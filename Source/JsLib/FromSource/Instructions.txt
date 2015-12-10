@@ -1,0 +1,27 @@
+1) Install CygWin/CygWin64 from https://cygwin.com/install.html
+
+   IMPORTANT: Include BC utility, Python 2.7 and Yaml libraries for Python when installing.
+
+2) Install JAVA 7 or later
+
+3) Download DukTape from GIT repository
+
+4) Download Google's Closure Compiler from https://developers.google.com/closure/compiler/ and copy "compiler.jar" in your local DukTape's folder.
+
+5) Open a command prompt console and go to your local DukTape's folder using:
+
+   CD your-duktape-git-local-copy-folder
+
+6) Add CygWin and Git to the PATH environment variable:
+
+   SET PATH=path-to-cygwin-bin-folder;path-to-git-bin-folder;%PATH%
+
+   i.e.:  SET PATH=C:\Dev\CygWin64\bin;C:\Dev\Git\bin;%PATH%
+
+7) Launch CygWin's Mini TTY by typing:
+
+   mintty
+
+8) At last, run the make distributable script in the MiniTTY console:
+
+   util/make_dist.sh

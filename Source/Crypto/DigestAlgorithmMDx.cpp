@@ -86,7 +86,7 @@ HRESULT CDigestAlgorithmMessageDigest::BeginDigest(__in eAlgorithm nAlgorithm, _
     return E_OUTOFMEMORY;
   CleanUp(TRUE);
   //create context
-  mdx_data->lpMdCtx = EVP_MD_CTX_create();
+  mdx_data->lpMdCtx = EVP_MD_CTX_new();
   if (mdx_data->lpMdCtx == NULL)
   {
     CleanUp(TRUE);
@@ -175,7 +175,7 @@ VOID CDigestAlgorithmMessageDigest::CleanUp(__in BOOL bZeroData)
 {
   if (mdx_data->lpMdCtx != NULL)
   {
-    EVP_MD_CTX_destroy(mdx_data->lpMdCtx);
+    EVP_MD_CTX_free(mdx_data->lpMdCtx);
     mdx_data->lpMdCtx = NULL;
   }
   //----

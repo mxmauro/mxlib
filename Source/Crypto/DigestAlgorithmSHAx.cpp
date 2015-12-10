@@ -87,7 +87,7 @@ HRESULT CDigestAlgorithmSecureHash::BeginDigest(__in eAlgorithm nAlgorithm, __in
     return E_OUTOFMEMORY;
   CleanUp(TRUE);
   //create context
-  shax_data->lpMdCtx = EVP_MD_CTX_create();
+  shax_data->lpMdCtx = EVP_MD_CTX_new();
   if (shax_data->lpMdCtx == NULL)
   {
     CleanUp(TRUE);
@@ -176,7 +176,7 @@ VOID CDigestAlgorithmSecureHash::CleanUp(__in BOOL bZeroData)
 {
   if (shax_data->lpMdCtx != NULL)
   {
-    EVP_MD_CTX_destroy(shax_data->lpMdCtx);
+    EVP_MD_CTX_free(shax_data->lpMdCtx);
     shax_data->lpMdCtx = NULL;
   }
   //----
