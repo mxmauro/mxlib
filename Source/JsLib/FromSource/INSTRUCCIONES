@@ -1,0 +1,11 @@
+* Instalalar CygWin64 con el utilitario TR
+* Instalar Python 2.7 con el submodulo PyYAML
+* Bajar DukTape de GIT
+* Bajar el ClosureCompiler (https://developers.google.com/closure/compiler/docs/gettingstarted_app) y copiar COMPILER.JAR en la carpeta raiz del código fuente.
+* Modificar el archivo util\make_dist.sh y reemplazar por las versiones que correspondan
+
+    DUK_MAJOR=1
+    DUK_MINOR=3
+    DUK_PATCH=99
+
+* Ejecutar SH.EXE util\make_dist.sh

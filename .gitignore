@@ -1,0 +1,14 @@
+.svn/
+*.~*
+*.suo
+*.ncb
+*.exp
+*.user
+*.sdf
+*.log
+*.obj
+*.ilk
+/bin/
+/Libs/
+/obj/
+/extras/

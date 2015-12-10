@@ -1,0 +1,400 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Source Files\Comm">
+      <UniqueIdentifier>{70cfaeb2-915c-417e-99c3-3cd11f785024}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Http">
+      <UniqueIdentifier>{5b913f3a-9002-412a-91a0-93b141f883b3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Comm">
+      <UniqueIdentifier>{ae0a9faa-8931-4b4e-a56a-4eac05302b34}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Http">
+      <UniqueIdentifier>{415c528c-7c2f-4824-9b1f-707558ac4c9d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Http\Body Parser">
+      <UniqueIdentifier>{2b23d682-00c8-4010-8883-8fb2ce894198}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Http\Body Parser">
+      <UniqueIdentifier>{028ae4f7-cbd6-4cc8-bec7-ba2a69cb2c7a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Http\Header Parser">
+      <UniqueIdentifier>{86ed9ebd-8ff3-41f6-9a70-378c33c79430}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Http\Header Parser">
+      <UniqueIdentifier>{adf018d5-5365-475d-b7c1-023f485f0320}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Http\Header Parser\Request">
+      <UniqueIdentifier>{f2ed13b8-a163-480c-9f57-4f8067ab4d10}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Http\Header Parser\Entity">
+      <UniqueIdentifier>{370cd0da-39b9-42df-94ab-75b23c6dc951}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Http\Header Parser\Request">
+      <UniqueIdentifier>{30006e63-c3da-4037-a0ff-d16b028bf388}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Http\Header Parser\Entity">
+      <UniqueIdentifier>{dd494b86-7a4c-41bf-9d50-630562f266cd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Http\Header Parser\General">
+      <UniqueIdentifier>{bedbc1db-1a94-4836-958f-109f953933e3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Http\Header Parser\General">
+      <UniqueIdentifier>{e0817e61-0d38-48a5-9608-d94d4a5b9959}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Http\Header Parser\Response">
+      <UniqueIdentifier>{f42fbbe0-bc81-4667-b8fc-4578ddd18c9e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Http\Header Parser\Response">
+      <UniqueIdentifier>{65b47fc6-9e0f-47d6-bddf-ab5d320e31c7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Include\Http\punycode.h">
+      <Filter>Header Files\Http</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpCookie.h">
+      <Filter>Header Files\Http</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\Url.h">
+      <Filter>Header Files\Http</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Comm\Sockets.h">
+      <Filter>Header Files\Comm</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Comm\NamedPipes.h">
+      <Filter>Header Files\Comm</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Comm\IpcCommon.h">
+      <Filter>Header Files\Comm</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpClient.h">
+      <Filter>Header Files\Http</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpCommon.h">
+      <Filter>Header Files\Http</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpAuthenticateResponseParser.h">
+      <Filter>Header Files\Http</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Comm\IpcSslLayer.h">
+      <Filter>Header Files\Comm</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Comm\SslCertificates.h">
+      <Filter>Header Files\Comm</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpServer.h">
+      <Filter>Header Files\Http</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpBodyParserBase.h">
+      <Filter>Header Files\Http\Body Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpBodyParserDefault.h">
+      <Filter>Header Files\Http\Body Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpBodyParserFormBase.h">
+      <Filter>Header Files\Http\Body Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpBodyParserIgnore.h">
+      <Filter>Header Files\Http\Body Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpBodyParserMultipartFormData.h">
+      <Filter>Header Files\Http\Body Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpBodyParserUrlEncodedForm.h">
+      <Filter>Header Files\Http\Body Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderBase.h">
+      <Filter>Header Files\Http\Header Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderGeneric.h">
+      <Filter>Header Files\Http\Header Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderReqAccept.h">
+      <Filter>Header Files\Http\Header Parser\Request</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderReqAcceptCharset.h">
+      <Filter>Header Files\Http\Header Parser\Request</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderReqAcceptEncoding.h">
+      <Filter>Header Files\Http\Header Parser\Request</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderReqAcceptLanguage.h">
+      <Filter>Header Files\Http\Header Parser\Request</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderReqExpect.h">
+      <Filter>Header Files\Http\Header Parser\Request</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderReqHost.h">
+      <Filter>Header Files\Http\Header Parser\Request</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderReqIfMatchOrIfNoneMatch.h">
+      <Filter>Header Files\Http\Header Parser\Request</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderReqIfModifiedSinceOrIfUnmodifiedSince.h">
+      <Filter>Header Files\Http\Header Parser\Request</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderReqRange.h">
+      <Filter>Header Files\Http\Header Parser\Request</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderReqReferer.h">
+      <Filter>Header Files\Http\Header Parser\Request</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderEntAllow.h">
+      <Filter>Header Files\Http\Header Parser\Entity</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderEntContentEncoding.h">
+      <Filter>Header Files\Http\Header Parser\Entity</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderEntContentLanguage.h">
+      <Filter>Header Files\Http\Header Parser\Entity</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderEntContentLength.h">
+      <Filter>Header Files\Http\Header Parser\Entity</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderEntContentRange.h">
+      <Filter>Header Files\Http\Header Parser\Entity</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderEntContentType.h">
+      <Filter>Header Files\Http\Header Parser\Entity</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderEntExpires.h">
+      <Filter>Header Files\Http\Header Parser\Entity</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderEntLastModified.h">
+      <Filter>Header Files\Http\Header Parser\Entity</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderGenConnection.h">
+      <Filter>Header Files\Http\Header Parser\General</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderGenDate.h">
+      <Filter>Header Files\Http\Header Parser\General</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderGenUpgrade.h">
+      <Filter>Header Files\Http\Header Parser\General</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderRespAcceptRanges.h">
+      <Filter>Header Files\Http\Header Parser\Response</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderRespAge.h">
+      <Filter>Header Files\Http\Header Parser\Response</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderRespETag.h">
+      <Filter>Header Files\Http\Header Parser\Response</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderRespRetryAfter.h">
+      <Filter>Header Files\Http\Header Parser\Response</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderRespLocation.h">
+      <Filter>Header Files\Http\Header Parser\Response</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderGenTransferEncoding.h">
+      <Filter>Header Files\Http\Header Parser\General</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderReqCacheControl.h">
+      <Filter>Header Files\Http\Header Parser\Request</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderRespCacheControl.h">
+      <Filter>Header Files\Http\Header Parser\Response</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderEntContentDisposition.h">
+      <Filter>Header Files\Http\Header Parser\Entity</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Comm\HostResolver.h">
+      <Filter>Header Files\Comm</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Comm\HostResolverCommon.h">
+      <Filter>Source Files\Comm</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Http\HttpServerCommon.h">
+      <Filter>Source Files\Http</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Comm\IpcMessageManager.h">
+      <Filter>Header Files\Comm</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\Http\HttpCookie.cpp">
+      <Filter>Source Files\Http</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\punycode.cpp">
+      <Filter>Source Files\Http</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\Url.cpp">
+      <Filter>Source Files\Http</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Comm\Sockets.cpp">
+      <Filter>Source Files\Comm</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Comm\NamedPipes.cpp">
+      <Filter>Source Files\Comm</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Comm\IpcCommon.cpp">
+      <Filter>Source Files\Comm</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpClient.cpp">
+      <Filter>Source Files\Http</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Comm\HostResolver.cpp">
+      <Filter>Source Files\Comm</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpCommon.cpp">
+      <Filter>Source Files\Http</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpAuthenticateResponseParser.cpp">
+      <Filter>Source Files\Http</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Comm\SslCertificates.cpp">
+      <Filter>Source Files\Comm</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Comm\SslCertificatesArray.cpp">
+      <Filter>Source Files\Comm</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Comm\IpcSslLayer.cpp">
+      <Filter>Source Files\Comm</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpServer.cpp">
+      <Filter>Source Files\Http</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpBodyParserBase.cpp">
+      <Filter>Source Files\Http\Body Parser</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpBodyParserDefault.cpp">
+      <Filter>Source Files\Http\Body Parser</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpBodyParserFormBase.cpp">
+      <Filter>Source Files\Http\Body Parser</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpBodyParserIgnore.cpp">
+      <Filter>Source Files\Http\Body Parser</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpBodyParserMultipartFormData.cpp">
+      <Filter>Source Files\Http\Body Parser</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpBodyParserUrlEncodedForm.cpp">
+      <Filter>Source Files\Http\Body Parser</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderBase.cpp">
+      <Filter>Source Files\Http\Header Parser</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderGeneric.cpp">
+      <Filter>Source Files\Http\Header Parser</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderReqReferer.cpp">
+      <Filter>Source Files\Http\Header Parser\Request</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderReqAccept.cpp">
+      <Filter>Source Files\Http\Header Parser\Request</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderReqAcceptCharset.cpp">
+      <Filter>Source Files\Http\Header Parser\Request</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderReqAcceptEncoding.cpp">
+      <Filter>Source Files\Http\Header Parser\Request</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderReqAcceptLanguage.cpp">
+      <Filter>Source Files\Http\Header Parser\Request</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderReqExpect.cpp">
+      <Filter>Source Files\Http\Header Parser\Request</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderReqHost.cpp">
+      <Filter>Source Files\Http\Header Parser\Request</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderReqIfMatchOrIfNoneMatch.cpp">
+      <Filter>Source Files\Http\Header Parser\Request</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderReqIfModifiedSinceOrIfUnmodifiedSince.cpp">
+      <Filter>Source Files\Http\Header Parser\Request</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderReqRange.cpp">
+      <Filter>Source Files\Http\Header Parser\Request</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderEntAllow.cpp">
+      <Filter>Source Files\Http\Header Parser\Entity</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderEntContentEncoding.cpp">
+      <Filter>Source Files\Http\Header Parser\Entity</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderEntContentLanguage.cpp">
+      <Filter>Source Files\Http\Header Parser\Entity</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderEntContentLength.cpp">
+      <Filter>Source Files\Http\Header Parser\Entity</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderEntExpires.cpp">
+      <Filter>Source Files\Http\Header Parser\Entity</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderEntLastModified.cpp">
+      <Filter>Source Files\Http\Header Parser\Entity</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderEntContentType.cpp">
+      <Filter>Source Files\Http\Header Parser\Entity</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderEntContentRange.cpp">
+      <Filter>Source Files\Http\Header Parser\Entity</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderGenConnection.cpp">
+      <Filter>Source Files\Http\Header Parser\General</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderGenDate.cpp">
+      <Filter>Source Files\Http\Header Parser\General</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderGenUpgrade.cpp">
+      <Filter>Source Files\Http\Header Parser\General</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderGenTransferEncoding.cpp">
+      <Filter>Source Files\Http\Header Parser\General</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderRespAcceptRanges.cpp">
+      <Filter>Source Files\Http\Header Parser\Response</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderRespAge.cpp">
+      <Filter>Source Files\Http\Header Parser\Response</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderRespETag.cpp">
+      <Filter>Source Files\Http\Header Parser\Response</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderRespLocation.cpp">
+      <Filter>Source Files\Http\Header Parser\Response</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderRespRetryAfter.cpp">
+      <Filter>Source Files\Http\Header Parser\Response</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderReqCacheControl.cpp">
+      <Filter>Source Files\Http\Header Parser\Request</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderRespCacheControl.cpp">
+      <Filter>Source Files\Http\Header Parser\Response</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderEntContentDisposition.cpp">
+      <Filter>Source Files\Http\Header Parser\Entity</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Comm\HostResolverIpAddrResolver.cpp">
+      <Filter>Source Files\Comm</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpServerRequest.cpp">
+      <Filter>Source Files\Http</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpCommonHelpers.cpp">
+      <Filter>Source Files\Http</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Comm\IpcMessageManager.cpp">
+      <Filter>Source Files\Comm</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Source\Http\HtmlEntities.inl">
+      <Filter>Source Files\Http</Filter>
+    </None>
+  </ItemGroup>
+</Project>

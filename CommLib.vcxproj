@@ -1,0 +1,277 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{E4280DFD-C300-440C-BCA4-B2CF3948EDEA}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>CommLib</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120_xp</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120_xp</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v120_xp</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v120_xp</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>.\Libs\$(PlatformName)\$(Configuration)\</OutDir>
+    <IntDir>.\obj\$(PlatformName)\$(Configuration)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>.\Libs\$(PlatformName)\$(Configuration)\</OutDir>
+    <IntDir>.\obj\$(PlatformName)\$(Configuration)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>.\Libs\$(PlatformName)\$(Configuration)\</OutDir>
+    <IntDir>.\obj\$(PlatformName)\$(Configuration)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>.\Libs\$(PlatformName)\$(Configuration)\</OutDir>
+    <IntDir>.\obj\$(PlatformName)\$(Configuration)\$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <ExceptionHandling>SyncCThrow</ExceptionHandling>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\OpenSSL\Source\Include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <ExceptionHandling>SyncCThrow</ExceptionHandling>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\OpenSSL\Source\Include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\OpenSSL\Source\Include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <SDLCheck>true</SDLCheck>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <ExceptionHandling>Async</ExceptionHandling>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\OpenSSL\Source\Include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="Include\Comm\HostResolver.h" />
+    <ClInclude Include="Include\Comm\IpcCommon.h" />
+    <ClInclude Include="Include\Comm\IpcMessageManager.h" />
+    <ClInclude Include="Include\Comm\IpcSslLayer.h" />
+    <ClInclude Include="Include\Comm\NamedPipes.h" />
+    <ClInclude Include="Include\Comm\Sockets.h" />
+    <ClInclude Include="Include\Comm\SslCertificates.h" />
+    <ClInclude Include="Include\Http\HttpHeaderBase.h" />
+    <ClInclude Include="Include\Http\HttpAuthenticateResponseParser.h" />
+    <ClInclude Include="Include\Http\HttpBodyParserBase.h" />
+    <ClInclude Include="Include\Http\HttpBodyParserFormBase.h" />
+    <ClInclude Include="Include\Http\HttpBodyParserIgnore.h" />
+    <ClInclude Include="Include\Http\HttpBodyParserMultipartFormData.h" />
+    <ClInclude Include="Include\Http\HttpBodyParserUrlEncodedForm.h" />
+    <ClInclude Include="Include\Http\HttpClient.h" />
+    <ClInclude Include="Include\Http\HttpCommon.h" />
+    <ClInclude Include="Include\Http\HttpBodyParserDefault.h" />
+    <ClInclude Include="Include\Http\HttpCookie.h" />
+    <ClInclude Include="Include\Http\HttpHeaderEntAllow.h" />
+    <ClInclude Include="Include\Http\HttpHeaderEntContentDisposition.h" />
+    <ClInclude Include="Include\Http\HttpHeaderEntContentEncoding.h" />
+    <ClInclude Include="Include\Http\HttpHeaderEntContentLanguage.h" />
+    <ClInclude Include="Include\Http\HttpHeaderEntContentLength.h" />
+    <ClInclude Include="Include\Http\HttpHeaderEntContentRange.h" />
+    <ClInclude Include="Include\Http\HttpHeaderEntContentType.h" />
+    <ClInclude Include="Include\Http\HttpHeaderEntExpires.h" />
+    <ClInclude Include="Include\Http\HttpHeaderEntLastModified.h" />
+    <ClInclude Include="Include\Http\HttpHeaderGenConnection.h" />
+    <ClInclude Include="Include\Http\HttpHeaderGenDate.h" />
+    <ClInclude Include="Include\Http\HttpHeaderGeneric.h" />
+    <ClInclude Include="Include\Http\HttpHeaderGenTransferEncoding.h" />
+    <ClInclude Include="Include\Http\HttpHeaderGenUpgrade.h" />
+    <ClInclude Include="Include\Http\HttpHeaderReqAccept.h" />
+    <ClInclude Include="Include\Http\HttpHeaderReqAcceptCharset.h" />
+    <ClInclude Include="Include\Http\HttpHeaderReqAcceptEncoding.h" />
+    <ClInclude Include="Include\Http\HttpHeaderReqAcceptLanguage.h" />
+    <ClInclude Include="Include\Http\HttpHeaderReqCacheControl.h" />
+    <ClInclude Include="Include\Http\HttpHeaderReqExpect.h" />
+    <ClInclude Include="Include\Http\HttpHeaderReqHost.h" />
+    <ClInclude Include="Include\Http\HttpHeaderReqIfMatchOrIfNoneMatch.h" />
+    <ClInclude Include="Include\Http\HttpHeaderReqIfModifiedSinceOrIfUnmodifiedSince.h" />
+    <ClInclude Include="Include\Http\HttpHeaderReqRange.h" />
+    <ClInclude Include="Include\Http\HttpHeaderReqReferer.h" />
+    <ClInclude Include="Include\Http\HttpHeaderRespAcceptRanges.h" />
+    <ClInclude Include="Include\Http\HttpHeaderRespAge.h" />
+    <ClInclude Include="Include\Http\HttpHeaderRespCacheControl.h" />
+    <ClInclude Include="Include\Http\HttpHeaderRespETag.h" />
+    <ClInclude Include="Include\Http\HttpHeaderRespLocation.h" />
+    <ClInclude Include="Include\Http\HttpHeaderRespRetryAfter.h" />
+    <ClInclude Include="Include\Http\HttpServer.h" />
+    <ClInclude Include="Include\Http\punycode.h" />
+    <ClInclude Include="Include\Http\Url.h" />
+    <ClInclude Include="Source\Comm\HostResolverCommon.h" />
+    <ClInclude Include="Source\Http\HttpServerCommon.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\Comm\HostResolver.cpp" />
+    <ClCompile Include="Source\Comm\HostResolverIpAddrResolver.cpp" />
+    <ClCompile Include="Source\Comm\IpcCommon.cpp" />
+    <ClCompile Include="Source\Comm\IpcMessageManager.cpp" />
+    <ClCompile Include="Source\Comm\IpcSslLayer.cpp" />
+    <ClCompile Include="Source\Comm\Sockets.cpp" />
+    <ClCompile Include="Source\Comm\SslCertificates.cpp" />
+    <ClCompile Include="Source\Comm\SslCertificatesArray.cpp" />
+    <ClCompile Include="Source\Http\HttpCommonHelpers.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderBase.cpp" />
+    <ClCompile Include="Source\Http\HttpAuthenticateResponseParser.cpp" />
+    <ClCompile Include="Source\Http\HttpBodyParserBase.cpp" />
+    <ClCompile Include="Source\Http\HttpBodyParserFormBase.cpp" />
+    <ClCompile Include="Source\Http\HttpBodyParserIgnore.cpp" />
+    <ClCompile Include="Source\Http\HttpBodyParserMultipartFormData.cpp" />
+    <ClCompile Include="Source\Http\HttpBodyParserUrlEncodedForm.cpp" />
+    <ClCompile Include="Source\Http\HttpClient.cpp" />
+    <ClCompile Include="Source\Http\HttpCommon.cpp" />
+    <ClCompile Include="Source\Http\HttpBodyParserDefault.cpp" />
+    <ClCompile Include="Source\Http\HttpCookie.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderEntAllow.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderEntContentDisposition.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderEntContentEncoding.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderEntContentLanguage.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderEntContentLength.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderEntContentRange.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderEntContentType.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderEntExpires.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderEntLastModified.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderGenConnection.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderGenDate.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderGeneric.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderGenTransferEncoding.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderGenUpgrade.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderReqAccept.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderReqAcceptCharset.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderReqAcceptEncoding.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderReqAcceptLanguage.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderReqCacheControl.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderReqExpect.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderReqHost.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderReqIfMatchOrIfNoneMatch.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderReqIfModifiedSinceOrIfUnmodifiedSince.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderReqRange.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderReqReferer.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderRespAcceptRanges.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderRespAge.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderRespCacheControl.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderRespETag.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderRespLocation.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderRespRetryAfter.cpp" />
+    <ClCompile Include="Source\Http\HttpServer.cpp" />
+    <ClCompile Include="Source\Http\HttpServerRequest.cpp" />
+    <ClCompile Include="Source\Http\punycode.cpp" />
+    <ClCompile Include="Source\Http\Url.cpp" />
+    <ClCompile Include="Source\Comm\NamedPipes.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Source\Http\HtmlEntities.inl" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
