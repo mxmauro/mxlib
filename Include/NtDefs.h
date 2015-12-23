@@ -1164,16 +1164,20 @@ int mx_vsnwprintf(__out_z wchar_t *lpDest, __in size_t nMaxCount, __in_z const w
                   __in va_list lpArgList);
 
 #if defined(_M_IX86)
-SIZE_T __stdcall MxCallWithSEH0(__in LPVOID lpFunc);
-SIZE_T __stdcall MxCallStdCallWithSEH1(__in LPVOID lpFunc, __in SIZE_T nParam1);
-SIZE_T __stdcall MxCallStdCallWithSEH2(__in LPVOID lpFunc, __in SIZE_T nParam1, __in SIZE_T nParam2);
-SIZE_T __stdcall MxCallStdCallWithSEH3(__in LPVOID lpFunc, __in SIZE_T nParam1, __in SIZE_T nParam2,
-                                       __in SIZE_T nParam3);
-SIZE_T __stdcall MxCallCDeclWithSEH1(__in LPVOID lpFunc, __in SIZE_T nParam1);
-SIZE_T __stdcall MxCallCDeclWithSEH2(__in LPVOID lpFunc, __in SIZE_T nParam1, __in SIZE_T nParam2);
-SIZE_T __stdcall MxCallCDeclWithSEH3(__in LPVOID lpFunc, __in SIZE_T nParam1, __in SIZE_T nParam2, __in SIZE_T nParam3);
+SIZE_T __stdcall MxCallWithSEH0(__in LPVOID lpFunc, __out BOOL *lpExceptionRaised);
+SIZE_T __stdcall MxCallStdCallWithSEH1(__in LPVOID lpFunc, __out BOOL *lpExceptionRaised, __in SIZE_T nParam1);
+SIZE_T __stdcall MxCallStdCallWithSEH2(__in LPVOID lpFunc, __out BOOL *lpExceptionRaised, __in SIZE_T nParam1,
+                                       __in SIZE_T nParam2);
+SIZE_T __stdcall MxCallStdCallWithSEH3(__in LPVOID lpFunc, __out BOOL *lpExceptionRaised, __in SIZE_T nParam1,
+                                       __in SIZE_T nParam2, __in SIZE_T nParam3);
+SIZE_T __stdcall MxCallCDeclWithSEH1(__in LPVOID lpFunc, __out BOOL *lpExceptionRaised, __in SIZE_T nParam1);
+SIZE_T __stdcall MxCallCDeclWithSEH2(__in LPVOID lpFunc, __out BOOL *lpExceptionRaised, __in SIZE_T nParam1,
+                                     __in SIZE_T nParam2);
+SIZE_T __stdcall MxCallCDeclWithSEH3(__in LPVOID lpFunc, __out BOOL *lpExceptionRaised, __in SIZE_T nParam1,
+                                     __in SIZE_T nParam2, __in SIZE_T nParam3);
 #elif defined(_M_X64)
-SIZE_T __stdcall MxCallWithSEH(__in LPVOID lpFunc, __in SIZE_T nParam1, __in SIZE_T nParam2, __in SIZE_T nParam3);
+SIZE_T __stdcall MxCallWithSEH(__in LPVOID lpFunc, __out BOOL *lpExceptionRaised, __in_opt SIZE_T nParam1=0,
+                               __in_opt SIZE_T nParam2=0, __in_opt SIZE_T nParam3=0);
 #endif
 
 VOID MxSleep(__in DWORD dwTimeMs);

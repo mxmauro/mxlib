@@ -101,9 +101,9 @@ public:
     if (h != NULL && h != INVALID_HANDLE_VALUE)
     {
 #if defined(_M_IX86)
-      ::MxCallStdCallWithSEH1(&::MxNtClose, (SIZE_T)h);
+      ::MxCallStdCallWithSEH1(&::MxNtClose, NULL, (SIZE_T)h);
 #elif defined(_M_X64)
-      ::MxCallWithSEH(&::MxNtClose, (SIZE_T)h, 0, 0);
+      ::MxCallWithSEH(&::MxNtClose, NULL, (SIZE_T)h, 0, 0);
 #endif
     }
     return;
@@ -223,9 +223,9 @@ public:
         hProc != NULL && hProc != INVALID_HANDLE_VALUE)
     {
 #if defined(_M_IX86)
-      ::MxCallStdCallWithSEH2(&CWindowsRemoteHandle::InternalCloseRH, (SIZE_T)hProc, (SIZE_T)h);
+      ::MxCallStdCallWithSEH2(&CWindowsRemoteHandle::InternalCloseRH, NULL, (SIZE_T)hProc, (SIZE_T)h);
 #elif defined(_M_X64)
-      ::MxCallWithSEH(&CWindowsRemoteHandle::InternalCloseRH, (SIZE_T)hProc, (SIZE_T)h, 0);
+      ::MxCallWithSEH(&CWindowsRemoteHandle::InternalCloseRH, NULL, (SIZE_T)hProc, (SIZE_T)h, 0);
 #endif
     }
     return;

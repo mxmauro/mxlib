@@ -97,7 +97,7 @@ public:
 
   virtual BOOL IsEmpty() const
     {
-    return (szStrA != NULL && szStrA[0] != 0) ? FALSE : TRUE;
+    return (szStrA != NULL && *szStrA != 0) ? FALSE : TRUE;
     };
 
   virtual BOOL Copy(__in_z_opt LPCSTR szSrcA);
@@ -137,10 +137,20 @@ public:
   virtual BOOL InsertN(__in_nz_opt LPCSTR szSrcA, __in SIZE_T nInsertPosition, __in SIZE_T nSrcLen);
   virtual VOID Delete(__in SIZE_T nStartChar, __in SIZE_T nChars);
 
+  virtual BOOL StartsWith(__in_z LPCSTR szStrA, __in_opt BOOL bCaseInsensitive=TRUE);
+  virtual BOOL EndsWith(__in_z LPCSTR szStrA, __in_opt BOOL bCaseInsensitive=TRUE);
+  virtual LPCSTR Contains(__in_z LPCSTR szStrA, __in_opt BOOL bCaseInsensitive=TRUE);
+
   virtual VOID Attach(__in_z LPSTR szSrcA);
   virtual LPSTR Detach();
 
   virtual BOOL EnsureBuffer(__in SIZE_T nChars);
+
+  virtual CHAR operator[](__in SIZE_T nIndex) const
+    {
+    return (szStrA != NULL) ? szStrA[nIndex] : 0;
+    };
+  virtual CHAR& operator[](__in SIZE_T nIndex);
 
   LPWSTR ToWide();
   static LPWSTR Ansi2Wide(__in_z LPCSTR szStrA, __in SIZE_T nSrcLen);
@@ -148,7 +158,6 @@ public:
 private:
   LPSTR szStrA;
   SIZE_T nSize, nLen;
-  LONG volatile nRecalcLength;
 };
 
 //-----------------------------------------------------------
@@ -177,7 +186,7 @@ public:
 
   virtual BOOL IsEmpty() const
     {
-    return (szStrW != NULL && szStrW[0] != 0) ? FALSE : TRUE;
+    return (szStrW != NULL && *szStrW != 0) ? FALSE : TRUE;
     };
 
   virtual BOOL Copy(__in_z_opt LPCSTR szSrcA);
@@ -217,10 +226,20 @@ public:
   virtual BOOL InsertN(__in_nz_opt LPCWSTR szSrcW, __in SIZE_T nInsertPosition, __in SIZE_T nSrcLen);
   virtual VOID Delete(__in SIZE_T nStartChar, __in SIZE_T nChars);
 
+  virtual BOOL StartsWith(__in_z LPCWSTR szStrW, __in_opt BOOL bCaseInsensitive=TRUE);
+  virtual BOOL EndsWith(__in_z LPCWSTR szStrW, __in_opt BOOL bCaseInsensitive=TRUE);
+  virtual LPCWSTR Contains(__in_z LPCWSTR szStrW, __in_opt BOOL bCaseInsensitive=TRUE);
+
   virtual VOID Attach(__in_z LPWSTR szSrcW);
   virtual LPWSTR Detach();
 
   virtual BOOL EnsureBuffer(__in SIZE_T nChars);
+
+  WCHAR operator[](__in SIZE_T nIndex) const
+    {
+    return (szStrW != NULL) ? szStrW[nIndex] : 0;
+    };
+  WCHAR& operator[](__in SIZE_T nIndex);
 
   LPSTR ToAnsi();
   static LPSTR Wide2Ansi(__in_z LPCWSTR szStrW, __in SIZE_T nSrcLen);
@@ -228,7 +247,6 @@ public:
 private:
   LPWSTR szStrW;
   SIZE_T nSize, nLen;
-  LONG volatile nRecalcLength;
 };
 
 } //namespace MX

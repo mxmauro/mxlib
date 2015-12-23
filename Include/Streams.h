@@ -35,6 +35,13 @@ class CStream : public virtual CBaseMemObj, public TRefCounted<CStream>
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CStream);
 public:
+  typedef enum {
+    SeekStart=0,
+    SeekCurrent,
+    SeekEnd,
+  } eSeekMethod;
+
+public:
   CStream() : CBaseMemObj(), TRefCounted<CStream>()
     { };
   virtual ~CStream()
@@ -49,58 +56,7 @@ public:
 
   virtual ULONGLONG GetLength() const = 0;
 
-  virtual CStream* Clone()
-    {
-    return NULL;
-    };
-};
-
-class CSeekableStream : public CStream
-{
-  MX_DISABLE_COPY_CONSTRUCTOR(CSeekableStream);
-public:
-  typedef enum {
-    SeekStart=0,
-    SeekCurrent,
-    SeekEnd,
-  } eSeekMethod;
-
-  CSeekableStream() : CStream()
-    { };
-  ~CSeekableStream()
-    { };
-
-  virtual HRESULT Seek(__in ULONGLONG nPosition, __in_opt eSeekMethod nMethod=SeekStart) = 0;
-
-  CSeekableStream* Clone()
-    {
-    return NULL;
-    };
-
-};
-
-//-----------------------------------------------------------
-
-class CStreamFragment : public CStream
-{
-  MX_DISABLE_COPY_CONSTRUCTOR(CStreamFragment);
-public:
-  CStreamFragment();
-
-  HRESULT Initialize(__in CSeekableStream *lpStream, __in ULONGLONG nOffset, __in ULONGLONG nLength);
-
-  HRESULT Read(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_T &nReaded);
-  HRESULT Write(__in LPCVOID lpSrc, __in SIZE_T nBytes, __out SIZE_T &nWritten);
-
-  ULONGLONG GetLength() const;
-
-  HRESULT Seek(__in ULONGLONG nPosition, __in_opt CSeekableStream::eSeekMethod nMethod=CSeekableStream::SeekStart);
-
-  CStreamFragment* Clone();
-
-private:
-  TAutoRefCounted<CSeekableStream> cStream;
-  ULONGLONG nOffset, nLength, nCurrPos;
+  virtual HRESULT Seek(__in ULONGLONG nPosition, __in_opt eSeekMethod nMethod=SeekStart);
 };
 
 } //namespace MX

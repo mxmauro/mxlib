@@ -30,7 +30,7 @@
 
 namespace MX {
 
-class CMemoryStream : public CSeekableStream
+class CMemoryStream : public CStream
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CMemoryStream);
 public:

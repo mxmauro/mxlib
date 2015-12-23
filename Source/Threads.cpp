@@ -937,15 +937,7 @@ VOID CThreadPool::WorkerThreadProc(__in SIZE_T nParam)
   ULONG nTimeout;
   LPVOID lpThreadContext;
 
-  try
-  {
-    lpThreadContext = OnThreadStarted();
-  }
-  catch (...)
-  {
-    lpThreadContext = NULL;
-  }
-  //----
+  lpThreadContext = OnThreadStarted();
   nTimeout = INFINITE; //at least process one item
   while (1)
   {
@@ -967,13 +959,7 @@ VOID CThreadPool::WorkerThreadProc(__in SIZE_T nParam)
     _InterlockedDecrement(&nInUse);
   }
   RemoveWorker((CWorkerThread*)nParam);
-  //----
-  try
-  {
-    OnThreadTerminated(lpThreadContext);
-  }
-  catch (...)
-  { }
+  OnThreadTerminated(lpThreadContext);
   return;
 }
 

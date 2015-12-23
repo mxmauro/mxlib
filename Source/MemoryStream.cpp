@@ -27,7 +27,7 @@
 
 namespace MX {
 
-CMemoryStream::CMemoryStream(__in_opt SIZE_T nAllocationGranularity) : CSeekableStream()
+CMemoryStream::CMemoryStream(__in_opt SIZE_T nAllocationGranularity) : CStream()
 {
   lpData = NULL;
   nOffset = nSize = nAllocated = 0;
@@ -165,12 +165,12 @@ HRESULT CMemoryStream::Seek(__in ULONGLONG nPosition, __in_opt eSeekMethod nMeth
         nPosition = (~nPosition) + 1;
         if (nPosition > (ULONGLONG)nOffset)
           return E_FAIL;
-        nPosition = nOffset - (SIZE_T)nPosition;
+        nPosition = (ULONGLONG)nOffset - nPosition;
       }
       break;
 
     case SeekEnd:
-      if (nPosition >(ULONGLONG)nSize)
+      if (nPosition > (ULONGLONG)nSize)
         nPosition = (ULONGLONG)nSize;
       nPosition = (ULONGLONG)nSize - nPosition;
       break;

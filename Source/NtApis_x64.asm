@@ -782,30 +782,51 @@ MxGetProcedureAddress ENDP
 MxCallWithSEH_SEH PROTO
 
 ALIGN 16
-;SIZE_T __stdcall MxCallWithSEH(__in LPVOID lpFunc, __in SIZE_T nParam1, __in SIZE_T nParam2, __in SIZE_T nParam3);
+;SIZE_T __stdcall MxCallWithSEH(__in LPVOID lpFunc, __out BOOL *lpExceptionRaised, __in_opt SIZE_T nParam1=0,
+;                               __in_opt SIZE_T nParam2=0, __in_opt SIZE_T nParam3=0);
 MxCallWithSEH PROC FRAME :MxCallWithSEH_SEH
-   push rbp
+    push rbp
 .PUSHREG rbp
-   mov  rbp, rsp
+    mov  rbp, rsp
 .SETFRAME rbp, 0
-   sub  rsp, 40h+sizeof MINIMAL_SEH+20h
-.ALLOCSTACK 40h+sizeof MINIMAL_SEH+20h
+    sub  rsp, 20h + sizeof MINIMAL_SEH+20h
+.ALLOCSTACK 20h + sizeof MINIMAL_SEH+20h
+    lea  rbp, [rsp + 20h]
+.SETFRAME rbp, 20h
 .ENDPROLOG
-seh EQU <[rbp - sizeof MINIMAL_SEH].MINIMAL_SEH>
+seh        EQU <[rbp].MINIMAL_SEH>
+origRdx    EQU [rbp + sizeof MINIMAL_SEH]
+fifthParam EQU  rbp + sizeof MINIMAL_SEH+20h + 28h
 
+    mov  QWORD PTR origRdx, rdx
+    test rdx, rdx
+    je   @F
+    mov  DWORD PTR [rdx], 0
     ;setup SEH
-    mov  rax, OFFSET @@done
+@@: mov  rax, OFFSET @@onException
     mov  seh.SafeOffset, rax
     mov  seh.PrevRsp, rsp
     mov  seh.PrevRbp, rbp
+
     ;do call
     mov  rax, rcx
-    mov  rcx, rdx
-    mov  rdx, r8
-    mov  r8, r9
+
+    mov  rcx, r8
+    mov  rdx, r9
+    mov  r8,  QWORD PTR [fifthParam]
     call rax
-@@done:
-    mov  rsp, rbp
+
+    ;done
+    lea  rsp, [rbp + sizeof MINIMAL_SEH+20h]
+    pop  rbp
+    ret
+@@onException:
+    test rdx, rdx
+    je   @F
+    mov  rax, origRdx
+    inc  QWORD PTR [rax]
+@@: xor  rax, rax
+    lea  rsp, [rbp + sizeof MINIMAL_SEH+20h]
     pop  rbp
     ret
 MxCallWithSEH ENDP

@@ -719,7 +719,7 @@ VOID CHttpServer::OnAfterSendResponse(__in CIpc *lpIpc, __in HANDLE h, __in LPVO
 
 HRESULT CHttpServer::SendStreams(__in CRequest *lpRequest, __in BOOL bForceClose)
 {
-  CSeekableStream *lpStream;
+  CStream *lpStream;
   SIZE_T i, nCount;
   HRESULT hRes;
 
@@ -728,7 +728,7 @@ HRESULT CHttpServer::SendStreams(__in CRequest *lpRequest, __in BOOL bForceClose
   for (i=0; SUCCEEDED(hRes) && i<nCount; i++)
   {
     lpStream = lpRequest->sResponse.aStreamsList.GetElementAt(i);
-    hRes = lpStream->Seek(0, CSeekableStream::SeekStart);
+    hRes = lpStream->Seek(0, CStream::SeekStart);
     if (SUCCEEDED(hRes))
       hRes = cSocketMgr.SendStream(lpRequest->hConn, lpStream);
   }

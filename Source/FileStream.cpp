@@ -27,7 +27,7 @@
 
 namespace MX {
 
-CFileStream::CFileStream() : CSeekableStream()
+CFileStream::CFileStream() : CStream()
 {
   return;
 }

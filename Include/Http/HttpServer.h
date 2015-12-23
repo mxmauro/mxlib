@@ -178,7 +178,7 @@ public:
 
     HRESULT SendResponse(__in LPCVOID lpData, __in SIZE_T nDataLen);
     HRESULT SendFile(__in_z LPCWSTR szFileNameW);
-    HRESULT SendStream(__in CSeekableStream *lpStream, __in_z_opt LPCWSTR szFileNameW=NULL);
+    HRESULT SendStream(__in CStream *lpStream, __in_z_opt LPCWSTR szFileNameW=NULL);
 
     HRESULT SendErrorPage(__in LONG nStatusCode, __in HRESULT hErrorCode, __in_z_opt LPCSTR szBodyExplanationA=NULL);
 
@@ -241,7 +241,7 @@ public:
       LONG nStatus;
       CStringA cStrReasonA;
       CHttpCommon cHttpCmn;
-      TArrayListWithRelease<CSeekableStream*> aStreamsList;
+      TArrayListWithRelease<CStream*> aStreamsList;
       BOOL bLastStreamIsData;
       LPCSTR szMimeTypeHintA;
       CStringA cStrFileNameA;

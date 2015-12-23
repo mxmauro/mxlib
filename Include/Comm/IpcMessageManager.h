@@ -32,6 +32,7 @@ namespace MX {
 
 class CIpcMessageManager : public virtual CBaseMemObj
 {
+  MX_DISABLE_COPY_CONSTRUCTOR(CIpcMessageManager);
 public:
   class CMessage;
 

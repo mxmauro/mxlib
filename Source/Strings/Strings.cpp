@@ -269,7 +269,8 @@ LPCSTR StrFindA(__in_z LPCSTR szSrcA, __in_z LPCSTR szToFindA, __in_opt BOOL bRe
   return StrNFindA(szSrcA, szToFindA, StrLenA(szSrcA), bReverse, bCaseInsensitive);
 }
 
-LPCWSTR StrFindW(__in_z LPCWSTR szSrcW, __in_z LPCWSTR szToFindW, __in_opt BOOL bReverse, __in_opt BOOL bCaseInsensitive)
+LPCWSTR StrFindW(__in_z LPCWSTR szSrcW, __in_z LPCWSTR szToFindW, __in_opt BOOL bReverse,
+                 __in_opt BOOL bCaseInsensitive)
 {
   return StrNFindW(szSrcW, szToFindW, StrLenW(szSrcW), bReverse, bCaseInsensitive);
 }
@@ -427,7 +428,6 @@ CStringA::CStringA() : CBaseMemObj()
 {
   szStrA = NULL;
   nSize = nLen = 0;
-  _InterlockedExchange(&nRecalcLength, 0);
   return;
 }
 
@@ -442,7 +442,6 @@ VOID CStringA::Empty()
   MX_FREE(szStrA);
   szStrA = NULL;
   nSize = nLen = 0;
-  _InterlockedExchange(&nRecalcLength, 0);
   return;
 }
 
@@ -456,7 +455,6 @@ VOID CStringA::Refresh()
     szStrA[nSize-1] = 0;
     while (szStrA[_nLen] != 0)
       _nLen++;
-    _InterlockedExchange(&nRecalcLength, 0);
   }
   nLen = _nLen;
   return;
@@ -464,8 +462,6 @@ VOID CStringA::Refresh()
 
 SIZE_T CStringA::GetLength() const
 {
-  if (__InterlockedRead(const_cast<LONG volatile*>(&nRecalcLength)) != 0)
-    const_cast<CStringA*>(this)->Refresh();
   return nLen;
 }
 
@@ -500,7 +496,6 @@ BOOL CStringA::ConcatN(__in_nz_opt LPCSTR szSrcA, __in SIZE_T nSrcLen)
     return TRUE;
   if (szSrcA == NULL)
     return FALSE;
-  GetLength(); //<<--- for length update
   if (nLen+nSrcLen+1 < nLen)
     return FALSE; //overflow
   if (EnsureBuffer(nLen+nSrcLen+1) == FALSE)
@@ -546,7 +541,6 @@ BOOL CStringA::ConcatN(__in_nz_opt LPCWSTR szSrcW, __in SIZE_T nSrcLen)
     return TRUE;
   if (szSrcW == NULL)
     return FALSE;
-  GetLength(); //<<--- for length update
   nAnsiLen = 0;
   usStr.Buffer = (PWSTR)szSrcW;
   for (k=nSrcLen; k>0; k-=nThisRoundLen)
@@ -716,7 +710,6 @@ BOOL CStringA::AppendFormatV(__in_z LPCSTR szFormatA, __in va_list argptr)
   if (szFormatA == NULL)
     return FALSE;
   nBufSize = 512;
-  GetLength(); //<<--- for length update
   while (1)
   {
     if (EnsureBuffer(nLen+nBufSize+1) == FALSE)
@@ -785,7 +778,6 @@ BOOL CStringA::InsertN(__in_nz_opt LPCSTR szSrcA, __in SIZE_T nInsertPosition, _
     return TRUE;
   if (szSrcA == NULL)
     return FALSE;
-  GetLength(); //<<--- for length update
   if (nLen+nSrcLen+1 < nLen)
     return FALSE; //overflow
   if (EnsureBuffer(nLen+nSrcLen+1) == FALSE)
@@ -805,7 +797,6 @@ VOID CStringA::Delete(__in SIZE_T nStartChar, __in SIZE_T nChars)
   LPSTR sA;
   SIZE_T k;
 
-  GetLength(); //<<--- for length update
   if (nLen > 0)
   {
     if (nStartChar > nLen)
@@ -819,6 +810,34 @@ VOID CStringA::Delete(__in SIZE_T nStartChar, __in SIZE_T nChars)
     szStrA[nLen] = 0;
   }
   return;
+}
+
+
+BOOL CStringA::StartsWith(__in_z LPCSTR _szStrA, __in_opt BOOL bCaseInsensitive)
+{
+  SIZE_T nSrcLen;
+
+  nSrcLen = StrLenA(_szStrA);
+  if (nSrcLen == 0 || nLen < nSrcLen)
+    return FALSE;
+  return (StrNCompareA(szStrA, _szStrA, nSrcLen, bCaseInsensitive) == 0) ? TRUE : FALSE;
+}
+
+BOOL CStringA::EndsWith(__in_z LPCSTR _szStrA, __in_opt BOOL bCaseInsensitive)
+{
+  SIZE_T nSrcLen;
+
+  nSrcLen = StrLenA(_szStrA);
+  if (nSrcLen == 0 || nLen < nSrcLen)
+    return FALSE;
+  return (StrNCompareA(szStrA+(nLen-nSrcLen), _szStrA, nSrcLen, bCaseInsensitive) == 0) ? TRUE : FALSE;
+}
+
+LPCSTR CStringA::Contains(__in_z LPCSTR _szStrA, __in_opt BOOL bCaseInsensitive)
+{
+  if (_szStrA == NULL || *_szStrA == 0)
+    return NULL;
+  return MX::StrFindA(szStrA, _szStrA, FALSE, bCaseInsensitive);
 }
 
 VOID CStringA::Attach(__in_z LPSTR szSrcA)
@@ -852,7 +871,6 @@ BOOL CStringA::EnsureBuffer(__in SIZE_T nChars)
   nChars++;
   if (nChars >= nSize)
   {
-    GetLength(); //<<--- for length update
     if (nSize > 0)
       nChars = X_ALIGN(nChars, 256);
     szNewStrA = (LPSTR)MX_MALLOC(nChars);
@@ -867,9 +885,13 @@ BOOL CStringA::EnsureBuffer(__in SIZE_T nChars)
   return TRUE;
 }
 
+CHAR& CStringA::operator[](__in SIZE_T nIndex)
+{
+  return szStrA[nIndex];
+}
+
 LPWSTR CStringA::ToWide()
 {
-  GetLength(); //<<--- for length update
   return Ansi2Wide(szStrA, nLen);
 }
 
@@ -892,7 +914,6 @@ CStringW::CStringW() : CBaseMemObj()
 {
   szStrW = NULL;
   nSize = nLen = 0;
-  _InterlockedExchange(&nRecalcLength, 0);
   return;
 }
 
@@ -907,7 +928,6 @@ VOID CStringW::Empty()
   MX_FREE(szStrW);
   szStrW = NULL;
   nSize = nLen = 0;
-  _InterlockedExchange(&nRecalcLength, 0);
   return;
 }
 
@@ -921,7 +941,6 @@ VOID CStringW::Refresh()
     szStrW[nSize-1] = 0;
     while (szStrW[_nLen] != 0)
       _nLen++;
-    _InterlockedExchange(&nRecalcLength, 0);
   }
   nLen = _nLen;
   return;
@@ -929,8 +948,6 @@ VOID CStringW::Refresh()
 
 SIZE_T CStringW::GetLength() const
 {
-  if (__InterlockedRead(const_cast<LONG volatile*>(&nRecalcLength)) != 0)
-    const_cast<CStringW*>(this)->Refresh();
   return nLen;
 }
 
@@ -969,7 +986,6 @@ BOOL CStringW::ConcatN(__in_nz_opt LPCSTR szSrcA, __in SIZE_T nSrcLen)
     return TRUE;
   if (szSrcA == NULL)
     return FALSE;
-  GetLength(); //<<--- for length update
   nWideLen = 0;
   asStr.Buffer = (PSTR)szSrcA;
   for (k=nSrcLen; k>0; k-=(SIZE_T)(asStr.Length))
@@ -1027,7 +1043,6 @@ BOOL CStringW::ConcatN(__in_nz_opt LPCWSTR szSrcW, __in SIZE_T nSrcLen)
     return TRUE;
   if (szSrcW == NULL)
     return FALSE;
-  GetLength(); //<<--- for length update
   if (nLen+nSrcLen+1 < nLen)
     return FALSE; //overflow
   if (EnsureBuffer(nLen+nSrcLen+1) == FALSE)
@@ -1208,7 +1223,6 @@ BOOL CStringW::AppendFormatV(__in_z LPCWSTR szFormatW, __in va_list argptr)
   if (szFormatW == NULL)
     return FALSE;
   nBufSize = 512;
-  GetLength(); //<<--- for length update
   while (1)
   {
     if (EnsureBuffer(nLen+nBufSize+1) == FALSE)
@@ -1244,7 +1258,6 @@ BOOL CStringW::InsertN(__in_nz_opt LPCWSTR szSrcW, __in SIZE_T nInsertPosition, 
     return TRUE;
   if (szSrcW == NULL)
     return FALSE;
-  GetLength(); //<<--- for length update
   if (nLen+nSrcLen+1 < nLen)
     return FALSE; //overflow
   if (EnsureBuffer(nLen+nSrcLen+1) == FALSE)
@@ -1264,7 +1277,6 @@ VOID CStringW::Delete(__in SIZE_T nStartChar, __in SIZE_T nChars)
   LPWSTR sW;
   SIZE_T k;
 
-  GetLength(); //<<--- for length update
   if (nLen > 0)
   {
     if (nStartChar > nLen)
@@ -1278,6 +1290,33 @@ VOID CStringW::Delete(__in SIZE_T nStartChar, __in SIZE_T nChars)
     szStrW[nLen] = 0;
   }
   return;
+}
+
+BOOL CStringW::StartsWith(__in_z LPCWSTR _szStrW, __in_opt BOOL bCaseInsensitive)
+{
+  SIZE_T nSrcLen;
+
+  nSrcLen = StrLenW(_szStrW);
+  if (nSrcLen == 0 || nLen < nSrcLen)
+    return FALSE;
+  return (StrNCompareW(szStrW, _szStrW, nSrcLen, bCaseInsensitive) == 0) ? TRUE : FALSE;
+}
+
+BOOL CStringW::EndsWith(__in_z LPCWSTR _szStrW, __in_opt BOOL bCaseInsensitive)
+{
+  SIZE_T nSrcLen;
+
+  nSrcLen = StrLenW(_szStrW);
+  if (nSrcLen == 0 || nLen < nSrcLen)
+    return FALSE;
+  return (StrNCompareW(szStrW+(nLen-nSrcLen), _szStrW, nSrcLen, bCaseInsensitive) == 0) ? TRUE : FALSE;
+}
+
+LPCWSTR CStringW::Contains(__in_z LPCWSTR _szStrW, __in_opt BOOL bCaseInsensitive)
+{
+  if (_szStrW == NULL || *_szStrW == 0)
+    return NULL;
+  return MX::StrFindW(szStrW, _szStrW, FALSE, bCaseInsensitive);
 }
 
 VOID CStringW::Attach(__in_z LPWSTR szSrcW)
@@ -1311,7 +1350,6 @@ BOOL CStringW::EnsureBuffer(__in SIZE_T nChars)
   nChars++;
   if (nChars >= nSize)
   {
-    GetLength(); //<<--- for length update
     if (nSize > 0)
       nChars = X_ALIGN(nChars, 256);
     szNewStrW = (LPWSTR)MX_MALLOC(nChars*sizeof(WCHAR));
@@ -1326,9 +1364,13 @@ BOOL CStringW::EnsureBuffer(__in SIZE_T nChars)
   return TRUE;
 }
 
+WCHAR& CStringW::operator[](__in SIZE_T nIndex)
+{
+  return szStrW[nIndex];
+}
+
 LPSTR CStringW::ToAnsi()
 {
-  GetLength(); //<<--- for length update
   return Wide2Ansi(szStrW, nLen);
 }
 

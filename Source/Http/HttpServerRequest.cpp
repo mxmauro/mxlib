@@ -413,7 +413,7 @@ HRESULT CHttpServer::CRequest::SendFile(__in_z LPCWSTR szFileNameW)
   return hRes;
 }
 
-HRESULT CHttpServer::CRequest::SendStream(__in CSeekableStream *lpStream, __in_z_opt LPCWSTR szFileNameW)
+HRESULT CHttpServer::CRequest::SendStream(__in CStream *lpStream, __in_z_opt LPCWSTR szFileNameW)
 {
   CFastLock cLock(&nMutex);
   CStringA cStrTempNameA;
