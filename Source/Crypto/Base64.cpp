@@ -40,13 +40,15 @@ SIZE_T Base64GetEncodedLength(__in SIZE_T nDataLen)
   return ((nDataLen+2) / 3) << 2;
 }
 
-SIZE_T Base64Encode(__in LPSTR szDestA, __in LPVOID lpData, __in SIZE_T nDataLen)
+SIZE_T Base64Encode(__out LPSTR szDestA, __in LPVOID lpData, __in SIZE_T nDataLen)
 {
   BYTE aTempBuf[3];
   SIZE_T i, j, nOutLen;
 
   if (lpData == NULL && nDataLen > 0)
     return 0;
+  if (szDestA == NULL)
+    return Base64GetEncodedLength(nDataLen);
   i = nOutLen = 0;
   while (nDataLen > 0)
   {
@@ -107,16 +109,16 @@ SIZE_T Base64GetMaxDecodedLength(__in SIZE_T nDataLen)
   return ((nDataLen+3) >> 2) * 3;
 }
 
-SIZE_T Base64Decode(__in LPVOID lpDest, __in LPCSTR szStrA, __in_opt SIZE_T nSrcLen)
+SIZE_T Base64Decode(__out LPVOID lpDest, __in LPCSTR szStrA, __in_opt SIZE_T nSrcLen)
 {
   BYTE aTempBuf[4], aTempBuf2[3];
   SIZE_T i, j, nEqualCounter, nDestLen;
   BYTE val;
 
-  if (lpDest == NULL || (szStrA == NULL && nSrcLen > 0))
-    return 0;
   if (nSrcLen == (SIZE_T)-1)
     nSrcLen = StrLenA(szStrA);
+  if (szStrA == NULL && nSrcLen > 0)
+    return 0;
   i = nEqualCounter = nDestLen = 0;
   while (nSrcLen > 0)
   {
@@ -135,15 +137,26 @@ SIZE_T Base64Decode(__in LPVOID lpDest, __in LPCSTR szStrA, __in_opt SIZE_T nSrc
     {
       //reset 'equal signs' that where in the middle
       nEqualCounter = 0;
-      aTempBuf[i++] = val - 62;
-      if (i == 4)
+      if (lpDest != NULL)
       {
-        ((LPBYTE)lpDest)[0] = ( (aTempBuf[0] << 2)         | (aTempBuf[1] >> 4));
-        ((LPBYTE)lpDest)[1] = ( (aTempBuf[1] << 4)         | (aTempBuf[2] >> 2));
-        ((LPBYTE)lpDest)[2] = (((aTempBuf[2] << 6) & 0xC0) |  aTempBuf[3]);
-        lpDest = (LPBYTE)lpDest + 3;
-        i = 0;
-        nDestLen += 3;
+        aTempBuf[i++] = val - 62;
+        if (i == 4)
+        {
+          ((LPBYTE)lpDest)[0] = ((aTempBuf[0] << 2)         | (aTempBuf[1] >> 4));
+          ((LPBYTE)lpDest)[1] = ((aTempBuf[1] << 4)         | (aTempBuf[2] >> 2));
+          ((LPBYTE)lpDest)[2] = (((aTempBuf[2] << 6) & 0xC0) |  aTempBuf[3]);
+          lpDest = (LPBYTE)lpDest + 3;
+          i = 0;
+          nDestLen += 3;
+        }
+      }
+      else
+      {
+        if ((++i) == 4)
+        {
+          i = 0;
+          nDestLen += 3;
+        }
       }
     }
     szStrA++;
@@ -151,13 +164,20 @@ SIZE_T Base64Decode(__in LPVOID lpDest, __in LPCSTR szStrA, __in_opt SIZE_T nSrc
   }
   if (i > 1) //if only one remaining char, just ignore
   {
-    for (j=i; j<4; j++)
-      aTempBuf[j] = 0;
-    aTempBuf2[0] = ( (aTempBuf[0] << 2)         | (aTempBuf[1] >> 4));
-    aTempBuf2[1] = ( (aTempBuf[1] << 4)         | (aTempBuf[2] >> 2));
-    aTempBuf2[2] = (((aTempBuf[2] << 6) & 0xC0) |  aTempBuf[3]);
-    i--;
-    MemCopy(lpDest, aTempBuf2, i);
+    if (lpDest != NULL)
+    {
+      for (j=i; j<4; j++)
+        aTempBuf[j] = 0;
+      aTempBuf2[0] = ( (aTempBuf[0] << 2)         | (aTempBuf[1] >> 4));
+      aTempBuf2[1] = ( (aTempBuf[1] << 4)         | (aTempBuf[2] >> 2));
+      aTempBuf2[2] = (((aTempBuf[2] << 6) & 0xC0) |  aTempBuf[3]);
+      i--;
+      MemCopy(lpDest, aTempBuf2, i);
+    }
+    else
+    {
+      i--;
+    }
     nDestLen += i;
   }
   return nDestLen;

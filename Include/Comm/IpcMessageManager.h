@@ -38,10 +38,12 @@ public:
 
   typedef Callback<VOID (__in CMessage *lpMsg)> OnMessageReceivedCallback;
 
-  typedef Callback<VOID (__in DWORD dwId, __in CMessage *lpMsg, __in LPVOID lpUserData)> OnMessageReplyCallback;
+  typedef Callback<VOID (__in CIpc *lpIpc, __in HANDLE hConn, __in DWORD dwId, __in CMessage *lpMsg,
+                         __in LPVOID lpUserData)> OnMessageReplyCallback;
 
 public:
-  CIpcMessageManager(__in CIoCompletionPortThreadPool &cWorkerPool);
+  CIpcMessageManager(__in CIoCompletionPortThreadPool &cWorkerPool, __in CIpc *lpIpc, __in HANDLE hConn,
+                     __in_opt DWORD dwMaxMessageSize=0x0FFFFFFFUL);
   ~CIpcMessageManager();
 
   VOID On(__in OnMessageReceivedCallback cMessageReceivedCallback);
@@ -50,9 +52,9 @@ public:
 
   DWORD GetNextId() const;
 
-  HRESULT ProcessIncomingPacket(__in CIpc *lpIpc, __in HANDLE h);
+  HRESULT ProcessIncomingPacket();
 
-  HRESULT SendHeader(__in CIpc *lpIpc, __in HANDLE h, __in DWORD dwMsgId, __in SIZE_T nMsgSize);
+  HRESULT SendHeader(__in DWORD dwMsgId, __in SIZE_T nMsgSize);
 
   HRESULT WaitForReply(__in DWORD dwId, __deref_out CMessage **lplpMessage);
   HRESULT WaitForReplyAsync(__in DWORD dwId, __in OnMessageReplyCallback cCallback, __in LPVOID lpUserData);
@@ -60,8 +62,9 @@ public:
 public:
   class CMessage : public virtual CBaseMemObj, public TLnkLstNode<CMessage>, public TRefCounted<CMessage>
   {
+  private:
+    CMessage(__in CIpc *lpIpc, __in HANDLE hConn);
   public:
-    CMessage();
     ~CMessage();
 
     DWORD GetId() const
@@ -82,6 +85,17 @@ public:
       return nDataLen;
       };
 
+    HRESULT SendReplyHeader(__in SIZE_T nMsgSize);
+
+    CIpc* GetIpc() const
+      {
+      return lpIpc;
+      };
+    HANDLE GetConn() const
+      {
+      return hConn;
+      };
+
   private:
     friend class CIpcMessageManager;
 
@@ -89,6 +103,8 @@ public:
     DWORD dwId;
     LPBYTE lpData;
     DWORD nDataLen;
+    CIpc *lpIpc;
+    HANDLE hConn;
   };
 
 private:
@@ -105,7 +121,7 @@ private:
     LPVOID lpUserData;
   } REPLYMSG_ITEM;
 
-  VOID SyncWait(__in DWORD dwId, __in CMessage *lpMsg, __in LPVOID lpUserData);
+  VOID SyncWait(__in CIpc *lpIpc, __in HANDLE hConn, __in DWORD dwId, __in CMessage *lpMsg, __in LPVOID lpUserData);
 
   HRESULT OnMessageCompleted();
 
@@ -124,6 +140,10 @@ private:
   } SYNC_WAIT;
 
   CIoCompletionPortThreadPool &cWorkerPool;
+  CIpc *lpIpc;
+  HANDLE hConn;
+  DWORD dwMaxMessageSize;
+
   LONG volatile nRundownLock;
   LONG volatile nNextId;
   OnMessageReceivedCallback cMessageReceivedCallback;

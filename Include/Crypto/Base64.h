@@ -33,12 +33,13 @@ namespace MX {
 
 SIZE_T Base64GetEncodedLength(__in SIZE_T nDataLen);
 
-SIZE_T Base64Encode(__in LPSTR szDestA, __in LPVOID lpData, __in SIZE_T nDataLen);
+//NOTE: szDestA is NOT nul-terminated
+SIZE_T Base64Encode(__out LPSTR szDestA, __in LPVOID lpData, __in SIZE_T nDataLen);
 SIZE_T Base64Encode(__inout CStringA &cStrDestA, __in LPVOID lpData, __in SIZE_T nDataLen);
 
 SIZE_T Base64GetMaxDecodedLength(__in SIZE_T nDataLen);
 
-SIZE_T Base64Decode(__in LPVOID lpDest, __in LPCSTR szStrA, __in_opt SIZE_T nSrcLen=(SIZE_T)-1);
+SIZE_T Base64Decode(__out LPVOID lpDest, __in LPCSTR szStrA, __in_opt SIZE_T nSrcLen=(SIZE_T)-1);
 
 } //namespace MX
 

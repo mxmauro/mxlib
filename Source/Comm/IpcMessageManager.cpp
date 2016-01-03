@@ -25,11 +25,30 @@
 
 //-----------------------------------------------------------
 
+#define _MESSAGE_ID_MASK     0x7FFFFFFFUL
+#define _MESSAGE_IS_REPLY    0x80000000UL
+
+//-----------------------------------------------------------
+
+#pragma pack(1)
+typedef struct {
+  DWORD dwMsgId;
+  DWORD dwMsgSize;
+} HEADER;
+#pragma pack()
+
+//-----------------------------------------------------------
+
 namespace MX {
 
-CIpcMessageManager::CIpcMessageManager(__in CIoCompletionPortThreadPool &_cWorkerPool) : CBaseMemObj(),
-                                                                                         cWorkerPool(_cWorkerPool)
+CIpcMessageManager::CIpcMessageManager(__in CIoCompletionPortThreadPool &_cWorkerPool, __in CIpc *_lpIpc,
+                                       __in HANDLE _hConn, __in_opt DWORD _dwMaxMessageSize) : CBaseMemObj(),
+                                       cWorkerPool(_cWorkerPool)
 {
+  lpIpc = _lpIpc;
+  hConn = _hConn;
+  dwMaxMessageSize = _dwMaxMessageSize;
+  //----
   RundownProt_Initialize(&nRundownLock);
   _InterlockedExchange(&nNextId, 0);
   nState = StateRetrievingId;
@@ -79,9 +98,9 @@ VOID CIpcMessageManager::Reset()
       }
     }
     if (sItem.cCallback)
-      sItem.cCallback(sItem.dwId & 0x7FFFFFFFUL, NULL, sItem.lpUserData);
+      sItem.cCallback(lpIpc, hConn, sItem.dwId & _MESSAGE_ID_MASK, NULL, sItem.lpUserData);
   }
-  while (sItem.cCallback);
+  while (sItem.dwId != 0);
   //delete received messages
   lpMsg = NULL;
   do
@@ -114,10 +133,10 @@ DWORD CIpcMessageManager::GetNextId() const
     dwId = (DWORD)_InterlockedIncrement(const_cast<LONG volatile*>(&nNextId));
   }
   while (dwId == 0);
-  return dwId & 0x7FFFFFFFUL;
+  return dwId & _MESSAGE_ID_MASK;
 }
 
-HRESULT CIpcMessageManager::ProcessIncomingPacket(__in CIpc *lpIpc, __in HANDLE h)
+HRESULT CIpcMessageManager::ProcessIncomingPacket()
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   BYTE aMsgBuf[4096];
@@ -131,7 +150,7 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket(__in CIpc *lpIpc, __in HANDLE 
   {
     bRestart = FALSE;
     nMsgSize = sizeof(aMsgBuf);
-    hRes = lpIpc->GetBufferedMessage(h, aMsgBuf, &nMsgSize);
+    hRes = lpIpc->GetBufferedMessage(hConn, aMsgBuf, &nMsgSize);
     if (SUCCEEDED(hRes))
     {
       switch (nState)
@@ -140,11 +159,11 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket(__in CIpc *lpIpc, __in HANDLE 
           if (nMsgSize < sizeof(DWORD))
             break;
           //create a new message
-          cCurrMessage.Attach(MX_DEBUG_NEW CMessage());
+          cCurrMessage.Attach(MX_DEBUG_NEW CMessage(lpIpc, hConn));
           if (!cCurrMessage)
             return E_OUTOFMEMORY;
           cCurrMessage->dwId = *((LPDWORD)aMsgBuf);
-          hRes = lpIpc->ConsumeBufferedMessage(h, sizeof(DWORD));
+          hRes = lpIpc->ConsumeBufferedMessage(hConn, sizeof(DWORD));
           if (SUCCEEDED(hRes))
           {
             bRestart = TRUE;
@@ -161,11 +180,11 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket(__in CIpc *lpIpc, __in HANDLE 
             break;
           MX_ASSERT(cCurrMessage != NULL);
           cCurrMessage->nDataLen = (SIZE_T)(*((LPDWORD)aMsgBuf));
-          if (cCurrMessage->nDataLen <= 0x0FFFFFFF)
+          if (cCurrMessage->nDataLen <= dwMaxMessageSize)
           {
             cCurrMessage->lpData = (LPBYTE)MX_MALLOC(cCurrMessage->nDataLen);
             if (cCurrMessage->lpData != NULL)
-              hRes = lpIpc->ConsumeBufferedMessage(h, 4);
+              hRes = lpIpc->ConsumeBufferedMessage(hConn, 4);
             else
               hRes = E_OUTOFMEMORY;
           }
@@ -207,7 +226,7 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket(__in CIpc *lpIpc, __in HANDLE 
           if (nToRead > nMsgSize)
             nToRead = nMsgSize;
           MemCopy(cCurrMessage->lpData+nCurrMsgSize, aMsgBuf, nToRead);
-          hRes = lpIpc->ConsumeBufferedMessage(h, nToRead);
+          hRes = lpIpc->ConsumeBufferedMessage(hConn, nToRead);
           if (SUCCEEDED(hRes))
           {
             nCurrMsgSize += nToRead;
@@ -247,21 +266,15 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket(__in CIpc *lpIpc, __in HANDLE 
   return hRes;
 }
 
-HRESULT CIpcMessageManager::SendHeader(__in CIpc *lpIpc, __in HANDLE h, __in DWORD dwMsgId, __in SIZE_T nMsgSize)
+HRESULT CIpcMessageManager::SendHeader(__in DWORD dwMsgId, __in SIZE_T nMsgSize)
 {
-  #pragma pack(1)
-  typedef struct {
-    DWORD dwMsgId;
-    DWORD dwMsgSize;
-  } HEADER;
-  #pragma pack()
   HEADER sHeader;
 
-  if (nMsgSize > 0x0FFFFFFF)
+  if (nMsgSize > dwMaxMessageSize)
     return MX_E_InvalidData;
   sHeader.dwMsgId = dwMsgId;
   sHeader.dwMsgSize = (DWORD)nMsgSize;
-  return lpIpc->SendMsg(h, &sHeader, sizeof(sHeader));
+  return lpIpc->SendMsg(hConn, &sHeader, sizeof(sHeader));
 }
 
 HRESULT CIpcMessageManager::WaitForReply(__in DWORD dwId, __deref_out CMessage **lplpMessage)
@@ -292,7 +305,7 @@ HRESULT CIpcMessageManager::WaitForReplyAsync(__in DWORD dwId, __in OnMessageRep
   REPLYMSG_ITEM sNewItem;
   HRESULT hRes;
 
-  if (dwId == 0 || dwId >= 0x80000000UL)
+  if (dwId == 0 || (dwId & (~_MESSAGE_ID_MASK)) != 0)
     return E_INVALIDARG;
   if (!cCallback)
     return E_POINTER;
@@ -300,7 +313,7 @@ HRESULT CIpcMessageManager::WaitForReplyAsync(__in DWORD dwId, __in OnMessageRep
     return MX_E_NotReady;
   //queue waiter
   hRes = S_OK;
-  sNewItem.dwId = dwId | 0x80000000UL;
+  sNewItem.dwId = dwId | _MESSAGE_IS_REPLY;
   sNewItem.cCallback = cCallback;
   sNewItem.lpUserData = lpUserData;
   {
@@ -329,7 +342,8 @@ HRESULT CIpcMessageManager::WaitForReplyAsync(__in DWORD dwId, __in OnMessageRep
   return hRes;
 }
 
-VOID CIpcMessageManager::SyncWait(__in DWORD dwId, __in CMessage *lpMsg, __in LPVOID lpUserData)
+VOID CIpcMessageManager::SyncWait(__in CIpc *lpIpc, __in HANDLE hConn, __in DWORD dwId, __in CMessage *lpMsg,
+                                  __in LPVOID lpUserData)
 {
   SYNC_WAIT *lpSyncWait = (SYNC_WAIT*)lpUserData;
 
@@ -362,7 +376,7 @@ VOID CIpcMessageManager::OnMessageReceived(__in CIoCompletionPortThreadPool *lpP
   if (cAutoRundownProt.IsAcquired() != FALSE)
   {
     //check if it is a reply for another message
-    if ((cMessage->GetId() & 0x80000000) == 0)
+    if ((cMessage->GetId() & _MESSAGE_IS_REPLY) == 0)
     {
       //standard message
       if (cMessageReceivedCallback)
@@ -388,7 +402,7 @@ VOID CIpcMessageManager::OnMessageReceived(__in CIoCompletionPortThreadPool *lpP
       }
       if (sItem.cCallback)
       {
-        sItem.cCallback(sItem.dwId & 0x7FFFFFFFUL, cMessage.Detach(), sItem.lpUserData);
+        sItem.cCallback(lpIpc, hConn, sItem.dwId & _MESSAGE_ID_MASK, cMessage.Get(), sItem.lpUserData);
       }
       else
       {
@@ -423,17 +437,18 @@ VOID CIpcMessageManager::OnFlushReceivedReplies(__in CIoCompletionPortThreadPool
 VOID CIpcMessageManager::FlushReceivedReplies()
 {
   TLnkLst<CMessage>::Iterator it;
-  CMessage *lpMsg;
+  TAutoRefCounted<CMessage> cMsg;
   REPLYMSG_ITEM sItem;
   SIZE_T nIndex;
 
   MemSet(&sItem, 0, sizeof(sItem));
-  do
+  while (1)
   {
-    lpMsg = NULL;
+    cMsg.Release();
     {
       CFastLock cLock1(&(sReceivedReplyMsg.nMutex));
       CFastLock cLock2(&(sReplyMsgWait.nMutex));
+      CMessage *lpMsg;
 
       for (lpMsg=it.Begin(sReceivedReplyMsg.cList); lpMsg!=NULL; lpMsg=it.Next())
       {
@@ -444,16 +459,15 @@ VOID CIpcMessageManager::FlushReceivedReplies()
           sItem = sReplyMsgWait.cList.GetElementAt(nIndex);
           sReplyMsgWait.cList.RemoveElementAt(nIndex);
           lpMsg->RemoveNode();
+          cMsg.Attach(lpMsg);
           break;
         }
       }
     }
-    if (lpMsg != NULL)
-    {
-      sItem.cCallback(sItem.dwId & 0x7FFFFFFFUL, lpMsg, sItem.lpUserData);
-    }
+    if (!cMsg)
+      break;
+    sItem.cCallback(lpIpc, hConn, sItem.dwId & _MESSAGE_ID_MASK, cMsg.Get(), sItem.lpUserData);
   }
-  while (lpMsg != NULL);
   return;
 }
 
@@ -469,12 +483,15 @@ int CIpcMessageManager::ReplyMsgWaitCompareFunc(__in LPVOID lpContext, __in REPL
 
 //-----------------------------------------------------------
 
-CIpcMessageManager::CMessage::CMessage() : CBaseMemObj(), TLnkLstNode<CMessage>(), TRefCounted<CMessage>()
+CIpcMessageManager::CMessage::CMessage(__in CIpc *_lpIpc, __in HANDLE _hConn) : CBaseMemObj(), TLnkLstNode<CMessage>(),
+                                                                                TRefCounted<CMessage>()
 {
   MemSet(&sOvr, 0, sizeof(sOvr));
   dwId = 0;
   lpData = NULL;
   nDataLen = 0;
+  lpIpc = _lpIpc;
+  hConn = _hConn;
   return;
 }
 
@@ -482,6 +499,19 @@ CIpcMessageManager::CMessage::~CMessage()
 {
   MX_FREE(lpData);
   return;
+}
+
+HRESULT CIpcMessageManager::CMessage::SendReplyHeader(__in SIZE_T nMsgSize)
+{
+  HEADER sHeader;
+
+#if defined(_M_X64)
+  if (nMsgSize > 0xFFFFFFFFUL)
+    return MX_E_InvalidData;
+#endif //_M_X64
+  sHeader.dwMsgId = dwId | _MESSAGE_IS_REPLY;
+  sHeader.dwMsgSize = (DWORD)nMsgSize;
+  return lpIpc->SendMsg(hConn, &sHeader, sizeof(sHeader));
 }
 
 } //namespace MX
