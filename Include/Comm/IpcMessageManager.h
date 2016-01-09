@@ -136,10 +136,11 @@ private:
 private:
   typedef struct {
     CWindowsEvent cCompletedEvent;
-    CMessage *lpMsg;
+    LPVOID volatile lpMsg;
   } SYNC_WAIT;
 
   CIoCompletionPortThreadPool &cWorkerPool;
+  CIoCompletionPortThreadPool::OnPacketCallback cMessageReceivedCallbackWP, cFlushReceivedRepliesWP;
   CIpc *lpIpc;
   HANDLE hConn;
   DWORD dwMaxMessageSize;

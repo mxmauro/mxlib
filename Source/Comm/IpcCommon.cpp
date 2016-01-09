@@ -657,7 +657,7 @@ VOID CIpc::OnDispatcherPacket(__in CIoCompletionPortThreadPool *lpPool, __in DWO
         break;
 
       case CPacket::TypeZeroRead:
-        if (SUCCEEDED(hRes))
+        if (SUCCEEDED(hRes) || hRes == MX_E_MoreData)
           hRes = lpConn->DoRead(1, FALSE);
         //free packet
         lpConn->cRwList.Remove(lpPacket);

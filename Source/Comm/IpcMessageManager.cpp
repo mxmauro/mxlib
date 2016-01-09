@@ -48,6 +48,8 @@ CIpcMessageManager::CIpcMessageManager(__in CIoCompletionPortThreadPool &_cWorke
   lpIpc = _lpIpc;
   hConn = _hConn;
   dwMaxMessageSize = _dwMaxMessageSize;
+  cMessageReceivedCallbackWP = MX_BIND_MEMBER_CALLBACK(&CIpcMessageManager::OnMessageReceived, this);
+  cFlushReceivedRepliesWP = MX_BIND_MEMBER_CALLBACK(&CIpcMessageManager::OnFlushReceivedReplies, this);
   //----
   RundownProt_Initialize(&nRundownLock);
   _InterlockedExchange(&nNextId, 0);
@@ -139,130 +141,103 @@ DWORD CIpcMessageManager::GetNextId() const
 HRESULT CIpcMessageManager::ProcessIncomingPacket()
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
-  BYTE aMsgBuf[4096];
-  SIZE_T nMsgSize, nToRead;
-  BOOL bRestart;
+  BYTE aMsgBuf[4096], *s;
+  SIZE_T nMsgSize, nToRead, nRemaining;
   HRESULT hRes;
 
   if (cAutoRundownProt.IsAcquired() == FALSE)
     return MX_E_NotReady;
+  if (nState == StateError)
+    return E_FAIL;
   do
   {
-    bRestart = FALSE;
     nMsgSize = sizeof(aMsgBuf);
     hRes = lpIpc->GetBufferedMessage(hConn, aMsgBuf, &nMsgSize);
-    if (SUCCEEDED(hRes))
+    if (FAILED(hRes) || nMsgSize == 0)
+      break;
+    s = aMsgBuf;
+    nRemaining = nMsgSize;
+    while (SUCCEEDED(hRes) && nRemaining > 0)
     {
-      switch (nState)
+      if (nState == StateRetrievingId)
       {
-        case StateRetrievingId:
-          if (nMsgSize < sizeof(DWORD))
+        if (nRemaining < sizeof(DWORD))
+          break;
+        //create a new message
+        cCurrMessage.Attach(MX_DEBUG_NEW CMessage(lpIpc, hConn));
+        if (!cCurrMessage)
+        {
+          hRes = E_OUTOFMEMORY;
+          break;
+        }
+        cCurrMessage->dwId = *((LPDWORD)s);
+        s += sizeof(DWORD);
+        nRemaining -= sizeof(DWORD);
+        nState = StateRetrievingSize;
+      }
+      else if (nState == StateRetrievingSize)
+      {
+        if (nRemaining < sizeof(DWORD))
+          break;
+        MX_ASSERT(cCurrMessage != NULL);
+        cCurrMessage->nDataLen = (SIZE_T)(*((LPDWORD)s));
+        s += sizeof(DWORD);
+        nRemaining -= sizeof(DWORD);
+        if (cCurrMessage->nDataLen > dwMaxMessageSize)
+        {
+          hRes = MX_E_InvalidData;
+          break;
+        }
+        if (cCurrMessage->nDataLen > 0)
+        {
+          cCurrMessage->lpData = (LPBYTE)MX_MALLOC(cCurrMessage->nDataLen);
+          if (cCurrMessage->lpData == NULL)
+          {
+            hRes = E_OUTOFMEMORY;
             break;
-          //create a new message
-          cCurrMessage.Attach(MX_DEBUG_NEW CMessage(lpIpc, hConn));
-          if (!cCurrMessage)
-            return E_OUTOFMEMORY;
-          cCurrMessage->dwId = *((LPDWORD)aMsgBuf);
-          hRes = lpIpc->ConsumeBufferedMessage(hConn, sizeof(DWORD));
-          if (SUCCEEDED(hRes))
-          {
-            bRestart = TRUE;
-            nState = StateRetrievingSize;
           }
-          else
-          {
-            nState = StateError;
-          }
-          break;
-
-        case StateRetrievingSize:
-          if (nMsgSize < sizeof(DWORD))
+          nState = StateRetrievingMessage;
+          nCurrMsgSize = 0;
+        }
+        else
+        {
+          hRes = OnMessageCompleted();
+          if (FAILED(hRes))
             break;
-          MX_ASSERT(cCurrMessage != NULL);
-          cCurrMessage->nDataLen = (SIZE_T)(*((LPDWORD)aMsgBuf));
-          if (cCurrMessage->nDataLen <= dwMaxMessageSize)
-          {
-            cCurrMessage->lpData = (LPBYTE)MX_MALLOC(cCurrMessage->nDataLen);
-            if (cCurrMessage->lpData != NULL)
-              hRes = lpIpc->ConsumeBufferedMessage(hConn, 4);
-            else
-              hRes = E_OUTOFMEMORY;
-          }
-          else
-          {
-            hRes = MX_E_InvalidData;
-          }
-          if (SUCCEEDED(hRes))
-          {
-            if (cCurrMessage->nDataLen == 0)
-            {
-              hRes = OnMessageCompleted();
-              if (SUCCEEDED(hRes))
-              {
-                nState = StateRetrievingId;
-                bRestart = TRUE;
-              }
-              else
-              {
-                nState = StateError;
-              }
-            }
-            else
-            {
-              nState = StateRetrievingMessage;
-              nCurrMsgSize = 0;
-            }
-          }
-          else
-          {
-            nState = StateError;
-          }
-          break;
-
-        case StateRetrievingMessage:
-          if (nMsgSize == 0)
+          nState = StateRetrievingId;
+        }
+      }
+      else if (nState == StateRetrievingMessage)
+      {
+        nToRead = cCurrMessage->nDataLen - nCurrMsgSize;
+        if (nToRead > nRemaining)
+          nToRead = nRemaining;
+        MemCopy(cCurrMessage->lpData+nCurrMsgSize, s, nToRead);
+        s += nToRead;
+        nRemaining -= nToRead;
+        nCurrMsgSize += nToRead;
+        if (nCurrMsgSize >= cCurrMessage->nDataLen)
+        {
+          hRes = OnMessageCompleted();
+          cCurrMessage.Release();
+          if (FAILED(hRes))
             break;
-          nToRead = cCurrMessage->nDataLen - nCurrMsgSize;
-          if (nToRead > nMsgSize)
-            nToRead = nMsgSize;
-          MemCopy(cCurrMessage->lpData+nCurrMsgSize, aMsgBuf, nToRead);
-          hRes = lpIpc->ConsumeBufferedMessage(hConn, nToRead);
-          if (SUCCEEDED(hRes))
-          {
-            nCurrMsgSize += nToRead;
-            if (nCurrMsgSize >= cCurrMessage->nDataLen)
-            {
-              hRes = OnMessageCompleted();
-              if (SUCCEEDED(hRes))
-              {
-                nState = StateRetrievingId;
-                cCurrMessage.Release();
-                bRestart = TRUE;
-              }
-              else
-              {
-                nState = StateError;
-              }
-            }
-            else
-            {
-              bRestart = TRUE;
-            }
-          }
-          else
-          {
-            nState = StateError;
-          }
-          break;
-
-        default:
-          hRes = E_FAIL;
-          break;
+          nState = StateRetrievingId;
+        }
+      }
+      else
+      {
+        MX_ASSERT(FALSE);
+        hRes = E_FAIL;
       }
     }
+    if (SUCCEEDED(hRes) && nMsgSize != nRemaining)
+      hRes = lpIpc->ConsumeBufferedMessage(hConn, nMsgSize-nRemaining);
   }
-  while (SUCCEEDED(hRes) && bRestart != FALSE);
+  while (SUCCEEDED(hRes) && nMsgSize != nRemaining);
   //done
+  if (FAILED(hRes))
+    nState = StateError;
   return hRes;
 }
 
@@ -292,7 +267,9 @@ HRESULT CIpcMessageManager::WaitForReply(__in DWORD dwId, __deref_out CMessage *
   if (SUCCEEDED(hRes))
   {
     sSyncWait.cCompletedEvent.Wait(INFINITE);
-    *lplpMessage = sSyncWait.lpMsg;
+    *lplpMessage = (CMessage*)MX::__InterlockedReadPointer(&(sSyncWait.lpMsg));
+    if ((*lplpMessage) == NULL)
+      hRes = MX_E_Cancelled;
   }
   //done
   return hRes;
@@ -330,8 +307,7 @@ HRESULT CIpcMessageManager::WaitForReplyAsync(__in DWORD dwId, __in OnMessageRep
     if (__InterlockedRead(&(sFlush.nActive)) == 0)
     {
       _InterlockedIncrement(&nIncomingQueuedMessagesCount);
-      hRes = cWorkerPool.Post(MX_BIND_MEMBER_CALLBACK(&CIpcMessageManager::OnFlushReceivedReplies, this), 0,
-                              &(sFlush.sOvr));
+      hRes = cWorkerPool.Post(cFlushReceivedRepliesWP, 0, &(sFlush.sOvr));
       if (SUCCEEDED(hRes))
         _InterlockedExchange(&(sFlush.nActive), 1);
       else
@@ -347,6 +323,9 @@ VOID CIpcMessageManager::SyncWait(__in CIpc *lpIpc, __in HANDLE hConn, __in DWOR
 {
   SYNC_WAIT *lpSyncWait = (SYNC_WAIT*)lpUserData;
 
+  _InterlockedExchangePointer(&(lpSyncWait->lpMsg), (LPVOID)lpMsg);
+  if (lpMsg != NULL)
+    lpMsg->AddRef();
   lpSyncWait->cCompletedEvent.Set();
   return;
 }
@@ -356,8 +335,7 @@ HRESULT CIpcMessageManager::OnMessageCompleted()
   HRESULT hRes;
 
   _InterlockedIncrement(&nIncomingQueuedMessagesCount);
-  hRes = cWorkerPool.Post(MX_BIND_MEMBER_CALLBACK(&CIpcMessageManager::OnMessageReceived, this), 0,
-                          &(cCurrMessage->sOvr));
+  hRes = cWorkerPool.Post(cMessageReceivedCallbackWP, 0, &(cCurrMessage->sOvr));
   if (SUCCEEDED(hRes))
     cCurrMessage.Detach();
   else

@@ -182,8 +182,8 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(__in HANDLE hProc, __out HANDL
   sSecAttrib.lpSecurityDescriptor = &sSecDesc;
   GenerateUniquePipeName(szBufW, MX_ARRAYLEN(szBufW), (DWORD)this, (DWORD)_InterlockedIncrement(&nRemoteConnCounter));
   cLocalPipe.Attach(::CreateNamedPipeW(szBufW, PIPE_ACCESS_DUPLEX|FILE_FLAG_WRITE_THROUGH|FILE_FLAG_OVERLAPPED,
-                                       PIPE_READMODE_MESSAGE|PIPE_TYPE_MESSAGE|PIPE_WAIT, 1,
-                                       dwPacketSize, dwPacketSize, 10000, &sSecAttrib));
+                                       PIPE_READMODE_BYTE|PIPE_TYPE_BYTE|PIPE_WAIT, 1, dwPacketSize, dwPacketSize,
+                                       10000, &sSecAttrib));
   if (cLocalPipe == NULL || cLocalPipe == INVALID_HANDLE_VALUE)
     return MX_HRESULT_FROM_LASTERROR();
   //initialize for connection wait
@@ -209,10 +209,6 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(__in HANDLE hProc, __out HANDL
         return hRes;
     }
   }
-  //pipe connected; change to message-read mode
-  dw = PIPE_READMODE_MESSAGE;
-  if (::SetNamedPipeHandleState(cRemotePipe, &dw, NULL, NULL) == FALSE)
-    return MX_HRESULT_FROM_LASTERROR();
   //duplicate handle on target process
   if (::DuplicateHandle(::GetCurrentProcess(), cRemotePipe.Get(), hProc, &hRemotePipe, 0, FALSE,
                         DUPLICATE_SAME_ACCESS) == FALSE)
@@ -334,7 +330,7 @@ HRESULT CNamedPipes::OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, 
         if (::ConnectNamedPipe(lpConn->hPipe, lpPacket->GetOverlapped()) == FALSE)
         {
           hRes = MX_HRESULT_FROM_LASTERROR();
-          if (hRes == MX_E_IoPending)
+          if (hRes == MX_E_IoPending || hRes == HRESULT_FROM_WIN32(ERROR_PIPE_CONNECTED))
             hRes = S_OK;
         }
         if (SUCCEEDED(hRes))
@@ -445,7 +441,7 @@ HRESULT CNamedPipes::CConnection::CreateServer(__in DWORD dwPacketSize)
     sSecAttrib.lpSecurityDescriptor = &sSecDesc;
   }
   hPipe = ::CreateNamedPipeW((LPWSTR)(cServerInfo->cStrNameW), PIPE_ACCESS_DUPLEX|FILE_FLAG_WRITE_THROUGH|
-                             FILE_FLAG_OVERLAPPED, PIPE_READMODE_MESSAGE|PIPE_TYPE_MESSAGE|PIPE_WAIT,
+                             FILE_FLAG_OVERLAPPED, PIPE_READMODE_BYTE|PIPE_TYPE_BYTE|PIPE_WAIT,
                              PIPE_UNLIMITED_INSTANCES, dwPacketSize, dwPacketSize, 10000, &sSecAttrib);
   if (hPipe == NULL || hPipe == INVALID_HANDLE_VALUE)
   {
@@ -479,7 +475,7 @@ HRESULT CNamedPipes::CConnection::CreateClient(__in_z LPCWSTR szServerNameW)
   SECURITY_ATTRIBUTES sSecAttrib;
   SECURITY_DESCRIPTOR sSecDesc;
   HRESULT hRes;
-  DWORD dwMode, dwRetry;
+  DWORD dwRetry;
 
   //create client pipe endpoint
   ::InitializeSecurityDescriptor(&sSecDesc, SECURITY_DESCRIPTOR_REVISION);
@@ -504,10 +500,6 @@ HRESULT CNamedPipes::CConnection::CreateClient(__in_z LPCWSTR szServerNameW)
   hRes = GetDispatcherPool().Attach(hPipe, GetDispatcherPoolPacketCallback());
   if (FAILED(hRes))
     return hRes;
-  //pipe connected; change to message-read mode
-  dwMode = PIPE_READMODE_MESSAGE;
-  if (::SetNamedPipeHandleState(hPipe, &dwMode, NULL, NULL) == FALSE)
-    return MX_HRESULT_FROM_LASTERROR();
   //done
   return S_OK;
 }
