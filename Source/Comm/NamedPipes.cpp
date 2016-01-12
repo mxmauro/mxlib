@@ -319,6 +319,7 @@ HRESULT CNamedPipes::OnPreprocessPacket(__in DWORD dwBytes, __in CPacket *lpPack
 HRESULT CNamedPipes::OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __in HRESULT hRes)
 {
   CConnection *lpConn;
+  HRESULT hOrigRes;
 
   lpConn = (CConnection*)(lpPacket->GetConn());
   switch (lpPacket->GetType())
@@ -351,13 +352,14 @@ HRESULT CNamedPipes::OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, 
       break;
 
     case TypeListen:
+      hOrigRes = hRes;
       if (SUCCEEDED(hRes))
         hRes = lpConn->HandleConnected();
       //free packet
       lpConn->cRwList.Remove(lpPacket);
       FreePacket(lpPacket);
       //process connection
-      if (lpConn->nClass == CIpc::ConnectionClassServer)
+      if (lpConn->nClass == CIpc::ConnectionClassServer && SUCCEEDED(hOrigRes) && IsShuttingDown() == FALSE)
       {
         //on server mode, create a new listener
         HRESULT hRes2 = CreateServerConnection(lpConn->cServerInfo, lpConn->cCreateCallback);
