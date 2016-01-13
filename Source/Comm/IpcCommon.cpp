@@ -647,7 +647,7 @@ VOID CIpc::OnDispatcherPacket(__in CIoCompletionPortThreadPool *lpPool, __in DWO
           TLnkLst<CLayer>::Iterator it;
 
           if (SUCCEEDED(hRes))
-            hRes =  lpConn->DoRead((SIZE_T)dwReadAhead, bDoZeroReads);
+            hRes =  lpConn->DoRead((SIZE_T)dwReadAhead, bDoZeroReads && ZeroReadsSupported());
           //notify all layers about disconnection
           for (lpLayer=it.Begin(lpConn->cLayersList); SUCCEEDED(hRes) && lpLayer!=NULL; lpLayer=it.Next())
             hRes = lpLayer->OnConnect();
@@ -661,11 +661,16 @@ VOID CIpc::OnDispatcherPacket(__in CIoCompletionPortThreadPool *lpPool, __in DWO
         break;
 
       case CPacket::TypeZeroRead:
-        if (SUCCEEDED(hRes) || hRes == MX_E_MoreData)
-          hRes = lpConn->DoRead(1, FALSE);
-        //free packet
         lpConn->cRwList.Remove(lpPacket);
-        FreePacket(lpPacket);
+        if (SUCCEEDED(hRes) || hRes == MX_E_MoreData)
+        {
+          hRes = lpConn->DoRead(1, FALSE, lpPacket);
+        }
+        else
+        {
+          //free packet
+          FreePacket(lpPacket);
+        }
         MX_ASSERT_ALWAYS(_InterlockedDecrement(&(lpConn->nOutstandingReads)) >= 0);
         break;
 
@@ -680,7 +685,8 @@ VOID CIpc::OnDispatcherPacket(__in CIoCompletionPortThreadPool *lpPool, __in DWO
           if (dwBytes > 0)
           {
             bQueueNewRead = TRUE;
-            bNewReadMode = (lpConn->IsGracefulShutdown() == FALSE) ? bDoZeroReads : FALSE;
+            bNewReadMode = (lpConn->IsGracefulShutdown() == FALSE && ZeroReadsSupported() != FALSE) ? bDoZeroReads :
+                                                                                                      FALSE;
             //move packet to readed list and process them
             lpConn->cRwList.Remove(lpPacket);
             lpConn->cReadedList.QueueSorted(lpPacket);
@@ -1086,6 +1092,7 @@ HRESULT CIpc::CConnectionBase::SendMsg(__in LPCVOID lpData, __in SIZE_T nDataSiz
 {
   CPacket *lpPacket;
   LPBYTE s;
+  DWORD dwToSendThisRound;
   HRESULT hRes;
 
   if (nDataSize == 0)
@@ -1103,7 +1110,8 @@ HRESULT CIpc::CConnectionBase::SendMsg(__in LPCVOID lpData, __in SIZE_T nDataSiz
     if (lpPacket == NULL)
       return E_OUTOFMEMORY;
     //fill buffer
-    lpPacket->SetBytesInUse((nDataSize > (SIZE_T)(lpIpc->dwPacketSize)) ? lpIpc->dwPacketSize : (DWORD)nDataSize);
+    dwToSendThisRound = (nDataSize > (SIZE_T)(lpIpc->dwPacketSize)) ? lpIpc->dwPacketSize : (DWORD)nDataSize;
+    lpPacket->SetBytesInUse(dwToSendThisRound);
     MemCopy(lpPacket->GetBuffer(), s, (SIZE_T)(lpPacket->GetBytesInUse()));
     //prepare
     lpPacket->SetOrder(_InterlockedIncrement(&nNextWriteOrder));
@@ -1124,8 +1132,8 @@ HRESULT CIpc::CConnectionBase::SendMsg(__in LPCVOID lpData, __in SIZE_T nDataSiz
       return hRes;
     }
     //next block
-    s += (SIZE_T)(lpPacket->GetBytesInUse());
-    nDataSize -= (SIZE_T)(lpPacket->GetBytesInUse());
+    s += (SIZE_T)dwToSendThisRound;
+    nDataSize -= (SIZE_T)dwToSendThisRound;
   }
   return S_OK;
 }
@@ -1344,7 +1352,7 @@ CIoCompletionPortThreadPool::OnPacketCallback& CIpc::CConnectionBase::GetDispatc
   return lpIpc->cDispatcherPoolPacketCallback;
 }
 
-HRESULT CIpc::CConnectionBase::DoRead(__in SIZE_T nPacketsCount, __in BOOL bZeroRead)
+HRESULT CIpc::CConnectionBase::DoRead(__in SIZE_T nPacketsCount, __in BOOL bZeroRead, __in_opt CPacket *lpReusePacket)
 {
   CFastLock cReadLock(&nMutex);
   CPacket *lpPacket;
@@ -1352,9 +1360,18 @@ HRESULT CIpc::CConnectionBase::DoRead(__in SIZE_T nPacketsCount, __in BOOL bZero
 
   while (nPacketsCount > 0)
   {
-    lpPacket = lpIpc->GetPacket(this, (bZeroRead != FALSE) ? CPacket::TypeZeroRead : CPacket::TypeRead);
-    if (lpPacket == NULL)
-      return E_OUTOFMEMORY;
+    if (lpReusePacket != NULL)
+    {
+      lpReusePacket->Reset((bZeroRead != FALSE) ? CPacket::TypeZeroRead : CPacket::TypeRead, this);
+      lpPacket = lpReusePacket;
+      lpReusePacket = NULL;
+    }
+    else
+    {
+      lpPacket = lpIpc->GetPacket(this, (bZeroRead != FALSE) ? CPacket::TypeZeroRead : CPacket::TypeRead);
+      if (lpPacket == NULL)
+        return E_OUTOFMEMORY;
+    }
     if (bZeroRead == FALSE)
     {
       lpPacket->SetOrder(_InterlockedIncrement(&nNextReadOrder));

@@ -165,7 +165,7 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(__in HANDLE hProc, __out HANDL
   BOOL bConnected;
   WCHAR szBufW[128];
   CWindowsHandle cLocalPipe, cRemotePipe;
-  DWORD dw;
+  DWORD dw, dwMode;
   HRESULT hRes;
 
   h = NULL;
@@ -209,6 +209,10 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(__in HANDLE hProc, __out HANDL
         return hRes;
     }
   }
+  //change wait mode
+  dwMode = PIPE_WAIT;
+  if (::SetNamedPipeHandleState(cLocalPipe, &dwMode, NULL, NULL) == FALSE)
+    return MX_HRESULT_FROM_LASTERROR();
   //duplicate handle on target process
   if (::DuplicateHandle(::GetCurrentProcess(), cRemotePipe.Get(), hProc, &hRemotePipe, 0, FALSE,
                         DUPLICATE_SAME_ACCESS) == FALSE)
@@ -477,7 +481,7 @@ HRESULT CNamedPipes::CConnection::CreateClient(__in_z LPCWSTR szServerNameW)
   SECURITY_ATTRIBUTES sSecAttrib;
   SECURITY_DESCRIPTOR sSecDesc;
   HRESULT hRes;
-  DWORD dwRetry;
+  DWORD dwMode, dwRetry;
 
   //create client pipe endpoint
   ::InitializeSecurityDescriptor(&sSecDesc, SECURITY_DESCRIPTOR_REVISION);
@@ -502,6 +506,10 @@ HRESULT CNamedPipes::CConnection::CreateClient(__in_z LPCWSTR szServerNameW)
   hRes = GetDispatcherPool().Attach(hPipe, GetDispatcherPoolPacketCallback());
   if (FAILED(hRes))
     return hRes;
+  //change wait mode
+  dwMode = PIPE_WAIT;
+  if (::SetNamedPipeHandleState(hPipe, &dwMode, NULL, NULL) == FALSE)
+    return MX_HRESULT_FROM_LASTERROR();
   //done
   return S_OK;
 }

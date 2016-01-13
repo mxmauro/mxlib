@@ -526,7 +526,7 @@ protected:
 
     HRESULT HandleConnected();
 
-    HRESULT DoRead(__in SIZE_T nPacketsCount, __in BOOL bZeroRead);
+    HRESULT DoRead(__in SIZE_T nPacketsCount, __in BOOL bZeroRead, __in_opt CPacket *lpReusePacket=NULL);
 
     CPacket* GetPacket(__in CPacket::eType nType);
     VOID FreePacket(__in CPacket *lpPacket);
@@ -615,6 +615,7 @@ protected:
 
   virtual HRESULT OnPreprocessPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __in HRESULT hRes);
   virtual HRESULT OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __in HRESULT hRes) = 0;
+  virtual BOOL ZeroReadsSupported() const = 0;
 
   VOID OnReadWriteTimeout(__in CTimedEventQueue::CEvent *lpEvent);
 

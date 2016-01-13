@@ -28,6 +28,8 @@
 #define _MESSAGE_ID_MASK     0x7FFFFFFFUL
 #define _MESSAGE_IS_REPLY    0x80000000UL
 
+//#define MX_DEBUG_OUTPUT
+
 //-----------------------------------------------------------
 
 #pragma pack(1)
@@ -174,6 +176,9 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
         s += sizeof(DWORD);
         nRemaining -= sizeof(DWORD);
         nState = StateRetrievingSize;
+#ifdef MX_DEBUG_OUTPUT
+        MX::DebugPrint("ProcessIncomingPacket: Id=%08X\n", cCurrMessage->dwId);
+#endif //MX_DEBUG_OUTPUT
       }
       else if (nState == StateRetrievingSize)
       {
@@ -183,6 +188,9 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
         cCurrMessage->nDataLen = (SIZE_T)(*((DWORD MX_UNALIGNED*)s));
         s += sizeof(DWORD);
         nRemaining -= sizeof(DWORD);
+#ifdef MX_DEBUG_OUTPUT
+        MX::DebugPrint("ProcessIncomingPacket: DataLen=%lu\n", (DWORD)(cCurrMessage->nDataLen));
+#endif //MX_DEBUG_OUTPUT
         if (cCurrMessage->nDataLen > dwMaxMessageSize)
         {
           hRes = MX_E_InvalidData;
@@ -216,6 +224,9 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
         s += nToRead;
         nRemaining -= nToRead;
         nCurrMsgSize += nToRead;
+#ifdef MX_DEBUG_OUTPUT
+        MX::DebugPrint("ProcessIncomingPacket: Data=%lu bytes\n", (DWORD)nToRead);
+#endif //MX_DEBUG_OUTPUT
         if (nCurrMsgSize >= cCurrMessage->nDataLen)
         {
           hRes = OnMessageCompleted();
@@ -231,6 +242,9 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
         hRes = E_FAIL;
       }
     }
+#ifdef MX_DEBUG_OUTPUT
+    MX::DebugPrint("ProcessIncomingPacket: Consumed=%lu bytes\n", (DWORD)(nMsgSize-nRemaining));
+#endif //MX_DEBUG_OUTPUT
     if (SUCCEEDED(hRes) && nMsgSize != nRemaining)
       hRes = lpIpc->ConsumeBufferedMessage(hConn, nMsgSize-nRemaining);
   }
@@ -334,6 +348,9 @@ HRESULT CIpcMessageManager::OnMessageCompleted()
 {
   HRESULT hRes;
 
+#ifdef MX_DEBUG_OUTPUT
+  MX::DebugPrint("ProcessIncomingPacket: OnMessageCompleted\n");
+#endif //MX_DEBUG_OUTPUT
   _InterlockedIncrement(&nIncomingQueuedMessagesCount);
   hRes = cWorkerPool.Post(cMessageReceivedCallbackWP, 0, &(cCurrMessage->sOvr));
   if (SUCCEEDED(hRes))

@@ -100,6 +100,11 @@ private:
   HRESULT OnPreprocessPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __in HRESULT hRes);
   HRESULT OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __in HRESULT hRes);
 
+  BOOL ZeroReadsSupported() const
+    {
+    return FALSE;
+    };
+
 private:
   LONG volatile nRemoteConnCounter;
 };
