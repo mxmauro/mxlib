@@ -196,7 +196,10 @@ CIpc::CMultiSendLock* CIpc::StartMultiSendBlock(__in HANDLE h)
     return NULL;
   cMultiSendBlock.Attach(MX_DEBUG_NEW CMultiSendLock());
   if (!cMultiSendBlock)
+  {
+    ReleaseAndRemoveConnectionIfClosed(lpConn);
     return NULL;
+  }
   //apply lock
   while ((_InterlockedOr(&(lpConn->nFlags), FLAG_InSendTransaction) & FLAG_InSendTransaction) != 0)
     _YieldProcessor();
@@ -533,6 +536,7 @@ VOID CIpc::FireOnDisconnect(__in CConnectionBase *lpConn)
 
 HRESULT CIpc::FireOnDataReceived(__in CConnectionBase *lpConn)
 {
+  CCriticalSection::CAutoLock cOnDataReceivedLock(lpConn->cOnDataReceivedCS);
   TAutoRefCounted<CUserData> cUserData(lpConn->cUserData);
 
   if (!(lpConn->cDataReceivedCallback))
@@ -924,8 +928,6 @@ check_pending_req:
   {
     if ((_InterlockedAnd(&(lpConn->nFlags), ~FLAG_NewReceivedDataAvailable) & FLAG_NewReceivedDataAvailable) != 0)
     {
-      CCriticalSection::CAutoLock cOnDataReceivedLock(lpConn->cOnDataReceivedCS);
-
       hRes2 = FireOnDataReceived(lpConn);
       if (SUCCEEDED(hRes))
         hRes = hRes2;

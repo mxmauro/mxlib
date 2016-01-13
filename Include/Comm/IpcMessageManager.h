@@ -85,7 +85,10 @@ public:
       return nDataLen;
       };
 
+    CIpc::CMultiSendLock* StartMultiSendBlock();
+
     HRESULT SendReplyHeader(__in SIZE_T nMsgSize);
+    HRESULT SendReplyData(__in LPCVOID lpMsg, __in SIZE_T nMsgSize);
 
     CIpc* GetIpc() const
       {

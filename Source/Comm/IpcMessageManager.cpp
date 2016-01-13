@@ -170,7 +170,7 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
           hRes = E_OUTOFMEMORY;
           break;
         }
-        cCurrMessage->dwId = *((LPDWORD)s);
+        cCurrMessage->dwId = *((DWORD MX_UNALIGNED*)s);
         s += sizeof(DWORD);
         nRemaining -= sizeof(DWORD);
         nState = StateRetrievingSize;
@@ -180,7 +180,7 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
         if (nRemaining < sizeof(DWORD))
           break;
         MX_ASSERT(cCurrMessage != NULL);
-        cCurrMessage->nDataLen = (SIZE_T)(*((LPDWORD)s));
+        cCurrMessage->nDataLen = (SIZE_T)(*((DWORD MX_UNALIGNED*)s));
         s += sizeof(DWORD);
         nRemaining -= sizeof(DWORD);
         if (cCurrMessage->nDataLen > dwMaxMessageSize)
@@ -479,6 +479,11 @@ CIpcMessageManager::CMessage::~CMessage()
   return;
 }
 
+CIpc::CMultiSendLock* CIpcMessageManager::CMessage::StartMultiSendBlock()
+{
+  return lpIpc->StartMultiSendBlock(hConn);
+}
+
 HRESULT CIpcMessageManager::CMessage::SendReplyHeader(__in SIZE_T nMsgSize)
 {
   HEADER sHeader;
@@ -490,6 +495,11 @@ HRESULT CIpcMessageManager::CMessage::SendReplyHeader(__in SIZE_T nMsgSize)
   sHeader.dwMsgId = dwId | _MESSAGE_IS_REPLY;
   sHeader.dwMsgSize = (DWORD)nMsgSize;
   return lpIpc->SendMsg(hConn, &sHeader, sizeof(sHeader));
+}
+
+HRESULT CIpcMessageManager::CMessage::SendReplyData(__in LPCVOID lpMsg, __in SIZE_T nMsgSize)
+{
+  return lpIpc->SendMsg(hConn, lpMsg, nMsgSize);
 }
 
 } //namespace MX
