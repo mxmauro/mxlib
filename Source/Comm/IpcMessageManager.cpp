@@ -44,8 +44,8 @@ typedef struct {
 namespace MX {
 
 CIpcMessageManager::CIpcMessageManager(__in CIoCompletionPortThreadPool &_cWorkerPool, __in CIpc *_lpIpc,
-                                       __in HANDLE _hConn, __in_opt DWORD _dwMaxMessageSize) : CBaseMemObj(),
-                                       cWorkerPool(_cWorkerPool)
+                                       __in HANDLE _hConn, __in OnMessageReceivedCallback _cMessageReceivedCallback,
+                                       __in_opt DWORD _dwMaxMessageSize) : CBaseMemObj(), cWorkerPool(_cWorkerPool)
 {
   lpIpc = _lpIpc;
   hConn = _hConn;
@@ -58,7 +58,7 @@ CIpcMessageManager::CIpcMessageManager(__in CIoCompletionPortThreadPool &_cWorke
   nState = StateRetrievingId;
   nCurrMsgSize = 0;
   _InterlockedExchange(&nIncomingQueuedMessagesCount, 0);
-  cMessageReceivedCallback = NullCallback();
+  cMessageReceivedCallback = _cMessageReceivedCallback;
   _InterlockedExchange(&(sReplyMsgWait.nMutex), 0);
   _InterlockedExchange(&(sReceivedReplyMsg.nMutex), 0);
   MemSet(&sFlush, 0, sizeof(sFlush));
@@ -67,17 +67,11 @@ CIpcMessageManager::CIpcMessageManager(__in CIoCompletionPortThreadPool &_cWorke
 
 CIpcMessageManager::~CIpcMessageManager()
 {
-  Reset();
+  Shutdown();
   return;
 }
 
-VOID CIpcMessageManager::On(__in OnMessageReceivedCallback _cMessageReceivedCallback)
-{
-  cMessageReceivedCallback = _cMessageReceivedCallback;
-  return;
-}
-
-VOID CIpcMessageManager::Reset()
+VOID CIpcMessageManager::Shutdown()
 {
   REPLYMSG_ITEM sItem;
   CMessage *lpMsg;
@@ -86,7 +80,7 @@ VOID CIpcMessageManager::Reset()
   //wait for pending incoming
   while (__InterlockedRead(&nIncomingQueuedMessagesCount) > 0)
     _YieldProcessor();
-  //cancel waiters
+  //cancel reply waiters
   do
   {
     MemSet(&sItem, 0, sizeof(sItem));
@@ -118,13 +112,7 @@ VOID CIpcMessageManager::Reset()
       lpMsg->Release();
   }
   while (lpMsg != NULL);
-  //reset values
-  _InterlockedExchange(&nNextId, 0);
-  nState = StateRetrievingId;
-  nCurrMsgSize = 0;
-  cCurrMessage.Release();
   //done
-  RundownProt_Initialize(&nRundownLock);
   return;
 }
 
@@ -148,7 +136,7 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
   HRESULT hRes;
 
   if (cAutoRundownProt.IsAcquired() == FALSE)
-    return MX_E_NotReady;
+    return MX_E_Cancelled;
   if (nState == StateError)
     return E_FAIL;
   do
@@ -257,8 +245,11 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
 
 HRESULT CIpcMessageManager::SendHeader(__in DWORD dwMsgId, __in SIZE_T nMsgSize)
 {
+  CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   HEADER sHeader;
 
+  if (cAutoRundownProt.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
   if (nMsgSize > dwMaxMessageSize)
     return MX_E_InvalidData;
   sHeader.dwMsgId = dwMsgId;
@@ -301,7 +292,7 @@ HRESULT CIpcMessageManager::WaitForReplyAsync(__in DWORD dwId, __in OnMessageRep
   if (!cCallback)
     return E_POINTER;
   if (cAutoRundownProt.IsAcquired() == FALSE)
-    return MX_E_NotReady;
+    return MX_E_Cancelled;
   //queue waiter
   hRes = S_OK;
   sNewItem.dwId = dwId | _MESSAGE_IS_REPLY;

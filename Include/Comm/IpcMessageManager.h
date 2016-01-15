@@ -43,12 +43,11 @@ public:
 
 public:
   CIpcMessageManager(__in CIoCompletionPortThreadPool &cWorkerPool, __in CIpc *lpIpc, __in HANDLE hConn,
+                     __in OnMessageReceivedCallback cMessageReceivedCallback,
                      __in_opt DWORD dwMaxMessageSize=0x0FFFFFFFUL);
   ~CIpcMessageManager();
 
-  VOID On(__in OnMessageReceivedCallback cMessageReceivedCallback);
-
-  VOID Reset();
+  VOID Shutdown();
 
   DWORD GetNextId() const;
 
