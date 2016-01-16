@@ -31,6 +31,8 @@
 #include "..\Strings\Strings.h"
 #include "DukTapeConfig.h"
 //include the following files OUTSIDE the namespace
+#include <xstddef>
+#include <exception>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

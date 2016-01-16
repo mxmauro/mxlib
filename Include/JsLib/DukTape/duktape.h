@@ -1,11 +1,11 @@
 /*
- *  Duktape public API for Duktape 1.3.99.
+ *  Duktape public API for Duktape 1.4.99.
  *  See the API reference for documentation on call semantics.
  *  The exposed API is inside the DUK_API_PUBLIC_H_INCLUDED
  *  include guard.  Other parts of the header are Duktape
  *  internal and related to platform/compiler/feature detection.
  *
- *  Git commit 358838183d3e8d77b9f14d467c688cdc10ec573b (v1.3.0-376-g3588381).
+ *  Git commit 5a9d96dea8b55d4c54dcfc5f704fe801e3139e30 (v1.3.0-484-g5a9d96d).
  *  Git branch master.
  *
  *  See Duktape AUTHORS.rst and LICENSE.txt for copyright and
@@ -20,7 +20,7 @@
  *  
  *  (http://opensource.org/licenses/MIT)
  *  
- *  Copyright (c) 2013-2015 by Duktape authors (see AUTHORS.rst)
+ *  Copyright (c) 2013-2016 by Duktape authors (see AUTHORS.rst)
  *  
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
@@ -71,6 +71,7 @@
  *  * Legimet <legimet.calc@gmail.com>
  *  * Karl Skomski <karl@skomski.com>
  *  * Bruce Pascoe <fatcerberus1@gmail.com>
+ *  * Ren\u00e9 Hollander <rene@rene8888.at>
  *  
  *  Other contributions
  *  ===================
@@ -107,6 +108,8 @@
  *  * https://github.com/sstruchtrup
  *  * Michael Drake (https://github.com/tlsa)
  *  * https://github.com/chris-y
+ *  * Laurent Zubiaur (https://github.com/lzubiaur)
+ *  * Ole Andr\u00e9 Vadla Ravn\u00e5s (https://github.com/oleavr)
  *  
  *  If you are accidentally missing from this list, send me an e-mail
  *  (``sami.vaarala@iki.fi``) and I'll fix the omission.
@@ -211,15 +214,15 @@ struct duk_number_list_entry {
  * have 99 for patch level (e.g. 0.10.99 would be a development version
  * after 0.10.0 but before the next official release).
  */
-#define DUK_VERSION                       10399L
+#define DUK_VERSION                       10499L
 
 /* Git commit, describe, and branch for Duktape build.  Useful for
  * non-official snapshot builds so that application code can easily log
  * which Duktape snapshot was used.  Not available in the Ecmascript
  * environment.
  */
-#define DUK_GIT_COMMIT                    "358838183d3e8d77b9f14d467c688cdc10ec573b"
-#define DUK_GIT_DESCRIBE                  "v1.3.0-376-g3588381"
+#define DUK_GIT_COMMIT                    "5a9d96dea8b55d4c54dcfc5f704fe801e3139e30"
+#define DUK_GIT_DESCRIBE                  "v1.3.0-484-g5a9d96d"
 #define DUK_GIT_BRANCH                    "master"
 
 /* Duktape debug protocol version used by this build. */
@@ -556,7 +559,7 @@ DUK_EXTERNAL_DECL duk_idx_t duk_push_error_object_va_raw(duk_context *ctx, duk_e
 DUK_EXTERNAL_DECL void *duk_push_buffer_raw(duk_context *ctx, duk_size_t size, duk_small_uint_t flags);
 
 #define duk_push_buffer(ctx,size,dynamic) \
-	duk_push_buffer_raw((ctx), (size), (dynamic) ? DUK_BUF_FLAG_DYNAMIC : 0);
+	duk_push_buffer_raw((ctx), (size), (dynamic) ? DUK_BUF_FLAG_DYNAMIC : 0)
 #define duk_push_fixed_buffer(ctx,size) \
 	duk_push_buffer_raw((ctx), (size), 0 /*flags*/)
 #define duk_push_dynamic_buffer(ctx,size) \
@@ -1231,13 +1234,13 @@ DUK_EXTERNAL_DECL void duk_debugger_cooperate(duk_context *ctx);
 union duk_double_union {
 	double d;
 	float f[2];
-#ifdef DUK_USE_64BIT_OPS
+#if defined(DUK_USE_64BIT_OPS)
 	duk_uint64_t ull[1];
 #endif
 	duk_uint32_t ui[2];
 	duk_uint16_t us[4];
 	duk_uint8_t uc[8];
-#ifdef DUK_USE_PACKED_TVAL_POSSIBLE
+#if defined(DUK_USE_PACKED_TVAL)
 	void *vp[2];  /* used by packed duk_tval, assumes sizeof(void *) == 4 */
 #endif
 };

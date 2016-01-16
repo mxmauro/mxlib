@@ -30,6 +30,8 @@
 #include "..\..\Include\Strings\Utf8.h"
 #include "..\..\Include\Debug.h"
 #include "..\..\Include\FnvHash.h"
+#include <xstddef>
+#include <exception>
 #include <malloc.h>
 #include <setjmp.h>
 #include <stdio.h>
