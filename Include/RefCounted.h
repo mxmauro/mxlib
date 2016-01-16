@@ -49,7 +49,9 @@ public:
 
   ULONG AddRef()
     {
-    return (ULONG)_InterlockedIncrement(&nRefCount);
+    ULONG nNewVal = (ULONG)_InterlockedIncrement(&nRefCount);
+    MX_ASSERT((nNewVal & 0xC0000000) == 0);
+    return nNewVal;
     };
   ULONG Release()
     {
@@ -64,7 +66,7 @@ public:
     }
     while (nOrigVal != nInitVal);
 #ifdef _DEBUG
-    if (nNewVal < -(2147483647L/2L) || (nNewVal & 0x80000000) || nNewVal > 500)
+    if (nNewVal <= -(2147483647L/2L) || (nNewVal & 0x80000000) || nNewVal > 500)
     {
       MX_ASSERT(FALSE);
     }
