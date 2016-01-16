@@ -49,13 +49,8 @@ static SSL_CTX * volatile lpSslContexts[2][4] ={ 0 };
 
 static HRESULT _OpenSSL_Init();
 static VOID OpenSSL_Shutdown();
-#ifdef _DEBUG
 static void* __cdecl my_malloc_withinfo(size_t _Size, const char *_filename, int _linenum);
 static void* __cdecl my_realloc_withinfo(void *_Memory, size_t _NewSize, const char *_filename, int _linenum);
-#else //_DEBUG
-static void* __cdecl my_malloc(size_t _Size);
-static void* __cdecl my_realloc(void *_Memory, size_t _NewSize);
-#endif //_DEBUG
 static void __cdecl my_free(void * _Memory);
 
 static void my_locking_function(int mode, int n, const char * file, int line);
@@ -119,7 +114,7 @@ SSL_CTX* GetSslContext(__in BOOL bServerSide, __in_z LPCSTR szVersionA)
     SSL *lpSsl;
     CStringA cStrCipherListA;
     STACK_OF(SSL_CIPHER) *lpCiphers;
-    SSL_CIPHER* lpCipher;
+    const SSL_CIPHER *lpCipher;
     unsigned long _id;
     int cipherIdx;
     SIZE_T i;
@@ -226,13 +221,10 @@ static HRESULT _OpenSSL_Init()
         return E_OUTOFMEMORY;
       //setup memory allocator
 #ifdef _DEBUG
-      CRYPTO_malloc_debug_init();
-      CRYPTO_set_mem_debug_options(V_CRYPTO_MDEBUG_ALL);
-      CRYPTO_set_mem_ex_functions(my_malloc_withinfo, my_realloc_withinfo, my_free);
-#else //_DEBUG
-      CRYPTO_set_mem_functions(my_malloc, my_realloc, my_free);
+      CRYPTO_set_mem_debug(1);
+      CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
 #endif //_DEBUG
-      CRYPTO_set_mem_debug_functions(NULL, NULL, NULL, NULL, NULL);
+      CRYPTO_set_mem_functions(my_malloc_withinfo, my_realloc_withinfo, my_free);
       //setup dynamic locks
       CRYPTO_set_locking_callback(my_locking_function);
       CRYPTO_set_dynlock_create_callback(&my_dynlock_create_callback);
@@ -294,8 +286,6 @@ static VOID OpenSSL_Shutdown()
   return;
 }
 
-#ifdef _DEBUG
-
 static void* __cdecl my_malloc_withinfo(size_t _Size, const char *_filename, int _linenum)
 {
   return MX::MemAllocD(_Size, _filename, _linenum);
@@ -305,20 +295,6 @@ static void* __cdecl my_realloc_withinfo(void *_Memory, size_t _NewSize, const c
 {
   return MX::MemReallocD(_Memory, _NewSize, _filename, _linenum);
 }
-
-#else //_DEBUG
-
-static void* __cdecl my_malloc(size_t _Size)
-{
-  return MX::MemAlloc(_Size);
-}
-
-static void* __cdecl my_realloc(void *_Memory, size_t _NewSize)
-{
-  return MX::MemRealloc(_Memory, _NewSize);
-}
-
-#endif //_DEBUG
 
 static void __cdecl my_free(void * _Memory)
 {

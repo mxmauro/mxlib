@@ -4,8 +4,8 @@ use strict;
 use vars qw(@ISA $VERSION);
 require File::Spec::Unix;
 
-$VERSION = '3.40';
-$VERSION =~ tr/_//;
+$VERSION = '3.60';
+$VERSION =~ tr/_//d;
 
 @ISA = qw(File::Spec::Unix);
 
@@ -92,15 +92,20 @@ from the following list:
     $ENV{'TEMP'}
     C:/temp
 
-Since Perl 5.8.0, if running under taint mode, and if the environment
+If running under taint mode, and if the environment
 variables are tainted, they are not used.
 
 =cut
 
-my $tmpdir;
 sub tmpdir {
-    return $tmpdir if defined $tmpdir;
-    $tmpdir = $_[0]->_tmpdir( $ENV{TMPDIR}, "/tmp", $ENV{'TMP'}, $ENV{'TEMP'}, 'C:/temp' );
+    my $cached = $_[0]->_cached_tmpdir(qw 'TMPDIR TMP TEMP');
+    return $cached if defined $cached;
+    $_[0]->_cache_tmpdir(
+        $_[0]->_tmpdir(
+            $ENV{TMPDIR}, "/tmp", $ENV{'TMP'}, $ENV{'TEMP'}, 'C:/temp'
+        ),
+        qw 'TMPDIR TMP TEMP'
+    );
 }
 
 =item case_tolerant

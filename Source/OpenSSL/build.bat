@@ -40,7 +40,7 @@ IF "%_VSTOOLS%" == "" GOTO err_cantsetupvs
 
 IF NOT [%_ISDEBUG%] == [] (
     SET _DESTPATH=%_DESTPATH%\Debug
-    SET _DEFINE_NOERR=
+    SET _DEFINE_NOERR=--debug
 ) ELSE (
     SET _DESTPATH=%_DESTPATH%\Release
     SET _DEFINE_NOERR=no-err

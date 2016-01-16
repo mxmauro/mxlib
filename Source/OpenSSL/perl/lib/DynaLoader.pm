@@ -16,7 +16,7 @@ package DynaLoader;
 # Tim.Bunce@ig.co.uk, August 1994
 
 BEGIN {
-    $VERSION = '1.18';
+    $VERSION = '1.32';
 }
 
 use Config;
@@ -29,6 +29,7 @@ $dl_debug = $ENV{PERL_DL_DEBUG} || 0 unless defined $dl_debug;
 #   0x01  make symbols available for linking later dl_load_file's.
 #         (only known to work on Solaris 2 using dlopen(RTLD_GLOBAL))
 #         (ignored under VMS; effect is built-in to image linking)
+#         (ignored under Android; the linker always uses RTLD_LOCAL)
 #
 # This is called as a class method $module->dl_load_flags.  The
 # definition here will be inherited and result on "default" loading
@@ -148,7 +149,7 @@ sub bootstrap {
 	next unless -d $dir; # skip over uninteresting directories
 	
 	# check for common cases to avoid autoload of dl_findfile
-	my $try = "$dir/$modfname.$dl_dlext";
+        my $try = "$dir/$modfname.$dl_dlext";
 	last if $file = ($do_expand) ? dl_expandspec($try) : ((-f $try) && $try);
 	
 	# no luck here, save dir for possible later dl_findfile search
@@ -187,7 +188,9 @@ sub bootstrap {
     # in this perl code simply because this was the last perl code
     # it executed.
 
-    my $libref = dl_load_file($file, $module->dl_load_flags) or
+    my $flags = $module->dl_load_flags;
+    
+    my $libref = dl_load_file($file, $flags) or
 	croak("Can't load '$file' for module $module: ".dl_error());
 
     push(@dl_librefs,$libref);  # record loaded object
@@ -220,7 +223,7 @@ sub dl_findfile {
     my (@args) = @_;
     my (@dirs,  $dir);   # which directories to search
     my (@found);         # full paths to real files we have found
-    #my $dl_ext= 'dll'; # $Config::Config{'dlext'} suffix for perl extensions
+    #my $dl_ext= 'xs.dll'; # $Config::Config{'dlext'} suffix for perl extensions
     #my $dl_so = 'dll'; # $Config::Config{'so'} suffix for shared libraries
 
     print STDERR "dl_findfile(@args)\n" if $dl_debug;
@@ -352,7 +355,7 @@ anyone wishing to use the DynaLoader directly in an application.
 
 The DynaLoader is designed to be a very simple high-level
 interface that is sufficiently general to cover the requirements
-of SunOS, HP-UX, NeXT, Linux, VMS and other platforms.
+of SunOS, HP-UX, Linux, VMS and other platforms.
 
 It is also hoped that the interface will cover the needs of OS/2, NT
 etc and also allow pseudo-dynamic linking (using C<ld -A> at runtime).
@@ -372,6 +375,7 @@ DynaLoader Interface Summary
   @dl_resolve_using
   @dl_require_symbols
   $dl_debug
+  $dl_dlext
   @dl_librefs
   @dl_modules
   @dl_shared_objects
@@ -484,6 +488,19 @@ built with the B<-DDEBUGGING> flag.  This can also be set via the
 PERL_DL_DEBUG environment variable.  Set to 1 for minimal information or
 higher for more.
 
+=item $dl_dlext
+
+When specified (localised) in a module's F<.pm> file, indicates the extension
+which the module's loadable object will have. For example:
+
+    local $DynaLoader::dl_dlext = 'unusual_ext';
+
+would indicate that the module's loadable object has an extension of
+C<unusual_ext> instead of the more usual C<$Config{dlext}>.  NOTE: This also
+requires that the module's F<Makefile.PL> specify (in C<WriteMakefile()>):
+
+    DLEXT => 'unusual_ext',
+
 =item dl_findfile()
 
 Syntax:
@@ -556,7 +573,6 @@ current values of @dl_require_symbols and @dl_resolve_using if required.
     SunOS: dlopen($filename)
     HP-UX: shl_load($filename)
     Linux: dld_create_reference(@dl_require_symbols); dld_link($filename)
-    NeXT:  rld_load($filename, @dl_resolve_using)
     VMS:   lib$find_image_symbol($filename,$dl_require_symbols[0])
 
 (The dlopen() function is also used by Solaris and some versions of
@@ -571,9 +587,10 @@ Syntax:
 
 Dynamically unload $libref, which must be an opaque 'library reference' as
 returned from dl_load_file.  Returns one on success and zero on failure.
-
 This function is optional and may not necessarily be provided on all platforms.
-If it is defined, it is called automatically when the interpreter exits for
+
+If it is defined and perl is compiled with the C macro C<DL_UNLOAD_ALL_AT_EXIT>
+defined, then it is called automatically when the interpreter exits for
 every shared object or library loaded by DynaLoader::bootstrap.  All such
 library references are stored in @dl_librefs by DynaLoader::Bootstrap as it
 loads the libraries.  The files are unloaded in last-in, first-out order.
@@ -592,7 +609,6 @@ Apache and mod_perl built with the APXS mechanism.
     SunOS: dlclose($libref)
     HP-UX: ???
     Linux: ???
-    NeXT:  ???
     VMS:   ???
 
 (The dlclose() function is also used by Solaris and some versions of
@@ -628,7 +644,6 @@ be passed to, and understood by, dl_install_xsub().
     SunOS: dlsym($libref, $symbol)
     HP-UX: shl_findsym($libref, $symbol)
     Linux: dld_get_func($symbol) and/or dld_get_symbol($symbol)
-    NeXT:  rld_lookup("_$symbol")
     VMS:   lib$find_image_symbol($libref,$symbol)
 
 

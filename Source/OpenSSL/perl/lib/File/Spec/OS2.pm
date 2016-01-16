@@ -4,8 +4,8 @@ use strict;
 use vars qw(@ISA $VERSION);
 require File::Spec::Unix;
 
-$VERSION = '3.40';
-$VERSION =~ tr/_//;
+$VERSION = '3.60';
+$VERSION =~ tr/_//d;
 
 @ISA = qw(File::Spec::Unix);
 
@@ -35,11 +35,13 @@ sub _cwd {
     return Cwd::sys_cwd();
 }
 
-my $tmpdir;
 sub tmpdir {
-    return $tmpdir if defined $tmpdir;
+    my $cached = $_[0]->_cached_tmpdir(qw 'TMPDIR TEMP TMP');
+    return $cached if defined $cached;
     my @d = @ENV{qw(TMPDIR TEMP TMP)};	# function call could autovivivy
-    $tmpdir = $_[0]->_tmpdir( @d, '/tmp', '/'  );
+    $_[0]->_cache_tmpdir(
+	$_[0]->_tmpdir( @d, '/tmp', '/' ), qw 'TMPDIR TEMP TMP'
+    );
 }
 
 sub catdir {
