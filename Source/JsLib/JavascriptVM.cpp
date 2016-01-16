@@ -729,7 +729,7 @@ DukTape::duk_ret_t CJavascriptVM::_ProxyHasPropHelper(__in DukTape::duk_context 
     if (cProxyCallbacks.cProxyHasNamedPropertyCallback)
       nRet = cProxyCallbacks.cProxyHasNamedPropertyCallback(lpCtx, szObjNameA, DukTape::duk_get_string(lpCtx, 1));
   }
-  else if (DukTape::duk_is_number(lpCtx, 1) && !DukTape::duk_is_nan(lpCtx, 1))
+  else if ((DukTape::duk_is_number(lpCtx, 1) || DukTape::duk_is_boolean(lpCtx, 1)) && !DukTape::duk_is_nan(lpCtx, 1))
   {
     if (cProxyCallbacks.cProxyHasIndexedPropertyCallback)
       nRet = cProxyCallbacks.cProxyHasIndexedPropertyCallback(lpCtx, szObjNameA, DukTape::duk_get_int(lpCtx, 1));
@@ -791,7 +791,7 @@ DukTape::duk_ret_t CJavascriptVM::_ProxyGetPropHelper(__in DukTape::duk_context 
       return DUK_RET_TYPE_ERROR;
     }
   }
-  else if (DukTape::duk_is_number(lpCtx, 1) && !DukTape::duk_is_nan(lpCtx, 1))
+  else if ((DukTape::duk_is_number(lpCtx, 1) || DukTape::duk_is_boolean(lpCtx, 1)) && !DukTape::duk_is_nan(lpCtx, 1))
   {
     int nIndex =  DukTape::duk_get_int(lpCtx, 1);
     if (cProxyCallbacks.cProxyGetIndexedPropertyCallback)
@@ -852,7 +852,7 @@ DukTape::duk_ret_t CJavascriptVM::_ProxySetPropHelper(__in DukTape::duk_context 
       return DUK_RET_TYPE_ERROR;
     }
   }
-  else if (DukTape::duk_is_number(lpCtx, 1) && !DukTape::duk_is_nan(lpCtx, 1))
+  else if ((DukTape::duk_is_number(lpCtx, 1) || DukTape::duk_is_boolean(lpCtx, 1)) && !DukTape::duk_is_nan(lpCtx, 1))
   {
     int nIndex =  DukTape::duk_get_int(lpCtx, 1);
     if (cProxyCallbacks.cProxySetIndexedPropertyCallback)
@@ -922,7 +922,7 @@ DukTape::duk_ret_t CJavascriptVM::_ProxyDeletePropHelper(__in DukTape::duk_conte
       return DUK_RET_TYPE_ERROR;
     }
   }
-  else if (DukTape::duk_is_number(lpCtx, 1))
+  else if (DukTape::duk_is_number(lpCtx, 1) || DukTape::duk_is_boolean(lpCtx, 1))
   {
     int nIndex =  DukTape::duk_get_int(lpCtx, 1);
     if (cProxyCallbacks.cProxyDeleteIndexedPropertyCallback)

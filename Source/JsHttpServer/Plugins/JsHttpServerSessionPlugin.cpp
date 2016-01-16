@@ -292,6 +292,11 @@ int CJsHttpServerSessionPlugin::OnProxySetNamedProperty(__in DukTape::duk_contex
     hRes = cBag.SetNull(szPropNameA);
     return (SUCCEEDED(hRes)) ? 0 : -1;
   }
+  if (DukTape::duk_is_boolean(lpCtx, nValueIndex) != 0)
+  {
+    hRes = cBag.SetDouble(szPropNameA, DukTape::duk_get_boolean(lpCtx, nValueIndex) ? 1.0 : 0.0);
+    return (SUCCEEDED(hRes)) ? 0 : -1;
+  }
   if (DukTape::duk_is_number(lpCtx, nValueIndex) != 0)
   {
     hRes = cBag.SetDouble(szPropNameA, DukTape::duk_get_number(lpCtx, nValueIndex));

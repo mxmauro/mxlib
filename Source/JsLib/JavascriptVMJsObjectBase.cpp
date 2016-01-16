@@ -293,7 +293,7 @@ DukTape::duk_ret_t CJsObjectBase::_ProxyHasPropHelper(__in DukTape::duk_context 
   {
     nRet = lpObj->OnProxyHasNamedProperty(lpCtx, DukTape::duk_get_string(lpCtx, 1));
   }
-  else if (DukTape::duk_is_number(lpCtx, 1) && !DukTape::duk_is_nan(lpCtx, 1))
+  else if ((DukTape::duk_is_number(lpCtx, 1) || DukTape::duk_is_boolean(lpCtx, 1)) && !DukTape::duk_is_nan(lpCtx, 1))
   {
     nRet = lpObj->OnProxyHasIndexedProperty(lpCtx, DukTape::duk_get_int(lpCtx, 1));
   }
@@ -338,7 +338,7 @@ DukTape::duk_ret_t CJsObjectBase::_ProxyGetPropHelper(__in DukTape::duk_context 
       return DUK_RET_TYPE_ERROR;
     }
   }
-  else if (DukTape::duk_is_number(lpCtx, 1) && !DukTape::duk_is_nan(lpCtx, 1))
+  else if ((DukTape::duk_is_number(lpCtx, 1) || DukTape::duk_is_boolean(lpCtx, 1)) && !DukTape::duk_is_nan(lpCtx, 1))
   {
     int nIndex =  DukTape::duk_get_int(lpCtx, 1);
     nRet = lpObj->OnProxyGetIndexedProperty(lpCtx, nIndex);
@@ -382,7 +382,7 @@ DukTape::duk_ret_t CJsObjectBase::_ProxySetPropHelper(__in DukTape::duk_context 
       return DUK_RET_TYPE_ERROR;
     }
   }
-  else if (DukTape::duk_is_number(lpCtx, 1) && !DukTape::duk_is_nan(lpCtx, 1))
+  else if ((DukTape::duk_is_number(lpCtx, 1) || DukTape::duk_is_boolean(lpCtx, 1)) && !DukTape::duk_is_nan(lpCtx, 1))
   {
     int nIndex =  DukTape::duk_get_int(lpCtx, 1);
     nRet = lpObj->OnProxySetIndexedProperty(lpCtx, nIndex, 2);
@@ -435,7 +435,7 @@ DukTape::duk_ret_t CJsObjectBase::_ProxyDeletePropHelper(__in DukTape::duk_conte
       return DUK_RET_TYPE_ERROR;
     }
   }
-  else if (DukTape::duk_is_number(lpCtx, 1))
+  else if (DukTape::duk_is_number(lpCtx, 1) || DukTape::duk_is_boolean(lpCtx, 1))
   {
     int nIndex =  DukTape::duk_get_int(lpCtx, 1);
     nRet = lpObj->OnProxyDeleteIndexedProperty(lpCtx, nIndex);

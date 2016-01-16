@@ -154,7 +154,8 @@ HRESULT CNamedPipes::ConnectToServer(__in_z LPCWSTR szServerNameW, __in OnCreate
 }
 
 HRESULT CNamedPipes::CreateRemoteClientConnection(__in HANDLE hProc, __out HANDLE &h, __out HANDLE &hRemotePipe,
-                                                  __in OnCreateCallback cCreateCallback, __in_opt CUserData *lpUserData)
+                                                  __in OnCreateCallback cCreateCallback,
+                                                  __in_opt CUserData *lpUserData)
 {
   CAutoSlimRWLShared cLock(&nSlimMutex);
   TAutoDeletePtr<CConnection> cConn;
