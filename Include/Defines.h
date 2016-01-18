@@ -94,6 +94,10 @@
 #define MX_E_BadLength                  HRESULT_FROM_WIN32(ERROR_BAD_LENGTH)
 #define MX_E_EndOfFileReached           HRESULT_FROM_WIN32(ERROR_HANDLE_EOF)
 
+#define MX_SCODE_FACILITY               0xF18
+#define MX_E_DuplicateKey               MX_E_AlreadyExists
+#define MX_E_ConstraintsCheckFailed     MAKE_HRESULT(1, MX_SCODE_FACILITY, 1) //0x8F180001
+
 __inline HRESULT MX_HRESULT_FROM_WIN32(__in DWORD dwOsErr)
 {
   if (dwOsErr == ERROR_NOT_ENOUGH_MEMORY)

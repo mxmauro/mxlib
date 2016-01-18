@@ -218,7 +218,13 @@ HRESULT CJsHttpServerMySqlPluginHelpers::HResultFromMySqlErr(__in int nError)
       return E_NOTIMPL;
 
     case ER_DUP_ENTRY:
-      return MX_E_AlreadyExists;
+      return MX_E_DuplicateKey;
+
+    case ER_NO_REFERENCED_ROW:
+    case ER_ROW_IS_REFERENCED:
+    case ER_ROW_IS_REFERENCED_2:
+    case ER_NO_REFERENCED_ROW_2:
+      return MX_E_ConstraintsCheckFailed;
   }
   return E_FAIL;
 }
