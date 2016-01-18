@@ -75,12 +75,12 @@ HRESULT CNamedPipes::CreateListener(__in_z LPCSTR szServerNameA, __in OnCreateCa
 HRESULT CNamedPipes::CreateListener(__in_z LPCWSTR szServerNameW, __in OnCreateCallback cCreateCallback,
                                     __in_z_opt LPCWSTR szSecutityDescriptorW)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
+  CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoRefCounted<CServerInfo> cServerInfo;
   HRESULT hRes;
 
-  if ((!cEngineErrorCallback) || IsShuttingDown() != FALSE)
-    return E_FAIL;
+  if (cRundownLock.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
   if (szServerNameW == NULL)
     return E_POINTER;
   if (*szServerNameW == 0 || (!cCreateCallback))
@@ -110,15 +110,15 @@ HRESULT CNamedPipes::ConnectToServer(__in_z LPCSTR szServerNameA, __in OnCreateC
 HRESULT CNamedPipes::ConnectToServer(__in_z LPCWSTR szServerNameW, __in OnCreateCallback cCreateCallback,
                                      __in_opt CUserData *lpUserData, __out_opt HANDLE *h)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
+  CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoDeletePtr<CConnection> cConn;
   CStringW cStrTempW;
   HRESULT hRes;
 
   if (h != NULL)
     *h = NULL;
-  if ((!cEngineErrorCallback) || IsShuttingDown() != FALSE)
-    return E_FAIL;
+  if (cRundownLock.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
   if (szServerNameW == NULL)
     return E_POINTER;
   if (*szServerNameW == 0 || (!cCreateCallback))
@@ -157,7 +157,7 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(__in HANDLE hProc, __out HANDL
                                                   __in OnCreateCallback cCreateCallback,
                                                   __in_opt CUserData *lpUserData)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
+  CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoDeletePtr<CConnection> cConn;
   SECURITY_ATTRIBUTES sSecAttrib;
   SECURITY_DESCRIPTOR sSecDesc;
@@ -171,8 +171,8 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(__in HANDLE hProc, __out HANDL
 
   h = NULL;
   hRemotePipe = NULL;
-  if ((!cEngineErrorCallback) == NULL || IsShuttingDown() != FALSE)
-    return E_FAIL;
+  if (cRundownLock.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
   if (!cCreateCallback)
     return E_INVALIDARG;
   //create named pipe
@@ -257,14 +257,12 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(__in HANDLE hProc, __out HANDL
 
 HRESULT CNamedPipes::ImpersonateConnectionClient(__in HANDLE h)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
+  CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnection *lpConn;
   HRESULT hRes;
 
-  if (!cEngineErrorCallback)
-    return E_FAIL;
-  if (h == NULL)
-    return E_POINTER;
+  if (cRundownLock.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
   lpConn = reinterpret_cast<CConnection*>(CheckAndGetConnection(h));
   if (lpConn == NULL)
     return E_INVALIDARG;

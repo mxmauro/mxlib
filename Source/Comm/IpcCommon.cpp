@@ -66,7 +66,8 @@ CIpc::CIpc(__in CIoCompletionPortThreadPool &_cDispatcherPool, __in CPropertyBag
     dwMaxOutgoingPackets = 2;
   //----
   cDispatcherPoolPacketCallback = MX_BIND_MEMBER_CALLBACK(&CIpc::OnDispatcherPacket, this);
-  SlimRWL_Initialize(&nSlimMutex);
+  _InterlockedExchange(&nInitShutdownMutex, 0);
+  RundownProt_Initialize(&nRundownProt);
   cEngineErrorCallback = NullCallback();
   SlimRWL_Initialize(&(sConnections.nSlimMutex));
   return;
@@ -86,7 +87,7 @@ VOID CIpc::On(__in OnEngineErrorCallback _cEngineErrorCallback)
 
 HRESULT CIpc::Initialize()
 {
-  CAutoSlimRWLExclusive cLock(&nSlimMutex);
+  CFastLock cInitShutdownLock(&nInitShutdownMutex);
   HRESULT hRes;
 
   DoInternalFinalize();
@@ -111,7 +112,7 @@ HRESULT CIpc::Initialize()
 
 VOID CIpc::Finalize()
 {
-  CAutoSlimRWLExclusive cLock(&nSlimMutex);
+  CFastLock cInitShutdownLock(&nInitShutdownMutex);
 
   if (cShuttingDownEv.Get() != NULL)
     DoInternalFinalize();
@@ -120,13 +121,13 @@ VOID CIpc::Finalize()
 
 HRESULT CIpc::SendMsg(__in HANDLE h, __in LPCVOID lpMsg, __in SIZE_T nMsgSize)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
+  CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
   HRESULT hRes;
 
-  if (!cShuttingDownEv)
-    return E_FAIL;
-  if (h == NULL || lpMsg == NULL)
+  if (cRundownLock.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
+  if (lpMsg == NULL)
     return E_POINTER;
   if (nMsgSize == 0)
     return E_INVALIDARG;
@@ -142,14 +143,14 @@ HRESULT CIpc::SendMsg(__in HANDLE h, __in LPCVOID lpMsg, __in SIZE_T nMsgSize)
 
 HRESULT CIpc::SendStream(__in HANDLE h, __in CStream *lpStream)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
+  CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoRefCounted<CStream> cStream(lpStream);
   CConnectionBase *lpConn;
   HRESULT hRes;
 
-  if (!cShuttingDownEv)
-    return E_FAIL;
-  if (h == NULL || lpStream == NULL)
+  if (cRundownLock.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
+  if (lpStream == NULL)
     return E_POINTER;
   lpConn = CheckAndGetConnection(h);
   if (lpConn == NULL)
@@ -163,14 +164,12 @@ HRESULT CIpc::SendStream(__in HANDLE h, __in CStream *lpStream)
 
 HRESULT CIpc::AfterWriteSignal(__in HANDLE h, __in OnAfterWriteSignalCallback cCallback, __in LPVOID lpCookie)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
+  CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
   HRESULT hRes;
 
-  if (!cShuttingDownEv)
-    return E_FAIL;
-  if (h == NULL)
-    return E_POINTER;
+  if (cRundownLock.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
   if (!cCallback)
     return E_INVALIDARG;
   lpConn = CheckAndGetConnection(h);
@@ -185,11 +184,11 @@ HRESULT CIpc::AfterWriteSignal(__in HANDLE h, __in OnAfterWriteSignalCallback cC
 
 CIpc::CMultiSendLock* CIpc::StartMultiSendBlock(__in HANDLE h)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
+  CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
   TAutoDeletePtr<CIpc::CMultiSendLock> cMultiSendBlock;
 
-  if ((!cShuttingDownEv) || h == NULL)
+  if (cRundownLock.IsAcquired() == FALSE)
     return NULL;
   lpConn = CheckAndGetConnection(h);
   if (lpConn == NULL)
@@ -210,12 +209,12 @@ CIpc::CMultiSendLock* CIpc::StartMultiSendBlock(__in HANDLE h)
 
 HRESULT CIpc::GetBufferedMessage(__in HANDLE h, __out LPVOID lpMsg, __inout SIZE_T *lpnMsgSize)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
+  CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
 
-  if (!cShuttingDownEv)
-    return E_FAIL;
-  if (h == NULL || lpMsg == NULL || lpnMsgSize == NULL)
+  if (cRundownLock.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
+  if (lpMsg == NULL || lpnMsgSize == NULL)
     return E_POINTER;
   lpConn = CheckAndGetConnection(h);
   if (lpConn == NULL)
@@ -233,14 +232,12 @@ HRESULT CIpc::GetBufferedMessage(__in HANDLE h, __out LPVOID lpMsg, __inout SIZE
 
 HRESULT CIpc::ConsumeBufferedMessage(__in HANDLE h, __in SIZE_T nConsumedBytes)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
+  CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
   HRESULT hRes;
 
-  if (!cShuttingDownEv)
-    return E_FAIL;
-  if (h == NULL)
-    return E_POINTER;
+  if (cRundownLock.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
   lpConn = CheckAndGetConnection(h);
   if (lpConn == NULL)
     return E_INVALIDARG;
@@ -257,13 +254,11 @@ HRESULT CIpc::ConsumeBufferedMessage(__in HANDLE h, __in SIZE_T nConsumedBytes)
 
 HRESULT CIpc::Close(__in HANDLE h, __in HRESULT hErrorCode)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
+  CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
 
-  if (!cShuttingDownEv)
-    return E_FAIL;
-  if (h == NULL)
-    return E_POINTER;
+  if (cRundownLock.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
   lpConn = CheckAndGetConnection(h);
   if (lpConn == NULL)
     return E_INVALIDARG;
@@ -276,15 +271,15 @@ HRESULT CIpc::Close(__in HANDLE h, __in HRESULT hErrorCode)
 
 HRESULT CIpc::IsConnected(__in HANDLE h)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
+  CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
   HRESULT hRes;
 
-  if ((!cShuttingDownEv) || h == NULL)
-    return NULL;
+  if (cRundownLock.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
   lpConn = CheckAndGetConnection(h);
   if (lpConn == NULL)
-    return NULL;
+    return E_INVALIDARG;
   //get state
   hRes = (lpConn->IsConnected() != FALSE) ? S_OK : S_FALSE;
   //done
@@ -294,15 +289,15 @@ HRESULT CIpc::IsConnected(__in HANDLE h)
 
 HRESULT CIpc::IsClosed(__in HANDLE h, __out_opt HRESULT *lphErrorCode)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
+  CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
   HRESULT hRes;
 
-  if ((!cShuttingDownEv) || h == NULL)
-    return NULL;
+  if (cRundownLock.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
   lpConn = CheckAndGetConnection(h);
   if (lpConn == NULL)
-    return NULL;
+    return E_INVALIDARG;
   //get state
   if (lphErrorCode != NULL)
     *lphErrorCode = __InterlockedRead(&(lpConn->hErrorCode));
@@ -314,11 +309,11 @@ HRESULT CIpc::IsClosed(__in HANDLE h, __out_opt HRESULT *lphErrorCode)
 
 CIpc::CUserData* CIpc::GetUserData(__in HANDLE h)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
+  CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
   CUserData *lpUserData;
 
-  if ((!cShuttingDownEv) || h == NULL)
+  if (cRundownLock.IsAcquired() == FALSE)
     return NULL;
   lpConn = CheckAndGetConnection(h);
   if (lpConn == NULL)
@@ -334,13 +329,11 @@ CIpc::CUserData* CIpc::GetUserData(__in HANDLE h)
 
 CIpc::eConnectionClass CIpc::GetClass(__in HANDLE h)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
+  CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
   eConnectionClass nClass;
 
-  if (!cShuttingDownEv)
-    return ConnectionClassError;
-  if (h == NULL)
+  if (cRundownLock.IsAcquired() == FALSE)
     return ConnectionClassError;
   lpConn = CheckAndGetConnection(h);
   if (lpConn == NULL)
@@ -374,6 +367,7 @@ VOID CIpc::DoInternalFinalize()
   TLnkLst<CConnectionBase>::Iterator itConn;
   CConnectionBase *lpConn;
 
+  RundownProt_WaitForRelease(&nRundownProt);
   cShuttingDownEv.Set();
   //close all connections
   do
@@ -420,6 +414,7 @@ VOID CIpc::DoInternalFinalize()
   //almost done
   OnInternalFinalize();
   cShuttingDownEv.Close();
+  RundownProt_Initialize(&nRundownProt);
   return;
 }
 
@@ -601,6 +596,8 @@ CIpc::CConnectionBase* CIpc::IsValidConnection(__in HANDLE h)
 {
   CConnectionBase *lpConn;
 
+  if (h == NULL)
+    return NULL;
   lpConn = (CConnectionBase*)h;
   __try
   {

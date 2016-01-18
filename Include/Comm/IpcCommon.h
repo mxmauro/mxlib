@@ -620,7 +620,8 @@ protected:
   VOID OnReadWriteTimeout(__in CTimedEventQueue::CEvent *lpEvent);
 
 protected:
-  LONG volatile nSlimMutex;
+  LONG volatile nInitShutdownMutex;
+  LONG volatile nRundownProt;
   CIoCompletionPortThreadPool &cDispatcherPool;
   CIoCompletionPortThreadPool::OnPacketCallback cDispatcherPoolPacketCallback;
   CPropertyBag &cPropBag;

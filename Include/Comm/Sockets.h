@@ -149,7 +149,6 @@ private:
     };
 
 private:
-  LONG volatile nSlimMutex;
   DWORD dwMaxAcceptsToPost, dwMaxResolverTimeoutMs;
 };
 

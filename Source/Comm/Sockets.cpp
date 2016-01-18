@@ -92,8 +92,6 @@ CSockets::CSockets(__in CIoCompletionPortThreadPool &cDispatcherPool, __in CProp
     dwMaxResolverTimeoutMs = 100;
   else if (dwMaxResolverTimeoutMs > 180000)
     dwMaxResolverTimeoutMs = 180000;
-  //----
-  SlimRWL_Initialize(&nSlimMutex);
   return;
 }
 
@@ -107,18 +105,19 @@ HRESULT CSockets::CreateListener(__in eFamily nFamily, __in int nPort, __in OnCr
                                  __in_z_opt LPCSTR szBindAddressA, __in_opt CUserData *lpUserData,
                                  __out_opt HANDLE *h)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
+  CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoDeletePtr<CConnection> cConn;
   HRESULT hRes;
 
   if (h != NULL)
     *h = NULL;
-  if ((!cEngineErrorCallback) || IsShuttingDown() != FALSE)
-    return E_FAIL;
+  if (cRundownLock.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
   if ((nFamily != FamilyUnknown && nFamily != FamilyIPv4 && nFamily != FamilyIPv6) ||
-      nPort < 1 || nPort > 65535 ||
-      (!cCreateCallback))
+      nPort < 1 || nPort > 65535 || (!cCreateCallback))
+  {
     return E_INVALIDARG;
+  }
   //create connection
   cConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassListener));
   if (!cConn)
@@ -165,20 +164,21 @@ HRESULT CSockets::ConnectToServer(__in eFamily nFamily, __in_z LPCSTR szAddressA
                                   __in OnCreateCallback cCreateCallback, __in_opt CUserData *lpUserData,
                                   __out_opt HANDLE *h)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
+  CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoDeletePtr<CConnection> cConn;
   HRESULT hRes;
 
   if (h != NULL)
     *h = NULL;
-  if ((!cEngineErrorCallback) || IsShuttingDown() != FALSE)
-    return E_FAIL;
+  if (cRundownLock.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
   if (szAddressA == NULL)
     return E_POINTER;
   if ((nFamily != FamilyUnknown && nFamily != FamilyIPv4 && nFamily != FamilyIPv6) ||
-      *szAddressA == 0 || nPort < 1 || nPort > 65535 ||
-      (!cCreateCallback))
+      *szAddressA == 0 || nPort < 1 || nPort > 65535 || (!cCreateCallback))
+  {
     return E_INVALIDARG;
+  }
   //create connection
   cConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassClient));
   if (!cConn)
@@ -223,13 +223,13 @@ HRESULT CSockets::ConnectToServer(__in eFamily nFamily, __in_z LPCWSTR szAddress
 
 HRESULT CSockets::GetPeerAddress(__in HANDLE h, __out sockaddr *lpAddr)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
+  CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnection *lpConn;
 
   if (lpAddr != NULL)
     MemSet(lpAddr, 0, sizeof(sockaddr));
-  if ((!cEngineErrorCallback) || IsShuttingDown() != FALSE)
-    return E_FAIL;
+  if (cRundownLock.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
   if (h == NULL || lpAddr == NULL)
     return E_POINTER;
   lpConn = (CConnection*)CheckAndGetConnection(h);
