@@ -403,7 +403,7 @@ HRESULT CSockets::OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __i
       if (SUCCEEDED(hRes))
         hRes = lpConn->HandleConnected();
       if (FAILED(hRes))
-        hRes = FireOnConnect(lpConn, hRes);
+        FireOnConnect(lpConn, hRes);
       //free packet
       lpConn->cRwList.Remove(lpPacket);
       FreePacket(lpPacket);
