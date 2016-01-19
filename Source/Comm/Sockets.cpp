@@ -134,7 +134,12 @@ HRESULT CSockets::CreateListener(__in eFamily nFamily, __in int nPort, __in OnCr
   if (SUCCEEDED(hRes))
     hRes = cConn->CreateSocket(nFamily, 0);
   if (SUCCEEDED(hRes))
+  {
+    _InterlockedIncrement(&(cConn->nRefCount));
     hRes = cConn->ResolveAddress(dwMaxResolverTimeoutMs, nFamily, szBindAddressA, nPort);
+    if (FAILED(hRes))
+      ReleaseAndRemoveConnectionIfClosed(cConn.Get());
+  }
   //done
   ReleaseAndRemoveConnectionIfClosed(cConn.Detach());
   if (FAILED(hRes) && h != NULL)
@@ -196,7 +201,12 @@ HRESULT CSockets::ConnectToServer(__in eFamily nFamily, __in_z LPCSTR szAddressA
   if (SUCCEEDED(hRes))
     hRes = cConn->CreateSocket(nFamily, dwPacketSize);
   if (SUCCEEDED(hRes))
+  {
+    _InterlockedIncrement(&(cConn->nRefCount));
     hRes = cConn->ResolveAddress(dwMaxResolverTimeoutMs, nFamily, szAddressA, nPort);
+    if (FAILED(hRes))
+      ReleaseAndRemoveConnectionIfClosed(cConn.Get());
+  }
   //done
   ReleaseAndRemoveConnectionIfClosed(cConn.Detach());
   if (FAILED(hRes) && h != NULL)
@@ -741,8 +751,6 @@ HRESULT CSockets::CConnection::ResolveAddress(__in DWORD dwMaxResolverTimeoutMs,
   if (szAddressA == NULL || *szAddressA == 0)
     szAddressA = (nFamily != FamilyIPv6) ? "0.0.0.0" : "::";
   hRes = sHostResolver.lpResolver->ResolveAsync(szAddressA, FamilyToWinSockFamily(nFamily), dwMaxResolverTimeoutMs);
-  if (SUCCEEDED(hRes))
-    _InterlockedIncrement(&nRefCount);
   //done
   return hRes;
 }
