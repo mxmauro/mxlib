@@ -221,6 +221,9 @@
     <ClInclude Include="Include\Comm\IpcMessageManager.h">
       <Filter>Header Files\Comm</Filter>
     </ClInclude>
+    <ClInclude Include="Include\Http\EMail.h">
+      <Filter>Header Files\Http</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Http\HttpCookie.cpp">
@@ -390,6 +393,9 @@
     </ClCompile>
     <ClCompile Include="Source\Comm\IpcMessageManager.cpp">
       <Filter>Source Files\Comm</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\EMail.cpp">
+      <Filter>Source Files\Http</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

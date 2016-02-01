@@ -115,6 +115,9 @@ public:
                         __in_opt BOOL bAppend=FALSE);
   static SIZE_T GetDecodedLength(__in_z LPCSTR szUrlA, __in_opt SIZE_T nUrlLen=(SIZE_T)-1);
 
+  static BOOL IsValidHostAddress(__in_z LPCSTR szHostA, __in_opt SIZE_T nHostLen=(SIZE_T)-1);
+  static BOOL IsValidHostAddress(__in_z LPCWSTR szHostW, __in_opt SIZE_T nHostLen=(SIZE_T)-1);
+
 private:
   typedef struct {
     LPWSTR szValueW;

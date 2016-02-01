@@ -162,6 +162,7 @@
     <ClInclude Include="Include\Comm\NamedPipes.h" />
     <ClInclude Include="Include\Comm\Sockets.h" />
     <ClInclude Include="Include\Comm\SslCertificates.h" />
+    <ClInclude Include="Include\Http\EMail.h" />
     <ClInclude Include="Include\Http\HttpHeaderBase.h" />
     <ClInclude Include="Include\Http\HttpAuthenticateResponseParser.h" />
     <ClInclude Include="Include\Http\HttpBodyParserBase.h" />
@@ -219,6 +220,7 @@
     <ClCompile Include="Source\Comm\Sockets.cpp" />
     <ClCompile Include="Source\Comm\SslCertificates.cpp" />
     <ClCompile Include="Source\Comm\SslCertificatesArray.cpp" />
+    <ClCompile Include="Source\Http\EMail.cpp" />
     <ClCompile Include="Source\Http\HttpCommonHelpers.cpp" />
     <ClCompile Include="Source\Http\HttpHeaderBase.cpp" />
     <ClCompile Include="Source\Http\HttpAuthenticateResponseParser.cpp" />

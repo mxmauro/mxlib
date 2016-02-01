@@ -22,6 +22,7 @@
  *       access to or use of the software to any third party.
  **/
 #include "..\..\Include\Http\Url.h"
+#include "..\..\Include\Http\EMail.h"
 #include "..\..\Include\Http\punycode.h"
 #include "..\..\Include\Comm\Sockets.h"
 #include "..\..\Include\AutoPtr.h"
@@ -72,7 +73,6 @@ static SIZE_T FindChar(__in_z LPCWSTR szStrW, __in SIZE_T nSrcLen, __in_z LPCWST
                        __in_z_opt LPCWSTR szStopCharW=NULL);
 static BOOL IsLocalHost(__in_z LPCSTR szHostA);
 static BOOL IsLocalHost(__in_z LPCWSTR szHostW);
-static BOOL IsValidEMailAddress(__in LPCWSTR szAddressW, __in SIZE_T nAddressLen);
 static BOOL HasDisallowedEscapedSequences(__in_z LPCSTR szSrcA, __in SIZE_T nSrcLen);
 static BOOL HasDisallowedEscapedSequences(__in_z LPCWSTR szSrcW, __in SIZE_T nSrcLen);
 
@@ -228,14 +228,18 @@ HRESULT CUrl::SetHost(__in_z LPCSTR szHostA, __in_opt SIZE_T nHostLen)
   if (szHostA == NULL)
     return E_POINTER;
   //is an IP address
-  if (MX::CHostResolver::IsValidIPV4(szHostA, nHostLen) != FALSE ||
-      MX::CHostResolver::IsValidIPV6(szHostA, nHostLen) != FALSE ||
-      (nHostLen > 2 && szHostA[0] == '[' && szHostA[nHostLen-1] == ']' &&
-       MX::CHostResolver::IsValidIPV6(szHostA+1, nHostLen-2) != FALSE))
+  if (CHostResolver::IsValidIPV4(szHostA, nHostLen) != FALSE || CHostResolver::IsValidIPV6(szHostA, nHostLen) != FALSE)
   {
     if (cStrTempW.CopyN(szHostA, nHostLen) == FALSE)
       return E_OUTOFMEMORY;
-    hRes = SetHost((LPWSTR)cStrTempW);
+  }
+  else if (nHostLen > 2 && szHostA[0] == '[' && szHostA[nHostLen-1] == ']' &&
+           CHostResolver::IsValidIPV6(szHostA+1, nHostLen-2) != FALSE)
+  {
+    if (cStrTempW.CopyN(L"[", 1) == FALSE ||
+        cStrTempW.ConcatN(szHostA, nHostLen) == FALSE ||
+        cStrTempW.ConcatN(L"]", 1) == FALSE)
+      return E_OUTOFMEMORY;
   }
   else
   {
@@ -243,14 +247,16 @@ HRESULT CUrl::SetHost(__in_z LPCSTR szHostA, __in_opt SIZE_T nHostLen)
     hRes = Decode(cStrTempA, szHostA, nHostLen);
     if (SUCCEEDED(hRes))
       hRes = Punycode_Decode(cStrTempW, (LPCSTR)cStrTempA, cStrTempA.GetLength());
-    if (SUCCEEDED(hRes))
-      hRes = SetHost((LPCWSTR)cStrTempW);
+    if (FAILED(hRes))
+      return hRes;
+    if (IsValidHostAddress((LPCWSTR)cStrTempW, cStrTempW.GetLength()) == FALSE)
+      return MX_E_InvalidData;
+    if (cStrTempW.CopyN(szHostA, nHostLen) == FALSE)
+      return E_OUTOFMEMORY;
   }
   //done
-  return hRes;
+  return S_OK;
 }
-
-//  reg-name    = *(unreserved / pct-encoded / sub-delims)
 
 HRESULT CUrl::SetHost(__in_z LPCWSTR szHostW, __in_opt SIZE_T nHostLen)
 {
@@ -1942,6 +1948,64 @@ SIZE_T CUrl::GetDecodedLength(__in_z LPCSTR szUrlA, __in_opt SIZE_T nUrlLen)
   return nCount;
 }
 
+BOOL CUrl::IsValidHostAddress(__in_z LPCSTR szHostA, __in_opt SIZE_T nHostLen)
+{
+  SIZE_T i;
+
+  if (nHostLen == (SIZE_T)-1)
+    nHostLen = StrLenA(szHostA);
+  if (nHostLen == 0)
+    return FALSE;
+  //check for IPv4
+  if (CHostResolver::IsValidIPV4(szHostA, nHostLen) != FALSE)
+    return S_OK;
+  //check for IPv6
+  if (CHostResolver::IsValidIPV6(szHostA, nHostLen) != FALSE)
+    return TRUE;
+  if (szHostA[0] == '[' && szHostA[nHostLen-1] == ']' && CHostResolver::IsValidIPV6(szHostA+1, nHostLen-2) != FALSE)
+    return TRUE;
+  //check for a valid name
+  if (szHostA[0] == '.' || szHostA[nHostLen-1] == '.')
+    return FALSE;
+  for (i=0; i<nHostLen-1; i++)
+  {
+    if (szHostA[i] == '.' && szHostA[i+1] == '.')
+      return FALSE;
+    if (StrChrA(":/?#[]@!$&'()*+,;=\"", szHostA[i]) != NULL)
+      return FALSE;
+  }
+  return TRUE;
+}
+
+BOOL CUrl::IsValidHostAddress(__in_z LPCWSTR szHostW, __in_opt SIZE_T nHostLen)
+{
+  SIZE_T i;
+
+  if (nHostLen == (SIZE_T)-1)
+    nHostLen = StrLenW(szHostW);
+  if (nHostLen == 0)
+    return FALSE;
+  //check for IPv4
+  if (CHostResolver::IsValidIPV4(szHostW, nHostLen) != FALSE)
+    return S_OK;
+  //check for IPv6
+  if (CHostResolver::IsValidIPV6(szHostW, nHostLen) != FALSE)
+    return TRUE;
+  if (szHostW[0] == L'[' && szHostW[nHostLen-1] == L']' && CHostResolver::IsValidIPV6(szHostW+1, nHostLen-2) != FALSE)
+    return TRUE;
+  //check for a valid name
+  if (szHostW[0] == L'.' || szHostW[nHostLen-1] == L'.')
+    return FALSE;
+  for (i=0; i<nHostLen-1; i++)
+  {
+    if (szHostW[i] == L'.' && szHostW[i+1] == L'.')
+      return FALSE;
+    if (StrChrW(L":/?#[]@!$&'()*+,;=\"", szHostW[i]) != NULL)
+      return FALSE;
+  }
+  return TRUE;
+}
+
 } //namespace MX
 
 //-----------------------------------------------------------
@@ -2433,46 +2497,6 @@ static BOOL IsLocalHost(__in_z LPCWSTR szHostW)
     }
   }
   return FALSE;
-}
-
-static BOOL IsValidEMailAddress(__in LPCWSTR szAddressW, __in SIZE_T nAddressLen)
-{
-  BOOL bLastWasDot, bAtFound;
-  LPCWSTR szAtPosW;
-
-  if (szAddressW == NULL || nAddressLen == 0)
-    return FALSE;
-  if (*szAddressW == L'@')
-    return FALSE;
-  bLastWasDot = bAtFound = FALSE;
-  szAtPosW = NULL;
-  for (; nAddressLen>0; szAddressW++, nAddressLen--)
-  {
-    if (*szAddressW <= L' ')
-      return FALSE;
-    switch (*szAddressW)
-    {
-      case L'.':
-        if (bLastWasDot != FALSE || szAtPosW == szAddressW-1)
-          return FALSE;
-        bLastWasDot = TRUE;
-        break;
-
-      case L'@':
-        if (bLastWasDot != FALSE || szAtPosW != NULL)
-          return FALSE;
-        szAtPosW = szAddressW;
-        bLastWasDot = FALSE;
-        break;
-
-      default:
-        if (MX::StrChrW(L"()<>,;:\\/\"[]", *szAddressW) != NULL)
-          return FALSE;
-        bLastWasDot = FALSE;
-        break;
-    }
-  }
-  return (bLastWasDot != FALSE || szAtPosW == NULL || szAtPosW == szAddressW-1) ? FALSE : TRUE;
 }
 
 static BOOL HasDisallowedEscapedSequences(__in_z LPCSTR szSrcA, __in SIZE_T nSrcLen)
