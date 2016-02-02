@@ -31,6 +31,10 @@
     <ClCompile Include="Source\JsLib\JavascriptVMJsObjectBase.cpp" />
     <ClCompile Include="Source\JsLib\JavascriptVMProxyCallbacks.cpp" />
     <ClCompile Include="Source\JsLib\JavascriptVMRequireModuleContext.cpp" />
+    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPlugin.cpp" />
+    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPluginApi.cpp" />
+    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPluginFieldInfo.cpp" />
+    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPluginHelpers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\JsLib\JavascriptVM.h" />
@@ -53,7 +57,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="Include\JsLib\Plugins\JsMySqlPlugin.h" />
     <ClInclude Include="Source\JsLib\JavascriptVMCommon.h" />
+    <ClInclude Include="Source\JsLib\Plugins\JsMySqlPluginCommon.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="Source\JsLib\DukTape\commonjs.txt">

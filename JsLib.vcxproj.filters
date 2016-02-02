@@ -12,6 +12,12 @@
     <Filter Include="Source Files\DukTape">
       <UniqueIdentifier>{8f2df32f-a6ef-49a2-8d48-1ef72156f0a0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Plugins">
+      <UniqueIdentifier>{aedf6258-5dce-4792-9f38-d355f52a7f9f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Plugins">
+      <UniqueIdentifier>{98c49818-e9ed-4c06-a1c4-64ce85e70077}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\JsLib\DukTape\duktape.c">
@@ -35,6 +41,18 @@
     <ClCompile Include="Source\JsLib\JavascriptVMCommon.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPlugin.cpp">
+      <Filter>Source Files\Plugins</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPluginApi.cpp">
+      <Filter>Source Files\Plugins</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPluginFieldInfo.cpp">
+      <Filter>Source Files\Plugins</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPluginHelpers.cpp">
+      <Filter>Source Files\Plugins</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\JsLib\DukTape\duk_config.h">
@@ -54,6 +72,12 @@
     </ClInclude>
     <ClInclude Include="Source\JsLib\JavascriptVMCommon.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\JsLib\Plugins\JsMySqlPluginCommon.h">
+      <Filter>Source Files\Plugins</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\JsLib\Plugins\JsMySqlPlugin.h">
+      <Filter>Header Files\Plugins</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

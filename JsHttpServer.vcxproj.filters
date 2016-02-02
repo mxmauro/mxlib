@@ -26,12 +26,6 @@
     <ClInclude Include="Include\JsHttpServer\Plugins\JsHttpServerSessionPlugin.h">
       <Filter>Header Files\Plugins</Filter>
     </ClInclude>
-    <ClInclude Include="Include\JsHttpServer\Plugins\JsHttpServerMySqlPlugin.h">
-      <Filter>Header Files\Plugins</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\JsHttpServer\Plugins\JsHttpServerMySqlPluginCommon.h">
-      <Filter>Source Files\Plugins</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\JsHttpServer\JsHttpServer.cpp">
@@ -53,18 +47,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\JsHttpServer\Plugins\JsHttpServerSessionPlugin.cpp">
-      <Filter>Source Files\Plugins</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\JsHttpServer\Plugins\JsHttpServerMySqlPlugin.cpp">
-      <Filter>Source Files\Plugins</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\JsHttpServer\Plugins\JsHttpServerMySqlPluginFieldInfo.cpp">
-      <Filter>Source Files\Plugins</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\JsHttpServer\Plugins\JsHttpServerMySqlPluginApi.cpp">
-      <Filter>Source Files\Plugins</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\JsHttpServer\Plugins\JsHttpServerMySqlPluginHelpers.cpp">
       <Filter>Source Files\Plugins</Filter>
     </ClCompile>
   </ItemGroup>

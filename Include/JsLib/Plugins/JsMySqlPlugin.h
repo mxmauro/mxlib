@@ -21,40 +21,40 @@
  *    c. Distribute, sub-license, rent, lease, loan [or grant any third party
  *       access to or use of the software to any third party.
  **/
-#ifndef _MX_JS_HTTP_SERVER_MYSQL_PLUGIN_H
-#define _MX_JS_HTTP_SERVER_MYSQL_PLUGIN_H
+#ifndef _MX_JS_MYSQL_PLUGIN_H
+#define _MX_JS_MYSQL_PLUGIN_H
 
-#include "..\JsHttpServer.h"
+#include "..\JavascriptVM.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-class CJsHttpServerMySqlPlugin : public CJsObjectBase
+class CJsMySqlPlugin : public CJsObjectBase
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CJsHttpServerMySqlPlugin);
+  MX_DISABLE_COPY_CONSTRUCTOR(CJsMySqlPlugin);
 public:
-  CJsHttpServerMySqlPlugin(__in DukTape::duk_context *lpCtx);
-  ~CJsHttpServerMySqlPlugin();
+  CJsMySqlPlugin(__in DukTape::duk_context *lpCtx);
+  ~CJsMySqlPlugin();
 
-  MX_JS_BEGIN_MAP(CJsHttpServerMySqlPlugin, "MySQL", 0)
-    MX_JS_MAP_METHOD("connect", &CJsHttpServerMySqlPlugin::Connect, MX_JS_VARARGS) //host,user[,pass[,dbname[,port]]]
-    MX_JS_MAP_METHOD("disconnect", &CJsHttpServerMySqlPlugin::Disconnect, 0)
-    MX_JS_MAP_METHOD("selectDatabase", &CJsHttpServerMySqlPlugin::SelectDatabase, 1)
-    MX_JS_MAP_METHOD("query", &CJsHttpServerMySqlPlugin::Query, 1)
-    MX_JS_MAP_METHOD("queryAndFetchRow", &CJsHttpServerMySqlPlugin::QueryAndFetch, 1)
-    MX_JS_MAP_METHOD("queryClose", &CJsHttpServerMySqlPlugin::QueryClose, 0)
-    MX_JS_MAP_METHOD("escapeString", &CJsHttpServerMySqlPlugin::EscapeString, MX_JS_VARARGS)
-    MX_JS_MAP_METHOD("fetchRow", &CJsHttpServerMySqlPlugin::FetchRow, 0)
-    MX_JS_MAP_METHOD("beginTransaction", &CJsHttpServerMySqlPlugin::BeginTransaction, 0)
-    MX_JS_MAP_METHOD("commit", &CJsHttpServerMySqlPlugin::CommitTransaction, 0)
-    MX_JS_MAP_METHOD("rollback", &CJsHttpServerMySqlPlugin::RollbackTransaction, 0)
-    MX_JS_MAP_PROPERTY("error", &CJsHttpServerMySqlPlugin::getLastError, NULL, FALSE)
-    MX_JS_MAP_PROPERTY("dbError", &CJsHttpServerMySqlPlugin::getLastDbError, NULL, FALSE)
-    MX_JS_MAP_PROPERTY("affectedRows", &CJsHttpServerMySqlPlugin::getAffectedRows, NULL, FALSE)
-    MX_JS_MAP_PROPERTY("insertId", &CJsHttpServerMySqlPlugin::getInsertId, NULL, FALSE)
-    MX_JS_MAP_PROPERTY("fields", &CJsHttpServerMySqlPlugin::getFields, NULL, FALSE)
-    MX_JS_MAP_PROPERTY("fieldsCount", &CJsHttpServerMySqlPlugin::getFieldsCount, NULL, FALSE)
+  MX_JS_BEGIN_MAP(CJsMySqlPlugin, "MySQL", 0)
+    MX_JS_MAP_METHOD("connect", &CJsMySqlPlugin::Connect, MX_JS_VARARGS) //host,user[,pass[,dbname[,port]]]
+    MX_JS_MAP_METHOD("disconnect", &CJsMySqlPlugin::Disconnect, 0)
+    MX_JS_MAP_METHOD("selectDatabase", &CJsMySqlPlugin::SelectDatabase, 1)
+    MX_JS_MAP_METHOD("query", &CJsMySqlPlugin::Query, 1)
+    MX_JS_MAP_METHOD("queryAndFetchRow", &CJsMySqlPlugin::QueryAndFetch, 1)
+    MX_JS_MAP_METHOD("queryClose", &CJsMySqlPlugin::QueryClose, 0)
+    MX_JS_MAP_METHOD("escapeString", &CJsMySqlPlugin::EscapeString, MX_JS_VARARGS)
+    MX_JS_MAP_METHOD("fetchRow", &CJsMySqlPlugin::FetchRow, 0)
+    MX_JS_MAP_METHOD("beginTransaction", &CJsMySqlPlugin::BeginTransaction, 0)
+    MX_JS_MAP_METHOD("commit", &CJsMySqlPlugin::CommitTransaction, 0)
+    MX_JS_MAP_METHOD("rollback", &CJsMySqlPlugin::RollbackTransaction, 0)
+    MX_JS_MAP_PROPERTY("error", &CJsMySqlPlugin::getLastError, NULL, FALSE)
+    MX_JS_MAP_PROPERTY("dbError", &CJsMySqlPlugin::getLastDbError, NULL, FALSE)
+    MX_JS_MAP_PROPERTY("affectedRows", &CJsMySqlPlugin::getAffectedRows, NULL, FALSE)
+    MX_JS_MAP_PROPERTY("insertId", &CJsMySqlPlugin::getInsertId, NULL, FALSE)
+    MX_JS_MAP_PROPERTY("fields", &CJsMySqlPlugin::getFields, NULL, FALSE)
+    MX_JS_MAP_PROPERTY("fieldsCount", &CJsMySqlPlugin::getFieldsCount, NULL, FALSE)
   MX_JS_END_MAP()
 
 private:
@@ -96,4 +96,4 @@ private:
 
 //-----------------------------------------------------------
 
-#endif //_MX_JS_HTTP_SERVER_MYSQL_PLUGIN_H
+#endif //_MX_JS_MYSQL_PLUGIN_H

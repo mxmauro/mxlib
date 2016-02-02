@@ -21,7 +21,7 @@
  *    c. Distribute, sub-license, rent, lease, loan [or grant any third party
  *       access to or use of the software to any third party.
  **/
-#include "JsHttpServerMySqlPluginCommon.h"
+#include "JsMySqlPluginCommon.h"
 #include <locale.h>
 #include "..\..\..\Include\Finalizer.h"
 

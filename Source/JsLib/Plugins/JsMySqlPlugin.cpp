@@ -21,7 +21,7 @@
  *    c. Distribute, sub-license, rent, lease, loan [or grant any third party
  *       access to or use of the software to any third party.
  **/
-#include "JsHttpServerMySqlPluginCommon.h"
+#include "JsMySqlPluginCommon.h"
 #include <stdlib.h>
 
 //-----------------------------------------------------------
@@ -31,9 +31,9 @@ extern "C" {
   extern _locale_tstruct __initiallocalestructinfo;
 };
 
-#define _INTERNAL()        ((Internals::CJsHttpServerMySqlPluginHelpers*)lpInternal)
-#define _DB()              ((Internals::CJsHttpServerMySqlPluginHelpers*)lpInternal)->lpDB
-#define _RS()              ((Internals::CJsHttpServerMySqlPluginHelpers*)lpInternal)->sQuery.lpResultSet
+#define _INTERNAL()        ((Internals::CJsMySqlPluginHelpers*)lpInternal)
+#define _DB()              ((Internals::CJsMySqlPluginHelpers*)lpInternal)->lpDB
+#define _RS()              ((Internals::CJsMySqlPluginHelpers*)lpInternal)->sQuery.lpResultSet
 #define _CALLAPI(apiname)  Internals::API::fn_##apiname
 
 #define longlong  LONGLONG
@@ -43,7 +43,7 @@ extern "C" {
 
 namespace MX {
 
-CJsHttpServerMySqlPlugin::CJsHttpServerMySqlPlugin(__in DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
+CJsMySqlPlugin::CJsMySqlPlugin(__in DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
 {
   lpInternal = NULL;
   hLastErr = S_OK;
@@ -51,13 +51,13 @@ CJsHttpServerMySqlPlugin::CJsHttpServerMySqlPlugin(__in DukTape::duk_context *lp
   return;
 }
 
-CJsHttpServerMySqlPlugin::~CJsHttpServerMySqlPlugin()
+CJsMySqlPlugin::~CJsMySqlPlugin()
 {
   Disconnect(NULL);
   return;
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::Connect(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsMySqlPlugin::Connect(__in DukTape::duk_context *lpCtx)
 {
   LPCSTR szHostA, szUserNameA, szPasswordA, szDbNameA;
   DukTape::duk_idx_t nParamsCount;
@@ -92,7 +92,7 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::Connect(__in DukTape::duk_context *
   if (FAILED(hRes))
     return ReturnErrorFromHResult(lpCtx, hRes);
   //create internal object
-  lpInternal = MX_DEBUG_NEW Internals::CJsHttpServerMySqlPluginHelpers();
+  lpInternal = MX_DEBUG_NEW Internals::CJsMySqlPluginHelpers();
   if (lpInternal == NULL)
     return ReturnErrorFromHResult(lpCtx, E_OUTOFMEMORY);
   //----
@@ -153,7 +153,7 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::Connect(__in DukTape::duk_context *
   return ReturnErrorFromHResult(lpCtx, S_OK);
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::Disconnect(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsMySqlPlugin::Disconnect(__in DukTape::duk_context *lpCtx)
 {
   if (lpInternal != NULL)
   {
@@ -182,7 +182,7 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::Disconnect(__in DukTape::duk_contex
   return 0;
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::SelectDatabase(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsMySqlPlugin::SelectDatabase(__in DukTape::duk_context *lpCtx)
 {
   LPCSTR szDbNameA;
   int err;
@@ -202,7 +202,7 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::SelectDatabase(__in DukTape::duk_co
   return ReturnErrorFromHResult(lpCtx, S_OK);
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::Query(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsMySqlPlugin::Query(__in DukTape::duk_context *lpCtx)
 {
   LPCSTR szQueryA;
   int err;
@@ -231,7 +231,7 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::Query(__in DukTape::duk_context *lp
   return ReturnErrorFromHResult(lpCtx, S_OK);
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::QueryAndFetch(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsMySqlPlugin::QueryAndFetch(__in DukTape::duk_context *lpCtx)
 {
   DukTape::duk_ret_t ret;
 
@@ -244,7 +244,7 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::QueryAndFetch(__in DukTape::duk_con
   return ret;
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::QueryClose(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsMySqlPlugin::QueryClose(__in DukTape::duk_context *lpCtx)
 {
   if (lpInternal != NULL)
     _INTERNAL()->QueryClose();
@@ -252,7 +252,7 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::QueryClose(__in DukTape::duk_contex
   return 0;
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::EscapeString(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsMySqlPlugin::EscapeString(__in DukTape::duk_context *lpCtx)
 {
   CStringA cStrResultA;
   DukTape::duk_idx_t nParamsCount;
@@ -364,10 +364,10 @@ doDefault:
   return 1;
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::FetchRow(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsMySqlPlugin::FetchRow(__in DukTape::duk_context *lpCtx)
 {
   static const DWORD dwMilliMult[3] ={ 100, 10, 1 };
-  Internals::CJsHttpServerMySqlPluginHelpers::CFieldInfo *lpFieldInfo;
+  Internals::CJsMySqlPluginHelpers::CFieldInfo *lpFieldInfo;
   MYSQL_ROW lpRow;
   ULONG k, *lpnRowLengths;
   SIZE_T i, nCount;
@@ -582,17 +582,17 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::FetchRow(__in DukTape::duk_context 
                   }
                   else
                   {
-                    dwMillis = DWORD_MAX;
+                    dwMillis = 0xFFFFFFFFUL;
                     break;
                   }
                 }
               }
               else
               {
-                dwMillis = DWORD_MAX;
+                dwMillis = 0xFFFFFFFFUL;
               }
             }
-            if (dwMillis != DWORD_MAX)
+            if (dwMillis != 0xFFFFFFFFUL)
             {
               DukTape::duk_get_global_string(lpCtx, "Date");
               u.dw = (DWORD)(sA[0] - '0') * 1000 + (DWORD)(sA[1] - '0') * 100 +
@@ -667,7 +667,7 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::FetchRow(__in DukTape::duk_context 
   return 1;
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::BeginTransaction(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsMySqlPlugin::BeginTransaction(__in DukTape::duk_context *lpCtx)
 {
   int nDbErr;
   HRESULT hRes;
@@ -678,7 +678,7 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::BeginTransaction(__in DukTape::duk_
   return ReturnErrorFromHResultAndDbErr(lpCtx, hRes, nDbErr);
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::CommitTransaction(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsMySqlPlugin::CommitTransaction(__in DukTape::duk_context *lpCtx)
 {
   int nDbErr;
   HRESULT hRes;
@@ -689,7 +689,7 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::CommitTransaction(__in DukTape::duk
   return ReturnErrorFromHResultAndDbErr(lpCtx, hRes, nDbErr);
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::RollbackTransaction(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsMySqlPlugin::RollbackTransaction(__in DukTape::duk_context *lpCtx)
 {
   int nDbErr;
   HRESULT hRes;
@@ -700,19 +700,19 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::RollbackTransaction(__in DukTape::d
   return ReturnErrorFromHResultAndDbErr(lpCtx, hRes, nDbErr);
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::getLastError(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsMySqlPlugin::getLastError(__in DukTape::duk_context *lpCtx)
 {
   DukTape::duk_push_int(lpCtx, (int)hLastErr);
   return 1;
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::getLastDbError(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsMySqlPlugin::getLastDbError(__in DukTape::duk_context *lpCtx)
 {
   DukTape::duk_push_int(lpCtx, (int)nLastDbErr);
   return 1;
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::getAffectedRows(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsMySqlPlugin::getAffectedRows(__in DukTape::duk_context *lpCtx)
 {
   if (lpInternal != NULL)
     DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)(_INTERNAL()->sQuery.nAffectedRows));
@@ -721,7 +721,7 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::getAffectedRows(__in DukTape::duk_c
   return 1;
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::getInsertId(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsMySqlPlugin::getInsertId(__in DukTape::duk_context *lpCtx)
 {
   if (lpInternal != NULL)
     DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)(_INTERNAL()->sQuery.nLastInsertId));
@@ -730,7 +730,7 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::getInsertId(__in DukTape::duk_conte
   return 1;
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::getFieldsCount(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsMySqlPlugin::getFieldsCount(__in DukTape::duk_context *lpCtx)
 {
   if (lpInternal != NULL && _RS() != NULL)
   {
@@ -746,11 +746,11 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::getFieldsCount(__in DukTape::duk_co
   return 1;
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::getFields(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsMySqlPlugin::getFields(__in DukTape::duk_context *lpCtx)
 {
   if (lpInternal != NULL && _RS() != NULL)
   {
-    Internals::CJsHttpServerMySqlPluginHelpers::CFieldInfo *lpFieldInfo;
+    Internals::CJsMySqlPluginHelpers::CFieldInfo *lpFieldInfo;
     DukTape::duk_ret_t nRet;
     SIZE_T i, nCount;
 
@@ -774,7 +774,7 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::getFields(__in DukTape::duk_context
   return 1;
 }
 
-HRESULT CJsHttpServerMySqlPlugin::_TransactionStart(__out int &nDbErr)
+HRESULT CJsMySqlPlugin::_TransactionStart(__out int &nDbErr)
 {
   HRESULT hRes;
 
@@ -791,7 +791,7 @@ HRESULT CJsHttpServerMySqlPlugin::_TransactionStart(__out int &nDbErr)
   return hRes;
 }
 
-HRESULT CJsHttpServerMySqlPlugin::_TransactionCommit(__out int &nDbErr)
+HRESULT CJsMySqlPlugin::_TransactionCommit(__out int &nDbErr)
 {
   HRESULT hRes;
 
@@ -808,7 +808,7 @@ HRESULT CJsHttpServerMySqlPlugin::_TransactionCommit(__out int &nDbErr)
   return hRes;
 }
 
-HRESULT CJsHttpServerMySqlPlugin::_TransactionRollback(__out int &nDbErr)
+HRESULT CJsMySqlPlugin::_TransactionRollback(__out int &nDbErr)
 {
   HRESULT hRes;
 
@@ -825,7 +825,7 @@ HRESULT CJsHttpServerMySqlPlugin::_TransactionRollback(__out int &nDbErr)
   return hRes;
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::ReturnErrorFromHResult(__in DukTape::duk_context *lpCtx, __in HRESULT hRes)
+DukTape::duk_ret_t CJsMySqlPlugin::ReturnErrorFromHResult(__in DukTape::duk_context *lpCtx, __in HRESULT hRes)
 {
   if (hRes == E_INVALIDARG)
   {
@@ -844,7 +844,7 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::ReturnErrorFromHResult(__in DukTape
   return 1;
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::ReturnErrorFromHResultAndDbErr(__in DukTape::duk_context *lpCtx, 
+DukTape::duk_ret_t CJsMySqlPlugin::ReturnErrorFromHResultAndDbErr(__in DukTape::duk_context *lpCtx, 
                                                                             __in HRESULT hRes, __in int nDbErr)
 {
   if (hRes == E_INVALIDARG)
@@ -864,12 +864,12 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::ReturnErrorFromHResultAndDbErr(__in
   return 1;
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::ReturnErrorFromLastDbErr(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsMySqlPlugin::ReturnErrorFromLastDbErr(__in DukTape::duk_context *lpCtx)
 {
   nLastDbErr = (int)_CALLAPI(mysql_errno)(_DB());
   if (nLastDbErr == 0)
     nLastDbErr = ER_UNKNOWN_ERROR;
-  hLastErr = Internals::CJsHttpServerMySqlPluginHelpers::HResultFromMySqlErr(nLastDbErr);
+  hLastErr = Internals::CJsMySqlPluginHelpers::HResultFromMySqlErr(nLastDbErr);
   //----
   if (hLastErr == E_INVALIDARG)
   {
@@ -885,12 +885,12 @@ DukTape::duk_ret_t CJsHttpServerMySqlPlugin::ReturnErrorFromLastDbErr(__in DukTa
   return 1;
 }
 
-DukTape::duk_ret_t CJsHttpServerMySqlPlugin::ReturnErrorFromDbErr(__in DukTape::duk_context *lpCtx, __in int nDbErr)
+DukTape::duk_ret_t CJsMySqlPlugin::ReturnErrorFromDbErr(__in DukTape::duk_context *lpCtx, __in int nDbErr)
 {
   nLastDbErr = nDbErr;
   if (nLastDbErr == 0)
     nLastDbErr = ER_UNKNOWN_ERROR;
-  hLastErr = Internals::CJsHttpServerMySqlPluginHelpers::HResultFromMySqlErr(nLastDbErr);
+  hLastErr = Internals::CJsMySqlPluginHelpers::HResultFromMySqlErr(nLastDbErr);
   //----
   if (hLastErr == E_INVALIDARG)
   {

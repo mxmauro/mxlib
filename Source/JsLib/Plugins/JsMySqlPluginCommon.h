@@ -21,10 +21,14 @@
  *    c. Distribute, sub-license, rent, lease, loan [or grant any third party
  *       access to or use of the software to any third party.
  **/
-#ifndef _MX_JS_HTTP_SERVER_MYSQL_PLUGIN_COMMON_H
-#define _MX_JS_HTTP_SERVER_MYSQL_PLUGIN_COMMON_H
+#ifndef _MX_JS_MYSQL_PLUGIN_COMMON_H
+#define _MX_JS_MYSQL_PLUGIN_COMMON_H
 
-#include "..\..\..\Include\JsHttpServer\Plugins\JsHttpServerMySqlPlugin.h"
+#include "..\..\..\Include\JsLib\Plugins\JsMySqlPlugin.h"
+#include "..\..\..\Include\ArrayList.h"
+#if (!defined(_WS2DEF_)) && (!defined(_WINSOCKAPI_))
+  #include <WS2tcpip.h>
+#endif
 #include "mysql\mysql.h"
 #include "mysql\mysqld_error.h"
 #include "mysql\errmsg.h"
@@ -68,11 +72,11 @@ namespace MX {
 
 namespace Internals {
 
-class CJsHttpServerMySqlPluginHelpers : public virtual CBaseMemObj
+class CJsMySqlPluginHelpers : public virtual CBaseMemObj
 {
 public:
-  CJsHttpServerMySqlPluginHelpers();
-  ~CJsHttpServerMySqlPluginHelpers();
+  CJsMySqlPluginHelpers();
+  ~CJsMySqlPluginHelpers();
 
   HRESULT ExecuteQuery(__in LPCSTR szQueryA, __in SIZE_T nQueryLegth, __out int &nDbErr,
                        __out_opt MYSQL_RES **lplpResult=NULL);
@@ -157,7 +161,7 @@ public:
     DukTape::duk_ret_t getType(__in DukTape::duk_context *lpCtx);
 
   private:
-    friend class CJsHttpServerMySqlPluginHelpers;
+    friend class CJsMySqlPluginHelpers;
 
     CStringA cStrNameA, cStrOriginalNameA;
     CStringA cStrTableA, cStrOriginalTableA;
@@ -218,4 +222,4 @@ extern lpfn_mysql_error fn_mysql_error;
 
 //-----------------------------------------------------------
 
-#endif //_MX_JS_HTTP_SERVER_MYSQL_PLUGIN_COMMON_H
+#endif //_MX_JS_MYSQL_PLUGIN_COMMON_H

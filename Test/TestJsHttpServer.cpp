@@ -24,7 +24,7 @@
 #include "TestJsHttpServer.h"
 #include <JsHttpServer\JsHttpServer.h>
 #include <JsHttpServer\Plugins\JsHttpServerSessionPlugin.h>
-#include <JsHttpServer\Plugins\JsHttpServerMySqlPlugin.h>
+#include <JsLib\Plugins\JsMySqlPlugin.h>
 
 //-----------------------------------------------------------
 
@@ -151,7 +151,7 @@ static HRESULT OnRequest(__in MX::CJsHttpServer *lpHttp, __in MX::CHttpServer::C
     if (SUCCEEDED(hRes))
       hRes = MX::CJsHttpServerSessionPlugin::Register(cJvm, FALSE, TRUE);
     if (SUCCEEDED(hRes))
-      hRes = MX::CJsHttpServerMySqlPlugin::Register(cJvm, TRUE, FALSE);
+      hRes = MX::CJsMySqlPlugin::Register(cJvm, TRUE, FALSE);
     if (hRes == MX_HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) ||
         hRes == MX_HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND))
     {

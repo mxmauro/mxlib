@@ -21,7 +21,7 @@
  *    c. Distribute, sub-license, rent, lease, loan [or grant any third party
  *       access to or use of the software to any third party.
  **/
-#include "JsHttpServerMySqlPluginCommon.h"
+#include "JsMySqlPluginCommon.h"
 
 //-----------------------------------------------------------
 
@@ -29,7 +29,7 @@ namespace MX {
 
 namespace Internals {
 
-CJsHttpServerMySqlPluginHelpers::CJsHttpServerMySqlPluginHelpers() : CBaseMemObj()
+CJsMySqlPluginHelpers::CJsMySqlPluginHelpers() : CBaseMemObj()
 {
   lpDB = NULL;
   nServerUsingNoBackslashEscapes = -1;
@@ -41,12 +41,12 @@ CJsHttpServerMySqlPluginHelpers::CJsHttpServerMySqlPluginHelpers() : CBaseMemObj
   return;
 }
 
-CJsHttpServerMySqlPluginHelpers::~CJsHttpServerMySqlPluginHelpers()
+CJsMySqlPluginHelpers::~CJsMySqlPluginHelpers()
 {
   return;
 }
 
-HRESULT CJsHttpServerMySqlPluginHelpers::ExecuteQuery(__in LPCSTR szQueryA, __in SIZE_T nQueryLegth, __out int &nDbErr,
+HRESULT CJsMySqlPluginHelpers::ExecuteQuery(__in LPCSTR szQueryA, __in SIZE_T nQueryLegth, __out int &nDbErr,
                                                       __out_opt MYSQL_RES **lplpResult)
 {
   int nRetryCount, err;
@@ -93,7 +93,7 @@ HRESULT CJsHttpServerMySqlPluginHelpers::ExecuteQuery(__in LPCSTR szQueryA, __in
   return HResultFromMySqlErr(err);
 }
 
-VOID CJsHttpServerMySqlPluginHelpers::QueryClose(__in_opt BOOL bFlushData)
+VOID CJsMySqlPluginHelpers::QueryClose(__in_opt BOOL bFlushData)
 {
   if (sQuery.lpResultSet != NULL)
   {
@@ -105,7 +105,7 @@ VOID CJsHttpServerMySqlPluginHelpers::QueryClose(__in_opt BOOL bFlushData)
   return;
 }
 
-VOID CJsHttpServerMySqlPluginHelpers::CloseResultSet(__in MYSQL_RES *lpResult, __in_opt BOOL bFlushData)
+VOID CJsMySqlPluginHelpers::CloseResultSet(__in MYSQL_RES *lpResult, __in_opt BOOL bFlushData)
 {
   MYSQL_ROW lpRow;
 
@@ -121,7 +121,7 @@ VOID CJsHttpServerMySqlPluginHelpers::CloseResultSet(__in MYSQL_RES *lpResult, _
   return;
 }
 
-BOOL CJsHttpServerMySqlPluginHelpers::BuildFieldInfoArray()
+BOOL CJsMySqlPluginHelpers::BuildFieldInfoArray()
 {
   TAutoRefCounted<CFieldInfo> cFieldInfo;
   SIZE_T i;
@@ -182,13 +182,13 @@ BOOL CJsHttpServerMySqlPluginHelpers::BuildFieldInfoArray()
   return TRUE;
 }
 
-BOOL CJsHttpServerMySqlPluginHelpers::IsConnectionLostError(__in int nError)
+BOOL CJsMySqlPluginHelpers::IsConnectionLostError(__in int nError)
 {
   return (nError == CR_TCP_CONNECTION || nError == CR_SERVER_LOST ||
           nError == CR_SERVER_GONE_ERROR || nError == CR_SERVER_LOST_EXTENDED) ? TRUE : FALSE;
 }
 
-HRESULT CJsHttpServerMySqlPluginHelpers::HResultFromMySqlErr(__in int nError)
+HRESULT CJsMySqlPluginHelpers::HResultFromMySqlErr(__in int nError)
 {
   if (nError == 0)
     return S_OK;

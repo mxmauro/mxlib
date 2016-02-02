@@ -20,10 +20,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\JsHttpServer\JsHttpServer.h" />
-    <ClInclude Include="Include\JsHttpServer\Plugins\JsHttpServerMySqlPlugin.h" />
     <ClInclude Include="Include\JsHttpServer\Plugins\JsHttpServerSessionPlugin.h" />
     <ClInclude Include="Source\JsHttpServer\JsHttpServerCommon.h" />
-    <ClInclude Include="Source\JsHttpServer\Plugins\JsHttpServerMySqlPluginCommon.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\JsHttpServer\JsHttpServer.cpp" />
@@ -32,10 +30,6 @@
     <ClCompile Include="Source\JsHttpServer\JsHttpServerJavascriptVM.cpp" />
     <ClCompile Include="Source\JsHttpServer\JsHttpServerRawBodyJsObject.cpp" />
     <ClCompile Include="Source\JsHttpServer\JsHttpServerResponseMethods.cpp" />
-    <ClCompile Include="Source\JsHttpServer\Plugins\JsHttpServerMySqlPlugin.cpp" />
-    <ClCompile Include="Source\JsHttpServer\Plugins\JsHttpServerMySqlPluginApi.cpp" />
-    <ClCompile Include="Source\JsHttpServer\Plugins\JsHttpServerMySqlPluginFieldInfo.cpp" />
-    <ClCompile Include="Source\JsHttpServer\Plugins\JsHttpServerMySqlPluginHelpers.cpp" />
     <ClCompile Include="Source\JsHttpServer\Plugins\JsHttpServerSessionPlugin.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
