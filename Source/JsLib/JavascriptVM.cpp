@@ -649,6 +649,76 @@ HRESULT CJavascriptVM::PushObjectProperty(__in_z LPCSTR szObjectNameA, __in_z LP
   return Internals::JsLib::PushPropertyCommon(lpCtx, szObjectNameA, szPropertyNameA);
 }
 
+HRESULT CJavascriptVM::AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCSTR szStrA, __in_opt SIZE_T nStrLen)
+{
+  LPCSTR szStartA;
+  CHAR chA;
+
+  if (nStrLen == (SIZE_T)-1)
+    nStrLen = StrLenA(szStrA);
+  if (nStrLen == 0)
+    return S_OK;
+  if (szStrA == NULL)
+    return E_POINTER;
+  while (nStrLen > 0)
+  {
+    szStartA = szStrA;
+    while (nStrLen > 0 && StrChrA("'\"\\\n\r\t\b\f", *szStrA) == NULL)
+    {
+      szStrA++;
+      nStrLen--;
+    }
+    if (szStrA > szStartA)
+    {
+      if (cStrCodeA.ConcatN(szStartA, (SIZE_T)(szStrA-szStartA)) == FALSE)
+        return E_OUTOFMEMORY;
+    }
+    if (nStrLen > 0)
+    {
+      nStrLen--;
+      switch (chA = *szStrA++)
+      {
+        case '\n':
+          chA = 'n';
+          break;
+        case '\r':
+          chA = 'r';
+          break;
+        case '\t':
+          chA = 't';
+          break;
+        case '\b':
+          chA = 'b';
+          break;
+        case '\f':
+          chA = 'f';
+          break;
+      }
+      if (cStrCodeA.ConcatN(&chA, 1) == FALSE)
+        return E_OUTOFMEMORY;
+    }
+  }
+  //done
+  return S_OK;
+}
+
+HRESULT CJavascriptVM::AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen)
+{
+  MX::CStringA cStrTempA;
+  HRESULT hRes;
+
+  if (nStrLen == (SIZE_T)-1)
+    nStrLen = StrLenW(szStrW);
+  if (nStrLen == 0)
+    return S_OK;
+  if (szStrW == NULL)
+    return E_POINTER;
+  hRes = MX::Utf8_Encode(cStrTempA, szStrW, nStrLen);
+  if (SUCCEEDED(hRes))
+    hRes = AddSafeString(cStrCodeA, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+  return hRes;
+}
+
 DukTape::duk_ret_t CJavascriptVM::OnModSearch(__in DukTape::duk_context *lpCtx)
 {
   CRequireModuleContext cContext;

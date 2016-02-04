@@ -377,6 +377,9 @@ public:
     return (LPCSTR)sLastExecError.cStrStackTraceA;
     };
 
+  static HRESULT AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCSTR szStrA, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
+  static HRESULT AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
+
 private:
   static DukTape::duk_ret_t OnModSearch(__in DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _ProxyHasPropHelper(__in DukTape::duk_context *lpCtx);
