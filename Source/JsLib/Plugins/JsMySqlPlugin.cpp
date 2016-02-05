@@ -392,9 +392,17 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow(__in DukTape::duk_context *lpCtx)
   if (lpRow == NULL)
   {
     nLastDbErr = _CALLAPI(mysql_errno)(_DB());
-    strncpy_s(szLastDbErrA, _countof(szLastDbErrA), _CALLAPI(mysql_error)(_DB()), _TRUNCATE);
-    strncpy_s(szLastSqlStateA, _countof(szLastSqlStateA), _CALLAPI(mysql_sqlstate)(_DB()), _TRUNCATE);
-    hLastErr = (nLastDbErr == 0) ? MX_E_EndOfFileReached : E_FAIL;
+    if (nLastDbErr == 0)
+    {
+      hLastErr = S_OK;
+      szLastDbErrA[0] = szLastSqlStateA[0] = 0;
+    }
+    else
+    {
+      strncpy_s(szLastDbErrA, _countof(szLastDbErrA), _CALLAPI(mysql_error)(_DB()), _TRUNCATE);
+      strncpy_s(szLastSqlStateA, _countof(szLastSqlStateA), _CALLAPI(mysql_sqlstate)(_DB()), _TRUNCATE);
+      hLastErr = E_FAIL;
+    }
     DukTape::duk_push_null(lpCtx);
     return 1;
   }
