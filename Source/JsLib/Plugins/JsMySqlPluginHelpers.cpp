@@ -46,8 +46,8 @@ CJsMySqlPluginHelpers::~CJsMySqlPluginHelpers()
   return;
 }
 
-HRESULT CJsMySqlPluginHelpers::ExecuteQuery(__in LPCSTR szQueryA, __in SIZE_T nQueryLegth, __out int &nDbErr,
-                                                      __out_opt MYSQL_RES **lplpResult)
+HRESULT CJsMySqlPluginHelpers::ExecuteQuery(__in LPCSTR szQueryA, __in SIZE_T nQueryLegth,
+                                            __out_opt MYSQL_RES **lplpResult)
 {
   int nRetryCount, err;
   MYSQL_RES *lpLocalResult;
@@ -55,7 +55,7 @@ HRESULT CJsMySqlPluginHelpers::ExecuteQuery(__in LPCSTR szQueryA, __in SIZE_T nQ
   //close previous query if any
   QueryClose();
   //validate arguments
-  nDbErr = err = 0;
+  err = 0;
   if (lplpResult == NULL)
     lplpResult = &lpLocalResult;
   *lplpResult = NULL;
@@ -78,10 +78,7 @@ HRESULT CJsMySqlPluginHelpers::ExecuteQuery(__in LPCSTR szQueryA, __in SIZE_T nQ
     }
     err = API::fn_mysql_errno(lpDB);
     if (IsConnectionLostError(err) != FALSE)
-    {
-      nDbErr = err;
       return MX_E_BrokenPipe;
-    }
     if (err == 0)
       err = ER_UNKNOWN_ERROR; //fake error
     if (nRetryCount == 1 || err != ER_CANT_LOCK)
@@ -89,7 +86,6 @@ HRESULT CJsMySqlPluginHelpers::ExecuteQuery(__in LPCSTR szQueryA, __in SIZE_T nQ
     ::Sleep(50);
     nRetryCount--;
   }
-  nDbErr = err;
   return HResultFromMySqlErr(err);
 }
 

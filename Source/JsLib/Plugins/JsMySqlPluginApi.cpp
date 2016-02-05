@@ -70,6 +70,7 @@ lpfn_mysql_insert_id          fn_mysql_insert_id = NULL;
 lpfn_mysql_set_character_set  fn_mysql_set_character_set = NULL;
 lpfn_mysql_errno              fn_mysql_errno = NULL;
 lpfn_mysql_error              fn_mysql_error = NULL;
+lpfn_mysql_sqlstate           fn_mysql_sqlstate = NULL;
 
 //-----------------------------------------------------------
 
@@ -109,6 +110,7 @@ HRESULT Initialize()
       lpfn_mysql_set_character_set  _fn_mysql_set_character_set = NULL;
       lpfn_mysql_errno              _fn_mysql_errno = NULL;
       lpfn_mysql_error              _fn_mysql_error = NULL;
+      lpfn_mysql_sqlstate           _fn_mysql_sqlstate = NULL;
       MYSQL *lpMySql;
 
       //get application path
@@ -155,6 +157,7 @@ HRESULT Initialize()
       LOAD_API(mysql_set_character_set);
       LOAD_API(mysql_errno);
       LOAD_API(mysql_error);
+      LOAD_API(mysql_sqlstate);
 #undef LOAD_API
       dw = 1;
 
@@ -209,6 +212,7 @@ afterLoad:
       fn_mysql_set_character_set  = _fn_mysql_set_character_set;
       fn_mysql_errno              = _fn_mysql_errno;
       fn_mysql_error              = _fn_mysql_error;
+      fn_mysql_sqlstate           = _fn_mysql_sqlstate;
       hDll = _hDll;
     }
   }

@@ -51,6 +51,8 @@ public:
     MX_JS_MAP_METHOD("rollback", &CJsMySqlPlugin::RollbackTransaction, 0)
     MX_JS_MAP_PROPERTY("error", &CJsMySqlPlugin::getLastError, NULL, FALSE)
     MX_JS_MAP_PROPERTY("dbError", &CJsMySqlPlugin::getLastDbError, NULL, FALSE)
+    MX_JS_MAP_PROPERTY("dbErrorMsg", &CJsMySqlPlugin::getLastDbErrorMessage, NULL, FALSE)
+    MX_JS_MAP_PROPERTY("sqlState", &CJsMySqlPlugin::getLastSqlState, NULL, FALSE)
     MX_JS_MAP_PROPERTY("affectedRows", &CJsMySqlPlugin::getAffectedRows, NULL, FALSE)
     MX_JS_MAP_PROPERTY("insertId", &CJsMySqlPlugin::getInsertId, NULL, FALSE)
     MX_JS_MAP_PROPERTY("fields", &CJsMySqlPlugin::getFields, NULL, FALSE)
@@ -71,25 +73,27 @@ private:
   DukTape::duk_ret_t RollbackTransaction(__in DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t getLastError(__in DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t getLastDbError(__in DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getLastDbErrorMessage(__in DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getLastSqlState(__in DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t getAffectedRows(__in DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t getInsertId(__in DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t getFieldsCount(__in DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t getFields(__in DukTape::duk_context *lpCtx);
 
-  HRESULT _TransactionStart(__out int &nDbErr);
-  HRESULT _TransactionCommit(__out int &nDbErr);
-  HRESULT _TransactionRollback(__out int &nDbErr);
+  HRESULT _TransactionStart();
+  HRESULT _TransactionCommit();
+  HRESULT _TransactionRollback();
 
   DukTape::duk_ret_t ReturnErrorFromHResult(__in DukTape::duk_context *lpCtx, __in HRESULT hRes);
-  DukTape::duk_ret_t ReturnErrorFromHResultAndDbErr(__in DukTape::duk_context *lpCtx, __in HRESULT hRes,
-                                                    __in int nDbErr);
+  DukTape::duk_ret_t ReturnErrorFromHResultAndDbErr(__in DukTape::duk_context *lpCtx, __in HRESULT hRes);
   DukTape::duk_ret_t ReturnErrorFromLastDbErr(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t ReturnErrorFromDbErr(__in DukTape::duk_context *lpCtx, __in int nDbErr);
 
 private:
   LPVOID lpInternal;
   HRESULT hLastErr;
   int nLastDbErr;
+  CHAR szLastDbErrA[512];
+  CHAR szLastSqlStateA[8];
 };
 
 } //namespace MX

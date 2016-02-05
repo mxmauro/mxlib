@@ -65,6 +65,7 @@ typedef ULONGLONG        (__stdcall *lpfn_mysql_insert_id)(MYSQL *mysql);
 typedef int              (__stdcall *lpfn_mysql_set_character_set)(MYSQL *mysql, const LPCSTR csname);
 typedef UINT             (__stdcall *lpfn_mysql_errno)(MYSQL *mysql);
 typedef const LPCSTR     (__stdcall *lpfn_mysql_error)(MYSQL *mysql);
+typedef const LPCSTR     (__stdcall *lpfn_mysql_sqlstate)(MYSQL *mysql);
 
 //-----------------------------------------------------------
 
@@ -78,8 +79,7 @@ public:
   CJsMySqlPluginHelpers();
   ~CJsMySqlPluginHelpers();
 
-  HRESULT ExecuteQuery(__in LPCSTR szQueryA, __in SIZE_T nQueryLegth, __out int &nDbErr,
-                       __out_opt MYSQL_RES **lplpResult=NULL);
+  HRESULT ExecuteQuery(__in LPCSTR szQueryA, __in SIZE_T nQueryLegth, __out_opt MYSQL_RES **lplpResult=NULL);
   VOID QueryClose(__in_opt BOOL bFlushData=TRUE);
   VOID CloseResultSet(__in MYSQL_RES *lpResult, __in_opt BOOL bFlushData=TRUE);
 
@@ -213,7 +213,7 @@ extern lpfn_mysql_insert_id fn_mysql_insert_id;
 extern lpfn_mysql_set_character_set fn_mysql_set_character_set;
 extern lpfn_mysql_errno fn_mysql_errno;
 extern lpfn_mysql_error fn_mysql_error;
-
+extern lpfn_mysql_sqlstate fn_mysql_sqlstate;
 } //namespace API
 
 } //namespace Internals
