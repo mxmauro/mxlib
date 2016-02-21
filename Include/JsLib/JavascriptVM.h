@@ -309,7 +309,11 @@ public:
                       __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddStringProperty(__in_z LPCSTR szPropertyNameA, __in_z LPCSTR szValueA,
                             __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddStringProperty(__in_z LPCSTR szPropertyNameA, __in_z LPCWSTR szValueW,
+                            __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddBooleanProperty(__in_z LPCSTR szPropertyNameA, __in BOOL bValue,
+                             __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddIntegerProperty(__in_z LPCSTR szPropertyNameA, __in int nValue,
                              __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddNumericProperty(__in_z LPCSTR szPropertyNameA, __in double nValue,
                              __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
@@ -337,7 +341,11 @@ public:
                             __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddObjectStringProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA, __in_z LPCSTR szValueA,
                                   __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddObjectStringProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA, __in_z LPCWSTR szValueW,
+                                  __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddObjectBooleanProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA, __in BOOL bValue,
+                                   __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddObjectIntegerProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA, __in int nValue,
                                    __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddObjectNumericProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA, __in double nValue,
                                    __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);

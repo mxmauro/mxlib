@@ -296,6 +296,22 @@ HRESULT CJavascriptVM::AddStringProperty(__in_z LPCSTR szPropertyNameA, __in_z L
                                              NullCallback());
 }
 
+HRESULT CJavascriptVM::AddStringProperty(__in_z LPCSTR szPropertyNameA, __in_z LPCWSTR szValueW,
+                                         __in_opt int nFlags)
+{
+  CStringA cStrTempA;
+  HRESULT hRes;
+
+  if (lpCtx == NULL)
+    return E_FAIL;
+  if (szValueW == NULL)
+    return AddStringProperty(szPropertyNameA, (LPCSTR)NULL, nFlags);
+  hRes = Utf8_Encode(cStrTempA, szValueW);
+  if (SUCCEEDED(hRes))
+    hRes = AddStringProperty(szPropertyNameA, (LPCSTR)cStrTempA, nFlags);
+  return hRes;
+}
+
 HRESULT CJavascriptVM::AddBooleanProperty(__in_z LPCSTR szPropertyNameA, __in BOOL bValue, __in_opt int nFlags)
 {
   if (lpCtx == NULL)
@@ -303,6 +319,22 @@ HRESULT CJavascriptVM::AddBooleanProperty(__in_z LPCSTR szPropertyNameA, __in BO
   try
   {
     DukTape::duk_push_boolean(lpCtx, (bValue != FALSE) ? true : false);
+  }
+  catch (CJavascriptVM::CException& ex)
+  {
+    return ex.GetErrorCode();
+  }
+  return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
+                                             NullCallback());
+}
+
+HRESULT CJavascriptVM::AddIntegerProperty(__in_z LPCSTR szPropertyNameA, __in int nValue, __in_opt int nFlags)
+{
+  if (lpCtx == NULL)
+    return E_FAIL;
+  try
+  {
+    DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)nValue);
   }
   catch (CJavascriptVM::CException& ex)
   {
@@ -524,6 +556,22 @@ HRESULT CJavascriptVM::AddObjectStringProperty(__in_z LPCSTR szObjectNameA, __in
                                              NullCallback());
 }
 
+HRESULT CJavascriptVM::AddObjectStringProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA,
+                                               __in_z LPCWSTR szValueW, __in_opt int nFlags)
+{
+  CStringA cStrTempA;
+  HRESULT hRes;
+
+  if (lpCtx == NULL)
+    return E_FAIL;
+  if (szValueW == NULL)
+    return AddObjectStringProperty(szObjectNameA, szPropertyNameA, (LPCSTR)NULL, nFlags);
+  hRes = Utf8_Encode(cStrTempA, szValueW);
+  if (SUCCEEDED(hRes))
+    hRes = AddObjectStringProperty(szObjectNameA, szPropertyNameA, (LPCSTR)cStrTempA, nFlags);
+  return hRes;
+}
+
 HRESULT CJavascriptVM::AddObjectBooleanProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA,
                                                 __in BOOL bValue, __in_opt int nFlags)
 {
@@ -534,6 +582,25 @@ HRESULT CJavascriptVM::AddObjectBooleanProperty(__in_z LPCSTR szObjectNameA, __i
   try
   {
     DukTape::duk_push_boolean(lpCtx, (bValue != FALSE) ? true : false);
+  }
+  catch (CJavascriptVM::CException& ex)
+  {
+    return ex.GetErrorCode();
+  }
+  return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
+                                             NullCallback());
+}
+
+HRESULT CJavascriptVM::AddObjectIntegerProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA,
+                                                __in int nValue, __in_opt int nFlags)
+{
+  if (szObjectNameA == NULL)
+    return E_POINTER;
+  if (lpCtx == NULL)
+    return E_FAIL;
+  try
+  {
+    DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)nValue);
   }
   catch (CJavascriptVM::CException& ex)
   {
