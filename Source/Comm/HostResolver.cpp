@@ -538,21 +538,13 @@ BOOL CHostResolver::IsValidIPV6(__in_z LPCWSTR szAddressW, __in_opt SIZE_T nAddr
 
 static SIZE_T Helper_IPv6_Fill(__out LPWORD lpnAddr, __in_z LPCSTR szStrA, __in SIZE_T nLen)
 {
-  SIZE_T i, k, nSlot;
+  SIZE_T i, nSlot;
   DWORD dw, dwValue;
 
   if (nLen == 0)
     return 0;
-  k = nLen;
-  while (k > 1)
-  {
-    if (szStrA[0] == ':' && szStrA[1] == ':')
-      break;
-    szStrA++;
-    k--;
-  }
   //catch double uses of ::
-  if (k > 1)
+  if (MX::StrFindA(szStrA, "::") != NULL)
     return (SIZE_T)-1;
   nSlot = 0;
   dwValue = 0;
@@ -589,21 +581,13 @@ static SIZE_T Helper_IPv6_Fill(__out LPWORD lpnAddr, __in_z LPCSTR szStrA, __in 
 
 static SIZE_T Helper_IPv6_Fill(__out LPWORD lpnAddr, __in_z LPCWSTR szStrW, __in SIZE_T nLen)
 {
-  SIZE_T i, k, nSlot;
+  SIZE_T i, nSlot;
   DWORD dw, dwValue;
 
   if (nLen == 0)
     return 0;
-  k = nLen;
-  while (k > 1)
-  {
-    if (szStrW[0] == L':' && szStrW[1] == L':')
-      break;
-    szStrW++;
-    k--;
-  }
   //catch double uses of ::
-  if (k > 1)
+  if (MX::StrFindW(szStrW, L"::") != NULL)
     return (SIZE_T)-1;
   nSlot = 0;
   dwValue = 0;
