@@ -55,11 +55,7 @@ typedef BOOL (WINAPI *lpfnSetFileCompletionNotificationModes)(__in HANDLE FileHa
 typedef struct {
   HRESULT MX_UNALIGNED hRes;
   WORD wPort;
-  union {
-    sockaddr MX_UNALIGNED sAddr;
-    sockaddr_in MX_UNALIGNED sAddr4;
-    SOCKADDR_IN6_W2KSP1 MX_UNALIGNED sAddr6;
-  };
+  SOCKADDR_INET sAddr;
 } RESOLVEADDRESS_PACKET_DATA;
 
 //-----------------------------------------------------------
@@ -231,13 +227,13 @@ HRESULT CSockets::ConnectToServer(__in eFamily nFamily, __in_z LPCWSTR szAddress
   return hRes;
 }
 
-HRESULT CSockets::GetPeerAddress(__in HANDLE h, __out sockaddr *lpAddr)
+HRESULT CSockets::GetPeerAddress(__in HANDLE h, __out PSOCKADDR_INET lpAddr)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnection *lpConn;
 
   if (lpAddr != NULL)
-    MemSet(lpAddr, 0, sizeof(sockaddr));
+    MemSet(lpAddr, 0, sizeof(SOCKADDR_INET));
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
   if (h == NULL || lpAddr == NULL)
@@ -281,7 +277,7 @@ HRESULT CSockets::CreateServerConnection(__in CConnection *lpListenConn)
   hRes = FireOnCreate(cIncomingConn.Get());
   if (SUCCEEDED(hRes))
   {
-    hRes = cIncomingConn->CreateSocket((lpListenConn->sAddr.sa_family == AF_INET) ? FamilyIPv4 : FamilyIPv6,
+    hRes = cIncomingConn->CreateSocket((lpListenConn->sAddr.si_family == AF_INET) ? FamilyIPv4 : FamilyIPv6,
                                        dwPacketSize);
   }
   if (SUCCEEDED(hRes))
@@ -353,7 +349,6 @@ HRESULT CSockets::OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __i
       {
         sockaddr *lpLocalAddr, *lpPeerAddr;
         INT nLocalAddrLen, nPeerAddrLen;
-        sockaddr sPeerAddr;
 
         //get peer address
         lpLocalAddr = lpPeerAddr = NULL;
@@ -364,17 +359,38 @@ HRESULT CSockets::OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __i
                                                  lpPacket->GetBytesInUse(), &lpLocalAddr, &nLocalAddrLen, &lpPeerAddr,
                                                  &nPeerAddrLen);
         }
-        if (lpPeerAddr != NULL && nPeerAddrLen >= (INT)SockAddrSizeFromWinSockFamily(lpConn->sAddr.sa_family))
+        if (lpPeerAddr != NULL && nPeerAddrLen >= (INT)SockAddrSizeFromWinSockFamily(lpConn->sAddr.si_family))
         {
-          MemCopy(&(lpIncomingConn->sAddr), (sockaddr*)lpPeerAddr, sizeof((lpIncomingConn->sAddr)));
+          MemCopy(&(lpIncomingConn->sAddr.Ipv4), (PSOCKADDR_IN)lpPeerAddr, sizeof(SOCKADDR_IN));
         }
         else
         {
-          int len = SockAddrSizeFromWinSockFamily(lpIncomingConn->sAddr.sa_family);
-          if (::getpeername(lpIncomingConn->sck, &sPeerAddr, &len) != SOCKET_ERROR)
-            MemCopy(&(lpIncomingConn->sAddr), (sockaddr*)lpPeerAddr, sizeof((lpIncomingConn->sAddr)));
+          SOCKADDR_INET sPeerAddr;
+
+          int len = SockAddrSizeFromWinSockFamily(lpIncomingConn->sAddr.si_family);
+          if (::getpeername(lpIncomingConn->sck, (sockaddr*)&sPeerAddr, &len) != SOCKET_ERROR)
+          {
+            if (sPeerAddr.si_family == AF_INET && len >= sizeof(SOCKADDR_IN))
+            {
+              MemCopy(&(lpIncomingConn->sAddr.Ipv4), (PSOCKADDR_IN)lpPeerAddr, sizeof(SOCKADDR_IN));
+              hRes = S_OK;
+            }
+            else if (sPeerAddr.si_family == AF_INET6 && len >= sizeof(SOCKADDR_IN6))
+            {
+              MemCopy(&(lpIncomingConn->sAddr.Ipv6), (PSOCKADDR_IN6)lpPeerAddr, sizeof(SOCKADDR_IN6));
+              hRes = S_OK;
+            }
+            else
+            {
+              MemCopy(&(lpIncomingConn->sAddr), (sockaddr*)lpPeerAddr, sizeof((lpIncomingConn->sAddr)));
+              hRes = E_FAIL;
+            }
+          }
+
           else
+          {
             hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
+          }
         }
       }
       if (SUCCEEDED(hRes))
@@ -604,7 +620,7 @@ VOID CSockets::CConnection::ShutdownLink(__in BOOL bAbortive)
 
 HRESULT CSockets::CConnection::SetupListener()
 {
-  if (::bind(sck, &sAddr, SockAddrSizeFromWinSockFamily(sAddr.sa_family)) == SOCKET_ERROR ||
+  if (::bind(sck, (sockaddr*)&sAddr, SockAddrSizeFromWinSockFamily(sAddr.si_family)) == SOCKET_ERROR ||
       ::listen(sck, SOMAXCONN) == SOCKET_ERROR)
     return MX_HRESULT_FROM_LASTSOCKETERROR();
   return S_OK;
@@ -613,13 +629,13 @@ HRESULT CSockets::CConnection::SetupListener()
 HRESULT CSockets::CConnection::SetupClient()
 {
   CPacket *lpPacket;
-  SOCKADDR sBindAddr;
+  SOCKADDR_INET sBindAddr;
   DWORD dw;
   HRESULT hRes;
 
   MemSet(&sBindAddr, 0, sizeof(sBindAddr));
-  sBindAddr.sa_family = sAddr.sa_family;
-  if (::bind(sck, &sBindAddr, SockAddrSizeFromWinSockFamily(sAddr.sa_family)) == SOCKET_ERROR)
+  sBindAddr.si_family = sAddr.si_family;
+  if (::bind(sck, (sockaddr*)&sBindAddr, SockAddrSizeFromWinSockFamily(sAddr.si_family)) == SOCKET_ERROR)
     return MX_HRESULT_FROM_LASTSOCKETERROR();
   lpPacket = GetPacket((fnConnectEx != NULL) ? (TypeConnectEx) : (TypeConnect));
   if (lpPacket == NULL)
@@ -634,7 +650,7 @@ HRESULT CSockets::CConnection::SetupClient()
   {
     //do connect
     _InterlockedIncrement(&nRefCount);
-    if (fnConnectEx(sck, &sAddr, SockAddrSizeFromWinSockFamily(sAddr.sa_family), NULL, 0, &dw,
+    if (fnConnectEx(sck, (sockaddr*)&sAddr, SockAddrSizeFromWinSockFamily(sAddr.si_family), NULL, 0, &dw,
                     lpPacket->GetOverlapped()) == FALSE)
     {
       hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
@@ -646,7 +662,7 @@ HRESULT CSockets::CConnection::SetupClient()
   }
   else
   {
-    if (::connect(sck, &sAddr, SockAddrSizeFromWinSockFamily(sAddr.sa_family)) != SOCKET_ERROR)
+    if (::connect(sck, (sockaddr*)&sAddr, SockAddrSizeFromWinSockFamily(sAddr.si_family)) != SOCKET_ERROR)
     {
       *((HRESULT MX_UNALIGNED*)(lpPacket->GetBuffer())) = hRes;
       _InterlockedIncrement(&nRefCount);
@@ -705,7 +721,7 @@ HRESULT CSockets::CConnection::SetupAcceptEx(__in CConnection *lpIncomingConn)
     return E_OUTOFMEMORY;
   cRwList.QueueLast(lpPacket);
   lpPacket->SetUserData(lpIncomingConn);
-  lpPacket->SetBytesInUse((DWORD)SockAddrSizeFromWinSockFamily(sAddr.sa_family) + 16);
+  lpPacket->SetBytesInUse((DWORD)SockAddrSizeFromWinSockFamily(sAddr.si_family) + 16);
   _InterlockedIncrement(&nRefCount);
   if (fnAcceptEx(sck, lpIncomingConn->sck, lpPacket->GetBuffer(), 0, lpPacket->GetBytesInUse(),
                  lpPacket->GetBytesInUse(), &dw, lpPacket->GetOverlapped()) == FALSE)
@@ -834,13 +850,13 @@ VOID CSockets::CConnection::HostResolveCallback(__in CHostResolver *lpResolver)
         {
           //copy address
           MemCopy(&(lpData->sAddr), &(sHostResolver.lpResolver->GetResolvedAddr()), sizeof(lpData->sAddr));
-          switch (lpData->sAddr.sa_family)
+          switch (lpData->sAddr.si_family)
           {
             case AF_INET:
-              lpData->sAddr4.sin_port = htons(lpData->wPort);
+              lpData->sAddr.Ipv4.sin_port = htons(lpData->wPort);
               break;
             case AF_INET6:
-              lpData->sAddr6.sin6_port = htons(lpData->wPort);
+              lpData->sAddr.Ipv6.sin6_port = htons(lpData->wPort);
               break;
           }
         }
@@ -1008,9 +1024,9 @@ static int SockAddrSizeFromWinSockFamily(__in int nFamily)
   switch (nFamily)
   {
     case AF_INET:
-      return (int)sizeof(sockaddr_in);
+      return (int)sizeof(SOCKADDR_IN);
     case AF_INET6:
-      return (int)sizeof(SOCKADDR_IN6_W2KSP1);
+      return (int)sizeof(SOCKADDR_IN6);
   }
   return 0;
 }

@@ -131,7 +131,7 @@ HRESULT CJsHttpServerSessionPlugin::RegenerateSessionId()
   ULARGE_INTEGER liSysTime;
   CSockets *lpSckMgr;
   HANDLE hConn;
-  sockaddr sAddr;
+  SOCKADDR_INET sAddr;
   DWORD dw;
   HRESULT hRes;
 
@@ -147,14 +147,13 @@ HRESULT CJsHttpServerSessionPlugin::RegenerateSessionId()
     hRes = cDigest.BeginDigest(CDigestAlgorithmSecureHash::AlgorithmSHA1);
   if (SUCCEEDED(hRes))
   {
-    switch (sAddr.sa_family)
+    switch (sAddr.si_family)
     {
       case AF_INET:
-        hRes = cDigest.DigestStream(&(((sockaddr_in*)&sAddr)->sin_addr), sizeof(((sockaddr_in*)&sAddr)->sin_addr));
+        hRes = cDigest.DigestStream(&(sAddr.Ipv4.sin_addr), sizeof(sAddr.Ipv4.sin_addr));
         break;
       case AF_INET6:
-        hRes = cDigest.DigestStream(&(((sockaddr_in6_w2ksp1*)&sAddr)->sin6_addr),
-                                    sizeof(((sockaddr_in6_w2ksp1*)&sAddr)->sin6_addr));
+        hRes = cDigest.DigestStream(&(sAddr.Ipv6.sin6_addr), sizeof(sAddr.Ipv6.sin6_addr));
         break;
       default:
         hRes = E_NOTIMPL;

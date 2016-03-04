@@ -28,7 +28,7 @@
 #include "..\EventNotifyBase.h"
 #if (!defined(_WS2DEF_)) && (!defined(_WINSOCKAPI_))
   #include <WS2tcpip.h>
-#endif
+#endif //!_WS2DEF_ && !_WINSOCKAPI_
 
 //-----------------------------------------------------------
 
@@ -48,7 +48,7 @@ public:
   HRESULT ResolveAsync(__in_z LPCWSTR szHostNameW, __in int nDesiredFamily, __in DWORD dwTimeoutMs);
   VOID Cancel();
 
-  sockaddr GetResolvedAddr() const
+  SOCKADDR_INET GetResolvedAddr() const
     {
     return sAddr;
     };
@@ -59,17 +59,17 @@ public:
     };
 
   static BOOL IsValidIPV4(__in_z LPCSTR szAddressA, __in_opt SIZE_T nAddressLen=(SIZE_T)-1,
-                          __out_opt sockaddr *lpAddress=NULL);
+                          __out_opt PSOCKADDR_INET lpAddress=NULL);
   static BOOL IsValidIPV4(__in_z LPCWSTR szAddressW, __in_opt SIZE_T nAddressLen=(SIZE_T)-1,
-                          __out_opt sockaddr *lpAddress=NULL);
+                          __out_opt PSOCKADDR_INET lpAddress=NULL);
   static BOOL IsValidIPV6(__in_z LPCSTR szAddressA, __in_opt SIZE_T nAddressLen=(SIZE_T)-1,
-                          __out_opt sockaddr *lpAddress=NULL);
+                          __out_opt PSOCKADDR_INET lpAddress=NULL);
   static BOOL IsValidIPV6(__in_z LPCWSTR szAddressW, __in_opt SIZE_T nAddressLen=(SIZE_T)-1,
-                          __out_opt sockaddr *lpAddress=NULL);
+                          __out_opt PSOCKADDR_INET lpAddress=NULL);
 
 private:
   LPVOID lpInternal;
-  sockaddr sAddr;
+  SOCKADDR_INET sAddr;
   OnNotifyCallback cCallback;
   LPVOID lpUserData;
   HRESULT hErrorCode;

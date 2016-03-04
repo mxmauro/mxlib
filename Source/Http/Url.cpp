@@ -2441,28 +2441,27 @@ static SIZE_T FindChar(__in_z LPCWSTR szStrW, __in SIZE_T nSrcLen, __in_z LPCWST
 
 static BOOL IsLocalHost(__in_z LPCSTR szHostA)
 {
-  union {
-    struct sockaddr_in sAddrV4;
-    SOCKADDR_IN6_W2KSP1 sAddrV6;
-  };
+  SOCKADDR_INET sAddr;
 
   if (MX::StrCompareA(szHostA, "localhost") == 0)
     return TRUE;
-  if (MX::CHostResolver::IsValidIPV4(szHostA, (SIZE_T)-1, (sockaddr*)&sAddrV4) != FALSE)
+  if (MX::CHostResolver::IsValidIPV4(szHostA, (SIZE_T)-1, &sAddr) != FALSE)
   {
-    if (sAddrV4.sin_addr.S_un.S_un_b.s_b1 == 127 && sAddrV4.sin_addr.S_un.S_un_b.s_b2 == 0 &&
-        sAddrV4.sin_addr.S_un.S_un_b.s_b3 == 0 && sAddrV4.sin_addr.S_un.S_un_b.s_b4 == 1)
+    if (sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b1 == 127 && sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b2 == 0 &&
+        sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b3 == 0 && sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b4 == 1)
       return TRUE;
   }
-  if (MX::CHostResolver::IsValidIPV6(szHostA, (SIZE_T)-1, (sockaddr*)&sAddrV6) != FALSE)
+  if (MX::CHostResolver::IsValidIPV6(szHostA, (SIZE_T)-1, &sAddr) != FALSE)
   {
-    if (sAddrV6.sin6_addr.u.Word[0] == 0 && sAddrV6.sin6_addr.u.Word[1] == 0 && sAddrV6.sin6_addr.u.Word[2] == 0 &&
-        sAddrV6.sin6_addr.u.Word[3] == 0 && sAddrV6.sin6_addr.u.Word[4] == 0)
+    if (sAddr.Ipv6.sin6_addr.u.Word[0] == 0 && sAddr.Ipv6.sin6_addr.u.Word[1] == 0 &&
+        sAddr.Ipv6.sin6_addr.u.Word[2] == 0 && sAddr.Ipv6.sin6_addr.u.Word[3] == 0 &&
+        sAddr.Ipv6.sin6_addr.u.Word[4] == 0)
     {
-      if (sAddrV6.sin6_addr.u.Word[5] == 0 && sAddrV6.sin6_addr.u.Word[6] == 0 && sAddrV6.sin6_addr.u.Word[7] == 1)
+      if (sAddr.Ipv6.sin6_addr.u.Word[5] == 0 && sAddr.Ipv6.sin6_addr.u.Word[6] == 0 &&
+          sAddr.Ipv6.sin6_addr.u.Word[7] == 1)
         return TRUE;
-      if ((sAddrV6.sin6_addr.u.Word[5] == 0 || sAddrV6.sin6_addr.u.Word[5] == 0xFFFF) &&
-          sAddrV6.sin6_addr.u.Word[6] == 0x7F00 && sAddrV6.sin6_addr.u.Word[7] == 0x0001)
+      if ((sAddr.Ipv6.sin6_addr.u.Word[5] == 0 || sAddr.Ipv6.sin6_addr.u.Word[5] == 0xFFFF) &&
+          sAddr.Ipv6.sin6_addr.u.Word[6] == 0x7F00 && sAddr.Ipv6.sin6_addr.u.Word[7] == 0x0001)
         return TRUE;
     }
   }
@@ -2471,28 +2470,27 @@ static BOOL IsLocalHost(__in_z LPCSTR szHostA)
 
 static BOOL IsLocalHost(__in_z LPCWSTR szHostW)
 {
-  union {
-    struct sockaddr_in sAddrV4;
-    SOCKADDR_IN6_W2KSP1 sAddrV6;
-  };
+  SOCKADDR_INET sAddr;
 
   if (MX::StrCompareW(szHostW, L"localhost") == 0)
     return TRUE;
-  if (MX::CHostResolver::IsValidIPV4(szHostW, (SIZE_T)-1, (sockaddr*)&sAddrV4) != FALSE)
+  if (MX::CHostResolver::IsValidIPV4(szHostW, (SIZE_T)-1, &sAddr) != FALSE)
   {
-    if (sAddrV4.sin_addr.S_un.S_un_b.s_b1 == 127 && sAddrV4.sin_addr.S_un.S_un_b.s_b2 == 0 &&
-        sAddrV4.sin_addr.S_un.S_un_b.s_b3 == 0 && sAddrV4.sin_addr.S_un.S_un_b.s_b4 == 1)
+    if (sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b1 == 127 && sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b2 == 0 &&
+        sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b3 == 0 && sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b4 == 1)
       return TRUE;
   }
-  if (MX::CHostResolver::IsValidIPV6(szHostW, (SIZE_T)-1, (sockaddr*)&sAddrV6) != FALSE)
+  if (MX::CHostResolver::IsValidIPV6(szHostW, (SIZE_T)-1, &sAddr) != FALSE)
   {
-    if (sAddrV6.sin6_addr.u.Word[0] == 0 && sAddrV6.sin6_addr.u.Word[1] == 0 && sAddrV6.sin6_addr.u.Word[2] == 0 &&
-        sAddrV6.sin6_addr.u.Word[3] == 0 && sAddrV6.sin6_addr.u.Word[4] == 0)
+    if (sAddr.Ipv6.sin6_addr.u.Word[0] == 0 && sAddr.Ipv6.sin6_addr.u.Word[1] == 0 &&
+        sAddr.Ipv6.sin6_addr.u.Word[2] == 0 && sAddr.Ipv6.sin6_addr.u.Word[3] == 0 &&
+        sAddr.Ipv6.sin6_addr.u.Word[4] == 0)
     {
-      if (sAddrV6.sin6_addr.u.Word[5] == 0 && sAddrV6.sin6_addr.u.Word[6] == 0 && sAddrV6.sin6_addr.u.Word[7] == 1)
+      if (sAddr.Ipv6.sin6_addr.u.Word[5] == 0 && sAddr.Ipv6.sin6_addr.u.Word[6] == 0 &&
+          sAddr.Ipv6.sin6_addr.u.Word[7] == 1)
         return TRUE;
-      if ((sAddrV6.sin6_addr.u.Word[5] == 0 || sAddrV6.sin6_addr.u.Word[5] == 0xFFFF) &&
-          sAddrV6.sin6_addr.u.Word[6] == 0x7F00 && sAddrV6.sin6_addr.u.Word[7] == 0x0001)
+      if ((sAddr.Ipv6.sin6_addr.u.Word[5] == 0 || sAddr.Ipv6.sin6_addr.u.Word[5] == 0xFFFF) &&
+          sAddr.Ipv6.sin6_addr.u.Word[6] == 0x7F00 && sAddr.Ipv6.sin6_addr.u.Word[7] == 0x0001)
         return TRUE;
     }
   }

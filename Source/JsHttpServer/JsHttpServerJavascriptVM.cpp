@@ -31,10 +31,11 @@ HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CHttpServer:
 {
   CStringA cStrTempA, cStrTempA_2;
   CUrl *lpUrl;
+  CHAR szBufA[32];
   TAutoRefCounted<CHttpBodyParserBase> cBodyParser;
   CSockets *lpSckMgr;
   HANDLE hConn;
-  sockaddr sAddr;
+  SOCKADDR_INET sAddr;
   SIZE_T i, nCount;
   HRESULT hRes;
 
@@ -117,94 +118,84 @@ HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CHttpServer:
   __EXIT_ON_ERROR(hRes);
   hRes = cJvm.CreateObject("request.remote");
   __EXIT_ON_ERROR(hRes);
-  switch (sAddr.sa_family)
+  switch (sAddr.si_family)
   {
     case AF_INET:
-      {
-        sockaddr_in *lpAddrV4 = (sockaddr_in*)&sAddr;
-
-        if (cStrTempA.Format("%lu.%lu.%lu.%lu", lpAddrV4->sin_addr.S_un.S_un_b.s_b1,
-                             lpAddrV4->sin_addr.S_un.S_un_b.s_b2, lpAddrV4->sin_addr.S_un.S_un_b.s_b3,
-                             lpAddrV4->sin_addr.S_un.S_un_b.s_b4) == FALSE)
-          return E_OUTOFMEMORY;
-        hRes = cJvm.AddObjectNumericProperty("request.remote", "family", 1.0, CJavascriptVM::PropertyFlagEnumerable);
-        __EXIT_ON_ERROR(hRes);
-        hRes = cJvm.AddObjectStringProperty("request.remote", "address", (LPCSTR)cStrTempA,
+      if (cStrTempA.Format("%lu.%lu.%lu.%lu", sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b1,
+                            sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b2, sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b3,
+                            sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b4) == FALSE)
+        return E_OUTOFMEMORY;
+      hRes = cJvm.AddObjectNumericProperty("request.remote", "family", 1.0, CJavascriptVM::PropertyFlagEnumerable);
+      __EXIT_ON_ERROR(hRes);
+      hRes = cJvm.AddObjectStringProperty("request.remote", "address", (LPCSTR)cStrTempA,
+                                          CJavascriptVM::PropertyFlagEnumerable);
+      __EXIT_ON_ERROR(hRes);
+      hRes = cJvm.AddObjectNumericProperty("request.remote", "port", (double)htons(sAddr.Ipv4.sin_port),
                                             CJavascriptVM::PropertyFlagEnumerable);
-        __EXIT_ON_ERROR(hRes);
-        hRes = cJvm.AddObjectNumericProperty("request.remote", "port", (double)htons(lpAddrV4->sin_port),
-                                             CJavascriptVM::PropertyFlagEnumerable);
-        __EXIT_ON_ERROR(hRes);
-      }
+      __EXIT_ON_ERROR(hRes);
       break;
 
     case AF_INET6:
+      if (cStrTempA.Format("%4x:%4x:%4x:%4x:%4x:%4x:%4x:%4x", sAddr.Ipv6.sin6_addr.u.Word[0],
+                           sAddr.Ipv6.sin6_addr.u.Word[1], sAddr.Ipv6.sin6_addr.u.Word[2],
+                           sAddr.Ipv6.sin6_addr.u.Word[3], sAddr.Ipv6.sin6_addr.u.Word[4],
+                           sAddr.Ipv6.sin6_addr.u.Word[5], sAddr.Ipv6.sin6_addr.u.Word[6],
+                           sAddr.Ipv6.sin6_addr.u.Word[7]) == FALSE)
+        return E_OUTOFMEMORY;
+      for (i=0; i<8; i++)
       {
-        sockaddr_in6_w2ksp1 *lpAddrV6 = (sockaddr_in6_w2ksp1*)&sAddr;
-        CHAR szBufA[32];
-
-        if (cStrTempA.Format("%4x:%4x:%4x:%4x:%4x:%4x:%4x:%4x", lpAddrV6->sin6_addr.u.Word[0],
-                             lpAddrV6->sin6_addr.u.Word[1], lpAddrV6->sin6_addr.u.Word[2],
-                             lpAddrV6->sin6_addr.u.Word[3], lpAddrV6->sin6_addr.u.Word[4],
-                             lpAddrV6->sin6_addr.u.Word[5], lpAddrV6->sin6_addr.u.Word[6],
-                             lpAddrV6->sin6_addr.u.Word[7]) == FALSE)
-          return E_OUTOFMEMORY;
-        for (i=0; i<8; i++)
-        {
-          szBufA[(i << 1)] = '0';
-          szBufA[(i << 1) + 1] = ':';
-        }
-        szBufA[15] = 0; //--> "0:0:0:0:0:0:0:0"
-        for (i=8; i>=2; i--)
-        {
-          LPCSTR sA = StrFindA((LPCSTR)cStrTempA, szBufA);
-          if (sA != NULL)
-          {
-            if (i == 8) //special case for all values equal to zero
-            {
-              if (cStrTempA.Copy("::") == FALSE)
-                return E_OUTOFMEMORY;
-            }
-            else if (sA == (LPCSTR)cStrTempA)
-            {
-              //the group of zeros are at the beginning
-              cStrTempA.Delete(0, (i << 1) - 1);
-              if (cStrTempA.InsertN(":", 0, 1) == FALSE)
-                return E_OUTOFMEMORY;
-            }
-
-            else if (sA[(i << 1) - 1] == 0)
-            {
-              //the group of zeros are at the end
-              cStrTempA.Delete((SIZE_T)(sA - (LPCSTR)cStrTempA), (i << 1) - 1);
-              if (cStrTempA.ConcatN(":", 1) == FALSE)
-                return E_OUTOFMEMORY;
-            }
-            else
-            {
-              //they are in the middle
-              cStrTempA.Delete((SIZE_T)(sA - (LPCSTR)cStrTempA), (i << 1) - 1);
-            }
-            break;
-          }
-          szBufA[(i << 1) + 1 - 2] = 0;
-        }
-        hRes = cJvm.AddObjectNumericProperty("request.remote", "family", 2.0, CJavascriptVM::PropertyFlagEnumerable);
-        __EXIT_ON_ERROR(hRes);
-        hRes = cJvm.AddObjectStringProperty("request.remote", "address", (LPCSTR)cStrTempA,
-                                            CJavascriptVM::PropertyFlagEnumerable);
-        __EXIT_ON_ERROR(hRes);
-        hRes = cJvm.AddObjectNumericProperty("request.remote", "port", (double)htons(lpAddrV6->sin6_port),
-                                             CJavascriptVM::PropertyFlagEnumerable);
-        __EXIT_ON_ERROR(hRes);
+        szBufA[(i << 1)] = '0';
+        szBufA[(i << 1) + 1] = ':';
       }
+      szBufA[15] = 0; //--> "0:0:0:0:0:0:0:0"
+      for (i=8; i>=2; i--)
+      {
+        LPCSTR sA = StrFindA((LPCSTR)cStrTempA, szBufA);
+        if (sA != NULL)
+        {
+          if (i == 8) //special case for all values equal to zero
+          {
+            if (cStrTempA.Copy("::") == FALSE)
+              return E_OUTOFMEMORY;
+          }
+          else if (sA == (LPCSTR)cStrTempA)
+          {
+            //the group of zeros are at the beginning
+            cStrTempA.Delete(0, (i << 1) - 1);
+            if (cStrTempA.InsertN(":", 0, 1) == FALSE)
+              return E_OUTOFMEMORY;
+          }
+
+          else if (sA[(i << 1) - 1] == 0)
+          {
+            //the group of zeros are at the end
+            cStrTempA.Delete((SIZE_T)(sA - (LPCSTR)cStrTempA), (i << 1) - 1);
+            if (cStrTempA.ConcatN(":", 1) == FALSE)
+              return E_OUTOFMEMORY;
+          }
+          else
+          {
+            //they are in the middle
+            cStrTempA.Delete((SIZE_T)(sA - (LPCSTR)cStrTempA), (i << 1) - 1);
+          }
+          break;
+        }
+        szBufA[(i << 1) + 1 - 2] = 0;
+      }
+      hRes = cJvm.AddObjectNumericProperty("request.remote", "family", 2.0, CJavascriptVM::PropertyFlagEnumerable);
+      __EXIT_ON_ERROR(hRes);
+      hRes = cJvm.AddObjectStringProperty("request.remote", "address", (LPCSTR)cStrTempA,
+                                          CJavascriptVM::PropertyFlagEnumerable);
+      __EXIT_ON_ERROR(hRes);
+      hRes = cJvm.AddObjectNumericProperty("request.remote", "port", (double)htons(sAddr.Ipv6.sin6_port),
+                                            CJavascriptVM::PropertyFlagEnumerable);
+      __EXIT_ON_ERROR(hRes);
       break;
 
     default:
       hRes = E_NOTIMPL;
       break;
   }
-
 
   //add request headers
   hRes = cJvm.CreateObject("request.headers");

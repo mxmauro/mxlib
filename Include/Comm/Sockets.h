@@ -27,9 +27,6 @@
 #include "IpcCommon.h"
 #include "HostResolver.h"
 #include "..\TimedEventQueue.h"
-#if (!defined(_WS2DEF_)) && (!defined(_WINSOCKAPI_))
-  #include <WS2tcpip.h>
-#endif
 
 //-----------------------------------------------------------
 
@@ -67,7 +64,7 @@ public:
                           __in OnCreateCallback cCreateCallback, __in_opt CUserData *lpUserData=NULL,
                           __out_opt HANDLE *h=NULL);
 
-  HRESULT GetPeerAddress(__in HANDLE h, __out sockaddr *lpAddr);
+  HRESULT GetPeerAddress(__in HANDLE h, __out PSOCKADDR_INET lpAddr);
 
   //--------
 
@@ -114,7 +111,7 @@ private:
                                                     __out LPINT RemoteSockaddrLength);
 
   protected:
-    sockaddr sAddr;
+    SOCKADDR_INET sAddr;
     union {
       lpfnAcceptEx fnAcceptEx;
       lpfnConnectEx fnConnectEx;

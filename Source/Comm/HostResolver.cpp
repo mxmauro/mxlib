@@ -114,7 +114,8 @@ VOID CHostResolver::Cancel()
   return;
 }
 
-BOOL CHostResolver::IsValidIPV4(__in_z LPCSTR szAddressA, __in_opt SIZE_T nAddressLen, __out_opt sockaddr *lpAddress)
+BOOL CHostResolver::IsValidIPV4(__in_z LPCSTR szAddressA, __in_opt SIZE_T nAddressLen,
+                                __out_opt PSOCKADDR_INET lpAddress)
 {
   SIZE_T i, j, nLen, nBlocksCount;
   DWORD dw, dwBase, dwValue, dwOldValue;
@@ -123,16 +124,16 @@ BOOL CHostResolver::IsValidIPV4(__in_z LPCSTR szAddressA, __in_opt SIZE_T nAddre
     LPCSTR szStartA;
     SIZE_T nLen;
   } sBlocks[4];
-  sockaddr sTempAddr;
+  SOCKADDR_INET sTempAddr;
 
   if (lpAddress == NULL)
     lpAddress = &sTempAddr;
-  MX::MemSet(lpAddress, 0, sizeof(sockaddr));
-  lpAddress->sa_family = AF_INET;
+  MX::MemSet(lpAddress, 0, sizeof(SOCKADDR_INET));
+  lpAddress->si_family = AF_INET;
   if (szAddressA == NULL)
     return FALSE;
   if (nAddressLen == (SIZE_T)-1)
-    nAddressLen = strlen(szAddressA);
+    nAddressLen = MX::StrLenA(szAddressA);
   for (nBlocksCount=0; nBlocksCount<4; nBlocksCount++)
   {
     sBlocks[nBlocksCount].szStartA = szAddressA;
@@ -202,7 +203,7 @@ BOOL CHostResolver::IsValidIPV4(__in_z LPCSTR szAddressA, __in_opt SIZE_T nAddre
     }
     if (lpAddress != NULL)
     {
-      LPBYTE d = (LPBYTE)&(((sockaddr_in*)lpAddress)->sin_addr.S_un.S_un_b.s_b1);
+      LPBYTE d = (LPBYTE)&(lpAddress->Ipv4.sin_addr.S_un.S_un_b.s_b1);
       for (j=0; dwValue>0; j++,dwValue/=0x100)
         d[i-j] = (BYTE)(dwValue & 0xFF);
     }
@@ -210,7 +211,8 @@ BOOL CHostResolver::IsValidIPV4(__in_z LPCSTR szAddressA, __in_opt SIZE_T nAddre
   return TRUE;
 }
 
-BOOL CHostResolver::IsValidIPV4(__in_z LPCWSTR szAddressW, __in_opt SIZE_T nAddressLen, __out_opt sockaddr *lpAddress)
+BOOL CHostResolver::IsValidIPV4(__in_z LPCWSTR szAddressW, __in_opt SIZE_T nAddressLen,
+                                __out_opt PSOCKADDR_INET lpAddress)
 {
   SIZE_T i, j, nLen, nBlocksCount;
   DWORD dw, dwBase, dwValue, dwOldValue;
@@ -219,16 +221,16 @@ BOOL CHostResolver::IsValidIPV4(__in_z LPCWSTR szAddressW, __in_opt SIZE_T nAddr
     LPCWSTR szStartW;
     SIZE_T nLen;
   } sBlocks[4];
-  sockaddr sTempAddr;
+  SOCKADDR_INET sTempAddr;
 
   if (lpAddress == NULL)
     lpAddress = &sTempAddr;
-  MX::MemSet(lpAddress, 0, sizeof(sockaddr));
-  lpAddress->sa_family = AF_INET;
+  MX::MemSet(lpAddress, 0, sizeof(SOCKADDR_INET));
+  lpAddress->si_family = AF_INET;
   if (szAddressW == NULL)
     return FALSE;
   if (nAddressLen == (SIZE_T)-1)
-    nAddressLen = wcslen(szAddressW);
+    nAddressLen = MX::StrLenW(szAddressW);
   for (nBlocksCount=0; nBlocksCount<4; nBlocksCount++)
   {
     sBlocks[nBlocksCount].szStartW = szAddressW;
@@ -298,7 +300,7 @@ BOOL CHostResolver::IsValidIPV4(__in_z LPCWSTR szAddressW, __in_opt SIZE_T nAddr
     }
     if (lpAddress != NULL)
     {
-      LPBYTE d = (LPBYTE)&(((sockaddr_in*)lpAddress)->sin_addr.S_un.S_un_b.s_b1);
+      LPBYTE d = (LPBYTE)&(lpAddress->Ipv4.sin_addr.S_un.S_un_b.s_b1);
       for (j=0; dwValue>0; j++,dwValue/=0x100)
         d[i-j] = (BYTE)(dwValue & 0xFF);
     }
@@ -306,23 +308,24 @@ BOOL CHostResolver::IsValidIPV4(__in_z LPCWSTR szAddressW, __in_opt SIZE_T nAddr
   return TRUE;
 }
 
-BOOL CHostResolver::IsValidIPV6(__in_z LPCSTR szAddressA, __in_opt SIZE_T nAddressLen, __out_opt sockaddr *lpAddress)
+BOOL CHostResolver::IsValidIPV6(__in_z LPCSTR szAddressA, __in_opt SIZE_T nAddressLen,
+                                __out_opt PSOCKADDR_INET lpAddress)
 {
   SIZE_T i, k, nSlots, nLastColonPos;
   BOOL bIPv4, bIPv6;
   LPCSTR sA;
-  sockaddr sTempAddr;
-  WORD *w;
+  SOCKADDR_INET sTempAddr;
+  LPWORD w;
 
   if (lpAddress == NULL)
     lpAddress = &sTempAddr;
-  MX::MemSet(lpAddress, 0, sizeof(sockaddr));
-  lpAddress->sa_family = AF_INET6;
+  MX::MemSet(lpAddress, 0, sizeof(SOCKADDR_INET));
+  lpAddress->si_family = AF_INET6;
   if (szAddressA == NULL)
     return FALSE;
   if (nAddressLen == (SIZE_T)-1)
     nAddressLen = StrLenA(szAddressA);
-  w = ((SOCKADDR_IN6_W2KSP1*)lpAddress)->sin6_addr.u.Word;
+  w = lpAddress->Ipv6.sin6_addr.u.Word;
   if (nAddressLen >= 2 && szAddressA[0] == '[' && szAddressA[nAddressLen-1] == ']')
   {
     szAddressA++;
@@ -351,12 +354,12 @@ BOOL CHostResolver::IsValidIPV6(__in_z LPCSTR szAddressA, __in_opt SIZE_T nAddre
   nSlots = 0;
   if (nLastColonPos < nAddressLen-1)
   {
-    sockaddr_in sTempAddr;
+    SOCKADDR_INET sTempAddrV4;
 
-    if (IsValidIPV4(szAddressA+nLastColonPos+1, nAddressLen-nLastColonPos-1, (sockaddr*)&sTempAddr) != FALSE)
+    if (IsValidIPV4(szAddressA+nLastColonPos+1, nAddressLen-nLastColonPos-1, &sTempAddrV4) != FALSE)
     {
-      w[6] = sTempAddr.sin_addr.S_un.S_un_w.s_w1;
-      w[7] = sTempAddr.sin_addr.S_un.S_un_w.s_w2;
+      w[6] = sTempAddrV4.Ipv4.sin_addr.S_un.S_un_w.s_w1;
+      w[7] = sTempAddrV4.Ipv4.sin_addr.S_un.S_un_w.s_w2;
       nAddressLen = nLastColonPos;
       if (nLastColonPos > 0 && szAddressA[nLastColonPos-1] == ':')
         nAddressLen++;
@@ -366,20 +369,12 @@ BOOL CHostResolver::IsValidIPV6(__in_z LPCSTR szAddressA, __in_opt SIZE_T nAddre
   }
   // Only an bIPv6 block remains, either:
   // "hexnumbers::hexnumbers", "hexnumbers::" or "hexnumbers"
-  sA = szAddressA;
-  k = nAddressLen;
-  while (k > 1)
-  {
-    if (sA[0] == ':' && sA[1] == ':')
-      break;
-    sA++;
-    k--;
-  }
-  if (k > 1)
+  sA = MX::StrFindA(szAddressA, "::");
+  if (sA != NULL)
   {
     SIZE_T nPos, nLeftSlots, nRightSlots;
 
-    nPos = (SIZE_T)(sA-szAddressA);
+    nPos = (SIZE_T)(sA - szAddressA);
     nRightSlots = Helper_IPv6_Fill(w, szAddressA+nPos+2, nAddressLen-nPos-2);
     if (nRightSlots == (SIZE_T)-1 || nRightSlots+nSlots > 8)
       return FALSE;
@@ -419,23 +414,24 @@ BOOL CHostResolver::IsValidIPV6(__in_z LPCSTR szAddressA, __in_opt SIZE_T nAddre
   return TRUE;
 }
 
-BOOL CHostResolver::IsValidIPV6(__in_z LPCWSTR szAddressW, __in_opt SIZE_T nAddressLen, __out_opt sockaddr *lpAddress)
+BOOL CHostResolver::IsValidIPV6(__in_z LPCWSTR szAddressW, __in_opt SIZE_T nAddressLen,
+                                __out_opt PSOCKADDR_INET lpAddress)
 {
   SIZE_T i, k, nSlots, nLastColonPos;
   BOOL bIPv4, bIPv6;
   LPCWSTR sW;
-  sockaddr sTempAddr;
-  WORD *w;
+  SOCKADDR_INET sTempAddr;
+  LPWORD w;
 
   if (lpAddress == NULL)
     lpAddress = &sTempAddr;
-  MX::MemSet(lpAddress, 0, sizeof(sockaddr));
-  lpAddress->sa_family = AF_INET6;
+  MX::MemSet(lpAddress, 0, sizeof(SOCKADDR_INET));
+  lpAddress->si_family = AF_INET6;
   if (szAddressW == NULL)
     return FALSE;
   if (nAddressLen == (SIZE_T)-1)
     nAddressLen = StrLenW(szAddressW);
-  w = ((SOCKADDR_IN6_W2KSP1*)lpAddress)->sin6_addr.u.Word;
+  w = lpAddress->Ipv6.sin6_addr.u.Word;
   if (nAddressLen >= 2 && szAddressW[0] == L'[' && szAddressW[nAddressLen-1] == L']')
   {
     szAddressW++;
@@ -464,12 +460,12 @@ BOOL CHostResolver::IsValidIPV6(__in_z LPCWSTR szAddressW, __in_opt SIZE_T nAddr
   nSlots = 0;
   if (nLastColonPos < nAddressLen-1)
   {
-    sockaddr_in sTempAddr;
+    SOCKADDR_INET sTempAddrV4;
 
-    if (IsValidIPV4(szAddressW+nLastColonPos+1, nAddressLen-nLastColonPos-1, (sockaddr*)&sTempAddr) != FALSE)
+    if (IsValidIPV4(szAddressW+nLastColonPos+1, nAddressLen-nLastColonPos-1, &sTempAddrV4) != FALSE)
     {
-      w[6] = sTempAddr.sin_addr.S_un.S_un_w.s_w1;
-      w[7] = sTempAddr.sin_addr.S_un.S_un_w.s_w2;
+      w[6] = sTempAddrV4.Ipv4.sin_addr.S_un.S_un_w.s_w1;
+      w[7] = sTempAddrV4.Ipv4.sin_addr.S_un.S_un_w.s_w2;
       nAddressLen = nLastColonPos;
       if (nLastColonPos > 0 && szAddressW[nLastColonPos-1] == L':')
         nAddressLen++;
@@ -479,16 +475,8 @@ BOOL CHostResolver::IsValidIPV6(__in_z LPCWSTR szAddressW, __in_opt SIZE_T nAddr
   }
   // Only an bIPv6 block remains, either:
   // "hexnumbers::hexnumbers", "hexnumbers::" or "hexnumbers"
-  sW = szAddressW;
-  k = nAddressLen;
-  while (k > 1)
-  {
-    if (sW[0] == L':' && sW[1] == L':')
-      break;
-    sW++;
-    k--;
-  }
-  if (k > 1)
+  sW = MX::StrFindW(szAddressW, L"::");
+  if (sW != NULL)
   {
     SIZE_T nPos, nLeftSlots, nRightSlots;
 

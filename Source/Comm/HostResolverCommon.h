@@ -67,11 +67,11 @@ public:
   static CIPAddressResolver* Get();
   VOID Release();
 
-  HRESULT Resolve(__in MX::CHostResolver *lpHostResolver, __in sockaddr *lpAddr, __in HRESULT *lphErrorCode,
+  HRESULT Resolve(__in MX::CHostResolver *lpHostResolver, __in PSOCKADDR_INET lpAddr, __in HRESULT *lphErrorCode,
                   __in_z LPCSTR szHostNameA, __in int nDesiredFamily, __in DWORD dwTimeoutMs);
   VOID Cancel(__in MX::CHostResolver *lpHostResolver);
 
-  HRESULT ResolveAddr(__out sockaddr *lpAddress, __in_z LPCSTR szAddressA, __in int nDesiredFamily=AF_UNSPEC);
+  HRESULT ResolveAddr(__out PSOCKADDR_INET lpAddress, __in_z LPCSTR szAddressA, __in int nDesiredFamily=AF_UNSPEC);
 
 private:
   class CItem : public CTimedEventQueue::CEvent, public TLnkLstNode<CItem>
@@ -90,7 +90,7 @@ private:
 
   public:
     TAutoRefCounted<MX::CHostResolver> cHostResolver;
-    sockaddr *lpAddr;
+    PSOCKADDR_INET lpAddr;
     HRESULT *lphErrorCode;
     CStringA cStrHostNameA;
     int nDesiredFamily;

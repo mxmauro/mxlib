@@ -122,7 +122,7 @@ VOID CIPAddressResolver::Release()
   return;
 }
 
-HRESULT CIPAddressResolver::Resolve(__in MX::CHostResolver *lpHostResolver, __in sockaddr *lpAddr,
+HRESULT CIPAddressResolver::Resolve(__in MX::CHostResolver *lpHostResolver, __in PSOCKADDR_INET lpAddr,
                                     __in HRESULT *lphErrorCode, __in_z LPCSTR szHostNameA, __in int nDesiredFamily,
                                     __in DWORD dwTimeoutMs)
 {
@@ -184,7 +184,7 @@ VOID CIPAddressResolver::Cancel(__in MX::CHostResolver *lpHostResolver)
   return;
 }
 
-HRESULT CIPAddressResolver::ResolveAddr(__out sockaddr *lpAddress, __in_z LPCSTR szAddressA, __in int nDesiredFamily)
+HRESULT CIPAddressResolver::ResolveAddr(__out PSOCKADDR_INET lpAddress, __in_z LPCSTR szAddressA, __in int nDesiredFamily)
 {
   PADDRINFOA lpCurrAddrInfoA, lpAddrInfoA;
 
@@ -203,16 +203,18 @@ HRESULT CIPAddressResolver::ResolveAddr(__out sockaddr *lpAddress, __in_z LPCSTR
   for (lpCurrAddrInfoA=lpAddrInfoA; lpCurrAddrInfoA!=NULL; lpCurrAddrInfoA=lpCurrAddrInfoA->ai_next)
   {
     if ((nDesiredFamily == AF_INET || nDesiredFamily == AF_UNSPEC) &&
-        lpCurrAddrInfoA->ai_addrlen >= sizeof(sockaddr_in))
+        lpCurrAddrInfoA->ai_family == PF_INET &&
+        lpCurrAddrInfoA->ai_addrlen >= sizeof(SOCKADDR_IN))
     {
-      MX::MemCopy(lpAddress, lpCurrAddrInfoA->ai_addr, sizeof(sockaddr_in));
+      MX::MemCopy(&(lpAddress->Ipv4), lpCurrAddrInfoA->ai_addr, sizeof(sockaddr_in));
       ::freeaddrinfo(lpAddrInfoA);
       return S_OK;
     }
     if ((nDesiredFamily == AF_INET6 || nDesiredFamily == AF_UNSPEC) &&
-        lpCurrAddrInfoA->ai_addrlen >= sizeof(SOCKADDR_IN6_W2KSP1))
+        lpCurrAddrInfoA->ai_family == PF_INET6 &&
+        lpCurrAddrInfoA->ai_addrlen >= sizeof(SOCKADDR_IN6))
     {
-      MX::MemCopy(lpAddress, lpCurrAddrInfoA->ai_addr, sizeof(SOCKADDR_IN6_W2KSP1));
+      MX::MemCopy(&(lpAddress->Ipv6), lpCurrAddrInfoA->ai_addr, sizeof(SOCKADDR_IN6));
       ::freeaddrinfo(lpAddrInfoA);
       return S_OK;
     }
@@ -304,7 +306,7 @@ VOID CIPAddressResolver::OnTimeout(__in CTimedEventQueue::CEvent *lpEvent)
 BOOL CIPAddressResolver::ProcessQueued()
 {
   CItem *lpItem;
-  sockaddr sAddr;
+  SOCKADDR_INET sAddr;
   HRESULT hRes;
 
   //now pop the first item from the queue
