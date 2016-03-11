@@ -566,8 +566,8 @@ VOID CIpc::FreePacket(__in CPacket *lpPacket)
   //DebugPrint("FreePacket: Ovr=0x%p\n", lpPacket->GetOverlapped());
   if (cFreePacketsList.GetCount() < (SIZE_T)dwMaxFreePackets)
   {
-    cFreePacketsList.QueueLast(lpPacket);
     lpPacket->Reset(CPacket::TypeDiscard, NULL);
+    cFreePacketsList.QueueLast(lpPacket);
   }
   else
   {
@@ -641,19 +641,19 @@ VOID CIpc::OnDispatcherPacket(__in CIoCompletionPortThreadPool *lpPool, __in DWO
     {
       case CPacket::TypeInitialSetup:
         {
-          TLnkLst<CLayer>::Iterator it;
+        TLnkLst<CLayer>::Iterator it;
 
-          if (SUCCEEDED(hRes))
-            hRes =  lpConn->DoRead((SIZE_T)dwReadAhead, bDoZeroReads && ZeroReadsSupported());
-          //notify all layers about disconnection
-          for (lpLayer=it.Begin(lpConn->cLayersList); SUCCEEDED(hRes) && lpLayer!=NULL; lpLayer=it.Next())
-            hRes = lpLayer->OnConnect();
-          //fire main connect
-          if (SUCCEEDED(hRes))
-            hRes = FireOnConnect(lpConn, S_OK);
-          //free packet
-          lpConn->cRwList.Remove(lpPacket);
-          FreePacket(lpPacket);
+        if (SUCCEEDED(hRes))
+          hRes =  lpConn->DoRead((SIZE_T)dwReadAhead, bDoZeroReads && ZeroReadsSupported());
+        //notify all layers about disconnection
+        for (lpLayer=it.Begin(lpConn->cLayersList); SUCCEEDED(hRes) && lpLayer!=NULL; lpLayer=it.Next())
+          hRes = lpLayer->OnConnect();
+        //fire main connect
+        if (SUCCEEDED(hRes))
+          hRes = FireOnConnect(lpConn, S_OK);
+        //free packet
+        lpConn->cRwList.Remove(lpPacket);
+        FreePacket(lpPacket);
         }
         break;
 
