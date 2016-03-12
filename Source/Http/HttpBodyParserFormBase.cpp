@@ -24,9 +24,14 @@
 #include "..\..\Include\Http\HttpBodyParserFormBase.h"
 #include "..\..\Include\AutoPtr.h"
 
+#define MAX_SUBINDEXES_COUNT 16
+
 //-----------------------------------------------------------
 
-static HRESULT ParseName(__in_z LPCWSTR szNameW, __inout MX::CStringW &cStrNameW, __inout MX::CStringW &cStrIndexW);
+static HRESULT ParseNameAndIndexes(__in_z LPCWSTR szNameW, __inout MX::CStringW &cStrNameW,
+                                   __inout MX::TArrayListWithFree<LPCWSTR> &aSubIndexesList);
+static BOOL __inline IsNumeric(__in_z LPCWSTR szNumberW);
+static int NumericCompare(__in_z LPCWSTR szNumber1, __in_z LPCWSTR szNumber2);
 
 //-----------------------------------------------------------
 
@@ -66,63 +71,78 @@ CHttpBodyParserFormBase::CFileField* CHttpBodyParserFormBase::GetFileField(__in 
 
 HRESULT CHttpBodyParserFormBase::AddField(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW)
 {
-  TAutoDeletePtr<CField> cNewField;
-  CField *lpField;
+  CField *lpField, *lpChildField;
   CStringW cStrNameW, cStrIndexW;
-  SIZE_T i, k, nCount, nValueLen;
-  LPWSTR szIdxW;
+  TArrayListWithFree<LPCWSTR> aSubIndexesList;
+  SIZE_T i, nCurrIdx, nCount;
+  LPCWSTR sW, szIdxW;
   HRESULT hRes;
 
-  hRes = ParseName(szNameW, cStrNameW, cStrIndexW);
+  hRes = ParseNameAndIndexes(szNameW, cStrNameW, aSubIndexesList);
   if (FAILED(hRes))
     return hRes;
   if (szValueW == NULL)
     return E_POINTER;
-  //delete previous non-indexed items
+  //locate field with name
+  lpField = lpChildField = NULL;
   for (nCount = cFieldsList.GetCount(); nCount > 0; nCount--)
   {
     lpField = cFieldsList.GetElementAt(nCount-1);
-    if (StrCompareW((LPWSTR)cStrNameW, lpField->GetName(), TRUE) == 0 && lpField->GetIndex() == NULL)
-      cFieldsList.RemoveElementAt(nCount-1);
+    if (StrCompareW((LPWSTR)cStrNameW, lpField->GetName(), TRUE) == 0)
+      break;
   }
-  //if the item has an index...
-  if (cStrIndexW.IsEmpty() == FALSE)
+  if (nCount == 0)
   {
-    //if the item has an empty index, find next index
-    if (((LPCWSTR)cStrIndexW)[0] == L'\x05')
+    //not found -> create
+    lpField = MX_DEBUG_NEW CField();
+    if (!lpField)
+      return E_OUTOFMEMORY;
+    if (lpField->cStrNameW.Copy((LPCWSTR)cStrNameW) == FALSE)
+      return E_OUTOFMEMORY;
+    //add to list
+    if (cFieldsList.AddElement(lpField) == FALSE)
     {
+      delete lpField;
+      return E_OUTOFMEMORY;
+    }
+  }
+  //check indexes
+  for (nCurrIdx=0; nCurrIdx<aSubIndexesList.GetCount(); nCurrIdx++)
+  {
+    lpField->ClearValue();
+    //----
+    sW = aSubIndexesList.GetElementAt(nCurrIdx);
+    if (sW == NULL)
+    {
+      //if the item has an empty index, find next index
       cStrIndexW.Empty();
-      nCount = cFieldsList.GetCount();
-      for (i=0; i<nCount; i++)
+      for (i=0; i<lpField->GetSubIndexesCount(); i++)
       {
-        lpField = cFieldsList.GetElementAt(i);
-        if (StrCompareW((LPWSTR)cStrNameW, lpField->GetName(), TRUE) == 0)
+        lpChildField = lpField->GetSubIndexAt(i);
+
+        szIdxW = lpChildField->GetName();
+        //check if numeric index
+        if (IsNumeric(szIdxW) != FALSE)
         {
-          szIdxW = (LPWSTR)(lpField->GetIndex());
-          //check if numeric index
-          for (k=0; szIdxW[k] != 0 && szIdxW[k] >= L'0' && szIdxW[k] <= L'9'; k++);
-          if (szIdxW[k] == 0)
+          //yes, it is a numeric index, store in temp index var if greater
+          if (cStrIndexW.IsEmpty() != FALSE || NumericCompare((LPCWSTR)cStrIndexW, szIdxW) > 0)
           {
-            //yes, it is a numeric index, store in temp index var if greater
-            if (cStrIndexW.IsEmpty() != FALSE || StrCompareW((LPCWSTR)cStrIndexW, szIdxW) > 0)
-            {
-              if (cStrIndexW.Copy(szIdxW) == FALSE)
-                return E_OUTOFMEMORY;
-            }
+            if (cStrIndexW.Copy(szIdxW) == FALSE)
+              return E_OUTOFMEMORY;
           }
         }
       }
       //calculate new index (increment the biggest by 1)
       if (cStrIndexW.IsEmpty() == FALSE)
       {
-        for (szIdxW=(LPWSTR)cStrIndexW+(cStrIndexW.GetLength()-1); szIdxW>=(LPWSTR)cStrIndexW; szIdxW--)
+        for (szIdxW=(LPCWSTR)cStrIndexW+(cStrIndexW.GetLength()-1); szIdxW>=(LPCWSTR)cStrIndexW; szIdxW--)
         {
-          (*szIdxW)++;
+          *((LPWSTR)szIdxW) += 1;
           if (*szIdxW <= L'9')
             break;
-          *szIdxW -= 10;
+          *((LPWSTR)szIdxW) -= 10;
         }
-        if (szIdxW < (LPWSTR)cStrIndexW)
+        if (szIdxW < (LPCWSTR)cStrIndexW)
         {
           if (cStrIndexW.Insert(L"1", 0) == FALSE)
             return E_OUTOFMEMORY;
@@ -133,124 +153,123 @@ HRESULT CHttpBodyParserFormBase::AddField(__in_z LPCWSTR szNameW, __in_z LPCWSTR
         if (cStrIndexW.Copy(L"0") == FALSE)
           return E_OUTOFMEMORY;
       }
+      //set index
+      sW = (LPCWSTR)cStrIndexW;
+    }
+    //look for the subindex
+    for (i=0; i<lpField->GetSubIndexesCount(); i++)
+    {
+      lpChildField = lpField->GetSubIndexAt(i);
+      if (StrCompareW(sW, lpChildField->GetName(), TRUE) == 0)
+        break;
+    }
+    if (i < lpField->GetSubIndexesCount())
+    {
+      //index exists, clear value
+      lpChildField->ClearValue();
     }
     else
     {
-      //else delete previous indexed items with the same name and index
-      for (nCount = cFieldsList.GetCount(); nCount > 0; nCount--)
+      //create new subindex
+      lpChildField = MX_DEBUG_NEW CField();
+      if (!lpChildField)
+        return E_OUTOFMEMORY;
+      if (lpChildField->cStrNameW.Copy(sW) == FALSE)
+        return E_OUTOFMEMORY;
+      //add to list
+      if (lpField->aSubIndexesItems.AddElement(lpChildField) == FALSE)
       {
-        lpField = cFieldsList.GetElementAt(nCount-1);
-        if (StrCompareW((LPWSTR)cStrNameW, lpField->GetName(), TRUE) == 0 &&
-            lpField->GetIndex() != NULL &&
-            StrCompareW((LPWSTR)cStrIndexW, lpField->GetIndex(), TRUE) == 0)
-        {
-          cFieldsList.RemoveElementAt(nCount-1);
-        }
+        delete lpChildField;
+        return E_OUTOFMEMORY;
       }
     }
+    //go to next
+    lpField = lpChildField;
   }
-  //create new item
-  cNewField.Attach(MX_DEBUG_NEW CField());
-  if (!cNewField)
-    return E_OUTOFMEMORY;
-  //allocate memory for data
-  k = (cStrNameW.GetLength() + 1) * sizeof(WCHAR);
-  if (cStrIndexW.IsEmpty() == FALSE)
-    k += (cStrIndexW.GetLength() + 1) * sizeof(WCHAR);
-  nValueLen = StrLenW(szValueW);
-  k += (nValueLen + 1) * sizeof(WCHAR);
-  cNewField->szNameW = (LPWSTR)MX_MALLOC(k);
-  if (cNewField->szNameW == NULL)
-    return E_OUTOFMEMORY;
-  //name
-  MemCopy(cNewField->szNameW, (LPWSTR)cStrNameW, cStrNameW.GetLength() * sizeof(WCHAR));
-  cNewField->szNameW[cStrNameW.GetLength()] = 0;
-  //index (if any)
-  if (cStrIndexW.IsEmpty() == FALSE)
-  {
-    cNewField->szIndexW = cNewField->szNameW + (cStrNameW.GetLength() + 1);
-    MemCopy(cNewField->szIndexW, (LPWSTR)cStrIndexW, cStrIndexW.GetLength() * sizeof(WCHAR));
-    cNewField->szIndexW[cStrIndexW.GetLength()] = 0;
-    //value
-    cNewField->szValueW = cNewField->szIndexW + (cStrIndexW.GetLength() + 1);
-  }
-  else
-  {
-    //value
-    cNewField->szValueW = cNewField->szNameW + (cStrNameW.GetLength() + 1);
-  }
-  MemCopy(cNewField->szValueW, szValueW, nValueLen * sizeof(WCHAR));
-  cNewField->szValueW[nValueLen] = 0;
-  //add to list
-  if (cFieldsList.AddElement(cNewField.Get()) == FALSE)
+  //assign the value to the field
+  if (lpField->cStrValueW.Copy(szValueW) == FALSE)
     return E_OUTOFMEMORY;
   //done
-  cNewField.Detach();
   return S_OK;
 }
 
 HRESULT CHttpBodyParserFormBase::AddFileField(__in_z LPCWSTR szNameW, __in_z LPCWSTR szFileNameW, __in_z LPCSTR szTypeA,
                                               __in HANDLE hFile)
 {
-  TAutoDeletePtr<CFileField> cNewFileField;
-  CFileField *lpFileField;
+  CFileField *lpField, *lpChildField;
   CStringW cStrNameW, cStrIndexW;
-  SIZE_T i, k, nCount, nFileNameLen, nTypeLen;
-  LPWSTR szIdxW;
+  TArrayListWithFree<LPCWSTR> aSubIndexesList;
+  SIZE_T i, nCurrIdx, nCount;
+  LPCWSTR sW, szIdxW;
   HRESULT hRes;
 
-  hRes = ParseName(szNameW, cStrNameW, cStrIndexW);
+  hRes = ParseNameAndIndexes(szNameW, cStrNameW, aSubIndexesList);
   if (FAILED(hRes))
     return hRes;
   if (szFileNameW == NULL || szTypeA == NULL)
     return E_POINTER;
   if (hFile == NULL || hFile == INVALID_HANDLE_VALUE)
     return E_INVALIDARG;
-  //delete previous non-indexed items
-  for (nCount=cFileFieldsList.GetCount(); nCount>0; nCount--)
+  //locate field with name
+  lpField = lpChildField = NULL;
+  for (nCount = cFileFieldsList.GetCount(); nCount > 0; nCount--)
   {
-    lpFileField = cFileFieldsList.GetElementAt(nCount-1);
-    if (StrCompareW((LPWSTR)cStrNameW, lpFileField->GetName(), TRUE) == 0 && lpFileField->GetIndex() == NULL)
-      cFileFieldsList.RemoveElementAt(nCount-1);
+    lpField = cFileFieldsList.GetElementAt(nCount-1);
+    if (StrCompareW((LPWSTR)cStrNameW, lpField->GetName(), TRUE) == 0)
+      break;
   }
-  //if the item has an index...
-  if (cStrIndexW.IsEmpty() == FALSE)
+  if (nCount == 0)
   {
-    //if the item has an empty index, find next index
-    if (((LPCWSTR)cStrIndexW)[0] == L'\x05')
+    //not found -> create
+    lpField = MX_DEBUG_NEW CFileField();
+    if (!lpField)
+      return E_OUTOFMEMORY;
+    if (lpField->cStrNameW.Copy((LPCWSTR)cStrNameW) == FALSE)
+      return E_OUTOFMEMORY;
+    //add to list
+    if (cFileFieldsList.AddElement(lpField) == FALSE)
     {
+      delete lpField;
+      return E_OUTOFMEMORY;
+    }
+  }
+  //check indexes
+  for (nCurrIdx=0; nCurrIdx<aSubIndexesList.GetCount(); nCurrIdx++)
+  {
+    lpField->ClearValue();
+    //----
+    sW = aSubIndexesList.GetElementAt(nCurrIdx);
+    if (sW == NULL)
+    {
+      //if the item has an empty index, find next index
       cStrIndexW.Empty();
-      nCount = cFileFieldsList.GetCount();
-      for (i=0; i<nCount; i++)
+      for (i=0; i<lpField->GetSubIndexesCount(); i++)
       {
-        lpFileField = cFileFieldsList.GetElementAt(i);
-        if (StrCompareW((LPWSTR)cStrNameW, lpFileField->GetName(), TRUE) == 0)
+        lpChildField = lpField->GetSubIndexAt(i);
+
+        szIdxW = lpChildField->GetName();
+        //check if numeric index
+        if (IsNumeric(szIdxW) != FALSE)
         {
-          szIdxW = (LPWSTR)(lpFileField->GetIndex());
-          //check if numeric index
-          for (k=0; szIdxW[k] != 0 && szIdxW[k] >= L'0' && szIdxW[k] <= L'9'; k++);
-          if (szIdxW[k] == 0)
+          //yes, it is a numeric index, store in temp index var if greater
+          if (cStrIndexW.IsEmpty() != FALSE || NumericCompare((LPCWSTR)cStrIndexW, szIdxW) > 0)
           {
-            //yes, it is a numeric index, store in temp index var if greater
-            if (cStrIndexW.IsEmpty() != FALSE || StrCompareW((LPCWSTR)cStrIndexW, szIdxW) > 0)
-            {
-              if (cStrIndexW.Copy(szIdxW) == FALSE)
-                return E_OUTOFMEMORY;
-            }
+            if (cStrIndexW.Copy(szIdxW) == FALSE)
+              return E_OUTOFMEMORY;
           }
         }
       }
       //calculate new index (increment the biggest by 1)
       if (cStrIndexW.IsEmpty() == FALSE)
       {
-        for (szIdxW=(LPWSTR)cStrIndexW+(cStrIndexW.GetLength()-1); szIdxW>=(LPWSTR)cStrIndexW; szIdxW--)
+        for (szIdxW=(LPCWSTR)cStrIndexW+(cStrIndexW.GetLength()-1); szIdxW>=(LPCWSTR)cStrIndexW; szIdxW--)
         {
-          (*szIdxW)++;
+          *((LPWSTR)szIdxW) += 1;
           if (*szIdxW <= L'9')
             break;
-          *szIdxW -= 10;
+          *((LPWSTR)szIdxW) -= 10;
         }
-        if (szIdxW < (LPWSTR)cStrIndexW)
+        if (szIdxW < (LPCWSTR)cStrIndexW)
         {
           if (cStrIndexW.Insert(L"1", 0) == FALSE)
             return E_OUTOFMEMORY;
@@ -261,70 +280,46 @@ HRESULT CHttpBodyParserFormBase::AddFileField(__in_z LPCWSTR szNameW, __in_z LPC
         if (cStrIndexW.Copy(L"0") == FALSE)
           return E_OUTOFMEMORY;
       }
+      //set index
+      sW = (LPCWSTR)cStrIndexW;
+    }
+    //look for the subindex
+    for (i=0; i<lpField->GetSubIndexesCount(); i++)
+    {
+      lpChildField = lpField->GetSubIndexAt(i);
+      if (StrCompareW(sW, lpChildField->GetName(), TRUE) == 0)
+        break;
+    }
+    if (i < lpField->GetSubIndexesCount())
+    {
+      //index exists, clear value
+      lpChildField->ClearValue();
     }
     else
     {
-      //else delete previous indexed items with the same name and index
-      for (nCount=cFileFieldsList.GetCount(); nCount>0; nCount--)
+      //create new subindex
+      lpChildField = MX_DEBUG_NEW CFileField();
+      if (!lpChildField)
+        return E_OUTOFMEMORY;
+      if (lpChildField->cStrNameW.Copy(sW) == FALSE)
+        return E_OUTOFMEMORY;
+      //add to list
+      if (lpField->aSubIndexesItems.AddElement(lpChildField) == FALSE)
       {
-        lpFileField = cFileFieldsList.GetElementAt(nCount-1);
-        if (StrCompareW((LPWSTR)cStrNameW, lpFileField->GetName(), TRUE) == 0 &&
-            lpFileField->GetIndex() != NULL &&
-            StrCompareW((LPWSTR)cStrIndexW, lpFileField->GetIndex(), TRUE) == 0)
-        {
-          cFileFieldsList.RemoveElementAt(nCount-1);
-        }
+        delete lpChildField;
+        return E_OUTOFMEMORY;
       }
     }
+    //go to next
+    lpField = lpChildField;
   }
-  //create new item
-  cNewFileField.Attach(MX_DEBUG_NEW CFileField());
-  if (!cNewFileField)
+  //assign the values to the field
+  if (lpField->cStrFileNameW.Copy(szFileNameW) == FALSE)
     return E_OUTOFMEMORY;
-  //allocate memory for data
-  k = (cStrNameW.GetLength() + 1) * sizeof(WCHAR);
-  if (cStrIndexW.IsEmpty() == FALSE)
-    k += (cStrIndexW.GetLength() + 1) * sizeof(WCHAR);
-  nFileNameLen = StrLenW(szFileNameW);
-  k += (nFileNameLen + 1) * sizeof(WCHAR);
-  nTypeLen = StrLenA(szTypeA);
-  k += (nTypeLen + 1) * sizeof(CHAR);
-  cNewFileField->szNameW = (LPWSTR)MX_MALLOC(k);
-  if (cNewFileField->szNameW == NULL)
+  if (lpField->cStrTypeA.Copy(szTypeA) == FALSE)
     return E_OUTOFMEMORY;
-  //name
-  MemCopy(cNewFileField->szNameW, (LPWSTR)cStrNameW, cStrNameW.GetLength() * sizeof(WCHAR));
-  cNewFileField->szNameW[cStrNameW.GetLength()] = 0;
-  //index (if any)
-  if (cStrIndexW.IsEmpty() == FALSE)
-  {
-    cNewFileField->szIndexW = cNewFileField->szNameW + (cStrNameW.GetLength() + 1);
-    MemCopy(cNewFileField->szIndexW, (LPWSTR)cStrIndexW, cStrIndexW.GetLength() * sizeof(WCHAR));
-    cNewFileField->szIndexW[cStrIndexW.GetLength()] = 0;
-    //filename
-    cNewFileField->szFileNameW = cNewFileField->szIndexW + (cStrIndexW.GetLength() + 1);
-  }
-  else
-  {
-    //filename
-    cNewFileField->szFileNameW = cNewFileField->szNameW + (cStrNameW.GetLength() + 1);
-  }
-  MemCopy(cNewFileField->szFileNameW, szFileNameW, nFileNameLen * sizeof(WCHAR));
-  cNewFileField->szFileNameW[nFileNameLen] = 0;
-  //type
-  cNewFileField->szTypeA = (LPSTR)(cNewFileField->szFileNameW + (nFileNameLen + 1));
-  MemCopy(cNewFileField->szTypeA, szTypeA, nTypeLen * sizeof(CHAR));
-  cNewFileField->szTypeA[nTypeLen] = 0;
-  //handle to file
-  cNewFileField->hFile = hFile;
-  //add to list
-  if (cFileFieldsList.AddElement(cNewFileField.Get()) == FALSE)
-  {
-    cNewFileField->hFile = NULL; //to avoid closing file on error
-    return E_OUTOFMEMORY;
-  }
+  lpField->hFile = hFile;
   //done
-  cNewFileField.Detach();
   return S_OK;
 }
 
@@ -332,13 +327,12 @@ HRESULT CHttpBodyParserFormBase::AddFileField(__in_z LPCWSTR szNameW, __in_z LPC
 
 CHttpBodyParserFormBase::CField::CField() : CBaseMemObj()
 {
-  szNameW = szIndexW = szValueW = NULL;
   return;
 }
 
-CHttpBodyParserFormBase::CField::~CField()
+VOID CHttpBodyParserFormBase::CField::ClearValue()
 {
-  MX_FREE(szNameW);
+  cStrValueW.Empty();
   return;
 }
 
@@ -346,15 +340,21 @@ CHttpBodyParserFormBase::CField::~CField()
 
 CHttpBodyParserFormBase::CFileField::CFileField() : CBaseMemObj()
 {
-  szNameW = szIndexW = szFileNameW = NULL;
   hFile = NULL;
-  szTypeA = NULL;
   return;
 }
 
 CHttpBodyParserFormBase::CFileField::~CFileField()
 {
-  MX_FREE(szNameW);
+  if (hFile != NULL && hFile != INVALID_HANDLE_VALUE)
+    ::CloseHandle(hFile);
+  cStrFileNameW.Empty();
+  cStrTypeA.Empty();
+  return;
+}
+
+VOID CHttpBodyParserFormBase::CFileField::ClearValue()
+{
   if (hFile != NULL && hFile != INVALID_HANDLE_VALUE)
     ::CloseHandle(hFile);
   return;
@@ -364,12 +364,15 @@ CHttpBodyParserFormBase::CFileField::~CFileField()
 
 //-----------------------------------------------------------
 
-static HRESULT ParseName(__in_z LPCWSTR szNameW, __inout MX::CStringW &cStrNameW, __inout MX::CStringW &cStrIndexW)
+static HRESULT ParseNameAndIndexes(__in_z LPCWSTR szNameW, __inout MX::CStringW &cStrNameW,
+                                   __inout MX::TArrayListWithFree<LPCWSTR> &aSubIndexesList)
 {
+  MX::CStringW cStrCurrSubIndexW;
   BOOL bValidChars, bPrevWasSpace;
+  LPCWSTR sW;
 
   cStrNameW.Empty();
-  cStrIndexW.Empty();
+  aSubIndexesList.RemoveAllElements();
   if (szNameW == NULL)
     return E_POINTER;
   //skip blanks
@@ -410,12 +413,18 @@ static HRESULT ParseName(__in_z LPCWSTR szNameW, __inout MX::CStringW &cStrNameW
   }
   if (cStrNameW.IsEmpty() != FALSE || bValidChars == FALSE)
     return E_INVALIDARG;
+parse_index:
   //skip blanks
   while (*szNameW == L' ' || *szNameW == L'\t')
     szNameW++;
-  //parse index (if any)
+  //parse indexes (if any)
   if (*szNameW == L'[')
   {
+    //too much indexes?
+    if (aSubIndexesList.GetCount() >= MAX_SUBINDEXES_COUNT)
+      return MX_E_Unsupported;
+    //parse
+    cStrCurrSubIndexW.Empty();
     szNameW++;
     //skip blanks
     while (*szNameW == L' ' || *szNameW == L'\t')
@@ -428,11 +437,11 @@ static HRESULT ParseName(__in_z LPCWSTR szNameW, __inout MX::CStringW &cStrNameW
       {
         if (bPrevWasSpace != FALSE)
         {
-          if (cStrIndexW.ConcatN(" ", 1) == FALSE)
+          if (cStrCurrSubIndexW.ConcatN(" ", 1) == FALSE)
             return E_OUTOFMEMORY;
           bPrevWasSpace = FALSE;
         }
-        if (cStrIndexW.ConcatN(szNameW, 1) == FALSE)
+        if (cStrCurrSubIndexW.ConcatN(szNameW, 1) == FALSE)
           return E_OUTOFMEMORY;
         bValidChars = TRUE;
       }
@@ -440,11 +449,11 @@ static HRESULT ParseName(__in_z LPCWSTR szNameW, __inout MX::CStringW &cStrNameW
       {
         if (bPrevWasSpace != FALSE)
         {
-          if (cStrIndexW.ConcatN(" ", 1) == FALSE)
+          if (cStrCurrSubIndexW.ConcatN(" ", 1) == FALSE)
             return E_OUTOFMEMORY;
           bPrevWasSpace = FALSE;
         }
-        if (cStrIndexW.ConcatN("_", 1) == FALSE)
+        if (cStrCurrSubIndexW.ConcatN("_", 1) == FALSE)
           return E_OUTOFMEMORY;
       }
       else if (*szNameW == L' ' || *szNameW == L'\t')
@@ -453,17 +462,61 @@ static HRESULT ParseName(__in_z LPCWSTR szNameW, __inout MX::CStringW &cStrNameW
       }
       *szNameW++;
     }
-    if (*szNameW != L']' || (cStrIndexW.IsEmpty() == FALSE && bValidChars == FALSE))
+    if (*szNameW != L']' || (cStrCurrSubIndexW.IsEmpty() == FALSE && bValidChars == FALSE))
       return E_INVALIDARG;
     szNameW++; //skip ']'
-    if (cStrIndexW.IsEmpty() != FALSE)
+    //check if numeric index and remove leading zeroes
+    if (cStrCurrSubIndexW.IsEmpty() == FALSE && IsNumeric((LPCWSTR)cStrCurrSubIndexW) != FALSE)
     {
-      if (cStrIndexW.CopyN(L"\x05", 1) == FALSE)
-        return E_OUTOFMEMORY;
+      for (sW=(LPCWSTR)cStrCurrSubIndexW; *sW == L'0'; sW++);
+      if (*sW == 0)
+        sW--; //if all are zeroes, leave one
+      cStrCurrSubIndexW.Delete(0, (SIZE_T)(sW-(LPCWSTR)cStrCurrSubIndexW));
     }
+    //add to subindex list
+    sW = cStrCurrSubIndexW.Detach();
+    if (aSubIndexesList.AddElement(sW) == FALSE)
+    {
+      MX_FREE(sW);
+      return E_OUTOFMEMORY;
+    }
+    //restart
+    goto parse_index;
   }
   //skip blanks and check for end
-  while (*szNameW == L' ' || *szNameW == L'\t')
-    szNameW++;
   return (*szNameW == 0) ? S_OK : E_INVALIDARG;
+}
+
+static BOOL __inline IsNumeric(__in_z LPCWSTR szNumberW)
+{
+  while (*szNumberW >= L'0' && *szNumberW <= L'9')
+    szNumberW++;
+  return (*szNumberW == 0) ? TRUE : FALSE;
+}
+
+static int NumericCompare(__in_z LPCWSTR szNumber1, __in_z LPCWSTR szNumber2)
+{
+  SIZE_T nDigitsLeft[2];
+
+  /* NOTE: No need of this because numbers won't have leading zeroes
+  while (*szNumber1 == L'0')
+    szNumber1++;
+  while (*szNumber2 == L'0')
+    szNumber2++;
+  */
+  while (*szNumber1 != 0 && *szNumber1 == *szNumber2)
+  {
+    szNumber1++;
+    szNumber2++;
+  }
+  nDigitsLeft[0] = MX::StrLenW(szNumber1);
+  nDigitsLeft[1] = MX::StrLenW(szNumber2);
+  if (nDigitsLeft[0] == 0 && nDigitsLeft[1] == 0)
+    return 0; //both numbers are equal
+  if (nDigitsLeft[0] < nDigitsLeft[1])
+    return -1; //less digits means smaller number
+  if (nDigitsLeft[0] > nDigitsLeft[1])
+    return 1; //more digits means bigger number
+  //same digits count, compare digit
+  return (*szNumber1 < *szNumber2) ? -1 : 1;
 }

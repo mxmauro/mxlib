@@ -87,6 +87,11 @@ private:
   HRESULT TransformJavascriptCode_ConvertToPrint(__inout MX::CStringA &cStrCodeA, __inout SIZE_T &nNonCodeBlockStart,
                                                  __inout SIZE_T &nCurrPos);
 
+  HRESULT InsertPostField(__in CJavascriptVM &cJvm, __in CHttpBodyParserFormBase::CField *lpField,
+                          __in LPCSTR szBaseObjectNameA);
+  HRESULT InsertPostFileField(__in CJavascriptVM &cJvm, __in CHttpBodyParserFormBase::CFileField *lpFileField,
+                              __in LPCSTR szBaseObjectNameA);
+
 private:
   CSockets &cSocketMgr;
   CPropertyBag &cPropBag;

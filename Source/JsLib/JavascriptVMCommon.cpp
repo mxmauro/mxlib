@@ -444,6 +444,7 @@ HRESULT PushPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObj
 HRESULT FindObject(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA, __in BOOL bCreateIfNotExists,
                    __in BOOL bResolveProxyOnLast)
 {
+  LPCSTR szNameA;
   SIZE_T nNameLen;
 
   MX_ASSERT(szObjectNameA == NULL || szObjectNameA[0] != 0);
@@ -453,9 +454,11 @@ HRESULT FindObject(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA
   {
     while (1)
     {
-      for (nNameLen=0; szObjectNameA[nNameLen]!=0 && szObjectNameA[nNameLen]!=L'.'; nNameLen++);
+      for (nNameLen=0; szObjectNameA[nNameLen] != 0 && szObjectNameA[nNameLen] != L'.' &&
+                       szObjectNameA[nNameLen] != L'['; nNameLen++);
       if (nNameLen == 0)
       {
+err_invalid_name:
         DukTape::duk_pop(lpCtx); //remove current object before returning to clean stack
         return E_INVALIDARG;
       }
@@ -486,11 +489,47 @@ HRESULT FindObject(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA
         else
           DukTape::duk_pop(lpCtx);
       }
+      //parse properties if specified
+      szObjectNameA += nNameLen;
+      while (*szObjectNameA == '[')
+      {
+        szObjectNameA++;
+        if (*szObjectNameA == '"' || *szObjectNameA == '\'')
+        {
+          szNameA = ++szObjectNameA;
+          for (nNameLen=0; szObjectNameA[nNameLen] != 0 && szObjectNameA[nNameLen] != *(szObjectNameA-1); nNameLen++);
+          if (nNameLen == 0 || szObjectNameA[nNameLen] != *(szObjectNameA-1) || szObjectNameA[nNameLen+1] != L']')
+            goto err_invalid_name;
+          szObjectNameA += nNameLen+2;
+        }
+        else
+        {
+          szNameA = szObjectNameA;
+          for (nNameLen=0; szObjectNameA[nNameLen] != 0 && szObjectNameA[nNameLen] != L']'; nNameLen++);
+          if (nNameLen == 0 || szObjectNameA[nNameLen] != L']')
+            goto err_invalid_name;
+          szObjectNameA += nNameLen+1;
+        }
+        //get object
+        DukTape::duk_push_lstring(lpCtx, szNameA, nNameLen);
+        DukTape::duk_get_prop(lpCtx, -2);
+        //check if this is an object
+        if (DukTape::duk_is_object(lpCtx, -1) == 0)
+        {
+          DukTape::duk_pop(lpCtx); //remove "undefined"
+          DukTape::duk_pop(lpCtx); //remove current object before returning to clean stack
+          return MX_E_NotFound;
+        }
+        //the object exists, remove the parent from stack
+        DukTape::duk_remove(lpCtx, -2);
+      }
       //final object? exit loop
-      if (szObjectNameA[nNameLen] == 0)
+      if (*szObjectNameA == 0)
         break;
+      if (*szObjectNameA != '.')
+        goto err_invalid_name;
       //skip dot and advance to next
-      szObjectNameA += nNameLen+1;
+      szObjectNameA++;
     }
   }
   //done

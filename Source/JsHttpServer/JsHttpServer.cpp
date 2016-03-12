@@ -102,12 +102,14 @@ HRESULT CJsHttpServer::OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in MX:
 {
   CJavascriptVM cJvm;
   CStringA cStrCodeA;
+  CUrl *lpUrl;
   HRESULT hRes;
 
   if (!cRequestCallback)
     return E_NOTIMPL;
   //build path
-  if (((LPCWSTR)(lpRequest->GetUrl()->GetPath()))[0] != L'/') //only accept absolute paths
+  lpUrl = lpRequest->GetUrl();
+  if (lpUrl != NULL && (lpUrl->GetPath())[0] != L'/') //only accept absolute paths
     return lpRequest->SendErrorPage(403, E_INVALIDARG);
 
   //initialize javascript engine
@@ -123,7 +125,7 @@ HRESULT CJsHttpServer::OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in MX:
     if (SUCCEEDED(hRes) && cStrCodeA.IsEmpty() == FALSE)
     {
       if (SUCCEEDED(hRes))
-        hRes = cJvm.Run(cStrCodeA, lpRequest->GetUrl()->GetPath());
+        hRes = cJvm.Run(cStrCodeA, lpUrl->GetPath());
       if (FAILED(hRes))
       {
         CStringA cStrBodyA;

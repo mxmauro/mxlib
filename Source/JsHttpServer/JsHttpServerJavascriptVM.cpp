@@ -266,85 +266,20 @@ HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CHttpServer:
     else if (StrCompareA(cBodyParser->GetType(), "form") == 0)
     {
       CHttpBodyParserFormBase *lpParser = (CHttpBodyParserFormBase*)(cBodyParser.Get());
-      LPCWSTR szIdxW;
-      CHttpBodyParserFormBase::CField *lpField;
-      CHttpBodyParserFormBase::CFileField *lpFileField;
-      Internals::CFileFieldJsObject *lpJsObj;
-      CStringA cStrNameA, cStrIndexA, cStrValueA;
 
       //add post fields
       nCount = lpParser->GetFieldsCount();
       for (i=0; i<nCount; i++)
       {
-        lpField = lpParser->GetField(i);
-        hRes = Utf8_Encode(cStrNameA, lpField->GetName());
+        hRes = InsertPostField(cJvm, lpParser->GetField(i), "request.post");
         __EXIT_ON_ERROR(hRes);
-        hRes = Utf8_Encode(cStrValueA, lpField->GetValue());
-        __EXIT_ON_ERROR(hRes);
-
-        szIdxW = lpField->GetIndex();
-        if (szIdxW == NULL)
-        {
-          hRes = cJvm.AddObjectStringProperty("request.post", (LPCSTR)cStrNameA, (LPCSTR)cStrValueA,
-                                              CJavascriptVM::PropertyFlagEnumerable);
-          __EXIT_ON_ERROR(hRes);
-        }
-        else
-        {
-          hRes = Utf8_Encode(cStrIndexA, lpField->GetIndex());
-          __EXIT_ON_ERROR(hRes);
-          if (cStrNameA.Insert("request.post.", 0) == FALSE)
-            return E_OUTOFMEMORY;
-          hRes = cJvm.CreateObject((LPCSTR)cStrNameA);
-          if (SUCCEEDED(hRes) || hRes == MX_E_AlreadyExists)
-          {
-            hRes = cJvm.AddObjectStringProperty((LPCSTR)cStrNameA, (LPCSTR)cStrIndexA, (LPCSTR)cStrValueA,
-                                                CJavascriptVM::PropertyFlagEnumerable);
-          }
-          __EXIT_ON_ERROR(hRes);
-        }
       }
-
       //add files fields
       nCount = lpParser->GetFileFieldsCount();
       for (i=0; i<nCount; i++)
       {
-        lpFileField = lpParser->GetFileField(i);
-        hRes = Utf8_Encode(cStrNameA, lpFileField->GetName());
+        hRes = InsertPostFileField(cJvm, lpParser->GetFileField(i), "request.files");
         __EXIT_ON_ERROR(hRes);
-        hRes = Utf8_Encode(cStrValueA, lpFileField->GetFileName());
-        __EXIT_ON_ERROR(hRes);
-        szIdxW = lpFileField->GetIndex();
-        if (szIdxW == NULL)
-        {
-          lpJsObj = MX_DEBUG_NEW Internals::CFileFieldJsObject(NULL);
-          if (!lpJsObj)
-            return E_OUTOFMEMORY;
-          lpJsObj->Initialize(lpFileField);
-          hRes = cJvm.AddObjectJsObjectProperty("request.files", (LPCSTR)cStrNameA, lpJsObj,
-                                                CJavascriptVM::PropertyFlagEnumerable);
-          lpJsObj->Release();
-          __EXIT_ON_ERROR(hRes);
-        }
-        else
-        {
-          hRes = Utf8_Encode(cStrIndexA, lpFileField->GetIndex());
-          __EXIT_ON_ERROR(hRes);
-          if (cStrNameA.Insert("request.files.", 0) == FALSE)
-            return E_OUTOFMEMORY;
-          hRes = cJvm.CreateObject((LPCSTR)cStrNameA);
-          if (SUCCEEDED(hRes) || hRes == MX_E_AlreadyExists)
-          {
-            lpJsObj = MX_DEBUG_NEW Internals::CFileFieldJsObject(NULL);
-            if (!lpJsObj)
-              return E_OUTOFMEMORY;
-            lpJsObj->Initialize(lpFileField);
-            hRes = cJvm.AddObjectJsObjectProperty((LPCSTR)cStrNameA, (LPCSTR)cStrIndexA, lpJsObj,
-                                                  CJavascriptVM::PropertyFlagEnumerable);
-            lpJsObj->Release();
-          }
-          __EXIT_ON_ERROR(hRes);
-        }
       }
     }
   }
@@ -544,6 +479,75 @@ HRESULT CJsHttpServer::TransformJavascriptCode_ConvertToPrint(__inout MX::CStrin
     nCurrPos += 3;
   }
   return S_OK;
+}
+
+HRESULT CJsHttpServer::InsertPostField(__in CJavascriptVM &cJvm, __in CHttpBodyParserFormBase::CField *lpField,
+                                       __in LPCSTR szBaseObjectNameA)
+{
+  CStringA cStrNameA;
+  SIZE_T i, nCount;
+  HRESULT hRes;
+
+  hRes = Utf8_Encode(cStrNameA, lpField->GetName());
+  __EXIT_ON_ERROR(hRes);
+  nCount = lpField->GetSubIndexesCount();
+  if (nCount > 0)
+  {
+    if (cStrNameA.InsertN(".", 0, 1) == FALSE || cStrNameA.Insert(szBaseObjectNameA, 0) == FALSE)
+      return E_OUTOFMEMORY;
+    hRes = cJvm.CreateObject((LPCSTR)cStrNameA);
+    if (hRes == MX_E_AlreadyExists)
+      hRes = S_OK;
+    for (i=0; SUCCEEDED(hRes) && i<nCount; i++)
+      hRes = InsertPostField(cJvm, lpField->GetSubIndexAt(i), (LPCSTR)cStrNameA);
+  }
+  else
+  {
+    CStringA cStrValueA;
+
+    hRes = Utf8_Encode(cStrValueA, lpField->GetValue());
+    __EXIT_ON_ERROR(hRes);
+
+    hRes = cJvm.AddObjectStringProperty(szBaseObjectNameA, (LPCSTR)cStrNameA, (LPCSTR)cStrValueA,
+                                        CJavascriptVM::PropertyFlagEnumerable);
+  }
+  return hRes;
+}
+
+HRESULT CJsHttpServer::InsertPostFileField(__in CJavascriptVM &cJvm,
+                                           __in CHttpBodyParserFormBase::CFileField *lpFileField,
+                                           __in LPCSTR szBaseObjectNameA)
+{
+  CStringA cStrNameA;
+  SIZE_T i, nCount;
+  HRESULT hRes;
+
+  hRes = Utf8_Encode(cStrNameA, lpFileField->GetName());
+  __EXIT_ON_ERROR(hRes);
+  nCount = lpFileField->GetSubIndexesCount();
+  if (nCount > 0)
+  {
+    if (cStrNameA.InsertN(".", 0, 1) == FALSE || cStrNameA.Insert(szBaseObjectNameA, 0) == FALSE)
+      return E_OUTOFMEMORY;
+    hRes = cJvm.CreateObject((LPCSTR)cStrNameA);
+    if (hRes == MX_E_AlreadyExists)
+      hRes = S_OK;
+    for (i=0; SUCCEEDED(hRes) && i<nCount; i++)
+      hRes = InsertPostFileField(cJvm, lpFileField->GetSubIndexAt(i), (LPCSTR)cStrNameA);
+  }
+  else
+  {
+    Internals::CFileFieldJsObject *lpJsObj;
+
+    lpJsObj = MX_DEBUG_NEW Internals::CFileFieldJsObject(cJvm);
+    if (!lpJsObj)
+      return E_OUTOFMEMORY;
+    lpJsObj->Initialize(lpFileField);
+    hRes = cJvm.AddObjectJsObjectProperty(szBaseObjectNameA, (LPCSTR)cStrNameA, lpJsObj,
+                                          CJavascriptVM::PropertyFlagEnumerable);
+    lpJsObj->Release();
+  }
+  return hRes;
 }
 
 //-----------------------------------------------------------

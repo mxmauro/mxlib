@@ -11,8 +11,8 @@ require("./top.jss");
     <p>Test field 2c: <input type="text" name='file2[aaa]' /></p>
     <p>File 2d: <input type="file" name='file2[bbb]' /></p>
     <p>File 3 (multiple): <input type="file" name='file3' multiple /></p>
-    <p>File 4a: <input type="file" name='file4' /></p>
-    <p>File 4b: <input type="file" name='file4' /></p>
+    <p>File 4a: <input type="file" name='file4[0][]' /></p>
+    <p>File 4b: <input type="file" name='file4[0][1]' /></p>
     <p><input type="submit" value="Send" /></p>
 </div>
 </form>

@@ -58,27 +58,35 @@ public:
   {
   public:
     CField();
-    ~CField();
 
     __inline LPCWSTR GetName() const
       {
-      return szNameW;
-      };
-
-    __inline LPCWSTR GetIndex() const
-      {
-      return szIndexW;
+      return (LPCWSTR)cStrNameW;
       };
 
     __inline LPCWSTR GetValue() const
       {
-      return szValueW;
+      return (LPCWSTR)cStrValueW;
+      };
+
+    __inline SIZE_T GetSubIndexesCount() const
+      {
+      return aSubIndexesItems.GetCount();
+      };
+
+    __inline CField* GetSubIndexAt(__in SIZE_T nPos) const
+      {
+      return (nPos < aSubIndexesItems.GetCount()) ? aSubIndexesItems[nPos] : NULL;
       };
 
   private:
     friend class CHttpBodyParserFormBase;
 
-    LPWSTR szNameW, szIndexW, szValueW;
+    VOID ClearValue();
+
+  private:
+    MX::CStringW cStrNameW, cStrValueW;
+    TArrayListWithDelete<CField*> aSubIndexesItems;
   };
 
   //----
@@ -91,22 +99,17 @@ public:
 
     __inline LPCWSTR GetName() const
       {
-      return szNameW;
-      };
-
-    __inline LPCWSTR GetIndex() const
-      {
-      return szIndexW;
+      return (LPCWSTR)cStrNameW;
       };
 
     __inline LPCSTR GetType() const
       {
-      return (szTypeA != NULL) ? szTypeA : "text/plain";
+      return (cStrTypeA.IsEmpty() == FALSE) ? (LPCSTR)cStrTypeA : "text/plain";
       };
 
     __inline LPCWSTR GetFileName() const
       {
-      return szFileNameW;
+        return (LPCWSTR)cStrFileNameW;
       };
 
     __inline HANDLE GetFileHandle() const
@@ -114,12 +117,26 @@ public:
       return hFile;
       };
 
+    __inline SIZE_T GetSubIndexesCount() const
+      {
+      return aSubIndexesItems.GetCount();
+      };
+
+    __inline CFileField* GetSubIndexAt(__in SIZE_T nPos) const
+      {
+        return (nPos < aSubIndexesItems.GetCount()) ? aSubIndexesItems[nPos] : NULL;
+      };
+
   private:
     friend class CHttpBodyParserFormBase;
 
-    LPWSTR szNameW, szIndexW, szFileNameW;
-    LPSTR szTypeA;
+    VOID ClearValue();
+
+  private:
+    MX::CStringW cStrNameW, cStrFileNameW;
+    MX::CStringA cStrTypeA;
     HANDLE hFile;
+    TArrayListWithDelete<CFileField*> aSubIndexesItems;
   };
 
 protected:
