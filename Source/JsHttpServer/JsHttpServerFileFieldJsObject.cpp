@@ -109,6 +109,7 @@ DukTape::duk_ret_t CFileFieldJsObject::ReadFile(__in DukTape::duk_context *lpCtx
     MX_JS_THROW_ERROR(lpCtx, DUK_ERR_API_ERROR, "**%08X", E_INVALIDARG);
   //parse parameters
   nToRead = DukTape::duk_require_uint(lpCtx, 0);
+  bAsBuffer = false;
   if (nParamsCount > 1)
   {
     if (DukTape::duk_is_boolean(lpCtx, 1) != 0)
