@@ -99,18 +99,35 @@ DukTape::duk_ret_t CFileFieldJsObject::SeekFile(__in DukTape::duk_context *lpCtx
 DukTape::duk_ret_t CFileFieldJsObject::ReadFile(__in DukTape::duk_context *lpCtx)
 {
   DukTape::duk_uint_t nToRead;
+  DukTape::duk_idx_t nParamsCount;
+  DukTape::duk_bool_t bAsBuffer;
   LPVOID lpBuf;
   DWORD dwReaded;
-
+ 
+  nParamsCount = DukTape::duk_get_top(lpCtx);
+  if (nParamsCount < 1 || nParamsCount > 2)
+    MX_JS_THROW_ERROR(lpCtx, DUK_ERR_API_ERROR, "**%08X", E_INVALIDARG);
+  //parse parameters
   nToRead = DukTape::duk_require_uint(lpCtx, 0);
+  if (nParamsCount > 1)
+  {
+    if (DukTape::duk_is_boolean(lpCtx, 1) != 0)
+      bAsBuffer = DukTape::duk_require_boolean(lpCtx, 1);
+    else
+      bAsBuffer = ((int)(DukTape::duk_require_number(lpCtx, 1)) != 0) ? true : false;
+  }
+  //do file read
   if (nToRead > 0)
   {
     lpBuf = DukTape::duk_push_dynamic_buffer(lpCtx, nToRead);
     if (::ReadFile(lpFileField->GetFileHandle(), lpBuf, (DWORD)nToRead, &dwReaded, NULL) != FALSE && dwReaded > 0)
     {
       DukTape::duk_resize_buffer(lpCtx, -1, (DukTape::duk_size_t)dwReaded);
-      DukTape::duk_push_buffer_object(lpCtx, -1, 0, (DukTape::duk_size_t)dwReaded, DUK_BUFOBJ_UINT8ARRAY);
-      DukTape::duk_remove(lpCtx, -2);
+      if (bAsBuffer == false)
+      {
+        DukTape::duk_push_buffer_object(lpCtx, -1, 0, (DukTape::duk_size_t)dwReaded, DUK_BUFOBJ_UINT8ARRAY);
+        DukTape::duk_remove(lpCtx, -2);
+      }
     }
     else
     {

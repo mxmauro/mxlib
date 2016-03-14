@@ -61,7 +61,7 @@ public:
     MX_JS_MAP_PROPERTY("filename", &CFileFieldJsObject::getFileName, NULL, TRUE)
     MX_JS_MAP_PROPERTY("filesize", &CFileFieldJsObject::getFileSize, NULL, TRUE)
     MX_JS_MAP_METHOD("Seek", &CFileFieldJsObject::SeekFile, 1)
-    MX_JS_MAP_METHOD("Read", &CFileFieldJsObject::ReadFile, 1)
+    MX_JS_MAP_METHOD("Read", &CFileFieldJsObject::ReadFile, MX_JS_VARARGS)
   MX_JS_END_MAP()
 
 private:
