@@ -39,11 +39,13 @@ public:
   class CRequireModuleContext;
   class CJsRequestRequireModuleContext;
 
-  typedef Callback<HRESULT (__in CJsHttpServer *lpHttp, __in CHttpServer::CRequest *lpRequest, __in CJavascriptVM &cJvm,
-                            __inout CStringA &cStrCodeA)> OnRequestCallback;
+  typedef Callback<HRESULT (__in CJsHttpServer *lpHttp, __in CHttpServer::CRequest *lpRequest,
+                            __in CJavascriptVM &cJvm, __inout CStringA &cStrCodeA)> OnRequestCallback;
+  typedef Callback<VOID (__in CJsHttpServer *lpHttp, __in CHttpServer::CRequest *lpRequest,
+                         __in CJavascriptVM &cJvm)> OnRequestCleanupCallback;
 
-  typedef Callback<HRESULT (__in CJsHttpServer *lpHttp, __in CHttpServer::CRequest *lpRequest, __in CJavascriptVM &cJvm,
-                            __inout CJavascriptVM::CRequireModuleContext *lpReqContext,
+  typedef Callback<HRESULT (__in CJsHttpServer *lpHttp, __in CHttpServer::CRequest *lpRequest,
+                            __in CJavascriptVM &cJvm, __inout CJavascriptVM::CRequireModuleContext *lpReqContext,
                             __inout CStringA &cStrCodeA)> OnRequireJsModuleCallback;
 
   typedef Callback<VOID (__in CJsHttpServer *lpHttp, __in CHttpServer::CRequest *lpRequest,
@@ -59,6 +61,7 @@ public:
   ~CJsHttpServer();
 
   VOID On(__in OnRequestCallback cRequestCallback);
+  VOID On(__in OnRequestCleanupCallback cRequestCleanupCallback);
   VOID On(__in OnRequireJsModuleCallback cRequireJsModuleCallback);
   VOID On(__in OnErrorCallback cErrorCallback);
   VOID On(__in OnJavascriptErrorCallback cJavascriptErrorCallback);
@@ -99,6 +102,7 @@ private:
   //----
   BOOL bShowStackTraceOnError;
   OnRequestCallback cRequestCallback;
+  OnRequestCleanupCallback cRequestCleanupCallback;
   OnRequireJsModuleCallback cRequireJsModuleCallback;
   OnErrorCallback cErrorCallback;
   OnJavascriptErrorCallback cJavascriptErrorCallback;

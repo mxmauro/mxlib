@@ -31,6 +31,7 @@ CJsHttpServer::CJsHttpServer(__in MX::CSockets &_cSocketMgr, __in MX::CPropertyB
                cSocketMgr(_cSocketMgr), cPropBag(_cPropBag), cHttpServer(_cSocketMgr, _cPropBag)
 {
   cRequestCallback = NullCallback();
+  cRequestCleanupCallback = NullCallback();
   cRequireJsModuleCallback = NullCallback();
   cErrorCallback = NullCallback();
   cJavascriptErrorCallback = NullCallback();
@@ -51,6 +52,12 @@ CJsHttpServer::~CJsHttpServer()
 VOID CJsHttpServer::On(__in OnRequestCallback _cRequestCallback)
 {
   cRequestCallback = _cRequestCallback;
+  return;
+}
+
+VOID CJsHttpServer::On(__in OnRequestCleanupCallback _cRequestCleanupCallback)
+{
+  cRequestCleanupCallback = _cRequestCleanupCallback;
   return;
 }
 
@@ -183,6 +190,8 @@ HRESULT CJsHttpServer::OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in MX:
       }
     }
   }
+  if (cRequestCleanupCallback)
+    cRequestCleanupCallback(this, lpRequest, cJvm);
   //done
   return hRes;
 }

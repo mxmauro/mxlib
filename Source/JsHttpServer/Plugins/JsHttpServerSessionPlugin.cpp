@@ -72,7 +72,6 @@ HRESULT CJsHttpServerSessionPlugin::Setup(__in CJavascriptVM &cJvm, __in CJsHttp
   if (i < nCount && IsValidSessionId(lpSessionIdCookie->GetValue()) != FALSE)
   {
     MemCopy(szCurrentIdA, lpSessionIdCookie->GetValue(), StrLenA(lpSessionIdCookie->GetValue())+1);
-    
     hRes = cLoadSaveCallback(this, TRUE);
     if (FAILED(hRes) && hRes != E_OUTOFMEMORY)
     {
