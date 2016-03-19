@@ -230,6 +230,13 @@ public:
       usName.MaximumLength = usName.Length;
       sObjAttr.ObjectName = &usName;
     }
+    //setup security
+    if (lpSecAttr != NULL)
+    {
+      sObjAttr.SecurityDescriptor = lpSecAttr->lpSecurityDescriptor;
+      if (lpSecAttr->bInheritHandle != FALSE)
+        sObjAttr.Attributes |= 0x00000002; //OBJ_INHERIT
+    }
     //create event
     nNtStatus = ::MxNtCreateEvent(&_h, EVENT_ALL_ACCESS, &sObjAttr,
                                   (bManualReset == FALSE) ? MxSynchronizationEvent : MxNotificationEvent,
