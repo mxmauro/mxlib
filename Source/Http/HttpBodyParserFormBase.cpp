@@ -125,7 +125,7 @@ HRESULT CHttpBodyParserFormBase::AddField(__in_z LPCWSTR szNameW, __in_z LPCWSTR
         if (IsNumeric(szIdxW) != FALSE)
         {
           //yes, it is a numeric index, store in temp index var if greater
-          if (cStrIndexW.IsEmpty() != FALSE || NumericCompare((LPCWSTR)cStrIndexW, szIdxW) > 0)
+          if (cStrIndexW.IsEmpty() != FALSE || NumericCompare((LPCWSTR)cStrIndexW, szIdxW) < 0)
           {
             if (cStrIndexW.Copy(szIdxW) == FALSE)
               return E_OUTOFMEMORY;
@@ -252,7 +252,7 @@ HRESULT CHttpBodyParserFormBase::AddFileField(__in_z LPCWSTR szNameW, __in_z LPC
         if (IsNumeric(szIdxW) != FALSE)
         {
           //yes, it is a numeric index, store in temp index var if greater
-          if (cStrIndexW.IsEmpty() != FALSE || NumericCompare((LPCWSTR)cStrIndexW, szIdxW) > 0)
+          if (cStrIndexW.IsEmpty() != FALSE || NumericCompare((LPCWSTR)cStrIndexW, szIdxW) < 0)
           {
             if (cStrIndexW.Copy(szIdxW) == FALSE)
               return E_OUTOFMEMORY;
