@@ -45,6 +45,7 @@ public:
     MX_JS_MAP_METHOD("queryAndFetchRow", &CJsMySqlPlugin::QueryAndFetch, 1)
     MX_JS_MAP_METHOD("queryClose", &CJsMySqlPlugin::QueryClose, 0)
     MX_JS_MAP_METHOD("escapeString", &CJsMySqlPlugin::EscapeString, MX_JS_VARARGS)
+    MX_JS_MAP_METHOD("utf8Truncate", &CJsMySqlPlugin::Utf8Truncate, 2)
     MX_JS_MAP_METHOD("fetchRow", &CJsMySqlPlugin::FetchRow, 0)
     MX_JS_MAP_METHOD("beginTransaction", &CJsMySqlPlugin::BeginTransaction, 0)
     MX_JS_MAP_METHOD("commit", &CJsMySqlPlugin::CommitTransaction, 0)
@@ -67,6 +68,7 @@ private:
   DukTape::duk_ret_t QueryAndFetch(__in DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t QueryClose(__in DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t EscapeString(__in DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t Utf8Truncate(__in DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t FetchRow(__in DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t BeginTransaction(__in DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t CommitTransaction(__in DukTape::duk_context *lpCtx);

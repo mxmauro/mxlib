@@ -265,7 +265,12 @@ DukTape::duk_ret_t CJsMySqlPlugin::EscapeString(__in DukTape::duk_context *lpCtx
   szStrA = DukTape::duk_require_string(lpCtx, 0);
   bIsLikeStatement = FALSE;
   if (nParamsCount > 1)
-    bIsLikeStatement = (DukTape::duk_require_boolean(lpCtx, 1) != 0) ? TRUE : FALSE;
+  {
+    if (DukTape::duk_is_boolean(lpCtx, 1) != 0)
+      bIsLikeStatement = (DukTape::duk_require_boolean(lpCtx, 1) != 0) ? TRUE : FALSE;
+    else
+      bIsLikeStatement = (DukTape::duk_require_int(lpCtx, 1) != 0) ? TRUE : FALSE;
+  }
   //detect if server is using no backslashes escape
   if (_INTERNAL()->nServerUsingNoBackslashEscapes == -1)
   {
@@ -358,6 +363,35 @@ doDefault:
   }
   //done
   DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrResultA, cStrResultA.GetLength());
+  return 1;
+}
+
+DukTape::duk_ret_t CJsMySqlPlugin::Utf8Truncate(__in DukTape::duk_context *lpCtx)
+{
+  CStringA cStrResultA;
+  DukTape::duk_size_t nStrLen;
+  DukTape::duk_uint_t nMaxLength;
+  LPCSTR sA, szStrA, szEndA;
+  int nCharLen;
+
+  if (lpInternal == NULL)
+    return ReturnErrorFromHResult(lpCtx, MX_E_NotReady);
+  //get parameters
+  szStrA = DukTape::duk_require_lstring(lpCtx, 0, &nStrLen);
+  szEndA = szStrA + nStrLen;
+  if (DukTape::duk_is_boolean(lpCtx, 1) != 0)
+    nMaxLength = (DukTape::duk_require_boolean(lpCtx, 1) != 0) ? 1 : 0;
+  else
+    nMaxLength = DukTape::duk_require_uint(lpCtx, 1);
+  //count characters
+  for (sA=szStrA;  sA<szEndA; sA+=(SIZE_T)nCharLen)
+  {
+    nCharLen = Utf8_DecodeChar(NULL, sA, (SIZE_T)(szEndA-sA));
+    if (nCharLen < 1)
+      break;
+  }
+  //done
+  DukTape::duk_push_lstring(lpCtx, szStrA, (DukTape::duk_size_t)(sA - szStrA));
   return 1;
 }
 
