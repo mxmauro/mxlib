@@ -543,15 +543,64 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow(__in DukTape::duk_context *lpCtx)
               sA[8] >= '0' && sA[8] <= '9' &&
               sA[9] >= '0' && sA[9] <= '9')
           {
-            DukTape::duk_get_global_string(lpCtx, "Date");
-            u.dw = (DWORD)(sA[0] - '0') * 1000 + (DWORD)(sA[1] - '0') * 100 +
-                   (DWORD)(sA[2] - '0') * 10   + (DWORD)(sA[3] - '0');
-            DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.dw);
-            u.dw = (DWORD)(sA[5] - '0') * 10 + (DWORD)(sA[6] - '0');
-            DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.dw);
-            u.dw = (DWORD)(sA[8] - '0') * 10 + (DWORD)(sA[9] - '0');
-            DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.dw);
-            DukTape::duk_new(lpCtx, 3);
+            if (MX::StrNCompareA(sA, "0000-00-00", 10) != 0)
+            {
+              DukTape::duk_idx_t nObjIdx;
+
+              DukTape::duk_get_global_string(lpCtx, "Date");
+              DukTape::duk_new(lpCtx, 0);
+              nObjIdx = DukTape::duk_normalize_index(lpCtx, -1);
+              //----
+              DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCFullYear");
+              DukTape::duk_dup(lpCtx, nObjIdx);
+              u.dw = (DWORD)(sA[0] - '0') * 1000 + (DWORD)(sA[1] - '0') * 100 +
+                     (DWORD)(sA[2] - '0') * 10   + (DWORD)(sA[3] - '0');
+              DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.dw);
+              DukTape::duk_call_method(lpCtx, 1);
+              DukTape::duk_pop(lpCtx); //pop void return
+              //----
+              DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCMonth");
+              DukTape::duk_dup(lpCtx, nObjIdx);
+              u.dw = (DWORD)(sA[5] - '0') * 10 + (DWORD)(sA[6] - '0');
+              DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.dw - 1);
+              DukTape::duk_call_method(lpCtx, 1);
+              DukTape::duk_pop(lpCtx); //pop void return
+              //----
+              DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCDate");
+              DukTape::duk_dup(lpCtx, nObjIdx);
+              u.dw = (DWORD)(sA[8] - '0') * 10 + (DWORD)(sA[9] - '0');
+              DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.dw);
+              DukTape::duk_call_method(lpCtx, 1);
+              DukTape::duk_pop(lpCtx); //pop void return
+              //----
+              DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCHours");
+              DukTape::duk_dup(lpCtx, nObjIdx);
+              DukTape::duk_push_uint(lpCtx, 0);
+              DukTape::duk_call_method(lpCtx, 1);
+              DukTape::duk_pop(lpCtx); //pop void return
+              //----
+              DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCMinutes");
+              DukTape::duk_dup(lpCtx, nObjIdx);
+              DukTape::duk_push_uint(lpCtx, 0);
+              DukTape::duk_call_method(lpCtx, 1);
+              DukTape::duk_pop(lpCtx); //pop void return
+              //----
+              DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCSeconds");
+              DukTape::duk_dup(lpCtx, nObjIdx);
+              DukTape::duk_push_uint(lpCtx, 0);
+              DukTape::duk_call_method(lpCtx, 1);
+              DukTape::duk_pop(lpCtx); //pop void return
+              //----
+              DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCMilliseconds");
+              DukTape::duk_dup(lpCtx, nObjIdx);
+              DukTape::duk_push_uint(lpCtx, 0);
+              DukTape::duk_call_method(lpCtx, 1);
+              DukTape::duk_pop(lpCtx); //pop void return
+            }
+            else
+            {
+              DukTape::duk_push_undefined(lpCtx);
+            }
           }
           else
           {
@@ -571,17 +620,38 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow(__in DukTape::duk_context *lpCtx)
               sA[6] >= '0' && sA[6] <= '9' &&
               sA[7] >= '0' && sA[7] <= '9')
           {
+            DukTape::duk_idx_t nObjIdx;
+
             DukTape::duk_get_global_string(lpCtx, "Date");
-            DukTape::duk_push_number(lpCtx, 1.0);
-            DukTape::duk_push_number(lpCtx, 1.0);
-            DukTape::duk_push_number(lpCtx, 1.0);
+            DukTape::duk_new(lpCtx, 0);
+            nObjIdx = DukTape::duk_normalize_index(lpCtx, -1);
+            //----
+            DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCHours");
+            DukTape::duk_dup(lpCtx, nObjIdx);
             u.dw = (DWORD)(sA[0] - '0') * 10 + (DWORD)(sA[1] - '0');
             DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.dw);
+            DukTape::duk_call_method(lpCtx, 1);
+            DukTape::duk_pop(lpCtx); //pop void return
+            //----
+            DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCMinutes");
+            DukTape::duk_dup(lpCtx, nObjIdx);
             u.dw = (DWORD)(sA[3] - '0') * 10 + (DWORD)(sA[4] - '0');
             DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.dw);
+            DukTape::duk_call_method(lpCtx, 1);
+            DukTape::duk_pop(lpCtx); //pop void return
+            //----
+            DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCSeconds");
+            DukTape::duk_dup(lpCtx, nObjIdx);
             u.dw = (DWORD)(sA[6] - '0') * 10 + (DWORD)(sA[7] - '0');
             DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.dw);
-            DukTape::duk_new(lpCtx, 6);
+            DukTape::duk_call_method(lpCtx, 1);
+            DukTape::duk_pop(lpCtx); //pop void return
+            //----
+            DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCMilliseconds");
+            DukTape::duk_dup(lpCtx, nObjIdx);
+            DukTape::duk_push_uint(lpCtx, 0);
+            DukTape::duk_call_method(lpCtx, 1);
+            DukTape::duk_pop(lpCtx); //pop void return
           }
           else
           {
@@ -638,22 +708,64 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow(__in DukTape::duk_context *lpCtx)
             }
             if (dwMillis != 0xFFFFFFFFUL)
             {
+              DukTape::duk_idx_t nObjIdx;
+
               DukTape::duk_get_global_string(lpCtx, "Date");
-              u.dw = (DWORD)(sA[0] - '0') * 1000 + (DWORD)(sA[1] - '0') * 100 +
-                     (DWORD)(sA[2] - '0') * 10   + (DWORD)(sA[3] - '0');
-              DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.dw);
-              u.dw = (DWORD)(sA[5] - '0') * 10 + (DWORD)(sA[6] - '0');
-              DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.dw);
-              u.dw = (DWORD)(sA[8] - '0') * 10 + (DWORD)(sA[9] - '0');
-              DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.dw);
+              DukTape::duk_new(lpCtx, 0);
+              nObjIdx = DukTape::duk_normalize_index(lpCtx, -1);
+              //set date if not all zeroes
+              if (MX::StrNCompareA(sA, "0000-00-00", 10) != 0)
+              {
+                DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCFullYear");
+                DukTape::duk_dup(lpCtx, nObjIdx);
+                u.dw = (DWORD)(sA[0] - '0') * 1000 + (DWORD)(sA[1] - '0') * 100 +
+                       (DWORD)(sA[2] - '0') * 10   + (DWORD)(sA[3] - '0');
+                DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.dw);
+                DukTape::duk_call_method(lpCtx, 1);
+                DukTape::duk_pop(lpCtx); //pop void return
+                //----
+                DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCMonth");
+                DukTape::duk_dup(lpCtx, nObjIdx);
+                u.dw = (DWORD)(sA[5] - '0') * 10 + (DWORD)(sA[6] - '0');
+                DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.dw - 1);
+                DukTape::duk_call_method(lpCtx, 1);
+                DukTape::duk_pop(lpCtx); //pop void return
+                //----
+                DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCDate");
+                DukTape::duk_dup(lpCtx, nObjIdx);
+                u.dw = (DWORD)(sA[8] - '0') * 10 + (DWORD)(sA[9] - '0');
+                DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.dw);
+                DukTape::duk_call_method(lpCtx, 1);
+                DukTape::duk_pop(lpCtx); //pop void return
+              }
+              //set time
+              DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCHours");
+              DukTape::duk_dup(lpCtx, nObjIdx);
               u.dw = (DWORD)(sA[11] - '0') * 10 + (DWORD)(sA[12] - '0');
               DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.dw);
+              DukTape::duk_call_method(lpCtx, 1);
+              DukTape::duk_pop(lpCtx); //pop void return
+              //----
+              DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCMinutes");
+              DukTape::duk_dup(lpCtx, nObjIdx);
               u.dw = (DWORD)(sA[14] - '0') * 10 + (DWORD)(sA[15] - '0');
               DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.dw);
+              DukTape::duk_call_method(lpCtx, 1);
+              DukTape::duk_pop(lpCtx); //pop void return
+              //----
+              DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCSeconds");
+              DukTape::duk_dup(lpCtx, nObjIdx);
               u.dw = (DWORD)(sA[17] - '0') * 10 + (DWORD)(sA[18] - '0');
               DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.dw);
+              DukTape::duk_call_method(lpCtx, 1);
+              DukTape::duk_pop(lpCtx); //pop void return
+              //----
+              DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCMilliseconds");
+              DukTape::duk_dup(lpCtx, nObjIdx);
+              u.dw = (DWORD)(sA[17] - '0') * 10 + (DWORD)(sA[18] - '0');
               DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)dwMillis);
-              DukTape::duk_new(lpCtx, 7);
+              DukTape::duk_call_method(lpCtx, 1);
+              DukTape::duk_pop(lpCtx); //pop void return
             }
             else
             {
