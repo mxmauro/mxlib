@@ -33,9 +33,9 @@ else
 }
 
 mysql.query('INSERT INTO `test_table` VALUES (\r\n' +
-			  'DEFAULT, "vachar data", 100, 123.4, 256.8, \r\n' +
+			  'DEFAULT, "' + mysql.escapeString("va\\char data") + '", 100, 123.4, 256.8, \r\n' +
 			  '"2015-11-03", "03:45:56",  "2015-11-03 03:45:56", "2015-11-03 03:45:56", \r\n' +
-			  '"char data", "blob data", "text data"\r\n' +
+			  '"char dat\\a", "bl\\ob data", "text data"\r\n' +
 			');');
 
 

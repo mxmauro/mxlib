@@ -761,7 +761,8 @@ HRESULT CJavascriptVM::AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCSTR 
           chA = 'f';
           break;
       }
-      if (cStrCodeA.ConcatN(&chA, 1) == FALSE)
+      if (cStrCodeA.ConcatN("\\", 1) == FALSE ||
+          cStrCodeA.ConcatN(&chA, 1) == FALSE)
         return E_OUTOFMEMORY;
     }
   }
