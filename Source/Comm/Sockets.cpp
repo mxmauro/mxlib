@@ -775,8 +775,6 @@ HRESULT CSockets::CConnection::ResolveAddress(__in DWORD dwMaxResolverTimeoutMs,
         break;
     }
     hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, sHostResolver.lpPacket->GetOverlapped());
-    if (SUCCEEDED(hRes))
-      _InterlockedIncrement(&nRefCount);
   }
   else
   {
