@@ -78,16 +78,8 @@ namespace MX {
 CSockets::CSockets(__in CIoCompletionPortThreadPool &cDispatcherPool, __in CPropertyBag &cPropBag) :
           CIpc(cDispatcherPool, cPropBag)
 {
-  cPropBag.GetDWord(MX_SOCKETS_PROPERTY_MaxAcceptsToPost, dwMaxAcceptsToPost,
-                    MX_SOCKETS_PROPERTY_MaxAcceptsToPost_DEFVAL);
-  if (dwMaxAcceptsToPost < 1)
-    dwMaxAcceptsToPost = 1;
-  cPropBag.GetDWord(MX_SOCKETS_PROPERTY_MaxResolverTimeoutMs, dwMaxResolverTimeoutMs,
-                    MX_SOCKETS_PROPERTY_MaxResolverTimeoutMs_DEFVAL);
-  if (dwMaxResolverTimeoutMs < 100)
-    dwMaxResolverTimeoutMs = 100;
-  else if (dwMaxResolverTimeoutMs > 180000)
-    dwMaxResolverTimeoutMs = 180000;
+  dwMaxAcceptsToPost = MX_SOCKETS_PROPERTY_MaxAcceptsToPost_DEFVAL;
+  dwMaxResolverTimeoutMs = MX_SOCKETS_PROPERTY_MaxResolverTimeoutMs_DEFVAL;
   return;
 }
 
@@ -250,6 +242,19 @@ HRESULT CSockets::GetPeerAddress(__in HANDLE h, __out PSOCKADDR_INET lpAddr)
 
 HRESULT CSockets::OnInternalInitialize()
 {
+  //read properties from property bag
+  cPropBag.GetDWord(MX_SOCKETS_PROPERTY_MaxAcceptsToPost, dwMaxAcceptsToPost,
+                    MX_SOCKETS_PROPERTY_MaxAcceptsToPost_DEFVAL);
+  if (dwMaxAcceptsToPost < 1)
+    dwMaxAcceptsToPost = 1;
+  cPropBag.GetDWord(MX_SOCKETS_PROPERTY_MaxResolverTimeoutMs, dwMaxResolverTimeoutMs,
+                    MX_SOCKETS_PROPERTY_MaxResolverTimeoutMs_DEFVAL);
+  if (dwMaxResolverTimeoutMs < 100)
+    dwMaxResolverTimeoutMs = 100;
+  else if (dwMaxResolverTimeoutMs > 180000)
+    dwMaxResolverTimeoutMs = 180000;
+
+  //initialize WinSock
   return Winsock_Init();
 }
 

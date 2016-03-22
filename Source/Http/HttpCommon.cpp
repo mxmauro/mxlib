@@ -63,18 +63,10 @@ static struct {
 
 namespace MX {
 
-CHttpCommon::CHttpCommon(__in BOOL _bActAsServer, __in CPropertyBag &cPropBag) : CBaseMemObj()
+CHttpCommon::CHttpCommon(__in BOOL _bActAsServer, __in CPropertyBag &_cPropBag) : CBaseMemObj(), cPropBag(_cPropBag)
 {
-  DWORD dw;
-
   bActAsServer = _bActAsServer;
-  cPropBag.GetDWord(MX_HTTP_MaxHeaderSize, dw, MX_HTTP_MaxHeaderSize_DEFVAL);
-  if (dw < 2048)
-    nMaxHeaderSize = 2048;
-  else if (dw > 327680)
-    nMaxHeaderSize = 327680;
-  else
-    nMaxHeaderSize = (int)((dw+16383) & (~16383));
+  nMaxHeaderSize = 2048;
   //----
   ResetParser();
   return;
@@ -89,6 +81,8 @@ CHttpCommon::~CHttpCommon()
 
 VOID CHttpCommon::ResetParser()
 {
+  DWORD dw;
+
   sParser.nState = StateStart;
   sParser.cStrCurrLineA.Empty();
   sParser.nHeadersLen = 0;
@@ -110,6 +104,16 @@ VOID CHttpCommon::ResetParser()
   RemoveAllCookies();
   cBodyDecoder.Reset();
   cBodyParser.Release();
+
+  //read properties from property bag
+  cPropBag.GetDWord(MX_HTTP_MaxHeaderSize, dw, MX_HTTP_MaxHeaderSize_DEFVAL);
+  if (dw < 2048)
+    nMaxHeaderSize = 2048;
+  else if (dw > 327680)
+    nMaxHeaderSize = 327680;
+  else
+    nMaxHeaderSize = (int)((dw+16383) & (~16383));
+
   return;
 }
 

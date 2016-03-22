@@ -218,6 +218,7 @@ private:
   HRESULT FlushContent();
 
 private:
+  CPropertyBag &cPropBag;
   BOOL bActAsServer;
   int nMaxHeaderSize;
 

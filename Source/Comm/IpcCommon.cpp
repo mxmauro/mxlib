@@ -42,28 +42,12 @@ namespace MX {
 CIpc::CIpc(__in CIoCompletionPortThreadPool &_cDispatcherPool, __in CPropertyBag &_cPropBag) : CBaseMemObj(),
       cDispatcherPool(_cDispatcherPool), cPropBag(_cPropBag)
 {
-  DWORD dw;
-
-  cPropBag.GetDWord(MX_IPC_PROPERTY_PacketSize, dwPacketSize, MX_IPC_PROPERTY_PacketSize_DEFVAL);
-  if (dwPacketSize < 1024)
-    dwPacketSize = 1024;
-  else if (dwPacketSize > 32768)
-    dwPacketSize = 32768;
-  cPropBag.GetDWord(MX_IPC_PROPERTY_ReadAhead, dwReadAhead, MX_IPC_PROPERTY_ReadAhead_DEFVAL);
-  if (dwReadAhead < 1)
-    dwReadAhead = 1;
-  else if (dwReadAhead > 16)
-    dwReadAhead = 16;
-  cPropBag.GetDWord(MX_IPC_PROPERTY_MaxFreePackets, dwMaxFreePackets, MX_IPC_PROPERTY_MaxFreePackets_DEFVAL);
-  cPropBag.GetDWord(MX_IPC_PROPERTY_MaxWriteTimeoutMs, dwMaxWriteTimeoutMs, MX_IPC_PROPERTY_MaxWriteTimeoutMs_DEFVAL);
-  if (dwMaxWriteTimeoutMs != 0 && dwMaxWriteTimeoutMs < 100)
-    dwMaxWriteTimeoutMs = 100;
-  cPropBag.GetDWord(MX_IPC_PROPERTY_DoZeroReads, dw, MX_IPC_PROPERTY_DoZeroReads_DEFVAL);
-  bDoZeroReads = (dw != 0) ? TRUE : FALSE;
-  cPropBag.GetDWord(MX_IPC_PROPERTY_OutgoingPacketsLimit, dwMaxOutgoingPackets,
-                    MX_IPC_PROPERTY_OutgoingPacketsLimit_DEFVAL);
-  if (dwMaxOutgoingPackets < 2)
-    dwMaxOutgoingPackets = 2;
+  dwPacketSize = 1024;
+  dwReadAhead = 1;
+  dwMaxFreePackets = MX_IPC_PROPERTY_MaxFreePackets_DEFVAL;
+  dwMaxWriteTimeoutMs = MX_IPC_PROPERTY_MaxWriteTimeoutMs_DEFVAL;
+  bDoZeroReads = TRUE;
+  dwMaxOutgoingPackets = MX_IPC_PROPERTY_OutgoingPacketsLimit_DEFVAL;
   //----
   cDispatcherPoolPacketCallback = MX_BIND_MEMBER_CALLBACK(&CIpc::OnDispatcherPacket, this);
   _InterlockedExchange(&nInitShutdownMutex, 0);
@@ -88,9 +72,33 @@ VOID CIpc::On(__in OnEngineErrorCallback _cEngineErrorCallback)
 HRESULT CIpc::Initialize()
 {
   CFastLock cInitShutdownLock(&nInitShutdownMutex);
+  DWORD dw;
   HRESULT hRes;
 
-  DoInternalFinalize();
+  InternalFinalize();
+
+  //read properties from property bag
+  cPropBag.GetDWord(MX_IPC_PROPERTY_PacketSize, dwPacketSize, MX_IPC_PROPERTY_PacketSize_DEFVAL);
+  if (dwPacketSize < 1024)
+    dwPacketSize = 1024;
+  else if (dwPacketSize > 32768)
+    dwPacketSize = 32768;
+  cPropBag.GetDWord(MX_IPC_PROPERTY_ReadAhead, dwReadAhead, MX_IPC_PROPERTY_ReadAhead_DEFVAL);
+  if (dwReadAhead < 1)
+    dwReadAhead = 1;
+  else if (dwReadAhead > 16)
+    dwReadAhead = 16;
+  cPropBag.GetDWord(MX_IPC_PROPERTY_MaxFreePackets, dwMaxFreePackets, MX_IPC_PROPERTY_MaxFreePackets_DEFVAL);
+  cPropBag.GetDWord(MX_IPC_PROPERTY_MaxWriteTimeoutMs, dwMaxWriteTimeoutMs, MX_IPC_PROPERTY_MaxWriteTimeoutMs_DEFVAL);
+  if (dwMaxWriteTimeoutMs != 0 && dwMaxWriteTimeoutMs < 100)
+    dwMaxWriteTimeoutMs = 100;
+  cPropBag.GetDWord(MX_IPC_PROPERTY_DoZeroReads, dw, MX_IPC_PROPERTY_DoZeroReads_DEFVAL);
+  bDoZeroReads = (dw != 0) ? TRUE : FALSE;
+  cPropBag.GetDWord(MX_IPC_PROPERTY_OutgoingPacketsLimit, dwMaxOutgoingPackets,
+                    MX_IPC_PROPERTY_OutgoingPacketsLimit_DEFVAL);
+  if (dwMaxOutgoingPackets < 2)
+    dwMaxOutgoingPackets = 2;
+
   //create shutdown event
   hRes = (cShuttingDownEv.Create(TRUE, FALSE) != FALSE) ? S_OK : E_OUTOFMEMORY;
   //check if IO thread pools are running
@@ -106,7 +114,7 @@ HRESULT CIpc::Initialize()
     hRes = OnInternalInitialize();
   //done
   if (FAILED(hRes))
-    DoInternalFinalize();
+    InternalFinalize();
   return hRes;
 }
 
@@ -115,7 +123,7 @@ VOID CIpc::Finalize()
   CFastLock cInitShutdownLock(&nInitShutdownMutex);
 
   if (cShuttingDownEv.Get() != NULL)
-    DoInternalFinalize();
+    InternalFinalize();
   return;
 }
 
@@ -362,7 +370,7 @@ BOOL CIpc::IsShuttingDown()
 
 //-----------------------------------------------------------
 
-VOID CIpc::DoInternalFinalize()
+VOID CIpc::InternalFinalize()
 {
   TLnkLst<CConnectionBase>::Iterator itConn;
   CConnectionBase *lpConn;

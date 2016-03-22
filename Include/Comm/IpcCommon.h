@@ -589,7 +589,7 @@ protected:
   //----
 
 protected:
-  VOID DoInternalFinalize();
+  VOID InternalFinalize();
 
   virtual HRESULT OnInternalInitialize() = 0;
   virtual VOID OnInternalFinalize() = 0;

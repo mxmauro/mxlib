@@ -39,12 +39,8 @@ namespace MX {
 CHttpClient::CHttpClient(__in CSockets &_cSocketMgr, __in CPropertyBag &_cPropBag) :
              CBaseMemObj(), cSocketMgr(_cSocketMgr), cPropBag(_cPropBag), sRequest(_cPropBag), sResponse(_cPropBag)
 {
-  cPropBag.GetDWord(MX_HTTP_CLIENT_ResponseTimeoutMs, dwResponseTimeoutMs, MX_HTTP_CLIENT_ResponseTimeoutMs_DEFVAL);
-  if (dwResponseTimeoutMs < 1000)
-    dwResponseTimeoutMs = 1000;
-  cPropBag.GetDWord(MX_HTTP_CLIENT_MaxRedirectionsCount, dwMaxRedirCount, MX_HTTP_CLIENT_MaxRedirectionsCount_DEFVAL);
-  if (dwMaxRedirCount < 1)
-    dwMaxRedirCount = 1;
+  dwResponseTimeoutMs = MX_HTTP_CLIENT_ResponseTimeoutMs_DEFVAL;
+  dwMaxRedirCount = MX_HTTP_CLIENT_MaxRedirectionsCount_DEFVAL;
   //----
   RundownProt_Initialize(&nRundownLock);
   nState = StateClosed;
@@ -441,6 +437,15 @@ HRESULT CHttpClient::Open(__in CUrl &cUrl)
 
   if (cAutoRundownProt.IsAcquired() == FALSE)
     return MX_E_NotReady;
+
+  //read properties from property bag
+  cPropBag.GetDWord(MX_HTTP_CLIENT_ResponseTimeoutMs, dwResponseTimeoutMs, MX_HTTP_CLIENT_ResponseTimeoutMs_DEFVAL);
+  if (dwResponseTimeoutMs < 1000)
+    dwResponseTimeoutMs = 1000;
+  cPropBag.GetDWord(MX_HTTP_CLIENT_MaxRedirectionsCount, dwMaxRedirCount, MX_HTTP_CLIENT_MaxRedirectionsCount_DEFVAL);
+  if (dwMaxRedirCount < 1)
+    dwMaxRedirCount = 1;
+
   sRedirect.dwRedirectCounter = 0;
   return InternalOpen(cUrl);
 }

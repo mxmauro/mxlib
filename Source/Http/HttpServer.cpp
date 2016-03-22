@@ -114,9 +114,7 @@ namespace MX {
 CHttpServer::CHttpServer(__in CSockets &_cSocketMgr, __in CPropertyBag &_cPropBag) :
              CBaseMemObj(), CCriticalSection(), cSocketMgr(_cSocketMgr), cPropBag(_cPropBag)
 {
-  cPropBag.GetDWord(MX_HTTP_SERVER_RequestTimeoutMs, dwRequestTimeoutMs, MX_HTTP_SERVER_RequestTimeoutMs_DEFVAL);
-  if (dwRequestTimeoutMs < 1000)
-    dwRequestTimeoutMs = 1000;
+  dwRequestTimeoutMs = MX_HTTP_SERVER_RequestTimeoutMs_DEFVAL;
   //----
   SlimRWL_Initialize(&(sSsl.nRwMutex));
   sSsl.nProtocol = CIpcSslLayer::ProtocolUnknown;
@@ -223,6 +221,11 @@ HRESULT CHttpServer::StartListening(__in_z LPCSTR szBindAddressA, __in int nPort
     return MX_E_NotReady;
   {
     CCriticalSection::CAutoLock cLock(*this);
+
+    //read properties from property bag
+    cPropBag.GetDWord(MX_HTTP_SERVER_RequestTimeoutMs, dwRequestTimeoutMs, MX_HTTP_SERVER_RequestTimeoutMs_DEFVAL);
+    if (dwRequestTimeoutMs < 1000)
+      dwRequestTimeoutMs = 1000;
 
     //set SSL
     hRes = S_OK;
