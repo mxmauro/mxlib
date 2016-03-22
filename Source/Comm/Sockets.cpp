@@ -740,34 +740,67 @@ HRESULT CSockets::CConnection::ResolveAddress(__in DWORD dwMaxResolverTimeoutMs,
                                               __in_z LPCSTR szAddressA, __in int nPort)
 {
   CFastLock cHostResolverLock(&(sHostResolver.nMutex));
+  RESOLVEADDRESS_PACKET_DATA *lpData;
+  SIZE_T nAddrLen;
   HRESULT hRes;
 
+  if (szAddressA == NULL || *szAddressA == 0)
+    szAddressA = (nFamily != FamilyIPv6) ? "0.0.0.0" : "::";
+  nAddrLen = MX::StrLenA(szAddressA);
+  //create packet
   sHostResolver.lpPacket = GetPacket(TypeResolvingAddress);
   if (sHostResolver.lpPacket == NULL)
     return E_OUTOFMEMORY;
-  MemSet(sHostResolver.lpPacket->GetBuffer(), 0, sizeof(RESOLVEADDRESS_PACKET_DATA));
-  ((RESOLVEADDRESS_PACKET_DATA*)(sHostResolver.lpPacket->GetBuffer()))->wPort = (WORD)nPort;
+  lpData = (RESOLVEADDRESS_PACKET_DATA*)(sHostResolver.lpPacket->GetBuffer());
+  MemSet(lpData, 0, sizeof(RESOLVEADDRESS_PACKET_DATA));
+  lpData->wPort = (WORD)nPort;
+  //queue
   cRwList.QueueLast(sHostResolver.lpPacket);
+  //is a numeric IP address?
+  if (CHostResolver::IsValidIPV4(szAddressA, nAddrLen, &(lpData->sAddr)) != FALSE ||
+      CHostResolver::IsValidIPV6(szAddressA, nAddrLen, &(lpData->sAddr)) != FALSE)
+  {
+    switch (lpData->sAddr.si_family)
+    {
+      case AF_INET:
+        lpData->sAddr.Ipv4.sin_port = htons(lpData->wPort);
+        break;
+      case AF_INET6:
+        lpData->sAddr.Ipv6.sin6_port = htons(lpData->wPort);
+        break;
+    }
+    hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, sHostResolver.lpPacket->GetOverlapped());
+    if (SUCCEEDED(hRes))
+      _InterlockedIncrement(&nRefCount);
+  }
+  else
+  {
 #ifdef MX_IPC_TIMING
-  DebugPrint("%lu MX::CSockets::CConnection::ResolveAddress) Clock=%lums / Ovr=0x%p / Type=%lu\n",
-             ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), sHostResolver.lpPacket->GetOverlapped(),
-             sHostResolver.lpPacket->GetType());
+    DebugPrint("%lu MX::CSockets::CConnection::ResolveAddress) Clock=%lums / Ovr=0x%p / Type=%lu\n",
+               ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), sHostResolver.lpPacket->GetOverlapped(),
+               sHostResolver.lpPacket->GetType());
 #endif //MX_IPC_TIMING
-  //create resolver and attach packet. no need to lock because it is called on socket creation
-  sHostResolver.lpResolver = MX_DEBUG_NEW CHostResolver(MX_BIND_MEMBER_CALLBACK(&CConnection::HostResolveCallback,
-                                                                                this));
-  if (sHostResolver.lpResolver == NULL)
+    //create resolver and attach packet. no need to lock because it is called on socket creation
+    sHostResolver.lpResolver = MX_DEBUG_NEW CHostResolver(MX_BIND_MEMBER_CALLBACK(&CConnection::HostResolveCallback,
+                                                                                  this));
+    if (sHostResolver.lpResolver != NULL)
+    {
+      //start address resolving with a timeout
+      hRes = sHostResolver.lpResolver->ResolveAsync(szAddressA, FamilyToWinSockFamily(nFamily),
+                                                    dwMaxResolverTimeoutMs);
+    }
+    else
+    {
+      hRes = E_OUTOFMEMORY;
+    }
+  }
+  //done
+  if (FAILED(hRes))
   {
     cRwList.Remove(sHostResolver.lpPacket);
     FreePacket(sHostResolver.lpPacket);
     sHostResolver.lpPacket = NULL;
-    return E_OUTOFMEMORY;
   }
-  //start address resolving with a timeout
-  if (szAddressA == NULL || *szAddressA == 0)
-    szAddressA = (nFamily != FamilyIPv6) ? "0.0.0.0" : "::";
-  hRes = sHostResolver.lpResolver->ResolveAsync(szAddressA, FamilyToWinSockFamily(nFamily), dwMaxResolverTimeoutMs);
-  //done
   return hRes;
 }
 

@@ -139,12 +139,13 @@ CHttpServer::~CHttpServer()
   RundownProt_WaitForRelease(&nRundownLock);
   //stop current server
   StopListening();
-  //terminate current connections
+  //terminate current connections and wait
   do
   {
     {
       CFastLock cRequestsListLock(&nRequestsMutex);
 
+      b = cRequestsList.IsEmpty();
       for (lpRequest=it.Begin(cRequestsList); lpRequest!=NULL; lpRequest=it.Next())
       {
         if ((_InterlockedOr(&(lpRequest->nFlags), REQUEST_FLAG_CloseInDestructorMark) &
@@ -159,16 +160,6 @@ CHttpServer::~CHttpServer()
     {
       cSocketMgr.Close(lpRequest->hConn, MX_E_Cancelled);
       lpRequest->Release();
-    }
-  }
-  while (lpRequest != NULL);
-  //wait until terminated
-  do
-  {
-    {
-      CFastLock cRequestsListLock(&nRequestsMutex);
-
-      b = cRequestsList.IsEmpty();
     }
     if (b == FALSE)
       _YieldProcessor();
