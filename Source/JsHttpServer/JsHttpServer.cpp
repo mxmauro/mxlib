@@ -189,6 +189,14 @@ HRESULT CJsHttpServer::OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in MX:
         }
       }
     }
+    else if (FAILED(hRes))
+    {
+      hRes = lpRequest->SendErrorPage(500, hRes, "");
+    }
+  }
+  else if (FAILED(hRes))
+  {
+    hRes = lpRequest->SendErrorPage(500, hRes, "");
   }
   if (cRequestCleanupCallback)
     cRequestCleanupCallback(this, lpRequest, cJvm);
