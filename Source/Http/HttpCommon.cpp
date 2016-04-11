@@ -733,7 +733,9 @@ HRESULT CHttpCommon::AddCookie(__in CHttpCookieArray &cSrc)
   return S_OK;
 }
 
-HRESULT CHttpCommon::AddCookie(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA)
+HRESULT CHttpCommon::AddCookie(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA, __in_z_opt LPCSTR szDomainA,
+                               __in_z_opt LPCSTR szPathA, __in_opt const CDateTime *lpDate, __in_opt BOOL bIsSecure,
+                               __in_opt BOOL bIsHttpOnly)
 {
   CHttpCookie cCookie;
   HRESULT hRes;
@@ -741,12 +743,25 @@ HRESULT CHttpCommon::AddCookie(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA)
   hRes = cCookie.SetName(szNameA);
   if (SUCCEEDED(hRes))
     hRes = cCookie.SetValue(szValueA);
+  if (SUCCEEDED(hRes) && szDomainA != NULL)
+    hRes = cCookie.SetDomain(szDomainA);
+  if (SUCCEEDED(hRes) && szPathA != NULL)
+    hRes = cCookie.SetPath(szPathA);
+  if (SUCCEEDED(hRes))
+  {
+    if (lpDate != NULL)
+      cCookie.SetExpireDate(lpDate);
+    cCookie.SetSecureFlag(bIsSecure);
+    cCookie.SetHttpOnlyFlag(bIsHttpOnly);
+  }
   if (SUCCEEDED(hRes))
     hRes = AddCookie(cCookie);
   return hRes;
 }
 
-HRESULT CHttpCommon::AddCookie(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW)
+HRESULT CHttpCommon::AddCookie(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW, __in_z_opt LPCWSTR szDomainW,
+                               __in_z_opt LPCWSTR szPathW, __in_opt const CDateTime *lpDate, __in_opt BOOL bIsSecure,
+                               __in_opt BOOL bIsHttpOnly)
 {
   CHttpCookie cCookie;
   HRESULT hRes;
@@ -754,6 +769,17 @@ HRESULT CHttpCommon::AddCookie(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW)
   hRes = cCookie.SetName(szNameW);
   if (SUCCEEDED(hRes))
     hRes = cCookie.SetValue(szValueW);
+  if (SUCCEEDED(hRes) && szDomainW != NULL)
+    hRes = cCookie.SetDomain(szDomainW);
+  if (SUCCEEDED(hRes) && szPathW != NULL)
+    hRes = cCookie.SetPath(szPathW);
+  if (SUCCEEDED(hRes))
+  {
+    if (lpDate != NULL)
+      cCookie.SetExpireDate(lpDate);
+    cCookie.SetSecureFlag(bIsSecure);
+    cCookie.SetHttpOnlyFlag(bIsHttpOnly);
+  }
   if (SUCCEEDED(hRes))
     hRes = AddCookie(cCookie);
   return hRes;

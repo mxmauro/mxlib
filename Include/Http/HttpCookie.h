@@ -77,7 +77,7 @@ public:
   //NOTE: Path will be UTF-8 decoded
   HRESULT GetPath(__inout CStringW &cStrDestW);
 
-  VOID SetExpireDate(__in const CDateTime *lpDate=NULL);
+  VOID SetExpireDate(__in_opt const CDateTime *lpDate=NULL);
   CDateTime* GetExpireDate() const;
 
   VOID SetSecureFlag(__in BOOL bIsSecure);

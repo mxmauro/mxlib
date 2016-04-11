@@ -161,8 +161,12 @@ public:
 
   HRESULT AddCookie(__in CHttpCookie &cSrc);
   HRESULT AddCookie(__in CHttpCookieArray &cSrc);
-  HRESULT AddCookie(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA);
-  HRESULT AddCookie(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW);
+  HRESULT AddCookie(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA, __in_z_opt LPCSTR szDomainA=NULL,
+                    __in_z_opt LPCSTR szPathA=NULL, __in_opt const CDateTime *lpDate=NULL,
+                    __in_opt BOOL bIsSecure=FALSE, __in_opt BOOL bIsHttpOnly=FALSE);
+  HRESULT AddCookie(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW, __in_z_opt LPCWSTR szDomainW=NULL,
+                    __in_z_opt LPCWSTR szPathW=NULL, __in_opt const CDateTime *lpDate=NULL,
+                    __in_opt BOOL bIsSecure=FALSE, __in_opt BOOL bIsHttpOnly=FALSE);
   HRESULT RemoveCookie(__in_z LPCSTR szNameA);
   HRESULT RemoveCookie(__in_z LPCWSTR szNameW);
   VOID RemoveAllCookies();

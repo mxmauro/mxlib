@@ -23,6 +23,7 @@
  **/
 #include "..\..\..\Include\JsHttpServer\Plugins\JsHttpServerSessionPlugin.h"
 #include "..\..\..\Include\Crypto\DigestAlgorithmSHAx.h"
+#include "..\..\..\Include\Http\punycode.h"
 
 //-----------------------------------------------------------
 
@@ -35,6 +36,8 @@ namespace MX {
 CJsHttpServerSessionPlugin::CJsHttpServerSessionPlugin(__in DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
 {
   *szCurrentIdA = 0;
+  nExpireTimeInSeconds = 0;
+  bIsSecure = bIsHttpOnly = FALSE;
   return;
 }
 
@@ -46,9 +49,12 @@ CJsHttpServerSessionPlugin::~CJsHttpServerSessionPlugin()
 
 HRESULT CJsHttpServerSessionPlugin::Setup(__in CJavascriptVM &cJvm, __in CJsHttpServer *_lpHttpServer,
                                           __in CHttpServer::CRequest *_lpRequest,
-                                          __in OnLoadSaveCallback _cLoadSaveCallback)
+                                          __in OnLoadSaveCallback _cLoadSaveCallback, __in_z_opt LPCWSTR szDomainW,
+                                          __in_z_opt LPCWSTR szPathW, __in_opt int _nExpireTimeInSeconds,
+                                          __in_opt BOOL _bIsSecure, __in_opt BOOL _bIsHttpOnly)
 {
   CHttpCookie *lpSessionIdCookie;
+  MX::CDateTime cExpireDt;
   SIZE_T i, nCount;
   HRESULT hRes;
 
@@ -59,6 +65,23 @@ HRESULT CJsHttpServerSessionPlugin::Setup(__in CJavascriptVM &cJvm, __in CJsHttp
   lpRequest = _lpRequest;
   lpJvm = &cJvm;
   cLoadSaveCallback = _cLoadSaveCallback;
+  if (szDomainW != NULL && *szDomainW != 0)
+  {
+    hRes = Punycode_Encode(cStrDomainA, szDomainW);
+    if (FAILED(hRes))
+      return hRes;
+  }
+  if (szPathW != NULL && *szPathW != 0)
+  {
+    hRes = Utf8_Encode(cStrPathA, szPathW);
+    if (FAILED(hRes))
+      return hRes;
+  }
+  nExpireTimeInSeconds = _nExpireTimeInSeconds;
+  if (nExpireTimeInSeconds < -1)
+    nExpireTimeInSeconds = -1;
+  bIsSecure = _bIsSecure;
+  bIsHttpOnly = _bIsHttpOnly;
 
   //initialize session data
   lpSessionIdCookie = NULL;
@@ -82,14 +105,21 @@ HRESULT CJsHttpServerSessionPlugin::Setup(__in CJavascriptVM &cJvm, __in CJsHttp
   else
   {
     hRes = RegenerateSessionId();
+    if (SUCCEEDED(hRes) && nExpireTimeInSeconds >= 0)
+    {
+      hRes = cExpireDt.SetFromNow(FALSE);
+      if (SUCCEEDED(hRes))
+        hRes = cExpireDt.Add(nExpireTimeInSeconds, MX::CDateTime::UnitsSeconds);
+    }
     if (SUCCEEDED(hRes))
-      hRes = lpRequest->AddResponseCookie(SESSION_ID_COOKIE_NAME, szCurrentIdA);
+    {
+      hRes = lpRequest->AddResponseCookie(SESSION_ID_COOKIE_NAME, szCurrentIdA, (LPCSTR)cStrDomainA,
+                                          (LPCSTR)cStrPathA, (nExpireTimeInSeconds >= 0) ? &cExpireDt : NULL,
+                                          bIsSecure, bIsHttpOnly);
+    }
   }
-  if (FAILED(hRes))
-    return hRes;
-
   //done
-  return S_OK;
+  return hRes;
 }
 
 LPCSTR CJsHttpServerSessionPlugin::GetSessionId() const
@@ -206,11 +236,22 @@ DukTape::duk_ret_t CJsHttpServerSessionPlugin::Save(__in DukTape::duk_context *l
 
 DukTape::duk_ret_t CJsHttpServerSessionPlugin::RegenerateId(__in DukTape::duk_context *lpCtx)
 {
+  MX::CDateTime cExpireDt;
   HRESULT hRes;
 
   hRes = RegenerateSessionId();
+  if (SUCCEEDED(hRes) && nExpireTimeInSeconds >= 0)
+  {
+    hRes = cExpireDt.SetFromNow(FALSE);
+    if (SUCCEEDED(hRes))
+      hRes = cExpireDt.Add(nExpireTimeInSeconds, MX::CDateTime::UnitsSeconds);
+  }
   if (SUCCEEDED(hRes))
-    hRes = lpRequest->AddResponseCookie(SESSION_ID_COOKIE_NAME, szCurrentIdA);
+  {
+    hRes = lpRequest->AddResponseCookie(SESSION_ID_COOKIE_NAME, szCurrentIdA, (LPCSTR)cStrDomainA,
+                                        (LPCSTR)cStrPathA, (nExpireTimeInSeconds >= 0) ? &cExpireDt : NULL,
+                                        bIsSecure, bIsHttpOnly);
+  }
   if (FAILED(hRes))
     return CJavascriptVM::DukTapeRetFromHResult(hRes);
   //on success

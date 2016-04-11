@@ -260,22 +260,28 @@ HRESULT CHttpServer::CRequest::AddResponseCookie(__in CHttpCookieArray &cSrc)
   return sResponse.cHttpCmn.AddCookie(cSrc);
 }
 
-HRESULT CHttpServer::CRequest::AddResponseCookie(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA)
+HRESULT CHttpServer::CRequest::AddResponseCookie(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA,
+                                                 __in_z_opt LPCSTR szDomainA, __in_z_opt LPCSTR szPathA,
+                                                 __in_opt const CDateTime *lpDate, __in_opt BOOL bIsSecure,
+                                                 __in_opt BOOL bIsHttpOnly)
 {
   CFastLock cLock(&nMutex);
 
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
-  return sResponse.cHttpCmn.AddCookie(szNameA, szValueA);
+  return sResponse.cHttpCmn.AddCookie(szNameA, szValueA, szDomainA, szPathA, lpDate, bIsSecure, bIsHttpOnly);
 }
 
-HRESULT CHttpServer::CRequest::AddResponseCookie(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW)
+HRESULT CHttpServer::CRequest::AddResponseCookie(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW,
+                                                 __in_z_opt LPCWSTR szDomainW, __in_z_opt LPCWSTR szPathW,
+                                                 __in_opt const CDateTime *lpDate, __in_opt BOOL bIsSecure,
+                                                 __in_opt BOOL bIsHttpOnly)
 {
   CFastLock cLock(&nMutex);
 
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
-  return sResponse.cHttpCmn.AddCookie(szNameW, szValueW);
+  return sResponse.cHttpCmn.AddCookie(szNameW, szValueW, szDomainW, szPathW, lpDate, bIsSecure, bIsHttpOnly);
 }
 
 HRESULT CHttpServer::CRequest::RemoveResponseCookie(__in_z LPCSTR szNameA)

@@ -41,7 +41,9 @@ public:
   ~CJsHttpServerSessionPlugin();
 
   HRESULT Setup(__in CJavascriptVM &cJvm, __in CJsHttpServer *lpHttpServer, __in CHttpServer::CRequest *lpRequest,
-                __in OnLoadSaveCallback cLoadSaveCallback);
+                __in OnLoadSaveCallback cLoadSaveCallback, __in_z_opt LPCWSTR szDomainW=NULL,
+                __in_z_opt LPCWSTR szPathW=NULL, __in_opt int nExpireTimeInSeconds=-1,
+                __in_opt BOOL bIsSecure=FALSE, __in_opt BOOL bIsHttpOnly=FALSE);
 
   LPCSTR GetSessionId() const;
   CJsHttpServer* GetServer() const;
@@ -86,6 +88,9 @@ private:
   CHttpServer::CRequest *lpRequest;
   CJavascriptVM *lpJvm;
   OnLoadSaveCallback cLoadSaveCallback;
+  MX::CStringA cStrDomainA, cStrPathA;
+  int nExpireTimeInSeconds;
+  BOOL bIsSecure, bIsHttpOnly;
 };
 
 } //namespace MX

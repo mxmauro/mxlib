@@ -184,7 +184,7 @@ HRESULT CHttpCookie::SetDomain(__in_z LPCWSTR szDomainW)
     return E_POINTER;
   hRes = Punycode_Encode(cStrTempA, szDomainW);
   if (SUCCEEDED(hRes))
-    hRes = SetDomain((LPSTR)cStrTempA);
+    hRes = SetDomain((LPCSTR)cStrTempA);
   return hRes;
 }
 
@@ -225,7 +225,7 @@ HRESULT CHttpCookie::SetPath(__in_z LPCWSTR szPathW)
     return E_POINTER;
   hRes = Utf8_Encode(cStrTempA, szPathW);
   if (SUCCEEDED(hRes))
-    hRes = SetPath((LPSTR)cStrTempA);
+    hRes = SetPath((LPCSTR)cStrTempA);
   return hRes;
 }
 
@@ -239,7 +239,7 @@ HRESULT CHttpCookie::GetPath(__inout CStringW &cStrDestW)
   return Utf8_Decode(cStrDestW, GetPath());
 }
 
-VOID CHttpCookie::SetExpireDate(__in const CDateTime *lpDate)
+VOID CHttpCookie::SetExpireDate(__in_opt const CDateTime *lpDate)
 {
   if (lpDate != NULL)
   {

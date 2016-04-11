@@ -110,6 +110,7 @@ static DukTape::duk_ret_t OnSetCookie(__in DukTape::duk_context *lpCtx, __in_z L
 {
   MX::CHttpServer::CRequest *lpRequest = MX::Internals::JsHttpServer::GetRequestObject(lpCtx);
   MX::CHttpCookie cCookie;
+  MX::CStringW cStrTempW;
   DukTape::duk_idx_t nParamsCount;
   LPCSTR szNameA, szValueA, szPathA, szDomainA;
   DukTape::duk_int_t nExpire;
@@ -144,7 +145,11 @@ static DukTape::duk_ret_t OnSetCookie(__in DukTape::duk_context *lpCtx, __in_z L
   if (SUCCEEDED(hRes) && szValueA != NULL)
     hRes = cCookie.SetValue(szValueA);
   if (SUCCEEDED(hRes) && szDomainA != NULL)
-    hRes = cCookie.SetDomain(szDomainA);
+  {
+    hRes = MX::Utf8_Decode(cStrTempW, szDomainA);
+    if (SUCCEEDED(hRes))
+      hRes = cCookie.SetDomain((LPCWSTR)cStrTempW);
+  }
   if (SUCCEEDED(hRes) && szPathA != NULL)
     hRes = cCookie.SetPath(szPathA);
   if (SUCCEEDED(hRes) && bHasExpireDt != FALSE)
@@ -161,9 +166,8 @@ static DukTape::duk_ret_t OnSetCookie(__in DukTape::duk_context *lpCtx, __in_z L
   {
     cCookie.SetSecureFlag(bIsSecure);
     cCookie.SetHttpOnlyFlag(bIsHttpOnly);
-  }
-  if (SUCCEEDED(hRes))
     hRes = lpRequest->AddResponseCookie(cCookie);
+  }
   __THROW_ERROR_ON_FAILED_HRESULT(hRes);
   return 0;
 }
