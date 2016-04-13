@@ -54,6 +54,9 @@ public:
 
 private:
   CWindowsHandle cFileH;
+#ifdef _DEBUG
+  ULONGLONG nCurrentOffset;
+#endif //_DEBUG
 };
 
 } //namespace MX

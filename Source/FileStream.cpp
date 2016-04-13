@@ -29,6 +29,9 @@ namespace MX {
 
 CFileStream::CFileStream() : CStream()
 {
+#ifdef _DEBUG
+  nCurrentOffset = 0ui64;
+#endif //_DEBUG
   return;
 }
 
@@ -59,6 +62,9 @@ HRESULT CFileStream::Create(__in LPCWSTR szFileNameW, __in_opt DWORD dwDesiredAc
 VOID CFileStream::Close()
 {
   cFileH.Close();
+#ifdef _DEBUG
+  nCurrentOffset = 0ui64;
+#endif //_DEBUG
   return;
 }
 
@@ -87,6 +93,9 @@ HRESULT CFileStream::Read(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_T 
     return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
   //done
   nReaded = (SIZE_T)(sIoStatus.Information);
+#ifdef _DEBUG
+  nCurrentOffset += (ULONGLONG)nReaded;
+#endif //_DEBUG
   return S_OK;
 }
 
@@ -115,8 +124,13 @@ HRESULT CFileStream::Write(__in LPCVOID lpSrc, __in SIZE_T nBytes, __out SIZE_T 
       if (NT_SUCCESS(nNtStatus))
         nNtStatus = sIoStatus.Status;
     }
-    if (!NT_SUCCESS(nNtStatus) || nToWrite != sIoStatus.Information)
+    if (!NT_SUCCESS(nNtStatus))
       break;
+#ifdef _DEBUG
+    nCurrentOffset += (ULONGLONG)(sIoStatus.Information);
+#endif //_DEBUG
+    if (nToWrite != sIoStatus.Information)
+      return MX_E_WriteFault;
     lpSrc = (LPBYTE)lpSrc + nToWrite;
     nBytes -= (SIZE_T)nToWrite;
   }
@@ -169,6 +183,9 @@ HRESULT CFileStream::Seek(__in ULONGLONG nPosition, __in_opt eSeekMethod nMethod
   if (!NT_SUCCESS(nNtStatus))
     return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
   //done
+#ifdef _DEBUG
+  nCurrentOffset = (ULONGLONG)(sFilePosInfo.CurrentByteOffset.QuadPart);
+#endif //_DEBUG
   return S_OK;
 }
 
