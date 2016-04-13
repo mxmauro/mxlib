@@ -454,6 +454,7 @@ VOID CIpc::ReleaseAndRemoveConnectionIfClosed(__in CConnectionBase *lpConn)
     if (bOnList != FALSE)
     {
       MX_ASSERT(lpConn->IsClosed() != FALSE);
+      lpConn->ShutdownLink(FAILED(lpConn->hErrorCode));
       FireOnDestroy(lpConn);
       delete lpConn;
     }

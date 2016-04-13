@@ -44,16 +44,19 @@ public:
 public:
   CIpcMessageManager(__in CIoCompletionPortThreadPool &cWorkerPool, __in CIpc *lpIpc, __in HANDLE hConn,
                      __in OnMessageReceivedCallback cMessageReceivedCallback,
-                     __in_opt DWORD dwMaxMessageSize=0x0FFFFFFFUL);
+                     __in_opt DWORD dwMaxMessageSize=0x0FFFFFFFUL, __in_opt DWORD dwProtocolVersion=1);
   ~CIpcMessageManager();
 
   VOID Shutdown();
+
+  HRESULT SwitchToProtocol(__in DWORD dwProtocolVersion);
 
   DWORD GetNextId() const;
 
   HRESULT ProcessIncomingPacket();
 
   HRESULT SendHeader(__in DWORD dwMsgId, __in SIZE_T nMsgSize);
+  HRESULT SendEndOfMessageMark(__in DWORD dwMsgId);
 
   HRESULT WaitForReply(__in DWORD dwId, __deref_out CMessage **lplpMessage);
   HRESULT WaitForReplyAsync(__in DWORD dwId, __in OnMessageReplyCallback cCallback, __in LPVOID lpUserData);
@@ -88,6 +91,7 @@ public:
 
     HRESULT SendReplyHeader(__in SIZE_T nMsgSize);
     HRESULT SendReplyData(__in LPCVOID lpMsg, __in SIZE_T nMsgSize);
+    HRESULT SendReplyEndOfMessageMark();
 
     CIpc* GetIpc() const
       {
@@ -107,6 +111,7 @@ public:
     DWORD nDataLen;
     CIpc *lpIpc;
     HANDLE hConn;
+    DWORD dwProtocolVersion;
   };
 
 private:
@@ -114,6 +119,7 @@ private:
     StateRetrievingId,
     StateRetrievingSize,
     StateRetrievingMessage,
+    StateWaitingMessageEnd,
     StateError
   } eState;
 
@@ -145,7 +151,7 @@ private:
   CIoCompletionPortThreadPool::OnPacketCallback cMessageReceivedCallbackWP, cFlushReceivedRepliesWP;
   CIpc *lpIpc;
   HANDLE hConn;
-  DWORD dwMaxMessageSize;
+  DWORD dwMaxMessageSize, dwProtocolVersion;
 
   LONG volatile nRundownLock;
   LONG volatile nNextId;
@@ -154,6 +160,7 @@ private:
   eState nState;
   TAutoRefCounted<CMessage> cCurrMessage;
   SIZE_T nCurrMsgSize;
+  DWORD dwLastMessageId;
 
   LONG volatile nIncomingQueuedMessagesCount;
   struct {

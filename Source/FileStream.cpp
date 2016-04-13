@@ -45,6 +45,8 @@ HRESULT CFileStream::Create(__in LPCWSTR szFileNameW, __in_opt DWORD dwDesiredAc
   NTSTATUS nNtStatus;
 
   Close();
+  if ((dwDesiredAccess & (GENERIC_READ|GENERIC_WRITE|GENERIC_EXECUTE|GENERIC_ALL)) == 0)
+    dwDesiredAccess |= SYNCHRONIZE;
   nNtStatus = ::MxCreateFile(&h, szFileNameW, dwDesiredAccess, dwShareMode, dwCreationDisposition,
                              dwFlagsAndAttributes, lpSecurityAttributes);
   if (!NT_SUCCESS(nNtStatus))

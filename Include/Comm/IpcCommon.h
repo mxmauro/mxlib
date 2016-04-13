@@ -409,7 +409,6 @@ protected:
 
       while ((lpPacket=DequeueFirst()) != NULL)
         delete lpPacket;
-      nCount = 0;
       return;
       };
 
@@ -475,6 +474,7 @@ protected:
 
       MX_ASSERT(lpPacket->GetLinkedList() == &cList);
       lpPacket->RemoveNode();
+      nCount--;
       return;
       };
 

@@ -25,10 +25,16 @@
 
 //-----------------------------------------------------------
 
-#define _MESSAGE_ID_MASK     0x7FFFFFFFUL
-#define _MESSAGE_IS_REPLY    0x80000000UL
+#define _MESSAGE_ID_MASK                        0x7FFFFFFFUL
+#define _MESSAGE_IS_REPLY                       0x80000000UL
 
-//#define MX_DEBUG_OUTPUT
+#define _MESSAGE_END_XOR_MASK                   0xA53B7F91UL
+
+#ifdef _DEBUG
+  #define MX_DEBUG_OUTPUT
+#else //_DEBUG
+  //#define MX_DEBUG_OUTPUT
+#endif //_DEBUG
 
 //-----------------------------------------------------------
 
@@ -45,11 +51,18 @@ namespace MX {
 
 CIpcMessageManager::CIpcMessageManager(__in CIoCompletionPortThreadPool &_cWorkerPool, __in CIpc *_lpIpc,
                                        __in HANDLE _hConn, __in OnMessageReceivedCallback _cMessageReceivedCallback,
-                                       __in_opt DWORD _dwMaxMessageSize) : CBaseMemObj(), cWorkerPool(_cWorkerPool)
+                                       __in_opt DWORD _dwMaxMessageSize, __in_opt DWORD _dwProtocolVersion) :
+                                       CBaseMemObj(), cWorkerPool(_cWorkerPool)
 {
   lpIpc = _lpIpc;
   hConn = _hConn;
-  dwMaxMessageSize = _dwMaxMessageSize;
+  dwMaxMessageSize = (_dwMaxMessageSize >= 1) ? _dwMaxMessageSize : 1;
+  if (_dwProtocolVersion < 1)
+    dwProtocolVersion = 1;
+  else if (_dwProtocolVersion > 2)
+    dwProtocolVersion = 2;
+  else 
+    dwProtocolVersion = _dwProtocolVersion;
   cMessageReceivedCallbackWP = MX_BIND_MEMBER_CALLBACK(&CIpcMessageManager::OnMessageReceived, this);
   cFlushReceivedRepliesWP = MX_BIND_MEMBER_CALLBACK(&CIpcMessageManager::OnFlushReceivedReplies, this);
   //----
@@ -57,6 +70,7 @@ CIpcMessageManager::CIpcMessageManager(__in CIoCompletionPortThreadPool &_cWorke
   _InterlockedExchange(&nNextId, 0);
   nState = StateRetrievingId;
   nCurrMsgSize = 0;
+  dwLastMessageId = 0;
   _InterlockedExchange(&nIncomingQueuedMessagesCount, 0);
   cMessageReceivedCallback = _cMessageReceivedCallback;
   _InterlockedExchange(&(sReplyMsgWait.nMutex), 0);
@@ -116,6 +130,20 @@ VOID CIpcMessageManager::Shutdown()
   return;
 }
 
+HRESULT CIpcMessageManager::SwitchToProtocol(__in DWORD _dwProtocolVersion)
+{
+  CAutoRundownProtection cAutoRundownProt(&nRundownLock);
+
+  if (_dwProtocolVersion < 1 || _dwProtocolVersion > 2)
+    return E_INVALIDARG;
+  if (cAutoRundownProt.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
+  if (nState != StateRetrievingId)
+    return E_FAIL;
+  dwProtocolVersion = _dwProtocolVersion;
+  return S_OK;
+}
+
 DWORD CIpcMessageManager::GetNextId() const
 {
   DWORD dwId;
@@ -160,7 +188,7 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
           hRes = E_OUTOFMEMORY;
           break;
         }
-        cCurrMessage->dwId = *((DWORD MX_UNALIGNED*)s);
+        dwLastMessageId = cCurrMessage->dwId = *((DWORD MX_UNALIGNED*)s);
         s += sizeof(DWORD);
         nRemaining -= sizeof(DWORD);
         nState = StateRetrievingSize;
@@ -181,6 +209,7 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
 #endif //MX_DEBUG_OUTPUT
         if (cCurrMessage->nDataLen > dwMaxMessageSize)
         {
+          MX_ASSERT(FALSE);
           hRes = MX_E_InvalidData;
           break;
         }
@@ -200,7 +229,7 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
           hRes = OnMessageCompleted();
           if (FAILED(hRes))
             break;
-          nState = StateRetrievingId;
+          nState = (dwProtocolVersion >= 2) ? StateWaitingMessageEnd : StateRetrievingId;
         }
       }
       else if (nState == StateRetrievingMessage)
@@ -221,8 +250,22 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
           cCurrMessage.Release();
           if (FAILED(hRes))
             break;
-          nState = StateRetrievingId;
+          nState = (dwProtocolVersion >= 2) ? StateWaitingMessageEnd : StateRetrievingId;
         }
+      }
+      else if (nState == StateWaitingMessageEnd)
+      {
+        if (nRemaining < sizeof(DWORD))
+          break;
+        if (*((DWORD MX_UNALIGNED*)s) != (dwLastMessageId ^ _MESSAGE_END_XOR_MASK))
+        {
+          MX_ASSERT(FALSE);
+          hRes = MX_E_InvalidData;
+          break;
+        }
+        s += sizeof(DWORD);
+        nRemaining -= sizeof(DWORD);
+        nState = StateRetrievingId;
       }
       else
       {
@@ -251,10 +294,25 @@ HRESULT CIpcMessageManager::SendHeader(__in DWORD dwMsgId, __in SIZE_T nMsgSize)
   if (cAutoRundownProt.IsAcquired() == FALSE)
     return MX_E_Cancelled;
   if (nMsgSize > dwMaxMessageSize)
+  {
+    MX_ASSERT(FALSE);
     return MX_E_InvalidData;
+  }
   sHeader.dwMsgId = dwMsgId;
   sHeader.dwMsgSize = (DWORD)nMsgSize;
   return lpIpc->SendMsg(hConn, &sHeader, sizeof(sHeader));
+}
+
+HRESULT CIpcMessageManager::SendEndOfMessageMark(__in DWORD dwMsgId)
+{
+  CAutoRundownProtection cAutoRundownProt(&nRundownLock);
+
+  if (cAutoRundownProt.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
+  if (dwProtocolVersion == 2)
+    return S_OK; //protocol version 1 has no end of message mark
+  dwMsgId = dwMsgId ^= _MESSAGE_END_XOR_MASK;
+  return lpIpc->SendMsg(hConn, &dwMsgId, sizeof(dwMsgId));
 }
 
 HRESULT CIpcMessageManager::WaitForReply(__in DWORD dwId, __deref_out CMessage **lplpMessage)
@@ -498,7 +556,10 @@ HRESULT CIpcMessageManager::CMessage::SendReplyHeader(__in SIZE_T nMsgSize)
 
 #if defined(_M_X64)
   if (nMsgSize > 0xFFFFFFFFUL)
+  {
+    MX_ASSERT(FALSE);
     return MX_E_InvalidData;
+  }
 #endif //_M_X64
   sHeader.dwMsgId = dwId | _MESSAGE_IS_REPLY;
   sHeader.dwMsgSize = (DWORD)nMsgSize;
@@ -508,6 +569,16 @@ HRESULT CIpcMessageManager::CMessage::SendReplyHeader(__in SIZE_T nMsgSize)
 HRESULT CIpcMessageManager::CMessage::SendReplyData(__in LPCVOID lpMsg, __in SIZE_T nMsgSize)
 {
   return lpIpc->SendMsg(hConn, lpMsg, nMsgSize);
+}
+
+HRESULT CIpcMessageManager::CMessage::SendReplyEndOfMessageMark()
+{
+  DWORD dwMsgId;
+
+  if (dwProtocolVersion == 2)
+    return S_OK; //protocol version 1 has no end of message mark
+  dwMsgId = (dwId | _MESSAGE_IS_REPLY) ^ _MESSAGE_END_XOR_MASK;
+  return lpIpc->SendMsg(hConn, &dwMsgId, sizeof(dwMsgId));
 }
 
 } //namespace MX
