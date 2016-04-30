@@ -105,8 +105,6 @@ private:
 
 namespace JsHttpServer {
 
-MX::CHttpServer::CRequest* GetRequestObject(__in DukTape::duk_context *lpCtx);
-
 HRESULT AddResponseMethods(__in CJavascriptVM &cJvm, __in MX::CHttpServer::CRequest *lpRequest);
 HRESULT AddHelpersMethods(__in CJavascriptVM &cJvm, __in MX::CHttpServer::CRequest *lpRequest);
 

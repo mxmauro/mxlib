@@ -69,7 +69,7 @@ HRESULT AddResponseMethods(__in CJavascriptVM &cJvm, __in MX::CHttpServer::CRequ
 static DukTape::duk_ret_t OnEcho(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
                                  __in_z LPCSTR szFunctionNameA)
 {
-  MX::CHttpServer::CRequest *lpRequest = MX::Internals::JsHttpServer::GetRequestObject(lpCtx);
+  MX::CHttpServer::CRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
   LPCSTR szBufA;
   HRESULT hRes;
 
@@ -85,7 +85,7 @@ static DukTape::duk_ret_t OnEcho(__in DukTape::duk_context *lpCtx, __in_z LPCSTR
 static DukTape::duk_ret_t OnSetStatus(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
                                       __in_z LPCSTR szFunctionNameA)
 {
-  MX::CHttpServer::CRequest *lpRequest = MX::Internals::JsHttpServer::GetRequestObject(lpCtx);
+  MX::CHttpServer::CRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
   DukTape::duk_idx_t nParamsCount;
   LONG nStatus;
   LPCSTR szReasonA;
@@ -108,7 +108,7 @@ static DukTape::duk_ret_t OnSetStatus(__in DukTape::duk_context *lpCtx, __in_z L
 static DukTape::duk_ret_t OnSetCookie(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
                                       __in_z LPCSTR szFunctionNameA)
 {
-  MX::CHttpServer::CRequest *lpRequest = MX::Internals::JsHttpServer::GetRequestObject(lpCtx);
+  MX::CHttpServer::CRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
   MX::CHttpCookie cCookie;
   MX::CStringW cStrTempW;
   DukTape::duk_idx_t nParamsCount;
@@ -175,7 +175,7 @@ static DukTape::duk_ret_t OnSetCookie(__in DukTape::duk_context *lpCtx, __in_z L
 static DukTape::duk_ret_t OnSetHeader(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
                                       __in_z LPCSTR szFunctionNameA)
 {
-  MX::CHttpServer::CRequest *lpRequest = MX::Internals::JsHttpServer::GetRequestObject(lpCtx);
+  MX::CHttpServer::CRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
   LPCSTR szNameA, szValueA;
   HRESULT hRes;
 

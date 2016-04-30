@@ -27,6 +27,27 @@
 
 namespace MX {
 
+CHttpServer::CRequest* CJsHttpServer::GetServerRequestFromContext(__in DukTape::duk_context *lpCtx)
+{
+  MX::CHttpServer::CRequest *lpRequest;
+
+  try
+  {
+    DukTape::duk_push_global_object(lpCtx);
+    DukTape::duk_get_prop_string(lpCtx, -1, INTERNAL_REQUEST_PROPERTY);
+    if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
+      lpRequest = reinterpret_cast<MX::CHttpServer::CRequest*>(DukTape::duk_to_pointer(lpCtx, -1));
+    else
+      lpRequest = NULL;
+    DukTape::duk_pop_2(lpCtx);
+  }
+  catch (CJavascriptVM::CException& ex)
+  {
+    lpRequest = NULL;
+  }
+  return lpRequest;
+}
+
 HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CHttpServer::CRequest *lpRequest)
 {
   CStringA cStrTempA, cStrTempA_2;
@@ -549,26 +570,5 @@ HRESULT CJsHttpServer::InsertPostFileField(__in CJavascriptVM &cJvm,
   }
   return hRes;
 }
-
-//-----------------------------------------------------------
-
-namespace Internals {
-
-namespace JsHttpServer {
-
-MX::CHttpServer::CRequest* GetRequestObject(__in DukTape::duk_context *lpCtx)
-{
-  MX::CHttpServer::CRequest *lpRequest;
-
-  DukTape::duk_push_global_object(lpCtx);
-  DukTape::duk_get_prop_string(lpCtx, -1, INTERNAL_REQUEST_PROPERTY);
-  lpRequest = reinterpret_cast<MX::CHttpServer::CRequest*>(DukTape::duk_to_pointer(lpCtx, -1));
-  DukTape::duk_pop_2(lpCtx);
-  return lpRequest;
-}
-
-} //namespace JsHttpServer
-
-} //namespace Internals
 
 } //namespace MX

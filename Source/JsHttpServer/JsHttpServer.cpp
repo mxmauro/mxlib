@@ -213,14 +213,9 @@ HRESULT CJsHttpServer::OnRequireJsModule(__in DukTape::duk_context *lpCtx,
 
   if (!cRequireJsModuleCallback)
     return E_NOTIMPL;
-  try
-  {
-    lpRequest = Internals::JsHttpServer::GetRequestObject(lpCtx);
-  }
-  catch (CJavascriptVM::CException& ex)
-  {
-    return ex.GetErrorCode();
-  }
+  lpRequest = GetServerRequestFromContext(lpCtx);
+  if (lpRequest == NULL)
+    return E_FAIL;
   hRes = cRequireJsModuleCallback(this, lpRequest, *CJavascriptVM::FromContext(lpCtx), lpReqContext, cStrCodeA);
   if (SUCCEEDED(hRes))
     hRes = TransformJavascriptCode(cStrCodeA);

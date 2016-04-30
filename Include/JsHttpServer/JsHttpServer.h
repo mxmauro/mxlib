@@ -76,6 +76,8 @@ public:
                          __in_opt CSslCertificate *lpSslCertificate=NULL, __in_opt CCryptoRSA *lpSslKey=NULL);
   VOID StopListening();
 
+  static CHttpServer::CRequest* GetServerRequestFromContext(__in DukTape::duk_context *lpCtx);
+
 private:
   HRESULT OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in MX::CHttpServer::CRequest *lpRequest);
 
