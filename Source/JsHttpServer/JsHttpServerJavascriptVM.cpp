@@ -41,7 +41,7 @@ CHttpServer::CRequest* CJsHttpServer::GetServerRequestFromContext(__in DukTape::
       lpRequest = NULL;
     DukTape::duk_pop_2(lpCtx);
   }
-  catch (CJavascriptVM::CException& ex)
+  catch (CJavascriptVM::CException&)
   {
     lpRequest = NULL;
   }

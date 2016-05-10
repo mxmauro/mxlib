@@ -65,11 +65,11 @@ public:
   MX_JS_END_MAP()
 
 private:
-  DukTape::duk_ret_t getType(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t getFileName(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t getFileSize(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t SeekFile(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t ReadFile(__in DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getType();
+  DukTape::duk_ret_t getFileName();
+  DukTape::duk_ret_t getFileSize();
+  DukTape::duk_ret_t SeekFile();
+  DukTape::duk_ret_t ReadFile();
 
 private:
   CHttpBodyParserFormBase::CFileField *lpFileField;
@@ -93,9 +93,9 @@ public:
   MX_JS_END_MAP()
 
 private:
-  DukTape::duk_ret_t getSize(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t ToString(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t Read(__in DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getSize();
+  DukTape::duk_ret_t ToString();
+  DukTape::duk_ret_t Read();
 
 private:
   CHttpBodyParserDefault *lpBody;

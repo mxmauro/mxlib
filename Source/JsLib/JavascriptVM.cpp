@@ -382,12 +382,12 @@ HRESULT CJavascriptVM::AddJsObjectProperty(__in_z LPCSTR szPropertyNameA, __in C
   DukTape::duk_idx_t nStackTop;
   HRESULT hRes;
 
-  if (lpCtx == NULL)
+  if (lpCtx == NULL || lpCtx != lpObject->GetContext())
     return E_FAIL;
   nStackTop = DukTape::duk_get_top(lpCtx);
   try
   {
-    lpObject->PushThis(lpCtx);
+    lpObject->PushThis();
   }
   catch (CJavascriptVM::CException& ex)
   {
@@ -656,10 +656,12 @@ HRESULT CJavascriptVM::AddObjectJsObjectProperty(__in_z LPCSTR szObjectNameA, __
 
   if (szObjectNameA == NULL)
     return E_POINTER;
+  if (lpCtx == NULL || lpCtx != lpObject->GetContext())
+    return E_FAIL;
   nStackTop = DukTape::duk_get_top(lpCtx);
   try
   {
-    lpObject->PushThis(lpCtx);
+    lpObject->PushThis();
   }
   catch (CJavascriptVM::CException& ex)
   {

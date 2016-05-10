@@ -314,18 +314,17 @@ HRESULT CHttpCookie::ToString(__inout CStringA& cStrDestA, __in BOOL bAddAttribu
   if (cStrNameA.IsEmpty() != FALSE)
     return E_FAIL;
   lpDt = NULL;
-  if (cStrDestA.Copy((LPSTR)cStrNameA) == FALSE ||
+  if (cStrDestA.Copy((LPCSTR)cStrNameA) == FALSE ||
       cStrDestA.Concat("=") == FALSE)
     return E_OUTOFMEMORY;
   if (cStrValueA.IsEmpty() == FALSE || bAddAttributes == FALSE)
   {
-    if (cStrDestA.Concat((LPSTR)cStrValueA) == FALSE ||
-        cStrDestA.Concat("; ") == FALSE)
+    if (cStrDestA.Concat((LPCSTR)cStrValueA) == FALSE)
       return E_OUTOFMEMORY;
   }
   else
   {
-    if (cStrDestA.Concat("dummy; ") == FALSE)
+    if (cStrDestA.Concat("dummy") == FALSE)
       return E_OUTOFMEMORY;
     hRes = cTempDt.SetFromNow(FALSE);
     hRes = cTempDt.Add(-1, CDateTime::UnitsHours);
@@ -335,16 +334,14 @@ HRESULT CHttpCookie::ToString(__inout CStringA& cStrDestA, __in BOOL bAddAttribu
   {
     if (cStrPathA.IsEmpty() == FALSE)
     {
-      if (cStrDestA.Concat("Path=") == FALSE ||
-          cStrDestA.Concat((LPSTR)cStrPathA) == FALSE ||
-          cStrDestA.Concat("; ") == FALSE)
+      if (cStrDestA.Concat("; Path=") == FALSE ||
+          cStrDestA.Concat((LPSTR)cStrPathA) == FALSE)
         return E_OUTOFMEMORY;
     }
     if (cStrDomainA.IsEmpty() == FALSE)
     {
-      if (cStrDestA.Concat("Domain=") == FALSE ||
-          cStrDestA.Concat((LPSTR)cStrDomainA) == FALSE ||
-          cStrDestA.Concat("; ") == FALSE)
+      if (cStrDestA.Concat("; Domain=") == FALSE ||
+          cStrDestA.Concat((LPSTR)cStrDomainA) == FALSE)
         return E_OUTOFMEMORY;
     }
     if (lpDt == NULL && (nFlags & COOKIE_FLAG_EXPIRES_SET) != 0)
@@ -358,7 +355,7 @@ HRESULT CHttpCookie::ToString(__inout CStringA& cStrDestA, __in BOOL bAddAttribu
   }
   if (lpDt != NULL)
   {
-    hRes = lpDt->AppendFormat(cStrDestA, "%a, %d-%m-%Y %H:%m:%S %z");
+    hRes = lpDt->AppendFormat(cStrDestA, "; %a, %d-%m-%Y %H:%m:%S %z");
     if (FAILED(hRes))
       return hRes;
   }
@@ -366,17 +363,15 @@ HRESULT CHttpCookie::ToString(__inout CStringA& cStrDestA, __in BOOL bAddAttribu
   {
     if ((nFlags & COOKIE_FLAG_ISSECURE) != 0)
     {
-      if (cStrDestA.Concat("Secure; ") == FALSE)
+      if (cStrDestA.Concat("; Secure") == FALSE)
         return E_OUTOFMEMORY;
     }
     if ((nFlags & COOKIE_FLAG_HTTPONLY) != 0)
     {
-      if (cStrDestA.Concat("HttpOnly; ") == FALSE)
+      if (cStrDestA.Concat("; HttpOnly") == FALSE)
         return E_OUTOFMEMORY;
     }
   }
-  //strip last "; "
-  cStrDestA.Delete(cStrDestA.GetLength()-2, 2);
   return S_OK;
 }
 

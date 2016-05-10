@@ -117,7 +117,7 @@ VOID CJsMySqlPluginHelpers::CloseResultSet(__in MYSQL_RES *lpResult, __in_opt BO
   return;
 }
 
-BOOL CJsMySqlPluginHelpers::BuildFieldInfoArray()
+BOOL CJsMySqlPluginHelpers::BuildFieldInfoArray(__in DukTape::duk_context *lpCtx)
 {
   TAutoRefCounted<CFieldInfo> cFieldInfo;
   SIZE_T i;
@@ -132,7 +132,7 @@ BOOL CJsMySqlPluginHelpers::BuildFieldInfoArray()
   //build fields
   for (i=0; i<sQuery.nFieldsCount; i++)
   {
-    cFieldInfo.Attach(MX_DEBUG_NEW CFieldInfo(NULL));
+    cFieldInfo.Attach(MX_DEBUG_NEW CFieldInfo(lpCtx));
     if (!cFieldInfo)
       return FALSE;
     //name

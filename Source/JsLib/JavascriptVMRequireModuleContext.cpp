@@ -154,7 +154,7 @@ HRESULT CJavascriptVM::CRequireModuleContext::AddJsObjectProperty(__in_z LPCSTR 
   nStackTop = DukTape::duk_get_top(lpCtx);
   try
   {
-    lpObject->PushThis(lpCtx);
+    lpObject->PushThis();
   }
   catch (CJavascriptVM::CException& ex)
   {
@@ -206,7 +206,7 @@ HRESULT CJavascriptVM::CRequireModuleContext::ReplaceModuleExportsWithObject(__i
 
   if (lpObject == NULL)
     return E_POINTER;
-  if (lpObject->PushThis(lpCtx) != 1)
+  if (lpObject->PushThis() != 1)
     return E_FAIL;
   hRes = ReplaceModuleExports(-1, TRUE);
   if (FAILED(hRes))

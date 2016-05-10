@@ -41,8 +41,9 @@ VOID CRawBodyJsObject::Initialize(__in CHttpBodyParserDefault *_lpBody)
   return;
 }
 
-DukTape::duk_ret_t CRawBodyJsObject::getSize(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CRawBodyJsObject::getSize()
 {
+  DukTape::duk_context *lpCtx = GetContext();
   ULONGLONG nSize;
 
   nSize = lpBody->GetSize();
@@ -52,17 +53,21 @@ DukTape::duk_ret_t CRawBodyJsObject::getSize(__in DukTape::duk_context *lpCtx)
   return 1;
 }
 
-DukTape::duk_ret_t CRawBodyJsObject::ToString(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CRawBodyJsObject::ToString()
 {
+  DukTape::duk_context *lpCtx = GetContext();
   CStringA cStrTempA;
+  HRESULT hRes;
 
-  lpBody->ToString(cStrTempA);
+  hRes = lpBody->ToString(cStrTempA);
+  __THROW_ERROR_ON_FAILED_HRESULT(hRes);
   DukTape::duk_push_string(lpCtx, (LPSTR)cStrTempA);
   return 1;
 }
 
-DukTape::duk_ret_t CRawBodyJsObject::Read(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CRawBodyJsObject::Read()
 {
+  DukTape::duk_context *lpCtx = GetContext();
   DukTape::duk_uint_t nOffset, nToRead;
   LPVOID lpBuf;
   SIZE_T nReaded;

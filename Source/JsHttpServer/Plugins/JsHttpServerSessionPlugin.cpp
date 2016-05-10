@@ -38,6 +38,7 @@ CJsHttpServerSessionPlugin::CJsHttpServerSessionPlugin(__in DukTape::duk_context
   *szCurrentIdA = 0;
   nExpireTimeInSeconds = 0;
   bIsSecure = bIsHttpOnly = FALSE;
+  szSessionVarNameA = SESSION_ID_COOKIE_NAME;
   return;
 }
 
@@ -47,9 +48,9 @@ CJsHttpServerSessionPlugin::~CJsHttpServerSessionPlugin()
   return;
 }
 
-HRESULT CJsHttpServerSessionPlugin::Setup(__in CJavascriptVM &cJvm, __in CJsHttpServer *_lpHttpServer,
-                                          __in CHttpServer::CRequest *_lpRequest,
-                                          __in OnLoadSaveCallback _cLoadSaveCallback, __in_z_opt LPCWSTR szDomainW,
+HRESULT CJsHttpServerSessionPlugin::Setup(__in CHttpServer::CRequest *_lpRequest,
+                                          __in OnLoadSaveCallback _cLoadSaveCallback,
+                                          __in_z_opt LPCWSTR szSessionVarNameW, __in_z_opt LPCWSTR szDomainW,
                                           __in_z_opt LPCWSTR szPathW, __in_opt int _nExpireTimeInSeconds,
                                           __in_opt BOOL _bIsSecure, __in_opt BOOL _bIsHttpOnly)
 {
@@ -58,12 +59,32 @@ HRESULT CJsHttpServerSessionPlugin::Setup(__in CJavascriptVM &cJvm, __in CJsHttp
   SIZE_T i, nCount;
   HRESULT hRes;
 
-  if (_lpHttpServer == NULL || _lpRequest == NULL || (!_cLoadSaveCallback))
+  if (_lpRequest == NULL || (!_cLoadSaveCallback))
     return E_POINTER;
-
-  lpHttpServer = _lpHttpServer;
+  if (szSessionVarNameW != NULL && *szSessionVarNameW != 0)
+  {
+    for (i=0; szSessionVarNameW[i] != 0; i++)
+    {
+      if (i > 64)
+        return E_INVALIDARG;
+      if ((szSessionVarNameW[i] < L'A' || szSessionVarNameW[i] > L'Z') &&
+          (szSessionVarNameW[i] < L'a' || szSessionVarNameW[i] > L'z') &&
+          (szSessionVarNameW[i] < L'0' || szSessionVarNameW[i] > L'9') &&
+          szSessionVarNameW[i] != L'-' && szSessionVarNameW[i] != L'_')
+      {
+        return E_INVALIDARG;
+      }
+    }
+    if (cStrSessionVarNameA.Copy(szSessionVarNameW) == FALSE)
+      return E_OUTOFMEMORY;
+    szSessionVarNameA = (LPCSTR)cStrSessionVarNameA;
+  }
+  else
+  {
+    szSessionVarNameA = SESSION_ID_COOKIE_NAME;
+  }
+  lpHttpServer = (CJsHttpServer*)(_lpRequest->GetHttpServer());
   lpRequest = _lpRequest;
-  lpJvm = &cJvm;
   cLoadSaveCallback = _cLoadSaveCallback;
   if (szDomainW != NULL && *szDomainW != 0)
   {
@@ -89,7 +110,7 @@ HRESULT CJsHttpServerSessionPlugin::Setup(__in CJavascriptVM &cJvm, __in CJsHttp
   for (i=0; i<nCount; i++)
   {
     lpSessionIdCookie = lpRequest->GetRequestCookie(i);
-    if (StrCompareA(lpSessionIdCookie->GetName(), SESSION_ID_COOKIE_NAME) == 0)
+    if (StrCompareA(lpSessionIdCookie->GetName(), szSessionVarNameA) == 0)
       break;
   }
   if (i < nCount && IsValidSessionId(lpSessionIdCookie->GetValue()) != FALSE)
@@ -97,13 +118,12 @@ HRESULT CJsHttpServerSessionPlugin::Setup(__in CJavascriptVM &cJvm, __in CJsHttp
     MemCopy(szCurrentIdA, lpSessionIdCookie->GetValue(), StrLenA(lpSessionIdCookie->GetValue())+1);
     hRes = cLoadSaveCallback(this, TRUE);
     if (FAILED(hRes) && hRes != E_OUTOFMEMORY)
-    {
-      cBag.Reset();
-      hRes = S_OK;
-    }
+      goto regenerate_session_id;
   }
   else
   {
+regenerate_session_id:
+    cBag.Reset();
     hRes = RegenerateSessionId();
     if (SUCCEEDED(hRes) && nExpireTimeInSeconds >= 0)
     {
@@ -113,7 +133,8 @@ HRESULT CJsHttpServerSessionPlugin::Setup(__in CJavascriptVM &cJvm, __in CJsHttp
     }
     if (SUCCEEDED(hRes))
     {
-      hRes = lpRequest->AddResponseCookie(SESSION_ID_COOKIE_NAME, szCurrentIdA, (LPCSTR)cStrDomainA,
+      lpRequest->RemoveResponseCookie(szSessionVarNameA);
+      hRes = lpRequest->AddResponseCookie(szSessionVarNameA, szCurrentIdA, (LPCSTR)cStrDomainA,
                                           (LPCSTR)cStrPathA, (nExpireTimeInSeconds >= 0) ? &cExpireDt : NULL,
                                           bIsSecure, bIsHttpOnly);
     }
@@ -228,13 +249,15 @@ HRESULT CJsHttpServerSessionPlugin::_Save()
   return cLoadSaveCallback(this, FALSE);
 }
 
-DukTape::duk_ret_t CJsHttpServerSessionPlugin::Save(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsHttpServerSessionPlugin::Save()
 {
+  DukTape::duk_context *lpCtx = GetContext();
+
   DukTape::duk_push_boolean(lpCtx, (SUCCEEDED(_Save())) ? 1 : 0);
   return 1;
 }
 
-DukTape::duk_ret_t CJsHttpServerSessionPlugin::RegenerateId(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsHttpServerSessionPlugin::RegenerateId()
 {
   MX::CDateTime cExpireDt;
   HRESULT hRes;
@@ -248,7 +271,8 @@ DukTape::duk_ret_t CJsHttpServerSessionPlugin::RegenerateId(__in DukTape::duk_co
   }
   if (SUCCEEDED(hRes))
   {
-    hRes = lpRequest->AddResponseCookie(SESSION_ID_COOKIE_NAME, szCurrentIdA, (LPCSTR)cStrDomainA,
+    lpRequest->RemoveResponseCookie(szSessionVarNameA);
+    hRes = lpRequest->AddResponseCookie(szSessionVarNameA, szCurrentIdA, (LPCSTR)cStrDomainA,
                                         (LPCSTR)cStrPathA, (nExpireTimeInSeconds >= 0) ? &cExpireDt : NULL,
                                         bIsSecure, bIsHttpOnly);
   }
@@ -259,7 +283,7 @@ DukTape::duk_ret_t CJsHttpServerSessionPlugin::RegenerateId(__in DukTape::duk_co
   return 0;
 }
 
-int CJsHttpServerSessionPlugin::OnProxyHasNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA)
+int CJsHttpServerSessionPlugin::OnProxyHasNamedProperty(__in_z LPCSTR szPropNameA)
 {
   if (szPropNameA[0] == 'i' && szPropNameA[1] == 'd' && szPropNameA[2] == 0)
     return 1;
@@ -273,13 +297,14 @@ int CJsHttpServerSessionPlugin::OnProxyHasNamedProperty(__in DukTape::duk_contex
   return 0;
 }
 
-int CJsHttpServerSessionPlugin::OnProxyHasIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex)
+int CJsHttpServerSessionPlugin::OnProxyHasIndexedProperty(__in int nIndex)
 {
   return 0; //throw error
 }
 
-int CJsHttpServerSessionPlugin::OnProxyGetNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA)
+int CJsHttpServerSessionPlugin::OnProxyGetNamedProperty(__in_z LPCSTR szPropNameA)
 {
+  DukTape::duk_context *lpCtx = GetContext();
   LPCSTR szValueA;
   double nDblValue;
 
@@ -309,14 +334,14 @@ int CJsHttpServerSessionPlugin::OnProxyGetNamedProperty(__in DukTape::duk_contex
   return 0; //pass original
 }
 
-int CJsHttpServerSessionPlugin::OnProxyGetIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex)
+int CJsHttpServerSessionPlugin::OnProxyGetIndexedProperty(__in int nIndex)
 {
   return -1; //throw error
 }
 
-int CJsHttpServerSessionPlugin::OnProxySetNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA,
-                                                        __in DukTape::duk_idx_t nValueIndex)
+int CJsHttpServerSessionPlugin::OnProxySetNamedProperty(__in_z LPCSTR szPropNameA, __in DukTape::duk_idx_t nValueIndex)
 {
+  DukTape::duk_context *lpCtx = GetContext();
   HRESULT hRes;
 
   if (szPropNameA[0] == 'i' && szPropNameA[1] == 'd' && szPropNameA[2] == 0)
@@ -349,13 +374,12 @@ int CJsHttpServerSessionPlugin::OnProxySetNamedProperty(__in DukTape::duk_contex
   return -1; //throw error
 }
 
-int CJsHttpServerSessionPlugin::OnProxySetIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex,
-                                                          __in DukTape::duk_idx_t nValueIndex)
+int CJsHttpServerSessionPlugin::OnProxySetIndexedProperty(__in int nIndex, __in DukTape::duk_idx_t nValueIndex)
 {
   return -1; //throw error
 }
 
-int CJsHttpServerSessionPlugin::OnProxyDeleteNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA)
+int CJsHttpServerSessionPlugin::OnProxyDeleteNamedProperty(__in_z LPCSTR szPropNameA)
 {
   if (szPropNameA[0] == 'i' && szPropNameA[1] == 'd' && szPropNameA[2] == 0)
     return -1; //cannot delete property
@@ -363,7 +387,7 @@ int CJsHttpServerSessionPlugin::OnProxyDeleteNamedProperty(__in DukTape::duk_con
   return 1;
 }
 
-int CJsHttpServerSessionPlugin::OnProxyDeleteIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex)
+int CJsHttpServerSessionPlugin::OnProxyDeleteIndexedProperty(__in int nIndex)
 {
   return -1; //throw error
 }

@@ -51,30 +51,37 @@ VOID CFileFieldJsObject::Initialize(__in CHttpBodyParserFormBase::CFileField *_l
   return;
 }
 
-DukTape::duk_ret_t CFileFieldJsObject::getType(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CFileFieldJsObject::getType()
 {
+  DukTape::duk_context *lpCtx = GetContext();
+
   DukTape::duk_push_string(lpCtx, lpFileField->GetType());
   return 1;
 }
 
-DukTape::duk_ret_t CFileFieldJsObject::getFileName(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CFileFieldJsObject::getFileName()
 {
+  DukTape::duk_context *lpCtx = GetContext();
   CStringA cStrTempA;
+  HRESULT hRes;
 
-  if (FAILED(Utf8_Encode(cStrTempA, lpFileField->GetFileName())))
-    cStrTempA.Empty();
+  hRes = Utf8_Encode(cStrTempA, lpFileField->GetFileName());
+  __THROW_ERROR_ON_FAILED_HRESULT(hRes);
   DukTape::duk_push_string(lpCtx, (LPCSTR)cStrTempA);
   return 1;
 }
 
-DukTape::duk_ret_t CFileFieldJsObject::getFileSize(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CFileFieldJsObject::getFileSize()
 {
+  DukTape::duk_context *lpCtx = GetContext();
+
   DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)nFileSize);
   return 1;
 }
 
-DukTape::duk_ret_t CFileFieldJsObject::SeekFile(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CFileFieldJsObject::SeekFile()
 {
+  DukTape::duk_context *lpCtx = GetContext();
   DukTape::duk_double_t nPos;
   union {
     ULONGLONG nFilePos;
@@ -96,8 +103,9 @@ DukTape::duk_ret_t CFileFieldJsObject::SeekFile(__in DukTape::duk_context *lpCtx
   return 0;
 }
 
-DukTape::duk_ret_t CFileFieldJsObject::ReadFile(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CFileFieldJsObject::ReadFile()
 {
+  DukTape::duk_context *lpCtx = GetContext();
   DukTape::duk_uint_t nToRead;
   DukTape::duk_idx_t nParamsCount;
   DukTape::duk_bool_t bAsBuffer;

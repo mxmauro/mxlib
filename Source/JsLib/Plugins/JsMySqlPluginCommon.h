@@ -83,7 +83,7 @@ public:
   VOID QueryClose(__in_opt BOOL bFlushData=TRUE);
   VOID CloseResultSet(__in MYSQL_RES *lpResult, __in_opt BOOL bFlushData=TRUE);
 
-  BOOL BuildFieldInfoArray();
+  BOOL BuildFieldInfoArray(__in DukTape::duk_context *lpCtx);
 
   static BOOL IsConnectionLostError(__in int nError);
 
@@ -137,28 +137,28 @@ public:
     MX_JS_END_MAP()
 
   private:
-    DukTape::duk_ret_t getName(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getOriginalName(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getTable(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getOriginalTable(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getDatabase(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getLength(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getMaxLength(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getDecimalsCount(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getCharSet(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getCanBeNull(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getIsPrimaryKey(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getIsUniqueKey(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getIsKey(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getIsUnsigned(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getIsZeroFill(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getIsBinary(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getIsAutoIncrement(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getIsEnum(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getIsSet(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getHasDefault(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getIsNumeric(__in DukTape::duk_context *lpCtx);
-    DukTape::duk_ret_t getType(__in DukTape::duk_context *lpCtx);
+    DukTape::duk_ret_t getName();
+    DukTape::duk_ret_t getOriginalName();
+    DukTape::duk_ret_t getTable();
+    DukTape::duk_ret_t getOriginalTable();
+    DukTape::duk_ret_t getDatabase();
+    DukTape::duk_ret_t getLength();
+    DukTape::duk_ret_t getMaxLength();
+    DukTape::duk_ret_t getDecimalsCount();
+    DukTape::duk_ret_t getCharSet();
+    DukTape::duk_ret_t getCanBeNull();
+    DukTape::duk_ret_t getIsPrimaryKey();
+    DukTape::duk_ret_t getIsUniqueKey();
+    DukTape::duk_ret_t getIsKey();
+    DukTape::duk_ret_t getIsUnsigned();
+    DukTape::duk_ret_t getIsZeroFill();
+    DukTape::duk_ret_t getIsBinary();
+    DukTape::duk_ret_t getIsAutoIncrement();
+    DukTape::duk_ret_t getIsEnum();
+    DukTape::duk_ret_t getIsSet();
+    DukTape::duk_ret_t getHasDefault();
+    DukTape::duk_ret_t getIsNumeric();
+    DukTape::duk_ret_t getType();
 
   private:
     friend class CJsMySqlPluginHelpers;

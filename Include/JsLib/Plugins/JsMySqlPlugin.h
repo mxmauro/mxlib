@@ -61,34 +61,34 @@ public:
   MX_JS_END_MAP()
 
 private:
-  DukTape::duk_ret_t Connect(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t Disconnect(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t SelectDatabase(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t Query(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t QueryAndFetch(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t QueryClose(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t EscapeString(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t Utf8Truncate(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t FetchRow(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t BeginTransaction(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t CommitTransaction(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t RollbackTransaction(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t getLastError(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t getLastDbError(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t getLastDbErrorMessage(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t getLastSqlState(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t getAffectedRows(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t getInsertId(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t getFieldsCount(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t getFields(__in DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t Connect();
+  DukTape::duk_ret_t Disconnect();
+  DukTape::duk_ret_t SelectDatabase();
+  DukTape::duk_ret_t Query();
+  DukTape::duk_ret_t QueryAndFetch();
+  DukTape::duk_ret_t QueryClose();
+  DukTape::duk_ret_t EscapeString();
+  DukTape::duk_ret_t Utf8Truncate();
+  DukTape::duk_ret_t FetchRow();
+  DukTape::duk_ret_t BeginTransaction();
+  DukTape::duk_ret_t CommitTransaction();
+  DukTape::duk_ret_t RollbackTransaction();
+  DukTape::duk_ret_t getLastError();
+  DukTape::duk_ret_t getLastDbError();
+  DukTape::duk_ret_t getLastDbErrorMessage();
+  DukTape::duk_ret_t getLastSqlState();
+  DukTape::duk_ret_t getAffectedRows();
+  DukTape::duk_ret_t getInsertId();
+  DukTape::duk_ret_t getFieldsCount();
+  DukTape::duk_ret_t getFields();
 
   HRESULT _TransactionStart();
   HRESULT _TransactionCommit();
   HRESULT _TransactionRollback();
 
-  DukTape::duk_ret_t ReturnErrorFromHResult(__in DukTape::duk_context *lpCtx, __in HRESULT hRes);
-  DukTape::duk_ret_t ReturnErrorFromHResultAndDbErr(__in DukTape::duk_context *lpCtx, __in HRESULT hRes);
-  DukTape::duk_ret_t ReturnErrorFromLastDbErr(__in DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t ReturnErrorFromHResult(__in HRESULT hRes);
+  DukTape::duk_ret_t ReturnErrorFromHResultAndDbErr(__in HRESULT hRes);
+  DukTape::duk_ret_t ReturnErrorFromLastDbErr();
 
 private:
   LPVOID lpInternal;

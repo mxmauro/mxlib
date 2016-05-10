@@ -103,6 +103,11 @@ public:
     LPCSTR GetMethod() const;
     CUrl* GetUrl() const;
 
+    CHttpServer* GetHttpServer() const
+      {
+      return lpHttpServer;
+      };
+
     SIZE_T GetRequestHeadersCount() const;
     CHttpHeaderBase* GetRequestHeader(__in SIZE_T nIndex) const;
 

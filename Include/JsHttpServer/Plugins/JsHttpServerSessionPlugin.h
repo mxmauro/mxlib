@@ -40,8 +40,8 @@ public:
   CJsHttpServerSessionPlugin(__in DukTape::duk_context *lpCtx);
   ~CJsHttpServerSessionPlugin();
 
-  HRESULT Setup(__in CJavascriptVM &cJvm, __in CJsHttpServer *lpHttpServer, __in CHttpServer::CRequest *lpRequest,
-                __in OnLoadSaveCallback cLoadSaveCallback, __in_z_opt LPCWSTR szDomainW=NULL,
+  HRESULT Setup(__in CHttpServer::CRequest *lpRequest, __in OnLoadSaveCallback cLoadSaveCallback,
+                __in_z_opt LPCWSTR szSessionVarNameW=NULL, __in_z_opt LPCWSTR szDomainW=NULL,
                 __in_z_opt LPCWSTR szPathW=NULL, __in_opt int nExpireTimeInSeconds=-1,
                 __in_opt BOOL bIsSecure=FALSE, __in_opt BOOL bIsHttpOnly=FALSE);
 
@@ -63,22 +63,20 @@ private:
   HRESULT RegenerateSessionId();
   HRESULT _Save();
 
-  DukTape::duk_ret_t Save(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t RegenerateId(__in DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t Save();
+  DukTape::duk_ret_t RegenerateId();
 
-  int OnProxyHasNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA);
-  int OnProxyHasIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex);
+  int OnProxyHasNamedProperty(__in_z LPCSTR szPropNameA);
+  int OnProxyHasIndexedProperty(__in int nIndex);
 
-  int OnProxyGetNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA);
-  int OnProxyGetIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex);
+  int OnProxyGetNamedProperty(__in_z LPCSTR szPropNameA);
+  int OnProxyGetIndexedProperty(__in int nIndex);
 
-  int OnProxySetNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA,
-                              __in DukTape::duk_idx_t nValueIndex);
-  int OnProxySetIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex,
-                                __in DukTape::duk_idx_t nValueIndex);
+  int OnProxySetNamedProperty(__in_z LPCSTR szPropNameA, __in DukTape::duk_idx_t nValueIndex);
+  int OnProxySetIndexedProperty(__in int nIndex, __in DukTape::duk_idx_t nValueIndex);
 
-  int OnProxyDeleteNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA);
-  int OnProxyDeleteIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex);
+  int OnProxyDeleteNamedProperty(__in_z LPCSTR szPropNameA);
+  int OnProxyDeleteIndexedProperty(__in int nIndex);
 
 private:
   CPropertyBag cBag;
@@ -86,9 +84,9 @@ private:
 
   CJsHttpServer *lpHttpServer;
   CHttpServer::CRequest *lpRequest;
-  CJavascriptVM *lpJvm;
   OnLoadSaveCallback cLoadSaveCallback;
-  MX::CStringA cStrDomainA, cStrPathA;
+  MX::CStringA cStrSessionVarNameA, cStrDomainA, cStrPathA;
+  LPCSTR szSessionVarNameA;
   int nExpireTimeInSeconds;
   BOOL bIsSecure, bIsHttpOnly;
 };

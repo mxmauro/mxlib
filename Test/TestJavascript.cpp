@@ -65,21 +65,20 @@ public:
   MX_JS_END_MAP()
 
 public:
-  DukTape::duk_ret_t add(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t Print(__in DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t add();
+  DukTape::duk_ret_t Print();
 
-  int OnProxyHasNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA);
-  int OnProxyHasIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex);
+  int OnProxyHasNamedProperty(__in_z LPCSTR szPropNameA);
+  int OnProxyHasIndexedProperty(__in int nIndex);
 
-  int OnProxyGetNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA);
-  int OnProxyGetIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex);
+  int OnProxyGetNamedProperty(__in_z LPCSTR szPropNameA);
+  int OnProxyGetIndexedProperty(__in int nIndex);
 
-  int OnProxySetNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA,
-                              __in DukTape::duk_idx_t nValueIndex);
-  int OnProxySetIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex, __in DukTape::duk_idx_t nValueIndex);
+  int OnProxySetNamedProperty(__in_z LPCSTR szPropNameA, __in DukTape::duk_idx_t nValueIndex);
+  int OnProxySetIndexedProperty(__in int nIndex, __in DukTape::duk_idx_t nValueIndex);
 
-  int OnProxyDeleteNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA);
-  int OnProxyDeleteIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex);
+  int OnProxyDeleteNamedProperty(__in_z LPCSTR szPropNameA);
+  int OnProxyDeleteIndexedProperty(__in int nIndex);
 };
 
 //-----------------------------------------------------------
@@ -336,79 +335,78 @@ CMyObject::~CMyObject()
   return;
 }
 
-DukTape::duk_ret_t CMyObject::add(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CMyObject::add()
 {
-  double n1 = DukTape::duk_require_number(lpCtx, 0);
-  double n2 = DukTape::duk_require_number(lpCtx, 1);
+  double n1 = DukTape::duk_require_number(GetContext(), 0);
+  double n2 = DukTape::duk_require_number(GetContext(), 1);
 
-  DukTape::duk_push_number(lpCtx, n1+n2);
+  DukTape::duk_push_number(GetContext(), n1+n2);
   return 1;
 }
 
-DukTape::duk_ret_t CMyObject::Print(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CMyObject::Print()
 {
   LPCSTR szBufA;
   MX::CStringW cStrTempW;
 
-  szBufA = duk_require_string(lpCtx, 0);
+  szBufA = duk_require_string(GetContext(), 0);
   MX::Utf8_Decode(cStrTempW, szBufA);
   wprintf_s(L"[CMyObject] %s\n", (LPWSTR)cStrTempW);
   return 0;
 }
 
-int CMyObject::OnProxyHasNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA)
+int CMyObject::OnProxyHasNamedProperty(__in_z LPCSTR szPropNameA)
 {
   wprintf_s(L"[CMyObject] Checking for property '%S'\n", szPropNameA);
-  return MX::CJsObjectBase::OnProxyHasNamedProperty(lpCtx, szPropNameA);
+  return MX::CJsObjectBase::OnProxyHasNamedProperty(szPropNameA);
 }
 
-int CMyObject::OnProxyHasIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex)
+int CMyObject::OnProxyHasIndexedProperty(__in int nIndex)
 {
   wprintf_s(L"[CMyObject] Checking for indexed property #%ld\n", nIndex);
-  return MX::CJsObjectBase::OnProxyHasIndexedProperty(lpCtx, nIndex);
+  return MX::CJsObjectBase::OnProxyHasIndexedProperty(nIndex);
 }
 
-int CMyObject::OnProxyGetNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA)
+int CMyObject::OnProxyGetNamedProperty(__in_z LPCSTR szPropNameA)
 {
   wprintf_s(L"[CMyObject] Retrieving value of property '%S'\n", szPropNameA);
-  return MX::CJsObjectBase::OnProxyGetNamedProperty(lpCtx, szPropNameA);
+  return MX::CJsObjectBase::OnProxyGetNamedProperty(szPropNameA);
 }
 
-int CMyObject::OnProxyGetIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex)
+int CMyObject::OnProxyGetIndexedProperty(__in int nIndex)
 {
   wprintf_s(L"[CMyObject] Retrieving value of indexed property #%ld\n", nIndex);
-  return MX::CJsObjectBase::OnProxyGetIndexedProperty(lpCtx, nIndex);
+  return MX::CJsObjectBase::OnProxyGetIndexedProperty(nIndex);
 }
 
-int CMyObject::OnProxySetNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA,
-                                       __in DukTape::duk_idx_t nValueIndex)
+int CMyObject::OnProxySetNamedProperty(__in_z LPCSTR szPropNameA, __in DukTape::duk_idx_t nValueIndex)
 {
-  DukTape::duk_dup(lpCtx, nValueIndex);
-  DukTape::duk_to_string(lpCtx, -1);
-  wprintf_s(L"[CMyObject] Setting value of property '%S' to \"%S\"\n", szPropNameA, DukTape::duk_get_string(lpCtx, -1));
-  DukTape::duk_pop(lpCtx);
-  return MX::CJsObjectBase::OnProxySetNamedProperty(lpCtx, szPropNameA, nValueIndex);
+  DukTape::duk_dup(GetContext(), nValueIndex);
+  DukTape::duk_to_string(GetContext(), -1);
+  wprintf_s(L"[CMyObject] Setting value of property '%S' to \"%S\"\n", szPropNameA,
+            DukTape::duk_get_string(GetContext(), -1));
+  DukTape::duk_pop(GetContext());
+  return MX::CJsObjectBase::OnProxySetNamedProperty(szPropNameA, nValueIndex);
 }
 
-int CMyObject::OnProxySetIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex,
-                                         __in DukTape::duk_idx_t nValueIndex)
+int CMyObject::OnProxySetIndexedProperty(__in int nIndex, __in DukTape::duk_idx_t nValueIndex)
 {
-  DukTape::duk_dup(lpCtx, nValueIndex);
-  DukTape::duk_to_string(lpCtx, -1);
+  DukTape::duk_dup(GetContext(), nValueIndex);
+  DukTape::duk_to_string(GetContext(), -1);
   wprintf_s(L"[CMyObject] Setting value of indexed property #%ld to \"%S\"\n", nIndex,
-            DukTape::duk_get_string(lpCtx, -1));
-  DukTape::duk_pop(lpCtx);
-  return MX::CJsObjectBase::OnProxySetIndexedProperty(lpCtx, nIndex, nValueIndex);
+            DukTape::duk_get_string(GetContext(), -1));
+  DukTape::duk_pop(GetContext());
+  return MX::CJsObjectBase::OnProxySetIndexedProperty(nIndex, nValueIndex);
 }
 
-int CMyObject::OnProxyDeleteNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA)
+int CMyObject::OnProxyDeleteNamedProperty(__in_z LPCSTR szPropNameA)
 {
   wprintf_s(L"[CMyObject] Deleting property '%S'\n", szPropNameA);
-  return MX::CJsObjectBase::OnProxyGetNamedProperty(lpCtx, szPropNameA);
+  return MX::CJsObjectBase::OnProxyGetNamedProperty(szPropNameA);
 }
 
-int CMyObject::OnProxyDeleteIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex)
+int CMyObject::OnProxyDeleteIndexedProperty(__in int nIndex)
 {
   wprintf_s(L"[CMyObject] Deleting property #%ld\n", nIndex);
-  return MX::CJsObjectBase::OnProxyDeleteIndexedProperty(lpCtx, nIndex);
+  return MX::CJsObjectBase::OnProxyDeleteIndexedProperty(nIndex);
 }

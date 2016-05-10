@@ -51,56 +51,55 @@ CJsObjectBase* CJsObjectBase::FromObject(__in DukTape::duk_context *lpCtx, __in 
   return lpObj;
 }
 
-int CJsObjectBase::OnProxyHasNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA)
+int CJsObjectBase::OnProxyHasNamedProperty(__in_z LPCSTR szPropNameA)
 {
   return -1; //pass original
 }
 
-int CJsObjectBase::OnProxyHasIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex)
+int CJsObjectBase::OnProxyHasIndexedProperty(__in int nIndex)
 {
   return -1; //pass original
 }
 
-int CJsObjectBase::OnProxyGetNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA)
+int CJsObjectBase::OnProxyGetNamedProperty(__in_z LPCSTR szPropNameA)
 {
   return 0; //pass original
 }
 
-int CJsObjectBase::OnProxyGetIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex)
+int CJsObjectBase::OnProxyGetIndexedProperty(__in int nIndex)
 {
   return 0; //pass original
 }
 
-int CJsObjectBase::OnProxySetNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA,
-                                      __in DukTape::duk_idx_t nValueIndex)
+int CJsObjectBase::OnProxySetNamedProperty(__in_z LPCSTR szPropNameA, __in DukTape::duk_idx_t nValueIndex)
 {
   return 0; //set original
 }
 
-int CJsObjectBase::OnProxySetIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex,
-                                             __in DukTape::duk_idx_t nValueIndex)
+int CJsObjectBase::OnProxySetIndexedProperty(__in int nIndex, __in DukTape::duk_idx_t nValueIndex)
 {
   return 0; //set original
 }
 
-int CJsObjectBase::OnProxyDeleteNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szPropNameA)
+int CJsObjectBase::OnProxyDeleteNamedProperty(__in_z LPCSTR szPropNameA)
 {
   return 1; //delete original
 }
 
-int CJsObjectBase::OnProxyDeleteIndexedProperty(__in DukTape::duk_context *lpCtx, __in int nIndex)
+int CJsObjectBase::OnProxyDeleteIndexedProperty(__in int nIndex)
 {
   return 1; //delete original
 }
 
 HRESULT CJsObjectBase::_RegisterHelper(__in DukTape::duk_context *lpCtx, __in MAP_ENTRY *lpEntries,
                                        __in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA,
-                                       __in DukTape::duk_c_function fnCreate, __in int nCreateArgsCount,
+                                       __in_opt DukTape::duk_c_function fnCreate, __in_opt int nCreateArgsCount,
                                        __in BOOL bCreateProxy)
 {
   DukTape::duk_uint_t nDukFlags;
 
-  MX_ASSERT(lpEntries != NULL);
+  if (lpCtx == NULL || lpEntries == NULL || szObjectNameA == NULL || szPrototypeNameA == NULL)
+    return E_POINTER;
   try
   {
     //create a prototype with functions
@@ -168,15 +167,15 @@ DukTape::duk_ret_t CJsObjectBase::_CreateHelper(__in DukTape::duk_context *lpCtx
     lpNewObj->Release();
     return DUK_RET_TYPE_ERROR;
   }
-  nRet = lpNewObj->PushThis(lpCtx);
+  nRet = lpNewObj->PushThis();
   lpNewObj->Release(); //remove extra reference added by PushThis or destroy object on error
   //returning the 'result' object replaces the default instance created by 'new'
   return (nRet >= 0) ? 1 : nRet;
 }
 
-DukTape::duk_ret_t CJsObjectBase::_PushThisHelper(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                                  __in_z LPCSTR szPrototypeNameA)
+DukTape::duk_ret_t CJsObjectBase::_PushThisHelper(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA)
 {
+  DukTape::duk_context *lpCtx = GetContext();
   DukTape::duk_idx_t nStackTop;
   BOOL bCreateProxy;
 
@@ -273,7 +272,7 @@ DukTape::duk_ret_t CJsObjectBase::_CallMethodHelper(__in DukTape::duk_context *l
   DukTape::duk_get_prop_string(lpCtx, -1, "\xff""\xff""data");
   lpObj = reinterpret_cast<CJsObjectBase*>(DukTape::duk_to_pointer(lpCtx, -1));
   DukTape::duk_pop_2(lpCtx);
-  return ((*lpObj).*fnFunc)(lpCtx);
+  return ((*lpObj).*fnFunc)();
 }
 
 DukTape::duk_ret_t CJsObjectBase::_ProxyHasPropHelper(__in DukTape::duk_context *lpCtx)
@@ -291,11 +290,11 @@ DukTape::duk_ret_t CJsObjectBase::_ProxyHasPropHelper(__in DukTape::duk_context 
   nRet = 0;
   if (DukTape::duk_is_string(lpCtx, 1))
   {
-    nRet = lpObj->OnProxyHasNamedProperty(lpCtx, DukTape::duk_get_string(lpCtx, 1));
+    nRet = lpObj->OnProxyHasNamedProperty(DukTape::duk_get_string(lpCtx, 1));
   }
   else if ((DukTape::duk_is_number(lpCtx, 1) || DukTape::duk_is_boolean(lpCtx, 1)) && !DukTape::duk_is_nan(lpCtx, 1))
   {
-    nRet = lpObj->OnProxyHasIndexedProperty(lpCtx, DukTape::duk_get_int(lpCtx, 1));
+    nRet = lpObj->OnProxyHasIndexedProperty(DukTape::duk_get_int(lpCtx, 1));
   }
   if (nRet == 0)
   {
@@ -330,7 +329,7 @@ DukTape::duk_ret_t CJsObjectBase::_ProxyGetPropHelper(__in DukTape::duk_context 
   if (DukTape::duk_is_string(lpCtx, 1))
   {
     LPCSTR szPropNameA = DukTape::duk_get_string(lpCtx, 1);
-    nRet = lpObj->OnProxyGetNamedProperty(lpCtx, szPropNameA);
+    nRet = lpObj->OnProxyGetNamedProperty(szPropNameA);
     if (nRet < 0)
     {
       //throw error
@@ -341,7 +340,7 @@ DukTape::duk_ret_t CJsObjectBase::_ProxyGetPropHelper(__in DukTape::duk_context 
   else if ((DukTape::duk_is_number(lpCtx, 1) || DukTape::duk_is_boolean(lpCtx, 1)) && !DukTape::duk_is_nan(lpCtx, 1))
   {
     int nIndex =  DukTape::duk_get_int(lpCtx, 1);
-    nRet = lpObj->OnProxyGetIndexedProperty(lpCtx, nIndex);
+    nRet = lpObj->OnProxyGetIndexedProperty(nIndex);
     if (nRet < 0)
     {
       //throw error
@@ -374,7 +373,7 @@ DukTape::duk_ret_t CJsObjectBase::_ProxySetPropHelper(__in DukTape::duk_context 
   if (DukTape::duk_is_string(lpCtx, 1))
   {
     LPCSTR szPropNameA = DukTape::duk_get_string(lpCtx, 1);
-    nRet = lpObj->OnProxySetNamedProperty(lpCtx, szPropNameA, 2);
+    nRet = lpObj->OnProxySetNamedProperty(szPropNameA, 2);
     if (nRet < 0)
     {
       //throw error
@@ -385,7 +384,7 @@ DukTape::duk_ret_t CJsObjectBase::_ProxySetPropHelper(__in DukTape::duk_context 
   else if ((DukTape::duk_is_number(lpCtx, 1) || DukTape::duk_is_boolean(lpCtx, 1)) && !DukTape::duk_is_nan(lpCtx, 1))
   {
     int nIndex =  DukTape::duk_get_int(lpCtx, 1);
-    nRet = lpObj->OnProxySetIndexedProperty(lpCtx, nIndex, 2);
+    nRet = lpObj->OnProxySetIndexedProperty(nIndex, 2);
     if (nRet < 0)
     {
       //throw error
@@ -427,7 +426,7 @@ DukTape::duk_ret_t CJsObjectBase::_ProxyDeletePropHelper(__in DukTape::duk_conte
   if (DukTape::duk_is_string(lpCtx, 1))
   {
     LPCSTR szPropNameA = DukTape::duk_get_string(lpCtx, 1);
-    nRet = lpObj->OnProxyDeleteNamedProperty(lpCtx, szPropNameA);
+    nRet = lpObj->OnProxyDeleteNamedProperty(szPropNameA);
     if (nRet < 0)
     {
       //throw error
@@ -438,7 +437,7 @@ DukTape::duk_ret_t CJsObjectBase::_ProxyDeletePropHelper(__in DukTape::duk_conte
   else if (DukTape::duk_is_number(lpCtx, 1) || DukTape::duk_is_boolean(lpCtx, 1))
   {
     int nIndex =  DukTape::duk_get_int(lpCtx, 1);
-    nRet = lpObj->OnProxyDeleteIndexedProperty(lpCtx, nIndex);
+    nRet = lpObj->OnProxyDeleteIndexedProperty(nIndex);
     if (nRet < 0)
     {
       //throw error

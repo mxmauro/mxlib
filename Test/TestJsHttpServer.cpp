@@ -194,10 +194,11 @@ static HRESULT OnRequireJsModule(__in MX::CJsHttpServer *lpHttp, __in MX::CHttpS
   {
     if (!(cReqUserData->cSessionJsObj))
     {
-      cReqUserData->cSessionJsObj.Attach(MX_DEBUG_NEW MX::CJsHttpServerSessionPlugin(NULL));
+      cReqUserData->cSessionJsObj.Attach(MX_DEBUG_NEW MX::CJsHttpServerSessionPlugin(cJvm));
       if (!(cReqUserData->cSessionJsObj))
         return E_OUTOFMEMORY;
-      hRes = cReqUserData->cSessionJsObj->Setup(cJvm, lpHttp, lpRequest, MX_BIND_CALLBACK(&OnSessionLoadSave));
+      hRes = cReqUserData->cSessionJsObj->Setup(lpRequest, MX_BIND_CALLBACK(&OnSessionLoadSave), NULL, NULL, L"/",
+                                                2*60*60, FALSE, TRUE);
       if (FAILED(hRes))
         return hRes;
     }
@@ -322,8 +323,6 @@ static HRESULT OnSessionLoadSave(__in MX::CJsHttpServerSessionPlugin *lpPlugin, 
   }
   if (!cFileH)
   {
-    if (bLoading && dwOsErr == ERROR_FILE_NOT_FOUND)
-      return S_OK;
     return MX_HRESULT_FROM_WIN32(dwOsErr);
   }
   //read/write
