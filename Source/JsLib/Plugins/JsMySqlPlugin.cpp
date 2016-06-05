@@ -107,12 +107,12 @@ DukTape::duk_ret_t CJsMySqlPlugin::Connect()
     lpInternal = NULL;
     return ReturnErrorFromHResult(E_OUTOFMEMORY);
   }
-  nTemp = 10;
+  nTemp = 30;
   _CALLAPI(mysql_options)(_DB(), MYSQL_OPT_CONNECT_TIMEOUT, (const LPCSTR)&nTemp);
   _CALLAPI(mysql_options)(_DB(), MYSQL_OPT_GUESS_CONNECTION, (const LPCSTR)L"");
-  nTemp = 15;
+  nTemp = 45;
   _CALLAPI(mysql_options)(_DB(), MYSQL_OPT_READ_TIMEOUT, (const LPCSTR)&nTemp);
-  nTemp = 15;
+  nTemp = 45;
   _CALLAPI(mysql_options)(_DB(), MYSQL_OPT_WRITE_TIMEOUT, (const LPCSTR)&nTemp);
   nTemp = 1;
   _CALLAPI(mysql_options)(_DB(), MYSQL_REPORT_DATA_TRUNCATION, (const LPCSTR)&nTemp);
