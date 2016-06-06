@@ -50,6 +50,50 @@ CJsMySqlPlugin::CJsMySqlPlugin(__in DukTape::duk_context *lpCtx) : CJsObjectBase
   hLastErr = S_OK;
   nLastDbErr = 0;
   szLastDbErrA[0] = szLastSqlStateA[0] = 0;
+  //default options
+  sOptions.nConnectTimeout = 30;
+  sOptions.nReadTimeout = sOptions.nWriteTimeout = 45;
+  //has options in constructor?
+  if (DukTape::duk_get_top(lpCtx) > 0)
+  {
+    if (duk_is_object(lpCtx, 0) == 1)
+    {
+      //connect timeout option
+      DukTape::duk_get_prop_string(lpCtx, 0, "connectTimeout");
+      if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
+      {
+        if (DukTape::duk_is_boolean(lpCtx, -1) != 0)
+          sOptions.nConnectTimeout = (DukTape::duk_require_boolean(lpCtx, -1) != 0) ? 1 : 0;
+        else
+          sOptions.nConnectTimeout = (long)DukTape::duk_require_int(lpCtx, -1);
+      }
+      DukTape::duk_pop(lpCtx);
+      //read timeout option
+      DukTape::duk_get_prop_string(lpCtx, 0, "readTimeout");
+      if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
+      {
+        if (DukTape::duk_is_boolean(lpCtx, -1) != 0)
+          sOptions.nReadTimeout = (DukTape::duk_require_boolean(lpCtx, -1) != 0) ? 1 : 0;
+        else
+          sOptions.nReadTimeout = (long)DukTape::duk_require_int(lpCtx, -1);
+      }
+      DukTape::duk_pop(lpCtx);
+      //write timeout option
+      DukTape::duk_get_prop_string(lpCtx, 0, "writeTimeout");
+      if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
+      {
+        if (DukTape::duk_is_boolean(lpCtx, -1) != 0)
+          sOptions.nWriteTimeout = (DukTape::duk_require_boolean(lpCtx, -1) != 0) ? 1 : 0;
+        else
+          sOptions.nWriteTimeout = (long)DukTape::duk_require_int(lpCtx, -1);
+      }
+      DukTape::duk_pop(lpCtx);
+    }
+    else if (duk_is_null_or_undefined(lpCtx, 0) == 0)
+    {
+      MX_JS_THROW_ERROR(lpCtx, DUK_ERR_API_ERROR, "**%08X", E_INVALIDARG);
+    }
+  }
   return;
 }
 
@@ -107,19 +151,28 @@ DukTape::duk_ret_t CJsMySqlPlugin::Connect()
     lpInternal = NULL;
     return ReturnErrorFromHResult(E_OUTOFMEMORY);
   }
-  nTemp = 30;
-  _CALLAPI(mysql_options)(_DB(), MYSQL_OPT_CONNECT_TIMEOUT, (const LPCSTR)&nTemp);
-  _CALLAPI(mysql_options)(_DB(), MYSQL_OPT_GUESS_CONNECTION, (const LPCSTR)L"");
-  nTemp = 45;
-  _CALLAPI(mysql_options)(_DB(), MYSQL_OPT_READ_TIMEOUT, (const LPCSTR)&nTemp);
-  nTemp = 45;
-  _CALLAPI(mysql_options)(_DB(), MYSQL_OPT_WRITE_TIMEOUT, (const LPCSTR)&nTemp);
+  if (sOptions.nConnectTimeout > 0)
+  {
+    nTemp = sOptions.nConnectTimeout;
+    _CALLAPI(mysql_options)(_DB(), MYSQL_OPT_CONNECT_TIMEOUT, &nTemp);
+  }
+  _CALLAPI(mysql_options)(_DB(), MYSQL_OPT_GUESS_CONNECTION, L"");
+  if (sOptions.nReadTimeout > 0)
+  {
+    nTemp = sOptions.nReadTimeout;
+    _CALLAPI(mysql_options)(_DB(), MYSQL_OPT_READ_TIMEOUT, &nTemp);
+  }
+  if (sOptions.nWriteTimeout > 0)
+  {
+    nTemp = sOptions.nWriteTimeout;
+    _CALLAPI(mysql_options)(_DB(), MYSQL_OPT_WRITE_TIMEOUT, &nTemp);
+  }
   nTemp = 1;
-  _CALLAPI(mysql_options)(_DB(), MYSQL_REPORT_DATA_TRUNCATION, (const LPCSTR)&nTemp);
+  _CALLAPI(mysql_options)(_DB(), MYSQL_REPORT_DATA_TRUNCATION, &nTemp);
   nTemp = 0;
-  _CALLAPI(mysql_options)(_DB(), MYSQL_OPT_RECONNECT, (const LPCSTR)&nTemp);
+  _CALLAPI(mysql_options)(_DB(), MYSQL_OPT_RECONNECT, &nTemp);
   nTemp = 1;
-  _CALLAPI(mysql_options)(_DB(), MYSQL_SECURE_AUTH, (const LPCSTR)&nTemp);
+  _CALLAPI(mysql_options)(_DB(), MYSQL_SECURE_AUTH, &nTemp);
   //do connection
   if (_CALLAPI(mysql_real_connect)(_DB(), szHostA, (szUserNameA != NULL) ? szUserNameA : "",
                                    (szPasswordA != NULL) ? szPasswordA : "", NULL, (UINT)nPort, NULL,

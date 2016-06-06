@@ -40,7 +40,7 @@ typedef int              (__stdcall *lpfn_mysql_server_init)(int argc, char **ar
 typedef void             (__stdcall *lpfn_mysql_server_end)(void);
 
 typedef MYSQL*           (__stdcall *lpfn_mysql_init)(MYSQL *mysql);
-typedef int              (__stdcall *lpfn_mysql_options)(MYSQL *mysql, enum mysql_option option, const LPCSTR arg);
+typedef int              (__stdcall *lpfn_mysql_options)(MYSQL *mysql, enum mysql_option option, const void *arg);
 typedef MYSQL*           (__stdcall *lpfn_mysql_real_connect)(MYSQL *mysql, const LPCSTR host, const LPCSTR user,
                                                               const LPCSTR passwd, const LPCSTR db, UINT port,
                                                               const LPCSTR unix_socket, ULONG clientflag);

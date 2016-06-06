@@ -93,7 +93,7 @@ int CJsObjectBase::OnProxyDeleteIndexedProperty(__in int nIndex)
 
 HRESULT CJsObjectBase::_RegisterHelper(__in DukTape::duk_context *lpCtx, __in MAP_ENTRY *lpEntries,
                                        __in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA,
-                                       __in_opt DukTape::duk_c_function fnCreate, __in_opt int nCreateArgsCount,
+                                       __in_opt lpfnCreateObject fnCreateObject, __in_opt int nCreateArgsCount,
                                        __in BOOL bCreateProxy)
 {
   DukTape::duk_uint_t nDukFlags;
@@ -125,13 +125,9 @@ HRESULT CJsObjectBase::_RegisterHelper(__in DukTape::duk_context *lpCtx, __in MA
         if (lpEntries->bEnumerable != FALSE)
           nDukFlags |= DUK_DEFPROP_ENUMERABLE;
         DukTape::duk_push_c_function(lpCtx, lpEntries->fnGetter, 0);
-        DukTape::duk_push_string(lpCtx, lpEntries->szNameA);
-        DukTape::duk_put_prop_string(lpCtx, -2, "key");
         if (lpEntries->fnSetter != NULL)
         {
           DukTape::duk_push_c_function(lpCtx, lpEntries->fnSetter, 1);
-          DukTape::duk_push_string(lpCtx, lpEntries->szNameA);
-          DukTape::duk_put_prop_string(lpCtx, -2, "key");
           nDukFlags |= DUK_DEFPROP_HAVE_SETTER;
         }
         DukTape::duk_def_prop(lpCtx, (lpEntries->fnSetter != NULL) ? -4 : -3, nDukFlags);
@@ -141,9 +137,11 @@ HRESULT CJsObjectBase::_RegisterHelper(__in DukTape::duk_context *lpCtx, __in MA
     //store as the prototype
     DukTape::duk_put_prop_string(lpCtx, -2, szPrototypeNameA);
     //register constructor in global if object is creatable
-    if (fnCreate != NULL)
+    if (fnCreateObject != NULL)
     {
-      DukTape::duk_push_c_function(lpCtx, fnCreate, nCreateArgsCount);
+      DukTape::duk_push_c_function(lpCtx, &CJsObjectBase::_CreateHelper, nCreateArgsCount);
+      DukTape::duk_push_pointer(lpCtx, fnCreateObject);
+      DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""createObject");
       DukTape::duk_put_prop_string(lpCtx, -2, szObjectNameA );
     }
     //pop global
@@ -156,16 +154,33 @@ HRESULT CJsObjectBase::_RegisterHelper(__in DukTape::duk_context *lpCtx, __in MA
   return S_OK;
 }
 
-DukTape::duk_ret_t CJsObjectBase::_CreateHelper(__in DukTape::duk_context *lpCtx, __in CJsObjectBase *lpNewObj)
+DukTape::duk_ret_t CJsObjectBase::_CreateHelper(__in DukTape::duk_context *lpCtx)
 {
+  lpfnCreateObject fnCreateObject;
+  CJsObjectBase *lpNewObj;
   DukTape::duk_ret_t nRet;
 
-  if (!lpNewObj)
-    return DUK_RET_ALLOC_ERROR;
   if (!DukTape::duk_is_constructor_call(lpCtx))
-  {
-    lpNewObj->Release();
     return DUK_RET_TYPE_ERROR;
+
+  DukTape::duk_push_current_function(lpCtx);
+  DukTape::duk_get_prop_string(lpCtx, -1, "\xff""\xff""createObject");
+  fnCreateObject = (lpfnCreateObject)DukTape::duk_require_pointer(lpCtx, -1);
+  DukTape::duk_pop_2(lpCtx);
+  //create object
+  try
+  {
+    lpNewObj = fnCreateObject(lpCtx);
+    if (!lpNewObj)
+      return DUK_RET_ALLOC_ERROR;
+  }
+  catch (CJavascriptVM::CException &ex)
+  {
+    return -ex.GetDukTapeErrorCode();
+  }
+  catch (...)
+  {
+    return DUK_RET_ALLOC_ERROR;
   }
   nRet = lpNewObj->PushThis();
   lpNewObj->Release(); //remove extra reference added by PushThis or destroy object on error

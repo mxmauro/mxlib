@@ -37,7 +37,7 @@ public:
   CJsMySqlPlugin(__in DukTape::duk_context *lpCtx);
   ~CJsMySqlPlugin();
 
-  MX_JS_BEGIN_MAP(CJsMySqlPlugin, "MySQL", 0)
+  MX_JS_BEGIN_MAP(CJsMySqlPlugin, "MySQL", MX_JS_VARARGS)
     MX_JS_MAP_METHOD("connect", &CJsMySqlPlugin::Connect, MX_JS_VARARGS) //host,user[,pass[,dbname[,port]]]
     MX_JS_MAP_METHOD("disconnect", &CJsMySqlPlugin::Disconnect, 0)
     MX_JS_MAP_METHOD("selectDatabase", &CJsMySqlPlugin::SelectDatabase, 1)
@@ -96,6 +96,10 @@ private:
   int nLastDbErr;
   CHAR szLastDbErrA[512];
   CHAR szLastSqlStateA[8];
+  struct {
+    long nConnectTimeout;
+    long nReadTimeout, nWriteTimeout;
+  } sOptions;
 };
 
 } //namespace MX

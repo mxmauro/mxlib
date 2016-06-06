@@ -55,7 +55,7 @@ public:                                                                         
                           __in_opt BOOL bCreateProxy=FALSE)                                     \
     {                                                                                           \
     return _RegisterHelper(lpCtx, _GetMapEntries(), _name, "\xff""\xff" _name "_prototype",     \
-                           (bCreatable) ? &_cls::_Create : NULL, _constructorArgsCount,         \
+                           (bCreatable) ? &_cls::_CreateObject : NULL, _constructorArgsCount,   \
                            bCreateProxy);                                                       \
     };                                                                                          \
                                                                                                 \
@@ -67,9 +67,9 @@ public:                                                                         
 private:                                                                                        \
   typedef DukTape::duk_ret_t (_cls::*lpfnFunc)(__in DukTape::duk_context *);                    \
                                                                                                 \
-  static DukTape::duk_ret_t _Create(__in DukTape::duk_context *lpCtx)                           \
+  static CJsObjectBase* _CreateObject(__in DukTape::duk_context *lpCtx)                         \
     {                                                                                           \
-    return _CreateHelper(lpCtx, MX_DEBUG_NEW _cls(lpCtx));                                      \
+    return MX_DEBUG_NEW _cls(lpCtx);                                                            \
     };                                                                                          \
                                                                                                 \
   static MAP_ENTRY* _GetMapEntries()                                                            \
@@ -466,11 +466,13 @@ protected:
   } MAP_ENTRY;
 
 protected:
+  typedef CJsObjectBase* (*lpfnCreateObject)(__in DukTape::duk_context *lpCtx);
+
   static HRESULT _RegisterHelper(__in DukTape::duk_context *lpCtx, __in MAP_ENTRY *lpEntries,
                                  __in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA,
-                                 __in_opt DukTape::duk_c_function fnCreate, __in_opt int nCreateArgsCount,
+                                 __in_opt lpfnCreateObject fnCreateObject, __in_opt int nCreateArgsCount,
                                  __in BOOL bCreateProxy);
-  static DukTape::duk_ret_t _CreateHelper(__in DukTape::duk_context *lpCtx, __in CJsObjectBase *lpNewObj);
+  static DukTape::duk_ret_t _CreateHelper(__in DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t _PushThisHelper(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA);
   static DukTape::duk_ret_t _FinalReleaseHelper(__in DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _CallMethodHelper(__in DukTape::duk_context *lpCtx, __in lpfnCallFunc fnFunc);
