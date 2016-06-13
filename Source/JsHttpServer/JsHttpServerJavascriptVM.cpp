@@ -324,7 +324,7 @@ HRESULT CJsHttpServer::TransformJavascriptCode(__inout MX::CStringA &cStrCodeA)
   } eCodeMode;
   LPCSTR sA;
   CHAR chQuoteA;
-  SIZE_T nCurrPos, nNonCodeBlockStart;
+  SIZE_T k, nCurrPos, nNonCodeBlockStart;
   eCodeMode nCodeMode, nOrigCodeMode;
   HRESULT hRes;
 
@@ -358,7 +358,23 @@ HRESULT CJsHttpServer::TransformJavascriptCode(__inout MX::CStringA &cStrCodeA)
         nCodeMode = (sA[2] != '=') ? CodeModeInCode : CodeModeInCodePrint;
         nCurrPos = (SIZE_T)(sA - (LPCSTR)cStrCodeA);
         //remove tag
-        cStrCodeA.Delete(nCurrPos, (nCodeMode == CodeModeInCode) ? 2 : 3); //remove tag
+        if (nCodeMode == CodeModeInCode)
+        {
+          //if after tag there are only spaces/tabs and the new line then remove them too
+          for (k=2; sA[k]==' ' || sA[k]=='\t'; k++);
+          if (sA[k] == 0)
+            cStrCodeA.Delete(nCurrPos, k);
+          else if (sA[k] == '\n')
+            cStrCodeA.Delete(nCurrPos, k+1);
+          else if (sA[k] == '\r')
+            cStrCodeA.Delete(nCurrPos, (sA[k] == '\n') ? (k+2) : (k+1));
+          else
+            cStrCodeA.Delete(nCurrPos, 2);
+        }
+        else
+        {
+          cStrCodeA.Delete(nCurrPos, 3);
+        }
         //convert code from 'nNonCodeBlockStart' to 'nCurrPos' to a print function
         hRes = TransformJavascriptCode_ConvertToPrint(cStrCodeA, nNonCodeBlockStart, nCurrPos);
         if (FAILED(hRes))
@@ -378,7 +394,16 @@ HRESULT CJsHttpServer::TransformJavascriptCode(__inout MX::CStringA &cStrCodeA)
         nOrigCodeMode = nCodeMode;
         nCodeMode = CodeModeNone;
         nNonCodeBlockStart = (SIZE_T)(sA - (LPCSTR)cStrCodeA);
-        cStrCodeA.Delete(nNonCodeBlockStart, 2); //remove tag
+        //remove the tag and, if after it, there are only spaces/tabs and the new line then remove them too
+        for (k=2; sA[k]==' ' || sA[k]=='\t'; k++);
+        if (sA[k] == 0)
+          cStrCodeA.Delete(nNonCodeBlockStart, k);
+        else if (sA[k] == '\n')
+          cStrCodeA.Delete(nNonCodeBlockStart, k+1);
+        else if (sA[k] == '\r')
+          cStrCodeA.Delete(nNonCodeBlockStart, (sA[k] == '\n') ? (k+2) : (k+1));
+        else
+          cStrCodeA.Delete(nNonCodeBlockStart, 2);
         //close echo if print mode
         if (nOrigCodeMode == CodeModeInCodePrint)
         {
