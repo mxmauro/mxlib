@@ -1,9 +1,9 @@
-[submodule "Source/ZipLib/Source"]
+[submodule "ZipLib"]
 	path = Source/ZipLib/Source
 	url = https://github.com/madler/zlib
-[submodule "Source/OpenSSL/Source"]
+[submodule "OpenSSL"]
 	path = Source/OpenSSL/Source
 	url = https://github.com/openssl/openssl
-[submodule "Source/JsLib/FromSource/DukTapeGit"]
+[submodule "DukTape"]
 	path = Source/JsLib/DukTape/Source
 	url = https://github.com/svaarala/duktape
