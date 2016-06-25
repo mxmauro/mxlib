@@ -13,4 +13,4 @@
 /obj/
 /extras/
 Source/OpenSSL/setenv.bat
-Source/OpenSSL/Generated/OpenSSL/opensslconf.h
+Source/OpenSSL/Generated/
