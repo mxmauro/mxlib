@@ -77,7 +77,8 @@ static DukTape::duk_ret_t OnEcho(__in DukTape::duk_context *lpCtx, __in_z LPCSTR
   if (*szBufA != 0)
   {
     hRes = lpRequest->SendResponse(szBufA, MX::StrLenA(szBufA));
-    __THROW_ERROR_ON_FAILED_HRESULT(hRes);
+    if (FAILED(hRes))
+      MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
   }
   return 0;
 }
@@ -94,14 +95,15 @@ static DukTape::duk_ret_t OnSetStatus(__in DukTape::duk_context *lpCtx, __in_z L
   //get parameters
   nParamsCount = DukTape::duk_get_top(lpCtx);
   if (nParamsCount < 1 || nParamsCount > 2)
-    MX_JS_THROW_ERROR(lpCtx, DUK_ERR_API_ERROR, "**%08X", E_INVALIDARG);
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, E_INVALIDARG);
   nStatus = DukTape::duk_require_int(lpCtx, 0);
   szReasonA = NULL;
   if (nParamsCount > 1)
     szReasonA = DukTape::duk_require_string(lpCtx, 1);
   //set status
   hRes = lpRequest->SetResponseStatus(nStatus, szReasonA);
-  __THROW_ERROR_ON_FAILED_HRESULT(hRes);
+  if (FAILED(hRes))
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
   return 0;
 }
 
@@ -119,7 +121,7 @@ static DukTape::duk_ret_t OnSetCookie(__in DukTape::duk_context *lpCtx, __in_z L
 
   nParamsCount = DukTape::duk_get_top(lpCtx);
   if (nParamsCount == 0 || nParamsCount > 7)
-    MX_JS_THROW_ERROR(lpCtx, DUK_ERR_ERROR, "**%08X", E_INVALIDARG);
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, E_INVALIDARG);
   //get parameters
   szValueA = szPathA = szDomainA = NULL;
   nExpire = 0;
@@ -168,7 +170,8 @@ static DukTape::duk_ret_t OnSetCookie(__in DukTape::duk_context *lpCtx, __in_z L
     cCookie.SetHttpOnlyFlag(bIsHttpOnly);
     hRes = lpRequest->AddResponseCookie(cCookie);
   }
-  __THROW_ERROR_ON_FAILED_HRESULT(hRes);
+  if (FAILED(hRes))
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
   return 0;
 }
 
@@ -182,6 +185,7 @@ static DukTape::duk_ret_t OnSetHeader(__in DukTape::duk_context *lpCtx, __in_z L
   szNameA = DukTape::duk_require_string(lpCtx, 0);
   szValueA = DukTape::duk_require_string(lpCtx, 1);
   hRes = lpRequest->AddResponseHeader(szNameA, szValueA);
-  __THROW_ERROR_ON_FAILED_HRESULT(hRes);
+  if (FAILED(hRes))
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
   return 0;
 }

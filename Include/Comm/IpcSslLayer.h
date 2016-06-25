@@ -39,7 +39,6 @@ class CIpcSslLayer : public CIpc::CLayer
 public:
   typedef enum {
     ProtocolUnknown=0,
-    ProtocolSSLv3,
     ProtocolTLSv1_0,
     ProtocolTLSv1_1,
     ProtocolTLSv1_2,

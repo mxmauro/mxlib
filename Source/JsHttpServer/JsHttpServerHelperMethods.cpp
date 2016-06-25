@@ -67,18 +67,16 @@ HRESULT AddHelpersMethods(__in CJavascriptVM &cJvm, __in MX::CHttpServer::CReque
   __EXIT_ON_ERROR(hRes);
   hRes = cJvm.AddNativeFunction("urldecode", MX_BIND_CALLBACK(&OnUrlDecode), 1);
   __EXIT_ON_ERROR(hRes);
-  try
+  hRes = cJvm.RunNativeProtected(0, 0, [](__in DukTape::duk_context *lpCtx)
   {
-    DukTape::duk_push_string(cJvm, "function vardump(obj)\n"
+    DukTape::duk_push_string(lpCtx, "function vardump(obj)\n"
                              "{ return Duktape.enc('jx', obj, null, 2); }\n");
-    DukTape::duk_push_string(cJvm, (const char *)(__FILE__));
-    DukTape::duk_eval_raw(cJvm, NULL, 0, DUK_COMPILE_EVAL);
-    DukTape::duk_pop(cJvm);
-  }
-  catch (CJavascriptVM::CException& ex)
-  {
-    return ex.GetErrorCode();
-  }
+    DukTape::duk_push_string(lpCtx, (const char *)(__FILE__));
+    DukTape::duk_eval_raw(lpCtx, NULL, 0, DUK_COMPILE_EVAL);
+    DukTape::duk_pop(lpCtx);
+    return 0;
+  });
+  __EXIT_ON_ERROR(hRes);
   hRes = cJvm.CreateObject("HASH");
   if (SUCCEEDED(hRes))
     hRes = cJvm.AddObjectNumericProperty("HASH", "MD5", 1.0, CJavascriptVM::PropertyFlagEnumerable);
@@ -116,7 +114,8 @@ static DukTape::duk_ret_t OnHtmlEntities(__in DukTape::duk_context *lpCtx, __in_
   hRes = (cStrTempA.Copy(szBufA) != FALSE) ? S_OK : E_OUTOFMEMORY;
   if (SUCCEEDED(hRes))
     hRes = MX::CHttpCommon::ToHtmlEntities(cStrTempA);
-  __THROW_ERROR_ON_FAILED_HRESULT(hRes);
+  if (FAILED(hRes))
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
   //push result
   DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
   return 1;
@@ -191,7 +190,8 @@ static DukTape::duk_ret_t OnXmlEntities(__in DukTape::duk_context *lpCtx, __in_z
     }
     if (SUCCEEDED(hRes))
       hRes = MX::Utf8_Encode(cStrTempA, (LPCWSTR)cStrTempW, cStrTempW.GetLength());
-    __THROW_ERROR_ON_FAILED_HRESULT(hRes);
+    if (FAILED(hRes))
+      MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
   }
   //push result
   DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
@@ -207,7 +207,8 @@ static DukTape::duk_ret_t OnUrlEncode(__in DukTape::duk_context *lpCtx, __in_z L
 
   szBufA = DukTape::duk_require_string(lpCtx, 0);
   hRes = MX::CUrl::Encode(cStrTempA, szBufA);
-  __THROW_ERROR_ON_FAILED_HRESULT(hRes);
+  if (FAILED(hRes))
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
   //push result
   DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
   return 1;
@@ -222,7 +223,8 @@ static DukTape::duk_ret_t OnUrlDecode(__in DukTape::duk_context *lpCtx, __in_z L
 
   szBufA = DukTape::duk_require_string(lpCtx, 0);
   hRes = MX::CUrl::Decode(cStrTempA, szBufA);
-  __THROW_ERROR_ON_FAILED_HRESULT(hRes);
+  if (FAILED(hRes))
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
   //push result
   DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
   return 1;

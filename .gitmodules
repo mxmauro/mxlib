@@ -5,5 +5,5 @@
 	path = Source/OpenSSL/Source
 	url = https://github.com/openssl/openssl
 [submodule "Source/JsLib/FromSource/DukTapeGit"]
-	path = Source/JsLib/FromSource/DukTapeGit
+	path = Source/JsLib/DukTape/Source
 	url = https://github.com/svaarala/duktape

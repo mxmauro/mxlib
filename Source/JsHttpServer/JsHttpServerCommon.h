@@ -30,12 +30,6 @@
 
 //-----------------------------------------------------------
 
-#define __THROW_ERROR_ON_FAILED_HRESULT(_hres)                              \
-              do {                                                          \
-                if (FAILED(_hres))                                          \
-                  MX_JS_THROW_ERROR(lpCtx, DUK_ERR_ERROR, "**%08X", _hres); \
-              } while (0)
-
 #define __EXIT_ON_ERROR(_hres)  if (FAILED(_hres)) return _hres
 
 //-----------------------------------------------------------

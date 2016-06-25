@@ -37,7 +37,8 @@ CJavascriptVM::CRequireModuleContext::CRequireModuleContext()
 
 HRESULT CJavascriptVM::CRequireModuleContext::RequireModule(__in_z LPCWSTR szModuleIdW)
 {
-  CStringA cStrTempA;
+  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
+  HRESULT hRes;
 
   if (szModuleIdW == NULL)
     return E_POINTER;
@@ -45,20 +46,19 @@ HRESULT CJavascriptVM::CRequireModuleContext::RequireModule(__in_z LPCWSTR szMod
     szModuleIdW++;
   if (*szModuleIdW == 0)
     return E_INVALIDARG;
-  if (cStrTempA.Copy(szModuleIdW) == FALSE)
-    return E_OUTOFMEMORY;
-  try
+  hRes = lpJVM->RunNativeProtected(0, 0, [szModuleIdW, this](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
+    CStringA cStrTempA;
+
+    if (cStrTempA.Copy(szModuleIdW) == FALSE)
+      MX_JS_THROW_HRESULT_ERROR(lpCtx, E_OUTOFMEMORY);
     DukTape::duk_dup(lpCtx, nRequireModuleIndex);
     DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
     DukTape::duk_call(lpCtx, 1);
-  }
-  catch (CJavascriptVM::CException& ex)
-  {
-    return ex.GetErrorCode();
-  }
+    return 0;
+  });
   //done
-  return S_OK;
+  return hRes;
 }
 
 HRESULT CJavascriptVM::CRequireModuleContext::AddNativeFunction(__in_z LPCSTR szFuncNameA,
@@ -86,85 +86,99 @@ HRESULT CJavascriptVM::CRequireModuleContext::AddProperty(__in_z LPCSTR szProper
 HRESULT CJavascriptVM::CRequireModuleContext::AddStringProperty(__in_z LPCSTR szPropertyNameA, __in_z LPCSTR szValueA,
                                                                 __in_opt int nFlags)
 {
-  try
+  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
+  HRESULT hRes;
+
+  hRes = lpJVM->RunNativeProtected(0, 1, [szValueA](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     if (szValueA != NULL)
       DukTape::duk_push_string(lpCtx, szValueA);
     else
       DukTape::duk_push_null(lpCtx);
-  }
-  catch (CJavascriptVM::CException& ex)
+    return 1;
+  });
+  if (SUCCEEDED(hRes))
   {
-    return ex.GetErrorCode();
+    hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, nExportsObjectIndex, szPropertyNameA, TRUE, nFlags,
+                                               NullCallback(), NullCallback());
   }
-  return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, nExportsObjectIndex, szPropertyNameA, TRUE, nFlags,
-                                             NullCallback(), NullCallback());
+  return hRes;
 }
 
 HRESULT CJavascriptVM::CRequireModuleContext::AddBooleanProperty(__in_z LPCSTR szPropertyNameA, __in BOOL bValue,
                                                                  __in_opt int nFlags)
 {
-  try
+  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
+  HRESULT hRes;
+
+  hRes = lpJVM->RunNativeProtected(0, 1, [bValue](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     DukTape::duk_push_boolean(lpCtx, (bValue != FALSE) ? true : false);
-  }
-  catch (CJavascriptVM::CException& ex)
+    return 1;
+  });
+  if (SUCCEEDED(hRes))
   {
-    return ex.GetErrorCode();
+    hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, nExportsObjectIndex, szPropertyNameA, TRUE, nFlags,
+                                               NullCallback(), NullCallback());
   }
-  return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, nExportsObjectIndex, szPropertyNameA, TRUE, nFlags,
-                                             NullCallback(), NullCallback());
+  return hRes;
 }
 
 HRESULT CJavascriptVM::CRequireModuleContext::AddNumericProperty(__in_z LPCSTR szPropertyNameA, __in double nValue,
                                                                  __in_opt int nFlags)
 {
-  try
+  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
+  HRESULT hRes;
+
+  hRes = lpJVM->RunNativeProtected(0, 1, [nValue](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     DukTape::duk_push_number(lpCtx, nValue);
-  }
-  catch (CJavascriptVM::CException& ex)
+    return 1;
+  });
+  if (SUCCEEDED(hRes))
   {
-    return ex.GetErrorCode();
+    hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, nExportsObjectIndex, szPropertyNameA, TRUE, nFlags,
+                                               NullCallback(), NullCallback());
   }
-  return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, nExportsObjectIndex, szPropertyNameA, TRUE, nFlags,
-                                             NullCallback(), NullCallback());
+  return hRes;
 }
 
 HRESULT CJavascriptVM::CRequireModuleContext::AddNullProperty(__in_z LPCSTR szPropertyNameA, __in_opt int nFlags)
 {
-  try
+  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
+  HRESULT hRes;
+
+  hRes = lpJVM->RunNativeProtected(0, 1, [](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     DukTape::duk_push_null(lpCtx);
-  }
-  catch (CJavascriptVM::CException& ex)
+    return 1;
+  });
+  if (SUCCEEDED(hRes))
   {
-    return ex.GetErrorCode();
+    hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, nExportsObjectIndex, szPropertyNameA, TRUE, nFlags,
+                                               NullCallback(), NullCallback());
   }
-  return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, nExportsObjectIndex, szPropertyNameA, TRUE, nFlags,
-                                             NullCallback(), NullCallback());
+  return hRes;
 }
 
 HRESULT CJavascriptVM::CRequireModuleContext::AddJsObjectProperty(__in_z LPCSTR szPropertyNameA,
                                                                   __in CJsObjectBase *lpObject, __in_opt int nFlags)
 {
-  DukTape::duk_idx_t nStackTop;
+  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   HRESULT hRes;
 
-  nStackTop = DukTape::duk_get_top(lpCtx);
-  try
+  hRes = lpJVM->RunNativeProtected(0, 1, [lpObject](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     lpObject->PushThis();
-  }
-  catch (CJavascriptVM::CException& ex)
+    return 1;
+  });
+  if (SUCCEEDED(hRes))
   {
-    DukTape::duk_set_top(lpCtx, nStackTop);
-    return ex.GetErrorCode();
+    hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, nExportsObjectIndex, szPropertyNameA, TRUE, nFlags,
+                                               NullCallback(), NullCallback());
+    if (FAILED(hRes))
+      lpObject->Release();
   }
-  hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, nExportsObjectIndex, szPropertyNameA, TRUE, nFlags,
-                                             NullCallback(), NullCallback());
-  if (FAILED(hRes))
-    lpObject->Release();
   return hRes;
 }
 
@@ -183,34 +197,39 @@ HRESULT CJavascriptVM::CRequireModuleContext::AddPropertyWithCallback(__in_z LPC
 HRESULT CJavascriptVM::CRequireModuleContext::ReplaceModuleExports(__in DukTape::duk_idx_t nObjIndex,
                                                                    __in_opt BOOL bRemoveFromStack)
 {
-  try
+  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
+  HRESULT hRes;
+
+  hRes = lpJVM->RunNativeProtected(0, 0, [nObjIndex, bRemoveFromStack, this]
+                                   (__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
-    if (nObjIndex < 0)
-      nObjIndex = DukTape::duk_normalize_index(lpCtx, nObjIndex);
-    DukTape::duk_dup(lpCtx, nObjIndex);
+    DukTape::duk_idx_t nObjIndex_2 = nObjIndex;
+    if (nObjIndex_2 < 0)
+      nObjIndex_2 = DukTape::duk_normalize_index(lpCtx, nObjIndex_2);
+    DukTape::duk_dup(lpCtx, nObjIndex_2);
     DukTape::duk_put_prop_string(lpCtx, nModuleObjectIndex, "exports");
     if (bRemoveFromStack != FALSE)
-      DukTape::duk_remove(lpCtx, nObjIndex);
-  }
-  catch (CJavascriptVM::CException& ex)
-  {
-    return ex.GetErrorCode();
-  }
+      DukTape::duk_remove(lpCtx, nObjIndex_2);
+    return 0;
+  });
   //done
-  return S_OK;
+  return hRes;
 }
 
 HRESULT CJavascriptVM::CRequireModuleContext::ReplaceModuleExportsWithObject(__in CJsObjectBase *lpObject)
 {
+  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   HRESULT hRes;
 
   if (lpObject == NULL)
     return E_POINTER;
-  if (lpObject->PushThis() != 1)
-    return E_FAIL;
-  hRes = ReplaceModuleExports(-1, TRUE);
-  if (FAILED(hRes))
-    DukTape::duk_pop(lpCtx); //release reference added by PushThis
+  hRes = lpJVM->RunNativeProtected(0, 0, [lpObject, this](__in DukTape::duk_context *lpCtx)
+  {
+    lpObject->PushThis();
+    DukTape::duk_put_prop_string(lpCtx, nModuleObjectIndex, "exports");
+    return 0;
+  });
+  //done
   return hRes;
 }
 

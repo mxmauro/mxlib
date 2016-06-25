@@ -30,22 +30,33 @@
 #include "..\..\Include\Strings\Utf8.h"
 #include "..\..\Include\Debug.h"
 #include "..\..\Include\FnvHash.h"
+
+//include the following files OUTSIDE the namespace
 #include <xstddef>
 #include <exception>
-#include <malloc.h>
-#include <setjmp.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stddef.h>
+#include <limits.h>
+#include <math.h>
+#include <xstddef>
 
 #ifdef _MX_JAVASCRIPT_VM_CPP
 
-#include "..\..\Include\JsLib\DukTapeConfig.h"
+#define DUK_OPT_HAVE_CUSTOM_H
+#define DUK_COMPILING_DUKTAPE
+#include "..\..\Include\JsLib\JavascriptVM.h"
 
 namespace DukTape {
 
-static void atPanic(int code, const char *msg);
-
+//#include "..\..\Include\JsLib\DukTape\duktape.h"
 #pragma warning(disable : 4101)
-#include "DukTape\duktape.c"
+#include "DukTape\Source\dist\src\duktape.c"
+#define snprintf mx_sprintf_s
+#include "DukTape\Source\extras\module-duktape\duk_module_duktape.c"
+#undef snprintf
 #pragma warning(default : 4101)
 
 } //namespace DukTape

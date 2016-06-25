@@ -36,7 +36,7 @@ HRESULT AddNativeFunctionCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPC
                                 __in MX::CJavascriptVM::OnNativeFunctionCallback cNativeFunctionCallback,
                                 __in int nArgsCount)
 {
-  DukTape::duk_idx_t nStackTop;
+  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   HRESULT hRes;
 
   if (szFunctionNameA == NULL)
@@ -47,10 +47,10 @@ HRESULT AddNativeFunctionCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPC
     return E_INVALIDARG;
   if (lpCtx == NULL)
     return E_FAIL;
-  nStackTop = DukTape::duk_get_top(lpCtx);
-  try
+  hRes = lpJVM->RunNativeProtected(0, 0, [=](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     DukTape::duk_c_function fnNativeFunc;
+    HRESULT hRes;
     LPVOID p;
 
     //push object
@@ -62,7 +62,7 @@ HRESULT AddNativeFunctionCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPC
     {
       hRes = FindObject(lpCtx, szObjectNameA, FALSE, TRUE);
       if (FAILED(hRes))
-        return hRes;
+        MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
     }
 
     fnNativeFunc = [](__in DukTape::duk_context *lpCtx) mutable -> DukTape::duk_ret_t
@@ -81,7 +81,7 @@ HRESULT AddNativeFunctionCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPC
       DukTape::duk_get_prop_string(lpCtx, -1, "\xff""\xff""name");
       sA = DukTape::duk_require_string(lpCtx, -1);
       if (cStrFuncNameA.Copy(sA) == FALSE)
-        return DUK_RET_ALLOC_ERROR;
+        MX_JS_THROW_HRESULT_ERROR(lpCtx, E_OUTOFMEMORY);
       DukTape::duk_pop(lpCtx);
       //get function's callback
       DukTape::duk_get_prop_string(lpCtx, -1, "\xff""\xff""callback");
@@ -99,7 +99,7 @@ HRESULT AddNativeFunctionCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPC
         if (DukTape::duk_is_string(lpCtx, -1) != 0)
         {
           if (cStrObjNameA.Copy(DukTape::duk_get_string(lpCtx, -1)) == FALSE)
-            return DUK_RET_ALLOC_ERROR;
+            MX_JS_THROW_HRESULT_ERROR(lpCtx, E_OUTOFMEMORY);
         }
         DukTape::duk_pop_2(lpCtx);
       }
@@ -115,22 +115,21 @@ HRESULT AddNativeFunctionCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPC
     //create c function callback
     DukTape::duk_push_c_function(lpCtx, fnNativeFunc, (DukTape::duk_int_t)nArgsCount);
     //store callback
-    p = DukTape::duk_push_fixed_buffer(lpCtx, MX::CJavascriptVM::OnNativeFunctionCallback::serialization_buffer_size());
-    cNativeFunctionCallback.serialize(p);
+    p = DukTape::duk_push_fixed_buffer(lpCtx, MX::CJavascriptVM::OnNativeFunctionCallback::
+                                              serialization_buffer_size());
+    const_cast<MX::CJavascriptVM::OnNativeFunctionCallback&>(cNativeFunctionCallback).serialize(p);
     DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""callback");
     //store function's name
     DukTape::duk_push_string(lpCtx, szFunctionNameA);
     DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""name");
     //add function to object
     DukTape::duk_put_prop_string(lpCtx, -2, szFunctionNameA);
-  }
-  catch (MX::CJavascriptVM::CException& ex)
-  {
-    DukTape::duk_set_top(lpCtx, nStackTop);
-    return ex.GetErrorCode();
-  }
+    //pop the object/global object
+    DukTape::duk_pop(lpCtx);
+    return 0;
+  });
   //done
-  return S_OK;
+  return hRes;
 }
 
 HRESULT AddPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPCSTR szObjectNameA,
@@ -139,8 +138,8 @@ HRESULT AddPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPCSTR sz
                           __in MX::CJavascriptVM::OnGetPropertyCallback cGetValueCallback,
                           __in MX::CJavascriptVM::OnSetPropertyCallback cSetValueCallback)
 {
-  DukTape::duk_uint_t nDukFlags;
-  DukTape::duk_idx_t nIndex, nStackTop;
+  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
+  DukTape::duk_idx_t nIndex;
   HRESULT hRes;
 
   if (szPropertyNameA == NULL)
@@ -153,12 +152,12 @@ HRESULT AddPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPCSTR sz
     return E_FAIL;
   //properties with callbacks cannot have an initial value
   MX_ASSERT(bInitialValueOnStack ? ((!cGetValueCallback) && (!cSetValueCallback)) : true);
-  nStackTop = DukTape::duk_get_top(lpCtx);
-  if (bInitialValueOnStack != FALSE && nStackTop > 0)
-    nStackTop--; //include pushed value
-  try
+  hRes = lpJVM->RunNativeProtected((bInitialValueOnStack != FALSE) ? 1 : 0, 0,
+                                   [&](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
-    nDukFlags = DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_HAVE_CONFIGURABLE;
+    DukTape::duk_uint_t nDukFlags = DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_HAVE_CONFIGURABLE;
+    HRESULT hRes;
+
     //push object
     if (nObjectIndex >= 0)
     {
@@ -168,7 +167,7 @@ HRESULT AddPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPCSTR sz
     {
       hRes = FindObject(lpCtx, szObjectNameA, FALSE, TRUE);
       if (FAILED(hRes))
-        return hRes;
+        MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
     }
     //set property name
     DukTape::duk_push_string(lpCtx, szPropertyNameA);
@@ -214,7 +213,7 @@ HRESULT AddPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPCSTR sz
         DukTape::duk_get_prop_string(lpCtx, -1, "\xff""\xff""name");
         sA = DukTape::duk_require_string(lpCtx, -1);
         if (cStrPropNameA.Copy(sA) == FALSE)
-          return DUK_RET_ALLOC_ERROR;
+          MX_JS_THROW_HRESULT_ERROR(lpCtx, E_OUTOFMEMORY);
         DukTape::duk_pop(lpCtx);
         //get function's callback
         DukTape::duk_get_prop_string(lpCtx, -1, "\xff""\xff""callback");
@@ -232,7 +231,7 @@ HRESULT AddPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPCSTR sz
           if (DukTape::duk_is_string(lpCtx, -1) != 0)
           {
             if (cStrObjNameA.Copy(DukTape::duk_get_string(lpCtx, -1)) == FALSE)
-              return DUK_RET_ALLOC_ERROR;
+              MX_JS_THROW_HRESULT_ERROR(lpCtx, E_OUTOFMEMORY);
           }
           DukTape::duk_pop_2(lpCtx);
         }
@@ -280,7 +279,7 @@ HRESULT AddPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPCSTR sz
         DukTape::duk_get_prop_string(lpCtx, -1, "\xff""\xff""name");
         sA = DukTape::duk_require_string(lpCtx, -1);
         if (cStrPropNameA.Copy(sA) == FALSE)
-          return DUK_RET_ALLOC_ERROR;
+          MX_JS_THROW_HRESULT_ERROR(lpCtx, E_OUTOFMEMORY);
         DukTape::duk_pop(lpCtx);
         //get function's callback
         DukTape::duk_get_prop_string(lpCtx, -1, "\xff""\xff""callback");
@@ -298,7 +297,7 @@ HRESULT AddPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPCSTR sz
           if (DukTape::duk_is_string(lpCtx, -1) != 0)
           {
             if (cStrObjNameA.Copy(DukTape::duk_get_string(lpCtx, -1)) == FALSE)
-              return DUK_RET_ALLOC_ERROR;
+              MX_JS_THROW_HRESULT_ERROR(lpCtx, E_OUTOFMEMORY);
           }
           DukTape::duk_pop_2(lpCtx);
         }
@@ -326,21 +325,18 @@ HRESULT AddPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPCSTR sz
     }
     //define the property
     DukTape::duk_def_prop(lpCtx, nIndex, nDukFlags);
-    DukTape::duk_pop(lpCtx); //pop the object/global object
-  }
-  catch (MX::CJavascriptVM::CException& ex)
-  {
-    DukTape::duk_set_top(lpCtx, nStackTop);
-    return ex.GetErrorCode();
-  }
+    //pop the object/global object
+    DukTape::duk_pop(lpCtx);
+    return 0;
+  });
   //done
-  return S_OK;
+  return hRes;
 }
 
 HRESULT RemovePropertyCommon(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
                              __in_z LPCSTR szPropertyNameA)
 {
-  DukTape::duk_idx_t nStackTop;
+  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   HRESULT hRes;
 
   if (szPropertyNameA == NULL)
@@ -352,28 +348,25 @@ HRESULT RemovePropertyCommon(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szO
   if (lpCtx == NULL)
     return E_FAIL;
   //properties with callbacks cannot have an initial value
-  nStackTop = DukTape::duk_get_top(lpCtx);
-  try
+  hRes = lpJVM->RunNativeProtected(0, 0, [szObjectNameA, szPropertyNameA]
+                                   (__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
-    hRes = FindObject(lpCtx, szObjectNameA, FALSE, TRUE);
+    HRESULT hRes = FindObject(lpCtx, szObjectNameA, FALSE, TRUE);
     if (FAILED(hRes))
-      return hRes;
+      MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
     //get property
     DukTape::duk_get_prop_string(lpCtx, -1, szPropertyNameA);
-    DukTape::duk_pop(lpCtx); //pop the object/global object
-  }
-  catch (MX::CJavascriptVM::CException& ex)
-  {
-    DukTape::duk_set_top(lpCtx, nStackTop);
-    return ex.GetErrorCode();
-  }
+    //pop the object/global object
+    DukTape::duk_pop(lpCtx);
+    return 0;
+  });
   //done
-  return S_OK;
+  return hRes;
 }
 
 HRESULT HasPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA)
 {
-  DukTape::duk_idx_t nStackTop;
+  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   HRESULT hRes;
 
   if (szPropertyNameA == NULL)
@@ -385,31 +378,28 @@ HRESULT HasPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObje
   if (lpCtx == NULL)
     return E_FAIL;
   //properties with callbacks cannot have an initial value
-  nStackTop = DukTape::duk_get_top(lpCtx);
-  try
+  hRes = lpJVM->RunNativeProtected(0, 0, [szObjectNameA, szPropertyNameA]
+                                   (__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
-    hRes = FindObject(lpCtx, szObjectNameA, FALSE, TRUE);
+    HRESULT hRes = FindObject(lpCtx, szObjectNameA, FALSE, TRUE);
     if (FAILED(hRes))
-      return hRes;
+      MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
     //get property
     DukTape::duk_get_prop_string(lpCtx, -1, szPropertyNameA);
     //does exists?
     hRes = (DukTape::duk_is_undefined(lpCtx, -1) != 0) ? S_FALSE : S_OK;
     //pop the property and the object/global object
     DukTape::duk_pop_2(lpCtx);
-  }
-  catch (MX::CJavascriptVM::CException& ex)
-  {
-    DukTape::duk_set_top(lpCtx, nStackTop);
-    return ex.GetErrorCode();
-  }
+    return 0;
+  });
   //done
   return hRes;
 }
 
-HRESULT PushPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA)
+HRESULT PushPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
+                           __in_z LPCSTR szPropertyNameA)
 {
-  DukTape::duk_idx_t nStackTop;
+  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   HRESULT hRes;
 
   if (szPropertyNameA == NULL)
@@ -421,24 +411,20 @@ HRESULT PushPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObj
   if (lpCtx == NULL)
     return E_FAIL;
   //properties with callbacks cannot have an initial value
-  nStackTop = DukTape::duk_get_top(lpCtx);
-  try
+  hRes = lpJVM->RunNativeProtected(0, 1, [szObjectNameA, szPropertyNameA]
+                                   (__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
-    hRes = FindObject(lpCtx, szObjectNameA, FALSE, TRUE);
+    HRESULT hRes = FindObject(lpCtx, szObjectNameA, FALSE, TRUE);
     if (FAILED(hRes))
-      return hRes;
+      MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
     //get property
     DukTape::duk_get_prop_string(lpCtx, -1, szPropertyNameA);
     //remove the object/global object
     DukTape::duk_remove(lpCtx, -2);
-  }
-  catch (MX::CJavascriptVM::CException& ex)
-  {
-    DukTape::duk_set_top(lpCtx, nStackTop);
-    return ex.GetErrorCode();
-  }
+    return 1;
+  });
   //done
-  return S_OK;
+  return hRes;
 }
 
 HRESULT FindObject(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA, __in BOOL bCreateIfNotExists,

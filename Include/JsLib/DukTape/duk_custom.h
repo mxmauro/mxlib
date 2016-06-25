@@ -1,52 +1,65 @@
 #undef DUK_UNREF
 #define DUK_UNREF(x)
 
-#undef DUK_ANSI_MALLOC
-#undef DUK_ANSI_REALLOC
-#undef DUK_ANSI_CALLOC
-#undef DUK_ANSI_FREE
-#define DUK_ANSI_MALLOC      MX_MALLOC
-#define DUK_ANSI_REALLOC     MX_REALLOC
-#define DUK_ANSI_CALLOC      DukTapeCalloc
-static __forceinline void* DukTapeCalloc(__in size_t _Count, __in size_t _Size)
-{
-  void *ptr;
+//--------------------------------
 
-  _Count *= _Size;
-  ptr = MX_MALLOC(_Count);
-  if (ptr != NULL)
-    MX::MemSet(ptr, 0, _Count);
-  return ptr;
-}
-#define DUK_ANSI_FREE        MX::MemFree
+#undef DUK_USE_MARK_AND_SWEEP
 
+//--------------------------------
+
+#undef DUK_USE_CPP_EXCEPTIONS
+#define DUK_USE_CPP_EXCEPTIONS
+
+//--------------------------------
+
+#undef DUK_USE_FATAL_HANDLER
+#define DUK_USE_FATAL_HANDLER(udata, msg) throw E_FAIL;
+
+//--------------------------------
+
+#undef DUK_USE_PROVIDE_DEFAULT_ALLOC_FUNCTIONS
+
+//--------------------------------
+
+#undef DUK_USE_VERBOSE_ERRORS
+#define DUK_USE_VERBOSE_ERRORS
+
+#undef DUK_USE_AUGMENT_ERROR_THROW
+#undef DUK_USE_AUGMENT_ERROR_CREATE
+
+//--------------------------------
 
 #undef DUK_MEMCPY
-#undef DUK_MEMMOVE
-#undef DUK_MEMCMP
-#undef DUK_MEMSET
 #define DUK_MEMCPY       MX::MemCopy
+
+#undef DUK_MEMMOVE
 #define DUK_MEMMOVE      MX::MemMove
+
+#undef DUK_MEMCMP
 #define DUK_MEMCMP       MX::MemCompare
+
+#undef DUK_MEMSET
 #define DUK_MEMSET       MX::MemSet
 
+//--------------------------------
 
 #undef DUK_STRLEN
-#undef DUK_STRCMP
-#undef DUK_STRNCMP
 #define DUK_STRLEN       MX::StrLenA
+
+#undef DUK_STRCMP
 #define DUK_STRCMP       DukTapeStrCmp
 static __forceinline int DukTapeStrCmp(_In_z_ const char * _Str1, _In_z_ const char * _Str2)
 {
   return MX::StrCompareA(_Str1, _Str2, FALSE);
 }
+
+#undef DUK_STRNCMP
 #define DUK_STRNCMP      DukTapeStrNCmp
 static __forceinline int DukTapeStrNCmp(_In_reads_or_z_(_MaxCount) const char * _Str1,
                                         _In_reads_or_z_(_MaxCount) const char * _Str2, _In_ size_t _MaxCount)
 {
   return MX::StrNCompareA(_Str1, _Str2, _MaxCount, FALSE);
 }
-
 
 #undef DUK_SPRINTF
 #define DUK_SPRINTF     DukTapeSprintf
@@ -64,6 +77,8 @@ static __forceinline int DukTapeSprintf(char *buffer, const char *format, ...)
 #define DUK_SNPRINTF     mx_sprintf_s
 #undef DUK_VSNPRINTF
 #define DUK_VSNPRINTF    mx_vsnprintf
+
+//--------------------------------
 
 //NOTE: Until fixed, I add a copy of duk_debug.h header modified with my custom debug output
 #if defined(DUK_OPT_DEBUG) && defined(DUK_COMPILING_DUKTAPE)

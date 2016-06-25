@@ -20,13 +20,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\JsLib\DukTape\duktape.c">
-      <Filter>Source Files\DukTape</Filter>
-    </ClCompile>
     <ClCompile Include="Source\JsLib\JavascriptVM.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\JsLib\JavascriptVMException.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\JsLib\JavascriptVMJsObjectBase.cpp">
@@ -53,20 +47,11 @@
     <ClCompile Include="Source\JsLib\Plugins\JsMySqlPluginHelpers.cpp">
       <Filter>Source Files\Plugins</Filter>
     </ClCompile>
+    <ClCompile Include="Source\JsLib\DukTape\Source\dist\src\duktape.c">
+      <Filter>Source Files\DukTape</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Include\JsLib\DukTape\duk_config.h">
-      <Filter>Source Files\DukTape</Filter>
-    </ClInclude>
-    <ClInclude Include="Include\JsLib\DukTape\duktape.h">
-      <Filter>Source Files\DukTape</Filter>
-    </ClInclude>
-    <ClInclude Include="Include\JsLib\DukTapeConfig.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Include\JsLib\duk_custom.h">
-      <Filter>Source Files\DukTape</Filter>
-    </ClInclude>
     <ClInclude Include="Include\JsLib\JavascriptVM.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -79,15 +64,18 @@
     <ClInclude Include="Include\JsLib\Plugins\JsMySqlPlugin.h">
       <Filter>Header Files\Plugins</Filter>
     </ClInclude>
+    <ClInclude Include="Source\JsLib\DukTape\Source\dist\src\duk_config.h">
+      <Filter>Source Files\DukTape</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\JsLib\DukTape\Source\dist\src\duktape.h">
+      <Filter>Source Files\DukTape</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\JsLib\DukTape\duk_custom.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="Source\JsLib\DukTape\commonjs.txt">
-      <Filter>Source Files\DukTape</Filter>
-    </Text>
-    <Text Include="Source\JsLib\DukTape\LICENSE.txt">
-      <Filter>Source Files\DukTape</Filter>
-    </Text>
-    <Text Include="Source\JsLib\DukTape\murmurhash2.txt">
+    <Text Include="Source\JsLib\DukTape\Source\dist\LICENSE.txt">
       <Filter>Source Files\DukTape</Filter>
     </Text>
   </ItemGroup>

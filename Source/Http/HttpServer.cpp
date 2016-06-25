@@ -204,7 +204,6 @@ HRESULT CHttpServer::StartListening(__in_z LPCSTR szBindAddressA, __in int nPort
   {
     case CIpcSslLayer::ProtocolUnknown:
       break;
-    case CIpcSslLayer::ProtocolSSLv3:
     case CIpcSslLayer::ProtocolTLSv1_0:
     case CIpcSslLayer::ProtocolTLSv1_1:
     case CIpcSslLayer::ProtocolTLSv1_2:

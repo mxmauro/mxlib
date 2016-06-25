@@ -91,7 +91,7 @@ CJsMySqlPlugin::CJsMySqlPlugin(__in DukTape::duk_context *lpCtx) : CJsObjectBase
     }
     else if (duk_is_null_or_undefined(lpCtx, 0) == 0)
     {
-      MX_JS_THROW_ERROR(lpCtx, DUK_ERR_API_ERROR, "**%08X", E_INVALIDARG);
+      MX_JS_THROW_HRESULT_ERROR(lpCtx, E_INVALIDARG);
     }
   }
   return;
@@ -946,7 +946,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::getLastDbErrorMessage()
     }
     else
     {
-      MX_JS_THROW_ERROR(lpCtx, DUK_ERR_ALLOC_ERROR, "**%08X", E_OUTOFMEMORY);
+      MX_JS_THROW_HRESULT_ERROR(lpCtx, E_OUTOFMEMORY);
     }
   }
   return 1;
@@ -1007,7 +1007,6 @@ DukTape::duk_ret_t CJsMySqlPlugin::getFields()
   if (lpInternal != NULL && _RS() != NULL)
   {
     Internals::CJsMySqlPluginHelpers::CFieldInfo *lpFieldInfo;
-    DukTape::duk_ret_t nRet;
     SIZE_T i, nCount;
 
     //create an array
@@ -1017,9 +1016,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::getFields()
     for (i=0; i<nCount; i++)
     {
       lpFieldInfo = _INTERNAL()->sQuery.aFieldsList.GetElementAt(i);
-      nRet = lpFieldInfo->PushThis();
-      if (nRet < 0)
-        return nRet;
+      lpFieldInfo->PushThis();
       DukTape::duk_put_prop_index(lpCtx, -2, (DukTape::duk_uarridx_t)i);
     }
   }
@@ -1075,14 +1072,9 @@ HRESULT CJsMySqlPlugin::_TransactionRollback()
 DukTape::duk_ret_t CJsMySqlPlugin::ReturnErrorFromHResult(__in HRESULT hRes)
 {
   DukTape::duk_context *lpCtx = GetContext();
-  if (hRes == E_INVALIDARG)
+  if (hRes == E_INVALIDARG || hRes == E_OUTOFMEMORY)
   {
-    MX_JS_THROW_ERROR(lpCtx, DUK_ERR_API_ERROR, "**%08X", E_INVALIDARG);
-    return 0;
-  }
-  if (hRes == E_OUTOFMEMORY)
-  {
-    MX_JS_THROW_ERROR(lpCtx, DUK_ERR_ALLOC_ERROR, "**%08X", E_OUTOFMEMORY);
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
     return 0;
   }
   //----
@@ -1097,14 +1089,9 @@ DukTape::duk_ret_t CJsMySqlPlugin::ReturnErrorFromHResultAndDbErr(__in HRESULT h
 {
   DukTape::duk_context *lpCtx = GetContext();
 
-  if (hRes == E_INVALIDARG)
+  if (hRes == E_INVALIDARG || hRes == E_OUTOFMEMORY)
   {
-    MX_JS_THROW_ERROR(lpCtx, DUK_ERR_API_ERROR, "**%08X", E_INVALIDARG);
-    return 0;
-  }
-  if (hRes == E_OUTOFMEMORY)
-  {
-    MX_JS_THROW_ERROR(lpCtx, DUK_ERR_ALLOC_ERROR, "**%08X", E_OUTOFMEMORY);
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
     return 0;
   }
   //----

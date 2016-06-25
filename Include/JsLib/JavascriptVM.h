@@ -29,18 +29,11 @@
 #include "..\RefCounted.h"
 #include "..\Callbacks.h"
 #include "..\Strings\Strings.h"
-#include "DukTapeConfig.h"
-//include the following files OUTSIDE the namespace
-#include <xstddef>
-#include <exception>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
-#include <setjmp.h>
-#include <stddef.h>
-#include <limits.h>
+
+#include <functional>
+
 namespace DukTape {
+#define DUK_OPT_HAVE_CUSTOM_H
 #include "DukTape\duktape.h"
 } //namespace DukTape
 #include "..\Debug.h"
@@ -59,9 +52,10 @@ public:                                                                         
                            bCreateProxy);                                                       \
     };                                                                                          \
                                                                                                 \
-  DukTape::duk_ret_t PushThis()                                                                 \
+  VOID PushThis()                                                                               \
     {                                                                                           \
-    return _PushThisHelper(_name, "\xff""\xff" _name "_prototype");                             \
+    _PushThisHelper(_name, "\xff""\xff" _name "_prototype");                                    \
+    return;                                                                                     \
     };                                                                                          \
                                                                                                 \
 private:                                                                                        \
@@ -102,6 +96,9 @@ private:                                                                        
           },                                                                                    \
           _enumerable },
 
+#define MX_JS_THROW_HRESULT_ERROR(ctx, hres)                                                    \
+          DukTape::duk_error_raw((ctx), DUK_ERR_ERROR, (LPCSTR)(__FILE__),                      \
+                                 (DukTape::duk_int_t)__LINE__, "\xFF\xFF%08X", (HRESULT)(hres))
 
 #define MX_JS_THROW_ERROR(ctx, code, fmt, ...)                                                  \
           DukTape::duk_error_raw((ctx), (DukTape::duk_errcode_t)(code), (LPCSTR)(__FILE__),     \
@@ -122,35 +119,6 @@ public:
     PropertyFlagEnumerable = 0x02,
     PropertyFlagDeletable  = 0x04
   } ePropertyFlags;
-
-  //----
-
-  class CException
-  {
-  public:
-    CException(__in int nCode, __in LPCSTR szMsgA);
-
-    int GetDukTapeErrorCode() const
-      {
-      return nCode;
-      };
-
-    HRESULT GetErrorCode() const
-      {
-      return CJavascriptVM::HResultFromDukTapeErr(nCode);
-      };
-
-    LPCSTR GetMsg() const
-      {
-      return szMsgA;
-      };
-
-    VOID DebugPrintMessage();
-
-  private:
-    int nCode;
-    CHAR szMsgA[256];
-  };
 
   //----
 
@@ -279,6 +247,8 @@ public:
 
   //--------
 
+  typedef std::function<DukTape::duk_ret_t (__in DukTape::duk_context*)> protected_function;
+
 public:
   CJavascriptVM();
   ~CJavascriptVM();
@@ -298,9 +268,8 @@ public:
 
   HRESULT Run(__in_z LPCSTR szCodeA, __in_z_opt LPCWSTR szFileNameW=NULL, __in_opt BOOL bIgnoreResult=TRUE);
 
-  static HRESULT HResultFromDukTapeErr(__in DukTape::duk_errcode_t code);
-  static DukTape::duk_errcode_t DukTapeErrFromHResult(__in HRESULT hRes);
-  static DukTape::duk_ret_t DukTapeRetFromHResult(__in HRESULT hRes);
+  HRESULT RunNativeProtected(__in DukTape::duk_idx_t nArgsCount, __in DukTape::duk_idx_t nRetValuesCount,
+                             __in protected_function func);
 
   HRESULT AddNativeFunction(__in_z LPCSTR szFuncNameA, __in OnNativeFunctionCallback cNativeFunctionCallback,
                             __in int nArgsCount);
@@ -394,11 +363,15 @@ private:
   static DukTape::duk_ret_t _ProxyGetPropHelper(__in DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _ProxySetPropHelper(__in DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _ProxyDeletePropHelper(__in DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t _RunNativeProtectedHelper(__in DukTape::duk_context *lpCtx, __in void *udata);
+
+  VOID GetErrorInfoFromException(__in DukTape::duk_idx_t nStackIndex);
 
 protected:
   DukTape::duk_context *lpCtx;
   OnRequireModuleCallback cRequireModuleCallback;
   struct {
+    HRESULT hRes;
     CStringA cStrMessageA;
     CStringA cStrFileNameA;
     ULONG nLine;
@@ -423,7 +396,7 @@ public:
   ~CJsObjectBase()
     { };
 
-  virtual DukTape::duk_ret_t PushThis() = 0;
+  virtual VOID PushThis() = 0;
 
   static CJsObjectBase* FromObject(__in DukTape::duk_context *lpCtx, __in DukTape::duk_int_t nIndex);
 
@@ -473,7 +446,7 @@ protected:
                                  __in_opt lpfnCreateObject fnCreateObject, __in_opt int nCreateArgsCount,
                                  __in BOOL bCreateProxy);
   static DukTape::duk_ret_t _CreateHelper(__in DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t _PushThisHelper(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA);
+  VOID _PushThisHelper(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA);
   static DukTape::duk_ret_t _FinalReleaseHelper(__in DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _CallMethodHelper(__in DukTape::duk_context *lpCtx, __in lpfnCallFunc fnFunc);
   static DukTape::duk_ret_t _ProxyHasPropHelper(__in DukTape::duk_context *lpCtx);

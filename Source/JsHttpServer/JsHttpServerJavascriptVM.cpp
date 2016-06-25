@@ -29,23 +29,20 @@ namespace MX {
 
 CHttpServer::CRequest* CJsHttpServer::GetServerRequestFromContext(__in DukTape::duk_context *lpCtx)
 {
-  MX::CHttpServer::CRequest *lpRequest;
+  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
+  MX::CHttpServer::CRequest *lpRequest = NULL;
+  HRESULT hRes;
 
-  try
+  hRes = lpJVM->RunNativeProtected(0, 0, [&lpRequest](__in DukTape::duk_context *lpCtx)
   {
     DukTape::duk_push_global_object(lpCtx);
     DukTape::duk_get_prop_string(lpCtx, -1, INTERNAL_REQUEST_PROPERTY);
     if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
       lpRequest = reinterpret_cast<MX::CHttpServer::CRequest*>(DukTape::duk_to_pointer(lpCtx, -1));
-    else
-      lpRequest = NULL;
     DukTape::duk_pop_2(lpCtx);
-  }
-  catch (CJavascriptVM::CException&)
-  {
-    lpRequest = NULL;
-  }
-  return lpRequest;
+    return 0;
+  });
+  return (SUCCEEDED(hRes)) ? lpRequest : NULL;
 }
 
 HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CHttpServer::CRequest *lpRequest)
@@ -66,17 +63,15 @@ HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CHttpServer:
   __EXIT_ON_ERROR(hRes);
 
   //store request pointer
-  try
+  hRes = cJvm.RunNativeProtected(0, 0, [lpRequest](__in DukTape::duk_context *lpCtx)
   {
-    DukTape::duk_push_global_object(cJvm);
-    DukTape::duk_push_pointer(cJvm, lpRequest);
-    DukTape::duk_put_prop_string(cJvm, -2, INTERNAL_REQUEST_PROPERTY);
-    DukTape::duk_pop(cJvm);
-  }
-  catch (CJavascriptVM::CException& ex)
-  {
-    return ex.GetErrorCode();
-  }
+    DukTape::duk_push_global_object(lpCtx);
+    DukTape::duk_push_pointer(lpCtx, lpRequest);
+    DukTape::duk_put_prop_string(lpCtx, -2, INTERNAL_REQUEST_PROPERTY);
+    DukTape::duk_pop(lpCtx);
+    return 0;
+  });
+  __EXIT_ON_ERROR(hRes);
 
   //register C++ objects
   hRes = Internals::CFileFieldJsObject::Register(cJvm, FALSE, FALSE);
@@ -124,13 +119,6 @@ HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CHttpServer:
   }
 
   //remote ip and port
-  hRes = cJvm.CreateObject("AddressFamily");
-  __EXIT_ON_ERROR(hRes);
-  hRes = cJvm.AddObjectNumericProperty("AddressFamily", "IPV4", 1.0, CJavascriptVM::PropertyFlagEnumerable);
-  __EXIT_ON_ERROR(hRes);
-  hRes = cJvm.AddObjectNumericProperty("AddressFamily", "IPV6", 2.0, CJavascriptVM::PropertyFlagEnumerable);
-  __EXIT_ON_ERROR(hRes);
-
   lpSckMgr = lpRequest->GetUnderlyingSocketManager();
   hConn = lpRequest->GetUnderlyingSocket();
   if (hConn == NULL || lpSckMgr == NULL)
@@ -146,7 +134,7 @@ HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CHttpServer:
                             sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b2, sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b3,
                             sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b4) == FALSE)
         return E_OUTOFMEMORY;
-      hRes = cJvm.AddObjectNumericProperty("request.remote", "family", 1.0, CJavascriptVM::PropertyFlagEnumerable);
+      hRes = cJvm.AddObjectStringProperty("request.remote", "family", "ipv4", CJavascriptVM::PropertyFlagEnumerable);
       __EXIT_ON_ERROR(hRes);
       hRes = cJvm.AddObjectStringProperty("request.remote", "address", (LPCSTR)cStrTempA,
                                           CJavascriptVM::PropertyFlagEnumerable);
@@ -203,7 +191,7 @@ HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CHttpServer:
         }
         szBufA[(i << 1) + 1 - 2] = 0;
       }
-      hRes = cJvm.AddObjectNumericProperty("request.remote", "family", 2.0, CJavascriptVM::PropertyFlagEnumerable);
+      hRes = cJvm.AddObjectStringProperty("request.family", "family", "ipv6", CJavascriptVM::PropertyFlagEnumerable);
       __EXIT_ON_ERROR(hRes);
       hRes = cJvm.AddObjectStringProperty("request.remote", "address", (LPCSTR)cStrTempA,
                                           CJavascriptVM::PropertyFlagEnumerable);

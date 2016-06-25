@@ -1,6 +1,17 @@
 @ECHO OFF
 SETLOCAL ENABLEEXTENSIONS
 
+IF [%_PERLPATH%] == [] (
+    ECHO Please set _PERLPATH environment variable to point where Perl 5 is located
+    PAUSE
+    GOTO end_with_error
+)
+IF [%_NASMPATH%] == [] (
+    ECHO Please set _NASMPATH environment variable to point where Netwide Assembler is located
+    PAUSE
+    GOTO end_with_error
+)
+
 SET _PLATFORM=
 SET _PLATFORM2=
 SET _ISDEBUG=
@@ -48,76 +59,39 @@ IF NOT [%_ISDEBUG%] == [] (
 SET _OBJDIR=%~dp0..\..\obj\%_DESTPATH%\OpenSSL
 SET _LIBDIR=%~dp0..\..\Libs\%_DESTPATH%
 
-SET PATH=%~dp0perl\bin;%~dp0nasm;%PATH%
-SET PERL5LIB=%~dp0perl\lib
-
-
-REM Cleanup some temporary folders
-RD /S /Q "%~dp0Source\inc32" >NUL 2>NUL
-RD /S /Q "%_OBJDIR%" >NUL 2>NUL
-RD /S /Q "%~dp0Source\out32" >NUL 2>NUL
-RD /S /Q "%~dp0Source\out32.dbg" >NUL 2>NUL
-MD "%_LIBDIR%" >NUL 2>NUL
-MD "%_OBJDIR%" >NUL 2>NUL
-
+SET PATH=%_PERLPATH%\bin;%_NASMPATH%\;%PATH%
 
 REM Prepare
 PUSHD "%~dp0Source"
 ECHO Configuring...
-perl.exe Configure %_CONFIGDEBUG%%_CONFIGTARGET% %_DEFINE_NOERR% no-sock no-rc2 no-idea no-cast no-md2 no-mdc2 no-camellia -DOPENSSL_NO_DGRAM -DOPENSSL_NO_OCSP -DUNICODE -D_UNICODE "--prefix=%_LIBDIR%" "-FI%~dp0..\config.h" "--config=%~dp0..\compiler_config.conf"
+perl.exe Configure %_CONFIGDEBUG%%_CONFIGTARGET% %_DEFINE_NOERR% no-sock no-rc2 no-idea no-cast no-md2 no-mdc2 no-camellia no-shared -DOPENSSL_NO_DGRAM -DOPENSSL_NO_CAPIENG -DUNICODE -D_UNICODE "--config=%~dp0..\compiler_config.conf"
+REM  -DOPENSSL_NO_OCSP "--prefix=%_LIBDIR%" "-FI%~dp0..\config.h"
 IF NOT %ERRORLEVEL% == 0 GOTO bad_prepare
 
-
-REM From ms\do_ms.bat and ms\do_win64a.bat
-ECHO Generating makefiles...
-
-TYPE util\mkfiles.pl | FINDSTR /v "\"test\"," | FINDSTR /v "\"apps\"," >util\mkfiles2.pl
-perl.exe util\mkfiles2.pl >MINFO
-DEL /Q util\mkfiles2.pl
-IF NOT %ERRORLEVEL% == 0 GOTO bad_prepare
-
-IF [%_PLATFORM%] == [x86] (
-    perl.exe util\mk1mf.pl nasm "TMP=%_OBJDIR%" VC-WIN32 >ms\nt.mak
-    IF NOT %ERRORLEVEL% == 0 GOTO bad_prepare
-) ELSE (
-    perl.exe ms\uplink-x86_64.pl masm > ms\uptable.asm
-    "%VCINSTALLDIR%\bin\x86_amd64\ML64.exe" -c -Foms\uptable.obj ms\uptable.asm
-    IF NOT %ERRORLEVEL% == 0 GOTO bad_compile
-    perl.exe util\mk1mf.pl nasm "TMP=%_OBJDIR%" VC-WIN64A >ms\nt.mak
-    IF NOT %ERRORLEVEL% == 0 GOTO bad_prepare
-)
-
-CSCRIPT "..\find_and_replace.vbs" //nologo ms\nt.mak "$(FIPS_SHA1_EXE) lib exe" "$(FIPS_SHA1_EXE) lib" >ms\nt2.mak
-MOVE /Y ms\nt2.mak ms\nt.mak
-
-perl.exe util\mkdef.pl 32 libeay >ms\libeay32.def
-IF NOT %ERRORLEVEL% == 0 GOTO bad_prepare
-perl.exe util\mkdef.pl 32 ssleay >ms\ssleay32.def  
-IF NOT %ERRORLEVEL% == 0 GOTO bad_prepare
-
-REM Fix buildinf.h
-ECHO #define DATE "%date% %time%" >%~dp0crypto\buildinf.h
+REM Clean before compile
+NMAKE clean >NUL 2>NUL
 
 REM Compile
-nmake -f ms\nt.mak
+NMAKE
 IF NOT %ERRORLEVEL% == 0 GOTO bad_compile
-POPD
+
+REM Pause 5 seconds because NMake's processes may still creating the lib WTF?????
+PING 127.0.0.1 -n 6 >NUL
 
 REM Move needed files
-IF NOT [%_ISDEBUG%] == [] (
-    MOVE "%~dp0Source\out32.dbg\libeay32.lib" "%_LIBDIR%\libeay32.lib" >NUL 2>NUL
-    MOVE "%~dp0Source\out32.dbg\ssleay32.lib" "%_LIBDIR%\ssleay32.lib" >NUL 2>NUL
-) ELSE (
-    MOVE "%~dp0Source\out32\libeay32.lib" "%_LIBDIR%\libeay32.lib" >NUL 2>NUL
-    MOVE "%~dp0Source\out32\ssleay32.lib" "%_LIBDIR%\ssleay32.lib" >NUL 2>NUL
-)
+MD "%_LIBDIR%" >NUL 2>NUL
+MD "%_OBJDIR%" >NUL 2>NUL
+MOVE /Y "%~dp0libssl.lib"      "%_LIBDIR%"
+MOVE /Y "%~dp0libcrypto.lib"   "%_LIBDIR%"
+MOVE /Y "%~dp0ossl_static.pdb" "%_LIBDIR%"
+MD "%~dp0..\Generated" >NUL 2>NUL
+MD "%~dp0..\Generated\OpenSSL" >NUL 2>NUL
+COPY /Y "%~dp0include\openssl\opensslconf.h" "%~dp0..\Generated\OpenSSL"
 
-REM Cleanup
-RD /S /Q "%~dp0Source\out32" >NUL 2>NUL
-RD /S /Q "%~dp0Source\out32.dbg" >NUL 2>NUL
-DEL /Q "%_OBJDIR%\*.c" >NUL 2>NUL
-DEL /Q "%_OBJDIR%\*.h" >NUL 2>NUL
+REM Clean after compile
+NMAKE clean >NUL 2>NUL
 
+POPD
 ENDLOCAL
 GOTO end
 

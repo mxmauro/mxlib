@@ -26,7 +26,20 @@
 
 //-----------------------------------------------------------
 
+typedef struct {
+  MX::CJavascriptVM::protected_function func;
+  BOOL bPushDummyNull;
+} RUN_NATIVE_PROTECTED_DATA;
+
+//-----------------------------------------------------------
+
 static DukTape::duk_ret_t OnJsOutputDebugString(__in DukTape::duk_context *lpCtx);
+
+static void* my_duk_alloc_function(void *udata, DukTape::duk_size_t size);
+static void* my_duk_realloc_function(void *udata, void *ptr, DukTape::duk_size_t size);
+static void my_duk_free_function(void *udata, void *ptr);
+
+static void my_duk_fatal_function(void *udata, const char *msg);
 
 //-----------------------------------------------------------
 
@@ -54,12 +67,15 @@ VOID CJavascriptVM::On(__in OnRequireModuleCallback _cRequireModuleCallback)
 
 HRESULT CJavascriptVM::Initialize()
 {
+  HRESULT hRes = S_OK;
+
   Finalize();
   //----
-  lpCtx = DukTape::duk_create_heap_default();
+  lpCtx = DukTape::duk_create_heap(&my_duk_alloc_function, &my_duk_realloc_function, &my_duk_free_function,
+                                   NULL, &my_duk_fatal_function);
   if (!lpCtx)
     return E_OUTOFMEMORY;
-  try
+  hRes = RunNativeProtected(0, 0, [this](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     //setup "jsVM" accessible only from native for callbacks
     DukTape::duk_push_global_object(lpCtx);
@@ -78,19 +94,17 @@ HRESULT CJavascriptVM::Initialize()
     DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::OnModSearch, 4);
     DukTape::duk_put_prop_string(lpCtx, -2, "modSearch");
     DukTape::duk_pop(lpCtx);
-  }
-  catch (CJavascriptVM::CException& ex)
+    //setup DukTape's CommonJS module
+    DukTape::duk_module_duktape_init(lpCtx);
+    return 0;
+  });
+  if (FAILED(hRes))
   {
-    HRESULT hRes;
-
-    hRes = ex.GetErrorCode();
-    ex.DebugPrintMessage();
     DukTape::duk_destroy_heap(lpCtx);
     lpCtx = NULL;
-    return hRes;
   }
   //done
-  return S_OK;
+  return hRes;
 }
 
 VOID CJavascriptVM::Finalize()
@@ -114,12 +128,8 @@ CJavascriptVM* CJavascriptVM::FromContext(__in DukTape::duk_context *lpCtx)
   return lpVM;
 }
 
-#define __RUN_EVAL_FLAGS (DUK_COMPILE_SAFE | DUK_COMPILE_STRLEN | DUK_COMPILE_NOSOURCE)
 HRESULT CJavascriptVM::Run(__in_z LPCSTR szCodeA, __in_z_opt LPCWSTR szFileNameW, __in_opt BOOL bIgnoreResult)
 {
-  CStringA cStrTempA;
-  DukTape::duk_idx_t nStackTop;
-  const char *sA;
   HRESULT hRes;
 
   if (szCodeA == NULL)
@@ -135,17 +145,21 @@ HRESULT CJavascriptVM::Run(__in_z LPCSTR szCodeA, __in_z_opt LPCWSTR szFileNameW
   }
   if (szFileNameW == NULL || *szFileNameW == 0)
     szFileNameW = L"main.jss";
-  hRes = Utf8_Encode(cStrTempA, szFileNameW);
-  if (FAILED(hRes))
-    return hRes;
+  
   //initialize last execution error
   sLastExecError.cStrMessageA.Empty();
   sLastExecError.cStrFileNameA.Empty();
   sLastExecError.nLine = 0;
   sLastExecError.cStrStackTraceA.Empty();
-  nStackTop = DukTape::duk_get_top(lpCtx);
-  try
+  hRes = RunNativeProtected(0, (bIgnoreResult != FALSE) ? 0 : 1, [szFileNameW, szCodeA, bIgnoreResult, this]
+                            (__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
+    CStringA cStrTempA;
+    HRESULT hRes;
+
+    hRes = Utf8_Encode(cStrTempA, szFileNameW);
+    if (FAILED(hRes))
+      MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
     //modify require.id to match our passed filename so we have a correct path resolution in 'modSearch'
     DukTape::duk_push_global_object(lpCtx);
     DukTape::duk_get_prop_string(lpCtx, -1, "require");
@@ -154,108 +168,50 @@ HRESULT CJavascriptVM::Run(__in_z LPCSTR szCodeA, __in_z_opt LPCWSTR szFileNameW
     DukTape::duk_pop_2(lpCtx);
     //run code
     DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
-    if (DukTape::duk_eval_raw(lpCtx, szCodeA, 0, __RUN_EVAL_FLAGS) != DUK_EXEC_SUCCESS)
-    {
-      //get message
-      DukTape::duk_get_prop_string(lpCtx, -1, "message");
-      sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "Unknown";
-      if (sLastExecError.cStrMessageA.Copy(sA) == FALSE)
-      {
-        hRes = E_OUTOFMEMORY;
-        DukTape::duk_set_top(lpCtx, nStackTop);
-        goto after_err;
-      }
-      DukTape::duk_pop(lpCtx);
-      //get filename
-      DukTape::duk_get_prop_string(lpCtx, -1, "fileName");
-      sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "";
-      if (sLastExecError.cStrFileNameA.Copy(sA) == FALSE)
-      {
-        hRes = E_OUTOFMEMORY;
-        DukTape::duk_set_top(lpCtx, nStackTop);
-        goto after_err;
-      }
-      DukTape::duk_pop(lpCtx);
-      //get line number
-      DukTape::duk_get_prop_string(lpCtx, -1, "lineNumber");
-      sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "";
-      while (*sA >= '0' && *sA <= '9')
-      {
-        sLastExecError.nLine = sLastExecError.nLine * 10 + ((ULONG)*sA++ - '0');
-      }
-      DukTape::duk_pop(lpCtx);
-      //stack trace
-      DukTape::duk_get_prop_string(lpCtx, -1, "stack");
-      sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "Unknown";
-      if (sLastExecError.cStrStackTraceA.Copy(sA) == FALSE)
-      {
-        hRes = E_OUTOFMEMORY;
-        DukTape::duk_set_top(lpCtx, nStackTop);
-        goto after_err;
-      }
-      DukTape::duk_pop(lpCtx);
-      hRes = E_FAIL;
-after_err: ;
-    }
-    if (bIgnoreResult != FALSE)
-      DukTape::duk_pop(lpCtx);
-  }
-  catch (CJavascriptVM::CException& ex)
-  {
-    DukTape::duk_set_top(lpCtx, nStackTop);
-    hRes = ex.GetErrorCode();
-  }
+    DukTape::duk_eval_raw(lpCtx, szCodeA, 0, DUK_COMPILE_STRLEN | DUK_COMPILE_NOSOURCE);
+    return (bIgnoreResult != FALSE) ? 1 : 0;
+  });
   //done
   return hRes;
 }
-#undef __RUN_EVAL_FLAGS
 
-HRESULT CJavascriptVM::HResultFromDukTapeErr(__in DukTape::duk_errcode_t code)
+HRESULT CJavascriptVM::RunNativeProtected(__in DukTape::duk_idx_t nArgsCount, __in DukTape::duk_idx_t nRetValuesCount,
+                                          __in protected_function func)
 {
-  switch (code)
-  {
-    case DUK_ERR_NONE:
-      return S_OK;
-    case DUK_ERR_UNIMPLEMENTED_ERROR:
-      return E_NOTIMPL;
-    case DUK_ERR_UNSUPPORTED_ERROR:
-      return MX_E_Unsupported;
-    case DUK_ERR_ALLOC_ERROR:
-      return E_OUTOFMEMORY;
-  }
-  return MX_E_ExceptionRaised;
-}
+  RUN_NATIVE_PROTECTED_DATA sData;
+  DukTape::duk_idx_t nStackTop;
+  HRESULT hRes = S_OK;
 
-DukTape::duk_errcode_t CJavascriptVM::DukTapeErrFromHResult(__in HRESULT hRes)
-{
-  if (SUCCEEDED(hRes))
-    return DUK_ERR_NONE;
-  switch (hRes)
+  nStackTop = DukTape::duk_get_top(lpCtx);
+  sData.func = func;
+  sData.bPushDummyNull = FALSE;
+  if (nRetValuesCount == 0)
   {
-    case E_NOTIMPL:
-      return DUK_ERR_UNIMPLEMENTED_ERROR;
-    case 0x80070000|ERROR_NOT_SUPPORTED:
-      return DUK_ERR_UNSUPPORTED_ERROR;
-    case E_OUTOFMEMORY:
-      return DUK_ERR_ALLOC_ERROR;
+    sData.bPushDummyNull = TRUE;
+    nRetValuesCount = 1;
   }
-  return DUK_ERR_ERROR;
-}
-
-DukTape::duk_ret_t CJavascriptVM::DukTapeRetFromHResult(__in HRESULT hRes)
-{
-  if (SUCCEEDED(hRes))
-    return DUK_ERR_NONE;
-  switch (hRes)
+  try
   {
-    case E_NOTIMPL:
-      return DUK_RET_UNIMPLEMENTED_ERROR;
-    case 0x80070000|ERROR_NOT_SUPPORTED:
-      return DUK_RET_UNSUPPORTED_ERROR;
-    case E_OUTOFMEMORY:
-      return DUK_RET_ALLOC_ERROR;
+    if (DukTape::duk_safe_call(lpCtx, &CJavascriptVM::_RunNativeProtectedHelper, &sData, nArgsCount,
+                               nRetValuesCount) != DUK_EXEC_SUCCESS)
+    {
+      GetErrorInfoFromException(-1);
+      hRes = sLastExecError.hRes;
+      DukTape::duk_pop(lpCtx);
+    }
+    else if (sData.bPushDummyNull != FALSE)
+    {
+      //because of a bug in 'duk_safe_call', we enforce returning at least one result so we can see the error code
+      DukTape::duk_pop(lpCtx);
+    }
   }
-  return DUK_RET_ERROR;
+  catch (HRESULT _hRes)
+  {
+    DukTape::duk_set_top(lpCtx, nStackTop);
+    hRes = _hRes;
+  }
+  //done
+  return hRes;
 }
 
 HRESULT CJavascriptVM::AddNativeFunction(__in_z LPCSTR szFuncNameA, __in OnNativeFunctionCallback cCallback,
@@ -279,21 +235,25 @@ HRESULT CJavascriptVM::AddProperty(__in_z LPCSTR szPropertyNameA, __in_opt BOOL 
 
 HRESULT CJavascriptVM::AddStringProperty(__in_z LPCSTR szPropertyNameA, __in_z LPCSTR szValueA, __in_opt int nFlags)
 {
+  HRESULT hRes;
+
   if (lpCtx == NULL)
     return E_FAIL;
-  try
+  hRes = RunNativeProtected(0, 1, [szValueA](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     if (szValueA != NULL)
       DukTape::duk_push_string(lpCtx, szValueA);
     else
       DukTape::duk_push_null(lpCtx);
-  }
-  catch (CJavascriptVM::CException& ex)
+    return 1;
+  });
+  if (SUCCEEDED(hRes))
   {
-    return ex.GetErrorCode();
+    hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
+                                               NullCallback());
   }
-  return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                             NullCallback());
+  //done
+  return hRes;
 }
 
 HRESULT CJavascriptVM::AddStringProperty(__in_z LPCSTR szPropertyNameA, __in_z LPCWSTR szValueW,
@@ -309,95 +269,110 @@ HRESULT CJavascriptVM::AddStringProperty(__in_z LPCSTR szPropertyNameA, __in_z L
   hRes = Utf8_Encode(cStrTempA, szValueW);
   if (SUCCEEDED(hRes))
     hRes = AddStringProperty(szPropertyNameA, (LPCSTR)cStrTempA, nFlags);
+  //done
   return hRes;
 }
 
 HRESULT CJavascriptVM::AddBooleanProperty(__in_z LPCSTR szPropertyNameA, __in BOOL bValue, __in_opt int nFlags)
 {
+  HRESULT hRes;
+
   if (lpCtx == NULL)
     return E_FAIL;
-  try
+  hRes = RunNativeProtected(0, 1, [bValue](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     DukTape::duk_push_boolean(lpCtx, (bValue != FALSE) ? true : false);
-  }
-  catch (CJavascriptVM::CException& ex)
+    return 1;
+  });
+  if (SUCCEEDED(hRes))
   {
-    return ex.GetErrorCode();
+    hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
+                                               NullCallback());
   }
-  return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                             NullCallback());
+  //done
+  return hRes;
 }
 
 HRESULT CJavascriptVM::AddIntegerProperty(__in_z LPCSTR szPropertyNameA, __in int nValue, __in_opt int nFlags)
 {
+  HRESULT hRes;
+
   if (lpCtx == NULL)
     return E_FAIL;
-  try
+  hRes = RunNativeProtected(0, 1, [nValue](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)nValue);
-  }
-  catch (CJavascriptVM::CException& ex)
+    return 1;
+  });
+  if (SUCCEEDED(hRes))
   {
-    return ex.GetErrorCode();
+    hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
+                                               NullCallback());
   }
-  return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                             NullCallback());
+  //done
+  return hRes;
 }
 
 HRESULT CJavascriptVM::AddNumericProperty(__in_z LPCSTR szPropertyNameA, __in double nValue, __in_opt int nFlags)
 {
+  HRESULT hRes;
+
   if (lpCtx == NULL)
     return E_FAIL;
-  try
+  hRes = RunNativeProtected(0, 1, [nValue](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     DukTape::duk_push_number(lpCtx, nValue);
-  }
-  catch (CJavascriptVM::CException& ex)
+    return 1;
+  });
+  if (SUCCEEDED(hRes))
   {
-    return ex.GetErrorCode();
+    hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
+                                               NullCallback());
   }
-  return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                             NullCallback());
+  //done
+  return hRes;
 }
 
 HRESULT CJavascriptVM::AddNullProperty(__in_z LPCSTR szPropertyNameA, __in_opt int nFlags)
 {
+  HRESULT hRes;
+
   if (lpCtx == NULL)
     return E_FAIL;
-  try
+  hRes = RunNativeProtected(0, 1, [](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     DukTape::duk_push_null(lpCtx);
-  }
-  catch (CJavascriptVM::CException& ex)
+    return 1;
+  });
+  if (SUCCEEDED(hRes))
   {
-    return ex.GetErrorCode();
+    hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
+                                               NullCallback());
   }
-  return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                             NullCallback());
+  //done
+  return hRes;
 }
 
 HRESULT CJavascriptVM::AddJsObjectProperty(__in_z LPCSTR szPropertyNameA, __in CJsObjectBase *lpObject,
                                            __in_opt int nFlags)
 {
-  DukTape::duk_idx_t nStackTop;
   HRESULT hRes;
 
   if (lpCtx == NULL || lpCtx != lpObject->GetContext())
     return E_FAIL;
-  nStackTop = DukTape::duk_get_top(lpCtx);
-  try
+  hRes = RunNativeProtected(0, 1, [lpObject](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     lpObject->PushThis();
-  }
-  catch (CJavascriptVM::CException& ex)
+    return 1;
+  });
+  if (SUCCEEDED(hRes))
   {
-    DukTape::duk_set_top(lpCtx, nStackTop);
-    return ex.GetErrorCode();
+    hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
+                                               NullCallback());
+    if (FAILED(hRes))
+      lpObject->Release();
   }
-  hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                             NullCallback());
-  if (FAILED(hRes))
-    lpObject->Release();
+  //done
   return hRes;
 }
 
@@ -437,7 +412,6 @@ HRESULT CJavascriptVM::PushProperty(__in_z LPCSTR szPropertyNameA)
 
 HRESULT CJavascriptVM::CreateObject(__in_z LPCSTR szObjectNameA, __in_opt CProxyCallbacks *lpCallbacks)
 {
-  LPCSTR sA;
   HRESULT hRes;
 
   if (szObjectNameA == NULL)
@@ -446,23 +420,26 @@ HRESULT CJavascriptVM::CreateObject(__in_z LPCSTR szObjectNameA, __in_opt CProxy
     return E_INVALIDARG;
   if (lpCtx == NULL)
     return E_FAIL;
-  try
+  hRes = RunNativeProtected(0, 0, [szObjectNameA, lpCallbacks](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
+    LPCSTR sA, szObjectNameA_2;
+    HRESULT hRes;
+
     hRes = Internals::JsLib::FindObject(lpCtx, szObjectNameA, TRUE, FALSE); //NOTE: Should the parent be the proxy???
     if (FAILED(hRes))
-      return hRes;
+      MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
     //if FindObject returned OK, then the object we are trying to create, already exists
     if (hRes == S_OK)
-      return MX_E_AlreadyExists;
+      MX_JS_THROW_HRESULT_ERROR(lpCtx, MX_E_AlreadyExists);
     MX_ASSERT(hRes == S_FALSE);
     //the stack contains the parent object, create new one
     DukTape::duk_push_object(lpCtx);
     //advance 'szObjectNameA' to point to the last portion of the name
-    sA = StrChrA(szObjectNameA, '.', TRUE);
+    sA = StrChrA(szObjectNameA_2 = szObjectNameA, '.', TRUE);
     if (sA != NULL)
-      szObjectNameA = sA + 1;
+      szObjectNameA_2 = sA + 1;
     //store name in object's internal property
-    DukTape::duk_push_string(lpCtx, szObjectNameA);
+    DukTape::duk_push_string(lpCtx, szObjectNameA_2);
     DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""name");
     //setup callbacks (if any) by creating and returning a Proxy object
     if (lpCallbacks != NULL)
@@ -476,7 +453,7 @@ HRESULT CJavascriptVM::CreateObject(__in_z LPCSTR szObjectNameA, __in_opt CProxy
       lpCallbacks->serialize(p);
       DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""callbacks");
       //save object's name
-      DukTape::duk_push_string(lpCtx, szObjectNameA);
+      DukTape::duk_push_string(lpCtx, szObjectNameA_2);
       DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""name");
       //add handler functions
       DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::_ProxyHasPropHelper, 2);
@@ -500,16 +477,13 @@ HRESULT CJavascriptVM::CreateObject(__in_z LPCSTR szObjectNameA, __in_opt CProxy
       DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""proxyTarget");
     }
     //store object in its parent
-    DukTape::duk_put_prop_string(lpCtx, -2, szObjectNameA);
+    DukTape::duk_put_prop_string(lpCtx, -2, szObjectNameA_2);
     //pop parent object
     DukTape::duk_pop(lpCtx);
-  }
-  catch (CJavascriptVM::CException& ex)
-  {
-    return ex.GetErrorCode();
-  }
+    return 0;
+  });
   //done
-  return S_OK;
+  return hRes;
 }
 
 HRESULT CJavascriptVM::AddObjectNativeFunction(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szFuncNameA,
@@ -537,23 +511,27 @@ HRESULT CJavascriptVM::AddObjectProperty(__in_z LPCSTR szObjectNameA, __in_z LPC
 HRESULT CJavascriptVM::AddObjectStringProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA,
                                                __in_z LPCSTR szValueA, __in_opt int nFlags)
 {
+  HRESULT hRes;
+
   if (szObjectNameA == NULL)
     return E_POINTER;
   if (lpCtx == NULL)
     return E_FAIL;
-  try
+  hRes = RunNativeProtected(0, 1, [szValueA](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     if (szValueA != NULL)
       DukTape::duk_push_string(lpCtx, szValueA);
     else
       DukTape::duk_push_null(lpCtx);
-  }
-  catch (CJavascriptVM::CException& ex)
+    return 1;
+  });
+  if (SUCCEEDED(hRes))
   {
-    return ex.GetErrorCode();
+    hRes = Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
+                                               NullCallback());
   }
-  return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                             NullCallback());
+  //done
+  return hRes;
 }
 
 HRESULT CJavascriptVM::AddObjectStringProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA,
@@ -569,109 +547,124 @@ HRESULT CJavascriptVM::AddObjectStringProperty(__in_z LPCSTR szObjectNameA, __in
   hRes = Utf8_Encode(cStrTempA, szValueW);
   if (SUCCEEDED(hRes))
     hRes = AddObjectStringProperty(szObjectNameA, szPropertyNameA, (LPCSTR)cStrTempA, nFlags);
+  //done
   return hRes;
 }
 
 HRESULT CJavascriptVM::AddObjectBooleanProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA,
                                                 __in BOOL bValue, __in_opt int nFlags)
 {
+  HRESULT hRes;
+
   if (szObjectNameA == NULL)
     return E_POINTER;
   if (lpCtx == NULL)
     return E_FAIL;
-  try
+  hRes = RunNativeProtected(0, 1, [bValue](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     DukTape::duk_push_boolean(lpCtx, (bValue != FALSE) ? true : false);
-  }
-  catch (CJavascriptVM::CException& ex)
+    return 1;
+  });
+  if (SUCCEEDED(hRes))
   {
-    return ex.GetErrorCode();
+    hRes = Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
+                                               NullCallback());
   }
-  return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                             NullCallback());
+  //done
+  return hRes;
 }
 
 HRESULT CJavascriptVM::AddObjectIntegerProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA,
                                                 __in int nValue, __in_opt int nFlags)
 {
+  HRESULT hRes;
+
   if (szObjectNameA == NULL)
     return E_POINTER;
   if (lpCtx == NULL)
     return E_FAIL;
-  try
+  hRes = RunNativeProtected(0, 1, [nValue](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)nValue);
-  }
-  catch (CJavascriptVM::CException& ex)
+    return 1;
+  });
+  if (SUCCEEDED(hRes))
   {
-    return ex.GetErrorCode();
+    hRes = Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
+                                               NullCallback());
   }
-  return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                             NullCallback());
+  //done
+  return hRes;
 }
 
 HRESULT CJavascriptVM::AddObjectNumericProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA,
                                                 __in double nValue, __in_opt int nFlags)
 {
+  HRESULT hRes;
+
   if (szObjectNameA == NULL)
     return E_POINTER;
   if (lpCtx == NULL)
     return E_FAIL;
-  try
+  hRes = RunNativeProtected(0, 1, [nValue](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     DukTape::duk_push_number(lpCtx, nValue);
-  }
-  catch (CJavascriptVM::CException& ex)
+    return 1;
+  });
+  if (SUCCEEDED(hRes))
   {
-    return ex.GetErrorCode();
+    hRes = Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags,
+                                               NullCallback(), NullCallback());
   }
-  return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                             NullCallback());
+  //done
+  return hRes;
 }
 
 HRESULT CJavascriptVM::AddObjectNullProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA,
                                              __in_opt int nFlags)
 {
+  HRESULT hRes;
+
   if (szObjectNameA == NULL)
     return E_POINTER;
   if (lpCtx == NULL)
     return E_FAIL;
-  try
+  hRes = RunNativeProtected(0, 1, [](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     DukTape::duk_push_null(lpCtx);
-  }
-  catch (CJavascriptVM::CException& ex)
+    return 1;
+  });
+  if (SUCCEEDED(hRes))
   {
-    return ex.GetErrorCode();
+    hRes = Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags,
+                                               NullCallback(), NullCallback());
   }
-  return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                             NullCallback());
+  //done
+  return hRes;
 }
 
 HRESULT CJavascriptVM::AddObjectJsObjectProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA,
                                                  __in CJsObjectBase *lpObject, __in_opt int nFlags)
 {
-  DukTape::duk_idx_t nStackTop;
   HRESULT hRes;
 
   if (szObjectNameA == NULL)
     return E_POINTER;
   if (lpCtx == NULL || lpCtx != lpObject->GetContext())
     return E_FAIL;
-  nStackTop = DukTape::duk_get_top(lpCtx);
-  try
+  hRes = RunNativeProtected(0, 1, [lpObject](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     lpObject->PushThis();
-  }
-  catch (CJavascriptVM::CException& ex)
+    return 1;
+  });
+  if (SUCCEEDED(hRes))
   {
-    DukTape::duk_set_top(lpCtx, nStackTop);
-    return ex.GetErrorCode();
+    hRes = Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags,
+                                               NullCallback(), NullCallback());
+    if (FAILED(hRes))
+      lpObject->Release();
   }
-  hRes = Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                             NullCallback());
-  if (FAILED(hRes))
-    lpObject->Release();
+  //done
   return hRes;
 }
 
@@ -763,8 +756,7 @@ HRESULT CJavascriptVM::AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCSTR 
           chA = 'f';
           break;
       }
-      if (cStrCodeA.ConcatN("\\", 1) == FALSE ||
-          cStrCodeA.ConcatN(&chA, 1) == FALSE)
+      if (cStrCodeA.ConcatN("\\", 1) == FALSE || cStrCodeA.ConcatN(&chA, 1) == FALSE)
         return E_OUTOFMEMORY;
     }
   }
@@ -786,6 +778,7 @@ HRESULT CJavascriptVM::AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCWSTR
   hRes = MX::Utf8_Encode(cStrTempA, szStrW, nStrLen);
   if (SUCCEEDED(hRes))
     hRes = AddSafeString(cStrCodeA, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+  //done
   return hRes;
 }
 
@@ -796,7 +789,6 @@ DukTape::duk_ret_t CJavascriptVM::OnModSearch(__in DukTape::duk_context *lpCtx)
   CStringA cStrCodeA;
   LPCSTR szModuleNameA;
   CJavascriptVM *lpVM;
-  DukTape::duk_ret_t nErr;
   HRESULT hRes;
 
   //get virtual machine pointer
@@ -804,39 +796,22 @@ DukTape::duk_ret_t CJavascriptVM::OnModSearch(__in DukTape::duk_context *lpCtx)
   //initialize context
   cContext.lpCtx = lpCtx;
   szModuleNameA = DukTape::duk_require_string(lpCtx, 0);
-  if (FAILED(Utf8_Decode(cStrTempW, szModuleNameA)))
-    return DUK_RET_ALLOC_ERROR;
+  hRes = Utf8_Decode(cStrTempW, szModuleNameA);
+  if (FAILED(hRes))
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
   cContext.szIdW = (LPCWSTR)cStrTempW;
   cContext.nRequireModuleIndex = 1;
   cContext.nExportsObjectIndex = 2;
   cContext.nModuleObjectIndex = 3;
   //raise callback
   hRes = (lpVM->cRequireModuleCallback) ? (lpVM->cRequireModuleCallback(lpCtx, &cContext, cStrCodeA)) : E_NOTIMPL;
-  if (SUCCEEDED(hRes))
-  {
-    if (cStrCodeA.IsEmpty() == FALSE)
-      DukTape::duk_push_string(lpCtx, (LPCSTR)cStrCodeA);
-    else
-      DukTape::duk_push_undefined(lpCtx);
-    return 1;
-  }
-  switch (hRes)
-  {
-    case E_NOTIMPL:
-      nErr = DUK_RET_UNIMPLEMENTED_ERROR;
-      break;
-    case 0x80070000|ERROR_NOT_SUPPORTED:
-      nErr = DUK_RET_UNSUPPORTED_ERROR;
-      break;
-    case E_OUTOFMEMORY:
-      nErr = DUK_RET_ALLOC_ERROR;
-      break;
-    default:
-      nErr = DUK_RET_INTERNAL_ERROR;
-      break;
-  }
-  MX_JS_THROW_ERROR(lpCtx, nErr, "Cannot load module '%s'", szModuleNameA);
-  return nErr;
+  if (FAILED(hRes))
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
+  if (cStrCodeA.IsEmpty() == FALSE)
+    DukTape::duk_push_string(lpCtx, (LPCSTR)cStrCodeA);
+  else
+    DukTape::duk_push_undefined(lpCtx);
+  return 1;
 }
 
 DukTape::duk_ret_t CJavascriptVM::_ProxyHasPropHelper(__in DukTape::duk_context *lpCtx)
@@ -1088,18 +1063,141 @@ DukTape::duk_ret_t CJavascriptVM::_ProxyDeletePropHelper(__in DukTape::duk_conte
   return 1;
 }
 
-} //namespace MX
-
-//-----------------------------------------------------------
-
-namespace DukTape {
-
-static void atPanic(__in duk_errcode_t code, __in const char *msg)
+DukTape::duk_ret_t CJavascriptVM::_RunNativeProtectedHelper(__in DukTape::duk_context *lpCtx, __in void *udata)
 {
-  throw MX::CJavascriptVM::CException(code, msg);
+  RUN_NATIVE_PROTECTED_DATA *lpData= (RUN_NATIVE_PROTECTED_DATA*)udata;
+  DukTape::duk_ret_t ret;
+
+  ret = lpData->func(lpCtx);
+  if (ret == 0 && lpData->bPushDummyNull != FALSE)
+  {
+    DukTape::duk_push_null(lpCtx);
+    ret = 1;
+  }
+  return ret;
 }
 
-} //namespace DukTape
+VOID CJavascriptVM::GetErrorInfoFromException(__in DukTape::duk_idx_t nStackIndex)
+{
+  static const struct {
+    DukTape::duk_uint_t code;
+    LPCSTR szMsgA;
+    HRESULT hRes;
+  } sTypedErrorCodes[] = {
+    { DUK_ERR_TYPE_ERROR,      DUK_STR_INVALID_CALL_ARGS,    E_INVALIDARG },
+    { DUK_ERR_ERROR,           DUK_STR_ALLOC_FAILED,         E_OUTOFMEMORY },
+    { DUK_ERR_RANGE_ERROR,     DUK_STR_STRING_TOO_LONG,      E_OUTOFMEMORY },
+    { DUK_ERR_RANGE_ERROR,     DUK_STR_BUFFER_TOO_LONG,      E_OUTOFMEMORY },
+    { DUK_ERR_ERROR,           DUK_STR_ALLOC_FAILED,         E_OUTOFMEMORY },
+    { DUK_ERR_RANGE_ERROR,     DUK_STR_RESULT_TOO_LONG,      E_OUTOFMEMORY },
+    { DUK_ERR_RANGE_ERROR,     DUK_STR_NUMBER_OUTSIDE_RANGE, MX_E_ArithmeticOverflow },
+  };
+
+  sLastExecError.hRes = E_FAIL;
+  sLastExecError.cStrFileNameA.Empty();
+  sLastExecError.nLine = 0;
+  sLastExecError.cStrMessageA.Empty();
+  sLastExecError.cStrStackTraceA.Empty();
+
+  nStackIndex = DukTape::duk_normalize_index(lpCtx, nStackIndex);
+  try
+  {
+    if (DukTape::duk_is_object(lpCtx, nStackIndex) != 0)
+    {
+      DukTape::duk_errcode_t nErrCode = DukTape::duk_get_error_code(lpCtx, nStackIndex);
+      DWORD dwValue;
+      LPCSTR sA;
+      SIZE_T i;
+
+      //get message
+      DukTape::duk_get_prop_string(lpCtx, nStackIndex, "message");
+      sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "Unknown";
+      if (sLastExecError.cStrMessageA.Copy(sA) == FALSE)
+      {
+err_nomem:
+        DukTape::duk_pop(lpCtx);
+        sLastExecError.hRes = E_OUTOFMEMORY;
+        return;
+      }
+      DukTape::duk_pop(lpCtx);
+      //get filename
+      DukTape::duk_get_prop_string(lpCtx, nStackIndex, "fileName");
+      sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "";
+      if (sLastExecError.cStrFileNameA.Copy(sA) == FALSE)
+        goto err_nomem;
+      DukTape::duk_pop(lpCtx);
+      //get line number
+      DukTape::duk_get_prop_string(lpCtx, nStackIndex, "lineNumber");
+      sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "";
+      while (*sA >= '0' && *sA <= '9')
+      {
+        sLastExecError.nLine = sLastExecError.nLine * 10 + ((ULONG)*sA++ - '0');
+      }
+      DukTape::duk_pop(lpCtx);
+      //stack trace
+      DukTape::duk_get_prop_string(lpCtx, nStackIndex, "stack");
+      sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "Unknown";
+      if (sLastExecError.cStrStackTraceA.Copy(sA) == FALSE)
+        goto err_nomem;
+      DukTape::duk_pop(lpCtx);
+
+      //check for typed errors
+      sA = (LPCSTR)(sLastExecError.cStrMessageA);
+      if (nErrCode == DUK_ERR_ERROR && sA[0] == '\xFF' && sA[1] == '\xFF')
+      {
+        dwValue = 0;
+        for (i=0; i<8; i++)
+        {
+          if (sA[i+2] >= L'0' && sA[i+2] <= L'9')
+            dwValue |= (DWORD) (sA[i+2] - L'0')       << ((7-i) << 2);
+          else if (sA[i+2] >= L'A' && sA[i+2] <= L'F')
+            dwValue |= (DWORD)((sA[i+2] - L'A') + 10) << ((7-i) << 2);
+          else if (sA[i+2] >= L'a' && sA[i+2] <= L'f')
+            dwValue |= (DWORD)((sA[i+2] - L'a') + 10) << ((7-i) << 2);
+          else
+            break;
+        }
+        if (i >= 8)
+          sLastExecError.hRes = (HRESULT)dwValue;
+      }
+      else
+      {
+        for (i=0; i<MX_ARRAYLEN(sTypedErrorCodes); i++)
+        {
+          if (nErrCode == sTypedErrorCodes[i].code)
+          {
+            if (sTypedErrorCodes[i].szMsgA == NULL ||
+                MX::StrCompareA(sTypedErrorCodes[i].szMsgA, sA) == 0)
+            {
+              sLastExecError.hRes = sTypedErrorCodes[i].hRes;
+              break;
+            }
+          }
+        }
+      }
+    }
+    else if (DukTape::duk_is_number(lpCtx, nStackIndex) != 0)
+    {
+      switch (DukTape::duk_require_int(lpCtx, nStackIndex))
+      {
+        case DUK_ERR_RANGE_ERROR:
+          sLastExecError.hRes = MX_E_ArithmeticOverflow;
+          break;
+      }
+    }
+  }
+  catch (...)
+  {
+    sLastExecError.hRes = MX_E_UnhandledException;
+    sLastExecError.cStrFileNameA.Empty();
+    sLastExecError.nLine = 0;
+    sLastExecError.cStrMessageA.Empty();
+    sLastExecError.cStrStackTraceA.Empty();
+  }
+  return;
+}
+
+} //namespace MX
 
 //-----------------------------------------------------------
 
@@ -1107,7 +1205,7 @@ static DukTape::duk_ret_t OnJsOutputDebugString(__in DukTape::duk_context *lpCtx
 {
   LPCSTR szBufA;
 
-  szBufA = duk_require_string(lpCtx, 0);
+  szBufA = DukTape::duk_require_string(lpCtx, 0);
 #ifdef _DEBUG
   if (szBufA != NULL && szBufA[0] != 0)
     MX::DebugPrint("%s\r\n", szBufA);
@@ -1115,3 +1213,25 @@ static DukTape::duk_ret_t OnJsOutputDebugString(__in DukTape::duk_context *lpCtx
   //done
   return 0;
 }
+
+static void* my_duk_alloc_function(void *udata, DukTape::duk_size_t size)
+{
+  return MX_MALLOC(size);
+}
+
+static void* my_duk_realloc_function(void *udata, void *ptr, DukTape::duk_size_t size)
+{
+  return MX_REALLOC(ptr, size);
+}
+
+static void my_duk_free_function(void *udata, void *ptr)
+{
+  MX_FREE(ptr);
+  return;
+}
+
+static void my_duk_fatal_function(void *udata, const char *msg)
+{
+  throw E_FAIL;
+}
+

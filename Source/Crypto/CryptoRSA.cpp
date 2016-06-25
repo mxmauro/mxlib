@@ -150,9 +150,12 @@ HRESULT CCryptoRSA::GenerateKeys(__in SIZE_T nBitsCount)
 
 SIZE_T CCryptoRSA::GetBitsCount() const
 {
-  if (lpInternalData == NULL || rsa_data->lpRsa == NULL || rsa_data->lpRsa->n == NULL)
+  const BIGNUM *lpN;
+
+  if (lpInternalData == NULL || rsa_data->lpRsa == NULL)
     return 0;
-  return (SIZE_T)BN_num_bits(rsa_data->lpRsa->n);
+  RSA_get0_key(rsa_data->lpRsa, &lpN, NULL, NULL);
+  return (lpN != NULL) ? (SIZE_T)BN_num_bits(lpN) : 0;
 }
 
 BOOL CCryptoRSA::HasPrivateKey() const
