@@ -151,7 +151,7 @@ HRESULT CJavascriptVM::Run(__in_z LPCSTR szCodeA, __in_z_opt LPCWSTR szFileNameW
   sLastExecError.cStrFileNameA.Empty();
   sLastExecError.nLine = 0;
   sLastExecError.cStrStackTraceA.Empty();
-  hRes = RunNativeProtected(0, (bIgnoreResult != FALSE) ? 0 : 1, [szFileNameW, szCodeA, bIgnoreResult, this]
+  hRes = RunNativeProtected(0, (bIgnoreResult != FALSE) ? 0 : 1, [szFileNameW, szCodeA, this]
                             (__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
   {
     CStringA cStrTempA;
@@ -169,7 +169,7 @@ HRESULT CJavascriptVM::Run(__in_z LPCSTR szCodeA, __in_z_opt LPCWSTR szFileNameW
     //run code
     DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
     DukTape::duk_eval_raw(lpCtx, szCodeA, 0, DUK_COMPILE_STRLEN | DUK_COMPILE_NOSOURCE);
-    return (bIgnoreResult != FALSE) ? 1 : 0;
+    return DukTape::duk_get_top(lpCtx);
   });
   //done
   return hRes;
