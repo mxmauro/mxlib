@@ -46,7 +46,7 @@ HRESULT CJavascriptVM::CRequireModuleContext::RequireModule(__in_z LPCWSTR szMod
     szModuleIdW++;
   if (*szModuleIdW == 0)
     return E_INVALIDARG;
-  hRes = lpJVM->RunNativeProtected(0, 0, [szModuleIdW, this](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = lpJVM->RunNativeProtected(0, 0, [szModuleIdW, this](__in DukTape::duk_context *lpCtx) -> VOID
   {
     CStringA cStrTempA;
 
@@ -55,7 +55,7 @@ HRESULT CJavascriptVM::CRequireModuleContext::RequireModule(__in_z LPCWSTR szMod
     DukTape::duk_dup(lpCtx, nRequireModuleIndex);
     DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
     DukTape::duk_call(lpCtx, 1);
-    return 0;
+    return;
   });
   //done
   return hRes;
@@ -89,13 +89,13 @@ HRESULT CJavascriptVM::CRequireModuleContext::AddStringProperty(__in_z LPCSTR sz
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   HRESULT hRes;
 
-  hRes = lpJVM->RunNativeProtected(0, 1, [szValueA](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = lpJVM->RunNativeProtected(0, 1, [szValueA](__in DukTape::duk_context *lpCtx) -> VOID
   {
     if (szValueA != NULL)
       DukTape::duk_push_string(lpCtx, szValueA);
     else
       DukTape::duk_push_null(lpCtx);
-    return 1;
+    return;
   });
   if (SUCCEEDED(hRes))
   {
@@ -111,10 +111,10 @@ HRESULT CJavascriptVM::CRequireModuleContext::AddBooleanProperty(__in_z LPCSTR s
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   HRESULT hRes;
 
-  hRes = lpJVM->RunNativeProtected(0, 1, [bValue](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = lpJVM->RunNativeProtected(0, 1, [bValue](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_push_boolean(lpCtx, (bValue != FALSE) ? true : false);
-    return 1;
+    return;
   });
   if (SUCCEEDED(hRes))
   {
@@ -130,10 +130,10 @@ HRESULT CJavascriptVM::CRequireModuleContext::AddNumericProperty(__in_z LPCSTR s
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   HRESULT hRes;
 
-  hRes = lpJVM->RunNativeProtected(0, 1, [nValue](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = lpJVM->RunNativeProtected(0, 1, [nValue](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_push_number(lpCtx, nValue);
-    return 1;
+    return;
   });
   if (SUCCEEDED(hRes))
   {
@@ -148,10 +148,10 @@ HRESULT CJavascriptVM::CRequireModuleContext::AddNullProperty(__in_z LPCSTR szPr
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   HRESULT hRes;
 
-  hRes = lpJVM->RunNativeProtected(0, 1, [](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = lpJVM->RunNativeProtected(0, 1, [](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_push_null(lpCtx);
-    return 1;
+    return;
   });
   if (SUCCEEDED(hRes))
   {
@@ -167,11 +167,7 @@ HRESULT CJavascriptVM::CRequireModuleContext::AddJsObjectProperty(__in_z LPCSTR 
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   HRESULT hRes;
 
-  hRes = lpJVM->RunNativeProtected(0, 1, [lpObject](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
-  {
-    lpObject->PushThis();
-    return 1;
-  });
+  hRes = lpObject->PushThis();
   if (SUCCEEDED(hRes))
   {
     hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, nExportsObjectIndex, szPropertyNameA, TRUE, nFlags,
@@ -200,8 +196,7 @@ HRESULT CJavascriptVM::CRequireModuleContext::ReplaceModuleExports(__in DukTape:
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   HRESULT hRes;
 
-  hRes = lpJVM->RunNativeProtected(0, 0, [nObjIndex, bRemoveFromStack, this]
-                                   (__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = lpJVM->RunNativeProtected(0, 0, [nObjIndex, bRemoveFromStack, this](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_idx_t nObjIndex_2 = nObjIndex;
     if (nObjIndex_2 < 0)
@@ -210,7 +205,7 @@ HRESULT CJavascriptVM::CRequireModuleContext::ReplaceModuleExports(__in DukTape:
     DukTape::duk_put_prop_string(lpCtx, nModuleObjectIndex, "exports");
     if (bRemoveFromStack != FALSE)
       DukTape::duk_remove(lpCtx, nObjIndex_2);
-    return 0;
+    return;
   });
   //done
   return hRes;
@@ -223,11 +218,13 @@ HRESULT CJavascriptVM::CRequireModuleContext::ReplaceModuleExportsWithObject(__i
 
   if (lpObject == NULL)
     return E_POINTER;
-  hRes = lpJVM->RunNativeProtected(0, 0, [lpObject, this](__in DukTape::duk_context *lpCtx)
+  hRes = lpJVM->RunNativeProtected(0, 0, [lpObject, this](__in DukTape::duk_context *lpCtx) -> VOID
   {
-    lpObject->PushThis();
+    HRESULT hRes = lpObject->PushThis();
+    if (FAILED(hRes))
+      MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
     DukTape::duk_put_prop_string(lpCtx, nModuleObjectIndex, "exports");
-    return 0;
+    return;
   });
   //done
   return hRes;

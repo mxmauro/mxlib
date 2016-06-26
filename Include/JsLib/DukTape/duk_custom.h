@@ -26,6 +26,7 @@
 
 #undef DUK_USE_AUGMENT_ERROR_THROW
 #undef DUK_USE_AUGMENT_ERROR_CREATE
+#define DUK_USE_AUGMENT_ERROR_CREATE
 
 //--------------------------------
 

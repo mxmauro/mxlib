@@ -33,13 +33,13 @@ CJsObjectBase* CJsObjectBase::FromObject(__in DukTape::duk_context *lpCtx, __in 
   CJsObjectBase *lpObj = NULL;
   HRESULT hRes;
 
-  hRes = lpJVM->RunNativeProtected(0, 0, [&lpObj, nIndex](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = lpJVM->RunNativeProtected(0, 0, [&lpObj, nIndex](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_get_prop_string(lpCtx, nIndex, "\xff""\xff""data");
     if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
       lpObj = reinterpret_cast<CJsObjectBase*>(DukTape::duk_to_pointer(lpCtx, -1));
     DukTape::duk_pop(lpCtx);
-    return 0;
+    return;
   });
   if (lpObj == NULL || FAILED(hRes))
     return NULL;
@@ -97,7 +97,7 @@ HRESULT CJsObjectBase::_RegisterHelper(__in DukTape::duk_context *lpCtx, __in MA
 
   if (lpCtx == NULL || lpEntries == NULL || szObjectNameA == NULL || szPrototypeNameA == NULL)
     return E_POINTER;
-  hRes = lpJVM->RunNativeProtected(0, 0, [=](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = lpJVM->RunNativeProtected(0, 0, [=](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_uint_t nDukFlags;
     MAP_ENTRY *lpEntries_2 = lpEntries;
@@ -146,7 +146,7 @@ HRESULT CJsObjectBase::_RegisterHelper(__in DukTape::duk_context *lpCtx, __in MA
     }
     //pop global
     DukTape::duk_pop(lpCtx);
-    return 0;
+    return;
   });
   return hRes;
 }
@@ -155,6 +155,7 @@ DukTape::duk_ret_t CJsObjectBase::_CreateHelper(__in DukTape::duk_context *lpCtx
 {
   lpfnCreateObject fnCreateObject;
   CJsObjectBase *lpNewObj;
+  HRESULT hRes;
 
   if (!DukTape::duk_is_constructor_call(lpCtx))
     return DUK_RET_TYPE_ERROR;
@@ -164,31 +165,33 @@ DukTape::duk_ret_t CJsObjectBase::_CreateHelper(__in DukTape::duk_context *lpCtx
   DukTape::duk_pop_2(lpCtx);
   //create object
   lpNewObj = fnCreateObject(lpCtx);
-  if (!lpNewObj)
-    MX_JS_THROW_HRESULT_ERROR(lpCtx, E_OUTOFMEMORY);
-  try
+  if (lpNewObj)
   {
-    lpNewObj->PushThis();
-  }
-  catch (...)
-  {
+    hRes = lpNewObj->PushThis();
     lpNewObj->Release(); //remove extra reference added by PushThis or destroy object on error
-    throw;
   }
-  lpNewObj->Release(); //remove extra reference added by PushThis or destroy object on error
+  else
+  {
+    hRes = E_OUTOFMEMORY;
+  }
+  if (FAILED(hRes))
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, E_OUTOFMEMORY);
   //returning the 'result' object replaces the default instance created by 'new'
   return 1;
 }
 
-VOID CJsObjectBase::_PushThisHelper(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA)
+HRESULT CJsObjectBase::_PushThisHelper(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA)
 {
   DukTape::duk_context *lpCtx = GetContext();
-  BOOL bCreateProxy = FALSE;
-  DukTape::duk_idx_t nStackTop;
+  CJavascriptVM *lpJvm = CJavascriptVM::FromContext(lpCtx);
+  HRESULT hRes;
 
-  nStackTop = DukTape::duk_get_top(lpCtx);
-  try
+  AddRef();
+  hRes = lpJvm->RunNativeProtected(0, 1, [this, szObjectNameA, szPrototypeNameA]
+                                   (__in DukTape::duk_context *lpCtx) -> VOID
   {
+    BOOL bCreateProxy = FALSE;
+
     //create javascript object
     DukTape::duk_push_object(lpCtx);
     //store object's name as internal property
@@ -237,14 +240,12 @@ VOID CJsObjectBase::_PushThisHelper(__in_z LPCSTR szObjectNameA, __in_z LPCSTR s
       //create proxy object
       DukTape::duk_new(lpCtx, 2);
     }
-  }
-  catch (...)
-  {
-    DukTape::duk_set_top(lpCtx, nStackTop);
-    throw;
-  }
-  AddRef();
-  return;
+    return;
+  });
+  //done
+  if (FAILED(hRes))
+    Release();
+  return hRes;
 }
 
 DukTape::duk_ret_t CJsObjectBase::_FinalReleaseHelper(__in DukTape::duk_context *lpCtx)

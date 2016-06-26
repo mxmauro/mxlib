@@ -33,14 +33,14 @@ CHttpServer::CRequest* CJsHttpServer::GetServerRequestFromContext(__in DukTape::
   MX::CHttpServer::CRequest *lpRequest = NULL;
   HRESULT hRes;
 
-  hRes = lpJVM->RunNativeProtected(0, 0, [&lpRequest](__in DukTape::duk_context *lpCtx)
+  hRes = lpJVM->RunNativeProtected(0, 0, [&lpRequest](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_push_global_object(lpCtx);
     DukTape::duk_get_prop_string(lpCtx, -1, INTERNAL_REQUEST_PROPERTY);
     if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
       lpRequest = reinterpret_cast<MX::CHttpServer::CRequest*>(DukTape::duk_to_pointer(lpCtx, -1));
     DukTape::duk_pop_2(lpCtx);
-    return 0;
+    return;
   });
   return (SUCCEEDED(hRes)) ? lpRequest : NULL;
 }
@@ -63,13 +63,13 @@ HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CHttpServer:
   __EXIT_ON_ERROR(hRes);
 
   //store request pointer
-  hRes = cJvm.RunNativeProtected(0, 0, [lpRequest](__in DukTape::duk_context *lpCtx)
+  hRes = cJvm.RunNativeProtected(0, 0, [lpRequest](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_push_global_object(lpCtx);
     DukTape::duk_push_pointer(lpCtx, lpRequest);
     DukTape::duk_put_prop_string(lpCtx, -2, INTERNAL_REQUEST_PROPERTY);
     DukTape::duk_pop(lpCtx);
-    return 0;
+    return;
   });
   __EXIT_ON_ERROR(hRes);
 

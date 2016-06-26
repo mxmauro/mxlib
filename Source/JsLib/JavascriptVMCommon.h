@@ -32,8 +32,9 @@
 #include "..\..\Include\FnvHash.h"
 
 //include the following files OUTSIDE the namespace
-#include <xstddef>
 #include <exception>
+/*
+#include <xstddef>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,7 +43,7 @@
 #include <limits.h>
 #include <math.h>
 #include <xstddef>
-
+*/
 #ifdef _MX_JAVASCRIPT_VM_CPP
 
 #define DUK_OPT_HAVE_CUSTOM_H

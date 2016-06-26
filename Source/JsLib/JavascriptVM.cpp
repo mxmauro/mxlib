@@ -28,7 +28,7 @@
 
 typedef struct {
   MX::CJavascriptVM::protected_function func;
-  BOOL bPushDummyNull;
+  DukTape::duk_idx_t nRetValuesCount;
 } RUN_NATIVE_PROTECTED_DATA;
 
 //-----------------------------------------------------------
@@ -75,7 +75,7 @@ HRESULT CJavascriptVM::Initialize()
                                    NULL, &my_duk_fatal_function);
   if (!lpCtx)
     return E_OUTOFMEMORY;
-  hRes = RunNativeProtected(0, 0, [this](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = RunNativeProtected(0, 0, [this](__in DukTape::duk_context *lpCtx) -> VOID
   {
     //setup "jsVM" accessible only from native for callbacks
     DukTape::duk_push_global_object(lpCtx);
@@ -96,7 +96,7 @@ HRESULT CJavascriptVM::Initialize()
     DukTape::duk_pop(lpCtx);
     //setup DukTape's CommonJS module
     DukTape::duk_module_duktape_init(lpCtx);
-    return 0;
+    return;
   });
   if (FAILED(hRes))
   {
@@ -152,7 +152,7 @@ HRESULT CJavascriptVM::Run(__in_z LPCSTR szCodeA, __in_z_opt LPCWSTR szFileNameW
   sLastExecError.nLine = 0;
   sLastExecError.cStrStackTraceA.Empty();
   hRes = RunNativeProtected(0, (bIgnoreResult != FALSE) ? 0 : 1, [szFileNameW, szCodeA, this]
-                            (__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+                            (__in DukTape::duk_context *lpCtx) -> VOID
   {
     CStringA cStrTempA;
     HRESULT hRes;
@@ -169,7 +169,7 @@ HRESULT CJavascriptVM::Run(__in_z LPCSTR szCodeA, __in_z_opt LPCWSTR szFileNameW
     //run code
     DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
     DukTape::duk_eval_raw(lpCtx, szCodeA, 0, DUK_COMPILE_STRLEN | DUK_COMPILE_NOSOURCE);
-    return DukTape::duk_get_top(lpCtx);
+    return;
   });
   //done
   return hRes;
@@ -184,12 +184,10 @@ HRESULT CJavascriptVM::RunNativeProtected(__in DukTape::duk_idx_t nArgsCount, __
 
   nStackTop = DukTape::duk_get_top(lpCtx);
   sData.func = func;
-  sData.bPushDummyNull = FALSE;
+  sData.nRetValuesCount = nRetValuesCount;
   if (nRetValuesCount == 0)
-  {
-    sData.bPushDummyNull = TRUE;
     nRetValuesCount = 1;
-  }
+  //do safe call
   try
   {
     if (DukTape::duk_safe_call(lpCtx, &CJavascriptVM::_RunNativeProtectedHelper, &sData, nArgsCount,
@@ -199,7 +197,7 @@ HRESULT CJavascriptVM::RunNativeProtected(__in DukTape::duk_idx_t nArgsCount, __
       hRes = sLastExecError.hRes;
       DukTape::duk_pop(lpCtx);
     }
-    else if (sData.bPushDummyNull != FALSE)
+    else if (sData.nRetValuesCount == 0)
     {
       //because of a bug in 'duk_safe_call', we enforce returning at least one result so we can see the error code
       DukTape::duk_pop(lpCtx);
@@ -239,13 +237,13 @@ HRESULT CJavascriptVM::AddStringProperty(__in_z LPCSTR szPropertyNameA, __in_z L
 
   if (lpCtx == NULL)
     return E_FAIL;
-  hRes = RunNativeProtected(0, 1, [szValueA](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = RunNativeProtected(0, 1, [szValueA](__in DukTape::duk_context *lpCtx) -> VOID
   {
     if (szValueA != NULL)
       DukTape::duk_push_string(lpCtx, szValueA);
     else
       DukTape::duk_push_null(lpCtx);
-    return 1;
+    return;
   });
   if (SUCCEEDED(hRes))
   {
@@ -279,10 +277,10 @@ HRESULT CJavascriptVM::AddBooleanProperty(__in_z LPCSTR szPropertyNameA, __in BO
 
   if (lpCtx == NULL)
     return E_FAIL;
-  hRes = RunNativeProtected(0, 1, [bValue](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = RunNativeProtected(0, 1, [bValue](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_push_boolean(lpCtx, (bValue != FALSE) ? true : false);
-    return 1;
+    return;
   });
   if (SUCCEEDED(hRes))
   {
@@ -299,10 +297,10 @@ HRESULT CJavascriptVM::AddIntegerProperty(__in_z LPCSTR szPropertyNameA, __in in
 
   if (lpCtx == NULL)
     return E_FAIL;
-  hRes = RunNativeProtected(0, 1, [nValue](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = RunNativeProtected(0, 1, [nValue](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)nValue);
-    return 1;
+    return;
   });
   if (SUCCEEDED(hRes))
   {
@@ -319,10 +317,10 @@ HRESULT CJavascriptVM::AddNumericProperty(__in_z LPCSTR szPropertyNameA, __in do
 
   if (lpCtx == NULL)
     return E_FAIL;
-  hRes = RunNativeProtected(0, 1, [nValue](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = RunNativeProtected(0, 1, [nValue](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_push_number(lpCtx, nValue);
-    return 1;
+    return;
   });
   if (SUCCEEDED(hRes))
   {
@@ -339,10 +337,10 @@ HRESULT CJavascriptVM::AddNullProperty(__in_z LPCSTR szPropertyNameA, __in_opt i
 
   if (lpCtx == NULL)
     return E_FAIL;
-  hRes = RunNativeProtected(0, 1, [](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = RunNativeProtected(0, 1, [](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_push_null(lpCtx);
-    return 1;
+    return;
   });
   if (SUCCEEDED(hRes))
   {
@@ -360,17 +358,11 @@ HRESULT CJavascriptVM::AddJsObjectProperty(__in_z LPCSTR szPropertyNameA, __in C
 
   if (lpCtx == NULL || lpCtx != lpObject->GetContext())
     return E_FAIL;
-  hRes = RunNativeProtected(0, 1, [lpObject](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
-  {
-    lpObject->PushThis();
-    return 1;
-  });
+  hRes = lpObject->PushThis();
   if (SUCCEEDED(hRes))
   {
     hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
                                                NullCallback());
-    if (FAILED(hRes))
-      lpObject->Release();
   }
   //done
   return hRes;
@@ -420,7 +412,7 @@ HRESULT CJavascriptVM::CreateObject(__in_z LPCSTR szObjectNameA, __in_opt CProxy
     return E_INVALIDARG;
   if (lpCtx == NULL)
     return E_FAIL;
-  hRes = RunNativeProtected(0, 0, [szObjectNameA, lpCallbacks](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = RunNativeProtected(0, 0, [szObjectNameA, lpCallbacks](__in DukTape::duk_context *lpCtx) -> VOID
   {
     LPCSTR sA, szObjectNameA_2;
     HRESULT hRes;
@@ -480,7 +472,7 @@ HRESULT CJavascriptVM::CreateObject(__in_z LPCSTR szObjectNameA, __in_opt CProxy
     DukTape::duk_put_prop_string(lpCtx, -2, szObjectNameA_2);
     //pop parent object
     DukTape::duk_pop(lpCtx);
-    return 0;
+    return;
   });
   //done
   return hRes;
@@ -517,13 +509,13 @@ HRESULT CJavascriptVM::AddObjectStringProperty(__in_z LPCSTR szObjectNameA, __in
     return E_POINTER;
   if (lpCtx == NULL)
     return E_FAIL;
-  hRes = RunNativeProtected(0, 1, [szValueA](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = RunNativeProtected(0, 1, [szValueA](__in DukTape::duk_context *lpCtx) -> VOID
   {
     if (szValueA != NULL)
       DukTape::duk_push_string(lpCtx, szValueA);
     else
       DukTape::duk_push_null(lpCtx);
-    return 1;
+    return;
   });
   if (SUCCEEDED(hRes))
   {
@@ -560,10 +552,10 @@ HRESULT CJavascriptVM::AddObjectBooleanProperty(__in_z LPCSTR szObjectNameA, __i
     return E_POINTER;
   if (lpCtx == NULL)
     return E_FAIL;
-  hRes = RunNativeProtected(0, 1, [bValue](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = RunNativeProtected(0, 1, [bValue](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_push_boolean(lpCtx, (bValue != FALSE) ? true : false);
-    return 1;
+    return;
   });
   if (SUCCEEDED(hRes))
   {
@@ -583,10 +575,10 @@ HRESULT CJavascriptVM::AddObjectIntegerProperty(__in_z LPCSTR szObjectNameA, __i
     return E_POINTER;
   if (lpCtx == NULL)
     return E_FAIL;
-  hRes = RunNativeProtected(0, 1, [nValue](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = RunNativeProtected(0, 1, [nValue](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)nValue);
-    return 1;
+    return;
   });
   if (SUCCEEDED(hRes))
   {
@@ -606,10 +598,10 @@ HRESULT CJavascriptVM::AddObjectNumericProperty(__in_z LPCSTR szObjectNameA, __i
     return E_POINTER;
   if (lpCtx == NULL)
     return E_FAIL;
-  hRes = RunNativeProtected(0, 1, [nValue](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = RunNativeProtected(0, 1, [nValue](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_push_number(lpCtx, nValue);
-    return 1;
+    return;
   });
   if (SUCCEEDED(hRes))
   {
@@ -629,10 +621,10 @@ HRESULT CJavascriptVM::AddObjectNullProperty(__in_z LPCSTR szObjectNameA, __in_z
     return E_POINTER;
   if (lpCtx == NULL)
     return E_FAIL;
-  hRes = RunNativeProtected(0, 1, [](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = RunNativeProtected(0, 1, [](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_push_null(lpCtx);
-    return 1;
+    return;
   });
   if (SUCCEEDED(hRes))
   {
@@ -652,17 +644,11 @@ HRESULT CJavascriptVM::AddObjectJsObjectProperty(__in_z LPCSTR szObjectNameA, __
     return E_POINTER;
   if (lpCtx == NULL || lpCtx != lpObject->GetContext())
     return E_FAIL;
-  hRes = RunNativeProtected(0, 1, [lpObject](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
-  {
-    lpObject->PushThis();
-    return 1;
-  });
+  hRes = lpObject->PushThis();
   if (SUCCEEDED(hRes))
   {
     hRes = Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags,
                                                NullCallback(), NullCallback());
-    if (FAILED(hRes))
-      lpObject->Release();
   }
   //done
   return hRes;
@@ -1065,16 +1051,17 @@ DukTape::duk_ret_t CJavascriptVM::_ProxyDeletePropHelper(__in DukTape::duk_conte
 
 DukTape::duk_ret_t CJavascriptVM::_RunNativeProtectedHelper(__in DukTape::duk_context *lpCtx, __in void *udata)
 {
-  RUN_NATIVE_PROTECTED_DATA *lpData= (RUN_NATIVE_PROTECTED_DATA*)udata;
-  DukTape::duk_ret_t ret;
+  RUN_NATIVE_PROTECTED_DATA *lpData = (RUN_NATIVE_PROTECTED_DATA*)udata;
+  DukTape::duk_idx_t nStackTop;
 
-  ret = lpData->func(lpCtx);
-  if (ret == 0 && lpData->bPushDummyNull != FALSE)
+  lpData->func(lpCtx);
+  nStackTop = DukTape::duk_get_top(lpCtx);
+  if (nStackTop == 0 && lpData->nRetValuesCount == 0)
   {
     DukTape::duk_push_null(lpCtx);
-    ret = 1;
+    return 1;
   }
-  return ret;
+  return (DukTape::duk_ret_t)(lpData->nRetValuesCount);
 }
 
 VOID CJavascriptVM::GetErrorInfoFromException(__in DukTape::duk_idx_t nStackIndex)

@@ -67,14 +67,14 @@ HRESULT AddHelpersMethods(__in CJavascriptVM &cJvm, __in MX::CHttpServer::CReque
   __EXIT_ON_ERROR(hRes);
   hRes = cJvm.AddNativeFunction("urldecode", MX_BIND_CALLBACK(&OnUrlDecode), 1);
   __EXIT_ON_ERROR(hRes);
-  hRes = cJvm.RunNativeProtected(0, 0, [](__in DukTape::duk_context *lpCtx)
+  hRes = cJvm.RunNativeProtected(0, 0, [](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_push_string(lpCtx, "function vardump(obj)\n"
                              "{ return Duktape.enc('jx', obj, null, 2); }\n");
     DukTape::duk_push_string(lpCtx, (const char *)(__FILE__));
     DukTape::duk_eval_raw(lpCtx, NULL, 0, DUK_COMPILE_EVAL);
     DukTape::duk_pop(lpCtx);
-    return 0;
+    return;
   });
   __EXIT_ON_ERROR(hRes);
   hRes = cJvm.CreateObject("HASH");

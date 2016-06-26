@@ -47,7 +47,7 @@ HRESULT AddNativeFunctionCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPC
     return E_INVALIDARG;
   if (lpCtx == NULL)
     return E_FAIL;
-  hRes = lpJVM->RunNativeProtected(0, 0, [=](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = lpJVM->RunNativeProtected(0, 0, [=](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_c_function fnNativeFunc;
     HRESULT hRes;
@@ -126,7 +126,7 @@ HRESULT AddNativeFunctionCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPC
     DukTape::duk_put_prop_string(lpCtx, -2, szFunctionNameA);
     //pop the object/global object
     DukTape::duk_pop(lpCtx);
-    return 0;
+    return;
   });
   //done
   return hRes;
@@ -153,7 +153,7 @@ HRESULT AddPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPCSTR sz
   //properties with callbacks cannot have an initial value
   MX_ASSERT(bInitialValueOnStack ? ((!cGetValueCallback) && (!cSetValueCallback)) : true);
   hRes = lpJVM->RunNativeProtected((bInitialValueOnStack != FALSE) ? 1 : 0, 0,
-                                   [&](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+                                   [&](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_uint_t nDukFlags = DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_HAVE_CONFIGURABLE;
     HRESULT hRes;
@@ -327,7 +327,7 @@ HRESULT AddPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPCSTR sz
     DukTape::duk_def_prop(lpCtx, nIndex, nDukFlags);
     //pop the object/global object
     DukTape::duk_pop(lpCtx);
-    return 0;
+    return;
   });
   //done
   return hRes;
@@ -348,8 +348,7 @@ HRESULT RemovePropertyCommon(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szO
   if (lpCtx == NULL)
     return E_FAIL;
   //properties with callbacks cannot have an initial value
-  hRes = lpJVM->RunNativeProtected(0, 0, [szObjectNameA, szPropertyNameA]
-                                   (__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = lpJVM->RunNativeProtected(0, 0, [szObjectNameA, szPropertyNameA](__in DukTape::duk_context *lpCtx) -> VOID
   {
     HRESULT hRes = FindObject(lpCtx, szObjectNameA, FALSE, TRUE);
     if (FAILED(hRes))
@@ -358,7 +357,7 @@ HRESULT RemovePropertyCommon(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szO
     DukTape::duk_get_prop_string(lpCtx, -1, szPropertyNameA);
     //pop the object/global object
     DukTape::duk_pop(lpCtx);
-    return 0;
+    return;
   });
   //done
   return hRes;
@@ -378,8 +377,7 @@ HRESULT HasPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObje
   if (lpCtx == NULL)
     return E_FAIL;
   //properties with callbacks cannot have an initial value
-  hRes = lpJVM->RunNativeProtected(0, 0, [szObjectNameA, szPropertyNameA]
-                                   (__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = lpJVM->RunNativeProtected(0, 0, [szObjectNameA, szPropertyNameA](__in DukTape::duk_context *lpCtx) -> VOID
   {
     HRESULT hRes = FindObject(lpCtx, szObjectNameA, FALSE, TRUE);
     if (FAILED(hRes))
@@ -390,7 +388,7 @@ HRESULT HasPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObje
     hRes = (DukTape::duk_is_undefined(lpCtx, -1) != 0) ? S_FALSE : S_OK;
     //pop the property and the object/global object
     DukTape::duk_pop_2(lpCtx);
-    return 0;
+    return;
   });
   //done
   return hRes;
@@ -411,8 +409,7 @@ HRESULT PushPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObj
   if (lpCtx == NULL)
     return E_FAIL;
   //properties with callbacks cannot have an initial value
-  hRes = lpJVM->RunNativeProtected(0, 1, [szObjectNameA, szPropertyNameA]
-                                   (__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t
+  hRes = lpJVM->RunNativeProtected(0, 1, [szObjectNameA, szPropertyNameA](__in DukTape::duk_context *lpCtx) -> VOID
   {
     HRESULT hRes = FindObject(lpCtx, szObjectNameA, FALSE, TRUE);
     if (FAILED(hRes))
@@ -421,7 +418,7 @@ HRESULT PushPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObj
     DukTape::duk_get_prop_string(lpCtx, -1, szPropertyNameA);
     //remove the object/global object
     DukTape::duk_remove(lpCtx, -2);
-    return 1;
+    return;
   });
   //done
   return hRes;

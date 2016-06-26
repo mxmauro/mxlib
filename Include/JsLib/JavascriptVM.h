@@ -52,10 +52,9 @@ public:                                                                         
                            bCreateProxy);                                                       \
     };                                                                                          \
                                                                                                 \
-  VOID PushThis()                                                                               \
+  HRESULT PushThis()                                                                            \
     {                                                                                           \
-    _PushThisHelper(_name, "\xff""\xff" _name "_prototype");                                    \
-    return;                                                                                     \
+    return _PushThisHelper(_name, "\xff""\xff" _name "_prototype");                             \
     };                                                                                          \
                                                                                                 \
 private:                                                                                        \
@@ -247,7 +246,7 @@ public:
 
   //--------
 
-  typedef std::function<DukTape::duk_ret_t (__in DukTape::duk_context*)> protected_function;
+  typedef std::function<VOID (__in DukTape::duk_context*)> protected_function;
 
 public:
   CJavascriptVM();
@@ -396,7 +395,7 @@ public:
   ~CJsObjectBase()
     { };
 
-  virtual VOID PushThis() = 0;
+  virtual HRESULT PushThis() = 0;
 
   static CJsObjectBase* FromObject(__in DukTape::duk_context *lpCtx, __in DukTape::duk_int_t nIndex);
 
@@ -446,7 +445,7 @@ protected:
                                  __in_opt lpfnCreateObject fnCreateObject, __in_opt int nCreateArgsCount,
                                  __in BOOL bCreateProxy);
   static DukTape::duk_ret_t _CreateHelper(__in DukTape::duk_context *lpCtx);
-  VOID _PushThisHelper(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA);
+  HRESULT _PushThisHelper(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA);
   static DukTape::duk_ret_t _FinalReleaseHelper(__in DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _CallMethodHelper(__in DukTape::duk_context *lpCtx, __in lpfnCallFunc fnFunc);
   static DukTape::duk_ret_t _ProxyHasPropHelper(__in DukTape::duk_context *lpCtx);
