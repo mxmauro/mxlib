@@ -12,5 +12,8 @@
 /Libs/
 /obj/
 /extras/
-Source/OpenSSL/setenv.bat
-Source/OpenSSL/Generated/
+/Include/JsLib/DukTape/duk_config.h
+/Include/JsLib/DukTape/duktape.h
+/Source/JsLib/DukTape/setenv.bat
+/Source/OpenSSL/setenv.bat
+/Source/OpenSSL/Generated/
