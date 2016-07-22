@@ -320,45 +320,50 @@ typedef enum {
 //-----------------------------------------------------------
 
 #pragma pack(8)
-typedef struct {
+typedef struct _MX_ANSI_STRING32 {
   USHORT Length;
   USHORT MaximumLength;
   ULONG Buffer;
-} MX_ANSI_STRING32, MX_UNICODE_STRING32;
+} MX_ANSI_STRING32, *PMX_ANSI_STRING32;
 
-typedef struct {
+typedef struct _MX_ANSI_STRING64 {
   USHORT Length;
   USHORT MaximumLength;
   ULONGLONG Buffer;
-} MX_ANSI_STRING64, MX_UNICODE_STRING64;
+} MX_ANSI_STRING64, *PMX_ANSI_STRING64;
 
-typedef struct {
+typedef struct _MX_ANSI_STRING {
   USHORT Length;
   USHORT MaximumLength;
-  PSTR   Buffer;
-} MX_ANSI_STRING;
+  PSTR Buffer;
+} MX_ANSI_STRING, *PMX_ANSI_STRING;
 
-typedef struct {
+typedef struct _MX_UNICODE_STRING32 {
   USHORT Length;
   USHORT MaximumLength;
-  PWSTR  Buffer;
-} MX_UNICODE_STRING;
+  ULONG Buffer;
+} MX_UNICODE_STRING32, *PMX_UNICODE_STRING32;
 
-typedef MX_ANSI_STRING32 *PMX_ANSI_STRING32;
-typedef MX_ANSI_STRING64 *PMX_ANSI_STRING64;
-typedef MX_ANSI_STRING *PMX_ANSI_STRING;
+typedef struct _MX_UNICODE_STRING64 {
+  USHORT Length;
+  USHORT MaximumLength;
+  ULONGLONG Buffer;
+} MX_UNICODE_STRING64, *PMX_UNICODE_STRING64;
+
+typedef struct _MX_UNICODE_STRING {
+  USHORT Length;
+  USHORT MaximumLength;
+  PWSTR Buffer;
+} MX_UNICODE_STRING, *PMX_UNICODE_STRING;
+
 typedef const MX_ANSI_STRING32 *PCMX_ANSI_STRING32;
 typedef const MX_ANSI_STRING64 *PCMX_ANSI_STRING64;
 typedef const MX_ANSI_STRING *PCMX_ANSI_STRING;
-
-typedef MX_UNICODE_STRING32 *PMX_UNICODE_STRING32;
-typedef MX_UNICODE_STRING64 *PMX_UNICODE_STRING64;
-typedef MX_UNICODE_STRING *PMX_UNICODE_STRING;
 typedef const MX_UNICODE_STRING32 *PCMX_UNICODE_STRING32;
 typedef const MX_UNICODE_STRING64 *PCMX_UNICODE_STRING64;
 typedef const MX_UNICODE_STRING *PCMX_UNICODE_STRING;
 
-typedef struct {
+typedef struct _MX_OBJECT_ATTRIBUTES {
   ULONG Length;
   HANDLE RootDirectory;
   PMX_UNICODE_STRING ObjectName;
@@ -368,7 +373,7 @@ typedef struct {
 } MX_OBJECT_ATTRIBUTES;
 typedef MX_OBJECT_ATTRIBUTES *PMX_OBJECT_ATTRIBUTES;
 
-typedef struct {
+typedef struct _MX_IO_STATUS_BLOCK {
   union {
     NTSTATUS Status;
     PVOID Pointer;
@@ -376,27 +381,27 @@ typedef struct {
   ULONG_PTR Information;
 } MX_IO_STATUS_BLOCK, *PMX_IO_STATUS_BLOCK;
 
-typedef struct {
+typedef struct _MX_FILE_BASIC_INFORMATION {
   LARGE_INTEGER CreationTime;
   LARGE_INTEGER LastAccessTime;
   LARGE_INTEGER LastWriteTime;
   LARGE_INTEGER ChangeTime;
   ULONG FileAttributes;
-} MX_FILE_BASIC_INFORMATION;
+} MX_FILE_BASIC_INFORMATION, *PMX_FILE_BASIC_INFORMATION;
 
-typedef struct {
+typedef struct _MX_FILE_STANDARD_INFORMATION {
   LARGE_INTEGER AllocationSize;
   LARGE_INTEGER EndOfFile;
   ULONG NumberOfLinks;
   BOOLEAN DeletePending;
   BOOLEAN Directory;
-} MX_FILE_STANDARD_INFORMATION;
+} MX_FILE_STANDARD_INFORMATION, *PMX_FILE_STANDARD_INFORMATION;
 
-typedef struct {
+typedef struct _MX_FILE_POSITION_INFORMATION {
   LARGE_INTEGER CurrentByteOffset;
-} MX_FILE_POSITION_INFORMATION;
+} MX_FILE_POSITION_INFORMATION, *PMX_FILE_POSITION_INFORMATION;
 
-typedef struct {
+typedef struct _MX_FILE_DIRECTORY_INFORMATION {
   ULONG NextEntryOffset;
   ULONG FileIndex;
   LARGE_INTEGER CreationTime;
@@ -408,9 +413,9 @@ typedef struct {
   ULONG FileAttributes;
   ULONG FileNameLength;
   WCHAR FileName[1];
-} MX_FILE_DIRECTORY_INFORMATION;
+} MX_FILE_DIRECTORY_INFORMATION, *PMX_FILE_DIRECTORY_INFORMATION;
 
-typedef struct {
+typedef struct _MX_FILE_FULL_DIR_INFORMATION {
   ULONG NextEntryOffset;
   ULONG FileIndex;
   LARGE_INTEGER CreationTime;
@@ -423,9 +428,9 @@ typedef struct {
   ULONG FileNameLength;
   ULONG EaSize;
   WCHAR FileName[1];
-} MX_FILE_FULL_DIR_INFORMATION;
+} MX_FILE_FULL_DIR_INFORMATION, *PMX_FILE_FULL_DIR_INFORMATION;
 
-typedef struct {
+typedef struct _MX_FILE_BOTH_DIR_INFORMATION {
   ULONG NextEntryOffset;
   ULONG FileIndex;
   LARGE_INTEGER CreationTime;
@@ -440,16 +445,16 @@ typedef struct {
   CCHAR ShortNameLength;
   WCHAR ShortName[12];
   WCHAR FileName[1];
-} MX_FILE_BOTH_DIR_INFORMATION;
+} MX_FILE_BOTH_DIR_INFORMATION, *PMX_FILE_BOTH_DIR_INFORMATION;
 
-typedef struct {
+typedef struct _MX_FILE_NAMES_INFORMATION {
   ULONG NextEntryOffset;
   ULONG FileIndex;
   ULONG FileNameLength;
   WCHAR FileName[1];
-} MX_FILE_NAMES_INFORMATION;
+} MX_FILE_NAMES_INFORMATION, *PMX_FILE_NAMES_INFORMATION;
 
-typedef struct {
+typedef struct _MX_FILE_ID_BOTH_DIR_INFORMATION {
   ULONG NextEntryOffset;
   ULONG FileIndex;
   LARGE_INTEGER CreationTime;
@@ -465,9 +470,9 @@ typedef struct {
   WCHAR ShortName[12];
   LARGE_INTEGER FileId;
   WCHAR FileName[1];
-} MX_FILE_ID_BOTH_DIR_INFORMATION;
+} MX_FILE_ID_BOTH_DIR_INFORMATION, *PMX_FILE_ID_BOTH_DIR_INFORMATION;
 
-typedef struct {
+typedef struct _MX_FILE_ID_FULL_DIR_INFORMATION {
   ULONG NextEntryOffset;
   ULONG FileIndex;
   LARGE_INTEGER CreationTime;
@@ -481,27 +486,69 @@ typedef struct {
   ULONG EaSize;
   LARGE_INTEGER FileId;
   WCHAR FileName[1];
-} MX_FILE_ID_FULL_DIR_INFORMATION;
+} MX_FILE_ID_FULL_DIR_INFORMATION, *PMX_FILE_ID_FULL_DIR_INFORMATION;
 
 //--------
 
-typedef struct {
+typedef struct _MX_SECTION_BASIC_INFORMATION {
+  PVOID BaseAddress;
+  ULONG AllocationAttributes;
+  LARGE_INTEGER MaximumSize;
+} MX_SECTION_BASIC_INFORMATION, *PMX_SECTION_BASIC_INFORMATION;
+
+typedef struct _MX_SECTION_IMAGE_INFORMATION {
+  PVOID TransferAddress;
+  ULONG ZeroBits;
+  SIZE_T MaximumStackSize;
+  SIZE_T CommittedStackSize;
+  ULONG SubSystemType;
+  union {
+    struct {
+      USHORT SubSystemMinorVersion;
+      USHORT SubSystemMajorVersion;
+    };
+    ULONG SubSystemVersion;
+  };
+  ULONG GpValue;
+  USHORT ImageCharacteristics;
+  USHORT DllCharacteristics;
+  USHORT Machine;
+  BOOLEAN ImageContainsCode;
+  union {
+    UCHAR ImageFlags;
+    struct {
+      UCHAR ComPlusNativeReady : 1;
+      UCHAR ComPlusILOnly : 1;
+      UCHAR ImageDynamicallyRelocated : 1;
+      UCHAR ImageMappedFlat : 1;
+      UCHAR BaseBelow4gb : 1;
+      UCHAR Reserved : 3;
+    };
+  };
+  ULONG LoaderFlags;
+  ULONG ImageFileSize;
+  ULONG CheckSum;
+} MX_SECTION_IMAGE_INFORMATION, *PMX_SECTION_IMAGE_INFORMATION;
+
+//--------
+
+typedef struct _MX_KEY_BASIC_INFORMATION {
   LARGE_INTEGER LastWriteTime;
   ULONG TitleIndex;
   ULONG NameLength;
   WCHAR Name[1];
-} MX_KEY_BASIC_INFORMATION;
+} MX_KEY_BASIC_INFORMATION, *PMX_KEY_BASIC_INFORMATION;
 
-typedef struct {
+typedef struct _MX_KEY_NODE_INFORMATION {
   LARGE_INTEGER LastWriteTime;
   ULONG TitleIndex;
   ULONG ClassOffset;
   ULONG ClassLength;
   ULONG NameLength;
   WCHAR Name[1];
-} MX_KEY_NODE_INFORMATION;
+} MX_KEY_NODE_INFORMATION, *PMX_KEY_NODE_INFORMATION;
 
-typedef struct {
+typedef struct _MX_KEY_FULL_INFORMATION {
   LARGE_INTEGER LastWriteTime;
   ULONG TitleIndex;
   ULONG ClassOffset;
@@ -513,14 +560,14 @@ typedef struct {
   ULONG MaxValueNameLen;
   ULONG MaxValueDataLen;
   WCHAR Class[1];
-} MX_KEY_FULL_INFORMATION;
+} MX_KEY_FULL_INFORMATION, *PMX_KEY_FULL_INFORMATION;
 
-typedef struct {
+typedef struct _MX_KEY_NAME_INFORMATION {
   ULONG NameLength;
   WCHAR Name[1];
-} MX_KEY_NAME_INFORMATION;
+} MX_KEY_NAME_INFORMATION, *PMX_KEY_NAME_INFORMATION;
 
-typedef struct {
+typedef struct _MX_KEY_CACHED_INFORMATION {
   LARGE_INTEGER LastWriteTime;
   ULONG TitleIndex;
   ULONG SubKeys;
@@ -529,55 +576,55 @@ typedef struct {
   ULONG MaxValueNameLen;
   ULONG MaxValueDataLen;
   ULONG NameLength;
-} MX_KEY_CACHED_INFORMATION;
+} MX_KEY_CACHED_INFORMATION, *PMX_KEY_CACHED_INFORMATION;
 
-typedef struct {
+typedef struct _MX_KEY_VIRTUALIZATION_INFORMATION {
   ULONG VirtualizationCandidate : 1;
   ULONG VirtualizationEnabled   : 1;
   ULONG VirtualTarget           : 1;
   ULONG VirtualStore            : 1;
   ULONG VirtualSource           : 1;
   ULONG Reserved                : 27;
-} MX_KEY_VIRTUALIZATION_INFORMATION;
+} MX_KEY_VIRTUALIZATION_INFORMATION, *PMX_KEY_VIRTUALIZATION_INFORMATION;
 
-typedef struct {
+typedef struct _MX_KEY_VALUE_BASIC_INFORMATION {
   ULONG TitleIndex;
   ULONG Type;
   ULONG NameLength;
   WCHAR Name[1];
-} MX_KEY_VALUE_BASIC_INFORMATION;
+} MX_KEY_VALUE_BASIC_INFORMATION, *PMX_KEY_VALUE_BASIC_INFORMATION;
 
-typedef struct {
+typedef struct _MX_KEY_VALUE_PARTIAL_INFORMATION {
   ULONG TitleIndex;
   ULONG Type;
   ULONG DataLength;
   UCHAR Data[1];
-} MX_KEY_VALUE_PARTIAL_INFORMATION;
+} MX_KEY_VALUE_PARTIAL_INFORMATION, *PMX_KEY_VALUE_PARTIAL_INFORMATION;
 
-typedef struct {
+typedef struct _MX_KEY_VALUE_FULL_INFORMATION {
   ULONG TitleIndex;
   ULONG Type;
   ULONG DataOffset;
   ULONG DataLength;
   ULONG NameLength;
   WCHAR Name[1];
-} MX_KEY_VALUE_FULL_INFORMATION;
+} MX_KEY_VALUE_FULL_INFORMATION, *PMX_KEY_VALUE_FULL_INFORMATION;
 
-typedef struct {
+typedef struct _MX_KEY_VALUE_ENTRY {
   PMX_UNICODE_STRING ValueName;
   ULONG DataLength;
   ULONG DataOffset;
   ULONG Type;
-} MX_KEY_VALUE_ENTRY;
+} MX_KEY_VALUE_ENTRY, *PMX_KEY_VALUE_ENTRY;
 
 //--------
 
-typedef struct {
+typedef struct _MX_CLIENT_ID {
   SIZE_T UniqueProcess;
   SIZE_T UniqueThread;
-} MX_CLIENT_ID;
+} MX_CLIENT_ID, *PMX_CLIENT_ID;
 
-typedef struct {
+typedef struct _MX_SYSTEM_THREAD_INFORMATION {
   LARGE_INTEGER KernelTime;
   LARGE_INTEGER UserTime;
   LARGE_INTEGER CreateTime;
@@ -589,9 +636,9 @@ typedef struct {
   ULONG ContextSwitches;
   ULONG ThreadState;
   MX_KWAIT_REASON WaitReason;
-} MX_SYSTEM_THREAD_INFORMATION, *LPMX_SYSTEM_THREAD_INFORMATION;
+} MX_SYSTEM_THREAD_INFORMATION, *PMX_SYSTEM_THREAD_INFORMATION;
 
-typedef struct {
+typedef struct _MX_SYSTEM_EXTENDED_THREAD_INFORMATION {
   MX_SYSTEM_THREAD_INFORMATION ThreadInfo;
   PVOID StackBase;
   PVOID StackLimit;
@@ -600,9 +647,9 @@ typedef struct {
   ULONG Reserved1;
   ULONG Reserved2;
   ULONG Reserved3;
-} MX_SYSTEM_EXTENDED_THREAD_INFORMATION, *LPMX_SYSTEM_EXTENDED_THREAD_INFORMATION;
+} MX_SYSTEM_EXTENDED_THREAD_INFORMATION, *PMX_SYSTEM_EXTENDED_THREAD_INFORMATION;
 
-typedef struct {
+typedef struct _MX_SYSTEM_PROCESS_INFORMATION {
   ULONG NextEntryOffset;
   ULONG NumberOfThreads;
   LARGE_INTEGER WorkingSetPrivateSize; //VISTA
@@ -643,51 +690,51 @@ typedef struct {
     MX_SYSTEM_THREAD_INFORMATION Threads[1];
     MX_SYSTEM_EXTENDED_THREAD_INFORMATION ExtThreads[1];
   };
-} MX_SYSTEM_PROCESS_INFORMATION, *LPMX_SYSTEM_PROCESS_INFORMATION;
+} MX_SYSTEM_PROCESS_INFORMATION, *PMX_SYSTEM_PROCESS_INFORMATION;
 
-typedef struct {
+typedef struct _MX_SYSTEM_PROCESSOR_INFORMATION {
   USHORT ProcessorArchitecture;
   USHORT ProcessorLevel;
   USHORT ProcessorRevision;
   USHORT Reserved;
   ULONG ProcessorFeatureBits;
-} MX_SYSTEM_PROCESSOR_INFORMATION;
+} MX_SYSTEM_PROCESSOR_INFORMATION, *PMX_SYSTEM_PROCESSOR_INFORMATION;
 
-typedef struct {
+typedef struct _MX_SYSTEM_SESSION_PROCESS_INFORMATION {
   ULONG SessionId;
   ULONG SizeOfBuf;
   PVOID Buffer;
 } MX_SYSTEM_SESSION_PROCESS_INFORMATION, *PMX_SYSTEM_SESSION_PROCESS_INFORMATION;
 
-typedef struct {
+typedef struct _MX_PROCESS_SESSION_INFORMATION {
   ULONG SessionId;
-} MX_PROCESS_SESSION_INFORMATION, *LPMX_PROCESS_SESSION_INFORMATION;
+} MX_PROCESS_SESSION_INFORMATION, *PMX_PROCESS_SESSION_INFORMATION;
 
-typedef struct {
+typedef struct _MX_THREAD_BASIC_INFORMATION {
   NTSTATUS ExitStatus;
   PVOID TebBaseAddress;
   MX_CLIENT_ID ClientId;
   ULONG_PTR AffinityMask;
   MX_KPRIORITY Priority;
   LONG BasePriority;
-} MX_THREAD_BASIC_INFORMATION, *LPMX_THREAD_BASIC_INFORMATION;
+} MX_THREAD_BASIC_INFORMATION, *PMX_THREAD_BASIC_INFORMATION;
 
-typedef struct {
+typedef struct _MX_LIST_ENTRY32 {
   ULONG Flink;
   ULONG Blink;
-} MX_LIST_ENTRY32;
+} MX_LIST_ENTRY32, *PMX_LIST_ENTRY32;
 
-typedef struct {
+typedef struct _MX_LIST_ENTRY64 {
   ULONGLONG Flink;
   ULONGLONG Blink;
-} MX_LIST_ENTRY64;
+} MX_LIST_ENTRY64, *PMX_LIST_ENTRY64;
 
-typedef struct tagMX_LIST_ENTRY {
-  struct tagMX_LIST_ENTRY *Flink;
-  struct tagMX_LIST_ENTRY *Blink;
-} MX_LIST_ENTRY;
+typedef struct _MX_LIST_ENTRY {
+  struct _MX_LIST_ENTRY *Flink;
+  struct _MX_LIST_ENTRY *Blink;
+} MX_LIST_ENTRY, *PMX_LIST_ENTRY;
 
-typedef struct {
+typedef struct _MX_LDR_DATA_TABLE_ENTRY32 {
   MX_LIST_ENTRY32 InLoadOrderLinks;
   MX_LIST_ENTRY32 InMemoryOrderLinks;
   MX_LIST_ENTRY32 InInitializationOrderLinks;
@@ -699,9 +746,9 @@ typedef struct {
   ULONG  Flags;
   USHORT LoadCount;
   //... the rest is unused
-} MX_LDR_DATA_TABLE_ENTRY32;
+} MX_LDR_DATA_TABLE_ENTRY32, *PMX_LDR_DATA_TABLE_ENTRY32;
 
-typedef struct {
+typedef struct _MX_LDR_DATA_TABLE_ENTRY64 {
   MX_LIST_ENTRY64 InLoadOrderLinks;
   MX_LIST_ENTRY64 InMemoryOrderLinks;
   MX_LIST_ENTRY64 InInitializationOrderLinks;
@@ -713,9 +760,9 @@ typedef struct {
   ULONG  Flags;
   USHORT LoadCount;
   //... the rest is unused
-} MX_LDR_DATA_TABLE_ENTRY64;
+} MX_LDR_DATA_TABLE_ENTRY64, *PMX_LDR_DATA_TABLE_ENTRY64;
 
-typedef struct {
+typedef struct _MX_LDR_DATA_TABLE_ENTRY {
   MX_LIST_ENTRY InLoadOrderLinks;
   MX_LIST_ENTRY InMemoryOrderLinks;
   MX_LIST_ENTRY InInitializationOrderLinks;
@@ -727,9 +774,9 @@ typedef struct {
   ULONG  Flags;
   USHORT LoadCount;
   //... the rest is unused
-} MX_LDR_DATA_TABLE_ENTRY;
+} MX_LDR_DATA_TABLE_ENTRY, *PMX_LDR_DATA_TABLE_ENTRY;
 
-typedef struct {
+typedef struct _MX_PEB_LDR_DATA {
   ULONG Length;
   BOOLEAN Initialized;
   HANDLE SsHandle;
@@ -739,10 +786,10 @@ typedef struct {
   PVOID EntryInProgress;
   BOOLEAN ShutdownInProgress;
   HANDLE ShutdownThreadId;
-} MX_PEB_LDR_DATA;
+} MX_PEB_LDR_DATA, *PMX_PEB_LDR_DATA;
 
 #pragma pack(4)
-typedef struct {
+typedef struct _MX_PROCESS_DEVICEMAP_INFORMATION {
   union {
     struct {
       HANDLE DirectoryHandle;
@@ -752,15 +799,15 @@ typedef struct {
       UCHAR DriveType[32];
     } Query;
   };
-} MX_PROCESS_DEVICEMAP_INFORMATION;
+} MX_PROCESS_DEVICEMAP_INFORMATION, *PMX_PROCESS_DEVICEMAP_INFORMATION;
 #pragma pack()
 
-typedef struct {
+typedef struct _MX_OBJECT_NAME_INFORMATION {
   MX_UNICODE_STRING Name;
   WCHAR Buffer[1];
-} MX_OBJECT_NAME_INFORMATION;
+} MX_OBJECT_NAME_INFORMATION, *PMX_OBJECT_NAME_INFORMATION;
 
-typedef struct {
+typedef struct _MX_KNONVOLATILE_CONTEXT_POINTERS {
   union {
     PM128A FloatingContext[16];
     struct {
@@ -803,7 +850,7 @@ typedef struct {
       PULONG64 R15;
     };
   };
-} MX_KNONVOLATILE_CONTEXT_POINTERS;
+} MX_KNONVOLATILE_CONTEXT_POINTERS, *PMX_KNONVOLATILE_CONTEXT_POINTERS;
 #pragma pack()
 
 //-----------------------------------------------------------
@@ -995,6 +1042,9 @@ __DECLARE(NTSTATUS, NtCreateSection)(__out PHANDLE SectionHandle, __in ACCESS_MA
                                      __in_opt PMX_OBJECT_ATTRIBUTES ObjectAttributes,
                                      __in_opt PLARGE_INTEGER MaximumSize, __in ULONG SectionPageProtection,
                                      __in ULONG AllocationAttributes, __in_opt HANDLE FileHandle);
+__DECLARE(NTSTATUS, NtQuerySection)(__in HANDLE SectionHandle, __in MX_SECTION_INFORMATION_CLASS InformationClass,
+                                    __out PVOID InformationBuffer, __in ULONG InformationBufferSize,
+                                    __out_opt PULONG ResultLength);
 __DECLARE(NTSTATUS, NtMapViewOfSection)(__in HANDLE SectionHandle, __in HANDLE ProcessHandle,
                                         __inout PVOID *BaseAddress, __in ULONG_PTR ZeroBits, __in SIZE_T CommitSize,
                                         __inout PLARGE_INTEGER SectionOffset, __inout PSIZE_T ViewSize,
