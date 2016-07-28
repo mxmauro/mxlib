@@ -84,6 +84,12 @@ CIpcMessageManager::~CIpcMessageManager()
 {
   RundownProt_WaitForRelease(&nRundownLock);
 
+  _InterlockedExchange(&nTerminated, 1);
+
+  //wait for pending incoming
+  while (__InterlockedRead(&nIncomingQueuedMessagesCount) > 0)
+    _YieldProcessor();
+
   Shutdown();
   return;
 }
@@ -95,9 +101,6 @@ VOID CIpcMessageManager::Shutdown()
   CMessage *lpMsg;
 
   _InterlockedExchange(&nTerminated, 1);
-  //wait for pending incoming
-  while (__InterlockedRead(&nIncomingQueuedMessagesCount) > 0)
-    _YieldProcessor();
 
   //cancel reply waiters
   do
