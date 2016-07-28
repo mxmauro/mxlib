@@ -24,7 +24,7 @@
 #ifndef _MX_IPC_MESSAGE_MANAGER_H
 #define _MX_IPC_MESSAGE_MANAGER_H
 
-#include "IpcCommon.h"
+#include "IpcCommon.h"\
 
 //-----------------------------------------------------------
 
@@ -154,6 +154,7 @@ private:
   DWORD dwMaxMessageSize, dwProtocolVersion;
 
   LONG volatile nRundownLock;
+  LONG volatile nTerminated;
   LONG volatile nNextId;
   OnMessageReceivedCallback cMessageReceivedCallback;
 
