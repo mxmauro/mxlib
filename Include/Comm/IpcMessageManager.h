@@ -24,13 +24,14 @@
 #ifndef _MX_IPC_MESSAGE_MANAGER_H
 #define _MX_IPC_MESSAGE_MANAGER_H
 
-#include "IpcCommon.h"\
+#include "IpcCommon.h"
+#include "..\RefCounted.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-class CIpcMessageManager : public virtual CBaseMemObj
+class CIpcMessageManager : public virtual CBaseMemObj, public TRefCounted<CIpcMessageManager>
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CIpcMessageManager);
 public:
@@ -140,6 +141,7 @@ private:
   static int ReplyMsgWaitCompareFunc(__in LPVOID lpContext, __in REPLYMSG_ITEM *lpElem1, __in REPLYMSG_ITEM *lpElem2);
 
   VOID FlushReceivedReplies();
+  VOID CancelWaitingReplies();
 
 private:
   typedef struct {
@@ -153,7 +155,6 @@ private:
   HANDLE hConn;
   DWORD dwMaxMessageSize, dwProtocolVersion;
 
-  LONG volatile nRundownLock;
   LONG volatile nTerminated;
   LONG volatile nNextId;
   OnMessageReceivedCallback cMessageReceivedCallback;
@@ -163,7 +164,6 @@ private:
   SIZE_T nCurrMsgSize;
   DWORD dwLastMessageId;
 
-  LONG volatile nIncomingQueuedMessagesCount;
   struct {
     LONG volatile nMutex;
     TArrayList4Structs<REPLYMSG_ITEM> cList;
