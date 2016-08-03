@@ -24,8 +24,6 @@
 #ifndef _MALLOCMACROS_H
 #define _MALLOCMACROS_H
 
-#define MX_TRACEALLOC
-
 //MallocMacros usage:
 //~~~~~~~~~~~~~~~~~~
 //  Add the following macro to the C/C++/Project macro list: MX_MALLOCMACFROS_FILE=mymalloc.h
@@ -47,15 +45,16 @@
   #endif
 #else //MX_MALLOC || MX_FREE || MX_REALLOC || MX__MSIZE
 
-  #if defined(_DEBUG) || defined(MX_TRACEALLOC)
-    #define MX_MALLOC(nSize)              MX::MemAllocD((SIZE_T)(nSize), __FILE__, __LINE__)
-    #define MX_REALLOC(lpPtr, nNewSize)   MX::MemReallocD((LPVOID)(lpPtr), (SIZE_T)(nNewSize), __FILE__, __LINE__)
+  #if defined(_DEBUG)
+    #define MX_MALLOC(nSize)                       MX::MemAllocD((SIZE_T)(nSize), __FILE__, __LINE__)
+    #define MX_REALLOC(lpPtr, nNewSize)            MX::MemReallocD((LPVOID)(lpPtr), (SIZE_T)(nNewSize), __FILE__, \
+                                                                    __LINE__)
     #define MX_MALLOC_D(nSize, _f, _l)             MX::MemAllocD((SIZE_T)(nSize), _f, _l)
     #define MX_REALLOC_D(lpPtr, nNewSize, _f, _l)  MX::MemReallocD((LPVOID)(lpPtr), (SIZE_T)(nNewSize), _f, _l)
-  #else //_DEBUG || MX_TRACEALLOC
+  #else //_DEBUG
     #define MX_MALLOC(nSize)              MX::MemAlloc((SIZE_T)(nSize))
     #define MX_REALLOC(lpPtr, nNewSize)   MX::MemRealloc((LPVOID)(lpPtr), (SIZE_T)(nNewSize))
-  #endif //_DEBUG || MX_TRACEALLOC
+  #endif //_DEBUG
 
   #define MX_FREE(lpPtr)                if (lpPtr != NULL) { MX::MemFree((LPVOID)(lpPtr));  lpPtr = NULL; }
   #define MX__MSIZE(lpPtr)              MX::MemSize((LPVOID)(lpPtr))
