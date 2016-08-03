@@ -25,6 +25,7 @@
 #include "..\Crypto\InitOpenSSL.h"
 #include "..\..\Include\CircularBuffer.h"
 #include "..\..\Include\Comm\SslCertificates.h"
+#include "..\OpenSSL\Source\crypto\x509\x509_lcl.h"
 #include "..\OpenSSL\Source\crypto\include\internal\x509_int.h"
 
 //-----------------------------------------------------------
@@ -85,7 +86,7 @@ typedef struct tagSSL_LAYER_DATA {
 
 //-----------------------------------------------------------
 
-static int my_X509_STORE_CTX_get1_issuer(X509 **issuer, X509_STORE_CTX *ctx, X509 *x);
+static int my_X509_STORE_get1_issuer(X509 **issuer, X509_STORE_CTX *ctx, X509 *x);
 static STACK_OF(X509) *my_X509_STORE_get1_certs(X509_STORE_CTX *ctx, X509_NAME *nm);
 static STACK_OF(X509_CRL) *my_X509_STORE_get1_crls(X509_STORE_CTX *ctx, X509_NAME *nm);
 static X509* lookup_cert_by_subject(__in MX::CSslCertificateArray *lpCertArray, __in X509_NAME *name);
@@ -208,9 +209,9 @@ HRESULT CIpcSslLayer::Initialize(__in BOOL bServerSide, __in eProtocol nProtocol
   SSL_ctrl(ssl_data->lpSslSession, SSL_CTRL_SET_VERIFY_CERT_STORE, 1, lpStore); //do add reference
   if (X509_STORE_set_ex_data(lpStore, 0, (void*)ssl_data) <= 0)
     return E_OUTOFMEMORY;
-  ((x509_store_ctx_st*)lpStore)->get_issuer = &my_X509_STORE_CTX_get1_issuer;
-  ((x509_store_ctx_st*)lpStore)->lookup_certs = &my_X509_STORE_get1_certs;
-  ((x509_store_ctx_st*)lpStore)->lookup_crls = &my_X509_STORE_get1_crls;
+  ((x509_store_st*)lpStore)->get_issuer = &my_X509_STORE_get1_issuer;
+  ((x509_store_st*)lpStore)->lookup_certs = &my_X509_STORE_get1_certs;
+  ((x509_store_st*)lpStore)->lookup_crls = &my_X509_STORE_get1_crls;
   //setup server/client certificate if provided
   ssl_data->lpCertArray = lpCheckCertificates;
   if (lpSelfCert != NULL)
@@ -541,7 +542,7 @@ HRESULT CIpcSslLayer::FinalizeHandshake()
 
 //-----------------------------------------------------------
 
-static int my_X509_STORE_CTX_get1_issuer(X509 **issuer, X509_STORE_CTX *ctx, X509 *x)
+static int my_X509_STORE_get1_issuer(X509 **issuer, X509_STORE_CTX *ctx, X509 *x)
 {
   X509_STORE *lpStore;
   SSL_LAYER_DATA *lpSslLayerData;
@@ -560,7 +561,6 @@ static int my_X509_STORE_CTX_get1_issuer(X509 **issuer, X509_STORE_CTX *ctx, X50
     }
   }
   return 0;
-  //return X509_STORE_CTX_get1_issuer(issuer, ctx, x);
 }
 
 static STACK_OF(X509) *my_X509_STORE_get1_certs(X509_STORE_CTX *ctx, X509_NAME *nm)

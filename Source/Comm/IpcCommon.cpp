@@ -434,30 +434,30 @@ VOID CIpc::CloseConnection(__in CConnectionBase *lpConn, __in HRESULT hErrorCode
 
 VOID CIpc::ReleaseAndRemoveConnectionIfClosed(__in CConnectionBase *lpConn)
 {
+  BOOL bDestroy = FALSE;
+
   MX_ASSERT(__InterlockedRead(&(lpConn->nRefCount)) > 0);
+  //if this is the last reference to a closed connection, remove from the connections list
   if (_InterlockedDecrement(&(lpConn->nRefCount)) == 0 && lpConn->IsClosed() != FALSE)
   {
-    BOOL bOnList;
+    CAutoSlimRWLExclusive cConnListLock(&(sConnections.nSlimMutex));
 
-    //this is the last reference to the connection, if closed, remove from the connections list
-    lpConn->nCheckTag1 = lpConn->nCheckTag2 = 0;
+    //while refcount reached zero on a closed connection AND before the exclusive RWL take place,
+    //another thread could call, i.e., 'GetBufferedMessage' and increment the reference count so
+    //we have to leave the connection alive
+    if (__InterlockedRead(&(lpConn->nRefCount)) == 0)
     {
-      CAutoSlimRWLExclusive cConnListLock(&(sConnections.nSlimMutex));
-
-      bOnList = FALSE;
-      if (lpConn->GetLinkedList() == &(sConnections.cList))
-      {
-        bOnList = TRUE;
-        lpConn->RemoveNode();
-     }
+      MX_ASSERT(lpConn->GetLinkedList() == &(sConnections.cList));
+      lpConn->nCheckTag1 = lpConn->nCheckTag2 = 0;
+      lpConn->RemoveNode();
+      bDestroy = TRUE;
     }
-    if (bOnList != FALSE)
-    {
-      MX_ASSERT(lpConn->IsClosed() != FALSE);
-      lpConn->ShutdownLink(FAILED(lpConn->hErrorCode));
-      FireOnDestroy(lpConn);
-      delete lpConn;
-    }
+  }
+  if (bDestroy != FALSE)
+  {
+    lpConn->ShutdownLink(FAILED(lpConn->hErrorCode));
+    FireOnDestroy(lpConn);
+    delete lpConn;
   }
   return;
 }
@@ -654,7 +654,7 @@ VOID CIpc::OnDispatcherPacket(__in CIoCompletionPortThreadPool *lpPool, __in DWO
 
         if (SUCCEEDED(hRes))
           hRes =  lpConn->DoRead((SIZE_T)dwReadAhead, bDoZeroReads && ZeroReadsSupported());
-        //notify all layers about disconnection
+        //notify all layers about connection
         for (lpLayer=it.Begin(lpConn->cLayersList); SUCCEEDED(hRes) && lpLayer!=NULL; lpLayer=it.Next())
           hRes = lpLayer->OnConnect();
         //fire main connect

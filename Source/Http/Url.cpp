@@ -255,6 +255,7 @@ HRESULT CUrl::SetHost(__in_z LPCSTR szHostA, __in_opt SIZE_T nHostLen)
       return E_OUTOFMEMORY;
   }
   //done
+  cStrHostW.Attach(cStrTempW.Detach());
   return S_OK;
 }
 

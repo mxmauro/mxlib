@@ -25,13 +25,12 @@
 #define _MX_IPC_MESSAGE_MANAGER_H
 
 #include "IpcCommon.h"
-#include "..\RefCounted.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-class CIpcMessageManager : public virtual CBaseMemObj, public TRefCounted<CIpcMessageManager>
+class CIpcMessageManager : public virtual CBaseMemObj
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CIpcMessageManager);
 public:
@@ -50,9 +49,11 @@ public:
 
   VOID Shutdown();
 
+  BOOL HasPending() const;
+
   HRESULT SwitchToProtocol(__in DWORD dwProtocolVersion);
 
-  DWORD GetNextId() const;
+  DWORD GetNextId();
 
   HRESULT ProcessIncomingPacket();
 
@@ -155,8 +156,9 @@ private:
   HANDLE hConn;
   DWORD dwMaxMessageSize, dwProtocolVersion;
 
-  LONG volatile nTerminated;
+  LONG volatile nShuttingDown;
   LONG volatile nNextId;
+  LONG volatile nPendingCount;
   OnMessageReceivedCallback cMessageReceivedCallback;
 
   eState nState;
@@ -174,7 +176,7 @@ private:
   } sReceivedReplyMsg;
   struct {
     LONG volatile nMutex;
-    LONG volatile nActive;
+    LONG nActive;
     OVERLAPPED sOvr;
   } sFlush;
 };

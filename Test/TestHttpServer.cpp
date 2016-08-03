@@ -44,7 +44,10 @@ int TestHttpServer()
   MX::CHttpServer cHttpServer(cSckMgr, cPropBag);
   MX::CSslCertificate cSslCert;
   MX::CCryptoRSA cSslPrivateKey;
+  BOOL bUseSSL;
   HRESULT hRes;
+
+  bUseSSL = FALSE;
 
   hRes = cDispatcherPool.Initialize();
   if (SUCCEEDED(hRes))
@@ -52,15 +55,14 @@ int TestHttpServer()
     cSckMgr.On(MX_BIND_CALLBACK(&OnEngineError));
     hRes = cSckMgr.Initialize();
   }
-  if (SUCCEEDED(hRes))
+  if (SUCCEEDED(hRes) && bUseSSL != FALSE)
   {
     MX::CStringA cStrTempA;
     MX::CStringW cStrTempW;
-    HRESULT hRes;
 
     //load SSL certificate
     hRes = GetAppPath(cStrTempW);
-    if (SUCCEEDED(hRes) && cStrTempW.Concat(L"ssl.crt") == FALSE)
+    if (SUCCEEDED(hRes) && cStrTempW.Concat(L"Web\\Certificates\\ssl.crt") == FALSE)
       hRes = E_OUTOFMEMORY;
     if (SUCCEEDED(hRes))
       hRes = LoadTxtFile(cStrTempA, (LPCWSTR)cStrTempW);
@@ -69,7 +71,7 @@ int TestHttpServer()
     //load private key
     if (SUCCEEDED(hRes))
       hRes = GetAppPath(cStrTempW);
-    if (SUCCEEDED(hRes) && cStrTempW.Concat(L"ssl.key") == FALSE)
+    if (SUCCEEDED(hRes) && cStrTempW.Concat(L"Web\\Certificates\\ssl.key") == FALSE)
       hRes = E_OUTOFMEMORY;
     if (SUCCEEDED(hRes))
       hRes = LoadTxtFile(cStrTempA, (LPCWSTR)cStrTempW);
@@ -83,7 +85,12 @@ int TestHttpServer()
     cHttpServer.On(MX_BIND_CALLBACK(&OnError));
   }
   if (SUCCEEDED(hRes))
-    hRes = cHttpServer.StartListening(443, MX::CIpcSslLayer::ProtocolTLSv1_2, &cSslCert, &cSslPrivateKey);
+  {
+    if (bUseSSL != FALSE)
+      hRes = cHttpServer.StartListening(443, MX::CIpcSslLayer::ProtocolTLSv1_2, &cSslCert, &cSslPrivateKey);
+    else
+      hRes = cHttpServer.StartListening(80);
+  }
   //----
   if (SUCCEEDED(hRes))
   {
