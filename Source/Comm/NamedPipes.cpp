@@ -147,6 +147,8 @@ HRESULT CNamedPipes::ConnectToServer(__in_z LPCWSTR szServerNameW, __in OnCreate
   if (FAILED(hRes))
     FireOnConnect(cConn.Get(), hRes);
   //done
+  if (FAILED(hRes))
+    CloseConnection(cConn.Get(), hRes);
   ReleaseAndRemoveConnectionIfClosed(cConn.Detach());
   if (FAILED(hRes) && h != NULL)
     *h = NULL;
@@ -251,6 +253,8 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(__in HANDLE hProc, __out HANDL
     CWindowsRemoteHandle::CloseRemoteHandleSEH(hProc, hRemotePipe);
     hRemotePipe = NULL;
   }
+  if (FAILED(hRes))
+    CloseConnection(cConn.Get(), hRes);
   ReleaseAndRemoveConnectionIfClosed(cConn.Detach());
   return hRes;
 }
@@ -310,6 +314,8 @@ HRESULT CNamedPipes::CreateServerConnection(__in CServerInfo *lpServerInfo, __in
   if (SUCCEEDED(hRes))
     hRes = cConn->CreateServer(dwPacketSize);
   //done
+  if (FAILED(hRes))
+    CloseConnection(cConn.Get(), hRes);
   ReleaseAndRemoveConnectionIfClosed(cConn.Detach());
   return hRes;
 }

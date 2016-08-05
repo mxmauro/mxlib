@@ -42,13 +42,29 @@ int wmain(int argc, WCHAR* argv[])
   if (argc >= 2)
   {
     if (_wcsicmp(argv[1], L"HttpServer") == 0)
-      return TestHttpServer();
+    {
+      BOOL bUseSSL;
+
+      bUseSSL = (argc >= 3 && (argv[2][0] == L'/' || argv[2][0] == L'-') &&
+                 _wcsicmp(argv[2]+1, L"ssl") == 0) ? TRUE : FALSE;
+      return TestHttpServer(bUseSSL);
+    }
     if (_wcsicmp(argv[1], L"HttpClient") == 0)
+    {
       return TestHttpClient();
+    }
     if (_wcsicmp(argv[1], L"Javascript") == 0)
+    {
       return TestJavascript();
+    }
     if (_wcsicmp(argv[1], L"JsHttpServer") == 0)
-      return TestJsHttpServer();
+    {
+      BOOL bUseSSL;
+
+      bUseSSL = (argc >= 3 && (argv[2][0] == L'/' || argv[2][0] == L'-') &&
+                 _wcsicmp(argv[2]+1, L"ssl") == 0) ? TRUE : FALSE;
+      return TestJsHttpServer(bUseSSL);
+    }
   }
   wprintf_s(L"Use: Test.exe test-module\n\n");
   wprintf_s(L"Where 'test-module' can be:\n");

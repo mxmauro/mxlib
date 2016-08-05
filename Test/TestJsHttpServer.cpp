@@ -55,7 +55,7 @@ static HRESULT BuildWebFileName(__inout MX::CStringW &cStrFullFileNameW, __out L
 
 //-----------------------------------------------------------
 
-int TestJsHttpServer()
+int TestJsHttpServer(__in BOOL bUseSSL)
 {
   MX::CIoCompletionPortThreadPool cDispatcherPool;
   MX::CPropertyBag cPropBag;
@@ -78,15 +78,14 @@ int TestJsHttpServer()
     cSckMgr.On(MX_BIND_CALLBACK(&OnEngineError));
     hRes = cSckMgr.Initialize();
   }
-  if (SUCCEEDED(hRes))
+  if (SUCCEEDED(hRes) && bUseSSL != FALSE)
   {
     MX::CStringA cStrTempA;
     MX::CStringW cStrTempW;
-    HRESULT hRes;
 
     //load SSL certificate
     hRes = GetAppPath(cStrTempW);
-    if (SUCCEEDED(hRes) && cStrTempW.Concat(L"ssl.crt") == FALSE)
+    if (SUCCEEDED(hRes) && cStrTempW.Concat(L"Web\\Certificates\\ssl.crt") == FALSE)
       hRes = E_OUTOFMEMORY;
     if (SUCCEEDED(hRes))
       hRes = LoadTxtFile(cStrTempA, (LPCWSTR)cStrTempW);
@@ -95,7 +94,7 @@ int TestJsHttpServer()
     //load private key
     if (SUCCEEDED(hRes))
       hRes = GetAppPath(cStrTempW);
-    if (SUCCEEDED(hRes) && cStrTempW.Concat(L"ssl.key") == FALSE)
+    if (SUCCEEDED(hRes) && cStrTempW.Concat(L"Web\\Certificates\\ssl.key") == FALSE)
       hRes = E_OUTOFMEMORY;
     if (SUCCEEDED(hRes))
       hRes = LoadTxtFile(cStrTempA, (LPCWSTR)cStrTempW);
@@ -110,8 +109,10 @@ int TestJsHttpServer()
   }
   if (SUCCEEDED(hRes))
   {
-    //hRes = cJsHttpServer.StartListening(443, MX::CIpcSslLayer::ProtocolTLSv1_2, &cSslCert, &cSslPrivateKey);
-    hRes = cJsHttpServer.StartListening(80);
+    if (bUseSSL != FALSE)
+      hRes = cJsHttpServer.StartListening(443, MX::CIpcSslLayer::ProtocolTLSv1_2, &cSslCert, &cSslPrivateKey);
+    else
+      hRes = cJsHttpServer.StartListening(80);
   }
   //----
   if (SUCCEEDED(hRes))

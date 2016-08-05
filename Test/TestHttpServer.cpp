@@ -36,7 +36,7 @@ static HRESULT LoadTxtFile(__inout MX::CStringA &cStrContentsA, __in_z LPCWSTR s
 
 //-----------------------------------------------------------
 
-int TestHttpServer()
+int TestHttpServer(__in BOOL bUseSSL)
 {
   MX::CIoCompletionPortThreadPool cDispatcherPool;
   MX::CPropertyBag cPropBag;
@@ -44,10 +44,7 @@ int TestHttpServer()
   MX::CHttpServer cHttpServer(cSckMgr, cPropBag);
   MX::CSslCertificate cSslCert;
   MX::CCryptoRSA cSslPrivateKey;
-  BOOL bUseSSL;
   HRESULT hRes;
-
-  bUseSSL = FALSE;
 
   hRes = cDispatcherPool.Initialize();
   if (SUCCEEDED(hRes))

@@ -438,25 +438,32 @@ VOID CIpc::ReleaseAndRemoveConnectionIfClosed(__in CConnectionBase *lpConn)
 
   MX_ASSERT(__InterlockedRead(&(lpConn->nRefCount)) > 0);
   //if this is the last reference to a closed connection, remove from the connections list
-  if (_InterlockedDecrement(&(lpConn->nRefCount)) == 0 && lpConn->IsClosed() != FALSE)
+  if (_InterlockedDecrement(&(lpConn->nRefCount)) == 0)
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nSlimMutex));
 
     //while refcount reached zero on a closed connection AND before the exclusive RWL take place,
     //another thread could call, i.e., 'GetBufferedMessage' and increment the reference count so
     //we have to leave the connection alive
+    lpConn->nCheckTag1 = lpConn->nCheckTag2 = 0;
     if (__InterlockedRead(&(lpConn->nRefCount)) == 0)
     {
-      MX_ASSERT(lpConn->GetLinkedList() == &(sConnections.cList));
-      lpConn->nCheckTag1 = lpConn->nCheckTag2 = 0;
-      lpConn->RemoveNode();
-      bDestroy = TRUE;
+      if (lpConn->GetLinkedList() == &(sConnections.cList))
+      {
+        lpConn->RemoveNode();
+        bDestroy = TRUE;
+      }
+      else
+      {
+        MX_ASSERT(FALSE); //re-use????
+      }
     }
   }
   if (bDestroy != FALSE)
   {
     lpConn->ShutdownLink(FAILED(lpConn->hErrorCode));
     FireOnDestroy(lpConn);
+    MX_ASSERT(__InterlockedRead(&(lpConn->nRefCount)) == 0);
     delete lpConn;
   }
   return;

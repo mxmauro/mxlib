@@ -420,11 +420,13 @@ VOID CHttpServer::OnSocketDestroy(__in CIpc *lpIpc, __in HANDLE h, __in CIpc::CU
 {
   CRequest *lpRequest = (CRequest*)lpUserData;
 
-  MX_ASSERT(lpUserData != NULL);
-  //mark link as closed
-  lpRequest->MarkLinkAsClosed();
-  //cancel all timeout events
-  CancelAllTimeoutEvents(lpRequest);
+  if (lpRequest != NULL)
+  {
+    //mark link as closed
+    lpRequest->MarkLinkAsClosed();
+    //cancel all timeout events
+    CancelAllTimeoutEvents(lpRequest);
+  }
   //raise error notification
   if (FAILED(hErrorCode) && cErrorCallback)
     cErrorCallback(this, NULL, hErrorCode);

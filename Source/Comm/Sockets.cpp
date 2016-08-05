@@ -129,6 +129,8 @@ HRESULT CSockets::CreateListener(__in eFamily nFamily, __in int nPort, __in OnCr
       ReleaseAndRemoveConnectionIfClosed(cConn.Get());
   }
   //done
+  if (FAILED(hRes))
+    CloseConnection(cConn.Get(), hRes);
   ReleaseAndRemoveConnectionIfClosed(cConn.Detach());
   if (FAILED(hRes) && h != NULL)
     *h = NULL;
@@ -196,6 +198,8 @@ HRESULT CSockets::ConnectToServer(__in eFamily nFamily, __in_z LPCSTR szAddressA
       ReleaseAndRemoveConnectionIfClosed(cConn.Get());
   }
   //done
+  if (FAILED(hRes))
+    CloseConnection(cConn.Get(), hRes);
   ReleaseAndRemoveConnectionIfClosed(cConn.Detach());
   if (FAILED(hRes) && h != NULL)
     *h = NULL;
@@ -288,6 +292,8 @@ HRESULT CSockets::CreateServerConnection(__in CConnection *lpListenConn)
   if (SUCCEEDED(hRes))
     hRes = lpListenConn->SetupAcceptEx(cIncomingConn.Get());
   //done
+  if (FAILED(hRes))
+    CloseConnection(cIncomingConn.Get(), hRes);
   ReleaseAndRemoveConnectionIfClosed(cIncomingConn.Detach());
   return hRes;
 }
@@ -391,7 +397,6 @@ HRESULT CSockets::OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __i
               hRes = E_FAIL;
             }
           }
-
           else
           {
             hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
@@ -407,6 +412,7 @@ HRESULT CSockets::OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __i
       hRes2 = CreateServerConnection(lpConn);
       if (FAILED(hRes2))
         FireOnEngineError(hRes2);
+      ReleaseAndRemoveConnectionIfClosed(lpIncomingConn);
       }
       break;
 
@@ -727,6 +733,7 @@ HRESULT CSockets::CConnection::SetupAcceptEx(__in CConnection *lpIncomingConn)
   cRwList.QueueLast(lpPacket);
   lpPacket->SetUserData(lpIncomingConn);
   lpPacket->SetBytesInUse((DWORD)SockAddrSizeFromWinSockFamily(sAddr.si_family) + 16);
+  _InterlockedIncrement(&(lpIncomingConn->nRefCount));
   _InterlockedIncrement(&nRefCount);
   if (fnAcceptEx(sck, lpIncomingConn->sck, lpPacket->GetBuffer(), 0, lpPacket->GetBytesInUse(),
                  lpPacket->GetBytesInUse(), &dw, lpPacket->GetOverlapped()) == FALSE)
@@ -734,6 +741,7 @@ HRESULT CSockets::CConnection::SetupAcceptEx(__in CConnection *lpIncomingConn)
     hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
     if (hRes != MX_E_IoPending)
     {
+      _InterlockedDecrement(&(lpIncomingConn->nRefCount));
       _InterlockedDecrement(&nRefCount);
       return hRes;
     }
