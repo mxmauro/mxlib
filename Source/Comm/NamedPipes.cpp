@@ -28,9 +28,6 @@
 
 //-----------------------------------------------------------
 
-#define CLIENTCONNECT_RETRY_COUNT                         10
-#define CLIENTCONNECT_RETRY_DELAY                        100
-
 #define TypeListenRequest (CPacket::eType)((int)CPacket::TypeMAX + 1)
 #define TypeListen        (CPacket::eType)((int)CPacket::TypeMAX + 2)
 
@@ -46,6 +43,7 @@ CNamedPipes::CNamedPipes(__in CIoCompletionPortThreadPool &cDispatcherPool, __in
              CIpc(cDispatcherPool, cPropBag)
 {
   _InterlockedExchange(&nRemoteConnCounter, 0);
+  dwMaxWaitTimeoutMs = MX_NAMEDPIPES_PROPERTY_MaxWaitTimeoutMs_DEFVAL;
   return;
 }
 
@@ -141,7 +139,7 @@ HRESULT CNamedPipes::ConnectToServer(__in_z LPCWSTR szServerNameW, __in OnCreate
   }
   hRes = FireOnCreate(cConn.Get());
   if (SUCCEEDED(hRes))
-    hRes = cConn->CreateClient((LPWSTR)cStrTempW);
+    hRes = cConn->CreateClient((LPCWSTR)cStrTempW, dwMaxWaitTimeoutMs);
   if (SUCCEEDED(hRes))
     hRes = cConn->HandleConnected();
   if (FAILED(hRes))
@@ -183,7 +181,8 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(__in HANDLE hProc, __out HANDL
   sSecAttrib.nLength = sizeof(SECURITY_ATTRIBUTES);
   sSecAttrib.bInheritHandle = FALSE;
   sSecAttrib.lpSecurityDescriptor = &sSecDesc;
-  GenerateUniquePipeName(szBufW, MX_ARRAYLEN(szBufW), (DWORD)this, (DWORD)_InterlockedIncrement(&nRemoteConnCounter));
+  GenerateUniquePipeName(szBufW, MX_ARRAYLEN(szBufW), (DWORD)((ULONG_PTR)this),
+                         (DWORD)_InterlockedIncrement(&nRemoteConnCounter));
   cLocalPipe.Attach(::CreateNamedPipeW(szBufW, PIPE_ACCESS_DUPLEX|FILE_FLAG_WRITE_THROUGH|FILE_FLAG_OVERLAPPED,
                                        PIPE_READMODE_BYTE|PIPE_TYPE_BYTE|PIPE_WAIT, 1, dwPacketSize, dwPacketSize,
                                        10000, &sSecAttrib));
@@ -203,7 +202,7 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(__in HANDLE hProc, __out HANDL
   //now wait until connected (may be not necessary)
   if (bConnected == FALSE)
   {
-    if (::WaitForSingleObject(sConnOvr.hEvent, 1000) != WAIT_OBJECT_0)
+    if (::WaitForSingleObject(sConnOvr.hEvent, dwMaxWaitTimeoutMs) != WAIT_OBJECT_0)
       return MX_E_BrokenPipe;
     if (::GetOverlappedResult(cLocalPipe, &sConnOvr, &dw, FALSE) == FALSE)
     {
@@ -284,6 +283,13 @@ HRESULT CNamedPipes::ImpersonateConnectionClient(__in HANDLE h)
 
 HRESULT CNamedPipes::OnInternalInitialize()
 {
+  cPropBag.GetDWord(MX_NAMEDPIPES_PROPERTY_MaxWaitTimeoutMs, dwMaxWaitTimeoutMs,
+                    MX_NAMEDPIPES_PROPERTY_MaxWaitTimeoutMs_DEFVAL);
+  if (dwMaxWaitTimeoutMs < 100)
+    dwMaxWaitTimeoutMs = 100;
+  else if (dwMaxWaitTimeoutMs > 180000)
+    dwMaxWaitTimeoutMs = 180000;
+  //done
   return S_OK;
 }
 
@@ -481,12 +487,12 @@ HRESULT CNamedPipes::CConnection::CreateServer(__in DWORD dwPacketSize)
   return hRes;
 }
 
-HRESULT CNamedPipes::CConnection::CreateClient(__in_z LPCWSTR szServerNameW)
+HRESULT CNamedPipes::CConnection::CreateClient(__in_z LPCWSTR szServerNameW, __in DWORD dwMaxWriteTimeoutMs)
 {
   SECURITY_ATTRIBUTES sSecAttrib;
   SECURITY_DESCRIPTOR sSecDesc;
   HRESULT hRes;
-  DWORD dwMode, dwRetry;
+  DWORD dwMode;
 
   //create client pipe endpoint
   ::InitializeSecurityDescriptor(&sSecDesc, SECURITY_DESCRIPTOR_REVISION);
@@ -494,7 +500,6 @@ HRESULT CNamedPipes::CConnection::CreateClient(__in_z LPCWSTR szServerNameW)
   sSecAttrib.nLength = (DWORD)sizeof(sSecAttrib);
   sSecAttrib.bInheritHandle = FALSE;
   sSecAttrib.lpSecurityDescriptor = &sSecDesc;
-  dwRetry = CLIENTCONNECT_RETRY_COUNT;
   while (1)
   {
     hPipe = ::CreateFileW(szServerNameW, GENERIC_READ|GENERIC_WRITE, 0, &sSecAttrib, OPEN_EXISTING,
@@ -503,9 +508,18 @@ HRESULT CNamedPipes::CConnection::CreateClient(__in_z LPCWSTR szServerNameW)
       break;
     hPipe = NULL;
     hRes = MX_HRESULT_FROM_LASTERROR();
-    if ((--dwRetry) == 0 || hRes != MX_HRESULT_FROM_WIN32(ERROR_PIPE_BUSY))
+    if (dwMaxWriteTimeoutMs == 0 || hRes != MX_HRESULT_FROM_WIN32(ERROR_PIPE_BUSY))
       return hRes;
-    ::WaitNamedPipeW(szServerNameW, CLIENTCONNECT_RETRY_DELAY);
+    if (dwMaxWriteTimeoutMs >= 100)
+    {
+      ::WaitNamedPipeW(szServerNameW, 100);
+      dwMaxWriteTimeoutMs -= 100;
+    }
+    else
+    {
+      ::WaitNamedPipeW(szServerNameW, dwMaxWriteTimeoutMs);
+      dwMaxWriteTimeoutMs = 0;
+    }
   }
   //attach to completion port
   hRes = GetDispatcherPool().Attach(hPipe, GetDispatcherPoolPacketCallback());

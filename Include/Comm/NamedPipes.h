@@ -28,6 +28,11 @@
 
 //-----------------------------------------------------------
 
+#define MX_NAMEDPIPES_PROPERTY_MaxWaitTimeoutMs         "NAMEDPIPES_MaxWaitTimeoutMs"
+#define MX_NAMEDPIPES_PROPERTY_MaxWaitTimeoutMs_DEFVAL  1000
+
+//-----------------------------------------------------------
+
 namespace MX {
 
 class CNamedPipes : public CIpc
@@ -76,7 +81,7 @@ private:
     ~CConnection();
 
     HRESULT CreateServer(__in DWORD dwPacketSize);
-    HRESULT CreateClient(__in_z LPCWSTR szServerNameW);
+    HRESULT CreateClient(__in_z LPCWSTR szServerNameW, __in DWORD dwMaxWriteTimeoutMs);
     VOID ShutdownLink(__in BOOL bAbortive);
 
     HRESULT SendReadPacket(__in CPacket *lpPacket);
@@ -107,6 +112,7 @@ private:
 
 private:
   LONG volatile nRemoteConnCounter;
+  DWORD dwMaxWaitTimeoutMs;
 };
 
 } //namespace MX
