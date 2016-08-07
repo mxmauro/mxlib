@@ -64,7 +64,7 @@ SET PATH=%_PERLPATH%\bin;%_NASMPATH%\;%PATH%
 REM Prepare
 PUSHD "%~dp0Source"
 ECHO Configuring...
-perl.exe Configure %_CONFIGDEBUG%%_CONFIGTARGET% %_DEFINE_NOERR% no-sock no-rc2 no-idea no-cast no-md2 no-mdc2 no-camellia no-shared -DOPENSSL_NO_DGRAM -DOPENSSL_NO_CAPIENG -DUNICODE -D_UNICODE "--config=%~dp0..\compiler_config.conf"
+perl.exe Configure %_CONFIGDEBUG%%_CONFIGTARGET% %_DEFINE_NOERR% no-sock no-rc2 no-idea no-cast no-md2 no-mdc2 no-camellia no-shared -DOPENSSL_NO_DGRAM -DOPENSSL_NO_CAPIENG -DOPENSSL_NO_FILENAMES -DUNICODE -D_UNICODE "--config=%~dp0..\compiler_config.conf"
 REM  -DOPENSSL_NO_OCSP "--prefix=%_LIBDIR%" "-FI%~dp0..\config.h"
 IF NOT %ERRORLEVEL% == 0 GOTO bad_prepare
 
@@ -72,8 +72,13 @@ REM Clean before compile
 NMAKE clean >NUL 2>NUL
 
 REM Compile
-NMAKE
+NMAKE /S build_generated
 IF NOT %ERRORLEVEL% == 0 GOTO bad_compile
+NMAKE /S build_libs_nodep
+IF NOT %ERRORLEVEL% == 0 GOTO bad_compile
+NMAKE /S build_engines_nodep
+IF NOT %ERRORLEVEL% == 0 GOTO bad_compile
+
 
 REM Pause 5 seconds because NMake's processes may still creating the lib WTF?????
 PING 127.0.0.1 -n 6 >NUL

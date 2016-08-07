@@ -127,20 +127,20 @@ static DukTape::duk_ret_t OnSetCookie(__in DukTape::duk_context *lpCtx, __in_z L
   nExpire = 0;
   bHasExpireDt = bIsSecure = bIsHttpOnly = FALSE;
   szNameA = DukTape::duk_require_string(lpCtx, 0);
-  if (nParamsCount > 1 && DukTape::duk_is_null_or_undefined(lpCtx, 1) == 0)
+  if (nParamsCount > 1 && duk_is_null_or_undefined(lpCtx, 1) == 0)
     szValueA = DukTape::duk_require_string(lpCtx, 1);
-  if (nParamsCount > 2 && DukTape::duk_is_null_or_undefined(lpCtx, 2) == 0)
+  if (nParamsCount > 2 && duk_is_null_or_undefined(lpCtx, 2) == 0)
   {
     nExpire = DukTape::duk_require_int(lpCtx, 2);
     bHasExpireDt = TRUE;
   }
-  if (nParamsCount > 3 && DukTape::duk_is_null_or_undefined(lpCtx, 3) == 0)
+  if (nParamsCount > 3 && duk_is_null_or_undefined(lpCtx, 3) == 0)
     szPathA = DukTape::duk_require_string(lpCtx, 3);
-  if (nParamsCount > 4 && DukTape::duk_is_null_or_undefined(lpCtx, 4) == 0)
+  if (nParamsCount > 4 && duk_is_null_or_undefined(lpCtx, 4) == 0)
     szDomainA = DukTape::duk_require_string(lpCtx, 4);
-  if (nParamsCount > 5 && DukTape::duk_is_null_or_undefined(lpCtx, 5) == 0)
+  if (nParamsCount > 5 && duk_is_null_or_undefined(lpCtx, 5) == 0)
     bIsSecure = DukTape::duk_require_boolean(lpCtx, 5) ? TRUE : FALSE;
-  if (nParamsCount > 6 && DukTape::duk_is_null_or_undefined(lpCtx, 6) == 0)
+  if (nParamsCount > 6 && duk_is_null_or_undefined(lpCtx, 6) == 0)
     bIsHttpOnly = DukTape::duk_require_boolean(lpCtx, 6) ? TRUE : FALSE;
   //setup cookie
   hRes = cCookie.SetName(szNameA);
