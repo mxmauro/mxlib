@@ -139,7 +139,7 @@ HRESULT CJsHttpServer::OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in MX:
         LPCSTR szErrMsgA;
         HRESULT hRes2;
 
-        szErrMsgA = cJvm.GetLastRunErrorMessage();
+        szErrMsgA = cJvm.ErrorInfo().GetDescription();
         if (MX::StrCompareA(szErrMsgA, "(exit)") == 0)
         {
           // "(exit)" is a "clean" exit :)
@@ -172,8 +172,8 @@ HRESULT CJsHttpServer::OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in MX:
           hRes2 = (cStrBodyA.Format("Error: %s", szErrMsgA) != FALSE) ? S_OK : E_OUTOFMEMORY;
           if (SUCCEEDED(hRes2) && bShowStackTraceOnError != FALSE)
           {
-            if (cStrBodyA.AppendFormat(" @ %s(%lu)\r\nStack trace:\r\n%s", cJvm.GetLastRunErrorFileName(),
-                                       cJvm.GetLastRunErrorLineNumber(), cJvm.GetLastRunErrorStackTrace()) == FALSE)
+            if (cStrBodyA.AppendFormat(" @ %s(%lu)\r\nStack trace:\r\n%s", cJvm.ErrorInfo().GetFileName(),
+                                       cJvm.ErrorInfo().GetLineNumber(), cJvm.ErrorInfo().GetStackTrace()) == FALSE)
             {
               hRes2 = E_OUTOFMEMORY;
             }

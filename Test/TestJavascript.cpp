@@ -113,9 +113,9 @@ int TestJavascript()
   {
     if (hRes == E_FAIL)
     {
-      wprintf_s(L"Error: %S in %S(%lu)\n", cJvm.GetLastRunErrorMessage(), cJvm.GetLastRunErrorFileName(),
-                cJvm.GetLastRunErrorLineNumber());
-      wprintf_s(L"%S\n", cJvm.GetLastRunErrorStackTrace());
+      wprintf_s(L"Error: %S in %S(%lu)\n", cJvm.ErrorInfo().GetDescription(), cJvm.ErrorInfo().GetFileName(),
+                cJvm.ErrorInfo().GetLineNumber());
+      wprintf_s(L"%S\n", cJvm.ErrorInfo().GetStackTrace());
     }
     else
     {
@@ -171,9 +171,9 @@ int TestJavascript()
   {
     if (hRes == E_FAIL)
     {
-      wprintf_s(L"Error: %S in %S(%lu)\n", cJvm.GetLastRunErrorMessage(), cJvm.GetLastRunErrorFileName(),
-                cJvm.GetLastRunErrorLineNumber());
-      wprintf_s(L"%S\n", cJvm.GetLastRunErrorStackTrace());
+      wprintf_s(L"Error: %S in %S(%lu)\n", cJvm.ErrorInfo().GetDescription(), cJvm.ErrorInfo().GetFileName(),
+                cJvm.ErrorInfo().GetLineNumber());
+      wprintf_s(L"%S\n", cJvm.ErrorInfo().GetStackTrace());
     }
     else
     {

@@ -246,6 +246,51 @@ public:
 
   //--------
 
+  class CErrorInfo
+  {
+    MX_DISABLE_COPY_CONSTRUCTOR(CErrorInfo);
+  public:
+    CErrorInfo();
+
+    VOID Clear();
+
+    __inline HRESULT GetErrorCode() const
+      {
+      return hRes;
+      };
+
+    __inline LPCSTR GetDescription() const
+      {
+      return (LPCSTR)cStrMessageA;
+      };
+
+    __inline LPCSTR GetFileName() const
+      {
+      return (LPCSTR)cStrFileNameA;
+      };
+
+    __inline ULONG GetLineNumber() const
+      {
+      return nLine;
+      };
+
+    __inline LPCSTR GetStackTrace() const
+      {
+      return (LPCSTR)cStrStackTraceA;
+      };
+
+  private:
+    friend class CJavascriptVM;
+
+    HRESULT hRes;
+    CStringA cStrMessageA;
+    CStringA cStrFileNameA;
+    ULONG nLine;
+    CStringA cStrStackTraceA;
+  };
+
+  //--------
+
   typedef std::function<VOID (__in DukTape::duk_context*)> protected_function;
 
 public:
@@ -257,16 +302,24 @@ public:
   HRESULT Initialize();
   VOID Finalize();
 
-  operator DukTape::duk_context*()
+  __inline operator DukTape::duk_context*() const
     {
     MX_ASSERT(lpCtx != NULL);
     return lpCtx;
+    };
+
+  __inline CErrorInfo& ErrorInfo()
+    {
+    return cLastErrorInfo;
     };
 
   static CJavascriptVM* FromContext(__in DukTape::duk_context *lpCtx);
 
   HRESULT Run(__in_z LPCSTR szCodeA, __in_z_opt LPCWSTR szFileNameW=NULL, __in_opt BOOL bIgnoreResult=TRUE);
 
+  static HRESULT RunNativeProtected(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nArgsCount,
+                                    __in DukTape::duk_idx_t nRetValuesCount, __in protected_function func,
+                                    __out_opt CErrorInfo *lpErrorInfo=NULL);
   HRESULT RunNativeProtected(__in DukTape::duk_idx_t nArgsCount, __in DukTape::duk_idx_t nRetValuesCount,
                              __in protected_function func);
 
@@ -333,25 +386,10 @@ public:
 
   HRESULT PushObjectProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA);
 
-  LPCSTR GetLastRunErrorMessage() const
-    {
-    return (LPCSTR)sLastExecError.cStrMessageA;
-    };
-
-  LPCSTR GetLastRunErrorFileName() const
-    {
-    return (LPCSTR)sLastExecError.cStrFileNameA;
-    };
-
-  ULONG GetLastRunErrorLineNumber() const
-    {
-    return sLastExecError.nLine;
-    };
-
-  LPCSTR GetLastRunErrorStackTrace() const
-    {
-    return (LPCSTR)sLastExecError.cStrStackTraceA;
-    };
+  HRESULT PushStringW(__in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
+  HRESULT GetStringW(__in DukTape::duk_idx_t nStackIndex, __inout CStringW &cStrW, __in_opt BOOL bAppend=FALSE);
+  HRESULT PushDate(__in LPSYSTEMTIME lpSt, __in_opt BOOL bAsUtc=TRUE);
+  HRESULT GetDate(__in DukTape::duk_idx_t nObjIdx, __out LPSYSTEMTIME lpSt);
 
   static HRESULT AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCSTR szStrA, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
   static HRESULT AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
@@ -364,18 +402,13 @@ private:
   static DukTape::duk_ret_t _ProxyDeletePropHelper(__in DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _RunNativeProtectedHelper(__in DukTape::duk_context *lpCtx, __in void *udata);
 
-  VOID GetErrorInfoFromException(__in DukTape::duk_idx_t nStackIndex);
+  static HRESULT GetErrorInfoFromException(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex,
+                                           __out_opt CErrorInfo *lpErrorInfo=NULL);
 
-protected:
+private:
   DukTape::duk_context *lpCtx;
   OnRequireModuleCallback cRequireModuleCallback;
-  struct {
-    HRESULT hRes;
-    CStringA cStrMessageA;
-    CStringA cStrFileNameA;
-    ULONG nLine;
-    CStringA cStrStackTraceA;
-  } sLastExecError;
+  CErrorInfo cLastErrorInfo;
 };
 
 //-----------------------------------------------------------

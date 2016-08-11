@@ -194,21 +194,22 @@ HRESULT CJavascriptVM::CRequireModuleContext::ReplaceModuleExports(__in DukTape:
                                                                    __in_opt BOOL bRemoveFromStack)
 {
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
-  HRESULT hRes;
+  BOOL bDup = FALSE;
+  HRESULT hRes = MX_E_UnhandledException;
 
-  hRes = lpJVM->RunNativeProtected(0, 0, [nObjIndex, bRemoveFromStack, this](__in DukTape::duk_context *lpCtx) -> VOID
+  try
   {
-    DukTape::duk_idx_t nObjIndex_2 = nObjIndex;
-    if (nObjIndex_2 < 0)
-      nObjIndex_2 = DukTape::duk_normalize_index(lpCtx, nObjIndex_2);
-    DukTape::duk_dup(lpCtx, nObjIndex_2);
+    DukTape::duk_dup(lpCtx, nObjIndex);
+    bDup = TRUE;
     DukTape::duk_put_prop_string(lpCtx, nModuleObjectIndex, "exports");
-    if (bRemoveFromStack != FALSE)
-      DukTape::duk_remove(lpCtx, nObjIndex_2);
-    return;
-  });
+    hRes = S_OK;
+  }
+  catch (...)
+  { }
   //done
-  return hRes;
+  if (bRemoveFromStack != FALSE && bDup != FALSE)
+    DukTape::duk_remove(lpCtx, nObjIndex);
+  return S_OK;
 }
 
 HRESULT CJavascriptVM::CRequireModuleContext::ReplaceModuleExportsWithObject(__in CJsObjectBase *lpObject)

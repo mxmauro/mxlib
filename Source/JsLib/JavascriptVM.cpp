@@ -49,7 +49,6 @@ CJavascriptVM::CJavascriptVM() : CBaseMemObj()
 {
   lpCtx = NULL;
   cRequireModuleCallback = NullCallback();
-  sLastExecError.nLine = 0;
   return;
 }
 
@@ -145,12 +144,7 @@ HRESULT CJavascriptVM::Run(__in_z LPCSTR szCodeA, __in_z_opt LPCWSTR szFileNameW
   }
   if (szFileNameW == NULL || *szFileNameW == 0)
     szFileNameW = L"main.jss";
-  
   //initialize last execution error
-  sLastExecError.cStrMessageA.Empty();
-  sLastExecError.cStrFileNameA.Empty();
-  sLastExecError.nLine = 0;
-  sLastExecError.cStrStackTraceA.Empty();
   hRes = RunNativeProtected(0, (bIgnoreResult != FALSE) ? 0 : 1, [szFileNameW, szCodeA, this]
                             (__in DukTape::duk_context *lpCtx) -> VOID
   {
@@ -175,13 +169,16 @@ HRESULT CJavascriptVM::Run(__in_z LPCSTR szCodeA, __in_z_opt LPCWSTR szFileNameW
   return hRes;
 }
 
-HRESULT CJavascriptVM::RunNativeProtected(__in DukTape::duk_idx_t nArgsCount, __in DukTape::duk_idx_t nRetValuesCount,
-                                          __in protected_function func)
+HRESULT CJavascriptVM::RunNativeProtected(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nArgsCount,
+                                          __in DukTape::duk_idx_t nRetValuesCount, __in protected_function func,
+                                          __out_opt CErrorInfo *lpErrorInfo)
 {
   RUN_NATIVE_PROTECTED_DATA sData;
   DukTape::duk_idx_t nStackTop;
   HRESULT hRes = S_OK;
 
+  if (lpErrorInfo != NULL)
+    lpErrorInfo->Clear();
   nStackTop = DukTape::duk_get_top(lpCtx);
   sData.func = func;
   sData.nRetValuesCount = nRetValuesCount;
@@ -193,8 +190,7 @@ HRESULT CJavascriptVM::RunNativeProtected(__in DukTape::duk_idx_t nArgsCount, __
     if (DukTape::duk_safe_call(lpCtx, &CJavascriptVM::_RunNativeProtectedHelper, &sData, nArgsCount,
                                nRetValuesCount) != DUK_EXEC_SUCCESS)
     {
-      GetErrorInfoFromException(-1);
-      hRes = sLastExecError.hRes;
+      hRes = GetErrorInfoFromException(lpCtx, -1, lpErrorInfo);
       DukTape::duk_pop(lpCtx);
     }
     else if (sData.nRetValuesCount == 0)
@@ -206,10 +202,31 @@ HRESULT CJavascriptVM::RunNativeProtected(__in DukTape::duk_idx_t nArgsCount, __
   catch (HRESULT _hRes)
   {
     DukTape::duk_set_top(lpCtx, nStackTop);
+    if (lpErrorInfo != NULL)
+    {
+      lpErrorInfo->Clear();
+      lpErrorInfo->hRes = _hRes;
+    }
     hRes = _hRes;
+  }
+  catch (...)
+  {
+    DukTape::duk_set_top(lpCtx, nStackTop);
+    if (lpErrorInfo != NULL)
+    {
+      lpErrorInfo->Clear();
+      lpErrorInfo->hRes = MX_E_UnhandledException;
+    }
+    hRes = MX_E_UnhandledException;
   }
   //done
   return hRes;
+}
+
+HRESULT CJavascriptVM::RunNativeProtected(__in DukTape::duk_idx_t nArgsCount, __in DukTape::duk_idx_t nRetValuesCount,
+                                          __in protected_function func)
+{
+  return RunNativeProtected(lpCtx, nArgsCount, nRetValuesCount, func, &cLastErrorInfo);
 }
 
 HRESULT CJavascriptVM::AddNativeFunction(__in_z LPCSTR szFuncNameA, __in OnNativeFunctionCallback cCallback,
@@ -697,6 +714,183 @@ HRESULT CJavascriptVM::PushObjectProperty(__in_z LPCSTR szObjectNameA, __in_z LP
   return Internals::JsLib::PushPropertyCommon(lpCtx, szObjectNameA, szPropertyNameA);
 }
 
+HRESULT CJavascriptVM::PushStringW(__in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen)
+{
+  MX::CStringA cStrTempA;
+  HRESULT hRes;
+
+  hRes = Utf8_Encode(cStrTempA, szStrW, nStrLen);
+  if (SUCCEEDED(hRes))
+  {
+    hRes = RunNativeProtected(0, 1, [&cStrTempA](__in DukTape::duk_context *lpCtx) -> VOID
+    {
+      DukTape::duk_push_string(lpCtx, cStrTempA);
+      return;
+    });
+  }
+  //done
+  return hRes;
+}
+
+HRESULT CJavascriptVM::GetStringW(__in DukTape::duk_idx_t nStackIndex, __inout CStringW &cStrW, __in_opt BOOL bAppend)
+{
+  LPCSTR sA;
+  HRESULT hRes;
+
+  if (bAppend == FALSE)
+    cStrW.Empty();
+  hRes = E_FAIL;
+  if (DukTape::duk_is_string(lpCtx, nStackIndex) != 0)
+  {
+    sA = DukTape::duk_get_string(lpCtx, nStackIndex);
+    hRes = Utf8_Decode(cStrW, sA, (SIZE_T)-1, bAppend);
+  }
+  //done
+  return hRes;
+}
+
+HRESULT CJavascriptVM::PushDate(__in LPSYSTEMTIME lpSt, __in_opt BOOL bAsUtc)
+{
+  HRESULT hRes;
+
+  if (lpSt == NULL)
+    return E_POINTER;
+  hRes = RunNativeProtected(0, 1, [lpSt](__in DukTape::duk_context *lpCtx) -> VOID
+  {
+    DukTape::duk_idx_t nObjIdx;
+
+    DukTape::duk_get_global_string(lpCtx, "Date");
+    DukTape::duk_new(lpCtx, 0);
+    nObjIdx = DukTape::duk_normalize_index(lpCtx, -1);
+    //----
+    DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCFullYear");
+    DukTape::duk_dup(lpCtx, nObjIdx);
+    DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wYear));
+    DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wMonth - 1));
+    DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wDay));
+    DukTape::duk_call_method(lpCtx, 3);
+    DukTape::duk_pop(lpCtx); //pop void return
+    //----
+    DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCHours");
+    DukTape::duk_dup(lpCtx, nObjIdx);
+    DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wHour));
+    DukTape::duk_call_method(lpCtx, 1);
+    DukTape::duk_pop(lpCtx); //pop void return
+    //----
+    DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCMinutes");
+    DukTape::duk_dup(lpCtx, nObjIdx);
+    DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wMinute));
+    DukTape::duk_call_method(lpCtx, 1);
+    DukTape::duk_pop(lpCtx); //pop void return
+    //----
+    DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCSeconds");
+    DukTape::duk_dup(lpCtx, nObjIdx);
+    DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wSecond));
+    DukTape::duk_call_method(lpCtx, 1);
+    DukTape::duk_pop(lpCtx); //pop void return
+    //----
+    DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCMilliseconds");
+    DukTape::duk_dup(lpCtx, nObjIdx);
+    DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wMilliseconds));
+    DukTape::duk_call_method(lpCtx, 1);
+    DukTape::duk_pop(lpCtx); //pop void return
+    return;
+  });
+  //done
+  return hRes;
+}
+
+HRESULT CJavascriptVM::GetDate(__in DukTape::duk_idx_t nObjIdx, __out LPSYSTEMTIME lpSt)
+{
+  static WORD wDaysInMonths[12] = { 31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+  static WORD wMonthOffsets[12] = { 0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4 };
+  HRESULT hRes;
+
+  if (lpSt == NULL)
+    return E_POINTER;
+  MX::MemSet(lpSt, 0, sizeof(SYSTEMTIME));
+  try
+  {
+    DukTape::duk_dup(lpCtx, nObjIdx);
+  }
+  catch (...)
+  {
+    return MX_E_UnhandledException;
+  }
+  hRes = RunNativeProtected(1, 0, [lpSt](__in DukTape::duk_context *lpCtx) -> VOID
+  {
+    DukTape::duk_idx_t nDateObjIdx = DukTape::duk_normalize_index(lpCtx, -1);
+    WORD y, w;
+
+    if (DukTape::duk_is_object(lpCtx, nDateObjIdx) == 0)
+      MX_JS_THROW_HRESULT_ERROR(lpCtx, E_FAIL);
+
+    DukTape::duk_get_prop_string(lpCtx, nDateObjIdx, "getUTCDate");
+    DukTape::duk_dup(lpCtx, nDateObjIdx);
+    DukTape::duk_call_method(lpCtx, 0);
+    lpSt->wDay = (WORD)(DukTape::duk_require_int(lpCtx, -1));
+    DukTape::duk_pop(lpCtx);
+    //----
+    DukTape::duk_get_prop_string(lpCtx, nDateObjIdx, "getUTCMonth");
+    DukTape::duk_dup(lpCtx, nDateObjIdx);
+    DukTape::duk_call_method(lpCtx, 0);
+    lpSt->wMonth = (WORD)(DukTape::duk_require_int(lpCtx, -1)) + 1;
+    DukTape::duk_pop(lpCtx);
+    //----
+    DukTape::duk_get_prop_string(lpCtx, nDateObjIdx, "getUTCFullYear");
+    DukTape::duk_dup(lpCtx, nDateObjIdx);
+    DukTape::duk_call_method(lpCtx, 0);
+    lpSt->wYear = (WORD)(DukTape::duk_require_int(lpCtx, -1));
+    DukTape::duk_pop(lpCtx);
+    //----
+    DukTape::duk_get_prop_string(lpCtx, nDateObjIdx, "getUTCHours");
+    DukTape::duk_dup(lpCtx, nDateObjIdx);
+    DukTape::duk_call_method(lpCtx, 0);
+    lpSt->wHour = (WORD)(DukTape::duk_require_int(lpCtx, -1));
+    DukTape::duk_pop(lpCtx);
+    //----
+    DukTape::duk_get_prop_string(lpCtx, nDateObjIdx, "getUTCMinutes");
+    DukTape::duk_dup(lpCtx, nDateObjIdx);
+    DukTape::duk_call_method(lpCtx, 0);
+    lpSt->wMinute = (WORD)(DukTape::duk_require_int(lpCtx, -1));
+    DukTape::duk_pop(lpCtx);
+    //----
+    DukTape::duk_get_prop_string(lpCtx, nDateObjIdx, "getUTCSeconds");
+    DukTape::duk_dup(lpCtx, nDateObjIdx);
+    DukTape::duk_call_method(lpCtx, 0);
+    lpSt->wSecond = (WORD)(DukTape::duk_require_int(lpCtx, -1));
+    DukTape::duk_pop(lpCtx);
+    //----
+    DukTape::duk_get_prop_string(lpCtx, nDateObjIdx, "getUTCMilliseconds");
+    DukTape::duk_dup(lpCtx, nDateObjIdx);
+    DukTape::duk_call_method(lpCtx, 0);
+    lpSt->wMilliseconds = (WORD)(DukTape::duk_require_int(lpCtx, -1));
+    DukTape::duk_pop(lpCtx);
+    //validate
+    if (lpSt->wMonth < 1 || lpSt->wMonth > 12 || lpSt->wYear < 1 || lpSt->wDay < 1)
+      MX_JS_THROW_HRESULT_ERROR(lpCtx, E_FAIL);
+    if (lpSt->wMonth != 2)
+    {
+      if (lpSt->wDay > wDaysInMonths[lpSt->wMonth - 1])
+        MX_JS_THROW_HRESULT_ERROR(lpCtx, E_FAIL);
+    }
+    else
+    {
+      w = ((lpSt->wYear % 400) == 0 || ((lpSt->wYear % 4) == 0 && (lpSt->wYear % 100) != 0)) ? 29 : 28;
+      if (lpSt->wDay > w)
+        MX_JS_THROW_HRESULT_ERROR(lpCtx, E_FAIL);
+    }
+    //calculate day of week
+    y = lpSt->wYear - ((lpSt->wMonth < 3) ? 1 : 0);
+    lpSt->wDayOfWeek = (lpSt->wYear + lpSt->wYear / 4 - lpSt->wYear / 100 + lpSt->wYear / 400 +
+                        wMonthOffsets[lpSt->wMonth - 1] + lpSt->wDay) % 7;
+
+    return;
+  });
+  //done
+  return hRes;
+}
+
 HRESULT CJavascriptVM::AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCSTR szStrA, __in_opt SIZE_T nStrLen)
 {
   LPCSTR szStartA;
@@ -1064,7 +1258,8 @@ DukTape::duk_ret_t CJavascriptVM::_RunNativeProtectedHelper(__in DukTape::duk_co
   return (DukTape::duk_ret_t)(lpData->nRetValuesCount);
 }
 
-VOID CJavascriptVM::GetErrorInfoFromException(__in DukTape::duk_idx_t nStackIndex)
+HRESULT CJavascriptVM::GetErrorInfoFromException(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex,
+                                                 __out_opt CErrorInfo *lpErrorInfo)
 {
   static const struct {
     DukTape::duk_uint_t code;
@@ -1079,12 +1274,7 @@ VOID CJavascriptVM::GetErrorInfoFromException(__in DukTape::duk_idx_t nStackInde
     { DUK_ERR_RANGE_ERROR,     DUK_STR_RESULT_TOO_LONG,      E_OUTOFMEMORY },
     { DUK_ERR_RANGE_ERROR,     DUK_STR_NUMBER_OUTSIDE_RANGE, MX_E_ArithmeticOverflow },
   };
-
-  sLastExecError.hRes = E_FAIL;
-  sLastExecError.cStrFileNameA.Empty();
-  sLastExecError.nLine = 0;
-  sLastExecError.cStrMessageA.Empty();
-  sLastExecError.cStrStackTraceA.Empty();
+  HRESULT hRes = E_FAIL;
 
   nStackIndex = DukTape::duk_normalize_index(lpCtx, nStackIndex);
   try
@@ -1095,48 +1285,19 @@ VOID CJavascriptVM::GetErrorInfoFromException(__in DukTape::duk_idx_t nStackInde
       DWORD dwValue;
       LPCSTR sA;
       SIZE_T i;
+      BOOL bMemError = FALSE;
 
       //get message
       DukTape::duk_get_prop_string(lpCtx, nStackIndex, "message");
       sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "Unknown";
-      if (sLastExecError.cStrMessageA.Copy(sA) == FALSE)
-      {
-err_nomem:
-        DukTape::duk_pop(lpCtx);
-        sLastExecError.hRes = E_OUTOFMEMORY;
-        return;
-      }
-      DukTape::duk_pop(lpCtx);
-      //get filename
-      DukTape::duk_get_prop_string(lpCtx, nStackIndex, "fileName");
-      sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "";
-      if (sLastExecError.cStrFileNameA.Copy(sA) == FALSE)
-        goto err_nomem;
-      DukTape::duk_pop(lpCtx);
-      //get line number
-      DukTape::duk_get_prop_string(lpCtx, nStackIndex, "lineNumber");
-      sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "";
-      while (*sA >= '0' && *sA <= '9')
-      {
-        sLastExecError.nLine = sLastExecError.nLine * 10 + ((ULONG)*sA++ - '0');
-      }
-      DukTape::duk_pop(lpCtx);
-      //stack trace
-      DukTape::duk_get_prop_string(lpCtx, nStackIndex, "stack");
-      sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "Unknown";
-      if (sLastExecError.cStrStackTraceA.Copy(sA) == FALSE)
-        goto err_nomem;
-      DukTape::duk_pop(lpCtx);
-
       //check for typed errors
-      sA = (LPCSTR)(sLastExecError.cStrMessageA);
       if (nErrCode == DUK_ERR_ERROR && sA[0] == '\xFF' && sA[1] == '\xFF')
       {
         dwValue = 0;
         for (i=0; i<8; i++)
         {
           if (sA[i+2] >= L'0' && sA[i+2] <= L'9')
-            dwValue |= (DWORD) (sA[i+2] - L'0')       << ((7-i) << 2);
+            dwValue |= (DWORD)(sA[i+2] - L'0')       << ((7-i) << 2);
           else if (sA[i+2] >= L'A' && sA[i+2] <= L'F')
             dwValue |= (DWORD)((sA[i+2] - L'A') + 10) << ((7-i) << 2);
           else if (sA[i+2] >= L'a' && sA[i+2] <= L'f')
@@ -1145,7 +1306,7 @@ err_nomem:
             break;
         }
         if (i >= 8)
-          sLastExecError.hRes = (HRESULT)dwValue;
+          hRes = (HRESULT)dwValue;
       }
       else
       {
@@ -1156,31 +1317,85 @@ err_nomem:
             if (sTypedErrorCodes[i].szMsgA == NULL ||
                 MX::StrCompareA(sTypedErrorCodes[i].szMsgA, sA) == 0)
             {
-              sLastExecError.hRes = sTypedErrorCodes[i].hRes;
+              hRes = sTypedErrorCodes[i].hRes;
               break;
             }
           }
         }
       }
+      //store message
+      if (lpErrorInfo != NULL)
+      {
+        if (lpErrorInfo->cStrMessageA.Copy(sA) == FALSE)
+          bMemError = TRUE;
+      }
+      DukTape::duk_pop(lpCtx);
+      //get error details
+      if (lpErrorInfo != NULL)
+      {
+        //filename
+        DukTape::duk_get_prop_string(lpCtx, nStackIndex, "fileName");
+        sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "";
+        if (lpErrorInfo->cStrFileNameA.Copy(sA) == FALSE)
+          bMemError = TRUE;
+        DukTape::duk_pop(lpCtx);
+        //line number
+        DukTape::duk_get_prop_string(lpCtx, nStackIndex, "lineNumber");
+        sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "";
+        while (*sA >= '0' && *sA <= '9')
+        {
+          lpErrorInfo->nLine = lpErrorInfo->nLine * 10 + ((ULONG)*sA++ - '0');
+        }
+        DukTape::duk_pop(lpCtx);
+        //stack trace
+        DukTape::duk_get_prop_string(lpCtx, nStackIndex, "stack");
+        sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "N/A";
+        if (lpErrorInfo->cStrStackTraceA.Copy(sA) == FALSE)
+          bMemError = TRUE;
+        DukTape::duk_pop(lpCtx);
+      }
+      //check for memory error
+      if (bMemError != FALSE)
+        hRes = E_OUTOFMEMORY;
     }
     else if (DukTape::duk_is_number(lpCtx, nStackIndex) != 0)
     {
       switch (DukTape::duk_require_int(lpCtx, nStackIndex))
       {
         case DUK_ERR_RANGE_ERROR:
-          sLastExecError.hRes = MX_E_ArithmeticOverflow;
+          hRes = MX_E_ArithmeticOverflow;
           break;
       }
     }
   }
   catch (...)
   {
-    sLastExecError.hRes = MX_E_UnhandledException;
-    sLastExecError.cStrFileNameA.Empty();
-    sLastExecError.nLine = 0;
-    sLastExecError.cStrMessageA.Empty();
-    sLastExecError.cStrStackTraceA.Empty();
+    if (lpErrorInfo != NULL)
+      lpErrorInfo->Clear();
+    hRes = MX_E_UnhandledException;
   }
+  //done
+  if (lpErrorInfo != NULL)
+    lpErrorInfo->hRes = hRes;
+  return hRes;
+}
+
+//-----------------------------------------------------------
+
+CJavascriptVM::CErrorInfo::CErrorInfo()
+{
+  hRes = S_OK;
+  nLine = 0;
+  return;
+}
+
+VOID CJavascriptVM::CErrorInfo::Clear()
+{
+  hRes = S_OK;
+  cStrMessageA.Empty();
+  cStrFileNameA.Empty();
+  nLine = 0;
+  cStrStackTraceA.Empty();
   return;
 }
 
