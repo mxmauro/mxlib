@@ -755,7 +755,7 @@ HRESULT CJavascriptVM::PushDate(__in LPSYSTEMTIME lpSt, __in_opt BOOL bAsUtc)
 
   if (lpSt == NULL)
     return E_POINTER;
-  hRes = RunNativeProtected(0, 1, [lpSt](__in DukTape::duk_context *lpCtx) -> VOID
+  hRes = RunNativeProtected(0, 1, [lpSt, bAsUtc](__in DukTape::duk_context *lpCtx) -> VOID
   {
     DukTape::duk_idx_t nObjIdx;
 
@@ -763,7 +763,7 @@ HRESULT CJavascriptVM::PushDate(__in LPSYSTEMTIME lpSt, __in_opt BOOL bAsUtc)
     DukTape::duk_new(lpCtx, 0);
     nObjIdx = DukTape::duk_normalize_index(lpCtx, -1);
     //----
-    DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCFullYear");
+    DukTape::duk_get_prop_string(lpCtx, nObjIdx, (bAsUtc != FALSE) ? "setUTCFullYear" : "setFullYear");
     DukTape::duk_dup(lpCtx, nObjIdx);
     DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wYear));
     DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wMonth - 1));
@@ -771,28 +771,13 @@ HRESULT CJavascriptVM::PushDate(__in LPSYSTEMTIME lpSt, __in_opt BOOL bAsUtc)
     DukTape::duk_call_method(lpCtx, 3);
     DukTape::duk_pop(lpCtx); //pop void return
     //----
-    DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCHours");
+    DukTape::duk_get_prop_string(lpCtx, nObjIdx, (bAsUtc != FALSE) ? "setUTCHours" : "setHours");
     DukTape::duk_dup(lpCtx, nObjIdx);
     DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wHour));
-    DukTape::duk_call_method(lpCtx, 1);
-    DukTape::duk_pop(lpCtx); //pop void return
-    //----
-    DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCMinutes");
-    DukTape::duk_dup(lpCtx, nObjIdx);
     DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wMinute));
-    DukTape::duk_call_method(lpCtx, 1);
-    DukTape::duk_pop(lpCtx); //pop void return
-    //----
-    DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCSeconds");
-    DukTape::duk_dup(lpCtx, nObjIdx);
     DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wSecond));
-    DukTape::duk_call_method(lpCtx, 1);
-    DukTape::duk_pop(lpCtx); //pop void return
-    //----
-    DukTape::duk_get_prop_string(lpCtx, nObjIdx, "setUTCMilliseconds");
-    DukTape::duk_dup(lpCtx, nObjIdx);
     DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wMilliseconds));
-    DukTape::duk_call_method(lpCtx, 1);
+    DukTape::duk_call_method(lpCtx, 4);
     DukTape::duk_pop(lpCtx); //pop void return
     return;
   });
