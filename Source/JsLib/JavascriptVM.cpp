@@ -714,7 +714,7 @@ HRESULT CJavascriptVM::PushObjectProperty(__in_z LPCSTR szObjectNameA, __in_z LP
   return Internals::JsLib::PushPropertyCommon(lpCtx, szObjectNameA, szPropertyNameA);
 }
 
-HRESULT CJavascriptVM::PushStringW(__in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen)
+HRESULT CJavascriptVM::PushString(__in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen)
 {
   MX::CStringA cStrTempA;
   HRESULT hRes;
@@ -732,7 +732,7 @@ HRESULT CJavascriptVM::PushStringW(__in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLe
   return hRes;
 }
 
-HRESULT CJavascriptVM::GetStringW(__in DukTape::duk_idx_t nStackIndex, __inout CStringW &cStrW, __in_opt BOOL bAppend)
+HRESULT CJavascriptVM::GetString(__in DukTape::duk_idx_t nStackIndex, __inout CStringW &cStrW, __in_opt BOOL bAppend)
 {
   LPCSTR sA;
   HRESULT hRes;

@@ -386,8 +386,8 @@ public:
 
   HRESULT PushObjectProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA);
 
-  HRESULT PushStringW(__in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
-  HRESULT GetStringW(__in DukTape::duk_idx_t nStackIndex, __inout CStringW &cStrW, __in_opt BOOL bAppend=FALSE);
+  HRESULT PushString(__in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
+  HRESULT GetString(__in DukTape::duk_idx_t nStackIndex, __inout CStringW &cStrW, __in_opt BOOL bAppend=FALSE);
   HRESULT PushDate(__in LPSYSTEMTIME lpSt, __in_opt BOOL bAsUtc=TRUE);
   HRESULT GetDate(__in DukTape::duk_idx_t nObjIdx, __out LPSYSTEMTIME lpSt);
 
