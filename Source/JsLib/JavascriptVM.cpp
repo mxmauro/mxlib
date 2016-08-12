@@ -876,6 +876,29 @@ HRESULT CJavascriptVM::GetDate(__in DukTape::duk_idx_t nObjIdx, __out LPSYSTEMTI
   return hRes;
 }
 
+//NOTE: Setting 'var a=0;' can lead to 'a == FALSE'. No idea if JS or DukTape.
+//      These methods checks for boolean values first and for integer values
+DukTape::duk_int_t CJavascriptVM::GetInt(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nObjIdx)
+{
+  if (DukTape::duk_is_boolean(lpCtx, nObjIdx))
+    return (DukTape::duk_get_boolean(lpCtx, nObjIdx) != 0) ? 1 : 0;
+  return DukTape::duk_require_int(lpCtx, nObjIdx);
+}
+
+DukTape::duk_int_t CJavascriptVM::GetUInt(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nObjIdx)
+{
+  if (DukTape::duk_is_boolean(lpCtx, nObjIdx))
+    return (DukTape::duk_get_boolean(lpCtx, nObjIdx) != 0) ? 1 : 0;
+  return DukTape::duk_require_uint(lpCtx, nObjIdx);
+}
+
+DukTape::duk_double_t CJavascriptVM::GetDouble(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nObjIdx)
+{
+  if (DukTape::duk_is_boolean(lpCtx, nObjIdx))
+    return (DukTape::duk_get_boolean(lpCtx, nObjIdx) != 0) ? 1.0 : 0.0;
+  return DukTape::duk_require_number(lpCtx, nObjIdx);
+}
+
 HRESULT CJavascriptVM::AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCSTR szStrA, __in_opt SIZE_T nStrLen)
 {
   LPCSTR szStartA;
