@@ -116,9 +116,10 @@ HRESULT CJsHttpServer::OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in MX:
     return E_NOTIMPL;
   //build path
   lpUrl = lpRequest->GetUrl();
-  if (lpUrl != NULL && (lpUrl->GetPath())[0] != L'/') //only accept absolute paths
+  if (lpUrl == NULL) //only accept absolute paths
+    return MX_E_NotReady;
+  if ((lpUrl->GetPath())[0] != L'/') //only accept absolute paths
     return lpRequest->SendErrorPage(403, E_INVALIDARG);
-
   //initialize javascript engine
   hRes = InitializeJVM(cJvm, lpRequest);
   if (SUCCEEDED(hRes))
