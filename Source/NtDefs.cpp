@@ -23,6 +23,7 @@
  **/
 #include "..\Include\NtDefs.h"
 #include "..\Include\MemoryObjects.h"
+#include "..\Include\WaitableObjects.h"
 #include <intrin.h>
 #include <winternl.h>
 
@@ -258,13 +259,13 @@ PRTL_CRITICAL_SECTION MxGetLoaderLockCS()
 
 #if defined(_M_IX86)
     lpPtr = (LPBYTE)__readfsdword(0x30); //get PEB from the TIB
-    lpPtr = *((LPBYTE*)(lpPtr+0xA0));    //get loader lock pointer
+    lpPtr = *((LPBYTE*)(lpPtr + 0xA0));  //get loader lock pointer
 #elif defined(_M_X64)
     lpPtr = (LPBYTE)__readgsqword(0x30); //get TEB
-    lpPtr = *((LPBYTE*)(lpPtr+0x60));
-    lpPtr = *((LPBYTE*)(lpPtr+0x110));
+    lpPtr = *((LPBYTE*)(lpPtr + 0x60));
+    lpPtr = *((LPBYTE*)(lpPtr + 0x110)); //get loader lock pointer
 #endif
-    lpLoaderLockCS = (PRTL_CRITICAL_SECTION)lpPtr;
+    MX::__InterlockedExchangePointer((PVOID volatile *)&lpLoaderLockCS, lpPtr);
   }
   return lpLoaderLockCS;
 }
@@ -589,7 +590,9 @@ PVOID MxGetDllHandle(__in_z PCWSTR szModuleNameW)
 #elif defined(_M_X64)
   lpPebLdr = *((MX_PEB_LDR_DATA**)(MxGetPeb()+0x18));
 #endif
-  lpLoaderLockCS = MxGetLoaderLockCS();
+  lpLoaderLockCS = ::MxGetLoaderLockCS();
+  if (lpLoaderLockCS == NULL)
+    return NULL;
   ::MxRtlEnterCriticalSection(lpLoaderLockCS);
   //loop
   pRet = NULL;
