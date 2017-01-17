@@ -1274,7 +1274,7 @@ HRESULT CJavascriptVM::GetErrorInfoFromException(__in DukTape::duk_context *lpCt
     LPCSTR szMsgA;
     HRESULT hRes;
   } sTypedErrorCodes[] = {
-    { DUK_ERR_TYPE_ERROR,      DUK_STR_INVALID_CALL_ARGS,    E_INVALIDARG },
+    { DUK_ERR_TYPE_ERROR,      DUK_STR_INVALID_INDEX,        E_INVALIDARG },
     { DUK_ERR_ERROR,           DUK_STR_ALLOC_FAILED,         E_OUTOFMEMORY },
     { DUK_ERR_RANGE_ERROR,     DUK_STR_STRING_TOO_LONG,      E_OUTOFMEMORY },
     { DUK_ERR_RANGE_ERROR,     DUK_STR_BUFFER_TOO_LONG,      E_OUTOFMEMORY },

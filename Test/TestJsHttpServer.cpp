@@ -431,8 +431,8 @@ static HRESULT OnSessionLoadSave(__in MX::CJsHttpServerSessionPlugin *lpPlugin, 
   else
   {
     //write date
-    sprintf_s(szBufA, _countof(szBufA), "%04lu/%02lu/%02lu %02lu:%02lu:%02lu", cDtNow.GetYear(), cDtNow.GetMonth(),
-              cDtNow.GetDay(), cDtNow.GetHours(), cDtNow.GetMinutes(), cDtNow.GetSeconds());
+    _snprintf_s(szBufA, _countof(szBufA), _TRUNCATE, "%04lu/%02lu/%02lu %02lu:%02lu:%02lu", cDtNow.GetYear(),
+                cDtNow.GetMonth(), cDtNow.GetDay(), cDtNow.GetHours(), cDtNow.GetMinutes(), cDtNow.GetSeconds());
     if (::WriteFile(cFileH, szBufA, 10+1+8, &dwWritten, NULL) == FALSE)
       delete_and_exit( hRes = MX_HRESULT_FROM_LASTERROR(); );
     if (dwWritten != 10+1+8)

@@ -13,13 +13,15 @@ REM Prepare
 PUSHD "%~dp0Source"
 
 REM Build
-python.exe util\make_dist.py
+RD /S /Q dist >NUL 2>NUL
+MD dist >NUL 2>NUL
+python tools\configure.py --output-directory .\dist
 IF NOT %ERRORLEVEL% == 0 GOTO bad_build
 
 REM Copy needed files
 MD "%~dp0..\..\..\Include\JsLib\DukTape" >NUL 2>NUL
-COPY /Y "%~dp0Source\dist\src\duk_config.h"  "%~dp0..\..\..\Include\JsLib\DukTape"
-COPY /Y "%~dp0Source\dist\src\duktape.h"     "%~dp0..\..\..\Include\JsLib\DukTape"
+COPY /Y "%~dp0Source\dist\duk_config.h"  "%~dp0..\..\..\Include\JsLib\DukTape"
+COPY /Y "%~dp0Source\dist\duktape.h"     "%~dp0..\..\..\Include\JsLib\DukTape"
 
 POPD
 ENDLOCAL

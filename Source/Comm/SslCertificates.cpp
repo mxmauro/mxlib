@@ -33,7 +33,7 @@
 
 //-----------------------------------------------------------
 
-static HRESULT Asn1TimeToDateTime(__in ASN1_TIME *lpTime, __out MX::CDateTime &cDt);
+static HRESULT Asn1TimeToDateTime(__in const ASN1_TIME *lpTime, __out MX::CDateTime &cDt);
 static HRESULT GetName(__in X509_NAME *lpName, __in MX::CSslCertificate::eInformation nInfo,
                        __inout MX::CStringW &cStrW);
 
@@ -208,7 +208,7 @@ LPBYTE CSslCertificateCrl::GetRevokedEntrySerial(__in SIZE_T nEntryIndex) const
 {
   STACK_OF(X509_REVOKED) *rev;
   X509_REVOKED *r;
-  ASN1_INTEGER *lpSerial;
+  const ASN1_INTEGER *lpSerial;
   int count;
 
   if (lpX509Crl == NULL)
@@ -226,7 +226,7 @@ SIZE_T CSslCertificateCrl::GetRevokedEntrySerialLength(__in SIZE_T nEntryIndex) 
 {
   STACK_OF(X509_REVOKED) *rev;
   X509_REVOKED *r;
-  ASN1_INTEGER *lpSerial;
+  const ASN1_INTEGER *lpSerial;
   int count;
 
   if (lpX509Crl == NULL)
@@ -289,7 +289,7 @@ LPVOID CSslCertificateCrl::GetOpenSSL_X509Crl()
 
 //-----------------------------------------------------------
 
-static HRESULT Asn1TimeToDateTime(__in ASN1_TIME *lpTime, __out MX::CDateTime &cDt)
+static HRESULT Asn1TimeToDateTime(__in const ASN1_TIME *lpTime, __out MX::CDateTime &cDt)
 {
   HRESULT hRes;
 

@@ -54,7 +54,7 @@ namespace DukTape {
 
 //#include "..\..\Include\JsLib\DukTape\duktape.h"
 #pragma warning(disable : 4101)
-#include "DukTape\Source\dist\src\duktape.c"
+#include "DukTape\Source\dist\duktape.c"
 #define snprintf mx_sprintf_s
 #include "DukTape\Source\extras\module-duktape\duk_module_duktape.c"
 #undef snprintf
