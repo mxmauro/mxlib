@@ -714,166 +714,161 @@ HRESULT CJavascriptVM::PushObjectProperty(__in_z LPCSTR szObjectNameA, __in_z LP
   return Internals::JsLib::PushPropertyCommon(lpCtx, szObjectNameA, szPropertyNameA);
 }
 
-HRESULT CJavascriptVM::PushString(__in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen)
+VOID CJavascriptVM::PushString(__in DukTape::duk_context *lpCtx, __in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen)
 {
   MX::CStringA cStrTempA;
   HRESULT hRes;
 
   hRes = Utf8_Encode(cStrTempA, szStrW, nStrLen);
-  if (SUCCEEDED(hRes))
-  {
-    hRes = RunNativeProtected(0, 1, [&cStrTempA](__in DukTape::duk_context *lpCtx) -> VOID
-    {
-      DukTape::duk_push_string(lpCtx, cStrTempA);
-      return;
-    });
-  }
-  //done
-  return hRes;
+  if (FAILED(hRes))
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
+  DukTape::duk_push_string(lpCtx, cStrTempA);
+  return;
 }
 
-HRESULT CJavascriptVM::GetString(__in DukTape::duk_idx_t nStackIndex, __inout CStringW &cStrW, __in_opt BOOL bAppend)
+VOID CJavascriptVM::PushString(__in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen)
+{
+  PushString(lpCtx, szStrW, nStrLen);
+  return;
+}
+
+VOID CJavascriptVM::GetString(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex,
+                              __inout CStringW &cStrW, __in_opt BOOL bAppend)
 {
   LPCSTR sA;
   HRESULT hRes;
 
   if (bAppend == FALSE)
     cStrW.Empty();
-  hRes = E_FAIL;
-  if (DukTape::duk_is_string(lpCtx, nStackIndex) != 0)
-  {
-    sA = DukTape::duk_get_string(lpCtx, nStackIndex);
-    hRes = Utf8_Decode(cStrW, sA, (SIZE_T)-1, bAppend);
-  }
-  //done
-  return hRes;
+  sA = DukTape::duk_require_string(lpCtx, nStackIndex);
+  hRes = Utf8_Decode(cStrW, sA, (SIZE_T)-1, bAppend);
+  if (FAILED(hRes))
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
+  return;
 }
 
-HRESULT CJavascriptVM::PushDate(__in LPSYSTEMTIME lpSt, __in_opt BOOL bAsUtc)
+VOID CJavascriptVM::GetString(__in DukTape::duk_idx_t nStackIndex, __inout CStringW &cStrW, __in_opt BOOL bAppend)
 {
-  HRESULT hRes;
+  GetString(lpCtx, nStackIndex, cStrW, bAppend);
+  return;
+}
+
+VOID CJavascriptVM::PushDate(__in DukTape::duk_context *lpCtx, __in LPSYSTEMTIME lpSt, __in_opt BOOL bAsUtc)
+{
+  DukTape::duk_idx_t nObjIdx;
 
   if (lpSt == NULL)
-    return E_POINTER;
-  hRes = RunNativeProtected(0, 1, [lpSt, bAsUtc](__in DukTape::duk_context *lpCtx) -> VOID
-  {
-    DukTape::duk_idx_t nObjIdx;
-
-    DukTape::duk_get_global_string(lpCtx, "Date");
-    DukTape::duk_new(lpCtx, 0);
-    nObjIdx = DukTape::duk_normalize_index(lpCtx, -1);
-    //----
-    DukTape::duk_get_prop_string(lpCtx, nObjIdx, (bAsUtc != FALSE) ? "setUTCFullYear" : "setFullYear");
-    DukTape::duk_dup(lpCtx, nObjIdx);
-    DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wYear));
-    DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wMonth - 1));
-    DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wDay));
-    DukTape::duk_call_method(lpCtx, 3);
-    DukTape::duk_pop(lpCtx); //pop void return
-    //----
-    DukTape::duk_get_prop_string(lpCtx, nObjIdx, (bAsUtc != FALSE) ? "setUTCHours" : "setHours");
-    DukTape::duk_dup(lpCtx, nObjIdx);
-    DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wHour));
-    DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wMinute));
-    DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wSecond));
-    DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wMilliseconds));
-    DukTape::duk_call_method(lpCtx, 4);
-    DukTape::duk_pop(lpCtx); //pop void return
-    return;
-  });
-  //done
-  return hRes;
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, E_POINTER);
+  DukTape::duk_get_global_string(lpCtx, "Date");
+  DukTape::duk_new(lpCtx, 0);
+  nObjIdx = DukTape::duk_normalize_index(lpCtx, -1);
+  //----
+  DukTape::duk_get_prop_string(lpCtx, nObjIdx, (bAsUtc != FALSE) ? "setUTCFullYear" : "setFullYear");
+  DukTape::duk_dup(lpCtx, nObjIdx);
+  DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wYear));
+  DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wMonth - 1));
+  DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wDay));
+  DukTape::duk_call_method(lpCtx, 3);
+  DukTape::duk_pop(lpCtx); //pop void return
+  //----
+  DukTape::duk_get_prop_string(lpCtx, nObjIdx, (bAsUtc != FALSE) ? "setUTCHours" : "setHours");
+  DukTape::duk_dup(lpCtx, nObjIdx);
+  DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wHour));
+  DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wMinute));
+  DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wSecond));
+  DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(lpSt->wMilliseconds));
+  DukTape::duk_call_method(lpCtx, 4);
+  DukTape::duk_pop(lpCtx); //pop void return
+  return;
 }
 
-HRESULT CJavascriptVM::GetDate(__in DukTape::duk_idx_t nObjIdx, __out LPSYSTEMTIME lpSt)
+VOID CJavascriptVM::PushDate(__in LPSYSTEMTIME lpSt, __in_opt BOOL bAsUtc)
 {
-  static WORD wDaysInMonths[12] = { 31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+  PushDate(lpCtx, lpSt, bAsUtc);
+  return;
+}
+
+VOID CJavascriptVM::GetDate(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nObjIdx, __out LPSYSTEMTIME lpSt)
+{
+  static WORD wDaysInMonths[12] ={ 31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
   static WORD wMonthOffsets[12] = { 0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4 };
-  HRESULT hRes;
+  WORD y, w;
 
   if (lpSt == NULL)
-    return E_POINTER;
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, E_POINTER);
   MX::MemSet(lpSt, 0, sizeof(SYSTEMTIME));
-  try
-  {
-    DukTape::duk_dup(lpCtx, nObjIdx);
-  }
-  catch (...)
-  {
-    return MX_E_UnhandledException;
-  }
-  hRes = RunNativeProtected(1, 0, [lpSt](__in DukTape::duk_context *lpCtx) -> VOID
-  {
-    DukTape::duk_idx_t nDateObjIdx = DukTape::duk_normalize_index(lpCtx, -1);
-    WORD y, w;
+  
+  nObjIdx = DukTape::duk_normalize_index(lpCtx, nObjIdx);
 
-    if (DukTape::duk_is_object(lpCtx, nDateObjIdx) == 0)
+  if (DukTape::duk_is_object(lpCtx, nObjIdx) == 0)
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, E_FAIL);
+
+  DukTape::duk_get_prop_string(lpCtx, nObjIdx, "getUTCDate");
+  DukTape::duk_dup(lpCtx, nObjIdx);
+  DukTape::duk_call_method(lpCtx, 0);
+  lpSt->wDay = (WORD)(DukTape::duk_require_int(lpCtx, -1));
+  DukTape::duk_pop(lpCtx);
+  //----
+  DukTape::duk_get_prop_string(lpCtx, nObjIdx, "getUTCMonth");
+  DukTape::duk_dup(lpCtx, nObjIdx);
+  DukTape::duk_call_method(lpCtx, 0);
+  lpSt->wMonth = (WORD)(DukTape::duk_require_int(lpCtx, -1)) + 1;
+  DukTape::duk_pop(lpCtx);
+  //----
+  DukTape::duk_get_prop_string(lpCtx, nObjIdx, "getUTCFullYear");
+  DukTape::duk_dup(lpCtx, nObjIdx);
+  DukTape::duk_call_method(lpCtx, 0);
+  lpSt->wYear = (WORD)(DukTape::duk_require_int(lpCtx, -1));
+  DukTape::duk_pop(lpCtx);
+  //----
+  DukTape::duk_get_prop_string(lpCtx, nObjIdx, "getUTCHours");
+  DukTape::duk_dup(lpCtx, nObjIdx);
+  DukTape::duk_call_method(lpCtx, 0);
+  lpSt->wHour = (WORD)(DukTape::duk_require_int(lpCtx, -1));
+  DukTape::duk_pop(lpCtx);
+  //----
+  DukTape::duk_get_prop_string(lpCtx, nObjIdx, "getUTCMinutes");
+  DukTape::duk_dup(lpCtx, nObjIdx);
+  DukTape::duk_call_method(lpCtx, 0);
+  lpSt->wMinute = (WORD)(DukTape::duk_require_int(lpCtx, -1));
+  DukTape::duk_pop(lpCtx);
+  //----
+  DukTape::duk_get_prop_string(lpCtx, nObjIdx, "getUTCSeconds");
+  DukTape::duk_dup(lpCtx, nObjIdx);
+  DukTape::duk_call_method(lpCtx, 0);
+  lpSt->wSecond = (WORD)(DukTape::duk_require_int(lpCtx, -1));
+  DukTape::duk_pop(lpCtx);
+  //----
+  DukTape::duk_get_prop_string(lpCtx, nObjIdx, "getUTCMilliseconds");
+  DukTape::duk_dup(lpCtx, nObjIdx);
+  DukTape::duk_call_method(lpCtx, 0);
+  lpSt->wMilliseconds = (WORD)(DukTape::duk_require_int(lpCtx, -1));
+  DukTape::duk_pop(lpCtx);
+  //validate
+  if (lpSt->wMonth < 1 || lpSt->wMonth > 12 || lpSt->wYear < 1 || lpSt->wDay < 1)
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, E_FAIL);
+  if (lpSt->wMonth != 2)
+  {
+    if (lpSt->wDay > wDaysInMonths[lpSt->wMonth - 1])
       MX_JS_THROW_HRESULT_ERROR(lpCtx, E_FAIL);
-
-    DukTape::duk_get_prop_string(lpCtx, nDateObjIdx, "getUTCDate");
-    DukTape::duk_dup(lpCtx, nDateObjIdx);
-    DukTape::duk_call_method(lpCtx, 0);
-    lpSt->wDay = (WORD)(DukTape::duk_require_int(lpCtx, -1));
-    DukTape::duk_pop(lpCtx);
-    //----
-    DukTape::duk_get_prop_string(lpCtx, nDateObjIdx, "getUTCMonth");
-    DukTape::duk_dup(lpCtx, nDateObjIdx);
-    DukTape::duk_call_method(lpCtx, 0);
-    lpSt->wMonth = (WORD)(DukTape::duk_require_int(lpCtx, -1)) + 1;
-    DukTape::duk_pop(lpCtx);
-    //----
-    DukTape::duk_get_prop_string(lpCtx, nDateObjIdx, "getUTCFullYear");
-    DukTape::duk_dup(lpCtx, nDateObjIdx);
-    DukTape::duk_call_method(lpCtx, 0);
-    lpSt->wYear = (WORD)(DukTape::duk_require_int(lpCtx, -1));
-    DukTape::duk_pop(lpCtx);
-    //----
-    DukTape::duk_get_prop_string(lpCtx, nDateObjIdx, "getUTCHours");
-    DukTape::duk_dup(lpCtx, nDateObjIdx);
-    DukTape::duk_call_method(lpCtx, 0);
-    lpSt->wHour = (WORD)(DukTape::duk_require_int(lpCtx, -1));
-    DukTape::duk_pop(lpCtx);
-    //----
-    DukTape::duk_get_prop_string(lpCtx, nDateObjIdx, "getUTCMinutes");
-    DukTape::duk_dup(lpCtx, nDateObjIdx);
-    DukTape::duk_call_method(lpCtx, 0);
-    lpSt->wMinute = (WORD)(DukTape::duk_require_int(lpCtx, -1));
-    DukTape::duk_pop(lpCtx);
-    //----
-    DukTape::duk_get_prop_string(lpCtx, nDateObjIdx, "getUTCSeconds");
-    DukTape::duk_dup(lpCtx, nDateObjIdx);
-    DukTape::duk_call_method(lpCtx, 0);
-    lpSt->wSecond = (WORD)(DukTape::duk_require_int(lpCtx, -1));
-    DukTape::duk_pop(lpCtx);
-    //----
-    DukTape::duk_get_prop_string(lpCtx, nDateObjIdx, "getUTCMilliseconds");
-    DukTape::duk_dup(lpCtx, nDateObjIdx);
-    DukTape::duk_call_method(lpCtx, 0);
-    lpSt->wMilliseconds = (WORD)(DukTape::duk_require_int(lpCtx, -1));
-    DukTape::duk_pop(lpCtx);
-    //validate
-    if (lpSt->wMonth < 1 || lpSt->wMonth > 12 || lpSt->wYear < 1 || lpSt->wDay < 1)
+  }
+  else
+  {
+    w = ((lpSt->wYear % 400) == 0 || ((lpSt->wYear % 4) == 0 && (lpSt->wYear % 100) != 0)) ? 29 : 28;
+    if (lpSt->wDay > w)
       MX_JS_THROW_HRESULT_ERROR(lpCtx, E_FAIL);
-    if (lpSt->wMonth != 2)
-    {
-      if (lpSt->wDay > wDaysInMonths[lpSt->wMonth - 1])
-        MX_JS_THROW_HRESULT_ERROR(lpCtx, E_FAIL);
-    }
-    else
-    {
-      w = ((lpSt->wYear % 400) == 0 || ((lpSt->wYear % 4) == 0 && (lpSt->wYear % 100) != 0)) ? 29 : 28;
-      if (lpSt->wDay > w)
-        MX_JS_THROW_HRESULT_ERROR(lpCtx, E_FAIL);
-    }
-    //calculate day of week
-    y = lpSt->wYear - ((lpSt->wMonth < 3) ? 1 : 0);
-    lpSt->wDayOfWeek = (lpSt->wYear + lpSt->wYear / 4 - lpSt->wYear / 100 + lpSt->wYear / 400 +
-                        wMonthOffsets[lpSt->wMonth - 1] + lpSt->wDay) % 7;
+  }
+  //calculate day of week
+  y = lpSt->wYear - ((lpSt->wMonth < 3) ? 1 : 0);
+  lpSt->wDayOfWeek = (lpSt->wYear + lpSt->wYear / 4 - lpSt->wYear / 100 + lpSt->wYear / 400 +
+                      wMonthOffsets[lpSt->wMonth - 1] + lpSt->wDay) % 7;
+  return;
+}
 
-    return;
-  });
-  //done
-  return hRes;
+VOID CJavascriptVM::GetDate(__in DukTape::duk_idx_t nObjIdx, __out LPSYSTEMTIME lpSt)
+{
+  GetDate(lpCtx, nObjIdx, lpSt);
+  return;
 }
 
 //NOTE: Setting 'var a=0;' can lead to 'a == FALSE'. No idea if JS or DukTape.
@@ -885,11 +880,21 @@ DukTape::duk_int_t CJavascriptVM::GetInt(__in DukTape::duk_context *lpCtx, __in 
   return DukTape::duk_require_int(lpCtx, nObjIdx);
 }
 
-DukTape::duk_int_t CJavascriptVM::GetUInt(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nObjIdx)
+DukTape::duk_int_t CJavascriptVM::GetInt(__in DukTape::duk_idx_t nObjIdx)
+{
+  return GetInt(lpCtx, nObjIdx);
+}
+
+DukTape::duk_uint_t CJavascriptVM::GetUInt(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nObjIdx)
 {
   if (DukTape::duk_is_boolean(lpCtx, nObjIdx))
     return (DukTape::duk_get_boolean(lpCtx, nObjIdx) != 0) ? 1 : 0;
   return DukTape::duk_require_uint(lpCtx, nObjIdx);
+}
+
+DukTape::duk_uint_t CJavascriptVM::GetUInt(__in DukTape::duk_idx_t nObjIdx)
+{
+  return GetUInt(lpCtx, nObjIdx);
 }
 
 DukTape::duk_double_t CJavascriptVM::GetDouble(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nObjIdx)
@@ -897,6 +902,11 @@ DukTape::duk_double_t CJavascriptVM::GetDouble(__in DukTape::duk_context *lpCtx,
   if (DukTape::duk_is_boolean(lpCtx, nObjIdx))
     return (DukTape::duk_get_boolean(lpCtx, nObjIdx) != 0) ? 1.0 : 0.0;
   return DukTape::duk_require_number(lpCtx, nObjIdx);
+}
+
+DukTape::duk_double_t CJavascriptVM::GetDouble(__in DukTape::duk_idx_t nObjIdx)
+{
+  return GetDouble(lpCtx, nObjIdx);
 }
 
 HRESULT CJavascriptVM::AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCSTR szStrA, __in_opt SIZE_T nStrLen)

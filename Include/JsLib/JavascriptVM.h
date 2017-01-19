@@ -387,19 +387,31 @@ public:
   HRESULT PushObjectProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA);
 
   //converts from/to utf-8
-  HRESULT PushString(__in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
-  HRESULT GetString(__in DukTape::duk_idx_t nStackIndex, __inout CStringW &cStrW, __in_opt BOOL bAppend=FALSE);
+  static VOID PushString(__in DukTape::duk_context *lpCtx, __in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
+  VOID PushString(__in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
+
+  static VOID GetString(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex, __inout CStringW &cStrW,
+                        __in_opt BOOL bAppend=FALSE);
+  VOID GetString(__in DukTape::duk_idx_t nStackIndex, __inout CStringW &cStrW, __in_opt BOOL bAppend=FALSE);
 
   //convert SYSTEMTIME from/to JS Date object
-  HRESULT PushDate(__in LPSYSTEMTIME lpSt, __in_opt BOOL bAsUtc=TRUE);
-  HRESULT GetDate(__in DukTape::duk_idx_t nObjIdx, __out LPSYSTEMTIME lpSt);
+  static VOID PushDate(__in DukTape::duk_context *lpCtx, __in LPSYSTEMTIME lpSt, __in_opt BOOL bAsUtc=TRUE);
+  VOID PushDate(__in LPSYSTEMTIME lpSt, __in_opt BOOL bAsUtc=TRUE);
+
+  static VOID GetDate(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nObjIdx, __out LPSYSTEMTIME lpSt);
+  VOID GetDate(__in DukTape::duk_idx_t nObjIdx, __out LPSYSTEMTIME lpSt);
 
   //NOTE: Setting 'var a=0;' can lead to 'a == FALSE'. No idea if JS or DukTape.
   //      These methods checks for boolean values first and for integer values
   //IMPORTANT: Unsafe execution. May throw exception if object at specified stack position is not a number.
   static DukTape::duk_int_t GetInt(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nObjIdx);
-  static DukTape::duk_int_t GetUInt(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nObjIdx);
+  DukTape::duk_int_t GetInt(__in DukTape::duk_idx_t nObjIdx);
+
+  static DukTape::duk_uint_t GetUInt(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nObjIdx);
+  DukTape::duk_uint_t GetUInt(__in DukTape::duk_idx_t nObjIdx);
+
   static DukTape::duk_double_t GetDouble(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nObjIdx);
+  DukTape::duk_double_t GetDouble(__in DukTape::duk_idx_t nObjIdx);
 
   static HRESULT AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCSTR szStrA, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
   static HRESULT AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
