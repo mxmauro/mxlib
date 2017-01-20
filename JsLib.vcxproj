@@ -42,7 +42,6 @@
     <ClCompile Include="Source\JsLib\Plugins\JsMySqlPluginHelpers.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Include\JsLib\DukTape\duk_custom.h" />
     <ClInclude Include="Include\JsLib\JavascriptVM.h" />
     <ClInclude Include="Include\JsLib\Plugins\JsMySqlPlugin.h" />
     <ClInclude Include="Source\JsLib\DukTape\Source\dist\duktape.h">

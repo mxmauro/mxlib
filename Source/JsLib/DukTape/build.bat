@@ -15,7 +15,7 @@ PUSHD "%~dp0Source"
 REM Build
 RD /S /Q dist >NUL 2>NUL
 MD dist >NUL 2>NUL
-python tools\configure.py --output-directory .\dist
+python tools\configure.py --fixup-file ..\duk_custom.h --output-directory .\dist
 IF NOT %ERRORLEVEL% == 0 GOTO bad_build
 
 REM Copy needed files

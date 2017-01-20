@@ -81,6 +81,11 @@ static __forceinline int DukTapeSprintf(char *buffer, const char *format, ...)
 
 //--------------------------------
 
+#define DUK_DPRINT(...)          MX::DebugPrint(__VA_ARGS__)
+#define DUK_DDPRINT(...)         MX::DebugPrint(__VA_ARGS__)
+#define DUK_DDDPRINT(...)        MX::DebugPrint(__VA_ARGS__)
+
+
 //NOTE: Until fixed, I add a copy of duk_debug.h header modified with my custom debug output
 #if defined(DUK_OPT_DEBUG) && defined(DUK_COMPILING_DUKTAPE)
 
@@ -91,7 +96,7 @@ static __forceinline int DukTapeSprintf(char *buffer, const char *format, ...)
 #ifdef DUK_USE_DDPRINT
   #undef DUK_DDPRINT
   #define DUK_DDPRINT(...)         MX::DebugPrint(__VA_ARGS__)
-#endif &&DUK_USE_DDPRINT
+#endif //DUK_USE_DDPRINT
 
 #ifdef DUK_USE_DDDPRINT
   #undef DUK_DDDPRINT
@@ -163,3 +168,4 @@ DUK_INTERNAL_DECL void duk_fb_put_funcptr(duk_fixedbuffer *fb, duk_uint8_t *fptr
 DUK_INTERNAL_DECL duk_bool_t duk_fb_is_full(duk_fixedbuffer *fb);
 
 #endif //DUK_OPT_DEBUG && DUK_COMPILING_DUKTAPE
+

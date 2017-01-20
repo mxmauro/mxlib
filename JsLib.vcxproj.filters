@@ -70,9 +70,6 @@
     <ClInclude Include="Include\JsLib\Plugins\JsMySqlPlugin.h">
       <Filter>Header Files\Plugins</Filter>
     </ClInclude>
-    <ClInclude Include="Include\JsLib\DukTape\duk_custom.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\JsLib\DukTape\Source\dist\duk_config.h">
       <Filter>Source Files\DukTape</Filter>
     </ClInclude>
