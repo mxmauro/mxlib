@@ -81,91 +81,11 @@ static __forceinline int DukTapeSprintf(char *buffer, const char *format, ...)
 
 //--------------------------------
 
-#define DUK_DPRINT(...)          MX::DebugPrint(__VA_ARGS__)
-#define DUK_DDPRINT(...)         MX::DebugPrint(__VA_ARGS__)
-#define DUK_DDDPRINT(...)        MX::DebugPrint(__VA_ARGS__)
-
-
-//NOTE: Until fixed, I add a copy of duk_debug.h header modified with my custom debug output
-#if defined(DUK_OPT_DEBUG) && defined(DUK_COMPILING_DUKTAPE)
-
-#define DUK_DEBUG_H_INCLUDED
-
-#define DUK_DPRINT(...)          MX::DebugPrint(__VA_ARGS__)
-
-#ifdef DUK_USE_DDPRINT
-  #undef DUK_DDPRINT
-  #define DUK_DDPRINT(...)         MX::DebugPrint(__VA_ARGS__)
-#endif //DUK_USE_DDPRINT
-
-#ifdef DUK_USE_DDDPRINT
-  #undef DUK_DDDPRINT
-  #define DUK_DDDPRINT(...)        MX::DebugPrint(__VA_ARGS__)
-#endif //DUK_USE_DDDPRINT
-
-#define DUK_D(x) x
-#define DUK_DD(x) x
-#define DUK_DDD(x) x
-
-#define DUK_LEVEL_DEBUG    1
-#define DUK_LEVEL_DDEBUG   2
-#define DUK_LEVEL_DDDEBUG  3
-
-#define DUK__DEBUG_LOG(lev,...)  mx_duk_debug_log((duk_small_int_t) (lev), DUK_FILE_MACRO, (duk_int_t) DUK_LINE_MACRO, DUK_FUNC_MACRO, __VA_ARGS__);
-
-DUK_LOCAL const char *duk__get_term_1(duk_small_int_t level);
-DUK_LOCAL const char *duk__get_term_2(duk_small_int_t level);
-DUK_LOCAL const char *duk__get_term_3(duk_small_int_t level);
-DUK_LOCAL const char *duk__get_level_string(duk_small_int_t level);
-
-DUK_INTERNAL void mx_duk_debug_log(duk_small_int_t level, const char *file, duk_int_t line, const char *func, const char *fmt, ...)
-{
-  char buf[1024];
-  va_list ap;
-
-  DUK_MEMZERO((void *)buf, 1024);
-
-  va_start(ap, fmt);
-  mx_vsnprintf(buf, 1023, fmt, ap);
-  va_end(ap);
-
-  MX::DebugPrint("%s[%s] %s:%ld (%s):%s %s%s\n",
-                  (const char *)duk__get_term_1(level),
-                  (const char *)duk__get_level_string(level),
-                  (const char *)file,
-                  (long)line,
-                  (const char *)func,
-                  (const char *)duk__get_term_2(level),
-                  (const char *)buf,
-                  (const char *)duk__get_term_3(level));
-}
-
-#undef DUK_DPRINT
-#define DUK_DPRINT(...)          DUK__DEBUG_LOG(DUK_LEVEL_DEBUG, __VA_ARGS__)
-#undef DUK_DDPRINT
-#define DUK_DDPRINT(...)         DUK__DEBUG_LOG(DUK_LEVEL_DDEBUG, __VA_ARGS__)
-#undef DUK_DDDPRINT
-#define DUK_DDDPRINT(...)        DUK__DEBUG_LOG(DUK_LEVEL_DDDEBUG, __VA_ARGS__)
-
-struct duk_fixedbuffer
-{
-  duk_uint8_t *buffer;
-  duk_size_t length;
-  duk_size_t offset;
-  duk_bool_t truncated;
-};
-
-DUK_INTERNAL_DECL duk_int_t duk_debug_vsnprintf(char *str, duk_size_t size, const char *format, va_list ap);
-DUK_INTERNAL_DECL void duk_debug_format_funcptr(char *buf, duk_size_t buf_size, duk_uint8_t *fptr, duk_size_t fptr_size);
-
-DUK_INTERNAL_DECL void duk_debug_log(duk_small_int_t level, const char *file, duk_int_t line, const char *func, const char *fmt, ...);
-
-DUK_INTERNAL_DECL void duk_fb_put_bytes(duk_fixedbuffer *fb, duk_uint8_t *buffer, duk_size_t length);
-DUK_INTERNAL_DECL void duk_fb_put_byte(duk_fixedbuffer *fb, duk_uint8_t x);
-DUK_INTERNAL_DECL void duk_fb_put_cstring(duk_fixedbuffer *fb, const char *x);
-DUK_INTERNAL_DECL void duk_fb_sprintf(duk_fixedbuffer *fb, const char *fmt, ...);
-DUK_INTERNAL_DECL void duk_fb_put_funcptr(duk_fixedbuffer *fb, duk_uint8_t *fptr, duk_size_t fptr_size);
-DUK_INTERNAL_DECL duk_bool_t duk_fb_is_full(duk_fixedbuffer *fb);
-
-#endif //DUK_OPT_DEBUG && DUK_COMPILING_DUKTAPE
-
+#ifdef _DEBUG
+  #define DUK_USE_DEBUG
+  #define DUK_USE_DEBUG_LEVEL 1
+  #define DUK_USE_DEBUG_WRITE(level,file,line,func,msg) do {                                               \
+    MX::DebugPrint("DukTape: D%ld %s:%d (%s): %s\n", (long)(level), (file), (long) (line), (func), (msg)); \
+  }                                                                                                        \
+  while (0)
+#endif //_DEBUG
