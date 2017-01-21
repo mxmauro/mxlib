@@ -190,7 +190,7 @@ HRESULT CJavascriptVM::RunNativeProtected(__in DukTape::duk_context *lpCtx, __in
     if (DukTape::duk_safe_call(lpCtx, &CJavascriptVM::_RunNativeProtectedHelper, &sData, nArgsCount,
                                nRetValuesCount) != DUK_EXEC_SUCCESS)
     {
-      hRes = GetErrorInfoFromException(lpCtx, -1, lpErrorInfo);
+      hRes = GetErrorInfoFromException(lpCtx, 0, lpErrorInfo);
       DukTape::duk_pop(lpCtx);
     }
     else if (sData.nRetValuesCount == 0)
@@ -1307,7 +1307,9 @@ HRESULT CJavascriptVM::GetErrorInfoFromException(__in DukTape::duk_context *lpCt
 
       //get message
       DukTape::duk_get_prop_string(lpCtx, nStackIndex, "message");
-      sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "Unknown";
+      sA = DukTape::duk_get_string(lpCtx, -1);
+      if (sA == NULL)
+        sA = "Unknown";
       //check for typed errors
       if (nErrCode == DUK_ERR_ERROR && sA[0] == '\xFF' && sA[1] == '\xFF')
       {
@@ -1353,22 +1355,25 @@ HRESULT CJavascriptVM::GetErrorInfoFromException(__in DukTape::duk_context *lpCt
       {
         //filename
         DukTape::duk_get_prop_string(lpCtx, nStackIndex, "fileName");
-        sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "";
-        if (lpErrorInfo->cStrFileNameA.Copy(sA) == FALSE)
+        sA = DukTape::duk_get_string(lpCtx, -1);
+        if (lpErrorInfo->cStrFileNameA.Copy((sA != NULL) ? sA : "") == FALSE)
           bMemError = TRUE;
         DukTape::duk_pop(lpCtx);
         //line number
         DukTape::duk_get_prop_string(lpCtx, nStackIndex, "lineNumber");
-        sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "";
-        while (*sA >= '0' && *sA <= '9')
+        sA = DukTape::duk_get_string(lpCtx, -1);
+        if (sA != NULL)
         {
-          lpErrorInfo->nLine = lpErrorInfo->nLine * 10 + ((ULONG)*sA++ - '0');
+          while (*sA >= '0' && *sA <= '9')
+          {
+            lpErrorInfo->nLine = lpErrorInfo->nLine * 10 + ((ULONG)*sA++ - '0');
+          }
         }
         DukTape::duk_pop(lpCtx);
         //stack trace
         DukTape::duk_get_prop_string(lpCtx, nStackIndex, "stack");
-        sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "N/A";
-        if (lpErrorInfo->cStrStackTraceA.Copy(sA) == FALSE)
+        sA = DukTape::duk_get_string(lpCtx, -1);
+        if (lpErrorInfo->cStrStackTraceA.Copy((sA != NULL) ? sA : "") == FALSE)
           bMemError = TRUE;
         DukTape::duk_pop(lpCtx);
       }
