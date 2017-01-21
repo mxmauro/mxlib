@@ -190,7 +190,7 @@ HRESULT CJavascriptVM::RunNativeProtected(__in DukTape::duk_context *lpCtx, __in
     if (DukTape::duk_safe_call(lpCtx, &CJavascriptVM::_RunNativeProtectedHelper, &sData, nArgsCount,
                                nRetValuesCount) != DUK_EXEC_SUCCESS)
     {
-      hRes = GetErrorInfoFromException(lpCtx, 0, lpErrorInfo);
+      hRes = GetErrorInfoFromException(lpCtx, -1, lpErrorInfo);
       DukTape::duk_pop(lpCtx);
     }
     else if (sData.nRetValuesCount == 0)
