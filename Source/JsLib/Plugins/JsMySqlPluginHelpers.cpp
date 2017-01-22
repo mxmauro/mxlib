@@ -37,7 +37,6 @@ CJsMySqlPluginHelpers::CJsMySqlPluginHelpers() : CBaseMemObj()
   sQuery.nAffectedRows = 0ui64;
   sQuery.nLastInsertId = 0ui64;
   sQuery.nFieldsCount = 0;
-  nTransactionCounter = 0;
   return;
 }
 

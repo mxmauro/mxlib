@@ -308,7 +308,8 @@ static DukTape::duk_ret_t OnHash(__in DukTape::duk_context *lpCtx, __in_z LPCSTR
       }
     }
   }
-  MX_JS_THROW_ERROR(lpCtx, DUK_ERR_ERROR, "**%08X", E_INVALIDARG);
+  if (FAILED(hRes))
+    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
   //push result
   DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
   return 1;

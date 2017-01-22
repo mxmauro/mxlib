@@ -212,17 +212,6 @@ DukTape::duk_ret_t CJsMySqlPlugin::Disconnect()
   {
     if (_DB() != NULL)
     {
-      /*
-      int nRetryCount;
-
-      _INTERNAL()->QueryClose(FALSE);
-      nRetryCount = 20;
-      while (nRetryCount > 0 && _INTERNAL()->nTransactionCounter > 0)
-      {
-        if (FAILED(TransactionRollback(err)))
-          nRetryCount--;
-      }
-      */
       _CALLAPI(mysql_close)(_DB());
     }
     //----
@@ -988,44 +977,17 @@ DukTape::duk_ret_t CJsMySqlPlugin::getFields()
 
 HRESULT CJsMySqlPlugin::_TransactionStart()
 {
-  HRESULT hRes;
-
-  if (_INTERNAL()->nTransactionCounter > 1024)
-    return E_FAIL;
-  //CLOSE CURRENT QUERY
-  hRes = _INTERNAL()->ExecuteQuery("START TRANSACTION;", 18);
-  if (SUCCEEDED(hRes))
-    (_INTERNAL()->nTransactionCounter)++;
-  //done
-  return hRes;
+  return _INTERNAL()->ExecuteQuery("START TRANSACTION;", 18);
 }
 
 HRESULT CJsMySqlPlugin::_TransactionCommit()
 {
-  HRESULT hRes;
-
-  if (_INTERNAL()->nTransactionCounter == 0)
-    return E_FAIL;
-  //CLOSE CURRENT QUERY
-  hRes = _INTERNAL()->ExecuteQuery("COMMIT;", 7);
-  if (SUCCEEDED(hRes))
-    (_INTERNAL()->nTransactionCounter)--;
-  //done
-  return hRes;
+  return _INTERNAL()->ExecuteQuery("COMMIT;", 7);
 }
 
 HRESULT CJsMySqlPlugin::_TransactionRollback()
 {
-  HRESULT hRes;
-
-  if (_INTERNAL()->nTransactionCounter == 0)
-    return E_FAIL;
-  //CLOSE CURRENT QUERY
-  hRes = _INTERNAL()->ExecuteQuery("ROLLBACK;", 9);
-  if (SUCCEEDED(hRes))
-    (_INTERNAL()->nTransactionCounter)--;
-  //done
-  return hRes;
+  return _INTERNAL()->ExecuteQuery("ROLLBACK;", 9);
 }
 
 DukTape::duk_ret_t CJsMySqlPlugin::ReturnErrorFromHResult(__in HRESULT hRes)

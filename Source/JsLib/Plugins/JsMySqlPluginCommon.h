@@ -181,7 +181,6 @@ public:
     SIZE_T nFieldsCount;
     TArrayListWithRelease<CFieldInfo*> aFieldsList;
   } sQuery;
-  SIZE_T nTransactionCounter;
 };
 
 //-----------------------------------------------------------
@@ -214,6 +213,7 @@ extern lpfn_mysql_set_character_set fn_mysql_set_character_set;
 extern lpfn_mysql_errno fn_mysql_errno;
 extern lpfn_mysql_error fn_mysql_error;
 extern lpfn_mysql_sqlstate fn_mysql_sqlstate;
+
 } //namespace API
 
 } //namespace Internals

@@ -97,7 +97,7 @@ private:                                                                        
 
 #define MX_JS_THROW_HRESULT_ERROR(ctx, hres)                                                    \
           DukTape::duk_error_raw((ctx), DUK_ERR_ERROR, (LPCSTR)(__FILE__),                      \
-                                 (DukTape::duk_int_t)__LINE__, "\xFF\xFF%08X", (HRESULT)(hres))
+                                 (DukTape::duk_int_t)__LINE__, "HR:%08X", (HRESULT)(hres))
 
 #define MX_JS_THROW_ERROR(ctx, code, fmt, ...)                                                  \
           DukTape::duk_error_raw((ctx), (DukTape::duk_errcode_t)(code), (LPCSTR)(__FILE__),     \
