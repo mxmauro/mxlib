@@ -53,7 +53,7 @@ HRESULT CHttpHeaderEntLastModified::Parse(__in_z LPCSTR szValueA)
 
 HRESULT CHttpHeaderEntLastModified::Build(__inout CStringA &cStrDestA)
 {
-  return cDt.Format(cStrDestA, "%a, %d-%m-%Y %H:%m:%S %z");
+  return cDt.Format(cStrDestA, "%a, %d %b %Y %H:%m:%S %z");
 }
 
 HRESULT CHttpHeaderEntLastModified::SetDate(__in CDateTime &_cDt)

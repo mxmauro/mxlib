@@ -145,9 +145,9 @@ HRESULT CHttpCommon::ParseDate(__out CDateTime &cDt, __in_z LPCSTR szDateTimeA)
   if (*szDateTimeA == 0)
     return MX_E_InvalidData;
   //parse date
-  hRes = cDt.SetFromString(szDateTimeA, "%A, %d-%b-%y %H:%M:%S %z");
+  hRes = cDt.SetFromString(szDateTimeA, "%a, %d %b %Y %H:%M:%S %z");
   if (FAILED(hRes))
-    hRes = cDt.SetFromString(szDateTimeA, "%a, %d %b %Y %H:%M:%S %z");
+    hRes = cDt.SetFromString(szDateTimeA, "%A, %d-%b-%y %H:%M:%S %z");
   if (FAILED(hRes))
     hRes = cDt.SetFromString(szDateTimeA, "%Y.%m.%dT%H:%M");
   if (FAILED(hRes))

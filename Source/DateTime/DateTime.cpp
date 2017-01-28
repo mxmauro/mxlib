@@ -565,7 +565,7 @@ pfs_skip_phrase:
         szFormatW++;
       }
     }
-    else if (*szFormatW==L' ' || *szFormatW==L'\t')
+    else if (*szFormatW == L' ' || *szFormatW == L'\t')
     {
       while (*szFormatW == L' ' || *szFormatW == L'\t')
         szFormatW++;
@@ -1250,7 +1250,7 @@ fmt_restart:
 
         case L'b': // abbreviated month name
         case L'B': // full month name
-          if (cStrDestW.Concat((*szFormatW == L'a') ? sCustomW.szShortMonthNamesW[nMonth-1] :
+          if (cStrDestW.Concat((*szFormatW == L'b') ? sCustomW.szShortMonthNamesW[nMonth-1] :
                                                       sCustomW.szLongMonthNamesW[nMonth-1]) == FALSE)
             return E_OUTOFMEMORY;
           break;
@@ -1268,7 +1268,7 @@ fmt_restart:
           szFormatW--; //fixed below at switch end
           break;
 
-        case L'd': // mday in decimal (01-31)
+        case L'd': // day in decimal (01-31)
           hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nDay, (bAlternateFlag == FALSE) ? 2 : 1);
           if (FAILED(hRes))
             return hRes;
@@ -1288,7 +1288,7 @@ fmt_restart:
             return hRes;
           break;
 
-        case L'j': // yday in decimal (001-366)
+        case L'j': // day of year in decimal (001-366)
           if (nDayOfYear < 0)
             nDayOfYear = GetDayOfYear();
           hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nDayOfYear+1, 3);
@@ -1407,7 +1407,7 @@ fmt_restart:
           }
           else
           {
-            if (cStrDestW.Concat((nGmtOffset > 0) ? L"+" : L"-") == FALSE)
+            if (cStrDestW.Concat((nGmtOffset >= 0) ? L"+" : L"-") == FALSE)
               return E_OUTOFMEMORY;
             nTemp = nGmtOffset;
             if (nTemp < 0)
