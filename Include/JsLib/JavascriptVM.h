@@ -204,9 +204,11 @@ public:
   class CRequireModuleContext
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CRequireModuleContext);
-  public:
-    CRequireModuleContext();
+  protected:
+    CRequireModuleContext(__in DukTape::duk_context *lpCtx, __in_z LPCWSTR szIdW,
+                          __in DukTape::duk_idx_t nModuleObjectIndex, __in DukTape::duk_idx_t nExportsObjectIndex);
 
+  public:
     LPCWSTR GetId() const
       {
       return szIdW;
@@ -233,7 +235,7 @@ public:
                                 __in_opt OnSetPropertyCallback cSetValueCallback=NullCallback(),
                                 __in_opt int nFlags=PropertyFlagEnumerable);
 
-    HRESULT ReplaceModuleExports(__in DukTape::duk_idx_t nObjIndex, __in_opt BOOL bRemoveFromStack=TRUE);
+    HRESULT ReplaceModuleExports();
     HRESULT ReplaceModuleExportsWithObject(__in CJsObjectBase *lpObject);
 
   private:
@@ -241,7 +243,7 @@ public:
 
     DukTape::duk_context *lpCtx;
     LPCWSTR szIdW;
-    DukTape::duk_idx_t nRequireModuleIndex, nExportsObjectIndex, nModuleObjectIndex;
+    DukTape::duk_idx_t nModuleObjectIndex, nExportsObjectIndex;
   };
 
   //--------
@@ -417,7 +419,9 @@ public:
   static HRESULT AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
 
 private:
-  static DukTape::duk_ret_t OnModSearch(__in DukTape::duk_context *lpCtx);
+  //static DukTape::duk_ret_t OnModSearch(__in DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t OnNodeJsResolveModule(__in DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t OnNodeJsLoadModule(__in DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _ProxyHasPropHelper(__in DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _ProxyGetPropHelper(__in DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _ProxySetPropHelper(__in DukTape::duk_context *lpCtx);

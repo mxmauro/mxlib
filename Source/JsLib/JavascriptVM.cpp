@@ -86,15 +86,13 @@ HRESULT CJavascriptVM::Initialize()
     DukTape::duk_push_c_function(lpCtx, &OnJsOutputDebugString, 1);
     DukTape::duk_put_prop_string(lpCtx, -2, "DebugPrint");
     DukTape::duk_pop(lpCtx);
-    //add "require" callback
-    DukTape::duk_push_global_object(lpCtx);
-    DukTape::duk_get_prop_string(lpCtx, -1, "Duktape");
-    DukTape::duk_remove(lpCtx, -2);
-    DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::OnModSearch, 4);
-    DukTape::duk_put_prop_string(lpCtx, -2, "modSearch");
-    DukTape::duk_pop(lpCtx);
-    //setup DukTape's CommonJS module
-    DukTape::duk_module_duktape_init(lpCtx);
+    //setup DukTape's Node.js-like module loading framework
+    DukTape::duk_push_object(lpCtx);
+    DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::OnNodeJsResolveModule, MX_JS_VARARGS);
+    DukTape::duk_put_prop_string(lpCtx, -2, "resolve");
+    DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::OnNodeJsLoadModule, MX_JS_VARARGS);
+    DukTape::duk_put_prop_string(lpCtx, -2, "load");
+    DukTape::duk_module_node_init(lpCtx);
     return;
   });
   if (FAILED(hRes))
@@ -981,9 +979,143 @@ HRESULT CJavascriptVM::AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCWSTR
   return hRes;
 }
 
-DukTape::duk_ret_t CJavascriptVM::OnModSearch(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJavascriptVM::OnNodeJsResolveModule(__in DukTape::duk_context *lpCtx)
 {
-  CRequireModuleContext cContext;
+  MX::CStringA cStrTempA;
+  LPSTR szRequestedIdA = (LPSTR)DukTape::duk_get_string(lpCtx, 0);
+  LPCSTR szParentIdA = DukTape::duk_get_string(lpCtx, 1);
+  LPSTR p, q, q_last;
+
+  if (szParentIdA == NULL)
+    szParentIdA = "";
+  if (szRequestedIdA == NULL)
+    szRequestedIdA = "";
+
+  //  A few notes on the algorithm:
+  //
+  //    - Terms are not allowed to begin with a period unless the term
+  //      is either '.' or '..'.  This simplifies implementation (and
+  //      is within CommonJS modules specification).
+  //
+  //    - There are few output bound checks here.  This is on purpose:
+  //      the resolution input is length checked and the output is never
+  //      longer than the input.  The resolved output is written directly
+  //      over the input because it's never longer than the input at any
+  //      point in the algorithm.
+  //
+  //    - Non-ASCII characters are processed as individual bytes and
+  //      need no special treatment.  However, U+0000 terminates the
+  //      algorithm; this is not an issue because U+0000 is not a
+  //      desirable term character anyway.
+
+  //  Set up the resolution input which is the requested ID directly
+  //  (if absolute or no current module path) or with current module
+  //  ID prepended (if relative and current module path exists).
+  //
+  //  Suppose current module is 'foo/bar' and relative path is './quux'.
+  //  The 'bar' component must be replaced so the initial input here is
+  //  'foo/bar/.././quux'.
+  if (*szParentIdA != 0 && *szRequestedIdA == '.')
+  {
+    if (cStrTempA.Format("%s/../%s", szParentIdA, szRequestedIdA) == FALSE)
+      MX_JS_THROW_HRESULT_ERROR(lpCtx, E_OUTOFMEMORY);
+    szRequestedIdA = (LPSTR)cStrTempA;
+  }
+  else
+  {
+    if (cStrTempA.Copy(szRequestedIdA) == FALSE)
+      MX_JS_THROW_HRESULT_ERROR(lpCtx, E_OUTOFMEMORY);
+  }
+  szRequestedIdA = (LPSTR)cStrTempA;
+
+  // Resolution loop.  At the top of the loop we're expecting a valid
+  // term: '.', '..', or a non-empty identifier not starting with a period.
+  p = szRequestedIdA;
+  q = szRequestedIdA;
+  for (;;)
+  {
+    DukTape::duk_uint_fast8_t c;
+
+    // Here 'p' always points to the start of a term.
+    //
+    // We can also unconditionally reset q_last here: if this is
+    // the last (non-empty) term q_last will have the right value
+    // on loop exit.
+    MX_ASSERT(p >= q);  //output is never longer than input during resolution
+
+    q_last = q;
+    c = *p++;
+    if (c == 0)
+    {
+      goto resolve_error;
+    }
+    if (c == '.')
+    {
+      c = *p++;
+      if (c == '/')
+        goto eat_dup_slashes; // Term was '.' and is eaten entirely (including dup slashes)
+
+      if (c == '.' && *p == '/')
+      {
+        // Term was '..', backtrack resolved name by one component.
+        // q[-1] = previous slash (or beyond start of buffer)
+        // q[-2] = last char of previous component (or beyond start of buffer)
+        p++;  // eat (first) input slash
+
+        MX_ASSERT(q >= szRequestedIdA);
+        if (q == szRequestedIdA)
+          goto resolve_error;
+
+        MX_ASSERT(*(q - 1) == '/');
+        q--;  //Backtrack to last output slash (dups already eliminated).
+        for (;;)
+        {
+          //Backtrack to previous slash or start of buffer.
+          MX_ASSERT(q >= szRequestedIdA);
+          if (q == szRequestedIdA)
+            break;
+          if (*(q - 1) == '/')
+            break;
+          q--;
+        }
+        goto eat_dup_slashes;
+      }
+      goto resolve_error;
+    }
+    if (c == '/')
+      goto resolve_error; // e.g. require('/foo'), empty terms not allowed
+
+    for (;;)
+    {
+      //Copy term name until end or '/'
+      *q++ = c;
+      c = *p++;
+      if (c == 0)
+        goto loop_done; // This was the last term, and q_last was updated to match this term at loop top.
+      if (c == '/')
+      {
+        *q++ = '/';
+        break;
+      }
+      // write on next loop
+    }
+eat_dup_slashes:
+    while (*p == '/')
+      p++;
+  }
+loop_done:
+  MX_ASSERT(q >= szRequestedIdA);
+  DukTape::duk_push_lstring(lpCtx, szRequestedIdA, (size_t)(q - szRequestedIdA));
+  return 1;
+
+resolve_error:
+  MX_JS_THROW_ERROR(lpCtx, DUK_ERR_TYPE_ERROR, "cannot resolve module id: %s", szRequestedIdA);
+  return 0;
+}
+
+DukTape::duk_ret_t CJavascriptVM::OnNodeJsLoadModule(__in DukTape::duk_context *lpCtx)
+{
+  //Entry stack: [ resolved_id exports module ]
   CStringW cStrTempW;
   CStringA cStrCodeA;
   LPCSTR szModuleNameA;
@@ -993,17 +1125,15 @@ DukTape::duk_ret_t CJavascriptVM::OnModSearch(__in DukTape::duk_context *lpCtx)
   //get virtual machine pointer
   lpVM = MX::CJavascriptVM::FromContext(lpCtx);
   //initialize context
-  cContext.lpCtx = lpCtx;
   szModuleNameA = DukTape::duk_require_string(lpCtx, 0);
   hRes = Utf8_Decode(cStrTempW, szModuleNameA);
-  if (FAILED(hRes))
-    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
-  cContext.szIdW = (LPCWSTR)cStrTempW;
-  cContext.nRequireModuleIndex = 1;
-  cContext.nExportsObjectIndex = 2;
-  cContext.nModuleObjectIndex = 3;
-  //raise callback
-  hRes = (lpVM->cRequireModuleCallback) ? (lpVM->cRequireModuleCallback(lpCtx, &cContext, cStrCodeA)) : E_NOTIMPL;
+  if (SUCCEEDED(hRes))
+  {
+    CRequireModuleContext cContext(lpCtx, (LPCWSTR)cStrTempW, 2, 1);
+
+    //raise callback
+    hRes = (lpVM->cRequireModuleCallback) ? (lpVM->cRequireModuleCallback(lpCtx, &cContext, cStrCodeA)) : E_NOTIMPL;
+  }
   if (FAILED(hRes))
     MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
   if (cStrCodeA.IsEmpty() == FALSE)

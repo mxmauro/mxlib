@@ -222,6 +222,22 @@ static HRESULT OnRequireJsModule(__in MX::CJsHttpServer *lpHttp, __in MX::CHttpS
     }
     return hRes;
   }
+  if (MX::StrCompareW(szExtensionW, L".js", TRUE) == 0)
+  {
+    hRes = LoadTxtFile(cStrCodeA, (LPCWSTR)cStrFileNameW);
+    if (SUCCEEDED(hRes))
+    {
+      if (cStrCodeA.InsertN("<%", 0, 2) == FALSE || cStrCodeA.ConcatN("%>", 2) == FALSE)
+        hRes = E_OUTOFMEMORY;
+    }
+    if (hRes == MX_HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) ||
+        hRes == MX_HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND))
+    {
+      hRes = lpRequest->SendErrorPage(404, E_INVALIDARG);
+    }
+    return hRes;
+  }
+
   //not found
   return MX_E_NotFound;
 }

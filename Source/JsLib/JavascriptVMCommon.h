@@ -33,17 +33,7 @@
 
 //include the following files OUTSIDE the namespace
 #include <exception>
-/*
-#include <xstddef>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
-#include <stddef.h>
-#include <limits.h>
-#include <math.h>
-#include <xstddef>
-*/
+
 #ifdef _MX_JAVASCRIPT_VM_CPP
 
 #define DUK_OPT_HAVE_CUSTOM_H
@@ -56,7 +46,8 @@ namespace DukTape {
 #pragma warning(disable : 4101)
 #include "DukTape\Source\dist\duktape.c"
 #define snprintf mx_sprintf_s
-#include "DukTape\Source\extras\module-duktape\duk_module_duktape.c"
+//#include "DukTape\Source\extras\module-duktape\duk_module_duktape.c"
+#include "DukTape\Source\extras\module-node\duk_module_node.c"
 #undef snprintf
 #pragma warning(default : 4101)
 
