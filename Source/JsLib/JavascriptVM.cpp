@@ -156,7 +156,7 @@ HRESULT CJavascriptVM::Run(__in_z LPCSTR szCodeA, __in_z_opt LPCWSTR szFileNameW
     DukTape::duk_push_global_object(lpCtx);
     DukTape::duk_get_prop_string(lpCtx, -1, "require");
     DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
-    DukTape::duk_put_prop_string(lpCtx, -2, "id");
+    DukTape::duk_put_prop_string(lpCtx, -2, "\xff" "moduleId");
     DukTape::duk_pop_2(lpCtx);
     //run code
     DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
