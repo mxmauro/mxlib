@@ -310,16 +310,15 @@ HRESULT CJsHttpServer::TransformJavascriptCode(__inout MX::CStringA &cStrCodeA)
   typedef enum {
     CodeModeNone=0, CodeModeInCode, CodeModeInCodePrint
   } eCodeMode;
-  LPCSTR sA;
+  LPSTR sA;
   CHAR chQuoteA;
   SIZE_T k, nCurrPos, nNonCodeBlockStart;
   eCodeMode nCodeMode, nOrigCodeMode;
-  HRESULT hRes;
 
   //remove UTF-8 BOM if any
   if (cStrCodeA.GetLength() >= 3)
   {
-    sA = (LPCSTR)cStrCodeA;
+    sA = (LPSTR)cStrCodeA;
     if (sA[0] == 0xEF && sA[1] == 0xBB && sA[2] == 0xBF)
       cStrCodeA.Delete(0, 3);
   }
@@ -327,7 +326,7 @@ HRESULT CJsHttpServer::TransformJavascriptCode(__inout MX::CStringA &cStrCodeA)
   nNonCodeBlockStart = 0;
   chQuoteA = 0;
   nCodeMode = CodeModeNone;
-  sA = (LPCSTR)cStrCodeA;
+  sA = (LPSTR)cStrCodeA;
   while (*sA != 0)
   {
     if (chQuoteA == 0)
@@ -344,29 +343,15 @@ HRESULT CJsHttpServer::TransformJavascriptCode(__inout MX::CStringA &cStrCodeA)
       else if (nCodeMode == CodeModeNone && *sA == '<' && sA[1] == '%')
       {
         nCodeMode = (sA[2] != '=') ? CodeModeInCode : CodeModeInCodePrint;
-        nCurrPos = (SIZE_T)(sA - (LPCSTR)cStrCodeA);
-        //remove tag
-        if (nCodeMode == CodeModeInCode)
-        {
-          //if after tag there are only spaces/tabs and the new line then remove them too
-          for (k=2; sA[k]==' ' || sA[k]=='\t'; k++);
-          if (sA[k] == 0)
-            cStrCodeA.Delete(nCurrPos, k);
-          else if (sA[k] == '\n')
-            cStrCodeA.Delete(nCurrPos, k+1);
-          else if (sA[k] == '\r')
-            cStrCodeA.Delete(nCurrPos, (sA[k] == '\n') ? (k+2) : (k+1));
-          else
-            cStrCodeA.Delete(nCurrPos, 2);
-        }
-        else
-        {
-          cStrCodeA.Delete(nCurrPos, 3);
-        }
+        nCurrPos = (SIZE_T)(sA - (LPSTR)cStrCodeA);
+
         //convert code from 'nNonCodeBlockStart' to 'nCurrPos' to a print function
-        hRes = TransformJavascriptCode_ConvertToPrint(cStrCodeA, nNonCodeBlockStart, nCurrPos);
-        if (FAILED(hRes))
-          return hRes;
+        if (TransformJavascriptCode_ConvertToPrint(cStrCodeA, nNonCodeBlockStart, nCurrPos) == FALSE)
+          return E_OUTOFMEMORY;
+        //reset code pointer and convert the tag to spaces
+        sA = (LPSTR)cStrCodeA + nCurrPos;
+        for (k = (nCodeMode == CodeModeInCode) ? 2 : 3; k>0; k--,nCurrPos++)
+          *sA++ = ' ';
         //insert "echo("
         if (nCodeMode == CodeModeInCodePrint)
         {
@@ -375,23 +360,13 @@ HRESULT CJsHttpServer::TransformJavascriptCode(__inout MX::CStringA &cStrCodeA)
           nCurrPos += 18;
         }
         //reset code pointer
-        sA = (LPCSTR)cStrCodeA + nCurrPos;
+        sA = (LPSTR)cStrCodeA + nCurrPos;
       }
       else if (nCodeMode != CodeModeNone && *sA == '%' && sA[1] == '>')
       {
         nOrigCodeMode = nCodeMode;
         nCodeMode = CodeModeNone;
         nNonCodeBlockStart = (SIZE_T)(sA - (LPCSTR)cStrCodeA);
-        //remove the tag and, if after it, there are only spaces/tabs and the new line then remove them too
-        for (k=2; sA[k]==' ' || sA[k]=='\t'; k++);
-        if (sA[k] == 0)
-          cStrCodeA.Delete(nNonCodeBlockStart, k);
-        else if (sA[k] == '\n')
-          cStrCodeA.Delete(nNonCodeBlockStart, k+1);
-        else if (sA[k] == '\r')
-          cStrCodeA.Delete(nNonCodeBlockStart, (sA[k] == '\n') ? (k+2) : (k+1));
-        else
-          cStrCodeA.Delete(nNonCodeBlockStart, 2);
         //close echo if print mode
         if (nOrigCodeMode == CodeModeInCodePrint)
         {
@@ -400,7 +375,22 @@ HRESULT CJsHttpServer::TransformJavascriptCode(__inout MX::CStringA &cStrCodeA)
           nNonCodeBlockStart += 3;
         }
         //reset code pointer
-        sA = (LPCSTR)cStrCodeA + nNonCodeBlockStart;
+        sA = (LPSTR)cStrCodeA + nNonCodeBlockStart;
+        //convert the tag to spaces
+        for (k=2; k>0; k--,nNonCodeBlockStart++)
+          *sA++ = ' ';
+        //if after tag, there are only spaces/tabs and the new line, then skip them
+        k = 0;
+        while (sA[k] == ' ' || sA[k] == '\t')
+          k++;
+        if (sA[k] == 0)
+          nNonCodeBlockStart += k;
+        else if (sA[k] == '\n')
+          nNonCodeBlockStart += k+1;
+        else if (sA[k] == '\r')
+          nNonCodeBlockStart += k + ((sA[k+1] == '\n') ? 2 : 1);
+        //reset code pointer
+        sA = (LPSTR)cStrCodeA + nNonCodeBlockStart;
       }
       else if (nCodeMode == CodeModeInCode && *sA == '/' && sA[1] == '/')
       {
@@ -444,75 +434,94 @@ HRESULT CJsHttpServer::TransformJavascriptCode(__inout MX::CStringA &cStrCodeA)
     return E_UNEXPECTED;
 
   //convert final block
-  nCurrPos = (SIZE_T)(sA - (LPCSTR)cStrCodeA);
+  nCurrPos = (SIZE_T)(sA - (LPSTR)cStrCodeA);
   //convert code from 'nNonCodeBlockStart' to 'nCurrPos' to a print function
-  hRes = TransformJavascriptCode_ConvertToPrint(cStrCodeA, nNonCodeBlockStart, nCurrPos);
+  if (TransformJavascriptCode_ConvertToPrint(cStrCodeA, nNonCodeBlockStart, nCurrPos) == FALSE)
+    return E_OUTOFMEMORY;
   //done
-  return hRes;
+  return S_OK;
 }
 
-HRESULT CJsHttpServer::TransformJavascriptCode_ConvertToPrint(__inout MX::CStringA &cStrCodeA,
-                                                              __inout SIZE_T &nNonCodeBlockStart,
-                                                              __inout SIZE_T &nCurrPos)
+BOOL CJsHttpServer::TransformJavascriptCode_ConvertToPrint(__inout MX::CStringA &cStrCodeA,
+                                            __inout SIZE_T nNonCodeBlockStart, __inout SIZE_T &nCurrPos)
 {
-  LPCSTR sA;
+  CHAR chA;
+  LPSTR sA;
 
-  if (nNonCodeBlockStart < nCurrPos)
+  while (nNonCodeBlockStart < nCurrPos)
   {
     //insert a call to 'echo' method
     if (cStrCodeA.Insert("echo(\"", nNonCodeBlockStart) == FALSE)
-      return E_OUTOFMEMORY;
-    nNonCodeBlockStart += 4+2;
-    nCurrPos += 4+2;
+      return FALSE;
+    nNonCodeBlockStart += 6;
+    nCurrPos += 6;
     //escape quotes and convert control chars
-    sA = (LPCSTR)cStrCodeA + nNonCodeBlockStart;
+    sA = (LPSTR)cStrCodeA + nNonCodeBlockStart;
     while (nNonCodeBlockStart < nCurrPos)
     {
-      switch (*sA)
+      if (*sA == '\r' || *sA == '\n')
+        break;
+      if (*sA == '"' || *sA == '\t')
       {
-        case '"':
-        case '\r':
-        case '\n':
-        case '\t':
-          switch (*sA)
-          {
-            case '\r':
-              *((LPSTR)sA) = 'r';
-              break;
-            case '\n':
-              *((LPSTR)sA) = 'n';
-              break;
-            case '\t':
-              *((LPSTR)sA) = 't';
-              break;
-          }
-          if (cStrCodeA.InsertN("\\", nNonCodeBlockStart, 1) == FALSE)
-            return E_OUTOFMEMORY;
-          nNonCodeBlockStart += 2;
-          nCurrPos++;
-          sA = (LPCSTR)cStrCodeA + nNonCodeBlockStart;
-          break;
-
-        default:
-          if (*((LPBYTE)sA) < 32)
-          {
-            cStrCodeA.Delete(nNonCodeBlockStart, 1);
-            nCurrPos--;
-          }
-          else
-          {
-            sA++;
-            nNonCodeBlockStart++;
-          }
-          break;
+        chA = (*sA == '"') ? '"' : 't';
+        if (cStrCodeA.InsertN("\\", nNonCodeBlockStart, 1) == FALSE)
+          return FALSE;
+        nNonCodeBlockStart += 2;
+        nCurrPos++;
+        sA = (LPSTR)cStrCodeA + nNonCodeBlockStart;
+        *(sA-1) = chA;
+      }
+      else if (*((LPBYTE)sA) < 32)
+      {
+        cStrCodeA.Delete(nNonCodeBlockStart, 1);
+        nCurrPos--;
+      }
+      else
+      {
+        sA++;
+        nNonCodeBlockStart++;
       }
     }
-    //close call to 'print'
-    if (cStrCodeA.Insert("\");", nCurrPos) == FALSE)
-      return E_OUTOFMEMORY;
-    nCurrPos += 3;
+    if (nNonCodeBlockStart < nCurrPos)
+    {
+      //the code ended with a \r, \n or \r\n pair.
+      //we leave them in order to maintain line numbering with original code but we close the echo sentence
+      //adding the correct chars
+      if (*sA == '\r')
+      {
+        if (sA[1] == '\n')
+        {
+          if (cStrCodeA.Insert("\\r\\n\");", nNonCodeBlockStart) == FALSE)
+            return FALSE;
+          nNonCodeBlockStart += 7 + 2; //plus 2 because the \r\n
+          nCurrPos += 7;
+        }
+        else
+        {
+          if (cStrCodeA.Insert("\\r\");", nNonCodeBlockStart) == FALSE)
+            return FALSE;
+          nNonCodeBlockStart += 5 + 1; //plus 1 because the \r
+          nCurrPos += 5;
+        }
+      }
+      else
+      {
+        if (cStrCodeA.Insert("\\n\");", nNonCodeBlockStart) == FALSE)
+          return FALSE;
+        nNonCodeBlockStart += 5 + 1; //plus 1 because the \n
+        nCurrPos += 5;
+      }
+    }
+    else
+    {
+      //the code ended so close the ECHO sentence
+      if (cStrCodeA.Insert("\");", nNonCodeBlockStart) == FALSE)
+        return FALSE;
+      nNonCodeBlockStart += 3;
+      nCurrPos += 3;
+    }
   }
-  return S_OK;
+  return TRUE;
 }
 
 HRESULT CJsHttpServer::InsertPostField(__in CJavascriptVM &cJvm, __in CHttpBodyParserFormBase::CField *lpField,

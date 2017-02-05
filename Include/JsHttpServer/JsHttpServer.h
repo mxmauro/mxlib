@@ -89,8 +89,8 @@ private:
   HRESULT InitializeJVM(__in CJavascriptVM &cJvm, __in CHttpServer::CRequest *lpRequest);
 
   HRESULT TransformJavascriptCode(__inout MX::CStringA &cStrCodeA);
-  HRESULT TransformJavascriptCode_ConvertToPrint(__inout MX::CStringA &cStrCodeA, __inout SIZE_T &nNonCodeBlockStart,
-                                                 __inout SIZE_T &nCurrPos);
+  BOOL TransformJavascriptCode_ConvertToPrint(__inout MX::CStringA &cStrCodeA, __inout SIZE_T nNonCodeBlockStart,
+                                              __inout SIZE_T &nCurrPos);
 
   HRESULT InsertPostField(__in CJavascriptVM &cJvm, __in CHttpBodyParserFormBase::CField *lpField,
                           __in LPCSTR szBaseObjectNameA);
