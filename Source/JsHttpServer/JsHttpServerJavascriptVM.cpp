@@ -340,6 +340,34 @@ HRESULT CJsHttpServer::TransformJavascriptCode(__inout MX::CStringA &cStrCodeA)
         //only process strings inside JS code
         chQuoteA = *sA++;
       }
+      else if (nCodeMode != CodeModeNone && *sA == '/' && sA[1] != '/' && sA[1] != '*')
+      {
+        //check for a possible regular expression and avoid dying in the intent
+        LPSTR szCurrA = sA + 1;
+
+        //parse expression
+        while (*szCurrA != 0 && MX::StrChrA("/\t ),;", *szCurrA) == NULL && (*szCurrA != '%' || szCurrA[1] != '>'))
+        {
+          if (*szCurrA == '\\' && szCurrA[1] != 0)
+            szCurrA++;
+          szCurrA++;
+        }
+        if (*szCurrA == '/')
+        {
+          //parse flags
+          szCurrA++;
+          while ((*szCurrA >= 'A' && *szCurrA <= 'Z') || (*szCurrA >= 'a' && *szCurrA <= 'z'))
+            szCurrA++;
+          if (MX::StrChrA("/\t ),;", *szCurrA) != NULL || (*szCurrA == '%' && szCurrA[1] == '>'))
+          {
+            //got a RegEx expression, advance the pointer until here
+            sA = szCurrA;
+            continue;
+          }
+        }
+        //if we reach here, then it is NOT a RegEx
+        sA++;
+      }
       else if (nCodeMode == CodeModeNone && *sA == '<' && sA[1] == '%')
       {
         nCodeMode = (sA[2] != '=') ? CodeModeInCode : CodeModeInCodePrint;
@@ -461,9 +489,9 @@ BOOL CJsHttpServer::TransformJavascriptCode_ConvertToPrint(__inout MX::CStringA 
     {
       if (*sA == '\r' || *sA == '\n')
         break;
-      if (*sA == '"' || *sA == '\t')
+      if (*sA == '"' || *sA == '\t' || *sA == '\\')
       {
-        chA = (*sA == '"') ? '"' : 't';
+        chA = (*sA == '\t') ? 't' : *sA;
         if (cStrCodeA.InsertN("\\", nNonCodeBlockStart, 1) == FALSE)
           return FALSE;
         nNonCodeBlockStart += 2;

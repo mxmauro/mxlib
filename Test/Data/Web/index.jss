@@ -15,6 +15,14 @@ else
 %></pre>
 <div class="caption">MOMENT.JS</div>
 <pre>ID: <%= moment().toISOString() %></pre>
+
+<div class="caption">REGEX</div>
+<pre>R: <%
+	var __s = Duktape.enc('jc', request);
+		__s = __s.replace(/[\\"']/g, '\\$&');
+		__s = __s.replace(/\u0000/g, '\\0');
+	echo( __s );
+	%></pre>
 <%
 //session.RegenerateId();
 require("./bottom.jss");
