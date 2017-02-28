@@ -200,6 +200,7 @@ HRESULT CJsMySqlPluginHelpers::HResultFromMySqlErr(__in int nError)
 
     case CR_OUT_OF_MEMORY:
     case ER_OUTOFMEMORY:
+    case ER_OUT_OF_SORTMEMORY:
     case ER_OUT_OF_RESOURCES:
       return E_OUTOFMEMORY;
 
@@ -213,6 +214,7 @@ HRESULT CJsMySqlPluginHelpers::HResultFromMySqlErr(__in int nError)
       return E_NOTIMPL;
 
     case ER_DUP_ENTRY:
+    case ER_DUP_KEY:
       return MX_E_DuplicateKey;
 
     case ER_NO_REFERENCED_ROW:
@@ -220,6 +222,10 @@ HRESULT CJsMySqlPluginHelpers::HResultFromMySqlErr(__in int nError)
     case ER_ROW_IS_REFERENCED_2:
     case ER_NO_REFERENCED_ROW_2:
       return MX_E_ConstraintsCheckFailed;
+
+    case ER_LOCK_WAIT_TIMEOUT:
+    case ER_XA_RBTIMEOUT:
+      return MX_E_Timeout;
   }
   return E_FAIL;
 }

@@ -53,6 +53,7 @@ public:
 
   //--------
 
+  typedef Callback<HRESULT (__in CPropertyBag &cPropBag, __out CRequest **lplpRequest)> OnNewRequestObjectCallback;
   typedef Callback<HRESULT (__in CHttpServer *lpHttp, __in CRequest *lpRequest,
                             __inout CHttpBodyParserBase *&lpBodyParser)> OnRequestHeadersReceivedCallback;
   typedef Callback<HRESULT (__in CHttpServer *lpHttp, __in CRequest *lpRequest)> OnRequestCompletedCallback;
@@ -65,6 +66,7 @@ public:
   CHttpServer(__in CSockets &cSocketMgr, __in CPropertyBag &cPropBag);
   ~CHttpServer();
 
+  VOID On(__in OnNewRequestObjectCallback cNewRequestObjectCallback);
   VOID On(__in OnRequestHeadersReceivedCallback cRequestHeadersReceivedCallback);
   VOID On(__in OnRequestCompletedCallback cRequestCompletedCallback);
   VOID On(__in OnErrorCallback cErrorCallback);
@@ -95,7 +97,7 @@ public:
   class CRequest : public virtual CBaseMemObj, public TLnkLstNode<CRequest>, public CIpc::CUserData
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CRequest);
-  private:
+  protected:
     CRequest(__in CHttpServer *lpHttpServer, __in CPropertyBag &cPropBag);
   public:
     ~CRequest();
@@ -217,8 +219,6 @@ public:
       StateReceivingRequestHeaders,
       StateReceivingRequestBody,
       StateBuildingResponse,
-      StateIgnoringRequest400,
-      StateIgnoringRequest413,
       StateError
     } eState;
 
@@ -308,6 +308,7 @@ private:
   CSystemTimedEventQueue *lpTimedEventQueue;
   LONG volatile nRundownLock;
   HANDLE hAcceptConn;
+  OnNewRequestObjectCallback cNewRequestObjectCallback;
   OnRequestHeadersReceivedCallback cRequestHeadersReceivedCallback;
   OnRequestCompletedCallback cRequestCompletedCallback;
   OnErrorCallback cErrorCallback;

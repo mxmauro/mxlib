@@ -25,6 +25,8 @@
 
 //-----------------------------------------------------------
 
+static DukTape::duk_ret_t OnResetOutput(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
+                                        __in_z LPCSTR szFunctionNameA);
 static DukTape::duk_ret_t OnEcho(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
                                  __in_z LPCSTR szFunctionNameA);
 static DukTape::duk_ret_t OnSetStatus(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
@@ -33,6 +35,12 @@ static DukTape::duk_ret_t OnSetCookie(__in DukTape::duk_context *lpCtx, __in_z L
                                       __in_z LPCSTR szFunctionNameA);
 static DukTape::duk_ret_t OnSetHeader(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
                                       __in_z LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnObStart(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
+                                    __in_z LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnObEnd(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
+                                  __in_z LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnObGetContents(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
+                                          __in_z LPCSTR szFunctionNameA);
 
 //-----------------------------------------------------------
 
@@ -54,6 +62,14 @@ HRESULT AddResponseMethods(__in CJavascriptVM &cJvm, __in MX::CHttpServer::CRequ
   __EXIT_ON_ERROR(hRes);
   hRes = cJvm.AddNativeFunction("setHeader", MX_BIND_CALLBACK(&OnSetHeader), 2);
   __EXIT_ON_ERROR(hRes);
+  hRes = cJvm.AddNativeFunction("resetOutput", MX_BIND_CALLBACK(&OnResetOutput), 0);
+  __EXIT_ON_ERROR(hRes);
+  hRes = cJvm.AddNativeFunction("obStart", MX_BIND_CALLBACK(&OnObStart), 0);
+  __EXIT_ON_ERROR(hRes);
+  hRes = cJvm.AddNativeFunction("obEnd", MX_BIND_CALLBACK(&OnObEnd), MX_JS_VARARGS);
+  __EXIT_ON_ERROR(hRes);
+  hRes = cJvm.AddNativeFunction("obGetContents", MX_BIND_CALLBACK(&OnObGetContents), 0);
+  __EXIT_ON_ERROR(hRes);
   //done
   return S_OK;
 }
@@ -66,19 +82,39 @@ HRESULT AddResponseMethods(__in CJavascriptVM &cJvm, __in MX::CHttpServer::CRequ
 
 //-----------------------------------------------------------
 
+static DukTape::duk_ret_t OnResetOutput(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
+                                        __in_z LPCSTR szFunctionNameA)
+{
+  MX::CJsHttpServer::CJsRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
+
+  lpRequest->ResetResponse();
+  return 0;
+}
+
 static DukTape::duk_ret_t OnEcho(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
                                  __in_z LPCSTR szFunctionNameA)
 {
-  MX::CHttpServer::CRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
+  MX::CJsHttpServer::CJsRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
   LPCSTR szBufA;
+  MX::CStringA *lpStrA;
+  SIZE_T nIdx;
   HRESULT hRes;
 
   szBufA = DukTape::duk_to_string(lpCtx, 0); //convert to string if other type
   if (*szBufA != 0)
   {
-    hRes = lpRequest->SendResponse(szBufA, MX::StrLenA(szBufA));
+    nIdx = lpRequest->cOutputBuffersList.GetCount();
+    if (nIdx > 0)
+    {
+      lpStrA = lpRequest->cOutputBuffersList.GetElementAt(nIdx - 1);
+      hRes = (lpStrA->ConcatN(szBufA, MX::StrLenA(szBufA)) != FALSE) ? S_OK : E_OUTOFMEMORY;
+    }
+    else
+    {
+      hRes = lpRequest->SendResponse(szBufA, MX::StrLenA(szBufA));
+    }
     if (FAILED(hRes))
-      MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
+      MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
   }
   return 0;
 }
@@ -86,7 +122,7 @@ static DukTape::duk_ret_t OnEcho(__in DukTape::duk_context *lpCtx, __in_z LPCSTR
 static DukTape::duk_ret_t OnSetStatus(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
                                       __in_z LPCSTR szFunctionNameA)
 {
-  MX::CHttpServer::CRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
+  MX::CJsHttpServer::CJsRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
   DukTape::duk_idx_t nParamsCount;
   LONG nStatus;
   LPCSTR szReasonA;
@@ -95,7 +131,7 @@ static DukTape::duk_ret_t OnSetStatus(__in DukTape::duk_context *lpCtx, __in_z L
   //get parameters
   nParamsCount = DukTape::duk_get_top(lpCtx);
   if (nParamsCount < 1 || nParamsCount > 2)
-    MX_JS_THROW_HRESULT_ERROR(lpCtx, E_INVALIDARG);
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
   nStatus = DukTape::duk_require_int(lpCtx, 0);
   szReasonA = NULL;
   if (nParamsCount > 1)
@@ -103,14 +139,14 @@ static DukTape::duk_ret_t OnSetStatus(__in DukTape::duk_context *lpCtx, __in_z L
   //set status
   hRes = lpRequest->SetResponseStatus(nStatus, szReasonA);
   if (FAILED(hRes))
-    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
   return 0;
 }
 
 static DukTape::duk_ret_t OnSetCookie(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
                                       __in_z LPCSTR szFunctionNameA)
 {
-  MX::CHttpServer::CRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
+  MX::CJsHttpServer::CJsRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
   MX::CHttpCookie cCookie;
   MX::CStringW cStrTempW;
   DukTape::duk_idx_t nParamsCount;
@@ -121,7 +157,7 @@ static DukTape::duk_ret_t OnSetCookie(__in DukTape::duk_context *lpCtx, __in_z L
 
   nParamsCount = DukTape::duk_get_top(lpCtx);
   if (nParamsCount == 0 || nParamsCount > 7)
-    MX_JS_THROW_HRESULT_ERROR(lpCtx, E_INVALIDARG);
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
   //get parameters
   szValueA = szPathA = szDomainA = NULL;
   nExpire = 0;
@@ -171,14 +207,14 @@ static DukTape::duk_ret_t OnSetCookie(__in DukTape::duk_context *lpCtx, __in_z L
     hRes = lpRequest->AddResponseCookie(cCookie);
   }
   if (FAILED(hRes))
-    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
   return 0;
 }
 
 static DukTape::duk_ret_t OnSetHeader(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
                                       __in_z LPCSTR szFunctionNameA)
 {
-  MX::CHttpServer::CRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
+  MX::CJsHttpServer::CJsRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
   LPCSTR szNameA, szValueA;
   HRESULT hRes;
 
@@ -186,6 +222,85 @@ static DukTape::duk_ret_t OnSetHeader(__in DukTape::duk_context *lpCtx, __in_z L
   szValueA = DukTape::duk_require_string(lpCtx, 1);
   hRes = lpRequest->AddResponseHeader(szNameA, szValueA);
   if (FAILED(hRes))
-    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
   return 0;
+}
+
+static DukTape::duk_ret_t OnObStart(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
+                                    __in_z LPCSTR szFunctionNameA)
+{
+  MX::CJsHttpServer::CJsRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
+  MX::CStringA *lpStrA;
+
+  lpStrA = MX_DEBUG_NEW MX::CStringA();
+  if (lpStrA == NULL)
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+  if (lpRequest->cOutputBuffersList.AddElement(lpStrA) == FALSE)
+  {
+    delete lpStrA;
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+  }
+  return 0;
+}
+
+static DukTape::duk_ret_t OnObEnd(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
+                                  __in_z LPCSTR szFunctionNameA)
+{
+  MX::CJsHttpServer::CJsRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
+  DukTape::duk_idx_t nParamsCount;
+  MX::CStringA *lpStrA;
+  MX::CJavascriptVM *lpJVM;
+  BOOL bDiscard;
+  SIZE_T nIdx;
+  HRESULT hRes;
+
+  bDiscard = FALSE;
+  //get parameters
+  nParamsCount = DukTape::duk_get_top(lpCtx);
+  if (nParamsCount < 0 || nParamsCount > 1)
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+  if (nParamsCount > 1)
+  {
+    lpJVM = MX::CJavascriptVM::FromContext(lpCtx);
+    if (lpJVM->GetInt(0) != 0)
+      bDiscard = TRUE;
+  }
+  //process output buffer
+  nIdx = lpRequest->cOutputBuffersList.GetCount();
+  if (nIdx > 0)
+  {
+    if (bDiscard == FALSE)
+    {
+      lpStrA = lpRequest->cOutputBuffersList.GetElementAt(nIdx - 1);
+      if (lpStrA->IsEmpty() == FALSE)
+      {
+        hRes = lpRequest->SendResponse((LPCSTR)(*lpStrA), lpStrA->GetLength());
+        if (FAILED(hRes))
+          MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+      }
+    }
+    lpRequest->cOutputBuffersList.RemoveElementAt(nIdx - 1);
+  }
+  return 0;
+}
+
+static DukTape::duk_ret_t OnObGetContents(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
+                                          __in_z LPCSTR szFunctionNameA)
+{
+  MX::CJsHttpServer::CJsRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
+  MX::CStringA *lpStrA;
+  SIZE_T nIdx;
+
+  //process output buffer
+  nIdx = lpRequest->cOutputBuffersList.GetCount();
+  if (nIdx > 0)
+  {
+    lpStrA = lpRequest->cOutputBuffersList.GetElementAt(nIdx - 1);
+    DukTape::duk_push_lstring(lpCtx, (LPCSTR)(*lpStrA), lpStrA->GetLength());
+  }
+  else
+  {
+    DukTape::duk_push_string(lpCtx, "");
+  }
+  return 1;
 }

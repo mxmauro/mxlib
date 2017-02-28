@@ -31,19 +31,24 @@ CJsObjectBase* CJsObjectBase::FromObject(__in DukTape::duk_context *lpCtx, __in 
 {
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   CJsObjectBase *lpObj = NULL;
-  HRESULT hRes;
 
-  hRes = lpJVM->RunNativeProtected(0, 0, [&lpObj, nIndex](__in DukTape::duk_context *lpCtx) -> VOID
+  try
   {
-    DukTape::duk_get_prop_string(lpCtx, nIndex, "\xff""\xff""data");
-    if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
-      lpObj = reinterpret_cast<CJsObjectBase*>(DukTape::duk_to_pointer(lpCtx, -1));
-    DukTape::duk_pop(lpCtx);
-    return;
-  });
-  if (lpObj == NULL || FAILED(hRes))
+    lpJVM->RunNativeProtected(0, 0, [&lpObj, nIndex](__in DukTape::duk_context *lpCtx) -> VOID
+    {
+      DukTape::duk_get_prop_string(lpCtx, nIndex, "\xff""\xff""data");
+      if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
+        lpObj = reinterpret_cast<CJsObjectBase*>(DukTape::duk_to_pointer(lpCtx, -1));
+      DukTape::duk_pop(lpCtx);
+      return;
+    });
+  }
+  catch (CJsError &)
+  {
     return NULL;
-  lpObj->AddRef();
+  }
+  if (lpObj != NULL)
+    lpObj->AddRef();
   return lpObj;
 }
 
@@ -89,66 +94,112 @@ int CJsObjectBase::OnProxyDeleteIndexedProperty(__in int nIndex)
 
 HRESULT CJsObjectBase::_RegisterHelper(__in DukTape::duk_context *lpCtx, __in MAP_ENTRY *lpEntries,
                                        __in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA,
-                                       __in_opt lpfnCreateObject fnCreateObject, __in_opt int nCreateArgsCount,
-                                       __in BOOL bCreateProxy)
+                                       __in_opt lpfnCreateObject fnCreateObject, __in BOOL bUseProxy,
+                                       __in lpfnRegisterUnregisterCallback fnRegisterCallback,
+                                       __in lpfnRegisterUnregisterCallback fnUnregisterCallback)
 {
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
-  HRESULT hRes;
 
   if (lpCtx == NULL || lpEntries == NULL || szObjectNameA == NULL || szPrototypeNameA == NULL)
     return E_POINTER;
-  hRes = lpJVM->RunNativeProtected(0, 0, [=](__in DukTape::duk_context *lpCtx) -> VOID
+  try
   {
-    DukTape::duk_uint_t nDukFlags;
-    MAP_ENTRY *lpEntries_2 = lpEntries;
+    lpJVM->RunNativeProtected(0, 0, [=](__in DukTape::duk_context *lpCtx) -> VOID
+    {
+      DukTape::duk_uint_t nDukFlags;
+      MAP_ENTRY *lpEntries_2 = lpEntries;
 
-    //create a prototype with functions
-    DukTape::duk_push_global_object(lpCtx);
-    DukTape::duk_push_object(lpCtx);
-    //set internal property to check if we have to create a proxy object too
-    DukTape::duk_push_boolean(lpCtx, (bCreateProxy != FALSE) ? 1 : 0);
-    DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""useProxy");
-    //setup mapped entries
-    while (lpEntries_2->szNameA != NULL)
-    {
-      if (lpEntries_2->fnInvoke != NULL)
+      //create a prototype with functions
+      DukTape::duk_push_global_object(lpCtx);
+      DukTape::duk_push_object(lpCtx);
+      //set internal property to check if we have to create a proxy object too
+      DukTape::duk_push_boolean(lpCtx, (bUseProxy != FALSE) ? 1 : 0);
+      DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""useProxy");
+      //setup mapped entries
+      while (lpEntries_2->szNameA != NULL)
       {
-        //a method
-        DukTape::duk_push_c_function(lpCtx, lpEntries_2->fnInvoke, lpEntries_2->nArgsCount);
-        DukTape::duk_put_prop_string(lpCtx, -2, lpEntries_2->szNameA);
-      }
-      else
-      {
-        //a property
-        DukTape::duk_push_string(lpCtx, lpEntries_2->szNameA);
-        nDukFlags = DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_HAVE_CONFIGURABLE | DUK_DEFPROP_HAVE_GETTER;
-        if (lpEntries_2->bEnumerable != FALSE)
-          nDukFlags |= DUK_DEFPROP_ENUMERABLE;
-        DukTape::duk_push_c_function(lpCtx, lpEntries_2->fnGetter, 0);
-        if (lpEntries_2->fnSetter != NULL)
+        if (lpEntries_2->fnInvoke != NULL)
         {
-          DukTape::duk_push_c_function(lpCtx, lpEntries_2->fnSetter, 1);
-          nDukFlags |= DUK_DEFPROP_HAVE_SETTER;
+          //a method
+          DukTape::duk_push_c_function(lpCtx, lpEntries_2->fnInvoke, lpEntries_2->nArgsCount);
+          DukTape::duk_put_prop_string(lpCtx, -2, lpEntries_2->szNameA);
         }
-        DukTape::duk_def_prop(lpCtx, (lpEntries_2->fnSetter != NULL) ? -4 : -3, nDukFlags);
+        else
+        {
+          //a property
+          DukTape::duk_push_string(lpCtx, lpEntries_2->szNameA);
+          nDukFlags = DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_HAVE_CONFIGURABLE | DUK_DEFPROP_HAVE_GETTER;
+          if (lpEntries_2->bEnumerable != FALSE)
+            nDukFlags |= DUK_DEFPROP_ENUMERABLE;
+          DukTape::duk_push_c_function(lpCtx, lpEntries_2->fnGetter, 0);
+          if (lpEntries_2->fnSetter != NULL)
+          {
+            DukTape::duk_push_c_function(lpCtx, lpEntries_2->fnSetter, 1);
+            nDukFlags |= DUK_DEFPROP_HAVE_SETTER;
+          }
+          DukTape::duk_def_prop(lpCtx, (lpEntries_2->fnSetter != NULL) ? -4 : -3, nDukFlags);
+        }
+        lpEntries_2++;
       }
-      lpEntries_2++;
-    }
-    //store as the prototype
-    DukTape::duk_put_prop_string(lpCtx, -2, szPrototypeNameA);
-    //register constructor in global if object is creatable
-    if (fnCreateObject != NULL)
+      //store as the prototype
+      DukTape::duk_put_prop_string(lpCtx, -2, szPrototypeNameA);
+      //register constructor in global if object is creatable
+      if (fnCreateObject != NULL)
+      {
+        DukTape::duk_push_c_function(lpCtx, &CJsObjectBase::_CreateHelper, MX_JS_VARARGS);
+        DukTape::duk_push_pointer(lpCtx, fnCreateObject);
+        DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""createObject");
+        DukTape::duk_put_prop_string(lpCtx, -2, szObjectNameA );
+      }
+      //pop global
+      DukTape::duk_pop(lpCtx);
+      return;
+    });
+
+    lpJVM->RunNativeProtected(0, 0, [fnRegisterCallback](__in DukTape::duk_context *lpCtx) -> VOID
     {
-      DukTape::duk_push_c_function(lpCtx, &CJsObjectBase::_CreateHelper, nCreateArgsCount);
-      DukTape::duk_push_pointer(lpCtx, fnCreateObject);
-      DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""createObject");
-      DukTape::duk_put_prop_string(lpCtx, -2, szObjectNameA );
-    }
-    //pop global
-    DukTape::duk_pop(lpCtx);
-    return;
-  });
-  return hRes;
+      fnRegisterCallback(lpCtx);
+    });
+  }
+  catch (CJsWindowsError &e)
+  {
+    _UnregisterHelper(lpCtx, szObjectNameA, szPrototypeNameA, fnUnregisterCallback);
+    return e.GetHResult();
+  }
+  catch (CJsError &)
+  {
+    _UnregisterHelper(lpCtx, szObjectNameA, szPrototypeNameA, fnUnregisterCallback);
+    return E_FAIL;
+  }
+  return S_OK;
+}
+
+VOID CJsObjectBase::_UnregisterHelper(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
+                                      __in_z LPCSTR szPrototypeNameA,
+                                      __in lpfnRegisterUnregisterCallback fnUnregisterCallback)
+{
+  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
+
+  try
+  {
+    lpJVM->RunNativeProtected(0, 0, [fnUnregisterCallback](__in DukTape::duk_context *lpCtx) -> VOID
+    {
+      fnUnregisterCallback(lpCtx);
+      return;
+    });
+
+    lpJVM->RunNativeProtected(0, 0, [szPrototypeNameA, szObjectNameA](__in DukTape::duk_context *lpCtx) -> VOID
+    {
+      DukTape::duk_push_global_object(lpCtx);
+      DukTape::duk_del_prop_string(lpCtx, -1, szPrototypeNameA);
+      DukTape::duk_del_prop_string(lpCtx, -1, szObjectNameA);
+      DukTape::duk_pop(lpCtx);
+      return;
+    });
+  }
+  catch (CJsError &)
+  { }
+  return;
 }
 
 DukTape::duk_ret_t CJsObjectBase::_CreateHelper(__in DukTape::duk_context *lpCtx)
@@ -175,7 +226,7 @@ DukTape::duk_ret_t CJsObjectBase::_CreateHelper(__in DukTape::duk_context *lpCtx
     hRes = E_OUTOFMEMORY;
   }
   if (FAILED(hRes))
-    MX_JS_THROW_HRESULT_ERROR(lpCtx, E_OUTOFMEMORY);
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
   //returning the 'result' object replaces the default instance created by 'new'
   return 1;
 }
@@ -183,69 +234,78 @@ DukTape::duk_ret_t CJsObjectBase::_CreateHelper(__in DukTape::duk_context *lpCtx
 HRESULT CJsObjectBase::_PushThisHelper(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA)
 {
   DukTape::duk_context *lpCtx = GetContext();
-  CJavascriptVM *lpJvm = CJavascriptVM::FromContext(lpCtx);
-  HRESULT hRes;
+  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
 
   AddRef();
-  hRes = lpJvm->RunNativeProtected(0, 1, [this, szObjectNameA, szPrototypeNameA]
-                                   (__in DukTape::duk_context *lpCtx) -> VOID
+  try
   {
-    BOOL bCreateProxy = FALSE;
-
-    //create javascript object
-    DukTape::duk_push_object(lpCtx);
-    //store object's name as internal property
-    DukTape::duk_push_string(lpCtx, szObjectNameA);
-    DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""name");
-    //get prototype from global object
-    DukTape::duk_get_global_string(lpCtx, szPrototypeNameA);
-    //check if we have to create a proxy from the prototype's internal property
-    DukTape::duk_get_prop_string(lpCtx, -1, "\xff""\xff""useProxy");
-    if (DukTape::duk_is_boolean(lpCtx, -1) != 0 && DukTape::duk_get_boolean(lpCtx, -1) != 0)
-      bCreateProxy = TRUE;
-    DukTape::duk_pop(lpCtx);
-    //set new object's prototype
-    DukTape::duk_set_prototype(lpCtx, -2);
-    //store underlying object
-    DukTape::duk_push_pointer(lpCtx, this);
-    DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""data");
-    //store boolean flag to mark the object as deleted because the destructor
-    //may be called several times
-    DukTape::duk_push_boolean(lpCtx, false);
-    DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""released");
-    //store function destructor
-    DukTape::duk_push_c_function(lpCtx, &CJsObjectBase::_FinalReleaseHelper, 1);
-    DukTape::duk_set_finalizer(lpCtx, -2);
-    //create proxy handler object
-    if (bCreateProxy != FALSE)
+    lpJVM->RunNativeProtected(0, 1, [this, szObjectNameA, szPrototypeNameA](__in DukTape::duk_context *lpCtx) -> VOID
     {
-      //create handler object
+      BOOL bCreateProxy = FALSE;
+
+      //create javascript object
       DukTape::duk_push_object(lpCtx);
+      //store object's name as internal property
+      DukTape::duk_push_string(lpCtx, szObjectNameA);
+      DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""name");
+      //get prototype from global object
+      DukTape::duk_get_global_string(lpCtx, szPrototypeNameA);
+      //check if we have to create a proxy from the prototype's internal property
+      DukTape::duk_get_prop_string(lpCtx, -1, "\xff""\xff""useProxy");
+      if (DukTape::duk_is_boolean(lpCtx, -1) != 0 && DukTape::duk_get_boolean(lpCtx, -1) != 0)
+        bCreateProxy = TRUE;
+      DukTape::duk_pop(lpCtx);
+      //set new object's prototype
+      DukTape::duk_set_prototype(lpCtx, -2);
+      //store underlying object
       DukTape::duk_push_pointer(lpCtx, this);
       DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""data");
-      //add handler functions
-      DukTape::duk_push_c_function(lpCtx, &CJsObjectBase::_ProxyHasPropHelper, 2);
-      DukTape::duk_put_prop_string(lpCtx, -2, "has");
-      DukTape::duk_push_c_function(lpCtx, &CJsObjectBase::_ProxyGetPropHelper, 3);
-      DukTape::duk_put_prop_string(lpCtx, -2, "get");
-      DukTape::duk_push_c_function(lpCtx, &CJsObjectBase::_ProxySetPropHelper, 4);
-      DukTape::duk_put_prop_string(lpCtx, -2, "set");
-      DukTape::duk_push_c_function(lpCtx, &CJsObjectBase::_ProxyDeletePropHelper, 2);
-      DukTape::duk_put_prop_string(lpCtx, -2, "deleteProperty");
-      //push Proxy object's constructor
-      DukTape::duk_get_global_string(lpCtx, "Proxy");
-      //reorder stack [target...handler...Proxy] -> [Proxy...target...handler]
-      DukTape::duk_swap(lpCtx, -3, -1);
-      DukTape::duk_swap(lpCtx, -2, -1);
-      //create proxy object
-      DukTape::duk_new(lpCtx, 2);
-    }
-    return;
-  });
-  //done
-  if (FAILED(hRes))
+      //store boolean flag to mark the object as deleted because the destructor
+      //may be called several times
+      DukTape::duk_push_boolean(lpCtx, false);
+      DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""released");
+      //store function destructor
+      DukTape::duk_push_c_function(lpCtx, &CJsObjectBase::_FinalReleaseHelper, 1);
+      DukTape::duk_set_finalizer(lpCtx, -2);
+      //create proxy handler object
+      if (bCreateProxy != FALSE)
+      {
+        //create handler object
+        DukTape::duk_push_object(lpCtx);
+        DukTape::duk_push_pointer(lpCtx, this);
+        DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""data");
+        //add handler functions
+        DukTape::duk_push_c_function(lpCtx, &CJsObjectBase::_ProxyHasPropHelper, 2);
+        DukTape::duk_put_prop_string(lpCtx, -2, "has");
+        DukTape::duk_push_c_function(lpCtx, &CJsObjectBase::_ProxyGetPropHelper, 3);
+        DukTape::duk_put_prop_string(lpCtx, -2, "get");
+        DukTape::duk_push_c_function(lpCtx, &CJsObjectBase::_ProxySetPropHelper, 4);
+        DukTape::duk_put_prop_string(lpCtx, -2, "set");
+        DukTape::duk_push_c_function(lpCtx, &CJsObjectBase::_ProxyDeletePropHelper, 2);
+        DukTape::duk_put_prop_string(lpCtx, -2, "deleteProperty");
+        //push Proxy object's constructor
+        DukTape::duk_get_global_string(lpCtx, "Proxy");
+        //reorder stack [target...handler...Proxy] -> [Proxy...target...handler]
+        DukTape::duk_swap(lpCtx, -3, -1);
+        DukTape::duk_swap(lpCtx, -2, -1);
+        //create proxy object
+        DukTape::duk_new(lpCtx, 2);
+      }
+      return;
+    });
+  }
+  catch (CJsWindowsError &e)
+  {
     Release();
-  return hRes;
+    return e.GetHResult();
+  }
+  catch (CJsError &)
+  {
+    Release();
+    return E_FAIL;
+  }
+  //done
+  return S_OK;
 }
 
 DukTape::duk_ret_t CJsObjectBase::_FinalReleaseHelper(__in DukTape::duk_context *lpCtx)

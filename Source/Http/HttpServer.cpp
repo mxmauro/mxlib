@@ -121,6 +121,7 @@ CHttpServer::CHttpServer(__in CSockets &_cSocketMgr, __in CPropertyBag &_cPropBa
   lpTimedEventQueue = NULL;
   RundownProt_Initialize(&nRundownLock);
   hAcceptConn = NULL;
+  cNewRequestObjectCallback = NullCallback();
   cRequestHeadersReceivedCallback = NullCallback();
   cRequestCompletedCallback = NullCallback();
   cErrorCallback = NullCallback();
@@ -166,6 +167,12 @@ CHttpServer::~CHttpServer()
   //release queue
   if (lpTimedEventQueue != NULL)
     lpTimedEventQueue->Release();
+  return;
+}
+
+VOID CHttpServer::On(__in OnNewRequestObjectCallback _cNewRequestObjectCallback)
+{
+  cNewRequestObjectCallback = _cNewRequestObjectCallback;
   return;
 }
 
@@ -371,7 +378,16 @@ HRESULT CHttpServer::OnSocketCreate(__in CIpc *lpIpc, __in HANDLE h, __deref_ino
       sData.cDataReceivedCallback = MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnSocketDataReceived, this);
       sData.cDestroyCallback = MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnSocketDestroy, this);
       //create new request object
-      cNewRequest.Attach(MX_DEBUG_NEW CRequest(this, cPropBag));
+      if (cNewRequestObjectCallback)
+      {
+        hRes = cNewRequestObjectCallback(cPropBag, &cNewRequest);
+        if (FAILED(hRes))
+          return hRes;
+      }
+      else
+      {
+        cNewRequest.Attach(MX_DEBUG_NEW CRequest(this, cPropBag));
+      }
       if (!cNewRequest)
         return E_OUTOFMEMORY;
       cNewRequest->lpSocketMgr = &cSocketMgr;
@@ -495,64 +511,51 @@ restart:
             switch (nParserState)
             {
               case CHttpCommon::StateBodyStart:
-                bFireRequestHeadersReceivedCallback = TRUE;
+                if (lpRequest->sRequest.cHttpCmn.GetErrorCode() == 0)
+                  bFireRequestHeadersReceivedCallback = TRUE; //fire events only if no error
                 lpRequest->nState = CRequest::StateReceivingRequestBody;
                 break;
 
               case CHttpCommon::StateDone:
                 CancelAllTimeoutEvents(lpRequest);
+                //check if there was a parse error
+                if (lpRequest->sRequest.cHttpCmn.GetErrorCode() != 0)
+                {
+                  hRes = (lpRequest->sRequest.cHttpCmn.GetErrorCode() == 413) ? MX_E_BadLength : MX_E_InvalidData;
+                  hRes = QuickSendErrorResponseAndReset(lpRequest, lpRequest->sRequest.cHttpCmn.GetErrorCode(),
+                                                        hRes, TRUE);
+                  break;
+                }
+                //check if the uploaded body is too large
+                if (lpRequest->nState == CRequest::StateReceivingRequestBody)
+                {
+                  TAutoRefCounted<CHttpBodyParserBase> cBodyParser;
+
+                  cBodyParser.Attach(lpRequest->sRequest.cHttpCmn.GetBodyParser());
+                  if (cBodyParser)
+                  {
+                    if (cBodyParser->IsEntityTooLarge() != FALSE)
+                    {
+                      hRes = QuickSendErrorResponseAndReset(lpRequest, 413, MX_E_BadLength, TRUE);
+                      break;
+                    }
+                  }
+                }
+                //all is ok
                 bFireRequestCompleted = TRUE;
                 if (lpRequest->nState == CRequest::StateReceivingRequestHeaders)
+                {
                   bFireRequestHeadersReceivedCallback = TRUE;
+                }
                 lpRequest->nState = CRequest::StateBuildingResponse;
                 break;
             }
-          }
-          else if (hRes == HRESULT_FROM_WIN32(ERROR_REQ_NOT_ACCEP))
-          {
-            lpRequest->nState = CRequest::StateIgnoringRequest400;
-            lpRequest->sRequest.cHttpCmn.SetParserIgnoreFlag();
-            if (lpRequest->sRequest.cHttpCmn.GetParserState() == CHttpCommon::StateDone)
-              goto ignoring_request_continue;
-            hRes = S_OK;
-          }
-          else if (hRes == MX_E_BadLength)
-          {
-            lpRequest->nState = CRequest::StateIgnoringRequest413;
-            lpRequest->sRequest.cHttpCmn.SetParserIgnoreFlag();
-            if (lpRequest->sRequest.cHttpCmn.GetParserState() == CHttpCommon::StateDone)
-              goto ignoring_request_continue;
-            hRes = S_OK;
           }
           else
           {
             CancelAllTimeoutEvents(lpRequest);
             hRes = QuickSendErrorResponseAndReset(lpRequest, (hRes == E_INVALIDARG ||
-                                                              hRes == MX_E_InvalidData) ? 400 : 500, hRes);
-          }
-          break;
-
-        case CRequest::StateIgnoringRequest400:
-        case CRequest::StateIgnoringRequest413:
-ignoring_request_continue:
-          //process http being received
-          hRes = lpRequest->sRequest.cHttpCmn.Parse(aMsgBuf, nMsgSize, nMsgUsed);
-          if (SUCCEEDED(hRes) && nMsgUsed > 0)
-            hRes = cSocketMgr.ConsumeBufferedMessage(h, nMsgUsed);
-          if (FAILED(hRes))
-          {
-            CancelAllTimeoutEvents(lpRequest);
-            hRes = QuickSendErrorResponseAndReset(lpRequest, 500, hRes);
-            break;
-          }
-          //take action if parser's state changed
-          nParserState = lpRequest->sRequest.cHttpCmn.GetParserState();
-          if (nParserState == CHttpCommon::StateDone)
-          {
-            CancelAllTimeoutEvents(lpRequest);
-            hRes = QuickSendErrorResponseAndReset(lpRequest,
-                                                  (lpRequest->nState == CRequest::StateIgnoringRequest400) ? 400 :
-                                                  413, hRes, FALSE);
+                                                              hRes == MX_E_InvalidData) ? 400 : 500, hRes, TRUE);
           }
           break;
 

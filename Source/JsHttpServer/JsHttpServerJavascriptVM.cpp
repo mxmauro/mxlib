@@ -27,25 +27,37 @@
 
 namespace MX {
 
-CHttpServer::CRequest* CJsHttpServer::GetServerRequestFromContext(__in DukTape::duk_context *lpCtx)
+HRESULT CJsHttpServer::OnNewRequestObject(__in CPropertyBag &cPropBag, __out CHttpServer::CRequest **lplpRequest)
 {
-  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
-  MX::CHttpServer::CRequest *lpRequest = NULL;
-  HRESULT hRes;
-
-  hRes = lpJVM->RunNativeProtected(0, 0, [&lpRequest](__in DukTape::duk_context *lpCtx) -> VOID
-  {
-    DukTape::duk_push_global_object(lpCtx);
-    DukTape::duk_get_prop_string(lpCtx, -1, INTERNAL_REQUEST_PROPERTY);
-    if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
-      lpRequest = reinterpret_cast<MX::CHttpServer::CRequest*>(DukTape::duk_to_pointer(lpCtx, -1));
-    DukTape::duk_pop_2(lpCtx);
-    return;
-  });
-  return (SUCCEEDED(hRes)) ? lpRequest : NULL;
+  *lplpRequest = MX_DEBUG_NEW CJsRequest(&cHttpServer, cPropBag);
+  return ((*lplpRequest) != NULL) ? S_OK : E_OUTOFMEMORY;
 }
 
-HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CHttpServer::CRequest *lpRequest)
+CJsHttpServer::CJsRequest* CJsHttpServer::GetServerRequestFromContext(__in DukTape::duk_context *lpCtx)
+{
+  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
+  CJsRequest *lpRequest = NULL;
+
+  try
+  {
+    lpJVM->RunNativeProtected(0, 0, [&lpRequest](__in DukTape::duk_context *lpCtx) -> VOID
+    {
+      DukTape::duk_push_global_object(lpCtx);
+      DukTape::duk_get_prop_string(lpCtx, -1, INTERNAL_REQUEST_PROPERTY);
+      if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
+        lpRequest = reinterpret_cast<CJsRequest*>(DukTape::duk_to_pointer(lpCtx, -1));
+      DukTape::duk_pop_2(lpCtx);
+      return;
+    });
+  }
+  catch (CJsError &)
+  {
+    return NULL;
+  }
+  return lpRequest;
+}
+
+HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CJsRequest *lpRequest)
 {
   CStringA cStrTempA, cStrTempA_2;
   CUrl *lpUrl;
@@ -63,20 +75,38 @@ HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CHttpServer:
   __EXIT_ON_ERROR(hRes);
 
   //store request pointer
-  hRes = cJvm.RunNativeProtected(0, 0, [lpRequest](__in DukTape::duk_context *lpCtx) -> VOID
+  try
   {
-    DukTape::duk_push_global_object(lpCtx);
-    DukTape::duk_push_pointer(lpCtx, lpRequest);
-    DukTape::duk_put_prop_string(lpCtx, -2, INTERNAL_REQUEST_PROPERTY);
-    DukTape::duk_pop(lpCtx);
+    cJvm.RunNativeProtected(0, 0, [lpRequest](__in DukTape::duk_context *lpCtx) -> VOID
+    {
+      DukTape::duk_push_global_object(lpCtx);
+      DukTape::duk_push_pointer(lpCtx, lpRequest);
+      DukTape::duk_put_prop_string(lpCtx, -2, INTERNAL_REQUEST_PROPERTY);
+      DukTape::duk_pop(lpCtx);
+      return;
+    });
+  }
+  catch (CJsWindowsError &e)
+  {
+    return e.GetHResult();
+  }
+  catch (CJsError &)
+  {
+    return E_FAIL;
+  }
+
+  hRes = cJvm.RegisterException("SystemExit", [](__in DukTape::duk_context *lpCtx,
+                                                 __in DukTape::duk_idx_t nExceptionObjectIndex) -> VOID
+  {
+    throw CJsHttpServerSystemExit(lpCtx, nExceptionObjectIndex);
     return;
   });
   __EXIT_ON_ERROR(hRes);
 
   //register C++ objects
-  hRes = Internals::CFileFieldJsObject::Register(cJvm, FALSE, FALSE);
+  hRes = Internals::CFileFieldJsObject::Register(cJvm);
   __EXIT_ON_ERROR(hRes);
-  hRes = Internals::CRawBodyJsObject::Register(cJvm, FALSE, FALSE);
+  hRes = Internals::CRawBodyJsObject::Register(cJvm);
   __EXIT_ON_ERROR(hRes);
 
   //create main objects
@@ -150,7 +180,9 @@ HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CHttpServer:
                            sAddr.Ipv6.sin6_addr.u.Word[3], sAddr.Ipv6.sin6_addr.u.Word[4],
                            sAddr.Ipv6.sin6_addr.u.Word[5], sAddr.Ipv6.sin6_addr.u.Word[6],
                            sAddr.Ipv6.sin6_addr.u.Word[7]) == FALSE)
+      {
         return E_OUTOFMEMORY;
+      }
       for (i=0; i<8; i++)
       {
         szBufA[(i << 1)] = '0';

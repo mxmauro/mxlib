@@ -70,8 +70,8 @@ void __cdecl operator delete[](__in void* p);
 
 #define MX_DISABLE_COPY_CONSTRUCTOR(_class)                \
   private:                                                 \
-    _class(__in const _class& cSrc);                       \
-    _class& operator=(__in const _class& cSrc)
+    _class(__in const _class& cSrc) = delete;              \
+    _class& operator=(__in const _class& cSrc) = delete
 
 //-----------------------------------------------------------
 
@@ -79,7 +79,6 @@ class __declspec(novtable) CBaseMemObj
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CBaseMemObj);
 public:
-
   void* __cdecl operator new(__in size_t nSize)
     {
     return MX_MALLOC(nSize);

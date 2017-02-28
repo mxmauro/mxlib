@@ -1,42 +1,68 @@
 ﻿<%
+SetUnhandledExceptionHandler(function(err) {
+	resetOutput();
+	if (err instanceof MySqlError)
+	{
+		s = err.message;
+		s = s + " [" + err.dbError.toString() + "]";
+		die(s);
+	}
+	else if (err instanceof WindowsError)
+	{
+		die(err.message);
+	}
+	else
+	{
+		die(err.message);
+	}
+});
+
 var mysql = new MySQL();
 
-if (mysql.connect('localhost', 'root', 'blaster') == false)
-	die("Cannot connect to database");
+mysql.connect('localhost', 'root', 'blaster');
+
 require("./top.jss");
 
-var row = mysql.queryAndFetchRow('SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME="mx_lib";');
-if (row[0] == 0)
+try
 {
 	mysql.query('CREATE DATABASE `mxlib_test` CHARACTER SET=UTF8;');
-	mysql.selectDatabase('mxlib_test');
-
-	mysql.query('CREATE TABLE `test_table` (\r\n' +
-				  'id INT AUTO_INCREMENT, ' +
-				  'varcharField VARCHAR(100), ' +
-				  'intField INT, ' +
-				  'doubleField DOUBLE, ' +
-				  'numericField NUMERIC(5,2), ' +
-				  'dateField DATE, ' +
-				  'timeField TIME, ' +
-				  'timestampField TIMESTAMP, ' +
-				  'datetimeField DATETIME, ' +
-				  'charField CHAR(100), ' +
-				  'blobField BLOB, ' +
-				  'textField TEXT, ' +
-				  'PRIMARY KEY (id) ' +
-				');');
 }
-else
+catch (err)
 {
-	mysql.selectDatabase('mxlib_test');
+	if (err.dbError != 1007)
+		throw err;
+}
+mysql.selectDatabase('mxlib_test');
+
+try
+{
+	mysql.query('CREATE TABLE `test_table` (\r\n' +
+	              'id INT AUTO_INCREMENT, ' +
+	              'varcharField VARCHAR(100), ' +
+	              'intField INT, ' +
+	              'doubleField DOUBLE, ' +
+	              'numericField NUMERIC(5,2), ' +
+	              'dateField DATE, ' +
+	              'timeField TIME, ' +
+	              'timestampField TIMESTAMP, ' +
+	              'datetimeField DATETIME, ' +
+	              'charField CHAR(100), ' +
+	              'blobField BLOB, ' +
+	              'textField TEXT, ' +
+	              'PRIMARY KEY (id) ' +
+	            ');');
+}
+catch (err)
+{
+	if (err.dbError != 1050)
+		throw err;
 }
 
 mysql.query('INSERT INTO `test_table` VALUES (\r\n' +
-			  'DEFAULT, "' + mysql.escapeString("va\\char data") + '", 100, 123.4, 256.8, \r\n' +
-			  '"2015-11-03", "03:45:56",  "2015-11-03 03:45:56", "2015-11-03 03:45:56", \r\n' +
-			  '"char dat\\a", "bl\\ob data", "text data"\r\n' +
-			');');
+              'DEFAULT, "' + mysql.escapeString("va\\char data") + '", 100, 123.4, 256.8, \r\n' +
+              '"2015-11-03", "03:45:56",  "2015-11-03 03:45:56", "2015-11-03 03:45:56", \r\n' +
+              '"char dat\\a", "bl\\ob data", "text data"\r\n' +
+            ');');
 
 
 var lastInsertId = mysql.insertId;
@@ -49,7 +75,7 @@ while (row !== null)
 {
 %><pre>Row #<%= row.id %>: <%= vardump(row) %></pre>
 <%
-    row = mysql.fetchRow();
+	row = mysql.fetchRow();
 }
 require("./bottom.jss");
 %>

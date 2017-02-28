@@ -1278,15 +1278,25 @@ HRESULT CIpc::CConnectionBase::WriteMsg(__in LPCVOID lpData, __in SIZE_T nDataSi
 
 VOID CIpc::CConnectionBase::Close(__in HRESULT hRes)
 {
+  LONG nInitVal, nOrigVal, nNewVal;
+
   //mark as closed
+  nOrigVal = __InterlockedRead(&nFlags);
+  do
+  {
+    nInitVal = nOrigVal;
+    nNewVal = nInitVal | FLAG_Closed;
+    if (SUCCEEDED(hRes) && (nInitVal & FLAG_Closed) == 0)
+      nNewVal |= FLAG_GracefulShutdown;
+    nOrigVal = _InterlockedCompareExchange(&nFlags, nNewVal, nInitVal);
+  }
+  while (nOrigVal != nInitVal);
 #ifdef MX_IPC_TIMING
-  if ((_InterlockedOr(&nFlags, FLAG_Closed) & FLAG_Closed) == 0)
+  if ((nInitVal & FLAG_Closed) == 0)
   {
     DebugPrint("%lu MX::CIpc::CConnectionBase::Close) Clock=%lums / This=0x%p / Res=0x%08X\n",
                ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), this, hRes);
   }
-#else //MX_IPC_TIMING
-  _InterlockedOr(&nFlags, FLAG_Closed);
 #endif //MX_IPC_TIMING
   _InterlockedCompareExchange(&hErrorCode, hRes, S_OK);
   if (hRes != S_OK || __InterlockedRead(&nOutstandingWrites) == 0)
@@ -1476,7 +1486,7 @@ HRESULT CIpc::CConnectionBase::MarkLastWriteActivity(__in BOOL bSet)
   CFastLock cWriteTimeoutLock(&(sWriteTimeout.nMutex));
   CTimedEventQueue::CEvent *lpEvent;
 
-  if (IsClosed() != FALSE)
+  if (IsClosed() != FALSE && IsGracefulShutdown() == FALSE)
     return MX_E_Cancelled;
   if (bSet != FALSE)
   {

@@ -206,12 +206,15 @@ HRESULT CHttpBodyParserDefault::Parse(__in LPCVOID lpData, __in SIZE_T nDataSize
   //begin
   hRes = S_OK;
   //check if size is greater than max size or overflow
-  if (nSize + (ULONGLONG)nDataSize >= nMaxBodySize ||
-      nSize + (ULONGLONG)nDataSize < nSize)
+  if (nSize + (ULONGLONG)nDataSize >= nMaxBodySize || nSize + (ULONGLONG)nDataSize < nSize)
   {
-    hRes = MX_E_BadLength;
-    goto done;
+    MarkEntityAsTooLarge();
+    return S_OK; //error 413 will be sent after boody is parsed
   }
+
+  if (IsEntityTooLarge() != FALSE)
+    return S_OK; //error 413 will be sent after boody is parsed
+
   //if we are writing to memory, check if buffer threshold passed
   if ((!cFileH) && nMaxBodySizeInMemory >= 0 && nSize + (ULONGLONG)nDataSize >= (ULONGLONG)(ULONG)nMaxBodySizeInMemory)
   {
@@ -228,7 +231,7 @@ err_nomem:
       hRes = E_OUTOFMEMORY;
       goto done;
     }
-    cFileH.Attach(::CreateFileW((LPWSTR)cStrTempW, GENERIC_READ|GENERIC_WRITE, _SHARING_MODE, NULL, CREATE_ALWAYS,
+    cFileH.Attach(::CreateFileW((LPWSTR)cStrTempW, GENERIC_READ | GENERIC_WRITE, _SHARING_MODE, NULL, CREATE_ALWAYS,
                                 _ATTRIBUTES, NULL));
     if (!cFileH)
     {

@@ -920,6 +920,20 @@ restart:
         hRes = sResponse.cHttpCmn.Parse(aMsgBuf+nMsgUsed, nMsgSize-nMsgUsed, nNewUsed);
         if ((nMsgUsed += nNewUsed) >= nMsgSize)
           nMsgSize = 0; //mark end of message
+        if (SUCCEEDED(hRes))
+        {
+          switch (sResponse.cHttpCmn.GetErrorCode())
+          {
+            case 0:
+              break;
+            case 413:
+              hRes = MX_E_BadLength;
+              break;
+            default:
+              hRes = MX_E_InvalidData;
+              break;
+          }
+        }
         if (FAILED(hRes))
         {
           SetErrorOnRequestAndClose(hRes);

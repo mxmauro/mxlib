@@ -21,28 +21,49 @@
  *    c. Distribute, sub-license, rent, lease, loan [or grant any third party
  *       access to or use of the software to any third party.
  **/
-#include "..\..\Include\Http\HttpBodyParserBase.h"
-
-//-----------------------------------------------------------
-
-#ifdef _DEBUG
-  #define _SHARING_MODE FILE_SHARE_READ
-#else //_DEBUG
-  #define _SHARING_MODE 0
-#endif //_DEBUG
+#include "JsMySqlPluginCommon.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-CHttpBodyParserBase::CHttpBodyParserBase() : CBaseMemObj(), TRefCounted<CHttpBodyParserBase>()
+CJsMySqlError::CJsMySqlError(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex) :
+               nDbError(0), lpStrSqlStateA(NULL), CJsWindowsError(lpCtx, nStackIndex)
 {
-  bEntityTooLarge = FALSE;
   return;
 }
 
-CHttpBodyParserBase::~CHttpBodyParserBase()
+CJsMySqlError::CJsMySqlError(__in const CJsMySqlError &obj) : CJsWindowsError(NULL, 0)
 {
+  *this = obj;
+  return;
+}
+
+CJsMySqlError::~CJsMySqlError()
+{
+  Cleanup();
+  return;
+}
+
+CJsMySqlError& CJsMySqlError::operator=(__in const CJsMySqlError &obj)
+{
+  Cleanup();
+  CJsWindowsError::operator=(obj);
+  //----
+  lpStrSqlStateA = obj.lpStrSqlStateA;
+  if (obj.lpStrSqlStateA != NULL)
+    obj.lpStrSqlStateA->AddRef();
+  //----
+  return *this;
+}
+
+VOID CJsMySqlError::Cleanup()
+{
+  if (lpStrSqlStateA != NULL)
+  {
+    lpStrSqlStateA->Release();
+    lpStrSqlStateA = NULL;
+  }
   return;
 }
 

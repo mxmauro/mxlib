@@ -44,8 +44,6 @@ static DukTape::duk_ret_t OnHash(__in DukTape::duk_context *lpCtx, __in_z LPCSTR
                                  __in_z LPCSTR szFunctionNameA);
 static DukTape::duk_ret_t OnDie(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
                                 __in_z LPCSTR szFunctionNameA);
-static DukTape::duk_ret_t OnExit(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                 __in_z LPCSTR szFunctionNameA);
 
 //-----------------------------------------------------------
 
@@ -67,29 +65,48 @@ HRESULT AddHelpersMethods(__in CJavascriptVM &cJvm, __in MX::CHttpServer::CReque
   __EXIT_ON_ERROR(hRes);
   hRes = cJvm.AddNativeFunction("urldecode", MX_BIND_CALLBACK(&OnUrlDecode), 1);
   __EXIT_ON_ERROR(hRes);
-  hRes = cJvm.RunNativeProtected(0, 0, [](__in DukTape::duk_context *lpCtx) -> VOID
+
+  try
   {
-    DukTape::duk_push_string(lpCtx, "function vardump(obj)\n"
-                             "{ return Duktape.enc('jx', obj, null, 2); }\n");
-    DukTape::duk_push_string(lpCtx, (const char *)(__FILE__));
-    DukTape::duk_eval_raw(lpCtx, NULL, 0, DUK_COMPILE_EVAL);
-    DukTape::duk_pop(lpCtx);
-    return;
-  });
-  __EXIT_ON_ERROR(hRes);
+    cJvm.RunNativeProtected(0, 0, [](__in DukTape::duk_context *lpCtx) -> VOID
+    {
+      DukTape::duk_push_string(lpCtx, "function vardump(obj)\n"
+                               "{ return Duktape.enc('jx', obj, null, 2); }\n");
+      DukTape::duk_push_string(lpCtx, (const char *)(__FILE__));
+      DukTape::duk_eval_raw(lpCtx, NULL, 0, DUK_COMPILE_EVAL);
+      DukTape::duk_pop(lpCtx);
+
+      DukTape::duk_eval_raw(lpCtx, "function SystemExit(msg) {\r\n"
+                                     "Error.call(this, \"\");\r\n"
+                                     "this.message = msg;\r\n"
+                                     "this.name = \"SystemExit\";\r\n"
+                                     "return this; }\r\n"
+                                   "SystemExit.prototype = Object.create(Error.prototype);\r\n"
+                                   "SystemExit.prototype.constructor=SystemExit;\r\n", 0,
+                            DUK_COMPILE_EVAL | DUK_COMPILE_NOSOURCE | DUK_COMPILE_STRLEN | DUK_COMPILE_NOFILENAME);
+      return;
+    });
+  }
+  catch (CJsWindowsError &e)
+  {
+    return e.GetHResult();
+  }
+  catch (CJsError &)
+  {
+    return E_FAIL;
+  }
+
   hRes = cJvm.CreateObject("HASH");
-  if (SUCCEEDED(hRes))
-    hRes = cJvm.AddObjectNumericProperty("HASH", "MD5", 1.0, CJavascriptVM::PropertyFlagEnumerable);
-  if (SUCCEEDED(hRes))
-    hRes = cJvm.AddObjectNumericProperty("HASH", "SHA1", 2.0, CJavascriptVM::PropertyFlagEnumerable);
-  if (SUCCEEDED(hRes))
-    hRes = cJvm.AddObjectNumericProperty("HASH", "SHA256", 3.0, CJavascriptVM::PropertyFlagEnumerable);
-  if (SUCCEEDED(hRes))
-    hRes = cJvm.AddNativeFunction("hash", MX_BIND_CALLBACK(&OnHash), 2);
-  if (SUCCEEDED(hRes))
-    hRes = cJvm.AddNativeFunction("die", MX_BIND_CALLBACK(&OnDie), 1);
-  if (SUCCEEDED(hRes))
-    hRes = cJvm.AddNativeFunction("exit", MX_BIND_CALLBACK(&OnExit), 0);
+  __EXIT_ON_ERROR(hRes);
+  hRes = cJvm.AddObjectNumericProperty("HASH", "MD5", 1.0, CJavascriptVM::PropertyFlagEnumerable);
+  __EXIT_ON_ERROR(hRes);
+  hRes = cJvm.AddObjectNumericProperty("HASH", "SHA1", 2.0, CJavascriptVM::PropertyFlagEnumerable);
+  __EXIT_ON_ERROR(hRes);
+  hRes = cJvm.AddObjectNumericProperty("HASH", "SHA256", 3.0, CJavascriptVM::PropertyFlagEnumerable);
+  __EXIT_ON_ERROR(hRes);
+  hRes = cJvm.AddNativeFunction("hash", MX_BIND_CALLBACK(&OnHash), 2);
+  __EXIT_ON_ERROR(hRes);
+  hRes = cJvm.AddNativeFunction("die", MX_BIND_CALLBACK(&OnDie), 1);
   __EXIT_ON_ERROR(hRes);
   //done
   return S_OK;
@@ -115,7 +132,7 @@ static DukTape::duk_ret_t OnHtmlEntities(__in DukTape::duk_context *lpCtx, __in_
   if (SUCCEEDED(hRes))
     hRes = MX::CHttpCommon::ToHtmlEntities(cStrTempA);
   if (FAILED(hRes))
-    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
   //push result
   DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
   return 1;
@@ -152,7 +169,6 @@ static DukTape::duk_ret_t OnXmlEntities(__in DukTape::duk_context *lpCtx, __in_z
           break;
         case L'\"':
           szReplacementW = L"&quot;";
-          szBufA++;
           break;
         case L'\'':
           szReplacementW = L"&apos;";
@@ -191,7 +207,7 @@ static DukTape::duk_ret_t OnXmlEntities(__in DukTape::duk_context *lpCtx, __in_z
     if (SUCCEEDED(hRes))
       hRes = MX::Utf8_Encode(cStrTempA, (LPCWSTR)cStrTempW, cStrTempW.GetLength());
     if (FAILED(hRes))
-      MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
+      MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
   }
   //push result
   DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
@@ -208,7 +224,7 @@ static DukTape::duk_ret_t OnUrlEncode(__in DukTape::duk_context *lpCtx, __in_z L
   szBufA = DukTape::duk_require_string(lpCtx, 0);
   hRes = MX::CUrl::Encode(cStrTempA, szBufA);
   if (FAILED(hRes))
-    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
   //push result
   DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
   return 1;
@@ -224,7 +240,7 @@ static DukTape::duk_ret_t OnUrlDecode(__in DukTape::duk_context *lpCtx, __in_z L
   szBufA = DukTape::duk_require_string(lpCtx, 0);
   hRes = MX::CUrl::Decode(cStrTempA, szBufA);
   if (FAILED(hRes))
-    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
   //push result
   DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
   return 1;
@@ -309,7 +325,7 @@ static DukTape::duk_ret_t OnHash(__in DukTape::duk_context *lpCtx, __in_z LPCSTR
     }
   }
   if (FAILED(hRes))
-    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
   //push result
   DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
   return 1;
@@ -318,16 +334,10 @@ static DukTape::duk_ret_t OnHash(__in DukTape::duk_context *lpCtx, __in_z LPCSTR
 static DukTape::duk_ret_t OnDie(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
                                 __in_z LPCSTR szFunctionNameA)
 {
-  LPCSTR szMsgA;
+  DukTape::duk_get_global_string(lpCtx, "SystemExit");
+  DukTape::duk_dup(lpCtx, 0); //copy message
+  DukTape::duk_new(lpCtx, 1);
 
-  szMsgA = DukTape::duk_require_string(lpCtx, 0);
-  MX_JS_THROW_ERROR(lpCtx, DUK_ERR_ERROR, "(die)%s", szMsgA);
-  return DUK_RET_ERROR;
-}
-
-static DukTape::duk_ret_t OnExit(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                 __in_z LPCSTR szFunctionNameA)
-{
-  MX_JS_THROW_ERROR(lpCtx, DUK_ERR_ERROR, "(exit)");
-  return DUK_RET_ERROR;
+  DukTape::duk_throw_raw(lpCtx);
+  return 0;
 }

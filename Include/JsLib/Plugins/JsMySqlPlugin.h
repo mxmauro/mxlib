@@ -37,7 +37,9 @@ public:
   CJsMySqlPlugin(__in DukTape::duk_context *lpCtx);
   ~CJsMySqlPlugin();
 
-  MX_JS_BEGIN_MAP(CJsMySqlPlugin, "MySQL", MX_JS_VARARGS)
+  MX_JS_DECLARE_CREATABLE(CJsMySqlPlugin, "MySQL")
+
+  MX_JS_BEGIN_MAP(CJsMySqlPlugin)
     MX_JS_MAP_METHOD("connect", &CJsMySqlPlugin::Connect, MX_JS_VARARGS) //host,user[,pass[,dbname[,port]]]
     MX_JS_MAP_METHOD("disconnect", &CJsMySqlPlugin::Disconnect, 0)
     MX_JS_MAP_METHOD("selectDatabase", &CJsMySqlPlugin::SelectDatabase, 1)
@@ -50,15 +52,15 @@ public:
     MX_JS_MAP_METHOD("beginTransaction", &CJsMySqlPlugin::BeginTransaction, 0)
     MX_JS_MAP_METHOD("commit", &CJsMySqlPlugin::CommitTransaction, 0)
     MX_JS_MAP_METHOD("rollback", &CJsMySqlPlugin::RollbackTransaction, 0)
-    MX_JS_MAP_PROPERTY("error", &CJsMySqlPlugin::getLastError, NULL, FALSE)
-    MX_JS_MAP_PROPERTY("dbError", &CJsMySqlPlugin::getLastDbError, NULL, FALSE)
-    MX_JS_MAP_PROPERTY("dbErrorMsg", &CJsMySqlPlugin::getLastDbErrorMessage, NULL, FALSE)
-    MX_JS_MAP_PROPERTY("sqlState", &CJsMySqlPlugin::getLastSqlState, NULL, FALSE)
     MX_JS_MAP_PROPERTY("affectedRows", &CJsMySqlPlugin::getAffectedRows, NULL, FALSE)
     MX_JS_MAP_PROPERTY("insertId", &CJsMySqlPlugin::getInsertId, NULL, FALSE)
     MX_JS_MAP_PROPERTY("fields", &CJsMySqlPlugin::getFields, NULL, FALSE)
     MX_JS_MAP_PROPERTY("fieldsCount", &CJsMySqlPlugin::getFieldsCount, NULL, FALSE)
   MX_JS_END_MAP()
+
+protected:
+  static VOID OnRegister(__in DukTape::duk_context *lpCtx);
+  static VOID OnUnregister(__in DukTape::duk_context *lpCtx);
 
 private:
   DukTape::duk_ret_t Connect();
@@ -73,10 +75,6 @@ private:
   DukTape::duk_ret_t BeginTransaction();
   DukTape::duk_ret_t CommitTransaction();
   DukTape::duk_ret_t RollbackTransaction();
-  DukTape::duk_ret_t getLastError();
-  DukTape::duk_ret_t getLastDbError();
-  DukTape::duk_ret_t getLastDbErrorMessage();
-  DukTape::duk_ret_t getLastSqlState();
   DukTape::duk_ret_t getAffectedRows();
   DukTape::duk_ret_t getInsertId();
   DukTape::duk_ret_t getFieldsCount();
@@ -86,20 +84,49 @@ private:
   HRESULT _TransactionCommit();
   HRESULT _TransactionRollback();
 
-  DukTape::duk_ret_t ReturnErrorFromHResult(__in HRESULT hRes);
-  DukTape::duk_ret_t ReturnErrorFromHResultAndDbErr(__in HRESULT hRes);
-  DukTape::duk_ret_t ReturnErrorFromLastDbErr();
+  VOID ThrowDbError(__in HRESULT hRes, __in_opt LPCSTR filename, __in_opt DukTape::duk_int_t line,
+                    __in_opt BOOL bOnlyPush=FALSE);
+  VOID ThrowDbError(__in_opt LPCSTR filename, __in_opt DukTape::duk_int_t line, __in_opt BOOL bOnlyPush=FALSE);
 
 private:
   LPVOID lpInternal;
-  HRESULT hLastErr;
-  int nLastDbErr;
-  CHAR szLastDbErrA[512];
-  CHAR szLastSqlStateA[8];
   struct {
     long nConnectTimeout;
     long nReadTimeout, nWriteTimeout;
   } sOptions;
+};
+
+//-----------------------------------------------------------
+
+class CJsMySqlError : public CJsWindowsError
+{
+protected:
+  CJsMySqlError(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex);
+
+public:
+  CJsMySqlError(__in const CJsMySqlError &obj);
+  CJsMySqlError& operator=(__in const CJsMySqlError &obj);
+
+  ~CJsMySqlError();
+
+  __inline int GetDbError() const
+    {
+    return nDbError;
+    };
+
+  __inline LPCSTR GetSqlState() const
+    {
+    return (lpStrSqlStateA != NULL) ? (LPCSTR)(*lpStrSqlStateA) : "";
+    };
+
+private:
+  friend class CJsMySqlPlugin;
+
+  VOID Cleanup();
+
+private:
+  int nDbError;
+  CRefCountedStringA *lpStrSqlStateA;
 };
 
 } //namespace MX

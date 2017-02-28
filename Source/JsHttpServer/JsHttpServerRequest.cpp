@@ -21,27 +21,19 @@
  *    c. Distribute, sub-license, rent, lease, loan [or grant any third party
  *       access to or use of the software to any third party.
  **/
-#include "..\..\Include\Http\HttpBodyParserBase.h"
-
-//-----------------------------------------------------------
-
-#ifdef _DEBUG
-  #define _SHARING_MODE FILE_SHARE_READ
-#else //_DEBUG
-  #define _SHARING_MODE 0
-#endif //_DEBUG
+#include "JsHttpServerCommon.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-CHttpBodyParserBase::CHttpBodyParserBase() : CBaseMemObj(), TRefCounted<CHttpBodyParserBase>()
+CJsHttpServer::CJsRequest::CJsRequest(__in CHttpServer *lpHttpServer, __in CPropertyBag &cPropBag) :
+                           CHttpServer::CRequest(lpHttpServer, cPropBag)
 {
-  bEntityTooLarge = FALSE;
   return;
 }
 
-CHttpBodyParserBase::~CHttpBodyParserBase()
+CJsHttpServer::CJsRequest::~CJsRequest()
 {
   return;
 }

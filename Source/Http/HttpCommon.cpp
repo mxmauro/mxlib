@@ -61,6 +61,10 @@ static struct {
 
 //-----------------------------------------------------------
 
+static BOOL IsContentTypeHeader(__in_z LPCSTR szHeaderA);
+
+//-----------------------------------------------------------
+
 namespace MX {
 
 CHttpCommon::CHttpCommon(__in BOOL _bActAsServer, __in CPropertyBag &_cPropBag) : CBaseMemObj(), cPropBag(_cPropBag)
@@ -88,7 +92,7 @@ VOID CHttpCommon::ResetParser()
   sParser.nHeadersLen = 0;
   sParser.sChunk.nSize = 0;
   sParser.sChunk.nReaded = 0;
-  sParser.bIgnoring = FALSE;
+  sParser.nErrorCode = 0;
   //----
   sRequest.nHttpProtocol = 0;
   sRequest.nMethodIndex = (SIZE_T)-1;
@@ -146,7 +150,7 @@ HRESULT CHttpCommon::Parse(__in LPCVOID lpData, __in SIZE_T nDataSize, __out SIZ
       case StateStatusLine:
         if (*szDataA == '\r' || *szDataA == '\n')
         {
-          if (sParser.bIgnoring == FALSE)
+          if (sParser.nErrorCode == 0)
           {
             if (sParser.nState == StateRequestLine)
               hRes = ParseRequestLine((LPCSTR)(sParser.cStrCurrLineA));
@@ -158,22 +162,20 @@ HRESULT CHttpCommon::Parse(__in LPCVOID lpData, __in SIZE_T nDataSize, __out SIZ
           sParser.cStrCurrLineA.Empty();
           break;
         }
-        if (sParser.bIgnoring == FALSE)
+        //is status/request line too long?
+        if (sParser.cStrCurrLineA.GetLength() < MAX_REQUEST_STATUS_LINE_LENGTH)
         {
-          //is status/request line too long?
-          if (sParser.cStrCurrLineA.GetLength() >= MAX_REQUEST_STATUS_LINE_LENGTH)
-          {
-err_bad_length:
-            hRes = MX_E_BadLength;
-            goto done;
-          }
           //add character to line
           if (sParser.cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
           {
-err_nomem:
-            hRes = E_OUTOFMEMORY;
+err_nomem:  hRes = E_OUTOFMEMORY;
             goto done;
           }
+        }
+        else
+        {
+          if (sParser.nErrorCode == 0)
+            sParser.nErrorCode = 400; //header line too long
         }
         break;
 
@@ -190,16 +192,16 @@ err_invalid_data:
       case StateHeaderStart:
         if (*szDataA == '\r' || *szDataA == '\n')
         {
-          if (sParser.bIgnoring == FALSE)
+          //no more headers
+          if (sParser.cStrCurrLineA.IsEmpty() == FALSE)
           {
-            //no more headers
-            if (sParser.cStrCurrLineA.IsEmpty() == FALSE)
+            if (sParser.nErrorCode == 0 || IsContentTypeHeader((LPCSTR)(sParser.cStrCurrLineA)) != FALSE)
             {
               hRes = ParseHeader(sParser.cStrCurrLineA);
               if (FAILED(hRes))
                 goto done;
-              sParser.cStrCurrLineA.Empty();
             }
+            sParser.cStrCurrLineA.Empty();
           }
           sParser.nState = StateHeadersEnd;
           if (*szDataA == '\n')
@@ -209,24 +211,21 @@ err_invalid_data:
         //are we continuing the last header?
         if (*szDataA == ' ' || *szDataA == '\t')
         {
-          if (sParser.bIgnoring == FALSE)
-          {
-            if (sParser.cStrCurrLineA.IsEmpty() != FALSE)
-              goto err_invalid_data;
-          }
+          if (sParser.cStrCurrLineA.IsEmpty() != FALSE)
+            goto err_invalid_data;
           sParser.nState = StateHeaderValueSpaceAfter;
           break;
         }
         //new header arrives, first check if we have a previous defined
-        if (sParser.bIgnoring == FALSE)
+        if (sParser.cStrCurrLineA.IsEmpty() == FALSE)
         {
-          if (sParser.cStrCurrLineA.IsEmpty() == FALSE)
+          if (sParser.nErrorCode == 0 || IsContentTypeHeader((LPCSTR)(sParser.cStrCurrLineA)) != FALSE)
           {
             hRes = ParseHeader(sParser.cStrCurrLineA);
             if (FAILED(hRes))
               goto done;
-            sParser.cStrCurrLineA.Empty();
           }
+          sParser.cStrCurrLineA.Empty();
         }
         sParser.nState = StateHeaderName;
         BACKWARD_CHAR();
@@ -234,28 +233,33 @@ err_invalid_data:
 
       case StateHeaderName:
         //check headers length
-        if ((++sParser.nHeadersLen) >= nMaxHeaderSize)
-          goto err_bad_length;
+        if (sParser.nHeadersLen < nMaxHeaderSize)
+          (sParser.nHeadersLen)++;
+        else if (sParser.nErrorCode == 0)
+          sParser.nErrorCode = 400; //headers too long
         //end of header name?
         if (*szDataA == ':')
         {
-          if (sParser.bIgnoring == FALSE)
-          {
-            if (sParser.cStrCurrLineA.IsEmpty() != FALSE)
-              goto err_invalid_data;
-            if (sParser.cStrCurrLineA.ConcatN(":", 1) == FALSE)
-              goto err_nomem;
-          }
+          if (sParser.cStrCurrLineA.IsEmpty() != FALSE)
+            goto err_invalid_data;
+          if (sParser.cStrCurrLineA.ConcatN(":", 1) == FALSE)
+            goto err_nomem;
           sParser.nState = StateHeaderValueSpaceBefore;
           break;
         }
         //check for valid token char
         if (IsValidNameChar(*szDataA) == FALSE)
           goto err_invalid_data;
-        if (sParser.bIgnoring == FALSE)
+        if (sParser.cStrCurrLineA.GetLength() < MAX_REQUEST_STATUS_LINE_LENGTH)
         {
+          //add character to line
           if (sParser.cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
             goto err_nomem;
+        }
+        else
+        {
+          if (sParser.nErrorCode == 0)
+            sParser.nErrorCode = 400; //header line too long
         }
         //ignore IIS bug sending HTTP/ more than once
         sA = (LPCSTR)(sParser.cStrCurrLineA);
@@ -279,7 +283,7 @@ err_invalid_data:
 on_header_value:
         if (*szDataA == '\r' || *szDataA == '\n')
         {
-          if (sParser.bIgnoring == FALSE)
+          if (sParser.nErrorCode == 0 || IsContentTypeHeader((LPCSTR)(sParser.cStrCurrLineA)) != FALSE)
           {
             hRes = ParseHeader(sParser.cStrCurrLineA);
             if (FAILED(hRes))
@@ -295,14 +299,22 @@ on_header_value:
           break;
         }
         //check headers length and valid value char
-        if ((++sParser.nHeadersLen) >= nMaxHeaderSize)
-          goto err_bad_length;
+        if (sParser.nHeadersLen < nMaxHeaderSize)
+          (sParser.nHeadersLen)++;
+        else if (sParser.nErrorCode == 0)
+          sParser.nErrorCode = 400; //headers too long
         if (*szDataA == 0)
           goto err_invalid_data;
-        if (sParser.bIgnoring == FALSE)
+        if (sParser.cStrCurrLineA.GetLength() < MAX_REQUEST_STATUS_LINE_LENGTH)
         {
+          //add character to line
           if (sParser.cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
             goto err_nomem;
+        }
+        else
+        {
+          if (sParser.nErrorCode == 0)
+            sParser.nErrorCode = 400; //header line too long
         }
         break;
 
@@ -311,12 +323,19 @@ on_header_value:
           goto on_header_value;
         if (*szDataA == ' ' || *szDataA == '\t')
           break;
-        if ((++sParser.nHeadersLen) >= nMaxHeaderSize)
-          goto err_bad_length;
-        if (sParser.bIgnoring == FALSE)
+        if (sParser.nHeadersLen < nMaxHeaderSize)
+          (sParser.nHeadersLen)++;
+        else if (sParser.nErrorCode == 0)
+          sParser.nErrorCode = 400; //headers too long
+        if (sParser.cStrCurrLineA.GetLength() < MAX_REQUEST_STATUS_LINE_LENGTH)
         {
           if (sParser.cStrCurrLineA.ConcatN(" ", 1) == FALSE)
             goto err_nomem;
+        }
+        else
+        {
+          if (sParser.nErrorCode == 0)
+            sParser.nErrorCode = 400; //header line too long
         }
         sParser.nState = StateHeaderValue;
         goto on_header_value;
@@ -340,9 +359,8 @@ headers_end_reached:
             //content or chunked transfer is not allowed
             if (nContentLength != ULONGLONG_MAX || (nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0)
             {
-err_invalid_request:
               sParser.nState = StateBodyStart;
-              hRes = HRESULT_FROM_WIN32(ERROR_REQ_NOT_ACCEP);
+              sParser.nErrorCode = 400;
             }
             else
             {
@@ -355,7 +373,9 @@ err_invalid_request:
           {
             //content-length must be specified
             if (nContentLength == ULONGLONG_MAX || (nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0)
-              goto err_invalid_request;
+            {
+              sParser.nErrorCode = 400;
+            }
           }
         }
         else
@@ -410,22 +430,16 @@ err_invalid_request:
         nToRead = nDataSize - (szDataA - (LPCSTR)lpData);
         if ((ULONGLONG)nToRead > nContentLength - nIdentityBodyReadedContentLength)
           nToRead = (SIZE_T)(nContentLength - nIdentityBodyReadedContentLength);
-        if (sParser.bIgnoring == FALSE)
-        {
-          hRes = ProcessContent(szDataA, nToRead);
-          if (FAILED(hRes))
-            goto done;
-        }
+        hRes = ProcessContent(szDataA, nToRead);
+        if (FAILED(hRes))
+          goto done;
         szDataA += (SIZE_T)nToRead;
         szDataA--;
         nIdentityBodyReadedContentLength += (ULONGLONG)nToRead;
         if (nIdentityBodyReadedContentLength == nContentLength)
         {
           sParser.nState = StateDone;
-          if (sParser.bIgnoring == FALSE)
-          {
-            hRes = FlushContent();
-          }
+          hRes = FlushContent();
           goto done;
         }
         }
@@ -477,10 +491,7 @@ chunk_data_begin:
         {
           //the trailing CR/LF will be consumed by a new parse
           sParser.nState = StateDone;
-          if (sParser.bIgnoring == FALSE)
-          {
-            hRes = FlushContent();
-          }
+          hRes = FlushContent();
           goto done;
         }
         break;
@@ -504,12 +515,9 @@ chunk_data_begin:
         nToRead = nDataSize - (szDataA - (LPCSTR)lpData);
         if ((ULONGLONG)nToRead > sParser.sChunk.nSize - sParser.sChunk.nReaded)
           nToRead = (SIZE_T)(sParser.sChunk.nSize - sParser.sChunk.nReaded);
-        if (sParser.bIgnoring == FALSE)
-        {
-          hRes = ProcessContent(szDataA, nToRead);
-          if (FAILED(hRes))
-            goto done;
-        }
+        hRes = ProcessContent(szDataA, nToRead);
+        if (FAILED(hRes))
+          goto done;
         szDataA += (SIZE_T)nToRead;
         szDataA--;
         sParser.sChunk.nReaded += (ULONGLONG)nToRead;
@@ -547,12 +555,6 @@ done:
   return hRes;
 }
 #undef BACKWARD_CHAR
-
-VOID CHttpCommon::SetParserIgnoreFlag()
-{
-  sParser.bIgnoring = TRUE;
-  return;
-}
 
 HRESULT CHttpCommon::AddHeader(__in_z LPCSTR szNameA, __out_opt CHttpHeaderBase **lplpHeader)
 {
@@ -1049,7 +1051,7 @@ HRESULT CHttpCommon::ParseHeader(__inout CStringA &cStrLineA)
 #endif //HTTP_DEBUG_OUTPUT
   //get header name
   szNameStartA = szNameEndA = szLineA;
-  while (*szNameEndA!=0 && *szNameEndA!=':')
+  while (*szNameEndA != 0 && *szNameEndA != ':')
     szNameEndA++;
   if (*szNameEndA != ':')
     return MX_E_InvalidData;
@@ -1291,3 +1293,12 @@ BOOL CHttpCommon::IsValidVerb(__in_z LPCSTR szVerbA)
 }
 
 } //namespace MX
+
+//-----------------------------------------------------------
+
+static BOOL IsContentTypeHeader(__in_z LPCSTR szHeaderA)
+{
+  while (*szHeaderA==' ' || *szHeaderA=='\t')
+    szHeaderA++;
+  return (MX::StrNCompareA(szHeaderA, "Content-Type:", 13) == 0) ? TRUE : FALSE;
+}

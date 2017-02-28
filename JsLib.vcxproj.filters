@@ -56,6 +56,12 @@
     <ClCompile Include="Source\JsLib\DukTape\Source\extras\module-duktape\duk_module_duktape.c">
       <Filter>Source Files\DukTape\Extras</Filter>
     </ClCompile>
+    <ClCompile Include="Source\JsLib\JavascriptVMException.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPluginException.cpp">
+      <Filter>Source Files\Plugins</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\JsLib\JavascriptVM.h">

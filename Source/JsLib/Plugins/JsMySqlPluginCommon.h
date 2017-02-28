@@ -111,7 +111,9 @@ public:
       return nFlags;
       };
 
-    MX_JS_BEGIN_MAP(CFieldInfo, "MySQLFieldInfo", 0)
+    MX_JS_DECLARE(CFieldInfo, "MySQLFieldInfo")
+
+    MX_JS_BEGIN_MAP(CFieldInfo)
       MX_JS_MAP_PROPERTY("name", &CFieldInfo::getName, NULL, TRUE)
       MX_JS_MAP_PROPERTY("originalName", &CFieldInfo::getOriginalName, NULL, TRUE)
       MX_JS_MAP_PROPERTY("table", &CFieldInfo::getTable, NULL, TRUE)

@@ -38,6 +38,7 @@ CJsHttpServer::CJsHttpServer(__in MX::CSockets &_cSocketMgr, __in MX::CPropertyB
   //----
   bShowStackTraceOnError = TRUE;
   //----
+  cHttpServer.On(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnNewRequestObject, this));
   cHttpServer.On(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequestCompleted, this));
   cHttpServer.On(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnError, this));
   return;
@@ -105,8 +106,9 @@ VOID CJsHttpServer::StopListening()
   return;
 }
 
-HRESULT CJsHttpServer::OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in MX::CHttpServer::CRequest *lpRequest)
+HRESULT CJsHttpServer::OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in CHttpServer::CRequest *_lpRequest)
 {
+  CJsRequest *lpRequest = static_cast<CJsRequest*>(_lpRequest);
   CJavascriptVM cJvm;
   CStringA cStrCodeA;
   CUrl *lpUrl;
@@ -130,51 +132,52 @@ HRESULT CJsHttpServer::OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in MX:
   if (SUCCEEDED(hRes) && cStrCodeA.IsEmpty() == FALSE)
   {
     hRes = TransformJavascriptCode(cStrCodeA);
-    if (SUCCEEDED(hRes) && cStrCodeA.IsEmpty() == FALSE)
+    if (SUCCEEDED(hRes))
     {
-      if (SUCCEEDED(hRes))
-        hRes = cJvm.Run(cStrCodeA, lpUrl->GetPath());
-      if (FAILED(hRes))
+      if (cStrCodeA.IsEmpty() == FALSE)
       {
-        CStringA cStrBodyA;
-        LPCSTR szErrMsgA;
-        HRESULT hRes2;
-
-        szErrMsgA = cJvm.ErrorInfo().GetDescription();
-        if (MX::StrCompareA(szErrMsgA, "(exit)") == 0)
+        try
         {
-          // "(exit)" is a "clean" exit :)
-          hRes = S_OK;
+          cJvm.Run(cStrCodeA, lpUrl->GetPath());
         }
-        else if (MX::StrNCompareA(szErrMsgA, "(die)", 5) == 0)
+        catch (CJsHttpServerSystemExit &e)
         {
-          lpRequest->ResetResponse();
-          if (cStrBodyA.Format("Error: %s", szErrMsgA+5) != FALSE)
-            hRes2 = MX::CHttpCommon::ToHtmlEntities(cStrBodyA);
-          else
-            hRes2 = E_OUTOFMEMORY;
-          if (SUCCEEDED(hRes2))
+          if (*(e.GetDescription()) != 0)
           {
-            if (cStrBodyA.InsertN("<html><body><pre>", 0, 6+6+5) == FALSE ||
-                cStrBodyA.ConcatN("</pre></body></html>", 6+7+7) == FALSE)
-            {
+            CStringA cStrBodyA;
+            HRESULT hRes2;
+
+            lpRequest->ResetResponse();
+            if (cStrBodyA.Format("Error: %s", e.GetDescription()) != FALSE)
+              hRes2 = MX::CHttpCommon::ToHtmlEntities(cStrBodyA);
+            else
               hRes2 = E_OUTOFMEMORY;
+            if (SUCCEEDED(hRes2))
+            {
+              if (cStrBodyA.InsertN("<html><body><pre>", 0, 6+6+5) == FALSE ||
+                  cStrBodyA.ConcatN("</pre></body></html>", 6+7+7) == FALSE)
+              {
+                hRes2 = E_OUTOFMEMORY;
+              }
             }
+            if (SUCCEEDED(hRes2))
+              hRes2 = lpRequest->SendResponse((LPCSTR)cStrBodyA, cStrBodyA.GetLength());
+            if (SUCCEEDED(hRes2))
+              hRes = hRes2;
+            else
+              hRes = lpRequest->SendErrorPage(500, hRes2);
           }
-          if (SUCCEEDED(hRes2))
-            hRes2 = lpRequest->SendResponse((LPCSTR)cStrBodyA, cStrBodyA.GetLength());
-          if (SUCCEEDED(hRes2))
-            hRes = hRes2;
-          else
-            hRes = lpRequest->SendErrorPage(500, hRes);
         }
-        else
+        catch (CJsError &e)
         {
-          hRes2 = (cStrBodyA.Format("Error: %s", szErrMsgA) != FALSE) ? S_OK : E_OUTOFMEMORY;
+          CStringA cStrBodyA;
+          HRESULT hRes2;
+
+          hRes2 = (cStrBodyA.Format("Error: %s", e.GetDescription()) != FALSE) ? S_OK : E_OUTOFMEMORY;
           if (SUCCEEDED(hRes2) && bShowStackTraceOnError != FALSE)
           {
-            if (cStrBodyA.AppendFormat(" @ %s(%lu)\r\nStack trace:\r\n%s", cJvm.ErrorInfo().GetFileName(),
-                                       cJvm.ErrorInfo().GetLineNumber(), cJvm.ErrorInfo().GetStackTrace()) == FALSE)
+            if (cStrBodyA.AppendFormat(" @ %s(%lu)\r\nStack trace:\r\n%s", e.GetFileName(), e.GetLineNumber(),
+                                       e.GetStackTrace()) == FALSE)
             {
               hRes2 = E_OUTOFMEMORY;
             }
@@ -187,6 +190,10 @@ HRESULT CJsHttpServer::OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in MX:
               hRes2 = E_OUTOFMEMORY;
           }
           hRes = lpRequest->SendErrorPage(500, hRes, (SUCCEEDED(hRes2)) ? (LPCSTR)cStrBodyA : "");
+        }
+        catch (...)
+        {
+          hRes = lpRequest->SendErrorPage(500, E_FAIL);
         }
       }
     }
@@ -209,7 +216,7 @@ HRESULT CJsHttpServer::OnRequireJsModule(__in DukTape::duk_context *lpCtx,
                                          __in CJavascriptVM::CRequireModuleContext *lpReqContext,
                                          __inout CStringA &cStrCodeA)
 {
-  CHttpServer::CRequest *lpRequest;
+  CJsRequest *lpRequest;
   HRESULT hRes;
 
   if (!cRequireJsModuleCallback)
@@ -224,10 +231,14 @@ HRESULT CJsHttpServer::OnRequireJsModule(__in DukTape::duk_context *lpCtx,
   return hRes;
 }
 
-VOID CJsHttpServer::OnError(__in CHttpServer *lpHttp, __in CHttpServer::CRequest *lpRequest, __in HRESULT hErrorCode)
+VOID CJsHttpServer::OnError(__in CHttpServer *lpHttp, __in CHttpServer::CRequest *_lpRequest, __in HRESULT hErrorCode)
 {
   if (cErrorCallback)
+  {
+    CJsRequest *lpRequest = static_cast<CJsRequest*>(_lpRequest);
+
     cErrorCallback(this, lpRequest, hErrorCode);
+  }
   return;
 }
 

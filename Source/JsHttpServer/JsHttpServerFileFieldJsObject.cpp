@@ -67,7 +67,7 @@ DukTape::duk_ret_t CFileFieldJsObject::getFileName()
 
   hRes = Utf8_Encode(cStrTempA, lpFileField->GetFileName());
   if (FAILED(hRes))
-    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
   DukTape::duk_push_string(lpCtx, (LPCSTR)cStrTempA);
   return 1;
 }
@@ -115,7 +115,7 @@ DukTape::duk_ret_t CFileFieldJsObject::ReadFile()
  
   nParamsCount = DukTape::duk_get_top(lpCtx);
   if (nParamsCount < 1 || nParamsCount > 2)
-    MX_JS_THROW_HRESULT_ERROR(lpCtx, E_INVALIDARG);
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
   //parse parameters
   nToRead = DukTape::duk_require_uint(lpCtx, 0);
   bAsBuffer = false;

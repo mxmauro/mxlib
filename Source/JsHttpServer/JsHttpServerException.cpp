@@ -1,7 +1,7 @@
 /*
  * Original code by Mauro H. Leggieri (http://www.mauroleggieri.com.ar)
  *
- * Copyright (C) 2006-2015. All rights reserved.
+ * Copyright (C) 2002-2015. All rights reserved.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -21,29 +21,28 @@
  *    c. Distribute, sub-license, rent, lease, loan [or grant any third party
  *       access to or use of the software to any third party.
  **/
-#include "..\..\Include\Http\HttpBodyParserBase.h"
-
-//-----------------------------------------------------------
-
-#ifdef _DEBUG
-  #define _SHARING_MODE FILE_SHARE_READ
-#else //_DEBUG
-  #define _SHARING_MODE 0
-#endif //_DEBUG
+#include "JsHttpServerCommon.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-CHttpBodyParserBase::CHttpBodyParserBase() : CBaseMemObj(), TRefCounted<CHttpBodyParserBase>()
+CJsHttpServerSystemExit::CJsHttpServerSystemExit(__in DukTape::duk_context *lpCtx,
+                                                 __in DukTape::duk_idx_t nStackIndex) : CJsError(lpCtx, nStackIndex)
 {
-  bEntityTooLarge = FALSE;
   return;
 }
 
-CHttpBodyParserBase::~CHttpBodyParserBase()
+CJsHttpServerSystemExit::CJsHttpServerSystemExit(__in const CJsHttpServerSystemExit &obj) : CJsError(NULL, 0)
 {
+  *this = obj;
   return;
+}
+
+CJsHttpServerSystemExit& CJsHttpServerSystemExit::operator=(__in const CJsHttpServerSystemExit &obj)
+{
+  CJsError::operator=(obj);
+  return *this;
 }
 
 } //namespace MX

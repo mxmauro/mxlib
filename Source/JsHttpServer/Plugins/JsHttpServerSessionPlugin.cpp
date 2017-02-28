@@ -277,7 +277,7 @@ DukTape::duk_ret_t CJsHttpServerSessionPlugin::RegenerateId()
                                         bIsSecure, bIsHttpOnly);
   }
   if (FAILED(hRes))
-    MX_JS_THROW_HRESULT_ERROR(GetContext(), hRes);
+    MX_JS_THROW_WINDOWS_ERROR(GetContext(), hRes);
   //on success
   cBag.Reset();
   return 0;

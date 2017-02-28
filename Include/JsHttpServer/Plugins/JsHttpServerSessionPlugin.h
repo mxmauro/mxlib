@@ -50,7 +50,9 @@ public:
   CHttpServer::CRequest* GetRequest() const;
   CPropertyBag* GetBag() const;
 
-  MX_JS_BEGIN_MAP(CJsHttpServerSessionPlugin, "Session", 0)
+  MX_JS_DECLARE_WITH_PROXY(CJsHttpServerSessionPlugin, "Session")
+
+  MX_JS_BEGIN_MAP(CJsHttpServerSessionPlugin)
     MX_JS_MAP_METHOD("Save", &CJsHttpServerSessionPlugin::Save, 0)
     MX_JS_MAP_METHOD("RegenerateId", &CJsHttpServerSessionPlugin::RegenerateId, 0)
   MX_JS_END_MAP()

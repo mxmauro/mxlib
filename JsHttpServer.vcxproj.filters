@@ -49,5 +49,11 @@
     <ClCompile Include="Source\JsHttpServer\Plugins\JsHttpServerSessionPlugin.cpp">
       <Filter>Source Files\Plugins</Filter>
     </ClCompile>
+    <ClCompile Include="Source\JsHttpServer\JsHttpServerRequest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsHttpServer\JsHttpServerException.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

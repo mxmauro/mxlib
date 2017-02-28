@@ -148,7 +148,7 @@ DukTape::duk_ret_t CJsMySqlPluginHelpers::CFieldInfo::getIsKey()
 {
   DukTape::duk_context *lpCtx = GetContext();
 
-  DukTape::duk_push_boolean(lpCtx, (nFlags & (PRI_KEY_FLAG|UNIQUE_KEY_FLAG|MULTIPLE_KEY_FLAG)) ? 1 : 0);
+  DukTape::duk_push_boolean(lpCtx, (nFlags & (PRI_KEY_FLAG | UNIQUE_KEY_FLAG | MULTIPLE_KEY_FLAG)) ? 1 : 0);
   return 1;
 }
 

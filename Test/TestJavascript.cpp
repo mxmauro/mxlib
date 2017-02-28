@@ -59,7 +59,9 @@ public:
   CMyObject(__in DukTape::duk_context *lpCtx);
   ~CMyObject();
 
-  MX_JS_BEGIN_MAP(CMyObject, "myobject", 0)
+  MX_JS_DECLARE_CREATABLE_WITH_PROXY(CMyObject, "myobject")
+
+  MX_JS_BEGIN_MAP(CMyObject)
     MX_JS_MAP_METHOD("add", &CMyObject::add, 2)
     MX_JS_MAP_METHOD("Print", &CMyObject::Print, 1)
   MX_JS_END_MAP()
@@ -99,7 +101,7 @@ int TestJavascript()
   wprintf_s(L"OK\n");
 
   wprintf_s(L"Registering 'myobject'... ");
-  hRes = CMyObject::Register(cJvm, TRUE, TRUE);
+  hRes = CMyObject::Register(cJvm);
   if (FAILED(hRes))
   {
     wprintf_s(L"Error: %08X\n", hRes);
@@ -108,20 +110,17 @@ int TestJavascript()
   wprintf_s(L"OK\n");
 
   wprintf_s(L"Testing call to zarasa...\n");
-  hRes = cJvm.Run("zarasa('hola');");
-  if (FAILED(hRes))
+  try
   {
-    if (hRes == E_FAIL)
-    {
-      wprintf_s(L"Error: %S in %S(%lu)\n", cJvm.ErrorInfo().GetDescription(), cJvm.ErrorInfo().GetFileName(),
-                cJvm.ErrorInfo().GetLineNumber());
-      wprintf_s(L"%S\n", cJvm.ErrorInfo().GetStackTrace());
-    }
-    else
-    {
-      wprintf_s(L"Error: %08X\n", hRes);
-    }
+    cJvm.Run("zarasa('hola');");
   }
+  catch (MX::CJsError &e)
+  {
+    wprintf_s(L"Error: %S in %S(%lu)\n", e.GetDescription(), e.GetFileName(), e.GetLineNumber());
+    wprintf_s(L"%S\n", e.GetStackTrace());
+  }
+
+  //--------
 
   wprintf_s(L"Registering 'Session'... ");
   hRes = cJvm.AddNumericProperty("globalValue", 10.0);
@@ -154,32 +153,28 @@ int TestJavascript()
   wprintf_s(L"OK\n");
 
   wprintf_s(L"Testing myobject creation...\n");
-  hRes = cJvm.Run("var ext = require('../child/add.js');\n"
-                  "obj = new myobject();\n"
-                  "obj.blabla = 2;\n"
-                  "obj[1] = obj.blabla;\n"
-                  "delete obj.blabla;\n"
-                  "obj[1] = 'Ã±andÃº';\n" //ñandú
-                  "obj.Print('          v1: ' + globalValue.toString());\n"
-                  "obj.Print('          v2: ' + session.value.toString());\n"
-                  "obj.Print('          Suma: ' + ext.add(globalValue, session['value']).toString());\n"
-                  "obj.Print('Multiplicacion: ' + ext.mult(globalValue, session['value']).toString());\n"
-                  "session.value2 = 200.0;\n"
-                  "obj.Print('Session value2: ' + session.value2.toString());\n",
-                  L"código/html/main/index.js");
-  if (FAILED(hRes))
+  try
   {
-    if (hRes == E_FAIL)
-    {
-      wprintf_s(L"Error: %S in %S(%lu)\n", cJvm.ErrorInfo().GetDescription(), cJvm.ErrorInfo().GetFileName(),
-                cJvm.ErrorInfo().GetLineNumber());
-      wprintf_s(L"%S\n", cJvm.ErrorInfo().GetStackTrace());
-    }
-    else
-    {
-      wprintf_s(L"Error: %08X\n", hRes);
-    }
+    cJvm.Run("var ext = require('../child/add.js');\n"
+             "obj = new myobject();\n"
+             "obj.blabla = 2;\n"
+             "obj[1] = obj.blabla;\n"
+             "delete obj.blabla;\n"
+             "obj[1] = 'Ã±andÃº';\n" //ñandú
+             "obj.Print('          v1: ' + globalValue.toString());\n"
+             "obj.Print('          v2: ' + session.value.toString());\n"
+             "obj.Print('          Suma: ' + ext.add(globalValue, session['value']).toString());\n"
+             "obj.Print('Multiplicacion: ' + ext.mult(globalValue, session['value']).toString());\n"
+             "session.value2 = 200.0;\n"
+             "obj.Print('Session value2: ' + session.value2.toString());\n",
+             L"código/html/main/index.js");
   }
+  catch (MX::CJsError &e)
+  {
+    wprintf_s(L"Error: %S in %S(%lu)\n", e.GetDescription(), e.GetFileName(), e.GetLineNumber());
+    wprintf_s(L"%S\n", e.GetStackTrace());
+  }
+
   //done
   return (int)S_OK;
 }

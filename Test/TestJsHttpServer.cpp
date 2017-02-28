@@ -40,13 +40,14 @@ public:
 //-----------------------------------------------------------
 
 static VOID OnEngineError(__in MX::CIpc *lpIpc, __in HRESULT hErrorCode);
-static HRESULT OnRequest(__in MX::CJsHttpServer *lpHttp, __in MX::CHttpServer::CRequest *lpRequest,
+static HRESULT OnRequest(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer::CJsRequest *lpRequest,
                          __inout MX::CJavascriptVM &cJvm, __inout MX::CStringA &cStrCodeA);
-static HRESULT OnRequireJsModule(__in MX::CJsHttpServer *lpHttp, __in MX::CHttpServer::CRequest *lpRequest,
+static HRESULT OnRequireJsModule(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer::CJsRequest *lpRequest,
                                  __inout MX::CJavascriptVM &cJvm,
                                  __inout MX::CJavascriptVM::CRequireModuleContext *lpReqContext,
                                  __inout MX::CStringA &cStrCodeA);
-static VOID OnError(__in MX::CJsHttpServer *lpHttp, __in MX::CHttpServer::CRequest *lpRequest, __in HRESULT hErrorCode);
+static VOID OnError(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer::CJsRequest *lpRequest,
+                    __in HRESULT hErrorCode);
 static VOID DeleteSessionFiles();
 static HRESULT OnSessionLoadSave(__in MX::CJsHttpServerSessionPlugin *lpPlugin, __in BOOL bLoading);
 static HRESULT LoadTxtFile(__inout MX::CStringA &cStrContentsA, __in_z LPCWSTR szFileNameW);
@@ -129,7 +130,7 @@ static VOID OnEngineError(__in MX::CIpc *lpIpc, __in HRESULT hErrorCode)
   return;
 }
 
-static HRESULT OnRequest(__in MX::CJsHttpServer *lpHttp, __in MX::CHttpServer::CRequest *lpRequest,
+static HRESULT OnRequest(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer::CJsRequest *lpRequest,
                          __inout MX::CJavascriptVM &cJvm, __inout MX::CStringA &cStrCodeA)
 {
   MX::TAutoRefCounted<CTestJsRequestUserData> cUserData;
@@ -150,11 +151,10 @@ static HRESULT OnRequest(__in MX::CJsHttpServer *lpHttp, __in MX::CHttpServer::C
   {
     hRes = LoadTxtFile(cStrCodeA, (LPCWSTR)cStrFileNameW);
     if (SUCCEEDED(hRes))
-      hRes = MX::CJsHttpServerSessionPlugin::Register(cJvm, FALSE, TRUE);
+      hRes = MX::CJsHttpServerSessionPlugin::Register(cJvm);
     if (SUCCEEDED(hRes))
-      hRes = MX::CJsMySqlPlugin::Register(cJvm, TRUE, FALSE);
-    if (hRes == MX_HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) ||
-        hRes == MX_HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND))
+      hRes = MX::CJsMySqlPlugin::Register(cJvm);
+    if (hRes == MX_E_FileNotFound || hRes == MX_E_PathNotFound)
     {
       hRes = lpRequest->SendErrorPage(404, E_INVALIDARG);
     }
@@ -179,7 +179,7 @@ static HRESULT OnRequest(__in MX::CJsHttpServer *lpHttp, __in MX::CHttpServer::C
   return hRes;
 }
 
-static HRESULT OnRequireJsModule(__in MX::CJsHttpServer *lpHttp, __in MX::CHttpServer::CRequest *lpRequest,
+static HRESULT OnRequireJsModule(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer::CJsRequest *lpRequest,
                                  __inout MX::CJavascriptVM &cJvm,
                                  __inout MX::CJavascriptVM::CRequireModuleContext *lpReqContext,
                                  __inout MX::CStringA &cStrCodeA)
@@ -242,7 +242,8 @@ static HRESULT OnRequireJsModule(__in MX::CJsHttpServer *lpHttp, __in MX::CHttpS
   return MX_E_NotFound;
 }
 
-static VOID OnError(__in MX::CJsHttpServer *lpHttp, __in MX::CHttpServer::CRequest *lpRequest, __in HRESULT hErrorCode)
+static VOID OnError(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer::CJsRequest *lpRequest,
+                    __in HRESULT hErrorCode)
 {
   return;
 }

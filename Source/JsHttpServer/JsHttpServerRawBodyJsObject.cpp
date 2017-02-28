@@ -61,7 +61,7 @@ DukTape::duk_ret_t CRawBodyJsObject::ToString()
 
   hRes = lpBody->ToString(cStrTempA);
   if (FAILED(hRes))
-    MX_JS_THROW_HRESULT_ERROR(lpCtx, hRes);
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
   DukTape::duk_push_string(lpCtx, (LPSTR)cStrTempA);
   return 1;
 }

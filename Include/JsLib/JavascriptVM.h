@@ -28,6 +28,7 @@
 #include "..\Defines.h"
 #include "..\RefCounted.h"
 #include "..\Callbacks.h"
+#include "..\ArrayList.h"
 #include "..\Strings\Strings.h"
 
 #include <functional>
@@ -42,28 +43,60 @@ namespace DukTape {
 
 #define MX_JS_VARARGS             ((DukTape::duk_int_t)(-1))
 
-#define MX_JS_BEGIN_MAP(_cls, _name, _constructorArgsCount)                                     \
+#define MX_JS_DECLARE(_cls, _name)                                                              \
 public:                                                                                         \
-  static HRESULT Register(__in DukTape::duk_context *lpCtx, __in_opt BOOL bCreatable=TRUE,      \
-                          __in_opt BOOL bCreateProxy=FALSE)                                     \
+  static HRESULT Register(__in DukTape::duk_context *lpCtx)                                     \
+    { return _Register(lpCtx, FALSE, NULL); };                                                  \
+    __MX_JS_DECLARE_COMMON(_cls, _name)
+
+#define MX_JS_DECLARE_CREATABLE(_cls, _name)                                                    \
+public:                                                                                         \
+  static HRESULT Register(__in DukTape::duk_context *lpCtx)                                     \
+    { return _Register(lpCtx, FALSE, &_cls::_CreateObject); };                                  \
+    __MX_JS_DECLARE_COMMON(_cls, _name)                                                         \
+    __MX_JS_DECLARE_CREATE_OBJECT(_cls)
+
+#define MX_JS_DECLARE_WITH_PROXY(_cls, _name)                                                   \
+public:                                                                                         \
+  static HRESULT Register(__in DukTape::duk_context *lpCtx)                                     \
+    { return _Register(lpCtx, TRUE, NULL); };                                                   \
+    __MX_JS_DECLARE_COMMON(_cls, _name)
+
+#define MX_JS_DECLARE_CREATABLE_WITH_PROXY(_cls, _name)                                         \
+public:                                                                                         \
+  static HRESULT Register(__in DukTape::duk_context *lpCtx)                                     \
+    { return _Register(lpCtx, TRUE, &_cls::_CreateObject); };                                   \
+    __MX_JS_DECLARE_COMMON(_cls, _name)                                                         \
+    __MX_JS_DECLARE_CREATE_OBJECT(_cls)
+
+#define __MX_JS_DECLARE_COMMON(_cls, _name)                                                     \
+public:                                                                                         \
+  static HRESULT _Register(__in DukTape::duk_context *lpCtx, __in BOOL bUseProxy,               \
+                           __in_opt lpfnCreateObject fnCreateObject)                            \
     {                                                                                           \
     return _RegisterHelper(lpCtx, _GetMapEntries(), _name, "\xff""\xff" _name "_prototype",     \
-                           (bCreatable) ? &_cls::_CreateObject : NULL, _constructorArgsCount,   \
-                           bCreateProxy);                                                       \
+                            fnCreateObject, bUseProxy, &_cls::OnRegister, &_cls::OnUnregister); \
+    };                                                                                          \
+                                                                                                \
+public:                                                                                         \
+  static HRESULT Unregister(__in DukTape::duk_context *lpCtx)                                   \
+    {                                                                                           \
+    _UnregisterHelper(lpCtx, _name, "\xff""\xff" _name "_prototype", &_cls::OnUnregister);      \
     };                                                                                          \
                                                                                                 \
   HRESULT PushThis()                                                                            \
     {                                                                                           \
     return _PushThisHelper(_name, "\xff""\xff" _name "_prototype");                             \
-    };                                                                                          \
-                                                                                                \
+    };
+
+#define __MX_JS_DECLARE_CREATE_OBJECT(_cls)                                                     \
+private:                                                                                        \
+  static CJsObjectBase* _CreateObject(__in DukTape::duk_context *lpCtx)                         \
+    { return MX_DEBUG_NEW _cls(lpCtx); };
+
+#define MX_JS_BEGIN_MAP(_cls)                                                                   \
 private:                                                                                        \
   typedef DukTape::duk_ret_t (_cls::*lpfnFunc)(__in DukTape::duk_context *);                    \
-                                                                                                \
-  static CJsObjectBase* _CreateObject(__in DukTape::duk_context *lpCtx)                         \
-    {                                                                                           \
-    return MX_DEBUG_NEW _cls(lpCtx);                                                            \
-    };                                                                                          \
                                                                                                 \
   static MAP_ENTRY* _GetMapEntries()                                                            \
     {                                                                                           \
@@ -95,9 +128,9 @@ private:                                                                        
           },                                                                                    \
           _enumerable },
 
-#define MX_JS_THROW_HRESULT_ERROR(ctx, hres)                                                    \
-          DukTape::duk_error_raw((ctx), DUK_ERR_ERROR, (LPCSTR)(__FILE__),                      \
-                                 (DukTape::duk_int_t)__LINE__, "HR:%08X", (HRESULT)(hres))
+#define MX_JS_THROW_WINDOWS_ERROR(ctx, hr)                                                      \
+          MX::CJavascriptVM::ThrowWindowsError((ctx), (HRESULT)(hr), (LPCSTR)(__FILE__),        \
+                                               (DukTape::duk_int_t)__LINE__)
 
 #define MX_JS_THROW_ERROR(ctx, code, fmt, ...)                                                  \
           DukTape::duk_error_raw((ctx), (DukTape::duk_errcode_t)(code), (LPCSTR)(__FILE__),     \
@@ -248,52 +281,10 @@ public:
 
   //--------
 
-  class CErrorInfo
-  {
-    MX_DISABLE_COPY_CONSTRUCTOR(CErrorInfo);
-  public:
-    CErrorInfo();
+  typedef std::function<VOID (__in DukTape::duk_context *lpCtx)> lpfnProtectedFunction;
 
-    VOID Clear();
-
-    __inline HRESULT GetErrorCode() const
-      {
-      return hRes;
-      };
-
-    __inline LPCSTR GetDescription() const
-      {
-      return (LPCSTR)cStrMessageA;
-      };
-
-    __inline LPCSTR GetFileName() const
-      {
-      return (LPCSTR)cStrFileNameA;
-      };
-
-    __inline ULONG GetLineNumber() const
-      {
-      return nLine;
-      };
-
-    __inline LPCSTR GetStackTrace() const
-      {
-      return (LPCSTR)cStrStackTraceA;
-      };
-
-  private:
-    friend class CJavascriptVM;
-
-    HRESULT hRes;
-    CStringA cStrMessageA;
-    CStringA cStrFileNameA;
-    ULONG nLine;
-    CStringA cStrStackTraceA;
-  };
-
-  //--------
-
-  typedef std::function<VOID (__in DukTape::duk_context*)> protected_function;
+  typedef VOID (*lpfnThrowExceptionCallback)(__in DukTape::duk_context *lpCtx,
+                                             __in DukTape::duk_idx_t nExceptionObjectIndex);
 
 public:
   CJavascriptVM();
@@ -310,20 +301,18 @@ public:
     return lpCtx;
     };
 
-  __inline CErrorInfo& ErrorInfo()
-    {
-    return cLastErrorInfo;
-    };
-
   static CJavascriptVM* FromContext(__in DukTape::duk_context *lpCtx);
 
-  HRESULT Run(__in_z LPCSTR szCodeA, __in_z_opt LPCWSTR szFileNameW=NULL, __in_opt BOOL bIgnoreResult=TRUE);
+  VOID Run(__in_z LPCSTR szCodeA, __in_z_opt LPCWSTR szFileNameW=NULL, __in_opt BOOL bIgnoreResult=TRUE);
 
-  static HRESULT RunNativeProtected(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nArgsCount,
-                                    __in DukTape::duk_idx_t nRetValuesCount, __in protected_function func,
-                                    __out_opt CErrorInfo *lpErrorInfo=NULL);
-  HRESULT RunNativeProtected(__in DukTape::duk_idx_t nArgsCount, __in DukTape::duk_idx_t nRetValuesCount,
-                             __in protected_function func);
+  static VOID RunNativeProtected(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nArgsCount,
+                                 __in DukTape::duk_idx_t nRetValuesCount, __in lpfnProtectedFunction fnFunc,
+                                 __in_opt BOOL bCatchUnhandled=FALSE);
+  VOID RunNativeProtected(__in DukTape::duk_idx_t nArgsCount, __in DukTape::duk_idx_t nRetValuesCount,
+                          __in lpfnProtectedFunction fnFunc, __in_opt BOOL bCatchUnhandled=FALSE);
+
+  HRESULT RegisterException(__in_z LPCSTR szExceptionNameA, __in lpfnThrowExceptionCallback fnThrowExceptionCallback);
+  HRESULT UnregisterException(__in_z LPCSTR szExceptionNameA);
 
   HRESULT AddNativeFunction(__in_z LPCSTR szFuncNameA, __in OnNativeFunctionCallback cNativeFunctionCallback,
                             __in int nArgsCount);
@@ -352,7 +341,7 @@ public:
 
   HRESULT HasProperty(__in_z LPCSTR szPropertyNameA);
 
-  HRESULT PushProperty(__in_z LPCSTR szPropertyNameA);
+  VOID PushProperty(__in_z LPCSTR szPropertyNameA);
 
   HRESULT CreateObject(__in_z LPCSTR szObjectNameA, __in_opt CProxyCallbacks *lpCallbacks=NULL);
 
@@ -386,7 +375,7 @@ public:
 
   HRESULT HasObjectProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA);
 
-  HRESULT PushObjectProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA);
+  VOID PushObjectProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA);
 
   //converts from/to utf-8
   static VOID PushString(__in DukTape::duk_context *lpCtx, __in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
@@ -418,6 +407,9 @@ public:
   static HRESULT AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCSTR szStrA, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
   static HRESULT AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
 
+  static VOID ThrowWindowsError(__in DukTape::duk_context *lpCtx, __in HRESULT hr, __in_opt LPCSTR filename=NULL,
+                                __in_opt DukTape::duk_int_t line=0);
+
 private:
   //static DukTape::duk_ret_t OnModSearch(__in DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t OnNodeJsResolveModule(__in DukTape::duk_context *lpCtx);
@@ -428,13 +420,18 @@ private:
   static DukTape::duk_ret_t _ProxyDeletePropHelper(__in DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _RunNativeProtectedHelper(__in DukTape::duk_context *lpCtx, __in void *udata);
 
-  static HRESULT GetErrorInfoFromException(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex,
-                                           __out_opt CErrorInfo *lpErrorInfo=NULL);
+  static BOOL HandleException(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex,
+                              __in_opt BOOL bCatchUnhandled);
 
 private:
+  typedef struct {
+    LPCSTR szExceptionNameA;
+    lpfnThrowExceptionCallback fnThrowExceptionCallback;
+  } EXCEPTION_ITEM;
+
   DukTape::duk_context *lpCtx;
   OnRequireModuleCallback cRequireModuleCallback;
-  CErrorInfo cLastErrorInfo;
+  TArrayList4Structs<EXCEPTION_ITEM> aRegisteredExceptionsList;
 };
 
 //-----------------------------------------------------------
@@ -446,8 +443,8 @@ public:
   CJsObjectBase(__in DukTape::duk_context *lpCtx) : CBaseMemObj(), TRefCounted<CJsObjectBase>()
     {
     MX_ASSERT(lpCtx != NULL);
-    lpJvm = CJavascriptVM::FromContext(lpCtx);
-    MX_ASSERT(lpJvm != NULL);
+    lpJVM = CJavascriptVM::FromContext(lpCtx);
+    MX_ASSERT(lpJVM != NULL);
     return;
     };
 
@@ -476,7 +473,7 @@ public:
 
   CJavascriptVM& GetJavascriptVM() const
     {
-    return *lpJvm;
+    return *lpJVM;
     };
 
   DukTape::duk_context* GetContext() const
@@ -498,11 +495,22 @@ protected:
 
 protected:
   typedef CJsObjectBase* (*lpfnCreateObject)(__in DukTape::duk_context *lpCtx);
+  typedef VOID (*lpfnRegisterUnregisterCallback)(__in DukTape::duk_context *lpCtx);
+
+  static VOID OnRegister(__in DukTape::duk_context *lpCtx)
+    { };
+  static VOID OnUnregister(__in DukTape::duk_context *lpCtx)
+    { };
 
   static HRESULT _RegisterHelper(__in DukTape::duk_context *lpCtx, __in MAP_ENTRY *lpEntries,
                                  __in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA,
-                                 __in_opt lpfnCreateObject fnCreateObject, __in_opt int nCreateArgsCount,
-                                 __in BOOL bCreateProxy);
+                                 __in_opt lpfnCreateObject fnCreateObject, __in BOOL bUseProxy,
+                                 __in lpfnRegisterUnregisterCallback fnRegisterCallback,
+                                 __in lpfnRegisterUnregisterCallback fnUnregisterCallback);
+  static VOID _UnregisterHelper(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
+                                __in_z LPCSTR szPrototypeNameA,
+                                __in lpfnRegisterUnregisterCallback fnUnregisterCallback);
+
   static DukTape::duk_ret_t _CreateHelper(__in DukTape::duk_context *lpCtx);
   HRESULT _PushThisHelper(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA);
   static DukTape::duk_ret_t _FinalReleaseHelper(__in DukTape::duk_context *lpCtx);
@@ -513,7 +521,91 @@ protected:
   static DukTape::duk_ret_t _ProxyDeletePropHelper(__in DukTape::duk_context *lpCtx);
 
 private:
-  CJavascriptVM *lpJvm;
+  CJavascriptVM *lpJVM;
+};
+
+//-----------------------------------------------------------
+
+class CJsError
+{
+protected:
+  CJsError(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex);
+  CJsError(__in_z LPCSTR szMessageA, __in DukTape::duk_context *lpCtx, __in_z LPCSTR szFileNameA, __in ULONG nLine);
+
+public:
+  CJsError(__in const CJsError &obj);
+  CJsError& operator=(__in const CJsError &obj);
+
+  ~CJsError();
+
+public:
+  __inline LPCSTR GetDescription() const
+    {
+    return (lpStrMessageA != NULL) ? (LPCSTR)(*lpStrMessageA) : "";
+    };
+
+  __inline LPCSTR GetFileName() const
+    {
+    return (lpStrFileNameA != NULL) ? (LPCSTR)(*lpStrFileNameA) : "";
+    };
+
+  __inline ULONG GetLineNumber() const
+    {
+    return nLine;
+    };
+
+  __inline LPCSTR GetStackTrace() const
+    {
+    return (lpStrStackTraceA != NULL) ? (LPCSTR)(*lpStrStackTraceA) : "N/A";
+    };
+
+protected:
+  class CRefCountedStringA : public CStringA, public TRefCounted<CRefCountedStringA>
+  {
+  public:
+    CRefCountedStringA() : CStringA(), TRefCounted<CRefCountedStringA>()
+      { };
+  };
+
+private:
+  friend class CJavascriptVM;
+
+  VOID Cleanup();
+
+protected:
+  CRefCountedStringA *lpStrMessageA;
+  CRefCountedStringA *lpStrFileNameA;
+  ULONG nLine;
+  CRefCountedStringA *lpStrStackTraceA;
+};
+
+//-----------------------------------------------------------
+
+class CJsWindowsError : public CJsError
+{
+protected:
+  CJsWindowsError(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex);
+  CJsWindowsError(__in HRESULT hRes, __in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex);
+  CJsWindowsError(__in HRESULT hRes, __in DukTape::duk_context *lpCtx, __in_z LPCSTR szFileNameA, __in ULONG nLine);
+  CJsWindowsError(__in HRESULT hRes);
+
+public:
+  CJsWindowsError(__in const CJsWindowsError &obj);
+  CJsWindowsError& operator=(__in const CJsWindowsError &obj);
+
+  __inline HRESULT GetHResult() const
+    {
+    return hRes;
+    };
+
+private:
+  friend class CJavascriptVM;
+  friend class CJsError;
+
+  VOID QueryMessageString();
+
+private:
+  HRESULT hRes;
 };
 
 } //namespace MX

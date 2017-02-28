@@ -249,9 +249,12 @@ err_invalid_data:
           //no more headers
           if (sParser.cStrCurrLineA.IsEmpty() == FALSE)
           {
-            hRes = ParseHeader(sParser.cStrCurrLineA);
-            if (FAILED(hRes))
-              goto done;
+            if (IsEntityTooLarge() == FALSE) //ignore if 413 error is postponed
+            {
+              hRes = ParseHeader(sParser.cStrCurrLineA);
+              if (FAILED(hRes))
+                goto done;
+            }
             sParser.cStrCurrLineA.Empty();
           }
           sParser.nState = StateHeadersEnd;
@@ -270,9 +273,12 @@ err_invalid_data:
         //new header arrives, first check if we have a previous defined
         if (sParser.cStrCurrLineA.IsEmpty() == FALSE)
         {
-          hRes = ParseHeader(sParser.cStrCurrLineA);
-          if (FAILED(hRes))
-            goto done;
+          if (IsEntityTooLarge() == FALSE) //ignore if 413 error is postponed
+          {
+            hRes = ParseHeader(sParser.cStrCurrLineA);
+            if (FAILED(hRes))
+              goto done;
+          }
           sParser.cStrCurrLineA.Empty();
         }
         sParser.nState = StateHeaderName;
@@ -296,14 +302,15 @@ err_nomem:  hRes = E_OUTOFMEMORY;
         //check for valid token char
         if (CHttpCommon::IsValidNameChar(*szDataA) == FALSE)
           goto err_invalid_data;
-        if (sParser.cStrCurrLineA.GetLength() >= MAX_HEADER_LINE)
+        if (sParser.cStrCurrLineA.GetLength() < MAX_HEADER_LINE)
         {
-err_bad_length:
-          hRes = MX_E_BadLength;
-          goto done;
+          if (sParser.cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
+            goto err_nomem;
         }
-        if (sParser.cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
-          goto err_nomem;
+        else
+        {
+          MarkEntityAsTooLarge();
+        }
         break;
 
       case StateHeaderValueSpaceBefore:
@@ -317,9 +324,12 @@ err_bad_length:
 on_header_value:
         if (*szDataA == '\r' || *szDataA == '\n')
         {
-          hRes = ParseHeader(sParser.cStrCurrLineA);
-          if (FAILED(hRes))
-            goto done;
+          if (IsEntityTooLarge() == FALSE) //ignore if 413 error is postponed
+          {
+            hRes = ParseHeader(sParser.cStrCurrLineA);
+            if (FAILED(hRes))
+              goto done;
+          }
           sParser.cStrCurrLineA.Empty();
           sParser.nState = (*szDataA == '\r') ? StateNearHeaderValueEnd : StateHeaderStart;
           break;
@@ -332,10 +342,15 @@ on_header_value:
         //check valid value char
         if (*szDataA == 0)
           goto err_invalid_data;
-        if (sParser.cStrCurrLineA.GetLength() >= MAX_HEADER_LINE)
-          goto err_bad_length;
-        if (sParser.cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
-          goto err_nomem;
+        if (sParser.cStrCurrLineA.GetLength() < MAX_HEADER_LINE)
+        {
+          if (sParser.cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
+            goto err_nomem;
+        }
+        else
+        {
+          MarkEntityAsTooLarge();
+        }
         break;
 
       case StateHeaderValueSpaceAfter:
@@ -359,32 +374,40 @@ on_header_value:
           goto err_invalid_data;
 headers_end_reached:
         //verify if required headers are set
-        if (sParser.sCurrentBlock.sContentDisposition.cStrNameW.IsEmpty() != FALSE)
-          goto err_invalid_data; //requires header not set
+        if (IsEntityTooLarge() == FALSE)
+        {
+          if (sParser.sCurrentBlock.sContentDisposition.cStrNameW.IsEmpty() != FALSE)
+            goto err_invalid_data; //requires header not set
+        }
         //if dealing with a file...
         if (sParser.sCurrentBlock.sContentDisposition.bHasFileName != FALSE)
         {
           if ((sParser.nFileUploadCounter++) >= nMaxFileUploadCount)
-            return MX_E_BadLength; //too many file uploads
-          //switch to file container
-          dw = ::GetCurrentProcessId();
-          nHash = fnv_64a_buf(&dw, sizeof(dw), FNV1A_64_INIT);
-          dw = ::GetTickCount();
-          nHash = fnv_64a_buf(&dw, sizeof(dw), nHash);
-          k = (SIZE_T)this;
-          nHash = fnv_64a_buf(&k, sizeof(k), nHash);
-          nHash = fnv_64a_buf(&(sParser.nFileUploadCounter), sizeof(sParser.nFileUploadCounter), nHash);
-          if (cStrTempW.Format(L"%stmp%016I64x", (LPWSTR)cStrTempFolderW, (ULONGLONG)nHash) == FALSE)
           {
-            hRes = E_OUTOFMEMORY;
-            goto done;
+            MarkEntityAsTooLarge(); //too many file uploads
           }
-          sParser.cFileH.Attach(::CreateFileW((LPWSTR)cStrTempW, GENERIC_READ|GENERIC_WRITE, _SHARING_MODE, NULL,
-                                              CREATE_ALWAYS, _ATTRIBUTES, NULL));
-          if (!(sParser.cFileH))
+          //switch to file container
+          if (IsEntityTooLarge() == FALSE)
           {
-            hRes = MX_HRESULT_FROM_LASTERROR();
-            goto done;
+            dw = ::GetCurrentProcessId();
+            nHash = fnv_64a_buf(&dw, sizeof(dw), FNV1A_64_INIT);
+            dw = ::GetTickCount();
+            nHash = fnv_64a_buf(&dw, sizeof(dw), nHash);
+            k = (SIZE_T)this;
+            nHash = fnv_64a_buf(&k, sizeof(k), nHash);
+            nHash = fnv_64a_buf(&(sParser.nFileUploadCounter), sizeof(sParser.nFileUploadCounter), nHash);
+            if (cStrTempW.Format(L"%stmp%016I64x", (LPWSTR)cStrTempFolderW, (ULONGLONG)nHash) == FALSE)
+            {
+              hRes = E_OUTOFMEMORY;
+              goto done;
+            }
+            sParser.cFileH.Attach(::CreateFileW((LPWSTR)cStrTempW, GENERIC_READ|GENERIC_WRITE, _SHARING_MODE, NULL,
+                                                CREATE_ALWAYS, _ATTRIBUTES, NULL));
+            if (!(sParser.cFileH))
+            {
+              hRes = MX_HRESULT_FROM_LASTERROR();
+              goto done;
+            }
           }
         }
         else
@@ -466,34 +489,41 @@ not_boundary_end:
           if (sA[sParser.nBoundaryPos-2] == 0)
           {
             //boundary detected, add accumulated value
-            if (!(sParser.cFileH))
+            if (IsEntityTooLarge() == FALSE)
             {
-              hRes = Utf8_Decode(cStrTempW, (LPCSTR)(sParser.cStrCurrLineA));
-              if (SUCCEEDED(hRes))
-                hRes = AddField((LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrNameW), (LPCWSTR)cStrTempW);
-              if (FAILED(hRes))
-                goto done;
+              if (!(sParser.cFileH))
+              {
+                hRes = Utf8_Decode(cStrTempW, (LPCSTR)(sParser.cStrCurrLineA));
+                if (SUCCEEDED(hRes))
+                  hRes = AddField((LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrNameW), (LPCWSTR)cStrTempW);
+                if (FAILED(hRes))
+                  goto done;
+              }
+              else
+              {
+                //flush buffers
+                hRes = S_OK;
+                if (sParser.nUsedTempBuf >= 0)
+                {
+                  if (::WriteFile(sParser.cFileH, sParser.aTempBuf, (DWORD)(sParser.nUsedTempBuf), &dw, NULL) == FALSE)
+                    hRes = MX_HRESULT_FROM_LASTERROR();
+                  else if ((SIZE_T)dw != sParser.nUsedTempBuf)
+                    hRes = MX_E_WriteFault;
+                }
+                if (SUCCEEDED(hRes))
+                {
+                  hRes = AddFileField((LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrNameW),
+                                      (LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrFileNameW),
+                                      (LPCSTR)(sParser.sCurrentBlock.cStrContentTypeA), sParser.cFileH.Get());
+                }
+                if (FAILED(hRes))
+                  goto done;
+                sParser.cFileH.Detach();
+              }
             }
             else
             {
-              //flush buffers
-              hRes = S_OK;
-              if (sParser.nUsedTempBuf >= 0)
-              {
-                if (::WriteFile(sParser.cFileH, sParser.aTempBuf, (DWORD)(sParser.nUsedTempBuf), &dw, NULL) == FALSE)
-                  hRes = MX_HRESULT_FROM_LASTERROR();
-                else if ((SIZE_T)dw != sParser.nUsedTempBuf)
-                  hRes = MX_E_WriteFault;
-              }
-              if (SUCCEEDED(hRes))
-              {
-                hRes = AddFileField((LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrNameW),
-                                    (LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrFileNameW),
-                                    (LPCSTR)(sParser.sCurrentBlock.cStrContentTypeA), sParser.cFileH.Get());
-              }
-              if (FAILED(hRes))
-                goto done;
-              sParser.cFileH.Detach();
+              sParser.cFileH.Close();
             }
             sParser.cStrCurrLineA.Empty();
             sParser.nState = StateDataEnd;
@@ -664,26 +694,38 @@ HRESULT CHttpBodyParserMultipartFormData::AccumulateData(__in CHAR chA)
 {
   DWORD dw;
 
+  if (IsEntityTooLarge() != FALSE)
+    return S_OK; //ignore if 413 error is postponed
   sParser.aTempBuf[sParser.nUsedTempBuf++] = (BYTE)chA;
   if (!(sParser.cFileH))
   {
-    if (sParser.cStrCurrLineA.ConcatN(&chA, 1) == FALSE)
-      return E_OUTOFMEMORY;
-    if (sParser.cStrCurrLineA.GetLength() >= nMaxNonFileFormFieldsDataSize)
-      return MX_E_BadLength;
+    if (sParser.cStrCurrLineA.GetLength() < nMaxNonFileFormFieldsDataSize)
+    {
+      if (sParser.cStrCurrLineA.ConcatN(&chA, 1) == FALSE)
+        return E_OUTOFMEMORY;
+    }
+    else
+    {
+      MarkEntityAsTooLarge();
+    }
   }
   else
   {
-    if ((++sParser.nFileUploadSize) >= nMaxFileUploadSize)
-      return MX_E_BadLength;
-    //flush current data?
-    if (sParser.nUsedTempBuf >= sizeof(sParser.aTempBuf))
+    if ((++sParser.nFileUploadSize) < nMaxFileUploadSize)
     {
-      if (::WriteFile(sParser.cFileH, sParser.aTempBuf, (DWORD)(sParser.nUsedTempBuf), &dw, NULL) == FALSE)
-        return MX_HRESULT_FROM_LASTERROR();
-      if ((SIZE_T)dw != sParser.nUsedTempBuf)
-        return MX_E_WriteFault;
-      sParser.nUsedTempBuf = 0;
+      //flush current data?
+      if (sParser.nUsedTempBuf >= sizeof(sParser.aTempBuf))
+      {
+        if (::WriteFile(sParser.cFileH, sParser.aTempBuf, (DWORD)(sParser.nUsedTempBuf), &dw, NULL) == FALSE)
+          return MX_HRESULT_FROM_LASTERROR();
+        if ((SIZE_T)dw != sParser.nUsedTempBuf)
+          return MX_E_WriteFault;
+        sParser.nUsedTempBuf = 0;
+      }
+    }
+    else
+    {
+      MarkEntityAsTooLarge();
     }
   }
   return S_OK;

@@ -50,7 +50,9 @@ public:
 
   VOID Initialize(__in CHttpBodyParserFormBase::CFileField *lpFileField);
 
-  MX_JS_BEGIN_MAP(CFileFieldJsObject, "FormFileField", 0)
+  MX_JS_DECLARE(CFileFieldJsObject, "FormFileField")
+
+  MX_JS_BEGIN_MAP(CFileFieldJsObject)
     MX_JS_MAP_PROPERTY("type", &CFileFieldJsObject::getType, NULL, TRUE)
     MX_JS_MAP_PROPERTY("filename", &CFileFieldJsObject::getFileName, NULL, TRUE)
     MX_JS_MAP_PROPERTY("filesize", &CFileFieldJsObject::getFileSize, NULL, TRUE)
@@ -80,7 +82,9 @@ public:
 
   VOID Initialize(__in CHttpBodyParserDefault *lpBody);
 
-  MX_JS_BEGIN_MAP(CRawBodyJsObject, "RawBody", 0)
+  MX_JS_DECLARE(CRawBodyJsObject, "RawBody")
+
+  MX_JS_BEGIN_MAP(CRawBodyJsObject)
     MX_JS_MAP_PROPERTY("size", &CRawBodyJsObject::getSize, NULL, TRUE)
     MX_JS_MAP_METHOD("toString", &CRawBodyJsObject::ToString, 0)
     MX_JS_MAP_METHOD("Read", &CRawBodyJsObject::Read, 2)

@@ -25,10 +25,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\JsHttpServer\JsHttpServer.cpp" />
+    <ClCompile Include="Source\JsHttpServer\JsHttpServerException.cpp" />
     <ClCompile Include="Source\JsHttpServer\JsHttpServerFileFieldJsObject.cpp" />
     <ClCompile Include="Source\JsHttpServer\JsHttpServerHelperMethods.cpp" />
     <ClCompile Include="Source\JsHttpServer\JsHttpServerJavascriptVM.cpp" />
     <ClCompile Include="Source\JsHttpServer\JsHttpServerRawBodyJsObject.cpp" />
+    <ClCompile Include="Source\JsHttpServer\JsHttpServerRequest.cpp" />
     <ClCompile Include="Source\JsHttpServer\JsHttpServerResponseMethods.cpp" />
     <ClCompile Include="Source\JsHttpServer\Plugins\JsHttpServerSessionPlugin.cpp" />
   </ItemGroup>

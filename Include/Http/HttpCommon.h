@@ -120,7 +120,10 @@ public:
   //... if 'stDone', the document has been completed
   HRESULT Parse(__in LPCVOID lpData, __in SIZE_T nDataSize, __out SIZE_T &nDataUsed);
 
-  VOID SetParserIgnoreFlag();
+  int GetErrorCode() const
+    {
+    return sParser.nErrorCode;
+    };
 
   template<class T>
   HRESULT AddHeader(__out_opt T **lplpHeader=NULL)
@@ -234,7 +237,7 @@ private:
       ULONGLONG nSize;
       ULONGLONG nReaded;
     } sChunk;
-    BOOL bIgnoring;
+    int nErrorCode;
   } sParser;
   //----
   struct {
