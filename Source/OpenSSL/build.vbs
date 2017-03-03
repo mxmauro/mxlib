@@ -16,7 +16,8 @@ Set objFS = CreateObject("Scripting.FileSystemObject")
 
 'Check if inside a Visual Studio environment
 If objShell.ExpandEnvironmentStrings("%VCINSTALLDIR%") = "%VCINSTALLDIR%" And _
-        objShell.ExpandEnvironmentStrings("%VisualStudioVersion%") = "%VisualStudioVersion%" Then
+        objShell.ExpandEnvironmentStrings("%VisualStudioVersion%") = "%VisualStudioVersion%" And _
+        objShell.ExpandEnvironmentStrings("%MSBuildLoadMicrosoftTargetsReadOnly%") = "%MSBuildLoadMicrosoftTargetsReadOnly%" Then
 	WScript.Echo "Error: Run this script inside Visual Studio."
 	WScript.Quit 1
 End If
