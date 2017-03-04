@@ -1579,6 +1579,15 @@ BOOL CJavascriptVM::HandleException(__in DukTape::duk_context *lpCtx, __in DukTa
     HRESULT hRes;
 
     //check if there is an unhandled exception handler
+    if (bCatchUnhandled != FALSE && DukTape::duk_is_object(lpCtx, nStackIndex) != 0)
+    {
+      DukTape::duk_get_prop_string(lpCtx, nStackIndex, "\xff""\xff""nonCatcheable");
+      if (DukTape::duk_get_boolean(lpCtx, -1) != 0)
+      {
+        bCatchUnhandled = FALSE;
+      }
+      DukTape::duk_pop(lpCtx);
+    }
     if (bCatchUnhandled != FALSE)
     {
       DukTape::duk_push_global_object(lpCtx);

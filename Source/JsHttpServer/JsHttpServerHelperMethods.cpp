@@ -338,6 +338,9 @@ static DukTape::duk_ret_t OnDie(__in DukTape::duk_context *lpCtx, __in_z LPCSTR 
   DukTape::duk_dup(lpCtx, 0); //copy message
   DukTape::duk_new(lpCtx, 1);
 
+  DukTape::duk_push_boolean(lpCtx, 1);
+  DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""nonCatcheable");
+
   DukTape::duk_throw_raw(lpCtx);
   return 0;
 }

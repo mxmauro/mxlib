@@ -217,6 +217,21 @@
     <ClCompile Include="Test\TestJavascript.cpp" />
     <ClCompile Include="Test\TestJsHttpServer.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Test\Data\Web\bottom.jss" />
+    <None Include="Test\Data\Web\form_upload.jss" />
+    <None Include="Test\Data\Web\increment_cookie_val.jss" />
+    <None Include="Test\Data\Web\index.css" />
+    <None Include="Test\Data\Web\index.jss" />
+    <None Include="Test\Data\Web\moment.min.js" />
+    <None Include="Test\Data\Web\mysql_test.jss" />
+    <None Include="Test\Data\Web\top.jss" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Test\Data\Web\images\header_background.png" />
+    <Image Include="Test\Data\Web\images\header_shadow.png" />
+    <Image Include="Test\Data\Web\images\header_text.png" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
