@@ -116,17 +116,14 @@ public:
 
   __inline LPCSTR GetSqlState() const
     {
-    return (lpStrSqlStateA != NULL) ? (LPCSTR)(*lpStrSqlStateA) : "";
+    return szSqlStateA;
     };
 
 private:
   friend class CJsMySqlPlugin;
 
-  VOID Cleanup();
-
-private:
   int nDbError;
-  CRefCountedStringA *lpStrSqlStateA;
+  CHAR szSqlStateA[8];
 };
 
 } //namespace MX

@@ -28,8 +28,26 @@
 namespace MX {
 
 CJsMySqlError::CJsMySqlError(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex) :
-               nDbError(0), lpStrSqlStateA(NULL), CJsWindowsError(lpCtx, nStackIndex)
+               CJsWindowsError(lpCtx, nStackIndex)
 {
+  LPCSTR sA;
+  SIZE_T nLen;
+
+  nDbError = 0;
+  szSqlStateA[0] = 0;
+
+  DukTape::duk_get_prop_string(lpCtx, nStackIndex, "dbError");
+  nDbError = (int)DukTape::duk_get_int(lpCtx, -1);
+  DukTape::duk_pop(lpCtx);
+
+  DukTape::duk_get_prop_string(lpCtx, nStackIndex, "sqlState");
+  sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "000000";
+  nLen = MX::StrLenA(sA);
+  if (nLen >= MX_ARRAYLEN(szSqlStateA))
+    nLen = MX_ARRAYLEN(szSqlStateA) - 1;
+  MX::MemCopy(szSqlStateA, sA, nLen);
+  szSqlStateA[nLen]  = 0;
+  DukTape::duk_pop(lpCtx);
   return;
 }
 
@@ -41,30 +59,17 @@ CJsMySqlError::CJsMySqlError(__in const CJsMySqlError &obj) : CJsWindowsError(NU
 
 CJsMySqlError::~CJsMySqlError()
 {
-  Cleanup();
   return;
 }
 
 CJsMySqlError& CJsMySqlError::operator=(__in const CJsMySqlError &obj)
 {
-  Cleanup();
   CJsWindowsError::operator=(obj);
   //----
-  lpStrSqlStateA = obj.lpStrSqlStateA;
-  if (obj.lpStrSqlStateA != NULL)
-    obj.lpStrSqlStateA->AddRef();
+  nDbError = obj.nDbError;
+  MX::MemCopy(szSqlStateA, obj.szSqlStateA, sizeof(szSqlStateA));
   //----
   return *this;
-}
-
-VOID CJsMySqlError::Cleanup()
-{
-  if (lpStrSqlStateA != NULL)
-  {
-    lpStrSqlStateA->Release();
-    lpStrSqlStateA = NULL;
-  }
-  return;
 }
 
 } //namespace MX
