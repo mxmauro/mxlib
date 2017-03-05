@@ -386,10 +386,11 @@ HRESULT CHttpServer::OnSocketCreate(__in CIpc *lpIpc, __in HANDLE h, __deref_ino
       }
       else
       {
-        cNewRequest.Attach(MX_DEBUG_NEW CRequest(this, cPropBag));
+        cNewRequest.Attach(MX_DEBUG_NEW CRequest(cPropBag));
       }
       if (!cNewRequest)
         return E_OUTOFMEMORY;
+      cNewRequest->lpHttpServer = this;
       cNewRequest->lpSocketMgr = &cSocketMgr;
       cNewRequest->hConn = h;
       //add ssl layer

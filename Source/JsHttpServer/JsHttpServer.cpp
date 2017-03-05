@@ -30,6 +30,7 @@ namespace MX {
 CJsHttpServer::CJsHttpServer(__in MX::CSockets &_cSocketMgr, __in MX::CPropertyBag &_cPropBag) : CBaseMemObj(),
                cSocketMgr(_cSocketMgr), cPropBag(_cPropBag), cHttpServer(_cSocketMgr, _cPropBag)
 {
+  cNewRequestObjectCallback = NullCallback();
   cRequestCallback = NullCallback();
   cRequestCleanupCallback = NullCallback();
   cRequireJsModuleCallback = NullCallback();
@@ -47,6 +48,12 @@ CJsHttpServer::CJsHttpServer(__in MX::CSockets &_cSocketMgr, __in MX::CPropertyB
 CJsHttpServer::~CJsHttpServer()
 {
   StopListening();
+  return;
+}
+
+VOID CJsHttpServer::On(__in OnNewRequestObjectCallback _cNewRequestObjectCallback)
+{
+  cNewRequestObjectCallback = _cNewRequestObjectCallback;
   return;
 }
 

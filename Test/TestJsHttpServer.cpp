@@ -28,11 +28,12 @@
 
 //-----------------------------------------------------------
 
-class CTestJsRequestUserData : public MX::CHttpServer::CRequestUserData
+class CTestJsRequest : public MX::CJsHttpServer::CJsRequest
 {
 public:
-  CTestJsRequestUserData() : MX::CHttpServer::CRequestUserData()
+  CTestJsRequest(__in MX::CPropertyBag &cPropBag) : MX::CJsHttpServer::CJsRequest(cPropBag)
     { };
+
 public:
   MX::TAutoRefCounted<MX::CJsHttpServerSessionPlugin> cSessionJsObj;
 };
@@ -40,6 +41,7 @@ public:
 //-----------------------------------------------------------
 
 static VOID OnEngineError(__in MX::CIpc *lpIpc, __in HRESULT hErrorCode);
+static HRESULT OnNewRequestObject(__in MX::CPropertyBag &cPropBag, __out MX::CJsHttpServer::CJsRequest **lplpRequest);
 static HRESULT OnRequest(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer::CJsRequest *lpRequest,
                          __inout MX::CJavascriptVM &cJvm, __inout MX::CStringA &cStrCodeA);
 static HRESULT OnRequireJsModule(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer::CJsRequest *lpRequest,
@@ -104,6 +106,7 @@ int TestJsHttpServer(__in BOOL bUseSSL)
   }
   if (SUCCEEDED(hRes))
   {
+    cJsHttpServer.On(MX_BIND_CALLBACK(&OnNewRequestObject));
     cJsHttpServer.On(MX_BIND_CALLBACK(&OnRequest));
     cJsHttpServer.On(MX_BIND_CALLBACK(&OnRequireJsModule));
     cJsHttpServer.On(MX_BIND_CALLBACK(&OnError));
@@ -130,19 +133,20 @@ static VOID OnEngineError(__in MX::CIpc *lpIpc, __in HRESULT hErrorCode)
   return;
 }
 
-static HRESULT OnRequest(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer::CJsRequest *lpRequest,
+static HRESULT OnNewRequestObject(__in MX::CPropertyBag &cPropBag, __out MX::CJsHttpServer::CJsRequest **lplpRequest)
+{
+  *lplpRequest = MX_DEBUG_NEW CTestJsRequest(cPropBag);
+  return ((*lplpRequest) != NULL) ? S_OK : E_OUTOFMEMORY;
+}
+
+static HRESULT OnRequest(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer::CJsRequest *_lpRequest,
                          __inout MX::CJavascriptVM &cJvm, __inout MX::CStringA &cStrCodeA)
 {
-  MX::TAutoRefCounted<CTestJsRequestUserData> cUserData;
+  CTestJsRequest *lpRequest = static_cast<CTestJsRequest*>(_lpRequest);
   MX::CStringW cStrFileNameW;
   LPCWSTR szExtensionW;
   HRESULT hRes;
 
-  cUserData.Attach(MX_DEBUG_NEW CTestJsRequestUserData());
-  if (!cUserData)
-    return E_OUTOFMEMORY;
-  lpRequest->SetUserData(cUserData);
-  //----
   hRes = BuildWebFileName(cStrFileNameW, szExtensionW, lpRequest->GetUrl()->GetPath());
   if (FAILED(hRes))
     return hRes;
@@ -179,31 +183,29 @@ static HRESULT OnRequest(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer:
   return hRes;
 }
 
-static HRESULT OnRequireJsModule(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer::CJsRequest *lpRequest,
+static HRESULT OnRequireJsModule(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer::CJsRequest *_lpRequest,
                                  __inout MX::CJavascriptVM &cJvm,
                                  __inout MX::CJavascriptVM::CRequireModuleContext *lpReqContext,
                                  __inout MX::CStringA &cStrCodeA)
 {
-  MX::TAutoRefCounted<CTestJsRequestUserData> cReqUserData;
+  CTestJsRequest *lpRequest = static_cast<CTestJsRequest*>(_lpRequest);
   MX::CStringW cStrFileNameW;
   LPCWSTR szExtensionW;
   HRESULT hRes;
 
-  cReqUserData.Attach(reinterpret_cast<CTestJsRequestUserData*>(lpRequest->GetUserData()));
-  //----
   if (MX::StrCompareW(lpReqContext->GetId(), L"session") == 0)
   {
-    if (!(cReqUserData->cSessionJsObj))
+    if (!(lpRequest->cSessionJsObj))
     {
-      cReqUserData->cSessionJsObj.Attach(MX_DEBUG_NEW MX::CJsHttpServerSessionPlugin(cJvm));
-      if (!(cReqUserData->cSessionJsObj))
+      lpRequest->cSessionJsObj.Attach(MX_DEBUG_NEW MX::CJsHttpServerSessionPlugin(cJvm));
+      if (!(lpRequest->cSessionJsObj))
         return E_OUTOFMEMORY;
-      hRes = cReqUserData->cSessionJsObj->Setup(lpRequest, MX_BIND_CALLBACK(&OnSessionLoadSave), NULL, NULL, L"/",
-                                                2*60*60, FALSE, TRUE);
+      hRes = lpRequest->cSessionJsObj->Setup(lpRequest, MX_BIND_CALLBACK(&OnSessionLoadSave), NULL, NULL, L"/",
+                                             2*60*60, FALSE, TRUE);
       if (FAILED(hRes))
         return hRes;
     }
-    hRes = lpReqContext->ReplaceModuleExportsWithObject(cReqUserData->cSessionJsObj);
+    hRes = lpReqContext->ReplaceModuleExportsWithObject(lpRequest->cSessionJsObj);
     //done
     return hRes;
   }

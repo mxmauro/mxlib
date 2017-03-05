@@ -82,23 +82,11 @@ public:
   VOID StopListening();
 
 public:
-  class CRequestUserData : public virtual CBaseMemObj, public TRefCounted<CRequestUserData>
-  {
-    MX_DISABLE_COPY_CONSTRUCTOR(CRequestUserData);
-  protected:
-    CRequestUserData() : CBaseMemObj(), TRefCounted<CRequestUserData>()
-      { };
-  public:
-    virtual ~CRequestUserData()
-      { };
-  };
-
-public:
   class CRequest : public virtual CBaseMemObj, public TLnkLstNode<CRequest>, public CIpc::CUserData
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CRequest);
   protected:
-    CRequest(__in CHttpServer *lpHttpServer, __in CPropertyBag &cPropBag);
+    CRequest(__in CPropertyBag &cPropBag);
   public:
     ~CRequest();
 
@@ -196,9 +184,6 @@ public:
     HANDLE GetUnderlyingSocket() const;
     CSockets* GetUnderlyingSocketManager() const;
 
-    VOID SetUserData(__in CRequestUserData *lpUserData);
-    CRequestUserData* GetUserData() const;
-
   private:
     VOID ResetForNewRequest();
 
@@ -255,8 +240,6 @@ public:
       LPCSTR szMimeTypeHintA;
       CStringA cStrFileNameA;
     } sResponse;
-
-    TAutoRefCounted<CRequestUserData> cUserData;
   };
 
 private:

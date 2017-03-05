@@ -40,6 +40,8 @@ public:
   class CRequireModuleContext;
   class CJsRequestRequireModuleContext;
 
+  typedef Callback<HRESULT (__in CPropertyBag &cPropBag, __out CJsRequest **lplpRequest)> OnNewRequestObjectCallback;
+
   typedef Callback<HRESULT (__in CJsHttpServer *lpHttp, __in CJsRequest *lpRequest,
                             __in CJavascriptVM &cJvm, __inout CStringA &cStrCodeA)> OnRequestCallback;
   typedef Callback<VOID (__in CJsHttpServer *lpHttp, __in CJsRequest *lpRequest,
@@ -61,6 +63,7 @@ public:
   CJsHttpServer(__in MX::CSockets &cSocketMgr, __in MX::CPropertyBag &cPropBag);
   ~CJsHttpServer();
 
+  VOID On(__in OnNewRequestObjectCallback cNewRequestObjectCallback);
   VOID On(__in OnRequestCallback cRequestCallback);
   VOID On(__in OnRequestCleanupCallback cRequestCleanupCallback);
   VOID On(__in OnRequireJsModuleCallback cRequireJsModuleCallback);
@@ -87,7 +90,7 @@ public:
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CJsRequest);
   protected:
-    CJsRequest(__in CHttpServer *lpHttpServer, __in CPropertyBag &cPropBag);
+    CJsRequest(__in CPropertyBag &cPropBag);
   public:
     ~CJsRequest();
 
@@ -123,6 +126,7 @@ private:
   CHttpServer cHttpServer;
   //----
   BOOL bShowStackTraceOnError;
+  OnNewRequestObjectCallback cNewRequestObjectCallback;
   OnRequestCallback cRequestCallback;
   OnRequestCleanupCallback cRequestCleanupCallback;
   OnRequireJsModuleCallback cRequireJsModuleCallback;

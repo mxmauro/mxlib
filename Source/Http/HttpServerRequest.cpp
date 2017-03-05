@@ -31,13 +31,12 @@ static const LPCSTR szServerInfoA = "MX-Library";
 
 namespace MX {
 
-CHttpServer::CRequest::CRequest(__in CHttpServer *_lpHttpServer, __in CPropertyBag &_cPropBag) :
-                       CBaseMemObj(), TLnkLstNode<CRequest>(), CIpc::CUserData(), sRequest(_cPropBag),
-                       sResponse(_cPropBag)
+CHttpServer::CRequest::CRequest(__in CPropertyBag &_cPropBag) : CBaseMemObj(), TLnkLstNode<CRequest>(),
+                                                                CIpc::CUserData(),
+                                                                sRequest(_cPropBag), sResponse(_cPropBag)
 {
   _InterlockedExchange(&nMutex, 0);
-  MX_ASSERT(_lpHttpServer != NULL);
-  lpHttpServer = _lpHttpServer;
+  lpHttpServer = NULL;
   hConn = NULL;
   nState = CRequest::StateReceivingRequestHeaders;
   _InterlockedExchange(&nFlags, 0);
@@ -53,7 +52,8 @@ CHttpServer::CRequest::CRequest(__in CHttpServer *_lpHttpServer, __in CPropertyB
 CHttpServer::CRequest::~CRequest()
 {
   MX_ASSERT(sRequest.sTimeout.cActiveList.HasPending() == FALSE);
-  lpHttpServer->OnRequestDestroyed(this);
+  if (lpHttpServer != NULL)
+    lpHttpServer->OnRequestDestroyed(this);
   return;
 }
 
@@ -474,6 +474,8 @@ HRESULT CHttpServer::CRequest::SendErrorPage(__in LONG nStatusCode, __in HRESULT
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
   _InterlockedOr(&nFlags, REQUEST_FLAG_DontKeepAlive);
+  if (lpHttpServer == NULL)
+    return E_FAIL;
   return lpHttpServer->SendGenericErrorPage(this, nStatusCode, hErrorCode, szBodyExplanationA);
 }
 
@@ -489,25 +491,6 @@ CSockets* CHttpServer::CRequest::GetUnderlyingSocketManager() const
   CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
 
   return (nState == StateBuildingResponse) ? const_cast<CSockets*>(lpSocketMgr) : NULL;
-}
-
-VOID CHttpServer::CRequest::SetUserData(__in CRequestUserData *lpUserData)
-{
-  CFastLock cLock(&nMutex);
-
-  cUserData = lpUserData;
-  return;
-}
-
-CHttpServer::CRequestUserData* CHttpServer::CRequest::GetUserData() const
-{
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
-  CRequestUserData *lpUserData;
-
-  lpUserData = cUserData.Get();
-  if (lpUserData != NULL)
-    lpUserData->AddRef();
-  return lpUserData;
 }
 
 VOID CHttpServer::CRequest::ResetForNewRequest()
@@ -526,8 +509,6 @@ VOID CHttpServer::CRequest::ResetForNewRequest()
   sResponse.bLastStreamIsData = FALSE;
   sResponse.szMimeTypeHintA = NULL;
   sResponse.cStrFileNameA.Empty();
-  //----
-  cUserData.Release();
   return;
 }
 
