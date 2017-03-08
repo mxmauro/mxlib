@@ -106,7 +106,9 @@ HRESULT AddHelpersMethods(__in CJavascriptVM &cJvm, __in MX::CHttpServer::CReque
   __EXIT_ON_ERROR(hRes);
   hRes = cJvm.AddNativeFunction("hash", MX_BIND_CALLBACK(&OnHash), 2);
   __EXIT_ON_ERROR(hRes);
-  hRes = cJvm.AddNativeFunction("die", MX_BIND_CALLBACK(&OnDie), 1);
+  hRes = cJvm.AddNativeFunction("die", MX_BIND_CALLBACK(&OnDie), MX_JS_VARARGS);
+  __EXIT_ON_ERROR(hRes);
+  hRes = cJvm.AddNativeFunction("exit", MX_BIND_CALLBACK(&OnDie), MX_JS_VARARGS);
   __EXIT_ON_ERROR(hRes);
   //done
   return S_OK;
@@ -334,8 +336,18 @@ static DukTape::duk_ret_t OnHash(__in DukTape::duk_context *lpCtx, __in_z LPCSTR
 static DukTape::duk_ret_t OnDie(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
                                 __in_z LPCSTR szFunctionNameA)
 {
+  BOOL bHasMessage = (DukTape::duk_get_top(lpCtx) > 0) ? TRUE : FALSE;
+
   DukTape::duk_get_global_string(lpCtx, "SystemExit");
-  DukTape::duk_dup(lpCtx, 0); //copy message
+  if (bHasMessage != FALSE)
+  {
+    DukTape::duk_dup(lpCtx, 0); //copy message
+    DukTape::duk_safe_to_string(lpCtx, -1);
+  }
+  else
+  {
+    DukTape::duk_push_string(lpCtx, "");
+  }
   DukTape::duk_new(lpCtx, 1);
 
   DukTape::duk_push_boolean(lpCtx, 1);

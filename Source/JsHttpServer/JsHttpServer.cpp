@@ -152,66 +152,62 @@ HRESULT CJsHttpServer::OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in CHt
           if (*(e.GetDescription()) != 0)
           {
             CStringA cStrBodyA;
-            HRESULT hRes2;
 
-            lpRequest->ResetResponse();
-            if (cStrBodyA.Format("Error: %s", e.GetDescription()) != FALSE)
-              hRes2 = MX::CHttpCommon::ToHtmlEntities(cStrBodyA);
-            else
-              hRes2 = E_OUTOFMEMORY;
-            if (SUCCEEDED(hRes2))
+            hRes = ResetAndDisableClientCache(lpRequest);
+            if (SUCCEEDED(hRes))
             {
-              if (cStrBodyA.InsertN("<html><body><pre>", 0, 6+6+5) == FALSE ||
-                  cStrBodyA.ConcatN("</pre></body></html>", 6+7+7) == FALSE)
+              if (cStrBodyA.Format("Error: %s", e.GetDescription()) != FALSE)
               {
-                hRes2 = E_OUTOFMEMORY;
+                hRes = MX::CHttpCommon::ToHtmlEntities(cStrBodyA);
+                if (SUCCEEDED(hRes))
+                {
+                  if (cStrBodyA.InsertN("<html><body><pre>", 0, 6+6+5) != FALSE &&
+                      cStrBodyA.ConcatN("</pre></body></html>", 6+7+7) != FALSE)
+                  {
+                    hRes = lpRequest->SendResponse((LPCSTR)cStrBodyA, cStrBodyA.GetLength());
+                  }
+                  else
+                  {
+                    hRes = E_OUTOFMEMORY;
+                  }
+                }
+              }
+              else
+              {
+                hRes = E_OUTOFMEMORY;
               }
             }
-            if (SUCCEEDED(hRes2))
-              hRes2 = lpRequest->SendResponse((LPCSTR)cStrBodyA, cStrBodyA.GetLength());
-            if (SUCCEEDED(hRes2))
-              hRes = hRes2;
-            else
-              hRes = lpRequest->SendErrorPage(500, hRes2);
+          }
+        }
+        catch (CJsWindowsError &e)
+        {
+          hRes = ResetAndDisableClientCache(lpRequest);
+          if (SUCCEEDED(hRes))
+          {
+            hRes = BuildErrorPage(lpRequest, e.GetHResult(), e.GetDescription(), e.GetFileName(), e.GetLineNumber(),
+                                  e.GetStackTrace());
           }
         }
         catch (CJsError &e)
         {
-          CStringA cStrBodyA;
-          HRESULT hRes2;
-
-          hRes2 = (cStrBodyA.Format("Error: %s", e.GetDescription()) != FALSE) ? S_OK : E_OUTOFMEMORY;
-          if (SUCCEEDED(hRes2) && bShowStackTraceOnError != FALSE)
+          hRes = ResetAndDisableClientCache(lpRequest);
+          if (SUCCEEDED(hRes))
           {
-            if (cStrBodyA.AppendFormat(" @ %s(%lu)\r\nStack trace:\r\n%s", e.GetFileName(), e.GetLineNumber(),
-                                       e.GetStackTrace()) == FALSE)
-            {
-              hRes2 = E_OUTOFMEMORY;
-            }
+            hRes = BuildErrorPage(lpRequest, E_FAIL, e.GetDescription(), e.GetFileName(), e.GetLineNumber(),
+                                  e.GetStackTrace());
           }
-          if (SUCCEEDED(hRes2))
-            hRes2 = MX::CHttpCommon::ToHtmlEntities(cStrBodyA);
-          if (SUCCEEDED(hRes2))
-          {
-            if (cStrBodyA.InsertN("<pre>", 0, 5) == FALSE || cStrBodyA.ConcatN("</pre>", 6) == FALSE)
-              hRes2 = E_OUTOFMEMORY;
-          }
-          hRes = lpRequest->SendErrorPage(500, hRes, (SUCCEEDED(hRes2)) ? (LPCSTR)cStrBodyA : "");
         }
         catch (...)
         {
-          hRes = lpRequest->SendErrorPage(500, E_FAIL);
+          hRes = E_FAIL;
         }
       }
     }
-    else if (FAILED(hRes))
-    {
-      hRes = lpRequest->SendErrorPage(500, hRes, "");
-    }
   }
-  else if (FAILED(hRes))
+  if (FAILED(hRes))
   {
-    hRes = lpRequest->SendErrorPage(500, hRes, "");
+    ResetAndDisableClientCache(lpRequest);
+    hRes = lpRequest->SendErrorPage(500, hRes);
   }
   if (cRequestCleanupCallback)
     cRequestCleanupCallback(this, lpRequest, cJvm);
@@ -247,6 +243,40 @@ VOID CJsHttpServer::OnError(__in CHttpServer *lpHttp, __in CHttpServer::CRequest
     cErrorCallback(this, lpRequest, hErrorCode);
   }
   return;
+}
+
+HRESULT CJsHttpServer::ResetAndDisableClientCache(__in CJsRequest *lpRequest)
+{
+  HRESULT hRes;
+
+  lpRequest->ResetResponse();
+  hRes = lpRequest->AddResponseHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  if (SUCCEEDED(hRes))
+    hRes = lpRequest->AddResponseHeader("Pragma", "no-cache");
+  if (SUCCEEDED(hRes))
+    hRes = lpRequest->AddResponseHeader("Expires", "0");
+  return hRes;
+}
+
+HRESULT CJsHttpServer::BuildErrorPage(__in CJsRequest *lpRequest, __in HRESULT hr, __in_z LPCSTR szDescriptionA,
+                                      __in_z LPCSTR szFileNameA, __in int nLine, __in_z LPCSTR szStackTraceA)
+{
+  CStringA cStrBodyA;
+  HRESULT hRes;
+
+  if (cStrBodyA.Format("Error 0x%08X: %s", hr, szDescriptionA) == FALSE)
+    return E_OUTOFMEMORY;
+  if (bShowStackTraceOnError != FALSE)
+  {
+    if (cStrBodyA.AppendFormat(" @ %s(%lu)\r\nStack trace:\r\n%s", szFileNameA, nLine, szStackTraceA) == FALSE)
+      return E_OUTOFMEMORY;
+  }
+  hRes = MX::CHttpCommon::ToHtmlEntities(cStrBodyA);
+  if (FAILED(hRes))
+    return hRes;
+  if (cStrBodyA.InsertN("<pre>", 0, 5) == FALSE || cStrBodyA.ConcatN("</pre>", 6) == FALSE)
+    return E_OUTOFMEMORY;
+  return lpRequest->SendErrorPage(500, hr, (LPCSTR)cStrBodyA);
 }
 
 } //namespace MX

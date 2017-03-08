@@ -120,6 +120,10 @@ private:
   HRESULT InsertPostFileField(__in CJavascriptVM &cJvm, __in CHttpBodyParserFormBase::CFileField *lpFileField,
                               __in LPCSTR szBaseObjectNameA);
 
+  HRESULT ResetAndDisableClientCache(__in CJsRequest *lpRequest);
+  HRESULT BuildErrorPage(__in CJsRequest *lpRequest, __in HRESULT hr, __in_z LPCSTR szDescriptionA,
+                         __in_z LPCSTR szFileNameA, __in int nLine, __in_z LPCSTR szStackTraceA);
+
 private:
   CSockets &cSocketMgr;
   CPropertyBag &cPropBag;
