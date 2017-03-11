@@ -116,7 +116,6 @@ HRESULT CJavascriptVM::Initialize()
       //add WindowsError exception
       DukTape::duk_eval_raw(lpCtx, "function WindowsError(_hr) {\r\n"
                                      "this.hr = _hr;\r\n"
-                                     "if (_hr < 0) _hr = 0xFFFFFFFF + _hr + 1;\r\n"
                                      "Error.call(this, \"\");\r\n"
                                      "this.message = FormatErrorMessage(_hr);\r\n"
                                      "this.name = \"WindowsError\";\r\n"
@@ -1717,11 +1716,14 @@ static DukTape::duk_ret_t OnFormatErrorMessage(__in DukTape::duk_context *lpCtx)
 {
   LPWSTR szBufW;
   HRESULT hRes;
+  DWORD dwErr;
 
   hRes = (HRESULT)(MX::CJavascriptVM::GetInt(lpCtx, 0));
-
-  if (::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, (DWORD)hRes, 0,
-                       (LPWSTR)&szBufW, 1024, NULL) > 0)
+  dwErr = (DWORD)hRes;
+  if ((dwErr & 0xFFFF0000) == 0x80070000)
+    dwErr &= 0x0000FFFF;
+  if (::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwErr, 0, (LPWSTR)&szBufW,
+                       1024, NULL) > 0)
   {
     MX::CStringA cStrTempA;
 

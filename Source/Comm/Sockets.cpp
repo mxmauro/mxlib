@@ -409,9 +409,12 @@ HRESULT CSockets::OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __i
       lpConn->cRwList.Remove(lpPacket);
       FreePacket(lpPacket);
       //instatiate a new accept socket
-      hRes2 = CreateServerConnection(lpConn);
-      if (FAILED(hRes2))
-        FireOnEngineError(hRes2);
+      if (IsShuttingDown() == FALSE)
+      {
+        hRes2 = CreateServerConnection(lpConn);
+        if (FAILED(hRes2))
+          FireOnEngineError(hRes2);
+      }
       ReleaseAndRemoveConnectionIfClosed(lpIncomingConn);
       }
       break;

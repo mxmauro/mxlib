@@ -562,7 +562,7 @@ HRESULT CIpcMessageManager::CMessage::SendReplyEndOfMessageMark()
 {
   DWORD dwMsgId;
 
-  if (dwProtocolVersion == 2)
+  if (dwProtocolVersion <= 1)
     return S_OK; //protocol version 1 has no end of message mark
   dwMsgId = (dwId | _MESSAGE_IS_REPLY) ^ _MESSAGE_END_XOR_MASK;
   return lpIpc->SendMsg(hConn, &dwMsgId, sizeof(dwMsgId));

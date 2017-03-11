@@ -374,7 +374,7 @@ HRESULT CNamedPipes::OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, 
       lpConn->cRwList.Remove(lpPacket);
       FreePacket(lpPacket);
       //process connection
-      if (lpConn->nClass == CIpc::ConnectionClassServer && SUCCEEDED(hOrigRes) && IsShuttingDown() == FALSE)
+      if (lpConn->nClass == CIpc::ConnectionClassServer && IsShuttingDown() == FALSE)
       {
         //on server mode, create a new listener
         HRESULT hRes2 = CreateServerConnection(lpConn->cServerInfo, lpConn->cCreateCallback);

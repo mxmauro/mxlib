@@ -34,6 +34,7 @@
 #define FLAG_NewReceivedDataAvailable                 0x0008
 #define FLAG_GracefulShutdown                         0x0010
 #define FLAG_InSendTransaction                        0x0020
+#define FLAG_ClosingOnShutDown                        0x0040
 
 //-----------------------------------------------------------
 
@@ -385,7 +386,8 @@ VOID CIpc::InternalFinalize()
 
       for (lpConn=itConn.Begin(sConnections.cList); lpConn!=NULL; lpConn=itConn.Next())
       {
-        if (lpConn->IsClosed() == FALSE)
+        if ((_InterlockedOr(&(lpConn->nFlags), FLAG_ClosingOnShutDown) & FLAG_ClosingOnShutDown) == 0)
+        //if (lpConn->IsClosed() == FALSE)
         {
           _InterlockedIncrement(&(lpConn->nRefCount));
           break;
@@ -1316,7 +1318,7 @@ BOOL CIpc::CConnectionBase::IsClosed()
 
 BOOL CIpc::CConnectionBase::IsClosedOrGracefulShutdown()
 {
-  return ((__InterlockedRead(&nFlags) & (FLAG_GracefulShutdown|FLAG_Closed)) != 0) ? TRUE : FALSE;
+  return ((__InterlockedRead(&nFlags) & (FLAG_GracefulShutdown | FLAG_Closed)) != 0) ? TRUE : FALSE;
 }
 
 BOOL CIpc::CConnectionBase::IsConnected()
