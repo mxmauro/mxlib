@@ -346,27 +346,38 @@ HRESULT CNamedPipes::OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, 
         if (::ConnectNamedPipe(lpConn->hPipe, lpPacket->GetOverlapped()) == FALSE)
         {
           hRes = MX_HRESULT_FROM_LASTERROR();
-          if (hRes == MX_E_IoPending || hRes == HRESULT_FROM_WIN32(ERROR_PIPE_CONNECTED))
+          if (hRes == MX_E_IoPending)
+          {
             hRes = S_OK;
+          }
+          else if (hRes == HRESULT_FROM_WIN32(ERROR_PIPE_CONNECTED))
+          {
+            hRes = S_OK;
+            goto pipe_connected;
+          }
         }
         if (SUCCEEDED(hRes))
         {
           _InterlockedIncrement(&(lpConn->nRefCount));
         }
-        else
-        {
-          lpConn->cRwList.Remove(lpPacket);
-          FreePacket(lpPacket);
-        }
       }
-      else
+      if (FAILED(hRes))
       {
         lpConn->cRwList.Remove(lpPacket);
         FreePacket(lpPacket);
+        //process connection
+        if (lpConn->nClass == CIpc::ConnectionClassServer && IsShuttingDown() == FALSE)
+        {
+          //on server mode, create a new listener
+          HRESULT hRes2 = CreateServerConnection(lpConn->cServerInfo, lpConn->cCreateCallback);
+          if (FAILED(hRes2))
+            FireOnEngineError(hRes2);
+        }
       }
       break;
 
     case TypeListen:
+pipe_connected:
       hOrigRes = hRes;
       if (SUCCEEDED(hRes))
         hRes = lpConn->HandleConnected();
