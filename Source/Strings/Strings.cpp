@@ -141,7 +141,8 @@ int StrNCompareA(__in_z LPCSTR szSrcA1, __in_z LPCSTR szSrcA2, __in SIZE_T nLen,
   res = 0;
   while (res == 0 && nLen > 0)
   {
-    asStr[0].Length = asStr[1].Length = (nLen > 16384) ? 16384 : (USHORT)nLen;
+    asStr[0].Length = asStr[0].MaximumLength =
+      asStr[1].Length = asStr[1].MaximumLength = (nLen > 16384) ? 16384 : (USHORT)nLen;
     res = ::MxRtlCompareString(&asStr[0], &asStr[1], bCaseInsensitive);
     if (res == 0)
     {
@@ -170,7 +171,8 @@ int StrNCompareW(__in_z LPCWSTR szSrcW1, __in_z LPCWSTR szSrcW2, __in SIZE_T nLe
   res = 0;
   while (res == 0 && nLen > 0)
   {
-    usStr[0].Length = usStr[1].Length = (nLen > 16384) ? 32768 : (USHORT)(nLen * 2);
+    usStr[0].Length = usStr[0].MaximumLength =
+      usStr[1].Length = usStr[1].MaximumLength = (nLen > 16384) ? 32768 : (USHORT)(nLen * 2);
     res = ::MxRtlCompareUnicodeString(&usStr[0], &usStr[1], bCaseInsensitive);
     if (res == 0)
     {
@@ -207,7 +209,7 @@ int StrNCompareAW(__in_z LPCSTR szSrcA1, __in_z LPCWSTR szSrcW2, __in SIZE_T nLe
     for (i=0; i<usStr[0].Length; i++)
       szTempBufW[i] = aToUnicodeChar[szSrcA1[i]];
     usStr[0].Length <<= 1;
-    usStr[1].Length = usStr[0].Length;
+    usStr[1].Length = usStr[1].MaximumLength =  usStr[0].MaximumLength = usStr[0].Length;
     res = ::MxRtlCompareUnicodeString(&usStr[0], &usStr[1], bCaseInsensitive);
     if (res == 0)
     {
@@ -548,7 +550,7 @@ BOOL CStringA::ConcatN(__in_nz_opt LPCWSTR szSrcW, __in SIZE_T nSrcLen)
     nThisRoundLen = (k > 16384) ? 16384 : k;
     if (nThisRoundLen > 1 && usStr.Buffer[nThisRoundLen-1] >= 0xD800 && usStr.Buffer[nThisRoundLen-1] <= 0xDBFF)
       nThisRoundLen--; //don't split surrogate pairs
-    usStr.Length = (USHORT)nThisRoundLen * sizeof(WCHAR);
+    usStr.Length = usStr.MaximumLength = (USHORT)nThisRoundLen * sizeof(WCHAR);
     nAnsiLen += (SIZE_T)::MxRtlUnicodeStringToAnsiSize(&usStr) - 1; //remove NUL char terminator
     usStr.Buffer += nThisRoundLen;
   }

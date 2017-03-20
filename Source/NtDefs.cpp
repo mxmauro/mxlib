@@ -738,7 +738,7 @@ PVOID MxGetRemoteDllHandle(__in HANDLE hProcess, __in_z PCWSTR szModuleNameW)
   //try scanning mapped image files
   lpCurrAddr = NULL;
   usTemp.Buffer = (PWSTR)szModuleNameW;
-  usTemp.Length = (USHORT)nModuleNameLen;
+  usTemp.Length = usTemp.MaximumLength = (USHORT)nModuleNameLen;
   while (1)
   {
     if (!NT_SUCCESS(MxNtQueryVirtualMemory(hProcess, lpCurrAddr, MxMemoryBasicInformation, &sMbi,
