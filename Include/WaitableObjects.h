@@ -154,14 +154,8 @@ public:
       return;
       };
 
-    BOOL IsLockHeld() const
-      {
-      return bLockHeld;
-      };
-
   private:
     CCriticalSection &cCS;
-    BOOL bLockHeld;
   };
 
 public:
@@ -487,7 +481,7 @@ public:
     nFlagMask = _nFlagMask;
     lpnLock = _lpnLock;
     while ((_InterlockedOr(lpnLock, nFlagMask) & nFlagMask) != 0)
-      MX::_YieldProcessor();
+      _YieldProcessor();
     return;
     };
 
@@ -598,25 +592,24 @@ class CAutoRundownProtection : public virtual CBaseMemObj
 public:
   CAutoRundownProtection(__in LONG volatile *_lpnValue) : CBaseMemObj()
     {
-    bAcquired = RundownProt_Acquire(lpnValue = _lpnValue);
+    lpnValue = (RundownProt_Acquire(_lpnValue) != FALSE) ? _lpnValue : NULL;
     return;
     };
 
   ~CAutoRundownProtection()
     {
-    if (bAcquired != FALSE)
+    if (lpnValue != NULL)
       RundownProt_Release(lpnValue);
     return;
     };
 
-  BOOL IsAcquired()
+  BOOL IsAcquired() const
     {
-    return bAcquired;
+    return (lpnValue != NULL) ? TRUE : FALSE;
     };
 
 private:
   LONG volatile *lpnValue;
-  BOOL bAcquired;
 };
 
 } //namespace MX
