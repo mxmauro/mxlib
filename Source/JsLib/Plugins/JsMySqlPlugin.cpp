@@ -215,7 +215,8 @@ DukTape::duk_ret_t CJsMySqlPlugin::Connect()
   if (_CALLAPI(mysql_real_connect)(_DB(), szHostA, (szUserNameA != NULL) ? szUserNameA : "",
                                    (szPasswordA != NULL) ? szPasswordA : "", NULL, (UINT)nPort, NULL,
                                    CLIENT_LONG_PASSWORD|CLIENT_LONG_FLAG|CLIENT_COMPRESS|CLIENT_LOCAL_FILES|
-                                   CLIENT_PROTOCOL_41|CLIENT_TRANSACTIONS|CLIENT_SECURE_CONNECTION) == NULL)
+                                   CLIENT_PROTOCOL_41|CLIENT_TRANSACTIONS|CLIENT_SECURE_CONNECTION|
+                                   CLIENT_FOUND_ROWS) == NULL)
   {
     ThrowDbError(__FILE__, __LINE__, TRUE);
     delete _INTERNAL();
