@@ -436,11 +436,11 @@ private:
 
 //-----------------------------------------------------------
 
-class CJsObjectBase : public virtual CBaseMemObj, public TRefCounted<CJsObjectBase>
+class CJsObjectBase : public virtual TRefCounted<CBaseMemObj>
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CJsObjectBase);
 public:
-  CJsObjectBase(__in DukTape::duk_context *lpCtx) : CBaseMemObj(), TRefCounted<CJsObjectBase>()
+  CJsObjectBase(__in DukTape::duk_context *lpCtx) : TRefCounted<CBaseMemObj>()
     {
     MX_ASSERT(lpCtx != NULL);
     lpJVM = CJavascriptVM::FromContext(lpCtx);
@@ -560,12 +560,7 @@ public:
     };
 
 protected:
-  class CRefCountedStringA : public CStringA, public TRefCounted<CRefCountedStringA>
-  {
-  public:
-    CRefCountedStringA() : CStringA(), TRefCounted<CRefCountedStringA>()
-      { };
-  };
+  typedef TRefCounted<CStringA> CRefCountedStringA;
 
 private:
   friend class CJavascriptVM;

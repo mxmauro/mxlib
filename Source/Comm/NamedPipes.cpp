@@ -405,7 +405,7 @@ pipe_connected:
 
 //-----------------------------------------------------------
 
-CNamedPipes::CServerInfo::CServerInfo() : CBaseMemObj(), TRefCounted<CNamedPipes::CServerInfo>()
+CNamedPipes::CServerInfo::CServerInfo() : TRefCounted<CBaseMemObj>()
 {
   lpSecDescr = NULL;
   return;

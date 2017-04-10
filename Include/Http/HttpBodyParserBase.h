@@ -49,7 +49,7 @@
 
 namespace MX {
 
-class CHttpBodyParserBase : public virtual CBaseMemObj, public TRefCounted<CHttpBodyParserBase>
+class CHttpBodyParserBase : public virtual TRefCounted<CBaseMemObj>
 {
 protected:
   CHttpBodyParserBase();

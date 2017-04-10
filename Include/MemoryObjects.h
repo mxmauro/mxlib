@@ -134,6 +134,8 @@ public:
 protected:
   CBaseMemObj()
     { };
+  virtual ~CBaseMemObj()
+    { };
 };
 
 } //namespace MX

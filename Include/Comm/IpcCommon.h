@@ -86,11 +86,11 @@ public:
 
   //--------
 
-  class CUserData : public virtual CBaseMemObj, public TRefCounted<CUserData>
+  class CUserData : public virtual TRefCounted<CBaseMemObj>
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CUserData);
   public:
-    CUserData() : CBaseMemObj(), TRefCounted<CUserData>()
+    CUserData() : TRefCounted<CBaseMemObj>()
       { };
     virtual ~CUserData()
       { };

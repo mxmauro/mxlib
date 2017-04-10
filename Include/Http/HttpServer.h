@@ -82,7 +82,7 @@ public:
   VOID StopListening();
 
 public:
-  class CRequest : public virtual CBaseMemObj, public TLnkLstNode<CRequest>, public CIpc::CUserData
+  class CRequest : public CIpc::CUserData, public TLnkLstNode<CRequest>
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CRequest);
   protected:

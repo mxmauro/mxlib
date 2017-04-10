@@ -64,7 +64,7 @@ public:
   HRESULT WaitForReplyAsync(__in DWORD dwId, __in OnMessageReplyCallback cCallback, __in LPVOID lpUserData);
 
 public:
-  class CMessage : public virtual CBaseMemObj, public TLnkLstNode<CMessage>, public TRefCounted<CMessage>
+  class CMessage : public virtual TRefCounted<CBaseMemObj>, public TLnkLstNode<CMessage>
   {
   private:
     CMessage(__in CIpc *lpIpc, __in HANDLE hConn);

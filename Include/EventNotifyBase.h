@@ -34,7 +34,7 @@
 namespace MX {
 
 template<class T>
-class TEventNotifyBase : public virtual CBaseMemObj, public TRefCounted<TEventNotifyBase<T>>
+class TEventNotifyBase : public virtual TRefCounted<CBaseMemObj>
 {
   MX_DISABLE_COPY_CONSTRUCTOR(TEventNotifyBase<T>);
 public:
@@ -51,8 +51,7 @@ public:
   } eState;
 
 public:
-  TEventNotifyBase(__in OnNotifyCallback _cCallback, __in_opt LPVOID _lpUserData=NULL) :
-                   CBaseMemObj(), TRefCounted<TEventNotifyBase<T>>()
+  TEventNotifyBase(__in OnNotifyCallback _cCallback, __in_opt LPVOID _lpUserData=NULL) : TRefCounted<CBaseMemObj>()
     {
     cCallback = _cCallback;
     lpUserData = _lpUserData;

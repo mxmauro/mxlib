@@ -32,16 +32,15 @@
 namespace MX {
 
 template <class T>
-class TRefCounted
+class TRefCounted : public T
 {
-protected:
-  TRefCounted()
+public:
+  TRefCounted() : T()
     {
     _InterlockedExchange(&nRefCount, 1);
     return;
     };
 
-public:
   virtual ~TRefCounted()
     {
     return;

@@ -35,7 +35,7 @@
 
 namespace MX {
 
-CHttpBodyParserBase::CHttpBodyParserBase() : CBaseMemObj(), TRefCounted<CHttpBodyParserBase>()
+CHttpBodyParserBase::CHttpBodyParserBase() : TRefCounted<CBaseMemObj>()
 {
   bEntityTooLarge = FALSE;
   return;

@@ -514,8 +514,8 @@ int CIpcMessageManager::ReplyMsgWaitCompareFunc(__in LPVOID lpContext, __in REPL
 
 //-----------------------------------------------------------
 
-CIpcMessageManager::CMessage::CMessage(__in CIpc *_lpIpc, __in HANDLE _hConn) : CBaseMemObj(), TLnkLstNode<CMessage>(),
-                                                                                TRefCounted<CMessage>()
+CIpcMessageManager::CMessage::CMessage(__in CIpc *_lpIpc, __in HANDLE _hConn) : TRefCounted<CBaseMemObj>(),
+                                                                                TLnkLstNode<CMessage>()
 {
   MemSet(&sOvr, 0, sizeof(sOvr));
   dwId = 0;

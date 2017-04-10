@@ -56,7 +56,7 @@ public:
   HRESULT ImpersonateConnectionClient(__in HANDLE h);
 
 private:
-  class CServerInfo : public virtual CBaseMemObj, public TRefCounted<CServerInfo>
+  class CServerInfo : public virtual TRefCounted<CBaseMemObj>
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CServerInfo);
   public:
