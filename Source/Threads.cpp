@@ -37,14 +37,6 @@
 
 //-----------------------------------------------------------
 
-typedef struct {
-  MX::CThread *lpThread;
-  LONG volatile *lpnThreadStartedOK;
-  LONG volatile * volatile lpnThreadHold;
-  HANDLE hThreadEndedOK;
-  BOOL bAutoDelete;
-} MXTHREAD_PARAM;
-
 #define MS_VC_EXCEPTION                           0x406D1388
 
 #pragma pack(push,8)
@@ -58,7 +50,6 @@ typedef struct tagTHREADNAME_INFO {
 
 //-----------------------------------------------------------
 
-static unsigned int __stdcall CommonThreadProc(__inout LPVOID lpParameter);
 static int MyExceptionFilter(__out EXCEPTION_POINTERS *lpDest, __in EXCEPTION_POINTERS *lpSrc);
 
 //-----------------------------------------------------------
@@ -88,62 +79,28 @@ CThread::~CThread()
   return;
 }
 
-BOOL CThread::Start(__in BOOL bSuspended)
+BOOL CThread::Start(__in_opt BOOL bSuspended)
 {
-  MXTHREAD_PARAM sParams;
-  LONG volatile nThreadStartedOK;
   unsigned int tid;
 
   if (hThread != NULL)
-  {
-    if (cThreadEndedOK.Wait(0) == FALSE)
-      return TRUE;
-    Stop(0);
-  }
+    return TRUE;
   if (cKillEvent.Create(TRUE, FALSE) == FALSE)
     return FALSE;
-  if (cThreadEndedOK.Create(TRUE, FALSE) == FALSE)
-  {
-    cKillEvent.Close();
-    return FALSE;
-  }
-  nThreadStartedOK = 0;
-  sParams.lpThread = this;
-  sParams.hThreadEndedOK = cThreadEndedOK.Get();
-  sParams.lpnThreadStartedOK = &nThreadStartedOK;
-  sParams.lpnThreadHold = NULL;
-  sParams.bAutoDelete = bAutoDelete;
-  hThread = (HANDLE)_beginthreadex(NULL, dwStackSize, &CommonThreadProc, &sParams, 0, &tid);
+  hThread = (HANDLE)_beginthreadex(NULL, dwStackSize, &CThread::CommonThreadProc, this,
+                                   (bSuspended != FALSE) ? CREATE_SUSPENDED : 0, &tid);
   if (hThread == NULL)
   {
-    cThreadEndedOK.Close();
     cKillEvent.Close();
     return FALSE;
   }
   dwThreadId = (DWORD)tid;
   ::SetThreadPriority(hThread, nPriority);
-  //wait for thread initialization
-  while (__InterlockedRead(&nThreadStartedOK) == 0)
-    _YieldProcessor();
-  if (bSuspended != FALSE)
-  {
-    if (::SuspendThread(hThread) == (DWORD)-1)
-    {
-      ::TerminateThread(hThread, 0);
-      hThread = NULL;
-      cThreadEndedOK.Close();
-      cKillEvent.Close();
-      return FALSE;
-    }
-  }
-  //allow continue
-  _InterlockedExchange(sParams.lpnThreadHold, 1);
   return TRUE;
 }
 
-BOOL CThread::Stop(__in DWORD dwTimeout)
+BOOL CThread::Stop(__in_opt DWORD dwTimeout)
 {
-  HANDLE hEvents[2];
   SIZE_T dwRetCode;
   DWORD dwExitCode;
 
@@ -151,51 +108,21 @@ BOOL CThread::Stop(__in DWORD dwTimeout)
   {
     if (dwThreadId == ::GetCurrentThreadId() || bAutoDelete != FALSE)
       return StopAsync();
-    if (cThreadEndedOK.Wait(0) == FALSE)
+    cKillEvent.Set();
+    dwRetCode = ::WaitForSingleObject(hThread, dwTimeout);
+    if (dwRetCode == WAIT_TIMEOUT)
     {
-      cKillEvent.Set();
-      hEvents[0] = hThread;
-      hEvents[1] = cThreadEndedOK.Get();
-      while (1)
-      {
-        ::CoCancelCall(dwThreadId, 0);
-        ////dwRetCode = WaitForMultipleObjects(2, hEvents, FALSE, (nTimeout > 100) ? 100 : dwTimeout);
-        //dwRetCode = ::WaitForSingleObject(hThread, (dwTimeout > 100) ? 100 : dwTimeout);
-        //dwRetCode = ::MsgWaitForMultipleObjectsEx(1, &hThread, (dwTimeout > 100) ? 100 : dwTimeout, QS_ALLINPUT,
-        //                                          /*MWMO_ALERTABLE|*/MWMO_INPUTAVAILABLE);
-        //dwRetCode = ::WaitForSingleObject(hThread, (dwTimeout > 100) ? 100 : dwTimeout);
-        dwRetCode = CoWaitAndDispatchMessages((dwTimeout > 100) ? 100 : dwTimeout, 1, &hThread);
-        if (dwRetCode == WAIT_TIMEOUT)
-        {
-          dwExitCode = STILL_ACTIVE;
-          ::GetExitCodeThread(hThread, &dwExitCode);
-          if (dwExitCode != STILL_ACTIVE)
-            dwRetCode = WAIT_OBJECT_0;
-        }
-        if (dwRetCode != WAIT_TIMEOUT)
-          break;
-        if (dwTimeout != INFINITE)
-        {
-          if (dwTimeout > 100)
-            dwTimeout -= 100;
-          else
-            break;
-        }
-      }
+      dwExitCode = STILL_ACTIVE;
+      ::GetExitCodeThread(hThread, &dwExitCode);
+      if (dwExitCode != STILL_ACTIVE)
+        dwRetCode = WAIT_OBJECT_0;
     }
-    else
-    {
-      //if i'm here, it may be that C runtime is still freeing some stuff
-      //so i wait 2 seconds to give him a chance to free all the stuff
-      dwRetCode = ::WaitForSingleObject(hThread, 2000);
-    }
-    if (dwRetCode != WAIT_OBJECT_0 && dwRetCode != (WAIT_OBJECT_0+1))
+    if (dwRetCode != WAIT_OBJECT_0)
       ::TerminateThread(hThread, 0);
     ::CloseHandle(hThread);
     hThread = NULL;
   }
   dwThreadId = 0;
-  cThreadEndedOK.Close();
   cKillEvent.Close();
   return TRUE;
 }
@@ -204,8 +131,7 @@ BOOL CThread::StopAsync()
 {
   if (hThread != NULL)
   {
-    if (cThreadEndedOK.Wait(0) == FALSE)
-      cKillEvent.Set();
+    cKillEvent.Set();
   }
   return TRUE;
 }
@@ -245,7 +171,59 @@ BOOL CThread::Wait(__in DWORD dwTimeout, __in DWORD dwEventCount, __in_opt LPHAN
     return TRUE;
   }
   hEvents[0] = hThread;
-  hEvents[1] = cThreadEndedOK.Get();
+  for (i=0; i<dwEventCount; i++)
+    hEvents[1+i] = lphEventList[i];
+  dwRetCode = ::WaitForMultipleObjects(1+dwEventCount, hEvents, FALSE, dwTimeout);
+  if (dwRetCode == WAIT_FAILED)
+  {
+    if (lpdwHitEvent != NULL)
+      *lpdwHitEvent = DWORD_MAX;
+    return TRUE;
+  }
+  if (dwRetCode == WAIT_OBJECT_0)
+  {
+    if (lpdwHitEvent != NULL)
+      *lpdwHitEvent = 0;
+    return TRUE;
+  }
+  if (dwRetCode >= (WAIT_OBJECT_0+1) && dwRetCode <= (WAIT_OBJECT_0+dwEventCount))
+  {
+    if (lpdwHitEvent != NULL)
+      *lpdwHitEvent = dwRetCode - WAIT_OBJECT_0;
+    return TRUE;
+  }
+  if (lpdwHitEvent != NULL)
+    *lpdwHitEvent = 0;
+  return FALSE;
+}
+
+BOOL CThread::IsRunning()
+{
+  if (hThread == NULL)
+    return FALSE;
+  if (::WaitForSingleObject(hThread, 0) == WAIT_OBJECT_0)
+    return FALSE;
+  return TRUE;
+}
+
+BOOL CThread::CheckForAbort(__in DWORD dwTimeout, __in DWORD dwEventCount, __out_opt LPHANDLE lphEventList,
+                            __out_opt LPDWORD lpdwHitEvent)
+{
+  HANDLE hEvents[50];
+  DWORD i, dwRetCode;
+
+  if (hThread == NULL)
+  {
+    if (lpdwHitEvent != NULL)
+      *lpdwHitEvent = 0;
+    return FALSE;
+  }
+  if (dwEventCount > 48)
+    return FALSE;
+  if (dwEventCount > 0 && lphEventList == NULL)
+    return FALSE;
+  hEvents[0] = hThread;
+  hEvents[1] = cKillEvent.Get();
   for (i=0; i<dwEventCount; i++)
     hEvents[2+i] = lphEventList[i];
   dwRetCode = ::WaitForMultipleObjects(2+dwEventCount, hEvents, FALSE, dwTimeout);
@@ -255,294 +233,20 @@ BOOL CThread::Wait(__in DWORD dwTimeout, __in DWORD dwEventCount, __in_opt LPHAN
       *lpdwHitEvent = DWORD_MAX;
     return TRUE;
   }
-  if (dwRetCode == WAIT_OBJECT_0 || dwRetCode == (WAIT_OBJECT_0+1))
+  if (dwRetCode >= WAIT_OBJECT_0 && dwRetCode <= (WAIT_OBJECT_0+1))
   {
     if (lpdwHitEvent != NULL)
       *lpdwHitEvent = 0;
     return TRUE;
   }
-  if (dwRetCode >= WAIT_OBJECT_0+2 && dwRetCode <= (WAIT_OBJECT_0+1+dwEventCount))
+  if (dwRetCode >= (WAIT_OBJECT_0+2) && dwRetCode <= (WAIT_OBJECT_0+1+dwEventCount))
   {
     if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = dwRetCode-(WAIT_OBJECT_0+1);
-    return TRUE;
-  }
-  if (lpdwHitEvent != NULL)
-    *lpdwHitEvent = 0;
-  return FALSE;
-}
-
-BOOL CThread::MsgWait(__in DWORD dwTimeout, __in DWORD dwEventCount, __in_opt LPHANDLE lphEventList,
-                      __out_opt LPDWORD lpdwHitEvent)
-{
-  HANDLE hEvents[50];
-  DWORD i, dwRetCode;
-
-  if (dwEventCount > 48)
-    return FALSE;
-  if (dwEventCount > 0 && lphEventList == NULL)
-    return FALSE;
-  if (hThread == NULL)
-  {
-    if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = 0;
-    return TRUE;
-  }
-  hEvents[0] = hThread;
-  hEvents[1] = cThreadEndedOK.Get();
-  for (i=0; i<dwEventCount; i++)
-    hEvents[2+i] = lphEventList[i];
-  dwRetCode = MsgWaitAndDispatchMessages(dwTimeout, 2+dwEventCount, hEvents);
-  if (dwRetCode == WAIT_FAILED)
-  {
-    if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = DWORD_MAX;
-    return TRUE;
-  }
-  if (dwRetCode == WAIT_OBJECT_0 || dwRetCode == (WAIT_OBJECT_0+1))
-  {
-    if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = 0;
-    return TRUE;
-  }
-  if (dwRetCode >= WAIT_OBJECT_0+2 && dwRetCode <= (WAIT_OBJECT_0+1+dwEventCount))
-  {
-    if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = dwRetCode-(WAIT_OBJECT_0+1);
-    return TRUE;
-  }
-  if (lpdwHitEvent != NULL)
-    *lpdwHitEvent = 0;
-  return FALSE;
-}
-
-BOOL CThread::CoWait(__in DWORD dwTimeout, __in DWORD dwEventCount, __in_opt LPHANDLE lphEventList,
-                     __out_opt LPDWORD lpdwHitEvent)
-{
-  HANDLE hEvents[50];
-  DWORD i, dwRetCode;
-
-  if (dwEventCount > 48)
-    return FALSE;
-  if (dwEventCount > 0 && lphEventList == NULL)
-    return FALSE;
-  if (hThread == NULL)
-  {
-    if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = 0;
-    return TRUE;
-  }
-  hEvents[0] = hThread;
-  hEvents[1] = cThreadEndedOK.Get();
-  for (i=0; i<dwEventCount; i++)
-    hEvents[2+i] = lphEventList[i];
-  dwRetCode = CoWaitAndDispatchMessages(dwTimeout, 2+dwEventCount, hEvents);
-  if (dwRetCode == WAIT_FAILED)
-  {
-    if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = DWORD_MAX;
-    return TRUE;
-  }
-  if (dwRetCode==WAIT_OBJECT_0 || dwRetCode==(WAIT_OBJECT_0+1))
-  {
-    if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = 0;
-    return TRUE;
-  }
-  if (dwRetCode>=WAIT_OBJECT_0+2 && dwRetCode<=(WAIT_OBJECT_0+1+dwEventCount))
-  {
-    if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = dwRetCode-(WAIT_OBJECT_0+1);
-    return TRUE;
-  }
-  if (lpdwHitEvent != NULL)
-    *lpdwHitEvent = 0;
-  return FALSE;
-}
-
-DWORD CThread::MsgWaitAndDispatchMessages(__in DWORD dwTimeout, __in DWORD dwEventsCount, __in LPHANDLE lpHandles)
-{
-  MSG sMsg;
-  DWORD dwRetCode;
-  BOOL bUnicode, bRet;
-  struct {
-    BOOL bHasQuit;
-    WPARAM wParam;
-  } sQuitMsg;
-
-  MemSet(&sQuitMsg, 0, sizeof(sQuitMsg));
-  while (1)
-  {
-    dwRetCode = ::MsgWaitForMultipleObjectsEx(dwEventsCount, lpHandles, dwTimeout, QS_ALLINPUT|QS_ALLPOSTMESSAGE,
-                                              MWMO_INPUTAVAILABLE|MWMO_ALERTABLE);
-    if (dwRetCode == WAIT_IO_COMPLETION)
-      continue;
-    if (dwRetCode != WAIT_OBJECT_0+dwEventsCount)
-      break;
-    bRet = FALSE;
-    while (bRet == FALSE && ::PeekMessageW(&sMsg, NULL, 0, 0, PM_NOREMOVE) != FALSE)
-    {
-      bUnicode = ::IsWindowUnicode(sMsg.hwnd);
-      if (bUnicode != FALSE)
-        bRet = ::GetMessageW(&sMsg, NULL, 0, 0);
-      else
-        bRet = ::GetMessageA(&sMsg, NULL, 0, 0);
-      if (bRet > 0)
-      {
-        if (sMsg.message == WM_QUIT)
-        {
-          sQuitMsg.bHasQuit = TRUE;
-          sQuitMsg.wParam = sMsg.wParam;
-        }
-        else
-        {
-          if (bUnicode != FALSE)
-            bRet = ::IsDialogMessageW(sMsg.hwnd, &sMsg);
-          else
-            bRet = ::IsDialogMessageA(sMsg.hwnd, &sMsg);
-          if (bRet == FALSE)
-          {
-            ::TranslateMessage(&sMsg);
-            if (bUnicode != FALSE)
-              ::DispatchMessageW(&sMsg);
-            else
-              ::DispatchMessageA(&sMsg);
-          }
-        }
-      }
-      dwRetCode = ::WaitForMultipleObjects(dwEventsCount, lpHandles, FALSE, 0);
-      bRet = (dwRetCode>=WAIT_OBJECT_0 && dwRetCode<WAIT_OBJECT_0+dwEventsCount) ? TRUE : FALSE;
-    }
-    if (bRet != FALSE)
-      break;
-  }
-  if (sQuitMsg.bHasQuit != FALSE)
-  {
-    ::PostMessageW(NULL, WM_NULL, 0, 0);
-    ::PostQuitMessage((int)sQuitMsg.wParam);
-  }
-  return dwRetCode;
-}
-
-DWORD CThread::CoWaitAndDispatchMessages(__in DWORD dwTimeout, __in DWORD dwEventsCount, __in LPHANDLE lpHandles)
-{
-  HRESULT hRes;
-  DWORD dwIndex;
-
-restart:
-  hRes = ::CoWaitForMultipleHandles(COWAIT_ALERTABLE/*|X_COWAIT_DISPATCH_CALLS|X_COWAIT_DISPATCH_WINDOW_MESSAGES*/,
-                                    dwTimeout, (ULONG)dwEventsCount, lpHandles, &dwIndex);
-  if (hRes == RPC_S_CALLPENDING)
-  {
-    ::SetLastError(WAIT_TIMEOUT);
-    return WAIT_TIMEOUT;
-  }
-  if (hRes == S_OK)
-  {
-    if (dwIndex == WAIT_IO_COMPLETION)
-      goto restart;
-    return dwIndex;
-  }
-  ::PostMessageW(NULL, WM_NULL, 0, 0);
-  ::SetLastError((DWORD)hRes & 0x0000FFFF);
-  return WAIT_FAILED;
-}
-
-BOOL CThread::IsRunning()
-{
-  if (hThread == NULL)
-    return FALSE;
-  if (cThreadEndedOK.Wait(0) != FALSE)
-    return FALSE;
-  return TRUE;
-}
-
-BOOL CThread::CheckForAbort(__in DWORD dwTimeout, __in DWORD dwEventCount, __out_opt LPHANDLE lphEventList,
-                               __out_opt LPDWORD lpdwHitEvent)
-{
-  HANDLE hEvents[51];
-  DWORD i, dwRetCode;
-
-  if (hThread == NULL)
-  {
-    if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = 0;
-    return FALSE;
-  }
-  if (dwEventCount > 48)
-    return FALSE;
-  if (dwEventCount > 0 && lphEventList == NULL)
-    return FALSE;
-  hEvents[0] = hThread;
-  hEvents[1] = cThreadEndedOK.Get();
-  hEvents[2] = cKillEvent.Get();
-  for (i=0; i<dwEventCount; i++)
-    hEvents[3+i] = lphEventList[i];
-  dwRetCode = ::WaitForMultipleObjects(3+dwEventCount, hEvents, FALSE, dwTimeout);
-  if (dwRetCode == WAIT_FAILED)
-  {
-    if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = DWORD_MAX;
-    return TRUE;
-  }
-  if (dwRetCode >= WAIT_OBJECT_0 && dwRetCode <= (WAIT_OBJECT_0+2))
-  {
-    if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = 0;
-    return TRUE;
-  }
-  if (dwRetCode >= WAIT_OBJECT_0+3 && dwRetCode <= (WAIT_OBJECT_0+2+dwEventCount))
-  {
-    if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = dwRetCode-(WAIT_OBJECT_0+2);
+      *lpdwHitEvent = dwRetCode - (WAIT_OBJECT_0+1);
   }
   else
   {
     if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = 0;
-  }
-  return FALSE;
-}
-
-BOOL CThread::MsgCheckForAbort(__in DWORD dwTimeout, __in DWORD dwEventCount, __out_opt LPHANDLE lphEventList,
-                                  __out_opt LPDWORD lpdwHitEvent)
-{
-  HANDLE hEvents[51];
-  DWORD i, dwRetCode;
-
-  if (hThread == NULL)
-  {
-    if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = 0;
-    return FALSE;
-  }
-  if (dwEventCount > 48)
-    return FALSE;
-  if (dwEventCount > 0 && lphEventList == NULL)
-    return FALSE;
-  hEvents[0] = hThread;
-  hEvents[1] = cThreadEndedOK.Get();
-  hEvents[2] = cKillEvent.Get();
-  for (i=0; i<dwEventCount; i++)
-    hEvents[3+i] = lphEventList[i];
-  dwRetCode = ::MsgWaitForMultipleObjects(3+dwEventCount, hEvents, FALSE, dwTimeout, QS_ALLINPUT);
-  if (dwRetCode == WAIT_FAILED)
-  {
-    if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = DWORD_MAX;
-    return TRUE;
-  }
-  if (dwRetCode >= WAIT_OBJECT_0 && dwRetCode <= (WAIT_OBJECT_0+2))
-  {
-    if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = 0;
-    return TRUE;
-  }
-  if (lpdwHitEvent != NULL)
-  {
-    if (dwRetCode >= WAIT_OBJECT_0+3 && dwRetCode <= (WAIT_OBJECT_0+2+dwEventCount))
-      *lpdwHitEvent = dwRetCode-(WAIT_OBJECT_0+2);
-    else
       *lpdwHitEvent = 0;
   }
   return FALSE;
@@ -582,7 +286,9 @@ BOOL CThread::SetPriority(__in int _nPriority)
       _nPriority != THREAD_PRIORITY_BELOW_NORMAL &&
       _nPriority != THREAD_PRIORITY_LOWEST &&
       _nPriority != THREAD_PRIORITY_IDLE)
+  {
     return FALSE;
+  }
   if (hThread != NULL)
   {
     if (::SetThreadPriority(hThread, _nPriority) == FALSE)
@@ -616,6 +322,17 @@ HRESULT CThread::SetAutoDelete(__in BOOL _bAutoDelete)
     return MX_E_AlreadyInitialized;
   bAutoDelete = _bAutoDelete;
   return S_OK;
+}
+
+unsigned int __stdcall CThread::CommonThreadProc(__in LPVOID lpParameter)
+{
+  CThread *lpThis = (CThread*)lpParameter;
+  BOOL bAutoDelete = lpThis->bAutoDelete;
+
+  lpThis->ThreadProc();
+  if (bAutoDelete != FALSE)
+    delete lpThis;
+  return 0;
 }
 
 //-----------------------------------------------------------
@@ -966,27 +683,6 @@ VOID CThreadPool::WorkerThreadProc(__in SIZE_T nParam)
 } //namespace MX
 
 //-----------------------------------------------------------
-
-static unsigned int __stdcall CommonThreadProc(__inout LPVOID _lpParameter)
-{
-  MXTHREAD_PARAM *lpParameter = (MXTHREAD_PARAM*)_lpParameter;
-  MXTHREAD_PARAM sParams;
-  LONG volatile nThreadHold = 0;
-
-  MX::MemCopy(&sParams, lpParameter, sizeof(MXTHREAD_PARAM));
-  MX::__InterlockedExchangePointer((volatile LPVOID *)&(lpParameter->lpnThreadHold), (LPVOID)&nThreadHold);
-  _InterlockedExchange(sParams.lpnThreadStartedOK, 1);
-  while (MX::__InterlockedRead(&nThreadHold) == 0)
-    MX::_YieldProcessor();
-  //run thread proc
-  sParams.lpThread->ThreadProc();
-  //signal thread end
-  ::SetEvent(sParams.hThreadEndedOK);
-  //delete object if required to do so
-  if (sParams.bAutoDelete != FALSE)
-    delete sParams.lpThread;
-  return 0;
-}
 
 static int MyExceptionFilter(__out EXCEPTION_POINTERS *lpDest, __in EXCEPTION_POINTERS *lpSrc)
 {

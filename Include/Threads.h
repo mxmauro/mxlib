@@ -38,17 +38,14 @@ public:
   CThread();
   virtual ~CThread();
 
-  virtual BOOL Start(__in BOOL bSuspended=FALSE);
-  virtual BOOL Stop(__in DWORD dwTimeout=INFINITE);
+  virtual BOOL Start(__in_opt BOOL bSuspended=FALSE);
+  virtual BOOL Stop(__in_opt DWORD dwTimeout=INFINITE);
   virtual BOOL StopAsync();
   virtual BOOL Pause();
   virtual BOOL Resume();
   virtual BOOL IsRunning();
   virtual BOOL CheckForAbort(__in DWORD dwTimeout=0, __in DWORD dwEventCount=0,
                              __out_opt LPHANDLE lphEventList=NULL, __out_opt LPDWORD lpdwHitEvent=NULL);
-  virtual BOOL MsgCheckForAbort(__in DWORD dwTimeout=INFINITE, __in DWORD dwEventCount=0,
-                                __out_opt LPHANDLE lphEventList=NULL,
-                                __out_opt LPDWORD lpdwHitEvent=NULL);
 
   static VOID SetThreadName(__in DWORD dwThreadId, __in_z_opt LPCSTR szName);
   virtual VOID SetThreadName(__in_z_opt LPCSTR szName);
@@ -77,21 +74,17 @@ public:
 
   virtual BOOL Wait(__in DWORD dwTimeout=0, __in DWORD dwEventCount=0,
                     __in_opt LPHANDLE lphEventList=NULL, __out_opt LPDWORD lpdwHitEvent=NULL);
-  virtual BOOL MsgWait(__in DWORD dwTimeout=INFINITE, __in DWORD dwEventCount=0,
-                       __in_opt LPHANDLE lphEventList=NULL, __out_opt LPDWORD lpdwHitEvent=NULL);
-  virtual BOOL CoWait(__in DWORD dwTimeout=INFINITE, __in DWORD dwEventCount=0,
-                      __in_opt LPHANDLE lphEventList=NULL, __out_opt LPDWORD lpdwHitEvent=NULL);
 
   virtual VOID ThreadProc()=0;
 
-  static DWORD MsgWaitAndDispatchMessages(__in DWORD dwTimeout, __in DWORD dwEventsCount, __in LPHANDLE lpHandles);
-  static DWORD CoWaitAndDispatchMessages(__in DWORD dwTimeout, __in DWORD dwEventsCount, __in LPHANDLE lpHandles);
+private:
+  static unsigned int __stdcall CommonThreadProc(__in LPVOID _lpParameter);
 
 protected:
   int nPriority;
   HANDLE hThread;
   DWORD dwThreadId, dwStackSize;
-  CWindowsEvent cKillEvent, cThreadEndedOK;
+  CWindowsEvent cKillEvent;
   BOOL bAutoDelete;
 };
 
