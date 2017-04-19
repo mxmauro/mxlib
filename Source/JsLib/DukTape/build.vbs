@@ -39,7 +39,7 @@ Loop
 
 'Setup directorie
 szScriptPath = Left(Wscript.ScriptFullName, Len(Wscript.ScriptFullName)-Len(Wscript.ScriptName))
-szPythonPath = szScriptPath & "..\..\Utilities\Python27"
+szPythonPath = szScriptPath & "..\..\..\Utilities\Python27"
 
 'Check if we have to rebuild the libraries
 aTargetFiles = Array("Source\dist\duktape.c", "Source\dist\duktape.h", "Source\dist\duk_config.h", "Source\dist\duk_source_meta.json")
