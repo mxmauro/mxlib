@@ -17,3 +17,4 @@
 /Source/JsLib/DukTape/setenv.bat
 /Source/OpenSSL/setenv.bat
 /Source/OpenSSL/Generated/
+*.pyc
