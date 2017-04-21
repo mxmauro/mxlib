@@ -73,7 +73,6 @@ End If
 If bRebuild <> False Then
 	'Setup environment variables
 	Set objShellEnv = objShell.Environment("PROCESS")
-	objShellEnv("PATH") = szPythonPath & ";" & objShellEnv("PATH")
 
 	'Prepare
 	szOrigFolder = objShell.CurrentDirectory
@@ -84,7 +83,8 @@ If bRebuild <> False Then
 	objShell.Run "CMD.EXE /c RD /S /Q " & Chr(34) & szScriptPath & "Source\dist" & Chr(34) & " >NUL 2>NUL", 1, True
 	objShell.Run "CMD.EXE /c MD " & Chr(34) & szScriptPath & "Source\dist" & Chr(34) & " >NUL 2>NUL", 1, True
 
-	S = "python.exe " & Chr(34) & szScriptPath & "Source\tools\configure.py" & Chr(34) & " --fixup-file " & Chr(34) & szScriptPath & "duk_custom.h" & Chr(34) & " --output-directory " & Chr(34) & szScriptPath & "Source\dist" & Chr(34)
+	S = Chr(34) & szPythonPath & "\python.exe" & Chr(34) & " " & Chr(34) & szScriptPath & "Source\tools\configure.py" & Chr(34)
+	S = S & " --fixup-file " & Chr(34) & szScriptPath & "duk_custom.h" & Chr(34) & " --output-directory " & Chr(34) & szScriptPath & "Source\dist" & Chr(34)
 	I = objShell.Run(S, 1, True)
 	If I = 0 Then
 		'Pause 5 seconds because Python's processes may still creating the lib WTF?????
