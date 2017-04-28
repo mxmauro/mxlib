@@ -103,6 +103,8 @@ public:
     return (dwMaxThreadsCount > dwMinThreadsCount) ? TRUE : FALSE;
     };
 
+  static DWORD GetNumberOfProcessors();
+
 private:
   class CThread : public virtual CBaseMemObj, public TClassWorkerThread<CIoCompletionPortThreadPool>,
                   public TLnkLstNode<CThread>

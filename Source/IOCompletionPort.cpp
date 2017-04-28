@@ -174,16 +174,14 @@ CIoCompletionPortThreadPool::CIoCompletionPortThreadPool(__in_opt DWORD _dwMinTh
                                 __in_opt DWORD _dwMaxThreadsCount, __in_opt DWORD _dwWorkerThreadIdleTimeoutMs,
                                 __in_opt DWORD _dwShutdownThreadThreshold) : CBaseMemObj()
 {
-  SYSTEM_INFO sInfo;
-
   SlimRWL_Initialize(&nSlimMutex);
   cThreadStartCallback = NullCallback();
   cThreadEndCallback = NullCallback();
   cThreadStartErrorCallback = NullCallback();
   if (_dwMinThreadsCount == 0 && _dwMaxThreadsCount == 0)
   {
-    ::GetSystemInfo(&sInfo);
-    _dwMinThreadsCount = _dwMaxThreadsCount = (sInfo.dwNumberOfProcessors > 1) ? sInfo.dwNumberOfProcessors : 1;
+    _dwMinThreadsCount = GetNumberOfProcessors() * 2;
+    _dwMaxThreadsCount = _dwMinThreadsCount;
   }
   else
   {
@@ -276,6 +274,14 @@ HRESULT CIoCompletionPortThreadPool::Post(__in OnPacketCallback &cCallback, __in
   if ((!cCallback) || lpOvr == NULL)
     return E_POINTER;
   return cIOCP.Post((ULONG_PTR)&cCallback, dwBytes, lpOvr);
+}
+
+DWORD CIoCompletionPortThreadPool::GetNumberOfProcessors()
+{
+  SYSTEM_INFO sInfo;
+
+  ::GetSystemInfo(&sInfo);
+  return (sInfo.dwNumberOfProcessors > 1) ? sInfo.dwNumberOfProcessors : 1;
 }
 
 VOID CIoCompletionPortThreadPool::InternalFinalize()
