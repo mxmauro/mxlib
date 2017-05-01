@@ -309,8 +309,6 @@ HRESULT CIpcMessageManager::WaitForReplyAsync(__in DWORD dwId, __in OnMessageRep
     return E_INVALIDARG;
   if (!cCallback)
     return E_POINTER;
-  if (__InterlockedRead(&nShuttingDown) != 0)
-    return MX_E_Cancelled;
   //queue waiter
   hRes = S_OK;
   sNewItem.dwId = dwId | _MESSAGE_IS_REPLY;
@@ -319,8 +317,16 @@ HRESULT CIpcMessageManager::WaitForReplyAsync(__in DWORD dwId, __in OnMessageRep
   {
     CFastLock cLock(&(sReplyMsgWait.nMutex));
 
-    if (sReplyMsgWait.cList.SortedInsert(&sNewItem, &CIpcMessageManager::ReplyMsgWaitCompareFunc, NULL) == FALSE)
-      hRes = E_OUTOFMEMORY;
+    if (__InterlockedRead(&nShuttingDown) == 0)
+    {
+      if (sReplyMsgWait.cList.SortedInsert(&sNewItem, &CIpcMessageManager::ReplyMsgWaitCompareFunc, NULL) == FALSE)
+        hRes = E_OUTOFMEMORY;
+    }
+    else
+    {
+      hRes = MX_E_Cancelled;
+    }
+
   }
   //add post for checking already received message replies
   if (SUCCEEDED(hRes) && sFlush.nActive == 0)

@@ -954,7 +954,8 @@ check_pending_req:
         hRes = hRes2;
     }
   }
-  else if (__InterlockedRead(&(lpConn->nOutstandingReads)) == 0 && __InterlockedRead(&(lpConn->nOutstandingWrites)) == 0)
+  else if (__InterlockedRead(&(lpConn->nOutstandingReads)) == 0 &&
+           __InterlockedRead(&(lpConn->nOutstandingWrites)) == 0)
   {
     if ((_InterlockedOr(&(lpConn->nFlags), FLAG_DisconnectedSent) & FLAG_DisconnectedSent) == 0)
     {
