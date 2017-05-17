@@ -48,7 +48,7 @@ HRESULT CFileStream::Create(__in LPCWSTR szFileNameW, __in_opt DWORD dwDesiredAc
   NTSTATUS nNtStatus;
 
   Close();
-  if ((dwDesiredAccess & (GENERIC_READ|GENERIC_WRITE|GENERIC_EXECUTE|GENERIC_ALL)) == 0)
+  if ((dwDesiredAccess & (GENERIC_READ | GENERIC_WRITE | GENERIC_EXECUTE | GENERIC_ALL)) == 0)
     dwDesiredAccess |= SYNCHRONIZE;
   nNtStatus = ::MxCreateFile(&h, szFileNameW, dwDesiredAccess, dwShareMode, dwCreationDisposition,
                              dwFlagsAndAttributes, lpSecurityAttributes);
@@ -68,9 +68,11 @@ VOID CFileStream::Close()
   return;
 }
 
-HRESULT CFileStream::Read(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_T &nReaded)
+HRESULT CFileStream::Read(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_T &nReaded,
+                          __in_opt ULONGLONG nStartOffset)
 {
   MX_IO_STATUS_BLOCK sIoStatus;
+  ULARGE_INTEGER liOffset;
   NTSTATUS nNtStatus;
 
   nReaded = 0;
@@ -80,7 +82,9 @@ HRESULT CFileStream::Read(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_T 
     return E_POINTER;
   if (nBytes > (SIZE_T)0xFFFFFFFFUL)
     nBytes = (SIZE_T)0xFFFFFFFFUL;
-  nNtStatus = ::MxNtReadFile(cFileH, NULL, NULL, NULL, &sIoStatus, lpDest, (ULONG)nBytes, NULL, NULL);
+  liOffset.QuadPart = nStartOffset;
+  nNtStatus = ::MxNtReadFile(cFileH, NULL, NULL, NULL, &sIoStatus, lpDest, (ULONG)nBytes,
+                             (nStartOffset != ULONGLONG_MAX) ? (PLARGE_INTEGER)&liOffset : NULL, NULL);
   if (nNtStatus == STATUS_PENDING)
   {
     nNtStatus = ::MxNtWaitForSingleObject(cFileH, FALSE, NULL);
@@ -94,14 +98,17 @@ HRESULT CFileStream::Read(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_T 
   //done
   nReaded = (SIZE_T)(sIoStatus.Information);
 #ifdef _DEBUG
-  nCurrentOffset += (ULONGLONG)nReaded;
+  if (nStartOffset == ULONGLONG_MAX)
+    nCurrentOffset += (ULONGLONG)nReaded;
 #endif //_DEBUG
   return S_OK;
 }
 
-HRESULT CFileStream::Write(__in LPCVOID lpSrc, __in SIZE_T nBytes, __out SIZE_T &nWritten)
+HRESULT CFileStream::Write(__in LPCVOID lpSrc, __in SIZE_T nBytes, __out SIZE_T &nWritten,
+                           __in_opt ULONGLONG nStartOffset)
 {
   MX_IO_STATUS_BLOCK sIoStatus;
+  ULARGE_INTEGER liOffset;
   ULONG nToWrite;
   NTSTATUS nNtStatus;
 
@@ -113,11 +120,13 @@ HRESULT CFileStream::Write(__in LPCVOID lpSrc, __in SIZE_T nBytes, __out SIZE_T 
   if (lpSrc == NULL)
     return E_POINTER;
   nNtStatus = STATUS_SUCCESS;
+  liOffset.QuadPart = nStartOffset;
   while (nBytes > 0)
   {
     MemSet(&sIoStatus, 0, sizeof(sIoStatus));
     nToWrite = (nBytes < (SIZE_T)0xFFFFFFFFUL) ? (ULONG)nBytes : 0xFFFFFFFFUL;
-    nNtStatus = ::MxNtWriteFile(cFileH, NULL, NULL, NULL, &sIoStatus, (PVOID)lpSrc, nToWrite, NULL, NULL);
+    nNtStatus = ::MxNtWriteFile(cFileH, NULL, NULL, NULL, &sIoStatus, (PVOID)lpSrc, nToWrite,
+                                (nStartOffset != ULONGLONG_MAX) ? (PLARGE_INTEGER)&liOffset : NULL, NULL);
     if (nNtStatus == STATUS_PENDING)
     {
       nNtStatus = ::MxNtWaitForSingleObject(cFileH, FALSE, NULL);
@@ -127,12 +136,15 @@ HRESULT CFileStream::Write(__in LPCVOID lpSrc, __in SIZE_T nBytes, __out SIZE_T 
     if (!NT_SUCCESS(nNtStatus))
       break;
 #ifdef _DEBUG
-    nCurrentOffset += (ULONGLONG)(sIoStatus.Information);
+    if (nStartOffset == ULONGLONG_MAX)
+      nCurrentOffset += (ULONGLONG)(sIoStatus.Information);
 #endif //_DEBUG
     if (nToWrite != sIoStatus.Information)
       return MX_E_WriteFault;
     lpSrc = (LPBYTE)lpSrc + nToWrite;
     nBytes -= (SIZE_T)nToWrite;
+    if (nStartOffset != ULONGLONG_MAX)
+      liOffset.QuadPart += (ULONGLONG)nToWrite;
   }
   if (!NT_SUCCESS(nNtStatus))
     return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));

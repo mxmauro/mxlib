@@ -40,8 +40,10 @@ public:
   HRESULT Create(__in_opt SIZE_T nInitialSize=0, __in_opt BOOL bGrowable=TRUE);
   VOID Close();
 
-  HRESULT Read(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_T &nReaded);
-  HRESULT Write(__in LPCVOID lpSrc, __in SIZE_T nBytes, __out SIZE_T &nWritten);
+  HRESULT Read(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_T &nReaded,
+               __in_opt ULONGLONG nStartOffset=ULONGLONG_MAX);
+  HRESULT Write(__in LPCVOID lpSrc, __in SIZE_T nBytes, __out SIZE_T &nWritten,
+                __in_opt ULONGLONG nStartOffset=ULONGLONG_MAX);
 
   HRESULT Seek(__in ULONGLONG nPosition, __in_opt eSeekMethod nMethod=SeekStart);
 
@@ -52,8 +54,11 @@ public:
   CMemoryStream* Clone();
 
 private:
+  BOOL EnsureSize(__in SIZE_T nRequiredSize);
+
+private:
   LPBYTE lpData;
-  SIZE_T nOffset, nSize, nAllocated, nGranularity;
+  SIZE_T nCurrPos, nSize, nAllocated, nGranularity;
   BOOL bCanGrow;
 };
 

@@ -240,6 +240,7 @@ protected:
       nOrder = 0;
       lpConn = NULL;
       lpStream = NULL;
+      nStreamReadOffset = 0ui64;
       cAfterWriteSignalCallback = NullCallback();
       lpUserData = NULL;
       dwInUseSize = 0;
@@ -311,7 +312,16 @@ protected:
       lpStream = _lpStream;
       if (lpStream != NULL)
         lpStream->AddRef();
+      nStreamReadOffset = 0ui64;
       return;
+      };
+
+    __inline HRESULT ReadStream(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_T &nReaded)
+      {
+      HRESULT hRes = lpStream->Read(lpDest, nBytes, nReaded, nStreamReadOffset);
+      if (SUCCEEDED(hRes))
+        nStreamReadOffset += (ULONGLONG)nReaded;
+      return hRes;
       };
 
     __inline CStream* GetStream() const
@@ -374,6 +384,7 @@ protected:
     ULONG nOrder;
     CConnectionBase *lpConn;
     CStream *lpStream;
+    ULONGLONG nStreamReadOffset;
     LPVOID lpUserData;
     union {
       DWORD dwInUseSize;

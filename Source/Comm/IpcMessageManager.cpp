@@ -206,7 +206,8 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
         nRemaining -= nToRead;
         nCurrMsgSize += nToRead;
 #ifdef MX_DEBUG_OUTPUT
-        MX::DebugPrint("ProcessIncomingPacket: Data=%lu bytes\n", (DWORD)nToRead);
+        MX::DebugPrint("ProcessIncomingPacket: Data=%lu bytes (%lu left)\n", (DWORD)nToRead,
+                       (DWORD)(cCurrMessage->nDataLen - nCurrMsgSize));
 #endif //MX_DEBUG_OUTPUT
         if (nCurrMsgSize >= cCurrMessage->nDataLen)
         {

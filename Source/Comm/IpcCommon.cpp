@@ -805,15 +805,17 @@ check_pending_req:
             }
             //read from stream
             nReaded = 0;
-            hRes = lpStreamPacket->GetStream()->Read(lpPacket->GetBuffer(), (SIZE_T)dwPacketSize, nReaded);
+            hRes = lpStreamPacket->ReadStream(lpPacket->GetBuffer(), (SIZE_T)dwPacketSize, nReaded);
             if (SUCCEEDED(hRes) && nReaded > (SIZE_T)dwPacketSize)
             {
               MX_ASSERT(FALSE);
               hRes = MX_E_InvalidData;
             }
             if (hRes == MX_E_EndOfFileReached)
+            {
               hRes = S_OK;
-            if (FAILED(hRes))
+            }
+            else if (FAILED(hRes))
             {
               FreePacket(lpPacket);
               //dealing with an error, requeue

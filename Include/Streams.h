@@ -26,6 +26,7 @@
 
 #include "Defines.h"
 #include "RefCounted.h"
+#include <intsafe.h>
 
 //-----------------------------------------------------------
 
@@ -47,8 +48,10 @@ public:
   virtual ~CStream()
     { };
 
-  virtual HRESULT Read(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_T &nReaded) = 0;
-  virtual HRESULT Write(__in LPCVOID lpSrc, __in SIZE_T nBytes, __out SIZE_T &nWritten) = 0;
+  virtual HRESULT Read(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_T &nReaded,
+                       __in_opt ULONGLONG nStartOffset=ULONGLONG_MAX) = 0;
+  virtual HRESULT Write(__in LPCVOID lpSrc, __in SIZE_T nBytes, __out SIZE_T &nWritten,
+                        __in_opt ULONGLONG nStartOffset=ULONGLONG_MAX) = 0;
   HRESULT WriteString(__in LPCSTR szFormatA, ...);
   HRESULT WriteStringV(__in LPCSTR szFormatA, __in va_list argptr);
   HRESULT WriteString(__in LPCWSTR szFormatA, ...);

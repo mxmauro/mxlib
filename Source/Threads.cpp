@@ -556,7 +556,7 @@ DWORD CThreadPool::InitializeWorker()
     lplpNewList = (CWorkerThread**)MX_MALLOC((sActiveThreads.nSize+32) * sizeof(CWorkerThread*));
     if (lplpNewList == NULL)
       return ERROR_NOT_ENOUGH_MEMORY;
-    memcpy(lplpNewList, sActiveThreads.lplpWorkerThreadsList, sActiveThreads.nCount*sizeof(CWorkerThread*));
+    MemCopy(lplpNewList, sActiveThreads.lplpWorkerThreadsList, sActiveThreads.nCount*sizeof(CWorkerThread*));
     MX_FREE(sActiveThreads.lplpWorkerThreadsList);
     sActiveThreads.lplpWorkerThreadsList = lplpNewList;
     sActiveThreads.nSize += 32;
