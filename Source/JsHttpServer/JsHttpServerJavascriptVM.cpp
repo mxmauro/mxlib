@@ -310,7 +310,7 @@ HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CJsRequest *
 
       hRes = lpParser->ToString(cStrTempA);
       __EXIT_ON_ERROR(hRes);
-      lpJsObj = MX_DEBUG_NEW Internals::CRawBodyJsObject(NULL);
+      lpJsObj = MX_DEBUG_NEW Internals::CRawBodyJsObject(cJvm);
       if (!lpJsObj)
         return E_OUTOFMEMORY;
       lpJsObj->Initialize(lpParser);
