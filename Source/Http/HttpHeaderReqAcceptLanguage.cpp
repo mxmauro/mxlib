@@ -234,7 +234,8 @@ HRESULT CHttpHeaderReqAcceptLanguage::CLanguage::SetLanguage(__in_z LPCSTR szLan
     if (*szLanguageA == '-')
     {
       szStartA_2 = ++szLanguageA;
-      while ((*szLanguageA >= 'A' && *szLanguageA <= 'Z') || (*szLanguageA >= 'a' && *szLanguageA <= 'z'))
+      while ((*szLanguageA >= 'A' && *szLanguageA <= 'Z') || (*szLanguageA >= 'a' && *szLanguageA <= 'z') ||
+             (*szLanguageA >= '0' && *szLanguageA <= '9'))
         szLanguageA++;
       if (szLanguageA == szStartA_2 || szLanguageA > szStartA_2+8)
         return MX_E_InvalidData;
