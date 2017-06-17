@@ -357,7 +357,8 @@ headers_end_reached:
           if (StrCompareA(GetRequestMethod(), "HEAD") == 0 || StrCompareA(GetRequestMethod(), "GET") == 0)
           {
             //content or chunked transfer is not allowed
-            if (nContentLength != ULONGLONG_MAX || (nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0)
+            if ((nContentLength != 0 && nContentLength != ULONGLONG_MAX) ||
+                (nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0)
             {
               sParser.nState = StateBodyStart;
               sParser.nErrorCode = 400;
