@@ -43,13 +43,13 @@
 namespace DukTape {
 
 //#include "..\..\Include\JsLib\DukTape\duktape.h"
-#pragma warning(disable : 4101)
+#pragma warning(disable : 4101 4703)
 #include "DukTape\Source\dist\duktape.c"
 #define snprintf mx_sprintf_s
 //#include "DukTape\Source\extras\module-duktape\duk_module_duktape.c"
 #include "DukTape\Source\extras\module-node\duk_module_node.c"
 #undef snprintf
-#pragma warning(default : 4101)
+#pragma warning(default : 4101 4703)
 
 } //namespace DukTape
 
