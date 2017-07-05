@@ -195,109 +195,14 @@ class CWindowsEvent : public CWindowsHandle
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CWindowsEvent);
 public:
-  CWindowsEvent() : CWindowsHandle()
-    { };
+  CWindowsEvent();
 
   BOOL Create(__in BOOL bManualReset, __in BOOL bInitialState, __in_z_opt LPCWSTR szNameW=NULL,
-              __in_opt LPSECURITY_ATTRIBUTES lpSecAttr=NULL, __out_opt LPBOOL lpbAlreadyExists=NULL)
-    {
-    MX_OBJECT_ATTRIBUTES sObjAttr;
-    MX_UNICODE_STRING usName;
-    HANDLE _h;
-    NTSTATUS nNtStatus;
+              __in_opt LPSECURITY_ATTRIBUTES lpSecAttr=NULL, __out_opt LPBOOL lpbAlreadyExists=NULL);
 
-    if (lpbAlreadyExists != NULL)
-      *lpbAlreadyExists = FALSE;
-    MemSet(&sObjAttr, 0, sizeof(sObjAttr));
-    sObjAttr.Length = (ULONG)sizeof(sObjAttr);
-    sObjAttr.Attributes = 0x00000080; //OBJ_OPENIF
-    if (szNameW != NULL)
-    {
-      //get root directory handle
-      sObjAttr.RootDirectory = GetRootDirHandle();
-      if (sObjAttr.RootDirectory == NULL)
-        return FALSE;
-      //setup object name
-      usName.Buffer = (PWSTR)szNameW;
-      for (usName.Length=0; szNameW[usName.Length]!=0; usName.Length++);
-      usName.Length *= (USHORT)sizeof(WCHAR);
-      usName.MaximumLength = usName.Length;
-      sObjAttr.ObjectName = &usName;
-    }
-    //setup security
-    if (lpSecAttr != NULL)
-    {
-      sObjAttr.SecurityDescriptor = lpSecAttr->lpSecurityDescriptor;
-      if (lpSecAttr->bInheritHandle != FALSE)
-        sObjAttr.Attributes |= 0x00000002; //OBJ_INHERIT
-    }
-    //create event
-    nNtStatus = ::MxNtCreateEvent(&_h, EVENT_ALL_ACCESS, &sObjAttr,
-                                  (bManualReset == FALSE) ? MxSynchronizationEvent : MxNotificationEvent,
-                                  bInitialState);
-    //close root directory
-    if (sObjAttr.RootDirectory != NULL)
-      ::MxNtClose(sObjAttr.RootDirectory);
-    //process result
-    if (!NT_SUCCESS(nNtStatus))
-      return FALSE;
-    if (nNtStatus == STATUS_OBJECT_NAME_EXISTS && lpbAlreadyExists != NULL)
-      *lpbAlreadyExists = TRUE;
-    Attach(_h);
-    return TRUE;
-    };
+  BOOL Open(__in_z_opt LPCWSTR szNameW=NULL, __in_opt BOOL bInherit=FALSE);
 
-  BOOL Open(__in_z_opt LPCWSTR szNameW=NULL, __in_opt BOOL bInherit=FALSE)
-    {
-    MX_OBJECT_ATTRIBUTES sObjAttr;
-    MX_UNICODE_STRING usName;
-    NTSTATUS nNtStatus;
-    HANDLE _h;
-
-    MemSet(&sObjAttr, 0, sizeof(sObjAttr));
-    sObjAttr.Length = (ULONG)sizeof(sObjAttr);
-    sObjAttr.Attributes = 0x00000080; //OBJ_OPENIF
-    if (bInherit != FALSE)
-      sObjAttr.Attributes |= 0x00000002; //OBJ_INHERIT
-    if (szNameW != NULL)
-    {
-      //get root directory handle
-      sObjAttr.RootDirectory = GetRootDirHandle();
-      if (sObjAttr.RootDirectory == NULL)
-        return FALSE;
-      //setup object name
-      usName.Buffer = (PWSTR)szNameW;
-      for (usName.Length=0; szNameW[usName.Length]!=0; usName.Length++);
-      usName.Length *= (USHORT)sizeof(WCHAR);
-      usName.MaximumLength = usName.Length;
-      sObjAttr.ObjectName = &usName;
-    }
-    //open event
-    nNtStatus = ::MxNtOpenEvent(&_h, EVENT_ALL_ACCESS, &sObjAttr);
-    //close root directory
-    if (sObjAttr.RootDirectory != NULL)
-      ::MxNtClose(sObjAttr.RootDirectory);
-    //process result
-    if (!NT_SUCCESS(nNtStatus))
-      return FALSE;
-    Attach(_h);
-    return TRUE;
-    };
-
-  BOOL Wait(__in DWORD dwTimeout=0)
-    {
-    LARGE_INTEGER liTimeout, *lpliTimeout;
-
-    if (h == NULL)
-      return TRUE;
-    lpliTimeout = NULL;
-    if (dwTimeout != INFINITE)
-    {
-      liTimeout.QuadPart = (LONGLONG)MX_MILLISECONDS_TO_100NS(dwTimeout);
-      lpliTimeout = &liTimeout;
-    }
-    return (::MxNtWaitForSingleObject(h, FALSE, lpliTimeout) == WAIT_OBJECT_0) ? TRUE : FALSE;
-    };
+  BOOL Wait(__in DWORD dwTimeoutMs);
 
   BOOL Reset()
     {
@@ -308,24 +213,6 @@ public:
     {
     return (h != NULL && NT_SUCCESS(::MxNtSetEvent(h, NULL))) ? TRUE : FALSE;
     };
-
-private:
-  HANDLE GetRootDirHandle()
-    {
-    MX_OBJECT_ATTRIBUTES sObjAttr;
-    MX_UNICODE_STRING usName;
-    HANDLE _h;
-    NTSTATUS nNtStatus;
-
-    //open root directory
-    MemSet(&sObjAttr, 0, sizeof(sObjAttr));
-    sObjAttr.Length = (ULONG)sizeof(sObjAttr);
-    usName.Buffer = L"\\BaseNamedObjects";
-    usName.Length = usName.MaximumLength = 34;
-    sObjAttr.ObjectName = &usName;
-    nNtStatus = ::MxNtOpenDirectoryObject(&_h, 6, &sObjAttr); //DIRECTORY_CREATE_OBJECT|DIRECTORY_TRAVERSE
-    return (NT_SUCCESS(nNtStatus)) ? _h : NULL;
-    };
 };
 
 //-----------------------------------------------------------
@@ -334,93 +221,12 @@ class CWindowsMutex : public CWindowsHandle
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CWindowsMutex);
 public:
-  CWindowsMutex() : CWindowsHandle()
-    { };
+  CWindowsMutex();
 
   BOOL Create(__in_z_opt LPCWSTR szNameW=NULL, __in BOOL bInitialOwner=TRUE,
-              __in_opt LPSECURITY_ATTRIBUTES lpSecAttr=NULL, __out_opt LPBOOL lpbAlreadyExists=NULL)
-    {
-    MX_OBJECT_ATTRIBUTES sObjAttr;
-    MX_UNICODE_STRING usName;
-    HANDLE _h;
-    NTSTATUS nNtStatus;
+              __in_opt LPSECURITY_ATTRIBUTES lpSecAttr=NULL, __out_opt LPBOOL lpbAlreadyExists=NULL);
 
-    if (lpbAlreadyExists != NULL)
-      *lpbAlreadyExists = FALSE;
-    MemSet(&sObjAttr, 0, sizeof(sObjAttr));
-    sObjAttr.Length = (ULONG)sizeof(sObjAttr);
-    sObjAttr.Attributes = 0x00000080; //OBJ_OPENIF
-    if (szNameW != NULL)
-    {
-      //get root directory handle
-      sObjAttr.RootDirectory = GetRootDirHandle();
-      if (sObjAttr.RootDirectory == NULL)
-        return FALSE;
-      //setup object name
-      usName.Buffer = (PWSTR)szNameW;
-      for (usName.Length=0; szNameW[usName.Length]!=0; usName.Length++);
-      usName.Length *= (USHORT)sizeof(WCHAR);
-      usName.MaximumLength = usName.Length;
-      sObjAttr.ObjectName = &usName;
-    }
-    //setup security
-    if (lpSecAttr != NULL)
-    {
-      sObjAttr.SecurityDescriptor = lpSecAttr->lpSecurityDescriptor;
-      if (lpSecAttr->bInheritHandle != FALSE)
-        sObjAttr.Attributes |= 0x00000002; //OBJ_INHERIT
-    }
-    //create mutant
-    nNtStatus = ::MxNtCreateMutant(&_h, MUTANT_ALL_ACCESS, &sObjAttr, (BOOLEAN)bInitialOwner);
-    //close root directory
-    if (sObjAttr.RootDirectory != NULL)
-      ::MxNtClose(sObjAttr.RootDirectory);
-    //process result
-    if (!NT_SUCCESS(nNtStatus))
-      return FALSE;
-    if (nNtStatus == STATUS_OBJECT_NAME_EXISTS && lpbAlreadyExists != NULL)
-      *lpbAlreadyExists = TRUE;
-    Attach(_h);
-    return TRUE;
-    };
-
-  BOOL Open(__in_z_opt LPCWSTR szNameW=NULL, __in BOOL bQueryOnly=FALSE, __in_opt BOOL bInherit=FALSE)
-    {
-    MX_OBJECT_ATTRIBUTES sObjAttr;
-    MX_UNICODE_STRING usName;
-    NTSTATUS nNtStatus;
-    HANDLE _h;
-
-    MemSet(&sObjAttr, 0, sizeof(sObjAttr));
-    sObjAttr.Length = (ULONG)sizeof(sObjAttr);
-    sObjAttr.Attributes = 0x00000080; //OBJ_OPENIF
-    if (bInherit != FALSE)
-      sObjAttr.Attributes |= 0x00000002; //OBJ_INHERIT
-    if (szNameW != NULL)
-    {
-      //get root directory handle
-      sObjAttr.RootDirectory = GetRootDirHandle();
-      if (sObjAttr.RootDirectory == NULL)
-        return FALSE;
-      //setup object name
-      usName.Buffer = (PWSTR)szNameW;
-      for (usName.Length=0; szNameW[usName.Length]!=0; usName.Length++);
-      usName.Length *= (USHORT)sizeof(WCHAR);
-      usName.MaximumLength = usName.Length;
-      sObjAttr.ObjectName = &usName;
-    }
-    //open mutant
-    nNtStatus = ::MxNtOpenMutant(&_h, (bQueryOnly == FALSE) ? MUTANT_ALL_ACCESS : (STANDARD_RIGHTS_READ|SYNCHRONIZE),
-                                 &sObjAttr);
-    //close root directory
-    if (sObjAttr.RootDirectory != NULL)
-      ::MxNtClose(sObjAttr.RootDirectory);
-    //process result
-    if (!NT_SUCCESS(nNtStatus))
-      return FALSE;
-    Attach(_h);
-    return TRUE;
-    };
+  BOOL Open(__in_z_opt LPCWSTR szNameW=NULL, __in BOOL bQueryOnly=FALSE, __in_opt BOOL bInherit=FALSE);
 
   BOOL Lock(__in DWORD dwTimeout=INFINITE)
     {
@@ -440,24 +246,6 @@ public:
   BOOL Unlock()
     {
     return (h != NULL && NT_SUCCESS(::MxNtReleaseMutant(h, NULL))) ? TRUE : FALSE;
-    };
-
-private:
-  HANDLE GetRootDirHandle()
-    {
-    MX_OBJECT_ATTRIBUTES sObjAttr;
-    MX_UNICODE_STRING usName;
-    HANDLE _h;
-    NTSTATUS nNtStatus;
-
-    //open root directory
-    MemSet(&sObjAttr, 0, sizeof(sObjAttr));
-    sObjAttr.Length = (ULONG)sizeof(sObjAttr);
-    usName.Buffer = L"\\BaseNamedObjects";
-    usName.Length = usName.MaximumLength = 34;
-    sObjAttr.ObjectName = &usName;
-    nNtStatus = ::MxNtOpenDirectoryObject(&_h, 6, &sObjAttr); //DIRECTORY_CREATE_OBJECT|DIRECTORY_TRAVERSE
-    return (NT_SUCCESS(nNtStatus)) ? _h : NULL;
     };
 };
 
