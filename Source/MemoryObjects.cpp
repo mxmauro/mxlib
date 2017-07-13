@@ -24,6 +24,7 @@
 #include "..\Include\NtDefs.h"
 #include "..\Include\MemoryObjects.h"
 #include "..\Include\WaitableObjects.h"
+#include "..\Include\Debug.h"
 #include <intrin.h>
 
 #pragma intrinsic (_InterlockedIncrement)
@@ -98,6 +99,16 @@ static VOID CheckBlock(__in MINIDEBUG_PREBLOCK *pPreBlk);
 static VOID LinkBlock(__in MINIDEBUG_PREBLOCK *pPreBlk);
 static VOID UnlinkBlock(__in MINIDEBUG_PREBLOCK *pPreBlk);
 static VOID AssertNotTag(__in MINIDEBUG_PREBLOCK *pPreBlk);
+static VOID DumpLeaks();
+#endif //DO_HEAP_CHECK
+
+//-----------------------------------------------------------
+
+#ifdef DO_HEAP_CHECK
+typedef void(*_PVFV)(void);
+
+#pragma section(".CRT$XTY", long, read)  // NOLINT
+static __declspec(allocate(".CRT$XTY")) _PVFV my_exit_funcs[] = { &DumpLeaks };
 #endif //DO_HEAP_CHECK
 
 //-----------------------------------------------------------
@@ -601,6 +612,30 @@ static VOID AssertNotTag(__in MINIDEBUG_PREBLOCK *pPreBlk)
   MX_ASSERT_ALWAYS(dw[1] != CHECKTAG1a_FREE && dw[1] != CHECKTAG1b_FREE &&
                    dw[1] != CHECKTAG2a_FREE && dw[1] != CHECKTAG2b_FREE);
 #endif
+  return;
+}
+
+static VOID DumpLeaks()
+{
+  MX::CFastLock cLock(&(sAllocatedBlocks.nMutex));
+  MINIDEBUG_PREBLOCK *lpBlock;
+
+  for (lpBlock=sAllocatedBlocks.lpHead; lpBlock!=NULL; lpBlock=lpBlock->lpNext)
+  {
+    LPBYTE p = (LPBYTE)(lpBlock+1);
+
+    if (lpBlock->szFilenameA != NULL && lpBlock->szFilenameA[0] != 0)
+    {
+      MX::DebugPrint("MXLIB: Leak @ 0x%p [%02X %02X %02X %02X %02X %02X %02X %02X] (%s@%lu)\n", p,
+                     p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],
+                     lpBlock->szFilenameA, (ULONG)(lpBlock->nLineNumber));
+    }
+    else
+    {
+      MX::DebugPrint("MXLIB: Leak @ 0x%p [%02X %02X %02X %02X %02X %02X %02X %02X]\n", p,
+                     p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+    }
+  }
   return;
 }
 #endif //DO_HEAP_CHECK

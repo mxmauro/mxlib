@@ -104,6 +104,9 @@ public:
   TLnkLst()
     {
     lpHead = lpTail = NULL;
+#ifdef _DEBUG
+    nCount = 0;
+#endif //_DEBUG
     return;
     };
 
@@ -125,6 +128,9 @@ public:
     if (lpNode->lpPrev != NULL)
       lpNode->lpPrev->lpNext = lpNode->lpNext;
     lpNode->lpNext = lpNode->lpPrev = NULL;
+#ifdef _DEBUG
+    nCount--;
+#endif //_DEBUG
     return;
     };
 
@@ -140,6 +146,9 @@ public:
     lpHead = lpNode;
     if (lpTail == NULL)
       lpTail = lpNode;
+#ifdef _DEBUG
+    nCount++;
+#endif //_DEBUG
     return;
     };
 
@@ -155,6 +164,9 @@ public:
     lpTail = lpNode;
     if (lpHead == NULL)
       lpHead = lpNode;
+#ifdef _DEBUG
+    nCount++;
+#endif //_DEBUG
     return;
     };
 
@@ -178,6 +190,9 @@ public:
       if (lpAfterNode->lpNext != NULL)
         lpAfterNode->lpNext->lpPrev = lpNode;
       lpAfterNode->lpNext = lpNode;
+#ifdef _DEBUG
+      nCount++;
+#endif //_DEBUG
     }
     return;
     };
@@ -202,6 +217,9 @@ public:
       if (lpBeforeNode->lpPrev != NULL)
         lpBeforeNode->lpPrev->lpNext = lpNode;
       lpBeforeNode->lpPrev = lpNode;
+#ifdef _DEBUG
+      nCount++;
+#endif //_DEBUG
     }
     return;
     };
@@ -303,6 +321,9 @@ public:
 
 private:
   _LnkLstNode *lpHead, *lpTail;
+#ifdef _DEBUG
+  ULONG nCount;
+#endif //_DEBUG
 };
 
 } //namespace MX
