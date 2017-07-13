@@ -45,7 +45,7 @@ szPythonPath = szScriptPath & "..\..\..\Utilities\Python27"
 aTargetFiles = Array("Source\dist\duktape.c", "Source\dist\duktape.h", "Source\dist\duk_config.h", "Source\dist\duk_source_meta.json")
 If bRebuild = False Then
 	WScript.Echo "Checking if source files were modified..."
-	For I = 0 To 2
+	For I = 0 To 3
 		szFileName = szScriptPath & "\" & aTargetFiles(I)
 		If objFS.FileExists(szFileName) = False Then
 			WScript.Echo "Library " & Chr(34) & aTargetFiles(I) & Chr(34) & " was not found... rebuilding"
@@ -62,7 +62,10 @@ If bRebuild = False Then
 End If
 
 If bRebuild = False Then
-	If CheckForNewerFiles(szScriptPath & "Source\config", dtBuildDate) <> False Then
+
+	If CheckForNewerFile(szScriptPath & "duk_custom.h", dtBuildDate) <> False Then
+		bRebuild = True
+	ElseIf CheckForNewerFiles(szScriptPath & "Source\config", dtBuildDate) <> False Then
 		bRebuild = True
 	ElseIf CheckForNewerFiles(szScriptPath & "Source\src-input", dtBuildDate) <> False Then
 		bRebuild = True
@@ -108,9 +111,19 @@ WScript.Quit I
 
 '-------------------------------------------------------------------------------
 
+Function CheckForNewerFile(szFile, dtBuildDate)
+Dim oFile
+
+	CheckForNewerFile = False
+	Set oFile = objFS.getFile(szFile)
+	If oFile.DateLastModified > dtBuildDate Then
+		WScript.Echo "File: " & Chr(34) & szFile & Chr(34) & " is newer... rebuilding"
+		CheckForNewerFile = True
+	End If
+End Function
+
 Function CheckForNewerFiles(szFolder, dtBuildDate)
-Dim f, oFolder, oFile
-Dim S
+Dim f, oFolder
 
 	CheckForNewerFiles = False
 	Set oFolder = objFS.GetFolder(szFolder)
@@ -121,10 +134,7 @@ Dim S
 		End If
 	Next
 	For Each f in oFolder.Files
-		S = szFolder & "\" & f.name
-		Set oFile = objFS.getFile(S)
-		If oFile.DateLastModified > dtBuildDate Then
-			WScript.Echo "File: " & Chr(34) & S & Chr(34) & " is newer... rebuilding"
+		If CheckForNewerFile(szFolder & "\" & f.name, dtBuildDate) <> False Then
 			CheckForNewerFiles = True
 			Exit Function
 		End If
