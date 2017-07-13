@@ -28,6 +28,7 @@
 #include <intrin.h>
 
 #pragma intrinsic (_InterlockedIncrement)
+#pragma intrinsic(_ReturnAddress)
 
 //#define USE_CRT_ALLOC
 #ifdef _DEBUG
@@ -70,6 +71,7 @@
     struct tagMINIDEBUG_PREBLOCK *lpNext, *lpPrev;
     LPCSTR szFilenameA;
     SIZE_T nLineNumber;
+    LPVOID lpRetAddress;
     DWORD dwTag2[CHECKTAG_COUNT];
     MINIDEBUG_POSTBLOCK MX_UNALIGNED *lpPost;
   } MINIDEBUG_PREBLOCK;
@@ -92,7 +94,7 @@ size_t __stdcall MxTryMemCopy(__out const void *lpDest, __in const void *lpSrc, 
 
 #ifdef DO_HEAP_CHECK
 static VOID InitializeBlock(__in MINIDEBUG_PREBLOCK *pPreBlk, __in SIZE_T nSize, __in_z_opt const char *szFilenameA,
-                            __in int nLineNumber);
+                            __in int nLineNumber, __in LPVOID lpRetAddress);
 static VOID SetBlockTags(__in MINIDEBUG_PREBLOCK *pPreBlk, __in BOOL bOnFree);
 static VOID CheckBlocks();
 static VOID CheckBlock(__in MINIDEBUG_PREBLOCK *pPreBlk);
@@ -128,7 +130,11 @@ namespace MX {
 
 LPVOID MemAlloc(__in SIZE_T nSize)
 {
-  return MemAllocD(nSize, NULL, NULL);
+#if (!defined(USE_CRT_ALLOC)) && defined(DO_HEAP_CHECK)
+  return MemAllocD(nSize, (const char*)_ReturnAddress(), -1);
+#else //!USE_CRT_ALLOC && DO_HEAP_CHECK
+  return MemAllocD(nSize, NULL, 0);
+#endif //!USE_CRT_ALLOC && DO_HEAP_CHECK
 }
 
 LPVOID MemAllocD(__in SIZE_T nSize, __in_z_opt const char *szFilenameA, __in int nLineNumber)
@@ -146,6 +152,18 @@ LPVOID MemAllocD(__in SIZE_T nSize, __in_z_opt const char *szFilenameA, __in int
 #ifdef DO_HEAP_CHECK
   LPBYTE p;
   MINIDEBUG_PREBLOCK *pPreBlk;
+  LPVOID lpRetAddress;
+
+  if (nLineNumber < 0)
+  {
+    lpRetAddress = (LPVOID)szFilenameA;
+    szFilenameA = NULL;
+    nLineNumber = 0;
+  }
+  else
+  {
+    lpRetAddress = _ReturnAddress();
+  }
 #endif //DO_HEAP_CHECK
 
   if (nSize == 0)
@@ -156,7 +174,7 @@ LPVOID MemAllocD(__in SIZE_T nSize, __in_z_opt const char *szFilenameA, __in int
   if (p != NULL)
   {
     pPreBlk = (MINIDEBUG_PREBLOCK*)p;
-    InitializeBlock(pPreBlk, nSize, szFilenameA, nLineNumber);
+    InitializeBlock(pPreBlk, nSize, szFilenameA, nLineNumber, lpRetAddress);
     LinkBlock(pPreBlk);
     p += sizeof(MINIDEBUG_PREBLOCK);
   }
@@ -170,7 +188,11 @@ LPVOID MemAllocD(__in SIZE_T nSize, __in_z_opt const char *szFilenameA, __in int
 
 LPVOID MemRealloc(__in LPVOID lpPtr, __in SIZE_T nSize)
 {
+#if (!defined(USE_CRT_ALLOC)) && defined(DO_HEAP_CHECK)
+  return MemReallocD(lpPtr, nSize, (const char*)_ReturnAddress(), -1);
+#else //!USE_CRT_ALLOC && DO_HEAP_CHECK
   return MemReallocD(lpPtr, nSize, NULL, 0);
+#endif //!USE_CRT_ALLOC && DO_HEAP_CHECK
 }
 
 LPVOID MemReallocD(__in LPVOID lpPtr, __in SIZE_T nSize, __in_z_opt const char *szFilenameA, __in int nLineNumber)
@@ -188,6 +210,7 @@ LPVOID MemReallocD(__in LPVOID lpPtr, __in SIZE_T nSize, __in_z_opt const char *
 #ifdef DO_HEAP_CHECK
   MINIDEBUG_PREBLOCK *pPreBlk;
   LPBYTE p;
+  LPVOID lpRetAddress;
 #endif //DO_HEAP_CHECK
 
   if (nSize == 0)
@@ -197,7 +220,19 @@ LPVOID MemReallocD(__in LPVOID lpPtr, __in SIZE_T nSize, __in_z_opt const char *
   }
   if (lpPtr == NULL)
     return MemAllocD(nSize, szFilenameA, nLineNumber);
+
 #ifdef DO_HEAP_CHECK
+  if (nLineNumber < 0)
+  {
+    lpRetAddress = (LPVOID)szFilenameA;
+    szFilenameA = NULL;
+    nLineNumber = 0;
+  }
+  else
+  {
+    lpRetAddress = _ReturnAddress();
+  }
+
   CheckBlocks();
   pPreBlk = (MINIDEBUG_PREBLOCK*)((LPBYTE)lpPtr - sizeof(MINIDEBUG_PREBLOCK));
   CheckBlock(pPreBlk);
@@ -207,7 +242,7 @@ LPVOID MemReallocD(__in LPVOID lpPtr, __in SIZE_T nSize, __in_z_opt const char *
   if (p != NULL)
   {
     pPreBlk = (MINIDEBUG_PREBLOCK*)p;
-    InitializeBlock(pPreBlk, nSize, szFilenameA, nLineNumber);
+    InitializeBlock(pPreBlk, nSize, szFilenameA, nLineNumber, lpRetAddress);
     p += sizeof(MINIDEBUG_PREBLOCK);
   }
   else
@@ -486,11 +521,12 @@ void __cdecl operator delete[](__in void* p)
 
 #ifdef DO_HEAP_CHECK
 static VOID InitializeBlock(__in MINIDEBUG_PREBLOCK *pPreBlk, __in SIZE_T nSize, __in_z_opt const char *szFilenameA,
-                            __in int nLineNumber)
+                            __in int nLineNumber, __in LPVOID lpRetAddress)
 {
   pPreBlk->lpNext = pPreBlk->lpPrev = NULL;
   pPreBlk->szFilenameA = (LPCSTR)szFilenameA;
   pPreBlk->nLineNumber = (SIZE_T)nLineNumber;
+  pPreBlk->lpRetAddress = lpRetAddress;
   pPreBlk->lpPost = (MINIDEBUG_POSTBLOCK*)((LPBYTE)pPreBlk + sizeof(MINIDEBUG_PREBLOCK) + nSize);
   SetBlockTags(pPreBlk, FALSE);
   pPreBlk->lpPost->szFilenameA = (LPCSTR)szFilenameA;
@@ -626,14 +662,16 @@ static VOID DumpLeaks()
 
     if (lpBlock->szFilenameA != NULL && lpBlock->szFilenameA[0] != 0)
     {
-      MX::DebugPrint("MXLIB: Leak @ 0x%p [%02X %02X %02X %02X %02X %02X %02X %02X] (%s@%lu)\n", p,
-                     p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],
+      MX::DebugPrint("MXLIB: Leak 0x%p (%Iu bytes): [%02X %02X %02X %02X %02X %02X %02X %02X] / RA:0x%p / %s[%lu]\n",
+                     p, (SIZE_T)((LPBYTE)(lpBlock->lpPost) - p),
+                     p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], lpBlock->lpRetAddress,
                      lpBlock->szFilenameA, (ULONG)(lpBlock->nLineNumber));
     }
     else
     {
-      MX::DebugPrint("MXLIB: Leak @ 0x%p [%02X %02X %02X %02X %02X %02X %02X %02X]\n", p,
-                     p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+      MX::DebugPrint("MXLIB: Leak 0x%p (%Iu bytes): [%02X %02X %02X %02X %02X %02X %02X %02X] / RA:0x%p\n",
+                     p, (SIZE_T)((LPBYTE)(lpBlock->lpPost) - p),
+                     p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], lpBlock->lpRetAddress);
     }
   }
   return;
