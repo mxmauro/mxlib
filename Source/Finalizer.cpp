@@ -89,6 +89,7 @@ HRESULT RegisterFinalizer(__in lpfnFinalizer fnFinalizer, __in SIZE_T nPriority)
   MemMove(lpList+(i+1), lpList+i, (nListCount-i) * sizeof(FINALIZER_ITEM));
   lpList[i].fnFinalizer = fnFinalizer;
   lpList[i].nPriority = nPriority;
+  nListCount++;
   //done
   return S_OK;
 }

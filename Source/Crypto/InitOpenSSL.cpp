@@ -27,6 +27,7 @@
 #include "..\..\Include\Strings\Strings.h"
 #include <OpenSSL\ssl.h>
 #include <OpenSSL\err.h>
+#include <openssl\conf.h>
 
 #pragma comment(lib, "libssl.lib")
 #pragma comment(lib, "libcrypto.lib")
@@ -37,19 +38,39 @@
 
 //-----------------------------------------------------------
 
-struct CRYPTO_dynlock_value {
-  CRITICAL_SECTION cs;
-};
+static LONG volatile nInitialized = 0;
+static SSL_CTX* volatile lpSslContexts[2][1] ={ 0 };
 
-static SSL_CTX * volatile lpSslContexts[2][1] ={ 0 };
+//-----------------------------------------------------------
+
+extern "C" {
+  void OPENSSL_thread_stop(void);
+};
 
 //-----------------------------------------------------------
 
 static HRESULT _OpenSSL_Init();
 static VOID OpenSSL_Shutdown();
+static void NTAPI OnTlsCallback(__in PVOID DllHandle, __in DWORD dwReason, __in PVOID);
 static void* __cdecl my_malloc_withinfo(size_t _Size, const char *_filename, int _linenum);
 static void* __cdecl my_realloc_withinfo(void *_Memory, size_t _NewSize, const char *_filename, int _linenum);
 static void __cdecl my_free(void * _Memory, const char *_filename, int _linenum);
+
+//-----------------------------------------------------------
+
+#if defined(_M_IX86)
+  #pragma comment (linker, "/INCLUDE:__tls_used")
+  #pragma comment (linker, "/INCLUDE:_OpenSslTlsCallback")
+  #pragma data_seg(".CRT$XLF")
+  EXTERN_C const PIMAGE_TLS_CALLBACK OpenSslTlsCallback = &OnTlsCallback;
+  #pragma data_seg()
+#elif defined(_M_X64)
+  #pragma comment (linker, "/INCLUDE:_tls_used")
+  #pragma comment (linker, "/INCLUDE:OpenSslTlsCallback")
+  #pragma const_seg(".CRT$XLF")
+  EXTERN_C const PIMAGE_TLS_CALLBACK OpenSslTlsCallback = &OnTlsCallback;
+  #pragma const_seg()
+#endif
 
 //-----------------------------------------------------------
 
@@ -92,9 +113,13 @@ SSL_CTX* GetSslContext(__in BOOL bServerSide, __in_z LPCSTR szVersionA)
     return NULL;
   if (MX::StrCompareA(szVersionA, "tls") == 0 || MX::StrCompareA(szVersionA, "tls1.0") == 0 ||
       MX::StrCompareA(szVersionA, "tls1.1") == 0 || MX::StrCompareA(szVersionA, "tls1.2") == 0)
+  {
     idx = 0;
+  }
   else
+  {
     return NULL;
+  }
   //----
   if (lpSslContexts[(bServerSide != FALSE) ? 1 : 0][idx] == NULL)
   {
@@ -109,7 +134,6 @@ SSL_CTX* GetSslContext(__in BOOL bServerSide, __in_z LPCSTR szVersionA)
     SIZE_T i;
     BOOL bEnable;
 
-    lpSslCtx = NULL;
     if (lpSslContexts[(bServerSide != FALSE) ? 1 : 0][idx] == NULL)
     {
       lpSslCtx = SSL_CTX_new((bServerSide != FALSE) ? TLS_server_method() : TLS_client_method());
@@ -180,7 +204,6 @@ SSL_CTX* GetSslContext(__in BOOL bServerSide, __in_z LPCSTR szVersionA)
 static HRESULT _OpenSSL_Init()
 {
   static LONG volatile nMutex = 0;
-  static LONG volatile nInitialized = 0;
 
   if (MX::__InterlockedRead(&nInitialized) == 0)
   {
@@ -196,10 +219,8 @@ static HRESULT _OpenSSL_Init()
 #endif //_DEBUG
       CRYPTO_set_mem_functions(&my_malloc_withinfo, &my_realloc_withinfo, &my_free);
       //init lib
-      SSL_load_error_strings();
-      SSL_library_init();
-      OpenSSL_add_all_algorithms();
-      ERR_load_crypto_strings();
+      OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_LOAD_CRYPTO_STRINGS |
+                       OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, NULL);
       //register shutdown callback
       hRes = MX::RegisterFinalizer(&OpenSSL_Shutdown, OPENSSL_FINALIZER_PRIORITY);
       if (FAILED(hRes))
@@ -232,15 +253,26 @@ static VOID OpenSSL_Shutdown()
     }
   }
   //----
-  CRYPTO_set_locking_callback(NULL);
-  CRYPTO_set_dynlock_create_callback(NULL);
-  CRYPTO_set_dynlock_lock_callback(NULL);
-  CRYPTO_set_dynlock_destroy_callback(NULL);
-  //----
+  FIPS_mode_set(0);
+  CONF_modules_unload(1);
   EVP_cleanup();
   CRYPTO_cleanup_all_ex_data();
-  ERR_remove_thread_state(NULL);
   ERR_free_strings();
+
+  OPENSSL_thread_stop();
+  OPENSSL_cleanup();
+
+  _InterlockedExchange(&nInitialized, 0);
+  return;
+}
+
+static void NTAPI OnTlsCallback(__in PVOID DllHandle, __in DWORD dwReason, __in PVOID)
+{
+  if (dwReason == DLL_THREAD_DETACH)
+  {
+    if (MX::__InterlockedRead(&nInitialized) != 0)
+      OPENSSL_thread_stop();
+  }
   return;
 }
 

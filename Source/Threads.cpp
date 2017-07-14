@@ -122,6 +122,11 @@ BOOL CThread::Stop(__in_opt DWORD dwTimeout)
     ::CloseHandle(hThread);
     hThread = NULL;
   }
+  else if (bAutoDelete != FALSE)
+  {
+    delete this;
+    return TRUE;
+  }
   dwThreadId = 0;
   cKillEvent.Close();
   return TRUE;

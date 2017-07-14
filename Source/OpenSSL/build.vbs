@@ -136,7 +136,10 @@ If bRebuild = False Then
 End If
 
 If bRebuild = False Then
-	If CheckForNewerFiles(szScriptPath & "Source", dtBuildDate) <> False Then bRebuild = True
+	If CheckForNewerFiles(szScriptPath & "Source", dtBuildDate) <> False Or _
+	        CheckForNewerFile(szScriptPath & "build.vbs", dtBuildDate) <> False Then
+		bRebuild = True
+	End If
 End If
 
 'Rebuild
@@ -151,7 +154,8 @@ If bRebuild <> False Then
 
 	WScript.Echo "Configuring..."
 	S = "perl.exe Configure " & szConfigDebug & szConfigurationTarget & " " & szDefineNoErr & " no-sock no-rc2 no-idea no-cast no-md2 no-mdc2 no-camellia no-shared "
-	S = S & "-DOPENSSL_NO_DGRAM -DOPENSSL_NO_CAPIENG -DOPENSSL_NO_FILENAMES -DUNICODE -D_UNICODE "
+	S = S & "-DOPENSSL_NO_DGRAM -DOPENSSL_NO_CAPIENG -DUNICODE -D_UNICODE "
+	If Len(szIsDebug) = 0 Then S = S & "-DOPENSSL_NO_FILENAMES "
 	S = S & Chr(34) & "--config=" & szScriptPath & "compiler_config.conf" & Chr(34)
 	I = objShell.Run(S, 1, True)
 	If I = 0 Then
@@ -204,8 +208,19 @@ WScript.Quit I
 
 '-------------------------------------------------------------------------------
 
+Function CheckForNewerFile(szFile, dtBuildDate)
+Dim oFile
+
+	CheckForNewerFile = False
+	Set oFile = objFS.getFile(szFile)
+	If oFile.DateLastModified > dtBuildDate Then
+		WScript.Echo "File: " & Chr(34) & szFile & Chr(34) & " is newer... rebuilding"
+		CheckForNewerFile = True
+	End If
+End Function
+
 Function CheckForNewerFiles(szFolder, dtBuildDate)
-Dim f, oFolder, oFile
+Dim f, oFolder
 Dim S, lS
 
 	CheckForNewerFiles = False
@@ -220,14 +235,12 @@ Dim S, lS
 		S = LCase(f.name)
 		If Right(S, 4) = ".cpp" Or Right(S, 2) = ".c" Or Right(S, 2) = ".h" Then
 			S = szFolder & "\" & f.name
-			Set oFile = objFS.getFile(S)
-			If oFile.DateLastModified > dtBuildDate Then
-				lS = LCase(S)
-				If Right(lS, 33) <> "crypto\include\internal\bn_conf.h" And _
-				        Right(lS, 34) <> "crypto\include\internal\dso_conf.h" And _
-				        Right(lS, 17) <> "crypto\buildinf.h" And _
-				        Right(lS, 29) <> "include\openssl\opensslconf.h" Then
-					WScript.Echo "File: " & Chr(34) & S & Chr(34) & " is newer... rebuilding"
+			lS = LCase(S)
+			If Right(lS, 33) <> "crypto\include\internal\bn_conf.h" And _
+			        Right(lS, 34) <> "crypto\include\internal\dso_conf.h" And _
+			        Right(lS, 17) <> "crypto\buildinf.h" And _
+			        Right(lS, 29) <> "include\openssl\opensslconf.h" Then
+				If CheckForNewerFile(S, dtBuildDate) <> False Then
 					CheckForNewerFiles = True
 					Exit Function
 				End If

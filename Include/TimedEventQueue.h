@@ -35,7 +35,7 @@
 
 namespace MX {
 
-class CTimedEventQueue : public virtual CBaseMemObj, protected CThread
+class CTimedEventQueue : public TRefCounted<CBaseMemObj>
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CTimedEventQueue);
 public:
@@ -67,7 +67,10 @@ public:
   VOID RemoveAll();
 
 private:
-  VOID ThreadProc();
+  TClassWorkerThread<CTimedEventQueue> cWorkerThread;
+
+  VOID ThreadProc(__in SIZE_T nParam);
+
   DWORD ProcessTimedOut();
   VOID ProcessCanceled();
 
@@ -93,6 +96,8 @@ protected:
 
 public:
   static CSystemTimedEventQueue* Get();
+
+  VOID AddRef();
   VOID Release();
 };
 

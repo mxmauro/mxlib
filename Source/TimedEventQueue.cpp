@@ -43,7 +43,7 @@ static struct {
 
 namespace MX {
 
-CTimedEventQueue::CTimedEventQueue() : CBaseMemObj(), CThread()
+CTimedEventQueue::CTimedEventQueue() : TRefCounted<CBaseMemObj>()
 {
   _InterlockedExchange(&nQueuedEventsTreeMutex, 0);
   _InterlockedExchange(&nRemovedTreeMutex, 0);
@@ -55,7 +55,7 @@ CTimedEventQueue::CTimedEventQueue() : CBaseMemObj(), CThread()
 CTimedEventQueue::~CTimedEventQueue()
 {
   RundownProt_WaitForRelease(&nRundownLock);
-  Stop();
+  cWorkerThread.Stop();
   return;
 }
 
@@ -70,7 +70,7 @@ HRESULT CTimedEventQueue::Add(__in CEvent *lpEvent, __in DWORD dwTimeoutMs)
   if (lpEvent == NULL)
     return E_POINTER;
   //start worker thread
-  if (IsRunning() == FALSE)
+  if (cWorkerThread.IsRunning() == FALSE)
   {
     CFastLock cLock(&nThreadMutex);
 
@@ -79,9 +79,9 @@ HRESULT CTimedEventQueue::Add(__in CEvent *lpEvent, __in DWORD dwTimeoutMs)
       if (cQueueChangedEv.Create(TRUE, FALSE) == FALSE)
         return E_OUTOFMEMORY;
     }
-    if (IsRunning() == FALSE)
+    if (cWorkerThread.IsRunning() == FALSE)
     {
-      if (Start() == FALSE)
+      if (cWorkerThread.Start(this, &CTimedEventQueue::ThreadProc, 0) == FALSE)
         return E_OUTOFMEMORY;
     }
   }
@@ -155,10 +155,12 @@ VOID CTimedEventQueue::RemoveAll()
   return;
 }
 
-VOID CTimedEventQueue::ThreadProc()
+VOID CTimedEventQueue::ThreadProc(__in SIZE_T nParam)
 {
   DWORD dwTimeoutMs, dwHitEv;
   HANDLE hEvent;
+
+  UNREFERENCED_PARAMETER(nParam);
 
   hEvent = cQueueChangedEv.Get();
   do
@@ -170,7 +172,7 @@ VOID CTimedEventQueue::ThreadProc()
     //process canceled events
     ProcessCanceled();
   }
-  while (CheckForAbort(dwTimeoutMs, 1, &hEvent, &dwHitEv) == FALSE);
+  while (cWorkerThread.CheckForAbort(dwTimeoutMs, 1, &hEvent, &dwHitEv) == FALSE);
   //before leaving the thread, cancel pending
   RemoveAll();
   ProcessCanceled();
@@ -287,7 +289,6 @@ CSystemTimedEventQueue* CSystemTimedEventQueue::Get()
     if (sSystemQueue.lpQueue != NULL)
     {
       MX_ASSERT(sSystemQueue.nRefCount == 0);
-      sSystemQueue.lpQueue->SetAutoDelete(TRUE);
       _InterlockedExchange(&(sSystemQueue.nRefCount), 1);
     }
   }
@@ -299,18 +300,34 @@ CSystemTimedEventQueue* CSystemTimedEventQueue::Get()
   return sSystemQueue.lpQueue;
 }
 
-VOID CSystemTimedEventQueue::Release()
+VOID CSystemTimedEventQueue::AddRef()
 {
   CFastLock cLock(&(sSystemQueue.nMutex));
 
   MX_ASSERT(sSystemQueue.lpQueue == this);
   MX_ASSERT(sSystemQueue.nRefCount > 0);
-  if (_InterlockedDecrement(&(sSystemQueue.nRefCount)) == 0)
+  _InterlockedIncrement(&(sSystemQueue.nRefCount));
+  return;
+}
+
+VOID CSystemTimedEventQueue::Release()
+{
+  CSystemTimedEventQueue *lpToDelete = NULL;
+
   {
-    MX_ASSERT(sSystemQueue.lpQueue != NULL);
-    sSystemQueue.lpQueue->Stop(); //will autodelete it
-    sSystemQueue.lpQueue = NULL;
+    CFastLock cLock(&(sSystemQueue.nMutex));
+
+    MX_ASSERT(sSystemQueue.lpQueue == this);
+    MX_ASSERT(sSystemQueue.nRefCount > 0);
+    if (_InterlockedDecrement(&(sSystemQueue.nRefCount)) == 0)
+    {
+      MX_ASSERT(sSystemQueue.lpQueue != NULL);
+      lpToDelete = sSystemQueue.lpQueue;
+      sSystemQueue.lpQueue = NULL;
+    }
   }
+  if (lpToDelete != NULL)
+    lpToDelete->CTimedEventQueue::Release();
   return;
 }
 

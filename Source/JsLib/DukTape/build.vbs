@@ -63,11 +63,10 @@ End If
 
 If bRebuild = False Then
 
-	If CheckForNewerFile(szScriptPath & "duk_custom.h", dtBuildDate) <> False Then
-		bRebuild = True
-	ElseIf CheckForNewerFiles(szScriptPath & "Source\config", dtBuildDate) <> False Then
-		bRebuild = True
-	ElseIf CheckForNewerFiles(szScriptPath & "Source\src-input", dtBuildDate) <> False Then
+	If CheckForNewerFile(szScriptPath & "duk_custom.h", dtBuildDate) <> False Or _
+	        CheckForNewerFile(szScriptPath & "build.vbs", dtBuildDate) <> False Or _
+	        CheckForNewerFiles(szScriptPath & "Source\config", dtBuildDate) <> False Or _
+	        CheckForNewerFiles(szScriptPath & "Source\src-input", dtBuildDate) <> False Then
 		bRebuild = True
 	End If
 End If

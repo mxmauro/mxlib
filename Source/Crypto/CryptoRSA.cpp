@@ -279,11 +279,16 @@ HRESULT CCryptoRSA::SetPublicKeyFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR 
 
 SIZE_T CCryptoRSA::GetPublicKey(__out_opt LPVOID lpDest)
 {
+  LPVOID lpData = NULL;
   int len;
 
   if (lpInternalData == NULL || rsa_data->lpRsa == NULL)
     return 0;
-  len = i2d_RSAPublicKey(rsa_data->lpRsa, (unsigned char**)&lpDest);
+  len = i2d_RSAPublicKey(rsa_data->lpRsa, (unsigned char**)&lpData);
+  if (len > 0 && lpData != NULL && lpDest != NULL)
+    MX::MemCopy(lpDest, lpData, (SIZE_T)len);
+  if (lpData != NULL)
+    OPENSSL_free(lpData);
   return (len > 0) ? (SIZE_T)len : 0;
 }
 
@@ -403,11 +408,16 @@ HRESULT CCryptoRSA::SetPrivateKeyFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR
 
 SIZE_T CCryptoRSA::GetPrivateKey(__out_opt LPVOID lpDest)
 {
+  LPVOID lpData = NULL;
   int len;
 
   if (lpInternalData == NULL || rsa_data->lpRsa == NULL)
     return 0;
-  len = i2d_RSAPrivateKey(rsa_data->lpRsa, (unsigned char**)&lpDest);
+  len = i2d_RSAPrivateKey(rsa_data->lpRsa, (unsigned char**)&lpData);
+  if (len > 0 && lpData != NULL && lpDest != NULL)
+    MX::MemCopy(lpDest, lpData, (SIZE_T)len);
+  if (lpData != NULL)
+    OPENSSL_free(lpData);
   return (len > 0) ? (SIZE_T)len : 0;
 }
 
