@@ -21,6 +21,10 @@
 
 //--------------------------------
 
+#define DUK_USE_REGEXP_CANON_WORKAROUND
+
+//--------------------------------
+
 #undef DUK_USE_VERBOSE_ERRORS
 #define DUK_USE_VERBOSE_ERRORS
 
