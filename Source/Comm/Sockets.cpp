@@ -414,6 +414,8 @@ HRESULT CSockets::OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __i
         hRes2 = CreateServerConnection(lpConn);
         if (FAILED(hRes2))
           FireOnEngineError(hRes2);
+        //we return success because the failing socket was the incoming one and not the one doing accepts
+        hRes = S_OK;
       }
       ReleaseAndRemoveConnectionIfClosed(lpIncomingConn);
       }
