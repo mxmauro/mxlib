@@ -42,6 +42,11 @@ CJsMySqlPluginHelpers::CJsMySqlPluginHelpers() : CBaseMemObj()
 
 CJsMySqlPluginHelpers::~CJsMySqlPluginHelpers()
 {
+  if (lpDB != NULL)
+  {
+    QueryClose(FALSE);
+    Internals::API::fn_mysql_close(lpDB);
+  }
   return;
 }
 

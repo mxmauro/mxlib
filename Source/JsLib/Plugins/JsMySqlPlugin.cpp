@@ -251,11 +251,6 @@ DukTape::duk_ret_t CJsMySqlPlugin::Disconnect()
 {
   if (lpInternal != NULL)
   {
-    if (_DB() != NULL)
-    {
-      _CALLAPI(mysql_close)(_DB());
-    }
-    //----
     delete _INTERNAL();
     lpInternal = NULL;
   }

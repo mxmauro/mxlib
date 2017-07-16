@@ -261,6 +261,13 @@ public:
     return;
     };
 
+#ifdef _DEBUG
+  _inline ULONG GetItemsCount() const
+    {
+    return nCount;
+    };
+#endif //_DEBUG
+
   //---------------------------------------------------------
 
   class Iterator
