@@ -6,9 +6,9 @@
 Option Explicit
 Dim szPlatform, szPlatformPath, szConfiguration, szConfigurationTarget, szConfigDebug
 Dim szScriptPath, szFileName, szDefineNoErr, szIsDebug
-Dim szPerlPath, szNasmPath, szOrigFolder, szObjDir, szLibDir
+Dim szPerlPath, szNasmPath, szObjDir, szLibDir
 Dim I, S, dtBuildDate, aTargetFiles, bRebuild
-Dim objFS, objShell, objShellEnv, oFile
+Dim objFS, objShell, oFile
 
 
 Set objShell = CreateObject("WScript.Shell")
@@ -144,51 +144,43 @@ End If
 
 'Rebuild
 If bRebuild <> False Then
-	'Setup environment variables
-	Set objShellEnv = objShell.Environment("PROCESS")
-	objShellEnv("PATH") = szPerlPath & ";" & szNasmPath & ";" & objShellEnv("PATH")
-
-	'Prepare
-	szOrigFolder = objShell.CurrentDirectory
-	objShell.CurrentDirectory = szScriptPath & "Source"
-
 	WScript.Echo "Configuring..."
 	S = "perl.exe Configure " & szConfigDebug & szConfigurationTarget & " " & szDefineNoErr & " no-sock no-rc2 no-idea no-cast no-md2 no-mdc2 no-camellia no-shared "
 	S = S & "-DOPENSSL_NO_DGRAM -DOPENSSL_NO_CAPIENG -DUNICODE -D_UNICODE "
 	If Len(szIsDebug) = 0 Then S = S & "-DOPENSSL_NO_FILENAMES "
 	S = S & Chr(34) & "--config=" & szScriptPath & "compiler_config.conf" & Chr(34)
-	I = objShell.Run(S, 1, True)
+	I = RunApp(S, szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
 	If I = 0 Then
-		objShell.Run "NMAKE clean >NUL 2>NUL", 1, True
+		RunApp "NMAKE clean", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, True
 
 		WScript.Echo "Compiling..."
-		I = objShell.Run("NMAKE /S build_generated", 1, True)
+		I = RunApp("NMAKE /S build_generated", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
 		If I = 0 Then
-			I = objShell.Run("NMAKE /S build_libs_nodep", 1, True)
+			I = RunApp("NMAKE /S build_libs_nodep", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
 		End If
 		If I = 0 Then
-			I = objShell.Run("NMAKE /S build_engines_nodep", 1, True)
+			I = RunApp("NMAKE /S build_engines_nodep", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
 		End If
 
 		If I = 0 Then
 			'Pause 5 seconds because NMake's processes may still creating the lib WTF?????
-			objShell.Run "PING 127.0.0.1 -n 6 >NUL", 1, True
+			WScript.Sleep(5000)
 
 			'Move needed files
-			objShell.Run "CMD.EXE /c MD " & Chr(34) & szObjDir & Chr(34) & " >NUL 2>NUL", 0, True
-			objShell.Run "CMD.EXE /c MD " & Chr(34) & szLibDir & Chr(34) & " >NUL 2>NUL", 0, True
+			RunApp "MD " & Chr(34) & szObjDir & Chr(34), szScriptPath & "Source", "", True
+			RunApp "MD " & Chr(34) & szLibDir & Chr(34), szScriptPath & "Source", "", True
 
 			For I = 0 To 2
-				objShell.Run "CMD.EXE /c MOVE /Y " & Chr(34) & szScriptPath & "Source\" & aTargetFiles(I) & Chr(34) & " " & Chr(34) & szLibDir & Chr(34), 0, True
+				RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\" & aTargetFiles(I) & Chr(34) & " " & Chr(34) & szLibDir & Chr(34), szScriptPath & "Source", "", False
 			Next
 
-			objShell.Run "CMD.EXE /c MD " & Chr(34) & szScriptPath & "Generated\" & Chr(34) & " >NUL 2>NUL", 0, True
-			objShell.Run "CMD.EXE /c MD " & Chr(34) & szScriptPath & "Generated\OpenSSL" & Chr(34) & " >NUL 2>NUL", 0, True
+			RunApp "MD " & Chr(34) & szScriptPath & "Generated\" & Chr(34), szScriptPath & "Source", "", True
+			RunApp "MD " & Chr(34) & szScriptPath & "Generated\OpenSSL" & Chr(34), szScriptPath & "Source", "", True
 
-			objShell.Run "CMD.EXE /c MOVE /Y " & Chr(34) & szScriptPath & "Source\include\openssl\opensslconf.h" & Chr(34) & " " & Chr(34) & szScriptPath & "Generated\OpenSSL" & Chr(34), 0, True
+			RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\include\openssl\opensslconf.h" & Chr(34) & " " & Chr(34) & szScriptPath & "Generated\OpenSSL" & Chr(34), szScriptPath & "Source", "", False
 
 			'Clean after compile
-			objShell.Run "NMAKE clean >NUL 2>NUL", 1, True
+			RunApp "NMAKE clean", szScriptPath & "Source", "", True
 
 			WScript.Echo "Done!"
 			I = 0
@@ -198,8 +190,6 @@ If bRebuild <> False Then
 	Else
 		WScript.Echo "Errors detected while preparing makefiles."
 	End If
-
-	objShell.CurrentDirectory = szOrigFolder
 Else
 	WScript.Echo "Libraries are up-to-date"
 	I = 0
@@ -247,4 +237,40 @@ Dim S, lS
 			End If
 		End If
 	Next
+End Function
+
+Function RunApp(szCmdLine, szCurFolder, szEnvPath, bHide)
+Dim oFso, oFile, oExec, oShell, objShellEnv
+Dim I, nRet, szOutputFile
+
+	WScript.Echo "Running: " & szCmdLine
+	Set oShell = CreateObject("WScript.Shell")
+	On Error Resume Next
+	If szCurFolder <> "" Then oShell.CurrentDirectory = szCurFolder
+	If szEnvPath <> "" Then
+		Set objShellEnv = objShell.Environment("PROCESS")
+		objShellEnv("PATH") = szEnvPath & ";" & objShellEnv("PATH")
+	End If
+	If bHide = False Then
+		Set oFso = CreateObject("Scripting.FileSystemObject")
+		szOutputFile = oFso.GetSpecialFolder(2)
+		If Right(szOutputFile, 1) <> "\" Then szOutputFile = szOutputFile & "\"
+		szOutputFile = szOutputFile & oFso.GetTempName
+		szCmdLine = "CMD.EXE /S /C " & Chr(34) & szCmdLine & " > " & Chr(34) & szOutputFile & Chr(34) & " 2>&1" & Chr(34)
+	End If
+	nRet = oShell.Run(szCmdLine, 0, True)
+	I = Err.Number
+	If I <> 0 Then nRet = I
+	On Error Goto 0
+	If bHide = False Then
+		If objFS.FileExists(szOutputFile) <> False Then
+			Set oFile = oFso.OpenTextFile(szOutputFile, 1)
+			WScript.Echo oFile.ReadAll
+			oFile.Close
+			On Error Resume Next
+			oFso.DeleteFile szOutputFile
+			On Error Goto 0
+		End If
+	End If
+	RunApp = nRet
 End Function

@@ -7,10 +7,9 @@ Option Explicit
 Dim szScriptPath, szFileName
 Dim szPythonPath, szOrigFolder
 Dim I, S, dtBuildDate, aTargetFiles, bRebuild
-Dim objFS, objShell, objShellEnv, oFile
+Dim objFS, oFile
 
 
-Set objShell = CreateObject("WScript.Shell")
 Set objFS = CreateObject("Scripting.FileSystemObject")
 
 'Check command-line arguments
@@ -73,35 +72,26 @@ End If
 
 'Rebuild
 If bRebuild <> False Then
-	'Setup environment variables
-	Set objShellEnv = objShell.Environment("PROCESS")
-
-	'Prepare
-	szOrigFolder = objShell.CurrentDirectory
-	objShell.CurrentDirectory = szScriptPath & "Source"
-
 	WScript.Echo "Building..."
 
-	objShell.Run "CMD.EXE /c RD /S /Q " & Chr(34) & szScriptPath & "Source\dist" & Chr(34) & " >NUL 2>NUL", 1, True
-	objShell.Run "CMD.EXE /c MD " & Chr(34) & szScriptPath & "Source\dist" & Chr(34) & " >NUL 2>NUL", 1, True
+	RunApp "RD /S /Q " & Chr(34) & szScriptPath & "Source\dist" & Chr(34), szScriptPath & "Source", "", True
+	RunApp "MD " & Chr(34) & szScriptPath & "Source\dist" & Chr(34), szScriptPath & "Source", "", True
 
 	S = Chr(34) & szPythonPath & "\python.exe" & Chr(34) & " " & Chr(34) & szScriptPath & "Source\tools\configure.py" & Chr(34)
 	S = S & " --fixup-file " & Chr(34) & szScriptPath & "duk_custom.h" & Chr(34) & " --output-directory " & Chr(34) & szScriptPath & "Source\dist" & Chr(34)
-	I = objShell.Run(S, 1, True)
+	I = RunApp(S, szScriptPath & "Source", "", False)
 	If I = 0 Then
 		'Pause 5 seconds because Python's processes may still creating the lib WTF?????
-		objShell.Run "PING 127.0.0.1 -n 6 >NUL", 1, True
+		WScript.Sleep(5000)
 
 		'Copy needed files
-		objShell.Run "CMD.EXE /c MD " & Chr(34) & szScriptPath & "..\..\..\Include\JsLib\DukTape" & Chr(34) & " >NUL 2>NUL", 1, True
-		objShell.Run "CMD.EXE /c COPY /Y " & Chr(34) & szScriptPath & "Source\dist\duk_config.h" & Chr(34) & " " & Chr(34) & szScriptPath & "..\..\..\Include\JsLib\DukTape" & Chr(34), 1, True
-		objShell.Run "CMD.EXE /c COPY /Y " & Chr(34) & szScriptPath & "Source\dist\duktape.h" & Chr(34) & " " & Chr(34) & szScriptPath & "..\..\..\Include\JsLib\DukTape" & Chr(34), 1, True
-
+		RunApp "MD " & Chr(34) & szScriptPath & "..\..\..\Include\JsLib\DukTape" & Chr(34), szScriptPath & "Source", "", True
+		RunApp "COPY /Y " & Chr(34) & szScriptPath & "Source\dist\duk_config.h" & Chr(34) & " " & Chr(34) & szScriptPath & "..\..\..\Include\JsLib\DukTape" & Chr(34), szScriptPath & "Source", "", False
+		RunApp "COPY /Y " & Chr(34) & szScriptPath & "Source\dist\duktape.h" & Chr(34) & " " & Chr(34) & szScriptPath & "..\..\..\Include\JsLib\DukTape" & Chr(34), szScriptPath & "Source", "", False
 	Else
 		WScript.Echo "Errors detected while building distributable files."
 	End If
 
-	objShell.CurrentDirectory = szOrigFolder
 Else
 	WScript.Echo "Distributable files are up-to-date"
 	I = 0
@@ -138,4 +128,40 @@ Dim f, oFolder
 			Exit Function
 		End If
 	Next
+End Function
+
+Function RunApp(szCmdLine, szCurFolder, szEnvPath, bHide)
+Dim oFso, oFile, oExec, oShell, objShellEnv
+Dim I, nRet, szOutputFile
+
+	WScript.Echo "Running: " & szCmdLine
+	Set oShell = CreateObject("WScript.Shell")
+	On Error Resume Next
+	If szCurFolder <> "" Then oShell.CurrentDirectory = szCurFolder
+	If szEnvPath <> "" Then
+		Set objShellEnv = objShell.Environment("PROCESS")
+		objShellEnv("PATH") = szEnvPath & ";" & objShellEnv("PATH")
+	End If
+	If bHide = False Then
+		Set oFso = CreateObject("Scripting.FileSystemObject")
+		szOutputFile = oFso.GetSpecialFolder(2)
+		If Right(szOutputFile, 1) <> "\" Then szOutputFile = szOutputFile & "\"
+		szOutputFile = szOutputFile & oFso.GetTempName
+		szCmdLine = "CMD.EXE /S /C " & Chr(34) & szCmdLine & " > " & Chr(34) & szOutputFile & Chr(34) & " 2>&1" & Chr(34)
+	End If
+	nRet = oShell.Run(szCmdLine, 0, True)
+	I = Err.Number
+	If I <> 0 Then nRet = I
+	On Error Goto 0
+	If bHide = False Then
+		If objFS.FileExists(szOutputFile) <> False Then
+			Set oFile = oFso.OpenTextFile(szOutputFile, 1)
+			WScript.Echo oFile.ReadAll
+			oFile.Close
+			On Error Resume Next
+			oFso.DeleteFile szOutputFile
+			On Error Goto 0
+		End If
+	End If
+	RunApp = nRet
 End Function
