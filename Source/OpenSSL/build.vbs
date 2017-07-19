@@ -263,9 +263,9 @@ Dim I, nRet, szOutputFile
 	If I <> 0 Then nRet = I
 	On Error Goto 0
 	If bHide = False Then
-		If objFS.FileExists(szOutputFile) <> False Then
+		If oFso.FileExists(szOutputFile) <> False Then
 			Set oFile = oFso.OpenTextFile(szOutputFile, 1)
-			WScript.Echo oFile.ReadAll
+			If Not oFile.AtEndOfStream Then WScript.Echo oFile.ReadAll
 			oFile.Close
 			On Error Resume Next
 			oFso.DeleteFile szOutputFile

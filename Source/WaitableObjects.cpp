@@ -183,9 +183,9 @@ BOOL CWindowsEvent::Open(__in_z_opt LPCWSTR szNameW, __in_opt BOOL bInherit)
 {
   HANDLE _h;
 
-  if (fnOpenMutexW != NULL)
+  if (fnOpenEventW != NULL)
   {
-    _h = fnOpenMutexW(EVENT_ALL_ACCESS, bInherit, szNameW);
+    _h = fnOpenEventW(EVENT_ALL_ACCESS, bInherit, szNameW);
     if (_h == NULL)
       return FALSE;
   }
