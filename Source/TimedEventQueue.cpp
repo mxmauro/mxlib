@@ -73,11 +73,13 @@ HRESULT CTimedEventQueue::Add(__in CEvent *lpEvent, __in DWORD dwTimeoutMs)
   if (cWorkerThread.IsRunning() == FALSE)
   {
     CFastLock cLock(&nThreadMutex);
+    HRESULT hRes;
 
     if (cQueueChangedEv.Get() == NULL)
     {
-      if (cQueueChangedEv.Create(TRUE, FALSE) == FALSE)
-        return E_OUTOFMEMORY;
+      hRes = cQueueChangedEv.Create(TRUE, FALSE);
+      if (FAILED(hRes))
+        return hRes;
     }
     if (cWorkerThread.IsRunning() == FALSE)
     {

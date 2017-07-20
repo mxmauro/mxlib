@@ -85,7 +85,7 @@ BOOL CThread::Start(__in_opt BOOL bSuspended)
 
   if (hThread != NULL)
     return TRUE;
-  if (cKillEvent.Create(TRUE, FALSE) == FALSE)
+  if (FAILED(cKillEvent.Create(TRUE, FALSE)))
     return FALSE;
   hThread = (HANDLE)_beginthreadex(NULL, dwStackSize, &CThread::CommonThreadProc, this,
                                    (bSuspended != FALSE) ? CREATE_SUSPENDED : 0, &tid);

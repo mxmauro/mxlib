@@ -197,10 +197,10 @@ class CWindowsEvent : public CWindowsHandle
 public:
   CWindowsEvent();
 
-  BOOL Create(__in BOOL bManualReset, __in BOOL bInitialState, __in_z_opt LPCWSTR szNameW=NULL,
-              __in_opt LPSECURITY_ATTRIBUTES lpSecAttr=NULL, __out_opt LPBOOL lpbAlreadyExists=NULL);
+  HRESULT Create(__in BOOL bManualReset, __in BOOL bInitialState, __in_z_opt LPCWSTR szNameW=NULL,
+                 __in_opt LPSECURITY_ATTRIBUTES lpSecAttr=NULL, __out_opt LPBOOL lpbAlreadyExists=NULL);
 
-  BOOL Open(__in_z_opt LPCWSTR szNameW=NULL, __in_opt BOOL bInherit=FALSE);
+  HRESULT Open(__in_z_opt LPCWSTR szNameW=NULL, __in_opt BOOL bInherit=FALSE);
 
   BOOL Wait(__in DWORD dwTimeoutMs);
 
@@ -223,10 +223,10 @@ class CWindowsMutex : public CWindowsHandle
 public:
   CWindowsMutex();
 
-  BOOL Create(__in_z_opt LPCWSTR szNameW=NULL, __in BOOL bInitialOwner=TRUE,
-              __in_opt LPSECURITY_ATTRIBUTES lpSecAttr=NULL, __out_opt LPBOOL lpbAlreadyExists=NULL);
+  HRESULT Create(__in_z_opt LPCWSTR szNameW=NULL, __in BOOL bInitialOwner=TRUE,
+                 __in_opt LPSECURITY_ATTRIBUTES lpSecAttr=NULL, __out_opt LPBOOL lpbAlreadyExists=NULL);
 
-  BOOL Open(__in_z_opt LPCWSTR szNameW=NULL, __in BOOL bQueryOnly=FALSE, __in_opt BOOL bInherit=FALSE);
+  HRESULT Open(__in_z_opt LPCWSTR szNameW=NULL, __in BOOL bQueryOnly=FALSE, __in_opt BOOL bInherit=FALSE);
 
   BOOL Lock(__in DWORD dwTimeout=INFINITE)
     {

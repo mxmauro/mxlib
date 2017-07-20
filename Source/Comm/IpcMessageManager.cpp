@@ -286,15 +286,17 @@ HRESULT CIpcMessageManager::WaitForReply(__in DWORD dwId, __deref_out CMessage *
     return E_POINTER;
   *lplpMessage = NULL;
   sSyncWait.lpMsg = NULL;
-  if (sSyncWait.cCompletedEvent.Create(TRUE, FALSE) == FALSE)
-    return E_OUTOFMEMORY;
-  hRes = WaitForReplyAsync(dwId, MX_BIND_MEMBER_CALLBACK(&CIpcMessageManager::SyncWait, this), &sSyncWait);
+  hRes = sSyncWait.cCompletedEvent.Create(TRUE, FALSE);
   if (SUCCEEDED(hRes))
   {
-    sSyncWait.cCompletedEvent.Wait(INFINITE);
-    *lplpMessage = (CMessage*)MX::__InterlockedReadPointer(&(sSyncWait.lpMsg));
-    if ((*lplpMessage) == NULL)
-      hRes = MX_E_Cancelled;
+    hRes = WaitForReplyAsync(dwId, MX_BIND_MEMBER_CALLBACK(&CIpcMessageManager::SyncWait, this), &sSyncWait);
+    if (SUCCEEDED(hRes))
+    {
+      sSyncWait.cCompletedEvent.Wait(INFINITE);
+      *lplpMessage = (CMessage*)MX::__InterlockedReadPointer(&(sSyncWait.lpMsg));
+      if ((*lplpMessage) == NULL)
+        hRes = MX_E_Cancelled;
+    }
   }
   //done
   return hRes;

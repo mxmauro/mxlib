@@ -69,7 +69,7 @@ static lpfnOpenMutexW fnOpenMutexW = NULL;
 //-----------------------------------------------------------
 
 static VOID InitializeKernel32Apis();
-static HANDLE GetRootDirHandle();
+static NTSTATUS GetRootDirHandle(__out PHANDLE lphRootDir);
 
 //-----------------------------------------------------------
 
@@ -118,20 +118,22 @@ CWindowsEvent::CWindowsEvent() : CWindowsHandle()
   return;
 }
 
-BOOL CWindowsEvent::Create(__in BOOL bManualReset, __in BOOL bInitialState, __in_z_opt LPCWSTR szNameW,
+HRESULT CWindowsEvent::Create(__in BOOL bManualReset, __in BOOL bInitialState, __in_z_opt LPCWSTR szNameW,
                               __in_opt LPSECURITY_ATTRIBUTES lpSecAttr, __out_opt LPBOOL lpbAlreadyExists)
 {
   HANDLE _h;
+  HRESULT hRes;
 
   if (lpbAlreadyExists != NULL)
     *lpbAlreadyExists = FALSE;
   if (fnCreateEventW != NULL)
   {
     _h = fnCreateEventW(lpSecAttr, bManualReset, bInitialState, szNameW);
+    hRes = MX_HRESULT_FROM_LASTERROR();
     if (_h == NULL)
-      return FALSE;
+      return hRes;
     if (lpbAlreadyExists != NULL)
-      *lpbAlreadyExists = (::MxGetLastWin32Error() == ERROR_ALREADY_EXISTS) ? TRUE : FALSE;
+      *lpbAlreadyExists = (hRes == MX_E_AlreadyExists) ? TRUE : FALSE;
   }
   else
   {
@@ -145,9 +147,9 @@ BOOL CWindowsEvent::Create(__in BOOL bManualReset, __in BOOL bInitialState, __in
     if (szNameW != NULL)
     {
       //get root directory handle
-      sObjAttr.RootDirectory = GetRootDirHandle();
-      if (sObjAttr.RootDirectory == NULL)
-        return FALSE;
+      nNtStatus = GetRootDirHandle(&(sObjAttr.RootDirectory));
+      if (!NT_SUCCESS(nNtStatus))
+        return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
       //setup object name
       usName.Buffer = (PWSTR)szNameW;
       for (usName.Length=0; szNameW[usName.Length]!=0; usName.Length++);
@@ -166,28 +168,25 @@ BOOL CWindowsEvent::Create(__in BOOL bManualReset, __in BOOL bInitialState, __in
     nNtStatus = ::MxNtCreateEvent(&_h, EVENT_ALL_ACCESS, &sObjAttr,
                                   (bManualReset == FALSE) ? MxSynchronizationEvent : MxNotificationEvent,
                                   bInitialState);
-    //close root directory
-    if (sObjAttr.RootDirectory != NULL)
-      ::MxNtClose(sObjAttr.RootDirectory);
-    //process result
     if (!NT_SUCCESS(nNtStatus))
-      return FALSE;
+      return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
     if (nNtStatus == STATUS_OBJECT_NAME_EXISTS && lpbAlreadyExists != NULL)
       *lpbAlreadyExists = TRUE;
   }
   Attach(_h);
-  return TRUE;
+  return S_OK;
 }
 
-BOOL CWindowsEvent::Open(__in_z_opt LPCWSTR szNameW, __in_opt BOOL bInherit)
+HRESULT CWindowsEvent::Open(__in_z_opt LPCWSTR szNameW, __in_opt BOOL bInherit)
 {
   HANDLE _h;
+  HRESULT hRes;
 
   if (fnOpenEventW != NULL)
   {
     _h = fnOpenEventW(EVENT_ALL_ACCESS, bInherit, szNameW);
     if (_h == NULL)
-      return FALSE;
+      return MX_HRESULT_FROM_LASTERROR();
   }
   else
   {
@@ -203,9 +202,9 @@ BOOL CWindowsEvent::Open(__in_z_opt LPCWSTR szNameW, __in_opt BOOL bInherit)
     if (szNameW != NULL)
     {
       //get root directory handle
-      sObjAttr.RootDirectory = GetRootDirHandle();
-      if (sObjAttr.RootDirectory == NULL)
-        return FALSE;
+      nNtStatus = GetRootDirHandle(&(sObjAttr.RootDirectory));
+      if (!NT_SUCCESS(nNtStatus))
+        return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
       //setup object name
       usName.Buffer = (PWSTR)szNameW;
       for (usName.Length=0; szNameW[usName.Length]!=0; usName.Length++);
@@ -215,15 +214,11 @@ BOOL CWindowsEvent::Open(__in_z_opt LPCWSTR szNameW, __in_opt BOOL bInherit)
     }
     //open event
     nNtStatus = ::MxNtOpenEvent(&_h, EVENT_ALL_ACCESS, &sObjAttr);
-    //close root directory
-    if (sObjAttr.RootDirectory != NULL)
-      ::MxNtClose(sObjAttr.RootDirectory);
-    //process result
     if (!NT_SUCCESS(nNtStatus))
-      return FALSE;
+      return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
   }
   Attach(_h);
-  return TRUE;
+  return S_OK;
 }
 
 BOOL CWindowsEvent::Wait(__in DWORD dwTimeoutMs)
@@ -249,20 +244,22 @@ CWindowsMutex::CWindowsMutex() : CWindowsHandle()
   return;
 }
 
-BOOL CWindowsMutex::Create(__in_z_opt LPCWSTR szNameW, __in BOOL bInitialOwner,
-                           __in_opt LPSECURITY_ATTRIBUTES lpSecAttr, __out_opt LPBOOL lpbAlreadyExists)
+HRESULT CWindowsMutex::Create(__in_z_opt LPCWSTR szNameW, __in BOOL bInitialOwner,
+                              __in_opt LPSECURITY_ATTRIBUTES lpSecAttr, __out_opt LPBOOL lpbAlreadyExists)
 {
   HANDLE _h;
+  HRESULT hRes;
 
   if (lpbAlreadyExists != NULL)
     *lpbAlreadyExists = FALSE;
   if (fnCreateMutexW != NULL)
   {
     _h = fnCreateMutexW(lpSecAttr, bInitialOwner, szNameW);
+    hRes = MX_HRESULT_FROM_LASTERROR();
     if (_h == NULL)
-      return FALSE;
+      return hRes;
     if (lpbAlreadyExists != NULL)
-      *lpbAlreadyExists = (::MxGetLastWin32Error() == ERROR_ALREADY_EXISTS) ? TRUE : FALSE;
+      *lpbAlreadyExists = (hRes == MX_E_AlreadyExists) ? TRUE : FALSE;
   }
   else
   {
@@ -276,9 +273,9 @@ BOOL CWindowsMutex::Create(__in_z_opt LPCWSTR szNameW, __in BOOL bInitialOwner,
     if (szNameW != NULL)
     {
       //get root directory handle
-      sObjAttr.RootDirectory = GetRootDirHandle();
-      if (sObjAttr.RootDirectory == NULL)
-        return FALSE;
+      nNtStatus = GetRootDirHandle(&(sObjAttr.RootDirectory));
+      if (!NT_SUCCESS(nNtStatus))
+        return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
       //setup object name
       usName.Buffer = (PWSTR)szNameW;
       for (usName.Length=0; szNameW[usName.Length]!=0; usName.Length++);
@@ -295,28 +292,25 @@ BOOL CWindowsMutex::Create(__in_z_opt LPCWSTR szNameW, __in BOOL bInitialOwner,
     }
     //create mutant
     nNtStatus = ::MxNtCreateMutant(&_h, MUTANT_ALL_ACCESS, &sObjAttr, (BOOLEAN)bInitialOwner);
-    //close root directory
-    if (sObjAttr.RootDirectory != NULL)
-      ::MxNtClose(sObjAttr.RootDirectory);
-    //process result
     if (!NT_SUCCESS(nNtStatus))
-      return FALSE;
+      return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
     if (nNtStatus == STATUS_OBJECT_NAME_EXISTS && lpbAlreadyExists != NULL)
       *lpbAlreadyExists = TRUE;
   }
   Attach(_h);
-  return TRUE;
+  return S_OK;
 }
 
-BOOL CWindowsMutex::Open(__in_z_opt LPCWSTR szNameW, __in BOOL bQueryOnly, __in_opt BOOL bInherit)
+HRESULT CWindowsMutex::Open(__in_z_opt LPCWSTR szNameW, __in BOOL bQueryOnly, __in_opt BOOL bInherit)
 {
   HANDLE _h;
+  HRESULT hRes;
 
   if (fnOpenMutexW != NULL)
   {
     _h = fnOpenMutexW(MUTEX_ALL_ACCESS, bInherit, szNameW);
     if (_h == NULL)
-      return FALSE;
+      return MX_HRESULT_FROM_LASTERROR();
   }
   else
   {
@@ -333,9 +327,9 @@ BOOL CWindowsMutex::Open(__in_z_opt LPCWSTR szNameW, __in BOOL bQueryOnly, __in_
     if (szNameW != NULL)
     {
       //get root directory handle
-      sObjAttr.RootDirectory = GetRootDirHandle();
-      if (sObjAttr.RootDirectory == NULL)
-        return FALSE;
+      nNtStatus = GetRootDirHandle(&(sObjAttr.RootDirectory));
+      if (!NT_SUCCESS(nNtStatus))
+        return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
       //setup object name
       usName.Buffer = (PWSTR)szNameW;
       for (usName.Length=0; szNameW[usName.Length]!=0; usName.Length++);
@@ -346,15 +340,11 @@ BOOL CWindowsMutex::Open(__in_z_opt LPCWSTR szNameW, __in BOOL bQueryOnly, __in_
     //open mutant
     nNtStatus = ::MxNtOpenMutant(&_h, (bQueryOnly == FALSE) ? MUTANT_ALL_ACCESS : (STANDARD_RIGHTS_READ|SYNCHRONIZE),
                                  &sObjAttr);
-    //close root directory
-    if (sObjAttr.RootDirectory != NULL)
-      ::MxNtClose(sObjAttr.RootDirectory);
-    //process result
     if (!NT_SUCCESS(nNtStatus))
-      return FALSE;
+      return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
   }
   Attach(_h);
-  return TRUE;
+  return S_OK;
 }
 
 //-----------------------------------------------------------
@@ -565,7 +555,7 @@ static VOID InitializeKernel32Apis()
   return;
 }
 
-static HANDLE GetRootDirHandle()
+static NTSTATUS GetRootDirHandle(__out PHANDLE lphRootDir)
 {
   static HANDLE volatile hRootDirHandle = NULL;
   RTL_OSVERSIONINFOW sOviW;
@@ -576,9 +566,10 @@ static HANDLE GetRootDirHandle()
   WCHAR szBufW[256];
   NTSTATUS nNtStatus;
 
-  _h = MX::__InterlockedReadPointer(&hRootDirHandle);
-  if (_h != NULL)
-    return _h;
+  *lphRootDir = MX::__InterlockedReadPointer(&hRootDirHandle);
+  if ((*lphRootDir) != NULL)
+    return STATUS_SUCCESS;
+
   _h = NULL;
 
   //get OS version
@@ -635,9 +626,9 @@ static HANDLE GetRootDirHandle()
   nNtStatus = ::MxNtOpenDirectoryObject(&_h, 0x0F, &sObjAttr); //DIRECTORY_CREATE_OBJECT|DIRECTORY_TRAVERSE
   if (NT_SUCCESS(nNtStatus) && dwUsesPrivateNamespace != 0)
   {
-    typedef NTSTATUS (NTAPI *lpfnRtlConvertSidToUnicodeString)(_Out_ PMX_UNICODE_STRING UnicodeString,
-                                                               _In_ PSID Sid, _In_ BOOLEAN AllocateDestinationString);
-    typedef VOID (NTAPI *lpfnRtlFreeUnicodeString)(_In_ PMX_UNICODE_STRING UnicodeString);
+    typedef NTSTATUS (NTAPI *lpfnRtlConvertSidToUnicodeString)(__out PMX_UNICODE_STRING UnicodeString,
+                                                               __in PSID Sid, __in BOOLEAN AllocateDestinationString);
+    typedef VOID (NTAPI *lpfnRtlFreeUnicodeString)(__in PMX_UNICODE_STRING UnicodeString);
     PVOID nNtDll;
     lpfnRtlConvertSidToUnicodeString fnRtlConvertSidToUnicodeString = NULL;
     lpfnRtlFreeUnicodeString fnRtlFreeUnicodeString = NULL;
@@ -683,8 +674,6 @@ static HANDLE GetRootDirHandle()
     {
       nNtStatus = STATUS_PROCEDURE_NOT_FOUND;
     }
-    if (!NT_SUCCESS(nNtStatus))
-      goto done;
   }
 
 done:
@@ -699,14 +688,20 @@ done:
   }
   if (NT_SUCCESS(nNtStatus))
   {
-    if (_h != NULL)
+    if (_InterlockedCompareExchangePointer(&hRootDirHandle, _h, NULL) != NULL)
+    {
       ::MxNtClose(_h);
-    return NULL;
+      _h = MX::__InterlockedReadPointer(&hRootDirHandle);
+    }
   }
-  if (_InterlockedCompareExchangePointer(&hRootDirHandle, _h, NULL) != NULL)
+  else
   {
-    ::MxNtClose(_h);
-    _h = MX::__InterlockedReadPointer(&hRootDirHandle);
+    if (_h != NULL)
+    {
+      ::MxNtClose(_h);
+      _h = NULL;
+    }
   }
-  return _h;
+  *lphRootDir = _h;
+  return nNtStatus;
 }

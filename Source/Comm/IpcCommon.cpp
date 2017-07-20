@@ -101,7 +101,7 @@ HRESULT CIpc::Initialize()
     dwMaxOutgoingPackets = 2;
 
   //create shutdown event
-  hRes = (cShuttingDownEv.Create(TRUE, FALSE) != FALSE) ? S_OK : E_OUTOFMEMORY;
+  hRes = cShuttingDownEv.Create(TRUE, FALSE);
   //check if IO thread pools are running
   if (SUCCEEDED(hRes))
   {

@@ -189,10 +189,11 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(__in HANDLE hProc, __out HANDL
   if (cLocalPipe == NULL || cLocalPipe == INVALID_HANDLE_VALUE)
     return MX_HRESULT_FROM_LASTERROR();
   //initialize for connection wait
-  if (cConnEv.Create(TRUE, FALSE) == FALSE)
-    return E_OUTOFMEMORY;
+  hRes = cConnEv.Create(TRUE, FALSE);
+  if (FAILED(hRes))
+    return hRes;
   MemSet(&sConnOvr, 0, sizeof(sConnOvr));
-  sConnOvr.hEvent = cConnEv;
+  sConnOvr.hEvent = cConnEv.Get();
   bConnected = ::ConnectNamedPipe(cLocalPipe, &sConnOvr);
   //create other party pipe
   cRemotePipe.Attach(::CreateFileW(szBufW, GENERIC_READ|GENERIC_WRITE, 0, &sSecAttrib, OPEN_EXISTING,

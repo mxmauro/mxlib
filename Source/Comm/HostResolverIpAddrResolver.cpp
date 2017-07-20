@@ -229,7 +229,7 @@ BOOL CIPAddressResolver::Initialize()
   lpEventQueue = CSystemTimedEventQueue::Get();
   if (lpEventQueue == NULL)
     return FALSE;
-  if (cQueueChangedEv.Create(TRUE, FALSE) == FALSE || Start() == FALSE)
+  if (FAILED(cQueueChangedEv.Create(TRUE, FALSE)) || Start() == FALSE)
     return FALSE;
   return TRUE;
 }
