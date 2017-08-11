@@ -306,7 +306,7 @@ VOID CIoCompletionPortThreadPool::InternalFinalize()
       }
     }
     if (b != FALSE)
-      ::MxSleep(10);
+      ::MxSleep(5);
   }
   while (b != FALSE);
   cIOCP.Finalize();

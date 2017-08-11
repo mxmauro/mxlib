@@ -230,7 +230,7 @@ BOOL CWindowsEvent::Wait(__in DWORD dwTimeoutMs)
   lpliTimeout = NULL;
   if (dwTimeoutMs != INFINITE)
   {
-    liTimeout.QuadPart = (LONGLONG)MX_MILLISECONDS_TO_100NS(dwTimeoutMs);
+    liTimeout.QuadPart = -(LONGLONG)MX_MILLISECONDS_TO_100NS(dwTimeoutMs);
     lpliTimeout = &liTimeout;
   }
   return (::MxNtWaitForSingleObject(h, FALSE, lpliTimeout) == WAIT_OBJECT_0) ? TRUE : FALSE;

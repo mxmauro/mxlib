@@ -237,7 +237,7 @@ public:
     lpliTimeout = NULL;
     if (dwTimeout != INFINITE)
     {
-      liTimeout.QuadPart = (LONGLONG)MX_MILLISECONDS_TO_100NS(dwTimeout);
+      liTimeout.QuadPart = -(LONGLONG)MX_MILLISECONDS_TO_100NS(dwTimeout);
       lpliTimeout = &liTimeout;
     }
     return (::MxNtWaitForSingleObject(h, FALSE, lpliTimeout) == WAIT_OBJECT_0) ? TRUE : FALSE;

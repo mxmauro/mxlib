@@ -853,7 +853,7 @@ VOID MxSleep(__in DWORD dwTimeMs)
 {
   LARGE_INTEGER liTime;
 
-  liTime.QuadPart = (LONGLONG)MX_MILLISECONDS_TO_100NS(dwTimeMs);
+  liTime.QuadPart = -(LONGLONG)MX_MILLISECONDS_TO_100NS(dwTimeMs);
   ::MxNtDelayExecution(FALSE, &liTime);
   return;
 }
