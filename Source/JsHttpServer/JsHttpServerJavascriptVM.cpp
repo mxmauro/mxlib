@@ -499,7 +499,7 @@ HRESULT CJsHttpServer::TransformJavascriptCode(__inout MX::CStringA &cStrCodeA)
       {
         if (*sA == chQuoteA)
           chQuoteA = 0;
-        *sA++;
+        sA++;
       }
     }
   }
