@@ -34,12 +34,20 @@ class CIpcMessageManager : public virtual CBaseMemObj
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CIpcMessageManager);
 public:
+  typedef struct tagMULTIBLOCK {
+    LPVOID lpMsg;
+    SIZE_T nMsgSize;
+  } MULTIBLOCK, *LPMULTIBLOCK;
+
   class CMessage;
 
   typedef Callback<VOID (__in CMessage *lpMsg)> OnMessageReceivedCallback;
 
   typedef Callback<VOID (__in CIpc *lpIpc, __in HANDLE hConn, __in DWORD dwId, __in CMessage *lpMsg,
                          __in LPVOID lpUserData)> OnMessageReplyCallback;
+
+  typedef Callback<VOID (__in SIZE_T nIndex, __out LPVOID *lplpMsg, __out PSIZE_T lpnMsgSize,
+                         __in LPVOID lpContext)> OnMultiBlockCallback;
 
 public:
   CIpcMessageManager(__in CIoCompletionPortThreadPool &cWorkerPool, __in CIpc *lpIpc, __in HANDLE hConn,
@@ -58,10 +66,24 @@ public:
   HRESULT ProcessIncomingPacket();
 
   HRESULT SendHeader(__in DWORD dwMsgId, __in SIZE_T nMsgSize);
+  HRESULT SendData(__in LPCVOID lpMsg, __in SIZE_T nMsgSize);
   HRESULT SendEndOfMessageMark(__in DWORD dwMsgId);
+  HRESULT SendMultipleBlocks(__out LPDWORD lpdwMsgId, __in SIZE_T nBlocksCount, ...);
+  HRESULT SendMultipleBlocks(__out LPDWORD lpdwMsgId, __in SIZE_T nBlocksCount, __in LPMULTIBLOCK lpBlocks);
+  HRESULT SendMultipleBlocks(__out LPDWORD lpdwMsgId, __in OnMultiBlockCallback cMultiBlockCallback,
+                             __in_opt LPVOID lpContext=NULL);
 
   HRESULT WaitForReply(__in DWORD dwId, __deref_out CMessage **lplpMessage);
   HRESULT WaitForReplyAsync(__in DWORD dwId, __in OnMessageReplyCallback cCallback, __in LPVOID lpUserData);
+
+  CIpc* GetIpc() const
+    {
+    return lpIpc;
+    };
+  HANDLE GetConn() const
+    {
+    return hConn;
+    };
 
 public:
   class CMessage : public virtual TRefCounted<CBaseMemObj>, public TLnkLstNode<CMessage>
@@ -94,6 +116,9 @@ public:
     HRESULT SendReplyHeader(__in SIZE_T nMsgSize);
     HRESULT SendReplyData(__in LPCVOID lpMsg, __in SIZE_T nMsgSize);
     HRESULT SendReplyEndOfMessageMark();
+    HRESULT SendReplyMultipleBlocks(__in SIZE_T nBlocksCount, ...);
+    HRESULT SendReplyMultipleBlocks(__in SIZE_T nBlocksCount, __in LPMULTIBLOCK lpBlocks);
+    HRESULT SendReplyMultipleBlocks(__in OnMultiBlockCallback cMultiBlockCallback, __in_opt LPVOID lpContext=NULL);
 
     CIpc* GetIpc() const
       {

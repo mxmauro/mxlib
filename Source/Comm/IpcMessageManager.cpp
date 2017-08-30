@@ -45,6 +45,23 @@ typedef struct {
 } HEADER;
 #pragma pack()
 
+typedef struct tagMULTIPLEBLOCKS_VAARGS {
+  SIZE_T nBlocksCount;
+  va_list args;
+} MULTIPLEBLOCKS_VAARGS, *LPMULTIPLEBLOCKS_VAARGS;
+
+typedef struct tagMULTIPLEBLOCKS_ARRAY {
+  SIZE_T nBlocksCount;
+  MX::CIpcMessageManager::LPMULTIBLOCK lpBlocks;
+} MULTIPLEBLOCKS_ARRAY, *LPMULTIPLEBLOCKS_ARRAY;
+
+//-----------------------------------------------------------
+
+static VOID MultiBlockCallback_VaArgs(__in SIZE_T nIndex, __out LPVOID *lplpMsg, __out PSIZE_T lpnMsgSize,
+                                      __in LPVOID lpContext);
+static VOID MultiBlockCallback_Array(__in SIZE_T nIndex, __out LPVOID *lplpMsg, __out PSIZE_T lpnMsgSize,
+                                     __in LPVOID lpContext);
+
 //-----------------------------------------------------------
 
 namespace MX {
@@ -267,14 +284,106 @@ HRESULT CIpcMessageManager::SendHeader(__in DWORD dwMsgId, __in SIZE_T nMsgSize)
   return lpIpc->SendMsg(hConn, &sHeader, sizeof(sHeader));
 }
 
+HRESULT CIpcMessageManager::SendData(__in LPCVOID lpMsg, __in SIZE_T nMsgSize)
+{
+  if (__InterlockedRead(&nShuttingDown) != 0)
+    return MX_E_Cancelled;
+  return lpIpc->SendMsg(hConn, lpMsg, nMsgSize);
+}
+
 HRESULT CIpcMessageManager::SendEndOfMessageMark(__in DWORD dwMsgId)
 {
   if (__InterlockedRead(&nShuttingDown) != 0)
     return MX_E_Cancelled;
-  if (dwProtocolVersion == 2)
+  if (dwProtocolVersion <= 1)
     return S_OK; //protocol version 1 has no end of message mark
   dwMsgId = dwMsgId ^= _MESSAGE_END_XOR_MASK;
   return lpIpc->SendMsg(hConn, &dwMsgId, sizeof(dwMsgId));
+}
+
+HRESULT CIpcMessageManager::SendMultipleBlocks(__out LPDWORD lpdwMsgId, __in SIZE_T nBlocksCount, ...)
+{
+  MULTIPLEBLOCKS_VAARGS sData;
+
+  sData.nBlocksCount = nBlocksCount;
+  va_start(sData.args, nBlocksCount);
+  return SendMultipleBlocks(lpdwMsgId, MX_BIND_CALLBACK(&MultiBlockCallback_VaArgs), &sData);
+}
+
+HRESULT CIpcMessageManager::SendMultipleBlocks(__out LPDWORD lpdwMsgId, __in SIZE_T nBlocksCount,
+                                               __in LPMULTIBLOCK lpBlocks)
+{
+  MULTIPLEBLOCKS_ARRAY sData;
+
+  sData.nBlocksCount = nBlocksCount;
+  sData.lpBlocks = lpBlocks;
+  return SendMultipleBlocks(lpdwMsgId, MX_BIND_CALLBACK(&MultiBlockCallback_Array), &sData);
+}
+
+HRESULT CIpcMessageManager::SendMultipleBlocks(__out LPDWORD lpdwMsgId, __in OnMultiBlockCallback cMultiBlockCallback,
+                                               __in_opt LPVOID lpContext)
+{
+  MX::CIpc::CAutoMultiSendLock cMultiSendLock(lpIpc->StartMultiSendBlock(hConn));
+  LPVOID lpMsg;
+  SIZE_T nIndex, nMsgSize, nTotalMsgSize;
+  DWORD dwMsgId;
+  HRESULT hRes;
+
+  if (lpdwMsgId == NULL)
+    return E_POINTER;
+  *lpdwMsgId = 0;
+
+  if (!cMultiBlockCallback)
+    return E_POINTER;
+
+  if (cMultiSendLock.IsLocked() == FALSE)
+    return MX_E_Cancelled;
+  nIndex = nTotalMsgSize = 0;
+  do
+  {
+    lpMsg = NULL;
+    nMsgSize = 0;
+    cMultiBlockCallback(nIndex, &lpMsg, &nMsgSize, lpContext);
+    if (lpMsg != NULL)
+    {
+      if (nMsgSize > dwMaxMessageSize ||
+          nTotalMsgSize + nMsgSize < nTotalMsgSize ||
+          nTotalMsgSize >(SIZE_T)dwMaxMessageSize)
+      {
+        MX_ASSERT(FALSE);
+        return MX_E_InvalidData;
+      }
+      nTotalMsgSize += nMsgSize;
+      nIndex++;
+    }
+  }
+  while (lpMsg != NULL);
+  if (nIndex == 0)
+    return E_INVALIDARG;
+  //get message id
+  dwMsgId = GetNextId();
+  //header
+  hRes = SendHeader(dwMsgId, nTotalMsgSize);
+  //body
+  nIndex = 0;
+  while (SUCCEEDED(hRes))
+  {
+    lpMsg = NULL;
+    nMsgSize = 0;
+    cMultiBlockCallback(nIndex++, &lpMsg, &nMsgSize, lpContext);
+    if (lpMsg == NULL)
+      break;
+    if (nMsgSize > 0)
+      hRes = lpIpc->SendMsg(hConn, lpMsg, nMsgSize);
+  }
+  while (lpMsg != NULL);
+  //end of message
+  if (SUCCEEDED(hRes))
+    hRes = SendEndOfMessageMark(dwMsgId);
+  //done
+  if (SUCCEEDED(hRes))
+    *lpdwMsgId = dwMsgId;
+  return hRes;
 }
 
 HRESULT CIpcMessageManager::WaitForReply(__in DWORD dwId, __deref_out CMessage **lplpMessage)
@@ -577,4 +686,113 @@ HRESULT CIpcMessageManager::CMessage::SendReplyEndOfMessageMark()
   return lpIpc->SendMsg(hConn, &dwMsgId, sizeof(dwMsgId));
 }
 
+HRESULT CIpcMessageManager::CMessage::SendReplyMultipleBlocks(__in SIZE_T nBlocksCount, ...)
+{
+  MULTIPLEBLOCKS_VAARGS sData;
+
+  sData.nBlocksCount = nBlocksCount;
+  va_start(sData.args, nBlocksCount);
+  return SendReplyMultipleBlocks(MX_BIND_CALLBACK(&MultiBlockCallback_VaArgs), &sData);
+}
+
+HRESULT CIpcMessageManager::CMessage::SendReplyMultipleBlocks(__in SIZE_T nBlocksCount, __in LPMULTIBLOCK lpBlocks)
+{
+  MULTIPLEBLOCKS_ARRAY sData;
+
+  sData.nBlocksCount = nBlocksCount;
+  sData.lpBlocks = lpBlocks;
+  return SendReplyMultipleBlocks(MX_BIND_CALLBACK(&MultiBlockCallback_Array), &sData);
+}
+
+HRESULT CIpcMessageManager::CMessage::SendReplyMultipleBlocks(__in OnMultiBlockCallback cMultiBlockCallback,
+                                                              __in_opt LPVOID lpContext)
+{
+  MX::CIpc::CAutoMultiSendLock cMultiSendLock(StartMultiSendBlock());
+  LPVOID lpMsg;
+  SIZE_T nIndex, nMsgSize, nTotalMsgSize;
+  HRESULT hRes;
+
+  if (cMultiSendLock.IsLocked() == FALSE)
+    return MX_E_Cancelled;
+
+  nIndex = nTotalMsgSize = 0;
+  do
+  {
+    lpMsg = NULL;
+    nMsgSize = 0;
+    cMultiBlockCallback(nIndex, &lpMsg, &nMsgSize, lpContext);
+    if (lpMsg != NULL)
+    {
+      if (nMsgSize > 0x7FFFFFFF ||
+          nTotalMsgSize + nMsgSize < nTotalMsgSize ||
+          nTotalMsgSize > 0x7FFFFFFF)
+      {
+        MX_ASSERT(FALSE);
+        return MX_E_InvalidData;
+      }
+      nTotalMsgSize += nMsgSize;
+      nIndex++;
+    }
+  }
+  while (lpMsg != NULL);
+  if (nIndex == 0)
+    return E_INVALIDARG;
+  //header
+  hRes = SendReplyHeader(nTotalMsgSize);
+  //body
+  nIndex = 0;
+  while (SUCCEEDED(hRes))
+  {
+    lpMsg = NULL;
+    nMsgSize = 0;
+    cMultiBlockCallback(nIndex++, &lpMsg, &nMsgSize, lpContext);
+    if (lpMsg == NULL)
+      break;
+    if (nMsgSize > 0)
+      hRes = lpIpc->SendMsg(hConn, lpMsg, nMsgSize);
+  }
+  while (lpMsg != NULL);
+  //end of message
+  if (SUCCEEDED(hRes))
+    hRes = SendReplyEndOfMessageMark();
+  //done
+  return hRes;
+}
+
 } //namespace MX
+
+//-----------------------------------------------------------
+
+static VOID MultiBlockCallback_VaArgs(__in SIZE_T nIndex, __out LPVOID *lplpMsg, __out PSIZE_T lpnMsgSize,
+                                      __in LPVOID lpContext)
+{
+  LPMULTIPLEBLOCKS_VAARGS lpData = (LPMULTIPLEBLOCKS_VAARGS)lpContext;
+
+  if (nIndex < lpData->nBlocksCount)
+  {
+    va_list args = lpData->args;
+
+    while (nIndex > 0)
+    {
+      va_arg(args, LPVOID);
+      va_arg(args, SIZE_T);
+      nIndex--;
+    }
+    *lplpMsg = va_arg(args, LPVOID);
+    *lpnMsgSize = va_arg(args, SIZE_T);
+  }
+  return;
+}
+
+static VOID MultiBlockCallback_Array(__in SIZE_T nIndex, __out LPVOID *lplpMsg, __out PSIZE_T lpnMsgSize,
+                                     __in LPVOID lpContext)
+{
+  LPMULTIPLEBLOCKS_ARRAY lpData = (LPMULTIPLEBLOCKS_ARRAY)lpContext;
+
+  if (nIndex < lpData->nBlocksCount)
+  {
+    *lplpMsg = lpData->lpBlocks[nIndex].lpMsg;
+    *lpnMsgSize = lpData->lpBlocks[nIndex].nMsgSize;
+  }
+  return;
+}
