@@ -89,7 +89,7 @@ public:
   class CMessage : public virtual TRefCounted<CBaseMemObj>, public TLnkLstNode<CMessage>
   {
   private:
-    CMessage(__in CIpc *lpIpc, __in HANDLE hConn);
+    CMessage(__in CIpcMessageManager *lpMgr);
   public:
     ~CMessage();
 
@@ -120,25 +120,28 @@ public:
     HRESULT SendReplyMultipleBlocks(__in SIZE_T nBlocksCount, __in LPMULTIBLOCK lpBlocks);
     HRESULT SendReplyMultipleBlocks(__in OnMultiBlockCallback cMultiBlockCallback, __in_opt LPVOID lpContext=NULL);
 
+    CIpcMessageManager* GetManager() const
+      {
+      return lpMgr;
+      };
     CIpc* GetIpc() const
       {
-      return lpIpc;
+      return lpMgr->lpIpc;
       };
     HANDLE GetConn() const
       {
-      return hConn;
+      return lpMgr->hConn;
       };
 
   private:
     friend class CIpcMessageManager;
 
+    CIpcMessageManager *lpMgr;
+
     OVERLAPPED sOvr;
     DWORD dwId;
     LPBYTE lpData;
     DWORD nDataLen;
-    CIpc *lpIpc;
-    HANDLE hConn;
-    DWORD dwProtocolVersion;
   };
 
 private:

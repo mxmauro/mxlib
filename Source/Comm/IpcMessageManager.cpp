@@ -163,7 +163,7 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
         if (nRemaining < sizeof(DWORD))
           break;
         //create a new message
-        cCurrMessage.Attach(MX_DEBUG_NEW CMessage(lpIpc, hConn));
+        cCurrMessage.Attach(MX_DEBUG_NEW CMessage(this));
         if (!cCurrMessage)
         {
           hRes = E_OUTOFMEMORY;
@@ -376,7 +376,6 @@ HRESULT CIpcMessageManager::SendMultipleBlocks(__out LPDWORD lpdwMsgId, __in OnM
     if (nMsgSize > 0)
       hRes = lpIpc->SendMsg(hConn, lpMsg, nMsgSize);
   }
-  while (lpMsg != NULL);
   //end of message
   if (SUCCEEDED(hRes))
     hRes = SendEndOfMessageMark(dwMsgId);
@@ -632,15 +631,14 @@ int CIpcMessageManager::ReplyMsgWaitCompareFunc(__in LPVOID lpContext, __in REPL
 
 //-----------------------------------------------------------
 
-CIpcMessageManager::CMessage::CMessage(__in CIpc *_lpIpc, __in HANDLE _hConn) : TRefCounted<CBaseMemObj>(),
+CIpcMessageManager::CMessage::CMessage(__in CIpcMessageManager *_lpMgr) : TRefCounted<CBaseMemObj>(),
                                                                                 TLnkLstNode<CMessage>()
 {
   MemSet(&sOvr, 0, sizeof(sOvr));
+  lpMgr = _lpMgr;
   dwId = 0;
   lpData = NULL;
   nDataLen = 0;
-  lpIpc = _lpIpc;
-  hConn = _hConn;
   return;
 }
 
@@ -652,7 +650,7 @@ CIpcMessageManager::CMessage::~CMessage()
 
 CIpc::CMultiSendLock* CIpcMessageManager::CMessage::StartMultiSendBlock()
 {
-  return lpIpc->StartMultiSendBlock(hConn);
+  return lpMgr->lpIpc->StartMultiSendBlock(lpMgr->hConn);
 }
 
 HRESULT CIpcMessageManager::CMessage::SendReplyHeader(__in SIZE_T nMsgSize)
@@ -668,22 +666,22 @@ HRESULT CIpcMessageManager::CMessage::SendReplyHeader(__in SIZE_T nMsgSize)
 #endif //_M_X64
   sHeader.dwMsgId = dwId | _MESSAGE_IS_REPLY;
   sHeader.dwMsgSize = (DWORD)nMsgSize;
-  return lpIpc->SendMsg(hConn, &sHeader, sizeof(sHeader));
+  return lpMgr->lpIpc->SendMsg(lpMgr->hConn, &sHeader, sizeof(sHeader));
 }
 
 HRESULT CIpcMessageManager::CMessage::SendReplyData(__in LPCVOID lpMsg, __in SIZE_T nMsgSize)
 {
-  return lpIpc->SendMsg(hConn, lpMsg, nMsgSize);
+  return lpMgr->lpIpc->SendMsg(lpMgr->hConn, lpMsg, nMsgSize);
 }
 
 HRESULT CIpcMessageManager::CMessage::SendReplyEndOfMessageMark()
 {
   DWORD dwMsgId;
 
-  if (dwProtocolVersion <= 1)
+  if (lpMgr->dwProtocolVersion <= 1)
     return S_OK; //protocol version 1 has no end of message mark
   dwMsgId = (dwId | _MESSAGE_IS_REPLY) ^ _MESSAGE_END_XOR_MASK;
-  return lpIpc->SendMsg(hConn, &dwMsgId, sizeof(dwMsgId));
+  return lpMgr->lpIpc->SendMsg(lpMgr->hConn, &dwMsgId, sizeof(dwMsgId));
 }
 
 HRESULT CIpcMessageManager::CMessage::SendReplyMultipleBlocks(__in SIZE_T nBlocksCount, ...)
@@ -749,9 +747,8 @@ HRESULT CIpcMessageManager::CMessage::SendReplyMultipleBlocks(__in OnMultiBlockC
     if (lpMsg == NULL)
       break;
     if (nMsgSize > 0)
-      hRes = lpIpc->SendMsg(hConn, lpMsg, nMsgSize);
+      hRes = lpMgr->lpIpc->SendMsg(lpMgr->hConn, lpMsg, nMsgSize);
   }
-  while (lpMsg != NULL);
   //end of message
   if (SUCCEEDED(hRes))
     hRes = SendReplyEndOfMessageMark();
