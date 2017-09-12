@@ -316,6 +316,62 @@ HRESULT CIpc::IsClosed(__in HANDLE h, __out_opt HRESULT *lphErrorCode)
   return hRes;
 }
 
+HRESULT CIpc::AddLayer(__in HANDLE h, __in CLayer *lpLayer, __in_opt BOOL bFront)
+{
+  CAutoRundownProtection cRundownLock(&nRundownProt);
+  CConnectionBase *lpConn;
+  BOOL bCallOnConnect = FALSE;
+
+  if (cRundownLock.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
+  lpConn = CheckAndGetConnection(h);
+  if (lpConn == NULL)
+    return E_INVALIDARG;
+  if (lpLayer == NULL)
+  {
+    ReleaseAndRemoveConnectionIfClosed(lpConn);
+    return E_POINTER;
+  }
+  //add layer
+  {
+    CAutoSlimRWLExclusive cLayersLock(&(lpConn->sLayers.nRwMutex));
+
+    if (bFront != FALSE)
+    {
+      CLayer *lpPrevLayer = lpConn->sLayers.cList.GetHead();
+      if (lpPrevLayer != NULL && (__InterlockedRead(&(lpPrevLayer->nFlags)) & FLAG_Connected) != 0)
+        bCallOnConnect = TRUE;
+      lpConn->sLayers.cList.PushHead(lpLayer);
+    }
+    else
+    {
+      CLayer *lpPrevLayer = lpConn->sLayers.cList.GetTail();
+      if (lpPrevLayer != NULL && (__InterlockedRead(&(lpPrevLayer->nFlags)) & FLAG_Connected) != 0)
+        bCallOnConnect = TRUE;
+      lpConn->sLayers.cList.PushTail(lpLayer);
+    }
+    lpLayer->lpConn = lpConn;
+  }
+  //call onconnect if needed
+  if (bCallOnConnect != FALSE)
+  {
+    HRESULT hRes = lpLayer->OnConnect();
+    if (FAILED(hRes))
+    {
+      {
+        CAutoSlimRWLExclusive cLayersLock(&(lpConn->sLayers.nRwMutex));
+
+        lpLayer->RemoveNode();
+      }
+      ReleaseAndRemoveConnectionIfClosed(lpConn);
+      return hRes;
+    }
+  }
+  //done
+  ReleaseAndRemoveConnectionIfClosed(lpConn);
+  return S_OK;
+}
+
 CIpc::CUserData* CIpc::GetUserData(__in HANDLE h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
@@ -485,7 +541,7 @@ HRESULT CIpc::FireOnCreate(__in CConnectionBase *lpConn)
   if (lpConn->cCreateCallback)
   {
     CREATE_CALLBACK_DATA sCallbackData = {
-      lpConn->cLayersList,
+      lpConn->sLayers.cList,
       lpConn->cConnectCallback, lpConn->cDisconnectCallback,
       lpConn->cDataReceivedCallback, lpConn->cDestroyCallback,
       lpConn->dwWriteTimeoutMs
@@ -500,7 +556,7 @@ HRESULT CIpc::FireOnCreate(__in CConnectionBase *lpConn)
       CLayer *lpLayer;
 
       lpConn->cUserData.Attach(lpUserData);
-      for (lpLayer=it.Begin(lpConn->cLayersList); lpLayer!=NULL; lpLayer=it.Next())
+      for (lpLayer=it.Begin(lpConn->sLayers.cList); lpLayer!=NULL; lpLayer=it.Next())
         lpLayer->lpConn = lpConn;
     }
   }
@@ -524,13 +580,13 @@ HRESULT CIpc::FireOnConnect(__in CConnectionBase *lpConn, __in HRESULT hErrorCod
   {
     if (lpConn->cConnectCallback)
     {
-      hRes = lpConn->cConnectCallback(this, (HANDLE)lpConn, lpConn->cUserData, lpConn->cLayersList, hErrorCode);
+      hRes = lpConn->cConnectCallback(this, (HANDLE)lpConn, lpConn->cUserData, lpConn->sLayers.cList, hErrorCode);
       if (SUCCEEDED(hRes))
       {
         TLnkLst<CLayer>::Iterator it;
         CLayer *lpLayer;
 
-        for (lpLayer=it.Begin(lpConn->cLayersList); lpLayer!=NULL; lpLayer=it.Next())
+        for (lpLayer=it.Begin(lpConn->sLayers.cList); lpLayer!=NULL; lpLayer=it.Next())
           lpLayer->lpConn = lpConn;
       }
     }
@@ -658,21 +714,30 @@ VOID CIpc::OnDispatcherPacket(__in CIoCompletionPortThreadPool *lpPool, __in DWO
     switch (lpPacket->GetType())
     {
       case CPacket::TypeInitialSetup:
-        {
-        TLnkLst<CLayer>::Iterator it;
-
         if (SUCCEEDED(hRes))
           hRes =  lpConn->DoRead((SIZE_T)dwReadAhead, bDoZeroReads && ZeroReadsSupported());
         //notify all layers about connection
-        for (lpLayer=it.Begin(lpConn->cLayersList); SUCCEEDED(hRes) && lpLayer!=NULL; lpLayer=it.Next())
+        {
+          CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
+
+          lpLayer = lpConn->sLayers.cList.GetTail();
+        }
+        while (SUCCEEDED(hRes) && lpLayer != NULL)
+        {
+          _InterlockedOr(&(lpLayer->nFlags), FLAG_Connected);
           hRes = lpLayer->OnConnect();
+          {
+            CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
+
+            lpLayer = lpLayer->GetPrevEntry();
+          }
+        }
         //fire main connect
         if (SUCCEEDED(hRes))
           hRes = FireOnConnect(lpConn, S_OK);
         //free packet
         lpConn->cRwList.Remove(lpPacket);
         FreePacket(lpPacket);
-        }
         break;
 
       case CPacket::TypeZeroRead:
@@ -705,7 +770,11 @@ VOID CIpc::OnDispatcherPacket(__in CIoCompletionPortThreadPool *lpPool, __in DWO
             //move packet to readed list and process them
             lpConn->cRwList.Remove(lpPacket);
             lpConn->cReadedList.QueueSorted(lpPacket);
-            lpLayer = lpConn->cLayersList.GetHead();
+            {
+              CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
+
+              lpLayer = lpConn->sLayers.cList.GetHead();
+            }
             //get next sequenced block
             while (SUCCEEDED(hRes) && IsShuttingDown() == FALSE)
             {
@@ -757,7 +826,11 @@ VOID CIpc::OnDispatcherPacket(__in CIoCompletionPortThreadPool *lpPool, __in DWO
         lpConn->cRwList.Remove(lpPacket);
         lpConn->cWritePendingList.QueueSorted(lpPacket);
 check_pending_req:
-        lpLayer = lpConn->cLayersList.GetTail();
+        {
+          CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
+
+          lpLayer = lpConn->sLayers.cList.GetTail();
+        }
         //loop
         while (SUCCEEDED(hRes) &&
                (DWORD)__InterlockedRead(&(lpConn->nOutstandingWritesBeingSent)) < dwMaxOutgoingPackets)
@@ -961,7 +1034,6 @@ check_pending_req:
   {
     if ((_InterlockedOr(&(lpConn->nFlags), FLAG_DisconnectedSent) & FLAG_DisconnectedSent) == 0)
     {
-      TLnkLst<CLayer>::Iterator it;
       CLayer *lpLayer;
       BOOL bDataAvailable;
 
@@ -971,11 +1043,21 @@ check_pending_req:
       lpConn->cOnDataReceivedCS.Lock();
       lpConn->cOnDataReceivedCS.Unlock();
       //notify all layers about disconnection
-      for (lpLayer=it.Begin(lpConn->cLayersList); lpLayer!=NULL; lpLayer=it.Next())
+      {
+        CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
+
+        lpLayer = lpConn->sLayers.cList.GetHead();
+      }
+      while (lpLayer != NULL)
       {
         hRes2 = lpLayer->OnDisconnect();
         if (FAILED(hRes2) && SUCCEEDED((HRESULT)__InterlockedRead(&(lpConn->hErrorCode))))
           _InterlockedExchange(&(lpConn->hErrorCode), (LONG)hRes2);
+        {
+          CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
+
+          lpLayer = lpLayer->GetNextEntry();
+        }
       }
       //check if some received data left
       {
@@ -1058,6 +1140,7 @@ CIpc::CConnectionBase::CConnectionBase(__in CIpc *_lpIpc, __in CIpc::eConnection
   dwWriteTimeoutMs = lpIpc->dwMaxWriteTimeoutMs;
   lpTimedEventQueue = NULL;
   _InterlockedExchange(&(sWriteTimeout.nMutex), 0);
+  SlimRWL_Initialize(&(sLayers.nRwMutex));
   _InterlockedExchange(&(sReceivedData.nMutex), 0);
   nCheckTag2 = CHECKTAG2;
   return;
@@ -1078,7 +1161,7 @@ CIpc::CConnectionBase::~CConnectionBase()
   while ((lpPacket = cWritePendingList.DequeueFirst()) != NULL)
     lpIpc->FreePacket(lpPacket);
   //destroy layers
-  while ((lpLayer=cLayersList.PopHead()) != NULL)
+  while ((lpLayer=sLayers.cList.PopHead()) != NULL)
     delete lpLayer;
   //release queue
   if (lpTimedEventQueue != NULL)
@@ -1465,7 +1548,11 @@ HRESULT CIpc::CConnectionBase::SendDataToLayer(__in LPCVOID lpMsg, __in SIZE_T n
     return S_OK;
   if (bIsMsg == FALSE)
   {
-    lpLayer = lpCurrLayer->GetNextEntry();
+    {
+      CAutoSlimRWLShared cLayersLock(&(sLayers.nRwMutex));
+
+      lpLayer = lpCurrLayer->GetNextEntry();
+    }
     if (lpLayer != NULL)
     {
       hRes = lpLayer->OnData(lpMsg, nMsgSize);
@@ -1480,7 +1567,11 @@ HRESULT CIpc::CConnectionBase::SendDataToLayer(__in LPCVOID lpMsg, __in SIZE_T n
   }
   else
   {
-    lpLayer = lpCurrLayer->GetPrevEntry();
+    {
+      CAutoSlimRWLShared cLayersLock(&(sLayers.nRwMutex));
+
+      lpLayer = lpCurrLayer->GetPrevEntry();
+    }
     hRes = (lpLayer != NULL) ? (lpLayer->OnSendMsg(lpMsg, nMsgSize)) : WriteMsg(lpMsg, nMsgSize);
   }
   return hRes;

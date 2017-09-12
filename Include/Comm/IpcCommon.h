@@ -103,7 +103,12 @@ public:
     MX_DISABLE_COPY_CONSTRUCTOR(CLayer);
   protected:
     CLayer() : CBaseMemObj(), TLnkLstNode<CLayer>()
-      { };
+      {
+      lpConn = NULL;
+      _InterlockedExchange(&nFlags, 0);
+      return;
+      };
+
   public:
     virtual ~CLayer()
       { };
@@ -123,6 +128,7 @@ public:
 
   private:
     LPVOID lpConn;
+    LONG volatile nFlags;
   };
 
   typedef TLnkLst<CLayer> CLayerList;
@@ -213,6 +219,9 @@ public:
 
   HRESULT IsConnected(__in HANDLE h);
   HRESULT IsClosed(__in HANDLE h, __out_opt HRESULT *lphErrorCode=NULL);
+
+  //NOTE: On success, the connection will own the layer
+  HRESULT AddLayer(__in HANDLE h, __in CLayer *lpLayer, __in_opt BOOL bFront=TRUE);
 
   CUserData* GetUserData(__in HANDLE h);
 
@@ -578,7 +587,10 @@ protected:
       LONG volatile nMutex;
       CCircularBuffer cBuffer;
     } sReceivedData;
-    CLayerList cLayersList;
+    struct {
+      LONG volatile nRwMutex;
+      CLayerList cList;
+    } sLayers;
     TAutoRefCounted<CUserData> cUserData;
     OnCreateCallback cCreateCallback;
     OnDestroyCallback cDestroyCallback;
