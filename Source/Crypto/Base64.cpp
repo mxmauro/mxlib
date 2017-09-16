@@ -23,6 +23,8 @@
  **/
 #include "..\..\Include\Crypto\Base64.h"
 
+#define __SIZE_T_MAX      ((SIZE_T)-1)
+
 //-----------------------------------------------------------
 
 static const LPCSTR szBase64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -35,152 +37,287 @@ static const BYTE aDecodeTable[] = "|$$$}rstuvwxyz{$$$=$$$>?@ABCDEFGHIJKLMNOPQRS
 
 namespace MX {
 
-SIZE_T Base64GetEncodedLength(__in SIZE_T nDataLen)
+CBase64Encoder::CBase64Encoder() : MX::CBaseMemObj()
 {
-  return ((nDataLen+2) / 3) << 2;
+  szBufferA = NULL;
+  nLength = nSize = 0;
+  aInput[0] = aInput[1] = aInput[2] = 0;
+  nInputLength = 0;
+  return;
 }
 
-SIZE_T Base64Encode(__out LPSTR szDestA, __in LPVOID lpData, __in SIZE_T nDataLen)
+CBase64Encoder::~CBase64Encoder()
 {
-  BYTE aTempBuf[3];
-  SIZE_T i, j, nOutLen;
+  MX_FREE(szBufferA);
+  return;
+}
+
+HRESULT CBase64Encoder::Begin(__in_opt SIZE_T nPreallocateOutputLen)
+{
+  aInput[0] = aInput[1] = aInput[2] = 0;
+  nLength = nInputLength = 0;
+  MX_FREE(szBufferA);
+  if (nPreallocateOutputLen == 0)
+    nPreallocateOutputLen = 1024;
+  else if (nPreallocateOutputLen < __SIZE_T_MAX - 1024)
+    nPreallocateOutputLen = (nPreallocateOutputLen + 1023) & (~1023);
+  else
+    nPreallocateOutputLen = __SIZE_T_MAX;
+  szBufferA = (LPSTR)MX_MALLOC(nSize = nPreallocateOutputLen);
+  if (szBufferA == NULL)
+  {
+    nSize = 0;
+    return E_OUTOFMEMORY;
+  }
+  szBufferA[0] = 0;
+  return S_OK;
+}
+
+HRESULT CBase64Encoder::Process(__in LPVOID lpData, __in SIZE_T nDataLen)
+{
+  CHAR szDestA[4];
 
   if (lpData == NULL && nDataLen > 0)
-    return 0;
-  if (szDestA == NULL)
-    return Base64GetEncodedLength(nDataLen);
-  i = nOutLen = 0;
+    return E_POINTER;
   while (nDataLen > 0)
   {
-    aTempBuf[i] = *((LPBYTE)lpData);
-    if ((++i) == 3)
+    aInput[nInputLength++] = *((LPBYTE)lpData);
+    if (nInputLength == 3)
     {
-      szDestA[0] = szBase64Chars[ (aTempBuf[0] & 0xFC) >> 2                               ];
-      szDestA[1] = szBase64Chars[((aTempBuf[0] & 0x03) << 4) + ((aTempBuf[1] & 0xF0) >> 4)];
-      szDestA[2] = szBase64Chars[((aTempBuf[1] & 0x0F) << 2) + ((aTempBuf[2] & 0xC0) >> 6)];
-      szDestA[3] = szBase64Chars[  aTempBuf[2] & 0x3F                                     ];
-      szDestA += 4;
-      nOutLen += 4;
-      i = 0;
+      szDestA[0] = szBase64Chars[(aInput[0] & 0xFC) >> 2];
+      szDestA[1] = szBase64Chars[((aInput[0] & 0x03) << 4) + ((aInput[1] & 0xF0) >> 4)];
+      szDestA[2] = szBase64Chars[((aInput[1] & 0x0F) << 2) + ((aInput[2] & 0xC0) >> 6)];
+      szDestA[3] = szBase64Chars[aInput[2] & 0x3F];
+      if (AddToBuffer(szDestA) == FALSE)
+        return E_OUTOFMEMORY;
+      nInputLength = 0;
     }
     lpData = (LPBYTE)lpData + 1;
     nDataLen--;
   }
-  if (i > 0)
-  {
-    for (j=i; j<3; j++)
-      aTempBuf[j] = 0;
-    szDestA[0] = szBase64Chars[ (aTempBuf[0] & 0xFC) >> 2                               ];
-    szDestA[1] = szBase64Chars[((aTempBuf[0] & 0x03) << 4) + ((aTempBuf[1] & 0xF0) >> 4)];
-    szDestA[2] = szBase64Chars[((aTempBuf[1] & 0x0F) << 2) + ((aTempBuf[2] & 0xC0) >> 6)];
-    szDestA[3] = szBase64Chars[  aTempBuf[2] & 0x3F                                     ];
-    while (i < 3)
-      szDestA[++i] = '=';
-    nOutLen += 4;
-  }
-  return nOutLen;
+  return S_OK;
 }
 
-SIZE_T Base64Encode(__inout CStringA &cStrDestA, __in LPVOID lpData, __in SIZE_T nDataLen)
+HRESULT CBase64Encoder::End()
 {
-  SIZE_T nDestLen, nOutLen;
+  CHAR szDestA[4];
 
-  cStrDestA.Empty();
-  if (lpData == NULL || nDataLen == 0)
-    return 0;
-  nDestLen = Base64GetEncodedLength(nDataLen);
-  if (cStrDestA.EnsureBuffer(nDestLen+2) == FALSE)
-    return 0;
-  nOutLen = Base64Encode((LPSTR)cStrDestA, lpData, nDataLen);
-  if (nOutLen > 0)
+  if (nInputLength > 0)
   {
-    ((LPSTR)cStrDestA)[nOutLen] = 0;
-    cStrDestA.Refresh();
+    for (SIZE_T i=nInputLength; i < 3; i++)
+      aInput[i] = 0;
+
+    szDestA[0] = szBase64Chars[(aInput[0] & 0xFC) >> 2];
+    szDestA[1] = szBase64Chars[((aInput[0] & 0x03) << 4) + ((aInput[1] & 0xF0) >> 4)];
+    szDestA[2] = szBase64Chars[((aInput[1] & 0x0F) << 2) + ((aInput[2] & 0xC0) >> 6)];
+    szDestA[3] = szBase64Chars[aInput[2] & 0x3F];
+    while (nInputLength < 3)
+      szDestA[++nInputLength] = '=';
+    if (AddToBuffer(szDestA) == FALSE)
+      return E_OUTOFMEMORY;
   }
+  return S_OK;
+}
+
+LPCSTR CBase64Encoder::GetBuffer() const
+{
+  return (szBufferA != NULL) ? szBufferA : "";
+}
+
+SIZE_T CBase64Encoder::GetOutputLength() const
+{
+  return nLength;
+}
+
+VOID CBase64Encoder::ConsumeOutput(__in SIZE_T nChars)
+{
+  if (szBufferA != NULL)
+  {
+    if (nChars > nLength)
+      nChars = nLength;
+    nLength -= nChars;
+    MX::MemMove(szBufferA, szBufferA + nChars, nLength);
+    szBufferA[nLength] = 0;
+  }
+  return;
+}
+
+SIZE_T CBase64Encoder::GetRequiredSpace(__in SIZE_T nDataLen)
+{
+  return ((nDataLen + 2) / 3) << 2;
+}
+
+BOOL CBase64Encoder::AddToBuffer(__in CHAR szDataA[4])
+{
+  if (nLength > nSize - 5)
+  {
+    LPSTR szNewBufferA;
+    SIZE_T nNewSize;
+
+    if (nSize == __SIZE_T_MAX)
+      return FALSE;
+    nNewSize = (nSize > __SIZE_T_MAX - 1024) ? __SIZE_T_MAX : (nSize + 1024);
+    szNewBufferA = (LPSTR)MX_MALLOC(nNewSize);
+    if (szNewBufferA == NULL)
+      return FALSE;
+    MX::MemCopy(szNewBufferA, szBufferA, nLength);
+    MX_FREE(szBufferA);
+    szBufferA = szNewBufferA;
+    nSize = nNewSize;
+  }
+  szBufferA[nLength    ] = szDataA[0];
+  szBufferA[nLength + 1] = szDataA[1];
+  szBufferA[nLength + 2] = szDataA[2];
+  szBufferA[nLength + 3] = szDataA[3];
+  szBufferA[nLength + 4] = 0;
+  nLength += 4;
+  return TRUE;
+}
+
+//-----------------------------------------------------------
+
+CBase64Decoder::CBase64Decoder() : MX::CBaseMemObj()
+{
+  lpBuffer = NULL;
+  nLength = nSize = 0;
+  aInput[0] = aInput[1] = aInput[2] = aInput[4] = 0;
+  nInputLength = nEqualCounter = 0;
+  return;
+}
+
+CBase64Decoder::~CBase64Decoder()
+{
+  MX_FREE(lpBuffer);
+  return;
+}
+
+HRESULT CBase64Decoder::Begin(__in_opt SIZE_T nPreallocateOutputLen)
+{
+  aInput[0] = aInput[1] = aInput[2] = aInput[4] = 0;
+  nLength = nInputLength = nEqualCounter = 0;
+  MX_FREE(lpBuffer);
+  if (nPreallocateOutputLen == 0)
+    nPreallocateOutputLen = 1024;
+  else if (nPreallocateOutputLen < __SIZE_T_MAX - 1024)
+    nPreallocateOutputLen = (nPreallocateOutputLen + 1023) & (~1023);
   else
+    nPreallocateOutputLen = __SIZE_T_MAX;
+  lpBuffer = (LPBYTE)MX_MALLOC(nSize = nPreallocateOutputLen);
+  if (lpBuffer == NULL)
   {
-    cStrDestA.Empty();
+    nSize = 0;
+    return E_OUTOFMEMORY;
   }
-  return nOutLen;
+  return S_OK;
 }
 
-SIZE_T Base64GetMaxDecodedLength(__in SIZE_T nDataLen)
+HRESULT CBase64Decoder::Process(__in LPCSTR szDataA, __in_opt SIZE_T nDataLen)
 {
-  return ((nDataLen+3) >> 2) * 3;
-}
-
-SIZE_T Base64Decode(__out LPVOID lpDest, __in LPCSTR szStrA, __in_opt SIZE_T nSrcLen)
-{
-  BYTE aTempBuf[4], aTempBuf2[3];
-  SIZE_T i, j, nEqualCounter, nDestLen;
+  BYTE aDest[3];
   BYTE val;
 
-  if (nSrcLen == (SIZE_T)-1)
-    nSrcLen = StrLenA(szStrA);
-  if (szStrA == NULL && nSrcLen > 0)
-    return 0;
-  i = nEqualCounter = nDestLen = 0;
-  while (nSrcLen > 0)
+  if (nDataLen == (SIZE_T)-1)
+    nDataLen = StrLenA(szDataA);
+  if (szDataA == NULL && nDataLen > 0)
+    return E_POINTER;
+  while (nDataLen > 0)
   {
-    val = (*((LPBYTE)szStrA) < 43 || *((LPBYTE)szStrA) > 122) ? '$' : aDecodeTable[*((LPBYTE)szStrA) - 43];
+    val = (*((LPBYTE)szDataA) < 43 || *((LPBYTE)szDataA) > 122) ? '$' : aDecodeTable[*((LPBYTE)szDataA) - 43];
     if (val == (BYTE)'=')
     {
       if ((++nEqualCounter) > 2)
-        return 0;
-      //just ignore char
+        return MX_E_InvalidData;
     }
-    else if (val == (BYTE)'$')
-    {
-      //just ignore char
-    }
-    else
+    else if (val != (BYTE)'$')
     {
       //reset 'equal signs' that where in the middle
       nEqualCounter = 0;
-      if (lpDest != NULL)
+      aInput[nInputLength++] = val - 62;
+      if (nInputLength >= 4)
       {
-        aTempBuf[i++] = val - 62;
-        if (i == 4)
-        {
-          ((LPBYTE)lpDest)[0] = ((aTempBuf[0] << 2)         | (aTempBuf[1] >> 4));
-          ((LPBYTE)lpDest)[1] = ((aTempBuf[1] << 4)         | (aTempBuf[2] >> 2));
-          ((LPBYTE)lpDest)[2] = (((aTempBuf[2] << 6) & 0xC0) |  aTempBuf[3]);
-          lpDest = (LPBYTE)lpDest + 3;
-          i = 0;
-          nDestLen += 3;
-        }
-      }
-      else
-      {
-        if ((++i) == 4)
-        {
-          i = 0;
-          nDestLen += 3;
-        }
+        aDest[0] =  ((aInput[0] << 2)         | (aInput[1] >> 4));
+        aDest[1] =  ((aInput[1] << 4)         | (aInput[2] >> 2));
+        aDest[2] = (((aInput[2] << 6) & 0xC0) |  aInput[3]);
+        if (AddToBuffer(aDest, 3) == FALSE)
+          return E_OUTOFMEMORY;
+        nInputLength = 0;
       }
     }
-    szStrA++;
-    nSrcLen--;
+    szDataA++;
+    nDataLen--;
   }
-  if (i > 1) //if only one remaining char, just ignore
+  return S_OK;
+}
+
+HRESULT CBase64Decoder::End()
+{
+  BYTE aDest[3];
+
+  if (nInputLength > 1) //if only one remaining char, just ignore
   {
-    if (lpDest != NULL)
-    {
-      for (j=i; j<4; j++)
-        aTempBuf[j] = 0;
-      aTempBuf2[0] = ( (aTempBuf[0] << 2)         | (aTempBuf[1] >> 4));
-      aTempBuf2[1] = ( (aTempBuf[1] << 4)         | (aTempBuf[2] >> 2));
-      aTempBuf2[2] = (((aTempBuf[2] << 6) & 0xC0) |  aTempBuf[3]);
-      i--;
-      MemCopy(lpDest, aTempBuf2, i);
-    }
-    else
-    {
-      i--;
-    }
-    nDestLen += i;
+    for (SIZE_T i=nInputLength; i < 4; i++)
+      aInput[i] = 0;
+    aDest[0] =  ((aInput[0] << 2)         | (aInput[1] >> 4));
+    aDest[1] =  ((aInput[1] << 4)         | (aInput[2] >> 2));
+    aDest[2] = (((aInput[2] << 6) & 0xC0) |  aInput[3]);
+    if (AddToBuffer(aDest, nInputLength-1) == FALSE)
+      return E_OUTOFMEMORY;
   }
-  return nDestLen;
+  return S_OK;
+}
+
+LPBYTE CBase64Decoder::GetBuffer() const
+{
+  return lpBuffer;
+}
+
+SIZE_T CBase64Decoder::GetOutputLength() const
+{
+  return nLength;
+}
+
+VOID CBase64Decoder::ConsumeOutput(__in SIZE_T nBytes)
+{
+  if (lpBuffer != NULL)
+  {
+    if (nBytes > nLength)
+      nBytes = nLength;
+    nLength -= nBytes;
+    MX::MemMove(lpBuffer, lpBuffer + nBytes, nLength);
+  }
+  return;
+}
+
+SIZE_T CBase64Decoder::GetRequiredSpace(__in SIZE_T nDataLen)
+{
+  return ((nDataLen + 3) >> 2) * 3;
+}
+
+BOOL CBase64Decoder::AddToBuffer(__in LPBYTE aData, __in SIZE_T nLen)
+{
+  SIZE_T i;
+
+  if (nLength + nLen < nLength)
+    return FALSE;
+  if (nLength > nSize - nLen)
+  {
+    LPBYTE lpNewBuffer;
+    SIZE_T nNewSize;
+
+    if (nSize == __SIZE_T_MAX)
+      return FALSE;
+    nNewSize = (nSize > __SIZE_T_MAX - 1024) ? __SIZE_T_MAX : (nSize + 1024);
+    lpNewBuffer = (LPBYTE)MX_MALLOC(nNewSize);
+    if (lpNewBuffer == NULL)
+      return FALSE;
+    MX::MemCopy(lpNewBuffer, lpBuffer, nLength);
+    MX_FREE(lpBuffer);
+    lpBuffer = lpNewBuffer;
+    nSize = nNewSize;
+  }
+  for (i=0; i<nLen; i++)
+    lpBuffer[nLength++] = aData[i];
+  return TRUE;
 }
 
 } //namespace MX

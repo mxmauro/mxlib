@@ -203,17 +203,27 @@ HRESULT CHttpAuthenticateResponseParser::MakeBasicAuthorization(__out CStringA &
     return E_POINTER;
   if (*szUserNameA == 0)
     return E_INVALIDARG;
-  hRes = (cStrTempA.Format("%s:%s", szUserNameA, (szPasswordA!=NULL) ? szPasswordA : "") != FALSE) ? S_OK :
-                                                                                                     E_OUTOFMEMORY;
-  if (SUCCEEDED(hRes) && Base64Encode(cStrDestA, (LPSTR)cStrTempA, cStrTempA.GetLength()) == 0)
+  if (cStrTempA.Format("%s:%s", szUserNameA, (szPasswordA!=NULL) ? szPasswordA : "") != FALSE)
+  {
+    CBase64Encoder cBase64Enc;
+
+    hRes = cBase64Enc.Begin(cBase64Enc.GetRequiredSpace(cStrTempA.GetLength()));
+    if (SUCCEEDED(hRes))
+      hRes = cBase64Enc.Process((LPSTR)cStrTempA, cStrTempA.GetLength());
+    if (SUCCEEDED(hRes))
+      hRes = cBase64Enc.End();
+    if (SUCCEEDED(hRes) && cStrDestA.Format("Authorization: Basic %s", cBase64Enc.GetBuffer()) == FALSE)
+      hRes = E_OUTOFMEMORY;
+  }
+  else
+  {
     hRes = E_OUTOFMEMORY;
-  MemSet((LPSTR)cStrTempA, '|', cStrTempA.GetLength());
-  if (SUCCEEDED(hRes) && cStrDestA.Insert("Authorization: Basic ", 0) == FALSE)
-    hRes = E_OUTOFMEMORY;
+  }
   if (SUCCEEDED(hRes) && bIsProxy != FALSE && cStrDestA.Insert("Proxy-", 0) == FALSE)
     hRes = E_OUTOFMEMORY;
   if (FAILED(hRes))
     cStrDestA.Empty();
+  MemSet((LPSTR)cStrTempA, '|', cStrTempA.GetLength());
   return hRes;
 }
 

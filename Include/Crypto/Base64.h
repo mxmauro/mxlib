@@ -31,15 +31,59 @@
 
 namespace MX {
 
-SIZE_T Base64GetEncodedLength(__in SIZE_T nDataLen);
+class CBase64Encoder : public MX::CBaseMemObj
+{
+public:
+  CBase64Encoder();
+  ~CBase64Encoder();
 
-//NOTE: szDestA is NOT nul-terminated
-SIZE_T Base64Encode(__out LPSTR szDestA, __in LPVOID lpData, __in SIZE_T nDataLen);
-SIZE_T Base64Encode(__inout CStringA &cStrDestA, __in LPVOID lpData, __in SIZE_T nDataLen);
+  HRESULT Begin(__in_opt SIZE_T nPreallocateOutputLen=0);
+  HRESULT Process(__in LPVOID lpData, __in SIZE_T nDataLen);
+  HRESULT End();
 
-SIZE_T Base64GetMaxDecodedLength(__in SIZE_T nDataLen);
+  LPCSTR GetBuffer() const;
+  SIZE_T GetOutputLength() const;
+  VOID ConsumeOutput(__in SIZE_T nChars);
 
-SIZE_T Base64Decode(__out LPVOID lpDest, __in LPCSTR szStrA, __in_opt SIZE_T nSrcLen=(SIZE_T)-1);
+  static SIZE_T GetRequiredSpace(__in SIZE_T nDataLen);
+
+private:
+  __inline BOOL AddToBuffer(__in CHAR szDataA[4]);
+
+private:
+  LPSTR szBufferA;
+  SIZE_T nSize, nLength;
+  BYTE aInput[3];
+  SIZE_T nInputLength;
+};
+
+//-----------------------------------------------------------
+
+class CBase64Decoder : public MX::CBaseMemObj
+{
+public:
+  CBase64Decoder();
+  ~CBase64Decoder();
+
+  HRESULT Begin(__in_opt SIZE_T nPreallocateOutputLen=0);
+  HRESULT Process(__in LPCSTR szDataA, __in_opt SIZE_T nDataLen=-1);
+  HRESULT End();
+
+  LPBYTE GetBuffer() const;
+  SIZE_T GetOutputLength() const;
+  VOID ConsumeOutput(__in SIZE_T nBytes);
+
+  static SIZE_T GetRequiredSpace(__in SIZE_T nDataLen);
+
+private:
+  __inline BOOL AddToBuffer(__in LPBYTE aData, __in SIZE_T nLen);
+
+private:
+  LPBYTE lpBuffer;
+  SIZE_T nSize, nLength;
+  BYTE aInput[4];
+  SIZE_T nInputLength, nEqualCounter;
+};
 
 } //namespace MX
 
