@@ -113,6 +113,7 @@ HRESULT CSockets::CreateListener(__in eFamily nFamily, __in int nPort, __in OnCr
   if (h != NULL)
     *h = reinterpret_cast<HANDLE>(cConn.Get());
   cConn->cCreateCallback = cCreateCallback;
+  cConn->cUserData = lpUserData;
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nSlimMutex));
 

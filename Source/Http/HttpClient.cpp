@@ -710,8 +710,7 @@ HRESULT CHttpClient::InternalOpen(__in CUrl &cUrl)
   return S_OK;
 }
 
-HRESULT CHttpClient::OnSocketCreate(__in CIpc *lpIpc, __in HANDLE h, __deref_inout CIpc::CUserData **lplpUserData,
-                                    __inout CIpc::CREATE_CALLBACK_DATA &sData)
+HRESULT CHttpClient::OnSocketCreate(__in CIpc *lpIpc, __in HANDLE h, __inout CIpc::CREATE_CALLBACK_DATA &sData)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
 

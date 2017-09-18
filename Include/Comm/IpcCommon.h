@@ -155,10 +155,10 @@ public:
     OnDataReceivedCallback &cDataReceivedCallback;
     OnDestroyCallback &cDestroyCallback;
     DWORD &dwWriteTimeoutMs;
+    TAutoRefCounted<CUserData> &cUserData;
   } CREATE_CALLBACK_DATA;
 
-  typedef Callback<HRESULT (__in CIpc *lpIpc, __in HANDLE h, __deref_inout CUserData **lplpUserData,
-                            __inout CREATE_CALLBACK_DATA &sData)> OnCreateCallback;
+  typedef Callback<HRESULT (__in CIpc *lpIpc, __in HANDLE h, __inout CREATE_CALLBACK_DATA &sData)> OnCreateCallback;
 
   //--------
 

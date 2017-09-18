@@ -352,8 +352,7 @@ VOID CHttpServer::StopListening()
   return;
 }
 
-HRESULT CHttpServer::OnSocketCreate(__in CIpc *lpIpc, __in HANDLE h, __deref_inout CIpc::CUserData **lplpUserData,
-                                    __inout CIpc::CREATE_CALLBACK_DATA &sData)
+HRESULT CHttpServer::OnSocketCreate(__in CIpc *lpIpc, __in HANDLE h, __inout CIpc::CREATE_CALLBACK_DATA &sData)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
 
@@ -414,7 +413,7 @@ HRESULT CHttpServer::OnSocketCreate(__in CIpc *lpIpc, __in HANDLE h, __deref_ino
 
         cRequestsList.PushTail(cNewRequest.Get());
       }
-      *lplpUserData = cNewRequest.Detach();
+      sData.cUserData = cNewRequest;
       }
       break;
   }

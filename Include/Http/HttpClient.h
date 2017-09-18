@@ -163,8 +163,7 @@ public:
 private:
   HRESULT InternalOpen(__in CUrl &cUrl);
 
-  HRESULT OnSocketCreate(__in CIpc *lpIpc, __in HANDLE h, __deref_inout CIpc::CUserData **lplpUserData,
-                         __inout CIpc::CREATE_CALLBACK_DATA &sData);
+  HRESULT OnSocketCreate(__in CIpc *lpIpc, __in HANDLE h, __inout CIpc::CREATE_CALLBACK_DATA &sData);
   VOID OnSocketDestroy(__in CIpc *lpIpc, __in HANDLE h, __in CIpc::CUserData *lpUserData,
                        __in HRESULT hErrorCode);
   HRESULT OnSocketConnect(__in CIpc *lpIpc, __in HANDLE h, __in CIpc::CUserData *lpUserData,

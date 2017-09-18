@@ -247,8 +247,7 @@ private:
 
   typedef TArrayList<CTimedEventQueue::CEvent*> __TEventArray;
 
-  HRESULT OnSocketCreate(__in CIpc *lpIpc, __in HANDLE h, __deref_inout CIpc::CUserData **lplpUserData,
-                         __inout CIpc::CREATE_CALLBACK_DATA &sData);
+  HRESULT OnSocketCreate(__in CIpc *lpIpc, __in HANDLE h, __inout CIpc::CREATE_CALLBACK_DATA &sData);
   VOID OnListenerSocketDestroy(__in CIpc *lpIpc, __in HANDLE h, __in CIpc::CUserData *lpUserData,
                                __in HRESULT hErrorCode);
 

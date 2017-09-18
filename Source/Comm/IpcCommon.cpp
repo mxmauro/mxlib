@@ -544,18 +544,16 @@ HRESULT CIpc::FireOnCreate(__in CConnectionBase *lpConn)
       lpConn->sLayers.cList,
       lpConn->cConnectCallback, lpConn->cDisconnectCallback,
       lpConn->cDataReceivedCallback, lpConn->cDestroyCallback,
-      lpConn->dwWriteTimeoutMs
+      lpConn->dwWriteTimeoutMs,
+      lpConn->cUserData
     };
-    CUserData *lpUserData;
 
-    lpUserData = NULL;
-    hRes = lpConn->cCreateCallback(this, (HANDLE)lpConn, &lpUserData, sCallbackData);
+    hRes = lpConn->cCreateCallback(this, (HANDLE)lpConn, sCallbackData);
     if (SUCCEEDED(hRes))
     {
       TLnkLst<CLayer>::Iterator it;
       CLayer *lpLayer;
 
-      lpConn->cUserData.Attach(lpUserData);
       for (lpLayer=it.Begin(lpConn->sLayers.cList); lpLayer!=NULL; lpLayer=it.Next())
         lpLayer->lpConn = lpConn;
     }
