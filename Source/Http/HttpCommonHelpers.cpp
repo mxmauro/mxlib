@@ -31,6 +31,12 @@ typedef struct {
   WCHAR chCharCodeW;
 } HTMLENTITY_DEF;
 
+#define DEFINE_ENTITY(_name, _char) { _name, _char }
+  static HTMLENTITY_DEF aHtmlEntities[] = {
+    #include "HtmlEntities.inl"
+  };
+#undef DEFINE_ENTITY
+
 //-----------------------------------------------------------
 
 static LPCSTR GetMimeTypeFromExtension(__in_z LPCSTR szExtA);
@@ -162,11 +168,6 @@ HRESULT CHttpCommon::ParseDate(__out CDateTime &cDt, __in_z LPCSTR szDateTimeA)
 
 LPCSTR CHttpCommon::GetHtmlEntity(__in WCHAR chW)
 {
-  static HTMLENTITY_DEF aHtmlEntities[] ={
-#define DEFINE_ENTITY(_name, _char) { _name, _char }
-#include "HtmlEntities.inl"
-#undef DEFINE_ENTITY
-  };
   HTMLENTITY_DEF *lpDef;
 
   lpDef = (HTMLENTITY_DEF*)bsearch_s(&chW, aHtmlEntities, MX_ARRAYLEN(aHtmlEntities), sizeof(HTMLENTITY_DEF),
@@ -236,6 +237,134 @@ HRESULT CHttpCommon::ToHtmlEntities(__inout CStringW &cStrW)
   }
   //done
   return S_OK;
+}
+
+WCHAR DecodeHtmlEntity(__inout LPCSTR &szStrA)
+{
+  if (szStrA == NULL || *szStrA != '&')
+    return 0;
+  if (szStrA[1] == '#')
+  {
+    SIZE_T nOfs = 2, nBase = 10, nDigit;
+    WCHAR chW = 0, chTempW;
+
+    if (szStrA[2] == 'x' || szStrA[2] == 'X')
+    {
+      nBase = 16;
+      nOfs++;
+    }
+    while (szStrA[nOfs] != 0 && szStrA[nOfs] != ';')
+    {
+      if (szStrA[nOfs] >= '0' && szStrA[nOfs] <= '9')
+        nDigit = (SIZE_T)(szStrA[nOfs] - '0');
+      else if (szStrA[nOfs] >= 'A' && szStrA[nOfs] <= 'F')
+        nDigit = (SIZE_T)(szStrA[nOfs] - 'A') + 10;
+      else if (szStrA[nOfs] >= 'a' && szStrA[nOfs] <= 'f')
+        nDigit = (SIZE_T)(szStrA[nOfs] - 'a') + 10;
+      else
+        return 0; //invalid digit
+      if (nDigit >= nBase)
+        return 0; //invalid digit
+      //check overflow
+      chTempW = chW * (WCHAR)nBase;
+      if (chTempW < chW)
+        return 0;
+      chW = chTempW + (WCHAR)nDigit;
+      if (chW < chTempW)
+        return 0;
+      //advance
+      nOfs++;
+    }
+    //has value?
+    if (szStrA[nOfs-1] != '#' && szStrA[nOfs-1] != 'x' && szStrA[nOfs-1] != 'X')
+    {
+      szStrA += nOfs;
+      if (*szStrA == ';')
+        szStrA++;
+      return chW;
+    }
+  }
+  else
+  {
+    LPCSTR sA;
+    SIZE_T i, j;
+
+    for (i=0; i<sizeof(aHtmlEntities) / sizeof(aHtmlEntities[0]); i++)
+    {
+      sA = aHtmlEntities[i].szNameA;
+      for (j=0; sA[j] != 0 && szStrA[j+1] == sA[j]; j++);
+      if (sA[j] == 0 && szStrA[j+1] == ';')
+      {
+        szStrA += j + 2;
+        return aHtmlEntities[i].chCharCodeW;
+      }
+    }
+  }
+  return 0;
+}
+
+WCHAR DecodeHtmlEntity(__inout LPCWSTR &szStrW)
+{
+  if (szStrW == NULL || *szStrW != L'&')
+    return 0;
+  if (szStrW[1] == L'#')
+  {
+    SIZE_T nOfs = 2, nBase = 10, nDigit;
+    WCHAR chW = 0, chTempW;
+
+    if (szStrW[2] == L'x' || szStrW[2] == L'X')
+    {
+      nBase = 16;
+      nOfs++;
+    }
+    while (szStrW[nOfs] != 0 && szStrW[nOfs] != L';')
+    {
+      if (szStrW[nOfs] >= L'0' && szStrW[nOfs] <= L'9')
+        nDigit = (SIZE_T)(szStrW[nOfs] - L'0');
+      else if (szStrW[nOfs] >= L'A' && szStrW[nOfs] <= L'F')
+        nDigit = (SIZE_T)(szStrW[nOfs] - L'A') + 10;
+      else if (szStrW[nOfs] >= L'a' && szStrW[nOfs] <= L'f')
+        nDigit = (SIZE_T)(szStrW[nOfs] - L'a') + 10;
+      else
+        return 0; //invalid digit
+      if (nDigit >= nBase)
+        return 0; //invalid digit
+      //check overflow
+      chTempW = chW * (WCHAR)nBase;
+      if (chTempW < chW)
+        return 0;
+      chW = chTempW + (WCHAR)nDigit;
+      if (chW < chTempW)
+        return 0;
+      //advance
+      nOfs++;
+    }
+    //has value?
+    if (szStrW[nOfs-1] != L'#' && szStrW[nOfs-1] != L'x' && szStrW[nOfs-1] != L'X')
+    {
+      szStrW += nOfs;
+      if (*szStrW == L';')
+        szStrW++;
+      return chW;
+    }
+  }
+  else
+  {
+    LPCSTR sA;
+    SIZE_T i, j;
+
+    for (i=0; i<sizeof(aHtmlEntities) / sizeof(aHtmlEntities[0]); i++)
+    {
+      sA = aHtmlEntities[i].szNameA;
+      for (j=0; sA[j] != 0 && szStrW[j+1] == (WCHAR)((UCHAR)sA[j]); j++);
+      if (sA[j] == 0 && szStrW[j+1] == L';')
+      {
+        szStrW += j + 2;
+        return aHtmlEntities[i].chCharCodeW;
+      }
+    }
+  }
+  return 0;
 }
 
 } //namespace MX
