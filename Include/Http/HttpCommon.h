@@ -211,14 +211,6 @@ public:
 
   static HRESULT ParseDate(__out CDateTime &cDt, __in_z LPCSTR szDateTimeA);
 
-  static LPCSTR GetHtmlEntity(__in WCHAR chW);
-
-  static HRESULT ToHtmlEntities(__inout CStringA &cStrA);
-  static HRESULT ToHtmlEntities(__inout CStringW &cStrW);
-
-  static WCHAR DecodeHtmlEntity(__inout LPCSTR &szStrA);
-  static WCHAR DecodeHtmlEntity(__inout LPCWSTR &szStrW);
-
 private:
   HRESULT ParseRequestLine(__in_z LPCSTR szLineA);
   HRESULT ParseStatusLine(__in_z LPCSTR szLineA);

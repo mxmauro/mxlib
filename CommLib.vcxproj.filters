@@ -224,6 +224,9 @@
     <ClInclude Include="Include\Http\EMail.h">
       <Filter>Header Files\Http</Filter>
     </ClInclude>
+    <ClInclude Include="Include\Http\HtmlEntities.h">
+      <Filter>Header Files\Http</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Http\HttpCookie.cpp">
@@ -399,7 +402,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Source\Http\HtmlEntities.inl">
+    <None Include="Source\Http\HtmlEntities.cpp">
       <Filter>Source Files\Http</Filter>
     </None>
   </ItemGroup>

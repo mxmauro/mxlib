@@ -22,6 +22,7 @@
  *       access to or use of the software to any third party.
  **/
 #include "JsHttpServerCommon.h"
+#include "..\..\Include\Http\HtmlEntities.h"
 #include "..\..\Include\Crypto\DigestAlgorithmMDx.h"
 #include "..\..\Include\Crypto\DigestAlgorithmSHAx.h"
 
@@ -132,7 +133,7 @@ static DukTape::duk_ret_t OnHtmlEntities(__in DukTape::duk_context *lpCtx, __in_
   szBufA = DukTape::duk_to_string(lpCtx, 0); //convert to string if other type
   hRes = (cStrTempA.Copy(szBufA) != FALSE) ? S_OK : E_OUTOFMEMORY;
   if (SUCCEEDED(hRes))
-    hRes = MX::CHttpCommon::ToHtmlEntities(cStrTempA);
+    hRes = MX::HtmlEntities::ConvertTo(cStrTempA);
   if (FAILED(hRes))
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
   //push result

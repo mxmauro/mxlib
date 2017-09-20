@@ -22,6 +22,7 @@
  *       access to or use of the software to any third party.
  **/
 #include "JsHttpServerCommon.h"
+#include "..\..\include\Http\HtmlEntities.h"
 
 //-----------------------------------------------------------
 
@@ -158,7 +159,7 @@ HRESULT CJsHttpServer::OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in CHt
             {
               if (cStrBodyA.Format("Error: %s", e.GetDescription()) != FALSE)
               {
-                hRes = MX::CHttpCommon::ToHtmlEntities(cStrBodyA);
+                hRes = HtmlEntities::ConvertTo(cStrBodyA);
                 if (SUCCEEDED(hRes))
                 {
                   if (cStrBodyA.InsertN("<html><body><pre>", 0, 6+6+5) != FALSE &&
@@ -271,7 +272,7 @@ HRESULT CJsHttpServer::BuildErrorPage(__in CJsRequest *lpRequest, __in HRESULT h
     if (cStrBodyA.AppendFormat(" @ %s(%lu)\r\nStack trace:\r\n%s", szFileNameA, nLine, szStackTraceA) == FALSE)
       return E_OUTOFMEMORY;
   }
-  hRes = MX::CHttpCommon::ToHtmlEntities(cStrBodyA);
+  hRes = HtmlEntities::ConvertTo(cStrBodyA);
   if (FAILED(hRes))
     return hRes;
   if (cStrBodyA.InsertN("<pre>", 0, 5) == FALSE || cStrBodyA.ConcatN("</pre>", 6) == FALSE)

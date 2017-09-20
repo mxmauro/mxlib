@@ -172,6 +172,7 @@
     <ClInclude Include="Include\Comm\Sockets.h" />
     <ClInclude Include="Include\Comm\SslCertificates.h" />
     <ClInclude Include="Include\Http\EMail.h" />
+    <ClInclude Include="Include\Http\HtmlEntities.h" />
     <ClInclude Include="Include\Http\HttpHeaderBase.h" />
     <ClInclude Include="Include\Http\HttpAuthenticateResponseParser.h" />
     <ClInclude Include="Include\Http\HttpBodyParserBase.h" />
@@ -280,7 +281,9 @@
     <ClCompile Include="Source\Comm\NamedPipes.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Source\Http\HtmlEntities.inl" />
+    <ClCompile Include="Source\Http\HtmlEntities.cpp">
+      <FileType>Document</FileType>
+    </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
