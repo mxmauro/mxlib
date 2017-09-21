@@ -35,6 +35,7 @@
 #define FLAG_GracefulShutdown                         0x0010
 #define FLAG_InSendTransaction                        0x0020
 #define FLAG_ClosingOnShutDown                        0x0040
+#define FLAG_InitialSetupExecuted                     0x0080
 
 //-----------------------------------------------------------
 
@@ -320,7 +321,6 @@ HRESULT CIpc::AddLayer(__in HANDLE h, __in CLayer *lpLayer, __in_opt BOOL bFront
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
-  BOOL bCallOnConnect = FALSE;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
@@ -337,23 +337,13 @@ HRESULT CIpc::AddLayer(__in HANDLE h, __in CLayer *lpLayer, __in_opt BOOL bFront
     CAutoSlimRWLExclusive cLayersLock(&(lpConn->sLayers.nRwMutex));
 
     if (bFront != FALSE)
-    {
-      CLayer *lpPrevLayer = lpConn->sLayers.cList.GetHead();
-      if (lpPrevLayer != NULL && (__InterlockedRead(&(lpPrevLayer->nFlags)) & FLAG_Connected) != 0)
-        bCallOnConnect = TRUE;
       lpConn->sLayers.cList.PushHead(lpLayer);
-    }
     else
-    {
-      CLayer *lpPrevLayer = lpConn->sLayers.cList.GetTail();
-      if (lpPrevLayer != NULL && (__InterlockedRead(&(lpPrevLayer->nFlags)) & FLAG_Connected) != 0)
-        bCallOnConnect = TRUE;
       lpConn->sLayers.cList.PushTail(lpLayer);
-    }
     lpLayer->lpConn = lpConn;
   }
   //call onconnect if needed
-  if (bCallOnConnect != FALSE)
+  if ((__InterlockedRead(&(lpConn->nFlags)) & FLAG_InitialSetupExecuted) != 0)
   {
     HRESULT hRes = lpLayer->OnConnect();
     if (FAILED(hRes))
@@ -730,6 +720,7 @@ VOID CIpc::OnDispatcherPacket(__in CIoCompletionPortThreadPool *lpPool, __in DWO
             lpLayer = lpLayer->GetPrevEntry();
           }
         }
+        _InterlockedOr(&(lpConn->nFlags), FLAG_InitialSetupExecuted);
         //fire main connect
         if (SUCCEEDED(hRes))
           hRes = FireOnConnect(lpConn, S_OK);
