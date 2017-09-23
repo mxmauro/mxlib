@@ -163,7 +163,6 @@ HRESULT CIPAddressResolver::Resolve(__in MX::CHostResolver *lpHostResolver, __in
     cQueueChangedEv.Set();
   }
   //done
-  AddRef();
   return S_OK;
 }
 
