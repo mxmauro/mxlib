@@ -315,7 +315,10 @@ HRESULT ConvertTo(__inout CStringA &cStrA)
   CStringW cStrTempW;
   WCHAR chW[2];
   SIZE_T nOfs, nLen;
-  LPSTR sA;
+  union {
+    LPSTR sA;
+    LPBYTE lpB;
+  };
   int nChars;
 
   sA = (LPSTR)cStrA;
@@ -323,7 +326,7 @@ HRESULT ConvertTo(__inout CStringA &cStrA)
   nLen = cStrA.GetLength();
   while (nOfs < nLen)
   {
-    nChars = MX::Utf8_DecodeChar(chW, (LPSTR)cStrA + nOfs, nLen - nOfs);
+    nChars = MX::Utf8_DecodeChar(chW, sA + nOfs, nLen - nOfs);
     if (nChars > 0 && chW[1] == 0)
     {
       //decoded a non-surrogate pair
@@ -348,13 +351,12 @@ HRESULT ConvertTo(__inout CStringA &cStrA)
     else if (*(((LPBYTE)sA) + nOfs) < 32)
     {
       CHAR szTempBufA[8];
-      BYTE v = *(((LPBYTE)sA) + nOfs);
 
       szTempBufA[0] = L'&';
       szTempBufA[1] = L'#';
       szTempBufA[2] = L'x';
-      szTempBufA[3] = szHexaNumA[(v >> 4) & 0x0F];
-      szTempBufA[4] = szHexaNumA[ v       & 0x0F];
+      szTempBufA[3] = szHexaNumA[(lpB[nOfs] >> 4) & 0x0F];
+      szTempBufA[4] = szHexaNumA[ lpB[nOfs]       & 0x0F];
       szTempBufA[5] = L';';
       cStrA.Delete(nOfs, 1);
       if (cStrA.InsertN(szTempBufA, nOfs, 6) == FALSE)
@@ -384,7 +386,7 @@ HRESULT ConvertTo(__inout CStringW &cStrW)
   nLen = cStrW.GetLength();
   while (nOfs < nLen)
   {
-    LPCSTR szEntityA = Get(*sW);
+    LPCSTR szEntityA = Get(sW[nOfs]);
     if (szEntityA != NULL)
     {
       //quick convert
@@ -399,13 +401,13 @@ HRESULT ConvertTo(__inout CStringW &cStrW)
       sW = (LPWSTR)cStrW;
       nLen = cStrW.GetLength();
     }
-    else if (*sW < 32)
+    else if (sW[nOfs] < 32)
     {
       szTempBufW[0] = L'&';
       szTempBufW[1] = L'#';
       szTempBufW[2] = L'x';
-      szTempBufW[3] = szHexaNumW[((ULONG)(*sW) >> 4) & 0x0F];
-      szTempBufW[4] = szHexaNumW[ (ULONG)(*sW)       & 0x0F];
+      szTempBufW[3] = szHexaNumW[((ULONG)(sW[nOfs]) >> 4) & 0x0F];
+      szTempBufW[4] = szHexaNumW[ (ULONG)(sW[nOfs])       & 0x0F];
       szTempBufW[5] = L';';
       cStrW.Delete(nOfs, 1);
       if (cStrW.InsertN(szTempBufW, nOfs, 6) == FALSE)
@@ -416,7 +418,7 @@ HRESULT ConvertTo(__inout CStringW &cStrW)
     }
     else
     {
-      sW++;
+      nOfs++;
     }
   }
   //done
@@ -561,7 +563,7 @@ WCHAR Decode(__in LPCSTR szStrA, __in SIZE_T nStrLen, __out_opt LPCSTR *lpszAfte
       if (sA[j] == 0 && nStrLen-1 > j && szStrA[j] == ';')
       {
         if (lpszAfterEntityA != NULL)
-          szStrA += j + 1;
+          *lpszAfterEntityA = szStrA + (j + 1);
         return aHtmlEntities[i].chCharCodeW;
       }
     }
@@ -638,7 +640,7 @@ WCHAR Decode(__in LPCWSTR szStrW, __in SIZE_T nStrLen, __out_opt LPCWSTR *lpszAf
       if (sA[j] == 0 && nStrLen-1 > j && szStrW[j] == L';')
       {
         if (lpszAfterEntityW != NULL)
-          szStrW += j + 1;
+          *lpszAfterEntityW = szStrW + (j + 1);
         return aHtmlEntities[i].chCharCodeW;
       }
     }
