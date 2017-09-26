@@ -173,14 +173,14 @@ HRESULT CHttpHeaderReqAccept::Build(__inout CStringA &cStrDestA)
     //q
     if (lpType->GetQ() < 1.0)
     {
-      if (cStrDestA.AppendFormat(";q=%f", lpType->GetQ()) == FALSE)
+      if (cStrDestA.AppendFormat("; q=%f", lpType->GetQ()) == FALSE)
         return E_OUTOFMEMORY;
     }
     //parameters
     nParamsCount = lpType->GetParamsCount();
     for (nParamIdx=0; nParamIdx<nParamsCount; nParamIdx++)
     {
-      if (cStrDestA.AppendFormat(";%s=", lpType->GetParamName(nParamIdx)) == FALSE)
+      if (cStrDestA.AppendFormat("; %s=", lpType->GetParamName(nParamIdx)) == FALSE)
         return E_OUTOFMEMORY;
       sW = lpType->GetParamValue(nParamIdx);
       while (*sW != 0)

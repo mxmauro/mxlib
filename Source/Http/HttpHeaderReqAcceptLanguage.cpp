@@ -131,7 +131,7 @@ HRESULT CHttpHeaderReqAcceptLanguage::Build(__inout CStringA &cStrDestA)
     //q
     if (lpLanguage->GetQ() < 1.0)
     {
-      if (cStrDestA.AppendFormat(";q=%f", lpLanguage->GetQ()) == FALSE)
+      if (cStrDestA.AppendFormat("; q=%f", lpLanguage->GetQ()) == FALSE)
         return E_OUTOFMEMORY;
     }
   }

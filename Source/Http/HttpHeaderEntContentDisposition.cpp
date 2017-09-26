@@ -214,7 +214,7 @@ HRESULT CHttpHeaderEntContentDisposition::Build(__inout CStringA &cStrDestA)
       return hRes;
     if (CHttpCommon::EncodeQuotedString(cStrTempA) == FALSE)
       return E_OUTOFMEMORY;
-    if (cStrDestA.AppendFormat(";filename=\"%s\"", (LPSTR)cStrTempA) == FALSE)
+    if (cStrDestA.AppendFormat("; filename=\"%s\"", (LPSTR)cStrTempA) == FALSE)
       return E_OUTOFMEMORY;
   }
   //creation date
@@ -223,7 +223,7 @@ HRESULT CHttpHeaderEntContentDisposition::Build(__inout CStringA &cStrDestA)
     hRes = cCreationDt.Format(cStrTempA, "%a, %d %b %Y %H:%M:%S %z");
     if (FAILED(hRes))
       return hRes;
-    if (cStrDestA.AppendFormat(";creation-date=\"%s\"", (LPSTR)cStrTempA) == FALSE)
+    if (cStrDestA.AppendFormat("; creation-date=\"%s\"", (LPSTR)cStrTempA) == FALSE)
       return E_OUTOFMEMORY;
   }
   //modification date
@@ -232,7 +232,7 @@ HRESULT CHttpHeaderEntContentDisposition::Build(__inout CStringA &cStrDestA)
     hRes = cModificationDt.Format(cStrTempA, "%a, %d %b %Y %H:%M:%S %z");
     if (FAILED(hRes))
       return hRes;
-    if (cStrDestA.AppendFormat(";modification-date=\"%s\"", (LPSTR)cStrTempA) == FALSE)
+    if (cStrDestA.AppendFormat("; modification-date=\"%s\"", (LPSTR)cStrTempA) == FALSE)
       return E_OUTOFMEMORY;
   }
   //read date
@@ -241,20 +241,20 @@ HRESULT CHttpHeaderEntContentDisposition::Build(__inout CStringA &cStrDestA)
     hRes = cReadDt.Format(cStrTempA, "%a, %d %b %Y %H:%M:%S %z");
     if (FAILED(hRes))
       return hRes;
-    if (cStrDestA.AppendFormat(";read-date=\"%s\"", (LPSTR)cStrTempA) == FALSE)
+    if (cStrDestA.AppendFormat("; read-date=\"%s\"", (LPSTR)cStrTempA) == FALSE)
       return E_OUTOFMEMORY;
   }
   //size
   if (nSize != ULONGLONG_MAX)
   {
-    if (cStrDestA.AppendFormat(";size=%I64u", nSize) == FALSE)
+    if (cStrDestA.AppendFormat("; size=%I64u", nSize) == FALSE)
       return E_OUTOFMEMORY;
   }
   //parameters
   nCount = cParamsList.GetCount();
   for (i=0; i<nCount; i++)
   {
-    if (cStrDestA.AppendFormat(";%s=", cParamsList[i]->szNameA) == FALSE)
+    if (cStrDestA.AppendFormat("; %s=", cParamsList[i]->szNameA) == FALSE)
       return E_OUTOFMEMORY;
     sW = cParamsList[i]->szValueW;
     while (*sW != 0)

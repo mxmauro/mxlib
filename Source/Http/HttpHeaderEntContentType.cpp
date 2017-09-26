@@ -135,7 +135,7 @@ HRESULT CHttpHeaderEntContentType::Build(__inout CStringA &cStrDestA)
   nCount = cParamsList.GetCount();
   for (i=0; i<nCount; i++)
   {
-    if (cStrDestA.AppendFormat(";%s=", cParamsList[i]->szNameA) == FALSE)
+    if (cStrDestA.AppendFormat("; %s=", cParamsList[i]->szNameA) == FALSE)
       return E_OUTOFMEMORY;
     sW = cParamsList[i]->szValueW;
     while (*sW != 0)
