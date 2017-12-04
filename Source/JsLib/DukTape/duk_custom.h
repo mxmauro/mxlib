@@ -71,11 +71,21 @@ static __forceinline int DukTapeStrNCmp(_In_reads_or_z_(_MaxCount) const char * 
 static __forceinline int DukTapeSprintf(char *buffer, const char *format, ...)
 {
   va_list argptr;
+  char tempbuf[128];
   int ret;
 
   va_start(argptr, format);
-  ret = mx_vsnprintf(buffer, 128, format, argptr);
+  ret = mx_vsnprintf(tempbuf, sizeof(tempbuf)/sizeof(tempbuf[0]), format, argptr);
   va_end(argptr);
+  if (ret >= 0)
+  {
+    MX::MemCopy(buffer, tempbuf, ret);
+    buffer[ret] = 0;
+  }
+  else
+  {
+    buffer[0] = 0;
+  }
   return ret;
 }
 #undef DUK_SNPRINTF

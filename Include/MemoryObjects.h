@@ -52,19 +52,9 @@ SIZE_T TryMemCopy(__out LPVOID lpDest, __in LPCVOID lpSrc, __in SIZE_T nCount);
 
 #define MX_DEBUG_NEW new(__FILE__, __LINE__)
 
-void* __cdecl operator new(__in size_t nSize, __in_z_opt const char *szFilenameA, __in int nLineNumber);
-void* __cdecl operator new[](__in size_t nSize, __in_z_opt const char *szFilenameA, __in int nLineNumber);
-void __cdecl operator delete(__in void* p, __in_z_opt const char *szFilenameA, __in int nLineNumber);
-void __cdecl operator delete[](__in void* p, __in_z_opt const char *szFilenameA, __in int nLineNumber);
-
 #else //_DEBUG || MX_TRACEALLOC
 
 #define MX_DEBUG_NEW new
-
-void* __cdecl operator new(__in size_t nSize);
-void* __cdecl operator new[](__in size_t nSize);
-void __cdecl operator delete(__in void* p);
-void __cdecl operator delete[](__in void* p);
 
 #endif //_DEBUG || MX_TRACEALLOC
 

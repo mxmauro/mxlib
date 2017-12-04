@@ -49,6 +49,11 @@ public:
 
   HRESULT Build(__inout CStringA &cStrDestA);
 
+  eDuplicateBehavior GetDuplicateBehavior() const
+    {
+    return DuplicateBehaviorAdd;
+    };
+
   HRESULT SetValue(__in_z LPCSTR szValueA);
   LPCSTR GetValue() const;
 

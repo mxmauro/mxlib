@@ -180,14 +180,14 @@
     <CustomBuild Include="Source\NtApis_x86.asm">
       <Filter>Source Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="Source\TryMemCopy_x64.asm">
-      <Filter>Source Files</Filter>
-    </CustomBuild>
     <CustomBuild Include="Source\TryMemCopy_x86.asm">
       <Filter>Source Files</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <None Include="LICENSE.COMMERCIAL" />
+    <None Include="Source\TryMemCopy_x64.asm">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

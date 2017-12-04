@@ -560,27 +560,46 @@ done:
 HRESULT CHttpCommon::AddHeader(__in_z LPCSTR szNameA, __out_opt CHttpHeaderBase **lplpHeader)
 {
   TAutoDeletePtr<CHttpHeaderBase> cHeader;
-  HRESULT hRes;
+  CHttpHeaderBase *lpHeader = NULL;
+  CHttpHeaderBase::eDuplicateBehavior nDuplicateBehavior;
+  SIZE_T i, nCount;
+  HRESULT hRes = S_OK;
 
-  RemoveHeader(szNameA); //remove any existing one
   if (lplpHeader != NULL)
     *lplpHeader = NULL;
-  hRes = CHttpHeaderBase::Create(szNameA, bActAsServer, &cHeader);
-  if (SUCCEEDED(hRes))
+
+  nDuplicateBehavior = CHttpHeaderBase::DuplicateBehaviorAdd;
+  nCount = cHeaders.GetCount();
+  for (i=0; i<nCount; i++)
   {
-    if (cHeaders.AddElement(cHeader.Get()) != FALSE)
+    if (StrCompareA(cHeaders[i]->GetName(), szNameA, TRUE) == 0)
     {
-      if (lplpHeader != NULL)
-        *lplpHeader = cHeader.Get();
-      cHeader.Detach();
-    }
-    else
-    {
-      hRes = E_OUTOFMEMORY;
+      nDuplicateBehavior = cHeaders[i]->GetDuplicateBehavior();
+      if (nDuplicateBehavior == CHttpHeaderBase::DuplicateBehaviorError)
+        return MX_E_AlreadyExists;
+      lpHeader = cHeaders[i];
+      break;
     }
   }
+  switch (nDuplicateBehavior)
+  {
+    case CHttpHeaderBase::DuplicateBehaviorReplace:
+      RemoveHeader(szNameA); //remove any existing one
+      //fall into add
+
+    case CHttpHeaderBase::DuplicateBehaviorAdd:
+      hRes = CHttpHeaderBase::Create(szNameA, bActAsServer, &cHeader);
+      if (FAILED(hRes))
+        return hRes;
+      if (cHeaders.AddElement(cHeader.Get()) == FALSE)
+        return E_OUTOFMEMORY;
+      lpHeader = cHeader.Detach();
+      break;
+  }
   //done
-  return hRes;
+  if (SUCCEEDED(hRes) && lplpHeader != NULL)
+    *lplpHeader = lpHeader;
+  return S_OK;
 }
 
 HRESULT CHttpCommon::AddHeader(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA, __in_opt SIZE_T nValueLen,

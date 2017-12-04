@@ -27,11 +27,6 @@
 
 //-----------------------------------------------------------
 
-//NOTE: UNDOCUMENTED!!!
-extern "C" {
-  extern _locale_tstruct __initiallocalestructinfo;
-};
-
 #define _INTERNAL()        ((Internals::CJsMySqlPluginHelpers*)lpInternal)
 #define _DB()              ((Internals::CJsMySqlPluginHelpers*)lpInternal)->lpDB
 #define _RS()              ((Internals::CJsMySqlPluginHelpers*)lpInternal)->sQuery.lpResultSet
@@ -555,7 +550,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow()
         case MYSQL_TYPE_YEAR:
           if ((lpFieldInfo->GetFlags() & UNSIGNED_FLAG) != 0)
           {
-            u.ull = _strtoui64_l(sA, &szEndPosA, 10, &__initiallocalestructinfo);
+            u.ull = _strtoui64(sA, &szEndPosA, 10);
             if (u.ull <= 0xFFFFFFFFui64)
               DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)u.ull);
             else
@@ -563,7 +558,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow()
           }
           else
           {
-            u.ll = _strtoi64_l(sA, &szEndPosA, 10, &__initiallocalestructinfo);
+            u.ll = _strtoi64(sA, &szEndPosA, 10);
             if (u.ll >= -2147483648i64 && u.ull < 2147483647i64)
               DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)u.ll);
             else
@@ -575,7 +570,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow()
         case MYSQL_TYPE_FLOAT:
         case MYSQL_TYPE_DOUBLE:
         case MYSQL_TYPE_NEWDECIMAL:
-          u.nDbl = _atof_l(sA, &__initiallocalestructinfo);
+          u.nDbl = atof(sA);
           DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)u.nDbl);
           break;
 

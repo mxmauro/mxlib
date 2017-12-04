@@ -4,14 +4,14 @@ var moment = require("./moment.min.js");
 require("./top.jss");
 %>
 <div class="caption">REQUEST</div>
-<pre><%= vardump(request) %></pre>
+<pre><%= Duktape.enc('jc', request, null, 4); %></pre>
 <div class="caption">SESSION</div>
 <pre>ID: <%= session.id %></pre>
 <pre>INTVAL: <%
 if (typeof session.intValue === 'undefined')
-    echo("Undefined");
+	echo("Undefined");
 else
-    echo(htmlentities(session.intValue.toString()));
+	echo(htmlentities(session.intValue.toString()));
 %></pre>
 <div class="caption">MOMENT.JS</div>
 <pre>ID: <%= moment().toISOString() %></pre>

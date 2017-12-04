@@ -26,10 +26,7 @@
 
 //-----------------------------------------------------------
 
-//NOTE: UNDOCUMENTED!!!
-extern "C" {
-  extern _locale_tstruct __initiallocalestructinfo;
-};
+static VOID RemoveTrailingZeroDecimals(__inout MX::CStringA &cStrA);
 
 //-----------------------------------------------------------
 
@@ -117,13 +114,13 @@ HRESULT CHttpHeaderReqAccept::Parse(__in_z LPCSTR szValueA)
         //add parameter
         if (StrCompareA((LPSTR)cStrTempA, "q", TRUE) == 0)
         {
-          hRes = lpType->SetQ(_atof_l((LPSTR)cStrTempA_2, &__initiallocalestructinfo));
+          hRes = lpType->SetQ(atof((LPCSTR)cStrTempA_2));
         }
         else
         {
           hRes = Utf8_Decode(cStrTempW, (LPSTR)cStrTempA_2);
           if (SUCCEEDED(hRes))
-            hRes = lpType->AddParam((LPSTR)cStrTempA, (LPWSTR)cStrTempW);
+            hRes = lpType->AddParam((LPCSTR)cStrTempA, (LPCWSTR)cStrTempW);
         }
         if (FAILED(hRes))
           return hRes;
@@ -175,6 +172,7 @@ HRESULT CHttpHeaderReqAccept::Build(__inout CStringA &cStrDestA)
     {
       if (cStrDestA.AppendFormat("; q=%f", lpType->GetQ()) == FALSE)
         return E_OUTOFMEMORY;
+      RemoveTrailingZeroDecimals(cStrDestA);
     }
     //parameters
     nParamsCount = lpType->GetParamsCount();
@@ -231,8 +229,11 @@ HRESULT CHttpHeaderReqAccept::AddType(__in_z LPCSTR szTypeA, __out_opt CType **l
   nCount = cTypesList.GetCount();
   for (i=0; i<nCount; i++)
   {
-    if (StrCompareA(cTypesList[i]->GetType(), cNewType->GetType()) == 0)
-      return MX_E_AlreadyExists;
+    if (StrCompareA(cTypesList[i]->GetType(), cNewType->GetType(), TRUE) == 0)
+    {
+      cTypesList.RemoveElementAt(i); //remove previous definition
+      break;
+    }
   }
   //add to list
   if (cTypesList.AddElement(cNewType.Get()) == FALSE)
@@ -349,7 +350,7 @@ HRESULT CHttpHeaderReqAccept::CType::AddParam(__in_z LPCSTR szNameA, __in_z LPCW
 {
   TAutoFreePtr<PARAMETER> cNewParam;
   LPCSTR szStartA, szEndA;
-  SIZE_T nNameLen, nValueLen;
+  SIZE_T i, nCount, nNameLen, nValueLen;
 
   if (szNameA == NULL)
     return E_POINTER;
@@ -368,6 +369,16 @@ HRESULT CHttpHeaderReqAccept::CType::AddParam(__in_z LPCSTR szNameA, __in_z LPCW
   //get name and value length
   nNameLen = (SIZE_T)(szEndA-szStartA);
   nValueLen = (StrLenW(szValueW) + 1) * sizeof(WCHAR);
+  //check if already exists in list
+  nCount = cParamsList.GetCount();
+  for (i = 0; i<nCount; i++)
+  {
+    if (StrNCompareA(cParamsList[i]->szNameA, szStartA, nNameLen, TRUE) == 0 && cParamsList[i]->szNameA[nNameLen] == 0)
+    {
+      cParamsList.RemoveElementAt(i); //remove previous definition
+      break;
+    }
+  }
   //create new item
   cNewParam.Attach((LPPARAMETER)MX_MALLOC(sizeof(PARAMETER) + nNameLen + nValueLen));
   if (!cNewParam)
@@ -416,3 +427,21 @@ LPCWSTR CHttpHeaderReqAccept::CType::GetParamValue(__in_z LPCSTR szNameA) const
 }
 
 } //namespace MX
+
+//-----------------------------------------------------------
+
+static VOID RemoveTrailingZeroDecimals(__inout MX::CStringA &cStrA)
+{
+  SIZE_T nCount = 0;
+  SIZE_T nOfs, nLen = cStrA.GetLength();
+  LPCSTR sA = (LPCSTR)cStrA;
+
+  for (nOfs=nLen; nOfs >= 2; nOfs--)
+  {
+    if (sA[nOfs-1] != '0' || sA[nOfs-2] == '.')
+      break;
+  }
+  if (nOfs < nLen)
+    cStrA.Delete(nOfs, nLen - nOfs);
+  return;
+}

@@ -104,7 +104,9 @@ public:
 
     __inline LPCSTR GetType() const
       {
-      return (cStrTypeA.IsEmpty() == FALSE) ? (LPCSTR)cStrTypeA : "text/plain";
+      if (cStrTypeA.IsEmpty() == FALSE)
+        return (LPCSTR)cStrTypeA;
+      return (cStrFileNameW.IsEmpty() == FALSE) ? "text/plain" : "";
       };
 
     __inline LPCWSTR GetFileName() const

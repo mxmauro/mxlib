@@ -465,58 +465,6 @@ SIZE_T TryMemCopy(__out LPVOID lpDest, __in LPCVOID lpSrc, __in SIZE_T nCount)
   return MxTryMemCopy(lpDest, lpSrc, nCount);
 }
 
-#if defined(_DEBUG) || defined(MX_TRACEALLOC)
-
-void* __cdecl operator new(__in size_t nSize, __in_z_opt const char *szFilenameA, __in int nLineNumber)
-{
-  return MX_MALLOC_D(nSize, szFilenameA, nLineNumber);
-}
-
-void* __cdecl operator new[](__in size_t nSize, __in_z_opt const char *szFilenameA, __in int nLineNumber)
-{
-  return MX_MALLOC_D(nSize, szFilenameA, nLineNumber);
-}
-
-void __cdecl operator delete(__in void* p, __in_z_opt const char *szFilenameA, __in int nLineNumber)
-{
-  MX_FREE(p);
-  return;
-}
-
-void __cdecl operator delete[](__in void* p, __in_z_opt const char *szFilenameA, __in int nLineNumber)
-{
-  MX_FREE(p);
-  return;
-}
-
-#else //_DEBUG || MX_TRACEALLOC
-
-#define MX_DEBUG_NEW new
-
-void* __cdecl operator new(__in size_t nSize)
-{
-  return MX_MALLOC(nSize);
-}
-
-void* __cdecl operator new[](__in size_t nSize)
-{
-  return MX_MALLOC(nSize);
-}
-
-void __cdecl operator delete(__in void* p)
-{
-  MX_FREE(p);
-  return;
-}
-
-void __cdecl operator delete[](__in void* p)
-{
-  MX_FREE(p);
-  return;
-}
-
-#endif //_DEBUG || MX_TRACEALLOC
-
 } //namespace MX
 
 #ifdef DO_HEAP_CHECK

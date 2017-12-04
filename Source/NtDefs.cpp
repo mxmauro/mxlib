@@ -26,6 +26,7 @@
 #include "..\Include\WaitableObjects.h"
 #include <intrin.h>
 #include <winternl.h>
+#include <stdio.h>
 
 #pragma intrinsic (_InterlockedExchange)
 
@@ -203,6 +204,11 @@ int mx_sprintf_s(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char 
 
 int mx_vsnprintf(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char *szFormatA, __in va_list lpArgList)
 {
+  if (*((PVOID*)&__stdio_common_vsprintf_s) != NULL)
+  {
+    int ret = __stdio_common_vsprintf_s(_CRT_INTERNAL_PRINTF_LEGACY_WIDE_SPECIFIERS, lpDest, nMaxCount, szFormatA, NULL, lpArgList);
+    return (ret >= 0) ? ret : -1;
+  }
   if (fn_vsnprintf == NULL)
   {
     PVOID DllBase = MxGetDllHandle(L"ntdll.dll");
@@ -233,6 +239,11 @@ int mx_swprintf_s(__out_z wchar_t *lpDest, __in size_t nMaxCount, __in_z const w
 int mx_vsnwprintf(__out_z wchar_t *lpDest, __in size_t nMaxCount, __in_z const wchar_t *szFormatW,
                   __in va_list lpArgList)
 {
+  if (*((PVOID*)&__stdio_common_vswprintf_s) != NULL)
+  {
+    int ret = __stdio_common_vswprintf_s(_CRT_INTERNAL_PRINTF_LEGACY_WIDE_SPECIFIERS, lpDest, nMaxCount, szFormatW, NULL, lpArgList);
+    return (ret >= 0) ? ret : -1;
+  }
   if (fn_vsnwprintf == NULL)
   {
     PVOID DllBase = MxGetDllHandle(L"ntdll.dll");
@@ -679,8 +690,8 @@ PVOID MxGetRemoteDllHandle(__in HANDLE hProcess, __in_z PCWSTR szModuleNameW)
     if (MxReadMem(hProcess, &dw, lpPeb+0x0C, sizeof(dw)) == sizeof(dw) && dw != 0)
     {
       //check if table is initialized
-      if (MxReadMem(hProcess, &nTemp8, (LPBYTE)dw+0x04, sizeof(nTemp8)) == sizeof(nTemp8) && nTemp8 != 0)
-        lpFirstLink = (LPBYTE)dw + 0x0C; //PEB_LDR_DATA32.InLoadOrderModuleList.Flink
+      if (MxReadMem(hProcess, &nTemp8, (LPBYTE)ULongToPtr(dw) + 0x04, sizeof(nTemp8)) == sizeof(nTemp8) && nTemp8 != 0)
+        lpFirstLink = (LPBYTE)ULongToPtr(dw) + 0x0C; //PEB_LDR_DATA32.InLoadOrderModuleList.Flink
     }
   }
   else
@@ -691,7 +702,7 @@ PVOID MxGetRemoteDllHandle(__in HANDLE hProcess, __in_z PCWSTR szModuleNameW)
     {
       //check if table is initialized
       nTemp8 = 0;
-      if (MxReadMem(hProcess, &nTemp8, (LPBYTE)ull+0x04, sizeof(nTemp8)) == sizeof(nTemp8) && nTemp8 != 0)
+      if (MxReadMem(hProcess, &nTemp8, (LPBYTE)ull + 0x04, sizeof(nTemp8)) == sizeof(nTemp8) && nTemp8 != 0)
         lpFirstLink = (LPBYTE)ull + 0x10; //PEB_LDR_DATA64.InLoadOrderModuleList.Flink
     }
   }
@@ -700,7 +711,7 @@ PVOID MxGetRemoteDllHandle(__in HANDLE hProcess, __in_z PCWSTR szModuleNameW)
   {
     if (bTargetIsX64 == FALSE)
     {
-      lpCurrLink = (MxReadMem(hProcess, &dw, lpFirstLink, 4) == 4) ? (LPBYTE)dw : lpFirstLink;
+      lpCurrLink = (MxReadMem(hProcess, &dw, lpFirstLink, 4) == 4) ? (LPBYTE)ULongToPtr(dw) : lpFirstLink;
       while (lpCurrLink != lpFirstLink)
       {
         if (MxReadMem(hProcess, &sCurrEntry32, lpCurrLink - FIELD_OFFSET(MX_LDR_DATA_TABLE_ENTRY32, InLoadOrderLinks),
@@ -708,12 +719,12 @@ PVOID MxGetRemoteDllHandle(__in HANDLE hProcess, __in_z PCWSTR szModuleNameW)
             break;
         if (sCurrEntry32.DllBase != 0 &&
             (SIZE_T)(sCurrEntry32.BaseDllName.Length) == nModuleNameLen &&
-            RemoteCompareStringW(hProcess, (LPWSTR)(sCurrEntry32.BaseDllName.Buffer), szModuleNameW,
-                                 nModuleNameLen/sizeof(WCHAR)) != FALSE)
+            RemoteCompareStringW(hProcess, (LPWSTR)ULongToPtr(sCurrEntry32.BaseDllName.Buffer), szModuleNameW,
+                                 nModuleNameLen / sizeof(WCHAR)) != FALSE)
         {
-          return (LPBYTE)(sCurrEntry32.DllBase);
+          return (LPBYTE)ULongToPtr(sCurrEntry32.DllBase);
         }
-        lpCurrLink = (LPBYTE)(sCurrEntry32.InLoadOrderLinks.Flink);
+        lpCurrLink = (LPBYTE)ULongToPtr(sCurrEntry32.InLoadOrderLinks.Flink);
       }
     }
     else

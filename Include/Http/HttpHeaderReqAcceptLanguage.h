@@ -63,6 +63,11 @@ public:
 
   HRESULT Build(__inout CStringA &cStrDestA);
 
+  eDuplicateBehavior GetDuplicateBehavior() const
+    {
+    return DuplicateBehaviorAppend;
+    };
+
   HRESULT AddLanguage(__in_z LPCSTR szLanguageA, __out_opt CLanguage **lplpLanguage=NULL);
 
   SIZE_T GetLanguagesCount() const;

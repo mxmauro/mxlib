@@ -26,10 +26,7 @@
 
 //-----------------------------------------------------------
 
-//NOTE: UNDOCUMENTED!!!
-extern "C" {
-  extern _locale_tstruct __initiallocalestructinfo;
-};
+static VOID RemoveTrailingZeroDecimals(__inout MX::CStringA &cStrA);
 
 //-----------------------------------------------------------
 
@@ -94,7 +91,7 @@ HRESULT CHttpHeaderReqAcceptLanguage::Parse(__in_z LPCSTR szValueA)
       if (cStrTempA_2.CopyN(szStartA, (SIZE_T)(szValueA-szStartA)) == FALSE)
         return E_OUTOFMEMORY;
       //add parameter
-      hRes = lpLanguage->SetQ(_atof_l((LPSTR)cStrTempA_2, &__initiallocalestructinfo));
+      hRes = lpLanguage->SetQ(atof((LPCSTR)cStrTempA_2));
       if (FAILED(hRes))
         return hRes;
     }
@@ -133,6 +130,7 @@ HRESULT CHttpHeaderReqAcceptLanguage::Build(__inout CStringA &cStrDestA)
     {
       if (cStrDestA.AppendFormat("; q=%f", lpLanguage->GetQ()) == FALSE)
         return E_OUTOFMEMORY;
+      RemoveTrailingZeroDecimals(cStrDestA);
     }
   }
   //done
@@ -160,8 +158,11 @@ HRESULT CHttpHeaderReqAcceptLanguage::AddLanguage(__in_z LPCSTR szLanguageA, __o
   nCount = cLanguagesList.GetCount();
   for (i=0; i<nCount; i++)
   {
-    if (StrCompareA(cLanguagesList[i]->GetLanguage(), cNewLanguage->GetLanguage()) == 0)
-      return MX_E_AlreadyExists;
+    if (StrCompareA(cLanguagesList[i]->GetLanguage(), cNewLanguage->GetLanguage(), TRUE) == 0)
+    {
+      cLanguagesList.RemoveElementAt(i); //remove previous definition
+      break;
+    }
   }
   //add to list
   if (cLanguagesList.AddElement(cNewLanguage.Get()) == FALSE)
@@ -277,3 +278,21 @@ double CHttpHeaderReqAcceptLanguage::CLanguage::GetQ() const
 }
 
 } //namespace MX
+
+//-----------------------------------------------------------
+
+static VOID RemoveTrailingZeroDecimals(__inout MX::CStringA &cStrA)
+{
+  SIZE_T nCount = 0;
+  SIZE_T nOfs, nLen = cStrA.GetLength();
+  LPCSTR sA = (LPCSTR)cStrA;
+
+  for (nOfs=nLen; nOfs >= 2; nOfs--)
+  {
+    if (sA[nOfs-1] != '0' || sA[nOfs-2] == '.')
+      break;
+  }
+  if (nOfs < nLen)
+    cStrA.Delete(nOfs, nLen - nOfs);
+  return;
+}

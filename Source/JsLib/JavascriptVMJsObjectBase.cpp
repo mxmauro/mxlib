@@ -92,6 +92,11 @@ int CJsObjectBase::OnProxyDeleteIndexedProperty(__in int nIndex)
   return 1; //delete original
 }
 
+LPCSTR CJsObjectBase::OnProxyGetPropertyName(__in int nIndex)
+{
+  return NULL;
+}
+
 HRESULT CJsObjectBase::_RegisterHelper(__in DukTape::duk_context *lpCtx, __in MAP_ENTRY *lpEntries,
                                        __in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA,
                                        __in_opt lpfnCreateObject fnCreateObject, __in BOOL bUseProxy,
@@ -106,41 +111,15 @@ HRESULT CJsObjectBase::_RegisterHelper(__in DukTape::duk_context *lpCtx, __in MA
   {
     lpJVM->RunNativeProtected(0, 0, [=](__in DukTape::duk_context *lpCtx) -> VOID
     {
-      DukTape::duk_uint_t nDukFlags;
-      MAP_ENTRY *lpEntries_2 = lpEntries;
-
       //create a prototype with functions
       DukTape::duk_push_global_object(lpCtx);
       DukTape::duk_push_object(lpCtx);
       //set internal property to check if we have to create a proxy object too
       DukTape::duk_push_boolean(lpCtx, (bUseProxy != FALSE) ? 1 : 0);
       DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""useProxy");
-      //setup mapped entries
-      while (lpEntries_2->szNameA != NULL)
-      {
-        if (lpEntries_2->fnInvoke != NULL)
-        {
-          //a method
-          DukTape::duk_push_c_function(lpCtx, lpEntries_2->fnInvoke, lpEntries_2->nArgsCount);
-          DukTape::duk_put_prop_string(lpCtx, -2, lpEntries_2->szNameA);
-        }
-        else
-        {
-          //a property
-          DukTape::duk_push_string(lpCtx, lpEntries_2->szNameA);
-          nDukFlags = DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_HAVE_CONFIGURABLE | DUK_DEFPROP_HAVE_GETTER;
-          if (lpEntries_2->bEnumerable != FALSE)
-            nDukFlags |= DUK_DEFPROP_ENUMERABLE;
-          DukTape::duk_push_c_function(lpCtx, lpEntries_2->fnGetter, 0);
-          if (lpEntries_2->fnSetter != NULL)
-          {
-            DukTape::duk_push_c_function(lpCtx, lpEntries_2->fnSetter, 1);
-            nDukFlags |= DUK_DEFPROP_HAVE_SETTER;
-          }
-          DukTape::duk_def_prop(lpCtx, (lpEntries_2->fnSetter != NULL) ? -4 : -3, nDukFlags);
-        }
-        lpEntries_2++;
-      }
+      //set internal property to store map entries
+      DukTape::duk_push_pointer(lpCtx, lpEntries);
+      DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""mapEntries");
       //store as the prototype
       DukTape::duk_put_prop_string(lpCtx, -2, szPrototypeNameA);
       //register constructor in global if object is creatable
@@ -149,7 +128,7 @@ HRESULT CJsObjectBase::_RegisterHelper(__in DukTape::duk_context *lpCtx, __in MA
         DukTape::duk_push_c_function(lpCtx, &CJsObjectBase::_CreateHelper, MX_JS_VARARGS);
         DukTape::duk_push_pointer(lpCtx, fnCreateObject);
         DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""createObject");
-        DukTape::duk_put_prop_string(lpCtx, -2, szObjectNameA );
+        DukTape::duk_put_prop_string(lpCtx, -2, szObjectNameA);
       }
       //pop global
       DukTape::duk_pop(lpCtx);
@@ -241,6 +220,8 @@ HRESULT CJsObjectBase::_PushThisHelper(__in_z LPCSTR szObjectNameA, __in_z LPCST
   {
     lpJVM->RunNativeProtected(0, 1, [this, szObjectNameA, szPrototypeNameA](__in DukTape::duk_context *lpCtx) -> VOID
     {
+      DukTape::duk_uint_t nDukFlags;
+      MAP_ENTRY *lpEntries, *lpEntries_2;
       BOOL bCreateProxy = FALSE;
 
       //create javascript object
@@ -255,11 +236,42 @@ HRESULT CJsObjectBase::_PushThisHelper(__in_z LPCSTR szObjectNameA, __in_z LPCST
       if (DukTape::duk_is_boolean(lpCtx, -1) != 0 && DukTape::duk_get_boolean(lpCtx, -1) != 0)
         bCreateProxy = TRUE;
       DukTape::duk_pop(lpCtx);
-      //set new object's prototype
-      DukTape::duk_set_prototype(lpCtx, -2);
+      //get the object map entries
+      DukTape::duk_get_prop_string(lpCtx, -1, "\xff""\xff""mapEntries");
+      lpEntries = lpEntries_2 = (MAP_ENTRY*)DukTape::duk_get_pointer(lpCtx, -1);
+      DukTape::duk_pop_2(lpCtx); //pops prototype too
+      //setup mapped entries
+      while (lpEntries_2->szNameA != NULL)
+      {
+        if (lpEntries_2->fnInvoke != NULL)
+        {
+          //a method
+          DukTape::duk_push_c_function(lpCtx, lpEntries_2->fnInvoke, lpEntries_2->nArgsCount);
+          DukTape::duk_put_prop_string(lpCtx, -2, lpEntries_2->szNameA);
+        }
+        else
+        {
+          //a property
+          DukTape::duk_push_string(lpCtx, lpEntries_2->szNameA);
+          nDukFlags = DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_HAVE_CONFIGURABLE | DUK_DEFPROP_HAVE_GETTER;
+          if (lpEntries_2->bEnumerable != FALSE)
+            nDukFlags |= DUK_DEFPROP_ENUMERABLE;
+          DukTape::duk_push_c_function(lpCtx, lpEntries_2->fnGetter, 0);
+          if (lpEntries_2->fnSetter != NULL)
+          {
+            DukTape::duk_push_c_function(lpCtx, lpEntries_2->fnSetter, 1);
+            nDukFlags |= DUK_DEFPROP_HAVE_SETTER;
+          }
+          DukTape::duk_def_prop(lpCtx, (lpEntries_2->fnSetter != NULL) ? -4 : -3, nDukFlags);
+        }
+        lpEntries_2++;
+      }
       //store underlying object
       DukTape::duk_push_pointer(lpCtx, this);
       DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""data");
+      //store map entries pointer
+      DukTape::duk_push_pointer(lpCtx, lpEntries);
+      DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""mapEntries");
       //store boolean flag to mark the object as deleted because the destructor
       //may be called several times
       DukTape::duk_push_boolean(lpCtx, false);
@@ -283,6 +295,8 @@ HRESULT CJsObjectBase::_PushThisHelper(__in_z LPCSTR szObjectNameA, __in_z LPCST
         DukTape::duk_put_prop_string(lpCtx, -2, "set");
         DukTape::duk_push_c_function(lpCtx, &CJsObjectBase::_ProxyDeletePropHelper, 2);
         DukTape::duk_put_prop_string(lpCtx, -2, "deleteProperty");
+        DukTape::duk_push_c_function(lpCtx, &CJsObjectBase::_ProxyOwnKeysHelper, 1);
+        DukTape::duk_put_prop_string(lpCtx, -2, "ownKeys");
         //push Proxy object's constructor
         DukTape::duk_get_global_string(lpCtx, "Proxy");
         //reorder stack [target...handler...Proxy] -> [Proxy...target...handler]
@@ -501,7 +515,7 @@ DukTape::duk_ret_t CJsObjectBase::_ProxyDeletePropHelper(__in DukTape::duk_conte
       return DUK_RET_TYPE_ERROR;
     }
   }
-  else if (DukTape::duk_is_number(lpCtx, 1) || DukTape::duk_is_boolean(lpCtx, 1))
+  else if ((DukTape::duk_is_number(lpCtx, 1) || DukTape::duk_is_boolean(lpCtx, 1)) && !DukTape::duk_is_nan(lpCtx, 1))
   {
     int nIndex =  DukTape::duk_get_int(lpCtx, 1);
     nRet = lpObj->OnProxyDeleteIndexedProperty(nIndex);
@@ -520,6 +534,51 @@ DukTape::duk_ret_t CJsObjectBase::_ProxyDeletePropHelper(__in DukTape::duk_conte
   }
   //done (return success)
   DukTape::duk_push_boolean(lpCtx, 1);
+  return 1;
+}
+
+DukTape::duk_ret_t CJsObjectBase::_ProxyOwnKeysHelper(__in DukTape::duk_context *lpCtx)
+{
+  CJsObjectBase *lpObj;
+  MAP_ENTRY *lpEntries;
+  DukTape::duk_uarridx_t ndx;
+  int nIndex;
+
+  //get target object
+  DukTape::duk_push_this(lpCtx);
+  DukTape::duk_get_prop_string(lpCtx, -1, "\xff""\xff""data");
+  lpObj = reinterpret_cast<CJsObjectBase*>(DukTape::duk_to_pointer(lpCtx, -1));
+  DukTape::duk_pop(lpCtx);
+  //get the object map entries
+  DukTape::duk_get_prop_string(lpCtx, -1, "\xff""\xff""mapEntries");
+  lpEntries = (MAP_ENTRY*)DukTape::duk_get_pointer(lpCtx, -1);
+  DukTape::duk_pop_2(lpCtx); //pops this too
+
+  //create an array
+  DukTape::duk_push_object(lpCtx);
+
+  //setup mapped entries
+  ndx = 0;
+  while (lpEntries->szNameA != NULL)
+  {
+    if (lpEntries->fnInvoke == NULL /*&& lpEntries->bEnumerable != FALSE*/)
+    {
+      //a property
+      DukTape::duk_push_string(lpCtx, lpEntries->szNameA);
+      DukTape::duk_put_prop_index(lpCtx, -2, ndx++);
+    }
+    lpEntries++;
+  }
+  //add custom property names
+  for (nIndex=0; ; nIndex++)
+  {
+    LPCSTR szPropNameA = lpObj->OnProxyGetPropertyName(nIndex);
+    if (szPropNameA == NULL || *szPropNameA == 0)
+      break;
+    DukTape::duk_push_string(lpCtx, szPropNameA);
+    DukTape::duk_put_prop_index(lpCtx, -2, ndx++);
+  }
+  //done (return array)
   return 1;
 }
 

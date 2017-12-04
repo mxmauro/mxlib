@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.40629.0
+# Visual Studio 15
+VisualStudioVersion = 15.0.27004.2009
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MXLib", "MXLib.vcxproj", "{0C906B7D-55F9-4ED1-A7E1-96B84A648703}"
 EndProject
@@ -134,5 +134,8 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{2FD2C206-BBC6-401C-9A97-0523A166F62D} = {AB48AFCA-7E75-453F-B534-0D32DE1758A6}
 		{67F7A801-6E62-4204-8005-2431194915A2} = {AB48AFCA-7E75-453F-B534-0D32DE1758A6}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {56063354-2E0E-4CA9-B3AB-7E9A334B647E}
 	EndGlobalSection
 EndGlobal

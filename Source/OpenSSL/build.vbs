@@ -151,6 +151,11 @@ If bRebuild <> False Then
 	S = S & Chr(34) & "--config=" & szScriptPath & "compiler_config.conf" & Chr(34)
 	I = RunApp(S, szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
 	If I = 0 Then
+		RunApp "MD " & Chr(34) & szScriptPath & "Temp" & Chr(34), "", "", True
+
+		Call Patch_Makefile()
+		Call Patch_RAND_WIN_C()
+
 		RunApp "NMAKE clean", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, True
 
 		WScript.Echo "Compiling..."
@@ -167,17 +172,17 @@ If bRebuild <> False Then
 			WScript.Sleep(5000)
 
 			'Move needed files
-			RunApp "MD " & Chr(34) & szObjDir & Chr(34), szScriptPath & "Source", "", True
-			RunApp "MD " & Chr(34) & szLibDir & Chr(34), szScriptPath & "Source", "", True
+			RunApp "MD " & Chr(34) & szObjDir & Chr(34), "", "", True
+			RunApp "MD " & Chr(34) & szLibDir & Chr(34), "", "", True
 
 			For I = 0 To 2
-				RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\" & aTargetFiles(I) & Chr(34) & " " & Chr(34) & szLibDir & Chr(34), szScriptPath & "Source", "", False
+				RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\" & aTargetFiles(I) & Chr(34) & " " & Chr(34) & szLibDir & Chr(34), "", "", False
 			Next
 
-			RunApp "MD " & Chr(34) & szScriptPath & "Generated\" & Chr(34), szScriptPath & "Source", "", True
-			RunApp "MD " & Chr(34) & szScriptPath & "Generated\OpenSSL" & Chr(34), szScriptPath & "Source", "", True
+			RunApp "MD " & Chr(34) & szScriptPath & "Generated" & Chr(34), "", "", True
+			RunApp "MD " & Chr(34) & szScriptPath & "Generated\OpenSSL" & Chr(34), "", "", True
 
-			RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\include\openssl\opensslconf.h" & Chr(34) & " " & Chr(34) & szScriptPath & "Generated\OpenSSL" & Chr(34), szScriptPath & "Source", "", False
+			RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\include\openssl\opensslconf.h" & Chr(34) & " " & Chr(34) & szScriptPath & "Generated\OpenSSL" & Chr(34), "", "", False
 
 			'Clean after compile
 			RunApp "NMAKE clean", szScriptPath & "Source", "", True
@@ -274,3 +279,56 @@ Dim I, nRet, szOutputFile
 	End If
 	RunApp = nRet
 End Function
+
+Sub Patch_RAND_WIN_C()
+Dim objRE1, objRE2, objInputFile, objOutputFile
+Dim S
+
+	Set objRE1 = New RegExp
+	objRE1.Pattern = "#\s*define\s+USE_BCRYPTGENRANDOM"
+	objRE1.IgnoreCase = True
+	objRE1.Global = False
+
+	Set objRE2 = New RegExp
+	objRE2.Pattern = "#\s*include\s+\" & Chr(34) & "rand_lcl\.h\" & Chr(34)
+	objRE2.IgnoreCase = True
+	objRE2.Global = False
+
+	Set objInputFile = objFS.OpenTextFile(szScriptPath & "Source\crypto\rand\rand_win.c", 1)
+	Set objOutputFile = objFS.CreateTextFile(szScriptPath & "Temp\rand_win.c", True)
+	Do Until objInputFile.AtEndOfStream
+		S = objInputFile.ReadLine
+
+		If objRE1.Test(S) <> False Then
+			S = ""
+		ElseIf objRE2.Test(S) <> False Then
+			S = "#include " & Chr(34) & "..\Source\crypto\rand\rand_lcl.h" & Chr(34)
+		End If
+
+		objOutputFile.Write S & vbCrLf
+	Loop
+	objOutputFile.Close
+	objInputFile.Close
+End Sub
+
+Sub Patch_Makefile()
+Dim objRE, objInputFile, objOutputFile
+Dim S, Pos
+
+	Set objInputFile = objFS.OpenTextFile(szScriptPath & "Source\makefile", 1)
+	Set objOutputFile = objFS.CreateTextFile(szScriptPath & "Temp\makefile", True)
+	Do Until objInputFile.AtEndOfStream
+		S = objInputFile.ReadLine
+
+		Pos = InStr(1, S, "crypto\rand\rand_win.c", 1)
+		If Pos > 0 Then
+			S = Left(S, Pos - 1) & "..\Temp" & Mid(S, Pos + 11)
+		End If
+
+		objOutputFile.Write S & vbCrLf
+	Loop
+	objOutputFile.Close
+	objInputFile.Close
+
+	RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Temp\makefile" & Chr(34) & " " & Chr(34) & szScriptPath & "Source\makefile" & Chr(34), "", "", False
+End Sub

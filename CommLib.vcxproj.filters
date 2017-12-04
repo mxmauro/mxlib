@@ -400,10 +400,8 @@
     <ClCompile Include="Source\Http\EMail.cpp">
       <Filter>Source Files\Http</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Source\Http\HtmlEntities.cpp">
+    <ClCompile Include="Source\Http\HtmlEntities.cpp">
       <Filter>Source Files\Http</Filter>
-    </None>
+    </ClCompile>
   </ItemGroup>
 </Project>

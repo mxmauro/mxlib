@@ -43,6 +43,11 @@ namespace MX {
 
 class CHttpHeaderBase : public virtual CBaseMemObj
 {
+public:
+  typedef enum {
+    DuplicateBehaviorError, DuplicateBehaviorReplace, DuplicateBehaviorAppend, DuplicateBehaviorAdd
+  } eDuplicateBehavior;
+
 protected:
   CHttpHeaderBase();
 public:
@@ -59,6 +64,11 @@ public:
 
   virtual HRESULT Parse(__in_z LPCSTR szValueA) = 0;
   virtual HRESULT Build(__inout CStringA &cStrDestA) = 0;
+
+  virtual eDuplicateBehavior GetDuplicateBehavior() const
+    {
+    return DuplicateBehaviorError;
+    };
 
   //helpers
   static LPCSTR SkipSpaces(__in_z LPCSTR sA);

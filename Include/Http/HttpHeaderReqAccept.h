@@ -76,6 +76,11 @@ public:
 
   HRESULT Build(__inout CStringA &cStrDestA);
 
+  eDuplicateBehavior GetDuplicateBehavior() const
+    {
+    return DuplicateBehaviorAppend;
+    };
+
   HRESULT AddType(__in_z LPCSTR szTypeA, __out_opt CType **lplpType=NULL);
 
   SIZE_T GetTypesCount() const;

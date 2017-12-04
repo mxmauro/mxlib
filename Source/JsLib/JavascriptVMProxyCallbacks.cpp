@@ -44,6 +44,8 @@ void CJavascriptVM::CProxyCallbacks::serialize(__in void *p)
   cProxyDeleteNamedPropertyCallback.serialize(p);
   p = (char*)p + OnProxyDeleteNamedPropertyCallback::serialization_buffer_size();
   cProxyDeleteIndexedPropertyCallback.serialize(p);
+  p = (char*)p + OnProxyDeleteIndexedPropertyCallback::serialization_buffer_size();
+  cProxyGetPropertyNameCallback.serialize(p);
   return;
 }
 
@@ -64,6 +66,8 @@ void CJavascriptVM::CProxyCallbacks::deserialize(__in void *p)
   cProxyDeleteNamedPropertyCallback.deserialize(p);
   p = (char*)p + OnProxyDeleteNamedPropertyCallback::serialization_buffer_size();
   cProxyDeleteIndexedPropertyCallback.deserialize(p);
+  p = (char*)p + OnProxyDeleteIndexedPropertyCallback::serialization_buffer_size();
+  cProxyGetPropertyNameCallback.deserialize(p);
   return;
 }
 
@@ -76,7 +80,8 @@ size_t CJavascriptVM::CProxyCallbacks::serialization_buffer_size()
          OnProxySetNamedPropertyCallback::serialization_buffer_size() +
          OnProxySetIndexedPropertyCallback::serialization_buffer_size() +
          OnProxyDeleteNamedPropertyCallback::serialization_buffer_size() +
-         OnProxyDeleteIndexedPropertyCallback::serialization_buffer_size();
+         OnProxyDeleteIndexedPropertyCallback::serialization_buffer_size() +
+         OnProxyGetPropertyNameCallback::serialization_buffer_size();
 }
 
 } //namespace MX

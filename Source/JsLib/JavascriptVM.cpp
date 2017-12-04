@@ -566,6 +566,8 @@ HRESULT CJavascriptVM::CreateObject(__in_z LPCSTR szObjectNameA, __in_opt CProxy
         DukTape::duk_put_prop_string(lpCtx, -2, "set");
         DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::_ProxyDeletePropHelper, 2);
         DukTape::duk_put_prop_string(lpCtx, -2, "deleteProperty");
+        DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::_ProxyOwnKeysHelper, 1);
+        DukTape::duk_put_prop_string(lpCtx, -2, "ownKeys");
         //duplicate target object reference for later use
         DukTape::duk_dup(lpCtx, -2);
         //push Proxy object's constructor
@@ -1534,6 +1536,42 @@ DukTape::duk_ret_t CJavascriptVM::_ProxyDeletePropHelper(__in DukTape::duk_conte
   }
   //done (return success)
   DukTape::duk_push_boolean(lpCtx, 1);
+  return 1;
+}
+
+DukTape::duk_ret_t CJavascriptVM::_ProxyOwnKeysHelper(__in DukTape::duk_context *lpCtx)
+{
+  CProxyCallbacks cProxyCallbacks;
+  LPCSTR szObjNameA;
+  LPVOID p;
+  DukTape::duk_size_t nBufSize;
+  int nIndex;
+
+  //get callbacks
+  DukTape::duk_push_this(lpCtx);
+  DukTape::duk_get_prop_string(lpCtx, -1, "\xff""\xff""callbacks");
+  p = DukTape::duk_require_buffer(lpCtx, -1, &nBufSize);
+  cProxyCallbacks.deserialize(p);
+  DukTape::duk_pop(lpCtx);
+  //get object's name
+  DukTape::duk_get_prop_string(lpCtx, -1, "\xff""\xff""name");
+  szObjNameA = DukTape::duk_require_string(lpCtx, -1);
+  //remove "this"
+  DukTape::duk_remove(lpCtx, -2);
+  //create an array
+  DukTape::duk_push_object(lpCtx);
+  if (cProxyCallbacks.cProxyGetPropertyNameCallback)
+  {
+    for (nIndex = 0; ; nIndex++)
+    {
+      LPCSTR szPropNameA = cProxyCallbacks.cProxyGetPropertyNameCallback(lpCtx, szObjNameA, nIndex);
+      if (szPropNameA == NULL || *szPropNameA == 0)
+        break;
+      DukTape::duk_push_string(lpCtx, szPropNameA);
+      DukTape::duk_put_prop_index(lpCtx, -2, (DukTape::duk_uarridx_t)nIndex);
+    }
+  }
+  //done (return array)
   return 1;
 }
 

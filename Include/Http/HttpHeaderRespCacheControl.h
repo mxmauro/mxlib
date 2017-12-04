@@ -43,6 +43,11 @@ public:
 
   HRESULT Build(__inout CStringA &cStrDestA);
 
+  eDuplicateBehavior GetDuplicateBehavior() const
+    {
+    return DuplicateBehaviorAppend;
+    };
+
   HRESULT SetPublic(__in BOOL bPublic);
   BOOL GetPublic() const;
 

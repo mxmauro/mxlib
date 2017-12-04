@@ -195,6 +195,10 @@ public:
   typedef Callback<int (__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
                         __in int nIndex)> OnProxyDeleteIndexedPropertyCallback;
 
+  //return NULL/Empty String to end enumeration
+  typedef Callback<LPCSTR (__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
+                           __in int nIndex)> OnProxyGetPropertyNameCallback;
+
   //--------
 
   class CProxyCallbacks
@@ -211,6 +215,7 @@ public:
       cProxySetIndexedPropertyCallback = NullCallback();
       cProxyDeleteNamedPropertyCallback = NullCallback();
       cProxyDeleteIndexedPropertyCallback = NullCallback();
+      cProxyGetPropertyNameCallback = NullCallback();
       return;
       };
 
@@ -223,6 +228,7 @@ public:
     OnProxySetIndexedPropertyCallback cProxySetIndexedPropertyCallback;
     OnProxyDeleteNamedPropertyCallback cProxyDeleteNamedPropertyCallback;
     OnProxyDeleteIndexedPropertyCallback cProxyDeleteIndexedPropertyCallback;
+    OnProxyGetPropertyNameCallback cProxyGetPropertyNameCallback;
 
   private:
     friend CJavascriptVM;
@@ -418,6 +424,7 @@ private:
   static DukTape::duk_ret_t _ProxyGetPropHelper(__in DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _ProxySetPropHelper(__in DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _ProxyDeletePropHelper(__in DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t _ProxyOwnKeysHelper(__in DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _RunNativeProtectedHelper(__in DukTape::duk_context *lpCtx, __in void *udata);
 
   static BOOL HandleException(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex,
@@ -471,6 +478,9 @@ public:
   virtual int OnProxyDeleteNamedProperty(__in_z LPCSTR szPropNameA);
   virtual int OnProxyDeleteIndexedProperty(__in int nIndex);
 
+  //return NULL/Empty String to end enumeration
+  virtual LPCSTR OnProxyGetPropertyName(__in int nIndex);
+
   CJavascriptVM& GetJavascriptVM() const
     {
     return *lpJVM;
@@ -519,6 +529,7 @@ protected:
   static DukTape::duk_ret_t _ProxyGetPropHelper(__in DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _ProxySetPropHelper(__in DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _ProxyDeletePropHelper(__in DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t _ProxyOwnKeysHelper(__in DukTape::duk_context *lpCtx);
 
 private:
   CJavascriptVM *lpJVM;

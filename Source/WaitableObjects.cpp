@@ -180,7 +180,6 @@ HRESULT CWindowsEvent::Create(__in BOOL bManualReset, __in BOOL bInitialState, _
 HRESULT CWindowsEvent::Open(__in_z_opt LPCWSTR szNameW, __in_opt BOOL bInherit)
 {
   HANDLE _h;
-  HRESULT hRes;
 
   if (fnOpenEventW != NULL)
   {
@@ -304,7 +303,6 @@ HRESULT CWindowsMutex::Create(__in_z_opt LPCWSTR szNameW, __in BOOL bInitialOwne
 HRESULT CWindowsMutex::Open(__in_z_opt LPCWSTR szNameW, __in BOOL bQueryOnly, __in_opt BOOL bInherit)
 {
   HANDLE _h;
-  HRESULT hRes;
 
   if (fnOpenMutexW != NULL)
   {

@@ -43,6 +43,11 @@ public:
 
   HRESULT Build(__inout CStringA &cStrDestA);
 
+  eDuplicateBehavior GetDuplicateBehavior() const
+    {
+    return DuplicateBehaviorAppend;
+    };
+
   HRESULT AddVerb(__in_z LPCSTR szVerbA);
 
   SIZE_T GetVerbsCount() const;
