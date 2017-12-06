@@ -1,9 +1,0 @@
-[submodule "ZipLib"]
-	path = Source/ZipLib/Source
-	url = https://github.com/madler/zlib
-[submodule "OpenSSL"]
-	path = Source/OpenSSL/Source
-	url = https://github.com/openssl/openssl
-[submodule "DukTape"]
-	path = Source/JsLib/DukTape/Source
-	url = https://github.com/svaarala/duktape
