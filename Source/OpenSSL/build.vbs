@@ -262,6 +262,8 @@ Dim I, nRet, szOutputFile
 		If Right(szOutputFile, 1) <> "\" Then szOutputFile = szOutputFile & "\"
 		szOutputFile = szOutputFile & oFso.GetTempName
 		szCmdLine = "CMD.EXE /S /C " & Chr(34) & szCmdLine & " > " & Chr(34) & szOutputFile & Chr(34) & " 2>&1" & Chr(34)
+	Else
+		szCmdLine = "CMD.EXE /S /C " & Chr(34) & szCmdLine & Chr(34)
 	End If
 	nRet = oShell.Run(szCmdLine, 0, True)
 	I = Err.Number

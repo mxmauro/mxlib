@@ -13,8 +13,7 @@
 /Libs/
 /obj/
 /extras/
-/Include/JsLib/DukTape/duk_config.h
-/Include/JsLib/DukTape/duktape.h
+/Include/JsLib/DukTape/
 /Source/JsLib/DukTape/setenv.bat
 /Source/OpenSSL/setenv.bat
 /Source/OpenSSL/Generated/
