@@ -60,7 +60,7 @@ HRESULT AddResponseMethods(__in CJavascriptVM &cJvm, __in MX::CHttpServer::CRequ
   __EXIT_ON_ERROR(hRes);
   hRes = cJvm.AddNativeFunction("setCookie", MX_BIND_CALLBACK(&OnSetCookie), MX_JS_VARARGS);
   __EXIT_ON_ERROR(hRes);
-  hRes = cJvm.AddNativeFunction("setHeader", MX_BIND_CALLBACK(&OnSetHeader), 2);
+  hRes = cJvm.AddNativeFunction("setHeader", MX_BIND_CALLBACK(&OnSetHeader), MX_JS_VARARGS);
   __EXIT_ON_ERROR(hRes);
   hRes = cJvm.AddNativeFunction("resetOutput", MX_BIND_CALLBACK(&OnResetOutput), 0);
   __EXIT_ON_ERROR(hRes);
@@ -175,9 +175,9 @@ static DukTape::duk_ret_t OnSetCookie(__in DukTape::duk_context *lpCtx, __in_z L
   if (nParamsCount > 4 && duk_is_null_or_undefined(lpCtx, 4) == 0)
     szDomainA = DukTape::duk_require_string(lpCtx, 4);
   if (nParamsCount > 5 && duk_is_null_or_undefined(lpCtx, 5) == 0)
-    bIsSecure = DukTape::duk_require_boolean(lpCtx, 5) ? TRUE : FALSE;
+    bIsSecure = (MX::CJavascriptVM::GetInt(lpCtx, 5) != 0) ? TRUE : FALSE;
   if (nParamsCount > 6 && duk_is_null_or_undefined(lpCtx, 6) == 0)
-    bIsHttpOnly = DukTape::duk_require_boolean(lpCtx, 6) ? TRUE : FALSE;
+    bIsHttpOnly = (MX::CJavascriptVM::GetInt(lpCtx, 6) != 0) ? TRUE : FALSE;
   //setup cookie
   hRes = cCookie.SetName(szNameA);
   if (SUCCEEDED(hRes) && szValueA != NULL)
@@ -215,12 +215,21 @@ static DukTape::duk_ret_t OnSetHeader(__in DukTape::duk_context *lpCtx, __in_z L
                                       __in_z LPCSTR szFunctionNameA)
 {
   MX::CJsHttpServer::CJsRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
+  DukTape::duk_idx_t nParamsCount;
   LPCSTR szNameA, szValueA;
+  BOOL bReplaceExisting;
   HRESULT hRes;
 
+  nParamsCount = DukTape::duk_get_top(lpCtx);
+  if (nParamsCount < 2 || nParamsCount > 3)
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+  //get parameters
+  bReplaceExisting = TRUE;
   szNameA = DukTape::duk_require_string(lpCtx, 0);
   szValueA = DukTape::duk_require_string(lpCtx, 1);
-  hRes = lpRequest->AddResponseHeader(szNameA, szValueA);
+  if (nParamsCount > 2 && duk_is_null_or_undefined(lpCtx, 2) == 0)
+    bReplaceExisting = (MX::CJavascriptVM::GetInt(lpCtx, 2) != 0) ? TRUE : FALSE;
+  hRes = lpRequest->AddResponseHeader(szNameA, szValueA, MX::StrLenA(szValueA), NULL, bReplaceExisting);
   if (FAILED(hRes))
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
   return 0;

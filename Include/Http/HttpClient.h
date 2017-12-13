@@ -98,10 +98,13 @@ public:
     {
     return AddRequestHeader(T::GetNameStatic(), reinterpret_cast<CHttpHeaderBase**>(lplpHeader));
     };
-  HRESULT AddRequestHeader(__in_z LPCSTR szNameA, __out CHttpHeaderBase **lplpHeader);
-  HRESULT AddRequestHeader(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA, __out_opt CHttpHeaderBase **lplpHeader=NULL);
-  HRESULT AddRequestHeader(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW, __out_opt CHttpHeaderBase **lplpHeader=NULL);
+  HRESULT AddRequestHeader(__in_z LPCSTR szNameA, __out CHttpHeaderBase **lplpHeader, __in BOOL bReplaceExisting=TRUE);
+  HRESULT AddRequestHeader(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA, __out_opt CHttpHeaderBase **lplpHeader=NULL,
+                           __in BOOL bReplaceExisting=TRUE);
+  HRESULT AddRequestHeader(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW, __out_opt CHttpHeaderBase **lplpHeader=NULL,
+                           __in BOOL bReplaceExisting=TRUE);
   HRESULT RemoveRequestHeader(__in_z LPCSTR szNameA);
+  HRESULT RemoveRequestHeader(__in CHttpHeaderBase *lpHeader);
   HRESULT RemoveAllRequestHeaders();
 
   HRESULT AddRequestCookie(__in CHttpCookie &cSrc);

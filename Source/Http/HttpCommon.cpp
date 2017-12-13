@@ -557,28 +557,34 @@ done:
 }
 #undef BACKWARD_CHAR
 
-HRESULT CHttpCommon::AddHeader(__in_z LPCSTR szNameA, __out_opt CHttpHeaderBase **lplpHeader)
+HRESULT CHttpCommon::AddHeader(__in_z LPCSTR szNameA, __out_opt CHttpHeaderBase **lplpHeader,
+                               __in BOOL bReplaceExisting)
 {
   TAutoDeletePtr<CHttpHeaderBase> cHeader;
   CHttpHeaderBase *lpHeader = NULL;
   CHttpHeaderBase::eDuplicateBehavior nDuplicateBehavior;
-  SIZE_T i, nCount;
-  HRESULT hRes = S_OK;
+  HRESULT hRes;
 
   if (lplpHeader != NULL)
     *lplpHeader = NULL;
 
-  nDuplicateBehavior = CHttpHeaderBase::DuplicateBehaviorAdd;
-  nCount = cHeaders.GetCount();
-  for (i=0; i<nCount; i++)
+  nDuplicateBehavior = CHttpHeaderBase::DuplicateBehaviorReplace;
+  if (bReplaceExisting == FALSE)
   {
-    if (StrCompareA(cHeaders[i]->GetName(), szNameA, TRUE) == 0)
+    SIZE_T i, nCount;
+
+    nDuplicateBehavior = CHttpHeaderBase::DuplicateBehaviorAdd;
+    nCount = cHeaders.GetCount();
+    for (i=0; i<nCount; i++)
     {
-      nDuplicateBehavior = cHeaders[i]->GetDuplicateBehavior();
-      if (nDuplicateBehavior == CHttpHeaderBase::DuplicateBehaviorError)
-        return MX_E_AlreadyExists;
-      lpHeader = cHeaders[i];
-      break;
+      if (StrCompareA(cHeaders[i]->GetName(), szNameA, TRUE) == 0)
+      {
+        nDuplicateBehavior = cHeaders[i]->GetDuplicateBehavior();
+        if (nDuplicateBehavior == CHttpHeaderBase::DuplicateBehaviorError)
+          return MX_E_AlreadyExists;
+        lpHeader = cHeaders[i];
+        break;
+      }
     }
   }
   switch (nDuplicateBehavior)
@@ -597,20 +603,20 @@ HRESULT CHttpCommon::AddHeader(__in_z LPCSTR szNameA, __out_opt CHttpHeaderBase 
       break;
   }
   //done
-  if (SUCCEEDED(hRes) && lplpHeader != NULL)
+  if (lplpHeader != NULL)
     *lplpHeader = lpHeader;
   return S_OK;
 }
 
 HRESULT CHttpCommon::AddHeader(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA, __in_opt SIZE_T nValueLen,
-                               __out_opt CHttpHeaderBase **lplpHeader)
+                               __out_opt CHttpHeaderBase **lplpHeader, __in BOOL bReplaceExisting)
 {
   CHttpHeaderBase *lpHeader;
   HRESULT hRes;
 
   if (lplpHeader != NULL)
     *lplpHeader = NULL;
-  hRes = AddHeader(szNameA, &lpHeader);
+  hRes = AddHeader(szNameA, &lpHeader, bReplaceExisting);
   if (SUCCEEDED(hRes))
   {
     if (nValueLen == (SIZE_T)-1)
@@ -636,13 +642,13 @@ HRESULT CHttpCommon::AddHeader(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA, __
   }
   else
   {
-    RemoveHeader(szNameA);
+    RemoveHeader(lpHeader);
   }
   return hRes;
 }
 
 HRESULT CHttpCommon::AddHeader(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW, __in_opt SIZE_T nValueLen,
-                               __out_opt CHttpHeaderBase **lplpHeader)
+                               __out_opt CHttpHeaderBase **lplpHeader, __in BOOL bReplaceExisting)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -659,21 +665,41 @@ HRESULT CHttpCommon::AddHeader(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW, _
     if (FAILED(hRes))
       return hRes;
   }
-  return AddHeader(szNameA, (LPSTR)cStrTempA, (SIZE_T)-1, lplpHeader);
+  return AddHeader(szNameA, (LPSTR)cStrTempA, (SIZE_T)-1, lplpHeader, bReplaceExisting);
 }
 
 HRESULT CHttpCommon::RemoveHeader(__in_z LPCSTR szNameA)
 {
-  SIZE_T i, nCount;
+  SIZE_T i;
+  BOOL bFound;
 
   if (szNameA == NULL)
     return E_POINTER;
   if (*szNameA == 0)
     return E_INVALIDARG;
-  nCount = cHeaders.GetCount();
-  for (i=0; i<nCount; i++)
+  bFound = FALSE;
+  i = cHeaders.GetCount();
+  while ((i--) > 0)
   {
     if (StrCompareA(szNameA, cHeaders[i]->GetName(), TRUE) == 0)
+    {
+      cHeaders.RemoveElementAt(i);
+      bFound = TRUE;
+    }
+  }
+  return (bFound != FALSE) ? S_OK : MX_E_NotFound;
+}
+
+HRESULT CHttpCommon::RemoveHeader(__in CHttpHeaderBase *lpHeader)
+{
+  SIZE_T i;
+
+  if (lpHeader == NULL)
+    return E_POINTER;
+  i = cHeaders.GetCount();
+  while ((i--) > 0)
+  {
+    if (lpHeader == cHeaders.GetElementAt(i))
     {
       cHeaders.RemoveElementAt(i);
       return S_OK;

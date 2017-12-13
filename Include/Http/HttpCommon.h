@@ -126,30 +126,35 @@ public:
     };
 
   template<class T>
-  HRESULT AddHeader(__out_opt T **lplpHeader=NULL)
+  HRESULT AddHeader(__out_opt T **lplpHeader=NULL, __in BOOL bReplaceExisting=TRUE)
     {
-    return AddHeader(T::GetNameStatic(), reinterpret_cast<CHttpHeaderBase**>(lplpHeader));
+    return AddHeader(T::GetNameStatic(), reinterpret_cast<CHttpHeaderBase**>(lplpHeader), bReplaceExisting);
     };
-  HRESULT AddHeader(__in_z LPCSTR szNameA, __out_opt CHttpHeaderBase **lplpHeader=NULL);
+  HRESULT AddHeader(__in_z LPCSTR szNameA, __out_opt CHttpHeaderBase **lplpHeader=NULL,
+                    __in BOOL bReplaceExisting=TRUE);
 
   template<class T>
   HRESULT AddHeader(__in_z LPCSTR szValueA, __in_opt SIZE_T nValueLen=(SIZE_T)-1, __out_opt T **lplpHeader=NULL)
     {
-    return AddHeader(T::GetNameStatic(), szValueA, nValueLen, reinterpret_cast<CHttpHeaderBase**>(lplpHeader));
+    return AddHeader(T::GetNameStatic(), szValueA, nValueLen, reinterpret_cast<CHttpHeaderBase**>(lplpHeader),
+                     bReplaceExisting);
     };
   HRESULT AddHeader(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA, __in_opt SIZE_T nValueLen=(SIZE_T)-1,
-                    __out_opt CHttpHeaderBase **lplpHeader=NULL);
+                    __out_opt CHttpHeaderBase **lplpHeader=NULL, __in BOOL bReplaceExisting=TRUE);
 
   //NOTE: Unicode values will be UTF-8 & URL encoded
   template<class T>
-  HRESULT AddHeader(__in_z LPCWSTR szValueW, __in_opt SIZE_T nValueLen=(SIZE_T)-1, __out_opt T **lplpHeader=NULL)
+  HRESULT AddHeader(__in_z LPCWSTR szValueW, __in_opt SIZE_T nValueLen=(SIZE_T)-1, __out_opt T **lplpHeader=NULL,
+                    __in BOOL bReplaceExisting=TRUE)
     {
-    return AddHeader(T::GetNameStatic(), szValueW, nValueLen, reinterpret_cast<CHttpHeaderBase**>(lplpHeader));
+    return AddHeader(T::GetNameStatic(), szValueW, nValueLen, reinterpret_cast<CHttpHeaderBase**>(lplpHeader),
+                     bReplaceExisting);
     };
   HRESULT AddHeader(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW, __in_opt SIZE_T nValueLen=(SIZE_T)-1,
-                    __out_opt CHttpHeaderBase **lplpHeader=NULL);
+                    __out_opt CHttpHeaderBase **lplpHeader=NULL, __in BOOL bReplaceExisting=TRUE);
 
   HRESULT RemoveHeader(__in_z LPCSTR szNameA);
+  HRESULT RemoveHeader(__in CHttpHeaderBase *lpHeader);
   VOID RemoveAllHeaders();
 
   SIZE_T GetHeadersCount() const;

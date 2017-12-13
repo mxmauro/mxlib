@@ -150,7 +150,8 @@ HRESULT CHttpClient::SetRequestMethod(__in_z LPCWSTR szMethodW)
   return SetRequestMethod((LPCSTR)cStrTempA);
 }
 
-HRESULT CHttpClient::AddRequestHeader(__in_z LPCSTR szNameA, __out CHttpHeaderBase **lplpHeader)
+HRESULT CHttpClient::AddRequestHeader(__in_z LPCSTR szNameA, __out CHttpHeaderBase **lplpHeader,
+                                      __in BOOL bReplaceExisting)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -159,11 +160,11 @@ HRESULT CHttpClient::AddRequestHeader(__in_z LPCSTR szNameA, __out CHttpHeaderBa
   *lplpHeader = NULL;
   if (nState != StateClosed && nState != StateDocumentCompleted)
     return MX_E_NotReady;
-  return sRequest.cHttpCmn.AddHeader(szNameA, lplpHeader);
+  return sRequest.cHttpCmn.AddHeader(szNameA, lplpHeader, bReplaceExisting);
 }
 
 HRESULT CHttpClient::AddRequestHeader(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA,
-                                      __out_opt CHttpHeaderBase **lplpHeader)
+                                      __out_opt CHttpHeaderBase **lplpHeader, __in BOOL bReplaceExisting)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -171,11 +172,11 @@ HRESULT CHttpClient::AddRequestHeader(__in_z LPCSTR szNameA, __in_z LPCSTR szVal
     *lplpHeader = NULL;
   if (nState != StateClosed && nState != StateDocumentCompleted)
     return MX_E_NotReady;
-  return sRequest.cHttpCmn.AddHeader(szNameA, szValueA, (SIZE_T)-1, lplpHeader);
+  return sRequest.cHttpCmn.AddHeader(szNameA, szValueA, (SIZE_T)-1, lplpHeader, bReplaceExisting);
 }
 
 HRESULT CHttpClient::AddRequestHeader(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW,
-                                      __out_opt CHttpHeaderBase **lplpHeader)
+                                      __out_opt CHttpHeaderBase **lplpHeader, __in BOOL bReplaceExisting)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -183,7 +184,7 @@ HRESULT CHttpClient::AddRequestHeader(__in_z LPCSTR szNameA, __in_z LPCWSTR szVa
     *lplpHeader = NULL;
   if (nState != StateClosed && nState != StateDocumentCompleted)
     return MX_E_NotReady;
-  return sRequest.cHttpCmn.AddHeader(szNameA, szValueW, (SIZE_T)-1, lplpHeader);
+  return sRequest.cHttpCmn.AddHeader(szNameA, szValueW, (SIZE_T)-1, lplpHeader, bReplaceExisting);
 }
 
 HRESULT CHttpClient::RemoveRequestHeader(__in_z LPCSTR szNameA)
@@ -193,6 +194,16 @@ HRESULT CHttpClient::RemoveRequestHeader(__in_z LPCSTR szNameA)
   if (nState != StateClosed && nState != StateDocumentCompleted)
     return MX_E_NotReady;
   sRequest.cHttpCmn.RemoveHeader(szNameA);
+  return S_OK;
+}
+
+HRESULT CHttpClient::RemoveRequestHeader(__in CHttpHeaderBase *lpHeader)
+{
+  CCriticalSection::CAutoLock cLock(cMutex);
+
+  if (nState != StateClosed && nState != StateDocumentCompleted)
+    return MX_E_NotReady;
+  sRequest.cHttpCmn.RemoveHeader(lpHeader);
   return S_OK;
 }
 

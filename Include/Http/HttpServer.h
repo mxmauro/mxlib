@@ -118,34 +118,36 @@ public:
     HRESULT SetResponseStatus(__in LONG nStatus, __in_opt LPCSTR szReasonA=NULL);
 
     template<class T>
-    HRESULT AddResponseHeader(__out_opt T **lplpHeader=NULL)
+    HRESULT AddResponseHeader(__out_opt T **lplpHeader=NULL, __in BOOL bReplaceExisting=TRUE)
       {
-      return AddResponseHeader(T::GetNameStatic(), reinterpret_cast<CHttpHeaderBase**>(lplpHeader));
+      return AddResponseHeader(T::GetNameStatic(), reinterpret_cast<CHttpHeaderBase**>(lplpHeader), bReplaceExisting);
       };
-    HRESULT AddResponseHeader(__in_z LPCSTR szNameA, __out_opt CHttpHeaderBase **lplpHeader=NULL);
+    HRESULT AddResponseHeader(__in_z LPCSTR szNameA, __out_opt CHttpHeaderBase **lplpHeader=NULL,
+                              __in BOOL bReplaceExisting=TRUE);
 
     template<class T>
     HRESULT AddResponseHeader(__in_z LPCSTR szValueA, __in_opt SIZE_T nValueLen=(SIZE_T)-1,
-                              __out_opt T **lplpHeader=NULL)
+                              __out_opt T **lplpHeader=NULL, __in BOOL bReplaceExisting=TRUE)
       {
-      return AddResponseHeader(T::GetNameStatic(), szValueA, nValueLen,
-                               reinterpret_cast<CHttpHeaderBase**>(lplpHeader));
+      return AddResponseHeader(T::GetNameStatic(), szValueA, nValueLen, reinterpret_cast<CHttpHeaderBase**>(lplpHeader),
+                               bReplaceExisting);
       };
     HRESULT AddResponseHeader(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA, __in_opt SIZE_T nValueLen=(SIZE_T)-1,
-                              __out_opt CHttpHeaderBase **lplpHeader=NULL);
+                              __out_opt CHttpHeaderBase **lplpHeader=NULL, __in BOOL bReplaceExisting=TRUE);
 
     //NOTE: Unicode values will be UTF-8 & URL encoded
     template<class T>
     HRESULT AddResponseHeader(__in_z LPCWSTR szValueW, __in_opt SIZE_T nValueLen=(SIZE_T)-1,
-                              __out_opt T **lplpHeader=NULL)
+                              __out_opt T **lplpHeader=NULL, __in BOOL bReplaceExisting=TRUE)
       {
-      return AddResponseHeader(T::GetNameStatic(), szValueW, nValueLen,
-                               reinterpret_cast<CHttpHeaderBase**>(lplpHeader));
+      return AddResponseHeader(T::GetNameStatic(), szValueW, nValueLen, reinterpret_cast<CHttpHeaderBase**>(lplpHeader),
+                               bReplaceExisting);
       };
     HRESULT AddResponseHeader(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW, __in_opt SIZE_T nValueLen=(SIZE_T)-1,
-                              __out_opt CHttpHeaderBase **lplpHeader=NULL);
+                              __out_opt CHttpHeaderBase **lplpHeader=NULL, __in BOOL bReplaceExisting=TRUE);
 
     HRESULT RemoveResponseHeader(__in_z LPCSTR szNameA);
+    HRESULT RemoveResponseHeader(__in CHttpHeaderBase *lpHeader);
     HRESULT RemoveAllResponseHeaders();
 
     SIZE_T GetResponseHeadersCount() const;

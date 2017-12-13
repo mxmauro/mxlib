@@ -169,7 +169,8 @@ HRESULT CHttpServer::CRequest::SetResponseStatus(__in LONG nStatus, __in_opt LPC
   return S_OK;
 }
 
-HRESULT CHttpServer::CRequest::AddResponseHeader(__in_z LPCSTR szNameA, __out_opt CHttpHeaderBase **lplpHeader)
+HRESULT CHttpServer::CRequest::AddResponseHeader(__in_z LPCSTR szNameA, __out_opt CHttpHeaderBase **lplpHeader,
+                                                 __in BOOL bReplaceExisting)
 {
   CFastLock cLock(&nMutex);
 
@@ -177,11 +178,12 @@ HRESULT CHttpServer::CRequest::AddResponseHeader(__in_z LPCSTR szNameA, __out_op
     *lplpHeader = NULL;
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
-  return sResponse.cHttpCmn.AddHeader(szNameA, lplpHeader);
+  return sResponse.cHttpCmn.AddHeader(szNameA, lplpHeader, bReplaceExisting);
 }
 
 HRESULT CHttpServer::CRequest::AddResponseHeader(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA,
-                                                 __in_opt SIZE_T nValueLen, __out_opt CHttpHeaderBase **lplpHeader)
+                                                 __in_opt SIZE_T nValueLen, __out_opt CHttpHeaderBase **lplpHeader,
+                                                 __in BOOL bReplaceExisting)
 {
   CFastLock cLock(&nMutex);
 
@@ -189,11 +191,12 @@ HRESULT CHttpServer::CRequest::AddResponseHeader(__in_z LPCSTR szNameA, __in_z L
     *lplpHeader = NULL;
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
-  return sResponse.cHttpCmn.AddHeader(szNameA, szValueA, nValueLen, lplpHeader);
+  return sResponse.cHttpCmn.AddHeader(szNameA, szValueA, nValueLen, lplpHeader, bReplaceExisting);
 }
 
 HRESULT CHttpServer::CRequest::AddResponseHeader(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW,
-                                                 __in_opt SIZE_T nValueLen, __out_opt CHttpHeaderBase **lplpHeader)
+                                                 __in_opt SIZE_T nValueLen, __out_opt CHttpHeaderBase **lplpHeader,
+                                                 __in BOOL bReplaceExisting)
 {
   CFastLock cLock(&nMutex);
 
@@ -201,7 +204,7 @@ HRESULT CHttpServer::CRequest::AddResponseHeader(__in_z LPCSTR szNameA, __in_z L
     *lplpHeader = NULL;
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
-  return sResponse.cHttpCmn.AddHeader(szNameA, szValueW, nValueLen, lplpHeader);
+  return sResponse.cHttpCmn.AddHeader(szNameA, szValueW, nValueLen, lplpHeader, bReplaceExisting);
 }
 
 HRESULT CHttpServer::CRequest::RemoveResponseHeader(__in_z LPCSTR szNameA)
@@ -210,7 +213,18 @@ HRESULT CHttpServer::CRequest::RemoveResponseHeader(__in_z LPCSTR szNameA)
 
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
-  return sResponse.cHttpCmn.RemoveHeader(szNameA);
+  sResponse.cHttpCmn.RemoveHeader(szNameA);
+  return S_OK;
+}
+
+HRESULT CHttpServer::CRequest::RemoveResponseHeader(__in CHttpHeaderBase *lpHeader)
+{
+  CFastLock cLock(&nMutex);
+
+  if (nState != StateBuildingResponse)
+    return MX_E_NotReady;
+  sResponse.cHttpCmn.RemoveHeader(lpHeader);
+  return S_OK;
 }
 
 HRESULT CHttpServer::CRequest::RemoveAllResponseHeaders()
