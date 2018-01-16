@@ -204,10 +204,15 @@ int mx_sprintf_s(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char 
 
 int mx_vsnprintf(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char *szFormatA, __in va_list lpArgList)
 {
-  if (*((PVOID*)&__stdio_common_vsprintf_s) != NULL)
+  if (*((PVOID*)&__stdio_common_vsnprintf_s) != NULL)
   {
-    int ret = __stdio_common_vsprintf_s(_CRT_INTERNAL_PRINTF_LEGACY_WIDE_SPECIFIERS, lpDest, nMaxCount, szFormatA, NULL, lpArgList);
-    return (ret >= 0) ? ret : -1;
+    //We use _CRT_INTERNAL_PRINTF_STANDARD_SNPRINTF_BEHAVIOR to get the total count of characters no matter
+    //if the buffer is truncated like original snprintf behavior.
+    //We also use _CRT_INTERNAL_PRINTF_LEGACY_WIDE_SPECIFIERS in order to favor %s and %S narrow-wide specifiers.
+    int ret = __stdio_common_vsnprintf_s(_CRT_INTERNAL_PRINTF_LEGACY_WIDE_SPECIFIERS |
+                                         _CRT_INTERNAL_PRINTF_STANDARD_SNPRINTF_BEHAVIOR, lpDest, nMaxCount,
+                                         _TRUNCATE, szFormatA, NULL, lpArgList);
+    return (ret >= 0) ? ret : (-1);
   }
   if (fn_vsnprintf == NULL)
   {
@@ -241,8 +246,13 @@ int mx_vsnwprintf(__out_z wchar_t *lpDest, __in size_t nMaxCount, __in_z const w
 {
   if (*((PVOID*)&__stdio_common_vswprintf_s) != NULL)
   {
-    int ret = __stdio_common_vswprintf_s(_CRT_INTERNAL_PRINTF_LEGACY_WIDE_SPECIFIERS, lpDest, nMaxCount, szFormatW, NULL, lpArgList);
-    return (ret >= 0) ? ret : -1;
+    //We use _CRT_INTERNAL_PRINTF_STANDARD_SNPRINTF_BEHAVIOR to get the total count of characters no matter
+    //if the buffer is truncated like original snprintf behavior.
+    //We also use _CRT_INTERNAL_PRINTF_LEGACY_WIDE_SPECIFIERS in order to favor %s and %S narrow-wide specifiers.
+    int ret = __stdio_common_vsnwprintf_s(_CRT_INTERNAL_PRINTF_LEGACY_WIDE_SPECIFIERS |
+                                          _CRT_INTERNAL_PRINTF_STANDARD_SNPRINTF_BEHAVIOR, lpDest, nMaxCount,
+                                          _TRUNCATE, szFormatW, NULL, lpArgList);
+    return (ret >= 0) ? ret : (-1);
   }
   if (fn_vsnwprintf == NULL)
   {

@@ -32,16 +32,16 @@
 
 //-----------------------------------------------------------
 
-typedef int (__cdecl *lpfn__stdio_common_vsprintf_s)(_In_ unsigned __int64 _Options,
-                                                     _Out_writes_z_(_BufferCount) char* _Buffer,
-                                                     _In_ size_t _BufferCount,
-                                                     _In_z_ _Printf_format_string_params_(2) char const* _Format,
-                                                     _In_opt_ _locale_t _Locale, va_list _ArgList);
-typedef int (__cdecl *lpfn__stdio_common_vswprintf_s)(_In_ unsigned __int64 _Options,
-                                                      _Out_writes_z_(_BufferCount) wchar_t* _Buffer,
-                                                      _In_ size_t _BufferCount,
-                                                      _In_z_ _Printf_format_string_params_(2) wchar_t const* _Format,
+typedef int (__cdecl *lpfn__stdio_common_vsnprintf_s)(_In_ unsigned __int64 _Options,
+                                                      _Out_writes_z_(_BufferCount) char* _Buffer,
+                                                      _In_ size_t _BufferCount, _In_ size_t _MaxCount,
+                                                      _In_z_ _Printf_format_string_params_(2) char const* _Format,
                                                       _In_opt_ _locale_t _Locale, va_list _ArgList);
+typedef int (__cdecl *lpfn__stdio_common_vsnwprintf_s)(_In_ unsigned __int64 _Options,
+                                                       _Out_writes_z_(_BufferCount) wchar_t* _Buffer,
+                                                       _In_ size_t _BufferCount, _In_ size_t _MaxCount,
+                                                       _In_z_ _Printf_format_string_params_(2) wchar_t const* _Format,
+                                                       _In_opt_ _locale_t _Locale, va_list _ArgList);
 
 //-----------------------------------------------------------
 
@@ -49,17 +49,15 @@ static LONG volatile nInitialized = 0;
 static CHAR volatile aToLowerChar[256] = { 0 };
 static WCHAR volatile aToUnicodeChar[256] = { 0 };
 
-//extern const lpfn__stdio_common_vsprintf_s __stdio_common_vsprintf_s;
-extern const lpfn__stdio_common_vsprintf_s mx__stdio_common_vsprintf_s_default = NULL;
-//extern const lpfn__stdio_common_vswprintf_s __stdio_common_vswprintf_s;
-extern const lpfn__stdio_common_vswprintf_s mx__stdio_common_vswprintf_s_default = NULL;
+extern const lpfn__stdio_common_vsnprintf_s mx__stdio_common_vsnprintf_s_default = NULL;
+extern const lpfn__stdio_common_vsnwprintf_s mx__stdio_common_vsnwprintf_s_default = NULL;
 #if defined (_M_IX86)
-  #pragma comment(linker, "/alternatename:___stdio_common_vsprintf_s=_mx__stdio_common_vsprintf_s_default")
-  #pragma comment(linker, "/alternatename:___stdio_common_vswprintf_s=_mx__stdio_common_vswprintf_s_default")
+  #pragma comment(linker, "/alternatename:___stdio_common_vsnprintf_s=_mx__stdio_common_vsnprintf_s_default")
+  #pragma comment(linker, "/alternatename:___stdio_common_vsnwprintf_s=_mx__stdio_common_vsnwprintf_s_default")
 #elif defined (_M_IA64) || defined (_M_AMD64)
-  #pragma comment(linker, "/alternatename:__stdio_common_vsprintf_s=mx__stdio_common_vsprintf_s_default")
-  #pragma comment(linker, "/alternatename:__stdio_common_vswprintf_s=mx__stdio_common_vswprintf_s_default")
-#endif  /* defined (_M_IA64) || defined (_M_AMD64) */
+  #pragma comment(linker, "/alternatename:__stdio_common_vsnprintf_s=mx__stdio_common_vsnprintf_s_default")
+  #pragma comment(linker, "/alternatename:__stdio_common_vsnwprintf_s=mx__stdio_common_vsnwprintf_s_default")
+#endif
 
 //-----------------------------------------------------------
 

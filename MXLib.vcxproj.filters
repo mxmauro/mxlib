@@ -27,6 +27,9 @@
     <Filter Include="Source Files\Streams">
       <UniqueIdentifier>{96ec0237-5d9c-42bb-bd63-71a4831c641b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Native Visualizations">
+      <UniqueIdentifier>{3bc48389-2576-4cfb-939f-642a6c86d301}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\DateTime\DateTime.h">
@@ -183,11 +186,16 @@
     <CustomBuild Include="Source\TryMemCopy_x86.asm">
       <Filter>Source Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="Source\TryMemCopy_x64.asm">
+      <Filter>Source Files</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <None Include="LICENSE.COMMERCIAL" />
-    <None Include="Source\TryMemCopy_x64.asm">
-      <Filter>Source Files</Filter>
-    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="NativeVis\CString.natvis">
+      <Filter>Native Visualizations</Filter>
+    </Natvis>
   </ItemGroup>
 </Project>
