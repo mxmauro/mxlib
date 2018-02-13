@@ -29,6 +29,7 @@
 #include <OpenSSL\evp.h>
 #include <OpenSSL\bn.h>
 #include <OpenSSL\rsa.h>
+#include <OpenSSL\pkcs12.h>
 
 #define BLOCK_SIZE                                      2048
 
@@ -120,7 +121,9 @@ HRESULT CCryptoRSA::GenerateKeys(__in SIZE_T nBitsCount)
     return E_OUTOFMEMORY;
   if (rsa_data->sEncryptor.lpInputBuf != NULL || rsa_data->sDecryptor.lpInputBuf != NULL ||
       rsa_data->sSignContext.lpSigner != NULL || rsa_data->sVerifyContext.lpVerifier != NULL)
+  {
     return MX_E_Busy;
+  }
   //create holders
   lpBn = BN_new();
   if (lpBn == NULL)
@@ -132,8 +135,7 @@ HRESULT CCryptoRSA::GenerateKeys(__in SIZE_T nBitsCount)
     return E_OUTOFMEMORY;
   }
   //generate key
-  if (BN_set_word(lpBn, RSA_F4) <= 0 ||
-      RSA_generate_key_ex(lpRsa, (int)nBitsCount, lpBn, NULL) <= 0)
+  if (BN_set_word(lpBn, RSA_F4) <= 0 || RSA_generate_key_ex(lpRsa, (int)nBitsCount, lpBn, NULL) <= 0)
   {
     BN_free(lpBn);
     RSA_free(lpRsa);
@@ -163,9 +165,14 @@ BOOL CCryptoRSA::HasPrivateKey() const
   return (const_cast<CCryptoRSA*>(this)->GetPrivateKey(NULL) > 0) ? TRUE : FALSE;
 }
 
-HRESULT CCryptoRSA::SetPublicKeyFromDER(__in LPCVOID lpKey, __in SIZE_T nKeySize)
+HRESULT CCryptoRSA::SetPublicKeyFromDER(__in LPCVOID lpKey, __in SIZE_T nKeySize, __in_z_opt LPCSTR szPasswordA)
 {
-  RSA *lpRsa;
+  EVP_PKEY *lpEvpKey;
+  RSA *lpRsa, *lpTempRsa;
+  PKCS12 *lpPkcs12;
+  X509 *lpX509;
+  const unsigned char *buf;
+  HRESULT hRes;
 
   if (lpKey == NULL)
     return E_POINTER;
@@ -175,40 +182,80 @@ HRESULT CCryptoRSA::SetPublicKeyFromDER(__in LPCVOID lpKey, __in SIZE_T nKeySize
     return E_OUTOFMEMORY;
   if (rsa_data->sEncryptor.lpInputBuf != NULL || rsa_data->sDecryptor.lpInputBuf != NULL ||
       rsa_data->sSignContext.lpSigner != NULL || rsa_data->sVerifyContext.lpVerifier != NULL)
-    return MX_E_Busy;
-  //parse key
-  ERR_clear_error();
-  lpRsa = d2i_RSAPublicKey(NULL, (const unsigned char**)&lpKey, (long)nKeySize);
-  if (lpRsa == NULL)
   {
-    BIO *lpBio;
-    EVP_PKEY *lpEvpKey;
-    RSA *lpTempRsa;
-    HRESULT hRes;
-
-    if (Internals::OpenSSL::IsMemoryError() != FALSE)
-      return E_OUTOFMEMORY;
-    lpBio = BIO_new_mem_buf((void*)lpKey, (int)nKeySize);
-    if (lpBio == NULL)
-      return E_OUTOFMEMORY;
-    ERR_clear_error();
-    lpEvpKey = d2i_PUBKEY_bio(lpBio, NULL);
-    hRes = (lpEvpKey == NULL) ? ((Internals::OpenSSL::IsMemoryError() != FALSE) ? E_OUTOFMEMORY : MX_E_InvalidData) :
-                                S_OK;
-    BIO_free(lpBio);
-    if (FAILED(hRes))
-      return hRes;
-    lpTempRsa = EVP_PKEY_get1_RSA(lpEvpKey);
-    if (lpTempRsa == NULL)
-    {
-      EVP_PKEY_free(lpEvpKey);
-      return MX_E_InvalidData;
-    }
-    lpRsa = RSAPublicKey_dup(lpTempRsa);
-    EVP_PKEY_free(lpEvpKey);
-    if (lpRsa == NULL)
-      return E_OUTOFMEMORY;
+    return MX_E_Busy;
   }
+  //try rsa public key
+  ERR_clear_error();
+  buf = (const unsigned char*)lpKey;
+  lpRsa = d2i_RSAPublicKey(NULL, &buf, (long)nKeySize);
+  if (lpRsa != NULL)
+    goto done;
+  hRes = Internals::OpenSSL::GetLastErrorCode(FALSE);
+  if (hRes == E_OUTOFMEMORY)
+    return hRes;
+  //try standard public key
+  ERR_clear_error();
+  buf = (const unsigned char*)lpKey;
+  lpEvpKey = d2i_PUBKEY(NULL, &buf, (long)nKeySize);
+  if (lpEvpKey != NULL)
+  {
+    lpTempRsa = EVP_PKEY_get1_RSA(lpEvpKey);
+    if (lpTempRsa != NULL)
+    {
+      lpRsa = RSAPublicKey_dup(lpTempRsa);
+      EVP_PKEY_free(lpEvpKey);
+      if (lpRsa == NULL)
+        return E_OUTOFMEMORY;
+      goto done;
+    }
+    EVP_PKEY_free(lpEvpKey);
+  }
+  else if (Internals::OpenSSL::GetLastErrorCode(FALSE) == E_OUTOFMEMORY)
+  {
+    return E_OUTOFMEMORY;
+  }
+  //try to extract from a pkcs12
+  ERR_clear_error();
+  buf = (const unsigned char*)lpKey;
+  lpPkcs12 = d2i_PKCS12(NULL, &buf, (long)nKeySize);
+  if (lpPkcs12 != NULL)
+  {
+    ERR_clear_error();
+    if (PKCS12_parse(lpPkcs12, szPasswordA, &lpEvpKey, &lpX509, NULL))
+    {
+      if (lpX509 != NULL)
+        X509_free(lpX509);
+      if (lpEvpKey != NULL)
+      {
+        lpTempRsa = EVP_PKEY_get1_RSA(lpEvpKey);
+        if (lpTempRsa != NULL)
+        {
+          lpRsa = RSAPublicKey_dup(lpTempRsa);
+          EVP_PKEY_free(lpEvpKey);
+          PKCS12_free(lpPkcs12);
+          if (lpRsa == NULL)
+            return E_OUTOFMEMORY;
+          goto done;
+        }
+        EVP_PKEY_free(lpEvpKey);
+      }
+    }
+    else if (Internals::OpenSSL::GetLastErrorCode(FALSE) == E_OUTOFMEMORY)
+    {
+      PKCS12_free(lpPkcs12);
+      return E_OUTOFMEMORY;
+    }
+    PKCS12_free(lpPkcs12);
+  }
+  else if (Internals::OpenSSL::GetLastErrorCode(FALSE) == E_OUTOFMEMORY)
+  {
+    return E_OUTOFMEMORY;
+  }
+  //nothing else to try
+  return MX_E_InvalidData;
+
+done:
   //replace key
   if (rsa_data->lpRsa != NULL)
     RSA_free(rsa_data->lpRsa);
@@ -220,7 +267,8 @@ HRESULT CCryptoRSA::SetPublicKeyFromDER(__in LPCVOID lpKey, __in SIZE_T nKeySize
 HRESULT CCryptoRSA::SetPublicKeyFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA, __in_opt SIZE_T nPemLen)
 {
   BIO *lpBio;
-  RSA *lpRsa;
+  EVP_PKEY *lpEvpKey;
+  RSA *lpRsa, *lpTempRsa;
 
   if (szPemA == NULL)
     return E_POINTER;
@@ -232,43 +280,54 @@ HRESULT CCryptoRSA::SetPublicKeyFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR 
     return E_OUTOFMEMORY;
   if (rsa_data->sEncryptor.lpInputBuf != NULL || rsa_data->sDecryptor.lpInputBuf != NULL ||
       rsa_data->sSignContext.lpSigner != NULL || rsa_data->sVerifyContext.lpVerifier != NULL)
+  {
     return MX_E_Busy;
-  //parse key
-  ERR_clear_error();
+  }
+  //try RSA public key
   lpBio = BIO_new_mem_buf((void*)szPemA, (int)nPemLen);
   if (lpBio == NULL)
     return E_OUTOFMEMORY;
   lpRsa = PEM_read_bio_RSAPublicKey(lpBio, NULL, &InitializeFromPEM_PasswordCallback, (LPSTR)szPasswordA);
-  BIO_free(lpBio);
-  if (lpRsa == NULL)
+  if (lpRsa != NULL)
   {
-    EVP_PKEY *lpEvpKey;
-    RSA *lpTempRsa;
-    HRESULT hRes;
-
-    if (Internals::OpenSSL::IsMemoryError() != FALSE)
-      return E_OUTOFMEMORY;
-    lpBio = BIO_new_mem_buf((void*)szPemA, (int)nPemLen);
-    if (lpBio == NULL)
-      return E_OUTOFMEMORY;
-    ERR_clear_error();
-    lpEvpKey = PEM_read_bio_PUBKEY(lpBio, NULL, &InitializeFromPEM_PasswordCallback, (LPSTR)szPasswordA);
-    hRes = (lpEvpKey == NULL) ? ((Internals::OpenSSL::IsMemoryError() != FALSE) ? E_OUTOFMEMORY : MX_E_InvalidData) :
-                                S_OK;
     BIO_free(lpBio);
-    if (FAILED(hRes))
-      return hRes;
-    lpTempRsa = EVP_PKEY_get1_RSA(lpEvpKey);
-    if (lpTempRsa == NULL)
-    {
-      EVP_PKEY_free(lpEvpKey);
-      return MX_E_InvalidData;
-    }
-    lpRsa = RSAPublicKey_dup(lpTempRsa);
-    EVP_PKEY_free(lpEvpKey);
-    if (lpRsa == NULL)
-      return E_OUTOFMEMORY;
+    goto done;
   }
+  if (Internals::OpenSSL::GetLastErrorCode(FALSE) == E_OUTOFMEMORY)
+  {
+    BIO_free(lpBio);
+    return E_OUTOFMEMORY;
+  }
+  //try standard public key
+  lpBio = BIO_new_mem_buf((void*)szPemA, (int)nPemLen);
+  if (lpBio == NULL)
+    return E_OUTOFMEMORY;
+  ERR_clear_error();
+  lpEvpKey = PEM_read_bio_PUBKEY(lpBio, NULL, &InitializeFromPEM_PasswordCallback, (LPSTR)szPasswordA);
+  if (lpEvpKey != NULL)
+  {
+    BIO_free(lpBio);
+    lpTempRsa = EVP_PKEY_get1_RSA(lpEvpKey);
+    if (lpTempRsa != NULL)
+    {
+      lpRsa = RSAPublicKey_dup(lpTempRsa);
+      EVP_PKEY_free(lpEvpKey);
+      if (lpRsa == NULL)
+        return E_OUTOFMEMORY;
+      goto done;
+    }
+    EVP_PKEY_free(lpEvpKey);
+  }
+  else if (Internals::OpenSSL::GetLastErrorCode(FALSE) == E_OUTOFMEMORY)
+  {
+    BIO_free(lpBio);
+    return E_OUTOFMEMORY;
+  }
+  //nothing else to try
+  BIO_free(lpBio);
+  return MX_E_InvalidData;
+
+done:
   //replace key
   if (rsa_data->lpRsa != NULL)
     RSA_free(rsa_data->lpRsa);
@@ -292,9 +351,14 @@ SIZE_T CCryptoRSA::GetPublicKey(__out_opt LPVOID lpDest)
   return (len > 0) ? (SIZE_T)len : 0;
 }
 
-HRESULT CCryptoRSA::SetPrivateKeyFromDER(__in LPCVOID lpKey, __in SIZE_T nKeySize)
+HRESULT CCryptoRSA::SetPrivateKeyFromDER(__in LPCVOID lpKey, __in SIZE_T nKeySize, __in_z_opt LPCSTR szPasswordA)
 {
-  RSA *lpRsa;
+  EVP_PKEY *lpEvpKey;
+  RSA *lpRsa, *lpTempRsa;
+  PKCS12 *lpPkcs12;
+  X509 *lpX509;
+  const unsigned char *buf;
+  HRESULT hRes;
 
   if (lpKey == NULL)
     return E_POINTER;
@@ -304,40 +368,80 @@ HRESULT CCryptoRSA::SetPrivateKeyFromDER(__in LPCVOID lpKey, __in SIZE_T nKeySiz
     return E_OUTOFMEMORY;
   if (rsa_data->sEncryptor.lpInputBuf != NULL || rsa_data->sDecryptor.lpInputBuf != NULL ||
       rsa_data->sSignContext.lpSigner != NULL || rsa_data->sVerifyContext.lpVerifier != NULL)
-    return MX_E_Busy;
-  //parse key
-  ERR_clear_error();
-  lpRsa = d2i_RSAPrivateKey(NULL, (const unsigned char**)&lpKey, (long)nKeySize);
-  if (lpRsa == NULL)
   {
-    BIO *lpBio;
-    EVP_PKEY *lpEvpKey;
-    RSA *lpTempRsa;
-    HRESULT hRes;
-
-    if (Internals::OpenSSL::IsMemoryError() != FALSE)
-      return E_OUTOFMEMORY;
-    lpBio = BIO_new_mem_buf((void*)lpKey, (int)nKeySize);
-    if (lpBio == NULL)
-      return E_OUTOFMEMORY;
-    ERR_clear_error();
-    lpEvpKey = d2i_PrivateKey_bio(lpBio, NULL);
-    hRes = (lpEvpKey == NULL) ? ((Internals::OpenSSL::IsMemoryError() != FALSE) ? E_OUTOFMEMORY : MX_E_InvalidData) :
-                                S_OK;
-    BIO_free(lpBio);
-    if (FAILED(hRes))
-      return hRes;
-    lpTempRsa = EVP_PKEY_get1_RSA(lpEvpKey);
-    if (lpTempRsa == NULL)
-    {
-      EVP_PKEY_free(lpEvpKey);
-      return MX_E_InvalidData;
-    }
-    lpRsa = RSAPrivateKey_dup(lpTempRsa);
-    EVP_PKEY_free(lpEvpKey);
-    if (lpRsa == NULL)
-      return E_OUTOFMEMORY;
+    return MX_E_Busy;
   }
+  //try rsa private key
+  ERR_clear_error();
+  buf = (const unsigned char*)lpKey;
+  lpRsa = d2i_RSAPrivateKey(NULL, &buf, (long)nKeySize);
+  if (lpRsa != NULL)
+    goto done;
+  hRes = Internals::OpenSSL::GetLastErrorCode(FALSE);
+  if (hRes == E_OUTOFMEMORY)
+    return hRes;
+  //try standard private key
+  ERR_clear_error();
+  buf = (const unsigned char*)lpKey;
+  lpEvpKey = d2i_AutoPrivateKey(NULL, &buf, (long)nKeySize);
+  if (lpEvpKey != NULL)
+  {
+    lpTempRsa = EVP_PKEY_get1_RSA(lpEvpKey);
+    if (lpTempRsa != NULL)
+    {
+      lpRsa = RSAPrivateKey_dup(lpTempRsa);
+      EVP_PKEY_free(lpEvpKey);
+      if (lpRsa == NULL)
+        return E_OUTOFMEMORY;
+      goto done;
+    }
+    EVP_PKEY_free(lpEvpKey);
+  }
+  else if (Internals::OpenSSL::GetLastErrorCode(FALSE) == E_OUTOFMEMORY)
+  {
+    return E_OUTOFMEMORY;
+  }
+  //try to extract from a pkcs12
+  ERR_clear_error();
+  buf = (const unsigned char*)lpKey;
+  lpPkcs12 = d2i_PKCS12(NULL, &buf, (long)nKeySize);
+  if (lpPkcs12 != NULL)
+  {
+    ERR_clear_error();
+    if (PKCS12_parse(lpPkcs12, szPasswordA, &lpEvpKey, &lpX509, NULL))
+    {
+      if (lpX509 != NULL)
+        X509_free(lpX509);
+      if (lpEvpKey != NULL)
+      {
+        lpTempRsa = EVP_PKEY_get1_RSA(lpEvpKey);
+        if (lpTempRsa != NULL)
+        {
+          lpRsa = RSAPrivateKey_dup(lpTempRsa);
+          EVP_PKEY_free(lpEvpKey);
+          PKCS12_free(lpPkcs12);
+          if (lpRsa == NULL)
+            return E_OUTOFMEMORY;
+          goto done;
+        }
+        EVP_PKEY_free(lpEvpKey);
+      }
+    }
+    else if (Internals::OpenSSL::GetLastErrorCode(FALSE) == E_OUTOFMEMORY)
+    {
+      PKCS12_free(lpPkcs12);
+      return E_OUTOFMEMORY;
+    }
+    PKCS12_free(lpPkcs12);
+  }
+  else if (Internals::OpenSSL::GetLastErrorCode(FALSE) == E_OUTOFMEMORY)
+  {
+    return E_OUTOFMEMORY;
+  }
+  //nothing else to try
+  return MX_E_InvalidData;
+
+done:
   //replace key
   if (rsa_data->lpRsa != NULL)
     RSA_free(rsa_data->lpRsa);
@@ -349,7 +453,8 @@ HRESULT CCryptoRSA::SetPrivateKeyFromDER(__in LPCVOID lpKey, __in SIZE_T nKeySiz
 HRESULT CCryptoRSA::SetPrivateKeyFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA, __in_opt SIZE_T nPemLen)
 {
   BIO *lpBio;
-  RSA *lpRsa;
+  EVP_PKEY *lpEvpKey;
+  RSA *lpRsa, *lpTempRsa;
 
   if (szPemA == NULL)
     return E_POINTER;
@@ -361,43 +466,56 @@ HRESULT CCryptoRSA::SetPrivateKeyFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR
     return E_OUTOFMEMORY;
   if (rsa_data->sEncryptor.lpInputBuf != NULL || rsa_data->sDecryptor.lpInputBuf != NULL ||
       rsa_data->sSignContext.lpSigner != NULL || rsa_data->sVerifyContext.lpVerifier != NULL)
-      return MX_E_Busy;
-  //parse key
-  ERR_clear_error();
+  {
+    return MX_E_Busy;
+  }
+  //try rsa private key
   lpBio = BIO_new_mem_buf((void*)szPemA, (int)nPemLen);
   if (lpBio == NULL)
     return E_OUTOFMEMORY;
   lpRsa = PEM_read_bio_RSAPrivateKey(lpBio, NULL, &InitializeFromPEM_PasswordCallback, (LPSTR)szPasswordA);
-  BIO_free(lpBio);
-  if (lpRsa == NULL)
+  if (lpRsa != NULL)
   {
-    EVP_PKEY *lpEvpKey;
-    RSA *lpTempRsa;
-    HRESULT hRes;
-
-    if (Internals::OpenSSL::IsMemoryError() != FALSE)
-      return E_OUTOFMEMORY;
-    lpBio = BIO_new_mem_buf((void*)szPemA, (int)nPemLen);
-    if (lpBio == NULL)
-      return E_OUTOFMEMORY;
-    ERR_clear_error();
-    lpEvpKey = PEM_read_bio_PrivateKey(lpBio, NULL, &InitializeFromPEM_PasswordCallback, (LPSTR)szPasswordA);
-    hRes = (lpEvpKey == NULL) ? ((Internals::OpenSSL::IsMemoryError() != FALSE) ? E_OUTOFMEMORY : MX_E_InvalidData) :
-                                S_OK;
     BIO_free(lpBio);
-    if (FAILED(hRes))
-      return hRes;
-    lpTempRsa = EVP_PKEY_get1_RSA(lpEvpKey);
-    if (lpTempRsa == NULL)
-    {
-      EVP_PKEY_free(lpEvpKey);
-      return MX_E_InvalidData;
-    }
-    lpRsa = RSAPrivateKey_dup(lpTempRsa);
-    EVP_PKEY_free(lpEvpKey);
-    if (lpRsa == NULL)
-      return E_OUTOFMEMORY;
+    goto done;
   }
+  if (Internals::OpenSSL::GetLastErrorCode(FALSE) == E_OUTOFMEMORY)
+  {
+    BIO_free(lpBio);
+    return E_OUTOFMEMORY;
+  }
+  BIO_free(lpBio);
+  //try standard private key
+  lpBio = BIO_new_mem_buf((void*)szPemA, (int)nPemLen);
+  if (lpBio == NULL)
+    return E_OUTOFMEMORY;
+  ERR_clear_error();
+  lpEvpKey = PEM_read_bio_PrivateKey(lpBio, NULL, &InitializeFromPEM_PasswordCallback, (LPSTR)szPasswordA);
+  if (lpEvpKey != NULL)
+  {
+    BIO_free(lpBio);
+    lpTempRsa = EVP_PKEY_get1_RSA(lpEvpKey);
+    if (lpTempRsa != NULL)
+    {
+      lpRsa = RSAPrivateKey_dup(lpTempRsa);
+      EVP_PKEY_free(lpEvpKey);
+      if (lpRsa == NULL)
+        return E_OUTOFMEMORY;
+      goto done;
+    }
+    EVP_PKEY_free(lpEvpKey);
+  }
+  else if (Internals::OpenSSL::GetLastErrorCode(FALSE) == E_OUTOFMEMORY)
+  {
+    BIO_free(lpBio);
+    return E_OUTOFMEMORY;
+  }
+  //try extract from a pkcs12
+  //nothing else to try
+  BIO_free(lpBio);
+  return MX_E_InvalidData;
+
+done:
   //replace key
   if (rsa_data->lpRsa != NULL)
     RSA_free(rsa_data->lpRsa);
@@ -519,7 +637,7 @@ HRESULT CCryptoRSA::EndEncrypt()
   }
   if (r <= 0)
   {
-    hRes = (Internals::OpenSSL::IsMemoryError() != FALSE) ? E_OUTOFMEMORY : MX_E_InvalidData;
+    hRes = Internals::OpenSSL::GetLastErrorCode(TRUE);
     CleanUp(WhatEncoder, TRUE);
     return hRes;
   }
@@ -627,7 +745,7 @@ HRESULT CCryptoRSA::EndDecrypt()
   }
   if (r <= 0)
   {
-    hRes = (Internals::OpenSSL::IsMemoryError() != FALSE) ? E_OUTOFMEMORY : MX_E_InvalidData;
+    hRes = Internals::OpenSSL::GetLastErrorCode(TRUE);
     CleanUp(WhatDecoder, TRUE);
     return hRes;
   }
@@ -716,7 +834,7 @@ HRESULT CCryptoRSA::EndSign()
                rsa_data->sSignContext.lpSignature, &siglen, rsa_data->lpRsa);
   if (r <= 0)
   {
-    hRes = (Internals::OpenSSL::IsMemoryError() != FALSE) ? E_OUTOFMEMORY : MX_E_InvalidData;
+    hRes = Internals::OpenSSL::GetLastErrorCode(TRUE);
     CleanUp(WhatSigner, TRUE);
     return hRes;
   }
@@ -806,7 +924,7 @@ HRESULT CCryptoRSA::EndVerify(__in LPCVOID lpSignature, __in SIZE_T nSignatureLe
                  (const unsigned char*)lpSignature, (unsigned int)nSignatureLen, rsa_data->lpRsa);
   if (r <= 0)
   {
-    hRes = (Internals::OpenSSL::IsMemoryError() != FALSE) ? E_OUTOFMEMORY : S_FALSE;
+    hRes = Internals::OpenSSL::GetLastErrorCode(TRUE);
     CleanUp(WhatSigner, TRUE);
     return hRes;
   }

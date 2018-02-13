@@ -32,6 +32,7 @@
 #include <OpenSSL\aes.h>
 #include <OpenSSL\err.h>
 #include <OpenSSL\evp.h>
+#include <OpenSSL\pkcs12.h>
 
 //-----------------------------------------------------------
 
@@ -77,6 +78,7 @@ static const struct {
 //-----------------------------------------------------------
 
 static int InitializeFromPEM_PasswordCallback(char *buf, int size, int rwflag, void *userdata);
+static BOOL Asn1_ValidateLength(__inout LPBYTE lpCurr, __in LPBYTE lpEnd);
 
 //-----------------------------------------------------------
 
@@ -92,151 +94,159 @@ CSslCertificateArray::~CSslCertificateArray()
   return;
 }
 
-HRESULT CSslCertificateArray::AddFromString(__in_z LPCSTR szStringA, __in_z_opt LPCSTR szPasswordA,
-                                            __in_opt SIZE_T nLen)
+HRESULT CSslCertificateArray::AddFromMemory(__in LPCVOID lpData, __in SIZE_T nDataLen, __in_z_opt LPCSTR szPasswordA)
 {
-  static const BYTE aDashes[5] = {'-','-','-','-','-'};
-  TArrayList4Structs<PEM_BLOCK> aBlocksList;
-  PEM_BLOCK sBlock;
-  LPCSTR sA, sA_2, szDataEndA;
-  SIZE_T i, k, nTag, nCount, nPassLen;
   HRESULT hRes;
 
-  if (nLen == (SIZE_T)-1)
-    nLen = StrLenA(szStringA);
-  if (szStringA == NULL && nLen > 0)
+  if (lpData == NULL && nDataLen > 0)
     return E_POINTER;
-  nPassLen = StrLenA(szPasswordA);
-  if (nPassLen > INT_MAX)
-    return E_INVALIDARG;
-  //initialize OpenSSL
-  if (Internals::OpenSSL::Init() == FALSE)
-    return E_OUTOFMEMORY;
-  //locate blocks
-  szDataEndA = (sA = szStringA) + nLen;
-  while (sA < szDataEndA)
-  {
-    while (sA < szDataEndA && *sA != '-')
-      sA++;
-    if (sA >= szDataEndA || (sA+5) > szDataEndA)
-      break;
-    if (MemCompare(sA, aDashes, 5) != 0)
-    {
-      sA++;
-      continue;
-    }
-    if (sA+11 <= szDataEndA && MemCompare(sA+5, "BEGIN ", 6) == 0)
-    {
-      nTag = 1;
-      sA_2 = sA + 11;
-    }
-    else if (sA+9 <= szDataEndA && MemCompare(sA+5, "END ", 4) == 0)
-    {
-      nTag = 2;
-      sA_2 = sA + 9;
-    }
-    else
-    {
-      sA++;
-      continue;
-    }
-    for (i=0; i<MX_ARRAYLEN(aPemTypes); i++)
-    {
-      k = StrLenA(aPemTypes[i].szNameA);
-      if (sA_2+k <= szDataEndA && MemCompare(sA_2, aPemTypes[i].szNameA, k) == 0)
-        break;
-    }
-    if (i >= MX_ARRAYLEN(aPemTypes))
-    {
-      sA++;
-      continue;
-    }
-    sBlock.nType = aPemTypes[i].nBlockType;
-    sA_2 += k;
-    //check "-----"
-    if (sA_2+5 > szDataEndA)
-      break;
-    if (MemCompare(sA_2, aDashes, 5) != 0)
-    {
-      sA++;
-      continue;
-    }
-    sA_2 += 5;
-    if (nTag == 1)
-    {
-      while (sA_2 < szDataEndA && (*sA_2=='\r' || *sA_2=='\n' || *sA_2=='\t' || *sA_2==' '))
-        sA_2++;
-    }
-    //here we are at the end of a -----BEGIN/END nnnnn-----
-    nCount = aBlocksList.GetCount();
-    if (nTag == 1)
-    {
-      //begin block
-      if (nCount>0 && aBlocksList[nCount-1].nLen == (SIZE_T)-1)
-        return MX_E_InvalidData; //previous block not finished
-      sBlock.nStart = (SIZE_T)(sA_2 - szStringA);
-      sBlock.nLen = (SIZE_T)-1;
-      if (aBlocksList.AddElement(&sBlock) == FALSE)
-        return E_OUTOFMEMORY;
-    }
-    else
-    {
-      //end block
-      if (nCount == 0 || aBlocksList[nCount-1].nType != sBlock.nType)
-        return MX_E_InvalidData; //no-previous block or begin/end mismatch
-      aBlocksList[nCount - 1].nLen = (SIZE_T)(sA-szStringA) - sBlock.nStart;
-    }
-    //go after tag
-    sA = sA_2;
-  }
-  nCount = aBlocksList.GetCount();
-  if (nCount == 0)
+  if (nDataLen == 0)
     return S_OK;
-  if (aBlocksList[nCount-1].nLen == (SIZE_T)-1)
-    return MX_E_InvalidData; //previous block not finished
-  //process blocks
-  for (k=0; k<nCount; k++)
+
+  if (((LPBYTE)lpData)[0] == (V_ASN1_CONSTRUCTED | V_ASN1_SEQUENCE) &&
+      Asn1_ValidateLength((LPBYTE)lpData + 1, (LPBYTE)lpData + nDataLen) != FALSE)
   {
-    sA = szStringA + aBlocksList[k].nStart;
-    switch (aBlocksList[k].nType)
-    {
-      case BLOCK_TYPE_PublicKey:
-      case BLOCK_TYPE_RsaPublicKey:
-        hRes = AddPublicKeyFromPEM(sA, szPasswordA, aBlocksList[k].nLen);
-        break;
-      case BLOCK_TYPE_PrivateKey:
-      case BLOCK_TYPE_RsaPrivateKey:
-        hRes = AddPrivateKeyFromPEM(sA, szPasswordA, aBlocksList[k].nLen);
-        break;
-      case BLOCK_TYPE_Certificate:
-      case BLOCK_TYPE_OldCertificate:
-        hRes = AddCertificateFromPEM(sA, szPasswordA, aBlocksList[k].nLen);
-        break;
-      case BLOCK_TYPE_Crl:
-        hRes = AddCrlFromPEM(sA, szPasswordA, aBlocksList[k].nLen);
-        break;
-      default:
-        hRes = MX_E_Unsupported;
-        break;
-    }
+    hRes = AddCertificateFromDER(lpData, nDataLen, szPasswordA);
+    if (hRes == MX_E_InvalidData)
+      hRes = AddCrlFromDER(lpData, nDataLen);
+    if (hRes == MX_E_InvalidData)
+      hRes = AddPrivateKeyFromDER(lpData, nDataLen, szPasswordA);
+    if (hRes == MX_E_InvalidData)
+      hRes = AddPublicKeyFromDER(lpData, nDataLen, szPasswordA);
     if (FAILED(hRes))
       return hRes;
   }
+  else
+  {
+    MX::TAutoFreePtr<BYTE> cFastAnsiCopy;
+    LPCSTR sA, szEndA, szBlockEndA;
+
+    //assume PEM data
+    sA = (LPCSTR)lpData;
+
+    //is unicode?
+    if (nDataLen >= 2 && ((LPBYTE)lpData)[0] == 0xFF && ((LPBYTE)lpData)[1] == 0xFE)
+    {
+      //unicode... quick convert to ansi
+      LPBYTE s;
+      LPCWSTR sW;
+      SIZE_T i;
+
+      if (nDataLen == 2)
+        return S_OK;
+      nDataLen = (nDataLen - 2) >> 1;
+      cFastAnsiCopy.Attach((LPBYTE)MX_MALLOC(nDataLen));
+      if (!cFastAnsiCopy)
+        return E_OUTOFMEMORY;
+      sW = (LPCWSTR)((LPBYTE)lpData + 2);
+      s = cFastAnsiCopy.Get();
+      //NOTE: unicode chars are converted to a pipe char because they are invalid too but inside ansi subset
+      for (i=0; i<nDataLen; i++)
+        s[i] = ((USHORT)(sW[i]) < 128) ? (BYTE)sW[i] : (BYTE)'|';
+      //set new pointer
+      sA = (LPCSTR)(cFastAnsiCopy.Get());
+    }
+
+    //process
+    szEndA = sA + nDataLen;
+    for (;;)
+    {
+      nDataLen = (SIZE_T)(szEndA - sA);
+      sA = StrNFindA(sA, "-----BEGIN ", nDataLen);
+      if (sA == NULL)
+        break;
+      if (nDataLen >= 15 && StrNCompareA(sA + 5, "PUBLIC KEY-----", 15) == 0)
+      {
+        szBlockEndA = StrNFindA(sA + (11+15), "-----END PUBLIC KEY-----", (SIZE_T)(szEndA - (sA + (11+15))));
+        if (szBlockEndA == NULL)
+          return MX_E_InvalidData;
+        szBlockEndA += 24;
+        //----
+        hRes = AddPublicKeyFromPEM(sA, szPasswordA, (SIZE_T)(szBlockEndA - sA));
+        if (FAILED(hRes))
+          return hRes;
+        sA = szBlockEndA;
+      }
+      else if (nDataLen >= 19 && StrNCompareA(sA + 5, "RSA PUBLIC KEY-----", 19) == 0)
+      {
+        szBlockEndA = StrNFindA(sA + (11+19), "-----END RSA PUBLIC KEY-----", (SIZE_T)(szEndA - (sA + (11+19))));
+        if (szBlockEndA == NULL)
+          return MX_E_InvalidData;
+        szBlockEndA += 28;
+        //----
+        hRes = AddPublicKeyFromPEM(sA, szPasswordA, (SIZE_T)(szBlockEndA - sA));
+        if (FAILED(hRes))
+          return hRes;
+        sA = szBlockEndA;
+      }
+      else if (nDataLen >= 16 && StrNCompareA(sA + 5, "PRIVATE KEY-----", 16) == 0)
+      {
+        szBlockEndA = StrNFindA(sA + (11+16), "-----END PRIVATE KEY-----", (SIZE_T)(szEndA - (sA + (11+16))));
+        if (szBlockEndA == NULL)
+          return MX_E_InvalidData;
+        szBlockEndA += 25;
+        //----
+        hRes = AddPrivateKeyFromPEM(sA, szPasswordA, (SIZE_T)(szBlockEndA - sA));
+        if (FAILED(hRes))
+          return hRes;
+        sA = szBlockEndA;
+      }
+      else if (nDataLen >= 20 && StrNCompareA(sA + 5, "RSA PRIVATE KEY-----", 20) == 0)
+      {
+        szBlockEndA = StrNFindA(sA + (11+20), "-----END RSA PRIVATE KEY-----", (SIZE_T)(szEndA - (sA + (11+20))));
+        if (szBlockEndA == NULL)
+          return MX_E_InvalidData;
+        szBlockEndA += 29;
+        //----
+        hRes = AddPrivateKeyFromPEM(sA, szPasswordA, (SIZE_T)(szBlockEndA - sA));
+        if (FAILED(hRes))
+          return hRes;
+        sA = szBlockEndA;
+      }
+      else if (nDataLen >= 16 && StrNCompareA(sA + 5, "CERTIFICATE-----", 16) == 0)
+      {
+        szBlockEndA = StrNFindA(sA + (11+16), "-----END CERTIFICATE-----", (SIZE_T)(szEndA - (sA + (11+16))));
+        if (szBlockEndA == NULL)
+          return MX_E_InvalidData;
+        szBlockEndA += 25;
+        //----
+        hRes = AddCertificateFromPEM(sA, szPasswordA, (SIZE_T)(szBlockEndA - sA));
+        if (FAILED(hRes))
+          return hRes;
+        sA = szBlockEndA;
+      }
+      else if (nDataLen >= 21 && StrNCompareA(sA + 5, "X509 CERTIFICATE-----", 21) == 0)
+      {
+        szBlockEndA = StrNFindA(sA + (11+21), "-----END X509 CERTIFICATE-----", (SIZE_T)(szEndA - (sA + (11+21))));
+        if (szBlockEndA == NULL)
+          return MX_E_InvalidData;
+        szBlockEndA += 30;
+        //----
+        hRes = AddCertificateFromPEM(sA, szPasswordA, (SIZE_T)(szBlockEndA - sA));
+        if (FAILED(hRes))
+          return hRes;
+        sA = szBlockEndA;
+      }
+      else if (nDataLen >= 13 && StrNCompareA(sA + 5, "X509 CRL-----", 13) == 0)
+      {
+        szBlockEndA = StrNFindA(sA + (11+13), "-----END X509 CRL-----", (SIZE_T)(szEndA - (sA + (11+13))));
+        if (szBlockEndA == NULL)
+          return MX_E_InvalidData;
+        szBlockEndA += 22;
+        //----
+        hRes = AddCrlFromPEM(sA, szPasswordA, (SIZE_T)(szBlockEndA - sA));
+        if (FAILED(hRes))
+          return hRes;
+        sA = szBlockEndA;
+      }
+      else
+      {
+        sA += 11;
+      }
+    }
+  }
+  //done
   return S_OK;
-}
-
-HRESULT CSslCertificateArray::AddFromString(__in_z LPCWSTR szStringW, __in_z_opt LPCSTR szPasswordA,
-                                            __in_opt SIZE_T nLen)
-{
-  CStringA cStrTempA;
-
-  if (nLen == (SIZE_T)-1)
-    nLen = StrLenW(szStringW);
-  if (szStringW == NULL && nLen > 0)
-    return E_POINTER;
-  if (cStrTempA.CopyN(szStringW, nLen) == FALSE)
-    return E_OUTOFMEMORY;
-  return AddFromString((LPSTR)cStrTempA, szPasswordA, -1);
 }
 
 HRESULT CSslCertificateArray::AddFromFile(__in_z LPCWSTR szFileNameW, __in_z_opt LPCSTR szPasswordA)
@@ -250,7 +260,8 @@ HRESULT CSslCertificateArray::AddFromFile(__in_z LPCWSTR szFileNameW, __in_z_opt
   if (*szFileNameW == 0)
     return E_INVALIDARG;
   //open file
-  cFileH.Attach(::CreateFileW(szFileNameW, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
+  cFileH.Attach(::CreateFileW(szFileNameW, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
+                              NULL));
   if (!cFileH)
     return MX_HRESULT_FROM_LASTERROR();
   dwSizeLo = ::GetFileSize(cFileH, &dwSizeHi);
@@ -264,14 +275,12 @@ HRESULT CSslCertificateArray::AddFromFile(__in_z LPCWSTR szFileNameW, __in_z_opt
     return MX_HRESULT_FROM_LASTERROR();
   if (dwReaded != dwSizeLo)
     return MX_E_ReadFault;
-  //check if unicode
-  if (dwSizeLo >= 2 && aTempBuf.Get()[0] == 0xFF && aTempBuf.Get()[1] == 0xFE)
-    return AddFromString((LPWSTR)(aTempBuf.Get()+2), szPasswordA, (SIZE_T)(dwSizeLo-2) / sizeof(WCHAR));
-  //else treat as ansi
-  return AddFromString((LPSTR)(aTempBuf.Get()), szPasswordA, (SIZE_T)dwSizeLo);
+  //process certificates
+  return AddFromMemory(aTempBuf.Get(), (SIZE_T)dwSizeLo, szPasswordA);
 }
 
-HRESULT CSslCertificateArray::AddPublicKeyFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen)
+HRESULT CSslCertificateArray::AddPublicKeyFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen,
+                                                  __in_z_opt LPCSTR szPasswordA)
 {
   TAutoDeletePtr<CCryptoRSA> cRsa;
   HRESULT hRes;
@@ -281,7 +290,7 @@ HRESULT CSslCertificateArray::AddPublicKeyFromDER(__in LPCVOID lpData, __in SIZE
   if (!cRsa)
     return E_OUTOFMEMORY;
   //set public key
-  hRes = cRsa->SetPublicKeyFromDER(lpData, nDataLen);
+  hRes = cRsa->SetPublicKeyFromDER(lpData, nDataLen, szPasswordA);
   if (SUCCEEDED(hRes))
   {
     //add to list
@@ -318,7 +327,8 @@ HRESULT CSslCertificateArray::AddPublicKeyFromPEM(__in_z LPCSTR szPemA, __in_z_o
   return hRes;
 }
 
-HRESULT CSslCertificateArray::AddPrivateKeyFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen)
+HRESULT CSslCertificateArray::AddPrivateKeyFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen,
+                                                   __in_z_opt LPCSTR szPasswordA)
 {
   TAutoDeletePtr<CCryptoRSA> cRsa;
   HRESULT hRes;
@@ -328,7 +338,7 @@ HRESULT CSslCertificateArray::AddPrivateKeyFromDER(__in LPCVOID lpData, __in SIZ
   if (!cRsa)
     return E_OUTOFMEMORY;
   //set private key
-  hRes = cRsa->SetPrivateKeyFromDER(lpData, nDataLen);
+  hRes = cRsa->SetPrivateKeyFromDER(lpData, nDataLen, szPasswordA);
   if (SUCCEEDED(hRes))
   {
     //add to list
@@ -365,10 +375,13 @@ HRESULT CSslCertificateArray::AddPrivateKeyFromPEM(__in_z LPCSTR szPemA, __in_z_
   return hRes;
 }
 
-HRESULT CSslCertificate::InitializeFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen)
+HRESULT CSslCertificate::InitializeFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen, __in_z_opt LPCSTR szPasswordA)
 {
   X509 *lpNewX509;
-  BIO *lpBio;
+  PKCS12 *lpPkcs12;
+  EVP_PKEY *lpEvpKey;
+  const unsigned char *buf;
+  HRESULT hRes;
 
   if (lpData == NULL)
     return E_POINTER;
@@ -376,14 +389,30 @@ HRESULT CSslCertificate::InitializeFromDER(__in LPCVOID lpData, __in SIZE_T nDat
     return E_INVALIDARG;
   //----
   ERR_clear_error();
-  lpBio = BIO_new_mem_buf((void*)lpData, (int)nDataLen);
-  if (lpBio == NULL)
-    return E_OUTOFMEMORY;
-  lpNewX509 = d2i_X509_bio(lpBio, NULL);
-  BIO_free(lpBio);
-  if (lpNewX509 == NULL)
-    return MX_E_InvalidData;
-  //done
+  buf = (unsigned char*)lpData;
+  lpNewX509 = d2i_X509(NULL, &buf, (long)nDataLen);
+  if (lpNewX509 != NULL)
+    goto done;
+  hRes = Internals::OpenSSL::GetLastErrorCode(FALSE);
+  if (hRes == E_OUTOFMEMORY)
+    return hRes;
+  //try to extract from a pkcs12
+  ERR_clear_error();
+  buf = (const unsigned char*)lpData;
+  lpPkcs12 = d2i_PKCS12(NULL, &buf, (long)nDataLen);
+  if (lpPkcs12 == NULL)
+    return Internals::OpenSSL::GetLastErrorCode(TRUE);
+  if (!PKCS12_parse(lpPkcs12, szPasswordA, &lpEvpKey, &lpNewX509, NULL))
+  {
+    hRes = Internals::OpenSSL::GetLastErrorCode(TRUE);
+    PKCS12_free(lpPkcs12);
+    return hRes;
+  }
+  if (lpEvpKey != NULL)
+    EVP_PKEY_free(lpEvpKey);
+  PKCS12_free(lpPkcs12);
+
+done:
   if (lpX509)
     X509_free(_x509);
   lpX509 = lpNewX509;
@@ -417,16 +446,175 @@ HRESULT CSslCertificate::InitializeFromPEM(__in LPCSTR szPemA, __in_z_opt LPCSTR
   return S_OK;
 }
 
-HRESULT CSslCertificateArray::AddCertificateFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen)
+HRESULT CSslCertificateArray::AddCertificateFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen,
+                                                    __in_z_opt LPCSTR szPasswordA)
 {
   TAutoDeletePtr<CSslCertificate> cNewCert;
+  PKCS12 *lpPkcs12;
+  const unsigned char *buf;
   HRESULT hRes;
 
+  if (lpData == NULL)
+    return E_POINTER;
+  if (nDataLen == 0 || nDataLen > 0x7FFFFFFF)
+    return E_INVALIDARG;
+
+  //check if we are dealing with a PKCS12 certificate
+  ERR_clear_error();
+  buf = (const unsigned char *)lpData;
+  lpPkcs12 = d2i_PKCS12(NULL, &buf, (long)nDataLen);
+  if (lpPkcs12 != NULL)
+  {
+    TAutoDeletePtr<CCryptoRSA> cNewRsa;
+    EVP_PKEY *lpEvpKey = NULL;
+    X509 *lpX509 = NULL;
+
+    //a pkcs12 can have a certificate and a private key so parse both
+    ERR_clear_error();
+    if (PKCS12_parse(lpPkcs12, szPasswordA, &lpEvpKey, &lpX509, NULL))
+    {
+      if (lpX509 != NULL)
+      {
+        TAutoFreePtr<BYTE> cTempBuffer;
+        unsigned char *buf2;
+        int nTempBufSize;
+
+        ERR_clear_error();
+        nTempBufSize = i2d_X509(lpX509, NULL);
+        if (nTempBufSize > 0)
+        {
+          cTempBuffer.Attach((LPBYTE)MX_MALLOC((SIZE_T)nTempBufSize));
+          if (cTempBuffer)
+          {
+            ERR_clear_error();
+            buf2 = (unsigned char *)cTempBuffer.Get();
+            nTempBufSize = i2d_X509(lpX509, &buf2);
+            if (nTempBufSize > 0)
+            {
+              //create certificate from temporary buffer
+              cNewCert.Attach(MX_DEBUG_NEW CSslCertificate());
+              if (cNewCert)
+              {
+                hRes = cNewCert->InitializeFromDER(cTempBuffer.Get(), (SIZE_T)nTempBufSize);
+                if (SUCCEEDED(hRes))
+                {
+                  if (cCertsList.AddElement(cNewCert.Get()) != FALSE)
+                    cNewCert.Detach();
+                  else
+                    hRes = E_OUTOFMEMORY;
+                }
+              }
+              else
+              {
+                hRes = E_OUTOFMEMORY;
+              }
+            }
+            else
+            {
+              hRes = Internals::OpenSSL::GetLastErrorCode(TRUE);
+            }
+          }
+          else
+          {
+            hRes = E_OUTOFMEMORY;
+          }
+        }
+        else
+        {
+          hRes = Internals::OpenSSL::GetLastErrorCode(TRUE);
+        }
+        X509_free(lpX509);
+        if (FAILED(hRes))
+        {
+          if (lpEvpKey != NULL)
+            EVP_PKEY_free(lpEvpKey);
+          PKCS12_free(lpPkcs12);
+          return hRes;
+        }
+      }
+      if (lpEvpKey != NULL)
+      {
+        RSA *lpTempRsa;
+
+        lpTempRsa = EVP_PKEY_get1_RSA(lpEvpKey);
+        if (lpTempRsa != NULL)
+        {
+          TAutoFreePtr<BYTE> cTempBuffer;
+          unsigned char *buf2;
+          int nTempBufSize;
+
+          ERR_clear_error();
+          nTempBufSize = i2d_RSAPrivateKey(lpTempRsa, NULL);
+          if (nTempBufSize > 0)
+          {
+            cTempBuffer.Attach((LPBYTE)MX_MALLOC((SIZE_T)nTempBufSize));
+            if (cTempBuffer)
+            {
+              ERR_clear_error();
+              buf2 = (unsigned char *)cTempBuffer.Get();
+              nTempBufSize = i2d_RSAPrivateKey(lpTempRsa, &buf2);
+              if (nTempBufSize > 0)
+              {
+                //create private key from temporary buffer
+                cNewRsa.Attach(MX_DEBUG_NEW CCryptoRSA());
+                if (cNewRsa)
+                {
+                  hRes = cNewRsa->SetPrivateKeyFromDER(cTempBuffer.Get(), (SIZE_T)nTempBufSize);
+                  if (SUCCEEDED(hRes))
+                  {
+                    if (cRsaKeysList.AddElement(cNewRsa.Get()) != FALSE)
+                      cNewRsa.Detach();
+                    else
+                      hRes = E_OUTOFMEMORY;
+                  }
+                }
+                else
+                {
+                  hRes = E_OUTOFMEMORY;
+                }
+              }
+              else
+              {
+                hRes = Internals::OpenSSL::GetLastErrorCode(TRUE);
+              }
+            }
+            else
+            {
+              hRes = E_OUTOFMEMORY;
+            }
+          }
+          else
+          {
+            hRes = Internals::OpenSSL::GetLastErrorCode(TRUE);
+          }
+        }
+
+        EVP_PKEY_free(lpEvpKey);
+
+        if (FAILED(hRes))
+        {
+          PKCS12_free(lpPkcs12);
+          return hRes;
+        }
+      }
+    }
+    else if (Internals::OpenSSL::GetLastErrorCode(FALSE) == E_OUTOFMEMORY)
+    {
+      PKCS12_free(lpPkcs12);
+      return E_OUTOFMEMORY;
+    }
+
+    PKCS12_free(lpPkcs12);
+    return S_OK;
+  }
+  hRes = Internals::OpenSSL::GetLastErrorCode(FALSE);
+  if (hRes == E_OUTOFMEMORY)
+    return hRes;
   //create object
   cNewCert.Attach(MX_DEBUG_NEW CSslCertificate());
   if (!cNewCert)
     return E_OUTOFMEMORY;
-  hRes = cNewCert->InitializeFromDER(lpData, nDataLen);
+  hRes = cNewCert->InitializeFromDER(lpData, nDataLen, szPasswordA);
   if (FAILED(hRes))
     return hRes;
   //add to list
@@ -485,7 +673,6 @@ HRESULT CSslCertificateCrl::InitializeFromDER(__in LPCVOID lpData, __in SIZE_T n
 
 HRESULT CSslCertificateCrl::InitializeFromPEM(__in LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA,
                                               __in_opt SIZE_T nPemLen)
-
 {
   X509_CRL *lpNewX509Crl;
   BIO *lpBio;
@@ -675,4 +862,38 @@ static int InitializeFromPEM_PasswordCallback(char *buf, int size, int rwflag, v
     nPassLen = (SIZE_T)size;
   MX::MemCopy(buf, userdata, nPassLen);
   return (int)nPassLen;
+}
+
+static BOOL Asn1_ValidateLength(__inout LPBYTE lpCurr, __in LPBYTE lpEnd)
+{
+  SIZE_T nLen;
+
+  if ((SIZE_T)(lpEnd - lpCurr) < 1)
+    return FALSE;
+  if (((*lpCurr) & 0x80) == 0)
+  {
+    nLen = (SIZE_T)(lpCurr[0]);
+    lpCurr++;
+  }
+  else
+  {
+    switch ((*lpCurr) & 0x7F)
+    {
+      case 1:
+        if ((SIZE_T)(lpEnd - lpCurr) < 2)
+          return FALSE;
+        nLen = (SIZE_T)(lpCurr[1]);
+        lpCurr += 2;
+        break;
+      case 2:
+        if ((SIZE_T)(lpEnd - lpCurr) < 3)
+          return FALSE;
+        nLen = ((SIZE_T)(lpCurr[1]) << 8) | (SIZE_T)(lpCurr[2]);
+        lpCurr += 3;
+        break;
+      default:
+        return FALSE;
+    }
+  }
+  return (nLen <= (SIZE_T)(lpEnd - lpCurr)) ? TRUE : FALSE;
 }

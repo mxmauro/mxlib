@@ -99,19 +99,6 @@ public:
     return _lpPtr;
     };
 
-  T* operator=(__in const TAutoPtrBase<T>& cPtr)
-    {
-    if (this != &cPtr)
-    {
-      if (cPtr.lpPtr != NULL)
-        cPtr.lpPtr->AddRef();
-      if (lpPtr != NULL)
-        lpPtr->Release();
-      lpPtr = cPtr.lpPtr;
-    }
-    return lpPtr;
-    };
-
   bool operator!() const
     {
     return (lpPtr == NULL) ? true : false;

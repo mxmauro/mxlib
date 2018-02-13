@@ -219,7 +219,7 @@ HRESULT CIpcSslLayer::Initialize(__in BOOL bServerSide, __in eProtocol nProtocol
     if (lpSelfCert->GetOpenSSL_X509() == NULL)
       return MX_E_NotReady;
     if (SSL_use_certificate(ssl_data->lpSslSession, (X509*)(lpSelfCert->GetOpenSSL_X509())) <= 0)
-      return (Internals::OpenSSL::IsMemoryError() != FALSE) ? E_OUTOFMEMORY : MX_E_InvalidData;
+      return Internals::OpenSSL::GetLastErrorCode(TRUE);
     //setup private key if provided
     if (lpPrivKey != NULL)
     {
@@ -234,7 +234,7 @@ HRESULT CIpcSslLayer::Initialize(__in BOOL bServerSide, __in eProtocol nProtocol
         return E_OUTOFMEMORY;
       lpPrivKey->GetPrivateKey(aTempBuf.Get());
       if (SSL_use_PrivateKey_ASN1(EVP_PKEY_RSA, ssl_data->lpSslSession, aTempBuf.Get(), (long)nSize) <= 0)
-        return (Internals::OpenSSL::IsMemoryError() != FALSE) ? E_OUTOFMEMORY : MX_E_InvalidData;
+        return Internals::OpenSSL::GetLastErrorCode(TRUE);
       if (SSL_check_private_key(ssl_data->lpSslSession) == 0)
         return MX_E_InvalidData;
     }

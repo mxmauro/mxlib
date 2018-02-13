@@ -40,7 +40,7 @@ namespace OpenSSL {
 
 BOOL Init();
 
-BOOL IsMemoryError();
+HRESULT GetLastErrorCode(__in BOOL bDefaultIsInvalidData);
 
 SSL_CTX* GetSslContext(__in BOOL bServerSide, __in_z LPCSTR szVersionA);
 

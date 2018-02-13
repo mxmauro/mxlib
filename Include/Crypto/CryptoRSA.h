@@ -51,12 +51,12 @@ public:
 
   BOOL HasPrivateKey() const;
 
-  HRESULT SetPublicKeyFromDER(__in LPCVOID lpKey, __in SIZE_T nKeySize);
+  HRESULT SetPublicKeyFromDER(__in LPCVOID lpKey, __in SIZE_T nKeySize, __in_z_opt LPCSTR szPasswordA=NULL);
   HRESULT SetPublicKeyFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA=NULL,
                               __in_opt SIZE_T nPemLen=(SIZE_T)-1);
   SIZE_T GetPublicKey(__out_opt LPVOID lpDest=NULL);
 
-  HRESULT SetPrivateKeyFromDER(__in LPCVOID lpKey, __in SIZE_T nKeySize);
+  HRESULT SetPrivateKeyFromDER(__in LPCVOID lpKey, __in SIZE_T nKeySize, __in_z_opt LPCSTR szPasswordA=NULL);
   HRESULT SetPrivateKeyFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA=NULL,
                               __in_opt SIZE_T nPemLen=(SIZE_T)-1);
   SIZE_T GetPrivateKey(__out_opt LPVOID lpDest=NULL);

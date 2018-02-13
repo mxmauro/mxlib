@@ -27,7 +27,8 @@
 #include "..\..\Include\Strings\Strings.h"
 #include <OpenSSL\ssl.h>
 #include <OpenSSL\err.h>
-#include <openssl\conf.h>
+#include <OpenSSL\conf.h>
+#include <OpenSSL\pkcs12err.h>
 
 #pragma comment(lib, "libssl.lib")
 #pragma comment(lib, "libcrypto.lib")
@@ -85,19 +86,33 @@ BOOL Init()
   return (SUCCEEDED(_OpenSSL_Init())) ? TRUE : FALSE;
 }
 
-BOOL IsMemoryError()
+HRESULT GetLastErrorCode(__in BOOL bDefaultIsInvalidData)
 {
   unsigned long err;
+  BOOL bHasError = FALSE;
+  HRESULT hRes = (bDefaultIsInvalidData != FALSE) ? MX_E_InvalidData : S_OK;
 
   while ((err = ERR_get_error()) != 0)
   {
     if (ERR_GET_REASON(err) == ERR_R_MALLOC_FAILURE)
     {
-      ERR_clear_error();
-      return TRUE;
+      hRes = E_OUTOFMEMORY;
+      break;
     }
+    if (ERR_GET_LIB(err) == ERR_LIB_PKCS12 && ERR_GET_REASON(err) == PKCS12_R_MAC_VERIFY_FAILURE)
+    {
+      hRes = HRESULT_FROM_WIN32(ERROR_INVALID_PASSWORD);
+      break;
+    }
+    bHasError = TRUE;
   }
-  return FALSE;
+  if (bHasError != FALSE)
+  {
+    ERR_clear_error();
+    if (hRes == S_OK)
+      hRes = MX_E_InvalidData;
+  }
+  return hRes;
 }
 
 SSL_CTX* GetSslContext(__in BOOL bServerSide, __in_z LPCSTR szVersionA)

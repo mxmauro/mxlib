@@ -27,6 +27,7 @@
 #include "TestHttpClient.h"
 #include "TestJavascript.h"
 #include "TestJsHttpServer.h"
+#include "Comm\SslCertificates.h"
 
 #pragma comment(lib, "MxLib.lib")
 #pragma comment(lib, "CommLib.lib")

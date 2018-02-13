@@ -4,7 +4,7 @@ var moment = require("./moment.min.js");
 require("./top.jss");
 %>
 <div class="caption">REQUEST</div>
-<pre><%= Duktape.enc('jc', request, null, 4); %></pre>
+<pre><%= Duktape.enc('jc', request, null, 4) %></pre>
 <div class="caption">SESSION</div>
 <pre>ID: <%= session.id %></pre>
 <pre>INTVAL: <%

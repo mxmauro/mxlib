@@ -52,7 +52,7 @@ public:
   CSslCertificate();
   ~CSslCertificate();
 
-  HRESULT InitializeFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen);
+  HRESULT InitializeFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen, __in_z_opt LPCSTR szPasswordA=NULL);
   HRESULT InitializeFromPEM(__in LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA=NULL, __in_opt SIZE_T nPemLen=(SIZE_T)-1);
 
   LONG GetVersion() const;
@@ -123,19 +123,18 @@ public:
   CSslCertificateArray();
   ~CSslCertificateArray();
 
-  HRESULT AddFromString(__in_z LPCSTR szStringA, __in_z_opt LPCSTR szPasswordA=NULL, __in_opt SIZE_T nLen=(SIZE_T)-1);
-  HRESULT AddFromString(__in_z LPCWSTR szStringW, __in_z_opt LPCSTR szPasswordA=NULL, __in_opt SIZE_T nLen=(SIZE_T)-1);
+  HRESULT AddFromMemory(__in LPCVOID lpData, __in SIZE_T nDataLen, __in_z_opt LPCSTR szPasswordA=NULL);
   HRESULT AddFromFile(__in_z LPCWSTR szFileNameW, __in_z_opt LPCSTR szPasswordA=NULL);
 
-  HRESULT AddPublicKeyFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen);
+  HRESULT AddPublicKeyFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen, __in_z_opt LPCSTR szPasswordA=NULL);
   HRESULT AddPublicKeyFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA=NULL,
                               __in_opt SIZE_T nPemLen=(SIZE_T)-1);
 
-  HRESULT AddPrivateKeyFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen);
+  HRESULT AddPrivateKeyFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen, __in_z_opt LPCSTR szPasswordA=NULL);
   HRESULT AddPrivateKeyFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA=NULL,
                                __in_opt SIZE_T nPemLen=(SIZE_T)-1);
 
-  HRESULT AddCertificateFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen);
+  HRESULT AddCertificateFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen, __in_z_opt LPCSTR szPasswordA=NULL);
   HRESULT AddCertificateFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA=NULL,
                                 __in_opt SIZE_T nPemLen=(SIZE_T)-1);
 
