@@ -630,10 +630,10 @@ static X509* lookup_cert_by_subject(__in MX::CSslCertificateArray *lpCertArray, 
 
   if (lpCertArray == NULL || name == NULL)
     return NULL;
-  nCount = lpCertArray->GetCertificatesCount();
+  nCount = lpCertArray->cCertsList.GetCount();
   for (i=0; i<nCount; i++)
   {
-    lpCert = lpCertArray->GetCertificate(i);
+    lpCert = lpCertArray->cCertsList.GetElementAt(i);
     lpX509 = (X509*)(lpCert->GetOpenSSL_X509());
     if (lpX509 != NULL && X509_NAME_cmp(X509_get_subject_name(lpX509), name) == 0 &&
         X509_cmp_time(X509_get_notBefore(lpX509), NULL) < 0 &&
@@ -653,10 +653,10 @@ static X509_CRL* lookup_crl_by_subject(__in MX::CSslCertificateArray *lpCertArra
 
   if (lpCertArray == NULL || name == NULL)
     return NULL;
-  nCount = lpCertArray->GetCrlCertificatesCount();
+  nCount = lpCertArray->cCertCrlsList.GetCount();
   for (i=0; i<nCount; i++)
   {
-    lpCertCrl = lpCertArray->GetCrlCertificate(i);
+    lpCertCrl = lpCertArray->cCertCrlsList.GetElementAt(i);
     lpX509Crl = (X509_CRL*)(lpCertCrl->GetOpenSSL_X509Crl());
     if (lpX509Crl != NULL && X509_NAME_cmp(X509_CRL_get_issuer(lpX509Crl), name) == 0)
       return lpX509Crl;

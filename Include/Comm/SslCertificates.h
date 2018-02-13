@@ -123,6 +123,8 @@ public:
   CSslCertificateArray();
   ~CSslCertificateArray();
 
+  VOID Reset();
+
   HRESULT AddFromMemory(__in LPCVOID lpData, __in SIZE_T nDataLen, __in_z_opt LPCSTR szPasswordA=NULL);
   HRESULT AddFromFile(__in_z LPCWSTR szFileNameW, __in_z_opt LPCSTR szPasswordA=NULL);
 
@@ -143,16 +145,7 @@ public:
 
   HRESULT ImportFromWindowsStore();
 
-  SIZE_T GetCertificatesCount() const;
-  CSslCertificate* GetCertificate(__in SIZE_T nIndex);
-
-  SIZE_T GetCrlCertificatesCount() const;
-  CSslCertificateCrl* GetCrlCertificate(__in SIZE_T nIndex);
-
-  SIZE_T GetRsaKeysCount() const;
-  CCryptoRSA* GetRsaKey(__in SIZE_T nIndex);
-
-private:
+public:
   TArrayListWithDelete<CSslCertificate*> cCertsList;
   TArrayListWithDelete<CSslCertificateCrl*> cCertCrlsList;
   TArrayListWithDelete<CCryptoRSA*> cRsaKeysList;

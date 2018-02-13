@@ -94,6 +94,14 @@ CSslCertificateArray::~CSslCertificateArray()
   return;
 }
 
+VOID CSslCertificateArray::Reset()
+{
+  cCertsList.RemoveAllElements();
+  cCertCrlsList.RemoveAllElements();
+  cRsaKeysList.RemoveAllElements();
+  return;
+}
+
 HRESULT CSslCertificateArray::AddFromMemory(__in LPCVOID lpData, __in SIZE_T nDataLen, __in_z_opt LPCSTR szPasswordA)
 {
   HRESULT hRes;
@@ -809,42 +817,6 @@ HRESULT CSslCertificateArray::ImportFromWindowsStore()
   fnCertCloseStore(hStore, 0);
   ::FreeLibrary(hCrypt32DLL);
   return S_OK;
-}
-
-SIZE_T CSslCertificateArray::GetCertificatesCount() const
-{
-  return cCertsList.GetCount();
-}
-
-CSslCertificate* CSslCertificateArray::GetCertificate(__in SIZE_T nIndex)
-{
-  if (nIndex >= cCertsList.GetCount())
-    return NULL;
-  return cCertsList.GetElementAt(nIndex);
-}
-
-SIZE_T CSslCertificateArray::GetCrlCertificatesCount() const
-{
-  return cCertCrlsList.GetCount();
-}
-
-CSslCertificateCrl* CSslCertificateArray::GetCrlCertificate(__in SIZE_T nIndex)
-{
-  if (nIndex >= cCertCrlsList.GetCount())
-    return NULL;
-  return cCertCrlsList.GetElementAt(nIndex);
-}
-
-SIZE_T CSslCertificateArray::GetRsaKeysCount() const
-{
-  return cRsaKeysList.GetCount();
-}
-
-CCryptoRSA* CSslCertificateArray::GetRsaKey(__in SIZE_T nIndex)
-{
-  if (nIndex >= cRsaKeysList.GetCount())
-    return NULL;
-  return cRsaKeysList.GetElementAt(nIndex);
 }
 
 } //namespace MX
