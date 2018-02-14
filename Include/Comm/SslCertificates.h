@@ -66,6 +66,7 @@ public:
   HRESULT GetValidFrom(__inout CDateTime &cDt);
   HRESULT GetValidUntil(__inout CDateTime &cDt);
 
+  HRESULT IsDateValid(); //returns S_OK if valid, S_FALSE if not, or an error
   BOOL IsCaCert() const;
 
   HRESULT operator=(const CSslCertificate& cSrc);

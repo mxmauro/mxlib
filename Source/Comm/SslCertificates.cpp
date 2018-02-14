@@ -113,6 +113,23 @@ HRESULT CSslCertificate::GetValidUntil(__inout CDateTime &cDt)
   return Asn1TimeToDateTime(X509_get_notAfter(_x509), cDt);
 }
 
+HRESULT CSslCertificate::IsDateValid()
+{
+  CDateTime cDtNow, cDt;
+  HRESULT hRes;
+
+  hRes = cDtNow.SetFromNow(FALSE);
+  if (hRes == S_OK)
+    hRes = GetValidFrom(cDt);
+  if (hRes == S_OK && cDtNow < cDt)
+    hRes = S_FALSE;
+  if (hRes == S_OK)
+    hRes = GetValidUntil(cDt);
+  if (hRes == S_OK && cDtNow >= cDt)
+    hRes = S_FALSE;
+  return hRes;
+}
+
 BOOL CSslCertificate::IsCaCert() const
 {
   return (lpX509 != NULL && X509_check_ca(_x509) >= 1) ? TRUE : FALSE;
@@ -314,39 +331,50 @@ static HRESULT GetName(__in X509_NAME *lpName, __in MX::CSslCertificate::eInform
                        __inout MX::CStringW &cStrW)
 {
   MX::TAutoFreePtr<CHAR> aTempBuf;
-  int i, nid;
+  ASN1_OBJECT *obj;
+  int idx, utf8_data_len;
+  unsigned char *utf8_data;
+  HRESULT hRes;
+
+  ASN1_STRING *data;
 
   if (lpName == NULL)
     return S_OK;
+  obj = NULL;
   switch (nInfo)
   {
     case MX::CSslCertificate::InfoOrganization:
-      nid = NID_organizationName;
+      obj = OBJ_nid2obj(NID_organizationName);
       break;
     case MX::CSslCertificate::InfoUnit:
-      nid = NID_organizationalUnitName;
+      obj = OBJ_nid2obj(NID_organizationalUnitName);
       break;
     case MX::CSslCertificate::InfoCommonName:
-      nid = NID_commonName;
+      obj = OBJ_nid2obj(NID_commonName);
       break;
     case MX::CSslCertificate::InfoCountry:
-      nid = NID_countryName;
+      obj = OBJ_nid2obj(NID_countryName);
       break;
     case MX::CSslCertificate::InfoStateProvince:
-      nid = NID_stateOrProvinceName;
+      obj = OBJ_nid2obj(NID_stateOrProvinceName);
       break;
     case MX::CSslCertificate::InfoTown:
-      nid = NID_localityName;
+      obj = OBJ_nid2obj(NID_localityName);
       break;
-    default:
-      return E_INVALIDARG;
   }
-  i = X509_NAME_get_text_by_NID(lpName, nid, NULL, 0);
-  if (i <= 0)
-    return S_OK;
-  aTempBuf.Attach((LPSTR)MX_MALLOC((SIZE_T)i + 1));
-  if (!aTempBuf)
-    return E_OUTOFMEMORY;
-  i = X509_NAME_get_text_by_NID(lpName, nid, aTempBuf.Get(), (i+1));
-  return MX::Utf8_Decode(cStrW, aTempBuf.Get(), (SIZE_T)i);
+  if (obj == NULL)
+    return E_INVALIDARG;
+
+  idx = X509_NAME_get_index_by_OBJ(lpName, obj, -1);
+  if (idx < 0)
+    return MX_E_NotFound;
+  data = X509_NAME_ENTRY_get_data(X509_NAME_get_entry(lpName, idx));
+
+  utf8_data_len = ASN1_STRING_to_UTF8(&utf8_data, data);
+  if (utf8_data_len < 0)
+    return MX::Internals::OpenSSL::GetLastErrorCode(TRUE);
+
+  hRes = MX::Utf8_Decode(cStrW, (LPCSTR)utf8_data, (SIZE_T)(unsigned int)utf8_data_len);
+  OPENSSL_free(utf8_data);
+  return hRes;
 }
