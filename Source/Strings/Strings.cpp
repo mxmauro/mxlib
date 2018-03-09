@@ -825,14 +825,14 @@ VOID CStringA::Delete(__in SIZE_T nStartChar, __in SIZE_T nChars)
 
   if (nLen > 0)
   {
-    if (nStartChar > nLen)
-      nStartChar = nLen;
+    if (nStartChar >= nLen)
+      return;
     if (nStartChar+nChars > nLen || nStartChar+nChars < nStartChar) //overflow
-      nChars = nLen-nStartChar;
+      nChars = nLen - nStartChar;
     k = nLen - nChars - nStartChar;
     sA = szStrA + nStartChar;
     nLen -= nChars;
-    MemMove(sA, sA+nChars, k);
+    MemMove(sA, sA + nChars, k);
     szStrA[nLen] = 0;
   }
   return;
@@ -1306,13 +1306,13 @@ VOID CStringW::Delete(__in SIZE_T nStartChar, __in SIZE_T nChars)
   if (nLen > 0)
   {
     if (nStartChar > nLen)
-      nStartChar = nLen;
+      return;
     if (nStartChar+nChars > nLen || nStartChar+nChars < nStartChar) //overflow
-      nChars = nLen-nStartChar;
+      nChars = nLen - nStartChar;
     k = nLen - nChars - nStartChar;
     sW = szStrW + nStartChar;
     nLen -= nChars;
-    MemMove(sW, sW+nChars, k*sizeof(WCHAR));
+    MemMove(sW, sW + nChars, k * sizeof(WCHAR));
     szStrW[nLen] = 0;
   }
   return;
