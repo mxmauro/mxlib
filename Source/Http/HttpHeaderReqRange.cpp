@@ -39,7 +39,7 @@ CHttpHeaderReqRange::~CHttpHeaderReqRange()
   return;
 }
 
-HRESULT CHttpHeaderReqRange::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderReqRange::Parse(_In_z_ LPCSTR szValueA)
 {
   RANGESET sRangeSet;
   ULONGLONG nTemp;
@@ -126,7 +126,7 @@ HRESULT CHttpHeaderReqRange::Parse(__in_z LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqRange::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderReqRange::Build(_Inout_ CStringA &cStrDestA)
 {
   SIZE_T i, nCount;
 
@@ -147,7 +147,7 @@ HRESULT CHttpHeaderReqRange::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqRange::AddRangeSet(__in ULONGLONG nByteStart, __in ULONGLONG nByteEnd)
+HRESULT CHttpHeaderReqRange::AddRangeSet(_In_ ULONGLONG nByteStart, _In_ ULONGLONG nByteEnd)
 {
   RANGESET sNewRangeSet;
 
@@ -166,12 +166,12 @@ SIZE_T CHttpHeaderReqRange::GetRangeSetsCount() const
   return cRangeSetsList.GetCount();
 }
 
-ULONGLONG CHttpHeaderReqRange::GetRangeSetStart(__in SIZE_T nIndex) const
+ULONGLONG CHttpHeaderReqRange::GetRangeSetStart(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cRangeSetsList.GetCount()) ? cRangeSetsList[nIndex].nByteStart : ULONGLONG_MAX;
 }
 
-ULONGLONG CHttpHeaderReqRange::GetRangeSetEnd(__in SIZE_T nIndex) const
+ULONGLONG CHttpHeaderReqRange::GetRangeSetEnd(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cRangeSetsList.GetCount()) ? cRangeSetsList[nIndex].nByteEnd : 0ui64;
 }

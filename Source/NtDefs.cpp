@@ -64,18 +64,18 @@ typedef struct {
 
 //-----------------------------------------------------------
 
-typedef NTSTATUS (NTAPI *lpfnRtlGetNativeSystemInformation)(__in MX_SYSTEM_INFORMATION_CLASS SystemInformationClass,
-                                               __inout PVOID SystemInformation, __in ULONG SystemInformationLength,
-                                               __out_opt PULONG ReturnLength);
+typedef NTSTATUS (NTAPI *lpfnRtlGetNativeSystemInformation)(_In_ MX_SYSTEM_INFORMATION_CLASS SystemInformationClass,
+                                               _Inout_ PVOID SystemInformation, _In_ ULONG SystemInformationLength,
+                                               _Out_opt_ PULONG ReturnLength);
 
-typedef int (__cdecl *lpfn_vsnprintf)(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char *szFormatA,
-                                      __in va_list lpArgList);
-typedef int (__cdecl *lpfn_vsnwprintf)(__out_z wchar_t *lpDest, __in size_t nMaxCount, __in_z const wchar_t *szFormatW,
-                                       __in va_list lpArgList);
+typedef int (__cdecl *lpfn_vsnprintf)(_Out_writes_z_(nMaxCount) char *lpDest, _In_ size_t nMaxCount,
+                                      _In_z_ _Printf_format_string_ const char *szFormatA, _In_ va_list lpArgList);
+typedef int (__cdecl *lpfn_vsnwprintf)(_Out_writes_z_(nMaxCount) wchar_t *lpDest, _In_ size_t nMaxCount,
+                                       _In_z_ _Printf_format_string_ const wchar_t *szFormatW, _In_ va_list lpArgList);
 
-typedef BOOLEAN (NTAPI *lpfnRtlDosPathNameToNtPathName_U)(__in_z_opt PCWSTR DosPathName,
-                                            __out PMX_UNICODE_STRING NtPathName, __out_opt PCWSTR *NtFileNamePart,
-                                            __out_opt PVOID DirectoryInfo);
+typedef BOOLEAN (NTAPI *lpfnRtlDosPathNameToNtPathName_U)(_In_opt_z_ PCWSTR DosPathName,
+                                            _Out_ PMX_UNICODE_STRING NtPathName, _Out_opt_ PCWSTR *NtFileNamePart,
+                                            _Out_opt_ PVOID DirectoryInfo);
 
 //-----------------------------------------------------------
 
@@ -85,8 +85,8 @@ static lpfnRtlDosPathNameToNtPathName_U fnRtlDosPathNameToNtPathName_U = NULL;
 
 //-----------------------------------------------------------
 
-static BOOL RemoteCompareStringW(__in HANDLE hProcess, __in_z LPCWSTR szRemoteNameW, __in_z LPCWSTR szLocalNameW,
-                                 __in SIZE_T nNameLen);
+static BOOL RemoteCompareStringW(_In_ HANDLE hProcess, _In_z_ LPCWSTR szRemoteNameW, _In_z_ LPCWSTR szLocalNameW,
+                                 _In_ SIZE_T nNameLen);
 
 //-----------------------------------------------------------
 
@@ -120,7 +120,7 @@ LPBYTE MxGetPeb()
 #endif
 };
 
-LPBYTE MxGetRemotePeb(__in HANDLE hProcess)
+LPBYTE MxGetRemotePeb(_In_ HANDLE hProcess)
 {
   ULONG k;
 
@@ -172,7 +172,7 @@ LPBYTE MxGetTeb()
 #endif
 };
 
-VOID MxSetLastWin32Error(__in DWORD dwOsErr)
+VOID MxSetLastWin32Error(_In_ DWORD dwOsErr)
 {
 #if defined(_M_IX86)
   *((LPDWORD)(MxGetTeb()+0x34)) = dwOsErr;
@@ -191,7 +191,8 @@ DWORD MxGetLastWin32Error()
 #endif
 };
 
-int mx_sprintf_s(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char *szFormatA, ...)
+int mx_sprintf_s(_Out_writes_z_(nMaxCount) char *lpDest, _In_ size_t nMaxCount,
+                 _In_z_ _Printf_format_string_ const char *szFormatA, ...)
 {
   va_list argptr;
   int ret;
@@ -202,7 +203,8 @@ int mx_sprintf_s(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char 
   return ret;
 }
 
-int mx_vsnprintf(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char *szFormatA, __in va_list lpArgList)
+int mx_vsnprintf(_Out_writes_z_(nMaxCount) char *lpDest, _In_ size_t nMaxCount,
+                 _In_z_ _Printf_format_string_ const char *szFormatA, _In_ va_list lpArgList)
 {
   if (*((PVOID*)&__stdio_common_vsnprintf_s) != NULL)
   {
@@ -230,7 +232,8 @@ int mx_vsnprintf(__out_z char *lpDest, __in size_t nMaxCount, __in_z const char 
   return fn_vsnprintf(lpDest, nMaxCount, szFormatA, lpArgList);
 }
 
-int mx_swprintf_s(__out_z wchar_t *lpDest, __in size_t nMaxCount, __in_z const wchar_t *szFormatW, ...)
+int mx_swprintf_s(_Out_writes_z_(nMaxCount) wchar_t *lpDest, _In_ size_t nMaxCount,
+                  _In_z_ _Printf_format_string_ const wchar_t *szFormatW, ...)
 {
   va_list argptr;
   int ret;
@@ -241,8 +244,8 @@ int mx_swprintf_s(__out_z wchar_t *lpDest, __in size_t nMaxCount, __in_z const w
   return ret;
 }
 
-int mx_vsnwprintf(__out_z wchar_t *lpDest, __in size_t nMaxCount, __in_z const wchar_t *szFormatW,
-                  __in va_list lpArgList)
+int mx_vsnwprintf(_Out_writes_z_(nMaxCount) wchar_t *lpDest, _In_ size_t nMaxCount,
+                  _In_z_ _Printf_format_string_ const wchar_t *szFormatW, _In_ va_list lpArgList)
 {
   if (*((PVOID*)&__stdio_common_vswprintf_s) != NULL)
   {
@@ -273,8 +276,10 @@ int mx_vsnwprintf(__out_z wchar_t *lpDest, __in size_t nMaxCount, __in_z const w
 PRTL_CRITICAL_SECTION MxGetLoaderLockCS()
 {
   static PRTL_CRITICAL_SECTION volatile lpLoaderLockCS = NULL;
+  PRTL_CRITICAL_SECTION _lpLoaderLockCS;
 
-  if (lpLoaderLockCS == NULL)
+  _lpLoaderLockCS = (PRTL_CRITICAL_SECTION)__InterlockedReadPointer(&lpLoaderLockCS);
+  if (_lpLoaderLockCS == NULL)
   {
     LPBYTE lpPtr;
 
@@ -286,9 +291,10 @@ PRTL_CRITICAL_SECTION MxGetLoaderLockCS()
     lpPtr = *((LPBYTE*)(lpPtr + 0x60));
     lpPtr = *((LPBYTE*)(lpPtr + 0x110)); //get loader lock pointer
 #endif
-    MX::__InterlockedExchangePointer((PVOID volatile *)&lpLoaderLockCS, lpPtr);
+    __InterlockedExchangePointer(&lpLoaderLockCS, lpPtr);
+    _lpLoaderLockCS = (PRTL_CRITICAL_SECTION)lpPtr;
   }
-  return lpLoaderLockCS;
+  return _lpLoaderLockCS;
 }
 
 LONG MxGetProcessorArchitecture()
@@ -309,6 +315,7 @@ LONG MxGetProcessorArchitecture()
       fnRtlGetNativeSystemInformation = (lpfnRtlGetNativeSystemInformation)MxGetProcedureAddress(
                                                    DllBase, "RtlGetNativeSystemInformation");
     }
+    MX::MemSet(&sProcInfo, 0, sizeof(sProcInfo));
     if (fnRtlGetNativeSystemInformation != NULL)
       nNtStatus = fnRtlGetNativeSystemInformation(MxSystemProcessorInformation, &sProcInfo, sizeof(sProcInfo), NULL);
     else
@@ -319,7 +326,7 @@ LONG MxGetProcessorArchitecture()
   return _InterlockedExchangeAdd(&nProcessorArchitecture, 0L);
 }
 
-HANDLE MxOpenProcess(__in DWORD dwDesiredAccess, __in BOOL bInheritHandle, __in DWORD dwProcessId)
+HANDLE MxOpenProcess(_In_ DWORD dwDesiredAccess, _In_ BOOL bInheritHandle, _In_ DWORD dwProcessId)
 {
   MX_OBJECT_ATTRIBUTES sObjAttr;
   MX_CLIENT_ID sClientId;
@@ -335,7 +342,7 @@ HANDLE MxOpenProcess(__in DWORD dwDesiredAccess, __in BOOL bInheritHandle, __in 
   return (NT_SUCCESS(nNtStatus)) ? hProc : NULL;
 }
 
-HANDLE MxOpenThread(__in DWORD dwDesiredAccess, __in BOOL bInheritHandle, __in DWORD dwThreadId)
+HANDLE MxOpenThread(_In_ DWORD dwDesiredAccess, _In_ BOOL bInheritHandle, _In_ DWORD dwThreadId)
 {
   MX_OBJECT_ATTRIBUTES sObjAttr;
   MX_CLIENT_ID sClientId;
@@ -351,9 +358,9 @@ HANDLE MxOpenThread(__in DWORD dwDesiredAccess, __in BOOL bInheritHandle, __in D
   return (NT_SUCCESS(nNtStatus)) ? hThread : NULL;
 }
 
-NTSTATUS MxCreateFile(__out HANDLE *lphFile, __in LPCWSTR szFileNameW, __in_opt DWORD dwDesiredAccess,
-                      __in_opt DWORD dwShareMode, __in_opt DWORD dwCreationDisposition,
-                      __in_opt DWORD dwFlagsAndAttributes, __in_opt LPSECURITY_ATTRIBUTES lpSecurityAttributes)
+NTSTATUS MxCreateFile(_Out_ HANDLE *lphFile, _In_ LPCWSTR szFileNameW, _In_opt_ DWORD dwDesiredAccess,
+                      _In_opt_ DWORD dwShareMode, _In_opt_ DWORD dwCreationDisposition,
+                      _In_opt_ DWORD dwFlagsAndAttributes, _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes)
 {
   MX_OBJECT_ATTRIBUTES sObjAttr;
   MX_IO_STATUS_BLOCK sIoStatus;
@@ -476,7 +483,7 @@ NTSTATUS MxCreateFile(__out HANDLE *lphFile, __in LPCWSTR szFileNameW, __in_opt 
   return nNtStatus;
 }
 
-NTSTATUS MxIsWow64(__in HANDLE hProcess)
+NTSTATUS MxIsWow64(_In_ HANDLE hProcess)
 {
   NTSTATUS nNtStatus = STATUS_NOT_SUPPORTED;
 
@@ -500,7 +507,8 @@ NTSTATUS MxIsWow64(__in HANDLE hProcess)
   return nNtStatus;
 }
 
-SIZE_T MxReadMem(__in HANDLE hProcess, __in LPVOID lpDest, __in LPVOID lpSrc, __in SIZE_T nBytesCount)
+SIZE_T MxReadMem(_In_ HANDLE hProcess, _Out_writes_bytes_(nBytesCount) LPVOID lpDest, _In_ LPVOID lpSrc,
+                 _In_ SIZE_T nBytesCount)
 {
   NTSTATUS nStatus;
   SIZE_T nReaded;
@@ -516,7 +524,7 @@ SIZE_T MxReadMem(__in HANDLE hProcess, __in LPVOID lpDest, __in LPVOID lpSrc, __
   return (NT_SUCCESS(nStatus)) ? nBytesCount : 0;
 }
 
-BOOL MxWriteMem(__in HANDLE hProcess, __in LPVOID lpDest, __in LPVOID lpSrc, __in SIZE_T nBytesCount)
+BOOL MxWriteMem(_In_ HANDLE hProcess, _In_ LPVOID lpDest, _In_ LPVOID lpSrc, _In_ SIZE_T nBytesCount)
 {
   NTSTATUS nStatus;
   SIZE_T nWritten;
@@ -531,7 +539,7 @@ BOOL MxWriteMem(__in HANDLE hProcess, __in LPVOID lpDest, __in LPVOID lpSrc, __i
           (nStatus == STATUS_PARTIAL_COPY && nWritten == nBytesCount)) ? TRUE : FALSE;
 }
 
-NTSTATUS MxGetThreadPriority(__in HANDLE hThread, __out int *lpnPriority)
+NTSTATUS MxGetThreadPriority(_In_ HANDLE hThread, _Out_ int *lpnPriority)
 {
   MX_THREAD_BASIC_INFORMATION sTbi;
   NTSTATUS nNtStatus;
@@ -549,7 +557,7 @@ NTSTATUS MxGetThreadPriority(__in HANDLE hThread, __out int *lpnPriority)
   return nNtStatus;
 }
 
-NTSTATUS MxSetThreadPriority(__in HANDLE hThread, __in int _nPriority)
+NTSTATUS MxSetThreadPriority(_In_ HANDLE hThread, _In_ int _nPriority)
 {
   LONG nPriority = _nPriority;
 
@@ -590,7 +598,7 @@ DWORD MxGetCurrentProcessId()
   return dw;
 }
 
-PVOID MxGetDllHandle(__in_z PCWSTR szModuleNameW)
+PVOID MxGetDllHandle(_In_z_ PCWSTR szModuleNameW)
 {
   PRTL_CRITICAL_SECTION lpLoaderLockCS;
   MX_PEB_LDR_DATA *lpPebLdr;
@@ -631,7 +639,7 @@ PVOID MxGetDllHandle(__in_z PCWSTR szModuleNameW)
   return pRet;
 }
 
-PVOID MxGetRemoteDllHandle(__in HANDLE hProcess, __in_z PCWSTR szModuleNameW)
+PVOID MxGetRemoteDllHandle(_In_ HANDLE hProcess, _In_z_ PCWSTR szModuleNameW)
 {
   BOOL bTargetIsX64;
   SIZE_T k, nModuleNameLen;
@@ -829,7 +837,7 @@ PVOID MxGetRemoteDllHandle(__in HANDLE hProcess, __in_z PCWSTR szModuleNameW)
   return NULL;
 }
 /*
-PVOID MxGetProcedureAddress(__in PVOID DllBase, __in_z PCSTR szApiNameA)
+PVOID MxGetProcedureAddress(_In_ PVOID DllBase, _In_z_ PCSTR szApiNameA)
 {
   MX_ANSI_STRING asApiName, *lpApiName;
   ULONG nOrd;
@@ -870,7 +878,7 @@ PVOID MxGetProcedureAddress(__in PVOID DllBase, __in_z PCSTR szApiNameA)
 }
 */
 
-VOID MxSleep(__in DWORD dwTimeMs)
+VOID MxSleep(_In_ DWORD dwTimeMs)
 {
   LARGE_INTEGER liTime;
 
@@ -883,8 +891,8 @@ VOID MxSleep(__in DWORD dwTimeMs)
 
 //-----------------------------------------------------------
 
-static BOOL RemoteCompareStringW(__in HANDLE hProcess, __in_z LPCWSTR szRemoteNameW, __in_z LPCWSTR szLocalNameW,
-                                 __in SIZE_T nNameLen)
+static BOOL RemoteCompareStringW(_In_ HANDLE hProcess, _In_z_ LPCWSTR szRemoteNameW, _In_z_ LPCWSTR szLocalNameW,
+                                 _In_ SIZE_T nNameLen)
 {
   WCHAR szTempW[256];
   SIZE_T nThisRound;

@@ -27,14 +27,14 @@
 
 namespace MX {
 
-CJsObjectBase* CJsObjectBase::FromObject(__in DukTape::duk_context *lpCtx, __in DukTape::duk_int_t nIndex)
+CJsObjectBase* CJsObjectBase::FromObject(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_int_t nIndex)
 {
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   CJsObjectBase *lpObj = NULL;
 
   try
   {
-    lpJVM->RunNativeProtected(0, 0, [&lpObj, nIndex](__in DukTape::duk_context *lpCtx) -> VOID
+    lpJVM->RunNativeProtected(0, 0, [&lpObj, nIndex](_In_ DukTape::duk_context *lpCtx) -> VOID
     {
       DukTape::duk_get_prop_string(lpCtx, nIndex, "\xff""\xff""data");
       if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
@@ -52,56 +52,56 @@ CJsObjectBase* CJsObjectBase::FromObject(__in DukTape::duk_context *lpCtx, __in 
   return lpObj;
 }
 
-int CJsObjectBase::OnProxyHasNamedProperty(__in_z LPCSTR szPropNameA)
+int CJsObjectBase::OnProxyHasNamedProperty(_In_z_ LPCSTR szPropNameA)
 {
   return -1; //pass original
 }
 
-int CJsObjectBase::OnProxyHasIndexedProperty(__in int nIndex)
+int CJsObjectBase::OnProxyHasIndexedProperty(_In_ int nIndex)
 {
   return -1; //pass original
 }
 
-int CJsObjectBase::OnProxyGetNamedProperty(__in_z LPCSTR szPropNameA)
+int CJsObjectBase::OnProxyGetNamedProperty(_In_z_ LPCSTR szPropNameA)
 {
   return 0; //pass original
 }
 
-int CJsObjectBase::OnProxyGetIndexedProperty(__in int nIndex)
+int CJsObjectBase::OnProxyGetIndexedProperty(_In_ int nIndex)
 {
   return 0; //pass original
 }
 
-int CJsObjectBase::OnProxySetNamedProperty(__in_z LPCSTR szPropNameA, __in DukTape::duk_idx_t nValueIndex)
+int CJsObjectBase::OnProxySetNamedProperty(_In_z_ LPCSTR szPropNameA, _In_ DukTape::duk_idx_t nValueIndex)
 {
   return 0; //set original
 }
 
-int CJsObjectBase::OnProxySetIndexedProperty(__in int nIndex, __in DukTape::duk_idx_t nValueIndex)
+int CJsObjectBase::OnProxySetIndexedProperty(_In_ int nIndex, _In_ DukTape::duk_idx_t nValueIndex)
 {
   return 0; //set original
 }
 
-int CJsObjectBase::OnProxyDeleteNamedProperty(__in_z LPCSTR szPropNameA)
+int CJsObjectBase::OnProxyDeleteNamedProperty(_In_z_ LPCSTR szPropNameA)
 {
   return 1; //delete original
 }
 
-int CJsObjectBase::OnProxyDeleteIndexedProperty(__in int nIndex)
+int CJsObjectBase::OnProxyDeleteIndexedProperty(_In_ int nIndex)
 {
   return 1; //delete original
 }
 
-LPCSTR CJsObjectBase::OnProxyGetPropertyName(__in int nIndex)
+LPCSTR CJsObjectBase::OnProxyGetPropertyName(_In_ int nIndex)
 {
   return NULL;
 }
 
-HRESULT CJsObjectBase::_RegisterHelper(__in DukTape::duk_context *lpCtx, __in MAP_ENTRY *lpEntries,
-                                       __in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA,
-                                       __in_opt lpfnCreateObject fnCreateObject, __in BOOL bUseProxy,
-                                       __in lpfnRegisterUnregisterCallback fnRegisterCallback,
-                                       __in lpfnRegisterUnregisterCallback fnUnregisterCallback)
+HRESULT CJsObjectBase::_RegisterHelper(_In_ DukTape::duk_context *lpCtx, _In_ MAP_ENTRY *lpEntries,
+                                       _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPrototypeNameA,
+                                       _In_opt_ lpfnCreateObject fnCreateObject, _In_ BOOL bUseProxy,
+                                       _In_ lpfnRegisterUnregisterCallback fnRegisterCallback,
+                                       _In_ lpfnRegisterUnregisterCallback fnUnregisterCallback)
 {
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
 
@@ -109,7 +109,7 @@ HRESULT CJsObjectBase::_RegisterHelper(__in DukTape::duk_context *lpCtx, __in MA
     return E_POINTER;
   try
   {
-    lpJVM->RunNativeProtected(0, 0, [=](__in DukTape::duk_context *lpCtx) -> VOID
+    lpJVM->RunNativeProtected(0, 0, [=](_In_ DukTape::duk_context *lpCtx) -> VOID
     {
       //create a prototype with functions
       DukTape::duk_push_global_object(lpCtx);
@@ -135,7 +135,7 @@ HRESULT CJsObjectBase::_RegisterHelper(__in DukTape::duk_context *lpCtx, __in MA
       return;
     });
 
-    lpJVM->RunNativeProtected(0, 0, [fnRegisterCallback](__in DukTape::duk_context *lpCtx) -> VOID
+    lpJVM->RunNativeProtected(0, 0, [fnRegisterCallback](_In_ DukTape::duk_context *lpCtx) -> VOID
     {
       fnRegisterCallback(lpCtx);
     });
@@ -153,21 +153,21 @@ HRESULT CJsObjectBase::_RegisterHelper(__in DukTape::duk_context *lpCtx, __in MA
   return S_OK;
 }
 
-VOID CJsObjectBase::_UnregisterHelper(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                      __in_z LPCSTR szPrototypeNameA,
-                                      __in lpfnRegisterUnregisterCallback fnUnregisterCallback)
+VOID CJsObjectBase::_UnregisterHelper(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                      _In_z_ LPCSTR szPrototypeNameA,
+                                      _In_ lpfnRegisterUnregisterCallback fnUnregisterCallback)
 {
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
 
   try
   {
-    lpJVM->RunNativeProtected(0, 0, [fnUnregisterCallback](__in DukTape::duk_context *lpCtx) -> VOID
+    lpJVM->RunNativeProtected(0, 0, [fnUnregisterCallback](_In_ DukTape::duk_context *lpCtx) -> VOID
     {
       fnUnregisterCallback(lpCtx);
       return;
     });
 
-    lpJVM->RunNativeProtected(0, 0, [szPrototypeNameA, szObjectNameA](__in DukTape::duk_context *lpCtx) -> VOID
+    lpJVM->RunNativeProtected(0, 0, [szPrototypeNameA, szObjectNameA](_In_ DukTape::duk_context *lpCtx) -> VOID
     {
       DukTape::duk_push_global_object(lpCtx);
       DukTape::duk_del_prop_string(lpCtx, -1, szPrototypeNameA);
@@ -181,7 +181,7 @@ VOID CJsObjectBase::_UnregisterHelper(__in DukTape::duk_context *lpCtx, __in_z L
   return;
 }
 
-DukTape::duk_ret_t CJsObjectBase::_CreateHelper(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsObjectBase::_CreateHelper(_In_ DukTape::duk_context *lpCtx)
 {
   lpfnCreateObject fnCreateObject;
   CJsObjectBase *lpNewObj;
@@ -210,7 +210,7 @@ DukTape::duk_ret_t CJsObjectBase::_CreateHelper(__in DukTape::duk_context *lpCtx
   return 1;
 }
 
-HRESULT CJsObjectBase::_PushThisHelper(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA)
+HRESULT CJsObjectBase::_PushThisHelper(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPrototypeNameA)
 {
   DukTape::duk_context *lpCtx = GetContext();
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
@@ -218,7 +218,7 @@ HRESULT CJsObjectBase::_PushThisHelper(__in_z LPCSTR szObjectNameA, __in_z LPCST
   AddRef();
   try
   {
-    lpJVM->RunNativeProtected(0, 1, [this, szObjectNameA, szPrototypeNameA](__in DukTape::duk_context *lpCtx) -> VOID
+    lpJVM->RunNativeProtected(0, 1, [this, szObjectNameA, szPrototypeNameA](_In_ DukTape::duk_context *lpCtx) -> VOID
     {
       DukTape::duk_uint_t nDukFlags;
       MAP_ENTRY *lpEntries, *lpEntries_2;
@@ -322,7 +322,7 @@ HRESULT CJsObjectBase::_PushThisHelper(__in_z LPCSTR szObjectNameA, __in_z LPCST
   return S_OK;
 }
 
-DukTape::duk_ret_t CJsObjectBase::_FinalReleaseHelper(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsObjectBase::_FinalReleaseHelper(_In_ DukTape::duk_context *lpCtx)
 {
   CJsObjectBase *lpObj;
 
@@ -345,7 +345,7 @@ DukTape::duk_ret_t CJsObjectBase::_FinalReleaseHelper(__in DukTape::duk_context 
   return 0;
 }
 
-DukTape::duk_ret_t CJsObjectBase::_CallMethodHelper(__in DukTape::duk_context *lpCtx, __in lpfnCallFunc fnFunc)
+DukTape::duk_ret_t CJsObjectBase::_CallMethodHelper(_In_ DukTape::duk_context *lpCtx, _In_ lpfnCallFunc fnFunc)
 {
   CJsObjectBase *lpObj;
 
@@ -356,7 +356,7 @@ DukTape::duk_ret_t CJsObjectBase::_CallMethodHelper(__in DukTape::duk_context *l
   return ((*lpObj).*fnFunc)();
 }
 
-DukTape::duk_ret_t CJsObjectBase::_ProxyHasPropHelper(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsObjectBase::_ProxyHasPropHelper(_In_ DukTape::duk_context *lpCtx)
 {
   CJsObjectBase *lpObj;
   DukTape::duk_bool_t retVal;
@@ -395,7 +395,7 @@ DukTape::duk_ret_t CJsObjectBase::_ProxyHasPropHelper(__in DukTape::duk_context 
   return 1;
 }
 
-DukTape::duk_ret_t CJsObjectBase::_ProxyGetPropHelper(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsObjectBase::_ProxyGetPropHelper(_In_ DukTape::duk_context *lpCtx)
 {
   CJsObjectBase *lpObj;
   int nRet;
@@ -439,7 +439,7 @@ DukTape::duk_ret_t CJsObjectBase::_ProxyGetPropHelper(__in DukTape::duk_context 
   return 1;
 }
 
-DukTape::duk_ret_t CJsObjectBase::_ProxySetPropHelper(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsObjectBase::_ProxySetPropHelper(_In_ DukTape::duk_context *lpCtx)
 {
   CJsObjectBase *lpObj;
   int nRet;
@@ -492,7 +492,7 @@ DukTape::duk_ret_t CJsObjectBase::_ProxySetPropHelper(__in DukTape::duk_context 
   return 1;
 }
 
-DukTape::duk_ret_t CJsObjectBase::_ProxyDeletePropHelper(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsObjectBase::_ProxyDeletePropHelper(_In_ DukTape::duk_context *lpCtx)
 {
   CJsObjectBase *lpObj;
   int nRet;
@@ -537,7 +537,7 @@ DukTape::duk_ret_t CJsObjectBase::_ProxyDeletePropHelper(__in DukTape::duk_conte
   return 1;
 }
 
-DukTape::duk_ret_t CJsObjectBase::_ProxyOwnKeysHelper(__in DukTape::duk_context *lpCtx)
+DukTape::duk_ret_t CJsObjectBase::_ProxyOwnKeysHelper(_In_ DukTape::duk_context *lpCtx)
 {
   CJsObjectBase *lpObj;
   MAP_ENTRY *lpEntries;

@@ -36,7 +36,7 @@ namespace MX {
 class CUrl : public virtual CBaseMemObj
 {
 private:
-  CUrl(__in const CUrl& cSrc);
+  CUrl(_In_ const CUrl& cSrc);
 public:
   CUrl();
   ~CUrl();
@@ -56,67 +56,67 @@ public:
 
   VOID Reset();
 
-  HRESULT SetScheme(__in_z LPCSTR szSchemeA);
-  HRESULT SetScheme(__in_z LPCWSTR szSchemeW);
+  HRESULT SetScheme(_In_opt_z_ LPCSTR szSchemeA);
+  HRESULT SetScheme(_In_opt_z_ LPCWSTR szSchemeW);
   LPCWSTR GetScheme() const;
-  HRESULT GetScheme(__inout CStringA &cStrDestA);
+  HRESULT GetScheme(_Inout_ CStringA &cStrDestA);
   eScheme GetSchemeCode() const;
 
-  HRESULT SetHost(__in_z LPCSTR szHostA, __in_opt SIZE_T nHostLen=(SIZE_T)-1);
-  HRESULT SetHost(__in_z LPCWSTR szHostW, __in_opt SIZE_T nHostLen=(SIZE_T)-1);
+  HRESULT SetHost(_In_z_ LPCSTR szHostA, _In_opt_ SIZE_T nHostLen=(SIZE_T)-1);
+  HRESULT SetHost(_In_z_ LPCWSTR szHostW, _In_opt_ SIZE_T nHostLen=(SIZE_T)-1);
   LPCWSTR GetHost() const;
-  HRESULT GetHost(__inout CStringA &cStrDestA);
+  HRESULT GetHost(_Inout_ CStringA &cStrDestA);
 
-  HRESULT SetPort(__in int nPort=-1);
+  HRESULT SetPort(_In_ int nPort=-1);
   int GetPort() const;
 
-  HRESULT SetPath(__in_z LPCSTR szPathA, __in_opt SIZE_T nPathLen=(SIZE_T)-1);
-  HRESULT SetPath(__in_z LPCWSTR szPathW, __in_opt SIZE_T nPathLen=(SIZE_T)-1);
+  HRESULT SetPath(_In_z_ LPCSTR szPathA, _In_opt_ SIZE_T nPathLen=(SIZE_T)-1);
+  HRESULT SetPath(_In_z_ LPCWSTR szPathW, _In_opt_ SIZE_T nPathLen=(SIZE_T)-1);
   LPCWSTR GetPath() const;
 
   HRESULT ShrinkPath();
 
   VOID ResetQueryStrings();
-  HRESULT AddQueryString(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA, __in_opt SIZE_T nValueLen=(SIZE_T)-1,
-                         __in_opt SIZE_T nNameLen=(SIZE_T)-1);
-  HRESULT AddQueryString(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW, __in_opt SIZE_T nValueLen=(SIZE_T)-1,
-                         __in_opt SIZE_T nNameLen=(SIZE_T)-1);
-  HRESULT RemoveQueryString(__in SIZE_T nIndex);
+  HRESULT AddQueryString(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen=(SIZE_T)-1,
+                         _In_opt_ SIZE_T nNameLen=(SIZE_T)-1);
+  HRESULT AddQueryString(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW, _In_opt_ SIZE_T nValueLen=(SIZE_T)-1,
+                         _In_opt_ SIZE_T nNameLen=(SIZE_T)-1);
+  HRESULT RemoveQueryString(_In_ SIZE_T nIndex);
   SIZE_T GetQueryStringCount() const;
 
-  LPCWSTR GetQueryStringName(__in SIZE_T nIndex) const;
-  LPCWSTR GetQueryStringValue(__in SIZE_T nIndex) const;
-  LPCWSTR GetQueryStringValue(__in_z LPCWSTR szNameW) const;
+  LPCWSTR GetQueryStringName(_In_ SIZE_T nIndex) const;
+  LPCWSTR GetQueryStringValue(_In_ SIZE_T nIndex) const;
+  LPCWSTR GetQueryStringValue(_In_z_ LPCWSTR szNameW) const;
 
-  HRESULT SetFragment(__in_z LPCSTR szFragmentA, __in_opt SIZE_T nFragmentLen=(SIZE_T)-1);
-  HRESULT SetFragment(__in_z LPCWSTR szFragmentW, __in_opt SIZE_T nFragmentLen=(SIZE_T)-1);
+  HRESULT SetFragment(_In_z_ LPCSTR szFragmentA, _In_opt_ SIZE_T nFragmentLen=(SIZE_T)-1);
+  HRESULT SetFragment(_In_z_ LPCWSTR szFragmentW, _In_opt_ SIZE_T nFragmentLen=(SIZE_T)-1);
   LPCWSTR GetFragment() const;
 
-  HRESULT SetUserInfo(__in_z LPCSTR szUserInfoA, __in_opt SIZE_T nUserInfoLen=(SIZE_T)-1);
-  HRESULT SetUserInfo(__in_z LPCWSTR szUserInfoW, __in_opt SIZE_T nUserInfoLen=(SIZE_T)-1);
+  HRESULT SetUserInfo(_In_z_ LPCSTR szUserInfoA, _In_opt_ SIZE_T nUserInfoLen=(SIZE_T)-1);
+  HRESULT SetUserInfo(_In_z_ LPCWSTR szUserInfoW, _In_opt_ SIZE_T nUserInfoLen=(SIZE_T)-1);
   LPCWSTR GetUserInfo() const;
 
-  HRESULT ToString(__inout CStringA &cStrDestA, __in int nFlags=ToStringAddAll);
-  HRESULT ToString(__inout CStringW &cStrDestW, __in int nFlags=ToStringAddAll);
+  HRESULT ToString(_Inout_ CStringA &cStrDestA, _In_ int nFlags=ToStringAddAll);
+  HRESULT ToString(_Inout_ CStringW &cStrDestW, _In_ int nFlags=ToStringAddAll);
 
-  HRESULT ParseFromString(__in_z LPCSTR szUrlA, __in_opt SIZE_T nSrcLen=(SIZE_T)-1);
-  HRESULT ParseFromString(__in_z LPCWSTR szUrlW, __in_opt SIZE_T nSrcLen=(SIZE_T)-1);
+  HRESULT ParseFromString(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nSrcLen=(SIZE_T)-1);
+  HRESULT ParseFromString(_In_z_ LPCWSTR szUrlW, _In_opt_ SIZE_T nSrcLen=(SIZE_T)-1);
 
-  HRESULT operator=(__in const CUrl& cSrc);
-  HRESULT operator+=(__in const CUrl& cOtherUrl);
+  HRESULT operator=(_In_ const CUrl& cSrc);
+  HRESULT operator+=(_In_ const CUrl& cOtherUrl);
 
-  HRESULT Merge(__in const CUrl& cOtherUrl);
+  HRESULT Merge(_In_ const CUrl& cOtherUrl);
 
-  static HRESULT Encode(__inout CStringA &cStrDestA, __in_z LPCSTR szUrlA, __in_opt SIZE_T nUrlLen=(SIZE_T)-1,
-                        __in_z_opt LPCSTR szAllowedCharsA=NULL, __in_opt BOOL bAppend=FALSE);
-  static SIZE_T GetEncodedLength(__in_z LPCSTR szUrlA, __in_opt SIZE_T nUrlLen=(SIZE_T)-1,
-                                 __in_z_opt LPCSTR szAllowedCharsA=NULL);
-  static HRESULT Decode(__inout CStringA &cStrDestA, __in_z LPCSTR szUrlA, __in_opt SIZE_T nUrlLen=(SIZE_T)-1,
-                        __in_opt BOOL bAppend=FALSE);
-  static SIZE_T GetDecodedLength(__in_z LPCSTR szUrlA, __in_opt SIZE_T nUrlLen=(SIZE_T)-1);
+  static HRESULT Encode(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nUrlLen=(SIZE_T)-1,
+                        _In_opt_z_ LPCSTR szAllowedCharsA=NULL, _In_opt_ BOOL bAppend=FALSE);
+  static SIZE_T GetEncodedLength(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nUrlLen=(SIZE_T)-1,
+                                 _In_opt_z_ LPCSTR szAllowedCharsA=NULL);
+  static HRESULT Decode(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nUrlLen=(SIZE_T)-1,
+                        _In_opt_ BOOL bAppend=FALSE);
+  static SIZE_T GetDecodedLength(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nUrlLen=(SIZE_T)-1);
 
-  static BOOL IsValidHostAddress(__in_z LPCSTR szHostA, __in_opt SIZE_T nHostLen=(SIZE_T)-1);
-  static BOOL IsValidHostAddress(__in_z LPCWSTR szHostW, __in_opt SIZE_T nHostLen=(SIZE_T)-1);
+  static BOOL IsValidHostAddress(_In_z_ LPCSTR szHostA, _In_opt_ SIZE_T nHostLen=(SIZE_T)-1);
+  static BOOL IsValidHostAddress(_In_z_ LPCWSTR szHostW, _In_opt_ SIZE_T nHostLen=(SIZE_T)-1);
 
 private:
   typedef struct {

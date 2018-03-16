@@ -37,12 +37,12 @@ CHttpHeaderReqReferer::~CHttpHeaderReqReferer()
   return;
 }
 
-HRESULT CHttpHeaderReqReferer::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderReqReferer::Parse(_In_z_ LPCSTR szValueA)
 {
   return SetReferer(szValueA);
 }
 
-HRESULT CHttpHeaderReqReferer::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderReqReferer::Build(_Inout_ CStringA &cStrDestA)
 {
   if (cStrDestA.Copy((LPSTR)cStrRefererA) == FALSE)
   {
@@ -53,7 +53,7 @@ HRESULT CHttpHeaderReqReferer::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqReferer::SetReferer(__in_z LPCSTR szRefererA)
+HRESULT CHttpHeaderReqReferer::SetReferer(_In_z_ LPCSTR szRefererA)
 {
   LPCSTR szStartA, szEndA;
   CUrl cUrl;

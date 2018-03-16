@@ -39,7 +39,7 @@ typedef struct tagSHAx_DATA {
 
 //-----------------------------------------------------------
 
-static const EVP_MD* GetDigest(__in MX::CDigestAlgorithmSecureHash::eAlgorithm nAlgorithm);
+static const EVP_MD* GetDigest(_In_ MX::CDigestAlgorithmSecureHash::eAlgorithm nAlgorithm);
 
 //-------------------------------------------------------
 
@@ -73,8 +73,8 @@ HRESULT CDigestAlgorithmSecureHash::BeginDigest()
   return BeginDigest(AlgorithmSHA1, NULL, 0);
 }
 
-HRESULT CDigestAlgorithmSecureHash::BeginDigest(__in eAlgorithm nAlgorithm, __in_opt LPCVOID lpKey,
-                                                __in_opt SIZE_T nKeyLen)
+HRESULT CDigestAlgorithmSecureHash::BeginDigest(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey,
+                                                _In_opt_ SIZE_T nKeyLen)
 {
   if (nAlgorithm != AlgorithmSHA1 && nAlgorithm != AlgorithmSHA224 && nAlgorithm != AlgorithmSHA256 &&
       nAlgorithm != AlgorithmSHA384 && nAlgorithm != AlgorithmSHA512)
@@ -131,7 +131,7 @@ HRESULT CDigestAlgorithmSecureHash::BeginDigest(__in eAlgorithm nAlgorithm, __in
   return S_OK;
 }
 
-HRESULT CDigestAlgorithmSecureHash::DigestStream(__in LPCVOID lpData, __in SIZE_T nDataLength)
+HRESULT CDigestAlgorithmSecureHash::DigestStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 {
   if (lpData == NULL && nDataLength > 0)
     return E_POINTER;
@@ -172,7 +172,7 @@ SIZE_T CDigestAlgorithmSecureHash::GetResultSize() const
   return (lpInternalData != NULL) ? shax_data->nOutputSize : 0;
 }
 
-VOID CDigestAlgorithmSecureHash::CleanUp(__in BOOL bZeroData)
+VOID CDigestAlgorithmSecureHash::CleanUp(_In_ BOOL bZeroData)
 {
   if (shax_data->lpMdCtx != NULL)
   {
@@ -197,7 +197,7 @@ VOID CDigestAlgorithmSecureHash::CleanUp(__in BOOL bZeroData)
 
 //-----------------------------------------------------------
 
-static const EVP_MD* GetDigest(__in MX::CDigestAlgorithmSecureHash::eAlgorithm nAlgorithm)
+static const EVP_MD* GetDigest(_In_ MX::CDigestAlgorithmSecureHash::eAlgorithm nAlgorithm)
 {
   switch (nAlgorithm)
   {

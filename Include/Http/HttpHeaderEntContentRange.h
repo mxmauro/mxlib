@@ -38,11 +38,11 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Content-Range)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
-  HRESULT SetRange(__in ULONGLONG nByteStart, __in ULONGLONG nByteEnd, __in ULONGLONG nTotalBytes);
+  HRESULT SetRange(_In_ ULONGLONG nByteStart, _In_ ULONGLONG nByteEnd, _In_ ULONGLONG nTotalBytes);
   ULONGLONG GetRangeStart() const;
   ULONGLONG GetRangeEnd() const;
   ULONGLONG GetRangeTotal() const;

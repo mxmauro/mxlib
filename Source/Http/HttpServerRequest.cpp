@@ -31,7 +31,7 @@ static const LPCSTR szServerInfoA = "MX-Library";
 
 namespace MX {
 
-CHttpServer::CRequest::CRequest(__in CPropertyBag &_cPropBag) : CIpc::CUserData(), TLnkLstNode<CRequest>(),
+CHttpServer::CRequest::CRequest(_In_ CPropertyBag &_cPropBag) : CIpc::CUserData(), TLnkLstNode<CRequest>(),
                                                                 sRequest(_cPropBag), sResponse(_cPropBag)
 {
   _InterlockedExchange(&nMutex, 0);
@@ -83,7 +83,7 @@ SIZE_T CHttpServer::CRequest::GetRequestHeadersCount() const
   return sRequest.cHttpCmn.GetHeadersCount();
 }
 
-CHttpHeaderBase* CHttpServer::CRequest::GetRequestHeader(__in SIZE_T nIndex) const
+CHttpHeaderBase* CHttpServer::CRequest::GetRequestHeader(_In_ SIZE_T nIndex) const
 {
   CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
 
@@ -92,7 +92,7 @@ CHttpHeaderBase* CHttpServer::CRequest::GetRequestHeader(__in SIZE_T nIndex) con
   return sRequest.cHttpCmn.GetHeader(nIndex);
 }
 
-CHttpHeaderBase* CHttpServer::CRequest::GetRequestHeader(__in_z LPCSTR szNameA) const
+CHttpHeaderBase* CHttpServer::CRequest::GetRequestHeader(_In_z_ LPCSTR szNameA) const
 {
   CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
 
@@ -110,7 +110,7 @@ SIZE_T CHttpServer::CRequest::GetRequestCookiesCount() const
   return sRequest.cHttpCmn.GetCookiesCount();
 }
 
-CHttpCookie* CHttpServer::CRequest::GetRequestCookie(__in SIZE_T nIndex) const
+CHttpCookie* CHttpServer::CRequest::GetRequestCookie(_In_ SIZE_T nIndex) const
 {
   CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
 
@@ -145,7 +145,7 @@ VOID CHttpServer::CRequest::ResetResponse()
   return;
 }
 
-HRESULT CHttpServer::CRequest::SetResponseStatus(__in LONG nStatus, __in_opt LPCSTR szReasonA)
+HRESULT CHttpServer::CRequest::SetResponseStatus(_In_ LONG nStatus, _In_opt_ LPCSTR szReasonA)
 {
   CFastLock cLock(&nMutex);
 
@@ -169,8 +169,8 @@ HRESULT CHttpServer::CRequest::SetResponseStatus(__in LONG nStatus, __in_opt LPC
   return S_OK;
 }
 
-HRESULT CHttpServer::CRequest::AddResponseHeader(__in_z LPCSTR szNameA, __out_opt CHttpHeaderBase **lplpHeader,
-                                                 __in BOOL bReplaceExisting)
+HRESULT CHttpServer::CRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _Out_opt_ CHttpHeaderBase **lplpHeader,
+                                                 _In_ BOOL bReplaceExisting)
 {
   CFastLock cLock(&nMutex);
 
@@ -181,9 +181,9 @@ HRESULT CHttpServer::CRequest::AddResponseHeader(__in_z LPCSTR szNameA, __out_op
   return sResponse.cHttpCmn.AddHeader(szNameA, lplpHeader, bReplaceExisting);
 }
 
-HRESULT CHttpServer::CRequest::AddResponseHeader(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA,
-                                                 __in_opt SIZE_T nValueLen, __out_opt CHttpHeaderBase **lplpHeader,
-                                                 __in BOOL bReplaceExisting)
+HRESULT CHttpServer::CRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA,
+                                                 _In_opt_ SIZE_T nValueLen, _Out_opt_ CHttpHeaderBase **lplpHeader,
+                                                 _In_ BOOL bReplaceExisting)
 {
   CFastLock cLock(&nMutex);
 
@@ -194,9 +194,9 @@ HRESULT CHttpServer::CRequest::AddResponseHeader(__in_z LPCSTR szNameA, __in_z L
   return sResponse.cHttpCmn.AddHeader(szNameA, szValueA, nValueLen, lplpHeader, bReplaceExisting);
 }
 
-HRESULT CHttpServer::CRequest::AddResponseHeader(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW,
-                                                 __in_opt SIZE_T nValueLen, __out_opt CHttpHeaderBase **lplpHeader,
-                                                 __in BOOL bReplaceExisting)
+HRESULT CHttpServer::CRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW,
+                                                 _In_opt_ SIZE_T nValueLen, _Out_opt_ CHttpHeaderBase **lplpHeader,
+                                                 _In_ BOOL bReplaceExisting)
 {
   CFastLock cLock(&nMutex);
 
@@ -207,7 +207,7 @@ HRESULT CHttpServer::CRequest::AddResponseHeader(__in_z LPCSTR szNameA, __in_z L
   return sResponse.cHttpCmn.AddHeader(szNameA, szValueW, nValueLen, lplpHeader, bReplaceExisting);
 }
 
-HRESULT CHttpServer::CRequest::RemoveResponseHeader(__in_z LPCSTR szNameA)
+HRESULT CHttpServer::CRequest::RemoveResponseHeader(_In_z_ LPCSTR szNameA)
 {
   CFastLock cLock(&nMutex);
 
@@ -217,7 +217,7 @@ HRESULT CHttpServer::CRequest::RemoveResponseHeader(__in_z LPCSTR szNameA)
   return S_OK;
 }
 
-HRESULT CHttpServer::CRequest::RemoveResponseHeader(__in CHttpHeaderBase *lpHeader)
+HRESULT CHttpServer::CRequest::RemoveResponseHeader(_In_ CHttpHeaderBase *lpHeader)
 {
   CFastLock cLock(&nMutex);
 
@@ -246,7 +246,7 @@ SIZE_T CHttpServer::CRequest::GetResponseHeadersCount() const
   return sResponse.cHttpCmn.GetHeadersCount();
 }
 
-CHttpHeaderBase* CHttpServer::CRequest::GetResponseHeader(__in_z LPCSTR szNameA) const
+CHttpHeaderBase* CHttpServer::CRequest::GetResponseHeader(_In_z_ LPCSTR szNameA) const
 {
   CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
 
@@ -255,7 +255,7 @@ CHttpHeaderBase* CHttpServer::CRequest::GetResponseHeader(__in_z LPCSTR szNameA)
   return sResponse.cHttpCmn.GetHeader(szNameA);
 }
 
-HRESULT CHttpServer::CRequest::AddResponseCookie(__in CHttpCookie &cSrc)
+HRESULT CHttpServer::CRequest::AddResponseCookie(_In_ CHttpCookie &cSrc)
 {
   CFastLock cLock(&nMutex);
 
@@ -264,7 +264,7 @@ HRESULT CHttpServer::CRequest::AddResponseCookie(__in CHttpCookie &cSrc)
   return sResponse.cHttpCmn.AddCookie(cSrc);
 }
 
-HRESULT CHttpServer::CRequest::AddResponseCookie(__in CHttpCookieArray &cSrc)
+HRESULT CHttpServer::CRequest::AddResponseCookie(_In_ CHttpCookieArray &cSrc)
 {
   CFastLock cLock(&nMutex);
 
@@ -273,10 +273,10 @@ HRESULT CHttpServer::CRequest::AddResponseCookie(__in CHttpCookieArray &cSrc)
   return sResponse.cHttpCmn.AddCookie(cSrc);
 }
 
-HRESULT CHttpServer::CRequest::AddResponseCookie(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA,
-                                                 __in_z_opt LPCSTR szDomainA, __in_z_opt LPCSTR szPathA,
-                                                 __in_opt const CDateTime *lpDate, __in_opt BOOL bIsSecure,
-                                                 __in_opt BOOL bIsHttpOnly)
+HRESULT CHttpServer::CRequest::AddResponseCookie(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA,
+                                                 _In_opt_z_ LPCSTR szDomainA, _In_opt_z_ LPCSTR szPathA,
+                                                 _In_opt_ const CDateTime *lpDate, _In_opt_ BOOL bIsSecure,
+                                                 _In_opt_ BOOL bIsHttpOnly)
 {
   CFastLock cLock(&nMutex);
 
@@ -285,10 +285,10 @@ HRESULT CHttpServer::CRequest::AddResponseCookie(__in_z LPCSTR szNameA, __in_z L
   return sResponse.cHttpCmn.AddCookie(szNameA, szValueA, szDomainA, szPathA, lpDate, bIsSecure, bIsHttpOnly);
 }
 
-HRESULT CHttpServer::CRequest::AddResponseCookie(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW,
-                                                 __in_z_opt LPCWSTR szDomainW, __in_z_opt LPCWSTR szPathW,
-                                                 __in_opt const CDateTime *lpDate, __in_opt BOOL bIsSecure,
-                                                 __in_opt BOOL bIsHttpOnly)
+HRESULT CHttpServer::CRequest::AddResponseCookie(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW,
+                                                 _In_opt_z_ LPCWSTR szDomainW, _In_opt_z_ LPCWSTR szPathW,
+                                                 _In_opt_ const CDateTime *lpDate, _In_opt_ BOOL bIsSecure,
+                                                 _In_opt_ BOOL bIsHttpOnly)
 {
   CFastLock cLock(&nMutex);
 
@@ -297,7 +297,7 @@ HRESULT CHttpServer::CRequest::AddResponseCookie(__in_z LPCWSTR szNameW, __in_z 
   return sResponse.cHttpCmn.AddCookie(szNameW, szValueW, szDomainW, szPathW, lpDate, bIsSecure, bIsHttpOnly);
 }
 
-HRESULT CHttpServer::CRequest::RemoveResponseCookie(__in_z LPCSTR szNameA)
+HRESULT CHttpServer::CRequest::RemoveResponseCookie(_In_z_ LPCSTR szNameA)
 {
   CFastLock cLock(&nMutex);
 
@@ -306,7 +306,7 @@ HRESULT CHttpServer::CRequest::RemoveResponseCookie(__in_z LPCSTR szNameA)
   return sResponse.cHttpCmn.RemoveCookie(szNameA);
 }
 
-HRESULT CHttpServer::CRequest::RemoveResponseCookie(__in_z LPCWSTR szNameW)
+HRESULT CHttpServer::CRequest::RemoveResponseCookie(_In_z_ LPCWSTR szNameW)
 {
   CFastLock cLock(&nMutex);
 
@@ -325,7 +325,7 @@ HRESULT CHttpServer::CRequest::RemoveAllResponseCookies()
   return S_OK;
 }
 
-CHttpCookie* CHttpServer::CRequest::GetResponseCookie(__in SIZE_T nIndex) const
+CHttpCookie* CHttpServer::CRequest::GetResponseCookie(_In_ SIZE_T nIndex) const
 {
   CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
 
@@ -334,7 +334,7 @@ CHttpCookie* CHttpServer::CRequest::GetResponseCookie(__in SIZE_T nIndex) const
   return sResponse.cHttpCmn.GetCookie(nIndex);
 }
 
-CHttpCookie* CHttpServer::CRequest::GetResponseCookie(__in_z LPCSTR szNameA) const
+CHttpCookie* CHttpServer::CRequest::GetResponseCookie(_In_z_ LPCSTR szNameA) const
 {
   CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
 
@@ -343,7 +343,7 @@ CHttpCookie* CHttpServer::CRequest::GetResponseCookie(__in_z LPCSTR szNameA) con
   return sResponse.cHttpCmn.GetCookie(szNameA);
 }
 
-CHttpCookie* CHttpServer::CRequest::GetResponseCookie(__in_z LPCWSTR szNameW) const
+CHttpCookie* CHttpServer::CRequest::GetResponseCookie(_In_z_ LPCWSTR szNameW) const
 {
   CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
 
@@ -370,7 +370,7 @@ SIZE_T CHttpServer::CRequest::GetResponseCookiesCount() const
   return sResponse.cHttpCmn.GetCookiesCount();
 }
 
-HRESULT CHttpServer::CRequest::SendResponse(__in LPCVOID lpData, __in SIZE_T nDataLen)
+HRESULT CHttpServer::CRequest::SendResponse(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen)
 {
   CFastLock cLock(&nMutex);
   SIZE_T nWritten;
@@ -414,7 +414,7 @@ HRESULT CHttpServer::CRequest::SendResponse(__in LPCVOID lpData, __in SIZE_T nDa
   return S_OK;
 }
 
-HRESULT CHttpServer::CRequest::SendFile(__in_z LPCWSTR szFileNameW)
+HRESULT CHttpServer::CRequest::SendFile(_In_z_ LPCWSTR szFileNameW)
 {
   TAutoRefCounted<CFileStream> cStream;
   HRESULT hRes;
@@ -432,7 +432,7 @@ HRESULT CHttpServer::CRequest::SendFile(__in_z LPCWSTR szFileNameW)
   return hRes;
 }
 
-HRESULT CHttpServer::CRequest::SendStream(__in CStream *lpStream, __in_z_opt LPCWSTR szFileNameW)
+HRESULT CHttpServer::CRequest::SendStream(_In_ CStream *lpStream, _In_opt_z_ LPCWSTR szFileNameW)
 {
   CFastLock cLock(&nMutex);
   CStringA cStrTempNameA;
@@ -479,8 +479,8 @@ HRESULT CHttpServer::CRequest::SendStream(__in CStream *lpStream, __in_z_opt LPC
   return S_OK;
 }
 
-HRESULT CHttpServer::CRequest::SendErrorPage(__in LONG nStatusCode, __in HRESULT hErrorCode,
-                                             __in_z_opt LPCSTR szBodyExplanationA)
+HRESULT CHttpServer::CRequest::SendErrorPage(_In_ LONG nStatusCode, _In_ HRESULT hErrorCode,
+                                             _In_opt_z_ LPCSTR szBodyExplanationA)
 {
   CFastLock cLock(&nMutex);
 

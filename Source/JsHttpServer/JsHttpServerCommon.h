@@ -46,9 +46,9 @@ class CFileFieldJsObject : public CJsObjectBase
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CFileFieldJsObject);
 public:
-  CFileFieldJsObject(__in DukTape::duk_context *lpCtx);
+  CFileFieldJsObject(_In_ DukTape::duk_context *lpCtx);
 
-  VOID Initialize(__in CHttpBodyParserFormBase::CFileField *lpFileField);
+  VOID Initialize(_In_ CHttpBodyParserFormBase::CFileField *lpFileField);
 
   MX_JS_DECLARE(CFileFieldJsObject, "FormFileField")
 
@@ -78,9 +78,9 @@ class CRawBodyJsObject : public CJsObjectBase
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CRawBodyJsObject);
 public:
-  CRawBodyJsObject(__in DukTape::duk_context *lpCtx);
+  CRawBodyJsObject(_In_ DukTape::duk_context *lpCtx);
 
-  VOID Initialize(__in CHttpBodyParserDefault *lpBody);
+  VOID Initialize(_In_ CHttpBodyParserDefault *lpBody);
 
   MX_JS_DECLARE(CRawBodyJsObject, "RawBody")
 
@@ -103,8 +103,8 @@ private:
 
 namespace JsHttpServer {
 
-HRESULT AddResponseMethods(__in CJavascriptVM &cJvm, __in MX::CHttpServer::CRequest *lpRequest);
-HRESULT AddHelpersMethods(__in CJavascriptVM &cJvm, __in MX::CHttpServer::CRequest *lpRequest);
+HRESULT AddResponseMethods(_In_ CJavascriptVM &cJvm, _In_ MX::CHttpServer::CRequest *lpRequest);
+HRESULT AddHelpersMethods(_In_ CJavascriptVM &cJvm, _In_ MX::CHttpServer::CRequest *lpRequest);
 
 } //namespace JsHttpServer
 

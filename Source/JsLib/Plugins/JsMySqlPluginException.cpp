@@ -27,7 +27,7 @@
 
 namespace MX {
 
-CJsMySqlError::CJsMySqlError(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex) :
+CJsMySqlError::CJsMySqlError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex) :
                CJsWindowsError(lpCtx, nStackIndex)
 {
   LPCSTR sA;
@@ -51,7 +51,7 @@ CJsMySqlError::CJsMySqlError(__in DukTape::duk_context *lpCtx, __in DukTape::duk
   return;
 }
 
-CJsMySqlError::CJsMySqlError(__in const CJsMySqlError &obj) : CJsWindowsError(NULL, 0)
+CJsMySqlError::CJsMySqlError(_In_ const CJsMySqlError &obj) : CJsWindowsError(obj.GetHResult())
 {
   *this = obj;
   return;
@@ -62,7 +62,7 @@ CJsMySqlError::~CJsMySqlError()
   return;
 }
 
-CJsMySqlError& CJsMySqlError::operator=(__in const CJsMySqlError &obj)
+CJsMySqlError& CJsMySqlError::operator=(_In_ const CJsMySqlError &obj)
 {
   CJsWindowsError::operator=(obj);
   //----

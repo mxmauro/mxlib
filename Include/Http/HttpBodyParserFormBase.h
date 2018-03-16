@@ -48,10 +48,10 @@ public:
     };
 
   SIZE_T GetFieldsCount() const;
-  CField* GetField(__in SIZE_T nIndex) const;
+  CField* GetField(_In_ SIZE_T nIndex) const;
 
   SIZE_T GetFileFieldsCount() const;
-  CFileField* GetFileField(__in SIZE_T nIndex) const;
+  CFileField* GetFileField(_In_ SIZE_T nIndex) const;
 
 public:
   class CField : public virtual CBaseMemObj
@@ -74,7 +74,7 @@ public:
       return aSubIndexesItems.GetCount();
       };
 
-    __inline CField* GetSubIndexAt(__in SIZE_T nPos) const
+    __inline CField* GetSubIndexAt(_In_ SIZE_T nPos) const
       {
       return (nPos < aSubIndexesItems.GetCount()) ? aSubIndexesItems[nPos] : NULL;
       };
@@ -124,7 +124,7 @@ public:
       return aSubIndexesItems.GetCount();
       };
 
-    __inline CFileField* GetSubIndexAt(__in SIZE_T nPos) const
+    __inline CFileField* GetSubIndexAt(_In_ SIZE_T nPos) const
       {
         return (nPos < aSubIndexesItems.GetCount()) ? aSubIndexesItems[nPos] : NULL;
       };
@@ -142,8 +142,8 @@ public:
   };
 
 protected:
-  HRESULT AddField(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW);
-  HRESULT AddFileField(__in_z LPCWSTR szNameW, __in_z LPCWSTR szFileNameW, __in_z LPCSTR szTypeA, __in HANDLE hFile);
+  HRESULT AddField(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW);
+  HRESULT AddFileField(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szFileNameW, _In_z_ LPCSTR szTypeA, _In_ HANDLE hFile);
 
 protected:
   TArrayListWithDelete<CField*> cFieldsList;

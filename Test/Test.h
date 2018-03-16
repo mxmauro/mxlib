@@ -36,4 +36,4 @@
 
 BOOL ShouldAbort();
 
-HRESULT GetAppPath(__out MX::CStringW &cStrPathW);
+HRESULT GetAppPath(_Out_ MX::CStringW &cStrPathW);

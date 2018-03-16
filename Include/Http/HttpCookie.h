@@ -49,53 +49,53 @@ public:
 
   VOID Clear();
 
-  HRESULT SetName(__in_z LPCSTR szNameA);
+  HRESULT SetName(_In_z_ LPCSTR szNameA);
   //NOTE: Name will be UTF-8 encoded
-  HRESULT SetName(__in_z LPCWSTR szNameW);
+  HRESULT SetName(_In_z_ LPCWSTR szNameW);
   LPCSTR GetName() const;
   //NOTE: Name will be UTF-8 decoded
-  HRESULT GetName(__inout CStringW &cStrDestW);
+  HRESULT GetName(_Inout_ CStringW &cStrDestW);
 
-  HRESULT SetValue(__in_z LPCSTR szValueA);
+  HRESULT SetValue(_In_z_ LPCSTR szValueA);
   //NOTE: Value will be UTF-8 encoded
-  HRESULT SetValue(__in_z LPCWSTR szValueW);
+  HRESULT SetValue(_In_z_ LPCWSTR szValueW);
   LPCSTR GetValue() const;
   //NOTE: Value will be UTF-8 decoded
-  HRESULT GetValue(__inout CStringW &cStrDestW);
+  HRESULT GetValue(_Inout_ CStringW &cStrDestW);
 
-  HRESULT SetDomain(__in_z LPCSTR szDomainA);
+  HRESULT SetDomain(_In_z_ LPCSTR szDomainA);
   //NOTE: Domain will be PUNY encoded
-  HRESULT SetDomain(__in_z LPCWSTR szDomainW);
+  HRESULT SetDomain(_In_z_ LPCWSTR szDomainW);
   LPCSTR GetDomain() const;
   //NOTE: Domain will be PUNY decoded
-  HRESULT GetDomain(__inout CStringW &cStrDestW);
+  HRESULT GetDomain(_Inout_ CStringW &cStrDestW);
 
-  HRESULT SetPath(__in_z LPCSTR szPathA);
+  HRESULT SetPath(_In_z_ LPCSTR szPathA);
   //NOTE: Path will be UTF-8 encoded
-  HRESULT SetPath(__in_z LPCWSTR szPathW);
+  HRESULT SetPath(_In_z_ LPCWSTR szPathW);
   LPCSTR GetPath() const;
   //NOTE: Path will be UTF-8 decoded
-  HRESULT GetPath(__inout CStringW &cStrDestW);
+  HRESULT GetPath(_Inout_ CStringW &cStrDestW);
 
-  VOID SetExpireDate(__in_opt const CDateTime *lpDate=NULL);
+  VOID SetExpireDate(_In_opt_ const CDateTime *lpDate=NULL);
   CDateTime* GetExpireDate() const;
 
-  VOID SetSecureFlag(__in BOOL bIsSecure);
+  VOID SetSecureFlag(_In_ BOOL bIsSecure);
   BOOL GetSecureFlag() const;
 
-  VOID SetHttpOnlyFlag(__in BOOL bIsHttpOnly);
+  VOID SetHttpOnlyFlag(_In_ BOOL bIsHttpOnly);
   BOOL GetHttpOnlyFlag() const;
 
-  HRESULT operator=(__in const CHttpCookie& cSrc);
+  HRESULT operator=(_In_ const CHttpCookie& cSrc);
 
-  HRESULT ToString(__inout CStringA& cStrDestA, __in BOOL bAddAttributes=TRUE);
+  HRESULT ToString(_Inout_ CStringA& cStrDestA, _In_ BOOL bAddAttributes=TRUE);
 
-  HRESULT DoesDomainMatch(__in_z LPCSTR szDomainToMatchA);
+  HRESULT DoesDomainMatch(_In_z_ LPCSTR szDomainToMatchA);
   //NOTE: Domain will be PUNY encoded
-  HRESULT DoesDomainMatch(__in_z LPCWSTR szDomainToMatchW);
-  HRESULT HasExpired(__in_opt const CDateTime *lpDate=NULL);
+  HRESULT DoesDomainMatch(_In_z_ LPCWSTR szDomainToMatchW);
+  HRESULT HasExpired(_In_opt_ const CDateTime *lpDate=NULL);
 
-  HRESULT ParseFromResponseHeader(__in_z LPCSTR szSrcA, __in_opt SIZE_T nSrcLen=(SIZE_T)-1);
+  HRESULT ParseFromResponseHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen=(SIZE_T)-1);
 
 private:
   ULONG nFlags;
@@ -111,18 +111,18 @@ private:
 class CHttpCookieArray : public TArrayListWithDelete<CHttpCookie*>
 {
 private:
-  CHttpCookieArray(__in const CHttpCookieArray& cSrc);
+  CHttpCookieArray(_In_ const CHttpCookieArray& cSrc);
 public:
   CHttpCookieArray() : TArrayListWithDelete<CHttpCookie*>()
     { };
   HRESULT operator=(const CHttpCookieArray& cSrc);
 
-  HRESULT ParseFromRequestHeader(__in_z LPCSTR szSrcA, __in_opt SIZE_T nSrcLen=(SIZE_T)-1);
+  HRESULT ParseFromRequestHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen=(SIZE_T)-1);
 
-  HRESULT Update(__in const CHttpCookieArray& cSrc, __in BOOL bReplaceExisting);
-  HRESULT Update(__in const CHttpCookie& cSrc, __in BOOL bReplaceExisting);
+  HRESULT Update(_In_ const CHttpCookieArray& cSrc, _In_ BOOL bReplaceExisting);
+  HRESULT Update(_In_ const CHttpCookie& cSrc, _In_ BOOL bReplaceExisting);
 
-  HRESULT RemoveExpiredAndInvalid(__in_opt const CDateTime *lpDate=NULL);
+  HRESULT RemoveExpiredAndInvalid(_In_opt_ const CDateTime *lpDate=NULL);
 };
 
 } //namespace MX

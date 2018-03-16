@@ -39,7 +39,7 @@
 
 namespace MX {
 
-CJsMySqlPlugin::CJsMySqlPlugin(__in DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
+CJsMySqlPlugin::CJsMySqlPlugin(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
 {
   lpInternal = NULL;
   //default options
@@ -95,7 +95,7 @@ CJsMySqlPlugin::~CJsMySqlPlugin()
   return;
 }
 
-VOID CJsMySqlPlugin::OnRegister(__in DukTape::duk_context *lpCtx)
+VOID CJsMySqlPlugin::OnRegister(_In_ DukTape::duk_context *lpCtx)
 {
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   HRESULT hRes;
@@ -114,8 +114,8 @@ VOID CJsMySqlPlugin::OnRegister(__in DukTape::duk_context *lpCtx)
                                "MySqlError.prototype.constructor=MySqlError;\r\n", 0,
                         DUK_COMPILE_EVAL | DUK_COMPILE_NOSOURCE | DUK_COMPILE_STRLEN | DUK_COMPILE_NOFILENAME);
 
-  hRes = lpJVM->RegisterException("MySqlError", [](__in DukTape::duk_context *lpCtx,
-                                                   __in DukTape::duk_idx_t nExceptionObjectIndex) -> VOID
+  hRes = lpJVM->RegisterException("MySqlError", [](_In_ DukTape::duk_context *lpCtx,
+                                                   _In_ DukTape::duk_idx_t nExceptionObjectIndex) -> VOID
   {
     throw CJsMySqlError(lpCtx, nExceptionObjectIndex);
     return;
@@ -125,7 +125,7 @@ VOID CJsMySqlPlugin::OnRegister(__in DukTape::duk_context *lpCtx)
   return;
 }
 
-VOID CJsMySqlPlugin::OnUnregister(__in DukTape::duk_context *lpCtx)
+VOID CJsMySqlPlugin::OnUnregister(_In_ DukTape::duk_context *lpCtx)
 {
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
 
@@ -943,8 +943,8 @@ HRESULT CJsMySqlPlugin::_TransactionRollback()
   return _INTERNAL()->ExecuteQuery("ROLLBACK;", 9);
 }
 
-VOID CJsMySqlPlugin::ThrowDbError(__in HRESULT hRes, __in_opt LPCSTR filename, __in_opt DukTape::duk_int_t line,
-                                  __in_opt BOOL bOnlyPush)
+VOID CJsMySqlPlugin::ThrowDbError(_In_ HRESULT hRes, _In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line,
+                                  _In_opt_ BOOL bOnlyPush)
 {
   DukTape::duk_context *lpCtx = GetContext();
   CStringW cStrTempW;
@@ -998,7 +998,7 @@ VOID CJsMySqlPlugin::ThrowDbError(__in HRESULT hRes, __in_opt LPCSTR filename, _
   return;
 }
 
-VOID CJsMySqlPlugin::ThrowDbError(__in_opt LPCSTR filename, __in_opt DukTape::duk_int_t line, __in_opt BOOL bOnlyPush)
+VOID CJsMySqlPlugin::ThrowDbError(_In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line, _In_opt_ BOOL bOnlyPush)
 {
   DukTape::duk_context *lpCtx = GetContext();
   int err;

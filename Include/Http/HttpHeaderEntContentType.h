@@ -39,19 +39,19 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Content-Type)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
-  HRESULT SetType(__in_z LPCSTR szTypeA);
+  HRESULT SetType(_In_z_ LPCSTR szTypeA);
   LPCSTR GetType() const;
 
-  HRESULT AddParam(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW);
+  HRESULT AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);
 
   SIZE_T GetParamsCount() const;
-  LPCSTR GetParamName(__in SIZE_T nIndex) const;
-  LPCWSTR GetParamValue(__in SIZE_T nIndex) const;
-  LPCWSTR GetParamValue(__in_z LPCSTR szNameA) const;
+  LPCSTR GetParamName(_In_ SIZE_T nIndex) const;
+  LPCWSTR GetParamValue(_In_ SIZE_T nIndex) const;
+  LPCWSTR GetParamValue(_In_z_ LPCSTR szNameA) const;
 
 private:
   typedef struct {

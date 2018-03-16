@@ -118,13 +118,13 @@ public:
 
     HANDLE GetConn();
 
-    HRESULT SendProcessedDataToNextLayer(__in LPCVOID lpMsg, __in SIZE_T nMsgSize);
-    HRESULT SendMsgToNextLayer(__in LPCVOID lpMsg, __in SIZE_T nMsgSize);
+    HRESULT SendProcessedDataToNextLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize);
+    HRESULT SendMsgToNextLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize);
 
     virtual HRESULT OnConnect() = 0;
     virtual HRESULT OnDisconnect() = 0;
-    virtual HRESULT OnData(__in LPCVOID lpData, __in SIZE_T nDataSize) = 0;
-    virtual HRESULT OnSendMsg(__in LPCVOID lpData, __in SIZE_T nDataSize) = 0;
+    virtual HRESULT OnData(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize) = 0;
+    virtual HRESULT OnSendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize) = 0;
 
   private:
     LPVOID lpConn;
@@ -135,18 +135,18 @@ public:
 
   //--------
 
-  typedef Callback<VOID (__in CIpc *lpIpc, __in HRESULT hErrorCode)> OnEngineErrorCallback;
+  typedef Callback<VOID (_In_ CIpc *lpIpc, _In_ HRESULT hErrorCode)> OnEngineErrorCallback;
 
-  typedef Callback<HRESULT (__in CIpc *lpIpc, __in HANDLE h, __in CUserData *lpUserData,
-                            __inout CLayerList &cLayersList, __in HRESULT hErrorCode)> OnConnectCallback;
-  typedef Callback<VOID (__in CIpc *lpIpc, __in HANDLE h, __in CUserData *lpUserData,
-                         __in HRESULT hErrorCode)> OnDisconnectCallback;
-  typedef Callback<HRESULT (__in CIpc *lpIpc, __in HANDLE h, __in CUserData *lpUserData)> OnDataReceivedCallback;
-  typedef Callback<VOID (__in CIpc *lpIpc, __in HANDLE h, __in CUserData *lpUserData,
-                         __in HRESULT hErrorCode)> OnDestroyCallback;
+  typedef Callback<HRESULT (_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CUserData *lpUserData,
+                            _Inout_ CLayerList &cLayersList, _In_ HRESULT hErrorCode)> OnConnectCallback;
+  typedef Callback<VOID (_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CUserData *lpUserData,
+                         _In_ HRESULT hErrorCode)> OnDisconnectCallback;
+  typedef Callback<HRESULT (_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CUserData *lpUserData)> OnDataReceivedCallback;
+  typedef Callback<VOID (_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CUserData *lpUserData,
+                         _In_ HRESULT hErrorCode)> OnDestroyCallback;
 
-  typedef Callback<VOID (__in CIpc *lpIpc, __in HANDLE h, __in LPVOID lpCookie,
-                         __in CUserData *lpUserData)> OnAfterWriteSignalCallback;
+  typedef Callback<VOID (_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie,
+                         _In_ CUserData *lpUserData)> OnAfterWriteSignalCallback;
 
   typedef struct {
     CLayerList &cLayersList;
@@ -158,7 +158,7 @@ public:
     TAutoRefCounted<CUserData> &cUserData;
   } CREATE_CALLBACK_DATA;
 
-  typedef Callback<HRESULT (__in CIpc *lpIpc, __in HANDLE h, __inout CREATE_CALLBACK_DATA &sData)> OnCreateCallback;
+  typedef Callback<HRESULT (_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CREATE_CALLBACK_DATA &sData)> OnCreateCallback;
 
   //--------
 
@@ -182,7 +182,7 @@ public:
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CAutoMultiSendLock);
   public:
-    CAutoMultiSendLock(__in CMultiSendLock *lpLock);
+    CAutoMultiSendLock(_In_ CMultiSendLock *lpLock);
     ~CAutoMultiSendLock();
 
     BOOL IsLocked() const
@@ -196,36 +196,36 @@ public:
 
   //--------
 protected:
-  CIpc(__in CIoCompletionPortThreadPool &cDispatcherPool, __in CPropertyBag &cPropBag);
+  CIpc(_In_ CIoCompletionPortThreadPool &cDispatcherPool, _In_ CPropertyBag &cPropBag);
 
 public:
   virtual ~CIpc();
 
-  VOID On(__in OnEngineErrorCallback cEngineErrorCallback);
+  VOID On(_In_ OnEngineErrorCallback cEngineErrorCallback);
 
   HRESULT Initialize();
   VOID Finalize();
 
-  virtual HRESULT SendMsg(__in HANDLE h, __in LPCVOID lpMsg, __in SIZE_T nMsgSize);
-  virtual HRESULT SendStream(__in HANDLE h, __in CStream *lpStream);
-  virtual HRESULT AfterWriteSignal(__in HANDLE h, __in OnAfterWriteSignalCallback cCallback, __in LPVOID lpCookie);
+  virtual HRESULT SendMsg(_In_ HANDLE h, _In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize);
+  virtual HRESULT SendStream(_In_ HANDLE h, _In_ CStream *lpStream);
+  virtual HRESULT AfterWriteSignal(_In_ HANDLE h, _In_ OnAfterWriteSignalCallback cCallback, _In_opt_ LPVOID lpCookie);
 
-  CMultiSendLock* StartMultiSendBlock(__in HANDLE h);
+  CMultiSendLock* StartMultiSendBlock(_In_ HANDLE h);
 
-  virtual HRESULT GetBufferedMessage(__in HANDLE h, __out LPVOID lpMsg, __inout SIZE_T *lpnMsgSize);
-  virtual HRESULT ConsumeBufferedMessage(__in HANDLE h, __in SIZE_T nConsumedBytes);
+  virtual HRESULT GetBufferedMessage(_In_ HANDLE h, _Out_ LPVOID lpMsg, _Inout_ SIZE_T *lpnMsgSize);
+  virtual HRESULT ConsumeBufferedMessage(_In_ HANDLE h, _In_ SIZE_T nConsumedBytes);
 
-  HRESULT Close(__in HANDLE h, __in HRESULT hErrorCode=S_OK);
+  HRESULT Close(_In_ HANDLE h, _In_ HRESULT hErrorCode=S_OK);
 
-  HRESULT IsConnected(__in HANDLE h);
-  HRESULT IsClosed(__in HANDLE h, __out_opt HRESULT *lphErrorCode=NULL);
+  HRESULT IsConnected(_In_ HANDLE h);
+  HRESULT IsClosed(_In_ HANDLE h, _Out_opt_ HRESULT *lphErrorCode=NULL);
 
   //NOTE: On success, the connection will own the layer
-  HRESULT AddLayer(__in HANDLE h, __in CLayer *lpLayer, __in_opt BOOL bFront=TRUE);
+  HRESULT AddLayer(_In_ HANDLE h, _In_ CLayer *lpLayer, _In_opt_ BOOL bFront=TRUE);
 
-  CUserData* GetUserData(__in HANDLE h);
+  CUserData* GetUserData(_In_ HANDLE h);
 
-  eConnectionClass GetClass(__in HANDLE h);
+  eConnectionClass GetClass(_In_ HANDLE h);
 
   BOOL IsShuttingDown();
 
@@ -242,7 +242,7 @@ protected:
       TypeMAX=TypeWrite
     } eType;
 
-    explicit CPacket(__in DWORD dwPacketSize) : CBaseMemObj(), TLnkLstNode<CPacket>()
+    explicit CPacket(_In_ DWORD dwPacketSize) : CBaseMemObj(), TLnkLstNode<CPacket>()
       {
       MemSet(&sOvr, 0, sizeof(sOvr));
       nType = TypeDiscard;
@@ -264,7 +264,7 @@ protected:
       return;
       };
 
-    static CPacket* FromOverlapped(__in LPOVERLAPPED lpOvr)
+    static CPacket* FromOverlapped(_In_ LPOVERLAPPED lpOvr)
       {
       return (CPacket*)((char*)lpOvr - (char*)&(((CPacket*)0)->sOvr));
       };
@@ -279,7 +279,7 @@ protected:
       return lpConn;
       };
 
-    VOID Reset(__in eType nType, __in CConnectionBase *_lpConn)
+    VOID Reset(_In_ eType nType, _In_opt_ CConnectionBase *_lpConn)
       {
       SetType(nType);
       nOrder = 0;
@@ -292,7 +292,7 @@ protected:
       return;
       };
 
-    __inline VOID SetType(__in eType _nType)
+    __inline VOID SetType(_In_ eType _nType)
       {
       _InterlockedExchange((LONG volatile *)&nType, (LONG)_nType);
       return;
@@ -303,7 +303,7 @@ protected:
       return (eType)__InterlockedRead((LONG volatile *)&nType);
       };
 
-    __inline VOID SetOrder(__in ULONG _nOrder)
+    __inline VOID SetOrder(_In_ ULONG _nOrder)
       {
       nOrder = _nOrder;
       return;
@@ -314,7 +314,7 @@ protected:
       return nOrder;
       };
 
-    __inline VOID SetStream(__in CStream *_lpStream)
+    __inline VOID SetStream(_In_ CStream *_lpStream)
       {
       if (lpStream != NULL)
         lpStream->Release();
@@ -325,7 +325,7 @@ protected:
       return;
       };
 
-    __inline HRESULT ReadStream(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_T &nReaded)
+    __inline HRESULT ReadStream(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nReaded)
       {
       HRESULT hRes = lpStream->Read(lpDest, nBytes, nReaded, nStreamReadOffset);
       if (SUCCEEDED(hRes))
@@ -343,7 +343,7 @@ protected:
       return (lpStream != NULL) ? TRUE : FALSE;
       };
 
-    __inline VOID SetBytesInUse(__in DWORD dwBytes)
+    __inline VOID SetBytesInUse(_In_ DWORD dwBytes)
       {
       dwInUseSize = dwBytes;
       return;
@@ -359,7 +359,7 @@ protected:
       return &sOvr;
       };
 
-    __inline VOID SetUserData(__in LPVOID _lpUserData)
+    __inline VOID SetUserData(_In_opt_ LPVOID _lpUserData)
       {
       lpUserData = _lpUserData;
       return;
@@ -370,13 +370,13 @@ protected:
       return lpUserData;
       };
 
-    __inline VOID SetAfterWriteSignalCallback(__in CIpc::OnAfterWriteSignalCallback cCallback)
+    __inline VOID SetAfterWriteSignalCallback(_In_ CIpc::OnAfterWriteSignalCallback cCallback)
       {
       cAfterWriteSignalCallback = cCallback;
       return;
       };
 
-    __inline VOID InvokeAfterWriteSignalCallback(__in CIpc *lpIpc, __in CUserData *_lpUserData)
+    __inline VOID InvokeAfterWriteSignalCallback(_In_ CIpc *lpIpc, _In_ CUserData *_lpUserData)
       {
       cAfterWriteSignalCallback(lpIpc, (HANDLE)lpConn, lpUserData, _lpUserData);
       return;
@@ -432,7 +432,7 @@ protected:
       return;
       };
 
-    VOID QueueLast(__in CPacket *lpPacket)
+    VOID QueueLast(_In_ CPacket *lpPacket)
       {
       if (lpPacket != NULL)
       {
@@ -454,7 +454,7 @@ protected:
       return lpPacket;
       };
 
-    VOID QueueSorted(__in CPacket *lpPacket)
+    VOID QueueSorted(_In_ CPacket *lpPacket)
       {
       CFastLock cLock(&nMutex);
       TLnkLst<CPacket>::Iterator it;
@@ -473,7 +473,7 @@ protected:
       return;
       };
 
-    CPacket* Dequeue(__in ULONG nOrder)
+    CPacket* Dequeue(_In_ ULONG nOrder)
       {
       CFastLock cLock(&nMutex);
       CPacket *lpPacket;
@@ -488,7 +488,7 @@ protected:
       return NULL;
       };
 
-    VOID Remove(__in CPacket *lpPacket)
+    VOID Remove(_In_ CPacket *lpPacket)
       {
       CFastLock cLock(&nMutex);
 
@@ -523,21 +523,21 @@ protected:
     typedef TArrayList<CTimedEventQueue::CEvent*> __TEventArray;
 
   protected:
-    CConnectionBase(__in CIpc *lpIpc, __in CIpc::eConnectionClass nClass);
+    CConnectionBase(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass);
   public:
     virtual ~CConnectionBase();
 
-    virtual VOID ShutdownLink(__in BOOL bAbortive);
+    virtual VOID ShutdownLink(_In_ BOOL bAbortive);
 
-    VOID DoCancelEventsCallback(__in __TEventArray &cEventsList);
+    VOID DoCancelEventsCallback(_In_ __TEventArray &cEventsList);
 
-    HRESULT SendMsg(__in LPCVOID lpData, __in SIZE_T nDataSize);
-    HRESULT SendStream(__in CStream *lpStream);
-    HRESULT AfterWriteSignal(__in OnAfterWriteSignalCallback cCallback, __in LPVOID lpCookie);
+    HRESULT SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
+    HRESULT SendStream(_In_ CStream *lpStream);
+    HRESULT AfterWriteSignal(_In_ OnAfterWriteSignalCallback cCallback, _In_opt_ LPVOID lpCookie);
 
-    HRESULT WriteMsg(__in LPCVOID lpData, __in SIZE_T nDataSize);
+    HRESULT WriteMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
 
-    VOID Close(__in HRESULT hRes);
+    VOID Close(_In_ HRESULT hRes);
 
     BOOL IsConnected();
     BOOL IsGracefulShutdown();
@@ -546,24 +546,24 @@ protected:
 
     HRESULT HandleConnected();
 
-    HRESULT DoRead(__in SIZE_T nPacketsCount, __in BOOL bZeroRead, __in_opt CPacket *lpReusePacket=NULL);
+    HRESULT DoRead(_In_ SIZE_T nPacketsCount, _In_ BOOL bZeroRead, _In_opt_ CPacket *lpReusePacket=NULL);
 
-    CPacket* GetPacket(__in CPacket::eType nType);
-    VOID FreePacket(__in CPacket *lpPacket);
+    CPacket* GetPacket(_In_ CPacket::eType nType);
+    VOID FreePacket(_In_ CPacket *lpPacket);
 
     CIoCompletionPortThreadPool& GetDispatcherPool();
     CIoCompletionPortThreadPool::OnPacketCallback& GetDispatcherPoolPacketCallback();
 
-    virtual HRESULT SendReadPacket(__in CPacket *lpPacket) = 0;
-    virtual HRESULT SendWritePacket(__in CPacket *lpPacket) = 0;
+    virtual HRESULT SendReadPacket(_In_ CPacket *lpPacket) = 0;
+    virtual HRESULT SendWritePacket(_In_ CPacket *lpPacket) = 0;
 
     BOOL AddRefIfStillValid();
     VOID ReleaseMySelf();
 
-    HRESULT SendDataToLayer(__in LPCVOID lpMsg, __in SIZE_T nMsgSize, __in CLayer *lpCurrLayer, __in BOOL bIsMsg);
+    HRESULT SendDataToLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize, _In_ CLayer *lpCurrLayer, _In_ BOOL bIsMsg);
 
-    HRESULT MarkLastWriteActivity(__in BOOL bSet);
-    VOID OnWriteTimeout(__in CTimedEventQueue::CEvent *lpEvent);
+    HRESULT MarkLastWriteActivity(_In_ BOOL bSet);
+    VOID OnWriteTimeout(_In_ CTimedEventQueue::CEvent *lpEvent);
 
   protected:
     friend class CIpc;
@@ -617,30 +617,30 @@ protected:
   virtual HRESULT OnInternalInitialize() = 0;
   virtual VOID OnInternalFinalize() = 0;
 
-  VOID CloseConnection(__in CConnectionBase *lpConn, __in HRESULT hErrorCode);
-  VOID ReleaseAndRemoveConnectionIfClosed(__in CConnectionBase *lpConn);
+  VOID CloseConnection(_In_ CConnectionBase *lpConn, _In_ HRESULT hErrorCode);
+  VOID ReleaseAndRemoveConnectionIfClosed(_In_ CConnectionBase *lpConn);
 
-  VOID FireOnEngineError(__in HRESULT hErrorCode);
-  HRESULT FireOnCreate(__in CConnectionBase *lpConn);
-  VOID FireOnDestroy(__in CConnectionBase *lpConn);
-  HRESULT FireOnConnect(__in CConnectionBase *lpConn, __in HRESULT hErrorCode);
-  VOID FireOnDisconnect(__in CConnectionBase *lpConn);
-  HRESULT FireOnDataReceived(__in CConnectionBase *lpConn);
+  VOID FireOnEngineError(_In_ HRESULT hErrorCode);
+  HRESULT FireOnCreate(_In_ CConnectionBase *lpConn);
+  VOID FireOnDestroy(_In_ CConnectionBase *lpConn);
+  HRESULT FireOnConnect(_In_ CConnectionBase *lpConn, _In_ HRESULT hErrorCode);
+  VOID FireOnDisconnect(_In_ CConnectionBase *lpConn);
+  HRESULT FireOnDataReceived(_In_ CConnectionBase *lpConn);
 
-  CPacket* GetPacket(__in CConnectionBase *lpConn, __in CPacket::eType nType);
-  VOID FreePacket(__in CPacket *lpPacket);
+  CPacket* GetPacket(_In_ CConnectionBase *lpConn, _In_ CPacket::eType nType);
+  VOID FreePacket(_In_ CPacket *lpPacket);
 
-  CConnectionBase* CheckAndGetConnection(__in HANDLE h);
-  CConnectionBase* IsValidConnection(__in HANDLE h);
+  CConnectionBase* CheckAndGetConnection(_In_ HANDLE h);
+  CConnectionBase* IsValidConnection(_In_ HANDLE h);
 
-  VOID OnDispatcherPacket(__in CIoCompletionPortThreadPool *lpPool, __in DWORD dwBytes, __in OVERLAPPED *lpOvr,
-                          __in HRESULT hRes);
+  VOID OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
+                          _In_ HRESULT hRes);
 
-  virtual HRESULT OnPreprocessPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __in HRESULT hRes);
-  virtual HRESULT OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __in HRESULT hRes) = 0;
+  virtual HRESULT OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes);
+  virtual HRESULT OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes) = 0;
   virtual BOOL ZeroReadsSupported() const = 0;
 
-  VOID OnReadWriteTimeout(__in CTimedEventQueue::CEvent *lpEvent);
+  VOID OnReadWriteTimeout(_In_ CTimedEventQueue::CEvent *lpEvent);
 
 protected:
   LONG volatile nInitShutdownMutex;

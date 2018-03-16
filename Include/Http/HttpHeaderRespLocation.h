@@ -38,11 +38,11 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Location)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
-  HRESULT SetLocation(__in_z LPCSTR szLocationA);
+  HRESULT SetLocation(_In_z_ LPCSTR szLocationA);
   LPCSTR GetLocation() const;
 
 private:

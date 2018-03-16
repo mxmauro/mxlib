@@ -78,7 +78,7 @@ static const struct {
 //-----------------------------------------------------------
 
 static int InitializeFromPEM_PasswordCallback(char *buf, int size, int rwflag, void *userdata);
-static BOOL Asn1_ValidateLength(__inout LPBYTE lpCurr, __in LPBYTE lpEnd);
+static BOOL Asn1_ValidateLength(_Inout_ LPBYTE lpCurr, _In_ LPBYTE lpEnd);
 
 //-----------------------------------------------------------
 
@@ -102,7 +102,7 @@ VOID CSslCertificateArray::Reset()
   return;
 }
 
-HRESULT CSslCertificateArray::AddFromMemory(__in LPCVOID lpData, __in SIZE_T nDataLen, __in_z_opt LPCSTR szPasswordA)
+HRESULT CSslCertificateArray::AddFromMemory(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA)
 {
   HRESULT hRes;
 
@@ -257,7 +257,7 @@ HRESULT CSslCertificateArray::AddFromMemory(__in LPCVOID lpData, __in SIZE_T nDa
   return S_OK;
 }
 
-HRESULT CSslCertificateArray::AddFromFile(__in_z LPCWSTR szFileNameW, __in_z_opt LPCSTR szPasswordA)
+HRESULT CSslCertificateArray::AddFromFile(_In_z_ LPCWSTR szFileNameW, _In_opt_z_ LPCSTR szPasswordA)
 {
   CWindowsHandle cFileH;
   DWORD dwSizeLo, dwSizeHi, dwReaded;
@@ -287,8 +287,8 @@ HRESULT CSslCertificateArray::AddFromFile(__in_z LPCWSTR szFileNameW, __in_z_opt
   return AddFromMemory(aTempBuf.Get(), (SIZE_T)dwSizeLo, szPasswordA);
 }
 
-HRESULT CSslCertificateArray::AddPublicKeyFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen,
-                                                  __in_z_opt LPCSTR szPasswordA)
+HRESULT CSslCertificateArray::AddPublicKeyFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen,
+                                                  _In_opt_z_ LPCSTR szPasswordA)
 {
   TAutoDeletePtr<CCryptoRSA> cRsa;
   HRESULT hRes;
@@ -311,8 +311,8 @@ HRESULT CSslCertificateArray::AddPublicKeyFromDER(__in LPCVOID lpData, __in SIZE
   return hRes;
 }
 
-HRESULT CSslCertificateArray::AddPublicKeyFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA,
-                                                  __in_opt SIZE_T nPemLen)
+HRESULT CSslCertificateArray::AddPublicKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA,
+                                                  _In_opt_ SIZE_T nPemLen)
 {
   TAutoDeletePtr<CCryptoRSA> cRsa;
   HRESULT hRes;
@@ -335,8 +335,8 @@ HRESULT CSslCertificateArray::AddPublicKeyFromPEM(__in_z LPCSTR szPemA, __in_z_o
   return hRes;
 }
 
-HRESULT CSslCertificateArray::AddPrivateKeyFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen,
-                                                   __in_z_opt LPCSTR szPasswordA)
+HRESULT CSslCertificateArray::AddPrivateKeyFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen,
+                                                   _In_opt_z_ LPCSTR szPasswordA)
 {
   TAutoDeletePtr<CCryptoRSA> cRsa;
   HRESULT hRes;
@@ -359,8 +359,8 @@ HRESULT CSslCertificateArray::AddPrivateKeyFromDER(__in LPCVOID lpData, __in SIZ
   return hRes;
 }
 
-HRESULT CSslCertificateArray::AddPrivateKeyFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA,
-                                                   __in_opt SIZE_T nPemLen)
+HRESULT CSslCertificateArray::AddPrivateKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA,
+                                                   _In_opt_ SIZE_T nPemLen)
 {
   TAutoDeletePtr<CCryptoRSA> cRsa;
   HRESULT hRes;
@@ -383,7 +383,7 @@ HRESULT CSslCertificateArray::AddPrivateKeyFromPEM(__in_z LPCSTR szPemA, __in_z_
   return hRes;
 }
 
-HRESULT CSslCertificate::InitializeFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen, __in_z_opt LPCSTR szPasswordA)
+HRESULT CSslCertificate::InitializeFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA)
 {
   X509 *lpNewX509;
   PKCS12 *lpPkcs12;
@@ -427,7 +427,7 @@ done:
   return S_OK;
 }
 
-HRESULT CSslCertificate::InitializeFromPEM(__in LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA, __in_opt SIZE_T nPemLen)
+HRESULT CSslCertificate::InitializeFromPEM(_In_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA, _In_opt_ SIZE_T nPemLen)
 {
   X509 *lpNewX509;
   BIO *lpBio;
@@ -454,8 +454,8 @@ HRESULT CSslCertificate::InitializeFromPEM(__in LPCSTR szPemA, __in_z_opt LPCSTR
   return S_OK;
 }
 
-HRESULT CSslCertificateArray::AddCertificateFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen,
-                                                    __in_z_opt LPCSTR szPasswordA)
+HRESULT CSslCertificateArray::AddCertificateFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen,
+                                                    _In_opt_z_ LPCSTR szPasswordA)
 {
   TAutoDeletePtr<CSslCertificate> cNewCert;
   PKCS12 *lpPkcs12;
@@ -481,6 +481,8 @@ HRESULT CSslCertificateArray::AddCertificateFromDER(__in LPCVOID lpData, __in SI
     ERR_clear_error();
     if (PKCS12_parse(lpPkcs12, szPasswordA, &lpEvpKey, &lpX509, NULL))
     {
+      hRes = S_OK;
+
       if (lpX509 != NULL)
       {
         TAutoFreePtr<BYTE> cTempBuffer;
@@ -633,8 +635,8 @@ HRESULT CSslCertificateArray::AddCertificateFromDER(__in LPCVOID lpData, __in SI
   return S_OK;
 }
 
-HRESULT CSslCertificateArray::AddCertificateFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA,
-                                                    __in_opt SIZE_T nPemLen)
+HRESULT CSslCertificateArray::AddCertificateFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA,
+                                                    _In_opt_ SIZE_T nPemLen)
 {
   TAutoDeletePtr<CSslCertificate> cNewCert;
   HRESULT hRes;
@@ -654,7 +656,7 @@ HRESULT CSslCertificateArray::AddCertificateFromPEM(__in_z LPCSTR szPemA, __in_z
   return S_OK;
 }
 
-HRESULT CSslCertificateCrl::InitializeFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen)
+HRESULT CSslCertificateCrl::InitializeFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen)
 {
   X509_CRL *lpNewX509Crl;
   BIO *lpBio;
@@ -679,8 +681,8 @@ HRESULT CSslCertificateCrl::InitializeFromDER(__in LPCVOID lpData, __in SIZE_T n
   return S_OK;
 }
 
-HRESULT CSslCertificateCrl::InitializeFromPEM(__in LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA,
-                                              __in_opt SIZE_T nPemLen)
+HRESULT CSslCertificateCrl::InitializeFromPEM(_In_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA,
+                                              _In_opt_ SIZE_T nPemLen)
 {
   X509_CRL *lpNewX509Crl;
   BIO *lpBio;
@@ -707,7 +709,7 @@ HRESULT CSslCertificateCrl::InitializeFromPEM(__in LPCSTR szPemA, __in_z_opt LPC
   return S_OK;
 }
 
-HRESULT CSslCertificateArray::AddCrlFromDER(__in LPCVOID lpData, __in SIZE_T nDataLen)
+HRESULT CSslCertificateArray::AddCrlFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen)
 {
   TAutoDeletePtr<CSslCertificateCrl> cNewCert;
   HRESULT hRes;
@@ -726,8 +728,8 @@ HRESULT CSslCertificateArray::AddCrlFromDER(__in LPCVOID lpData, __in SIZE_T nDa
   return S_OK;
 }
 
-HRESULT CSslCertificateArray::AddCrlFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA,
-                                            __in_opt SIZE_T nPemLen)
+HRESULT CSslCertificateArray::AddCrlFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA,
+                                            _In_opt_ SIZE_T nPemLen)
 {
   TAutoDeletePtr<CSslCertificateCrl> cNewCert;
   HRESULT hRes;
@@ -748,13 +750,13 @@ HRESULT CSslCertificateArray::AddCrlFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPC
 
 HRESULT CSslCertificateArray::ImportFromWindowsStore()
 {
-  typedef HCERTSTORE (WINAPI *lpfnCertOpenSystemStoreW)(__in_opt HCRYPTPROV_LEGACY hProv,
-                                                        __in LPCWSTR szSubsystemProtocol);
-  typedef PCCERT_CONTEXT (WINAPI *lpfnCertEnumCertificatesInStore)(__in HCERTSTORE hCertStore,
-                                                                   __in_opt PCCERT_CONTEXT pPrevCertContext);
-  typedef PCCRL_CONTEXT (WINAPI *lpfnCertEnumCRLsInStore)(__in HCERTSTORE hCertStore,
-                                                          __in_opt PCCRL_CONTEXT pPrevCrlContext);
-  typedef BOOL (WINAPI *lpfnCertCloseStore)(__in_opt HCERTSTORE hCertStore, __in DWORD dwFlags);
+  typedef HCERTSTORE (WINAPI *lpfnCertOpenSystemStoreW)(_In_opt_ HCRYPTPROV_LEGACY hProv,
+                                                        _In_ LPCWSTR szSubsystemProtocol);
+  typedef PCCERT_CONTEXT (WINAPI *lpfnCertEnumCertificatesInStore)(_In_ HCERTSTORE hCertStore,
+                                                                   _In_opt_ PCCERT_CONTEXT pPrevCertContext);
+  typedef PCCRL_CONTEXT (WINAPI *lpfnCertEnumCRLsInStore)(_In_ HCERTSTORE hCertStore,
+                                                          _In_opt_ PCCRL_CONTEXT pPrevCrlContext);
+  typedef BOOL (WINAPI *lpfnCertCloseStore)(_In_opt_ HCERTSTORE hCertStore, _In_ DWORD dwFlags);
   HCERTSTORE hStore;
   PCCERT_CONTEXT lpCertCtx;
   PCCRL_CONTEXT lpCrlCtx;
@@ -836,7 +838,7 @@ static int InitializeFromPEM_PasswordCallback(char *buf, int size, int rwflag, v
   return (int)nPassLen;
 }
 
-static BOOL Asn1_ValidateLength(__inout LPBYTE lpCurr, __in LPBYTE lpEnd)
+static BOOL Asn1_ValidateLength(_Inout_ LPBYTE lpCurr, _In_ LPBYTE lpEnd)
 {
   SIZE_T nLen;
 

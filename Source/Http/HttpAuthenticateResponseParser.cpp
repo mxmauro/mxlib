@@ -50,7 +50,7 @@ VOID CHttpAuthenticateResponseParser::Reset()
   return;
 }
 
-HRESULT CHttpAuthenticateResponseParser::Parse(__in_z LPCSTR szResponseA)
+HRESULT CHttpAuthenticateResponseParser::Parse(_In_z_ LPCSTR szResponseA)
 {
   TAutoFreePtr<TOKEN_VALUE> cNewTokenValue;
   LPCSTR szNameStartA, szNameEndA, szValueStartA, szValueEndA;
@@ -162,7 +162,7 @@ HRESULT CHttpAuthenticateResponseParser::Parse(__in_z LPCSTR szResponseA)
   return S_OK;
 }
 
-LPCSTR CHttpAuthenticateResponseParser::GetValue(__in_z LPCSTR szKeyA) const
+LPCSTR CHttpAuthenticateResponseParser::GetValue(_In_z_ LPCSTR szKeyA) const
 {
   SIZE_T i, nCount;
 
@@ -178,8 +178,8 @@ LPCSTR CHttpAuthenticateResponseParser::GetValue(__in_z LPCSTR szKeyA) const
   return NULL;
 }
 
-HRESULT CHttpAuthenticateResponseParser::MakeAutoAuthorization(__out CStringA &cStrDestA, __in_z LPCSTR szUserNameA,
-                                                               __in_z LPCSTR szPasswordA)
+HRESULT CHttpAuthenticateResponseParser::MakeAutoAuthorization(_Out_ CStringA &cStrDestA, _In_z_ LPCSTR szUserNameA,
+                                                               _In_z_ LPCSTR szPasswordA)
 {
   switch (nType)
   {
@@ -192,8 +192,8 @@ HRESULT CHttpAuthenticateResponseParser::MakeAutoAuthorization(__out CStringA &c
   return MX_E_NotReady;
 }
 
-HRESULT CHttpAuthenticateResponseParser::MakeBasicAuthorization(__out CStringA &cStrDestA, __in_z LPCSTR szUserNameA,
-                                                                __in_z LPCSTR szPasswordA, __in BOOL bIsProxy)
+HRESULT CHttpAuthenticateResponseParser::MakeBasicAuthorization(_Out_ CStringA &cStrDestA, _In_z_ LPCSTR szUserNameA,
+                                                                _In_z_ LPCSTR szPasswordA, _In_ BOOL bIsProxy)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -227,13 +227,13 @@ HRESULT CHttpAuthenticateResponseParser::MakeBasicAuthorization(__out CStringA &
   return hRes;
 }
 
-HRESULT CHttpAuthenticateResponseParser::MakeDigestAuthorization(__out CStringA &cStrDestA, __in_z LPCSTR szUserNameA,
-                                                                 __in_z LPCSTR szRealmA, __in_z LPCSTR szPasswordA,
-                                                                 __in_z LPCSTR szAlgorithmA, __in_z LPCSTR szMethodA,
-                                                                 __in_z LPCSTR szNonceA, __in SIZE_T nNonceCount,
-                                                                 __in_z LPCSTR szQopA, __in_z LPCSTR szDigestUriA,
-                                                                 __in LPVOID lpBodyMD5Checksum, __in_z LPCSTR szOpaqueA,
-                                                                 __in BOOL bIsProxy)
+HRESULT CHttpAuthenticateResponseParser::MakeDigestAuthorization(_Out_ CStringA &cStrDestA, _In_z_ LPCSTR szUserNameA,
+                                                                 _In_z_ LPCSTR szRealmA, _In_z_ LPCSTR szPasswordA,
+                                                                 _In_z_ LPCSTR szAlgorithmA, _In_z_ LPCSTR szMethodA,
+                                                                 _In_z_ LPCSTR szNonceA, _In_ SIZE_T nNonceCount,
+                                                                 _In_z_ LPCSTR szQopA, _In_z_ LPCSTR szDigestUriA,
+                                                                 _In_ LPVOID lpBodyMD5Checksum, _In_z_ LPCSTR szOpaqueA,
+                                                                 _In_ BOOL bIsProxy)
 {
   cStrDestA.Empty();
   return E_NOTIMPL;

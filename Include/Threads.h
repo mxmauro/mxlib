@@ -38,22 +38,22 @@ public:
   CThread();
   virtual ~CThread();
 
-  virtual BOOL Start(__in_opt BOOL bSuspended=FALSE);
-  virtual BOOL Stop(__in_opt DWORD dwTimeout=INFINITE);
+  virtual BOOL Start(_In_opt_ BOOL bSuspended=FALSE);
+  virtual BOOL Stop(_In_opt_ DWORD dwTimeout=INFINITE);
   virtual BOOL StopAsync();
   virtual BOOL Pause();
   virtual BOOL Resume();
   virtual BOOL IsRunning();
-  virtual BOOL CheckForAbort(__in DWORD dwTimeout=0, __in DWORD dwEventCount=0,
-                             __out_opt LPHANDLE lphEventList=NULL, __out_opt LPDWORD lpdwHitEvent=NULL);
+  virtual BOOL CheckForAbort(_In_opt_ DWORD dwTimeout=0, _In_opt_ DWORD dwEventCount=0,
+                             _In_opt_ LPHANDLE lphEventList=NULL, _Out_opt_ LPDWORD lpdwHitEvent=NULL);
 
-  static VOID SetThreadName(__in DWORD dwThreadId, __in_z_opt LPCSTR szName);
-  virtual VOID SetThreadName(__in_z_opt LPCSTR szName);
+  static VOID SetThreadName(_In_ DWORD dwThreadId, _In_opt_z_ LPCSTR szName);
+  virtual VOID SetThreadName(_In_opt_z_ LPCSTR szName);
 
-  virtual BOOL SetPriority(__in int nPriority);
+  virtual BOOL SetPriority(_In_ int nPriority);
   virtual int GetPriority() const;
 
-  virtual BOOL SetStackSize(__in DWORD dwStackSize=0);
+  virtual BOOL SetStackSize(_In_opt_ DWORD dwStackSize=0);
   virtual DWORD GetStackSize() const;
 
   virtual HANDLE GetKillEvent()
@@ -70,15 +70,15 @@ public:
     return dwThreadId;
     };
 
-  HRESULT SetAutoDelete(__in BOOL bAutoDelete);
+  HRESULT SetAutoDelete(_In_ BOOL bAutoDelete);
 
-  virtual BOOL Wait(__in DWORD dwTimeout=0, __in DWORD dwEventCount=0,
-                    __in_opt LPHANDLE lphEventList=NULL, __out_opt LPDWORD lpdwHitEvent=NULL);
+  virtual BOOL Wait(_In_opt_ DWORD dwTimeout=0, _In_opt_ DWORD dwEventCount=0,
+                    _In_opt_ LPHANDLE lphEventList=NULL, _Out_opt_ LPDWORD lpdwHitEvent=NULL);
 
   virtual VOID ThreadProc()=0;
 
 private:
-  static unsigned int __stdcall CommonThreadProc(__in LPVOID _lpParameter);
+  static unsigned int __stdcall CommonThreadProc(_In_ LPVOID _lpParameter);
 
 protected:
   int nPriority;
@@ -94,12 +94,12 @@ class CWorkerThread : public CThread
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CWorkerThread);
 public:
-  typedef VOID (__cdecl *lpfnWorkerThread)(__in CWorkerThread *lpWrkThread, __in LPVOID lpParam);
+  typedef VOID (__cdecl *lpfnWorkerThread)(_In_ CWorkerThread *lpWrkThread, _In_opt_ LPVOID lpParam);
 
-  CWorkerThread(__in lpfnWorkerThread lpStartRoutine=NULL, __in LPVOID lpParam=NULL);
+  CWorkerThread(_In_opt_ lpfnWorkerThread lpStartRoutine=NULL, _In_opt_ LPVOID lpParam=NULL);
   virtual ~CWorkerThread();
 
-  virtual BOOL SetRoutine(__in lpfnWorkerThread lpStartRoutine, __in LPVOID lpParam=NULL);
+  virtual BOOL SetRoutine(_In_ lpfnWorkerThread lpStartRoutine, _In_opt_ LPVOID lpParam=NULL);
 
 private:
   VOID ThreadProc();
@@ -120,17 +120,18 @@ public:
     {
     lpObject = NULL;
     lpStartRoutine = NULL;
+    return;
     };
 
-  virtual BOOL Start(__in BOOL bSuspended=FALSE)
+  virtual BOOL Start(_In_opt_ BOOL bSuspended=FALSE)
     {
     if (lpObject==NULL || (lpStartRoutine==NULL && lpStartRoutineWithParam==NULL))
       return FALSE;
     return CThread::Start(bSuspended);
     };
   
-  virtual BOOL Start(__in TClass *_lpObject, __in VOID (TClass::* _lpStartRoutine)(),
-                     __in BOOL bSuspended=FALSE)
+  virtual BOOL Start(_In_ TClass *_lpObject, _In_ VOID (TClass::* _lpStartRoutine)(),
+                     _In_ BOOL bSuspended=FALSE)
     {
     lpObject = _lpObject;
     lpStartRoutine = _lpStartRoutine;
@@ -139,8 +140,8 @@ public:
     return Start(bSuspended);
     }
 
-  virtual BOOL Start(__in TClass *_lpObject, __in VOID (TClass::* _lpStartRoutine)(SIZE_T),
-                     __in SIZE_T _nParam, __in BOOL bSuspended=FALSE)
+  virtual BOOL Start(_In_ TClass *_lpObject, _In_ VOID (TClass::* _lpStartRoutine)(SIZE_T),
+                     _In_ SIZE_T _nParam, _In_ BOOL bSuspended=FALSE)
     {
     lpObject = _lpObject;
     lpStartRoutine = NULL;
@@ -174,21 +175,21 @@ public:
   CThreadPool();
   virtual ~CThreadPool();
 
-  BOOL Initialize(__in ULONG nMinWorkerThreads, __in ULONG nWorkerThreadsCreateAhead,
-                  __in ULONG nThreadShutdownThresholdMs);
+  BOOL Initialize(_In_ ULONG nMinWorkerThreads, _In_ ULONG nWorkerThreadsCreateAhead,
+                  _In_ ULONG nThreadShutdownThresholdMs);
   VOID Finalize();
 
   BOOL IsInitialized();
 
-  BOOL QueueTask(__in LPTHREAD_START_ROUTINE lpRoutine, __in LPVOID lpContext);
+  BOOL QueueTask(_In_ LPTHREAD_START_ROUTINE lpRoutine, _In_ LPVOID lpContext);
 
   virtual LPVOID OnThreadStarted();
-  virtual VOID OnThreadTerminated(__in LPVOID lpContext);
+  virtual VOID OnThreadTerminated(_In_ LPVOID lpContext);
 
-  virtual VOID OnTaskTerminated(__in LPVOID lpContext, __in HRESULT hReturnValue) = 0;
-  virtual VOID OnTaskCancelled(__in LPVOID lpContext) = 0;
-  virtual VOID OnTaskExceptionError(__in LPVOID lpContext, __in DWORD dwException,
-                                    __in struct _EXCEPTION_POINTERS *excPtr) = 0;
+  virtual VOID OnTaskTerminated(_In_ LPVOID lpContext, _In_ HRESULT hReturnValue) = 0;
+  virtual VOID OnTaskCancelled(_In_ LPVOID lpContext) = 0;
+  virtual VOID OnTaskExceptionError(_In_ LPVOID lpContext, _In_ DWORD dwException,
+                                    _In_ struct _EXCEPTION_POINTERS *excPtr) = 0;
 
 private:
   typedef TClassWorkerThread<CThreadPool> CWorkerThread;
@@ -205,11 +206,11 @@ private:
 
 private:
   DWORD InitializeWorker();
-  VOID RemoveWorker(__in CWorkerThread *lpWorker);
-  VOID RemoveTask(__in WORKITEM *lpWorkItem);
-  VOID ExecuteTask(__in WORKITEM *lpWorkItem);
-  VOID CancelTask(__in WORKITEM *lpWorkItem);
-  VOID WorkerThreadProc(__in SIZE_T nParam);
+  VOID RemoveWorker(_In_ CWorkerThread *lpWorker);
+  VOID RemoveTask(_In_ WORKITEM *lpWorkItem);
+  VOID ExecuteTask(_In_ WORKITEM *lpWorkItem);
+  VOID CancelTask(_In_ WORKITEM *lpWorkItem);
+  VOID WorkerThreadProc(_In_ SIZE_T nParam);
 
 private:
   CCriticalSection cMtx;

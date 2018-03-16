@@ -26,7 +26,7 @@
 
 //-----------------------------------------------------------
 
-static VOID RemoveTrailingZeroDecimals(__inout MX::CStringA &cStrA);
+static VOID RemoveTrailingZeroDecimals(_Inout_ MX::CStringA &cStrA);
 
 //-----------------------------------------------------------
 
@@ -43,7 +43,7 @@ CHttpHeaderReqAccept::~CHttpHeaderReqAccept()
   return;
 }
 
-HRESULT CHttpHeaderReqAccept::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderReqAccept::Parse(_In_z_ LPCSTR szValueA)
 {
   CType *lpType;
   LPCSTR szStartA;
@@ -147,7 +147,7 @@ HRESULT CHttpHeaderReqAccept::Parse(__in_z LPCSTR szValueA)
   return (bGotItem != FALSE) ? S_OK : MX_E_InvalidData;
 }
 
-HRESULT CHttpHeaderReqAccept::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderReqAccept::Build(_Inout_ CStringA &cStrDestA)
 {
   SIZE_T i, nCount, nParamIdx, nParamsCount;
   CType *lpType;
@@ -208,7 +208,7 @@ HRESULT CHttpHeaderReqAccept::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqAccept::AddType(__in_z LPCSTR szTypeA, __out_opt CType **lplpType)
+HRESULT CHttpHeaderReqAccept::AddType(_In_z_ LPCSTR szTypeA, _Out_opt_ CType **lplpType)
 {
   TAutoDeletePtr<CType> cNewType;
   SIZE_T i, nCount;
@@ -251,12 +251,12 @@ SIZE_T CHttpHeaderReqAccept::GetTypesCount() const
   return cTypesList.GetCount();
 }
 
-CHttpHeaderReqAccept::CType* CHttpHeaderReqAccept::GetType(__in SIZE_T nIndex) const
+CHttpHeaderReqAccept::CType* CHttpHeaderReqAccept::GetType(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cTypesList.GetCount()) ? cTypesList.GetElementAt(nIndex) : NULL;
 }
 
-CHttpHeaderReqAccept::CType* CHttpHeaderReqAccept::GetType(__in_z LPCSTR szTypeA) const
+CHttpHeaderReqAccept::CType* CHttpHeaderReqAccept::GetType(_In_z_ LPCSTR szTypeA) const
 {
   SIZE_T i, nCount;
 
@@ -287,7 +287,7 @@ CHttpHeaderReqAccept::CType::~CType()
   return;
 }
 
-HRESULT CHttpHeaderReqAccept::CType::SetType(__in_z LPCSTR szTypeA)
+HRESULT CHttpHeaderReqAccept::CType::SetType(_In_z_ LPCSTR szTypeA)
 {
   LPCSTR szStartA, szEndA;
 
@@ -333,7 +333,7 @@ LPCSTR CHttpHeaderReqAccept::CType::GetType() const
   return (LPCSTR)cStrTypeA;
 }
 
-HRESULT CHttpHeaderReqAccept::CType::SetQ(__in double _q)
+HRESULT CHttpHeaderReqAccept::CType::SetQ(_In_ double _q)
 {
   if (_q < -0.000001 || _q > 1.000001)
     return E_INVALIDARG;
@@ -346,7 +346,7 @@ double CHttpHeaderReqAccept::CType::GetQ() const
   return q;
 }
 
-HRESULT CHttpHeaderReqAccept::CType::AddParam(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW)
+HRESULT CHttpHeaderReqAccept::CType::AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW)
 {
   TAutoFreePtr<PARAMETER> cNewParam;
   LPCSTR szStartA, szEndA;
@@ -400,17 +400,17 @@ SIZE_T CHttpHeaderReqAccept::CType::GetParamsCount() const
   return cParamsList.GetCount();
 }
 
-LPCSTR CHttpHeaderReqAccept::CType::GetParamName(__in SIZE_T nIndex) const
+LPCSTR CHttpHeaderReqAccept::CType::GetParamName(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cParamsList.GetCount()) ? cParamsList[nIndex]->szNameA : NULL;
 }
 
-LPCWSTR CHttpHeaderReqAccept::CType::GetParamValue(__in SIZE_T nIndex) const
+LPCWSTR CHttpHeaderReqAccept::CType::GetParamValue(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cParamsList.GetCount()) ? cParamsList[nIndex]->szValueW : NULL;
 }
 
-LPCWSTR CHttpHeaderReqAccept::CType::GetParamValue(__in_z LPCSTR szNameA) const
+LPCWSTR CHttpHeaderReqAccept::CType::GetParamValue(_In_z_ LPCSTR szNameA) const
 {
   SIZE_T i, nCount;
 
@@ -430,7 +430,7 @@ LPCWSTR CHttpHeaderReqAccept::CType::GetParamValue(__in_z LPCSTR szNameA) const
 
 //-----------------------------------------------------------
 
-static VOID RemoveTrailingZeroDecimals(__inout MX::CStringA &cStrA)
+static VOID RemoveTrailingZeroDecimals(_Inout_ MX::CStringA &cStrA)
 {
   SIZE_T nCount = 0;
   SIZE_T nOfs, nLen = cStrA.GetLength();

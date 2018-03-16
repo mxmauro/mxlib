@@ -50,7 +50,7 @@ public:
   ~CHttpAuthenticateResponseParser();
 
   VOID Reset();
-  HRESULT Parse(__in_z LPCSTR szResponseA);
+  HRESULT Parse(_In_z_ LPCSTR szResponseA);
 
   eClass GetClass() const
     {
@@ -60,17 +60,17 @@ public:
     {
     return nType;
     };
-  LPCSTR GetValue(__in_z LPCSTR szKeyA) const;
+  LPCSTR GetValue(_In_z_ LPCSTR szKeyA) const;
 
-  HRESULT MakeAutoAuthorization(__out CStringA &cStrDestA, __in_z LPCSTR szUserNameA, __in_z LPCSTR szPasswordA);
+  HRESULT MakeAutoAuthorization(_Out_ CStringA &cStrDestA, _In_z_ LPCSTR szUserNameA, _In_z_ LPCSTR szPasswordA);
 
-  HRESULT MakeBasicAuthorization(__out CStringA &cStrDestA, __in_z LPCSTR szUserNameA, __in_z LPCSTR szPasswordA,
-                                 __in BOOL bIsProxy);
-  HRESULT MakeDigestAuthorization(__out CStringA &cStrDestA, __in_z LPCSTR szUserNameA, __in_z LPCSTR szRealmA,
-                                  __in_z LPCSTR szPasswordA, __in_z LPCSTR szAlgorithmA, __in_z LPCSTR szMethodA,
-                                  __in_z LPCSTR szNonceA, __in SIZE_T nNonceCount, __in_z LPCSTR szQopA,
-                                  __in_z LPCSTR szDigestUriA, __in LPVOID lpBodyMD5Checksum, __in_z LPCSTR szOpaqueA,
-                                  __in BOOL bIsProxy);
+  HRESULT MakeBasicAuthorization(_Out_ CStringA &cStrDestA, _In_z_ LPCSTR szUserNameA, _In_z_ LPCSTR szPasswordA,
+                                 _In_ BOOL bIsProxy);
+  HRESULT MakeDigestAuthorization(_Out_ CStringA &cStrDestA, _In_z_ LPCSTR szUserNameA, _In_z_ LPCSTR szRealmA,
+                                  _In_z_ LPCSTR szPasswordA, _In_z_ LPCSTR szAlgorithmA, _In_z_ LPCSTR szMethodA,
+                                  _In_z_ LPCSTR szNonceA, _In_ SIZE_T nNonceCount, _In_z_ LPCSTR szQopA,
+                                  _In_z_ LPCSTR szDigestUriA, _In_ LPVOID lpBodyMD5Checksum, _In_z_ LPCSTR szOpaqueA,
+                                  _In_ BOOL bIsProxy);
 
 private:
   typedef struct {

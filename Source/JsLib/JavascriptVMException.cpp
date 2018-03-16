@@ -27,7 +27,16 @@
 
 namespace MX {
 
-CJsError::CJsError(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex)
+CJsError::CJsError()
+{
+  lpStrMessageA = NULL;
+  lpStrFileNameA = NULL;
+  nLine = 0;
+  lpStrStackTraceA = NULL;
+  return;
+}
+
+CJsError::CJsError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex)
 {
   lpStrMessageA = NULL;
   lpStrFileNameA = NULL;
@@ -118,8 +127,8 @@ CJsError::CJsError(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nSt
   return;
 }
 
-CJsError::CJsError(__in_z LPCSTR szMessageA, __in DukTape::duk_context *lpCtx, __in_z LPCSTR szFileNameA,
-                   __in ULONG _nLine)
+CJsError::CJsError(_In_z_ LPCSTR szMessageA, _In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szFileNameA,
+                   _In_ ULONG _nLine)
 {
   HRESULT hRes = S_OK;
 
@@ -202,7 +211,7 @@ CJsError::CJsError(__in_z LPCSTR szMessageA, __in DukTape::duk_context *lpCtx, _
   return;
 }
 
-CJsError::CJsError(__in const CJsError &obj)
+CJsError::CJsError(_In_ const CJsError &obj)
 {
   *this = obj;
   return;
@@ -214,7 +223,7 @@ CJsError::~CJsError()
   return;
 }
 
-CJsError& CJsError::operator=(__in const CJsError &obj)
+CJsError& CJsError::operator=(_In_ const CJsError &obj)
 {
   Cleanup();
   //----
@@ -257,7 +266,7 @@ VOID CJsError::Cleanup()
 
 //-----------------------------------------------------------
 
-CJsWindowsError::CJsWindowsError(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex) :
+CJsWindowsError::CJsWindowsError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex) :
                  CJsError(lpCtx, nStackIndex)
 {
   DukTape::duk_get_prop_string(lpCtx, nStackIndex, "hr");
@@ -266,35 +275,35 @@ CJsWindowsError::CJsWindowsError(__in DukTape::duk_context *lpCtx, __in DukTape:
   return;
 }
 
-CJsWindowsError::CJsWindowsError(__in HRESULT _hRes, __in DukTape::duk_context *lpCtx,
-                                 __in DukTape::duk_idx_t nStackIndex) : CJsError(lpCtx, nStackIndex)
+CJsWindowsError::CJsWindowsError(_In_ HRESULT _hRes, _In_ DukTape::duk_context *lpCtx,
+                                 _In_ DukTape::duk_idx_t nStackIndex) : CJsError(lpCtx, nStackIndex)
 {
   hRes = _hRes;
   return;
 }
 
-CJsWindowsError::CJsWindowsError(__in HRESULT _hRes, __in DukTape::duk_context *lpCtx, __in_z LPCSTR szFileNameA,
-                                 __in ULONG nLine) : CJsError("", lpCtx, szFileNameA, nLine)
-{
-  hRes = _hRes;
-  QueryMessageString();
-  return;
-}
-
-CJsWindowsError::CJsWindowsError(__in HRESULT _hRes) : CJsError(NULL, 0)
+CJsWindowsError::CJsWindowsError(_In_ HRESULT _hRes, _In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szFileNameA,
+                                 _In_ ULONG nLine) : CJsError("", lpCtx, szFileNameA, nLine)
 {
   hRes = _hRes;
   QueryMessageString();
   return;
 }
 
-CJsWindowsError::CJsWindowsError(__in const CJsWindowsError &obj) : CJsError(NULL, 0)
+CJsWindowsError::CJsWindowsError(_In_ HRESULT _hRes) : CJsError()
+{
+  hRes = _hRes;
+  QueryMessageString();
+  return;
+}
+
+CJsWindowsError::CJsWindowsError(_In_ const CJsWindowsError &obj) : CJsError()
 {
   *this = obj;
   return;
 }
 
-CJsWindowsError& CJsWindowsError::operator=(__in const CJsWindowsError &obj)
+CJsWindowsError& CJsWindowsError::operator=(_In_ const CJsWindowsError &obj)
 {
   CJsError::operator=(obj);
   hRes = obj.hRes;

@@ -38,7 +38,7 @@ CHttpHeaderGeneric::~CHttpHeaderGeneric()
   return;
 }
 
-HRESULT CHttpHeaderGeneric::SetName(__in_z LPCSTR szNameA)
+HRESULT CHttpHeaderGeneric::SetName(_In_z_ LPCSTR szNameA)
 {
   SIZE_T i;
 
@@ -59,12 +59,12 @@ LPCSTR CHttpHeaderGeneric::GetName() const
   return (LPCSTR)cStrNameA;
 }
 
-HRESULT CHttpHeaderGeneric::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderGeneric::Parse(_In_z_ LPCSTR szValueA)
 {
   return SetValue(szValueA);
 }
 
-HRESULT CHttpHeaderGeneric::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderGeneric::Build(_Inout_ CStringA &cStrDestA)
 {
   if (cStrDestA.Copy((LPSTR)cStrValueA) == FALSE)
     return E_OUTOFMEMORY;
@@ -72,7 +72,7 @@ HRESULT CHttpHeaderGeneric::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderGeneric::SetValue(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderGeneric::SetValue(_In_z_ LPCSTR szValueA)
 {
   LPCSTR szStartA, szEndA;
 

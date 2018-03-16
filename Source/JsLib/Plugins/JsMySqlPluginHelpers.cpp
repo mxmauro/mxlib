@@ -50,8 +50,8 @@ CJsMySqlPluginHelpers::~CJsMySqlPluginHelpers()
   return;
 }
 
-HRESULT CJsMySqlPluginHelpers::ExecuteQuery(__in LPCSTR szQueryA, __in SIZE_T nQueryLegth,
-                                            __out_opt MYSQL_RES **lplpResult)
+HRESULT CJsMySqlPluginHelpers::ExecuteQuery(_In_ LPCSTR szQueryA, _In_ SIZE_T nQueryLegth,
+                                            _Out_opt_ MYSQL_RES **lplpResult)
 {
   int nRetryCount, err;
   MYSQL_RES *lpLocalResult;
@@ -93,7 +93,7 @@ HRESULT CJsMySqlPluginHelpers::ExecuteQuery(__in LPCSTR szQueryA, __in SIZE_T nQ
   return HResultFromMySqlErr(err);
 }
 
-VOID CJsMySqlPluginHelpers::QueryClose(__in_opt BOOL bFlushData)
+VOID CJsMySqlPluginHelpers::QueryClose(_In_opt_ BOOL bFlushData)
 {
   if (sQuery.lpResultSet != NULL)
   {
@@ -105,7 +105,7 @@ VOID CJsMySqlPluginHelpers::QueryClose(__in_opt BOOL bFlushData)
   return;
 }
 
-VOID CJsMySqlPluginHelpers::CloseResultSet(__in MYSQL_RES *lpResult, __in_opt BOOL bFlushData)
+VOID CJsMySqlPluginHelpers::CloseResultSet(_In_ MYSQL_RES *lpResult, _In_opt_ BOOL bFlushData)
 {
   MYSQL_ROW lpRow;
 
@@ -121,7 +121,7 @@ VOID CJsMySqlPluginHelpers::CloseResultSet(__in MYSQL_RES *lpResult, __in_opt BO
   return;
 }
 
-BOOL CJsMySqlPluginHelpers::BuildFieldInfoArray(__in DukTape::duk_context *lpCtx)
+BOOL CJsMySqlPluginHelpers::BuildFieldInfoArray(_In_ DukTape::duk_context *lpCtx)
 {
   TAutoRefCounted<CFieldInfo> cFieldInfo;
   SIZE_T i;
@@ -182,13 +182,13 @@ BOOL CJsMySqlPluginHelpers::BuildFieldInfoArray(__in DukTape::duk_context *lpCtx
   return TRUE;
 }
 
-BOOL CJsMySqlPluginHelpers::IsConnectionLostError(__in int nError)
+BOOL CJsMySqlPluginHelpers::IsConnectionLostError(_In_ int nError)
 {
   return (nError == CR_TCP_CONNECTION || nError == CR_SERVER_LOST ||
           nError == CR_SERVER_GONE_ERROR || nError == CR_SERVER_LOST_EXTENDED) ? TRUE : FALSE;
 }
 
-HRESULT CJsMySqlPluginHelpers::HResultFromMySqlErr(__in int nError)
+HRESULT CJsMySqlPluginHelpers::HResultFromMySqlErr(_In_ int nError)
 {
   if (nError == 0)
     return S_OK;

@@ -27,7 +27,7 @@
 
 namespace MX {
 
-void CJavascriptVM::CProxyCallbacks::serialize(__in void *p)
+void CJavascriptVM::CProxyCallbacks::serialize(_In_ void *p)
 {
   cProxyHasNamedPropertyCallback.serialize(p);
   p = (char*)p + OnProxyHasNamedPropertyCallback::serialization_buffer_size();
@@ -49,7 +49,7 @@ void CJavascriptVM::CProxyCallbacks::serialize(__in void *p)
   return;
 }
 
-void CJavascriptVM::CProxyCallbacks::deserialize(__in void *p)
+void CJavascriptVM::CProxyCallbacks::deserialize(_In_ void *p)
 {
   cProxyHasNamedPropertyCallback.deserialize(p);
   p = (char*)p + OnProxyHasNamedPropertyCallback::serialization_buffer_size();

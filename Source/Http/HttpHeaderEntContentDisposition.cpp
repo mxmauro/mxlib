@@ -40,7 +40,7 @@ CHttpHeaderEntContentDisposition::~CHttpHeaderEntContentDisposition()
   return;
 }
 
-HRESULT CHttpHeaderEntContentDisposition::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderEntContentDisposition::Parse(_In_z_ LPCSTR szValueA)
 {
   LPCSTR szStartA;
   CStringA cStrTempA, cStrTempA_2;
@@ -192,7 +192,7 @@ HRESULT CHttpHeaderEntContentDisposition::Parse(__in_z LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentDisposition::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderEntContentDisposition::Build(_Inout_ CStringA &cStrDestA)
 {
   SIZE_T i, nCount;
   LPWSTR sW;
@@ -283,7 +283,7 @@ HRESULT CHttpHeaderEntContentDisposition::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentDisposition::SetType(__in_z LPCSTR szTypeA)
+HRESULT CHttpHeaderEntContentDisposition::SetType(_In_z_ LPCSTR szTypeA)
 {
   LPCSTR szStartA, szEndA;
 
@@ -318,7 +318,7 @@ LPCSTR CHttpHeaderEntContentDisposition::GetType() const
   return (LPCSTR)cStrTypeA;
 }
 
-HRESULT CHttpHeaderEntContentDisposition::SetFileName(__in_z LPCWSTR szFileNameW)
+HRESULT CHttpHeaderEntContentDisposition::SetFileName(_In_opt_z_ LPCWSTR szFileNameW)
 {
   //set new value
   if (szFileNameW != NULL && *szFileNameW != 0)
@@ -341,7 +341,7 @@ LPCWSTR CHttpHeaderEntContentDisposition::GetFileName() const
   return (bHasFileName != FALSE) ? (LPCWSTR)cStrFileNameW : NULL;
 }
 
-HRESULT CHttpHeaderEntContentDisposition::SetCreationDate(__in CDateTime &cDt)
+HRESULT CHttpHeaderEntContentDisposition::SetCreationDate(_In_ CDateTime &cDt)
 {
   cCreationDt = cDt;
   //done
@@ -353,7 +353,7 @@ CDateTime CHttpHeaderEntContentDisposition::GetCreationDate() const
   return cCreationDt;
 }
 
-HRESULT CHttpHeaderEntContentDisposition::SetModificationDate(__in CDateTime &cDt)
+HRESULT CHttpHeaderEntContentDisposition::SetModificationDate(_In_ CDateTime &cDt)
 {
   cModificationDt = cDt;
   //done
@@ -365,7 +365,7 @@ CDateTime CHttpHeaderEntContentDisposition::GetModificationDate() const
   return cModificationDt;
 }
 
-HRESULT CHttpHeaderEntContentDisposition::SetReadDate(__in CDateTime &cDt)
+HRESULT CHttpHeaderEntContentDisposition::SetReadDate(_In_ CDateTime &cDt)
 {
   cReadDt = cDt;
   //done
@@ -377,7 +377,7 @@ CDateTime CHttpHeaderEntContentDisposition::GetReadDate() const
   return cReadDt;
 }
 
-HRESULT CHttpHeaderEntContentDisposition::SetSize(__in ULONGLONG _nSize)
+HRESULT CHttpHeaderEntContentDisposition::SetSize(_In_ ULONGLONG _nSize)
 {
   nSize = _nSize;
   //done
@@ -389,7 +389,7 @@ ULONGLONG CHttpHeaderEntContentDisposition::GetSize() const
   return nSize;
 }
 
-HRESULT CHttpHeaderEntContentDisposition::AddParam(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW)
+HRESULT CHttpHeaderEntContentDisposition::AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW)
 {
   TAutoFreePtr<PARAMETER> cNewParam;
   LPCSTR szStartA, szEndA;
@@ -433,17 +433,17 @@ SIZE_T CHttpHeaderEntContentDisposition::GetParamsCount() const
   return cParamsList.GetCount();
 }
 
-LPCSTR CHttpHeaderEntContentDisposition::GetParamName(__in SIZE_T nIndex) const
+LPCSTR CHttpHeaderEntContentDisposition::GetParamName(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cParamsList.GetCount()) ? cParamsList[nIndex]->szNameA : NULL;
 }
 
-LPCWSTR CHttpHeaderEntContentDisposition::GetParamValue(__in SIZE_T nIndex) const
+LPCWSTR CHttpHeaderEntContentDisposition::GetParamValue(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cParamsList.GetCount()) ? cParamsList[nIndex]->szValueW : NULL;
 }
 
-LPCWSTR CHttpHeaderEntContentDisposition::GetParamValue(__in_z LPCSTR szNameA) const
+LPCWSTR CHttpHeaderEntContentDisposition::GetParamValue(_In_z_ LPCSTR szNameA) const
 {
   SIZE_T i, nCount;
 

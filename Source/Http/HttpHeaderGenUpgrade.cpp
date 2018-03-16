@@ -38,7 +38,7 @@ CHttpHeaderGenUpgrade::~CHttpHeaderGenUpgrade()
   return;
 }
 
-HRESULT CHttpHeaderGenUpgrade::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderGenUpgrade::Parse(_In_z_ LPCSTR szValueA)
 {
   LPCSTR szStartA;
   CStringA cStrTempA, cStrTempA_2;
@@ -77,7 +77,7 @@ HRESULT CHttpHeaderGenUpgrade::Parse(__in_z LPCSTR szValueA)
   return (bGotItem != FALSE) ? S_OK : MX_E_InvalidData;
 }
 
-HRESULT CHttpHeaderGenUpgrade::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderGenUpgrade::Build(_Inout_ CStringA &cStrDestA)
 {
   SIZE_T i, nCount;
 
@@ -97,7 +97,7 @@ HRESULT CHttpHeaderGenUpgrade::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderGenUpgrade::AddProduct(__in_z LPCSTR szProductA)
+HRESULT CHttpHeaderGenUpgrade::AddProduct(_In_z_ LPCSTR szProductA)
 {
   LPCSTR szStartA, szEndA;
   CStringA cStrTempA;
@@ -138,12 +138,12 @@ SIZE_T CHttpHeaderGenUpgrade::GetProductsCount() const
   return cProductsList.GetCount();
 }
 
-LPCSTR CHttpHeaderGenUpgrade::GetProduct(__in SIZE_T nIndex) const
+LPCSTR CHttpHeaderGenUpgrade::GetProduct(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cProductsList.GetCount()) ? cProductsList.GetElementAt(nIndex) : NULL;
 }
 
-BOOL CHttpHeaderGenUpgrade::HasProduct(__in_z LPCSTR szProductA) const
+BOOL CHttpHeaderGenUpgrade::HasProduct(_In_z_ LPCSTR szProductA) const
 {
   SIZE_T i, nCount;
 

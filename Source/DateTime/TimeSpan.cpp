@@ -31,36 +31,36 @@
 
 //-----------------------------------------------------------
 
-static LONGLONG CalculateTicks(__in int nDays, __in int nHours, __in int nMinutes, __in int nSeconds,
-                               __in int nMilliSeconds, __out_opt LPBOOL lpbOverflow=NULL);
-static BOOL myStrTol(__out int &nValue, __inout_z LPCSTR &sA, __inout SIZE_T &nLen);
-static BOOL myWcsTol(__out int &nValue, __inout_z LPCWSTR &sW, __inout SIZE_T &nLen);
+static LONGLONG CalculateTicks(_In_ int nDays, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds,
+                               _In_ int nMilliSeconds, _Out_opt_ LPBOOL lpbOverflow=NULL);
+static BOOL myStrTol(_Out_ int &nValue, _Inout_ LPCSTR &sA, _Inout_ SIZE_T &nLen);
+static BOOL myWcsTol(_Out_ int &nValue, _Inout_ LPCWSTR &sW, _Inout_ SIZE_T &nLen);
 
 //-----------------------------------------------------------
 
 namespace MX {
 
 
-CTimeSpan::CTimeSpan(__in const CTimeSpan& cSrc) : CBaseMemObj()
+CTimeSpan::CTimeSpan(_In_ const CTimeSpan& cSrc) : CBaseMemObj()
 {
   nTicks = cSrc.nTicks;
   return;
 }
 
-CTimeSpan::CTimeSpan(__in_opt LONGLONG nValue) : CBaseMemObj()
+CTimeSpan::CTimeSpan(_In_opt_ LONGLONG nValue) : CBaseMemObj()
 {
   nTicks = nValue;
   return;
 }
 
-CTimeSpan::CTimeSpan(__in int nDays, __in int nHours, __in int nMinutes, __in int nSeconds,
-                     __in_opt int nMilliSeconds) : CBaseMemObj()
+CTimeSpan::CTimeSpan(_In_ int nDays, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds,
+                     _In_opt_ int nMilliSeconds) : CBaseMemObj()
 {
   nTicks = CalculateTicks(nDays, nHours, nMinutes, nSeconds, nMilliSeconds);
   return;
 }
 
-CTimeSpan::CTimeSpan(__in int nHours, __in int nMinutes, __in int nSeconds) : CBaseMemObj()
+CTimeSpan::CTimeSpan(_In_ int nHours, _In_ int nMinutes, _In_ int nSeconds) : CBaseMemObj()
 {
   nTicks = CalculateTicks(0, nHours, nMinutes, nSeconds, 0);
   return;
@@ -123,7 +123,7 @@ double CTimeSpan::GetTotalMilliSeconds() const
   return (double)nTicks / (double)MX_DATETIME_TICKS_PER_MILLISECOND;
 }
 
-HRESULT CTimeSpan::Add(__in LONGLONG nValue)
+HRESULT CTimeSpan::Add(_In_ LONGLONG nValue)
 {
   if (nTicks >= 0)
   {
@@ -139,22 +139,22 @@ HRESULT CTimeSpan::Add(__in LONGLONG nValue)
   return S_OK;
 }
 
-HRESULT CTimeSpan::Add(__in CTimeSpan &cTs)
+HRESULT CTimeSpan::Add(_In_ CTimeSpan &cTs)
 {
   return Add(cTs.nTicks);
 }
 
-HRESULT CTimeSpan::Sub(__in LONGLONG nValue)
+HRESULT CTimeSpan::Sub(_In_ LONGLONG nValue)
 {
   return Add(-nValue);
 }
 
-HRESULT CTimeSpan::Sub(__in CTimeSpan &cTs)
+HRESULT CTimeSpan::Sub(_In_ CTimeSpan &cTs)
 {
   return Sub(cTs.nTicks);
 }
 
-HRESULT CTimeSpan::SetFrom(__in double nValue, __in LONGLONG nTickMultiplicator)
+HRESULT CTimeSpan::SetFrom(_In_ double nValue, _In_ LONGLONG nTickMultiplicator)
 {
   LONGLONG nNewTick;
   int nClass;
@@ -170,39 +170,39 @@ HRESULT CTimeSpan::SetFrom(__in double nValue, __in LONGLONG nTickMultiplicator)
   return S_OK;
 }
 
-HRESULT CTimeSpan::SetFromDays(__in double nValue)
+HRESULT CTimeSpan::SetFromDays(_In_ double nValue)
 {
   return SetFrom(nValue, MX_DATETIME_TICKS_PER_DAY);
 }
 
-HRESULT CTimeSpan::SetFromHours(__in double nValue)
+HRESULT CTimeSpan::SetFromHours(_In_ double nValue)
 {
   return SetFrom(nValue, MX_DATETIME_TICKS_PER_HOUR);
 }
 
-HRESULT CTimeSpan::SetFromMinutes(__in double nValue)
+HRESULT CTimeSpan::SetFromMinutes(_In_ double nValue)
 {
   return SetFrom(nValue, MX_DATETIME_TICKS_PER_MINUTE);
 }
 
-HRESULT CTimeSpan::SetFromSeconds(__in double nValue)
+HRESULT CTimeSpan::SetFromSeconds(_In_ double nValue)
 {
   return SetFrom(nValue, MX_DATETIME_TICKS_PER_SECOND);
 }
 
-HRESULT CTimeSpan::SetFromMilliSeconds(__in double nValue)
+HRESULT CTimeSpan::SetFromMilliSeconds(_In_ double nValue)
 {
   return SetFrom(nValue, MX_DATETIME_TICKS_PER_MILLISECOND);
 }
 
-HRESULT CTimeSpan::SetFromTicks(__in LONGLONG nValue)
+HRESULT CTimeSpan::SetFromTicks(_In_ LONGLONG nValue)
 {
   nTicks = nValue;
   return S_OK;
 }
 
-HRESULT CTimeSpan::SetFrom(__in int nDays, __in int nHours, __in int nMinutes, __in int nSeconds,
-                           __in_opt int nMilliSeconds)
+HRESULT CTimeSpan::SetFrom(_In_ int nDays, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds,
+                           _In_opt_ int nMilliSeconds)
 {
   BOOL bOverflow;
   LONGLONG nValue;
@@ -214,7 +214,7 @@ HRESULT CTimeSpan::SetFrom(__in int nDays, __in int nHours, __in int nMinutes, _
   return S_OK;
 }
 
-HRESULT CTimeSpan::SetFrom(__in int nHours, __in int nMinutes, __in int nSeconds)
+HRESULT CTimeSpan::SetFrom(_In_ int nHours, _In_ int nMinutes, _In_ int nSeconds)
 {
   BOOL bOverflow;
   LONGLONG nValue;
@@ -234,7 +234,7 @@ HRESULT CTimeSpan::Negate()
   return S_OK;
 }
 
-HRESULT CTimeSpan::Parse(__in_z LPCSTR szSrcA, __in SIZE_T nLength, __out_opt LPSTR *lpszEndStringA)
+HRESULT CTimeSpan::Parse(_In_z_ LPCSTR szSrcA, _In_ SIZE_T nLength, _Out_opt_ LPSTR *lpszEndStringA)
 {
   // Parse [ws][-][dd.]hh:mm:ss[.ff][ws]
   int nDays, nHours, nMinutes, nSeconds, nTicksX;
@@ -352,7 +352,7 @@ parse_err:
   return hRes;
 }
 
-HRESULT CTimeSpan::Parse(__in_z LPCWSTR szSrcW, __in SIZE_T nLength, __out_opt LPWSTR *lpszEndStringW)
+HRESULT CTimeSpan::Parse(_In_z_ LPCWSTR szSrcW, _In_ SIZE_T nLength, _Out_opt_ LPWSTR *lpszEndStringW)
 {
   // Parse [ws][-][dd.]hh:mm:ss[.ff][ws]
   int nDays, nHours, nMinutes, nSeconds, nTicksX;
@@ -470,13 +470,13 @@ parse_err:
   return hRes;
 }
 
-HRESULT CTimeSpan::Format(__inout CStringW& cStrDestW)
+HRESULT CTimeSpan::Format(_Inout_ CStringW& cStrDestW)
 {
   cStrDestW.Empty();
   return AppendFormat(cStrDestW);
 }
 
-HRESULT CTimeSpan::AppendFormat(__inout CStringW& cStrDestW)
+HRESULT CTimeSpan::AppendFormat(_Inout_ CStringW& cStrDestW)
 {
   LONGLONG nTemp;
 
@@ -519,39 +519,39 @@ HRESULT CTimeSpan::AppendFormat(__inout CStringW& cStrDestW)
   return S_OK;
 }
 
-CTimeSpan& CTimeSpan::operator=(__in const CTimeSpan& cSrc)
+CTimeSpan& CTimeSpan::operator=(_In_ const CTimeSpan& cSrc)
 {
   if (&cSrc != this)
     nTicks = cSrc.nTicks;
   return *this;
 }
 
-bool CTimeSpan::operator==(__in const CTimeSpan& cTs) const
+bool CTimeSpan::operator==(_In_ const CTimeSpan& cTs) const
 {
   return (nTicks == cTs.nTicks) ? true : false;
 }
 
-bool CTimeSpan::operator!=(__in const CTimeSpan& cTs) const
+bool CTimeSpan::operator!=(_In_ const CTimeSpan& cTs) const
 {
   return (nTicks != cTs.nTicks) ? true : false;
 }
 
-bool CTimeSpan::operator<(__in const CTimeSpan& cTs) const
+bool CTimeSpan::operator<(_In_ const CTimeSpan& cTs) const
 {
   return (nTicks < cTs.nTicks) ? true : false;
 }
 
-bool CTimeSpan::operator>(__in const CTimeSpan& cTs) const
+bool CTimeSpan::operator>(_In_ const CTimeSpan& cTs) const
 {
   return (nTicks > cTs.nTicks) ? true : false;
 }
 
-bool CTimeSpan::operator<=(__in const CTimeSpan& cTs) const
+bool CTimeSpan::operator<=(_In_ const CTimeSpan& cTs) const
 {
   return (nTicks <= cTs.nTicks) ? true : false;
 }
 
-bool CTimeSpan::operator>=(__in const CTimeSpan& cTs) const
+bool CTimeSpan::operator>=(_In_ const CTimeSpan& cTs) const
 {
   return (nTicks >= cTs.nTicks) ? true : false;
 }
@@ -560,8 +560,8 @@ bool CTimeSpan::operator>=(__in const CTimeSpan& cTs) const
 
 //-----------------------------------------------------------
 
-static LONGLONG CalculateTicks(__in int nDays, __in int nHours, __in int nMinutes, __in int nSeconds,
-                               __in int nMilliSeconds, __out_opt LPBOOL lpbOverflow)
+static LONGLONG CalculateTicks(_In_ int nDays, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds,
+                               _In_ int nMilliSeconds, _Out_opt_ LPBOOL lpbOverflow)
 {
   LONGLONG t, nTicksDays, nTemp;
   BOOL bOverflow;
@@ -618,7 +618,7 @@ static LONGLONG CalculateTicks(__in int nDays, __in int nHours, __in int nMinute
   return (bOverflow == FALSE) ? t : 0;
 }
 
-static BOOL myStrTol(__out int &nValue, __inout_z LPCSTR &sA, __inout SIZE_T &nLen)
+static BOOL myStrTol(_Out_ int &nValue, _Inout_ LPCSTR &sA, _Inout_ SIZE_T &nLen)
 {
   BOOL bNeg = FALSE;
   ULONG nVal, nDigit;
@@ -663,7 +663,7 @@ static BOOL myStrTol(__out int &nValue, __inout_z LPCSTR &sA, __inout SIZE_T &nL
   return TRUE;
 }
 
-static BOOL myWcsTol(__out int &nValue, __inout_z LPCWSTR &sW, __inout SIZE_T &nLen)
+static BOOL myWcsTol(_Out_ int &nValue, _Inout_ LPCWSTR &sW, _Inout_ SIZE_T &nLen)
 {
   BOOL bNeg = FALSE;
   ULONG nVal, nDigit;

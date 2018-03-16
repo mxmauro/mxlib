@@ -39,7 +39,7 @@ CHttpHeaderGenConnection::~CHttpHeaderGenConnection()
   return;
 }
 
-HRESULT CHttpHeaderGenConnection::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderGenConnection::Parse(_In_z_ LPCSTR szValueA)
 {
   CStringA cStrTempA;
   LPCSTR szStartA;
@@ -77,7 +77,7 @@ HRESULT CHttpHeaderGenConnection::Parse(__in_z LPCSTR szValueA)
   return (bGotItem != FALSE) ? S_OK : MX_E_InvalidData;
 }
 
-HRESULT CHttpHeaderGenConnection::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderGenConnection::Build(_Inout_ CStringA &cStrDestA)
 {
   SIZE_T i, nCount;
 
@@ -97,7 +97,7 @@ HRESULT CHttpHeaderGenConnection::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderGenConnection::AddConnection(__in_z LPCSTR szConnectionA)
+HRESULT CHttpHeaderGenConnection::AddConnection(_In_z_ LPCSTR szConnectionA)
 {
   CStringA cStrTempA;
   LPCSTR szStartA, szEndA;
@@ -129,12 +129,12 @@ SIZE_T CHttpHeaderGenConnection::GetConnectionsCount() const
   return cConnectionsList.GetCount();
 }
 
-LPCSTR CHttpHeaderGenConnection::GetConnection(__in SIZE_T nIndex) const
+LPCSTR CHttpHeaderGenConnection::GetConnection(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cConnectionsList.GetCount()) ? cConnectionsList.GetElementAt(nIndex) : NULL;
 }
 
-BOOL CHttpHeaderGenConnection::HasConnection(__in_z LPCSTR szConnectionA) const
+BOOL CHttpHeaderGenConnection::HasConnection(_In_z_ LPCSTR szConnectionA) const
 {
   SIZE_T i, nCount;
 

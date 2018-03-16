@@ -37,7 +37,7 @@ CHttpHeaderGenDate::~CHttpHeaderGenDate()
   return;
 }
 
-HRESULT CHttpHeaderGenDate::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderGenDate::Parse(_In_z_ LPCSTR szValueA)
 {
   HRESULT hRes;
 
@@ -51,12 +51,12 @@ HRESULT CHttpHeaderGenDate::Parse(__in_z LPCSTR szValueA)
   return hRes;
 }
 
-HRESULT CHttpHeaderGenDate::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderGenDate::Build(_Inout_ CStringA &cStrDestA)
 {
   return cDt.Format(cStrDestA, "%a, %d %b %Y %H:%m:%S %z");
 }
 
-HRESULT CHttpHeaderGenDate::SetDate(__in CDateTime &_cDt)
+HRESULT CHttpHeaderGenDate::SetDate(_In_ CDateTime &_cDt)
 {
   cDt = _cDt;
   return S_OK;

@@ -45,11 +45,11 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Accept-Ranges)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
-  HRESULT SetRange(__in eRange nRange);
+  HRESULT SetRange(_In_ eRange nRange);
   eRange GetRange() const;
 
 private:

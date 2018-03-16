@@ -35,15 +35,15 @@ class CJsHttpServerSessionPlugin : public CJsObjectBase
   MX_DISABLE_COPY_CONSTRUCTOR(CJsHttpServerSessionPlugin);
 public:
   //can be called simultaneously from different threads servicing different requests
-  typedef Callback<HRESULT (__in CJsHttpServerSessionPlugin *lpPlugin, __in BOOL bLoading)> OnLoadSaveCallback;
+  typedef Callback<HRESULT (_In_ CJsHttpServerSessionPlugin *lpPlugin, _In_ BOOL bLoading)> OnLoadSaveCallback;
 
-  CJsHttpServerSessionPlugin(__in DukTape::duk_context *lpCtx);
+  CJsHttpServerSessionPlugin(_In_ DukTape::duk_context *lpCtx);
   ~CJsHttpServerSessionPlugin();
 
-  HRESULT Setup(__in CHttpServer::CRequest *lpRequest, __in OnLoadSaveCallback cLoadSaveCallback,
-                __in_z_opt LPCWSTR szSessionVarNameW=NULL, __in_z_opt LPCWSTR szDomainW=NULL,
-                __in_z_opt LPCWSTR szPathW=NULL, __in_opt int nExpireTimeInSeconds=-1,
-                __in_opt BOOL bIsSecure=FALSE, __in_opt BOOL bIsHttpOnly=FALSE);
+  HRESULT Setup(_In_ CHttpServer::CRequest *lpRequest, _In_ OnLoadSaveCallback cLoadSaveCallback,
+                _In_opt_z_ LPCWSTR szSessionVarNameW=NULL, _In_opt_z_ LPCWSTR szDomainW=NULL,
+                _In_opt_z_ LPCWSTR szPathW=NULL, _In_opt_ int nExpireTimeInSeconds=-1,
+                _In_opt_ BOOL bIsSecure=FALSE, _In_opt_ BOOL bIsHttpOnly=FALSE);
 
   LPCSTR GetSessionId() const;
   CJsHttpServer* GetServer() const;
@@ -60,7 +60,7 @@ public:
 private:
   typedef CHAR SESSION_ID[48];
 
-  static BOOL IsValidSessionId(__in_z LPCSTR szSessionIdA);
+  static BOOL IsValidSessionId(_In_z_ LPCSTR szSessionIdA);
 
   HRESULT RegenerateSessionId();
   HRESULT _Save();
@@ -68,17 +68,17 @@ private:
   DukTape::duk_ret_t Save();
   DukTape::duk_ret_t RegenerateId();
 
-  int OnProxyHasNamedProperty(__in_z LPCSTR szPropNameA);
-  int OnProxyHasIndexedProperty(__in int nIndex);
+  int OnProxyHasNamedProperty(_In_z_ LPCSTR szPropNameA);
+  int OnProxyHasIndexedProperty(_In_ int nIndex);
 
-  int OnProxyGetNamedProperty(__in_z LPCSTR szPropNameA);
-  int OnProxyGetIndexedProperty(__in int nIndex);
+  int OnProxyGetNamedProperty(_In_z_ LPCSTR szPropNameA);
+  int OnProxyGetIndexedProperty(_In_ int nIndex);
 
-  int OnProxySetNamedProperty(__in_z LPCSTR szPropNameA, __in DukTape::duk_idx_t nValueIndex);
-  int OnProxySetIndexedProperty(__in int nIndex, __in DukTape::duk_idx_t nValueIndex);
+  int OnProxySetNamedProperty(_In_z_ LPCSTR szPropNameA, _In_ DukTape::duk_idx_t nValueIndex);
+  int OnProxySetIndexedProperty(_In_ int nIndex, _In_ DukTape::duk_idx_t nValueIndex);
 
-  int OnProxyDeleteNamedProperty(__in_z LPCSTR szPropNameA);
-  int OnProxyDeleteIndexedProperty(__in int nIndex);
+  int OnProxyDeleteNamedProperty(_In_z_ LPCSTR szPropNameA);
+  int OnProxyDeleteIndexedProperty(_In_ int nIndex);
 
 private:
   CPropertyBag cBag;

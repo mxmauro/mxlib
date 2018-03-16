@@ -32,7 +32,7 @@ typedef enum {
 
 //-----------------------------------------------------------
 
-static HRESULT GetUInt64(__in_z LPCSTR szValueA, __out ULONGLONG &nValue);
+static HRESULT GetUInt64(_In_z_ LPCSTR szValueA, _Out_ ULONGLONG &nValue);
 
 //-----------------------------------------------------------
 
@@ -61,7 +61,7 @@ CHttpHeaderRespCacheControl::~CHttpHeaderRespCacheControl()
   return;
 }
 
-HRESULT CHttpHeaderRespCacheControl::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderRespCacheControl::Parse(_In_z_ LPCSTR szValueA)
 {
   LPCSTR szNameStartA, szNameEndA, szStartA, szFieldA;
   CStringA cStrTempA, cStrFieldA;
@@ -325,7 +325,7 @@ HRESULT CHttpHeaderRespCacheControl::Parse(__in_z LPCSTR szValueA)
   return (nGotItems != 0) ? S_OK : MX_E_InvalidData;
 }
 
-HRESULT CHttpHeaderRespCacheControl::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderRespCacheControl::Build(_Inout_ CStringA &cStrDestA)
 {
   SIZE_T i, nCount;
   LPCWSTR sW;
@@ -435,7 +435,7 @@ HRESULT CHttpHeaderRespCacheControl::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderRespCacheControl::SetPublic(__in BOOL _bPublic)
+HRESULT CHttpHeaderRespCacheControl::SetPublic(_In_ BOOL _bPublic)
 {
   bPublic = _bPublic;
   return S_OK;
@@ -446,7 +446,7 @@ BOOL CHttpHeaderRespCacheControl::GetPublic() const
   return bPublic;
 }
 
-HRESULT CHttpHeaderRespCacheControl::SetPrivate(__in BOOL _bPrivate)
+HRESULT CHttpHeaderRespCacheControl::SetPrivate(_In_ BOOL _bPrivate)
 {
   bPrivate = _bPrivate;
   return S_OK;
@@ -457,7 +457,7 @@ BOOL CHttpHeaderRespCacheControl::GetPrivate() const
   return bPrivate;
 }
 
-HRESULT CHttpHeaderRespCacheControl::AddPrivateField(__in_z LPCSTR szFieldA)
+HRESULT CHttpHeaderRespCacheControl::AddPrivateField(_In_z_ LPCSTR szFieldA)
 {
   LPCSTR szStartA, szEndA;
   CStringA cStrTempA;
@@ -489,12 +489,12 @@ SIZE_T CHttpHeaderRespCacheControl::GetPrivateFieldsCount() const
   return cPrivateFieldsList.GetCount();
 }
 
-LPCSTR CHttpHeaderRespCacheControl::GetPrivateField(__in SIZE_T nIndex) const
+LPCSTR CHttpHeaderRespCacheControl::GetPrivateField(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cPrivateFieldsList.GetCount()) ? cPrivateFieldsList.GetElementAt(nIndex) : NULL;
 }
 
-BOOL CHttpHeaderRespCacheControl::HasPrivateField(__in_z LPCSTR szFieldA) const
+BOOL CHttpHeaderRespCacheControl::HasPrivateField(_In_z_ LPCSTR szFieldA) const
 {
   SIZE_T i, nCount;
 
@@ -510,7 +510,7 @@ BOOL CHttpHeaderRespCacheControl::HasPrivateField(__in_z LPCSTR szFieldA) const
   return FALSE;
 }
 
-HRESULT CHttpHeaderRespCacheControl::SetNoCache(__in BOOL _bNoCache)
+HRESULT CHttpHeaderRespCacheControl::SetNoCache(_In_ BOOL _bNoCache)
 {
   bNoCache = _bNoCache;
   return S_OK;
@@ -521,7 +521,7 @@ BOOL CHttpHeaderRespCacheControl::GetNoCache() const
   return bNoCache;
 }
 
-HRESULT CHttpHeaderRespCacheControl::AddNoCacheField(__in_z LPCSTR szFieldA)
+HRESULT CHttpHeaderRespCacheControl::AddNoCacheField(_In_z_ LPCSTR szFieldA)
 {
   LPCSTR szStartA, szEndA;
   CStringA cStrTempA;
@@ -553,12 +553,12 @@ SIZE_T CHttpHeaderRespCacheControl::GetNoCacheFieldsCount() const
   return cNoCacheFieldsList.GetCount();
 }
 
-LPCSTR CHttpHeaderRespCacheControl::GetNoCacheField(__in SIZE_T nIndex) const
+LPCSTR CHttpHeaderRespCacheControl::GetNoCacheField(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cNoCacheFieldsList.GetCount()) ? cNoCacheFieldsList.GetElementAt(nIndex) : NULL;
 }
 
-BOOL CHttpHeaderRespCacheControl::HasNoCacheField(__in_z LPCSTR szFieldA) const
+BOOL CHttpHeaderRespCacheControl::HasNoCacheField(_In_z_ LPCSTR szFieldA) const
 {
   SIZE_T i, nCount;
 
@@ -574,7 +574,7 @@ BOOL CHttpHeaderRespCacheControl::HasNoCacheField(__in_z LPCSTR szFieldA) const
   return FALSE;
 }
 
-HRESULT CHttpHeaderRespCacheControl::SetNoStore(__in BOOL _bNoStore)
+HRESULT CHttpHeaderRespCacheControl::SetNoStore(_In_ BOOL _bNoStore)
 {
   bNoStore = _bNoStore;
   return S_OK;
@@ -585,7 +585,7 @@ BOOL CHttpHeaderRespCacheControl::GetNoStore() const
   return bNoStore;
 }
 
-HRESULT CHttpHeaderRespCacheControl::SetNoTransform(__in BOOL _bNoTransform)
+HRESULT CHttpHeaderRespCacheControl::SetNoTransform(_In_ BOOL _bNoTransform)
 {
   bNoTransform = _bNoTransform;
   return S_OK;
@@ -596,7 +596,7 @@ BOOL CHttpHeaderRespCacheControl::GetNoTransform() const
   return bNoTransform;
 }
 
-HRESULT CHttpHeaderRespCacheControl::SetMustRevalidate(__in BOOL _bMustRevalidate)
+HRESULT CHttpHeaderRespCacheControl::SetMustRevalidate(_In_ BOOL _bMustRevalidate)
 {
   bMustRevalidate = _bMustRevalidate;
   return S_OK;
@@ -607,7 +607,7 @@ BOOL CHttpHeaderRespCacheControl::GetMustRevalidate() const
   return bMustRevalidate;
 }
 
-HRESULT CHttpHeaderRespCacheControl::SetProxyRevalidate(__in BOOL _bProxyRevalidate)
+HRESULT CHttpHeaderRespCacheControl::SetProxyRevalidate(_In_ BOOL _bProxyRevalidate)
 {
   bProxyRevalidate = _bProxyRevalidate;
   return S_OK;
@@ -618,7 +618,7 @@ BOOL CHttpHeaderRespCacheControl::GetProxyRevalidate() const
   return bProxyRevalidate;
 }
 
-HRESULT CHttpHeaderRespCacheControl::SetMaxAge(__in ULONGLONG _nMaxAge)
+HRESULT CHttpHeaderRespCacheControl::SetMaxAge(_In_ ULONGLONG _nMaxAge)
 {
   nMaxAge = _nMaxAge;
   return S_OK;
@@ -629,7 +629,7 @@ ULONGLONG CHttpHeaderRespCacheControl::GetMaxAge() const
   return nMaxAge;
 }
 
-HRESULT CHttpHeaderRespCacheControl::SetSharedMaxAge(__in ULONGLONG _nSharedMaxAge)
+HRESULT CHttpHeaderRespCacheControl::SetSharedMaxAge(_In_ ULONGLONG _nSharedMaxAge)
 {
   nSMaxAge = _nSharedMaxAge;
   return S_OK;
@@ -640,7 +640,7 @@ ULONGLONG CHttpHeaderRespCacheControl::GetSharedMaxAge() const
   return nSMaxAge;
 }
 
-HRESULT CHttpHeaderRespCacheControl::AddExtension(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW)
+HRESULT CHttpHeaderRespCacheControl::AddExtension(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW)
 {
   TAutoFreePtr<EXTENSION> cNewExtension;
   LPCSTR szStartA, szEndA;
@@ -684,17 +684,17 @@ SIZE_T CHttpHeaderRespCacheControl::GetExtensionsCount() const
   return cExtensionsList.GetCount();
 }
 
-LPCSTR CHttpHeaderRespCacheControl::GetExtensionName(__in SIZE_T nIndex) const
+LPCSTR CHttpHeaderRespCacheControl::GetExtensionName(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cExtensionsList.GetCount()) ? cExtensionsList[nIndex]->szNameA : NULL;
 }
 
-LPCWSTR CHttpHeaderRespCacheControl::GetExtensionValue(__in SIZE_T nIndex) const
+LPCWSTR CHttpHeaderRespCacheControl::GetExtensionValue(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cExtensionsList.GetCount()) ? cExtensionsList[nIndex]->szValueW : NULL;
 }
 
-LPCWSTR CHttpHeaderRespCacheControl::GetExtensionValue(__in_z LPCSTR szNameA) const
+LPCWSTR CHttpHeaderRespCacheControl::GetExtensionValue(_In_z_ LPCSTR szNameA) const
 {
   SIZE_T i, nCount;
 
@@ -714,7 +714,7 @@ LPCWSTR CHttpHeaderRespCacheControl::GetExtensionValue(__in_z LPCSTR szNameA) co
 
 //-----------------------------------------------------------
 
-static HRESULT GetUInt64(__in_z LPCSTR szValueA, __out ULONGLONG &nValue)
+static HRESULT GetUInt64(_In_z_ LPCSTR szValueA, _Out_ ULONGLONG &nValue)
 {
   ULONGLONG nTemp;
 

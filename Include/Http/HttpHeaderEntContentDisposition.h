@@ -40,34 +40,34 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Content-Disposition)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
-  HRESULT SetType(__in_z LPCSTR szTypeA);
+  HRESULT SetType(_In_z_ LPCSTR szTypeA);
   LPCSTR GetType() const;
 
-  HRESULT SetFileName(__in_z_opt LPCWSTR szFileNameW);
+  HRESULT SetFileName(_In_opt_z_ LPCWSTR szFileNameW);
   LPCWSTR GetFileName() const; //NULL if no filename parameter
 
-  HRESULT SetCreationDate(__in CDateTime &cDt);
+  HRESULT SetCreationDate(_In_ CDateTime &cDt);
   CDateTime GetCreationDate() const; //ticks=0 if no creation date parameter
 
-  HRESULT SetModificationDate(__in CDateTime &cDt);
+  HRESULT SetModificationDate(_In_ CDateTime &cDt);
   CDateTime GetModificationDate() const; //ticks=0 if no modification date parameter
 
-  HRESULT SetReadDate(__in CDateTime &cDt);
+  HRESULT SetReadDate(_In_ CDateTime &cDt);
   CDateTime GetReadDate() const; //ticks=0 if no read date parameter
 
-  HRESULT SetSize(__in ULONGLONG nSize);
+  HRESULT SetSize(_In_ ULONGLONG nSize);
   ULONGLONG GetSize() const; //ULONGLONG_MAX if size parameter
 
-  HRESULT AddParam(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW);
+  HRESULT AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);
 
   SIZE_T GetParamsCount() const;
-  LPCSTR GetParamName(__in SIZE_T nIndex) const;
-  LPCWSTR GetParamValue(__in SIZE_T nIndex) const;
-  LPCWSTR GetParamValue(__in_z LPCSTR szNameA) const;
+  LPCSTR GetParamName(_In_ SIZE_T nIndex) const;
+  LPCWSTR GetParamValue(_In_ SIZE_T nIndex) const;
+  LPCWSTR GetParamValue(_In_z_ LPCSTR szNameA) const;
 
 private:
   typedef struct {

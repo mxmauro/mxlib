@@ -48,18 +48,18 @@ public:
   virtual ~CStream()
     { };
 
-  virtual HRESULT Read(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_T &nReaded,
-                       __in_opt ULONGLONG nStartOffset=ULONGLONG_MAX) = 0;
-  virtual HRESULT Write(__in LPCVOID lpSrc, __in SIZE_T nBytes, __out SIZE_T &nWritten,
-                        __in_opt ULONGLONG nStartOffset=ULONGLONG_MAX) = 0;
-  HRESULT WriteString(__in LPCSTR szFormatA, ...);
-  HRESULT WriteStringV(__in LPCSTR szFormatA, __in va_list argptr);
-  HRESULT WriteString(__in LPCWSTR szFormatA, ...);
-  HRESULT WriteStringV(__in LPCWSTR szFormatA, __in va_list argptr);
+  virtual HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nReaded,
+                       _In_opt_ ULONGLONG nStartOffset=ULONGLONG_MAX) = 0;
+  virtual HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nWritten,
+                        _In_opt_ ULONGLONG nStartOffset=ULONGLONG_MAX) = 0;
+  HRESULT WriteString(_In_ LPCSTR szFormatA, ...);
+  HRESULT WriteStringV(_In_ LPCSTR szFormatA, _In_ va_list argptr);
+  HRESULT WriteString(_In_ LPCWSTR szFormatA, ...);
+  HRESULT WriteStringV(_In_ LPCWSTR szFormatA, _In_ va_list argptr);
 
   virtual ULONGLONG GetLength() const = 0;
 
-  virtual HRESULT Seek(__in ULONGLONG nPosition, __in_opt eSeekMethod nMethod=SeekStart);
+  virtual HRESULT Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod=SeekStart);
 };
 
 } //namespace MX

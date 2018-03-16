@@ -27,7 +27,7 @@
 
 namespace MX {
 
-CHttpHeaderReqIfXXXMatchBase::CHttpHeaderReqIfXXXMatchBase(__in_opt BOOL _bIsMatch) : CHttpHeaderBase()
+CHttpHeaderReqIfXXXMatchBase::CHttpHeaderReqIfXXXMatchBase(_In_opt_ BOOL _bIsMatch) : CHttpHeaderBase()
 {
   bIsMatch = _bIsMatch;
   return;
@@ -39,7 +39,7 @@ CHttpHeaderReqIfXXXMatchBase::~CHttpHeaderReqIfXXXMatchBase()
   return;
 }
 
-HRESULT CHttpHeaderReqIfXXXMatchBase::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderReqIfXXXMatchBase::Parse(_In_z_ LPCSTR szValueA)
 {
   CEntity *lpEntity;
   LPCSTR szStartA;
@@ -87,7 +87,7 @@ HRESULT CHttpHeaderReqIfXXXMatchBase::Parse(__in_z LPCSTR szValueA)
   return (bGotItem != FALSE) ? S_OK : MX_E_InvalidData;
 }
 
-HRESULT CHttpHeaderReqIfXXXMatchBase::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderReqIfXXXMatchBase::Build(_Inout_ CStringA &cStrDestA)
 {
   SIZE_T i, nCount;
   CStringA cStrTempA;
@@ -123,7 +123,7 @@ HRESULT CHttpHeaderReqIfXXXMatchBase::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqIfXXXMatchBase::AddEntity(__in_z LPCSTR szTagA, __out_opt CEntity **lplpEntity)
+HRESULT CHttpHeaderReqIfXXXMatchBase::AddEntity(_In_z_ LPCSTR szTagA, _Out_opt_ CEntity **lplpEntity)
 {
   TAutoDeletePtr<CEntity> cNewEntity;
   SIZE_T i, nCount;
@@ -158,7 +158,7 @@ HRESULT CHttpHeaderReqIfXXXMatchBase::AddEntity(__in_z LPCSTR szTagA, __out_opt 
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqIfXXXMatchBase::AddEntity(__in_z LPCWSTR szTagW, __out_opt CEntity **lplpEntity)
+HRESULT CHttpHeaderReqIfXXXMatchBase::AddEntity(_In_z_ LPCWSTR szTagW, _Out_opt_ CEntity **lplpEntity)
 {
   TAutoDeletePtr<CEntity> cNewEntity;
   SIZE_T i, nCount;
@@ -198,12 +198,12 @@ SIZE_T CHttpHeaderReqIfXXXMatchBase::GetEntitiesCount() const
   return cEntitiesList.GetCount();
 }
 
-CHttpHeaderReqIfXXXMatchBase::CEntity* CHttpHeaderReqIfXXXMatchBase::GetEntity(__in SIZE_T nIndex) const
+CHttpHeaderReqIfXXXMatchBase::CEntity* CHttpHeaderReqIfXXXMatchBase::GetEntity(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cEntitiesList.GetCount()) ? cEntitiesList.GetElementAt(nIndex) : NULL;
 }
 
-CHttpHeaderReqIfXXXMatchBase::CEntity* CHttpHeaderReqIfXXXMatchBase::GetEntity(__in_z LPCWSTR szTagW) const
+CHttpHeaderReqIfXXXMatchBase::CEntity* CHttpHeaderReqIfXXXMatchBase::GetEntity(_In_z_ LPCWSTR szTagW) const
 {
   SIZE_T i, nCount;
 
@@ -233,7 +233,7 @@ CHttpHeaderReqIfXXXMatchBase::CEntity::~CEntity()
   return;
 }
 
-HRESULT CHttpHeaderReqIfXXXMatchBase::CEntity::SetTag(__in_z LPCSTR szTagA)
+HRESULT CHttpHeaderReqIfXXXMatchBase::CEntity::SetTag(_In_z_ LPCSTR szTagA)
 {
   LPCSTR szStartA, szEndA;
   CStringA cStrTempA;
@@ -277,7 +277,7 @@ HRESULT CHttpHeaderReqIfXXXMatchBase::CEntity::SetTag(__in_z LPCSTR szTagA)
   return hRes;
 }
 
-HRESULT CHttpHeaderReqIfXXXMatchBase::CEntity::SetTag(__in_z LPCWSTR szTagW)
+HRESULT CHttpHeaderReqIfXXXMatchBase::CEntity::SetTag(_In_z_ LPCWSTR szTagW)
 {
   LPCWSTR szStartW, szEndW;
 
@@ -323,7 +323,7 @@ LPCWSTR CHttpHeaderReqIfXXXMatchBase::CEntity::GetTag() const
   return (LPCWSTR)cStrTagW;
 }
 
-HRESULT CHttpHeaderReqIfXXXMatchBase::CEntity::SetWeak(__in BOOL _bIsWeak)
+HRESULT CHttpHeaderReqIfXXXMatchBase::CEntity::SetWeak(_In_ BOOL _bIsWeak)
 {
   bIsWeak = _bIsWeak;
   return S_OK;

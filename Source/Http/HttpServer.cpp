@@ -111,7 +111,7 @@ static const struct {
 
 namespace MX {
 
-CHttpServer::CHttpServer(__in CSockets &_cSocketMgr, __in CPropertyBag &_cPropBag) :
+CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr, _In_ CPropertyBag &_cPropBag) :
              CBaseMemObj(), CCriticalSection(), cSocketMgr(_cSocketMgr), cPropBag(_cPropBag)
 {
   dwRequestTimeoutMs = MX_HTTP_SERVER_RequestTimeoutMs_DEFVAL;
@@ -170,39 +170,39 @@ CHttpServer::~CHttpServer()
   return;
 }
 
-VOID CHttpServer::On(__in OnNewRequestObjectCallback _cNewRequestObjectCallback)
+VOID CHttpServer::On(_In_ OnNewRequestObjectCallback _cNewRequestObjectCallback)
 {
   cNewRequestObjectCallback = _cNewRequestObjectCallback;
   return;
 }
 
-VOID CHttpServer::On(__in OnRequestHeadersReceivedCallback _cRequestHeadersReceivedCallback)
+VOID CHttpServer::On(_In_ OnRequestHeadersReceivedCallback _cRequestHeadersReceivedCallback)
 {
   cRequestHeadersReceivedCallback = _cRequestHeadersReceivedCallback;
   return;
 }
 
-VOID CHttpServer::On(__in OnRequestCompletedCallback _cRequestCompletedCallback)
+VOID CHttpServer::On(_In_ OnRequestCompletedCallback _cRequestCompletedCallback)
 {
   cRequestCompletedCallback = _cRequestCompletedCallback;
   return;
 }
 
-VOID CHttpServer::On(__in OnErrorCallback _cErrorCallback)
+VOID CHttpServer::On(_In_ OnErrorCallback _cErrorCallback)
 {
   cErrorCallback = _cErrorCallback;
   return;
 }
 
-HRESULT CHttpServer::StartListening(__in int nPort, __in_opt CIpcSslLayer::eProtocol nProtocol,
-                                    __in_opt CSslCertificate *lpSslCertificate, __in_opt CCryptoRSA *lpSslKey)
+HRESULT CHttpServer::StartListening(_In_ int nPort, _In_opt_ CIpcSslLayer::eProtocol nProtocol,
+                                    _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CCryptoRSA *lpSslKey)
 {
   return StartListening((LPCSTR)NULL, nPort, nProtocol, lpSslCertificate, lpSslKey);
 }
 
-HRESULT CHttpServer::StartListening(__in_z LPCSTR szBindAddressA, __in int nPort,
-                                    __in_opt CIpcSslLayer::eProtocol nProtocol,
-                                    __in_opt CSslCertificate *lpSslCertificate, __in_opt CCryptoRSA *lpSslKey)
+HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ int nPort,
+                                    _In_opt_ CIpcSslLayer::eProtocol nProtocol,
+                                    _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CCryptoRSA *lpSslKey)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   HRESULT hRes;
@@ -294,9 +294,9 @@ HRESULT CHttpServer::StartListening(__in_z LPCSTR szBindAddressA, __in int nPort
   return hRes;
 }
 
-HRESULT CHttpServer::StartListening(__in_z LPCWSTR szBindAddressW, __in int nPort,
-                                    __in_opt CIpcSslLayer::eProtocol nProtocol,
-                                    __in_opt CSslCertificate *lpSslCertificate, __in_opt CCryptoRSA *lpSslKey)
+HRESULT CHttpServer::StartListening(_In_opt_z_ LPCWSTR szBindAddressW, _In_ int nPort,
+                                    _In_opt_ CIpcSslLayer::eProtocol nProtocol,
+                                    _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CCryptoRSA *lpSslKey)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -352,7 +352,7 @@ VOID CHttpServer::StopListening()
   return;
 }
 
-HRESULT CHttpServer::OnSocketCreate(__in CIpc *lpIpc, __in HANDLE h, __inout CIpc::CREATE_CALLBACK_DATA &sData)
+HRESULT CHttpServer::OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIpc::CREATE_CALLBACK_DATA &sData)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
 
@@ -421,8 +421,8 @@ HRESULT CHttpServer::OnSocketCreate(__in CIpc *lpIpc, __in HANDLE h, __inout CIp
   return S_OK;
 }
 
-VOID CHttpServer::OnListenerSocketDestroy(__in CIpc *lpIpc, __in HANDLE h, __in CIpc::CUserData *lpUserData,
-                                          __in HRESULT hErrorCode)
+VOID CHttpServer::OnListenerSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
+                                          _In_ HRESULT hErrorCode)
 {
   CCriticalSection::CAutoLock cLock(*this);
 
@@ -431,8 +431,8 @@ VOID CHttpServer::OnListenerSocketDestroy(__in CIpc *lpIpc, __in HANDLE h, __in 
   return;
 }
 
-VOID CHttpServer::OnSocketDestroy(__in CIpc *lpIpc, __in HANDLE h, __in CIpc::CUserData *lpUserData,
-                                  __in HRESULT hErrorCode)
+VOID CHttpServer::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
+                                  _In_ HRESULT hErrorCode)
 {
   CRequest *lpRequest = (CRequest*)lpUserData;
 
@@ -449,8 +449,8 @@ VOID CHttpServer::OnSocketDestroy(__in CIpc *lpIpc, __in HANDLE h, __in CIpc::CU
   return;
 }
 
-HRESULT CHttpServer::OnSocketConnect(__in CIpc *lpIpc, __in HANDLE h, __in CIpc::CUserData *lpUserData,
-                                     __inout CIpc::CLayerList &cLayersList, __in HRESULT hErrorCode)
+HRESULT CHttpServer::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
+                                     _Inout_ CIpc::CLayerList &cLayersList, _In_ HRESULT hErrorCode)
 {
   CRequest *lpRequest = (CRequest*)lpUserData;
   HRESULT hRes;
@@ -463,7 +463,7 @@ HRESULT CHttpServer::OnSocketConnect(__in CIpc *lpIpc, __in HANDLE h, __in CIpc:
   return hRes;
 }
 
-HRESULT CHttpServer::OnSocketDataReceived(__in CIpc *lpIpc, __in HANDLE h, __in CIpc::CUserData *lpUserData)
+HRESULT CHttpServer::OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData)
 {
   CRequest *lpRequest = (CRequest*)lpUserData;
   BYTE aMsgBuf[4096];
@@ -637,8 +637,8 @@ restart:
   return hRes;
 }
 
-HRESULT CHttpServer::QuickSendErrorResponseAndReset(__in CRequest *lpRequest, __in LONG nErrorCode,
-                                                    __in HRESULT hErrorCode, __in_opt BOOL bForceClose)
+HRESULT CHttpServer::QuickSendErrorResponseAndReset(_In_ CRequest *lpRequest, _In_ LONG nErrorCode,
+                                                    _In_ HRESULT hErrorCode, _In_opt_ BOOL bForceClose)
 {
   HRESULT hRes;
 
@@ -656,7 +656,7 @@ HRESULT CHttpServer::QuickSendErrorResponseAndReset(__in CRequest *lpRequest, __
   return hRes;
 }
 
-VOID CHttpServer::OnRequestTimeout(__in CTimedEventQueue::CEvent *lpEvent)
+VOID CHttpServer::OnRequestTimeout(_In_ CTimedEventQueue::CEvent *lpEvent)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   CRequest *lpRequest = (CRequest*)(lpEvent->GetUserData());
@@ -695,8 +695,8 @@ VOID CHttpServer::OnRequestTimeout(__in CTimedEventQueue::CEvent *lpEvent)
   return;
 }
 
-VOID CHttpServer::OnAfterSendResponse(__in CIpc *lpIpc, __in HANDLE h, __in LPVOID lpCookie,
-                                      __in CIpc::CUserData *lpUserData)
+VOID CHttpServer::OnAfterSendResponse(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie,
+                                      _In_ CIpc::CUserData *lpUserData)
 {
   CRequest *lpRequest = (CRequest*)lpUserData;
 
@@ -715,7 +715,7 @@ VOID CHttpServer::OnAfterSendResponse(__in CIpc *lpIpc, __in HANDLE h, __in LPVO
   return;
 }
 
-HRESULT CHttpServer::SendStreams(__in CRequest *lpRequest, __in BOOL bForceClose)
+HRESULT CHttpServer::SendStreams(_In_ CRequest *lpRequest, _In_ BOOL bForceClose)
 {
   CStream *lpStream;
   SIZE_T i, nCount;
@@ -742,8 +742,8 @@ HRESULT CHttpServer::SendStreams(__in CRequest *lpRequest, __in BOOL bForceClose
   return hRes;
 }
 
-HRESULT CHttpServer::SendGenericErrorPage(__in CRequest *lpRequest, __in LONG nErrorCode, __in HRESULT hErrorCode,
-                                          __in_z_opt LPCSTR szBodyExplanationA)
+HRESULT CHttpServer::SendGenericErrorPage(_In_ CRequest *lpRequest, _In_ LONG nErrorCode, _In_ HRESULT hErrorCode,
+                                          _In_opt_z_ LPCSTR szBodyExplanationA)
 {
   CMemoryStream *lpStream;
   CDateTime cDtNow;
@@ -821,7 +821,7 @@ HRESULT CHttpServer::SendGenericErrorPage(__in CRequest *lpRequest, __in LONG nE
   return hRes;
 }
 
-LPCSTR CHttpServer::LocateError(__in LONG nErrorCode)
+LPCSTR CHttpServer::LocateError(_In_ LONG nErrorCode)
 {
   SIZE_T i;
 
@@ -836,7 +836,7 @@ LPCSTR CHttpServer::LocateError(__in LONG nErrorCode)
   return NULL;
 }
 
-HRESULT CHttpServer::SetupTimeoutEvent(__in CRequest *lpRequest, __in DWORD dwTimeoutMs)
+HRESULT CHttpServer::SetupTimeoutEvent(_In_ CRequest *lpRequest, _In_ DWORD dwTimeoutMs)
 {
   CFastLock cRequestTimeoutLock(&(lpRequest->sRequest.sTimeout.nMutex));
   CTimedEventQueue::CEvent *lpEvent;
@@ -865,7 +865,7 @@ HRESULT CHttpServer::SetupTimeoutEvent(__in CRequest *lpRequest, __in DWORD dwTi
   return S_OK;
 }
 
-VOID CHttpServer::CancelAllTimeoutEvents(__in CRequest *lpRequest)
+VOID CHttpServer::CancelAllTimeoutEvents(_In_ CRequest *lpRequest)
 {
   CFastLock cRequestTimeoutLock(&(lpRequest->sRequest.sTimeout.nMutex));
 
@@ -878,7 +878,7 @@ VOID CHttpServer::CancelAllTimeoutEvents(__in CRequest *lpRequest)
   return;
 }
 
-VOID CHttpServer::DoCancelEventsCallback(__in __TEventArray &cEventsList)
+VOID CHttpServer::DoCancelEventsCallback(_In_ __TEventArray &cEventsList)
 {
   SIZE_T i, nCount;
 
@@ -888,7 +888,7 @@ VOID CHttpServer::DoCancelEventsCallback(__in __TEventArray &cEventsList)
   return;
 }
 
-VOID CHttpServer::OnRequestDestroyed(__in CRequest *lpRequest)
+VOID CHttpServer::OnRequestDestroyed(_In_ CRequest *lpRequest)
 {
   CFastLock cListLock(&nRequestsMutex);
 

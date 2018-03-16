@@ -783,8 +783,8 @@ MxGetProcedureAddress ENDP
 MxCallWithSEH_SEH PROTO
 
 ALIGN 16
-;SIZE_T __stdcall MxCallWithSEH(__in LPVOID lpFunc, __out BOOL *lpExceptionRaised, __in_opt SIZE_T nParam1=0,
-;                               __in_opt SIZE_T nParam2=0, __in_opt SIZE_T nParam3=0);
+;SIZE_T __stdcall MxCallWithSEH(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_opt_ SIZE_T nParam1=0,
+;                               _In_opt_ SIZE_T nParam2=0, _In_opt_ SIZE_T nParam3=0);
 MxCallWithSEH PROC FRAME :MxCallWithSEH_SEH
     push rbp
 .PUSHREG rbp
@@ -822,9 +822,9 @@ fifthParam EQU  rbp + sizeof MINIMAL_SEH+20h + 28h
     pop  rbp
     ret
 @@onException:
-    test rdx, rdx
-    je   @F
     mov  rax, origRdx
+    test rax, rax
+    je   @F
     inc  QWORD PTR [rax]
 @@: xor  rax, rax
     lea  rsp, [rbp + sizeof MINIMAL_SEH+20h]

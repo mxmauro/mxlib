@@ -72,8 +72,8 @@ public:
 protected:
   friend class CHttpCommon;
 
-  virtual HRESULT Initialize(__in CPropertyBag &cPropBag, __in CHttpCommon &cHttpCmn) = 0;
-  virtual HRESULT Parse(__in LPCVOID lpData, __in SIZE_T nDataSize) = 0;
+  virtual HRESULT Initialize(_In_ CPropertyBag &cPropBag, _In_ CHttpCommon &cHttpCmn) = 0;
+  virtual HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize) = 0;
 
 protected:
   BOOL bEntityTooLarge;

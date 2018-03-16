@@ -34,18 +34,18 @@ class CMemoryStream : public CStream
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CMemoryStream);
 public:
-  CMemoryStream(__in_opt SIZE_T nAllocationGranularity=65536);
+  CMemoryStream(_In_opt_ SIZE_T nAllocationGranularity=65536);
   ~CMemoryStream();
 
-  HRESULT Create(__in_opt SIZE_T nInitialSize=0, __in_opt BOOL bGrowable=TRUE);
+  HRESULT Create(_In_opt_ SIZE_T nInitialSize=0, _In_opt_ BOOL bGrowable=TRUE);
   VOID Close();
 
-  HRESULT Read(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_T &nReaded,
-               __in_opt ULONGLONG nStartOffset=ULONGLONG_MAX);
-  HRESULT Write(__in LPCVOID lpSrc, __in SIZE_T nBytes, __out SIZE_T &nWritten,
-                __in_opt ULONGLONG nStartOffset=ULONGLONG_MAX);
+  HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nReaded,
+               _In_opt_ ULONGLONG nStartOffset=ULONGLONG_MAX);
+  HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nWritten,
+                _In_opt_ ULONGLONG nStartOffset=ULONGLONG_MAX);
 
-  HRESULT Seek(__in ULONGLONG nPosition, __in_opt eSeekMethod nMethod=SeekStart);
+  HRESULT Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod=SeekStart);
 
   ULONGLONG GetLength() const;
 
@@ -54,7 +54,7 @@ public:
   CMemoryStream* Clone();
 
 private:
-  BOOL EnsureSize(__in SIZE_T nRequiredSize);
+  BOOL EnsureSize(_In_ SIZE_T nRequiredSize);
 
 private:
   LPBYTE lpData;

@@ -27,7 +27,7 @@
 
 namespace MX {
 
-CMemoryStream::CMemoryStream(__in_opt SIZE_T nAllocationGranularity) : CStream()
+CMemoryStream::CMemoryStream(_In_opt_ SIZE_T nAllocationGranularity) : CStream()
 {
   lpData = NULL;
   nCurrPos = nSize = nAllocated = 0;
@@ -59,7 +59,7 @@ CMemoryStream::~CMemoryStream()
   return;
 }
 
-HRESULT CMemoryStream::Create(__in_opt SIZE_T nInitialSize, __in_opt BOOL bGrowable)
+HRESULT CMemoryStream::Create(_In_opt_ SIZE_T nInitialSize, _In_opt_ BOOL bGrowable)
 {
   Close();
   if (nInitialSize > 0)
@@ -80,8 +80,8 @@ VOID CMemoryStream::Close()
   return;
 }
 
-HRESULT CMemoryStream::Read(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_T &nReaded,
-                            __in_opt ULONGLONG nStartOffset)
+HRESULT CMemoryStream::Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nReaded,
+                            _In_opt_ ULONGLONG nStartOffset)
 {
   SIZE_T nReadPos;
 
@@ -110,8 +110,8 @@ HRESULT CMemoryStream::Read(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_
   return S_OK;
 }
 
-HRESULT CMemoryStream::Write(__in LPCVOID lpSrc, __in SIZE_T nBytes, __out SIZE_T &nWritten,
-                             __in_opt ULONGLONG nStartOffset)
+HRESULT CMemoryStream::Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nWritten,
+                             _In_opt_ ULONGLONG nStartOffset)
 {
   SIZE_T nWritePos;
 
@@ -152,7 +152,7 @@ HRESULT CMemoryStream::Write(__in LPCVOID lpSrc, __in SIZE_T nBytes, __out SIZE_
   return S_OK;
 }
 
-HRESULT CMemoryStream::Seek(__in ULONGLONG nPosition, __in_opt eSeekMethod nMethod)
+HRESULT CMemoryStream::Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod)
 {
   switch (nMethod)
   {
@@ -206,7 +206,7 @@ CMemoryStream* CMemoryStream::Clone()
   return NULL;
 }
 
-BOOL CMemoryStream::EnsureSize(__in SIZE_T nRequiredSize)
+BOOL CMemoryStream::EnsureSize(_In_ SIZE_T nRequiredSize)
 {
   if (nRequiredSize > nAllocated)
   {

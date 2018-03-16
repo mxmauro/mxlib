@@ -38,15 +38,15 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Upgrade)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
-  HRESULT AddProduct(__in_z LPCSTR szProductA);
+  HRESULT AddProduct(_In_z_ LPCSTR szProductA);
 
   SIZE_T GetProductsCount() const;
-  LPCSTR GetProduct(__in SIZE_T nIndex) const;
-  BOOL HasProduct(__in_z LPCSTR szProductA) const;
+  LPCSTR GetProduct(_In_ SIZE_T nIndex) const;
+  BOOL HasProduct(_In_z_ LPCSTR szProductA) const;
 
 private:
   TArrayListWithFree<LPSTR> cProductsList;

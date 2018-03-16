@@ -40,9 +40,9 @@ static const MX::CDateTime cZeroDt(1, 1, 1);
 
 //-----------------------------------------------------------
 
-static VOID SkipBlanks(__inout LPCSTR &szSrcA, __inout SIZE_T &nSrcLen);
-static HRESULT GetPairA(__inout LPCSTR &szSrcA, __inout SIZE_T &nSrcLen, __in BOOL bAdv,
-                        __inout MX::CStringA &cStrNameA, __inout MX::CStringA &cStrValueA);
+static VOID SkipBlanks(_Inout_ LPCSTR &szSrcA, _Inout_ SIZE_T &nSrcLen);
+static HRESULT GetPairA(_Inout_ LPCSTR &szSrcA, _Inout_ SIZE_T &nSrcLen, _In_ BOOL bAdv,
+                        _Inout_ MX::CStringA &cStrNameA, _Inout_ MX::CStringA &cStrValueA);
 
 //-----------------------------------------------------------
 
@@ -70,7 +70,7 @@ VOID CHttpCookie::Clear()
   return;
 }
 
-HRESULT CHttpCookie::SetName(__in_z LPCSTR szNameA)
+HRESULT CHttpCookie::SetName(_In_z_ LPCSTR szNameA)
 {
   CStringA cStrTempA;
   LPCSTR sA;
@@ -87,7 +87,7 @@ HRESULT CHttpCookie::SetName(__in_z LPCSTR szNameA)
   return S_OK;
 }
 
-HRESULT CHttpCookie::SetName(__in_z LPCWSTR szNameW)
+HRESULT CHttpCookie::SetName(_In_z_ LPCWSTR szNameW)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -106,12 +106,12 @@ LPCSTR CHttpCookie::GetName() const
   return (LPSTR)cStrNameA;
 }
 
-HRESULT CHttpCookie::GetName(__inout CStringW &cStrDestW)
+HRESULT CHttpCookie::GetName(_Inout_ CStringW &cStrDestW)
 {
   return Utf8_Decode(cStrDestW, GetName());
 }
 
-HRESULT CHttpCookie::SetValue(__in_z LPCSTR szValueA)
+HRESULT CHttpCookie::SetValue(_In_z_ LPCSTR szValueA)
 {
   CStringA cStrTempA;
   LPCSTR sA;
@@ -128,7 +128,7 @@ HRESULT CHttpCookie::SetValue(__in_z LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpCookie::SetValue(__in_z LPCWSTR szValueW)
+HRESULT CHttpCookie::SetValue(_In_z_ LPCWSTR szValueW)
 {
   CStringA cStrTempA;
   LPCWSTR sW;
@@ -152,12 +152,12 @@ LPCSTR CHttpCookie::GetValue() const
   return (LPSTR)cStrValueA;
 }
 
-HRESULT CHttpCookie::GetValue(__inout CStringW &cStrDestW)
+HRESULT CHttpCookie::GetValue(_Inout_ CStringW &cStrDestW)
 {
   return Utf8_Decode(cStrDestW, GetValue());
 }
 
-HRESULT CHttpCookie::SetDomain(__in_z LPCSTR szDomainA)
+HRESULT CHttpCookie::SetDomain(_In_z_ LPCSTR szDomainA)
 {
   CStringA cStrTempA;
   LPCSTR sA;
@@ -175,7 +175,7 @@ HRESULT CHttpCookie::SetDomain(__in_z LPCSTR szDomainA)
   return S_OK;
 }
 
-HRESULT CHttpCookie::SetDomain(__in_z LPCWSTR szDomainW)
+HRESULT CHttpCookie::SetDomain(_In_z_ LPCWSTR szDomainW)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -193,12 +193,12 @@ LPCSTR CHttpCookie::GetDomain() const
   return (LPSTR)cStrDomainA;
 }
 
-HRESULT CHttpCookie::GetDomain(__inout CStringW &cStrDestW)
+HRESULT CHttpCookie::GetDomain(_Inout_ CStringW &cStrDestW)
 {
   return Punycode_Decode(cStrDestW, GetDomain());
 }
 
-HRESULT CHttpCookie::SetPath(__in_z LPCSTR szPathA)
+HRESULT CHttpCookie::SetPath(_In_z_ LPCSTR szPathA)
 {
   CStringA cStrTempA;
   LPCSTR sA;
@@ -216,7 +216,7 @@ HRESULT CHttpCookie::SetPath(__in_z LPCSTR szPathA)
   return S_OK;
 }
 
-HRESULT CHttpCookie::SetPath(__in_z LPCWSTR szPathW)
+HRESULT CHttpCookie::SetPath(_In_z_ LPCWSTR szPathW)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -234,12 +234,12 @@ LPCSTR CHttpCookie::GetPath() const
   return (LPSTR)cStrPathA;
 }
 
-HRESULT CHttpCookie::GetPath(__inout CStringW &cStrDestW)
+HRESULT CHttpCookie::GetPath(_Inout_ CStringW &cStrDestW)
 {
   return Utf8_Decode(cStrDestW, GetPath());
 }
 
-VOID CHttpCookie::SetExpireDate(__in_opt const CDateTime *lpDate)
+VOID CHttpCookie::SetExpireDate(_In_opt_ const CDateTime *lpDate)
 {
   if (lpDate != NULL)
   {
@@ -258,7 +258,7 @@ CDateTime* CHttpCookie::GetExpireDate() const
   return const_cast<CDateTime*>(((nFlags & COOKIE_FLAG_EXPIRES_SET) != 0) ? (&cExpiresDt) : (&cZeroDt));
 }
 
-VOID CHttpCookie::SetSecureFlag(__in BOOL bIsSecure)
+VOID CHttpCookie::SetSecureFlag(_In_ BOOL bIsSecure)
 {
   if (bIsSecure != FALSE)
     nFlags |= COOKIE_FLAG_ISSECURE;
@@ -272,7 +272,7 @@ BOOL CHttpCookie::GetSecureFlag() const
   return ((nFlags & COOKIE_FLAG_ISSECURE) != 0) ? TRUE : FALSE;
 }
 
-VOID CHttpCookie::SetHttpOnlyFlag(__in BOOL bIsHttpOnly)
+VOID CHttpCookie::SetHttpOnlyFlag(_In_ BOOL bIsHttpOnly)
 {
   if (bIsHttpOnly != FALSE)
     nFlags |= COOKIE_FLAG_HTTPONLY;
@@ -286,7 +286,7 @@ BOOL CHttpCookie::GetHttpOnlyFlag() const
   return ((nFlags & COOKIE_FLAG_HTTPONLY) != 0) ? TRUE : FALSE;
 }
 
-HRESULT CHttpCookie::operator=(__in const CHttpCookie& cSrc)
+HRESULT CHttpCookie::operator=(_In_ const CHttpCookie& cSrc)
 {
   if (&cSrc != this)
   {
@@ -305,7 +305,7 @@ HRESULT CHttpCookie::operator=(__in const CHttpCookie& cSrc)
   return S_OK;
 }
 
-HRESULT CHttpCookie::ToString(__inout CStringA& cStrDestA, __in BOOL bAddAttributes)
+HRESULT CHttpCookie::ToString(_Inout_ CStringA& cStrDestA, _In_ BOOL bAddAttributes)
 {
   CDateTime cTempDt, *lpDt;
   HRESULT hRes;
@@ -375,7 +375,7 @@ HRESULT CHttpCookie::ToString(__inout CStringA& cStrDestA, __in BOOL bAddAttribu
   return S_OK;
 }
 
-HRESULT CHttpCookie::DoesDomainMatch(__in_z LPCSTR szDomainToMatchA)
+HRESULT CHttpCookie::DoesDomainMatch(_In_z_ LPCSTR szDomainToMatchA)
 {
   SIZE_T nToMatchLen, nLength;
   LPCSTR szDomainA;
@@ -397,7 +397,7 @@ HRESULT CHttpCookie::DoesDomainMatch(__in_z LPCSTR szDomainToMatchA)
   return (StrCompareA(szDomainToMatchA, szDomainA) == 0) ? S_OK : S_FALSE;
 }
 
-HRESULT CHttpCookie::DoesDomainMatch(__in_z LPCWSTR szDomainToMatchW)
+HRESULT CHttpCookie::DoesDomainMatch(_In_z_ LPCWSTR szDomainToMatchW)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -410,7 +410,7 @@ HRESULT CHttpCookie::DoesDomainMatch(__in_z LPCWSTR szDomainToMatchW)
   return hRes;
 }
 
-HRESULT CHttpCookie::HasExpired(__in_opt const CDateTime *lpDate)
+HRESULT CHttpCookie::HasExpired(_In_opt_ const CDateTime *lpDate)
 {
   CDateTime cTempCmpDt, cTempExpDt, *lpThisDt;
   HRESULT hRes;
@@ -447,7 +447,7 @@ HRESULT CHttpCookie::HasExpired(__in_opt const CDateTime *lpDate)
   return ((*lpDate) >= cExpiresDt) ? S_FALSE : S_OK;
 }
 
-HRESULT CHttpCookie::ParseFromResponseHeader(__in_z LPCSTR szSrcA, __in_opt SIZE_T nSrcLen)
+HRESULT CHttpCookie::ParseFromResponseHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen)
 {
   CStringA cStrTempNameA, cStrTempValueA;
   HRESULT hRes;
@@ -607,7 +607,7 @@ HRESULT CHttpCookieArray::operator=(const CHttpCookieArray& cSrc)
   return hRes;
 }
 
-HRESULT CHttpCookieArray::ParseFromRequestHeader(__in_z LPCSTR szSrcA, __in_opt SIZE_T nSrcLen)
+HRESULT CHttpCookieArray::ParseFromRequestHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen)
 {
   CStringA cStrNameA, cStrValueA;
   TAutoDeletePtr<CHttpCookie> cCookie;
@@ -648,7 +648,7 @@ HRESULT CHttpCookieArray::ParseFromRequestHeader(__in_z LPCSTR szSrcA, __in_opt 
   return S_OK;
 }
 
-HRESULT CHttpCookieArray::Update(__in const CHttpCookieArray& cSrc, __in BOOL bReplaceExisting)
+HRESULT CHttpCookieArray::Update(_In_ const CHttpCookieArray& cSrc, _In_ BOOL bReplaceExisting)
 {
   SIZE_T i, nCount;
   HRESULT hRes;
@@ -660,7 +660,7 @@ HRESULT CHttpCookieArray::Update(__in const CHttpCookieArray& cSrc, __in BOOL bR
   return hRes;
 }
 
-HRESULT CHttpCookieArray::Update(__in const CHttpCookie& cSrc, __in BOOL bReplaceExisting)
+HRESULT CHttpCookieArray::Update(_In_ const CHttpCookie& cSrc, _In_ BOOL bReplaceExisting)
 {
   TAutoDeletePtr<CHttpCookie> cNewCookie;
   SIZE_T nIdx, nCount;
@@ -692,7 +692,7 @@ HRESULT CHttpCookieArray::Update(__in const CHttpCookie& cSrc, __in BOOL bReplac
   return S_OK;
 }
 
-HRESULT CHttpCookieArray::RemoveExpiredAndInvalid(__in_opt const CDateTime *lpDate)
+HRESULT CHttpCookieArray::RemoveExpiredAndInvalid(_In_opt_ const CDateTime *lpDate)
 {
   CDateTime cTempDt;
   CHttpCookie *lpCookie;
@@ -729,7 +729,7 @@ HRESULT CHttpCookieArray::RemoveExpiredAndInvalid(__in_opt const CDateTime *lpDa
 
 //-----------------------------------------------------------
 
-static VOID SkipBlanks(__inout LPCSTR &szSrcA, __inout SIZE_T &nSrcLen)
+static VOID SkipBlanks(_Inout_ LPCSTR &szSrcA, _Inout_ SIZE_T &nSrcLen)
 {
   while (nSrcLen > 0 && (*szSrcA == ' ' || *szSrcA == '\t'))
   {
@@ -739,8 +739,8 @@ static VOID SkipBlanks(__inout LPCSTR &szSrcA, __inout SIZE_T &nSrcLen)
   return;
 }
 
-static HRESULT GetPairA(__inout LPCSTR &szSrcA, __inout SIZE_T &nSrcLen, __in BOOL bAdv,
-                        __inout MX::CStringA &cStrNameA, __inout MX::CStringA &cStrValueA)
+static HRESULT GetPairA(_Inout_ LPCSTR &szSrcA, _Inout_ SIZE_T &nSrcLen, _In_ BOOL bAdv,
+                        _Inout_ MX::CStringA &cStrNameA, _Inout_ MX::CStringA &cStrValueA)
 {
   LPCSTR szStartA;
 

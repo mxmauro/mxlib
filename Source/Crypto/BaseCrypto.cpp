@@ -40,7 +40,7 @@ SIZE_T CBaseCrypto::GetAvailableEncryptedData()
   return nSize1+nSize2;
 }
 
-SIZE_T CBaseCrypto::GetEncryptedData(__out LPVOID lpDest, __in SIZE_T nDestSize)
+SIZE_T CBaseCrypto::GetEncryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize)
 {
   LPBYTE lpPtr1, lpPtr2;
   SIZE_T nSize1, nSize2;
@@ -71,7 +71,7 @@ SIZE_T CBaseCrypto::GetAvailableDecryptedData()
   return nSize1+nSize2;
 }
 
-SIZE_T CBaseCrypto::GetDecryptedData(__out LPVOID lpDest, __in SIZE_T nDestSize)
+SIZE_T CBaseCrypto::GetDecryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize)
 {
   LPBYTE lpPtr1, lpPtr2;
   SIZE_T nSize1, nSize2;

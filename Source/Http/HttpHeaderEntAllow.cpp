@@ -38,7 +38,7 @@ CHttpHeaderEntAllow::~CHttpHeaderEntAllow()
   return;
 }
 
-HRESULT CHttpHeaderEntAllow::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderEntAllow::Parse(_In_z_ LPCSTR szValueA)
 {
   CStringA cStrTempA;
   LPCSTR szStartA;
@@ -78,7 +78,7 @@ HRESULT CHttpHeaderEntAllow::Parse(__in_z LPCSTR szValueA)
   return (bGotItem != FALSE) ? S_OK : MX_E_InvalidData;
 }
 
-HRESULT CHttpHeaderEntAllow::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderEntAllow::Build(_Inout_ CStringA &cStrDestA)
 {
   SIZE_T i, nCount;
 
@@ -96,7 +96,7 @@ HRESULT CHttpHeaderEntAllow::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntAllow::AddVerb(__in_z LPCSTR szVerbA)
+HRESULT CHttpHeaderEntAllow::AddVerb(_In_z_ LPCSTR szVerbA)
 {
   LPCSTR szStartA, szEndA;
   CStringA cStrTempA;
@@ -131,12 +131,12 @@ SIZE_T CHttpHeaderEntAllow::GetVerbsCount() const
   return cVerbsList.GetCount();
 }
 
-LPCSTR CHttpHeaderEntAllow::GetVerb(__in SIZE_T nIndex) const
+LPCSTR CHttpHeaderEntAllow::GetVerb(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cVerbsList.GetCount()) ? cVerbsList.GetElementAt(nIndex) : NULL;
 }
 
-BOOL CHttpHeaderEntAllow::HasVerb(__in_z LPCSTR szVerbA) const
+BOOL CHttpHeaderEntAllow::HasVerb(_In_z_ LPCSTR szVerbA) const
 {
   SIZE_T i, nCount;
 

@@ -115,7 +115,7 @@ public:
     return (lpHead == NULL) ? TRUE : FALSE;
     };
 
-  _inline VOID Remove(__inout _LnkLstNode *lpNode)
+  _inline VOID Remove(_Inout_ _LnkLstNode *lpNode)
     {
     MX_ASSERT(lpNode->lpList == this);
     lpNode->lpList = NULL;
@@ -134,7 +134,7 @@ public:
     return;
     };
 
-  _inline VOID PushHead(__inout _LnkLstNode *lpNode)
+  _inline VOID PushHead(_Inout_ _LnkLstNode *lpNode)
     {
     MX_ASSERT(lpNode != NULL);
     MX_ASSERT(lpNode->lpList == NULL);
@@ -152,7 +152,7 @@ public:
     return;
     };
 
-  _inline VOID PushTail(__inout _LnkLstNode *lpNode)
+  _inline VOID PushTail(_Inout_ _LnkLstNode *lpNode)
     {
     MX_ASSERT(lpNode != NULL);
     MX_ASSERT(lpNode->lpList == NULL);
@@ -170,7 +170,7 @@ public:
     return;
     };
 
-  _inline VOID PushAfter(__inout _LnkLstNode *lpNode, __inout _LnkLstNode *lpAfterNode)
+  _inline VOID PushAfter(_Inout_ _LnkLstNode *lpNode, _Inout_ _LnkLstNode *lpAfterNode)
     {
     if (lpAfterNode == lpTail)
     {
@@ -197,7 +197,7 @@ public:
     return;
     };
 
-  _inline VOID PushBefore(__inout _LnkLstNode *lpNode, __inout _LnkLstNode *lpBeforeNode)
+  _inline VOID PushBefore(_Inout_ _LnkLstNode *lpNode, _Inout_ _LnkLstNode *lpBeforeNode)
     {
     if (lpBeforeNode == lpHead)
     {
@@ -273,13 +273,13 @@ public:
   class Iterator
   {
   public:
-    classOrStruct* Begin(__in _LnkLstList &_list)
+    classOrStruct* Begin(_In_ _LnkLstList &_list)
       {
       lpNextCursor = _list.lpHead;
       return Next();
       };
 
-    classOrStruct* Begin(__in const _LnkLstList &_list)
+    classOrStruct* Begin(_In_ const _LnkLstList &_list)
       {
       return Begin(const_cast<_LnkLstList&>(_list));
       };
@@ -302,13 +302,13 @@ public:
   class IteratorRev
   {
   public:
-    classOrStruct* Begin(__in _LnkLstList &_list)
+    classOrStruct* Begin(_In_ _LnkLstList &_list)
       {
       lpNextCursor = _list.lpTail;
       return Next();
       };
 
-    classOrStruct* Begin(__in const _LnkLstList &_list)
+    classOrStruct* Begin(_In_ const _LnkLstList &_list)
       {
       return Begin(const_cast<_LnkLstList&>(_list));
       };

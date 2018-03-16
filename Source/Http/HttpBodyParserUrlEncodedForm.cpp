@@ -42,7 +42,7 @@ CHttpBodyParserUrlEncodedForm::~CHttpBodyParserUrlEncodedForm()
   return;
 }
 
-HRESULT CHttpBodyParserUrlEncodedForm::Initialize(__in CPropertyBag &cPropBag, __in CHttpCommon &cHttpCmn)
+HRESULT CHttpBodyParserUrlEncodedForm::Initialize(_In_ CPropertyBag &cPropBag, _In_ CHttpCommon &cHttpCmn)
 {
   DWORD dw;
   HRESULT hRes;
@@ -59,7 +59,7 @@ HRESULT CHttpBodyParserUrlEncodedForm::Initialize(__in CPropertyBag &cPropBag, _
 }
 
 #define BACKWARD_CHAR()     szDataA--
-HRESULT CHttpBodyParserUrlEncodedForm::Parse(__in LPCVOID lpData, __in SIZE_T nDataSize)
+HRESULT CHttpBodyParserUrlEncodedForm::Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize)
 {
   CStringA cStrTempA;
   CStringW cStrTempW;

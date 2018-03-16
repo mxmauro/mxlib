@@ -38,13 +38,13 @@ protected:
 
 public:
   virtual HRESULT BeginDigest()=0;
-  virtual HRESULT DigestStream(__in LPCVOID lpData, __in SIZE_T nDataLength)=0;
-  HRESULT DigestWordLE(__in LPWORD lpnValues, __in SIZE_T nCount);
-  HRESULT DigestWordBE(__in LPWORD lpnValues, __in SIZE_T nCount);
-  HRESULT DigestDWordLE(__in LPDWORD lpnValues, __in SIZE_T nCount);
-  HRESULT DigestDWordBE(__in LPDWORD lpnValues, __in SIZE_T nCount);
-  HRESULT DigestQWordLE(__in ULONGLONG *lpnValues, __in SIZE_T nCount);
-  HRESULT DigestQWordBE(__in ULONGLONG *lpnValues, __in SIZE_T nCount);
+  virtual HRESULT DigestStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)=0;
+  HRESULT DigestWordLE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount);
+  HRESULT DigestWordBE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount);
+  HRESULT DigestDWordLE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount);
+  HRESULT DigestDWordBE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount);
+  HRESULT DigestQWordLE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCount);
+  HRESULT DigestQWordBE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCount);
   virtual HRESULT EndDigest()=0;
 
   virtual LPBYTE GetResult() const=0;

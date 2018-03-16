@@ -38,15 +38,15 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(ETag)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
-  HRESULT SetEntity(__in_z LPCSTR szEntityA);
-  HRESULT SetEntity(__in_z LPCWSTR szEntityW);
+  HRESULT SetEntity(_In_z_ LPCSTR szEntityA);
+  HRESULT SetEntity(_In_z_ LPCWSTR szEntityW);
   LPCWSTR GetEntity() const;
 
-  HRESULT SetWeak(__in BOOL bIsWeak);
+  HRESULT SetWeak(_In_ BOOL bIsWeak);
   BOOL GetWeak() const;
 
 private:

@@ -29,8 +29,8 @@
 
 namespace Console {
 
-VOID SetCursorPosition(__in int X, __in int Y);
-VOID GetCursorPosition(__out int *lpnX, __out int *lpnY);
+VOID SetCursorPosition(_In_ int X, _In_ int Y);
+VOID GetCursorPosition(_Out_ int *lpnX, _Out_ int *lpnY);
 
 VOID PrintTimestamp();
 

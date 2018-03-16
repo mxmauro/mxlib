@@ -41,7 +41,7 @@ public:
     return;
     };
 
-  TAutoPtrBase(__in T* _lpPtr)
+  TAutoPtrBase(_In_ T* _lpPtr)
     {
     lpPtr = _lpPtr;
     return;
@@ -92,7 +92,7 @@ public:
     return lpPtr;
     };
 
-  T* operator=(__in T* _lpPtr)
+  T* operator=(_In_ T* _lpPtr)
     {
     if (_lpPtr != lpPtr)
       Attach(_lpPtr);
@@ -109,12 +109,12 @@ public:
     return (lpPtr != NULL) ? true : false;
     };
 
-  bool operator==(__in T* _lpPtr) const
+  bool operator==(_In_ T* _lpPtr) const
     {
     return (lpPtr == _lpPtr) ? true : false;
     };
 
-  VOID Attach(__in T* _lpPtr)
+  VOID Attach(_In_ T* _lpPtr)
     {
     if (lpPtr != NULL)
       OnDeleteItem(lpPtr);
@@ -130,7 +130,7 @@ public:
     };
 
 protected:
-  virtual VOID OnDeleteItem(__inout T *lpObj) = 0;
+  virtual VOID OnDeleteItem(_Inout_ T *lpObj) = 0;
 
 protected:
   T *lpPtr;
@@ -153,7 +153,7 @@ public:
     };
 
 protected:
-  virtual VOID OnDeleteItem(__inout T *lpObj)
+  virtual VOID OnDeleteItem(_Inout_ T *lpObj)
     {
     MX_FREE(lpObj);
     return;
@@ -177,7 +177,7 @@ public:
     };
 
 protected:
-  virtual VOID OnDeleteItem(__inout T *lpObj)
+  virtual VOID OnDeleteItem(_Inout_ T *lpObj)
     {
     if (lpObj != NULL)
       delete lpObj;
@@ -202,7 +202,7 @@ public:
     };
 
 protected:
-  virtual VOID OnDeleteItem(__inout T *lpObj)
+  virtual VOID OnDeleteItem(_Inout_ T *lpObj)
     {
     delete [] lpObj;
     return;
@@ -221,7 +221,7 @@ public:
     return;
     };
 
-  TAtomicPtr(__in T* _lpPtr)
+  TAtomicPtr(_In_ T* _lpPtr)
     {
     _InterlockedExchangePointer((LPVOID volatile*)&lpPtr, _lpPtr);
     return;
@@ -243,13 +243,13 @@ public:
     return const_cast<TAtomicPtr<T>*>(this)->Get();
     };
 
-  T* operator=(__in T* _lpPtr)
+  T* operator=(_In_ T* _lpPtr)
     {
     _InterlockedExchangePointer((PVOID volatile*)&lpPtr, _lpPtr);
     return _lpPtr;
     };
 
-  T* operator=(__in const TAtomicPtr<T>& cPtr)
+  T* operator=(_In_ const TAtomicPtr<T>& cPtr)
     {
     if (this != &cPtr)
       _InterlockedExchangePointer((PVOID volatile*)&lpPtr, cPtr.Get());
@@ -266,7 +266,7 @@ public:
     return (const_cast<TAtomicPtr<T>*>(this)->Get() != NULL) ? true : false;
     };
 
-  bool operator==(__in T* _lpPtr) const
+  bool operator==(_In_ T* _lpPtr) const
     {
     return (const_cast<TAtomicPtr<T>*>(this)->Get() == _lpPtr) ? true : false;
     };

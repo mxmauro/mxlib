@@ -27,7 +27,7 @@
 
 namespace MX {
 
-CJsHttpServer::CJsRequest::CJsRequest(__in CPropertyBag &cPropBag) : CHttpServer::CRequest(cPropBag)
+CJsHttpServer::CJsRequest::CJsRequest(_In_ CPropertyBag &cPropBag) : CHttpServer::CRequest(cPropBag)
 {
   return;
 }

@@ -25,6 +25,7 @@
 #include "..\..\Include\FnvHash.h"
 #include "..\..\Include\AutoHandle.h"
 #include <Sddl.h>
+#include <VersionHelpers.h>
 
 //-----------------------------------------------------------
 
@@ -33,17 +34,37 @@
 
 //-----------------------------------------------------------
 
-static VOID GenerateUniquePipeName(__out LPWSTR szNameW, __in SIZE_T nNameSize, __in DWORD dwVal1, __in DWORD dwVal2);
+//D:(A;;0x12019F;;;WD)
+static const BYTE aSecDescriptorXP[] = {
+  0x01, 0x00, 0x04, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+  0x14, 0x00, 0x00, 0x00, 0x02, 0x00, 0x1C, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x00,
+  0x9F, 0x01, 0x12, 0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00
+};
+
+//D:(A;;0x12019F;;;WD)S:(ML;;NW;;;LW)
+static const BYTE aSecDescriptorVistaOrLater[] = {
+  0x01, 0x00, 0x14, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00,
+  0x30, 0x00, 0x00, 0x00, 0x02, 0x00, 0x1C, 0x00, 0x01, 0x00, 0x00, 0x00, 0x11, 0x00, 0x14, 0x00,
+  0x01, 0x00, 0x00, 0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x10, 0x00, 0x00,
+  0x02, 0x00, 0x1C, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x9F, 0x01, 0x12, 0x00,
+  0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00
+};
+
+//-----------------------------------------------------------
+
+static VOID GenerateUniquePipeName(_Out_ LPWSTR szNameW, _In_ SIZE_T nNameSize, _In_ DWORD dwVal1, _In_ DWORD dwVal2);
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-CNamedPipes::CNamedPipes(__in CIoCompletionPortThreadPool &cDispatcherPool, __in CPropertyBag &cPropBag) :
+CNamedPipes::CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool, _In_ CPropertyBag &cPropBag) :
              CIpc(cDispatcherPool, cPropBag)
 {
   _InterlockedExchange(&nRemoteConnCounter, 0);
   dwMaxWaitTimeoutMs = MX_NAMEDPIPES_PROPERTY_MaxWaitTimeoutMs_DEFVAL;
+  lpSecDescr = (PSECURITY_DESCRIPTOR)((::IsWindowsVistaOrGreater() != FALSE) ? aSecDescriptorVistaOrLater :
+                                                                               aSecDescriptorXP);
   return;
 }
 
@@ -53,8 +74,8 @@ CNamedPipes::~CNamedPipes()
   return;
 }
 
-HRESULT CNamedPipes::CreateListener(__in_z LPCSTR szServerNameA, __in OnCreateCallback cCreateCallback,
-                                    __in_z_opt LPCWSTR szSecutityDescriptorA)
+HRESULT CNamedPipes::CreateListener(_In_z_ LPCSTR szServerNameA, _In_ OnCreateCallback cCreateCallback,
+                                    _In_opt_z_ LPCWSTR szSecutityDescriptorA)
 {
   CStringW cStrTempW[2];
 
@@ -70,8 +91,8 @@ HRESULT CNamedPipes::CreateListener(__in_z LPCSTR szServerNameA, __in OnCreateCa
   return CreateListener((LPWSTR)cStrTempW[0], cCreateCallback, (LPWSTR)cStrTempW[1]);
 }
 
-HRESULT CNamedPipes::CreateListener(__in_z LPCWSTR szServerNameW, __in OnCreateCallback cCreateCallback,
-                                    __in_z_opt LPCWSTR szSecutityDescriptorW)
+HRESULT CNamedPipes::CreateListener(_In_z_ LPCWSTR szServerNameW, _In_ OnCreateCallback cCreateCallback,
+                                    _In_opt_z_ LPCWSTR szSecutityDescriptorW)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoRefCounted<CServerInfo> cServerInfo;
@@ -87,14 +108,34 @@ HRESULT CNamedPipes::CreateListener(__in_z LPCWSTR szServerNameW, __in OnCreateC
   cServerInfo.Attach(MX_DEBUG_NEW CServerInfo());
   if (!cServerInfo)
     return E_OUTOFMEMORY;
-  hRes = cServerInfo->Init(szServerNameW, szSecutityDescriptorW);
+
+  if (szSecutityDescriptorW != NULL && *szSecutityDescriptorW != 0)
+  {
+    PSECURITY_DESCRIPTOR _lpSecDescr;
+
+    if (::ConvertStringSecurityDescriptorToSecurityDescriptorW(szSecutityDescriptorW, SECURITY_DESCRIPTOR_REVISION,
+                                                               &_lpSecDescr, NULL) != FALSE)
+    {
+      hRes = cServerInfo->Init(szServerNameW, _lpSecDescr);
+      if (FAILED(hRes))
+        ::LocalFree(_lpSecDescr);
+    }
+    else
+    {
+      hRes = MX_HRESULT_FROM_LASTERROR();
+    }
+  }
+  else
+  {
+    hRes = cServerInfo->Init(szServerNameW, lpSecDescr);
+  }
   if (FAILED(hRes))
     return hRes;
   return CreateServerConnection((CServerInfo*)cServerInfo, cCreateCallback);
 }
 
-HRESULT CNamedPipes::ConnectToServer(__in_z LPCSTR szServerNameA, __in OnCreateCallback cCreateCallback,
-                                     __in_opt CUserData *lpUserData, __out_opt HANDLE *h)
+HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCSTR szServerNameA, _In_ OnCreateCallback cCreateCallback,
+                                     _In_opt_ CUserData *lpUserData, _Out_opt_ HANDLE *h)
 {
   CStringW cStrTempW;
 
@@ -105,8 +146,8 @@ HRESULT CNamedPipes::ConnectToServer(__in_z LPCSTR szServerNameA, __in OnCreateC
   return ConnectToServer((LPWSTR)cStrTempW, cCreateCallback, lpUserData, h);
 }
 
-HRESULT CNamedPipes::ConnectToServer(__in_z LPCWSTR szServerNameW, __in OnCreateCallback cCreateCallback,
-                                     __in_opt CUserData *lpUserData, __out_opt HANDLE *h)
+HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreateCallback cCreateCallback,
+                                     _In_opt_ CUserData *lpUserData, _Out_opt_ HANDLE *h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoDeletePtr<CConnection> cConn;
@@ -139,7 +180,7 @@ HRESULT CNamedPipes::ConnectToServer(__in_z LPCWSTR szServerNameW, __in OnCreate
   }
   hRes = FireOnCreate(cConn.Get());
   if (SUCCEEDED(hRes))
-    hRes = cConn->CreateClient((LPCWSTR)cStrTempW, dwMaxWaitTimeoutMs);
+    hRes = cConn->CreateClient((LPCWSTR)cStrTempW, dwMaxWaitTimeoutMs, lpSecDescr);
   if (SUCCEEDED(hRes))
     hRes = cConn->HandleConnected();
   if (FAILED(hRes))
@@ -153,14 +194,13 @@ HRESULT CNamedPipes::ConnectToServer(__in_z LPCWSTR szServerNameW, __in OnCreate
   return hRes;
 }
 
-HRESULT CNamedPipes::CreateRemoteClientConnection(__in HANDLE hProc, __out HANDLE &h, __out HANDLE &hRemotePipe,
-                                                  __in OnCreateCallback cCreateCallback,
-                                                  __in_opt CUserData *lpUserData)
+HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDLE &h, _Out_ HANDLE &hRemotePipe,
+                                                  _In_ OnCreateCallback cCreateCallback,
+                                                  _In_opt_ CUserData *lpUserData)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoDeletePtr<CConnection> cConn;
   SECURITY_ATTRIBUTES sSecAttrib;
-  SECURITY_DESCRIPTOR sSecDesc;
   OVERLAPPED sConnOvr;
   CWindowsEvent cConnEv;
   BOOL bConnected;
@@ -176,15 +216,13 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(__in HANDLE hProc, __out HANDL
   if (!cCreateCallback)
     return E_INVALIDARG;
   //create named pipe
-  ::InitializeSecurityDescriptor(&sSecDesc, SECURITY_DESCRIPTOR_REVISION);
-  ::SetSecurityDescriptorDacl(&sSecDesc, TRUE, NULL, FALSE);
   sSecAttrib.nLength = sizeof(SECURITY_ATTRIBUTES);
   sSecAttrib.bInheritHandle = FALSE;
-  sSecAttrib.lpSecurityDescriptor = &sSecDesc;
+  sSecAttrib.lpSecurityDescriptor = lpSecDescr;
   GenerateUniquePipeName(szBufW, MX_ARRAYLEN(szBufW), (DWORD)((ULONG_PTR)this),
                          (DWORD)_InterlockedIncrement(&nRemoteConnCounter));
-  cLocalPipe.Attach(::CreateNamedPipeW(szBufW, PIPE_ACCESS_DUPLEX|FILE_FLAG_WRITE_THROUGH|FILE_FLAG_OVERLAPPED,
-                                       PIPE_READMODE_BYTE|PIPE_TYPE_BYTE|PIPE_WAIT, 1, dwPacketSize, dwPacketSize,
+  cLocalPipe.Attach(::CreateNamedPipeW(szBufW, PIPE_ACCESS_DUPLEX | FILE_FLAG_WRITE_THROUGH | FILE_FLAG_OVERLAPPED,
+                                       PIPE_READMODE_BYTE | PIPE_TYPE_BYTE | PIPE_WAIT, 1, dwPacketSize, dwPacketSize,
                                        10000, &sSecAttrib));
   if (cLocalPipe == NULL || cLocalPipe == INVALID_HANDLE_VALUE)
     return MX_HRESULT_FROM_LASTERROR();
@@ -259,7 +297,7 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(__in HANDLE hProc, __out HANDL
   return hRes;
 }
 
-HRESULT CNamedPipes::ImpersonateConnectionClient(__in HANDLE h)
+HRESULT CNamedPipes::ImpersonateConnectionClient(_In_ HANDLE h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnection *lpConn;
@@ -300,7 +338,7 @@ VOID CNamedPipes::OnInternalFinalize()
   return;
 }
 
-HRESULT CNamedPipes::CreateServerConnection(__in CServerInfo *lpServerInfo, __in OnCreateCallback _cCreateCallback)
+HRESULT CNamedPipes::CreateServerConnection(_In_ CServerInfo *lpServerInfo, _In_ OnCreateCallback _cCreateCallback)
 {
   TAutoDeletePtr<CConnection> cConn;
   HRESULT hRes;
@@ -327,12 +365,12 @@ HRESULT CNamedPipes::CreateServerConnection(__in CServerInfo *lpServerInfo, __in
   return hRes;
 }
 
-HRESULT CNamedPipes::OnPreprocessPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __in HRESULT hRes)
+HRESULT CNamedPipes::OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes)
 {
   return S_FALSE;
 }
 
-HRESULT CNamedPipes::OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __in HRESULT hRes)
+HRESULT CNamedPipes::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes)
 {
   CConnection *lpConn;
   HRESULT hOrigRes;
@@ -414,25 +452,25 @@ CNamedPipes::CServerInfo::CServerInfo() : TRefCounted<CBaseMemObj>()
 
 CNamedPipes::CServerInfo::~CServerInfo()
 {
-  if (lpSecDescr != NULL)
+  if (lpSecDescr != NULL && lpSecDescr != (PSECURITY_DESCRIPTOR)&aSecDescriptorVistaOrLater &&
+      lpSecDescr != (PSECURITY_DESCRIPTOR)&aSecDescriptorXP)
+  {
     ::LocalFree(lpSecDescr);
+  }
   return;
 }
 
-HRESULT CNamedPipes::CServerInfo::Init(__in_z LPCWSTR szServerNameW, __in_z LPCWSTR szSecutityDescriptorW)
+HRESULT CNamedPipes::CServerInfo::Init(_In_z_ LPCWSTR szServerNameW, _In_ PSECURITY_DESCRIPTOR _lpSecDescr)
 {
   if (cStrNameW.Format(L"\\\\.\\pipe\\%s", szServerNameW) == FALSE)
     return E_OUTOFMEMORY;
-  if (szSecutityDescriptorW != NULL && szSecutityDescriptorW[0] != 0 &&
-      ::ConvertStringSecurityDescriptorToSecurityDescriptorW(szSecutityDescriptorW, SECURITY_DESCRIPTOR_REVISION,
-                                                             &lpSecDescr, NULL) == FALSE)
-    return MX_HRESULT_FROM_LASTERROR();
+  lpSecDescr = _lpSecDescr;
   return S_OK;
 }
 
 //-----------------------------------------------------------
 
-CNamedPipes::CConnection::CConnection(__in CIpc *lpIpc, __in CIpc::eConnectionClass nClass) : CConnectionBase(lpIpc,
+CNamedPipes::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass) : CConnectionBase(lpIpc,
                                                                                                               nClass)
 {
   hPipe = NULL;
@@ -449,26 +487,16 @@ CNamedPipes::CConnection::~CConnection()
   return;
 }
 
-HRESULT CNamedPipes::CConnection::CreateServer(__in DWORD dwPacketSize)
+HRESULT CNamedPipes::CConnection::CreateServer(_In_ DWORD dwPacketSize)
 {
   SECURITY_ATTRIBUTES sSecAttrib;
-  SECURITY_DESCRIPTOR sSecDesc;
   CPacket *lpPacket;
   HRESULT hRes;
 
   //create server pipe endpoint
   sSecAttrib.nLength = (DWORD)sizeof(sSecAttrib);
   sSecAttrib.bInheritHandle = FALSE;
-  if (cServerInfo->lpSecDescr != NULL)
-  {
-    sSecAttrib.lpSecurityDescriptor = cServerInfo->lpSecDescr;
-  }
-  else
-  {
-    ::InitializeSecurityDescriptor(&sSecDesc, SECURITY_DESCRIPTOR_REVISION);
-    ::SetSecurityDescriptorDacl(&sSecDesc, TRUE, NULL, FALSE);
-    sSecAttrib.lpSecurityDescriptor = &sSecDesc;
-  }
+  sSecAttrib.lpSecurityDescriptor = cServerInfo->lpSecDescr;
   hPipe = ::CreateNamedPipeW((LPWSTR)(cServerInfo->cStrNameW), PIPE_ACCESS_DUPLEX|FILE_FLAG_WRITE_THROUGH|
                              FILE_FLAG_OVERLAPPED, PIPE_READMODE_BYTE|PIPE_TYPE_BYTE|PIPE_WAIT,
                              PIPE_UNLIMITED_INSTANCES, dwPacketSize, dwPacketSize, 10000, &sSecAttrib);
@@ -499,19 +527,17 @@ HRESULT CNamedPipes::CConnection::CreateServer(__in DWORD dwPacketSize)
   return hRes;
 }
 
-HRESULT CNamedPipes::CConnection::CreateClient(__in_z LPCWSTR szServerNameW, __in DWORD dwMaxWriteTimeoutMs)
+HRESULT CNamedPipes::CConnection::CreateClient(_In_z_ LPCWSTR szServerNameW, _In_ DWORD dwMaxWriteTimeoutMs,
+                                               _In_ PSECURITY_DESCRIPTOR lpSecDescr)
 {
   SECURITY_ATTRIBUTES sSecAttrib;
-  SECURITY_DESCRIPTOR sSecDesc;
-  HRESULT hRes;
   DWORD dwMode;
+  HRESULT hRes;
 
   //create client pipe endpoint
-  ::InitializeSecurityDescriptor(&sSecDesc, SECURITY_DESCRIPTOR_REVISION);
-  ::SetSecurityDescriptorDacl(&sSecDesc, TRUE, NULL, FALSE);
   sSecAttrib.nLength = (DWORD)sizeof(sSecAttrib);
   sSecAttrib.bInheritHandle = FALSE;
-  sSecAttrib.lpSecurityDescriptor = &sSecDesc;
+  sSecAttrib.lpSecurityDescriptor = lpSecDescr;
   while (1)
   {
     hPipe = ::CreateFileW(szServerNameW, GENERIC_READ|GENERIC_WRITE, 0, &sSecAttrib, OPEN_EXISTING,
@@ -545,7 +571,7 @@ HRESULT CNamedPipes::CConnection::CreateClient(__in_z LPCWSTR szServerNameW, __i
   return S_OK;
 }
 
-VOID CNamedPipes::CConnection::ShutdownLink(__in BOOL bAbortive)
+VOID CNamedPipes::CConnection::ShutdownLink(_In_ BOOL bAbortive)
 {
   {
     CFastLock cLock(&nMutex);
@@ -562,7 +588,7 @@ VOID CNamedPipes::CConnection::ShutdownLink(__in BOOL bAbortive)
   return;
 }
 
-HRESULT CNamedPipes::CConnection::SendReadPacket(__in CPacket *lpPacket)
+HRESULT CNamedPipes::CConnection::SendReadPacket(_In_ CPacket *lpPacket)
 {
   DWORD dwReaded;
   HRESULT hRes;
@@ -577,7 +603,7 @@ HRESULT CNamedPipes::CConnection::SendReadPacket(__in CPacket *lpPacket)
   return S_OK;
 }
 
-HRESULT CNamedPipes::CConnection::SendWritePacket(__in CPacket *lpPacket)
+HRESULT CNamedPipes::CConnection::SendWritePacket(_In_ CPacket *lpPacket)
 {
   DWORD dwWritten;
   HRESULT hRes;
@@ -596,10 +622,11 @@ HRESULT CNamedPipes::CConnection::SendWritePacket(__in CPacket *lpPacket)
 
 //-----------------------------------------------------------
 
-static VOID GenerateUniquePipeName(__out LPWSTR szNameW, __in SIZE_T nNameSize, __in DWORD dwVal1, __in DWORD dwVal2)
+static VOID GenerateUniquePipeName(_Out_ LPWSTR szNameW, _In_ SIZE_T nNameSize, _In_ DWORD dwVal1, _In_ DWORD dwVal2)
 {
   DWORD dwVal[4];
 
+#pragma warning(suppress: 28159)
   dwVal[0] = ::GetTickCount();
   dwVal[1] = ::GetCurrentProcessId();
   dwVal[2] = dwVal1;

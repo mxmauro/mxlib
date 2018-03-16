@@ -49,12 +49,12 @@ public:
     return;
     };
 
-  virtual BOOL AddElement(__in TType elem)
+  virtual BOOL AddElement(_In_ TType elem)
     {
     return InsertElementAt(elem, (SIZE_T)-1);
     };
 
-  virtual BOOL SetElementAt(__in TType elem, __in SIZE_T nIndex)
+  virtual BOOL SetElementAt(_In_ TType elem, _In_ SIZE_T nIndex)
     {
     if (nIndex >= nCount)
       return FALSE;
@@ -62,7 +62,7 @@ public:
     return TRUE;
     };
 
-  virtual BOOL InsertElementAt(__in TType elem, __in SIZE_T nIndex=(SIZE_T)-1)
+  virtual BOOL InsertElementAt(_In_ TType elem, _In_ SIZE_T nIndex=(SIZE_T)-1)
     {
     if (nIndex >= nCount)
       nIndex = nCount;
@@ -74,7 +74,7 @@ public:
     return TRUE;
     };
 
-  virtual BOOL SortedInsert(__in TType elem)
+  virtual BOOL SortedInsert(_In_ TType elem)
     {
     SIZE_T nIndex, nMin, nMax;
 
@@ -97,7 +97,7 @@ public:
     };
 
   template<class _Comparator>
-  BOOL SortedInsert(__in TType elem, __in _Comparator lpCompareFunc, __in_opt LPVOID lpContext=NULL)
+  BOOL SortedInsert(_In_ TType elem, _In_ _Comparator lpCompareFunc, _In_opt_ LPVOID lpContext=NULL)
     {
     SIZE_T nIndex, nMin, nMax;
     int res;
@@ -124,14 +124,14 @@ public:
     };
 
   template<class _Comparator>
-  TType* BinarySearchPtr(__in TType *lpKey, __in _Comparator lpSearchFunc, __in_opt LPVOID lpContext=NULL)
+  TType* BinarySearchPtr(_In_ TType *lpKey, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext=NULL)
     {
     SIZE_T nIndex = BinarySearch(lpKey, lpSearchFunc, lpContext);
     return (nIndex != (SIZE_T)-1) ? lpItems+nIndex : NULL;
     };
 
   template<class _Comparator>
-  SIZE_T BinarySearch(__in TType *lpKey, __in _Comparator lpSearchFunc, __in_opt LPVOID lpContext=NULL)
+  SIZE_T BinarySearch(_In_ TType *lpKey, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext=NULL)
     {
     SIZE_T nMid, nMin, nMax;
     int res;
@@ -154,18 +154,18 @@ public:
     return (SIZE_T)-1;
     };
 
-  virtual TType GetElementAt(__in SIZE_T nIndex) const
+  virtual TType GetElementAt(_In_ SIZE_T nIndex) const
     {
     MX_ASSERT(nIndex < nCount);
     return lpItems[nIndex];
     };
 
-  virtual TType& operator[](__in SIZE_T nIndex)
+  virtual TType& operator[](_In_ SIZE_T nIndex)
     {
     MX_ASSERT(nIndex < nCount);
     return lpItems[nIndex];
     };
-  virtual const TType& operator[](__in SIZE_T nIndex) const
+  virtual const TType& operator[](_In_ SIZE_T nIndex) const
     {
     MX_ASSERT(nIndex < nCount);
     return lpItems[nIndex];
@@ -176,7 +176,7 @@ public:
     return nCount;
     };
 
-  virtual BOOL SetCount(__in SIZE_T _nCount)
+  virtual BOOL SetCount(_In_ SIZE_T _nCount)
     {
     SIZE_T i;
 
@@ -199,7 +199,7 @@ public:
     return nSize;
     };
 
-  virtual BOOL SetSize(__in SIZE_T _nSize, __in BOOL bForceRealloc=FALSE)
+  virtual BOOL SetSize(_In_ SIZE_T _nSize, _In_ BOOL bForceRealloc=FALSE)
     {
     TType *lpNewItems;
     SIZE_T i;
@@ -256,7 +256,7 @@ public:
     return (nCount == 0) ? TRUE : FALSE;
     };
 
-  virtual SIZE_T GetIndexOf(__in TType elem, __in SIZE_T nStartIndex=0) const
+  virtual SIZE_T GetIndexOf(_In_ TType elem, _In_ SIZE_T nStartIndex=0) const
     {
     SIZE_T i;
 
@@ -268,7 +268,7 @@ public:
     return (SIZE_T)-1;
     };
 
-  virtual BOOL Contains(__in TType elem) const
+  virtual BOOL Contains(_In_ TType elem) const
     {
     return (GetIndexOf(elem) != (SIZE_T)-1) ? TRUE : FALSE;
     };
@@ -283,7 +283,7 @@ public:
     return lpItems;
     };
 
-  virtual VOID Attach(__in TType *lpNewList, __in SIZE_T _nCount)
+  virtual VOID Attach(_In_ TType *lpNewList, _In_ SIZE_T _nCount)
     {
     RemoveAllElements();
     if ((lpItems = lpNewList) != NULL)
@@ -299,7 +299,7 @@ public:
     return _lpItems;
     };
 
-  virtual VOID Transfer(__in _list &cSrcList)
+  virtual VOID Transfer(_In_ _list &cSrcList)
     {
     SIZE_T nCount;
 
@@ -308,7 +308,7 @@ public:
     return;
     };
 
-  virtual BOOL RemoveElementAt(__in SIZE_T nIndex, __in SIZE_T nItemsCount=1, __in BOOL bDoFinalize=TRUE)
+  virtual BOOL RemoveElementAt(_In_ SIZE_T nIndex, _In_ SIZE_T nItemsCount=1, _In_ BOOL bDoFinalize=TRUE)
     {
     SIZE_T i;
 
@@ -339,7 +339,7 @@ public:
     };
 
 protected:
-  virtual VOID OnDeleteItem(__inout TType& item)
+  virtual VOID OnDeleteItem(_Inout_ TType& item)
     {
     return;
     };
@@ -362,7 +362,7 @@ public:
     };
 
 protected:
-  VOID OnDeleteItem(__inout TType& item)
+  VOID OnDeleteItem(_Inout_ TType& item)
     {
     MX_FREE(item);
     return;
@@ -382,7 +382,7 @@ public:
     };
 
 protected:
-  VOID OnDeleteItem(__inout TType& item)
+  VOID OnDeleteItem(_Inout_ TType& item)
     {
     if (item != NULL)
       item->Release();
@@ -403,7 +403,7 @@ public:
     };
 
 protected:
-  VOID OnDeleteItem(__inout TType& item)
+  VOID OnDeleteItem(_Inout_ TType& item)
     {
     if (item != NULL)
       delete item;
@@ -430,12 +430,12 @@ public:
     return;
     };
 
-  virtual BOOL AddElement(__in TType *lpElem)
+  virtual BOOL AddElement(_In_ TType *lpElem)
     {
     return InsertElementAt(lpElem, (SIZE_T)-1);
     };
 
-  virtual BOOL SetElementAt(__in TType *lpElem, __in SIZE_T nIndex)
+  virtual BOOL SetElementAt(_In_ TType *lpElem, _In_ SIZE_T nIndex)
     {
     if (nIndex >= nCount)
       return FALSE;
@@ -443,7 +443,7 @@ public:
     return TRUE;
     };
 
-  virtual BOOL InsertElementAt(__in TType *lpElem, __in SIZE_T nIndex=(SIZE_T)-1)
+  virtual BOOL InsertElementAt(_In_ TType *lpElem, _In_ SIZE_T nIndex=(SIZE_T)-1)
     {
     if (nIndex >= nCount)
       nIndex = nCount;
@@ -456,7 +456,7 @@ public:
     };
 
   template<class _Comparator>
-  BOOL SortedInsert(__in TType *lpElem, __in _Comparator lpCompareFunc, __in_opt LPVOID lpContext=NULL)
+  BOOL SortedInsert(_In_ TType *lpElem, _In_ _Comparator lpCompareFunc, _In_opt_ LPVOID lpContext=NULL)
     {
     SIZE_T nIndex, nMin, nMax;
     int res;
@@ -482,14 +482,14 @@ public:
     };
 
   template<class _Comparator>
-  TType* BinarySearchPtr(__in TType *lpKey, __in _Comparator lpSearchFunc, __in_opt LPVOID lpContext=NULL)
+  TType* BinarySearchPtr(_In_ TType *lpKey, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext=NULL)
     {
     SIZE_T nIndex = BinarySearch(lpKey, lpSearchFunc, lpContext);
     return (nIndex != (SIZE_T)-1) ? lpItems+nIndex : NULL;
     };
 
   template<class _Comparator>
-  SIZE_T BinarySearch(__in TType *lpKey, __in _Comparator lpCompareFunc, __in_opt LPVOID lpContext=NULL)
+  SIZE_T BinarySearch(_In_ TType *lpKey, _In_ _Comparator lpCompareFunc, _In_opt_ LPVOID lpContext=NULL)
     {
     SIZE_T nMid, nMin, nMax;
     int res;
@@ -512,18 +512,18 @@ public:
     return (SIZE_T)-1;
     };
 
-  virtual TType& GetElementAt(__in SIZE_T nIndex) const
+  virtual TType& GetElementAt(_In_ SIZE_T nIndex) const
     {
     MX_ASSERT(nIndex < nCount);
     return lpItems[nIndex];
     };
 
-  virtual TType& operator[](__in SIZE_T nIndex)
+  virtual TType& operator[](_In_ SIZE_T nIndex)
     {
     MX_ASSERT(nIndex < nCount);
     return lpItems[nIndex];
     };
-  virtual const TType& operator[](__in SIZE_T nIndex) const
+  virtual const TType& operator[](_In_ SIZE_T nIndex) const
     {
     MX_ASSERT(nIndex < nCount);
     return lpItems[nIndex];
@@ -539,7 +539,7 @@ public:
     return nCount;
     };
 
-  virtual BOOL SetCount(__in SIZE_T _nCount)
+  virtual BOOL SetCount(_In_ SIZE_T _nCount)
     {
     SIZE_T i;
 
@@ -562,7 +562,7 @@ public:
     return nSize;
     };
 
-  virtual BOOL SetSize(__in SIZE_T _nSize, __in BOOL bForceRealloc=FALSE)
+  virtual BOOL SetSize(_In_ SIZE_T _nSize, _In_ BOOL bForceRealloc=FALSE)
     {
     TType *lpNewItems;
     SIZE_T k;
@@ -618,7 +618,7 @@ public:
     return (nCount == 0) ? TRUE : FALSE;
     };
 
-  virtual BOOL RemoveElementAt(__in SIZE_T nIndex, __in SIZE_T nItemsCount=1, __in BOOL bDoFinalize=TRUE)
+  virtual BOOL RemoveElementAt(_In_ SIZE_T nIndex, _In_ SIZE_T nItemsCount=1, _In_ BOOL bDoFinalize=TRUE)
     {
     SIZE_T i;
 
@@ -648,7 +648,7 @@ public:
     return;
     };
 
-  virtual TType* ReserveBlock(__in SIZE_T nItemsCount, __in SIZE_T nIndex=(SIZE_T)-1)
+  virtual TType* ReserveBlock(_In_ SIZE_T nItemsCount, _In_ SIZE_T nIndex=(SIZE_T)-1)
     {
     if (SetSize(nCount+nItemsCount) == FALSE)
       return FALSE;
@@ -660,7 +660,7 @@ public:
     return &lpItems[nIndex];
     };
 
-  virtual TType* PopBlock(__in SIZE_T nItemsCount)
+  virtual TType* PopBlock(_In_ SIZE_T nItemsCount)
     {
     if (nItemsCount > nCount)
       nItemsCount = nCount;
@@ -669,7 +669,7 @@ public:
     };
 
 protected:
-  virtual VOID OnDeleteItem(__inout TType& item)
+  virtual VOID OnDeleteItem(_Inout_ TType& item)
     {
     return;
     };

@@ -40,7 +40,7 @@ class TEventNotifyBase : public virtual TRefCounted<CBaseMemObj>
 public:
   typedef TEventNotifyBase<T> CEventBase;
 
-  typedef Callback<VOID (__in T *lpEvent)> OnNotifyCallback;
+  typedef Callback<VOID (_In_ T *lpEvent)> OnNotifyCallback;
 
   typedef enum {
     StateInvalidArg=-1,
@@ -51,7 +51,7 @@ public:
   } eState;
 
 public:
-  TEventNotifyBase(__in OnNotifyCallback _cCallback, __in_opt LPVOID _lpUserData=NULL) : TRefCounted<CBaseMemObj>()
+  TEventNotifyBase(_In_opt_ OnNotifyCallback _cCallback, _In_opt_ LPVOID _lpUserData=NULL) : TRefCounted<CBaseMemObj>()
     {
     cCallback = _cCallback;
     lpUserData = _lpUserData;
@@ -70,7 +70,7 @@ public:
     };
 
   //returns old state
-  eState SetState(__in eState nNewState)
+  eState SetState(_In_ eState nNewState)
     {
     LONG initVal, newVal;
 
@@ -88,7 +88,7 @@ public:
     };
 
   //returns old state
-  eState SetStateIf(__in eState nNewState, __in eState nIfState)
+  eState SetStateIf(_In_ eState nNewState, _In_ eState nIfState)
     {
     LONG initVal, newVal;
 
@@ -144,7 +144,7 @@ public:
     return lpUserData;
     };
 
-  VOID SetUserData(__in LPVOID _lpUserData)
+  VOID SetUserData(_In_ LPVOID _lpUserData)
     {
     lpUserData = _lpUserData;
     return;
@@ -169,7 +169,7 @@ template<class T>
 class TPendingListHelper : public virtual CBaseMemObj
 {
 public:
-  typedef Callback<VOID (__in TArrayList<T> &cEventsList)> OnActionCallback;
+  typedef Callback<VOID (_In_ TArrayList<T> &cEventsList)> OnActionCallback;
 
 public:
   TPendingListHelper() : CBaseMemObj()
@@ -184,14 +184,14 @@ public:
     return;
     };
 
-  HRESULT Add(__in T elem)
+  HRESULT Add(_In_ T elem)
     {
     CFastLock cLock(&nMutex);
 
-    return cList.SortedInsert(elem, &TPendingListHelper<T>::_Compare, this);
+    return (cList.SortedInsert(elem, &TPendingListHelper<T>::_Compare, this) != FALSE) ? S_OK : E_OUTOFMEMORY;
     };
 
-  VOID Remove(__in T elem)
+  VOID Remove(_In_ T elem)
     {
     CFastLock cLock(&nMutex);
     SIZE_T nIndex;
@@ -209,7 +209,7 @@ public:
     return (cList.GetCount() > 0) ? TRUE : FALSE;
     };
 
-  VOID RunAction(__in OnActionCallback cActionCallback)
+  VOID RunAction(_In_ OnActionCallback cActionCallback)
     {
     CFastLock cLock(&nMutex);
 
@@ -225,10 +225,10 @@ public:
     };
 
 protected:
-  virtual int Compare(__in T elem1, __in T elem2) = 0;
+  virtual int Compare(_In_ T elem1, _In_ T elem2) = 0;
 
 private:
-  static int _Compare(__in LPVOID lpCtx, __in T *lpElem1, __in T *lpElem2)
+  static int _Compare(_In_ LPVOID lpCtx, _In_ T *lpElem1, _In_ T *lpElem2)
     {
     return ((TPendingListHelper<T>*)lpCtx)->Compare(*lpElem1, *lpElem2);
     };
@@ -244,7 +244,7 @@ template<class T>
 class TPendingListHelperGeneric : public TPendingListHelper<T>
 {
 protected:
-  int Compare(__in T elem1, __in T elem2)
+  int Compare(_In_ T elem1, _In_ T elem2)
     {
     SSIZE_T v = (SSIZE_T)((SIZE_T)elem1 - (SIZE_T)elem2);
     return (v > 0) - (v < 0);

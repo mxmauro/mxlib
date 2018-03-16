@@ -54,7 +54,7 @@ static SIZE_T nListCount = 0;
 
 namespace MX {
 
-HRESULT RegisterFinalizer(__in lpfnFinalizer fnFinalizer, __in SIZE_T nPriority)
+HRESULT RegisterFinalizer(_In_ lpfnFinalizer fnFinalizer, _In_ SIZE_T nPriority)
 {
   CFastLock cLock(&nMutex);
   SIZE_T i;

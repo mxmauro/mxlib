@@ -39,12 +39,12 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Retry-After)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
-  HRESULT SetSeconds(__in ULONGLONG nSeconds);
-  HRESULT SetDate(__in CDateTime &cDt);
+  HRESULT SetSeconds(_In_ ULONGLONG nSeconds);
+  HRESULT SetDate(_In_ CDateTime &cDt);
   ULONGLONG GetSeconds() const;
 
 private:

@@ -39,7 +39,7 @@ typedef struct tagMDx_DATA {
 
 //-----------------------------------------------------------
 
-static const EVP_MD* GetDigest(__in MX::CDigestAlgorithmMessageDigest::eAlgorithm nAlgorithm);
+static const EVP_MD* GetDigest(_In_ MX::CDigestAlgorithmMessageDigest::eAlgorithm nAlgorithm);
 
 //-------------------------------------------------------
 
@@ -73,8 +73,8 @@ HRESULT CDigestAlgorithmMessageDigest::BeginDigest()
   return BeginDigest(AlgorithmMD5, NULL, 0);
 }
 
-HRESULT CDigestAlgorithmMessageDigest::BeginDigest(__in eAlgorithm nAlgorithm, __in_opt LPCVOID lpKey,
-                                                   __in_opt SIZE_T nKeyLen)
+HRESULT CDigestAlgorithmMessageDigest::BeginDigest(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey,
+                                                   _In_opt_ SIZE_T nKeyLen)
 {
   if (nAlgorithm != AlgorithmMD2 && nAlgorithm != AlgorithmMD4 && nAlgorithm != AlgorithmMD5)
     return E_INVALIDARG;
@@ -130,7 +130,7 @@ HRESULT CDigestAlgorithmMessageDigest::BeginDigest(__in eAlgorithm nAlgorithm, _
   return S_OK;
 }
 
-HRESULT CDigestAlgorithmMessageDigest::DigestStream(__in LPCVOID lpData, __in SIZE_T nDataLength)
+HRESULT CDigestAlgorithmMessageDigest::DigestStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 {
   if (lpData == NULL && nDataLength > 0)
     return E_POINTER;
@@ -171,7 +171,7 @@ SIZE_T CDigestAlgorithmMessageDigest::GetResultSize() const
   return (lpInternalData != NULL) ? mdx_data->nOutputSize : 0;
 }
 
-VOID CDigestAlgorithmMessageDigest::CleanUp(__in BOOL bZeroData)
+VOID CDigestAlgorithmMessageDigest::CleanUp(_In_ BOOL bZeroData)
 {
   if (mdx_data->lpMdCtx != NULL)
   {
@@ -196,7 +196,7 @@ VOID CDigestAlgorithmMessageDigest::CleanUp(__in BOOL bZeroData)
 
 //-----------------------------------------------------------
 
-static const EVP_MD* GetDigest(__in MX::CDigestAlgorithmMessageDigest::eAlgorithm nAlgorithm)
+static const EVP_MD* GetDigest(_In_ MX::CDigestAlgorithmMessageDigest::eAlgorithm nAlgorithm)
 {
   switch (nAlgorithm)
   {

@@ -43,7 +43,7 @@ CHttpHeaderBase::~CHttpHeaderBase()
       *lplpHeader = MX_DEBUG_NEW CHttpHeader##_hdr();                              \
       return (*lplpHeader != NULL) ? S_OK : E_OUTOFMEMORY;                         \
     }
-HRESULT CHttpHeaderBase::Create(__in LPCSTR szHeaderNameA, __in BOOL bIsRequest, __out CHttpHeaderBase **lplpHeader)
+HRESULT CHttpHeaderBase::Create(_In_ LPCSTR szHeaderNameA, _In_ BOOL bIsRequest, _Out_ CHttpHeaderBase **lplpHeader)
 {
   CHttpHeaderGeneric *lpGenericHdr;
   HRESULT hRes;
@@ -109,21 +109,21 @@ HRESULT CHttpHeaderBase::Create(__in LPCSTR szHeaderNameA, __in BOOL bIsRequest,
 }
 #undef CHECK_AND_CREATE_HEADER
 
-LPCSTR CHttpHeaderBase::SkipSpaces(__in_z LPCSTR sA)
+LPCSTR CHttpHeaderBase::SkipSpaces(_In_z_ LPCSTR sA)
 {
   while (*sA == ' ' || *sA == '\t')
     sA++;
   return sA;
 }
 
-LPCWSTR CHttpHeaderBase::SkipSpaces(__in_z LPCWSTR sW)
+LPCWSTR CHttpHeaderBase::SkipSpaces(_In_z_ LPCWSTR sW)
 {
   while (*sW == L' ' || *sW == L'\t')
     sW++;
   return sW;
 }
 
-LPCSTR CHttpHeaderBase::GetToken(__in_z LPCSTR sA, __in_z_opt LPCSTR szStopCharsA)
+LPCSTR CHttpHeaderBase::GetToken(_In_z_ LPCSTR sA, _In_opt_z_ LPCSTR szStopCharsA)
 {
   while (*sA != 0)
   {
@@ -136,7 +136,7 @@ LPCSTR CHttpHeaderBase::GetToken(__in_z LPCSTR sA, __in_z_opt LPCSTR szStopChars
   return sA;
 }
 
-LPCWSTR CHttpHeaderBase::GetToken(__in_z LPCWSTR sW, __in_z_opt LPCWSTR szStopCharsW)
+LPCWSTR CHttpHeaderBase::GetToken(_In_z_ LPCWSTR sW, _In_opt_z_ LPCWSTR szStopCharsW)
 {
   while (*sW != 0)
   {
@@ -152,7 +152,7 @@ LPCWSTR CHttpHeaderBase::GetToken(__in_z LPCWSTR sW, __in_z_opt LPCWSTR szStopCh
 }
 
 
-LPCSTR CHttpHeaderBase::Advance(__in_z LPCSTR sA, __in_z_opt LPCSTR szStopCharsA)
+LPCSTR CHttpHeaderBase::Advance(_In_z_ LPCSTR sA, _In_opt_z_ LPCSTR szStopCharsA)
 {
   while (*sA != 0)
   {
@@ -163,7 +163,7 @@ LPCSTR CHttpHeaderBase::Advance(__in_z LPCSTR sA, __in_z_opt LPCSTR szStopCharsA
   return sA;
 }
 
-LPCWSTR CHttpHeaderBase::Advance(__in_z LPCWSTR sW, __in_z_opt LPCWSTR szStopCharsW)
+LPCWSTR CHttpHeaderBase::Advance(_In_z_ LPCWSTR sW, _In_opt_z_ LPCWSTR szStopCharsW)
 {
   while (*sW != 0)
   {

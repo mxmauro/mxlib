@@ -41,40 +41,40 @@ public:
 
   class CMessage;
 
-  typedef Callback<VOID (__in CMessage *lpMsg)> OnMessageReceivedCallback;
+  typedef Callback<VOID (_In_ CMessage *lpMsg)> OnMessageReceivedCallback;
 
-  typedef Callback<VOID (__in CIpc *lpIpc, __in HANDLE hConn, __in DWORD dwId, __in CMessage *lpMsg,
-                         __in LPVOID lpUserData)> OnMessageReplyCallback;
+  typedef Callback<VOID (_In_ CIpc *lpIpc, _In_ HANDLE hConn, _In_ DWORD dwId, _In_ CMessage *lpMsg,
+                         _In_ LPVOID lpUserData)> OnMessageReplyCallback;
 
-  typedef Callback<VOID (__in SIZE_T nIndex, __out LPVOID *lplpMsg, __out PSIZE_T lpnMsgSize,
-                         __in LPVOID lpContext)> OnMultiBlockCallback;
+  typedef Callback<VOID (_In_ SIZE_T nIndex, _Out_ LPVOID *lplpMsg, _Out_ PSIZE_T lpnMsgSize,
+                         _In_ LPVOID lpContext)> OnMultiBlockCallback;
 
 public:
-  CIpcMessageManager(__in CIoCompletionPortThreadPool &cWorkerPool, __in CIpc *lpIpc, __in HANDLE hConn,
-                     __in OnMessageReceivedCallback cMessageReceivedCallback,
-                     __in_opt DWORD dwMaxMessageSize=0x0FFFFFFFUL, __in_opt DWORD dwProtocolVersion=1);
+  CIpcMessageManager(_In_ CIoCompletionPortThreadPool &cWorkerPool, _In_ CIpc *lpIpc, _In_ HANDLE hConn,
+                     _In_ OnMessageReceivedCallback cMessageReceivedCallback,
+                     _In_opt_ DWORD dwMaxMessageSize=0x0FFFFFFFUL, _In_opt_ DWORD dwProtocolVersion=1);
   ~CIpcMessageManager();
 
   VOID Shutdown();
 
   BOOL HasPending() const;
 
-  HRESULT SwitchToProtocol(__in DWORD dwProtocolVersion);
+  HRESULT SwitchToProtocol(_In_ DWORD dwProtocolVersion);
 
   DWORD GetNextId();
 
   HRESULT ProcessIncomingPacket();
 
-  HRESULT SendHeader(__in DWORD dwMsgId, __in SIZE_T nMsgSize);
-  HRESULT SendData(__in LPCVOID lpMsg, __in SIZE_T nMsgSize);
-  HRESULT SendEndOfMessageMark(__in DWORD dwMsgId);
-  HRESULT SendMultipleBlocks(__out LPDWORD lpdwMsgId, __in SIZE_T nBlocksCount, ...);
-  HRESULT SendMultipleBlocks(__out LPDWORD lpdwMsgId, __in SIZE_T nBlocksCount, __in LPMULTIBLOCK lpBlocks);
-  HRESULT SendMultipleBlocks(__out LPDWORD lpdwMsgId, __in OnMultiBlockCallback cMultiBlockCallback,
-                             __in_opt LPVOID lpContext=NULL);
+  HRESULT SendHeader(_In_ DWORD dwMsgId, _In_ SIZE_T nMsgSize);
+  HRESULT SendData(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize);
+  HRESULT SendEndOfMessageMark(_In_ DWORD dwMsgId);
+  HRESULT SendMultipleBlocks(_Out_ LPDWORD lpdwMsgId, _In_ SIZE_T nBlocksCount, ...);
+  HRESULT SendMultipleBlocks(_Out_ LPDWORD lpdwMsgId, _In_ SIZE_T nBlocksCount, _In_ LPMULTIBLOCK lpBlocks);
+  HRESULT SendMultipleBlocks(_Out_ LPDWORD lpdwMsgId, _In_ OnMultiBlockCallback cMultiBlockCallback,
+                             _In_opt_ LPVOID lpContext=NULL);
 
-  HRESULT WaitForReply(__in DWORD dwId, __deref_out CMessage **lplpMessage);
-  HRESULT WaitForReplyAsync(__in DWORD dwId, __in OnMessageReplyCallback cCallback, __in LPVOID lpUserData);
+  HRESULT WaitForReply(_In_ DWORD dwId, _Deref_out_ CMessage **lplpMessage);
+  HRESULT WaitForReplyAsync(_In_ DWORD dwId, _In_ OnMessageReplyCallback cCallback, _In_ LPVOID lpUserData);
 
   CIpc* GetIpc() const
     {
@@ -89,7 +89,7 @@ public:
   class CMessage : public virtual TRefCounted<CBaseMemObj>, public TLnkLstNode<CMessage>
   {
   private:
-    CMessage(__in CIpcMessageManager *lpMgr);
+    CMessage(_In_ CIpcMessageManager *lpMgr);
   public:
     ~CMessage();
 
@@ -113,12 +113,12 @@ public:
 
     CIpc::CMultiSendLock* StartMultiSendBlock();
 
-    HRESULT SendReplyHeader(__in SIZE_T nMsgSize);
-    HRESULT SendReplyData(__in LPCVOID lpMsg, __in SIZE_T nMsgSize);
+    HRESULT SendReplyHeader(_In_ SIZE_T nMsgSize);
+    HRESULT SendReplyData(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize);
     HRESULT SendReplyEndOfMessageMark();
-    HRESULT SendReplyMultipleBlocks(__in SIZE_T nBlocksCount, ...);
-    HRESULT SendReplyMultipleBlocks(__in SIZE_T nBlocksCount, __in LPMULTIBLOCK lpBlocks);
-    HRESULT SendReplyMultipleBlocks(__in OnMultiBlockCallback cMultiBlockCallback, __in_opt LPVOID lpContext=NULL);
+    HRESULT SendReplyMultipleBlocks(_In_ SIZE_T nBlocksCount, ...);
+    HRESULT SendReplyMultipleBlocks(_In_ SIZE_T nBlocksCount, _In_ LPMULTIBLOCK lpBlocks);
+    HRESULT SendReplyMultipleBlocks(_In_ OnMultiBlockCallback cMultiBlockCallback, _In_opt_ LPVOID lpContext=NULL);
 
     CIpcMessageManager* GetManager() const
       {
@@ -159,15 +159,15 @@ private:
     LPVOID lpUserData;
   } REPLYMSG_ITEM;
 
-  VOID SyncWait(__in CIpc *lpIpc, __in HANDLE hConn, __in DWORD dwId, __in CMessage *lpMsg, __in LPVOID lpUserData);
+  VOID SyncWait(_In_ CIpc *lpIpc, _In_ HANDLE hConn, _In_ DWORD dwId, _In_ CMessage *lpMsg, _In_ LPVOID lpUserData);
 
   HRESULT OnMessageCompleted();
 
-  VOID OnMessageReceived(__in CIoCompletionPortThreadPool *lpPool, __in DWORD dwBytes, __in OVERLAPPED *lpOvr,
-                         __in HRESULT hRes);
-  VOID OnFlushReceivedReplies(__in CIoCompletionPortThreadPool *lpPool, __in DWORD dwBytes, __in OVERLAPPED *lpOvr,
-                              __in HRESULT hRes);
-  static int ReplyMsgWaitCompareFunc(__in LPVOID lpContext, __in REPLYMSG_ITEM *lpElem1, __in REPLYMSG_ITEM *lpElem2);
+  VOID OnMessageReceived(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
+                         _In_ HRESULT hRes);
+  VOID OnFlushReceivedReplies(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
+                              _In_ HRESULT hRes);
+  static int ReplyMsgWaitCompareFunc(_In_ LPVOID lpContext, _In_ REPLYMSG_ITEM *lpElem1, _In_ REPLYMSG_ITEM *lpElem2);
 
   VOID FlushReceivedReplies();
   VOID CancelWaitingReplies();

@@ -27,8 +27,8 @@
 
 //-----------------------------------------------------------
 
-static SIZE_T Helper_IPv6_Fill(__out LPWORD lpnAddr, __in_z LPCSTR szStrA, __in SIZE_T nLen);
-static SIZE_T Helper_IPv6_Fill(__out LPWORD lpnAddr, __in_z LPCWSTR szStrW, __in SIZE_T nLen);
+static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCSTR szStrA, _In_ SIZE_T nLen);
+static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCWSTR szStrW, _In_ SIZE_T nLen);
 
 //-----------------------------------------------------------
 
@@ -38,7 +38,7 @@ static SIZE_T Helper_IPv6_Fill(__out LPWORD lpnAddr, __in_z LPCWSTR szStrW, __in
 
 namespace MX {
 
-CHostResolver::CHostResolver(__in_opt OnNotifyCallback cCallback, __in_opt LPVOID lpUserData) :
+CHostResolver::CHostResolver(_In_ OnNotifyCallback cCallback, _In_opt_ LPVOID lpUserData) :
                TEventNotifyBase<CHostResolver>(cCallback, lpUserData)
 {
   lpInternal = MX::Internals::CIPAddressResolver::Get();
@@ -55,7 +55,7 @@ CHostResolver::~CHostResolver()
   return;
 }
 
-HRESULT CHostResolver::Resolve(__in_z LPCSTR szHostNameA, __in int nDesiredFamily)
+HRESULT CHostResolver::Resolve(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily)
 {
   if (szHostNameA == NULL)
     return E_POINTER;
@@ -68,7 +68,7 @@ HRESULT CHostResolver::Resolve(__in_z LPCSTR szHostNameA, __in int nDesiredFamil
   return __resolver->ResolveAddr(&sAddr, szHostNameA, nDesiredFamily);
 }
 
-HRESULT CHostResolver::Resolve(__in_z LPCWSTR szHostNameW, __in int nDesiredFamily)
+HRESULT CHostResolver::Resolve(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -87,14 +87,14 @@ HRESULT CHostResolver::Resolve(__in_z LPCWSTR szHostNameW, __in int nDesiredFami
   return hRes;
 }
 
-HRESULT CHostResolver::ResolveAsync(__in_z LPCSTR szHostNameA, __in int nDesiredFamily, __in DWORD dwTimeoutMs)
+HRESULT CHostResolver::ResolveAsync(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _In_ DWORD dwTimeoutMs)
 {
   if (lpInternal == NULL)
     return E_OUTOFMEMORY;
   return __resolver->Resolve(this, &sAddr, &hErrorCode, szHostNameA, nDesiredFamily, dwTimeoutMs);
 }
 
-HRESULT CHostResolver::ResolveAsync(__in_z LPCWSTR szHostNameW, __in int nDesiredFamily, __in DWORD dwTimeoutMs)
+HRESULT CHostResolver::ResolveAsync(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _In_ DWORD dwTimeoutMs)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -114,8 +114,8 @@ VOID CHostResolver::Cancel()
   return;
 }
 
-BOOL CHostResolver::IsValidIPV4(__in_z LPCSTR szAddressA, __in_opt SIZE_T nAddressLen,
-                                __out_opt PSOCKADDR_INET lpAddress)
+BOOL CHostResolver::IsValidIPV4(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen,
+                                _Out_opt_ PSOCKADDR_INET lpAddress)
 {
   SIZE_T i, j, nLen, nBlocksCount;
   DWORD dw, dwBase, dwValue, dwOldValue;
@@ -211,8 +211,8 @@ BOOL CHostResolver::IsValidIPV4(__in_z LPCSTR szAddressA, __in_opt SIZE_T nAddre
   return TRUE;
 }
 
-BOOL CHostResolver::IsValidIPV4(__in_z LPCWSTR szAddressW, __in_opt SIZE_T nAddressLen,
-                                __out_opt PSOCKADDR_INET lpAddress)
+BOOL CHostResolver::IsValidIPV4(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen,
+                                _Out_opt_ PSOCKADDR_INET lpAddress)
 {
   SIZE_T i, j, nLen, nBlocksCount;
   DWORD dw, dwBase, dwValue, dwOldValue;
@@ -308,8 +308,8 @@ BOOL CHostResolver::IsValidIPV4(__in_z LPCWSTR szAddressW, __in_opt SIZE_T nAddr
   return TRUE;
 }
 
-BOOL CHostResolver::IsValidIPV6(__in_z LPCSTR szAddressA, __in_opt SIZE_T nAddressLen,
-                                __out_opt PSOCKADDR_INET lpAddress)
+BOOL CHostResolver::IsValidIPV6(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen,
+                                _Out_opt_ PSOCKADDR_INET lpAddress)
 {
   SIZE_T i, k, nSlots, nLastColonPos;
   BOOL bIPv4, bIPv6;
@@ -414,8 +414,8 @@ BOOL CHostResolver::IsValidIPV6(__in_z LPCSTR szAddressA, __in_opt SIZE_T nAddre
   return TRUE;
 }
 
-BOOL CHostResolver::IsValidIPV6(__in_z LPCWSTR szAddressW, __in_opt SIZE_T nAddressLen,
-                                __out_opt PSOCKADDR_INET lpAddress)
+BOOL CHostResolver::IsValidIPV6(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen,
+                                _Out_opt_ PSOCKADDR_INET lpAddress)
 {
   SIZE_T i, k, nSlots, nLastColonPos;
   BOOL bIPv4, bIPv6;
@@ -524,7 +524,8 @@ BOOL CHostResolver::IsValidIPV6(__in_z LPCWSTR szAddressW, __in_opt SIZE_T nAddr
 
 //-----------------------------------------------------------
 
-static SIZE_T Helper_IPv6_Fill(__out LPWORD lpnAddr, __in_z LPCSTR szStrA, __in SIZE_T nLen)
+#pragma warning(suppress: 6101)
+static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCSTR szStrA, _In_ SIZE_T nLen)
 {
   SIZE_T i, nSlot;
   DWORD dw, dwValue;
@@ -532,7 +533,7 @@ static SIZE_T Helper_IPv6_Fill(__out LPWORD lpnAddr, __in_z LPCSTR szStrA, __in 
   if (nLen == 0)
     return 0;
   //catch double uses of ::
-  if (MX::StrFindA(szStrA, "::") != NULL)
+  if (MX::StrNFindA(szStrA, "::", nLen) != NULL)
     return (SIZE_T)-1;
   nSlot = 0;
   dwValue = 0;
@@ -563,11 +564,13 @@ static SIZE_T Helper_IPv6_Fill(__out LPWORD lpnAddr, __in_z LPCSTR szStrA, __in 
   }
   if (nSlot == 8)
     return (SIZE_T)-1;
+#pragma warning(suppress: 6386)
   lpnAddr[nSlot++] = (WORD)dwValue;
   return nSlot;
 }
 
-static SIZE_T Helper_IPv6_Fill(__out LPWORD lpnAddr, __in_z LPCWSTR szStrW, __in SIZE_T nLen)
+#pragma warning(suppress: 6101)
+static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCWSTR szStrW, _In_ SIZE_T nLen)
 {
   SIZE_T i, nSlot;
   DWORD dw, dwValue;
@@ -606,6 +609,7 @@ static SIZE_T Helper_IPv6_Fill(__out LPWORD lpnAddr, __in_z LPCWSTR szStrW, __in
   }
   if (nSlot == 8)
     return (SIZE_T)-1;
+#pragma warning(suppress: 6386)
   lpnAddr[nSlot++] = (WORD)dwValue;
   return nSlot;
 }

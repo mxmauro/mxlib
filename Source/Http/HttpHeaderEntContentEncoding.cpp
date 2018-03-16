@@ -38,7 +38,7 @@ CHttpHeaderEntContentEncoding::~CHttpHeaderEntContentEncoding()
   return;
 }
 
-HRESULT CHttpHeaderEntContentEncoding::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderEntContentEncoding::Parse(_In_z_ LPCSTR szValueA)
 {
   eEncoding _nEncoding = EncodingUnsupported;
 
@@ -87,7 +87,7 @@ HRESULT CHttpHeaderEntContentEncoding::Parse(__in_z LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentEncoding::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderEntContentEncoding::Build(_Inout_ CStringA &cStrDestA)
 {
   switch (nEncoding)
   {
@@ -108,7 +108,7 @@ HRESULT CHttpHeaderEntContentEncoding::Build(__inout CStringA &cStrDestA)
   return MX_E_Unsupported;
 }
 
-HRESULT CHttpHeaderEntContentEncoding::SetEncoding(__in eEncoding _nEncoding)
+HRESULT CHttpHeaderEntContentEncoding::SetEncoding(_In_ eEncoding _nEncoding)
 {
   if (_nEncoding != EncodingIdentity && _nEncoding != EncodingGZip &&
       _nEncoding != EncodingDeflate && _nEncoding != EncodingUnsupported)

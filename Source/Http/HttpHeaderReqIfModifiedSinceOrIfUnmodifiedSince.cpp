@@ -27,7 +27,7 @@
 
 namespace MX {
 
-CHttpHeaderReqIfXXXSinceBase::CHttpHeaderReqIfXXXSinceBase(__in BOOL _bIfModified) : CHttpHeaderBase()
+CHttpHeaderReqIfXXXSinceBase::CHttpHeaderReqIfXXXSinceBase(_In_ BOOL _bIfModified) : CHttpHeaderBase()
 {
   bIfModified = _bIfModified;
   return;
@@ -38,7 +38,7 @@ CHttpHeaderReqIfXXXSinceBase::~CHttpHeaderReqIfXXXSinceBase()
   return;
 }
 
-HRESULT CHttpHeaderReqIfXXXSinceBase::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderReqIfXXXSinceBase::Parse(_In_z_ LPCSTR szValueA)
 {
   HRESULT hRes;
 
@@ -52,12 +52,12 @@ HRESULT CHttpHeaderReqIfXXXSinceBase::Parse(__in_z LPCSTR szValueA)
   return hRes;
 }
 
-HRESULT CHttpHeaderReqIfXXXSinceBase::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderReqIfXXXSinceBase::Build(_Inout_ CStringA &cStrDestA)
 {
   return cDt.Format(cStrDestA, "%a, %d %b %Y %H:%m:%S %z");
 }
 
-HRESULT CHttpHeaderReqIfXXXSinceBase::SetDate(__in CDateTime &_cDt)
+HRESULT CHttpHeaderReqIfXXXSinceBase::SetDate(_In_ CDateTime &_cDt)
 {
   cDt = _cDt;
   return S_OK;

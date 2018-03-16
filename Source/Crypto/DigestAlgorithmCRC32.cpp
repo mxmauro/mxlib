@@ -100,14 +100,14 @@ HRESULT CDigestAlgorithmCRC32::BeginDigest()
   return BeginDigest(0);
 }
 
-HRESULT CDigestAlgorithmCRC32::BeginDigest(__in DWORD dwStartingCrcValue)
+HRESULT CDigestAlgorithmCRC32::BeginDigest(_In_ DWORD dwStartingCrcValue)
 {
   EndDigest();
   dwCurrentCRC = dwStartingCrcValue;
   return S_OK;
 }
 
-HRESULT CDigestAlgorithmCRC32::DigestStream(__in LPCVOID lpData, __in SIZE_T nDataLength)
+HRESULT CDigestAlgorithmCRC32::DigestStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 {
   DWORD dwCRC;
   LPBYTE s;

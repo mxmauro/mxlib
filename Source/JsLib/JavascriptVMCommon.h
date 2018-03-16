@@ -42,14 +42,13 @@
 
 namespace DukTape {
 
-//#include "..\..\Include\JsLib\DukTape\duktape.h"
-#pragma warning(disable : 4101 4703)
+#pragma warning(disable : 4101 4703 4244 4267 6262 6385 6011 6387)
 #include "DukTape\Source\dist\duktape.c"
 #define snprintf mx_sprintf_s
 //#include "DukTape\Source\extras\module-duktape\duk_module_duktape.c"
 #include "DukTape\Source\extras\module-node\duk_module_node.c"
 #undef snprintf
-#pragma warning(default : 4101 4703)
+#pragma warning(default : 4101 4703 4244 4267 6262 6385 6011 6387)
 
 } //namespace DukTape
 
@@ -65,29 +64,31 @@ namespace Internals {
 
 namespace JsLib {
 
-HRESULT AddNativeFunctionCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPCSTR szObjectNameA,
-                                __in DukTape::duk_idx_t nObjectIndex, __in_z LPCSTR szFunctionNameA,
-                                __in MX::CJavascriptVM::OnNativeFunctionCallback cNativeFunctionCallback,
-                                __in int nArgsCount);
+HRESULT AddNativeFunctionCommon(_In_ DukTape::duk_context *lpCtx, _In_opt_z_ LPCSTR szObjectNameA,
+                                _In_ DukTape::duk_idx_t nObjectIndex, _In_z_ LPCSTR szFunctionNameA,
+                                _In_ MX::CJavascriptVM::OnNativeFunctionCallback cNativeFunctionCallback,
+                                _In_ int nArgsCount);
 
-HRESULT AddPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z_opt LPCSTR szObjectNameA,
-                          __in DukTape::duk_idx_t nObjectIndex, __in_z LPCSTR szPropertyNameA,
-                          __in BOOL bInitialValueOnStack, __in int nFlags,
-                          __in MX::CJavascriptVM::OnGetPropertyCallback cGetValueCallback,
-                          __in MX::CJavascriptVM::OnSetPropertyCallback cSetValueCallback);
+HRESULT AddPropertyCommon(_In_ DukTape::duk_context *lpCtx, _In_opt_z_ LPCSTR szObjectNameA,
+                          _In_ DukTape::duk_idx_t nObjectIndex, _In_z_ LPCSTR szPropertyNameA,
+                          _In_ BOOL bInitialValueOnStack, _In_ int nFlags,
+                          _In_ MX::CJavascriptVM::OnGetPropertyCallback cGetValueCallback,
+                          _In_ MX::CJavascriptVM::OnSetPropertyCallback cSetValueCallback);
 
-HRESULT RemovePropertyCommon(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                             __in_z LPCSTR szPropertyNameA);
+HRESULT RemovePropertyCommon(_In_ DukTape::duk_context *lpCtx, _In_opt_z_ LPCSTR szObjectNameA,
+                             _In_z_ LPCSTR szPropertyNameA);
 
-HRESULT HasPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA);
+HRESULT HasPropertyCommon(_In_ DukTape::duk_context *lpCtx, _In_opt_z_ LPCSTR szObjectNameA,
+                          _In_z_ LPCSTR szPropertyNameA);
 
-VOID PushPropertyCommon(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA);
+VOID PushPropertyCommon(_In_ DukTape::duk_context *lpCtx, _In_opt_z_ LPCSTR szObjectNameA,
+                        _In_z_ LPCSTR szPropertyNameA);
 
-HRESULT FindObject(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA, __in BOOL bCreateIfNotExists,
-                   __in BOOL bResolveProxyOnLast);
+HRESULT FindObject(_In_ DukTape::duk_context *lpCtx, _In_opt_z_ LPCSTR szObjectNameA, _In_ BOOL bCreateIfNotExists,
+                   _In_ BOOL bResolveProxyOnLast);
 
 #ifdef _DEBUG
-VOID DebugDump(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nIndex);
+VOID DebugDump(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nIndex);
 #endif //_DEBUG
 
 } //namespace JsLib

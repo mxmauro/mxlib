@@ -300,16 +300,17 @@ namespace MX {
 
 namespace HtmlEntities {
 
-LPCSTR Get(__in WCHAR chW)
+LPCSTR Get(_In_ WCHAR chW)
 {
   HTMLENTITY_DEF *lpDef;
 
+#pragma warning(suppress: 6387)
   lpDef = (HTMLENTITY_DEF*)bsearch_s(&chW, aHtmlEntities, MX_ARRAYLEN(aHtmlEntities), sizeof(HTMLENTITY_DEF),
                                      &HtmlEntities_Compare, NULL);
   return (lpDef != NULL) ? lpDef->szNameA : NULL;
 }
 
-HRESULT ConvertTo(__inout CStringA &cStrA)
+HRESULT ConvertTo(_Inout_ CStringA &cStrA)
 {
   static const LPCSTR szHexaNumA = "0123456789ABCDEF";
   CStringW cStrTempW;
@@ -374,7 +375,7 @@ HRESULT ConvertTo(__inout CStringA &cStrA)
   return S_OK;
 }
 
-HRESULT ConvertTo(__inout CStringW &cStrW)
+HRESULT ConvertTo(_Inout_ CStringW &cStrW)
 {
   static const LPCWSTR szHexaNumW = L"0123456789ABCDEF";
   WCHAR szTempBufW[32];
@@ -395,6 +396,7 @@ HRESULT ConvertTo(__inout CStringW &cStrW)
       cStrW.Delete(nOfs, 1);
       if (cStrW.InsertN(L"&;", nOfs, 2) == FALSE)
         return E_OUTOFMEMORY;
+#pragma warning(suppress: 6054)
       if (cStrW.InsertN(szTempBufW, nOfs+1, i) == FALSE)
         return E_OUTOFMEMORY;
       nOfs += 2 + i;
@@ -425,7 +427,7 @@ HRESULT ConvertTo(__inout CStringW &cStrW)
   return S_OK;
 }
 
-HRESULT ConvertFrom(__inout CStringA &cStrA)
+HRESULT ConvertFrom(_Inout_ CStringA &cStrA)
 {
   LPCSTR sA, szEndA;
   CHAR szBufA[8];
@@ -465,7 +467,7 @@ HRESULT ConvertFrom(__inout CStringA &cStrA)
   return S_OK;
 }
 
-HRESULT ConvertFrom(__inout CStringW &cStrW)
+HRESULT ConvertFrom(_Inout_ CStringW &cStrW)
 {
   LPCWSTR sW, szEndW;
   SIZE_T nOfs, nLen, nEntityLen;
@@ -495,7 +497,7 @@ HRESULT ConvertFrom(__inout CStringW &cStrW)
   return S_OK;
 }
 
-WCHAR Decode(__in LPCSTR szStrA, __in SIZE_T nStrLen, __out_opt LPCSTR *lpszAfterEntityA)
+WCHAR Decode(_In_ LPCSTR szStrA, _In_ SIZE_T nStrLen, _Out_opt_ LPCSTR *lpszAfterEntityA)
 {
   if (lpszAfterEntityA != NULL)
     *lpszAfterEntityA = szStrA;
@@ -572,7 +574,7 @@ WCHAR Decode(__in LPCSTR szStrA, __in SIZE_T nStrLen, __out_opt LPCSTR *lpszAfte
   return 0;
 }
 
-WCHAR Decode(__in LPCWSTR szStrW, __in SIZE_T nStrLen, __out_opt LPCWSTR *lpszAfterEntityW)
+WCHAR Decode(_In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen, _Out_opt_ LPCWSTR *lpszAfterEntityW)
 {
   if (lpszAfterEntityW != NULL)
     *lpszAfterEntityW = szStrW;

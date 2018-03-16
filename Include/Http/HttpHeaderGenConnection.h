@@ -39,15 +39,15 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Connection)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
-  HRESULT AddConnection(__in_z LPCSTR szConnectionA);
+  HRESULT AddConnection(_In_z_ LPCSTR szConnectionA);
 
   SIZE_T GetConnectionsCount() const;
-  LPCSTR GetConnection(__in SIZE_T nIndex) const;
-  BOOL HasConnection(__in_z LPCSTR szConnectionA) const;
+  LPCSTR GetConnection(_In_ SIZE_T nIndex) const;
+  BOOL HasConnection(_In_z_ LPCSTR szConnectionA) const;
 
 private:
   TArrayListWithFree<LPSTR> cConnectionsList;

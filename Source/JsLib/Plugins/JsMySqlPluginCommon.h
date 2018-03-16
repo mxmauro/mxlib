@@ -79,21 +79,21 @@ public:
   CJsMySqlPluginHelpers();
   ~CJsMySqlPluginHelpers();
 
-  HRESULT ExecuteQuery(__in LPCSTR szQueryA, __in SIZE_T nQueryLegth, __out_opt MYSQL_RES **lplpResult=NULL);
-  VOID QueryClose(__in_opt BOOL bFlushData=TRUE);
-  VOID CloseResultSet(__in MYSQL_RES *lpResult, __in_opt BOOL bFlushData=TRUE);
+  HRESULT ExecuteQuery(_In_ LPCSTR szQueryA, _In_ SIZE_T nQueryLegth, _Out_opt_ MYSQL_RES **lplpResult=NULL);
+  VOID QueryClose(_In_opt_ BOOL bFlushData=TRUE);
+  VOID CloseResultSet(_In_ MYSQL_RES *lpResult, _In_opt_ BOOL bFlushData=TRUE);
 
-  BOOL BuildFieldInfoArray(__in DukTape::duk_context *lpCtx);
+  BOOL BuildFieldInfoArray(_In_ DukTape::duk_context *lpCtx);
 
-  static BOOL IsConnectionLostError(__in int nError);
+  static BOOL IsConnectionLostError(_In_ int nError);
 
-  static HRESULT HResultFromMySqlErr(__in int nError);
+  static HRESULT HResultFromMySqlErr(_In_ int nError);
 
 public:
   class CFieldInfo : public CJsObjectBase
   {
   public:
-    CFieldInfo(__in DukTape::duk_context *lpCtx);
+    CFieldInfo(_In_ DukTape::duk_context *lpCtx);
     ~CFieldInfo();
 
     LPCSTR GetName() const

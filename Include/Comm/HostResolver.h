@@ -38,14 +38,14 @@ class CHostResolver : public TEventNotifyBase<CHostResolver>
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CHostResolver);
 public:
-  CHostResolver(__in OnNotifyCallback cCallback, __in_opt LPVOID lpUserData=NULL);
+  CHostResolver(_In_ OnNotifyCallback cCallback, _In_opt_ LPVOID lpUserData=NULL);
   ~CHostResolver();
 
-  HRESULT Resolve(__in_z LPCSTR szHostNameA, __in int nDesiredFamily);
-  HRESULT Resolve(__in_z LPCWSTR szHostNameW, __in int nDesiredFamily);
+  HRESULT Resolve(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily);
+  HRESULT Resolve(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily);
 
-  HRESULT ResolveAsync(__in_z LPCSTR szHostNameA, __in int nDesiredFamily, __in DWORD dwTimeoutMs);
-  HRESULT ResolveAsync(__in_z LPCWSTR szHostNameW, __in int nDesiredFamily, __in DWORD dwTimeoutMs);
+  HRESULT ResolveAsync(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _In_ DWORD dwTimeoutMs);
+  HRESULT ResolveAsync(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _In_ DWORD dwTimeoutMs);
   VOID Cancel();
 
   SOCKADDR_INET GetResolvedAddr() const
@@ -58,14 +58,14 @@ public:
     return hErrorCode;
     };
 
-  static BOOL IsValidIPV4(__in_z LPCSTR szAddressA, __in_opt SIZE_T nAddressLen=(SIZE_T)-1,
-                          __out_opt PSOCKADDR_INET lpAddress=NULL);
-  static BOOL IsValidIPV4(__in_z LPCWSTR szAddressW, __in_opt SIZE_T nAddressLen=(SIZE_T)-1,
-                          __out_opt PSOCKADDR_INET lpAddress=NULL);
-  static BOOL IsValidIPV6(__in_z LPCSTR szAddressA, __in_opt SIZE_T nAddressLen=(SIZE_T)-1,
-                          __out_opt PSOCKADDR_INET lpAddress=NULL);
-  static BOOL IsValidIPV6(__in_z LPCWSTR szAddressW, __in_opt SIZE_T nAddressLen=(SIZE_T)-1,
-                          __out_opt PSOCKADDR_INET lpAddress=NULL);
+  static BOOL IsValidIPV4(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen=(SIZE_T)-1,
+                          _Out_opt_ PSOCKADDR_INET lpAddress=NULL);
+  static BOOL IsValidIPV4(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen=(SIZE_T)-1,
+                          _Out_opt_ PSOCKADDR_INET lpAddress=NULL);
+  static BOOL IsValidIPV6(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen=(SIZE_T)-1,
+                          _Out_opt_ PSOCKADDR_INET lpAddress=NULL);
+  static BOOL IsValidIPV6(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen=(SIZE_T)-1,
+                          _Out_opt_ PSOCKADDR_INET lpAddress=NULL);
 
 private:
   LPVOID lpInternal;

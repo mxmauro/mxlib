@@ -43,13 +43,13 @@ public:
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CEvent);
   public:
-    CEvent(__in OnNotifyCallback cCallback, __in_opt LPVOID lpUserData=NULL);
+    CEvent(_In_ OnNotifyCallback cCallback, _In_opt_ LPVOID lpUserData=NULL);
     ~CEvent();
 
   private:
     friend class CTimedEventQueue;
 
-    BOOL IsGreaterThan(__in CEvent *lpOtherNode)
+    BOOL IsGreaterThan(_In_ CEvent *lpOtherNode)
       {
       return (nDueTime > lpOtherNode->nDueTime) ? TRUE : FALSE;
       };
@@ -62,14 +62,14 @@ public:
   CTimedEventQueue();
   ~CTimedEventQueue();
 
-  HRESULT Add(__in CEvent *lpEvent, __in DWORD dwTimeoutMs);
-  HRESULT Remove(__in CEvent *lpEvent, __in_opt BOOL bMarkAsCanceled=TRUE);
+  HRESULT Add(_In_ CEvent *lpEvent, _In_ DWORD dwTimeoutMs);
+  HRESULT Remove(_In_ CEvent *lpEvent, _In_opt_ BOOL bMarkAsCanceled=TRUE);
   VOID RemoveAll();
 
 private:
   TClassWorkerThread<CTimedEventQueue> cWorkerThread;
 
-  VOID ThreadProc(__in SIZE_T nParam);
+  VOID ThreadProc(_In_ SIZE_T nParam);
 
   DWORD ProcessTimedOut();
   VOID ProcessCanceled();

@@ -31,7 +31,7 @@
 class CTestJsRequest : public MX::CJsHttpServer::CJsRequest
 {
 public:
-  CTestJsRequest(__in MX::CPropertyBag &cPropBag) : MX::CJsHttpServer::CJsRequest(cPropBag)
+  CTestJsRequest(_In_ MX::CPropertyBag &cPropBag) : MX::CJsHttpServer::CJsRequest(cPropBag)
     { };
 
 public:
@@ -40,25 +40,25 @@ public:
 
 //-----------------------------------------------------------
 
-static VOID OnEngineError(__in MX::CIpc *lpIpc, __in HRESULT hErrorCode);
-static HRESULT OnNewRequestObject(__in MX::CPropertyBag &cPropBag, __out MX::CJsHttpServer::CJsRequest **lplpRequest);
-static HRESULT OnRequest(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer::CJsRequest *lpRequest,
-                         __inout MX::CJavascriptVM &cJvm, __inout MX::CStringA &cStrCodeA);
-static HRESULT OnRequireJsModule(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer::CJsRequest *lpRequest,
-                                 __inout MX::CJavascriptVM &cJvm,
-                                 __inout MX::CJavascriptVM::CRequireModuleContext *lpReqContext,
-                                 __inout MX::CStringA &cStrCodeA);
-static VOID OnError(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer::CJsRequest *lpRequest,
-                    __in HRESULT hErrorCode);
+static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode);
+static HRESULT OnNewRequestObject(_In_ MX::CPropertyBag &cPropBag, _Out_ MX::CJsHttpServer::CJsRequest **lplpRequest);
+static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CJsRequest *lpRequest,
+                         _Inout_ MX::CJavascriptVM &cJvm, _Inout_ MX::CStringA &cStrCodeA);
+static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CJsRequest *lpRequest,
+                                 _Inout_ MX::CJavascriptVM &cJvm,
+                                 _Inout_ MX::CJavascriptVM::CRequireModuleContext *lpReqContext,
+                                 _Inout_ MX::CStringA &cStrCodeA);
+static VOID OnError(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CJsRequest *lpRequest,
+                    _In_ HRESULT hErrorCode);
 static VOID DeleteSessionFiles();
-static HRESULT OnSessionLoadSave(__in MX::CJsHttpServerSessionPlugin *lpPlugin, __in BOOL bLoading);
-static HRESULT LoadTxtFile(__inout MX::CStringA &cStrContentsA, __in_z LPCWSTR szFileNameW);
-static HRESULT BuildWebFileName(__inout MX::CStringW &cStrFullFileNameW, __out LPCWSTR &szExtensionW,
-                                __in_z LPCWSTR szPathW);
+static HRESULT OnSessionLoadSave(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin, _In_ BOOL bLoading);
+static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR szFileNameW);
+static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ LPCWSTR &szExtensionW,
+                                _In_z_ LPCWSTR szPathW);
 
 //-----------------------------------------------------------
 
-int TestJsHttpServer(__in BOOL bUseSSL)
+int TestJsHttpServer(_In_ BOOL bUseSSL)
 {
   MX::CIoCompletionPortThreadPool cDispatcherPool;
   MX::CPropertyBag cPropBag;
@@ -128,19 +128,19 @@ int TestJsHttpServer(__in BOOL bUseSSL)
   return (int)hRes;
 }
 
-static VOID OnEngineError(__in MX::CIpc *lpIpc, __in HRESULT hErrorCode)
+static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode)
 {
   return;
 }
 
-static HRESULT OnNewRequestObject(__in MX::CPropertyBag &cPropBag, __out MX::CJsHttpServer::CJsRequest **lplpRequest)
+static HRESULT OnNewRequestObject(_In_ MX::CPropertyBag &cPropBag, _Out_ MX::CJsHttpServer::CJsRequest **lplpRequest)
 {
   *lplpRequest = MX_DEBUG_NEW CTestJsRequest(cPropBag);
   return ((*lplpRequest) != NULL) ? S_OK : E_OUTOFMEMORY;
 }
 
-static HRESULT OnRequest(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer::CJsRequest *_lpRequest,
-                         __inout MX::CJavascriptVM &cJvm, __inout MX::CStringA &cStrCodeA)
+static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CJsRequest *_lpRequest,
+                         _Inout_ MX::CJavascriptVM &cJvm, _Inout_ MX::CStringA &cStrCodeA)
 {
   CTestJsRequest *lpRequest = static_cast<CTestJsRequest*>(_lpRequest);
   MX::CStringW cStrFileNameW;
@@ -183,10 +183,10 @@ static HRESULT OnRequest(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer:
   return hRes;
 }
 
-static HRESULT OnRequireJsModule(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer::CJsRequest *_lpRequest,
-                                 __inout MX::CJavascriptVM &cJvm,
-                                 __inout MX::CJavascriptVM::CRequireModuleContext *lpReqContext,
-                                 __inout MX::CStringA &cStrCodeA)
+static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CJsRequest *_lpRequest,
+                                 _Inout_ MX::CJavascriptVM &cJvm,
+                                 _Inout_ MX::CJavascriptVM::CRequireModuleContext *lpReqContext,
+                                 _Inout_ MX::CStringA &cStrCodeA)
 {
   CTestJsRequest *lpRequest = static_cast<CTestJsRequest*>(_lpRequest);
   MX::CStringW cStrFileNameW;
@@ -244,8 +244,8 @@ static HRESULT OnRequireJsModule(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHtt
   return MX_E_NotFound;
 }
 
-static VOID OnError(__in MX::CJsHttpServer *lpHttp, __in MX::CJsHttpServer::CJsRequest *lpRequest,
-                    __in HRESULT hErrorCode)
+static VOID OnError(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CJsRequest *lpRequest,
+                    _In_ HRESULT hErrorCode)
 {
   return;
 }
@@ -288,7 +288,7 @@ static VOID DeleteSessionFiles()
 }
 
 #define delete_and_exit(_cmd) { _cmd; bDelete = TRUE; goto done; }
-static HRESULT OnSessionLoadSave(__in MX::CJsHttpServerSessionPlugin *lpPlugin, __in BOOL bLoading)
+static HRESULT OnSessionLoadSave(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin, _In_ BOOL bLoading)
 {
   MX::CWindowsHandle cFileH;
   MX::CStringA cStrNameA, cStrValueA;
@@ -550,7 +550,7 @@ done:
   return hRes;
 }
 
-static HRESULT LoadTxtFile(__inout MX::CStringA &cStrContentsA, __in_z LPCWSTR szFileNameW)
+static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR szFileNameW)
 {
   MX::CWindowsHandle cFileH;
   DWORD dw, dw2;
@@ -576,8 +576,8 @@ static HRESULT LoadTxtFile(__inout MX::CStringA &cStrContentsA, __in_z LPCWSTR s
   return S_OK;
 }
 
-static HRESULT BuildWebFileName(__inout MX::CStringW &cStrFullFileNameW, __out LPCWSTR &szExtensionW,
-                                __in_z LPCWSTR szPathW)
+static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ LPCWSTR &szExtensionW,
+                                _In_z_ LPCWSTR szPathW)
 {
   LPWSTR sW;
   HRESULT hRes;

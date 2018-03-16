@@ -31,22 +31,22 @@
 
 namespace MX {
 
-HRESULT Utf8_Encode(__inout CStringA &cStrDestA, __in_z LPCWSTR szSrcW, __in_opt SIZE_T nSrcLen=(SIZE_T)-1,
-                    __in_opt BOOL bAppend=FALSE);
-HRESULT Utf8_Decode(__inout CStringW &cStrDestW, __in_z LPCSTR szSrcA, __in_opt SIZE_T nSrcLen=(SIZE_T)-1,
-                    __in_opt BOOL bAppend=FALSE);
+HRESULT Utf8_Encode(_Inout_ CStringA &cStrDestA, _In_z_ LPCWSTR szSrcW, _In_opt_ SIZE_T nSrcLen=(SIZE_T)-1,
+                    _In_opt_ BOOL bAppend=FALSE);
+HRESULT Utf8_Decode(_Inout_ CStringW &cStrDestW, _In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen=(SIZE_T)-1,
+                    _In_opt_ BOOL bAppend=FALSE);
 
-int Utf8_EncodeChar(__out LPSTR szDestA, __in WCHAR chW, __in_opt WCHAR chSurrogatePairW=0);
-int Utf8_DecodeChar(__out LPWSTR szDestW, __in_z LPCSTR szSrcA, __in_opt SIZE_T nSrcLen=(SIZE_T)-1);
+int Utf8_EncodeChar(_Out_opt_ CHAR szDestA[], _In_ WCHAR chW, _In_opt_ WCHAR chSurrogatePairW=0);
+int Utf8_DecodeChar(_Out_opt_ WCHAR szDestW[], _In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen=(SIZE_T)-1);
 
-SIZE_T Utf8_StrLen(__in_z LPCSTR szSrcA);
+SIZE_T Utf8_StrLen(_In_z_ LPCSTR szSrcA);
 
-int Utf8_StrCompareA(__in_z LPCSTR szSrcUtf8, __in_z LPCSTR szSrcA,__in_opt BOOL bCaseInsensitive=FALSE);
-int Utf8_StrCompareW(__in_z LPCSTR szSrcUtf8, __in_z LPCWSTR szSrcW, __in_opt BOOL bCaseInsensitive=FALSE);
-int Utf8_StrNCompareA(__in_z LPCSTR szSrcUtf8, __in_z LPCSTR szSrcA, __in SIZE_T nLen,
-                     __in_opt BOOL bCaseInsensitive=FALSE);
-int Utf8_StrNCompareW(__in_z LPCSTR szSrcUtf8, __in_z LPCWSTR szSrcW, __in SIZE_T nLen,
-                      __in_opt BOOL bCaseInsensitive=FALSE);
+int Utf8_StrCompareA(_In_z_ LPCSTR szSrcUtf8, _In_z_ LPCSTR szSrcA,_In_opt_ BOOL bCaseInsensitive=FALSE);
+int Utf8_StrCompareW(_In_z_ LPCSTR szSrcUtf8, _In_z_ LPCWSTR szSrcW, _In_opt_ BOOL bCaseInsensitive=FALSE);
+int Utf8_StrNCompareA(_In_z_ LPCSTR szSrcUtf8, _In_z_ LPCSTR szSrcA, _In_ SIZE_T nLen,
+                     _In_opt_ BOOL bCaseInsensitive=FALSE);
+int Utf8_StrNCompareW(_In_z_ LPCSTR szSrcUtf8, _In_z_ LPCWSTR szSrcW, _In_ SIZE_T nLen,
+                      _In_opt_ BOOL bCaseInsensitive=FALSE);
 
 } //namespace MX
 

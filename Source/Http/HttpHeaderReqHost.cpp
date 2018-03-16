@@ -37,7 +37,7 @@ CHttpHeaderReqHost::~CHttpHeaderReqHost()
   return;
 }
 
-HRESULT CHttpHeaderReqHost::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderReqHost::Parse(_In_z_ LPCSTR szValueA)
 {
   LPCSTR szStartA, szEndA;
   CUrl cTempUrl;
@@ -81,7 +81,7 @@ HRESULT CHttpHeaderReqHost::Parse(__in_z LPCSTR szValueA)
   return (cUrl = cTempUrl);
 }
 
-HRESULT CHttpHeaderReqHost::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderReqHost::Build(_Inout_ CStringA &cStrDestA)
 {
   if (cStrDestA.Copy(cUrl.GetHost()) == FALSE)
     return E_OUTOFMEMORY;
@@ -94,7 +94,7 @@ HRESULT CHttpHeaderReqHost::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqHost::SetHost(__in_z LPCWSTR szHostW)
+HRESULT CHttpHeaderReqHost::SetHost(_In_z_ LPCWSTR szHostW)
 {
   CUrl cTempUrl;
   HRESULT hRes;
@@ -114,7 +114,7 @@ LPCWSTR CHttpHeaderReqHost::GetHost() const
   return cUrl.GetHost();
 }
 
-HRESULT CHttpHeaderReqHost::SetPort(__in int nPort)
+HRESULT CHttpHeaderReqHost::SetPort(_In_ int nPort)
 {
   return cUrl.SetPort(nPort);
 }

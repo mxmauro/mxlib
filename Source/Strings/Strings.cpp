@@ -67,7 +67,7 @@ static VOID InitializeTables();
 
 namespace MX {
 
-SIZE_T StrLenA(__in_z_opt LPCSTR szSrcA)
+SIZE_T StrLenA(_In_opt_z_ LPCSTR szSrcA)
 {
   SIZE_T nLen = 0;
 
@@ -78,7 +78,7 @@ SIZE_T StrLenA(__in_z_opt LPCSTR szSrcA)
   return nLen;
 }
 
-SIZE_T StrLenW(__in_z_opt LPCWSTR szSrcW)
+SIZE_T StrLenW(_In_opt_z_ LPCWSTR szSrcW)
 {
   SIZE_T nLen = 0;
 
@@ -89,7 +89,7 @@ SIZE_T StrLenW(__in_z_opt LPCWSTR szSrcW)
   return nLen;
 }
 
-int StrCompareA(__in_z LPCSTR szSrcA1, __in_z LPCSTR szSrcA2, __in_opt BOOL bCaseInsensitive)
+int StrCompareA(_In_z_ LPCSTR szSrcA1, _In_z_ LPCSTR szSrcA2, _In_opt_ BOOL bCaseInsensitive)
 {
   SIZE_T nLen[3];
   int res;
@@ -109,7 +109,7 @@ int StrCompareA(__in_z LPCSTR szSrcA1, __in_z LPCSTR szSrcA2, __in_opt BOOL bCas
   return res;
 }
 
-int StrCompareW(__in_z LPCWSTR szSrcW1, __in_z LPCWSTR szSrcW2, __in_opt BOOL bCaseInsensitive)
+int StrCompareW(_In_z_ LPCWSTR szSrcW1, _In_z_ LPCWSTR szSrcW2, _In_opt_ BOOL bCaseInsensitive)
 {
   SIZE_T nLen[3];
   int res;
@@ -129,7 +129,7 @@ int StrCompareW(__in_z LPCWSTR szSrcW1, __in_z LPCWSTR szSrcW2, __in_opt BOOL bC
   return res;
 }
 
-int StrCompareAW(__in_z LPCSTR szSrcA1, __in_z LPCWSTR szSrcW2, __in_opt BOOL bCaseInsensitive)
+int StrCompareAW(_In_z_ LPCSTR szSrcA1, _In_z_ LPCWSTR szSrcW2, _In_opt_ BOOL bCaseInsensitive)
 {
   SIZE_T nLen[3];
   int res;
@@ -149,7 +149,7 @@ int StrCompareAW(__in_z LPCSTR szSrcA1, __in_z LPCWSTR szSrcW2, __in_opt BOOL bC
   return res;
 }
 
-int StrNCompareA(__in_z LPCSTR szSrcA1, __in_z LPCSTR szSrcA2, __in SIZE_T nLen, __in_opt BOOL bCaseInsensitive)
+int StrNCompareA(_In_z_ LPCSTR szSrcA1, _In_z_ LPCSTR szSrcA2, _In_ SIZE_T nLen, _In_opt_ BOOL bCaseInsensitive)
 {
   MX_ANSI_STRING asStr[2];
   LONG res;
@@ -178,7 +178,7 @@ int StrNCompareA(__in_z LPCSTR szSrcA1, __in_z LPCSTR szSrcA2, __in SIZE_T nLen,
   return res;
 }
 
-int StrNCompareW(__in_z LPCWSTR szSrcW1, __in_z LPCWSTR szSrcW2, __in SIZE_T nLen, __in_opt BOOL bCaseInsensitive)
+int StrNCompareW(_In_z_ LPCWSTR szSrcW1, _In_z_ LPCWSTR szSrcW2, _In_ SIZE_T nLen, _In_opt_ BOOL bCaseInsensitive)
 {
   MX_UNICODE_STRING usStr[2];
 
@@ -209,8 +209,8 @@ int StrNCompareW(__in_z LPCWSTR szSrcW1, __in_z LPCWSTR szSrcW2, __in SIZE_T nLe
   return res;
 }
 
-int StrNCompareAW(__in_z LPCSTR szSrcA1, __in_z LPCWSTR szSrcW2, __in SIZE_T nLen,
-                  __in_opt BOOL bCaseInsensitive)
+int StrNCompareAW(_In_z_ LPCSTR szSrcA1, _In_z_ LPCWSTR szSrcW2, _In_ SIZE_T nLen,
+                  _In_opt_ BOOL bCaseInsensitive)
 {
   MX_UNICODE_STRING usStr[2];
   WCHAR szTempBufW[32];
@@ -246,17 +246,17 @@ int StrNCompareAW(__in_z LPCSTR szSrcA1, __in_z LPCWSTR szSrcW2, __in SIZE_T nLe
   return res;
 }
 
-LPCSTR StrChrA(__in_z LPCSTR szSrcA, __in CHAR chA, __in_opt BOOL bReverse)
+LPCSTR StrChrA(_In_z_ LPCSTR szSrcA, _In_ CHAR chA, _In_opt_ BOOL bReverse)
 {
   return StrNChrA(szSrcA, chA, StrLenA(szSrcA), bReverse);
 }
 
-LPCWSTR StrChrW(__in_z LPCWSTR szSrcW, __in WCHAR chW, __in_opt BOOL bReverse)
+LPCWSTR StrChrW(_In_z_ LPCWSTR szSrcW, _In_ WCHAR chW, _In_opt_ BOOL bReverse)
 {
   return StrNChrW(szSrcW, chW, StrLenW(szSrcW), bReverse);
 }
 
-LPCSTR StrNChrA(__in_z LPCSTR szSrcA, __in CHAR chA, __in SIZE_T nLen, __in_opt BOOL bReverse)
+LPCSTR StrNChrA(_In_z_ LPCSTR szSrcA, _In_ CHAR chA, _In_ SIZE_T nLen, _In_opt_ BOOL bReverse)
 {
   SSIZE_T nAdv;
 
@@ -273,7 +273,7 @@ LPCSTR StrNChrA(__in_z LPCSTR szSrcA, __in CHAR chA, __in SIZE_T nLen, __in_opt 
   return NULL;
 }
 
-LPCWSTR StrNChrW(__in_z LPCWSTR szSrcW, __in WCHAR chW, __in SIZE_T nLen, __in_opt BOOL bReverse)
+LPCWSTR StrNChrW(_In_z_ LPCWSTR szSrcW, _In_ WCHAR chW, _In_ SIZE_T nLen, _In_opt_ BOOL bReverse)
 {
   SSIZE_T nAdv;
 
@@ -290,19 +290,19 @@ LPCWSTR StrNChrW(__in_z LPCWSTR szSrcW, __in WCHAR chW, __in SIZE_T nLen, __in_o
   return NULL;
 }
 
-LPCSTR StrFindA(__in_z LPCSTR szSrcA, __in_z LPCSTR szToFindA, __in_opt BOOL bReverse, __in_opt BOOL bCaseInsensitive)
+LPCSTR StrFindA(_In_z_ LPCSTR szSrcA, _In_z_ LPCSTR szToFindA, _In_opt_ BOOL bReverse, _In_opt_ BOOL bCaseInsensitive)
 {
   return StrNFindA(szSrcA, szToFindA, StrLenA(szSrcA), bReverse, bCaseInsensitive);
 }
 
-LPCWSTR StrFindW(__in_z LPCWSTR szSrcW, __in_z LPCWSTR szToFindW, __in_opt BOOL bReverse,
-                 __in_opt BOOL bCaseInsensitive)
+LPCWSTR StrFindW(_In_z_ LPCWSTR szSrcW, _In_z_ LPCWSTR szToFindW, _In_opt_ BOOL bReverse,
+                 _In_opt_ BOOL bCaseInsensitive)
 {
   return StrNFindW(szSrcW, szToFindW, StrLenW(szSrcW), bReverse, bCaseInsensitive);
 }
 
-LPCSTR StrNFindA(__in_z LPCSTR szSrcA, __in_z LPCSTR szToFindA, __in SIZE_T nLen, __in_opt BOOL bReverse,
-                 __in_opt BOOL bCaseInsensitive)
+LPCSTR StrNFindA(_In_z_ LPCSTR szSrcA, _In_z_ LPCSTR szToFindA, _In_ SIZE_T nLen, _In_opt_ BOOL bReverse,
+                 _In_opt_ BOOL bCaseInsensitive)
 {
   SSIZE_T nAdv;
   SIZE_T nToFindLen;
@@ -324,8 +324,8 @@ LPCSTR StrNFindA(__in_z LPCSTR szSrcA, __in_z LPCSTR szToFindA, __in SIZE_T nLen
   return NULL;
 }
 
-LPCWSTR StrNFindW(__in_z LPCWSTR szSrcW, __in_z LPCWSTR szToFindW, __in SIZE_T nLen, __in_opt BOOL bReverse,
-                  __in_opt BOOL bCaseInsensitive)
+LPCWSTR StrNFindW(_In_z_ LPCWSTR szSrcW, _In_z_ LPCWSTR szToFindW, _In_ SIZE_T nLen, _In_opt_ BOOL bReverse,
+                  _In_opt_ BOOL bCaseInsensitive)
 {
   SSIZE_T nAdv;
   SIZE_T nToFindLen;
@@ -347,33 +347,33 @@ LPCWSTR StrNFindW(__in_z LPCWSTR szSrcW, __in_z LPCWSTR szToFindW, __in SIZE_T n
   return NULL;
 }
 
-CHAR CharToLowerA(__in CHAR chA)
+CHAR CharToLowerA(_In_ CHAR chA)
 {
   return aToLowerChar[chA];
 }
 
-CHAR CharToUpperA(__in CHAR chA)
+CHAR CharToUpperA(_In_ CHAR chA)
 {
   return ::MxRtlUpperChar(chA);
 }
 
-WCHAR CharToLowerW(__in WCHAR chW)
+WCHAR CharToLowerW(_In_ WCHAR chW)
 {
   return ::MxRtlDowncaseUnicodeChar(chW);
 }
 
-WCHAR CharToUpperW(__in WCHAR chW)
+WCHAR CharToUpperW(_In_ WCHAR chW)
 {
   return ::MxRtlUpcaseUnicodeChar(chW);
 }
 
-VOID StrToLowerA(__inout_z LPSTR szSrcA)
+VOID StrToLowerA(_Inout_z_ LPSTR szSrcA)
 {
   StrNToLowerA(szSrcA, StrLenA(szSrcA));
   return;
 }
 
-VOID StrNToLowerA(__inout_z LPSTR szSrcA, __in SIZE_T nLen)
+VOID StrNToLowerA(_Inout_updates_(nLen) LPSTR szSrcA, _In_ SIZE_T nLen)
 {
   if (szSrcA != NULL)
   {
@@ -388,13 +388,13 @@ VOID StrNToLowerA(__inout_z LPSTR szSrcA, __in SIZE_T nLen)
   return;
 }
 
-VOID StrToLowerW(__inout_z LPWSTR szSrcW)
+VOID StrToLowerW(_Inout_z_ LPWSTR szSrcW)
 {
   StrNToLowerW(szSrcW, StrLenW(szSrcW));
   return;
 }
 
-VOID StrNToLowerW(__inout_z LPWSTR szSrcW, __in SIZE_T nLen)
+VOID StrNToLowerW(_Inout_updates_(nLen) LPWSTR szSrcW, _In_ SIZE_T nLen)
 {
   if (szSrcW != NULL)
   {
@@ -408,13 +408,13 @@ VOID StrNToLowerW(__inout_z LPWSTR szSrcW, __in SIZE_T nLen)
   return;
 }
 
-VOID StrToUpperA(__inout_z LPSTR szSrcA)
+VOID StrToUpperA(_Inout_z_ LPSTR szSrcA)
 {
   StrNToUpperA(szSrcA, StrLenA(szSrcA));
   return;
 }
 
-VOID StrNToUpperA(__inout_z LPSTR szSrcA, __in SIZE_T nLen)
+VOID StrNToUpperA(_Inout_updates_(nLen) LPSTR szSrcA, _In_ SIZE_T nLen)
 {
   if (szSrcA != NULL)
   {
@@ -428,13 +428,13 @@ VOID StrNToUpperA(__inout_z LPSTR szSrcA, __in SIZE_T nLen)
   return;
 }
 
-VOID StrToUpperW(__inout_z LPWSTR szSrcW)
+VOID StrToUpperW(_Inout_z_ LPWSTR szSrcW)
 {
   StrNToUpperW(szSrcW, StrLenW(szSrcW));
   return;
 }
 
-VOID StrNToUpperW(__inout_z LPWSTR szSrcW, __in SIZE_T nLen)
+VOID StrNToUpperW(_Inout_updates_(nLen) LPWSTR szSrcW, _In_ SIZE_T nLen)
 {
   if (szSrcW != NULL)
   {
@@ -491,19 +491,19 @@ SIZE_T CStringA::GetLength() const
   return nLen;
 }
 
-BOOL CStringA::Copy(__in_z_opt LPCSTR szSrcA)
+BOOL CStringA::Copy(_In_opt_z_ LPCSTR szSrcA)
 {
   Empty();
   return Concat(szSrcA);
 }
 
-BOOL CStringA::CopyN(__in_nz_opt LPCSTR szSrcA, __in SIZE_T nSrcLen)
+BOOL CStringA::CopyN(_In_reads_or_z_opt_(nSrcLen) LPCSTR szSrcA, _In_ SIZE_T nSrcLen)
 {
   Empty();
   return ConcatN(szSrcA, nSrcLen);
 }
 
-BOOL CStringA::Concat(__in_z_opt LPCSTR szSrcA)
+BOOL CStringA::Concat(_In_opt_z_ LPCSTR szSrcA)
 {
   SIZE_T nSrcLen;
 
@@ -516,7 +516,7 @@ BOOL CStringA::Concat(__in_z_opt LPCSTR szSrcA)
   return ConcatN(szSrcA, nSrcLen);
 }
 
-BOOL CStringA::ConcatN(__in_nz_opt LPCSTR szSrcA, __in SIZE_T nSrcLen)
+BOOL CStringA::ConcatN(_In_reads_or_z_opt_(nSrcLen) LPCSTR szSrcA, _In_ SIZE_T nSrcLen)
 {
   if (nSrcLen == 0)
     return TRUE;
@@ -532,19 +532,19 @@ BOOL CStringA::ConcatN(__in_nz_opt LPCSTR szSrcA, __in SIZE_T nSrcLen)
   return TRUE;
 }
 
-BOOL CStringA::Copy(__in_z_opt LPCWSTR szSrcW)
+BOOL CStringA::Copy(_In_opt_z_ LPCWSTR szSrcW)
 {
   Empty();
   return Concat(szSrcW);
 }
 
-BOOL CStringA::CopyN(__in_nz_opt LPCWSTR szSrcW, __in SIZE_T nSrcLen)
+BOOL CStringA::CopyN(_In_reads_or_z_opt_(nSrcLen) LPCWSTR szSrcW, _In_ SIZE_T nSrcLen)
 {
   Empty();
   return ConcatN(szSrcW, nSrcLen);
 }
 
-BOOL CStringA::Concat(__in_z_opt LPCWSTR szSrcW)
+BOOL CStringA::Concat(_In_opt_z_ LPCWSTR szSrcW)
 {
   SIZE_T nSrcLen;
 
@@ -557,7 +557,7 @@ BOOL CStringA::Concat(__in_z_opt LPCWSTR szSrcW)
   return ConcatN(szSrcW, nSrcLen);
 }
 
-BOOL CStringA::ConcatN(__in_nz_opt LPCWSTR szSrcW, __in SIZE_T nSrcLen)
+BOOL CStringA::ConcatN(_In_reads_or_z_opt_(nSrcLen) LPCWSTR szSrcW, _In_ SIZE_T nSrcLen)
 {
   MX_ANSI_STRING asTemp;
   MX_UNICODE_STRING usStr;
@@ -599,48 +599,48 @@ BOOL CStringA::ConcatN(__in_nz_opt LPCWSTR szSrcW, __in SIZE_T nSrcLen)
   return TRUE;
 }
 
-BOOL CStringA::Copy(__in PCMX_ANSI_STRING pASStr)
+BOOL CStringA::Copy(_In_ PCMX_ANSI_STRING pASStr)
 {
   Empty();
   return Concat(pASStr);
 }
 
-BOOL CStringA::Concat(__in PCMX_ANSI_STRING pASStr)
+BOOL CStringA::Concat(_In_ PCMX_ANSI_STRING pASStr)
 {
   if (pASStr != NULL && pASStr->Buffer != NULL && pASStr->Length != 0)
     return ConcatN(pASStr->Buffer, (SIZE_T)(pASStr->Length));
   return TRUE;
 }
 
-BOOL CStringA::Copy(__in LONG nSrc)
+BOOL CStringA::Copy(_In_ LONG nSrc)
 {
   Empty();
   return Concat(nSrc);
 }
 
-BOOL CStringA::Concat(__in LONG nSrc)
+BOOL CStringA::Concat(_In_ LONG nSrc)
 {
   return Concat((LONGLONG)nSrc);
 }
 
-BOOL CStringA::Copy(__in ULONG nSrc)
+BOOL CStringA::Copy(_In_ ULONG nSrc)
 {
   Empty();
   return Concat(nSrc);
 }
 
-BOOL CStringA::Concat(__in ULONG nSrc)
+BOOL CStringA::Concat(_In_ ULONG nSrc)
 {
   return Concat((ULONGLONG)nSrc);
 }
 
-BOOL CStringA::Copy(__in LONGLONG nSrc)
+BOOL CStringA::Copy(_In_ LONGLONG nSrc)
 {
   Empty();
   return Concat(nSrc);
 }
 
-BOOL CStringA::Concat(__in LONGLONG nSrc)
+BOOL CStringA::Concat(_In_ LONGLONG nSrc)
 {
   CHAR szTempA[128];
 
@@ -648,13 +648,13 @@ BOOL CStringA::Concat(__in LONGLONG nSrc)
   return Concat(szTempA);
 }
 
-BOOL CStringA::Copy(__in ULONGLONG nSrc)
+BOOL CStringA::Copy(_In_ ULONGLONG nSrc)
 {
   Empty();
   return Concat(nSrc);
 }
 
-BOOL CStringA::Concat(__in ULONGLONG nSrc)
+BOOL CStringA::Concat(_In_ ULONGLONG nSrc)
 {
   CHAR szTempA[128];
 
@@ -662,7 +662,7 @@ BOOL CStringA::Concat(__in ULONGLONG nSrc)
   return Concat(szTempA);
 }
 
-BOOL CStringA::Format(__in_z LPCSTR szFormatA, ...)
+BOOL CStringA::Format(_In_z_ _Printf_format_string_ LPCSTR szFormatA, ...)
 {
   va_list argptr;
   BOOL b;
@@ -676,7 +676,7 @@ BOOL CStringA::Format(__in_z LPCSTR szFormatA, ...)
   return b;
 }
 
-BOOL CStringA::Format(__in_z LPCWSTR szFormatW, ...)
+BOOL CStringA::Format(_In_z_ _Printf_format_string_ LPCWSTR szFormatW, ...)
 {
   va_list argptr;
   BOOL b;
@@ -690,19 +690,19 @@ BOOL CStringA::Format(__in_z LPCWSTR szFormatW, ...)
   return b;
 }
 
-BOOL CStringA::FormatV(__in_z LPCSTR szFormatA, __in va_list argptr)
+BOOL CStringA::FormatV(_In_z_ _Printf_format_string_params_(1) LPCSTR szFormatA, _In_ va_list argptr)
 {
   Empty();
   return AppendFormatV(szFormatA, argptr);
 }
 
-BOOL CStringA::FormatV(__in_z LPCWSTR szFormatW, __in va_list argptr)
+BOOL CStringA::FormatV(_In_z_ _Printf_format_string_params_(1) LPCWSTR szFormatW, _In_ va_list argptr)
 {
   Empty();
   return AppendFormatV(szFormatW, argptr);
 }
 
-BOOL CStringA::AppendFormat(__in_z LPCSTR szFormatA, ...)
+BOOL CStringA::AppendFormat(_In_z_ _Printf_format_string_ LPCSTR szFormatA, ...)
 {
   va_list argptr;
   BOOL b;
@@ -715,7 +715,7 @@ BOOL CStringA::AppendFormat(__in_z LPCSTR szFormatA, ...)
   return b;
 }
 
-BOOL CStringA::AppendFormat(__in_z LPCWSTR szFormatW, ...)
+BOOL CStringA::AppendFormat(_In_z_ _Printf_format_string_ LPCWSTR szFormatW, ...)
 {
   va_list argptr;
   BOOL b;
@@ -728,7 +728,7 @@ BOOL CStringA::AppendFormat(__in_z LPCWSTR szFormatW, ...)
   return b;
 }
 
-BOOL CStringA::AppendFormatV(__in_z LPCSTR szFormatA, __in va_list argptr)
+BOOL CStringA::AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCSTR szFormatA, _In_ va_list argptr)
 {
   int nChars;
   SIZE_T nBufSize;
@@ -750,7 +750,7 @@ BOOL CStringA::AppendFormatV(__in_z LPCSTR szFormatA, __in va_list argptr)
   return TRUE;
 }
 
-BOOL CStringA::AppendFormatV(__in_z LPCWSTR szFormatW, __in va_list argptr)
+BOOL CStringA::AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCWSTR szFormatW, _In_ va_list argptr)
 {
   WCHAR szTempBufW[512], *szTempW;
   int nChars, nBufSize;
@@ -783,7 +783,7 @@ BOOL CStringA::AppendFormatV(__in_z LPCWSTR szFormatW, __in va_list argptr)
   return TRUE;
 }
 
-BOOL CStringA::Insert(__in_z_opt LPCSTR szSrcA, __in SIZE_T nInsertPosition)
+BOOL CStringA::Insert(_In_opt_z_ LPCSTR szSrcA, _In_ SIZE_T nInsertPosition)
 {
   SIZE_T nSrcLen;
 
@@ -796,7 +796,7 @@ BOOL CStringA::Insert(__in_z_opt LPCSTR szSrcA, __in SIZE_T nInsertPosition)
   return InsertN(szSrcA, nInsertPosition, nSrcLen);
 }
 
-BOOL CStringA::InsertN(__in_nz_opt LPCSTR szSrcA, __in SIZE_T nInsertPosition, __in SIZE_T nSrcLen)
+BOOL CStringA::InsertN(_In_reads_or_z_opt_(nSrcLen) LPCSTR szSrcA, _In_ SIZE_T nInsertPosition, _In_ SIZE_T nSrcLen)
 {
   LPSTR sA;
 
@@ -818,7 +818,7 @@ BOOL CStringA::InsertN(__in_nz_opt LPCSTR szSrcA, __in SIZE_T nInsertPosition, _
   return TRUE;
 }
 
-VOID CStringA::Delete(__in SIZE_T nStartChar, __in SIZE_T nChars)
+VOID CStringA::Delete(_In_ SIZE_T nStartChar, _In_ SIZE_T nChars)
 {
   LPSTR sA;
   SIZE_T k;
@@ -839,7 +839,7 @@ VOID CStringA::Delete(__in SIZE_T nStartChar, __in SIZE_T nChars)
 }
 
 
-BOOL CStringA::StartsWith(__in_z LPCSTR _szStrA, __in_opt BOOL bCaseInsensitive)
+BOOL CStringA::StartsWith(_In_z_ LPCSTR _szStrA, _In_opt_ BOOL bCaseInsensitive)
 {
   SIZE_T nSrcLen;
 
@@ -849,7 +849,7 @@ BOOL CStringA::StartsWith(__in_z LPCSTR _szStrA, __in_opt BOOL bCaseInsensitive)
   return (StrNCompareA(szStrA, _szStrA, nSrcLen, bCaseInsensitive) == 0) ? TRUE : FALSE;
 }
 
-BOOL CStringA::EndsWith(__in_z LPCSTR _szStrA, __in_opt BOOL bCaseInsensitive)
+BOOL CStringA::EndsWith(_In_z_ LPCSTR _szStrA, _In_opt_ BOOL bCaseInsensitive)
 {
   SIZE_T nSrcLen;
 
@@ -859,14 +859,14 @@ BOOL CStringA::EndsWith(__in_z LPCSTR _szStrA, __in_opt BOOL bCaseInsensitive)
   return (StrNCompareA(szStrA+(nLen-nSrcLen), _szStrA, nSrcLen, bCaseInsensitive) == 0) ? TRUE : FALSE;
 }
 
-LPCSTR CStringA::Contains(__in_z LPCSTR _szStrA, __in_opt BOOL bCaseInsensitive)
+LPCSTR CStringA::Contains(_In_z_ LPCSTR _szStrA, _In_opt_ BOOL bCaseInsensitive)
 {
   if (_szStrA == NULL || *_szStrA == 0)
     return NULL;
   return MX::StrFindA(szStrA, _szStrA, FALSE, bCaseInsensitive);
 }
 
-VOID CStringA::Attach(__in_z LPSTR szSrcA)
+VOID CStringA::Attach(_In_z_ LPSTR szSrcA)
 {
   Empty();
   szStrA = szSrcA;
@@ -890,7 +890,7 @@ LPSTR CStringA::Detach()
   return szRetA;
 }
 
-BOOL CStringA::EnsureBuffer(__in SIZE_T nChars)
+BOOL CStringA::EnsureBuffer(_In_ SIZE_T nChars)
 {
   LPSTR szNewStrA;
 
@@ -911,7 +911,7 @@ BOOL CStringA::EnsureBuffer(__in SIZE_T nChars)
   return TRUE;
 }
 
-CHAR& CStringA::operator[](__in SIZE_T nIndex)
+CHAR& CStringA::operator[](_In_ SIZE_T nIndex)
 {
   return szStrA[nIndex];
 }
@@ -921,7 +921,7 @@ LPWSTR CStringA::ToWide()
   return Ansi2Wide(szStrA, nLen);
 }
 
-LPWSTR CStringA::Ansi2Wide(__in_z LPCSTR szStrA, __in SIZE_T nSrcLen)
+LPWSTR CStringA::Ansi2Wide(_In_z_ LPCSTR szStrA, _In_ SIZE_T nSrcLen)
 {
   CStringW cStrTempW;
 
@@ -977,19 +977,19 @@ SIZE_T CStringW::GetLength() const
   return nLen;
 }
 
-BOOL CStringW::Copy(__in_z_opt LPCSTR szSrcA)
+BOOL CStringW::Copy(_In_opt_z_ LPCSTR szSrcA)
 {
   Empty();
   return Concat(szSrcA);
 }
 
-BOOL CStringW::CopyN(__in_nz_opt LPCSTR szSrcA, __in SIZE_T nSrcLen)
+BOOL CStringW::CopyN(_In_reads_or_z_opt_(nSrcLen) LPCSTR szSrcA, _In_ SIZE_T nSrcLen)
 {
   Empty();
   return ConcatN(szSrcA, nSrcLen);
 }
 
-BOOL CStringW::Concat(__in_z_opt LPCSTR szSrcA)
+BOOL CStringW::Concat(_In_opt_z_ LPCSTR szSrcA)
 {
   SIZE_T nSrcLen;
 
@@ -1002,7 +1002,7 @@ BOOL CStringW::Concat(__in_z_opt LPCSTR szSrcA)
   return ConcatN(szSrcA, nSrcLen);
 }
 
-BOOL CStringW::ConcatN(__in_nz_opt LPCSTR szSrcA, __in SIZE_T nSrcLen)
+BOOL CStringW::ConcatN(_In_reads_or_z_opt_(nSrcLen) LPCSTR szSrcA, _In_ SIZE_T nSrcLen)
 {
   MX_ANSI_STRING asStr;
   MX_UNICODE_STRING usTemp;
@@ -1038,19 +1038,19 @@ BOOL CStringW::ConcatN(__in_nz_opt LPCSTR szSrcA, __in SIZE_T nSrcLen)
   return TRUE;
 }
 
-BOOL CStringW::Copy(__in_z_opt LPCWSTR szSrcW)
+BOOL CStringW::Copy(_In_opt_z_ LPCWSTR szSrcW)
 {
   Empty();
   return Concat(szSrcW);
 }
 
-BOOL CStringW::CopyN(__in_nz_opt LPCWSTR szSrcW, __in SIZE_T nSrcLen)
+BOOL CStringW::CopyN(_In_reads_or_z_opt_(nSrcLen) LPCWSTR szSrcW, _In_ SIZE_T nSrcLen)
 {
   Empty();
   return ConcatN(szSrcW, nSrcLen);
 }
 
-BOOL CStringW::Concat(__in_z_opt LPCWSTR szSrcW)
+BOOL CStringW::Concat(_In_opt_z_ LPCWSTR szSrcW)
 {
   SIZE_T nSrcLen;
 
@@ -1063,7 +1063,7 @@ BOOL CStringW::Concat(__in_z_opt LPCWSTR szSrcW)
   return ConcatN(szSrcW, nSrcLen);
 }
 
-BOOL CStringW::ConcatN(__in_nz_opt LPCWSTR szSrcW, __in SIZE_T nSrcLen)
+BOOL CStringW::ConcatN(_In_reads_or_z_opt_(nSrcLen) LPCWSTR szSrcW, _In_ SIZE_T nSrcLen)
 {
   if (nSrcLen == 0)
     return TRUE;
@@ -1079,48 +1079,48 @@ BOOL CStringW::ConcatN(__in_nz_opt LPCWSTR szSrcW, __in SIZE_T nSrcLen)
   return TRUE;
 }
 
-BOOL CStringW::Copy(__in PCMX_UNICODE_STRING pUSStr)
+BOOL CStringW::Copy(_In_ PCMX_UNICODE_STRING pUSStr)
 {
   Empty();
   return Concat(pUSStr);
 }
 
-BOOL CStringW::Concat(__in PCMX_UNICODE_STRING pUSStr)
+BOOL CStringW::Concat(_In_ PCMX_UNICODE_STRING pUSStr)
 {
   if (pUSStr != NULL && pUSStr->Buffer != NULL && pUSStr->Length != 0)
     return ConcatN(pUSStr->Buffer, (SIZE_T)(pUSStr->Length)/sizeof(WCHAR));
   return TRUE;
 }
 
-BOOL CStringW::Copy(__in LONG nSrc)
+BOOL CStringW::Copy(_In_ LONG nSrc)
 {
   Empty();
   return Concat(nSrc);
 }
 
-BOOL CStringW::Concat(__in LONG nSrc)
+BOOL CStringW::Concat(_In_ LONG nSrc)
 {
   return Concat((LONGLONG)nSrc);
 }
 
-BOOL CStringW::Copy(__in ULONG nSrc)
+BOOL CStringW::Copy(_In_ ULONG nSrc)
 {
   Empty();
   return Concat(nSrc);
 }
 
-BOOL CStringW::Concat(__in ULONG nSrc)
+BOOL CStringW::Concat(_In_ ULONG nSrc)
 {
   return Concat((ULONGLONG)nSrc);
 }
 
-BOOL CStringW::Copy(__in LONGLONG nSrc)
+BOOL CStringW::Copy(_In_ LONGLONG nSrc)
 {
   Empty();
   return Concat(nSrc);
 }
 
-BOOL CStringW::Concat(__in LONGLONG nSrc)
+BOOL CStringW::Concat(_In_ LONGLONG nSrc)
 {
   WCHAR szTempW[128];
 
@@ -1128,13 +1128,13 @@ BOOL CStringW::Concat(__in LONGLONG nSrc)
   return Concat(szTempW);
 }
 
-BOOL CStringW::Copy(__in ULONGLONG nSrc)
+BOOL CStringW::Copy(_In_ ULONGLONG nSrc)
 {
   Empty();
   return Concat(nSrc);
 }
 
-BOOL CStringW::Concat(__in ULONGLONG nSrc)
+BOOL CStringW::Concat(_In_ ULONGLONG nSrc)
 {
   WCHAR szTempW[128];
 
@@ -1142,7 +1142,7 @@ BOOL CStringW::Concat(__in ULONGLONG nSrc)
   return Concat(szTempW);
 }
 
-BOOL CStringW::Format(__in_z LPCSTR szFormatA, ...)
+BOOL CStringW::Format(_In_z_ _Printf_format_string_ LPCSTR szFormatA, ...)
 {
   va_list argptr;
   BOOL b;
@@ -1156,7 +1156,7 @@ BOOL CStringW::Format(__in_z LPCSTR szFormatA, ...)
   return b;
 }
 
-BOOL CStringW::Format(__in_z LPCWSTR szFormatW, ...)
+BOOL CStringW::Format(_In_z_ _Printf_format_string_ LPCWSTR szFormatW, ...)
 {
   va_list argptr;
   BOOL b;
@@ -1170,19 +1170,19 @@ BOOL CStringW::Format(__in_z LPCWSTR szFormatW, ...)
   return b;
 }
 
-BOOL CStringW::FormatV(__in_z LPCSTR szFormatA, __in va_list argptr)
+BOOL CStringW::FormatV(_In_z_ _Printf_format_string_params_(1) LPCSTR szFormatA, _In_ va_list argptr)
 {
   Empty();
   return AppendFormatV(szFormatA, argptr);
 }
 
-BOOL CStringW::FormatV(__in_z LPCWSTR szFormatW, __in va_list argptr)
+BOOL CStringW::FormatV(_In_z_ _Printf_format_string_params_(1) LPCWSTR szFormatW, _In_ va_list argptr)
 {
   Empty();
   return AppendFormatV(szFormatW, argptr);
 }
 
-BOOL CStringW::AppendFormat(__in_z LPCSTR szFormatA, ...)
+BOOL CStringW::AppendFormat(_In_z_ _Printf_format_string_ LPCSTR szFormatA, ...)
 {
   va_list argptr;
   BOOL b;
@@ -1195,7 +1195,7 @@ BOOL CStringW::AppendFormat(__in_z LPCSTR szFormatA, ...)
   return b;
 }
 
-BOOL CStringW::AppendFormat(__in_z LPCWSTR szFormatW, ...)
+BOOL CStringW::AppendFormat(_In_z_ _Printf_format_string_ LPCWSTR szFormatW, ...)
 {
   va_list argptr;
   BOOL b;
@@ -1208,7 +1208,7 @@ BOOL CStringW::AppendFormat(__in_z LPCWSTR szFormatW, ...)
   return b;
 }
 
-BOOL CStringW::AppendFormatV(__in_z LPCSTR szFormatA, __in va_list argptr)
+BOOL CStringW::AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCSTR szFormatA, _In_ va_list argptr)
 {
   CHAR szTempBufA[512], *szTempA;
   int nChars, nBufSize;
@@ -1241,7 +1241,7 @@ BOOL CStringW::AppendFormatV(__in_z LPCSTR szFormatA, __in va_list argptr)
   return TRUE;
 }
 
-BOOL CStringW::AppendFormatV(__in_z LPCWSTR szFormatW, __in va_list argptr)
+BOOL CStringW::AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCWSTR szFormatW, _In_ va_list argptr)
 {
   int nChars;
   SIZE_T nBufSize;
@@ -1263,7 +1263,7 @@ BOOL CStringW::AppendFormatV(__in_z LPCWSTR szFormatW, __in va_list argptr)
   return TRUE;
 }
 
-BOOL CStringW::Insert(__in_z_opt LPCWSTR szSrcW, __in SIZE_T nInsertPosition)
+BOOL CStringW::Insert(_In_opt_z_ LPCWSTR szSrcW, _In_ SIZE_T nInsertPosition)
 {
   SIZE_T nSrcLen;
 
@@ -1276,7 +1276,7 @@ BOOL CStringW::Insert(__in_z_opt LPCWSTR szSrcW, __in SIZE_T nInsertPosition)
   return InsertN(szSrcW, nInsertPosition, nSrcLen);
 }
 
-BOOL CStringW::InsertN(__in_nz_opt LPCWSTR szSrcW, __in SIZE_T nInsertPosition, __in SIZE_T nSrcLen)
+BOOL CStringW::InsertN(_In_reads_or_z_opt_(nSrcLen) LPCWSTR szSrcW, _In_ SIZE_T nInsertPosition, _In_ SIZE_T nSrcLen)
 {
   LPWSTR sW;
 
@@ -1298,7 +1298,7 @@ BOOL CStringW::InsertN(__in_nz_opt LPCWSTR szSrcW, __in SIZE_T nInsertPosition, 
   return TRUE;
 }
 
-VOID CStringW::Delete(__in SIZE_T nStartChar, __in SIZE_T nChars)
+VOID CStringW::Delete(_In_ SIZE_T nStartChar, _In_ SIZE_T nChars)
 {
   LPWSTR sW;
   SIZE_T k;
@@ -1318,7 +1318,7 @@ VOID CStringW::Delete(__in SIZE_T nStartChar, __in SIZE_T nChars)
   return;
 }
 
-BOOL CStringW::StartsWith(__in_z LPCWSTR _szStrW, __in_opt BOOL bCaseInsensitive)
+BOOL CStringW::StartsWith(_In_z_ LPCWSTR _szStrW, _In_opt_ BOOL bCaseInsensitive)
 {
   SIZE_T nSrcLen;
 
@@ -1328,7 +1328,7 @@ BOOL CStringW::StartsWith(__in_z LPCWSTR _szStrW, __in_opt BOOL bCaseInsensitive
   return (StrNCompareW(szStrW, _szStrW, nSrcLen, bCaseInsensitive) == 0) ? TRUE : FALSE;
 }
 
-BOOL CStringW::EndsWith(__in_z LPCWSTR _szStrW, __in_opt BOOL bCaseInsensitive)
+BOOL CStringW::EndsWith(_In_z_ LPCWSTR _szStrW, _In_opt_ BOOL bCaseInsensitive)
 {
   SIZE_T nSrcLen;
 
@@ -1338,14 +1338,14 @@ BOOL CStringW::EndsWith(__in_z LPCWSTR _szStrW, __in_opt BOOL bCaseInsensitive)
   return (StrNCompareW(szStrW+(nLen-nSrcLen), _szStrW, nSrcLen, bCaseInsensitive) == 0) ? TRUE : FALSE;
 }
 
-LPCWSTR CStringW::Contains(__in_z LPCWSTR _szStrW, __in_opt BOOL bCaseInsensitive)
+LPCWSTR CStringW::Contains(_In_z_ LPCWSTR _szStrW, _In_opt_ BOOL bCaseInsensitive)
 {
   if (_szStrW == NULL || *_szStrW == 0)
     return NULL;
   return MX::StrFindW(szStrW, _szStrW, FALSE, bCaseInsensitive);
 }
 
-VOID CStringW::Attach(__in_z LPWSTR szSrcW)
+VOID CStringW::Attach(_In_z_ LPWSTR szSrcW)
 {
   Empty();
   szStrW = szSrcW;
@@ -1369,7 +1369,7 @@ LPWSTR CStringW::Detach()
   return szRetW;
 }
 
-BOOL CStringW::EnsureBuffer(__in SIZE_T nChars)
+BOOL CStringW::EnsureBuffer(_In_ SIZE_T nChars)
 {
   LPWSTR szNewStrW;
 
@@ -1390,7 +1390,7 @@ BOOL CStringW::EnsureBuffer(__in SIZE_T nChars)
   return TRUE;
 }
 
-WCHAR& CStringW::operator[](__in SIZE_T nIndex)
+WCHAR& CStringW::operator[](_In_ SIZE_T nIndex)
 {
   return szStrW[nIndex];
 }
@@ -1400,7 +1400,7 @@ LPSTR CStringW::ToAnsi()
   return Wide2Ansi(szStrW, nLen);
 }
 
-LPSTR CStringW::Wide2Ansi(__in_z LPCWSTR szStrW, __in SIZE_T nSrcLen)
+LPSTR CStringW::Wide2Ansi(_In_z_ LPCWSTR szStrW, _In_ SIZE_T nSrcLen)
 {
   CStringA cStrTempA;
 

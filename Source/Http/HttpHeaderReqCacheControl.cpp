@@ -32,7 +32,7 @@ typedef enum {
 
 //-----------------------------------------------------------
 
-static HRESULT GetUInt64(__in_z LPCSTR szValueA, __out ULONGLONG &nValue);
+static HRESULT GetUInt64(_In_z_ LPCSTR szValueA, _Out_ ULONGLONG &nValue);
 
 //-----------------------------------------------------------
 
@@ -56,7 +56,7 @@ CHttpHeaderReqCacheControl::~CHttpHeaderReqCacheControl()
   return;
 }
 
-HRESULT CHttpHeaderReqCacheControl::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderReqCacheControl::Parse(_In_z_ LPCSTR szValueA)
 {
   LPCSTR szNameStartA, szNameEndA, szStartA;
   CStringA cStrTempA;
@@ -233,7 +233,7 @@ HRESULT CHttpHeaderReqCacheControl::Parse(__in_z LPCSTR szValueA)
   return (nGotItems != 0) ? S_OK : MX_E_InvalidData;
 }
 
-HRESULT CHttpHeaderReqCacheControl::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderReqCacheControl::Build(_Inout_ CStringA &cStrDestA)
 {
   SIZE_T i, nCount;
   LPCWSTR sW;
@@ -311,7 +311,7 @@ HRESULT CHttpHeaderReqCacheControl::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqCacheControl::SetNoCache(__in BOOL _bNoCache)
+HRESULT CHttpHeaderReqCacheControl::SetNoCache(_In_ BOOL _bNoCache)
 {
   bNoCache = _bNoCache;
   return S_OK;
@@ -322,7 +322,7 @@ BOOL CHttpHeaderReqCacheControl::GetNoCache() const
   return bNoCache;
 }
 
-HRESULT CHttpHeaderReqCacheControl::SetNoStore(__in BOOL _bNoStore)
+HRESULT CHttpHeaderReqCacheControl::SetNoStore(_In_ BOOL _bNoStore)
 {
   bNoStore = _bNoStore;
   return S_OK;
@@ -333,7 +333,7 @@ BOOL CHttpHeaderReqCacheControl::GetNoStore() const
   return bNoStore;
 }
 
-HRESULT CHttpHeaderReqCacheControl::SetMaxAge(__in ULONGLONG _nMaxAge)
+HRESULT CHttpHeaderReqCacheControl::SetMaxAge(_In_ ULONGLONG _nMaxAge)
 {
   nMaxAge = _nMaxAge;
   return S_OK;
@@ -344,7 +344,7 @@ ULONGLONG CHttpHeaderReqCacheControl::GetMaxAge() const
   return nMaxAge;
 }
 
-HRESULT CHttpHeaderReqCacheControl::SetMaxStale(__in ULONGLONG _nMaxStale)
+HRESULT CHttpHeaderReqCacheControl::SetMaxStale(_In_ ULONGLONG _nMaxStale)
 {
   nMaxStale = _nMaxStale;
   return S_OK;
@@ -355,7 +355,7 @@ ULONGLONG CHttpHeaderReqCacheControl::GetMaxStale() const
   return nMaxStale;
 }
 
-HRESULT CHttpHeaderReqCacheControl::SetMinFresh(__in ULONGLONG _nMinFresh)
+HRESULT CHttpHeaderReqCacheControl::SetMinFresh(_In_ ULONGLONG _nMinFresh)
 {
   nMinFresh = _nMinFresh;
   return S_OK;
@@ -366,7 +366,7 @@ ULONGLONG CHttpHeaderReqCacheControl::GetMinFresh() const
   return nMinFresh;
 }
 
-HRESULT CHttpHeaderReqCacheControl::SetNoTransform(__in BOOL _bNoTransform)
+HRESULT CHttpHeaderReqCacheControl::SetNoTransform(_In_ BOOL _bNoTransform)
 {
   bNoTransform = _bNoTransform;
   return S_OK;
@@ -377,7 +377,7 @@ BOOL CHttpHeaderReqCacheControl::GetNoTransform() const
   return bNoTransform;
 }
 
-HRESULT CHttpHeaderReqCacheControl::SetOnlyIfCached(__in BOOL _bOnlyIfCached)
+HRESULT CHttpHeaderReqCacheControl::SetOnlyIfCached(_In_ BOOL _bOnlyIfCached)
 {
   bOnlyIfCached = _bOnlyIfCached;
   return S_OK;
@@ -388,7 +388,7 @@ BOOL CHttpHeaderReqCacheControl::GetOnlyIfCached() const
   return bOnlyIfCached;
 }
 
-HRESULT CHttpHeaderReqCacheControl::AddExtension(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW)
+HRESULT CHttpHeaderReqCacheControl::AddExtension(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW)
 {
   TAutoFreePtr<EXTENSION> cNewExtension;
   LPCSTR szStartA, szEndA;
@@ -432,17 +432,17 @@ SIZE_T CHttpHeaderReqCacheControl::GetExtensionsCount() const
   return cExtensionsList.GetCount();
 }
 
-LPCSTR CHttpHeaderReqCacheControl::GetExtensionName(__in SIZE_T nIndex) const
+LPCSTR CHttpHeaderReqCacheControl::GetExtensionName(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cExtensionsList.GetCount()) ? cExtensionsList[nIndex]->szNameA : NULL;
 }
 
-LPCWSTR CHttpHeaderReqCacheControl::GetExtensionValue(__in SIZE_T nIndex) const
+LPCWSTR CHttpHeaderReqCacheControl::GetExtensionValue(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cExtensionsList.GetCount()) ? cExtensionsList[nIndex]->szValueW : NULL;
 }
 
-LPCWSTR CHttpHeaderReqCacheControl::GetExtensionValue(__in_z LPCSTR szNameA) const
+LPCWSTR CHttpHeaderReqCacheControl::GetExtensionValue(_In_z_ LPCSTR szNameA) const
 {
   SIZE_T i, nCount;
 
@@ -462,7 +462,7 @@ LPCWSTR CHttpHeaderReqCacheControl::GetExtensionValue(__in_z LPCSTR szNameA) con
 
 //-----------------------------------------------------------
 
-static HRESULT GetUInt64(__in_z LPCSTR szValueA, __out ULONGLONG &nValue)
+static HRESULT GetUInt64(_In_z_ LPCSTR szValueA, _Out_ ULONGLONG &nValue)
 {
   ULONGLONG nTemp;
 

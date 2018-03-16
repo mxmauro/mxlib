@@ -45,19 +45,19 @@ public:
   ~CCryptoDES();
 
   HRESULT BeginEncrypt();
-  HRESULT BeginEncrypt(__in eAlgorithm nAlgorithm, __in_opt LPCVOID lpKey=NULL, __in_opt SIZE_T nKeyLen=0,
-                       __in_opt LPCVOID lpInitVector=NULL, __in_opt BOOL bUsePadding=TRUE);
-  HRESULT EncryptStream(__in LPCVOID lpData, __in SIZE_T nDataLength);
+  HRESULT BeginEncrypt(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey=NULL, _In_opt_ SIZE_T nKeyLen=0,
+                       _In_opt_ LPCVOID lpInitVector=NULL, _In_opt_ BOOL bUsePadding=TRUE);
+  HRESULT EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
   HRESULT EndEncrypt();
 
   HRESULT BeginDecrypt();
-  HRESULT BeginDecrypt(__in eAlgorithm nAlgorithm, __in_opt LPCVOID lpKey=NULL, __in_opt SIZE_T nKeyLen=0,
-                       __in_opt LPCVOID lpInitVector=NULL, __in_opt BOOL bUsePadding=TRUE);
-  HRESULT DecryptStream(__in LPCVOID lpData, __in SIZE_T nDataLength);
+  HRESULT BeginDecrypt(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey=NULL, _In_opt_ SIZE_T nKeyLen=0,
+                       _In_opt_ LPCVOID lpInitVector=NULL, _In_opt_ BOOL bUsePadding=TRUE);
+  HRESULT DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
   HRESULT EndDecrypt();
 
 private:
-  VOID CleanUp(__in BOOL bEncoder, __in BOOL bZeroData);
+  VOID CleanUp(_In_ BOOL bEncoder, _In_ BOOL bZeroData);
 
 private:
   LPVOID lpInternalData;

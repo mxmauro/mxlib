@@ -27,8 +27,8 @@
 
 namespace MX {
 
-HRESULT Utf8_Encode(__inout CStringA &cStrDestA, __in_z LPCWSTR szSrcW, __in_opt SIZE_T nSrcLen,
-                    __in_opt BOOL bAppend)
+HRESULT Utf8_Encode(_Inout_ CStringA &cStrDestA, _In_z_ LPCWSTR szSrcW, _In_opt_ SIZE_T nSrcLen,
+                    _In_opt_ BOOL bAppend)
 {
   int k;
   CHAR chA[4];
@@ -63,8 +63,8 @@ HRESULT Utf8_Encode(__inout CStringA &cStrDestA, __in_z LPCWSTR szSrcW, __in_opt
   return S_OK;
 }
 
-HRESULT Utf8_Decode(__inout CStringW &cStrDestW, __in_z LPCSTR szSrcA, __in_opt SIZE_T nSrcLen,
-                    __in_opt BOOL bAppend)
+HRESULT Utf8_Decode(_Inout_ CStringW &cStrDestW, _In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen,
+                    _In_opt_ BOOL bAppend)
 {
   WCHAR chW[2];
   int res;
@@ -88,7 +88,7 @@ HRESULT Utf8_Decode(__inout CStringW &cStrDestW, __in_z LPCSTR szSrcA, __in_opt 
   return S_OK;
 }
 
-int Utf8_EncodeChar(__out LPSTR szDestA, __in WCHAR chW, __in_opt WCHAR chSurrogatePairW)
+int Utf8_EncodeChar(_Out_opt_ CHAR szDestA[], _In_ WCHAR chW, _In_opt_ WCHAR chSurrogatePairW)
 {
   static const BYTE aFirstByteMark[4] ={ 0x00, 0xC0, 0xE0, 0xF0 };
   SIZE_T nVal;
@@ -97,6 +97,8 @@ int Utf8_EncodeChar(__out LPSTR szDestA, __in WCHAR chW, __in_opt WCHAR chSurrog
 
   if (szDestA == NULL)
     szDestA = chA;
+#pragma warning(suppress : 6386)
+  szDestA[0] = szDestA[1] = szDestA[2] = szDestA[3] = 0;
   if (chW >= 0xD800 && chW <= 0xDBFF && chSurrogatePairW != 0)
   {
     if (chSurrogatePairW < 0xDC00 || chSurrogatePairW > 0xDFFF)
@@ -134,7 +136,7 @@ int Utf8_EncodeChar(__out LPSTR szDestA, __in WCHAR chW, __in_opt WCHAR chSurrog
   return k;
 }
 
-int Utf8_DecodeChar(__out LPWSTR szDestW, __in_z LPCSTR szSrcA, __in_opt SIZE_T nSrcLen)
+int Utf8_DecodeChar(_Out_opt_ WCHAR szDestW[], _In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen)
 {
   WCHAR chW[2];
   UCHAR *sA;
@@ -142,6 +144,7 @@ int Utf8_DecodeChar(__out LPWSTR szDestW, __in_z LPCSTR szSrcA, __in_opt SIZE_T 
 
   if (szDestW == NULL)
     szDestW = chW;
+#pragma warning(suppress : 6386)
   szDestW[0] = szDestW[1] = 0;
   if (szSrcA == NULL || *szSrcA == 0 || nSrcLen == 0)
     return 0;
@@ -192,7 +195,7 @@ int Utf8_DecodeChar(__out LPWSTR szDestW, __in_z LPCSTR szSrcA, __in_opt SIZE_T 
   return 4;
 }
 
-SIZE_T Utf8_StrLen(__in_z LPCSTR szSrcA)
+SIZE_T Utf8_StrLen(_In_z_ LPCSTR szSrcA)
 {
   SIZE_T nLen;
 
@@ -237,7 +240,7 @@ SIZE_T Utf8_StrLen(__in_z LPCSTR szSrcA)
   return nLen;
 }
 
-int Utf8_StrCompareA(__in_z LPCSTR szSrcUtf8, __in_z LPCSTR szSrcA, __in_opt BOOL bCaseInsensitive)
+int Utf8_StrCompareA(_In_z_ LPCSTR szSrcUtf8, _In_z_ LPCSTR szSrcA, _In_opt_ BOOL bCaseInsensitive)
 {
   SIZE_T nLen[3];
   int res;
@@ -257,7 +260,7 @@ int Utf8_StrCompareA(__in_z LPCSTR szSrcUtf8, __in_z LPCSTR szSrcA, __in_opt BOO
   return res;
 }
 
-int Utf8_StrCompareW(__in_z LPCSTR szSrcUtf8, __in_z LPCWSTR szSrcW, __in_opt BOOL bCaseInsensitive)
+int Utf8_StrCompareW(_In_z_ LPCSTR szSrcUtf8, _In_z_ LPCWSTR szSrcW, _In_opt_ BOOL bCaseInsensitive)
 {
   SIZE_T nLen[3];
   int res;
@@ -277,7 +280,7 @@ int Utf8_StrCompareW(__in_z LPCSTR szSrcUtf8, __in_z LPCWSTR szSrcW, __in_opt BO
   return res;
 }
 
-int Utf8_StrNCompareA(__in_z LPCSTR szSrcUtf8, __in_z LPCSTR szSrcA, __in SIZE_T nLen, __in_opt BOOL bCaseInsensitive)
+int Utf8_StrNCompareA(_In_z_ LPCSTR szSrcUtf8, _In_z_ LPCSTR szSrcA, _In_ SIZE_T nLen, _In_opt_ BOOL bCaseInsensitive)
 {
   WCHAR szTempBufW[64];
   SIZE_T nTempBufLen;
@@ -313,7 +316,7 @@ int Utf8_StrNCompareA(__in_z LPCSTR szSrcUtf8, __in_z LPCSTR szSrcA, __in SIZE_T
   return -res; //negate result because string parameter swap in call to 'StrNCompareAW'
 }
 
-int Utf8_StrNCompareW(__in_z LPCSTR szSrcUtf8, __in_z LPCWSTR szSrcW, __in SIZE_T nLen, __in_opt BOOL bCaseInsensitive)
+int Utf8_StrNCompareW(_In_z_ LPCSTR szSrcUtf8, _In_z_ LPCWSTR szSrcW, _In_ SIZE_T nLen, _In_opt_ BOOL bCaseInsensitive)
 {
   WCHAR szTempBufW[64];
   SIZE_T nTempBufLen;

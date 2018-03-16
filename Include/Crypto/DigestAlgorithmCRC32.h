@@ -38,8 +38,8 @@ public:
   ~CDigestAlgorithmCRC32();
 
   HRESULT BeginDigest();
-  HRESULT BeginDigest(__in DWORD dwStartingCrcValue);
-  HRESULT DigestStream(__in LPCVOID lpData, __in SIZE_T nDataLength);
+  HRESULT BeginDigest(_In_ DWORD dwStartingCrcValue);
+  HRESULT DigestStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
   HRESULT EndDigest();
 
   LPBYTE GetResult() const;

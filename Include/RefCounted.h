@@ -93,14 +93,14 @@ public:
     return;
     };
 
-  TAutoRefCounted(__in_opt T* _lpPtr)
+  TAutoRefCounted(_In_opt_ T* _lpPtr)
     {
     if ((lpPtr = _lpPtr) != NULL)
       lpPtr->AddRef();
     return;
     };
 
-  TAutoRefCounted(__in TAutoRefCounted<T> &cPtr)
+  TAutoRefCounted(_In_ TAutoRefCounted<T> &cPtr)
     {
     if ((lpPtr = cPtr.lpPtr) != NULL)
       lpPtr->AddRef();
@@ -161,7 +161,7 @@ public:
     return lpPtr;
     };
 
-  T* operator=(__in_opt T* _lpPtr)
+  T* operator=(_In_opt_ T* _lpPtr)
     {
     if (_lpPtr != lpPtr)
     {
@@ -174,7 +174,7 @@ public:
     return _lpPtr;
     };
 
-  T* operator=(__in const TAutoRefCounted<T>& cPtr)
+  T* operator=(_In_ const TAutoRefCounted<T>& cPtr)
     {
     if (this != &cPtr)
     {
@@ -197,12 +197,12 @@ public:
     return (lpPtr != NULL) ? true : false;
     };
 
-  bool operator==(__in_opt T* _lpPtr) const
+  bool operator==(_In_opt_ T* _lpPtr) const
     {
     return (lpPtr == _lpPtr) ? true : false;
     };
 
-  VOID Attach(__in_opt T* _lpPtr)
+  VOID Attach(_In_opt_ T* _lpPtr)
     {
     if (lpPtr != NULL)
       lpPtr->Release();

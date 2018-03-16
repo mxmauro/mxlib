@@ -39,60 +39,60 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Cache-Control)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
     return DuplicateBehaviorAppend;
     };
 
-  HRESULT SetPublic(__in BOOL bPublic);
+  HRESULT SetPublic(_In_ BOOL bPublic);
   BOOL GetPublic() const;
 
-  HRESULT SetPrivate(__in BOOL bPrivate);
+  HRESULT SetPrivate(_In_ BOOL bPrivate);
   BOOL GetPrivate() const;
 
-  HRESULT AddPrivateField(__in_z LPCSTR szFieldA);
+  HRESULT AddPrivateField(_In_z_ LPCSTR szFieldA);
 
   SIZE_T GetPrivateFieldsCount() const;
-  LPCSTR GetPrivateField(__in SIZE_T nIndex) const;
-  BOOL HasPrivateField(__in_z LPCSTR szFieldA) const;
+  LPCSTR GetPrivateField(_In_ SIZE_T nIndex) const;
+  BOOL HasPrivateField(_In_z_ LPCSTR szFieldA) const;
 
-  HRESULT SetNoCache(__in BOOL bNoCache);
+  HRESULT SetNoCache(_In_ BOOL bNoCache);
   BOOL GetNoCache() const;
 
-  HRESULT AddNoCacheField(__in_z LPCSTR szFieldA);
+  HRESULT AddNoCacheField(_In_z_ LPCSTR szFieldA);
 
   SIZE_T GetNoCacheFieldsCount() const;
-  LPCSTR GetNoCacheField(__in SIZE_T nIndex) const;
-  BOOL HasNoCacheField(__in_z LPCSTR szFieldA) const;
+  LPCSTR GetNoCacheField(_In_ SIZE_T nIndex) const;
+  BOOL HasNoCacheField(_In_z_ LPCSTR szFieldA) const;
 
-  HRESULT SetNoStore(__in BOOL bNoStore);
+  HRESULT SetNoStore(_In_ BOOL bNoStore);
   BOOL GetNoStore() const;
 
-  HRESULT SetNoTransform(__in BOOL bNoTransform);
+  HRESULT SetNoTransform(_In_ BOOL bNoTransform);
   BOOL GetNoTransform() const;
 
-  HRESULT SetMustRevalidate(__in BOOL bMustRevalidate);
+  HRESULT SetMustRevalidate(_In_ BOOL bMustRevalidate);
   BOOL GetMustRevalidate() const;
 
-  HRESULT SetProxyRevalidate(__in BOOL bProxyRevalidate);
+  HRESULT SetProxyRevalidate(_In_ BOOL bProxyRevalidate);
   BOOL GetProxyRevalidate() const;
 
-  HRESULT SetMaxAge(__in ULONGLONG nMaxAge);
+  HRESULT SetMaxAge(_In_ ULONGLONG nMaxAge);
   ULONGLONG GetMaxAge() const;
 
-  HRESULT SetSharedMaxAge(__in ULONGLONG nSharedMaxAge);
+  HRESULT SetSharedMaxAge(_In_ ULONGLONG nSharedMaxAge);
   ULONGLONG GetSharedMaxAge() const;
 
-  HRESULT AddExtension(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW);
+  HRESULT AddExtension(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);
 
   SIZE_T GetExtensionsCount() const;
-  LPCSTR GetExtensionName(__in SIZE_T nIndex) const;
-  LPCWSTR GetExtensionValue(__in SIZE_T nIndex) const;
-  LPCWSTR GetExtensionValue(__in_z LPCSTR szNameA) const;
+  LPCSTR GetExtensionName(_In_ SIZE_T nIndex) const;
+  LPCWSTR GetExtensionValue(_In_ SIZE_T nIndex) const;
+  LPCWSTR GetExtensionValue(_In_z_ LPCSTR szNameA) const;
 
 private:
   typedef struct {

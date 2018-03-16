@@ -27,19 +27,19 @@
 
 namespace MX {
 
-CJsHttpServerSystemExit::CJsHttpServerSystemExit(__in DukTape::duk_context *lpCtx,
-                                                 __in DukTape::duk_idx_t nStackIndex) : CJsError(lpCtx, nStackIndex)
+CJsHttpServerSystemExit::CJsHttpServerSystemExit(_In_ DukTape::duk_context *lpCtx,
+                                                 _In_ DukTape::duk_idx_t nStackIndex) : CJsError(lpCtx, nStackIndex)
 {
   return;
 }
 
-CJsHttpServerSystemExit::CJsHttpServerSystemExit(__in const CJsHttpServerSystemExit &obj) : CJsError(NULL, 0)
+CJsHttpServerSystemExit::CJsHttpServerSystemExit(_In_ const CJsHttpServerSystemExit &obj) : CJsError()
 {
   *this = obj;
   return;
 }
 
-CJsHttpServerSystemExit& CJsHttpServerSystemExit::operator=(__in const CJsHttpServerSystemExit &obj)
+CJsHttpServerSystemExit& CJsHttpServerSystemExit::operator=(_In_ const CJsHttpServerSystemExit &obj)
 {
   CJsError::operator=(obj);
   return *this;

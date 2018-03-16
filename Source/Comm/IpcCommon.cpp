@@ -41,7 +41,7 @@
 
 namespace MX {
 
-CIpc::CIpc(__in CIoCompletionPortThreadPool &_cDispatcherPool, __in CPropertyBag &_cPropBag) : CBaseMemObj(),
+CIpc::CIpc(_In_ CIoCompletionPortThreadPool &_cDispatcherPool, _In_ CPropertyBag &_cPropBag) : CBaseMemObj(),
       cDispatcherPool(_cDispatcherPool), cPropBag(_cPropBag)
 {
   dwPacketSize = 1024;
@@ -65,7 +65,7 @@ CIpc::~CIpc()
   return;
 }
 
-VOID CIpc::On(__in OnEngineErrorCallback _cEngineErrorCallback)
+VOID CIpc::On(_In_ OnEngineErrorCallback _cEngineErrorCallback)
 {
   cEngineErrorCallback = _cEngineErrorCallback;
   return;
@@ -129,7 +129,7 @@ VOID CIpc::Finalize()
   return;
 }
 
-HRESULT CIpc::SendMsg(__in HANDLE h, __in LPCVOID lpMsg, __in SIZE_T nMsgSize)
+HRESULT CIpc::SendMsg(_In_ HANDLE h, _In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
@@ -151,7 +151,7 @@ HRESULT CIpc::SendMsg(__in HANDLE h, __in LPCVOID lpMsg, __in SIZE_T nMsgSize)
   return hRes;
 }
 
-HRESULT CIpc::SendStream(__in HANDLE h, __in CStream *lpStream)
+HRESULT CIpc::SendStream(_In_ HANDLE h, _In_ CStream *lpStream)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoRefCounted<CStream> cStream(lpStream);
@@ -172,7 +172,7 @@ HRESULT CIpc::SendStream(__in HANDLE h, __in CStream *lpStream)
   return hRes;
 }
 
-HRESULT CIpc::AfterWriteSignal(__in HANDLE h, __in OnAfterWriteSignalCallback cCallback, __in LPVOID lpCookie)
+HRESULT CIpc::AfterWriteSignal(_In_ HANDLE h, _In_ OnAfterWriteSignalCallback cCallback, _In_opt_ LPVOID lpCookie)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
@@ -192,7 +192,7 @@ HRESULT CIpc::AfterWriteSignal(__in HANDLE h, __in OnAfterWriteSignalCallback cC
   return hRes;
 }
 
-CIpc::CMultiSendLock* CIpc::StartMultiSendBlock(__in HANDLE h)
+CIpc::CMultiSendLock* CIpc::StartMultiSendBlock(_In_ HANDLE h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
@@ -217,7 +217,7 @@ CIpc::CMultiSendLock* CIpc::StartMultiSendBlock(__in HANDLE h)
   return cMultiSendBlock.Detach();
 }
 
-HRESULT CIpc::GetBufferedMessage(__in HANDLE h, __out LPVOID lpMsg, __inout SIZE_T *lpnMsgSize)
+HRESULT CIpc::GetBufferedMessage(_In_ HANDLE h, _Out_ LPVOID lpMsg, _Inout_ SIZE_T *lpnMsgSize)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
@@ -240,7 +240,7 @@ HRESULT CIpc::GetBufferedMessage(__in HANDLE h, __out LPVOID lpMsg, __inout SIZE
   return S_OK;
 }
 
-HRESULT CIpc::ConsumeBufferedMessage(__in HANDLE h, __in SIZE_T nConsumedBytes)
+HRESULT CIpc::ConsumeBufferedMessage(_In_ HANDLE h, _In_ SIZE_T nConsumedBytes)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
@@ -262,7 +262,7 @@ HRESULT CIpc::ConsumeBufferedMessage(__in HANDLE h, __in SIZE_T nConsumedBytes)
   return hRes;
 }
 
-HRESULT CIpc::Close(__in HANDLE h, __in HRESULT hErrorCode)
+HRESULT CIpc::Close(_In_ HANDLE h, _In_ HRESULT hErrorCode)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
@@ -279,7 +279,7 @@ HRESULT CIpc::Close(__in HANDLE h, __in HRESULT hErrorCode)
   return S_OK;
 }
 
-HRESULT CIpc::IsConnected(__in HANDLE h)
+HRESULT CIpc::IsConnected(_In_ HANDLE h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
@@ -297,7 +297,7 @@ HRESULT CIpc::IsConnected(__in HANDLE h)
   return hRes;
 }
 
-HRESULT CIpc::IsClosed(__in HANDLE h, __out_opt HRESULT *lphErrorCode)
+HRESULT CIpc::IsClosed(_In_ HANDLE h, _Out_opt_ HRESULT *lphErrorCode)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
@@ -317,7 +317,7 @@ HRESULT CIpc::IsClosed(__in HANDLE h, __out_opt HRESULT *lphErrorCode)
   return hRes;
 }
 
-HRESULT CIpc::AddLayer(__in HANDLE h, __in CLayer *lpLayer, __in_opt BOOL bFront)
+HRESULT CIpc::AddLayer(_In_ HANDLE h, _In_ CLayer *lpLayer, _In_opt_ BOOL bFront)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
@@ -362,7 +362,7 @@ HRESULT CIpc::AddLayer(__in HANDLE h, __in CLayer *lpLayer, __in_opt BOOL bFront
   return S_OK;
 }
 
-CIpc::CUserData* CIpc::GetUserData(__in HANDLE h)
+CIpc::CUserData* CIpc::GetUserData(_In_ HANDLE h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
@@ -382,7 +382,7 @@ CIpc::CUserData* CIpc::GetUserData(__in HANDLE h)
   return lpUserData;
 }
 
-CIpc::eConnectionClass CIpc::GetClass(__in HANDLE h)
+CIpc::eConnectionClass CIpc::GetClass(_In_ HANDLE h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
@@ -474,13 +474,13 @@ VOID CIpc::InternalFinalize()
   return;
 }
 
-VOID CIpc::CloseConnection(__in CConnectionBase *lpConn, __in HRESULT hErrorCode)
+VOID CIpc::CloseConnection(_In_ CConnectionBase *lpConn, _In_ HRESULT hErrorCode)
 {
   lpConn->Close(hErrorCode);
   return;
 }
 
-VOID CIpc::ReleaseAndRemoveConnectionIfClosed(__in CConnectionBase *lpConn)
+VOID CIpc::ReleaseAndRemoveConnectionIfClosed(_In_ CConnectionBase *lpConn)
 {
   BOOL bDestroy = FALSE;
 
@@ -517,14 +517,14 @@ VOID CIpc::ReleaseAndRemoveConnectionIfClosed(__in CConnectionBase *lpConn)
   return;
 }
 
-VOID CIpc::FireOnEngineError(__in HRESULT hErrorCode)
+VOID CIpc::FireOnEngineError(_In_ HRESULT hErrorCode)
 {
   if (cEngineErrorCallback)
     cEngineErrorCallback(this, hErrorCode);
   return;
 }
 
-HRESULT CIpc::FireOnCreate(__in CConnectionBase *lpConn)
+HRESULT CIpc::FireOnCreate(_In_ CConnectionBase *lpConn)
 {
   HRESULT hRes = S_OK;
 
@@ -551,7 +551,7 @@ HRESULT CIpc::FireOnCreate(__in CConnectionBase *lpConn)
   return hRes;
 }
 
-VOID CIpc::FireOnDestroy(__in CConnectionBase *lpConn)
+VOID CIpc::FireOnDestroy(_In_ CConnectionBase *lpConn)
 {
   TAutoRefCounted<CUserData> cUserData(lpConn->cUserData);
 
@@ -560,7 +560,7 @@ VOID CIpc::FireOnDestroy(__in CConnectionBase *lpConn)
   return;
 }
 
-HRESULT CIpc::FireOnConnect(__in CConnectionBase *lpConn, __in HRESULT hErrorCode)
+HRESULT CIpc::FireOnConnect(_In_ CConnectionBase *lpConn, _In_ HRESULT hErrorCode)
 {
   HRESULT hRes = S_OK;
 
@@ -582,7 +582,7 @@ HRESULT CIpc::FireOnConnect(__in CConnectionBase *lpConn, __in HRESULT hErrorCod
   return hRes;
 }
 
-VOID CIpc::FireOnDisconnect(__in CConnectionBase *lpConn)
+VOID CIpc::FireOnDisconnect(_In_ CConnectionBase *lpConn)
 {
   TAutoRefCounted<CUserData> cUserData(lpConn->cUserData);
 
@@ -591,7 +591,7 @@ VOID CIpc::FireOnDisconnect(__in CConnectionBase *lpConn)
   return;
 }
 
-HRESULT CIpc::FireOnDataReceived(__in CConnectionBase *lpConn)
+HRESULT CIpc::FireOnDataReceived(_In_ CConnectionBase *lpConn)
 {
   CCriticalSection::CAutoLock cOnDataReceivedLock(lpConn->cOnDataReceivedCS);
   TAutoRefCounted<CUserData> cUserData(lpConn->cUserData);
@@ -601,7 +601,7 @@ HRESULT CIpc::FireOnDataReceived(__in CConnectionBase *lpConn)
   return lpConn->cDataReceivedCallback(this, lpConn, lpConn->cUserData);
 }
 
-CIpc::CPacket* CIpc::GetPacket(__in CConnectionBase *lpConn, __in CPacket::eType nType)
+CIpc::CPacket* CIpc::GetPacket(_In_ CConnectionBase *lpConn, _In_ CPacket::eType nType)
 {
   CPacket *lpPacket;
 
@@ -623,7 +623,7 @@ CIpc::CPacket* CIpc::GetPacket(__in CConnectionBase *lpConn, __in CPacket::eType
   return lpPacket;
 }
 
-VOID CIpc::FreePacket(__in CPacket *lpPacket)
+VOID CIpc::FreePacket(_In_ CPacket *lpPacket)
 {
   //DebugPrint("FreePacket: Ovr=0x%p\n", lpPacket->GetOverlapped());
   if (cFreePacketsList.GetCount() < (SIZE_T)dwMaxFreePackets)
@@ -638,7 +638,7 @@ VOID CIpc::FreePacket(__in CPacket *lpPacket)
   return;
 }
 
-CIpc::CConnectionBase* CIpc::CheckAndGetConnection(__in HANDLE h)
+CIpc::CConnectionBase* CIpc::CheckAndGetConnection(_In_ HANDLE h)
 {
   CAutoSlimRWLShared cConnListLock(&(sConnections.nSlimMutex));
   CConnectionBase *lpConn;
@@ -654,7 +654,7 @@ CIpc::CConnectionBase* CIpc::CheckAndGetConnection(__in HANDLE h)
   return lpConn;
 }
 
-CIpc::CConnectionBase* CIpc::IsValidConnection(__in HANDLE h)
+CIpc::CConnectionBase* CIpc::IsValidConnection(_In_ HANDLE h)
 {
   CConnectionBase *lpConn;
 
@@ -673,8 +673,8 @@ CIpc::CConnectionBase* CIpc::IsValidConnection(__in HANDLE h)
   return lpConn;
 }
 
-VOID CIpc::OnDispatcherPacket(__in CIoCompletionPortThreadPool *lpPool, __in DWORD dwBytes, __in OVERLAPPED *lpOvr,
-                              __in HRESULT hRes)
+VOID CIpc::OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
+                              _In_ HRESULT hRes)
 {
   CConnectionBase *lpConn;
   CPacket *lpPacket, *lpStreamPacket;
@@ -1096,7 +1096,7 @@ check_pending_req:
   return;
 }
 
-HRESULT CIpc::OnPreprocessPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __in HRESULT hRes)
+HRESULT CIpc::OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes)
 {
   return S_FALSE;
 }
@@ -1104,7 +1104,7 @@ HRESULT CIpc::OnPreprocessPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __i
 //-----------------------------------------------------------
 //-----------------------------------------------------------
 
-CIpc::CConnectionBase::CConnectionBase(__in CIpc *_lpIpc, __in CIpc::eConnectionClass _nClass) : CBaseMemObj(),
+CIpc::CConnectionBase::CConnectionBase(_In_ CIpc *_lpIpc, _In_ CIpc::eConnectionClass _nClass) : CBaseMemObj(),
                                                                                  TLnkLstNode<CIpc::CConnectionBase>()
 {
   nCheckTag1 = CHECKTAG1;
@@ -1158,7 +1158,7 @@ CIpc::CConnectionBase::~CConnectionBase()
   return;
 }
 
-VOID CIpc::CConnectionBase::ShutdownLink(__in BOOL bAbortive)
+VOID CIpc::CConnectionBase::ShutdownLink(_In_ BOOL bAbortive)
 {
   CFastLock cWriteTimeoutLock(&(sWriteTimeout.nMutex));
 
@@ -1168,7 +1168,7 @@ VOID CIpc::CConnectionBase::ShutdownLink(__in BOOL bAbortive)
   return;
 }
 
-VOID CIpc::CConnectionBase::DoCancelEventsCallback(__in __TEventArray &cEventsList)
+VOID CIpc::CConnectionBase::DoCancelEventsCallback(_In_ __TEventArray &cEventsList)
 {
   SIZE_T i, nCount;
 
@@ -1178,7 +1178,7 @@ VOID CIpc::CConnectionBase::DoCancelEventsCallback(__in __TEventArray &cEventsLi
   return;
 }
 
-HRESULT CIpc::CConnectionBase::SendMsg(__in LPCVOID lpData, __in SIZE_T nDataSize)
+HRESULT CIpc::CConnectionBase::SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize)
 {
   CPacket *lpPacket;
   LPBYTE s;
@@ -1228,7 +1228,7 @@ HRESULT CIpc::CConnectionBase::SendMsg(__in LPCVOID lpData, __in SIZE_T nDataSiz
   return S_OK;
 }
 
-HRESULT CIpc::CConnectionBase::SendStream(__in CStream *lpStream)
+HRESULT CIpc::CConnectionBase::SendStream(_In_ CStream *lpStream)
 {
   CPacket *lpPacket;
   HRESULT hRes;
@@ -1257,7 +1257,7 @@ HRESULT CIpc::CConnectionBase::SendStream(__in CStream *lpStream)
   return hRes;
 }
 
-HRESULT CIpc::CConnectionBase::AfterWriteSignal(__in OnAfterWriteSignalCallback cCallback, __in LPVOID lpCookie)
+HRESULT CIpc::CConnectionBase::AfterWriteSignal(_In_ OnAfterWriteSignalCallback cCallback, _In_opt_ LPVOID lpCookie)
 {
   CPacket *lpPacket;
   HRESULT hRes;
@@ -1287,7 +1287,7 @@ HRESULT CIpc::CConnectionBase::AfterWriteSignal(__in OnAfterWriteSignalCallback 
   return hRes;
 }
 
-HRESULT CIpc::CConnectionBase::WriteMsg(__in LPCVOID lpData, __in SIZE_T nDataSize)
+HRESULT CIpc::CConnectionBase::WriteMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize)
 {
   CPacket *lpPacket;
   HRESULT hRes;
@@ -1353,7 +1353,7 @@ HRESULT CIpc::CConnectionBase::WriteMsg(__in LPCVOID lpData, __in SIZE_T nDataSi
   return S_OK;
 }
 
-VOID CIpc::CConnectionBase::Close(__in HRESULT hRes)
+VOID CIpc::CConnectionBase::Close(_In_ HRESULT hRes)
 {
   LONG nInitVal, nOrigVal, nNewVal;
 
@@ -1431,12 +1431,12 @@ HRESULT CIpc::CConnectionBase::HandleConnected()
   return S_OK;
 }
 
-CIpc::CPacket* CIpc::CConnectionBase::GetPacket(__in CPacket::eType nType)
+CIpc::CPacket* CIpc::CConnectionBase::GetPacket(_In_ CPacket::eType nType)
 {
   return lpIpc->GetPacket(this, nType);
 }
 
-VOID CIpc::CConnectionBase::FreePacket(__in CPacket *lpPacket)
+VOID CIpc::CConnectionBase::FreePacket(_In_ CPacket *lpPacket)
 {
   lpIpc->FreePacket(lpPacket);
   return;
@@ -1452,7 +1452,7 @@ CIoCompletionPortThreadPool::OnPacketCallback& CIpc::CConnectionBase::GetDispatc
   return lpIpc->cDispatcherPoolPacketCallback;
 }
 
-HRESULT CIpc::CConnectionBase::DoRead(__in SIZE_T nPacketsCount, __in BOOL bZeroRead, __in_opt CPacket *lpReusePacket)
+HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_ BOOL bZeroRead, _In_opt_ CPacket *lpReusePacket)
 {
   CFastLock cReadLock(&nMutex);
   CPacket *lpPacket;
@@ -1525,8 +1525,8 @@ VOID CIpc::CConnectionBase::ReleaseMySelf()
   return;
 }
 
-HRESULT CIpc::CConnectionBase::SendDataToLayer(__in LPCVOID lpMsg, __in SIZE_T nMsgSize, __in CLayer *lpCurrLayer,
-                                               __in BOOL bIsMsg)
+HRESULT CIpc::CConnectionBase::SendDataToLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize, _In_ CLayer *lpCurrLayer,
+                                               _In_ BOOL bIsMsg)
 {
   CLayer *lpLayer;
   HRESULT hRes = S_OK;
@@ -1566,7 +1566,7 @@ HRESULT CIpc::CConnectionBase::SendDataToLayer(__in LPCVOID lpMsg, __in SIZE_T n
   return hRes;
 }
 
-HRESULT CIpc::CConnectionBase::MarkLastWriteActivity(__in BOOL bSet)
+HRESULT CIpc::CConnectionBase::MarkLastWriteActivity(_In_ BOOL bSet)
 {
   CFastLock cWriteTimeoutLock(&(sWriteTimeout.nMutex));
   CTimedEventQueue::CEvent *lpEvent;
@@ -1619,7 +1619,7 @@ HRESULT CIpc::CConnectionBase::MarkLastWriteActivity(__in BOOL bSet)
   return S_OK;
 }
 
-VOID CIpc::CConnectionBase::OnWriteTimeout(__in CTimedEventQueue::CEvent *lpEvent)
+VOID CIpc::CConnectionBase::OnWriteTimeout(_In_ CTimedEventQueue::CEvent *lpEvent)
 {
   {
     CFastLock cWriteTimeoutLock(&(sWriteTimeout.nMutex));
@@ -1642,12 +1642,12 @@ HANDLE CIpc::CLayer::GetConn()
   return (HANDLE)lpConn;
 }
 
-HRESULT CIpc::CLayer::SendProcessedDataToNextLayer(__in LPCVOID lpMsg, __in SIZE_T nMsgSize)
+HRESULT CIpc::CLayer::SendProcessedDataToNextLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize)
 {
   return reinterpret_cast<CIpc::CConnectionBase*>(lpConn)->SendDataToLayer(lpMsg, nMsgSize, this, FALSE);
 }
 
-HRESULT CIpc::CLayer::SendMsgToNextLayer(__in LPCVOID lpMsg, __in SIZE_T nMsgSize)
+HRESULT CIpc::CLayer::SendMsgToNextLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize)
 {
   return reinterpret_cast<CIpc::CConnectionBase*>(lpConn)->SendDataToLayer(lpMsg, nMsgSize, this, TRUE);
 }
@@ -1672,7 +1672,7 @@ CIpc::CMultiSendLock::~CMultiSendLock()
 
 //-----------------------------------------------------------
 
-CIpc::CAutoMultiSendLock::CAutoMultiSendLock(__in CMultiSendLock *_lpLock) : CBaseMemObj()
+CIpc::CAutoMultiSendLock::CAutoMultiSendLock(_In_ CMultiSendLock *_lpLock) : CBaseMemObj()
 {
   lpLock = _lpLock;
   return;

@@ -53,17 +53,17 @@ protected:
 public:
   ~CHttpHeaderBase();
 
-  static HRESULT Create(__in LPCSTR szHeaderNameA, __in BOOL bIsRequest, __out CHttpHeaderBase **lplpHeader);
+  static HRESULT Create(_In_ LPCSTR szHeaderNameA, _In_ BOOL bIsRequest, _Out_ CHttpHeaderBase **lplpHeader);
   template<class T>
-  static HRESULT Create(__in BOOL bIsRequest, __out T **lplpHeader)
+  static HRESULT Create(_In_ BOOL bIsRequest, _Out_ T **lplpHeader)
     {
     return Create(T::GetNameStatic(), bIsRequest, reinterpret_cast<CHttpHeaderBase**>(lplpHeader));
     };
 
   virtual LPCSTR GetName() const = 0;
 
-  virtual HRESULT Parse(__in_z LPCSTR szValueA) = 0;
-  virtual HRESULT Build(__inout CStringA &cStrDestA) = 0;
+  virtual HRESULT Parse(_In_z_ LPCSTR szValueA) = 0;
+  virtual HRESULT Build(_Inout_ CStringA &cStrDestA) = 0;
 
   virtual eDuplicateBehavior GetDuplicateBehavior() const
     {
@@ -71,14 +71,14 @@ public:
     };
 
   //helpers
-  static LPCSTR SkipSpaces(__in_z LPCSTR sA);
-  static LPCWSTR SkipSpaces(__in_z LPCWSTR sW);
+  static LPCSTR SkipSpaces(_In_z_ LPCSTR sA);
+  static LPCWSTR SkipSpaces(_In_z_ LPCWSTR sW);
 
-  static LPCSTR GetToken(__in_z LPCSTR sA, __in_z_opt LPCSTR szStopCharsA=NULL);
-  static LPCWSTR GetToken(__in_z LPCWSTR sW, __in_z_opt LPCWSTR szStopCharsW=NULL);
+  static LPCSTR GetToken(_In_z_ LPCSTR sA, _In_opt_z_ LPCSTR szStopCharsA=NULL);
+  static LPCWSTR GetToken(_In_z_ LPCWSTR sW, _In_opt_z_ LPCWSTR szStopCharsW=NULL);
 
-  static LPCSTR Advance(__in_z LPCSTR sA, __in_z_opt LPCSTR szStopCharsA=NULL);
-  static LPCWSTR Advance(__in_z LPCWSTR sW, __in_z_opt LPCWSTR szStopCharsW=NULL);
+  static LPCSTR Advance(_In_z_ LPCSTR sA, _In_opt_z_ LPCSTR szStopCharsA=NULL);
+  static LPCWSTR Advance(_In_z_ LPCWSTR sW, _In_opt_z_ LPCWSTR szStopCharsW=NULL);
 };
 
 } //namespace MX

@@ -28,4 +28,4 @@
 
 //-----------------------------------------------------------
 
-int TestHttpServer(__in BOOL bUseSSL);
+int TestHttpServer(_In_ BOOL bUseSSL);

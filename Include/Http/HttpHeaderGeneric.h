@@ -42,19 +42,19 @@ public:
   CHttpHeaderGeneric();
   ~CHttpHeaderGeneric();
 
-  HRESULT SetName(__in_z LPCSTR szNameA);
+  HRESULT SetName(_In_z_ LPCSTR szNameA);
   LPCSTR GetName() const;
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
     return DuplicateBehaviorAdd;
     };
 
-  HRESULT SetValue(__in_z LPCSTR szValueA);
+  HRESULT SetValue(_In_z_ LPCSTR szValueA);
   LPCSTR GetValue() const;
 
 private:

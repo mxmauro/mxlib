@@ -30,7 +30,7 @@ PUBLIC MxTryMemCopy
 MxTryMemCopy_SEH PROTO
 
 ALIGN 16
-;SIZE_T __stdcall MxTryMemCopy(__in LPVOID lpDest, __in LPVOID lpSrc, __in SIZE_T nCount);
+;SIZE_T __stdcall MxTryMemCopy(_Out_writes_to_(nCount) LPVOID lpDest, _In_ LPVOID lpSrc, _In_ SIZE_T nCount);
 MxTryMemCopy PROC FRAME :MxTryMemCopy_SEH
 		sub  rsp, 28h+20h
 .allocstack 28h+20h

@@ -28,7 +28,7 @@
 
 namespace MX {
 
-CJsHttpServer::CJsHttpServer(__in MX::CSockets &_cSocketMgr, __in MX::CPropertyBag &_cPropBag) : CBaseMemObj(),
+CJsHttpServer::CJsHttpServer(_In_ MX::CSockets &_cSocketMgr, _In_ MX::CPropertyBag &_cPropBag) : CBaseMemObj(),
                cSocketMgr(_cSocketMgr), cPropBag(_cPropBag), cHttpServer(_cSocketMgr, _cPropBag)
 {
   cNewRequestObjectCallback = NullCallback();
@@ -52,58 +52,58 @@ CJsHttpServer::~CJsHttpServer()
   return;
 }
 
-VOID CJsHttpServer::On(__in OnNewRequestObjectCallback _cNewRequestObjectCallback)
+VOID CJsHttpServer::On(_In_ OnNewRequestObjectCallback _cNewRequestObjectCallback)
 {
   cNewRequestObjectCallback = _cNewRequestObjectCallback;
   return;
 }
 
-VOID CJsHttpServer::On(__in OnRequestCallback _cRequestCallback)
+VOID CJsHttpServer::On(_In_ OnRequestCallback _cRequestCallback)
 {
   cRequestCallback = _cRequestCallback;
   return;
 }
 
-VOID CJsHttpServer::On(__in OnRequestCleanupCallback _cRequestCleanupCallback)
+VOID CJsHttpServer::On(_In_ OnRequestCleanupCallback _cRequestCleanupCallback)
 {
   cRequestCleanupCallback = _cRequestCleanupCallback;
   return;
 }
 
-VOID CJsHttpServer::On(__in OnRequireJsModuleCallback _cRequireJsModuleCallback)
+VOID CJsHttpServer::On(_In_ OnRequireJsModuleCallback _cRequireJsModuleCallback)
 {
   cRequireJsModuleCallback = _cRequireJsModuleCallback;
   return;
 }
 
-VOID CJsHttpServer::On(__in OnErrorCallback _cErrorCallback)
+VOID CJsHttpServer::On(_In_ OnErrorCallback _cErrorCallback)
 {
   cErrorCallback = _cErrorCallback;
   return;
 }
 
-VOID CJsHttpServer::On(__in OnJavascriptErrorCallback _cJavascriptErrorCallback)
+VOID CJsHttpServer::On(_In_ OnJavascriptErrorCallback _cJavascriptErrorCallback)
 {
   cJavascriptErrorCallback = _cJavascriptErrorCallback;
   return;
 }
 
-HRESULT CJsHttpServer::StartListening(__in int nPort, __in_opt CIpcSslLayer::eProtocol nProtocol,
-                                      __in_opt CSslCertificate *lpSslCertificate, __in_opt CCryptoRSA *lpSslKey)
+HRESULT CJsHttpServer::StartListening(_In_ int nPort, _In_opt_ CIpcSslLayer::eProtocol nProtocol,
+                                      _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CCryptoRSA *lpSslKey)
 {
   return cHttpServer.StartListening(nPort, nProtocol, lpSslCertificate, lpSslKey);
 }
 
-HRESULT CJsHttpServer::StartListening(__in_z LPCSTR szBindAddressA, __in int nPort,
-                                      __in_opt CIpcSslLayer::eProtocol nProtocol,
-                                      __in_opt CSslCertificate *lpSslCertificate, __in_opt CCryptoRSA *lpSslKey)
+HRESULT CJsHttpServer::StartListening(_In_z_ LPCSTR szBindAddressA, _In_ int nPort,
+                                      _In_opt_ CIpcSslLayer::eProtocol nProtocol,
+                                      _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CCryptoRSA *lpSslKey)
 {
   return cHttpServer.StartListening(szBindAddressA, nPort, nProtocol, lpSslCertificate, lpSslKey);
 }
 
-HRESULT CJsHttpServer::StartListening(__in_z LPCWSTR szBindAddressW, __in int nPort,
-                                      __in_opt CIpcSslLayer::eProtocol nProtocol,
-                                      __in_opt CSslCertificate *lpSslCertificate, __in_opt CCryptoRSA *lpSslKey)
+HRESULT CJsHttpServer::StartListening(_In_z_ LPCWSTR szBindAddressW, _In_ int nPort,
+                                      _In_opt_ CIpcSslLayer::eProtocol nProtocol,
+                                      _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CCryptoRSA *lpSslKey)
 {
   return cHttpServer.StartListening(szBindAddressW, nPort, nProtocol, lpSslCertificate, lpSslKey);
 }
@@ -114,7 +114,7 @@ VOID CJsHttpServer::StopListening()
   return;
 }
 
-HRESULT CJsHttpServer::OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in CHttpServer::CRequest *_lpRequest)
+HRESULT CJsHttpServer::OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpServer::CRequest *_lpRequest)
 {
   CJsRequest *lpRequest = static_cast<CJsRequest*>(_lpRequest);
   CJavascriptVM cJvm;
@@ -216,9 +216,9 @@ HRESULT CJsHttpServer::OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in CHt
   return hRes;
 }
 
-HRESULT CJsHttpServer::OnRequireJsModule(__in DukTape::duk_context *lpCtx,
-                                         __in CJavascriptVM::CRequireModuleContext *lpReqContext,
-                                         __inout CStringA &cStrCodeA)
+HRESULT CJsHttpServer::OnRequireJsModule(_In_ DukTape::duk_context *lpCtx,
+                                         _In_ CJavascriptVM::CRequireModuleContext *lpReqContext,
+                                         _Inout_ CStringA &cStrCodeA)
 {
   CJsRequest *lpRequest;
   HRESULT hRes;
@@ -235,7 +235,7 @@ HRESULT CJsHttpServer::OnRequireJsModule(__in DukTape::duk_context *lpCtx,
   return hRes;
 }
 
-VOID CJsHttpServer::OnError(__in CHttpServer *lpHttp, __in CHttpServer::CRequest *_lpRequest, __in HRESULT hErrorCode)
+VOID CJsHttpServer::OnError(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CRequest *_lpRequest, _In_ HRESULT hErrorCode)
 {
   if (cErrorCallback)
   {
@@ -246,7 +246,7 @@ VOID CJsHttpServer::OnError(__in CHttpServer *lpHttp, __in CHttpServer::CRequest
   return;
 }
 
-HRESULT CJsHttpServer::ResetAndDisableClientCache(__in CJsRequest *lpRequest)
+HRESULT CJsHttpServer::ResetAndDisableClientCache(_In_ CJsRequest *lpRequest)
 {
   HRESULT hRes;
 
@@ -259,8 +259,8 @@ HRESULT CJsHttpServer::ResetAndDisableClientCache(__in CJsRequest *lpRequest)
   return hRes;
 }
 
-HRESULT CJsHttpServer::BuildErrorPage(__in CJsRequest *lpRequest, __in HRESULT hr, __in_z LPCSTR szDescriptionA,
-                                      __in_z LPCSTR szFileNameA, __in int nLine, __in_z LPCSTR szStackTraceA)
+HRESULT CJsHttpServer::BuildErrorPage(_In_ CJsRequest *lpRequest, _In_ HRESULT hr, _In_z_ LPCSTR szDescriptionA,
+                                      _In_z_ LPCSTR szFileNameA, _In_ int nLine, _In_z_ LPCSTR szStackTraceA)
 {
   CStringA cStrBodyA;
   HRESULT hRes;

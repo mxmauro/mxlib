@@ -28,35 +28,35 @@
 
 //-----------------------------------------------------------
 
-static HRESULT OnRequireModule(__in DukTape::duk_context *lpCtx,
-                               __in MX::CJavascriptVM::CRequireModuleContext *lpReqCtx,
-                               __inout MX::CStringA &cStrCodeA);
+static HRESULT OnRequireModule(_In_ DukTape::duk_context *lpCtx,
+                               _In_ MX::CJavascriptVM::CRequireModuleContext *lpReqCtx,
+                               _Inout_ MX::CStringA &cStrCodeA);
 
-static DukTape::duk_ret_t OnGetSessionValue2(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                             __in_z LPCSTR szPropertyNameA);
-static DukTape::duk_ret_t OnSetSessionValue2(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                             __in_z LPCSTR szPropertyNameA, __in DukTape::duk_idx_t nValueIndex);
+static DukTape::duk_ret_t OnGetSessionValue2(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                             _In_z_ LPCSTR szPropertyNameA);
+static DukTape::duk_ret_t OnSetSessionValue2(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                             _In_z_ LPCSTR szPropertyNameA, _In_ DukTape::duk_idx_t nValueIndex);
 
-static int OnProxyHasNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                   __in_z LPCSTR szPropertyNameA);
-static int OnProxyHasIndexedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA, __in int nIndex);
-static int OnProxyGetNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                   __in_z LPCSTR szPropertyNameA);
-static int OnProxyGetIndexedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA, __in int nIndex);
-static int OnProxySetNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                   __in_z LPCSTR szPropertyNameA, __in DukTape::duk_idx_t nValueIndex);
-static int OnProxySetIndexedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA, __in int nIndex,
-                                     __in DukTape::duk_idx_t nValueIndex);
-static int OnProxyDeleteNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                      __in_z LPCSTR szPropertyNameA);
-static int OnProxyDeleteIndexedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA, __in int nIndex);
+static int OnProxyHasNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                   _In_z_ LPCSTR szPropertyNameA);
+static int OnProxyHasIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_ int nIndex);
+static int OnProxyGetNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                   _In_z_ LPCSTR szPropertyNameA);
+static int OnProxyGetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_ int nIndex);
+static int OnProxySetNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                   _In_z_ LPCSTR szPropertyNameA, _In_ DukTape::duk_idx_t nValueIndex);
+static int OnProxySetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_ int nIndex,
+                                     _In_ DukTape::duk_idx_t nValueIndex);
+static int OnProxyDeleteNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                      _In_z_ LPCSTR szPropertyNameA);
+static int OnProxyDeleteIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_ int nIndex);
 
 //-----------------------------------------------------------
 
 class CMyObject : public MX::CJsObjectBase
 {
 public:
-  CMyObject(__in DukTape::duk_context *lpCtx);
+  CMyObject(_In_ DukTape::duk_context *lpCtx);
   ~CMyObject();
 
   MX_JS_DECLARE_CREATABLE_WITH_PROXY(CMyObject, "myobject")
@@ -70,17 +70,17 @@ public:
   DukTape::duk_ret_t add();
   DukTape::duk_ret_t Print();
 
-  int OnProxyHasNamedProperty(__in_z LPCSTR szPropNameA);
-  int OnProxyHasIndexedProperty(__in int nIndex);
+  int OnProxyHasNamedProperty(_In_z_ LPCSTR szPropNameA);
+  int OnProxyHasIndexedProperty(_In_ int nIndex);
 
-  int OnProxyGetNamedProperty(__in_z LPCSTR szPropNameA);
-  int OnProxyGetIndexedProperty(__in int nIndex);
+  int OnProxyGetNamedProperty(_In_z_ LPCSTR szPropNameA);
+  int OnProxyGetIndexedProperty(_In_ int nIndex);
 
-  int OnProxySetNamedProperty(__in_z LPCSTR szPropNameA, __in DukTape::duk_idx_t nValueIndex);
-  int OnProxySetIndexedProperty(__in int nIndex, __in DukTape::duk_idx_t nValueIndex);
+  int OnProxySetNamedProperty(_In_z_ LPCSTR szPropNameA, _In_ DukTape::duk_idx_t nValueIndex);
+  int OnProxySetIndexedProperty(_In_ int nIndex, _In_ DukTape::duk_idx_t nValueIndex);
 
-  int OnProxyDeleteNamedProperty(__in_z LPCSTR szPropNameA);
-  int OnProxyDeleteIndexedProperty(__in int nIndex);
+  int OnProxyDeleteNamedProperty(_In_z_ LPCSTR szPropNameA);
+  int OnProxyDeleteIndexedProperty(_In_ int nIndex);
 };
 
 //-----------------------------------------------------------
@@ -179,9 +179,9 @@ int TestJavascript()
   return (int)S_OK;
 }
 
-static HRESULT OnRequireModule(__in DukTape::duk_context *lpCtx,
-                               __in MX::CJavascriptVM::CRequireModuleContext *lpReqCtx,
-                               __inout MX::CStringA &cStrCodeA)
+static HRESULT OnRequireModule(_In_ DukTape::duk_context *lpCtx,
+                               _In_ MX::CJavascriptVM::CRequireModuleContext *lpReqCtx,
+                               _Inout_ MX::CStringA &cStrCodeA)
 {
   if (wcscmp(lpReqCtx->GetId(), L"código/html/child/add.js") == 0)
   {
@@ -223,15 +223,15 @@ static HRESULT OnRequireModule(__in DukTape::duk_context *lpCtx,
 
 static double nSessionValue2 = 100.0;
 
-static DukTape::duk_ret_t OnGetSessionValue2(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                             __in_z LPCSTR szPropertyNameA)
+static DukTape::duk_ret_t OnGetSessionValue2(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                             _In_z_ LPCSTR szPropertyNameA)
 {
   DukTape::duk_push_number(lpCtx, nSessionValue2);
   return 1;
 }
 
-static DukTape::duk_ret_t OnSetSessionValue2(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                             __in_z LPCSTR szPropertyNameA, __in DukTape::duk_idx_t nValueIndex)
+static DukTape::duk_ret_t OnSetSessionValue2(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                             _In_z_ LPCSTR szPropertyNameA, _In_ DukTape::duk_idx_t nValueIndex)
 {
   nSessionValue2 = duk_require_number(lpCtx, nValueIndex);
   return DUK_ERR_NONE;
@@ -239,8 +239,8 @@ static DukTape::duk_ret_t OnSetSessionValue2(__in DukTape::duk_context *lpCtx, _
 
 //-----------------------------------------------------------
 
-static int OnProxyHasNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                   __in_z LPCSTR szPropertyNameA)
+static int OnProxyHasNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                   _In_z_ LPCSTR szPropertyNameA)
 {
   if (szObjectNameA == NULL)
     szObjectNameA = "global";
@@ -248,7 +248,7 @@ static int OnProxyHasNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCS
   return -1; //pass original
 }
 
-static int OnProxyHasIndexedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA, __in int nIndex)
+static int OnProxyHasIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_ int nIndex)
 {
   if (szObjectNameA == NULL)
     szObjectNameA = "global";
@@ -256,8 +256,8 @@ static int OnProxyHasIndexedProperty(__in DukTape::duk_context *lpCtx, __in_z LP
   return -1; //pass original
 }
 
-static int OnProxyGetNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                   __in_z LPCSTR szPropertyNameA)
+static int OnProxyGetNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                   _In_z_ LPCSTR szPropertyNameA)
 {
   if (szObjectNameA == NULL)
     szObjectNameA = "global";
@@ -265,7 +265,7 @@ static int OnProxyGetNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCS
   return 0; //pass original
 }
 
-static int OnProxyGetIndexedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA, __in int nIndex)
+static int OnProxyGetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_ int nIndex)
 {
   if (szObjectNameA == NULL)
     szObjectNameA = "global";
@@ -273,8 +273,8 @@ static int OnProxyGetIndexedProperty(__in DukTape::duk_context *lpCtx, __in_z LP
   return 0; //pass original
 }
 
-static int OnProxySetNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                   __in_z LPCSTR szPropertyNameA, __in DukTape::duk_idx_t nValueIndex)
+static int OnProxySetNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                   _In_z_ LPCSTR szPropertyNameA, _In_ DukTape::duk_idx_t nValueIndex)
 {
   if (szObjectNameA == NULL)
     szObjectNameA = "global";
@@ -286,8 +286,8 @@ static int OnProxySetNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCS
   return 0; //set original
 }
 
-static int OnProxySetIndexedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA, __in int nIndex,
-                                     __in DukTape::duk_idx_t nValueIndex)
+static int OnProxySetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_ int nIndex,
+                                     _In_ DukTape::duk_idx_t nValueIndex)
 {
   if (szObjectNameA == NULL)
     szObjectNameA = "global";
@@ -299,8 +299,8 @@ static int OnProxySetIndexedProperty(__in DukTape::duk_context *lpCtx, __in_z LP
   return 0; //set original
 }
 
-static int OnProxyDeleteNamedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                      __in_z LPCSTR szPropertyNameA)
+static int OnProxyDeleteNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                      _In_z_ LPCSTR szPropertyNameA)
 {
   if (szObjectNameA == NULL)
     szObjectNameA = "global";
@@ -308,7 +308,7 @@ static int OnProxyDeleteNamedProperty(__in DukTape::duk_context *lpCtx, __in_z L
   return 1; //delete original
 }
 
-static int OnProxyDeleteIndexedProperty(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA, __in int nIndex)
+static int OnProxyDeleteIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_ int nIndex)
 {
   if (szObjectNameA == NULL)
     szObjectNameA = "global";
@@ -318,7 +318,7 @@ static int OnProxyDeleteIndexedProperty(__in DukTape::duk_context *lpCtx, __in_z
 
 //-----------------------------------------------------------
 
-CMyObject::CMyObject(__in DukTape::duk_context *lpCtx) : MX::CJsObjectBase(lpCtx)
+CMyObject::CMyObject(_In_ DukTape::duk_context *lpCtx) : MX::CJsObjectBase(lpCtx)
 {
   wprintf_s(L"[CMyObject] Constructor\n");
   return;
@@ -350,31 +350,31 @@ DukTape::duk_ret_t CMyObject::Print()
   return 0;
 }
 
-int CMyObject::OnProxyHasNamedProperty(__in_z LPCSTR szPropNameA)
+int CMyObject::OnProxyHasNamedProperty(_In_z_ LPCSTR szPropNameA)
 {
   wprintf_s(L"[CMyObject] Checking for property '%S'\n", szPropNameA);
   return MX::CJsObjectBase::OnProxyHasNamedProperty(szPropNameA);
 }
 
-int CMyObject::OnProxyHasIndexedProperty(__in int nIndex)
+int CMyObject::OnProxyHasIndexedProperty(_In_ int nIndex)
 {
   wprintf_s(L"[CMyObject] Checking for indexed property #%ld\n", nIndex);
   return MX::CJsObjectBase::OnProxyHasIndexedProperty(nIndex);
 }
 
-int CMyObject::OnProxyGetNamedProperty(__in_z LPCSTR szPropNameA)
+int CMyObject::OnProxyGetNamedProperty(_In_z_ LPCSTR szPropNameA)
 {
   wprintf_s(L"[CMyObject] Retrieving value of property '%S'\n", szPropNameA);
   return MX::CJsObjectBase::OnProxyGetNamedProperty(szPropNameA);
 }
 
-int CMyObject::OnProxyGetIndexedProperty(__in int nIndex)
+int CMyObject::OnProxyGetIndexedProperty(_In_ int nIndex)
 {
   wprintf_s(L"[CMyObject] Retrieving value of indexed property #%ld\n", nIndex);
   return MX::CJsObjectBase::OnProxyGetIndexedProperty(nIndex);
 }
 
-int CMyObject::OnProxySetNamedProperty(__in_z LPCSTR szPropNameA, __in DukTape::duk_idx_t nValueIndex)
+int CMyObject::OnProxySetNamedProperty(_In_z_ LPCSTR szPropNameA, _In_ DukTape::duk_idx_t nValueIndex)
 {
   DukTape::duk_dup(GetContext(), nValueIndex);
   DukTape::duk_to_string(GetContext(), -1);
@@ -384,7 +384,7 @@ int CMyObject::OnProxySetNamedProperty(__in_z LPCSTR szPropNameA, __in DukTape::
   return MX::CJsObjectBase::OnProxySetNamedProperty(szPropNameA, nValueIndex);
 }
 
-int CMyObject::OnProxySetIndexedProperty(__in int nIndex, __in DukTape::duk_idx_t nValueIndex)
+int CMyObject::OnProxySetIndexedProperty(_In_ int nIndex, _In_ DukTape::duk_idx_t nValueIndex)
 {
   DukTape::duk_dup(GetContext(), nValueIndex);
   DukTape::duk_to_string(GetContext(), -1);
@@ -394,13 +394,13 @@ int CMyObject::OnProxySetIndexedProperty(__in int nIndex, __in DukTape::duk_idx_
   return MX::CJsObjectBase::OnProxySetIndexedProperty(nIndex, nValueIndex);
 }
 
-int CMyObject::OnProxyDeleteNamedProperty(__in_z LPCSTR szPropNameA)
+int CMyObject::OnProxyDeleteNamedProperty(_In_z_ LPCSTR szPropNameA)
 {
   wprintf_s(L"[CMyObject] Deleting property '%S'\n", szPropNameA);
   return MX::CJsObjectBase::OnProxyGetNamedProperty(szPropNameA);
 }
 
-int CMyObject::OnProxyDeleteIndexedProperty(__in int nIndex)
+int CMyObject::OnProxyDeleteIndexedProperty(_In_ int nIndex)
 {
   wprintf_s(L"[CMyObject] Deleting property #%ld\n", nIndex);
   return MX::CJsObjectBase::OnProxyDeleteIndexedProperty(nIndex);

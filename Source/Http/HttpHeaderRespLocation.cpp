@@ -37,12 +37,12 @@ CHttpHeaderRespLocation::~CHttpHeaderRespLocation()
   return;
 }
 
-HRESULT CHttpHeaderRespLocation::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderRespLocation::Parse(_In_z_ LPCSTR szValueA)
 {
   return SetLocation(szValueA);
 }
 
-HRESULT CHttpHeaderRespLocation::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderRespLocation::Build(_Inout_ CStringA &cStrDestA)
 {
   if (cStrDestA.Copy((LPSTR)cStrLocationA) == FALSE)
     return E_OUTOFMEMORY;
@@ -50,7 +50,7 @@ HRESULT CHttpHeaderRespLocation::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderRespLocation::SetLocation(__in_z LPCSTR szLocationA)
+HRESULT CHttpHeaderRespLocation::SetLocation(_In_z_ LPCSTR szLocationA)
 {
   LPCSTR szStartA, szEndA;
   CUrl cUrl;

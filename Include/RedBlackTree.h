@@ -55,7 +55,7 @@ public:
     return;
     };
 
-  virtual BOOL IsGreaterThan(__in classOrStruct *lpOtherNode)
+  virtual BOOL IsGreaterThan(_In_ classOrStruct *lpOtherNode)
     {
     return FALSE;
     };
@@ -211,7 +211,7 @@ public:
     return (lpNode != &cNil) ? (static_cast<_RbTreeNode*>(lpNode)->GetEntry()) : NULL;
     };
 
-  VOID Insert(__in _RbTreeNode *lpNewNode)
+  VOID Insert(_In_ _RbTreeNode *lpNewNode)
     {
     _RbTreeNode *lpNode, *lpNode2;
 
@@ -220,6 +220,7 @@ public:
     MX_ASSERT(lpNode->lpParent == NULL);
     MX_ASSERT(lpNode->lpLeft == NULL && lpNode->lpRight == NULL);
     InsertFixup(lpNode);
+    __analysis_assume(lpNode->lpParent != NULL);
     lpNode->lpTree = this;
     lpNode->bRed = TRUE;
     while (lpNode->lpParent->bRed != FALSE)
@@ -271,7 +272,7 @@ public:
     return;
     };
 
-  VOID Remove(__in _RbTreeNode *lpDelNode)
+  VOID Remove(_In_ _RbTreeNode *lpDelNode)
     {
     _RbTreeNode *lpNode, *lpNode2, *lpNode3;
 
@@ -337,7 +338,7 @@ private:
   friend class Iterator;
   friend class IteratorRev;
 
-  VOID LeftRotate(__in _RbTreeNode *left)
+  VOID LeftRotate(_Inout_ _RbTreeNode *left)
     {
     _RbTreeNode *right;
 
@@ -357,7 +358,7 @@ private:
     return;
     };
 
-  VOID RightRotate(__in _RbTreeNode *right)
+  VOID RightRotate(_Inout_ _RbTreeNode *right)
     {
     _RbTreeNode *left;
 
@@ -377,7 +378,7 @@ private:
     return;
     };
 
-  VOID InsertFixup(__in _RbTreeNode *lpNodeToAdd)
+  VOID InsertFixup(_Inout_ _RbTreeNode *lpNodeToAdd)
     {
     _RbTreeNode *left, *right;
 
@@ -400,7 +401,7 @@ private:
     return;
     };
 
-  VOID DeleteFixup(__in _RbTreeNode *lpNode)
+  VOID DeleteFixup(_Inout_ _RbTreeNode *lpNode)
     {
     _RbTreeNode *lpNode2, *rootLeft = cRoot.lpLeft;
 
@@ -505,13 +506,13 @@ public:
   class Iterator
   {
   public:
-    classOrStruct* Begin(__in _RbTree &_tree)
+    classOrStruct* Begin(_In_ _RbTree &_tree)
       {
       lpNextCursor = _tree.GetFirstNode();
       return Next();
       };
 
-    classOrStruct* Begin(__in const _RbTree &_tree)
+    classOrStruct* Begin(_In_ const _RbTree &_tree)
       {
       return Begin(const_cast<_RbTree&>(_tree));
       };
@@ -534,13 +535,13 @@ public:
   class IteratorRev
   {
   public:
-    classOrStruct* Begin(__in _RbTree &_tree)
+    classOrStruct* Begin(_In_ _RbTree &_tree)
       {
       lpNextCursor = _tree.GetLast();
       return Next();
       };
 
-    classOrStruct* Begin(__in const _RbTree &_tree)
+    classOrStruct* Begin(_In_ const _RbTree &_tree)
       {
       return Begin(const_cast<_RbTree&>(_tree));
       };

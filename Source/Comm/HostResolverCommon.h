@@ -47,8 +47,8 @@ static __inline HRESULT MX_HRESULT_FROM_LASTSOCKETERROR()
   return (hRes != MX_HRESULT_FROM_WIN32(WSAEWOULDBLOCK)) ? hRes : MX_E_IoPending;
 }
 
-static SIZE_T Helper_IPv6_Fill(__out LPWORD lpnAddr, __in_z LPCSTR szStrA, __in SIZE_T nLen);
-static SIZE_T Helper_IPv6_Fill(__out LPWORD lpnAddr, __in_z LPCWSTR szStrW, __in SIZE_T nLen);
+static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCSTR szStrA, _In_ SIZE_T nLen);
+static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCWSTR szStrW, _In_ SIZE_T nLen);
 
 //-----------------------------------------------------------
 
@@ -67,18 +67,18 @@ public:
   static CIPAddressResolver* Get();
   VOID Release();
 
-  HRESULT Resolve(__in MX::CHostResolver *lpHostResolver, __in PSOCKADDR_INET lpAddr, __in HRESULT *lphErrorCode,
-                  __in_z LPCSTR szHostNameA, __in int nDesiredFamily, __in DWORD dwTimeoutMs);
-  VOID Cancel(__in MX::CHostResolver *lpHostResolver);
+  HRESULT Resolve(_In_ MX::CHostResolver *lpHostResolver, _In_ PSOCKADDR_INET lpAddr, _In_ HRESULT *lphErrorCode,
+                  _In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _In_ DWORD dwTimeoutMs);
+  VOID Cancel(_In_ MX::CHostResolver *lpHostResolver);
 
-  HRESULT ResolveAddr(__out PSOCKADDR_INET lpAddress, __in_z LPCSTR szAddressA, __in int nDesiredFamily=AF_UNSPEC);
+  HRESULT ResolveAddr(_Out_ PSOCKADDR_INET lpAddress, _In_z_ LPCSTR szAddressA, _In_ int nDesiredFamily=AF_UNSPEC);
 
 private:
   class CItem : public CTimedEventQueue::CEvent, public TLnkLstNode<CItem>
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CItem);
   public:
-    CItem(MX::CHostResolver *lpHostResolver, __in OnNotifyCallback cCallback) :
+    CItem(MX::CHostResolver *lpHostResolver, _In_ OnNotifyCallback cCallback) :
           CTimedEventQueue::CEvent(cCallback, NULL), TLnkLstNode<CItem>()
       {
       cHostResolver = lpHostResolver;
@@ -103,15 +103,15 @@ private:
   VOID AddRef();
 
   VOID ThreadProc();
-  VOID OnTimeout(__in CTimedEventQueue::CEvent *lpEvent);
+  VOID OnTimeout(_In_ CTimedEventQueue::CEvent *lpEvent);
   BOOL ProcessQueued();
   VOID CancelAll();
   BOOL FlushCompleted();
 
 private:
-  typedef INT(WSAAPI *LPFN_GETADDRINFOW)(__in_opt PCWSTR pNodeName, __in_opt PCWSTR pServiceName,
-                                          __in_opt const ADDRINFOW *pHints, __deref_out PADDRINFOW *ppResult);
-  typedef VOID (WSAAPI * LPFN_FREEADDRINFOW)(__in_opt PADDRINFOW pAddrInfo);
+  typedef INT(WSAAPI *LPFN_GETADDRINFOW)(_In_opt_ PCWSTR pNodeName, _In_opt_ PCWSTR pServiceName,
+                                          _In_opt_ const ADDRINFOW *pHints, _Deref_out_ PADDRINFOW *ppResult);
+  typedef VOID (WSAAPI * LPFN_FREEADDRINFOW)(_In_opt_ PADDRINFOW pAddrInfo);
 
   CCriticalSection cs;
   LONG volatile nRefCount;

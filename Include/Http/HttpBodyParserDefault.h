@@ -49,13 +49,14 @@ public:
     return nSize;
     };
 
-  HRESULT Read(__out LPVOID lpDest, __in ULONGLONG nOffset, __in SIZE_T nToRead, __out_opt SIZE_T *lpnReaded=NULL);
+  HRESULT Read(_Out_writes_to_(nToRead, *lpnReaded) LPVOID lpDest, _In_ ULONGLONG nOffset, _In_ SIZE_T nToRead,
+               _Out_opt_ SIZE_T *lpnReaded=NULL);
 
-  HRESULT ToString(__inout CStringA &cStrDestA);
+  HRESULT ToString(_Inout_ CStringA &cStrDestA);
 
 protected:
-  HRESULT Initialize(__in CPropertyBag &cPropBag, __in CHttpCommon &cHttpCmn);
-  HRESULT Parse(__in LPCVOID lpData, __in SIZE_T nDataSize);
+  HRESULT Initialize(_In_ CPropertyBag &cPropBag, _In_ CHttpCommon &cHttpCmn);
+  HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
 
 private:
   typedef enum {

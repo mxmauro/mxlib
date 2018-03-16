@@ -51,31 +51,31 @@ public:
 
   VOID Reset();
 
-  HRESULT Clear(__in_z LPCSTR szNameA);
+  HRESULT Clear(_In_z_ LPCSTR szNameA);
 
-  HRESULT SetNull(__in_z LPCSTR szNameA);
-  HRESULT SetDWord(__in_z LPCSTR szNameA, __in DWORD dwValue);
-  HRESULT SetQWord(__in_z LPCSTR szNameA, __in ULONGLONG ullValue);
-  HRESULT SetDouble(__in_z LPCSTR szNameA, __in double nValue);
-  HRESULT SetString(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA);
-  HRESULT SetString(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW);
+  HRESULT SetNull(_In_z_ LPCSTR szNameA);
+  HRESULT SetDWord(_In_z_ LPCSTR szNameA, _In_ DWORD dwValue);
+  HRESULT SetQWord(_In_z_ LPCSTR szNameA, _In_ ULONGLONG ullValue);
+  HRESULT SetDouble(_In_z_ LPCSTR szNameA, _In_ double nValue);
+  HRESULT SetString(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA);
+  HRESULT SetString(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);
 
-  LPCSTR GetAt(__in SIZE_T nIndex) const;
+  LPCSTR GetAt(_In_ SIZE_T nIndex) const;
 
-  eType GetType(__in SIZE_T nIndex) const;
-  eType GetType(__in_z LPCSTR szNameA) const;
+  eType GetType(_In_ SIZE_T nIndex) const;
+  eType GetType(_In_z_ LPCSTR szNameA) const;
 
-  HRESULT GetDWord(__in SIZE_T nIndex, __out DWORD &dwValue, __in_opt DWORD dwDefValue=0);
-  HRESULT GetQWord(__in SIZE_T nIndex, __out ULONGLONG &ullValue, __in_opt ULONGLONG ullDefValue=0);
-  HRESULT GetDouble(__in SIZE_T nIndex, __out double &nValue, __in_opt double nDefValue=0.0);
-  HRESULT GetString(__in SIZE_T nIndex, __out LPCSTR &szValueA, __in_z_opt LPCSTR szDefValueA=NULL);
-  HRESULT GetString(__in SIZE_T nIndex, __out LPCWSTR &szValueW, __in_z_opt LPCWSTR szDefValueW=NULL);
+  HRESULT GetDWord(_In_ SIZE_T nIndex, _Out_ DWORD &dwValue, _In_opt_ DWORD dwDefValue=0);
+  HRESULT GetQWord(_In_ SIZE_T nIndex, _Out_ ULONGLONG &ullValue, _In_opt_ ULONGLONG ullDefValue=0);
+  HRESULT GetDouble(_In_ SIZE_T nIndex, _Out_ double &nValue, _In_opt_ double nDefValue=0.0);
+  HRESULT GetString(_In_ SIZE_T nIndex, _Out_ LPCSTR &szValueA, _In_opt_z_ LPCSTR szDefValueA=NULL);
+  HRESULT GetString(_In_ SIZE_T nIndex, _Out_ LPCWSTR &szValueW, _In_opt_z_ LPCWSTR szDefValueW=NULL);
 
-  HRESULT GetDWord(__in_z LPCSTR szNameA, __out DWORD &dwValue, __in_opt DWORD dwDefValue=0);
-  HRESULT GetQWord(__in_z LPCSTR szNameA, __out ULONGLONG &ullValue, __in_opt ULONGLONG ullDefValue=0);
-  HRESULT GetDouble(__in_z LPCSTR szNameA, __out double &nValue, __in_opt double nDefValue=0.0);
-  HRESULT GetString(__in_z LPCSTR szNameA, __out LPCSTR &szValueA, __in_z_opt LPCSTR szDefValueA=NULL);
-  HRESULT GetString(__in_z LPCSTR szNameA, __out LPCWSTR &szValueW, __in_z_opt LPCWSTR szDefValueW=NULL);
+  HRESULT GetDWord(_In_z_ LPCSTR szNameA, _Out_ DWORD &dwValue, _In_opt_ DWORD dwDefValue=0);
+  HRESULT GetQWord(_In_z_ LPCSTR szNameA, _Out_ ULONGLONG &ullValue, _In_opt_ ULONGLONG ullDefValue=0);
+  HRESULT GetDouble(_In_z_ LPCSTR szNameA, _Out_ double &nValue, _In_opt_ double nDefValue=0.0);
+  HRESULT GetString(_In_z_ LPCSTR szNameA, _Out_ LPCSTR &szValueA, _In_opt_z_ LPCSTR szDefValueA=NULL);
+  HRESULT GetString(_In_z_ LPCSTR szNameA, _Out_ LPCWSTR &szValueW, _In_opt_z_ LPCWSTR szDefValueW=NULL);
 
 private:
   typedef struct {
@@ -91,10 +91,10 @@ private:
   } PROPERTY;
 
 private:
-  BOOL Insert(__in PROPERTY *lpNewProp);
-  SIZE_T Find(__in_z LPCSTR szNameA);
+  BOOL Insert(_In_ PROPERTY *lpNewProp);
+  SIZE_T Find(_In_z_ LPCSTR szNameA);
 
-  static int SearchCompareFunc(__in LPVOID lpContext, __in PROPERTY **lpItem1, __in PROPERTY **lpItem2);
+  static int SearchCompareFunc(_In_ LPVOID lpContext, _In_ PROPERTY **lpItem1, _In_ PROPERTY **lpItem2);
 
 private:
   TArrayListWithFree<PROPERTY*> cPropertiesList;

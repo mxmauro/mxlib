@@ -37,7 +37,7 @@ CHttpHeaderEntExpires::~CHttpHeaderEntExpires()
   return;
 }
 
-HRESULT CHttpHeaderEntExpires::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderEntExpires::Parse(_In_z_ LPCSTR szValueA)
 {
   HRESULT hRes;
 
@@ -51,12 +51,12 @@ HRESULT CHttpHeaderEntExpires::Parse(__in_z LPCSTR szValueA)
   return hRes;
 }
 
-HRESULT CHttpHeaderEntExpires::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderEntExpires::Build(_Inout_ CStringA &cStrDestA)
 {
   return cDt.Format(cStrDestA, "%a, %d %b %Y %H:%m:%S %z");
 }
 
-HRESULT CHttpHeaderEntExpires::SetDate(__in CDateTime &_cDt)
+HRESULT CHttpHeaderEntExpires::SetDate(_In_ CDateTime &_cDt)
 {
   cDt = _cDt;
   return S_OK;

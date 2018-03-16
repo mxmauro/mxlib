@@ -45,41 +45,41 @@ namespace DukTape {
 
 #define MX_JS_DECLARE(_cls, _name)                                                              \
 public:                                                                                         \
-  static HRESULT Register(__in DukTape::duk_context *lpCtx)                                     \
+  static HRESULT Register(_In_ DukTape::duk_context *lpCtx)                                     \
     { return _Register(lpCtx, FALSE, NULL); };                                                  \
     __MX_JS_DECLARE_COMMON(_cls, _name)
 
 #define MX_JS_DECLARE_CREATABLE(_cls, _name)                                                    \
 public:                                                                                         \
-  static HRESULT Register(__in DukTape::duk_context *lpCtx)                                     \
+  static HRESULT Register(_In_ DukTape::duk_context *lpCtx)                                     \
     { return _Register(lpCtx, FALSE, &_cls::_CreateObject); };                                  \
     __MX_JS_DECLARE_COMMON(_cls, _name)                                                         \
     __MX_JS_DECLARE_CREATE_OBJECT(_cls)
 
 #define MX_JS_DECLARE_WITH_PROXY(_cls, _name)                                                   \
 public:                                                                                         \
-  static HRESULT Register(__in DukTape::duk_context *lpCtx)                                     \
+  static HRESULT Register(_In_ DukTape::duk_context *lpCtx)                                     \
     { return _Register(lpCtx, TRUE, NULL); };                                                   \
     __MX_JS_DECLARE_COMMON(_cls, _name)
 
 #define MX_JS_DECLARE_CREATABLE_WITH_PROXY(_cls, _name)                                         \
 public:                                                                                         \
-  static HRESULT Register(__in DukTape::duk_context *lpCtx)                                     \
+  static HRESULT Register(_In_ DukTape::duk_context *lpCtx)                                     \
     { return _Register(lpCtx, TRUE, &_cls::_CreateObject); };                                   \
     __MX_JS_DECLARE_COMMON(_cls, _name)                                                         \
     __MX_JS_DECLARE_CREATE_OBJECT(_cls)
 
 #define __MX_JS_DECLARE_COMMON(_cls, _name)                                                     \
 public:                                                                                         \
-  static HRESULT _Register(__in DukTape::duk_context *lpCtx, __in BOOL bUseProxy,               \
-                           __in_opt lpfnCreateObject fnCreateObject)                            \
+  static HRESULT _Register(_In_ DukTape::duk_context *lpCtx, _In_ BOOL bUseProxy,               \
+                           _In_opt_ lpfnCreateObject fnCreateObject)                            \
     {                                                                                           \
     return _RegisterHelper(lpCtx, _GetMapEntries(), _name, "\xff""\xff" _name "_prototype",     \
                             fnCreateObject, bUseProxy, &_cls::OnRegister, &_cls::OnUnregister); \
     };                                                                                          \
                                                                                                 \
 public:                                                                                         \
-  static HRESULT Unregister(__in DukTape::duk_context *lpCtx)                                   \
+  static HRESULT Unregister(_In_ DukTape::duk_context *lpCtx)                                   \
     {                                                                                           \
     _UnregisterHelper(lpCtx, _name, "\xff""\xff" _name "_prototype", &_cls::OnUnregister);      \
     };                                                                                          \
@@ -91,12 +91,12 @@ public:                                                                         
 
 #define __MX_JS_DECLARE_CREATE_OBJECT(_cls)                                                     \
 private:                                                                                        \
-  static CJsObjectBase* _CreateObject(__in DukTape::duk_context *lpCtx)                         \
+  static CJsObjectBase* _CreateObject(_In_ DukTape::duk_context *lpCtx)                         \
     { return MX_DEBUG_NEW _cls(lpCtx); };
 
 #define MX_JS_BEGIN_MAP(_cls)                                                                   \
 private:                                                                                        \
-  typedef DukTape::duk_ret_t (_cls::*lpfnFunc)(__in DukTape::duk_context *);                    \
+  typedef DukTape::duk_ret_t (_cls::*lpfnFunc)(_In_ DukTape::duk_context *);                    \
                                                                                                 \
   static MAP_ENTRY* _GetMapEntries()                                                            \
     {                                                                                           \
@@ -110,7 +110,7 @@ private:                                                                        
 
 #define MX_JS_MAP_METHOD(_name, _func, _argsCount)                                              \
         { _name,                                                                                \
-          [](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t                            \
+          [](_In_ DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t                            \
           {                                                                                     \
             return _CallMethodHelper(lpCtx, static_cast<lpfnCallFunc>(_func));                  \
           },                                                                                    \
@@ -118,12 +118,17 @@ private:                                                                        
 
 #define MX_JS_MAP_PROPERTY(_name, _getFunc, _setFunc, _enumerable )                             \
         { _name, NULL,                                                                          \
-          [](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t                            \
+          [](_In_ DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t                            \
           {                                                                                     \
             return _CallMethodHelper(lpCtx, static_cast<lpfnCallFunc>(_getFunc));               \
           },                                                                                    \
-          [](__in DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t                            \
+          [](_In_ DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t                            \
           {                                                                                     \
+            if (_setFunc == NULL)                                                               \
+            {                                                                                   \
+              MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_NOTIMPL);                                      \
+              return 0;                                                                         \
+            }                                                                                   \
             return _CallMethodHelper(lpCtx, static_cast<lpfnCallFunc>(_setFunc));               \
           },                                                                                    \
           _enumerable },
@@ -159,45 +164,45 @@ public:
   //--------
 
 public:
-  typedef Callback<HRESULT (__in DukTape::duk_context *lpCtx, __in CRequireModuleContext *lpReqContext,
-                            __inout CStringA &cStrCodeA)> OnRequireModuleCallback;
+  typedef Callback<HRESULT (_In_ DukTape::duk_context *lpCtx, _In_ CRequireModuleContext *lpReqContext,
+                            _Inout_ CStringA &cStrCodeA)> OnRequireModuleCallback;
 
-  typedef Callback<DukTape::duk_ret_t (__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                       __in_z LPCSTR szFunctionNameA)> OnNativeFunctionCallback;
+  typedef Callback<DukTape::duk_ret_t (_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                       _In_z_ LPCSTR szFunctionNameA)> OnNativeFunctionCallback;
 
-  typedef Callback<DukTape::duk_ret_t (__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                       __in_z LPCSTR szPropertyNameA)> OnGetPropertyCallback;
-  typedef Callback<DukTape::duk_ret_t (__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                       __in_z LPCSTR szPropertyNameA,
-                                       __in DukTape::duk_idx_t nValueIndex)> OnSetPropertyCallback;
+  typedef Callback<DukTape::duk_ret_t (_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                       _In_z_ LPCSTR szPropertyNameA)> OnGetPropertyCallback;
+  typedef Callback<DukTape::duk_ret_t (_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                       _In_z_ LPCSTR szPropertyNameA,
+                                       _In_ DukTape::duk_idx_t nValueIndex)> OnSetPropertyCallback;
 
   //return 1 if has, 0 if has not, -1 to pass to original object
-  typedef Callback<int (__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                        __in_z LPCSTR szPropertyNameA)> OnProxyHasNamedPropertyCallback;
-  typedef Callback<int (__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                        __in int nIndex)> OnProxyHasIndexedPropertyCallback;
+  typedef Callback<int (_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                        _In_z_ LPCSTR szPropertyNameA)> OnProxyHasNamedPropertyCallback;
+  typedef Callback<int (_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                        _In_ int nIndex)> OnProxyHasIndexedPropertyCallback;
 
   //return 1 if a value was pushed, 0 to pass to original object, -1 to throw an error
-  typedef Callback<int (__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                        __in_z LPCSTR szPropertyNameA)> OnProxyGetNamedPropertyCallback;
-  typedef Callback<int (__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                        __in int nIndex)> OnProxyGetIndexedPropertyCallback;
+  typedef Callback<int (_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                        _In_z_ LPCSTR szPropertyNameA)> OnProxyGetNamedPropertyCallback;
+  typedef Callback<int (_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                        _In_ int nIndex)> OnProxyGetIndexedPropertyCallback;
 
   //return 1 if a new value was pushed, 0 to set the original passed value, -1 to throw an error
-  typedef Callback<int (__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA,
-                        __in DukTape::duk_idx_t nValueIndex)> OnProxySetNamedPropertyCallback;
-  typedef Callback<int (__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA, __in int nIndex,
-                        __in DukTape::duk_idx_t nValueIndex)> OnProxySetIndexedPropertyCallback;
+  typedef Callback<int (_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
+                        _In_ DukTape::duk_idx_t nValueIndex)> OnProxySetNamedPropertyCallback;
+  typedef Callback<int (_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_ int nIndex,
+                        _In_ DukTape::duk_idx_t nValueIndex)> OnProxySetIndexedPropertyCallback;
 
   //return 1 if delete must proceed, 0 to silently ignore, -1 to throw an error
-  typedef Callback<int (__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                        __in_z LPCSTR szPropertyNameA)> OnProxyDeleteNamedPropertyCallback;
-  typedef Callback<int (__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                        __in int nIndex)> OnProxyDeleteIndexedPropertyCallback;
+  typedef Callback<int (_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                        _In_z_ LPCSTR szPropertyNameA)> OnProxyDeleteNamedPropertyCallback;
+  typedef Callback<int (_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                        _In_ int nIndex)> OnProxyDeleteIndexedPropertyCallback;
 
   //return NULL/Empty String to end enumeration
-  typedef Callback<LPCSTR (__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                           __in int nIndex)> OnProxyGetPropertyNameCallback;
+  typedef Callback<LPCSTR (_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                           _In_ int nIndex)> OnProxyGetPropertyNameCallback;
 
   //--------
 
@@ -233,8 +238,8 @@ public:
   private:
     friend CJavascriptVM;
 
-    void serialize(__in void *p);
-    void deserialize(__in void *p);
+    void serialize(_In_ void *p);
+    void deserialize(_In_ void *p);
     static size_t serialization_buffer_size();
   };
 
@@ -244,8 +249,8 @@ public:
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CRequireModuleContext);
   protected:
-    CRequireModuleContext(__in DukTape::duk_context *lpCtx, __in_z LPCWSTR szIdW,
-                          __in DukTape::duk_idx_t nModuleObjectIndex, __in DukTape::duk_idx_t nExportsObjectIndex);
+    CRequireModuleContext(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCWSTR szIdW,
+                          _In_ DukTape::duk_idx_t nModuleObjectIndex, _In_ DukTape::duk_idx_t nExportsObjectIndex);
 
   public:
     LPCWSTR GetId() const
@@ -253,29 +258,29 @@ public:
       return szIdW;
       };
 
-    HRESULT RequireModule(__in_z LPCWSTR szModuleIdW);
+    HRESULT RequireModule(_In_z_ LPCWSTR szModuleIdW);
 
-    HRESULT AddNativeFunction(__in_z LPCSTR szFuncNameA, __in OnNativeFunctionCallback cNativeFunctionCallback,
-                              __in int nArgsCount);
+    HRESULT AddNativeFunction(_In_z_ LPCSTR szFuncNameA, _In_ OnNativeFunctionCallback cNativeFunctionCallback,
+                              _In_ int nArgsCount);
 
-    HRESULT AddProperty(__in_z LPCSTR szPropertyNameA, __in_opt BOOL bInitialValueOnStack=FALSE,
-                        __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-    HRESULT AddStringProperty(__in_z LPCSTR szPropertyNameA, __in_z LPCSTR szValueA,
-                              __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-    HRESULT AddBooleanProperty(__in_z LPCSTR szPropertyNameA, __in BOOL bValue,
-                               __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-    HRESULT AddNumericProperty(__in_z LPCSTR szPropertyNameA, __in double nValue,
-                               __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-    HRESULT AddNullProperty(__in_z LPCSTR szPropertyNameA,
-                            __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-    HRESULT AddJsObjectProperty(__in_z LPCSTR szPropertyNameA, __in CJsObjectBase *lpObject,
-                                __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-    HRESULT AddPropertyWithCallback(__in_z LPCSTR szPropertyNameA, __in OnGetPropertyCallback cGetValueCallback,
-                                __in_opt OnSetPropertyCallback cSetValueCallback=NullCallback(),
-                                __in_opt int nFlags=PropertyFlagEnumerable);
+    HRESULT AddProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ BOOL bInitialValueOnStack=FALSE,
+                        _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+    HRESULT AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ LPCSTR szValueA,
+                              _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+    HRESULT AddBooleanProperty(_In_z_ LPCSTR szPropertyNameA, _In_ BOOL bValue,
+                               _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+    HRESULT AddNumericProperty(_In_z_ LPCSTR szPropertyNameA, _In_ double nValue,
+                               _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+    HRESULT AddNullProperty(_In_z_ LPCSTR szPropertyNameA,
+                            _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+    HRESULT AddJsObjectProperty(_In_z_ LPCSTR szPropertyNameA, _In_ CJsObjectBase *lpObject,
+                                _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+    HRESULT AddPropertyWithCallback(_In_z_ LPCSTR szPropertyNameA, _In_ OnGetPropertyCallback cGetValueCallback,
+                                _In_opt_ OnSetPropertyCallback cSetValueCallback=NullCallback(),
+                                _In_opt_ int nFlags=PropertyFlagEnumerable);
 
     HRESULT ReplaceModuleExports();
-    HRESULT ReplaceModuleExportsWithObject(__in CJsObjectBase *lpObject);
+    HRESULT ReplaceModuleExportsWithObject(_In_ CJsObjectBase *lpObject);
 
   private:
     friend CJavascriptVM;
@@ -287,16 +292,16 @@ public:
 
   //--------
 
-  typedef std::function<VOID (__in DukTape::duk_context *lpCtx)> lpfnProtectedFunction;
+  typedef std::function<VOID (_In_ DukTape::duk_context *lpCtx)> lpfnProtectedFunction;
 
-  typedef VOID (*lpfnThrowExceptionCallback)(__in DukTape::duk_context *lpCtx,
-                                             __in DukTape::duk_idx_t nExceptionObjectIndex);
+  typedef VOID (*lpfnThrowExceptionCallback)(_In_ DukTape::duk_context *lpCtx,
+                                             _In_ DukTape::duk_idx_t nExceptionObjectIndex);
 
 public:
   CJavascriptVM();
   ~CJavascriptVM();
 
-  VOID On(__in OnRequireModuleCallback cRequireModuleCallback);
+  VOID On(_In_ OnRequireModuleCallback cRequireModuleCallback);
 
   HRESULT Initialize();
   VOID Finalize();
@@ -307,128 +312,128 @@ public:
     return lpCtx;
     };
 
-  static CJavascriptVM* FromContext(__in DukTape::duk_context *lpCtx);
+  static CJavascriptVM* FromContext(_In_ DukTape::duk_context *lpCtx);
 
-  VOID Run(__in_z LPCSTR szCodeA, __in_z_opt LPCWSTR szFileNameW=NULL, __in_opt BOOL bIgnoreResult=TRUE);
+  VOID Run(_In_z_ LPCSTR szCodeA, _In_opt_z_ LPCWSTR szFileNameW=NULL, _In_opt_ BOOL bIgnoreResult=TRUE);
 
-  static VOID RunNativeProtected(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nArgsCount,
-                                 __in DukTape::duk_idx_t nRetValuesCount, __in lpfnProtectedFunction fnFunc,
-                                 __in_opt BOOL bCatchUnhandled=FALSE);
-  VOID RunNativeProtected(__in DukTape::duk_idx_t nArgsCount, __in DukTape::duk_idx_t nRetValuesCount,
-                          __in lpfnProtectedFunction fnFunc, __in_opt BOOL bCatchUnhandled=FALSE);
+  static VOID RunNativeProtected(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nArgsCount,
+                                 _In_ DukTape::duk_idx_t nRetValuesCount, _In_ lpfnProtectedFunction fnFunc,
+                                 _In_opt_ BOOL bCatchUnhandled=FALSE);
+  VOID RunNativeProtected(_In_ DukTape::duk_idx_t nArgsCount, _In_ DukTape::duk_idx_t nRetValuesCount,
+                          _In_ lpfnProtectedFunction fnFunc, _In_opt_ BOOL bCatchUnhandled=FALSE);
 
-  HRESULT RegisterException(__in_z LPCSTR szExceptionNameA, __in lpfnThrowExceptionCallback fnThrowExceptionCallback);
-  HRESULT UnregisterException(__in_z LPCSTR szExceptionNameA);
+  HRESULT RegisterException(_In_z_ LPCSTR szExceptionNameA, _In_ lpfnThrowExceptionCallback fnThrowExceptionCallback);
+  HRESULT UnregisterException(_In_z_ LPCSTR szExceptionNameA);
 
-  HRESULT AddNativeFunction(__in_z LPCSTR szFuncNameA, __in OnNativeFunctionCallback cNativeFunctionCallback,
-                            __in int nArgsCount);
+  HRESULT AddNativeFunction(_In_z_ LPCSTR szFuncNameA, _In_ OnNativeFunctionCallback cNativeFunctionCallback,
+                            _In_ int nArgsCount);
 
-  HRESULT AddProperty(__in_z LPCSTR szPropertyNameA, __in_opt BOOL bInitialValueOnStack=FALSE,
-                      __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-  HRESULT AddStringProperty(__in_z LPCSTR szPropertyNameA, __in_z LPCSTR szValueA,
-                            __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-  HRESULT AddStringProperty(__in_z LPCSTR szPropertyNameA, __in_z LPCWSTR szValueW,
-                            __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-  HRESULT AddBooleanProperty(__in_z LPCSTR szPropertyNameA, __in BOOL bValue,
-                             __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-  HRESULT AddIntegerProperty(__in_z LPCSTR szPropertyNameA, __in int nValue,
-                             __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-  HRESULT AddNumericProperty(__in_z LPCSTR szPropertyNameA, __in double nValue,
-                             __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-  HRESULT AddNullProperty(__in_z LPCSTR szPropertyNameA,
-                          __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-  HRESULT AddJsObjectProperty(__in_z LPCSTR szPropertyNameA, __in CJsObjectBase *lpObject,
-                              __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-  HRESULT AddPropertyWithCallback(__in_z LPCSTR szPropertyNameA, __in OnGetPropertyCallback cGetValueCallback,
-                                  __in_opt OnSetPropertyCallback cSetValueCallback=NullCallback(),
-                                  __in_opt int nFlags=PropertyFlagEnumerable);
+  HRESULT AddProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ BOOL bInitialValueOnStack=FALSE,
+                      _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ LPCSTR szValueA,
+                            _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ LPCWSTR szValueW,
+                            _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddBooleanProperty(_In_z_ LPCSTR szPropertyNameA, _In_ BOOL bValue,
+                             _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddIntegerProperty(_In_z_ LPCSTR szPropertyNameA, _In_ int nValue,
+                             _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddNumericProperty(_In_z_ LPCSTR szPropertyNameA, _In_ double nValue,
+                             _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddNullProperty(_In_z_ LPCSTR szPropertyNameA,
+                          _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddJsObjectProperty(_In_z_ LPCSTR szPropertyNameA, _In_ CJsObjectBase *lpObject,
+                              _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddPropertyWithCallback(_In_z_ LPCSTR szPropertyNameA, _In_ OnGetPropertyCallback cGetValueCallback,
+                                  _In_opt_ OnSetPropertyCallback cSetValueCallback=NullCallback(),
+                                  _In_opt_ int nFlags=PropertyFlagEnumerable);
 
-  HRESULT RemoveProperty(__in_z LPCSTR szPropertyNameA);
+  HRESULT RemoveProperty(_In_z_ LPCSTR szPropertyNameA);
 
-  HRESULT HasProperty(__in_z LPCSTR szPropertyNameA);
+  HRESULT HasProperty(_In_z_ LPCSTR szPropertyNameA);
 
-  VOID PushProperty(__in_z LPCSTR szPropertyNameA);
+  VOID PushProperty(_In_z_ LPCSTR szPropertyNameA);
 
-  HRESULT CreateObject(__in_z LPCSTR szObjectNameA, __in_opt CProxyCallbacks *lpCallbacks=NULL);
+  HRESULT CreateObject(_In_z_ LPCSTR szObjectNameA, _In_opt_ CProxyCallbacks *lpCallbacks=NULL);
 
-  HRESULT AddObjectNativeFunction(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szFuncNameA,
-                                  __in OnNativeFunctionCallback cNativeFunctionCallback, __in int nArgsCount);
+  HRESULT AddObjectNativeFunction(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFuncNameA,
+                                  _In_ OnNativeFunctionCallback cNativeFunctionCallback, _In_ int nArgsCount);
 
-  HRESULT AddObjectProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA,
-                            __in_opt BOOL bInitialValueOnStack=FALSE,
-                            __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-  HRESULT AddObjectStringProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA, __in_z LPCSTR szValueA,
-                                  __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-  HRESULT AddObjectStringProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA, __in_z LPCWSTR szValueW,
-                                  __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-  HRESULT AddObjectBooleanProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA, __in BOOL bValue,
-                                   __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-  HRESULT AddObjectIntegerProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA, __in int nValue,
-                                   __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-  HRESULT AddObjectNumericProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA, __in double nValue,
-                                   __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-  HRESULT AddObjectNullProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA,
-                                __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-  HRESULT AddObjectJsObjectProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA,
-                                    __in CJsObjectBase *lpObject,
-                                    __in_opt int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
-  HRESULT AddObjectPropertyWithCallback(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA,
-                                        __in OnGetPropertyCallback cGetValueCallback,
-                                        __in_opt OnSetPropertyCallback cSetValueCallback=NullCallback(),
-                                        __in_opt int nFlags=PropertyFlagEnumerable);
+  HRESULT AddObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
+                            _In_opt_ BOOL bInitialValueOnStack=FALSE,
+                            _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddObjectStringProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_z_ LPCSTR szValueA,
+                                  _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddObjectStringProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_z_ LPCWSTR szValueW,
+                                  _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddObjectBooleanProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_ BOOL bValue,
+                                   _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddObjectIntegerProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_ int nValue,
+                                   _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddObjectNumericProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_ double nValue,
+                                   _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddObjectNullProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
+                                _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddObjectJsObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
+                                    _In_ CJsObjectBase *lpObject,
+                                    _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddObjectPropertyWithCallback(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
+                                        _In_ OnGetPropertyCallback cGetValueCallback,
+                                        _In_opt_ OnSetPropertyCallback cSetValueCallback=NullCallback(),
+                                        _In_opt_ int nFlags=PropertyFlagEnumerable);
 
-  HRESULT RemoveObjectProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA);
+  HRESULT RemoveObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA);
 
-  HRESULT HasObjectProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA);
+  HRESULT HasObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA);
 
-  VOID PushObjectProperty(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPropertyNameA);
+  VOID PushObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA);
 
   //converts from/to utf-8
-  static VOID PushString(__in DukTape::duk_context *lpCtx, __in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
-  VOID PushString(__in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
+  static VOID PushString(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen=(SIZE_T)-1);
+  VOID PushString(_In_z_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen=(SIZE_T)-1);
 
-  static VOID GetString(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex, __inout CStringW &cStrW,
-                        __in_opt BOOL bAppend=FALSE);
-  VOID GetString(__in DukTape::duk_idx_t nStackIndex, __inout CStringW &cStrW, __in_opt BOOL bAppend=FALSE);
+  static VOID GetString(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex, _Inout_ CStringW &cStrW,
+                        _In_opt_ BOOL bAppend=FALSE);
+  VOID GetString(_In_ DukTape::duk_idx_t nStackIndex, _Inout_ CStringW &cStrW, _In_opt_ BOOL bAppend=FALSE);
 
   //convert SYSTEMTIME from/to JS Date object
-  static VOID PushDate(__in DukTape::duk_context *lpCtx, __in LPSYSTEMTIME lpSt, __in_opt BOOL bAsUtc=TRUE);
-  VOID PushDate(__in LPSYSTEMTIME lpSt, __in_opt BOOL bAsUtc=TRUE);
+  static VOID PushDate(_In_ DukTape::duk_context *lpCtx, _In_ LPSYSTEMTIME lpSt, _In_opt_ BOOL bAsUtc=TRUE);
+  VOID PushDate(_In_ LPSYSTEMTIME lpSt, _In_opt_ BOOL bAsUtc=TRUE);
 
-  static VOID GetDate(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nObjIdx, __out LPSYSTEMTIME lpSt);
-  VOID GetDate(__in DukTape::duk_idx_t nObjIdx, __out LPSYSTEMTIME lpSt);
+  static VOID GetDate(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nObjIdx, _Out_ LPSYSTEMTIME lpSt);
+  VOID GetDate(_In_ DukTape::duk_idx_t nObjIdx, _Out_ LPSYSTEMTIME lpSt);
 
   //NOTE: Setting 'var a=0;' can lead to 'a == FALSE'. No idea if JS or DukTape.
   //      These methods checks for boolean values first and for integer values
   //IMPORTANT: Unsafe execution. May throw exception if object at specified stack position is not a number.
-  static DukTape::duk_int_t GetInt(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nObjIdx);
-  DukTape::duk_int_t GetInt(__in DukTape::duk_idx_t nObjIdx);
+  static DukTape::duk_int_t GetInt(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nObjIdx);
+  DukTape::duk_int_t GetInt(_In_ DukTape::duk_idx_t nObjIdx);
 
-  static DukTape::duk_uint_t GetUInt(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nObjIdx);
-  DukTape::duk_uint_t GetUInt(__in DukTape::duk_idx_t nObjIdx);
+  static DukTape::duk_uint_t GetUInt(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nObjIdx);
+  DukTape::duk_uint_t GetUInt(_In_ DukTape::duk_idx_t nObjIdx);
 
-  static DukTape::duk_double_t GetDouble(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nObjIdx);
-  DukTape::duk_double_t GetDouble(__in DukTape::duk_idx_t nObjIdx);
+  static DukTape::duk_double_t GetDouble(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nObjIdx);
+  DukTape::duk_double_t GetDouble(_In_ DukTape::duk_idx_t nObjIdx);
 
-  static HRESULT AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCSTR szStrA, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
-  static HRESULT AddSafeString(__inout CStringA &cStrCodeA, __in_z LPCWSTR szStrW, __in_opt SIZE_T nStrLen=(SIZE_T)-1);
+  static HRESULT AddSafeString(_Inout_ CStringA &cStrCodeA, _In_z_ LPCSTR szStrA, _In_opt_ SIZE_T nStrLen=(SIZE_T)-1);
+  static HRESULT AddSafeString(_Inout_ CStringA &cStrCodeA, _In_z_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen=(SIZE_T)-1);
 
-  static VOID ThrowWindowsError(__in DukTape::duk_context *lpCtx, __in HRESULT hr, __in_opt LPCSTR filename=NULL,
-                                __in_opt DukTape::duk_int_t line=0);
+  static VOID ThrowWindowsError(_In_ DukTape::duk_context *lpCtx, _In_ HRESULT hr, _In_opt_ LPCSTR filename=NULL,
+                                _In_opt_ DukTape::duk_int_t line=0);
 
 private:
-  //static DukTape::duk_ret_t OnModSearch(__in DukTape::duk_context *lpCtx);
-  static DukTape::duk_ret_t OnNodeJsResolveModule(__in DukTape::duk_context *lpCtx);
-  static DukTape::duk_ret_t OnNodeJsLoadModule(__in DukTape::duk_context *lpCtx);
-  static DukTape::duk_ret_t _ProxyHasPropHelper(__in DukTape::duk_context *lpCtx);
-  static DukTape::duk_ret_t _ProxyGetPropHelper(__in DukTape::duk_context *lpCtx);
-  static DukTape::duk_ret_t _ProxySetPropHelper(__in DukTape::duk_context *lpCtx);
-  static DukTape::duk_ret_t _ProxyDeletePropHelper(__in DukTape::duk_context *lpCtx);
-  static DukTape::duk_ret_t _ProxyOwnKeysHelper(__in DukTape::duk_context *lpCtx);
-  static DukTape::duk_ret_t _RunNativeProtectedHelper(__in DukTape::duk_context *lpCtx, __in void *udata);
+  //static DukTape::duk_ret_t OnModSearch(_In_ DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t OnNodeJsResolveModule(_In_ DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t OnNodeJsLoadModule(_In_ DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t _ProxyHasPropHelper(_In_ DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t _ProxyGetPropHelper(_In_ DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t _ProxySetPropHelper(_In_ DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t _ProxyDeletePropHelper(_In_ DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t _ProxyOwnKeysHelper(_In_ DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t _RunNativeProtectedHelper(_In_ DukTape::duk_context *lpCtx, _In_ void *udata);
 
-  static BOOL HandleException(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex,
-                              __in_opt BOOL bCatchUnhandled);
+  static BOOL HandleException(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex,
+                              _In_opt_ BOOL bCatchUnhandled);
 
 private:
   typedef struct {
@@ -447,7 +452,7 @@ class CJsObjectBase : public virtual TRefCounted<CBaseMemObj>
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CJsObjectBase);
 public:
-  CJsObjectBase(__in DukTape::duk_context *lpCtx) : TRefCounted<CBaseMemObj>()
+  CJsObjectBase(_In_ DukTape::duk_context *lpCtx) : TRefCounted<CBaseMemObj>()
     {
     MX_ASSERT(lpCtx != NULL);
     lpJVM = CJavascriptVM::FromContext(lpCtx);
@@ -460,26 +465,26 @@ public:
 
   virtual HRESULT PushThis() = 0;
 
-  static CJsObjectBase* FromObject(__in DukTape::duk_context *lpCtx, __in DukTape::duk_int_t nIndex);
+  static CJsObjectBase* FromObject(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_int_t nIndex);
 
   //return 1 if has, 0 if has not, -1 to pass to original object
-  virtual int OnProxyHasNamedProperty(__in_z LPCSTR szPropNameA);
-  virtual int OnProxyHasIndexedProperty(__in int nIndex);
+  virtual int OnProxyHasNamedProperty(_In_z_ LPCSTR szPropNameA);
+  virtual int OnProxyHasIndexedProperty(_In_ int nIndex);
 
   //return 1 if a value was pushed, 0 to pass to original object, -1 to throw an error
-  virtual int OnProxyGetNamedProperty(__in_z LPCSTR szPropNameA);
-  virtual int OnProxyGetIndexedProperty(__in int nIndex);
+  virtual int OnProxyGetNamedProperty(_In_z_ LPCSTR szPropNameA);
+  virtual int OnProxyGetIndexedProperty(_In_ int nIndex);
 
   //return 1 if a new value was pushed, 0 to set the original passed value, -1 to throw an error
-  virtual int OnProxySetNamedProperty(__in_z LPCSTR szPropNameA, __in DukTape::duk_idx_t nValueIndex);
-  virtual int OnProxySetIndexedProperty(__in int nIndex, __in DukTape::duk_idx_t nValueIndex);
+  virtual int OnProxySetNamedProperty(_In_z_ LPCSTR szPropNameA, _In_ DukTape::duk_idx_t nValueIndex);
+  virtual int OnProxySetIndexedProperty(_In_ int nIndex, _In_ DukTape::duk_idx_t nValueIndex);
 
   //return 1 if delete must proceed, 0 to silently ignore, -1 to throw an error
-  virtual int OnProxyDeleteNamedProperty(__in_z LPCSTR szPropNameA);
-  virtual int OnProxyDeleteIndexedProperty(__in int nIndex);
+  virtual int OnProxyDeleteNamedProperty(_In_z_ LPCSTR szPropNameA);
+  virtual int OnProxyDeleteIndexedProperty(_In_ int nIndex);
 
   //return NULL/Empty String to end enumeration
-  virtual LPCSTR OnProxyGetPropertyName(__in int nIndex);
+  virtual LPCSTR OnProxyGetPropertyName(_In_ int nIndex);
 
   CJavascriptVM& GetJavascriptVM() const
     {
@@ -504,32 +509,32 @@ protected:
   } MAP_ENTRY;
 
 protected:
-  typedef CJsObjectBase* (*lpfnCreateObject)(__in DukTape::duk_context *lpCtx);
-  typedef VOID (*lpfnRegisterUnregisterCallback)(__in DukTape::duk_context *lpCtx);
+  typedef CJsObjectBase* (*lpfnCreateObject)(_In_ DukTape::duk_context *lpCtx);
+  typedef VOID (*lpfnRegisterUnregisterCallback)(_In_ DukTape::duk_context *lpCtx);
 
-  static VOID OnRegister(__in DukTape::duk_context *lpCtx)
+  static VOID OnRegister(_In_ DukTape::duk_context *lpCtx)
     { };
-  static VOID OnUnregister(__in DukTape::duk_context *lpCtx)
+  static VOID OnUnregister(_In_ DukTape::duk_context *lpCtx)
     { };
 
-  static HRESULT _RegisterHelper(__in DukTape::duk_context *lpCtx, __in MAP_ENTRY *lpEntries,
-                                 __in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA,
-                                 __in_opt lpfnCreateObject fnCreateObject, __in BOOL bUseProxy,
-                                 __in lpfnRegisterUnregisterCallback fnRegisterCallback,
-                                 __in lpfnRegisterUnregisterCallback fnUnregisterCallback);
-  static VOID _UnregisterHelper(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                __in_z LPCSTR szPrototypeNameA,
-                                __in lpfnRegisterUnregisterCallback fnUnregisterCallback);
+  static HRESULT _RegisterHelper(_In_ DukTape::duk_context *lpCtx, _In_ MAP_ENTRY *lpEntries,
+                                 _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPrototypeNameA,
+                                 _In_opt_ lpfnCreateObject fnCreateObject, _In_ BOOL bUseProxy,
+                                 _In_ lpfnRegisterUnregisterCallback fnRegisterCallback,
+                                 _In_ lpfnRegisterUnregisterCallback fnUnregisterCallback);
+  static VOID _UnregisterHelper(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                _In_z_ LPCSTR szPrototypeNameA,
+                                _In_ lpfnRegisterUnregisterCallback fnUnregisterCallback);
 
-  static DukTape::duk_ret_t _CreateHelper(__in DukTape::duk_context *lpCtx);
-  HRESULT _PushThisHelper(__in_z LPCSTR szObjectNameA, __in_z LPCSTR szPrototypeNameA);
-  static DukTape::duk_ret_t _FinalReleaseHelper(__in DukTape::duk_context *lpCtx);
-  static DukTape::duk_ret_t _CallMethodHelper(__in DukTape::duk_context *lpCtx, __in lpfnCallFunc fnFunc);
-  static DukTape::duk_ret_t _ProxyHasPropHelper(__in DukTape::duk_context *lpCtx);
-  static DukTape::duk_ret_t _ProxyGetPropHelper(__in DukTape::duk_context *lpCtx);
-  static DukTape::duk_ret_t _ProxySetPropHelper(__in DukTape::duk_context *lpCtx);
-  static DukTape::duk_ret_t _ProxyDeletePropHelper(__in DukTape::duk_context *lpCtx);
-  static DukTape::duk_ret_t _ProxyOwnKeysHelper(__in DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t _CreateHelper(_In_ DukTape::duk_context *lpCtx);
+  HRESULT _PushThisHelper(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPrototypeNameA);
+  static DukTape::duk_ret_t _FinalReleaseHelper(_In_ DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t _CallMethodHelper(_In_ DukTape::duk_context *lpCtx, _In_ lpfnCallFunc fnFunc);
+  static DukTape::duk_ret_t _ProxyHasPropHelper(_In_ DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t _ProxyGetPropHelper(_In_ DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t _ProxySetPropHelper(_In_ DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t _ProxyDeletePropHelper(_In_ DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t _ProxyOwnKeysHelper(_In_ DukTape::duk_context *lpCtx);
 
 private:
   CJavascriptVM *lpJVM;
@@ -540,12 +545,13 @@ private:
 class CJsError
 {
 protected:
-  CJsError(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex);
-  CJsError(__in_z LPCSTR szMessageA, __in DukTape::duk_context *lpCtx, __in_z LPCSTR szFileNameA, __in ULONG nLine);
+  CJsError();
+  CJsError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex);
+  CJsError(_In_z_ LPCSTR szMessageA, _In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szFileNameA, _In_ ULONG nLine);
 
 public:
-  CJsError(__in const CJsError &obj);
-  CJsError& operator=(__in const CJsError &obj);
+  CJsError(_In_ const CJsError &obj);
+  CJsError& operator=(_In_ const CJsError &obj);
 
   ~CJsError();
 
@@ -590,14 +596,14 @@ protected:
 class CJsWindowsError : public CJsError
 {
 protected:
-  CJsWindowsError(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex);
-  CJsWindowsError(__in HRESULT hRes, __in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex);
-  CJsWindowsError(__in HRESULT hRes, __in DukTape::duk_context *lpCtx, __in_z LPCSTR szFileNameA, __in ULONG nLine);
-  CJsWindowsError(__in HRESULT hRes);
+  CJsWindowsError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex);
+  CJsWindowsError(_In_ HRESULT hRes, _In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex);
+  CJsWindowsError(_In_ HRESULT hRes, _In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szFileNameA, _In_ ULONG nLine);
+  CJsWindowsError(_In_ HRESULT hRes);
 
 public:
-  CJsWindowsError(__in const CJsWindowsError &obj);
-  CJsWindowsError& operator=(__in const CJsWindowsError &obj);
+  CJsWindowsError(_In_ const CJsWindowsError &obj);
+  CJsWindowsError& operator=(_In_ const CJsWindowsError &obj);
 
   __inline HRESULT GetHResult() const
     {

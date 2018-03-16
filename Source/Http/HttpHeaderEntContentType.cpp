@@ -38,7 +38,7 @@ CHttpHeaderEntContentType::~CHttpHeaderEntContentType()
   return;
 }
 
-HRESULT CHttpHeaderEntContentType::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderEntContentType::Parse(_In_z_ LPCSTR szValueA)
 {
   LPCSTR szStartA;
   CStringA cStrTempA, cStrTempA_2;
@@ -120,7 +120,7 @@ HRESULT CHttpHeaderEntContentType::Parse(__in_z LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentType::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderEntContentType::Build(_Inout_ CStringA &cStrDestA)
 {
   SIZE_T i, nCount;
   LPWSTR sW;
@@ -164,7 +164,7 @@ HRESULT CHttpHeaderEntContentType::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentType::SetType(__in_z LPCSTR szTypeA)
+HRESULT CHttpHeaderEntContentType::SetType(_In_z_ LPCSTR szTypeA)
 {
   LPCSTR szStartA, szEndA;
 
@@ -197,7 +197,7 @@ LPCSTR CHttpHeaderEntContentType::GetType() const
   return (LPCSTR)cStrTypeA;
 }
 
-HRESULT CHttpHeaderEntContentType::AddParam(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW)
+HRESULT CHttpHeaderEntContentType::AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW)
 {
   TAutoFreePtr<PARAMETER> cNewParam;
   LPCSTR szStartA, szEndA;
@@ -241,17 +241,17 @@ SIZE_T CHttpHeaderEntContentType::GetParamsCount() const
   return cParamsList.GetCount();
 }
 
-LPCSTR CHttpHeaderEntContentType::GetParamName(__in SIZE_T nIndex) const
+LPCSTR CHttpHeaderEntContentType::GetParamName(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cParamsList.GetCount()) ? cParamsList[nIndex]->szNameA : NULL;
 }
 
-LPCWSTR CHttpHeaderEntContentType::GetParamValue(__in SIZE_T nIndex) const
+LPCWSTR CHttpHeaderEntContentType::GetParamValue(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cParamsList.GetCount()) ? cParamsList[nIndex]->szValueW : NULL;
 }
 
-LPCWSTR CHttpHeaderEntContentType::GetParamValue(__in_z LPCSTR szNameA) const
+LPCWSTR CHttpHeaderEntContentType::GetParamValue(_In_z_ LPCSTR szNameA) const
 {
   SIZE_T i, nCount;
 

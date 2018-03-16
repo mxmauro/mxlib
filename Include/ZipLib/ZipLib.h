@@ -35,23 +35,23 @@ class CZipLib : public virtual CBaseMemObj
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CZipLib);
 public:
-  CZipLib(__in BOOL bUseZipLibHeader=TRUE);
+  CZipLib(_In_ BOOL bUseZipLibHeader=TRUE);
   virtual ~CZipLib();
 
-  HRESULT BeginCompress(__in int nCompressionLevel);
+  HRESULT BeginCompress(_In_ int nCompressionLevel);
   HRESULT BeginDecompress();
-  HRESULT CompressStream(__in LPCVOID lpSrc, __in SIZE_T nSrcLen);
-  HRESULT DecompressStream(__in LPCVOID lpSrc, __in SIZE_T nSrcLen, __out_opt SIZE_T *lpnUnusedBytes=NULL);
+  HRESULT CompressStream(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLen);
+  HRESULT DecompressStream(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLen, _Out_opt_ SIZE_T *lpnUnusedBytes=NULL);
   HRESULT End();
 
   SIZE_T GetAvailableData() const;
-  SIZE_T GetData(__out LPVOID lpDest, __in SIZE_T nDestSize);
+  SIZE_T GetData(_Out_ LPVOID lpDest, _In_ SIZE_T nDestSize);
 
   BOOL HasDecompressEndOfStreamBeenReached();
 
 protected:
   VOID Cleanup();
-  BOOL CheckAndSkipGZipHeader(__inout LPBYTE &s, __inout SIZE_T &nSrcLen, __out_opt SIZE_T *lpnUnusedBytes);
+  BOOL CheckAndSkipGZipHeader(_Inout_ LPBYTE &s, _Inout_ SIZE_T &nSrcLen, _Inout_opt_ SIZE_T *lpnUnusedBytes);
 
 protected:
   BOOL bUseZipLibHeader;

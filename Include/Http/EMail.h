@@ -32,8 +32,8 @@
 
 namespace MX {
 
-BOOL IsValidEMailAddress(__in LPCSTR szAddressA, __in_opt SIZE_T nAddressLen=(SIZE_T)-1);
-BOOL IsValidEMailAddress(__in LPCWSTR szAddressW, __in_opt SIZE_T nAddressLen=(SIZE_T)-1);
+BOOL IsValidEMailAddress(_In_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen=(SIZE_T)-1);
+BOOL IsValidEMailAddress(_In_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen=(SIZE_T)-1);
 
 } //namespace MX
 

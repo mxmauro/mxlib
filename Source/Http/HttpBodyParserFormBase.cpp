@@ -28,10 +28,10 @@
 
 //-----------------------------------------------------------
 
-static HRESULT ParseNameAndIndexes(__in_z LPCWSTR szNameW, __inout MX::CStringW &cStrNameW,
-                                   __inout MX::TArrayListWithFree<LPCWSTR> &aSubIndexesList);
-static BOOL __inline IsNumeric(__in_z LPCWSTR szNumberW);
-static int NumericCompare(__in_z LPCWSTR szNumber1, __in_z LPCWSTR szNumber2);
+static HRESULT ParseNameAndIndexes(_In_z_ LPCWSTR szNameW, _Inout_ MX::CStringW &cStrNameW,
+                                   _Inout_ MX::TArrayListWithFree<LPCWSTR> &aSubIndexesList);
+static BOOL __inline IsNumeric(_In_z_ LPCWSTR szNumberW);
+static int NumericCompare(_In_z_ LPCWSTR szNumber1, _In_z_ LPCWSTR szNumber2);
 
 //-----------------------------------------------------------
 
@@ -54,7 +54,7 @@ SIZE_T CHttpBodyParserFormBase::GetFieldsCount() const
   return cFieldsList.GetCount();
 }
 
-CHttpBodyParserFormBase::CField* CHttpBodyParserFormBase::GetField(__in SIZE_T nIndex) const
+CHttpBodyParserFormBase::CField* CHttpBodyParserFormBase::GetField(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cFieldsList.GetCount()) ? cFieldsList.GetElementAt(nIndex) : NULL;
 }
@@ -64,12 +64,12 @@ SIZE_T CHttpBodyParserFormBase::GetFileFieldsCount() const
   return cFileFieldsList.GetCount();
 }
 
-CHttpBodyParserFormBase::CFileField* CHttpBodyParserFormBase::GetFileField(__in SIZE_T nIndex) const
+CHttpBodyParserFormBase::CFileField* CHttpBodyParserFormBase::GetFileField(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cFileFieldsList.GetCount()) ? cFileFieldsList.GetElementAt(nIndex) : NULL;
 }
 
-HRESULT CHttpBodyParserFormBase::AddField(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW)
+HRESULT CHttpBodyParserFormBase::AddField(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW)
 {
   CField *lpField, *lpChildField;
   CStringW cStrNameW, cStrIndexW;
@@ -187,14 +187,15 @@ HRESULT CHttpBodyParserFormBase::AddField(__in_z LPCWSTR szNameW, __in_z LPCWSTR
     lpField = lpChildField;
   }
   //assign the value to the field
+#pragma warning(suppress : 6011)
   if (lpField->cStrValueW.Copy(szValueW) == FALSE)
     return E_OUTOFMEMORY;
   //done
   return S_OK;
 }
 
-HRESULT CHttpBodyParserFormBase::AddFileField(__in_z LPCWSTR szNameW, __in_z LPCWSTR szFileNameW, __in_z LPCSTR szTypeA,
-                                              __in HANDLE hFile)
+HRESULT CHttpBodyParserFormBase::AddFileField(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szFileNameW, _In_z_ LPCSTR szTypeA,
+                                              _In_ HANDLE hFile)
 {
   CFileField *lpField, *lpChildField;
   CStringW cStrNameW, cStrIndexW;
@@ -314,8 +315,10 @@ HRESULT CHttpBodyParserFormBase::AddFileField(__in_z LPCWSTR szNameW, __in_z LPC
     lpField = lpChildField;
   }
   //assign the values to the field
+#pragma warning(suppress : 6011)
   if (lpField->cStrFileNameW.Copy(szFileNameW) == FALSE)
     return E_OUTOFMEMORY;
+#pragma warning(suppress : 6011)
   if (lpField->cStrTypeA.Copy(szTypeA) == FALSE)
     return E_OUTOFMEMORY;
   lpField->hFile = hFile;
@@ -364,8 +367,8 @@ VOID CHttpBodyParserFormBase::CFileField::ClearValue()
 
 //-----------------------------------------------------------
 
-static HRESULT ParseNameAndIndexes(__in_z LPCWSTR szNameW, __inout MX::CStringW &cStrNameW,
-                                   __inout MX::TArrayListWithFree<LPCWSTR> &aSubIndexesList)
+static HRESULT ParseNameAndIndexes(_In_z_ LPCWSTR szNameW, _Inout_ MX::CStringW &cStrNameW,
+                                   _Inout_ MX::TArrayListWithFree<LPCWSTR> &aSubIndexesList)
 {
   MX::CStringW cStrCurrSubIndexW;
   BOOL bValidChars, bPrevWasSpace;
@@ -409,7 +412,7 @@ static HRESULT ParseNameAndIndexes(__in_z LPCWSTR szNameW, __inout MX::CStringW 
     {
       bPrevWasSpace = TRUE;
     }
-    *szNameW++;
+    szNameW++;
   }
   if (cStrNameW.IsEmpty() != FALSE || bValidChars == FALSE)
     return E_INVALIDARG;
@@ -460,7 +463,7 @@ parse_index:
       {
         bPrevWasSpace = TRUE;
       }
-      *szNameW++;
+      szNameW++;
     }
     if (*szNameW != L']' || (cStrCurrSubIndexW.IsEmpty() == FALSE && bValidChars == FALSE))
       return E_INVALIDARG;
@@ -487,14 +490,14 @@ parse_index:
   return (*szNameW == 0) ? S_OK : E_INVALIDARG;
 }
 
-static BOOL __inline IsNumeric(__in_z LPCWSTR szNumberW)
+static BOOL __inline IsNumeric(_In_z_ LPCWSTR szNumberW)
 {
   while (*szNumberW >= L'0' && *szNumberW <= L'9')
     szNumberW++;
   return (*szNumberW == 0) ? TRUE : FALSE;
 }
 
-static int NumericCompare(__in_z LPCWSTR szNumber1, __in_z LPCWSTR szNumber2)
+static int NumericCompare(_In_z_ LPCWSTR szNumber1, _In_z_ LPCWSTR szNumber2)
 {
   SIZE_T nDigitsLeft[2];
 

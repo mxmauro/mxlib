@@ -33,15 +33,15 @@ namespace MX {
 
 namespace HtmlEntities {
 
-LPCSTR Get(__in WCHAR chW);
+LPCSTR Get(_In_ WCHAR chW);
 
-HRESULT ConvertTo(__inout CStringA &cStrA);
-HRESULT ConvertTo(__inout CStringW &cStrW);
-HRESULT ConvertFrom(__inout CStringA &cStrA);
-HRESULT ConvertFrom(__inout CStringW &cStrW);
+HRESULT ConvertTo(_Inout_ CStringA &cStrA);
+HRESULT ConvertTo(_Inout_ CStringW &cStrW);
+HRESULT ConvertFrom(_Inout_ CStringA &cStrA);
+HRESULT ConvertFrom(_Inout_ CStringW &cStrW);
 
-WCHAR Decode(__in LPCSTR szStrA, __in SIZE_T nStrLen=(SIZE_T)-1, __out_opt LPCSTR *lpszAfterEntityA=NULL);
-WCHAR Decode(__in LPCWSTR szStrW, __in SIZE_T nStrLen=(SIZE_T)-1, __out_opt LPCWSTR *lpszAfterEntityW=NULL);
+WCHAR Decode(_In_ LPCSTR szStrA, _In_ SIZE_T nStrLen=(SIZE_T)-1, _Out_opt_ LPCSTR *lpszAfterEntityA=NULL);
+WCHAR Decode(_In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen=(SIZE_T)-1, _Out_opt_ LPCWSTR *lpszAfterEntityW=NULL);
 
 } //namespace HtmlEntities
 

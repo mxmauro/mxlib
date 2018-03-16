@@ -51,7 +51,7 @@ static void my_free_func(voidpf opaque, voidpf address);
 
 namespace MX {
 
-CZipLib::CZipLib(__in BOOL _bUseZipLibHeader)
+CZipLib::CZipLib(_In_ BOOL _bUseZipLibHeader)
 {
   bUseZipLibHeader = _bUseZipLibHeader;
   nInUse = INUSE_None;
@@ -67,7 +67,7 @@ CZipLib::~CZipLib()
   return;
 }
 
-HRESULT CZipLib::BeginCompress(__in int nCompressionLevel)
+HRESULT CZipLib::BeginCompress(_In_ int nCompressionLevel)
 {
   int nErr;
 
@@ -121,7 +121,7 @@ HRESULT CZipLib::BeginDecompress()
   return S_OK;
 }
 
-HRESULT CZipLib::CompressStream(__in LPCVOID lpSrc, __in SIZE_T nSrcLen)
+HRESULT CZipLib::CompressStream(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLen)
 {
   SIZE_T nToProcess, nReaded, nWritten;
   LPBYTE s;
@@ -173,7 +173,7 @@ HRESULT CZipLib::CompressStream(__in LPCVOID lpSrc, __in SIZE_T nSrcLen)
   return S_OK;
 }
 
-HRESULT CZipLib::DecompressStream(__in LPCVOID lpSrc, __in SIZE_T nSrcLen, __out_opt SIZE_T *lpnUnusedBytes)
+HRESULT CZipLib::DecompressStream(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLen, _Out_opt_ SIZE_T *lpnUnusedBytes)
 {
   static const BYTE aFalseGZipHeader = 0x1F;
   SIZE_T nToProcess, nReaded, nWritten;
@@ -418,7 +418,7 @@ SIZE_T CZipLib::GetAvailableData() const
   return cProcessed.GetAvailableForRead();
 }
 
-SIZE_T CZipLib::GetData(__out LPVOID lpDest, __in SIZE_T nDestSize)
+SIZE_T CZipLib::GetData(_Out_ LPVOID lpDest, _In_ SIZE_T nDestSize)
 {
   if (lpDest == NULL)
     return 0;
@@ -465,7 +465,7 @@ VOID CZipLib::Cleanup()
   return;
 }
 
-BOOL CZipLib::CheckAndSkipGZipHeader(__inout LPBYTE &s, __inout SIZE_T &nSrcLen, __out_opt SIZE_T *lpnUnusedBytes)
+BOOL CZipLib::CheckAndSkipGZipHeader(_Inout_ LPBYTE &s, _Inout_ SIZE_T &nSrcLen, _Inout_opt_ SIZE_T *lpnUnusedBytes)
 {
   while (nGZipHdrState > 0 && nSrcLen > 0)
   {

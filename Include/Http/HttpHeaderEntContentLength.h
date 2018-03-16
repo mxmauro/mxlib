@@ -38,11 +38,11 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Content-Length)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
-  HRESULT SetLength(__in ULONGLONG nLength);
+  HRESULT SetLength(_In_ ULONGLONG nLength);
   ULONGLONG GetLength() const;
 
 private:

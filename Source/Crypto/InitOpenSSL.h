@@ -40,9 +40,9 @@ namespace OpenSSL {
 
 BOOL Init();
 
-HRESULT GetLastErrorCode(__in BOOL bDefaultIsInvalidData);
+HRESULT GetLastErrorCode(_In_ BOOL bDefaultIsInvalidData);
 
-SSL_CTX* GetSslContext(__in BOOL bServerSide, __in_z LPCSTR szVersionA);
+SSL_CTX* GetSslContext(_In_ BOOL bServerSide, _In_z_ LPCSTR szVersionA);
 
 } //namespace OpenSSL
 

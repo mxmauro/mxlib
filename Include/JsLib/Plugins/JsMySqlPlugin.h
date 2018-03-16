@@ -34,7 +34,7 @@ class CJsMySqlPlugin : public CJsObjectBase
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CJsMySqlPlugin);
 public:
-  CJsMySqlPlugin(__in DukTape::duk_context *lpCtx);
+  CJsMySqlPlugin(_In_ DukTape::duk_context *lpCtx);
   ~CJsMySqlPlugin();
 
   MX_JS_DECLARE_CREATABLE(CJsMySqlPlugin, "MySQL")
@@ -59,8 +59,8 @@ public:
   MX_JS_END_MAP()
 
 protected:
-  static VOID OnRegister(__in DukTape::duk_context *lpCtx);
-  static VOID OnUnregister(__in DukTape::duk_context *lpCtx);
+  static VOID OnRegister(_In_ DukTape::duk_context *lpCtx);
+  static VOID OnUnregister(_In_ DukTape::duk_context *lpCtx);
 
 private:
   DukTape::duk_ret_t Connect();
@@ -84,9 +84,9 @@ private:
   HRESULT _TransactionCommit();
   HRESULT _TransactionRollback();
 
-  VOID ThrowDbError(__in HRESULT hRes, __in_opt LPCSTR filename, __in_opt DukTape::duk_int_t line,
-                    __in_opt BOOL bOnlyPush=FALSE);
-  VOID ThrowDbError(__in_opt LPCSTR filename, __in_opt DukTape::duk_int_t line, __in_opt BOOL bOnlyPush=FALSE);
+  VOID ThrowDbError(_In_ HRESULT hRes, _In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line,
+                    _In_opt_ BOOL bOnlyPush=FALSE);
+  VOID ThrowDbError(_In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line, _In_opt_ BOOL bOnlyPush=FALSE);
 
 private:
   LPVOID lpInternal;
@@ -101,11 +101,11 @@ private:
 class CJsMySqlError : public CJsWindowsError
 {
 protected:
-  CJsMySqlError(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex);
+  CJsMySqlError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex);
 
 public:
-  CJsMySqlError(__in const CJsMySqlError &obj);
-  CJsMySqlError& operator=(__in const CJsMySqlError &obj);
+  CJsMySqlError(_In_ const CJsMySqlError &obj);
+  CJsMySqlError& operator=(_In_ const CJsMySqlError &obj);
 
   ~CJsMySqlError();
 

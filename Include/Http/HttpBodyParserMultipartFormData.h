@@ -37,11 +37,11 @@ public:
   ~CHttpBodyParserMultipartFormData();
 
 protected:
-  HRESULT Initialize(__in CPropertyBag &cPropBag, __in CHttpCommon &cHttpCmn);;
-  HRESULT Parse(__in LPCVOID lpData, __in SIZE_T nDataSize);
+  HRESULT Initialize(_In_ CPropertyBag &cPropBag, _In_ CHttpCommon &cHttpCmn);;
+  HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
 
-  HRESULT ParseHeader(__inout CStringA &cStrLineA);
-  HRESULT AccumulateData(__in CHAR chA);
+  HRESULT ParseHeader(_Inout_ CStringA &cStrLineA);
+  HRESULT AccumulateData(_In_ CHAR chA);
 
 private:
   typedef enum {

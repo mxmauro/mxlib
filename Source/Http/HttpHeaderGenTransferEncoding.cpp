@@ -38,7 +38,7 @@ CHttpHeaderGenTransferEncoding::~CHttpHeaderGenTransferEncoding()
   return;
 }
 
-HRESULT CHttpHeaderGenTransferEncoding::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderGenTransferEncoding::Parse(_In_z_ LPCSTR szValueA)
 {
   eEncoding _nEncoding = EncodingUnsupported;
 
@@ -70,7 +70,7 @@ HRESULT CHttpHeaderGenTransferEncoding::Parse(__in_z LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderGenTransferEncoding::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderGenTransferEncoding::Build(_Inout_ CStringA &cStrDestA)
 {
   switch (nEncoding)
   {
@@ -87,7 +87,7 @@ HRESULT CHttpHeaderGenTransferEncoding::Build(__inout CStringA &cStrDestA)
   return MX_E_Unsupported;
 }
 
-HRESULT CHttpHeaderGenTransferEncoding::SetEncoding(__in eEncoding _nEncoding)
+HRESULT CHttpHeaderGenTransferEncoding::SetEncoding(_In_ eEncoding _nEncoding)
 {
   if (_nEncoding != EncodingChunked && _nEncoding != EncodingIdentity && _nEncoding != EncodingUnsupported)
     return E_INVALIDARG;

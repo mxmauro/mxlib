@@ -57,18 +57,18 @@ typedef struct tagMULTIPLEBLOCKS_ARRAY {
 
 //-----------------------------------------------------------
 
-static VOID MultiBlockCallback_VaArgs(__in SIZE_T nIndex, __out LPVOID *lplpMsg, __out PSIZE_T lpnMsgSize,
-                                      __in LPVOID lpContext);
-static VOID MultiBlockCallback_Array(__in SIZE_T nIndex, __out LPVOID *lplpMsg, __out PSIZE_T lpnMsgSize,
-                                     __in LPVOID lpContext);
+static VOID MultiBlockCallback_VaArgs(_In_ SIZE_T nIndex, _Out_ LPVOID *lplpMsg, _Out_ PSIZE_T lpnMsgSize,
+                                      _In_ LPVOID lpContext);
+static VOID MultiBlockCallback_Array(_In_ SIZE_T nIndex, _Out_ LPVOID *lplpMsg, _Out_ PSIZE_T lpnMsgSize,
+                                     _In_ LPVOID lpContext);
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-CIpcMessageManager::CIpcMessageManager(__in CIoCompletionPortThreadPool &_cWorkerPool, __in CIpc *_lpIpc,
-                                       __in HANDLE _hConn, __in OnMessageReceivedCallback _cMessageReceivedCallback,
-                                       __in_opt DWORD _dwMaxMessageSize, __in_opt DWORD _dwProtocolVersion) :
+CIpcMessageManager::CIpcMessageManager(_In_ CIoCompletionPortThreadPool &_cWorkerPool, _In_ CIpc *_lpIpc,
+                                       _In_ HANDLE _hConn, _In_ OnMessageReceivedCallback _cMessageReceivedCallback,
+                                       _In_opt_ DWORD _dwMaxMessageSize, _In_opt_ DWORD _dwProtocolVersion) :
                                        CBaseMemObj(), cWorkerPool(_cWorkerPool)
 {
   lpIpc = _lpIpc;
@@ -109,7 +109,7 @@ VOID CIpcMessageManager::Shutdown()
   return;
 }
 
-HRESULT CIpcMessageManager::SwitchToProtocol(__in DWORD _dwProtocolVersion)
+HRESULT CIpcMessageManager::SwitchToProtocol(_In_ DWORD _dwProtocolVersion)
 {
   if (_dwProtocolVersion < 1 || _dwProtocolVersion > 2)
     return E_INVALIDARG;
@@ -268,7 +268,7 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
   return hRes;
 }
 
-HRESULT CIpcMessageManager::SendHeader(__in DWORD dwMsgId, __in SIZE_T nMsgSize)
+HRESULT CIpcMessageManager::SendHeader(_In_ DWORD dwMsgId, _In_ SIZE_T nMsgSize)
 {
   HEADER sHeader;
 
@@ -284,14 +284,14 @@ HRESULT CIpcMessageManager::SendHeader(__in DWORD dwMsgId, __in SIZE_T nMsgSize)
   return lpIpc->SendMsg(hConn, &sHeader, sizeof(sHeader));
 }
 
-HRESULT CIpcMessageManager::SendData(__in LPCVOID lpMsg, __in SIZE_T nMsgSize)
+HRESULT CIpcMessageManager::SendData(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize)
 {
   if (__InterlockedRead(&nShuttingDown) != 0)
     return MX_E_Cancelled;
   return lpIpc->SendMsg(hConn, lpMsg, nMsgSize);
 }
 
-HRESULT CIpcMessageManager::SendEndOfMessageMark(__in DWORD dwMsgId)
+HRESULT CIpcMessageManager::SendEndOfMessageMark(_In_ DWORD dwMsgId)
 {
   if (__InterlockedRead(&nShuttingDown) != 0)
     return MX_E_Cancelled;
@@ -301,7 +301,7 @@ HRESULT CIpcMessageManager::SendEndOfMessageMark(__in DWORD dwMsgId)
   return lpIpc->SendMsg(hConn, &dwMsgId, sizeof(dwMsgId));
 }
 
-HRESULT CIpcMessageManager::SendMultipleBlocks(__out LPDWORD lpdwMsgId, __in SIZE_T nBlocksCount, ...)
+HRESULT CIpcMessageManager::SendMultipleBlocks(_Out_ LPDWORD lpdwMsgId, _In_ SIZE_T nBlocksCount, ...)
 {
   MULTIPLEBLOCKS_VAARGS sData;
 
@@ -310,8 +310,8 @@ HRESULT CIpcMessageManager::SendMultipleBlocks(__out LPDWORD lpdwMsgId, __in SIZ
   return SendMultipleBlocks(lpdwMsgId, MX_BIND_CALLBACK(&MultiBlockCallback_VaArgs), &sData);
 }
 
-HRESULT CIpcMessageManager::SendMultipleBlocks(__out LPDWORD lpdwMsgId, __in SIZE_T nBlocksCount,
-                                               __in LPMULTIBLOCK lpBlocks)
+HRESULT CIpcMessageManager::SendMultipleBlocks(_Out_ LPDWORD lpdwMsgId, _In_ SIZE_T nBlocksCount,
+                                               _In_ LPMULTIBLOCK lpBlocks)
 {
   MULTIPLEBLOCKS_ARRAY sData;
 
@@ -320,8 +320,8 @@ HRESULT CIpcMessageManager::SendMultipleBlocks(__out LPDWORD lpdwMsgId, __in SIZ
   return SendMultipleBlocks(lpdwMsgId, MX_BIND_CALLBACK(&MultiBlockCallback_Array), &sData);
 }
 
-HRESULT CIpcMessageManager::SendMultipleBlocks(__out LPDWORD lpdwMsgId, __in OnMultiBlockCallback cMultiBlockCallback,
-                                               __in_opt LPVOID lpContext)
+HRESULT CIpcMessageManager::SendMultipleBlocks(_Out_ LPDWORD lpdwMsgId, _In_ OnMultiBlockCallback cMultiBlockCallback,
+                                               _In_opt_ LPVOID lpContext)
 {
   MX::CIpc::CAutoMultiSendLock cMultiSendLock(lpIpc->StartMultiSendBlock(hConn));
   LPVOID lpMsg;
@@ -385,7 +385,7 @@ HRESULT CIpcMessageManager::SendMultipleBlocks(__out LPDWORD lpdwMsgId, __in OnM
   return hRes;
 }
 
-HRESULT CIpcMessageManager::WaitForReply(__in DWORD dwId, __deref_out CMessage **lplpMessage)
+HRESULT CIpcMessageManager::WaitForReply(_In_ DWORD dwId, _Deref_out_ CMessage **lplpMessage)
 {
   SYNC_WAIT sSyncWait;
   HRESULT hRes;
@@ -401,7 +401,7 @@ HRESULT CIpcMessageManager::WaitForReply(__in DWORD dwId, __deref_out CMessage *
     if (SUCCEEDED(hRes))
     {
       sSyncWait.cCompletedEvent.Wait(INFINITE);
-      *lplpMessage = (CMessage*)MX::__InterlockedReadPointer(&(sSyncWait.lpMsg));
+      *lplpMessage = (CMessage*)__InterlockedReadPointer(&(sSyncWait.lpMsg));
       if ((*lplpMessage) == NULL)
         hRes = MX_E_Cancelled;
     }
@@ -410,8 +410,8 @@ HRESULT CIpcMessageManager::WaitForReply(__in DWORD dwId, __deref_out CMessage *
   return hRes;
 }
 
-HRESULT CIpcMessageManager::WaitForReplyAsync(__in DWORD dwId, __in OnMessageReplyCallback cCallback,
-                                              __in LPVOID lpUserData)
+HRESULT CIpcMessageManager::WaitForReplyAsync(_In_ DWORD dwId, _In_ OnMessageReplyCallback cCallback,
+                                              _In_ LPVOID lpUserData)
 {
   REPLYMSG_ITEM sNewItem;
   HRESULT hRes;
@@ -458,8 +458,8 @@ HRESULT CIpcMessageManager::WaitForReplyAsync(__in DWORD dwId, __in OnMessageRep
   return hRes;
 }
 
-VOID CIpcMessageManager::SyncWait(__in CIpc *lpIpc, __in HANDLE hConn, __in DWORD dwId, __in CMessage *lpMsg,
-                                  __in LPVOID lpUserData)
+VOID CIpcMessageManager::SyncWait(_In_ CIpc *lpIpc, _In_ HANDLE hConn, _In_ DWORD dwId, _In_ CMessage *lpMsg,
+                                  _In_ LPVOID lpUserData)
 {
   SYNC_WAIT *lpSyncWait = (SYNC_WAIT*)lpUserData;
 
@@ -486,8 +486,8 @@ HRESULT CIpcMessageManager::OnMessageCompleted()
   return hRes;
 }
 
-VOID CIpcMessageManager::OnMessageReceived(__in CIoCompletionPortThreadPool *lpPool, __in DWORD dwBytes,
-                                           __in OVERLAPPED *lpOvr, __in HRESULT hRes)
+VOID CIpcMessageManager::OnMessageReceived(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes,
+                                           _In_ OVERLAPPED *lpOvr, _In_ HRESULT hRes)
 {
   TAutoRefCounted<CMessage> cMessage;
   BOOL bCallCallback = FALSE;
@@ -520,8 +520,8 @@ VOID CIpcMessageManager::OnMessageReceived(__in CIoCompletionPortThreadPool *lpP
   return;
 }
 
-VOID CIpcMessageManager::OnFlushReceivedReplies(__in CIoCompletionPortThreadPool *lpPool, __in DWORD dwBytes,
-                                                __in OVERLAPPED *lpOvr, __in HRESULT hRes)
+VOID CIpcMessageManager::OnFlushReceivedReplies(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes,
+                                                _In_ OVERLAPPED *lpOvr, _In_ HRESULT hRes)
 {
   _InterlockedExchange(&(sFlush.nActive), 0);
   //process only if we are not resetting
@@ -619,8 +619,8 @@ VOID CIpcMessageManager::CancelWaitingReplies()
 }
 
 
-int CIpcMessageManager::ReplyMsgWaitCompareFunc(__in LPVOID lpContext, __in REPLYMSG_ITEM *lpElem1,
-                                                __in REPLYMSG_ITEM *lpElem2)
+int CIpcMessageManager::ReplyMsgWaitCompareFunc(_In_ LPVOID lpContext, _In_ REPLYMSG_ITEM *lpElem1,
+                                                _In_ REPLYMSG_ITEM *lpElem2)
 {
   if (lpElem1->dwId < lpElem2->dwId)
     return -1;
@@ -631,7 +631,7 @@ int CIpcMessageManager::ReplyMsgWaitCompareFunc(__in LPVOID lpContext, __in REPL
 
 //-----------------------------------------------------------
 
-CIpcMessageManager::CMessage::CMessage(__in CIpcMessageManager *_lpMgr) : TRefCounted<CBaseMemObj>(),
+CIpcMessageManager::CMessage::CMessage(_In_ CIpcMessageManager *_lpMgr) : TRefCounted<CBaseMemObj>(),
                                                                                 TLnkLstNode<CMessage>()
 {
   MemSet(&sOvr, 0, sizeof(sOvr));
@@ -653,7 +653,7 @@ CIpc::CMultiSendLock* CIpcMessageManager::CMessage::StartMultiSendBlock()
   return lpMgr->lpIpc->StartMultiSendBlock(lpMgr->hConn);
 }
 
-HRESULT CIpcMessageManager::CMessage::SendReplyHeader(__in SIZE_T nMsgSize)
+HRESULT CIpcMessageManager::CMessage::SendReplyHeader(_In_ SIZE_T nMsgSize)
 {
   HEADER sHeader;
 
@@ -669,7 +669,7 @@ HRESULT CIpcMessageManager::CMessage::SendReplyHeader(__in SIZE_T nMsgSize)
   return lpMgr->lpIpc->SendMsg(lpMgr->hConn, &sHeader, sizeof(sHeader));
 }
 
-HRESULT CIpcMessageManager::CMessage::SendReplyData(__in LPCVOID lpMsg, __in SIZE_T nMsgSize)
+HRESULT CIpcMessageManager::CMessage::SendReplyData(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize)
 {
   return lpMgr->lpIpc->SendMsg(lpMgr->hConn, lpMsg, nMsgSize);
 }
@@ -684,7 +684,7 @@ HRESULT CIpcMessageManager::CMessage::SendReplyEndOfMessageMark()
   return lpMgr->lpIpc->SendMsg(lpMgr->hConn, &dwMsgId, sizeof(dwMsgId));
 }
 
-HRESULT CIpcMessageManager::CMessage::SendReplyMultipleBlocks(__in SIZE_T nBlocksCount, ...)
+HRESULT CIpcMessageManager::CMessage::SendReplyMultipleBlocks(_In_ SIZE_T nBlocksCount, ...)
 {
   MULTIPLEBLOCKS_VAARGS sData;
 
@@ -693,7 +693,7 @@ HRESULT CIpcMessageManager::CMessage::SendReplyMultipleBlocks(__in SIZE_T nBlock
   return SendReplyMultipleBlocks(MX_BIND_CALLBACK(&MultiBlockCallback_VaArgs), &sData);
 }
 
-HRESULT CIpcMessageManager::CMessage::SendReplyMultipleBlocks(__in SIZE_T nBlocksCount, __in LPMULTIBLOCK lpBlocks)
+HRESULT CIpcMessageManager::CMessage::SendReplyMultipleBlocks(_In_ SIZE_T nBlocksCount, _In_ LPMULTIBLOCK lpBlocks)
 {
   MULTIPLEBLOCKS_ARRAY sData;
 
@@ -702,8 +702,8 @@ HRESULT CIpcMessageManager::CMessage::SendReplyMultipleBlocks(__in SIZE_T nBlock
   return SendReplyMultipleBlocks(MX_BIND_CALLBACK(&MultiBlockCallback_Array), &sData);
 }
 
-HRESULT CIpcMessageManager::CMessage::SendReplyMultipleBlocks(__in OnMultiBlockCallback cMultiBlockCallback,
-                                                              __in_opt LPVOID lpContext)
+HRESULT CIpcMessageManager::CMessage::SendReplyMultipleBlocks(_In_ OnMultiBlockCallback cMultiBlockCallback,
+                                                              _In_opt_ LPVOID lpContext)
 {
   MX::CIpc::CAutoMultiSendLock cMultiSendLock(StartMultiSendBlock());
   LPVOID lpMsg;
@@ -760,8 +760,8 @@ HRESULT CIpcMessageManager::CMessage::SendReplyMultipleBlocks(__in OnMultiBlockC
 
 //-----------------------------------------------------------
 
-static VOID MultiBlockCallback_VaArgs(__in SIZE_T nIndex, __out LPVOID *lplpMsg, __out PSIZE_T lpnMsgSize,
-                                      __in LPVOID lpContext)
+static VOID MultiBlockCallback_VaArgs(_In_ SIZE_T nIndex, _Out_ LPVOID *lplpMsg, _Out_ PSIZE_T lpnMsgSize,
+                                      _In_ LPVOID lpContext)
 {
   LPMULTIPLEBLOCKS_VAARGS lpData = (LPMULTIPLEBLOCKS_VAARGS)lpContext;
 
@@ -771,18 +771,25 @@ static VOID MultiBlockCallback_VaArgs(__in SIZE_T nIndex, __out LPVOID *lplpMsg,
 
     while (nIndex > 0)
     {
+#pragma warning(suppress: 6269)
       va_arg(args, LPVOID);
+#pragma warning(suppress: 6269)
       va_arg(args, SIZE_T);
       nIndex--;
     }
     *lplpMsg = va_arg(args, LPVOID);
     *lpnMsgSize = va_arg(args, SIZE_T);
   }
+  else
+  {
+    *lplpMsg = NULL;
+    *lpnMsgSize = 0;
+  }
   return;
 }
 
-static VOID MultiBlockCallback_Array(__in SIZE_T nIndex, __out LPVOID *lplpMsg, __out PSIZE_T lpnMsgSize,
-                                     __in LPVOID lpContext)
+static VOID MultiBlockCallback_Array(_In_ SIZE_T nIndex, _Out_ LPVOID *lplpMsg, _Out_ PSIZE_T lpnMsgSize,
+                                     _In_ LPVOID lpContext)
 {
   LPMULTIPLEBLOCKS_ARRAY lpData = (LPMULTIPLEBLOCKS_ARRAY)lpContext;
 
@@ -790,6 +797,11 @@ static VOID MultiBlockCallback_Array(__in SIZE_T nIndex, __out LPVOID *lplpMsg, 
   {
     *lplpMsg = lpData->lpBlocks[nIndex].lpMsg;
     *lpnMsgSize = lpData->lpBlocks[nIndex].nMsgSize;
+  }
+  else
+  {
+    *lplpMsg = NULL;
+    *lpnMsgSize = 0;
   }
   return;
 }

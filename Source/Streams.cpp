@@ -28,7 +28,7 @@
 
 namespace MX {
 
-HRESULT CStream::WriteString(__in LPCSTR szFormatA, ...)
+HRESULT CStream::WriteString(_In_ LPCSTR szFormatA, ...)
 {
   va_list args;
   HRESULT hRes;
@@ -39,7 +39,7 @@ HRESULT CStream::WriteString(__in LPCSTR szFormatA, ...)
   return hRes;
 }
 
-HRESULT CStream::WriteStringV(__in LPCSTR szFormatA, __in va_list argptr)
+HRESULT CStream::WriteStringV(_In_ LPCSTR szFormatA, _In_ va_list argptr)
 {
   CStringA cStrTempA;
   SIZE_T nWritten;
@@ -53,7 +53,7 @@ HRESULT CStream::WriteStringV(__in LPCSTR szFormatA, __in va_list argptr)
   return hRes;
 }
 
-HRESULT CStream::WriteString(__in LPCWSTR szFormatA, ...)
+HRESULT CStream::WriteString(_In_ LPCWSTR szFormatA, ...)
 {
   va_list args;
   HRESULT hRes;
@@ -64,7 +64,7 @@ HRESULT CStream::WriteString(__in LPCWSTR szFormatA, ...)
   return hRes;
 }
 
-HRESULT CStream::WriteStringV(__in LPCWSTR szFormatA, __in va_list argptr)
+HRESULT CStream::WriteStringV(_In_ LPCWSTR szFormatA, _In_ va_list argptr)
 {
   CStringW cStrTempW;
   SIZE_T nWritten;
@@ -78,7 +78,7 @@ HRESULT CStream::WriteStringV(__in LPCWSTR szFormatA, __in va_list argptr)
   return hRes;
 }
 
-HRESULT CStream::Seek(__in ULONGLONG nPosition, __in_opt eSeekMethod nMethod)
+HRESULT CStream::Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod)
 {
   return E_NOTIMPL;
 }

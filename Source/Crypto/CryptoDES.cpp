@@ -44,7 +44,7 @@ typedef struct tagDES_DATA {
 
 //-----------------------------------------------------------
 
-static const EVP_CIPHER* GetCipher(__in MX::CCryptoDES::eAlgorithm nAlgorithm);
+static const EVP_CIPHER* GetCipher(_In_ MX::CCryptoDES::eAlgorithm nAlgorithm);
 
 //-----------------------------------------------------------
 
@@ -79,8 +79,8 @@ HRESULT CCryptoDES::BeginEncrypt()
   return BeginEncrypt(AlgorithmTripleDesEcb, NULL, 0, NULL, TRUE);
 }
 
-HRESULT CCryptoDES::BeginEncrypt(__in eAlgorithm nAlgorithm, __in_opt LPCVOID lpKey, __in_opt SIZE_T nKeyLen,
-                                 __in_opt LPCVOID lpInitVector, __in_opt BOOL bUsePadding)
+HRESULT CCryptoDES::BeginEncrypt(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey, _In_opt_ SIZE_T nKeyLen,
+                                 _In_opt_ LPCVOID lpInitVector, _In_opt_ BOOL bUsePadding)
 {
   if (nAlgorithm != AlgorithmDesEcb && nAlgorithm != AlgorithmDesCbc && nAlgorithm != AlgorithmDesCfb &&
       nAlgorithm != AlgorithmDesOfb && nAlgorithm != AlgorithmDesCfb1 && nAlgorithm != AlgorithmDesCfb8 &&
@@ -150,7 +150,7 @@ HRESULT CCryptoDES::BeginEncrypt(__in eAlgorithm nAlgorithm, __in_opt LPCVOID lp
   return S_OK;
 }
 
-HRESULT CCryptoDES::EncryptStream(__in LPCVOID lpData, __in SIZE_T nDataLength)
+HRESULT CCryptoDES::EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 {
   LPBYTE lpIn;
   int nInSize, nOutSize;
@@ -219,8 +219,8 @@ HRESULT CCryptoDES::BeginDecrypt()
   return BeginDecrypt(AlgorithmTripleDesEcb, NULL, 0, NULL, TRUE);
 }
 
-HRESULT CCryptoDES::BeginDecrypt(__in eAlgorithm nAlgorithm, __in_opt LPCVOID lpKey, __in_opt SIZE_T nKeyLen,
-                                 __in_opt LPCVOID lpInitVector, __in_opt BOOL bUsePadding)
+HRESULT CCryptoDES::BeginDecrypt(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey, _In_opt_ SIZE_T nKeyLen,
+                                 _In_opt_ LPCVOID lpInitVector, _In_opt_ BOOL bUsePadding)
 {
   if (nAlgorithm != AlgorithmDesEcb && nAlgorithm != AlgorithmDesCbc && nAlgorithm != AlgorithmDesCfb &&
       nAlgorithm != AlgorithmDesOfb && nAlgorithm != AlgorithmDesCfb1 && nAlgorithm != AlgorithmDesCfb8 &&
@@ -290,7 +290,7 @@ HRESULT CCryptoDES::BeginDecrypt(__in eAlgorithm nAlgorithm, __in_opt LPCVOID lp
   return S_OK;
 }
 
-HRESULT CCryptoDES::DecryptStream(__in LPCVOID lpData, __in SIZE_T nDataLength)
+HRESULT CCryptoDES::DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 {
   LPBYTE lpIn;
   int nInSize, nOutSize;
@@ -354,7 +354,7 @@ HRESULT CCryptoDES::EndDecrypt()
   return S_OK;
 }
 
-VOID CCryptoDES::CleanUp(__in BOOL bEncoder, __in BOOL bZeroData)
+VOID CCryptoDES::CleanUp(_In_ BOOL bEncoder, _In_ BOOL bZeroData)
 {
   struct tagDES_DATA::tagCipherInfo *lpInfo = (bEncoder != FALSE) ? &(des_data->sEncryptor) : &(des_data->sDecryptor);
 
@@ -390,7 +390,7 @@ VOID CCryptoDES::CleanUp(__in BOOL bEncoder, __in BOOL bZeroData)
 
 //-----------------------------------------------------------
 
-static const EVP_CIPHER* GetCipher(__in MX::CCryptoDES::eAlgorithm nAlgorithm)
+static const EVP_CIPHER* GetCipher(_In_ MX::CCryptoDES::eAlgorithm nAlgorithm)
 {
   switch (nAlgorithm)
   {

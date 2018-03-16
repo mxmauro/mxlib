@@ -59,7 +59,7 @@ CTimedEventQueue::~CTimedEventQueue()
   return;
 }
 
-HRESULT CTimedEventQueue::Add(__in CEvent *lpEvent, __in DWORD dwTimeoutMs)
+HRESULT CTimedEventQueue::Add(_In_ CEvent *lpEvent, _In_ DWORD dwTimeoutMs)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   TAutoRefCounted<CEvent> cAutoRefEvent(lpEvent);
@@ -124,7 +124,7 @@ HRESULT CTimedEventQueue::Add(__in CEvent *lpEvent, __in DWORD dwTimeoutMs)
   return S_OK;
 }
 
-HRESULT CTimedEventQueue::Remove(__in CEvent *lpEvent, __in_opt BOOL bMarkAsCanceled)
+HRESULT CTimedEventQueue::Remove(_In_ CEvent *lpEvent, _In_opt_ BOOL bMarkAsCanceled)
 {
   CFastLock cLock1(&nQueuedEventsTreeMutex);
   CFastLock cLock2(&nRemovedTreeMutex);
@@ -157,7 +157,7 @@ VOID CTimedEventQueue::RemoveAll()
   return;
 }
 
-VOID CTimedEventQueue::ThreadProc(__in SIZE_T nParam)
+VOID CTimedEventQueue::ThreadProc(_In_ SIZE_T nParam)
 {
   DWORD dwTimeoutMs, dwHitEv;
   HANDLE hEvent;
@@ -256,7 +256,7 @@ VOID CTimedEventQueue::ProcessCanceled()
 //-----------------------------------------------------------
 //-----------------------------------------------------------
 
-CTimedEventQueue::CEvent::CEvent(__in OnNotifyCallback cCallback, __in_opt LPVOID lpUserData) :
+CTimedEventQueue::CEvent::CEvent(_In_ OnNotifyCallback cCallback, _In_opt_ LPVOID lpUserData) :
                           TEventNotifyBase<CEvent>(cCallback, lpUserData), TRedBlackTreeNode<CEvent>()
 {
   nDueTime = 0ui64;

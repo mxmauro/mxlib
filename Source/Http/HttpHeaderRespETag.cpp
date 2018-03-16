@@ -38,7 +38,7 @@ CHttpHeaderRespETag::~CHttpHeaderRespETag()
   return;
 }
 
-HRESULT CHttpHeaderRespETag::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderRespETag::Parse(_In_z_ LPCSTR szValueA)
 {
   LPCSTR szStartA, szEndA;
   CStringA cStrTempA;
@@ -74,7 +74,7 @@ HRESULT CHttpHeaderRespETag::Parse(__in_z LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderRespETag::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderRespETag::Build(_Inout_ CStringA &cStrDestA)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -101,7 +101,7 @@ HRESULT CHttpHeaderRespETag::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderRespETag::SetEntity(__in_z LPCSTR szEntityA)
+HRESULT CHttpHeaderRespETag::SetEntity(_In_z_ LPCSTR szEntityA)
 {
   LPCSTR szStartA, szEndA;
   CStringA cStrTempA;
@@ -145,7 +145,7 @@ HRESULT CHttpHeaderRespETag::SetEntity(__in_z LPCSTR szEntityA)
   return hRes;
 }
 
-HRESULT CHttpHeaderRespETag::SetEntity(__in_z LPCWSTR szEntityW)
+HRESULT CHttpHeaderRespETag::SetEntity(_In_z_ LPCWSTR szEntityW)
 {
   LPCWSTR szStartW, szEndW;
 
@@ -191,7 +191,7 @@ LPCWSTR CHttpHeaderRespETag::GetEntity() const
   return (LPCWSTR)cStrEntityW;
 }
 
-HRESULT CHttpHeaderRespETag::SetWeak(__in BOOL _bIsWeak)
+HRESULT CHttpHeaderRespETag::SetWeak(_In_ BOOL _bIsWeak)
 {
   bIsWeak = _bIsWeak;
   return S_OK;

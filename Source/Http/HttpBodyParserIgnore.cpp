@@ -39,12 +39,12 @@ CHttpBodyParserIgnore::~CHttpBodyParserIgnore()
   return;
 }
 
-HRESULT CHttpBodyParserIgnore::Initialize(__in CPropertyBag &cPropBag, __in CHttpCommon &cHttpCmn)
+HRESULT CHttpBodyParserIgnore::Initialize(_In_ CPropertyBag &cPropBag, _In_ CHttpCommon &cHttpCmn)
 {
   return S_OK;
 }
 
-HRESULT CHttpBodyParserIgnore::Parse(__in LPCVOID lpData, __in SIZE_T nDataSize)
+HRESULT CHttpBodyParserIgnore::Parse(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize)
 {
   return (lpData == NULL && nDataSize > 0) ? E_POINTER : S_OK;
 }

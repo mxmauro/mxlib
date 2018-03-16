@@ -57,8 +57,8 @@ CHttpBodyParserDefault::~CHttpBodyParserDefault()
   return;
 }
 
-HRESULT CHttpBodyParserDefault::Read(__out LPVOID lpDest, __in ULONGLONG nOffset, __in SIZE_T nToRead,
-                                     __out_opt SIZE_T *lpnReaded)
+HRESULT CHttpBodyParserDefault::Read(_Out_writes_to_(nToRead, *lpnReaded) LPVOID lpDest, _In_ ULONGLONG nOffset,
+                                     _In_ SIZE_T nToRead, _Out_opt_ SIZE_T *lpnReaded)
 {
   CFastLock cLock(&nMutex);
 
@@ -105,7 +105,7 @@ HRESULT CHttpBodyParserDefault::Read(__out LPVOID lpDest, __in ULONGLONG nOffset
   return S_OK;
 }
 
-HRESULT CHttpBodyParserDefault::ToString(__inout CStringA &cStrDestA)
+HRESULT CHttpBodyParserDefault::ToString(_Inout_ CStringA &cStrDestA)
 {
   SIZE_T nReaded;
   ULONGLONG nSize;
@@ -130,7 +130,7 @@ HRESULT CHttpBodyParserDefault::ToString(__inout CStringA &cStrDestA)
   return hRes;
 }
 
-HRESULT CHttpBodyParserDefault::Initialize(__in CPropertyBag &cPropBag, __in CHttpCommon &cHttpCmn)
+HRESULT CHttpBodyParserDefault::Initialize(_In_ CPropertyBag &cPropBag, _In_ CHttpCommon &cHttpCmn)
 {
   WCHAR szTempW[MAX_PATH];
   SIZE_T nLen;
@@ -176,7 +176,7 @@ HRESULT CHttpBodyParserDefault::Initialize(__in CPropertyBag &cPropBag, __in CHt
   return S_OK;
 }
 
-HRESULT CHttpBodyParserDefault::Parse(__in LPCVOID lpData, __in SIZE_T nDataSize)
+HRESULT CHttpBodyParserDefault::Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize)
 {
   CStringW cStrTempW;
   SIZE_T k, nNewSize;
@@ -221,6 +221,7 @@ HRESULT CHttpBodyParserDefault::Parse(__in LPCVOID lpData, __in SIZE_T nDataSize
     //switch to file container
     dw = ::GetCurrentProcessId();
     nHash = fnv_64a_buf(&dw, sizeof(dw), FNV1A_64_INIT);
+#pragma warning(suppress : 28159)
     dw = ::GetTickCount();
     nHash = fnv_64a_buf(&dw, sizeof(dw), nHash);
     k = (SIZE_T)this;

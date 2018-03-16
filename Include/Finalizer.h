@@ -32,7 +32,7 @@ namespace MX {
 
 typedef VOID (__cdecl *lpfnFinalizer)();
 
-HRESULT RegisterFinalizer(__in lpfnFinalizer fnFinalizer, __in SIZE_T nPriority);
+HRESULT RegisterFinalizer(_In_ lpfnFinalizer fnFinalizer, _In_ SIZE_T nPriority);
 
 } //namespace MX
 

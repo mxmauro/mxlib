@@ -48,28 +48,28 @@ public:                                                                         
     return;                                                                                         \
     };                                                                                              \
                                                                                                     \
-  Callback(__in NullCallback)                                                                       \
+  Callback(_In_ NullCallback)                                                                       \
     {                                                                                               \
     lpObj = NULL;                                                                                   \
     lpFunc = NULL;                                                                                  \
     return;                                                                                         \
     };                                                                                              \
                                                                                                     \
-  Callback(__in const Callback& rhs)                                                                \
+  Callback(_In_ const Callback& rhs)                                                                \
     {                                                                                               \
     lpObj = rhs.lpObj;                                                                              \
     lpFunc = rhs.lpFunc;                                                                            \
     return;                                                                                         \
     };                                                                                              \
                                                                                                     \
-  Callback& operator=(__in const Callback& rhs)                                                     \
+  Callback& operator=(_In_ const Callback& rhs)                                                     \
     {                                                                                               \
     lpObj = rhs.lpObj;                                                                              \
     lpFunc = rhs.lpFunc;                                                                            \
     return *this;                                                                                   \
     };                                                                                              \
                                                                                                     \
-  Callback& operator=(__in NullCallback)                                                            \
+  Callback& operator=(_In_ NullCallback)                                                            \
     {                                                                                               \
     lpObj = NULL;                                                                                   \
     lpFunc = NULL;                                                                                  \
@@ -89,12 +89,12 @@ public:                                                                         
     return (lpObj == NULL && lpFunc == NULL);                                                       \
     };                                                                                              \
                                                                                                     \
-  inline bool operator==(__in const Callback& rhs)                                                  \
+  inline bool operator==(_In_ const Callback& rhs)                                                  \
     {                                                                                               \
     return (lpObj == rhs.lpObj || lpFunc == rhs.lpFunc);                                            \
     };                                                                                              \
                                                                                                     \
-  inline bool operator==(__in NullCallback)                                                         \
+  inline bool operator==(_In_ NullCallback)                                                         \
     {                                                                                               \
     return (lpObj == NULL && lpFunc == NULL);                                                       \
     };                                                                                              \
@@ -104,14 +104,14 @@ public:                                                                         
     return (lpObj != NULL || lpFunc != NULL);                                                       \
     };                                                                                              \
                                                                                                     \
-  void serialize(__in void *p)                                                                      \
+  void serialize(_In_ void *p)                                                                      \
     {                                                                                               \
     *((void**)p) = const_cast<void*>(lpObj);                                                        \
     *((FuncType*)((char*)p+sizeof(void*))) = lpFunc;                                                \
     return;                                                                                         \
     };                                                                                              \
                                                                                                     \
-  void deserialize(__in void *p)                                                                    \
+  void deserialize(_In_ void *p)                                                                    \
     {                                                                                               \
     lpObj = *((void**)p);                                                                           \
     lpFunc = *((FuncType*)((char*)p+sizeof(void*)));                                                \
@@ -125,7 +125,7 @@ public:                                                                         
                                                                                                     \
 private:                                                                                            \
   typedef R (*FuncType)(const void* CBTEMPLGEN_PARAMS_WITH_COMMA);                                  \
-  Callback(__in const void* _lpObj, __in FuncType _lpFunc)                                          \
+  Callback(_In_opt_ const void* _lpObj, _In_ FuncType _lpFunc)                                      \
     {                                                                                               \
     lpFunc = _lpFunc;                                                                               \
     lpObj = _lpObj;                                                                                 \

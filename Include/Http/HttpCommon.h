@@ -110,7 +110,7 @@ public:
   } eContentEncodingMethod;
 
 public:
-  CHttpCommon(__in BOOL bActAsServer, __in CPropertyBag &cPropBag);
+  CHttpCommon(_In_ BOOL bActAsServer, _In_ CPropertyBag &cPropBag);
   ~CHttpCommon();
 
   VOID ResetParser();
@@ -118,7 +118,7 @@ public:
   //NOTE: After a successful parsing, check for parser state...
   //... if 'stBodyStart', the headers has been parsed
   //... if 'stDone', the document has been completed
-  HRESULT Parse(__in LPCVOID lpData, __in SIZE_T nDataSize, __out SIZE_T &nDataUsed);
+  HRESULT Parse(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize, _Out_ SIZE_T &nDataUsed);
 
   int GetErrorCode() const
     {
@@ -126,67 +126,67 @@ public:
     };
 
   template<class T>
-  HRESULT AddHeader(__out_opt T **lplpHeader=NULL, __in BOOL bReplaceExisting=TRUE)
+  HRESULT AddHeader(_Out_opt_ T **lplpHeader=NULL, _In_ BOOL bReplaceExisting=TRUE)
     {
     return AddHeader(T::GetNameStatic(), reinterpret_cast<CHttpHeaderBase**>(lplpHeader), bReplaceExisting);
     };
-  HRESULT AddHeader(__in_z LPCSTR szNameA, __out_opt CHttpHeaderBase **lplpHeader=NULL,
-                    __in BOOL bReplaceExisting=TRUE);
+  HRESULT AddHeader(_In_z_ LPCSTR szNameA, _Out_opt_ CHttpHeaderBase **lplpHeader=NULL,
+                    _In_ BOOL bReplaceExisting=TRUE);
 
   template<class T>
-  HRESULT AddHeader(__in_z LPCSTR szValueA, __in_opt SIZE_T nValueLen=(SIZE_T)-1, __out_opt T **lplpHeader=NULL)
+  HRESULT AddHeader(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen=(SIZE_T)-1, _Out_opt_ T **lplpHeader=NULL)
     {
     return AddHeader(T::GetNameStatic(), szValueA, nValueLen, reinterpret_cast<CHttpHeaderBase**>(lplpHeader),
                      bReplaceExisting);
     };
-  HRESULT AddHeader(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA, __in_opt SIZE_T nValueLen=(SIZE_T)-1,
-                    __out_opt CHttpHeaderBase **lplpHeader=NULL, __in BOOL bReplaceExisting=TRUE);
+  HRESULT AddHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen=(SIZE_T)-1,
+                    _Out_opt_ CHttpHeaderBase **lplpHeader=NULL, _In_ BOOL bReplaceExisting=TRUE);
 
   //NOTE: Unicode values will be UTF-8 & URL encoded
   template<class T>
-  HRESULT AddHeader(__in_z LPCWSTR szValueW, __in_opt SIZE_T nValueLen=(SIZE_T)-1, __out_opt T **lplpHeader=NULL,
-                    __in BOOL bReplaceExisting=TRUE)
+  HRESULT AddHeader(_In_z_ LPCWSTR szValueW, _In_opt_ SIZE_T nValueLen=(SIZE_T)-1, _Out_opt_ T **lplpHeader=NULL,
+                    _In_ BOOL bReplaceExisting=TRUE)
     {
     return AddHeader(T::GetNameStatic(), szValueW, nValueLen, reinterpret_cast<CHttpHeaderBase**>(lplpHeader),
                      bReplaceExisting);
     };
-  HRESULT AddHeader(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW, __in_opt SIZE_T nValueLen=(SIZE_T)-1,
-                    __out_opt CHttpHeaderBase **lplpHeader=NULL, __in BOOL bReplaceExisting=TRUE);
+  HRESULT AddHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW, _In_opt_ SIZE_T nValueLen=(SIZE_T)-1,
+                    _Out_opt_ CHttpHeaderBase **lplpHeader=NULL, _In_ BOOL bReplaceExisting=TRUE);
 
-  HRESULT RemoveHeader(__in_z LPCSTR szNameA);
-  HRESULT RemoveHeader(__in CHttpHeaderBase *lpHeader);
+  HRESULT RemoveHeader(_In_z_ LPCSTR szNameA);
+  HRESULT RemoveHeader(_In_ CHttpHeaderBase *lpHeader);
   VOID RemoveAllHeaders();
 
   SIZE_T GetHeadersCount() const;
 
-  CHttpHeaderBase* GetHeader(__in SIZE_T nIndex) const;
+  CHttpHeaderBase* GetHeader(_In_ SIZE_T nIndex) const;
   template<class T>
   T* GetHeader() const
     {
     return reinterpret_cast<T*>(GetHeader(T::GetNameStatic()));
     };
-  CHttpHeaderBase* GetHeader(__in_z LPCSTR szNameA) const;
+  CHttpHeaderBase* GetHeader(_In_z_ LPCSTR szNameA) const;
 
-  HRESULT AddCookie(__in CHttpCookie &cSrc);
-  HRESULT AddCookie(__in CHttpCookieArray &cSrc);
-  HRESULT AddCookie(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA, __in_z_opt LPCSTR szDomainA=NULL,
-                    __in_z_opt LPCSTR szPathA=NULL, __in_opt const CDateTime *lpDate=NULL,
-                    __in_opt BOOL bIsSecure=FALSE, __in_opt BOOL bIsHttpOnly=FALSE);
-  HRESULT AddCookie(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW, __in_z_opt LPCWSTR szDomainW=NULL,
-                    __in_z_opt LPCWSTR szPathW=NULL, __in_opt const CDateTime *lpDate=NULL,
-                    __in_opt BOOL bIsSecure=FALSE, __in_opt BOOL bIsHttpOnly=FALSE);
-  HRESULT RemoveCookie(__in_z LPCSTR szNameA);
-  HRESULT RemoveCookie(__in_z LPCWSTR szNameW);
+  HRESULT AddCookie(_In_ CHttpCookie &cSrc);
+  HRESULT AddCookie(_In_ CHttpCookieArray &cSrc);
+  HRESULT AddCookie(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _In_opt_z_ LPCSTR szDomainA=NULL,
+                    _In_opt_z_ LPCSTR szPathA=NULL, _In_opt_ const CDateTime *lpDate=NULL,
+                    _In_opt_ BOOL bIsSecure=FALSE, _In_opt_ BOOL bIsHttpOnly=FALSE);
+  HRESULT AddCookie(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW, _In_opt_z_ LPCWSTR szDomainW=NULL,
+                    _In_opt_z_ LPCWSTR szPathW=NULL, _In_opt_ const CDateTime *lpDate=NULL,
+                    _In_opt_ BOOL bIsSecure=FALSE, _In_opt_ BOOL bIsHttpOnly=FALSE);
+  HRESULT RemoveCookie(_In_z_ LPCSTR szNameA);
+  HRESULT RemoveCookie(_In_z_ LPCWSTR szNameW);
   VOID RemoveAllCookies();
-  CHttpCookie* GetCookie(__in SIZE_T nIndex) const;
-  CHttpCookie* GetCookie(__in_z LPCSTR szNameA) const;
-  CHttpCookie* GetCookie(__in_z LPCWSTR szNameW) const;
+  CHttpCookie* GetCookie(_In_ SIZE_T nIndex) const;
+  CHttpCookie* GetCookie(_In_z_ LPCSTR szNameA) const;
+  CHttpCookie* GetCookie(_In_z_ LPCWSTR szNameW) const;
   CHttpCookieArray* GetCookies() const;
   SIZE_T GetCookiesCount() const;
 
   eState GetParserState() const;
 
-  HRESULT SetBodyParser(__in CHttpBodyParserBase *lpParser, __in CPropertyBag &cPropBag);
+  HRESULT SetBodyParser(_In_ CHttpBodyParserBase *lpParser, _In_ CPropertyBag &cPropBag);
   CHttpBodyParserBase* GetBodyParser() const;
 
   BOOL IsActingAsServer() const
@@ -206,22 +206,22 @@ public:
 
   CHttpBodyParserBase* GetDefaultBodyParser();
 
-  static BOOL IsValidVerb(__in_z LPCSTR szVerbA);
-  static BOOL IsValidNameChar(__in CHAR chA);
+  static BOOL IsValidVerb(_In_z_ LPCSTR szVerbA);
+  static BOOL IsValidNameChar(_In_ CHAR chA);
 
-  static BOOL EncodeQuotedString(__inout CStringA &cStrA);
+  static BOOL EncodeQuotedString(_Inout_ CStringA &cStrA);
 
-  static LPCSTR GetMimeType(__in_z LPCSTR szFileNameA);
-  static LPCSTR GetMimeType(__in_z LPCWSTR szFileNameW);
+  static LPCSTR GetMimeType(_In_z_ LPCSTR szFileNameA);
+  static LPCSTR GetMimeType(_In_z_ LPCWSTR szFileNameW);
 
-  static HRESULT ParseDate(__out CDateTime &cDt, __in_z LPCSTR szDateTimeA);
+  static HRESULT ParseDate(_Out_ CDateTime &cDt, _In_z_ LPCSTR szDateTimeA);
 
 private:
-  HRESULT ParseRequestLine(__in_z LPCSTR szLineA);
-  HRESULT ParseStatusLine(__in_z LPCSTR szLineA);
-  HRESULT ParseHeader(__inout CStringA &cStrLineA);
+  HRESULT ParseRequestLine(_In_z_ LPCSTR szLineA);
+  HRESULT ParseStatusLine(_In_z_ LPCSTR szLineA);
+  HRESULT ParseHeader(_Inout_ CStringA &cStrLineA);
 
-  HRESULT ProcessContent(__in LPCVOID lpContent, __in SIZE_T nContentSize);
+  HRESULT ProcessContent(_In_ LPCVOID lpContent, _In_ SIZE_T nContentSize);
   HRESULT FlushContent();
 
 private:

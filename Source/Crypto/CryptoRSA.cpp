@@ -73,8 +73,8 @@ typedef struct tagRSA_DATA {
 
 //-----------------------------------------------------------
 
-static HRESULT GetDigest(__in MX::CCryptoRSA::eHashAlgorithm nHashAlgorithm, __out int &md_type,
-                         __out MX::CBaseDigestAlgorithm **lplpDigest);
+static HRESULT GetDigest(_In_ MX::CCryptoRSA::eHashAlgorithm nHashAlgorithm, _Out_ int &md_type,
+                         _Out_ MX::CBaseDigestAlgorithm **lplpDigest);
 static int InitializeFromPEM_PasswordCallback(char *buf, int size, int rwflag, void *userdata);
 
 //-----------------------------------------------------------
@@ -109,7 +109,7 @@ CCryptoRSA::~CCryptoRSA()
   return;
 }
 
-HRESULT CCryptoRSA::GenerateKeys(__in SIZE_T nBitsCount)
+HRESULT CCryptoRSA::GenerateKeys(_In_ SIZE_T nBitsCount)
 {
   BIGNUM *lpBn;
   RSA *lpRsa;
@@ -165,7 +165,7 @@ BOOL CCryptoRSA::HasPrivateKey() const
   return (const_cast<CCryptoRSA*>(this)->GetPrivateKey(NULL) > 0) ? TRUE : FALSE;
 }
 
-HRESULT CCryptoRSA::SetPublicKeyFromDER(__in LPCVOID lpKey, __in SIZE_T nKeySize, __in_z_opt LPCSTR szPasswordA)
+HRESULT CCryptoRSA::SetPublicKeyFromDER(_In_ LPCVOID lpKey, _In_ SIZE_T nKeySize, _In_opt_z_ LPCSTR szPasswordA)
 {
   EVP_PKEY *lpEvpKey;
   RSA *lpRsa, *lpTempRsa;
@@ -264,7 +264,7 @@ done:
   return S_OK;
 }
 
-HRESULT CCryptoRSA::SetPublicKeyFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA, __in_opt SIZE_T nPemLen)
+HRESULT CCryptoRSA::SetPublicKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA, _In_opt_ SIZE_T nPemLen)
 {
   BIO *lpBio;
   EVP_PKEY *lpEvpKey;
@@ -336,7 +336,8 @@ done:
   return S_OK;
 }
 
-SIZE_T CCryptoRSA::GetPublicKey(__out_opt LPVOID lpDest)
+#pragma warning(suppress : 6101)
+SIZE_T CCryptoRSA::GetPublicKey(_Out_opt_ LPVOID lpDest)
 {
   LPVOID lpData = NULL;
   int len;
@@ -351,7 +352,7 @@ SIZE_T CCryptoRSA::GetPublicKey(__out_opt LPVOID lpDest)
   return (len > 0) ? (SIZE_T)len : 0;
 }
 
-HRESULT CCryptoRSA::SetPrivateKeyFromDER(__in LPCVOID lpKey, __in SIZE_T nKeySize, __in_z_opt LPCSTR szPasswordA)
+HRESULT CCryptoRSA::SetPrivateKeyFromDER(_In_ LPCVOID lpKey, _In_ SIZE_T nKeySize, _In_opt_z_ LPCSTR szPasswordA)
 {
   EVP_PKEY *lpEvpKey;
   RSA *lpRsa, *lpTempRsa;
@@ -450,7 +451,7 @@ done:
   return S_OK;
 }
 
-HRESULT CCryptoRSA::SetPrivateKeyFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA, __in_opt SIZE_T nPemLen)
+HRESULT CCryptoRSA::SetPrivateKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA, _In_opt_ SIZE_T nPemLen)
 {
   BIO *lpBio;
   EVP_PKEY *lpEvpKey;
@@ -524,7 +525,8 @@ done:
   return S_OK;
 }
 
-SIZE_T CCryptoRSA::GetPrivateKey(__out_opt LPVOID lpDest)
+#pragma warning(suppress : 6101)
+SIZE_T CCryptoRSA::GetPrivateKey(_Out_opt_ LPVOID lpDest)
 {
   LPVOID lpData = NULL;
   int len;
@@ -544,7 +546,7 @@ HRESULT CCryptoRSA::BeginEncrypt()
   return BeginEncrypt(PaddingPKCS1);
 }
 
-HRESULT CCryptoRSA::BeginEncrypt(__in ePadding nPadding, __in_opt BOOL bUsePublicKey)
+HRESULT CCryptoRSA::BeginEncrypt(_In_ ePadding nPadding, _In_opt_ BOOL bUsePublicKey)
 {
   int padSize, padding;
 
@@ -594,7 +596,7 @@ HRESULT CCryptoRSA::BeginEncrypt(__in ePadding nPadding, __in_opt BOOL bUsePubli
   return S_OK;
 }
 
-HRESULT CCryptoRSA::EncryptStream(__in LPCVOID lpData, __in SIZE_T nDataLength)
+HRESULT CCryptoRSA::EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 {
   SIZE_T nMaxData;
 
@@ -656,7 +658,7 @@ HRESULT CCryptoRSA::BeginDecrypt()
   return BeginDecrypt(PaddingPKCS1);
 }
 
-HRESULT CCryptoRSA::BeginDecrypt(__in ePadding nPadding, __in_opt BOOL bUsePrivateKey)
+HRESULT CCryptoRSA::BeginDecrypt(_In_ ePadding nPadding, _In_opt_ BOOL bUsePrivateKey)
 {
   int padding;
 
@@ -702,7 +704,7 @@ HRESULT CCryptoRSA::BeginDecrypt(__in ePadding nPadding, __in_opt BOOL bUsePriva
   return S_OK;
 }
 
-HRESULT CCryptoRSA::DecryptStream(__in LPCVOID lpData, __in SIZE_T nDataLength)
+HRESULT CCryptoRSA::DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 {
   SIZE_T nMaxData;
 
@@ -764,7 +766,7 @@ HRESULT CCryptoRSA::BeginSign()
   return BeginSign(HashAlgorithmSHA1);
 }
 
-HRESULT CCryptoRSA::BeginSign(__in eHashAlgorithm nAlgorithm)
+HRESULT CCryptoRSA::BeginSign(_In_ eHashAlgorithm nAlgorithm)
 {
   TAutoDeletePtr<MX::CBaseDigestAlgorithm> cDigest;
   int md_type;
@@ -794,7 +796,7 @@ HRESULT CCryptoRSA::BeginSign(__in eHashAlgorithm nAlgorithm)
   return S_OK;
 }
 
-HRESULT CCryptoRSA::SignStream(__in LPCVOID lpData, __in SIZE_T nDataLength)
+HRESULT CCryptoRSA::SignStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 {
   HRESULT hRes;
 
@@ -858,7 +860,7 @@ HRESULT CCryptoRSA::BeginVerify()
   return BeginVerify(HashAlgorithmSHA1);
 }
 
-HRESULT CCryptoRSA::BeginVerify(__in eHashAlgorithm nAlgorithm)
+HRESULT CCryptoRSA::BeginVerify(_In_ eHashAlgorithm nAlgorithm)
 {
   TAutoDeletePtr<MX::CBaseDigestAlgorithm> cDigest;
   int md_type;
@@ -881,7 +883,7 @@ HRESULT CCryptoRSA::BeginVerify(__in eHashAlgorithm nAlgorithm)
   return S_OK;
 }
 
-HRESULT CCryptoRSA::VerifyStream(__in LPCVOID lpData, __in SIZE_T nDataLength)
+HRESULT CCryptoRSA::VerifyStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 {
   HRESULT hRes;
 
@@ -900,7 +902,7 @@ HRESULT CCryptoRSA::VerifyStream(__in LPCVOID lpData, __in SIZE_T nDataLength)
   return S_OK;
 }
 
-HRESULT CCryptoRSA::EndVerify(__in LPCVOID lpSignature, __in SIZE_T nSignatureLen)
+HRESULT CCryptoRSA::EndVerify(_In_ LPCVOID lpSignature, _In_ SIZE_T nSignatureLen)
 {
   int r;
   HRESULT hRes;
@@ -932,7 +934,7 @@ HRESULT CCryptoRSA::EndVerify(__in LPCVOID lpSignature, __in SIZE_T nSignatureLe
   return S_OK;
 }
 
-VOID CCryptoRSA::CleanUp(__in int nWhat, __in BOOL bZeroData)
+VOID CCryptoRSA::CleanUp(_In_ int nWhat, _In_ BOOL bZeroData)
 {
   switch (nWhat)
   {
@@ -1015,8 +1017,8 @@ VOID CCryptoRSA::CleanUp(__in int nWhat, __in BOOL bZeroData)
 
 //-----------------------------------------------------------
 
-static HRESULT GetDigest(__in MX::CCryptoRSA::eHashAlgorithm nHashAlgorithm, __out int &md_type,
-                         __out MX::CBaseDigestAlgorithm **lplpDigest)
+static HRESULT GetDigest(_In_ MX::CCryptoRSA::eHashAlgorithm nHashAlgorithm, _Out_ int &md_type,
+                         _Out_ MX::CBaseDigestAlgorithm **lplpDigest)
 {
   HRESULT hRes;
 
@@ -1031,7 +1033,7 @@ static HRESULT GetDigest(__in MX::CCryptoRSA::eHashAlgorithm nHashAlgorithm, __o
     case MX::CCryptoRSA::HashAlgorithmSHA512:
       {
       MX::TAutoDeletePtr<MX::CDigestAlgorithmSecureHash> cDigest;
-      MX::CDigestAlgorithmSecureHash::eAlgorithm nAlg;
+      MX::CDigestAlgorithmSecureHash::eAlgorithm nAlg = MX::CDigestAlgorithmSecureHash::AlgorithmSHA512;
 
       switch (nHashAlgorithm)
       {
@@ -1052,7 +1054,6 @@ static HRESULT GetDigest(__in MX::CCryptoRSA::eHashAlgorithm nHashAlgorithm, __o
           md_type = NID_sha384;
           break;
         case MX::CCryptoRSA::HashAlgorithmSHA512:
-          nAlg = MX::CDigestAlgorithmSecureHash::AlgorithmSHA512;
           md_type = NID_sha512;
           break;
       }
@@ -1071,7 +1072,7 @@ static HRESULT GetDigest(__in MX::CCryptoRSA::eHashAlgorithm nHashAlgorithm, __o
     case MX::CCryptoRSA::HashAlgorithmMD5:
       {
       MX::TAutoDeletePtr<MX::CDigestAlgorithmMessageDigest> cDigest;
-      MX::CDigestAlgorithmMessageDigest::eAlgorithm nAlg;
+      MX::CDigestAlgorithmMessageDigest::eAlgorithm nAlg = MX::CDigestAlgorithmMessageDigest::AlgorithmMD5;
 
       switch (nHashAlgorithm)
       {
@@ -1084,7 +1085,6 @@ static HRESULT GetDigest(__in MX::CCryptoRSA::eHashAlgorithm nHashAlgorithm, __o
           md_type = NID_md4;
           break;
         case MX::CCryptoRSA::HashAlgorithmSHA256:
-          nAlg = MX::CDigestAlgorithmMessageDigest::AlgorithmMD5;
           md_type = NID_md5;
           break;
       }

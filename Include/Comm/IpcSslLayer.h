@@ -48,17 +48,18 @@ public:
   CIpcSslLayer();
   ~CIpcSslLayer();
 
-  HRESULT Initialize(__in BOOL bServerSide, __in eProtocol nProtocol, __in CSslCertificateArray *lpCheckCertificates,
-                     __in_opt CSslCertificate *lpSelfCert=NULL, __in_opt CCryptoRSA *lpPrivKey=NULL);
+  HRESULT Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol,
+                     _In_opt_ CSslCertificateArray *lpCheckCertificates, _In_opt_ CSslCertificate *lpSelfCert=NULL,
+                     _In_opt_ CCryptoRSA *lpPrivKey=NULL);
 
 private:
   HRESULT OnConnect();
   HRESULT OnDisconnect();
 
-  HRESULT OnData(__in LPCVOID lpData, __in SIZE_T nDataSize);
-  HRESULT OnSendMsg(__in LPCVOID lpData, __in SIZE_T nDataSize);
+  HRESULT OnData(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
+  HRESULT OnSendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
 
-  HRESULT HandleSsl(__in BOOL bCanWrite);
+  HRESULT HandleSsl(_In_ BOOL bCanWrite);
   HRESULT ExecSslRead();
   HRESULT SendEncryptedOutput();
   HRESULT ProcessDataToSend();

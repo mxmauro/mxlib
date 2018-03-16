@@ -30,46 +30,46 @@
 
 namespace MX {
 
-SIZE_T StrLenA(__in_z_opt LPCSTR szSrcA);
-SIZE_T StrLenW(__in_z_opt LPCWSTR szSrcW);
+SIZE_T StrLenA(_In_opt_z_ LPCSTR szSrcA);
+SIZE_T StrLenW(_In_opt_z_ LPCWSTR szSrcW);
 
-int StrCompareA(__in_z LPCSTR szSrcA1, __in_z LPCSTR szSrcA2, __in_opt BOOL bCaseInsensitive=FALSE);
-int StrCompareW(__in_z LPCWSTR szSrcW1, __in_z LPCWSTR szSrcW2, __in_opt BOOL bCaseInsensitive=FALSE);
-int StrNCompareA(__in_z LPCSTR szSrcA1, __in_z LPCSTR szSrcA2, __in SIZE_T nLen,
-                 __in_opt BOOL bCaseInsensitive=FALSE);
-int StrNCompareW(__in_z LPCWSTR szSrcW1, __in_z LPCWSTR szSrcW2, __in SIZE_T nLen,
-                 __in_opt BOOL bCaseInsensitive=FALSE);
-int StrCompareAW(__in_z LPCSTR szSrcA1, __in_z LPCWSTR szSrcW2, __in_opt BOOL bCaseInsensitive=FALSE);
-int StrNCompareAW(__in_z LPCSTR szSrcA1, __in_z LPCWSTR szSrcW2, __in SIZE_T nLen,
-                  __in_opt BOOL bCaseInsensitive=FALSE);
+int StrCompareA(_In_z_ LPCSTR szSrcA1, _In_z_ LPCSTR szSrcA2, _In_opt_ BOOL bCaseInsensitive=FALSE);
+int StrCompareW(_In_z_ LPCWSTR szSrcW1, _In_z_ LPCWSTR szSrcW2, _In_opt_ BOOL bCaseInsensitive=FALSE);
+int StrNCompareA(_In_z_ LPCSTR szSrcA1, _In_z_ LPCSTR szSrcA2, _In_ SIZE_T nLen,
+                 _In_opt_ BOOL bCaseInsensitive=FALSE);
+int StrNCompareW(_In_z_ LPCWSTR szSrcW1, _In_z_ LPCWSTR szSrcW2, _In_ SIZE_T nLen,
+                 _In_opt_ BOOL bCaseInsensitive=FALSE);
+int StrCompareAW(_In_z_ LPCSTR szSrcA1, _In_z_ LPCWSTR szSrcW2, _In_opt_ BOOL bCaseInsensitive=FALSE);
+int StrNCompareAW(_In_z_ LPCSTR szSrcA1, _In_z_ LPCWSTR szSrcW2, _In_ SIZE_T nLen,
+                  _In_opt_ BOOL bCaseInsensitive=FALSE);
 
-LPCSTR StrChrA(__in_z LPCSTR szSrcA, __in CHAR chA, __in_opt BOOL bReverse=FALSE);
-LPCWSTR StrChrW(__in_z LPCWSTR szSrcW, __in WCHAR chW, __in_opt BOOL bReverse=FALSE);
-LPCSTR StrNChrA(__in_z LPCSTR szSrcA, __in CHAR chA, __in SIZE_T nLen, __in_opt BOOL bReverse=FALSE);
-LPCWSTR StrNChrW(__in_z LPCWSTR szSrcW, __in WCHAR chW, __in SIZE_T nLen, __in_opt BOOL bReverse=FALSE);
+LPCSTR StrChrA(_In_z_ LPCSTR szSrcA, _In_ CHAR chA, _In_opt_ BOOL bReverse=FALSE);
+LPCWSTR StrChrW(_In_z_ LPCWSTR szSrcW, _In_ WCHAR chW, _In_opt_ BOOL bReverse=FALSE);
+LPCSTR StrNChrA(_In_z_ LPCSTR szSrcA, _In_ CHAR chA, _In_ SIZE_T nLen, _In_opt_ BOOL bReverse=FALSE);
+LPCWSTR StrNChrW(_In_z_ LPCWSTR szSrcW, _In_ WCHAR chW, _In_ SIZE_T nLen, _In_opt_ BOOL bReverse=FALSE);
 
-LPCSTR StrFindA(__in_z LPCSTR szSrcA, __in_z LPCSTR szToFindA, __in_opt BOOL bReverse=FALSE,
-                __in_opt BOOL bCaseInsensitive=FALSE);
-LPCWSTR StrFindW(__in_z LPCWSTR szSrcW, __in_z LPCWSTR szToFindW, __in_opt BOOL bReverse=FALSE,
-                 __in_opt BOOL bCaseInsensitive=FALSE);
-LPCSTR StrNFindA(__in_z LPCSTR szSrcA, __in_z LPCSTR szToFindA, __in SIZE_T nLen, __in_opt BOOL bReverse=FALSE,
-                 __in_opt BOOL bCaseInsensitive=FALSE);
-LPCWSTR StrNFindW(__in_z LPCWSTR szSrcW, __in_z LPCWSTR szToFindW, __in SIZE_T nLen, __in_opt BOOL bReverse=FALSE,
-                  __in_opt BOOL bCaseInsensitive=FALSE);
+LPCSTR StrFindA(_In_z_ LPCSTR szSrcA, _In_z_ LPCSTR szToFindA, _In_opt_ BOOL bReverse=FALSE,
+                _In_opt_ BOOL bCaseInsensitive=FALSE);
+LPCWSTR StrFindW(_In_z_ LPCWSTR szSrcW, _In_z_ LPCWSTR szToFindW, _In_opt_ BOOL bReverse=FALSE,
+                 _In_opt_ BOOL bCaseInsensitive=FALSE);
+LPCSTR StrNFindA(_In_z_ LPCSTR szSrcA, _In_z_ LPCSTR szToFindA, _In_ SIZE_T nLen, _In_opt_ BOOL bReverse=FALSE,
+                 _In_opt_ BOOL bCaseInsensitive=FALSE);
+LPCWSTR StrNFindW(_In_z_ LPCWSTR szSrcW, _In_z_ LPCWSTR szToFindW, _In_ SIZE_T nLen, _In_opt_ BOOL bReverse=FALSE,
+                  _In_opt_ BOOL bCaseInsensitive=FALSE);
 
-CHAR CharToLowerA(__in CHAR chA);
-CHAR CharToUpperA(__in CHAR chA);
-WCHAR CharToLowerW(__in WCHAR chW);
-WCHAR CharToUpperW(__in WCHAR chW);
+CHAR CharToLowerA(_In_ CHAR chA);
+CHAR CharToUpperA(_In_ CHAR chA);
+WCHAR CharToLowerW(_In_ WCHAR chW);
+WCHAR CharToUpperW(_In_ WCHAR chW);
 
-VOID StrToLowerA(__inout_z LPSTR szSrcA);
-VOID StrNToLowerA(__inout_z LPSTR szSrcA, __in SIZE_T nLen);
-VOID StrToLowerW(__inout_z LPWSTR szSrcW);
-VOID StrNToLowerW(__inout_z LPWSTR szSrcW, __in SIZE_T nLen);
-VOID StrToUpperA(__inout_z LPSTR szSrcA);
-VOID StrNToUpperA(__inout_z LPSTR szSrcA, __in SIZE_T nLen);
-VOID StrToUpperW(__inout_z LPWSTR szSrcW);
-VOID StrNToUpperW(__inout_z LPWSTR szSrcW, __in SIZE_T nLen);
+VOID StrToLowerA(_Inout_z_ LPSTR szSrcA);
+VOID StrNToLowerA(_Inout_updates_(nLen) LPSTR szSrcA, _In_ SIZE_T nLen);
+VOID StrToLowerW(_Inout_z_ LPWSTR szSrcW);
+VOID StrNToLowerW(_Inout_updates_(nLen) LPWSTR szSrcW, _In_ SIZE_T nLen);
+VOID StrToUpperA(_Inout_z_ LPSTR szSrcA);
+VOID StrNToUpperA(_Inout_updates_(nLen) LPSTR szSrcA, _In_ SIZE_T nLen);
+VOID StrToUpperW(_Inout_z_ LPWSTR szSrcW);
+VOID StrNToUpperW(_Inout_updates_(nLen) LPWSTR szSrcW, _In_ SIZE_T nLen);
 
 //-----------------------------------------------------------
 
@@ -100,60 +100,60 @@ public:
     return (szStrA != NULL && *szStrA != 0) ? FALSE : TRUE;
     };
 
-  virtual BOOL Copy(__in_z_opt LPCSTR szSrcA);
-  virtual BOOL CopyN(__in_nz_opt LPCSTR szSrcA, __in SIZE_T nSrcLen);
-  virtual BOOL Concat(__in_z_opt LPCSTR szSrcA);
-  virtual BOOL ConcatN(__in_nz_opt LPCSTR szSrcA, __in SIZE_T nSrcLen);
+  virtual BOOL Copy(_In_opt_z_ LPCSTR szSrcA);
+  virtual BOOL CopyN(_In_reads_or_z_opt_(nSrcLen) LPCSTR szSrcA, _In_ SIZE_T nSrcLen);
+  virtual BOOL Concat(_In_opt_z_ LPCSTR szSrcA);
+  virtual BOOL ConcatN(_In_reads_or_z_opt_(nSrcLen) LPCSTR szSrcA, _In_ SIZE_T nSrcLen);
 
-  virtual BOOL Copy(__in_z_opt LPCWSTR szSrcW);
-  virtual BOOL CopyN(__in_nz_opt LPCWSTR szSrcW, __in SIZE_T nSrcLen);
-  virtual BOOL Concat(__in_z_opt LPCWSTR szSrcW);
-  virtual BOOL ConcatN(__in_nz_opt LPCWSTR szSrcW, __in SIZE_T nSrcLen);
+  virtual BOOL Copy(_In_opt_z_ LPCWSTR szSrcW);
+  virtual BOOL CopyN(_In_reads_or_z_opt_(nSrcLen) LPCWSTR szSrcW, _In_ SIZE_T nSrcLen);
+  virtual BOOL Concat(_In_opt_z_ LPCWSTR szSrcW);
+  virtual BOOL ConcatN(_In_reads_or_z_opt_(nSrcLen) LPCWSTR szSrcW, _In_ SIZE_T nSrcLen);
 
-  virtual BOOL Copy(__in PCMX_ANSI_STRING pASStr);
-  virtual BOOL Concat(__in PCMX_ANSI_STRING pASStr);
+  virtual BOOL Copy(_In_ PCMX_ANSI_STRING pASStr);
+  virtual BOOL Concat(_In_ PCMX_ANSI_STRING pASStr);
 
-  virtual BOOL Copy(__in LONG nSrc);
-  virtual BOOL Concat(__in LONG nSrc);
-  virtual BOOL Copy(__in ULONG nSrc);
-  virtual BOOL Concat(__in ULONG nSrc);
+  virtual BOOL Copy(_In_ LONG nSrc);
+  virtual BOOL Concat(_In_ LONG nSrc);
+  virtual BOOL Copy(_In_ ULONG nSrc);
+  virtual BOOL Concat(_In_ ULONG nSrc);
 
-  virtual BOOL Copy(__in LONGLONG nSrc);
-  virtual BOOL Concat(__in LONGLONG nSrc);
-  virtual BOOL Copy(__in ULONGLONG nSrc);
-  virtual BOOL Concat(__in ULONGLONG nSrc);
+  virtual BOOL Copy(_In_ LONGLONG nSrc);
+  virtual BOOL Concat(_In_ LONGLONG nSrc);
+  virtual BOOL Copy(_In_ ULONGLONG nSrc);
+  virtual BOOL Concat(_In_ ULONGLONG nSrc);
 
-  virtual BOOL Format(__in_z LPCSTR szFormatA, ...);
-  virtual BOOL Format(__in_z LPCWSTR szFormatW, ...);
-  virtual BOOL FormatV(__in_z LPCSTR szFormatA, __in va_list argptr);
-  virtual BOOL FormatV(__in_z LPCWSTR szFormatW, __in va_list argptr);
+  virtual BOOL Format(_In_z_ _Printf_format_string_ LPCSTR szFormatA, ...);
+  virtual BOOL Format(_In_z_ _Printf_format_string_ LPCWSTR szFormatW, ...);
+  virtual BOOL FormatV(_In_z_ _Printf_format_string_params_(1) LPCSTR szFormatA, _In_ va_list argptr);
+  virtual BOOL FormatV(_In_z_ _Printf_format_string_params_(1) LPCWSTR szFormatW, _In_ va_list argptr);
 
-  virtual BOOL AppendFormat(__in_z LPCSTR szFormatA, ...);
-  virtual BOOL AppendFormat(__in_z LPCWSTR szFormatW, ...);
-  virtual BOOL AppendFormatV(__in_z LPCSTR szFormatA, __in va_list argptr);
-  virtual BOOL AppendFormatV(__in_z LPCWSTR szFormatW, __in va_list argptr);
+  virtual BOOL AppendFormat(_In_z_ _Printf_format_string_ LPCSTR szFormatA, ...);
+  virtual BOOL AppendFormat(_In_z_ _Printf_format_string_ LPCWSTR szFormatW, ...);
+  virtual BOOL AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCSTR szFormatA, _In_ va_list argptr);
+  virtual BOOL AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCWSTR szFormatW, _In_ va_list argptr);
 
-  virtual BOOL Insert(__in_z_opt LPCSTR szSrcA, __in SIZE_T nInsertPosition);
-  virtual BOOL InsertN(__in_nz_opt LPCSTR szSrcA, __in SIZE_T nInsertPosition, __in SIZE_T nSrcLen);
-  virtual VOID Delete(__in SIZE_T nStartChar, __in SIZE_T nChars);
+  virtual BOOL Insert(_In_opt_z_ LPCSTR szSrcA, _In_ SIZE_T nInsertPosition);
+  virtual BOOL InsertN(_In_reads_or_z_opt_(nSrcLen) LPCSTR szSrcA, _In_ SIZE_T nInsertPosition, _In_ SIZE_T nSrcLen);
+  virtual VOID Delete(_In_ SIZE_T nStartChar, _In_ SIZE_T nChars);
 
-  virtual BOOL StartsWith(__in_z LPCSTR szStrA, __in_opt BOOL bCaseInsensitive=TRUE);
-  virtual BOOL EndsWith(__in_z LPCSTR szStrA, __in_opt BOOL bCaseInsensitive=TRUE);
-  virtual LPCSTR Contains(__in_z LPCSTR szStrA, __in_opt BOOL bCaseInsensitive=TRUE);
+  virtual BOOL StartsWith(_In_z_ LPCSTR szStrA, _In_opt_ BOOL bCaseInsensitive=TRUE);
+  virtual BOOL EndsWith(_In_z_ LPCSTR szStrA, _In_opt_ BOOL bCaseInsensitive=TRUE);
+  virtual LPCSTR Contains(_In_z_ LPCSTR szStrA, _In_opt_ BOOL bCaseInsensitive=TRUE);
 
-  virtual VOID Attach(__in_z LPSTR szSrcA);
+  virtual VOID Attach(_In_z_ LPSTR szSrcA);
   virtual LPSTR Detach();
 
-  virtual BOOL EnsureBuffer(__in SIZE_T nChars);
+  virtual BOOL EnsureBuffer(_In_ SIZE_T nChars);
 
-  virtual CHAR operator[](__in SIZE_T nIndex) const
+  virtual CHAR operator[](_In_ SIZE_T nIndex) const
     {
     return (szStrA != NULL) ? szStrA[nIndex] : 0;
     };
-  virtual CHAR& operator[](__in SIZE_T nIndex);
+  virtual CHAR& operator[](_In_ SIZE_T nIndex);
 
   LPWSTR ToWide();
-  static LPWSTR Ansi2Wide(__in_z LPCSTR szStrA, __in SIZE_T nSrcLen);
+  static LPWSTR Ansi2Wide(_In_z_ LPCSTR szStrA, _In_ SIZE_T nSrcLen);
 
 private:
   LPSTR szStrA;
@@ -189,60 +189,60 @@ public:
     return (szStrW != NULL && *szStrW != 0) ? FALSE : TRUE;
     };
 
-  virtual BOOL Copy(__in_z_opt LPCSTR szSrcA);
-  virtual BOOL CopyN(__in_nz_opt LPCSTR szSrcA, __in SIZE_T nSrcLen);
-  virtual BOOL Concat(__in_z_opt LPCSTR szSrcA);
-  virtual BOOL ConcatN(__in_nz_opt LPCSTR szSrcA, __in SIZE_T nSrcLen);
+  virtual BOOL Copy(_In_opt_z_ LPCSTR szSrcA);
+  virtual BOOL CopyN(_In_reads_or_z_opt_(nSrcLen) LPCSTR szSrcA, _In_ SIZE_T nSrcLen);
+  virtual BOOL Concat(_In_opt_z_ LPCSTR szSrcA);
+  virtual BOOL ConcatN(_In_reads_or_z_opt_(nSrcLen) LPCSTR szSrcA, _In_ SIZE_T nSrcLen);
 
-  virtual BOOL Copy(__in_z_opt LPCWSTR szSrcW);
-  virtual BOOL CopyN(__in_nz_opt LPCWSTR szSrcW, __in SIZE_T nSrcLen);
-  virtual BOOL Concat(__in_z_opt LPCWSTR szSrcW);
-  virtual BOOL ConcatN(__in_nz_opt LPCWSTR szSrcW, __in SIZE_T nSrcLen);
+  virtual BOOL Copy(_In_opt_z_ LPCWSTR szSrcW);
+  virtual BOOL CopyN(_In_reads_or_z_opt_(nSrcLen) LPCWSTR szSrcW, _In_ SIZE_T nSrcLen);
+  virtual BOOL Concat(_In_opt_z_ LPCWSTR szSrcW);
+  virtual BOOL ConcatN(_In_reads_or_z_opt_(nSrcLen) LPCWSTR szSrcW, _In_ SIZE_T nSrcLen);
 
-  virtual BOOL Copy(__in PCMX_UNICODE_STRING pUSStr);
-  virtual BOOL Concat(__in PCMX_UNICODE_STRING pUSStr);
+  virtual BOOL Copy(_In_ PCMX_UNICODE_STRING pUSStr);
+  virtual BOOL Concat(_In_ PCMX_UNICODE_STRING pUSStr);
 
-  virtual BOOL Copy(__in LONG nSrc);
-  virtual BOOL Concat(__in LONG nSrc);
-  virtual BOOL Copy(__in ULONG nSrc);
-  virtual BOOL Concat(__in ULONG nSrc);
+  virtual BOOL Copy(_In_ LONG nSrc);
+  virtual BOOL Concat(_In_ LONG nSrc);
+  virtual BOOL Copy(_In_ ULONG nSrc);
+  virtual BOOL Concat(_In_ ULONG nSrc);
 
-  virtual BOOL Copy(__in LONGLONG nSrc);
-  virtual BOOL Concat(__in LONGLONG nSrc);
-  virtual BOOL Copy(__in ULONGLONG nSrc);
-  virtual BOOL Concat(__in ULONGLONG nSrc);
+  virtual BOOL Copy(_In_ LONGLONG nSrc);
+  virtual BOOL Concat(_In_ LONGLONG nSrc);
+  virtual BOOL Copy(_In_ ULONGLONG nSrc);
+  virtual BOOL Concat(_In_ ULONGLONG nSrc);
 
-  virtual BOOL Format(__in_z LPCSTR szFormatA, ...);
-  virtual BOOL Format(__in_z LPCWSTR szFormatW, ...);
-  virtual BOOL FormatV(__in_z LPCSTR szFormatA, __in va_list argptr);
-  virtual BOOL FormatV(__in_z LPCWSTR szFormatW, __in va_list argptr);
+  virtual BOOL Format(_In_z_ _Printf_format_string_ LPCSTR szFormatA, ...);
+  virtual BOOL Format(_In_z_ _Printf_format_string_ LPCWSTR szFormatW, ...);
+  virtual BOOL FormatV(_In_z_ _Printf_format_string_params_(1) LPCSTR szFormatA, _In_ va_list argptr);
+  virtual BOOL FormatV(_In_z_ _Printf_format_string_params_(1) LPCWSTR szFormatW, _In_ va_list argptr);
 
-  virtual BOOL AppendFormat(__in_z LPCSTR szFormatA, ...);
-  virtual BOOL AppendFormat(__in_z LPCWSTR szFormatW, ...);
-  virtual BOOL AppendFormatV(__in_z LPCSTR szFormatA, __in va_list argptr);
-  virtual BOOL AppendFormatV(__in_z LPCWSTR szFormatW, __in va_list argptr);
+  virtual BOOL AppendFormat(_In_z_ _Printf_format_string_ LPCSTR szFormatA, ...);
+  virtual BOOL AppendFormat(_In_z_ _Printf_format_string_ LPCWSTR szFormatW, ...);
+  virtual BOOL AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCSTR szFormatA, _In_ va_list argptr);
+  virtual BOOL AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCWSTR szFormatW, _In_ va_list argptr);
 
-  virtual BOOL Insert(__in_z_opt LPCWSTR szSrcW, __in SIZE_T nInsertPosition);
-  virtual BOOL InsertN(__in_nz_opt LPCWSTR szSrcW, __in SIZE_T nInsertPosition, __in SIZE_T nSrcLen);
-  virtual VOID Delete(__in SIZE_T nStartChar, __in SIZE_T nChars);
+  virtual BOOL Insert(_In_opt_z_ LPCWSTR szSrcW, _In_ SIZE_T nInsertPosition);
+  virtual BOOL InsertN(_In_reads_or_z_opt_(nSrcLen) LPCWSTR szSrcW, _In_ SIZE_T nInsertPosition, _In_ SIZE_T nSrcLen);
+  virtual VOID Delete(_In_ SIZE_T nStartChar, _In_ SIZE_T nChars);
 
-  virtual BOOL StartsWith(__in_z LPCWSTR szStrW, __in_opt BOOL bCaseInsensitive=TRUE);
-  virtual BOOL EndsWith(__in_z LPCWSTR szStrW, __in_opt BOOL bCaseInsensitive=TRUE);
-  virtual LPCWSTR Contains(__in_z LPCWSTR szStrW, __in_opt BOOL bCaseInsensitive=TRUE);
+  virtual BOOL StartsWith(_In_z_ LPCWSTR szStrW, _In_opt_ BOOL bCaseInsensitive=TRUE);
+  virtual BOOL EndsWith(_In_z_ LPCWSTR szStrW, _In_opt_ BOOL bCaseInsensitive=TRUE);
+  virtual LPCWSTR Contains(_In_z_ LPCWSTR szStrW, _In_opt_ BOOL bCaseInsensitive=TRUE);
 
-  virtual VOID Attach(__in_z LPWSTR szSrcW);
+  virtual VOID Attach(_In_z_ LPWSTR szSrcW);
   virtual LPWSTR Detach();
 
-  virtual BOOL EnsureBuffer(__in SIZE_T nChars);
+  virtual BOOL EnsureBuffer(_In_ SIZE_T nChars);
 
-  WCHAR operator[](__in SIZE_T nIndex) const
+  WCHAR operator[](_In_ SIZE_T nIndex) const
     {
     return (szStrW != NULL) ? szStrW[nIndex] : 0;
     };
-  WCHAR& operator[](__in SIZE_T nIndex);
+  WCHAR& operator[](_In_ SIZE_T nIndex);
 
   LPSTR ToAnsi();
-  static LPSTR Wide2Ansi(__in_z LPCWSTR szStrW, __in SIZE_T nSrcLen);
+  static LPSTR Wide2Ansi(_In_z_ LPCWSTR szStrW, _In_ SIZE_T nSrcLen);
 
 private:
   LPWSTR szStrW;

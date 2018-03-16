@@ -46,7 +46,7 @@ VOID CPropertyBag::Reset()
   return;
 }
 
-HRESULT CPropertyBag::Clear(__in_z LPCSTR szNameA)
+HRESULT CPropertyBag::Clear(_In_z_ LPCSTR szNameA)
 {
   SIZE_T nIndex;
 
@@ -63,7 +63,7 @@ HRESULT CPropertyBag::Clear(__in_z LPCSTR szNameA)
   return S_OK;
 }
 
-HRESULT CPropertyBag::SetNull(__in_z LPCSTR szNameA)
+HRESULT CPropertyBag::SetNull(_In_z_ LPCSTR szNameA)
 {
   PROPERTY *lpNewProp;
   SIZE_T nNameLen;
@@ -89,7 +89,7 @@ HRESULT CPropertyBag::SetNull(__in_z LPCSTR szNameA)
   return S_OK;
 }
 
-HRESULT CPropertyBag::SetDWord(__in_z LPCSTR szNameA, __in DWORD dwValue)
+HRESULT CPropertyBag::SetDWord(_In_z_ LPCSTR szNameA, _In_ DWORD dwValue)
 {
   PROPERTY *lpNewProp;
   SIZE_T nNameLen;
@@ -116,7 +116,7 @@ HRESULT CPropertyBag::SetDWord(__in_z LPCSTR szNameA, __in DWORD dwValue)
   return S_OK;
 }
 
-HRESULT CPropertyBag::SetQWord(__in_z LPCSTR szNameA, __in ULONGLONG ullValue)
+HRESULT CPropertyBag::SetQWord(_In_z_ LPCSTR szNameA, _In_ ULONGLONG ullValue)
 {
   PROPERTY *lpNewProp;
   SIZE_T nNameLen;
@@ -143,7 +143,7 @@ HRESULT CPropertyBag::SetQWord(__in_z LPCSTR szNameA, __in ULONGLONG ullValue)
   return S_OK;
 }
 
-HRESULT CPropertyBag::SetDouble(__in_z LPCSTR szNameA, __in double nValue)
+HRESULT CPropertyBag::SetDouble(_In_z_ LPCSTR szNameA, _In_ double nValue)
 {
   PROPERTY *lpNewProp;
   SIZE_T nNameLen;
@@ -170,7 +170,7 @@ HRESULT CPropertyBag::SetDouble(__in_z LPCSTR szNameA, __in double nValue)
   return S_OK;
 }
 
-HRESULT CPropertyBag::SetString(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA)
+HRESULT CPropertyBag::SetString(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA)
 {
   PROPERTY *lpNewProp;
   SIZE_T nNameLen, nValueLen;
@@ -199,7 +199,7 @@ HRESULT CPropertyBag::SetString(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CPropertyBag::SetString(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW)
+HRESULT CPropertyBag::SetString(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW)
 {
   PROPERTY *lpNewProp;
   SIZE_T nNameLen, nValueLen;
@@ -228,7 +228,7 @@ HRESULT CPropertyBag::SetString(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW)
   return S_OK;
 }
 
-LPCSTR CPropertyBag::GetAt(__in SIZE_T nIndex) const
+LPCSTR CPropertyBag::GetAt(_In_ SIZE_T nIndex) const
 {
   if (nIndex >= cPropertiesList.GetCount())
     return NULL;
@@ -236,7 +236,7 @@ LPCSTR CPropertyBag::GetAt(__in SIZE_T nIndex) const
   return cPropertiesList[nIndex]->szNameA;
 }
 
-CPropertyBag::eType CPropertyBag::GetType(__in SIZE_T nIndex) const
+CPropertyBag::eType CPropertyBag::GetType(_In_ SIZE_T nIndex) const
 {
   if (nIndex >= cPropertiesList.GetCount())
     return PropertyTypeUndefined;
@@ -244,7 +244,7 @@ CPropertyBag::eType CPropertyBag::GetType(__in SIZE_T nIndex) const
   return cPropertiesList[nIndex]->nType;
 }
 
-CPropertyBag::eType CPropertyBag::GetType(__in_z LPCSTR szNameA) const
+CPropertyBag::eType CPropertyBag::GetType(_In_z_ LPCSTR szNameA) const
 {
   SIZE_T nIndex;
 
@@ -257,7 +257,7 @@ CPropertyBag::eType CPropertyBag::GetType(__in_z LPCSTR szNameA) const
   return cPropertiesList[nIndex]->nType;
 }
 
-HRESULT CPropertyBag::GetDWord(__in SIZE_T nIndex, __out DWORD &dwValue, __in_opt DWORD dwDefValue)
+HRESULT CPropertyBag::GetDWord(_In_ SIZE_T nIndex, _Out_ DWORD &dwValue, _In_opt_ DWORD dwDefValue)
 {
   dwValue = dwDefValue;
   if (nIndex >= cPropertiesList.GetCount())
@@ -269,7 +269,7 @@ HRESULT CPropertyBag::GetDWord(__in SIZE_T nIndex, __out DWORD &dwValue, __in_op
   return S_OK;
 }
 
-HRESULT CPropertyBag::GetQWord(__in SIZE_T nIndex, __out ULONGLONG &ullValue, __in_opt ULONGLONG ullDefValue)
+HRESULT CPropertyBag::GetQWord(_In_ SIZE_T nIndex, _Out_ ULONGLONG &ullValue, _In_opt_ ULONGLONG ullDefValue)
 {
   ullValue = ullDefValue;
   if (nIndex >= cPropertiesList.GetCount())
@@ -281,7 +281,7 @@ HRESULT CPropertyBag::GetQWord(__in SIZE_T nIndex, __out ULONGLONG &ullValue, __
   return S_OK;
 }
 
-HRESULT CPropertyBag::GetDouble(__in SIZE_T nIndex, __out double &nValue, __in_opt double nDefValue)
+HRESULT CPropertyBag::GetDouble(_In_ SIZE_T nIndex, _Out_ double &nValue, _In_opt_ double nDefValue)
 {
   nValue = nDefValue;
   if (nIndex >= cPropertiesList.GetCount())
@@ -293,7 +293,7 @@ HRESULT CPropertyBag::GetDouble(__in SIZE_T nIndex, __out double &nValue, __in_o
   return S_OK;
 }
 
-HRESULT CPropertyBag::GetString(__in SIZE_T nIndex, __out LPCSTR &szValueA, __in_z_opt LPCSTR szDefValueA)
+HRESULT CPropertyBag::GetString(_In_ SIZE_T nIndex, _Out_ LPCSTR &szValueA, _In_opt_z_ LPCSTR szDefValueA)
 {
   szValueA = szDefValueA;
   if (nIndex >= cPropertiesList.GetCount())
@@ -305,7 +305,7 @@ HRESULT CPropertyBag::GetString(__in SIZE_T nIndex, __out LPCSTR &szValueA, __in
   return S_OK;
 }
 
-HRESULT CPropertyBag::GetString(__in SIZE_T nIndex, __out LPCWSTR &szValueW, __in_z_opt LPCWSTR szDefValueW)
+HRESULT CPropertyBag::GetString(_In_ SIZE_T nIndex, _Out_ LPCWSTR &szValueW, _In_opt_z_ LPCWSTR szDefValueW)
 {
   szValueW = szDefValueW;
   if (nIndex >= cPropertiesList.GetCount())
@@ -317,7 +317,7 @@ HRESULT CPropertyBag::GetString(__in SIZE_T nIndex, __out LPCWSTR &szValueW, __i
   return S_OK;
 }
 
-HRESULT CPropertyBag::GetDWord(__in_z LPCSTR szNameA, __out DWORD &dwValue, __in_opt DWORD dwDefValue)
+HRESULT CPropertyBag::GetDWord(_In_z_ LPCSTR szNameA, _Out_ DWORD &dwValue, _In_opt_ DWORD dwDefValue)
 {
   SIZE_T nIndex;
 
@@ -336,7 +336,7 @@ HRESULT CPropertyBag::GetDWord(__in_z LPCSTR szNameA, __out DWORD &dwValue, __in
   return S_OK;
 }
 
-HRESULT CPropertyBag::GetQWord(__in_z LPCSTR szNameA, __out ULONGLONG &ullValue, __in_opt ULONGLONG ullDefValue)
+HRESULT CPropertyBag::GetQWord(_In_z_ LPCSTR szNameA, _Out_ ULONGLONG &ullValue, _In_opt_ ULONGLONG ullDefValue)
 {
   SIZE_T nIndex;
 
@@ -355,7 +355,7 @@ HRESULT CPropertyBag::GetQWord(__in_z LPCSTR szNameA, __out ULONGLONG &ullValue,
   return S_OK;
 }
 
-HRESULT CPropertyBag::GetDouble(__in_z LPCSTR szNameA, __out double &nValue, __in_opt double nDefValue)
+HRESULT CPropertyBag::GetDouble(_In_z_ LPCSTR szNameA, _Out_ double &nValue, _In_opt_ double nDefValue)
 {
   SIZE_T nIndex;
 
@@ -374,7 +374,7 @@ HRESULT CPropertyBag::GetDouble(__in_z LPCSTR szNameA, __out double &nValue, __i
   return S_OK;
 }
 
-HRESULT CPropertyBag::GetString(__in_z LPCSTR szNameA, __out LPCSTR &szValueA, __in_z_opt LPCSTR szDefValueA)
+HRESULT CPropertyBag::GetString(_In_z_ LPCSTR szNameA, _Out_ LPCSTR &szValueA, _In_opt_z_ LPCSTR szDefValueA)
 {
   SIZE_T nIndex;
 
@@ -393,7 +393,7 @@ HRESULT CPropertyBag::GetString(__in_z LPCSTR szNameA, __out LPCSTR &szValueA, _
   return S_OK;
 }
 
-HRESULT CPropertyBag::GetString(__in_z LPCSTR szNameA, __out LPCWSTR &szValueW, __in_z_opt LPCWSTR szDefValueW)
+HRESULT CPropertyBag::GetString(_In_z_ LPCSTR szNameA, _Out_ LPCWSTR &szValueW, _In_opt_z_ LPCWSTR szDefValueW)
 {
   SIZE_T nIndex;
 
@@ -413,7 +413,7 @@ HRESULT CPropertyBag::GetString(__in_z LPCSTR szNameA, __out LPCWSTR &szValueW, 
 }
 
 
-BOOL CPropertyBag::Insert(__in PROPERTY *lpNewProp)
+BOOL CPropertyBag::Insert(_In_ PROPERTY *lpNewProp)
 {
   SIZE_T nIndex;
 
@@ -428,7 +428,7 @@ BOOL CPropertyBag::Insert(__in PROPERTY *lpNewProp)
   return cPropertiesList.SortedInsert(lpNewProp, &CPropertyBag::SearchCompareFunc, NULL);
 }
 
-SIZE_T CPropertyBag::Find(__in_z LPCSTR szNameA)
+SIZE_T CPropertyBag::Find(_In_z_ LPCSTR szNameA)
 {
   PROPERTY sProp, *lpProp;
 
@@ -437,7 +437,7 @@ SIZE_T CPropertyBag::Find(__in_z LPCSTR szNameA)
   return cPropertiesList.BinarySearch(&lpProp, &CPropertyBag::SearchCompareFunc, NULL);
 }
 
-int CPropertyBag::SearchCompareFunc(__in LPVOID lpContext, __in PROPERTY **lpItem1, __in PROPERTY **lpItem2)
+int CPropertyBag::SearchCompareFunc(_In_ LPVOID lpContext, _In_ PROPERTY **lpItem1, _In_ PROPERTY **lpItem2)
 {
   return StrCompareA((*lpItem1)->szNameA, (*lpItem2)->szNameA, TRUE);
 }

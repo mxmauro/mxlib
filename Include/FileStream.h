@@ -37,18 +37,18 @@ public:
   CFileStream();
   ~CFileStream();
 
-  HRESULT Create(__in LPCWSTR szFileNameW, __in_opt DWORD dwDesiredAccess=GENERIC_READ,
-                 __in_opt DWORD dwShareMode=FILE_SHARE_READ, __in_opt DWORD dwCreationDisposition=OPEN_EXISTING,
-                 __in_opt DWORD dwFlagsAndAttributes=FILE_ATTRIBUTE_NORMAL,
-                 __in_opt LPSECURITY_ATTRIBUTES lpSecurityAttributes=NULL);
+  HRESULT Create(_In_ LPCWSTR szFileNameW, _In_opt_ DWORD dwDesiredAccess=GENERIC_READ,
+                 _In_opt_ DWORD dwShareMode=FILE_SHARE_READ, _In_opt_ DWORD dwCreationDisposition=OPEN_EXISTING,
+                 _In_opt_ DWORD dwFlagsAndAttributes=FILE_ATTRIBUTE_NORMAL,
+                 _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes=NULL);
   VOID Close();
 
-  HRESULT Read(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_T &nReaded,
-               __in_opt ULONGLONG nStartOffset=ULONGLONG_MAX);
-  HRESULT Write(__in LPCVOID lpSrc, __in SIZE_T nBytes, __out SIZE_T &nWritten,
-                __in_opt ULONGLONG nStartOffset=ULONGLONG_MAX);
+  HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nReaded,
+               _In_opt_ ULONGLONG nStartOffset=ULONGLONG_MAX);
+  HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nWritten,
+                _In_opt_ ULONGLONG nStartOffset=ULONGLONG_MAX);
 
-  HRESULT Seek(__in ULONGLONG nPosition, __in_opt eSeekMethod nMethod=SeekStart);
+  HRESULT Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod=SeekStart);
 
   ULONGLONG GetLength() const;
 

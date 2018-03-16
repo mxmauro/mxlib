@@ -38,14 +38,14 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Host)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
-  HRESULT SetHost(__in_z LPCWSTR szHostW);
+  HRESULT SetHost(_In_z_ LPCWSTR szHostW);
   LPCWSTR GetHost() const;
 
-  HRESULT SetPort(__in int nPort);
+  HRESULT SetPort(_In_ int nPort);
   int GetPort() const; //-1 == undefined
 
 private:

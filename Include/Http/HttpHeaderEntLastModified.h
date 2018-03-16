@@ -39,11 +39,11 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Last-Modified)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
-  HRESULT SetDate(__in CDateTime &cDt);
+  HRESULT SetDate(_In_ CDateTime &cDt);
   CDateTime GetDate() const;
 
 private:

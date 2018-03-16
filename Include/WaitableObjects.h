@@ -44,62 +44,37 @@ namespace MX {
 BOOL IsMultiProcessor();
 VOID _YieldProcessor();
 
-static __inline LONG __InterlockedRead(__inout LONG volatile *lpnValue)
-{
-  return _InterlockedExchangeAdd(lpnValue, 0L);
-}
+#define __InterlockedRead(lpnValue) _InterlockedExchangeAdd(lpnValue, 0L)
 
 #if defined(_M_IX86)
-static __inline LPVOID __InterlockedReadPointer(__inout LPVOID volatile *lpValue)
-{
-  return (LPVOID)_InterlockedExchangeAdd((LONG volatile*)lpValue, 0L);
-}
 
-static __inline LPVOID __InterlockedExchangePointer(__inout LPVOID volatile *lpValue, __in LPVOID lpPtr)
-{
-  return (LPVOID)_InterlockedExchange((LONG volatile*)lpValue, (long)lpPtr);
-}
-
-static __inline LPVOID __InterlockedCompareExchangePointer(__inout LPVOID volatile *lpValue, __in LPVOID lpExchange,
-                                                           __in LPVOID lpComperand)
-{
-  return (LPVOID)_InterlockedCompareExchange((LONG volatile*)lpValue, (long)lpExchange, (long)lpComperand);
-}
+#define __InterlockedReadPointer(lpValue)                                                          \
+           ((LPVOID)_InterlockedExchangeAdd((LONG volatile*)lpValue, 0L))
+#define __InterlockedExchangePointer(lpValue, lpPtr)                                               \
+           ((LPVOID)_InterlockedExchange((LONG volatile*)lpValue, PtrToLong(lpPtr)))
+#define __InterlockedCompareExchangePointer(lpValue, lpExchange, lpComperand)                      \
+           ((LPVOID)_InterlockedCompareExchange((LONG volatile*)lpValue, (LONG)lpExchange,         \
+                                                PtrToLong(lpComperand)))
 
 #elif defined(_M_X64)
 
-static __inline LPVOID __InterlockedReadPointer(__inout LPVOID volatile *lpValue)
-{
-  return (LPVOID)_InterlockedExchangeAdd64((__int64 volatile*)lpValue, 0i64);
-}
+#define __InterlockedReadPointer(lpValue)                                                          \
+           ((LPVOID)_InterlockedExchangeAdd64((__int64 volatile*)lpValue, 0i64))
+#define __InterlockedExchangePointer(lpValue, lpPtr)                                               \
+           ((LPVOID)_InterlockedExchange64((__int64 volatile*)lpValue, (__int64)lpPtr))
+#define __InterlockedCompareExchangePointer(lpValue, lpExchange, lpComperand)                      \
+           ((LPVOID)_InterlockedCompareExchange64((__int64 volatile*)lpValue, (__int64)lpExchange, \
+                                                  (__int64)lpComperand))
 
-static __inline LPVOID __InterlockedExchangePointer(__inout LPVOID volatile *lpValue, __in LPVOID lpPtr)
-{
-  return (LPVOID)_InterlockedExchange64((__int64 volatile*)lpValue, (__int64)lpPtr);
-}
-
-static __inline LPVOID __InterlockedCompareExchangePointer(__inout LPVOID volatile *lpValue, __in LPVOID lpExchange,
-                                                           __in LPVOID lpComperand)
-{
-  return (LPVOID)_InterlockedCompareExchange64((__int64 volatile*)lpValue, (__int64)lpExchange, (__int64)lpComperand);
-}
 #endif
 
-static __forceinline SIZE_T __InterlockedReadSizeT(__inout SIZE_T volatile *lpnValue)
-{
-  return (SIZE_T)__InterlockedReadPointer((LPVOID volatile*)lpnValue);
-}
-
-static __forceinline SIZE_T __InterlockedExchangeSizeT(__inout SIZE_T volatile *lpnValue, __in SIZE_T nNewValue)
-{
-  return (SIZE_T)__InterlockedExchangePointer((LPVOID volatile*)lpnValue, (LPVOID)nNewValue);
-}
-
-static __forceinline SIZE_T __InterlockedCompareExchangeSizeT(__inout SIZE_T volatile *lpnValue, __in SIZE_T nExchange,
-                                                              __in SIZE_T nComperand)
-{
-  return (SIZE_T)__InterlockedCompareExchangePointer((LPVOID volatile*)lpnValue, (LPVOID)nExchange, (LPVOID)nComperand);
-}
+#define __InterlockedReadSizeT(lpnValue)                                                           \
+           ((SIZE_T)__InterlockedReadPointer((LPVOID volatile*)lpnValue))
+#define __InterlockedExchangeSizeT(lpnValue, nNewValue)                                            \
+           ((SIZE_T)__InterlockedExchangePointer((LPVOID volatile*)lpnValue, (LPVOID)nNewValue))
+#define __InterlockedCompareExchangeSizeT(lpnValue, nExchange, nComperand)                         \
+           ((SIZE_T)__InterlockedCompareExchangePointer((LPVOID volatile*)lpnValue,                \
+                                                        (LPVOID)nExchange, (LPVOID)nComperand))
 
 //-----------------------------------------------------------
 
@@ -107,7 +82,7 @@ class CCriticalSection : public virtual CBaseMemObj
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CCriticalSection);
 public:
-  CCriticalSection(__in ULONG nSpinCount=4000) : CBaseMemObj()
+  CCriticalSection(_In_ ULONG nSpinCount=4000) : CBaseMemObj()
     {
     if (::MxRtlInitializeCriticalSectionAndSpinCount(&cs, nSpinCount) == STATUS_NOT_IMPLEMENTED)
       ::MxRtlInitializeCriticalSection(&cs);
@@ -142,7 +117,7 @@ public:
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CAutoLock);
   public:
-    CAutoLock(__in CCriticalSection &_cCS) : CBaseMemObj(), cCS(_cCS)
+    CAutoLock(_In_ CCriticalSection &_cCS) : CBaseMemObj(), cCS(_cCS)
       {
       cCS.Lock();
       return;
@@ -163,7 +138,7 @@ public:
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CTryAutoLock);
   public:
-    CTryAutoLock(__in CCriticalSection &cCS) : CBaseMemObj()
+    CTryAutoLock(_In_ CCriticalSection &cCS) : CBaseMemObj()
       {
       lpCS = (cCS.TryLock() != FALSE) ? &cCS : NULL;
       return;
@@ -197,12 +172,12 @@ class CWindowsEvent : public CWindowsHandle
 public:
   CWindowsEvent();
 
-  HRESULT Create(__in BOOL bManualReset, __in BOOL bInitialState, __in_z_opt LPCWSTR szNameW=NULL,
-                 __in_opt LPSECURITY_ATTRIBUTES lpSecAttr=NULL, __out_opt LPBOOL lpbAlreadyExists=NULL);
+  HRESULT Create(_In_ BOOL bManualReset, _In_ BOOL bInitialState, _In_opt_z_ LPCWSTR szNameW=NULL,
+                 _In_opt_ LPSECURITY_ATTRIBUTES lpSecAttr=NULL, _Out_opt_ LPBOOL lpbAlreadyExists=NULL);
 
-  HRESULT Open(__in_z_opt LPCWSTR szNameW=NULL, __in_opt BOOL bInherit=FALSE);
+  HRESULT Open(_In_z_ LPCWSTR szNameW, _In_opt_ BOOL bInherit=FALSE);
 
-  BOOL Wait(__in DWORD dwTimeoutMs);
+  BOOL Wait(_In_ DWORD dwTimeoutMs);
 
   BOOL Reset()
     {
@@ -223,12 +198,12 @@ class CWindowsMutex : public CWindowsHandle
 public:
   CWindowsMutex();
 
-  HRESULT Create(__in_z_opt LPCWSTR szNameW=NULL, __in BOOL bInitialOwner=TRUE,
-                 __in_opt LPSECURITY_ATTRIBUTES lpSecAttr=NULL, __out_opt LPBOOL lpbAlreadyExists=NULL);
+  HRESULT Create(_In_opt_z_ LPCWSTR szNameW=NULL, _In_ BOOL bInitialOwner=TRUE,
+                 _In_opt_ LPSECURITY_ATTRIBUTES lpSecAttr=NULL, _Out_opt_ LPBOOL lpbAlreadyExists=NULL);
 
-  HRESULT Open(__in_z_opt LPCWSTR szNameW=NULL, __in BOOL bQueryOnly=FALSE, __in_opt BOOL bInherit=FALSE);
+  HRESULT Open(_In_opt_z_ LPCWSTR szNameW=NULL, _In_ BOOL bQueryOnly=FALSE, _In_opt_ BOOL bInherit=FALSE);
 
-  BOOL Lock(__in DWORD dwTimeout=INFINITE)
+  BOOL Lock(_In_ DWORD dwTimeout=INFINITE)
     {
     LARGE_INTEGER liTimeout, *lpliTimeout;
 
@@ -255,7 +230,7 @@ class CFastLock : public virtual CBaseMemObj
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CFastLock);
 public:
-  CFastLock(__inout LONG volatile *_lpnLock) : CBaseMemObj()
+  CFastLock(_Inout_ LONG volatile *_lpnLock) : CBaseMemObj()
     {
     nFlagMask = 0;
     lpnLock = _lpnLock;
@@ -264,7 +239,7 @@ public:
     return;
     };
 
-  CFastLock(__inout LONG volatile *_lpnLock, __in LONG _nFlagMask) : CBaseMemObj()
+  CFastLock(_Inout_ LONG volatile *_lpnLock, _In_ LONG _nFlagMask) : CBaseMemObj()
     {
     nFlagMask = _nFlagMask;
     lpnLock = _lpnLock;
@@ -289,19 +264,19 @@ private:
 
 //-----------------------------------------------------------
 
-VOID SlimRWL_Initialize(__in LONG volatile *lpnValue);
-BOOL SlimRWL_TryAcquireShared(__in LONG volatile *lpnValue);
-VOID SlimRWL_AcquireShared(__in LONG volatile *lpnValue);
-VOID SlimRWL_ReleaseShared(__in LONG volatile *lpnValue);
-BOOL SlimRWL_TryAcquireExclusive(__in LONG volatile *lpnValue);
-VOID SlimRWL_AcquireExclusive(__in LONG volatile *lpnValue);
-VOID SlimRWL_ReleaseExclusive(__in LONG volatile *lpnValue);
+VOID SlimRWL_Initialize(_In_ LONG volatile *lpnValue);
+BOOL SlimRWL_TryAcquireShared(_In_ LONG volatile *lpnValue);
+VOID SlimRWL_AcquireShared(_In_ LONG volatile *lpnValue);
+VOID SlimRWL_ReleaseShared(_In_ LONG volatile *lpnValue);
+BOOL SlimRWL_TryAcquireExclusive(_In_ LONG volatile *lpnValue);
+VOID SlimRWL_AcquireExclusive(_In_ LONG volatile *lpnValue);
+VOID SlimRWL_ReleaseExclusive(_In_ LONG volatile *lpnValue);
 
 class CAutoSlimRWLBase : public virtual CBaseMemObj
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CAutoSlimRWLBase);
 protected:
-  CAutoSlimRWLBase(__in LONG volatile *_lpnValue, __in BOOL b) : CBaseMemObj()
+  CAutoSlimRWLBase(_In_ LONG volatile *_lpnValue, _In_ BOOL b) : CBaseMemObj()
     {
     lpnValue = _lpnValue;
     bShared = b;
@@ -349,7 +324,7 @@ class CAutoSlimRWLShared : public CAutoSlimRWLBase
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CAutoSlimRWLShared);
 public:
-  CAutoSlimRWLShared(__in LONG volatile *lpnValue) : CAutoSlimRWLBase(lpnValue, TRUE)
+  CAutoSlimRWLShared(_In_ LONG volatile *lpnValue) : CAutoSlimRWLBase(lpnValue, TRUE)
     {
     SlimRWL_AcquireShared(lpnValue);
     return;
@@ -360,7 +335,7 @@ class CAutoSlimRWLExclusive : public CAutoSlimRWLBase
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CAutoSlimRWLExclusive);
 public:
-  CAutoSlimRWLExclusive(__in LONG volatile *lpnValue) : CAutoSlimRWLBase(lpnValue, FALSE)
+  CAutoSlimRWLExclusive(_In_ LONG volatile *lpnValue) : CAutoSlimRWLBase(lpnValue, FALSE)
     {
     SlimRWL_AcquireExclusive(lpnValue);
     return;
@@ -369,16 +344,16 @@ public:
 
 //-----------------------------------------------------------
 
-VOID RundownProt_Initialize(__in LONG volatile *lpnValue);
-BOOL RundownProt_Acquire(__in LONG volatile *lpnValue);
-VOID RundownProt_Release(__in LONG volatile *lpnValue);
-VOID RundownProt_WaitForRelease(__in LONG volatile *lpnValue);
+VOID RundownProt_Initialize(_In_ LONG volatile *lpnValue);
+BOOL RundownProt_Acquire(_In_ LONG volatile *lpnValue);
+VOID RundownProt_Release(_In_ LONG volatile *lpnValue);
+VOID RundownProt_WaitForRelease(_In_ LONG volatile *lpnValue);
 
 class CAutoRundownProtection : public virtual CBaseMemObj
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CAutoRundownProtection);
 public:
-  CAutoRundownProtection(__in LONG volatile *_lpnValue) : CBaseMemObj()
+  CAutoRundownProtection(_In_ LONG volatile *_lpnValue) : CBaseMemObj()
     {
     lpnValue = (RundownProt_Acquire(_lpnValue) != FALSE) ? _lpnValue : NULL;
     return;

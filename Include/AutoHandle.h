@@ -79,7 +79,7 @@ public:
     return (h != NULL && h != INVALID_HANDLE_VALUE) ? true : false;
     };
 
-  VOID Attach(__in HANDLE _h)
+  VOID Attach(_In_ HANDLE _h)
     {
     Close();
     if (_h != NULL && _h != INVALID_HANDLE_VALUE)
@@ -96,7 +96,7 @@ public:
     return h;
     };
 
-  static VOID CloseHandleSEH(__in HANDLE h)
+  static VOID CloseHandleSEH(_In_ HANDLE h)
     {
     if (h != NULL && h != INVALID_HANDLE_VALUE)
     {
@@ -139,7 +139,7 @@ public:
     return;
     };
 
-  HRESULT Init(__in DWORD dwPid, __in HANDLE _h)
+  HRESULT Init(_In_ DWORD dwPid, _In_ HANDLE _h)
     {
     NTSTATUS nNtStatus;
 
@@ -158,7 +158,7 @@ public:
     return S_OK;
     };
 
-  HRESULT Init(__in HANDLE _hProc, __in HANDLE _h)
+  HRESULT Init(_In_ HANDLE _hProc, _In_ HANDLE _h)
     {
     NTSTATUS nNtStatus;
 
@@ -197,7 +197,7 @@ public:
     return (h != NULL && h != INVALID_HANDLE_VALUE) ? true : false;
     };
 
-  VOID Attach(__in HANDLE _hProc, __in HANDLE _h)
+  VOID Attach(_In_ HANDLE _hProc, _In_ HANDLE _h)
     {
     Close();
     if (_hProc != NULL && _hProc != INVALID_HANDLE_VALUE)
@@ -217,7 +217,7 @@ public:
     return hTemp;
     };
 
-  static VOID CloseRemoteHandleSEH(__in HANDLE hProc, __in HANDLE h)
+  static VOID CloseRemoteHandleSEH(_In_ HANDLE hProc, _In_ HANDLE h)
     {
     if (h != NULL && h != INVALID_HANDLE_VALUE &&
         hProc != NULL && hProc != INVALID_HANDLE_VALUE)
@@ -235,7 +235,7 @@ protected:
   HANDLE hProc, h;
 
 private:
-  static VOID InternalCloseRH(__in HANDLE hProc, __in HANDLE h)
+  static VOID InternalCloseRH(_In_ HANDLE hProc, _In_ HANDLE h)
     {
     MxNtDuplicateObject(hProc, h, hProc, NULL, 0, FALSE, DUPLICATE_CLOSE_SOURCE);
     return;

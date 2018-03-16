@@ -64,7 +64,7 @@ CHttpBodyParserMultipartFormData::~CHttpBodyParserMultipartFormData()
   return;
 }
 
-HRESULT CHttpBodyParserMultipartFormData::Initialize(__in CPropertyBag &cPropBag, __in CHttpCommon &cHttpCmn)
+HRESULT CHttpBodyParserMultipartFormData::Initialize(_In_ CPropertyBag &cPropBag, _In_ CHttpCommon &cHttpCmn)
 {
   CHttpHeaderEntContentType *lpHeader;
   WCHAR szTempW[MAX_PATH];
@@ -127,7 +127,7 @@ HRESULT CHttpBodyParserMultipartFormData::Initialize(__in CPropertyBag &cPropBag
 }
 
 #define BACKWARD_CHAR()     szDataA--
-HRESULT CHttpBodyParserMultipartFormData::Parse(__in LPCVOID lpData, __in SIZE_T nDataSize)
+HRESULT CHttpBodyParserMultipartFormData::Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize)
 {
   CStringW cStrTempW;
   LPCSTR szDataA, sA;
@@ -391,6 +391,7 @@ headers_end_reached:
           {
             dw = ::GetCurrentProcessId();
             nHash = fnv_64a_buf(&dw, sizeof(dw), FNV1A_64_INIT);
+#pragma warning(suppress : 28159)
             dw = ::GetTickCount();
             nHash = fnv_64a_buf(&dw, sizeof(dw), nHash);
             k = (SIZE_T)this;
@@ -565,7 +566,7 @@ done:
 }
 #undef BACKWARD_CHAR
 
-HRESULT CHttpBodyParserMultipartFormData::ParseHeader(__inout CStringA &cStrLineA)
+HRESULT CHttpBodyParserMultipartFormData::ParseHeader(_Inout_ CStringA &cStrLineA)
 {
   LPSTR szLineA, szNameStartA, szNameEndA, szValueStartA, szValueEndA;
   CHAR chA[2];
@@ -690,7 +691,7 @@ HRESULT CHttpBodyParserMultipartFormData::ParseHeader(__inout CStringA &cStrLine
   return S_OK;
 }
 
-HRESULT CHttpBodyParserMultipartFormData::AccumulateData(__in CHAR chA)
+HRESULT CHttpBodyParserMultipartFormData::AccumulateData(_In_ CHAR chA)
 {
   DWORD dw;
 

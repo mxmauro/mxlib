@@ -48,23 +48,23 @@ public:
     FamilyUnknown=0, FamilyIPv4=1, FamilyIPv6
   } eFamily;
 
-  CSockets(__in CIoCompletionPortThreadPool &cDispatcherPool, __in CPropertyBag &cPropBag);
+  CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool, _In_ CPropertyBag &cPropBag);
   ~CSockets();
 
-  HRESULT CreateListener(__in eFamily nFamily, __in int nPort, __in OnCreateCallback cCreateCallback,
-                         __in_z_opt LPCSTR szBindAddressA=NULL, __in_opt CUserData *lpUserData=NULL,
-                         __out_opt HANDLE *h=NULL);
-  HRESULT CreateListener(__in eFamily nFamily, __in int nPort, __in OnCreateCallback cCreateCallback,
-                         __in_z_opt LPCWSTR szBindAddressW=NULL, __in_opt CUserData *lpUserData=NULL,
-                         __out_opt HANDLE *h=NULL);
-  HRESULT ConnectToServer(__in eFamily nFamily, __in_z LPCSTR szAddressA, __in int nPort,
-                          __in OnCreateCallback cCreateCallback, __in_opt CUserData *lpUserData=NULL,
-                          __out_opt HANDLE *h=NULL);
-  HRESULT ConnectToServer(__in eFamily nFamily, __in_z LPCWSTR szAddressW, __in int nPort,
-                          __in OnCreateCallback cCreateCallback, __in_opt CUserData *lpUserData=NULL,
-                          __out_opt HANDLE *h=NULL);
+  HRESULT CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
+                         _In_opt_z_ LPCSTR szBindAddressA=NULL, _In_opt_ CUserData *lpUserData=NULL,
+                         _Out_opt_ HANDLE *h=NULL);
+  HRESULT CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
+                         _In_opt_z_ LPCWSTR szBindAddressW=NULL, _In_opt_ CUserData *lpUserData=NULL,
+                         _Out_opt_ HANDLE *h=NULL);
+  HRESULT ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA, _In_ int nPort,
+                          _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData=NULL,
+                          _Out_opt_ HANDLE *h=NULL);
+  HRESULT ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCWSTR szAddressW, _In_ int nPort,
+                          _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData=NULL,
+                          _Out_opt_ HANDLE *h=NULL);
 
-  HRESULT GetPeerAddress(__in HANDLE h, __out PSOCKADDR_INET lpAddr);
+  HRESULT GetPeerAddress(_In_ HANDLE h, _Out_ PSOCKADDR_INET lpAddr);
 
   //--------
 
@@ -73,42 +73,42 @@ private:
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CConnection);
   public:
-    CConnection(__in CIpc *lpIpc, __in CIpc::eConnectionClass nClass);
+    CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass);
     ~CConnection();
 
-    HRESULT CreateSocket(__in eFamily nFamily, __in DWORD dwPacketSize);
-    VOID ShutdownLink(__in BOOL bAbortive);
+    HRESULT CreateSocket(_In_ eFamily nFamily, _In_ DWORD dwPacketSize);
+    VOID ShutdownLink(_In_ BOOL bAbortive);
 
     HRESULT SetupListener();
     HRESULT SetupClient();
-    HRESULT SetupAcceptEx(__in CConnection *lpListenConn);
+    HRESULT SetupAcceptEx(_In_ CConnection *lpListenConn);
 
-    HRESULT ResolveAddress(__in DWORD dwMaxResolverTimeoutMs, __in eFamily nFamily, __in_z LPCSTR szAddressA,
-                           __in int nPort);
+    HRESULT ResolveAddress(_In_ DWORD dwMaxResolverTimeoutMs, _In_ eFamily nFamily, _In_opt_z_ LPCSTR szAddressA,
+                           _In_opt_ int nPort);
 
-    HRESULT SendReadPacket(__in CPacket *lpPacket);
-    HRESULT SendWritePacket(__in CPacket *lpPacket);
+    HRESULT SendReadPacket(_In_ CPacket *lpPacket);
+    HRESULT SendWritePacket(_In_ CPacket *lpPacket);
 
-    VOID HostResolveCallback(__in CHostResolver *lpResolver);
+    VOID HostResolveCallback(_In_ CHostResolver *lpResolver);
 
     VOID ConnectWaiterThreadProc();
 
   protected:
     friend class CSockets;
 
-    typedef BOOL (WINAPI *lpfnAcceptEx)(__in SOCKET sListenSocket, __in SOCKET sAcceptSocket, __in PVOID lpOutputBuffer,
-                                        __in DWORD dwReceiveDataLength, __in DWORD dwLocalAddressLength,
-                                        __in DWORD dwRemoteAddressLength, __out LPDWORD lpdwBytesReceived,
-                                        __inout LPOVERLAPPED lpOverlapped);
-    typedef BOOL (WINAPI *lpfnConnectEx)(__in SOCKET s, __in const struct sockaddr FAR *name, __in int namelen,
-                                         __in_opt PVOID lpSendBuffer, __in DWORD dwSendDataLength,
-                                         __out LPDWORD lpdwBytesSent, __inout LPOVERLAPPED lpOverlapped);
-    typedef VOID (WINAPI *lpfnGetAcceptExSockaddrs)(__in PVOID lpOutputBuffer, __in DWORD dwReceiveDataLength,
-                                                    __in DWORD dwLocalAddressLength, __in DWORD dwRemoteAddressLength,
-                                                    __deref_out struct sockaddr **LocalSockaddr,
-                                                    __out LPINT LocalSockaddrLength,
-                                                    __deref_out struct sockaddr **RemoteSockaddr,
-                                                    __out LPINT RemoteSockaddrLength);
+    typedef BOOL (WINAPI *lpfnAcceptEx)(_In_ SOCKET sListenSocket, _In_ SOCKET sAcceptSocket, _In_ PVOID lpOutputBuffer,
+                                        _In_ DWORD dwReceiveDataLength, _In_ DWORD dwLocalAddressLength,
+                                        _In_ DWORD dwRemoteAddressLength, _Out_ LPDWORD lpdwBytesReceived,
+                                        _Inout_ LPOVERLAPPED lpOverlapped);
+    typedef BOOL (WINAPI *lpfnConnectEx)(_In_ SOCKET s, _In_ const struct sockaddr FAR *name, _In_ int namelen,
+                                         _In_opt_ PVOID lpSendBuffer, _In_ DWORD dwSendDataLength,
+                                         _Out_ LPDWORD lpdwBytesSent, _Inout_ LPOVERLAPPED lpOverlapped);
+    typedef VOID (WINAPI *lpfnGetAcceptExSockaddrs)(_In_ PVOID lpOutputBuffer, _In_ DWORD dwReceiveDataLength,
+                                                    _In_ DWORD dwLocalAddressLength, _In_ DWORD dwRemoteAddressLength,
+                                                    _Deref_out_ struct sockaddr **LocalSockaddr,
+                                                    _Out_ LPINT LocalSockaddrLength,
+                                                    _Deref_out_ struct sockaddr **RemoteSockaddr,
+                                                    _Out_ LPINT RemoteSockaddrLength);
 
   protected:
     SOCKADDR_INET sAddr;
@@ -135,10 +135,10 @@ private:
   HRESULT OnInternalInitialize();
   VOID OnInternalFinalize();
 
-  HRESULT CreateServerConnection(__in CConnection *lpListenConn);
+  HRESULT CreateServerConnection(_In_ CConnection *lpListenConn);
 
-  HRESULT OnPreprocessPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __in HRESULT hRes);
-  HRESULT OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __in HRESULT hRes);
+  HRESULT OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes);
+  HRESULT OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes);
 
   BOOL ZeroReadsSupported() const
     {

@@ -27,9 +27,13 @@
 
 namespace MX {
 
-HRESULT CJsHttpServer::OnNewRequestObject(__in CPropertyBag &cPropBag, __out CHttpServer::CRequest **lplpRequest)
+HRESULT CJsHttpServer::OnNewRequestObject(_In_ CPropertyBag &cPropBag, _Out_ CHttpServer::CRequest **lplpRequest)
 {
   HRESULT hRes;
+
+  if (lplpRequest == NULL)
+    return E_POINTER;
+  *lplpRequest = NULL;
 
   if (cNewRequestObjectCallback)
   {
@@ -47,14 +51,14 @@ HRESULT CJsHttpServer::OnNewRequestObject(__in CPropertyBag &cPropBag, __out CHt
   return hRes;
 }
 
-CJsHttpServer::CJsRequest* CJsHttpServer::GetServerRequestFromContext(__in DukTape::duk_context *lpCtx)
+CJsHttpServer::CJsRequest* CJsHttpServer::GetServerRequestFromContext(_In_ DukTape::duk_context *lpCtx)
 {
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   CJsRequest *lpRequest = NULL;
 
   try
   {
-    lpJVM->RunNativeProtected(0, 0, [&lpRequest](__in DukTape::duk_context *lpCtx) -> VOID
+    lpJVM->RunNativeProtected(0, 0, [&lpRequest](_In_ DukTape::duk_context *lpCtx) -> VOID
     {
       DukTape::duk_push_global_object(lpCtx);
       DukTape::duk_get_prop_string(lpCtx, -1, INTERNAL_REQUEST_PROPERTY);
@@ -71,7 +75,7 @@ CJsHttpServer::CJsRequest* CJsHttpServer::GetServerRequestFromContext(__in DukTa
   return lpRequest;
 }
 
-HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CJsRequest *lpRequest)
+HRESULT CJsHttpServer::InitializeJVM(_In_ CJavascriptVM &cJvm, _In_ CJsRequest *lpRequest)
 {
   CStringA cStrTempA, cStrTempA_2;
   CUrl *lpUrl;
@@ -91,7 +95,7 @@ HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CJsRequest *
   //store request pointer
   try
   {
-    cJvm.RunNativeProtected(0, 0, [lpRequest](__in DukTape::duk_context *lpCtx) -> VOID
+    cJvm.RunNativeProtected(0, 0, [lpRequest](_In_ DukTape::duk_context *lpCtx) -> VOID
     {
       DukTape::duk_push_global_object(lpCtx);
       DukTape::duk_push_pointer(lpCtx, lpRequest);
@@ -109,8 +113,8 @@ HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CJsRequest *
     return E_FAIL;
   }
 
-  hRes = cJvm.RegisterException("SystemExit", [](__in DukTape::duk_context *lpCtx,
-                                                 __in DukTape::duk_idx_t nExceptionObjectIndex) -> VOID
+  hRes = cJvm.RegisterException("SystemExit", [](_In_ DukTape::duk_context *lpCtx,
+                                                 _In_ DukTape::duk_idx_t nExceptionObjectIndex) -> VOID
   {
     throw CJsHttpServerSystemExit(lpCtx, nExceptionObjectIndex);
     return;
@@ -280,7 +284,7 @@ HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CJsRequest *
     lpCookie = lpRequest->GetRequestCookie(i);
     if (cStrTempA.Copy(lpCookie->GetName()) == FALSE)
       return E_OUTOFMEMORY;
-    for (LPSTR sA=(LPSTR)cStrTempA; *sA!=0; *sA++)
+    for (LPSTR sA=(LPSTR)cStrTempA; *sA!=0; sA++)
     {
       if (*sA == '.')
         *sA = '_';
@@ -351,7 +355,7 @@ HRESULT CJsHttpServer::InitializeJVM(__in CJavascriptVM &cJvm, __in CJsRequest *
   return S_OK;
 }
 
-HRESULT CJsHttpServer::TransformJavascriptCode(__inout MX::CStringA &cStrCodeA)
+HRESULT CJsHttpServer::TransformJavascriptCode(_Inout_ MX::CStringA &cStrCodeA)
 {
   typedef enum {
     CodeModeNone=0, CodeModeInCode, CodeModeInCodePrint
@@ -516,8 +520,8 @@ HRESULT CJsHttpServer::TransformJavascriptCode(__inout MX::CStringA &cStrCodeA)
   return S_OK;
 }
 
-BOOL CJsHttpServer::TransformJavascriptCode_ConvertToPrint(__inout MX::CStringA &cStrCodeA,
-                                            __inout SIZE_T nNonCodeBlockStart, __inout SIZE_T &nCurrPos)
+BOOL CJsHttpServer::TransformJavascriptCode_ConvertToPrint(_Inout_ MX::CStringA &cStrCodeA,
+                                            _Inout_ SIZE_T nNonCodeBlockStart, _Inout_ SIZE_T &nCurrPos)
 {
   CHAR chA;
   LPSTR sA;
@@ -598,8 +602,8 @@ BOOL CJsHttpServer::TransformJavascriptCode_ConvertToPrint(__inout MX::CStringA 
   return TRUE;
 }
 
-HRESULT CJsHttpServer::InsertPostField(__in CJavascriptVM &cJvm, __in CHttpBodyParserFormBase::CField *lpField,
-                                       __in LPCSTR szBaseObjectNameA)
+HRESULT CJsHttpServer::InsertPostField(_In_ CJavascriptVM &cJvm, _In_ CHttpBodyParserFormBase::CField *lpField,
+                                       _In_ LPCSTR szBaseObjectNameA)
 {
   CStringA cStrNameA;
   SIZE_T i, nCount;
@@ -631,9 +635,9 @@ HRESULT CJsHttpServer::InsertPostField(__in CJavascriptVM &cJvm, __in CHttpBodyP
   return hRes;
 }
 
-HRESULT CJsHttpServer::InsertPostFileField(__in CJavascriptVM &cJvm,
-                                           __in CHttpBodyParserFormBase::CFileField *lpFileField,
-                                           __in LPCSTR szBaseObjectNameA)
+HRESULT CJsHttpServer::InsertPostFileField(_In_ CJavascriptVM &cJvm,
+                                           _In_ CHttpBodyParserFormBase::CFileField *lpFileField,
+                                           _In_ LPCSTR szBaseObjectNameA)
 {
   CStringA cStrNameA;
   SIZE_T i, nCount;

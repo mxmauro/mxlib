@@ -61,13 +61,13 @@ static struct {
 
 //-----------------------------------------------------------
 
-static BOOL IsContentTypeHeader(__in_z LPCSTR szHeaderA);
+static BOOL IsContentTypeHeader(_In_z_ LPCSTR szHeaderA);
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-CHttpCommon::CHttpCommon(__in BOOL _bActAsServer, __in CPropertyBag &_cPropBag) : CBaseMemObj(), cPropBag(_cPropBag)
+CHttpCommon::CHttpCommon(_In_ BOOL _bActAsServer, _In_ CPropertyBag &_cPropBag) : CBaseMemObj(), cPropBag(_cPropBag)
 {
   bActAsServer = _bActAsServer;
   nMaxHeaderSize = 2048;
@@ -122,7 +122,7 @@ VOID CHttpCommon::ResetParser()
 }
 
 #define BACKWARD_CHAR()     szDataA--
-HRESULT CHttpCommon::Parse(__in LPCVOID lpData, __in SIZE_T nDataSize, __out SIZE_T &nDataUsed)
+HRESULT CHttpCommon::Parse(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize, _Out_ SIZE_T &nDataUsed)
 {
   LPCSTR szDataA, sA;
   HRESULT hRes;
@@ -557,8 +557,8 @@ done:
 }
 #undef BACKWARD_CHAR
 
-HRESULT CHttpCommon::AddHeader(__in_z LPCSTR szNameA, __out_opt CHttpHeaderBase **lplpHeader,
-                               __in BOOL bReplaceExisting)
+HRESULT CHttpCommon::AddHeader(_In_z_ LPCSTR szNameA, _Out_opt_ CHttpHeaderBase **lplpHeader,
+                               _In_ BOOL bReplaceExisting)
 {
   TAutoDeletePtr<CHttpHeaderBase> cHeader;
   CHttpHeaderBase *lpHeader = NULL;
@@ -608,8 +608,8 @@ HRESULT CHttpCommon::AddHeader(__in_z LPCSTR szNameA, __out_opt CHttpHeaderBase 
   return S_OK;
 }
 
-HRESULT CHttpCommon::AddHeader(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA, __in_opt SIZE_T nValueLen,
-                               __out_opt CHttpHeaderBase **lplpHeader, __in BOOL bReplaceExisting)
+HRESULT CHttpCommon::AddHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen,
+                               _Out_opt_ CHttpHeaderBase **lplpHeader, _In_ BOOL bReplaceExisting)
 {
   CHttpHeaderBase *lpHeader;
   HRESULT hRes;
@@ -647,8 +647,8 @@ HRESULT CHttpCommon::AddHeader(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA, __
   return hRes;
 }
 
-HRESULT CHttpCommon::AddHeader(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW, __in_opt SIZE_T nValueLen,
-                               __out_opt CHttpHeaderBase **lplpHeader, __in BOOL bReplaceExisting)
+HRESULT CHttpCommon::AddHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW, _In_opt_ SIZE_T nValueLen,
+                               _Out_opt_ CHttpHeaderBase **lplpHeader, _In_ BOOL bReplaceExisting)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -668,7 +668,7 @@ HRESULT CHttpCommon::AddHeader(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW, _
   return AddHeader(szNameA, (LPSTR)cStrTempA, (SIZE_T)-1, lplpHeader, bReplaceExisting);
 }
 
-HRESULT CHttpCommon::RemoveHeader(__in_z LPCSTR szNameA)
+HRESULT CHttpCommon::RemoveHeader(_In_z_ LPCSTR szNameA)
 {
   SIZE_T i;
   BOOL bFound;
@@ -690,7 +690,7 @@ HRESULT CHttpCommon::RemoveHeader(__in_z LPCSTR szNameA)
   return (bFound != FALSE) ? S_OK : MX_E_NotFound;
 }
 
-HRESULT CHttpCommon::RemoveHeader(__in CHttpHeaderBase *lpHeader)
+HRESULT CHttpCommon::RemoveHeader(_In_ CHttpHeaderBase *lpHeader)
 {
   SIZE_T i;
 
@@ -719,12 +719,12 @@ SIZE_T CHttpCommon::GetHeadersCount() const
   return cHeaders.GetCount();
 }
 
-CHttpHeaderBase* CHttpCommon::GetHeader(__in SIZE_T nIndex) const
+CHttpHeaderBase* CHttpCommon::GetHeader(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cHeaders.GetCount()) ? cHeaders.GetElementAt(nIndex) : NULL;
 }
 
-CHttpHeaderBase* CHttpCommon::GetHeader(__in_z LPCSTR szNameA) const
+CHttpHeaderBase* CHttpCommon::GetHeader(_In_z_ LPCSTR szNameA) const
 {
   SIZE_T i, nCount;
 
@@ -740,7 +740,7 @@ CHttpHeaderBase* CHttpCommon::GetHeader(__in_z LPCSTR szNameA) const
   return NULL;
 }
 
-HRESULT CHttpCommon::AddCookie(__in CHttpCookie &cSrc)
+HRESULT CHttpCommon::AddCookie(_In_ CHttpCookie &cSrc)
 {
   TAutoDeletePtr<CHttpCookie> cNewCookie;
   HRESULT hRes;
@@ -761,7 +761,7 @@ HRESULT CHttpCommon::AddCookie(__in CHttpCookie &cSrc)
   return S_OK;
 }
 
-HRESULT CHttpCommon::AddCookie(__in CHttpCookieArray &cSrc)
+HRESULT CHttpCommon::AddCookie(_In_ CHttpCookieArray &cSrc)
 {
   CHttpCookie *lpCookie;
   SIZE_T i, nCount;
@@ -781,9 +781,9 @@ HRESULT CHttpCommon::AddCookie(__in CHttpCookieArray &cSrc)
   return S_OK;
 }
 
-HRESULT CHttpCommon::AddCookie(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA, __in_z_opt LPCSTR szDomainA,
-                               __in_z_opt LPCSTR szPathA, __in_opt const CDateTime *lpDate, __in_opt BOOL bIsSecure,
-                               __in_opt BOOL bIsHttpOnly)
+HRESULT CHttpCommon::AddCookie(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _In_opt_z_ LPCSTR szDomainA,
+                               _In_opt_z_ LPCSTR szPathA, _In_opt_ const CDateTime *lpDate, _In_opt_ BOOL bIsSecure,
+                               _In_opt_ BOOL bIsHttpOnly)
 {
   CHttpCookie cCookie;
   HRESULT hRes;
@@ -807,9 +807,9 @@ HRESULT CHttpCommon::AddCookie(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA, __
   return hRes;
 }
 
-HRESULT CHttpCommon::AddCookie(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW, __in_z_opt LPCWSTR szDomainW,
-                               __in_z_opt LPCWSTR szPathW, __in_opt const CDateTime *lpDate, __in_opt BOOL bIsSecure,
-                               __in_opt BOOL bIsHttpOnly)
+HRESULT CHttpCommon::AddCookie(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW, _In_opt_z_ LPCWSTR szDomainW,
+                               _In_opt_z_ LPCWSTR szPathW, _In_opt_ const CDateTime *lpDate, _In_opt_ BOOL bIsSecure,
+                               _In_opt_ BOOL bIsHttpOnly)
 {
   CHttpCookie cCookie;
   HRESULT hRes;
@@ -833,7 +833,7 @@ HRESULT CHttpCommon::AddCookie(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW, 
   return hRes;
 }
 
-HRESULT CHttpCommon::RemoveCookie(__in_z LPCSTR szNameA)
+HRESULT CHttpCommon::RemoveCookie(_In_z_ LPCSTR szNameA)
 {
   SIZE_T i, nCount;
 
@@ -853,7 +853,7 @@ HRESULT CHttpCommon::RemoveCookie(__in_z LPCSTR szNameA)
   return MX_E_NotFound;
 }
 
-HRESULT CHttpCommon::RemoveCookie(__in_z LPCWSTR szNameW)
+HRESULT CHttpCommon::RemoveCookie(_In_z_ LPCWSTR szNameW)
 {
   SIZE_T i, nCount;
 
@@ -879,12 +879,12 @@ VOID CHttpCommon::RemoveAllCookies()
   return;
 }
 
-CHttpCookie* CHttpCommon::GetCookie(__in SIZE_T nIndex) const
+CHttpCookie* CHttpCommon::GetCookie(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cCookies.GetCount()) ? cCookies.GetElementAt(nIndex) : NULL;
 }
 
-CHttpCookie* CHttpCommon::GetCookie(__in_z LPCSTR szNameA) const
+CHttpCookie* CHttpCommon::GetCookie(_In_z_ LPCSTR szNameA) const
 {
   SIZE_T i, nCount;
 
@@ -899,7 +899,7 @@ CHttpCookie* CHttpCommon::GetCookie(__in_z LPCSTR szNameA) const
   return NULL;
 }
 
-CHttpCookie* CHttpCommon::GetCookie(__in_z LPCWSTR szNameW) const
+CHttpCookie* CHttpCommon::GetCookie(_In_z_ LPCWSTR szNameW) const
 {
   SIZE_T i, nCount;
 
@@ -929,7 +929,7 @@ CHttpCommon::eState CHttpCommon::GetParserState() const
   return sParser.nState;
 }
 
-HRESULT CHttpCommon::SetBodyParser(__in CHttpBodyParserBase *lpParser, __in CPropertyBag &cPropBag)
+HRESULT CHttpCommon::SetBodyParser(_In_ CHttpBodyParserBase *lpParser, _In_ CPropertyBag &cPropBag)
 {
   if (sParser.nState != StateBodyStart)
     return E_FAIL;
@@ -998,7 +998,7 @@ CHttpBodyParserBase* CHttpCommon::GetDefaultBodyParser()
   return MX_DEBUG_NEW CHttpBodyParserDefault();
 }
 
-HRESULT CHttpCommon::ParseRequestLine(__in_z LPCSTR szLineA)
+HRESULT CHttpCommon::ParseRequestLine(_In_z_ LPCSTR szLineA)
 {
   SIZE_T nMethod, nUriLength;
   LPCSTR szUriStartA;
@@ -1057,7 +1057,7 @@ HRESULT CHttpCommon::ParseRequestLine(__in_z LPCSTR szLineA)
   return (*szLineA == 0) ? S_OK : MX_E_InvalidData;
 }
 
-HRESULT CHttpCommon::ParseStatusLine(__in_z LPCSTR szLineA)
+HRESULT CHttpCommon::ParseStatusLine(_In_z_ LPCSTR szLineA)
 {
   //check http version
   if (szLineA[0] != 'H' || szLineA[1] != 'T' || szLineA[2] != 'T' || szLineA[3] != 'P' ||
@@ -1081,7 +1081,7 @@ HRESULT CHttpCommon::ParseStatusLine(__in_z LPCSTR szLineA)
   return S_OK;
 }
 
-HRESULT CHttpCommon::ParseHeader(__inout CStringA &cStrLineA)
+HRESULT CHttpCommon::ParseHeader(_Inout_ CStringA &cStrLineA)
 {
   TAutoDeletePtr<CHttpHeaderBase> cHeader;
   LPSTR szLineA, szNameStartA, szNameEndA, szValueStartA, szValueEndA;
@@ -1242,7 +1242,7 @@ HRESULT CHttpCommon::ParseHeader(__inout CStringA &cStrLineA)
   return S_OK;
 }
 
-HRESULT CHttpCommon::ProcessContent(__in LPCVOID lpContent, __in SIZE_T nContentSize)
+HRESULT CHttpCommon::ProcessContent(_In_ LPCVOID lpContent, _In_ SIZE_T nContentSize)
 {
   BYTE aTempBuf[4096];
   SIZE_T nSize;
@@ -1323,7 +1323,7 @@ HRESULT CHttpCommon::FlushContent()
   return hRes;
 }
 
-BOOL CHttpCommon::IsValidVerb(__in_z LPCSTR szVerbA)
+BOOL CHttpCommon::IsValidVerb(_In_z_ LPCSTR szVerbA)
 {
   if (szVerbA != NULL && szVerbA[0] != 0)
   {
@@ -1342,7 +1342,7 @@ BOOL CHttpCommon::IsValidVerb(__in_z LPCSTR szVerbA)
 
 //-----------------------------------------------------------
 
-static BOOL IsContentTypeHeader(__in_z LPCSTR szHeaderA)
+static BOOL IsContentTypeHeader(_In_z_ LPCSTR szHeaderA)
 {
   while (*szHeaderA==' ' || *szHeaderA=='\t')
     szHeaderA++;

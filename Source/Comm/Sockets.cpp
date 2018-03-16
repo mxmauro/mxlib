@@ -25,6 +25,7 @@
 #include "..\..\Include\Finalizer.h"
 #include "..\..\Include\Http\punycode.h"
 #include <MSTcpIP.h>
+#include <VersionHelpers.h>
 
 #pragma comment(lib, "ws2_32.lib")
 
@@ -50,7 +51,7 @@
   #define FILE_SKIP_SET_EVENT_ON_HANDLE           0x2
 #endif //!FILE_SKIP_SET_EVENT_ON_HANDLE
 
-typedef BOOL (WINAPI *lpfnSetFileCompletionNotificationModes)(__in HANDLE FileHandle, __in UCHAR Flags);
+typedef BOOL (WINAPI *lpfnSetFileCompletionNotificationModes)(_In_ HANDLE FileHandle, _In_ UCHAR Flags);
 
 typedef struct {
   HRESULT MX_UNALIGNED hRes;
@@ -66,8 +67,8 @@ static lpfnSetFileCompletionNotificationModes volatile fnSetFileCompletionNotifi
 
 //-----------------------------------------------------------
 
-static int FamilyToWinSockFamily(__in MX::CSockets::eFamily nFamily);
-static int SockAddrSizeFromWinSockFamily(__in int nFamily);
+static int FamilyToWinSockFamily(_In_ MX::CSockets::eFamily nFamily);
+static int SockAddrSizeFromWinSockFamily(_In_ int nFamily);
 static HRESULT Winsock_Init();
 static VOID Winsock_Shutdown();
 
@@ -75,7 +76,7 @@ static VOID Winsock_Shutdown();
 
 namespace MX {
 
-CSockets::CSockets(__in CIoCompletionPortThreadPool &cDispatcherPool, __in CPropertyBag &cPropBag) :
+CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool, _In_ CPropertyBag &cPropBag) :
           CIpc(cDispatcherPool, cPropBag)
 {
   dwMaxAcceptsToPost = MX_SOCKETS_PROPERTY_MaxAcceptsToPost_DEFVAL;
@@ -89,9 +90,9 @@ CSockets::~CSockets()
   return;
 }
 
-HRESULT CSockets::CreateListener(__in eFamily nFamily, __in int nPort, __in OnCreateCallback cCreateCallback,
-                                 __in_z_opt LPCSTR szBindAddressA, __in_opt CUserData *lpUserData,
-                                 __out_opt HANDLE *h)
+HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
+                                 _In_opt_z_ LPCSTR szBindAddressA, _In_opt_ CUserData *lpUserData,
+                                 _Out_opt_ HANDLE *h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoDeletePtr<CConnection> cConn;
@@ -138,9 +139,9 @@ HRESULT CSockets::CreateListener(__in eFamily nFamily, __in int nPort, __in OnCr
   return hRes;
 }
 
-HRESULT CSockets::CreateListener(__in eFamily nFamily, __in int nPort, __in OnCreateCallback cCreateCallback,
-                                 __in_z_opt LPCWSTR szBindAddressW, __in_opt CUserData *lpUserData,
-                                 __out_opt HANDLE *h)
+HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
+                                 _In_opt_z_ LPCWSTR szBindAddressW, _In_opt_ CUserData *lpUserData,
+                                 _Out_opt_ HANDLE *h)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -156,9 +157,9 @@ HRESULT CSockets::CreateListener(__in eFamily nFamily, __in int nPort, __in OnCr
   return CreateListener(nFamily, nPort, cCreateCallback, (LPSTR)cStrTempA, lpUserData, h);
 }
 
-HRESULT CSockets::ConnectToServer(__in eFamily nFamily, __in_z LPCSTR szAddressA, __in int nPort,
-                                  __in OnCreateCallback cCreateCallback, __in_opt CUserData *lpUserData,
-                                  __out_opt HANDLE *h)
+HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA, _In_ int nPort,
+                                  _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData,
+                                  _Out_opt_ HANDLE *h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoDeletePtr<CConnection> cConn;
@@ -207,9 +208,9 @@ HRESULT CSockets::ConnectToServer(__in eFamily nFamily, __in_z LPCSTR szAddressA
   return hRes;
 }
 
-HRESULT CSockets::ConnectToServer(__in eFamily nFamily, __in_z LPCWSTR szAddressW, __in int nPort,
-                                  __in OnCreateCallback cCreateCallback, __in_opt CUserData *lpUserData,
-                                  __out_opt HANDLE *h)
+HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCWSTR szAddressW, _In_ int nPort,
+                                  _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData,
+                                  _Out_opt_ HANDLE *h)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -224,7 +225,7 @@ HRESULT CSockets::ConnectToServer(__in eFamily nFamily, __in_z LPCWSTR szAddress
   return hRes;
 }
 
-HRESULT CSockets::GetPeerAddress(__in HANDLE h, __out PSOCKADDR_INET lpAddr)
+HRESULT CSockets::GetPeerAddress(_In_ HANDLE h, _Out_ PSOCKADDR_INET lpAddr)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnection *lpConn;
@@ -268,7 +269,7 @@ VOID CSockets::OnInternalFinalize()
   return;
 }
 
-HRESULT CSockets::CreateServerConnection(__in CConnection *lpListenConn)
+HRESULT CSockets::CreateServerConnection(_In_ CConnection *lpListenConn)
 {
   TAutoDeletePtr<CConnection> cIncomingConn;
   HRESULT hRes;
@@ -299,12 +300,12 @@ HRESULT CSockets::CreateServerConnection(__in CConnection *lpListenConn)
   return hRes;
 }
 
-HRESULT CSockets::OnPreprocessPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __in HRESULT hRes)
+HRESULT CSockets::OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes)
 {
   return S_FALSE;
 }
 
-HRESULT CSockets::OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __in HRESULT hRes)
+HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes)
 {
   CConnection *lpConn;
 
@@ -384,17 +385,17 @@ HRESULT CSockets::OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __i
           {
             if (sPeerAddr.si_family == AF_INET && len >= sizeof(SOCKADDR_IN))
             {
-              MemCopy(&(lpIncomingConn->sAddr.Ipv4), (PSOCKADDR_IN)lpPeerAddr, sizeof(SOCKADDR_IN));
+              MemCopy(&(lpIncomingConn->sAddr.Ipv4), (PSOCKADDR_IN)&sPeerAddr, sizeof(SOCKADDR_IN));
               hRes = S_OK;
             }
             else if (sPeerAddr.si_family == AF_INET6 && len >= sizeof(SOCKADDR_IN6))
             {
-              MemCopy(&(lpIncomingConn->sAddr.Ipv6), (PSOCKADDR_IN6)lpPeerAddr, sizeof(SOCKADDR_IN6));
+              MemCopy(&(lpIncomingConn->sAddr.Ipv6), (PSOCKADDR_IN6)&sPeerAddr, sizeof(SOCKADDR_IN6));
               hRes = S_OK;
             }
             else
             {
-              MemCopy(&(lpIncomingConn->sAddr), (sockaddr*)lpPeerAddr, sizeof((lpIncomingConn->sAddr)));
+              MemCopy(&(lpIncomingConn->sAddr), (sockaddr*)&sPeerAddr, sizeof((lpIncomingConn->sAddr)));
               hRes = E_FAIL;
             }
           }
@@ -448,7 +449,7 @@ HRESULT CSockets::OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __i
 
 //-----------------------------------------------------------
 
-CSockets::CConnection::CConnection(__in CIpc *lpIpc, __in CIpc::eConnectionClass nClass) : CConnectionBase(lpIpc,
+CSockets::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass) : CConnectionBase(lpIpc,
                                                                                                            nClass)
 {
   MemSet(&sAddr, 0, sizeof(sAddr));
@@ -469,7 +470,7 @@ CSockets::CConnection::~CConnection()
   return;
 }
 
-HRESULT CSockets::CConnection::CreateSocket(__in eFamily nFamily, __in DWORD dwPacketSize)
+HRESULT CSockets::CConnection::CreateSocket(_In_ eFamily nFamily, _In_ DWORD dwPacketSize)
 {
   static const GUID sGuid_AcceptEx = {
     0xB5367DF1, 0xCBAC, 0x11CF, { 0x95, 0xCA, 0x00, 0x80, 0x5F, 0x48, 0xA1, 0x92 }
@@ -530,16 +531,10 @@ HRESULT CSockets::CConnection::CreateSocket(__in eFamily nFamily, __in DWORD dwP
   if (__InterlockedRead(&nIsVistaOrLater) < 0)
   {
     HINSTANCE hKernel32Dll;
-    OSVERSIONINFOW sOviW;
-    LONG nIsVista = 0;
+    LONG nIsVista;
 
-#pragma warning(disable : 4996)
-    sOviW.dwOSVersionInfoSize = (DWORD)sizeof(sOviW);
-    if (::GetVersionExW(&sOviW) != FALSE)
-    {
-      if (sOviW.dwMajorVersion >= 6)
-        nIsVista = 1;
-    }
+    nIsVista = (::IsWindowsVistaOrGreater() != FALSE) ? 1 : 0;
+
     hKernel32Dll = ::GetModuleHandleW(L"kernel32.dll");
     if (hKernel32Dll != NULL)
     {
@@ -590,7 +585,7 @@ HRESULT CSockets::CConnection::CreateSocket(__in eFamily nFamily, __in DWORD dwP
   return GetDispatcherPool().Attach((HANDLE)sck, GetDispatcherPoolPacketCallback());
 }
 
-VOID CSockets::CConnection::ShutdownLink(__in BOOL bAbortive)
+VOID CSockets::CConnection::ShutdownLink(_In_ BOOL bAbortive)
 {
   {
     CFastLock cLock(&nMutex);
@@ -727,7 +722,7 @@ HRESULT CSockets::CConnection::SetupClient()
   return hRes;
 }
 
-HRESULT CSockets::CConnection::SetupAcceptEx(__in CConnection *lpIncomingConn)
+HRESULT CSockets::CConnection::SetupAcceptEx(_In_ CConnection *lpIncomingConn)
 {
   CPacket *lpPacket;
   DWORD dw;
@@ -755,8 +750,8 @@ HRESULT CSockets::CConnection::SetupAcceptEx(__in CConnection *lpIncomingConn)
   return S_OK;
 }
 
-HRESULT CSockets::CConnection::ResolveAddress(__in DWORD dwMaxResolverTimeoutMs, __in eFamily nFamily,
-                                              __in_z LPCSTR szAddressA, __in int nPort)
+HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwMaxResolverTimeoutMs, _In_ eFamily nFamily,
+                                              _In_opt_z_ LPCSTR szAddressA, _In_opt_ int nPort)
 {
   CFastLock cHostResolverLock(&(sHostResolver.nMutex));
   RESOLVEADDRESS_PACKET_DATA *lpData;
@@ -821,7 +816,7 @@ HRESULT CSockets::CConnection::ResolveAddress(__in DWORD dwMaxResolverTimeoutMs,
   return hRes;
 }
 
-HRESULT CSockets::CConnection::SendReadPacket(__in CPacket *lpPacket)
+HRESULT CSockets::CConnection::SendReadPacket(_In_ CPacket *lpPacket)
 {
   WSABUF sWsaBuf;
   DWORD dwToRead, dwReaded, dwFlags, dwErr;
@@ -852,7 +847,7 @@ HRESULT CSockets::CConnection::SendReadPacket(__in CPacket *lpPacket)
   return S_OK;
 }
 
-HRESULT CSockets::CConnection::SendWritePacket(__in CPacket *lpPacket)
+HRESULT CSockets::CConnection::SendWritePacket(_In_ CPacket *lpPacket)
 {
   WSABUF sWsaBuf;
   DWORD dwErr, dwWritten;
@@ -875,7 +870,7 @@ HRESULT CSockets::CConnection::SendWritePacket(__in CPacket *lpPacket)
   return S_OK;
 }
 
-VOID CSockets::CConnection::HostResolveCallback(__in CHostResolver *lpResolver)
+VOID CSockets::CConnection::HostResolveCallback(_In_ CHostResolver *lpResolver)
 {
   HRESULT hRes;
 
@@ -1023,13 +1018,13 @@ static HRESULT Winsock_Init()
   static LONG volatile nMutex = 0;
   static LONG volatile nInitialized = 0;
 
-  if (nInitialized == 0)
+  if (__InterlockedRead(&nInitialized) == 0)
   {
     MX::CFastLock cLock(&nMutex);
     WSADATA sWsaData;
     HRESULT hRes;
 
-    if (nInitialized == 0)
+    if (__InterlockedRead(&nInitialized) == 0)
     {
       MX::MemSet(&sWsaData, 0, sizeof(sWsaData));
       hRes = MX_HRESULT_FROM_WIN32(::WSAStartup(MAKEWORD(2, 2), &sWsaData));
@@ -1055,7 +1050,7 @@ static VOID Winsock_Shutdown()
   return;
 }
 
-static int FamilyToWinSockFamily(__in MX::CSockets::eFamily nFamily)
+static int FamilyToWinSockFamily(_In_ MX::CSockets::eFamily nFamily)
 {
   switch (nFamily)
   {
@@ -1069,7 +1064,7 @@ static int FamilyToWinSockFamily(__in MX::CSockets::eFamily nFamily)
   return AF_UNSPEC;
 }
 
-static int SockAddrSizeFromWinSockFamily(__in int nFamily)
+static int SockAddrSizeFromWinSockFamily(_In_ int nFamily)
 {
   switch (nFamily)
   {

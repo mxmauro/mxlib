@@ -42,15 +42,15 @@ public:
   ~CDigestAlgorithmMessageDigest();
 
   HRESULT BeginDigest();
-  HRESULT BeginDigest(__in eAlgorithm nAlgorithm, __in_opt LPCVOID lpKey=NULL, __in_opt SIZE_T nKeyLen=0);
-  HRESULT DigestStream(__in LPCVOID lpData, __in SIZE_T nDataLength);
+  HRESULT BeginDigest(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey=NULL, _In_opt_ SIZE_T nKeyLen=0);
+  HRESULT DigestStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
   HRESULT EndDigest();
 
   LPBYTE GetResult() const;
   SIZE_T GetResultSize() const;
 
 private:
-  VOID CleanUp(__in BOOL bZeroData);
+  VOID CleanUp(_In_ BOOL bZeroData);
 
 private:
   LPVOID lpInternalData;

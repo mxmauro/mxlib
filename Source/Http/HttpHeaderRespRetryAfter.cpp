@@ -38,7 +38,7 @@ CHttpHeaderRespRetryAfter::~CHttpHeaderRespRetryAfter()
   return;
 }
 
-HRESULT CHttpHeaderRespRetryAfter::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderRespRetryAfter::Parse(_In_z_ LPCSTR szValueA)
 {
   CDateTime cDt;
   ULONGLONG _nSeconds, nTemp;
@@ -85,18 +85,18 @@ done:
   return hRes;
 }
 
-HRESULT CHttpHeaderRespRetryAfter::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderRespRetryAfter::Build(_Inout_ CStringA &cStrDestA)
 {
-  return cStrDestA.Format(cStrDestA, "%I64u", nSeconds);
+  return (cStrDestA.Format(cStrDestA, "%I64u", nSeconds) != FALSE) ? S_OK : E_OUTOFMEMORY;
 }
 
-HRESULT CHttpHeaderRespRetryAfter::SetSeconds(__in ULONGLONG _nSeconds)
+HRESULT CHttpHeaderRespRetryAfter::SetSeconds(_In_ ULONGLONG _nSeconds)
 {
   nSeconds = _nSeconds;
   return S_OK;
 }
 
-HRESULT CHttpHeaderRespRetryAfter::SetDate(__in CDateTime &cDt)
+HRESULT CHttpHeaderRespRetryAfter::SetDate(_In_ CDateTime &cDt)
 {
   CDateTime cDtNow;
 

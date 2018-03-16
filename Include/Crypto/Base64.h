@@ -37,18 +37,18 @@ public:
   CBase64Encoder();
   ~CBase64Encoder();
 
-  HRESULT Begin(__in_opt SIZE_T nPreallocateOutputLen=0);
-  HRESULT Process(__in LPVOID lpData, __in SIZE_T nDataLen);
+  HRESULT Begin(_In_opt_ SIZE_T nPreallocateOutputLen=0);
+  HRESULT Process(_In_ LPVOID lpData, _In_ SIZE_T nDataLen);
   HRESULT End();
 
   LPCSTR GetBuffer() const;
   SIZE_T GetOutputLength() const;
-  VOID ConsumeOutput(__in SIZE_T nChars);
+  VOID ConsumeOutput(_In_ SIZE_T nChars);
 
-  static SIZE_T GetRequiredSpace(__in SIZE_T nDataLen);
+  static SIZE_T GetRequiredSpace(_In_ SIZE_T nDataLen);
 
 private:
-  __inline BOOL AddToBuffer(__in CHAR szDataA[4]);
+  __inline BOOL AddToBuffer(_In_ CHAR szDataA[4]);
 
 private:
   LPSTR szBufferA;
@@ -65,18 +65,18 @@ public:
   CBase64Decoder();
   ~CBase64Decoder();
 
-  HRESULT Begin(__in_opt SIZE_T nPreallocateOutputLen=0);
-  HRESULT Process(__in LPCSTR szDataA, __in_opt SIZE_T nDataLen=-1);
+  HRESULT Begin(_In_opt_ SIZE_T nPreallocateOutputLen=0);
+  HRESULT Process(_In_ LPCSTR szDataA, _In_opt_ SIZE_T nDataLen=-1);
   HRESULT End();
 
   LPBYTE GetBuffer() const;
   SIZE_T GetOutputLength() const;
-  VOID ConsumeOutput(__in SIZE_T nBytes);
+  VOID ConsumeOutput(_In_ SIZE_T nBytes);
 
-  static SIZE_T GetRequiredSpace(__in SIZE_T nDataLen);
+  static SIZE_T GetRequiredSpace(_In_ SIZE_T nDataLen);
 
 private:
-  __inline BOOL AddToBuffer(__in LPBYTE aData, __in SIZE_T nLen);
+  __inline BOOL AddToBuffer(_In_ LPBYTE aData, _In_ SIZE_T nLen);
 
 private:
   LPBYTE lpBuffer;

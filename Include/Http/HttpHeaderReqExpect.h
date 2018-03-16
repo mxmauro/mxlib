@@ -44,11 +44,11 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Expect)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
-  HRESULT SetExpectation(__in eExpectation nExpectation);
+  HRESULT SetExpectation(_In_ eExpectation nExpectation);
   eExpectation GetExpectation() const;
 
 private:

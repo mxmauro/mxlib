@@ -38,11 +38,11 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Content-Language)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
-  HRESULT SetLanguage(__in_z LPCSTR szLanguageA);
+  HRESULT SetLanguage(_In_z_ LPCSTR szLanguageA);
   LPCSTR GetLanguage() const;
 
 private:

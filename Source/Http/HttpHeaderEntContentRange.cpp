@@ -40,7 +40,7 @@ CHttpHeaderEntContentRange::~CHttpHeaderEntContentRange()
   return;
 }
 
-HRESULT CHttpHeaderEntContentRange::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderEntContentRange::Parse(_In_z_ LPCSTR szValueA)
 {
   ULONGLONG _nByteStart, _nByteEnd, _nTotalBytes, nTemp;
 
@@ -136,7 +136,7 @@ HRESULT CHttpHeaderEntContentRange::Parse(__in_z LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentRange::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderEntContentRange::Build(_Inout_ CStringA &cStrDestA)
 {
   //fill ranges
   if (cStrDestA.Format("bytes %I64u-%I64u/", nByteStart, nByteEnd) == FALSE)
@@ -155,8 +155,8 @@ HRESULT CHttpHeaderEntContentRange::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentRange::SetRange(__in ULONGLONG _nByteStart, __in ULONGLONG _nByteEnd,
-                                             __in ULONGLONG _nTotalBytes)
+HRESULT CHttpHeaderEntContentRange::SetRange(_In_ ULONGLONG _nByteStart, _In_ ULONGLONG _nByteEnd,
+                                             _In_ ULONGLONG _nTotalBytes)
 {
   if (_nByteStart > _nByteEnd || _nByteEnd > _nTotalBytes)
     return E_INVALIDARG;

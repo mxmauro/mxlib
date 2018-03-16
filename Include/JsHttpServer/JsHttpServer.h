@@ -40,57 +40,57 @@ public:
   class CRequireModuleContext;
   class CJsRequestRequireModuleContext;
 
-  typedef Callback<HRESULT (__in CPropertyBag &cPropBag, __out CJsRequest **lplpRequest)> OnNewRequestObjectCallback;
+  typedef Callback<HRESULT (_In_ CPropertyBag &cPropBag, _Out_ CJsRequest **lplpRequest)> OnNewRequestObjectCallback;
 
-  typedef Callback<HRESULT (__in CJsHttpServer *lpHttp, __in CJsRequest *lpRequest,
-                            __in CJavascriptVM &cJvm, __inout CStringA &cStrCodeA)> OnRequestCallback;
-  typedef Callback<VOID (__in CJsHttpServer *lpHttp, __in CJsRequest *lpRequest,
-                         __in CJavascriptVM &cJvm)> OnRequestCleanupCallback;
+  typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CJsRequest *lpRequest,
+                            _In_ CJavascriptVM &cJvm, _Inout_ CStringA &cStrCodeA)> OnRequestCallback;
+  typedef Callback<VOID (_In_ CJsHttpServer *lpHttp, _In_ CJsRequest *lpRequest,
+                         _In_ CJavascriptVM &cJvm)> OnRequestCleanupCallback;
 
-  typedef Callback<HRESULT (__in CJsHttpServer *lpHttp, __in CJsRequest *lpRequest,
-                            __in CJavascriptVM &cJvm, __inout CJavascriptVM::CRequireModuleContext *lpReqContext,
-                            __inout CStringA &cStrCodeA)> OnRequireJsModuleCallback;
+  typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CJsRequest *lpRequest,
+                            _In_ CJavascriptVM &cJvm, _Inout_ CJavascriptVM::CRequireModuleContext *lpReqContext,
+                            _Inout_ CStringA &cStrCodeA)> OnRequireJsModuleCallback;
 
-  typedef Callback<VOID (__in CJsHttpServer *lpHttp, __in CJsRequest *lpRequest,
-                         __in HRESULT hErrorCode)> OnErrorCallback;
+  typedef Callback<VOID (_In_ CJsHttpServer *lpHttp, _In_ CJsRequest *lpRequest,
+                         _In_ HRESULT hErrorCode)> OnErrorCallback;
 
-  typedef Callback<VOID (__in CJsHttpServer *lpHttp, __in CJsRequest *lpRequest, __in CJavascriptVM &cJvm,
-                         __in HRESULT hRunErrorCode)> OnJavascriptErrorCallback;
+  typedef Callback<VOID (_In_ CJsHttpServer *lpHttp, _In_ CJsRequest *lpRequest, _In_ CJavascriptVM &cJvm,
+                         _In_ HRESULT hRunErrorCode)> OnJavascriptErrorCallback;
 
   //--------
 
 public:
-  CJsHttpServer(__in MX::CSockets &cSocketMgr, __in MX::CPropertyBag &cPropBag);
+  CJsHttpServer(_In_ MX::CSockets &cSocketMgr, _In_ MX::CPropertyBag &cPropBag);
   ~CJsHttpServer();
 
-  VOID On(__in OnNewRequestObjectCallback cNewRequestObjectCallback);
-  VOID On(__in OnRequestCallback cRequestCallback);
-  VOID On(__in OnRequestCleanupCallback cRequestCleanupCallback);
-  VOID On(__in OnRequireJsModuleCallback cRequireJsModuleCallback);
-  VOID On(__in OnErrorCallback cErrorCallback);
-  VOID On(__in OnJavascriptErrorCallback cJavascriptErrorCallback);
+  VOID On(_In_ OnNewRequestObjectCallback cNewRequestObjectCallback);
+  VOID On(_In_ OnRequestCallback cRequestCallback);
+  VOID On(_In_ OnRequestCleanupCallback cRequestCleanupCallback);
+  VOID On(_In_ OnRequireJsModuleCallback cRequireJsModuleCallback);
+  VOID On(_In_ OnErrorCallback cErrorCallback);
+  VOID On(_In_ OnJavascriptErrorCallback cJavascriptErrorCallback);
 
-  HRESULT StartListening(__in int nPort, __in_opt CIpcSslLayer::eProtocol nProtocol=CIpcSslLayer::ProtocolUnknown,
-                         __in_opt CSslCertificate *lpSslCertificate=NULL, __in_opt CCryptoRSA *lpSslKey=NULL);
-  HRESULT StartListening(__in_z LPCSTR szBindAddressA, __in int nPort,
-                         __in_opt CIpcSslLayer::eProtocol nProtocol=CIpcSslLayer::ProtocolUnknown,
-                         __in_opt CSslCertificate *lpSslCertificate=NULL, __in_opt CCryptoRSA *lpSslKey=NULL);
-  HRESULT StartListening(__in_z LPCWSTR szBindAddressW, __in int nPort,
-                         __in_opt CIpcSslLayer::eProtocol nProtocol=CIpcSslLayer::ProtocolUnknown,
-                         __in_opt CSslCertificate *lpSslCertificate=NULL, __in_opt CCryptoRSA *lpSslKey=NULL);
+  HRESULT StartListening(_In_ int nPort, _In_opt_ CIpcSslLayer::eProtocol nProtocol=CIpcSslLayer::ProtocolUnknown,
+                         _In_opt_ CSslCertificate *lpSslCertificate=NULL, _In_opt_ CCryptoRSA *lpSslKey=NULL);
+  HRESULT StartListening(_In_z_ LPCSTR szBindAddressA, _In_ int nPort,
+                         _In_opt_ CIpcSslLayer::eProtocol nProtocol=CIpcSslLayer::ProtocolUnknown,
+                         _In_opt_ CSslCertificate *lpSslCertificate=NULL, _In_opt_ CCryptoRSA *lpSslKey=NULL);
+  HRESULT StartListening(_In_z_ LPCWSTR szBindAddressW, _In_ int nPort,
+                         _In_opt_ CIpcSslLayer::eProtocol nProtocol=CIpcSslLayer::ProtocolUnknown,
+                         _In_opt_ CSslCertificate *lpSslCertificate=NULL, _In_opt_ CCryptoRSA *lpSslKey=NULL);
   VOID StopListening();
 
-  static CJsRequest* GetServerRequestFromContext(__in DukTape::duk_context *lpCtx);
+  static CJsRequest* GetServerRequestFromContext(_In_ DukTape::duk_context *lpCtx);
 
 protected:
-  virtual HRESULT OnNewRequestObject(__in CPropertyBag &cPropBag, __out CHttpServer::CRequest **lplpRequest);
+  virtual HRESULT OnNewRequestObject(_In_ CPropertyBag &cPropBag, _Out_ CHttpServer::CRequest **lplpRequest);
 
 public:
   class CJsRequest : public CHttpServer::CRequest
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CJsRequest);
   protected:
-    CJsRequest(__in CPropertyBag &cPropBag);
+    CJsRequest(_In_ CPropertyBag &cPropBag);
   public:
     ~CJsRequest();
 
@@ -102,27 +102,27 @@ public:
   };
 
 private:
-  HRESULT OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in CHttpServer::CRequest *lpRequest);
+  HRESULT OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpServer::CRequest *lpRequest);
 
-  HRESULT OnRequireJsModule(__in DukTape::duk_context *lpCtx, __in CJavascriptVM::CRequireModuleContext *lpReqContext,
-                            __inout CStringA &cStrCodeA);
+  HRESULT OnRequireJsModule(_In_ DukTape::duk_context *lpCtx, _In_ CJavascriptVM::CRequireModuleContext *lpReqContext,
+                            _Inout_ CStringA &cStrCodeA);
 
-  VOID OnError(__in CHttpServer *lpHttp, __in CHttpServer::CRequest *lpRequest, __in HRESULT hErrorCode);
+  VOID OnError(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CRequest *lpRequest, _In_ HRESULT hErrorCode);
 
-  HRESULT InitializeJVM(__in CJavascriptVM &cJvm, __in CJsRequest *lpRequest);
+  HRESULT InitializeJVM(_In_ CJavascriptVM &cJvm, _In_ CJsRequest *lpRequest);
 
-  HRESULT TransformJavascriptCode(__inout MX::CStringA &cStrCodeA);
-  BOOL TransformJavascriptCode_ConvertToPrint(__inout MX::CStringA &cStrCodeA, __inout SIZE_T nNonCodeBlockStart,
-                                              __inout SIZE_T &nCurrPos);
+  HRESULT TransformJavascriptCode(_Inout_ MX::CStringA &cStrCodeA);
+  BOOL TransformJavascriptCode_ConvertToPrint(_Inout_ MX::CStringA &cStrCodeA, _Inout_ SIZE_T nNonCodeBlockStart,
+                                              _Inout_ SIZE_T &nCurrPos);
 
-  HRESULT InsertPostField(__in CJavascriptVM &cJvm, __in CHttpBodyParserFormBase::CField *lpField,
-                          __in LPCSTR szBaseObjectNameA);
-  HRESULT InsertPostFileField(__in CJavascriptVM &cJvm, __in CHttpBodyParserFormBase::CFileField *lpFileField,
-                              __in LPCSTR szBaseObjectNameA);
+  HRESULT InsertPostField(_In_ CJavascriptVM &cJvm, _In_ CHttpBodyParserFormBase::CField *lpField,
+                          _In_ LPCSTR szBaseObjectNameA);
+  HRESULT InsertPostFileField(_In_ CJavascriptVM &cJvm, _In_ CHttpBodyParserFormBase::CFileField *lpFileField,
+                              _In_ LPCSTR szBaseObjectNameA);
 
-  HRESULT ResetAndDisableClientCache(__in CJsRequest *lpRequest);
-  HRESULT BuildErrorPage(__in CJsRequest *lpRequest, __in HRESULT hr, __in_z LPCSTR szDescriptionA,
-                         __in_z LPCSTR szFileNameA, __in int nLine, __in_z LPCSTR szStackTraceA);
+  HRESULT ResetAndDisableClientCache(_In_ CJsRequest *lpRequest);
+  HRESULT BuildErrorPage(_In_ CJsRequest *lpRequest, _In_ HRESULT hr, _In_z_ LPCSTR szDescriptionA,
+                         _In_z_ LPCSTR szFileNameA, _In_ int nLine, _In_z_ LPCSTR szStackTraceA);
 
 private:
   CSockets &cSocketMgr;
@@ -143,11 +143,11 @@ private:
 class CJsHttpServerSystemExit : public CJsError
 {
 protected:
-  CJsHttpServerSystemExit(__in DukTape::duk_context *lpCtx, __in DukTape::duk_idx_t nStackIndex);
+  CJsHttpServerSystemExit(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex);
 
 public:
-  CJsHttpServerSystemExit(__in const CJsHttpServerSystemExit &obj);
-  CJsHttpServerSystemExit& operator=(__in const CJsHttpServerSystemExit &obj);
+  CJsHttpServerSystemExit(_In_ const CJsHttpServerSystemExit &obj);
+  CJsHttpServerSystemExit& operator=(_In_ const CJsHttpServerSystemExit &obj);
 
 private:
   friend class CJsHttpServer;

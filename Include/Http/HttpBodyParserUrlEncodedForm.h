@@ -38,8 +38,8 @@ public:
   ~CHttpBodyParserUrlEncodedForm();
 
 protected:
-  HRESULT Initialize(__in CPropertyBag &cPropBag, __in CHttpCommon &cHttpCmn);
-  HRESULT Parse(__in LPCVOID lpData, __in SIZE_T nDataSize);
+  HRESULT Initialize(_In_ CPropertyBag &cPropBag, _In_ CHttpCommon &cHttpCmn);
+  HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
 
 private:
   typedef enum {

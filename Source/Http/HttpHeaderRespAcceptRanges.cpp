@@ -38,7 +38,7 @@ CHttpHeaderRespAcceptRanges::~CHttpHeaderRespAcceptRanges()
   return;
 }
 
-HRESULT CHttpHeaderRespAcceptRanges::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderRespAcceptRanges::Parse(_In_z_ LPCSTR szValueA)
 {
   eRange _nRange = RangeUnsupported;
 
@@ -70,7 +70,7 @@ HRESULT CHttpHeaderRespAcceptRanges::Parse(__in_z LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderRespAcceptRanges::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderRespAcceptRanges::Build(_Inout_ CStringA &cStrDestA)
 {
   switch (nRange)
   {
@@ -88,7 +88,7 @@ HRESULT CHttpHeaderRespAcceptRanges::Build(__inout CStringA &cStrDestA)
   return MX_E_Unsupported;
 }
 
-HRESULT CHttpHeaderRespAcceptRanges::SetRange(__in eRange _nRange)
+HRESULT CHttpHeaderRespAcceptRanges::SetRange(_In_ eRange _nRange)
 {
   if (_nRange != RangeNone && _nRange != RangeBytes && _nRange != RangeUnsupported)
     return E_INVALIDARG;

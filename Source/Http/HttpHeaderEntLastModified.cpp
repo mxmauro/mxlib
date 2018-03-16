@@ -37,7 +37,7 @@ CHttpHeaderEntLastModified::~CHttpHeaderEntLastModified()
   return;
 }
 
-HRESULT CHttpHeaderEntLastModified::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderEntLastModified::Parse(_In_z_ LPCSTR szValueA)
 {
   HRESULT hRes;
 
@@ -51,12 +51,12 @@ HRESULT CHttpHeaderEntLastModified::Parse(__in_z LPCSTR szValueA)
   return hRes;
 }
 
-HRESULT CHttpHeaderEntLastModified::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderEntLastModified::Build(_Inout_ CStringA &cStrDestA)
 {
   return cDt.Format(cStrDestA, "%a, %d %b %Y %H:%m:%S %z");
 }
 
-HRESULT CHttpHeaderEntLastModified::SetDate(__in CDateTime &_cDt)
+HRESULT CHttpHeaderEntLastModified::SetDate(_In_ CDateTime &_cDt)
 {
   cDt = _cDt;
   return S_OK;

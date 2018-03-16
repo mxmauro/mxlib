@@ -40,15 +40,15 @@ public:
   CIoCompletionPort();
   ~CIoCompletionPort();
 
-  HRESULT Initialize(__in DWORD dwMaxConcurrency);
+  HRESULT Initialize(_In_ DWORD dwMaxConcurrency);
   VOID Finalize();
 
-  HRESULT Attach(__in HANDLE h, __in ULONG_PTR nKey);
+  HRESULT Attach(_In_ HANDLE h, _In_ ULONG_PTR nKey);
 
-  HRESULT Post(__in ULONG_PTR nKey, __in DWORD dwBytes, __in OVERLAPPED *lpOvr=NULL);
-  HRESULT Post(__in LPOVERLAPPED_ENTRY lpEntry);
+  HRESULT Post(_In_ ULONG_PTR nKey, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr=NULL);
+  HRESULT Post(_In_ LPOVERLAPPED_ENTRY lpEntry);
 
-  HRESULT Get(__out LPOVERLAPPED_ENTRY lpEntries, __inout ULONG &nEntriesCount, __in DWORD dwTimeoutMs=INFINITE);
+  HRESULT Get(_Out_ LPOVERLAPPED_ENTRY lpEntries, _Inout_ ULONG &nEntriesCount, _In_ DWORD dwTimeoutMs=INFINITE);
 
   operator HANDLE() const
     {
@@ -65,28 +65,28 @@ class CIoCompletionPortThreadPool : public virtual CBaseMemObj
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CIoCompletionPortThreadPool);
 public:
-  typedef Callback<VOID (__in CIoCompletionPortThreadPool *lpPool, __inout LPVOID &lpUserData)> OnThreadStartCallback;
-  typedef Callback<VOID (__in CIoCompletionPortThreadPool *lpPool, __in LPVOID lpUserData)> OnThreadEndCallback;
-  typedef Callback<VOID (__in CIoCompletionPortThreadPool *lpPool, __in HRESULT hRes)> OnThreadStartErrorCallback;
-  typedef Callback<VOID (__in CIoCompletionPortThreadPool *lpPool, __in DWORD dwBytes, __in OVERLAPPED *lpOvr,
-                         __in HRESULT hRes)> OnPacketCallback;
+  typedef Callback<VOID (_In_ CIoCompletionPortThreadPool *lpPool, _Inout_ LPVOID &lpUserData)> OnThreadStartCallback;
+  typedef Callback<VOID (_In_ CIoCompletionPortThreadPool *lpPool, _In_ LPVOID lpUserData)> OnThreadEndCallback;
+  typedef Callback<VOID (_In_ CIoCompletionPortThreadPool *lpPool, _In_ HRESULT hRes)> OnThreadStartErrorCallback;
+  typedef Callback<VOID (_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
+                         _In_ HRESULT hRes)> OnPacketCallback;
 
 public:
-  CIoCompletionPortThreadPool(__in_opt DWORD dwMinThreadsCount=0, __in_opt DWORD dwMaxThreadsCount=0,
-                              __in_opt DWORD dwWorkerThreadIdleTimeoutMs=2000,
-                              __in_opt DWORD dwShutdownThreadThreshold=2);
+  CIoCompletionPortThreadPool(_In_opt_ DWORD dwMinThreadsCount=0, _In_opt_ DWORD dwMaxThreadsCount=0,
+                              _In_opt_ DWORD dwWorkerThreadIdleTimeoutMs=2000,
+                              _In_opt_ DWORD dwShutdownThreadThreshold=2);
   ~CIoCompletionPortThreadPool();
 
-  VOID On(__in_opt OnThreadStartCallback cThreadStartCallback);
-  VOID On(__in_opt OnThreadEndCallback cThreadEndCallback);
-  VOID On(__in_opt OnThreadStartErrorCallback cThreadStartErrorCallback);
+  VOID On(_In_opt_ OnThreadStartCallback cThreadStartCallback);
+  VOID On(_In_opt_ OnThreadEndCallback cThreadEndCallback);
+  VOID On(_In_opt_ OnThreadStartErrorCallback cThreadStartErrorCallback);
 
   HRESULT Initialize();
   VOID Finalize();
 
   //NOTE: 'cCallback' SHOULD be available when a packet is dequeued because a pointer is stored in the IOCP queue
-  HRESULT Attach(__in HANDLE h, __in OnPacketCallback &cCallback);
-  HRESULT Post(__in OnPacketCallback &cCallback, __in DWORD dwBytes, __in OVERLAPPED *lpOvr);
+  HRESULT Attach(_In_ HANDLE h, _In_ OnPacketCallback &cCallback);
+  HRESULT Post(_In_ OnPacketCallback &cCallback, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr);
 
   DWORD GetActiveThreadsCount() const
     {
@@ -119,8 +119,8 @@ private:
 
   VOID InternalFinalize();
 
-  HRESULT StartThread(__in BOOL bInitial);
-  VOID ThreadProc(__in SIZE_T nParam);
+  HRESULT StartThread(_In_ BOOL bInitial);
+  VOID ThreadProc(_In_ SIZE_T nParam);
 
 private:
   LONG volatile nSlimMutex;

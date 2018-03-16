@@ -46,16 +46,16 @@ typedef struct {
 
 //-----------------------------------------------------------
 
-typedef NTSTATUS (NTAPI *lpfnRtlGetNativeSystemInformation)(__in MX_SYSTEM_INFORMATION_CLASS SystemInformationClass,
-                                               __inout PVOID SystemInformation, __in ULONG SystemInformationLength,
-                                               __out_opt PULONG ReturnLength);
+typedef NTSTATUS (NTAPI *lpfnRtlGetNativeSystemInformation)(_In_ MX_SYSTEM_INFORMATION_CLASS SystemInformationClass,
+                                               _Inout_ PVOID SystemInformation, _In_ ULONG SystemInformationLength,
+                                               _Out_opt_ PULONG ReturnLength);
 
-typedef HANDLE (WINAPI *lpfnCreateEventW)(__in_opt LPSECURITY_ATTRIBUTES lpEventAttributes, __in BOOL bManualReset,
-                                          __in BOOL bInitialState, __in_opt LPCWSTR lpName);
-typedef HANDLE (WINAPI *lpfnOpenEventW)(__in DWORD dwDesiredAccess, __in BOOL bInheritHandle, __in LPCWSTR lpName);
-typedef HANDLE (WINAPI *lpfnCreateMutexW)(__in_opt LPSECURITY_ATTRIBUTES lpMutexAttributes, __in BOOL bInitialOwner,
-                                          __in_opt LPCWSTR lpName);
-typedef HANDLE (WINAPI *lpfnOpenMutexW)(__in DWORD dwDesiredAccess, __in BOOL bInheritHandle, __in LPCWSTR lpName);
+typedef HANDLE (WINAPI *lpfnCreateEventW)(_In_opt_ LPSECURITY_ATTRIBUTES lpEventAttributes, _In_ BOOL bManualReset,
+                                          _In_ BOOL bInitialState, _In_opt_ LPCWSTR lpName);
+typedef HANDLE (WINAPI *lpfnOpenEventW)(_In_ DWORD dwDesiredAccess, _In_ BOOL bInheritHandle, _In_ LPCWSTR lpName);
+typedef HANDLE (WINAPI *lpfnCreateMutexW)(_In_opt_ LPSECURITY_ATTRIBUTES lpMutexAttributes, _In_ BOOL bInitialOwner,
+                                          _In_opt_ LPCWSTR lpName);
+typedef HANDLE (WINAPI *lpfnOpenMutexW)(_In_ DWORD dwDesiredAccess, _In_ BOOL bInheritHandle, _In_opt_ LPCWSTR lpName);
 
 //-----------------------------------------------------------
 
@@ -69,7 +69,7 @@ static lpfnOpenMutexW fnOpenMutexW = NULL;
 //-----------------------------------------------------------
 
 static VOID InitializeKernel32Apis();
-static NTSTATUS GetRootDirHandle(__out PHANDLE lphRootDir);
+static NTSTATUS GetRootDirHandle(_Out_ PHANDLE lphRootDir);
 
 //-----------------------------------------------------------
 
@@ -91,6 +91,7 @@ BOOL IsMultiProcessor()
       fnRtlGetNativeSystemInformation =
         (lpfnRtlGetNativeSystemInformation)MxGetProcedureAddress(DllBase, "RtlGetNativeSystemInformation");
     }
+    MX::MemSet(&sBasicInfo, 0, sizeof(sBasicInfo));
     if (fnRtlGetNativeSystemInformation != NULL)
       nNtStatus = fnRtlGetNativeSystemInformation(MxSystemBasicInformation, &sBasicInfo, sizeof(sBasicInfo), NULL);
     else
@@ -118,8 +119,8 @@ CWindowsEvent::CWindowsEvent() : CWindowsHandle()
   return;
 }
 
-HRESULT CWindowsEvent::Create(__in BOOL bManualReset, __in BOOL bInitialState, __in_z_opt LPCWSTR szNameW,
-                              __in_opt LPSECURITY_ATTRIBUTES lpSecAttr, __out_opt LPBOOL lpbAlreadyExists)
+HRESULT CWindowsEvent::Create(_In_ BOOL bManualReset, _In_ BOOL bInitialState, _In_opt_z_ LPCWSTR szNameW,
+                              _In_opt_ LPSECURITY_ATTRIBUTES lpSecAttr, _Out_opt_ LPBOOL lpbAlreadyExists)
 {
   HANDLE _h;
   HRESULT hRes;
@@ -177,7 +178,7 @@ HRESULT CWindowsEvent::Create(__in BOOL bManualReset, __in BOOL bInitialState, _
   return S_OK;
 }
 
-HRESULT CWindowsEvent::Open(__in_z_opt LPCWSTR szNameW, __in_opt BOOL bInherit)
+HRESULT CWindowsEvent::Open(_In_z_ LPCWSTR szNameW, _In_opt_ BOOL bInherit)
 {
   HANDLE _h;
 
@@ -198,19 +199,18 @@ HRESULT CWindowsEvent::Open(__in_z_opt LPCWSTR szNameW, __in_opt BOOL bInherit)
     sObjAttr.Attributes = 0x00000080; //OBJ_OPENIF
     if (bInherit != FALSE)
       sObjAttr.Attributes |= 0x00000002; //OBJ_INHERIT
-    if (szNameW != NULL)
-    {
-      //get root directory handle
-      nNtStatus = GetRootDirHandle(&(sObjAttr.RootDirectory));
-      if (!NT_SUCCESS(nNtStatus))
-        return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
-      //setup object name
-      usName.Buffer = (PWSTR)szNameW;
-      for (usName.Length=0; szNameW[usName.Length]!=0; usName.Length++);
-      usName.Length *= (USHORT)sizeof(WCHAR);
-      usName.MaximumLength = usName.Length;
-      sObjAttr.ObjectName = &usName;
-    }
+
+    //get root directory handle
+    nNtStatus = GetRootDirHandle(&(sObjAttr.RootDirectory));
+    if (!NT_SUCCESS(nNtStatus))
+      return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
+    //setup object name
+    usName.Buffer = (PWSTR)szNameW;
+    for (usName.Length=0; szNameW[usName.Length]!=0; usName.Length++);
+    usName.Length *= (USHORT)sizeof(WCHAR);
+    usName.MaximumLength = usName.Length;
+    sObjAttr.ObjectName = &usName;
+
     //open event
     nNtStatus = ::MxNtOpenEvent(&_h, EVENT_ALL_ACCESS, &sObjAttr);
     if (!NT_SUCCESS(nNtStatus))
@@ -220,7 +220,7 @@ HRESULT CWindowsEvent::Open(__in_z_opt LPCWSTR szNameW, __in_opt BOOL bInherit)
   return S_OK;
 }
 
-BOOL CWindowsEvent::Wait(__in DWORD dwTimeoutMs)
+BOOL CWindowsEvent::Wait(_In_ DWORD dwTimeoutMs)
 {
   LARGE_INTEGER liTimeout, *lpliTimeout;
 
@@ -243,8 +243,8 @@ CWindowsMutex::CWindowsMutex() : CWindowsHandle()
   return;
 }
 
-HRESULT CWindowsMutex::Create(__in_z_opt LPCWSTR szNameW, __in BOOL bInitialOwner,
-                              __in_opt LPSECURITY_ATTRIBUTES lpSecAttr, __out_opt LPBOOL lpbAlreadyExists)
+HRESULT CWindowsMutex::Create(_In_opt_z_ LPCWSTR szNameW, _In_ BOOL bInitialOwner,
+                              _In_opt_ LPSECURITY_ATTRIBUTES lpSecAttr, _Out_opt_ LPBOOL lpbAlreadyExists)
 {
   HANDLE _h;
   HRESULT hRes;
@@ -300,9 +300,9 @@ HRESULT CWindowsMutex::Create(__in_z_opt LPCWSTR szNameW, __in BOOL bInitialOwne
   return S_OK;
 }
 
-HRESULT CWindowsMutex::Open(__in_z_opt LPCWSTR szNameW, __in BOOL bQueryOnly, __in_opt BOOL bInherit)
+HRESULT CWindowsMutex::Open(_In_opt_z_ LPCWSTR szNameW, _In_ BOOL bQueryOnly, _In_opt_ BOOL bInherit)
 {
-  HANDLE _h;
+  HANDLE _h = NULL;
 
   if (fnOpenMutexW != NULL)
   {
@@ -315,7 +315,6 @@ HRESULT CWindowsMutex::Open(__in_z_opt LPCWSTR szNameW, __in BOOL bQueryOnly, __
     MX_OBJECT_ATTRIBUTES sObjAttr;
     MX_UNICODE_STRING usName;
     NTSTATUS nNtStatus;
-    HANDLE _h;
 
     MemSet(&sObjAttr, 0, sizeof(sObjAttr));
     sObjAttr.Length = (ULONG)sizeof(sObjAttr);
@@ -347,13 +346,13 @@ HRESULT CWindowsMutex::Open(__in_z_opt LPCWSTR szNameW, __in BOOL bQueryOnly, __
 
 //-----------------------------------------------------------
 
-VOID SlimRWL_Initialize(__in LONG volatile *lpnValue)
+VOID SlimRWL_Initialize(_In_ LONG volatile *lpnValue)
 {
   _InterlockedExchange(lpnValue, 0);
   return;
 }
 
-BOOL SlimRWL_TryAcquireShared(__in LONG volatile *lpnValue)
+BOOL SlimRWL_TryAcquireShared(_In_ LONG volatile *lpnValue)
 {
   LONG initVal, newVal;
 
@@ -370,7 +369,7 @@ BOOL SlimRWL_TryAcquireShared(__in LONG volatile *lpnValue)
   return TRUE;
 }
 
-VOID SlimRWL_AcquireShared(__in LONG volatile *lpnValue)
+VOID SlimRWL_AcquireShared(_In_ LONG volatile *lpnValue)
 {
   while (SlimRWL_TryAcquireShared(lpnValue) == FALSE)
     _YieldProcessor();
@@ -380,7 +379,7 @@ VOID SlimRWL_AcquireShared(__in LONG volatile *lpnValue)
   return;
 }
 
-VOID SlimRWL_ReleaseShared(__in LONG volatile *lpnValue)
+VOID SlimRWL_ReleaseShared(_In_ LONG volatile *lpnValue)
 { 
   LONG initVal, newVal;
 
@@ -399,7 +398,7 @@ VOID SlimRWL_ReleaseShared(__in LONG volatile *lpnValue)
   return;
 }
 
-BOOL SlimRWL_TryAcquireExclusive(__in LONG volatile *lpnValue)
+BOOL SlimRWL_TryAcquireExclusive(_In_ LONG volatile *lpnValue)
 {
   LONG initVal, newVal;
 
@@ -418,7 +417,7 @@ BOOL SlimRWL_TryAcquireExclusive(__in LONG volatile *lpnValue)
   return TRUE;
 }
 
-VOID SlimRWL_AcquireExclusive(__in LONG volatile *lpnValue)
+VOID SlimRWL_AcquireExclusive(_In_ LONG volatile *lpnValue)
 {
   while (SlimRWL_TryAcquireExclusive(lpnValue) == FALSE)
     _YieldProcessor();
@@ -428,7 +427,7 @@ VOID SlimRWL_AcquireExclusive(__in LONG volatile *lpnValue)
   return;
 }
 
-VOID SlimRWL_ReleaseExclusive(__in LONG volatile *lpnValue)
+VOID SlimRWL_ReleaseExclusive(_In_ LONG volatile *lpnValue)
 {
   MX_ASSERT(__InterlockedRead(lpnValue) == 0x80000000L);
   _InterlockedExchange(lpnValue, 0);
@@ -440,13 +439,13 @@ VOID SlimRWL_ReleaseExclusive(__in LONG volatile *lpnValue)
 
 //-----------------------------------------------------------
 
-VOID RundownProt_Initialize(__in LONG volatile *lpnValue)
+VOID RundownProt_Initialize(_In_ LONG volatile *lpnValue)
 {
   _InterlockedExchange(lpnValue, 0);
   return;
 }
 
-BOOL RundownProt_Acquire(__in LONG volatile *lpnValue)
+BOOL RundownProt_Acquire(_In_ LONG volatile *lpnValue)
 {
   LONG initVal, newVal;
 
@@ -462,7 +461,7 @@ BOOL RundownProt_Acquire(__in LONG volatile *lpnValue)
   return TRUE;
 }
 
-VOID RundownProt_Release(__in LONG volatile *lpnValue)
+VOID RundownProt_Release(_In_ LONG volatile *lpnValue)
 {
   LONG initVal, newVal;
 
@@ -478,7 +477,7 @@ VOID RundownProt_Release(__in LONG volatile *lpnValue)
   return;
 }
 
-VOID RundownProt_WaitForRelease(__in LONG volatile *lpnValue)
+VOID RundownProt_WaitForRelease(_In_ LONG volatile *lpnValue)
 {
   //mark rundown protection as shutting down
   _InterlockedOr(lpnValue, 0x80000000L);
@@ -497,11 +496,11 @@ static VOID InitializeKernel32Apis()
   static LONG volatile nInitialized = 0;
   static LONG volatile nMutex = 0;
 
-  if (MX::__InterlockedRead(&nInitialized) == 0)
+  if (__InterlockedRead(&nInitialized) == 0)
   {
     MX::CFastLock cLock(&nMutex);
 
-    if (MX::__InterlockedRead(&nInitialized) == 0)
+    if (__InterlockedRead(&nInitialized) == 0)
     {
       PVOID hDll;
 
@@ -553,7 +552,7 @@ static VOID InitializeKernel32Apis()
   return;
 }
 
-static NTSTATUS GetRootDirHandle(__out PHANDLE lphRootDir)
+static NTSTATUS GetRootDirHandle(_Out_ PHANDLE lphRootDir)
 {
   static HANDLE volatile hRootDirHandle = NULL;
   RTL_OSVERSIONINFOW sOviW;
@@ -564,7 +563,7 @@ static NTSTATUS GetRootDirHandle(__out PHANDLE lphRootDir)
   WCHAR szBufW[256];
   NTSTATUS nNtStatus;
 
-  *lphRootDir = MX::__InterlockedReadPointer(&hRootDirHandle);
+  *lphRootDir = __InterlockedReadPointer(&hRootDirHandle);
   if ((*lphRootDir) != NULL)
     return STATUS_SUCCESS;
 
@@ -624,9 +623,9 @@ static NTSTATUS GetRootDirHandle(__out PHANDLE lphRootDir)
   nNtStatus = ::MxNtOpenDirectoryObject(&_h, 0x0F, &sObjAttr); //DIRECTORY_CREATE_OBJECT|DIRECTORY_TRAVERSE
   if (NT_SUCCESS(nNtStatus) && dwUsesPrivateNamespace != 0)
   {
-    typedef NTSTATUS (NTAPI *lpfnRtlConvertSidToUnicodeString)(__out PMX_UNICODE_STRING UnicodeString,
-                                                               __in PSID Sid, __in BOOLEAN AllocateDestinationString);
-    typedef VOID (NTAPI *lpfnRtlFreeUnicodeString)(__in PMX_UNICODE_STRING UnicodeString);
+    typedef NTSTATUS (NTAPI *lpfnRtlConvertSidToUnicodeString)(_Out_ PMX_UNICODE_STRING UnicodeString,
+                                                               _In_ PSID Sid, _In_ BOOLEAN AllocateDestinationString);
+    typedef VOID (NTAPI *lpfnRtlFreeUnicodeString)(_In_ PMX_UNICODE_STRING UnicodeString);
     PVOID nNtDll;
     lpfnRtlConvertSidToUnicodeString fnRtlConvertSidToUnicodeString = NULL;
     lpfnRtlFreeUnicodeString fnRtlFreeUnicodeString = NULL;
@@ -689,7 +688,7 @@ done:
     if (_InterlockedCompareExchangePointer(&hRootDirHandle, _h, NULL) != NULL)
     {
       ::MxNtClose(_h);
-      _h = MX::__InterlockedReadPointer(&hRootDirHandle);
+      _h = __InterlockedReadPointer(&hRootDirHandle);
     }
   }
   else

@@ -39,20 +39,20 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Allow)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
     return DuplicateBehaviorAppend;
     };
 
-  HRESULT AddVerb(__in_z LPCSTR szVerbA);
+  HRESULT AddVerb(_In_z_ LPCSTR szVerbA);
 
   SIZE_T GetVerbsCount() const;
-  LPCSTR GetVerb(__in SIZE_T nIndex) const;
-  BOOL HasVerb(__in_z LPCSTR szVerbA) const;
+  LPCSTR GetVerb(_In_ SIZE_T nIndex) const;
+  BOOL HasVerb(_In_z_ LPCSTR szVerbA) const;
 
 private:
   TArrayListWithFree<LPSTR> cVerbsList;

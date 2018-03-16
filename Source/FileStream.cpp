@@ -40,9 +40,9 @@ CFileStream::~CFileStream()
   return;
 }
 
-HRESULT CFileStream::Create(__in LPCWSTR szFileNameW, __in_opt DWORD dwDesiredAccess, __in_opt DWORD dwShareMode,
-                            __in_opt DWORD dwCreationDisposition, __in_opt DWORD dwFlagsAndAttributes,
-                            __in_opt LPSECURITY_ATTRIBUTES lpSecurityAttributes)
+HRESULT CFileStream::Create(_In_ LPCWSTR szFileNameW, _In_opt_ DWORD dwDesiredAccess, _In_opt_ DWORD dwShareMode,
+                            _In_opt_ DWORD dwCreationDisposition, _In_opt_ DWORD dwFlagsAndAttributes,
+                            _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes)
 {
   HANDLE h;
   NTSTATUS nNtStatus;
@@ -68,8 +68,8 @@ VOID CFileStream::Close()
   return;
 }
 
-HRESULT CFileStream::Read(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_T &nReaded,
-                          __in_opt ULONGLONG nStartOffset)
+HRESULT CFileStream::Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nReaded,
+                          _In_opt_ ULONGLONG nStartOffset)
 {
   MX_IO_STATUS_BLOCK sIoStatus;
   ULARGE_INTEGER liOffset;
@@ -104,8 +104,8 @@ HRESULT CFileStream::Read(__out LPVOID lpDest, __in SIZE_T nBytes, __out SIZE_T 
   return S_OK;
 }
 
-HRESULT CFileStream::Write(__in LPCVOID lpSrc, __in SIZE_T nBytes, __out SIZE_T &nWritten,
-                           __in_opt ULONGLONG nStartOffset)
+HRESULT CFileStream::Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nWritten,
+                           _In_opt_ ULONGLONG nStartOffset)
 {
   MX_IO_STATUS_BLOCK sIoStatus;
   ULARGE_INTEGER liOffset;
@@ -152,7 +152,7 @@ HRESULT CFileStream::Write(__in LPCVOID lpSrc, __in SIZE_T nBytes, __out SIZE_T 
   return S_OK;
 }
 
-HRESULT CFileStream::Seek(__in ULONGLONG nPosition, __in_opt eSeekMethod nMethod)
+HRESULT CFileStream::Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod)
 {
   MX_FILE_POSITION_INFORMATION sFilePosInfo;
   MX_FILE_STANDARD_INFORMATION sFileStdInfo;

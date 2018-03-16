@@ -39,38 +39,38 @@ static const int aDateTimeMonthDays[13] = {0, 31, 59, 90, 120, 151, 181, 212, 24
 
 //-----------------------------------------------------------
 
-static HRESULT Format_AddNumber(__inout MX::CStringW &cStrDestW, __in SIZE_T nNumber, __in SIZE_T nMinDigits);
-static BOOL DoTwoDigitsYearAdjustment(__inout int &nYear, __in int nTwoDigitsYearRule);
-static VOID TicksToYearAndDayOfYear(__in const MX::CTimeSpan &cTicks, __out_opt int *lpnYear,
-                                    __out_opt int *lpnDayOfYear);
-static BOOL ConvertCustomSettingsA2W(__out MX::CDateTime::LPCUSTOMSETTINGSW lpCustomW,
-                                     __in MX::CDateTime::LPCUSTOMSETTINGSA lpCustomA);
-static VOID FreeCustomSettings(__in MX::CDateTime::LPCUSTOMSETTINGSW lpCustomW);
-static VOID FixCustomSettings(__out MX::CDateTime::LPCUSTOMSETTINGSW lpOut, __in MX::CDateTime::LPCUSTOMSETTINGSW lpIn);
-static HRESULT GetRoundedMillisecondsForOA(__in double nMs, __out LONGLONG *lpnRes);
+static HRESULT Format_AddNumber(_Inout_ MX::CStringW &cStrDestW, _In_ SIZE_T nNumber, _In_ SIZE_T nMinDigits);
+static BOOL DoTwoDigitsYearAdjustment(_Inout_ int &nYear, _In_ int nTwoDigitsYearRule);
+static VOID TicksToYearAndDayOfYear(_In_ const MX::CTimeSpan &cTicks, _Out_opt_ int *lpnYear,
+                                    _Out_opt_ int *lpnDayOfYear);
+static BOOL ConvertCustomSettingsA2W(_Out_ MX::CDateTime::LPCUSTOMSETTINGSW lpCustomW,
+                                     _In_ MX::CDateTime::LPCUSTOMSETTINGSA lpCustomA);
+static VOID FreeCustomSettings(_In_ MX::CDateTime::LPCUSTOMSETTINGSW lpCustomW);
+static VOID FixCustomSettings(_Out_ MX::CDateTime::LPCUSTOMSETTINGSW lpOut, _In_ MX::CDateTime::LPCUSTOMSETTINGSW lpIn);
+static HRESULT GetRoundedMillisecondsForOA(_In_ double nMs, _Out_ LONGLONG *lpnRes);
 static LPWSTR Ansi2Wide(__in_nz_opt LPCSTR szSrcA);
-static SIZE_T CompareStrW(__in_z LPCWSTR szStrW, __in_z LPCWSTR szCompareToW);
-static int FixGmtOffset(__in int nGmtOffset);
+static SIZE_T CompareStrW(_In_z_ LPCWSTR szStrW, _In_z_ LPCWSTR szCompareToW);
+static int FixGmtOffset(_In_ int nGmtOffset);
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-CDateTime::CDateTime(__in const CDateTime& cSrc) : CBaseMemObj()
+CDateTime::CDateTime(_In_ const CDateTime& cSrc) : CBaseMemObj()
 {
   cTicks = cSrc.cTicks;
   nGmtOffset = cSrc.nGmtOffset;
   return;
 }
 
-CDateTime::CDateTime(__in_opt LONGLONG nTicks, __in_opt int _nGmtOffset) : CBaseMemObj()
+CDateTime::CDateTime(_In_opt_ LONGLONG nTicks, _In_opt_ int _nGmtOffset) : CBaseMemObj()
 {
   cTicks.SetFromTicks((nTicks>=0 && nTicks<=X_MAX_VALUE_TICKS) ? nTicks : 0);
   nGmtOffset = FixGmtOffset(_nGmtOffset);
   return;
 }
 
-CDateTime::CDateTime(__in CTimeSpan &cTs, __in_opt int _nGmtOffset) : CBaseMemObj()
+CDateTime::CDateTime(_In_ CTimeSpan &cTs, _In_opt_ int _nGmtOffset) : CBaseMemObj()
 {
   LONGLONG nTicks;
 
@@ -80,7 +80,7 @@ CDateTime::CDateTime(__in CTimeSpan &cTs, __in_opt int _nGmtOffset) : CBaseMemOb
   return;
 }
 
-CDateTime::CDateTime(__in int nYear, __in int nMonth, __in int nDay, __in_opt int _nGmtOffset) : CBaseMemObj()
+CDateTime::CDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_opt_ int _nGmtOffset) : CBaseMemObj()
 {
   int nAbsDay;
 
@@ -91,8 +91,8 @@ CDateTime::CDateTime(__in int nYear, __in int nMonth, __in int nDay, __in_opt in
   return;
 }
 
-CDateTime::CDateTime(__in int nYear, __in int nMonth, __in int nDay, __in int nHours, __in int nMinutes,
-                     __in int nSeconds, __in_opt int nMilliSeconds, __in_opt int _nGmtOffset) : CBaseMemObj()
+CDateTime::CDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_ int nHours, _In_ int nMinutes,
+                     _In_ int nSeconds, _In_opt_ int nMilliSeconds, _In_opt_ int _nGmtOffset) : CBaseMemObj()
 {
   int nAbsDay;
 
@@ -115,7 +115,7 @@ VOID CDateTime::Clear()
   return;
 }
 
-HRESULT CDateTime::SetDate(__in int nYear, __in int nMonth, __in int nDay)
+HRESULT CDateTime::SetDate(_In_ int nYear, _In_ int nMonth, _In_ int nDay)
 {
   CTimeSpan cTempTicks;
   int nAbsDay;
@@ -130,13 +130,13 @@ HRESULT CDateTime::SetDate(__in int nYear, __in int nMonth, __in int nDay)
   return hRes;
 }
 
-HRESULT CDateTime::SetTime(__in int nHours, __in int nMinutes, __in int nSeconds, __in_opt int nMilliSeconds)
+HRESULT CDateTime::SetTime(_In_ int nHours, _In_ int nMinutes, _In_ int nSeconds, _In_opt_ int nMilliSeconds)
 {
   return cTicks.SetFrom((int)cTicks.GetDays(), nHours, nMinutes, nSeconds, nMilliSeconds);
 }
 
-HRESULT CDateTime::SetDateTime(__in int nYear, __in int nMonth, __in int nDay, __in int nHours, __in int nMinutes,
-                               __in int nSeconds, __in_opt int nMilliSeconds)
+HRESULT CDateTime::SetDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_ int nHours, _In_ int nMinutes,
+                               _In_ int nSeconds, _In_opt_ int nMilliSeconds)
 {
   CTimeSpan cOldTicks;
   HRESULT hRes;
@@ -150,7 +150,7 @@ HRESULT CDateTime::SetDateTime(__in int nYear, __in int nMonth, __in int nDay, _
   return hRes;
 }
 
-HRESULT CDateTime::SetFromTicks(__in LONGLONG nTicks)
+HRESULT CDateTime::SetFromTicks(_In_ LONGLONG nTicks)
 {
   if (nTicks < 0 || nTicks > X_MAX_VALUE_TICKS)
     return E_INVALIDARG;
@@ -158,7 +158,7 @@ HRESULT CDateTime::SetFromTicks(__in LONGLONG nTicks)
   return S_OK;
 }
 
-HRESULT CDateTime::SetFromSystemTime(__in const SYSTEMTIME& sSrcSysTime)
+HRESULT CDateTime::SetFromSystemTime(_In_ const SYSTEMTIME& sSrcSysTime)
 {
   HRESULT hRes;
 
@@ -170,7 +170,7 @@ HRESULT CDateTime::SetFromSystemTime(__in const SYSTEMTIME& sSrcSysTime)
   return hRes;
 }
 
-HRESULT CDateTime::SetFromFileTime(__in const FILETIME& sSrcFileTime)
+HRESULT CDateTime::SetFromFileTime(_In_ const FILETIME& sSrcFileTime)
 {
   SYSTEMTIME sSysTime;
 
@@ -179,8 +179,8 @@ HRESULT CDateTime::SetFromFileTime(__in const FILETIME& sSrcFileTime)
   return SetFromSystemTime(sSysTime);
 }
 
-HRESULT CDateTime::SetFromString(__in_z LPCSTR szDateA, __in_z LPCSTR szFormatA, __in_opt LPCUSTOMSETTINGSA lpCustomA,
-                                 __in_opt int nTwoDigitsYearRule)
+HRESULT CDateTime::SetFromString(_In_z_ LPCSTR szDateA, _In_z_ LPCSTR szFormatA, _In_opt_ LPCUSTOMSETTINGSA lpCustomA,
+                                 _In_opt_ int nTwoDigitsYearRule)
 {
   CStringW cStrTempDateW, cStrTempFormatW;
   CUSTOMSETTINGSW sCustomW;
@@ -204,8 +204,8 @@ HRESULT CDateTime::SetFromString(__in_z LPCSTR szDateA, __in_z LPCSTR szFormatA,
   return hRes;
 }
 
-HRESULT CDateTime::SetFromString(__in_z LPCWSTR szDateW, __in_z LPCWSTR szFormatW, __in_opt LPCUSTOMSETTINGSW lpCustomW,
-                                 __in_opt int nTwoDigitsYearRule)
+HRESULT CDateTime::SetFromString(_In_z_ LPCWSTR szDateW, _In_z_ LPCWSTR szFormatW, _In_opt_ LPCUSTOMSETTINGSW lpCustomW,
+                                 _In_opt_ int nTwoDigitsYearRule)
 {
   int nYear, nMonth, nDay, nHours, nMinutes, nSeconds, nMilliSeconds;
   int nHourFlag, nYDay, nWeekDay, nWeekNumber, nSign;
@@ -626,7 +626,7 @@ pfs_skip_phrase:
   return S_OK;
 }
 
-HRESULT CDateTime::SetFromNow(__in BOOL bLocal)
+HRESULT CDateTime::SetFromNow(_In_ BOOL bLocal)
 {
   SYSTEMTIME sSi;
   TIME_ZONE_INFORMATION sTzi;
@@ -650,12 +650,12 @@ HRESULT CDateTime::SetFromNow(__in BOOL bLocal)
   return S_OK;
 }
 
-HRESULT CDateTime::SetFromUnixTime(__in int nTime)
+HRESULT CDateTime::SetFromUnixTime(_In_ int nTime)
 {
   return SetFromUnixTime((LONGLONG)nTime);
 }
 
-HRESULT CDateTime::SetFromUnixTime(__in LONGLONG nTime)
+HRESULT CDateTime::SetFromUnixTime(_In_ LONGLONG nTime)
 {
   LONGLONG nTicks;
 
@@ -676,7 +676,7 @@ HRESULT CDateTime::SetFromUnixTime(__in LONGLONG nTime)
   return S_OK;
 }
 
-HRESULT CDateTime::SetFromOleAutDate(__in double nValue)
+HRESULT CDateTime::SetFromOleAutDate(_In_ double nValue)
 {
   CDateTime cDt;
   double nDays, nHours;
@@ -715,7 +715,7 @@ HRESULT CDateTime::SetFromOleAutDate(__in double nValue)
   return hRes;
 }
 
-HRESULT CDateTime::SetGmtOffset(__in int _nGmtOffset, __in BOOL bAdjustTime)
+HRESULT CDateTime::SetGmtOffset(_In_ int _nGmtOffset, _In_ BOOL bAdjustTime)
 {
   HRESULT hRes;
 
@@ -731,7 +731,7 @@ HRESULT CDateTime::SetGmtOffset(__in int _nGmtOffset, __in BOOL bAdjustTime)
   return S_OK;
 }
 
-VOID CDateTime::GetDate(__out int *lpnYear, __out int *lpnMonth, __out int *lpnDay)
+VOID CDateTime::GetDate(_Out_ int *lpnYear, _Out_ int *lpnMonth, _Out_ int *lpnDay)
 {
   int nDayOfYear, nYear;
 
@@ -742,8 +742,8 @@ VOID CDateTime::GetDate(__out int *lpnYear, __out int *lpnMonth, __out int *lpnD
   return;
 }
 
-VOID CDateTime::GetTime(__out int *lpnHour, __out int *lpnMinutes, __out int *lpnSeconds,
-                        __out_opt int *lpnMilliSeconds)
+VOID CDateTime::GetTime(_Out_ int *lpnHour, _Out_ int *lpnMinutes, _Out_ int *lpnSeconds,
+                        _Out_opt_ int *lpnMilliSeconds)
 {
   if (lpnHour != NULL)
     *lpnHour = cTicks.GetHours();
@@ -756,15 +756,15 @@ VOID CDateTime::GetTime(__out int *lpnHour, __out int *lpnMinutes, __out int *lp
   return;
 }
 
-VOID CDateTime::GetDateTime(__out int *lpnYear, __out int *lpnMonth, __out int *lpnDay, __out int *lpnHours,
-                            __out int *lpnMinutes, __out int *lpnSeconds, __out_opt int *lpnMilliSeconds)
+VOID CDateTime::GetDateTime(_Out_ int *lpnYear, _Out_ int *lpnMonth, _Out_ int *lpnDay, _Out_ int *lpnHours,
+                            _Out_ int *lpnMinutes, _Out_ int *lpnSeconds, _Out_opt_ int *lpnMilliSeconds)
 {
   GetDate(lpnYear, lpnMonth, lpnDay);
   GetTime(lpnHours, lpnMinutes, lpnSeconds, lpnMilliSeconds);
   return;
 }
 
-VOID CDateTime::GetSystemTime(__out SYSTEMTIME &sSysTime)
+VOID CDateTime::GetSystemTime(_Out_ SYSTEMTIME &sSysTime)
 {
   int nYear, nMonth, nDay, nHours, nMinutes, nSeconds;
 
@@ -781,7 +781,7 @@ VOID CDateTime::GetSystemTime(__out SYSTEMTIME &sSysTime)
   return;
 }
 
-HRESULT CDateTime::GetFileTime(__out FILETIME &sFileTime)
+HRESULT CDateTime::GetFileTime(_Out_ FILETIME &sFileTime)
 {
   SYSTEMTIME sSysTime;
 
@@ -791,7 +791,7 @@ HRESULT CDateTime::GetFileTime(__out FILETIME &sFileTime)
   return S_OK;
 }
 
-HRESULT CDateTime::GetUnixTime(__out int *lpnTime)
+HRESULT CDateTime::GetUnixTime(_Out_ int *lpnTime)
 {
   LONGLONG nTemp;
   HRESULT hRes;
@@ -805,7 +805,7 @@ HRESULT CDateTime::GetUnixTime(__out int *lpnTime)
   return hRes;
 }
 
-HRESULT CDateTime::GetUnixTime(__out LONGLONG *lpnTime)
+HRESULT CDateTime::GetUnixTime(_Out_ LONGLONG *lpnTime)
 {
   if (lpnTime == NULL)
     return E_POINTER;
@@ -820,7 +820,7 @@ HRESULT CDateTime::GetUnixTime(__out LONGLONG *lpnTime)
   return S_OK;
 }
 
-HRESULT CDateTime::GetOleAutDate(__out double *lpnValue)
+HRESULT CDateTime::GetOleAutDate(_Out_ double *lpnValue)
 {
   CTimeSpan cTs;
   double nRes, d;
@@ -869,19 +869,19 @@ int CDateTime::GetYear() const
 
 int CDateTime::GetMonth() const
 {
-  int nDayOfYear, nYear, nMonth;
+  int nDayOfYear, nYear, nMonth, nDay;
 
   TicksToYearAndDayOfYear(cTicks, &nYear, &nDayOfYear);
-  CalculateDayMonth(nDayOfYear, nYear, &nMonth, NULL);
+  CalculateDayMonth(nDayOfYear, nYear, &nMonth, &nDay);
   return nMonth;
 }
 
 int CDateTime::GetDay() const
 {
-  int nDayOfYear, nYear, nDay;
+  int nDayOfYear, nYear, nMonth, nDay;
 
   TicksToYearAndDayOfYear(cTicks, &nYear, &nDayOfYear);
-  CalculateDayMonth(nDayOfYear, nYear, NULL, &nDay);
+  CalculateDayMonth(nDayOfYear, nYear, &nMonth, &nDay);
   return nDay;
 }
 
@@ -921,7 +921,7 @@ int CDateTime::GetDayOfYear() const
   return nDayOfYear;
 }
 
-VOID CDateTime::GetTimeOfDay(__out CTimeSpan &cDestTs)
+VOID CDateTime::GetTimeOfDay(_Out_ CTimeSpan &cDestTs)
 {
   cDestTs.SetFromTicks(cTicks.GetTicks() % MX_DATETIME_TICKS_PER_DAY);
   return;
@@ -937,7 +937,7 @@ BOOL CDateTime::IsLeapYear() const
   return IsLeapYear(GetYear());
 }
 
-CDateTime& CDateTime::operator=(__in const CDateTime& cSrc)
+CDateTime& CDateTime::operator=(_In_ const CDateTime& cSrc)
 {
   if (&cSrc != this)
   {
@@ -947,47 +947,47 @@ CDateTime& CDateTime::operator=(__in const CDateTime& cSrc)
   return *this;
 }
 
-bool CDateTime::operator==(__in const CDateTime& cDt) const
+bool CDateTime::operator==(_In_ const CDateTime& cDt) const
 {
   return (cTicks.GetTicks() == cDt.GetTicks()) ? true : false;
 }
 
-bool CDateTime::operator!=(__in const CDateTime& cDt) const
+bool CDateTime::operator!=(_In_ const CDateTime& cDt) const
 {
   return (cTicks.GetTicks() != cDt.GetTicks()) ? true : false;
 }
 
-bool CDateTime::operator<(__in const CDateTime& cDt) const
+bool CDateTime::operator<(_In_ const CDateTime& cDt) const
 {
   return (cTicks.GetTicks() < cDt.GetTicks()) ? true : false;
 }
 
-bool CDateTime::operator>(__in const CDateTime& cDt) const
+bool CDateTime::operator>(_In_ const CDateTime& cDt) const
 {
   return (cTicks.GetTicks() > cDt.GetTicks()) ? true : false;
 }
 
-bool CDateTime::operator<=(__in const CDateTime& cDt) const
+bool CDateTime::operator<=(_In_ const CDateTime& cDt) const
 {
   return (cTicks.GetTicks() <= cDt.GetTicks()) ? true : false;
 }
 
-bool CDateTime::operator>=(__in const CDateTime& cDt) const
+bool CDateTime::operator>=(_In_ const CDateTime& cDt) const
 {
   return (cTicks.GetTicks() >= cDt.GetTicks()) ? true : false;
 }
 
-HRESULT CDateTime::Add(__in CTimeSpan &cTs)
+HRESULT CDateTime::Add(_In_ CTimeSpan &cTs)
 {
   return Add(cTs.GetTicks(), UnitsTicks);
 }
 
-HRESULT CDateTime::Add(__in int nCount, __in eUnits nUnits)
+HRESULT CDateTime::Add(_In_ int nCount, _In_ eUnits nUnits)
 {
   return Add((LONGLONG)nCount, nUnits);
 }
 
-HRESULT CDateTime::Add(__in LONGLONG nCount, __in eUnits nUnits)
+HRESULT CDateTime::Add(_In_ LONGLONG nCount, _In_ eUnits nUnits)
 {
   CTimeSpan cNewTicks, cTs;
   int k, nYear, nMonth, nDay;
@@ -1066,24 +1066,24 @@ HRESULT CDateTime::Add(__in LONGLONG nCount, __in eUnits nUnits)
   return hRes;
 }
 
-HRESULT CDateTime::Sub(__in CTimeSpan &cTs)
+HRESULT CDateTime::Sub(_In_ CTimeSpan &cTs)
 {
   return Sub(cTs.GetTicks(), UnitsTicks);
 }
 
-HRESULT CDateTime::Sub(__in int nCount, __in eUnits nUnits)
+HRESULT CDateTime::Sub(_In_ int nCount, _In_ eUnits nUnits)
 {
   return Sub((LONGLONG)nCount, nUnits);
 }
 
-HRESULT CDateTime::Sub(__in LONGLONG nCount, __in eUnits nUnits)
+HRESULT CDateTime::Sub(_In_ LONGLONG nCount, _In_ eUnits nUnits)
 {
   if (nCount == LONGLONG_MIN)
     return MX_E_ArithmeticOverflow;
   return Add(-nCount, nUnits);
 }
 
-LONGLONG CDateTime::GetDiff(__in const CDateTime& cFromDt, __in eUnits nUnits)
+LONGLONG CDateTime::GetDiff(_In_ const CDateTime& cFromDt, _In_ eUnits nUnits)
 {
   int i, nYear[2], nMonth[2], nDay[2], nTemp[2];
   double nDblTemp[2];
@@ -1153,20 +1153,20 @@ LONGLONG CDateTime::GetDiff(__in const CDateTime& cFromDt, __in eUnits nUnits)
   return nDiff;
 }
 
-HRESULT CDateTime::Format(__inout CStringA &cStrDestA, __in_z LPCSTR szFormatA, __in_opt LPCUSTOMSETTINGSA lpCustomA)
+HRESULT CDateTime::Format(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szFormatA, _In_opt_ LPCUSTOMSETTINGSA lpCustomA)
 {
   cStrDestA.Empty();
   return AppendFormat(cStrDestA, szFormatA, lpCustomA);
 }
 
-HRESULT CDateTime::Format(__inout CStringW &cStrDestW, __in_z LPCWSTR szFormatW, __in_opt LPCUSTOMSETTINGSW lpCustomW)
+HRESULT CDateTime::Format(_Inout_ CStringW &cStrDestW, _In_z_ LPCWSTR szFormatW, _In_opt_ LPCUSTOMSETTINGSW lpCustomW)
 {
   cStrDestW.Empty();
   return AppendFormat(cStrDestW, szFormatW, lpCustomW);
 }
 
-HRESULT CDateTime::AppendFormat(__inout CStringA &cStrDestA, __in_z LPCSTR szFormatA,
-                                __in_opt LPCUSTOMSETTINGSA lpCustomA)
+HRESULT CDateTime::AppendFormat(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szFormatA,
+                                _In_opt_ LPCUSTOMSETTINGSA lpCustomA)
 {
   CStringW cStrFormatW, cStrTempW;
   CUSTOMSETTINGSW sCustomW;
@@ -1200,8 +1200,8 @@ HRESULT CDateTime::AppendFormat(__inout CStringA &cStrDestA, __in_z LPCSTR szFor
   return hRes;
 }
 
-HRESULT CDateTime::AppendFormat(__inout CStringW &cStrDestW, __in_z LPCWSTR szFormatW,
-                                __in_opt LPCUSTOMSETTINGSW lpCustomW)
+HRESULT CDateTime::AppendFormat(_Inout_ CStringW &cStrDestW, _In_z_ LPCWSTR szFormatW,
+                                _In_opt_ LPCUSTOMSETTINGSW lpCustomW)
 {
   CUSTOMSETTINGSW sCustomW;
   int nYear, nMonth, nDay, nHours, nMinutes, nSeconds, nMilliSeconds;
@@ -1243,6 +1243,7 @@ fmt_restart:
         case L'A': // full weekday name
           if (nWeekDay < 0)
             nWeekDay = GetDayOfWeek();
+#pragma warning(suppress : 6385)
           if (cStrDestW.Concat((*szFormatW == L'a') ? sCustomW.szShortDayNamesW[nWeekDay] :
                                                       sCustomW.szLongDayNamesW[nWeekDay]) == FALSE)
             return E_OUTOFMEMORY;
@@ -1463,7 +1464,7 @@ fmt_restart:
   return S_OK;
 }
 
-BOOL CDateTime::IsDateValid(__in int nYear, __in int nMonth, __in int nDay)
+BOOL CDateTime::IsDateValid(_In_ int nYear, _In_ int nMonth, _In_ int nDay)
 {
   int nDaysInMonth;
 
@@ -1473,19 +1474,19 @@ BOOL CDateTime::IsDateValid(__in int nYear, __in int nMonth, __in int nDay)
   return (nDaysInMonth > 0 && nDay <= nDaysInMonth) ? TRUE : FALSE;
 }
 
-BOOL CDateTime::IsTimeValid(__in int nHours, __in int nMinutes, __in int nSeconds)
+BOOL CDateTime::IsTimeValid(_In_ int nHours, _In_ int nMinutes, _In_ int nSeconds)
 {
   return (nHours<0 || nHours>23 || nMinutes<0 || nMinutes>59 || nSeconds<0 || nSeconds>59) ? FALSE : TRUE;
 }
 
-BOOL CDateTime::IsLeapYear(__in int nYear)
+BOOL CDateTime::IsLeapYear(_In_ int nYear)
 {
   if (nYear < 1)
     return FALSE;
   return (((nYear&3)==0) && ((nYear%100)!=0 || (nYear%400)==0)) ? TRUE : FALSE;
 }
 
-int CDateTime::GetDaysInMonth(__in int nMonth, __in int nYear)
+int CDateTime::GetDaysInMonth(_In_ int nMonth, _In_ int nYear)
 {
   if (nYear<1 || nYear>9999 || nMonth<1 || nMonth>12)
     return 0;
@@ -1493,9 +1494,9 @@ int CDateTime::GetDaysInMonth(__in int nMonth, __in int nYear)
          ((IsLeapYear(nYear) != FALSE && nMonth == 2) ? 1 : 0);
 }
 
-int CDateTime::GetDayOfWeek(__in int nYear, __in int nMonth, __in int nDay)
+int CDateTime::GetDayOfWeek(_In_ int nYear, _In_ int nMonth, _In_ int nDay)
 {
-  __in int nTemp;
+  _In_ int nTemp;
 
   if (IsDateValid(nYear, nMonth, nDay) == FALSE)
     return -1;
@@ -1507,14 +1508,14 @@ int CDateTime::GetDayOfWeek(__in int nYear, __in int nMonth, __in int nDay)
   return ((nTemp - 1) % 7);
 }
 
-int CDateTime::GetDayOfYear(__in int nYear, __in int nMonth, __in int nDay)
+int CDateTime::GetDayOfYear(_In_ int nYear, _In_ int nMonth, _In_ int nDay)
 {
   if (IsDateValid(nYear, nMonth, nDay) == FALSE)
     return -1;
   return aDateTimeMonthDays[nMonth-1] + (nDay-1) + ((IsLeapYear(nYear) != FALSE && nMonth > 2) ? 1 : 0);
 }
 
-int CDateTime::GetAbsoluteDay(__in int nYear, __in int nMonth, __in int nDay)
+int CDateTime::GetAbsoluteDay(_In_ int nYear, _In_ int nMonth, _In_ int nDay)
 {
   int nM, nTemp, nLeap;
 
@@ -1527,7 +1528,7 @@ int CDateTime::GetAbsoluteDay(__in int nYear, __in int nMonth, __in int nDay)
   return (nDay-1) + nTemp + (365*nYear) + (nYear/4) - (nYear/100) + (nYear/400);
 }
 
-HRESULT CDateTime::CalculateDayMonth(__in int nDayOfYear, __in int nYear, __out int *lpnMonth, __out int *lpnDay)
+HRESULT CDateTime::CalculateDayMonth(_In_ int nDayOfYear, _In_ int nYear, _Out_ int *lpnMonth, _Out_ int *lpnDay)
 {
   int nLeapYear, nMonth, nTemp;
 
@@ -1556,8 +1557,8 @@ HRESULT CDateTime::CalculateDayMonth(__in int nDayOfYear, __in int nYear, __out 
   return S_OK;
 }
 
-HRESULT CDateTime::CalculateEasterInYear(__in int nYear, __out int *lpnMonth, __out int *lpnDay,
-                                         __in BOOL bOrthodoxChurchesMethod)
+HRESULT CDateTime::CalculateEasterInYear(_In_ int nYear, _Out_ int *lpnMonth, _Out_ int *lpnDay,
+                                         _In_ BOOL bOrthodoxChurchesMethod)
 {
   int nFirstDig, nRemain19, nTemp, tA, tB, tC, tD, tE;
 
@@ -1657,7 +1658,7 @@ HRESULT CDateTime::CalculateEasterInYear(__in int nYear, __out int *lpnMonth, __
 
 //-----------------------------------------------------------
 
-static HRESULT Format_AddNumber(__inout MX::CStringW &cStrDestW, __in SIZE_T nNumber, __in SIZE_T nMinDigits)
+static HRESULT Format_AddNumber(_Inout_ MX::CStringW &cStrDestW, _In_ SIZE_T nNumber, _In_ SIZE_T nMinDigits)
 {
   static const LPCWSTR szZeroesW = L"00000000";
   SIZE_T k, nTotalDigits;
@@ -1690,7 +1691,7 @@ static HRESULT Format_AddNumber(__inout MX::CStringW &cStrDestW, __in SIZE_T nNu
   return S_OK;
 }
 
-static BOOL DoTwoDigitsYearAdjustment(__inout int &nYear, __in int nTwoDigitsYearRule)
+static BOOL DoTwoDigitsYearAdjustment(_Inout_ int &nYear, _In_ int nTwoDigitsYearRule)
 {
   int i, k;
 
@@ -1725,8 +1726,8 @@ static BOOL DoTwoDigitsYearAdjustment(__inout int &nYear, __in int nTwoDigitsYea
   return TRUE;
 }
 
-static VOID TicksToYearAndDayOfYear(__in const MX::CTimeSpan &cTicks, __out_opt int *lpnYear,
-                                    __out_opt int *lpnDayOfYear)
+static VOID TicksToYearAndDayOfYear(_In_ const MX::CTimeSpan &cTicks, _Out_opt_ int *lpnYear,
+                                    _Out_opt_ int *lpnDayOfYear)
 {
   int nTotalDays, nYears400, nDays400, nYears100, nDays100, nYears4, nDays4, nYears1;
 
@@ -1755,8 +1756,8 @@ static VOID TicksToYearAndDayOfYear(__in const MX::CTimeSpan &cTicks, __out_opt 
   return;
 }
 
-static BOOL ConvertCustomSettingsA2W(__out MX::CDateTime::LPCUSTOMSETTINGSW lpCustomW,
-                                     __in MX::CDateTime::LPCUSTOMSETTINGSA lpCustomA)
+static BOOL ConvertCustomSettingsA2W(_Out_ MX::CDateTime::LPCUSTOMSETTINGSW lpCustomW,
+                                     _In_ MX::CDateTime::LPCUSTOMSETTINGSA lpCustomA)
 {
   int i;
 
@@ -1836,7 +1837,7 @@ onerr:  FreeCustomSettings(lpCustomW);
   return TRUE;
 }
 
-static VOID FreeCustomSettings(__in MX::CDateTime::LPCUSTOMSETTINGSW lpCustomW)
+static VOID FreeCustomSettings(_In_ MX::CDateTime::LPCUSTOMSETTINGSW lpCustomW)
 {
   int i;
 
@@ -1862,7 +1863,7 @@ static VOID FreeCustomSettings(__in MX::CDateTime::LPCUSTOMSETTINGSW lpCustomW)
   return;
 }
 
-static VOID FixCustomSettings(__out MX::CDateTime::LPCUSTOMSETTINGSW lpOut, __in MX::CDateTime::LPCUSTOMSETTINGSW lpIn)
+static VOID FixCustomSettings(_Out_ MX::CDateTime::LPCUSTOMSETTINGSW lpOut, _In_ MX::CDateTime::LPCUSTOMSETTINGSW lpIn)
 {
   static LPCWSTR szShortDayNamesW[7] = {
     L"Sun", L"Mon", L"Tue", L"Wed", L"Thu", L"Fri", L"Sat"
@@ -1916,7 +1917,7 @@ static VOID FixCustomSettings(__out MX::CDateTime::LPCUSTOMSETTINGSW lpOut, __in
   return;
 }
 
-static HRESULT GetRoundedMillisecondsForOA(__in double nMs, __out LONGLONG *lpnRes)
+static HRESULT GetRoundedMillisecondsForOA(_In_ double nMs, _Out_ LONGLONG *lpnRes)
 {
   LONGLONG nTicks;
   double nTempDbl;
@@ -1964,7 +1965,7 @@ static LPWSTR Ansi2Wide(__in_nz_opt LPCSTR szSrcA)
   return cStrTempW.Detach();
 }
 
-static SIZE_T CompareStrW(__in_z LPCWSTR szStrW, __in_z LPCWSTR szCompareToW)
+static SIZE_T CompareStrW(_In_z_ LPCWSTR szStrW, _In_z_ LPCWSTR szCompareToW)
 {
   SIZE_T nLen;
 
@@ -1975,7 +1976,7 @@ static SIZE_T CompareStrW(__in_z LPCWSTR szStrW, __in_z LPCWSTR szCompareToW)
   return nLen;
 }
 
-static int FixGmtOffset(__in int nGmtOffset)
+static int FixGmtOffset(_In_ int nGmtOffset)
 {
   if (nGmtOffset < -12*60)
     nGmtOffset = -12*60;

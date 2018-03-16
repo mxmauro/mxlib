@@ -50,7 +50,7 @@ typedef struct tagTHREADNAME_INFO {
 
 //-----------------------------------------------------------
 
-static int MyExceptionFilter(__out EXCEPTION_POINTERS *lpDest, __in EXCEPTION_POINTERS *lpSrc);
+static int MyExceptionFilter(_Out_ EXCEPTION_POINTERS *lpDest, _In_ EXCEPTION_POINTERS *lpSrc);
 
 //-----------------------------------------------------------
 
@@ -79,7 +79,7 @@ CThread::~CThread()
   return;
 }
 
-BOOL CThread::Start(__in_opt BOOL bSuspended)
+BOOL CThread::Start(_In_opt_ BOOL bSuspended)
 {
   unsigned int tid;
 
@@ -99,7 +99,7 @@ BOOL CThread::Start(__in_opt BOOL bSuspended)
   return TRUE;
 }
 
-BOOL CThread::Stop(__in_opt DWORD dwTimeout)
+BOOL CThread::Stop(_In_opt_ DWORD dwTimeout)
 {
   SIZE_T dwRetCode;
   DWORD dwExitCode;
@@ -118,7 +118,10 @@ BOOL CThread::Stop(__in_opt DWORD dwTimeout)
         dwRetCode = WAIT_OBJECT_0;
     }
     if (dwRetCode != WAIT_OBJECT_0)
+    {
+#pragma warning(suppress : 6258)
       ::TerminateThread(hThread, 0);
+    }
     ::CloseHandle(hThread);
     hThread = NULL;
   }
@@ -159,22 +162,20 @@ BOOL CThread::Resume()
   return TRUE;
 }
 
-BOOL CThread::Wait(__in DWORD dwTimeout, __in DWORD dwEventCount, __in_opt LPHANDLE lphEventList,
-                   __out_opt LPDWORD lpdwHitEvent)
+BOOL CThread::Wait(_In_opt_ DWORD dwTimeout, _In_opt_ DWORD dwEventCount, _In_opt_ LPHANDLE lphEventList,
+                   _Out_opt_ LPDWORD lpdwHitEvent)
 {
   HANDLE hEvents[50];
   DWORD i, dwRetCode;
 
+  if (lpdwHitEvent != NULL)
+    *lpdwHitEvent = 0;
   if (dwEventCount > 48)
     return FALSE;
   if (dwEventCount > 0 && lphEventList == NULL)
     return FALSE;
   if (hThread == NULL)
-  {
-    if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = 0;
     return TRUE;
-  }
   hEvents[0] = hThread;
   for (i=0; i<dwEventCount; i++)
     hEvents[1+i] = lphEventList[i];
@@ -211,19 +212,15 @@ BOOL CThread::IsRunning()
   return TRUE;
 }
 
-BOOL CThread::CheckForAbort(__in DWORD dwTimeout, __in DWORD dwEventCount, __out_opt LPHANDLE lphEventList,
-                            __out_opt LPDWORD lpdwHitEvent)
+BOOL CThread::CheckForAbort(_In_opt_ DWORD dwTimeout, _In_opt_ DWORD dwEventCount, _In_opt_ LPHANDLE lphEventList,
+                            _Out_opt_ LPDWORD lpdwHitEvent)
 {
   HANDLE hEvents[50];
   DWORD i, dwRetCode;
 
-  if (hThread == NULL)
-  {
-    if (lpdwHitEvent != NULL)
-      *lpdwHitEvent = 0;
-    return FALSE;
-  }
-  if (dwEventCount > 48)
+  if (lpdwHitEvent != NULL)
+    *lpdwHitEvent = 0;
+  if (hThread == NULL || dwEventCount > 48)
     return FALSE;
   if (dwEventCount > 0 && lphEventList == NULL)
     return FALSE;
@@ -257,7 +254,7 @@ BOOL CThread::CheckForAbort(__in DWORD dwTimeout, __in DWORD dwEventCount, __out
   return FALSE;
 }
 
-VOID CThread::SetThreadName(__in DWORD dwThreadId, __in_z_opt LPCSTR szName)
+VOID CThread::SetThreadName(_In_ DWORD dwThreadId, _In_opt_z_ LPCSTR szName)
 {
   THREADNAME_INFO sInfo;
 
@@ -275,14 +272,14 @@ VOID CThread::SetThreadName(__in DWORD dwThreadId, __in_z_opt LPCSTR szName)
   return;
 }
 
-VOID CThread::SetThreadName(__in_z_opt LPCSTR szName)
+VOID CThread::SetThreadName(_In_opt_z_ LPCSTR szName)
 {
   if (hThread != NULL)
     SetThreadName(dwThreadId, szName);
   return;
 }
 
-BOOL CThread::SetPriority(__in int _nPriority)
+BOOL CThread::SetPriority(_In_ int _nPriority)
 {
   if (_nPriority != THREAD_PRIORITY_TIME_CRITICAL &&
       _nPriority != THREAD_PRIORITY_HIGHEST &&
@@ -308,7 +305,7 @@ int CThread::GetPriority() const
   return nPriority;
 }
 
-BOOL CThread::SetStackSize(__in DWORD _dwStackSize)
+BOOL CThread::SetStackSize(_In_opt_ DWORD _dwStackSize)
 {
   if (hThread != NULL)
     return FALSE;
@@ -321,7 +318,7 @@ DWORD CThread::GetStackSize() const
   return dwStackSize;
 }
 
-HRESULT CThread::SetAutoDelete(__in BOOL _bAutoDelete)
+HRESULT CThread::SetAutoDelete(_In_ BOOL _bAutoDelete)
 {
   if (hThread != NULL)
     return MX_E_AlreadyInitialized;
@@ -329,7 +326,7 @@ HRESULT CThread::SetAutoDelete(__in BOOL _bAutoDelete)
   return S_OK;
 }
 
-unsigned int __stdcall CThread::CommonThreadProc(__in LPVOID lpParameter)
+unsigned int __stdcall CThread::CommonThreadProc(_In_ LPVOID lpParameter)
 {
   CThread *lpThis = (CThread*)lpParameter;
   BOOL bAutoDelete = lpThis->bAutoDelete;
@@ -343,7 +340,7 @@ unsigned int __stdcall CThread::CommonThreadProc(__in LPVOID lpParameter)
 //-----------------------------------------------------------
 //-----------------------------------------------------------
 
-CWorkerThread::CWorkerThread(__in lpfnWorkerThread _lpStartRoutine, __in LPVOID _lpParam) : CThread()
+CWorkerThread::CWorkerThread(_In_opt_ lpfnWorkerThread _lpStartRoutine, _In_opt_ LPVOID _lpParam) : CThread()
 {
   lpStartRoutine = _lpStartRoutine;
   lpParam = _lpParam;
@@ -355,7 +352,7 @@ CWorkerThread::~CWorkerThread()
   return;
 }
 
-BOOL CWorkerThread::SetRoutine(__in lpfnWorkerThread _lpStartRoutine, __in LPVOID _lpParam)
+BOOL CWorkerThread::SetRoutine(_In_ lpfnWorkerThread _lpStartRoutine, _In_opt_ LPVOID _lpParam)
 {
   lpStartRoutine = _lpStartRoutine;
   lpParam = _lpParam;
@@ -389,8 +386,8 @@ CThreadPool::~CThreadPool()
   return;
 }
 
-BOOL CThreadPool::Initialize(__in ULONG _nMinWorkerThreads, __in ULONG _nWorkerThreadsCreateAhead,
-                                __in ULONG _nThreadShutdownThresholdMs)
+BOOL CThreadPool::Initialize(_In_ ULONG _nMinWorkerThreads, _In_ ULONG _nWorkerThreadsCreateAhead,
+                                _In_ ULONG _nThreadShutdownThresholdMs)
 {
   CCriticalSection::CAutoLock cLock(cMtx);
   DWORD dwOsErr;
@@ -486,12 +483,12 @@ LPVOID CThreadPool::OnThreadStarted()
   return NULL;
 }
 
-VOID CThreadPool::OnThreadTerminated(__in LPVOID lpContext)
+VOID CThreadPool::OnThreadTerminated(_In_ LPVOID lpContext)
 {
   return;
 }
 
-BOOL CThreadPool::QueueTask(__in LPTHREAD_START_ROUTINE lpRoutine, __in LPVOID lpContext)
+BOOL CThreadPool::QueueTask(_In_ LPTHREAD_START_ROUTINE lpRoutine, _In_ LPVOID lpContext)
 {
   CCriticalSection::CAutoLock cLock(cMtx);
   WORKITEM *lpNewWorkItem;
@@ -581,7 +578,7 @@ DWORD CThreadPool::InitializeWorker()
   return NOERROR;
 }
 
-VOID CThreadPool::RemoveWorker(__in CWorkerThread *lpWorker)
+VOID CThreadPool::RemoveWorker(_In_ CWorkerThread *lpWorker)
 {
   CFastLock cLock(&(sActiveThreads.nMtx));
   SIZE_T i;
@@ -599,7 +596,7 @@ VOID CThreadPool::RemoveWorker(__in CWorkerThread *lpWorker)
   return;
 }
 
-VOID CThreadPool::RemoveTask(__in WORKITEM *lpWorkItem)
+VOID CThreadPool::RemoveTask(_In_ WORKITEM *lpWorkItem)
 {
   lpWorkItem->sLink.lpPrev->lpNext = lpWorkItem->sLink.lpNext;
   lpWorkItem->sLink.lpNext->lpPrev = lpWorkItem->sLink.lpPrev;
@@ -607,7 +604,7 @@ VOID CThreadPool::RemoveTask(__in WORKITEM *lpWorkItem)
   return;
 }
 
-VOID CThreadPool::ExecuteTask(__in WORKITEM *lpWorkItem)
+VOID CThreadPool::ExecuteTask(_In_ WORKITEM *lpWorkItem)
 {
 #ifndef _DEBUG
   EXCEPTION_POINTERS sExcPtr;
@@ -640,7 +637,7 @@ VOID CThreadPool::ExecuteTask(__in WORKITEM *lpWorkItem)
   return;
 }
 
-VOID CThreadPool::CancelTask(__in WORKITEM *lpWorkItem)
+VOID CThreadPool::CancelTask(_In_ WORKITEM *lpWorkItem)
 {
   __try
   {
@@ -651,7 +648,7 @@ VOID CThreadPool::CancelTask(__in WORKITEM *lpWorkItem)
   return;
 }
 
-VOID CThreadPool::WorkerThreadProc(__in SIZE_T nParam)
+VOID CThreadPool::WorkerThreadProc(_In_ SIZE_T nParam)
 {
   DWORD dwNumberOfBytes;
   WORKITEM *lpWorkItem;
@@ -689,7 +686,7 @@ VOID CThreadPool::WorkerThreadProc(__in SIZE_T nParam)
 
 //-----------------------------------------------------------
 
-static int MyExceptionFilter(__out EXCEPTION_POINTERS *lpDest, __in EXCEPTION_POINTERS *lpSrc)
+static int MyExceptionFilter(_Out_ EXCEPTION_POINTERS *lpDest, _In_ EXCEPTION_POINTERS *lpSrc)
 {
   MX::MemCopy(lpDest, lpSrc, sizeof(EXCEPTION_POINTERS));
   return EXCEPTION_EXECUTE_HANDLER;

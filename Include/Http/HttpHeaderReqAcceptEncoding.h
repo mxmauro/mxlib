@@ -40,10 +40,10 @@ public:
     CType();
     ~CType();
 
-    HRESULT SetType(__in_z LPCSTR szTypeA);
+    HRESULT SetType(_In_z_ LPCSTR szTypeA);
     LPCSTR GetType() const;
 
-    HRESULT SetQ(__in double q);
+    HRESULT SetQ(_In_ double q);
     double GetQ() const;
 
   private:
@@ -59,20 +59,20 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Accept-Encoding)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
     return DuplicateBehaviorAppend;
     };
 
-  HRESULT AddType(__in_z LPCSTR szTypeA, __out_opt CType **lplpType=NULL);
+  HRESULT AddType(_In_z_ LPCSTR szTypeA, _Out_opt_ CType **lplpType=NULL);
 
   SIZE_T GetTypesCount() const;
-  CType* GetType(__in SIZE_T nIndex) const;
-  CType* GetType(__in_z LPCSTR szTypeA) const;
+  CType* GetType(_In_ SIZE_T nIndex) const;
+  CType* GetType(_In_z_ LPCSTR szTypeA) const;
 
 private:
   TArrayListWithDelete<CType*> cTypesList;

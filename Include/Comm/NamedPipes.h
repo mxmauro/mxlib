@@ -39,21 +39,21 @@ class CNamedPipes : public CIpc
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CNamedPipes);
 public:
-  CNamedPipes(__in CIoCompletionPortThreadPool &cDispatcherPool, __in CPropertyBag &cPropBag);
+  CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool, _In_ CPropertyBag &cPropBag);
   ~CNamedPipes();
 
-  HRESULT CreateListener(__in_z LPCSTR szServerNameA, __in OnCreateCallback cCreateCallback,
-                         __in_z_opt LPCWSTR szSecutityDescriptorA=NULL);
-  HRESULT CreateListener(__in_z LPCWSTR szServerNameW, __in OnCreateCallback cCreateCallback,
-                         __in_z_opt LPCWSTR szSecutityDescriptorW=NULL);
-  HRESULT ConnectToServer(__in_z LPCSTR szServerNameA, __in OnCreateCallback cCreateCallback,
-                          __in_opt CUserData *lpUserData=NULL, __out_opt HANDLE *h=NULL);
-  HRESULT ConnectToServer(__in_z LPCWSTR szServerNameW, __in OnCreateCallback cCreateCallback,
-                          __in_opt CUserData *lpUserData=NULL, __out_opt HANDLE *h=NULL);
-  HRESULT CreateRemoteClientConnection(__in HANDLE hProc, __out HANDLE &h, __out HANDLE &hRemotePipe,
-                                       __in OnCreateCallback cCreateCallback, __in_opt CUserData *lpUserData=NULL);
+  HRESULT CreateListener(_In_z_ LPCSTR szServerNameA, _In_ OnCreateCallback cCreateCallback,
+                         _In_opt_z_ LPCWSTR szSecutityDescriptorA=NULL);
+  HRESULT CreateListener(_In_z_ LPCWSTR szServerNameW, _In_ OnCreateCallback cCreateCallback,
+                         _In_opt_z_ LPCWSTR szSecutityDescriptorW=NULL);
+  HRESULT ConnectToServer(_In_z_ LPCSTR szServerNameA, _In_ OnCreateCallback cCreateCallback,
+                          _In_opt_ CUserData *lpUserData=NULL, _Out_opt_ HANDLE *h=NULL);
+  HRESULT ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreateCallback cCreateCallback,
+                          _In_opt_ CUserData *lpUserData=NULL, _Out_opt_ HANDLE *h=NULL);
+  HRESULT CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDLE &h, _Out_ HANDLE &hRemotePipe,
+                                       _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData=NULL);
 
-  HRESULT ImpersonateConnectionClient(__in HANDLE h);
+  HRESULT ImpersonateConnectionClient(_In_ HANDLE h);
 
 private:
   class CServerInfo : public virtual TRefCounted<CBaseMemObj>
@@ -63,7 +63,7 @@ private:
     CServerInfo();
     ~CServerInfo();
 
-    HRESULT Init(__in_z LPCWSTR szServerNameW, __in_z LPCWSTR szSecutityDescriptorW);
+    HRESULT Init(_In_z_ LPCWSTR szServerNameW, _In_ PSECURITY_DESCRIPTOR lpSecDescr);
 
   public:
     CStringW cStrNameW;
@@ -77,15 +77,16 @@ private:
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CConnection);
   public:
-    CConnection(__in CIpc *lpIpc, __in CIpc::eConnectionClass nClass);
+    CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass);
     ~CConnection();
 
-    HRESULT CreateServer(__in DWORD dwPacketSize);
-    HRESULT CreateClient(__in_z LPCWSTR szServerNameW, __in DWORD dwMaxWriteTimeoutMs);
-    VOID ShutdownLink(__in BOOL bAbortive);
+    HRESULT CreateServer(_In_ DWORD dwPacketSize);
+    HRESULT CreateClient(_In_z_ LPCWSTR szServerNameW, _In_ DWORD dwMaxWriteTimeoutMs,
+                         _In_ PSECURITY_DESCRIPTOR lpSecDescr);
+    VOID ShutdownLink(_In_ BOOL bAbortive);
 
-    HRESULT SendReadPacket(__in CPacket *lpPacket);
-    HRESULT SendWritePacket(__in CPacket *lpPacket);
+    HRESULT SendReadPacket(_In_ CPacket *lpPacket);
+    HRESULT SendWritePacket(_In_ CPacket *lpPacket);
 
   protected:
     friend class CNamedPipes;
@@ -100,10 +101,10 @@ private:
   HRESULT OnInternalInitialize();
   VOID OnInternalFinalize();
 
-  HRESULT CreateServerConnection(__in CServerInfo *lpServerInfo, __in OnCreateCallback cCreateCallback);
+  HRESULT CreateServerConnection(_In_ CServerInfo *lpServerInfo, _In_ OnCreateCallback cCreateCallback);
 
-  HRESULT OnPreprocessPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __in HRESULT hRes);
-  HRESULT OnCustomPacket(__in DWORD dwBytes, __in CPacket *lpPacket, __in HRESULT hRes);
+  HRESULT OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes);
+  HRESULT OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes);
 
   BOOL ZeroReadsSupported() const
     {
@@ -113,6 +114,7 @@ private:
 private:
   LONG volatile nRemoteConnCounter;
   DWORD dwMaxWaitTimeoutMs;
+  PSECURITY_DESCRIPTOR lpSecDescr;
 };
 
 } //namespace MX

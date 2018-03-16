@@ -26,17 +26,17 @@
 
 //-----------------------------------------------------------
 
-static VOID OnEngineError(__in MX::CIpc *lpIpc, __in HRESULT hErrorCode);
-static HRESULT OnRequestHeadersReceived(__in MX::CHttpServer *lpHttp, __in MX::CHttpServer::CRequest *lpRequest,
-                                        __inout MX::CHttpBodyParserBase *&lpBodyParser);
-static HRESULT OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in MX::CHttpServer::CRequest *lpRequest);
-static VOID OnError(__in MX::CHttpServer *lpHttp, __in MX::CHttpServer::CRequest *lpRequest, __in HRESULT hErrorCode);
+static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode);
+static HRESULT OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest,
+                                        _Inout_ MX::CHttpBodyParserBase *&lpBodyParser);
+static HRESULT OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest);
+static VOID OnError(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest, _In_ HRESULT hErrorCode);
 
-static HRESULT LoadTxtFile(__inout MX::CStringA &cStrContentsA, __in_z LPCWSTR szFileNameW);
+static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR szFileNameW);
 
 //-----------------------------------------------------------
 
-int TestHttpServer(__in BOOL bUseSSL)
+int TestHttpServer(_In_ BOOL bUseSSL)
 {
   MX::CIoCompletionPortThreadPool cDispatcherPool;
   MX::CPropertyBag cPropBag;
@@ -98,18 +98,18 @@ int TestHttpServer(__in BOOL bUseSSL)
   return (int)hRes;
 }
 
-static VOID OnEngineError(__in MX::CIpc *lpIpc, __in HRESULT hErrorCode)
+static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode)
 {
   return;
 }
 
-static HRESULT OnRequestHeadersReceived(__in MX::CHttpServer *lpHttp, __in MX::CHttpServer::CRequest *lpRequest,
-                                        __inout MX::CHttpBodyParserBase *&lpBodyParser)
+static HRESULT OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest,
+                                        _Inout_ MX::CHttpBodyParserBase *&lpBodyParser)
 {
   return S_OK;
 }
 
-static HRESULT OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in MX::CHttpServer::CRequest *lpRequest)
+static HRESULT OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest)
 {
   HRESULT hRes;
 
@@ -117,12 +117,12 @@ static HRESULT OnRequestCompleted(__in MX::CHttpServer *lpHttp, __in MX::CHttpSe
   return hRes;
 }
 
-static VOID OnError(__in MX::CHttpServer *lpHttp, __in MX::CHttpServer::CRequest *lpRequest, __in HRESULT hErrorCode)
+static VOID OnError(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest, _In_ HRESULT hErrorCode)
 {
   return;
 }
 
-static HRESULT LoadTxtFile(__inout MX::CStringA &cStrContentsA, __in_z LPCWSTR szFileNameW)
+static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR szFileNameW)
 {
   MX::CWindowsHandle cFileH;
   DWORD dw, dw2;

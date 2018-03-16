@@ -30,8 +30,8 @@
 
 namespace MX {
 
-VOID DebugPrint(__in_z LPCSTR szFormatA, ...);
-VOID DebugPrintV(__in_z LPCSTR szFormatA, va_list ap);
+VOID DebugPrint(_In_z_ LPCSTR szFormatA, ...);
+VOID DebugPrintV(_In_z_ LPCSTR szFormatA, va_list ap);
 
 } //namespace MX
 

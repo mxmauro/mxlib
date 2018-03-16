@@ -77,7 +77,7 @@ BOOL ShouldAbort()
 {
   static LONG volatile nDoAbort = 0;
 
-  if (MX::__InterlockedRead(&nDoAbort) != 0)
+  if (__InterlockedRead(&nDoAbort) != 0)
     return TRUE;
   if (_kbhit() != 0 && _getwch() == 27)
   {
@@ -87,7 +87,7 @@ BOOL ShouldAbort()
   return FALSE;
 }
 
-HRESULT GetAppPath(__out MX::CStringW &cStrPathW)
+HRESULT GetAppPath(_Out_ MX::CStringW &cStrPathW)
 {
   DWORD dw;
   LPWSTR sW;

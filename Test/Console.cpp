@@ -31,7 +31,7 @@ static LONG volatile nPrintLock = 0;
 
 namespace Console {
 
-VOID SetCursorPosition(__in int X, __in int Y)
+VOID SetCursorPosition(_In_ int X, _In_ int Y)
 {
   COORD sCursorPos;
 
@@ -41,7 +41,7 @@ VOID SetCursorPosition(__in int X, __in int Y)
   return;
 }
 
-VOID GetCursorPosition(__out int *lpnX, __out int *lpnY)
+VOID GetCursorPosition(_Out_ int *lpnX, _Out_ int *lpnY)
 {
   CONSOLE_SCREEN_BUFFER_INFO sCsbi;
 

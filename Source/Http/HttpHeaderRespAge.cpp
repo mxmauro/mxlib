@@ -38,7 +38,7 @@ CHttpHeaderRespAge::~CHttpHeaderRespAge()
   return;
 }
 
-HRESULT CHttpHeaderRespAge::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderRespAge::Parse(_In_z_ LPCSTR szValueA)
 {
   ULONGLONG _nAge, nTemp;
 
@@ -71,7 +71,7 @@ HRESULT CHttpHeaderRespAge::Parse(__in_z LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderRespAge::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderRespAge::Build(_Inout_ CStringA &cStrDestA)
 {
   if (cStrDestA.Format("%I64u", nAge) == FALSE)
     return E_OUTOFMEMORY;
@@ -79,7 +79,7 @@ HRESULT CHttpHeaderRespAge::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderRespAge::SetAge(__in ULONGLONG _nAge)
+HRESULT CHttpHeaderRespAge::SetAge(_In_ ULONGLONG _nAge)
 {
   nAge = _nAge;
   return S_OK;

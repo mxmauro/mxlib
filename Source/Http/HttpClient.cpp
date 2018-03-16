@@ -36,7 +36,7 @@
 
 namespace MX {
 
-CHttpClient::CHttpClient(__in CSockets &_cSocketMgr, __in CPropertyBag &_cPropBag) :
+CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr, _In_ CPropertyBag &_cPropBag) :
              CBaseMemObj(), cSocketMgr(_cSocketMgr), cPropBag(_cPropBag), sRequest(_cPropBag), sResponse(_cPropBag)
 {
   dwResponseTimeoutMs = MX_HTTP_CLIENT_ResponseTimeoutMs_DEFVAL;
@@ -92,25 +92,25 @@ CHttpClient::~CHttpClient()
   return;
 }
 
-VOID CHttpClient::On(__in OnHeadersReceivedCallback _cHeadersReceivedCallback)
+VOID CHttpClient::On(_In_ OnHeadersReceivedCallback _cHeadersReceivedCallback)
 {
   cHeadersReceivedCallback = _cHeadersReceivedCallback;
   return;
 }
 
-VOID CHttpClient::On(__in OnDocumentCompletedCallback _cDocumentCompletedCallback)
+VOID CHttpClient::On(_In_ OnDocumentCompletedCallback _cDocumentCompletedCallback)
 {
   cDocumentCompletedCallback = _cDocumentCompletedCallback;
   return;
 }
 
-VOID CHttpClient::On(__in OnErrorCallback _cErrorCallback)
+VOID CHttpClient::On(_In_ OnErrorCallback _cErrorCallback)
 {
   cErrorCallback = _cErrorCallback;
   return;
 }
 
-VOID CHttpClient::On(__in OnQueryCertificatesCallback _cQueryCertificatesCallback)
+VOID CHttpClient::On(_In_ OnQueryCertificatesCallback _cQueryCertificatesCallback)
 {
   cQueryCertificatesCallback = _cQueryCertificatesCallback;
   return;
@@ -126,7 +126,7 @@ HRESULT CHttpClient::SetRequestMethodAuto()
   return S_OK;
 }
 
-HRESULT CHttpClient::SetRequestMethod(__in_z LPCSTR szMethodA)
+HRESULT CHttpClient::SetRequestMethod(_In_z_ LPCSTR szMethodA)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -139,7 +139,7 @@ HRESULT CHttpClient::SetRequestMethod(__in_z LPCSTR szMethodA)
   return (sRequest.cStrMethodA.Copy(szMethodA) != FALSE) ? S_OK : E_OUTOFMEMORY;
 }
 
-HRESULT CHttpClient::SetRequestMethod(__in_z LPCWSTR szMethodW)
+HRESULT CHttpClient::SetRequestMethod(_In_z_ LPCWSTR szMethodW)
 {
   CStringA cStrTempA;
 
@@ -150,8 +150,8 @@ HRESULT CHttpClient::SetRequestMethod(__in_z LPCWSTR szMethodW)
   return SetRequestMethod((LPCSTR)cStrTempA);
 }
 
-HRESULT CHttpClient::AddRequestHeader(__in_z LPCSTR szNameA, __out CHttpHeaderBase **lplpHeader,
-                                      __in BOOL bReplaceExisting)
+HRESULT CHttpClient::AddRequestHeader(_In_z_ LPCSTR szNameA, _Out_ CHttpHeaderBase **lplpHeader,
+                                      _In_ BOOL bReplaceExisting)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -163,8 +163,8 @@ HRESULT CHttpClient::AddRequestHeader(__in_z LPCSTR szNameA, __out CHttpHeaderBa
   return sRequest.cHttpCmn.AddHeader(szNameA, lplpHeader, bReplaceExisting);
 }
 
-HRESULT CHttpClient::AddRequestHeader(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA,
-                                      __out_opt CHttpHeaderBase **lplpHeader, __in BOOL bReplaceExisting)
+HRESULT CHttpClient::AddRequestHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA,
+                                      _Out_opt_ CHttpHeaderBase **lplpHeader, _In_ BOOL bReplaceExisting)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -175,8 +175,8 @@ HRESULT CHttpClient::AddRequestHeader(__in_z LPCSTR szNameA, __in_z LPCSTR szVal
   return sRequest.cHttpCmn.AddHeader(szNameA, szValueA, (SIZE_T)-1, lplpHeader, bReplaceExisting);
 }
 
-HRESULT CHttpClient::AddRequestHeader(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW,
-                                      __out_opt CHttpHeaderBase **lplpHeader, __in BOOL bReplaceExisting)
+HRESULT CHttpClient::AddRequestHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW,
+                                      _Out_opt_ CHttpHeaderBase **lplpHeader, _In_ BOOL bReplaceExisting)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -187,7 +187,7 @@ HRESULT CHttpClient::AddRequestHeader(__in_z LPCSTR szNameA, __in_z LPCWSTR szVa
   return sRequest.cHttpCmn.AddHeader(szNameA, szValueW, (SIZE_T)-1, lplpHeader, bReplaceExisting);
 }
 
-HRESULT CHttpClient::RemoveRequestHeader(__in_z LPCSTR szNameA)
+HRESULT CHttpClient::RemoveRequestHeader(_In_z_ LPCSTR szNameA)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -197,7 +197,7 @@ HRESULT CHttpClient::RemoveRequestHeader(__in_z LPCSTR szNameA)
   return S_OK;
 }
 
-HRESULT CHttpClient::RemoveRequestHeader(__in CHttpHeaderBase *lpHeader)
+HRESULT CHttpClient::RemoveRequestHeader(_In_ CHttpHeaderBase *lpHeader)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -217,7 +217,7 @@ HRESULT CHttpClient::RemoveAllRequestHeaders()
   return S_OK;
 }
 
-HRESULT CHttpClient::AddRequestCookie(__in CHttpCookie &cSrc)
+HRESULT CHttpClient::AddRequestCookie(_In_ CHttpCookie &cSrc)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -226,7 +226,7 @@ HRESULT CHttpClient::AddRequestCookie(__in CHttpCookie &cSrc)
   return sRequest.cHttpCmn.AddCookie(cSrc);
 }
 
-HRESULT CHttpClient::AddRequestCookie(__in CHttpCookieArray &cSrc)
+HRESULT CHttpClient::AddRequestCookie(_In_ CHttpCookieArray &cSrc)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -235,7 +235,7 @@ HRESULT CHttpClient::AddRequestCookie(__in CHttpCookieArray &cSrc)
   return sRequest.cHttpCmn.AddCookie(cSrc);
 }
 
-HRESULT CHttpClient::AddRequestCookie(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA)
+HRESULT CHttpClient::AddRequestCookie(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -244,7 +244,7 @@ HRESULT CHttpClient::AddRequestCookie(__in_z LPCSTR szNameA, __in_z LPCSTR szVal
   return sRequest.cHttpCmn.AddCookie(szNameA, szValueA);
 }
 
-HRESULT CHttpClient::AddRequestCookie(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW)
+HRESULT CHttpClient::AddRequestCookie(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -253,7 +253,7 @@ HRESULT CHttpClient::AddRequestCookie(__in_z LPCWSTR szNameW, __in_z LPCWSTR szV
   return sRequest.cHttpCmn.AddCookie(szNameW, szValueW);
 }
 
-HRESULT CHttpClient::RemoveRequestCookie(__in_z LPCSTR szNameA)
+HRESULT CHttpClient::RemoveRequestCookie(_In_z_ LPCSTR szNameA)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -262,7 +262,7 @@ HRESULT CHttpClient::RemoveRequestCookie(__in_z LPCSTR szNameA)
   return sRequest.cHttpCmn.RemoveCookie(szNameA);
 }
 
-HRESULT CHttpClient::RemoveRequestCookie(__in_z LPCWSTR szNameW)
+HRESULT CHttpClient::RemoveRequestCookie(_In_z_ LPCWSTR szNameW)
 {
   CStringA cStrTempA;
 
@@ -285,7 +285,7 @@ HRESULT CHttpClient::RemoveAllRequestCookies()
   return S_OK;
 }
 
-HRESULT CHttpClient::AddRequestPostData(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA)
+HRESULT CHttpClient::AddRequestPostData(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
   TAutoDeletePtr<CPostDataItem> cItem;
@@ -308,7 +308,7 @@ HRESULT CHttpClient::AddRequestPostData(__in_z LPCSTR szNameA, __in_z LPCSTR szV
   return S_OK;
 }
 
-HRESULT CHttpClient::AddRequestPostData(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW)
+HRESULT CHttpClient::AddRequestPostData(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW)
 {
   CStringA cStrTempA[2];
   HRESULT hRes;
@@ -325,7 +325,7 @@ HRESULT CHttpClient::AddRequestPostData(__in_z LPCWSTR szNameW, __in_z LPCWSTR s
   return AddRequestPostData((LPSTR)cStrTempA[0], (LPSTR)cStrTempA[1]);
 }
 
-HRESULT CHttpClient::AddRequestPostDataFile(__in_z LPCSTR szNameA, __in_z LPCSTR szFileNameA, __in CStream *lpStream)
+HRESULT CHttpClient::AddRequestPostDataFile(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szFileNameA, _In_ CStream *lpStream)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
   TAutoDeletePtr<CPostDataItem> cItem;
@@ -358,7 +358,7 @@ HRESULT CHttpClient::AddRequestPostDataFile(__in_z LPCSTR szNameA, __in_z LPCSTR
   return S_OK;
 }
 
-HRESULT CHttpClient::AddRequestPostDataFile(__in_z LPCWSTR szNameW, __in_z LPCWSTR szFileNameW, __in CStream *lpStream)
+HRESULT CHttpClient::AddRequestPostDataFile(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szFileNameW, _In_ CStream *lpStream)
 {
   CStringA cStrTempA[2];
   HRESULT hRes;
@@ -375,7 +375,7 @@ HRESULT CHttpClient::AddRequestPostDataFile(__in_z LPCWSTR szNameW, __in_z LPCWS
   return AddRequestPostDataFile((LPSTR)cStrTempA[0], (LPSTR)cStrTempA[1], lpStream);
 }
 
-HRESULT CHttpClient::RemoveRequestPostData(__in_z LPCSTR szNameA)
+HRESULT CHttpClient::RemoveRequestPostData(_In_z_ LPCSTR szNameA)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
   TLnkLst<CPostDataItem>::Iterator it;
@@ -401,7 +401,7 @@ HRESULT CHttpClient::RemoveRequestPostData(__in_z LPCSTR szNameA)
   return (bGotOne != FALSE) ? S_OK : MX_E_NotFound;
 }
 
-HRESULT CHttpClient::RemoveRequestPostData(__in_z LPCWSTR szNameW)
+HRESULT CHttpClient::RemoveRequestPostData(_In_z_ LPCWSTR szNameW)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -428,7 +428,7 @@ HRESULT CHttpClient::RemoveAllRequestPostData()
   return S_OK;
 }
 
-HRESULT CHttpClient::SetOptionFlags(__in int _nOptionFlags)
+HRESULT CHttpClient::SetOptionFlags(_In_ int _nOptionFlags)
 {
   if (nState != StateClosed)
     return MX_E_NotReady;
@@ -441,7 +441,7 @@ int CHttpClient::GetOptionFlags()
   return nOptionFlags;
 }
 
-HRESULT CHttpClient::Open(__in CUrl &cUrl)
+HRESULT CHttpClient::Open(_In_ CUrl &cUrl)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   CCriticalSection::CAutoLock cLock(cMutex);
@@ -461,7 +461,7 @@ HRESULT CHttpClient::Open(__in CUrl &cUrl)
   return InternalOpen(cUrl);
 }
 
-HRESULT CHttpClient::Open(__in_z LPCSTR szUrlA)
+HRESULT CHttpClient::Open(_In_z_ LPCSTR szUrlA)
 {
   CUrl cUrl;
   HRESULT hRes;
@@ -476,7 +476,7 @@ HRESULT CHttpClient::Open(__in_z LPCSTR szUrlA)
   return hRes;
 }
 
-HRESULT CHttpClient::Open(__in_z LPCWSTR szUrlW)
+HRESULT CHttpClient::Open(_In_z_ LPCWSTR szUrlW)
 {
   CUrl cUrl;
   HRESULT hRes;
@@ -491,7 +491,7 @@ HRESULT CHttpClient::Open(__in_z LPCWSTR szUrlW)
   return hRes;
 }
 
-VOID CHttpClient::Close(__in_opt BOOL bReuseConn)
+VOID CHttpClient::Close(_In_opt_ BOOL bReuseConn)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -554,7 +554,7 @@ LONG CHttpClient::GetResponseStatus()
   return sResponse.cHttpCmn.GetResponseStatus();
 }
 
-HRESULT CHttpClient::GetResponseReason(__inout CStringA &cStrDestA)
+HRESULT CHttpClient::GetResponseReason(_Inout_ CStringA &cStrDestA)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -582,7 +582,7 @@ SIZE_T CHttpClient::GetResponseHeadersCount() const
   return sResponse.cHttpCmn.GetHeadersCount();
 }
 
-CHttpHeaderBase* CHttpClient::GetResponseHeader(__in SIZE_T nIndex) const
+CHttpHeaderBase* CHttpClient::GetResponseHeader(_In_ SIZE_T nIndex) const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
@@ -591,7 +591,7 @@ CHttpHeaderBase* CHttpClient::GetResponseHeader(__in SIZE_T nIndex) const
   return sResponse.cHttpCmn.GetHeader(nIndex);
 }
 
-CHttpHeaderBase* CHttpClient::GetResponseHeader(__in_z LPCSTR szNameA) const
+CHttpHeaderBase* CHttpClient::GetResponseHeader(_In_z_ LPCSTR szNameA) const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
@@ -609,7 +609,7 @@ SIZE_T CHttpClient::GetResponseCookiesCount() const
   return const_cast<CHttpClient*>(this)->sResponse.cHttpCmn.GetCookies()->GetCount();
 }
 
-HRESULT CHttpClient::GetResponseCookie(__in SIZE_T nIndex, __out CHttpCookie &cCookie)
+HRESULT CHttpClient::GetResponseCookie(_In_ SIZE_T nIndex, _Out_ CHttpCookie &cCookie)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
   CHttpCookieArray *lpCookieArray;
@@ -623,7 +623,7 @@ HRESULT CHttpClient::GetResponseCookie(__in SIZE_T nIndex, __out CHttpCookie &cC
   return (cCookie = *(lpCookieArray->GetElementAt(nIndex)));
 }
 
-HRESULT CHttpClient::GetResponseCookies(__out CHttpCookieArray &cCookieArray)
+HRESULT CHttpClient::GetResponseCookies(_Out_ CHttpCookieArray &cCookieArray)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -649,7 +649,7 @@ CSockets* CHttpClient::GetUnderlyingSocketManager() const
   return const_cast<CSockets*>(&cSocketMgr);
 }
 
-HRESULT CHttpClient::InternalOpen(__in CUrl &cUrl)
+HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl)
 {
   CStringA cStrHostA;
   int nUrlPort;
@@ -721,7 +721,7 @@ HRESULT CHttpClient::InternalOpen(__in CUrl &cUrl)
   return S_OK;
 }
 
-HRESULT CHttpClient::OnSocketCreate(__in CIpc *lpIpc, __in HANDLE h, __inout CIpc::CREATE_CALLBACK_DATA &sData)
+HRESULT CHttpClient::OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIpc::CREATE_CALLBACK_DATA &sData)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
 
@@ -765,8 +765,8 @@ HRESULT CHttpClient::OnSocketCreate(__in CIpc *lpIpc, __in HANDLE h, __inout CIp
   return cPendingHandles.Add(h);
 }
 
-VOID CHttpClient::OnSocketDestroy(__in CIpc *lpIpc, __in HANDLE h, __in CIpc::CUserData *lpUserData,
-                                  __in HRESULT hErrorCode)
+VOID CHttpClient::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
+                                  _In_ HRESULT hErrorCode)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   BOOL bRaiseDocCompletedCallback, bRaiseErrorCallback;
@@ -820,8 +820,8 @@ VOID CHttpClient::OnSocketDestroy(__in CIpc *lpIpc, __in HANDLE h, __in CIpc::CU
   return;
 }
 
-HRESULT CHttpClient::OnSocketConnect(__in CIpc *lpIpc, __in HANDLE h, __in CIpc::CUserData *lpUserData,
-                                     __inout CIpc::CLayerList &cLayersList, __in HRESULT hErrorCode)
+HRESULT CHttpClient::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_opt_ CIpc::CUserData *lpUserData,
+                                     _Inout_ CIpc::CLayerList &cLayersList, _In_ HRESULT hErrorCode)
 {
   HRESULT hRes;
 
@@ -880,7 +880,7 @@ HRESULT CHttpClient::OnSocketConnect(__in CIpc *lpIpc, __in HANDLE h, __in CIpc:
 }
 
 //NOTE: "CIpc" guarantees no simultaneous calls to 'OnSocketDataReceived' will be received from different threads
-HRESULT CHttpClient::OnSocketDataReceived(__in CIpc *lpIpc, __in HANDLE h, __in CIpc::CUserData *lpUserData)
+HRESULT CHttpClient::OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData)
 {
   BYTE aMsgBuf[4096];
   SIZE_T nMsgSize, nMsgUsed;
@@ -1138,7 +1138,7 @@ restart:
   return hRes;
 }
 
-VOID CHttpClient::OnRedirect(__in CTimedEventQueue::CEvent *lpEvent)
+VOID CHttpClient::OnRedirect(_In_ CTimedEventQueue::CEvent *lpEvent)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
 
@@ -1170,7 +1170,7 @@ VOID CHttpClient::OnRedirect(__in CTimedEventQueue::CEvent *lpEvent)
   return;
 }
 
-VOID CHttpClient::OnResponseTimeout(__in CTimedEventQueue::CEvent *lpEvent)
+VOID CHttpClient::OnResponseTimeout(_In_ CTimedEventQueue::CEvent *lpEvent)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
 
@@ -1201,8 +1201,8 @@ VOID CHttpClient::OnResponseTimeout(__in CTimedEventQueue::CEvent *lpEvent)
   return;
 }
 
-VOID CHttpClient::OnAfterSendRequest(__in CIpc *lpIpc, __in HANDLE h, __in LPVOID lpCookie,
-                                     __in CIpc::CUserData *lpUserData)
+VOID CHttpClient::OnAfterSendRequest(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie,
+                                     _In_ CIpc::CUserData *lpUserData)
 {
   HRESULT hRes;
 
@@ -1253,7 +1253,7 @@ VOID CHttpClient::OnAfterSendRequest(__in CIpc *lpIpc, __in HANDLE h, __in LPVOI
   return;
 }
 
-VOID CHttpClient::SetErrorOnRequestAndClose(__in HRESULT hErrorCode)
+VOID CHttpClient::SetErrorOnRequestAndClose(_In_ HRESULT hErrorCode)
 {
   nState = StateClosed;
   if (SUCCEEDED(hLastErrorCode)) //preserve first error
@@ -1263,7 +1263,7 @@ VOID CHttpClient::SetErrorOnRequestAndClose(__in HRESULT hErrorCode)
   return;
 }
 
-HRESULT CHttpClient::BuildRequestHeaders(__inout CStringA &cStrReqHdrsA)
+HRESULT CHttpClient::BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA)
 {
   CHttpHeaderBase *lpHeader;
   CStringA cStrTempA;
@@ -1367,8 +1367,8 @@ HRESULT CHttpClient::BuildRequestHeaders(__inout CStringA &cStrReqHdrsA)
   return S_OK;
 }
 
-HRESULT CHttpClient::BuildRequestHeaderAdd(__inout CStringA &cStrReqHdrsA, __in_z LPCSTR szNameA,
-                                           __in_z LPCSTR szDefaultValueA)
+HRESULT CHttpClient::BuildRequestHeaderAdd(_Inout_ CStringA &cStrReqHdrsA, _In_z_ LPCSTR szNameA,
+                                           _In_z_ LPCSTR szDefaultValueA)
 {
   CHttpHeaderBase *lpHeader;
   CStringA cStrTempA;
@@ -1396,7 +1396,7 @@ HRESULT CHttpClient::BuildRequestHeaderAdd(__inout CStringA &cStrReqHdrsA, __in_
   return S_OK;
 }
 
-HRESULT CHttpClient::AddRequestHeadersForBody(__inout CStringA &cStrReqHdrsA)
+HRESULT CHttpClient::AddRequestHeadersForBody(_Inout_ CStringA &cStrReqHdrsA)
 {
   TLnkLst<CPostDataItem>::Iterator it;
   CPostDataItem *lpItem;
@@ -1438,6 +1438,7 @@ HRESULT CHttpClient::AddRequestHeadersForBody(__inout CStringA &cStrReqHdrsA)
 
     //build boundary name
     MemCopy(sRequest.szBoundary, "MXLIB_HTTP_", 11);
+#pragma warning(suppress : 28159)
     dw = ::GetTickCount();
     value = fnv_64a_buf(&dw, 4, FNV1A_64_INIT);
     dw = MxGetCurrentProcessId();
@@ -1603,7 +1604,7 @@ HRESULT CHttpClient::SendRequestBody()
 //-----------------------------------------------------------
 //-----------------------------------------------------------
 
-CHttpClient::CPostDataItem::CPostDataItem(__in_z LPCSTR _szNameA, __in_z LPCSTR _szValueA, __in_opt CStream *lpStream) :
+CHttpClient::CPostDataItem::CPostDataItem(_In_z_ LPCSTR _szNameA, _In_z_ LPCSTR _szValueA, _In_opt_ CStream *lpStream) :
                                           CBaseMemObj(), TLnkLstNode<CPostDataItem>()
 {
   SIZE_T nNameLen, nValueLen;

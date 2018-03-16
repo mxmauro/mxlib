@@ -52,7 +52,7 @@ CBase64Encoder::~CBase64Encoder()
   return;
 }
 
-HRESULT CBase64Encoder::Begin(__in_opt SIZE_T nPreallocateOutputLen)
+HRESULT CBase64Encoder::Begin(_In_opt_ SIZE_T nPreallocateOutputLen)
 {
   aInput[0] = aInput[1] = aInput[2] = 0;
   nLength = nInputLength = 0;
@@ -73,7 +73,7 @@ HRESULT CBase64Encoder::Begin(__in_opt SIZE_T nPreallocateOutputLen)
   return S_OK;
 }
 
-HRESULT CBase64Encoder::Process(__in LPVOID lpData, __in SIZE_T nDataLen)
+HRESULT CBase64Encoder::Process(_In_ LPVOID lpData, _In_ SIZE_T nDataLen)
 {
   CHAR szDestA[4];
 
@@ -129,7 +129,7 @@ SIZE_T CBase64Encoder::GetOutputLength() const
   return nLength;
 }
 
-VOID CBase64Encoder::ConsumeOutput(__in SIZE_T nChars)
+VOID CBase64Encoder::ConsumeOutput(_In_ SIZE_T nChars)
 {
   if (szBufferA != NULL)
   {
@@ -142,12 +142,12 @@ VOID CBase64Encoder::ConsumeOutput(__in SIZE_T nChars)
   return;
 }
 
-SIZE_T CBase64Encoder::GetRequiredSpace(__in SIZE_T nDataLen)
+SIZE_T CBase64Encoder::GetRequiredSpace(_In_ SIZE_T nDataLen)
 {
   return ((nDataLen + 2) / 3) << 2;
 }
 
-BOOL CBase64Encoder::AddToBuffer(__in CHAR szDataA[4])
+BOOL CBase64Encoder::AddToBuffer(_In_ CHAR szDataA[4])
 {
   if (nLength > nSize - 5)
   {
@@ -180,7 +180,7 @@ CBase64Decoder::CBase64Decoder() : MX::CBaseMemObj()
 {
   lpBuffer = NULL;
   nLength = nSize = 0;
-  aInput[0] = aInput[1] = aInput[2] = aInput[4] = 0;
+  aInput[0] = aInput[1] = aInput[2] = aInput[3] = 0;
   nInputLength = nEqualCounter = 0;
   return;
 }
@@ -191,9 +191,9 @@ CBase64Decoder::~CBase64Decoder()
   return;
 }
 
-HRESULT CBase64Decoder::Begin(__in_opt SIZE_T nPreallocateOutputLen)
+HRESULT CBase64Decoder::Begin(_In_opt_ SIZE_T nPreallocateOutputLen)
 {
-  aInput[0] = aInput[1] = aInput[2] = aInput[4] = 0;
+  aInput[0] = aInput[1] = aInput[2] = aInput[3] = 0;
   nLength = nInputLength = nEqualCounter = 0;
   MX_FREE(lpBuffer);
   if (nPreallocateOutputLen == 0)
@@ -211,7 +211,7 @@ HRESULT CBase64Decoder::Begin(__in_opt SIZE_T nPreallocateOutputLen)
   return S_OK;
 }
 
-HRESULT CBase64Decoder::Process(__in LPCSTR szDataA, __in_opt SIZE_T nDataLen)
+HRESULT CBase64Decoder::Process(_In_ LPCSTR szDataA, _In_opt_ SIZE_T nDataLen)
 {
   BYTE aDest[3];
   BYTE val;
@@ -276,7 +276,7 @@ SIZE_T CBase64Decoder::GetOutputLength() const
   return nLength;
 }
 
-VOID CBase64Decoder::ConsumeOutput(__in SIZE_T nBytes)
+VOID CBase64Decoder::ConsumeOutput(_In_ SIZE_T nBytes)
 {
   if (lpBuffer != NULL)
   {
@@ -288,12 +288,12 @@ VOID CBase64Decoder::ConsumeOutput(__in SIZE_T nBytes)
   return;
 }
 
-SIZE_T CBase64Decoder::GetRequiredSpace(__in SIZE_T nDataLen)
+SIZE_T CBase64Decoder::GetRequiredSpace(_In_ SIZE_T nDataLen)
 {
   return ((nDataLen + 3) >> 2) * 3;
 }
 
-BOOL CBase64Decoder::AddToBuffer(__in LPBYTE aData, __in SIZE_T nLen)
+BOOL CBase64Decoder::AddToBuffer(_In_ LPBYTE aData, _In_ SIZE_T nLen)
 {
   SIZE_T i;
 

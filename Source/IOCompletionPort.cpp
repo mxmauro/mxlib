@@ -31,9 +31,9 @@
 
 //-----------------------------------------------------------
 
-typedef BOOL(WINAPI *lpfnGetQueuedCompletionStatusEx)(__in HANDLE CompletionPort, __out LPOVERLAPPED_ENTRY lpEntries,
-                                                      __in ULONG ulCount, __out PULONG ulNumEntriesRemoved,
-                                                      __in DWORD dwMilliseconds, __in BOOL fAlertable);
+typedef BOOL(WINAPI *lpfnGetQueuedCompletionStatusEx)(_In_ HANDLE CompletionPort, _Out_ LPOVERLAPPED_ENTRY lpEntries,
+                                                      _In_ ULONG ulCount, _Out_ PULONG ulNumEntriesRemoved,
+                                                      _In_ DWORD dwMilliseconds, _In_ BOOL fAlertable);
 
 //-----------------------------------------------------------
 
@@ -75,7 +75,7 @@ CIoCompletionPort::~CIoCompletionPort()
   return;
 }
 
-HRESULT CIoCompletionPort::Initialize(__in DWORD dwMaxConcurrency)
+HRESULT CIoCompletionPort::Initialize(_In_ DWORD dwMaxConcurrency)
 {
   hIOCP = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL,
                                    (dwMaxConcurrency < 0x7FFFFFFFUL) ? dwMaxConcurrency : 0x7FFFFFFFUL);
@@ -97,7 +97,7 @@ VOID CIoCompletionPort::Finalize()
   return;
 }
 
-HRESULT CIoCompletionPort::Attach(__in HANDLE h, __in ULONG_PTR nKey)
+HRESULT CIoCompletionPort::Attach(_In_ HANDLE h, _In_ ULONG_PTR nKey)
 {
   HANDLE _hiocp;
 
@@ -110,7 +110,7 @@ HRESULT CIoCompletionPort::Attach(__in HANDLE h, __in ULONG_PTR nKey)
   return S_OK;
 }
 
-HRESULT CIoCompletionPort::Post(__in ULONG_PTR nKey, __in DWORD dwBytes, __in OVERLAPPED *lpOvr)
+HRESULT CIoCompletionPort::Post(_In_ ULONG_PTR nKey, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr)
 {
   MX_ASSERT(hIOCP != NULL);
   MX_ASSERT(lpOvr != NULL);
@@ -120,13 +120,13 @@ HRESULT CIoCompletionPort::Post(__in ULONG_PTR nKey, __in DWORD dwBytes, __in OV
   return S_OK;
 }
 
-HRESULT CIoCompletionPort::Post(__in LPOVERLAPPED_ENTRY lpEntry)
+HRESULT CIoCompletionPort::Post(_In_ LPOVERLAPPED_ENTRY lpEntry)
 {
   MX_ASSERT(lpEntry != NULL);
   return Post(lpEntry->lpCompletionKey, lpEntry->dwNumberOfBytesTransferred, lpEntry->lpOverlapped);
 }
 
-HRESULT CIoCompletionPort::Get(__out LPOVERLAPPED_ENTRY lpEntries, __inout ULONG &nEntriesCount, __in DWORD dwTimeoutMs)
+HRESULT CIoCompletionPort::Get(_Out_ LPOVERLAPPED_ENTRY lpEntries, _Inout_ ULONG &nEntriesCount, _In_ DWORD dwTimeoutMs)
 {
   ULONG i, nRemoved;
 
@@ -142,6 +142,7 @@ HRESULT CIoCompletionPort::Get(__out LPOVERLAPPED_ENTRY lpEntries, __inout ULONG
     }
     for (i=0; i<nRemoved; i++)
     {
+#pragma warning(suppress : 6386)
       lpEntries[i].Internal = lpEntries[i].lpOverlapped->Internal =
           ::MxRtlNtStatusToDosError((NTSTATUS)(ULONG)(lpEntries[i].lpOverlapped->Internal));
     }
@@ -170,9 +171,9 @@ HRESULT CIoCompletionPort::Get(__out LPOVERLAPPED_ENTRY lpEntries, __inout ULONG
 
 //-----------------------------------------------------------
 
-CIoCompletionPortThreadPool::CIoCompletionPortThreadPool(__in_opt DWORD _dwMinThreadsCount,
-                                __in_opt DWORD _dwMaxThreadsCount, __in_opt DWORD _dwWorkerThreadIdleTimeoutMs,
-                                __in_opt DWORD _dwShutdownThreadThreshold) : CBaseMemObj()
+CIoCompletionPortThreadPool::CIoCompletionPortThreadPool(_In_opt_ DWORD _dwMinThreadsCount,
+                                _In_opt_ DWORD _dwMaxThreadsCount, _In_opt_ DWORD _dwWorkerThreadIdleTimeoutMs,
+                                _In_opt_ DWORD _dwShutdownThreadThreshold) : CBaseMemObj()
 {
   SlimRWL_Initialize(&nSlimMutex);
   cThreadStartCallback = NullCallback();
@@ -211,19 +212,19 @@ CIoCompletionPortThreadPool::~CIoCompletionPortThreadPool()
   return;
 }
 
-VOID CIoCompletionPortThreadPool::On(__in_opt OnThreadStartCallback _cThreadStartCallback)
+VOID CIoCompletionPortThreadPool::On(_In_opt_ OnThreadStartCallback _cThreadStartCallback)
 {
   cThreadStartCallback = _cThreadStartCallback;
   return;
 }
 
-VOID CIoCompletionPortThreadPool::On(__in_opt OnThreadEndCallback _cThreadEndCallback)
+VOID CIoCompletionPortThreadPool::On(_In_opt_ OnThreadEndCallback _cThreadEndCallback)
 {
   cThreadEndCallback = _cThreadEndCallback;
   return;
 }
 
-VOID CIoCompletionPortThreadPool::On(__in_opt OnThreadStartErrorCallback _cThreadStartErrorCallback)
+VOID CIoCompletionPortThreadPool::On(_In_opt_ OnThreadStartErrorCallback _cThreadStartErrorCallback)
 {
   cThreadStartErrorCallback = _cThreadStartErrorCallback;
   return;
@@ -252,7 +253,7 @@ VOID CIoCompletionPortThreadPool::Finalize()
   return;
 }
 
-HRESULT CIoCompletionPortThreadPool::Attach(__in HANDLE h, __in OnPacketCallback &cCallback)
+HRESULT CIoCompletionPortThreadPool::Attach(_In_ HANDLE h, _In_ OnPacketCallback &cCallback)
 {
   CAutoSlimRWLShared cLock(&nSlimMutex);
 
@@ -265,7 +266,7 @@ HRESULT CIoCompletionPortThreadPool::Attach(__in HANDLE h, __in OnPacketCallback
   return cIOCP.Attach(h, (ULONG_PTR)&cCallback);
 }
 
-HRESULT CIoCompletionPortThreadPool::Post(__in OnPacketCallback &cCallback, __in DWORD dwBytes, __in OVERLAPPED *lpOvr)
+HRESULT CIoCompletionPortThreadPool::Post(_In_ OnPacketCallback &cCallback, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr)
 {
   CAutoSlimRWLShared cLock(&nSlimMutex);
 
@@ -316,7 +317,7 @@ VOID CIoCompletionPortThreadPool::InternalFinalize()
   return;
 }
 
-HRESULT CIoCompletionPortThreadPool::StartThread(__in BOOL bInitial)
+HRESULT CIoCompletionPortThreadPool::StartThread(_In_ BOOL bInitial)
 {
   CThread *lpThread;
   HRESULT hRes;
@@ -362,7 +363,7 @@ HRESULT CIoCompletionPortThreadPool::StartThread(__in BOOL bInitial)
   return hRes;
 }
 
-VOID CIoCompletionPortThreadPool::ThreadProc(__in SIZE_T nParam)
+VOID CIoCompletionPortThreadPool::ThreadProc(_In_ SIZE_T nParam)
 {
   CThread *lpThread = (CThread*)nParam;
   OVERLAPPED_ENTRY sOvrEntries[4], *lpOvrEntry, *lpOvrEntryEnd;

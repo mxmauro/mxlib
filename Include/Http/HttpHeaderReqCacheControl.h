@@ -39,37 +39,37 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Cache-Control)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
-  HRESULT SetNoCache(__in BOOL bNoCache);
+  HRESULT SetNoCache(_In_ BOOL bNoCache);
   BOOL GetNoCache() const;
 
-  HRESULT SetNoStore(__in BOOL bNoStore);
+  HRESULT SetNoStore(_In_ BOOL bNoStore);
   BOOL GetNoStore() const;
 
-  HRESULT SetMaxAge(__in ULONGLONG nMaxAge);
+  HRESULT SetMaxAge(_In_ ULONGLONG nMaxAge);
   ULONGLONG GetMaxAge() const;
 
-  HRESULT SetMaxStale(__in ULONGLONG nMaxStale);
+  HRESULT SetMaxStale(_In_ ULONGLONG nMaxStale);
   ULONGLONG GetMaxStale() const;
 
-  HRESULT SetMinFresh(__in ULONGLONG nMinFresh);
+  HRESULT SetMinFresh(_In_ ULONGLONG nMinFresh);
   ULONGLONG GetMinFresh() const;
 
-  HRESULT SetNoTransform(__in BOOL bNoTransform);
+  HRESULT SetNoTransform(_In_ BOOL bNoTransform);
   BOOL GetNoTransform() const;
 
-  HRESULT SetOnlyIfCached(__in BOOL bOnlyIfCached);
+  HRESULT SetOnlyIfCached(_In_ BOOL bOnlyIfCached);
   BOOL GetOnlyIfCached() const;
 
-  HRESULT AddExtension(__in_z LPCSTR szNameA, __in_z LPCWSTR szValueW);
+  HRESULT AddExtension(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);
 
   SIZE_T GetExtensionsCount() const;
-  LPCSTR GetExtensionName(__in SIZE_T nIndex) const;
-  LPCWSTR GetExtensionValue(__in SIZE_T nIndex) const;
-  LPCWSTR GetExtensionValue(__in_z LPCSTR szNameA) const;
+  LPCSTR GetExtensionName(_In_ SIZE_T nIndex) const;
+  LPCWSTR GetExtensionValue(_In_ SIZE_T nIndex) const;
+  LPCWSTR GetExtensionValue(_In_z_ LPCSTR szNameA) const;
 
 private:
   typedef struct {

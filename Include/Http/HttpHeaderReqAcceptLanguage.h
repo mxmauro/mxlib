@@ -40,10 +40,10 @@ public:
     CLanguage();
     ~CLanguage();
 
-    HRESULT SetLanguage(__in_z LPCSTR szLanguageA);
+    HRESULT SetLanguage(_In_z_ LPCSTR szLanguageA);
     LPCSTR GetLanguage() const;
 
-    HRESULT SetQ(__in double q);
+    HRESULT SetQ(_In_ double q);
     double GetQ() const;
 
   private:
@@ -59,20 +59,20 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Accept-Language)
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
     return DuplicateBehaviorAppend;
     };
 
-  HRESULT AddLanguage(__in_z LPCSTR szLanguageA, __out_opt CLanguage **lplpLanguage=NULL);
+  HRESULT AddLanguage(_In_z_ LPCSTR szLanguageA, _Out_opt_ CLanguage **lplpLanguage=NULL);
 
   SIZE_T GetLanguagesCount() const;
-  CLanguage* GetLanguage(__in SIZE_T nIndex) const;
-  CLanguage* GetLanguage(__in_z LPCSTR szLanguageA) const;
+  CLanguage* GetLanguage(_In_ SIZE_T nIndex) const;
+  CLanguage* GetLanguage(_In_z_ LPCSTR szLanguageA) const;
 
 private:
   TArrayListWithDelete<CLanguage*> cLanguagesList;

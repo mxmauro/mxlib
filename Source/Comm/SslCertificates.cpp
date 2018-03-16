@@ -33,9 +33,9 @@
 
 //-----------------------------------------------------------
 
-static HRESULT Asn1TimeToDateTime(__in const ASN1_TIME *lpTime, __out MX::CDateTime &cDt);
-static HRESULT GetName(__in X509_NAME *lpName, __in MX::CSslCertificate::eInformation nInfo,
-                       __inout MX::CStringW &cStrW);
+static HRESULT Asn1TimeToDateTime(_In_ const ASN1_TIME *lpTime, _Out_ MX::CDateTime &cDt);
+static HRESULT GetName(_In_ X509_NAME *lpName, _In_ MX::CSslCertificate::eInformation nInfo,
+                       _Inout_ MX::CStringW &cStrW);
 
 //-----------------------------------------------------------
 
@@ -79,7 +79,7 @@ SIZE_T CSslCertificate::GetSerialLength() const
   return (SIZE_T)(unsigned int)(bs->length);
 }
 
-HRESULT CSslCertificate::GetSubject(__in eInformation nInfo, __inout CStringW &cStrW)
+HRESULT CSslCertificate::GetSubject(_In_ eInformation nInfo, _Inout_ CStringW &cStrW)
 {
   cStrW.Empty();
   if (lpX509 == NULL)
@@ -87,7 +87,7 @@ HRESULT CSslCertificate::GetSubject(__in eInformation nInfo, __inout CStringW &c
   return GetName(X509_get_subject_name(_x509), nInfo, cStrW);
 }
 
-HRESULT CSslCertificate::GetIssuer(__in eInformation nInfo, __inout CStringW &cStrW)
+HRESULT CSslCertificate::GetIssuer(_In_ eInformation nInfo, _Inout_ CStringW &cStrW)
 {
   cStrW.Empty();
   if (lpX509 == NULL)
@@ -95,7 +95,7 @@ HRESULT CSslCertificate::GetIssuer(__in eInformation nInfo, __inout CStringW &cS
   return GetName(X509_get_issuer_name(_x509), nInfo, cStrW);
 }
 
-HRESULT CSslCertificate::GetValidFrom(__inout CDateTime &cDt)
+HRESULT CSslCertificate::GetValidFrom(_Inout_ CDateTime &cDt)
 {
   cDt.Clear();
   cDt.SetGmtOffset(0);
@@ -104,7 +104,7 @@ HRESULT CSslCertificate::GetValidFrom(__inout CDateTime &cDt)
   return Asn1TimeToDateTime(X509_get_notBefore(_x509), cDt);
 }
 
-HRESULT CSslCertificate::GetValidUntil(__inout CDateTime &cDt)
+HRESULT CSslCertificate::GetValidUntil(_Inout_ CDateTime &cDt)
 {
   cDt.Clear();
   cDt.SetGmtOffset(0);
@@ -183,7 +183,7 @@ LONG CSslCertificateCrl::GetVersion() const
   return (lpX509Crl != NULL) ? (LONG)X509_CRL_get_version(_x509Crl) : 0;
 }
 
-HRESULT CSslCertificateCrl::GetIssuer(__in eInformation nInfo, __inout CStringW &cStrW)
+HRESULT CSslCertificateCrl::GetIssuer(_In_ eInformation nInfo, _Inout_ CStringW &cStrW)
 {
   cStrW.Empty();
   if (lpX509Crl == NULL)
@@ -191,7 +191,7 @@ HRESULT CSslCertificateCrl::GetIssuer(__in eInformation nInfo, __inout CStringW 
   return GetName(X509_CRL_get_issuer(_x509Crl), (MX::CSslCertificate::eInformation)nInfo, cStrW);
 }
 
-HRESULT CSslCertificateCrl::GetUpdate(__inout CDateTime &cDt)
+HRESULT CSslCertificateCrl::GetUpdate(_Inout_ CDateTime &cDt)
 {
   cDt.Clear();
   cDt.SetGmtOffset(0);
@@ -200,7 +200,7 @@ HRESULT CSslCertificateCrl::GetUpdate(__inout CDateTime &cDt)
   return Asn1TimeToDateTime(X509_CRL_get_lastUpdate(_x509Crl), cDt);
 }
 
-HRESULT CSslCertificateCrl::GetNextUpdate(__inout CDateTime &cDt)
+HRESULT CSslCertificateCrl::GetNextUpdate(_Inout_ CDateTime &cDt)
 {
   cDt.Clear();
   cDt.SetGmtOffset(0);
@@ -221,7 +221,7 @@ SIZE_T CSslCertificateCrl::GetRevokedEntriesCount() const
   return (count > 0) ? (SIZE_T)count : 0;
 }
 
-LPBYTE CSslCertificateCrl::GetRevokedEntrySerial(__in SIZE_T nEntryIndex) const
+LPBYTE CSslCertificateCrl::GetRevokedEntrySerial(_In_ SIZE_T nEntryIndex) const
 {
   STACK_OF(X509_REVOKED) *rev;
   X509_REVOKED *r;
@@ -239,7 +239,7 @@ LPBYTE CSslCertificateCrl::GetRevokedEntrySerial(__in SIZE_T nEntryIndex) const
   return (LPBYTE)(lpSerial->data);
 }
 
-SIZE_T CSslCertificateCrl::GetRevokedEntrySerialLength(__in SIZE_T nEntryIndex) const
+SIZE_T CSslCertificateCrl::GetRevokedEntrySerialLength(_In_ SIZE_T nEntryIndex) const
 {
   STACK_OF(X509_REVOKED) *rev;
   X509_REVOKED *r;
@@ -257,7 +257,7 @@ SIZE_T CSslCertificateCrl::GetRevokedEntrySerialLength(__in SIZE_T nEntryIndex) 
   return (SIZE_T)(lpSerial->length);
 }
 
-HRESULT CSslCertificateCrl::GetRevokedEntryDate(__in SIZE_T nEntryIndex, __inout CDateTime &cDt)
+HRESULT CSslCertificateCrl::GetRevokedEntryDate(_In_ SIZE_T nEntryIndex, _Inout_ CDateTime &cDt)
 {
   STACK_OF(X509_REVOKED) *rev;
   X509_REVOKED *r;
@@ -306,7 +306,7 @@ LPVOID CSslCertificateCrl::GetOpenSSL_X509Crl()
 
 //-----------------------------------------------------------
 
-static HRESULT Asn1TimeToDateTime(__in const ASN1_TIME *lpTime, __out MX::CDateTime &cDt)
+static HRESULT Asn1TimeToDateTime(_In_ const ASN1_TIME *lpTime, _Out_ MX::CDateTime &cDt)
 {
   HRESULT hRes;
 
@@ -327,8 +327,8 @@ static HRESULT Asn1TimeToDateTime(__in const ASN1_TIME *lpTime, __out MX::CDateT
   return (hRes != E_FAIL) ? hRes : MX_E_InvalidData;
 }
 
-static HRESULT GetName(__in X509_NAME *lpName, __in MX::CSslCertificate::eInformation nInfo,
-                       __inout MX::CStringW &cStrW)
+static HRESULT GetName(_In_ X509_NAME *lpName, _In_ MX::CSslCertificate::eInformation nInfo,
+                       _Inout_ MX::CStringW &cStrW)
 {
   MX::TAutoFreePtr<CHAR> aTempBuf;
   ASN1_OBJECT *obj;

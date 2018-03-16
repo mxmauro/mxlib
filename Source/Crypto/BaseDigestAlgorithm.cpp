@@ -32,12 +32,12 @@ CBaseDigestAlgorithm::CBaseDigestAlgorithm() : CBaseMemObj()
   return;
 }
 
-HRESULT CBaseDigestAlgorithm::DigestWordLE(__in LPWORD lpnValues, __in SIZE_T nCount)
+HRESULT CBaseDigestAlgorithm::DigestWordLE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount)
 {
   return DigestStream(lpnValues, nCount * sizeof(WORD));
 }
 
-HRESULT CBaseDigestAlgorithm::DigestWordBE(__in LPWORD lpnValues, __in SIZE_T nCount)
+HRESULT CBaseDigestAlgorithm::DigestWordBE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount)
 {
   WORD aTempValues[32];
   SIZE_T i;
@@ -58,12 +58,12 @@ HRESULT CBaseDigestAlgorithm::DigestWordBE(__in LPWORD lpnValues, __in SIZE_T nC
   return hRes;
 }
 
-HRESULT CBaseDigestAlgorithm::DigestDWordLE(__in LPDWORD lpnValues, __in SIZE_T nCount)
+HRESULT CBaseDigestAlgorithm::DigestDWordLE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount)
 {
   return DigestStream(lpnValues, nCount * sizeof(DWORD));
 }
 
-HRESULT CBaseDigestAlgorithm::DigestDWordBE(__in LPDWORD lpnValues, __in SIZE_T nCount)
+HRESULT CBaseDigestAlgorithm::DigestDWordBE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount)
 {
   DWORD aTempValues[32];
   SIZE_T i;
@@ -86,12 +86,12 @@ HRESULT CBaseDigestAlgorithm::DigestDWordBE(__in LPDWORD lpnValues, __in SIZE_T 
   return hRes;
 }
 
-HRESULT CBaseDigestAlgorithm::DigestQWordLE(__in ULONGLONG *lpnValues, __in SIZE_T nCount)
+HRESULT CBaseDigestAlgorithm::DigestQWordLE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCount)
 {
   return DigestStream(lpnValues, nCount * sizeof(ULONGLONG));
 }
 
-HRESULT CBaseDigestAlgorithm::DigestQWordBE(__in ULONGLONG *lpnValues, __in SIZE_T nCount)
+HRESULT CBaseDigestAlgorithm::DigestQWordBE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCount)
 {
   ULONGLONG aTempValues[32];
   SIZE_T i;

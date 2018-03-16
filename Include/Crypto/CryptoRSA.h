@@ -46,45 +46,45 @@ public:
   CCryptoRSA();
   ~CCryptoRSA();
 
-  HRESULT GenerateKeys(__in SIZE_T nBitsCount);
+  HRESULT GenerateKeys(_In_ SIZE_T nBitsCount);
   SIZE_T GetBitsCount() const;
 
   BOOL HasPrivateKey() const;
 
-  HRESULT SetPublicKeyFromDER(__in LPCVOID lpKey, __in SIZE_T nKeySize, __in_z_opt LPCSTR szPasswordA=NULL);
-  HRESULT SetPublicKeyFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA=NULL,
-                              __in_opt SIZE_T nPemLen=(SIZE_T)-1);
-  SIZE_T GetPublicKey(__out_opt LPVOID lpDest=NULL);
+  HRESULT SetPublicKeyFromDER(_In_ LPCVOID lpKey, _In_ SIZE_T nKeySize, _In_opt_z_ LPCSTR szPasswordA=NULL);
+  HRESULT SetPublicKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA=NULL,
+                              _In_opt_ SIZE_T nPemLen=(SIZE_T)-1);
+  SIZE_T GetPublicKey(_Out_opt_ LPVOID lpDest=NULL);
 
-  HRESULT SetPrivateKeyFromDER(__in LPCVOID lpKey, __in SIZE_T nKeySize, __in_z_opt LPCSTR szPasswordA=NULL);
-  HRESULT SetPrivateKeyFromPEM(__in_z LPCSTR szPemA, __in_z_opt LPCSTR szPasswordA=NULL,
-                              __in_opt SIZE_T nPemLen=(SIZE_T)-1);
-  SIZE_T GetPrivateKey(__out_opt LPVOID lpDest=NULL);
+  HRESULT SetPrivateKeyFromDER(_In_ LPCVOID lpKey, _In_ SIZE_T nKeySize, _In_opt_z_ LPCSTR szPasswordA=NULL);
+  HRESULT SetPrivateKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA=NULL,
+                              _In_opt_ SIZE_T nPemLen=(SIZE_T)-1);
+  SIZE_T GetPrivateKey(_Out_opt_ LPVOID lpDest=NULL);
 
   HRESULT BeginEncrypt();
-  HRESULT BeginEncrypt(__in ePadding nPadding, __in_opt BOOL bUsePublicKey=TRUE);
-  HRESULT EncryptStream(__in LPCVOID lpData, __in SIZE_T nDataLength);
+  HRESULT BeginEncrypt(_In_ ePadding nPadding, _In_opt_ BOOL bUsePublicKey=TRUE);
+  HRESULT EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
   HRESULT EndEncrypt();
 
   HRESULT BeginDecrypt();
-  HRESULT BeginDecrypt(__in ePadding nPadding, __in_opt BOOL bUsePrivateKey=TRUE);
-  HRESULT DecryptStream(__in LPCVOID lpData, __in SIZE_T nDataLength);
+  HRESULT BeginDecrypt(_In_ ePadding nPadding, _In_opt_ BOOL bUsePrivateKey=TRUE);
+  HRESULT DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
   HRESULT EndDecrypt();
 
   HRESULT BeginSign();
-  HRESULT BeginSign(__in eHashAlgorithm nAlgorithm);
-  HRESULT SignStream(__in LPCVOID lpData, __in SIZE_T nDataLength);
+  HRESULT BeginSign(_In_ eHashAlgorithm nAlgorithm);
+  HRESULT SignStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
   HRESULT EndSign();
   LPBYTE GetSignature() const;
   SIZE_T GetSignatureSize() const;
 
   HRESULT BeginVerify();
-  HRESULT BeginVerify(__in eHashAlgorithm nAlgorithm);
-  HRESULT VerifyStream(__in LPCVOID lpData, __in SIZE_T nDataLength);
-  HRESULT EndVerify(__in LPCVOID lpSignature, __in SIZE_T nSignatureLen);
+  HRESULT BeginVerify(_In_ eHashAlgorithm nAlgorithm);
+  HRESULT VerifyStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
+  HRESULT EndVerify(_In_ LPCVOID lpSignature, _In_ SIZE_T nSignatureLen);
 
 private:
-  VOID CleanUp(__in int nWhat, __in BOOL bZeroData);
+  VOID CleanUp(_In_ int nWhat, _In_ BOOL bZeroData);
 
 private:
   LPVOID lpInternalData;

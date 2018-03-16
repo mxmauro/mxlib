@@ -40,11 +40,11 @@ public:
     CEntity();
     ~CEntity();
 
-    HRESULT SetTag(__in_z LPCSTR szTagA);
-    HRESULT SetTag(__in_z LPCWSTR szTagW);
+    HRESULT SetTag(_In_z_ LPCSTR szTagA);
+    HRESULT SetTag(_In_z_ LPCWSTR szTagW);
     LPCWSTR GetTag() const;
 
-    HRESULT SetWeak(__in BOOL bIsWeak);
+    HRESULT SetWeak(_In_ BOOL bIsWeak);
     BOOL GetWeak() const;
 
   private:
@@ -55,20 +55,20 @@ public:
   //----
 
 protected:
-  CHttpHeaderReqIfXXXMatchBase(__in_opt BOOL bIsMatch=TRUE);
+  CHttpHeaderReqIfXXXMatchBase(_In_opt_ BOOL bIsMatch=TRUE);
 public:
   ~CHttpHeaderReqIfXXXMatchBase();
 
-  HRESULT Parse(__in_z LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(__inout CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA);
 
-  HRESULT AddEntity(__in_z LPCSTR szEntityA, __out_opt CEntity **lplpEntity=NULL);
-  HRESULT AddEntity(__in_z LPCWSTR szEntityW, __out_opt CEntity **lplpEntity=NULL);
+  HRESULT AddEntity(_In_z_ LPCSTR szEntityA, _Out_opt_ CEntity **lplpEntity=NULL);
+  HRESULT AddEntity(_In_z_ LPCWSTR szEntityW, _Out_opt_ CEntity **lplpEntity=NULL);
 
   SIZE_T GetEntitiesCount() const;
-  CEntity* GetEntity(__in SIZE_T nIndex) const;
-  CEntity* GetEntity(__in_z LPCWSTR szTagW) const;
+  CEntity* GetEntity(_In_ SIZE_T nIndex) const;
+  CEntity* GetEntity(_In_z_ LPCWSTR szTagW) const;
 
 private:
   TArrayListWithDelete<CEntity*> cEntitiesList;

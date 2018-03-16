@@ -37,22 +37,22 @@ public:
   CCircularBuffer();
   ~CCircularBuffer();
 
-  SIZE_T Find(__in BYTE nToScan, __in SIZE_T nStartPos=0); //returns -1 if not found
+  SIZE_T Find(_In_ BYTE nToScan, _In_ SIZE_T nStartPos=0); //returns -1 if not found
 
-  VOID GetReadPtr(__out_opt LPBYTE *lplpPtr1, __out_opt SIZE_T *lpnSize1, __out_opt LPBYTE *lplpPtr2,
-                  __out_opt SIZE_T *lpnSize2);
-  HRESULT AdvanceReadPtr(__in SIZE_T nCount);
+  VOID GetReadPtr(_Out_opt_ LPBYTE *lplpPtr1, _Out_opt_ SIZE_T *lpnSize1, _Out_opt_ LPBYTE *lplpPtr2,
+                  _Out_opt_ SIZE_T *lpnSize2);
+  HRESULT AdvanceReadPtr(_In_ SIZE_T nCount);
 
-  VOID GetWritePtr(__out_opt LPBYTE *lplpPtr1, __out_opt SIZE_T *lpnSize1, __out_opt LPBYTE *lplpPtr2,
-                   __out_opt SIZE_T *lpnSize2);
-  HRESULT AdvanceWritePtr(__in SIZE_T nCount);
+  VOID GetWritePtr(_Out_opt_ LPBYTE *lplpPtr1, _Out_opt_ SIZE_T *lpnSize1, _Out_opt_ LPBYTE *lplpPtr2,
+                   _Out_opt_ SIZE_T *lpnSize2);
+  HRESULT AdvanceWritePtr(_In_ SIZE_T nCount);
 
   SIZE_T GetAvailableForRead() const;
-  SIZE_T Peek(__out LPVOID lpDest, __in SIZE_T nToRead);
-  SIZE_T Read(__out LPVOID lpDest, __in SIZE_T nToRead);
-  HRESULT Write(__in LPCVOID lpSrc, __in SIZE_T nSrcLength, __in BOOL bExpandIfNeeded=TRUE);
+  SIZE_T Peek(_Out_writes_(nToRead) LPVOID lpDest, _In_ SIZE_T nToRead);
+  SIZE_T Read(_Out_writes_(nToRead) LPVOID lpDest, _In_ SIZE_T nToRead);
+  HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLength, _In_ BOOL bExpandIfNeeded=TRUE);
 
-  HRESULT SetBufferSize(__in SIZE_T nSize);
+  HRESULT SetBufferSize(_In_ SIZE_T nSize);
   SIZE_T GetBufferSize() const
     {
     return nSize;

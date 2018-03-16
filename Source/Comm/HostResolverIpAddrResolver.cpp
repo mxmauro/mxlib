@@ -122,9 +122,9 @@ VOID CIPAddressResolver::Release()
   return;
 }
 
-HRESULT CIPAddressResolver::Resolve(__in MX::CHostResolver *lpHostResolver, __in PSOCKADDR_INET lpAddr,
-                                    __in HRESULT *lphErrorCode, __in_z LPCSTR szHostNameA, __in int nDesiredFamily,
-                                    __in DWORD dwTimeoutMs)
+HRESULT CIPAddressResolver::Resolve(_In_ MX::CHostResolver *lpHostResolver, _In_ PSOCKADDR_INET lpAddr,
+                                    _In_ HRESULT *lphErrorCode, _In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily,
+                                    _In_ DWORD dwTimeoutMs)
 {
   TAutoRefCounted<CHostResolver> cAutoRefEvent(lpHostResolver);
   TAutoRefCounted<CItem> cNewItem;
@@ -166,7 +166,7 @@ HRESULT CIPAddressResolver::Resolve(__in MX::CHostResolver *lpHostResolver, __in
   return S_OK;
 }
 
-VOID CIPAddressResolver::Cancel(__in MX::CHostResolver *lpHostResolver)
+VOID CIPAddressResolver::Cancel(_In_ MX::CHostResolver *lpHostResolver)
 {
   CCriticalSection::CAutoLock cLock(cs);
   TLnkLst<CItem>::Iterator it;
@@ -183,10 +183,13 @@ VOID CIPAddressResolver::Cancel(__in MX::CHostResolver *lpHostResolver)
   return;
 }
 
-HRESULT CIPAddressResolver::ResolveAddr(__out PSOCKADDR_INET lpAddress, __in_z LPCSTR szAddressA, __in int nDesiredFamily)
+HRESULT CIPAddressResolver::ResolveAddr(_Out_ PSOCKADDR_INET lpAddress, _In_z_ LPCSTR szAddressA,
+                                        _In_ int nDesiredFamily)
 {
   PADDRINFOA lpCurrAddrInfoA, lpAddrInfoA;
 
+  if (lpAddress == NULL)
+    return E_POINTER;
   if (nDesiredFamily == AF_INET || nDesiredFamily == AF_UNSPEC)
   {
     if (MX::CHostResolver::IsValidIPV4(szAddressA, (SIZE_T)-1, lpAddress) != FALSE)
@@ -198,7 +201,11 @@ HRESULT CIPAddressResolver::ResolveAddr(__out PSOCKADDR_INET lpAddress, __in_z L
       return S_OK;
   }
   if (::getaddrinfo(szAddressA, NULL, NULL, &lpAddrInfoA) == SOCKET_ERROR)
-    return MX_HRESULT_FROM_LASTSOCKETERROR();
+  {
+    HRESULT hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
+    MX::MemSet(lpAddress, 0, sizeof(SOCKADDR_INET));
+    return hRes;
+  }
   for (lpCurrAddrInfoA=lpAddrInfoA; lpCurrAddrInfoA!=NULL; lpCurrAddrInfoA=lpCurrAddrInfoA->ai_next)
   {
     if ((nDesiredFamily == AF_INET || nDesiredFamily == AF_UNSPEC) &&
@@ -219,6 +226,7 @@ HRESULT CIPAddressResolver::ResolveAddr(__out PSOCKADDR_INET lpAddress, __in_z L
     }
   }
   ::freeaddrinfo(lpAddrInfoA);
+  MX::MemSet(lpAddress, 0, sizeof(SOCKADDR_INET));
   return E_FAIL;
 }
 
@@ -265,7 +273,7 @@ VOID CIPAddressResolver::ThreadProc()
   return;
 }
 
-VOID CIPAddressResolver::OnTimeout(__in CTimedEventQueue::CEvent *lpEvent)
+VOID CIPAddressResolver::OnTimeout(_In_ CTimedEventQueue::CEvent *lpEvent)
 {
   CItem *lpItem = (CItem*)lpEvent;
   CItem *lpProcessItem = NULL;

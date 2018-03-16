@@ -33,18 +33,18 @@ static const LPCWSTR szHexaNumW = L"0123456789ABCDEF";
 
 //-----------------------------------------------------------
 
-static DukTape::duk_ret_t OnHtmlEntities(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                         __in_z LPCSTR szFunctionNameA);
-static DukTape::duk_ret_t OnXmlEntities(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                        __in_z LPCSTR szFunctionNameA);
-static DukTape::duk_ret_t OnUrlEncode(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                      __in_z LPCSTR szFunctionNameA);
-static DukTape::duk_ret_t OnUrlDecode(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                      __in_z LPCSTR szFunctionNameA);
-static DukTape::duk_ret_t OnHash(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                 __in_z LPCSTR szFunctionNameA);
-static DukTape::duk_ret_t OnDie(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                __in_z LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnHtmlEntities(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                         _In_z_ LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnXmlEntities(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                        _In_z_ LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnUrlEncode(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                      _In_z_ LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnUrlDecode(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                      _In_z_ LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnHash(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                 _In_z_ LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnDie(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                _In_z_ LPCSTR szFunctionNameA);
 
 //-----------------------------------------------------------
 
@@ -54,7 +54,7 @@ namespace Internals {
 
 namespace JsHttpServer {
 
-HRESULT AddHelpersMethods(__in CJavascriptVM &cJvm, __in MX::CHttpServer::CRequest *lpRequest)
+HRESULT AddHelpersMethods(_In_ CJavascriptVM &cJvm, _In_ MX::CHttpServer::CRequest *lpRequest)
 {
   HRESULT hRes;
 
@@ -69,7 +69,7 @@ HRESULT AddHelpersMethods(__in CJavascriptVM &cJvm, __in MX::CHttpServer::CReque
 
   try
   {
-    cJvm.RunNativeProtected(0, 0, [](__in DukTape::duk_context *lpCtx) -> VOID
+    cJvm.RunNativeProtected(0, 0, [](_In_ DukTape::duk_context *lpCtx) -> VOID
     {
       DukTape::duk_push_string(lpCtx, "function vardump(obj)\n"
                                "{ return Duktape.enc('jx', obj, null, 2); }\n");
@@ -123,8 +123,8 @@ HRESULT AddHelpersMethods(__in CJavascriptVM &cJvm, __in MX::CHttpServer::CReque
 
 //-----------------------------------------------------------
 
-static DukTape::duk_ret_t OnHtmlEntities(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                         __in_z LPCSTR szFunctionNameA)
+static DukTape::duk_ret_t OnHtmlEntities(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                         _In_z_ LPCSTR szFunctionNameA)
 {
   MX::CStringA cStrTempA;
   LPCSTR szBufA;
@@ -141,8 +141,8 @@ static DukTape::duk_ret_t OnHtmlEntities(__in DukTape::duk_context *lpCtx, __in_
   return 1;
 }
 
-static DukTape::duk_ret_t OnXmlEntities(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                        __in_z LPCSTR szFunctionNameA)
+static DukTape::duk_ret_t OnXmlEntities(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                        _In_z_ LPCSTR szFunctionNameA)
 {
   MX::CStringA cStrTempA;
   MX::CStringW cStrTempW;
@@ -217,8 +217,8 @@ static DukTape::duk_ret_t OnXmlEntities(__in DukTape::duk_context *lpCtx, __in_z
   return 1;
 }
 
-static DukTape::duk_ret_t OnUrlEncode(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                      __in_z LPCSTR szFunctionNameA)
+static DukTape::duk_ret_t OnUrlEncode(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                      _In_z_ LPCSTR szFunctionNameA)
 {
   MX::CStringA cStrTempA;
   LPCSTR szBufA;
@@ -233,8 +233,8 @@ static DukTape::duk_ret_t OnUrlEncode(__in DukTape::duk_context *lpCtx, __in_z L
   return 1;
 }
 
-static DukTape::duk_ret_t OnUrlDecode(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                      __in_z LPCSTR szFunctionNameA)
+static DukTape::duk_ret_t OnUrlDecode(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                      _In_z_ LPCSTR szFunctionNameA)
 {
   MX::CStringA cStrTempA;
   LPCSTR szBufA;
@@ -249,8 +249,8 @@ static DukTape::duk_ret_t OnUrlDecode(__in DukTape::duk_context *lpCtx, __in_z L
   return 1;
 }
 
-static DukTape::duk_ret_t OnHash(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                 __in_z LPCSTR szFunctionNameA)
+static DukTape::duk_ret_t OnHash(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                 _In_z_ LPCSTR szFunctionNameA)
 
 {
   MX::TAutoDeletePtr<MX::CBaseDigestAlgorithm> cDigest;
@@ -334,8 +334,8 @@ static DukTape::duk_ret_t OnHash(__in DukTape::duk_context *lpCtx, __in_z LPCSTR
   return 1;
 }
 
-static DukTape::duk_ret_t OnDie(__in DukTape::duk_context *lpCtx, __in_z LPCSTR szObjectNameA,
-                                __in_z LPCSTR szFunctionNameA)
+static DukTape::duk_ret_t OnDie(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                _In_z_ LPCSTR szFunctionNameA)
 {
   BOOL bHasMessage = (DukTape::duk_get_top(lpCtx) > 0) ? TRUE : FALSE;
 

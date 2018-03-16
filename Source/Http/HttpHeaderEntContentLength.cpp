@@ -38,7 +38,7 @@ CHttpHeaderEntContentLength::~CHttpHeaderEntContentLength()
   return;
 }
 
-HRESULT CHttpHeaderEntContentLength::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderEntContentLength::Parse(_In_z_ LPCSTR szValueA)
 {
   ULONGLONG nTemp;
 
@@ -69,15 +69,15 @@ HRESULT CHttpHeaderEntContentLength::Parse(__in_z LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentLength::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderEntContentLength::Build(_Inout_ CStringA &cStrDestA)
 {
-  if (cStrDestA.Format("%i64u", nLength) == FALSE)
+  if (cStrDestA.Format("%I64u", nLength) == FALSE)
     return E_OUTOFMEMORY;
   //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentLength::SetLength(__in ULONGLONG _nLength)
+HRESULT CHttpHeaderEntContentLength::SetLength(_In_ ULONGLONG _nLength)
 {
   nLength = _nLength;
   return S_OK;

@@ -37,12 +37,12 @@ CHttpHeaderEntContentLanguage::~CHttpHeaderEntContentLanguage()
   return;
 }
 
-HRESULT CHttpHeaderEntContentLanguage::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderEntContentLanguage::Parse(_In_z_ LPCSTR szValueA)
 {
   return SetLanguage(szValueA);
 }
 
-HRESULT CHttpHeaderEntContentLanguage::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderEntContentLanguage::Build(_Inout_ CStringA &cStrDestA)
 {
   if (cStrDestA.Copy((LPSTR)cStrLanguageA) == FALSE)
     return E_OUTOFMEMORY;
@@ -50,7 +50,7 @@ HRESULT CHttpHeaderEntContentLanguage::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentLanguage::SetLanguage(__in_z LPCSTR szLanguageA)
+HRESULT CHttpHeaderEntContentLanguage::SetLanguage(_In_z_ LPCSTR szLanguageA)
 {
   LPCSTR szStartA, szStartA_2, szEndA;
 

@@ -32,19 +32,19 @@ namespace MX {
 
 //-----------------------------------------------------------
 
-LPVOID MemAlloc(__in SIZE_T nSize);
-LPVOID MemRealloc(__in LPVOID lpPtr, __in SIZE_T nSize);
-LPVOID MemAllocD(__in SIZE_T nSize, __in_z_opt const char *szFilenameA, __in int nLineNumber);
-LPVOID MemReallocD(__in LPVOID lpPtr, __in SIZE_T nSize, __in_z_opt const char *szFilenameA, __in int nLineNumber);
-VOID MemFree(__in LPVOID lpPtr);
-SIZE_T MemSize(__in LPVOID lpPtr);
+LPVOID MemAlloc(_In_ SIZE_T nSize);
+LPVOID MemRealloc(_In_opt_ LPVOID lpPtr, _In_ SIZE_T nSize);
+LPVOID MemAllocD(_In_ SIZE_T nSize, _In_opt_z_ const char *szFilenameA, _In_ int nLineNumber);
+LPVOID MemReallocD(_In_opt_ LPVOID lpPtr, _In_ SIZE_T nSize, _In_opt_z_ const char *szFilenameA, _In_ int nLineNumber);
+VOID MemFree(_In_opt_ LPVOID lpPtr);
+SIZE_T MemSize(_In_opt_ LPVOID lpPtr);
 
-VOID MemSet(__out LPVOID lpDest, __in int nVal, __in SIZE_T nCount);
-VOID MemCopy(__out LPVOID lpDest, __in LPCVOID lpSrc, __in SIZE_T nCount);
-VOID MemMove(__out LPVOID lpDest, __in LPCVOID lpSrc, __in SIZE_T nCount);
-int MemCompare(__in LPCVOID lpSrc1, __in LPCVOID lpSrc2, __in SIZE_T nCount);
+VOID MemSet(_Out_writes_bytes_all_(nCount) LPVOID lpDest, _In_ int nVal, _In_ SIZE_T nCount);
+VOID MemCopy(_Out_writes_bytes_all_(nCount) LPVOID lpDest, _In_ LPCVOID lpSrc, _In_ SIZE_T nCount);
+VOID MemMove(_Out_writes_bytes_all_(nCount) LPVOID lpDest, _In_ LPCVOID lpSrc, _In_ SIZE_T nCount);
+int MemCompare(_In_ LPCVOID lpSrc1, _In_ LPCVOID lpSrc2, _In_ SIZE_T nCount);
 
-SIZE_T TryMemCopy(__out LPVOID lpDest, __in LPCVOID lpSrc, __in SIZE_T nCount);
+SIZE_T TryMemCopy(_Out_ LPVOID lpDest, _In_ LPCVOID lpSrc, _In_ SIZE_T nCount);
 
 //-----------------------------------------------------------
 
@@ -60,8 +60,8 @@ SIZE_T TryMemCopy(__out LPVOID lpDest, __in LPCVOID lpSrc, __in SIZE_T nCount);
 
 #define MX_DISABLE_COPY_CONSTRUCTOR(_class)                \
   private:                                                 \
-    _class(__in const _class& cSrc) = delete;              \
-    _class& operator=(__in const _class& cSrc) = delete
+    _class(_In_ const _class& cSrc) = delete;              \
+    _class& operator=(_In_ const _class& cSrc) = delete
 
 //-----------------------------------------------------------
 
@@ -69,52 +69,52 @@ class __declspec(novtable) CBaseMemObj
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CBaseMemObj);
 public:
-  void* __cdecl operator new(__in size_t nSize)
+  void* __cdecl operator new(_In_ size_t nSize)
     {
     return MX_MALLOC(nSize);
     };
-  void* __cdecl operator new[](__in size_t nSize)
+  void* __cdecl operator new[](_In_ size_t nSize)
     {
     return MX_MALLOC(nSize);
     };
-  void* __cdecl operator new(__in size_t nSize, __inout void* lpInPlace)
+  void* __cdecl operator new(_In_ size_t nSize, _Inout_ void* lpInPlace)
     {
     return lpInPlace;
     };
 
 #if defined(_DEBUG) || defined(MX_TRACEALLOC)
-  void* __cdecl operator new(__in size_t nSize, __in const char *szFileNameA, int nLine)
+  void* __cdecl operator new(_In_ size_t nSize, _In_ const char *szFileNameA, int nLine)
     {
     return MX_MALLOC_D(nSize, szFileNameA, nLine);
     };
-  void* __cdecl operator new[](__in size_t nSize, __in const char *szFileNameA, int nLine)
+  void* __cdecl operator new[](_In_ size_t nSize, _In_ const char *szFileNameA, int nLine)
     {
     return MX_MALLOC_D(nSize, szFileNameA, nLine);
     };
 #endif //_DEBUG || MX_TRACEALLOC
 
-  void __cdecl operator delete(__inout void* p)
+  void __cdecl operator delete(_Inout_ void* p)
     {
     MX_FREE(p);
     return;
     };
-  void __cdecl operator delete[](__inout void* p)
+  void __cdecl operator delete[](_Inout_ void* p)
     {
     MX_FREE(p);
     return;
     };
-  void __cdecl operator delete(__inout void* p, __inout void* lpPlace)
+  void __cdecl operator delete(_Inout_ void* p, _Inout_ void* lpPlace)
     {
     return;
     };
 
 #if defined(_DEBUG) || defined(MX_TRACEALLOC)
-  void __cdecl operator delete(__in void *p, __in const char *szFileNameA, int nLine)
+  void __cdecl operator delete(_In_ void *p, _In_ const char *szFileNameA, int nLine)
     {
     MX_FREE(p);
     return;
     };
-  void __cdecl operator delete[](__inout void* p, __in const char *szFileNameA, int nLine)
+  void __cdecl operator delete[](_Inout_ void* p, _In_ const char *szFileNameA, int nLine)
     {
     MX_FREE(p);
     return;

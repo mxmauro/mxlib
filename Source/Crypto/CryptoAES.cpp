@@ -44,7 +44,7 @@ typedef struct tagDES_DATA {
 
 //-----------------------------------------------------------
 
-static const EVP_CIPHER* GetCipher(__in MX::CCryptoAES::eAlgorithm nAlgorithm);
+static const EVP_CIPHER* GetCipher(_In_ MX::CCryptoAES::eAlgorithm nAlgorithm);
 
 //-----------------------------------------------------------
 
@@ -79,8 +79,8 @@ HRESULT CCryptoAES::BeginEncrypt()
   return BeginEncrypt(AlgorithmAes256Ecb, NULL, 0, NULL, TRUE);
 }
 
-HRESULT CCryptoAES::BeginEncrypt(__in eAlgorithm nAlgorithm, __in_opt LPCVOID lpKey, __in_opt SIZE_T nKeyLen,
-                                 __in_opt LPCVOID lpInitVector, __in_opt BOOL bUsePadding)
+HRESULT CCryptoAES::BeginEncrypt(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey, _In_opt_ SIZE_T nKeyLen,
+                                 _In_opt_ LPCVOID lpInitVector, _In_opt_ BOOL bUsePadding)
 {
   if (nAlgorithm != AlgorithmAes128Ecb && nAlgorithm != AlgorithmAes128Cbc && nAlgorithm != AlgorithmAes128Cfb &&
       nAlgorithm != AlgorithmAes128Ofb && nAlgorithm != AlgorithmAes128Cfb1 && nAlgorithm != AlgorithmAes128Cfb8 &&
@@ -151,7 +151,7 @@ HRESULT CCryptoAES::BeginEncrypt(__in eAlgorithm nAlgorithm, __in_opt LPCVOID lp
   return S_OK;
 }
 
-HRESULT CCryptoAES::EncryptStream(__in LPCVOID lpData, __in SIZE_T nDataLength)
+HRESULT CCryptoAES::EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 {
   LPBYTE lpIn;
   int nInSize, nOutSize;
@@ -220,8 +220,8 @@ HRESULT CCryptoAES::BeginDecrypt()
   return BeginDecrypt(AlgorithmAes256Ecb, NULL, 0, NULL, TRUE);
 }
 
-HRESULT CCryptoAES::BeginDecrypt(__in eAlgorithm nAlgorithm, __in_opt LPCVOID lpKey, __in_opt SIZE_T nKeyLen,
-                                 __in_opt LPCVOID lpInitVector, __in_opt BOOL bUsePadding)
+HRESULT CCryptoAES::BeginDecrypt(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey, _In_opt_ SIZE_T nKeyLen,
+                                 _In_opt_ LPCVOID lpInitVector, _In_opt_ BOOL bUsePadding)
 {
   if (nAlgorithm != AlgorithmAes128Ecb && nAlgorithm != AlgorithmAes128Cbc && nAlgorithm != AlgorithmAes128Cfb &&
       nAlgorithm != AlgorithmAes128Ofb && nAlgorithm != AlgorithmAes128Cfb1 && nAlgorithm != AlgorithmAes128Cfb8 &&
@@ -292,7 +292,7 @@ HRESULT CCryptoAES::BeginDecrypt(__in eAlgorithm nAlgorithm, __in_opt LPCVOID lp
   return S_OK;
 }
 
-HRESULT CCryptoAES::DecryptStream(__in LPCVOID lpData, __in SIZE_T nDataLength)
+HRESULT CCryptoAES::DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 {
   LPBYTE lpIn;
   int nInSize, nOutSize;
@@ -356,7 +356,7 @@ HRESULT CCryptoAES::EndDecrypt()
   return S_OK;
 }
 
-VOID CCryptoAES::CleanUp(__in BOOL bEncoder, __in BOOL bZeroData)
+VOID CCryptoAES::CleanUp(_In_ BOOL bEncoder, _In_ BOOL bZeroData)
 {
   struct tagDES_DATA::tagCipherInfo *lpInfo = (bEncoder != FALSE) ? &(aes_data->sEncryptor) : &(aes_data->sDecryptor);
 
@@ -392,7 +392,7 @@ VOID CCryptoAES::CleanUp(__in BOOL bEncoder, __in BOOL bZeroData)
 
 //-----------------------------------------------------------
 
-static const EVP_CIPHER* GetCipher(__in MX::CCryptoAES::eAlgorithm nAlgorithm)
+static const EVP_CIPHER* GetCipher(_In_ MX::CCryptoAES::eAlgorithm nAlgorithm)
 {
   switch (nAlgorithm)
   {

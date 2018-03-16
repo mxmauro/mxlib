@@ -98,14 +98,14 @@
 #define MX_E_DuplicateKey               MX_E_AlreadyExists
 #define MX_E_ConstraintsCheckFailed     MAKE_HRESULT(1, MX_SCODE_FACILITY, 1) //0x8F180001
 
-__inline HRESULT MX_HRESULT_FROM_WIN32(__in DWORD dwOsErr)
+__inline HRESULT MX_HRESULT_FROM_WIN32(_In_ DWORD dwOsErr)
 {
   if (dwOsErr == ERROR_NOT_ENOUGH_MEMORY)
     dwOsErr = ERROR_OUTOFMEMORY;
   return HRESULT_FROM_WIN32(dwOsErr);
 }
 
-static HRESULT MX_HRESULT_FROM_NT(__in NTSTATUS nNtStatus)
+static HRESULT MX_HRESULT_FROM_NT(_In_ NTSTATUS nNtStatus)
 {
   switch (nNtStatus)
   {

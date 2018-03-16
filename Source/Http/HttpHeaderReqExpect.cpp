@@ -38,7 +38,7 @@ CHttpHeaderReqExpect::~CHttpHeaderReqExpect()
   return;
 }
 
-HRESULT CHttpHeaderReqExpect::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderReqExpect::Parse(_In_z_ LPCSTR szValueA)
 {
   eExpectation _nExpectation = ExpectationUnsupported;
 
@@ -65,7 +65,7 @@ HRESULT CHttpHeaderReqExpect::Parse(__in_z LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqExpect::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderReqExpect::Build(_Inout_ CStringA &cStrDestA)
 {
   switch (nExpectation)
   {
@@ -78,7 +78,7 @@ HRESULT CHttpHeaderReqExpect::Build(__inout CStringA &cStrDestA)
   return MX_E_Unsupported;
 }
 
-HRESULT CHttpHeaderReqExpect::SetExpectation(__in eExpectation _nExpectation)
+HRESULT CHttpHeaderReqExpect::SetExpectation(_In_ eExpectation _nExpectation)
 {
   if (_nExpectation != Expectation100Continue && _nExpectation != ExpectationUnsupported)
     return E_INVALIDARG;

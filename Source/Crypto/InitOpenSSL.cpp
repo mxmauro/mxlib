@@ -52,7 +52,7 @@ extern "C" {
 
 static HRESULT _OpenSSL_Init();
 static VOID OpenSSL_Shutdown();
-static void NTAPI OnTlsCallback(__in PVOID DllHandle, __in DWORD dwReason, __in PVOID);
+static void NTAPI OnTlsCallback(_In_ PVOID DllHandle, _In_ DWORD dwReason, _In_ PVOID);
 static void* __cdecl my_malloc_withinfo(size_t _Size, const char *_filename, int _linenum);
 static void* __cdecl my_realloc_withinfo(void *_Memory, size_t _NewSize, const char *_filename, int _linenum);
 static void __cdecl my_free(void * _Memory, const char *_filename, int _linenum);
@@ -86,7 +86,7 @@ BOOL Init()
   return (SUCCEEDED(_OpenSSL_Init())) ? TRUE : FALSE;
 }
 
-HRESULT GetLastErrorCode(__in BOOL bDefaultIsInvalidData)
+HRESULT GetLastErrorCode(_In_ BOOL bDefaultIsInvalidData)
 {
   unsigned long err;
   BOOL bHasError = FALSE;
@@ -115,7 +115,7 @@ HRESULT GetLastErrorCode(__in BOOL bDefaultIsInvalidData)
   return hRes;
 }
 
-SSL_CTX* GetSslContext(__in BOOL bServerSide, __in_z LPCSTR szVersionA)
+SSL_CTX* GetSslContext(_In_ BOOL bServerSide, _In_z_ LPCSTR szVersionA)
 {
   static LONG volatile nSslContextMutex = 0;
   static const WORD aDisallowedCiphers[] ={
@@ -220,12 +220,12 @@ static HRESULT _OpenSSL_Init()
 {
   static LONG volatile nMutex = 0;
 
-  if (MX::__InterlockedRead(&nInitialized) == 0)
+  if (__InterlockedRead(&nInitialized) == 0)
   {
     MX::CFastLock cLock(&nMutex);
     HRESULT hRes;
 
-    if (MX::__InterlockedRead(&nInitialized) == 0)
+    if (__InterlockedRead(&nInitialized) == 0)
     {
       //setup memory allocator
 #ifdef _DEBUG
@@ -281,11 +281,11 @@ static VOID OpenSSL_Shutdown()
   return;
 }
 
-static void NTAPI OnTlsCallback(__in PVOID DllHandle, __in DWORD dwReason, __in PVOID)
+static void NTAPI OnTlsCallback(_In_ PVOID DllHandle, _In_ DWORD dwReason, _In_ PVOID)
 {
   if (dwReason == DLL_THREAD_DETACH)
   {
-    if (MX::__InterlockedRead(&nInitialized) != 0)
+    if (__InterlockedRead(&nInitialized) != 0)
       OPENSSL_thread_stop();
   }
   return;

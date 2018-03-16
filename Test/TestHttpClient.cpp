@@ -29,7 +29,7 @@
 class CMyHttpClient : public MX::CHttpClient
 {
 public:
-  CMyHttpClient(__in MX::CSockets &cSocketMgr, __in MX::CPropertyBag &cPropBag) : MX::CHttpClient(cSocketMgr, cPropBag)
+  CMyHttpClient(_In_ MX::CSockets &cSocketMgr, _In_ MX::CPropertyBag &cPropBag) : MX::CHttpClient(cSocketMgr, cPropBag)
     {
     return;
     };
@@ -40,15 +40,15 @@ public:
 
 //-----------------------------------------------------------
 
-static VOID OnEngineError(__in MX::CIpc *lpIpc, __in HRESULT hErrorCode);
-static HRESULT OnResponseHeadersReceived(__in MX::CHttpClient *lpHttp, __inout MX::CHttpBodyParserBase *&lpBodyParser);
-static HRESULT OnDocumentCompleted(__in MX::CHttpClient *lpHttp);
-static VOID OnError(__in MX::CHttpClient *lpHttp, __in HRESULT hErrorCode);
-static HRESULT OnQueryCertificates(__in MX::CHttpClient *lpHttp, __inout MX::CIpcSslLayer::eProtocol &nProtocol,
-                                   __inout MX::CSslCertificateArray *&lpCheckCertificates,
-                                   __inout MX::CSslCertificate *&lpSelfCert, __inout MX::CCryptoRSA *&lpPrivKey);
+static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode);
+static HRESULT OnResponseHeadersReceived(_In_ MX::CHttpClient *lpHttp, _Inout_ MX::CHttpBodyParserBase *&lpBodyParser);
+static HRESULT OnDocumentCompleted(_In_ MX::CHttpClient *lpHttp);
+static VOID OnError(_In_ MX::CHttpClient *lpHttp, _In_ HRESULT hErrorCode);
+static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *lpHttp, _Inout_ MX::CIpcSslLayer::eProtocol &nProtocol,
+                                   _Inout_ MX::CSslCertificateArray *&lpCheckCertificates,
+                                   _Inout_ MX::CSslCertificate *&lpSelfCert, _Inout_ MX::CCryptoRSA *&lpPrivKey);
 
-static VOID HttpClientJob(__in MX::CWorkerThread *lpWrkThread, __in LPVOID lpParam);
+static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpParam);
 
 //-----------------------------------------------------------
 
@@ -116,29 +116,29 @@ int TestHttpClient()
   return (int)hRes;
 }
 
-static VOID OnEngineError(__in MX::CIpc *lpIpc, __in HRESULT hErrorCode)
+static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode)
 {
   return;
 }
 
-static HRESULT OnResponseHeadersReceived(__in MX::CHttpClient *lpHttp, __inout MX::CHttpBodyParserBase *&lpBodyParser)
+static HRESULT OnResponseHeadersReceived(_In_ MX::CHttpClient *lpHttp, _Inout_ MX::CHttpBodyParserBase *&lpBodyParser)
 {
   return S_OK;
 }
 
-static HRESULT OnDocumentCompleted(__in MX::CHttpClient *lpHttp)
+static HRESULT OnDocumentCompleted(_In_ MX::CHttpClient *lpHttp)
 {
   return S_OK;
 }
 
-static VOID OnError(__in MX::CHttpClient *lpHttp, __in HRESULT hErrorCode)
+static VOID OnError(_In_ MX::CHttpClient *lpHttp, _In_ HRESULT hErrorCode)
 {
   return;
 }
 
-static HRESULT OnQueryCertificates(__in MX::CHttpClient *_lpHttp, __inout MX::CIpcSslLayer::eProtocol &nProtocol,
-                                   __inout MX::CSslCertificateArray *&lpCheckCertificates,
-                                   __inout MX::CSslCertificate *&lpSelfCert, __inout MX::CCryptoRSA *&lpPrivKey)
+static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *_lpHttp, _Inout_ MX::CIpcSslLayer::eProtocol &nProtocol,
+                                   _Inout_ MX::CSslCertificateArray *&lpCheckCertificates,
+                                   _Inout_ MX::CSslCertificate *&lpSelfCert, _Inout_ MX::CCryptoRSA *&lpPrivKey)
 {
   CMyHttpClient *lpHttp = static_cast<CMyHttpClient*>(_lpHttp);
 
@@ -147,7 +147,7 @@ static HRESULT OnQueryCertificates(__in MX::CHttpClient *_lpHttp, __inout MX::CI
   return S_OK;
 }
 
-static VOID HttpClientJob(__in MX::CWorkerThread *lpWrkThread, __in LPVOID lpParam)
+static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpParam)
 {
   THREAD_DATA *lpThreadData = (THREAD_DATA*)lpParam;
   CMyHttpClient cHttpClient(*(lpThreadData->lpSckMgr), *(lpThreadData->lpPropBag));
@@ -168,6 +168,7 @@ static VOID HttpClientJob(__in MX::CWorkerThread *lpWrkThread, __in LPVOID lpPar
     wprintf_s(L"[HttpClient/%lu] Downloading...\n", lpThreadData->nIndex);
     Console::GetCursorPosition(&nOrigPosX, &nOrigPosY);
   }
+#pragma warning(suppress : 28159)
   dwStartTime = dwEndTime = ::GetTickCount();
   hRes = cHttpClient.Open("https://en.wikipedia.org/wiki/HTTPS");
   //hRes = cHttpClient.Open("https://www.google.com");
@@ -176,6 +177,7 @@ static VOID HttpClientJob(__in MX::CWorkerThread *lpWrkThread, __in LPVOID lpPar
   {
     while (lpThreadData->cWorkerThreads.CheckForAbort(100) == FALSE && cHttpClient.IsDocumentComplete() == FALSE &&
            cHttpClient.IsClosed() == FALSE);
+#pragma warning(suppress : 28159)
     dwEndTime = ::GetTickCount();
     if (lpThreadData->cWorkerThreads.CheckForAbort(0) == FALSE)
     {

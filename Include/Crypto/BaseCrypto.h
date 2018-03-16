@@ -39,16 +39,16 @@ protected:
 
 public:
   virtual HRESULT BeginEncrypt()=0;
-  virtual HRESULT EncryptStream(__in LPCVOID lpData, __in SIZE_T nDataLength)=0;
+  virtual HRESULT EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)=0;
   virtual HRESULT EndEncrypt()=0;
   SIZE_T GetAvailableEncryptedData();
-  SIZE_T GetEncryptedData(__out LPVOID lpDest, __in SIZE_T nDestSize);
+  SIZE_T GetEncryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize);
 
   virtual HRESULT BeginDecrypt()=0;
-  virtual HRESULT DecryptStream(__in LPCVOID lpData, __in SIZE_T nDataLength)=0;
+  virtual HRESULT DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)=0;
   virtual HRESULT EndDecrypt()=0;
   SIZE_T GetAvailableDecryptedData();
-  SIZE_T GetDecryptedData(__out LPVOID lpDest, __in SIZE_T nDestSize);
+  SIZE_T GetDecryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize);
 
 protected:
   CCircularBuffer cEncryptedData;

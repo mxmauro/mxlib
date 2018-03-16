@@ -26,7 +26,7 @@
 
 //-----------------------------------------------------------
 
-static VOID RemoveTrailingZeroDecimals(__inout MX::CStringA &cStrA);
+static VOID RemoveTrailingZeroDecimals(_Inout_ MX::CStringA &cStrA);
 
 //-----------------------------------------------------------
 
@@ -43,7 +43,7 @@ CHttpHeaderReqAcceptLanguage::~CHttpHeaderReqAcceptLanguage()
   return;
 }
 
-HRESULT CHttpHeaderReqAcceptLanguage::Parse(__in_z LPCSTR szValueA)
+HRESULT CHttpHeaderReqAcceptLanguage::Parse(_In_z_ LPCSTR szValueA)
 {
   CLanguage *lpLanguage;
   LPCSTR szStartA;
@@ -108,7 +108,7 @@ HRESULT CHttpHeaderReqAcceptLanguage::Parse(__in_z LPCSTR szValueA)
   return (bGotItem != FALSE) ? S_OK : MX_E_InvalidData;
 }
 
-HRESULT CHttpHeaderReqAcceptLanguage::Build(__inout CStringA &cStrDestA)
+HRESULT CHttpHeaderReqAcceptLanguage::Build(_Inout_ CStringA &cStrDestA)
 {
   SIZE_T i, nCount;
   CLanguage *lpLanguage;
@@ -137,7 +137,7 @@ HRESULT CHttpHeaderReqAcceptLanguage::Build(__inout CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqAcceptLanguage::AddLanguage(__in_z LPCSTR szLanguageA, __out_opt CLanguage **lplpLanguage)
+HRESULT CHttpHeaderReqAcceptLanguage::AddLanguage(_In_z_ LPCSTR szLanguageA, _Out_opt_ CLanguage **lplpLanguage)
 {
   TAutoDeletePtr<CLanguage> cNewLanguage;
   SIZE_T i, nCount;
@@ -180,12 +180,12 @@ SIZE_T CHttpHeaderReqAcceptLanguage::GetLanguagesCount() const
   return cLanguagesList.GetCount();
 }
 
-CHttpHeaderReqAcceptLanguage::CLanguage* CHttpHeaderReqAcceptLanguage::GetLanguage(__in SIZE_T nIndex) const
+CHttpHeaderReqAcceptLanguage::CLanguage* CHttpHeaderReqAcceptLanguage::GetLanguage(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cLanguagesList.GetCount()) ? cLanguagesList.GetElementAt(nIndex) : NULL;
 }
 
-CHttpHeaderReqAcceptLanguage::CLanguage* CHttpHeaderReqAcceptLanguage::GetLanguage(__in_z LPCSTR szLanguageA) const
+CHttpHeaderReqAcceptLanguage::CLanguage* CHttpHeaderReqAcceptLanguage::GetLanguage(_In_z_ LPCSTR szLanguageA) const
 {
   SIZE_T i, nCount;
 
@@ -215,7 +215,7 @@ CHttpHeaderReqAcceptLanguage::CLanguage::~CLanguage()
   return;
 }
 
-HRESULT CHttpHeaderReqAcceptLanguage::CLanguage::SetLanguage(__in_z LPCSTR szLanguageA)
+HRESULT CHttpHeaderReqAcceptLanguage::CLanguage::SetLanguage(_In_z_ LPCSTR szLanguageA)
 {
   LPCSTR szStartA, szStartA_2, szEndA;
 
@@ -264,7 +264,7 @@ LPCSTR CHttpHeaderReqAcceptLanguage::CLanguage::GetLanguage() const
   return (LPCSTR)cStrLanguageA;
 }
 
-HRESULT CHttpHeaderReqAcceptLanguage::CLanguage::SetQ(__in double _q)
+HRESULT CHttpHeaderReqAcceptLanguage::CLanguage::SetQ(_In_ double _q)
 {
   if (_q < -0.000001 || _q > 1.000001)
     return E_INVALIDARG;
@@ -281,7 +281,7 @@ double CHttpHeaderReqAcceptLanguage::CLanguage::GetQ() const
 
 //-----------------------------------------------------------
 
-static VOID RemoveTrailingZeroDecimals(__inout MX::CStringA &cStrA)
+static VOID RemoveTrailingZeroDecimals(_Inout_ MX::CStringA &cStrA)
 {
   SIZE_T nCount = 0;
   SIZE_T nOfs, nLen = cStrA.GetLength();

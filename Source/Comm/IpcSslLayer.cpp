@@ -89,8 +89,8 @@ typedef struct tagSSL_LAYER_DATA {
 static int my_X509_STORE_get1_issuer(X509 **issuer, X509_STORE_CTX *ctx, X509 *x);
 static STACK_OF(X509) *my_X509_STORE_get1_certs(X509_STORE_CTX *ctx, X509_NAME *nm);
 static STACK_OF(X509_CRL) *my_X509_STORE_get1_crls(X509_STORE_CTX *ctx, X509_NAME *nm);
-static X509* lookup_cert_by_subject(__in MX::CSslCertificateArray *lpCertArray, __in X509_NAME *name);
-static X509_CRL* lookup_crl_by_subject(__in MX::CSslCertificateArray *lpCertArray, __in X509_NAME *name);
+static X509* lookup_cert_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ X509_NAME *name);
+static X509_CRL* lookup_crl_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ X509_NAME *name);
 
 #ifdef SSLLAYER_PRINT_ERROR
 static int DebugPrintSslError(const char *str, size_t len, void *u);
@@ -139,9 +139,9 @@ CIpcSslLayer::~CIpcSslLayer()
   return;
 }
 
-HRESULT CIpcSslLayer::Initialize(__in BOOL bServerSide, __in eProtocol nProtocol,
-                                 __in CSslCertificateArray *lpCheckCertificates, __in_opt CSslCertificate *lpSelfCert,
-                                 __in_opt CCryptoRSA *lpPrivKey)
+HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol,
+                                 _In_opt_ CSslCertificateArray *lpCheckCertificates, _In_opt_ CSslCertificate *lpSelfCert,
+                                 _In_opt_ CCryptoRSA *lpPrivKey)
 {
   X509_STORE *lpStore;
 
@@ -271,7 +271,7 @@ HRESULT CIpcSslLayer::OnDisconnect()
   return HandleSsl(FALSE);
 }
 
-HRESULT CIpcSslLayer::OnData(__in LPCVOID lpData, __in SIZE_T nDataSize)
+HRESULT CIpcSslLayer::OnData(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize)
 {
   HRESULT hRes;
 
@@ -296,7 +296,7 @@ HRESULT CIpcSslLayer::OnData(__in LPCVOID lpData, __in SIZE_T nDataSize)
   return hRes;
 }
 
-HRESULT CIpcSslLayer::OnSendMsg(__in LPCVOID lpData, __in SIZE_T nDataSize)
+HRESULT CIpcSslLayer::OnSendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize)
 {
   HRESULT hRes;
 
@@ -323,7 +323,7 @@ HRESULT CIpcSslLayer::OnSendMsg(__in LPCVOID lpData, __in SIZE_T nDataSize)
   return hRes;
 }
 
-HRESULT CIpcSslLayer::HandleSsl(__in BOOL bCanWrite)
+HRESULT CIpcSslLayer::HandleSsl(_In_ BOOL bCanWrite)
 {
   CFastLock cLock(&nMutex);
   BOOL bLoop = TRUE;
@@ -622,7 +622,7 @@ static STACK_OF(X509_CRL) *my_X509_STORE_get1_crls(X509_STORE_CTX *ctx, X509_NAM
   //return X509_STORE_get1_crls(ctx, nm);
 }
 
-static X509* lookup_cert_by_subject(__in MX::CSslCertificateArray *lpCertArray, __in X509_NAME *name)
+static X509* lookup_cert_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ X509_NAME *name)
 {
   X509 *lpX509;
   MX::CSslCertificate *lpCert;
@@ -645,7 +645,7 @@ static X509* lookup_cert_by_subject(__in MX::CSslCertificateArray *lpCertArray, 
   return NULL;
 }
 
-static X509_CRL* lookup_crl_by_subject(__in MX::CSslCertificateArray *lpCertArray, __in X509_NAME *name)
+static X509_CRL* lookup_crl_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ X509_NAME *name)
 {
   X509_CRL *lpX509Crl;
   MX::CSslCertificateCrl *lpCertCrl;
@@ -675,16 +675,15 @@ static int DebugPrintSslError(const char *str, size_t len, void *u)
 
 //-----------------------------------------------------------
 
-static int circular_buffer_new(__in BIO *bi);
-static int circular_buffer_free(__in BIO *bi);
-static int circular_buffer_read(__in BIO *bi, __out char *out, __in int outl);
-static int circular_buffer_write(__in BIO *bi, __in const char *in, __in int inl);
-static long circular_buffer_ctrl(__in BIO *bi, __in int cmd, __in long num, __in void *ptr);
-static int circular_buffer_gets(__in BIO *bi, __out char *buf, __in int size);
-static int circular_buffer_puts(__in BIO *bi, __in const char *str);
+static int circular_buffer_new(BIO *bi);
+static int circular_buffer_free(BIO *bi);
+static int circular_buffer_read(BIO *bi, char *out, int outl);
+static int circular_buffer_write(BIO *bi, const char *in, int inl);
+static long circular_buffer_ctrl(BIO *bi, int cmd, long num, void *ptr);
+static int circular_buffer_gets(BIO *bi, char *buf, int size);
+static int circular_buffer_puts(BIO *bi, const char *str);
 
-
-static int circular_buffer_new(__in BIO *bi)
+static int circular_buffer_new(BIO *bi)
 {
   MX::Internals::COpenSSLCircularBufferBIO *lpBuf;
 
@@ -697,7 +696,7 @@ static int circular_buffer_new(__in BIO *bi)
   return 1;
 }
 
-static int circular_buffer_free(__in BIO *bi)
+static int circular_buffer_free(BIO *bi)
 {
   MX::Internals::COpenSSLCircularBufferBIO *lpBuf;
 
@@ -712,7 +711,7 @@ static int circular_buffer_free(__in BIO *bi)
   return 1;
 }
 
-static int circular_buffer_read(__in BIO *bi, __out char *out, __in int outl)
+static int circular_buffer_read(BIO *bi, char *out, int outl)
 {
   MX::Internals::COpenSSLCircularBufferBIO *lpBuf;
   int ret;
@@ -734,7 +733,7 @@ static int circular_buffer_read(__in BIO *bi, __out char *out, __in int outl)
   return ret;
 }
 
-static int circular_buffer_write(__in BIO *bi, __in const char *in, __in int inl)
+static int circular_buffer_write(BIO *bi, const char *in, int inl)
 {
   MX::Internals::COpenSSLCircularBufferBIO *lpBuf;
 
@@ -764,7 +763,7 @@ static int circular_buffer_write(__in BIO *bi, __in const char *in, __in int inl
   return inl;
 }
 
-static long circular_buffer_ctrl(__in BIO *bi, __in int cmd, __in long num, __in void *ptr)
+static long circular_buffer_ctrl(BIO *bi, int cmd, long num, void *ptr)
 {
   MX::Internals::COpenSSLCircularBufferBIO *lpBuf;
 
@@ -803,7 +802,7 @@ static long circular_buffer_ctrl(__in BIO *bi, __in int cmd, __in long num, __in
   return 0;
 }
 
-static int circular_buffer_gets(__in BIO *bi, __out char *buf, __in int size)
+static int circular_buffer_gets(BIO *bi, char *buf, int size)
 {
   if (buf == NULL)
   {
@@ -849,7 +848,7 @@ static int circular_buffer_gets(__in BIO *bi, __out char *buf, __in int size)
   return 0;
 }
 
-static int circular_buffer_puts(__in BIO *bi, __in const char *str)
+static int circular_buffer_puts(BIO *bi, const char *str)
 {
   return circular_buffer_write(bi, str, (int)MX::StrLenA(str));
 }

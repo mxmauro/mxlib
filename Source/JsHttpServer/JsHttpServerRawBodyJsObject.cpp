@@ -29,13 +29,13 @@ namespace MX {
 
 namespace Internals {
 
-CRawBodyJsObject::CRawBodyJsObject(__in DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
+CRawBodyJsObject::CRawBodyJsObject(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
 {
   lpBody = NULL;
   return;
 }
 
-VOID CRawBodyJsObject::Initialize(__in CHttpBodyParserDefault *_lpBody)
+VOID CRawBodyJsObject::Initialize(_In_ CHttpBodyParserDefault *_lpBody)
 {
   lpBody = _lpBody;
   return;

@@ -46,17 +46,17 @@
 
 //-----------------------------------------------------------
 
-SIZE_T GetWideChar(__in LPCWSTR szSrcW, __in SIZE_T nSrcLen);
-static SIZE_T adapt_bias(__in SIZE_T delta, __in SIZE_T n_points, __in bool is_first);
-static CHAR encode_digit(__in SIZE_T c);
-static HRESULT encode_var_int(__in SIZE_T bias, __in SIZE_T delta, __inout MX::CStringA &cStrDestA);
-static SIZE_T decode_digit(__in CHAR v);
+SIZE_T GetWideChar(_In_ LPCWSTR szSrcW, _In_ SIZE_T nSrcLen);
+static SIZE_T adapt_bias(_In_ SIZE_T delta, _In_ SIZE_T n_points, _In_ bool is_first);
+static CHAR encode_digit(_In_ SIZE_T c);
+static HRESULT encode_var_int(_In_ SIZE_T bias, _In_ SIZE_T delta, _Inout_ MX::CStringA &cStrDestA);
+static SIZE_T decode_digit(_In_ CHAR v);
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-HRESULT Punycode_Encode(__inout CStringA &cStrDestA, __in_z LPCWSTR szSrcW, __in_opt SIZE_T nSrcLen)
+HRESULT Punycode_Encode(_Inout_ CStringA &cStrDestA, _In_z_ LPCWSTR szSrcW, _In_opt_ SIZE_T nSrcLen)
 {
   SIZE_T b, h, delta, bias, m, n, si, chW, nHyphenInsertionPoint;
   HRESULT hRes;
@@ -136,7 +136,7 @@ HRESULT Punycode_Encode(__inout CStringA &cStrDestA, __in_z LPCWSTR szSrcW, __in
   return S_OK;
 }
 
-HRESULT Punycode_Decode(__inout CStringW &cStrDestW, __in_z LPCSTR szSrcA, __in_opt SIZE_T nSrcLen)
+HRESULT Punycode_Decode(_Inout_ CStringW &cStrDestW, _In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen)
 {
   SIZE_T n, t, i, k, w, si, digit, org_i, bias;
   LPCSTR p;
@@ -248,7 +248,7 @@ HRESULT Punycode_Decode(__inout CStringW &cStrDestW, __in_z LPCSTR szSrcA, __in_
 
 //-----------------------------------------------------------
 
-SIZE_T GetWideChar(__in LPCWSTR szSrcW, __in SIZE_T nSrcLen)
+SIZE_T GetWideChar(_In_ LPCWSTR szSrcW, _In_ SIZE_T nSrcLen)
 {
   if (szSrcW[0] < 0xD800 || szSrcW[0] > 0xDBFF)
     return (SIZE_T)szSrcW[0];
@@ -259,7 +259,7 @@ SIZE_T GetWideChar(__in LPCWSTR szSrcW, __in SIZE_T nSrcLen)
   return (((SIZE_T)szSrcW[0] - 0xD800) << 10) + 0x10000 + ((SIZE_T)szSrcW[1] - 0xDC00);
 }
 
-static SIZE_T adapt_bias(__in SIZE_T delta, __in SIZE_T n_points, __in bool is_first)
+static SIZE_T adapt_bias(_In_ SIZE_T delta, _In_ SIZE_T n_points, _In_ bool is_first)
 {
   SIZE_T k;
 
@@ -274,7 +274,7 @@ static SIZE_T adapt_bias(__in SIZE_T delta, __in SIZE_T n_points, __in bool is_f
   return k + (((BASE - TMIN + 1) * delta) / (delta + SKEW));
 }
 
-static CHAR encode_digit(__in SIZE_T c)
+static CHAR encode_digit(_In_ SIZE_T c)
 {
   MX_ASSERT(c >= 0 && c <= BASE - TMIN);
   if (c > 25)
@@ -283,7 +283,7 @@ static CHAR encode_digit(__in SIZE_T c)
 }
 
 // Encode as a generalized variable-length integer. Returns number of bytes written.
-static HRESULT encode_var_int(__in SIZE_T bias, __in SIZE_T delta, __inout MX::CStringA &cStrDestA)
+static HRESULT encode_var_int(_In_ SIZE_T bias, _In_ SIZE_T delta, _Inout_ MX::CStringA &cStrDestA)
 {
   SIZE_T i, k, q, t;
   CHAR _ch;
@@ -313,7 +313,7 @@ static HRESULT encode_var_int(__in SIZE_T bias, __in SIZE_T delta, __inout MX::C
   return (cStrDestA.ConcatN(&_ch, 1) != FALSE) ? S_OK : E_OUTOFMEMORY;
 }
 
-static SIZE_T decode_digit(__in CHAR v)
+static SIZE_T decode_digit(_In_ CHAR v)
 {
   if (isdigit(v))
     return 22 + (v - '0');

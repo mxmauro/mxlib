@@ -33,7 +33,7 @@
 
 namespace MX {
 
-CJsHttpServerSessionPlugin::CJsHttpServerSessionPlugin(__in DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
+CJsHttpServerSessionPlugin::CJsHttpServerSessionPlugin(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
 {
   *szCurrentIdA = 0;
   nExpireTimeInSeconds = 0;
@@ -48,11 +48,11 @@ CJsHttpServerSessionPlugin::~CJsHttpServerSessionPlugin()
   return;
 }
 
-HRESULT CJsHttpServerSessionPlugin::Setup(__in CHttpServer::CRequest *_lpRequest,
-                                          __in OnLoadSaveCallback _cLoadSaveCallback,
-                                          __in_z_opt LPCWSTR szSessionVarNameW, __in_z_opt LPCWSTR szDomainW,
-                                          __in_z_opt LPCWSTR szPathW, __in_opt int _nExpireTimeInSeconds,
-                                          __in_opt BOOL _bIsSecure, __in_opt BOOL _bIsHttpOnly)
+HRESULT CJsHttpServerSessionPlugin::Setup(_In_ CHttpServer::CRequest *_lpRequest,
+                                          _In_ OnLoadSaveCallback _cLoadSaveCallback,
+                                          _In_opt_z_ LPCWSTR szSessionVarNameW, _In_opt_z_ LPCWSTR szDomainW,
+                                          _In_opt_z_ LPCWSTR szPathW, _In_opt_ int _nExpireTimeInSeconds,
+                                          _In_opt_ BOOL _bIsSecure, _In_opt_ BOOL _bIsHttpOnly)
 {
   CHttpCookie *lpSessionIdCookie;
   MX::CDateTime cExpireDt;
@@ -163,7 +163,7 @@ CPropertyBag* CJsHttpServerSessionPlugin::GetBag() const
   return const_cast<CPropertyBag*>(&cBag);
 }
 
-BOOL CJsHttpServerSessionPlugin::IsValidSessionId(__in_z LPCSTR szSessionIdA)
+BOOL CJsHttpServerSessionPlugin::IsValidSessionId(_In_z_ LPCSTR szSessionIdA)
 {
   SIZE_T i;
 
@@ -283,7 +283,7 @@ DukTape::duk_ret_t CJsHttpServerSessionPlugin::RegenerateId()
   return 0;
 }
 
-int CJsHttpServerSessionPlugin::OnProxyHasNamedProperty(__in_z LPCSTR szPropNameA)
+int CJsHttpServerSessionPlugin::OnProxyHasNamedProperty(_In_z_ LPCSTR szPropNameA)
 {
   if (szPropNameA[0] == 'i' && szPropNameA[1] == 'd' && szPropNameA[2] == 0)
     return 1;
@@ -297,12 +297,12 @@ int CJsHttpServerSessionPlugin::OnProxyHasNamedProperty(__in_z LPCSTR szPropName
   return 0;
 }
 
-int CJsHttpServerSessionPlugin::OnProxyHasIndexedProperty(__in int nIndex)
+int CJsHttpServerSessionPlugin::OnProxyHasIndexedProperty(_In_ int nIndex)
 {
   return 0; //throw error
 }
 
-int CJsHttpServerSessionPlugin::OnProxyGetNamedProperty(__in_z LPCSTR szPropNameA)
+int CJsHttpServerSessionPlugin::OnProxyGetNamedProperty(_In_z_ LPCSTR szPropNameA)
 {
   DukTape::duk_context *lpCtx = GetContext();
   LPCSTR szValueA;
@@ -334,12 +334,12 @@ int CJsHttpServerSessionPlugin::OnProxyGetNamedProperty(__in_z LPCSTR szPropName
   return 0; //pass original
 }
 
-int CJsHttpServerSessionPlugin::OnProxyGetIndexedProperty(__in int nIndex)
+int CJsHttpServerSessionPlugin::OnProxyGetIndexedProperty(_In_ int nIndex)
 {
   return -1; //throw error
 }
 
-int CJsHttpServerSessionPlugin::OnProxySetNamedProperty(__in_z LPCSTR szPropNameA, __in DukTape::duk_idx_t nValueIndex)
+int CJsHttpServerSessionPlugin::OnProxySetNamedProperty(_In_z_ LPCSTR szPropNameA, _In_ DukTape::duk_idx_t nValueIndex)
 {
   DukTape::duk_context *lpCtx = GetContext();
   HRESULT hRes;
@@ -374,12 +374,12 @@ int CJsHttpServerSessionPlugin::OnProxySetNamedProperty(__in_z LPCSTR szPropName
   return -1; //throw error
 }
 
-int CJsHttpServerSessionPlugin::OnProxySetIndexedProperty(__in int nIndex, __in DukTape::duk_idx_t nValueIndex)
+int CJsHttpServerSessionPlugin::OnProxySetIndexedProperty(_In_ int nIndex, _In_ DukTape::duk_idx_t nValueIndex)
 {
   return -1; //throw error
 }
 
-int CJsHttpServerSessionPlugin::OnProxyDeleteNamedProperty(__in_z LPCSTR szPropNameA)
+int CJsHttpServerSessionPlugin::OnProxyDeleteNamedProperty(_In_z_ LPCSTR szPropNameA)
 {
   if (szPropNameA[0] == 'i' && szPropNameA[1] == 'd' && szPropNameA[2] == 0)
     return -1; //cannot delete property
@@ -387,7 +387,7 @@ int CJsHttpServerSessionPlugin::OnProxyDeleteNamedProperty(__in_z LPCSTR szPropN
   return 1;
 }
 
-int CJsHttpServerSessionPlugin::OnProxyDeleteIndexedProperty(__in int nIndex)
+int CJsHttpServerSessionPlugin::OnProxyDeleteIndexedProperty(_In_ int nIndex)
 {
   return -1; //throw error
 }

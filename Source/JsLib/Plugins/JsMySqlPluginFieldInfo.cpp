@@ -29,7 +29,7 @@ namespace MX {
 
 namespace Internals {
 
-CJsMySqlPluginHelpers::CFieldInfo::CFieldInfo(__in DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
+CJsMySqlPluginHelpers::CFieldInfo::CFieldInfo(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
 {
   nLength = nMaxLength = 0;
   nDecimalsCount = nCharSet = nFlags = 0;

@@ -40,7 +40,7 @@ CCircularBuffer::~CCircularBuffer()
   return;
 }
 
-SIZE_T CCircularBuffer::Find(__in BYTE nToScan, __in SIZE_T nStartPos)
+SIZE_T CCircularBuffer::Find(_In_ BYTE nToScan, _In_ SIZE_T nStartPos)
 {
   LPBYTE lpPtr1, lpPtr2;
   SIZE_T i, nSize1,  nSize2;
@@ -69,8 +69,8 @@ SIZE_T CCircularBuffer::Find(__in BYTE nToScan, __in SIZE_T nStartPos)
   return (SIZE_T)-1;
 }
 
-VOID CCircularBuffer::GetReadPtr(__out_opt LPBYTE *lplpPtr1, __out_opt SIZE_T *lpnSize1, __out_opt LPBYTE *lplpPtr2,
-                                 __out_opt SIZE_T *lpnSize2)
+VOID CCircularBuffer::GetReadPtr(_Out_opt_ LPBYTE *lplpPtr1, _Out_opt_ SIZE_T *lpnSize1, _Out_opt_ LPBYTE *lplpPtr2,
+                                 _Out_opt_ SIZE_T *lpnSize2)
 {
   if (lplpPtr1 != NULL)
     *lplpPtr1 = NULL;
@@ -101,7 +101,7 @@ VOID CCircularBuffer::GetReadPtr(__out_opt LPBYTE *lplpPtr1, __out_opt SIZE_T *l
   return;
 }
 
-HRESULT CCircularBuffer::AdvanceReadPtr(__in SIZE_T nCount)
+HRESULT CCircularBuffer::AdvanceReadPtr(_In_ SIZE_T nCount)
 {
   if (lpData == NULL)
     return E_FAIL;
@@ -116,8 +116,8 @@ HRESULT CCircularBuffer::AdvanceReadPtr(__in SIZE_T nCount)
   return S_OK;
 }
 
-VOID CCircularBuffer::GetWritePtr(__out_opt LPBYTE *lplpPtr1, __out_opt SIZE_T *lpnSize1, __out_opt LPBYTE *lplpPtr2,
-                                  __out_opt SIZE_T *lpnSize2)
+VOID CCircularBuffer::GetWritePtr(_Out_opt_ LPBYTE *lplpPtr1, _Out_opt_ SIZE_T *lpnSize1, _Out_opt_ LPBYTE *lplpPtr2,
+                                  _Out_opt_ SIZE_T *lpnSize2)
 {
   SIZE_T nEnd;
 
@@ -156,7 +156,7 @@ VOID CCircularBuffer::GetWritePtr(__out_opt LPBYTE *lplpPtr1, __out_opt SIZE_T *
   return;
 }
 
-HRESULT CCircularBuffer::AdvanceWritePtr(__in SIZE_T nCount)
+HRESULT CCircularBuffer::AdvanceWritePtr(_In_ SIZE_T nCount)
 {
   if (lpData == NULL)
     return E_FAIL;
@@ -174,7 +174,7 @@ SIZE_T CCircularBuffer::GetAvailableForRead() const
   return nSize1+nSize2;
 }
 
-SIZE_T CCircularBuffer::Peek(__out LPVOID lpDest, __in SIZE_T nToRead)
+SIZE_T CCircularBuffer::Peek(_Out_writes_(nToRead) LPVOID lpDest, _In_ SIZE_T nToRead)
 {
   LPBYTE lpPtr1, lpPtr2;
   SIZE_T nReaded, nSize1, nSize2;
@@ -195,7 +195,7 @@ SIZE_T CCircularBuffer::Peek(__out LPVOID lpDest, __in SIZE_T nToRead)
   return nReaded;
 }
 
-SIZE_T CCircularBuffer::Read(__out LPVOID lpDest, __in SIZE_T nToRead)
+SIZE_T CCircularBuffer::Read(_Out_writes_(nToRead) LPVOID lpDest, _In_ SIZE_T nToRead)
 {
   SIZE_T nReaded;
 
@@ -205,7 +205,7 @@ SIZE_T CCircularBuffer::Read(__out LPVOID lpDest, __in SIZE_T nToRead)
   return nReaded;
 }
 
-HRESULT CCircularBuffer::Write(__in LPCVOID lpSrc, __in SIZE_T nSrcLength, __in BOOL bExpandIfNeeded)
+HRESULT CCircularBuffer::Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLength, _In_ BOOL bExpandIfNeeded)
 {
   LPBYTE lpPtr1, lpPtr2;
   SIZE_T _nCap, nSize1, nSize2;
@@ -242,7 +242,7 @@ HRESULT CCircularBuffer::Write(__in LPCVOID lpSrc, __in SIZE_T nSrcLength, __in 
   return AdvanceWritePtr(nSrcLength);
 }
 
-HRESULT CCircularBuffer::SetBufferSize(__in SIZE_T _nSize)
+HRESULT CCircularBuffer::SetBufferSize(_In_ SIZE_T _nSize)
 {
   LPBYTE lpNewData;
   SIZE_T nTemp;

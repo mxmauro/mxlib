@@ -31,14 +31,14 @@
 
 //-----------------------------------------------------------
 
-typedef ULONG (__cdecl *lpfnDbgPrint)(__in_z PCSTR Format, ...);
-typedef VOID (WINAPI *lpfnOutputDebugStringA)(__in_opt LPCSTR lpOutputString);
+typedef ULONG (__cdecl *lpfnDbgPrint)(_In_z_ PCSTR Format, ...);
+typedef VOID (WINAPI *lpfnOutputDebugStringA)(_In_opt_ LPCSTR lpOutputString);
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-VOID DebugPrint(__in_z LPCSTR szFormatA, ...)
+VOID DebugPrint(_In_z_ LPCSTR szFormatA, ...)
 {
   va_list ap;
 
@@ -48,7 +48,7 @@ VOID DebugPrint(__in_z LPCSTR szFormatA, ...)
   return;
 }
 
-VOID DebugPrintV(__in_z LPCSTR szFormatA, va_list ap)
+VOID DebugPrintV(_In_z_ LPCSTR szFormatA, va_list ap)
 {
   static LONG volatile nAccessMtx = 0;
   static lpfnOutputDebugStringA fnOutputDebugStringA = NULL;

@@ -55,38 +55,38 @@ static const LPCWSTR szHexaNumW = L"0123456789ABCDEF";
 
 //-----------------------------------------------------------
 
-static MX::CUrl::eScheme Scheme2Enum(__in_z LPCWSTR szSchemeW);
-static HRESULT ValidateHostAddress(__inout MX::CStringW &cStrHostW);
-static CHAR DecodePct(__in_z LPCSTR szStrA);
-static WCHAR DecodePct(__in_z LPCWSTR szStrW);
-static WCHAR DecodePctU(__in_z LPCSTR szStrA);
-static WCHAR DecodePctU(__in_z LPCWSTR szStrW);
-static HRESULT NormalizePath(__inout MX::CStringW &cStrPathW, __in_z LPCWSTR szSchemeW);
-static HRESULT ReducePath(__inout MX::CStringW &cStrPathW, __in_z LPCWSTR szSchemeW);
-static HRESULT ToStringEncode(__inout MX::CStringA &cStrDestA, __in_z LPCWSTR szStrW, __in SIZE_T nLen,
-                              __in_z LPCSTR szAllowedCharsA);
-static HRESULT ToStringEncode(__inout MX::CStringW &cStrDestW, __in_z LPCWSTR szStrW, __in SIZE_T nLen,
-                              __in_z LPCWSTR szAllowedCharsW);
-static SIZE_T FindChar(__in_z LPCSTR szStrA, __in SIZE_T nSrcLen, __in_z LPCSTR szToFindA,
-                       __in_z_opt LPCSTR szStopCharA=NULL);
-static SIZE_T FindChar(__in_z LPCWSTR szStrW, __in SIZE_T nSrcLen, __in_z LPCWSTR szToFindW,
-                       __in_z_opt LPCWSTR szStopCharW=NULL);
-static BOOL IsLocalHost(__in_z LPCSTR szHostA);
-static BOOL IsLocalHost(__in_z LPCWSTR szHostW);
-static BOOL HasDisallowedEscapedSequences(__in_z LPCSTR szSrcA, __in SIZE_T nSrcLen);
-static BOOL HasDisallowedEscapedSequences(__in_z LPCWSTR szSrcW, __in SIZE_T nSrcLen);
+static MX::CUrl::eScheme Scheme2Enum(_In_z_ LPCWSTR szSchemeW);
+static HRESULT ValidateHostAddress(_Inout_ MX::CStringW &cStrHostW);
+static CHAR DecodePct(_In_z_ LPCSTR szStrA);
+static WCHAR DecodePct(_In_z_ LPCWSTR szStrW);
+static WCHAR DecodePctU(_In_z_ LPCSTR szStrA);
+static WCHAR DecodePctU(_In_z_ LPCWSTR szStrW);
+static HRESULT NormalizePath(_Inout_ MX::CStringW &cStrPathW, _In_z_ LPCWSTR szSchemeW);
+static HRESULT ReducePath(_Inout_ MX::CStringW &cStrPathW, _In_z_ LPCWSTR szSchemeW);
+static HRESULT ToStringEncode(_Inout_ MX::CStringA &cStrDestA, _In_z_ LPCWSTR szStrW, _In_ SIZE_T nLen,
+                              _In_opt_z_ LPCSTR szAllowedCharsA);
+static HRESULT ToStringEncode(_Inout_ MX::CStringW &cStrDestW, _In_z_ LPCWSTR szStrW, _In_ SIZE_T nLen,
+                              _In_opt_z_ LPCWSTR szAllowedCharsW);
+static SIZE_T FindChar(_In_z_ LPCSTR szStrA, _In_ SIZE_T nSrcLen, _In_z_ LPCSTR szToFindA,
+                       _In_opt_z_ LPCSTR szStopCharA=NULL);
+static SIZE_T FindChar(_In_z_ LPCWSTR szStrW, _In_ SIZE_T nSrcLen, _In_z_ LPCWSTR szToFindW,
+                       _In_opt_z_ LPCWSTR szStopCharW=NULL);
+static BOOL IsLocalHost(_In_z_ LPCSTR szHostA);
+static BOOL IsLocalHost(_In_z_ LPCWSTR szHostW);
+static BOOL HasDisallowedEscapedSequences(_In_z_ LPCSTR szSrcA, _In_ SIZE_T nSrcLen);
+static BOOL HasDisallowedEscapedSequences(_In_z_ LPCWSTR szSrcW, _In_ SIZE_T nSrcLen);
 
-static __inline BOOL IsAlpha(__in CHAR chA)
+static __inline BOOL IsAlpha(_In_ CHAR chA)
 {
   return ((chA >= 'A' && chA <= 'Z') || (chA >= 'a' && chA <= 'z')) ? TRUE : FALSE;
 }
 
-static __inline BOOL IsAlpha(__in WCHAR chW)
+static __inline BOOL IsAlpha(_In_ WCHAR chW)
 {
   return ((chW >= L'A' && chW <= L'Z') || (chW >= L'a' && chW <= L'z')) ? TRUE : FALSE;
 }
 
-static __inline int IsHexaDigit(__in CHAR chA)
+static __inline int IsHexaDigit(_In_ CHAR chA)
 {
   if (chA >= '0' && chA <= '9')
     return (int)(chA - '0');
@@ -97,7 +97,7 @@ static __inline int IsHexaDigit(__in CHAR chA)
   return -1;
 }
 
-static __inline int IsHexaDigit(__in WCHAR chW)
+static __inline int IsHexaDigit(_In_ WCHAR chW)
 {
   if (chW >= L'0' && chW <= L'9')
     return (int)(chW - L'0');
@@ -108,23 +108,23 @@ static __inline int IsHexaDigit(__in WCHAR chW)
   return -1;
 }
 
-static __inline BOOL IsSlash(__in CHAR chA)
+static __inline BOOL IsSlash(_In_ CHAR chA)
 {
   return (chA == '/' || chA == '\\') ? TRUE : FALSE;
 }
 
-static __inline BOOL IsSlash(__in WCHAR chW)
+static __inline BOOL IsSlash(_In_ WCHAR chW)
 {
   return (chW == L'/' || chW == L'\\') ? TRUE : FALSE;
 }
 
-static __inline BOOL IsUnreservedChar(__in CHAR chA)
+static __inline BOOL IsUnreservedChar(_In_ CHAR chA)
 {
   return ((chA >='A' && chA <= 'Z') || (chA >='a' && chA <= 'z') ||
           (chA >='0' && chA <= '9') || MX::StrChrA("-_.~", chA) != NULL) ? TRUE : FALSE;
 }
 
-static __inline BOOL IsUnreservedChar(__in WCHAR chW)
+static __inline BOOL IsUnreservedChar(_In_ WCHAR chW)
 {
   return (chW < 0x80) ? IsUnreservedChar((CHAR)(UCHAR)chW) : FALSE;
 }
@@ -157,7 +157,7 @@ VOID CUrl::Reset()
   return;
 }
 
-HRESULT CUrl::SetScheme(__in_z LPCSTR szSchemeA)
+HRESULT CUrl::SetScheme(_In_opt_z_ LPCSTR szSchemeA)
 {
   CStringW cStrTempW;
 
@@ -171,7 +171,7 @@ HRESULT CUrl::SetScheme(__in_z LPCSTR szSchemeA)
   return SetScheme((LPWSTR)cStrTempW);
 }
 
-HRESULT CUrl::SetScheme(__in_z LPCWSTR szSchemeW)
+HRESULT CUrl::SetScheme(_In_opt_z_ LPCWSTR szSchemeW)
 {
   LPCWSTR sW;
 
@@ -202,7 +202,7 @@ LPCWSTR CUrl::GetScheme() const
   return (LPCWSTR)cStrSchemeW;
 }
 
-HRESULT CUrl::GetScheme(__inout CStringA &cStrDestA)
+HRESULT CUrl::GetScheme(_Inout_ CStringA &cStrDestA)
 {
   return (cStrDestA.Copy((LPCWSTR)cStrSchemeW) != FALSE) ? S_OK : E_OUTOFMEMORY;
 }
@@ -212,7 +212,7 @@ CUrl::eScheme CUrl::GetSchemeCode() const
   return Scheme2Enum(GetScheme());
 }
 
-HRESULT CUrl::SetHost(__in_z LPCSTR szHostA, __in_opt SIZE_T nHostLen)
+HRESULT CUrl::SetHost(_In_z_ LPCSTR szHostA, _In_opt_ SIZE_T nHostLen)
 {
   CStringA cStrTempA;
   CStringW cStrTempW;
@@ -259,7 +259,7 @@ HRESULT CUrl::SetHost(__in_z LPCSTR szHostA, __in_opt SIZE_T nHostLen)
   return S_OK;
 }
 
-HRESULT CUrl::SetHost(__in_z LPCWSTR szHostW, __in_opt SIZE_T nHostLen)
+HRESULT CUrl::SetHost(_In_z_ LPCWSTR szHostW, _In_opt_ SIZE_T nHostLen)
 {
   CStringW cStrTempW;
   HRESULT hRes;
@@ -288,7 +288,7 @@ LPCWSTR CUrl::GetHost() const
   return (LPCWSTR)cStrHostW;
 }
 
-HRESULT CUrl::GetHost(__inout CStringA &cStrDestA)
+HRESULT CUrl::GetHost(_Inout_ CStringA &cStrDestA)
 {
   HRESULT hRes;
 
@@ -298,7 +298,7 @@ HRESULT CUrl::GetHost(__inout CStringA &cStrDestA)
   return hRes;
 }
 
-HRESULT CUrl::SetPort(__in int _nPort)
+HRESULT CUrl::SetPort(_In_ int _nPort)
 {
   if (_nPort != -1 && (_nPort < 1 || _nPort > 65535))
     return E_INVALIDARG;
@@ -311,7 +311,7 @@ int CUrl::GetPort() const
   return nPort;
 }
 
-HRESULT CUrl::SetPath(__in_z LPCSTR szPathA, __in_opt SIZE_T nPathLen)
+HRESULT CUrl::SetPath(_In_z_ LPCSTR szPathA, _In_opt_ SIZE_T nPathLen)
 {
   CStringA cStrTempA;
   CStringW cStrTempW;
@@ -340,7 +340,7 @@ HRESULT CUrl::SetPath(__in_z LPCSTR szPathA, __in_opt SIZE_T nPathLen)
   return hRes;
 }
 
-HRESULT CUrl::SetPath(__in_z LPCWSTR szPathW, __in_opt SIZE_T nPathLen)
+HRESULT CUrl::SetPath(_In_z_ LPCWSTR szPathW, _In_opt_ SIZE_T nPathLen)
 {
   CStringW cStrTempW;
   HRESULT hRes;
@@ -381,8 +381,8 @@ VOID CUrl::ResetQueryStrings()
   return;
 }
 
-HRESULT CUrl::AddQueryString(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA, __in_opt SIZE_T nValueLen,
-                             __in_opt SIZE_T nNameLen)
+HRESULT CUrl::AddQueryString(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen,
+                             _In_opt_ SIZE_T nNameLen)
 {
   CStringA cStrTempA;
   CStringW cStrTempNameW, cStrTempValueW;
@@ -414,8 +414,8 @@ HRESULT CUrl::AddQueryString(__in_z LPCSTR szNameA, __in_z LPCSTR szValueA, __in
   return hRes;
 }
 
-HRESULT CUrl::AddQueryString(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW, __in_opt SIZE_T nValueLen,
-                             __in_opt SIZE_T nNameLen)
+HRESULT CUrl::AddQueryString(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW, _In_opt_ SIZE_T nValueLen,
+                             _In_opt_ SIZE_T nNameLen)
 {
   TAutoFreePtr<QUERYSTRINGITEM> cNewItem;
   SIZE_T nLen;
@@ -454,7 +454,7 @@ HRESULT CUrl::AddQueryString(__in_z LPCWSTR szNameW, __in_z LPCWSTR szValueW, __
   return S_OK;
 }
 
-HRESULT CUrl::RemoveQueryString(__in SIZE_T nIndex)
+HRESULT CUrl::RemoveQueryString(_In_ SIZE_T nIndex)
 {
   if (nIndex >= cQueryStringsList.GetCount())
     return E_INVALIDARG;
@@ -468,17 +468,17 @@ SIZE_T CUrl::GetQueryStringCount() const
   return cQueryStringsList.GetCount();
 }
 
-LPCWSTR CUrl::GetQueryStringName(__in SIZE_T nIndex) const
+LPCWSTR CUrl::GetQueryStringName(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cQueryStringsList.GetCount()) ? cQueryStringsList[nIndex]->szNameW : NULL;
 }
 
-LPCWSTR CUrl::GetQueryStringValue(__in SIZE_T nIndex) const
+LPCWSTR CUrl::GetQueryStringValue(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cQueryStringsList.GetCount()) ? cQueryStringsList[nIndex]->szValueW : NULL;
 }
 
-LPCWSTR CUrl::GetQueryStringValue(__in_z LPCWSTR szNameW) const
+LPCWSTR CUrl::GetQueryStringValue(_In_z_ LPCWSTR szNameW) const
 {
   SIZE_T i, nCount;
 
@@ -494,7 +494,7 @@ LPCWSTR CUrl::GetQueryStringValue(__in_z LPCWSTR szNameW) const
   return NULL;
 }
 
-HRESULT CUrl::SetFragment(__in_z LPCSTR szFragmentA, __in_opt SIZE_T nFragmentLen)
+HRESULT CUrl::SetFragment(_In_z_ LPCSTR szFragmentA, _In_opt_ SIZE_T nFragmentLen)
 {
   CStringA cStrTempA;
   CStringW cStrTempW;
@@ -519,7 +519,7 @@ HRESULT CUrl::SetFragment(__in_z LPCSTR szFragmentA, __in_opt SIZE_T nFragmentLe
   return hRes;
 }
 
-HRESULT CUrl::SetFragment(__in_z LPCWSTR szFragmentW, __in_opt SIZE_T nFragmentLen)
+HRESULT CUrl::SetFragment(_In_z_ LPCWSTR szFragmentW, _In_opt_ SIZE_T nFragmentLen)
 {
   CStringW cStrTempW;
 
@@ -545,7 +545,7 @@ LPCWSTR CUrl::GetFragment() const
   return (LPCWSTR)cStrFragmentW;
 }
 
-HRESULT CUrl::SetUserInfo(__in_z LPCSTR szUserInfoA, __in_opt SIZE_T nUserInfoLen)
+HRESULT CUrl::SetUserInfo(_In_z_ LPCSTR szUserInfoA, _In_opt_ SIZE_T nUserInfoLen)
 {
   CStringA cStrTempA;
   CStringW cStrTempW;
@@ -570,7 +570,7 @@ HRESULT CUrl::SetUserInfo(__in_z LPCSTR szUserInfoA, __in_opt SIZE_T nUserInfoLe
   return hRes;
 }
 
-HRESULT CUrl::SetUserInfo(__in_z LPCWSTR szUserInfoW, __in_opt SIZE_T nUserInfoLen)
+HRESULT CUrl::SetUserInfo(_In_z_ LPCWSTR szUserInfoW, _In_opt_ SIZE_T nUserInfoLen)
 {
   CStringW cStrTempW;
 
@@ -596,7 +596,7 @@ LPCWSTR CUrl::GetUserInfo() const
   return (LPCWSTR)cStrUserInfoW;
 }
 
-HRESULT CUrl::ToString(__inout CStringA &cStrDestA, __in int nFlags)
+HRESULT CUrl::ToString(_Inout_ CStringA &cStrDestA, _In_ int nFlags)
 {
   eScheme nSchemeType;
   CStringA cStrTempA;
@@ -776,7 +776,7 @@ done:
   return hRes;
 }
 
-HRESULT CUrl::ToString(__inout CStringW &cStrDestW, __in int nFlags)
+HRESULT CUrl::ToString(_Inout_ CStringW &cStrDestW, _In_ int nFlags)
 {
   eScheme nSchemeType;
   CStringA cStrTempA;
@@ -953,7 +953,7 @@ done:
   return hRes;
 }
 
-HRESULT CUrl::ParseFromString(__in_z LPCSTR szUrlA, __in_opt SIZE_T nSrcLen)
+HRESULT CUrl::ParseFromString(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nSrcLen)
 {
   CStringA cStrTempA, cStrTempHostA, cStrTempUserInfoA;
   eScheme nSchemeType;
@@ -1252,7 +1252,7 @@ done:
   return hRes;
 }
 
-HRESULT CUrl::ParseFromString(__in_z LPCWSTR szUrlW, __in_opt SIZE_T nSrcLen)
+HRESULT CUrl::ParseFromString(_In_z_ LPCWSTR szUrlW, _In_opt_ SIZE_T nSrcLen)
 {
   CStringW cStrTempW, cStrTempHostW, cStrTempUserInfoW;
   eScheme nSchemeType;
@@ -1546,7 +1546,7 @@ done:
   return hRes;
 }
 
-HRESULT CUrl::operator=(__in const CUrl& cSrc)
+HRESULT CUrl::operator=(_In_ const CUrl& cSrc)
 {
   CStringW cStrSrcSchemeW, cStrSrcHostW, cStrSrcPathW, cStrSrcFragmentW, cStrSrcUserInfoW;
   TArrayListWithFree<LPQUERYSTRINGITEM> cNewQueryStringsList;
@@ -1591,12 +1591,12 @@ HRESULT CUrl::operator=(__in const CUrl& cSrc)
   return S_OK;
 }
 
-HRESULT CUrl::operator+=(__in const CUrl& cOtherUrl)
+HRESULT CUrl::operator+=(_In_ const CUrl& cOtherUrl)
 {
   return Merge(cOtherUrl);
 }
 
-HRESULT CUrl::Merge(__in const CUrl& cOtherUrl)
+HRESULT CUrl::Merge(_In_ const CUrl& cOtherUrl)
 {
   TAutoFreePtr<QUERYSTRINGITEM> cNewItem;
   CStringA cStrTempPathA, cStrTempSubPathA;
@@ -1747,8 +1747,8 @@ merge_copyqueryandfrag:
   return S_OK;
 }
 
-HRESULT CUrl::Encode(__inout CStringA &cStrDestA, __in_z LPCSTR szUrlA, __in_opt SIZE_T nUrlLen,
-                     __in_z_opt LPCSTR szAllowedCharsA, __in_opt BOOL bAppend)
+HRESULT CUrl::Encode(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nUrlLen,
+                     _In_opt_z_ LPCSTR szAllowedCharsA, _In_opt_ BOOL bAppend)
 {
   CHAR chA[3];
   LPCSTR szStartA;
@@ -1790,7 +1790,7 @@ HRESULT CUrl::Encode(__inout CStringA &cStrDestA, __in_z LPCSTR szUrlA, __in_opt
   return S_OK;
 }
 
-SIZE_T CUrl::GetEncodedLength(__in_z LPCSTR szUrlA, __in_opt SIZE_T nUrlLen, __in_z_opt LPCSTR szAllowedCharsA)
+SIZE_T CUrl::GetEncodedLength(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nUrlLen, _In_opt_z_ LPCSTR szAllowedCharsA)
 {
   SIZE_T nCount;
 
@@ -1821,7 +1821,7 @@ SIZE_T CUrl::GetEncodedLength(__in_z LPCSTR szUrlA, __in_opt SIZE_T nUrlLen, __i
   return nCount;
 }
 
-HRESULT CUrl::Decode(__inout CStringA &cStrDestA, __in_z LPCSTR szUrlA, __in_opt SIZE_T nUrlLen, __in_opt BOOL bAppend)
+HRESULT CUrl::Decode(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nUrlLen, _In_opt_ BOOL bAppend)
 {
   CStringA cStrTempA;
   CHAR chA;
@@ -1895,7 +1895,7 @@ HRESULT CUrl::Decode(__inout CStringA &cStrDestA, __in_z LPCSTR szUrlA, __in_opt
   return S_OK;
 }
 
-SIZE_T CUrl::GetDecodedLength(__in_z LPCSTR szUrlA, __in_opt SIZE_T nUrlLen)
+SIZE_T CUrl::GetDecodedLength(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nUrlLen)
 {
   CHAR chA;
   WCHAR chW;
@@ -1949,7 +1949,7 @@ SIZE_T CUrl::GetDecodedLength(__in_z LPCSTR szUrlA, __in_opt SIZE_T nUrlLen)
   return nCount;
 }
 
-BOOL CUrl::IsValidHostAddress(__in_z LPCSTR szHostA, __in_opt SIZE_T nHostLen)
+BOOL CUrl::IsValidHostAddress(_In_z_ LPCSTR szHostA, _In_opt_ SIZE_T nHostLen)
 {
   SIZE_T i;
 
@@ -1959,7 +1959,7 @@ BOOL CUrl::IsValidHostAddress(__in_z LPCSTR szHostA, __in_opt SIZE_T nHostLen)
     return FALSE;
   //check for IPv4
   if (CHostResolver::IsValidIPV4(szHostA, nHostLen) != FALSE)
-    return S_OK;
+    return TRUE;
   //check for IPv6
   if (CHostResolver::IsValidIPV6(szHostA, nHostLen) != FALSE)
     return TRUE;
@@ -1978,7 +1978,7 @@ BOOL CUrl::IsValidHostAddress(__in_z LPCSTR szHostA, __in_opt SIZE_T nHostLen)
   return TRUE;
 }
 
-BOOL CUrl::IsValidHostAddress(__in_z LPCWSTR szHostW, __in_opt SIZE_T nHostLen)
+BOOL CUrl::IsValidHostAddress(_In_z_ LPCWSTR szHostW, _In_opt_ SIZE_T nHostLen)
 {
   SIZE_T i;
 
@@ -1988,7 +1988,7 @@ BOOL CUrl::IsValidHostAddress(__in_z LPCWSTR szHostW, __in_opt SIZE_T nHostLen)
     return FALSE;
   //check for IPv4
   if (CHostResolver::IsValidIPV4(szHostW, nHostLen) != FALSE)
-    return S_OK;
+    return TRUE;
   //check for IPv6
   if (CHostResolver::IsValidIPV6(szHostW, nHostLen) != FALSE)
     return TRUE;
@@ -2011,7 +2011,7 @@ BOOL CUrl::IsValidHostAddress(__in_z LPCWSTR szHostW, __in_opt SIZE_T nHostLen)
 
 //-----------------------------------------------------------
 
-static MX::CUrl::eScheme Scheme2Enum(__in_z LPCWSTR szSchemeW)
+static MX::CUrl::eScheme Scheme2Enum(_In_z_ LPCWSTR szSchemeW)
 {
   SIZE_T i;
 
@@ -2025,7 +2025,7 @@ static MX::CUrl::eScheme Scheme2Enum(__in_z LPCWSTR szSchemeW)
   return MX::CUrl::SchemeUnknown;
 }
 
-static HRESULT ValidateHostAddress(__inout MX::CStringW &cStrHostW)
+static HRESULT ValidateHostAddress(_Inout_ MX::CStringW &cStrHostW)
 {
   LPCWSTR sW;
   SIZE_T i, nLen;
@@ -2060,7 +2060,7 @@ static HRESULT ValidateHostAddress(__inout MX::CStringW &cStrHostW)
   return S_OK;
 }
 
-static CHAR DecodePct(__in_z LPCSTR szStrA)
+static CHAR DecodePct(_In_z_ LPCSTR szStrA)
 {
   int nDigits[2];
 
@@ -2073,7 +2073,7 @@ static CHAR DecodePct(__in_z LPCSTR szStrA)
   return (CHAR)(((SIZE_T)nDigits[0] << 4) | (SIZE_T)nDigits[1]);
 }
 
-static WCHAR DecodePct(__in_z LPCWSTR szStrW)
+static WCHAR DecodePct(_In_z_ LPCWSTR szStrW)
 {
   int nDigits[2];
 
@@ -2086,7 +2086,7 @@ static WCHAR DecodePct(__in_z LPCWSTR szStrW)
   return (WCHAR)(((SIZE_T)nDigits[0] << 4) | (SIZE_T)nDigits[1]);
 }
 
-static WCHAR DecodePctU(__in_z LPCSTR szStrA)
+static WCHAR DecodePctU(_In_z_ LPCSTR szStrA)
 {
   int nDigits[4];
 
@@ -2102,7 +2102,7 @@ static WCHAR DecodePctU(__in_z LPCSTR szStrA)
                  ((SIZE_T)nDigits[2] <<  4) |  (SIZE_T)nDigits[3]);
 }
 
-static WCHAR DecodePctU(__in_z LPCWSTR szStrW)
+static WCHAR DecodePctU(_In_z_ LPCWSTR szStrW)
 {
   int nDigits[4];
 
@@ -2118,7 +2118,7 @@ static WCHAR DecodePctU(__in_z LPCWSTR szStrW)
                  ((SIZE_T)nDigits[2] <<  4) |  (SIZE_T)nDigits[3]);
 }
 
-static HRESULT NormalizePath(__inout MX::CStringW &cStrPathW, __in_z LPCWSTR szSchemeW)
+static HRESULT NormalizePath(_Inout_ MX::CStringW &cStrPathW, _In_z_ LPCWSTR szSchemeW)
 {
   MX::CUrl::eScheme nSchemeType;
   BOOL bCanBeFilename;
@@ -2210,7 +2210,7 @@ static HRESULT NormalizePath(__inout MX::CStringW &cStrPathW, __in_z LPCWSTR szS
   return S_OK;
 }
 
-static HRESULT ReducePath(__inout MX::CStringW &cStrPathW, __in_z LPCWSTR szSchemeW)
+static HRESULT ReducePath(_Inout_ MX::CStringW &cStrPathW, _In_z_ LPCWSTR szSchemeW)
 {
   MX::CUrl::eScheme nSchemeType;
   BOOL bCanBeFilename, bValid, bPrevWasSlash;
@@ -2305,8 +2305,8 @@ static HRESULT ReducePath(__inout MX::CStringW &cStrPathW, __in_z LPCWSTR szSche
   return (bValid != FALSE) ? S_OK : MX_E_InvalidData;
 }
 
-static HRESULT ToStringEncode(__inout MX::CStringA &cStrDestA, __in_z LPCWSTR szStrW, __in SIZE_T nLen,
-                              __in_z LPCSTR szAllowedCharsA)
+static HRESULT ToStringEncode(_Inout_ MX::CStringA &cStrDestA, _In_z_ LPCWSTR szStrW, _In_ SIZE_T nLen,
+                              _In_opt_z_ LPCSTR szAllowedCharsA)
 {
   CHAR chA[4], _chA[3];
   int i, nSize;
@@ -2354,8 +2354,8 @@ static HRESULT ToStringEncode(__inout MX::CStringA &cStrDestA, __in_z LPCWSTR sz
   return S_OK;
 }
 
-static HRESULT ToStringEncode(__inout MX::CStringW &cStrDestW, __in_z LPCWSTR szStrW, __in SIZE_T nLen,
-                              __in_z LPCWSTR szAllowedCharsW)
+static HRESULT ToStringEncode(_Inout_ MX::CStringW &cStrDestW, _In_z_ LPCWSTR szStrW, _In_ SIZE_T nLen,
+                              _In_opt_z_ LPCWSTR szAllowedCharsW)
 {
   WCHAR chW[3];
   CHAR chA[4];
@@ -2400,8 +2400,8 @@ static HRESULT ToStringEncode(__inout MX::CStringW &cStrDestW, __in_z LPCWSTR sz
   return S_OK;
 }
 
-static SIZE_T FindChar(__in_z LPCSTR szStrA, __in SIZE_T nSrcLen, __in_z LPCSTR szToFindA,
-                       __in_z_opt LPCSTR szStopCharA)
+static SIZE_T FindChar(_In_z_ LPCSTR szStrA, _In_ SIZE_T nSrcLen, _In_z_ LPCSTR szToFindA,
+                       _In_opt_z_ LPCSTR szStopCharA)
 {
   SIZE_T nCounter;
 
@@ -2420,8 +2420,8 @@ static SIZE_T FindChar(__in_z LPCSTR szStrA, __in SIZE_T nSrcLen, __in_z LPCSTR 
   return (SIZE_T)-1;
 }
 
-static SIZE_T FindChar(__in_z LPCWSTR szStrW, __in SIZE_T nSrcLen, __in_z LPCWSTR szToFindW,
-                       __in_z_opt LPCWSTR szStopCharW)
+static SIZE_T FindChar(_In_z_ LPCWSTR szStrW, _In_ SIZE_T nSrcLen, _In_z_ LPCWSTR szToFindW,
+                       _In_opt_z_ LPCWSTR szStopCharW)
 {
   SIZE_T nCounter;
 
@@ -2440,7 +2440,7 @@ static SIZE_T FindChar(__in_z LPCWSTR szStrW, __in SIZE_T nSrcLen, __in_z LPCWST
   return (SIZE_T)-1;
 }
 
-static BOOL IsLocalHost(__in_z LPCSTR szHostA)
+static BOOL IsLocalHost(_In_z_ LPCSTR szHostA)
 {
   SOCKADDR_INET sAddr;
 
@@ -2469,7 +2469,7 @@ static BOOL IsLocalHost(__in_z LPCSTR szHostA)
   return FALSE;
 }
 
-static BOOL IsLocalHost(__in_z LPCWSTR szHostW)
+static BOOL IsLocalHost(_In_z_ LPCWSTR szHostW)
 {
   SOCKADDR_INET sAddr;
 
@@ -2498,7 +2498,7 @@ static BOOL IsLocalHost(__in_z LPCWSTR szHostW)
   return FALSE;
 }
 
-static BOOL HasDisallowedEscapedSequences(__in_z LPCSTR szSrcA, __in SIZE_T nSrcLen)
+static BOOL HasDisallowedEscapedSequences(_In_z_ LPCSTR szSrcA, _In_ SIZE_T nSrcLen)
 {
   return (MX::StrNFindA(szSrcA, "%00", nSrcLen) != NULL ||
           MX::StrNFindA(szSrcA, "%2F", nSrcLen) != NULL ||
@@ -2508,7 +2508,7 @@ static BOOL HasDisallowedEscapedSequences(__in_z LPCSTR szSrcA, __in SIZE_T nSrc
           MX::StrNFindA(szSrcA, "%u005C", nSrcLen) != NULL) ? TRUE : FALSE;
 }
 
-static BOOL HasDisallowedEscapedSequences(__in_z LPCWSTR szSrcW, __in SIZE_T nSrcLen)
+static BOOL HasDisallowedEscapedSequences(_In_z_ LPCWSTR szSrcW, _In_ SIZE_T nSrcLen)
 {
   return (MX::StrNFindW(szSrcW, L"%00", nSrcLen) != NULL ||
           MX::StrNFindW(szSrcW, L"%2F", nSrcLen) != NULL ||

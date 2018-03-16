@@ -764,7 +764,7 @@ MxCallWithSEH_POST MACRO
 ;--------
 
 ALIGN 4
-;SIZE_T __stdcall MxCallWithSEH0(__in LPVOID lpFunc, __out BOOL *lpExceptionRaised);
+;SIZE_T __stdcall MxCallWithSEH0(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised);
 MxCallWithSEH0 PROC STDCALL lpFunc:DWORD, lpExceptionRaised:DWORD
     MxCallWithSEH_PRE
     ;do call
@@ -774,7 +774,7 @@ MxCallWithSEH0 PROC STDCALL lpFunc:DWORD, lpExceptionRaised:DWORD
 MxCallWithSEH0 ENDP
 
 ALIGN 4
-;SIZE_T __stdcall MxCallStdCallWithSEH1(__in LPVOID lpFunc, __out BOOL *lpExceptionRaised, __in SIZE_T nParam1);
+;SIZE_T __stdcall MxCallStdCallWithSEH1(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_ SIZE_T nParam1);
 MxCallStdCallWithSEH1 PROC STDCALL lpFunc:DWORD, lpExceptionRaised:DWORD, nParam1:DWORD
     MxCallWithSEH_PRE
     ;do call
@@ -786,8 +786,8 @@ MxCallStdCallWithSEH1 PROC STDCALL lpFunc:DWORD, lpExceptionRaised:DWORD, nParam
 MxCallStdCallWithSEH1 ENDP
 
 ALIGN 4
-;SIZE_T __stdcall MxCallStdCallWithSEH2(__in LPVOID lpFunc, __out BOOL *lpExceptionRaised, __in SIZE_T nParam1,
-;                                       __in SIZE_T nParam2);
+;SIZE_T __stdcall MxCallStdCallWithSEH2(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_ SIZE_T nParam1,
+;                                       _In_ SIZE_T nParam2);
 MxCallStdCallWithSEH2 PROC STDCALL lpFunc:DWORD, lpExceptionRaised:DWORD, nParam1:DWORD, nParam2:DWORD
     MxCallWithSEH_PRE
     ;do call
@@ -801,8 +801,8 @@ MxCallStdCallWithSEH2 PROC STDCALL lpFunc:DWORD, lpExceptionRaised:DWORD, nParam
 MxCallStdCallWithSEH2 ENDP
 
 ALIGN 4
-;SIZE_T __stdcall MxCallStdCallWithSEH3(__in LPVOID lpFunc, __out BOOL *lpExceptionRaised, __in SIZE_T nParam1,
-;                                       __in SIZE_T nParam2, __in SIZE_T nParam3);
+;SIZE_T __stdcall MxCallStdCallWithSEH3(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_ SIZE_T nParam1,
+;                                       _In_ SIZE_T nParam2, _In_ SIZE_T nParam3);
 MxCallStdCallWithSEH3 PROC STDCALL lpFunc:DWORD, lpExceptionRaised:DWORD, nParam1:DWORD, nParam2:DWORD, nParam3:DWORD
     MxCallWithSEH_PRE
     ;do call
@@ -818,7 +818,7 @@ MxCallStdCallWithSEH3 PROC STDCALL lpFunc:DWORD, lpExceptionRaised:DWORD, nParam
 MxCallStdCallWithSEH3 ENDP
 
 ALIGN 4
-;SIZE_T __stdcall MxCallCDeclWithSEH1(__in LPVOID lpFunc, __out BOOL *lpExceptionRaised, __in SIZE_T nParam1);
+;SIZE_T __stdcall MxCallCDeclWithSEH1(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_ SIZE_T nParam1);
 MxCallCDeclWithSEH1 PROC STDCALL lpFunc:DWORD, lpExceptionRaised:DWORD, nParam1:DWORD
     MxCallWithSEH_PRE
     ;do call
@@ -831,8 +831,8 @@ MxCallCDeclWithSEH1 PROC STDCALL lpFunc:DWORD, lpExceptionRaised:DWORD, nParam1:
 MxCallCDeclWithSEH1 ENDP
 
 ALIGN 4
-;SIZE_T __stdcall MxCallCDeclWithSEH2(__in LPVOID lpFunc, __out BOOL *lpExceptionRaised, __in SIZE_T nParam1,
-;                                     __in SIZE_T nParam2);
+;SIZE_T __stdcall MxCallCDeclWithSEH2(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_ SIZE_T nParam1,
+;                                     _In_ SIZE_T nParam2);
 MxCallCDeclWithSEH2 PROC STDCALL lpFunc:DWORD, lpExceptionRaised:DWORD, nParam1:DWORD, nParam2:DWORD
     MxCallWithSEH_PRE
     ;do call
@@ -847,8 +847,8 @@ MxCallCDeclWithSEH2 PROC STDCALL lpFunc:DWORD, lpExceptionRaised:DWORD, nParam1:
 MxCallCDeclWithSEH2 ENDP
 
 ALIGN 4
-;SIZE_T __stdcall MxCallCDeclWithSEH3(__in LPVOID lpFunc, __out BOOL *lpExceptionRaised, __in SIZE_T nParam1,
-;                                     __in SIZE_T nParam2, __in SIZE_T nParam3);
+;SIZE_T __stdcall MxCallCDeclWithSEH3(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_ SIZE_T nParam1,
+;                                     _In_ SIZE_T nParam2, _In_ SIZE_T nParam3);
 MxCallCDeclWithSEH3 PROC STDCALL lpFunc:DWORD, lpExceptionRaised:DWORD, nParam1:DWORD, nParam2:DWORD, nParam3:DWORD
     MxCallWithSEH_PRE
     ;do call

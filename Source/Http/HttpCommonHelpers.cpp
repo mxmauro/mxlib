@@ -25,13 +25,13 @@
 
 //-----------------------------------------------------------
 
-static LPCSTR GetMimeTypeFromExtension(__in_z LPCSTR szExtA);
+static LPCSTR GetMimeTypeFromExtension(_In_z_ LPCSTR szExtA);
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-BOOL CHttpCommon::IsValidNameChar(__in CHAR chA)
+BOOL CHttpCommon::IsValidNameChar(_In_ CHAR chA)
 {
   static LPCSTR szInvalidA = "()<>@,;:\\\"/[]?={}";
   int i;
@@ -47,7 +47,7 @@ BOOL CHttpCommon::IsValidNameChar(__in CHAR chA)
 }
 
 //like Google Chrome and IE
-BOOL CHttpCommon::EncodeQuotedString(__inout CStringA &cStrA)
+BOOL CHttpCommon::EncodeQuotedString(_Inout_ CStringA &cStrA)
 {
   SIZE_T nOffset;
   LPSTR sA, szToInsertA;
@@ -85,7 +85,7 @@ BOOL CHttpCommon::EncodeQuotedString(__inout CStringA &cStrA)
   return TRUE;
 }
 
-LPCSTR CHttpCommon::GetMimeType(__in_z LPCSTR szFileNameA)
+LPCSTR CHttpCommon::GetMimeType(_In_z_ LPCSTR szFileNameA)
 {
   LPCSTR szExtA;
 
@@ -97,7 +97,7 @@ LPCSTR CHttpCommon::GetMimeType(__in_z LPCSTR szFileNameA)
   return GetMimeTypeFromExtension((szExtA > szFileNameA && *(szExtA-1) == '.') ? (szExtA-1) : "");
 }
 
-LPCSTR CHttpCommon::GetMimeType(__in_z LPCWSTR szFileNameW)
+LPCSTR CHttpCommon::GetMimeType(_In_z_ LPCWSTR szFileNameW)
 {
   LPCWSTR szExtW;
   CHAR szExtA[8];
@@ -126,7 +126,7 @@ LPCSTR CHttpCommon::GetMimeType(__in_z LPCWSTR szFileNameW)
   return GetMimeTypeFromExtension(".");
 }
 
-HRESULT CHttpCommon::ParseDate(__out CDateTime &cDt, __in_z LPCSTR szDateTimeA)
+HRESULT CHttpCommon::ParseDate(_Out_ CDateTime &cDt, _In_z_ LPCSTR szDateTimeA)
 {
   HRESULT hRes;
 
@@ -155,7 +155,7 @@ HRESULT CHttpCommon::ParseDate(__out CDateTime &cDt, __in_z LPCSTR szDateTimeA)
 
 //-----------------------------------------------------------
 
-static LPCSTR GetMimeTypeFromExtension(__in_z LPCSTR szExtA)
+static LPCSTR GetMimeTypeFromExtension(_In_z_ LPCSTR szExtA)
 {
   if (*szExtA == '.')
   {

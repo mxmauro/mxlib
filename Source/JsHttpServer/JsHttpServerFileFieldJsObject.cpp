@@ -29,14 +29,14 @@ namespace MX {
 
 namespace Internals {
 
-CFileFieldJsObject::CFileFieldJsObject(__in DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
+CFileFieldJsObject::CFileFieldJsObject(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
 {
   lpFileField = NULL;
   nFileSize = 0;
   return;
 }
 
-VOID CFileFieldJsObject::Initialize(__in CHttpBodyParserFormBase::CFileField *_lpFileField)
+VOID CFileFieldJsObject::Initialize(_In_ CHttpBodyParserFormBase::CFileField *_lpFileField)
 {
   HANDLE hFile;
   DWORD dw, dwHigh;
