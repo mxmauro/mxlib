@@ -206,7 +206,7 @@ public:
   HRESULT Initialize();
   VOID Finalize();
 
-  virtual HRESULT SendMsg(_In_ HANDLE h, _In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize);
+  virtual HRESULT SendMsg(_In_ HANDLE h, _In_reads_bytes_(nMsgSize) LPCVOID lpMsg, _In_ SIZE_T nMsgSize);
   virtual HRESULT SendStream(_In_ HANDLE h, _In_ CStream *lpStream);
   virtual HRESULT AfterWriteSignal(_In_ HANDLE h, _In_ OnAfterWriteSignalCallback cCallback, _In_opt_ LPVOID lpCookie);
 
@@ -215,7 +215,7 @@ public:
   virtual HRESULT GetBufferedMessage(_In_ HANDLE h, _Out_ LPVOID lpMsg, _Inout_ SIZE_T *lpnMsgSize);
   virtual HRESULT ConsumeBufferedMessage(_In_ HANDLE h, _In_ SIZE_T nConsumedBytes);
 
-  HRESULT Close(_In_ HANDLE h, _In_ HRESULT hErrorCode=S_OK);
+  HRESULT Close(_In_opt_ HANDLE h, _In_opt_ HRESULT hErrorCode=S_OK);
 
   HRESULT IsConnected(_In_ HANDLE h);
   HRESULT IsClosed(_In_ HANDLE h, _Out_opt_ HRESULT *lphErrorCode=NULL);

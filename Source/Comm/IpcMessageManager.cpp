@@ -411,7 +411,7 @@ HRESULT CIpcMessageManager::WaitForReply(_In_ DWORD dwId, _Deref_out_ CMessage *
 }
 
 HRESULT CIpcMessageManager::WaitForReplyAsync(_In_ DWORD dwId, _In_ OnMessageReplyCallback cCallback,
-                                              _In_ LPVOID lpUserData)
+                                              _In_opt_ LPVOID lpUserData)
 {
   REPLYMSG_ITEM sNewItem;
   HRESULT hRes;
@@ -669,7 +669,7 @@ HRESULT CIpcMessageManager::CMessage::SendReplyHeader(_In_ SIZE_T nMsgSize)
   return lpMgr->lpIpc->SendMsg(lpMgr->hConn, &sHeader, sizeof(sHeader));
 }
 
-HRESULT CIpcMessageManager::CMessage::SendReplyData(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize)
+HRESULT CIpcMessageManager::CMessage::SendReplyData(_In_reads_bytes_(nMsgSize) LPCVOID lpMsg, _In_ SIZE_T nMsgSize)
 {
   return lpMgr->lpIpc->SendMsg(lpMgr->hConn, lpMsg, nMsgSize);
 }

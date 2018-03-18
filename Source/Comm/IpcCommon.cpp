@@ -129,7 +129,7 @@ VOID CIpc::Finalize()
   return;
 }
 
-HRESULT CIpc::SendMsg(_In_ HANDLE h, _In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize)
+HRESULT CIpc::SendMsg(_In_ HANDLE h, _In_reads_bytes_(nMsgSize) LPCVOID lpMsg, _In_ SIZE_T nMsgSize)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;
@@ -262,7 +262,7 @@ HRESULT CIpc::ConsumeBufferedMessage(_In_ HANDLE h, _In_ SIZE_T nConsumedBytes)
   return hRes;
 }
 
-HRESULT CIpc::Close(_In_ HANDLE h, _In_ HRESULT hErrorCode)
+HRESULT CIpc::Close(_In_opt_ HANDLE h, _In_opt_ HRESULT hErrorCode)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   CConnectionBase *lpConn;

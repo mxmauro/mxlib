@@ -74,7 +74,7 @@ public:
                              _In_opt_ LPVOID lpContext=NULL);
 
   HRESULT WaitForReply(_In_ DWORD dwId, _Deref_out_ CMessage **lplpMessage);
-  HRESULT WaitForReplyAsync(_In_ DWORD dwId, _In_ OnMessageReplyCallback cCallback, _In_ LPVOID lpUserData);
+  HRESULT WaitForReplyAsync(_In_ DWORD dwId, _In_ OnMessageReplyCallback cCallback, _In_opt_ LPVOID lpUserData);
 
   CIpc* GetIpc() const
     {
@@ -114,7 +114,7 @@ public:
     CIpc::CMultiSendLock* StartMultiSendBlock();
 
     HRESULT SendReplyHeader(_In_ SIZE_T nMsgSize);
-    HRESULT SendReplyData(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize);
+    HRESULT SendReplyData(_In_reads_bytes_(nMsgSize) LPCVOID lpMsg, _In_ SIZE_T nMsgSize);
     HRESULT SendReplyEndOfMessageMark();
     HRESULT SendReplyMultipleBlocks(_In_ SIZE_T nBlocksCount, ...);
     HRESULT SendReplyMultipleBlocks(_In_ SIZE_T nBlocksCount, _In_ LPMULTIBLOCK lpBlocks);
