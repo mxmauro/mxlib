@@ -113,7 +113,12 @@ static HRESULT OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpSe
 {
   HRESULT hRes;
 
+  //HANDLE h = lpRequest->GetUnderlyingSocket();
+  //MX::CSockets *lpMgr = lpRequest->GetUnderlyingSocketManager();
+
+  //lpMgr->PauseOutputProcessing(h);
   hRes = lpRequest->SendResponse("<html><body>test OK</body></html>", 6+6+ 7 +7+7);
+  //lpMgr->ResumeOutputProcessing(h);
   return hRes;
 }
 

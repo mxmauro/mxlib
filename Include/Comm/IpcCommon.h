@@ -220,6 +220,11 @@ public:
   HRESULT IsConnected(_In_ HANDLE h);
   HRESULT IsClosed(_In_ HANDLE h, _Out_opt_ HRESULT *lphErrorCode=NULL);
 
+  HRESULT PauseInputProcessing(_In_ HANDLE h);
+  HRESULT ResumeInputProcessing(_In_ HANDLE h);
+  HRESULT PauseOutputProcessing(_In_ HANDLE h);
+  HRESULT ResumeOutputProcessing(_In_ HANDLE h);
+
   //NOTE: On success, the connection will own the layer
   HRESULT AddLayer(_In_ HANDLE h, _In_ CLayer *lpLayer, _In_opt_ BOOL bFront=TRUE);
 
@@ -239,6 +244,7 @@ protected:
       TypeInitialSetup,
       TypeZeroRead, TypeRead,
       TypeWriteRequest, TypeWrite,
+      TypeResumeIoProcessing,
       TypeMAX=TypeWrite
     } eType;
 
@@ -534,6 +540,8 @@ protected:
     HRESULT SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
     HRESULT SendStream(_In_ CStream *lpStream);
     HRESULT AfterWriteSignal(_In_ OnAfterWriteSignalCallback cCallback, _In_opt_ LPVOID lpCookie);
+
+    HRESULT SendResumeIoProcessingPacket(_In_ BOOL bInput);
 
     HRESULT WriteMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
 
