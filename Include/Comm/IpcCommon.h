@@ -245,7 +245,7 @@ protected:
       TypeZeroRead, TypeRead,
       TypeWriteRequest, TypeWrite,
       TypeResumeIoProcessing,
-      TypeMAX=TypeWrite
+      TypeMAX=TypeResumeIoProcessing
     } eType;
 
     explicit CPacket(_In_ DWORD dwPacketSize) : CBaseMemObj(), TLnkLstNode<CPacket>()
