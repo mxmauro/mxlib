@@ -47,11 +47,40 @@ CSslCertificate::CSslCertificate() : CBaseMemObj()
   return;
 }
 
+CSslCertificate::CSslCertificate(_In_ const CSslCertificate& cSrc) throw(...) : CBaseMemObj()
+{
+  lpX509 = NULL;
+  operator=(cSrc);
+  return;
+}
+
 CSslCertificate::~CSslCertificate()
 {
   if (lpX509 != NULL)
     X509_free(_x509);
   return;
+}
+
+CSslCertificate& CSslCertificate::operator=(_In_ const CSslCertificate& cSrc) throw(...)
+{
+  if (this != &cSrc)
+  {
+    X509 *lpNewX509;
+
+    //duplicate
+    lpNewX509 = NULL;
+    if (cSrc.lpX509 != NULL)
+    {
+      lpNewX509 = X509_dup((X509*)(cSrc.lpX509));
+      if (lpNewX509 == NULL)
+        throw (LONG)E_OUTOFMEMORY;
+    }
+    //replace original
+    if (lpX509 != NULL)
+      X509_free(_x509);
+    lpX509 = lpNewX509;
+  }
+  return *this;
 }
 
 LONG CSslCertificate::GetVersion() const
@@ -133,28 +162,6 @@ HRESULT CSslCertificate::IsDateValid()
 BOOL CSslCertificate::IsCaCert() const
 {
   return (lpX509 != NULL && X509_check_ca(_x509) >= 1) ? TRUE : FALSE;
-}
-
-HRESULT CSslCertificate::operator=(const CSslCertificate& cSrc)
-{
-  if (this != &cSrc)
-  {
-    X509 *lpNewX509;
-
-    //duplicate
-    lpNewX509 = NULL;
-    if (cSrc.lpX509 != NULL)
-    {
-      lpNewX509 = X509_dup((X509*)(cSrc.lpX509));
-      if (lpNewX509 == NULL)
-        return E_OUTOFMEMORY;
-    }
-    //replace original
-    if (lpX509 != NULL)
-      X509_free(_x509);
-    lpX509 = lpNewX509;
-  }
-  return S_OK;
 }
 
 LPVOID CSslCertificate::GetOpenSSL_X509()

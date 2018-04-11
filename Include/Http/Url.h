@@ -35,12 +35,7 @@ namespace MX {
 
 class CUrl : public virtual CBaseMemObj
 {
-private:
-  CUrl(_In_ const CUrl& cSrc);
 public:
-  CUrl();
-  ~CUrl();
-
   typedef enum {
     SchemeUnknown=-1, SchemeNone=0,
     SchemeMailTo, SchemeNews, SchemeHttp, SchemeHttps, SchemeFtp,
@@ -51,8 +46,17 @@ public:
     ToStringAddScheme=0x01, ToStringAddUserInfo=0x02, ToStringAddHostPort=0x04,
     ToStringAddPath=0x08, ToStringAddQueryStrings=0x10, ToStringAddFragment=0x20,
     ToStringShrinkPath=0x40,
-    ToStringAddAll=0x7F
+    ToStringAddAll=0x7F,
+    ToStringDontAddHostPortIfDefault=0x10000000
   } eToStringFlags;
+
+public:
+  CUrl();
+  CUrl(_In_ const CUrl& cSrc) throw(...);
+  ~CUrl();
+
+  CUrl& operator=(_In_ const CUrl& cSrc) throw(...);
+  CUrl& operator+=(_In_ const CUrl& cOtherUrl) throw(...);
 
   VOID Reset();
 
@@ -101,9 +105,6 @@ public:
 
   HRESULT ParseFromString(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nSrcLen=(SIZE_T)-1);
   HRESULT ParseFromString(_In_z_ LPCWSTR szUrlW, _In_opt_ SIZE_T nSrcLen=(SIZE_T)-1);
-
-  HRESULT operator=(_In_ const CUrl& cSrc);
-  HRESULT operator+=(_In_ const CUrl& cOtherUrl);
 
   HRESULT Merge(_In_ const CUrl& cOtherUrl);
 

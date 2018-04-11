@@ -45,7 +45,10 @@ class CHttpCookie : public virtual CBaseMemObj
 {
 public:
   CHttpCookie();
+  CHttpCookie(_In_ const CHttpCookie& cSrc) throw(...);
   ~CHttpCookie();
+
+  CHttpCookie& operator=(_In_ const CHttpCookie& cSrc) throw(...);
 
   VOID Clear();
 
@@ -86,8 +89,6 @@ public:
   VOID SetHttpOnlyFlag(_In_ BOOL bIsHttpOnly);
   BOOL GetHttpOnlyFlag() const;
 
-  HRESULT operator=(_In_ const CHttpCookie& cSrc);
-
   HRESULT ToString(_Inout_ CStringA& cStrDestA, _In_ BOOL bAddAttributes=TRUE);
 
   HRESULT DoesDomainMatch(_In_z_ LPCSTR szDomainToMatchA);
@@ -111,11 +112,12 @@ private:
 class CHttpCookieArray : public TArrayListWithDelete<CHttpCookie*>
 {
 private:
-  CHttpCookieArray(_In_ const CHttpCookieArray& cSrc);
 public:
   CHttpCookieArray() : TArrayListWithDelete<CHttpCookie*>()
     { };
-  HRESULT operator=(const CHttpCookieArray& cSrc);
+  CHttpCookieArray(_In_ const CHttpCookieArray& cSrc) throw(...);
+
+  CHttpCookieArray& operator=(_In_ const CHttpCookieArray& cSrc) throw(...);
 
   HRESULT ParseFromRequestHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen=(SIZE_T)-1);
 

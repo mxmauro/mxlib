@@ -35,6 +35,7 @@
 #include "HttpBodyParserMultipartFormData.h"
 #include "HttpBodyParserUrlEncodedForm.h"
 #include "HttpBodyParserIgnore.h"
+#include "..\Comm\Proxy.h"
 
 //-----------------------------------------------------------
 
@@ -63,7 +64,9 @@ public:
     StateReceivingResponseHeaders,
     StateReceivingResponseBody,
     StateDocumentCompleted,
-    StateWaitingForRedirection
+    StateWaitingForRedirection,
+    StateEstablishingProxyTunnelConnection,
+    StateWaitingProxyTunnelConnectionResponse
   } eState;
 
   //--------
@@ -128,6 +131,8 @@ public:
   HRESULT SetOptionFlags(_In_ int nOptionFlags);
   int GetOptionFlags();
 
+  HRESULT SetProxy(_In_ CProxy &cProxy);
+
   HRESULT Open(_In_ CUrl &cUrl);
   HRESULT Open(_In_z_ LPCSTR szUrlA);
   HRESULT Open(_In_z_ LPCWSTR szUrlW);
@@ -179,10 +184,14 @@ private:
 
   VOID SetErrorOnRequestAndClose(_In_ HRESULT hErrorCode);
 
+  HRESULT AddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_opt_ CIpc::CREATE_CALLBACK_DATA *lpData);
+
   HRESULT BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA);
   HRESULT BuildRequestHeaderAdd(_Inout_ CStringA &cStrReqHdrsA, _In_z_ LPCSTR szNameA, _In_z_ LPCSTR szDefaultValueA);
   HRESULT AddRequestHeadersForBody(_Inout_ CStringA &cStrReqHdrsA);
 
+  HRESULT SendTunnelConnect();
+  HRESULT SendRequestHeader();
   HRESULT SendRequestBody();
 
 private:
@@ -225,6 +234,7 @@ private:
   eState nState;
   int nOptionFlags;
   HANDLE hConn;
+  CProxy cProxy;
   HRESULT hLastErrorCode;
   OnHeadersReceivedCallback cHeadersReceivedCallback;
   OnDocumentCompletedCallback cDocumentCompletedCallback;
@@ -241,6 +251,7 @@ private:
     TLnkLst<CPostDataItem> cPostData;
     CHAR szBoundary[32];
     BOOL bUsingMultiPartFormData;
+    BOOL bUsingProxy;
   } sRequest;
 
   struct tagResponse {

@@ -589,7 +589,7 @@ VOID CIpc::ReleaseAndRemoveConnectionIfClosed(_In_ CConnectionBase *lpConn)
   }
   if (bDestroy != FALSE)
   {
-    lpConn->ShutdownLink(FAILED(lpConn->hErrorCode));
+    lpConn->ShutdownLink(FAILED(__InterlockedRead(&(lpConn->hErrorCode))));
     FireOnDestroy(lpConn);
     MX_ASSERT(__InterlockedRead(&(lpConn->nRefCount)) == 0);
     delete lpConn;
@@ -636,7 +636,7 @@ VOID CIpc::FireOnDestroy(_In_ CConnectionBase *lpConn)
   TAutoRefCounted<CUserData> cUserData(lpConn->cUserData);
 
   if (lpConn->cDestroyCallback)
-    lpConn->cDestroyCallback(this, (HANDLE)lpConn, lpConn->cUserData, lpConn->hErrorCode);
+    lpConn->cDestroyCallback(this, (HANDLE)lpConn, lpConn->cUserData, __InterlockedRead(&(lpConn->hErrorCode)));
   return;
 }
 
@@ -667,7 +667,7 @@ VOID CIpc::FireOnDisconnect(_In_ CConnectionBase *lpConn)
   TAutoRefCounted<CUserData> cUserData(lpConn->cUserData);
 
   if (lpConn->cDisconnectCallback)
-    lpConn->cDisconnectCallback(this, (HANDLE)lpConn, lpConn->cUserData, lpConn->hErrorCode);
+    lpConn->cDisconnectCallback(this, (HANDLE)lpConn, lpConn->cUserData, __InterlockedRead(&(lpConn->hErrorCode)));
   return;
 }
 
@@ -933,7 +933,7 @@ check_pending_write_req:
                 //decrement the outstanding writes incremented by the send/recheck and close if needed
                 MX_ASSERT_ALWAYS(__InterlockedRead(&(lpConn->nOutstandingWrites)) >= 1);
                 if (_InterlockedDecrement(&(lpConn->nOutstandingWrites)) == 0 && lpConn->IsClosed() != FALSE)
-                  lpConn->ShutdownLink(FAILED(lpConn->hErrorCode));
+                  lpConn->ShutdownLink(FAILED(__InterlockedRead(&(lpConn->hErrorCode))));
                 continue; //loop
               }
               //there still exists packets being sent so requeue and wait
@@ -1011,7 +1011,7 @@ check_pending_write_req:
                     if (_InterlockedDecrement(&(lpConn->nOutstandingWritesBeingSent)) == 0)
                       lpConn->MarkLastWriteActivity(FALSE);
                     if (_InterlockedDecrement(&(lpConn->nOutstandingWrites)) == 0 && lpConn->IsClosed() != FALSE)
-                      lpConn->ShutdownLink(FAILED(lpConn->hErrorCode));
+                      lpConn->ShutdownLink(FAILED(__InterlockedRead(&(lpConn->hErrorCode))));
 #ifdef MX_IPC_TIMING
                     DebugPrint("%lu MX::CIpc::CConnectionBase::GracefulShutdown B) Clock=%lums / This=0x%p\n",
                                ::MxGetCurrentThreadId(), lpConn->cHiResTimer.GetElapsedTimeMs(), this);
@@ -1033,7 +1033,7 @@ check_pending_write_req:
                     if (_InterlockedDecrement(&(lpConn->nOutstandingWritesBeingSent)) == 0)
                       lpConn->MarkLastWriteActivity(FALSE);
                     if (_InterlockedDecrement(&(lpConn->nOutstandingWrites)) == 0 && lpConn->IsClosed() != FALSE)
-                      lpConn->ShutdownLink(FAILED(lpConn->hErrorCode));
+                      lpConn->ShutdownLink(FAILED(__InterlockedRead(&(lpConn->hErrorCode))));
                     break;
                 }
               }
@@ -1055,7 +1055,7 @@ check_pending_write_req:
               //decrement the outstanding writes incremented by the send and close if needed
               MX_ASSERT_ALWAYS(__InterlockedRead(&(lpConn->nOutstandingWrites)) >= 1);
               if (_InterlockedDecrement(&(lpConn->nOutstandingWrites)) == 0 && lpConn->IsClosed() != FALSE)
-                lpConn->ShutdownLink(FAILED(lpConn->hErrorCode));
+                lpConn->ShutdownLink(FAILED(__InterlockedRead(&(lpConn->hErrorCode))));
             }
           }
         }
@@ -1075,7 +1075,7 @@ check_pending_write_req:
         if (_InterlockedDecrement(&(lpConn->nOutstandingWritesBeingSent)) == 0)
           lpConn->MarkLastWriteActivity(FALSE);
         if (_InterlockedDecrement(&(lpConn->nOutstandingWrites)) == 0 && lpConn->IsClosed() != FALSE)
-          lpConn->ShutdownLink(FAILED(lpConn->hErrorCode));
+          lpConn->ShutdownLink(FAILED(__InterlockedRead(&(lpConn->hErrorCode))));
         //free packet
         lpConn->cRwList.Remove(lpPacket);
         FreePacket(lpPacket);
@@ -1458,7 +1458,7 @@ HRESULT CIpc::CConnectionBase::WriteMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSi
         if (_InterlockedDecrement(&nOutstandingWritesBeingSent) == 0)
           MarkLastWriteActivity(FALSE);
         if (_InterlockedDecrement(&nOutstandingWrites) == 0 && IsClosed() != FALSE)
-          ShutdownLink(FAILED(hErrorCode));
+          ShutdownLink(FAILED(__InterlockedRead(&hErrorCode)));
 #ifdef MX_IPC_TIMING
         DebugPrint("%lu MX::CIpc::CConnectionBase::GracefulShutdown D) Clock=%lums / This=0x%p\n",
                    ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), this);
@@ -1478,7 +1478,7 @@ HRESULT CIpc::CConnectionBase::WriteMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSi
         if (_InterlockedDecrement(&nOutstandingWritesBeingSent) == 0)
           MarkLastWriteActivity(FALSE);
         if (_InterlockedDecrement(&nOutstandingWrites) == 0 && IsClosed() != FALSE)
-          ShutdownLink(FAILED(hErrorCode));
+          ShutdownLink(FAILED(__InterlockedRead(&hErrorCode)));
         return hRes;
     }
   }
@@ -1723,10 +1723,13 @@ HRESULT CIpc::CConnectionBase::MarkLastWriteActivity(_In_ BOOL bSet)
                                                                             this), NULL);
     if (lpEvent == NULL)
       return E_OUTOFMEMORY;
+    _InterlockedIncrement(&nRefCount);
     //add to list
-    if (sWriteTimeout.cActiveList.Add(lpEvent) == FALSE)
+    hRes = sWriteTimeout.cActiveList.Add(lpEvent);
+    if (FAILED(hRes))
     {
       lpEvent->Release();
+      ReleaseMySelf();
       return E_OUTOFMEMORY;
     }
     //add event
@@ -1735,9 +1738,9 @@ HRESULT CIpc::CConnectionBase::MarkLastWriteActivity(_In_ BOOL bSet)
     {
       sWriteTimeout.cActiveList.Remove(lpEvent);
       lpEvent->Release();
+      ReleaseMySelf();
       return hRes;
     }
-    _InterlockedIncrement(&nRefCount);
   }
   else
   {

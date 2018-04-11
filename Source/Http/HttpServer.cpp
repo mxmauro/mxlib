@@ -242,9 +242,20 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ int n
       sSsl.nProtocol = nProtocol;
       sSsl.cSslCertificate.Attach(MX_DEBUG_NEW CSslCertificate());
       if (sSsl.cSslCertificate)
-        hRes = ((*sSsl.cSslCertificate.Get()) = (*lpSslCertificate));
+      {
+        try
+        {
+          *(sSsl.cSslCertificate.Get()) = *lpSslCertificate;
+        }
+        catch (LONG hr)
+        {
+          hRes = hr;
+        }
+      }
       else
+      {
         hRes = E_OUTOFMEMORY;
+      }
       if (SUCCEEDED(hRes) && lpSslKey != NULL)
       {
         SIZE_T nSize;

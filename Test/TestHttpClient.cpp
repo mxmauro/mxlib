@@ -151,10 +151,13 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
 {
   THREAD_DATA *lpThreadData = (THREAD_DATA*)lpParam;
   CMyHttpClient cHttpClient(*(lpThreadData->lpSckMgr), *(lpThreadData->lpPropBag));
+  MX::CProxy cProxy;
   DWORD dwStartTime, dwEndTime;
   int nOrigPosX, nOrigPosY;
   HRESULT hRes;
 
+  cProxy.SetUseIE();
+  cHttpClient.SetProxy(cProxy);
   cHttpClient.lpCerts = lpThreadData->lpCerts;
   //cHttpClient.SetOptionFlags(0);
   //cHttpClient.SetOptionFlags(MX::CHttpClient::OptionKeepConnectionOpen);
@@ -175,7 +178,7 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
   //hRes = cHttpClient.Open("http://www.sitepoint.com/forums/showthread.php?390414-Reading-from-socket-connection-SLOW");
   if (SUCCEEDED(hRes))
   {
-    while (lpThreadData->cWorkerThreads.CheckForAbort(100) == FALSE && cHttpClient.IsDocumentComplete() == FALSE &&
+    while (lpThreadData->cWorkerThreads.CheckForAbort(10) == FALSE && cHttpClient.IsDocumentComplete() == FALSE &&
            cHttpClient.IsClosed() == FALSE);
 #pragma warning(suppress : 28159)
     dwEndTime = ::GetTickCount();

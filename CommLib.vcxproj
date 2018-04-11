@@ -169,6 +169,7 @@
     <ClInclude Include="Include\Comm\IpcMessageManager.h" />
     <ClInclude Include="Include\Comm\IpcSslLayer.h" />
     <ClInclude Include="Include\Comm\NamedPipes.h" />
+    <ClInclude Include="Include\Comm\Proxy.h" />
     <ClInclude Include="Include\Comm\Sockets.h" />
     <ClInclude Include="Include\Comm\SslCertificates.h" />
     <ClInclude Include="Include\Http\EMail.h" />
@@ -227,6 +228,7 @@
     <ClCompile Include="Source\Comm\IpcCommon.cpp" />
     <ClCompile Include="Source\Comm\IpcMessageManager.cpp" />
     <ClCompile Include="Source\Comm\IpcSslLayer.cpp" />
+    <ClCompile Include="Source\Comm\Proxy.cpp" />
     <ClCompile Include="Source\Comm\Sockets.cpp" />
     <ClCompile Include="Source\Comm\SslCertificates.cpp" />
     <ClCompile Include="Source\Comm\SslCertificatesArray.cpp" />

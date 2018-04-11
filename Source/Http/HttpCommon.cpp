@@ -743,7 +743,6 @@ CHttpHeaderBase* CHttpCommon::GetHeader(_In_z_ LPCSTR szNameA) const
 HRESULT CHttpCommon::AddCookie(_In_ CHttpCookie &cSrc)
 {
   TAutoDeletePtr<CHttpCookie> cNewCookie;
-  HRESULT hRes;
 
   if (cSrc.GetName()[0] == 0)
     return E_INVALIDARG;
@@ -751,9 +750,14 @@ HRESULT CHttpCommon::AddCookie(_In_ CHttpCookie &cSrc)
   cNewCookie.Attach(MX_DEBUG_NEW CHttpCookie());
   if (!cNewCookie)
     return E_OUTOFMEMORY;
-  hRes = (*(cNewCookie.Get()) = cSrc);
-  if (FAILED(hRes))
-    return hRes;
+  try
+  {
+    *(cNewCookie.Get()) = cSrc;
+  }
+  catch (LONG hr)
+  {
+    return hr;
+  }
   //add to array
   if (cCookies.AddElement(cNewCookie.Get()) == FALSE)
     return E_OUTOFMEMORY;

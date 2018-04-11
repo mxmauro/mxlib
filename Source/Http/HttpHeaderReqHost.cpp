@@ -78,7 +78,15 @@ HRESULT CHttpHeaderReqHost::Parse(_In_z_ LPCSTR szValueA)
   if (FAILED(hRes))
     return (hRes == E_INVALIDARG) ? MX_E_InvalidData : hRes;
   //set new value
-  return (cUrl = cTempUrl);
+  try
+  {
+    cUrl = cTempUrl;
+  }
+  catch (LONG hr)
+  {
+    return hr;
+  }
+  return S_OK;
 }
 
 HRESULT CHttpHeaderReqHost::Build(_Inout_ CStringA &cStrDestA)
@@ -106,7 +114,15 @@ HRESULT CHttpHeaderReqHost::SetHost(_In_z_ LPCWSTR szHostW)
   if (FAILED(hRes))
     return (hRes == E_INVALIDARG) ? MX_E_InvalidData : hRes;
   //set new value
-  return (cUrl = cTempUrl);
+  try
+  {
+    cUrl = cTempUrl;
+  }
+  catch (LONG hr)
+  {
+    return hr;
+  }
+  return S_OK;
 }
 
 LPCWSTR CHttpHeaderReqHost::GetHost() const

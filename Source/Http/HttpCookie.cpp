@@ -54,9 +54,41 @@ CHttpCookie::CHttpCookie() : CBaseMemObj()
   return;
 }
 
+CHttpCookie::CHttpCookie(_In_ const CHttpCookie& cSrc) throw(...) : CBaseMemObj()
+{
+  nFlags = 0;
+  operator=(cSrc);
+  return;
+}
+
 CHttpCookie::~CHttpCookie()
 {
   return;
+}
+
+CHttpCookie& CHttpCookie::operator=(_In_ const CHttpCookie& cSrc) throw(...)
+{
+  if (&cSrc != this)
+  {
+    MX::CStringA cStrTempNameA, cStrTempValueA, cStrTempDomainA, cStrTempPathA;
+
+    if (cStrTempNameA.Copy(cSrc.GetName()) == FALSE)
+      throw (LONG)E_OUTOFMEMORY;
+    if (cStrTempValueA.Copy(cSrc.GetValue()) == FALSE)
+      throw (LONG)E_OUTOFMEMORY;
+    if (cStrTempDomainA.Copy(cSrc.GetDomain()) == FALSE)
+      throw (LONG)E_OUTOFMEMORY;
+    if (cStrTempPathA.Copy(cSrc.GetPath()) == FALSE)
+      throw (LONG)E_OUTOFMEMORY;
+
+    nFlags = cSrc.nFlags;
+    cStrNameA.Attach(cStrTempNameA.Detach());
+    cStrValueA.Attach(cStrTempValueA.Detach());
+    cStrDomainA.Attach(cStrTempDomainA.Detach());
+    cStrPathA.Attach(cStrTempPathA.Detach());
+    cExpiresDt = *(cSrc.GetExpireDate());
+  }
+  return *this;
 }
 
 VOID CHttpCookie::Clear()
@@ -284,25 +316,6 @@ VOID CHttpCookie::SetHttpOnlyFlag(_In_ BOOL bIsHttpOnly)
 BOOL CHttpCookie::GetHttpOnlyFlag() const
 {
   return ((nFlags & COOKIE_FLAG_HTTPONLY) != 0) ? TRUE : FALSE;
-}
-
-HRESULT CHttpCookie::operator=(_In_ const CHttpCookie& cSrc)
-{
-  if (&cSrc != this)
-  {
-    if (cStrNameA.EnsureBuffer(StrLenA(cSrc.GetName()) + 1) == FALSE ||
-        cStrValueA.EnsureBuffer(StrLenA(cSrc.GetValue()) + 1) == FALSE ||
-        cStrDomainA.EnsureBuffer(StrLenA(cSrc.GetDomain()) + 1) == FALSE ||
-        cStrPathA.EnsureBuffer(StrLenA(cSrc.GetPath()) + 1) == FALSE)
-      return E_OUTOFMEMORY;
-    cStrNameA.Copy(cSrc.GetName());
-    cStrValueA.Copy(cSrc.GetValue());
-    cStrDomainA.Copy(cSrc.GetDomain());
-    cStrPathA.Copy(cSrc.GetPath());
-    nFlags = cSrc.nFlags;
-    cExpiresDt = *(cSrc.GetExpireDate());
-  }
-  return S_OK;
 }
 
 HRESULT CHttpCookie::ToString(_Inout_ CStringA& cStrDestA, _In_ BOOL bAddAttributes)
@@ -565,46 +578,34 @@ HRESULT CHttpCookie::ParseFromResponseHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE
 
 //-----------------------------------------------------------
 
-HRESULT CHttpCookieArray::operator=(const CHttpCookieArray& cSrc)
+CHttpCookieArray::CHttpCookieArray(_In_ const CHttpCookieArray& cSrc) throw(...) : TArrayListWithDelete<CHttpCookie*>()
 {
-  TAutoDeletePtr<CHttpCookie> cNewCookie;
-  SIZE_T i, nCount, nOrigCount;
-  HRESULT hRes;
+  operator=(cSrc);
+  return;
+}
 
-  nOrigCount = GetCount();
-  hRes = S_OK;
-  nCount = cSrc.GetCount();
-  for (i=0; SUCCEEDED(hRes) && i<nCount; i++)
+CHttpCookieArray& CHttpCookieArray::operator=(_In_ const CHttpCookieArray& cSrc) throw(...)
+{
+  if (this != &cSrc)
   {
-    cNewCookie.Attach(MX_DEBUG_NEW CHttpCookie());
-    if (cNewCookie != NULL)
+    TArrayListWithDelete<CHttpCookie*> aNewList;
+    TAutoDeletePtr<CHttpCookie> cNewCookie;
+    SIZE_T i, nCount;
+
+    nCount = cSrc.GetCount();
+    for (i = 0; i < nCount; i++)
     {
-      hRes = (*(cNewCookie.Get()) = *(cSrc.GetElementAt(i)));
-      if (SUCCEEDED(hRes))
-      {
-        if (AddElement(cNewCookie.Get()) != FALSE)
-          cNewCookie.Detach();
-        else
-          hRes = E_OUTOFMEMORY;
-      }
+      cNewCookie.Attach(MX_DEBUG_NEW CHttpCookie());
+      if (!cNewCookie)
+        throw (LONG)E_OUTOFMEMORY;
+      *(cNewCookie.Get()) = *(cSrc.GetElementAt(i));
+      if (AddElement(cNewCookie.Get()) == FALSE)
+        throw (LONG)E_OUTOFMEMORY;
+      cNewCookie.Detach();
     }
-    else
-    {
-      hRes = E_OUTOFMEMORY;
-    }
+    this->Transfer(aNewList);
   }
-  if (SUCCEEDED(hRes))
-  {
-    for (i=0; i<nCount; i++)
-      RemoveElementAt(0);
-  }
-  else
-  {
-    nCount = GetCount();
-    for (i=nOrigCount; i<nCount; i++)
-      RemoveElementAt(nOrigCount);
-  }
-  return hRes;
+  return *this;
 }
 
 HRESULT CHttpCookieArray::ParseFromRequestHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen)
@@ -680,9 +681,14 @@ HRESULT CHttpCookieArray::Update(_In_ const CHttpCookie& cSrc, _In_ BOOL bReplac
   cNewCookie.Attach(MX_DEBUG_NEW CHttpCookie());
   if (!cNewCookie)
     return E_OUTOFMEMORY;
-  hRes = (*(cNewCookie.Get()) = cSrc);
-  if (FAILED(hRes))
-    return hRes;
+  try
+  {
+    *(cNewCookie.Get()) = cSrc;
+  }
+  catch (LONG hr)
+  {
+    return hr;
+  }
   if (AddElement(cNewCookie.Get()) == FALSE)
     return E_OUTOFMEMORY;
   cNewCookie.Detach();

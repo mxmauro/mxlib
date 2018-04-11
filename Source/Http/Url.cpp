@@ -139,10 +139,73 @@ CUrl::CUrl() : CBaseMemObj()
   return;
 }
 
+CUrl::CUrl(_In_ const CUrl& cSrc) throw(...)
+{
+  operator=(cSrc);
+  return;
+}
+
 CUrl::~CUrl()
 {
   Reset();
   return;
+}
+
+CUrl& CUrl::operator=(_In_ const CUrl& cSrc) throw(...)
+{
+  CStringW cStrSrcSchemeW, cStrSrcHostW, cStrSrcPathW, cStrSrcFragmentW, cStrSrcUserInfoW;
+  TArrayListWithFree<LPQUERYSTRINGITEM> cNewQueryStringsList;
+  TAutoFreePtr<QUERYSTRINGITEM> cNewItem;
+  SIZE_T i, nCount, nNameLen, nValueLen;
+
+  if (&cSrc != this)
+  {
+    if (cStrSrcSchemeW.Copy(cSrc.GetScheme()) == FALSE)
+      throw (LONG)E_OUTOFMEMORY;
+    if (cStrSrcHostW.Copy(cSrc.GetHost()) == FALSE)
+      throw (LONG)E_OUTOFMEMORY;
+    if (cStrSrcPathW.Copy(cSrc.GetPath()) == FALSE)
+      throw (LONG)E_OUTOFMEMORY;
+    if (cStrSrcFragmentW.Copy(cSrc.GetFragment()) == FALSE)
+      throw (LONG)E_OUTOFMEMORY;
+    if (cStrSrcUserInfoW.Copy(cSrc.GetUserInfo()) == FALSE)
+      throw (LONG)E_OUTOFMEMORY;
+    nCount = cSrc.cQueryStringsList.GetCount();
+    for (i=0; i<nCount; i++)
+    {
+      nNameLen = StrLenW(cSrc.cQueryStringsList[i]->szNameW);
+      nValueLen = StrLenW(cSrc.cQueryStringsList[i]->szValueW);
+      cNewItem.Attach((LPQUERYSTRINGITEM)MX_MALLOC(sizeof(QUERYSTRINGITEM) + (nNameLen + nValueLen + 1) * sizeof(WCHAR)));
+      if (!cNewItem)
+        throw (LONG)E_OUTOFMEMORY;
+      cNewItem->szValueW = cNewItem->szNameW + (nNameLen + 1);
+      MemCopy(cNewItem->szNameW, cSrc.cQueryStringsList[i]->szNameW, nNameLen * sizeof(WCHAR));
+      cNewItem->szNameW[nNameLen] = 0;
+      MemCopy(cNewItem->szValueW, cSrc.cQueryStringsList[i]->szValueW, nValueLen * sizeof(WCHAR));
+      cNewItem->szValueW[nValueLen] = 0;
+      if (cNewQueryStringsList.AddElement(cNewItem.Get()) == FALSE)
+        throw (LONG)E_OUTOFMEMORY;
+      cNewItem.Detach();
+    }
+    //done... move to the query strings list
+    ResetQueryStrings();
+    cQueryStringsList.Transfer(cNewQueryStringsList);
+    cStrSchemeW.Attach(cStrSrcSchemeW.Detach());
+    cStrHostW.Attach(cStrSrcHostW.Detach());
+    cStrPathW.Attach(cStrSrcPathW.Detach());
+    cStrFragmentW.Attach(cStrSrcFragmentW.Detach());
+    cStrUserInfoW.Attach(cStrSrcUserInfoW.Detach());
+    nPort = cSrc.GetPort();
+  }
+  return *this;
+}
+
+CUrl& CUrl::operator+=(_In_ const CUrl& cOtherUrl) throw(...)
+{
+  HRESULT hr = Merge(cOtherUrl);
+  if (FAILED(hr))
+    throw (LONG)hr;
+  return *this;
 }
 
 VOID CUrl::Reset()
@@ -706,7 +769,8 @@ err_nomem:  hRes = E_OUTOFMEMORY;
             if (aValidSchemes[i].nCode == nSchemeType)
               break;
           }
-          if (aValidSchemes[i].szNameW == NULL || aValidSchemes[i].nDefaultPort != nPort)
+          if ((nFlags & ToStringDontAddHostPortIfDefault) == 0 || aValidSchemes[i].szNameW == NULL ||
+              aValidSchemes[i].nDefaultPort != nPort)
           {
             if (cStrDestA.AppendFormat(":%ld", nPort) == FALSE)
               goto err_nomem;
@@ -1544,56 +1608,6 @@ done:
   if (FAILED(hRes))
     Reset();
   return hRes;
-}
-
-HRESULT CUrl::operator=(_In_ const CUrl& cSrc)
-{
-  CStringW cStrSrcSchemeW, cStrSrcHostW, cStrSrcPathW, cStrSrcFragmentW, cStrSrcUserInfoW;
-  TArrayListWithFree<LPQUERYSTRINGITEM> cNewQueryStringsList;
-  TAutoFreePtr<QUERYSTRINGITEM> cNewItem;
-  SIZE_T i, nCount, nNameLen, nValueLen;
-
-  if (&cSrc != this)
-  {
-    if (cStrSrcSchemeW.Copy(cSrc.GetScheme()) == FALSE ||
-        cStrSrcHostW.Copy(cSrc.GetHost()) == FALSE ||
-        cStrSrcPathW.Copy(cSrc.GetPath()) == FALSE ||
-        cStrSrcFragmentW.Copy(cSrc.GetFragment()) == FALSE ||
-        cStrSrcUserInfoW.Copy(cSrc.GetUserInfo()) == FALSE)
-      return E_OUTOFMEMORY;
-    nCount = cSrc.cQueryStringsList.GetCount();
-    for (i=0; i<nCount; i++)
-    {
-      nNameLen = StrLenW(cSrc.cQueryStringsList[i]->szNameW);
-      nValueLen = StrLenW(cSrc.cQueryStringsList[i]->szValueW);
-      cNewItem.Attach((LPQUERYSTRINGITEM)MX_MALLOC(sizeof(QUERYSTRINGITEM)+(nNameLen+nValueLen+1)*sizeof(WCHAR)));
-      if (!cNewItem)
-        return E_OUTOFMEMORY;
-      cNewItem->szValueW = cNewItem->szNameW + (nNameLen + 1);
-      MemCopy(cNewItem->szNameW, cSrc.cQueryStringsList[i]->szNameW, nNameLen * sizeof(WCHAR));
-      cNewItem->szNameW[nNameLen] = 0;
-      MemCopy(cNewItem->szValueW, cSrc.cQueryStringsList[i]->szValueW, nValueLen * sizeof(WCHAR));
-      cNewItem->szValueW[nValueLen] = 0;
-      if (cNewQueryStringsList.AddElement(cNewItem.Get()) == FALSE)
-        return E_OUTOFMEMORY;
-      cNewItem.Detach();
-    }
-    //done... move to the query strings list
-    ResetQueryStrings();
-    cQueryStringsList.Transfer(cNewQueryStringsList);
-    cStrSchemeW.Attach(cStrSrcSchemeW.Detach());
-    cStrHostW.Attach(cStrSrcHostW.Detach());
-    cStrPathW.Attach(cStrSrcPathW.Detach());
-    cStrFragmentW.Attach(cStrSrcFragmentW.Detach());
-    cStrUserInfoW.Attach(cStrSrcUserInfoW.Detach());
-    nPort = cSrc.GetPort();
-  }
-  return S_OK;
-}
-
-HRESULT CUrl::operator+=(_In_ const CUrl& cOtherUrl)
-{
-  return Merge(cOtherUrl);
 }
 
 HRESULT CUrl::Merge(_In_ const CUrl& cOtherUrl)

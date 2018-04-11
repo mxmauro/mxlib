@@ -42,15 +42,16 @@ namespace MX {
 
 class CSslCertificate : public virtual CBaseMemObj
 {
-private:
-  CSslCertificate(_In_ const CSslCertificate& cSrc);
 public:
   typedef enum {
     InfoOrganization = 1, InfoUnit, InfoCommonName, InfoCountry, InfoStateProvince, InfoTown
   } eInformation;
 
   CSslCertificate();
+  CSslCertificate(_In_ const CSslCertificate& cSrc) throw(...);
   ~CSslCertificate();
+
+  CSslCertificate& operator=(_In_ const CSslCertificate& cSrc) throw(...);
 
   HRESULT InitializeFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA=NULL);
   HRESULT InitializeFromPEM(_In_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA=NULL, _In_opt_ SIZE_T nPemLen=(SIZE_T)-1);
@@ -68,8 +69,6 @@ public:
 
   HRESULT IsDateValid(); //returns S_OK if valid, S_FALSE if not, or an error
   BOOL IsCaCert() const;
-
-  HRESULT operator=(const CSslCertificate& cSrc);
 
   LPVOID GetOpenSSL_X509();
 
