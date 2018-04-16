@@ -30,23 +30,23 @@
 
 #define MAX_HEADER_LINE                                 4096
 
-#ifdef _DEBUG
-  #define _SHARING_MODE FILE_SHARE_READ
-  #define _ATTRIBUTES  (FILE_ATTRIBUTE_NORMAL)
-#else //_DEBUG
-  #define _SHARING_MODE 0
-  #define _ATTRIBUTES  (FILE_ATTRIBUTE_NORMAL|FILE_ATTRIBUTE_TEMPORARY|FILE_FLAG_DELETE_ON_CLOSE)
-#endif //_DEBUG
-
 //-----------------------------------------------------------
 
 namespace MX {
 
-CHttpBodyParserMultipartFormData::CHttpBodyParserMultipartFormData() : CHttpBodyParserFormBase()
+CHttpBodyParserMultipartFormData::CHttpBodyParserMultipartFormData(
+                                                 _In_ OnDownloadStartedCallback _cDownloadStartedCallback,
+                                                 _In_opt_ LPVOID _lpUserData, _In_ DWORD _dwMaxFieldSize,
+                                                 _In_ ULONGLONG _ullMaxFileSize, _In_ DWORD _dwMaxFilesCount) :
+                                  CHttpBodyParserFormBase()
 {
-  nMaxFileUploadSize = 0;
-  nMaxFileUploadCount = 0;
-  nMaxNonFileFormFieldsDataSize = 0;
+  cDownloadStartedCallback = _cDownloadStartedCallback;
+  lpUserData = _lpUserData;
+  dwMaxFieldSize = _dwMaxFieldSize;
+  if (dwMaxFieldSize < 32768)
+    dwMaxFieldSize = 32768;
+  ullMaxFileSize = _ullMaxFileSize;
+  dwMaxFilesCount = _dwMaxFilesCount;
   sParser.nState = StateBoundary;
   sParser.nBoundaryPos = 0;
   sParser.sCurrentBlock.sContentDisposition.cStrNameW.Empty();
@@ -64,56 +64,11 @@ CHttpBodyParserMultipartFormData::~CHttpBodyParserMultipartFormData()
   return;
 }
 
-HRESULT CHttpBodyParserMultipartFormData::Initialize(_In_ CPropertyBag &cPropBag, _In_ CHttpCommon &cHttpCmn)
+HRESULT CHttpBodyParserMultipartFormData::Initialize(_In_ CHttpCommon &cHttpCmn)
 {
   CHttpHeaderEntContentType *lpHeader;
-  WCHAR szTempW[MAX_PATH];
-  SIZE_T nLen;
-  DWORD dw;
-  ULONGLONG ull;
-  LPCWSTR szBoundaryW, szValueW;
-  HRESULT hRes;
+  LPCWSTR szBoundaryW;
 
-  hRes = cPropBag.GetQWord(MX_HTTP_BODYPARSER_PROPERTY_MaxFileUploadSize, ull,
-                           MX_HTTP_BODYPARSER_PROPERTY_MaxFileUploadSize_DEFVAL);
-  if (FAILED(hRes) && hRes != MX_E_NotFound)
-    return hRes;
-  nMaxFileUploadSize = ull;
-  //----
-  hRes = cPropBag.GetDWord(MX_HTTP_BODYPARSER_PROPERTY_MaxFileUploadCount, dw,
-                           MX_HTTP_BODYPARSER_PROPERTY_MaxFileUploadCount_DEFVAL);
-  if (FAILED(hRes) && hRes != MX_E_NotFound)
-    return hRes;
-  nMaxFileUploadCount = (SIZE_T)dw;
-  //----
-  hRes = cPropBag.GetString(MX_HTTP_BODYPARSER_PROPERTY_TempFolder, szValueW,
-                            MX_HTTP_BODYPARSER_PROPERTY_TempFolder_DEFVAL);
-  if (FAILED(hRes) && hRes != MX_E_NotFound)
-    return hRes;
-  if (szValueW == NULL || *szValueW == 0)
-  {
-    nLen = (SIZE_T)::GetTempPathW(MAX_PATH, szTempW);
-    if (cStrTempFolderW.Copy(szTempW) == FALSE)
-      return E_OUTOFMEMORY;
-  }
-  else
-  {
-    if (cStrTempFolderW.Copy(szValueW) == FALSE)
-      return E_OUTOFMEMORY;
-  }
-  nLen = cStrTempFolderW.GetLength();
-  if (nLen > 0 && ((LPWSTR)cStrTempFolderW)[nLen-1] != L'\\')
-  {
-    if (cStrTempFolderW.Concat(L"\\") == FALSE)
-      cStrTempFolderW.Empty();
-  }
-  //----
-  hRes = cPropBag.GetDWord(MX_HTTP_BODYPARSER_PROPERTY_MaxNonFileFormFieldsDataSize, dw,
-                           MX_HTTP_BODYPARSER_PROPERTY_MaxNonFileFormFieldsDataSize_DEFVAL);
-  if (FAILED(hRes) && hRes != MX_E_NotFound)
-    return hRes;
-  nMaxNonFileFormFieldsDataSize = (dw > 32768) ? (SIZE_T)dw : 32768;
-  //----
   lpHeader = cHttpCmn.GetHeader<CHttpHeaderEntContentType>();
   if (lpHeader == NULL)
     return MX_E_InvalidData;
@@ -131,7 +86,6 @@ HRESULT CHttpBodyParserMultipartFormData::Parse(_In_opt_ LPCVOID lpData, _In_opt
 {
   CStringW cStrTempW;
   LPCSTR szDataA, sA;
-  ULONGLONG nHash;
   DWORD dw;
   SIZE_T k;
   HRESULT hRes;
@@ -382,33 +336,26 @@ headers_end_reached:
         //if dealing with a file...
         if (sParser.sCurrentBlock.sContentDisposition.bHasFileName != FALSE)
         {
-          if ((sParser.nFileUploadCounter++) >= nMaxFileUploadCount)
+          if ((sParser.nFileUploadCounter++) >= (SIZE_T)dwMaxFilesCount)
           {
             MarkEntityAsTooLarge(); //too many file uploads
           }
           //switch to file container
           if (IsEntityTooLarge() == FALSE)
           {
-            dw = ::GetCurrentProcessId();
-            nHash = fnv_64a_buf(&dw, sizeof(dw), FNV1A_64_INIT);
-#pragma warning(suppress : 28159)
-            dw = ::GetTickCount();
-            nHash = fnv_64a_buf(&dw, sizeof(dw), nHash);
-            k = (SIZE_T)this;
-            nHash = fnv_64a_buf(&k, sizeof(k), nHash);
-            nHash = fnv_64a_buf(&(sParser.nFileUploadCounter), sizeof(sParser.nFileUploadCounter), nHash);
-            if (cStrTempW.Format(L"%stmp%016I64x", (LPWSTR)cStrTempFolderW, (ULONGLONG)nHash) == FALSE)
+            if (cDownloadStartedCallback)
             {
-              hRes = E_OUTOFMEMORY;
-              goto done;
+              LPCWSTR sW = (LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrFileNameW);
+              hRes = cDownloadStartedCallback(&(sParser.cFileH), sW, lpUserData);
+              if (SUCCEEDED(hRes) && (!(sParser.cFileH)))
+                hRes = MX_HRESULT_FROM_WIN32(ERROR_FILE_TOO_LARGE);
             }
-            sParser.cFileH.Attach(::CreateFileW((LPWSTR)cStrTempW, GENERIC_READ|GENERIC_WRITE, _SHARING_MODE, NULL,
-                                                CREATE_ALWAYS, _ATTRIBUTES, NULL));
-            if (!(sParser.cFileH))
+            else
             {
-              hRes = MX_HRESULT_FROM_LASTERROR();
-              goto done;
+              hRes = MX_HRESULT_FROM_WIN32(ERROR_FILE_TOO_LARGE);
             }
+            if (FAILED(hRes))
+              goto done;
           }
         }
         else
@@ -700,7 +647,7 @@ HRESULT CHttpBodyParserMultipartFormData::AccumulateData(_In_ CHAR chA)
   sParser.aTempBuf[sParser.nUsedTempBuf++] = (BYTE)chA;
   if (!(sParser.cFileH))
   {
-    if (sParser.cStrCurrLineA.GetLength() < nMaxNonFileFormFieldsDataSize)
+    if (sParser.cStrCurrLineA.GetLength() < (SIZE_T)dwMaxFieldSize)
     {
       if (sParser.cStrCurrLineA.ConcatN(&chA, 1) == FALSE)
         return E_OUTOFMEMORY;
@@ -712,7 +659,7 @@ HRESULT CHttpBodyParserMultipartFormData::AccumulateData(_In_ CHAR chA)
   }
   else
   {
-    if ((++sParser.nFileUploadSize) < nMaxFileUploadSize)
+    if ((++sParser.nFileUploadSize) < ullMaxFileSize)
     {
       //flush current data?
       if (sParser.nUsedTempBuf >= sizeof(sParser.aTempBuf))

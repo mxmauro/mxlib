@@ -34,25 +34,23 @@ namespace MX {
 class CHttpBodyParserUrlEncodedForm : public CHttpBodyParserFormBase
 {
 public:
-  CHttpBodyParserUrlEncodedForm();
+  CHttpBodyParserUrlEncodedForm(_In_ DWORD dwMaxFieldSize=256000);
   ~CHttpBodyParserUrlEncodedForm();
 
 protected:
-  HRESULT Initialize(_In_ CPropertyBag &cPropBag, _In_ CHttpCommon &cHttpCmn);
+  HRESULT Initialize(_In_ CHttpCommon &cHttpCmn);
   HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
 
 private:
   typedef enum {
     StateNameStart,
     StateName,
-
     StateValue,
-
     StateDone,
     StateError
   } eState;
 
-  SIZE_T nMaxNonFileFormFieldsDataSize;
+  DWORD dwMaxFieldSize;
 
   struct {
     eState nState;

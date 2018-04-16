@@ -38,11 +38,6 @@
 
 //-----------------------------------------------------------
 
-#define MX_HTTP_SERVER_RequestTimeoutMs               "HTTP_SERVER_RequestTimeoutMs"
-#define MX_HTTP_SERVER_RequestTimeoutMs_DEFVAL        60000
-
-//-----------------------------------------------------------
-
 namespace MX {
 
 class CHttpServer : public virtual CBaseMemObj, private CCriticalSection
@@ -53,7 +48,7 @@ public:
 
   //--------
 
-  typedef Callback<HRESULT (_In_ CPropertyBag &cPropBag, _Out_ CRequest **lplpRequest)> OnNewRequestObjectCallback;
+  typedef Callback<HRESULT (_Out_ CRequest **lplpRequest)> OnNewRequestObjectCallback;
   typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _In_ CRequest *lpRequest,
                             _Inout_ CHttpBodyParserBase *&lpBodyParser)> OnRequestHeadersReceivedCallback;
   typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _In_ CRequest *lpRequest)> OnRequestCompletedCallback;
@@ -63,8 +58,17 @@ public:
   //--------
 
 public:
-  CHttpServer(_In_ CSockets &cSocketMgr, _In_ CPropertyBag &cPropBag);
+  CHttpServer(_In_ CSockets &cSocketMgr);
   ~CHttpServer();
+
+  VOID SetOption_MaxRequestTimeoutMs(_In_ DWORD dwTimeoutMs);
+  VOID SetOption_MaxHeaderSize(_In_ DWORD dwSize);
+  VOID SetOption_MaxFieldSize(_In_ DWORD dwSize);
+  VOID SetOption_MaxFileSize(_In_ ULONGLONG ullSize);
+  VOID SetOption_MaxFilesCount(_In_ DWORD dwCount);
+  BOOL SetOption_TemporaryFolder(_In_opt_z_ LPCWSTR szFolderW);
+  VOID SetOption_MaxBodySizeInMemory(_In_ DWORD dwSize);
+  VOID SetOption_MaxBodySize(_In_ ULONGLONG ullSize);
 
   VOID On(_In_ OnNewRequestObjectCallback cNewRequestObjectCallback);
   VOID On(_In_ OnRequestHeadersReceivedCallback cRequestHeadersReceivedCallback);
@@ -86,7 +90,7 @@ public:
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CRequest);
   protected:
-    CRequest(_In_ CPropertyBag &cPropBag);
+    CRequest();
   public:
     ~CRequest();
 
@@ -217,8 +221,12 @@ public:
     LONG volatile nFlags;
 
     struct tagRequest {
-      tagRequest(_In_ CPropertyBag &cPropBag) : cHttpCmn(TRUE, cPropBag)
-        { };
+      tagRequest() : cHttpCmn(TRUE)
+        {
+        _InterlockedExchange(&(sTimeout.nMutex), 0);
+        liLastRead.QuadPart = 0ui64;
+        return;
+        };
 
       CUrl cUrl;
       CStringA cStrMethodA;
@@ -231,8 +239,13 @@ public:
     } sRequest;
 
     struct tagResponse {
-      tagResponse(_In_ CPropertyBag &cPropBag) : cHttpCmn(FALSE, cPropBag)
-        { };
+      tagResponse() : cHttpCmn(FALSE)
+        {
+        nStatus = 0;
+        bLastStreamIsData = FALSE;
+        szMimeTypeHintA = NULL;
+        return;
+        };
 
       LONG nStatus;
       CStringA cStrReasonA;
@@ -279,10 +292,20 @@ private:
 
   VOID OnRequestDestroyed(_In_ CRequest *lpRequest);
 
+  HRESULT OnDownloadStarted(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW, _In_ LPVOID lpUserParam);
+
 private:
   CSockets &cSocketMgr;
-  CPropertyBag &cPropBag;
-  DWORD dwRequestTimeoutMs;
+
+  DWORD dwMaxRequestTimeoutMs;
+  DWORD dwMaxHeaderSize;
+  DWORD dwMaxFieldSize;
+  ULONGLONG ullMaxFileSize;
+  DWORD dwMaxFilesCount;
+  CStringW cStrTemporaryFolderW;
+  DWORD dwMaxBodySizeInMemory;
+  ULONGLONG ullMaxBodySize;
+
   struct {
     LONG volatile nRwMutex;
     CIpcSslLayer::eProtocol nProtocol;

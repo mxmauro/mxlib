@@ -40,7 +40,7 @@ public:
   class CRequireModuleContext;
   class CJsRequestRequireModuleContext;
 
-  typedef Callback<HRESULT (_In_ CPropertyBag &cPropBag, _Out_ CJsRequest **lplpRequest)> OnNewRequestObjectCallback;
+  typedef Callback<HRESULT (_Out_ CJsRequest **lplpRequest)> OnNewRequestObjectCallback;
 
   typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CJsRequest *lpRequest,
                             _In_ CJavascriptVM &cJvm, _Inout_ CStringA &cStrCodeA)> OnRequestCallback;
@@ -60,8 +60,17 @@ public:
   //--------
 
 public:
-  CJsHttpServer(_In_ MX::CSockets &cSocketMgr, _In_ MX::CPropertyBag &cPropBag);
+  CJsHttpServer(_In_ MX::CSockets &cSocketMgr);
   ~CJsHttpServer();
+
+  VOID SetOption_MaxRequestTimeoutMs(_In_ DWORD dwTimeoutMs);
+  VOID SetOption_MaxHeaderSize(_In_ DWORD dwSize);
+  VOID SetOption_MaxFieldSize(_In_ DWORD dwSize);
+  VOID SetOption_MaxFileSize(_In_ ULONGLONG ullSize);
+  VOID SetOption_MaxFilesCount(_In_ DWORD dwCount);
+  BOOL SetOption_TemporaryFolder(_In_opt_z_ LPCWSTR szFolderW);
+  VOID SetOption_MaxBodySizeInMemory(_In_ DWORD dwSize);
+  VOID SetOption_MaxBodySize(_In_ ULONGLONG ullSize);
 
   VOID On(_In_ OnNewRequestObjectCallback cNewRequestObjectCallback);
   VOID On(_In_ OnRequestCallback cRequestCallback);
@@ -83,14 +92,14 @@ public:
   static CJsRequest* GetServerRequestFromContext(_In_ DukTape::duk_context *lpCtx);
 
 protected:
-  virtual HRESULT OnNewRequestObject(_In_ CPropertyBag &cPropBag, _Out_ CHttpServer::CRequest **lplpRequest);
+  virtual HRESULT OnNewRequestObject(_Out_ CHttpServer::CRequest **lplpRequest);
 
 public:
   class CJsRequest : public CHttpServer::CRequest
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CJsRequest);
   protected:
-    CJsRequest(_In_ CPropertyBag &cPropBag);
+    CJsRequest();
   public:
     ~CJsRequest();
 
@@ -126,7 +135,6 @@ private:
 
 private:
   CSockets &cSocketMgr;
-  CPropertyBag &cPropBag;
   CHttpServer cHttpServer;
   //----
   BOOL bShowStackTraceOnError;

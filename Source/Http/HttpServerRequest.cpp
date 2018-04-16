@@ -31,8 +31,7 @@ static const LPCSTR szServerInfoA = "MX-Library";
 
 namespace MX {
 
-CHttpServer::CRequest::CRequest(_In_ CPropertyBag &_cPropBag) : CIpc::CUserData(), TLnkLstNode<CRequest>(),
-                                                                sRequest(_cPropBag), sResponse(_cPropBag)
+CHttpServer::CRequest::CRequest() : CIpc::CUserData(), TLnkLstNode<CRequest>(), sRequest(), sResponse()
 {
   _InterlockedExchange(&nMutex, 0);
   lpHttpServer = NULL;

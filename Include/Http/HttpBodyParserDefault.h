@@ -36,7 +36,12 @@ namespace MX {
 class CHttpBodyParserDefault : public CHttpBodyParserBase
 {
 public:
-  CHttpBodyParserDefault();
+  typedef Callback<HRESULT (_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW,
+                            _In_opt_ LPVOID lpUserParam)> OnDownloadStartedCallback;
+
+public:
+  CHttpBodyParserDefault(_In_ OnDownloadStartedCallback cDownloadStartedCallback, _In_opt_ LPVOID lpUserParam,
+                         _In_ DWORD dwMaxBodySizeInMemory=32768, _In_ ULONGLONG ullMaxBodySize=10ui64*1048576ui64);
   ~CHttpBodyParserDefault();
 
   virtual LPCSTR GetType() const
@@ -54,8 +59,10 @@ public:
 
   HRESULT ToString(_Inout_ CStringA &cStrDestA);
 
+  VOID KeepFile();
+
 protected:
-  HRESULT Initialize(_In_ CPropertyBag &cPropBag, _In_ CHttpCommon &cHttpCmn);
+  HRESULT Initialize(_In_ CHttpCommon &cHttpCmn);
   HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
 
 private:
@@ -66,9 +73,10 @@ private:
     StateError
   } eState;
 
-  int nMaxBodySizeInMemory;
-  CStringW cStrTempFolderW;
-  ULONGLONG nMaxBodySize;
+  OnDownloadStartedCallback cDownloadStartedCallback;
+  LPVOID lpUserParam;
+  DWORD dwMaxBodySizeInMemory;
+  ULONGLONG ullMaxBodySize;
 
   struct {
     eState nState;

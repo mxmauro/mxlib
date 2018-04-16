@@ -111,12 +111,7 @@ public:
 
     __inline LPCWSTR GetFileName() const
       {
-        return (LPCWSTR)cStrFileNameW;
-      };
-
-    __inline HANDLE GetFileHandle() const
-      {
-      return hFile;
+      return (LPCWSTR)cStrFileNameW;
       };
 
     __inline SIZE_T GetSubIndexesCount() const
@@ -126,8 +121,16 @@ public:
 
     __inline CFileField* GetSubIndexAt(_In_ SIZE_T nPos) const
       {
-        return (nPos < aSubIndexesItems.GetCount()) ? aSubIndexesItems[nPos] : NULL;
+      return (nPos < aSubIndexesItems.GetCount()) ? aSubIndexesItems[nPos] : NULL;
       };
+
+    ULONGLONG GetSize() const
+      {
+      return nSize;
+      };
+
+    HRESULT Read(_Out_writes_to_(nToRead, *lpnReaded) LPVOID lpDest, _In_ ULONGLONG nOffset, _In_ SIZE_T nToRead,
+                 _Out_opt_ SIZE_T *lpnReaded=NULL);
 
   private:
     friend class CHttpBodyParserFormBase;
@@ -138,6 +141,7 @@ public:
     MX::CStringW cStrNameW, cStrFileNameW;
     MX::CStringA cStrTypeA;
     HANDLE hFile;
+    ULONGLONG nSize;
     TArrayListWithDelete<CFileField*> aSubIndexesItems;
   };
 

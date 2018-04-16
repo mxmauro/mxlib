@@ -39,7 +39,7 @@ CHttpBodyParserIgnore::~CHttpBodyParserIgnore()
   return;
 }
 
-HRESULT CHttpBodyParserIgnore::Initialize(_In_ CPropertyBag &cPropBag, _In_ CHttpCommon &cHttpCmn)
+HRESULT CHttpBodyParserIgnore::Initialize(_In_ CHttpCommon &cHttpCmn)
 {
   return S_OK;
 }

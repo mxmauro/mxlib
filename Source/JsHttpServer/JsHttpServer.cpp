@@ -28,8 +28,8 @@
 
 namespace MX {
 
-CJsHttpServer::CJsHttpServer(_In_ MX::CSockets &_cSocketMgr, _In_ MX::CPropertyBag &_cPropBag) : CBaseMemObj(),
-               cSocketMgr(_cSocketMgr), cPropBag(_cPropBag), cHttpServer(_cSocketMgr, _cPropBag)
+CJsHttpServer::CJsHttpServer(_In_ MX::CSockets &_cSocketMgr) : CBaseMemObj(), cSocketMgr(_cSocketMgr),
+                                                               cHttpServer(_cSocketMgr)
 {
   cNewRequestObjectCallback = NullCallback();
   cRequestCallback = NullCallback();
@@ -49,6 +49,53 @@ CJsHttpServer::CJsHttpServer(_In_ MX::CSockets &_cSocketMgr, _In_ MX::CPropertyB
 CJsHttpServer::~CJsHttpServer()
 {
   StopListening();
+  return;
+}
+
+VOID CJsHttpServer::SetOption_MaxRequestTimeoutMs(_In_ DWORD dwTimeoutMs)
+{
+  cHttpServer.SetOption_MaxRequestTimeoutMs(dwTimeoutMs);
+  return;
+}
+
+VOID CJsHttpServer::SetOption_MaxHeaderSize(_In_ DWORD dwSize)
+{
+  cHttpServer.SetOption_MaxHeaderSize(dwSize);
+  return;
+}
+
+VOID CJsHttpServer::SetOption_MaxFieldSize(_In_ DWORD dwSize)
+{
+  cHttpServer.SetOption_MaxFieldSize(dwSize);
+  return;
+}
+
+VOID CJsHttpServer::SetOption_MaxFileSize(_In_ ULONGLONG ullSize)
+{
+  cHttpServer.SetOption_MaxFileSize(ullSize);
+  return;
+}
+
+VOID CJsHttpServer::SetOption_MaxFilesCount(_In_ DWORD dwCount)
+{
+  cHttpServer.SetOption_MaxFilesCount(dwCount);
+  return;
+}
+
+BOOL CJsHttpServer::SetOption_TemporaryFolder(_In_opt_z_ LPCWSTR szFolderW)
+{
+  return cHttpServer.SetOption_TemporaryFolder(szFolderW);
+}
+
+VOID CJsHttpServer::SetOption_MaxBodySizeInMemory(_In_ DWORD dwSize)
+{
+  cHttpServer.SetOption_MaxBodySizeInMemory(dwSize);
+  return;
+}
+
+VOID CJsHttpServer::SetOption_MaxBodySize(_In_ ULONGLONG ullSize)
+{
+  cHttpServer.SetOption_MaxBodySize(ullSize);
   return;
 }
 

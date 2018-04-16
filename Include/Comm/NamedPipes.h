@@ -28,19 +28,16 @@
 
 //-----------------------------------------------------------
 
-#define MX_NAMEDPIPES_PROPERTY_MaxWaitTimeoutMs         "NAMEDPIPES_MaxWaitTimeoutMs"
-#define MX_NAMEDPIPES_PROPERTY_MaxWaitTimeoutMs_DEFVAL  1000
-
-//-----------------------------------------------------------
-
 namespace MX {
 
 class CNamedPipes : public CIpc
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CNamedPipes);
 public:
-  CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool, _In_ CPropertyBag &cPropBag);
+  CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool);
   ~CNamedPipes();
+
+  VOID SetOption_MaxWaitTimeoutMs(_In_ DWORD dwTimeoutMs);
 
   HRESULT CreateListener(_In_z_ LPCSTR szServerNameA, _In_ OnCreateCallback cCreateCallback,
                          _In_opt_z_ LPCWSTR szSecutityDescriptorA=NULL);

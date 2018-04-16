@@ -57,14 +57,32 @@ HRESULT CHttpHeaderRespETag::Parse(_In_z_ LPCSTR szValueA)
     _bIsWeak = TRUE;
   }
   //get entity
-  szValueA = Advance(szStartA = szValueA, " \t");
-  if (szValueA == szStartA)
-    return MX_E_InvalidData;
-  szEndA = szValueA;
+  if (*szValueA != '"')
+  {
+    szValueA = Advance(szStartA = szValueA, " \t");
+    if (szValueA == szStartA)
+      return MX_E_InvalidData;
+    szEndA = szValueA;
+  }
+  else
+  {
+    szStartA = ++szValueA;
+    while (*szValueA != 0 && *szValueA != '"')
+    {
+      if (*szValueA == L'\\' && szValueA[1] != 0)
+        szValueA++;
+      szValueA++;
+    }
+    if (*szValueA != '"')
+      return MX_E_InvalidData;
+    szEndA = szValueA++;
+  }
   //skip spaces and check for end
   if (*SkipSpaces(szValueA) != 0)
     return MX_E_InvalidData;
   //set entity name
+  if (cStrTempA.CopyN(szStartA, (SIZE_T)(szEndA-szStartA)) == FALSE)
+    return E_OUTOFMEMORY;
   hRes = SetEntity((LPSTR)cStrTempA);
   if (FAILED(hRes))
     return hRes;
@@ -103,84 +121,32 @@ HRESULT CHttpHeaderRespETag::Build(_Inout_ CStringA &cStrDestA)
 
 HRESULT CHttpHeaderRespETag::SetEntity(_In_z_ LPCSTR szEntityA)
 {
-  LPCSTR szStartA, szEndA;
-  CStringA cStrTempA;
+  MX::CStringW cStrTempW;
   HRESULT hRes;
 
   if (szEntityA == NULL)
     return E_POINTER;
-  //skip spaces
-  szEntityA = CHttpHeaderBase::SkipSpaces(szEntityA);
-  //get entity
-  if (szEntityA[0] == '"')
-  {
-    szEntityA = CHttpHeaderBase::Advance(szStartA = ++szEntityA, "\"");
-    if (*szEntityA != '"')
-      return MX_E_InvalidData;
-    szEndA = szEntityA;
-    szEntityA++;
-  }
-  else if (szEntityA[0] != '*')
-  {
-    szEntityA = CHttpHeaderBase::Advance(szStartA = szEntityA, " \t;,");
-    if (szEntityA == szStartA)
-      return MX_E_InvalidData;
-    szEndA = szEntityA;
-  }
-  else
-  {
-    szStartA = szEntityA++;
-    szEndA = szEntityA;
-  }
-  if (szEndA == szStartA)
-    return MX_E_InvalidData;
-  //skip spaces and check for end
-  if (*CHttpHeaderBase::SkipSpaces(szEntityA) != 0)
-    return MX_E_InvalidData;
-  //set new value
-  if (cStrTempA.CopyN(szStartA, (SIZE_T)(szEndA-szStartA)) == FALSE)
-    return E_OUTOFMEMORY;
-  hRes = Utf8_Decode(cStrEntityW, (LPSTR)cStrTempA);
+  hRes = Utf8_Decode(cStrTempW, szEntityA);
+  if (FAILED(hRes))
+    return hRes;
   //done
-  return hRes;
+  return SetEntity((LPCWSTR)cStrTempW);
 }
 
 HRESULT CHttpHeaderRespETag::SetEntity(_In_z_ LPCWSTR szEntityW)
 {
-  LPCWSTR szStartW, szEndW;
+  LPCWSTR sW;
 
   if (szEntityW == NULL)
     return E_POINTER;
-  //skip spaces
-  szEntityW = CHttpHeaderBase::SkipSpaces(szEntityW);
-  //get entity
-  if (szEntityW[0] == L'"')
+  //check for invalid characters
+  for (sW=szEntityW; *sW!=0; sW++)
   {
-    szEntityW = CHttpHeaderBase::Advance(szStartW = ++szEntityW, L"\"");
-    if (*szEntityW != L'"')
+    if (*sW < 32 || *sW == L'"')
       return MX_E_InvalidData;
-    szEndW = szEntityW;
-    szEntityW++;
   }
-  else if (szEntityW[0] != L'*')
-  {
-    szEntityW = CHttpHeaderBase::Advance(szStartW = szEntityW, L" \t;,");
-    if (szEntityW == szStartW)
-      return MX_E_InvalidData;
-    szEndW = szEntityW;
-  }
-  else
-  {
-    szStartW = szEntityW++;
-    szEndW = szEntityW;
-  }
-  if (szEndW == szStartW)
-    return MX_E_InvalidData;
-  //skip spaces and check for end
-  if (*CHttpHeaderBase::SkipSpaces(szEntityW) != 0)
-    return MX_E_InvalidData;
-  //set new value
-  if (cStrEntityW.CopyN(szStartW, (SIZE_T)(szEndW-szStartW)) == FALSE)
+  //check completed
+  if (cStrEntityW.Copy(szEntityW) == FALSE)
     return E_OUTOFMEMORY;
   //done
   return S_OK;

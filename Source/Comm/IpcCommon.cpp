@@ -43,15 +43,14 @@
 
 namespace MX {
 
-CIpc::CIpc(_In_ CIoCompletionPortThreadPool &_cDispatcherPool, _In_ CPropertyBag &_cPropBag) : CBaseMemObj(),
-      cDispatcherPool(_cDispatcherPool), cPropBag(_cPropBag)
+CIpc::CIpc(_In_ CIoCompletionPortThreadPool &_cDispatcherPool) : CBaseMemObj(), cDispatcherPool(_cDispatcherPool)
 {
-  dwPacketSize = 1024;
-  dwReadAhead = 1;
-  dwMaxFreePackets = MX_IPC_PROPERTY_MaxFreePackets_DEFVAL;
-  dwMaxWriteTimeoutMs = MX_IPC_PROPERTY_MaxWriteTimeoutMs_DEFVAL;
+  dwPacketSize = 4096;
+  dwReadAhead = 4;
+  dwMaxFreePackets = 4096;
+  dwMaxWriteTimeoutMs = 0;
   bDoZeroReads = TRUE;
-  dwMaxOutgoingPackets = MX_IPC_PROPERTY_OutgoingPacketsLimit_DEFVAL;
+  dwMaxOutgoingPackets = 16;
   //----
   cDispatcherPoolPacketCallback = MX_BIND_MEMBER_CALLBACK(&CIpc::OnDispatcherPacket, this);
   _InterlockedExchange(&nInitShutdownMutex, 0);
@@ -67,6 +66,86 @@ CIpc::~CIpc()
   return;
 }
 
+VOID CIpc::SetOption_PacketSize(_In_ DWORD dwSize)
+{
+  CFastLock cInitShutdownLock(&nInitShutdownMutex);
+
+  if (cShuttingDownEv.Get() == NULL)
+  {
+    dwPacketSize = dwSize;
+    if (dwPacketSize < 1024)
+      dwPacketSize = 1024;
+    else if (dwPacketSize > 32768)
+      dwPacketSize = 32768;
+  }
+  return;
+}
+
+VOID CIpc::SetOption_ReadAheadCount(_In_ DWORD dwCount)
+{
+  CFastLock cInitShutdownLock(&nInitShutdownMutex);
+
+  if (cShuttingDownEv.Get() == NULL)
+  {
+    dwReadAhead = dwCount;
+    if (dwReadAhead < 1)
+      dwReadAhead = 1;
+    else if (dwReadAhead > 16)
+      dwReadAhead = 16;
+  }
+  return;
+}
+
+VOID CIpc::SetOption_MaxFreePacketsCount(_In_ DWORD dwCount)
+{
+  CFastLock cInitShutdownLock(&nInitShutdownMutex);
+
+  if (cShuttingDownEv.Get() == NULL)
+  {
+    dwMaxFreePackets = dwCount;
+    if (dwMaxFreePackets > 102400)
+      dwMaxFreePackets = 102400;
+  }
+  return;
+}
+
+VOID CIpc::SetOption_MaxWriteTimeoutMs(_In_ DWORD dwTimeoutMs)
+{
+  CFastLock cInitShutdownLock(&nInitShutdownMutex);
+
+  if (cShuttingDownEv.Get() == NULL)
+  {
+    dwMaxWriteTimeoutMs = dwTimeoutMs;
+    if (dwMaxWriteTimeoutMs != 0 && dwMaxWriteTimeoutMs < 100)
+      dwMaxWriteTimeoutMs = 100;
+  }
+  return;
+}
+
+VOID CIpc::SetOption_EnableZeroReads(_In_ BOOL bEnable)
+{
+  CFastLock cInitShutdownLock(&nInitShutdownMutex);
+
+  if (cShuttingDownEv.Get() == NULL)
+  {
+    bDoZeroReads = bEnable;
+  }
+  return;
+}
+
+VOID CIpc::SetOption_OutgoingPacketsLimitCount(_In_ DWORD dwCount)
+{
+  CFastLock cInitShutdownLock(&nInitShutdownMutex);
+
+  if (cShuttingDownEv.Get() == NULL)
+  {
+    dwMaxOutgoingPackets = dwCount;
+    if (dwMaxOutgoingPackets < 2)
+      dwMaxOutgoingPackets = 2;
+  }
+  return;
+}
+
 VOID CIpc::On(_In_ OnEngineErrorCallback _cEngineErrorCallback)
 {
   cEngineErrorCallback = _cEngineErrorCallback;
@@ -76,32 +155,9 @@ VOID CIpc::On(_In_ OnEngineErrorCallback _cEngineErrorCallback)
 HRESULT CIpc::Initialize()
 {
   CFastLock cInitShutdownLock(&nInitShutdownMutex);
-  DWORD dw;
   HRESULT hRes;
 
   InternalFinalize();
-
-  //read properties from property bag
-  cPropBag.GetDWord(MX_IPC_PROPERTY_PacketSize, dwPacketSize, MX_IPC_PROPERTY_PacketSize_DEFVAL);
-  if (dwPacketSize < 1024)
-    dwPacketSize = 1024;
-  else if (dwPacketSize > 32768)
-    dwPacketSize = 32768;
-  cPropBag.GetDWord(MX_IPC_PROPERTY_ReadAhead, dwReadAhead, MX_IPC_PROPERTY_ReadAhead_DEFVAL);
-  if (dwReadAhead < 1)
-    dwReadAhead = 1;
-  else if (dwReadAhead > 16)
-    dwReadAhead = 16;
-  cPropBag.GetDWord(MX_IPC_PROPERTY_MaxFreePackets, dwMaxFreePackets, MX_IPC_PROPERTY_MaxFreePackets_DEFVAL);
-  cPropBag.GetDWord(MX_IPC_PROPERTY_MaxWriteTimeoutMs, dwMaxWriteTimeoutMs, MX_IPC_PROPERTY_MaxWriteTimeoutMs_DEFVAL);
-  if (dwMaxWriteTimeoutMs != 0 && dwMaxWriteTimeoutMs < 100)
-    dwMaxWriteTimeoutMs = 100;
-  cPropBag.GetDWord(MX_IPC_PROPERTY_DoZeroReads, dw, MX_IPC_PROPERTY_DoZeroReads_DEFVAL);
-  bDoZeroReads = (dw != 0) ? TRUE : FALSE;
-  cPropBag.GetDWord(MX_IPC_PROPERTY_OutgoingPacketsLimit, dwMaxOutgoingPackets,
-                    MX_IPC_PROPERTY_OutgoingPacketsLimit_DEFVAL);
-  if (dwMaxOutgoingPackets < 2)
-    dwMaxOutgoingPackets = 2;
 
   //create shutdown event
   hRes = cShuttingDownEv.Create(TRUE, FALSE);

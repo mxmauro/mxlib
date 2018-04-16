@@ -31,7 +31,7 @@
 class CTestJsRequest : public MX::CJsHttpServer::CJsRequest
 {
 public:
-  CTestJsRequest(_In_ MX::CPropertyBag &cPropBag) : MX::CJsHttpServer::CJsRequest(cPropBag)
+  CTestJsRequest() : MX::CJsHttpServer::CJsRequest()
     { };
 
 public:
@@ -41,7 +41,7 @@ public:
 //-----------------------------------------------------------
 
 static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode);
-static HRESULT OnNewRequestObject(_In_ MX::CPropertyBag &cPropBag, _Out_ MX::CJsHttpServer::CJsRequest **lplpRequest);
+static HRESULT OnNewRequestObject(_Out_ MX::CJsHttpServer::CJsRequest **lplpRequest);
 static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CJsRequest *lpRequest,
                          _Inout_ MX::CJavascriptVM &cJvm, _Inout_ MX::CStringA &cStrCodeA);
 static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CJsRequest *lpRequest,
@@ -61,21 +61,18 @@ static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ L
 int TestJsHttpServer(_In_ BOOL bUseSSL)
 {
   MX::CIoCompletionPortThreadPool cDispatcherPool;
-  MX::CPropertyBag cPropBag;
-  MX::CSockets cSckMgr(cDispatcherPool, cPropBag);
-  MX::CJsHttpServer cJsHttpServer(cSckMgr, cPropBag);
+  MX::CSockets cSckMgr(cDispatcherPool);
+  MX::CJsHttpServer cJsHttpServer(cSckMgr);
   MX::CSslCertificate cSslCert;
   MX::CCryptoRSA cSslPrivateKey;
   HRESULT hRes;
 
   DeleteSessionFiles();
 
-  hRes = cPropBag.SetDWord(MX_SOCKETS_PROPERTY_MaxAcceptsToPost, 24);
-  if (SUCCEEDED(hRes))
-    hRes = cPropBag.SetDWord(MX_HTTP_BODYPARSER_PROPERTY_MaxFileUploadCount, 10);
+  cSckMgr.SetOption_MaxAcceptsToPost(24);
+  cJsHttpServer.SetOption_MaxFilesCount(10);
 
-  if (SUCCEEDED(hRes))
-    hRes = cDispatcherPool.Initialize();
+  hRes = cDispatcherPool.Initialize();
   if (SUCCEEDED(hRes))
   {
     cSckMgr.On(MX_BIND_CALLBACK(&OnEngineError));
@@ -133,9 +130,9 @@ static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode)
   return;
 }
 
-static HRESULT OnNewRequestObject(_In_ MX::CPropertyBag &cPropBag, _Out_ MX::CJsHttpServer::CJsRequest **lplpRequest)
+static HRESULT OnNewRequestObject(_Out_ MX::CJsHttpServer::CJsRequest **lplpRequest)
 {
-  *lplpRequest = MX_DEBUG_NEW CTestJsRequest(cPropBag);
+  *lplpRequest = MX_DEBUG_NEW CTestJsRequest();
   return ((*lplpRequest) != NULL) ? S_OK : E_OUTOFMEMORY;
 }
 

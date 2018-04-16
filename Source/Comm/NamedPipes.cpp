@@ -58,11 +58,10 @@ static VOID GenerateUniquePipeName(_Out_ LPWSTR szNameW, _In_ SIZE_T nNameSize, 
 
 namespace MX {
 
-CNamedPipes::CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool, _In_ CPropertyBag &cPropBag) :
-             CIpc(cDispatcherPool, cPropBag)
+CNamedPipes::CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDispatcherPool)
 {
   _InterlockedExchange(&nRemoteConnCounter, 0);
-  dwMaxWaitTimeoutMs = MX_NAMEDPIPES_PROPERTY_MaxWaitTimeoutMs_DEFVAL;
+  dwMaxWaitTimeoutMs = 1000;
   lpSecDescr = (PSECURITY_DESCRIPTOR)((::IsWindowsVistaOrGreater() != FALSE) ? aSecDescriptorVistaOrLater :
                                                                                aSecDescriptorXP);
   return;
@@ -71,6 +70,21 @@ CNamedPipes::CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool, _In_
 CNamedPipes::~CNamedPipes()
 {
   Finalize();
+  return;
+}
+
+VOID CNamedPipes::SetOption_MaxWaitTimeoutMs(_In_ DWORD dwTimeoutMs)
+{
+  CFastLock cInitShutdownLock(&nInitShutdownMutex);
+
+  if (cShuttingDownEv.Get() == NULL)
+  {
+    dwMaxWaitTimeoutMs = dwTimeoutMs;
+    if (dwMaxWaitTimeoutMs < 100)
+      dwMaxWaitTimeoutMs = 100;
+    else if (dwMaxWaitTimeoutMs > 180000)
+      dwMaxWaitTimeoutMs = 180000;
+  }
   return;
 }
 
@@ -322,13 +336,6 @@ HRESULT CNamedPipes::ImpersonateConnectionClient(_In_ HANDLE h)
 
 HRESULT CNamedPipes::OnInternalInitialize()
 {
-  cPropBag.GetDWord(MX_NAMEDPIPES_PROPERTY_MaxWaitTimeoutMs, dwMaxWaitTimeoutMs,
-                    MX_NAMEDPIPES_PROPERTY_MaxWaitTimeoutMs_DEFVAL);
-  if (dwMaxWaitTimeoutMs < 100)
-    dwMaxWaitTimeoutMs = 100;
-  else if (dwMaxWaitTimeoutMs > 180000)
-    dwMaxWaitTimeoutMs = 180000;
-  //done
   return S_OK;
 }
 

@@ -104,7 +104,10 @@ HRESULT CTimedEventQueue::Add(_In_ CEvent *lpEvent, _In_ DWORD dwTimeoutMs)
       if (nDueTime < MINIMUM_DUE_TIME_CHANGE_THRESHOLD_MS)
         return S_OK; //don't requeue if due time difference is minimal
     }
-    else if (lpEvent->GetTree() == &cRemovedTree)
+    lpEvent->nDueTime = nDueTime;
+    lpEvent->SetState(CEvent::StateQueued);
+    lpEvent->ResetCancelMark();
+    if (lpEvent->GetTree() == &cQueuedEventsTree || lpEvent->GetTree() == &cRemovedTree)
     {
       //requeue
       lpEvent->RemoveNode();
@@ -115,30 +118,29 @@ HRESULT CTimedEventQueue::Add(_In_ CEvent *lpEvent, _In_ DWORD dwTimeoutMs)
       cQueuedEventsTree.Insert(lpEvent);
       lpEvent->AddRef();
     }
-    lpEvent->nDueTime = nDueTime;
-    lpEvent->SetState(CEvent::StateQueued);
-    lpEvent->ResetCancelMark();
   }
   //done
   cQueueChangedEv.Set();
   return S_OK;
 }
 
-HRESULT CTimedEventQueue::Remove(_In_ CEvent *lpEvent, _In_opt_ BOOL bMarkAsCanceled)
+VOID CTimedEventQueue::Remove(_In_ CEvent *lpEvent, _In_opt_ BOOL bMarkAsCanceled)
 {
-  CFastLock cLock1(&nQueuedEventsTreeMutex);
-  CFastLock cLock2(&nRemovedTreeMutex);
+  if (lpEvent != NULL)
+  {
+    CFastLock cLock1(&nQueuedEventsTreeMutex);
+    CFastLock cLock2(&nRemovedTreeMutex);
 
-  if (lpEvent == NULL)
-    return E_POINTER;
-  if (lpEvent->GetTree() != &cQueuedEventsTree)
-    return MX_E_NotFound;
-  if (bMarkAsCanceled != FALSE)
-    lpEvent->MarkAsCanceled();
-  lpEvent->RemoveNode();
-  cRemovedTree.Insert(lpEvent);
-  cQueueChangedEv.Set();
-  return S_OK;
+    if (lpEvent->GetTree() == &cQueuedEventsTree)
+    {
+      if (bMarkAsCanceled != FALSE)
+        lpEvent->MarkAsCanceled();
+      lpEvent->RemoveNode();
+      cRemovedTree.Insert(lpEvent);
+      cQueueChangedEv.Set();
+    }
+  }
+  return;
 }
 
 VOID CTimedEventQueue::RemoveAll()
@@ -155,6 +157,33 @@ VOID CTimedEventQueue::RemoveAll()
   }
   cQueueChangedEv.Set();
   return;
+}
+
+BOOL CTimedEventQueue::ChangeTimeout(_In_ CEvent *lpEvent, _In_ DWORD dwTimeoutMs)
+{
+  CFastLock cLock1(&nQueuedEventsTreeMutex);
+  CFastLock cLock2(&nRemovedTreeMutex);
+  ULARGE_INTEGER liCurrTime;
+  ULONGLONG nDueTime, nDiff;
+
+  if (lpEvent == NULL)
+    return FALSE;
+  if (lpEvent->GetTree() != &cQueuedEventsTree)
+    return FALSE;
+  //get current time
+  MxNtQuerySystemTime(&liCurrTime);
+  //calculate due time
+  nDueTime = MX_100NS_TO_MILLISECONDS(liCurrTime.QuadPart) + (ULONGLONG)dwTimeoutMs;
+  //re-add to queue
+  nDiff = (nDueTime > lpEvent->nDueTime) ? (nDueTime - lpEvent->nDueTime) : (lpEvent->nDueTime - nDueTime);
+  if (nDueTime < MINIMUM_DUE_TIME_CHANGE_THRESHOLD_MS)
+    return TRUE; //don't requeue if due time difference is minimal
+  lpEvent->nDueTime = nDueTime;
+  //requeue
+  lpEvent->RemoveNode();
+  cQueuedEventsTree.Insert(lpEvent);
+  cQueueChangedEv.Set();
+  return TRUE;
 }
 
 VOID CTimedEventQueue::ThreadProc(_In_ SIZE_T nParam)

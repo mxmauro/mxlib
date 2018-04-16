@@ -27,23 +27,17 @@
 
 //-----------------------------------------------------------
 
-#ifdef _DEBUG
-  #define _SHARING_MODE FILE_SHARE_READ
-  #define _ATTRIBUTES  (FILE_ATTRIBUTE_NORMAL)
-#else //_DEBUG
-  #define _SHARING_MODE 0
-  #define _ATTRIBUTES  (FILE_ATTRIBUTE_NORMAL|FILE_ATTRIBUTE_TEMPORARY|FILE_FLAG_DELETE_ON_CLOSE)
-#endif //_DEBUG
-
-//-----------------------------------------------------------
-
 namespace MX {
 
-CHttpBodyParserDefault::CHttpBodyParserDefault() : CHttpBodyParserBase()
+CHttpBodyParserDefault::CHttpBodyParserDefault(_In_ OnDownloadStartedCallback _cDownloadStartedCallback,
+                                               _In_opt_ LPVOID _lpUserParam, _In_ DWORD _dwMaxBodySizeInMemory,
+                                               _In_ ULONGLONG _ullMaxBodySize) : CHttpBodyParserBase()
 {
   _InterlockedExchange(&nMutex, 0);
-  nMaxBodySizeInMemory = 32768;
-  nMaxBodySize = ULONGLONG_MAX;
+  cDownloadStartedCallback = _cDownloadStartedCallback;
+  lpUserParam = _lpUserParam;
+  dwMaxBodySizeInMemory = _dwMaxBodySizeInMemory;
+  ullMaxBodySize = _ullMaxBodySize;
   nSize = 0ui64;
   nMemBufferSize = 0;
   sParser.nState = StateReading;
@@ -66,8 +60,10 @@ HRESULT CHttpBodyParserDefault::Read(_Out_writes_to_(nToRead, *lpnReaded) LPVOID
     *lpnReaded = 0;
   if (lpDest == NULL)
     return E_POINTER;
-  if (nToRead == 0 || nOffset >= nSize)
+  if (nToRead == 0)
     return S_OK;
+  if (nOffset >= nSize)
+    return MX_E_EndOfFileReached;
   //validate to-read size
   if ((ULONGLONG)nToRead > nSize - nOffset)
     nToRead = (SIZE_T)(nSize - nOffset);
@@ -78,19 +74,22 @@ HRESULT CHttpBodyParserDefault::Read(_Out_writes_to_(nToRead, *lpnReaded) LPVOID
       ULONGLONG nOfs;
       DWORD dwOfs[2];
     };
+    OVERLAPPED sOvr;
     DWORD dwToRead, dwReaded;
 
     nOfs = nOffset;
-    if (::SetFilePointer(cFileH, (LONG)dwOfs[0], (PLONG)&dwOfs[1], FILE_BEGIN) ==  INVALID_SET_FILE_POINTER)
-      return MX_HRESULT_FROM_LASTERROR();
+    MX::MemSet(&sOvr, 0, sizeof(sOvr));
     while (nToRead > 0)
     {
+      sOvr.Offset = dwOfs[0];
+      sOvr.OffsetHigh = dwOfs[1];
       dwToRead = (nToRead > 65536) ? 65536 : (DWORD)nToRead;
-      if (::ReadFile(cFileH, lpDest, dwToRead, &dwReaded, NULL) == FALSE)
+      if (::ReadFile(cFileH, lpDest, dwToRead, &dwReaded, &sOvr) == FALSE)
         return MX_HRESULT_FROM_LASTERROR();
       if (dwToRead != dwReaded)
         return MX_E_ReadFault;
       lpDest = (LPBYTE)lpDest + (SIZE_T)dwReaded;
+      nOfs += (SIZE_T)dwReaded;
       nToRead -= (SIZE_T)dwReaded;
       if (lpnReaded != NULL)
         *lpnReaded += (SIZE_T)dwReaded;
@@ -130,48 +129,22 @@ HRESULT CHttpBodyParserDefault::ToString(_Inout_ CStringA &cStrDestA)
   return hRes;
 }
 
-HRESULT CHttpBodyParserDefault::Initialize(_In_ CPropertyBag &cPropBag, _In_ CHttpCommon &cHttpCmn)
+VOID CHttpBodyParserDefault::KeepFile()
 {
-  WCHAR szTempW[MAX_PATH];
-  SIZE_T nLen;
-  DWORD dw;
-  ULONGLONG ull;
-  LPCWSTR szValueW;
-  HRESULT hRes;
+  if (cFileH.Get() != NULL)
+  {
+    MX_IO_STATUS_BLOCK sIoStatusBlock;
+    UCHAR _DeleteFile;
 
-  hRes = cPropBag.GetDWord(MX_HTTP_BODYPARSER_PROPERTY_MaxBodySizeInMemory, dw,
-                           MX_HTTP_BODYPARSER_PROPERTY_MaxBodySizeInMemory_DEFVAL);
-  if (FAILED(hRes) && hRes != MX_E_NotFound)
-    return hRes;
-  nMaxBodySizeInMemory = ((int)dw >= 0) ? (int)dw : -1;
-  //----
-  hRes = cPropBag.GetQWord(MX_HTTP_BODYPARSER_PROPERTY_MaxNonFormBodySize, ull,
-                           MX_HTTP_BODYPARSER_PROPERTY_MaxNonFormBodySize_DEFVAL);
-  if (FAILED(hRes) && hRes != MX_E_NotFound)
-    return hRes;
-  nMaxBodySize = (ull > 32768ui64) ? ull : 0ui64;
-  //----
-  hRes = cPropBag.GetString(MX_HTTP_BODYPARSER_PROPERTY_TempFolder, szValueW,
-                            MX_HTTP_BODYPARSER_PROPERTY_TempFolder_DEFVAL);
-  if (FAILED(hRes) && hRes != MX_E_NotFound)
-    return hRes;
-  if (szValueW == NULL || *szValueW == 0)
-  {
-    nLen = (SIZE_T)::GetTempPathW(MAX_PATH, szTempW);
-    if (cStrTempFolderW.Copy(szTempW) == FALSE)
-      return E_OUTOFMEMORY;
+    _DeleteFile = 0;
+    ::MxNtSetInformationFile(cFileH, &sIoStatusBlock, &_DeleteFile, (ULONG)sizeof(_DeleteFile),
+                             MxFileDispositionInformation);
   }
-  else
-  {
-    if (cStrTempFolderW.Copy(szValueW) == FALSE)
-      return E_OUTOFMEMORY;
-  }
-  nLen = cStrTempFolderW.GetLength();
-  if (nLen > 0 && ((LPWSTR)cStrTempFolderW)[nLen-1] != L'\\')
-  {
-    if (cStrTempFolderW.Concat(L"\\") == FALSE)
-      cStrTempFolderW.Empty();
-  }
+  return;
+}
+
+HRESULT CHttpBodyParserDefault::Initialize(_In_ CHttpCommon &cHttpCmn)
+{
   //done
   return S_OK;
 }
@@ -185,8 +158,7 @@ HRESULT CHttpBodyParserDefault::Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T n
     LPWSTR sW;
   };
   LPBYTE lpPtr;
-  Fnv64_t nHash;
-  DWORD dw, dwToWrite, dwWritten;
+  DWORD dwToWrite, dwWritten;
   HRESULT hRes;
 
   if (lpData == NULL && nDataSize > 0)
@@ -199,46 +171,55 @@ HRESULT CHttpBodyParserDefault::Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T n
   //end of parsing?
   if (lpData == NULL)
   {
+    //a zero-length body was sent but all the content should go to disk so create the file
+    if ((!cFileH) && dwMaxBodySizeInMemory == 0)
+    {
+      //switch to file container
+      if (cDownloadStartedCallback)
+      {
+        hRes = cDownloadStartedCallback(&cFileH, L"", lpUserParam);
+        if (SUCCEEDED(hRes) && (!cFileH))
+          hRes = MX_HRESULT_FROM_WIN32(ERROR_FILE_TOO_LARGE);
+      }
+      else
+      {
+        hRes = MX_HRESULT_FROM_WIN32(ERROR_FILE_TOO_LARGE);
+      }
+      if (FAILED(hRes))
+        goto done;
+    }
     sParser.nState = StateDone;
     return S_OK;
   }
 
-  //begin
-  hRes = S_OK;
   //check if size is greater than max size or overflow
-  if (nSize + (ULONGLONG)nDataSize >= nMaxBodySize || nSize + (ULONGLONG)nDataSize < nSize)
+  if (nSize + (ULONGLONG)nDataSize >= ullMaxBodySize || nSize + (ULONGLONG)nDataSize < nSize)
   {
     MarkEntityAsTooLarge();
-    return S_OK; //error 413 will be sent after boody is parsed
+    return S_OK; //error 413 will be sent after body is parsed
   }
 
   if (IsEntityTooLarge() != FALSE)
-    return S_OK; //error 413 will be sent after boody is parsed
+    return S_OK; //error 413 will be sent after body is parsed
 
+  //begin
+  hRes = S_OK;
   //if we are writing to memory, check if buffer threshold passed
-  if ((!cFileH) && nMaxBodySizeInMemory >= 0 && nSize + (ULONGLONG)nDataSize >= (ULONGLONG)(ULONG)nMaxBodySizeInMemory)
+  if ((!cFileH) && nSize + (ULONGLONG)nDataSize >= (ULONGLONG)dwMaxBodySizeInMemory)
   {
     //switch to file container
-    dw = ::GetCurrentProcessId();
-    nHash = fnv_64a_buf(&dw, sizeof(dw), FNV1A_64_INIT);
-#pragma warning(suppress : 28159)
-    dw = ::GetTickCount();
-    nHash = fnv_64a_buf(&dw, sizeof(dw), nHash);
-    k = (SIZE_T)this;
-    nHash = fnv_64a_buf(&k, sizeof(k), nHash);
-    if (cStrTempW.Format(L"%stmp%016I64x", (LPWSTR)cStrTempFolderW, (ULONGLONG)nHash) == FALSE)
+    if (cDownloadStartedCallback)
     {
-err_nomem:
-      hRes = E_OUTOFMEMORY;
-      goto done;
+      hRes = cDownloadStartedCallback(&cFileH, L"", lpUserParam);
+      if (SUCCEEDED(hRes) && (!cFileH))
+        hRes = MX_HRESULT_FROM_WIN32(ERROR_FILE_TOO_LARGE);
     }
-    cFileH.Attach(::CreateFileW((LPWSTR)cStrTempW, GENERIC_READ | GENERIC_WRITE, _SHARING_MODE, NULL, CREATE_ALWAYS,
-                                _ATTRIBUTES, NULL));
-    if (!cFileH)
+    else
     {
-      hRes = MX_HRESULT_FROM_LASTERROR();
-      goto done;
+      hRes = MX_HRESULT_FROM_WIN32(ERROR_FILE_TOO_LARGE);
     }
+    if (FAILED(hRes))
+      goto done;
     //move already existing in-memory data
     s = cMemBuffer.Get();
     k = (SIZE_T)nSize;
@@ -288,7 +269,11 @@ err_nomem:
   {
     //grow buffer?
     if ((ULONGLONG)nDataSize + nSize > SIZE_T_MAX)
-      goto err_nomem;
+    {
+err_nomem:
+      hRes = E_OUTOFMEMORY;
+      goto done;
+    }
     if (nDataSize + (SIZE_T)nSize > nMemBufferSize)
     {
       k = (nDataSize + (SIZE_T)nSize + 4095) & (~4095);

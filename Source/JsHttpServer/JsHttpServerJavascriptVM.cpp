@@ -27,7 +27,7 @@
 
 namespace MX {
 
-HRESULT CJsHttpServer::OnNewRequestObject(_In_ CPropertyBag &cPropBag, _Out_ CHttpServer::CRequest **lplpRequest)
+HRESULT CJsHttpServer::OnNewRequestObject(_Out_ CHttpServer::CRequest **lplpRequest)
 {
   HRESULT hRes;
 
@@ -39,13 +39,13 @@ HRESULT CJsHttpServer::OnNewRequestObject(_In_ CPropertyBag &cPropBag, _Out_ CHt
   {
     CJsRequest *lpJsRequest = NULL;
 
-    hRes = cNewRequestObjectCallback(cPropBag, &lpJsRequest);
+    hRes = cNewRequestObjectCallback(&lpJsRequest);
     if (SUCCEEDED(hRes) && lpJsRequest != NULL)
       *lplpRequest = lpJsRequest;
   }
   else
   {
-    *lplpRequest = MX_DEBUG_NEW CJsRequest(cPropBag);
+    *lplpRequest = MX_DEBUG_NEW CJsRequest();
     hRes = ((*lplpRequest) != NULL) ? S_OK : E_OUTOFMEMORY;
   }
   return hRes;

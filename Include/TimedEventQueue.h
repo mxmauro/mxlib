@@ -63,8 +63,10 @@ public:
   ~CTimedEventQueue();
 
   HRESULT Add(_In_ CEvent *lpEvent, _In_ DWORD dwTimeoutMs);
-  HRESULT Remove(_In_ CEvent *lpEvent, _In_opt_ BOOL bMarkAsCanceled=TRUE);
+  VOID Remove(_In_ CEvent *lpEvent, _In_opt_ BOOL bMarkAsCanceled=TRUE);
   VOID RemoveAll();
+
+  BOOL ChangeTimeout(_In_ CEvent *lpEvent, _In_ DWORD dwTimeoutMs);
 
 private:
   TClassWorkerThread<CTimedEventQueue> cWorkerThread;

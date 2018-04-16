@@ -30,13 +30,6 @@
 
 //-----------------------------------------------------------
 
-#define MX_SOCKETS_PROPERTY_MaxAcceptsToPost             "SOCKETS_MaxAcceptsToPost"
-#define MX_SOCKETS_PROPERTY_MaxAcceptsToPost_DEFVAL      4
-#define MX_SOCKETS_PROPERTY_MaxResolverTimeoutMs         "SOCKETS_MaxResolverTimeoutMs"
-#define MX_SOCKETS_PROPERTY_MaxResolverTimeoutMs_DEFVAL  3000
-
-//-----------------------------------------------------------
-
 namespace MX {
 
 class CHostResolver;
@@ -48,8 +41,11 @@ public:
     FamilyUnknown=0, FamilyIPv4=1, FamilyIPv6
   } eFamily;
 
-  CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool, _In_ CPropertyBag &cPropBag);
+  CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool);
   ~CSockets();
+
+  VOID SetOption_MaxAcceptsToPost(_In_ DWORD dwCount);
+  VOID SetOption_MaxResolverTimeoutMs(_In_ DWORD dwTimeoutMs);
 
   HRESULT CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
                          _In_opt_z_ LPCSTR szBindAddressA=NULL, _In_opt_ CUserData *lpUserData=NULL,

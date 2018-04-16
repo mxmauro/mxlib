@@ -39,9 +39,8 @@ static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR s
 int TestHttpServer(_In_ BOOL bUseSSL)
 {
   MX::CIoCompletionPortThreadPool cDispatcherPool;
-  MX::CPropertyBag cPropBag;
-  MX::CSockets cSckMgr(cDispatcherPool, cPropBag);
-  MX::CHttpServer cHttpServer(cSckMgr, cPropBag);
+  MX::CSockets cSckMgr(cDispatcherPool);
+  MX::CHttpServer cHttpServer(cSckMgr);
   MX::CSslCertificate cSslCert;
   MX::CCryptoRSA cSslPrivateKey;
   HRESULT hRes;

@@ -46,9 +46,6 @@
   //#define HTTP_DEBUG_OUTPUT
 #endif //_DEBUG
 
-#define MX_HTTP_MaxHeaderSize                 "HTTP_MaxHeaderSize"
-#define MX_HTTP_MaxHeaderSize_DEFVAL          16384
-
 //-----------------------------------------------------------
 
 namespace MX {
@@ -110,8 +107,10 @@ public:
   } eContentEncodingMethod;
 
 public:
-  CHttpCommon(_In_ BOOL bActAsServer, _In_ CPropertyBag &cPropBag);
+  CHttpCommon(_In_ BOOL bActAsServer);
   ~CHttpCommon();
+
+  VOID SetOption_MaxHeaderSize(_In_ DWORD dwSize);
 
   VOID ResetParser();
 
@@ -186,7 +185,7 @@ public:
 
   eState GetParserState() const;
 
-  HRESULT SetBodyParser(_In_ CHttpBodyParserBase *lpParser, _In_ CPropertyBag &cPropBag);
+  HRESULT SetBodyParser(_In_ CHttpBodyParserBase *lpParser);
   CHttpBodyParserBase* GetBodyParser() const;
 
   BOOL IsActingAsServer() const
@@ -204,8 +203,6 @@ public:
   LONG GetResponseStatus() const;
   LPCSTR GetResponseReasonA() const;
 
-  CHttpBodyParserBase* GetDefaultBodyParser();
-
   static BOOL IsValidVerb(_In_z_ LPCSTR szVerbA);
   static BOOL IsValidNameChar(_In_ CHAR chA);
 
@@ -216,6 +213,8 @@ public:
 
   static HRESULT ParseDate(_Out_ CDateTime &cDt, _In_z_ LPCSTR szDateTimeA);
 
+  static HRESULT _GetTempPath(_Out_ MX::CStringW &cStrPathW);
+
 private:
   HRESULT ParseRequestLine(_In_z_ LPCSTR szLineA);
   HRESULT ParseStatusLine(_In_z_ LPCSTR szLineA);
@@ -225,14 +224,13 @@ private:
   HRESULT FlushContent();
 
 private:
-  CPropertyBag &cPropBag;
   BOOL bActAsServer;
-  int nMaxHeaderSize;
+  DWORD dwMaxHeaderSize;
 
   struct {
     eState nState;
     CStringA cStrCurrLineA;
-    int nHeadersLen;
+    DWORD dwHeadersLen;
     struct {
       ULONGLONG nSize;
       ULONGLONG nReaded;

@@ -27,10 +27,13 @@
 #include "..\..\Include\DateTime\DateTime.h"
 #include "..\..\Include\Comm\IpcSslLayer.h"
 #include "..\..\Include\Http\Url.h"
+#include "..\..\Include\Http\HttpCommon.h"
 
 //-----------------------------------------------------------
 
 #define MAX_FORM_SIZE_4_REQUEST                 (128 * 1024)
+
+//-----------------------------------------------------------
 
 static const LPCSTR szDefaultUserAgentA = "Mozilla/5.0 (compatible; MX-Lib 1.0)";
 
@@ -38,15 +41,20 @@ static const LPCSTR szDefaultUserAgentA = "Mozilla/5.0 (compatible; MX-Lib 1.0)"
 
 namespace MX {
 
-CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr, _In_ CPropertyBag &_cPropBag) :
-             CBaseMemObj(), cSocketMgr(_cSocketMgr), cPropBag(_cPropBag), sRequest(_cPropBag), sResponse(_cPropBag)
+CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr) : CBaseMemObj(), cSocketMgr(_cSocketMgr), sRequest(), sResponse()
 {
-  dwResponseTimeoutMs = MX_HTTP_CLIENT_ResponseTimeoutMs_DEFVAL;
-  dwMaxRedirCount = MX_HTTP_CLIENT_MaxRedirectionsCount_DEFVAL;
+  dwResponseTimeoutMs = 60000;
+  dwMaxRedirCount = 10;
+  dwMaxFieldSize = 256000;
+  ullMaxFileSize = 2097152ui64;
+  dwMaxFilesCount = 4;
+  dwMaxBodySizeInMemory = 32768;
+  ullMaxBodySize = 10485760ui64;
   //----
   RundownProt_Initialize(&nRundownLock);
   nState = StateClosed;
-  nOptionFlags = (int)(OptionKeepConnectionOpen | OptionAcceptCompressedContent);
+  bKeepConnectionOpen = TRUE;
+  bAcceptCompressedContent = TRUE;
   hConn = NULL;
   hLastErrorCode = S_OK;
   sRedirect.dwRedirectCounter = 0;
@@ -54,6 +62,7 @@ CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr, _In_ CPropertyBag &_cPropBa
   cHeadersReceivedCallback = NullCallback();
   cDocumentCompletedCallback = NullCallback();
   cErrorCallback = NullCallback();
+  cQueryCertificatesCallback = NullCallback();
   return;
 }
 
@@ -91,6 +100,140 @@ CHttpClient::~CHttpClient()
   //release queue
   if (lpTimedEventQueue != NULL)
     lpTimedEventQueue->Release();
+  return;
+}
+
+VOID CHttpClient::SetOption_MaxResponseTimeoutMs(_In_ DWORD dwTimeoutMs)
+{
+  CCriticalSection::CAutoLock cLock(cMutex);
+
+  if (nState == StateClosed || nState == StateDocumentCompleted)
+  {
+    dwResponseTimeoutMs = dwTimeoutMs;
+    if (dwResponseTimeoutMs < 1000)
+      dwResponseTimeoutMs = 1000;
+  }
+  return;
+}
+
+VOID CHttpClient::SetOption_MaxRedirectionsCount(_In_ DWORD dwCount)
+{
+  CCriticalSection::CAutoLock cLock(cMutex);
+
+  if (nState == StateClosed || nState == StateDocumentCompleted)
+  {
+    dwMaxRedirCount = dwCount;
+    if (dwMaxRedirCount < 1000)
+      dwMaxRedirCount = 1000;
+  }
+  return;
+}
+
+VOID CHttpClient::SetOption_MaxHeaderSize(_In_ DWORD dwSize)
+{
+  CCriticalSection::CAutoLock cLock(cMutex);
+
+  if (nState == StateClosed || nState == StateDocumentCompleted)
+  {
+    sRequest.cHttpCmn.SetOption_MaxHeaderSize(dwSize);
+    sResponse.cHttpCmn.SetOption_MaxHeaderSize(dwSize);
+  }
+  return;
+}
+
+VOID CHttpClient::SetOption_MaxFieldSize(_In_ DWORD dwSize)
+{
+  CCriticalSection::CAutoLock cLock(cMutex);
+
+  if (nState == StateClosed || nState == StateDocumentCompleted)
+  {
+    dwMaxFieldSize = dwSize;
+  }
+  return;
+}
+
+VOID CHttpClient::SetOption_MaxFileSize(_In_ ULONGLONG ullSize)
+{
+  CCriticalSection::CAutoLock cLock(cMutex);
+
+  if (nState == StateClosed || nState == StateDocumentCompleted)
+  {
+    ullMaxFileSize = ullSize;
+  }
+  return;
+}
+
+VOID CHttpClient::SetOption_MaxFilesCount(_In_ DWORD dwCount)
+{
+  CCriticalSection::CAutoLock cLock(cMutex);
+
+  if (nState == StateClosed || nState == StateDocumentCompleted)
+  {
+    dwMaxFilesCount = dwCount;
+  }
+  return;
+}
+
+BOOL CHttpClient::SetOption_TemporaryFolder(_In_opt_z_ LPCWSTR szFolderW)
+{
+  CCriticalSection::CAutoLock cLock(cMutex);
+
+  if (nState == StateClosed || nState == StateDocumentCompleted)
+  {
+    if (szFolderW != NULL && *szFolderW != NULL)
+    {
+      if (cStrTemporaryFolderW.Copy(szFolderW) == FALSE)
+        return FALSE;
+    }
+    else
+    {
+      cStrTemporaryFolderW.Empty();
+    }
+  }
+  return TRUE;
+}
+
+VOID CHttpClient::SetOption_MaxBodySizeInMemory(_In_ DWORD dwSize)
+{
+  CCriticalSection::CAutoLock cLock(cMutex);
+
+  if (nState == StateClosed || nState == StateDocumentCompleted)
+  {
+    dwMaxBodySizeInMemory = dwSize;
+  }
+  return;
+}
+
+VOID CHttpClient::SetOption_MaxBodySize(_In_ ULONGLONG ullSize)
+{
+  CCriticalSection::CAutoLock cLock(cMutex);
+
+  if (nState == StateClosed || nState == StateDocumentCompleted)
+  {
+    ullMaxBodySize = ullSize;
+  }
+  return;
+}
+
+VOID CHttpClient::SetOption_KeepConnectionOpen(_In_ BOOL bKeep)
+{
+  CCriticalSection::CAutoLock cLock(cMutex);
+
+  if (nState == StateClosed || nState == StateDocumentCompleted)
+  {
+    bKeepConnectionOpen = bKeep;
+  }
+  return;
+}
+
+VOID CHttpClient::SetOption_AcceptCompressedContent(_In_ BOOL bAccept)
+{
+  CCriticalSection::CAutoLock cLock(cMutex);
+
+  if (nState == StateClosed || nState == StateDocumentCompleted)
+  {
+    bAcceptCompressedContent = bAccept;
+  }
   return;
 }
 
@@ -430,21 +573,6 @@ HRESULT CHttpClient::RemoveAllRequestPostData()
   return S_OK;
 }
 
-HRESULT CHttpClient::SetOptionFlags(_In_ int _nOptionFlags)
-{
-  CCriticalSection::CAutoLock cLock(cMutex);
-
-  if (nState != StateClosed)
-    return MX_E_NotReady;
-  nOptionFlags = _nOptionFlags;
-  return S_OK;
-}
-
-int CHttpClient::GetOptionFlags()
-{
-  return nOptionFlags;
-}
-
 HRESULT CHttpClient::SetProxy(_In_ CProxy &_cProxy)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
@@ -469,15 +597,6 @@ HRESULT CHttpClient::Open(_In_ CUrl &cUrl)
 
   if (cAutoRundownProt.IsAcquired() == FALSE)
     return MX_E_NotReady;
-
-  //read properties from property bag
-  cPropBag.GetDWord(MX_HTTP_CLIENT_ResponseTimeoutMs, dwResponseTimeoutMs, MX_HTTP_CLIENT_ResponseTimeoutMs_DEFVAL);
-  if (dwResponseTimeoutMs < 1000)
-    dwResponseTimeoutMs = 1000;
-  cPropBag.GetDWord(MX_HTTP_CLIENT_MaxRedirectionsCount, dwMaxRedirCount, MX_HTTP_CLIENT_MaxRedirectionsCount_DEFVAL);
-  if (dwMaxRedirCount < 1)
-    dwMaxRedirCount = 1;
-
   sRedirect.dwRedirectCounter = 0;
   return InternalOpen(cUrl);
 }
@@ -725,6 +844,13 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl)
       sResponse.lpTimeoutEvent = NULL;
     }
   }
+  else
+  {
+    lpTimedEventQueue = CSystemTimedEventQueue::Get();
+    if (lpTimedEventQueue == NULL)
+      return E_OUTOFMEMORY;
+  }
+
 
   //check where we should connect
   szConnectHostW = NULL;
@@ -758,6 +884,7 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl)
   }
   //cleanup some stuff
   sResponse.cHttpCmn.ResetParser();
+  sResponse.cStrDownloadFileNameW.Empty();
   //setup new state
   nState = (cUrl.GetSchemeCode() == CUrl::SchemeHttps &&
             sRequest.bUsingProxy != FALSE) ? StateEstablishingProxyTunnelConnection : StateSendingRequest;
@@ -924,7 +1051,6 @@ HRESULT CHttpClient::OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ 
 
   nMsgSize = nMsgUsed = 0;
   bCheckConnection = TRUE;
-  hRes = S_OK;
 restart:
   bFireResponseHeadersReceivedCallback = bFireDocumentCompleted = FALSE;
   {
@@ -934,6 +1060,8 @@ restart:
     if (bCheckConnection != FALSE && h != hConn)
       return MX_E_Cancelled;
     bCheckConnection = TRUE;
+    //re-add timeout
+    hRes = UpdateResponseTimeoutEvent();
     //loop
     while (SUCCEEDED(hRes) && bFireResponseHeadersReceivedCallback == FALSE && bFireDocumentCompleted == FALSE)
     {
@@ -1063,7 +1191,7 @@ restart:
               SetErrorOnRequestAndClose(E_OUTOFMEMORY);
               break;
             }
-            hRes = sResponse.cHttpCmn.SetBodyParser(lpParser, cPropBag);
+            hRes = sResponse.cHttpCmn.SetBodyParser(lpParser);
             lpParser->Release();
             if (FAILED(hRes))
             {
@@ -1139,12 +1267,6 @@ restart:
                 hRes = sRequest.cHttpCmn.GetCookies()->RemoveExpiredAndInvalid();
             }
             //start redirector/waiter thread
-            if (SUCCEEDED(hRes) && lpTimedEventQueue == NULL)
-            {
-              lpTimedEventQueue = CSystemTimedEventQueue::Get();
-              if (lpTimedEventQueue == NULL)
-                hRes = E_OUTOFMEMORY;
-            }
             if (SUCCEEDED(hRes))
             {
               nState = StateWaitingForRedirection;
@@ -1180,6 +1302,19 @@ restart:
             if (nState == StateReceivingResponseHeaders)
               bFireResponseHeadersReceivedCallback = TRUE;
             nState = StateDocumentCompleted;
+
+            //on completion, unmark the file as deletable
+            if (sResponse.cStrDownloadFileNameW.IsEmpty() == FALSE)
+            {
+              CHttpBodyParserBase *lpBodyParser = sResponse.cHttpCmn.GetBodyParser();
+              if (lpBodyParser != NULL)
+              {
+                if (MX::StrCompareA(lpBodyParser->GetType(), "default") == 0)
+                {
+                  ((CHttpBodyParserDefault*)lpBodyParser)->KeepFile();
+                }
+              }
+            }
           }
           break;
         }
@@ -1196,9 +1331,55 @@ restart:
   if (SUCCEEDED(hRes) && bFireResponseHeadersReceivedCallback != FALSE)
   {
     CHttpBodyParserBase *lpBodyParser = NULL;
+    CStringW cStrFullFileNameW;
 
     if (cHeadersReceivedCallback)
-      hRes = cHeadersReceivedCallback(this, lpBodyParser);
+    {
+
+      CHttpHeaderEntContentType *lpContentTypeHeader = sResponse.cHttpCmn.GetHeader<CHttpHeaderEntContentType>();
+      CHttpHeaderEntContentLength *lpContentLengthHeader = sResponse.cHttpCmn.GetHeader<CHttpHeaderEntContentLength>();
+      CHttpHeaderEntContentDisposition *lpContentDispHeader =
+          sResponse.cHttpCmn.GetHeader<CHttpHeaderEntContentDisposition>();
+      LPCSTR szTypeA;
+      ULONGLONG nContentLength;
+      LPCWSTR sW, szFileNameW;
+      BOOL bTreatAsAttachment;
+      HRESULT hRes;
+
+      szFileNameW = L"";
+      if (lpContentDispHeader != NULL)
+      {
+        szFileNameW = lpContentDispHeader->GetFileName();
+        sW = MX::StrChrW(szFileNameW, L'/');
+        szFileNameW = (sW != NULL) ? (sW + 1) : szFileNameW;
+      }
+      if (*szFileNameW == 0)
+      {
+        szFileNameW = sRequest.cUrl.GetPath();
+        sW = MX::StrChrW(szFileNameW, L'/');
+        szFileNameW = (sW != NULL) ? (sW + 1) : szFileNameW;
+      }
+      if (*szFileNameW == 0)
+      {
+        szFileNameW = L"index";
+      }
+
+      nContentLength = (lpContentLengthHeader != NULL) ? lpContentLengthHeader->GetLength() : 0ui64;
+
+      szTypeA = (lpContentTypeHeader != NULL) ? lpContentTypeHeader->GetType() : "";
+      if (*szTypeA == 0)
+        szTypeA = "application/octet-stream";
+
+      if (lpContentDispHeader != NULL && MX::StrCompareA(lpContentDispHeader->GetType(), "attachment", TRUE) == 0)
+        bTreatAsAttachment = TRUE;
+      else
+        bTreatAsAttachment = FALSE;
+
+      hRes = cHeadersReceivedCallback(this, szFileNameW, ((lpContentLengthHeader != NULL) ? &nContentLength : NULL),
+                                      szTypeA, bTreatAsAttachment, sResponse.cStrDownloadFileNameW, &lpBodyParser);
+      if (FAILED(hRes))
+        return hRes;
+    }
     if (SUCCEEDED(hRes))
     {
       CCriticalSection::CAutoLock cLock(cMutex);
@@ -1209,12 +1390,15 @@ restart:
       {
         if (!cBodyParser)
         {
-          cBodyParser.Attach(sResponse.cHttpCmn.GetDefaultBodyParser());
+          cBodyParser.Attach(MX_DEBUG_NEW CHttpBodyParserDefault(
+                             MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnDownloadStarted, this), NULL,
+                             ((sResponse.cStrDownloadFileNameW.IsEmpty() == FALSE) ? 0 : dwMaxBodySizeInMemory),
+                             ((sResponse.cStrDownloadFileNameW.IsEmpty() == FALSE) ? ULONGLONG_MAX : ullMaxBodySize)));
           if (!cBodyParser)
             hRes = E_OUTOFMEMORY;
         }
         if (SUCCEEDED(hRes))
-          hRes = sResponse.cHttpCmn.SetBodyParser(cBodyParser.Get(), cPropBag);
+          hRes = sResponse.cHttpCmn.SetBodyParser(cBodyParser.Get());
       }
     }
   }
@@ -1316,37 +1500,8 @@ VOID CHttpClient::OnAfterSendRequest(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOI
 
     if (h == hConn && (nState == StateReceivingResponseHeaders || nState == StateReceivingResponseBody))
     {
-      //get system timeout queue manager
-      if (lpTimedEventQueue == NULL)
-      {
-        lpTimedEventQueue = CSystemTimedEventQueue::Get();
-        if (lpTimedEventQueue == NULL)
-          hRes = E_OUTOFMEMORY;
-      }
       //add timeout
-      if (SUCCEEDED(hRes))
-      {
-        if (sResponse.lpTimeoutEvent != NULL)
-          lpTimedEventQueue->Remove(sResponse.lpTimeoutEvent);
-        sResponse.lpTimeoutEvent =
-            MX_DEBUG_NEW CTimedEventQueue::CEvent(MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnResponseTimeout, this));
-        if (sResponse.lpTimeoutEvent != NULL)
-        {
-          hRes = cPendingEvents.Add(sResponse.lpTimeoutEvent);
-          if (SUCCEEDED(hRes))
-            hRes = lpTimedEventQueue->Add(sResponse.lpTimeoutEvent, dwResponseTimeoutMs);
-          if (FAILED(hRes))
-          {
-            cPendingEvents.Remove(sResponse.lpTimeoutEvent);
-            delete sResponse.lpTimeoutEvent;
-            sResponse.lpTimeoutEvent = NULL;
-          }
-        }
-        else
-        {
-          hRes = E_OUTOFMEMORY;
-        }
-      }
+      hRes = UpdateResponseTimeoutEvent();
       if (FAILED(hRes))
         SetErrorOnRequestAndClose(hRes);
     }
@@ -1365,6 +1520,32 @@ VOID CHttpClient::SetErrorOnRequestAndClose(_In_ HRESULT hErrorCode)
   cSocketMgr.Close(hConn, hLastErrorCode);
   hConn = NULL;
   return;
+}
+
+HRESULT CHttpClient::UpdateResponseTimeoutEvent()
+{
+  HRESULT hRes;
+
+  if (sResponse.lpTimeoutEvent != NULL)
+  {
+    if (lpTimedEventQueue->ChangeTimeout(sResponse.lpTimeoutEvent, dwResponseTimeoutMs) != FALSE)
+      return S_OK;
+    lpTimedEventQueue->Remove(sResponse.lpTimeoutEvent);
+  }
+  sResponse.lpTimeoutEvent = MX_DEBUG_NEW CTimedEventQueue::CEvent(
+                                 MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnResponseTimeout, this));
+  if (sResponse.lpTimeoutEvent == NULL)
+    return E_OUTOFMEMORY;
+  hRes = cPendingEvents.Add(sResponse.lpTimeoutEvent);
+  if (SUCCEEDED(hRes))
+    hRes = lpTimedEventQueue->Add(sResponse.lpTimeoutEvent, dwResponseTimeoutMs);
+  if (FAILED(hRes))
+  {
+    cPendingEvents.Remove(sResponse.lpTimeoutEvent);
+    sResponse.lpTimeoutEvent->Release();
+    sResponse.lpTimeoutEvent = NULL;
+  }
+  return hRes;
 }
 
 HRESULT CHttpClient::AddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_opt_ CIpc::CREATE_CALLBACK_DATA *lpData)
@@ -1484,7 +1665,7 @@ HRESULT CHttpClient::BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA)
   }
   //3) Accept-Encoding: gzip, deflate
   hRes = BuildRequestHeaderAdd(cStrReqHdrsA, "Accept-Encoding",
-                               (nOptionFlags & OptionAcceptCompressedContent) ? "gzip,deflate" : "");
+                               ((bAcceptCompressedContent != FALSE)  ? "gzip, deflate, identity" : "identity"));
   if (FAILED(hRes))
     return hRes;
   //4) Accept-Language: en-us,ie_ee;q=0.5
@@ -1516,18 +1697,22 @@ HRESULT CHttpClient::BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA)
   }
   //8) Connection
   hRes = BuildRequestHeaderAdd(cStrReqHdrsA, "Connection",
-                               (nOptionFlags & OptionKeepConnectionOpen) ? "Keep-Alive" : "Close");
+                               ((bKeepConnectionOpen != FALSE) ? "Keep-Alive" : "Close"));
   if (FAILED(hRes))
     return hRes;
   //9) Proxy-Connection (if using a proxy)
   if (sRequest.bUsingProxy != FALSE && sRequest.cUrl.GetSchemeCode() != CUrl::SchemeHttps)
   {
     hRes = BuildRequestHeaderAdd(cStrReqHdrsA, "Proxy-Connection",
-                                 (nOptionFlags & OptionKeepConnectionOpen) ? "Keep-Alive" : "Close");
+                                 ((bKeepConnectionOpen != FALSE) ? "Keep-Alive" : "Close"));
     if (FAILED(hRes))
       return hRes;
   }
-  //10) the rest of the headers
+  //10) Upgrade-Insecure-Requests
+  hRes = BuildRequestHeaderAdd(cStrReqHdrsA, "Upgrade-Insecure-Requests", "1");
+  if (FAILED(hRes))
+    return hRes;
+  //11) the rest of the headers
   for (nIndex=0; (lpHeader=sRequest.cHttpCmn.GetHeader(nIndex)) != NULL; nIndex++)
   {
     LPCSTR sA = lpHeader->GetName();
@@ -1568,6 +1753,12 @@ HRESULT CHttpClient::BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA)
           goto add_header;
         break;
 
+      case 'U':
+      case 'u':
+        if (StrCompareA(sA, "Upgrade-Insecure-Requests", TRUE) != 0)
+          goto add_header;
+        break;
+
       default:
 add_header:
         hRes = lpHeader->Build(cStrTempA);
@@ -1581,15 +1772,17 @@ add_header:
         break;
     }
   }
-  //10) Cookies: ????
+  //12) Cookies: ????
   cStrTempA.Empty();
   for (nIndex=0; (lpCookie = sRequest.cHttpCmn.GetCookie(nIndex)) != NULL; nIndex++)
   {
     if (lpCookie->DoesDomainMatch(sRequest.cUrl.GetHost()) != FALSE)
     {
       if (cStrTempA.AppendFormat("%s%s=%s", ((cStrTempA.IsEmpty() == FALSE) ? "; " : ""),
-        lpCookie->GetName(), lpCookie->GetValue()) == FALSE)
+                                 lpCookie->GetName(), lpCookie->GetValue()) == FALSE)
+      {
         return E_OUTOFMEMORY;
+      }
     }
   }
   if (cStrTempA.IsEmpty() == FALSE)
@@ -1775,7 +1968,7 @@ HRESULT CHttpClient::SendTunnelConnect()
   }
   //proxy connextion
   hRes = BuildRequestHeaderAdd(cStrReqHdrsA, "Proxy-Connection",
-                               (nOptionFlags & OptionKeepConnectionOpen) ? "Keep-Alive" : "Close");
+                               ((bKeepConnectionOpen != FALSE) ? "Keep-Alive" : "Close"));
   if (FAILED(hRes))
     return hRes;
 
@@ -1920,6 +2113,81 @@ HRESULT CHttpClient::SendRequestBody()
     if (FAILED(hRes))
       return hRes;
   }
+  //done
+  return S_OK;
+}
+
+HRESULT CHttpClient::OnDownloadStarted(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW, _In_ LPVOID lpUserParam)
+{
+  MX::CStringW cStrFileNameW;
+#ifndef _DEBUG
+  MX_IO_STATUS_BLOCK sIoStatusBlock;
+  UCHAR _DeleteFile;
+#endif //!_DEBUG
+  HRESULT hRes;
+
+  if (sResponse.cStrDownloadFileNameW.IsEmpty() != FALSE)
+  {
+    SIZE_T nLen;
+    DWORD dw;
+    Fnv64_t nHash;
+
+    //generate filename
+    if (cStrTemporaryFolderW.IsEmpty() != FALSE)
+    {
+      hRes = CHttpCommon::_GetTempPath(cStrFileNameW);
+      if (FAILED(hRes))
+        return hRes;
+    }
+    else
+    {
+      nLen = cStrTemporaryFolderW.GetLength();
+      if (cStrFileNameW.CopyN((LPCWSTR)cStrTemporaryFolderW, nLen) == FALSE)
+        return E_OUTOFMEMORY;
+      if (nLen > 0 && ((LPWSTR)(cStrFileNameW))[nLen - 1] != L'\\')
+      {
+        if (cStrFileNameW.Concat(L"\\") == FALSE)
+          return E_OUTOFMEMORY;
+      }
+    }
+
+    dw = ::GetCurrentProcessId();
+    nHash = fnv_64a_buf(&dw, sizeof(dw), FNV1A_64_INIT);
+#pragma warning(suppress : 28159)
+    dw = ::GetTickCount();
+    nHash = fnv_64a_buf(&dw, sizeof(dw), nHash);
+    nLen = (SIZE_T)this;
+    nHash = fnv_64a_buf(&nLen, sizeof(nLen), nHash);
+    nHash = fnv_64a_buf(&sResponse, sizeof(sResponse), nHash);
+    if (cStrFileNameW.AppendFormat(L"tmp%016I64x", (ULONGLONG)nHash) == FALSE)
+      return E_OUTOFMEMORY;
+  }
+
+  //create target file
+  *lphFile = ::CreateFileW(((sResponse.cStrDownloadFileNameW.IsEmpty() == FALSE)
+                           ? (LPCWSTR)(sResponse.cStrDownloadFileNameW) : (LPCWSTR)cStrFileNameW),
+#ifdef _DEBUG
+                           GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ,
+#else //_DEBUG
+                           GENERIC_READ | GENERIC_WRITE | DELETE, 0,
+#endif //_DEBUG
+                           NULL, CREATE_ALWAYS,
+#ifdef _DEBUG
+                           FILE_ATTRIBUTE_NORMAL,
+#else //_DEBUG
+                           FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_TEMPORARY,
+#endif //_DEBUG
+                           NULL);
+  if ((*lphFile) == NULL || (*lphFile) == INVALID_HANDLE_VALUE)
+  {
+    *lphFile = NULL;
+    return MX_HRESULT_FROM_LASTERROR();
+  }
+#ifndef _DEBUG
+  _DeleteFile = 1;
+  ::MxNtSetInformationFile(*lphFile, &sIoStatusBlock, &_DeleteFile, (ULONG)sizeof(_DeleteFile),
+                           MxFileDispositionInformation);
+#endif //!_DEBUG
   //done
   return S_OK;
 }

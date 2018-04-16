@@ -33,11 +33,17 @@ namespace MX {
 class CHttpBodyParserMultipartFormData : public CHttpBodyParserFormBase
 {
 public:
-  CHttpBodyParserMultipartFormData();
+  typedef Callback<HRESULT(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW,
+                           _In_opt_ LPVOID lpUserParam)> OnDownloadStartedCallback;
+
+public:
+  CHttpBodyParserMultipartFormData(_In_ OnDownloadStartedCallback cDownloadStartedCallback, _In_opt_ LPVOID lpUserData,
+                                   _In_ DWORD dwMaxFieldSize=256000, _In_ ULONGLONG ullMaxFileSize=2097152ui64,
+                                   _In_ DWORD dwMaxFilesCount=4);
   ~CHttpBodyParserMultipartFormData();
 
 protected:
-  HRESULT Initialize(_In_ CPropertyBag &cPropBag, _In_ CHttpCommon &cHttpCmn);;
+  HRESULT Initialize(_In_ CHttpCommon &cHttpCmn);;
   HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
 
   HRESULT ParseHeader(_Inout_ CStringA &cStrLineA);
@@ -71,10 +77,12 @@ private:
     StateError
   } eState;
 
-  ULONGLONG nMaxFileUploadSize;
-  SIZE_T nMaxFileUploadCount;
-  CStringW cStrTempFolderW;
-  SIZE_T nMaxNonFileFormFieldsDataSize;
+  OnDownloadStartedCallback cDownloadStartedCallback;
+  LPVOID lpUserData;
+  DWORD dwMaxFieldSize;
+  ULONGLONG ullMaxFileSize;
+  DWORD dwMaxFilesCount;
+
   CStringA cStrBoundaryA;
 
   struct {

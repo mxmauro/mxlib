@@ -111,10 +111,15 @@ static const struct {
 
 namespace MX {
 
-CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr, _In_ CPropertyBag &_cPropBag) :
-             CBaseMemObj(), CCriticalSection(), cSocketMgr(_cSocketMgr), cPropBag(_cPropBag)
+CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr) : CBaseMemObj(), CCriticalSection(), cSocketMgr(_cSocketMgr)
 {
-  dwRequestTimeoutMs = MX_HTTP_SERVER_RequestTimeoutMs_DEFVAL;
+  dwMaxRequestTimeoutMs = 60000;
+  dwMaxHeaderSize = 16384;
+  dwMaxFieldSize = 256000;
+  ullMaxFileSize = 2097152ui64;
+  dwMaxFilesCount = 4;
+  dwMaxBodySizeInMemory = 32768;
+  ullMaxBodySize = 10485760ui64;
   //----
   SlimRWL_Initialize(&(sSsl.nRwMutex));
   sSsl.nProtocol = CIpcSslLayer::ProtocolUnknown;
@@ -167,6 +172,104 @@ CHttpServer::~CHttpServer()
   //release queue
   if (lpTimedEventQueue != NULL)
     lpTimedEventQueue->Release();
+  return;
+}
+
+VOID CHttpServer::SetOption_MaxRequestTimeoutMs(_In_ DWORD dwTimeoutMs)
+{
+  CCriticalSection::CAutoLock cLock(*this);
+
+  if (hAcceptConn == NULL)
+  {
+    dwMaxRequestTimeoutMs = dwTimeoutMs;
+    if (dwMaxRequestTimeoutMs < 1000)
+      dwMaxRequestTimeoutMs = 1000;
+  }
+  return;
+}
+
+VOID CHttpServer::SetOption_MaxHeaderSize(_In_ DWORD dwSize)
+{
+  CCriticalSection::CAutoLock cLock(*this);
+
+  if (hAcceptConn == NULL)
+  {
+    dwMaxHeaderSize = dwSize;
+  }
+  return;
+}
+
+VOID CHttpServer::SetOption_MaxFieldSize(_In_ DWORD dwSize)
+{
+  CCriticalSection::CAutoLock cLock(*this);
+
+  if (hAcceptConn == NULL)
+  {
+    dwMaxFieldSize = dwSize;
+  }
+  return;
+}
+
+VOID CHttpServer::SetOption_MaxFileSize(_In_ ULONGLONG ullSize)
+{
+  CCriticalSection::CAutoLock cLock(*this);
+
+  if (hAcceptConn == NULL)
+  {
+    ullMaxFileSize = ullSize;
+  }
+  return;
+}
+
+VOID CHttpServer::SetOption_MaxFilesCount(_In_ DWORD dwCount)
+{
+  CCriticalSection::CAutoLock cLock(*this);
+
+  if (hAcceptConn == NULL)
+  {
+    dwMaxFilesCount = dwCount;
+  }
+  return;
+}
+
+BOOL CHttpServer::SetOption_TemporaryFolder(_In_opt_z_ LPCWSTR szFolderW)
+{
+  CCriticalSection::CAutoLock cLock(*this);
+
+  if (hAcceptConn == NULL)
+  {
+    if (szFolderW != NULL && *szFolderW != NULL)
+    {
+      if (cStrTemporaryFolderW.Copy(szFolderW) == FALSE)
+        return FALSE;
+    }
+    else
+    {
+      cStrTemporaryFolderW.Empty();
+    }
+  }
+  return TRUE;
+}
+
+VOID CHttpServer::SetOption_MaxBodySizeInMemory(_In_ DWORD dwSize)
+{
+  CCriticalSection::CAutoLock cLock(*this);
+
+  if (hAcceptConn == NULL)
+  {
+    dwMaxBodySizeInMemory = dwSize;
+  }
+  return;
+}
+
+VOID CHttpServer::SetOption_MaxBodySize(_In_ ULONGLONG ullSize)
+{
+  CCriticalSection::CAutoLock cLock(*this);
+
+  if (hAcceptConn == NULL)
+  {
+    ullMaxBodySize = ullSize;
+  }
   return;
 }
 
@@ -227,11 +330,6 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ int n
     return MX_E_NotReady;
   {
     CCriticalSection::CAutoLock cLock(*this);
-
-    //read properties from property bag
-    cPropBag.GetDWord(MX_HTTP_SERVER_RequestTimeoutMs, dwRequestTimeoutMs, MX_HTTP_SERVER_RequestTimeoutMs_DEFVAL);
-    if (dwRequestTimeoutMs < 1000)
-      dwRequestTimeoutMs = 1000;
 
     //set SSL
     hRes = S_OK;
@@ -390,19 +488,21 @@ HRESULT CHttpServer::OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIp
       //create new request object
       if (cNewRequestObjectCallback)
       {
-        hRes = cNewRequestObjectCallback(cPropBag, &cNewRequest);
+        hRes = cNewRequestObjectCallback(&cNewRequest);
         if (FAILED(hRes))
           return hRes;
       }
       else
       {
-        cNewRequest.Attach(MX_DEBUG_NEW CRequest(cPropBag));
+        cNewRequest.Attach(MX_DEBUG_NEW CRequest());
       }
       if (!cNewRequest)
         return E_OUTOFMEMORY;
       cNewRequest->lpHttpServer = this;
       cNewRequest->lpSocketMgr = &cSocketMgr;
       cNewRequest->hConn = h;
+      cNewRequest->sRequest.cHttpCmn.SetOption_MaxHeaderSize(dwMaxHeaderSize);
+      cNewRequest->sResponse.cHttpCmn.SetOption_MaxHeaderSize(dwMaxHeaderSize);
       //add ssl layer
       {
         CAutoSlimRWLShared cSslLock(&(sSsl.nRwMutex));
@@ -469,7 +569,7 @@ HRESULT CHttpServer::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc:
   MX_ASSERT(lpUserData != NULL);
   //setup header timeout
   ::MxNtQuerySystemTime(&(lpRequest->sRequest.liLastRead));
-  hRes = SetupTimeoutEvent(lpRequest, dwRequestTimeoutMs);
+  hRes = SetupTimeoutEvent(lpRequest, dwMaxRequestTimeoutMs);
   //done
   return hRes;
 }
@@ -607,12 +707,31 @@ restart:
         cBodyParser.Attach(lpBodyParser);
         if (!cBodyParser)
         {
-          cBodyParser.Attach(lpRequest->sRequest.cHttpCmn.GetDefaultBodyParser());
+          CHttpHeaderEntContentType *lpHeader = lpRequest->sRequest.cHttpCmn.GetHeader<CHttpHeaderEntContentType>();
+          if (lpHeader != NULL)
+          {
+            if (StrCompareA(lpHeader->GetType(), "application/x-www-form-urlencoded") == 0)
+            {
+              cBodyParser.Attach(MX_DEBUG_NEW CHttpBodyParserUrlEncodedForm(dwMaxFieldSize));
+            }
+            else if (StrCompareA(lpHeader->GetType(), "multipart/form-data") == 0)
+            {
+              cBodyParser.Attach(MX_DEBUG_NEW CHttpBodyParserMultipartFormData(
+                                                   MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnDownloadStarted, this),
+                                                   lpRequest, dwMaxFieldSize, ullMaxFileSize, dwMaxFilesCount));
+            }
+          }
+          if (!cBodyParser)
+          {
+            cBodyParser.Attach(MX_DEBUG_NEW CHttpBodyParserDefault(
+                                                 MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnDownloadStarted, this),
+                                                 lpRequest, dwMaxBodySizeInMemory, ullMaxBodySize));
+          }
           if (!cBodyParser)
             hRes = E_OUTOFMEMORY;
         }
         if (SUCCEEDED(hRes))
-          hRes = lpRequest->sRequest.cHttpCmn.SetBodyParser(cBodyParser.Get(), cPropBag);
+          hRes = lpRequest->sRequest.cHttpCmn.SetBodyParser(cBodyParser.Get());
       }
       if (FAILED(hRes))
       {
@@ -684,10 +803,10 @@ VOID CHttpServer::OnRequestTimeout(_In_ CTimedEventQueue::CEvent *lpEvent)
       dwDiffMs = 0;
       if (liCurrTime.QuadPart > lpRequest->sRequest.liLastRead.QuadPart)
         dwDiffMs = (DWORD)MX_100NS_TO_MILLISECONDS(liCurrTime.QuadPart - lpRequest->sRequest.liLastRead.QuadPart);
-      if (dwDiffMs > dwRequestTimeoutMs)
+      if (dwDiffMs > dwMaxRequestTimeoutMs)
         hRes = QuickSendErrorResponseAndReset(lpRequest, 408, S_OK);
       else if (lpRequest->IsLinkClosed() == FALSE)
-        hRes = SetupTimeoutEvent(lpRequest, dwRequestTimeoutMs-dwDiffMs);
+        hRes = SetupTimeoutEvent(lpRequest, dwMaxRequestTimeoutMs-dwDiffMs);
       else
         hRes = S_OK;
     }
@@ -864,7 +983,7 @@ HRESULT CHttpServer::SetupTimeoutEvent(_In_ CRequest *lpRequest, _In_ DWORD dwTi
     lpEvent->Release();
     return hRes;
   }
-  hRes = lpTimedEventQueue->Add(lpEvent, dwRequestTimeoutMs);
+  hRes = lpTimedEventQueue->Add(lpEvent, dwMaxRequestTimeoutMs);
   if (FAILED(hRes))
   {
     lpRequest->sRequest.sTimeout.cActiveList.Remove(lpEvent);
@@ -905,6 +1024,68 @@ VOID CHttpServer::OnRequestDestroyed(_In_ CRequest *lpRequest)
 
   lpRequest->RemoveNode();
   return;
+}
+
+HRESULT CHttpServer::OnDownloadStarted(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW, _In_ LPVOID lpUserParam)
+{
+  CRequest *lpRequest = (CRequest*)lpUserParam;
+  MX::CStringW cStrFileNameW;
+  SIZE_T nLen;
+  DWORD dw;
+  Fnv64_t nHash;
+  HRESULT hRes;
+
+  //generate filename
+  if (cStrTemporaryFolderW.IsEmpty() != FALSE)
+  {
+    hRes = CHttpCommon::_GetTempPath(cStrTemporaryFolderW);
+    if (FAILED(hRes))
+      return hRes;
+  }
+  else
+  {
+    nLen = cStrTemporaryFolderW.GetLength();
+    if (cStrFileNameW.CopyN((LPCWSTR)cStrTemporaryFolderW, nLen) == FALSE)
+      return E_OUTOFMEMORY;
+    if (nLen > 0 && ((LPWSTR)cStrFileNameW)[nLen - 1] != L'\\')
+    {
+      if (cStrFileNameW.Concat(L"\\") == FALSE)
+        return E_OUTOFMEMORY;
+    }
+  }
+
+  dw = ::GetCurrentProcessId();
+  nHash = fnv_64a_buf(&dw, sizeof(dw), FNV1A_64_INIT);
+#pragma warning(suppress : 28159)
+  dw = ::GetTickCount();
+  nHash = fnv_64a_buf(&dw, sizeof(dw), nHash);
+  nLen = (SIZE_T)this;
+  nHash = fnv_64a_buf(&nLen, sizeof(nLen), nHash);
+  nHash = fnv_64a_buf(lpRequest, sizeof(CRequest), nHash);
+  if (cStrFileNameW.AppendFormat(L"tmp%016I64x", (ULONGLONG)nHash) == FALSE)
+    return E_OUTOFMEMORY;
+
+  //create temporary file
+  *lphFile = ::CreateFileW((LPCWSTR)cStrFileNameW, GENERIC_READ | GENERIC_WRITE,
+#ifdef _DEBUG
+                           FILE_SHARE_READ,
+#else //_DEBUG
+                           0,
+#endif //_DEBUG
+                           NULL, CREATE_ALWAYS,
+#ifdef _DEBUG
+                           FILE_ATTRIBUTE_NORMAL,
+#else //_DEBUG
+                           FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE,
+#endif //_DEBUG
+                           NULL);
+  if ((*lphFile) == NULL || (*lphFile) == INVALID_HANDLE_VALUE)
+  {
+    *lphFile = NULL;
+    return MX_HRESULT_FROM_LASTERROR();
+  }
+  //done
+  return S_OK;
 }
 
 } //namespace MX

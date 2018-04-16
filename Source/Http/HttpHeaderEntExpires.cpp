@@ -47,8 +47,10 @@ HRESULT CHttpHeaderEntExpires::Parse(_In_z_ LPCSTR szValueA)
   szValueA = SkipSpaces(szValueA);
   //parse date
   hRes = CHttpCommon::ParseDate(cDt, szValueA);
+  if (FAILED(hRes)) //an invalid "expires" is interpreted as "now"
+    cDt.SetFromNow(FALSE);
   //done
-  return hRes;
+  return S_OK;
 }
 
 HRESULT CHttpHeaderEntExpires::Build(_Inout_ CStringA &cStrDestA)

@@ -39,25 +39,12 @@
 
 //-----------------------------------------------------------
 
-#define MX_HTTP_CLIENT_ResponseTimeoutMs               "HTTP_CLIENT_ResponseTimeoutMs"
-#define MX_HTTP_CLIENT_ResponseTimeoutMs_DEFVAL        60000
-
-#define MX_HTTP_CLIENT_MaxRedirectionsCount            "HTTP_CLIENT_MaxRedirectionsCount"
-#define MX_HTTP_CLIENT_MaxRedirectionsCount_DEFVAL     10
-
-//-----------------------------------------------------------
-
 namespace MX {
 
 class CHttpClient : public virtual CBaseMemObj
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CHttpClient);
 public:
-  typedef enum {
-    OptionKeepConnectionOpen = 1,
-    OptionAcceptCompressedContent = 2
-  } eOptionFlags;
-
   typedef enum {
     StateClosed = 0,
     StateSendingRequest,
@@ -71,8 +58,10 @@ public:
 
   //--------
 
-  typedef Callback<HRESULT (_In_ CHttpClient *lpHttp,
-                            _Inout_ CHttpBodyParserBase *&lpBodyParser)> OnHeadersReceivedCallback;
+  //NOTE: Leave cStrFullFileNameW empty to download to temp location (with imposed limitations)
+  typedef Callback<HRESULT (_In_ CHttpClient *lpHttp, _In_z_ LPCWSTR szFileNameW, _In_opt_ PULONGLONG lpnContentSize,
+                            _In_z_ LPCSTR szTypeA, _In_ BOOL bTreatAsAttachment, _Out_ CStringW &cStrFullFileNameW,
+                            _Outptr_result_maybenull_ CHttpBodyParserBase **lpBodyParser)> OnHeadersReceivedCallback;
   typedef Callback<HRESULT (_In_ CHttpClient *lpHttp)> OnDocumentCompletedCallback;
 
   typedef Callback<VOID (_In_ CHttpClient *lpHttp, _In_ HRESULT hErrorCode)> OnErrorCallback;
@@ -84,8 +73,20 @@ public:
   //--------
 
 public:
-  CHttpClient(_In_ CSockets &cSocketMgr, _In_ CPropertyBag &cPropBag);
+  CHttpClient(_In_ CSockets &cSocketMgr);
   ~CHttpClient();
+
+  VOID SetOption_MaxResponseTimeoutMs(_In_ DWORD dwTimeoutMs);
+  VOID SetOption_MaxRedirectionsCount(_In_ DWORD dwCount);
+  VOID SetOption_MaxHeaderSize(_In_ DWORD dwSize);
+  VOID SetOption_MaxFieldSize(_In_ DWORD dwSize);
+  VOID SetOption_MaxFileSize(_In_ ULONGLONG ullSize);
+  VOID SetOption_MaxFilesCount(_In_ DWORD dwCount);
+  BOOL SetOption_TemporaryFolder(_In_opt_z_ LPCWSTR szFolderW);
+  VOID SetOption_MaxBodySizeInMemory(_In_ DWORD dwSize);
+  VOID SetOption_MaxBodySize(_In_ ULONGLONG ullSize);
+  VOID SetOption_KeepConnectionOpen(_In_ BOOL bKeep);
+  VOID SetOption_AcceptCompressedContent(_In_ BOOL bAccept);
 
   VOID On(_In_ OnHeadersReceivedCallback cHeadersReceivedCallback);
   VOID On(_In_ OnDocumentCompletedCallback cDocumentCompletedCallback);
@@ -127,9 +128,6 @@ public:
   HRESULT RemoveRequestPostData(_In_z_ LPCSTR szNameA);
   HRESULT RemoveRequestPostData(_In_z_ LPCWSTR szNameW);
   HRESULT RemoveAllRequestPostData();
-
-  HRESULT SetOptionFlags(_In_ int nOptionFlags);
-  int GetOptionFlags();
 
   HRESULT SetProxy(_In_ CProxy &cProxy);
 
@@ -184,6 +182,8 @@ private:
 
   VOID SetErrorOnRequestAndClose(_In_ HRESULT hErrorCode);
 
+  HRESULT UpdateResponseTimeoutEvent();
+
   HRESULT AddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_opt_ CIpc::CREATE_CALLBACK_DATA *lpData);
 
   HRESULT BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA);
@@ -193,6 +193,8 @@ private:
   HRESULT SendTunnelConnect();
   HRESULT SendRequestHeader();
   HRESULT SendRequestBody();
+
+  HRESULT OnDownloadStarted(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW, _In_ LPVOID lpUserParam);
 
 private:
   class CPostDataItem : public virtual CBaseMemObj, public TLnkLstNode<CPostDataItem>
@@ -225,25 +227,39 @@ private:
 private:
   CCriticalSection cMutex;
   CSockets &cSocketMgr;
-  CPropertyBag &cPropBag;
-  DWORD dwResponseTimeoutMs, dwMaxRedirCount;
   CSystemTimedEventQueue *lpTimedEventQueue;
   TPendingListHelperGeneric<CTimedEventQueue::CEvent*> cPendingEvents;
   TPendingListHelperGeneric<HANDLE> cPendingHandles;
   LONG volatile nRundownLock;
   eState nState;
-  int nOptionFlags;
   HANDLE hConn;
   CProxy cProxy;
   HRESULT hLastErrorCode;
+
+  DWORD dwResponseTimeoutMs;
+  DWORD dwMaxRedirCount;
+  DWORD dwMaxFieldSize;
+  ULONGLONG ullMaxFileSize;
+  DWORD dwMaxFilesCount;
+  CStringW cStrTemporaryFolderW;
+  DWORD dwMaxBodySizeInMemory;
+  ULONGLONG ullMaxBodySize;
+  BOOL bKeepConnectionOpen;
+  BOOL bAcceptCompressedContent;
+
   OnHeadersReceivedCallback cHeadersReceivedCallback;
   OnDocumentCompletedCallback cDocumentCompletedCallback;
   OnErrorCallback cErrorCallback;
   OnQueryCertificatesCallback cQueryCertificatesCallback;
 
   struct tagRequest {
-    tagRequest(_In_ CPropertyBag &cPropBag) : cHttpCmn(FALSE, cPropBag)
-      { };
+    tagRequest() : cHttpCmn(TRUE)
+      {
+      szBoundary[0] = 0;
+      bUsingMultiPartFormData = FALSE;
+      bUsingProxy = FALSE;
+      return;
+      };
 
     CUrl cUrl;
     CStringA cStrMethodA;
@@ -255,11 +271,15 @@ private:
   } sRequest;
 
   struct tagResponse {
-    tagResponse(_In_ CPropertyBag &cPropBag) : cHttpCmn(FALSE, cPropBag)
-      { };
+    tagResponse() : cHttpCmn(FALSE)
+      {
+      lpTimeoutEvent = NULL;
+      return;
+      };
 
     CHttpCommon cHttpCmn;
     CTimedEventQueue::CEvent *lpTimeoutEvent;
+    CStringW cStrDownloadFileNameW;
   } sResponse;
 
   struct tagRedirect {

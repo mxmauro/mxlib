@@ -29,9 +29,11 @@
 
 namespace MX {
 
-CHttpBodyParserUrlEncodedForm::CHttpBodyParserUrlEncodedForm() : CHttpBodyParserFormBase()
+CHttpBodyParserUrlEncodedForm::CHttpBodyParserUrlEncodedForm(_In_ DWORD _dwMaxFieldSize) : CHttpBodyParserFormBase()
 {
-  nMaxNonFileFormFieldsDataSize = 0;
+  dwMaxFieldSize = _dwMaxFieldSize;
+  if (dwMaxFieldSize < 32768)
+    dwMaxFieldSize = 32768;
   sParser.nState = StateNameStart;
   nCurrContentSize = 0;
   return;
@@ -42,19 +44,8 @@ CHttpBodyParserUrlEncodedForm::~CHttpBodyParserUrlEncodedForm()
   return;
 }
 
-HRESULT CHttpBodyParserUrlEncodedForm::Initialize(_In_ CPropertyBag &cPropBag, _In_ CHttpCommon &cHttpCmn)
+HRESULT CHttpBodyParserUrlEncodedForm::Initialize(_In_ CHttpCommon &cHttpCmn)
 {
-  DWORD dw;
-  HRESULT hRes;
-
-  hRes = cPropBag.GetDWord(MX_HTTP_BODYPARSER_PROPERTY_MaxNonFileFormFieldsDataSize, dw,
-                           MX_HTTP_BODYPARSER_PROPERTY_MaxNonFileFormFieldsDataSize_DEFVAL);
-  if (FAILED(hRes) && hRes != MX_E_NotFound)
-    return hRes;
-  nMaxNonFileFormFieldsDataSize = (DWORD)dw;
-  if (nMaxNonFileFormFieldsDataSize < 32768)
-    nMaxNonFileFormFieldsDataSize = 32768;
-  //done
   return S_OK;
 }
 
@@ -106,8 +97,7 @@ HRESULT CHttpBodyParserUrlEncodedForm::Parse(_In_opt_ LPCVOID lpData, _In_opt_ S
   //begin
   hRes = S_OK;
   //check if size is greater than max size or overflow
-  if (nCurrContentSize+nDataSize < nCurrContentSize ||
-      nCurrContentSize+nDataSize > nMaxNonFileFormFieldsDataSize)
+  if (nCurrContentSize+nDataSize < nCurrContentSize || nCurrContentSize+nDataSize > (SIZE_T)dwMaxFieldSize)
   {
     MarkEntityAsTooLarge();
   }

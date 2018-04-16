@@ -69,7 +69,7 @@ private:
 
 private:
   CHttpBodyParserFormBase::CFileField *lpFileField;
-  ULONGLONG nFileSize;
+  ULONGLONG nFilePos;
 };
 
 //-----------------------------------------------------------

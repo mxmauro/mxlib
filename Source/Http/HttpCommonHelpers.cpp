@@ -151,6 +151,30 @@ HRESULT CHttpCommon::ParseDate(_Out_ CDateTime &cDt, _In_z_ LPCSTR szDateTimeA)
   return hRes;
 }
 
+HRESULT CHttpCommon::_GetTempPath(_Out_ MX::CStringW &cStrPathW)
+{
+  SIZE_T nLen, nThisLen=0;
+
+  for (nLen=2048; nLen<=65536; nLen<<=1)
+  {
+    if (cStrPathW.EnsureBuffer(nLen) == FALSE)
+      return E_OUTOFMEMORY;
+    nThisLen = (SIZE_T)::GetTempPathW((DWORD)nLen, (LPWSTR)cStrPathW);
+    if (nThisLen < nLen - 4)
+      break;
+  }
+  if (nLen > 65536)
+    return ERROR_BUFFER_ALL_ZEROS;
+  ((LPWSTR)cStrPathW)[nThisLen] = 0;
+  cStrPathW.Refresh();
+  if (nThisLen > 0 && ((LPWSTR)cStrPathW)[nThisLen - 1] != L'\\')
+  {
+    if (cStrPathW.Concat(L"\\") == FALSE)
+      return E_OUTOFMEMORY;
+  }
+  return S_OK;
+}
+
 } //namespace MX
 
 //-----------------------------------------------------------

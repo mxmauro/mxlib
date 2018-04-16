@@ -32,22 +32,13 @@ namespace Internals {
 CFileFieldJsObject::CFileFieldJsObject(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
 {
   lpFileField = NULL;
-  nFileSize = 0;
+  nFilePos = 0ui64;
   return;
 }
 
 VOID CFileFieldJsObject::Initialize(_In_ CHttpBodyParserFormBase::CFileField *_lpFileField)
 {
-  HANDLE hFile;
-  DWORD dw, dwHigh;
-
   lpFileField = _lpFileField;
-  hFile = lpFileField->GetFileHandle();
-  dw = ::GetFileSize(hFile, &dwHigh);
-  if (dwHigh <= 0x1FFFFF)
-    nFileSize = ((ULONGLONG)dwHigh << 32) | (ULONGLONG)dw;
-  else
-    nFileSize = 0x1FFFFFFFFFFFFF;
   return;
 }
 
@@ -76,7 +67,7 @@ DukTape::duk_ret_t CFileFieldJsObject::getFileSize()
 {
   DukTape::duk_context *lpCtx = GetContext();
 
-  DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)nFileSize);
+  DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)(lpFileField->GetSize()));
   return 1;
 }
 
@@ -84,23 +75,12 @@ DukTape::duk_ret_t CFileFieldJsObject::SeekFile()
 {
   DukTape::duk_context *lpCtx = GetContext();
   DukTape::duk_double_t nPos;
-  union {
-    ULONGLONG nFilePos;
-    DWORD dw[2];
-  };
 
   nPos = DukTape::duk_require_number(lpCtx, 0);
   if (nPos > 0.00001)
-  {
     nFilePos = (ULONGLONG)nPos;
-    if (nFilePos > nFileSize)
-      nFilePos = nFileSize;
-  }
   else
-  {
-    nFilePos = 0;
-  }
-  ::SetFilePointer(lpFileField->GetFileHandle(), (LONG)dw[0], (PLONG)&dw[1], SEEK_SET);
+    nFilePos = 0ui64;
   return 0;
 }
 
@@ -111,8 +91,9 @@ DukTape::duk_ret_t CFileFieldJsObject::ReadFile()
   DukTape::duk_idx_t nParamsCount;
   DukTape::duk_bool_t bAsBuffer;
   LPVOID lpBuf;
-  DWORD dwReaded;
- 
+  SIZE_T nReaded;
+  HRESULT hRes;
+
   nParamsCount = DukTape::duk_get_top(lpCtx);
   if (nParamsCount < 1 || nParamsCount > 2)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
@@ -130,12 +111,15 @@ DukTape::duk_ret_t CFileFieldJsObject::ReadFile()
   if (nToRead > 0)
   {
     lpBuf = DukTape::duk_push_dynamic_buffer(lpCtx, nToRead);
-    if (::ReadFile(lpFileField->GetFileHandle(), lpBuf, (DWORD)nToRead, &dwReaded, NULL) != FALSE && dwReaded > 0)
+    hRes = lpFileField->Read(lpBuf, nFilePos, nToRead, &nReaded);
+    if (FAILED(hRes))
+      MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+    if (nReaded > 0)
     {
-      DukTape::duk_resize_buffer(lpCtx, -1, (DukTape::duk_size_t)dwReaded);
+      DukTape::duk_resize_buffer(lpCtx, -1, (DukTape::duk_size_t)nReaded);
       if (bAsBuffer == false)
       {
-        DukTape::duk_push_buffer_object(lpCtx, -1, 0, (DukTape::duk_size_t)dwReaded, DUK_BUFOBJ_UINT8ARRAY);
+        DukTape::duk_push_buffer_object(lpCtx, -1, 0, (DukTape::duk_size_t)nReaded, DUK_BUFOBJ_UINT8ARRAY);
         DukTape::duk_remove(lpCtx, -2);
       }
     }

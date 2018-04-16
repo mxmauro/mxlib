@@ -67,10 +67,10 @@ static BOOL IsContentTypeHeader(_In_z_ LPCSTR szHeaderA);
 
 namespace MX {
 
-CHttpCommon::CHttpCommon(_In_ BOOL _bActAsServer, _In_ CPropertyBag &_cPropBag) : CBaseMemObj(), cPropBag(_cPropBag)
+CHttpCommon::CHttpCommon(_In_ BOOL _bActAsServer) : CBaseMemObj()
 {
   bActAsServer = _bActAsServer;
-  nMaxHeaderSize = 2048;
+  dwMaxHeaderSize = 16384;
   //----
   ResetParser();
   return;
@@ -83,13 +83,23 @@ CHttpCommon::~CHttpCommon()
   return;
 }
 
+VOID CHttpCommon::SetOption_MaxHeaderSize(_In_ DWORD dwSize)
+{
+  dwMaxHeaderSize = dwSize;
+  if (dwMaxHeaderSize < 2048)
+    dwMaxHeaderSize = 2048;
+  else if (dwMaxHeaderSize > 327680)
+    dwMaxHeaderSize = 327680;
+  else
+    dwMaxHeaderSize = (dwMaxHeaderSize + 16383) & (~16383);
+  return;
+}
+
 VOID CHttpCommon::ResetParser()
 {
-  DWORD dw;
-
   sParser.nState = StateStart;
   sParser.cStrCurrLineA.Empty();
-  sParser.nHeadersLen = 0;
+  sParser.dwHeadersLen = 0;
   sParser.sChunk.nSize = 0;
   sParser.sChunk.nReaded = 0;
   sParser.nErrorCode = 0;
@@ -108,16 +118,6 @@ VOID CHttpCommon::ResetParser()
   RemoveAllCookies();
   cBodyDecoder.Reset();
   cBodyParser.Release();
-
-  //read properties from property bag
-  cPropBag.GetDWord(MX_HTTP_MaxHeaderSize, dw, MX_HTTP_MaxHeaderSize_DEFVAL);
-  if (dw < 2048)
-    nMaxHeaderSize = 2048;
-  else if (dw > 327680)
-    nMaxHeaderSize = 327680;
-  else
-    nMaxHeaderSize = (int)((dw+16383) & (~16383));
-
   return;
 }
 
@@ -233,8 +233,8 @@ err_invalid_data:
 
       case StateHeaderName:
         //check headers length
-        if (sParser.nHeadersLen < nMaxHeaderSize)
-          (sParser.nHeadersLen)++;
+        if (sParser.dwHeadersLen < dwMaxHeaderSize)
+          (sParser.dwHeadersLen)++;
         else if (sParser.nErrorCode == 0)
           sParser.nErrorCode = 400; //headers too long
         //end of header name?
@@ -265,7 +265,7 @@ err_invalid_data:
         sA = (LPCSTR)(sParser.cStrCurrLineA);
         if (sA[0] == 'H' && sA[1] == 'T' && sA[2] == 'T' && sA[3] == 'P' && sA[4] == '/')
         {
-          sParser.nHeadersLen -= 5;
+          sParser.dwHeadersLen -= 5;
           sParser.nState = StateIgnoringHeader;
           sParser.cStrCurrLineA.Empty();
           break;
@@ -299,8 +299,8 @@ on_header_value:
           break;
         }
         //check headers length and valid value char
-        if (sParser.nHeadersLen < nMaxHeaderSize)
-          (sParser.nHeadersLen)++;
+        if (sParser.dwHeadersLen < dwMaxHeaderSize)
+          (sParser.dwHeadersLen)++;
         else if (sParser.nErrorCode == 0)
           sParser.nErrorCode = 400; //headers too long
         if (*szDataA == 0)
@@ -323,8 +323,8 @@ on_header_value:
           goto on_header_value;
         if (*szDataA == ' ' || *szDataA == '\t')
           break;
-        if (sParser.nHeadersLen < nMaxHeaderSize)
-          (sParser.nHeadersLen)++;
+        if (sParser.dwHeadersLen < dwMaxHeaderSize)
+          (sParser.dwHeadersLen)++;
         else if (sParser.nErrorCode == 0)
           sParser.nErrorCode = 400; //headers too long
         if (sParser.cStrCurrLineA.GetLength() < MAX_REQUEST_STATUS_LINE_LENGTH)
@@ -933,13 +933,13 @@ CHttpCommon::eState CHttpCommon::GetParserState() const
   return sParser.nState;
 }
 
-HRESULT CHttpCommon::SetBodyParser(_In_ CHttpBodyParserBase *lpParser, _In_ CPropertyBag &cPropBag)
+HRESULT CHttpCommon::SetBodyParser(_In_ CHttpBodyParserBase *lpParser)
 {
   if (sParser.nState != StateBodyStart)
     return E_FAIL;
   MX_ASSERT(lpParser != NULL);
   cBodyParser = lpParser;
-  return lpParser->Initialize(cPropBag, *this);
+  return lpParser->Initialize(*this);
 }
 
 CHttpBodyParserBase* CHttpCommon::GetBodyParser() const
@@ -985,21 +985,6 @@ LONG CHttpCommon::GetResponseStatus() const
 LPCSTR CHttpCommon::GetResponseReasonA() const
 {
   return (LPSTR)(sResponse.cStrReasonA);
-}
-
-CHttpBodyParserBase* CHttpCommon::GetDefaultBodyParser()
-{
-  CHttpHeaderEntContentType *lpHeader;
-
-  lpHeader = GetHeader<CHttpHeaderEntContentType>();
-  if (lpHeader != NULL)
-  {
-    if (StrCompareA(lpHeader->GetType(), "application/x-www-form-urlencoded") == 0)
-      return MX_DEBUG_NEW CHttpBodyParserUrlEncodedForm();
-    if (StrCompareA(lpHeader->GetType(), "multipart/form-data") == 0)
-      return MX_DEBUG_NEW CHttpBodyParserMultipartFormData();
-  }
-  return MX_DEBUG_NEW CHttpBodyParserDefault();
 }
 
 HRESULT CHttpCommon::ParseRequestLine(_In_z_ LPCSTR szLineA)

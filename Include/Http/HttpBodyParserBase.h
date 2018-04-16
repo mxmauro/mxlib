@@ -32,21 +32,6 @@
 
 //-----------------------------------------------------------
 
-#define MX_HTTP_BODYPARSER_PROPERTY_MaxBodySizeInMemory                 "HTTP_BODYPARSER_MaxBodySizeInMemory"
-#define MX_HTTP_BODYPARSER_PROPERTY_MaxBodySizeInMemory_DEFVAL          32768
-#define MX_HTTP_BODYPARSER_PROPERTY_TempFolder                          "HTTP_BODYPARSER_TempFolder"
-#define MX_HTTP_BODYPARSER_PROPERTY_TempFolder_DEFVAL                   L""
-#define MX_HTTP_BODYPARSER_PROPERTY_MaxFileUploadSize                   "HTTP_BODYPARSER_MaxFileUploadSize"
-#define MX_HTTP_BODYPARSER_PROPERTY_MaxFileUploadSize_DEFVAL            (2ui64*1048576ui64)
-#define MX_HTTP_BODYPARSER_PROPERTY_MaxFileUploadCount                  "HTTP_BODYPARSER_MaxFileUploadCount"
-#define MX_HTTP_BODYPARSER_PROPERTY_MaxFileUploadCount_DEFVAL           4
-#define MX_HTTP_BODYPARSER_PROPERTY_MaxNonFileFormFieldsDataSize        "HTTP_BODYPARSER_MaxNonFileFormFieldsDataSize"
-#define MX_HTTP_BODYPARSER_PROPERTY_MaxNonFileFormFieldsDataSize_DEFVAL 256000
-#define MX_HTTP_BODYPARSER_PROPERTY_MaxNonFormBodySize                  "HTTP_BODYPARSER_MaxNonFormBodySize"
-#define MX_HTTP_BODYPARSER_PROPERTY_MaxNonFormBodySize_DEFVAL           (10ui64*1048576ui64)
-
-//-----------------------------------------------------------
-
 namespace MX {
 
 class CHttpBodyParserBase : public virtual TRefCounted<CBaseMemObj>
@@ -72,7 +57,7 @@ public:
 protected:
   friend class CHttpCommon;
 
-  virtual HRESULT Initialize(_In_ CPropertyBag &cPropBag, _In_ CHttpCommon &cHttpCmn) = 0;
+  virtual HRESULT Initialize(_In_ CHttpCommon &cHttpCmn) = 0;
   virtual HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize) = 0;
 
 protected:

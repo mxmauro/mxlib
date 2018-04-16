@@ -201,6 +201,7 @@ HRESULT CHttpBodyParserFormBase::AddFileField(_In_z_ LPCWSTR szNameW, _In_z_ LPC
   CStringW cStrNameW, cStrIndexW;
   TArrayListWithFree<LPCWSTR> aSubIndexesList;
   SIZE_T i, nCurrIdx, nCount;
+  ULARGE_INTEGER ullFileSize;
   LPCWSTR sW, szIdxW;
   HRESULT hRes;
 
@@ -226,7 +227,10 @@ HRESULT CHttpBodyParserFormBase::AddFileField(_In_z_ LPCWSTR szNameW, _In_z_ LPC
     if (!lpField)
       return E_OUTOFMEMORY;
     if (lpField->cStrNameW.Copy((LPCWSTR)cStrNameW) == FALSE)
+    {
+      delete lpField;
       return E_OUTOFMEMORY;
+    }
     //add to list
     if (cFileFieldsList.AddElement(lpField) == FALSE)
     {
@@ -322,6 +326,7 @@ HRESULT CHttpBodyParserFormBase::AddFileField(_In_z_ LPCWSTR szNameW, _In_z_ LPC
   if (lpField->cStrTypeA.Copy(szTypeA) == FALSE)
     return E_OUTOFMEMORY;
   lpField->hFile = hFile;
+  lpField->nSize = (::GetFileSizeEx(hFile, (PLARGE_INTEGER)&ullFileSize) != FALSE) ? ullFileSize.QuadPart : 0ui64;
   //done
   return S_OK;
 }
@@ -344,6 +349,7 @@ VOID CHttpBodyParserFormBase::CField::ClearValue()
 CHttpBodyParserFormBase::CFileField::CFileField() : CBaseMemObj()
 {
   hFile = NULL;
+  nSize = 0ui64;
   return;
 }
 
@@ -354,6 +360,48 @@ CHttpBodyParserFormBase::CFileField::~CFileField()
   cStrFileNameW.Empty();
   cStrTypeA.Empty();
   return;
+}
+
+HRESULT CHttpBodyParserFormBase::CFileField::Read(_Out_writes_to_(nToRead, *lpnReaded) LPVOID lpDest,
+                                                  _In_ ULONGLONG nOffset, _In_ SIZE_T nToRead,
+                                                  _Out_opt_ SIZE_T *lpnReaded)
+{
+  union {
+    ULONGLONG nOfs;
+    DWORD dwOfs[2];
+  };
+  OVERLAPPED sOvr;
+  DWORD dwToRead, dwReaded;
+
+  if (lpnReaded != NULL)
+    *lpnReaded = 0;
+  if (lpDest == NULL)
+    return E_POINTER;
+  if (nToRead == 0 || hFile == NULL || hFile == INVALID_HANDLE_VALUE)
+    return S_OK;
+  if (nOffset >= nSize)
+    return MX_E_EndOfFileReached;
+  //validate to-read size
+  if ((ULONGLONG)nToRead > nSize - nOffset)
+    nToRead = (SIZE_T)(nSize - nOffset);
+  //----
+  nOfs = nOffset;
+  while (nToRead > 0)
+  {
+    sOvr.Offset = dwOfs[0];
+    sOvr.OffsetHigh = dwOfs[1];
+    dwToRead = (nToRead > 65536) ? 65536 : (DWORD)nToRead;
+    if (::ReadFile(hFile, lpDest, dwToRead, &dwReaded, &sOvr) == FALSE)
+      return MX_HRESULT_FROM_LASTERROR();
+    if (dwToRead != dwReaded)
+      return MX_E_ReadFault;
+    lpDest = (LPBYTE)lpDest + (SIZE_T)dwReaded;
+    nOfs += (SIZE_T)dwReaded;
+    nToRead -= (SIZE_T)dwReaded;
+    if (lpnReaded != NULL)
+      *lpnReaded += (SIZE_T)dwReaded;
+  }
+  return S_OK;
 }
 
 VOID CHttpBodyParserFormBase::CFileField::ClearValue()

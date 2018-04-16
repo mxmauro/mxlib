@@ -35,7 +35,6 @@
 #include "..\CircularBuffer.h"
 #include "..\Callbacks.h"
 #include "..\Streams.h"
-#include "..\PropertyBag.h"
 #include "..\TimedEventQueue.h"
 #include "..\Debug.h"
 
@@ -48,21 +47,6 @@
 #ifdef MX_IPC_TIMING
 #include "..\HiResTimer.h"
 #endif //MX_IPC_TIMING
-
-//-----------------------------------------------------------
-
-#define MX_IPC_PROPERTY_PacketSize                     "IPC_PacketSize"
-#define MX_IPC_PROPERTY_PacketSize_DEFVAL              4096
-#define MX_IPC_PROPERTY_ReadAhead                      "IPC_ReadAhead"
-#define MX_IPC_PROPERTY_ReadAhead_DEFVAL               4
-#define MX_IPC_PROPERTY_MaxFreePackets                 "IPC_MaxFreePackets"
-#define MX_IPC_PROPERTY_MaxFreePackets_DEFVAL          128
-#define MX_IPC_PROPERTY_MaxWriteTimeoutMs              "IPC_MaxWriteTimeoutMs"
-#define MX_IPC_PROPERTY_MaxWriteTimeoutMs_DEFVAL       0
-#define MX_IPC_PROPERTY_DoZeroReads                    "IPC_DoZeroReads"
-#define MX_IPC_PROPERTY_DoZeroReads_DEFVAL             1
-#define MX_IPC_PROPERTY_OutgoingPacketsLimit           "IPC_OutgoingPacketsLimit"
-#define MX_IPC_PROPERTY_OutgoingPacketsLimit_DEFVAL    16
 
 //-----------------------------------------------------------
 
@@ -196,10 +180,17 @@ public:
 
   //--------
 protected:
-  CIpc(_In_ CIoCompletionPortThreadPool &cDispatcherPool, _In_ CPropertyBag &cPropBag);
+  CIpc(_In_ CIoCompletionPortThreadPool &cDispatcherPool);
 
 public:
   virtual ~CIpc();
+
+  VOID SetOption_PacketSize(_In_ DWORD dwSize);
+  VOID SetOption_ReadAheadCount(_In_ DWORD dwCount);
+  VOID SetOption_MaxFreePacketsCount(_In_ DWORD dwCount);
+  VOID SetOption_MaxWriteTimeoutMs(_In_ DWORD dwTimeoutMs);
+  VOID SetOption_EnableZeroReads(_In_ BOOL bEnable);
+  VOID SetOption_OutgoingPacketsLimitCount(_In_ DWORD dwCount);
 
   VOID On(_In_ OnEngineErrorCallback cEngineErrorCallback);
 
@@ -655,7 +646,6 @@ protected:
   LONG volatile nRundownProt;
   CIoCompletionPortThreadPool &cDispatcherPool;
   CIoCompletionPortThreadPool::OnPacketCallback cDispatcherPoolPacketCallback;
-  CPropertyBag &cPropBag;
   DWORD dwPacketSize;
   DWORD dwReadAhead, dwMaxOutgoingPackets;
   BOOL bDoZeroReads;
