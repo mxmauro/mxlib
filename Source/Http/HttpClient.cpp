@@ -69,6 +69,7 @@ CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr) : CBaseMemObj(), cSocketMgr
 CHttpClient::~CHttpClient()
 {
   LONG volatile nWait = 0;
+  CPostDataItem *lpItem;
 
   RundownProt_WaitForRelease(&nRundownLock);
   //close current connection
@@ -100,6 +101,9 @@ CHttpClient::~CHttpClient()
   //release queue
   if (lpTimedEventQueue != NULL)
     lpTimedEventQueue->Release();
+  //more cleanup
+  while ((lpItem = sRequest.cPostData.PopHead()) != NULL)
+    delete lpItem;
   return;
 }
 
@@ -1313,6 +1317,7 @@ restart:
                 {
                   ((CHttpBodyParserDefault*)lpBodyParser)->KeepFile();
                 }
+                lpBodyParser->Release();
               }
             }
           }
