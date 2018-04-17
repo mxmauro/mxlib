@@ -121,12 +121,13 @@ public:
 
   HRESULT AddRequestPostData(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA);
   HRESULT AddRequestPostData(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW);
-
   HRESULT AddRequestPostDataFile(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szFileNameA, _In_ CStream *lpStream);
   HRESULT AddRequestPostDataFile(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szFileNameW, _In_ CStream *lpStream);
+  HRESULT AddRequestRawPostData(_In_ LPCVOID lpData, _In_ SIZE_T nLength);
+  HRESULT AddRequestRawPostData(_In_ CStream *lpStream);
 
-  HRESULT RemoveRequestPostData(_In_z_ LPCSTR szNameA);
-  HRESULT RemoveRequestPostData(_In_z_ LPCWSTR szNameW);
+  HRESULT RemoveRequestPostData(_In_opt_z_ LPCSTR szNameA);
+  HRESULT RemoveRequestPostData(_In_opt_z_ LPCWSTR szNameW);
   HRESULT RemoveAllRequestPostData();
 
   HRESULT SetProxy(_In_ CProxy &cProxy);
@@ -201,26 +202,14 @@ private:
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CPostDataItem);
   public:
-    CPostDataItem(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _In_opt_ CStream *lpStream=NULL);
+    CPostDataItem(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA);
+    CPostDataItem(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szFileNameA, _In_ CStream *lpStream);
+    CPostDataItem(_In_ CStream *lpStream);
     ~CPostDataItem();
 
-    LPCSTR GetName() const
-      {
-      return szNameA;
-      };
-
-    LPCSTR GetValue() const
-      {
-      return szValueA;
-      };
-
-    CStream* GetStream() const
-      {
-      return cStream.Get();
-      };
-
-  private:
+  public:
     LPSTR szNameA, szValueA;
+    SIZE_T nValueLen;
     TAutoRefCounted<CStream> cStream;
   };
 
@@ -252,37 +241,37 @@ private:
   OnErrorCallback cErrorCallback;
   OnQueryCertificatesCallback cQueryCertificatesCallback;
 
-  struct tagRequest {
-    tagRequest() : cHttpCmn(TRUE)
-      {
-      szBoundary[0] = 0;
-      bUsingMultiPartFormData = FALSE;
-      bUsingProxy = FALSE;
-      return;
-      };
+  class CRequest : public CBaseMemObj
+  {
+  public:
+    CRequest();
+    ~CRequest();
 
+  public:
     CUrl cUrl;
     CStringA cStrMethodA;
     CHttpCommon cHttpCmn;
-    TLnkLst<CPostDataItem> cPostData;
+    struct {
+      TLnkLst<CPostDataItem> cList;
+      BOOL bHasRaw;
+    } sPostData;
     CHAR szBoundary[32];
     BOOL bUsingMultiPartFormData;
     BOOL bUsingProxy;
-  } sRequest;
+  } cRequest;
 
-  struct tagResponse {
-    tagResponse() : cHttpCmn(FALSE)
-      {
-      lpTimeoutEvent = NULL;
-      return;
-      };
+  class CResponse : public CBaseMemObj
+  {
+  public:
+    CResponse();
 
+  public:
     CHttpCommon cHttpCmn;
     CTimedEventQueue::CEvent *lpTimeoutEvent;
     CStringW cStrDownloadFileNameW;
-  } sResponse;
+  } cResponse;
 
-  struct tagRedirect {
+  struct {
     CTimedEventQueue::CEvent *lpEvent;
     CUrl cUrl;
     SIZE_T nWaitTimeSecs;
