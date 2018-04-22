@@ -559,10 +559,17 @@ VOID CHttpServer::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
 
   if (lpRequest != NULL)
   {
-    //mark link as closed
-    lpRequest->MarkLinkAsClosed();
-    //cancel all timeout events
-    CancelAllTimeoutEvents(lpRequest);
+    CFastLock cLock(&(lpRequest->nMutex));
+
+    if (lpRequest->hConn == h)
+    {
+      //mark link as closed
+      lpRequest->MarkLinkAsClosed();
+      //cancel all timeout events
+      CancelAllTimeoutEvents(lpRequest);
+
+      lpRequest->hConn = NULL;
+    }
   }
   //raise error notification
   if (FAILED(hErrorCode) && cErrorCallback)
@@ -811,11 +818,8 @@ HRESULT CHttpServer::QuickSendErrorResponseAndReset(_In_ CRequest *lpRequest, _I
     hRes = cSocketMgr.SendMsg(lpRequest->hConn, (LPCSTR)cStrResponseA, cStrResponseA.GetLength());
     if (bForceClose == FALSE && SUCCEEDED(hRes))
     {
-      lpRequest->AddRef();
       hRes = cSocketMgr.AfterWriteSignal(lpRequest->hConn,
                                          MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnAfterSendResponse, this), lpRequest);
-      if (FAILED(hRes))
-        lpRequest->Release();
     }
   }
   if (bForceClose != FALSE || FAILED(hRes))
@@ -885,7 +889,6 @@ VOID CHttpServer::OnAfterSendResponse(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVO
       cSocketMgr.Close(lpRequest->hConn);
     }
   }
-  lpRequest->Release();
   return;
 }
 
@@ -1049,11 +1052,8 @@ VOID CHttpServer::OnRequestEnding(_In_ CRequest *lpRequest, _In_ HRESULT hErrorC
   }
   if (SUCCEEDED(hRes))
   {
-    lpRequest->AddRef();
     hRes = cSocketMgr.AfterWriteSignal(lpRequest->hConn,
                                         MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnAfterSendResponse, this), lpRequest);
-    if (FAILED(hRes))
-      lpRequest->Release();
   }
   if (SUCCEEDED(hRes))
   {

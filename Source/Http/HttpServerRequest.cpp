@@ -153,13 +153,7 @@ VOID CHttpServer::CRequest::ResetResponse()
 
   if (nState == StateBuildingResponse && HasHeadersBeenSent() == FALSE)
   {
-    sResponse.nStatus = 0;
-    sResponse.cStrReasonA.Empty();
-    sResponse.cHttpCmn.ResetParser();
-    sResponse.aStreamsList.RemoveAllElements();
-    sResponse.bLastStreamIsData = FALSE;
-    sResponse.szMimeTypeHintA = NULL;
-    sResponse.cStrFileNameA.Empty();
+    sResponse.ResetForNewRequest();
   }
   return;
 }
