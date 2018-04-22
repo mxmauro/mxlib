@@ -43,17 +43,17 @@ public:
 static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode);
 static HRESULT OnResponseHeadersReceived(_In_ MX::CHttpClient *lpHttp, _In_z_ LPCWSTR szFileNameW,
                                          _In_opt_ PULONGLONG lpnContentSize, _In_z_ LPCSTR szTypeA,
-                                         _In_ BOOL bTreatAsAttachment, _Out_ MX::CStringW &cStrFullFileNameW,
-                                         _Outptr_result_maybenull_ MX::CHttpBodyParserBase **lpBodyParser);
+                                         _In_ BOOL bTreatAsAttachment, _Inout_ MX::CStringW &cStrFullFileNameW,
+                                         _Inout_ MX::CHttpBodyParserBase **lplpBodyParser);
 static HRESULT OnResponseHeadersReceived_BigDownload(_In_ MX::CHttpClient *lpHttp, _In_z_ LPCWSTR szFileNameW,
                                          _In_opt_ PULONGLONG lpnContentSize, _In_z_ LPCSTR szTypeA,
-                                          _In_ BOOL bTreatAsAttachment, _Out_ MX::CStringW &cStrFullFileNameW,
-                                         _Outptr_result_maybenull_ MX::CHttpBodyParserBase **lpBodyParser);
+                                          _In_ BOOL bTreatAsAttachment, _Inout_ MX::CStringW &cStrFullFileNameW,
+                                         _Inout_ MX::CHttpBodyParserBase **lplpBodyParser);
 static HRESULT OnDocumentCompleted(_In_ MX::CHttpClient *lpHttp);
 static VOID OnError(_In_ MX::CHttpClient *lpHttp, _In_ HRESULT hErrorCode);
 static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *lpHttp, _Inout_ MX::CIpcSslLayer::eProtocol &nProtocol,
-                                   _Inout_ MX::CSslCertificateArray *&lpCheckCertificates,
-                                   _Inout_ MX::CSslCertificate *&lpSelfCert, _Inout_ MX::CCryptoRSA *&lpPrivKey);
+                                   _Inout_ MX::CSslCertificateArray **lplpCheckCertificates,
+                                   _Inout_ MX::CSslCertificate **lplpSelfCert, _Inout_ MX::CCryptoRSA **lplpPrivKey);
 
 static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpParam);
 
@@ -129,16 +129,17 @@ static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode)
 
 static HRESULT OnResponseHeadersReceived(_In_ MX::CHttpClient *lpHttp, _In_z_ LPCWSTR szFileNameW,
                                          _In_opt_ PULONGLONG lpnContentSize, _In_z_ LPCSTR szTypeA,
-                                         _In_ BOOL bTreatAsAttachment, _Out_ MX::CStringW &cStrFullFileNameW,
-                                         _Outptr_result_maybenull_ MX::CHttpBodyParserBase **lpBodyParser)
+                                         _In_ BOOL bTreatAsAttachment, _Inout_ MX::CStringW &cStrFullFileNameW,
+                                         _Inout_ MX::CHttpBodyParserBase **lplpBodyParser)
 {
+  cStrFullFileNameW.Empty();
   return S_OK;
 }
 
 static HRESULT OnResponseHeadersReceived_BigDownload(_In_ MX::CHttpClient *lpHttp, _In_z_ LPCWSTR szFileNameW,
                                                      _In_opt_ PULONGLONG lpnContentSize, _In_z_ LPCSTR szTypeA,
-                                                     _In_ BOOL bTreatAsAttachment, _Out_ MX::CStringW &cStrFullFileNameW,
-                                                     _Outptr_result_maybenull_ MX::CHttpBodyParserBase **lpBodyParser)
+                                                     _In_ BOOL bTreatAsAttachment, _Inout_ MX::CStringW &cStrFullFileNameW,
+                                                     _Inout_ MX::CHttpBodyParserBase **lplpBodyParser)
 {
   HRESULT hRes;
 
@@ -161,13 +162,13 @@ static VOID OnError(_In_ MX::CHttpClient *lpHttp, _In_ HRESULT hErrorCode)
 }
 
 static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *_lpHttp, _Inout_ MX::CIpcSslLayer::eProtocol &nProtocol,
-                                   _Inout_ MX::CSslCertificateArray *&lpCheckCertificates,
-                                   _Inout_ MX::CSslCertificate *&lpSelfCert, _Inout_ MX::CCryptoRSA *&lpPrivKey)
+                                   _Inout_ MX::CSslCertificateArray **lplpCheckCertificates,
+                                   _Inout_ MX::CSslCertificate **lplpSelfCert, _Inout_ MX::CCryptoRSA **lplpPrivKey)
 {
   CMyHttpClient *lpHttp = static_cast<CMyHttpClient*>(_lpHttp);
 
   nProtocol = MX::CIpcSslLayer::ProtocolTLSv1_2;
-  lpCheckCertificates = lpHttp->lpCerts;
+  *lplpCheckCertificates = lpHttp->lpCerts;
   return S_OK;
 }
 
@@ -198,6 +199,7 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
 #pragma warning(suppress : 28159)
   dwStartTime = dwEndTime = ::GetTickCount();
 
+  hRes = E_FAIL;
   if (lpThreadData->nIndex == 1)
   {
     bExpectHtml = FALSE;

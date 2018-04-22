@@ -774,7 +774,7 @@ VOID CIpc::FreePacket(_In_ CPacket *lpPacket)
   return;
 }
 
-CIpc::CConnectionBase* CIpc::CheckAndGetConnection(_In_ HANDLE h)
+CIpc::CConnectionBase* CIpc::CheckAndGetConnection(_In_opt_ HANDLE h)
 {
   CAutoSlimRWLShared cConnListLock(&(sConnections.nSlimMutex));
   CConnectionBase *lpConn;
@@ -790,7 +790,7 @@ CIpc::CConnectionBase* CIpc::CheckAndGetConnection(_In_ HANDLE h)
   return lpConn;
 }
 
-CIpc::CConnectionBase* CIpc::IsValidConnection(_In_ HANDLE h)
+CIpc::CConnectionBase* CIpc::IsValidConnection(_In_opt_ HANDLE h)
 {
   CConnectionBase *lpConn;
 

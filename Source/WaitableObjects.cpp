@@ -685,6 +685,7 @@ done:
   }
   if (NT_SUCCESS(nNtStatus))
   {
+#pragma warning(suppress: 28112) //NOTE: This suppress is an analyzer bug
     if (_InterlockedCompareExchangePointer(&hRootDirHandle, _h, NULL) != NULL)
     {
       ::MxNtClose(_h);

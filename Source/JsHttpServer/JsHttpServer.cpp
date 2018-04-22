@@ -28,8 +28,8 @@
 
 namespace MX {
 
-CJsHttpServer::CJsHttpServer(_In_ MX::CSockets &_cSocketMgr) : CBaseMemObj(), cSocketMgr(_cSocketMgr),
-                                                               cHttpServer(_cSocketMgr)
+CJsHttpServer::CJsHttpServer(_In_ MX::CSockets &cSocketMgr, _In_ CIoCompletionPortThreadPool &cWorkerPool) :
+                            CBaseMemObj(), cHttpServer(cSocketMgr, cWorkerPool)
 {
   cNewRequestObjectCallback = NullCallback();
   cRequestCallback = NullCallback();
@@ -161,7 +161,8 @@ VOID CJsHttpServer::StopListening()
   return;
 }
 
-HRESULT CJsHttpServer::OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpServer::CRequest *_lpRequest)
+VOID CJsHttpServer::OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpServer::CRequest *_lpRequest,
+                                       _In_ HANDLE hShutdownEv)
 {
   CJsRequest *lpRequest = static_cast<CJsRequest*>(_lpRequest);
   CJavascriptVM cJvm;
@@ -170,13 +171,22 @@ HRESULT CJsHttpServer::OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHt
   HRESULT hRes;
 
   if (!cRequestCallback)
-    return E_NOTIMPL;
+  {
+    hRes = E_NOTIMPL;
+    goto done;
+  }
   //build path
   lpUrl = lpRequest->GetUrl();
   if (lpUrl == NULL) //only accept absolute paths
-    return MX_E_NotReady;
+  {
+    hRes = MX_E_NotReady;
+    goto done;
+  }
   if ((lpUrl->GetPath())[0] != L'/') //only accept absolute paths
-    return lpRequest->SendErrorPage(403, E_INVALIDARG);
+  {
+    hRes = lpRequest->SendErrorPage(403, E_INVALIDARG);
+    goto done;
+  }
   //initialize javascript engine
   hRes = InitializeJVM(cJvm, lpRequest);
   if (SUCCEEDED(hRes))
@@ -260,7 +270,9 @@ HRESULT CJsHttpServer::OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHt
   if (cRequestCleanupCallback)
     cRequestCleanupCallback(this, lpRequest, cJvm);
   //done
-  return hRes;
+done:
+  lpRequest->End(hRes);
+  return;
 }
 
 HRESULT CJsHttpServer::OnRequireJsModule(_In_ DukTape::duk_context *lpCtx,

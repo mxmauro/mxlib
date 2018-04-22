@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27004.2009
+VisualStudioVersion = 15.0.27130.2026
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MXLib", "MXLib.vcxproj", "{0C906B7D-55F9-4ED1-A7E1-96B84A648703}"
 EndProject
@@ -35,6 +35,7 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "JsHttpServer", "JsHttpServer.vcxproj", "{34E4685A-F936-43F8-81FB-416CE8316EE6}"
 	ProjectSection(ProjectDependencies) = postProject
 		{11F49497-A8D8-4D57-8611-BB73FA2634FB} = {11F49497-A8D8-4D57-8611-BB73FA2634FB}
+		{E4280DFD-C300-440C-BCA4-B2CF3948EDEA} = {E4280DFD-C300-440C-BCA4-B2CF3948EDEA}
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "External Projects", "External Projects", "{AB48AFCA-7E75-453F-B534-0D32DE1758A6}"
@@ -137,5 +138,8 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {56063354-2E0E-4CA9-B3AB-7E9A334B647E}
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
 	EndGlobalSection
 EndGlobal

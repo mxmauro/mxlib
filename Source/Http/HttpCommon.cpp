@@ -935,8 +935,6 @@ CHttpCommon::eState CHttpCommon::GetParserState() const
 
 HRESULT CHttpCommon::SetBodyParser(_In_ CHttpBodyParserBase *lpParser)
 {
-  if (sParser.nState != StateBodyStart)
-    return E_FAIL;
   MX_ASSERT(lpParser != NULL);
   cBodyParser = lpParser;
   return lpParser->Initialize(*this);

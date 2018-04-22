@@ -179,6 +179,7 @@ private:
   } SYNC_WAIT;
 
   CIoCompletionPortThreadPool &cWorkerPool;
+  //NOTE: CIoCompletionPortThreadPool::Post needs a non-dynamic variable
   CIoCompletionPortThreadPool::OnPacketCallback cMessageReceivedCallbackWP, cFlushReceivedRepliesWP;
   CIpc *lpIpc;
   HANDLE hConn;

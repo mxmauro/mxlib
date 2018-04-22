@@ -629,8 +629,8 @@ protected:
   CPacket* GetPacket(_In_ CConnectionBase *lpConn, _In_ CPacket::eType nType);
   VOID FreePacket(_In_ CPacket *lpPacket);
 
-  CConnectionBase* CheckAndGetConnection(_In_ HANDLE h);
-  CConnectionBase* IsValidConnection(_In_ HANDLE h);
+  CConnectionBase* CheckAndGetConnection(_In_opt_ HANDLE h);
+  CConnectionBase* IsValidConnection(_In_opt_ HANDLE h);
 
   VOID OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
                           _In_ HRESULT hRes);

@@ -49,16 +49,17 @@ public:
   //--------
 
   typedef Callback<HRESULT (_Out_ CRequest **lplpRequest)> OnNewRequestObjectCallback;
-  typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _In_ CRequest *lpRequest,
-                            _Inout_ CHttpBodyParserBase *&lpBodyParser)> OnRequestHeadersReceivedCallback;
-  typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _In_ CRequest *lpRequest)> OnRequestCompletedCallback;
+  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CRequest *lpRequest, _In_ HANDLE hShutdownEv,
+                         _Outptr_ _Maybenull_ CHttpBodyParserBase **lplpBodyParser)> OnRequestHeadersReceivedCallback;
+  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CRequest *lpRequest,
+                         _In_ HANDLE hShutdownEv)> OnRequestCompletedCallback;
 
   typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CRequest *lpRequest, _In_ HRESULT hErrorCode)> OnErrorCallback;
 
   //--------
 
 public:
-  CHttpServer(_In_ CSockets &cSocketMgr);
+  CHttpServer(_In_ CSockets &cSocketMgr, _In_ CIoCompletionPortThreadPool &cWorkerPool);
   ~CHttpServer();
 
   VOID SetOption_MaxRequestTimeoutMs(_In_ DWORD dwTimeoutMs);
@@ -93,6 +94,10 @@ public:
     CRequest();
   public:
     ~CRequest();
+
+    VOID End(_In_opt_ HRESULT hErrorCode=S_OK);
+
+    VOID EnableDirectResponse();
 
     LPCSTR GetMethod() const;
     CUrl* GetUrl() const;
@@ -181,6 +186,7 @@ public:
     CHttpCookieArray* GetResponseCookies() const;
     SIZE_T GetResponseCookiesCount() const;
 
+    HRESULT SendHeaders();
     HRESULT SendResponse(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen);
     HRESULT SendFile(_In_z_ LPCWSTR szFileNameW);
     HRESULT SendStream(_In_ CStream *lpStream, _In_opt_z_ LPCWSTR szFileNameW=NULL);
@@ -195,9 +201,11 @@ public:
 
     BOOL IsKeepAliveRequest() const;
     BOOL HasErrorBeenSent() const;
+    BOOL HasHeadersBeenSent() const;
 
-    HRESULT BuildAndSendResponse();
-    HRESULT BuildAndInsertHeaderStream();
+    HRESULT BuildAndInsertOrSendHeaderStream();
+
+    HRESULT SendQueuedStreams();
 
     VOID MarkLinkAsClosed();
     BOOL IsLinkClosed() const;
@@ -210,9 +218,11 @@ public:
       StateReceivingRequestHeaders,
       StateReceivingRequestBody,
       StateBuildingResponse,
-      StateError
+      StateError,
+      StateEnded
     } eState;
 
+    OVERLAPPED sOvr;
     LONG volatile nMutex;
     CHttpServer *lpHttpServer;
     CSockets *lpSocketMgr;
@@ -228,6 +238,16 @@ public:
         return;
         };
 
+      VOID ResetForNewRequest()
+        {
+        cUrl.Reset();
+        cStrMethodA.Empty();
+        cHttpCmn.ResetParser();
+        liLastRead.QuadPart = 0ui64;
+        return;
+        };
+
+    public:
       CUrl cUrl;
       CStringA cStrMethodA;
       CHttpCommon cHttpCmn;
@@ -244,8 +264,22 @@ public:
         nStatus = 0;
         bLastStreamIsData = FALSE;
         szMimeTypeHintA = NULL;
+        bDirect = FALSE;
         return;
         };
+
+       VOID ResetForNewRequest()
+         {
+         nStatus = 0;
+         cStrReasonA.Empty();
+         cHttpCmn.ResetParser();
+         aStreamsList.RemoveAllElements();
+         bLastStreamIsData = FALSE;
+         szMimeTypeHintA = NULL;
+         cStrFileNameA.Empty();
+         bDirect = FALSE;
+         return;
+         };
 
       LONG nStatus;
       CStringA cStrReasonA;
@@ -254,6 +288,7 @@ public:
       BOOL bLastStreamIsData;
       LPCSTR szMimeTypeHintA;
       CStringA cStrFileNameA;
+      BOOL bDirect;
     } sResponse;
   };
 
@@ -274,13 +309,14 @@ private:
 
   VOID OnRequestTimeout(_In_ CTimedEventQueue::CEvent *lpEvent);
 
-  HRESULT SendStreams(_In_ CRequest *lpRequest, _In_ BOOL bForceClose);
+  VOID OnRequestCompleted(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
+                          _In_ HRESULT hRes);
 
   HRESULT QuickSendErrorResponseAndReset(_In_ CRequest *lpRequest, _In_ LONG nErrorCode, _In_ HRESULT hErrorCode,
-                                         _In_opt_ BOOL bForceClose=TRUE);
+                                         _In_ BOOL bForceClose);
 
-  HRESULT SendGenericErrorPage(_In_ CRequest *lpRequest, _In_ LONG nErrorCode, _In_ HRESULT hErrorCode,
-                               _In_opt_z_ LPCSTR szBodyExplanationA=NULL);
+  HRESULT GenerateErrorPage(_Out_ CStringA &cStrResponseA, _In_ CRequest *lpRequest, _In_ LONG nErrorCode,
+                            _In_ HRESULT hErrorCode, _In_opt_z_ LPCSTR szBodyExplanationA=NULL);
   static LPCSTR LocateError(_In_ LONG nErrorCode);
 
   VOID OnAfterSendResponse(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie, _In_ CIpc::CUserData *lpUserData);
@@ -291,11 +327,15 @@ private:
   VOID DoCancelEventsCallback(_In_ __TEventArray &cEventsList);
 
   VOID OnRequestDestroyed(_In_ CRequest *lpRequest);
+  VOID OnRequestEnding(_In_ CRequest *lpRequest, _In_ HRESULT hErrorCode);
 
   HRESULT OnDownloadStarted(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW, _In_ LPVOID lpUserParam);
 
 private:
   CSockets &cSocketMgr;
+  CIoCompletionPortThreadPool &cWorkerPool;
+  //NOTE: CIoCompletionPortThreadPool::Post needs a non-dynamic variable
+  CIoCompletionPortThreadPool::OnPacketCallback cRequestCompletedWP;
 
   DWORD dwMaxRequestTimeoutMs;
   DWORD dwMaxHeaderSize;
@@ -306,6 +346,7 @@ private:
   DWORD dwMaxBodySizeInMemory;
   ULONGLONG ullMaxBodySize;
 
+  LONG volatile nDownloadNameGeneratorCounter;
   struct {
     LONG volatile nRwMutex;
     CIpcSslLayer::eProtocol nProtocol;
@@ -321,6 +362,7 @@ private:
   OnErrorCallback cErrorCallback;
   LONG volatile nRequestsMutex;
   TLnkLst<CRequest> cRequestsList;
+  CWindowsEvent cShutdownEv;
 };
 
 } //namespace MX

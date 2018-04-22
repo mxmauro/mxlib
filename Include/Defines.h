@@ -93,6 +93,7 @@
 #define MX_E_Busy                       HRESULT_FROM_WIN32(ERROR_BUSY)
 #define MX_E_BadLength                  HRESULT_FROM_WIN32(ERROR_BAD_LENGTH)
 #define MX_E_EndOfFileReached           HRESULT_FROM_WIN32(ERROR_HANDLE_EOF)
+#define MX_E_InvalidState               HRESULT_FROM_WIN32(ERROR_INVALID_STATE)
 
 #define MX_SCODE_FACILITY               0xF18
 #define MX_E_DuplicateKey               MX_E_AlreadyExists

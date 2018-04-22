@@ -47,7 +47,8 @@ class CHttpClient : public virtual CBaseMemObj
 public:
   typedef enum {
     StateClosed = 0,
-    StateSendingRequest,
+    StateSendingRequestHeaders,
+    StateSendingDynamicRequestBody,
     StateReceivingResponseHeaders,
     StateReceivingResponseBody,
     StateDocumentCompleted,
@@ -60,15 +61,17 @@ public:
 
   //NOTE: Leave cStrFullFileNameW empty to download to temp location (with imposed limitations)
   typedef Callback<HRESULT (_In_ CHttpClient *lpHttp, _In_z_ LPCWSTR szFileNameW, _In_opt_ PULONGLONG lpnContentSize,
-                            _In_z_ LPCSTR szTypeA, _In_ BOOL bTreatAsAttachment, _Out_ CStringW &cStrFullFileNameW,
-                            _Outptr_result_maybenull_ CHttpBodyParserBase **lpBodyParser)> OnHeadersReceivedCallback;
+                            _In_z_ LPCSTR szTypeA, _In_ BOOL bTreatAsAttachment, _Inout_ CStringW &cStrFullFileNameW,
+                            _Inout_ CHttpBodyParserBase **lpBodyParser)> OnHeadersReceivedCallback;
   typedef Callback<HRESULT (_In_ CHttpClient *lpHttp)> OnDocumentCompletedCallback;
+
+  typedef Callback<VOID (_In_ CHttpClient *lpHttp)> OnDymanicRequestBodyStartCallback;
 
   typedef Callback<VOID (_In_ CHttpClient *lpHttp, _In_ HRESULT hErrorCode)> OnErrorCallback;
 
   typedef Callback<HRESULT (_In_ CHttpClient *lpHttp, _Inout_ CIpcSslLayer::eProtocol &nProtocol,
-                            _Inout_ CSslCertificateArray *&lpCheckCertificates, _Inout_ CSslCertificate *&lpSelfCert,
-                            _Inout_ CCryptoRSA *&lpPrivKey)> OnQueryCertificatesCallback;
+                            _Inout_ CSslCertificateArray **lplpCheckCertificates, _Inout_ CSslCertificate **lplpSelfCert,
+                            _Inout_ CCryptoRSA **lplpPrivKey)> OnQueryCertificatesCallback;
 
   //--------
 
@@ -90,6 +93,7 @@ public:
 
   VOID On(_In_ OnHeadersReceivedCallback cHeadersReceivedCallback);
   VOID On(_In_ OnDocumentCompletedCallback cDocumentCompletedCallback);
+  VOID On(_In_ OnDymanicRequestBodyStartCallback cDymanicRequestBodyStartCallback);
   VOID On(_In_ OnErrorCallback cErrorCallback);
   VOID On(_In_ OnQueryCertificatesCallback cQueryCertificatesCallback);
 
@@ -125,6 +129,8 @@ public:
   HRESULT AddRequestPostDataFile(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szFileNameW, _In_ CStream *lpStream);
   HRESULT AddRequestRawPostData(_In_ LPCVOID lpData, _In_ SIZE_T nLength);
   HRESULT AddRequestRawPostData(_In_ CStream *lpStream);
+  HRESULT EnableDynamicPostData();
+  HRESULT SignalEndOfPostData();
 
   HRESULT RemoveRequestPostData(_In_opt_z_ LPCSTR szNameA);
   HRESULT RemoveRequestPostData(_In_opt_z_ LPCWSTR szNameW);
@@ -167,6 +173,8 @@ public:
   HANDLE GetUnderlyingSocket() const;
   CSockets* GetUnderlyingSocketManager() const;
 
+  LPCSTR GetRequestBoundary() const;
+
 private:
   HRESULT InternalOpen(_In_ CUrl &cUrl);
 
@@ -179,7 +187,10 @@ private:
 
   VOID OnRedirect(_In_ CTimedEventQueue::CEvent *lpEvent);
   VOID OnResponseTimeout(_In_ CTimedEventQueue::CEvent *lpEvent);
-  VOID OnAfterSendRequest(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie, _In_ CIpc::CUserData *lpUserData);
+  VOID OnAfterSendRequestHeaders(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie,
+                                 _In_ CIpc::CUserData *lpUserData);
+  VOID OnAfterSendRequestBody(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie,
+                              _In_ CIpc::CUserData *lpUserData);
 
   VOID SetErrorOnRequestAndClose(_In_ HRESULT hErrorCode);
 
@@ -192,8 +203,10 @@ private:
   HRESULT AddRequestHeadersForBody(_Inout_ CStringA &cStrReqHdrsA);
 
   HRESULT SendTunnelConnect();
-  HRESULT SendRequestHeader();
+  HRESULT SendRequestHeaders();
   HRESULT SendRequestBody();
+
+  VOID GenerateRequestBoundary();
 
   HRESULT OnDownloadStarted(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW, _In_ LPVOID lpUserParam);
 
@@ -237,6 +250,7 @@ private:
   BOOL bAcceptCompressedContent;
 
   OnHeadersReceivedCallback cHeadersReceivedCallback;
+  OnDymanicRequestBodyStartCallback cDymanicRequestBodyStartCallback;
   OnDocumentCompletedCallback cDocumentCompletedCallback;
   OnErrorCallback cErrorCallback;
   OnQueryCertificatesCallback cQueryCertificatesCallback;
@@ -247,6 +261,8 @@ private:
     CRequest();
     ~CRequest();
 
+    VOID ResetForNewRequest();
+
   public:
     CUrl cUrl;
     CStringA cStrMethodA;
@@ -254,6 +270,7 @@ private:
     struct {
       TLnkLst<CPostDataItem> cList;
       BOOL bHasRaw;
+      BOOL bIsDynamic;
     } sPostData;
     CHAR szBoundary[32];
     BOOL bUsingMultiPartFormData;
@@ -264,6 +281,8 @@ private:
   {
   public:
     CResponse();
+
+    VOID ResetForNewRequest();
 
   public:
     CHttpCommon cHttpCmn;

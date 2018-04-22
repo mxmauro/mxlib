@@ -60,9 +60,9 @@ static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ L
 
 int TestJsHttpServer(_In_ BOOL bUseSSL)
 {
-  MX::CIoCompletionPortThreadPool cDispatcherPool;
+  MX::CIoCompletionPortThreadPool cDispatcherPool, cWorkerPool(4);
   MX::CSockets cSckMgr(cDispatcherPool);
-  MX::CJsHttpServer cJsHttpServer(cSckMgr);
+  MX::CJsHttpServer cJsHttpServer(cSckMgr, cWorkerPool);
   MX::CSslCertificate cSslCert;
   MX::CCryptoRSA cSslPrivateKey;
   HRESULT hRes;
@@ -73,6 +73,8 @@ int TestJsHttpServer(_In_ BOOL bUseSSL)
   cJsHttpServer.SetOption_MaxFilesCount(10);
 
   hRes = cDispatcherPool.Initialize();
+  if (SUCCEEDED(hRes))
+    hRes = cWorkerPool.Initialize();
   if (SUCCEEDED(hRes))
   {
     cSckMgr.On(MX_BIND_CALLBACK(&OnEngineError));

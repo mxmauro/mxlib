@@ -27,9 +27,10 @@
 //-----------------------------------------------------------
 
 static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode);
-static HRESULT OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest,
-                                        _Inout_ MX::CHttpBodyParserBase *&lpBodyParser);
-static HRESULT OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest);
+static VOID OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest,
+                                     _In_ HANDLE hShutdownEv, _Inout_ MX::CHttpBodyParserBase **lplpBodyParser);
+static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest,
+                               _In_ HANDLE hShutdownEv);
 static VOID OnError(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest, _In_ HRESULT hErrorCode);
 
 static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR szFileNameW);
@@ -38,14 +39,16 @@ static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR s
 
 int TestHttpServer(_In_ BOOL bUseSSL)
 {
-  MX::CIoCompletionPortThreadPool cDispatcherPool;
+  MX::CIoCompletionPortThreadPool cDispatcherPool, cWorkerPool;
   MX::CSockets cSckMgr(cDispatcherPool);
-  MX::CHttpServer cHttpServer(cSckMgr);
+  MX::CHttpServer cHttpServer(cSckMgr, cWorkerPool);
   MX::CSslCertificate cSslCert;
   MX::CCryptoRSA cSslPrivateKey;
   HRESULT hRes;
 
   hRes = cDispatcherPool.Initialize();
+  if (SUCCEEDED(hRes))
+    hRes = cWorkerPool.Initialize();
   if (SUCCEEDED(hRes))
   {
     cSckMgr.On(MX_BIND_CALLBACK(&OnEngineError));
@@ -102,13 +105,14 @@ static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode)
   return;
 }
 
-static HRESULT OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest,
-                                        _Inout_ MX::CHttpBodyParserBase *&lpBodyParser)
+static VOID OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest,
+                                     _In_ HANDLE hShutdownEv, _Inout_ MX::CHttpBodyParserBase **lplpBodyParser)
 {
-  return S_OK;
+  return;
 }
 
-static HRESULT OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest)
+static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest,
+                               _In_ HANDLE hShutdownEv)
 {
   HRESULT hRes;
 
@@ -118,7 +122,9 @@ static HRESULT OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpSe
   //lpMgr->PauseOutputProcessing(h);
   hRes = lpRequest->SendResponse("<html><body>test OK</body></html>", 6+6+ 7 +7+7);
   //lpMgr->ResumeOutputProcessing(h);
-  return hRes;
+
+  lpRequest->End(hRes);
+  return;
 }
 
 static VOID OnError(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest, _In_ HRESULT hErrorCode)

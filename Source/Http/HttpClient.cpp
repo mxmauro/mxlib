@@ -61,6 +61,7 @@ CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr) : CBaseMemObj(), cSocketMgr
   sRedirect.dwRedirectCounter = 0;
   lpTimedEventQueue = NULL;
   cHeadersReceivedCallback = NullCallback();
+  cDymanicRequestBodyStartCallback = NullCallback();
   cDocumentCompletedCallback = NullCallback();
   cErrorCallback = NullCallback();
   cQueryCertificatesCallback = NullCallback();
@@ -241,6 +242,12 @@ VOID CHttpClient::SetOption_AcceptCompressedContent(_In_ BOOL bAccept)
 VOID CHttpClient::On(_In_ OnHeadersReceivedCallback _cHeadersReceivedCallback)
 {
   cHeadersReceivedCallback = _cHeadersReceivedCallback;
+  return;
+}
+
+VOID CHttpClient::On(_In_ OnDymanicRequestBodyStartCallback _cDymanicRequestBodyStartCallback)
+{
+  cDymanicRequestBodyStartCallback = _cDymanicRequestBodyStartCallback;
   return;
 }
 
@@ -541,34 +548,46 @@ HRESULT CHttpClient::AddRequestRawPostData(_In_ LPCVOID lpData, _In_ SIZE_T nLen
   SIZE_T nWritten;
   HRESULT hRes;
 
-  if (nState != StateClosed)
+  if (nState != StateClosed && nState != StateSendingDynamicRequestBody)
     return MX_E_NotReady;
   if (lpData == NULL && nLength > 0)
     return E_POINTER;
-  if (cRequest.sPostData.cList.IsEmpty() == FALSE)
+  
+  if (nState == StateClosed)
   {
-    if (cRequest.sPostData.bHasRaw == FALSE)
-      return E_FAIL;
+    if (cRequest.sPostData.cList.IsEmpty() == FALSE)
+    {
+      if (cRequest.sPostData.bHasRaw == FALSE)
+        return E_FAIL;
+    }
+    //create stream
+    cStream.Attach(MX_DEBUG_NEW CMemoryStream());
+    if (!cStream)
+      return E_OUTOFMEMORY;
+    hRes = cStream->Create(nLength);
+    if (SUCCEEDED(hRes) && nLength > 0)
+    {
+      hRes = cStream->Write(lpData, nLength, nWritten);
+      if (SUCCEEDED(hRes))
+        hRes = cStream->Seek(0);
+    }
+    if (FAILED(hRes))
+      return hRes;
+    //create new pair
+    cItem.Attach(MX_DEBUG_NEW CPostDataItem(cStream.Get()));
+    if (!cItem)
+      return E_OUTOFMEMORY;
+    cRequest.sPostData.cList.PushTail(cItem.Detach());
+    cRequest.sPostData.bHasRaw = TRUE;
   }
-  //create stream
-  cStream.Attach(MX_DEBUG_NEW CMemoryStream());
-  if (!cStream)
-    return E_OUTOFMEMORY;
-  hRes = cStream->Create(nLength);
-  if (SUCCEEDED(hRes) && nLength > 0)
+  else
   {
-    hRes = cStream->Write(lpData, nLength, nWritten);
-    if (SUCCEEDED(hRes))
-      hRes = cStream->Seek(0);
+    //direct
+    hRes = cSocketMgr.SendMsg(hConn, lpData, nLength);
+    if (FAILED(hRes))
+      return hRes;
   }
-  if (FAILED(hRes))
-    return hRes;
-  //create new pair
-  cItem.Attach(MX_DEBUG_NEW CPostDataItem(cStream.Get()));
-  if (!cItem)
-    return E_OUTOFMEMORY;
-  cRequest.sPostData.cList.PushTail(cItem.Detach());
-  cRequest.sPostData.bHasRaw = TRUE;
+  //done
   return S_OK;
 }
 
@@ -577,22 +596,67 @@ HRESULT CHttpClient::AddRequestRawPostData(_In_ CStream *lpStream)
   CCriticalSection::CAutoLock cLock(cMutex);
   TAutoDeletePtr<CPostDataItem> cItem;
 
-  if (nState != StateClosed)
+  if (nState != StateClosed && nState != StateSendingDynamicRequestBody)
     return MX_E_NotReady;
   if (lpStream == NULL)
     return E_POINTER;
-  if (cRequest.sPostData.cList.IsEmpty() == FALSE)
+  if (nState == StateClosed)
   {
-    if (cRequest.sPostData.bHasRaw == FALSE)
-      return E_FAIL;
+    if (cRequest.sPostData.cList.IsEmpty() == FALSE)
+    {
+      if (cRequest.sPostData.bHasRaw == FALSE)
+        return E_FAIL;
+    }
+    //create new pair
+    cItem.Attach(MX_DEBUG_NEW CPostDataItem(lpStream));
+    if (!cItem)
+      return E_OUTOFMEMORY;
+    cRequest.sPostData.cList.PushTail(cItem.Detach());
+    cRequest.sPostData.bHasRaw = TRUE;
   }
-  //create new pair
-  cItem.Attach(MX_DEBUG_NEW CPostDataItem(lpStream));
-  if (!cItem)
-    return E_OUTOFMEMORY;
-  cRequest.sPostData.cList.PushTail(cItem.Detach());
-  cRequest.sPostData.bHasRaw = TRUE;
+  else
+  {
+    HRESULT hRes;
+
+    hRes = cSocketMgr.SendStream(hConn, lpStream);
+    if (FAILED(hRes))
+      return hRes;
+  }
+  //done
   return S_OK;
+}
+
+HRESULT CHttpClient::EnableDynamicPostData()
+{
+  CCriticalSection::CAutoLock cLock(cMutex);
+
+  if (nState != StateClosed)
+    return MX_E_NotReady;
+  cRequest.sPostData.bIsDynamic = TRUE;
+  return S_OK;
+}
+
+HRESULT CHttpClient::SignalEndOfPostData()
+{
+  CCriticalSection::CAutoLock cLock(cMutex);
+  HRESULT hRes;
+
+  if (nState != StateSendingDynamicRequestBody)
+    return MX_E_InvalidState;
+
+  //send end of body mark
+  hRes = cSocketMgr.SendMsg(hConn, "\r\n", 2);
+  if (SUCCEEDED(hRes))
+  {
+    nState = StateReceivingResponseHeaders;
+
+    hRes = cSocketMgr.AfterWriteSignal(hConn, MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnAfterSendRequestBody, this),
+                                       NULL);
+  }
+  if (FAILED(hRes))
+    SetErrorOnRequestAndClose(hRes);
+  //done
+  return hRes;
 }
 
 HRESULT CHttpClient::RemoveRequestPostData(_In_opt_z_ LPCSTR szNameA)
@@ -739,6 +803,8 @@ VOID CHttpClient::Close(_In_opt_ BOOL bReuseConn)
       cResponse.lpTimeoutEvent = NULL;
     }
   }
+  cRequest.ResetForNewRequest();
+  cResponse.ResetForNewRequest();
   nState = StateClosed;
   return;
 }
@@ -891,6 +957,13 @@ CSockets* CHttpClient::GetUnderlyingSocketManager() const
   return const_cast<CSockets*>(&cSocketMgr);
 }
 
+LPCSTR CHttpClient::GetRequestBoundary() const
+{
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
+
+  return cRequest.szBoundary;
+}
+
 HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl)
 {
   CStringA cStrHostA;
@@ -937,7 +1010,6 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl)
       return E_OUTOFMEMORY;
   }
 
-
   //check where we should connect
   szConnectHostW = NULL;
   nConnectPort = 0;
@@ -968,12 +1040,9 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl)
       hConn = NULL;
     }
   }
-  //cleanup some stuff
-  cResponse.cHttpCmn.ResetParser();
-  cResponse.cStrDownloadFileNameW.Empty();
   //setup new state
   nState = (cUrl.GetSchemeCode() == CUrl::SchemeHttps &&
-            cRequest.bUsingProxy != FALSE) ? StateEstablishingProxyTunnelConnection : StateSendingRequest;
+            cRequest.bUsingProxy != FALSE) ? StateEstablishingProxyTunnelConnection : StateSendingRequestHeaders;
   //create a new connection if needed
   hRes = S_OK;
   if (hConn == NULL)
@@ -988,6 +1057,8 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl)
     }
     if (SUCCEEDED(hRes))
     {
+      GenerateRequestBoundary();
+
       cRequest.cUrl.SetPort(nUrlPort);
       hRes = cSocketMgr.ConnectToServer(CSockets::FamilyIPv4, szConnectHostW, nConnectPort,
                                         MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnSocketCreate, this), NULL, &hConn);
@@ -996,6 +1067,8 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl)
   else
   {
     CIpc::CLayerList cDummyLayersList;
+
+    GenerateRequestBoundary();
 
     hRes = OnSocketConnect(&cSocketMgr, hConn, NULL, cDummyLayersList, 0x12345678); //special error code value
   }
@@ -1052,7 +1125,8 @@ VOID CHttpClient::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
 
         case StateEstablishingProxyTunnelConnection:
         case StateWaitingProxyTunnelConnectionResponse:
-        case StateSendingRequest:
+        case StateSendingRequestHeaders:
+        case StateSendingDynamicRequestBody:
         case StateReceivingResponseHeaders:
           if (SUCCEEDED(hErrorCode))
             hErrorCode = MX_E_Cancelled;
@@ -1100,17 +1174,16 @@ HRESULT CHttpClient::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_opt_ C
       return MX_E_Cancelled;
     if (SUCCEEDED(hErrorCode))
     {
-      if (nState == StateEstablishingProxyTunnelConnection)
+      hRes = S_OK;
+      switch (nState)
       {
-        hRes = SendTunnelConnect();
-      }
-      else if (nState == StateSendingRequest)
-      {
-        hRes = SendRequestHeader();
-      }
-      else
-      {
-        hRes = S_OK;
+        case StateEstablishingProxyTunnelConnection:
+          hRes = SendTunnelConnect();
+          break;
+
+        case StateSendingRequestHeaders:
+          hRes = SendRequestHeaders();
+          break;
       }
     }
     else
@@ -1215,8 +1288,8 @@ restart:
             hRes = AddSslLayer(lpIpc, h, NULL);
             if (SUCCEEDED(hRes))
             {
-              nState = StateSendingRequest;
-              hRes = SendRequestHeader();
+              nState = StateSendingRequestHeaders;
+              hRes = SendRequestHeaders();
             }
           }
           else
@@ -1576,22 +1649,71 @@ VOID CHttpClient::OnResponseTimeout(_In_ CTimedEventQueue::CEvent *lpEvent)
   return;
 }
 
-VOID CHttpClient::OnAfterSendRequest(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie,
-                                     _In_ CIpc::CUserData *lpUserData)
+VOID CHttpClient::OnAfterSendRequestHeaders(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie,
+                                            _In_ CIpc::CUserData *lpUserData)
 {
-  HRESULT hRes;
+  BOOL bFireDymanicRequestBodyStartCallback = FALSE;
+  HRESULT hRes = S_OK;
 
-  hRes = S_OK;
   {
     CCriticalSection::CAutoLock cLock(cMutex);
 
-    if (h == hConn && (nState == StateReceivingResponseHeaders || nState == StateReceivingResponseBody))
+    if (h == hConn && nState == StateSendingRequestHeaders)
     {
-      //add timeout
-      hRes = UpdateResponseTimeoutEvent();
-      if (FAILED(hRes))
-        SetErrorOnRequestAndClose(hRes);
+      if (StrCompareA((LPCSTR)(cRequest.cStrMethodA), "HEAD") != 0 &&
+          cRequest.sPostData.cList.IsEmpty() != FALSE && cRequest.sPostData.bIsDynamic == FALSE)
+      {
+        hRes = SendRequestBody();
+        if (SUCCEEDED(hRes))
+        {
+          nState = StateReceivingResponseHeaders;
+
+          hRes = cSocketMgr.AfterWriteSignal(hConn, MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnAfterSendRequestBody, this),
+                                             NULL);
+        }
+      }
+      else if (cRequest.sPostData.bIsDynamic == FALSE)
+      {
+        //no body to send, directly switch to receiving response headers
+        nState = StateReceivingResponseHeaders;
+
+        //add response timeout
+        hRes = UpdateResponseTimeoutEvent();
+      }
+      else
+      {
+        //sending dynamic body
+        nState = StateSendingDynamicRequestBody;
+
+        bFireDymanicRequestBodyStartCallback = TRUE;
+      }
     }
+    if (FAILED(hRes))
+      SetErrorOnRequestAndClose(hRes);
+  }
+  if (SUCCEEDED(hRes) && bFireDymanicRequestBodyStartCallback != FALSE && cDymanicRequestBodyStartCallback)
+    cDymanicRequestBodyStartCallback(this);
+  //raise error event if any
+  if (FAILED(hRes) && cErrorCallback)
+    cErrorCallback(this, hRes);
+  return;
+}
+
+VOID CHttpClient::OnAfterSendRequestBody(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie,
+                                         _In_ CIpc::CUserData *lpUserData)
+{
+  HRESULT hRes = S_OK;
+
+  {
+    CCriticalSection::CAutoLock cLock(cMutex);
+
+    if (h == hConn && nState == StateReceivingResponseHeaders)
+    {
+      //add response timeout
+      hRes = UpdateResponseTimeoutEvent();
+    }
+    if (FAILED(hRes))
+      SetErrorOnRequestAndClose(hRes);
   }
   //raise error event if any
   if (FAILED(hRes) && cErrorCallback)
@@ -1651,7 +1773,7 @@ HRESULT CHttpClient::AddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_opt_ CI
   //query for client certificates
   if (!cQueryCertificatesCallback)
     return MX_E_NotReady;
-  hRes = cQueryCertificatesCallback(this, nProtocol, lpCheckCertificates, lpSelfCert, lpPrivKey);
+  hRes = cQueryCertificatesCallback(this, nProtocol, &lpCheckCertificates, &lpSelfCert, &lpPrivKey);
   if (FAILED(hRes))
     return hRes;
   //add ssl layer
@@ -1721,8 +1843,11 @@ HRESULT CHttpClient::BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA)
   //1) GET/POST/{methood} url HTTP/1.1
   if (cRequest.cStrMethodA.IsEmpty() != FALSE)
   {
-    if (cStrReqHdrsA.Copy((cRequest.sPostData.cList.IsEmpty() == FALSE) ? "POST " : "GET ") == FALSE)
+    if (cStrReqHdrsA.Copy((cRequest.sPostData.cList.IsEmpty() == FALSE ||
+                           cRequest.sPostData.bIsDynamic != FALSE) ? "POST " : "GET ") == FALSE)
+    {
       return E_OUTOFMEMORY;
+    }
   }
   else
   {
@@ -1877,6 +2002,7 @@ add_header:
     if (cStrReqHdrsA.AppendFormat("Cookie: %s\r\n", (LPCSTR)cStrTempA) == FALSE)
       return E_OUTOFMEMORY;
   }
+  //done
   return S_OK;
 }
 
@@ -1904,7 +2030,9 @@ HRESULT CHttpClient::BuildRequestHeaderAdd(_Inout_ CStringA &cStrReqHdrsA, _In_z
         cStrReqHdrsA.ConcatN(": ", 2) == FALSE ||
         cStrReqHdrsA.Concat(szValueA) == FALSE ||
         cStrReqHdrsA.ConcatN("\r\n", 2) == FALSE)
+    {
       return E_OUTOFMEMORY;
+    }
   }
   return S_OK;
 }
@@ -1913,19 +2041,25 @@ HRESULT CHttpClient::AddRequestHeadersForBody(_Inout_ CStringA &cStrReqHdrsA)
 {
   TLnkLst<CPostDataItem>::Iterator it;
   CPostDataItem *lpItem;
-  DWORD dw;
+  BOOL bHasContentLengthHeader, bHasContentTypeHeader;
   ULONGLONG nLen;
+
+  bHasContentLengthHeader = (cRequest.cHttpCmn.GetHeader<CHttpHeaderEntContentLength>() != NULL) ? TRUE : FALSE;
+  bHasContentTypeHeader = (cRequest.cHttpCmn.GetHeader<CHttpHeaderEntContentType>() != NULL) ? TRUE : FALSE;
 
   nLen = 0ui64;
   if (cRequest.sPostData.cList.IsEmpty() == FALSE && cRequest.sPostData.bHasRaw != FALSE)
   {
-    for (lpItem=it.Begin(cRequest.sPostData.cList); lpItem!=NULL; lpItem=it.Next())
+    if (bHasContentLengthHeader == FALSE)
     {
-      nLen += lpItem->cStream->GetLength();
+      for (lpItem = it.Begin(cRequest.sPostData.cList); lpItem != NULL; lpItem = it.Next())
+      {
+        nLen += lpItem->cStream->GetLength();
+      }
+      //add content length
+      if (cStrReqHdrsA.AppendFormat("Content-Length: %I64u\r\n", nLen) == FALSE)
+        return E_OUTOFMEMORY;
     }
-    //add content length
-    if (cStrReqHdrsA.AppendFormat("Content-Length: %I64u\r\n", nLen) == FALSE)
-      return E_OUTOFMEMORY;
 
     cRequest.bUsingMultiPartFormData = FALSE;
   }
@@ -1948,80 +2082,69 @@ HRESULT CHttpClient::AddRequestHeadersForBody(_Inout_ CStringA &cStrReqHdrsA)
     if (nLen < (ULONGLONG)MAX_FORM_SIZE_4_REQUEST)
     {
       //add content type
-      if (cStrReqHdrsA.Concat("Content-Type: application/x-www-form-urlencoded\r\n") == FALSE)
-        return E_OUTOFMEMORY;
+      if (bHasContentTypeHeader == FALSE)
+      {
+        if (cStrReqHdrsA.Concat("Content-Type: application/x-www-form-urlencoded\r\n") == FALSE)
+          return E_OUTOFMEMORY;
+      }
       //add content length
-      if (cStrReqHdrsA.AppendFormat("Content-Length: %I64u\r\n", nLen) == FALSE)
-        return E_OUTOFMEMORY;
+      if (bHasContentLengthHeader == FALSE)
+      {
+        if (cStrReqHdrsA.AppendFormat("Content-Length: %I64u\r\n", nLen) == FALSE)
+          return E_OUTOFMEMORY;
+      }
       //----
       cRequest.bUsingMultiPartFormData = FALSE;
     }
     else
     {
-      Fnv64_t value;
-      LPVOID lpPtr;
-      SIZE_T i;
-
-      //build boundary name
-      MemCopy(cRequest.szBoundary, "MXLIB_HTTP_", 11);
-#pragma warning(suppress : 28159)
-      dw = ::GetTickCount();
-      value = fnv_64a_buf(&dw, 4, FNV1A_64_INIT);
-      dw = MxGetCurrentProcessId();
-      value = fnv_64a_buf(&dw, 4, value);
-      lpPtr = this;
-      value = fnv_64a_buf(&lpPtr, sizeof(lpPtr), value);
-      value = fnv_64a_buf(&cRequest, sizeof(CRequest), value);
-      for (i=0; i<16; i++)
-      {
-        SIZE_T val = (SIZE_T)(value & 15);
-        cRequest.szBoundary[11 + i] = (CHAR)(((val >= 10) ? 55 : 48) + val);
-        value >>= 4;
-      }
-      cRequest.szBoundary[27] = 0;
-
       //add content type
-      if (cStrReqHdrsA.ConcatN("Content-Type:multipart/form-data; boundary=----", 47) == FALSE ||
-          cStrReqHdrsA.ConcatN(cRequest.szBoundary, 27) == FALSE ||
-          cStrReqHdrsA.ConcatN("\r\n", 2) == FALSE)
+      if (bHasContentTypeHeader == FALSE)
       {
-        return E_OUTOFMEMORY;
+        if (cStrReqHdrsA.ConcatN("Content-Type:multipart/form-data; boundary=----", 47) == FALSE ||
+            cStrReqHdrsA.ConcatN(cRequest.szBoundary, 27) == FALSE ||
+            cStrReqHdrsA.ConcatN("\r\n", 2) == FALSE)
+        {
+          return E_OUTOFMEMORY;
+        }
       }
 
       //add content length
-      nLen = 0ui64;
-      for (lpItem=it.Begin(cRequest.sPostData.cList); lpItem!=NULL; lpItem=it.Next())
+      if (bHasContentLengthHeader == FALSE)
       {
-        nLen += 4ui64 + 27ui64 + 2ui64; //size of boundary start
-        nLen += 38ui64; //size of 'Content-Disposition: form-data; name="'
-        nLen += (ULONGLONG)StrLenA(lpItem->szNameA);
-        nLen += 1ui64; //size of '"'
-        if (lpItem->cStream)
+        nLen = 0ui64;
+        for (lpItem = it.Begin(cRequest.sPostData.cList); lpItem != NULL; lpItem = it.Next())
         {
-          nLen += 12ui64; //size of '; filename="'
-          nLen += (ULONGLONG)StrLenA(lpItem->szValueA); //size of filename
-          nLen += 3ui64; //size of '"\r\n'
-          nLen += 14ui64; //size of 'Content-type: '
-          nLen += (ULONGLONG)StrLenA(CHttpCommon::GetMimeType(lpItem->szValueA)); //size of mime type
-          nLen += 2ui64; //size of '"\r\n'
-          nLen += 33ui64; //size of 'Content-Transfer-Encoding: binary\r\n'
-          nLen += 2ui64; //size of '\r\n'
-          nLen += lpItem->cStream->GetLength(); //size of data
-          nLen += 2ui64; //size of '\r\n'
+          nLen += 4ui64 + 27ui64 + 2ui64; //size of boundary start
+          nLen += 38ui64; //size of 'Content-Disposition: form-data; name="'
+          nLen += (ULONGLONG)StrLenA(lpItem->szNameA);
+          nLen += 1ui64; //size of '"'
+          if (lpItem->cStream)
+          {
+            nLen += 12ui64; //size of '; filename="'
+            nLen += (ULONGLONG)StrLenA(lpItem->szValueA); //size of filename
+            nLen += 3ui64; //size of '"\r\n'
+            nLen += 14ui64; //size of 'Content-type: '
+            nLen += (ULONGLONG)StrLenA(CHttpCommon::GetMimeType(lpItem->szValueA)); //size of mime type
+            nLen += 2ui64; //size of '"\r\n'
+            nLen += 33ui64; //size of 'Content-Transfer-Encoding: binary\r\n'
+            nLen += 2ui64; //size of '\r\n'
+            nLen += lpItem->cStream->GetLength(); //size of data
+            nLen += 2ui64; //size of '\r\n'
+          }
+          else
+          {
+            nLen += 2ui64; //size of '\r\n'
+            nLen += 27ui64; //size of 'Content-Type: text/plain;\r\n'
+            nLen += 2ui64; //size of '\r\n'
+            nLen += (ULONGLONG)StrLenA(lpItem->szValueA); //size of data
+            nLen += 2ui64; //size of '\r\n'
+          }
         }
-        else
-        {
-          nLen += 2ui64; //size of '\r\n'
-          nLen += 27ui64; //size of 'Content-Type: text/plain;\r\n'
-          nLen += 2ui64; //size of '\r\n'
-          nLen += (ULONGLONG)StrLenA(lpItem->szValueA); //size of data
-          nLen += 2ui64; //size of '\r\n'
-        }
-        
+        nLen += 4ui64 + 27ui64 + 2ui64 + 2ui64; //size of boundary end
+        if (cStrReqHdrsA.AppendFormat("Content-Length: %I64u\r\n", ++nLen) == FALSE)
+          return E_OUTOFMEMORY;
       }
-      nLen += 4ui64 + 27ui64 + 2ui64 + 2ui64; //size of boundary end
-      if (cStrReqHdrsA.AppendFormat("Content-Length: %I64u\r\n", ++nLen) == FALSE)
-        return E_OUTOFMEMORY;
       //----
       cRequest.bUsingMultiPartFormData = TRUE;
     }
@@ -2089,18 +2212,17 @@ HRESULT CHttpClient::SendTunnelConnect()
   return S_OK;
 }
 
-HRESULT CHttpClient::SendRequestHeader()
+HRESULT CHttpClient::SendRequestHeaders()
 {
   CStringA cStrReqHdrsA;
-  BOOL bHasBody;
   HRESULT hRes;
 
-  bHasBody = (StrCompareA((LPSTR)(cRequest.cStrMethodA), "HEAD") != 0 &&
-              cRequest.sPostData.cList.IsEmpty() == FALSE) ? TRUE : FALSE;
-  //----
   hRes = BuildRequestHeaders(cStrReqHdrsA);
-  if (SUCCEEDED(hRes) && bHasBody != FALSE)
+  if (SUCCEEDED(hRes) && StrCompareA((LPCSTR)(cRequest.cStrMethodA), "HEAD") != 0 != FALSE &&
+      cRequest.sPostData.cList.IsEmpty() == FALSE)
+  {
     hRes = AddRequestHeadersForBody(cStrReqHdrsA);
+  }
   if (SUCCEEDED(hRes) && cStrReqHdrsA.ConcatN("\r\n", 2) == FALSE)
     hRes = E_OUTOFMEMORY;
   if (SUCCEEDED(hRes))
@@ -2110,12 +2232,11 @@ HRESULT CHttpClient::SendRequestHeader()
 #endif //HTTP_DEBUG_OUTPUT
     hRes = cSocketMgr.SendMsg(hConn, (LPSTR)cStrReqHdrsA, cStrReqHdrsA.GetLength());
   }
-  if (SUCCEEDED(hRes) && bHasBody != FALSE)
-    hRes = SendRequestBody();
   if (SUCCEEDED(hRes))
-    hRes = cSocketMgr.AfterWriteSignal(hConn, MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnAfterSendRequest, this), NULL);
-  if (SUCCEEDED(hRes))
-    nState = StateReceivingResponseHeaders;
+  {
+    hRes = cSocketMgr.AfterWriteSignal(hConn, MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnAfterSendRequestHeaders, this),
+                                       NULL);
+  }
   //done
   return hRes;
 }
@@ -2238,6 +2359,34 @@ HRESULT CHttpClient::SendRequestBody()
   return S_OK;
 }
 
+VOID CHttpClient::GenerateRequestBoundary()
+{
+  Fnv64_t value;
+  LPVOID lpPtr;
+  DWORD dw;
+  SIZE_T i, val;
+
+  //build boundary name
+  MemCopy(cRequest.szBoundary, "MXLIB_HTTP_", 11);
+#pragma warning(suppress : 28159)
+  dw = ::GetTickCount();
+  value = fnv_64a_buf(&dw, 4, FNV1A_64_INIT);
+  dw = MxGetCurrentProcessId();
+  value = fnv_64a_buf(&dw, 4, value);
+  lpPtr = this;
+  value = fnv_64a_buf(&lpPtr, sizeof(lpPtr), value);
+  value = fnv_64a_buf(&cRequest, sizeof(CRequest), value);
+  value = fnv_64a_buf(&cResponse, sizeof(CResponse), value);
+  for (i=0; i<16; i++)
+  {
+    val = (SIZE_T)(value & 15);
+    cRequest.szBoundary[11 + i] = (CHAR)(((val >= 10) ? 55 : 48) + val);
+    value >>= 4;
+  }
+  cRequest.szBoundary[27] = 0;
+  return;
+}
+
 HRESULT CHttpClient::OnDownloadStarted(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW, _In_ LPVOID lpUserParam)
 {
   MX::CStringW cStrFileNameW;
@@ -2334,12 +2483,30 @@ CHttpClient::CRequest::~CRequest()
   return;
 }
 
+VOID CHttpClient::CRequest::ResetForNewRequest()
+{
+  CPostDataItem *lpItem;
+
+  while ((lpItem = sPostData.cList.PopHead()) != NULL)
+    delete lpItem;
+  sPostData.bHasRaw = FALSE;
+  sPostData.bIsDynamic = FALSE;
+  return;
+}
+
 //-----------------------------------------------------------
 //-----------------------------------------------------------
 
 CHttpClient::CResponse::CResponse() : CBaseMemObj(), cHttpCmn(FALSE)
 {
   lpTimeoutEvent = NULL;
+  return;
+}
+
+VOID CHttpClient::CResponse::ResetForNewRequest()
+{
+  cHttpCmn.ResetParser();
+  cStrDownloadFileNameW.Empty();
   return;
 }
 

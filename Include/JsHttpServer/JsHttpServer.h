@@ -60,7 +60,7 @@ public:
   //--------
 
 public:
-  CJsHttpServer(_In_ MX::CSockets &cSocketMgr);
+  CJsHttpServer(_In_ MX::CSockets &cSocketMgr, _In_ CIoCompletionPortThreadPool &cWorkerPool);
   ~CJsHttpServer();
 
   VOID SetOption_MaxRequestTimeoutMs(_In_ DWORD dwTimeoutMs);
@@ -111,7 +111,8 @@ public:
   };
 
 private:
-  HRESULT OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpServer::CRequest *lpRequest);
+  VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpServer::CRequest *lpRequest,
+                          _In_ HANDLE hShutdownEv);
 
   HRESULT OnRequireJsModule(_In_ DukTape::duk_context *lpCtx, _In_ CJavascriptVM::CRequireModuleContext *lpReqContext,
                             _Inout_ CStringA &cStrCodeA);
@@ -134,7 +135,6 @@ private:
                          _In_z_ LPCSTR szFileNameA, _In_ int nLine, _In_z_ LPCSTR szStackTraceA);
 
 private:
-  CSockets &cSocketMgr;
   CHttpServer cHttpServer;
   //----
   BOOL bShowStackTraceOnError;
