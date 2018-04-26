@@ -1661,7 +1661,7 @@ VOID CHttpClient::OnAfterSendRequestHeaders(_In_ CIpc *lpIpc, _In_ HANDLE h, _In
     if (h == hConn && nState == StateSendingRequestHeaders)
     {
       if (StrCompareA((LPCSTR)(cRequest.cStrMethodA), "HEAD") != 0 &&
-          cRequest.sPostData.cList.IsEmpty() != FALSE && cRequest.sPostData.bIsDynamic == FALSE)
+          cRequest.sPostData.cList.IsEmpty() == FALSE && cRequest.sPostData.bIsDynamic == FALSE)
       {
         hRes = SendRequestBody();
         if (SUCCEEDED(hRes))
@@ -2218,7 +2218,8 @@ HRESULT CHttpClient::SendRequestHeaders()
   HRESULT hRes;
 
   hRes = BuildRequestHeaders(cStrReqHdrsA);
-  if (SUCCEEDED(hRes) && StrCompareA((LPCSTR)(cRequest.cStrMethodA), "HEAD") != 0 != FALSE &&
+  //NOTE: Dynamic POST requires "Content-###" headers to be provided by the sender
+  if (SUCCEEDED(hRes) && StrCompareA((LPCSTR)(cRequest.cStrMethodA), "HEAD") != 0 &&
       cRequest.sPostData.cList.IsEmpty() == FALSE)
   {
     hRes = AddRequestHeadersForBody(cStrReqHdrsA);
