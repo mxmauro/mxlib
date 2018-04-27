@@ -172,63 +172,74 @@ VOID CJsHttpServer::OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpS
 
   if (!cRequestCallback)
   {
-    hRes = E_NOTIMPL;
-    goto done;
+    hRes = E_FAIL;
+on_init_error:
+    ResetAndDisableClientCache(lpRequest);
+    hRes = lpRequest->SendErrorPage(500, hRes);
+    lpRequest->End(hRes);
+    return;
   }
   //build path
   lpUrl = lpRequest->GetUrl();
   if (lpUrl == NULL) //only accept absolute paths
   {
-    hRes = MX_E_NotReady;
-    goto done;
+    hRes = E_NOTIMPL;
+    goto on_init_error;
   }
   if ((lpUrl->GetPath())[0] != L'/') //only accept absolute paths
   {
     hRes = lpRequest->SendErrorPage(403, E_INVALIDARG);
-    goto done;
+    ResetAndDisableClientCache(lpRequest);
+    hRes = lpRequest->SendErrorPage(500, hRes);
+    lpRequest->End(hRes);
+    return;
   }
   //initialize javascript engine
   hRes = InitializeJVM(cJvm, lpRequest);
-  if (SUCCEEDED(hRes))
-  {
-    cJvm.On(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequireJsModule, this));
-    hRes = cRequestCallback(this, lpRequest, cJvm, cStrCodeA);
-  }
-  if (SUCCEEDED(hRes) && cStrCodeA.IsEmpty() == FALSE)
+  if (FAILED(hRes))
+    goto on_init_error;
+
+  cJvm.On(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequireJsModule, this));
+  hRes = cRequestCallback(this, lpRequest, cJvm, cStrCodeA);
+  if (FAILED(hRes))
+    goto on_init_error;
+  if (hRes == S_FALSE)
+    return; //the callback owns the request now
+
+  //transform provided code
+  if (cStrCodeA.IsEmpty() == FALSE)
   {
     hRes = TransformJavascriptCode(cStrCodeA);
-    if (SUCCEEDED(hRes))
-    {
-      if (cStrCodeA.IsEmpty() == FALSE)
-      {
-        try
-        {
-          cJvm.Run(cStrCodeA, lpUrl->GetPath());
-        }
-        catch (CJsHttpServerSystemExit &e)
-        {
-          if (*(e.GetDescription()) != 0)
-          {
-            CStringA cStrBodyA;
+    if (FAILED(hRes))
+      goto on_init_error;
+  }
+  hRes = S_OK;
+  //execute JS code
+  if (cStrCodeA.IsEmpty() == FALSE)
+  {
 
-            hRes = ResetAndDisableClientCache(lpRequest);
+    try
+    {
+      cJvm.Run(cStrCodeA, lpUrl->GetPath());
+    }
+    catch (CJsHttpServerSystemExit &e)
+    {
+      if (*(e.GetDescription()) != 0)
+      {
+        CStringA cStrBodyA;
+
+        hRes = ResetAndDisableClientCache(lpRequest);
+        if (SUCCEEDED(hRes))
+        {
+          if (cStrBodyA.Format("Error: %s", e.GetDescription()) != FALSE)
+          {
+            hRes = HtmlEntities::ConvertTo(cStrBodyA);
             if (SUCCEEDED(hRes))
             {
-              if (cStrBodyA.Format("Error: %s", e.GetDescription()) != FALSE)
+              if (cStrBodyA.InsertN("<html><body><pre>", 0, 6 + 6 + 5) != FALSE &&
+                  cStrBodyA.ConcatN("</pre></body></html>", 6 + 7 + 7) != FALSE)
               {
-                hRes = HtmlEntities::ConvertTo(cStrBodyA);
-                if (SUCCEEDED(hRes))
-                {
-                  if (cStrBodyA.InsertN("<html><body><pre>", 0, 6+6+5) != FALSE &&
-                      cStrBodyA.ConcatN("</pre></body></html>", 6+7+7) != FALSE)
-                  {
-                    hRes = lpRequest->SendResponse((LPCSTR)cStrBodyA, cStrBodyA.GetLength());
-                  }
-                  else
-                  {
-                    hRes = E_OUTOFMEMORY;
-                  }
-                }
+                hRes = lpRequest->SendResponse((LPCSTR)cStrBodyA, cStrBodyA.GetLength());
               }
               else
               {
@@ -236,41 +247,42 @@ VOID CJsHttpServer::OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpS
               }
             }
           }
-        }
-        catch (CJsWindowsError &e)
-        {
-          hRes = ResetAndDisableClientCache(lpRequest);
-          if (SUCCEEDED(hRes))
+          else
           {
-            hRes = BuildErrorPage(lpRequest, e.GetHResult(), e.GetDescription(), e.GetFileName(), e.GetLineNumber(),
-                                  e.GetStackTrace());
+            hRes = E_OUTOFMEMORY;
           }
-        }
-        catch (CJsError &e)
-        {
-          hRes = ResetAndDisableClientCache(lpRequest);
-          if (SUCCEEDED(hRes))
-          {
-            hRes = BuildErrorPage(lpRequest, E_FAIL, e.GetDescription(), e.GetFileName(), e.GetLineNumber(),
-                                  e.GetStackTrace());
-          }
-        }
-        catch (...)
-        {
-          hRes = E_FAIL;
         }
       }
     }
+    catch (CJsWindowsError &e)
+    {
+      hRes = ResetAndDisableClientCache(lpRequest);
+      if (SUCCEEDED(hRes))
+      {
+        hRes = BuildErrorPage(lpRequest, e.GetHResult(), e.GetDescription(), e.GetFileName(), e.GetLineNumber(),
+                              e.GetStackTrace());
+      }
+    }
+    catch (CJsError &e)
+    {
+      hRes = ResetAndDisableClientCache(lpRequest);
+      if (SUCCEEDED(hRes))
+      {
+        hRes = BuildErrorPage(lpRequest, E_FAIL, e.GetDescription(), e.GetFileName(), e.GetLineNumber(),
+                              e.GetStackTrace());
+      }
+    }
+    catch (...)
+    {
+      hRes = E_FAIL;
+    }
   }
   if (FAILED(hRes))
-  {
-    ResetAndDisableClientCache(lpRequest);
-    hRes = lpRequest->SendErrorPage(500, hRes);
-  }
+    goto on_init_error;
+
+  //done
   if (cRequestCleanupCallback)
     cRequestCleanupCallback(this, lpRequest, cJvm);
-  //done
-done:
   lpRequest->End(hRes);
   return;
 }
