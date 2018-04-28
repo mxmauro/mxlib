@@ -49,7 +49,7 @@ HRESULT CHttpHeaderReqRange::Parse(_In_z_ LPCSTR szValueA)
   //skip spaces
   szValueA = SkipSpaces(szValueA);
   //check units
-  if (StrCompareA(szValueA, "bytes", TRUE) != 0)
+  if (StrNCompareA(szValueA, "bytes", 5, TRUE) != 0)
     return MX_E_InvalidData;
   //skip spaces
   szValueA = SkipSpaces(szValueA+5);
