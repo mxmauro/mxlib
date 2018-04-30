@@ -30,6 +30,8 @@
 
 #define _MESSAGE_END_XOR_MASK                   0xA53B7F91UL
 
+#define MAX_SYNCWAIT_ITEMS                                 8
+
 #ifdef _DEBUG
   #define MX_DEBUG_OUTPUT
 #else //_DEBUG
@@ -93,12 +95,18 @@ CIpcMessageManager::CIpcMessageManager(_In_ CIoCompletionPortThreadPool &_cWorke
   _InterlockedExchange(&(sReplyMsgWait.nMutex), 0);
   _InterlockedExchange(&(sReceivedReplyMsg.nMutex), 0);
   MemSet(&sFlush, 0, sizeof(sFlush));
+  _InterlockedExchange(&(sSyncWait.nMutex), 0);
+  sSyncWait.nCount = 0;
   return;
 }
 
 CIpcMessageManager::~CIpcMessageManager()
 {
+  CSyncWait *lpSyncWait;
+
   CancelWaitingReplies();
+  while ((lpSyncWait = sSyncWait.cList.PopHead()) != NULL)
+    lpSyncWait->Release();
   return;
 }
 
@@ -385,27 +393,35 @@ HRESULT CIpcMessageManager::SendMultipleBlocks(_Out_ LPDWORD lpdwMsgId, _In_ OnM
   return hRes;
 }
 
-HRESULT CIpcMessageManager::WaitForReply(_In_ DWORD dwId, _Deref_out_ CMessage **lplpMessage)
+HRESULT CIpcMessageManager::WaitForReply(_In_ DWORD dwId, _Deref_out_ CMessage **lplpMessage,
+                                         _In_opt_ DWORD dwTimeoutMs)
 {
-  SYNC_WAIT sSyncWait;
+  CSyncWait *lpSyncWait;
   HRESULT hRes;
 
   if (lplpMessage == NULL)
     return E_POINTER;
   *lplpMessage = NULL;
-  sSyncWait.lpMsg = NULL;
-  hRes = sSyncWait.cCompletedEvent.Create(TRUE, FALSE);
+
+  lpSyncWait = GetSyncWaitObject();
+  if (lpSyncWait == NULL)
+    return E_OUTOFMEMORY;
+
+  lpSyncWait->AddRef();
+  hRes = WaitForReplyAsync(dwId, MX_BIND_MEMBER_CALLBACK(&CIpcMessageManager::SyncWait, this), lpSyncWait);
   if (SUCCEEDED(hRes))
   {
-    hRes = WaitForReplyAsync(dwId, MX_BIND_MEMBER_CALLBACK(&CIpcMessageManager::SyncWait, this), &sSyncWait);
-    if (SUCCEEDED(hRes))
-    {
-      sSyncWait.cCompletedEvent.Wait(INFINITE);
-      *lplpMessage = (CMessage*)__InterlockedReadPointer(&(sSyncWait.lpMsg));
-      if ((*lplpMessage) == NULL)
-        hRes = MX_E_Cancelled;
-    }
+    lpSyncWait->Wait(dwTimeoutMs);
+    *lplpMessage = lpSyncWait->DetachMessage();
+    if ((*lplpMessage) == NULL)
+      hRes = MX_E_Cancelled;
   }
+  else
+  {
+    lpSyncWait->Release();
+  }
+
+  FreeSyncWaitObject(lpSyncWait, FAILED(hRes));
   //done
   return hRes;
 }
@@ -461,12 +477,10 @@ HRESULT CIpcMessageManager::WaitForReplyAsync(_In_ DWORD dwId, _In_ OnMessageRep
 VOID CIpcMessageManager::SyncWait(_In_ CIpc *lpIpc, _In_ HANDLE hConn, _In_ DWORD dwId, _In_ CMessage *lpMsg,
                                   _In_ LPVOID lpUserData)
 {
-  SYNC_WAIT *lpSyncWait = (SYNC_WAIT*)lpUserData;
+  CSyncWait *lpSyncWait = (CSyncWait*)lpUserData;
 
-  _InterlockedExchangePointer(&(lpSyncWait->lpMsg), (LPVOID)lpMsg);
-  if (lpMsg != NULL)
-    lpMsg->AddRef();
-  lpSyncWait->cCompletedEvent.Set();
+  lpSyncWait->Complete(lpMsg);
+  lpSyncWait->Release();
   return;
 }
 
@@ -618,6 +632,47 @@ VOID CIpcMessageManager::CancelWaitingReplies()
   return;
 }
 
+CIpcMessageManager::CSyncWait* CIpcMessageManager::GetSyncWaitObject()
+{
+  CFastLock cLock(&(sSyncWait.nMutex));
+  CSyncWait *lpSyncWait;
+
+  lpSyncWait = sSyncWait.cList.PopHead();
+  if (lpSyncWait != NULL)
+  {
+    (sSyncWait.nCount)--;
+  }
+  else
+  {
+    try
+    {
+      lpSyncWait = MX_DEBUG_NEW CSyncWait();
+    }
+    catch (LONG hr)
+    {
+      UNREFERENCED_PARAMETER(hr);
+      lpSyncWait = NULL;
+    }
+  }
+  return lpSyncWait;
+}
+
+VOID CIpcMessageManager::FreeSyncWaitObject(_In_ CSyncWait *lpSyncWait, _In_ BOOL bForceFree)
+{
+  CFastLock cLock(&(sSyncWait.nMutex));
+
+  if (bForceFree == FALSE && sSyncWait.nCount < MAX_SYNCWAIT_ITEMS)
+  {
+    lpSyncWait->Reset();
+    sSyncWait.cList.PushTail(lpSyncWait);
+    (sSyncWait.nCount)++;
+  }
+  else
+  {
+    lpSyncWait->Release();
+  }
+  return;
+}
 
 int CIpcMessageManager::ReplyMsgWaitCompareFunc(_In_ LPVOID lpContext, _In_ REPLYMSG_ITEM *lpElem1,
                                                 _In_ REPLYMSG_ITEM *lpElem2)
@@ -754,6 +809,60 @@ HRESULT CIpcMessageManager::CMessage::SendReplyMultipleBlocks(_In_ OnMultiBlockC
     hRes = SendReplyEndOfMessageMark();
   //done
   return hRes;
+}
+
+//-----------------------------------------------------------
+
+CIpcMessageManager::CSyncWait::CSyncWait() throw(...) : TRefCounted<CBaseMemObj>(), TLnkLstNode<CSyncWait>()
+{
+  HRESULT hRes;
+
+  _InterlockedExchangePointer(&lpMsg, NULL);
+  hRes = cCompletedEvent.Create(TRUE, FALSE);
+  if (FAILED(hRes))
+    throw (LONG)hRes;
+  return;
+}
+
+CIpcMessageManager::CSyncWait::~CSyncWait()
+{
+  Reset();
+  return;
+}
+
+VOID CIpcMessageManager::CSyncWait::Reset()
+{
+  CMessage *lpMessage;
+
+  cCompletedEvent.Reset();
+  lpMessage = DetachMessage();
+  if (lpMessage != NULL)
+    lpMessage->Release();
+  return;
+}
+
+VOID CIpcMessageManager::CSyncWait::Complete(_In_opt_ CMessage *lpMessage)
+{
+  CMessage *lpOldMessage = DetachMessage();
+  if (lpOldMessage != NULL)
+    lpOldMessage->Release();
+
+  _InterlockedExchangePointer(&lpMsg, (LPVOID)lpMessage);
+  if (lpMessage != NULL)
+    lpMessage->AddRef();
+  cCompletedEvent.Set();
+  return;
+}
+
+VOID CIpcMessageManager::CSyncWait::Wait(_In_ DWORD dwTimeoutMs)
+{
+  cCompletedEvent.Wait(dwTimeoutMs);
+  return;
+}
+
+CIpcMessageManager::CMessage* CIpcMessageManager::CSyncWait::DetachMessage()
+{
+  return (CMessage*)_InterlockedExchangePointer(&lpMsg, NULL);
 }
 
 } //namespace MX

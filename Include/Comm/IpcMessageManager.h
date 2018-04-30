@@ -73,7 +73,7 @@ public:
   HRESULT SendMultipleBlocks(_Out_ LPDWORD lpdwMsgId, _In_ OnMultiBlockCallback cMultiBlockCallback,
                              _In_opt_ LPVOID lpContext=NULL);
 
-  HRESULT WaitForReply(_In_ DWORD dwId, _Deref_out_ CMessage **lplpMessage);
+  HRESULT WaitForReply(_In_ DWORD dwId, _Deref_out_ CMessage **lplpMessage, _In_opt_ DWORD dwTimeoutMs=INFINITE);
   HRESULT WaitForReplyAsync(_In_ DWORD dwId, _In_ OnMessageReplyCallback cCallback, _In_opt_ LPVOID lpUserData);
 
   CIpc* GetIpc() const
@@ -159,6 +159,25 @@ private:
     LPVOID lpUserData;
   } REPLYMSG_ITEM;
 
+  class CSyncWait : public TRefCounted<CBaseMemObj>, public TLnkLstNode<CSyncWait>
+  {
+  public:
+    CSyncWait() throw(...);
+    ~CSyncWait();
+
+    VOID Reset();
+
+    VOID Complete(_In_opt_ CMessage *lpMessage);
+    VOID Wait(_In_ DWORD dwTimeoutMs);
+
+    CMessage* DetachMessage();
+
+  private:
+    CWindowsEvent cCompletedEvent;
+    LPVOID volatile lpMsg;
+  };
+
+private:
   VOID SyncWait(_In_ CIpc *lpIpc, _In_ HANDLE hConn, _In_ DWORD dwId, _In_ CMessage *lpMsg, _In_ LPVOID lpUserData);
 
   HRESULT OnMessageCompleted();
@@ -172,12 +191,10 @@ private:
   VOID FlushReceivedReplies();
   VOID CancelWaitingReplies();
 
-private:
-  typedef struct {
-    CWindowsEvent cCompletedEvent;
-    LPVOID volatile lpMsg;
-  } SYNC_WAIT;
+  CSyncWait* GetSyncWaitObject();
+  VOID FreeSyncWaitObject(_In_ CSyncWait *lpSyncWait, _In_ BOOL bForceFree);
 
+private:
   CIoCompletionPortThreadPool &cWorkerPool;
   //NOTE: CIoCompletionPortThreadPool::Post needs a non-dynamic variable
   CIoCompletionPortThreadPool::OnPacketCallback cMessageReceivedCallbackWP, cFlushReceivedRepliesWP;
@@ -208,6 +225,11 @@ private:
     LONG nActive;
     OVERLAPPED sOvr;
   } sFlush;
+  struct {
+    LONG volatile nMutex;
+    SIZE_T nCount;
+    TLnkLst<CSyncWait> cList;
+  } sSyncWait;
 };
 
 } //namespace MX
