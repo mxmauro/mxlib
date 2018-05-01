@@ -93,7 +93,7 @@ public:
 
     hTemp = (h != INVALID_HANDLE_VALUE) ? h : NULL;
     h = NULL;
-    return h;
+    return hTemp;
     };
 
   static VOID CloseHandleSEH(_In_ HANDLE h)
