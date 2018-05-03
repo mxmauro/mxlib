@@ -43,9 +43,9 @@ public:
                  _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes=NULL);
   VOID Close();
 
-  HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nReaded,
+  HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesRead,
                _In_opt_ ULONGLONG nStartOffset=ULONGLONG_MAX);
-  HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nWritten,
+  HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
                 _In_opt_ ULONGLONG nStartOffset=ULONGLONG_MAX);
 
   HRESULT Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod=SeekStart);

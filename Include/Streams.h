@@ -48,9 +48,9 @@ public:
   virtual ~CStream()
     { };
 
-  virtual HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nReaded,
+  virtual HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesRead,
                        _In_opt_ ULONGLONG nStartOffset=ULONGLONG_MAX) = 0;
-  virtual HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nWritten,
+  virtual HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
                         _In_opt_ ULONGLONG nStartOffset=ULONGLONG_MAX) = 0;
   HRESULT WriteString(_In_ LPCSTR szFormatA, ...);
   HRESULT WriteStringV(_In_ LPCSTR szFormatA, _In_ va_list argptr);

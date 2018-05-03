@@ -447,6 +447,8 @@ HRESULT CHttpServer::CRequest::SendResponse(_In_ LPCVOID lpData, _In_ SIZE_T nDa
     {
       CStream *lpStream = sResponse.aStreamsList.GetElementAt(sResponse.aStreamsList.GetCount()-1);
       hRes = lpStream->Write(lpData, nDataLen, nWritten);
+      if (SUCCEEDED(hRes) && nDataLen != nWritten)
+        hRes = MX_E_WriteFault;
     }
     else
     {

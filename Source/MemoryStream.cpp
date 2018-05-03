@@ -80,12 +80,12 @@ VOID CMemoryStream::Close()
   return;
 }
 
-HRESULT CMemoryStream::Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nReaded,
+HRESULT CMemoryStream::Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesRead,
                             _In_opt_ ULONGLONG nStartOffset)
 {
   SIZE_T nReadPos;
 
-  nReaded = 0;
+  nBytesRead = 0;
   if (lpDest == NULL)
     return E_POINTER;
   if (nStartOffset == ULONGLONG_MAX)
@@ -106,16 +106,16 @@ HRESULT CMemoryStream::Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_
   if (nStartOffset == ULONGLONG_MAX)
     nCurrPos += nBytes;
   //done
-  nReaded = nBytes;
+  nBytesRead = nBytes;
   return S_OK;
 }
 
-HRESULT CMemoryStream::Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nWritten,
+HRESULT CMemoryStream::Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
                              _In_opt_ ULONGLONG nStartOffset)
 {
   SIZE_T nWritePos;
 
-  nWritten = 0;
+  nBytesWritten = 0;
   if (nBytes == 0)
     return S_OK;
   if (lpSrc == NULL)
@@ -147,8 +147,8 @@ HRESULT CMemoryStream::Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_
     nCurrPos += nBytes;
   if (nSize < nWritePos + nBytes)
     nSize = nWritePos + nBytes;
+  nBytesWritten = nBytes;
   //done
-  nWritten = nBytes;
   return S_OK;
 }
 
