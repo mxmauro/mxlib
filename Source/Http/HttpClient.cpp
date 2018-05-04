@@ -59,6 +59,8 @@ CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr) : CBaseMemObj(), cSocketMgr
   hConn = NULL;
   hLastErrorCode = S_OK;
   sRedirect.dwRedirectCounter = 0;
+  sRedirect.lpEvent = NULL;
+  sRedirect.nWaitTimeSecs = 0;
   lpTimedEventQueue = NULL;
   cHeadersReceivedCallback = NullCallback();
   cDymanicRequestBodyStartCallback = NullCallback();
