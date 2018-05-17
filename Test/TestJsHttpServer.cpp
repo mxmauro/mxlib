@@ -34,6 +34,12 @@ public:
   CTestJsRequest() : MX::CJsHttpServer::CJsRequest()
     { };
 
+  VOID Reset()
+    {
+    cSessionJsObj.Release();
+    return;
+    };
+
 public:
   MX::TAutoRefCounted<MX::CJsHttpServerSessionPlugin> cSessionJsObj;
 };
@@ -145,6 +151,8 @@ static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer:
   MX::CStringW cStrFileNameW;
   LPCWSTR szExtensionW;
   HRESULT hRes;
+
+  lpRequest->Reset();
 
   hRes = BuildWebFileName(cStrFileNameW, szExtensionW, lpRequest->GetUrl()->GetPath());
   if (FAILED(hRes))

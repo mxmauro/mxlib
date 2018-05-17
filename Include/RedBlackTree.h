@@ -31,20 +31,20 @@
 
 namespace MX {
 
-template <class classOrStruct>
+template <class classOrStruct, typename KeyType>
 class TRedBlackTree;
 
-template <class classOrStruct>
+template <class classOrStruct, typename KeyType>
 class TRedBlackTreeNode : public virtual CBaseMemObj
 {
 public:
-  typedef TRedBlackTree<classOrStruct> _RbTree;
-  typedef TRedBlackTreeNode<classOrStruct> _RbTreeNode;
+  typedef TRedBlackTree<classOrStruct, KeyType> _RbTree;
+  typedef TRedBlackTreeNode<classOrStruct, KeyType> _RbTreeNode;
 
-  template <class classOrStruct>
+  template <class classOrStruct, typename KeyType>
   friend class TRedBlackTree;
 
-  friend class TRedBlackTree<classOrStruct>;
+  friend class TRedBlackTree<classOrStruct, KeyType>;
 
 public:
   TRedBlackTreeNode() : CBaseMemObj()
@@ -55,9 +55,9 @@ public:
     return;
     };
 
-  virtual BOOL IsGreaterThan(_In_ classOrStruct *lpOtherNode)
+  virtual KeyType GetNodeKey() const
     {
-    return FALSE;
+    return (KeyType)0;
     };
 
   _RbTreeNode* GetNextNode()
@@ -162,14 +162,16 @@ private:
 
 //-----------------------------------------------------------
 
-template <class classOrStruct>
+template <class classOrStruct, typename KeyType>
 class TRedBlackTree
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(TRedBlackTree<classOrStruct>);
 public:
-  typedef TRedBlackTree<classOrStruct> _RbTree;
-  typedef TRedBlackTreeNode<classOrStruct> _RbTreeNode;
+  typedef TRedBlackTree<classOrStruct, KeyType> _RbTree;
+  typedef TRedBlackTreeNode<classOrStruct, KeyType> _RbTreeNode;
 
+  MX_DISABLE_COPY_CONSTRUCTOR(_RbTree);
+
+public:
   TRedBlackTree()
     {
     cRoot.lpLeft = cRoot.lpRight = cRoot.lpParent = &cNil;
@@ -181,6 +183,25 @@ public:
   _inline BOOL IsEmpty()
     {
     return (cRoot.lpLeft == &cNil && cRoot.lpRight == &cNil) ? TRUE : FALSE;
+    };
+
+  _inline classOrStruct* Find(_In_ KeyType _key)
+    {
+    _RbTreeNode *lpNode;
+    int comp;
+
+    lpNode = cRoot.lpLeft;
+    while (lpNode != &cNil)
+    {
+      comp = CompareKeys(lpNode->GetNodeKey(), _key);
+      if (comp == 0)
+        return lpNode->GetEntry();
+      if (comp < 0)
+        lpNode = lpNode->lpLeft;
+      else
+        lpNode = lpNode->lpRight;
+    }
+    return NULL;
     };
 
   _inline classOrStruct* GetFirst()
@@ -338,6 +359,15 @@ private:
   friend class Iterator;
   friend class IteratorRev;
 
+  _inline int CompareKeys(_In_ KeyType key1, _In_ KeyType key2)
+    {
+    if (key1 < key2)
+      return -1;
+    if (key1 > key2)
+      return 1;
+    return 0;
+    };
+
   VOID LeftRotate(_Inout_ _RbTreeNode *left)
     {
     _RbTreeNode *right;
@@ -388,13 +418,13 @@ private:
     while (left != &cNil)
     {
       right = left;
-      if (left->IsGreaterThan(static_cast<classOrStruct*>(lpNodeToAdd)) != FALSE)
+      if (CompareKeys(lpNodeToAdd->GetNodeKey(), left->GetNodeKey()) > 0)
         left = left->lpLeft;
       else
         left = left->lpRight;
     }
     lpNodeToAdd->lpParent = right;
-    if (right == &cRoot || right->IsGreaterThan(static_cast<classOrStruct*>(lpNodeToAdd)) != FALSE)
+    if (right == &cRoot || CompareKeys(lpNodeToAdd->GetNodeKey(), right->GetNodeKey()) > 0)
       right->lpLeft = lpNodeToAdd;
     else
       right->lpRight = lpNodeToAdd;
@@ -560,7 +590,7 @@ public:
   };
 
 private:
-  template <class classOrStruct>
+  template <class classOrStruct, typename KeyType>
   friend class TRedBlackTreeNode;
 
   _RbTreeNode cRoot, cNil;

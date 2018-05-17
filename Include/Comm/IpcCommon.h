@@ -513,7 +513,7 @@ protected:
 protected:
   friend class CLayer;
 
-  class CConnectionBase : public virtual CBaseMemObj, public TLnkLstNode<CConnectionBase>
+  class CConnectionBase : public virtual TRefCounted<CBaseMemObj>, public TRedBlackTreeNode<CConnectionBase,SIZE_T>
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CConnectionBase);
   protected:
@@ -523,6 +523,11 @@ protected:
     CConnectionBase(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass);
   public:
     virtual ~CConnectionBase();
+
+    SIZE_T GetNodeKey() const
+      {
+      return (SIZE_T)this;
+      };
 
     virtual VOID ShutdownLink(_In_ BOOL bAbortive);
 
@@ -556,9 +561,6 @@ protected:
     virtual HRESULT SendReadPacket(_In_ CPacket *lpPacket) = 0;
     virtual HRESULT SendWritePacket(_In_ CPacket *lpPacket) = 0;
 
-    BOOL AddRefIfStillValid();
-    VOID ReleaseMySelf();
-
     HRESULT SendDataToLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize, _In_ CLayer *lpCurrLayer, _In_ BOOL bIsMsg);
 
     HRESULT MarkLastWriteActivity(_In_ BOOL bSet);
@@ -567,7 +569,6 @@ protected:
   protected:
     friend class CIpc;
 
-    ULONG volatile nCheckTag1;
     LONG volatile nMutex;
     CIpc *lpIpc;
     CIpc::eConnectionClass nClass;
@@ -579,7 +580,7 @@ protected:
     CPacketList cWritePendingList;
     LONG volatile nNextWriteOrder;
     LONG volatile nNextWriteOrderToProcess;
-    LONG volatile nRefCount, nOutstandingReads, nOutstandingWrites, nOutstandingWritesBeingSent;
+    LONG volatile nOutstandingReads, nOutstandingWrites, nOutstandingWritesBeingSent;
     DWORD dwWriteTimeoutMs;
     CPacketList cRwList;
     struct {
@@ -605,7 +606,6 @@ protected:
 #ifdef MX_IPC_TIMING
     CHiResTimer cHiResTimer;
 #endif //MX_IPC_TIMING
-    ULONG volatile nCheckTag2;
   };
 
   //----
@@ -616,8 +616,10 @@ protected:
   virtual HRESULT OnInternalInitialize() = 0;
   virtual VOID OnInternalFinalize() = 0;
 
+  /*
   VOID CloseConnection(_In_ CConnectionBase *lpConn, _In_ HRESULT hErrorCode);
   VOID ReleaseAndRemoveConnectionIfClosed(_In_ CConnectionBase *lpConn);
+  */
 
   VOID FireOnEngineError(_In_ HRESULT hErrorCode);
   HRESULT FireOnCreate(_In_ CConnectionBase *lpConn);
@@ -630,7 +632,6 @@ protected:
   VOID FreePacket(_In_ CPacket *lpPacket);
 
   CConnectionBase* CheckAndGetConnection(_In_opt_ HANDLE h);
-  CConnectionBase* IsValidConnection(_In_opt_ HANDLE h);
 
   VOID OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
                           _In_ HRESULT hRes);
@@ -638,8 +639,6 @@ protected:
   virtual HRESULT OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes);
   virtual HRESULT OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes) = 0;
   virtual BOOL ZeroReadsSupported() const = 0;
-
-  VOID OnReadWriteTimeout(_In_ CTimedEventQueue::CEvent *lpEvent);
 
 protected:
   LONG volatile nInitShutdownMutex;
@@ -655,7 +654,7 @@ protected:
   OnEngineErrorCallback cEngineErrorCallback;
   struct {
     LONG volatile nSlimMutex;
-    TLnkLst<CConnectionBase> cList;
+    TRedBlackTree<CConnectionBase,SIZE_T> cTree;
   } sConnections;
   CPacketList cFreePacketsList;
 };

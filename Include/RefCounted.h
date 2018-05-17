@@ -52,6 +52,23 @@ public:
     MX_ASSERT((nNewVal & 0xC0000000) == 0);
     return nNewVal;
     };
+
+  ULONG SafeAddRef()
+    {
+    LONG nInitVal, nOrigVal, nNewVal;
+
+    nOrigVal = __InterlockedRead(&nRefCount);
+    do
+    {
+      nInitVal = nOrigVal;
+      nNewVal = (nInitVal > 0) ? (nInitVal + 1) : nInitVal;
+      nOrigVal = _InterlockedCompareExchange(&nRefCount, nNewVal, nInitVal);
+    }
+    while (nOrigVal != nInitVal);
+    MX_ASSERT(((ULONG)nNewVal & 0xC0000000) == 0);
+    return (nNewVal > 0) ? (ULONG)nNewVal : 0;
+    };
+
   ULONG Release()
     {
     LONG nInitVal, nOrigVal, nNewVal;
@@ -65,10 +82,7 @@ public:
     }
     while (nOrigVal != nInitVal);
 #ifdef _DEBUG
-    if (nNewVal <= -(2147483647L/2L) || (nNewVal & 0x80000000) || nNewVal > 500)
-    {
-      MX_ASSERT(FALSE);
-    }
+    MX_ASSERT(!(nNewVal <= -(2147483647L / 2L) || (nNewVal & 0x80000000) || nNewVal > 500));
 #endif //_DEBUG
     if (nNewVal == 0)
     {

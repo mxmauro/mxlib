@@ -39,7 +39,7 @@ class CTimedEventQueue : public TRefCounted<CBaseMemObj>
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CTimedEventQueue);
 public:
-  class CEvent : public TEventNotifyBase<CEvent>, private TRedBlackTreeNode<CEvent>
+  class CEvent : public TEventNotifyBase<CEvent>, private TRedBlackTreeNode<CEvent, ULONGLONG>
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CEvent);
   public:
@@ -49,9 +49,9 @@ public:
   private:
     friend class CTimedEventQueue;
 
-    BOOL IsGreaterThan(_In_ CEvent *lpOtherNode)
+    ULONGLONG GetNodeKey()
       {
-      return (nDueTime > lpOtherNode->nDueTime) ? TRUE : FALSE;
+      return nDueTime;
       };
 
   private:
@@ -82,9 +82,9 @@ private:
   CWindowsEvent cQueueChangedEv;
   //----
   LONG volatile nQueuedEventsTreeMutex;
-  TRedBlackTree<CEvent> cQueuedEventsTree;
+  TRedBlackTree<CEvent, ULONGLONG> cQueuedEventsTree;
   LONG volatile nRemovedTreeMutex;
-  TRedBlackTree<CEvent> cRemovedTree;
+  TRedBlackTree<CEvent, ULONGLONG> cRemovedTree;
 };
 
 //-----------------------------------------------------------

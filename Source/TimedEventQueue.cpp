@@ -286,7 +286,7 @@ VOID CTimedEventQueue::ProcessCanceled()
 //-----------------------------------------------------------
 
 CTimedEventQueue::CEvent::CEvent(_In_ OnNotifyCallback cCallback, _In_opt_ LPVOID lpUserData) :
-                          TEventNotifyBase<CEvent>(cCallback, lpUserData), TRedBlackTreeNode<CEvent>()
+                          TEventNotifyBase<CEvent>(cCallback, lpUserData), TRedBlackTreeNode<CEvent, ULONGLONG>()
 {
   nDueTime = 0ui64;
   return;

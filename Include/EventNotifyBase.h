@@ -76,7 +76,9 @@ public:
 
     if (nNewState != StateDetached && nNewState != StateQueued &&
         nNewState != StateProcessing && nNewState != StateProcessed)
+    {
       return StateInvalidArg;
+    }
     newVal = __InterlockedRead(&nState);
     do
     {

@@ -217,7 +217,6 @@ on_init_error:
   //execute JS code
   if (cStrCodeA.IsEmpty() == FALSE)
   {
-
     try
     {
       cJvm.Run(cStrCodeA, lpUrl->GetPath());

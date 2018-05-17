@@ -122,7 +122,7 @@ HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCr
                                  _Out_opt_ HANDLE *h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  TAutoDeletePtr<CConnection> cConn;
+  TAutoRefCounted<CConnection> cConn;
   HRESULT hRes;
 
   if (h != NULL)
@@ -145,24 +145,28 @@ HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCr
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nSlimMutex));
 
-    sConnections.cList.PushTail(cConn.Get());
+    sConnections.cTree.Insert(cConn.Get());
   }
   hRes = FireOnCreate(cConn.Get());
   if (SUCCEEDED(hRes))
     hRes = cConn->CreateSocket(nFamily, 0);
   if (SUCCEEDED(hRes))
   {
-    _InterlockedIncrement(&(cConn->nRefCount));
     hRes = cConn->ResolveAddress(dwMaxResolverTimeoutMs, nFamily, szBindAddressA, nPort);
-    if (FAILED(hRes))
-      ReleaseAndRemoveConnectionIfClosed(cConn.Get());
+    if (SUCCEEDED(hRes))
+      cConn->AddRef();
   }
   //done
-  if (FAILED(hRes))
-    CloseConnection(cConn.Get(), hRes);
-  ReleaseAndRemoveConnectionIfClosed(cConn.Detach());
-  if (FAILED(hRes) && h != NULL)
-    *h = NULL;
+  if (SUCCEEDED(hRes))
+  {
+    cConn.Detach();
+  }
+  else
+  {
+    cConn->Close(hRes);
+    if (h != NULL)
+      *h = NULL;
+  }
   return hRes;
 }
 
@@ -189,7 +193,7 @@ HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA
                                   _Out_opt_ HANDLE *h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  TAutoDeletePtr<CConnection> cConn;
+  TAutoRefCounted<CConnection> cConn;
   HRESULT hRes;
 
   if (h != NULL)
@@ -214,24 +218,28 @@ HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nSlimMutex));
 
-    sConnections.cList.PushTail(cConn.Get());
+    sConnections.cTree.Insert(cConn.Get());
   }
   hRes = FireOnCreate(cConn.Get());
   if (SUCCEEDED(hRes))
     hRes = cConn->CreateSocket(nFamily, dwPacketSize);
   if (SUCCEEDED(hRes))
   {
-    _InterlockedIncrement(&(cConn->nRefCount));
     hRes = cConn->ResolveAddress(dwMaxResolverTimeoutMs, nFamily, szAddressA, nPort);
-    if (FAILED(hRes))
-      ReleaseAndRemoveConnectionIfClosed(cConn.Get());
+    if (SUCCEEDED(hRes))
+      cConn->AddRef();
   }
   //done
-  if (FAILED(hRes))
-    CloseConnection(cConn.Get(), hRes);
-  ReleaseAndRemoveConnectionIfClosed(cConn.Detach());
-  if (FAILED(hRes) && h != NULL)
-    *h = NULL;
+  if (SUCCEEDED(hRes))
+  {
+    cConn.Detach();
+  }
+  else
+  {
+    cConn->Close(hRes);
+    if (h != NULL)
+      *h = NULL;
+  }
   return hRes;
 }
 
@@ -255,7 +263,7 @@ HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCWSTR szAddress
 HRESULT CSockets::GetPeerAddress(_In_ HANDLE h, _Out_ PSOCKADDR_INET lpAddr)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  CConnection *lpConn;
+  TAutoRefCounted<CConnection> cConn;
 
   if (lpAddr != NULL)
     MemSet(lpAddr, 0, sizeof(SOCKADDR_INET));
@@ -263,13 +271,12 @@ HRESULT CSockets::GetPeerAddress(_In_ HANDLE h, _Out_ PSOCKADDR_INET lpAddr)
     return MX_E_Cancelled;
   if (h == NULL || lpAddr == NULL)
     return E_POINTER;
-  lpConn = (CConnection*)CheckAndGetConnection(h);
-  if (lpConn == NULL)
+  cConn.Attach((CConnection*)CheckAndGetConnection(h));
+  if (!cConn)
     return E_INVALIDARG;
   //copy peer info
-  MemCopy(lpAddr, &(lpConn->sAddr), sizeof(lpConn->sAddr));
+  MemCopy(lpAddr, &(cConn->sAddr), sizeof(cConn->sAddr));
   //done
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
   return S_OK;
 }
 
@@ -298,7 +305,7 @@ HRESULT CSockets::CreateServerConnection(_In_ CConnection *lpListenConn)
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nSlimMutex));
 
-    sConnections.cList.PushTail(cIncomingConn.Get());
+    sConnections.cTree.Insert(cIncomingConn.Get());
   }
   hRes = FireOnCreate(cIncomingConn.Get());
   if (SUCCEEDED(hRes))
@@ -309,9 +316,14 @@ HRESULT CSockets::CreateServerConnection(_In_ CConnection *lpListenConn)
   if (SUCCEEDED(hRes))
     hRes = lpListenConn->SetupAcceptEx(cIncomingConn.Get());
   //done
-  if (FAILED(hRes))
-    CloseConnection(cIncomingConn.Get(), hRes);
-  ReleaseAndRemoveConnectionIfClosed(cIncomingConn.Detach());
+  if (SUCCEEDED(hRes))
+  {
+    cIncomingConn.Detach();
+  }
+  else
+  {
+    cIncomingConn->Close(hRes);
+  }
   return hRes;
 }
 
@@ -362,7 +374,7 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In
 
     case TypeAcceptEx:
       {
-      CConnection *lpIncomingConn = (CConnection *)(lpPacket->GetUserData());
+      CConnection *lpIncomingConn = (CConnection*)(lpPacket->GetUserData());
       HRESULT hRes2;
 
       if (SUCCEEDED(hRes) && IsShuttingDown() != FALSE)
@@ -434,7 +446,7 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In
         //we return success because the failing socket was the incoming one and not the one doing accepts
         hRes = S_OK;
       }
-      ReleaseAndRemoveConnectionIfClosed(lpIncomingConn);
+      lpIncomingConn->Release();
       }
       break;
 
@@ -676,15 +688,15 @@ HRESULT CSockets::CConnection::SetupClient()
   if (fnConnectEx != NULL)
   {
     //do connect
-    _InterlockedIncrement(&nRefCount);
+    AddRef();
     if (fnConnectEx(sck, (sockaddr*)&sAddr, SockAddrSizeFromWinSockFamily(sAddr.si_family), NULL, 0, &dw,
                     lpPacket->GetOverlapped()) == FALSE)
     {
       hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
       if (hRes == MX_E_IoPending)
         hRes = S_OK;
-      if (FAILED(hRes))
-        _InterlockedDecrement(&nRefCount);
+      else if (FAILED(hRes))
+        Release();
     }
   }
   else
@@ -692,10 +704,10 @@ HRESULT CSockets::CConnection::SetupClient()
     if (::connect(sck, (sockaddr*)&sAddr, SockAddrSizeFromWinSockFamily(sAddr.si_family)) != SOCKET_ERROR)
     {
       *((HRESULT MX_UNALIGNED*)(lpPacket->GetBuffer())) = hRes;
-      _InterlockedIncrement(&nRefCount);
+      AddRef();
       hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, lpPacket->GetOverlapped());
       if (FAILED(hRes))
-        _InterlockedDecrement(&nRefCount);
+        Release();
     }
     else
     {
@@ -709,9 +721,9 @@ HRESULT CSockets::CConnection::SetupClient()
         if (sConnectWaiter.lpWorkerThread != NULL)
         {
           sConnectWaiter.lpWorkerThread->SetAutoDelete(TRUE);
-          if (sConnectWaiter.lpWorkerThread->Start(this, &CConnection::ConnectWaiterThreadProc) == FALSE)
+          AddRef();
+          if (sConnectWaiter.lpWorkerThread->Start(this, &CConnection::ConnectWaiterThreadProc) != FALSE)
           {
-            _InterlockedIncrement(&nRefCount);
             sConnectWaiter.lpPacket = lpPacket;
             hRes = S_OK;
           }
@@ -719,6 +731,7 @@ HRESULT CSockets::CConnection::SetupClient()
           {
             delete sConnectWaiter.lpWorkerThread;
             sConnectWaiter.lpWorkerThread = NULL;
+            Release();
             hRes = E_OUTOFMEMORY;
           }
         }
@@ -749,16 +762,16 @@ HRESULT CSockets::CConnection::SetupAcceptEx(_In_ CConnection *lpIncomingConn)
   cRwList.QueueLast(lpPacket);
   lpPacket->SetUserData(lpIncomingConn);
   lpPacket->SetBytesInUse((DWORD)SockAddrSizeFromWinSockFamily(sAddr.si_family) + 16);
-  _InterlockedIncrement(&(lpIncomingConn->nRefCount));
-  _InterlockedIncrement(&nRefCount);
+  AddRef();
+  lpIncomingConn->AddRef();
   if (fnAcceptEx(sck, lpIncomingConn->sck, lpPacket->GetBuffer(), 0, lpPacket->GetBytesInUse(),
                  lpPacket->GetBytesInUse(), &dw, lpPacket->GetOverlapped()) == FALSE)
   {
     hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
     if (hRes != MX_E_IoPending)
     {
-      _InterlockedDecrement(&(lpIncomingConn->nRefCount));
-      _InterlockedDecrement(&nRefCount);
+      lpIncomingConn->Release();
+      Release();
       return hRes;
     }
   }
@@ -920,9 +933,10 @@ VOID CSockets::CConnection::HostResolveCallback(_In_ CHostResolver *lpResolver)
               break;
           }
         }
+        AddRef();
         hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, sHostResolver.lpPacket->GetOverlapped());
-        if (SUCCEEDED(hRes))
-          _InterlockedIncrement(&nRefCount);
+        if (FAILED(hRes))
+          Release();
       }
       else
       {
@@ -946,7 +960,7 @@ VOID CSockets::CConnection::HostResolveCallback(_In_ CHostResolver *lpResolver)
   if (FAILED(hRes))
     Close(hRes);
   //release myself
-  ReleaseMySelf();
+  Release();
   return;
 }
 
@@ -996,13 +1010,11 @@ VOID CSockets::CConnection::ConnectWaiterThreadProc()
     if (IsClosed() == FALSE)
     {
       *((HRESULT MX_UNALIGNED*)(sConnectWaiter.lpPacket->GetBuffer())) = hRes;
+      AddRef();
       hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, sConnectWaiter.lpPacket->GetOverlapped());
-      if (SUCCEEDED(hRes))
+      if (FAILED(hRes))
       {
-        _InterlockedIncrement(&nRefCount);
-      }
-      else
-      {
+        Release();
         cRwList.Remove(sConnectWaiter.lpPacket);
         FreePacket(sConnectWaiter.lpPacket);
       }
@@ -1020,7 +1032,7 @@ VOID CSockets::CConnection::ConnectWaiterThreadProc()
   if (FAILED(hRes))
     Close(hRes);
   //release myself
-  ReleaseMySelf();
+  Release();
   return;
 }
 

@@ -190,8 +190,7 @@ VOID CIpc::Finalize()
 HRESULT CIpc::SendMsg(_In_ HANDLE h, _In_reads_bytes_(nMsgSize) LPCVOID lpMsg, _In_ SIZE_T nMsgSize)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  CConnectionBase *lpConn;
-  HRESULT hRes;
+  TAutoRefCounted<CConnectionBase> cConn;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
@@ -199,78 +198,64 @@ HRESULT CIpc::SendMsg(_In_ HANDLE h, _In_reads_bytes_(nMsgSize) LPCVOID lpMsg, _
     return E_POINTER;
   if (nMsgSize == 0)
     return E_INVALIDARG;
-  lpConn = CheckAndGetConnection(h);
-  if (lpConn == NULL)
+  cConn.Attach(CheckAndGetConnection(h));
+  if (!cConn)
     return E_INVALIDARG;
   //send real message
-  hRes = (lpConn->IsClosed() == FALSE) ? lpConn->SendMsg(lpMsg, nMsgSize) : E_FAIL;
-  //done
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
-  return hRes;
+  return (cConn->IsClosed() == FALSE) ? cConn->SendMsg(lpMsg, nMsgSize) : E_FAIL;
 }
 
 HRESULT CIpc::SendStream(_In_ HANDLE h, _In_ CStream *lpStream)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoRefCounted<CStream> cStream(lpStream);
-  CConnectionBase *lpConn;
-  HRESULT hRes;
+  TAutoRefCounted<CConnectionBase> cConn;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
   if (lpStream == NULL)
     return E_POINTER;
-  lpConn = CheckAndGetConnection(h);
-  if (lpConn == NULL)
+  cConn.Attach(CheckAndGetConnection(h));
+  if (!cConn)
     return E_INVALIDARG;
   //send real message
-  hRes = (lpConn->IsClosed() == FALSE) ? lpConn->SendStream(lpStream) : E_FAIL;
-  //done
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
-  return hRes;
+  return (cConn->IsClosed() == FALSE) ? cConn->SendStream(lpStream) : E_FAIL;
 }
 
 HRESULT CIpc::AfterWriteSignal(_In_ HANDLE h, _In_ OnAfterWriteSignalCallback cCallback, _In_opt_ LPVOID lpCookie)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  CConnectionBase *lpConn;
-  HRESULT hRes;
+  TAutoRefCounted<CConnectionBase> cConn;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
   if (!cCallback)
     return E_INVALIDARG;
-  lpConn = CheckAndGetConnection(h);
-  if (lpConn == NULL)
+  cConn.Attach(CheckAndGetConnection(h));
+  if (!cConn)
     return E_INVALIDARG;
   //add signal
-  hRes = (lpConn->IsClosed() == FALSE) ? lpConn->AfterWriteSignal(cCallback, lpCookie) : E_FAIL;
-  //done
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
-  return hRes;
+  return (cConn->IsClosed() == FALSE) ? cConn->AfterWriteSignal(cCallback, lpCookie) : E_FAIL;
 }
 
 CIpc::CMultiSendLock* CIpc::StartMultiSendBlock(_In_ HANDLE h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  CConnectionBase *lpConn;
+  TAutoRefCounted<CConnectionBase> cConn;
   TAutoDeletePtr<CIpc::CMultiSendLock> cMultiSendBlock;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return NULL;
-  lpConn = CheckAndGetConnection(h);
-  if (lpConn == NULL)
+  cConn.Attach(CheckAndGetConnection(h));
+  if (!cConn)
     return NULL;
   cMultiSendBlock.Attach(MX_DEBUG_NEW CMultiSendLock());
   if (!cMultiSendBlock)
-  {
-    ReleaseAndRemoveConnectionIfClosed(lpConn);
     return NULL;
-  }
   //apply lock
-  while ((_InterlockedOr(&(lpConn->nFlags), FLAG_InSendTransaction) & FLAG_InSendTransaction) != 0)
+  while ((_InterlockedOr(&(cConn->nFlags), FLAG_InSendTransaction) & FLAG_InSendTransaction) != 0)
     _YieldProcessor();
-  cMultiSendBlock->lpConn = lpConn;
+  cMultiSendBlock->lpConn = cConn.Detach();
   //done
   return cMultiSendBlock.Detach();
 }
@@ -278,272 +263,245 @@ CIpc::CMultiSendLock* CIpc::StartMultiSendBlock(_In_ HANDLE h)
 HRESULT CIpc::GetBufferedMessage(_In_ HANDLE h, _Out_ LPVOID lpMsg, _Inout_ SIZE_T *lpnMsgSize)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  CConnectionBase *lpConn;
+  TAutoRefCounted<CConnectionBase> cConn;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
   if (lpMsg == NULL || lpnMsgSize == NULL)
     return E_POINTER;
-  lpConn = CheckAndGetConnection(h);
-  if (lpConn == NULL)
+  cConn.Attach(CheckAndGetConnection(h));
+  if (!cConn)
     return E_INVALIDARG;
   //get received data
   {
-    CFastLock cRecBufLock(&(lpConn->sReceivedData.nMutex));
+    CFastLock cRecBufLock(&(cConn->sReceivedData.nMutex));
 
-    *lpnMsgSize = lpConn->sReceivedData.cBuffer.Peek(lpMsg, *lpnMsgSize);
+    *lpnMsgSize = cConn->sReceivedData.cBuffer.Peek(lpMsg, *lpnMsgSize);
   }
   //done
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
   return S_OK;
 }
 
 HRESULT CIpc::ConsumeBufferedMessage(_In_ HANDLE h, _In_ SIZE_T nConsumedBytes)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  CConnectionBase *lpConn;
+  TAutoRefCounted<CConnectionBase> cConn;
   HRESULT hRes;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
-  lpConn = CheckAndGetConnection(h);
-  if (lpConn == NULL)
+  cConn.Attach(CheckAndGetConnection(h));
+  if (!cConn)
     return E_INVALIDARG;
   //consume received data
   {
-    CFastLock cRecBufLock(&(lpConn->sReceivedData.nMutex));
+    CFastLock cRecBufLock(&(cConn->sReceivedData.nMutex));
 
-    hRes = lpConn->sReceivedData.cBuffer.AdvanceReadPtr(nConsumedBytes);
+    hRes = cConn->sReceivedData.cBuffer.AdvanceReadPtr(nConsumedBytes);
   }
   //done
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
   return hRes;
 }
 
 HRESULT CIpc::Close(_In_opt_ HANDLE h, _In_opt_ HRESULT hErrorCode)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  CConnectionBase *lpConn;
+  TAutoRefCounted<CConnectionBase> cConn;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
-  lpConn = CheckAndGetConnection(h);
-  if (lpConn == NULL)
+  cConn.Attach(CheckAndGetConnection(h));
+  if (!cConn)
     return E_INVALIDARG;
   //close connection
-  CloseConnection(lpConn, hErrorCode);
+  cConn->Close(hErrorCode);
   //done
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
   return S_OK;
 }
 
 HRESULT CIpc::IsConnected(_In_ HANDLE h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  CConnectionBase *lpConn;
-  HRESULT hRes;
+  TAutoRefCounted<CConnectionBase> cConn;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
-  lpConn = CheckAndGetConnection(h);
-  if (lpConn == NULL)
+  cConn.Attach(CheckAndGetConnection(h));
+  if (!cConn)
     return E_INVALIDARG;
   //get state
-  hRes = (lpConn->IsConnected() != FALSE) ? S_OK : S_FALSE;
-  //done
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
-  return hRes;
+  return (cConn->IsConnected() != FALSE) ? S_OK : S_FALSE;
 }
 
 HRESULT CIpc::IsClosed(_In_ HANDLE h, _Out_opt_ HRESULT *lphErrorCode)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  CConnectionBase *lpConn;
-  HRESULT hRes;
+  TAutoRefCounted<CConnectionBase> cConn;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
-  lpConn = CheckAndGetConnection(h);
-  if (lpConn == NULL)
+  cConn.Attach(CheckAndGetConnection(h));
+  if (!cConn)
     return E_INVALIDARG;
   //get state
   if (lphErrorCode != NULL)
-    *lphErrorCode = __InterlockedRead(&(lpConn->hErrorCode));
-  hRes = (lpConn->IsClosed() != FALSE) ? S_OK : S_FALSE;
-  //done
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
-  return hRes;
+    *lphErrorCode = __InterlockedRead(&(cConn->hErrorCode));
+  return (cConn->IsClosed() != FALSE) ? S_OK : S_FALSE;
 }
 
 HRESULT CIpc::PauseInputProcessing(_In_ HANDLE h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  CConnectionBase *lpConn;
+  TAutoRefCounted<CConnectionBase> cConn;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
-  lpConn = CheckAndGetConnection(h);
-  if (lpConn == NULL)
+  cConn.Attach(CheckAndGetConnection(h));
+  if (!cConn)
     return E_INVALIDARG;
   //set flag
-  _InterlockedOr(&(lpConn->nFlags), FLAG_InputProcessingPaused);
+  _InterlockedOr(&(cConn->nFlags), FLAG_InputProcessingPaused);
   //done
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
   return S_OK;
 }
 
 HRESULT CIpc::ResumeInputProcessing(_In_ HANDLE h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  CConnectionBase *lpConn;
+  TAutoRefCounted<CConnectionBase> cConn;
   HRESULT hRes;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
-  lpConn = CheckAndGetConnection(h);
-  if (lpConn == NULL)
+  cConn.Attach(CheckAndGetConnection(h));
+  if (!cConn)
     return E_INVALIDARG;
   //clear flag
   hRes = S_OK;
-  if ((_InterlockedAnd(&(lpConn->nFlags), ~FLAG_InputProcessingPaused) & FLAG_InputProcessingPaused) != 0)
+  if ((_InterlockedAnd(&(cConn->nFlags), ~FLAG_InputProcessingPaused) & FLAG_InputProcessingPaused) != 0)
   {
-    hRes = lpConn->SendResumeIoProcessingPacket(TRUE);
+    hRes = cConn->SendResumeIoProcessingPacket(TRUE);
   }
   //done
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
   return hRes;
 }
 
 HRESULT CIpc::PauseOutputProcessing(_In_ HANDLE h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  CConnectionBase *lpConn;
+  TAutoRefCounted<CConnectionBase> cConn;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
-  lpConn = CheckAndGetConnection(h);
-  if (lpConn == NULL)
+  cConn.Attach(CheckAndGetConnection(h));
+  if (!cConn)
     return E_INVALIDARG;
   //set flag
-  _InterlockedOr(&(lpConn->nFlags), FLAG_OutputProcessingPaused);
+  _InterlockedOr(&(cConn->nFlags), FLAG_OutputProcessingPaused);
   //done
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
   return S_OK;
 }
 
 HRESULT CIpc::ResumeOutputProcessing(_In_ HANDLE h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  CConnectionBase *lpConn;
+  TAutoRefCounted<CConnectionBase> cConn;
   HRESULT hRes;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
-  lpConn = CheckAndGetConnection(h);
-  if (lpConn == NULL)
+  cConn.Attach(CheckAndGetConnection(h));
+  if (!cConn)
     return E_INVALIDARG;
   //clear flag
   hRes = S_OK;
-  if ((_InterlockedAnd(&(lpConn->nFlags), ~FLAG_OutputProcessingPaused) & FLAG_OutputProcessingPaused) != 0)
+  if ((_InterlockedAnd(&(cConn->nFlags), ~FLAG_OutputProcessingPaused) & FLAG_OutputProcessingPaused) != 0)
   {
-    hRes = lpConn->SendResumeIoProcessingPacket(FALSE);
+    hRes = cConn->SendResumeIoProcessingPacket(FALSE);
   }
   //done
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
   return hRes;
 }
 
 HRESULT CIpc::AddLayer(_In_ HANDLE h, _In_ CLayer *lpLayer, _In_opt_ BOOL bFront)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  CConnectionBase *lpConn;
+  TAutoRefCounted<CConnectionBase> cConn;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
-  lpConn = CheckAndGetConnection(h);
-  if (lpConn == NULL)
+  cConn.Attach(CheckAndGetConnection(h));
+  if (!cConn)
     return E_INVALIDARG;
   if (lpLayer == NULL)
-  {
-    ReleaseAndRemoveConnectionIfClosed(lpConn);
     return E_POINTER;
-  }
   //add layer
   {
-    CAutoSlimRWLExclusive cLayersLock(&(lpConn->sLayers.nRwMutex));
+    CAutoSlimRWLExclusive cLayersLock(&(cConn->sLayers.nRwMutex));
 
     if (bFront != FALSE)
-      lpConn->sLayers.cList.PushHead(lpLayer);
+      cConn->sLayers.cList.PushHead(lpLayer);
     else
-      lpConn->sLayers.cList.PushTail(lpLayer);
-    lpLayer->lpConn = lpConn;
+      cConn->sLayers.cList.PushTail(lpLayer);
+    lpLayer->lpConn = cConn.Get();
   }
-  //call onconnect if needed
-  if ((__InterlockedRead(&(lpConn->nFlags)) & FLAG_InitialSetupExecuted) != 0)
+  //call OnConnect if needed
+  if ((__InterlockedRead(&(cConn->nFlags)) & FLAG_InitialSetupExecuted) != 0)
   {
     HRESULT hRes = lpLayer->OnConnect();
     if (FAILED(hRes))
     {
       {
-        CAutoSlimRWLExclusive cLayersLock(&(lpConn->sLayers.nRwMutex));
+        CAutoSlimRWLExclusive cLayersLock(&(cConn->sLayers.nRwMutex));
 
         lpLayer->RemoveNode();
       }
-      ReleaseAndRemoveConnectionIfClosed(lpConn);
       return hRes;
     }
   }
   //done
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
   return S_OK;
 }
 
 CIpc::CUserData* CIpc::GetUserData(_In_ HANDLE h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  CConnectionBase *lpConn;
+  TAutoRefCounted<CConnectionBase> cConn;
   CUserData *lpUserData;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return NULL;
-  lpConn = CheckAndGetConnection(h);
-  if (lpConn == NULL)
+  cConn.Attach(CheckAndGetConnection(h));
+  if (!cConn)
     return NULL;
   //get user data
-  lpUserData = lpConn->cUserData;
+  lpUserData = cConn->cUserData;
   if (lpUserData != NULL)
     lpUserData->AddRef();
   //done
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
   return lpUserData;
 }
 
 CIpc::eConnectionClass CIpc::GetClass(_In_ HANDLE h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  CConnectionBase *lpConn;
-  eConnectionClass nClass;
+  TAutoRefCounted<CConnectionBase> cConn;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return ConnectionClassError;
-  lpConn = CheckAndGetConnection(h);
-  if (lpConn == NULL)
+  cConn.Attach(CheckAndGetConnection(h));
+  if (!cConn)
     return ConnectionClassError;
   //check class
-  switch (lpConn->nClass)
+  switch (cConn->nClass)
   {
     case ConnectionClassClient:
     case ConnectionClassServer:
     case ConnectionClassListener:
-      nClass = lpConn->nClass;
-      break;
-    default:
-      nClass = ConnectionClassUnknown;
-      break;
+      return cConn->nClass;
   }
   //done
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
-  return nClass;
+  return ConnectionClassUnknown;
 }
 
 BOOL CIpc::IsShuttingDown()
@@ -555,101 +513,56 @@ BOOL CIpc::IsShuttingDown()
 
 VOID CIpc::InternalFinalize()
 {
-  TLnkLst<CConnectionBase>::Iterator itConn;
   CConnectionBase *lpConn;
+  BOOL b;
 
   RundownProt_WaitForRelease(&nRundownProt);
   cShuttingDownEv.Set();
+
   //close all connections
   do
   {
     {
       CAutoSlimRWLShared cConnListLock(&(sConnections.nSlimMutex));
+      TRedBlackTree<CConnectionBase, SIZE_T>::Iterator it;
 
-      for (lpConn=itConn.Begin(sConnections.cList); lpConn!=NULL; lpConn=itConn.Next())
+      for (lpConn=it.Begin(sConnections.cTree); lpConn!=NULL; lpConn=it.Next())
       {
         if ((_InterlockedOr(&(lpConn->nFlags), FLAG_ClosingOnShutDown) & FLAG_ClosingOnShutDown) == 0)
-        //if (lpConn->IsClosed() == FALSE)
         {
-          _InterlockedIncrement(&(lpConn->nRefCount));
-          break;
+          if (lpConn->SafeAddRef() > 0)
+            break;
         }
       }
     }
     if (lpConn != NULL)
     {
-      CloseConnection(lpConn, MX_E_Cancelled);
+      lpConn->Close(MX_E_Cancelled);
       lpConn->ShutdownLink(TRUE);
-      ReleaseAndRemoveConnectionIfClosed(lpConn);
+      lpConn->Release();
     }
   }
   while (lpConn != NULL);
+
   //wait all connections to be destroyed
   do
   {
     {
       CAutoSlimRWLShared cConnListLock(&(sConnections.nSlimMutex));
 
-      lpConn = sConnections.cList.GetHead();
-      if (lpConn != NULL)
-        _InterlockedIncrement(&(lpConn->nRefCount));
+      b = sConnections.cTree.IsEmpty();
     }
-    if (lpConn != NULL)
-    {
-      ReleaseAndRemoveConnectionIfClosed(lpConn);
+    if (b == FALSE)
       MX::_YieldProcessor();
-    }
   }
-  while (lpConn != NULL);
+  while (b == FALSE);
+
   //remove free packets
   cFreePacketsList.DiscardAll();
   //almost done
   OnInternalFinalize();
   cShuttingDownEv.Close();
   RundownProt_Initialize(&nRundownProt);
-  return;
-}
-
-VOID CIpc::CloseConnection(_In_ CConnectionBase *lpConn, _In_ HRESULT hErrorCode)
-{
-  lpConn->Close(hErrorCode);
-  return;
-}
-
-VOID CIpc::ReleaseAndRemoveConnectionIfClosed(_In_ CConnectionBase *lpConn)
-{
-  BOOL bDestroy = FALSE;
-
-  MX_ASSERT(__InterlockedRead(&(lpConn->nRefCount)) > 0);
-  //if this is the last reference to a closed connection, remove from the connections list
-  if (_InterlockedDecrement(&(lpConn->nRefCount)) == 0)
-  {
-    CAutoSlimRWLExclusive cConnListLock(&(sConnections.nSlimMutex));
-
-    //while refcount reached zero on a closed connection AND before the exclusive RWL take place,
-    //another thread could call, i.e., 'GetBufferedMessage' and increment the reference count so
-    //we have to leave the connection alive
-    lpConn->nCheckTag1 = lpConn->nCheckTag2 = 0;
-    if (__InterlockedRead(&(lpConn->nRefCount)) == 0)
-    {
-      if (lpConn->GetLinkedList() == &(sConnections.cList))
-      {
-        lpConn->RemoveNode();
-        bDestroy = TRUE;
-      }
-      else
-      {
-        MX_ASSERT(FALSE); //re-use????
-      }
-    }
-  }
-  if (bDestroy != FALSE)
-  {
-    lpConn->ShutdownLink(FAILED(__InterlockedRead(&(lpConn->hErrorCode))));
-    FireOnDestroy(lpConn);
-    MX_ASSERT(__InterlockedRead(&(lpConn->nRefCount)) == 0);
-    delete lpConn;
-  }
   return;
 }
 
@@ -776,37 +689,19 @@ VOID CIpc::FreePacket(_In_ CPacket *lpPacket)
 
 CIpc::CConnectionBase* CIpc::CheckAndGetConnection(_In_opt_ HANDLE h)
 {
-  CAutoSlimRWLShared cConnListLock(&(sConnections.nSlimMutex));
-  CConnectionBase *lpConn;
-
-  lpConn = IsValidConnection(h);
-  if (lpConn != NULL)
+  if (h != NULL)
   {
-    if (lpConn->GetLinkedList() == &(sConnections.cList))
-      _InterlockedIncrement(&(lpConn->nRefCount));
-    else
-      lpConn = NULL;
-  }
-  return lpConn;
-}
+    CAutoSlimRWLShared cConnListLock(&(sConnections.nSlimMutex));
+    CConnectionBase *lpConn;
 
-CIpc::CConnectionBase* CIpc::IsValidConnection(_In_opt_ HANDLE h)
-{
-  CConnectionBase *lpConn;
-
-  if (h == NULL)
-    return NULL;
-  lpConn = (CConnectionBase*)h;
-  __try
-  {
-    if (lpConn->nCheckTag1 != CHECKTAG1 || lpConn->nCheckTag2 != CHECKTAG2)
-      return NULL;
+    lpConn = sConnections.cTree.Find((SIZE_T)h);
+    if (lpConn != NULL)
+    {
+      if (lpConn->SafeAddRef() > 0)
+        return lpConn;
+    }
   }
-  __except(EXCEPTION_EXECUTE_HANDLER)
-  {
-    return NULL;
-  }
-  return lpConn;
+  return NULL;
 }
 
 VOID CIpc::OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
@@ -825,7 +720,7 @@ VOID CIpc::OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWO
 
   lpPacket = CPacket::FromOverlapped(lpOvr);
   lpConn = lpPacket->GetConn();
-  _InterlockedIncrement(&(lpConn->nRefCount));
+  lpConn->AddRef();
 #ifdef MX_IPC_TIMING
   lpOrigOverlapped = lpPacket->GetOverlapped();
   nOrigOverlappedType = lpPacket->GetType();
@@ -1081,7 +976,7 @@ check_pending_write_req:
 
                   case S_OK:
                   case 0x80070000 | ERROR_IO_PENDING:
-                    _InterlockedIncrement(&(lpConn->nRefCount));
+                    lpConn->AddRef();
                     hRes = S_OK;
                     break;
 
@@ -1187,7 +1082,7 @@ check_pending_write_req:
       BOOL bDataAvailable;
 
       if (lpConn->IsClosed() == FALSE)
-        CloseConnection(lpConn, S_OK);
+        lpConn->Close(S_OK);
       //wait until another message is processed
       lpConn->cOnDataReceivedCS.Lock();
       lpConn->cOnDataReceivedCS.Unlock();
@@ -1242,16 +1137,16 @@ check_pending_write_req:
       hRes = S_OK;
       _InterlockedOr(&(lpConn->nFlags), FLAG_GracefulShutdown);
     }
-    CloseConnection(lpConn, hRes);
+    lpConn->Close(hRes);
   }
   //release connection reference
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
+  lpConn->Release();
 #ifdef MX_IPC_TIMING
   DebugPrint("%lu MX::CIpc::OnDispatcherPacket) Clock=%lums / Conn=0x%p / Ovr=0x%p / Type=%lu / Err=0x%08X [EXIT]\n",
              ::MxGetCurrentThreadId(), lpConn->cHiResTimer.GetElapsedTimeMs(), lpConn, lpOrigOverlapped,
              nOrigOverlappedType, hRes);
 #endif //MX_IPC_TIMING
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
+  lpConn->Release();
   //done
   return;
 }
@@ -1264,10 +1159,9 @@ HRESULT CIpc::OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In
 //-----------------------------------------------------------
 //-----------------------------------------------------------
 
-CIpc::CConnectionBase::CConnectionBase(_In_ CIpc *_lpIpc, _In_ CIpc::eConnectionClass _nClass) : CBaseMemObj(),
-                                                                                 TLnkLstNode<CIpc::CConnectionBase>()
+CIpc::CConnectionBase::CConnectionBase(_In_ CIpc *_lpIpc, _In_ CIpc::eConnectionClass _nClass) :
+                       TRefCounted<CBaseMemObj>(), TRedBlackTreeNode<CIpc::CConnectionBase,SIZE_T>()
 {
-  nCheckTag1 = CHECKTAG1;
   _InterlockedExchange(&nMutex, 0);
   lpIpc = _lpIpc;
   nClass = _nClass;
@@ -1277,7 +1171,6 @@ CIpc::CConnectionBase::CConnectionBase(_In_ CIpc *_lpIpc, _In_ CIpc::eConnection
   _InterlockedExchange(&nNextReadOrderToProcess, 1);
   _InterlockedExchange(&nNextWriteOrder, 0);
   _InterlockedExchange(&nNextWriteOrderToProcess, 1);
-  _InterlockedExchange(&nRefCount, 1);
   _InterlockedExchange(&nOutstandingReads, 0);
   _InterlockedExchange(&nOutstandingWrites, 0);
   _InterlockedExchange(&nOutstandingWritesBeingSent, 0);
@@ -1291,7 +1184,6 @@ CIpc::CConnectionBase::CConnectionBase(_In_ CIpc *_lpIpc, _In_ CIpc::eConnection
   _InterlockedExchange(&(sWriteTimeout.nMutex), 0);
   SlimRWL_Initialize(&(sLayers.nRwMutex));
   _InterlockedExchange(&(sReceivedData.nMutex), 0);
-  nCheckTag2 = CHECKTAG2;
   return;
 }
 
@@ -1300,7 +1192,13 @@ CIpc::CConnectionBase::~CConnectionBase()
   CPacket *lpPacket;
   CLayer *lpLayer;
 
-  nCheckTag1 = nCheckTag2 = 0;
+  {
+    CAutoSlimRWLExclusive cConnListLock(&(lpIpc->sConnections.nSlimMutex));
+
+    RemoveNode();
+  }
+  lpIpc->FireOnDestroy(this);
+
   MX_ASSERT(sWriteTimeout.cActiveList.HasPending() == FALSE);
   //free packets
   while ((lpPacket = cRwList.DequeueFirst()) != NULL)
@@ -1366,7 +1264,7 @@ HRESULT CIpc::CConnectionBase::SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSiz
     //prepare
     lpPacket->SetOrder(_InterlockedIncrement(&nNextWriteOrder));
     cRwList.QueueLast(lpPacket);
-    _InterlockedIncrement(&nRefCount);
+    AddRef();
     _InterlockedIncrement(&nOutstandingWrites);
 #ifdef MX_IPC_TIMING
     DebugPrint("%lu MX::CIpc::CConnectionBase::SendMsg) Clock=%lums / Ovr=0x%p / Type=%lu / Bytes=%lu\n",
@@ -1378,7 +1276,7 @@ HRESULT CIpc::CConnectionBase::SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSiz
     {
       MX_ASSERT_ALWAYS(__InterlockedRead(&nOutstandingWrites) >= 1);
       _InterlockedDecrement(&nOutstandingWrites);
-      _InterlockedDecrement(&nRefCount);
+      Release();
       return hRes;
     }
     //next block
@@ -1402,7 +1300,7 @@ HRESULT CIpc::CConnectionBase::SendStream(_In_ CStream *lpStream)
   lpPacket->SetStream(lpStream);
   lpPacket->SetOrder(_InterlockedIncrement(&nNextWriteOrder));
   cRwList.QueueLast(lpPacket);
-  _InterlockedIncrement(&nRefCount);
+  AddRef();
   _InterlockedIncrement(&nOutstandingWrites);
 #ifdef MX_IPC_TIMING
   DebugPrint("%lu MX::CIpc::CConnectionBase::SendStream) Clock=%lums / Ovr=0x%p / Type=%lu\n",
@@ -1412,7 +1310,7 @@ HRESULT CIpc::CConnectionBase::SendStream(_In_ CStream *lpStream)
   if (FAILED(hRes))
   {
     _InterlockedDecrement(&nOutstandingWrites);
-    _InterlockedDecrement(&nRefCount);
+    Release();
   }
   return hRes;
 }
@@ -1432,7 +1330,7 @@ HRESULT CIpc::CConnectionBase::AfterWriteSignal(_In_ OnAfterWriteSignalCallback 
   lpPacket->SetAfterWriteSignalCallback(cCallback);
   lpPacket->SetUserData(lpCookie);
   cRwList.QueueLast(lpPacket);
-  _InterlockedIncrement(&nRefCount);
+  AddRef();
   _InterlockedIncrement(&nOutstandingWrites);
 #ifdef MX_IPC_TIMING
   DebugPrint("%lu MX::CIpc::CConnectionBase::AfterWriteSignal) Clock=%lums / Ovr=0x%p / Type=%lu\n",
@@ -1442,7 +1340,7 @@ HRESULT CIpc::CConnectionBase::AfterWriteSignal(_In_ OnAfterWriteSignalCallback 
   if (FAILED(hRes))
   {
     _InterlockedDecrement(&nOutstandingWrites);
-    _InterlockedDecrement(&nRefCount);
+    Release();
   }
   return hRes;
 }
@@ -1459,7 +1357,7 @@ HRESULT CIpc::CConnectionBase::SendResumeIoProcessingPacket(_In_ BOOL bInput)
   //prepare
   lpPacket->SetOrder((bInput != FALSE) ? 1 : 0);
   cRwList.QueueLast(lpPacket);
-  _InterlockedIncrement(&nRefCount);
+  AddRef();
 #ifdef MX_IPC_TIMING
   DebugPrint("%lu MX::CIpc::CConnectionBase::SendResumeIoProcessingPacket[%s]) Clock=%lums / Ovr=0x%p / Type=%lu\n",
              ::MxGetCurrentThreadId(), ((bInput != FALSE) ? "Input" : "Output"), cHiResTimer.GetElapsedTimeMs(),
@@ -1468,9 +1366,9 @@ HRESULT CIpc::CConnectionBase::SendResumeIoProcessingPacket(_In_ BOOL bInput)
   hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
   if (FAILED(hRes))
   {
-    _InterlockedDecrement(&nRefCount);
     cRwList.Remove(lpPacket);
     lpIpc->FreePacket(lpPacket);
+    Release();
   }
   return hRes;
 }
@@ -1527,7 +1425,7 @@ HRESULT CIpc::CConnectionBase::WriteMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSi
 
       case S_OK:
       case 0x80070000|ERROR_IO_PENDING:
-        _InterlockedIncrement(&nRefCount);
+        AddRef();
         break;
 
       default:
@@ -1601,7 +1499,7 @@ HRESULT CIpc::CConnectionBase::HandleConnected()
   if (lpPacket == NULL)
     return E_OUTOFMEMORY;
   cRwList.QueueLast(lpPacket);
-  _InterlockedIncrement(&nRefCount);
+  AddRef();
 #ifdef MX_IPC_TIMING
   DebugPrint("%lu MX::CIpc::CConnectionBase::HandleConnected) Clock=%lums / Ovr=0x%p / Type=%lu\n",
              ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(),
@@ -1612,7 +1510,7 @@ HRESULT CIpc::CConnectionBase::HandleConnected()
   {
     cRwList.Remove(lpPacket);
     FreePacket(lpPacket);
-    _InterlockedDecrement(&nRefCount);
+    Release();
     return hRes;
   }
   //done
@@ -1689,7 +1587,7 @@ HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_ BOOL bZero
 
       case S_OK:
       case 0x80070000|ERROR_IO_PENDING:
-        _InterlockedIncrement(&nRefCount);
+        AddRef();
         break;
 
       default:
@@ -1700,17 +1598,6 @@ HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_ BOOL bZero
   }
   //done
   return S_OK;
-}
-
-BOOL CIpc::CConnectionBase::AddRefIfStillValid()
-{
-  return (lpIpc->CheckAndGetConnection((HANDLE)this) != NULL) ? TRUE : FALSE;
-}
-
-VOID CIpc::CConnectionBase::ReleaseMySelf()
-{
-  lpIpc->ReleaseAndRemoveConnectionIfClosed(this);
-  return;
 }
 
 HRESULT CIpc::CConnectionBase::SendDataToLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize, _In_ CLayer *lpCurrLayer,
@@ -1779,14 +1666,14 @@ HRESULT CIpc::CConnectionBase::MarkLastWriteActivity(_In_ BOOL bSet)
                                                                             this), NULL);
     if (lpEvent == NULL)
       return E_OUTOFMEMORY;
-    _InterlockedIncrement(&nRefCount);
+    AddRef();
     //add to list
     hRes = sWriteTimeout.cActiveList.Add(lpEvent);
     if (FAILED(hRes))
     {
       lpEvent->Release();
-      ReleaseMySelf();
-      return E_OUTOFMEMORY;
+      Release();
+      return hRes;
     }
     //add event
     hRes = lpTimedEventQueue->Add(lpEvent, dwWriteTimeoutMs);
@@ -1794,7 +1681,7 @@ HRESULT CIpc::CConnectionBase::MarkLastWriteActivity(_In_ BOOL bSet)
     {
       sWriteTimeout.cActiveList.Remove(lpEvent);
       lpEvent->Release();
-      ReleaseMySelf();
+      Release();
       return hRes;
     }
   }
@@ -1822,7 +1709,7 @@ VOID CIpc::CConnectionBase::OnWriteTimeout(_In_ CTimedEventQueue::CEvent *lpEven
     Close(MX_E_Timeout);
   //release event and myself
   lpEvent->Release();
-  ReleaseMySelf();
+  Release();
   return;
 }
 
@@ -1856,7 +1743,7 @@ CIpc::CMultiSendLock::~CMultiSendLock()
   if (lpConn != NULL)
   {
     _InterlockedAnd(&(lpConn->nFlags), ~FLAG_InSendTransaction);
-    lpConn->ReleaseMySelf();
+    lpConn->Release();
   }
   return;
 }

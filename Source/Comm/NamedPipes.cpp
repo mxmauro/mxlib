@@ -190,7 +190,7 @@ HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreate
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nSlimMutex));
 
-    sConnections.cList.PushTail(cConn.Get());
+    sConnections.cTree.Insert(cConn.Get());
   }
   hRes = FireOnCreate(cConn.Get());
   if (SUCCEEDED(hRes))
@@ -200,11 +200,16 @@ HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreate
   if (FAILED(hRes))
     FireOnConnect(cConn.Get(), hRes);
   //done
-  if (FAILED(hRes))
-    CloseConnection(cConn.Get(), hRes);
-  ReleaseAndRemoveConnectionIfClosed(cConn.Detach());
-  if (FAILED(hRes) && h != NULL)
-    *h = NULL;
+  if (SUCCEEDED(hRes))
+  {
+    cConn.Detach();
+  }
+  else
+  {
+    cConn->Close(hRes);
+    if (h != NULL)
+      *h = NULL;
+  }
   return hRes;
 }
 
@@ -290,7 +295,7 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nSlimMutex));
 
-    sConnections.cList.PushTail(cConn.Get());
+    sConnections.cTree.Insert(cConn.Get());
   }
   hRes = FireOnCreate(cConn.Get());
   if (SUCCEEDED(hRes))
@@ -300,35 +305,39 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
   if (FAILED(hRes))
     FireOnConnect(cConn.Get(), hRes);
   //done
-  if (FAILED(hRes) && hRemotePipe != NULL)
+  if (SUCCEEDED(hRes))
   {
-    CWindowsRemoteHandle::CloseRemoteHandleSEH(hProc, hRemotePipe);
-    hRemotePipe = NULL;
+    cConn.Detach();
   }
-  if (FAILED(hRes))
-    CloseConnection(cConn.Get(), hRes);
-  ReleaseAndRemoveConnectionIfClosed(cConn.Detach());
+  else
+  {
+    cConn->Close(hRes);
+    if (hRemotePipe != NULL)
+    {
+      CWindowsRemoteHandle::CloseRemoteHandleSEH(hProc, hRemotePipe);
+      hRemotePipe = NULL;
+    }
+  }
   return hRes;
 }
 
 HRESULT CNamedPipes::ImpersonateConnectionClient(_In_ HANDLE h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  CConnection *lpConn;
+  TAutoRefCounted<CConnection> cConn;
   HRESULT hRes;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
-  lpConn = reinterpret_cast<CConnection*>(CheckAndGetConnection(h));
-  if (lpConn == NULL)
+  cConn.Attach(reinterpret_cast<CConnection*>(CheckAndGetConnection(h)));
+  if (!cConn)
     return E_INVALIDARG;
   //do impersonation
-  if (lpConn->hPipe != NULL)
-    hRes = (::ImpersonateNamedPipeClient(lpConn->hPipe) != FALSE) ? S_OK : MX_HRESULT_FROM_LASTERROR();
+  if (cConn->hPipe != NULL)
+    hRes = (::ImpersonateNamedPipeClient(cConn->hPipe) != FALSE) ? S_OK : MX_HRESULT_FROM_LASTERROR();
   else
     hRes = E_FAIL;
   //done
-  ReleaseAndRemoveConnectionIfClosed(lpConn);
   return hRes;
 }
 
@@ -360,15 +369,20 @@ HRESULT CNamedPipes::CreateServerConnection(_In_ CServerInfo *lpServerInfo, _In_
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nSlimMutex));
 
-    sConnections.cList.PushTail(cConn.Get());
+    sConnections.cTree.Insert(cConn.Get());
   }
   hRes = FireOnCreate(cConn.Get());
   if (SUCCEEDED(hRes))
     hRes = cConn->CreateServer(dwPacketSize);
   //done
-  if (FAILED(hRes))
-    CloseConnection(cConn.Get(), hRes);
-  ReleaseAndRemoveConnectionIfClosed(cConn.Detach());
+  if (SUCCEEDED(hRes))
+  {
+    cConn.Detach();
+  }
+  else
+  {
+    cConn->Close(hRes);
+  }
   return hRes;
 }
 
@@ -389,23 +403,21 @@ HRESULT CNamedPipes::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, 
       if (SUCCEEDED(hRes))
       {
         lpPacket->SetType(TypeListen);
+        lpConn->AddRef();
         if (::ConnectNamedPipe(lpConn->hPipe, lpPacket->GetOverlapped()) == FALSE)
         {
           hRes = MX_HRESULT_FROM_LASTERROR();
-          if (hRes == MX_E_IoPending)
+          if (hRes == HRESULT_FROM_WIN32(ERROR_PIPE_CONNECTED))
           {
-            hRes = S_OK;
-          }
-          else if (hRes == HRESULT_FROM_WIN32(ERROR_PIPE_CONNECTED))
-          {
+            lpConn->Release();
             hRes = S_OK;
             goto pipe_connected;
           }
+          if (hRes == MX_E_IoPending)
+            hRes = S_OK;
         }
-        if (SUCCEEDED(hRes))
-        {
-          _InterlockedIncrement(&(lpConn->nRefCount));
-        }
+        if (FAILED(hRes))
+          lpConn->Release();
       }
       if (FAILED(hRes))
       {
@@ -522,13 +534,13 @@ HRESULT CNamedPipes::CConnection::CreateServer(_In_ DWORD dwPacketSize)
   if (lpPacket == NULL)
     return E_OUTOFMEMORY;
   cRwList.QueueLast(lpPacket);
-  _InterlockedIncrement(&nRefCount);
+  AddRef();
   hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, lpPacket->GetOverlapped());
   if (FAILED(hRes))
   {
     cRwList.Remove(lpPacket);
     FreePacket(lpPacket);
-    _InterlockedDecrement(&nRefCount);
+    Release();
   }
   //done
   return hRes;

@@ -184,8 +184,6 @@ private:
 
   VOID OnMessageReceived(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
                          _In_ HRESULT hRes);
-  VOID OnFlushReceivedReplies(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
-                              _In_ HRESULT hRes);
   static int ReplyMsgWaitCompareFunc(_In_ LPVOID lpContext, _In_ REPLYMSG_ITEM *lpElem1, _In_ REPLYMSG_ITEM *lpElem2);
 
   VOID FlushReceivedReplies();
@@ -197,12 +195,12 @@ private:
 private:
   CIoCompletionPortThreadPool &cWorkerPool;
   //NOTE: CIoCompletionPortThreadPool::Post needs a non-dynamic variable
-  CIoCompletionPortThreadPool::OnPacketCallback cMessageReceivedCallbackWP, cFlushReceivedRepliesWP;
+  CIoCompletionPortThreadPool::OnPacketCallback cMessageReceivedCallbackWP;
   CIpc *lpIpc;
   HANDLE hConn;
   DWORD dwMaxMessageSize, dwProtocolVersion;
 
-  LONG volatile nShuttingDown;
+  LONG volatile nRundownLock;
   LONG volatile nNextId;
   LONG volatile nPendingCount;
   OnMessageReceivedCallback cMessageReceivedCallback;
@@ -215,16 +213,11 @@ private:
   struct {
     LONG volatile nMutex;
     TArrayList4Structs<REPLYMSG_ITEM> cList;
-  } sReplyMsgWait;
+  } sWaitingForReply;
   struct {
     LONG volatile nMutex;
     TLnkLst<CMessage> cList;
-  } sReceivedReplyMsg;
-  struct {
-    LONG volatile nMutex;
-    LONG nActive;
-    OVERLAPPED sOvr;
-  } sFlush;
+  } sReceivedMsgReplies;
   struct {
     LONG volatile nMutex;
     SIZE_T nCount;

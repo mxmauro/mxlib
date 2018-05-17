@@ -83,18 +83,16 @@ CIpcMessageManager::CIpcMessageManager(_In_ CIoCompletionPortThreadPool &_cWorke
   else 
     dwProtocolVersion = _dwProtocolVersion;
   cMessageReceivedCallbackWP = MX_BIND_MEMBER_CALLBACK(&CIpcMessageManager::OnMessageReceived, this);
-  cFlushReceivedRepliesWP = MX_BIND_MEMBER_CALLBACK(&CIpcMessageManager::OnFlushReceivedReplies, this);
   //----
-  _InterlockedExchange(&nShuttingDown, 0);
+  RundownProt_Initialize(&nRundownLock);
   _InterlockedExchange(&nNextId, 0);
   _InterlockedExchange(&nPendingCount, 0);
   nState = StateRetrievingId;
   nCurrMsgSize = 0;
   dwLastMessageId = 0;
   cMessageReceivedCallback = _cMessageReceivedCallback;
-  _InterlockedExchange(&(sReplyMsgWait.nMutex), 0);
-  _InterlockedExchange(&(sReceivedReplyMsg.nMutex), 0);
-  MemSet(&sFlush, 0, sizeof(sFlush));
+  _InterlockedExchange(&(sWaitingForReply.nMutex), 0);
+  _InterlockedExchange(&(sReceivedMsgReplies.nMutex), 0);
   _InterlockedExchange(&(sSyncWait.nMutex), 0);
   sSyncWait.nCount = 0;
   return;
@@ -104,7 +102,8 @@ CIpcMessageManager::~CIpcMessageManager()
 {
   CSyncWait *lpSyncWait;
 
-  CancelWaitingReplies();
+  Shutdown();
+
   while ((lpSyncWait = sSyncWait.cList.PopHead()) != NULL)
     lpSyncWait->Release();
   return;
@@ -112,16 +111,21 @@ CIpcMessageManager::~CIpcMessageManager()
 
 VOID CIpcMessageManager::Shutdown()
 {
-  _InterlockedExchange(&nShuttingDown, 1);
+  RundownProt_WaitForRelease(&nRundownLock);
+
+  while (HasPending() != FALSE)
+    _YieldProcessor();
   CancelWaitingReplies();
   return;
 }
 
 HRESULT CIpcMessageManager::SwitchToProtocol(_In_ DWORD _dwProtocolVersion)
 {
+  CAutoRundownProtection cAutoRundownProt(&nRundownLock);
+
   if (_dwProtocolVersion < 1 || _dwProtocolVersion > 2)
     return E_INVALIDARG;
-  if (__InterlockedRead(&nShuttingDown) != 0)
+  if (cAutoRundownProt.IsAcquired() == FALSE)
     return MX_E_Cancelled;
   if (nState != StateRetrievingId)
     return E_FAIL;
@@ -148,11 +152,12 @@ DWORD CIpcMessageManager::GetNextId()
 
 HRESULT CIpcMessageManager::ProcessIncomingPacket()
 {
+  CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   BYTE aMsgBuf[4096], *s;
   SIZE_T nMsgSize, nToRead, nRemaining;
   HRESULT hRes;
 
-  if (__InterlockedRead(&nShuttingDown) != 0)
+  if (cAutoRundownProt.IsAcquired() == FALSE)
     return MX_E_Cancelled;
   if (nState == StateError)
     return E_FAIL;
@@ -278,9 +283,10 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
 
 HRESULT CIpcMessageManager::SendHeader(_In_ DWORD dwMsgId, _In_ SIZE_T nMsgSize)
 {
+  CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   HEADER sHeader;
 
-  if (__InterlockedRead(&nShuttingDown) != 0)
+  if (cAutoRundownProt.IsAcquired() == FALSE)
     return MX_E_Cancelled;
   if (nMsgSize > dwMaxMessageSize)
   {
@@ -294,14 +300,18 @@ HRESULT CIpcMessageManager::SendHeader(_In_ DWORD dwMsgId, _In_ SIZE_T nMsgSize)
 
 HRESULT CIpcMessageManager::SendData(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize)
 {
-  if (__InterlockedRead(&nShuttingDown) != 0)
+  CAutoRundownProtection cAutoRundownProt(&nRundownLock);
+
+  if (cAutoRundownProt.IsAcquired() == FALSE)
     return MX_E_Cancelled;
   return lpIpc->SendMsg(hConn, lpMsg, nMsgSize);
 }
 
 HRESULT CIpcMessageManager::SendEndOfMessageMark(_In_ DWORD dwMsgId)
 {
-  if (__InterlockedRead(&nShuttingDown) != 0)
+  CAutoRundownProtection cAutoRundownProt(&nRundownLock);
+
+  if (cAutoRundownProt.IsAcquired() == FALSE)
     return MX_E_Cancelled;
   if (dwProtocolVersion <= 1)
     return S_OK; //protocol version 1 has no end of message mark
@@ -429,6 +439,7 @@ HRESULT CIpcMessageManager::WaitForReply(_In_ DWORD dwId, _Deref_out_ CMessage *
 HRESULT CIpcMessageManager::WaitForReplyAsync(_In_ DWORD dwId, _In_ OnMessageReplyCallback cCallback,
                                               _In_opt_ LPVOID lpUserData)
 {
+  CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   REPLYMSG_ITEM sNewItem;
   HRESULT hRes;
 
@@ -436,39 +447,23 @@ HRESULT CIpcMessageManager::WaitForReplyAsync(_In_ DWORD dwId, _In_ OnMessageRep
     return E_INVALIDARG;
   if (!cCallback)
     return E_POINTER;
+  if (cAutoRundownProt.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
   //queue waiter
   hRes = S_OK;
   sNewItem.dwId = dwId | _MESSAGE_IS_REPLY;
   sNewItem.cCallback = cCallback;
   sNewItem.lpUserData = lpUserData;
   {
-    CFastLock cLock(&(sReplyMsgWait.nMutex));
+    CFastLock cLock(&(sWaitingForReply.nMutex));
 
-    if (__InterlockedRead(&nShuttingDown) == 0)
-    {
-      if (sReplyMsgWait.cList.SortedInsert(&sNewItem, &CIpcMessageManager::ReplyMsgWaitCompareFunc, NULL) == FALSE)
-        hRes = E_OUTOFMEMORY;
-    }
-    else
-    {
-      hRes = MX_E_Cancelled;
-    }
-
+    if (sWaitingForReply.cList.SortedInsert(&sNewItem, &CIpcMessageManager::ReplyMsgWaitCompareFunc, NULL) == FALSE)
+      hRes = E_OUTOFMEMORY;
   }
   //add post for checking already received message replies
-  if (SUCCEEDED(hRes) && sFlush.nActive == 0)
+  if (SUCCEEDED(hRes))
   {
-    CFastLock cLock(&(sFlush.nMutex));
-
-    if (sFlush.nActive == 0)
-    {
-      _InterlockedIncrement(&nPendingCount);
-      hRes = cWorkerPool.Post(cFlushReceivedRepliesWP, 0, &(sFlush.sOvr));
-      if (SUCCEEDED(hRes))
-        sFlush.nActive = 1;
-      else
-        _InterlockedDecrement(&nPendingCount);
-    }
+    FlushReceivedReplies();
   }
   //done
   return hRes;
@@ -503,14 +498,14 @@ HRESULT CIpcMessageManager::OnMessageCompleted()
 VOID CIpcMessageManager::OnMessageReceived(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes,
                                            _In_ OVERLAPPED *lpOvr, _In_ HRESULT hRes)
 {
+  CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   TAutoRefCounted<CMessage> cMessage;
   BOOL bCallCallback = FALSE;
-  REPLYMSG_ITEM sItem;
 
   cMessage.Attach((CMessage*)((char*)lpOvr - (char*)&(((CMessage*)0)->sOvr)));
-  MemSet(&sItem, 0, sizeof(sItem));
-  //process only if we are not resetting
-  if (__InterlockedRead(&nShuttingDown) == 0)
+
+  //process only if we are not shutting down
+  if (cAutoRundownProt.IsAcquired() != FALSE)
   {
     //check if it is a reply for another message
     if ((cMessage->GetId() & _MESSAGE_IS_REPLY) == 0)
@@ -521,25 +516,16 @@ VOID CIpcMessageManager::OnMessageReceived(_In_ CIoCompletionPortThreadPool *lpP
     }
     else
     {
-      //add to the received replies list
-      CFastLock cLock(&(sReceivedReplyMsg.nMutex));
+      {
+        //add to the received replies list
+        CFastLock cLock(&(sReceivedMsgReplies.nMutex));
 
-      sReceivedReplyMsg.cList.PushTail(cMessage.Detach());
+        sReceivedMsgReplies.cList.PushTail(cMessage.Detach());
+      }
+      //flush pending
+      FlushReceivedReplies();
     }
   }
-  //flush pending
-  FlushReceivedReplies();
-  //done
-  _InterlockedDecrement(&nPendingCount);
-  return;
-}
-
-VOID CIpcMessageManager::OnFlushReceivedReplies(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes,
-                                                _In_ OVERLAPPED *lpOvr, _In_ HRESULT hRes)
-{
-  _InterlockedExchange(&(sFlush.nActive), 0);
-  //process only if we are not resetting
-  FlushReceivedReplies();
   //done
   _InterlockedDecrement(&nPendingCount);
   return;
@@ -553,23 +539,23 @@ VOID CIpcMessageManager::FlushReceivedReplies()
   SIZE_T nIndex;
 
   //process only if we are not resetting
-  while (__InterlockedRead(&nShuttingDown) == 0)
+  for (;;)
   {
     MemSet(&sItem, 0, sizeof(sItem));
 
     {
-      CFastLock cLock1(&(sReceivedReplyMsg.nMutex));
-      CFastLock cLock2(&(sReplyMsgWait.nMutex));
+      CFastLock cLock1(&(sReceivedMsgReplies.nMutex));
+      CFastLock cLock2(&(sWaitingForReply.nMutex));
       CMessage *lpMsg;
 
-      for (lpMsg=it.Begin(sReceivedReplyMsg.cList); lpMsg!=NULL; lpMsg=it.Next())
+      for (lpMsg=it.Begin(sReceivedMsgReplies.cList); lpMsg!=NULL; lpMsg=it.Next())
       {
         sItem.dwId = lpMsg->GetId();
-        nIndex = sReplyMsgWait.cList.BinarySearch(&sItem, &CIpcMessageManager::ReplyMsgWaitCompareFunc, NULL);
+        nIndex = sWaitingForReply.cList.BinarySearch(&sItem, &CIpcMessageManager::ReplyMsgWaitCompareFunc, NULL);
         if (nIndex != (SIZE_T)-1)
         {
-          sItem = sReplyMsgWait.cList.GetElementAt(nIndex);
-          sReplyMsgWait.cList.RemoveElementAt(nIndex);
+          sItem = sWaitingForReply.cList.GetElementAt(nIndex);
+          sWaitingForReply.cList.RemoveElementAt(nIndex);
           lpMsg->RemoveNode();
           cMsg.Attach(lpMsg);
           break;
@@ -584,9 +570,6 @@ VOID CIpcMessageManager::FlushReceivedReplies()
     //release message
     cMsg.Release();
   }
-  //cancel pending if shutting down
-  if (__InterlockedRead(&nShuttingDown) != 0)
-    CancelWaitingReplies();
   //done
   return;
 }
@@ -601,14 +584,14 @@ VOID CIpcMessageManager::CancelWaitingReplies()
   {
     MemSet(&sItem, 0, sizeof(sItem));
     {
-      CFastLock cLock(&(sReplyMsgWait.nMutex));
+      CFastLock cLock(&(sWaitingForReply.nMutex));
       SIZE_T nCount;
 
-      nCount = sReplyMsgWait.cList.GetCount();
+      nCount = sWaitingForReply.cList.GetCount();
       if (nCount > 0)
       {
-        sItem = sReplyMsgWait.cList.GetElementAt(nCount-1);
-        sReplyMsgWait.cList.RemoveElementAt(nCount-1);
+        sItem = sWaitingForReply.cList.GetElementAt(nCount-1);
+        sWaitingForReply.cList.RemoveElementAt(nCount-1);
       }
     }
     if (sItem.cCallback)
@@ -620,9 +603,9 @@ VOID CIpcMessageManager::CancelWaitingReplies()
   do
   {
     {
-      CFastLock cLock(&(sReceivedReplyMsg.nMutex));
+      CFastLock cLock(&(sReceivedMsgReplies.nMutex));
 
-      lpMsg = sReceivedReplyMsg.cList.PopHead();
+      lpMsg = sReceivedMsgReplies.cList.PopHead();
     }
     if (lpMsg != NULL)
       lpMsg->Release();
