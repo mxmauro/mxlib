@@ -1454,16 +1454,18 @@ VOID CIpc::CConnectionBase::Close(_In_ HRESULT hRes)
     nOrigVal = _InterlockedCompareExchange(&nFlags, nNewVal, nInitVal);
   }
   while (nOrigVal != nInitVal);
-#ifdef MX_IPC_TIMING
-  if ((nInitVal & FLAG_Closed) == 0)
-  {
-    DebugPrint("%lu MX::CIpc::CConnectionBase::Close) Clock=%lums / This=0x%p / Res=0x%08X\n",
-               ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), this, hRes);
-  }
-#endif //MX_IPC_TIMING
   _InterlockedCompareExchange(&hErrorCode, hRes, S_OK);
   if (hRes != S_OK || __InterlockedRead(&nOutstandingWrites) == 0)
     ShutdownLink(FAILED(__InterlockedRead(&hErrorCode)));
+  //when closing call the "final" release to remove from list
+  if ((nInitVal & FLAG_Closed) == 0)
+  {
+#ifdef MX_IPC_TIMING
+    DebugPrint("%lu MX::CIpc::CConnectionBase::Close) Clock=%lums / This=0x%p / Res=0x%08X\n",
+               ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), this, hRes);
+#endif //MX_IPC_TIMING
+    Release();
+  }
   return;
 }
 

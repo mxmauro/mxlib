@@ -122,7 +122,6 @@ HRESULT CNamedPipes::CreateListener(_In_z_ LPCWSTR szServerNameW, _In_ OnCreateC
   cServerInfo.Attach(MX_DEBUG_NEW CServerInfo());
   if (!cServerInfo)
     return E_OUTOFMEMORY;
-
   if (szSecutityDescriptorW != NULL && *szSecutityDescriptorW != 0)
   {
     PSECURITY_DESCRIPTOR _lpSecDescr;
@@ -197,19 +196,16 @@ HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreate
     hRes = cConn->CreateClient((LPCWSTR)cStrTempW, dwMaxWaitTimeoutMs, lpSecDescr);
   if (SUCCEEDED(hRes))
     hRes = cConn->HandleConnected();
-  if (FAILED(hRes))
+  if (SUCCEEDED(hRes))
     FireOnConnect(cConn.Get(), hRes);
   //done
-  if (SUCCEEDED(hRes))
-  {
-    cConn.Detach();
-  }
-  else
+  if (FAILED(hRes))
   {
     cConn->Close(hRes);
     if (h != NULL)
       *h = NULL;
   }
+  cConn.Detach();
   return hRes;
 }
 
@@ -276,7 +272,9 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
   //duplicate handle on target process
   if (::DuplicateHandle(::GetCurrentProcess(), cRemotePipe.Get(), hProc, &hRemotePipe, 0, FALSE,
                         DUPLICATE_SAME_ACCESS) == FALSE)
+  {
     return MX_HRESULT_FROM_LASTERROR();
+  }
   //associate the local pipe with a connection and the given (optional) custom data
   cConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassServer));
   if (!cConn)
@@ -302,14 +300,10 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
     hRes = cDispatcherPool.Attach(cConn->hPipe, cDispatcherPoolPacketCallback);
   if (SUCCEEDED(hRes))
     hRes = cConn->HandleConnected();
-  if (FAILED(hRes))
+  if (SUCCEEDED(hRes))
     FireOnConnect(cConn.Get(), hRes);
   //done
-  if (SUCCEEDED(hRes))
-  {
-    cConn.Detach();
-  }
-  else
+  if (FAILED(hRes))
   {
     cConn->Close(hRes);
     if (hRemotePipe != NULL)
@@ -318,6 +312,7 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
       hRemotePipe = NULL;
     }
   }
+  cConn.Detach();
   return hRes;
 }
 
@@ -325,7 +320,6 @@ HRESULT CNamedPipes::ImpersonateConnectionClient(_In_ HANDLE h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoRefCounted<CConnection> cConn;
-  HRESULT hRes;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
@@ -333,12 +327,9 @@ HRESULT CNamedPipes::ImpersonateConnectionClient(_In_ HANDLE h)
   if (!cConn)
     return E_INVALIDARG;
   //do impersonation
-  if (cConn->hPipe != NULL)
-    hRes = (::ImpersonateNamedPipeClient(cConn->hPipe) != FALSE) ? S_OK : MX_HRESULT_FROM_LASTERROR();
-  else
-    hRes = E_FAIL;
-  //done
-  return hRes;
+  if (cConn->hPipe == NULL)
+    return MX_E_NotReady;
+  return (::ImpersonateNamedPipeClient(cConn->hPipe) != FALSE) ? S_OK : MX_HRESULT_FROM_LASTERROR();
 }
 
 //-----------------------------------------------------------
@@ -375,14 +366,11 @@ HRESULT CNamedPipes::CreateServerConnection(_In_ CServerInfo *lpServerInfo, _In_
   if (SUCCEEDED(hRes))
     hRes = cConn->CreateServer(dwPacketSize);
   //done
-  if (SUCCEEDED(hRes))
-  {
-    cConn.Detach();
-  }
-  else
+  if (FAILED(hRes))
   {
     cConn->Close(hRes);
   }
+  cConn.Detach();
   return hRes;
 }
 
@@ -416,15 +404,13 @@ HRESULT CNamedPipes::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, 
           if (hRes == MX_E_IoPending)
             hRes = S_OK;
         }
-        if (FAILED(hRes))
-          lpConn->Release();
       }
       if (FAILED(hRes))
       {
         lpConn->cRwList.Remove(lpPacket);
         FreePacket(lpPacket);
         //process connection
-        if (lpConn->nClass == CIpc::ConnectionClassServer && IsShuttingDown() == FALSE)
+        if (lpConn->nClass == CIpc::ConnectionClassServer && lpConn->IsClosed() == FALSE && IsShuttingDown() == FALSE)
         {
           //on server mode, create a new listener
           HRESULT hRes2 = CreateServerConnection(lpConn->cServerInfo, lpConn->cCreateCallback);
@@ -443,7 +429,7 @@ pipe_connected:
       lpConn->cRwList.Remove(lpPacket);
       FreePacket(lpPacket);
       //process connection
-      if (lpConn->nClass == CIpc::ConnectionClassServer && IsShuttingDown() == FALSE)
+      if (lpConn->nClass == CIpc::ConnectionClassServer && lpConn->IsClosed() == FALSE && IsShuttingDown() == FALSE)
       {
         //on server mode, create a new listener
         HRESULT hRes2 = CreateServerConnection(lpConn->cServerInfo, lpConn->cCreateCallback);
@@ -489,8 +475,8 @@ HRESULT CNamedPipes::CServerInfo::Init(_In_z_ LPCWSTR szServerNameW, _In_ PSECUR
 
 //-----------------------------------------------------------
 
-CNamedPipes::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass) : CConnectionBase(lpIpc,
-                                                                                                              nClass)
+CNamedPipes::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass) :
+                          CConnectionBase(lpIpc, nClass)
 {
   hPipe = NULL;
   return;
@@ -498,11 +484,7 @@ CNamedPipes::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionCl
 
 CNamedPipes::CConnection::~CConnection()
 {
-  if (hPipe != NULL)
-  {
-    ::DisconnectNamedPipe(hPipe);
-    ::CloseHandle(hPipe);
-  }
+  MX_ASSERT(hPipe == NULL);
   return;
 }
 

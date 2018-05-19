@@ -151,22 +151,15 @@ HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCr
   if (SUCCEEDED(hRes))
     hRes = cConn->CreateSocket(nFamily, 0);
   if (SUCCEEDED(hRes))
-  {
     hRes = cConn->ResolveAddress(dwMaxResolverTimeoutMs, nFamily, szBindAddressA, nPort);
-    if (SUCCEEDED(hRes))
-      cConn->AddRef();
-  }
   //done
-  if (SUCCEEDED(hRes))
-  {
-    cConn.Detach();
-  }
-  else
+  if (FAILED(hRes))
   {
     cConn->Close(hRes);
     if (h != NULL)
       *h = NULL;
   }
+  cConn.Detach();
   return hRes;
 }
 
@@ -224,22 +217,15 @@ HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA
   if (SUCCEEDED(hRes))
     hRes = cConn->CreateSocket(nFamily, dwPacketSize);
   if (SUCCEEDED(hRes))
-  {
     hRes = cConn->ResolveAddress(dwMaxResolverTimeoutMs, nFamily, szAddressA, nPort);
-    if (SUCCEEDED(hRes))
-      cConn->AddRef();
-  }
   //done
-  if (SUCCEEDED(hRes))
-  {
-    cConn.Detach();
-  }
-  else
+  if (FAILED(hRes))
   {
     cConn->Close(hRes);
     if (h != NULL)
       *h = NULL;
   }
+  cConn.Detach();
   return hRes;
 }
 
@@ -316,14 +302,11 @@ HRESULT CSockets::CreateServerConnection(_In_ CConnection *lpListenConn)
   if (SUCCEEDED(hRes))
     hRes = lpListenConn->SetupAcceptEx(cIncomingConn.Get());
   //done
-  if (SUCCEEDED(hRes))
-  {
-    cIncomingConn.Detach();
-  }
-  else
+  if (FAILED(hRes))
   {
     cIncomingConn->Close(hRes);
   }
+  cIncomingConn.Detach();
   return hRes;
 }
 
@@ -434,19 +417,20 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In
       }
       if (SUCCEEDED(hRes))
         hRes = lpIncomingConn->HandleConnected();
+      if (FAILED(hRes))
+        lpIncomingConn->Close(hRes);
       //free packet
+      lpIncomingConn->Release();
       lpConn->cRwList.Remove(lpPacket);
       FreePacket(lpPacket);
       //instatiate a new accept socket
-      if (IsShuttingDown() == FALSE)
+      hRes = S_OK;
+      if (lpConn->IsClosed() == FALSE && IsShuttingDown() == FALSE)
       {
-        hRes2 = CreateServerConnection(lpConn);
-        if (FAILED(hRes2))
-          FireOnEngineError(hRes2);
-        //we return success because the failing socket was the incoming one and not the one doing accepts
-        hRes = S_OK;
+        hRes = CreateServerConnection(lpConn);
+        if (FAILED(hRes))
+          FireOnEngineError(hRes);
       }
-      lpIncomingConn->Release();
       }
       break;
 
@@ -659,10 +643,8 @@ VOID CSockets::CConnection::ShutdownLink(_In_ BOOL bAbortive)
 
 HRESULT CSockets::CConnection::SetupListener()
 {
-  if (::bind(sck, (sockaddr*)&sAddr, SockAddrSizeFromWinSockFamily(sAddr.si_family)) == SOCKET_ERROR ||
-      ::listen(sck, SOMAXCONN) == SOCKET_ERROR)
-    return MX_HRESULT_FROM_LASTSOCKETERROR();
-  return S_OK;
+  return (::bind(sck, (sockaddr*)&sAddr, SockAddrSizeFromWinSockFamily(sAddr.si_family)) == SOCKET_ERROR ||
+          ::listen(sck, SOMAXCONN) == SOCKET_ERROR) ? MX_HRESULT_FROM_LASTSOCKETERROR() : S_OK;
 }
 
 HRESULT CSockets::CConnection::SetupClient()
@@ -811,13 +793,16 @@ HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwMaxResolverTimeoutMs,
         lpData->sAddr.Ipv6.sin6_port = htons(lpData->wPort);
         break;
     }
+    AddRef();
     hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, sHostResolver.lpPacket->GetOverlapped());
+    if (FAILED(hRes))
+      Release();
   }
   else
   {
 #ifdef MX_IPC_TIMING
-    DebugPrint("%lu MX::CSockets::CConnection::ResolveAddress) Clock=%lums / Ovr=0x%p / Type=%lu\n",
-               ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), sHostResolver.lpPacket->GetOverlapped(),
+    DebugPrint("%lu MX::CSockets::CConnection::ResolveAddress) Clock=%lums / This=0x%p / Ovr=0x%p / Type=%lu\n",
+               ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), this, sHostResolver.lpPacket->GetOverlapped(),
                sHostResolver.lpPacket->GetType());
 #endif //MX_IPC_TIMING
     //create resolver and attach packet. no need to lock because it is called on socket creation
@@ -826,8 +811,11 @@ HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwMaxResolverTimeoutMs,
     if (sHostResolver.lpResolver != NULL)
     {
       //start address resolving with a timeout
+      AddRef();
       hRes = sHostResolver.lpResolver->ResolveAsync(szAddressA, FamilyToWinSockFamily(nFamily),
                                                     dwMaxResolverTimeoutMs);
+      if (FAILED(hRes))
+        Release();
     }
     else
     {
