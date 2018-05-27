@@ -34,7 +34,6 @@ namespace MX {
 CHttpServer::CRequest::CRequest() : CIpc::CUserData(), TLnkLstNode<CRequest>(), sRequest(), sResponse()
 {
   MemSet(&sOvr, 0, sizeof(sOvr));
-  _InterlockedExchange(&nMutex, 0);
   lpHttpServer = NULL;
   hConn = NULL;
   nState = CRequest::StateReceivingRequestHeaders;
@@ -55,7 +54,7 @@ CHttpServer::CRequest::~CRequest()
 
 VOID CHttpServer::CRequest::End(_In_opt_ HRESULT hErrorCode)
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState == StateBuildingResponse)
   {
@@ -66,7 +65,7 @@ VOID CHttpServer::CRequest::End(_In_opt_ HRESULT hErrorCode)
 
 VOID CHttpServer::CRequest::EnableDirectResponse()
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState == StateBuildingResponse)
   {
@@ -77,7 +76,7 @@ VOID CHttpServer::CRequest::EnableDirectResponse()
 
 LPCSTR CHttpServer::CRequest::GetMethod() const
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return "";
@@ -86,7 +85,7 @@ LPCSTR CHttpServer::CRequest::GetMethod() const
 
 CUrl* CHttpServer::CRequest::GetUrl() const
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
@@ -95,7 +94,7 @@ CUrl* CHttpServer::CRequest::GetUrl() const
 
 SIZE_T CHttpServer::CRequest::GetRequestHeadersCount() const
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return 0;
@@ -104,7 +103,7 @@ SIZE_T CHttpServer::CRequest::GetRequestHeadersCount() const
 
 CHttpHeaderBase* CHttpServer::CRequest::GetRequestHeader(_In_ SIZE_T nIndex) const
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
@@ -113,7 +112,7 @@ CHttpHeaderBase* CHttpServer::CRequest::GetRequestHeader(_In_ SIZE_T nIndex) con
 
 CHttpHeaderBase* CHttpServer::CRequest::GetRequestHeader(_In_z_ LPCSTR szNameA) const
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
@@ -122,7 +121,7 @@ CHttpHeaderBase* CHttpServer::CRequest::GetRequestHeader(_In_z_ LPCSTR szNameA) 
 
 SIZE_T CHttpServer::CRequest::GetRequestCookiesCount() const
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return 0;
@@ -131,7 +130,7 @@ SIZE_T CHttpServer::CRequest::GetRequestCookiesCount() const
 
 CHttpCookie* CHttpServer::CRequest::GetRequestCookie(_In_ SIZE_T nIndex) const
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
@@ -140,7 +139,7 @@ CHttpCookie* CHttpServer::CRequest::GetRequestCookie(_In_ SIZE_T nIndex) const
 
 CHttpBodyParserBase* CHttpServer::CRequest::GetRequestBodyParser() const
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
@@ -149,7 +148,7 @@ CHttpBodyParserBase* CHttpServer::CRequest::GetRequestBodyParser() const
 
 VOID CHttpServer::CRequest::ResetResponse()
 {
-  CFastLock cLock(&nMutex);
+  CCriticalSection::CAutoLock cLock(cMutex);
 
   if (nState == StateBuildingResponse && HasHeadersBeenSent() == FALSE)
   {
@@ -160,7 +159,7 @@ VOID CHttpServer::CRequest::ResetResponse()
 
 HRESULT CHttpServer::CRequest::SetResponseStatus(_In_ LONG nStatus, _In_opt_ LPCSTR szReasonA)
 {
-  CFastLock cLock(&nMutex);
+  CCriticalSection::CAutoLock cLock(cMutex);
 
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
@@ -187,7 +186,7 @@ HRESULT CHttpServer::CRequest::SetResponseStatus(_In_ LONG nStatus, _In_opt_ LPC
 HRESULT CHttpServer::CRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _Out_opt_ CHttpHeaderBase **lplpHeader,
                                                  _In_ BOOL bReplaceExisting)
 {
-  CFastLock cLock(&nMutex);
+  CCriticalSection::CAutoLock cLock(cMutex);
 
   if (lplpHeader != NULL)
     *lplpHeader = NULL;
@@ -202,7 +201,7 @@ HRESULT CHttpServer::CRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _In_z_ L
                                                  _In_opt_ SIZE_T nValueLen, _Out_opt_ CHttpHeaderBase **lplpHeader,
                                                  _In_ BOOL bReplaceExisting)
 {
-  CFastLock cLock(&nMutex);
+  CCriticalSection::CAutoLock cLock(cMutex);
 
   if (lplpHeader != NULL)
     *lplpHeader = NULL;
@@ -217,7 +216,7 @@ HRESULT CHttpServer::CRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _In_z_ L
                                                  _In_opt_ SIZE_T nValueLen, _Out_opt_ CHttpHeaderBase **lplpHeader,
                                                  _In_ BOOL bReplaceExisting)
 {
-  CFastLock cLock(&nMutex);
+  CCriticalSection::CAutoLock cLock(cMutex);
 
   if (lplpHeader != NULL)
     *lplpHeader = NULL;
@@ -228,7 +227,7 @@ HRESULT CHttpServer::CRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _In_z_ L
 
 HRESULT CHttpServer::CRequest::RemoveResponseHeader(_In_z_ LPCSTR szNameA)
 {
-  CFastLock cLock(&nMutex);
+  CCriticalSection::CAutoLock cLock(cMutex);
 
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
@@ -240,7 +239,7 @@ HRESULT CHttpServer::CRequest::RemoveResponseHeader(_In_z_ LPCSTR szNameA)
 
 HRESULT CHttpServer::CRequest::RemoveResponseHeader(_In_ CHttpHeaderBase *lpHeader)
 {
-  CFastLock cLock(&nMutex);
+  CCriticalSection::CAutoLock cLock(cMutex);
 
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
@@ -252,7 +251,7 @@ HRESULT CHttpServer::CRequest::RemoveResponseHeader(_In_ CHttpHeaderBase *lpHead
 
 HRESULT CHttpServer::CRequest::RemoveAllResponseHeaders()
 {
-  CFastLock cLock(&nMutex);
+  CCriticalSection::CAutoLock cLock(cMutex);
 
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
@@ -264,7 +263,7 @@ HRESULT CHttpServer::CRequest::RemoveAllResponseHeaders()
 
 SIZE_T CHttpServer::CRequest::GetResponseHeadersCount() const
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return 0;
@@ -273,7 +272,7 @@ SIZE_T CHttpServer::CRequest::GetResponseHeadersCount() const
 
 CHttpHeaderBase* CHttpServer::CRequest::GetResponseHeader(_In_ SIZE_T nIndex) const
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
@@ -282,7 +281,7 @@ CHttpHeaderBase* CHttpServer::CRequest::GetResponseHeader(_In_ SIZE_T nIndex) co
 
 CHttpHeaderBase* CHttpServer::CRequest::GetResponseHeader(_In_z_ LPCSTR szNameA) const
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
@@ -291,7 +290,7 @@ CHttpHeaderBase* CHttpServer::CRequest::GetResponseHeader(_In_z_ LPCSTR szNameA)
 
 HRESULT CHttpServer::CRequest::AddResponseCookie(_In_ CHttpCookie &cSrc)
 {
-  CFastLock cLock(&nMutex);
+  CCriticalSection::CAutoLock cLock(cMutex);
 
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
@@ -302,7 +301,7 @@ HRESULT CHttpServer::CRequest::AddResponseCookie(_In_ CHttpCookie &cSrc)
 
 HRESULT CHttpServer::CRequest::AddResponseCookie(_In_ CHttpCookieArray &cSrc)
 {
-  CFastLock cLock(&nMutex);
+  CCriticalSection::CAutoLock cLock(cMutex);
 
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
@@ -316,7 +315,7 @@ HRESULT CHttpServer::CRequest::AddResponseCookie(_In_z_ LPCSTR szNameA, _In_z_ L
                                                  _In_opt_ const CDateTime *lpDate, _In_opt_ BOOL bIsSecure,
                                                  _In_opt_ BOOL bIsHttpOnly)
 {
-  CFastLock cLock(&nMutex);
+  CCriticalSection::CAutoLock cLock(cMutex);
 
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
@@ -330,7 +329,7 @@ HRESULT CHttpServer::CRequest::AddResponseCookie(_In_z_ LPCWSTR szNameW, _In_z_ 
                                                  _In_opt_ const CDateTime *lpDate, _In_opt_ BOOL bIsSecure,
                                                  _In_opt_ BOOL bIsHttpOnly)
 {
-  CFastLock cLock(&nMutex);
+  CCriticalSection::CAutoLock cLock(cMutex);
 
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
@@ -341,7 +340,7 @@ HRESULT CHttpServer::CRequest::AddResponseCookie(_In_z_ LPCWSTR szNameW, _In_z_ 
 
 HRESULT CHttpServer::CRequest::RemoveResponseCookie(_In_z_ LPCSTR szNameA)
 {
-  CFastLock cLock(&nMutex);
+  CCriticalSection::CAutoLock cLock(cMutex);
 
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
@@ -352,7 +351,7 @@ HRESULT CHttpServer::CRequest::RemoveResponseCookie(_In_z_ LPCSTR szNameA)
 
 HRESULT CHttpServer::CRequest::RemoveResponseCookie(_In_z_ LPCWSTR szNameW)
 {
-  CFastLock cLock(&nMutex);
+  CCriticalSection::CAutoLock cLock(cMutex);
 
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
@@ -363,7 +362,7 @@ HRESULT CHttpServer::CRequest::RemoveResponseCookie(_In_z_ LPCWSTR szNameW)
 
 HRESULT CHttpServer::CRequest::RemoveAllResponseCookies()
 {
-  CFastLock cLock(&nMutex);
+  CCriticalSection::CAutoLock cLock(cMutex);
 
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
@@ -375,7 +374,7 @@ HRESULT CHttpServer::CRequest::RemoveAllResponseCookies()
 
 CHttpCookie* CHttpServer::CRequest::GetResponseCookie(_In_ SIZE_T nIndex) const
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
@@ -384,7 +383,7 @@ CHttpCookie* CHttpServer::CRequest::GetResponseCookie(_In_ SIZE_T nIndex) const
 
 CHttpCookie* CHttpServer::CRequest::GetResponseCookie(_In_z_ LPCSTR szNameA) const
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
@@ -393,7 +392,7 @@ CHttpCookie* CHttpServer::CRequest::GetResponseCookie(_In_z_ LPCSTR szNameA) con
 
 CHttpCookie* CHttpServer::CRequest::GetResponseCookie(_In_z_ LPCWSTR szNameW) const
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
@@ -402,7 +401,7 @@ CHttpCookie* CHttpServer::CRequest::GetResponseCookie(_In_z_ LPCWSTR szNameW) co
 
 CHttpCookieArray* CHttpServer::CRequest::GetResponseCookies() const
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
@@ -411,7 +410,7 @@ CHttpCookieArray* CHttpServer::CRequest::GetResponseCookies() const
 
 SIZE_T CHttpServer::CRequest::GetResponseCookiesCount() const
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return 0;
@@ -420,7 +419,7 @@ SIZE_T CHttpServer::CRequest::GetResponseCookiesCount() const
 
 HRESULT CHttpServer::CRequest::SendHeaders()
 {
-  CFastLock cLock(&nMutex);
+  CCriticalSection::CAutoLock cLock(cMutex);
 
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
@@ -431,7 +430,7 @@ HRESULT CHttpServer::CRequest::SendHeaders()
 
 HRESULT CHttpServer::CRequest::SendResponse(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen)
 {
-  CFastLock cLock(&nMutex);
+  CCriticalSection::CAutoLock cLock(cMutex);
   SIZE_T nWritten;
   HRESULT hRes;
 
@@ -507,7 +506,7 @@ HRESULT CHttpServer::CRequest::SendFile(_In_z_ LPCWSTR szFileNameW)
 
 HRESULT CHttpServer::CRequest::SendStream(_In_ CStream *lpStream, _In_opt_z_ LPCWSTR szFileNameW)
 {
-  CFastLock cLock(&nMutex);
+  CCriticalSection::CAutoLock cLock(cMutex);
   CStringA cStrTempNameA;
   LPCWSTR sW[2];
   BOOL bSetInfo;
@@ -568,7 +567,7 @@ HRESULT CHttpServer::CRequest::SendErrorPage(_In_ LONG nStatusCode, _In_ HRESULT
   CStringA cStrResponseA;
 
   {
-    CFastLock cLock(&nMutex);
+    CCriticalSection::CAutoLock cLock(cMutex);
     HRESULT hRes;
 
     if (nState != StateBuildingResponse)
@@ -586,14 +585,14 @@ HRESULT CHttpServer::CRequest::SendErrorPage(_In_ LONG nStatusCode, _In_ HRESULT
 
 HANDLE CHttpServer::CRequest::GetUnderlyingSocket() const
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   return (nState == StateBuildingResponse) ? hConn : NULL;
 }
 
 CSockets* CHttpServer::CRequest::GetUnderlyingSocketManager() const
 {
-  CFastLock cLock(const_cast<LONG volatile*>(&nMutex));
+  CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   return (nState == StateBuildingResponse) ? const_cast<CSockets*>(lpSocketMgr) : NULL;
 }

@@ -559,7 +559,7 @@ VOID CHttpServer::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
 
   if (lpRequest != NULL)
   {
-    CFastLock cLock(&(lpRequest->nMutex));
+    CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
 
     if (lpRequest->hConn == h)
     {
@@ -605,7 +605,7 @@ HRESULT CHttpServer::OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ 
 restart:
   bFireRequestHeadersReceivedCallback = bFireRequestCompleted = FALSE;
   {
-    CFastLock cLock(&(lpRequest->nMutex));
+    CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
     CHttpCommon::eState nParserState;
     SIZE_T nMsgUsed;
 
@@ -718,7 +718,7 @@ restart:
       cRequestHeadersReceivedCallback(this, lpRequest, cShutdownEv.Get(), &lpBodyParser);
     }
     {
-      CFastLock cLock(&(lpRequest->nMutex));
+      CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
 
       if (lpRequest->nState != CRequest::StateEnded)
       {
@@ -842,7 +842,7 @@ VOID CHttpServer::OnRequestTimeout(_In_ CTimedEventQueue::CEvent *lpEvent)
   if (cAutoRundownProt.IsAcquired() != FALSE && lpEvent->IsCanceled() == FALSE)
   {
     {
-      CFastLock cLock(&(lpRequest->nMutex));
+      CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
 
       ::MxNtQuerySystemTime(&liCurrTime);
       dwDiffMs = 0;
@@ -877,7 +877,7 @@ VOID CHttpServer::OnAfterSendResponse(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVO
   CRequest *lpRequest = (CRequest*)lpUserData;
 
   {
-    CFastLock cLock(&(lpRequest->nMutex));
+    CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
 
     CancelAllTimeoutEvents(lpRequest);
     if (lpRequest->nState != CRequest::StateError && lpRequest->IsKeepAliveRequest() != FALSE)

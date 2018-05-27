@@ -223,7 +223,7 @@ public:
     } eState;
 
     OVERLAPPED sOvr;
-    LONG volatile nMutex;
+    CCriticalSection cMutex;
     CHttpServer *lpHttpServer;
     CSockets *lpSocketMgr;
     HANDLE hConn;
