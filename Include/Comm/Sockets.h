@@ -60,6 +60,7 @@ public:
                           _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData=NULL,
                           _Out_opt_ HANDLE *h=NULL);
 
+  HRESULT GetLocalAddress(_In_ HANDLE h, _Out_ PSOCKADDR_INET lpAddr);
   HRESULT GetPeerAddress(_In_ HANDLE h, _Out_ PSOCKADDR_INET lpAddr);
 
   //--------

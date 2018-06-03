@@ -246,6 +246,32 @@ HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCWSTR szAddress
   return hRes;
 }
 
+HRESULT CSockets::GetLocalAddress(_In_ HANDLE h, _Out_ PSOCKADDR_INET lpAddr)
+{
+  CAutoRundownProtection cRundownLock(&nRundownProt);
+  TAutoRefCounted<CConnection> cConn;
+  int namelen;
+
+  if (lpAddr != NULL)
+    MemSet(lpAddr, 0, sizeof(SOCKADDR_INET));
+  if (cRundownLock.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
+  if (h == NULL || lpAddr == NULL)
+    return E_POINTER;
+  cConn.Attach((CConnection*)CheckAndGetConnection(h));
+  if (!cConn)
+    return E_INVALIDARG;
+  //copy local info
+  namelen = (int)sizeof(SOCKADDR_INET);
+  if (::getsockname(cConn->sck, (sockaddr*)lpAddr, &namelen) != 0)
+  {
+    MemSet(lpAddr, 0, sizeof(SOCKADDR_INET));
+    return MX_HRESULT_FROM_LASTSOCKETERROR();
+  }
+  //done
+  return S_OK;
+}
+
 HRESULT CSockets::GetPeerAddress(_In_ HANDLE h, _Out_ PSOCKADDR_INET lpAddr)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
@@ -358,7 +384,6 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In
     case TypeAcceptEx:
       {
       CConnection *lpIncomingConn = (CConnection*)(lpPacket->GetUserData());
-      HRESULT hRes2;
 
       if (SUCCEEDED(hRes) && IsShuttingDown() != FALSE)
         hRes = MX_E_Cancelled;
