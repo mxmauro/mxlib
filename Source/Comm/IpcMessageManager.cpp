@@ -1,26 +1,26 @@
 /*
-* Original code by Mauro H. Leggieri (http://www.mauroleggieri.com.ar)
-*
-* Copyright (C) 2006-2015. All rights reserved.
-*
-* This software is provided 'as-is', without any express or implied warranty.
-* In no event will the authors be held liable for any damages arising from
-* the use of this software.
-*
-* 1. The origin of this software must not be misrepresented; you must not
-*    claim that you wrote the original software.
-*
-* 2. This notice may not be removed or altered from any source distribution.
-*
-* 3. YOU MAY NOT:
-*
-*    a. Modify, translate, adapt, alter, or create derivative works from
-*       this software.
-*    b. Copy (other than one back-up copy), distribute, publicly display,
-*       transmit, sell, rent, lease or otherwise exploit this software.
-*    c. Distribute, sub-license, rent, lease, loan [or grant any third party
-*       access to or use of the software to any third party.
-**/
+ * Original code by Mauro H. Leggieri (http://www.mauroleggieri.com.ar)
+ *
+ * Copyright (C) 2006-2015. All rights reserved.
+ *
+ * This software is provided 'as-is', without any express or implied warranty.
+ * In no event will the authors be held liable for any damages arising from
+ * the use of this software.
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software.
+ *
+ * 2. This notice may not be removed or altered from any source distribution.
+ *
+ * 3. YOU MAY NOT:
+ *
+ *    a. Modify, translate, adapt, alter, or create derivative works from
+ *       this software.
+ *    b. Copy (other than one back-up copy), distribute, publicly display,
+ *       transmit, sell, rent, lease or otherwise exploit this software.
+ *    c. Distribute, sub-license, rent, lease, loan [or grant any third party
+ *       access to or use of the software to any third party.
+ **/
 #include "..\..\Include\Comm\IpcMessageManager.h"
 
 //-----------------------------------------------------------
@@ -92,6 +92,7 @@ CIpcMessageManager::CIpcMessageManager(_In_ CIoCompletionPortThreadPool &_cWorke
   dwLastMessageId = 0;
   cMessageReceivedCallback = _cMessageReceivedCallback;
   _InterlockedExchange(&(sWaitingForReply.nMutex), 0);
+  _InterlockedExchange(&(sReceivedMessages.nMutex), 0);
   _InterlockedExchange(&(sReceivedMsgReplies.nMutex), 0);
   _InterlockedExchange(&(sSyncWait.nMutex), 0);
   sSyncWait.nCount = 0;
@@ -111,11 +112,20 @@ CIpcMessageManager::~CIpcMessageManager()
 
 VOID CIpcMessageManager::Shutdown()
 {
+  CMessage *lpMsg;
+
   RundownProt_WaitForRelease(&nRundownLock);
 
   while (HasPending() != FALSE)
     _YieldProcessor();
   CancelWaitingReplies();
+
+  {
+    CFastLock cLock(&(sReceivedMessages.nMutex));
+
+    while ((lpMsg = sReceivedMessages.cList.PopHead()) != NULL)
+      lpMsg->Release();
+  }
   return;
 }
 
@@ -221,6 +231,7 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
         else
         {
           hRes = OnMessageCompleted();
+          cCurrMessage.Release();
           if (FAILED(hRes))
             break;
           nState = (dwProtocolVersion >= 2) ? StateWaitingMessageEnd : StateRetrievingId;
@@ -487,45 +498,70 @@ HRESULT CIpcMessageManager::OnMessageCompleted()
   MX::DebugPrint("ProcessIncomingPacket: OnMessageCompleted\n");
 #endif //MX_DEBUG_OUTPUT
   _InterlockedIncrement(&nPendingCount);
+
+  {
+    CFastLock cLock(&(sReceivedMessages.nMutex));
+
+    sReceivedMessages.cList.PushTail(cCurrMessage.Get());
+    cCurrMessage->AddRef();
+  }
+
+  cCurrMessage->AddRef();
   hRes = cWorkerPool.Post(cMessageReceivedCallbackWP, 0, &(cCurrMessage->sOvr));
-  if (SUCCEEDED(hRes))
-    cCurrMessage.Detach();
-  else
+  if (FAILED(hRes))
+  {
+    cCurrMessage->Release();
     _InterlockedDecrement(&nPendingCount);
+  }
   return hRes;
 }
 
 VOID CIpcMessageManager::OnMessageReceived(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes,
                                            _In_ OVERLAPPED *lpOvr, _In_ HRESULT hRes)
 {
-  CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   TAutoRefCounted<CMessage> cMessage;
-  BOOL bCallCallback = FALSE;
-
-  cMessage.Attach((CMessage*)((char*)lpOvr - (char*)&(((CMessage*)0)->sOvr)));
 
   //process only if we are not shutting down
-  if (cAutoRundownProt.IsAcquired() != FALSE)
+  do
   {
-    //check if it is a reply for another message
-    if ((cMessage->GetId() & _MESSAGE_IS_REPLY) == 0)
+    cMessage.Release();
     {
-      //call the callback
-      if (cMessageReceivedCallback)
-        cMessageReceivedCallback(cMessage.Get());
-    }
-    else
-    {
-      {
-        //add to the received replies list
-        CFastLock cLock(&(sReceivedMsgReplies.nMutex));
+      CFastLock cLock(&(sReceivedMessages.nMutex));
 
-        sReceivedMsgReplies.cList.PushTail(cMessage.Detach());
+      cMessage.Attach(sReceivedMessages.cList.PopHead());
+    }
+    if (cMessage)
+    {
+      CAutoRundownProtection cAutoRundownProt(&nRundownLock);
+
+      if (cAutoRundownProt.IsAcquired() == FALSE)
+        break;
+
+      //check if it is a reply for another message
+      if ((cMessage->GetId() & _MESSAGE_IS_REPLY) == 0)
+      {
+        //call the callback
+        if (cMessageReceivedCallback)
+          cMessageReceivedCallback(cMessage.Get());
       }
-      //flush pending
-      FlushReceivedReplies();
+      else
+      {
+        {
+          //add to the received replies list
+          CFastLock cLock(&(sReceivedMsgReplies.nMutex));
+
+          sReceivedMsgReplies.cList.PushTail(cMessage.Detach());
+        }
+        //flush pending
+        FlushReceivedReplies();
+      }
     }
   }
+  while (cMessage);
+
+  //release reference to posted message
+  cMessage.Attach((CMessage*)((char*)lpOvr - (char*)&(((CMessage*)0)->sOvr)));
+  cMessage.Release();
   //done
   _InterlockedDecrement(&nPendingCount);
   return;
