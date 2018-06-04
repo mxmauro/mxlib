@@ -393,30 +393,34 @@ HRESULT CJsHttpServer::TransformJavascriptCode(_Inout_ MX::CStringA &cStrCodeA)
       else if (nCodeMode != CodeModeNone && *sA == '/' && sA[1] != '/' && sA[1] != '*')
       {
         //check for a possible regular expression and avoid dying in the intent
-        LPSTR szCurrA = sA + 1;
+        LPSTR szCurrA = sA;
 
-        //parse expression
-        while (*szCurrA != 0 && MX::StrChrA("/\t ),;", *szCurrA) == NULL && (*szCurrA != '%' || szCurrA[1] != '>'))
+        //look for the previous non-white character
+        while (szCurrA > (LPSTR)cStrCodeA && *((LPBYTE)(szCurrA - 1)) <= 32)
+          szCurrA--;
+        if (szCurrA > (LPSTR)cStrCodeA && MX::StrChrA("(,=:[!&|?{};~+-*%/^<>", *(szCurrA - 1)) != NULL)
         {
-          if (*szCurrA == '\\' && szCurrA[1] != 0)
-            szCurrA++;
-          szCurrA++;
-        }
-        if (*szCurrA == '/')
-        {
-          //parse flags
-          szCurrA++;
-          while ((*szCurrA >= 'A' && *szCurrA <= 'Z') || (*szCurrA >= 'a' && *szCurrA <= 'z'))
-            szCurrA++;
-          if (MX::StrChrA("/\t ),;", *szCurrA) != NULL || (*szCurrA == '%' && szCurrA[1] == '>'))
+          //assume we are dealing with a regex so advance until end
+          sA++;
+          while (*sA != 0 && *sA != '/')
           {
-            //got a RegEx expression, advance the pointer until here
-            sA = szCurrA;
-            continue;
+            if (sA[0] == '\\' && sA[1] != 0)
+              sA++;
+            sA++;
+          }
+          //parse flags
+          if (*sA == '/')
+          {
+            sA++;
+            while ((*sA >= 'A' && *sA <= 'Z') || (*sA >= 'a' && *sA <= 'z'))
+              sA++;
           }
         }
-        //if we reach here, then it is NOT a RegEx
-        sA++;
+        else
+        {
+          //if we reach here, then it is NOT a RegEx
+          sA++;
+        }
       }
       else if (nCodeMode == CodeModeNone && *sA == '<' && sA[1] == '%')
       {
