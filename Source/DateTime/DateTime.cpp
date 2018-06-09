@@ -210,7 +210,7 @@ HRESULT CDateTime::SetFromString(_In_z_ LPCWSTR szDateW, _In_z_ LPCWSTR szFormat
   int nYear, nMonth, nDay, nHours, nMinutes, nSeconds, nMilliSeconds;
   int nHourFlag, nYDay, nWeekDay, nWeekNumber, nSign;
   CUSTOMSETTINGSW sCustomW;
-  SIZE_T i, nTemp, nTemp2;
+  SIZE_T i, nTemp, nTemp2, nMaxDigits;
   LPWSTR szOldFormatW;
   CStringW cStrTempFormatW;
   BOOL bAlternateFlag, bAlternateFlag2;
@@ -330,16 +330,28 @@ pfs_skip_phrase:
         case L'W': // monday week number (00-53)
         case L'y': // year w/o century (00-99)
         case L'Y': // year w/ century
+          nMaxDigits = 2;
+          switch (*szFormatW)
+          {
+            case L'j': // yday in decimal (001-366)
+            case L'f': // milliseconds in decimal (0-999)
+              nMaxDigits = 3;
+              break;
+            case L'w': // week day in decimal (0-6)
+              nMaxDigits = 1;
+              break;
+            case L'Y': // year w/ century
+              nMaxDigits = 4;
+              break;
+          }
           if (*szDateW < L'0' || *szDateW > L'9')
             return E_FAIL;
-          i = nTemp = 0;
-          while (*szDateW >= L'0' && *szDateW <= L'9')
+          nTemp = 0;
+          while (*szDateW >= L'0' && *szDateW <= L'9' && nMaxDigits > 0)
           {
-            i++;
             nTemp = (nTemp * 10) + (SIZE_T)(*szDateW - L'0');
-            if (nTemp > 0x10000000)
-              return MX_E_ArithmeticOverflow;
             szDateW++;
+            nMaxDigits--;
           }
           switch (*szFormatW)
           {
@@ -589,6 +601,8 @@ pfs_skip_phrase:
     szFormatW = szOldFormatW;
     goto sfs_restart;
   }
+  if (*szDateW == 0 && *szFormatW != 0)
+    return E_FAIL;
   if (nHourFlag == 2 && nHours < 12)
     nHours += 12; //convert to pm
   if (nYear >= 0 && (nMonth < 0 || nDay < 0))
