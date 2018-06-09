@@ -86,13 +86,15 @@ CIpcMessageManager::CIpcMessageManager(_In_ CIoCompletionPortThreadPool &_cWorke
   //----
   RundownProt_Initialize(&nRundownLock);
   _InterlockedExchange(&nNextId, 0);
-  _InterlockedExchange(&nPendingCount, 0);
+  _InterlockedExchange(&nOutgoingMessageReceivedCallback, 0);
   nState = StateRetrievingId;
   nCurrMsgSize = 0;
   dwLastMessageId = 0;
   cMessageReceivedCallback = _cMessageReceivedCallback;
   _InterlockedExchange(&(sWaitingForReply.nMutex), 0);
   _InterlockedExchange(&(sReceivedMessages.nMutex), 0);
+  _InterlockedExchange(&(sReceivedMessages.nNextOrderId), 0);
+  _InterlockedExchange(&(sReceivedMessages.nNextOrderIdToProcess), 1);
   _InterlockedExchange(&(sReceivedMsgReplies.nMutex), 0);
   _InterlockedExchange(&(sSyncWait.nMutex), 0);
   sSyncWait.nCount = 0;
@@ -145,7 +147,7 @@ HRESULT CIpcMessageManager::SwitchToProtocol(_In_ DWORD _dwProtocolVersion)
 
 BOOL CIpcMessageManager::HasPending() const
 {
-  return (__InterlockedRead(const_cast<LONG volatile*>(&nPendingCount)) > 0) ? TRUE : FALSE;
+  return (__InterlockedRead(const_cast<LONG volatile*>(&nOutgoingMessageReceivedCallback)) > 0) ? TRUE : FALSE;
 }
 
 DWORD CIpcMessageManager::GetNextId()
@@ -497,21 +499,15 @@ HRESULT CIpcMessageManager::OnMessageCompleted()
 #ifdef MX_DEBUG_OUTPUT
   MX::DebugPrint("ProcessIncomingPacket: OnMessageCompleted\n");
 #endif //MX_DEBUG_OUTPUT
-  _InterlockedIncrement(&nPendingCount);
+  _InterlockedIncrement(&nOutgoingMessageReceivedCallback);
 
-  {
-    CFastLock cLock(&(sReceivedMessages.nMutex));
-
-    sReceivedMessages.cList.PushTail(cCurrMessage.Get());
-    cCurrMessage->AddRef();
-  }
-
+  cCurrMessage->dwOrder = (DWORD)_InterlockedIncrement(&(sReceivedMessages.nNextOrderId));
   cCurrMessage->AddRef();
   hRes = cWorkerPool.Post(cMessageReceivedCallbackWP, 0, &(cCurrMessage->sOvr));
   if (FAILED(hRes))
   {
     cCurrMessage->Release();
-    _InterlockedDecrement(&nPendingCount);
+    _InterlockedDecrement(&nOutgoingMessageReceivedCallback);
   }
   return hRes;
 }
@@ -519,51 +515,81 @@ HRESULT CIpcMessageManager::OnMessageCompleted()
 VOID CIpcMessageManager::OnMessageReceived(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes,
                                            _In_ OVERLAPPED *lpOvr, _In_ HRESULT hRes)
 {
-  TAutoRefCounted<CMessage> cMessage;
+  CMessage *lpMsg;
+  BOOL bContinue;
 
   //process only if we are not shutting down
+  lpMsg = (CMessage*)((char*)lpOvr - (char*)&(((CMessage*)0)->sOvr));
+  {
+    CFastLock cLock(&(sReceivedMessages.nMutex));
+    TLnkLst<CMessage>::Iterator it;
+    CMessage *lpCurrMsg;
+
+    for (lpCurrMsg=it.Begin(sReceivedMessages.cList); lpCurrMsg!=NULL; lpCurrMsg = it.Next())
+    {
+      if (lpMsg->dwOrder < lpCurrMsg->dwOrder)
+        break;
+    }
+    if (lpCurrMsg != NULL)
+      sReceivedMessages.cList.PushBefore(lpMsg, lpCurrMsg);
+    else
+      sReceivedMessages.cList.PushTail(lpMsg);
+  }
+
   do
   {
-    cMessage.Release();
     {
       CFastLock cLock(&(sReceivedMessages.nMutex));
 
-      cMessage.Attach(sReceivedMessages.cList.PopHead());
+      lpMsg = sReceivedMessages.cList.GetHead();
+      if (lpMsg != NULL)
+      {
+        if (lpMsg->dwOrder == (DWORD)__InterlockedRead(&(sReceivedMessages.nNextOrderIdToProcess)))
+          sReceivedMessages.cList.PopHead();
+        else
+          lpMsg = NULL;
+      }
     }
-    if (cMessage)
+
+    bContinue = FALSE;
+    if (lpMsg != NULL)
     {
       CAutoRundownProtection cAutoRundownProt(&nRundownLock);
 
-      if (cAutoRundownProt.IsAcquired() == FALSE)
-        break;
+      if (cAutoRundownProt.IsAcquired() != FALSE)
+      {
+        bContinue = TRUE;
 
-      //check if it is a reply for another message
-      if ((cMessage->GetId() & _MESSAGE_IS_REPLY) == 0)
-      {
-        //call the callback
-        if (cMessageReceivedCallback)
-          cMessageReceivedCallback(cMessage.Get());
-      }
-      else
-      {
+        //check if it is a reply for another message
+        if ((lpMsg->GetId() & _MESSAGE_IS_REPLY) == 0)
         {
-          //add to the received replies list
-          CFastLock cLock(&(sReceivedMsgReplies.nMutex));
-
-          sReceivedMsgReplies.cList.PushTail(cMessage.Detach());
+          //call the callback
+          if (cMessageReceivedCallback)
+            cMessageReceivedCallback(lpMsg);
         }
-        //flush pending
-        FlushReceivedReplies();
-      }
-    }
-  }
-  while (cMessage);
+        else
+        {
+          {
+            //add to the received replies list
+            CFastLock cLock(&(sReceivedMsgReplies.nMutex));
 
-  //release reference to posted message
-  cMessage.Attach((CMessage*)((char*)lpOvr - (char*)&(((CMessage*)0)->sOvr)));
-  cMessage.Release();
+            sReceivedMsgReplies.cList.PushTail(lpMsg);
+            lpMsg = NULL;
+          }
+          //flush pending
+          FlushReceivedReplies();
+        }
+      }
+
+      _InterlockedIncrement(&(sReceivedMessages.nNextOrderIdToProcess));
+    }
+    if (lpMsg != NULL)
+      lpMsg->Release();
+  }
+  while (bContinue != FALSE);
+
   //done
-  _InterlockedDecrement(&nPendingCount);
+  _InterlockedDecrement(&nOutgoingMessageReceivedCallback);
   return;
 }
 

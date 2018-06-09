@@ -118,7 +118,7 @@ BOOL CHostResolver::IsValidIPV4(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddre
                                 _Out_opt_ PSOCKADDR_INET lpAddress)
 {
   SIZE_T i, j, nLen, nBlocksCount;
-  DWORD dw, dwBase, dwValue, dwOldValue;
+  DWORD dw, dwBase, dwValue, dwTempValue;
   LPCSTR sA;
   struct {
     LPCSTR szStartA;
@@ -139,7 +139,9 @@ BOOL CHostResolver::IsValidIPV4(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddre
     sBlocks[nBlocksCount].szStartA = szAddressA;
     for (nLen=0; nLen<nAddressLen && szAddressA[nLen]!='.' && szAddressA[nLen]!='/' && szAddressA[nLen]!='%';
          nLen++);
+    {
       sBlocks[nBlocksCount].nLen = nLen;
+    }
     if (nLen >= nAddressLen || szAddressA[nLen] != '.')
     {
       nBlocksCount++;
@@ -187,9 +189,11 @@ BOOL CHostResolver::IsValidIPV4(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddre
         return FALSE;
       if (dw >= dwBase)
         return FALSE;
-      dwOldValue = dwValue;
-      dwValue = (dwValue * dwBase) + dw;
-      if (dwOldValue < dwValue)
+      dwTempValue = dwValue * dwBase;
+      if (dwTempValue < dwValue)
+        return FALSE; //if overflow, not a valid ipv4 address
+      dwValue = dwTempValue + dw;
+      if (dwValue < dwTempValue)
         return FALSE; //if overflow, not a valid ipv4 address
     }
     if (i < nBlocksCount-1)
@@ -215,7 +219,7 @@ BOOL CHostResolver::IsValidIPV4(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddr
                                 _Out_opt_ PSOCKADDR_INET lpAddress)
 {
   SIZE_T i, j, nLen, nBlocksCount;
-  DWORD dw, dwBase, dwValue, dwOldValue;
+  DWORD dw, dwBase, dwValue, dwTempValue;
   LPCWSTR sW;
   struct {
     LPCWSTR szStartW;
@@ -236,7 +240,9 @@ BOOL CHostResolver::IsValidIPV4(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddr
     sBlocks[nBlocksCount].szStartW = szAddressW;
     for (nLen=0; nLen<nAddressLen && szAddressW[nLen]!=L'.' && szAddressW[nLen]!=L'/' && szAddressW[nLen]!=L'%';
          nLen++);
+    {
       sBlocks[nBlocksCount].nLen = nLen;
+    }
     if (nLen >= nAddressLen || szAddressW[nLen] != L'.')
     {
       nBlocksCount++;
@@ -284,9 +290,11 @@ BOOL CHostResolver::IsValidIPV4(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddr
         return FALSE;
       if (dw >= dwBase)
         return FALSE;
-      dwOldValue = dwValue;
-      dwValue = (dwValue * dwBase) + dw;
-      if (dwOldValue < dwValue)
+      dwTempValue = dwValue * dwBase;
+      if (dwTempValue < dwValue)
+        return FALSE; //if overflow, not a valid ipv4 address
+      dwValue = dwTempValue + dw;
+      if (dwValue < dwTempValue)
         return FALSE; //if overflow, not a valid ipv4 address
     }
     if (i < nBlocksCount-1)
@@ -528,7 +536,7 @@ BOOL CHostResolver::IsValidIPV6(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddr
 static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCSTR szStrA, _In_ SIZE_T nLen)
 {
   SIZE_T i, nSlot;
-  DWORD dw, dwValue;
+  DWORD dw, dwValue, dwTempValue;
 
   if (nLen == 0)
     return 0;
@@ -557,9 +565,10 @@ static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCSTR szStrA, _In_ 
         dw = (DWORD)(szStrA[i] - 'A' + 10);
       else
         return (SIZE_T)-1;
-      dwValue = (dwValue << 4) + dw;
-      if (dwValue > 0xFFFF)
+      dwTempValue = dwValue << 4;
+      if (dwTempValue < dwValue || dwValue > 0xFFFF - dw)
         return (SIZE_T)-1;
+      dwValue = dwTempValue + dw;
     }
   }
   if (nSlot == 8)
@@ -573,7 +582,7 @@ static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCSTR szStrA, _In_ 
 static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCWSTR szStrW, _In_ SIZE_T nLen)
 {
   SIZE_T i, nSlot;
-  DWORD dw, dwValue;
+  DWORD dw, dwValue, dwTempValue;
 
   if (nLen == 0)
     return 0;
@@ -602,9 +611,10 @@ static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCWSTR szStrW, _In_
         dw = (DWORD)(szStrW[i] - L'A' + 10);
       else
         return (SIZE_T)-1;
-      dwValue = (dwValue << 4) + dw;
-      if (dwValue > 0xFFFF)
+      dwTempValue = dwValue << 4;
+      if (dwTempValue < dwValue || dwValue > 0xFFFF - dw)
         return (SIZE_T)-1;
+      dwValue = dwTempValue + dw;
     }
   }
   if (nSlot == 8)

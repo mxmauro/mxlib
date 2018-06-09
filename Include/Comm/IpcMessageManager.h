@@ -140,6 +140,7 @@ public:
 
     OVERLAPPED sOvr;
     DWORD dwId;
+    DWORD dwOrder;
     LPBYTE lpData;
     DWORD nDataLen;
   };
@@ -202,7 +203,7 @@ private:
 
   LONG volatile nRundownLock;
   LONG volatile nNextId;
-  LONG volatile nPendingCount;
+  LONG volatile nOutgoingMessageReceivedCallback;
   OnMessageReceivedCallback cMessageReceivedCallback;
 
   eState nState;
@@ -217,6 +218,8 @@ private:
   struct {
     LONG volatile nMutex;
     TLnkLst<CMessage> cList;
+    LONG volatile nNextOrderId;
+    LONG volatile nNextOrderIdToProcess;
   } sReceivedMessages;
   struct {
     LONG volatile nMutex;
