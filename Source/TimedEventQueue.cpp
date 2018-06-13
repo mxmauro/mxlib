@@ -49,6 +49,9 @@ CTimedEventQueue::CTimedEventQueue() : TRefCounted<CBaseMemObj>()
   _InterlockedExchange(&nRemovedTreeMutex, 0);
   _InterlockedExchange(&nThreadMutex, 0);
   RundownProt_Initialize(&nRundownLock);
+#ifdef _DEBUG
+  nQueuedEventsCounter = nRemovedTreeCounter = 0;
+#endif //_DEBUG
   return;
 }
 
@@ -109,14 +112,34 @@ HRESULT CTimedEventQueue::Add(_In_ CEvent *lpEvent, _In_ DWORD dwTimeoutMs)
     lpEvent->ResetCancelMark();
     if (lpEvent->GetTree() == &cQueuedEventsTree || lpEvent->GetTree() == &cRemovedTree)
     {
+#ifdef _DEBUG
+      if (lpEvent->GetTree() == &cQueuedEventsTree)
+      {
+        MX_ASSERT(nQueuedEventsCounter > 0);
+        nQueuedEventsCounter--;
+      }
+      else
+      {
+        MX_ASSERT(nRemovedTreeCounter > 0);
+        nRemovedTreeCounter--;
+      }
+#endif //_DEBUG
       //requeue
       lpEvent->RemoveNode();
-      cQueuedEventsTree.Insert(lpEvent);
+      cQueuedEventsTree.Insert(lpEvent, TRUE);
+#ifdef _DEBUG
+      nQueuedEventsCounter++;
+      MX_ASSERT(nQueuedEventsCounter == cQueuedEventsTree.GetCount());
+#endif //_DEBUG
     }
     else
     {
-      cQueuedEventsTree.Insert(lpEvent);
+      cQueuedEventsTree.Insert(lpEvent, TRUE);
       lpEvent->AddRef();
+#ifdef _DEBUG
+      nQueuedEventsCounter++;
+      MX_ASSERT(nQueuedEventsCounter == cQueuedEventsTree.GetCount());
+#endif //_DEBUG
     }
   }
   //done
@@ -133,10 +156,21 @@ VOID CTimedEventQueue::Remove(_In_ CEvent *lpEvent, _In_opt_ BOOL bMarkAsCancele
 
     if (lpEvent->GetTree() == &cQueuedEventsTree)
     {
+#ifdef _DEBUG
+      MX_ASSERT(nQueuedEventsCounter > 0);
+      nQueuedEventsCounter--;
+#endif //_DEBUG
       if (bMarkAsCanceled != FALSE)
         lpEvent->MarkAsCanceled();
       lpEvent->RemoveNode();
-      cRemovedTree.Insert(lpEvent);
+
+#ifdef _DEBUG
+      nRemovedTreeCounter++;
+#endif //_DEBUG
+      cRemovedTree.Insert(lpEvent, TRUE);
+#ifdef _DEBUG
+      MX_ASSERT(nRemovedTreeCounter == cRemovedTree.GetCount());
+#endif //_DEBUG
       cQueueChangedEv.Set();
     }
   }
@@ -151,10 +185,27 @@ VOID CTimedEventQueue::RemoveAll()
 
   while ((lpEvent = cQueuedEventsTree.GetFirst()) != NULL)
   {
+#ifdef _DEBUG
+    MX_ASSERT(nQueuedEventsCounter > 0);
+    nQueuedEventsCounter--;
+#endif //_DEBUG
     lpEvent->MarkAsCanceled();
     lpEvent->RemoveNode();
-    cRemovedTree.Insert(lpEvent);
+#ifdef _DEBUG
+    MX_ASSERT(nQueuedEventsCounter == cQueuedEventsTree.GetCount());
+#endif //_DEBUG
+
+#ifdef _DEBUG
+    nRemovedTreeCounter++;
+#endif //_DEBUG
+    cRemovedTree.Insert(lpEvent, TRUE);
+#ifdef _DEBUG
+    MX_ASSERT(nRemovedTreeCounter == cRemovedTree.GetCount());
+#endif //_DEBUG
   }
+#ifdef _DEBUG
+  MX_ASSERT(nQueuedEventsCounter == 0);
+#endif //_DEBUG
   cQueueChangedEv.Set();
   return;
 }
@@ -181,7 +232,7 @@ BOOL CTimedEventQueue::ChangeTimeout(_In_ CEvent *lpEvent, _In_ DWORD dwTimeoutM
   lpEvent->nDueTime = nDueTime;
   //requeue
   lpEvent->RemoveNode();
-  cQueuedEventsTree.Insert(lpEvent);
+  cQueuedEventsTree.Insert(lpEvent, TRUE);
   cQueueChangedEv.Set();
   return TRUE;
 }
@@ -231,8 +282,16 @@ DWORD CTimedEventQueue::ProcessTimedOut()
       {
         if (lpEvent->nDueTime <= liCurrTime.QuadPart)
         {
+#ifdef _DEBUG
+          MX_ASSERT(nQueuedEventsCounter > 0);
+          nQueuedEventsCounter--;
+#endif //_DEBUG
+
           //got a timed-out item
           lpEvent->RemoveNode();
+#ifdef _DEBUG
+          MX_ASSERT(nQueuedEventsCounter == cQueuedEventsTree.GetCount());
+#endif //_DEBUG
           lpEvent->SetState(CEvent::StateProcessing);
         }
         else
@@ -242,6 +301,12 @@ DWORD CTimedEventQueue::ProcessTimedOut()
           lpEvent = NULL;
         }
       }
+#ifdef _DEBUG
+      else
+      {
+        MX_ASSERT(nQueuedEventsCounter == 0);
+      }
+#endif //_DEBUG
     }
     //fire event
     if (lpEvent != NULL)
@@ -267,9 +332,20 @@ VOID CTimedEventQueue::ProcessCanceled()
       lpEvent = cRemovedTree.GetFirst();
       if (lpEvent != NULL)
       {
+#ifdef _DEBUG
+        MX_ASSERT(nRemovedTreeCounter > 0);
+        nRemovedTreeCounter--;
+#endif //_DEBUG
+
         lpEvent->SetState(CEvent::StateProcessing);
         lpEvent->RemoveNode();
       }
+#ifdef _DEBUG
+      else
+      {
+        MX_ASSERT(nRemovedTreeCounter == 0);
+      }
+#endif //_DEBUG
     }
     if (lpEvent != NULL)
     {

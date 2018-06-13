@@ -83,8 +83,14 @@ private:
   //----
   LONG volatile nQueuedEventsTreeMutex;
   TRedBlackTree<CEvent, ULONGLONG> cQueuedEventsTree;
+#ifdef _DEBUG
+  SIZE_T nQueuedEventsCounter;
+#endif //_DEBUG
   LONG volatile nRemovedTreeMutex;
   TRedBlackTree<CEvent, ULONGLONG> cRemovedTree;
+#ifdef _DEBUG
+  SIZE_T nRemovedTreeCounter;
+#endif //_DEBUG
 };
 
 //-----------------------------------------------------------
