@@ -149,6 +149,10 @@ HRESULT CJsHttpServer::InitializeJVM(_In_ CJavascriptVM &cJvm, _In_ CJsRequest *
   hRes = cJvm.AddObjectStringProperty("request", "path", (LPCSTR)cStrTempA, CJavascriptVM::PropertyFlagEnumerable);
   __EXIT_ON_ERROR(hRes);
 
+  hRes = cJvm.AddObjectNativeFunction("request", "detach",
+                                      MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequestDetach, this), 0);
+  __EXIT_ON_ERROR(hRes);
+
   //query strings
   hRes = cJvm.CreateObject("request.query");
   __EXIT_ON_ERROR(hRes);
@@ -673,6 +677,14 @@ HRESULT CJsHttpServer::InsertPostFileField(_In_ CJavascriptVM &cJvm,
     lpJsObj->Release();
   }
   return hRes;
+}
+
+DukTape::duk_ret_t CJsHttpServer::OnRequestDetach(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                                  _In_z_ LPCSTR szFunctionNameA)
+{
+  CJsRequest *lpRequest = GetServerRequestFromContext(lpCtx);
+  lpRequest->bDetached = TRUE;
+  return 0;
 }
 
 } //namespace MX

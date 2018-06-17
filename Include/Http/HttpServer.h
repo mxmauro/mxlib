@@ -196,6 +196,16 @@ public:
     HANDLE GetUnderlyingSocket() const;
     CSockets* GetUnderlyingSocketManager() const;
 
+    virtual HRESULT OnSetup()
+      {
+      return S_OK;
+      };
+
+    virtual VOID OnCleanup()
+      {
+      return;
+      };
+
   private:
     VOID ResetForNewRequest();
 
@@ -215,6 +225,7 @@ public:
 
     typedef enum {
       StateClosed = 0,
+      StateInitializing,
       StateReceivingRequestHeaders,
       StateReceivingRequestBody,
       StateBuildingResponse,

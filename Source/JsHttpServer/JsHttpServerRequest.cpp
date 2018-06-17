@@ -29,6 +29,7 @@ namespace MX {
 
 CJsHttpServer::CJsRequest::CJsRequest() : CHttpServer::CRequest()
 {
+  bDetached = FALSE;
   return;
 }
 
@@ -36,5 +37,18 @@ CJsHttpServer::CJsRequest::~CJsRequest()
 {
   return;
 }
+
+HRESULT CJsHttpServer::CJsRequest::OnSetup()
+{
+  bDetached = FALSE;
+  return CHttpServer::CRequest::OnSetup();;
+}
+
+VOID CJsHttpServer::CJsRequest::OnCleanup()
+{
+  CHttpServer::CRequest::OnCleanup();
+  return;
+}
+
 
 } //namespace MX

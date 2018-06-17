@@ -44,8 +44,6 @@ public:
 
   typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CJsRequest *lpRequest,
                             _In_ CJavascriptVM &cJvm, _Inout_ CStringA &cStrCodeA)> OnRequestCallback;
-  typedef Callback<VOID (_In_ CJsHttpServer *lpHttp, _In_ CJsRequest *lpRequest,
-                         _In_ CJavascriptVM &cJvm)> OnRequestCleanupCallback;
 
   typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CJsRequest *lpRequest,
                             _In_ CJavascriptVM &cJvm, _Inout_ CJavascriptVM::CRequireModuleContext *lpReqContext,
@@ -74,7 +72,6 @@ public:
 
   VOID On(_In_ OnNewRequestObjectCallback cNewRequestObjectCallback);
   VOID On(_In_ OnRequestCallback cRequestCallback);
-  VOID On(_In_ OnRequestCleanupCallback cRequestCleanupCallback);
   VOID On(_In_ OnRequireJsModuleCallback cRequireJsModuleCallback);
   VOID On(_In_ OnErrorCallback cErrorCallback);
   VOID On(_In_ OnJavascriptErrorCallback cJavascriptErrorCallback);
@@ -103,11 +100,16 @@ public:
   public:
     ~CJsRequest();
 
+    HRESULT OnSetup();
+    VOID OnCleanup();
+
   public:
     TArrayListWithDelete<CStringA*> cOutputBuffersList;
 
   private:
     friend class CJsHttpServer;
+
+    BOOL bDetached;
   };
 
 private:
@@ -130,6 +132,9 @@ private:
   HRESULT InsertPostFileField(_In_ CJavascriptVM &cJvm, _In_ CHttpBodyParserFormBase::CFileField *lpFileField,
                               _In_ LPCSTR szBaseObjectNameA);
 
+  DukTape::duk_ret_t OnRequestDetach(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                     _In_z_ LPCSTR szFunctionNameA);
+
   HRESULT ResetAndDisableClientCache(_In_ CJsRequest *lpRequest);
   HRESULT BuildErrorPage(_In_ CJsRequest *lpRequest, _In_ HRESULT hr, _In_z_ LPCSTR szDescriptionA,
                          _In_z_ LPCSTR szFileNameA, _In_ int nLine, _In_z_ LPCSTR szStackTraceA);
@@ -140,7 +145,6 @@ private:
   BOOL bShowStackTraceOnError;
   OnNewRequestObjectCallback cNewRequestObjectCallback;
   OnRequestCallback cRequestCallback;
-  OnRequestCleanupCallback cRequestCleanupCallback;
   OnRequireJsModuleCallback cRequireJsModuleCallback;
   OnErrorCallback cErrorCallback;
   OnJavascriptErrorCallback cJavascriptErrorCallback;

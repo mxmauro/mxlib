@@ -33,7 +33,6 @@ CJsHttpServer::CJsHttpServer(_In_ MX::CSockets &cSocketMgr, _In_ CIoCompletionPo
 {
   cNewRequestObjectCallback = NullCallback();
   cRequestCallback = NullCallback();
-  cRequestCleanupCallback = NullCallback();
   cRequireJsModuleCallback = NullCallback();
   cErrorCallback = NullCallback();
   cJavascriptErrorCallback = NullCallback();
@@ -111,12 +110,6 @@ VOID CJsHttpServer::On(_In_ OnRequestCallback _cRequestCallback)
   return;
 }
 
-VOID CJsHttpServer::On(_In_ OnRequestCleanupCallback _cRequestCleanupCallback)
-{
-  cRequestCleanupCallback = _cRequestCleanupCallback;
-  return;
-}
-
 VOID CJsHttpServer::On(_In_ OnRequireJsModuleCallback _cRequireJsModuleCallback)
 {
   cRequireJsModuleCallback = _cRequireJsModuleCallback;
@@ -168,6 +161,7 @@ VOID CJsHttpServer::OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpS
   CJavascriptVM cJvm;
   CStringA cStrCodeA;
   CUrl *lpUrl;
+  BOOL bDetached = FALSE;
   HRESULT hRes;
 
   if (!cRequestCallback)
@@ -220,6 +214,7 @@ on_init_error:
     try
     {
       cJvm.Run(cStrCodeA, lpUrl->GetPath());
+      bDetached = lpRequest->bDetached;
     }
     catch (CJsHttpServerSystemExit &e)
     {
@@ -280,9 +275,8 @@ on_init_error:
     goto on_init_error;
 
   //done
-  if (cRequestCleanupCallback)
-    cRequestCleanupCallback(this, lpRequest, cJvm);
-  lpRequest->End(hRes);
+  if (bDetached == FALSE)
+    lpRequest->End(hRes);
   return;
 }
 

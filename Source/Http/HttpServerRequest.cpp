@@ -36,7 +36,7 @@ CHttpServer::CRequest::CRequest() : CIpc::CUserData(), TLnkLstNode<CRequest>(), 
   MemSet(&sOvr, 0, sizeof(sOvr));
   lpHttpServer = NULL;
   hConn = NULL;
-  nState = CRequest::StateReceivingRequestHeaders;
+  nState = CRequest::StateInitializing;
   _InterlockedExchange(&nFlags, 0);
   sRequest.liLastRead.QuadPart = 0ui64;
   _InterlockedExchange(&(sRequest.sTimeout.nMutex), 0);
@@ -599,7 +599,7 @@ CSockets* CHttpServer::CRequest::GetUnderlyingSocketManager() const
 
 VOID CHttpServer::CRequest::ResetForNewRequest()
 {
-  nState = CRequest::StateReceivingRequestHeaders;
+  nState = CRequest::StateInitializing;
   _InterlockedExchange(&nFlags, 0);
   //----
   sRequest.ResetForNewRequest();

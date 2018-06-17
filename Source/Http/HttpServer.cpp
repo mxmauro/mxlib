@@ -600,6 +600,15 @@ HRESULT CHttpServer::OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ 
   HRESULT hRes;
 
   MX_ASSERT(lpUserData != NULL);
+
+  if (lpRequest->nState == CRequest::StateInitializing)
+  {
+    hRes = lpRequest->OnSetup();
+    if (FAILED(hRes))
+      goto done;
+    lpRequest->nState = CRequest::StateReceivingRequestHeaders;
+  }
+
   hRes = S_OK;
   ::MxNtQuerySystemTime(&(lpRequest->sRequest.liLastRead));
 restart:
@@ -779,6 +788,7 @@ restart:
     if (bFireRequestHeadersReceivedCallback != FALSE || bFireRequestCompleted != FALSE)
       goto restart;
   }
+done:
   //raise error event if any
   if (FAILED(hRes) && cErrorCallback)
     cErrorCallback(this, lpRequest, hRes);
@@ -1064,6 +1074,7 @@ VOID CHttpServer::OnRequestEnding(_In_ CRequest *lpRequest, _In_ HRESULT hErrorC
     cSocketMgr.Close(lpRequest->hConn, hRes);
     lpRequest->nState = CRequest::StateError;
   }
+  lpRequest->OnCleanup();
   return;
 }
 

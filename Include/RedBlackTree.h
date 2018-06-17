@@ -417,7 +417,7 @@ public:
 
 #ifdef _DEBUG
     Check(lpRoot);
-#endif /_DEBUG
+#endif //_DEBUG
 
     lpNode = lpRoot;
     do
@@ -510,15 +510,12 @@ public:
     nItemsCount++;
 #ifdef _DEBUG
     Check(lpRoot);
-#endif /_DEBUG
+#endif //_DEBUG
     return TRUE;
     };
 
   VOID Remove(_In_ _RbTreeNode *lpDelNode)
     {
-    /*
-    _RbTreeNode *repl, *y;
-    */
     _RbTreeNode *n;
 
     MX_ASSERT(lpDelNode != NULL);
@@ -532,7 +529,7 @@ public:
 
 #ifdef _DEBUG
       Check(lpRoot);
-#endif /_DEBUG
+#endif //_DEBUG
 
       lpSucc = lpDelNode->lpRight;
       if (lpSucc->lpLeft != NULL)
@@ -577,7 +574,7 @@ public:
 
 #ifdef _DEBUG
         Check(lpRoot);
-#endif /_DEBUG
+#endif //_DEBUG
       }
       else
       {
@@ -603,7 +600,7 @@ public:
 
 #ifdef _DEBUG
         Check(lpRoot);
-#endif /_DEBUG
+#endif //_DEBUG
 
         bSuccIsRed = lpSucc->bRed;
         lpSucc->bRed = lpDelNode->bRed;
@@ -629,14 +626,14 @@ public:
 
 #ifdef _DEBUG
       Check(lpRoot);
-#endif /_DEBUG
+#endif //_DEBUG
 
       if (lpDelNode->bRed == FALSE)
         DeleteFixup(n);
 
 #ifdef _DEBUG
       Check(lpRoot);
-#endif /_DEBUG
+#endif //_DEBUG
     }
     else if (lpDelNode->lpParent == NULL)
     {
@@ -650,7 +647,7 @@ public:
 
 #ifdef _DEBUG
       Check(lpRoot);
-#endif /_DEBUG
+#endif //_DEBUG
 
       MX_ASSERT(lpDelNode->lpParent != NULL);
       if (lpDelNode->lpParent != NULL)
@@ -662,73 +659,12 @@ public:
       }
 #ifdef _DEBUG
       Check(lpRoot);
-#endif /_DEBUG
-    }
-    /*
-    if (lpDelNode->lpLeft != NULL && lpDelNode->lpRight != NULL)
-      y = lpDelNode->GetNextNode(); //remove the successor
-    else
-      y = lpDelNode;
-
-    repl = (y->lpLeft == NULL) ? y->lpRight : y->lpLeft;
-    if (repl != NULL)
-    {
-      repl->lpParent = y->lpParent;
-      if (y->lpParent == NULL)
-        lpRoot = repl;
-      else if (y == y->lpParent->lpLeft)
-        y->lpParent->lpLeft = repl;
-      else
-        y->lpParent->lpRight = repl;
-
-      y->lpParent = y->lpLeft = y->lpRight = NULL;
-      if (y->bRed == FALSE)
-        DeleteFixup(repl);
-    }
-    else if (y->lpParent == NULL)
-    {
-      lpRoot = NULL; //we are the only node
-    }
-    else
-    {
-      if (y->bRed == FALSE)
-        DeleteFixup(y);
-
-      if (y->lpParent != NULL)
-      {
-        if (y == y->lpParent->lpLeft)
-          y->lpParent->lpLeft = NULL;
-        else if (y == y->lpParent->lpRight)
-          y->lpParent->lpRight = NULL;
-        y->lpParent = NULL;
-      }
+#endif //_DEBUG
     }
 
-    if (y != lpDelNode)
-    {
-      //the successor was removed BUT we need to exchange it at "lpDelNode" position
-      y->bRed = lpDelNode->bRed;
-      y->lpLeft = lpDelNode->lpLeft;
-      y->lpRight = lpDelNode->lpRight;
-      y->lpParent = lpDelNode->lpParent;
-      //fix parent node
-      if (y->lpParent == NULL)
-        lpRoot = y;
-      else if (y->lpParent->lpLeft == lpDelNode)
-        y->lpParent->lpLeft = y;
-      else
-        y->lpParent->lpRight = y;
-      //fix childs
-      if (y->lpLeft != NULL)
-        y->lpLeft->lpParent = y;
-      if (y->lpRight != NULL)
-        y->lpRight->lpParent = y;
-    }
-    */
     lpDelNode->lpTree = NULL;
     lpDelNode->lpLeft = lpDelNode->lpRight = NULL;
     lpDelNode->lpParent = NULL;
-
     nItemsCount--;
     return;
     };
