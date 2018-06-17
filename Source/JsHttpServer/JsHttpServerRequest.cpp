@@ -38,6 +38,12 @@ CJsHttpServer::CJsRequest::~CJsRequest()
   return;
 }
 
+VOID CJsHttpServer::CJsRequest::Detach()
+{
+  bDetached = TRUE;
+  return;
+}
+
 HRESULT CJsHttpServer::CJsRequest::OnSetup()
 {
   bDetached = FALSE;
@@ -49,6 +55,5 @@ VOID CJsHttpServer::CJsRequest::OnCleanup()
   CHttpServer::CRequest::OnCleanup();
   return;
 }
-
 
 } //namespace MX

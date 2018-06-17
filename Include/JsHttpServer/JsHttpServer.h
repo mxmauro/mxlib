@@ -100,6 +100,8 @@ public:
   public:
     ~CJsRequest();
 
+    VOID Detach();
+
     HRESULT OnSetup();
     VOID OnCleanup();
 
