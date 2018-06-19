@@ -49,7 +49,7 @@ public:
   private:
     friend class CTimedEventQueue;
 
-    ULONGLONG GetNodeKey()
+    ULONGLONG GetNodeKey() const
       {
       return nDueTime;
       };
