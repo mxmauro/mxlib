@@ -227,7 +227,19 @@ LPCSTR CHttpCookie::GetDomain() const
 
 HRESULT CHttpCookie::GetDomain(_Inout_ CStringW &cStrDestW)
 {
-  return Punycode_Decode(cStrDestW, GetDomain());
+  HRESULT hRes;
+
+  hRes = Punycode_Decode(cStrDestW, GetDomain());
+  if (FAILED(hRes) && hRes != E_OUTOFMEMORY)
+    hRes = MX::Utf8_Decode(cStrDestW, GetDomain());
+  if (FAILED(hRes) && hRes != E_OUTOFMEMORY)
+  {
+    if (cStrDestW.Copy(GetDomain()) == FALSE)
+      hRes = E_OUTOFMEMORY;
+  }
+  if (FAILED(hRes))
+    cStrDestW.Empty();
+  return hRes;
 }
 
 HRESULT CHttpCookie::SetPath(_In_z_ LPCSTR szPathA)

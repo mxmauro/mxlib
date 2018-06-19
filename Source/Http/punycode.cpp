@@ -156,8 +156,8 @@ HRESULT Punycode_Decode(_Inout_ CStringW &cStrDestW, _In_z_ LPCSTR szSrcA, _In_o
   }
 
   //reverse-search for delimiter in input
-  for (p=szSrcA+nSrcLen; p>szSrcA && *(p-1)!='-'; p--);
-  if (p == szSrcA)
+  p = StrNChrA(szSrcA, '-', nSrcLen, TRUE);
+  if (p == NULL)
   {
     //no delimiter found
     for (i=0; i<nSrcLen; i++)

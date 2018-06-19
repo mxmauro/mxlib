@@ -309,7 +309,16 @@ HRESULT CUrl::SetHost(_In_z_ LPCSTR szHostA, _In_opt_ SIZE_T nHostLen)
     //convert to punycode
     hRes = Decode(cStrTempA, szHostA, nHostLen);
     if (SUCCEEDED(hRes))
+    {
       hRes = Punycode_Decode(cStrTempW, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+      if (FAILED(hRes) && hRes != E_OUTOFMEMORY)
+        hRes = MX::Utf8_Decode(cStrTempW, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+      if (FAILED(hRes) && hRes != E_OUTOFMEMORY)
+      {
+        if (cStrTempW.CopyN((LPCSTR)cStrTempA, cStrTempA.GetLength()) == FALSE)
+          hRes = E_OUTOFMEMORY;
+      }
+    }
     if (FAILED(hRes))
       return hRes;
     if (IsValidHostAddress((LPCWSTR)cStrTempW, cStrTempW.GetLength()) == FALSE)
