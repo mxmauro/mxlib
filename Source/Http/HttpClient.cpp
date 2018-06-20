@@ -1012,6 +1012,8 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl)
       return E_OUTOFMEMORY;
   }
 
+  cResponse.ResetForNewRequest();
+
   //check where we should connect
   szConnectHostW = NULL;
   nConnectPort = 0;

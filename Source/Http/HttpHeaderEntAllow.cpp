@@ -114,7 +114,7 @@ HRESULT CHttpHeaderEntAllow::AddVerb(_In_z_ LPCSTR szVerbA)
   if (*SkipSpaces(szVerbA) != 0)
     return MX_E_InvalidData;
   //convert to uppercase, validate and set new value
-  if (cStrTempA.Copy(szVerbA) == FALSE)
+  if (cStrTempA.CopyN(szStartA, (SIZE_T)(szEndA - szStartA)) == FALSE)
     return E_OUTOFMEMORY;
   StrToUpperA((LPSTR)cStrTempA);
   if (CHttpCommon::IsValidVerb((LPSTR)cStrTempA) == FALSE)
