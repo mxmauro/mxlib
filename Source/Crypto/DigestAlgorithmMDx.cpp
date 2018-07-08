@@ -48,12 +48,6 @@ namespace MX {
 CDigestAlgorithmMessageDigest::CDigestAlgorithmMessageDigest() : CBaseDigestAlgorithm()
 {
   lpInternalData = NULL;
-  if (Internals::OpenSSL::Init() != FALSE)
-  {
-    lpInternalData = MX_MALLOC(sizeof(MDx_DATA));
-    if (lpInternalData != NULL)
-      MemSet(lpInternalData, 0, sizeof(MDx_DATA));
-  }
   return;
 }
 
@@ -76,14 +70,24 @@ HRESULT CDigestAlgorithmMessageDigest::BeginDigest()
 HRESULT CDigestAlgorithmMessageDigest::BeginDigest(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey,
                                                    _In_opt_ SIZE_T nKeyLen)
 {
+  HRESULT hRes;
+
   if (nAlgorithm != AlgorithmMD2 && nAlgorithm != AlgorithmMD4 && nAlgorithm != AlgorithmMD5)
     return E_INVALIDARG;
   if (lpKey == NULL && nKeyLen > 0)
     return E_POINTER;
   if (nKeyLen > 0x7FFFFFFFF)
     return E_INVALIDARG;
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
+  {
+    lpInternalData = MX_MALLOC(sizeof(MDx_DATA));
+    if (lpInternalData == NULL)
+      return E_OUTOFMEMORY;
+    MemSet(lpInternalData, 0, sizeof(MDx_DATA));
+  }
   CleanUp(TRUE);
   //create context
   mdx_data->lpMdCtx = EVP_MD_CTX_new();
@@ -134,9 +138,7 @@ HRESULT CDigestAlgorithmMessageDigest::DigestStream(_In_ LPCVOID lpData, _In_ SI
 {
   if (lpData == NULL && nDataLength > 0)
     return E_POINTER;
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (mdx_data->lpMdCtx == NULL)
+  if (lpInternalData == NULL || mdx_data->lpMdCtx == NULL)
     return MX_E_NotReady;
   EVP_DigestUpdate(mdx_data->lpMdCtx, lpData, nDataLength);
   return S_OK;
@@ -146,9 +148,7 @@ HRESULT CDigestAlgorithmMessageDigest::EndDigest()
 {
   unsigned int nOutputSize;
 
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (mdx_data->lpMdCtx == NULL)
+  if (lpInternalData == NULL || mdx_data->lpMdCtx == NULL)
     return MX_E_NotReady;
   if (mdx_data->lpKey == NULL)
     EVP_DigestFinal_ex(mdx_data->lpMdCtx, mdx_data->aOutput, &nOutputSize);

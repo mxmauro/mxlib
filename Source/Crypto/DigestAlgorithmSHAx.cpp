@@ -48,12 +48,6 @@ namespace MX {
 CDigestAlgorithmSecureHash::CDigestAlgorithmSecureHash() : CBaseDigestAlgorithm()
 {
   lpInternalData = NULL;
-  if (Internals::OpenSSL::Init() != FALSE)
-  {
-    lpInternalData = MX_MALLOC(sizeof(SHAx_DATA));
-    if (lpInternalData != NULL)
-      MemSet(lpInternalData, 0, sizeof(SHAx_DATA));
-  }
   return;
 }
 
@@ -76,15 +70,27 @@ HRESULT CDigestAlgorithmSecureHash::BeginDigest()
 HRESULT CDigestAlgorithmSecureHash::BeginDigest(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey,
                                                 _In_opt_ SIZE_T nKeyLen)
 {
+  HRESULT hRes;
+
   if (nAlgorithm != AlgorithmSHA1 && nAlgorithm != AlgorithmSHA224 && nAlgorithm != AlgorithmSHA256 &&
       nAlgorithm != AlgorithmSHA384 && nAlgorithm != AlgorithmSHA512)
+  {
     return E_INVALIDARG;
+  }
   if (lpKey == NULL && nKeyLen > 0)
     return E_POINTER;
   if (nKeyLen > 0x7FFFFFFFF)
     return E_INVALIDARG;
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
+  {
+    lpInternalData = MX_MALLOC(sizeof(SHAx_DATA));
+    if (lpInternalData == NULL)
+      return E_OUTOFMEMORY;
+    MemSet(lpInternalData, 0, sizeof(SHAx_DATA));
+  }
   CleanUp(TRUE);
   //create context
   shax_data->lpMdCtx = EVP_MD_CTX_new();
@@ -135,9 +141,7 @@ HRESULT CDigestAlgorithmSecureHash::DigestStream(_In_ LPCVOID lpData, _In_ SIZE_
 {
   if (lpData == NULL && nDataLength > 0)
     return E_POINTER;
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (shax_data->lpMdCtx == NULL)
+  if (lpInternalData == NULL || shax_data->lpMdCtx == NULL)
     return MX_E_NotReady;
   EVP_DigestUpdate(shax_data->lpMdCtx, lpData, nDataLength);
   return S_OK;
@@ -147,9 +151,7 @@ HRESULT CDigestAlgorithmSecureHash::EndDigest()
 {
   unsigned int nOutputSize;
 
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (shax_data->lpMdCtx == NULL)
+  if (lpInternalData == NULL || shax_data->lpMdCtx == NULL)
     return MX_E_NotReady;
   if (shax_data->lpKey == NULL)
     EVP_DigestFinal_ex(shax_data->lpMdCtx, shax_data->aOutput, &nOutputSize);

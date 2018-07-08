@@ -53,12 +53,6 @@ namespace MX {
 CCryptoAES::CCryptoAES() : CBaseCrypto()
 {
   lpInternalData = NULL;
-  if (Internals::OpenSSL::Init() != FALSE)
-  {
-    lpInternalData = MX_MALLOC(sizeof(AES_DATA));
-    if (lpInternalData != NULL)
-      MemSet(lpInternalData, 0, sizeof(AES_DATA));
-  }
   return;
 }
 
@@ -82,15 +76,27 @@ HRESULT CCryptoAES::BeginEncrypt()
 HRESULT CCryptoAES::BeginEncrypt(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey, _In_opt_ SIZE_T nKeyLen,
                                  _In_opt_ LPCVOID lpInitVector, _In_opt_ BOOL bUsePadding)
 {
+  HRESULT hRes;
+
   if (nAlgorithm != AlgorithmAes128Ecb && nAlgorithm != AlgorithmAes128Cbc && nAlgorithm != AlgorithmAes128Cfb &&
       nAlgorithm != AlgorithmAes128Ofb && nAlgorithm != AlgorithmAes128Cfb1 && nAlgorithm != AlgorithmAes128Cfb8 &&
       nAlgorithm != AlgorithmAes192Ecb && nAlgorithm != AlgorithmAes192Cbc && nAlgorithm != AlgorithmAes192Cfb &&
       nAlgorithm != AlgorithmAes192Ofb && nAlgorithm != AlgorithmAes192Cfb1 && nAlgorithm != AlgorithmAes192Cfb8 &&
       nAlgorithm != AlgorithmAes256Ecb && nAlgorithm != AlgorithmAes256Cbc && nAlgorithm != AlgorithmAes256Cfb &&
       nAlgorithm != AlgorithmAes256Ofb && nAlgorithm != AlgorithmAes256Cfb1 && nAlgorithm != AlgorithmAes256Cfb8)
+  {
     return E_INVALIDARG;
+  }
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
+  {
+    lpInternalData = MX_MALLOC(sizeof(AES_DATA));
+    if (lpInternalData == NULL)
+      return E_OUTOFMEMORY;
+    MemSet(lpInternalData, 0, sizeof(AES_DATA));
+  }
   CleanUp(TRUE, TRUE);
   //create context
   aes_data->sEncryptor.lpCipherCtx = EVP_CIPHER_CTX_new();
@@ -159,9 +165,7 @@ HRESULT CCryptoAES::EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 
   if (lpData == NULL && nDataLength > 0)
     return E_POINTER;
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (aes_data->sEncryptor.lpCipherCtx == NULL)
+  if (lpInternalData == NULL || aes_data->sEncryptor.lpCipherCtx == NULL)
     return MX_E_NotReady;
   lpIn = (LPBYTE)lpData;
   while (nDataLength > 0)
@@ -193,9 +197,7 @@ HRESULT CCryptoAES::EndEncrypt()
   int nOutSize;
   HRESULT hRes;
 
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (aes_data->sEncryptor.lpCipherCtx == NULL)
+  if (lpInternalData == NULL || aes_data->sEncryptor.lpCipherCtx == NULL)
     return MX_E_NotReady;
   if (EVP_EncryptFinal_ex(aes_data->sEncryptor.lpCipherCtx, aes_data->sEncryptor.lpTempOutputBuf, &nOutSize) <= 0)
   {
@@ -223,15 +225,27 @@ HRESULT CCryptoAES::BeginDecrypt()
 HRESULT CCryptoAES::BeginDecrypt(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey, _In_opt_ SIZE_T nKeyLen,
                                  _In_opt_ LPCVOID lpInitVector, _In_opt_ BOOL bUsePadding)
 {
+  HRESULT hRes;
+
   if (nAlgorithm != AlgorithmAes128Ecb && nAlgorithm != AlgorithmAes128Cbc && nAlgorithm != AlgorithmAes128Cfb &&
       nAlgorithm != AlgorithmAes128Ofb && nAlgorithm != AlgorithmAes128Cfb1 && nAlgorithm != AlgorithmAes128Cfb8 &&
       nAlgorithm != AlgorithmAes192Ecb && nAlgorithm != AlgorithmAes192Cbc && nAlgorithm != AlgorithmAes192Cfb &&
       nAlgorithm != AlgorithmAes192Ofb && nAlgorithm != AlgorithmAes192Cfb1 && nAlgorithm != AlgorithmAes192Cfb8 &&
       nAlgorithm != AlgorithmAes256Ecb && nAlgorithm != AlgorithmAes256Cbc && nAlgorithm != AlgorithmAes256Cfb &&
       nAlgorithm != AlgorithmAes256Ofb && nAlgorithm != AlgorithmAes256Cfb1 && nAlgorithm != AlgorithmAes256Cfb8)
+  {
     return E_INVALIDARG;
+  }
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
+  {
+    lpInternalData = MX_MALLOC(sizeof(AES_DATA));
+    if (lpInternalData == NULL)
+      return E_OUTOFMEMORY;
+    MemSet(lpInternalData, 0, sizeof(AES_DATA));
+  }
   CleanUp(FALSE, TRUE);
   //create context
   aes_data->sDecryptor.lpCipherCtx = EVP_CIPHER_CTX_new();
@@ -300,9 +314,7 @@ HRESULT CCryptoAES::DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 
   if (lpData == NULL && nDataLength > 0)
     return E_POINTER;
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (aes_data->sDecryptor.lpCipherCtx == NULL)
+  if (lpInternalData == NULL || aes_data->sDecryptor.lpCipherCtx == NULL)
     return MX_E_NotReady;
   lpIn = (LPBYTE)lpData;
   while (nDataLength > 0)
@@ -334,9 +346,7 @@ HRESULT CCryptoAES::EndDecrypt()
   int nOutSize;
   HRESULT hRes;
 
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (aes_data->sDecryptor.lpCipherCtx == NULL)
+  if (lpInternalData == NULL || aes_data->sDecryptor.lpCipherCtx == NULL)
     return MX_E_NotReady;
   if (EVP_DecryptFinal_ex(aes_data->sDecryptor.lpCipherCtx, aes_data->sDecryptor.lpTempOutputBuf, &nOutSize) <= 0)
   {

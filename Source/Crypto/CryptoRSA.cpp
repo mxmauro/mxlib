@@ -84,12 +84,6 @@ namespace MX {
 CCryptoRSA::CCryptoRSA() : CBaseCrypto()
 {
   lpInternalData = NULL;
-  if (Internals::OpenSSL::Init() != FALSE)
-  {
-    lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
-    if (lpInternalData != NULL)
-      MemSet(lpInternalData, 0, sizeof(RSA_DATA));
-  }
   return;
 }
 
@@ -113,12 +107,23 @@ HRESULT CCryptoRSA::GenerateKeys(_In_ SIZE_T nBitsCount)
 {
   BIGNUM *lpBn;
   RSA *lpRsa;
+  HRESULT hRes;
 
   if (nBitsCount < 512 || nBitsCount > 65536 ||
      (nBitsCount && !(nBitsCount & (nBitsCount - 1))) == 0)
+  {
     return E_INVALIDARG;
+  }
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
+  {
+    lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
+    if (lpInternalData == NULL)
+      return E_OUTOFMEMORY;
+    MemSet(lpInternalData, 0, sizeof(RSA_DATA));
+  }
   if (rsa_data->sEncryptor.lpInputBuf != NULL || rsa_data->sDecryptor.lpInputBuf != NULL ||
       rsa_data->sSignContext.lpSigner != NULL || rsa_data->sVerifyContext.lpVerifier != NULL)
   {
@@ -178,8 +183,16 @@ HRESULT CCryptoRSA::SetPublicKeyFromDER(_In_ LPCVOID lpKey, _In_ SIZE_T nKeySize
     return E_POINTER;
   if (nKeySize == 0 || nKeySize > 0x7FFFFFFF)
     return E_INVALIDARG;
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
+  {
+    lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
+    if (lpInternalData == NULL)
+      return E_OUTOFMEMORY;
+    MemSet(lpInternalData, 0, sizeof(RSA_DATA));
+  }
   if (rsa_data->sEncryptor.lpInputBuf != NULL || rsa_data->sDecryptor.lpInputBuf != NULL ||
       rsa_data->sSignContext.lpSigner != NULL || rsa_data->sVerifyContext.lpVerifier != NULL)
   {
@@ -276,9 +289,8 @@ HRESULT CCryptoRSA::SetPublicKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR 
     nPemLen = StrLenA(szPemA);
   if (nPemLen == 0)
     return E_INVALIDARG;
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (rsa_data->sEncryptor.lpInputBuf != NULL || rsa_data->sDecryptor.lpInputBuf != NULL ||
+  if (lpInternalData == NULL ||
+      rsa_data->sEncryptor.lpInputBuf != NULL || rsa_data->sDecryptor.lpInputBuf != NULL ||
       rsa_data->sSignContext.lpSigner != NULL || rsa_data->sVerifyContext.lpVerifier != NULL)
   {
     return MX_E_Busy;
@@ -365,8 +377,16 @@ HRESULT CCryptoRSA::SetPrivateKeyFromDER(_In_ LPCVOID lpKey, _In_ SIZE_T nKeySiz
     return E_POINTER;
   if (nKeySize == 0 || nKeySize > 0x7FFFFFFF)
     return E_INVALIDARG;
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
+  {
+    lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
+    if (lpInternalData == NULL)
+      return E_OUTOFMEMORY;
+    MemSet(lpInternalData, 0, sizeof(RSA_DATA));
+  }
   if (rsa_data->sEncryptor.lpInputBuf != NULL || rsa_data->sDecryptor.lpInputBuf != NULL ||
       rsa_data->sSignContext.lpSigner != NULL || rsa_data->sVerifyContext.lpVerifier != NULL)
   {
@@ -456,6 +476,7 @@ HRESULT CCryptoRSA::SetPrivateKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR
   BIO *lpBio;
   EVP_PKEY *lpEvpKey;
   RSA *lpRsa, *lpTempRsa;
+  HRESULT hRes;
 
   if (szPemA == NULL)
     return E_POINTER;
@@ -463,8 +484,16 @@ HRESULT CCryptoRSA::SetPrivateKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR
     nPemLen = StrLenA(szPemA);
   if (nPemLen == 0)
     return E_INVALIDARG;
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
+  {
+    lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
+    if (lpInternalData == NULL)
+      return E_OUTOFMEMORY;
+    MemSet(lpInternalData, 0, sizeof(RSA_DATA));
+  }
   if (rsa_data->sEncryptor.lpInputBuf != NULL || rsa_data->sDecryptor.lpInputBuf != NULL ||
       rsa_data->sSignContext.lpSigner != NULL || rsa_data->sVerifyContext.lpVerifier != NULL)
   {
@@ -549,6 +578,7 @@ HRESULT CCryptoRSA::BeginEncrypt()
 HRESULT CCryptoRSA::BeginEncrypt(_In_ ePadding nPadding, _In_opt_ BOOL bUsePublicKey)
 {
   int padSize, padding;
+  HRESULT hRes;
 
   switch (nPadding)
   {
@@ -571,8 +601,16 @@ HRESULT CCryptoRSA::BeginEncrypt(_In_ ePadding nPadding, _In_opt_ BOOL bUsePubli
     default:
       return E_INVALIDARG;
   }
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
+  {
+    lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
+    if (lpInternalData == NULL)
+      return E_OUTOFMEMORY;
+    MemSet(lpInternalData, 0, sizeof(RSA_DATA));
+  }
   if (rsa_data->lpRsa == NULL)
     return MX_E_NotReady;
   if (bUsePublicKey == FALSE && HasPrivateKey() == FALSE)
@@ -602,9 +640,7 @@ HRESULT CCryptoRSA::EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 
   if (lpData == NULL && nDataLength > 0)
     return E_POINTER;
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (rsa_data->sEncryptor.lpInputBuf == NULL)
+  if (lpInternalData == NULL || rsa_data->sEncryptor.lpInputBuf == NULL)
     return MX_E_NotReady;
   nMaxData = rsa_data->sEncryptor.nMaxInputSize - rsa_data->sEncryptor.nCurrInputSize;
   if (nDataLength > nMaxData)
@@ -622,9 +658,7 @@ HRESULT CCryptoRSA::EndEncrypt()
   int r;
   HRESULT hRes;
 
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (rsa_data->sEncryptor.lpInputBuf == NULL)
+  if (lpInternalData == NULL || rsa_data->sEncryptor.lpInputBuf == NULL)
     return MX_E_NotReady;
   ERR_clear_error();
   if (rsa_data->sEncryptor.bUsePrivateKey != FALSE)
@@ -661,6 +695,7 @@ HRESULT CCryptoRSA::BeginDecrypt()
 HRESULT CCryptoRSA::BeginDecrypt(_In_ ePadding nPadding, _In_opt_ BOOL bUsePrivateKey)
 {
   int padding;
+  HRESULT hRes;
 
   switch (nPadding)
   {
@@ -679,8 +714,16 @@ HRESULT CCryptoRSA::BeginDecrypt(_In_ ePadding nPadding, _In_opt_ BOOL bUsePriva
     default:
       return E_INVALIDARG;
   }
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
+  {
+    lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
+    if (lpInternalData == NULL)
+      return E_OUTOFMEMORY;
+    MemSet(lpInternalData, 0, sizeof(RSA_DATA));
+  }
   if (rsa_data->lpRsa == NULL)
     return MX_E_NotReady;
   if (bUsePrivateKey != FALSE && HasPrivateKey() == FALSE)
@@ -710,9 +753,7 @@ HRESULT CCryptoRSA::DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 
   if (lpData == NULL && nDataLength > 0)
     return E_POINTER;
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (rsa_data->sDecryptor.lpInputBuf == NULL)
+  if (lpInternalData == NULL || rsa_data->sDecryptor.lpInputBuf == NULL)
     return MX_E_NotReady;
   nMaxData = rsa_data->sDecryptor.nMaxInputSize - rsa_data->sDecryptor.nCurrInputSize;
   if (nDataLength > nMaxData)
@@ -730,9 +771,7 @@ HRESULT CCryptoRSA::EndDecrypt()
   int r;
   HRESULT hRes;
 
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (rsa_data->sDecryptor.lpInputBuf == NULL)
+  if (lpInternalData == NULL || rsa_data->sDecryptor.lpInputBuf == NULL)
     return MX_E_NotReady;
   ERR_clear_error();
   if (rsa_data->sDecryptor.bUsePrivateKey != FALSE)
@@ -775,8 +814,16 @@ HRESULT CCryptoRSA::BeginSign(_In_ eHashAlgorithm nAlgorithm)
   hRes = GetDigest(nAlgorithm, md_type, &cDigest);
   if (FAILED(hRes))
     return hRes;
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
+  {
+    lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
+    if (lpInternalData == NULL)
+      return E_OUTOFMEMORY;
+    MemSet(lpInternalData, 0, sizeof(RSA_DATA));
+  }
   if (rsa_data->lpRsa == NULL)
     return MX_E_NotReady;
   if (HasPrivateKey() == FALSE)
@@ -802,8 +849,16 @@ HRESULT CCryptoRSA::SignStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 
   if (lpData == NULL && nDataLength > 0)
     return E_POINTER;
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
+  {
+    lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
+    if (lpInternalData == NULL)
+      return E_OUTOFMEMORY;
+    MemSet(lpInternalData, 0, sizeof(RSA_DATA));
+  }
   if (rsa_data->sSignContext.lpSigner == NULL)
     return MX_E_NotReady;
   hRes = rsa_data->sSignContext.lpSigner->DigestStream(lpData, nDataLength);
@@ -821,9 +876,7 @@ HRESULT CCryptoRSA::EndSign()
   unsigned int siglen;
   HRESULT hRes;
 
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (rsa_data->sSignContext.lpSigner == NULL)
+  if (lpInternalData == NULL || rsa_data->sSignContext.lpSigner == NULL)
     return MX_E_NotReady;
   hRes = rsa_data->sSignContext.lpSigner->EndDigest();
   if (FAILED(hRes))
@@ -869,8 +922,16 @@ HRESULT CCryptoRSA::BeginVerify(_In_ eHashAlgorithm nAlgorithm)
   hRes = GetDigest(nAlgorithm, md_type, &cDigest);
   if (FAILED(hRes))
     return hRes;
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
+  {
+    lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
+    if (lpInternalData == NULL)
+      return E_OUTOFMEMORY;
+    MemSet(lpInternalData, 0, sizeof(RSA_DATA));
+  }
   if (rsa_data->lpRsa == NULL)
     return MX_E_NotReady;
   if (HasPrivateKey() == FALSE)
@@ -889,9 +950,7 @@ HRESULT CCryptoRSA::VerifyStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 
   if (lpData == NULL && nDataLength > 0)
     return E_POINTER;
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (rsa_data->sVerifyContext.lpVerifier == NULL)
+  if (lpInternalData == NULL || rsa_data->sVerifyContext.lpVerifier == NULL)
     return MX_E_NotReady;
   hRes = rsa_data->sVerifyContext.lpVerifier->DigestStream(lpData, nDataLength);
   if (FAILED(hRes))
@@ -911,9 +970,7 @@ HRESULT CCryptoRSA::EndVerify(_In_ LPCVOID lpSignature, _In_ SIZE_T nSignatureLe
     return E_POINTER;
   if (nSignatureLen == 0 || nSignatureLen > 0x7FFFFFFF)
     return E_INVALIDARG;
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (rsa_data->sVerifyContext.lpVerifier == NULL)
+  if (lpInternalData == NULL || rsa_data->sVerifyContext.lpVerifier == NULL)
     return MX_E_NotReady;
   hRes = rsa_data->sVerifyContext.lpVerifier->EndDigest();
   if (FAILED(hRes))

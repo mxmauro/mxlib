@@ -34,7 +34,6 @@
 #include <functional>
 
 namespace DukTape {
-#define DUK_OPT_HAVE_CUSTOM_H
 #include "DukTape\duktape.h"
 } //namespace DukTape
 #include "..\Debug.h"

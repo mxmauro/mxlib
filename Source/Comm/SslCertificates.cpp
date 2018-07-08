@@ -66,7 +66,11 @@ CSslCertificate& CSslCertificate::operator=(_In_ const CSslCertificate& cSrc) th
   if (this != &cSrc)
   {
     X509 *lpNewX509;
+    HRESULT hRes;
 
+    hRes = Internals::OpenSSL::Init();
+    if (FAILED(hRes))
+      throw (LONG)hRes;
     //duplicate
     lpNewX509 = NULL;
     if (cSrc.lpX509 != NULL)
@@ -287,7 +291,11 @@ HRESULT CSslCertificateCrl::operator=(const CSslCertificateCrl& cSrc)
   if (this != &cSrc)
   {
     X509_CRL *lpNewX509Crl;
+    HRESULT hRes;
 
+    hRes = Internals::OpenSSL::Init();
+    if (FAILED(hRes))
+      throw (LONG)hRes;
     //duplicate
     lpNewX509Crl = NULL;
     if (cSrc.lpX509Crl != NULL)

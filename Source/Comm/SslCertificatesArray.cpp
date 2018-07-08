@@ -110,7 +110,9 @@ HRESULT CSslCertificateArray::AddFromMemory(_In_ LPCVOID lpData, _In_ SIZE_T nDa
     return E_POINTER;
   if (nDataLen == 0)
     return S_OK;
-
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   if (((LPBYTE)lpData)[0] == (V_ASN1_CONSTRUCTED | V_ASN1_SEQUENCE) &&
       Asn1_ValidateLength((LPBYTE)lpData + 1, (LPBYTE)lpData + nDataLen) != FALSE)
   {
@@ -396,6 +398,9 @@ HRESULT CSslCertificate::InitializeFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDat
   if (nDataLen == 0 || nDataLen > 0x7FFFFFFF)
     return E_INVALIDARG;
   //----
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   ERR_clear_error();
   buf = (unsigned char*)lpData;
   lpNewX509 = d2i_X509(NULL, &buf, (long)nDataLen);
@@ -431,6 +436,7 @@ HRESULT CSslCertificate::InitializeFromPEM(_In_ LPCSTR szPemA, _In_opt_z_ LPCSTR
 {
   X509 *lpNewX509;
   BIO *lpBio;
+  HRESULT hRes;
 
   if (szPemA == NULL)
     return E_POINTER;
@@ -439,6 +445,9 @@ HRESULT CSslCertificate::InitializeFromPEM(_In_ LPCSTR szPemA, _In_opt_z_ LPCSTR
   if (nPemLen == 0 || nPemLen > 0x7FFFFFFF)
     return E_INVALIDARG;
   //----
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   ERR_clear_error();
   lpBio = BIO_new_mem_buf((void*)szPemA, (int)nPemLen);
   if (lpBio == NULL)
@@ -466,8 +475,10 @@ HRESULT CSslCertificateArray::AddCertificateFromDER(_In_ LPCVOID lpData, _In_ SI
     return E_POINTER;
   if (nDataLen == 0 || nDataLen > 0x7FFFFFFF)
     return E_INVALIDARG;
-
   //check if we are dealing with a PKCS12 certificate
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   ERR_clear_error();
   buf = (const unsigned char *)lpData;
   lpPkcs12 = d2i_PKCS12(NULL, &buf, (long)nDataLen);
@@ -660,12 +671,16 @@ HRESULT CSslCertificateCrl::InitializeFromDER(_In_ LPCVOID lpData, _In_ SIZE_T n
 {
   X509_CRL *lpNewX509Crl;
   BIO *lpBio;
+  HRESULT hRes;
 
   if (lpData == NULL)
     return E_POINTER;
   if (nDataLen == 0 || nDataLen > 0x7FFFFFFF)
     return E_INVALIDARG;
   //----
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   ERR_clear_error();
   lpBio = BIO_new_mem_buf((void*)lpData, (int)nDataLen);
   if (lpBio == NULL)
@@ -686,6 +701,7 @@ HRESULT CSslCertificateCrl::InitializeFromPEM(_In_ LPCSTR szPemA, _In_opt_z_ LPC
 {
   X509_CRL *lpNewX509Crl;
   BIO *lpBio;
+  HRESULT hRes;
 
   if (szPemA == NULL)
     return E_POINTER;
@@ -694,6 +710,9 @@ HRESULT CSslCertificateCrl::InitializeFromPEM(_In_ LPCSTR szPemA, _In_opt_z_ LPC
   if (nPemLen == 0 || nPemLen > 0x7FFFFFFF)
     return E_INVALIDARG;
   //----
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   ERR_clear_error();
   lpBio = BIO_new_mem_buf((void*)szPemA, (int)nPemLen);
   if (lpBio == NULL)
@@ -829,7 +848,7 @@ static int InitializeFromPEM_PasswordCallback(char *buf, int size, int rwflag, v
 {
   SIZE_T nPassLen;
 
-  nPassLen = MX::StrLenA((LPSTR)userdata);
+  nPassLen = MX::StrLenA((LPCSTR)userdata);
   if (size < 0)
     size = 0;
   if (nPassLen > (SIZE_T)size)

@@ -81,9 +81,9 @@ namespace Internals {
 
 namespace OpenSSL {
 
-BOOL Init()
+HRESULT Init()
 {
-  return (SUCCEEDED(_OpenSSL_Init())) ? TRUE : FALSE;
+  return _OpenSSL_Init();
 }
 
 HRESULT GetLastErrorCode(_In_ BOOL bDefaultIsInvalidData)

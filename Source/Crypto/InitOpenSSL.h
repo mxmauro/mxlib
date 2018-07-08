@@ -38,7 +38,7 @@ namespace Internals {
 
 namespace OpenSSL {
 
-BOOL Init();
+HRESULT Init();
 
 HRESULT GetLastErrorCode(_In_ BOOL bDefaultIsInvalidData);
 

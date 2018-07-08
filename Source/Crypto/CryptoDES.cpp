@@ -53,12 +53,6 @@ namespace MX {
 CCryptoDES::CCryptoDES() : CBaseCrypto()
 {
   lpInternalData = NULL;
-  if (Internals::OpenSSL::Init() != FALSE)
-  {
-    lpInternalData = MX_MALLOC(sizeof(DES_DATA));
-    if (lpInternalData != NULL)
-      MemSet(lpInternalData, 0, sizeof(DES_DATA));
-  }
   return;
 }
 
@@ -82,14 +76,26 @@ HRESULT CCryptoDES::BeginEncrypt()
 HRESULT CCryptoDES::BeginEncrypt(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey, _In_opt_ SIZE_T nKeyLen,
                                  _In_opt_ LPCVOID lpInitVector, _In_opt_ BOOL bUsePadding)
 {
+  HRESULT hRes;
+
   if (nAlgorithm != AlgorithmDesEcb && nAlgorithm != AlgorithmDesCbc && nAlgorithm != AlgorithmDesCfb &&
       nAlgorithm != AlgorithmDesOfb && nAlgorithm != AlgorithmDesCfb1 && nAlgorithm != AlgorithmDesCfb8 &&
       nAlgorithm != AlgorithmTripleDesEcb && nAlgorithm != AlgorithmTripleDesCbc &&
       nAlgorithm != AlgorithmTripleDesCfb && nAlgorithm != AlgorithmTripleDesOfb &&
       nAlgorithm != AlgorithmTripleDesCfb1 && nAlgorithm != AlgorithmTripleDesCfb8)
+  {
     return E_INVALIDARG;
+  }
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
+  {
+    lpInternalData = MX_MALLOC(sizeof(DES_DATA));
+    if (lpInternalData == NULL)
+      return E_OUTOFMEMORY;
+    MemSet(lpInternalData, 0, sizeof(DES_DATA));
+  }
   CleanUp(TRUE, TRUE);
   //create context
   des_data->sEncryptor.lpCipherCtx = EVP_CIPHER_CTX_new();
@@ -158,9 +164,7 @@ HRESULT CCryptoDES::EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 
   if (lpData == NULL && nDataLength > 0)
     return E_POINTER;
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (des_data->sEncryptor.lpCipherCtx == NULL)
+  if (lpInternalData == NULL || des_data->sEncryptor.lpCipherCtx == NULL)
     return MX_E_NotReady;
   lpIn = (LPBYTE)lpData;
   while (nDataLength > 0)
@@ -192,9 +196,7 @@ HRESULT CCryptoDES::EndEncrypt()
   int nOutSize;
   HRESULT hRes;
 
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (des_data->sEncryptor.lpCipherCtx == NULL)
+  if (lpInternalData == NULL || des_data->sEncryptor.lpCipherCtx == NULL)
     return MX_E_NotReady;
   if (EVP_EncryptFinal_ex(des_data->sEncryptor.lpCipherCtx, des_data->sEncryptor.lpTempOutputBuf, &nOutSize) <= 0)
   {
@@ -222,15 +224,27 @@ HRESULT CCryptoDES::BeginDecrypt()
 HRESULT CCryptoDES::BeginDecrypt(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey, _In_opt_ SIZE_T nKeyLen,
                                  _In_opt_ LPCVOID lpInitVector, _In_opt_ BOOL bUsePadding)
 {
+  HRESULT hRes;
+
   if (nAlgorithm != AlgorithmDesEcb && nAlgorithm != AlgorithmDesCbc && nAlgorithm != AlgorithmDesCfb &&
       nAlgorithm != AlgorithmDesOfb && nAlgorithm != AlgorithmDesCfb1 && nAlgorithm != AlgorithmDesCfb8 &&
       nAlgorithm != AlgorithmTripleDesEcb && nAlgorithm != AlgorithmTripleDesCbc &&
       nAlgorithm != AlgorithmTripleDesCfb && nAlgorithm != AlgorithmTripleDesOfb &&
       nAlgorithm != AlgorithmTripleDesCfb1 && nAlgorithm != AlgorithmTripleDesCfb8)
+  {
     return E_INVALIDARG;
+  }
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  EndDecrypt();
+  {
+    lpInternalData = MX_MALLOC(sizeof(DES_DATA));
+    if (lpInternalData == NULL)
+      return E_OUTOFMEMORY;
+    MemSet(lpInternalData, 0, sizeof(DES_DATA));
+  }
+  CleanUp(FALSE, TRUE);
   //create context
   des_data->sDecryptor.lpCipherCtx = EVP_CIPHER_CTX_new();
   if (des_data->sDecryptor.lpCipherCtx == NULL)
@@ -298,9 +312,7 @@ HRESULT CCryptoDES::DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 
   if (lpData == NULL && nDataLength > 0)
     return E_POINTER;
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (des_data->sDecryptor.lpCipherCtx == NULL)
+  if (lpInternalData == NULL || des_data->sDecryptor.lpCipherCtx == NULL)
     return MX_E_NotReady;
   lpIn = (LPBYTE)lpData;
   while (nDataLength > 0)
@@ -332,9 +344,7 @@ HRESULT CCryptoDES::EndDecrypt()
   int nOutSize;
   HRESULT hRes;
 
-  if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
-  if (des_data->sDecryptor.lpCipherCtx == NULL)
+  if (lpInternalData == NULL || des_data->sDecryptor.lpCipherCtx == NULL)
     return MX_E_NotReady;
   if (EVP_DecryptFinal_ex(des_data->sDecryptor.lpCipherCtx, des_data->sDecryptor.lpTempOutputBuf, &nOutSize) <= 0)
   {

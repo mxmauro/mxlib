@@ -107,12 +107,6 @@ CIpcSslLayer::CIpcSslLayer() : CIpc::CLayer()
   _InterlockedExchange(&nMutex, 0);
   _InterlockedExchange(&hNetworkError, 0);
   lpInternalData = NULL;
-  if (Internals::OpenSSL::Init() != FALSE)
-  {
-    lpInternalData = MX_MALLOC(sizeof(SSL_LAYER_DATA));
-    if (lpInternalData != NULL)
-      MemSet(lpInternalData, 0, sizeof(SSL_LAYER_DATA));
-  }
   return;
 }
 
@@ -144,13 +138,22 @@ HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol
                                  _In_opt_ CCryptoRSA *lpPrivKey)
 {
   X509_STORE *lpStore;
+  HRESULT hRes;
 
   if (nProtocol != ProtocolTLSv1_0 && nProtocol != ProtocolTLSv1_1 && nProtocol != ProtocolTLSv1_2)
     return E_INVALIDARG;
   if (bServerSide != FALSE && lpSelfCert == NULL)
     return E_POINTER;
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
   if (lpInternalData == NULL)
-    return E_OUTOFMEMORY;
+  {
+    lpInternalData = MX_MALLOC(sizeof(SSL_LAYER_DATA));
+    if (lpInternalData == NULL)
+      return E_OUTOFMEMORY;
+    MemSet(lpInternalData, 0, sizeof(SSL_LAYER_DATA));
+  }
   ssl_data->bServerSide = bServerSide;
   ssl_data->nProtocol = nProtocol;
   //create SSL context
@@ -258,7 +261,7 @@ HRESULT CIpcSslLayer::OnConnect()
 HRESULT CIpcSslLayer::OnDisconnect()
 {
   if (lpInternalData == NULL)
-    return E_FAIL;
+    return MX_E_NotReady;
   _InterlockedOr(&(ssl_data->nFlags), FLAG_Disconnected);
   //shutdown
   {
@@ -276,7 +279,7 @@ HRESULT CIpcSslLayer::OnData(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize)
   HRESULT hRes;
 
   if (lpInternalData == NULL)
-    return E_FAIL;
+    return MX_E_NotReady;
   hRes = (HRESULT)__InterlockedRead(&hNetworkError);
   if (FAILED(hRes))
     return hRes;
@@ -301,7 +304,7 @@ HRESULT CIpcSslLayer::OnSendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize)
   HRESULT hRes;
 
   if (lpInternalData == NULL)
-    return E_FAIL;
+    return MX_E_NotReady;
   hRes = (HRESULT)__InterlockedRead(&hNetworkError);
   if (FAILED(hRes))
     return hRes;

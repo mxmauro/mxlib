@@ -36,7 +36,6 @@
 
 #ifdef _MX_JAVASCRIPT_VM_CPP
 
-#define DUK_OPT_HAVE_CUSTOM_H
 #define DUK_COMPILING_DUKTAPE
 #include "..\..\Include\JsLib\JavascriptVM.h"
 
