@@ -744,7 +744,6 @@ VOID CIpc::OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWO
         }
         while (SUCCEEDED(hRes) && lpLayer != NULL)
         {
-          _InterlockedOr(&(lpLayer->nFlags), FLAG_Connected);
           hRes = lpLayer->OnConnect();
           {
             CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));

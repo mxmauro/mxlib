@@ -89,7 +89,6 @@ public:
     CLayer() : CBaseMemObj(), TLnkLstNode<CLayer>()
       {
       lpConn = NULL;
-      _InterlockedExchange(&nFlags, 0);
       return;
       };
 
@@ -112,7 +111,6 @@ public:
 
   private:
     LPVOID lpConn;
-    LONG volatile nFlags;
   };
 
   typedef TLnkLst<CLayer> CLayerList;
