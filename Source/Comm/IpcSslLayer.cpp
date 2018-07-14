@@ -517,8 +517,12 @@ HRESULT CIpcSslLayer::FinalizeHandshake()
     nLen = i2d_X509(lpPeer, NULL);
     lpTempBuf[0] = lpTempBuf[1] = (unsigned char*)OPENSSL_malloc(nLen);
     if (lpTempBuf[0] == NULL)
+    {
+      X509_free(lpPeer);
       return E_OUTOFMEMORY;
+    }
     nLen = i2d_X509(lpPeer, &lpTempBuf[1]);
+    X509_free(lpPeer);
     if (nLen < 0)
     {
       OPENSSL_free(lpTempBuf[0]);
