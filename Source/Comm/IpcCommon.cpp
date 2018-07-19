@@ -43,9 +43,9 @@
 
 namespace MX {
 
-#ifdef IPC_DEBUG_OUTPUT
+#ifdef MX_IPC_DEBUG_OUTPUT
 LONG CIpc::nDebugLevel = 0;
-#endif //IPC_DEBUG_OUTPUT
+#endif //MX_IPC_DEBUG_OUTPUT
 
 CIpc::CIpc(_In_ CIoCompletionPortThreadPool &_cDispatcherPool) : CBaseMemObj(), cDispatcherPool(_cDispatcherPool)
 {
@@ -716,22 +716,22 @@ VOID CIpc::OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWO
   CLayer *lpLayer;
   SIZE_T nReaded;
   HRESULT hRes2;
-#ifdef IPC_DEBUG_OUTPUT
+#ifdef MX_IPC_DEBUG_OUTPUT
   LPVOID lpOrigOverlapped;
   CPacket::eType nOrigOverlappedType;
-#endif //IPC_DEBUG_OUTPUT
+#endif //MX_IPC_DEBUG_OUTPUT
   BOOL bQueueNewRead, bNewReadMode, bJumpFromResumeInputProcessing;
 
   lpPacket = CPacket::FromOverlapped(lpOvr);
   lpConn = lpPacket->GetConn();
   lpConn->AddRef();
-#ifdef IPC_DEBUG_OUTPUT
+#ifdef MX_IPC_DEBUG_OUTPUT
   lpOrigOverlapped = lpPacket->GetOverlapped();
   nOrigOverlappedType = lpPacket->GetType();
   MX_IPC_DEBUG_PRINT(1, ("%lu MX::CIpc::OnDispatcherPacket) Clock=%lums / Conn=0x%p / Ovr=0x%p / Type=%lu / "
                          "Bytes=%lu / Err=0x%08X\n", ::MxGetCurrentThreadId(), lpConn->cHiResTimer.GetElapsedTimeMs(),
                          lpConn, lpPacket->GetOverlapped(), lpPacket->GetType(), dwBytes, hRes));
-#endif //IPC_DEBUG_OUTPUT
+#endif //MX_IPC_DEBUG_OUTPUT
   hRes2 = OnPreprocessPacket(dwBytes, lpPacket, hRes);
   if (hRes2 == S_FALSE)
   {

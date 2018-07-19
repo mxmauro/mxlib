@@ -67,9 +67,9 @@ static BOOL IsContentTypeHeader(_In_z_ LPCSTR szHeaderA);
 
 namespace MX {
 
-#ifdef HTTP_DEBUG_OUTPUT
+#ifdef MX_HTTP_DEBUG_OUTPUT
 LONG CHttpCommon::nDebugLevel = 0;
-#endif //HTTP_DEBUG_OUTPUT
+#endif //MX_HTTP_DEBUG_OUTPUT
 
 CHttpCommon::CHttpCommon(_In_ BOOL _bActAsServer) : CBaseMemObj()
 {

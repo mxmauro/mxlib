@@ -41,18 +41,18 @@
 //-----------------------------------------------------------
 
 #ifdef _DEBUG
-  #define HTTP_DEBUG_OUTPUT
+  #define MX_HTTP_DEBUG_OUTPUT
 #else //_DEBUG
-  //#define HTTP_DEBUG_OUTPUT
+  //#define MX_HTTP_DEBUG_OUTPUT
 #endif //_DEBUG
 
-#ifdef HTTP_DEBUG_OUTPUT
-  #define MX_HTTP_DEBUG_PRINT(level, output) if (level > MX::CHttpCommon::nDebugLevel) {  \
-                                               MX::DebugPrint output;                    \
+#ifdef MX_HTTP_DEBUG_OUTPUT
+  #define MX_HTTP_DEBUG_PRINT(level, output) if (MX::CHttpCommon::nDebugLevel >= level) {  \
+                                               MX::DebugPrint output;                      \
                                              }
-#else //HTTP_DEBUG_OUTPUT
+#else //MX_HTTP_DEBUG_OUTPUT
   #define MX_HTTP_DEBUG_PRINT(level, output)
-#endif //HTTP_DEBUG_OUTPUT
+#endif //MX_HTTP_DEBUG_OUTPUT
 
 //-----------------------------------------------------------
 
@@ -67,9 +67,9 @@ class CHttpCommon : public virtual CBaseMemObj
 public:
   class CContentDecoder;
 
-#ifdef HTTP_DEBUG_OUTPUT
+#ifdef MX_HTTP_DEBUG_OUTPUT
   static LONG nDebugLevel;
-#endif //HTTP_DEBUG_OUTPUT
+#endif //MX_HTTP_DEBUG_OUTPUT
 
   typedef enum {
     StateStart,
