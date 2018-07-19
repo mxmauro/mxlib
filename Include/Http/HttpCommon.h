@@ -46,6 +46,14 @@
   //#define HTTP_DEBUG_OUTPUT
 #endif //_DEBUG
 
+#ifdef HTTP_DEBUG_OUTPUT
+  #define MX_HTTP_DEBUG_PRINT(level, output) if (level > MX::CHttpCommon::nDebugLevel) {  \
+                                               MX::DebugPrint output;                    \
+                                             }
+#else //HTTP_DEBUG_OUTPUT
+  #define MX_HTTP_DEBUG_PRINT(level, output)
+#endif //HTTP_DEBUG_OUTPUT
+
 //-----------------------------------------------------------
 
 namespace MX {
@@ -58,6 +66,10 @@ class CHttpCommon : public virtual CBaseMemObj
   MX_DISABLE_COPY_CONSTRUCTOR(CHttpCommon);
 public:
   class CContentDecoder;
+
+#ifdef HTTP_DEBUG_OUTPUT
+  static LONG nDebugLevel;
+#endif //HTTP_DEBUG_OUTPUT
 
   typedef enum {
     StateStart,

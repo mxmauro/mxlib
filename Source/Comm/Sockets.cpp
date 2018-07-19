@@ -688,10 +688,10 @@ HRESULT CSockets::CConnection::SetupClient()
     return E_OUTOFMEMORY;
   cRwList.QueueLast(lpPacket);
   hRes = S_OK;
-#ifdef MX_IPC_TIMING
+#ifdef _SHOULD_ABORT(lpSlot)
   DebugPrint("%lu MX::CSockets::CConnection::SetupClient) Clock=%lums / Ovr=0x%p / Type=%lu\n",
              ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(), lpPacket->GetType());
-#endif //MX_IPC_TIMING
+#endif //_SHOULD_ABORT(lpSlot)
   if (fnConnectEx != NULL)
   {
     //do connect
@@ -825,11 +825,11 @@ HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwMaxResolverTimeoutMs,
   }
   else
   {
-#ifdef MX_IPC_TIMING
+#ifdef _SHOULD_ABORT(lpSlot)
     DebugPrint("%lu MX::CSockets::CConnection::ResolveAddress) Clock=%lums / This=0x%p / Ovr=0x%p / Type=%lu\n",
                ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), this, sHostResolver.lpPacket->GetOverlapped(),
                sHostResolver.lpPacket->GetType());
-#endif //MX_IPC_TIMING
+#endif //_SHOULD_ABORT(lpSlot)
     //create resolver and attach packet. no need to lock because it is called on socket creation
     sHostResolver.lpResolver = MX_DEBUG_NEW CHostResolver(MX_BIND_MEMBER_CALLBACK(&CConnection::HostResolveCallback,
                                                                                   this));
@@ -873,11 +873,11 @@ HRESULT CSockets::CConnection::SendReadPacket(_In_ CPacket *lpPacket)
   sWsaBuf.buf = (char*)(lpPacket->GetBuffer());
   sWsaBuf.len = (ULONG)dwToRead;
   dwReaded = dwFlags = 0;
-#ifdef MX_IPC_TIMING
+#ifdef _SHOULD_ABORT(lpSlot)
   DebugPrint("%lu MX::CSockets::CConnection::SendReadPacket) Clock=%lums / Ovr=0x%p / Type=%lu / Bytes=%lu\n",
              ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(), lpPacket->GetType(),
              lpPacket->GetBytesInUse());
-#endif //MX_IPC_TIMING
+#endif //_SHOULD_ABORT(lpSlot)
   if (sck == NULL)
     return S_FALSE;
   if (::WSARecv(sck, &sWsaBuf, 1, &dwReaded, &dwFlags, lpPacket->GetOverlapped(), NULL) == SOCKET_ERROR)
@@ -898,11 +898,11 @@ HRESULT CSockets::CConnection::SendWritePacket(_In_ CPacket *lpPacket)
   dwWritten = 0;
   if (sck == NULL)
     return S_FALSE;
-#ifdef MX_IPC_TIMING
+#ifdef _SHOULD_ABORT(lpSlot)
   DebugPrint("%lu MX::CSockets::CConnection::SendWritePacket) Clock=%lums / Ovr=0x%p / Type=%lu / Bytes=%lu\n",
              ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(), lpPacket->GetType(),
              lpPacket->GetBytesInUse());
-#endif //MX_IPC_TIMING
+#endif //_SHOULD_ABORT(lpSlot)
   if (::WSASend(sck, &sWsaBuf, 1, &dwWritten, 0, lpPacket->GetOverlapped(), NULL) == SOCKET_ERROR)
   {
     dwErr = ::WSAGetLastError();
@@ -926,11 +926,11 @@ VOID CSockets::CConnection::HostResolveCallback(_In_ CHostResolver *lpResolver)
       {
         RESOLVEADDRESS_PACKET_DATA *lpData = (RESOLVEADDRESS_PACKET_DATA*)(sHostResolver.lpPacket->GetBuffer());
 
-#ifdef MX_IPC_TIMING
+#ifdef _SHOULD_ABORT(lpSlot)
         DebugPrint("%lu MX::CSockets::CConnection::HostResolveCallback) Clock=%lums / Ovr=0x%p / Type=%lu\n",
                    ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), sHostResolver.lpPacket->GetOverlapped(),
                    sHostResolver.lpPacket->GetType());
-#endif //MX_IPC_TIMING
+#endif //_SHOULD_ABORT(lpSlot)
         lpData->hRes = sHostResolver.lpResolver->GetErrorCode();
         if (SUCCEEDED(lpData->hRes))
         {

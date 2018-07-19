@@ -39,14 +39,20 @@
 #include "..\Debug.h"
 
 #ifdef _DEBUG
-  #define MX_IPC_TIMING
+  #define IPC_DEBUG_OUTPUT
 #else //_DEBUG
-  //#define MX_IPC_TIMING
+  //#define IPC_DEBUG_OUTPUT
 #endif //_DEBUG
 
-#ifdef MX_IPC_TIMING
-#include "..\HiResTimer.h"
-#endif //MX_IPC_TIMING
+#ifdef IPC_DEBUG_OUTPUT
+  #include "..\HiResTimer.h"
+
+  #define MX_IPC_DEBUG_PRINT(level, output) if (level > MX::CIpc::nDebugLevel) {  \
+                                              MX::DebugPrint output;              \
+                                            }
+#else //IPC_DEBUG_OUTPUT
+  #define MX_IPC_DEBUG_PRINT(level, output)
+#endif //IPC_DEBUG_OUTPUT
 
 //-----------------------------------------------------------
 
@@ -59,6 +65,10 @@ protected:
   class CConnectionBase;
 public:
   class CLayer;
+
+#ifdef IPC_DEBUG_OUTPUT
+  static LONG nDebugLevel;
+#endif //IPC_DEBUG_OUTPUT
 
   typedef enum {
     ConnectionClassError=-1,
@@ -601,9 +611,9 @@ protected:
       TPendingListHelperGeneric<CTimedEventQueue::CEvent*> cActiveList;
     } sWriteTimeout;
     CCriticalSection cOnDataReceivedCS;
-#ifdef MX_IPC_TIMING
+#ifdef IPC_DEBUG_OUTPUT
     CHiResTimer cHiResTimer;
-#endif //MX_IPC_TIMING
+#endif //IPC_DEBUG_OUTPUT
   };
 
   //----

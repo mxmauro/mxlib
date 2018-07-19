@@ -37,9 +37,7 @@ CHttpServer::CRequest::CRequest() : CIpc::CUserData(), TLnkLstNode<CRequest>(), 
   lpHttpServer = NULL;
   hConn = NULL;
   nState = CRequest::StateInitializing;
-#ifdef HTTP_DEBUG_OUTPUT
-  MX::DebugPrint("HttpServer(State/0x%p): StateInitializing\n", this);
-#endif //HTTP_DEBUG_OUTPUT
+  MX_HTTP_DEBUG_PRINT(1, ("HttpServer(State/0x%p): StateInitializing\n", this));
   _InterlockedExchange(&nFlags, 0);
   sRequest.liLastRead.QuadPart = 0ui64;
   _InterlockedExchange(&(sRequest.sTimeout.nMutex), 0);
@@ -603,9 +601,7 @@ CSockets* CHttpServer::CRequest::GetUnderlyingSocketManager() const
 VOID CHttpServer::CRequest::ResetForNewRequest()
 {
   nState = CRequest::StateInitializing;
-#ifdef HTTP_DEBUG_OUTPUT
-  MX::DebugPrint("HttpServer(State/0x%p): StateInitializing [ResetForNewRequest]\n", this);
-#endif //HTTP_DEBUG_OUTPUT
+  MX_HTTP_DEBUG_PRINT(1, ("HttpServer(State/0x%p): StateInitializing [ResetForNewRequest]\n", this));
   _InterlockedExchange(&nFlags, 0);
   //----
   sRequest.ResetForNewRequest();
@@ -864,9 +860,7 @@ HRESULT CHttpServer::CRequest::BuildAndInsertOrSendHeaderStream()
       hRes = lpHttpServer->cSocketMgr.SendStream(hConn, cHdrStream.Get());
     }
   }
-#ifdef HTTP_DEBUG_OUTPUT
-  MX::DebugPrint("HttpServer(ResponseHeaders/0x%p): 0x%08X\n", this, hRes);
-#endif //HTTP_DEBUG_OUTPUT
+  MX_HTTP_DEBUG_PRINT(1, ("HttpServer(ResponseHeaders/0x%p): 0x%08X\n", this, hRes));
   //done
   return hRes;
 }

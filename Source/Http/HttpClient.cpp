@@ -2231,9 +2231,7 @@ HRESULT CHttpClient::SendRequestHeaders()
     hRes = E_OUTOFMEMORY;
   if (SUCCEEDED(hRes))
   {
-#ifdef HTTP_DEBUG_OUTPUT
-    MX::DebugPrint("HttpClient(ReqHeaders/0x%p): %s\n", this, (LPSTR)cStrReqHdrsA);
-#endif //HTTP_DEBUG_OUTPUT
+    MX_HTTP_DEBUG_PRINT(1, ("HttpClient(ReqHeaders/0x%p): %s\n", this, (LPSTR)cStrReqHdrsA));
     hRes = cSocketMgr.SendMsg(hConn, (LPSTR)cStrReqHdrsA, cStrReqHdrsA.GetLength());
   }
   if (SUCCEEDED(hRes))

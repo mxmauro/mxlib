@@ -607,9 +607,7 @@ HRESULT CHttpServer::OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ 
     if (FAILED(hRes))
       goto done;
     lpRequest->nState = CRequest::StateReceivingRequestHeaders;
-#ifdef HTTP_DEBUG_OUTPUT
-    MX::DebugPrint("HttpServer(State/0x%p): StateReceivingRequestHeaders\n", this);
-#endif //HTTP_DEBUG_OUTPUT
+    MX_HTTP_DEBUG_PRINT(1, ("HttpServer(State/0x%p): StateReceivingRequestHeaders\n", this));
   }
 
   hRes = S_OK;
@@ -654,9 +652,7 @@ restart:
                 if (lpRequest->sRequest.cHttpCmn.GetErrorCode() == 0)
                   bFireRequestHeadersReceivedCallback = TRUE; //fire events only if no error
                 lpRequest->nState = CRequest::StateReceivingRequestBody;
-#ifdef HTTP_DEBUG_OUTPUT
-                MX::DebugPrint("HttpServer(State/0x%p): StateReceivingRequestBody\n", this);
-#endif //HTTP_DEBUG_OUTPUT
+                MX_HTTP_DEBUG_PRINT(1, ("HttpServer(State/0x%p): StateReceivingRequestBody\n", this));
                 break;
 
               case CHttpCommon::StateDone:
@@ -691,9 +687,7 @@ restart:
                   bFireRequestHeadersReceivedCallback = TRUE;
                 }
                 lpRequest->nState = CRequest::StateBuildingResponse;
-#ifdef HTTP_DEBUG_OUTPUT
-                MX::DebugPrint("HttpServer(State/0x%p): StateBuildingResponse\n", this);
-#endif //HTTP_DEBUG_OUTPUT
+                MX_HTTP_DEBUG_PRINT(1, ("HttpServer(State/0x%p): StateBuildingResponse\n", this));
                 break;
             }
           }
@@ -847,9 +841,7 @@ HRESULT CHttpServer::QuickSendErrorResponseAndReset(_In_ CRequest *lpRequest, _I
   }
   //done
   lpRequest->nState = CRequest::StateError;
-#ifdef HTTP_DEBUG_OUTPUT
-  MX::DebugPrint("HttpServer(State/0x%p): StateError [%ld/%08X]\n", this, nErrorCode, hErrorCode);
-#endif //HTTP_DEBUG_OUTPUT
+  MX_HTTP_DEBUG_PRINT(1, ("HttpServer(State/0x%p): StateError [%ld/%08X]\n", this, nErrorCode, hErrorCode));
   return hRes;
 }
 
@@ -908,9 +900,7 @@ VOID CHttpServer::OnAfterSendResponse(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVO
     }
     else
     {
-#ifdef HTTP_DEBUG_OUTPUT
-      MX::DebugPrint("HttpServer(OnAfterSendResponse/0x%p): Closing\n", lpRequest);
-#endif //HTTP_DEBUG_OUTPUT
+      MX_HTTP_DEBUG_PRINT(1, ("HttpServer(OnAfterSendResponse/0x%p): Closing\n", lpRequest));
       cSocketMgr.Close(lpRequest->hConn);
     }
   }
@@ -1083,17 +1073,13 @@ VOID CHttpServer::OnRequestEnding(_In_ CRequest *lpRequest, _In_ HRESULT hErrorC
   if (SUCCEEDED(hRes))
   {
     lpRequest->nState = CRequest::StateEnded;
-#ifdef HTTP_DEBUG_OUTPUT
-    MX::DebugPrint("HttpServer(State/0x%p): StateEnded\n", this);
-#endif //HTTP_DEBUG_OUTPUT
+    MX_HTTP_DEBUG_PRINT(1, ("HttpServer(State/0x%p): StateEnded\n", this));
   }
   else
   {
     cSocketMgr.Close(lpRequest->hConn, hRes);
     lpRequest->nState = CRequest::StateError;
-#ifdef HTTP_DEBUG_OUTPUT
-    MX::DebugPrint("HttpServer(State/0x%p): StateError [%08X]\n", this, hErrorCode);
-#endif //HTTP_DEBUG_OUTPUT
+    MX_HTTP_DEBUG_PRINT(1, ("HttpServer(State/0x%p): StateError [%08X]\n", this, hErrorCode));
   }
   lpRequest->OnCleanup();
   return;
