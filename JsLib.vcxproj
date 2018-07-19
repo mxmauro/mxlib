@@ -46,6 +46,7 @@
   <ItemGroup>
     <ClInclude Include="Include\JsLib\JavascriptVM.h" />
     <ClInclude Include="Include\JsLib\Plugins\JsMySqlPlugin.h" />
+    <ClInclude Include="Source\JsLib\DukTape\duk_custom.h" />
     <ClInclude Include="Source\JsLib\DukTape\Source\dist\duktape.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>

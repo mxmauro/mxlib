@@ -88,7 +88,7 @@ int TestHttpClient()
     hRes = cCerts.ImportFromWindowsStore();
   if (SUCCEEDED(hRes))
   {
-    for (i=1; SUCCEEDED(hRes) && i<MX_ARRAYLEN(sThreadData); i++)
+    for (i=0; SUCCEEDED(hRes) && i<MX_ARRAYLEN(sThreadData); i++)
     {
       sThreadData[i].nIndex = (int)i + 1;
       sThreadData[i].lpSckMgr = &cSckMgr;

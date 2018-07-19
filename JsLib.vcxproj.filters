@@ -85,6 +85,9 @@
     <ClInclude Include="Source\JsLib\DukTape\Source\extras\module-duktape\duk_module_duktape.h">
       <Filter>Source Files\DukTape\Extras</Filter>
     </ClInclude>
+    <ClInclude Include="Source\JsLib\DukTape\duk_custom.h">
+      <Filter>Source Files\DukTape</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Text Include="Source\JsLib\DukTape\Source\LICENSE.txt">

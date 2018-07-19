@@ -33,6 +33,14 @@ typedef struct {
 
 //-----------------------------------------------------------
 
+namespace DukTape {
+#ifdef DUK_USE_DEBUG
+LONG nDebugLevel = 0;
+#endif //DUK_USE_DEBUG
+} //namespace DukTape
+
+//-----------------------------------------------------------
+
 static DukTape::duk_ret_t OnDebugString(_In_ DukTape::duk_context *lpCtx);
 static DukTape::duk_ret_t OnSetUnhandledExceptionHandler(_In_ DukTape::duk_context *lpCtx);
 static DukTape::duk_ret_t OnFormatErrorMessage(_In_ DukTape::duk_context *lpCtx);

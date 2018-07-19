@@ -97,13 +97,14 @@ static __forceinline int DukTapeSprintf(char *buffer, const char *format, ...)
 
 #undef DUK_USE_ASSERTIONS
 #ifdef _DEBUG
+  extern LONG nDebugLevel;
+
   #define DUK_USE_ASSERTIONS
 
   #define DUK_USE_DEBUG
   #undef DUK_USE_DEBUG_LEVEL
-  #define DUK_USE_DEBUG_LEVEL 0
-  #define DUK_USE_DEBUG_WRITE(level,file,line,func,msg) do {                                               \
+  #define DUK_USE_DEBUG_LEVEL 1
+  #define DUK_USE_DEBUG_WRITE(level,file,line,func,msg) if ((LONG)level < nDebugLevel) {                   \
     MX::DebugPrint("DukTape: D%ld %s:%d (%s): %s\n", (long)(level), (file), (long) (line), (func), (msg)); \
-  }                                                                                                        \
-  while (0)
+  }
 #endif //_DEBUG
