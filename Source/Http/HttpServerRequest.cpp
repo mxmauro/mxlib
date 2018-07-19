@@ -638,12 +638,13 @@ HRESULT CHttpServer::CRequest::BuildAndInsertOrSendHeaderStream()
   HRESULT hRes;
 
   if ((_InterlockedOr(&nFlags, REQUEST_FLAG_HeadersSent) & REQUEST_FLAG_HeadersSent) != 0)
+  {
+    MX_HTTP_DEBUG_PRINT(1, ("HttpServer(ResponseHeaders/0x%p): Already sent!\n", this));
     return S_OK;
+  }
 
   cHdrStream.Attach(MX_DEBUG_NEW CMemoryStream(65536));
-  if (!cHdrStream)
-    return E_OUTOFMEMORY;
-  hRes = cHdrStream->Create();
+  hRes = (cHdrStream) ? cHdrStream->Create() : E_OUTOFMEMORY;
   //status
   if (SUCCEEDED(hRes))
   {
@@ -790,10 +791,14 @@ HRESULT CHttpServer::CRequest::BuildAndInsertOrSendHeaderStream()
           {
             nLen = sResponse.aStreamsList[i]->GetLength();
             if (nLen + nTotalLength < nTotalLength)
-              return MX_E_BadLength;
+            {
+              hRes = MX_E_BadLength;
+              break;
+            }
             nTotalLength += nLen;
           }
-          hRes = cHdrStream->WriteString("Content-Length:%I64u\r\n", nTotalLength);
+          if (SUCCEEDED(hRes))
+            hRes = cHdrStream->WriteString("Content-Length:%I64u\r\n", nTotalLength);
         }
       }
       else
