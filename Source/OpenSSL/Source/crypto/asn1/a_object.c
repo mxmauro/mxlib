@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2017 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -43,7 +43,7 @@ int a2d_ASN1_OBJECT(unsigned char *out, int olen, const char *buf, int num)
 {
     int i, first, len = 0, c, use_bn;
     char ftmp[24], *tmp = ftmp;
-    int tmpsize = sizeof ftmp;
+    int tmpsize = sizeof(ftmp);
     const char *p;
     unsigned long l;
     BIGNUM *bl = NULL;
@@ -178,11 +178,12 @@ int i2a_ASN1_OBJECT(BIO *bp, const ASN1_OBJECT *a)
 
     if ((a == NULL) || (a->data == NULL))
         return BIO_write(bp, "NULL", 4);
-    i = i2t_ASN1_OBJECT(buf, sizeof buf, a);
+    i = i2t_ASN1_OBJECT(buf, sizeof(buf), a);
     if (i > (int)(sizeof(buf) - 1)) {
-        p = OPENSSL_malloc(i + 1);
-        if (p == NULL)
+        if ((p = OPENSSL_malloc(i + 1)) == NULL) {
+            ASN1err(ASN1_F_I2A_ASN1_OBJECT, ERR_R_MALLOC_FAILURE);
             return -1;
+        }
         i2t_ASN1_OBJECT(p, i + 1, a);
     }
     if (i <= 0) {

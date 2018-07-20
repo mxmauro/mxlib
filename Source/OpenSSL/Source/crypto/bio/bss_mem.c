@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2016 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -37,7 +37,7 @@ static const BIO_METHOD mem_method = {
     mem_ctrl,
     mem_new,
     mem_free,
-    NULL,
+    NULL,                      /* mem_callback_ctrl */
 };
 
 static const BIO_METHOD secmem_method = {
@@ -54,7 +54,7 @@ static const BIO_METHOD secmem_method = {
     mem_ctrl,
     secmem_new,
     mem_free,
-    NULL,
+    NULL,                      /* mem_callback_ctrl */
 };
 
 /* BIO memory stores buffer and read pointer  */
@@ -147,23 +147,19 @@ static int mem_buf_free(BIO *a, int free_all)
 {
     if (a == NULL)
         return 0;
-    if (a->shutdown) {
-        if ((a->init) && (a->ptr != NULL)) {
-            BUF_MEM *b;
-            BIO_BUF_MEM *bb = (BIO_BUF_MEM *)a->ptr;
 
-            if (bb != NULL) {
-                b = bb->buf;
-                if (a->flags & BIO_FLAGS_MEM_RDONLY)
-                    b->data = NULL;
-                BUF_MEM_free(b);
-                if (free_all) {
-                    OPENSSL_free(bb->readp);
-                    OPENSSL_free(bb);
-                }
-            }
-            a->ptr = NULL;
+    if (a->shutdown && a->init && a->ptr != NULL) {
+        BIO_BUF_MEM *bb = (BIO_BUF_MEM *)a->ptr;
+        BUF_MEM *b = bb->buf;
+
+        if (a->flags & BIO_FLAGS_MEM_RDONLY)
+            b->data = NULL;
+        BUF_MEM_free(b);
+        if (free_all) {
+            OPENSSL_free(bb->readp);
+            OPENSSL_free(bb);
         }
+        a->ptr = NULL;
     }
     return 1;
 }
@@ -220,6 +216,8 @@ static int mem_write(BIO *b, const char *in, int inl)
         goto end;
     }
     BIO_clear_retry_flags(b);
+    if (inl == 0)
+        return 0;
     blen = bbm->readp->length;
     mem_buf_sync(b);
     if (BUF_MEM_grow_clean(bbm->buf, blen + inl) == 0)

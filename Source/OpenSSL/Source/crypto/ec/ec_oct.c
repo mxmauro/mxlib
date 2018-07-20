@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2016 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2011-2018 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright (c) 2002, Oracle and/or its affiliates. All rights reserved
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
@@ -25,7 +25,7 @@ int EC_POINT_set_compressed_coordinates_GFp(const EC_GROUP *group,
               ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED);
         return 0;
     }
-    if (group->meth != point->meth) {
+    if (!ec_point_is_compat(point, group)) {
         ECerr(EC_F_EC_POINT_SET_COMPRESSED_COORDINATES_GFP,
               EC_R_INCOMPATIBLE_OBJECTS);
         return 0;
@@ -61,7 +61,7 @@ int EC_POINT_set_compressed_coordinates_GF2m(const EC_GROUP *group,
               ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED);
         return 0;
     }
-    if (group->meth != point->meth) {
+    if (!ec_point_is_compat(point, group)) {
         ECerr(EC_F_EC_POINT_SET_COMPRESSED_COORDINATES_GF2M,
               EC_R_INCOMPATIBLE_OBJECTS);
         return 0;
@@ -88,7 +88,7 @@ size_t EC_POINT_point2oct(const EC_GROUP *group, const EC_POINT *point,
         ECerr(EC_F_EC_POINT_POINT2OCT, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED);
         return 0;
     }
-    if (group->meth != point->meth) {
+    if (!ec_point_is_compat(point, group)) {
         ECerr(EC_F_EC_POINT_POINT2OCT, EC_R_INCOMPATIBLE_OBJECTS);
         return 0;
     }
@@ -118,7 +118,7 @@ int EC_POINT_oct2point(const EC_GROUP *group, EC_POINT *point,
         ECerr(EC_F_EC_POINT_OCT2POINT, ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED);
         return 0;
     }
-    if (group->meth != point->meth) {
+    if (!ec_point_is_compat(point, group)) {
         ECerr(EC_F_EC_POINT_OCT2POINT, EC_R_INCOMPATIBLE_OBJECTS);
         return 0;
     }
@@ -144,12 +144,14 @@ size_t EC_POINT_point2buf(const EC_GROUP *group, const EC_POINT *point,
 {
     size_t len;
     unsigned char *buf;
+
     len = EC_POINT_point2oct(group, point, form, NULL, 0, NULL);
     if (len == 0)
         return 0;
-    buf = OPENSSL_malloc(len);
-    if (buf == NULL)
+    if ((buf = OPENSSL_malloc(len)) == NULL) {
+        ECerr(EC_F_EC_POINT_POINT2BUF, ERR_R_MALLOC_FAILURE);
         return 0;
+    }
     len = EC_POINT_point2oct(group, point, form, buf, len, ctx);
     if (len == 0) {
         OPENSSL_free(buf);

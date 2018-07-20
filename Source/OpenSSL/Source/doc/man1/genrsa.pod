@@ -53,7 +53,7 @@ standard output is used.
 The output file password source. For more information about the format
 of B<arg> see the B<PASS PHRASE ARGUMENTS> section in L<openssl(1)>.
 
-=item B<-aes128|-aes192|-aes256|-aria128|-aria192|-aria256|-camellia128|-camellia192|-camellia256|-des|-des3|-idea>
+=item B<-aes128>, B<-aes192>, B<-aes256>, B<-aria128>, B<-aria192>, B<-aria256>, B<-camellia128>, B<-camellia192>, B<-camellia256>, B<-des>, B<-des3>, B<-idea>
 
 These options encrypt the private key with specified
 cipher before outputting it. If none of these options is
@@ -94,7 +94,7 @@ RSA key, which is defined in RFC 8017.
 =item B<numbits>
 
 The size of the private key to generate in bits. This must be the last option
-specified. The default is 2048.
+specified. The default is 2048 and values less than 512 are not allowed.
 
 =back
 
@@ -111,13 +111,6 @@ has passed all the prime tests (the actual number depends on the key size).
 Because key generation is a random process the time taken to generate a key
 may vary somewhat. But in general, more primes lead to less generation time
 of a key.
-
-=head1 BUGS
-
-A quirk of the prime generation algorithm is that it cannot generate small
-primes. Therefore the number of bits should not be less that 64. For typical
-private keys this will not matter because for security reasons they will
-be much larger (typically 1024 bits).
 
 =head1 SEE ALSO
 

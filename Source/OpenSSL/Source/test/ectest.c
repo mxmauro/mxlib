@@ -1,5 +1,5 @@
 /*
- * Copyright 2001-2017 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2001-2018 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright (c) 2002, Oracle and/or its affiliates. All rights reserved
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
@@ -31,6 +31,7 @@ static int group_order_tests(EC_GROUP *group)
 {
     BIGNUM *n1 = NULL, *n2 = NULL, *order = NULL;
     EC_POINT *P = NULL, *Q = NULL, *R = NULL, *S = NULL;
+    const EC_POINT *G = NULL;
     BN_CTX *ctx = NULL;
     int i = 0, r = 0;
 
@@ -38,6 +39,7 @@ static int group_order_tests(EC_GROUP *group)
         || !TEST_ptr(n2 = BN_new())
         || !TEST_ptr(order = BN_new())
         || !TEST_ptr(ctx = BN_CTX_new())
+        || !TEST_ptr(G = EC_GROUP_get0_generator(group))
         || !TEST_ptr(P = EC_POINT_new(group))
         || !TEST_ptr(Q = EC_POINT_new(group))
         || !TEST_ptr(R = EC_POINT_new(group))
@@ -49,7 +51,15 @@ static int group_order_tests(EC_GROUP *group)
         || !TEST_true(EC_POINT_is_at_infinity(group, Q))
         || !TEST_true(EC_GROUP_precompute_mult(group, ctx))
         || !TEST_true(EC_POINT_mul(group, Q, order, NULL, NULL, ctx))
-        || !TEST_true(EC_POINT_is_at_infinity(group, Q)))
+        || !TEST_true(EC_POINT_is_at_infinity(group, Q))
+        || !TEST_true(EC_POINT_copy(P, G))
+        || !TEST_true(BN_one(n1))
+        || !TEST_true(EC_POINT_mul(group, Q, n1, NULL, NULL, ctx))
+        || !TEST_int_eq(0, EC_POINT_cmp(group, Q, P, ctx))
+        || !TEST_true(BN_sub(n1, order, n1))
+        || !TEST_true(EC_POINT_mul(group, Q, n1, NULL, NULL, ctx))
+        || !TEST_true(EC_POINT_invert(group, Q, ctx))
+        || !TEST_int_eq(0, EC_POINT_cmp(group, Q, P, ctx)))
         goto err;
 
     for (i = 1; i <= 2; i++) {
@@ -62,6 +72,7 @@ static int group_order_tests(EC_GROUP *group)
              * EC_GROUP_precompute_mult has set up precomputation.
              */
             || !TEST_true(EC_POINT_mul(group, P, n1, NULL, NULL, ctx))
+            || (i == 1 && !TEST_int_eq(0, EC_POINT_cmp(group, P, G, ctx)))
             || !TEST_true(BN_one(n1))
             /* n1 = 1 - order */
             || !TEST_true(BN_sub(n1, n1, order))
@@ -232,7 +243,7 @@ static int prime_field_tests(void)
 
     len =
         EC_POINT_point2oct(group, Q, POINT_CONVERSION_COMPRESSED, buf,
-                           sizeof buf, ctx);
+                           sizeof(buf), ctx);
     if (!TEST_size_t_ne(len, 0)
         || !TEST_true(EC_POINT_oct2point(group, P, buf, len, ctx))
         || !TEST_int_eq(0, EC_POINT_cmp(group, P, Q, ctx)))
@@ -241,7 +252,7 @@ static int prime_field_tests(void)
                        buf, len);
 
     len = EC_POINT_point2oct(group, Q, POINT_CONVERSION_UNCOMPRESSED,
-                             buf, sizeof buf, ctx);
+                             buf, sizeof(buf), ctx);
     if (!TEST_size_t_ne(len, 0)
         || !TEST_true(EC_POINT_oct2point(group, P, buf, len, ctx))
         || !TEST_int_eq(0, EC_POINT_cmp(group, P, Q, ctx)))
@@ -250,7 +261,7 @@ static int prime_field_tests(void)
                        buf, len);
 
     len = EC_POINT_point2oct(group, Q, POINT_CONVERSION_HYBRID,
-                             buf, sizeof buf, ctx);
+                             buf, sizeof(buf), ctx);
     if (!TEST_size_t_ne(len, 0)
         || !TEST_true(EC_POINT_oct2point(group, P, buf, len, ctx))
         || !TEST_int_eq(0, EC_POINT_cmp(group, P, Q, ctx)))
@@ -1071,7 +1082,7 @@ static int char2_field_tests(void)
 /* Change test based on whether binary point compression is enabled or not. */
 #  ifdef OPENSSL_EC_BIN_PT_COMP
     len = EC_POINT_point2oct(group, Q, POINT_CONVERSION_COMPRESSED,
-                             buf, sizeof buf, ctx);
+                             buf, sizeof(buf), ctx);
     if (!TEST_size_t_ne(len, 0)
         || !TEST_true(EC_POINT_oct2point(group, P, buf, len, ctx))
         || !TEST_int_eq(0, EC_POINT_cmp(group, P, Q, ctx)))
@@ -1081,7 +1092,7 @@ static int char2_field_tests(void)
 #  endif
 
     len = EC_POINT_point2oct(group, Q, POINT_CONVERSION_UNCOMPRESSED,
-                             buf, sizeof buf, ctx);
+                             buf, sizeof(buf), ctx);
     if (!TEST_size_t_ne(len, 0)
         || !TEST_true(EC_POINT_oct2point(group, P, buf, len, ctx))
         || !TEST_int_eq(0, EC_POINT_cmp(group, P, Q, ctx)))
@@ -1092,7 +1103,7 @@ static int char2_field_tests(void)
 /* Change test based on whether binary point compression is enabled or not. */
 #  ifdef OPENSSL_EC_BIN_PT_COMP
     len =
-        EC_POINT_point2oct(group, Q, POINT_CONVERSION_HYBRID, buf, sizeof buf,
+        EC_POINT_point2oct(group, Q, POINT_CONVERSION_HYBRID, buf, sizeof(buf),
                            ctx);
     if (!TEST_size_t_ne(len, 0)
         || !TEST_true(EC_POINT_oct2point(group, P, buf, len, ctx))
@@ -1152,12 +1163,6 @@ static int internal_curve_test_method(int n)
     int r, nid = curves[n].nid;
     EC_GROUP *group;
 
-    /*
-     * Skip for X25519 because low level operations such as EC_POINT_mul()
-     * are not supported for this curve
-     */
-    if (nid == NID_X25519)
-        return 1;
     if (!TEST_ptr(group = EC_GROUP_new_by_curve_name(nid))) {
         TEST_info("Curve %s failed\n", OBJ_nid2sn(nid));
         return 0;
@@ -1173,7 +1178,7 @@ static int internal_curve_test_method(int n)
  * implementations of several NIST curves with characteristic > 3.
  */
 struct nistp_test_params {
-    const EC_METHOD *(*meth) ();
+    const EC_METHOD *(*meth) (void);
     int degree;
     /*
      * Qx, Qy and D are taken from
@@ -1383,6 +1388,15 @@ static int nistp_single_test(int idx)
     if (!TEST_int_eq(0, EC_POINT_cmp(NISTP, Q, Q_CHECK, ctx)))
         goto err;
 
+    /* regression test for felem_neg bug */
+    if (!TEST_true(BN_set_word(m, 32))
+        || !TEST_true(BN_set_word(n, 31))
+        || !TEST_true(EC_POINT_copy(P, G))
+        || !TEST_true(EC_POINT_invert(NISTP, P, ctx))
+        || !TEST_true(EC_POINT_mul(NISTP, Q, m, P, n, ctx))
+        || !TEST_int_eq(0, EC_POINT_cmp(NISTP, Q, G, ctx)))
+      goto err;
+
     r = group_order_tests(NISTP);
 err:
     EC_GROUP_free(NISTP);
@@ -1404,20 +1418,91 @@ err:
 }
 # endif
 
+static const unsigned char p521_named[] = {
+    0x06, 0x05, 0x2b, 0x81, 0x04, 0x00, 0x23,
+};
+
+static const unsigned char p521_explicit[] = {
+    0x30, 0x82, 0x01, 0xc3, 0x02, 0x01, 0x01, 0x30, 0x4d, 0x06, 0x07, 0x2a,
+    0x86, 0x48, 0xce, 0x3d, 0x01, 0x01, 0x02, 0x42, 0x01, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0x30, 0x81, 0x9f, 0x04, 0x42, 0x01, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xfc, 0x04, 0x42, 0x00, 0x51, 0x95, 0x3e, 0xb9, 0x61, 0x8e, 0x1c, 0x9a,
+    0x1f, 0x92, 0x9a, 0x21, 0xa0, 0xb6, 0x85, 0x40, 0xee, 0xa2, 0xda, 0x72,
+    0x5b, 0x99, 0xb3, 0x15, 0xf3, 0xb8, 0xb4, 0x89, 0x91, 0x8e, 0xf1, 0x09,
+    0xe1, 0x56, 0x19, 0x39, 0x51, 0xec, 0x7e, 0x93, 0x7b, 0x16, 0x52, 0xc0,
+    0xbd, 0x3b, 0xb1, 0xbf, 0x07, 0x35, 0x73, 0xdf, 0x88, 0x3d, 0x2c, 0x34,
+    0xf1, 0xef, 0x45, 0x1f, 0xd4, 0x6b, 0x50, 0x3f, 0x00, 0x03, 0x15, 0x00,
+    0xd0, 0x9e, 0x88, 0x00, 0x29, 0x1c, 0xb8, 0x53, 0x96, 0xcc, 0x67, 0x17,
+    0x39, 0x32, 0x84, 0xaa, 0xa0, 0xda, 0x64, 0xba, 0x04, 0x81, 0x85, 0x04,
+    0x00, 0xc6, 0x85, 0x8e, 0x06, 0xb7, 0x04, 0x04, 0xe9, 0xcd, 0x9e, 0x3e,
+    0xcb, 0x66, 0x23, 0x95, 0xb4, 0x42, 0x9c, 0x64, 0x81, 0x39, 0x05, 0x3f,
+    0xb5, 0x21, 0xf8, 0x28, 0xaf, 0x60, 0x6b, 0x4d, 0x3d, 0xba, 0xa1, 0x4b,
+    0x5e, 0x77, 0xef, 0xe7, 0x59, 0x28, 0xfe, 0x1d, 0xc1, 0x27, 0xa2, 0xff,
+    0xa8, 0xde, 0x33, 0x48, 0xb3, 0xc1, 0x85, 0x6a, 0x42, 0x9b, 0xf9, 0x7e,
+    0x7e, 0x31, 0xc2, 0xe5, 0xbd, 0x66, 0x01, 0x18, 0x39, 0x29, 0x6a, 0x78,
+    0x9a, 0x3b, 0xc0, 0x04, 0x5c, 0x8a, 0x5f, 0xb4, 0x2c, 0x7d, 0x1b, 0xd9,
+    0x98, 0xf5, 0x44, 0x49, 0x57, 0x9b, 0x44, 0x68, 0x17, 0xaf, 0xbd, 0x17,
+    0x27, 0x3e, 0x66, 0x2c, 0x97, 0xee, 0x72, 0x99, 0x5e, 0xf4, 0x26, 0x40,
+    0xc5, 0x50, 0xb9, 0x01, 0x3f, 0xad, 0x07, 0x61, 0x35, 0x3c, 0x70, 0x86,
+    0xa2, 0x72, 0xc2, 0x40, 0x88, 0xbe, 0x94, 0x76, 0x9f, 0xd1, 0x66, 0x50,
+    0x02, 0x42, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfa,
+    0x51, 0x86, 0x87, 0x83, 0xbf, 0x2f, 0x96, 0x6b, 0x7f, 0xcc, 0x01, 0x48,
+    0xf7, 0x09, 0xa5, 0xd0, 0x3b, 0xb5, 0xc9, 0xb8, 0x89, 0x9c, 0x47, 0xae,
+    0xbb, 0x6f, 0xb7, 0x1e, 0x91, 0x38, 0x64, 0x09, 0x02, 0x01, 0x01,
+};
+
 static int parameter_test(void)
 {
     EC_GROUP *group = NULL, *group2 = NULL;
     ECPARAMETERS *ecparameters = NULL;
-    int r;
+    unsigned char *buf = NULL;
+    int r = 0, len;
 
-    r = TEST_ptr(group = EC_GROUP_new_by_curve_name(NID_secp112r1))
-        && TEST_ptr(ecparameters = EC_GROUP_get_ecparameters(group, NULL))
-        && TEST_ptr(group2 = EC_GROUP_new_from_ecparameters(ecparameters))
-        && TEST_int_eq(EC_GROUP_cmp(group, group2, NULL), 0);
+    if (!TEST_ptr(group = EC_GROUP_new_by_curve_name(NID_secp112r1))
+        || !TEST_ptr(ecparameters = EC_GROUP_get_ecparameters(group, NULL))
+        || !TEST_ptr(group2 = EC_GROUP_new_from_ecparameters(ecparameters))
+        || !TEST_int_eq(EC_GROUP_cmp(group, group2, NULL), 0))
+        goto err;
 
+    EC_GROUP_free(group);
+    group = NULL;
+
+    /* Test the named curve encoding, which should be default. */
+    if (!TEST_ptr(group = EC_GROUP_new_by_curve_name(NID_secp521r1))
+        || !TEST_true((len = i2d_ECPKParameters(group, &buf)) >= 0)
+        || !TEST_mem_eq(buf, len, p521_named, sizeof(p521_named)))
+        goto err;
+
+    OPENSSL_free(buf);
+    buf = NULL;
+
+    /*
+     * Test the explicit encoding. P-521 requires correctly zero-padding the
+     * curve coefficients.
+     */
+    EC_GROUP_set_asn1_flag(group, OPENSSL_EC_EXPLICIT_CURVE);
+    if (!TEST_true((len = i2d_ECPKParameters(group, &buf)) >= 0)
+        || !TEST_mem_eq(buf, len, p521_explicit, sizeof(p521_explicit)))
+        goto err;
+
+    r = 1;
+err:
     EC_GROUP_free(group);
     EC_GROUP_free(group2);
     ECPARAMETERS_free(ecparameters);
+    OPENSSL_free(buf);
     return r;
 }
 #endif

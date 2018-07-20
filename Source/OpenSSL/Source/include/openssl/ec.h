@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2016 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2002-2018 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright (c) 2002, Oracle and/or its affiliates. All rights reserved
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
@@ -338,7 +338,7 @@ EC_GROUP *EC_GROUP_new_by_curve_name(int nid);
  */
 EC_GROUP *EC_GROUP_new_from_ecparameters(const ECPARAMETERS *params);
 
-/** Creates an ECPARAMETERS object for the the given EC_GROUP object.
+/** Creates an ECPARAMETERS object for the given EC_GROUP object.
  *  \param  group   pointer to the EC_GROUP object
  *  \param  params  pointer to an existing ECPARAMETERS object or NULL
  *  \return pointer to the new ECPARAMETERS object or NULL
@@ -354,7 +354,7 @@ ECPARAMETERS *EC_GROUP_get_ecparameters(const EC_GROUP *group,
  */
 EC_GROUP *EC_GROUP_new_from_ecpkparameters(const ECPKPARAMETERS *params);
 
-/** Creates an ECPKPARAMETERS object for the the given EC_GROUP object.
+/** Creates an ECPKPARAMETERS object for the given EC_GROUP object.
  *  \param  group   pointer to the EC_GROUP object
  *  \param  params  pointer to an existing ECPKPARAMETERS object or NULL
  *  \return pointer to the new ECPKPARAMETERS object or NULL
@@ -1060,14 +1060,24 @@ int i2d_ECDSA_SIG(const ECDSA_SIG *sig, unsigned char **pp);
 ECDSA_SIG *d2i_ECDSA_SIG(ECDSA_SIG **sig, const unsigned char **pp, long len);
 
 /** Accessor for r and s fields of ECDSA_SIG
- *  \param  sig  pointer to ECDSA_SIG pointer
+ *  \param  sig  pointer to ECDSA_SIG structure
  *  \param  pr   pointer to BIGNUM pointer for r (may be NULL)
  *  \param  ps   pointer to BIGNUM pointer for s (may be NULL)
  */
 void ECDSA_SIG_get0(const ECDSA_SIG *sig, const BIGNUM **pr, const BIGNUM **ps);
 
+/** Accessor for r field of ECDSA_SIG
+ *  \param  sig  pointer to ECDSA_SIG structure
+ */
+const BIGNUM *ECDSA_SIG_get0_r(const ECDSA_SIG *sig);
+
+/** Accessor for s field of ECDSA_SIG
+ *  \param  sig  pointer to ECDSA_SIG structure
+ */
+const BIGNUM *ECDSA_SIG_get0_s(const ECDSA_SIG *sig);
+
 /** Setter for r and s fields of ECDSA_SIG
- *  \param  sig  pointer to ECDSA_SIG pointer
+ *  \param  sig  pointer to ECDSA_SIG structure
  *  \param  r    pointer to BIGNUM for r (may be NULL)
  *  \param  s    pointer to BIGNUM for s (may be NULL)
  */
@@ -1346,7 +1356,6 @@ void EC_KEY_METHOD_get_verify(const EC_KEY_METHOD *meth,
 # define EVP_PKEY_ECDH_KDF_NONE                          1
 # define EVP_PKEY_ECDH_KDF_X9_62                         2
 
-int ERR_load_EC_strings(void);
 
 #  ifdef  __cplusplus
 }
