@@ -8,7 +8,7 @@
  *  Property handling
  *
  *  The API exposes only the most common property handling functions.
- *  The caller can invoke Ecmascript built-ins for full control (e.g.
+ *  The caller can invoke ECMAScript built-ins for full control (e.g.
  *  defineProperty, getOwnPropertyDescriptor).
  */
 
@@ -105,10 +105,7 @@ DUK_INTERNAL duk_bool_t duk_get_prop_stridx_boolean(duk_hthread *thr, duk_idx_t 
 	if (out_has_prop) {
 		*out_has_prop = rc;
 	}
-	rc = duk_to_boolean(thr, -1);
-	DUK_ASSERT(rc == 0 || rc == 1);
-	duk_pop(thr);
-	return rc;
+	return duk_to_boolean_top_pop(thr);
 }
 
 DUK_LOCAL duk_bool_t duk__put_prop_shared(duk_hthread *thr, duk_idx_t obj_idx, duk_idx_t idx_key) {
@@ -569,7 +566,7 @@ DUK_EXTERNAL void duk_def_prop(duk_hthread *thr, duk_idx_t obj_idx, duk_uint_t f
 /*
  *  Object related
  *
- *  Note: seal() and freeze() are accessible through Ecmascript bindings,
+ *  Note: seal() and freeze() are accessible through ECMAScript bindings,
  *  and are not exposed through the API.
  */
 
@@ -838,6 +835,23 @@ DUK_EXTERNAL duk_bool_t duk_put_global_heapptr(duk_hthread *thr, void *ptr) {
 	ret = duk_put_prop_heapptr(thr, -2, ptr);  /* [ ... global val ] -> [ ... global ] */
 	duk_pop(thr);
 	return ret;
+}
+
+/*
+ *  ES2015 GetMethod()
+ */
+
+DUK_INTERNAL duk_bool_t duk_get_method_stridx(duk_hthread *thr, duk_idx_t idx, duk_small_uint_t stridx) {
+	(void) duk_get_prop_stridx(thr, idx, stridx);
+	if (duk_is_null_or_undefined(thr, -1)) {
+		duk_pop_nodecref_unsafe(thr);
+		return 0;
+	}
+	if (!duk_is_callable(thr, -1)) {
+		DUK_ERROR_TYPE(thr, DUK_STR_NOT_CALLABLE);
+		DUK_WO_NORETURN(return 0;);
+	}
+	return 1;
 }
 
 /*

@@ -1,5 +1,5 @@
 /*
- *  Ecmascript bytecode executor.
+ *  ECMAScript bytecode executor.
  */
 
 #include "duk_internal.h"
@@ -774,7 +774,7 @@ DUK_LOCAL DUK__INLINE_PERF void duk__prepost_incdec_var_helper(duk_hthread *thr,
  * top are combined into one pass.
  */
 
-/* Reconfigure value stack for return to an Ecmascript function at
+/* Reconfigure value stack for return to an ECMAScript function at
  * callstack top (caller unwinds).
  */
 DUK_LOCAL void duk__reconfig_valstack_ecma_return(duk_hthread *thr) {
@@ -790,7 +790,7 @@ DUK_LOCAL void duk__reconfig_valstack_ecma_return(duk_hthread *thr) {
 
 	/* Clamp so that values at 'clamp_top' and above are wiped and won't
 	 * retain reachable garbage.  Then extend to 'nregs' because we're
-	 * returning to an Ecmascript function.
+	 * returning to an ECMAScript function.
 	 */
 
 	h_func = (duk_hcompfunc *) DUK_ACT_GET_FUNC(act);
@@ -806,7 +806,7 @@ DUK_LOCAL void duk__reconfig_valstack_ecma_return(duk_hthread *thr) {
 	/* XXX: a best effort shrink check would be OK here */
 }
 
-/* Reconfigure value stack for an Ecmascript catcher.  Use topmost catcher
+/* Reconfigure value stack for an ECMAScript catcher.  Use topmost catcher
  * in 'act'.
  */
 DUK_LOCAL void duk__reconfig_valstack_ecma_catcher(duk_hthread *thr, duk_activation *act) {
@@ -1042,7 +1042,7 @@ DUK_LOCAL void duk__handle_yield(duk_hthread *thr, duk_hthread *resumer, duk_tva
 	act_resumer = resumer->callstack_curr;
 	DUK_ASSERT(act_resumer != NULL);
 	DUK_ASSERT(DUK_ACT_GET_FUNC(act_resumer) != NULL);
-	DUK_ASSERT(DUK_HOBJECT_IS_COMPFUNC(DUK_ACT_GET_FUNC(act_resumer)));  /* resume caller must be an ecmascript func */
+	DUK_ASSERT(DUK_HOBJECT_IS_COMPFUNC(DUK_ACT_GET_FUNC(act_resumer)));  /* resume caller must be an ECMAScript func */
 
 	tv1 = (duk_tval *) (void *) ((duk_uint8_t *) resumer->valstack + act_resumer->retval_byteoff);  /* return value from Duktape.Thread.resume() */
 	DUK_TVAL_SET_TVAL_UPDREF(thr, tv1, tv_val_unstable);  /* side effects */  /* XXX: avoid side effects */
@@ -1098,7 +1098,7 @@ DUK_LOCAL duk_small_uint_t duk__handle_longjmp(duk_hthread *thr, duk_activation 
 		/* duk_bi_duk_object_yield() and duk_bi_duk_object_resume() ensure all of these are met */
 
 		DUK_ASSERT(thr->state == DUK_HTHREAD_STATE_RUNNING);                                                         /* unchanged by Duktape.Thread.resume() */
-		DUK_ASSERT(thr->callstack_top >= 2);                                                                         /* Ecmascript activation + Duktape.Thread.resume() activation */
+		DUK_ASSERT(thr->callstack_top >= 2);                                                                         /* ECMAScript activation + Duktape.Thread.resume() activation */
 		DUK_ASSERT(thr->callstack_curr != NULL);
 		DUK_ASSERT(thr->callstack_curr->parent != NULL);
 		DUK_ASSERT(DUK_ACT_GET_FUNC(thr->callstack_curr) != NULL &&
@@ -1116,7 +1116,7 @@ DUK_LOCAL duk_small_uint_t duk__handle_longjmp(duk_hthread *thr, duk_activation 
 		DUK_ASSERT(resumee->state == DUK_HTHREAD_STATE_INACTIVE ||
 		           resumee->state == DUK_HTHREAD_STATE_YIELDED);                                                     /* checked by Duktape.Thread.resume() */
 		DUK_ASSERT(resumee->state != DUK_HTHREAD_STATE_YIELDED ||
-		           resumee->callstack_top >= 2);                                                                     /* YIELDED: Ecmascript activation + Duktape.Thread.yield() activation */
+		           resumee->callstack_top >= 2);                                                                     /* YIELDED: ECMAScript activation + Duktape.Thread.yield() activation */
 		DUK_ASSERT(resumee->state != DUK_HTHREAD_STATE_YIELDED ||
 		           (DUK_ACT_GET_FUNC(resumee->callstack_curr) != NULL &&
 		            DUK_HOBJECT_IS_NATFUNC(DUK_ACT_GET_FUNC(resumee->callstack_curr)) &&
@@ -1154,8 +1154,8 @@ DUK_LOCAL duk_small_uint_t duk__handle_longjmp(duk_hthread *thr, duk_activation 
 			goto check_longjmp;
 		} else if (resumee->state == DUK_HTHREAD_STATE_YIELDED) {
 			/* Unwind previous Duktape.Thread.yield() call.  The
-			 * activation remaining must always be an Ecmascript
-			 * call now (yield() accepts calls from Ecmascript
+			 * activation remaining must always be an ECMAScript
+			 * call now (yield() accepts calls from ECMAScript
 			 * only).
 			 */
 			duk_activation *act_resumee;
@@ -1163,7 +1163,7 @@ DUK_LOCAL duk_small_uint_t duk__handle_longjmp(duk_hthread *thr, duk_activation 
 			DUK_ASSERT(resumee->callstack_top >= 2);
 			act_resumee = resumee->callstack_curr;  /* Duktape.Thread.yield() */
 			DUK_ASSERT(act_resumee != NULL);
-			act_resumee = act_resumee->parent;      /* Ecmascript call site for yield() */
+			act_resumee = act_resumee->parent;      /* ECMAScript call site for yield() */
 			DUK_ASSERT(act_resumee != NULL);
 
 			tv = (duk_tval *) (void *) ((duk_uint8_t *) resumee->valstack + act_resumee->retval_byteoff);  /* return value from Duktape.Thread.yield() */
@@ -1234,7 +1234,7 @@ DUK_LOCAL duk_small_uint_t duk__handle_longjmp(duk_hthread *thr, duk_activation 
 	case DUK_LJ_TYPE_YIELD: {
 		/*
 		 *  Currently only allowed only if yielding thread has only
-		 *  Ecmascript activations (except for the Duktape.Thread.yield()
+		 *  ECMAScript activations (except for the Duktape.Thread.yield()
 		 *  call at the callstack top) and none of them constructor
 		 *  calls.
 		 *
@@ -1250,27 +1250,27 @@ DUK_LOCAL duk_small_uint_t duk__handle_longjmp(duk_hthread *thr, duk_activation 
 		DUK_ASSERT(thr != entry_thread);                                                                             /* Duktape.Thread.yield() should prevent */
 #endif
 		DUK_ASSERT(thr->state == DUK_HTHREAD_STATE_RUNNING);                                                         /* unchanged from Duktape.Thread.yield() */
-		DUK_ASSERT(thr->callstack_top >= 2);                                                                         /* Ecmascript activation + Duktape.Thread.yield() activation */
+		DUK_ASSERT(thr->callstack_top >= 2);                                                                         /* ECMAScript activation + Duktape.Thread.yield() activation */
 		DUK_ASSERT(thr->callstack_curr != NULL);
 		DUK_ASSERT(thr->callstack_curr->parent != NULL);
 		DUK_ASSERT(DUK_ACT_GET_FUNC(thr->callstack_curr) != NULL &&
 		           DUK_HOBJECT_IS_NATFUNC(DUK_ACT_GET_FUNC(thr->callstack_curr)) &&
 		           ((duk_hnatfunc *) DUK_ACT_GET_FUNC(thr->callstack_curr))->func == duk_bi_thread_yield);
 		DUK_ASSERT(DUK_ACT_GET_FUNC(thr->callstack_curr->parent) != NULL &&
-		           DUK_HOBJECT_IS_COMPFUNC(DUK_ACT_GET_FUNC(thr->callstack_curr->parent)));                              /* an Ecmascript function */
+		           DUK_HOBJECT_IS_COMPFUNC(DUK_ACT_GET_FUNC(thr->callstack_curr->parent)));                              /* an ECMAScript function */
 
 		resumer = thr->resumer;
 
 		DUK_ASSERT(resumer != NULL);
 		DUK_ASSERT(resumer->state == DUK_HTHREAD_STATE_RESUMED);                                                     /* written by a previous RESUME handling */
-		DUK_ASSERT(resumer->callstack_top >= 2);                                                                     /* Ecmascript activation + Duktape.Thread.resume() activation */
+		DUK_ASSERT(resumer->callstack_top >= 2);                                                                     /* ECMAScript activation + Duktape.Thread.resume() activation */
 		DUK_ASSERT(resumer->callstack_curr != NULL);
 		DUK_ASSERT(resumer->callstack_curr->parent != NULL);
 		DUK_ASSERT(DUK_ACT_GET_FUNC(resumer->callstack_curr) != NULL &&
 		           DUK_HOBJECT_IS_NATFUNC(DUK_ACT_GET_FUNC(resumer->callstack_curr)) &&
 		           ((duk_hnatfunc *) DUK_ACT_GET_FUNC(resumer->callstack_curr))->func == duk_bi_thread_resume);
 		DUK_ASSERT(DUK_ACT_GET_FUNC(resumer->callstack_curr->parent) != NULL &&
-		           DUK_HOBJECT_IS_COMPFUNC(DUK_ACT_GET_FUNC(resumer->callstack_curr->parent)));                            /* an Ecmascript function */
+		           DUK_HOBJECT_IS_COMPFUNC(DUK_ACT_GET_FUNC(resumer->callstack_curr->parent)));                            /* an ECMAScript function */
 
 		if (thr->heap->lj.iserror) {
 			thr->state = DUK_HTHREAD_STATE_YIELDED;
@@ -1324,7 +1324,7 @@ DUK_LOCAL duk_small_uint_t duk__handle_longjmp(duk_hthread *thr, duk_activation 
 		 *      resumer in this case.)
 		 *
 		 *  Note: until we hit the entry level, there can only be
-		 *  Ecmascript activations.
+		 *  ECMAScript activations.
 		 */
 
 		duk_activation *act;
@@ -1391,11 +1391,11 @@ DUK_LOCAL duk_small_uint_t duk__handle_longjmp(duk_hthread *thr, duk_activation 
 		 */
 
 		DUK_ASSERT(thr->resumer != NULL);
-		DUK_ASSERT(thr->resumer->callstack_top >= 2);  /* Ecmascript activation + Duktape.Thread.resume() activation */
+		DUK_ASSERT(thr->resumer->callstack_top >= 2);  /* ECMAScript activation + Duktape.Thread.resume() activation */
 		DUK_ASSERT(thr->resumer->callstack_curr != NULL);
 		DUK_ASSERT(thr->resumer->callstack_curr->parent != NULL);
 		DUK_ASSERT(DUK_ACT_GET_FUNC(thr->resumer->callstack_curr->parent) != NULL &&
-		           DUK_HOBJECT_IS_COMPFUNC(DUK_ACT_GET_FUNC(thr->resumer->callstack_curr->parent)));  /* an Ecmascript function */
+		           DUK_HOBJECT_IS_COMPFUNC(DUK_ACT_GET_FUNC(thr->resumer->callstack_curr->parent)));  /* an ECMAScript function */
 
 		resumer = thr->resumer;
 
@@ -1547,7 +1547,7 @@ DUK_LOCAL duk_small_uint_t duk__handle_return(duk_hthread *thr, duk_activation *
 	 *    2. The return happens at the entry level of the bytecode
 	 *       executor, so return from the executor (in C stack).
 	 *
-	 *    3. There is a calling (Ecmascript) activation in the call
+	 *    3. There is a calling (ECMAScript) activation in the call
 	 *       stack => return to it, in the same executor instance.
 	 *
 	 *    4. There is no calling activation, and the thread is
@@ -1592,16 +1592,16 @@ DUK_LOCAL duk_small_uint_t duk__handle_return(duk_hthread *thr, duk_activation *
 	}
 
 	if (thr->callstack_top >= 2) {
-		/* There is a caller; it MUST be an Ecmascript caller (otherwise it would
+		/* There is a caller; it MUST be an ECMAScript caller (otherwise it would
 		 * match entry_act check).
 		 */
-		DUK_DDD(DUK_DDDPRINT("return to Ecmascript caller, retval_byteoff=%ld, lj_value1=%!T",
+		DUK_DDD(DUK_DDDPRINT("return to ECMAScript caller, retval_byteoff=%ld, lj_value1=%!T",
 		                     (long) (thr->callstack_curr->parent->retval_byteoff),
 		                     (duk_tval *) &thr->heap->lj.value1));
 
 		DUK_ASSERT(thr->callstack_curr != NULL);
 		DUK_ASSERT(thr->callstack_curr->parent != NULL);
-		DUK_ASSERT(DUK_HOBJECT_IS_COMPFUNC(DUK_ACT_GET_FUNC(thr->callstack_curr->parent)));   /* must be ecmascript */
+		DUK_ASSERT(DUK_HOBJECT_IS_COMPFUNC(DUK_ACT_GET_FUNC(thr->callstack_curr->parent)));   /* must be ECMAScript */
 
 #if defined(DUK_USE_ES6_PROXY)
 		if (thr->callstack_curr->flags & (DUK_ACT_FLAG_CONSTRUCT | DUK_ACT_FLAG_CONSTRUCT_PROXY)) {
@@ -1631,31 +1631,51 @@ DUK_LOCAL duk_small_uint_t duk__handle_return(duk_hthread *thr, duk_activation *
 	DUK_DD(DUK_DDPRINT("no calling activation, thread finishes (similar to yield)"));
 
 	DUK_ASSERT(thr->resumer != NULL);
-	DUK_ASSERT(thr->resumer->callstack_top >= 2);  /* Ecmascript activation + Duktape.Thread.resume() activation */
+	DUK_ASSERT(thr->resumer->callstack_top >= 2);  /* ECMAScript activation + Duktape.Thread.resume() activation */
 	DUK_ASSERT(thr->resumer->callstack_curr != NULL);
 	DUK_ASSERT(thr->resumer->callstack_curr->parent != NULL);
 	DUK_ASSERT(DUK_ACT_GET_FUNC(thr->resumer->callstack_curr) != NULL &&
 			DUK_HOBJECT_IS_NATFUNC(DUK_ACT_GET_FUNC(thr->resumer->callstack_curr)) &&
 			((duk_hnatfunc *) DUK_ACT_GET_FUNC(thr->resumer->callstack_curr))->func == duk_bi_thread_resume);  /* Duktape.Thread.resume() */
 	DUK_ASSERT(DUK_ACT_GET_FUNC(thr->resumer->callstack_curr->parent) != NULL &&
-			DUK_HOBJECT_IS_COMPFUNC(DUK_ACT_GET_FUNC(thr->resumer->callstack_curr->parent)));  /* an Ecmascript function */
+			DUK_HOBJECT_IS_COMPFUNC(DUK_ACT_GET_FUNC(thr->resumer->callstack_curr->parent)));  /* an ECMAScript function */
 	DUK_ASSERT(thr->state == DUK_HTHREAD_STATE_RUNNING);
 	DUK_ASSERT(thr->resumer->state == DUK_HTHREAD_STATE_RESUMED);
 
 	resumer = thr->resumer;
 
-	/* Share yield longjmp handler. */
+	/* Share yield longjmp handler.
+	 *
+	 * This sequence of steps is a bit fragile (see GH-1845):
+	 * - We need the return value from 'thr' (resumed thread) value stack.
+	 *   The termination unwinds its value stack, losing the value.
+	 * - We need a refcounted reference for 'thr', which may only exist
+	 *   in the caller value stack.  We can't unwind or reconfigure the
+	 *   caller's value stack without potentially freeing 'thr'.
+	 *
+	 * Current approach is to capture the 'thr' return value and store
+	 * a reference to 'thr' in the caller value stack temporarily.  This
+	 * keeps 'thr' reachable until final yield/return handling which
+	 * removes the references atomatically.
+	 */
+
 	DUK_ASSERT(thr->valstack_top - 1 >= thr->valstack_bottom);
-	duk_hthread_activation_unwind_norz(resumer);
-	duk__handle_yield(thr, resumer, thr->valstack_top - 1);
+	duk_hthread_activation_unwind_norz(resumer);  /* May remove last reference to 'thr', but is NORZ. */
+	duk_push_tval(resumer, thr->valstack_top - 1);  /* Capture return value, side effect free. */
+	duk_push_hthread(resumer, thr);  /* Make 'thr' reachable again, before side effects. */
 
-	duk_hthread_terminate(thr);  /* updates thread state, minimizes its allocations */
-	DUK_ASSERT(thr->state == DUK_HTHREAD_STATE_TERMINATED);
-
+	duk_hthread_terminate(thr);  /* Updates thread state, minimizes its allocations. */
 	thr->resumer = NULL;
 	DUK_HTHREAD_DECREF(thr, resumer);
+	DUK_ASSERT(thr->state == DUK_HTHREAD_STATE_TERMINATED);
+
 	resumer->state = DUK_HTHREAD_STATE_RUNNING;
 	DUK_HEAP_SWITCH_THREAD(thr->heap, resumer);
+
+	DUK_ASSERT(resumer->valstack_top - 2 >= resumer->valstack_bottom);
+	duk__handle_yield(thr, resumer, resumer->valstack_top - 2);
+	thr = NULL;  /* 'thr' invalidated by call */
+
 #if 0
 	thr = resumer;  /* not needed */
 #endif
@@ -1815,7 +1835,7 @@ DUK_LOCAL void duk__interrupt_handle_debugger(duk_hthread *thr, duk_bool_t *out_
 		if (diff_last < 0.0 || diff_last >= (duk_double_t) DUK_HEAP_DBG_RATELIMIT_MILLISECS) {
 			/* Monotonic time should not experience time jumps,
 			 * but the provider may be missing and we're actually
-			 * using Ecmascript time.  So, tolerate negative values
+			 * using ECMAScript time.  So, tolerate negative values
 			 * so that a time jump works reasonably.
 			 *
 			 * Same interval is now used for status sending and
@@ -2650,7 +2670,7 @@ DUK_LOCAL duk_bool_t duk__executor_handle_call(duk_hthread *thr, duk_idx_t idx, 
 }
 
 /*
- *  Ecmascript bytecode executor.
+ *  ECMAScript bytecode executor.
  *
  *  Resume execution for the current thread from its current activation.
  *  Returns when execution would return from the entry level activation,
@@ -2659,7 +2679,7 @@ DUK_LOCAL duk_bool_t duk__executor_handle_call(duk_hthread *thr, duk_idx_t idx, 
  *  a longjmp() with type DUK_LJ_TYPE_THROW is called on the entry level
  *  setjmp() jmpbuf.
  *
- *  Ecmascript function calls and coroutine resumptions are handled
+ *  ECMAScript function calls and coroutine resumptions are handled
  *  internally (by the outer executor function) without recursive C calls.
  *  Other function calls are handled using duk_handle_call(), increasing
  *  C recursion depth.
@@ -2917,7 +2937,10 @@ DUK_INTERNAL void duk_js_execute_bytecode(duk_hthread *exec_thr) {
 			                           entry_jmpbuf_ptr);
 		}
 #if defined(DUK_USE_CPP_EXCEPTIONS)
-		catch (std::exception &exc) {
+		catch (duk_fatal_exception &exc) {
+			DUK_D(DUK_DPRINT("rethrow duk_fatal_exception"));
+			throw;
+		} catch (std::exception &exc) {
 			const char *what = exc.what();
 			if (!what) {
 				what = "unknown";

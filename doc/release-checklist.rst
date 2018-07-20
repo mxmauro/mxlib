@@ -111,7 +111,7 @@ Checklist for ordinary releases
         $ make duk-sanitize-clang
         $ for i in tests/ecmascript/test-*.js; do python util/runtest.py --duk ./duk-sanitize-clang --timeout 30 $i; done
 
-* Ecmascript testcases
+* ECMAScript testcases
 
   - On x86-64 (exercise 16-byte duk_tval):
 
@@ -281,7 +281,7 @@ Checklist for ordinary releases
     The branch is not pushed to the server.
 
   - The concrete commands are packaged into ``add-unpacked.sh`` in
-    duktape-releases repo.
+    duktape-releases repo.  Add the tar.xz into master first.
 
 * Update website downloads page
 
@@ -342,11 +342,12 @@ Checklist for maintenance releases
 
 * Review diff between previous release and new patch release.
 
-* Tag release, description "maintenance release" should be good enough for
+* Tag release; description "maintenance release" should be good enough for
   most patch releases.
 
 * Build release.  Compare release to previous release package by diffing the
-  unpacked directories.
+  unpacked directories.  Check out the maintenance branch for the build so
+  that the branch in C defines is that branch instead of "HEAD".
 
 * Build website from master.  Deploy only ``download.html``.
 
