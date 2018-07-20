@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2016 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2015-2018 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -100,6 +100,7 @@ struct ossl_statem_st {
     /* Should we skip the CertificateVerify message? */
     unsigned int no_cert_verify;
     int use_timer;
+    int invalid_enc_write_ctx;
 };
 typedef struct ossl_statem_st OSSL_STATEM;
 
@@ -132,3 +133,8 @@ __owur int ossl_statem_skip_early_data(SSL *s);
 void ossl_statem_check_finish_init(SSL *s, int send);
 void ossl_statem_set_hello_verify_done(SSL *s);
 __owur int ossl_statem_app_data_allowed(SSL *s);
+__owur int ossl_statem_export_allowed(SSL *s);
+__owur int ossl_statem_export_early_allowed(SSL *s);
+
+/* Flush the write BIO */
+int statem_flush(SSL *s);

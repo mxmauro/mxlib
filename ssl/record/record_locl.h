@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2016 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -80,6 +80,7 @@ int ssl3_release_write_buffer(SSL *s);
 
 #define SSL3_RECORD_get_type(r)                 ((r)->type)
 #define SSL3_RECORD_set_type(r, t)              ((r)->type = (t))
+#define SSL3_RECORD_set_rec_version(r, v)       ((r)->rec_version = (v))
 #define SSL3_RECORD_get_length(r)               ((r)->length)
 #define SSL3_RECORD_set_length(r, l)            ((r)->length = (l))
 #define SSL3_RECORD_add_length(r, l)            ((r)->length += (l))
@@ -114,4 +115,4 @@ __owur int tls1_cbc_remove_padding(const SSL *s,
                                    size_t block_size, size_t mac_size);
 int dtls1_process_record(SSL *s, DTLS1_BITMAP *bitmap);
 __owur int dtls1_get_record(SSL *s);
-int early_data_count_ok(SSL *s, size_t length, size_t overhead, int *al);
+int early_data_count_ok(SSL *s, size_t length, size_t overhead, int send);

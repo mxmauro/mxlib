@@ -1,4 +1,4 @@
-# Copyright 2016 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2016-2018 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the OpenSSL license (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -17,7 +17,6 @@ use constant {
     MT_CLIENT_HELLO => 1,
     MT_SERVER_HELLO => 2,
     MT_NEW_SESSION_TICKET => 4,
-    MT_HELLO_RETRY_REQUEST => 6,
     MT_ENCRYPTED_EXTENSIONS => 8,
     MT_CERTIFICATE => 11,
     MT_SERVER_KEY_EXCHANGE => 12,
@@ -48,7 +47,6 @@ my %message_type = (
     MT_CLIENT_HELLO, "ClientHello",
     MT_SERVER_HELLO, "ServerHello",
     MT_NEW_SESSION_TICKET, "NewSessionTicket",
-    MT_HELLO_RETRY_REQUEST, "HelloRetryRequest",
     MT_ENCRYPTED_EXTENSIONS, "EncryptedExtensions",
     MT_CERTIFICATE, "Certificate",
     MT_SERVER_KEY_EXCHANGE, "ServerKeyExchange",
@@ -76,11 +74,13 @@ use constant {
     EXT_ENCRYPT_THEN_MAC => 22,
     EXT_EXTENDED_MASTER_SECRET => 23,
     EXT_SESSION_TICKET => 35,
-    EXT_KEY_SHARE => 40,
+    EXT_KEY_SHARE => 51,
     EXT_PSK => 41,
     EXT_SUPPORTED_VERSIONS => 43,
     EXT_COOKIE => 44,
     EXT_PSK_KEX_MODES => 45,
+    EXT_POST_HANDSHAKE_AUTH => 49,
+    EXT_SIG_ALGS_CERT => 50,
     EXT_RENEGOTIATE => 65281,
     EXT_NPN => 13172,
     # This extension is an unofficial extension only ever written by OpenSSL
@@ -103,11 +103,14 @@ use constant {
     SIG_ALG_ECDSA_SECP256R1_SHA256 => 0x0403,
     SIG_ALG_ECDSA_SECP384R1_SHA384 => 0x0503,
     SIG_ALG_ECDSA_SECP521R1_SHA512 => 0x0603,
-    SIG_ALG_RSA_PSS_SHA256 => 0x0804,
-    SIG_ALG_RSA_PSS_SHA384 => 0x0805,
-    SIG_ALG_RSA_PSS_SHA512 => 0x0806,
+    SIG_ALG_RSA_PSS_RSAE_SHA256 => 0x0804,
+    SIG_ALG_RSA_PSS_RSAE_SHA384 => 0x0805,
+    SIG_ALG_RSA_PSS_RSAE_SHA512 => 0x0806,
     SIG_ALG_ED25519 => 0x0807,
     SIG_ALG_ED448 => 0x0808,
+    SIG_ALG_RSA_PSS_PSS_SHA256 => 0x0809,
+    SIG_ALG_RSA_PSS_PSS_SHA384 => 0x080a,
+    SIG_ALG_RSA_PSS_PSS_SHA512 => 0x080b,
     SIG_ALG_RSA_PKCS1_SHA1 => 0x0201,
     SIG_ALG_ECDSA_SHA1 => 0x0203,
     SIG_ALG_DSA_SHA1 => 0x0202,
@@ -172,10 +175,12 @@ sub get_messages
             #We can't handle this yet
             die "CCS received before message data complete\n";
         }
-        if ($server) {
-            TLSProxy::Record->server_encrypting(1);
-        } else {
-            TLSProxy::Record->client_encrypting(1);
+        if (!TLSProxy::Proxy->is_tls13()) {
+            if ($server) {
+                TLSProxy::Record->server_encrypting(1);
+            } else {
+                TLSProxy::Record->client_encrypting(1);
+            }
         }
     } elsif ($record->content_type == TLSProxy::Record::RT_HANDSHAKE) {
         if ($record->len == 0 || $record->len_real == 0) {
@@ -265,14 +270,17 @@ sub get_messages
         }
     } elsif ($record->content_type == TLSProxy::Record::RT_ALERT) {
         my ($alertlev, $alertdesc) = unpack('CC', $record->decrypt_data);
+        print "  [$alertlev, $alertdesc]\n";
         #A CloseNotify from the client indicates we have finished successfully
         #(we assume)
         if (!$end && !$server && $alertlev == AL_LEVEL_WARN
             && $alertdesc == AL_DESC_CLOSE_NOTIFY) {
             $success = 1;
         }
-        #All alerts end the test
-        $end = 1;
+        #Fatal or close notify alerts end the test
+        if ($alertlev == AL_LEVEL_FATAL || $alertdesc == AL_DESC_CLOSE_NOTIFY) {
+            $end = 1;
+        }
     }
 
     return @messages;
@@ -289,15 +297,6 @@ sub create_message
     #others
     if ($mt == MT_CLIENT_HELLO) {
         $message = TLSProxy::ClientHello->new(
-            $server,
-            $data,
-            [@message_rec_list],
-            $startoffset,
-            [@message_frag_lens]
-        );
-        $message->parse();
-    } elsif ($mt == MT_HELLO_RETRY_REQUEST) {
-        $message = TLSProxy::HelloRetryRequest->new(
             $server,
             $data,
             [@message_rec_list],
