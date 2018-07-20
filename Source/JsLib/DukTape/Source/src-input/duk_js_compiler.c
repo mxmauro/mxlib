@@ -1,5 +1,5 @@
 /*
- *  Ecmascript compiler.
+ *  ECMAScript compiler.
  *
  *  Parses an input string and generates a function template result.
  *  Compilation may happen in multiple contexts (global code, eval
@@ -2317,7 +2317,7 @@ DUK_LOCAL void duk__ivalue_toplain_raw(duk_compiler_ctx *comp_ctx, duk_ivalue *x
 				}
 			} else if (x->op == DUK_OP_ADD && DUK_TVAL_IS_STRING(tv1) && DUK_TVAL_IS_STRING(tv2)) {
 				/* Inline string concatenation.  No need to check for
-				 * symbols, as all inputs are valid Ecmascript strings.
+				 * symbols, as all inputs are valid ECMAScript strings.
 				 */
 				duk_dup(thr, x->x1.valstack_idx);
 				duk_dup(thr, x->x2.valstack_idx);
@@ -6703,7 +6703,7 @@ DUK_LOCAL void duk__parse_stmt(duk_compiler_ctx *comp_ctx, duk_ivalue *res, duk_
 				 */
 
 				if (DUK_HSTRING_GET_BYTELEN(h_dir) == 10 &&
-				    DUK_STRNCMP((const char *) DUK_HSTRING_GET_DATA(h_dir), "use strict", 10) == 0) {
+				    DUK_STRCMP((const char *) DUK_HSTRING_GET_DATA(h_dir), "use strict") == 0) {
 #if defined(DUK_USE_STRICT_DECL)
 					DUK_DDD(DUK_DDDPRINT("use strict directive detected: strict flag %ld -> %ld",
 					                     (long) comp_ctx->curr_func.is_strict, (long) 1));
@@ -6712,7 +6712,7 @@ DUK_LOCAL void duk__parse_stmt(duk_compiler_ctx *comp_ctx, duk_ivalue *res, duk_
 					DUK_DDD(DUK_DDDPRINT("use strict detected but strict declarations disabled, ignoring"));
 #endif
 				} else if (DUK_HSTRING_GET_BYTELEN(h_dir) == 14 &&
-				           DUK_STRNCMP((const char *) DUK_HSTRING_GET_DATA(h_dir), "use duk notail", 14) == 0) {
+				           DUK_STRCMP((const char *) DUK_HSTRING_GET_DATA(h_dir), "use duk notail") == 0) {
 					DUK_DDD(DUK_DDDPRINT("use duk notail directive detected: notail flag %ld -> %ld",
 					                     (long) comp_ctx->curr_func.is_notail, (long) 1));
 					comp_ctx->curr_func.is_notail = 1;
@@ -7829,7 +7829,7 @@ DUK_LOCAL duk_int_t duk__parse_func_like_fnum(duk_compiler_ctx *comp_ctx, duk_sm
  *  Compile input string into an executable function template without
  *  arguments.
  *
- *  The string is parsed as the "Program" production of Ecmascript E5.
+ *  The string is parsed as the "Program" production of ECMAScript E5.
  *  Compilation context can be either global code or eval code (see E5
  *  Sections 14 and 15.1.2.1).
  *

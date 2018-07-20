@@ -2686,48 +2686,42 @@ DUK_EXTERNAL void duk_to_null(duk_hthread *thr, duk_idx_t idx) {
 }
 
 /* E5 Section 9.1 */
-DUK_EXTERNAL void duk_to_primitive(duk_hthread *thr, duk_idx_t idx, duk_int_t hint) {
-	/* inline initializer for coercers[] is not allowed by old compilers like BCC */
+DUK_LOCAL const char * const duk__toprim_hint_strings[3] = {
+	"default", "string", "number"
+};
+DUK_LOCAL void duk__to_primitive_helper(duk_hthread *thr, duk_idx_t idx, duk_int_t hint, duk_bool_t check_symbol) {
+	/* Inline initializer for coercers[] is not allowed by old compilers like BCC. */
 	duk_small_uint_t coercers[2];
-	duk_small_uint_t class_number;
 
 	DUK_ASSERT_API_ENTRY(thr);
 	DUK_ASSERT(hint == DUK_HINT_NONE || hint == DUK_HINT_NUMBER || hint == DUK_HINT_STRING);
 
 	idx = duk_require_normalize_index(thr, idx);
 
+	/* If already primitive, return as is. */
 	if (!duk_check_type_mask(thr, idx, DUK_TYPE_MASK_OBJECT |
 	                                   DUK_TYPE_MASK_LIGHTFUNC |
 	                                   DUK_TYPE_MASK_BUFFER)) {
-		/* Any other values stay as is. */
 		DUK_ASSERT(!duk_is_buffer(thr, idx));  /* duk_to_string() relies on this behavior */
 		return;
 	}
 
-	class_number = duk_get_class_number(thr, idx);
-
-	/* XXX: Symbol objects normally coerce via the ES2015-revised ToPrimitive()
-	 * algorithm which consults value[@@toPrimitive] and avoids calling
-	 * .valueOf() and .toString().  Before that is implemented, special
-	 * case Symbol objects to behave as if they had the default @@toPrimitive
-	 * algorithm of E6 Section 19.4.3.4, i.e. return the plain symbol value
-	 * with no further side effects.
+	/* @@toPrimitive lookup.  Also do for plain buffers and lightfuncs
+	 * which mimic objects.
 	 */
-
-	if (class_number == DUK_HOBJECT_CLASS_SYMBOL) {
-		duk_hobject *h_obj;
-		duk_hstring *h_str;
-
-		/* XXX: pretty awkward, index based API for internal value access? */
-		h_obj = duk_known_hobject(thr, idx);
-		h_str = duk_hobject_get_internal_value_string(thr->heap, h_obj);
-		if (h_str) {
-			duk_push_hstring(thr, h_str);
-			duk_replace(thr, idx);
-			return;
+	if (check_symbol && duk_get_method_stridx(thr, idx, DUK_STRIDX_WELLKNOWN_SYMBOL_TO_PRIMITIVE)) {
+		DUK_ASSERT(hint >= 0 && (duk_size_t) hint < sizeof(duk__toprim_hint_strings) / sizeof(const char *));
+		duk_dup(thr, idx);
+		duk_push_string(thr, duk__toprim_hint_strings[hint]);
+		duk_call_method(thr, 1);  /* [ ... method value hint ] -> [ ... res] */
+		if (duk_check_type_mask(thr, -1, DUK_TYPE_MASK_OBJECT |
+	                                         DUK_TYPE_MASK_LIGHTFUNC |
+		                                 DUK_TYPE_MASK_BUFFER)) {
+			goto fail;
 		}
+		duk_replace(thr, idx);
+		return;
 	}
-
 
 	/* Objects are coerced based on E5 specification.
 	 * Lightfuncs are coerced because they behave like
@@ -2736,17 +2730,29 @@ DUK_EXTERNAL void duk_to_primitive(duk_hthread *thr, duk_idx_t idx, duk_int_t hi
 	 * like ArrayBuffer objects since Duktape 2.x.
 	 */
 
-	coercers[0] = DUK_STRIDX_VALUE_OF;
-	coercers[1] = DUK_STRIDX_TO_STRING;
-
+	/* Hint magic for Date is unnecessary in ES2015 because of
+	 * Date.prototype[@@toPrimitive].  However, it is needed if
+	 * symbol support is not enabled.
+	 */
+#if defined(DUK_USE_SYMBOL_BUILTIN)
 	if (hint == DUK_HINT_NONE) {
+		hint = DUK_HINT_NUMBER;
+	}
+#else  /* DUK_USE_SYMBOL_BUILTIN */
+	if (hint == DUK_HINT_NONE) {
+		duk_small_uint_t class_number;
+
+		class_number = duk_get_class_number(thr, idx);
 		if (class_number == DUK_HOBJECT_CLASS_DATE) {
 			hint = DUK_HINT_STRING;
 		} else {
 			hint = DUK_HINT_NUMBER;
 		}
 	}
+#endif  /* DUK_USE_SYMBOL_BUILTIN */
 
+	coercers[0] = DUK_STRIDX_VALUE_OF;
+	coercers[1] = DUK_STRIDX_TO_STRING;
 	if (hint == DUK_HINT_STRING) {
 		coercers[0] = DUK_STRIDX_TO_STRING;
 		coercers[1] = DUK_STRIDX_VALUE_OF;
@@ -2762,9 +2768,20 @@ DUK_EXTERNAL void duk_to_primitive(duk_hthread *thr, duk_idx_t idx, duk_int_t hi
 		return;
 	}
 
+ fail:
 	DUK_ERROR_TYPE(thr, DUK_STR_TOPRIMITIVE_FAILED);
 	DUK_WO_NORETURN(return;);
 }
+
+DUK_EXTERNAL void duk_to_primitive(duk_hthread *thr, duk_idx_t idx, duk_int_t hint) {
+	duk__to_primitive_helper(thr, idx, hint, 1 /*check_symbol*/);
+}
+
+#if defined(DUK_USE_SYMBOL_BUILTIN)
+DUK_INTERNAL void duk_to_primitive_ordinary(duk_hthread *thr, duk_idx_t idx, duk_int_t hint) {
+	duk__to_primitive_helper(thr, idx, hint, 0 /*check_symbol*/);
+}
+#endif
 
 /* E5 Section 9.2 */
 DUK_EXTERNAL duk_bool_t duk_to_boolean(duk_hthread *thr, duk_idx_t idx) {
@@ -2783,6 +2800,22 @@ DUK_EXTERNAL duk_bool_t duk_to_boolean(duk_hthread *thr, duk_idx_t idx) {
 	/* Note: no need to re-lookup tv, conversion is side effect free. */
 	DUK_ASSERT(tv != NULL);
 	DUK_TVAL_SET_BOOLEAN_UPDREF(thr, tv, val);  /* side effects */
+	return val;
+}
+
+DUK_INTERNAL duk_bool_t duk_to_boolean_top_pop(duk_hthread *thr) {
+	duk_tval *tv;
+	duk_bool_t val;
+
+	DUK_ASSERT_API_ENTRY(thr);
+
+	tv = duk_require_tval(thr, -1);
+	DUK_ASSERT(tv != NULL);
+
+	val = duk_js_toboolean(tv);
+	DUK_ASSERT(val == 0 || val == 1);
+
+	duk_pop_unsafe(thr);
 	return val;
 }
 
@@ -3065,68 +3098,67 @@ DUK_INTERNAL duk_hstring *duk_safe_to_hstring(duk_hthread *thr, duk_idx_t idx) {
 #endif
 
 /* Push Object.prototype.toString() output for 'tv'. */
-DUK_INTERNAL void duk_push_class_string_tval(duk_hthread *thr, duk_tval *tv) {
-	duk_small_uint_t stridx;
-	duk_hstring *h_strclass;
+#if 0  /* See XXX note why this variant doesn't work. */
+DUK_INTERNAL void duk_push_class_string_tval(duk_hthread *thr, duk_tval *tv, duk_bool_t avoid_side_effects) {
+	duk_uint_t stridx_bidx = 0;  /* (prototype_bidx << 16) + default_tag_stridx */
 
 	DUK_ASSERT_API_ENTRY(thr);
+
+	/* Conceptually for any non-undefined/null value we should do a
+	 * ToObject() coercion and look up @@toStringTag (from the object
+	 * prototype) to see if a custom tag should be used.  Avoid the
+	 * actual conversion by doing a prototype lookup without the object
+	 * coercion.  However, see problem below.
+	 */
+
+	duk_push_literal(thr, "[object ");  /* -> [ ... "[object" ] */
 
 	switch (DUK_TVAL_GET_TAG(tv)) {
 	case DUK_TAG_UNUSED:  /* Treat like 'undefined', shouldn't happen. */
 	case DUK_TAG_UNDEFINED: {
-		stridx = DUK_STRIDX_UC_UNDEFINED;
-		break;
+		stridx_bidx = DUK_STRIDX_UC_UNDEFINED;
+		goto use_stridx;
 	}
 	case DUK_TAG_NULL: {
-		stridx = DUK_STRIDX_UC_NULL;
-		break;
+		stridx_bidx = DUK_STRIDX_UC_NULL;
+		goto use_stridx;
 	}
 	case DUK_TAG_BOOLEAN: {
-		stridx = DUK_STRIDX_UC_BOOLEAN;
-		break;
+		stridx_bidx = (DUK_BIDX_BOOLEAN_PROTOTYPE << 16) + DUK_STRIDX_UC_BOOLEAN;
+		goto use_proto_bidx;
 	}
 	case DUK_TAG_POINTER: {
-		stridx = DUK_STRIDX_UC_POINTER;
-		break;
+		stridx_bidx = (DUK_BIDX_POINTER_PROTOTYPE << 16) + DUK_STRIDX_UC_POINTER;
+		goto use_proto_bidx;
 	}
 	case DUK_TAG_LIGHTFUNC: {
-		stridx = DUK_STRIDX_UC_FUNCTION;
-		break;
+		stridx_bidx = (DUK_BIDX_FUNCTION_PROTOTYPE << 16) + DUK_STRIDX_UC_FUNCTION;
+		goto use_proto_bidx;
 	}
 	case DUK_TAG_STRING: {
 		duk_hstring *h;
 		h = DUK_TVAL_GET_STRING(tv);
 		DUK_ASSERT(h != NULL);
 		if (DUK_UNLIKELY(DUK_HSTRING_HAS_SYMBOL(h))) {
-			stridx = DUK_STRIDX_UC_SYMBOL;
+			/* Even without DUK_USE_SYMBOL_BUILTIN the Symbol
+			 * prototype exists so we can lookup @@toStringTag
+			 * and provide [object Symbol] for symbol values
+			 * created from C code.
+			 */
+			stridx_bidx = (DUK_BIDX_SYMBOL_PROTOTYPE << 16) + DUK_STRIDX_UC_SYMBOL;
 		} else {
-			stridx = DUK_STRIDX_UC_STRING;
+			stridx_bidx = (DUK_BIDX_STRING_PROTOTYPE << 16) + DUK_STRIDX_UC_STRING;
 		}
-		break;
+		goto use_proto_bidx;
 	}
 	case DUK_TAG_OBJECT: {
-		duk_hobject *h;
-		duk_small_uint_t classnum;
-
-		h = DUK_TVAL_GET_OBJECT(tv);
-		DUK_ASSERT(h != NULL);
-		classnum = DUK_HOBJECT_GET_CLASS_NUMBER(h);
-		stridx = DUK_HOBJECT_CLASS_NUMBER_TO_STRIDX(classnum);
-
-		/* XXX: This is not entirely correct anymore; in ES2015 the
-		 * default lookup should use @@toStringTag to come up with
-		 * e.g. [object Symbol], [object Uint8Array], etc.  See
-		 * ES2015 Section 19.1.3.6.  The downside of implementing that
-		 * directly is that the @@toStringTag lookup may have side
-		 * effects, so all call sites must be checked for that.
-		 * Some may need a side-effect free lookup, e.g. avoiding
-		 * getters which are not typical.
-		 */
-		break;
+		duk_push_tval(thr, tv);
+		stridx_bidx = 0xffffffffUL;  /* Marker value. */
+		goto use_pushed_object;
 	}
 	case DUK_TAG_BUFFER: {
-		stridx = DUK_STRIDX_UINT8_ARRAY;
-		break;
+		stridx_bidx = (DUK_BIDX_UINT8ARRAY_PROTOTYPE << 16) + DUK_STRIDX_UINT8_ARRAY;
+		goto use_proto_bidx;
 	}
 #if defined(DUK_USE_FASTINT)
 	case DUK_TAG_FASTINT:
@@ -3134,14 +3166,142 @@ DUK_INTERNAL void duk_push_class_string_tval(duk_hthread *thr, duk_tval *tv) {
 #endif
 	default: {
 		DUK_ASSERT(DUK_TVAL_IS_NUMBER(tv));  /* number (maybe fastint) */
-		stridx = DUK_STRIDX_UC_NUMBER;
-		break;
+		stridx_bidx = (DUK_BIDX_NUMBER_PROTOTYPE << 16) + DUK_STRIDX_UC_NUMBER;
+		goto use_proto_bidx;
 	}
 	}
-	h_strclass = DUK_HTHREAD_GET_STRING(thr, stridx);
-	DUK_ASSERT(h_strclass != NULL);
+	DUK_ASSERT(0);  /* Never here. */
 
-	duk_push_sprintf(thr, "[object %s]", (const char *) DUK_HSTRING_GET_DATA(h_strclass));
+ use_proto_bidx:
+	DUK_ASSERT_BIDX_VALID((stridx_bidx >> 16) & 0xffffUL);
+	duk_push_hobject(thr, thr->builtins[(stridx_bidx >> 16) & 0xffffUL]);
+	/* Fall through. */
+
+ use_pushed_object:
+	/* [ ... "[object" obj ] */
+
+#if defined(DUK_USE_SYMBOL_BUILTIN)
+	/* XXX: better handling with avoid_side_effects == 1; lookup tval
+	 * without Proxy or getter side effects, and use it in sanitized
+	 * form if it's a string.
+	 */
+	if (!avoid_side_effects) {
+		/* XXX: The problem with using the prototype object as the
+		 * lookup base is that if @@toStringTag is a getter, its
+		 * 'this' binding must be the ToObject() coerced input value,
+		 * not the prototype object of the type.
+		 */
+		(void) duk_get_prop_stridx(thr, -1, DUK_STRIDX_WELLKNOWN_SYMBOL_TO_STRING_TAG);
+		if (duk_is_string_notsymbol(thr, -1)) {
+			duk_remove_m2(thr);
+			goto finish;
+		}
+		duk_pop_unsafe(thr);
+	}
+#endif
+
+	if (stridx_bidx == 0xffffffffUL) {
+		duk_hobject *h_obj;
+		duk_small_uint_t classnum;
+
+		h_obj = duk_known_hobject(thr, -1);
+		DUK_ASSERT(h_obj != NULL);
+		classnum = DUK_HOBJECT_GET_CLASS_NUMBER(h_obj);
+		stridx_bidx = DUK_HOBJECT_CLASS_NUMBER_TO_STRIDX(classnum);
+	} else {
+		/* stridx_bidx already has the desired fallback stridx. */
+		;
+	}
+	duk_pop_unsafe(thr);
+	/* Fall through. */
+
+ use_stridx:
+	/* [ ... "[object" ] */
+	duk_push_hstring_stridx(thr, stridx_bidx & 0xffffUL);
+
+ finish:
+	/* [ ... "[object" tag ] */
+	duk_push_literal(thr, "]");
+	duk_concat(thr, 3);  /* [ ... "[object" tag "]" ] -> [ ... res ] */
+}
+#endif  /* 0 */
+
+DUK_INTERNAL void duk_push_class_string_tval(duk_hthread *thr, duk_tval *tv, duk_bool_t avoid_side_effects) {
+	duk_hobject *h_obj;
+	duk_small_uint_t classnum;
+	duk_small_uint_t stridx;
+	duk_tval tv_tmp;
+
+	DUK_ASSERT_API_ENTRY(thr);
+	DUK_ASSERT(tv != NULL);
+
+	/* Stabilize 'tv', duk_push_literal() may trigger side effects. */
+	DUK_TVAL_SET_TVAL(&tv_tmp, tv);
+	tv = &tv_tmp;
+
+	/* Conceptually for any non-undefined/null value we should do a
+	 * ToObject() coercion and look up @@toStringTag (from the object
+	 * prototype) to see if a custom result should be used.  We'd like to
+	 * avoid the actual conversion, but even for primitive types the
+	 * prototype may have @@toStringTag.  What's worse, the @@toStringTag
+	 * property may be a getter that must get the object coerced value
+	 * (not the prototype) as its 'this' binding.
+	 *
+	 * For now, do an actual object coercion.  This could be avoided by
+	 * doing a side effect free lookup to see if a getter would be invoked.
+	 * If not, the value can be read directly and the object coercion could
+	 * be avoided.  This may not be worth it in practice, because
+	 * Object.prototype.toString() is usually not performance critical.
+	 */
+
+	duk_push_literal(thr, "[object ");  /* -> [ ... "[object" ] */
+
+	switch (DUK_TVAL_GET_TAG(tv)) {
+	case DUK_TAG_UNUSED:  /* Treat like 'undefined', shouldn't happen. */
+	case DUK_TAG_UNDEFINED: {
+		duk_push_hstring_stridx(thr, DUK_STRIDX_UC_UNDEFINED);
+		goto finish;
+	}
+	case DUK_TAG_NULL: {
+		duk_push_hstring_stridx(thr, DUK_STRIDX_UC_NULL);
+		goto finish;
+	}
+	}
+
+	duk_push_tval(thr, tv);
+	tv = NULL;  /* Invalidated by ToObject(). */
+	duk_to_object(thr, -1);
+
+	/* [ ... "[object" obj ] */
+
+#if defined(DUK_USE_SYMBOL_BUILTIN)
+	/* XXX: better handling with avoid_side_effects == 1; lookup tval
+	 * without Proxy or getter side effects, and use it in sanitized
+	 * form if it's a string.
+	 */
+	if (!avoid_side_effects) {
+		(void) duk_get_prop_stridx(thr, -1, DUK_STRIDX_WELLKNOWN_SYMBOL_TO_STRING_TAG);
+		if (duk_is_string_notsymbol(thr, -1)) {
+			duk_remove_m2(thr);
+			goto finish;
+		}
+		duk_pop_unsafe(thr);
+	}
+#else
+	DUK_UNREF(avoid_side_effects);
+#endif
+
+	h_obj = duk_known_hobject(thr, -1);
+	DUK_ASSERT(h_obj != NULL);
+	classnum = DUK_HOBJECT_GET_CLASS_NUMBER(h_obj);
+	stridx = DUK_HOBJECT_CLASS_NUMBER_TO_STRIDX(classnum);
+	duk_pop_unsafe(thr);
+	duk_push_hstring_stridx(thr, stridx);
+
+ finish:
+	/* [ ... "[object" tag ] */
+	duk_push_literal(thr, "]");
+	duk_concat(thr, 3);  /* [ ... "[object" tag "]" ] -> [ ... res ] */
 }
 
 /* XXX: other variants like uint, u32 etc */
@@ -5280,7 +5440,7 @@ DUK_EXTERNAL duk_idx_t duk_push_error_object_va_raw(duk_hthread *thr, duk_errcod
 		duk_xdef_prop_stridx_short(thr, -2, DUK_STRIDX_MESSAGE, DUK_PROPDESC_FLAGS_WC);
 	} else {
 		/* If no explicit message given, put error code into message field
-		 * (as a number).  This is not fully in keeping with the Ecmascript
+		 * (as a number).  This is not fully in keeping with the ECMAScript
 		 * error model because messages are supposed to be strings (Error
 		 * constructors use ToString() on their argument).  However, it's
 		 * probably more useful than having a separate 'code' property.
@@ -6584,7 +6744,7 @@ DUK_LOCAL const char *duk__push_string_tval_readable(duk_hthread *thr, duk_tval 
 					break;
 				}
 			}
-			duk_push_class_string_tval(thr, tv);
+			duk_push_class_string_tval(thr, tv, 1 /*avoid_side_effects*/);
 			break;
 		}
 		case DUK_TAG_BUFFER: {
