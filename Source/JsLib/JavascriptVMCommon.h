@@ -32,7 +32,7 @@
 #include "..\..\Include\FnvHash.h"
 
 //include the following files OUTSIDE the namespace
-#include <exception>
+//#include <exception>
 
 #ifdef _MX_JAVASCRIPT_VM_CPP
 

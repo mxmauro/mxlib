@@ -144,18 +144,25 @@ End If
 
 'Rebuild
 If bRebuild <> False Then
-	WScript.Echo "Configuring..."
-	S = "perl.exe Configure " & szConfigDebug & szConfigurationTarget & " " & szDefineNoErr & " no-sock no-rc2 no-idea no-cast no-md2 no-mdc2 no-camellia no-shared "
-	S = S & "-DOPENSSL_NO_DGRAM -DOPENSSL_NO_CAPIENG -DUNICODE -D_UNICODE "
-	If Len(szIsDebug) = 0 Then S = S & "-DOPENSSL_NO_FILENAMES "
-	S = S & Chr(34) & "--config=" & szScriptPath & "compiler_config.conf" & Chr(34)
-	I = RunApp(S, szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
+	RunApp "MD " & Chr(34) & szScriptPath & "Temp" & Chr(34), "", "", True
+
+	WScript.Echo "Creating configuration settings..."
+	I = CreateConfiguration()
 	If I = 0 Then
-		RunApp "MD " & Chr(34) & szScriptPath & "Temp" & Chr(34), "", "", True
-
-		Call Patch_Makefile()
-		Call Patch_RAND_WIN_C()
-
+		WScript.Echo "Configuring..."
+		S = "perl.exe Configure " & szConfigDebug & szConfigurationTarget & " " & szDefineNoErr & " no-sock no-rc2 no-idea no-cast no-md2 no-mdc2 no-camellia no-shared "
+		S = S & "-DOPENSSL_NO_DGRAM -DOPENSSL_NO_CAPIENG -DUNICODE -D_UNICODE "
+		If Len(szIsDebug) = 0 Then S = S & "-DOPENSSL_NO_FILENAMES "
+		S = S & Chr(34) & "--config=" & szScriptPath & "Temp\compiler_config.conf" & Chr(34)
+		I = RunApp(S, szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
+	End If
+	If I = 0 Then
+		I = Patch_Makefile()
+	End If
+	If I = 0 Then
+		I = Patch_RAND_WIN_C()
+	End If
+	If I = 0 Then
 		RunApp "NMAKE clean", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, True
 
 		WScript.Echo "Compiling..."
@@ -193,7 +200,7 @@ If bRebuild <> False Then
 			WScript.Echo "Errors detected while compiling project."
 		End If
 	Else
-		WScript.Echo "Errors detected while preparing makefiles."
+		WScript.Echo "Errors detected while preparing files."
 	End If
 Else
 	WScript.Echo "Libraries are up-to-date"
@@ -282,24 +289,234 @@ Dim I, nRet, szOutputFile
 	RunApp = nRet
 End Function
 
-Sub Patch_RAND_WIN_C()
-Dim objRE1, objRE2, objInputFile, objOutputFile
-Dim S
+Function CreateConfiguration()
+Dim objRE1, objRE2, objRE3, objRE4, objInputFile, objOutputFile
+Dim I, S, nArea
 
 	Set objRE1 = New RegExp
-	objRE1.Pattern = "#\s*define\s+USE_BCRYPTGENRANDOM"
+	objRE1.Pattern = "^\s*my\s+%targets\s+=\s+\(\s*"
 	objRE1.IgnoreCase = True
 	objRE1.Global = False
 
 	Set objRE2 = New RegExp
-	objRE2.Pattern = "#\s*include\s+\" & Chr(34) & "rand_lcl\.h\" & Chr(34)
+	objRE2.Pattern = "^\s*\);\s*"
 	objRE2.IgnoreCase = True
 	objRE2.Global = False
 
-	Set objInputFile = objFS.OpenTextFile(szScriptPath & "Source\crypto\rand\rand_win.c", 1)
-	Set objOutputFile = objFS.CreateTextFile(szScriptPath & "Temp\rand_win.c", True)
+	Set objRE3 = New RegExp
+	objRE3.Pattern = "^\s*" & Chr(34) & "VC-[^" & Chr(34) & "]*" & Chr(34) & "\s*=>\s*{\s*"
+	objRE3.IgnoreCase = True
+	objRE3.Global = False
+
+	Set objRE4 = New RegExp
+	objRE4.Pattern = "^\s*},\s*"
+	objRE4.IgnoreCase = True
+	objRE4.Global = False
+
+	On Error Resume Next
+	Set objInputFile = objFS.OpenTextFile(szScriptPath & "Source\Configurations\10-main.conf", 1)
+	I = Err.Number
+	If I <> 0 Then
+		CreateConfiguration = I
+		On Error Goto 0
+		Exit Function
+	End If
+	Set objOutputFile = objFS.CreateTextFile(szScriptPath & "Temp\compiler_config.conf", True)
+	I = Err.Number
+	If I <> 0 Then
+		CreateConfiguration = I
+		On Error Goto 0
+		Exit Function
+	End If
+
+	objOutputFile.Write "my %targets = (" & vbCrLf
+	I = Err.Number
+	If I <> 0 Then
+		CreateConfiguration = I
+		On Error Goto 0
+		Exit Function
+	End If
+
+	nArea = 0
 	Do Until objInputFile.AtEndOfStream
 		S = objInputFile.ReadLine
+		I = Err.Number
+		If I <> 0 Then
+			CreateConfiguration = I
+			On Error Goto 0
+			Exit Function
+		End If
+
+		If nArea = 0 Then
+			'start of targets?
+			If objRE1.Test(S) <> False Then nArea = 1
+		ElseIf nArea = 1 Then
+			'end of targets?
+			If objRE2.Test(S) <> False Then Exit Do
+
+			'start of a block?
+			If objRE3.Test(S) <> False Then
+				'get block name
+				S = Mid(S, InStr(S, "VC-"))
+				S = Left(S, InStr(S, Chr(34)) - 1)
+
+				If S = "VC-noCE-common" Then
+					'replace the common block with ours
+					objOutputFile.Write "    " & Chr(34) & "base-" & S & Chr(34) & " => {" & vbCrLf & _
+					                    "        inherit_from     => [ " & Chr(34) & "base-VC-common" & Chr(34) & " ]," & vbCrLf & _
+					                    "        cflags           => add(picker(default => " & Chr(34) & "-DUNICODE -D_UNICODE " & Chr(34) & "," & vbCrLf & _
+					                    "                                       debug   => sub {" & vbCrLf & _
+					                    "                                           ($disabled{shared} ? " & Chr(34) & "/MTd" & Chr(34) & " : " & Chr(34) & "/MDd" & Chr(34) & ") ." & Chr(34) & " /Od -DDEBUG -D_DEBUG" & Chr(34) & ";" & vbCrLf & _
+					                    "                                       }," & vbCrLf & _
+					                    "                                       release => sub {" & vbCrLf & _
+					                    "                                           ($disabled{shared} ? " & Chr(34) & "/MT" & Chr(34) & " : " & Chr(34) & "/MD" & Chr(34) & ") . " & Chr(34) & " /O2" & Chr(34) & ";" & vbCrLf & _
+					                    "                                       }))," & vbCrLf & _
+					                    "        lib_cflags       => add(picker(debug   => sub {" & vbCrLf & _
+					                    "                                           ($disabled{shared} ? " & Chr(34) & "/MTd" & Chr(34) & " : " & Chr(34) & "/MDd" & Chr(34) & ");" & vbCrLf & _
+					                    "                                       }," & vbCrLf & _
+					                    "                                       release => sub {" & vbCrLf & _
+					                    "                                           ($disabled{shared} ? " & Chr(34) & "/MT" & Chr(34) & " : " & Chr(34) & "/MD" & Chr(34) & ");" & vbCrLf & _
+					                    "                                       }))," & vbCrLf & _
+					                    "        bin_cflags       => add(picker(debug   => sub {" & vbCrLf & _
+					                    "                                           ($disabled{shared} ? " & Chr(34) & "/MTd" & Chr(34) & " : " & Chr(34) & "/MDd" & Chr(34) & ");" & vbCrLf & _
+					                    "                                       }," & vbCrLf & _
+					                    "                                       release => sub {" & vbCrLf & _
+					                    "                                           ($disabled{shared} ? " & Chr(34) & "/MT" & Chr(34) & " : " & Chr(34) & "/MD" & Chr(34) & ");" & vbCrLf & _
+					                    "                                       }))," & vbCrLf & _
+					                    "        bin_lflags       => add(" & Chr(34) & "/subsystem:console /opt:ref" & Chr(34) & ")," & vbCrLf & _
+					                    "        ex_libs          => add(sub {" & vbCrLf & _
+					                    "            my @ex_libs = ();" & vbCrLf & _
+					                    "            push @ex_libs, 'ws2_32.lib' unless $disabled{sock};" & vbCrLf & _
+					                    "            push @ex_libs, 'gdi32.lib advapi32.lib crypt32.lib user32.lib';" & vbCrLf & _
+					                    "            return join(" & Chr(34) & " " & Chr(34) & ", @ex_libs);" & vbCrLf & _
+					                    "        })," & vbCrLf & _
+					                    "    }," & vbCrLf
+					I = Err.Number
+					If I <> 0 Then
+						CreateConfiguration = I
+						On Error Goto 0
+						Exit Function
+					End If
+
+					nArea = 2
+				Else
+					'not a common block but a VC one
+					objOutputFile.Write "    " & Chr(34) & "base-" & S & Chr(34) & " => {" & vbCrLf
+					I = Err.Number
+					If I <> 0 Then
+						CreateConfiguration = I
+						On Error Goto 0
+						Exit Function
+					End If
+
+					nArea = 3
+				End If
+			End If
+		ElseIf nArea = 2 Then
+			'skip block content until end
+			If objRE4.Test(S) <> False Then nArea = 1
+		ElseIf nArea = 3 Then
+			'end of block?
+			If objRE4.Test(S) <> False Then
+				objOutputFile.Write S & vbCrLf
+				I = Err.Number
+				If I <> 0 Then
+					CreateConfiguration = I
+					On Error Goto 0
+					Exit Function
+				End If
+
+				nArea = 1
+			Else
+				'replace inherited block names
+				Do
+					I = InStr(S, Chr(34) & "VC-")
+					If I > 0 Then S = Left(S, I) & "base-" & Mid(S, I + 1)
+				Loop Until I = 0
+
+				objOutputFile.Write S & vbCrLf
+				I = Err.Number
+				If I <> 0 Then
+					CreateConfiguration = I
+					On Error Goto 0
+					Exit Function
+				End If
+			End If
+		End If
+	Loop
+
+	'add our custom targets
+	objOutputFile.Write "    " & Chr(34) & "my-VC-WIN32" & Chr(34) & " => {" & vbCrLf & _
+	                    "        inherit_from     => [ " & Chr(34) & "base-VC-WIN32" & Chr(34) & " ]," & vbCrLf & _
+	                    "        cflags           => add(" & Chr(34) & "-wd4244 -wd4267" & Chr(34) & ")," & vbCrLf & _
+	                    "        lflags           => add(" & Chr(34) & "/ignore:4221 LIBCMT.lib" & Chr(34) & ")" & vbCrLf & _
+	                    "    }," & vbCrLf & _
+	                    "    " & Chr(34) & "my-VC-WIN64A" & Chr(34) & " => {" & vbCrLf & _
+	                    "        inherit_from     => [ " & Chr(34) & "base-VC-WIN64A" & Chr(34) & " ]," & vbCrLf & _
+	                    "        cflags           => add(" & Chr(34) & "-wd4244 -wd4267" & Chr(34) & ")," & vbCrLf & _
+	                    "        lflags           => add(" & Chr(34) & "/ignore:4221 LIBCMT.lib" & Chr(34) & ")" & vbCrLf & _
+	                    "    }," & vbCrLf & _
+	                    "    " & Chr(34) & "debug-my-VC-WIN32" & Chr(34) & " => {" & vbCrLf & _
+	                    "        inherit_from     => [ " & Chr(34) & "base-VC-WIN32" & Chr(34) & " ]," & vbCrLf & _
+	                    "        cflags           => add(" & Chr(34) & "-wd4244 -wd4267" & Chr(34) & ")," & vbCrLf & _
+	                    "        lflags           => add(" & Chr(34) & "/ignore:4221 LIBCMTD.lib" & Chr(34) & ")" & vbCrLf & _
+	                    "    }," & vbCrLf & _
+	                    "    " & Chr(34) & "debug-my-VC-WIN64A" & Chr(34) & " => {" & vbCrLf & _
+	                    "        inherit_from     => [ " & Chr(34) & "base-VC-WIN64A" & Chr(34) & " ]," & vbCrLf & _
+	                    "        cflags           => add(" & Chr(34) & "-wd4244 -wd4267" & Chr(34) & ")," & vbCrLf & _
+	                    "        lflags           => add(" & Chr(34) & "/ignore:4221 LIBCMTD.lib" & Chr(34) & ")" & vbCrLf & _
+	                    "    }" & vbCrLf & _
+	                    ");"
+	I = Err.Number
+	If I <> 0 Then
+		CreateConfiguration = I
+		On Error Goto 0
+		Exit Function
+	End If
+
+	objOutputFile.Close
+	objInputFile.Close
+	On Error Goto 0
+	CreateConfiguration = 0
+End Function
+
+Function Patch_RAND_WIN_C()
+Dim objRE1, objRE2, objInputFile, objOutputFile
+Dim I, S
+
+	Set objRE1 = New RegExp
+	objRE1.Pattern = "^\s*#\s*define\s+USE_BCRYPTGENRANDOM\s*"
+	objRE1.IgnoreCase = True
+	objRE1.Global = False
+
+	Set objRE2 = New RegExp
+	objRE2.Pattern = "^\s*#\s*include\s+\" & Chr(34) & "rand_lcl\.h\" & Chr(34) & "\s*"
+	objRE2.IgnoreCase = True
+	objRE2.Global = False
+
+	On Error Resume Next
+	Set objInputFile = objFS.OpenTextFile(szScriptPath & "Source\crypto\rand\rand_win.c", 1)
+	I = Err.Number
+	If I <> 0 Then
+		Patch_RAND_WIN_C = I
+		On Error Goto 0
+		Exit Function
+	End If
+	Set objOutputFile = objFS.CreateTextFile(szScriptPath & "Temp\rand_win.c", True)
+	I = Err.Number
+	If I <> 0 Then
+		Patch_RAND_WIN_C = I
+		On Error Goto 0
+		Exit Function
+	End If
+	Do Until objInputFile.AtEndOfStream
+		S = objInputFile.ReadLine
+		I = Err.Number
+		If I <> 0 Then
+			Patch_RAND_WIN_C = I
+			On Error Goto 0
+			Exit Function
+		End If
 
 		If objRE1.Test(S) <> False Then
 			S = ""
@@ -308,19 +525,46 @@ Dim S
 		End If
 
 		objOutputFile.Write S & vbCrLf
+		I = Err.Number
+		If I <> 0 Then
+			Patch_RAND_WIN_C = I
+			On Error Goto 0
+			Exit Function
+		End If
 	Loop
 	objOutputFile.Close
 	objInputFile.Close
-End Sub
+	On Error Goto 0
+	Patch_RAND_WIN_C = 0
+End Function
 
-Sub Patch_Makefile()
+Function Patch_Makefile()
 Dim objRE, objInputFile, objOutputFile
-Dim S, Pos
+Dim I, S, Pos
 
+	On Error Resume Next
 	Set objInputFile = objFS.OpenTextFile(szScriptPath & "Source\makefile", 1)
+	I = Err.Number
+	If I <> 0 Then
+		Patch_Makefile = I
+		On Error Goto 0
+		Exit Function
+	End If
 	Set objOutputFile = objFS.CreateTextFile(szScriptPath & "Temp\makefile", True)
+	I = Err.Number
+	If I <> 0 Then
+		Patch_Makefile = I
+		On Error Goto 0
+		Exit Function
+	End If
 	Do Until objInputFile.AtEndOfStream
 		S = objInputFile.ReadLine
+		I = Err.Number
+		If I <> 0 Then
+			Patch_Makefile = I
+			On Error Goto 0
+			Exit Function
+		End If
 
 		Pos = InStr(1, S, "crypto\rand\rand_win.c", 1)
 		If Pos > 0 Then
@@ -328,9 +572,17 @@ Dim S, Pos
 		End If
 
 		objOutputFile.Write S & vbCrLf
+		I = Err.Number
+		If I <> 0 Then
+			Patch_Makefile = I
+			On Error Goto 0
+			Exit Function
+		End If
 	Loop
 	objOutputFile.Close
 	objInputFile.Close
+	On Error Goto 0
 
 	RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Temp\makefile" & Chr(34) & " " & Chr(34) & szScriptPath & "Source\makefile" & Chr(34), "", "", False
-End Sub
+	Patch_Makefile = 0
+End Function

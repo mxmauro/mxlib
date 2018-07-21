@@ -30,7 +30,8 @@
 #include "..\Callbacks.h"
 #include "..\ArrayList.h"
 #include "..\Strings\Strings.h"
-
+#include <exception>
+#include <stdexcept>
 #include <functional>
 
 namespace DukTape {
