@@ -713,9 +713,6 @@ restart:
           }
           break;
 
-        case CRequest::StateEnded:
-          break; //do nothing while reinitializing the request object
-
         default:
         //case CRequest::StateClosed:
         //case CRequest::StateError:
@@ -737,7 +734,9 @@ restart:
     {
       CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
 
-      if (lpRequest->nState != CRequest::StateEnded)
+      if (lpRequest->nState == CRequest::StateReceivingRequestHeaders ||
+          lpRequest->nState == CRequest::StateReceivingRequestBody ||
+          lpRequest->nState == CRequest::StateBuildingResponse)
       {
         TAutoRefCounted<CHttpBodyParserBase> cBodyParser;
 
@@ -895,22 +894,12 @@ VOID CHttpServer::OnAfterSendResponse(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVO
                                       _In_ CIpc::CUserData *lpUserData)
 {
   CRequest *lpRequest = (CRequest*)lpUserData;
+  CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
 
-  {
-    CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
-
-    CancelAllTimeoutEvents(lpRequest);
-    if (lpRequest->nState != CRequest::StateError && lpRequest->IsKeepAliveRequest() != FALSE)
-    {
-      lpRequest->ResetForNewRequest();
-    }
-    else
-    {
-      MX_HTTP_DEBUG_PRINT(1, ("HttpServer(OnAfterSendResponse/0x%p/0x%p/0x%p): Closing\n", lpRequest,
-                              &(lpRequest->sRequest.cHttpCmn), &(lpRequest->sResponse.cHttpCmn)));
-      cSocketMgr.Close(lpRequest->hConn);
-    }
-  }
+  CancelAllTimeoutEvents(lpRequest);
+  MX_HTTP_DEBUG_PRINT(1, ("HttpServer(OnAfterSendResponse/0x%p/0x%p/0x%p): Closing\n", lpRequest,
+                          &(lpRequest->sRequest.cHttpCmn), &(lpRequest->sResponse.cHttpCmn)));
+  cSocketMgr.Close(lpRequest->hConn);
   return;
 }
 
@@ -1074,16 +1063,17 @@ VOID CHttpServer::OnRequestEnding(_In_ CRequest *lpRequest, _In_ HRESULT hErrorC
   }
   if (SUCCEEDED(hRes))
   {
-    hRes = cSocketMgr.AfterWriteSignal(lpRequest->hConn,
-                                        MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnAfterSendResponse, this), lpRequest);
+    if (lpRequest->IsKeepAliveRequest() != FALSE)
+    {
+      lpRequest->ResetForNewRequest();
+    }
+    else
+    {
+      hRes = cSocketMgr.AfterWriteSignal(lpRequest->hConn,
+                                          MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnAfterSendResponse, this), lpRequest);
+    }
   }
-  if (SUCCEEDED(hRes))
-  {
-    lpRequest->nState = CRequest::StateEnded;
-    MX_HTTP_DEBUG_PRINT(1, ("HttpServer(State/0x%p/0x%p/0x%p): StateEnded\n", lpRequest,
-                            &(lpRequest->sRequest.cHttpCmn), &(lpRequest->sResponse.cHttpCmn)));
-  }
-  else
+  if (FAILED(hRes))
   {
     cSocketMgr.Close(lpRequest->hConn, hRes);
     lpRequest->nState = CRequest::StateError;

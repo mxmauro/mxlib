@@ -229,8 +229,7 @@ public:
       StateReceivingRequestHeaders,
       StateReceivingRequestBody,
       StateBuildingResponse,
-      StateError,
-      StateEnded
+      StateError
     } eState;
 
     OVERLAPPED sOvr;
