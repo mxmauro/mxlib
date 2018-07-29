@@ -49,9 +49,9 @@ public:
     { };
 
   virtual HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesRead,
-                       _In_opt_ ULONGLONG nStartOffset=ULONGLONG_MAX) = 0;
+                       _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX) = 0;
   virtual HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
-                        _In_opt_ ULONGLONG nStartOffset=ULONGLONG_MAX) = 0;
+                        _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX) = 0;
   HRESULT WriteString(_In_ LPCSTR szFormatA, ...);
   HRESULT WriteStringV(_In_ LPCSTR szFormatA, _In_ va_list argptr);
   HRESULT WriteString(_In_ LPCWSTR szFormatA, ...);
@@ -60,6 +60,9 @@ public:
   virtual ULONGLONG GetLength() const = 0;
 
   virtual HRESULT Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod=SeekStart);
+
+  HRESULT CopyTo(_In_ CStream *lpTarget, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
+                 _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX);
 };
 
 } //namespace MX

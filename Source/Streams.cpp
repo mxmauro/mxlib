@@ -23,6 +23,7 @@
  **/
 #include "..\Include\Streams.h"
 #include "..\Include\Strings\Strings.h"
+#include "..\Include\AutoPtr.h"
 
 //-----------------------------------------------------------
 
@@ -81,6 +82,53 @@ HRESULT CStream::WriteStringV(_In_ LPCWSTR szFormatA, _In_ va_list argptr)
 HRESULT CStream::Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod)
 {
   return E_NOTIMPL;
+}
+HRESULT CStream::CopyTo(_In_ CStream *lpTarget, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
+                        _In_opt_ ULONGLONG nStartOffset)
+{
+  MX::TAutoFreePtr<BYTE> aBuffer;
+  BYTE aMemSafeBuf[1024], *lpTempBuf;
+  SIZE_T nBufferSize, nThisBytesRead, nThisBytesWritten;
+  HRESULT hRes;
+
+  nBytesWritten = 0;
+  if (lpTarget == NULL)
+    return E_POINTER;
+  nBufferSize = 65536;
+  aBuffer.Attach((LPBYTE)MX_MALLOC(nBufferSize));
+  if (aBuffer)
+  {
+    lpTempBuf = aBuffer.Get();
+  }
+  else
+  {
+    nBufferSize = sizeof(aMemSafeBuf);
+    lpTempBuf = aMemSafeBuf;
+  }
+  hRes = S_OK;
+  while (nBytes > 0)
+  {
+    hRes = Read(lpTempBuf, (nBytes > nBufferSize) ? nBufferSize : nBytes, nThisBytesRead, nStartOffset);
+    if (FAILED(hRes))
+      break;
+    if (nThisBytesRead == 0)
+      break;
+    nBytes -= nThisBytesRead;
+    if (nStartOffset != ULONGLONG_MAX)
+      nStartOffset += (ULONGLONG)nThisBytesRead;
+
+    hRes = lpTarget->Write(lpTempBuf, nThisBytesRead, nThisBytesWritten);
+    if (FAILED(hRes))
+      break;
+    nBytesWritten += nThisBytesWritten;
+    if (nThisBytesWritten != nThisBytesRead)
+    {
+      hRes = MX_E_WriteFault;
+      break;
+    }
+  }
+  //done
+  return (hRes == MX_E_EndOfFileReached) ? S_OK : hRes;
 }
 
 } //namespace MX
