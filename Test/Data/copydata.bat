@@ -11,4 +11,4 @@ ROBOCOPY "%~dp0Web" "%~1\Web" /COPYALL /IS /IT /XJ /E /XF *.~* /NP >NUL 2>NUL
 REM Resetting ROBOCOPY errorlevel to zero
 CMD /c "EXIT /b 0"
 
-COPY /Y "%~dp0MySQL\%~2\libmysql.dll" "%~1"
+"%~dp0..\..\SupportFiles\7za.exe" -y -o"%~1" x "%~dp0..\..\SupportFiles\MySQL\MySQL_%~2.zip" libmysql.dll >NUL 2>NUL

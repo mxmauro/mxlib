@@ -74,7 +74,11 @@ lpfn_mysql_sqlstate           fn_mysql_sqlstate = NULL;
 
 //-----------------------------------------------------------
 
-HRESULT Initialize()
+HRESULT Initialize(
+#ifdef _DEBUG
+  _In_ BOOL bUseDebugDll
+#endif //_DEBUG
+)
 {
   if (hDll == NULL)
   {
@@ -111,6 +115,7 @@ HRESULT Initialize()
       lpfn_mysql_errno              _fn_mysql_errno = NULL;
       lpfn_mysql_error              _fn_mysql_error = NULL;
       lpfn_mysql_sqlstate           _fn_mysql_sqlstate = NULL;
+      lpfn_mysql_get_client_version _fn_mysql_get_client_version = NULL;
       MYSQL *lpMySql;
 
       //get application path
@@ -122,8 +127,13 @@ HRESULT Initialize()
       if (sW != NULL)
         *(sW+1) = 0;
       cStrTempW.Refresh();
+#ifdef _DEBUG
+      if (cStrTempW.Concat((bUseDebugDll != FALSE) ? L"libmysqld.dll" : L"libmysql.dll") == FALSE)
+        return E_OUTOFMEMORY;
+#else //_DEBUG
       if (cStrTempW.Concat(L"libmysql.dll") == FALSE)
         return E_OUTOFMEMORY;
+#endif //_DEBUG
       //load library
       _hDll = ::LoadLibraryW((LPCWSTR)cStrTempW);
       if (_hDll == NULL)
@@ -158,6 +168,7 @@ HRESULT Initialize()
       LOAD_API(mysql_errno);
       LOAD_API(mysql_error);
       LOAD_API(mysql_sqlstate);
+      LOAD_API(mysql_get_client_version);
 #undef LOAD_API
       dw = 1;
 
@@ -166,6 +177,11 @@ afterLoad:
       {
         ::FreeLibrary(_hDll);
         return MX_E_ProcNotFound;
+      }
+      if (_fn_mysql_get_client_version() != MYSQL_VERSION_ID)
+      {
+        ::FreeLibrary(_hDll);
+        return MX_E_Unsupported;
       }
 
       //initialize library

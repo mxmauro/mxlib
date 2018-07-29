@@ -45,6 +45,9 @@ CJsMySqlPlugin::CJsMySqlPlugin(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase
   //default options
   sOptions.nConnectTimeout = 30;
   sOptions.nReadTimeout = sOptions.nWriteTimeout = 45;
+#ifdef _DEBUG
+  sOptions.bUseDebugDll = FALSE;
+#endif //_DEBUG
   //has options in constructor?
   if (DukTape::duk_get_top(lpCtx) > 0)
   {
@@ -169,7 +172,11 @@ DukTape::duk_ret_t CJsMySqlPlugin::Connect()
       MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
   }
   //initialize APIs
+#ifdef _DEBUG
+  hRes = Internals::API::Initialize(sOptions.bUseDebugDll);
+#else //_DEBUG
   hRes = Internals::API::Initialize();
+#endif //_DEBUG
   if (FAILED(hRes))
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
   //create internal object
@@ -209,9 +216,8 @@ DukTape::duk_ret_t CJsMySqlPlugin::Connect()
   //do connection
   if (_CALLAPI(mysql_real_connect)(_DB(), szHostA, (szUserNameA != NULL) ? szUserNameA : "",
                                    (szPasswordA != NULL) ? szPasswordA : "", NULL, (UINT)nPort, NULL,
-                                   CLIENT_LONG_PASSWORD|CLIENT_LONG_FLAG|CLIENT_COMPRESS|CLIENT_LOCAL_FILES|
-                                   CLIENT_PROTOCOL_41|CLIENT_TRANSACTIONS|CLIENT_SECURE_CONNECTION|
-                                   CLIENT_FOUND_ROWS) == NULL)
+                                   CLIENT_LONG_PASSWORD | CLIENT_LONG_FLAG | CLIENT_COMPRESS | CLIENT_LOCAL_FILES |
+                                   CLIENT_PROTOCOL_41 | CLIENT_TRANSACTIONS | CLIENT_FOUND_ROWS) == NULL)
   {
     ThrowDbError(__FILE__, __LINE__, TRUE);
     delete _INTERNAL();
@@ -928,6 +934,26 @@ DukTape::duk_ret_t CJsMySqlPlugin::getFields()
   return 1;
 }
 
+#ifdef _DEBUG
+DukTape::duk_ret_t CJsMySqlPlugin::getUseDebugDll()
+{
+  DukTape::duk_context *lpCtx = GetContext();
+
+  DukTape::duk_push_boolean(lpCtx, (sOptions.bUseDebugDll != FALSE) ? 1 : 0);
+  return 1;
+}
+
+DukTape::duk_ret_t CJsMySqlPlugin::setUseDebugDll()
+{
+  DukTape::duk_context *lpCtx = GetContext();
+
+  if (DukTape::duk_get_top(lpCtx) != 1)
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+  sOptions.bUseDebugDll = (CJavascriptVM::GetInt(lpCtx, 0) != 0) ? TRUE : FALSE;
+  return 0;
+}
+#endif //_DEBUG
+
 HRESULT CJsMySqlPlugin::_TransactionStart()
 {
   return _INTERNAL()->ExecuteQuery("START TRANSACTION;", 18);
@@ -947,10 +973,8 @@ VOID CJsMySqlPlugin::ThrowDbError(_In_ HRESULT hRes, _In_opt_ LPCSTR filename, _
                                   _In_opt_ BOOL bOnlyPush)
 {
   DukTape::duk_context *lpCtx = GetContext();
-  CStringW cStrTempW;
   LPCSTR sA;
   int nDbErr;
-  SIZE_T i;
 
   if (hRes == E_INVALIDARG || hRes == E_OUTOFMEMORY)
     MX::CJavascriptVM::ThrowWindowsError(lpCtx, hRes, filename, line);
@@ -964,20 +988,10 @@ VOID CJsMySqlPlugin::ThrowDbError(_In_ HRESULT hRes, _In_opt_ LPCSTR filename, _
   DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)nDbErr);
 
   sA = _CALLAPI(mysql_error)(_DB());
-  for (i=0; sA[i] != 0 && (BYTE)sA[i] < 128; i++);
-  if (sA[i] == 0)
-  {
-    DukTape::duk_push_lstring(lpCtx, sA, i);
-  }
-  else
-  {
-    if (cStrTempW.Copy(sA) == FALSE)
-      CJavascriptVM::ThrowWindowsError(lpCtx, E_OUTOFMEMORY, filename, line);
-    CJavascriptVM::PushString(lpCtx, (LPCWSTR)cStrTempW);
-  }
+  DukTape::duk_push_string(lpCtx, (sA != NULL) ? sA : "");
 
   sA = _CALLAPI(mysql_sqlstate)(_DB());
-  DukTape::duk_push_string(lpCtx, sA);
+  DukTape::duk_push_string(lpCtx, (sA != NULL) ? sA : "");
 
   DukTape::duk_new(lpCtx, 4);
 

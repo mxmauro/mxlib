@@ -29,10 +29,11 @@
 #if (!defined(_WS2DEF_)) && (!defined(_WINSOCKAPI_))
   #include <WS2tcpip.h>
 #endif
-#include "mysql\mysql.h"
-#include "mysql\mysqld_error.h"
-#include "mysql\errmsg.h"
-#include "mysql\my_byteorder.h"
+#define HAVE_STRUCT_TIMESPEC
+#include <my_global.h>
+#include <mysql.h>
+#include <mysqld_error.h>
+#include <errmsg.h>
 
 //-----------------------------------------------------------
 
@@ -66,6 +67,7 @@ typedef int              (__stdcall *lpfn_mysql_set_character_set)(MYSQL *mysql,
 typedef UINT             (__stdcall *lpfn_mysql_errno)(MYSQL *mysql);
 typedef const LPCSTR     (__stdcall *lpfn_mysql_error)(MYSQL *mysql);
 typedef const LPCSTR     (__stdcall *lpfn_mysql_sqlstate)(MYSQL *mysql);
+typedef unsigned long    (__stdcall *lpfn_mysql_get_client_version)(void);
 
 //-----------------------------------------------------------
 
@@ -189,7 +191,11 @@ public:
 
 namespace API {
 
+#ifdef _DEBUG
+HRESULT Initialize(_In_ BOOL bUseDebugDll);
+#else //_DEBUG
 HRESULT Initialize();
+#endif //_DEBUG
 
 extern lpfn_mysql_init fn_mysql_init;
 extern lpfn_mysql_options fn_mysql_options;
