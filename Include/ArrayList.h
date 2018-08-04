@@ -123,15 +123,15 @@ public:
     return InsertElementAt(elem, nMin-1);
     };
 
-  template<class _Comparator>
-  TType* BinarySearchPtr(_In_ TType *lpKey, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext=NULL)
+  template<class _Comparator, class _KeyType>
+  TType* BinarySearchPtr(_In_ _KeyType lpKey, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext=NULL)
     {
     SIZE_T nIndex = BinarySearch(lpKey, lpSearchFunc, lpContext);
     return (nIndex != (SIZE_T)-1) ? lpItems+nIndex : NULL;
     };
 
-  template<class _Comparator>
-  SIZE_T BinarySearch(_In_ TType *lpKey, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext=NULL)
+  template<class _Comparator, class _KeyType>
+  SIZE_T BinarySearch(_In_ _KeyType lpKey, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext=NULL)
     {
     SIZE_T nMid, nMin, nMax;
     int res;
@@ -470,7 +470,7 @@ public:
     while (nMin <= nMax)
     {
       nIndex = (nMin + nMax) / 2;
-      res = lpCompareFunc(lpContext, lpElem, lpItems+nIndex-1);
+      res = lpCompareFunc(lpContext, lpElem, &lpItems[nIndex-1]);
       if (res == 0)
         return InsertElementAt(lpElem, nIndex-1);
       if (res < 0)
@@ -481,15 +481,15 @@ public:
     return InsertElementAt(lpElem, nMin-1);
     };
 
-  template<class _Comparator>
-  TType* BinarySearchPtr(_In_ TType *lpKey, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext=NULL)
+  template<class _Comparator, class _KeyType>
+  TType* BinarySearchPtr(_In_ _KeyType lpKey, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext=NULL)
     {
     SIZE_T nIndex = BinarySearch(lpKey, lpSearchFunc, lpContext);
     return (nIndex != (SIZE_T)-1) ? lpItems+nIndex : NULL;
     };
 
-  template<class _Comparator>
-  SIZE_T BinarySearch(_In_ TType *lpKey, _In_ _Comparator lpCompareFunc, _In_opt_ LPVOID lpContext=NULL)
+  template<class _Comparator, class _KeyType>
+  SIZE_T BinarySearch(_In_ _KeyType lpKey, _In_ _Comparator lpCompareFunc, _In_opt_ LPVOID lpContext=NULL)
     {
     SIZE_T nMid, nMin, nMax;
     int res;

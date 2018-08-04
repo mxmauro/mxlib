@@ -94,7 +94,8 @@ private:
   BOOL Insert(_In_ PROPERTY *lpNewProp);
   SIZE_T Find(_In_z_ LPCSTR szNameA);
 
-  static int SearchCompareFunc(_In_ LPVOID lpContext, _In_ PROPERTY **lpItem1, _In_ PROPERTY **lpItem2);
+  static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ PROPERTY **lpItem1, _In_ PROPERTY **lpItem2);
+  static int SearchCompareFunc(_In_ LPVOID lpContext, _In_ LPCVOID lpKey, _In_ PROPERTY **lpItem);
 
 private:
   TArrayListWithFree<PROPERTY*> cPropertiesList;

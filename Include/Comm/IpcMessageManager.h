@@ -185,7 +185,8 @@ private:
 
   VOID OnMessageReceived(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
                          _In_ HRESULT hRes);
-  static int ReplyMsgWaitCompareFunc(_In_ LPVOID lpContext, _In_ REPLYMSG_ITEM *lpElem1, _In_ REPLYMSG_ITEM *lpElem2);
+  static int ReplyMsgWaitCompareFunc(_In_ LPVOID lpContext, _In_ REPLYMSG_ITEM *lpElem1,
+                                     _In_ REPLYMSG_ITEM *lpElem2);
 
   VOID FlushReceivedReplies();
   VOID CancelWaitingReplies();
