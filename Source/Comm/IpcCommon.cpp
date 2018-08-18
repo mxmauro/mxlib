@@ -901,7 +901,8 @@ check_pending_write_req:
               if (lpPacket == NULL)
               {
                 //dealing with an error, requeue
-                lpConn->cWritePendingList.QueueSorted(lpStreamPacket);
+                //lpConn->cWritePendingList.QueueSorted(lpStreamPacket);
+                lpConn->cWritePendingList.QueueFirst(lpStreamPacket);
                 //set error
                 hRes = E_OUTOFMEMORY;
                 break;
@@ -922,7 +923,8 @@ check_pending_write_req:
               {
                 FreePacket(lpPacket);
                 //dealing with an error, requeue
-                lpConn->cWritePendingList.QueueSorted(lpStreamPacket);
+                //lpConn->cWritePendingList.QueueSorted(lpStreamPacket);
+                lpConn->cWritePendingList.QueueFirst(lpStreamPacket);
                 break;
               }
               lpPacket->SetBytesInUse((DWORD)nReaded);
@@ -997,7 +999,8 @@ check_pending_write_req:
             //if packet's origin was a stream, then requeue but don't increment next write to process
             if (lpStreamPacket != NULL)
             {
-              lpConn->cWritePendingList.QueueSorted(lpStreamPacket);
+              lpConn->cWritePendingList.QueueFirst(lpStreamPacket);
+              //lpConn->cWritePendingList.QueueSorted(lpStreamPacket);
             }
             else
             {

@@ -35,6 +35,9 @@ static VOID OnError(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest
 
 static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR szFileNameW);
 
+static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ LPCWSTR &szExtensionW,
+                                _In_z_ LPCWSTR szPathW);
+
 //-----------------------------------------------------------
 
 int TestHttpServer(_In_ BOOL bUseSSL)
@@ -45,6 +48,10 @@ int TestHttpServer(_In_ BOOL bUseSSL)
   MX::CSslCertificate cSslCert;
   MX::CCryptoRSA cSslPrivateKey;
   HRESULT hRes;
+
+  cSckMgr.SetOption_MaxAcceptsToPost(24);
+  //cSckMgr.SetOption_PacketSize(32768);
+  cHttpServer.SetOption_MaxFilesCount(10);
 
   hRes = cDispatcherPool.Initialize();
   if (SUCCEEDED(hRes))
@@ -114,15 +121,32 @@ static VOID OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHtt
 static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest,
                                _In_ HANDLE hShutdownEv)
 {
+  MX::CStringW cStrFileNameW;
+  LPCWSTR szExtensionW;
   HRESULT hRes;
 
-  //HANDLE h = lpRequest->GetUnderlyingSocket();
-  //MX::CSockets *lpMgr = lpRequest->GetUnderlyingSocketManager();
+  hRes = BuildWebFileName(cStrFileNameW, szExtensionW, lpRequest->GetUrl()->GetPath());
+  if (SUCCEEDED(hRes))
+  {
+    if (MX::StrCompareW(szExtensionW, L".dat", TRUE) == 0)
+    {
+      hRes = lpRequest->SendFile((LPCWSTR)cStrFileNameW);
+      if (hRes == MX_HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) ||
+          hRes == MX_HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND))
+      {
+        hRes = lpRequest->SendErrorPage(404, E_INVALIDARG);
+      }
+    }
+    else
+    {
+      //HANDLE h = lpRequest->GetUnderlyingSocket();
+      //MX::CSockets *lpMgr = lpRequest->GetUnderlyingSocketManager();
 
-  //lpMgr->PauseOutputProcessing(h);
-  hRes = lpRequest->SendResponse("<html><body>test OK</body></html>", 6+6+ 7 +7+7);
-  //lpMgr->ResumeOutputProcessing(h);
-
+      //lpMgr->PauseOutputProcessing(h);
+      hRes = lpRequest->SendResponse("<html><body>test OK</body></html>", 6 + 6 + 7 + 7 + 7);
+      //lpMgr->ResumeOutputProcessing(h);
+    }
+  }
   lpRequest->End(hRes);
   return;
 }
@@ -155,5 +179,39 @@ static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR s
     return MX_E_ReadFault;
   ((LPSTR)cStrContentsA)[dw] = 0;
   cStrContentsA.Refresh();
+  return S_OK;
+}
+
+static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ LPCWSTR &szExtensionW,
+                                _In_z_ LPCWSTR szPathW)
+{
+  LPWSTR sW;
+  HRESULT hRes;
+
+  szExtensionW = NULL;
+  hRes = GetAppPath(cStrFullFileNameW);
+  if (FAILED(hRes))
+    return hRes;
+  if (cStrFullFileNameW.Concat(L"Web\\") == FALSE)
+    return E_OUTOFMEMORY;
+  while (*szPathW == L'/')
+    szPathW++;
+  if (cStrFullFileNameW.Concat(szPathW) == FALSE)
+    return FALSE;
+  for (sW = (LPWSTR)cStrFullFileNameW; *sW != 0; sW++)
+  {
+    if (*sW == L'/')
+      *sW = L'\\';
+  }
+  if (*(sW - 1) == L'\\')
+  {
+    if (cStrFullFileNameW.Concat(L"index.jss") == FALSE)
+      return E_OUTOFMEMORY;
+  }
+  //----
+  sW = (LPWSTR)cStrFullFileNameW + (cStrFullFileNameW.GetLength() - 1);
+  while (sW >= (LPWSTR)cStrFullFileNameW && *sW != L'.' && *sW != L'/')
+    sW--;
+  szExtensionW = (sW >= (LPWSTR)cStrFullFileNameW && *sW == L'.') ? sW : L"";
   return S_OK;
 }

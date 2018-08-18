@@ -76,6 +76,7 @@ int TestJsHttpServer(_In_ BOOL bUseSSL)
   DeleteSessionFiles();
 
   cSckMgr.SetOption_MaxAcceptsToPost(24);
+  //cSckMgr.SetOption_PacketSize(16384);
   cJsHttpServer.SetOption_MaxFilesCount(10);
 
   hRes = cDispatcherPool.Initialize();
@@ -174,7 +175,8 @@ static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer:
            MX::StrCompareW(szExtensionW, L".js", TRUE) == 0 ||
            MX::StrCompareW(szExtensionW, L".jpg", TRUE) == 0 ||
            MX::StrCompareW(szExtensionW, L".png", TRUE) == 0 ||
-           MX::StrCompareW(szExtensionW, L".gif", TRUE) == 0)
+           MX::StrCompareW(szExtensionW, L".gif", TRUE) == 0 ||
+           MX::StrCompareW(szExtensionW, L".dat", TRUE) == 0)
   {
     hRes = lpRequest->SendFile((LPCWSTR)cStrFileNameW);
     if (hRes == MX_HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) ||

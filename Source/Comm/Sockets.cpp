@@ -560,7 +560,7 @@ HRESULT CSockets::CConnection::CreateSocket(_In_ eFamily nFamily, _In_ DWORD dwP
   if (::ioctlsocket(sck, FIONBIO, &nYes) == SOCKET_ERROR)
     return MX_HRESULT_FROM_LASTSOCKETERROR();
   //tcp no delay
-  nYes = 0;
+  nYes = 1;
   if (::setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, (char*)&nYes, (int)sizeof(nYes)) == SOCKET_ERROR)
     return MX_HRESULT_FROM_LASTSOCKETERROR();
   //packet size on pre-vista
@@ -603,7 +603,9 @@ HRESULT CSockets::CConnection::CreateSocket(_In_ eFamily nFamily, _In_ DWORD dwP
       dw = 0;
       if (::WSAIoctl(sck, SIO_KEEPALIVE_VALS, &sKeepAliveData, sizeof(sKeepAliveData), NULL, 0, &dw,
                      NULL, NULL) == SOCKET_ERROR)
+      {
         return MX_HRESULT_FROM_LASTSOCKETERROR();
+      }
       break;
 
     case CIpc::ConnectionClassListener:
@@ -857,8 +859,9 @@ HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwMaxResolverTimeoutMs,
 HRESULT CSockets::CConnection::SendReadPacket(_In_ CPacket *lpPacket)
 {
   WSABUF sWsaBuf;
-  DWORD dwToRead, dwReaded, dwFlags, dwErr;
+  DWORD dwToRead, dwReaded, dwFlags;
   LONG nCurrThrottle;
+  HRESULT hRes;
 
   dwToRead = lpPacket->GetBytesInUse();
   nCurrThrottle = __InterlockedRead(&nReadThrottle);
@@ -875,18 +878,21 @@ HRESULT CSockets::CConnection::SendReadPacket(_In_ CPacket *lpPacket)
                          lpPacket->GetOverlapped(), lpPacket->GetType(), lpPacket->GetBytesInUse()));
   if (sck == NULL)
     return S_FALSE;
+  hRes = S_OK;
   if (::WSARecv(sck, &sWsaBuf, 1, &dwReaded, &dwFlags, lpPacket->GetOverlapped(), NULL) == SOCKET_ERROR)
   {
-    dwErr = ::WSAGetLastError();
-    return (dwErr == WSAESHUTDOWN || dwErr == WSAEDISCON) ? S_FALSE : MX_HRESULT_FROM_WIN32(dwErr);
+    hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
+    if (hRes == HRESULT_FROM_WIN32(WSAESHUTDOWN) || hRes == HRESULT_FROM_WIN32(WSAEDISCON))
+      hRes = S_FALSE;
   }
-  return S_OK;
+  return hRes;
 }
 
 HRESULT CSockets::CConnection::SendWritePacket(_In_ CPacket *lpPacket)
 {
   WSABUF sWsaBuf;
-  DWORD dwErr, dwWritten;
+  DWORD dwWritten;
+  HRESULT hRes;
 
   sWsaBuf.buf = (char*)(lpPacket->GetBuffer());
   sWsaBuf.len = (ULONG)(lpPacket->GetBytesInUse());
@@ -896,12 +902,14 @@ HRESULT CSockets::CConnection::SendWritePacket(_In_ CPacket *lpPacket)
   MX_IPC_DEBUG_PRINT(2, ("%lu MX::CSockets::CConnection::SendWritePacket) Clock=%lums / Ovr=0x%p / Type=%lu / "
                          "Bytes=%lu\n", ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(),
                          lpPacket->GetOverlapped(), lpPacket->GetType(), lpPacket->GetBytesInUse()));
+  hRes = S_OK;
   if (::WSASend(sck, &sWsaBuf, 1, &dwWritten, 0, lpPacket->GetOverlapped(), NULL) == SOCKET_ERROR)
   {
-    dwErr = ::WSAGetLastError();
-    return (dwErr == WSAESHUTDOWN || dwErr == WSAEDISCON) ? S_FALSE : MX_HRESULT_FROM_WIN32(dwErr);
+    hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
+    if (hRes == HRESULT_FROM_WIN32(WSAESHUTDOWN) || hRes == HRESULT_FROM_WIN32(WSAEDISCON))
+      hRes = S_FALSE;
   }
-  return S_OK;
+  return hRes;
 }
 
 VOID CSockets::CConnection::HostResolveCallback(_In_ CHostResolver *lpResolver)

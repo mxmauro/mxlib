@@ -197,6 +197,7 @@ public:
   VOID SetOption_ReadAheadCount(_In_ DWORD dwCount);
   VOID SetOption_MaxFreePacketsCount(_In_ DWORD dwCount);
   VOID SetOption_MaxWriteTimeoutMs(_In_ DWORD dwTimeoutMs);
+  //NOTE: Disabling ZeroReads can lead to receive WSAENOBUFFS on low memory conditions.
   VOID SetOption_EnableZeroReads(_In_ BOOL bEnable);
   VOID SetOption_OutgoingPacketsLimitCount(_In_ DWORD dwCount);
 
@@ -290,7 +291,9 @@ protected:
       nOrder = 0;
       lpConn = _lpConn;
       dwInUseSize = 0;
-      MemSet(&sOvr, 0, sizeof(sOvr));
+      sOvr.Internal = 0;
+      sOvr.InternalHigh = 0;
+      sOvr.Pointer = NULL;
       MX_RELEASE(lpStream);
       cAfterWriteSignalCallback = NullCallback();
       lpUserData = NULL;
@@ -437,6 +440,18 @@ protected:
       return;
       };
 
+    VOID QueueFirst(_In_ CPacket *lpPacket)
+      {
+      if (lpPacket != NULL)
+      {
+        CFastLock cLock(&nMutex);
+
+        cList.PushHead(lpPacket);
+        nCount++;
+      }
+      return;
+      };
+
     VOID QueueLast(_In_ CPacket *lpPacket)
       {
       if (lpPacket != NULL)
@@ -462,18 +477,18 @@ protected:
     VOID QueueSorted(_In_ CPacket *lpPacket)
       {
       CFastLock cLock(&nMutex);
-      TLnkLst<CPacket>::Iterator it;
+      TLnkLst<CPacket>::IteratorRev it;
       CPacket *lpCurrPacket;
 
       for (lpCurrPacket=it.Begin(cList); lpCurrPacket!=NULL; lpCurrPacket=it.Next())
       {
-        if (lpPacket->GetOrder() < lpCurrPacket->GetOrder())
+        if (lpPacket->GetOrder() > lpCurrPacket->GetOrder())
           break;
       }
       if (lpCurrPacket != NULL)
-        cList.PushBefore(lpPacket, lpCurrPacket);
+        cList.PushAfter(lpPacket, lpCurrPacket);
       else
-        cList.PushTail(lpPacket);
+        cList.PushHead(lpPacket);
       nCount++;
       return;
       };
