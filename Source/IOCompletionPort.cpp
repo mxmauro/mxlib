@@ -171,34 +171,15 @@ HRESULT CIoCompletionPort::Get(_Out_ LPOVERLAPPED_ENTRY lpEntries, _Inout_ ULONG
 
 //-----------------------------------------------------------
 
-CIoCompletionPortThreadPool::CIoCompletionPortThreadPool(_In_opt_ DWORD _dwMinThreadsCount,
-                                _In_opt_ DWORD _dwMaxThreadsCount, _In_opt_ DWORD _dwWorkerThreadIdleTimeoutMs,
-                                _In_opt_ DWORD _dwShutdownThreadThreshold) : CBaseMemObj()
+CIoCompletionPortThreadPool::CIoCompletionPortThreadPool() : CBaseMemObj()
 {
   SlimRWL_Initialize(&nSlimMutex);
   cThreadStartCallback = NullCallback();
   cThreadEndCallback = NullCallback();
   cThreadStartErrorCallback = NullCallback();
-  if (_dwMinThreadsCount == 0 && _dwMaxThreadsCount == 0)
-  {
-    _dwMinThreadsCount = GetNumberOfProcessors() * 2;
-    _dwMaxThreadsCount = _dwMinThreadsCount;
-  }
-  else
-  {
-    if (_dwMinThreadsCount == 0)
-      _dwMinThreadsCount = 1;
-    if (_dwMaxThreadsCount < _dwMinThreadsCount)
-      _dwMaxThreadsCount = _dwMinThreadsCount;
-  }
-  dwMinThreadsCount = _dwMinThreadsCount;
-  dwMaxThreadsCount = _dwMaxThreadsCount;
-  dwWorkerThreadIdleTimeoutMs = _dwWorkerThreadIdleTimeoutMs;
-  dwShutdownThreadThreshold = _dwShutdownThreadThreshold;
-  if (dwShutdownThreadThreshold > dwMaxThreadsCount)
-    dwShutdownThreadThreshold = dwMaxThreadsCount;
-  if (dwShutdownThreadThreshold > 0x7FFFFFFFUL)
-    dwShutdownThreadThreshold = 0x7FFFFFFFUL;
+  dwMinThreadsCount = dwMaxThreadsCount = GetNumberOfProcessors() * 2;
+  dwWorkerThreadIdleTimeoutMs = 2000;
+  dwShutdownThreadThreshold = 2;
   _InterlockedExchange(&(sThreads.nMutex), 0);
   _InterlockedExchange(&(sThreads.nActiveCount), 0);
   _InterlockedExchange(&(sThreads.nBusyCount), 0);
@@ -209,6 +190,44 @@ CIoCompletionPortThreadPool::CIoCompletionPortThreadPool(_In_opt_ DWORD _dwMinTh
 CIoCompletionPortThreadPool::~CIoCompletionPortThreadPool()
 {
   Finalize();
+  return;
+}
+
+VOID CIoCompletionPortThreadPool::SetOption_MinThreadsCount(_In_opt_ DWORD dwCount)
+{
+  dwMinThreadsCount = (dwCount == 0) ? GetNumberOfProcessors() * 2 : dwCount;
+  if (dwMinThreadsCount > 8192)
+    dwMinThreadsCount = 8192;
+  if (dwMaxThreadsCount < dwMinThreadsCount)
+    dwMaxThreadsCount = dwMinThreadsCount;
+  if (dwShutdownThreadThreshold > dwMaxThreadsCount)
+    dwShutdownThreadThreshold = dwMaxThreadsCount;
+  return;
+}
+
+VOID CIoCompletionPortThreadPool::SetOption_MaxThreadsCount(_In_opt_ DWORD dwCount)
+{
+  dwMaxThreadsCount = (dwCount == 0) ? GetNumberOfProcessors() * 2 : dwCount;
+  if (dwMaxThreadsCount > 8192)
+    dwMaxThreadsCount = 8192;
+  if (dwMaxThreadsCount > dwMaxThreadsCount)
+    dwMinThreadsCount = dwMaxThreadsCount;
+  if (dwShutdownThreadThreshold > dwMaxThreadsCount)
+    dwShutdownThreadThreshold = dwMaxThreadsCount;
+  return;
+}
+
+VOID CIoCompletionPortThreadPool::SetOption_WorkerThreadIdleTimeoutMs(_In_opt_ DWORD dwTimeoutMs)
+{
+  dwWorkerThreadIdleTimeoutMs = dwTimeoutMs;
+  return;
+}
+
+VOID CIoCompletionPortThreadPool::SetOption_ShutdownThreadThreshold(_In_opt_ DWORD dwThreshold)
+{
+  dwShutdownThreadThreshold = dwThreshold;
+  if (dwShutdownThreadThreshold > dwMaxThreadsCount)
+    dwShutdownThreadThreshold = dwMaxThreadsCount;
   return;
 }
 
@@ -300,7 +319,7 @@ VOID CIoCompletionPortThreadPool::InternalFinalize()
       CThread *lpThread;
 
       MemSet(&sDummyOvr, 0, sizeof(sDummyOvr));
-      for (lpThread=it.Begin(sThreads.cList); lpThread!=NULL; lpThread=it.Next())
+      for (lpThread = it.Begin(sThreads.cList); lpThread != NULL; lpThread = it.Next())
       {
         cIOCP.Post(0, 0, &sDummyOvr);
         b = TRUE;

@@ -66,7 +66,7 @@ static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ L
 
 int TestJsHttpServer(_In_ BOOL bUseSSL)
 {
-  MX::CIoCompletionPortThreadPool cDispatcherPool, cWorkerPool(4);
+  MX::CIoCompletionPortThreadPool cDispatcherPool, cWorkerPool;
   MX::CSockets cSckMgr(cDispatcherPool);
   MX::CJsHttpServer cJsHttpServer(cSckMgr, cWorkerPool);
   MX::CSslCertificate cSslCert;
@@ -75,6 +75,7 @@ int TestJsHttpServer(_In_ BOOL bUseSSL)
 
   DeleteSessionFiles();
 
+  cWorkerPool.SetOption_MinThreadsCount(4);
   cSckMgr.SetOption_MaxAcceptsToPost(24);
   //cSckMgr.SetOption_PacketSize(16384);
   cJsHttpServer.SetOption_MaxFilesCount(10);

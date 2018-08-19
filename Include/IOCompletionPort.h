@@ -72,10 +72,13 @@ public:
                          _In_ HRESULT hRes)> OnPacketCallback;
 
 public:
-  CIoCompletionPortThreadPool(_In_opt_ DWORD dwMinThreadsCount=0, _In_opt_ DWORD dwMaxThreadsCount=0,
-                              _In_opt_ DWORD dwWorkerThreadIdleTimeoutMs=2000,
-                              _In_opt_ DWORD dwShutdownThreadThreshold=2);
+  CIoCompletionPortThreadPool();
   ~CIoCompletionPortThreadPool();
+
+  VOID SetOption_MinThreadsCount(_In_opt_ DWORD dwCount = 0);
+  VOID SetOption_MaxThreadsCount(_In_opt_ DWORD dwCount = 0);
+  VOID SetOption_WorkerThreadIdleTimeoutMs(_In_opt_ DWORD dwTimeoutMs = 2000);
+  VOID SetOption_ShutdownThreadThreshold(_In_opt_ DWORD dwThreshold = 2);
 
   VOID On(_In_opt_ OnThreadStartCallback cThreadStartCallback);
   VOID On(_In_opt_ OnThreadEndCallback cThreadEndCallback);
