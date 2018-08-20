@@ -142,9 +142,13 @@ HRESULT CNamedPipes::CreateListener(_In_z_ LPCWSTR szServerNameW, _In_ OnCreateC
   {
     hRes = cServerInfo->Init(szServerNameW, lpSecDescr);
   }
-  if (FAILED(hRes))
-    return hRes;
-  return CreateServerConnection((CServerInfo*)cServerInfo, cCreateCallback);
+  if (SUCCEEDED(hRes))
+  {
+    hRes = CreateServerConnection((CServerInfo*)cServerInfo, cCreateCallback);
+    if (FAILED(hRes))
+      FireOnEngineError(hRes);
+  }
+  return hRes;
 }
 
 HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCSTR szServerNameA, _In_ OnCreateCallback cCreateCallback,

@@ -362,12 +362,17 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In
         {
           case CIpc::ConnectionClassListener:
             hRes = lpConn->SetupListener();
-            for (DWORD i=0; SUCCEEDED(hRes) && i<dwMaxAcceptsToPost; i++)
+            if (SUCCEEDED(hRes))
             {
-              hRes = CreateServerConnection(lpConn);
-              if (FAILED(hRes))
-                FireOnEngineError(hRes);
+              for (DWORD i = 0; i < dwMaxAcceptsToPost; i++)
+              {
+                hRes = CreateServerConnection(lpConn);
+                if (FAILED(hRes))
+                  break;
+              }
             }
+            if (FAILED(hRes))
+              FireOnEngineError(hRes);
             break;
 
           case CIpc::ConnectionClassClient:
@@ -391,7 +396,9 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In
       {
         if (::setsockopt(lpIncomingConn->sck, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char*)&(lpConn->sck),
                           sizeof(lpConn->sck)) == SOCKET_ERROR)
+        {
           hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
+        }
       }
       if (SUCCEEDED(hRes))
       {
