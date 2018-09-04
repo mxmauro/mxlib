@@ -50,8 +50,7 @@ struct ec_method_st {
     void (*group_finish) (EC_GROUP *);
     void (*group_clear_finish) (EC_GROUP *);
     int (*group_copy) (EC_GROUP *, const EC_GROUP *);
-    /* used by EC_GROUP_set_curve_GFp, EC_GROUP_get_curve_GFp, */
-    /* EC_GROUP_set_curve_GF2m, and EC_GROUP_get_curve_GF2m: */
+    /* used by EC_GROUP_set_curve, EC_GROUP_get_curve: */
     int (*group_set_curve) (EC_GROUP *, const BIGNUM *p, const BIGNUM *a,
                             const BIGNUM *b, BN_CTX *);
     int (*group_get_curve) (const EC_GROUP *, BIGNUM *p, BIGNUM *a, BIGNUM *b,
@@ -73,9 +72,9 @@ struct ec_method_st {
      * used by EC_POINT_set_to_infinity,
      * EC_POINT_set_Jprojective_coordinates_GFp,
      * EC_POINT_get_Jprojective_coordinates_GFp,
-     * EC_POINT_set_affine_coordinates_GFp,     ..._GF2m,
-     * EC_POINT_get_affine_coordinates_GFp,     ..._GF2m,
-     * EC_POINT_set_compressed_coordinates_GFp, ..._GF2m:
+     * EC_POINT_set_affine_coordinates,
+     * EC_POINT_get_affine_coordinates,
+     * EC_POINT_set_compressed_coordinates:
      */
     int (*point_set_to_infinity) (const EC_GROUP *, EC_POINT *);
     int (*point_set_Jprojective_coordinates_GFp) (const EC_GROUP *,
@@ -301,7 +300,6 @@ struct ec_point_st {
                                  * special case */
 };
 
-
 static ossl_inline int ec_point_is_compat(const EC_POINT *point,
                                           const EC_GROUP *group)
 {
@@ -313,7 +311,6 @@ static ossl_inline int ec_point_is_compat(const EC_POINT *point,
 
     return 1;
 }
-
 
 NISTP224_PRE_COMP *EC_nistp224_pre_comp_dup(NISTP224_PRE_COMP *);
 NISTP256_PRE_COMP *EC_nistp256_pre_comp_dup(NISTP256_PRE_COMP *);
@@ -394,7 +391,16 @@ int ec_GFp_simple_field_mul(const EC_GROUP *, BIGNUM *r, const BIGNUM *a,
 int ec_GFp_simple_field_sqr(const EC_GROUP *, BIGNUM *r, const BIGNUM *a,
                             BN_CTX *);
 int ec_GFp_simple_blind_coordinates(const EC_GROUP *group, EC_POINT *p,
-                                   BN_CTX *ctx);
+                                    BN_CTX *ctx);
+int ec_GFp_simple_ladder_pre(const EC_GROUP *group,
+                             EC_POINT *r, EC_POINT *s,
+                             EC_POINT *p, BN_CTX *ctx);
+int ec_GFp_simple_ladder_step(const EC_GROUP *group,
+                              EC_POINT *r, EC_POINT *s,
+                              EC_POINT *p, BN_CTX *ctx);
+int ec_GFp_simple_ladder_post(const EC_GROUP *group,
+                              EC_POINT *r, EC_POINT *s,
+                              EC_POINT *p, BN_CTX *ctx);
 
 /* method functions in ecp_mont.c */
 int ec_GFp_mont_group_init(EC_GROUP *);

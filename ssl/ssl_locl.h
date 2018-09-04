@@ -33,6 +33,7 @@
 # include "packet_locl.h"
 # include "internal/dane.h"
 # include "internal/refcount.h"
+# include "internal/tsan_assist.h"
 
 # ifdef OPENSSL_BUILD_SHLIBSSL
 #  undef OPENSSL_EXTERN
@@ -779,21 +780,23 @@ struct ssl_ctx_st {
                                     const unsigned char *data, int len,
                                     int *copy);
     struct {
-        int sess_connect;       /* SSL new conn - started */
-        int sess_connect_renegotiate; /* SSL reneg - requested */
-        int sess_connect_good;  /* SSL new conne/reneg - finished */
-        int sess_accept;        /* SSL new accept - started */
-        int sess_accept_renegotiate; /* SSL reneg - requested */
-        int sess_accept_good;   /* SSL accept/reneg - finished */
-        int sess_miss;          /* session lookup misses */
-        int sess_timeout;       /* reuse attempt on timeouted session */
-        int sess_cache_full;    /* session removed due to full cache */
-        int sess_hit;           /* session reuse actually done */
-        int sess_cb_hit;        /* session-id that was not in the cache was
-                                 * passed back via the callback.  This
-                                 * indicates that the application is supplying
-                                 * session-id's from other processes - spooky
-                                 * :-) */
+        TSAN_QUALIFIER int sess_connect;       /* SSL new conn - started */
+        TSAN_QUALIFIER int sess_connect_renegotiate; /* SSL reneg - requested */
+        TSAN_QUALIFIER int sess_connect_good;  /* SSL new conne/reneg - finished */
+        TSAN_QUALIFIER int sess_accept;        /* SSL new accept - started */
+        TSAN_QUALIFIER int sess_accept_renegotiate; /* SSL reneg - requested */
+        TSAN_QUALIFIER int sess_accept_good;   /* SSL accept/reneg - finished */
+        TSAN_QUALIFIER int sess_miss;          /* session lookup misses */
+        TSAN_QUALIFIER int sess_timeout;       /* reuse attempt on timeouted session */
+        TSAN_QUALIFIER int sess_cache_full;    /* session removed due to full cache */
+        TSAN_QUALIFIER int sess_hit;           /* session reuse actually done */
+        TSAN_QUALIFIER int sess_cb_hit;        /* session-id that was not in
+                                                * the cache was passed back via
+                                                * the callback. This indicates
+                                                * that the application is
+                                                * supplying session-id's from
+                                                * other processes - spooky
+                                                * :-) */
     } stats;
 
     CRYPTO_REF_COUNT references;
@@ -1060,6 +1063,9 @@ struct ssl_ctx_st {
     /* Callback to determine if early_data is acceptable or not */
     SSL_allow_early_data_cb_fn allow_early_data_cb;
     void *allow_early_data_cb_data;
+
+    /* Do we advertise Post-handshake auth support? */
+    int pha_enabled;
 };
 
 struct ssl_st {
@@ -1068,8 +1074,6 @@ struct ssl_st {
      * DTLS1_VERSION)
      */
     int version;
-    /* TODO(TLS1.3): Remove this before release */
-    int version_draft;
     /* SSLv3 */
     const SSL_METHOD *method;
     /*
@@ -1390,7 +1394,7 @@ struct ssl_st {
     int key_update;
     /* Post-handshake authentication state */
     SSL_PHA_STATE post_handshake_auth;
-    int pha_forced;
+    int pha_enabled;
     uint8_t* pha_context;
     size_t pha_context_len;
     int certreqs_sent;
@@ -2380,7 +2384,7 @@ __owur int ssl_choose_server_version(SSL *s, CLIENTHELLO_MSG *hello,
 __owur int ssl_choose_client_version(SSL *s, int version,
                                      RAW_EXTENSION *extensions);
 __owur int ssl_get_min_max_version(const SSL *s, int *min_version,
-                                   int *max_version);
+                                   int *max_version, int *real_max);
 
 __owur long tls1_default_timeout(void);
 __owur int dtls1_do_write(SSL *s, int type);
