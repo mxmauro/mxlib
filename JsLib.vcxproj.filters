@@ -21,6 +21,15 @@
     <Filter Include="Source Files\DukTape\Extras">
       <UniqueIdentifier>{618e6ed2-588d-4914-b918-77f8eda4e078}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Plugins\MySQL">
+      <UniqueIdentifier>{13306ea7-b371-433e-a694-95615add417a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Plugins\SQLite">
+      <UniqueIdentifier>{3c63aeca-3b6e-487f-b33e-d0592d48a80c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Plugins\SQLite\Internals">
+      <UniqueIdentifier>{7ab51c90-ff71-47fd-9136-0dd800c13f1f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\JsLib\JavascriptVM.cpp">
@@ -38,18 +47,6 @@
     <ClCompile Include="Source\JsLib\JavascriptVMCommon.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPlugin.cpp">
-      <Filter>Source Files\Plugins</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPluginApi.cpp">
-      <Filter>Source Files\Plugins</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPluginFieldInfo.cpp">
-      <Filter>Source Files\Plugins</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPluginHelpers.cpp">
-      <Filter>Source Files\Plugins</Filter>
-    </ClCompile>
     <ClCompile Include="Source\JsLib\DukTape\Source\dist\duktape.c">
       <Filter>Source Files\DukTape</Filter>
     </ClCompile>
@@ -59,8 +56,35 @@
     <ClCompile Include="Source\JsLib\JavascriptVMException.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPluginException.cpp">
-      <Filter>Source Files\Plugins</Filter>
+    <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPlugin.cpp">
+      <Filter>Source Files\Plugins\MySQL</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginApi.cpp">
+      <Filter>Source Files\Plugins\MySQL</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginException.cpp">
+      <Filter>Source Files\Plugins\MySQL</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginFieldInfo.cpp">
+      <Filter>Source Files\Plugins\MySQL</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePlugin.cpp">
+      <Filter>Source Files\Plugins\SQLite</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginApi.cpp">
+      <Filter>Source Files\Plugins\SQLite</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginException.cpp">
+      <Filter>Source Files\Plugins\SQLite</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginFieldInfo.cpp">
+      <Filter>Source Files\Plugins\SQLite</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\SQLite\internals\sqlite3.c">
+      <Filter>Source Files\Plugins\SQLite\Internals</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\SQLite\internals\custom_sqlite3_mem.cpp">
+      <Filter>Source Files\Plugins\SQLite\Internals</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -69,9 +93,6 @@
     </ClInclude>
     <ClInclude Include="Source\JsLib\JavascriptVMCommon.h">
       <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\JsLib\Plugins\JsMySqlPluginCommon.h">
-      <Filter>Source Files\Plugins</Filter>
     </ClInclude>
     <ClInclude Include="Include\JsLib\Plugins\JsMySqlPlugin.h">
       <Filter>Header Files\Plugins</Filter>
@@ -87,6 +108,18 @@
     </ClInclude>
     <ClInclude Include="Source\JsLib\DukTape\duk_custom.h">
       <Filter>Source Files\DukTape</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginCommon.h">
+      <Filter>Source Files\Plugins\MySQL</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\JsLib\Plugins\JsSQLitePlugin.h">
+      <Filter>Header Files\Plugins</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginCommon.h">
+      <Filter>Source Files\Plugins\SQLite</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\JsLib\Plugins\SQLite\internals\config.h">
+      <Filter>Source Files\Plugins\SQLite\Internals</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

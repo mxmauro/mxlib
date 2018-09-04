@@ -58,11 +58,11 @@ catch (err)
 		throw err;
 }
 
-mysql.query('INSERT INTO `test_table` VALUES (\r\n' +
-              'DEFAULT, "' + mysql.escapeString("va\\char data") + '", 100, 123.4, 256.8, \r\n' +
-              '"2015-11-03", "03:45:56",  "2015-11-03 03:45:56", "2015-11-03 03:45:56", \r\n' +
-              '"char dat\\a", "bl\\ob data", "text data"\r\n' +
-            ');');
+mysql.query('INSERT INTO `test_table` VALUES (' +
+              'DEFAULT, "' + mysql.escapeString("va\\char data") + '", 100, ?, 256.8, ' +
+              '"2015-11-03", "03:45:56",  "2015-11-03 03:45:56", ?, ' +
+              '"char dat\\a", "bl\\ob data", ?' +
+            ');', 123.4, new Date(Date.UTC(2015, 11, 3, 3, 45, 56)), "text data");
 
 
 var lastInsertId = mysql.insertId;

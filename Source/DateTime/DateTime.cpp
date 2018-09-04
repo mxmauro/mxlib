@@ -188,8 +188,7 @@ HRESULT CDateTime::SetFromString(_In_z_ LPCSTR szDateA, _In_z_ LPCSTR szFormatA,
 
   if (szDateA == NULL || szFormatA == NULL)
     return E_POINTER;
-  if (cStrTempDateW.Copy(szDateA) == FALSE ||
-      cStrTempFormatW.Copy(szFormatA) == FALSE)
+  if (cStrTempDateW.Copy(szDateA) == FALSE || cStrTempFormatW.Copy(szFormatA) == FALSE)
     return E_OUTOFMEMORY;
   if (lpCustomA != NULL)
   {

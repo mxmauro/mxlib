@@ -37,15 +37,26 @@
     <ClCompile Include="Source\JsLib\JavascriptVMJsObjectBase.cpp" />
     <ClCompile Include="Source\JsLib\JavascriptVMProxyCallbacks.cpp" />
     <ClCompile Include="Source\JsLib\JavascriptVMRequireModuleContext.cpp" />
-    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPlugin.cpp" />
-    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPluginApi.cpp" />
-    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPluginException.cpp" />
-    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPluginFieldInfo.cpp" />
-    <ClCompile Include="Source\JsLib\Plugins\JsMySqlPluginHelpers.cpp" />
+    <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPlugin.cpp" />
+    <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginApi.cpp" />
+    <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginException.cpp" />
+    <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginFieldInfo.cpp" />
+    <ClCompile Include="Source\JsLib\Plugins\SQLite\internals\custom_sqlite3_mem.cpp" />
+    <ClCompile Include="Source\JsLib\Plugins\SQLite\internals\sqlite3.c">
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_HAVE_SQLITE_CONFIG_H;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">WIN32;_HAVE_SQLITE_CONFIG_H;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">WIN32;_HAVE_SQLITE_CONFIG_H;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">WIN32;_HAVE_SQLITE_CONFIG_H;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePlugin.cpp" />
+    <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginApi.cpp" />
+    <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginException.cpp" />
+    <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginFieldInfo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\JsLib\JavascriptVM.h" />
     <ClInclude Include="Include\JsLib\Plugins\JsMySqlPlugin.h" />
+    <ClInclude Include="Include\JsLib\Plugins\JsSQLitePlugin.h" />
     <ClInclude Include="Source\JsLib\DukTape\duk_custom.h" />
     <ClInclude Include="Source\JsLib\DukTape\Source\dist\duktape.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -66,7 +77,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="Source\JsLib\JavascriptVMCommon.h" />
-    <ClInclude Include="Source\JsLib\Plugins\JsMySqlPluginCommon.h" />
+    <ClInclude Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginCommon.h" />
+    <ClInclude Include="Source\JsLib\Plugins\SQLite\internals\config.h" />
+    <ClInclude Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginCommon.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="Source\JsLib\DukTape\Source\LICENSE.txt">
@@ -157,7 +170,7 @@
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <ExceptionHandling>SyncCThrow</ExceptionHandling>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source\JsLib\DukTape\Source\dist;$(ProjectDir)Source\JsLib\Plugins\MySQL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\JsLib\DukTape\Source\dist;$(ProjectDir)Source\JsLib\Plugins\MySQL\internals;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <EnablePREfast>false</EnablePREfast>
     </ClCompile>
@@ -176,7 +189,7 @@
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <ExceptionHandling>SyncCThrow</ExceptionHandling>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source\JsLib\DukTape\Source\dist;$(ProjectDir)Source\JsLib\Plugins\MySQL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\JsLib\DukTape\Source\dist;$(ProjectDir)Source\JsLib\Plugins\MySQL\internals;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnablePREfast>false</EnablePREfast>
     </ClCompile>
     <Link>
@@ -196,7 +209,7 @@
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <ExceptionHandling>Async</ExceptionHandling>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source\JsLib\DukTape\Source\dist;$(ProjectDir)Source\JsLib\Plugins\MySQL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\JsLib\DukTape\Source\dist;$(ProjectDir)Source\JsLib\Plugins\MySQL\internals;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <UseFullPaths>false</UseFullPaths>
       <EnablePREfast>false</EnablePREfast>
     </ClCompile>
@@ -219,7 +232,7 @@
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <ExceptionHandling>Async</ExceptionHandling>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source\JsLib\DukTape\Source\dist;$(ProjectDir)Source\JsLib\Plugins\MySQL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\JsLib\DukTape\Source\dist;$(ProjectDir)Source\JsLib\Plugins\MySQL\internals;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <UseFullPaths>false</UseFullPaths>
       <EnablePREfast>false</EnablePREfast>
     </ClCompile>

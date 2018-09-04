@@ -43,8 +43,8 @@ public:
     MX_JS_MAP_METHOD("connect", &CJsMySqlPlugin::Connect, MX_JS_VARARGS) //host,user[,pass[,dbname[,port]]]
     MX_JS_MAP_METHOD("disconnect", &CJsMySqlPlugin::Disconnect, 0)
     MX_JS_MAP_METHOD("selectDatabase", &CJsMySqlPlugin::SelectDatabase, 1)
-    MX_JS_MAP_METHOD("query", &CJsMySqlPlugin::Query, 1)
-    MX_JS_MAP_METHOD("queryAndFetchRow", &CJsMySqlPlugin::QueryAndFetch, 1)
+    MX_JS_MAP_METHOD("query", &CJsMySqlPlugin::Query, MX_JS_VARARGS)
+    MX_JS_MAP_METHOD("queryAndFetchRow", &CJsMySqlPlugin::QueryAndFetch, MX_JS_VARARGS)
     MX_JS_MAP_METHOD("queryClose", &CJsMySqlPlugin::QueryClose, 0)
     MX_JS_MAP_METHOD("escapeString", &CJsMySqlPlugin::EscapeString, MX_JS_VARARGS)
     MX_JS_MAP_METHOD("utf8Truncate", &CJsMySqlPlugin::Utf8Truncate, 2)
@@ -87,13 +87,9 @@ private:
   DukTape::duk_ret_t setUseDebugDll();
 #endif //_DEBUG
 
-  HRESULT _TransactionStart();
-  HRESULT _TransactionCommit();
-  HRESULT _TransactionRollback();
-
-  VOID ThrowDbError(_In_ HRESULT hRes, _In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line,
-                    _In_opt_ BOOL bOnlyPush=FALSE);
   VOID ThrowDbError(_In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line, _In_opt_ BOOL bOnlyPush=FALSE);
+
+  static HRESULT HResultFromMySqlErr(_In_ int nError);
 
 private:
   LPVOID lpInternal;

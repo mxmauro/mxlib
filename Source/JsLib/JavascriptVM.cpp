@@ -928,11 +928,11 @@ VOID CJavascriptVM::GetDate(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_
   if (lpSt == NULL)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_POINTER);
   MX::MemSet(lpSt, 0, sizeof(SYSTEMTIME));
-  
+
   nObjIdx = DukTape::duk_normalize_index(lpCtx, nObjIdx);
 
   if (DukTape::duk_is_object(lpCtx, nObjIdx) == 0)
-    MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_FAIL);
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
 
   DukTape::duk_get_prop_string(lpCtx, nObjIdx, "getUTCDate");
   DukTape::duk_dup(lpCtx, nObjIdx);
@@ -977,17 +977,17 @@ VOID CJavascriptVM::GetDate(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_
   DukTape::duk_pop(lpCtx);
   //validate
   if (lpSt->wMonth < 1 || lpSt->wMonth > 12 || lpSt->wYear < 1 || lpSt->wDay < 1)
-    MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_FAIL);
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
   if (lpSt->wMonth != 2)
   {
     if (lpSt->wDay > wDaysInMonths[lpSt->wMonth - 1])
-      MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_FAIL);
+      MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
   }
   else
   {
     w = ((lpSt->wYear % 400) == 0 || ((lpSt->wYear % 4) == 0 && (lpSt->wYear % 100) != 0)) ? 29 : 28;
     if (lpSt->wDay > w)
-      MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_FAIL);
+      MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
   }
   //calculate day of week
   y = lpSt->wYear - ((lpSt->wMonth < 3) ? 1 : 0);
@@ -1038,6 +1038,38 @@ DukTape::duk_double_t CJavascriptVM::GetDouble(_In_ DukTape::duk_context *lpCtx,
 DukTape::duk_double_t CJavascriptVM::GetDouble(_In_ DukTape::duk_idx_t nObjIdx)
 {
   return GetDouble(lpCtx, nObjIdx);
+}
+
+VOID CJavascriptVM::GetObjectType(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nObjIdx,
+                                  _Out_ MX::CStringA &cStrTypeA)
+{
+  LPCSTR sA;
+  SIZE_T nLen;
+  HRESULT hRes = E_INVALIDARG;
+
+  nObjIdx = DukTape::duk_normalize_index(lpCtx, nObjIdx);
+
+  DukTape::duk_eval_raw(lpCtx, "Object.prototype.toString", 0, 0 | DUK_COMPILE_EVAL | DUK_COMPILE_NOSOURCE |
+                                                               DUK_COMPILE_STRLEN | DUK_COMPILE_NOFILENAME);
+  DukTape::duk_dup(lpCtx, nObjIdx);
+  DukTape::duk_call_method(lpCtx, 0);
+  sA = DukTape::duk_require_string(lpCtx, -1);
+  if (StrNCompareA(sA, "[object ", 8) == 0)
+  {
+    sA += 8;
+    for (nLen = 0; sA[nLen] != 0 && sA[nLen] != ']'; nLen++);
+    hRes = (cStrTypeA.CopyN(sA, nLen) != FALSE) ? S_OK : E_OUTOFMEMORY;
+  }
+  DukTape::duk_pop(lpCtx);
+  if (FAILED(hRes))
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+  return;
+}
+
+VOID CJavascriptVM::GetObjectType(_In_ DukTape::duk_idx_t nObjIdx, _Out_ MX::CStringA &cStrTypeA)
+{
+  GetObjectType(lpCtx, nObjIdx, cStrTypeA);
+  return;
 }
 
 HRESULT CJavascriptVM::AddSafeString(_Inout_ CStringA &cStrCodeA, _In_z_ LPCSTR szStrA, _In_opt_ SIZE_T nStrLen)

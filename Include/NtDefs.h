@@ -857,7 +857,7 @@ typedef struct _MX_KNONVOLATILE_CONTEXT_POINTERS {
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif //__cplusplus
 
 #define __DECLARE(ret, apiName) ret NTAPI Mx##apiName
 __DECLARE(NTSTATUS, NtOpenProcess)(_Out_ PHANDLE ProcessHandle, _In_ ACCESS_MASK DesiredAccess,
@@ -1238,7 +1238,7 @@ VOID MxSleep(_In_ DWORD dwTimeMs);
 
 #ifdef __cplusplus
 }; //extern "C"
-#endif
+#endif //__cplusplus
 
 //-----------------------------------------------------------
 

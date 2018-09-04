@@ -99,6 +99,10 @@
 #define MX_E_DuplicateKey               MX_E_AlreadyExists
 #define MX_E_ConstraintsCheckFailed     MAKE_HRESULT(1, MX_SCODE_FACILITY, 1) //0x8F180001
 
+#ifdef __cplusplus
+extern "C" {
+#endif //__cplusplus
+
 __inline HRESULT MX_HRESULT_FROM_WIN32(_In_ DWORD dwOsErr)
 {
   if (dwOsErr == ERROR_NOT_ENOUGH_MEMORY)
@@ -127,6 +131,10 @@ __inline HRESULT MX_HRESULT_FROM_LASTERROR()
 {
   return MX_HRESULT_FROM_WIN32(::MxGetLastWin32Error());
 }
+
+#ifdef __cplusplus
+}; //extern "C"
+#endif //__cplusplus
 
 //-----------------------------------------------------------
 
