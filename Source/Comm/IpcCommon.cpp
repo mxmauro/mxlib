@@ -1692,7 +1692,7 @@ VOID CIpc::CConnectionBase::OnWriteTimeout(_In_ CTimedEventQueue::CEvent *lpEven
 
     sWriteTimeout.cActiveList.Remove(lpEvent);
   }
-  //close connection if not cancelled
+  //close connection if not canceled
   if (lpEvent->IsCanceled() == FALSE)
     Close(MX_E_Timeout);
   //release event and myself

@@ -78,8 +78,7 @@ private:
   DukTape::duk_ret_t getFieldsCount();
   DukTape::duk_ret_t getFields();
 
-  VOID ThrowDbError(_In_ int err, _In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line,
-                    _In_opt_ BOOL bOnlyPush=FALSE);
+  VOID ThrowDbError(_In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line);
 
   static HRESULT HResultFromSQLiteErr(_In_ int nError);
 
@@ -87,6 +86,7 @@ private:
   LPVOID lpInternal;
   struct {
     BOOL bDontCreate, bReadOnly;
+    DWORD dwCloseTimeoutMs;
     DWORD dwBusyTimeoutMs;
   } sOptions;
 };

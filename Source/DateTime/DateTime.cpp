@@ -40,7 +40,7 @@ static const int aDateTimeMonthDays[13] = {0, 31, 59, 90, 120, 151, 181, 212, 24
 //-----------------------------------------------------------
 
 static HRESULT Format_AddNumber(_Inout_ MX::CStringW &cStrDestW, _In_ SIZE_T nNumber, _In_ SIZE_T nMinDigits);
-static BOOL DoTwoDigitsYearAdjustment(_Inout_ int &nYear, _In_ int nTwoDigitsYearRule);
+static HRESULT DoTwoDigitsYearAdjustment(_Inout_ int &nYear, _In_ int nTwoDigitsYearRule);
 static VOID TicksToYearAndDayOfYear(_In_ const MX::CTimeSpan &cTicks, _Out_opt_ int *lpnYear,
                                     _Out_opt_ int *lpnDayOfYear);
 static BOOL ConvertCustomSettingsA2W(_Out_ MX::CDateTime::LPCUSTOMSETTINGSW lpCustomW,
@@ -413,8 +413,9 @@ pfs_skip_phrase:
               if (nYear <= 99 && i <= 2)
               {
                 //do two digits year adjustment
-                if (DoTwoDigitsYearAdjustment(nYear, nTwoDigitsYearRule) == FALSE)
-                  return FALSE;
+                hRes = DoTwoDigitsYearAdjustment(nYear, nTwoDigitsYearRule);
+                if (FAILED(hRes))
+                  return hRes;
               }
               if (nYear < 1 || nYear > 99999999)
                 return MX_E_ArithmeticOverflow;
@@ -440,7 +441,9 @@ pfs_skip_phrase:
             return E_INVALIDARG;
           if ((cStrTempFormatW.Copy((bAlternateFlag == FALSE) ? sCustomW.szLongDateFormatW :
                                                                    sCustomW.szShortDateFormatW)) == FALSE)
+          {
             return E_OUTOFMEMORY;
+          }
           szOldFormatW = (LPWSTR)szFormatW+1;
           szFormatW = (LPWSTR)cStrTempFormatW;
           szFormatW--; //fixed below at switch end
@@ -463,7 +466,9 @@ pfs_skip_phrase:
                                                                   sCustomW.szShortDateFormatW) == FALSE ||
               cStrTempFormatW.Concat(L" ") == FALSE ||
               cStrTempFormatW.Concat(sCustomW.szTimeFormatW) == FALSE)
-            return FALSE;
+          {
+            return E_OUTOFMEMORY;
+          }
           szOldFormatW = (LPWSTR)szFormatW+1;
           szFormatW = (LPWSTR)cStrTempFormatW;
           szFormatW--; //fixed below at switch end
@@ -1704,7 +1709,7 @@ static HRESULT Format_AddNumber(_Inout_ MX::CStringW &cStrDestW, _In_ SIZE_T nNu
   return S_OK;
 }
 
-static BOOL DoTwoDigitsYearAdjustment(_Inout_ int &nYear, _In_ int nTwoDigitsYearRule)
+static HRESULT DoTwoDigitsYearAdjustment(_Inout_ int &nYear, _In_ int nTwoDigitsYearRule)
 {
   int i, k;
 
@@ -1714,7 +1719,7 @@ static BOOL DoTwoDigitsYearAdjustment(_Inout_ int &nYear, _In_ int nTwoDigitsYea
   {
     DWORD dw;
 
-    if (::GetCalendarInfoW(LOCALE_USER_DEFAULT, CAL_GREGORIAN, CAL_NOUSEROVERRIDE|CAL_ITWODIGITYEARMAX|
+    if (::GetCalendarInfoW(LOCALE_USER_DEFAULT, CAL_GREGORIAN, CAL_NOUSEROVERRIDE | CAL_ITWODIGITYEARMAX |
                            CAL_RETURN_NUMBER, NULL, 0, &dw) != 0 &&
         dw >= 101)
     {
@@ -1724,9 +1729,11 @@ static BOOL DoTwoDigitsYearAdjustment(_Inout_ int &nYear, _In_ int nTwoDigitsYea
     {
       //cannot get calendar so get current date and add 20 years
       MX::CDateTime cDt;
+      HRESULT hRes;
 
-      if (FAILED(cDt.SetFromNow(TRUE)))
-        return FALSE;
+      hRes = cDt.SetFromNow(TRUE);
+      if (FAILED(hRes))
+        return hRes;
       nTwoDigitsYearRule = cDt.GetYear() + 20;
     }
   }
@@ -1736,7 +1743,7 @@ static BOOL DoTwoDigitsYearAdjustment(_Inout_ int &nYear, _In_ int nTwoDigitsYea
   if (nYear > k)
     i -= 100;
   nYear += i;
-  return TRUE;
+  return S_OK;
 }
 
 static VOID TicksToYearAndDayOfYear(_In_ const MX::CTimeSpan &cTicks, _Out_opt_ int *lpnYear,

@@ -222,16 +222,16 @@ DukTape::duk_ret_t CJsMySqlPlugin::Connect()
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
   szHostA = DukTape::duk_require_string(lpCtx, 0);
   szUserNameA = NULL;
-  if (nParamsCount > 1)
+  if (nParamsCount > 1 && DukTape::duk_is_undefined(lpCtx, 1) == 0)
     szUserNameA = DukTape::duk_require_string(lpCtx, 1);
   szPasswordA = NULL;
-  if (nParamsCount > 2)
+  if (nParamsCount > 2 && DukTape::duk_is_undefined(lpCtx, 2) == 0)
     szPasswordA = DukTape::duk_require_string(lpCtx, 2);
   szDbNameA = NULL;
-  if (nParamsCount > 3)
+  if (nParamsCount > 3 && DukTape::duk_is_undefined(lpCtx, 3) == 0)
     szDbNameA = DukTape::duk_require_string(lpCtx, 3);
   nPort = 3306;
-  if (nParamsCount > 4)
+  if (nParamsCount > 4 && DukTape::duk_is_undefined(lpCtx, 4) == 0)
   {
     nPort = DukTape::duk_require_int(lpCtx, 4);
     if (nPort < 1 || nPort > 65535)
@@ -651,16 +651,6 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
   //get last insert id and initialize result-set fields
   if (jsmysql_data->lpResultSet != NULL)
   {
-    /*
-    my_bool attr_val;
-
-    attr_val = 1;
-    _CALLAPI(mysql_stmt_attr_set)(jsmysql_data->lpStmt, STMT_ATTR_UPDATE_MAX_LENGTH, &attr_val);
-
-    attr_val = CURSOR_TYPE_READ_ONLY;
-    _CALLAPI(mysql_stmt_attr_set)(jsmysql_data->lpStmt, STMT_ATTR_CURSOR_TYPE, &attr_val);
-    */
-
     jsmysql_data->nFieldsCount = (SIZE_T)(_CALLAPI(mysql_num_fields)(jsmysql_data->lpResultSet));
     if (jsmysql_data->nFieldsCount > 0)
     {
@@ -1170,10 +1160,17 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow()
             sSt.wYear = (WORD)(lpDt->year);
             sSt.wMonth = (WORD)(lpDt->month);
             sSt.wDay = (WORD)(lpDt->day);
-            sSt.wHour = (WORD)(lpDt->hour);
-            sSt.wMinute = (WORD)(lpDt->minute);
-            sSt.wSecond = (WORD)(lpDt->second);
-            sSt.wMilliseconds = (WORD)(lpDt->second_part);
+            if (lpFieldInfo->nType != MYSQL_TYPE_DATE)
+            {
+              sSt.wHour = (WORD)(lpDt->hour);
+              sSt.wMinute = (WORD)(lpDt->minute);
+              sSt.wSecond = (WORD)(lpDt->second);
+              sSt.wMilliseconds = (WORD)(lpDt->second_part);
+            }
+            else
+            {
+              sSt.wHour = sSt.wMinute = sSt.wSecond = sSt.wMilliseconds = 0;
+            }
 
             CJavascriptVM::PushDate(lpCtx, &sSt, TRUE);
           }

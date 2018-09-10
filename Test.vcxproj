@@ -110,13 +110,14 @@
       <AdditionalLibraryDirectories>$(ProjectDir)Libs\$(PlatformName)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <MinimumRequiredVersion>5.01</MinimumRequiredVersion>
     </Link>
-    <PostBuildEvent>
-      <Command>CALL "$(ProjectDir)Test\Data\copydata.bat" "$(TargetDir)" $(PlatformTarget)
-</Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
+    <PostBuildEvent />
+    <PostBuildEvent />
+    <PreBuildEvent>
+      <Command>CALL "$(ProjectDir)Test\Data\copydata.bat" "$(TargetDir)" $(PlatformTarget)</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
       <Message>Copying data files...</Message>
-    </PostBuildEvent>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -137,13 +138,14 @@
       <AdditionalLibraryDirectories>$(ProjectDir)Libs\$(PlatformName)\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <MinimumRequiredVersion>5.02</MinimumRequiredVersion>
     </Link>
-    <PostBuildEvent>
-      <Command>CALL "$(ProjectDir)Test\Data\copydata.bat" "$(TargetDir)" $(PlatformTarget)
-</Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
+    <PostBuildEvent />
+    <PostBuildEvent />
+    <PreBuildEvent>
+      <Command>CALL "$(ProjectDir)Test\Data\copydata.bat" "$(TargetDir)" $(PlatformTarget)</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
       <Message>Copying data files...</Message>
-    </PostBuildEvent>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -168,13 +170,14 @@
       <Profile>false</Profile>
       <MinimumRequiredVersion>5.01</MinimumRequiredVersion>
     </Link>
-    <PostBuildEvent>
-      <Command>CALL "$(ProjectDir)Test\Data\copydata.bat" "$(TargetDir)" $(PlatformTarget)
-</Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
+    <PostBuildEvent />
+    <PostBuildEvent />
+    <PreBuildEvent>
+      <Command>CALL "$(ProjectDir)Test\Data\copydata.bat" "$(TargetDir)" $(PlatformTarget)</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
       <Message>Copying data files...</Message>
-    </PostBuildEvent>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -199,13 +202,14 @@
       <Profile>false</Profile>
       <MinimumRequiredVersion>5.02</MinimumRequiredVersion>
     </Link>
-    <PostBuildEvent>
-      <Command>CALL "$(ProjectDir)Test\Data\copydata.bat" "$(TargetDir)" $(PlatformTarget)
-</Command>
-    </PostBuildEvent>
-    <PostBuildEvent>
+    <PostBuildEvent />
+    <PostBuildEvent />
+    <PreBuildEvent>
+      <Command>CALL "$(ProjectDir)Test\Data\copydata.bat" "$(TargetDir)" $(PlatformTarget)</Command>
+    </PreBuildEvent>
+    <PreBuildEvent>
       <Message>Copying data files...</Message>
-    </PostBuildEvent>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Test\Console.h" />

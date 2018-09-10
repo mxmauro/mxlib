@@ -73,22 +73,15 @@ private:
 
 //-----------------------------------------------------------
 
-class CJsSQLiteDatabase : public TRefCounted<CBaseMemObj>
-{
-private:
-  CJsSQLiteDatabase();
+namespace JsSQLiteDbManager {
 
-public:
-  ~CJsSQLiteDatabase();
+HRESULT Open(_In_z_ LPCSTR szFileNameA, _In_ BOOL bReadOnly, _In_ BOOL bDontCreate, _In_ DWORD dwCloseTimeoutMs,
+             _Out_ sqlite3 **lplpDB);
+VOID Close(_In_ sqlite3 *lpDB);
 
-  static HRESULT GetOrCreate(_In_z_ LPCSTR szFileNameA, _In_ BOOL bReadOnly, _In_ BOOL bDontCreate,
-                             _Deref_out_ CJsSQLiteDatabase **lplpDatabase);
+VOID Shutdown();
 
-public:
-  sqlite3 *lpDB;
-  ULONGLONG nHash;
-  BOOL bReadOnly;
-};
+} //namespace DbManager
 
 //-----------------------------------------------------------
 

@@ -25,6 +25,11 @@
 #include "..\Crypto\InitOpenSSL.h"
 #include "..\..\Include\CircularBuffer.h"
 #include "..\..\Include\Comm\SslCertificates.h"
+#include <intrin.h>
+FORCEINLINE int InterlockedExchangeAdd(_Inout_ _Interlocked_operand_ int volatile *Addend, _In_ int Value)
+{
+  return (int)_InterlockedExchangeAdd((volatile long*)Addend, (long)Value);
+}
 #include "..\OpenSSL\Source\crypto\x509\x509_lcl.h"
 #include "..\OpenSSL\Source\crypto\include\internal\x509_int.h"
 

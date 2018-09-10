@@ -46,14 +46,14 @@ namespace Internals {
 CIPAddressResolver::CIPAddressResolver() : CBaseMemObj(), CThread()
 {
   InterlockedExchange(&nRefCount, 1);
-  lpEventQueue = NULL;
+  lpTimedEventQueue = NULL;
   return;
 }
 
 CIPAddressResolver::~CIPAddressResolver()
 {
-  if (lpEventQueue != NULL)
-    lpEventQueue->Release();
+  if (lpTimedEventQueue != NULL)
+    lpTimedEventQueue->Release();
   return;
 }
 
@@ -155,7 +155,7 @@ HRESULT CIPAddressResolver::Resolve(_In_ MX::CHostResolver *lpHostResolver, _In_
     lpHostResolver->SetState(CHostResolver::StateQueued);
     lpHostResolver->ResetCancelMark();
     //setup timeout
-    hRes = lpEventQueue->Add(cNewItem.Get(), dwTimeoutMs);
+    hRes = lpTimedEventQueue->Add(cNewItem.Get(), dwTimeoutMs);
     if (FAILED(hRes))
       return hRes;
     //enqueue
@@ -233,8 +233,8 @@ HRESULT CIPAddressResolver::ResolveAddr(_Out_ PSOCKADDR_INET lpAddress, _In_z_ L
 BOOL CIPAddressResolver::Initialize()
 {
   SetAutoDelete(TRUE);
-  lpEventQueue = CSystemTimedEventQueue::Get();
-  if (lpEventQueue == NULL)
+  lpTimedEventQueue = CSystemTimedEventQueue::Get();
+  if (lpTimedEventQueue == NULL)
     return FALSE;
   if (FAILED(cQueueChangedEv.Create(TRUE, FALSE)) || Start() == FALSE)
     return FALSE;
@@ -324,7 +324,7 @@ BOOL CIPAddressResolver::ProcessQueued()
     if (lpItem == NULL)
       return FALSE;
     cProcessedItemsList.PushTail(lpItem);
-    lpEventQueue->Remove(lpItem, FALSE);
+    lpTimedEventQueue->Remove(lpItem, FALSE);
     //mark as processing
     lpItem->cHostResolver->SetState(MX::CHostResolver::StateProcessing);
   }

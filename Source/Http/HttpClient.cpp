@@ -1436,7 +1436,7 @@ restart:
               if (sRedirect.lpEvent != NULL)
                 lpTimedEventQueue->Remove(sRedirect.lpEvent);
               sRedirect.lpEvent = MX_DEBUG_NEW CTimedEventQueue::CEvent(
-                        MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnRedirect, this));
+                                               MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnRedirect, this));
               if (sRedirect.lpEvent != NULL)
               {
                 hRes = cPendingEvents.Add(sRedirect.lpEvent);

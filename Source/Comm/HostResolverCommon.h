@@ -115,7 +115,7 @@ private:
 
   CCriticalSection cs;
   LONG volatile nRefCount;
-  CSystemTimedEventQueue *lpEventQueue;
+  CSystemTimedEventQueue *lpTimedEventQueue;
   TLnkLst<CItem> cQueuedItemsList, cProcessedItemsList;
   CWindowsEvent cQueueChangedEv;
 };

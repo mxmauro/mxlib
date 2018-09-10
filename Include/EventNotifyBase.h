@@ -40,7 +40,7 @@ class TEventNotifyBase : public virtual TRefCounted<CBaseMemObj>
 public:
   typedef TEventNotifyBase<T> CEventBase;
 
-  typedef Callback<VOID (_In_ T *lpEvent)> OnNotifyCallback;
+  typedef Callback <VOID (_In_ T *lpEvent)> OnNotifyCallback;
 
   typedef enum {
     StateInvalidArg=-1,

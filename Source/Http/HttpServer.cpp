@@ -991,13 +991,13 @@ HRESULT CHttpServer::SetupTimeoutEvent(_In_ CRequest *lpRequest, _In_ DWORD dwTi
   HRESULT hRes;
 
   lpRequest->AddRef();
-  lpEvent = MX_DEBUG_NEW CTimedEventQueue::CEvent(MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnRequestTimeout, this));
+  lpEvent = MX_DEBUG_NEW CTimedEventQueue::CEvent(MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnRequestTimeout, this),
+                                                  lpRequest);
   if (lpEvent == NULL)
   {
     lpRequest->Release();
     return E_OUTOFMEMORY;
   }
-  lpEvent->SetUserData(lpRequest);
   //add to queues
   hRes = lpRequest->sRequest.sTimeout.cActiveList.Add(lpEvent);
   if (FAILED(hRes))

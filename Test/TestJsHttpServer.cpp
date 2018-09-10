@@ -25,6 +25,7 @@
 #include <JsHttpServer\JsHttpServer.h>
 #include <JsHttpServer\Plugins\JsHttpServerSessionPlugin.h>
 #include <JsLib\Plugins\JsMySqlPlugin.h>
+#include <JsLib\Plugins\JsSQLitePlugin.h>
 
 //-----------------------------------------------------------
 
@@ -61,6 +62,8 @@ static HRESULT OnSessionLoadSave(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin, 
 static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR szFileNameW);
 static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ LPCWSTR &szExtensionW,
                                 _In_z_ LPCWSTR szPathW);
+static DukTape::duk_ret_t OnGetExecutablePath(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                              _In_z_ LPCSTR szFunctionNameA);
 
 //-----------------------------------------------------------
 
@@ -167,6 +170,10 @@ static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer:
       hRes = MX::CJsHttpServerSessionPlugin::Register(cJvm);
     if (SUCCEEDED(hRes))
       hRes = MX::CJsMySqlPlugin::Register(cJvm);
+    if (SUCCEEDED(hRes))
+      hRes = MX::CJsSQLitePlugin::Register(cJvm);
+    if (SUCCEEDED(hRes))
+      hRes = cJvm.AddNativeFunction("getExecutablePath", MX_BIND_CALLBACK(&OnGetExecutablePath), 0);
     if (hRes == MX_E_FileNotFound || hRes == MX_E_PathNotFound)
     {
       hRes = lpRequest->SendErrorPage(404, E_INVALIDARG);
@@ -618,4 +625,18 @@ static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ L
     sW--;
   szExtensionW = (sW >= (LPWSTR)cStrFullFileNameW && *sW == L'.') ? sW : L"";
   return S_OK;
+}
+
+static DukTape::duk_ret_t OnGetExecutablePath(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                              _In_z_ LPCSTR szFunctionNameA)
+{
+  MX::CStringW cStrPathW;
+  HRESULT hRes;
+
+  hRes = GetAppPath(cStrPathW);
+  if (FAILED(hRes))
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+
+  MX::CJavascriptVM::PushString(lpCtx, (LPCWSTR)cStrPathW, cStrPathW.GetLength());
+  return 1;
 }

@@ -23,5 +23,8 @@ if (request.path.indexOf("/top.jss", request.path.length - "/top.jss".length) !=
 	<div class="headerShadow"></div>
 </header>
 <div class="top_menu">
-	<a href="form_upload.jss">Form Upload</a>&nbsp;|&nbsp;<a href="increment_cookie_val.jss">Increment cookie value</a>&nbsp;|&nbsp;<a href="mysql_test.jss">MySQL test</a>
+	<a href="form_upload.jss">Form Upload</a>&nbsp;|&nbsp;
+	<a href="increment_cookie_val.jss">Increment cookie value</a>&nbsp;|&nbsp;
+	<a href="mysql_test.jss">MySQL test</a>&nbsp;|&nbsp;
+	<a href="sqlite_test.jss">SQLite test</a>
 </div>
