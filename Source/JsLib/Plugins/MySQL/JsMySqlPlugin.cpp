@@ -390,205 +390,245 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
       jsmysql_data->lpStmt = _CALLAPI(mysql_stmt_init)(jsmysql_data->lpDB);
       if (jsmysql_data->lpStmt == NULL)
         MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
-
       if (_CALLAPI(mysql_stmt_prepare)(jsmysql_data->lpStmt, szQueryA, (ULONG)nQueryLegth) != 0)
       {
         err = _CALLAPI(mysql_stmt_errno)(jsmysql_data->lpStmt);
-        if (err == CR_OUT_OF_MEMORY)
-          MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
-        if (nRetryCount > 1 && err == ER_CANT_LOCK)
-          throw (int)ER_CANT_LOCK;
-        ThrowDbError(__FILE__, __LINE__);
+        if (err == ER_UNSUPPORTED_PS)
+        {
+          //query does not support the prepared statement protocol so switch to a standard query
+          QueryClose();
+          //but the standard query does not support input bindings
+          if (nParamsCount != 1)
+            MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+
+          err = 0;
+          if (_CALLAPI(mysql_real_query)(jsmysql_data->lpDB, szQueryA, (ULONG)nQueryLegth) == 0)
+          {
+            jsmysql_data->lpResultSet = _CALLAPI(mysql_store_result)(jsmysql_data->lpDB);
+            if (jsmysql_data->lpResultSet == NULL)
+              err = (int)_CALLAPI(mysql_errno)(jsmysql_data->lpDB);
+          }
+          else
+          {
+            err = (int)_CALLAPI(mysql_errno)(jsmysql_data->lpDB);
+          }
+        }
+        if (err != 0)
+        {
+          if (err == CR_OUT_OF_MEMORY)
+            MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+          if (nRetryCount > 1 && err == ER_CANT_LOCK)
+            throw (int)ER_CANT_LOCK;
+          ThrowDbError(__FILE__, __LINE__);
+        }
       }
 
-      nInputParams = _CALLAPI(mysql_stmt_param_count)(jsmysql_data->lpStmt);
-      if (nParamsCount != (DukTape::duk_idx_t)nInputParams + 1)
-        MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+      nInputParams = 0;
 
-      if (nInputParams > 0)
+      //if it is a prepared statement...
+      if (jsmysql_data->lpStmt != NULL)
       {
-        //calculate data size
-        SIZE_T nSize = (SIZE_T)nInputParams * sizeof(MYSQL_BIND);
-        LPBYTE lpPtr;
+        //...process input fields
+        nInputParams = _CALLAPI(mysql_stmt_param_count)(jsmysql_data->lpStmt);
+        if (nParamsCount != (DukTape::duk_idx_t)nInputParams + 1)
+          MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
 
-        for (idx = 1; idx < nParamsCount; idx++)
+        if (nInputParams > 0)
         {
-          DukTape::duk_size_t nLen;
-          MX::CStringA cStrTypeA;
+          //calculate data size
+          SIZE_T nSize = (SIZE_T)nInputParams * sizeof(MYSQL_BIND);
+          LPBYTE lpPtr;
 
-          switch (DukTape::duk_get_type(lpCtx, idx))
+          for (idx = 1; idx < nParamsCount; idx++)
           {
-            case DUK_TYPE_NONE:
-            case DUK_TYPE_UNDEFINED:
-            case DUK_TYPE_NULL:
-              nSize += sizeof(my_bool);
-              break;
+            DukTape::duk_size_t nLen;
+            MX::CStringA cStrTypeA;
 
-            case DUK_TYPE_BOOLEAN:
-              nSize += sizeof(LONG);
-              break;
+            switch (DukTape::duk_get_type(lpCtx, idx))
+            {
+              case DUK_TYPE_NONE:
+              case DUK_TYPE_UNDEFINED:
+              case DUK_TYPE_NULL:
+                nSize += sizeof(my_bool);
+                break;
 
-            case DUK_TYPE_NUMBER:
-              nSize += sizeof(double);
-              break;
+              case DUK_TYPE_BOOLEAN:
+                nSize += sizeof(LONG);
+                break;
 
-            case DUK_TYPE_STRING:
-              DukTape::duk_get_lstring(lpCtx, idx, &nLen);
-              nSize += nLen;
-              break;
+              case DUK_TYPE_NUMBER:
+                nSize += sizeof(double);
+                break;
 
-            case DUK_TYPE_OBJECT:
-              CJavascriptVM::GetObjectType(lpCtx, idx, cStrTypeA);
-              if (StrCompareA((LPCSTR)cStrTypeA, "Date") == 0)
-              {
-                nSize += sizeof(MYSQL_TIME);
-              }
-              else
-              {
+              case DUK_TYPE_STRING:
+                DukTape::duk_get_lstring(lpCtx, idx, &nLen);
+                nSize += nLen;
+                break;
+
+              case DUK_TYPE_OBJECT:
+                CJavascriptVM::GetObjectType(lpCtx, idx, cStrTypeA);
+                if (StrCompareA((LPCSTR)cStrTypeA, "Date") == 0)
+                {
+                  nSize += sizeof(MYSQL_TIME);
+                }
+                else
+                {
+                  MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+                }
+                break;
+
+              case DUK_TYPE_BUFFER:
+                DukTape::duk_get_buffer(lpCtx, idx, &nLen);
+                nSize += nLen;
+                break;
+
+              default:
                 MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
-              }
-              break;
-
-            case DUK_TYPE_BUFFER:
-              DukTape::duk_get_buffer(lpCtx, idx, &nLen);
-              nSize += nLen;
-              break;
-
-            default:
-              MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+            }
           }
-        }
 
-        cInputBindings.Attach((MYSQL_BIND*)MX_MALLOC((SIZE_T)nInputParams * sizeof(MYSQL_BIND) + nSize));
-        if (!cInputBindings)
-          MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
-        MemSet(cInputBindings.Get(), 0, (SIZE_T)nInputParams * sizeof(MYSQL_BIND) + nSize);
+          cInputBindings.Attach((MYSQL_BIND*)MX_MALLOC((SIZE_T)nInputParams * sizeof(MYSQL_BIND) + nSize));
+          if (!cInputBindings)
+            MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+          MemSet(cInputBindings.Get(), 0, (SIZE_T)nInputParams * sizeof(MYSQL_BIND) + nSize);
 
-        lpPtr = (LPBYTE)cInputBindings.Get() + (SIZE_T)nInputParams * sizeof(MYSQL_BIND);
-        for (idx = 1; idx < nParamsCount; idx++)
-        {
-          MX::CStringA cStrTypeA;
-          MYSQL_BIND *lpBind = cInputBindings.Get() + (SIZE_T)(idx - 1);
-          DukTape::duk_size_t nLen;
-          LPVOID s;
-
-          switch (DukTape::duk_get_type(lpCtx, idx))
+          lpPtr = (LPBYTE)cInputBindings.Get() + (SIZE_T)nInputParams * sizeof(MYSQL_BIND);
+          for (idx = 1; idx < nParamsCount; idx++)
           {
-            case DUK_TYPE_NONE:
-            case DUK_TYPE_UNDEFINED:
-            case DUK_TYPE_NULL:
-              lpBind->buffer_type = MYSQL_TYPE_NULL;
-              lpBind->is_null = (my_bool*)lpPtr;
-              *(lpBind->is_null) = 1;
+            MX::CStringA cStrTypeA;
+            MYSQL_BIND *lpBind = cInputBindings.Get() + (SIZE_T)(idx - 1);
+            DukTape::duk_size_t nLen;
+            LPVOID s;
 
-              lpPtr += sizeof(my_bool);
-              break;
+            switch (DukTape::duk_get_type(lpCtx, idx))
+            {
+              case DUK_TYPE_NONE:
+              case DUK_TYPE_UNDEFINED:
+              case DUK_TYPE_NULL:
+                lpBind->buffer_type = MYSQL_TYPE_NULL;
+                lpBind->is_null = (my_bool*)lpPtr;
+                *(lpBind->is_null) = 1;
 
-            case DUK_TYPE_BOOLEAN:
-              lpBind->buffer_type = MYSQL_TYPE_LONG;
-              lpBind->buffer = lpPtr;
-              lpBind->buffer_length = (ULONG)sizeof(LONG);
-              *((LONG*)(lpBind->buffer)) = DukTape::duk_get_boolean(lpCtx, idx) ? 1 : 0;
+                lpPtr += sizeof(my_bool);
+                break;
 
-              lpPtr += sizeof(LONG);
-              break;
-
-            case DUK_TYPE_NUMBER:
-              {
-              double dbl;
-              LONGLONG ll;
-
-              lpBind->buffer = lpPtr;
-
-              dbl = (double)DukTape::duk_get_number(lpCtx, idx);
-              ll = (LONGLONG)dbl;
-              if ((double)ll != dbl || dbl < (double)LONG_MIN)
-              {
-                lpBind->buffer_type = MYSQL_TYPE_DOUBLE;
-                lpBind->buffer_length = (ULONG)sizeof(double);
-                *((double*)(lpBind->buffer)) = dbl;
-              }
-              else if (ll < (LONGLONG)LONG_MIN)
-              {
-                lpBind->buffer_type = MYSQL_TYPE_LONGLONG;
-                lpBind->buffer_length = (ULONG)sizeof(LONGLONG);
-                *((LONGLONG*)(lpBind->buffer)) = ll;
-              }
-              else if (ll <= (LONGLONG)LONG_MAX)
-              {
+              case DUK_TYPE_BOOLEAN:
                 lpBind->buffer_type = MYSQL_TYPE_LONG;
-                lpBind->buffer_length = (ULONG)sizeof(LONG);
-                *((LONG*)(lpBind->buffer)) = (LONG)ll;
-              }
-              else if ((ULONG)(ULONGLONG)ll <= (ULONG)LONG_MAX)
-              {
-                lpBind->buffer_type = MYSQL_TYPE_LONG;
-                lpBind->buffer_length = (ULONG)sizeof(LONG);
-                *((ULONG*)(lpBind->buffer)) = (ULONG)(ULONGLONG)ll;
-                lpBind->is_unsigned = 1;
-              }
-              else
-              {
-                lpBind->buffer_type = MYSQL_TYPE_DOUBLE;
-                lpBind->buffer_length = (ULONG)sizeof(double);
-                *((double*)(lpBind->buffer)) = dbl;
-              }
-
-              lpPtr += sizeof(double);
-              }
-              break;
-
-            case DUK_TYPE_STRING:
-              s = (LPVOID)DukTape::duk_get_lstring(lpCtx, idx, &nLen);
-
-              lpBind->buffer_type = MYSQL_TYPE_VAR_STRING;
-              lpBind->buffer = lpPtr;
-              lpBind->buffer_length = (ULONG)nLen;
-              MemCopy(lpBind->buffer, s, nLen);
-
-              lpPtr += nLen;
-              break;
-
-            case DUK_TYPE_OBJECT:
-              CJavascriptVM::GetObjectType(lpCtx, idx, cStrTypeA);
-              if (StrCompareA((LPCSTR)cStrTypeA, "Date") == 0)
-              {
-                SYSTEMTIME sSt;
-
-                CJavascriptVM::GetDate(lpCtx, idx, &sSt);
-
-                lpBind->buffer_type = MYSQL_TYPE_DATETIME;
                 lpBind->buffer = lpPtr;
-                lpBind->buffer_length = (ULONG)sizeof(MYSQL_TIME);
+                lpBind->buffer_length = (ULONG)sizeof(LONG);
+                *((LONG*)(lpBind->buffer)) = DukTape::duk_get_boolean(lpCtx, idx) ? 1 : 0;
 
-                ((MYSQL_TIME*)lpPtr)->day = (UINT)(sSt.wDay);
-                ((MYSQL_TIME*)lpPtr)->month = (UINT)(sSt.wMonth);
-                ((MYSQL_TIME*)lpPtr)->year = (UINT)(sSt.wYear);
-                ((MYSQL_TIME*)lpPtr)->hour = (UINT)(sSt.wHour);
-                ((MYSQL_TIME*)lpPtr)->minute = (UINT)(sSt.wMinute);
-                ((MYSQL_TIME*)lpPtr)->second = (UINT)(sSt.wSecond);
-                ((MYSQL_TIME*)lpPtr)->second_part = (ULONG)(sSt.wMilliseconds);
-                ((MYSQL_TIME*)lpPtr)->neg = 0;
-                ((MYSQL_TIME*)lpPtr)->time_type = MYSQL_TIMESTAMP_DATETIME;
+                lpPtr += sizeof(LONG);
+                break;
 
-                lpPtr += sizeof(MYSQL_TIME);
-              }
-              break;
+              case DUK_TYPE_NUMBER:
+                {
+                double dbl;
+                LONGLONG ll;
 
-            case DUK_TYPE_BUFFER:
-              s = DukTape::duk_get_buffer(lpCtx, idx, &nLen);
+                lpBind->buffer = lpPtr;
 
-              lpBind->buffer_type = MYSQL_TYPE_LONG_BLOB;
-              lpBind->buffer = lpPtr;
-              lpBind->buffer_length = (ULONG)nLen;
-              MemCopy(lpBind->buffer, s, nLen);
+                dbl = (double)DukTape::duk_get_number(lpCtx, idx);
+                ll = (LONGLONG)dbl;
+                if ((double)ll != dbl || dbl < (double)LONG_MIN)
+                {
+                  lpBind->buffer_type = MYSQL_TYPE_DOUBLE;
+                  lpBind->buffer_length = (ULONG)sizeof(double);
+                  *((double*)(lpBind->buffer)) = dbl;
+                }
+                else if (ll < (LONGLONG)LONG_MIN)
+                {
+                  lpBind->buffer_type = MYSQL_TYPE_LONGLONG;
+                  lpBind->buffer_length = (ULONG)sizeof(LONGLONG);
+                  *((LONGLONG*)(lpBind->buffer)) = ll;
+                }
+                else if (ll <= (LONGLONG)LONG_MAX)
+                {
+                  lpBind->buffer_type = MYSQL_TYPE_LONG;
+                  lpBind->buffer_length = (ULONG)sizeof(LONG);
+                  *((LONG*)(lpBind->buffer)) = (LONG)ll;
+                }
+                else if ((ULONG)(ULONGLONG)ll <= (ULONG)LONG_MAX)
+                {
+                  lpBind->buffer_type = MYSQL_TYPE_LONG;
+                  lpBind->buffer_length = (ULONG)sizeof(LONG);
+                  *((ULONG*)(lpBind->buffer)) = (ULONG)(ULONGLONG)ll;
+                  lpBind->is_unsigned = 1;
+                }
+                else
+                {
+                  lpBind->buffer_type = MYSQL_TYPE_DOUBLE;
+                  lpBind->buffer_length = (ULONG)sizeof(double);
+                  *((double*)(lpBind->buffer)) = dbl;
+                }
 
-              lpPtr += nLen;
-              break;
+                lpPtr += sizeof(double);
+                }
+                break;
+
+              case DUK_TYPE_STRING:
+                s = (LPVOID)DukTape::duk_get_lstring(lpCtx, idx, &nLen);
+
+                lpBind->buffer_type = MYSQL_TYPE_VAR_STRING;
+                lpBind->buffer = lpPtr;
+                lpBind->buffer_length = (ULONG)nLen;
+                MemCopy(lpBind->buffer, s, nLen);
+
+                lpPtr += nLen;
+                break;
+
+              case DUK_TYPE_OBJECT:
+                CJavascriptVM::GetObjectType(lpCtx, idx, cStrTypeA);
+                if (StrCompareA((LPCSTR)cStrTypeA, "Date") == 0)
+                {
+                  SYSTEMTIME sSt;
+
+                  CJavascriptVM::GetDate(lpCtx, idx, &sSt);
+
+                  lpBind->buffer_type = MYSQL_TYPE_DATETIME;
+                  lpBind->buffer = lpPtr;
+                  lpBind->buffer_length = (ULONG)sizeof(MYSQL_TIME);
+
+                  ((MYSQL_TIME*)lpPtr)->day = (UINT)(sSt.wDay);
+                  ((MYSQL_TIME*)lpPtr)->month = (UINT)(sSt.wMonth);
+                  ((MYSQL_TIME*)lpPtr)->year = (UINT)(sSt.wYear);
+                  ((MYSQL_TIME*)lpPtr)->hour = (UINT)(sSt.wHour);
+                  ((MYSQL_TIME*)lpPtr)->minute = (UINT)(sSt.wMinute);
+                  ((MYSQL_TIME*)lpPtr)->second = (UINT)(sSt.wSecond);
+                  ((MYSQL_TIME*)lpPtr)->second_part = (ULONG)(sSt.wMilliseconds);
+                  ((MYSQL_TIME*)lpPtr)->neg = 0;
+                  ((MYSQL_TIME*)lpPtr)->time_type = MYSQL_TIMESTAMP_DATETIME;
+
+                  lpPtr += sizeof(MYSQL_TIME);
+                }
+                break;
+
+              case DUK_TYPE_BUFFER:
+                s = DukTape::duk_get_buffer(lpCtx, idx, &nLen);
+
+                lpBind->buffer_type = MYSQL_TYPE_LONG_BLOB;
+                lpBind->buffer = lpPtr;
+                lpBind->buffer_length = (ULONG)nLen;
+                MemCopy(lpBind->buffer, s, nLen);
+
+                lpPtr += nLen;
+                break;
+            }
+          }
+
+          if (_CALLAPI(mysql_stmt_bind_param)(jsmysql_data->lpStmt, cInputBindings.Get()) != 0)
+          {
+            err = _CALLAPI(mysql_stmt_errno)(jsmysql_data->lpStmt);
+            if (err == CR_OUT_OF_MEMORY)
+              MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+            if (nRetryCount > 1 && err == ER_CANT_LOCK)
+              throw (int)ER_CANT_LOCK;
+            ThrowDbError(__FILE__, __LINE__);
           }
         }
 
-        if (_CALLAPI(mysql_stmt_bind_param)(jsmysql_data->lpStmt, cInputBindings.Get()) != 0)
+        //...execute statement
+        if (_CALLAPI(mysql_stmt_execute)(jsmysql_data->lpStmt) != 0)
         {
           err = _CALLAPI(mysql_stmt_errno)(jsmysql_data->lpStmt);
           if (err == CR_OUT_OF_MEMORY)
@@ -597,29 +637,20 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
             throw (int)ER_CANT_LOCK;
           ThrowDbError(__FILE__, __LINE__);
         }
-      }
 
-      if (_CALLAPI(mysql_stmt_execute)(jsmysql_data->lpStmt) != 0)
-      {
-        err = _CALLAPI(mysql_stmt_errno)(jsmysql_data->lpStmt);
-        if (err == CR_OUT_OF_MEMORY)
-          MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
-        if (nRetryCount > 1 && err == ER_CANT_LOCK)
-          throw (int)ER_CANT_LOCK;
-        ThrowDbError(__FILE__, __LINE__);
-      }
-
-      jsmysql_data->lpResultSet = _CALLAPI(mysql_stmt_result_metadata)(jsmysql_data->lpStmt);
-      if (jsmysql_data->lpResultSet == NULL)
-      {
-        err = _CALLAPI(mysql_stmt_errno)(jsmysql_data->lpStmt);
-        if (err != 0)
+        //analyze result set (if any)
+        jsmysql_data->lpResultSet = _CALLAPI(mysql_stmt_result_metadata)(jsmysql_data->lpStmt);
+        if (jsmysql_data->lpResultSet == NULL)
         {
-          if (err == CR_OUT_OF_MEMORY)
-            MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
-          if (nRetryCount > 1 && err == ER_CANT_LOCK)
-            throw (int)ER_CANT_LOCK;
-          ThrowDbError(__FILE__, __LINE__);
+          err = _CALLAPI(mysql_stmt_errno)(jsmysql_data->lpStmt);
+          if (err != 0)
+          {
+            if (err == CR_OUT_OF_MEMORY)
+              MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+            if (nRetryCount > 1 && err == ER_CANT_LOCK)
+              throw (int)ER_CANT_LOCK;
+            ThrowDbError(__FILE__, __LINE__);
+          }
         }
       }
 
@@ -644,8 +675,16 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
   }
 
   //get some data
-  jsmysql_data->nAffectedRows = _CALLAPI(mysql_stmt_affected_rows)(jsmysql_data->lpStmt);
-  jsmysql_data->nLastInsertId = _CALLAPI(mysql_stmt_insert_id)(jsmysql_data->lpStmt);
+  if (jsmysql_data->lpStmt != NULL)
+  {
+    jsmysql_data->nAffectedRows = _CALLAPI(mysql_stmt_affected_rows)(jsmysql_data->lpStmt);
+    jsmysql_data->nLastInsertId = _CALLAPI(mysql_stmt_insert_id)(jsmysql_data->lpStmt);
+  }
+  else
+  {
+    jsmysql_data->nAffectedRows = _CALLAPI(mysql_affected_rows)(jsmysql_data->lpDB);
+    jsmysql_data->nLastInsertId = _CALLAPI(mysql_insert_id)(jsmysql_data->lpDB);
+  }
   jsmysql_data->nFieldsCount = 0;
 
   //get last insert id and initialize result-set fields
@@ -659,25 +698,29 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
         TAutoRefCounted<Internals::CJsMySqlFieldInfo> cFieldInfo;
         SIZE_T i;
         MYSQL_FIELD *lpFields;
-        MYSQL_BIND *lpBind;
-        ULONG *lpLengthPtr;
-        my_bool *lpNulPtr;
+        MYSQL_BIND *lpBind = NULL;
+        ULONG *lpLengthPtr = NULL;
+        my_bool *lpNulPtr = NULL;
         Internals::CJsMySqlPluginData::COutputBuffer *lpOutputBuffer;
 
-        //allocate for result bindings
-        jsmysql_data->cOutputBindings.Attach((MYSQL_BIND*)MX_MALLOC(jsmysql_data->nFieldsCount * (sizeof(MYSQL_BIND) +
-                                                                    sizeof(ULONG) + sizeof(my_bool))));
-        if (!(jsmysql_data->cOutputBindings))
-          MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
-        MemSet(jsmysql_data->cOutputBindings.Get(), 0, jsmysql_data->nFieldsCount *
-                                                       (sizeof(MYSQL_BIND) + sizeof(ULONG) + sizeof(my_bool)));
+        //allocate buffers for output bindings on prepared statements
+        if (jsmysql_data->lpStmt != NULL)
+        {
+          //allocate for result bindings
+          jsmysql_data->cOutputBindings.Attach((MYSQL_BIND*)MX_MALLOC(jsmysql_data->nFieldsCount * (sizeof(MYSQL_BIND) +
+                                                                      sizeof(ULONG) + sizeof(my_bool))));
+          if (!(jsmysql_data->cOutputBindings))
+            MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+          MemSet(jsmysql_data->cOutputBindings.Get(), 0, jsmysql_data->nFieldsCount *
+                                                         (sizeof(MYSQL_BIND) + sizeof(ULONG) + sizeof(my_bool)));
 
-        lpBind = jsmysql_data->cOutputBindings.Get();
-        lpLengthPtr = (ULONG*)(lpBind + jsmysql_data->nFieldsCount);
-        lpNulPtr = (my_bool*)(lpLengthPtr + jsmysql_data->nFieldsCount);
+          lpBind = jsmysql_data->cOutputBindings.Get();
+          lpLengthPtr = (ULONG*)(lpBind + jsmysql_data->nFieldsCount);
+          lpNulPtr = (my_bool*)(lpLengthPtr + jsmysql_data->nFieldsCount);
+        }
 
-        lpFields = _CALLAPI(mysql_fetch_fields)(jsmysql_data->lpResultSet);
         //build fields
+        lpFields = _CALLAPI(mysql_fetch_fields)(jsmysql_data->lpResultSet);
         for (i = 0; i < jsmysql_data->nFieldsCount; i++)
         {
           cFieldInfo.Attach(MX_DEBUG_NEW Internals::CJsMySqlFieldInfo(lpCtx));
@@ -716,78 +759,83 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
           cFieldInfo->nFlags = lpFields[i].flags;
           cFieldInfo->nType = lpFields[i].type;
 
-          lpBind[i].buffer_type = cFieldInfo->nType;
-          lpBind[i].length = lpLengthPtr + i;
-          lpBind[i].is_null = lpNulPtr + i;
-          lpBind[i].is_unsigned = ((lpFields[i].flags & UNSIGNED_FLAG) != 0) ? 1 : 0;
-
-          if ((lpFields[i].flags & (BLOB_FLAG | BINARY_FLAG)) == (BLOB_FLAG | BINARY_FLAG))
+          //output bindings
+          if (jsmysql_data->lpStmt != NULL)
           {
-            lpBind[i].buffer_type = MYSQL_TYPE_BLOB;
-          }
-          else switch (lpFields[i].type) {
-            case MYSQL_TYPE_TINY_BLOB:
-            case MYSQL_TYPE_MEDIUM_BLOB:
-            case MYSQL_TYPE_LONG_BLOB:
-            case MYSQL_TYPE_BLOB:
-              break;
+            lpBind[i].buffer_type = cFieldInfo->nType;
+            lpBind[i].length = lpLengthPtr + i;
+            lpBind[i].is_null = lpNulPtr + i;
+            lpBind[i].is_unsigned = ((lpFields[i].flags & UNSIGNED_FLAG) != 0) ? 1 : 0;
 
-            case MYSQL_TYPE_TINY:
-            case MYSQL_TYPE_SHORT:
-            case MYSQL_TYPE_LONG:
-              lpBind[i].buffer_type = MYSQL_TYPE_LONG;
-              lpBind[i].buffer_length = sizeof(LONG);
-              break;
+            if ((lpFields[i].flags & (BLOB_FLAG | BINARY_FLAG)) == (BLOB_FLAG | BINARY_FLAG))
+            {
+              lpBind[i].buffer_type = MYSQL_TYPE_BLOB;
+            }
+            else switch (lpFields[i].type)
+            {
+              case MYSQL_TYPE_TINY_BLOB:
+              case MYSQL_TYPE_MEDIUM_BLOB:
+              case MYSQL_TYPE_LONG_BLOB:
+              case MYSQL_TYPE_BLOB:
+                break;
 
-            case MYSQL_TYPE_LONGLONG:
-              lpBind[i].buffer_length = sizeof(LONGLONG);
-              break;
+              case MYSQL_TYPE_TINY:
+              case MYSQL_TYPE_SHORT:
+              case MYSQL_TYPE_LONG:
+                lpBind[i].buffer_type = MYSQL_TYPE_LONG;
+                lpBind[i].buffer_length = sizeof(LONG);
+                break;
 
-            case MYSQL_TYPE_INT24:
-            case MYSQL_TYPE_YEAR:
-            case MYSQL_TYPE_BIT:
-              lpBind[i].buffer_type = MYSQL_TYPE_LONGLONG;
-              lpBind[i].buffer_length = sizeof(LONGLONG);
-              break;
+              case MYSQL_TYPE_LONGLONG:
+                lpBind[i].buffer_length = sizeof(LONGLONG);
+                break;
 
-            case MYSQL_TYPE_FLOAT:
-              lpBind[i].buffer_length = sizeof(float);
-              break;
+              case MYSQL_TYPE_INT24:
+              case MYSQL_TYPE_YEAR:
+              case MYSQL_TYPE_BIT:
+                lpBind[i].buffer_type = MYSQL_TYPE_LONGLONG;
+                lpBind[i].buffer_length = sizeof(LONGLONG);
+                break;
 
-            case MYSQL_TYPE_DECIMAL:
-            case MYSQL_TYPE_NEWDECIMAL:
-            case MYSQL_TYPE_DOUBLE:
-              lpBind[i].buffer_type = MYSQL_TYPE_DOUBLE;
-              lpBind[i].buffer_length = sizeof(double);
-              break;
+              case MYSQL_TYPE_FLOAT:
+                lpBind[i].buffer_length = sizeof(float);
+                break;
 
-            case MYSQL_TYPE_TIMESTAMP:
-            case MYSQL_TYPE_DATE:
-            case MYSQL_TYPE_TIME:
-            case MYSQL_TYPE_DATETIME:
-            case MYSQL_TYPE_NEWDATE:
-            //case MYSQL_TYPE_TIMESTAMP2: //only server-side
-            //case MYSQL_TYPE_DATETIME2:  //only server-side
-            //case MYSQL_TYPE_TIME2:      //only server-side
-              lpBind[i].buffer_type = MYSQL_TYPE_DATETIME;
-              lpBind[i].buffer_length = sizeof(MYSQL_TIME);
-              break;
+              case MYSQL_TYPE_DECIMAL:
+              case MYSQL_TYPE_NEWDECIMAL:
+              case MYSQL_TYPE_DOUBLE:
+                lpBind[i].buffer_type = MYSQL_TYPE_DOUBLE;
+                lpBind[i].buffer_length = sizeof(double);
+                break;
 
-            case MYSQL_TYPE_ENUM:
-            case MYSQL_TYPE_VARCHAR:
-            case MYSQL_TYPE_VAR_STRING:
-            case MYSQL_TYPE_STRING:
-            case MYSQL_TYPE_SET:
-            case MYSQL_TYPE_JSON:
-              lpBind[i].buffer_type = MYSQL_TYPE_VAR_STRING;
-              break;
+              case MYSQL_TYPE_TIMESTAMP:
+              case MYSQL_TYPE_DATE:
+              case MYSQL_TYPE_TIME:
+              case MYSQL_TYPE_DATETIME:
+              case MYSQL_TYPE_NEWDATE:
+              //case MYSQL_TYPE_TIMESTAMP2: //only server-side
+              //case MYSQL_TYPE_DATETIME2:  //only server-side
+              //case MYSQL_TYPE_TIME2:      //only server-side
+                lpBind[i].buffer_type = MYSQL_TYPE_DATETIME;
+                lpBind[i].buffer_length = sizeof(MYSQL_TIME);
+                break;
 
-            case MYSQL_TYPE_NULL:
-              break;
+              case MYSQL_TYPE_ENUM:
+              case MYSQL_TYPE_VARCHAR:
+              case MYSQL_TYPE_VAR_STRING:
+              case MYSQL_TYPE_STRING:
+              case MYSQL_TYPE_SET:
+              case MYSQL_TYPE_JSON:
+                lpBind[i].buffer_type = MYSQL_TYPE_VAR_STRING;
+                break;
 
-            default:
-              lpBind[i].buffer_type = MYSQL_TYPE_NULL;
-              break;
+              case MYSQL_TYPE_NULL:
+                break;
+
+              default:
+                lpBind[i].buffer_type = MYSQL_TYPE_NULL;
+                break;
+            }
           }
 
           //add to list
@@ -795,33 +843,41 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
             MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
           cFieldInfo.Detach();
 
-          lpOutputBuffer = MX_DEBUG_NEW Internals::CJsMySqlPluginData::COutputBuffer();
-          if (lpOutputBuffer != NULL)
+          //allocate output buffer handler
+          if (jsmysql_data->lpStmt != NULL)
           {
-            if (jsmysql_data->aOutputBuffersList.AddElement(lpOutputBuffer) == FALSE)
+            lpOutputBuffer = MX_DEBUG_NEW Internals::CJsMySqlPluginData::COutputBuffer();
+            if (lpOutputBuffer != NULL)
             {
-              delete lpOutputBuffer;
+              if (jsmysql_data->aOutputBuffersList.AddElement(lpOutputBuffer) == FALSE)
+              {
+                delete lpOutputBuffer;
+                MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+              }
+              if (lpBind[i].buffer_length > 0)
+              {
+                if (lpOutputBuffer->EnsureSize((SIZE_T)(lpBind[i].buffer_length)) == FALSE)
+                  MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+                lpBind[i].buffer = lpOutputBuffer->cData.Get();
+              }
+            }
+            else
+            {
               MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
             }
-            if (lpBind[i].buffer_length > 0)
-            {
-              if (lpOutputBuffer->EnsureSize((SIZE_T)(lpBind[i].buffer_length)) == FALSE)
-                MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
-              lpBind[i].buffer = lpOutputBuffer->cData.Get();
-            }
-          }
-          else
-          {
-            MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
           }
         }
 
-        if (_CALLAPI(mysql_stmt_bind_result)(jsmysql_data->lpStmt, jsmysql_data->cOutputBindings.Get()) != 0)
+        //bind output
+        if (jsmysql_data->lpStmt != NULL)
         {
-          int err = _CALLAPI(mysql_stmt_errno)(jsmysql_data->lpStmt);
-          if (err == CR_OUT_OF_MEMORY)
-            MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
-          ThrowDbError(__FILE__, __LINE__);
+          if (_CALLAPI(mysql_stmt_bind_result)(jsmysql_data->lpStmt, jsmysql_data->cOutputBindings.Get()) != 0)
+          {
+            int err = _CALLAPI(mysql_stmt_errno)(jsmysql_data->lpStmt);
+            if (err == CR_OUT_OF_MEMORY)
+              MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+            ThrowDbError(__FILE__, __LINE__);
+          }
         }
       }
       catch (...)
@@ -1019,10 +1075,6 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow()
   DukTape::duk_context *lpCtx = GetContext();
   Internals::CJsMySqlFieldInfo *lpFieldInfo;
   SIZE_T i, nFieldsCount;
-  MYSQL_BIND *lpBind;
-  Internals::CJsMySqlPluginData::COutputBuffer *lpOutputBuffer;
-  ULONG *lpLengthPtr;
-  my_bool *lpNulPtr;
   int err;
 
   if (lpInternal == NULL)
@@ -1032,177 +1084,449 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow()
     DukTape::duk_push_null(lpCtx);
     return 1;
   }
-  //set result bind buffers length to 0 before fetching
-  lpBind = jsmysql_data->cOutputBindings.Get();
-  lpLengthPtr = (ULONG*)(lpBind + jsmysql_data->nFieldsCount);
-  lpNulPtr = (my_bool*)(lpLengthPtr + jsmysql_data->nFieldsCount);
-  for (i = 0; i < nFieldsCount; i++)
-  {
-    if (lpBind[i].buffer_type == MYSQL_TYPE_TINY_BLOB || lpBind[i].buffer_type == MYSQL_TYPE_MEDIUM_BLOB ||
-        lpBind[i].buffer_type == MYSQL_TYPE_LONG_BLOB || lpBind[i].buffer_type == MYSQL_TYPE_BLOB ||
-        lpBind[i].buffer_type == MYSQL_TYPE_VAR_STRING)
-    {
-      lpBind[i].buffer_length = 0;
-    }
-  }
-  //fetch next row
-  err = _CALLAPI(mysql_stmt_fetch)(jsmysql_data->lpStmt);
-  if (err == MYSQL_NO_DATA)
-  {
-    DukTape::duk_push_null(lpCtx);
-    return 1;
-  }
-  if (err != 0 && err != MYSQL_DATA_TRUNCATED)
-    ThrowDbError(__FILE__, __LINE__);
-  //ensure enough buffer size in the field
-  for (i = 0; i < nFieldsCount; i++)
-  {
-    if (lpBind[i].buffer_type == MYSQL_TYPE_TINY_BLOB || lpBind[i].buffer_type == MYSQL_TYPE_MEDIUM_BLOB ||
-        lpBind[i].buffer_type == MYSQL_TYPE_LONG_BLOB || lpBind[i].buffer_type == MYSQL_TYPE_BLOB ||
-        lpBind[i].buffer_type == MYSQL_TYPE_VAR_STRING)
-    {
-      lpOutputBuffer = jsmysql_data->aOutputBuffersList.GetElementAt(i);
-      lpBind[i].buffer_length = lpLengthPtr[i];
-      if (lpOutputBuffer->EnsureSize((SIZE_T)lpLengthPtr[i]) == FALSE)
-        MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
-      lpBind[i].buffer = lpOutputBuffer->cData.Get();
-    }
-  }
-  //fetch each column
-  for (i = 0; i < nFieldsCount; i++)
-  {
-    err = _CALLAPI(mysql_stmt_fetch_column)(jsmysql_data->lpStmt, &lpBind[i], (unsigned int)i, 0);
-    if (err != 0)
-      ThrowDbError(__FILE__, __LINE__);
-  }
 
-  //create an object for each result
-  DukTape::duk_push_object(lpCtx);
-  for (i = 0; i < nFieldsCount; i++)
+  if (jsmysql_data->lpStmt != NULL)
   {
-    lpFieldInfo = jsmysql_data->aFieldsList.GetElementAt(i);
-    if (lpNulPtr[i] == 0)
+    MYSQL_BIND *lpBind;
+    Internals::CJsMySqlPluginData::COutputBuffer *lpOutputBuffer;
+    ULONG *lpLengthPtr;
+    my_bool *lpNulPtr;
+
+    //set result bind buffers length to 0 before fetching
+    lpBind = jsmysql_data->cOutputBindings.Get();
+    lpLengthPtr = (ULONG*)(lpBind + jsmysql_data->nFieldsCount);
+    lpNulPtr = (my_bool*)(lpLengthPtr + jsmysql_data->nFieldsCount);
+    for (i = 0; i < nFieldsCount; i++)
     {
-      switch (lpBind[i].buffer_type)
+      if (lpBind[i].buffer_type == MYSQL_TYPE_TINY_BLOB || lpBind[i].buffer_type == MYSQL_TYPE_MEDIUM_BLOB ||
+          lpBind[i].buffer_type == MYSQL_TYPE_LONG_BLOB || lpBind[i].buffer_type == MYSQL_TYPE_BLOB ||
+          lpBind[i].buffer_type == MYSQL_TYPE_VAR_STRING)
       {
-        case MYSQL_TYPE_TINY_BLOB:
-        case MYSQL_TYPE_MEDIUM_BLOB:
-        case MYSQL_TYPE_LONG_BLOB:
-        case MYSQL_TYPE_BLOB:
-        case MYSQL_TYPE_VAR_STRING:
-          if ((lpFieldInfo->nFlags & BINARY_FLAG) != 0)
-          {
-            LPBYTE p = (LPBYTE)(DukTape::duk_push_fixed_buffer(lpCtx, (DukTape::duk_size_t)(lpLengthPtr[i])));
+        lpBind[i].buffer_length = 0;
+      }
+    }
+    //fetch next row
+    err = _CALLAPI(mysql_stmt_fetch)(jsmysql_data->lpStmt);
+    if (err == MYSQL_NO_DATA)
+    {
+      DukTape::duk_push_null(lpCtx);
+      return 1;
+    }
+    if (err != 0 && err != MYSQL_DATA_TRUNCATED)
+      ThrowDbError(__FILE__, __LINE__);
+    //ensure enough buffer size in the field
+    for (i = 0; i < nFieldsCount; i++)
+    {
+      if (lpBind[i].buffer_type == MYSQL_TYPE_TINY_BLOB || lpBind[i].buffer_type == MYSQL_TYPE_MEDIUM_BLOB ||
+          lpBind[i].buffer_type == MYSQL_TYPE_LONG_BLOB || lpBind[i].buffer_type == MYSQL_TYPE_BLOB ||
+          lpBind[i].buffer_type == MYSQL_TYPE_VAR_STRING)
+      {
+        lpOutputBuffer = jsmysql_data->aOutputBuffersList.GetElementAt(i);
+        lpBind[i].buffer_length = lpLengthPtr[i];
+        if (lpOutputBuffer->EnsureSize((SIZE_T)lpLengthPtr[i]) == FALSE)
+          MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+        lpBind[i].buffer = lpOutputBuffer->cData.Get();
+      }
+    }
+    //fetch each column
+    for (i = 0; i < nFieldsCount; i++)
+    {
+      err = _CALLAPI(mysql_stmt_fetch_column)(jsmysql_data->lpStmt, &lpBind[i], (unsigned int)i, 0);
+      if (err != 0)
+      {
+        if (err == CR_OUT_OF_MEMORY)
+          MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+        ThrowDbError(__FILE__, __LINE__);
+      }
+    }
 
-            MemCopy(p, lpBind[i].buffer, (SIZE_T)lpLengthPtr[i]);
-            DukTape::duk_push_buffer_object(lpCtx, -1, 0, (DukTape::duk_size_t)(lpLengthPtr[i]), DUK_BUFOBJ_UINT8ARRAY);
-            DukTape::duk_remove(lpCtx, -2);
-          }
-          else
-          {
-            DukTape::duk_push_lstring(lpCtx, (const char*)(lpBind[i].buffer), (DukTape::duk_size_t)(lpLengthPtr[i]));
-          }
-          break;
+    //create an object for each result
+    DukTape::duk_push_object(lpCtx);
+    for (i = 0; i < nFieldsCount; i++)
+    {
+      lpFieldInfo = jsmysql_data->aFieldsList.GetElementAt(i);
 
-        case MYSQL_TYPE_LONG:
-          if ((lpFieldInfo->nFlags & UNSIGNED_FLAG) != 0)
-            DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)*((ULONG*)(lpBind[i].buffer)));
-          else
-            DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)*((LONG*)(lpBind[i].buffer)));
-          break;
-
-        case MYSQL_TYPE_LONGLONG:
-          if ((lpFieldInfo->nFlags & UNSIGNED_FLAG) != 0)
-          {
-            ULONGLONG ull = *((ULONGLONG*)(lpBind[i].buffer));
-
-            if (ull < (ULONGLONG)ULONG_MAX)
-              DukTape::duk_push_uint(lpCtx, (DukTape::duk_int_t)ull);
-            else
-              DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)ull);
-          }
-          else
-          {
-            LONGLONG ll = *((LONGLONG*)(lpBind[i].buffer));
-
-            if (ll >= (LONGLONG)LONG_MIN && ll <= (LONGLONG)LONG_MAX)
-              DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)ll);
-            else
-              DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)ll);
-          }
-          break;
-
-        case MYSQL_TYPE_FLOAT:
-          DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)*((float*)(lpBind[i].buffer)));
-          break;
-
-        case MYSQL_TYPE_DOUBLE:
-          DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)*((double*)(lpBind[i].buffer)));
-          break;
-
-        case MYSQL_TYPE_DATETIME:
-          {
-          MYSQL_TIME *lpDt = (MYSQL_TIME*)(lpBind[i].buffer);
-          SYSTEMTIME sSt;
-
-          if (lpFieldInfo->nType == MYSQL_TYPE_TIME)
-          {
-            ::GetSystemTime(&sSt);
-            sSt.wHour = (WORD)(lpDt->hour);
-            sSt.wMinute = (WORD)(lpDt->minute);
-            sSt.wSecond = (WORD)(lpDt->second);
-            sSt.wMilliseconds = (WORD)(lpDt->second_part);
-
-            CJavascriptVM::PushDate(lpCtx, &sSt, TRUE);
-          }
-          else if (lpDt->month != 0 && lpDt->day != 0)
-          {
-            sSt.wYear = (WORD)(lpDt->year);
-            sSt.wMonth = (WORD)(lpDt->month);
-            sSt.wDay = (WORD)(lpDt->day);
-            if (lpFieldInfo->nType != MYSQL_TYPE_DATE)
+      if (lpNulPtr[i] == 0)
+      {
+        switch (lpBind[i].buffer_type)
+        {
+          case MYSQL_TYPE_TINY_BLOB:
+          case MYSQL_TYPE_MEDIUM_BLOB:
+          case MYSQL_TYPE_LONG_BLOB:
+          case MYSQL_TYPE_BLOB:
+          case MYSQL_TYPE_VAR_STRING:
+            if ((lpFieldInfo->nFlags & BINARY_FLAG) != 0)
             {
+              LPBYTE p = (LPBYTE)(DukTape::duk_push_fixed_buffer(lpCtx, (DukTape::duk_size_t)(lpLengthPtr[i])));
+
+              MemCopy(p, lpBind[i].buffer, (SIZE_T)lpLengthPtr[i]);
+              DukTape::duk_push_buffer_object(lpCtx, -1, 0, (DukTape::duk_size_t)(lpLengthPtr[i]), DUK_BUFOBJ_UINT8ARRAY);
+              DukTape::duk_remove(lpCtx, -2);
+            }
+            else
+            {
+              DukTape::duk_push_lstring(lpCtx, (const char*)(lpBind[i].buffer), (DukTape::duk_size_t)(lpLengthPtr[i]));
+            }
+            break;
+
+          case MYSQL_TYPE_LONG:
+            if ((lpFieldInfo->nFlags & UNSIGNED_FLAG) != 0)
+              DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)*((ULONG*)(lpBind[i].buffer)));
+            else
+              DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)*((LONG*)(lpBind[i].buffer)));
+            break;
+
+          case MYSQL_TYPE_LONGLONG:
+            if ((lpFieldInfo->nFlags & UNSIGNED_FLAG) != 0)
+            {
+              ULONGLONG ull = *((ULONGLONG*)(lpBind[i].buffer));
+
+              if (ull < (ULONGLONG)ULONG_MAX)
+                DukTape::duk_push_uint(lpCtx, (DukTape::duk_int_t)ull);
+              else
+                DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)ull);
+            }
+            else
+            {
+              LONGLONG ll = *((LONGLONG*)(lpBind[i].buffer));
+
+              if (ll >= (LONGLONG)LONG_MIN && ll <= (LONGLONG)LONG_MAX)
+                DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)ll);
+              else
+                DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)ll);
+            }
+            break;
+
+          case MYSQL_TYPE_FLOAT:
+            DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)*((float*)(lpBind[i].buffer)));
+            break;
+
+          case MYSQL_TYPE_DOUBLE:
+            DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)*((double*)(lpBind[i].buffer)));
+            break;
+
+          case MYSQL_TYPE_DATETIME:
+            {
+            MYSQL_TIME *lpDt = (MYSQL_TIME*)(lpBind[i].buffer);
+            SYSTEMTIME sSt;
+
+            if (lpFieldInfo->nType == MYSQL_TYPE_TIME)
+            {
+              ::GetSystemTime(&sSt);
               sSt.wHour = (WORD)(lpDt->hour);
               sSt.wMinute = (WORD)(lpDt->minute);
               sSt.wSecond = (WORD)(lpDt->second);
               sSt.wMilliseconds = (WORD)(lpDt->second_part);
+
+              CJavascriptVM::PushDate(lpCtx, &sSt, TRUE);
+            }
+            else if (lpDt->month != 0 && lpDt->day != 0)
+            {
+              sSt.wYear = (WORD)(lpDt->year);
+              sSt.wMonth = (WORD)(lpDt->month);
+              sSt.wDay = (WORD)(lpDt->day);
+              if (lpFieldInfo->nType != MYSQL_TYPE_DATE)
+              {
+                sSt.wHour = (WORD)(lpDt->hour);
+                sSt.wMinute = (WORD)(lpDt->minute);
+                sSt.wSecond = (WORD)(lpDt->second);
+                sSt.wMilliseconds = (WORD)(lpDt->second_part);
+              }
+              else
+              {
+                sSt.wHour = sSt.wMinute = sSt.wSecond = sSt.wMilliseconds = 0;
+              }
+
+              CJavascriptVM::PushDate(lpCtx, &sSt, TRUE);
             }
             else
             {
-              sSt.wHour = sSt.wMinute = sSt.wSecond = sSt.wMilliseconds = 0;
+              DukTape::duk_push_null(lpCtx);
             }
+            }
+            break;
 
-            CJavascriptVM::PushDate(lpCtx, &sSt, TRUE);
-          }
-          else
-          {
+          case MYSQL_TYPE_NULL:
             DukTape::duk_push_null(lpCtx);
-          }
-          }
-          break;
+            break;
 
-        case MYSQL_TYPE_NULL:
-          DukTape::duk_push_null(lpCtx);
-          break;
-
-        default:
-          DukTape::duk_push_undefined(lpCtx);
-          break;
+          default:
+            DukTape::duk_push_undefined(lpCtx);
+            break;
+        }
+      }
+      else
+      {
+        DukTape::duk_push_null(lpCtx);
+      }
+      //add field data
+      if (lpFieldInfo->cStrNameA.IsEmpty() != FALSE)
+      {
+        DukTape::duk_put_prop_index(lpCtx, -2, (DukTape::duk_uarridx_t)i);
+      }
+      else
+      {
+        DukTape::duk_dup(lpCtx, -1);
+        DukTape::duk_put_prop_index(lpCtx, -3, (DukTape::duk_uarridx_t)i);
+        DukTape::duk_put_prop_string(lpCtx, -2, (LPCSTR)(lpFieldInfo->cStrNameA));
       }
     }
-    else
+  }
+  else
+  {
+    MYSQL_ROW lpRow;
+    ULONG *lpnRowLengths;
+
+    lpRow = _CALLAPI(mysql_fetch_row)(jsmysql_data->lpResultSet);
+    if (lpRow == NULL)
     {
+      err = _CALLAPI(mysql_errno)(jsmysql_data->lpDB);
+      if (err != 0)
+      {
+        if (err == CR_OUT_OF_MEMORY)
+          MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+        ThrowDbError(__FILE__, __LINE__);
+      }
+      //----
       DukTape::duk_push_null(lpCtx);
+      return 1;
     }
-    if (lpFieldInfo->cStrNameA.IsEmpty() != FALSE)
+    lpnRowLengths = _CALLAPI(mysql_fetch_lengths)(jsmysql_data->lpResultSet);
+    if (lpnRowLengths == NULL)
+      MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+
+    //create an object for each result
+    DukTape::duk_push_object(lpCtx);
+    for (i = 0; i < nFieldsCount; i++)
     {
-      DukTape::duk_put_prop_index(lpCtx, -2, (DukTape::duk_uarridx_t)i);
-    }
-    else
-    {
-      DukTape::duk_dup(lpCtx, -1);
-      DukTape::duk_put_prop_index(lpCtx, -3, (DukTape::duk_uarridx_t)i);
-      DukTape::duk_put_prop_string(lpCtx, -2, (LPCSTR)(lpFieldInfo->cStrNameA));
+      lpFieldInfo = jsmysql_data->aFieldsList.GetElementAt(i);
+
+      if (lpRow[i] != NULL)
+      {
+        BYTE aTempBuf[8], *p;
+        char *szEndPosA;
+        union {
+          ULONGLONG ull;
+          LONGLONG ll;
+          double nDbl;
+          SYSTEMTIME sSt;
+        } u;
+        LPCSTR sA = lpRow[i];
+
+        switch (lpFieldInfo->nType)
+        {
+          case MYSQL_TYPE_BIT:
+            u.ull = 0;
+            if (lpnRowLengths[i] >= 1 && lpnRowLengths[i] <= 8)
+            {
+              MemSet(aTempBuf, 0, 8);
+              MemCopy(aTempBuf, lpRow[i], lpnRowLengths[i]);
+              if ((lpFieldInfo->nFlags & UNSIGNED_FLAG) != 0)
+              {
+                u.ull = (ULONGLONG)uint8korr(aTempBuf);
+              }
+              else
+              {
+                if ((aTempBuf[lpnRowLengths[i] - 1] & 0x80) != 0)
+                  MemSet(aTempBuf + lpnRowLengths[i], 0xFF, 8 - lpnRowLengths[i]);
+                u.ll = (LONGLONG)sint8korr(aTempBuf);
+              }
+            }
+            if ((lpFieldInfo->nFlags & UNSIGNED_FLAG) != 0)
+              DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)(u.ull));
+            else
+              DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)(u.ll));
+            break;
+
+          case MYSQL_TYPE_TINY:
+          case MYSQL_TYPE_SHORT:
+          case MYSQL_TYPE_LONG:
+          case MYSQL_TYPE_LONGLONG:
+          case MYSQL_TYPE_INT24:
+          case MYSQL_TYPE_YEAR:
+            if ((lpFieldInfo->nFlags & UNSIGNED_FLAG) != 0)
+            {
+              u.ull = _strtoui64(sA, &szEndPosA, 10);
+              if (u.ull <= 0xFFFFFFFFui64)
+                DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(u.ull));
+              else
+                DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)(u.ull));
+            }
+            else
+            {
+              u.ll = _strtoi64(sA, &szEndPosA, 10);
+              if (u.ll >= -2147483648i64 && u.ull < 2147483647i64)
+                DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)(u.ll));
+              else
+                DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)(u.ll));
+            }
+            break;
+
+          case MYSQL_TYPE_DECIMAL:
+          case MYSQL_TYPE_FLOAT:
+          case MYSQL_TYPE_DOUBLE:
+          case MYSQL_TYPE_NEWDECIMAL:
+            u.nDbl = atof(sA);
+            DukTape::duk_push_number(lpCtx, u.nDbl);
+            break;
+
+          case MYSQL_TYPE_NULL:
+            DukTape::duk_push_null(lpCtx);
+            break;
+
+          case MYSQL_TYPE_DATE:
+          case MYSQL_TYPE_NEWDATE:
+            //"YYYY-MM-DD"
+            if (lpnRowLengths[i] != 10)
+              MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_InvalidData);
+
+            if (MX::StrNCompareA(sA, "0000-00-00", 10) == 0)
+            {
+              DukTape::duk_push_null(lpCtx);
+              break;
+            }
+
+            if (sA[0] < '0' || sA[0] > '9' || sA[1] < '0' || sA[1] > '9' ||
+                sA[2] < '0' || sA[2] > '9' || sA[3] < '0' || sA[3] > '9' ||
+                sA[4] != '-' ||
+                sA[5] < '0' || sA[5] > '9' || sA[6] < '0' || sA[6] > '9' ||
+                sA[7] != '-' ||
+                sA[8] < '0' || sA[8] > '9' || sA[9] < '0' || sA[9] > '9')
+            {
+              MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_InvalidData);
+            }
+
+            MX::MemSet(&(u.sSt), 0, sizeof(u.sSt));
+            u.sSt.wDay = (WORD)(sA[8] - '0') * 10 + (WORD)(sA[9] - '0');
+            u.sSt.wMonth = (WORD)(sA[5] - '0') * 10 + (WORD)(sA[6] - '0');
+            u.sSt.wYear = (WORD)(sA[0] - '0') * 1000 + (WORD)(sA[1] - '0') * 100 +
+                          (WORD)(sA[2] - '0') * 10 + (WORD)(sA[3] - '0');
+
+            MX::CJavascriptVM::PushDate(lpCtx, &(u.sSt), TRUE);
+            break;
+
+          case MYSQL_TYPE_TIME:
+            //"HH:MM:SS[.ffff]"
+            if (lpnRowLengths[i] < 8)
+              MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_InvalidData);
+
+            if (sA[0] < '0' || sA[0] > '9' || sA[1] < '0' || sA[1] > '9' ||
+                sA[2] != ':' ||
+                sA[3] < '0' || sA[3] > '9' || sA[4] < '0' || sA[4] > '9' ||
+                sA[5] != ':' ||
+                sA[6] < '0' || sA[6] > '9' || sA[7] < '0' || sA[7] > '9')
+            {
+              MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_InvalidData);
+            }
+
+            ::GetSystemTime(&(u.sSt));
+            u.sSt.wHour = (WORD)(sA[0] - '0') * 10 + (WORD)(sA[1] - '0');
+            u.sSt.wMinute = (WORD)(sA[3] - '0') * 10 + (WORD)(sA[4] - '0');
+            u.sSt.wSecond = (WORD)(sA[6] - '0') * 10 + (WORD)(sA[7] - '0');
+
+            u.sSt.wMilliseconds = 0;
+            if (lpnRowLengths[i] >= 9)
+            {
+              if (sA[8] != '.')
+                MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_InvalidData);
+              for (SIZE_T k = 9; k < 12 && k < lpnRowLengths[i]; k++)
+              {
+                if (sA[k] < '0' || sA[k] > '9')
+                  break;
+                u.sSt.wMilliseconds += (WORD)(sA[k] - '0') * ((k == 9) ? 100 : ((k == 10) ? 10 : 1));
+              }
+            }
+
+            MX::CJavascriptVM::PushDate(lpCtx, &(u.sSt), TRUE);
+            break;
+
+          case MYSQL_TYPE_TIMESTAMP:
+          case MYSQL_TYPE_DATETIME:
+            //"YYYY-MM-DD HH:MM:SS[.ffff]"
+            if (lpnRowLengths[i] < 19)
+              MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_InvalidData);
+
+            if (sA[0] < '0' || sA[0] > '9' || sA[1] < '0' || sA[1] > '9' ||
+                sA[2] < '0' || sA[2] > '9' || sA[3] < '0' || sA[3] > '9' ||
+                sA[4] != '-' ||
+                sA[5] < '0' || sA[5] > '9' || sA[6] < '0' || sA[6] > '9' ||
+                sA[7] != '-' ||
+                sA[8] < '0' || sA[8] > '9' || sA[9] < '0' || sA[9] > '9' ||
+                sA[10] != ' ' ||
+                sA[11] < '0' || sA[11] > '9' || sA[12] < '0' || sA[12] > '9' ||
+                sA[13] != ':' ||
+                sA[14] < '0' || sA[14] > '9' || sA[15] < '0' || sA[15] > '9' ||
+                sA[16] != ':' ||
+                sA[17] < '0' || sA[17] > '9' || sA[18] < '0' || sA[18] > '9')
+            {
+              MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_InvalidData);
+            }
+
+            u.sSt.wYear = (WORD)(sA[0] - '0') * 1000 + (WORD)(sA[1] - '0') * 100 +
+                          (WORD)(sA[2] - '0') * 10 + (WORD)(sA[3] - '0');
+            u.sSt.wMonth = (WORD)(sA[5] - '0') * 10 + (WORD)(sA[6] - '0');
+            u.sSt.wDay = (WORD)(sA[8] - '0') * 10 + (WORD)(sA[9] - '0');
+
+            u.sSt.wHour = (WORD)(sA[11] - '0') * 10 + (WORD)(sA[12] - '0');
+            u.sSt.wMinute = (WORD)(sA[14] - '0') * 10 + (WORD)(sA[15] - '0');
+            u.sSt.wSecond = (WORD)(sA[17] - '0') * 10 + (WORD)(sA[18] - '0');
+            u.sSt.wMilliseconds = 0;
+            if (lpnRowLengths[i] >= 20)
+            {
+              if (sA[19] == '.')
+                MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_InvalidData);
+              for (SIZE_T k = 20; k < 23 && k < lpnRowLengths[i]; k++)
+              {
+                if (sA[k] < '0' || sA[k] > '9')
+                  break;
+                u.sSt.wMilliseconds += (WORD)(sA[k] - '0') * ((k == 20) ? 100 : ((k == 21) ? 10 : 1));
+              }
+            }
+
+            MX::CJavascriptVM::PushDate(lpCtx, &(u.sSt), TRUE);
+            break;
+
+          case MYSQL_TYPE_TINY_BLOB:
+          case MYSQL_TYPE_MEDIUM_BLOB:
+          case MYSQL_TYPE_LONG_BLOB:
+          case MYSQL_TYPE_BLOB:
+            if ((lpFieldInfo->nFlags & BINARY_FLAG) != 0)
+            {
+              p = (LPBYTE)(DukTape::duk_push_fixed_buffer(lpCtx, (DukTape::duk_size_t)(lpnRowLengths[i])));
+              MemCopy(p, lpRow[i], (SIZE_T)(lpnRowLengths[i]));
+              DukTape::duk_push_buffer_object(lpCtx, -1, 0, (DukTape::duk_size_t)(lpnRowLengths[i]),
+                                              DUK_BUFOBJ_UINT8ARRAY);
+              DukTape::duk_remove(lpCtx, -2);
+              break;
+            }
+            //fall into default string handling if not a binary blob (a.k.a. TEXT)
+
+          //case MYSQL_TYPE_ENUM:
+          //case MYSQL_TYPE_SET:
+          //case MYSQL_TYPE_VARCHAR:
+          //case MYSQL_TYPE_VAR_STRING:
+          //case MYSQL_TYPE_STRING:
+          //case MYSQL_TYPE_GEOMETRY:
+          default:
+            DukTape::duk_push_lstring(lpCtx, lpRow[i], (DukTape::duk_size_t)lpnRowLengths[i]);
+            break;
+        }
+      }
+      else
+      {
+        DukTape::duk_push_null(lpCtx);
+      }
+
+      if (lpFieldInfo->cStrNameA.IsEmpty() != FALSE)
+      {
+        DukTape::duk_put_prop_index(lpCtx, -2, (DukTape::duk_uarridx_t)i);
+      }
+      else
+      {
+        DukTape::duk_dup(lpCtx, -1);
+        DukTape::duk_put_prop_index(lpCtx, -3, (DukTape::duk_uarridx_t)i);
+        DukTape::duk_put_prop_string(lpCtx, -2, (LPCSTR)(lpFieldInfo->cStrNameA));
+      }
     }
   }
   return 1;

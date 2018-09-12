@@ -917,7 +917,7 @@ fetchrow_set_time:
               goto fetchrow_set_time;
 
             default:
-              DukTape::duk_push_null(lpCtx);
+              MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_InvalidData);
               break;
           }
           }
