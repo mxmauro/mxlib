@@ -388,6 +388,7 @@ HRESULT CHttpBodyParserFormBase::CFileField::Read(_Out_writes_to_(nToRead, *lpnR
   nOfs = nOffset;
   while (nToRead > 0)
   {
+    MX::MemSet(&sOvr, 0, sizeof(sOvr));
     sOvr.Offset = dwOfs[0];
     sOvr.OffsetHigh = dwOfs[1];
     dwToRead = (nToRead > 65536) ? 65536 : (DWORD)nToRead;
