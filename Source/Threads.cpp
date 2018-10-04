@@ -84,7 +84,14 @@ BOOL CThread::Start(_In_opt_ BOOL bSuspended)
   unsigned int tid;
 
   if (hThread != NULL)
-    return TRUE;
+  {
+    if (::WaitForSingleObject(hThread, 0) != WAIT_OBJECT_0)
+      return TRUE;
+    ::CloseHandle(hThread);
+    hThread = NULL;
+    cKillEvent.Close();
+    dwThreadId = 0;
+  }
   if (FAILED(cKillEvent.Create(TRUE, FALSE)))
     return FALSE;
   hThread = (HANDLE)_beginthreadex(NULL, dwStackSize, &CThread::CommonThreadProc, this,
@@ -228,7 +235,7 @@ BOOL CThread::CheckForAbort(_In_opt_ DWORD dwTimeout, _In_opt_ DWORD dwEventCoun
   hEvents[1] = cKillEvent.Get();
   for (i=0; i<dwEventCount; i++)
     hEvents[2+i] = lphEventList[i];
-  dwRetCode = ::WaitForMultipleObjects(2+dwEventCount, hEvents, FALSE, dwTimeout);
+  dwRetCode = ::WaitForMultipleObjects(2 + dwEventCount, hEvents, FALSE, dwTimeout);
   if (dwRetCode == WAIT_FAILED)
   {
     if (lpdwHitEvent != NULL)
