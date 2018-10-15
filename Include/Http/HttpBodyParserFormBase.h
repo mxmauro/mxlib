@@ -132,6 +132,11 @@ public:
     HRESULT Read(_Out_writes_to_(nToRead, *lpnReaded) LPVOID lpDest, _In_ ULONGLONG nOffset, _In_ SIZE_T nToRead,
                  _Out_opt_ SIZE_T *lpnReaded=NULL);
 
+    operator HANDLE() const
+      {
+      return hFile;
+      };
+
   private:
     friend class CHttpBodyParserFormBase;
 

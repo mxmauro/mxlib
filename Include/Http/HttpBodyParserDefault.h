@@ -59,6 +59,11 @@ public:
 
   HRESULT ToString(_Inout_ CStringA &cStrDestA);
 
+  operator HANDLE() const
+    {
+    return cFileH.Get();
+    };
+
   VOID KeepFile();
 
 protected:
@@ -68,7 +73,6 @@ protected:
 private:
   typedef enum {
     StateReading,
-
     StateDone,
     StateError
   } eState;

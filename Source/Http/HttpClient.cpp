@@ -1465,7 +1465,7 @@ restart:
               bFireResponseHeadersReceivedCallback = TRUE;
             nState = StateDocumentCompleted;
 
-            //on completion, unmark the file as deletable
+            //on completion, keep the file
             if (cResponse.cStrDownloadFileNameW.IsEmpty() == FALSE)
             {
               CHttpBodyParserBase *lpBodyParser = cResponse.cHttpCmn.GetBodyParser();
@@ -1498,16 +1498,18 @@ restart:
 
     if (cHeadersReceivedCallback)
     {
-
-      CHttpHeaderEntContentType *lpContentTypeHeader = cResponse.cHttpCmn.GetHeader<CHttpHeaderEntContentType>();
-      CHttpHeaderEntContentLength *lpContentLengthHeader = cResponse.cHttpCmn.GetHeader<CHttpHeaderEntContentLength>();
-      CHttpHeaderEntContentDisposition *lpContentDispHeader =
-          cResponse.cHttpCmn.GetHeader<CHttpHeaderEntContentDisposition>();
+      CHttpHeaderEntContentType *lpContentTypeHeader;
+      CHttpHeaderEntContentLength *lpContentLengthHeader;
+      CHttpHeaderEntContentDisposition *lpContentDispHeader;
       LPCSTR szTypeA;
       ULONGLONG nContentLength;
       LPCWSTR sW, szFileNameW;
       BOOL bTreatAsAttachment;
       HRESULT hRes;
+
+      lpContentTypeHeader = cResponse.cHttpCmn.GetHeader<CHttpHeaderEntContentType>();
+      lpContentLengthHeader = cResponse.cHttpCmn.GetHeader<CHttpHeaderEntContentLength>();
+      lpContentDispHeader = cResponse.cHttpCmn.GetHeader<CHttpHeaderEntContentDisposition>();
 
       szFileNameW = L"";
       if (lpContentDispHeader != NULL)
