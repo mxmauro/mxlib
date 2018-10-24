@@ -1503,7 +1503,7 @@ restart:
       CHttpHeaderEntContentDisposition *lpContentDispHeader;
       LPCSTR szTypeA;
       ULONGLONG nContentLength;
-      LPCWSTR sW, szFileNameW;
+      LPCWSTR sW[2], szFileNameW;
       BOOL bTreatAsAttachment;
       HRESULT hRes;
 
@@ -1515,14 +1515,20 @@ restart:
       if (lpContentDispHeader != NULL)
       {
         szFileNameW = lpContentDispHeader->GetFileName();
-        sW = MX::StrChrW(szFileNameW, L'/');
-        szFileNameW = (sW != NULL) ? (sW + 1) : szFileNameW;
+        if ((sW[0] = MX::StrChrW(szFileNameW, L'/', TRUE)) == NULL)
+          sW[0] = szFileNameW;
+        if ((sW[1] = MX::StrChrW(szFileNameW, L'\\', TRUE)) == NULL)
+          sW[1] = szFileNameW;
+        szFileNameW = (sW[1] > sW[0]) ? (sW[1] + 1) : (sW[0] + 1);
       }
       if (*szFileNameW == 0)
       {
         szFileNameW = cRequest.cUrl.GetPath();
-        sW = MX::StrChrW(szFileNameW, L'/');
-        szFileNameW = (sW != NULL) ? (sW + 1) : szFileNameW;
+        if ((sW[0] = MX::StrChrW(szFileNameW, L'/', TRUE)) == NULL)
+          sW[0] = szFileNameW;
+        if ((sW[1] = MX::StrChrW(szFileNameW, L'\\', TRUE)) == NULL)
+          sW[1] = szFileNameW;
+        szFileNameW = (sW[1] > sW[0]) ? (sW[1] + 1) : (sW[0] + 1);
       }
       if (*szFileNameW == 0)
       {
