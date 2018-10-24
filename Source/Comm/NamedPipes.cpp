@@ -602,8 +602,8 @@ HRESULT CNamedPipes::CConnection::SendReadPacket(_In_ CPacket *lpPacket)
                  lpPacket->GetOverlapped()) == FALSE)
   {
     hRes = MX_HRESULT_FROM_LASTERROR();
-    return (hRes == MX_E_BrokenPipe || hRes == HRESULT_FROM_WIN32(ERROR_NO_DATA) ||
-            hRes == MX_E_PipeNotConnected && hRes == HRESULT_FROM_WIN32(ERROR_GEN_FAILURE)) ? S_FALSE : hRes;
+    return (hRes == MX_E_BrokenPipe || hRes == MX_E_NoData || hRes == MX_E_PipeNotConnected &&
+            hRes == HRESULT_FROM_WIN32(ERROR_GEN_FAILURE)) ? S_FALSE : hRes;
   }
   return S_OK;
 }
