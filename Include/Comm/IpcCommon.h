@@ -573,7 +573,8 @@ protected:
 
     HRESULT HandleConnected();
 
-    HRESULT DoRead(_In_ SIZE_T nPacketsCount, _In_ BOOL bZeroRead, _In_opt_ CPacket *lpReusePacket=NULL);
+    HRESULT DoZeroRead(_In_ SIZE_T nPacketsCount);
+    HRESULT DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacket *lpReusePacket=NULL);
 
     CPacket* GetPacket(_In_ CPacket::eType nType);
     VOID FreePacket(_In_ CPacket *lpPacket);

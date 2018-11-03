@@ -108,6 +108,7 @@ private:
                                                     _Out_ LPINT RemoteSockaddrLength);
 
   protected:
+    LONG volatile nRwHandleInUse;
     SOCKADDR_INET sAddr;
     union {
       lpfnAcceptEx fnAcceptEx;

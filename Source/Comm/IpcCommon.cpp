@@ -720,7 +720,7 @@ VOID CIpc::OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWO
   LPVOID lpOrigOverlapped;
   CPacket::eType nOrigOverlappedType;
 #endif //MX_IPC_DEBUG_OUTPUT
-  BOOL bQueueNewRead, bNewReadMode, bJumpFromResumeInputProcessing;
+  BOOL bQueueNewRead, bJumpFromResumeInputProcessing;
 
   lpPacket = CPacket::FromOverlapped(lpOvr);
   lpConn = lpPacket->GetConn();
@@ -739,7 +739,10 @@ VOID CIpc::OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWO
     {
       case CPacket::TypeInitialSetup:
         if (SUCCEEDED(hRes))
-          hRes =  lpConn->DoRead((SIZE_T)dwReadAhead, bDoZeroReads && ZeroReadsSupported());
+        {
+          hRes = (bDoZeroReads != FALSE && ZeroReadsSupported() != FALSE) ? lpConn->DoZeroRead((SIZE_T)dwReadAhead)
+                                                                          : lpConn->DoRead((SIZE_T)dwReadAhead);
+        }
         //notify all layers about connection
         {
           CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
@@ -768,7 +771,7 @@ VOID CIpc::OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWO
         lpConn->cRwList.Remove(lpPacket);
         if (SUCCEEDED(hRes) || hRes == MX_E_MoreData)
         {
-          hRes = lpConn->DoRead(1, FALSE, lpPacket);
+          hRes = lpConn->DoRead(1, lpPacket);
         }
         else
         {
@@ -779,15 +782,13 @@ VOID CIpc::OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWO
         break;
 
       case CPacket::TypeRead:
-        bQueueNewRead = bNewReadMode = FALSE;
+        bQueueNewRead = FALSE;
         if (SUCCEEDED(hRes))
         {
           lpPacket->SetBytesInUse(dwBytes);
           if (dwBytes > 0)
           {
             bQueueNewRead = TRUE;
-            bNewReadMode = (lpConn->IsGracefulShutdown() == FALSE && ZeroReadsSupported() != FALSE) ? bDoZeroReads :
-                                                                                                      FALSE;
             //move packet to readed list
             lpConn->cRwList.Remove(lpPacket);
             lpConn->cReadedList.QueueSorted(lpPacket);
@@ -816,7 +817,8 @@ check_pending_read_req:
                 {
                   CFastLock cRecBufLock(&(lpConn->sReceivedData.nMutex));
 
-                  hRes = lpConn->sReceivedData.cBuffer.Write(lpPacket->GetBuffer(), (SIZE_T)(lpPacket->GetBytesInUse()));
+                  hRes = lpConn->sReceivedData.cBuffer.Write(lpPacket->GetBuffer(),
+                                                             (SIZE_T)(lpPacket->GetBytesInUse()));
                   _InterlockedOr(&(lpConn->nFlags), FLAG_NewReceivedDataAvailable);
                 }
                 FreePacket(lpPacket);
@@ -844,7 +846,9 @@ check_pending_read_req:
         }
         //setup a new read-ahead
         if (SUCCEEDED(hRes) && bQueueNewRead != FALSE && lpConn->IsClosedOrGracefulShutdown() == FALSE)
-          hRes = lpConn->DoRead(1, bNewReadMode);
+        {
+          hRes = (bDoZeroReads != FALSE && ZeroReadsSupported() != FALSE) ? lpConn->DoZeroRead(1) : lpConn->DoRead(1);
+        }
         //done
         MX_ASSERT_ALWAYS(_InterlockedDecrement(&(lpConn->nOutstandingReads)) >= 0);
         break;
@@ -1528,36 +1532,16 @@ CIoCompletionPortThreadPool::OnPacketCallback& CIpc::CConnectionBase::GetDispatc
   return lpIpc->cDispatcherPoolPacketCallback;
 }
 
-HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_ BOOL bZeroRead, _In_opt_ CPacket *lpReusePacket)
+HRESULT CIpc::CConnectionBase::DoZeroRead(_In_ SIZE_T nPacketsCount)
 {
-  CFastLock cReadLock(&nMutex);
   CPacket *lpPacket;
   HRESULT hRes;
 
   while (nPacketsCount > 0)
   {
-    if (lpReusePacket != NULL)
-    {
-      lpReusePacket->Reset((bZeroRead != FALSE) ? CPacket::TypeZeroRead : CPacket::TypeRead, this);
-      lpPacket = lpReusePacket;
-      lpReusePacket = NULL;
-    }
-    else
-    {
-      lpPacket = lpIpc->GetPacket(this, (bZeroRead != FALSE) ? CPacket::TypeZeroRead : CPacket::TypeRead);
-      if (lpPacket == NULL)
-        return E_OUTOFMEMORY;
-    }
-    if (bZeroRead == FALSE)
-    {
-      lpPacket->SetOrder(_InterlockedIncrement(&nNextReadOrder));
-      lpPacket->SetBytesInUse(lpIpc->dwPacketSize);
-    }
-    else
-    {
-      lpPacket->SetOrder(0);
-      lpPacket->SetBytesInUse(0);
-    }
+    lpPacket = lpIpc->GetPacket(this, CPacket::TypeZeroRead);
+    if (lpPacket == NULL)
+      return E_OUTOFMEMORY;
     cRwList.QueueLast(lpPacket);
     _InterlockedIncrement(&nOutstandingReads);
     switch (hRes = SendReadPacket(lpPacket))
@@ -1570,7 +1554,57 @@ HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_ BOOL bZero
         //free packet
         cRwList.Remove(lpPacket);
         FreePacket(lpPacket);
-        hRes = S_OK;
+        break;
+
+      case S_OK:
+      case 0x80070000|ERROR_IO_PENDING:
+        AddRef();
+        break;
+
+      default:
+        MX_ASSERT_ALWAYS(_InterlockedDecrement(&nOutstandingReads) >= 0);
+        return hRes;
+    }
+    nPacketsCount--;
+  }
+  //done
+  return S_OK;
+}
+
+HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacket *lpReusePacket)
+{
+  CFastLock cReadLock(&nMutex);
+  CPacket *lpPacket;
+  HRESULT hRes;
+
+  while (nPacketsCount > 0)
+  {
+    if (lpReusePacket != NULL)
+    {
+      lpReusePacket->Reset(CPacket::TypeRead, this);
+      lpPacket = lpReusePacket;
+      lpReusePacket = NULL;
+    }
+    else
+    {
+      lpPacket = lpIpc->GetPacket(this, CPacket::TypeRead);
+      if (lpPacket == NULL)
+        return E_OUTOFMEMORY;
+    }
+    lpPacket->SetOrder(_InterlockedIncrement(&nNextReadOrder));
+    lpPacket->SetBytesInUse(lpIpc->dwPacketSize);
+    cRwList.QueueLast(lpPacket);
+    _InterlockedIncrement(&nOutstandingReads);
+    switch (hRes = SendReadPacket(lpPacket))
+    {
+      case S_FALSE:
+        MX_ASSERT_ALWAYS(_InterlockedDecrement(&nOutstandingReads) >= 0);
+        MX_IPC_DEBUG_PRINT(1, ("%lu MX::CIpc::CConnectionBase::GracefulShutdown F) Clock=%lums / This=0x%p\n",
+                           ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), this));
+        _InterlockedOr(&nFlags, FLAG_GracefulShutdown);
+        //free packet
+        cRwList.Remove(lpPacket);
+        FreePacket(lpPacket);
         break;
 
       case S_OK:

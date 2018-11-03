@@ -88,6 +88,7 @@ private:
   protected:
     friend class CNamedPipes;
 
+    LONG volatile nRwHandleInUse;
     HANDLE hPipe;
     TAutoRefCounted<CServerInfo> cServerInfo;
   };

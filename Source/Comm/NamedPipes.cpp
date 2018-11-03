@@ -482,6 +482,7 @@ HRESULT CNamedPipes::CServerInfo::Init(_In_z_ LPCWSTR szServerNameW, _In_ PSECUR
 CNamedPipes::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass) :
                           CConnectionBase(lpIpc, nClass)
 {
+  SlimRWL_Initialize(&nRwHandleInUse);
   hPipe = NULL;
   return;
 }
@@ -579,7 +580,7 @@ HRESULT CNamedPipes::CConnection::CreateClient(_In_z_ LPCWSTR szServerNameW, _In
 VOID CNamedPipes::CConnection::ShutdownLink(_In_ BOOL bAbortive)
 {
   {
-    CFastLock cLock(&nMutex);
+    CAutoSlimRWLExclusive cHandleInUseLock(&nRwHandleInUse);
 
     if (hPipe != NULL)
     {
@@ -595,9 +596,12 @@ VOID CNamedPipes::CConnection::ShutdownLink(_In_ BOOL bAbortive)
 
 HRESULT CNamedPipes::CConnection::SendReadPacket(_In_ CPacket *lpPacket)
 {
+  CAutoSlimRWLShared cHandleInUseLock(&nRwHandleInUse);
   DWORD dwReaded;
   HRESULT hRes;
 
+  if (hPipe == NULL)
+    return S_FALSE;
   if (::ReadFile(hPipe, lpPacket->GetBuffer(), lpPacket->GetBytesInUse(), &dwReaded,
                  lpPacket->GetOverlapped()) == FALSE)
   {
@@ -610,9 +614,12 @@ HRESULT CNamedPipes::CConnection::SendReadPacket(_In_ CPacket *lpPacket)
 
 HRESULT CNamedPipes::CConnection::SendWritePacket(_In_ CPacket *lpPacket)
 {
+  CAutoSlimRWLShared cHandleInUseLock(&nRwHandleInUse);
   DWORD dwWritten;
   HRESULT hRes;
 
+  if (hPipe == NULL)
+    return S_FALSE;
   if (::WriteFile(hPipe, lpPacket->GetBuffer(), lpPacket->GetBytesInUse(), &dwWritten,
                   lpPacket->GetOverlapped()) == FALSE)
   {
