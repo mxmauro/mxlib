@@ -30,7 +30,7 @@
 
 namespace MX {
 
-class CIpcMessageManager : public virtual CBaseMemObj
+class CIpcMessageManager : public virtual TRefCounted<CBaseMemObj>
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CIpcMessageManager);
 public:
@@ -54,8 +54,6 @@ public:
                      _In_ OnMessageReceivedCallback cMessageReceivedCallback,
                      _In_opt_ DWORD dwMaxMessageSize=0x0FFFFFFFUL, _In_opt_ DWORD dwProtocolVersion=1);
   ~CIpcMessageManager();
-
-  VOID Shutdown();
 
   BOOL HasPending() const;
 

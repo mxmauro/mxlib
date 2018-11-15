@@ -106,6 +106,8 @@ private:
                                                     _Out_ LPINT LocalSockaddrLength,
                                                     _Deref_out_ struct sockaddr **RemoteSockaddr,
                                                     _Out_ LPINT RemoteSockaddrLength);
+    typedef BOOL (WINAPI *lpfnDisconnectEx)(_In_ SOCKET hSocket, _In_ LPOVERLAPPED lpOverlapped, _In_ DWORD dwFlags,
+                                            _In_ DWORD reserved);
 
   protected:
     LONG volatile nRwHandleInUse;
@@ -115,6 +117,7 @@ private:
       lpfnConnectEx fnConnectEx;
     };
     lpfnGetAcceptExSockaddrs fnGetAcceptExSockaddrs;
+    lpfnDisconnectEx fnDisconnectEx;
     SOCKET sck;
     struct {
       LONG volatile nMutex;

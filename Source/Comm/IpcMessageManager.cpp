@@ -71,7 +71,7 @@ namespace MX {
 CIpcMessageManager::CIpcMessageManager(_In_ CIoCompletionPortThreadPool &_cWorkerPool, _In_ CIpc *_lpIpc,
                                        _In_ HANDLE _hConn, _In_ OnMessageReceivedCallback _cMessageReceivedCallback,
                                        _In_opt_ DWORD _dwMaxMessageSize, _In_opt_ DWORD _dwProtocolVersion) :
-                                       CBaseMemObj(), cWorkerPool(_cWorkerPool)
+                                       TRefCounted<CBaseMemObj>(), cWorkerPool(_cWorkerPool)
 {
   lpIpc = _lpIpc;
   hConn = _hConn;
@@ -103,18 +103,8 @@ CIpcMessageManager::CIpcMessageManager(_In_ CIoCompletionPortThreadPool &_cWorke
 
 CIpcMessageManager::~CIpcMessageManager()
 {
-  CSyncWait *lpSyncWait;
-
-  Shutdown();
-
-  while ((lpSyncWait = sSyncWait.cList.PopHead()) != NULL)
-    lpSyncWait->Release();
-  return;
-}
-
-VOID CIpcMessageManager::Shutdown()
-{
   CMessage *lpMsg;
+  CSyncWait *lpSyncWait;
 
   RundownProt_WaitForRelease(&nRundownLock);
 
@@ -122,12 +112,10 @@ VOID CIpcMessageManager::Shutdown()
     _YieldProcessor();
   CancelWaitingReplies();
 
-  {
-    CFastLock cLock(&(sReceivedMessages.nMutex));
-
-    while ((lpMsg = sReceivedMessages.cList.PopHead()) != NULL)
-      lpMsg->Release();
-  }
+  while ((lpMsg = sReceivedMessages.cList.PopHead()) != NULL)
+    lpMsg->Release();
+  while ((lpSyncWait = sSyncWait.cList.PopHead()) != NULL)
+    lpSyncWait->Release();
   return;
 }
 
@@ -430,6 +418,7 @@ HRESULT CIpcMessageManager::WaitForReply(_In_ DWORD dwId, _Deref_out_ CMessage *
   if (lpSyncWait == NULL)
     return E_OUTOFMEMORY;
 
+  AddRef();
   lpSyncWait->AddRef();
   hRes = WaitForReplyAsync(dwId, MX_BIND_MEMBER_CALLBACK(&CIpcMessageManager::SyncWait, this), lpSyncWait);
   if (SUCCEEDED(hRes))
@@ -445,7 +434,9 @@ HRESULT CIpcMessageManager::WaitForReply(_In_ DWORD dwId, _Deref_out_ CMessage *
   }
 
   FreeSyncWaitObject(lpSyncWait, FAILED(hRes));
+
   //done
+  Release();
   return hRes;
 }
 
@@ -502,11 +493,13 @@ HRESULT CIpcMessageManager::OnMessageCompleted()
   _InterlockedIncrement(&nOutgoingMessageReceivedCallback);
 
   cCurrMessage->dwOrder = (DWORD)_InterlockedIncrement(&(sReceivedMessages.nNextOrderId));
+  AddRef();
   cCurrMessage->AddRef();
   hRes = cWorkerPool.Post(cMessageReceivedCallbackWP, 0, &(cCurrMessage->sOvr));
   if (FAILED(hRes))
   {
     cCurrMessage->Release();
+    Release();
     _InterlockedDecrement(&nOutgoingMessageReceivedCallback);
   }
   return hRes;
@@ -590,6 +583,8 @@ VOID CIpcMessageManager::OnMessageReceived(_In_ CIoCompletionPortThreadPool *lpP
 
   //done
   _InterlockedDecrement(&nOutgoingMessageReceivedCallback);
+
+  Release();
   return;
 }
 
