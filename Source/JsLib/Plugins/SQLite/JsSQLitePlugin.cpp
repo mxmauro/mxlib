@@ -76,6 +76,7 @@ public:
     nLastInsertId = 0ui64;
     nFieldsCount = 0;
     dwFlags = 0;
+    dwBusyTimeoutMs = _DEFAULT_BUSY_TIMEOUT_MS;
     return;
     };
 
@@ -115,6 +116,7 @@ public:
   };
 
 public:
+  DWORD dwBusyTimeoutMs;
   sqlite3 *lpDB;
   sqlite3_stmt *lpStmt;
   ULONGLONG nAffectedRows;
@@ -160,70 +162,6 @@ namespace MX {
 CJsSQLitePlugin::CJsSQLitePlugin(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
 {
   lpInternal = NULL;
-  sOptions.bDontCreate = FALSE;
-  sOptions.bReadOnly = FALSE;
-  sOptions.dwBusyTimeoutMs = _DEFAULT_BUSY_TIMEOUT_MS;
-  sOptions.dwCloseTimeoutMs = _DEFAULT_DB_CLOSE_TIMEOUT_MS;
-
-  //has options in constructor?
-  if (DukTape::duk_get_top(lpCtx) > 0)
-  {
-    if (duk_is_object(lpCtx, 0) == 1)
-    {
-      int timeout;
-
-      //don't create
-      DukTape::duk_get_prop_string(lpCtx, 0, "create");
-      if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
-      {
-        if (DukTape::duk_is_boolean(lpCtx, -1) != 0)
-          sOptions.bDontCreate = (DukTape::duk_require_boolean(lpCtx, -1) != 0) ? FALSE : TRUE;
-        else
-          sOptions.bDontCreate = (DukTape::duk_require_int(lpCtx, -1) != 0) ? FALSE : TRUE;
-      }
-      DukTape::duk_pop(lpCtx);
-      //read-only
-      DukTape::duk_get_prop_string(lpCtx, 0, "readOnly");
-      if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
-      {
-        if (DukTape::duk_is_boolean(lpCtx, -1) != 0)
-          sOptions.bReadOnly = (DukTape::duk_require_boolean(lpCtx, -1) != 0) ? TRUE : FALSE;
-        else
-          sOptions.bReadOnly = (DukTape::duk_require_int(lpCtx, -1) != 0) ? TRUE : FALSE;
-      }
-      DukTape::duk_pop(lpCtx);
-      //busy timeout ms
-      DukTape::duk_get_prop_string(lpCtx, 0, "busyTimeoutMs");
-      if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
-      {
-        if (DukTape::duk_is_boolean(lpCtx, -1) != 0)
-          timeout = (DukTape::duk_require_boolean(lpCtx, -1) != 0) ? 1 : 0;
-        else
-          timeout = (int)DukTape::duk_require_int(lpCtx, -1);
-        if (timeout < 0)
-          MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
-        sOptions.dwBusyTimeoutMs = (DWORD)timeout;
-      }
-      //close timeout ms
-      DukTape::duk_get_prop_string(lpCtx, 0, "closeTimeoutMs");
-      if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
-      {
-        if (DukTape::duk_is_boolean(lpCtx, -1) != 0)
-          timeout = (DukTape::duk_require_boolean(lpCtx, -1) != 0) ? 1 : 0;
-        else
-          timeout = (int)DukTape::duk_require_int(lpCtx, -1);
-        if (timeout < 0)
-          MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
-        sOptions.dwCloseTimeoutMs = (DWORD)timeout;
-      }
-      //----
-      DukTape::duk_pop(lpCtx);
-    }
-    else if (duk_is_null_or_undefined(lpCtx, 0) == 0)
-    {
-      MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
-    }
-  }
   return;
 }
 
@@ -277,14 +215,84 @@ VOID CJsSQLitePlugin::OnUnregister(_In_ DukTape::duk_context *lpCtx)
 DukTape::duk_ret_t CJsSQLitePlugin::Connect()
 {
   DukTape::duk_context *lpCtx = GetContext();
+  DukTape::duk_idx_t nParamsCount;
   LPCSTR szDatabaseNameA;
+  BOOL bDontCreate, bReadOnly;
+  DWORD dwBusyTimeoutMs, dwCloseTimeoutMs;
   HRESULT hRes;
 
   Disconnect();
   //get parameters
-  if (DukTape::duk_get_top(lpCtx) != 1)
+  nParamsCount = DukTape::duk_get_top(lpCtx);
+  if (nParamsCount < 1)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+
   szDatabaseNameA = DukTape::duk_require_string(lpCtx, 0);
+
+  //has more options?
+  bDontCreate = FALSE;
+  bReadOnly = FALSE;
+  dwBusyTimeoutMs = _DEFAULT_BUSY_TIMEOUT_MS;
+  dwCloseTimeoutMs = _DEFAULT_DB_CLOSE_TIMEOUT_MS;
+  if (nParamsCount > 1)
+  {
+    if (duk_is_object(lpCtx, 1) == 1)
+    {
+      int timeout;
+
+      //don't create
+      DukTape::duk_get_prop_string(lpCtx, 1, "create");
+      if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
+      {
+        if (DukTape::duk_is_boolean(lpCtx, -1) != 0)
+          bDontCreate = (DukTape::duk_require_boolean(lpCtx, -1) != 0) ? FALSE : TRUE;
+        else
+          bDontCreate = (DukTape::duk_require_int(lpCtx, -1) != 0) ? FALSE : TRUE;
+      }
+      DukTape::duk_pop(lpCtx);
+      //read-only
+      DukTape::duk_get_prop_string(lpCtx, 1, "readOnly");
+      if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
+      {
+        if (DukTape::duk_is_boolean(lpCtx, -1) != 0)
+          bReadOnly = (DukTape::duk_require_boolean(lpCtx, -1) != 0) ? TRUE : FALSE;
+        else
+          bReadOnly = (DukTape::duk_require_int(lpCtx, -1) != 0) ? TRUE : FALSE;
+      }
+      DukTape::duk_pop(lpCtx);
+      //busy timeout ms
+      DukTape::duk_get_prop_string(lpCtx, 1, "busyTimeoutMs");
+      if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
+      {
+        if (DukTape::duk_is_boolean(lpCtx, -1) != 0)
+          timeout = (DukTape::duk_require_boolean(lpCtx, -1) != 0) ? 1 : 0;
+        else
+          timeout = (int)DukTape::duk_require_int(lpCtx, -1);
+        if (timeout < 0)
+          MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+        dwBusyTimeoutMs = (DWORD)timeout;
+      }
+      //close timeout ms
+      DukTape::duk_get_prop_string(lpCtx, 1, "closeTimeoutMs");
+      if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
+      {
+        if (DukTape::duk_is_boolean(lpCtx, -1) != 0)
+          timeout = (DukTape::duk_require_boolean(lpCtx, -1) != 0) ? 1 : 0;
+        else
+          timeout = (int)DukTape::duk_require_int(lpCtx, -1);
+        if (timeout < 0)
+          MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+        dwCloseTimeoutMs = (DWORD)timeout;
+      }
+      //----
+      DukTape::duk_pop(lpCtx);
+    }
+    else if (duk_is_null_or_undefined(lpCtx, 1) == 0)
+    {
+      MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+    }
+  }
+
   //initialize APIs
   hRes = Internals::API::SQLiteInitialize();
   if (FAILED(hRes))
@@ -294,15 +302,16 @@ DukTape::duk_ret_t CJsSQLitePlugin::Connect()
   if (lpInternal == NULL)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
   //----
-  hRes = Internals::JsSQLiteDbManager::Open(szDatabaseNameA, sOptions.bReadOnly, sOptions.bDontCreate,
-                                            sOptions.dwCloseTimeoutMs, &(jssqlite_data->lpDB));
+  hRes = Internals::JsSQLiteDbManager::Open(szDatabaseNameA, bReadOnly, bDontCreate,
+                                            dwCloseTimeoutMs, &(jssqlite_data->lpDB));
   if (FAILED(hRes))
   {
     delete jssqlite_data;
     lpInternal = NULL;
-    MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
   }
 
+  jssqlite_data->dwBusyTimeoutMs = dwBusyTimeoutMs;
   //done
   return 0;
 }
@@ -348,12 +357,12 @@ DukTape::duk_ret_t CJsSQLitePlugin::Query()
   while (nQueryLegth > 0 && szQueryA[nQueryLegth - 1] == ';')
     nQueryLegth--;
   //execute query
-  dwBusyTimeoutMs = sOptions.dwBusyTimeoutMs;
+  dwBusyTimeoutMs = jssqlite_data->dwBusyTimeoutMs;
   do
   {
     err = sqlite3_prepare_v2(jssqlite_data->lpDB, szQueryA, (int)nQueryLegth, &(jssqlite_data->lpStmt), &szLeftOverA);
   }
-  while (MustRetry(err, sOptions.dwBusyTimeoutMs, dwBusyTimeoutMs) != FALSE);
+  while (MustRetry(err, jssqlite_data->dwBusyTimeoutMs, dwBusyTimeoutMs) != FALSE);
   if (err != SQLITE_OK)
   {
     jssqlite_data->lpStmt = NULL;
@@ -474,12 +483,12 @@ DukTape::duk_ret_t CJsSQLitePlugin::Query()
     }
 
     //execute query and optionally get first row
-    dwBusyTimeoutMs = sOptions.dwBusyTimeoutMs;
+    dwBusyTimeoutMs = jssqlite_data->dwBusyTimeoutMs;
     do
     {
       err = sqlite3_step(jssqlite_data->lpStmt);
     }
-    while (MustRetry(err, sOptions.dwBusyTimeoutMs, dwBusyTimeoutMs) != FALSE);
+    while (MustRetry(err, jssqlite_data->dwBusyTimeoutMs, dwBusyTimeoutMs) != FALSE);
     switch (err)
     {
       case SQLITE_ROW:
@@ -735,12 +744,12 @@ DukTape::duk_ret_t CJsSQLitePlugin::FetchRow()
   {
     DWORD dwBusyTimeoutMs;
 
-    dwBusyTimeoutMs = sOptions.dwBusyTimeoutMs;
+    dwBusyTimeoutMs = jssqlite_data->dwBusyTimeoutMs;
     do
     {
       err = sqlite3_step(jssqlite_data->lpStmt);
     }
-    while (MustRetry(err, sOptions.dwBusyTimeoutMs, dwBusyTimeoutMs) != FALSE);
+    while (MustRetry(err, jssqlite_data->dwBusyTimeoutMs, dwBusyTimeoutMs) != FALSE);
     switch (err)
     {
       case SQLITE_ROW:

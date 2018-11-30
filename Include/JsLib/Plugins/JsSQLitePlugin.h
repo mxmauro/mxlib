@@ -40,7 +40,7 @@ public:
   MX_JS_DECLARE_CREATABLE(CJsSQLitePlugin, "SQLite")
 
   MX_JS_BEGIN_MAP(CJsSQLitePlugin)
-    MX_JS_MAP_METHOD("connect", &CJsSQLitePlugin::Connect, MX_JS_VARARGS) //host,user[,pass[,dbname[,port]]]
+    MX_JS_MAP_METHOD("connect", &CJsSQLitePlugin::Connect, MX_JS_VARARGS) //filename[,options]
     MX_JS_MAP_METHOD("disconnect", &CJsSQLitePlugin::Disconnect, 0)
     MX_JS_MAP_METHOD("query", &CJsSQLitePlugin::Query, MX_JS_VARARGS)
     MX_JS_MAP_METHOD("queryAndFetchRow", &CJsSQLitePlugin::QueryAndFetch, MX_JS_VARARGS)
@@ -84,11 +84,6 @@ private:
 
 private:
   LPVOID lpInternal;
-  struct {
-    BOOL bDontCreate, bReadOnly;
-    DWORD dwCloseTimeoutMs;
-    DWORD dwBusyTimeoutMs;
-  } sOptions;
 };
 
 //-----------------------------------------------------------
