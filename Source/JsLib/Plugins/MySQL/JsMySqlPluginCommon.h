@@ -30,7 +30,6 @@
   #include <WS2tcpip.h>
 #endif
 #define HAVE_STRUCT_TIMESPEC
-#include <my_global.h>
 #include <mysql.h>
 #include <mysqld_error.h>
 #include <errmsg.h>
@@ -162,11 +161,7 @@ private:
 
 namespace API {
 
-#ifdef _DEBUG
-HRESULT MySqlInitialize(_In_ BOOL bUseDebugDll);
-#else //_DEBUG
 HRESULT MySqlInitialize();
-#endif //_DEBUG
 
 extern lpfn_mysql_init fn_mysql_init;
 extern lpfn_mysql_options fn_mysql_options;

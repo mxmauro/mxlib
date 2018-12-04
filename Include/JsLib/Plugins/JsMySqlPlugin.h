@@ -56,9 +56,6 @@ public:
     MX_JS_MAP_PROPERTY("insertId", &CJsMySqlPlugin::getInsertId, NULL, FALSE)
     MX_JS_MAP_PROPERTY("fields", &CJsMySqlPlugin::getFields, NULL, FALSE)
     MX_JS_MAP_PROPERTY("fieldsCount", &CJsMySqlPlugin::getFieldsCount, NULL, FALSE)
-#ifdef _DEBUG
-    MX_JS_MAP_PROPERTY("useDebugDll", &CJsMySqlPlugin::getUseDebugDll, &CJsMySqlPlugin::setUseDebugDll, FALSE)
-#endif //_DEBUG
   MX_JS_END_MAP()
 
 protected:
@@ -82,10 +79,6 @@ private:
   DukTape::duk_ret_t getInsertId();
   DukTape::duk_ret_t getFieldsCount();
   DukTape::duk_ret_t getFields();
-#ifdef _DEBUG
-  DukTape::duk_ret_t getUseDebugDll();
-  DukTape::duk_ret_t setUseDebugDll();
-#endif //_DEBUG
 
   VOID ThrowDbError(_In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line, _In_opt_ BOOL bOnlyPush=FALSE);
 
@@ -96,9 +89,6 @@ private:
   struct {
     long nConnectTimeout;
     long nReadTimeout, nWriteTimeout;
-#ifdef _DEBUG
-    BOOL bUseDebugDll;
-#endif //_DEBUG
   } sOptions;
 };
 

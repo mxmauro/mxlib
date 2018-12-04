@@ -91,11 +91,7 @@ lpfn_mysql_stmt_attr_set         fn_mysql_stmt_attr_set = NULL;
 
 //-----------------------------------------------------------
 
-HRESULT MySqlInitialize(
-#ifdef _DEBUG
-  _In_ BOOL bUseDebugDll
-#endif //_DEBUG
-)
+HRESULT MySqlInitialize()
 {
   if (hDll == NULL)
   {
@@ -161,13 +157,8 @@ HRESULT MySqlInitialize(
       if (sW != NULL)
         *(sW+1) = 0;
       cStrTempW.Refresh();
-#ifdef _DEBUG
-      if (cStrTempW.Concat((bUseDebugDll != FALSE) ? L"libmysqld.dll" : L"libmysql.dll") == FALSE)
+      if (cStrTempW.Concat(L"libmariadb.dll") == FALSE)
         return E_OUTOFMEMORY;
-#else //_DEBUG
-      if (cStrTempW.Concat(L"libmysql.dll") == FALSE)
-        return E_OUTOFMEMORY;
-#endif //_DEBUG
       //load library
       _hDll = ::LoadLibraryW((LPCWSTR)cStrTempW);
       if (_hDll == NULL)
