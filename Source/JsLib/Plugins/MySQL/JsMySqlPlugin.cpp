@@ -1113,7 +1113,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow()
     //ensure enough buffer size in the field and fetch truncated columns
     for (i = 0; i < nFieldsCount; i++)
     {
-      if (lpLengthPtr[i] > lpBind[i].buffer_length)
+      if (lpErrorPtr[i] != 0 || lpLengthPtr[i] > lpBind[i].buffer_length)
       {
         lpOutputBuffer = jsmysql_data->aOutputBuffersList.GetElementAt(i);
         if (lpOutputBuffer->EnsureSize((SIZE_T)lpLengthPtr[i]) == FALSE)
