@@ -145,7 +145,7 @@ HRESULT CZipLib::CompressStream(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLen)
     nWritten = sizeof(aTempBuf);
     __try
     {
-      nErr = deflate(__stream, Z_NO_FLUSH);
+      nErr = deflate(__stream, Z_SYNC_FLUSH);
     }
     __except (EXCEPTION_EXECUTE_HANDLER)
     {
@@ -268,7 +268,7 @@ HRESULT CZipLib::DecompressStream(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLen, _Out_
       __stream->avail_in = (uInt)nToProcess;
       __stream->next_out = aTempBuf;
       __stream->avail_out = (uInt)sizeof(aTempBuf);
-      nWritten = (SIZE_T)(__stream->avail_out);
+      nWritten = sizeof(aTempBuf);
       __try
       {
         nErr = inflate(__stream, Z_SYNC_FLUSH);
