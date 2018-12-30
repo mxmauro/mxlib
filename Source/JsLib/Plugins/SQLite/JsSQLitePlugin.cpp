@@ -461,7 +461,7 @@ DukTape::duk_ret_t CJsSQLitePlugin::Query()
 
         if (bParamsIsArray != FALSE)
         {
-          DukTape::duk_get_prop_index(lpCtx, 2, (DukTape::duk_uarridx_t)nParam);
+          DukTape::duk_get_prop_index(lpCtx, 1, (DukTape::duk_uarridx_t)nParam);
           ndx = -1;
         }
         else

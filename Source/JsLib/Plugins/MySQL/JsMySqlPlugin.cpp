@@ -458,7 +458,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
 
             if (bParamsIsArray != FALSE)
             {
-              DukTape::duk_get_prop_index(lpCtx, 2, (DukTape::duk_uarridx_t)nParam);
+              DukTape::duk_get_prop_index(lpCtx, 1, (DukTape::duk_uarridx_t)nParam);
               ndx = -1;
             }
             else
@@ -530,7 +530,7 @@ is_buffer1:     DukTape::duk_get_buffer_data(lpCtx, ndx, &nLen);
 
             if (bParamsIsArray != FALSE)
             {
-              DukTape::duk_get_prop_index(lpCtx, 2, (DukTape::duk_uarridx_t)nParam);
+              DukTape::duk_get_prop_index(lpCtx, 1, (DukTape::duk_uarridx_t)nParam);
               ndx = -1;
             }
             else
