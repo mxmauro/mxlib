@@ -48,7 +48,7 @@ public:
     MX_JS_MAP_METHOD("escapeString", &CJsSQLitePlugin::EscapeString, MX_JS_VARARGS)
     MX_JS_MAP_METHOD("utf8Truncate", &CJsSQLitePlugin::Utf8Truncate, 2)
     MX_JS_MAP_METHOD("fetchRow", &CJsSQLitePlugin::FetchRow, 0)
-    MX_JS_MAP_METHOD("beginTransaction", &CJsSQLitePlugin::BeginTransaction, 0)
+    MX_JS_MAP_METHOD("beginTransaction", &CJsSQLitePlugin::BeginTransaction, MX_JS_VARARGS)
     MX_JS_MAP_METHOD("commit", &CJsSQLitePlugin::CommitTransaction, 0)
     MX_JS_MAP_METHOD("rollback", &CJsSQLitePlugin::RollbackTransaction, 0)
     MX_JS_MAP_PROPERTY("affectedRows", &CJsSQLitePlugin::getAffectedRows, NULL, FALSE)
@@ -79,8 +79,10 @@ private:
   DukTape::duk_ret_t getFields();
 
   VOID ThrowDbError(_In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line);
+  VOID ThrowDbError(_In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line, _In_ int err,
+                    _In_opt_ HRESULT hRes = S_OK);
 
-  static HRESULT HResultFromSQLiteErr(_In_ int nError);
+  HRESULT HResultFromSQLiteErr(_In_ int nError);
 
 private:
   LPVOID lpInternal;

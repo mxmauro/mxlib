@@ -73,18 +73,6 @@ private:
 
 //-----------------------------------------------------------
 
-namespace JsSQLiteDbManager {
-
-HRESULT Open(_In_z_ LPCSTR szFileNameA, _In_ BOOL bReadOnly, _In_ BOOL bDontCreate, _In_ DWORD dwCloseTimeoutMs,
-             _Out_ sqlite3 **lplpDB);
-VOID Close(_In_ sqlite3 *lpDB);
-
-VOID Shutdown();
-
-} //namespace DbManager
-
-//-----------------------------------------------------------
-
 namespace API {
 
 HRESULT SQLiteInitialize();

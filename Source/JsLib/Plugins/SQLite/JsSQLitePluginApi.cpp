@@ -84,8 +84,6 @@ static VOID SQLITE_Shutdown()
 
   if (__InterlockedRead(&nInitialized) != 0)
   {
-    MX::Internals::JsSQLiteDbManager::Shutdown();
-
     sqlite3_shutdown();
 
     _InterlockedExchange(&nInitialized, 0);

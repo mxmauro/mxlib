@@ -49,7 +49,7 @@ public:
     MX_JS_MAP_METHOD("escapeString", &CJsMySqlPlugin::EscapeString, MX_JS_VARARGS)
     MX_JS_MAP_METHOD("utf8Truncate", &CJsMySqlPlugin::Utf8Truncate, 2)
     MX_JS_MAP_METHOD("fetchRow", &CJsMySqlPlugin::FetchRow, 0)
-    MX_JS_MAP_METHOD("beginTransaction", &CJsMySqlPlugin::BeginTransaction, 0)
+    MX_JS_MAP_METHOD("beginTransaction", &CJsMySqlPlugin::BeginTransaction, MX_JS_VARARGS)
     MX_JS_MAP_METHOD("commit", &CJsMySqlPlugin::CommitTransaction, 0)
     MX_JS_MAP_METHOD("rollback", &CJsMySqlPlugin::RollbackTransaction, 0)
     MX_JS_MAP_PROPERTY("affectedRows", &CJsMySqlPlugin::getAffectedRows, NULL, FALSE)

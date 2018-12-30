@@ -50,7 +50,6 @@
     </ClCompile>
     <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePlugin.cpp" />
     <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginApi.cpp" />
-    <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginDbManager.cpp" />
     <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginException.cpp" />
     <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginFieldInfo.cpp" />
   </ItemGroup>

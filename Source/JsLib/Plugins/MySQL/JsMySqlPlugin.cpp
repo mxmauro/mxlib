@@ -354,6 +354,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
   int nRetryCount;
   SIZE_T nQueryLegth;
   DukTape::duk_idx_t nParamsCount;
+  BOOL bParamsIsArray;
   HRESULT hRes;
 
   if (lpInternal == NULL)
@@ -362,6 +363,8 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
   nParamsCount = DukTape::duk_get_top(lpCtx);
   if (nParamsCount < 1)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+  bParamsIsArray = (nParamsCount == 2 && DukTape::duk_is_array(lpCtx, 1) != 0) ? TRUE : FALSE;
+
   szQueryA = DukTape::duk_require_string(lpCtx, 0);
   if (*szQueryA == 0)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
@@ -379,7 +382,6 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
   {
     TAutoFreePtr<MYSQL_BIND> cInputBindings;
     ULONG nInputParams;
-    DukTape::duk_idx_t idx;
     int err;
 
     QueryClose();
@@ -429,21 +431,41 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
       {
         //...process input fields
         nInputParams = _CALLAPI(mysql_stmt_param_count)(jsmysql_data->lpStmt);
-        if (nParamsCount != (DukTape::duk_idx_t)nInputParams + 1)
-          MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+        if (bParamsIsArray == FALSE)
+        {
+          if (nParamsCount != (DukTape::duk_idx_t)nInputParams + 1)
+            MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+        }
+        else
+        {
+          if (DukTape::duk_get_length(lpCtx, 1) != (DukTape::duk_size_t)nInputParams)
+            MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+        }
 
         if (nInputParams > 0)
         {
           //calculate data size
-          SIZE_T nSize = (SIZE_T)nInputParams * sizeof(MYSQL_BIND);
+          SIZE_T nParam, nSize;
           LPBYTE lpPtr;
 
-          for (idx = 1; idx < nParamsCount; idx++)
+          nSize = (SIZE_T)nInputParams * sizeof(MYSQL_BIND);
+
+          for (nParam = 0; nParam < nInputParams; nParam++)
           {
             DukTape::duk_size_t nLen;
             MX::CStringA cStrTypeA;
+            DukTape::duk_idx_t ndx;
 
-            switch (DukTape::duk_get_type(lpCtx, idx))
+            if (bParamsIsArray != FALSE)
+            {
+              DukTape::duk_get_prop_index(lpCtx, 2, (DukTape::duk_uarridx_t)nParam);
+              ndx = -1;
+            }
+            else
+            {
+              ndx = (DukTape::duk_idx_t)(nParam + 1);
+            }
+            switch (DukTape::duk_get_type(lpCtx, ndx))
             {
               case DUK_TYPE_NONE:
               case DUK_TYPE_UNDEFINED:
@@ -460,12 +482,14 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
                 break;
 
               case DUK_TYPE_STRING:
-                DukTape::duk_get_lstring(lpCtx, idx, &nLen);
+                DukTape::duk_get_lstring(lpCtx, ndx, &nLen);
                 nSize += nLen;
                 break;
 
               case DUK_TYPE_OBJECT:
-                CJavascriptVM::GetObjectType(lpCtx, idx, cStrTypeA);
+                if (DukTape::duk_is_buffer_data(lpCtx, ndx) != 0)
+                  goto is_buffer1;
+                CJavascriptVM::GetObjectType(lpCtx, ndx, cStrTypeA);
                 if (StrCompareA((LPCSTR)cStrTypeA, "Date") == 0)
                 {
                   nSize += sizeof(MYSQL_TIME);
@@ -477,12 +501,16 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
                 break;
 
               case DUK_TYPE_BUFFER:
-                DukTape::duk_get_buffer(lpCtx, idx, &nLen);
+is_buffer1:     DukTape::duk_get_buffer_data(lpCtx, ndx, &nLen);
                 nSize += nLen;
                 break;
 
               default:
                 MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+            }
+            if (bParamsIsArray != FALSE)
+            {
+              DukTape::duk_pop(lpCtx);
             }
           }
 
@@ -492,14 +520,24 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
           MemSet(cInputBindings.Get(), 0, (SIZE_T)nInputParams * sizeof(MYSQL_BIND) + nSize);
 
           lpPtr = (LPBYTE)cInputBindings.Get() + (SIZE_T)nInputParams * sizeof(MYSQL_BIND);
-          for (idx = 1; idx < nParamsCount; idx++)
+          for (nParam = 0; nParam < nInputParams; nParam++)
           {
             MX::CStringA cStrTypeA;
-            MYSQL_BIND *lpBind = cInputBindings.Get() + (SIZE_T)(idx - 1);
+            MYSQL_BIND *lpBind = cInputBindings.Get() + (SIZE_T)nParam;
             DukTape::duk_size_t nLen;
             LPVOID s;
+            DukTape::duk_idx_t ndx;
 
-            switch (DukTape::duk_get_type(lpCtx, idx))
+            if (bParamsIsArray != FALSE)
+            {
+              DukTape::duk_get_prop_index(lpCtx, 2, (DukTape::duk_uarridx_t)nParam);
+              ndx = -1;
+            }
+            else
+            {
+              ndx = (DukTape::duk_idx_t)(nParam + 1);
+            }
+            switch (DukTape::duk_get_type(lpCtx, ndx))
             {
               case DUK_TYPE_NONE:
               case DUK_TYPE_UNDEFINED:
@@ -515,7 +553,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
                 lpBind->buffer_type = MYSQL_TYPE_LONG;
                 lpBind->buffer = lpPtr;
                 lpBind->buffer_length = (ULONG)sizeof(LONG);
-                *((LONG*)(lpBind->buffer)) = DukTape::duk_get_boolean(lpCtx, idx) ? 1 : 0;
+                *((LONG*)(lpBind->buffer)) = DukTape::duk_get_boolean(lpCtx, ndx) ? 1 : 0;
 
                 lpPtr += sizeof(LONG);
                 break;
@@ -527,7 +565,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
 
                 lpBind->buffer = lpPtr;
 
-                dbl = (double)DukTape::duk_get_number(lpCtx, idx);
+                dbl = (double)DukTape::duk_get_number(lpCtx, ndx);
                 ll = (LONGLONG)dbl;
                 if ((double)ll != dbl || dbl < (double)LONG_MIN)
                 {
@@ -566,7 +604,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
                 break;
 
               case DUK_TYPE_STRING:
-                s = (LPVOID)DukTape::duk_get_lstring(lpCtx, idx, &nLen);
+                s = (LPVOID)DukTape::duk_get_lstring(lpCtx, ndx, &nLen);
 
                 lpBind->buffer_type = MYSQL_TYPE_VAR_STRING;
                 lpBind->buffer = lpPtr;
@@ -577,12 +615,14 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
                 break;
 
               case DUK_TYPE_OBJECT:
-                CJavascriptVM::GetObjectType(lpCtx, idx, cStrTypeA);
+                if (DukTape::duk_is_buffer_data(lpCtx, ndx) != 0)
+                  goto is_buffer2;
+                CJavascriptVM::GetObjectType(lpCtx, ndx, cStrTypeA);
                 if (StrCompareA((LPCSTR)cStrTypeA, "Date") == 0)
                 {
                   SYSTEMTIME sSt;
 
-                  CJavascriptVM::GetDate(lpCtx, idx, &sSt);
+                  CJavascriptVM::GetDate(lpCtx, ndx, &sSt);
 
                   lpBind->buffer_type = MYSQL_TYPE_DATETIME;
                   lpBind->buffer = lpPtr;
@@ -603,7 +643,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
                 break;
 
               case DUK_TYPE_BUFFER:
-                s = DukTape::duk_get_buffer(lpCtx, idx, &nLen);
+is_buffer2:     s = DukTape::duk_get_buffer_data(lpCtx, ndx, &nLen);
 
                 lpBind->buffer_type = MYSQL_TYPE_LONG_BLOB;
                 lpBind->buffer = lpPtr;
@@ -612,6 +652,10 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query()
 
                 lpPtr += nLen;
                 break;
+            }
+            if (bParamsIsArray != FALSE)
+            {
+              DukTape::duk_pop(lpCtx);
             }
           }
 
@@ -1152,7 +1196,8 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow()
               LPBYTE p = (LPBYTE)(DukTape::duk_push_fixed_buffer(lpCtx, (DukTape::duk_size_t)(lpLengthPtr[i])));
 
               MemCopy(p, lpBind[i].buffer, (SIZE_T)lpLengthPtr[i]);
-              DukTape::duk_push_buffer_object(lpCtx, -1, 0, (DukTape::duk_size_t)(lpLengthPtr[i]), DUK_BUFOBJ_UINT8ARRAY);
+              DukTape::duk_push_buffer_object(lpCtx, -1, 0, (DukTape::duk_size_t)(lpLengthPtr[i]),
+                                              DUK_BUFOBJ_UINT8ARRAY);
               DukTape::duk_remove(lpCtx, -2);
             }
             else
@@ -1530,7 +1575,40 @@ DukTape::duk_ret_t CJsMySqlPlugin::BeginTransaction()
 
   if (lpInternal == NULL)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_NotReady);
-  DukTape::duk_push_lstring(lpCtx, "START TRANSACTION;", 18);
+
+  switch (DukTape::duk_get_top(lpCtx))
+  {
+    case 0:
+      DukTape::duk_push_lstring(lpCtx, "START TRANSACTION READ WRITE;", 29);
+      break;
+
+    case 1:
+      {
+      BOOL bIsReadOnly = FALSE;
+
+      if (DukTape::duk_is_object(lpCtx, 0) == 0)
+        MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+
+      DukTape::duk_get_prop_string(lpCtx, 0, "readOnly");
+      if (duk_is_null_or_undefined(lpCtx, -1) == 0)
+        bIsReadOnly = (MX::CJavascriptVM::GetInt(lpCtx, -1) != 0) ? TRUE : FALSE;
+      DukTape::duk_pop(lpCtx);
+
+      if (bIsReadOnly != FALSE)
+      {
+        DukTape::duk_push_lstring(lpCtx, "START TRANSACTION READ ONLY;", 28);
+      }
+      else
+      {
+        DukTape::duk_push_lstring(lpCtx, "START TRANSACTION READ WRITE;", 29);
+      }
+      }
+      break;
+
+    default:
+      MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+  }
+
   return Query();
 }
 

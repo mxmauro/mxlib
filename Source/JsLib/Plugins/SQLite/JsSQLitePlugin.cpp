@@ -47,7 +47,6 @@
 #define _FIELD_TYPE_DateTime                               4
 
 #define _DEFAULT_BUSY_TIMEOUT_MS                       30000
-#define _DEFAULT_DB_CLOSE_TIMEOUT_MS                   10000
 
 #define DATETIME_QUICK_FLAGS_Dot                        0x01
 #define DATETIME_QUICK_FLAGS_Dash                       0x02
@@ -56,8 +55,26 @@
 
 //-----------------------------------------------------------
 
+typedef struct {
+  size_t len;
+  size_t count;
+  char *data;
+  char *close;
+} MYFUNC_CONCAT_CONTEXT;
+
+//-----------------------------------------------------------
+
 static BOOL GetTypeFromName(_In_z_ LPCSTR szNameA, _Out_ int *lpnType, _Out_ int *lpnRealType);
 static BOOL MustRetry(_In_ int err, _In_ DWORD dwInitialBusyTimeoutMs, _Inout_ DWORD &dwBusyTimeoutMs);
+
+static void myFuncUtcNow(sqlite3_context *ctx, int argc, sqlite3_value **argv);
+static void myFuncNow(sqlite3_context *ctx, int argc, sqlite3_value **argv);
+/*
+static void myFuncRegExp(sqlite3_context *ctx, int argc, sqlite3_value **argv);
+*/
+static void myFuncConcatStep(sqlite3_context *ctx, int argc, sqlite3_value **argv);
+static void myFuncConcatFinal(sqlite3_context *ctx);
+static void myFuncFree(_In_ void *ptr);
 
 //-----------------------------------------------------------
 
@@ -83,7 +100,7 @@ public:
   ~CJsSQLitePluginData()
     {
     if (lpDB != NULL)
-      JsSQLiteDbManager::Close(lpDB);
+      sqlite3_close(lpDB);
     return;
     };
 
@@ -215,10 +232,12 @@ VOID CJsSQLitePlugin::OnUnregister(_In_ DukTape::duk_context *lpCtx)
 DukTape::duk_ret_t CJsSQLitePlugin::Connect()
 {
   DukTape::duk_context *lpCtx = GetContext();
+  MX::CStringW cStrFileNameW;
   DukTape::duk_idx_t nParamsCount;
   LPCSTR szDatabaseNameA;
-  BOOL bDontCreate, bReadOnly;
-  DWORD dwBusyTimeoutMs, dwCloseTimeoutMs;
+  BOOL bDontCreate, bReadOnly, bFileExists;
+  DWORD dwBusyTimeoutMs;
+  int err, flags;
   HRESULT hRes;
 
   Disconnect();
@@ -233,7 +252,6 @@ DukTape::duk_ret_t CJsSQLitePlugin::Connect()
   bDontCreate = FALSE;
   bReadOnly = FALSE;
   dwBusyTimeoutMs = _DEFAULT_BUSY_TIMEOUT_MS;
-  dwCloseTimeoutMs = _DEFAULT_DB_CLOSE_TIMEOUT_MS;
   if (nParamsCount > 1)
   {
     if (duk_is_object(lpCtx, 1) == 1)
@@ -268,23 +286,8 @@ DukTape::duk_ret_t CJsSQLitePlugin::Connect()
           timeout = (DukTape::duk_require_boolean(lpCtx, -1) != 0) ? 1 : 0;
         else
           timeout = (int)DukTape::duk_require_int(lpCtx, -1);
-        if (timeout < 0)
-          MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
-        dwBusyTimeoutMs = (DWORD)timeout;
+        dwBusyTimeoutMs = (timeout >= 0) ? (DWORD)timeout : INFINITE;
       }
-      //close timeout ms
-      DukTape::duk_get_prop_string(lpCtx, 1, "closeTimeoutMs");
-      if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
-      {
-        if (DukTape::duk_is_boolean(lpCtx, -1) != 0)
-          timeout = (DukTape::duk_require_boolean(lpCtx, -1) != 0) ? 1 : 0;
-        else
-          timeout = (int)DukTape::duk_require_int(lpCtx, -1);
-        if (timeout < 0)
-          MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
-        dwCloseTimeoutMs = (DWORD)timeout;
-      }
-      //----
       DukTape::duk_pop(lpCtx);
     }
     else if (duk_is_null_or_undefined(lpCtx, 1) == 0)
@@ -292,6 +295,10 @@ DukTape::duk_ret_t CJsSQLitePlugin::Connect()
       MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
     }
   }
+
+  hRes = Utf8_Decode(cStrFileNameW, szDatabaseNameA);
+  if (FAILED(hRes))
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
 
   //initialize APIs
   hRes = Internals::API::SQLiteInitialize();
@@ -301,14 +308,66 @@ DukTape::duk_ret_t CJsSQLitePlugin::Connect()
   lpInternal = MX_DEBUG_NEW Internals::CJsSQLitePluginData();
   if (lpInternal == NULL)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
-  //----
-  hRes = Internals::JsSQLiteDbManager::Open(szDatabaseNameA, bReadOnly, bDontCreate,
-                                            dwCloseTimeoutMs, &(jssqlite_data->lpDB));
-  if (FAILED(hRes))
+
+  //open database
+  flags = SQLITE_OPEN_FULLMUTEX | SQLITE_OPEN_SHAREDCACHE;
+  if (bDontCreate == FALSE)
+    flags |= SQLITE_OPEN_CREATE;
+  flags |= (bReadOnly == FALSE) ? SQLITE_OPEN_READWRITE : SQLITE_OPEN_READONLY;
+
+  //NOTE: Docs says the name must be UTF-8
+  bFileExists = (::GetFileAttributesW((LPCWSTR)cStrFileNameW) != INVALID_FILE_ATTRIBUTES);
+
+  err = sqlite3_open_v2(szDatabaseNameA, &(jssqlite_data->lpDB), flags, NULL);
+  if (err != SQLITE_OK)
+  {
+    hRes = (jssqlite_data->lpDB != NULL) ? MX_HRESULT_FROM_WIN32(sqlite3_system_errno(jssqlite_data->lpDB)) : S_OK;
+    if (SUCCEEDED(hRes))
+    {
+      if (err == SQLITE_NOTFOUND || err == SQLITE_CANTOPEN)
+        hRes = MX_E_NotFound;
+      else if (err == SQLITE_NOMEM)
+        hRes = E_OUTOFMEMORY;
+      else
+        hRes = E_FAIL;
+    }
+    delete jssqlite_data;
+    lpInternal = NULL;
+    ThrowDbError(__FILE__, __LINE__, err, hRes);
+  }
+  sqlite3_extended_result_codes(jssqlite_data->lpDB, 1);
+
+  err = sqlite3_create_function(jssqlite_data->lpDB, "UTC_TIMESTAMP", 0, SQLITE_UTF8, 0, myFuncUtcNow, NULL, NULL);
+  if (err == SQLITE_OK)
+  {
+    err = sqlite3_create_function(jssqlite_data->lpDB, "NOW", 0, SQLITE_UTF8, 0, myFuncNow, NULL, NULL);
+  }
+  if (err == SQLITE_OK)
+  {
+    err = sqlite3_create_function(jssqlite_data->lpDB, "CURRENT_TIMESTAMP", 0, SQLITE_UTF8, 0, myFuncNow, NULL, NULL);
+  }
+  /*
+  if (err == SQLITE_OK)
+  {
+    err = sqlite3_create_function(jssqlite_data->lpDB, "REGEXP", 2, SQLITE_UTF8, 0, myFuncRegExp, 0, 0);
+  }
+  */
+  if (err == SQLITE_OK)
+  {
+    err = sqlite3_create_function(jssqlite_data->lpDB, "CONCAT", -1, SQLITE_UTF8, 0, NULL, myFuncConcatStep,
+                                  myFuncConcatFinal);
+  }
+  if (err != SQLITE_OK)
   {
     delete jssqlite_data;
     lpInternal = NULL;
-    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+
+    if (bFileExists == FALSE)
+    {
+      ::DeleteFileW((LPCWSTR)cStrFileNameW);
+    }
+    
+    ThrowDbError(__FILE__, __LINE__, err);
   }
 
   jssqlite_data->dwBusyTimeoutMs = dwBusyTimeoutMs;
@@ -335,6 +394,7 @@ DukTape::duk_ret_t CJsSQLitePlugin::Query()
   LPCSTR szQueryA;
   SIZE_T nQueryLegth;
   DukTape::duk_idx_t nParamsCount;
+  BOOL bParamsIsArray;
   const char *szLeftOverA;
   int err, nInputParams;
   DWORD dwBusyTimeoutMs;
@@ -345,6 +405,8 @@ DukTape::duk_ret_t CJsSQLitePlugin::Query()
   nParamsCount = DukTape::duk_get_top(lpCtx);
   if (nParamsCount < 1)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+  bParamsIsArray = (nParamsCount == 2 && DukTape::duk_is_array(lpCtx, 1) != 0) ? TRUE : FALSE;
+
   szQueryA = DukTape::duk_require_string(lpCtx, 0);
   if (*szQueryA == 0)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
@@ -379,77 +441,97 @@ DukTape::duk_ret_t CJsSQLitePlugin::Query()
     {
       MX::CStringA cStrTypeA;
       DukTape::duk_size_t nLen;
-      DukTape::duk_idx_t idx;
+      int nParam;
 
-      if (nParamsCount != (DukTape::duk_idx_t)nInputParams + 1)
-        MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
-
-      for (idx = 1; idx < nParamsCount; idx++)
+      if (bParamsIsArray == FALSE)
       {
+        if (nParamsCount != (DukTape::duk_idx_t)nInputParams + 1)
+          MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+      }
+      else
+      {
+        if (DukTape::duk_get_length(lpCtx, 1) != (DukTape::duk_size_t)nInputParams)
+          MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+      }
+
+      for (nParam = 0; nParam < nInputParams; nParam++)
+      {
+        DukTape::duk_idx_t ndx;
         LPVOID s;
 
-        switch (DukTape::duk_get_type(lpCtx, idx))
+        if (bParamsIsArray != FALSE)
+        {
+          DukTape::duk_get_prop_index(lpCtx, 2, (DukTape::duk_uarridx_t)nParam);
+          ndx = -1;
+        }
+        else
+        {
+          ndx = (DukTape::duk_idx_t)(nParam + 1);
+        }
+        switch (DukTape::duk_get_type(lpCtx, ndx))
         {
           case DUK_TYPE_NONE:
           case DUK_TYPE_UNDEFINED:
           case DUK_TYPE_NULL:
-            err = sqlite3_bind_null(jssqlite_data->lpStmt, (int)idx);
+            err = sqlite3_bind_null(jssqlite_data->lpStmt, nParam + 1);
             if (err != SQLITE_OK)
               ThrowDbError(__FILE__, __LINE__);
             break;
 
           case DUK_TYPE_BOOLEAN:
-            err = sqlite3_bind_int(jssqlite_data->lpStmt, (int)idx, DukTape::duk_get_boolean(lpCtx, idx) ? 1 : 0);
+            err = sqlite3_bind_int(jssqlite_data->lpStmt, nParam + 1, DukTape::duk_get_boolean(lpCtx, ndx) ? 1 : 0);
             if (err != SQLITE_OK)
               ThrowDbError(__FILE__, __LINE__);
             break;
 
           case DUK_TYPE_NUMBER:
             {
-              double dbl;
-              LONGLONG ll;
+            double dbl;
+            LONGLONG ll;
 
-              dbl = (double)DukTape::duk_get_number(lpCtx, idx);
-              ll = (LONGLONG)dbl;
-              if ((double)ll != dbl || dbl < (double)LONG_MIN)
-              {
-                err = sqlite3_bind_double(jssqlite_data->lpStmt, (int)idx, dbl);
-                if (err != SQLITE_OK)
-                  ThrowDbError(__FILE__, __LINE__);
-              }
-              else if (ll >= (LONGLONG)LONG_MIN || ll <= (LONGLONG)LONG_MAX)
-              {
-                err = sqlite3_bind_int(jssqlite_data->lpStmt, (int)idx, (LONG)ll);
-                if (err != SQLITE_OK)
-                  ThrowDbError(__FILE__, __LINE__);
-              }
-              else
-              {
-                err = sqlite3_bind_int64(jssqlite_data->lpStmt, (int)idx, ll);
-                if (err != SQLITE_OK)
-                  ThrowDbError(__FILE__, __LINE__);
-              }
+            dbl = (double)DukTape::duk_get_number(lpCtx, ndx);
+            ll = (LONGLONG)dbl;
+            if ((double)ll != dbl || dbl < (double)LONG_MIN)
+            {
+              err = sqlite3_bind_double(jssqlite_data->lpStmt, nParam + 1, dbl);
+              if (err != SQLITE_OK)
+                ThrowDbError(__FILE__, __LINE__);
+            }
+            else if (ll >= (LONGLONG)LONG_MIN || ll <= (LONGLONG)LONG_MAX)
+            {
+              err = sqlite3_bind_int(jssqlite_data->lpStmt, nParam + 1, (LONG)ll);
+              if (err != SQLITE_OK)
+                ThrowDbError(__FILE__, __LINE__);
+            }
+            else
+            {
+              err = sqlite3_bind_int64(jssqlite_data->lpStmt, nParam + 1, ll);
+              if (err != SQLITE_OK)
+                ThrowDbError(__FILE__, __LINE__);
+            }
             }
             break;
 
           case DUK_TYPE_STRING:
-            s = (LPVOID)DukTape::duk_get_lstring(lpCtx, idx, &nLen);
-            err = sqlite3_bind_text(jssqlite_data->lpStmt, (int)idx, (const char*)s, (int)nLen, SQLITE_TRANSIENT);
+            s = (LPVOID)DukTape::duk_get_lstring(lpCtx, ndx, &nLen);
+            err = sqlite3_bind_text(jssqlite_data->lpStmt, nParam + 1, (const char*)s, (int)nLen, SQLITE_TRANSIENT);
             if (err != SQLITE_OK)
               ThrowDbError(__FILE__, __LINE__);
             break;
 
           case DUK_TYPE_OBJECT:
-            CJavascriptVM::GetObjectType(lpCtx, idx, cStrTypeA);
+            if (DukTape::duk_is_buffer_data(lpCtx, ndx) != 0)
+              goto is_buffer;
+            CJavascriptVM::GetObjectType(lpCtx, ndx, cStrTypeA);
             if (StrCompareA((LPCSTR)cStrTypeA, "Date") == 0)
             {
               SYSTEMTIME sSt;
               CHAR szBufA[32];
 
-              CJavascriptVM::GetDate(lpCtx, idx, &sSt);
+              CJavascriptVM::GetDate(lpCtx, ndx, &sSt);
               _snprintf_s(szBufA, MX_ARRAYLEN(szBufA), _TRUNCATE, "%04u-%02u-%02u %02u:%02u:%02u.%03u",
                           sSt.wYear, sSt.wMonth, sSt.wDay, sSt.wHour, sSt.wMinute, sSt.wSecond, sSt.wMilliseconds);
-              err = sqlite3_bind_text(jssqlite_data->lpStmt, (int)idx, szBufA, (int)MX::StrLenA(szBufA),
+              err = sqlite3_bind_text(jssqlite_data->lpStmt, nParam + 1, szBufA, (int)MX::StrLenA(szBufA),
                                       SQLITE_TRANSIENT);
               if (err != SQLITE_OK)
                 ThrowDbError(__FILE__, __LINE__);
@@ -461,16 +543,16 @@ DukTape::duk_ret_t CJsSQLitePlugin::Query()
             break;
 
           case DUK_TYPE_BUFFER:
-            s = DukTape::duk_get_buffer(lpCtx, idx, &nLen);
+is_buffer:  s = DukTape::duk_get_buffer_data(lpCtx, ndx, &nLen);
             if (nLen < 0x7FFFFFFFL)
             {
-              err = sqlite3_bind_blob(jssqlite_data->lpStmt, (int)idx, s, (int)nLen, SQLITE_TRANSIENT);
+              err = sqlite3_bind_blob(jssqlite_data->lpStmt, nParam + 1, s, (int)nLen, SQLITE_TRANSIENT);
               if (err != SQLITE_OK)
                 ThrowDbError(__FILE__, __LINE__);
             }
             else
             {
-              err = sqlite3_bind_blob64(jssqlite_data->lpStmt, (int)idx, s, (sqlite3_uint64)nLen, SQLITE_TRANSIENT);
+              err = sqlite3_bind_blob64(jssqlite_data->lpStmt, nParam + 1, s, (sqlite3_uint64)nLen, SQLITE_TRANSIENT);
               if (err != SQLITE_OK)
                 ThrowDbError(__FILE__, __LINE__);
             }
@@ -478,6 +560,10 @@ DukTape::duk_ret_t CJsSQLitePlugin::Query()
 
           default:
             MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+        }
+        if (bParamsIsArray != FALSE)
+        {
+          DukTape::duk_pop(lpCtx);
         }
       }
     }
@@ -961,7 +1047,51 @@ DukTape::duk_ret_t CJsSQLitePlugin::BeginTransaction()
 
   if (lpInternal == NULL)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_NotReady);
-  DukTape::duk_push_lstring(lpCtx, "BEGIN TRANSACTION;", 18);
+
+  switch (DukTape::duk_get_top(lpCtx))
+  {
+    case 0:
+      DukTape::duk_push_lstring(lpCtx, "BEGIN TRANSACTION;", 18);
+      break;
+
+    case 1:
+      {
+      BOOL bIsExclusive = FALSE, bIsImmediate = FALSE;
+
+      if (DukTape::duk_is_object(lpCtx, 0) == 0)
+        MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+
+      DukTape::duk_get_prop_string(lpCtx, 0, "immediate");
+      if (duk_is_null_or_undefined(lpCtx, -1) == 0)
+        bIsImmediate = (MX::CJavascriptVM::GetInt(lpCtx, -1) != 0) ? TRUE : FALSE;
+      DukTape::duk_pop(lpCtx);
+      //----
+      DukTape::duk_get_prop_string(lpCtx, 0, "immediate");
+      if (duk_is_null_or_undefined(lpCtx, -1) == 0)
+        bIsExclusive = (MX::CJavascriptVM::GetInt(lpCtx, -1) != 0) ? TRUE : FALSE;
+      DukTape::duk_pop(lpCtx);
+
+      if (bIsExclusive != FALSE)
+      {
+        if (bIsImmediate != FALSE)
+          MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+        DukTape::duk_push_lstring(lpCtx, "BEGIN EXCLUSIVE TRANSACTION;", 28);
+      }
+      else if (bIsImmediate != FALSE)
+      {
+        DukTape::duk_push_lstring(lpCtx, "BEGIN IMMEDIATE TRANSACTION;", 28);
+      }
+      else
+      {
+        DukTape::duk_push_lstring(lpCtx, "BEGIN TRANSACTION;", 18);
+      }
+      }
+      break;
+
+    default:
+      MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+  }
+
   return Query();
 }
 
@@ -1047,24 +1177,31 @@ DukTape::duk_ret_t CJsSQLitePlugin::getFields()
 
 VOID CJsSQLitePlugin::ThrowDbError(_In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line)
 {
+  ThrowDbError(filename, line, sqlite3_extended_errcode(jssqlite_data->lpDB));
+  return;
+}
+
+VOID CJsSQLitePlugin::ThrowDbError(_In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line, _In_ int err,
+                                   _In_opt_ HRESULT hRes)
+{
   DukTape::duk_context *lpCtx = GetContext();
   LPCSTR sA;
-  int err;
 
-  err = sqlite3_extended_errcode(jssqlite_data->lpDB);
   if (err == 0)
     err = SQLITE_ERROR;
-  if (err == SQLITE_NOMEM)
+  if (err == SQLITE_NOMEM || hRes == E_OUTOFMEMORY)
     MX::CJavascriptVM::ThrowWindowsError(lpCtx, E_OUTOFMEMORY, filename, line);
 
-  sA = sqlite3_errmsg(jssqlite_data->lpDB);
-  if (sA == NULL || *sA == 0)
-    sA = sqlite3_errstr(err);
+  //sA = sqlite3_errmsg(jssqlite_data->lpDB);
+  //if (sA == NULL || *sA == 0)
+  sA = sqlite3_errstr(err);
+  if (SUCCEEDED(hRes))
+    hRes = HResultFromSQLiteErr(err);
 
   DukTape::duk_get_global_string(lpCtx, "SQLiteError");
-  DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)HResultFromSQLiteErr(err));
+  DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)hRes);
   DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)err);
-  DukTape::duk_push_string(lpCtx, (sA != NULL) ? sA : "");
+  DukTape::duk_push_string(lpCtx, (sA != NULL) ? sA : "Unknown");
   DukTape::duk_new(lpCtx, 3);
 
   if (filename != NULL && *filename != 0)
@@ -1115,6 +1252,12 @@ HRESULT CJsSQLitePlugin::HResultFromSQLiteErr(_In_ int nError)
           return MX_E_DuplicateKey;
       }
       return MX_E_ConstraintsCheckFailed;
+  }
+  if (jssqlite_data->lpDB != NULL)
+  {
+    HRESULT hRes = MX_HRESULT_FROM_WIN32(sqlite3_system_errno(jssqlite_data->lpDB));
+    if (FAILED(hRes))
+      return hRes;
   }
   return E_FAIL;
 }
@@ -1212,15 +1355,157 @@ static BOOL MustRetry(_In_ int err, _In_ DWORD dwInitialBusyTimeoutMs, _Inout_ D
 {
   if (err != SQLITE_BUSY || dwInitialBusyTimeoutMs == 0 || dwBusyTimeoutMs == 0)
     return FALSE;
-  if (dwBusyTimeoutMs >= 100)
+  if (dwBusyTimeoutMs != INFINITE)
   {
-    ::Sleep(100);
-    dwBusyTimeoutMs -= 100;
+    if (dwBusyTimeoutMs >= 100)
+    {
+      ::Sleep(100);
+      dwBusyTimeoutMs -= 100;
+    }
+    else
+    {
+      ::Sleep(dwBusyTimeoutMs);
+      dwBusyTimeoutMs = 0;
+    }
+  }
+  return TRUE;
+}
+
+static void myFuncUtcNow(sqlite3_context *ctx, int argc, sqlite3_value **argv)
+{
+  SYSTEMTIME sSt;
+  CHAR szBufA[32];
+
+  ::GetSystemTime(&sSt);
+  _snprintf_s(szBufA, MX_ARRAYLEN(szBufA), _TRUNCATE, "%04lu-%02lu-%02lu %02lu:%02lu:%02lu", (DWORD)(sSt.wYear),
+              (DWORD)(sSt.wMonth), (DWORD)(sSt.wDay), (DWORD)(sSt.wHour), (DWORD)(sSt.wMinute), (DWORD)(sSt.wSecond));
+  sqlite3_result_text(ctx, szBufA, -1, SQLITE_TRANSIENT);
+  return;
+}
+
+static void myFuncNow(sqlite3_context *ctx, int argc, sqlite3_value **argv)
+{
+  SYSTEMTIME sSt;
+  CHAR szBufA[32];
+
+  ::GetLocalTime(&sSt);
+  _snprintf_s(szBufA, MX_ARRAYLEN(szBufA), _TRUNCATE, "%04lu-%02lu-%02lu %02lu:%02lu:%02lu", (DWORD)(sSt.wYear),
+              (DWORD)(sSt.wMonth), (DWORD)(sSt.wDay), (DWORD)(sSt.wHour), (DWORD)(sSt.wMinute), (DWORD)(sSt.wSecond));
+  sqlite3_result_text(ctx, szBufA, -1, SQLITE_TRANSIENT);
+  return;
+}
+
+/*
+static void myFuncRegExp(sqlite3_context *ctx, int argc, sqlite3_value **argv)
+{
+  if (argc < 2) return;
+  const char *pattern = (const char *)sqlite3_value_text(argv[0]);
+  const char *text = (const char*)sqlite3_value_text(argv[1]);
+  if (pattern && text) sqlite3_result_int(ctx, strRegexp(pattern, text));
+  return;
+}
+*/
+
+static BOOL myFuncConcatCommon(_In_ MYFUNC_CONCAT_CONTEXT *p, _In_ const char *data, _In_ size_t len)
+{
+  if (data != NULL)
+  {
+    p->data = (char*)MX_REALLOC(p->data, p->len + len + 1);
+    if (p->data == NULL)
+      return FALSE;
+    p->data[p->len] = 0;
+    strncat_s(p->data, p->len + len + 1, data, len);
+    p->len += len;
+  }
+  return TRUE;
+}
+
+static void myFuncConcatStep(sqlite3_context *ctx, int argc, sqlite3_value **argv)
+{
+  MYFUNC_CONCAT_CONTEXT *p;
+  const char *txt;
+  const char *sep;
+
+  p = (MYFUNC_CONCAT_CONTEXT*)sqlite3_aggregate_context(ctx, sizeof(MYFUNC_CONCAT_CONTEXT));
+  if (p == NULL)
+  {
+err_nomem:
+    if (p != NULL)
+    {
+      MX_FREE(p->data);
+      MX_FREE(p->close);
+    }
+    sqlite3_result_error_nomem(ctx);
+    return;
+  }
+  txt = (const char*)sqlite3_value_text(argv[0]);
+  if (txt == NULL)
+    return;
+  sep = (const char*)sqlite3_value_text(argv[1]);
+  if (argc > 3)
+  {
+    const char *open = (const char*)sqlite3_value_text(argv[2]);
+    const char *close = (const char*)sqlite3_value_text(argv[3]);
+    if (p->close == NULL && close != NULL )
+    {
+      size_t len = strlen(close);
+
+      p->close = (char*)MX_MALLOC(len + 1);
+      if (p->close == NULL)
+        goto err_nomem;
+      strncpy_s(p->close, len + 1, close, len);
+      p->close[len] = 0;
+    }
+    if (p->data == NULL && open != NULL)
+    {
+      if (myFuncConcatCommon(p, open, strlen(open)) == FALSE)
+        goto err_nomem;
+    }
+  }
+  if (p->count && sep != NULL)
+  {
+    if (myFuncConcatCommon(p, sep, strlen(sep)) == FALSE)
+      goto err_nomem;
+  }
+  if (myFuncConcatCommon(p, txt, strlen(txt)) == FALSE)
+    goto err_nomem;
+  (p->count)++;
+  return;
+}
+
+static void myFuncConcatFinal(sqlite3_context *ctx)
+{
+  MYFUNC_CONCAT_CONTEXT *p;
+
+  p = (MYFUNC_CONCAT_CONTEXT*)sqlite3_aggregate_context(ctx, 0);
+  if (p != NULL && p->data != NULL)
+  {
+    if (p->close != NULL)
+    {
+      if (myFuncConcatCommon(p, p->close, strlen(p->close)) == FALSE)
+      {
+        MX_FREE(p->data);
+        MX_FREE(p->close);
+        sqlite3_result_error_nomem(ctx);
+        return;
+      }
+      MX_FREE(p->close);
+    }
+    sqlite3_result_text(ctx, p->data, (int)(unsigned int)(p->len), myFuncFree);
   }
   else
   {
-    ::Sleep(dwBusyTimeoutMs);
-    dwBusyTimeoutMs = 0;
+    if (p != NULL)
+    {
+      MX_FREE(p->data);
+    }
+    sqlite3_result_text(ctx, "", 0, SQLITE_STATIC);
   }
-  return TRUE;
+  return;
+}
+
+static void myFuncFree(_In_ void *ptr)
+{
+  MX_FREE(ptr);
+  return;
 }
