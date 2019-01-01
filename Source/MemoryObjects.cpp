@@ -96,7 +96,7 @@ size_t __stdcall MxTryMemCopy(_Out_writes_(nCount) void *lpDest, _In_ const void
 static VOID InitializeBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk, _In_ SIZE_T nSize, _In_opt_z_ const char *szFilenameA,
                             _In_ int nLineNumber, _In_ LPVOID lpRetAddress);
 static VOID SetBlockTags(_In_ MINIDEBUG_PREBLOCK *pPreBlk, _In_ BOOL bOnFree);
-static VOID CheckBlocks();
+//static VOID CheckBlocks();
 static VOID CheckBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk);
 static VOID LinkBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk);
 static VOID UnlinkBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk);
@@ -118,10 +118,11 @@ static __declspec(allocate(".CRT$XTY")) _PVFV my_exit_funcs[] = { &DumpLeaks };
 #ifdef DO_HEAP_CHECK
 static struct {
   LONG volatile nMutex;
-  LONG volatile nCheckCounter;
+  LONG volatile nCount;
+  //LONG volatile nCheckCounter;
   MINIDEBUG_PREBLOCK *lpHead;
   MINIDEBUG_PREBLOCK *lpTail;
-} sAllocatedBlocks = { 0, CHECK_COUNTER_START, NULL, NULL };
+} sAllocatedBlocks = { 0, 0, /*CHECK_COUNTER_START, */NULL, NULL };
 #endif //DO_HEAP_CHECK
 
 //-----------------------------------------------------------
@@ -151,7 +152,7 @@ LPVOID MemAlloc(_In_ SIZE_T nSize)
   if (nSize == 0)
     nSize = 1;
 #ifdef DO_HEAP_CHECK
-  CheckBlocks();
+  //CheckBlocks();
   p = (LPBYTE)::MxRtlAllocateHeap(::MxGetProcessHeap(), 0, nSize + EXTRA_ALLOC);
   if (p != NULL)
   {
@@ -191,7 +192,7 @@ LPVOID MemAllocD(_In_ SIZE_T nSize, _In_opt_z_ const char *szFilenameA, _In_ int
   if (nSize == 0)
     nSize = 1;
 #ifdef DO_HEAP_CHECK
-  CheckBlocks();
+  //CheckBlocks();
   p = (LPBYTE)::MxRtlAllocateHeap(::MxGetProcessHeap(), 0, nSize+EXTRA_ALLOC);
   if (p != NULL)
   {
@@ -237,7 +238,7 @@ LPVOID MemRealloc(_In_opt_ LPVOID lpPtr, _In_ SIZE_T nSize)
 #ifdef DO_HEAP_CHECK
   lpRetAddress = _ReturnAddress();
 
-  CheckBlocks();
+  //CheckBlocks();
   pPreBlk = (MINIDEBUG_PREBLOCK*)((LPBYTE)lpPtr - sizeof(MINIDEBUG_PREBLOCK));
   CheckBlock(pPreBlk);
   UnlinkBlock(pPreBlk);
@@ -291,7 +292,7 @@ LPVOID MemReallocD(_In_opt_ LPVOID lpPtr, _In_ SIZE_T nSize, _In_opt_z_ const ch
 #ifdef DO_HEAP_CHECK
   lpRetAddress = _ReturnAddress();
 
-  CheckBlocks();
+  //CheckBlocks();
   pPreBlk = (MINIDEBUG_PREBLOCK*)((LPBYTE)lpPtr - sizeof(MINIDEBUG_PREBLOCK));
   CheckBlock(pPreBlk);
   UnlinkBlock(pPreBlk);
@@ -333,7 +334,7 @@ VOID MemFree(_In_opt_ LPVOID lpPtr)
 #ifdef DO_HEAP_CHECK
     MINIDEBUG_PREBLOCK *pPreBlk;
 
-    CheckBlocks();
+    //CheckBlocks();
     pPreBlk = (MINIDEBUG_PREBLOCK*)((LPBYTE)lpPtr - sizeof(MINIDEBUG_PREBLOCK));
     CheckBlock(pPreBlk);
     UnlinkBlock(pPreBlk);
@@ -365,7 +366,7 @@ SIZE_T MemSize(_In_opt_ LPVOID lpPtr)
     MINIDEBUG_PREBLOCK *pPreBlk;
     SIZE_T nSize;
 
-    CheckBlocks();
+    //CheckBlocks();
     pPreBlk = (MINIDEBUG_PREBLOCK*)((LPBYTE)lpPtr - sizeof(MINIDEBUG_PREBLOCK));
     CheckBlock(pPreBlk);
     nSize = ::MxRtlSizeHeap(::MxGetProcessHeap(), 0, pPreBlk);
@@ -567,19 +568,19 @@ static VOID SetBlockTags(_In_ MINIDEBUG_PREBLOCK *pPreBlk, _In_ BOOL bOnFree)
   return;
 }
 
-static VOID CheckBlocks()
-{
-  if (_InterlockedDecrement(&(sAllocatedBlocks.nCheckCounter)) == 0)
-  {
-    MX::CFastLock cLock(&(sAllocatedBlocks.nMutex));
-    MINIDEBUG_PREBLOCK *lpBlock;
-
-    _InterlockedExchange(&(sAllocatedBlocks.nCheckCounter), CHECK_COUNTER_START);
-    for (lpBlock=sAllocatedBlocks.lpHead; lpBlock!=NULL; lpBlock=lpBlock->lpNext)
-      CheckBlock(lpBlock);
-  }
-  return;
-}
+//static VOID CheckBlocks()
+//{
+//  if (_InterlockedDecrement(&(sAllocatedBlocks.nCheckCounter)) == 0)
+//  {
+//    MX::CFastLock cLock(&(sAllocatedBlocks.nMutex));
+//    MINIDEBUG_PREBLOCK *lpBlock;
+//
+//    _InterlockedExchange(&(sAllocatedBlocks.nCheckCounter), CHECK_COUNTER_START);
+//    for (lpBlock=sAllocatedBlocks.lpHead; lpBlock!=NULL; lpBlock=lpBlock->lpNext)
+//      CheckBlock(lpBlock);
+//  }
+//  return;
+//}
 
 static VOID CheckBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk)
 {
@@ -607,6 +608,8 @@ static VOID LinkBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk)
   sAllocatedBlocks.lpTail = pPreBlk;
   if (sAllocatedBlocks.lpHead == NULL)
     sAllocatedBlocks.lpHead = pPreBlk;
+  //----
+  (sAllocatedBlocks.nCount)++;
   return;
 }
 
@@ -631,6 +634,8 @@ static VOID UnlinkBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk)
     pPreBlk->lpPrev->lpNext = pPreBlk->lpNext;
   }
   pPreBlk->lpNext = pPreBlk->lpPrev = NULL;
+  //----
+  (sAllocatedBlocks.nCount)--;
   return;
 }
 
