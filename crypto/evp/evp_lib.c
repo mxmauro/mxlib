@@ -1,7 +1,7 @@
 /*
  * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -460,6 +460,25 @@ EVP_PKEY_CTX *EVP_MD_CTX_pkey_ctx(const EVP_MD_CTX *ctx)
     return ctx->pctx;
 }
 
+void EVP_MD_CTX_set_pkey_ctx(EVP_MD_CTX *ctx, EVP_PKEY_CTX *pctx)
+{
+    /*
+     * it's reasonable to set NULL pctx (a.k.a clear the ctx->pctx), so
+     * we have to deal with the cleanup job here.
+     */
+    if (!EVP_MD_CTX_test_flags(ctx, EVP_MD_CTX_FLAG_KEEP_PKEY_CTX))
+        EVP_PKEY_CTX_free(ctx->pctx);
+
+    ctx->pctx = pctx;
+
+    if (pctx != NULL) {
+        /* make sure pctx is not freed when destroying EVP_MD_CTX */
+        EVP_MD_CTX_set_flags(ctx, EVP_MD_CTX_FLAG_KEEP_PKEY_CTX);
+    } else {
+        EVP_MD_CTX_clear_flags(ctx, EVP_MD_CTX_FLAG_KEEP_PKEY_CTX);
+    }
+}
+
 void *EVP_MD_CTX_md_data(const EVP_MD_CTX *ctx)
 {
     return ctx->md_data;
@@ -506,4 +525,31 @@ void EVP_CIPHER_CTX_clear_flags(EVP_CIPHER_CTX *ctx, int flags)
 int EVP_CIPHER_CTX_test_flags(const EVP_CIPHER_CTX *ctx, int flags)
 {
     return (ctx->flags & flags);
+}
+
+int EVP_str2ctrl(int (*cb)(void *ctx, int cmd, void *buf, size_t buflen),
+                 void *ctx, int cmd, const char *value)
+{
+    size_t len;
+
+    len = strlen(value);
+    if (len > INT_MAX)
+        return -1;
+    return cb(ctx, cmd, (void *)value, len);
+}
+
+int EVP_hex2ctrl(int (*cb)(void *ctx, int cmd, void *buf, size_t buflen),
+                 void *ctx, int cmd, const char *hex)
+{
+    unsigned char *bin;
+    long binlen;
+    int rv = -1;
+
+    bin = OPENSSL_hexstr2buf(hex, &binlen);
+    if (bin == NULL)
+        return 0;
+    if (binlen <= INT_MAX)
+        rv = cb(ctx, cmd, bin, binlen);
+    OPENSSL_free(bin);
+    return rv;
 }
