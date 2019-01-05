@@ -1,7 +1,7 @@
 /*
  * Copyright 2001-2018 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -863,6 +863,7 @@ static void killall(int ret, pid_t *kidpids)
     for (i = 0; i < multi; ++i)
         if (kidpids[i] != 0)
             (void)kill(kidpids[i], SIGTERM);
+    OPENSSL_free(kidpids);
     sleep(1);
     exit(ret);
 }
@@ -950,6 +951,7 @@ static void spawn_loop(void)
             sleep(30);
             break;
         case 0:             /* child */
+            OPENSSL_free(kidpids);
             signal(SIGINT, SIG_DFL);
             signal(SIGTERM, SIG_DFL);
             if (termsig)

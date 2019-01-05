@@ -3,7 +3,7 @@
  * Copyright (c) 2002, Oracle and/or its affiliates. All rights reserved
  * Copyright 2005 Nokia. All rights reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -163,7 +163,7 @@ static int ossl_statem_client13_read_transition(SSL *s, int mt)
             return 1;
         }
         if (mt == SSL3_MT_CERTIFICATE_REQUEST) {
-#if DTLS_MAX_VERSION != DTLS1_2_VERSION
+#if DTLS_MAX_VERSION_INTERNAL != DTLS1_2_VERSION
 # error TODO(DTLS1.3): Restore digest for PHA before adding message.
 #endif
             if (!SSL_IS_DTLS(s) && s->post_handshake_auth == SSL_PHA_EXT_SENT) {
@@ -423,11 +423,19 @@ static WRITE_TRAN ossl_statem_client13_write_transition(SSL *s)
             st->hand_state = TLS_ST_CW_CERT;
             return WRITE_TRAN_CONTINUE;
         }
-        /* Shouldn't happen - same as default case */
-        SSLfatal(s, SSL_AD_INTERNAL_ERROR,
-                 SSL_F_OSSL_STATEM_CLIENT13_WRITE_TRANSITION,
-                 ERR_R_INTERNAL_ERROR);
-        return WRITE_TRAN_ERROR;
+        /*
+         * We should only get here if we received a CertificateRequest after
+         * we already sent close_notify
+         */
+        if (!ossl_assert((s->shutdown & SSL_SENT_SHUTDOWN) != 0)) {
+            /* Shouldn't happen - same as default case */
+            SSLfatal(s, SSL_AD_INTERNAL_ERROR,
+                     SSL_F_OSSL_STATEM_CLIENT13_WRITE_TRANSITION,
+                     ERR_R_INTERNAL_ERROR);
+            return WRITE_TRAN_ERROR;
+        }
+        st->hand_state = TLS_ST_OK;
+        return WRITE_TRAN_CONTINUE;
 
     case TLS_ST_CR_FINISHED:
         if (s->early_data_state == SSL_EARLY_DATA_WRITE_RETRY
@@ -1087,6 +1095,7 @@ WORK_STATE ossl_statem_client_post_process_message(SSL *s, WORK_STATE wst)
                  ERR_R_INTERNAL_ERROR);
         return WORK_ERROR;
 
+    case TLS_ST_CR_CERT_VRFY:
     case TLS_ST_CR_CERT_REQ:
         return tls_prepare_client_certificate(s, wst);
     }
@@ -2344,7 +2353,8 @@ MSG_PROCESS_RETURN tls_process_key_exchange(SSL *s, PACKET *pkt)
         }
 #ifdef SSL_DEBUG
         if (SSL_USE_SIGALGS(s))
-            fprintf(stderr, "USING TLSv1.2 HASH %s\n", EVP_MD_name(md));
+            fprintf(stderr, "USING TLSv1.2 HASH %s\n",
+                    md == NULL ? "n/a" : EVP_MD_name(md));
 #endif
 
         if (!PACKET_get_length_prefixed_2(pkt, &signature)
@@ -2446,6 +2456,15 @@ MSG_PROCESS_RETURN tls_process_certificate_request(SSL *s, PACKET *pkt)
         PACKET reqctx, extensions;
         RAW_EXTENSION *rawexts = NULL;
 
+        if ((s->shutdown & SSL_SENT_SHUTDOWN) != 0) {
+            /*
+             * We already sent close_notify. This can only happen in TLSv1.3
+             * post-handshake messages. We can't reasonably respond to this, so
+             * we just ignore it
+             */
+            return MSG_PROCESS_FINISHED_READING;
+        }
+
         /* Free and zero certificate types: it is not present in TLS 1.3 */
         OPENSSL_free(s->s3->tmp.ctype);
         s->s3->tmp.ctype = NULL;
@@ -2545,6 +2564,17 @@ MSG_PROCESS_RETURN tls_process_certificate_request(SSL *s, PACKET *pkt)
 
     /* we should setup a certificate to return.... */
     s->s3->tmp.cert_req = 1;
+
+    /*
+     * In TLSv1.3 we don't prepare the client certificate yet. We wait until
+     * after the CertificateVerify message has been received. This is because
+     * in TLSv1.3 the CertificateRequest arrives before the Certificate message
+     * but in TLSv1.2 it is the other way around. We want to make sure that
+     * SSL_get_peer_certificate() returns something sensible in
+     * client_cert_cb.
+     */
+    if (SSL_IS_TLS13(s) && s->post_handshake_auth != SSL_PHA_REQUESTED)
+        return MSG_PROCESS_CONTINUE_READING;
 
     return MSG_PROCESS_CONTINUE_PROCESSING;
 }
@@ -2710,7 +2740,7 @@ MSG_PROCESS_RETURN tls_process_new_session_ticket(SSL *s, PACKET *pkt)
                                PACKET_data(&nonce),
                                PACKET_remaining(&nonce),
                                s->session->master_key,
-                               hashlen)) {
+                               hashlen, 1)) {
             /* SSLfatal() already called */
             goto err;
         }

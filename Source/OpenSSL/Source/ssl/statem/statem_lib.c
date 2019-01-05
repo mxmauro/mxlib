@@ -2,7 +2,7 @@
  * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright (c) 2002, Oracle and/or its affiliates. All rights reserved
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -203,9 +203,10 @@ static int get_cert_verify_tbs_data(SSL *s, unsigned char *tls13tbs,
         *hdatalen = TLS13_TBS_PREAMBLE_SIZE + hashlen;
     } else {
         size_t retlen;
+        long retlen_l;
 
-        retlen = BIO_get_mem_data(s->s3->handshake_buffer, hdata);
-        if (retlen <= 0) {
+        retlen = retlen_l = BIO_get_mem_data(s->s3->handshake_buffer, hdata);
+        if (retlen_l <= 0) {
             SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_GET_CERT_VERIFY_TBS_DATA,
                      ERR_R_INTERNAL_ERROR);
             return 0;
@@ -395,7 +396,8 @@ MSG_PROCESS_RETURN tls_process_cert_verify(SSL *s, PACKET *pkt)
 
 #ifdef SSL_DEBUG
     if (SSL_USE_SIGALGS(s))
-        fprintf(stderr, "USING TLSv1.2 HASH %s\n", EVP_MD_name(md));
+        fprintf(stderr, "USING TLSv1.2 HASH %s\n",
+                md == NULL ? "n/a" : EVP_MD_name(md));
 #endif
 
     /* Check for broken implementations of GOST ciphersuites */
@@ -438,7 +440,8 @@ MSG_PROCESS_RETURN tls_process_cert_verify(SSL *s, PACKET *pkt)
     }
 
 #ifdef SSL_DEBUG
-    fprintf(stderr, "Using client verify alg %s\n", EVP_MD_name(md));
+    fprintf(stderr, "Using client verify alg %s\n",
+            md == NULL ? "n/a" : EVP_MD_name(md));
 #endif
     if (EVP_DigestVerifyInit(mctx, &pctx, md, NULL, pkey) <= 0) {
         SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_TLS_PROCESS_CERT_VERIFY,
@@ -494,7 +497,18 @@ MSG_PROCESS_RETURN tls_process_cert_verify(SSL *s, PACKET *pkt)
         }
     }
 
-    ret = MSG_PROCESS_CONTINUE_READING;
+    /*
+     * In TLSv1.3 on the client side we make sure we prepare the client
+     * certificate after the CertVerify instead of when we get the
+     * CertificateRequest. This is because in TLSv1.3 the CertificateRequest
+     * comes *before* the Certificate message. In TLSv1.2 it comes after. We
+     * want to make sure that SSL_get_peer_certificate() will return the actual
+     * server certificate from the client_cert_cb callback.
+     */
+    if (!s->server && SSL_IS_TLS13(s) && s->s3->tmp.cert_req == 1)
+        ret = MSG_PROCESS_CONTINUE_PROCESSING;
+    else
+        ret = MSG_PROCESS_CONTINUE_READING;
  err:
     BIO_free(s->s3->handshake_buffer);
     s->s3->handshake_buffer = NULL;
@@ -638,9 +652,12 @@ MSG_PROCESS_RETURN tls_process_key_update(SSL *s, PACKET *pkt)
     /*
      * If we get a request for us to update our sending keys too then, we need
      * to additionally send a KeyUpdate message. However that message should
-     * not also request an update (otherwise we get into an infinite loop).
+     * not also request an update (otherwise we get into an infinite loop). We
+     * ignore a request for us to update our sending keys too if we already
+     * sent close_notify.
      */
-    if (updatetype == SSL_KEY_UPDATE_REQUESTED)
+    if (updatetype == SSL_KEY_UPDATE_REQUESTED
+            && (s->shutdown & SSL_SENT_SHUTDOWN) == 0)
         s->key_update = SSL_KEY_UPDATE_NOT_REQUESTED;
 
     if (!tls13_update_key(s, 0)) {
@@ -1400,7 +1417,7 @@ typedef struct {
     const SSL_METHOD *(*smeth) (void);
 } version_info;
 
-#if TLS_MAX_VERSION != TLS1_3_VERSION
+#if TLS_MAX_VERSION_INTERNAL != TLS1_3_VERSION
 # error Code needs update for TLS_method() support beyond TLS1_3_VERSION.
 #endif
 
@@ -1434,7 +1451,7 @@ static const version_info tls_version_table[] = {
     {0, NULL, NULL},
 };
 
-#if DTLS_MAX_VERSION != DTLS1_2_VERSION
+#if DTLS_MAX_VERSION_INTERNAL != DTLS1_2_VERSION
 # error Code needs update for DTLS_method() support beyond DTLS1_2_VERSION.
 #endif
 
@@ -1486,18 +1503,23 @@ static int ssl_method_error(const SSL *s, const SSL_METHOD *method)
 
 /*
  * Only called by servers. Returns 1 if the server has a TLSv1.3 capable
- * certificate type, or has PSK configured. Otherwise returns 0.
+ * certificate type, or has PSK or a certificate callback configured. Otherwise
+ * returns 0.
  */
 static int is_tls13_capable(const SSL *s)
 {
     int i;
+#ifndef OPENSSL_NO_EC
+    int curve;
+    EC_KEY *eckey;
+#endif
 
 #ifndef OPENSSL_NO_PSK
     if (s->psk_server_callback != NULL)
         return 1;
 #endif
 
-    if (s->psk_find_session_cb != NULL)
+    if (s->psk_find_session_cb != NULL || s->cert->cert_cb != NULL)
         return 1;
 
     for (i = 0; i < SSL_PKEY_NUM; i++) {
@@ -1511,8 +1533,25 @@ static int is_tls13_capable(const SSL *s)
         default:
             break;
         }
-        if (ssl_has_cert(s, i))
+        if (!ssl_has_cert(s, i))
+            continue;
+#ifndef OPENSSL_NO_EC
+        if (i != SSL_PKEY_ECC)
             return 1;
+        /*
+         * Prior to TLSv1.3 sig algs allowed any curve to be used. TLSv1.3 is
+         * more restrictive so check that our sig algs are consistent with this
+         * EC cert. See section 4.2.3 of RFC8446.
+         */
+        eckey = EVP_PKEY_get0_EC_KEY(s->cert->pkeys[SSL_PKEY_ECC].privatekey);
+        if (eckey == NULL)
+            continue;
+        curve = EC_GROUP_get_curve_name(EC_KEY_get0_group(eckey));
+        if (tls_check_sigalg_curve(s, curve))
+            return 1;
+#else
+        return 1;
+#endif
     }
 
     return 0;
@@ -1645,12 +1684,12 @@ int ssl_set_version_bound(int method_version, int version, int *bound)
         return 0;
 
     case TLS_ANY_VERSION:
-        if (version < SSL3_VERSION || version > TLS_MAX_VERSION)
+        if (version < SSL3_VERSION || version > TLS_MAX_VERSION_INTERNAL)
             return 0;
         break;
 
     case DTLS_ANY_VERSION:
-        if (DTLS_VERSION_GT(version, DTLS_MAX_VERSION) ||
+        if (DTLS_VERSION_GT(version, DTLS_MAX_VERSION_INTERNAL) ||
             DTLS_VERSION_LT(version, DTLS1_BAD_VER))
             return 0;
         break;
@@ -1696,7 +1735,7 @@ int ssl_choose_server_version(SSL *s, CLIENTHELLO_MSG *hello, DOWNGRADE *dgrd)
      * With version-flexible methods we have an initial state with:
      *
      *   s->method->version == (D)TLS_ANY_VERSION,
-     *   s->version == (D)TLS_MAX_VERSION.
+     *   s->version == (D)TLS_MAX_VERSION_INTERNAL.
      *
      * So we detect version-flexible methods via the method version, not the
      * handle version.
@@ -2257,10 +2296,24 @@ int parse_ca_names(SSL *s, PACKET *pkt)
     return 0;
 }
 
-int construct_ca_names(SSL *s, WPACKET *pkt)
+const STACK_OF(X509_NAME) *get_ca_names(SSL *s)
 {
-    const STACK_OF(X509_NAME) *ca_sk = SSL_get0_CA_list(s);
+    const STACK_OF(X509_NAME) *ca_sk = NULL;;
 
+    if (s->server) {
+        ca_sk = SSL_get_client_CA_list(s);
+        if (ca_sk != NULL && sk_X509_NAME_num(ca_sk) == 0)
+            ca_sk = NULL;
+    }
+
+    if (ca_sk == NULL)
+        ca_sk = SSL_get0_CA_list(s);
+
+    return ca_sk;
+}
+
+int construct_ca_names(SSL *s, const STACK_OF(X509_NAME) *ca_sk, WPACKET *pkt)
+{
     /* Start sub-packet for client CA list */
     if (!WPACKET_start_sub_packet_u16(pkt)) {
         SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_CONSTRUCT_CA_NAMES,

@@ -1,7 +1,7 @@
 /*
  * Copyright 2016-2018 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -1160,6 +1160,7 @@ int tls_parse_ctos_psk(SSL *s, PACKET *pkt, unsigned int context, X509 *x,
             ext = 1;
             if (id == 0)
                 s->ext.early_data_ok = 1;
+            s->ext.ticket_expected = 1;
         } else {
             uint32_t ticket_age = 0, now, agesec, agems;
             int ret;
@@ -1235,6 +1236,7 @@ int tls_parse_ctos_psk(SSL *s, PACKET *pkt, unsigned int context, X509 *x,
             SSL_SESSION_free(sess);
             sess = NULL;
             s->ext.early_data_ok = 0;
+            s->ext.ticket_expected = 0;
             continue;
         }
         break;

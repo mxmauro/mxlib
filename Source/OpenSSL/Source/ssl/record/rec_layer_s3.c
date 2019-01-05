@@ -1,7 +1,7 @@
 /*
  * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -743,6 +743,18 @@ int do_ssl3_write(SSL *s, int type, const unsigned char *buf,
         s->s3->empty_fragment_done = 1;
     }
 
+    if (BIO_get_ktls_send(s->wbio)) {
+        /*
+         * ktls doesn't modify the buffer, but to avoid a warning we need to
+         * discard the const qualifier.
+         * This doesn't leak memory because the buffers have been released when
+         * switching to ktls.
+         */
+        SSL3_BUFFER_set_buf(&s->rlayer.wbuf[0], (unsigned char *)buf);
+        SSL3_BUFFER_set_offset(&s->rlayer.wbuf[0], 0);
+        goto wpacket_init_complete;
+    }
+
     if (create_empty_fragment) {
         wb = &s->rlayer.wbuf[0];
 #if defined(SSL3_ALIGN_PAYLOAD) && SSL3_ALIGN_PAYLOAD!=0
@@ -812,6 +824,8 @@ int do_ssl3_write(SSL *s, int type, const unsigned char *buf,
         }
     }
 
+ wpacket_init_complete:
+
     totlen = 0;
     /* Clear our SSL3_RECORD structures */
     memset(wr, 0, sizeof(wr));
@@ -853,15 +867,19 @@ int do_ssl3_write(SSL *s, int type, const unsigned char *buf,
         if (s->compress != NULL)
             maxcomplen += SSL3_RT_MAX_COMPRESSED_OVERHEAD;
 
-        /* write the header */
-        if (!WPACKET_put_bytes_u8(thispkt, rectype)
+        /*
+         * When using offload kernel will write the header.
+         * Otherwise write the header now
+         */
+        if (!BIO_get_ktls_send(s->wbio)
+                && (!WPACKET_put_bytes_u8(thispkt, rectype)
                 || !WPACKET_put_bytes_u16(thispkt, version)
                 || !WPACKET_start_sub_packet_u16(thispkt)
                 || (eivlen > 0
                     && !WPACKET_allocate_bytes(thispkt, eivlen, NULL))
                 || (maxcomplen > 0
                     && !WPACKET_reserve_bytes(thispkt, maxcomplen,
-                                              &compressdata))) {
+                                              &compressdata)))) {
             SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_DO_SSL3_WRITE,
                      ERR_R_INTERNAL_ERROR);
             goto err;
@@ -887,12 +905,16 @@ int do_ssl3_write(SSL *s, int type, const unsigned char *buf,
                 goto err;
             }
         } else {
-            if (!WPACKET_memcpy(thispkt, thiswr->input, thiswr->length)) {
-                SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_DO_SSL3_WRITE,
-                         ERR_R_INTERNAL_ERROR);
-                goto err;
+            if (BIO_get_ktls_send(s->wbio)) {
+                SSL3_RECORD_reset_data(&wr[j]);
+            } else {
+                if (!WPACKET_memcpy(thispkt, thiswr->input, thiswr->length)) {
+                    SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_DO_SSL3_WRITE,
+                            ERR_R_INTERNAL_ERROR);
+                    goto err;
+                }
+                SSL3_RECORD_reset_input(&wr[j]);
             }
-            SSL3_RECORD_reset_input(&wr[j]);
         }
 
         if (SSL_TREAT_AS_TLS13(s)
@@ -967,24 +989,26 @@ int do_ssl3_write(SSL *s, int type, const unsigned char *buf,
          * This will be at most one cipher block or the tag length if using
          * AEAD. SSL_RT_MAX_CIPHER_BLOCK_SIZE covers either case.
          */
-        if (!WPACKET_reserve_bytes(thispkt, SSL_RT_MAX_CIPHER_BLOCK_SIZE,
-                                   NULL)
-                   /*
-                    * We also need next the amount of bytes written to this
-                    * sub-packet
-                    */
+        if (!BIO_get_ktls_send(s->wbio)) {
+            if (!WPACKET_reserve_bytes(thispkt,
+                                        SSL_RT_MAX_CIPHER_BLOCK_SIZE,
+                                        NULL)
+                /*
+                 * We also need next the amount of bytes written to this
+                 * sub-packet
+                 */
                 || !WPACKET_get_length(thispkt, &len)) {
             SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_DO_SSL3_WRITE,
                      ERR_R_INTERNAL_ERROR);
             goto err;
+            }
+
+            /* Get a pointer to the start of this record excluding header */
+            recordstart = WPACKET_get_curr(thispkt) - len;
+            SSL3_RECORD_set_data(thiswr, recordstart);
+            SSL3_RECORD_reset_input(thiswr);
+            SSL3_RECORD_set_length(thiswr, len);
         }
-
-        /* Get a pointer to the start of this record excluding header */
-        recordstart = WPACKET_get_curr(thispkt) - len;
-
-        SSL3_RECORD_set_data(thiswr, recordstart);
-        SSL3_RECORD_reset_input(thiswr);
-        SSL3_RECORD_set_length(thiswr, len);
     }
 
     if (s->statem.enc_write_state == ENC_WRITE_STATE_WRITE_PLAIN_ALERTS) {
@@ -1000,12 +1024,14 @@ int do_ssl3_write(SSL *s, int type, const unsigned char *buf,
             goto err;
         }
     } else {
-        if (s->method->ssl3_enc->enc(s, wr, numpipes, 1) < 1) {
-            if (!ossl_statem_in_error(s)) {
-                SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_DO_SSL3_WRITE,
-                         ERR_R_INTERNAL_ERROR);
+        if (!BIO_get_ktls_send(s->wbio)) {
+            if (s->method->ssl3_enc->enc(s, wr, numpipes, 1) < 1) {
+                if (!ossl_statem_in_error(s)) {
+                    SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_DO_SSL3_WRITE,
+                            ERR_R_INTERNAL_ERROR);
+                }
+                goto err;
             }
-            goto err;
         }
     }
 
@@ -1015,13 +1041,17 @@ int do_ssl3_write(SSL *s, int type, const unsigned char *buf,
         thispkt = &pkt[j];
         thiswr = &wr[j];
 
+        if (BIO_get_ktls_send(s->wbio))
+            goto mac_done;
+
         /* Allocate bytes for the encryption overhead */
         if (!WPACKET_get_length(thispkt, &origlen)
                    /* Encryption should never shrink the data! */
                 || origlen > thiswr->length
                 || (thiswr->length > origlen
                     && !WPACKET_allocate_bytes(thispkt,
-                                               thiswr->length - origlen, NULL))) {
+                                               thiswr->length - origlen,
+                                               NULL))) {
             SSLfatal(s, SSL_AD_INTERNAL_ERROR, SSL_F_DO_SSL3_WRITE,
                      ERR_R_INTERNAL_ERROR);
             goto err;
@@ -1066,13 +1096,8 @@ int do_ssl3_write(SSL *s, int type, const unsigned char *buf,
             goto err;
         }
 
-        /*
-         * we should now have thiswr->data pointing to the encrypted data, which
-         * is thiswr->length long
-         */
-        SSL3_RECORD_set_type(thiswr, type); /* not needed but helps for
-                                             * debugging */
-        SSL3_RECORD_add_length(thiswr, SSL3_RT_HEADER_LENGTH);
+        /* header is added by the kernel when using offload */
+        SSL3_RECORD_add_length(&wr[j], SSL3_RT_HEADER_LENGTH);
 
         if (create_empty_fragment) {
             /*
@@ -1088,6 +1113,14 @@ int do_ssl3_write(SSL *s, int type, const unsigned char *buf,
             *written = SSL3_RECORD_get_length(thiswr);
             return 1;
         }
+
+ mac_done:
+        /*
+         * we should now have thiswr->data pointing to the encrypted data, which
+         * is thiswr->length long
+         */
+        SSL3_RECORD_set_type(thiswr, type); /* not needed but helps for
+                                             * debugging */
 
         /* now let's set up wb */
         SSL3_BUFFER_set_left(&s->rlayer.wbuf[j],
@@ -1142,6 +1175,21 @@ int ssl3_write_pending(SSL *s, int type, const unsigned char *buf, size_t len,
         clear_sys_error();
         if (s->wbio != NULL) {
             s->rwstate = SSL_WRITING;
+
+            /*
+             * To prevent coalescing of control and data messages,
+             * such as in buffer_write, we flush the BIO
+             */
+            if (BIO_get_ktls_send(s->wbio) && type != SSL3_RT_APPLICATION_DATA) {
+                i = BIO_flush(s->wbio);
+                if (i <= 0)
+                    return i;
+            }
+
+            if (BIO_get_ktls_send(s->wbio)
+                && type != SSL3_RT_APPLICATION_DATA) {
+                BIO_set_ktls_ctrl_msg(s->wbio, type);
+            }
             /* TODO(size_t): Convert this call */
             i = BIO_write(s->wbio, (char *)
                           &(SSL3_BUFFER_get_buf(&wb[currbuf])
@@ -1554,30 +1602,30 @@ int ssl3_read_bytes(SSL *s, int type, int *recvd_type, unsigned char *buf,
         return -1;
     }
 
-    /*
-     * If we've sent a close_notify but not yet received one back then ditch
-     * anything we read.
-     */
     if ((s->shutdown & SSL_SENT_SHUTDOWN) != 0) {
-        /*
-         * In TLSv1.3 this could get problematic if we receive a KeyUpdate
-         * message after we sent a close_notify because we're about to ditch it,
-         * so we won't be able to read a close_notify sent afterwards! We don't
-         * support that.
-         */
-        SSL3_RECORD_set_length(rr, 0);
-        SSL3_RECORD_set_read(rr);
-
         if (SSL3_RECORD_get_type(rr) == SSL3_RT_HANDSHAKE) {
             BIO *rbio;
 
-            if ((s->mode & SSL_MODE_AUTO_RETRY) != 0)
-                goto start;
+            /*
+             * We ignore any handshake messages sent to us unless they are
+             * TLSv1.3 in which case we want to process them. For all other
+             * handshake messages we can't do anything reasonable with them
+             * because we are unable to write any response due to having already
+             * sent close_notify.
+             */
+            if (!SSL_IS_TLS13(s)) {
+                SSL3_RECORD_set_length(rr, 0);
+                SSL3_RECORD_set_read(rr);
 
-            s->rwstate = SSL_READING;
-            rbio = SSL_get_rbio(s);
-            BIO_clear_retry_flags(rbio);
-            BIO_set_retry_read(rbio);
+                if ((s->mode & SSL_MODE_AUTO_RETRY) != 0)
+                    goto start;
+
+                s->rwstate = SSL_READING;
+                rbio = SSL_get_rbio(s);
+                BIO_clear_retry_flags(rbio);
+                BIO_set_retry_read(rbio);
+                return -1;
+            }
         } else {
             /*
              * The peer is continuing to send application data, but we have
@@ -1586,10 +1634,12 @@ int ssl3_read_bytes(SSL *s, int type, int *recvd_type, unsigned char *buf,
              * above.
              * No alert sent because we already sent close_notify
              */
+            SSL3_RECORD_set_length(rr, 0);
+            SSL3_RECORD_set_read(rr);
             SSLfatal(s, SSL_AD_NO_ALERT, SSL_F_SSL3_READ_BYTES,
                      SSL_R_APPLICATION_DATA_AFTER_CLOSE_NOTIFY);
+            return -1;
         }
-        return -1;
     }
 
     /*
