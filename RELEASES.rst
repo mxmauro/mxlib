@@ -3398,8 +3398,24 @@ Planned
 
 * Enable Symbol built-in by default (DUK_USE_SYMBOL_BUILTIN) (GH-1969)
 
+* Remove arguments.caller for strict argument objects to match revised
+  ES2017 behavior (GH-2009)
+
+* Fix Object.getOwnPropertySymbols() behavior for the virtual properties
+  of arrays, Strings, and buffer objects: string keys were incorrectly
+  included in the result (GH-1978, GH-1979)
+
+* Fix compile error (missing DUK_DCERROR_UNSUPPORTED macro) when compiling
+  with RegExp support disabled (GH-1990, GH-1991)
+
+* Fix configure.py -D option to accept parenthesized macros, e.g.
+  '-DFOO(bar)=quux', which were used in some examples but were not
+  actually functional (GH-2013, GH-2014)
+
 * Trivial fixes and cleanups: Windows Date provider return code check
   consistency (GH-1956)
+
+* Various portability fixes (GH-1931, GH-1976)
 
 3.0.0 (XXXX-XX-XX)
 ------------------
