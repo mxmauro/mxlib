@@ -53,6 +53,7 @@ public:
     StateReceivingResponseBody,
     StateDocumentCompleted,
     StateWaitingForRedirection,
+    StateRetryingAuthentication,
     StateEstablishingProxyTunnelConnection,
     StateWaitingProxyTunnelConnectionResponse
   } eState;
@@ -138,6 +139,8 @@ public:
 
   HRESULT SetProxy(_In_ CProxy &cProxy);
 
+  HRESULT SetAuthCredentials(_In_opt_z_ LPCWSTR szUserNameW, _In_opt_z_ LPCWSTR szPasswordW);
+
   HRESULT Open(_In_ CUrl &cUrl);
   HRESULT Open(_In_z_ LPCSTR szUrlA);
   HRESULT Open(_In_z_ LPCWSTR szUrlW);
@@ -185,7 +188,7 @@ private:
                           _Inout_ CIpc::CLayerList &cLayersList, _In_ HRESULT hErrorCode);
   HRESULT OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData);
 
-  VOID OnRedirect(_In_ CTimedEventQueue::CEvent *lpEvent);
+  VOID OnRedirectOrRetryAuth(_In_ CTimedEventQueue::CEvent *lpEvent);
   VOID OnResponseTimeout(_In_ CTimedEventQueue::CEvent *lpEvent);
   VOID OnAfterSendRequestHeaders(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie,
                                  _In_ CIpc::CUserData *lpUserData);
@@ -193,6 +196,8 @@ private:
                               _In_ CIpc::CUserData *lpUserData);
 
   VOID SetErrorOnRequestAndClose(_In_ HRESULT hErrorCode);
+
+  HRESULT SetupRedirectOrRetry(_In_ DWORD dwDelayMs);
 
   HRESULT UpdateResponseTimeoutEvent();
 
@@ -236,6 +241,7 @@ private:
   eState nState;
   HANDLE hConn;
   CProxy cProxy;
+  CSecureStringW cStrAuthUserNameW, cStrAuthUserPasswordW;
   HRESULT hLastErrorCode;
 
   DWORD dwResponseTimeoutMs;
@@ -293,9 +299,13 @@ private:
   struct {
     CTimedEventQueue::CEvent *lpEvent;
     CUrl cUrl;
-    SIZE_T nWaitTimeSecs;
     DWORD dwRedirectCounter;
-  } sRedirect;
+  } sRedirectOrRetryAuth;
+
+  struct {
+    BOOL bSeen401, bSeen407;
+    int nSeen401Or407Counter;
+  } sAuthorization;
 };
 
 } //namespace MX

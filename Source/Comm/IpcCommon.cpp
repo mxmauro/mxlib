@@ -195,6 +195,7 @@ HRESULT CIpc::SendMsg(_In_ HANDLE h, _In_reads_bytes_(nMsgSize) LPCVOID lpMsg, _
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoRefCounted<CConnectionBase> cConn;
+  HRESULT hRes;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
@@ -206,7 +207,10 @@ HRESULT CIpc::SendMsg(_In_ HANDLE h, _In_reads_bytes_(nMsgSize) LPCVOID lpMsg, _
   if (!cConn)
     return E_INVALIDARG;
   //send real message
-  return (cConn->IsClosed() == FALSE) ? cConn->SendMsg(lpMsg, nMsgSize) : E_FAIL;
+  if (cConn->IsClosed() == FALSE)
+    return cConn->SendMsg(lpMsg, nMsgSize);
+  hRes = cConn->GetErrorCode();
+  return (SUCCEEDED(hRes)) ? E_FAIL : hRes;
 }
 
 HRESULT CIpc::SendStream(_In_ HANDLE h, _In_ CStream *lpStream)
@@ -214,6 +218,7 @@ HRESULT CIpc::SendStream(_In_ HANDLE h, _In_ CStream *lpStream)
   CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoRefCounted<CStream> cStream(lpStream);
   TAutoRefCounted<CConnectionBase> cConn;
+  HRESULT hRes;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
@@ -223,13 +228,17 @@ HRESULT CIpc::SendStream(_In_ HANDLE h, _In_ CStream *lpStream)
   if (!cConn)
     return E_INVALIDARG;
   //send real message
-  return (cConn->IsClosed() == FALSE) ? cConn->SendStream(lpStream) : E_FAIL;
+  if (cConn->IsClosed() == FALSE)
+    return cConn->SendStream(lpStream);
+  hRes = cConn->GetErrorCode();
+  return (SUCCEEDED(hRes)) ? E_FAIL : hRes;
 }
 
 HRESULT CIpc::AfterWriteSignal(_In_ HANDLE h, _In_ OnAfterWriteSignalCallback cCallback, _In_opt_ LPVOID lpCookie)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoRefCounted<CConnectionBase> cConn;
+  HRESULT hRes;
 
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
@@ -239,7 +248,10 @@ HRESULT CIpc::AfterWriteSignal(_In_ HANDLE h, _In_ OnAfterWriteSignalCallback cC
   if (!cConn)
     return E_INVALIDARG;
   //add signal
-  return (cConn->IsClosed() == FALSE) ? cConn->AfterWriteSignal(cCallback, lpCookie) : E_FAIL;
+  if (cConn->IsClosed() == FALSE)
+    return cConn->AfterWriteSignal(cCallback, lpCookie);
+  hRes = cConn->GetErrorCode();
+  return (SUCCEEDED(hRes)) ? E_FAIL : hRes;
 }
 
 CIpc::CMultiSendLock* CIpc::StartMultiSendBlock(_In_ HANDLE h)
@@ -1383,7 +1395,10 @@ HRESULT CIpc::CConnectionBase::WriteMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSi
   if (nDataSize > 0x7FFFFFFF)
     return E_INVALIDARG;
   if (IsClosed() != FALSE)
-    return E_FAIL;
+  {
+    hRes = GetErrorCode();
+    return (SUCCEEDED(hRes)) ? E_FAIL : hRes;
+  }
   //do write
   hRes = MarkLastWriteActivity(TRUE);
   if (FAILED(hRes))
@@ -1481,6 +1496,11 @@ BOOL CIpc::CConnectionBase::IsClosedOrGracefulShutdown()
 BOOL CIpc::CConnectionBase::IsConnected()
 {
   return ((__InterlockedRead(&nFlags) & FLAG_Connected) != 0) ? TRUE : FALSE;
+}
+
+HRESULT CIpc::CConnectionBase::GetErrorCode()
+{
+  return (HRESULT)__InterlockedRead(&hErrorCode);
 }
 
 HRESULT CIpc::CConnectionBase::HandleConnected()

@@ -80,6 +80,8 @@ HRESULT CHttpHeaderBase::Create(_In_ LPCSTR szHeaderNameA, _In_ BOOL bIsRequest,
     CHECK_AND_CREATE_HEADER(RespETag);
     CHECK_AND_CREATE_HEADER(RespLocation);
     CHECK_AND_CREATE_HEADER(RespRetryAfter);
+    CHECK_AND_CREATE_HEADER(RespWwwAuthenticate);
+    CHECK_AND_CREATE_HEADER(RespProxyAuthenticate);
   }
   //----
   CHECK_AND_CREATE_HEADER(EntAllow);
@@ -150,7 +152,6 @@ LPCWSTR CHttpHeaderBase::GetToken(_In_z_ LPCWSTR sW, _In_opt_z_ LPCWSTR szStopCh
   }
   return sW;
 }
-
 
 LPCSTR CHttpHeaderBase::Advance(_In_z_ LPCSTR sA, _In_opt_z_ LPCSTR szStopCharsA)
 {

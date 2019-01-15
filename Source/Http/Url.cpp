@@ -750,7 +750,9 @@ err_nomem:  hRes = E_OUTOFMEMORY;
       {
         if (cStrDestA.Concat((LPCWSTR)cStrSchemeW) == FALSE ||
             cStrDestA.Concat("://") == FALSE)
+        {
           goto err_nomem;
+        }
       }
       //add host
       if ((nFlags & ToStringAddHostPort) != 0 && cStrHostW.IsEmpty() == FALSE &&
@@ -931,7 +933,9 @@ err_nomem:  hRes = E_OUTOFMEMORY;
       {
         if (cStrDestW.Concat((LPCWSTR)cStrSchemeW) == FALSE ||
             cStrDestW.Concat(L"://") == FALSE)
-            goto err_nomem;
+        {
+          goto err_nomem;
+        }
       }
       //add host
       if ((nFlags & ToStringAddHostPort) != 0 && cStrHostW.IsEmpty() == FALSE &&

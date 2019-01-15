@@ -56,7 +56,6 @@ static HRESULT GetProxyConfiguration(_In_opt_z_ LPCWSTR szTargetUrlW, _Out_ MX::
                                      _Out_ int *lpnPort);
 static HRESULT GetProxyForAutoSettings(_In_ HINTERNET hSession, _In_z_ LPCWSTR szUrlW,
                                        _In_opt_z_ LPCWSTR szAutoConfigUrlW, _Out_ LPWSTR *lpwszProxyW);
-static BOOL IsRecoverableAutoProxyError(_In_ HRESULT hr);
 static BOOL IsValidProxyValue(_Inout_ MX::CStringW &cStrProxyW, _Out_ int *lpnPort, _In_opt_z_ LPCWSTR szTargetUrlW);
 
 //-----------------------------------------------------------
@@ -85,14 +84,22 @@ CProxy::~CProxy()
 
 CProxy& CProxy::operator=(_In_ const CProxy& cSrc) throw(...)
 {
-  MX::CStringW cStrTempAddressW;
-
   if (&cSrc != this)
   {
-    if (cStrTempAddressW.CopyN((LPCWSTR)(cSrc.cStrAddressW), cSrc.cStrAddressW.GetLength()) == FALSE)
+    CStringW cStrTempAddressW;
+    CSecureStringW cStrTempUserNameW, cStrTempUserPasswordW;
+
+    if (cStrTempAddressW.CopyN((LPCWSTR)(cSrc.cStrAddressW), cSrc.cStrAddressW.GetLength()) == FALSE ||
+        cStrTempUserNameW.CopyN((LPCWSTR)(cSrc.cStrUserNameW), cSrc.cStrUserNameW.GetLength()) == FALSE ||
+        cStrTempUserPasswordW.CopyN((LPCWSTR)(cSrc.cStrUserPasswordW), cSrc.cStrUserPasswordW.GetLength()) == FALSE)
+    {
       throw (LONG)E_OUTOFMEMORY;
+    }
+
     nType = cSrc.nType;
     cStrAddressW.Attach(cStrTempAddressW.Detach());
+    cStrUserNameW.Attach(cStrTempUserNameW.Detach());
+    cStrUserPasswordW.Attach(cStrTempUserPasswordW.Detach());
     nPort = cSrc.nPort;
   }
   return *this;
@@ -131,6 +138,24 @@ VOID CProxy::SetUseIE()
   cStrAddressW.Empty();
   nPort = 0;
   return;
+}
+
+HRESULT CProxy::SetCredentials(_In_z_ LPCWSTR szUserNameW, _In_z_ LPCWSTR szPasswordW)
+{
+  if (szUserNameW != NULL && *szUserNameW != 0)
+  {
+    if (cStrUserNameW.Copy(szUserNameW) == FALSE)
+      return E_OUTOFMEMORY;
+    if (szPasswordW != NULL && *szPasswordW != 0)
+    {
+      if (cStrUserPasswordW.Copy(szPasswordW) == FALSE)
+      {
+        cStrUserNameW.Empty();
+        return E_OUTOFMEMORY;
+      }
+    }
+  }
+  return S_OK;
 }
 
 HRESULT CProxy::Resolve(_In_opt_z_ LPCWSTR szTargetUrlW)
@@ -237,6 +262,7 @@ static HRESULT GetProxyConfiguration(_In_opt_z_ LPCWSTR szTargetUrlW, _Out_ MX::
 {
   HINTERNET hSession = NULL;
   MX::CStringW cStrUrlW;
+  LPWSTR szProxyW = NULL;
   WINHTTP_CURRENT_USER_IE_PROXY_CONFIG sIeProxy = { 0 };
   HRESULT hRes;
 
@@ -278,73 +304,51 @@ static HRESULT GetProxyConfiguration(_In_opt_z_ LPCWSTR szTargetUrlW, _Out_ MX::
   if (fnWinHttpGetIEProxyConfigForCurrentUser(&sIeProxy) == FALSE)
   {
     hRes = MX_HRESULT_FROM_LASTERROR();
-    if (hRes != MX_E_NotFound)
+    if (hRes == E_OUTOFMEMORY)
       goto done;
-
-    //no IE proxy settings found, just do autodetect
-    sIeProxy.fAutoDetect = TRUE;
+    MX::MemSet(&sIeProxy, 0, sizeof(sIeProxy));
   }
-
-  if (sIeProxy.fAutoDetect != FALSE)
+  if (sIeProxy.fAutoDetect == FALSE && sIeProxy.lpszProxy != NULL)
   {
-    LPWSTR szProxyW;
-
-    hRes = GetProxyForAutoSettings(hSession, (LPCWSTR)cStrUrlW, NULL, &szProxyW);
-    if (SUCCEEDED(hRes))
+    if (cStrProxyW.Copy(sIeProxy.lpszProxy) == FALSE)
     {
-      if (szProxyW != NULL)
-      {
-        hRes = (cStrProxyW.Copy(szProxyW) != FALSE) ? S_OK : E_OUTOFMEMORY;
-        fnGlobalFree(szProxyW);
-        if (FAILED(hRes))
-          goto done;
-        if (IsValidProxyValue(cStrProxyW, lpnPort, (LPCWSTR)cStrUrlW) != FALSE)
-          goto done;
-        cStrProxyW.Empty();
-      }
-    }
-    else if (IsRecoverableAutoProxyError(hRes) == FALSE)
-    {
+      hRes = E_OUTOFMEMORY;
       goto done;
     }
-  }
-  if (sIeProxy.lpszAutoConfigUrl != NULL && sIeProxy.lpszAutoConfigUrl[0] != 0)
-  {
-    LPWSTR szProxyW;
-
-    hRes = GetProxyForAutoSettings(hSession, (LPCWSTR)cStrUrlW, sIeProxy.lpszAutoConfigUrl, &szProxyW);
-    if (SUCCEEDED(hRes))
-    {
-      if (szProxyW != NULL)
-      {
-        hRes = (cStrProxyW.Copy(szProxyW) != FALSE) ? S_OK : E_OUTOFMEMORY;
-        fnGlobalFree(szProxyW);
-        if (FAILED(hRes))
-          goto done;
-        if (IsValidProxyValue(cStrProxyW, lpnPort, (LPCWSTR)cStrUrlW) != FALSE)
-          goto done;
-        cStrProxyW.Empty();
-      }
-    }
-    else if (IsRecoverableAutoProxyError(hRes) == FALSE)
-    {
-      goto done;
-    }
-  }
-
-  if (sIeProxy.lpszProxy != NULL)
-  {
-    hRes = (cStrProxyW.Copy(sIeProxy.lpszProxy) != FALSE) ? S_OK : E_OUTOFMEMORY;
-    if (FAILED(hRes))
-      goto done;
     if (IsValidProxyValue(cStrProxyW, lpnPort, (LPCWSTR)cStrUrlW) != FALSE)
+    {
+      hRes = S_OK;
       goto done;
+    }
     cStrProxyW.Empty();
   }
 
-  hRes = S_OK;
+  hRes = GetProxyForAutoSettings(hSession, (LPCWSTR)cStrUrlW,
+                                 ((sIeProxy.lpszAutoConfigUrl != NULL &&
+                                   sIeProxy.lpszAutoConfigUrl[0] != 0) ? sIeProxy.lpszAutoConfigUrl : NULL), &szProxyW);
+  if (FAILED(hRes))
+    goto done;
+  if (szProxyW == NULL)
+  {
+    hRes = MX_E_NotFound;
+    goto done;
+  }
+  if (cStrProxyW.Copy(szProxyW) == FALSE)
+  {
+    hRes = E_OUTOFMEMORY;
+    goto done;
+  }
+  if (IsValidProxyValue(cStrProxyW, lpnPort, (LPCWSTR)cStrUrlW) != FALSE)
+  {
+    hRes = S_OK;
+    goto done;
+  }
+
+  hRes = MX_E_NotFound;
 
 done:
+  if (szProxyW != NULL)
+    fnGlobalFree(szProxyW);
   if (sIeProxy.lpszAutoConfigUrl != NULL)
     fnGlobalFree(sIeProxy.lpszAutoConfigUrl);
   if (sIeProxy.lpszProxy != NULL)
@@ -353,6 +357,11 @@ done:
     fnGlobalFree(sIeProxy.lpszProxyBypass);
   if (hSession != NULL)
     fnWinHttpCloseHandle(hSession);
+  if (FAILED(hRes))
+  {
+    cStrProxyW.Empty();
+    *lpnPort = 0;
+  }
   return hRes;
 }
 
@@ -382,28 +391,30 @@ static HRESULT GetProxyForAutoSettings(_In_ HINTERNET hSession, _In_z_ LPCWSTR s
     //First call with no autologon.  Autologon prevents the session (in proc) or autoproxy service (out of proc) from
     //caching the proxy script.  This causes repetitive network traffic, so it is best not to do autologon unless it
     //is required according to the result of WinHttpGetProxyForUrl.
-    if (fnWinHttpGetProxyForUrl(hSession, szUrlW, &sProxyOpts, &sProxyInfo) == FALSE)
-    {
-      hRes = MX_HRESULT_FROM_LASTERROR();
-      if (hRes != HRESULT_FROM_WIN32(ERROR_WINHTTP_LOGIN_FAILURE))
-        goto done;
-
-      sProxyOpts.fAutoLogonIfChallenged = TRUE;
-      if (fnWinHttpGetProxyForUrl(hSession, szUrlW, &sProxyOpts, &sProxyInfo) == FALSE)
-      {
-        hRes = MX_HRESULT_FROM_LASTERROR();
-        goto done;
-      }
-    }
-  }
-  else
-  {
-    if (fnWinHttpGetDefaultProxyConfiguration(&sProxyInfo) == FALSE)
-    {
-      hRes = MX_HRESULT_FROM_LASTERROR();
+    if (fnWinHttpGetProxyForUrl(hSession, szUrlW, &sProxyOpts, &sProxyInfo) != FALSE)
+      goto have_proxy;
+    hRes = MX_HRESULT_FROM_LASTERROR();
+    if (hRes == E_OUTOFMEMORY)
       goto done;
+    if (hRes == HRESULT_FROM_WIN32(ERROR_WINHTTP_LOGIN_FAILURE))
+    {
+      sProxyOpts.fAutoLogonIfChallenged = TRUE;
+      if (fnWinHttpGetProxyForUrl(hSession, szUrlW, &sProxyOpts, &sProxyInfo) != FALSE)
+        goto have_proxy;
+
+      hRes = MX_HRESULT_FROM_LASTERROR();
+      if (hRes == E_OUTOFMEMORY)
+        goto done;
     }
   }
+
+  if (fnWinHttpGetDefaultProxyConfiguration(&sProxyInfo) != FALSE)
+    goto have_proxy;
+
+  hRes = MX_HRESULT_FROM_LASTERROR();
+  goto done;
+
+have_proxy:
   if (sProxyInfo.lpszProxy != NULL && sProxyInfo.lpszProxy[0] != 0)
   {
     *lpwszProxyW = sProxyInfo.lpszProxy;
@@ -420,6 +431,7 @@ done:
   return hRes;
 }
 
+/*
 static BOOL IsRecoverableAutoProxyError(_In_ HRESULT hr)
 {
   return (SUCCEEDED(hr) ||
@@ -433,6 +445,7 @@ static BOOL IsRecoverableAutoProxyError(_In_ HRESULT hr)
           hr == HRESULT_FROM_WIN32(ERROR_WINHTTP_UNABLE_TO_DOWNLOAD_SCRIPT) ||
           hr == HRESULT_FROM_WIN32(ERROR_WINHTTP_UNRECOGNIZED_SCHEME)) ? TRUE : FALSE;
 }
+*/
 
 static BOOL IsValidProxyValue(_Inout_ MX::CStringW &cStrProxyW, _Out_ int *lpnPort, _In_opt_z_ LPCWSTR szTargetUrlW)
 {
@@ -547,4 +560,11 @@ static BOOL IsValidProxyValue(_Inout_ MX::CStringW &cStrProxyW, _Out_ int *lpnPo
   cStrProxyW.Delete(0, (SIZE_T)(szProxyStartW - (LPCWSTR)cStrProxyW));
   cStrProxyW.Delete(nLen, (SIZE_T)-1);
   return TRUE;
+}
+
+static VOID CleanupSensibleData(_Inout_ MX::CStringW &cStrW)
+{
+  MX::MemSet((LPWSTR)cStrW, '*', cStrW.GetLength() * 2);
+  cStrW.Empty();
+  return;
 }

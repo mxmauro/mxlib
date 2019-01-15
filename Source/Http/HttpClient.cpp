@@ -29,10 +29,22 @@
 #include "..\..\Include\Comm\IpcSslLayer.h"
 #include "..\..\Include\Http\Url.h"
 #include "..\..\Include\Http\HttpCommon.h"
+#include "HttpAuthCache.h"
 
 //-----------------------------------------------------------
 
 #define MAX_FORM_SIZE_4_REQUEST                 (128 * 1024)
+#define DEFAULT_MAX_REDIRECTIONS_COUNT                    10
+#define DEFAULT_MAX_AUTHORIZATION_COUNT                   10
+
+#define _HTTP_STATUS_MovedPermanently                    301
+#define _HTTP_STATUS_MovedTemporarily                    302
+#define _HTTP_STATUS_SeeOther                            303
+#define _HTTP_STATUS_UseProxy                            305
+#define _HTTP_STATUS_TemporaryRedirect                   307
+#define _HTTP_STATUS_Unauthorized                        401
+#define _HTTP_STATUS_ProxyAuthenticationRequired         407
+#define _HTTP_STATUS_RequestTimeout                      408
 
 //-----------------------------------------------------------
 
@@ -45,7 +57,7 @@ namespace MX {
 CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr) : CBaseMemObj(), cSocketMgr(_cSocketMgr)
 {
   dwResponseTimeoutMs = 60000;
-  dwMaxRedirCount = 10;
+  dwMaxRedirCount = DEFAULT_MAX_REDIRECTIONS_COUNT;
   dwMaxFieldSize = 256000;
   ullMaxFileSize = 2097152ui64;
   dwMaxFilesCount = 4;
@@ -58,9 +70,10 @@ CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr) : CBaseMemObj(), cSocketMgr
   bAcceptCompressedContent = TRUE;
   hConn = NULL;
   hLastErrorCode = S_OK;
-  sRedirect.dwRedirectCounter = 0;
-  sRedirect.lpEvent = NULL;
-  sRedirect.nWaitTimeSecs = 0;
+  sRedirectOrRetryAuth.dwRedirectCounter = 0;
+  sRedirectOrRetryAuth.lpEvent = NULL;
+  sAuthorization.bSeen401 = sAuthorization.bSeen407 = FALSE;
+  sAuthorization.nSeen401Or407Counter = 0;
   lpTimedEventQueue = NULL;
   cHeadersReceivedCallback = NullCallback();
   cDymanicRequestBodyStartCallback = NullCallback();
@@ -86,10 +99,10 @@ CHttpClient::~CHttpClient()
     }
     if (lpTimedEventQueue != NULL)
     {
-      if (sRedirect.lpEvent != NULL)
+      if (sRedirectOrRetryAuth.lpEvent != NULL)
       {
-        lpTimedEventQueue->Remove(sRedirect.lpEvent);
-        sRedirect.lpEvent = NULL;
+        lpTimedEventQueue->Remove(sRedirectOrRetryAuth.lpEvent);
+        sRedirectOrRetryAuth.lpEvent = NULL;
       }
       if (cResponse.lpTimeoutEvent != NULL)
       {
@@ -127,7 +140,7 @@ VOID CHttpClient::SetOption_MaxRedirectionsCount(_In_ DWORD dwCount)
   if (nState == StateClosed)
   {
     dwMaxRedirCount = dwCount;
-    if (dwMaxRedirCount < 1000)
+    if (dwMaxRedirCount > 1000)
       dwMaxRedirCount = 1000;
   }
   return;
@@ -742,6 +755,28 @@ HRESULT CHttpClient::SetProxy(_In_ CProxy &_cProxy)
   return S_OK;
 }
 
+HRESULT CHttpClient::SetAuthCredentials(_In_opt_z_ LPCWSTR szUserNameW, _In_opt_z_ LPCWSTR szPasswordW)
+{
+  CCriticalSection::CAutoLock cLock(cMutex);
+
+  if (nState != StateClosed)
+    return MX_E_NotReady;
+  if (szUserNameW != NULL && *szUserNameW != 0)
+  {
+    if (cStrAuthUserNameW.Copy(szUserNameW) == FALSE)
+      return E_OUTOFMEMORY;
+    if (szPasswordW != NULL && *szPasswordW != 0)
+    {
+      if (cStrAuthUserPasswordW.Copy(szPasswordW) == FALSE)
+      {
+        cStrAuthUserNameW.Empty();
+        return E_OUTOFMEMORY;
+      }
+    }
+  }
+  return S_OK;
+}
+
 HRESULT CHttpClient::Open(_In_ CUrl &cUrl)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
@@ -749,7 +784,9 @@ HRESULT CHttpClient::Open(_In_ CUrl &cUrl)
 
   if (cAutoRundownProt.IsAcquired() == FALSE)
     return MX_E_NotReady;
-  sRedirect.dwRedirectCounter = 0;
+  sRedirectOrRetryAuth.dwRedirectCounter = 0;
+  sAuthorization.bSeen401 = sAuthorization.bSeen407 = FALSE;
+  sAuthorization.nSeen401Or407Counter = 0;
   return InternalOpen(cUrl);
 }
 
@@ -794,10 +831,10 @@ VOID CHttpClient::Close(_In_opt_ BOOL bReuseConn)
   }
   if (lpTimedEventQueue != NULL)
   {
-    if (sRedirect.lpEvent != NULL)
+    if (sRedirectOrRetryAuth.lpEvent != NULL)
     {
-      lpTimedEventQueue->Remove(sRedirect.lpEvent);
-      sRedirect.lpEvent = NULL;
+      lpTimedEventQueue->Remove(sRedirectOrRetryAuth.lpEvent);
+      sRedirectOrRetryAuth.lpEvent = NULL;
     }
     if (cResponse.lpTimeoutEvent != NULL)
     {
@@ -994,10 +1031,10 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl)
   //disable redirection
   if (lpTimedEventQueue != NULL)
   {
-    if (sRedirect.lpEvent != NULL)
+    if (sRedirectOrRetryAuth.lpEvent != NULL)
     {
-      lpTimedEventQueue->Remove(sRedirect.lpEvent);
-      sRedirect.lpEvent = NULL;
+      lpTimedEventQueue->Remove(sRedirectOrRetryAuth.lpEvent);
+      sRedirectOrRetryAuth.lpEvent = NULL;
     }
     if (cResponse.lpTimeoutEvent != NULL)
     {
@@ -1122,6 +1159,7 @@ VOID CHttpClient::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
       switch (nState)
       {
         case StateWaitingForRedirection:
+        case StateRetryingAuthentication:
           cSocketMgr.Close(hConn, S_OK);
           hConn = NULL;
           break;
@@ -1336,17 +1374,18 @@ restart:
         }
         //take action if parser's state changed
         nParserState = cResponse.cHttpCmn.GetParserState();
-        //check if we hit a redirection
+        //check if we hit a redirection or a site/proxy authentication
         if (nParserState == CHttpCommon::StateBodyStart)
         {
           LONG nRespStatus = cResponse.cHttpCmn.GetResponseStatus();
+          CHttpBodyParserBase *lpParser;
 
-          if ((nRespStatus == 301 || nRespStatus == 302 || nRespStatus == 303 ||
-                nRespStatus == 305 || nRespStatus == 307 || nRespStatus == 408) &&
-              sRedirect.dwRedirectCounter < dwMaxRedirCount)
+          if ((nRespStatus == _HTTP_STATUS_MovedPermanently || nRespStatus == _HTTP_STATUS_MovedTemporarily ||
+               nRespStatus == _HTTP_STATUS_SeeOther || nRespStatus == _HTTP_STATUS_UseProxy ||
+               nRespStatus == _HTTP_STATUS_TemporaryRedirect || nRespStatus == _HTTP_STATUS_RequestTimeout) &&
+              sRedirectOrRetryAuth.dwRedirectCounter < dwMaxRedirCount)
           {
-            CHttpBodyParserBase *lpParser;
-
+handle_redirect_or_auth_ignore_body:
             lpParser = MX_DEBUG_NEW CHttpBodyParserIgnore();
             if (lpParser == NULL)
             {
@@ -1361,8 +1400,47 @@ restart:
               break;
             }
           }
+          else if (nRespStatus == _HTTP_STATUS_Unauthorized && cStrAuthUserNameW.IsEmpty() == FALSE &&
+                   sAuthorization.nSeen401Or407Counter < DEFAULT_MAX_AUTHORIZATION_COUNT)
+          {
+            TAutoRefCounted<CHttpBaseAuth> cHttpAuth;
+            CHttpHeaderRespWwwAuthenticate *lpHeader;
+
+            if (sAuthorization.bSeen401 == FALSE)
+              goto handle_redirect_or_auth_ignore_body;
+
+            lpHeader = cResponse.cHttpCmn.GetHeader<CHttpHeaderRespWwwAuthenticate>();
+            if (lpHeader != NULL)
+            {
+              cHttpAuth = lpHeader->GetHttpAuth();
+              if (cHttpAuth && cHttpAuth->IsReauthenticateRequst() != FALSE)
+                goto handle_redirect_or_auth_ignore_body;
+            }
+
+            goto handle_redirect_or_auth_processbody;
+          }
+          else if (nRespStatus == _HTTP_STATUS_ProxyAuthenticationRequired && *(cProxy._GetUserName()) != 0 &&
+                   sAuthorization.nSeen401Or407Counter < DEFAULT_MAX_AUTHORIZATION_COUNT)
+          {
+            TAutoRefCounted<CHttpBaseAuth> cHttpAuth;
+            CHttpHeaderRespProxyAuthenticate *lpHeader;
+
+            if (sAuthorization.bSeen407 == FALSE)
+              goto handle_redirect_or_auth_ignore_body;
+
+            lpHeader = cResponse.cHttpCmn.GetHeader<CHttpHeaderRespProxyAuthenticate>();
+            if (lpHeader != NULL)
+            {
+              cHttpAuth = lpHeader->GetHttpAuth();
+              if (cHttpAuth && cHttpAuth->IsReauthenticateRequst() != FALSE)
+                goto handle_redirect_or_auth_ignore_body;
+            }
+
+            goto handle_redirect_or_auth_processbody;
+          }
           else
           {
+handle_redirect_or_auth_processbody:
             bFireResponseHeadersReceivedCallback = TRUE;
           }
           nState = StateReceivingResponseBody;
@@ -1371,20 +1449,21 @@ restart:
         {
           LONG nRespStatus = cResponse.cHttpCmn.GetResponseStatus();
 
-          if ((nRespStatus == 301 || nRespStatus == 302 || nRespStatus == 303 ||
-              nRespStatus == 305 || nRespStatus == 307 || nRespStatus == 408) &&
-              sRedirect.dwRedirectCounter < dwMaxRedirCount)
+          if ((nRespStatus == _HTTP_STATUS_MovedPermanently || nRespStatus == _HTTP_STATUS_MovedTemporarily ||
+               nRespStatus == _HTTP_STATUS_SeeOther || nRespStatus == _HTTP_STATUS_UseProxy ||
+               nRespStatus == _HTTP_STATUS_TemporaryRedirect || nRespStatus == _HTTP_STATUS_RequestTimeout) &&
+               sRedirectOrRetryAuth.dwRedirectCounter < dwMaxRedirCount)
           {
             CUrl cUrlTemp;
             ULONGLONG nWaitTimeSecs;
 
-            sRedirect.dwRedirectCounter++;
+            (sRedirectOrRetryAuth.dwRedirectCounter)++;
             nWaitTimeSecs = 0ui64;
             //build new url
             hRes = S_OK;
             try
             {
-              sRedirect.cUrl = cRequest.cUrl;
+              sRedirectOrRetryAuth.cUrl = cRequest.cUrl;
             }
             catch (LONG hr)
             {
@@ -1392,15 +1471,17 @@ restart:
             }
             if (SUCCEEDED(hRes))
             {
-              if (cResponse.cHttpCmn.GetResponseStatus() != 408)
+              if (cResponse.cHttpCmn.GetResponseStatus() != _HTTP_STATUS_RequestTimeout)
               {
                 CHttpHeaderRespLocation *lpHeader = cResponse.cHttpCmn.GetHeader<CHttpHeaderRespLocation>();
                 if (lpHeader != NULL)
                 {
                   if (SUCCEEDED(hRes))
+                  {
                     hRes = cUrlTemp.ParseFromString(lpHeader->GetLocation());
-                  if (SUCCEEDED(hRes))
-                    hRes = sRedirect.cUrl.Merge(cUrlTemp);
+                    if (SUCCEEDED(hRes))
+                      hRes = sRedirectOrRetryAuth.cUrl.Merge(cUrlTemp);
+                  }
                 }
                 else
                 {
@@ -1432,34 +1513,81 @@ restart:
             if (SUCCEEDED(hRes))
             {
               nState = StateWaitingForRedirection;
-              //----
-              if (sRedirect.lpEvent != NULL)
-                lpTimedEventQueue->Remove(sRedirect.lpEvent);
-              sRedirect.lpEvent = MX_DEBUG_NEW CTimedEventQueue::CEvent(
-                                               MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnRedirect, this));
-              if (sRedirect.lpEvent != NULL)
+              hRes = SetupRedirectOrRetry((DWORD)(nWaitTimeSecs * 1000ui64));
+            }
+            if (FAILED(hRes))
+              SetErrorOnRequestAndClose(hRes);
+          }
+          else if (((nRespStatus == _HTTP_STATUS_Unauthorized && cStrAuthUserNameW.IsEmpty() == FALSE) ||
+                    (nRespStatus == _HTTP_STATUS_ProxyAuthenticationRequired && *(cProxy._GetUserName()) != 0)) &&
+                   sAuthorization.nSeen401Or407Counter < DEFAULT_MAX_AUTHORIZATION_COUNT)
+          {
+            TAutoRefCounted<CHttpBaseAuth> cHttpAuth;
+
+            (sAuthorization.nSeen401Or407Counter)++;
+
+            hRes = S_OK;
+            if (nRespStatus == _HTTP_STATUS_Unauthorized)
+            {
+              CHttpHeaderRespWwwAuthenticate *lpHeader;
+
+              //reset seen 407 so the proxy does not complain on next round if credentials fails for any reason
+              sAuthorization.bSeen407 = FALSE;
+
+              lpHeader = cResponse.cHttpCmn.GetHeader<CHttpHeaderRespWwwAuthenticate>();
+              if (lpHeader != NULL)
+                cHttpAuth = lpHeader->GetHttpAuth();
+
+              if (sAuthorization.bSeen401 == FALSE ||
+                  (cHttpAuth && cHttpAuth->IsReauthenticateRequst() != FALSE))
               {
-                hRes = cPendingEvents.Add(sRedirect.lpEvent);
-                if (SUCCEEDED(hRes))
-                  hRes = lpTimedEventQueue->Add(sRedirect.lpEvent, (DWORD)(nWaitTimeSecs * 1000ui64));
-                if (FAILED(hRes))
-                {
-                  cPendingEvents.Remove(sRedirect.lpEvent);
-                  delete sRedirect.lpEvent;
-                  sRedirect.lpEvent = NULL;
-                }
+                sAuthorization.bSeen401 = TRUE;
               }
               else
               {
-                hRes = E_OUTOFMEMORY;
+                goto handle_redirect_or_auth_processdocument;
               }
             }
+            else //nRespStatus == _HTTP_STATUS_ProxyAuthenticationRequired
+            {
+              CHttpHeaderRespProxyAuthenticate *lpHeader;
+
+              lpHeader = cResponse.cHttpCmn.GetHeader<CHttpHeaderRespProxyAuthenticate>();
+              if (lpHeader != NULL)
+                cHttpAuth = lpHeader->GetHttpAuth();
+
+              if (sAuthorization.bSeen407 == FALSE ||
+                  (cHttpAuth && cHttpAuth->IsReauthenticateRequst() != FALSE))
+              {
+                sAuthorization.bSeen407 = TRUE;
+              }
+              else
+              {
+                goto handle_redirect_or_auth_processdocument;
+              }
+            }
+
+            if (cHttpAuth)
+            {
+              hRes = HttpAuthCache::Add(cRequest.cUrl, cHttpAuth.Get());
+              if (SUCCEEDED(hRes))
+              {
+                nState = StateRetryingAuthentication;
+                hRes = SetupRedirectOrRetry(0);
+              }
+            }
+            else
+            {
+              hRes = MX_E_InvalidData;
+            }
+
             if (FAILED(hRes))
               SetErrorOnRequestAndClose(hRes);
           }
           else
           {
-            //no redirection
+handle_redirect_or_auth_processdocument:
+            //no redirection or (re)auth
             bFireDocumentCompleted = TRUE;
             if (nState == StateReceivingResponseHeaders)
               bFireResponseHeadersReceivedCallback = TRUE;
@@ -1596,7 +1724,7 @@ restart:
   return hRes;
 }
 
-VOID CHttpClient::OnRedirect(_In_ CTimedEventQueue::CEvent *lpEvent)
+VOID CHttpClient::OnRedirectOrRetryAuth(_In_ CTimedEventQueue::CEvent *lpEvent)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
 
@@ -1608,14 +1736,26 @@ VOID CHttpClient::OnRedirect(_In_ CTimedEventQueue::CEvent *lpEvent)
     {
       CCriticalSection::CAutoLock cLock(cMutex);
 
-      if (sRedirect.lpEvent == lpEvent)
+      if (sRedirectOrRetryAuth.lpEvent == lpEvent)
       {
         if (lpEvent->IsCanceled() == FALSE)
         {
-          if (nState == StateWaitingForRedirection)
-            hRes = InternalOpen(sRedirect.cUrl);
+          switch (nState)
+          {
+            case StateWaitingForRedirection:
+              hRes = InternalOpen(sRedirectOrRetryAuth.cUrl);
+              break;
+
+            case StateRetryingAuthentication:
+              hRes = InternalOpen(cRequest.cUrl);
+              break;
+
+            default:
+              hRes = MX_E_InvalidState;
+              break;
+          }
         }
-        sRedirect.lpEvent = NULL;
+        sRedirectOrRetryAuth.lpEvent = NULL;
       }
     }
     //raise error event if any
@@ -1742,6 +1882,32 @@ VOID CHttpClient::SetErrorOnRequestAndClose(_In_ HRESULT hErrorCode)
   return;
 }
 
+HRESULT CHttpClient::SetupRedirectOrRetry(_In_ DWORD dwDelayMs)
+{
+  HRESULT hRes;
+
+  if (sRedirectOrRetryAuth.lpEvent != NULL)
+    lpTimedEventQueue->Remove(sRedirectOrRetryAuth.lpEvent);
+
+  sRedirectOrRetryAuth.lpEvent =
+        MX_DEBUG_NEW CTimedEventQueue::CEvent(MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnRedirectOrRetryAuth, this));
+  if (sRedirectOrRetryAuth.lpEvent == NULL)
+    return E_OUTOFMEMORY;
+
+  hRes = cPendingEvents.Add(sRedirectOrRetryAuth.lpEvent);
+  if (SUCCEEDED(hRes))
+    hRes = lpTimedEventQueue->Add(sRedirectOrRetryAuth.lpEvent, dwDelayMs);
+
+  //done
+  if (FAILED(hRes))
+  {
+    cPendingEvents.Remove(sRedirectOrRetryAuth.lpEvent);
+    delete sRedirectOrRetryAuth.lpEvent;
+    sRedirectOrRetryAuth.lpEvent = NULL;
+  }
+  return hRes;
+}
+
 HRESULT CHttpClient::UpdateResponseTimeoutEvent()
 {
   HRESULT hRes;
@@ -1813,7 +1979,7 @@ HRESULT CHttpClient::BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA)
   CHttpHeaderBase *lpHeader;
   CStringA cStrTempA;
   CHttpCookie *lpCookie;
-  SIZE_T nHdrIndex_Accept, nHdrIndex_AcceptLanguage, nHdrIndex_Referer, nHdrIndex_UserAgent;
+  SIZE_T nHdrIndex_Accept, nHdrIndex_AcceptLanguage, nHdrIndex_Referer, nHdrIndex_UserAgent, nHdrIndex_WWWAuthenticate;
   SIZE_T nIndex;
   HRESULT hRes;
 
@@ -1824,6 +1990,7 @@ HRESULT CHttpClient::BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA)
   nHdrIndex_AcceptLanguage = (SIZE_T)-1;
   nHdrIndex_Referer = (SIZE_T)-1;
   nHdrIndex_UserAgent = (SIZE_T)-1;
+  nHdrIndex_WWWAuthenticate = (SIZE_T)-1;
   for (nIndex=0; (lpHeader=cRequest.cHttpCmn.GetHeader(nIndex)) != NULL; nIndex++)
   {
     LPCSTR sA = lpHeader->GetName();
@@ -1848,6 +2015,12 @@ HRESULT CHttpClient::BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA)
       case 'u':
         if (StrCompareA(sA, "User-Agent", TRUE) == 0)
           nHdrIndex_UserAgent = nIndex;
+        break;
+
+      case 'W':
+      case 'w':
+        if (StrCompareA(sA, "WWW-Authenticate", TRUE) == 0)
+          nHdrIndex_WWWAuthenticate = nIndex;
         break;
     }
   }
@@ -1935,7 +2108,65 @@ HRESULT CHttpClient::BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA)
   hRes = BuildRequestHeaderAdd(cStrReqHdrsA, "Upgrade-Insecure-Requests", "1");
   if (FAILED(hRes))
     return hRes;
-  //11) the rest of the headers
+  //12) WWW-Authenticate
+  if (nHdrIndex_WWWAuthenticate == (SIZE_T)-1)
+  {
+    if (cStrAuthUserNameW.IsEmpty() == FALSE)
+    {
+      CHttpBaseAuth *lpHttpAuth;
+
+      //check if there is a previous authentication for this web request
+      lpHttpAuth = HttpAuthCache::Lookup(cRequest.cUrl);
+      if (lpHttpAuth != NULL)
+      {
+        switch (lpHttpAuth->GetType())
+        {
+          case CHttpBaseAuth::TypeBasic:
+            hRes = ((CHttpAuthBasic*)lpHttpAuth)->MakeAuthenticateResponse(cStrTempA, (LPCWSTR)cStrAuthUserNameW,
+                                                                           (LPCWSTR)cStrAuthUserPasswordW, FALSE);
+            if (FAILED(hRes))
+              return hRes;
+            if (cStrReqHdrsA.ConcatN((LPCSTR)cStrTempA, cStrTempA.GetLength()) == FALSE)
+              return E_OUTOFMEMORY;
+            break;
+
+          case CHttpBaseAuth::TypeDigest:
+            {
+            CStringA cStrPathA;
+            LPCSTR szMethodA;
+
+            if (cRequest.cStrMethodA.IsEmpty() != FALSE)
+            {
+              szMethodA = (cRequest.sPostData.cList.IsEmpty() == FALSE ||
+                           cRequest.sPostData.bIsDynamic != FALSE) ? "POST" : "GET";
+            }
+            else
+            {
+              szMethodA = (LPCSTR)(cRequest.cStrMethodA);
+            }
+
+            hRes = cRequest.cUrl.ToString(cStrPathA, CUrl::ToStringAddPath);
+            if (FAILED(hRes))
+              return hRes;
+
+            hRes = ((CHttpAuthDigest*)lpHttpAuth)->MakeAuthenticateResponse(cStrTempA, (LPCWSTR)cStrAuthUserNameW,
+                                                                            (LPCWSTR)cStrAuthUserPasswordW, szMethodA,
+                                                                            (LPCSTR)cStrPathA, FALSE);
+            if (FAILED(hRes))
+              return hRes;
+            if (cStrReqHdrsA.ConcatN((LPCSTR)cStrTempA, cStrTempA.GetLength()) == FALSE)
+              return E_OUTOFMEMORY;
+            }
+            break;
+
+          default:
+            MX_ASSERT(FALSE);
+            return MX_E_Unsupported;
+        }
+      }
+    }
+  }
+  //12) the rest of the headers
   for (nIndex=0; (lpHeader=cRequest.cHttpCmn.GetHeader(nIndex)) != NULL; nIndex++)
   {
     LPCSTR sA = lpHeader->GetName();
@@ -2168,6 +2399,7 @@ HRESULT CHttpClient::SendTunnelConnect()
 {
   MX::CStringA cStrReqHdrsA, cStrTempA;
   CHttpHeaderBase *lpHeader;
+  CHttpBaseAuth *lpHttpAuth;
   SIZE_T nIndex;
   HRESULT hRes;
 
@@ -2206,12 +2438,61 @@ HRESULT CHttpClient::SendTunnelConnect()
     if (FAILED(hRes))
       return hRes;
   }
-  //proxy connextion
+  //proxy connection
   hRes = BuildRequestHeaderAdd(cStrReqHdrsA, "Proxy-Connection",
                                ((bKeepConnectionOpen != FALSE) ? "Keep-Alive" : "Close"));
   if (FAILED(hRes))
     return hRes;
+  //check if there is a previous authentication for this proxy
+  lpHttpAuth = HttpAuthCache::Lookup(CUrl::SchemeNone, cProxy.GetAddress(), cProxy.GetPort(), L"/");
+  if (lpHttpAuth != NULL)
+  {
+    switch (lpHttpAuth->GetType())
+    {
+      case CHttpBaseAuth::TypeBasic:
+        hRes = ((CHttpAuthBasic*)lpHttpAuth)->MakeAuthenticateResponse(cStrTempA, cProxy._GetUserName(),
+                                                                       cProxy.GetUserPassword(), TRUE);
+        if (FAILED(hRes))
+          return hRes;
+        if (cStrReqHdrsA.ConcatN((LPCSTR)cStrTempA, cStrTempA.GetLength()) == FALSE)
+          return E_OUTOFMEMORY;
+        break;
 
+      case CHttpBaseAuth::TypeDigest:
+        {
+        //for proxy the url is the same than the one being requested
+        CStringA cStrPathA;
+        LPCSTR szMethodA;
+
+        if (cRequest.cStrMethodA.IsEmpty() != FALSE)
+        {
+          szMethodA = (cRequest.sPostData.cList.IsEmpty() == FALSE ||
+                        cRequest.sPostData.bIsDynamic != FALSE) ? "POST" : "GET";
+        }
+        else
+        {
+          szMethodA = (LPCSTR)(cRequest.cStrMethodA);
+        }
+
+        hRes = cRequest.cUrl.ToString(cStrPathA, CUrl::ToStringAddPath);
+        if (FAILED(hRes))
+          return hRes;
+
+        hRes = ((CHttpAuthDigest*)lpHttpAuth)->MakeAuthenticateResponse(cStrTempA, cProxy._GetUserName(),
+                                                                        cProxy.GetUserPassword(), szMethodA,
+                                                                        (LPCSTR)cStrPathA, TRUE);
+        if (FAILED(hRes))
+          return hRes;
+        if (cStrReqHdrsA.ConcatN((LPCSTR)cStrTempA, cStrTempA.GetLength()) == FALSE)
+          return E_OUTOFMEMORY;
+        }
+        break;
+
+      default:
+        MX_ASSERT(FALSE);
+        return MX_E_Unsupported;
+    }
+  }
   //send CONNECT
   if (cStrReqHdrsA.ConcatN("\r\n", 2) == FALSE)
     return E_OUTOFMEMORY;

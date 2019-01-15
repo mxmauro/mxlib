@@ -175,8 +175,8 @@
     <ClInclude Include="Include\Comm\SslCertificates.h" />
     <ClInclude Include="Include\Http\EMail.h" />
     <ClInclude Include="Include\Http\HtmlEntities.h" />
+    <ClInclude Include="Include\Http\HttpAuth.h" />
     <ClInclude Include="Include\Http\HttpHeaderBase.h" />
-    <ClInclude Include="Include\Http\HttpAuthenticateResponseParser.h" />
     <ClInclude Include="Include\Http\HttpBodyParserBase.h" />
     <ClInclude Include="Include\Http\HttpBodyParserFormBase.h" />
     <ClInclude Include="Include\Http\HttpBodyParserIgnore.h" />
@@ -217,10 +217,12 @@
     <ClInclude Include="Include\Http\HttpHeaderRespETag.h" />
     <ClInclude Include="Include\Http\HttpHeaderRespLocation.h" />
     <ClInclude Include="Include\Http\HttpHeaderRespRetryAfter.h" />
+    <ClInclude Include="Include\Http\HttpHeaderRespWwwProxyAuthenticate.h" />
     <ClInclude Include="Include\Http\HttpServer.h" />
     <ClInclude Include="Include\Http\punycode.h" />
     <ClInclude Include="Include\Http\Url.h" />
     <ClInclude Include="Source\Comm\HostResolverCommon.h" />
+    <ClInclude Include="Source\Http\HttpAuthCache.h" />
     <ClInclude Include="Source\Http\HttpServerCommon.h" />
   </ItemGroup>
   <ItemGroup>
@@ -234,9 +236,10 @@
     <ClCompile Include="Source\Comm\SslCertificates.cpp" />
     <ClCompile Include="Source\Comm\SslCertificatesArray.cpp" />
     <ClCompile Include="Source\Http\EMail.cpp" />
+    <ClCompile Include="Source\Http\HttpAuth.cpp" />
+    <ClCompile Include="Source\Http\HttpAuthCache.cpp" />
     <ClCompile Include="Source\Http\HttpCommonHelpers.cpp" />
     <ClCompile Include="Source\Http\HttpHeaderBase.cpp" />
-    <ClCompile Include="Source\Http\HttpAuthenticateResponseParser.cpp" />
     <ClCompile Include="Source\Http\HttpBodyParserBase.cpp" />
     <ClCompile Include="Source\Http\HttpBodyParserFormBase.cpp" />
     <ClCompile Include="Source\Http\HttpBodyParserIgnore.cpp" />
@@ -277,6 +280,7 @@
     <ClCompile Include="Source\Http\HttpHeaderRespETag.cpp" />
     <ClCompile Include="Source\Http\HttpHeaderRespLocation.cpp" />
     <ClCompile Include="Source\Http\HttpHeaderRespRetryAfter.cpp" />
+    <ClCompile Include="Source\Http\HttpHeaderRespWwwProxyAuthenticate.cpp" />
     <ClCompile Include="Source\Http\HttpServer.cpp" />
     <ClCompile Include="Source\Http\HttpServerRequest.cpp" />
     <ClCompile Include="Source\Http\punycode.cpp" />

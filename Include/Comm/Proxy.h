@@ -52,6 +52,8 @@ public:
   HRESULT SetManual(_In_z_ LPCWSTR szProxyServerW);
   VOID SetUseIE();
 
+  HRESULT SetCredentials(_In_opt_z_ LPCWSTR szUserNameW, _In_opt_z_ LPCWSTR szPasswordW);
+
   HRESULT Resolve(_In_opt_z_ LPCWSTR szTargetUrlW);
   HRESULT Resolve(_In_ CUrl &cUrl);
 
@@ -69,9 +71,20 @@ public:
     return nPort;
     };
 
+  LPCWSTR _GetUserName() const
+    {
+    return (LPCWSTR)cStrUserNameW;
+    };
+
+  LPCWSTR GetUserPassword() const
+    {
+    return (LPCWSTR)cStrUserPasswordW;
+    };
+
 private:
   eType nType;
   MX::CStringW cStrAddressW;
+  MX::CSecureStringW cStrUserNameW, cStrUserPasswordW;
   int nPort;
 };
 

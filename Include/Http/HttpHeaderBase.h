@@ -115,6 +115,7 @@ public:
 #include "HttpHeaderRespETag.h"
 #include "HttpHeaderRespLocation.h"
 #include "HttpHeaderRespRetryAfter.h"
+#include "HttpHeaderRespWwwProxyAuthenticate.h"
 #include "HttpHeaderGeneric.h"
 
 //-----------------------------------------------------------

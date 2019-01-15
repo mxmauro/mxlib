@@ -43,6 +43,9 @@
 #define HEADER_FLAG_ConnectionKeepAlive               0x0020
 #define HEADER_FLAG_ConnectionClose                   0x0040
 
+#define _HTTP_STATUS_NoContent                           204
+#define _HTTP_STATUS_NotModified                         304
+
 //-----------------------------------------------------------
 
 #define MAX_VERB_LENGTH                                   24
@@ -386,7 +389,8 @@ headers_end_reached:
         else
         {
           //1xx, 204 and 304 responses must not contain a body
-          if (sResponse.nStatusCode < 200 || sResponse.nStatusCode == 204 || sResponse.nStatusCode == 304)
+          if (sResponse.nStatusCode < 200 || sResponse.nStatusCode == _HTTP_STATUS_NoContent ||
+              sResponse.nStatusCode == _HTTP_STATUS_NotModified)
           {
             //content or chunked transfer is not allowed
             if (nContentLength != ULONGLONG_MAX || (nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0)

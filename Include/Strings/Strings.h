@@ -155,9 +155,26 @@ public:
   LPWSTR ToWide();
   static LPWSTR Ansi2Wide(_In_z_ LPCSTR szStrA, _In_ SIZE_T nSrcLen);
 
-private:
+protected:
   LPSTR szStrA;
   SIZE_T nSize, nLen;
+};
+
+//--------
+
+class CSecureStringA : public CStringA
+{
+  MX_DISABLE_COPY_CONSTRUCTOR(CSecureStringA);
+public:
+  CSecureStringA() : CStringA()
+    { };
+
+  VOID Empty();
+
+  BOOL Concat(_In_ LONGLONG nSrc);
+  BOOL Concat(_In_ ULONGLONG nSrc);
+
+  BOOL AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCWSTR szFormatW, _In_ va_list argptr);
 };
 
 //-----------------------------------------------------------
@@ -244,9 +261,26 @@ public:
   LPSTR ToAnsi();
   static LPSTR Wide2Ansi(_In_z_ LPCWSTR szStrW, _In_ SIZE_T nSrcLen);
 
-private:
+protected:
   LPWSTR szStrW;
   SIZE_T nSize, nLen;
+};
+
+//--------
+
+class CSecureStringW : public CStringW
+{
+  MX_DISABLE_COPY_CONSTRUCTOR(CSecureStringW);
+public:
+  CSecureStringW() : CStringW()
+    { };
+
+  VOID Empty();
+
+  BOOL Concat(_In_ LONGLONG nSrc);
+  BOOL Concat(_In_ ULONGLONG nSrc);
+
+  BOOL AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCSTR szFormatA, _In_ va_list argptr);
 };
 
 } //namespace MX

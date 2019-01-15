@@ -571,6 +571,8 @@ protected:
     BOOL IsClosed();
     BOOL IsClosedOrGracefulShutdown();
 
+    HRESULT GetErrorCode();
+
     HRESULT HandleConnected();
 
     HRESULT DoZeroRead(_In_ SIZE_T nPacketsCount);

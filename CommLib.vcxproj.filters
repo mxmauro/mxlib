@@ -83,9 +83,6 @@
     <ClInclude Include="Include\Http\HttpCommon.h">
       <Filter>Header Files\Http</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Http\HttpAuthenticateResponseParser.h">
-      <Filter>Header Files\Http</Filter>
-    </ClInclude>
     <ClInclude Include="Include\Comm\IpcSslLayer.h">
       <Filter>Header Files\Comm</Filter>
     </ClInclude>
@@ -230,6 +227,15 @@
     <ClInclude Include="Include\Comm\Proxy.h">
       <Filter>Header Files\Comm</Filter>
     </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderRespWwwProxyAuthenticate.h">
+      <Filter>Header Files\Http\Header Parser\Response</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpAuth.h">
+      <Filter>Header Files\Http</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Http\HttpAuthCache.h">
+      <Filter>Source Files\Http</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Http\HttpCookie.cpp">
@@ -257,9 +263,6 @@
       <Filter>Source Files\Comm</Filter>
     </ClCompile>
     <ClCompile Include="Source\Http\HttpCommon.cpp">
-      <Filter>Source Files\Http</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Http\HttpAuthenticateResponseParser.cpp">
       <Filter>Source Files\Http</Filter>
     </ClCompile>
     <ClCompile Include="Source\Comm\SslCertificates.cpp">
@@ -408,6 +411,15 @@
     </ClCompile>
     <ClCompile Include="Source\Comm\Proxy.cpp">
       <Filter>Source Files\Comm</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderRespWwwProxyAuthenticate.cpp">
+      <Filter>Source Files\Http\Header Parser\Response</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpAuth.cpp">
+      <Filter>Source Files\Http</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpAuthCache.cpp">
+      <Filter>Source Files\Http</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

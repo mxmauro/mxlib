@@ -24,6 +24,8 @@
 #include "TestHttpClient.h"
 #include <Http\HttpClient.h>
 
+#define SIMPLE_TEST
+
 //-----------------------------------------------------------
 
 class CMyHttpClient : public MX::CHttpClient
@@ -55,16 +57,24 @@ static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *lpHttp, _Inout_ MX::CIp
                                    _Inout_ MX::CSslCertificateArray **lplpCheckCertificates,
                                    _Inout_ MX::CSslCertificate **lplpSelfCert, _Inout_ MX::CCryptoRSA **lplpPrivKey);
 
+#ifdef SIMPLE_TEST
+static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificateArray *lpCerts);
+#else //SIMPLE_TEST
 static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpParam);
+#endif //SIMPLE_TEST
+
+static HRESULT CheckHttpClientResponse(_In_ CMyHttpClient &cHttpClient, _In_ BOOL bExpectHtml);
 
 //-----------------------------------------------------------
 
+#ifndef SIMPLE_TEST
 typedef struct {
   int nIndex;
   MX::CSockets *lpSckMgr;
   MX::CSslCertificateArray *lpCerts;
   MX::CWorkerThread cWorkerThreads;
 } THREAD_DATA;
+#endif //!SIMPLE_TEST
 
 //-----------------------------------------------------------
 
@@ -73,9 +83,6 @@ int TestHttpClient()
   MX::CIoCompletionPortThreadPool cDispatcherPool;
   MX::CSockets cSckMgr(cDispatcherPool);
   MX::CSslCertificateArray cCerts;
-  THREAD_DATA sThreadData[20];
-  BOOL bActive;
-  SIZE_T i;
   HRESULT hRes;
 
   hRes = cDispatcherPool.Initialize();
@@ -86,9 +93,20 @@ int TestHttpClient()
   }
   if (SUCCEEDED(hRes))
     hRes = cCerts.ImportFromWindowsStore();
+
+#ifdef SIMPLE_TEST
   if (SUCCEEDED(hRes))
   {
-    for (i=0; SUCCEEDED(hRes) && i<MX_ARRAYLEN(sThreadData); i++)
+    hRes = SimpleTest1(&cSckMgr, &cCerts);
+  }
+#else //SIMPLE_TEST
+  if (SUCCEEDED(hRes))
+  {
+    THREAD_DATA sThreadData[20];
+    BOOL bActive;
+    SIZE_T i;
+
+    for (i = 0; SUCCEEDED(hRes) && i < MX_ARRAYLEN(sThreadData); i++)
     {
       sThreadData[i].nIndex = (int)i + 1;
       sThreadData[i].lpSckMgr = &cSckMgr;
@@ -99,24 +117,25 @@ int TestHttpClient()
         hRes = E_OUTOFMEMORY;
       }
     }
-  }
-  //----
-  if (SUCCEEDED(hRes))
-  {
-    do
+    //----
+    if (SUCCEEDED(hRes))
     {
-      bActive = FALSE;
-      for (i=0; i<MX_ARRAYLEN(sThreadData); i++)
+      do
       {
-        if (sThreadData[i].cWorkerThreads.Wait(10) == FALSE)
-          bActive = TRUE;
+        bActive = FALSE;
+        for (i = 0; i < MX_ARRAYLEN(sThreadData); i++)
+        {
+          if (sThreadData[i].cWorkerThreads.Wait(10) == FALSE)
+            bActive = TRUE;
+        }
       }
+      while (bActive != FALSE && ShouldAbort() == FALSE);
     }
-    while (bActive != FALSE && ShouldAbort() == FALSE);
-  }
 
-  for (i=0; i<MX_ARRAYLEN(sThreadData); i++)
-    sThreadData[i].cWorkerThreads.Stop();
+    for (i = 0; i < MX_ARRAYLEN(sThreadData); i++)
+      sThreadData[i].cWorkerThreads.Stop();
+  }
+#endif //SIMPLE_TEST
 
   //done
   return (int)hRes;
@@ -172,6 +191,66 @@ static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *_lpHttp, _Inout_ MX::CI
   return S_OK;
 }
 
+#ifdef SIMPLE_TEST
+static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificateArray *lpCerts)
+{
+  CMyHttpClient cHttpClient(*lpSckMgr);
+  MX::CProxy cProxy;
+  DWORD dwStartTime, dwEndTime;
+  HRESULT hRes;
+
+  //cProxy.SetUseIE();
+  cProxy.SetManual(L"127.0.0.1:808");
+  cProxy.SetCredentials(L"guest", L"invitado");
+  cHttpClient.SetProxy(cProxy);
+  cHttpClient.lpCerts = lpCerts;
+  //cHttpClient.SetOptionFlags(0);
+  //cHttpClient.SetOptionFlags(MX::CHttpClient::OptionKeepConnectionOpen);
+  cHttpClient.On(MX_BIND_CALLBACK(&OnDocumentCompleted));
+  cHttpClient.On(MX_BIND_CALLBACK(&OnError));
+  cHttpClient.On(MX_BIND_CALLBACK(&OnQueryCertificates));
+
+  wprintf_s(L"[HttpClient/SimpleTest1] Downloading...\n");
+  dwStartTime = dwEndTime = ::GetTickCount();
+
+  cHttpClient.On(MX_BIND_CALLBACK(&OnResponseHeadersReceived));
+
+  hRes = cHttpClient.SetAuthCredentials(L"guest", L"guest");
+  if (SUCCEEDED(hRes))
+  {
+    //hRes = cHttpClient.Open("https://jigsaw.w3.org/HTTP/Basic/");
+    hRes = cHttpClient.Open("https://jigsaw.w3.org/HTTP/Digest/");
+  }
+  if (SUCCEEDED(hRes))
+  {
+    while (cHttpClient.IsDocumentComplete() == FALSE && cHttpClient.IsClosed() == FALSE);
+#pragma warning(suppress : 28159)
+    dwEndTime = ::GetTickCount();
+    hRes = CheckHttpClientResponse(cHttpClient, TRUE);
+
+    //print results
+    switch (hRes)
+    {
+      case 0x80070000 | ERROR_CANCELLED:
+        wprintf_s(L"[HttpClient/SimpleTest1] Cancelled by user.\n");
+        break;
+      case S_FALSE:
+        wprintf_s(L"[HttpClient/SimpleTest1] Body is NOT complete.\n");
+        break;
+      case S_OK:
+        wprintf_s(L"[HttpClient/SimpleTest1] Successful download in %lums / Status:%ld\n", dwEndTime - dwStartTime,
+                  cHttpClient.GetResponseStatus());
+        break;
+      default:
+        wprintf_s(L"[HttpClient/SimpleTest1] Error 0x%08X / Status:%ld\n", hRes,
+                  cHttpClient.GetResponseStatus());
+        break;
+    }
+  }
+  return hRes;
+}
+
+#else //SIMPLE_TEST
 static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpParam)
 {
   THREAD_DATA *lpThreadData = (THREAD_DATA*)lpParam;
@@ -233,39 +312,7 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
     dwEndTime = ::GetTickCount();
     if (lpThreadData->cWorkerThreads.CheckForAbort(0) == FALSE)
     {
-      if (cHttpClient.GetResponseStatus() == 200)
-      {
-        MX::CHttpBodyParserBase *lpBodyParser;
-
-        lpBodyParser = cHttpClient.GetResponseBodyParser();
-        if (lpBodyParser != NULL)
-        {
-          if (MX::StrCompareA(lpBodyParser->GetType(), "default") == 0)
-          {
-            MX::CHttpBodyParserDefault *lpParser = (MX::CHttpBodyParserDefault*)lpBodyParser;
-            MX::CStringA cStrBodyA;
-
-            hRes = lpParser->ToString(cStrBodyA);
-            if (SUCCEEDED(hRes) && bExpectHtml != FALSE)
-            {
-              if (MX::StrFindA((LPCSTR)cStrBodyA, "<html", FALSE, TRUE) == NULL ||
-                  MX::StrFindA((LPCSTR)cStrBodyA, "</html>", TRUE, TRUE) == NULL)
-              {
-                hRes = S_FALSE;
-              }
-            }
-          }
-          lpBodyParser->Release();
-        }
-        else
-        {
-          hRes = S_FALSE;
-        }
-      }
-      else
-      {
-        hRes = cHttpClient.GetLastRequestError();;
-      }
+      hRes = CheckHttpClientResponse(cHttpClient, bExpectHtml);
     }
     else
     {
@@ -299,4 +346,37 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
     Console::SetCursorPosition(nCurPosX, nCurPosY);
   }
   return;
+}
+#endif //SIMPLE_TEST
+
+static HRESULT CheckHttpClientResponse(_In_ CMyHttpClient &cHttpClient, _In_ BOOL bExpectHtml)
+{
+  MX::CHttpBodyParserBase *lpBodyParser;
+  HRESULT hRes;
+
+  if (cHttpClient.GetResponseStatus() != 200)
+    return cHttpClient.GetLastRequestError();
+
+  lpBodyParser = cHttpClient.GetResponseBodyParser();
+  if (lpBodyParser == NULL)
+    return S_FALSE;
+
+  hRes = S_FALSE;
+  if (MX::StrCompareA(lpBodyParser->GetType(), "default") == 0)
+  {
+    MX::CHttpBodyParserDefault *lpParser = (MX::CHttpBodyParserDefault*)lpBodyParser;
+    MX::CStringA cStrBodyA;
+
+    hRes = lpParser->ToString(cStrBodyA);
+    if (SUCCEEDED(hRes) && bExpectHtml != FALSE)
+    {
+      if (MX::StrFindA((LPCSTR)cStrBodyA, "<html", FALSE, TRUE) == NULL ||
+          MX::StrFindA((LPCSTR)cStrBodyA, "</html>", TRUE, TRUE) == NULL)
+      {
+        hRes = S_FALSE;
+      }
+    }
+  }
+  lpBodyParser->Release();
+  return hRes;
 }
