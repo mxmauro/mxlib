@@ -1594,6 +1594,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::BeginTransaction()
         bIsReadOnly = (MX::CJavascriptVM::GetInt(lpCtx, -1) != 0) ? TRUE : FALSE;
       DukTape::duk_pop(lpCtx);
 
+      DukTape::duk_set_top(lpCtx, 0);
       if (bIsReadOnly != FALSE)
       {
         DukTape::duk_push_lstring(lpCtx, "START TRANSACTION READ ONLY;", 28);
@@ -1608,7 +1609,6 @@ DukTape::duk_ret_t CJsMySqlPlugin::BeginTransaction()
     default:
       MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
   }
-
   return Query();
 }
 
@@ -1618,6 +1618,8 @@ DukTape::duk_ret_t CJsMySqlPlugin::CommitTransaction()
 
   if (lpInternal == NULL)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_NotReady);
+
+  DukTape::duk_set_top(lpCtx, 0);
   DukTape::duk_push_lstring(lpCtx, "COMMIT;", 7);
   return Query();
 }
@@ -1628,6 +1630,8 @@ DukTape::duk_ret_t CJsMySqlPlugin::RollbackTransaction()
 
   if (lpInternal == NULL)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_NotReady);
+
+  DukTape::duk_set_top(lpCtx, 0);
   DukTape::duk_push_lstring(lpCtx, "ROLLBACK;", 9);
   return Query();
 }

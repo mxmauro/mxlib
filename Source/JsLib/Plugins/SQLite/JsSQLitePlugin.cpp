@@ -1066,11 +1066,12 @@ DukTape::duk_ret_t CJsSQLitePlugin::BeginTransaction()
         bIsImmediate = (MX::CJavascriptVM::GetInt(lpCtx, -1) != 0) ? TRUE : FALSE;
       DukTape::duk_pop(lpCtx);
       //----
-      DukTape::duk_get_prop_string(lpCtx, 0, "immediate");
+      DukTape::duk_get_prop_string(lpCtx, 0, "exclusive");
       if (duk_is_null_or_undefined(lpCtx, -1) == 0)
         bIsExclusive = (MX::CJavascriptVM::GetInt(lpCtx, -1) != 0) ? TRUE : FALSE;
       DukTape::duk_pop(lpCtx);
 
+      DukTape::duk_set_top(lpCtx, 0);
       if (bIsExclusive != FALSE)
       {
         if (bIsImmediate != FALSE)
@@ -1091,7 +1092,6 @@ DukTape::duk_ret_t CJsSQLitePlugin::BeginTransaction()
     default:
       MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
   }
-
   return Query();
 }
 
@@ -1101,6 +1101,8 @@ DukTape::duk_ret_t CJsSQLitePlugin::CommitTransaction()
 
   if (lpInternal == NULL)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_NotReady);
+
+  DukTape::duk_set_top(lpCtx, 0);
   DukTape::duk_push_lstring(lpCtx, "COMMIT TRANSACTION;", 19);
   return Query();
 }
@@ -1111,6 +1113,8 @@ DukTape::duk_ret_t CJsSQLitePlugin::RollbackTransaction()
 
   if (lpInternal == NULL)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_NotReady);
+
+  DukTape::duk_set_top(lpCtx, 0);
   DukTape::duk_push_lstring(lpCtx, "ROLLBACK TRANSACTION;", 21);
   return Query();
 }
