@@ -54,8 +54,11 @@ static const LPCSTR szDefaultUserAgentA = "Mozilla/5.0 (compatible; MX-Lib 1.0)"
 
 namespace MX {
 
-CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr) : CBaseMemObj(), cSocketMgr(_cSocketMgr)
+CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr, _In_opt_ CLoggable *lpLogParent) : CBaseMemObj(),
+                         CLoggable(), cSocketMgr(_cSocketMgr), cRequest(this), cResponse(this)
 {
+  SetLogParent(lpLogParent);
+  //----
   dwResponseTimeoutMs = 60000;
   dwMaxRedirCount = DEFAULT_MAX_REDIRECTIONS_COUNT;
   dwMaxFieldSize = 256000;
@@ -2520,7 +2523,10 @@ HRESULT CHttpClient::SendRequestHeaders()
     hRes = E_OUTOFMEMORY;
   if (SUCCEEDED(hRes))
   {
-    MX_HTTP_DEBUG_PRINT(1, ("HttpClient(ReqHeaders/0x%p): %s\n", this, (LPSTR)cStrReqHdrsA));
+    if (ShouldLog(1) != FALSE)
+    {
+      Log(L"HttpClient(ReqHeaders/0x%p): %S", this, (LPCSTR)cStrReqHdrsA);
+    }
     hRes = cSocketMgr.SendMsg(hConn, (LPSTR)cStrReqHdrsA, cStrReqHdrsA.GetLength());
   }
   if (SUCCEEDED(hRes))
@@ -2756,7 +2762,7 @@ HRESULT CHttpClient::OnDownloadStarted(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR sz
 //-----------------------------------------------------------
 //-----------------------------------------------------------
 
-CHttpClient::CRequest::CRequest() : CBaseMemObj(), cHttpCmn(TRUE)
+CHttpClient::CRequest::CRequest(_In_ CHttpClient *lpHttpClient) : CBaseMemObj(), cHttpCmn(TRUE, lpHttpClient)
 {
   szBoundary[0] = 0;
   bUsingMultiPartFormData = FALSE;
@@ -2788,7 +2794,7 @@ VOID CHttpClient::CRequest::ResetForNewRequest()
 //-----------------------------------------------------------
 //-----------------------------------------------------------
 
-CHttpClient::CResponse::CResponse() : CBaseMemObj(), cHttpCmn(FALSE)
+CHttpClient::CResponse::CResponse(_In_ CHttpClient *lpHttpClient) : CBaseMemObj(), cHttpCmn(FALSE, lpHttpClient)
 {
   lpTimeoutEvent = NULL;
   return;

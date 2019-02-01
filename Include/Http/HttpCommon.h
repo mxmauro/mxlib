@@ -1,7 +1,7 @@
 /*
  * Original code by Mauro H. Leggieri (http://www.mauroleggieri.com.ar)
  *
- * Copyright (C) 2002-2015. All rights reserved.
+ * Copyright (C) 2002-2019. All rights reserved.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -30,6 +30,7 @@
 #include "..\AutoPtr.h"
 #include "..\Callbacks.h"
 #include "..\RefCounted.h"
+#include "..\Loggable.h"
 #include "..\CircularBuffer.h"
 #include "..\ZipLib\ZipLib.h"
 #include "HttpCookie.h"
@@ -40,36 +41,16 @@
 
 //-----------------------------------------------------------
 
-#ifdef _DEBUG
-  #define MX_HTTP_DEBUG_OUTPUT
-#else //_DEBUG
-  //#define MX_HTTP_DEBUG_OUTPUT
-#endif //_DEBUG
-
-#ifdef MX_HTTP_DEBUG_OUTPUT
-  #define MX_HTTP_DEBUG_PRINT(level, output) if (MX::CHttpCommon::nDebugLevel >= level) {  \
-                                               MX::DebugPrint output;                      \
-                                             }
-#else //MX_HTTP_DEBUG_OUTPUT
-  #define MX_HTTP_DEBUG_PRINT(level, output)
-#endif //MX_HTTP_DEBUG_OUTPUT
-
-//-----------------------------------------------------------
-
 namespace MX {
 
 class CHttpBodyParserBase;
 class CHttpHeaderBase;
 
-class CHttpCommon : public virtual CBaseMemObj
+class CHttpCommon : public virtual CBaseMemObj, public CLoggable
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CHttpCommon);
 public:
   class CContentDecoder;
-
-#ifdef MX_HTTP_DEBUG_OUTPUT
-  static LONG nDebugLevel;
-#endif //MX_HTTP_DEBUG_OUTPUT
 
   typedef enum {
     StateStart,
@@ -119,7 +100,7 @@ public:
   } eContentEncodingMethod;
 
 public:
-  CHttpCommon(_In_ BOOL bActAsServer);
+  CHttpCommon(_In_ BOOL bActAsServer, _In_ CLoggable *lpLogHandler);
   ~CHttpCommon();
 
   VOID SetOption_MaxHeaderSize(_In_ DWORD dwSize);

@@ -70,14 +70,12 @@ static BOOL IsContentTypeHeader(_In_z_ LPCSTR szHeaderA);
 
 namespace MX {
 
-#ifdef MX_HTTP_DEBUG_OUTPUT
-LONG CHttpCommon::nDebugLevel = 0;
-#endif //MX_HTTP_DEBUG_OUTPUT
-
-CHttpCommon::CHttpCommon(_In_ BOOL _bActAsServer) : CBaseMemObj()
+CHttpCommon::CHttpCommon(_In_ BOOL _bActAsServer, _In_ CLoggable *lpLogHandler) : CBaseMemObj(), CLoggable()
 {
   bActAsServer = _bActAsServer;
   dwMaxHeaderSize = 16384;
+  //----
+  SetLogParent(lpLogHandler);
   //----
   ResetParser();
   return;
@@ -410,7 +408,10 @@ headers_end_reached:
           goto done;
         }
         sParser.nState = StateBodyStart;
-        MX_HTTP_DEBUG_PRINT(1, ("HttpCommon(HeadersComplete/0x%p): BodyStart\n", this));
+        if (ShouldLog(1) != FALSE)
+        {
+          Log(L"HttpCommon(HeadersComplete/0x%p): BodyStart", this);
+        }
         goto done;
 
       case StateBodyStart:
@@ -490,7 +491,10 @@ headers_end_reached:
         if (*szDataA != '\n')
           goto err_invalid_data;
 chunk_data_begin:
-        MX_HTTP_DEBUG_PRINT(1, ("HttpCommon(Chunk/0x%p): %I64u\n", this, sParser.sChunk.nSize));
+        if (ShouldLog(1) != FALSE)
+        {
+          Log(L"HttpCommon(Chunk/0x%p): %I64u", this, sParser.sChunk.nSize);
+        }
         sParser.nState = StateChunkData;
         if (sParser.sChunk.nSize == 0)
         {
@@ -996,7 +1000,10 @@ HRESULT CHttpCommon::ParseRequestLine(_In_z_ LPCSTR szLineA)
   HRESULT hRes;
 
   //get method
-  MX_HTTP_DEBUG_PRINT(1, ("HttpCommon(RequestLine/0x%p): %s\n", this, szLineA));
+  if (ShouldLog(1) != FALSE)
+  {
+    Log(L"HttpCommon(RequestLine/0x%p): %S", this, szLineA);
+  }
   for (nMethod=0; nMethod<MX_ARRAYLEN(sVerbs); nMethod++)
   {
     if (StrNCompareA(szLineA, sVerbs[nMethod].szNameA, sVerbs[nMethod].nNameLen, FALSE) == 0)
@@ -1062,7 +1069,10 @@ HRESULT CHttpCommon::ParseStatusLine(_In_z_ LPCSTR szLineA)
       szLineA[12] != ' ')
     return MX_E_InvalidData;
   //get status code
-  MX_HTTP_DEBUG_PRINT(1, ("HttpCommon(StatusLine/0x%p): %s\n", this, szLineA));
+  if (ShouldLog(1) != FALSE)
+  {
+    Log(L"HttpCommon(StatusLine/0x%p): %S", this, szLineA);
+  }
   sResponse.nStatusCode = (LONG)(szLineA[ 9] - '0') * 100 +
                           (LONG)(szLineA[10] - '0') * 10 +
                           (LONG)(szLineA[11] - '0');
@@ -1085,7 +1095,10 @@ HRESULT CHttpCommon::ParseHeader(_Inout_ CStringA &cStrLineA)
   //skip blanks
   while (*szLineA==' ' || *szLineA=='\t')
     szLineA++;
-  MX_HTTP_DEBUG_PRINT(1, ("HttpCommon(Header/0x%p): %s\n", this, szLineA));
+  if (ShouldLog(1) != FALSE)
+  {
+    Log(L"HttpCommon(Header/0x%p): %S", this, szLineA);
+  }
   //get header name
   szNameStartA = szNameEndA = szLineA;
   while (*szNameEndA != 0 && *szNameEndA != ':')
@@ -1292,7 +1305,10 @@ HRESULT CHttpCommon::FlushContent()
       while (SUCCEEDED(hRes) && cBodyDecoder->GetAvailableData() > 0)
       {
         nSize = cBodyDecoder->GetData(aTempBuf, sizeof(aTempBuf));
-        MX_HTTP_DEBUG_PRINT(1, ("HttpCommon(Body/0x%p): %.*s\n", this, nSize, (LPSTR)aTempBuf));
+        if (ShouldLog(1) != FALSE)
+        {
+          Log(L"HttpCommon(Body/0x%p): %.*S", this, nSize, (LPCSTR)aTempBuf);
+        }
         //parse body
         hRes = cBodyParser->Parse(aTempBuf, nSize);
       }

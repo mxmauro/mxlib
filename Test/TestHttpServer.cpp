@@ -26,17 +26,24 @@
 
 //-----------------------------------------------------------
 
+static LONG volatile nLogMutex = 0;
+
+//-----------------------------------------------------------
+
 static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode);
-static VOID OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest,
+static VOID OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
                                      _In_ HANDLE hShutdownEv, _Inout_ MX::CHttpBodyParserBase **lplpBodyParser);
-static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest,
+static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
                                _In_ HANDLE hShutdownEv);
-static VOID OnError(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest, _In_ HRESULT hErrorCode);
+static VOID OnError(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
+                    _In_ HRESULT hErrorCode);
 
 static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR szFileNameW);
 
 static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ LPCWSTR &szExtensionW,
                                 _In_z_ LPCWSTR szPathW);
+
+static HRESULT OnLog(_In_z_ LPCWSTR szInfoW);
 
 //-----------------------------------------------------------
 
@@ -48,6 +55,9 @@ int TestHttpServer(_In_ BOOL bUseSSL)
   MX::CSslCertificate cSslCert;
   MX::CCryptoRSA cSslPrivateKey;
   HRESULT hRes;
+
+  cHttpServer.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
+  cHttpServer.SetLogLevel(5);
 
   cSckMgr.SetOption_MaxAcceptsToPost(24);
   //cSckMgr.SetOption_PacketSize(32768);
@@ -112,13 +122,13 @@ static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode)
   return;
 }
 
-static VOID OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest,
+static VOID OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
                                      _In_ HANDLE hShutdownEv, _Inout_ MX::CHttpBodyParserBase **lplpBodyParser)
 {
   return;
 }
 
-static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest,
+static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
                                _In_ HANDLE hShutdownEv)
 {
   MX::CStringW cStrFileNameW;
@@ -151,7 +161,8 @@ static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServe
   return;
 }
 
-static VOID OnError(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CRequest *lpRequest, _In_ HRESULT hErrorCode)
+static VOID OnError(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
+                    _In_ HRESULT hErrorCode)
 {
   return;
 }
@@ -213,5 +224,13 @@ static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ L
   while (sW >= (LPWSTR)cStrFullFileNameW && *sW != L'.' && *sW != L'/')
     sW--;
   szExtensionW = (sW >= (LPWSTR)cStrFullFileNameW && *sW == L'.') ? sW : L"";
+  return S_OK;
+}
+
+static HRESULT OnLog(_In_z_ LPCWSTR szInfoW)
+{
+  MX::CFastLock cLock(&nLogMutex);
+
+  wprintf_s(L"%s\n", szInfoW);
   return S_OK;
 }

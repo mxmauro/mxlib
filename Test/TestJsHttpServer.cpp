@@ -29,10 +29,14 @@
 
 //-----------------------------------------------------------
 
-class CTestJsRequest : public MX::CJsHttpServer::CJsRequest
+static LONG volatile nLogMutex = 0;
+
+//-----------------------------------------------------------
+
+class CTestJsRequest : public MX::CJsHttpServer::CClientRequest
 {
 public:
-  CTestJsRequest() : MX::CJsHttpServer::CJsRequest()
+  CTestJsRequest() : MX::CJsHttpServer::CClientRequest()
     { };
 
   VOID Reset()
@@ -48,14 +52,14 @@ public:
 //-----------------------------------------------------------
 
 static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode);
-static HRESULT OnNewRequestObject(_Out_ MX::CJsHttpServer::CJsRequest **lplpRequest);
-static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CJsRequest *lpRequest,
-                         _Inout_ MX::CJavascriptVM &cJvm, _Inout_ MX::CStringA &cStrCodeA);
-static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CJsRequest *lpRequest,
+static HRESULT OnNewRequestObject(_Out_ MX::CJsHttpServer::CClientRequest **lplpRequest);
+static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
+                         _Outptr_result_maybenull_ MX::CJavascriptVM **lplpJvm, _Out_ MX::CStringA &cStrCodeA);
+static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
                                  _Inout_ MX::CJavascriptVM &cJvm,
                                  _Inout_ MX::CJavascriptVM::CRequireModuleContext *lpReqContext,
                                  _Inout_ MX::CStringA &cStrCodeA);
-static VOID OnError(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CJsRequest *lpRequest,
+static VOID OnError(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
                     _In_ HRESULT hErrorCode);
 static VOID DeleteSessionFiles();
 static HRESULT OnSessionLoadSave(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin, _In_ BOOL bLoading);
@@ -64,6 +68,8 @@ static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ L
                                 _In_z_ LPCWSTR szPathW);
 static DukTape::duk_ret_t OnGetExecutablePath(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
                                               _In_z_ LPCSTR szFunctionNameA);
+
+static HRESULT OnLog(_In_z_ LPCWSTR szInfoW);
 
 //-----------------------------------------------------------
 
@@ -77,6 +83,9 @@ int TestJsHttpServer(_In_ BOOL bUseSSL)
   HRESULT hRes;
 
   DeleteSessionFiles();
+
+  cJsHttpServer.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
+  cJsHttpServer.SetLogLevel(5);
 
   cWorkerPool.SetOption_MinThreadsCount(4);
   cSckMgr.SetOption_MaxAcceptsToPost(24);
@@ -143,14 +152,14 @@ static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode)
   return;
 }
 
-static HRESULT OnNewRequestObject(_Out_ MX::CJsHttpServer::CJsRequest **lplpRequest)
+static HRESULT OnNewRequestObject(_Out_ MX::CJsHttpServer::CClientRequest **lplpRequest)
 {
   *lplpRequest = MX_DEBUG_NEW CTestJsRequest();
   return ((*lplpRequest) != NULL) ? S_OK : E_OUTOFMEMORY;
 }
 
-static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CJsRequest *_lpRequest,
-                         _Inout_ MX::CJavascriptVM &cJvm, _Inout_ MX::CStringA &cStrCodeA)
+static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *_lpRequest,
+                         _Outptr_result_maybenull_ MX::CJavascriptVM **lplpJvm, _Out_ MX::CStringA &cStrCodeA)
 {
   CTestJsRequest *lpRequest = static_cast<CTestJsRequest*>(_lpRequest);
   MX::CStringW cStrFileNameW;
@@ -165,15 +174,17 @@ static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer:
   //check extension
   if (MX::StrCompareW(szExtensionW, L".jss", TRUE) == 0)
   {
-    hRes = LoadTxtFile(cStrCodeA, (LPCWSTR)cStrFileNameW);
+    hRes = lpRequest->CreateJVM(lplpJvm);
     if (SUCCEEDED(hRes))
-      hRes = MX::CJsHttpServerSessionPlugin::Register(cJvm);
+      hRes = LoadTxtFile(cStrCodeA, (LPCWSTR)cStrFileNameW);
     if (SUCCEEDED(hRes))
-      hRes = MX::CJsMySqlPlugin::Register(cJvm);
+      hRes = MX::CJsHttpServerSessionPlugin::Register(**lplpJvm);
     if (SUCCEEDED(hRes))
-      hRes = MX::CJsSQLitePlugin::Register(cJvm);
+      hRes = MX::CJsMySqlPlugin::Register(**lplpJvm);
     if (SUCCEEDED(hRes))
-      hRes = cJvm.AddNativeFunction("getExecutablePath", MX_BIND_CALLBACK(&OnGetExecutablePath), 0);
+      hRes = MX::CJsSQLitePlugin::Register(**lplpJvm);
+    if (SUCCEEDED(hRes))
+      hRes = (*lplpJvm)->AddNativeFunction("getExecutablePath", MX_BIND_CALLBACK(&OnGetExecutablePath), 0);
     if (hRes == MX_E_FileNotFound || hRes == MX_E_PathNotFound)
     {
       hRes = lpRequest->SendErrorPage(404, E_INVALIDARG);
@@ -200,7 +211,7 @@ static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer:
   return hRes;
 }
 
-static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CJsRequest *_lpRequest,
+static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *_lpRequest,
                                  _Inout_ MX::CJavascriptVM &cJvm,
                                  _Inout_ MX::CJavascriptVM::CRequireModuleContext *lpReqContext,
                                  _Inout_ MX::CStringA &cStrCodeA)
@@ -261,7 +272,7 @@ static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHtt
   return MX_E_NotFound;
 }
 
-static VOID OnError(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CJsRequest *lpRequest,
+static VOID OnError(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
                     _In_ HRESULT hErrorCode)
 {
   return;
@@ -639,4 +650,12 @@ static DukTape::duk_ret_t OnGetExecutablePath(_In_ DukTape::duk_context *lpCtx, 
 
   MX::CJavascriptVM::PushString(lpCtx, (LPCWSTR)cStrPathW, cStrPathW.GetLength());
   return 1;
+}
+
+static HRESULT OnLog(_In_z_ LPCWSTR szInfoW)
+{
+  MX::CFastLock cLock(&nLogMutex);
+
+  wprintf_s(L"%s\n", szInfoW);
+  return S_OK;
 }

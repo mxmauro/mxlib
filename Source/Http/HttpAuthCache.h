@@ -1,7 +1,7 @@
 /*
  * Original code by Mauro H. Leggieri (http://www.mauroleggieri.com.ar)
  *
- * Copyright (C) 2002-2015. All rights reserved.
+ * Copyright (C) 2002-2019. All rights reserved.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from

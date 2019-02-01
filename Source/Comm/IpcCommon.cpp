@@ -43,11 +43,8 @@
 
 namespace MX {
 
-#ifdef MX_IPC_DEBUG_OUTPUT
-LONG CIpc::nDebugLevel = 0;
-#endif //MX_IPC_DEBUG_OUTPUT
-
-CIpc::CIpc(_In_ CIoCompletionPortThreadPool &_cDispatcherPool) : CBaseMemObj(), cDispatcherPool(_cDispatcherPool)
+CIpc::CIpc(_In_ CIoCompletionPortThreadPool &_cDispatcherPool) : CBaseMemObj(), CLoggable(),
+                                                                 cDispatcherPool(_cDispatcherPool)
 {
   dwPacketSize = 4096;
   dwReadAhead = 4;
@@ -728,22 +725,22 @@ VOID CIpc::OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWO
   CLayer *lpLayer;
   SIZE_T nReaded;
   HRESULT hRes2;
-#ifdef MX_IPC_DEBUG_OUTPUT
   LPVOID lpOrigOverlapped;
   CPacket::eType nOrigOverlappedType;
-#endif //MX_IPC_DEBUG_OUTPUT
   BOOL bQueueNewRead, bJumpFromResumeInputProcessing;
 
   lpPacket = CPacket::FromOverlapped(lpOvr);
   lpConn = lpPacket->GetConn();
   lpConn->AddRef();
-#ifdef MX_IPC_DEBUG_OUTPUT
+
   lpOrigOverlapped = lpPacket->GetOverlapped();
   nOrigOverlappedType = lpPacket->GetType();
-  MX_IPC_DEBUG_PRINT(1, ("%lu MX::CIpc::OnDispatcherPacket) Clock=%lums / Conn=0x%p / Ovr=0x%p / Type=%lu / "
-                         "Bytes=%lu / Err=0x%08X\n", ::MxGetCurrentThreadId(), lpConn->cHiResTimer.GetElapsedTimeMs(),
-                         lpConn, lpPacket->GetOverlapped(), lpPacket->GetType(), dwBytes, hRes));
-#endif //MX_IPC_DEBUG_OUTPUT
+  if (ShouldLog(1) != FALSE)
+  {
+    Log(L"CIpc::OnDispatcherPacket) Clock=%lums / Conn=0x%p / Ovr=0x%p / Type=%lu / Bytes=%lu / Err=0x%08X",
+        lpConn->cHiResTimer.GetElapsedTimeMs(), lpConn, lpPacket->GetOverlapped(), lpPacket->GetType(), dwBytes, hRes);
+  }
+
   hRes2 = OnPreprocessPacket(dwBytes, lpPacket, hRes);
   if (hRes2 == S_FALSE)
   {
@@ -842,8 +839,10 @@ check_pending_read_req:
           }
           else
           {
-            MX_IPC_DEBUG_PRINT(1, ("%lu MX::CIpc::CConnectionBase::GracefulShutdown A) Clock=%lums / This=0x%p\n",
-                                   ::MxGetCurrentThreadId(), lpConn->cHiResTimer.GetElapsedTimeMs(), lpConn));
+            if (ShouldLog(1) != FALSE)
+            {
+              Log(L"CIpc::GracefulShutdown A) Clock=%lums / This=0x%p", lpConn->cHiResTimer.GetElapsedTimeMs(), lpConn);
+            }
             _InterlockedOr(&(lpConn->nFlags), FLAG_GracefulShutdown);
             //free packet
             lpConn->cRwList.Remove(lpPacket);
@@ -982,9 +981,11 @@ check_pending_write_req:
                       lpConn->MarkLastWriteActivity(FALSE);
                     if (_InterlockedDecrement(&(lpConn->nOutstandingWrites)) == 0 && lpConn->IsClosed() != FALSE)
                       lpConn->ShutdownLink(FAILED(__InterlockedRead(&(lpConn->hErrorCode))));
-                    MX_IPC_DEBUG_PRINT(1, ("%lu MX::CIpc::CConnectionBase::GracefulShutdown B) Clock=%lums / "
-                                           "This=0x%p\n", ::MxGetCurrentThreadId(),
-                                           lpConn->cHiResTimer.GetElapsedTimeMs(), this));
+                    if (ShouldLog(1) != FALSE)
+                    {
+                      Log(L"CIpc::GracefulShutdown B) Clock=%lums / This=0x%p",
+                          lpConn->cHiResTimer.GetElapsedTimeMs(), this);
+                    }
                     _InterlockedOr(&(lpConn->nFlags), FLAG_GracefulShutdown);
                     //free packet
                     lpConn->cRwList.Remove(lpPacket);
@@ -1149,9 +1150,11 @@ check_pending_write_req:
         hRes == HRESULT_FROM_NT(STATUS_LOCAL_DISCONNECT) ||
         hRes == HRESULT_FROM_NT(STATUS_REMOTE_DISCONNECT))
     {
-      MX_IPC_DEBUG_PRINT(1, ("%lu MX::CIpc::CConnectionBase::GracefulShutdown C) Clock=%lums / This=0x%p / "
-                             "Res=0x%08X\n", ::MxGetCurrentThreadId(), lpConn->cHiResTimer.GetElapsedTimeMs(), this,
-                             hRes));
+      if (ShouldLog(1) != FALSE)
+      {
+        Log(L"CIpc::GracefulShutdown C) Clock=%lums / This=0x%p / Res=0x%08X", lpConn->cHiResTimer.GetElapsedTimeMs(),
+            this, hRes);
+      }
       hRes = S_OK;
       _InterlockedOr(&(lpConn->nFlags), FLAG_GracefulShutdown);
     }
@@ -1159,9 +1162,11 @@ check_pending_write_req:
   }
   //release connection reference
   lpConn->Release();
-  MX_IPC_DEBUG_PRINT(1, ("%lu MX::CIpc::OnDispatcherPacket) Clock=%lums / Conn=0x%p / Ovr=0x%p / Type=%lu / "
-                         "Err=0x%08X [EXIT]\n", ::MxGetCurrentThreadId(), lpConn->cHiResTimer.GetElapsedTimeMs(),
-                         lpConn, lpOrigOverlapped, nOrigOverlappedType, hRes));
+  if (ShouldLog(1) != FALSE)
+  {
+    Log(L"CIpc::OnDispatcherPacket) Clock=%lums / Conn=0x%p / Ovr=0x%p / Type=%lu / Err=0x%08X [EXIT]",
+        lpConn->cHiResTimer.GetElapsedTimeMs(), lpConn, lpOrigOverlapped, nOrigOverlappedType, hRes);
+  }
   lpConn->Release();
   //done
   return;
@@ -1282,9 +1287,11 @@ HRESULT CIpc::CConnectionBase::SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSiz
     cRwList.QueueLast(lpPacket);
     AddRef();
     _InterlockedIncrement(&nOutstandingWrites);
-    MX_IPC_DEBUG_PRINT(1, ("%lu MX::CIpc::CConnectionBase::SendMsg) Clock=%lums / Ovr=0x%p / Type=%lu / Bytes=%lu\n",
-                           ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(),
-                           lpPacket->GetType(), lpPacket->GetBytesInUse()));
+    if (lpIpc->ShouldLog(1) != FALSE)
+    {
+      lpIpc->Log(L"CIpc::SendMsg) Clock=%lums / Ovr=0x%p / Type=%lu / Bytes=%lu", cHiResTimer.GetElapsedTimeMs(),
+                 lpPacket->GetOverlapped(), lpPacket->GetType(), lpPacket->GetBytesInUse());
+    }
     hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
     if (FAILED(hRes))
     {
@@ -1316,9 +1323,11 @@ HRESULT CIpc::CConnectionBase::SendStream(_In_ CStream *lpStream)
   cRwList.QueueLast(lpPacket);
   AddRef();
   _InterlockedIncrement(&nOutstandingWrites);
-  MX_IPC_DEBUG_PRINT(1, ("%lu MX::CIpc::CConnectionBase::SendStream) Clock=%lums / Ovr=0x%p / Type=%lu\n",
-                         ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(),
-                         lpPacket->GetType()));
+  if (lpIpc->ShouldLog(1) != FALSE)
+  {
+    lpIpc->Log(L"CIpc::SendStream) Clock=%lums / Ovr=0x%p / Type=%lu", cHiResTimer.GetElapsedTimeMs(),
+               lpPacket->GetOverlapped(), lpPacket->GetType());
+  }
   hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
   if (FAILED(hRes))
   {
@@ -1345,9 +1354,11 @@ HRESULT CIpc::CConnectionBase::AfterWriteSignal(_In_ OnAfterWriteSignalCallback 
   cRwList.QueueLast(lpPacket);
   AddRef();
   _InterlockedIncrement(&nOutstandingWrites);
-  MX_IPC_DEBUG_PRINT(1, ("%lu MX::CIpc::CConnectionBase::AfterWriteSignal) Clock=%lums / Ovr=0x%p / Type=%lu\n",
-                         ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(),
-                         lpPacket->GetType()));
+  if (lpIpc->ShouldLog(1) != FALSE)
+  {
+    lpIpc->Log(L"CIpc::AfterWriteSignal) Clock=%lums / Ovr=0x%p / Type=%lu", cHiResTimer.GetElapsedTimeMs(),
+               lpPacket->GetOverlapped(), lpPacket->GetType());
+  }
   hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
   if (FAILED(hRes))
   {
@@ -1370,9 +1381,12 @@ HRESULT CIpc::CConnectionBase::SendResumeIoProcessingPacket(_In_ BOOL bInput)
   lpPacket->SetOrder((bInput != FALSE) ? 1 : 0);
   cRwList.QueueLast(lpPacket);
   AddRef();
-  MX_IPC_DEBUG_PRINT(1, ("%lu MX::CIpc::CConnectionBase::SendResumeIoProcessingPacket[%s]) Clock=%lums / Ovr=0x%p / "
-                         "Type=%lu\n", ::MxGetCurrentThreadId(), ((bInput != FALSE) ? "Input" : "Output"),
-                         cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(), lpPacket->GetType()));
+  if (lpIpc->ShouldLog(1) != FALSE)
+  {
+    lpIpc->Log(L"CIpc::SendResumeIoProcessingPacket[%s]) Clock=%lums / Ovr=0x%p / Type=%lu",
+               ((bInput != FALSE) ? L"Input" : L"Output"), cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(),
+               lpPacket->GetType());
+  }
   hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
   if (FAILED(hRes))
   {
@@ -1426,8 +1440,10 @@ HRESULT CIpc::CConnectionBase::WriteMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSi
           MarkLastWriteActivity(FALSE);
         if (_InterlockedDecrement(&nOutstandingWrites) == 0 && IsClosed() != FALSE)
           ShutdownLink(FAILED(__InterlockedRead(&hErrorCode)));
-        MX_IPC_DEBUG_PRINT(1, ("%lu MX::CIpc::CConnectionBase::GracefulShutdown D) Clock=%lums / This=0x%p\n",
-                               ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), this));
+        if (lpIpc->ShouldLog(1) != FALSE)
+        {
+          lpIpc->Log(L"CIpc::GracefulShutdown D) Clock=%lums / This=0x%p", cHiResTimer.GetElapsedTimeMs(), this);
+        }
         _InterlockedOr(&nFlags, FLAG_GracefulShutdown);
         //free packet
         cRwList.Remove(lpPacket);
@@ -1471,8 +1487,10 @@ VOID CIpc::CConnectionBase::Close(_In_ HRESULT hRes)
   //when closing call the "final" release to remove from list
   if ((nInitVal & FLAG_Closed) == 0)
   {
-    MX_IPC_DEBUG_PRINT(1, ("%lu MX::CIpc::CConnectionBase::Close) Clock=%lums / This=0x%p / Res=0x%08X\n",
-                           ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), this, hRes));
+    if (lpIpc->ShouldLog(1) != FALSE)
+    {
+      lpIpc->Log(L"CIpc::Close) Clock=%lums / This=0x%p / Res=0x%08X", cHiResTimer.GetElapsedTimeMs(), this, hRes);
+    }
     Release();
   }
   return;
@@ -1516,9 +1534,11 @@ HRESULT CIpc::CConnectionBase::HandleConnected()
     return E_OUTOFMEMORY;
   cRwList.QueueLast(lpPacket);
   AddRef();
-  MX_IPC_DEBUG_PRINT(1, ("%lu MX::CIpc::CConnectionBase::HandleConnected) Clock=%lums / Ovr=0x%p / Type=%lu\n",
-                         ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(),
-                         lpPacket->GetType()));
+  if (lpIpc->ShouldLog(1) != FALSE)
+  {
+    lpIpc->Log(L"CIpc::HandleConnected) Clock=%lums / Ovr=0x%p / Type=%lu", cHiResTimer.GetElapsedTimeMs(),
+               lpPacket->GetOverlapped(), lpPacket->GetType());
+  }
   hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
   if (FAILED(hRes))
   {
@@ -1568,8 +1588,10 @@ HRESULT CIpc::CConnectionBase::DoZeroRead(_In_ SIZE_T nPacketsCount)
     {
       case S_FALSE:
         MX_ASSERT_ALWAYS(_InterlockedDecrement(&nOutstandingReads) >= 0);
-        MX_IPC_DEBUG_PRINT(1, ("%lu MX::CIpc::CConnectionBase::GracefulShutdown E) Clock=%lums / This=0x%p\n",
-                               ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), this));
+        if (lpIpc->ShouldLog(1) != FALSE)
+        {
+          lpIpc->Log(L"CIpc::GracefulShutdown E) Clock=%lums / This=0x%p", cHiResTimer.GetElapsedTimeMs(), this);
+        }
         _InterlockedOr(&nFlags, FLAG_GracefulShutdown);
         //free packet
         cRwList.Remove(lpPacket);
@@ -1619,8 +1641,10 @@ HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacke
     {
       case S_FALSE:
         MX_ASSERT_ALWAYS(_InterlockedDecrement(&nOutstandingReads) >= 0);
-        MX_IPC_DEBUG_PRINT(1, ("%lu MX::CIpc::CConnectionBase::GracefulShutdown F) Clock=%lums / This=0x%p\n",
-                           ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), this));
+        if (lpIpc->ShouldLog(1) != FALSE)
+        {
+          lpIpc->Log(L"CIpc::GracefulShutdown F) Clock=%lums / This=0x%p", cHiResTimer.GetElapsedTimeMs(), this);
+        }
         _InterlockedOr(&nFlags, FLAG_GracefulShutdown);
         //free packet
         cRwList.Remove(lpPacket);

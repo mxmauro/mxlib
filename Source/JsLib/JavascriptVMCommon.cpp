@@ -1,7 +1,7 @@
 /*
  * Original code by Mauro H. Leggieri (http://www.mauroleggieri.com.ar)
  *
- * Copyright (C) 2002-2015. All rights reserved.
+ * Copyright (C) 2002-2019. All rights reserved.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -553,16 +553,6 @@ err_invalid_name:
   //done
   return S_OK;
 }
-
-#ifdef _DEBUG
-VOID DebugDump(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nIndex)
-{
-  DukTape::duk_dup(lpCtx, nIndex);
-  MX::DebugPrint("#%ld: %s\n", nIndex, DukTape::duk_json_encode(lpCtx, -1));
-  DukTape::duk_pop(lpCtx);
-  return;
-}
-#endif //_DEBUG
 
 } //namespace JsLib
 

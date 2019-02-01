@@ -186,6 +186,7 @@
     <ClInclude Include="Include\HiResTimer.h" />
     <ClInclude Include="Include\IOCompletionPort.h" />
     <ClInclude Include="Include\LinkedList.h" />
+    <ClInclude Include="Include\Loggable.h" />
     <ClInclude Include="Include\MallocMacros.h" />
     <ClInclude Include="Include\MemoryObjects.h" />
     <ClInclude Include="Include\MemoryStream.h" />
@@ -210,6 +211,7 @@
     <ClCompile Include="Source\FnvHash.cpp" />
     <ClCompile Include="Source\HiResTimer.cpp" />
     <ClCompile Include="Source\IOCompletionPort.cpp" />
+    <ClCompile Include="Source\Loggable.cpp" />
     <ClCompile Include="Source\MemoryObjects.cpp" />
     <ClCompile Include="Source\MemoryStream.cpp" />
     <ClCompile Include="Source\NtDefs.cpp" />

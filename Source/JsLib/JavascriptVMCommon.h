@@ -1,7 +1,7 @@
 /*
  * Original code by Mauro H. Leggieri (http://www.mauroleggieri.com.ar)
  *
- * Copyright (C) 2002-2015. All rights reserved.
+ * Copyright (C) 2002-2019. All rights reserved.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -85,10 +85,6 @@ VOID PushPropertyCommon(_In_ DukTape::duk_context *lpCtx, _In_opt_z_ LPCSTR szOb
 
 HRESULT FindObject(_In_ DukTape::duk_context *lpCtx, _In_opt_z_ LPCSTR szObjectNameA, _In_ BOOL bCreateIfNotExists,
                    _In_ BOOL bResolveProxyOnLast);
-
-#ifdef _DEBUG
-VOID DebugDump(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nIndex);
-#endif //_DEBUG
 
 } //namespace JsLib
 

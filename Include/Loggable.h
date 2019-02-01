@@ -21,58 +21,51 @@
  *    c. Distribute, sub-license, rent, lease, loan [or grant any third party
  *       access to or use of the software to any third party.
  **/
-#ifndef _MX_IPCSSL_H
-#define _MX_IPCSSL_H
+#ifndef _MX_LOGGABLE_H
+#define _MX_LOGGABLE_H
 
-#include "IpcCommon.h"
-#include "..\DateTime\DateTime.h"
-#include "..\ArrayList.h"
-#include "SslCertificates.h"
+#include "Callbacks.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-class CIpcSslLayer : public CIpc::CLayer, public CLoggable
+class CLoggable : public virtual CBaseMemObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CIpcSslLayer);
 public:
-  typedef enum {
-    ProtocolUnknown=0,
-    ProtocolTLSv1_0,
-    ProtocolTLSv1_1,
-    ProtocolTLSv1_2,
-  } eProtocol;
-
+  typedef Callback <HRESULT (_In_z_ LPCWSTR szInfoW)> OnLogCallback;
 public:
-  CIpcSslLayer();
-  ~CIpcSslLayer();
+  CLoggable();
+  CLoggable(_In_ OnLogCallback cCallback);
 
-  HRESULT Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol,
-                     _In_opt_ CSslCertificateArray *lpCheckCertificates, _In_opt_ CSslCertificate *lpSelfCert=NULL,
-                     _In_opt_ CCryptoRSA *lpPrivKey=NULL);
+  CLoggable& operator=(_In_ const CLoggable &cSrc);
+
+  VOID SetLogParent(_In_opt_ CLoggable *lpParentLog);
+  VOID SetLogLevel(_In_ DWORD dwLevel);
+  VOID SetLogCallback(_In_ OnLogCallback cCallback);
+
+  __inline BOOL ShouldLog(_In_ DWORD dwRequiredLevel) const
+    {
+    return (GetRoot()->dwLevel >= dwRequiredLevel) ? TRUE : FALSE;
+    };
+
+  HRESULT Log(_Printf_format_string_ LPCWSTR szFormatW, ...);
+  HRESULT LogIfError(_In_ HRESULT hResError, _Printf_format_string_ LPCWSTR szFormatW, ...);
+  HRESULT LogAlways(_In_ HRESULT hResError, _Printf_format_string_ LPCWSTR szFormatW, ...);
 
 private:
-  HRESULT OnConnect();
-  HRESULT OnDisconnect();
+  CLoggable* GetRoot() const;
 
-  HRESULT OnData(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
-  HRESULT OnSendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
-
-  HRESULT HandleSsl(_In_ BOOL bCanWrite);
-  HRESULT ExecSslRead();
-  HRESULT SendEncryptedOutput();
-  HRESULT ProcessDataToSend();
-  HRESULT FinalizeHandshake();
+  HRESULT WriteLogCommon(_In_ BOOL bAddError, _In_ HRESULT hResError, _In_z_ LPCWSTR szFormatW, _In_ va_list argptr);
 
 private:
-  LONG volatile nMutex;
-  LONG volatile hNetworkError;
-  LPVOID lpInternalData;
+  CLoggable *lpParentLog;
+  DWORD dwLevel;
+  OnLogCallback cCallback;
 };
 
 } //namespace MX
 
 //-----------------------------------------------------------
 
-#endif //_MX_IPCSSL_H
+#endif //_MX_LOGGABLE_H

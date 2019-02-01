@@ -48,7 +48,7 @@ CJsHttpServerSessionPlugin::~CJsHttpServerSessionPlugin()
   return;
 }
 
-HRESULT CJsHttpServerSessionPlugin::Setup(_In_ CHttpServer::CRequest *_lpRequest,
+HRESULT CJsHttpServerSessionPlugin::Setup(_In_ CJsHttpServer::CClientRequest *_lpRequest,
                                           _In_ OnLoadSaveCallback _cLoadSaveCallback,
                                           _In_opt_z_ LPCWSTR szSessionVarNameW, _In_opt_z_ LPCWSTR szDomainW,
                                           _In_opt_z_ LPCWSTR szPathW, _In_opt_ int _nExpireTimeInSeconds,
@@ -153,7 +153,7 @@ CJsHttpServer* CJsHttpServerSessionPlugin::GetServer() const
   return lpHttpServer;
 }
 
-CHttpServer::CRequest* CJsHttpServerSessionPlugin::GetRequest() const
+CHttpServer::CClientRequest* CJsHttpServerSessionPlugin::GetRequest() const
 {
   return lpRequest;
 }

@@ -32,33 +32,35 @@
 
 namespace MX {
 
-class CJsHttpServer : public CBaseMemObj
+class CJsHttpServer : public virtual CBaseMemObj, public CLoggable
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CJsHttpServer);
 public:
-  class CJsRequest;
+  class CClientRequest;
   class CRequireModuleContext;
   class CJsRequestRequireModuleContext;
 
-  typedef Callback<HRESULT (_Out_ CJsRequest **lplpRequest)> OnNewRequestObjectCallback;
+  typedef Callback<HRESULT (_Out_ CClientRequest **lplpRequest)> OnNewRequestObjectCallback;
 
-  typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CJsRequest *lpRequest,
-                            _In_ CJavascriptVM &cJvm, _Inout_ CStringA &cStrCodeA)> OnRequestCallback;
+  typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
+                            _Outptr_result_maybenull_ CJavascriptVM **lplpJvm,
+                            _Out_ CStringA &cStrCodeA)> OnRequestCallback;
 
-  typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CJsRequest *lpRequest,
+  typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
                             _In_ CJavascriptVM &cJvm, _Inout_ CJavascriptVM::CRequireModuleContext *lpReqContext,
                             _Inout_ CStringA &cStrCodeA)> OnRequireJsModuleCallback;
 
-  typedef Callback<VOID (_In_ CJsHttpServer *lpHttp, _In_ CJsRequest *lpRequest,
+  typedef Callback<VOID (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
                          _In_ HRESULT hErrorCode)> OnErrorCallback;
 
-  typedef Callback<VOID (_In_ CJsHttpServer *lpHttp, _In_ CJsRequest *lpRequest, _In_ CJavascriptVM &cJvm,
+  typedef Callback<VOID (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ CJavascriptVM &cJvm,
                          _In_ HRESULT hRunErrorCode)> OnJavascriptErrorCallback;
 
   //--------
 
 public:
-  CJsHttpServer(_In_ MX::CSockets &cSocketMgr, _In_ CIoCompletionPortThreadPool &cWorkerPool);
+  CJsHttpServer(_In_ CSockets &cSocketMgr, _In_ CIoCompletionPortThreadPool &cWorkerPool,
+                _In_opt_ CLoggable *lpLogParent = NULL);
   ~CJsHttpServer();
 
   VOID SetOption_MaxRequestTimeoutMs(_In_ DWORD dwTimeoutMs);
@@ -86,24 +88,26 @@ public:
                          _In_opt_ CSslCertificate *lpSslCertificate=NULL, _In_opt_ CCryptoRSA *lpSslKey=NULL);
   VOID StopListening();
 
-  static CJsRequest* GetServerRequestFromContext(_In_ DukTape::duk_context *lpCtx);
+  static CClientRequest* GetServerRequestFromContext(_In_ DukTape::duk_context *lpCtx);
 
 protected:
-  virtual HRESULT OnNewRequestObject(_Out_ CHttpServer::CRequest **lplpRequest);
+  virtual HRESULT OnNewRequestObject(_Out_ CHttpServer::CClientRequest **lplpRequest);
 
 public:
-  class CJsRequest : public CHttpServer::CRequest
+  class CClientRequest : public CHttpServer::CClientRequest
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CJsRequest);
+    MX_DISABLE_COPY_CONSTRUCTOR(CClientRequest);
   protected:
-    CJsRequest();
+    CClientRequest();
   public:
-    ~CJsRequest();
+    ~CClientRequest();
 
     VOID Detach();
 
     HRESULT OnSetup();
     VOID OnCleanup();
+
+    HRESULT CreateJVM(_Outptr_result_maybenull_ CJavascriptVM **lplpJvm);
 
   public:
     TArrayListWithDelete<CStringA*> cOutputBuffersList;
@@ -111,19 +115,20 @@ public:
   private:
     friend class CJsHttpServer;
 
+    CJsHttpServer *lpJsHttpServer;
     BOOL bDetached;
   };
 
 private:
-  VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpServer::CRequest *lpRequest,
+  VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest,
                           _In_ HANDLE hShutdownEv);
 
   HRESULT OnRequireJsModule(_In_ DukTape::duk_context *lpCtx, _In_ CJavascriptVM::CRequireModuleContext *lpReqContext,
                             _Inout_ CStringA &cStrCodeA);
 
-  VOID OnError(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CRequest *lpRequest, _In_ HRESULT hErrorCode);
+  VOID OnError(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest, _In_ HRESULT hErrorCode);
 
-  HRESULT InitializeJVM(_In_ CJavascriptVM &cJvm, _In_ CJsRequest *lpRequest);
+  HRESULT InitializeJVM(_In_ CJavascriptVM *lpJvm, _In_ CClientRequest *lpRequest);
 
   HRESULT TransformJavascriptCode(_Inout_ MX::CStringA &cStrCodeA);
   BOOL TransformJavascriptCode_ConvertToPrint(_Inout_ MX::CStringA &cStrCodeA, _Inout_ SIZE_T nNonCodeBlockStart,
@@ -137,8 +142,8 @@ private:
   DukTape::duk_ret_t OnRequestDetach(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
                                      _In_z_ LPCSTR szFunctionNameA);
 
-  HRESULT ResetAndDisableClientCache(_In_ CJsRequest *lpRequest);
-  HRESULT BuildErrorPage(_In_ CJsRequest *lpRequest, _In_ HRESULT hr, _In_z_ LPCSTR szDescriptionA,
+  HRESULT ResetAndDisableClientCache(_In_ CClientRequest *lpRequest);
+  HRESULT BuildErrorPage(_In_ CClientRequest *lpRequest, _In_ HRESULT hr, _In_z_ LPCSTR szDescriptionA,
                          _In_z_ LPCSTR szFileNameA, _In_ int nLine, _In_z_ LPCSTR szStackTraceA);
 
 private:

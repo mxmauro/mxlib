@@ -111,10 +111,14 @@ static const struct {
 
 namespace MX {
 
-CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr, _In_ CIoCompletionPortThreadPool &_cWorkerPool) : CBaseMemObj(),
-                         CCriticalSection(), cSocketMgr(_cSocketMgr), cWorkerPool(_cWorkerPool)
+CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr, _In_ CIoCompletionPortThreadPool &_cWorkerPool,
+                         _In_opt_ CLoggable *lpLogParent) : CBaseMemObj(), CLoggable(),
+                                                            CCriticalSection(), cSocketMgr(_cSocketMgr),
+                                                            cWorkerPool(_cWorkerPool)
 {
   cRequestCompletedWP = MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnRequestCompleted, this);
+  //----
+  SetLogParent(lpLogParent);
   //----
   dwMaxRequestTimeoutMs = 60000;
   dwMaxHeaderSize = 16384;
@@ -140,8 +144,8 @@ CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr, _In_ CIoCompletionPortThrea
 
 CHttpServer::~CHttpServer()
 {
-  TLnkLst<CRequest>::Iterator it;
-  CRequest *lpRequest;
+  TLnkLst<CClientRequest>::Iterator it;
+  CClientRequest *lpRequest;
   BOOL b;
 
   RundownProt_WaitForRelease(&nRundownLock);
@@ -487,7 +491,7 @@ HRESULT CHttpServer::OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIp
 
     case CIpc::ConnectionClassServer:
       {
-      TAutoRefCounted<CRequest> cNewRequest;
+      TAutoRefCounted<CClientRequest> cNewRequest;
       TAutoDeletePtr<CIpcSslLayer> cLayer;
       HRESULT hRes;
 
@@ -504,15 +508,13 @@ HRESULT CHttpServer::OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIp
       }
       else
       {
-        cNewRequest.Attach(MX_DEBUG_NEW CRequest());
+        cNewRequest.Attach(MX_DEBUG_NEW CClientRequest());
       }
       if (!cNewRequest)
         return E_OUTOFMEMORY;
-      cNewRequest->lpHttpServer = this;
-      cNewRequest->lpSocketMgr = &cSocketMgr;
-      cNewRequest->hConn = h;
-      cNewRequest->sRequest.cHttpCmn.SetOption_MaxHeaderSize(dwMaxHeaderSize);
-      cNewRequest->sResponse.cHttpCmn.SetOption_MaxHeaderSize(dwMaxHeaderSize);
+      hRes = cNewRequest->Initialize(this, &cSocketMgr, h, dwMaxHeaderSize);
+      if (FAILED(hRes))
+        return hRes;
       //add ssl layer
       {
         CAutoSlimRWLShared cSslLock(&(sSsl.nRwMutex));
@@ -555,7 +557,7 @@ VOID CHttpServer::OnListenerSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ 
 VOID CHttpServer::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
                                   _In_ HRESULT hErrorCode)
 {
-  CRequest *lpRequest = (CRequest*)lpUserData;
+  CClientRequest *lpRequest = (CClientRequest*)lpUserData;
 
   if (lpRequest != NULL)
   {
@@ -580,12 +582,12 @@ VOID CHttpServer::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
 HRESULT CHttpServer::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
                                      _Inout_ CIpc::CLayerList &cLayersList, _In_ HRESULT hErrorCode)
 {
-  CRequest *lpRequest = (CRequest*)lpUserData;
+  CClientRequest *lpRequest = (CClientRequest*)lpUserData;
   HRESULT hRes;
 
   MX_ASSERT(lpUserData != NULL);
   //setup header timeout
-  ::MxNtQuerySystemTime(&(lpRequest->sRequest.liLastRead));
+  ::MxNtQuerySystemTime(&(lpRequest->cRequest->liLastRead));
   hRes = SetupTimeoutEvent(lpRequest, dwMaxRequestTimeoutMs);
   //done
   return hRes;
@@ -593,7 +595,7 @@ HRESULT CHttpServer::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc:
 
 HRESULT CHttpServer::OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData)
 {
-  CRequest *lpRequest = (CRequest*)lpUserData;
+  CClientRequest *lpRequest = (CClientRequest*)lpUserData;
   BYTE aMsgBuf[4096];
   SIZE_T nMsgSize;
   BOOL bFireRequestHeadersReceivedCallback, bFireRequestCompleted;
@@ -601,18 +603,21 @@ HRESULT CHttpServer::OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ 
 
   MX_ASSERT(lpUserData != NULL);
 
-  if (lpRequest->nState == CRequest::StateInitializing)
+  if (lpRequest->nState == CClientRequest::StateInitializing)
   {
     hRes = lpRequest->OnSetup();
     if (FAILED(hRes))
       goto done;
-    lpRequest->nState = CRequest::StateReceivingRequestHeaders;
-    MX_HTTP_DEBUG_PRINT(1, ("HttpServer(State/0x%p/0x%p/0x%p): StateReceivingRequestHeaders\n", lpRequest,
-                        &(lpRequest->sRequest.cHttpCmn), &(lpRequest->sResponse.cHttpCmn)));
+    lpRequest->nState = CClientRequest::StateReceivingRequestHeaders;
+    if (ShouldLog(1) != FALSE)
+    {
+      Log(L"HttpServer(State/0x%p/0x%p/0x%p): StateReceivingRequestHeaders", lpRequest,
+          &(lpRequest->cRequest->cHttpCmn), &(lpRequest->cResponse->cHttpCmn));
+    }
   }
 
   hRes = S_OK;
-  ::MxNtQuerySystemTime(&(lpRequest->sRequest.liLastRead));
+  ::MxNtQuerySystemTime(&(lpRequest->cRequest->liLastRead));
 restart:
   bFireRequestHeadersReceivedCallback = bFireRequestCompleted = FALSE;
   {
@@ -637,42 +642,45 @@ restart:
       //take action depending on current state
       switch (lpRequest->nState)
       {
-        case CRequest::StateReceivingRequestHeaders:
-        case CRequest::StateReceivingRequestBody:
+        case CClientRequest::StateReceivingRequestHeaders:
+        case CClientRequest::StateReceivingRequestBody:
           //process http being received
-          hRes = lpRequest->sRequest.cHttpCmn.Parse(aMsgBuf, nMsgSize, nMsgUsed);
+          hRes = lpRequest->cRequest->cHttpCmn.Parse(aMsgBuf, nMsgSize, nMsgUsed);
           if (SUCCEEDED(hRes) && nMsgUsed > 0)
             hRes = cSocketMgr.ConsumeBufferedMessage(h, nMsgUsed);
           if (SUCCEEDED(hRes))
           {
             //take action if parser's state changed
-            nParserState = lpRequest->sRequest.cHttpCmn.GetParserState();
+            nParserState = lpRequest->cRequest->cHttpCmn.GetParserState();
             switch (nParserState)
             {
               case CHttpCommon::StateBodyStart:
-                if (lpRequest->sRequest.cHttpCmn.GetErrorCode() == 0)
+                if (lpRequest->cRequest->cHttpCmn.GetErrorCode() == 0)
                   bFireRequestHeadersReceivedCallback = TRUE; //fire events only if no error
-                lpRequest->nState = CRequest::StateReceivingRequestBody;
-                MX_HTTP_DEBUG_PRINT(1, ("HttpServer(State/0x%p/0x%p/0x%p): StateReceivingRequestBody\n", lpRequest,
-                                        &(lpRequest->sRequest.cHttpCmn), &(lpRequest->sResponse.cHttpCmn)));
+                lpRequest->nState = CClientRequest::StateReceivingRequestBody;
+                if (ShouldLog(1) != FALSE)
+                {
+                  Log(L"HttpServer(State/0x%p/0x%p/0x%p): StateReceivingRequestBody", lpRequest,
+                      &(lpRequest->cRequest->cHttpCmn), &(lpRequest->cResponse->cHttpCmn));
+                }
                 break;
 
               case CHttpCommon::StateDone:
                 CancelAllTimeoutEvents(lpRequest);
                 //check if there was a parse error
-                if (lpRequest->sRequest.cHttpCmn.GetErrorCode() != 0)
+                if (lpRequest->cRequest->cHttpCmn.GetErrorCode() != 0)
                 {
-                  hRes = (lpRequest->sRequest.cHttpCmn.GetErrorCode() == 413) ? MX_E_BadLength : MX_E_InvalidData;
-                  hRes = QuickSendErrorResponseAndReset(lpRequest, lpRequest->sRequest.cHttpCmn.GetErrorCode(),
+                  hRes = (lpRequest->cRequest->cHttpCmn.GetErrorCode() == 413) ? MX_E_BadLength : MX_E_InvalidData;
+                  hRes = QuickSendErrorResponseAndReset(lpRequest, lpRequest->cRequest->cHttpCmn.GetErrorCode(),
                                                         hRes, TRUE);
                   break;
                 }
                 //check if the uploaded body is too large
-                if (lpRequest->nState == CRequest::StateReceivingRequestBody)
+                if (lpRequest->nState == CClientRequest::StateReceivingRequestBody)
                 {
                   TAutoRefCounted<CHttpBodyParserBase> cBodyParser;
 
-                  cBodyParser.Attach(lpRequest->sRequest.cHttpCmn.GetBodyParser());
+                  cBodyParser.Attach(lpRequest->cRequest->cHttpCmn.GetBodyParser());
                   if (cBodyParser)
                   {
                     if (cBodyParser->IsEntityTooLarge() != FALSE)
@@ -684,13 +692,16 @@ restart:
                 }
                 //all is ok
                 bFireRequestCompleted = TRUE;
-                if (lpRequest->nState == CRequest::StateReceivingRequestHeaders)
+                if (lpRequest->nState == CClientRequest::StateReceivingRequestHeaders)
                 {
                   bFireRequestHeadersReceivedCallback = TRUE;
                 }
-                lpRequest->nState = CRequest::StateBuildingResponse;
-                MX_HTTP_DEBUG_PRINT(1, ("HttpServer(State/0x%p/0x%p/0x%p): StateBuildingResponse\n", lpRequest,
-                                        &(lpRequest->sRequest.cHttpCmn), &(lpRequest->sResponse.cHttpCmn)));
+                lpRequest->nState = CClientRequest::StateBuildingResponse;
+                if (ShouldLog(1) != FALSE)
+                {
+                  Log(L"HttpServer(State/0x%p/0x%p/0x%p): StateBuildingResponse", lpRequest,
+                      &(lpRequest->cRequest->cHttpCmn), &(lpRequest->cResponse->cHttpCmn));
+                }
                 break;
             }
           }
@@ -702,7 +713,7 @@ restart:
           }
           break;
 
-        case CRequest::StateBuildingResponse:
+        case CClientRequest::StateBuildingResponse:
           //we should not receive data after receiving the request, except some extra \r\n
           hRes = cSocketMgr.ConsumeBufferedMessage(h, nMsgSize);
           for (nMsgUsed=0; nMsgUsed<nMsgSize && (aMsgBuf[nMsgUsed] == '\r' || aMsgBuf[nMsgUsed] == '\n'); nMsgUsed++);
@@ -734,16 +745,16 @@ restart:
     {
       CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
 
-      if (lpRequest->nState == CRequest::StateReceivingRequestHeaders ||
-          lpRequest->nState == CRequest::StateReceivingRequestBody ||
-          lpRequest->nState == CRequest::StateBuildingResponse)
+      if (lpRequest->nState == CClientRequest::StateReceivingRequestHeaders ||
+          lpRequest->nState == CClientRequest::StateReceivingRequestBody ||
+          lpRequest->nState == CClientRequest::StateBuildingResponse)
       {
         TAutoRefCounted<CHttpBodyParserBase> cBodyParser;
 
         cBodyParser.Attach(lpBodyParser);
         if (!cBodyParser)
         {
-          CHttpHeaderEntContentType *lpHeader = lpRequest->sRequest.cHttpCmn.GetHeader<CHttpHeaderEntContentType>();
+          CHttpHeaderEntContentType *lpHeader = lpRequest->cRequest->cHttpCmn.GetHeader<CHttpHeaderEntContentType>();
           if (lpHeader != NULL)
           {
             if (StrCompareA(lpHeader->GetType(), "application/x-www-form-urlencoded") == 0)
@@ -768,7 +779,7 @@ restart:
         }
         if (SUCCEEDED(hRes))
         {
-          hRes = lpRequest->sRequest.cHttpCmn.SetBodyParser(cBodyParser.Get());
+          hRes = lpRequest->cRequest->cHttpCmn.SetBodyParser(cBodyParser.Get());
         }
         if (FAILED(hRes))
         {
@@ -805,7 +816,7 @@ done:
 VOID CHttpServer::OnRequestCompleted(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes,
                                      _In_ OVERLAPPED *lpOvr, _In_ HRESULT hRes)
 {
-  CRequest *lpRequest = (CRequest*)((char*)lpOvr - (char*)&(((CRequest*)0)->sOvr));
+  CClientRequest *lpRequest = (CClientRequest*)((char*)lpOvr - (char*)&(((CClientRequest*)0)->sOvr));
 
   if (SUCCEEDED(hRes))
   {
@@ -822,7 +833,7 @@ VOID CHttpServer::OnRequestCompleted(_In_ CIoCompletionPortThreadPool *lpPool, _
   return;
 }
 
-HRESULT CHttpServer::QuickSendErrorResponseAndReset(_In_ CRequest *lpRequest, _In_ LONG nErrorCode,
+HRESULT CHttpServer::QuickSendErrorResponseAndReset(_In_ CClientRequest *lpRequest, _In_ LONG nErrorCode,
                                                     _In_ HRESULT hErrorCode, _In_ BOOL bForceClose)
 {
   CStringA cStrResponseA;
@@ -844,16 +855,19 @@ HRESULT CHttpServer::QuickSendErrorResponseAndReset(_In_ CRequest *lpRequest, _I
     cSocketMgr.Close(lpRequest->hConn, hRes);
   }
   //done
-  lpRequest->nState = CRequest::StateError;
-  MX_HTTP_DEBUG_PRINT(1, ("HttpServer(State/0x%p/0x%p/0x%p): StateError [%ld/%08X]\n", lpRequest,
-                          &(lpRequest->sRequest.cHttpCmn), &(lpRequest->sResponse.cHttpCmn), nErrorCode, hErrorCode));
+  lpRequest->nState = CClientRequest::StateError;
+  if (ShouldLog(1) != FALSE)
+  {
+    Log(L"HttpServer(State/0x%p/0x%p/0x%p): StateError [%ld/%08X]", lpRequest, &(lpRequest->cRequest->cHttpCmn),
+        &(lpRequest->cResponse->cHttpCmn), nErrorCode, hErrorCode);
+  }
   return hRes;
 }
 
 VOID CHttpServer::OnRequestTimeout(_In_ CTimedEventQueue::CEvent *lpEvent)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
-  CRequest *lpRequest = (CRequest*)(lpEvent->GetUserData());
+  CClientRequest *lpRequest = (CClientRequest*)(lpEvent->GetUserData());
   ULARGE_INTEGER liCurrTime;
   DWORD dwDiffMs;
   HRESULT hRes;
@@ -865,8 +879,8 @@ VOID CHttpServer::OnRequestTimeout(_In_ CTimedEventQueue::CEvent *lpEvent)
 
       ::MxNtQuerySystemTime(&liCurrTime);
       dwDiffMs = 0;
-      if (liCurrTime.QuadPart > lpRequest->sRequest.liLastRead.QuadPart)
-        dwDiffMs = (DWORD)MX_100NS_TO_MILLISECONDS(liCurrTime.QuadPart - lpRequest->sRequest.liLastRead.QuadPart);
+      if (liCurrTime.QuadPart > lpRequest->cRequest->liLastRead.QuadPart)
+        dwDiffMs = (DWORD)MX_100NS_TO_MILLISECONDS(liCurrTime.QuadPart - lpRequest->cRequest->liLastRead.QuadPart);
       if (dwDiffMs > dwMaxRequestTimeoutMs)
         hRes = QuickSendErrorResponseAndReset(lpRequest, 408, S_OK, TRUE);
       else if (lpRequest->IsLinkClosed() == FALSE)
@@ -880,9 +894,9 @@ VOID CHttpServer::OnRequestTimeout(_In_ CTimedEventQueue::CEvent *lpEvent)
   }
   //delete the event and remove from pending list
   {
-    CFastLock cRequestTimeoutLock(&(lpRequest->sRequest.sTimeout.nMutex));
+    CFastLock cRequestTimeoutLock(&(lpRequest->cRequest->sTimeout.nMutex));
 
-    lpRequest->sRequest.sTimeout.cActiveList.Remove(lpEvent);
+    lpRequest->cRequest->sTimeout.cActiveList.Remove(lpEvent);
   }
   //done
   lpEvent->Release();
@@ -893,17 +907,20 @@ VOID CHttpServer::OnRequestTimeout(_In_ CTimedEventQueue::CEvent *lpEvent)
 VOID CHttpServer::OnAfterSendResponse(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie,
                                       _In_ CIpc::CUserData *lpUserData)
 {
-  CRequest *lpRequest = (CRequest*)lpUserData;
+  CClientRequest *lpRequest = (CClientRequest*)lpUserData;
   CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
 
   CancelAllTimeoutEvents(lpRequest);
-  MX_HTTP_DEBUG_PRINT(1, ("HttpServer(OnAfterSendResponse/0x%p/0x%p/0x%p): Closing\n", lpRequest,
-                          &(lpRequest->sRequest.cHttpCmn), &(lpRequest->sResponse.cHttpCmn)));
+  if (ShouldLog(1) != FALSE)
+  {
+    Log(L"HttpServer(OnAfterSendResponse/0x%p/0x%p/0x%p): Closing", lpRequest, &(lpRequest->cRequest->cHttpCmn),
+        &(lpRequest->cResponse->cHttpCmn));
+  }
   cSocketMgr.Close(lpRequest->hConn);
   return;
 }
 
-HRESULT CHttpServer::GenerateErrorPage(_Out_ CStringA &cStrResponseA, _In_ CRequest *lpRequest, _In_ LONG nErrorCode,
+HRESULT CHttpServer::GenerateErrorPage(_Out_ CStringA &cStrResponseA, _In_ CClientRequest *lpRequest, _In_ LONG nErrorCode,
                                        _In_ HRESULT hErrorCode, _In_opt_z_ LPCSTR szBodyExplanationA)
 {
   CDateTime cDtNow;
@@ -923,8 +940,8 @@ HRESULT CHttpServer::GenerateErrorPage(_Out_ CStringA &cStrResponseA, _In_ CRequ
     bHasBody = FALSE;
     szErrMsgA++;
   }
-  nHttpVersion[0] = lpRequest->sRequest.cHttpCmn.GetRequestVersionMajor();
-  nHttpVersion[1] = lpRequest->sRequest.cHttpCmn.GetRequestVersionMinor();
+  nHttpVersion[0] = lpRequest->cRequest->cHttpCmn.GetRequestVersionMajor();
+  nHttpVersion[1] = lpRequest->cRequest->cHttpCmn.GetRequestVersionMinor();
   if (nHttpVersion[0] == 0)
   {
     nHttpVersion[0] = 1;
@@ -984,9 +1001,9 @@ LPCSTR CHttpServer::LocateError(_In_ LONG nErrorCode)
   return NULL;
 }
 
-HRESULT CHttpServer::SetupTimeoutEvent(_In_ CRequest *lpRequest, _In_ DWORD dwTimeoutMs)
+HRESULT CHttpServer::SetupTimeoutEvent(_In_ CClientRequest *lpRequest, _In_ DWORD dwTimeoutMs)
 {
-  CFastLock cRequestTimeoutLock(&(lpRequest->sRequest.sTimeout.nMutex));
+  CFastLock cRequestTimeoutLock(&(lpRequest->cRequest->sTimeout.nMutex));
   CTimedEventQueue::CEvent *lpEvent;
   HRESULT hRes;
 
@@ -999,7 +1016,7 @@ HRESULT CHttpServer::SetupTimeoutEvent(_In_ CRequest *lpRequest, _In_ DWORD dwTi
     return E_OUTOFMEMORY;
   }
   //add to queues
-  hRes = lpRequest->sRequest.sTimeout.cActiveList.Add(lpEvent);
+  hRes = lpRequest->cRequest->sTimeout.cActiveList.Add(lpEvent);
   if (FAILED(hRes))
   {
     lpEvent->Release();
@@ -1009,7 +1026,7 @@ HRESULT CHttpServer::SetupTimeoutEvent(_In_ CRequest *lpRequest, _In_ DWORD dwTi
   hRes = lpTimedEventQueue->Add(lpEvent, dwMaxRequestTimeoutMs);
   if (FAILED(hRes))
   {
-    lpRequest->sRequest.sTimeout.cActiveList.Remove(lpEvent);
+    lpRequest->cRequest->sTimeout.cActiveList.Remove(lpEvent);
     lpEvent->Release();
     lpRequest->Release();
     return hRes;
@@ -1018,15 +1035,15 @@ HRESULT CHttpServer::SetupTimeoutEvent(_In_ CRequest *lpRequest, _In_ DWORD dwTi
   return S_OK;
 }
 
-VOID CHttpServer::CancelAllTimeoutEvents(_In_ CRequest *lpRequest)
+VOID CHttpServer::CancelAllTimeoutEvents(_In_ CClientRequest *lpRequest)
 {
-  CFastLock cRequestTimeoutLock(&(lpRequest->sRequest.sTimeout.nMutex));
+  CFastLock cRequestTimeoutLock(&(lpRequest->cRequest->sTimeout.nMutex));
 
   //cancel all queued events
   if (lpTimedEventQueue != NULL)
   {
-    lpRequest->sRequest.sTimeout.cActiveList.RunAction(MX_BIND_MEMBER_CALLBACK(&CHttpServer::DoCancelEventsCallback,
-                                                                               this));
+    lpRequest->cRequest->sTimeout.cActiveList.RunAction(MX_BIND_MEMBER_CALLBACK(&CHttpServer::DoCancelEventsCallback,
+                                                                                this));
   }
   return;
 }
@@ -1041,7 +1058,7 @@ VOID CHttpServer::DoCancelEventsCallback(_In_ __TEventArray &cEventsList)
   return;
 }
 
-VOID CHttpServer::OnRequestDestroyed(_In_ CRequest *lpRequest)
+VOID CHttpServer::OnRequestDestroyed(_In_ CClientRequest *lpRequest)
 {
   CFastLock cListLock(&nRequestsMutex);
 
@@ -1049,12 +1066,12 @@ VOID CHttpServer::OnRequestDestroyed(_In_ CRequest *lpRequest)
   return;
 }
 
-VOID CHttpServer::OnRequestEnding(_In_ CRequest *lpRequest, _In_ HRESULT hErrorCode)
+VOID CHttpServer::OnRequestEnding(_In_ CClientRequest *lpRequest, _In_ HRESULT hErrorCode)
 {
   HRESULT hRes = hErrorCode;
 
   CancelAllTimeoutEvents(lpRequest);
-  if (lpRequest->sResponse.bDirect == FALSE)
+  if (lpRequest->cResponse->bDirect == FALSE)
   {
     if (SUCCEEDED(hRes) && lpRequest->HasErrorBeenSent() == FALSE)
       hRes = lpRequest->BuildAndInsertOrSendHeaderStream();
@@ -1076,9 +1093,12 @@ VOID CHttpServer::OnRequestEnding(_In_ CRequest *lpRequest, _In_ HRESULT hErrorC
   if (FAILED(hRes))
   {
     cSocketMgr.Close(lpRequest->hConn, hRes);
-    lpRequest->nState = CRequest::StateError;
-    MX_HTTP_DEBUG_PRINT(1, ("HttpServer(State/0x%p/0x%p/0x%p): StateError [%08X]\n", lpRequest,
-                            &(lpRequest->sRequest.cHttpCmn), &(lpRequest->sResponse.cHttpCmn), hErrorCode));
+    lpRequest->nState = CClientRequest::StateError;
+    if (ShouldLog(1) != FALSE)
+    {
+      Log(L"HttpServer(State/0x%p/0x%p/0x%p): StateError [%08X]", lpRequest, &(lpRequest->cRequest->cHttpCmn),
+          &(lpRequest->cResponse->cHttpCmn), hErrorCode);
+    }
   }
   lpRequest->OnCleanup();
   return;
@@ -1086,7 +1106,7 @@ VOID CHttpServer::OnRequestEnding(_In_ CRequest *lpRequest, _In_ HRESULT hErrorC
 
 HRESULT CHttpServer::OnDownloadStarted(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW, _In_ LPVOID lpUserParam)
 {
-  CRequest *lpRequest = (CRequest*)lpUserParam;
+  CClientRequest *lpRequest = (CClientRequest*)lpUserParam;
   MX::CStringW cStrFileNameW;
   SIZE_T nLen;
   DWORD dw;
@@ -1121,7 +1141,7 @@ HRESULT CHttpServer::OnDownloadStarted(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR sz
   nHash = fnv_64a_buf(&dw, sizeof(dw), nHash);
   nLen = (SIZE_T)this;
   nHash = fnv_64a_buf(&nLen, sizeof(nLen), nHash);
-  nHash = fnv_64a_buf(lpRequest, sizeof(CRequest), nHash);
+  nHash = fnv_64a_buf(lpRequest, sizeof(CClientRequest), nHash);
   nHash = fnv_64a_buf(&szFileNameW, sizeof(LPCWSTR), nHash);
   nHash = fnv_64a_buf(szFileNameW, MX::StrLenW(szFileNameW) * 2, nHash);
   if (cStrFileNameW.AppendFormat(L"tmp%016I64x", (ULONGLONG)nHash) == FALSE)

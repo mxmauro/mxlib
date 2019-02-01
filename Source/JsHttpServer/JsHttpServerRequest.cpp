@@ -27,33 +27,57 @@
 
 namespace MX {
 
-CJsHttpServer::CJsRequest::CJsRequest() : CHttpServer::CRequest()
+CJsHttpServer::CClientRequest::CClientRequest() : CHttpServer::CClientRequest()
 {
   bDetached = FALSE;
+  lpJsHttpServer = NULL;
   return;
 }
 
-CJsHttpServer::CJsRequest::~CJsRequest()
+CJsHttpServer::CClientRequest::~CClientRequest()
 {
   return;
 }
 
-VOID CJsHttpServer::CJsRequest::Detach()
+VOID CJsHttpServer::CClientRequest::Detach()
 {
   bDetached = TRUE;
   return;
 }
 
-HRESULT CJsHttpServer::CJsRequest::OnSetup()
+HRESULT CJsHttpServer::CClientRequest::OnSetup()
 {
   bDetached = FALSE;
-  return CHttpServer::CRequest::OnSetup();;
+  return __super::OnSetup();;
 }
 
-VOID CJsHttpServer::CJsRequest::OnCleanup()
+VOID CJsHttpServer::CClientRequest::OnCleanup()
 {
-  CHttpServer::CRequest::OnCleanup();
+  __super::OnCleanup();
   return;
+}
+
+HRESULT CJsHttpServer::CClientRequest::CreateJVM(_Outptr_result_maybenull_ CJavascriptVM **lplpJvm)
+{
+  HRESULT hRes;
+
+  if (lplpJvm == NULL)
+    return E_POINTER;
+
+  *lplpJvm = MX_DEBUG_NEW CJavascriptVM();
+  if ((*lplpJvm) == NULL)
+    return E_OUTOFMEMORY;
+
+  //initialize javascript engine
+  hRes = lpJsHttpServer->InitializeJVM(*lplpJvm, this);
+  if (FAILED(hRes))
+  {
+    delete *lplpJvm;
+    *lplpJvm = NULL;
+  }
+
+  //done
+  return hRes;
 }
 
 } //namespace MX

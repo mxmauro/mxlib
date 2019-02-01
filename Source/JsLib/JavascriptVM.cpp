@@ -1,7 +1,7 @@
 /*
  * Original code by Mauro H. Leggieri (http://www.mauroleggieri.com.ar)
  *
- * Copyright (C) 2002-2015. All rights reserved.
+ * Copyright (C) 2002-2019. All rights reserved.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -103,6 +103,13 @@ HRESULT CJavascriptVM::Initialize()
       DukTape::duk_push_c_function(lpCtx, &OnDebugString, 1);
       DukTape::duk_put_prop_string(lpCtx, -2, "DebugPrint");
       DukTape::duk_pop(lpCtx);
+#ifdef _DEBUG
+      //add IS_DEBUG_BUILD property
+      DukTape::duk_push_global_object(lpCtx);
+      DukTape::duk_push_boolean(lpCtx, 1);
+      DukTape::duk_put_prop_string(lpCtx, -2, "IS_DEBUG_BUILD");
+      DukTape::duk_pop(lpCtx);
+#endif //_DEBUG
       //add unhandled exception handler
       DukTape::duk_push_global_object(lpCtx);
       DukTape::duk_push_c_function(lpCtx, &OnSetUnhandledExceptionHandler, 1);
@@ -1763,10 +1770,8 @@ static DukTape::duk_ret_t OnDebugString(_In_ DukTape::duk_context *lpCtx)
   LPCSTR szBufA;
 
   szBufA = DukTape::duk_require_string(lpCtx, 0);
-#ifdef _DEBUG
-  if (szBufA != NULL && szBufA[0] != 0)
+  if (szBufA != NULL && *szBufA != 0)
     MX::DebugPrint("%s\r\n", szBufA);
-#endif //_DEBUG
   //done
   return 0;
 }

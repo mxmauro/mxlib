@@ -32,12 +32,6 @@
 
 #define MAX_SYNCWAIT_ITEMS                                 8
 
-#ifdef _DEBUG
-  #define MX_DEBUG_OUTPUT
-#else //_DEBUG
-  //#define MX_DEBUG_OUTPUT
-#endif //_DEBUG
-
 //-----------------------------------------------------------
 
 #pragma pack(1)
@@ -71,7 +65,7 @@ namespace MX {
 CIpcMessageManager::CIpcMessageManager(_In_ CIoCompletionPortThreadPool &_cWorkerPool, _In_ CIpc *_lpIpc,
                                        _In_ HANDLE _hConn, _In_ OnMessageReceivedCallback _cMessageReceivedCallback,
                                        _In_opt_ DWORD _dwMaxMessageSize, _In_opt_ DWORD _dwProtocolVersion) :
-                                       TRefCounted<CBaseMemObj>(), cWorkerPool(_cWorkerPool)
+                                       TRefCounted<CBaseMemObj>(), CLoggable(), cWorkerPool(_cWorkerPool)
 {
   lpIpc = _lpIpc;
   hConn = _hConn;
@@ -186,9 +180,10 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
         s += sizeof(DWORD);
         nRemaining -= sizeof(DWORD);
         nState = StateRetrievingSize;
-#ifdef MX_DEBUG_OUTPUT
-        MX::DebugPrint("ProcessIncomingPacket: Id=%08X\n", cCurrMessage->dwId);
-#endif //MX_DEBUG_OUTPUT
+        if (ShouldLog(1) != FALSE)
+        {
+          Log(L"IpcMsgMgr/ProcessIncomingPacket: Id=%08X", cCurrMessage->dwId);
+        }
       }
       else if (nState == StateRetrievingSize)
       {
@@ -198,9 +193,10 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
         cCurrMessage->nDataLen = (SIZE_T)(*((DWORD MX_UNALIGNED*)s));
         s += sizeof(DWORD);
         nRemaining -= sizeof(DWORD);
-#ifdef MX_DEBUG_OUTPUT
-        MX::DebugPrint("ProcessIncomingPacket: DataLen=%lu\n", (DWORD)(cCurrMessage->nDataLen));
-#endif //MX_DEBUG_OUTPUT
+        if (ShouldLog(1) != FALSE)
+        {
+          Log(L"IpcMsgMgr/ProcessIncomingPacket: DataLen=%lu", (DWORD)(cCurrMessage->nDataLen));
+        }
         if (cCurrMessage->nDataLen > dwMaxMessageSize)
         {
           MX_ASSERT(FALSE);
@@ -236,10 +232,11 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
         s += nToRead;
         nRemaining -= nToRead;
         nCurrMsgSize += nToRead;
-#ifdef MX_DEBUG_OUTPUT
-        MX::DebugPrint("ProcessIncomingPacket: Data=%lu bytes (%lu left)\n", (DWORD)nToRead,
+        if (ShouldLog(1) != FALSE)
+        {
+          Log(L"IpcMsgMgr/ProcessIncomingPacket: Data=%lu bytes (%lu left)", (DWORD)nToRead,
                        (DWORD)(cCurrMessage->nDataLen - nCurrMsgSize));
-#endif //MX_DEBUG_OUTPUT
+        }
         if (nCurrMsgSize >= cCurrMessage->nDataLen)
         {
           hRes = OnMessageCompleted();
@@ -269,9 +266,10 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
         hRes = E_FAIL;
       }
     }
-#ifdef MX_DEBUG_OUTPUT
-    MX::DebugPrint("ProcessIncomingPacket: Consumed=%lu bytes\n", (DWORD)(nMsgSize-nRemaining));
-#endif //MX_DEBUG_OUTPUT
+    if (ShouldLog(1) != FALSE)
+    {
+      Log(L"IpcMsgMgr/ProcessIncomingPacket: Consumed=%lu bytes\n", (DWORD)(nMsgSize - nRemaining));
+    }
     if (SUCCEEDED(hRes) && nMsgSize != nRemaining)
       hRes = lpIpc->ConsumeBufferedMessage(hConn, nMsgSize-nRemaining);
   }
@@ -487,9 +485,10 @@ HRESULT CIpcMessageManager::OnMessageCompleted()
 {
   HRESULT hRes;
 
-#ifdef MX_DEBUG_OUTPUT
-  MX::DebugPrint("ProcessIncomingPacket: OnMessageCompleted\n");
-#endif //MX_DEBUG_OUTPUT
+  if (ShouldLog(1) != FALSE)
+  {
+    Log(L"IpcMsgMgr/ProcessIncomingPacket: OnMessageCompleted");
+  }
   _InterlockedIncrement(&nOutgoingMessageReceivedCallback);
 
   cCurrMessage->dwOrder = (DWORD)_InterlockedIncrement(&(sReceivedMessages.nNextOrderId));

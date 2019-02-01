@@ -28,9 +28,12 @@
 
 namespace MX {
 
-CJsHttpServer::CJsHttpServer(_In_ MX::CSockets &cSocketMgr, _In_ CIoCompletionPortThreadPool &cWorkerPool) :
-                            CBaseMemObj(), cHttpServer(cSocketMgr, cWorkerPool)
+CJsHttpServer::CJsHttpServer(_In_ CSockets &cSocketMgr, _In_ CIoCompletionPortThreadPool &cWorkerPool,
+                             _In_opt_ CLoggable *lpLogParent) : CBaseMemObj(), CLoggable(),
+                                                                cHttpServer(cSocketMgr, cWorkerPool, this)
 {
+  SetLogParent(lpLogParent);
+  //----
   cNewRequestObjectCallback = NullCallback();
   cRequestCallback = NullCallback();
   cRequireJsModuleCallback = NullCallback();
@@ -154,11 +157,11 @@ VOID CJsHttpServer::StopListening()
   return;
 }
 
-VOID CJsHttpServer::OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpServer::CRequest *_lpRequest,
+VOID CJsHttpServer::OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *_lpRequest,
                                        _In_ HANDLE hShutdownEv)
 {
-  CJsRequest *lpRequest = static_cast<CJsRequest*>(_lpRequest);
-  CJavascriptVM cJvm;
+  CClientRequest *lpRequest = static_cast<CClientRequest*>(_lpRequest);
+  TAutoDeletePtr<CJavascriptVM> cJvm;
   CStringA cStrCodeA;
   CUrl *lpUrl;
   BOOL bDetached = FALSE;
@@ -188,13 +191,8 @@ on_init_error:
     lpRequest->End(hRes);
     return;
   }
-  //initialize javascript engine
-  hRes = InitializeJVM(cJvm, lpRequest);
-  if (FAILED(hRes))
-    goto on_init_error;
 
-  cJvm.On(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequireJsModule, this));
-  hRes = cRequestCallback(this, lpRequest, cJvm, cStrCodeA);
+  hRes = cRequestCallback(this, lpRequest, &cJvm, cStrCodeA);
   if (FAILED(hRes))
     goto on_init_error;
   if (hRes == S_FALSE)
@@ -203,80 +201,80 @@ on_init_error:
   //transform provided code
   if (cStrCodeA.IsEmpty() == FALSE)
   {
-    hRes = TransformJavascriptCode(cStrCodeA);
+    hRes = (cJvm) ? TransformJavascriptCode(cStrCodeA) : MX_E_NotReady;
     if (FAILED(hRes))
       goto on_init_error;
-  }
-  hRes = S_OK;
-  //execute JS code
-  if (cStrCodeA.IsEmpty() == FALSE)
-  {
-    try
-    {
-      cJvm.Run(cStrCodeA, lpUrl->GetPath());
-      bDetached = lpRequest->bDetached;
-    }
-    catch (CJsHttpServerSystemExit &e)
-    {
-      if (*(e.GetDescription()) != 0)
-      {
-        CStringA cStrBodyA;
 
-        hRes = ResetAndDisableClientCache(lpRequest);
-        if (SUCCEEDED(hRes))
+    //execute JS code
+    if (cStrCodeA.IsEmpty() == FALSE)
+    {
+      try
+      {
+        cJvm->Run(cStrCodeA, lpUrl->GetPath());
+        bDetached = lpRequest->bDetached;
+      }
+      catch (CJsHttpServerSystemExit &e)
+      {
+        if (*(e.GetDescription()) != 0)
         {
-          if (cStrBodyA.Format("Error: %s", e.GetDescription()) != FALSE)
+          CStringA cStrBodyA;
+
+          hRes = ResetAndDisableClientCache(lpRequest);
+          if (SUCCEEDED(hRes))
           {
-            hRes = HtmlEntities::ConvertTo(cStrBodyA);
-            if (SUCCEEDED(hRes))
+            if (cStrBodyA.Format("Error: %s", e.GetDescription()) != FALSE)
             {
-              if (cStrBodyA.InsertN("<html><body><pre>", 0, 6 + 6 + 5) != FALSE &&
-                  cStrBodyA.ConcatN("</pre></body></html>", 6 + 7 + 7) != FALSE)
+              hRes = HtmlEntities::ConvertTo(cStrBodyA);
+              if (SUCCEEDED(hRes))
               {
-                hRes = lpRequest->SendResponse((LPCSTR)cStrBodyA, cStrBodyA.GetLength());
-              }
-              else
-              {
-                hRes = E_OUTOFMEMORY;
+                if (cStrBodyA.InsertN("<html><body><pre>", 0, 6 + 6 + 5) != FALSE &&
+                    cStrBodyA.ConcatN("</pre></body></html>", 6 + 7 + 7) != FALSE)
+                {
+                  hRes = lpRequest->SendResponse((LPCSTR)cStrBodyA, cStrBodyA.GetLength());
+                }
+                else
+                {
+                  hRes = E_OUTOFMEMORY;
+                }
               }
             }
-          }
-          else
-          {
-            hRes = E_OUTOFMEMORY;
+            else
+            {
+              hRes = E_OUTOFMEMORY;
+            }
           }
         }
       }
-    }
-    catch (CJsWindowsError &e)
-    {
-      hRes = ResetAndDisableClientCache(lpRequest);
-      if (SUCCEEDED(hRes))
+      catch (CJsWindowsError &e)
       {
-        hRes = BuildErrorPage(lpRequest, e.GetHResult(), e.GetDescription(), e.GetFileName(), e.GetLineNumber(),
-                              e.GetStackTrace());
+        hRes = ResetAndDisableClientCache(lpRequest);
+        if (SUCCEEDED(hRes))
+        {
+          hRes = BuildErrorPage(lpRequest, e.GetHResult(), e.GetDescription(), e.GetFileName(), e.GetLineNumber(),
+                                e.GetStackTrace());
+        }
+      }
+      catch (CJsError &e)
+      {
+        hRes = ResetAndDisableClientCache(lpRequest);
+        if (SUCCEEDED(hRes))
+        {
+          hRes = BuildErrorPage(lpRequest, E_FAIL, e.GetDescription(), e.GetFileName(), e.GetLineNumber(),
+                                e.GetStackTrace());
+        }
+      }
+      catch (...)
+      {
+        hRes = E_FAIL;
       }
     }
-    catch (CJsError &e)
-    {
-      hRes = ResetAndDisableClientCache(lpRequest);
-      if (SUCCEEDED(hRes))
-      {
-        hRes = BuildErrorPage(lpRequest, E_FAIL, e.GetDescription(), e.GetFileName(), e.GetLineNumber(),
-                              e.GetStackTrace());
-      }
-    }
-    catch (...)
-    {
-      hRes = E_FAIL;
-    }
+    if (FAILED(hRes))
+      goto on_init_error;
   }
-  if (FAILED(hRes))
-    goto on_init_error;
 
   //done
   if (bDetached == FALSE)
-    lpRequest->End(hRes);
+    lpRequest->End(S_OK);
   return;
 }
 
@@ -284,7 +282,7 @@ HRESULT CJsHttpServer::OnRequireJsModule(_In_ DukTape::duk_context *lpCtx,
                                          _In_ CJavascriptVM::CRequireModuleContext *lpReqContext,
                                          _Inout_ CStringA &cStrCodeA)
 {
-  CJsRequest *lpRequest;
+  CClientRequest *lpRequest;
   HRESULT hRes;
 
   if (!cRequireJsModuleCallback)
@@ -299,18 +297,19 @@ HRESULT CJsHttpServer::OnRequireJsModule(_In_ DukTape::duk_context *lpCtx,
   return hRes;
 }
 
-VOID CJsHttpServer::OnError(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CRequest *_lpRequest, _In_ HRESULT hErrorCode)
+VOID CJsHttpServer::OnError(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *_lpRequest,
+                            _In_ HRESULT hErrorCode)
 {
   if (cErrorCallback)
   {
-    CJsRequest *lpRequest = static_cast<CJsRequest*>(_lpRequest);
+    CClientRequest *lpRequest = static_cast<CClientRequest*>(_lpRequest);
 
     cErrorCallback(this, lpRequest, hErrorCode);
   }
   return;
 }
 
-HRESULT CJsHttpServer::ResetAndDisableClientCache(_In_ CJsRequest *lpRequest)
+HRESULT CJsHttpServer::ResetAndDisableClientCache(_In_ CClientRequest *lpRequest)
 {
   HRESULT hRes;
 
@@ -323,7 +322,7 @@ HRESULT CJsHttpServer::ResetAndDisableClientCache(_In_ CJsRequest *lpRequest)
   return hRes;
 }
 
-HRESULT CJsHttpServer::BuildErrorPage(_In_ CJsRequest *lpRequest, _In_ HRESULT hr, _In_z_ LPCSTR szDescriptionA,
+HRESULT CJsHttpServer::BuildErrorPage(_In_ CClientRequest *lpRequest, _In_ HRESULT hr, _In_z_ LPCSTR szDescriptionA,
                                       _In_z_ LPCSTR szFileNameA, _In_ int nLine, _In_z_ LPCSTR szStackTraceA)
 {
   CStringA cStrBodyA;

@@ -30,7 +30,7 @@
 
 namespace MX {
 
-class CIpcMessageManager : public virtual TRefCounted<CBaseMemObj>
+class CIpcMessageManager : public virtual TRefCounted<CBaseMemObj>, public CLoggable
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CIpcMessageManager);
 public:

@@ -1,7 +1,7 @@
 /*
  * Original code by Mauro H. Leggieri (http://www.mauroleggieri.com.ar)
  *
- * Copyright (C) 2002-2015. All rights reserved.
+ * Copyright (C) 2002-2019. All rights reserved.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -41,7 +41,7 @@
 
 namespace MX {
 
-class CHttpClient : public virtual CBaseMemObj
+class CHttpClient : public virtual CBaseMemObj, public CLoggable
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CHttpClient);
 public:
@@ -77,7 +77,7 @@ public:
   //--------
 
 public:
-  CHttpClient(_In_ CSockets &cSocketMgr);
+  CHttpClient(_In_ CSockets &cSocketMgr, _In_opt_ CLoggable *lpLogParent = NULL);
   ~CHttpClient();
 
   VOID SetOption_MaxResponseTimeoutMs(_In_ DWORD dwTimeoutMs);
@@ -264,7 +264,7 @@ private:
   class CRequest : public CBaseMemObj
   {
   public:
-    CRequest();
+    CRequest(_In_ CHttpClient *lpHttpClient);
     ~CRequest();
 
     VOID ResetForNewRequest();
@@ -286,7 +286,7 @@ private:
   class CResponse : public CBaseMemObj
   {
   public:
-    CResponse();
+    CResponse(_In_ CHttpClient *lpHttpClient);
 
     VOID ResetForNewRequest();
 

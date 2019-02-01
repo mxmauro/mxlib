@@ -1,7 +1,7 @@
 /*
  * Original code by Mauro H. Leggieri (http://www.mauroleggieri.com.ar)
  *
- * Copyright (C) 2002-2015. All rights reserved.
+ * Copyright (C) 2002-2019. All rights reserved.
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from
@@ -40,26 +40,27 @@
 
 namespace MX {
 
-class CHttpServer : public virtual CBaseMemObj, private CCriticalSection
+class CHttpServer : public virtual CBaseMemObj, public CLoggable, private CCriticalSection
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CHttpServer);
 public:
-  class CRequest;
+  class CClientRequest;
 
   //--------
 
-  typedef Callback<HRESULT (_Out_ CRequest **lplpRequest)> OnNewRequestObjectCallback;
-  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CRequest *lpRequest, _In_ HANDLE hShutdownEv,
+  typedef Callback<HRESULT (_Out_ CClientRequest **lplpRequest)> OnNewRequestObjectCallback;
+  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ HANDLE hShutdownEv,
                          _Outptr_ _Maybenull_ CHttpBodyParserBase **lplpBodyParser)> OnRequestHeadersReceivedCallback;
-  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CRequest *lpRequest,
+  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
                          _In_ HANDLE hShutdownEv)> OnRequestCompletedCallback;
 
-  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CRequest *lpRequest, _In_ HRESULT hErrorCode)> OnErrorCallback;
+  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ HRESULT hErrorCode)> OnErrorCallback;
 
   //--------
 
 public:
-  CHttpServer(_In_ CSockets &cSocketMgr, _In_ CIoCompletionPortThreadPool &cWorkerPool);
+  CHttpServer(_In_ CSockets &cSocketMgr, _In_ CIoCompletionPortThreadPool &cWorkerPool,
+              _In_opt_ CLoggable *lpLogParent = NULL);
   ~CHttpServer();
 
   VOID SetOption_MaxRequestTimeoutMs(_In_ DWORD dwTimeoutMs);
@@ -87,13 +88,13 @@ public:
   VOID StopListening();
 
 public:
-  class CRequest : public CIpc::CUserData, public TLnkLstNode<CRequest>
+  class CClientRequest : public CIpc::CUserData, public TLnkLstNode<CClientRequest>
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CRequest);
+    MX_DISABLE_COPY_CONSTRUCTOR(CClientRequest);
   protected:
-    CRequest();
+    CClientRequest();
   public:
-    ~CRequest();
+    ~CClientRequest();
 
     VOID End(_In_opt_ HRESULT hErrorCode=S_OK);
 
@@ -207,6 +208,9 @@ public:
       };
 
   private:
+    HRESULT Initialize(_In_ CHttpServer *lpHttpServer, _In_ CSockets *lpSocketMgr, _In_ HANDLE hConn,
+                       _In_ DWORD dwMaxHeaderSize);
+
     VOID ResetForNewRequest();
 
     BOOL IsKeepAliveRequest() const;
@@ -232,16 +236,11 @@ public:
       StateError
     } eState;
 
-    OVERLAPPED sOvr;
-    CCriticalSection cMutex;
-    CHttpServer *lpHttpServer;
-    CSockets *lpSocketMgr;
-    HANDLE hConn;
-    eState nState;
-    LONG volatile nFlags;
-
-    struct tagRequest {
-      tagRequest() : cHttpCmn(TRUE)
+  private:
+    class CRequest : public CBaseMemObj
+    {
+    public:
+      CRequest(_In_ CHttpServer *lpHttpServer) : CBaseMemObj(), cHttpCmn(TRUE, lpHttpServer)
         {
         _InterlockedExchange(&(sTimeout.nMutex), 0);
         liLastRead.QuadPart = 0ui64;
@@ -266,10 +265,13 @@ public:
         TPendingListHelperGeneric<CTimedEventQueue::CEvent*> cActiveList;
       } sTimeout;
       ULARGE_INTEGER liLastRead;
-    } sRequest;
+    };
 
-    struct tagResponse {
-      tagResponse() : cHttpCmn(FALSE)
+  private:
+    class CResponse : public CBaseMemObj
+    {
+    public:
+      CResponse(_In_ CHttpServer *lpHttpServer) : CBaseMemObj(), cHttpCmn(FALSE, lpHttpServer)
         {
         nStatus = 0;
         bLastStreamIsData = FALSE;
@@ -278,19 +280,20 @@ public:
         return;
         };
 
-       VOID ResetForNewRequest()
-         {
-         nStatus = 0;
-         cStrReasonA.Empty();
-         cHttpCmn.ResetParser();
-         aStreamsList.RemoveAllElements();
-         bLastStreamIsData = FALSE;
-         szMimeTypeHintA = NULL;
-         cStrFileNameA.Empty();
-         bDirect = FALSE;
-         return;
-         };
+      VOID ResetForNewRequest()
+        {
+        nStatus = 0;
+        cStrReasonA.Empty();
+        cHttpCmn.ResetParser();
+        aStreamsList.RemoveAllElements();
+        bLastStreamIsData = FALSE;
+        szMimeTypeHintA = NULL;
+        cStrFileNameA.Empty();
+        bDirect = FALSE;
+        return;
+        };
 
+    public:
       LONG nStatus;
       CStringA cStrReasonA;
       CHttpCommon cHttpCmn;
@@ -299,11 +302,22 @@ public:
       LPCSTR szMimeTypeHintA;
       CStringA cStrFileNameA;
       BOOL bDirect;
-    } sResponse;
+    };
+
+  private:
+    OVERLAPPED sOvr;
+    CCriticalSection cMutex;
+    CHttpServer *lpHttpServer;
+    CSockets *lpSocketMgr;
+    HANDLE hConn;
+    eState nState;
+    LONG volatile nFlags;
+    MX::TAutoDeletePtr<CRequest> cRequest;
+    MX::TAutoDeletePtr<CResponse> cResponse;
   };
 
 private:
-  friend class CRequest;
+  friend class CClientRequest;
 
   typedef TArrayList<CTimedEventQueue::CEvent*> __TEventArray;
 
@@ -322,22 +336,22 @@ private:
   VOID OnRequestCompleted(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
                           _In_ HRESULT hRes);
 
-  HRESULT QuickSendErrorResponseAndReset(_In_ CRequest *lpRequest, _In_ LONG nErrorCode, _In_ HRESULT hErrorCode,
+  HRESULT QuickSendErrorResponseAndReset(_In_ CClientRequest *lpRequest, _In_ LONG nErrorCode, _In_ HRESULT hErrorCode,
                                          _In_ BOOL bForceClose);
 
-  HRESULT GenerateErrorPage(_Out_ CStringA &cStrResponseA, _In_ CRequest *lpRequest, _In_ LONG nErrorCode,
+  HRESULT GenerateErrorPage(_Out_ CStringA &cStrResponseA, _In_ CClientRequest *lpRequest, _In_ LONG nErrorCode,
                             _In_ HRESULT hErrorCode, _In_opt_z_ LPCSTR szBodyExplanationA=NULL);
   static LPCSTR LocateError(_In_ LONG nErrorCode);
 
   VOID OnAfterSendResponse(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie, _In_ CIpc::CUserData *lpUserData);
 
-  HRESULT SetupTimeoutEvent(_In_ CRequest *lpRequest, _In_ DWORD dwTimeoutMs);
-  VOID CancelAllTimeoutEvents(_In_ CRequest *lpRequest);
+  HRESULT SetupTimeoutEvent(_In_ CClientRequest *lpRequest, _In_ DWORD dwTimeoutMs);
+  VOID CancelAllTimeoutEvents(_In_ CClientRequest *lpRequest);
 
   VOID DoCancelEventsCallback(_In_ __TEventArray &cEventsList);
 
-  VOID OnRequestDestroyed(_In_ CRequest *lpRequest);
-  VOID OnRequestEnding(_In_ CRequest *lpRequest, _In_ HRESULT hErrorCode);
+  VOID OnRequestDestroyed(_In_ CClientRequest *lpRequest);
+  VOID OnRequestEnding(_In_ CClientRequest *lpRequest, _In_ HRESULT hErrorCode);
 
   HRESULT OnDownloadStarted(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW, _In_ LPVOID lpUserParam);
 
@@ -371,7 +385,7 @@ private:
   OnRequestCompletedCallback cRequestCompletedCallback;
   OnErrorCallback cErrorCallback;
   LONG volatile nRequestsMutex;
-  TLnkLst<CRequest> cRequestsList;
+  TLnkLst<CClientRequest> cRequestsList;
   CWindowsEvent cShutdownEv;
 };
 

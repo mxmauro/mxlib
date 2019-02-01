@@ -39,12 +39,6 @@ FORCEINLINE int InterlockedExchangeAdd(_Inout_ _Interlocked_operand_ int volatil
 #define FLAG_HandshakeCompleted                        0x0002
 #define FLAG_WantsRead                                 0x0004
 
-#ifdef _DEBUG
-  #define SSLLAYER_PRINT_ERROR
-#else //_DEBUG
-  //#define SSLLAYER_PRINT_ERROR
-#endif //_DEBUG
-
 //-----------------------------------------------------------
 
 namespace MX {
@@ -68,6 +62,11 @@ public:
 } //namespace Internals
 
 } //namespace MX
+
+typedef struct {
+  MX::CIpcSslLayer *lpLayer;
+  LPCWSTR szDescW;
+} DEBUGPRINT_DATA, *LPDEBUGPRINT_DATA;
 
 typedef struct tagSSL_LAYER_DATA {
   LONG volatile nFlags;
@@ -97,9 +96,7 @@ static STACK_OF(X509_CRL) *my_X509_STORE_get1_crls(X509_STORE_CTX *ctx, X509_NAM
 static X509* lookup_cert_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ X509_NAME *name);
 static X509_CRL* lookup_crl_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ X509_NAME *name);
 
-#ifdef SSLLAYER_PRINT_ERROR
 static int DebugPrintSslError(const char *str, size_t len, void *u);
-#endif //SSLLAYER_PRINT_ERROR
 
 static BIO_METHOD *BIO_circular_buffer_mem();
 
@@ -107,7 +104,7 @@ static BIO_METHOD *BIO_circular_buffer_mem();
 
 namespace MX {
 
-CIpcSslLayer::CIpcSslLayer() : CIpc::CLayer()
+CIpcSslLayer::CIpcSslLayer() : CIpc::CLayer(), CLoggable()
 {
   _InterlockedExchange(&nMutex, 0);
   _InterlockedExchange(&hNetworkError, 0);
@@ -184,8 +181,9 @@ HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol
   //init some stuff
   SSL_set_verify(ssl_data->lpSslSession, SSL_VERIFY_NONE, NULL);
   SSL_set_verify_depth(ssl_data->lpSslSession, 4);
-  SSL_set_options(ssl_data->lpSslSession, SSL_OP_NO_SSLv2|SSL_OP_NO_COMPRESSION|SSL_OP_LEGACY_SERVER_CONNECT|SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
-  SSL_set_mode(ssl_data->lpSslSession, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER|SSL_MODE_RELEASE_BUFFERS);
+  SSL_set_options(ssl_data->lpSslSession, SSL_OP_NO_SSLv2 | SSL_OP_NO_COMPRESSION | SSL_OP_LEGACY_SERVER_CONNECT |
+                                          SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
+  SSL_set_mode(ssl_data->lpSslSession, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER | SSL_MODE_RELEASE_BUFFERS);
   if (ssl_data->bServerSide == FALSE)
     SSL_set_connect_state(ssl_data->lpSslSession);
   else
@@ -416,9 +414,11 @@ HRESULT CIpcSslLayer::ExecSslRead()
       break;
 
     default:
-#ifdef SSLLAYER_PRINT_ERROR
-      ERR_print_errors_cb(&DebugPrintSslError, "ExecSslRead");
-#endif //SSLLAYER_PRINT_ERROR
+      if (ShouldLog(1) != FALSE)
+      {
+        DEBUGPRINT_DATA sData = { this, L"ExecSslRead" };
+        ERR_print_errors_cb(&DebugPrintSslError, &sData);
+      }
       hRes = MX_E_InvalidData;
       break;
   }
@@ -497,9 +497,11 @@ HRESULT CIpcSslLayer::ProcessDataToSend()
       break;
 
     default:
-#ifdef SSLLAYER_PRINT_ERROR
-      ERR_print_errors_cb(&DebugPrintSslError, "ProcessDataToSend");
-#endif //SSLLAYER_PRINT_ERROR
+      if (ShouldLog(1) != FALSE)
+      {
+        DEBUGPRINT_DATA sData = { this, L"ProcessDataToSend" };
+        ERR_print_errors_cb(&DebugPrintSslError, &sData);
+      }
       return MX_E_InvalidData;
   }
   //done
@@ -676,14 +678,11 @@ static X509_CRL* lookup_crl_by_subject(_In_ MX::CSslCertificateArray *lpCertArra
   return NULL;
 }
 
-#ifdef SSLLAYER_PRINT_ERROR
 static int DebugPrintSslError(const char *str, size_t len, void *u)
 {
-  MX::DebugPrint("IpcSslLayer SSL error(%s): %.*s\n", (char*)u, len, str);
+  ((LPDEBUGPRINT_DATA)u)->lpLayer->Log(L"IpcSslLayer/%s: Error: %.*s\n", ((LPDEBUGPRINT_DATA)u)->szDescW, len, str);
   return 1;
 }
-#endif //SSLLAYER_PRINT_ERROR
-
 
 //-----------------------------------------------------------
 

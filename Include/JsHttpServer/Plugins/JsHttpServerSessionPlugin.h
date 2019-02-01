@@ -40,14 +40,14 @@ public:
   CJsHttpServerSessionPlugin(_In_ DukTape::duk_context *lpCtx);
   ~CJsHttpServerSessionPlugin();
 
-  HRESULT Setup(_In_ CHttpServer::CRequest *lpRequest, _In_ OnLoadSaveCallback cLoadSaveCallback,
+  HRESULT Setup(_In_ CJsHttpServer::CClientRequest *lpRequest, _In_ OnLoadSaveCallback cLoadSaveCallback,
                 _In_opt_z_ LPCWSTR szSessionVarNameW=NULL, _In_opt_z_ LPCWSTR szDomainW=NULL,
                 _In_opt_z_ LPCWSTR szPathW=NULL, _In_opt_ int nExpireTimeInSeconds=-1,
                 _In_opt_ BOOL bIsSecure=FALSE, _In_opt_ BOOL bIsHttpOnly=FALSE);
 
   LPCSTR GetSessionId() const;
   CJsHttpServer* GetServer() const;
-  CHttpServer::CRequest* GetRequest() const;
+  CHttpServer::CClientRequest* GetRequest() const;
   CPropertyBag* GetBag() const;
 
   MX_JS_DECLARE_WITH_PROXY(CJsHttpServerSessionPlugin, "Session")
@@ -85,7 +85,7 @@ private:
   SESSION_ID szCurrentIdA;
 
   CJsHttpServer *lpHttpServer;
-  CHttpServer::CRequest *lpRequest;
+  CJsHttpServer::CClientRequest *lpRequest;
   OnLoadSaveCallback cLoadSaveCallback;
   MX::CStringA cStrSessionVarNameA, cStrDomainA, cStrPathA;
   LPCSTR szSessionVarNameA;

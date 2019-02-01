@@ -31,29 +31,26 @@ static const LPCSTR szServerInfoA = "MX-Library";
 
 namespace MX {
 
-CHttpServer::CRequest::CRequest() : CIpc::CUserData(), TLnkLstNode<CRequest>(), sRequest(), sResponse()
+CHttpServer::CClientRequest::CClientRequest() : CIpc::CUserData(), TLnkLstNode<CClientRequest>()
 {
   MemSet(&sOvr, 0, sizeof(sOvr));
   lpHttpServer = NULL;
+  lpSocketMgr = NULL;
   hConn = NULL;
-  nState = CRequest::StateInitializing;
-  MX_HTTP_DEBUG_PRINT(1, ("HttpServer(State/0x%p): StateInitializing\n", this));
+  nState = CClientRequest::StateInitializing;
   _InterlockedExchange(&nFlags, 0);
-  sRequest.liLastRead.QuadPart = 0ui64;
-  _InterlockedExchange(&(sRequest.sTimeout.nMutex), 0);
-  ResetForNewRequest();
   return;
 }
 
-CHttpServer::CRequest::~CRequest()
+CHttpServer::CClientRequest::~CClientRequest()
 {
-  MX_ASSERT(sRequest.sTimeout.cActiveList.HasPending() == FALSE);
+  MX_ASSERT(cRequest && cRequest->sTimeout.cActiveList.HasPending() == FALSE);
   if (lpHttpServer != NULL)
     lpHttpServer->OnRequestDestroyed(this);
   return;
 }
 
-VOID CHttpServer::CRequest::End(_In_opt_ HRESULT hErrorCode)
+VOID CHttpServer::CClientRequest::End(_In_opt_ HRESULT hErrorCode)
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
@@ -64,101 +61,101 @@ VOID CHttpServer::CRequest::End(_In_opt_ HRESULT hErrorCode)
   return;
 }
 
-VOID CHttpServer::CRequest::EnableDirectResponse()
+VOID CHttpServer::CClientRequest::EnableDirectResponse()
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState == StateBuildingResponse)
   {
-    sResponse.bDirect = TRUE;
+    cResponse->bDirect = TRUE;
   }
   return;
 }
 
-LPCSTR CHttpServer::CRequest::GetMethod() const
+LPCSTR CHttpServer::CClientRequest::GetMethod() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return "";
-  return sRequest.cHttpCmn.GetRequestMethod();
+  return cRequest->cHttpCmn.GetRequestMethod();
 }
 
-CUrl* CHttpServer::CRequest::GetUrl() const
+CUrl* CHttpServer::CClientRequest::GetUrl() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
-  return sRequest.cHttpCmn.GetRequestUri();
+  return cRequest->cHttpCmn.GetRequestUri();
 }
 
-SIZE_T CHttpServer::CRequest::GetRequestHeadersCount() const
+SIZE_T CHttpServer::CClientRequest::GetRequestHeadersCount() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return 0;
-  return sRequest.cHttpCmn.GetHeadersCount();
+  return cRequest->cHttpCmn.GetHeadersCount();
 }
 
-CHttpHeaderBase* CHttpServer::CRequest::GetRequestHeader(_In_ SIZE_T nIndex) const
+CHttpHeaderBase* CHttpServer::CClientRequest::GetRequestHeader(_In_ SIZE_T nIndex) const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
-  return sRequest.cHttpCmn.GetHeader(nIndex);
+  return cRequest->cHttpCmn.GetHeader(nIndex);
 }
 
-CHttpHeaderBase* CHttpServer::CRequest::GetRequestHeader(_In_z_ LPCSTR szNameA) const
+CHttpHeaderBase* CHttpServer::CClientRequest::GetRequestHeader(_In_z_ LPCSTR szNameA) const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
-  return sRequest.cHttpCmn.GetHeader(szNameA);
+  return cRequest->cHttpCmn.GetHeader(szNameA);
 }
 
-SIZE_T CHttpServer::CRequest::GetRequestCookiesCount() const
+SIZE_T CHttpServer::CClientRequest::GetRequestCookiesCount() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return 0;
-  return sRequest.cHttpCmn.GetCookiesCount();
+  return cRequest->cHttpCmn.GetCookiesCount();
 }
 
-CHttpCookie* CHttpServer::CRequest::GetRequestCookie(_In_ SIZE_T nIndex) const
+CHttpCookie* CHttpServer::CClientRequest::GetRequestCookie(_In_ SIZE_T nIndex) const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
-  return sRequest.cHttpCmn.GetCookie(nIndex);
+  return cRequest->cHttpCmn.GetCookie(nIndex);
 }
 
-CHttpBodyParserBase* CHttpServer::CRequest::GetRequestBodyParser() const
+CHttpBodyParserBase* CHttpServer::CClientRequest::GetRequestBodyParser() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
-  return sRequest.cHttpCmn.GetBodyParser();
+  return cRequest->cHttpCmn.GetBodyParser();
 }
 
-VOID CHttpServer::CRequest::ResetResponse()
+VOID CHttpServer::CClientRequest::ResetResponse()
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
   if (nState == StateBuildingResponse && HasHeadersBeenSent() == FALSE)
   {
-    sResponse.ResetForNewRequest();
+    cResponse->ResetForNewRequest();
   }
   return;
 }
 
-HRESULT CHttpServer::CRequest::SetResponseStatus(_In_ LONG nStatus, _In_opt_ LPCSTR szReasonA)
+HRESULT CHttpServer::CClientRequest::SetResponseStatus(_In_ LONG nStatus, _In_opt_ LPCSTR szReasonA)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -170,21 +167,21 @@ HRESULT CHttpServer::CRequest::SetResponseStatus(_In_ LONG nStatus, _In_opt_ LPC
     return E_INVALIDARG;
   if (szReasonA != NULL && szReasonA[0] != 0)
   {
-    if (sResponse.cStrReasonA.Copy(szReasonA) == FALSE)
+    if (cResponse->cStrReasonA.Copy(szReasonA) == FALSE)
       return E_OUTOFMEMORY;
   }
   else
   {
     if (CHttpServer::LocateError(nStatus) == NULL)
       return E_INVALIDARG;
-    sResponse.cStrReasonA.Empty();
+    cResponse->cStrReasonA.Empty();
   }
-  sResponse.nStatus = nStatus;
+  cResponse->nStatus = nStatus;
   //done
   return S_OK;
 }
 
-HRESULT CHttpServer::CRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _Out_opt_ CHttpHeaderBase **lplpHeader,
+HRESULT CHttpServer::CClientRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _Out_opt_ CHttpHeaderBase **lplpHeader,
                                                  _In_ BOOL bReplaceExisting)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
@@ -195,10 +192,10 @@ HRESULT CHttpServer::CRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _Out_opt
     return MX_E_NotReady;
   if (HasHeadersBeenSent() != FALSE)
     return E_FAIL;
-  return sResponse.cHttpCmn.AddHeader(szNameA, lplpHeader, bReplaceExisting);
+  return cResponse->cHttpCmn.AddHeader(szNameA, lplpHeader, bReplaceExisting);
 }
 
-HRESULT CHttpServer::CRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA,
+HRESULT CHttpServer::CClientRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA,
                                                  _In_opt_ SIZE_T nValueLen, _Out_opt_ CHttpHeaderBase **lplpHeader,
                                                  _In_ BOOL bReplaceExisting)
 {
@@ -210,10 +207,10 @@ HRESULT CHttpServer::CRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _In_z_ L
     return MX_E_NotReady;
   if (HasHeadersBeenSent() != FALSE)
     return E_FAIL;
-  return sResponse.cHttpCmn.AddHeader(szNameA, szValueA, nValueLen, lplpHeader, bReplaceExisting);
+  return cResponse->cHttpCmn.AddHeader(szNameA, szValueA, nValueLen, lplpHeader, bReplaceExisting);
 }
 
-HRESULT CHttpServer::CRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW,
+HRESULT CHttpServer::CClientRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW,
                                                  _In_opt_ SIZE_T nValueLen, _Out_opt_ CHttpHeaderBase **lplpHeader,
                                                  _In_ BOOL bReplaceExisting)
 {
@@ -223,10 +220,10 @@ HRESULT CHttpServer::CRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _In_z_ L
     *lplpHeader = NULL;
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
-  return sResponse.cHttpCmn.AddHeader(szNameA, szValueW, nValueLen, lplpHeader, bReplaceExisting);
+  return cResponse->cHttpCmn.AddHeader(szNameA, szValueW, nValueLen, lplpHeader, bReplaceExisting);
 }
 
-HRESULT CHttpServer::CRequest::RemoveResponseHeader(_In_z_ LPCSTR szNameA)
+HRESULT CHttpServer::CClientRequest::RemoveResponseHeader(_In_z_ LPCSTR szNameA)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -234,11 +231,11 @@ HRESULT CHttpServer::CRequest::RemoveResponseHeader(_In_z_ LPCSTR szNameA)
     return MX_E_NotReady;
   if (HasHeadersBeenSent() != FALSE)
     return E_FAIL;
-  sResponse.cHttpCmn.RemoveHeader(szNameA);
+  cResponse->cHttpCmn.RemoveHeader(szNameA);
   return S_OK;
 }
 
-HRESULT CHttpServer::CRequest::RemoveResponseHeader(_In_ CHttpHeaderBase *lpHeader)
+HRESULT CHttpServer::CClientRequest::RemoveResponseHeader(_In_ CHttpHeaderBase *lpHeader)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -246,11 +243,11 @@ HRESULT CHttpServer::CRequest::RemoveResponseHeader(_In_ CHttpHeaderBase *lpHead
     return MX_E_NotReady;
   if (HasHeadersBeenSent() != FALSE)
     return E_FAIL;
-  sResponse.cHttpCmn.RemoveHeader(lpHeader);
+  cResponse->cHttpCmn.RemoveHeader(lpHeader);
   return S_OK;
 }
 
-HRESULT CHttpServer::CRequest::RemoveAllResponseHeaders()
+HRESULT CHttpServer::CClientRequest::RemoveAllResponseHeaders()
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -258,38 +255,38 @@ HRESULT CHttpServer::CRequest::RemoveAllResponseHeaders()
     return MX_E_NotReady;
   if (HasHeadersBeenSent() != FALSE)
     return E_FAIL;
-  sResponse.cHttpCmn.RemoveAllHeaders();
+  cResponse->cHttpCmn.RemoveAllHeaders();
   return S_OK;
 }
 
-SIZE_T CHttpServer::CRequest::GetResponseHeadersCount() const
+SIZE_T CHttpServer::CClientRequest::GetResponseHeadersCount() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return 0;
-  return sResponse.cHttpCmn.GetHeadersCount();
+  return cResponse->cHttpCmn.GetHeadersCount();
 }
 
-CHttpHeaderBase* CHttpServer::CRequest::GetResponseHeader(_In_ SIZE_T nIndex) const
+CHttpHeaderBase* CHttpServer::CClientRequest::GetResponseHeader(_In_ SIZE_T nIndex) const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
-  return sResponse.cHttpCmn.GetHeader(nIndex);
+  return cResponse->cHttpCmn.GetHeader(nIndex);
 }
 
-CHttpHeaderBase* CHttpServer::CRequest::GetResponseHeader(_In_z_ LPCSTR szNameA) const
+CHttpHeaderBase* CHttpServer::CClientRequest::GetResponseHeader(_In_z_ LPCSTR szNameA) const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
-  return sResponse.cHttpCmn.GetHeader(szNameA);
+  return cResponse->cHttpCmn.GetHeader(szNameA);
 }
 
-HRESULT CHttpServer::CRequest::AddResponseCookie(_In_ CHttpCookie &cSrc)
+HRESULT CHttpServer::CClientRequest::AddResponseCookie(_In_ CHttpCookie &cSrc)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -297,10 +294,10 @@ HRESULT CHttpServer::CRequest::AddResponseCookie(_In_ CHttpCookie &cSrc)
     return MX_E_NotReady;
   if (HasHeadersBeenSent() != FALSE)
     return E_FAIL;
-  return sResponse.cHttpCmn.AddCookie(cSrc);
+  return cResponse->cHttpCmn.AddCookie(cSrc);
 }
 
-HRESULT CHttpServer::CRequest::AddResponseCookie(_In_ CHttpCookieArray &cSrc)
+HRESULT CHttpServer::CClientRequest::AddResponseCookie(_In_ CHttpCookieArray &cSrc)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -308,10 +305,10 @@ HRESULT CHttpServer::CRequest::AddResponseCookie(_In_ CHttpCookieArray &cSrc)
     return MX_E_NotReady;
   if (HasHeadersBeenSent() != FALSE)
     return E_FAIL;
-  return sResponse.cHttpCmn.AddCookie(cSrc);
+  return cResponse->cHttpCmn.AddCookie(cSrc);
 }
 
-HRESULT CHttpServer::CRequest::AddResponseCookie(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA,
+HRESULT CHttpServer::CClientRequest::AddResponseCookie(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA,
                                                  _In_opt_z_ LPCSTR szDomainA, _In_opt_z_ LPCSTR szPathA,
                                                  _In_opt_ const CDateTime *lpDate, _In_opt_ BOOL bIsSecure,
                                                  _In_opt_ BOOL bIsHttpOnly)
@@ -322,10 +319,10 @@ HRESULT CHttpServer::CRequest::AddResponseCookie(_In_z_ LPCSTR szNameA, _In_z_ L
     return MX_E_NotReady;
   if (HasHeadersBeenSent() != FALSE)
     return E_FAIL;
-  return sResponse.cHttpCmn.AddCookie(szNameA, szValueA, szDomainA, szPathA, lpDate, bIsSecure, bIsHttpOnly);
+  return cResponse->cHttpCmn.AddCookie(szNameA, szValueA, szDomainA, szPathA, lpDate, bIsSecure, bIsHttpOnly);
 }
 
-HRESULT CHttpServer::CRequest::AddResponseCookie(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW,
+HRESULT CHttpServer::CClientRequest::AddResponseCookie(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW,
                                                  _In_opt_z_ LPCWSTR szDomainW, _In_opt_z_ LPCWSTR szPathW,
                                                  _In_opt_ const CDateTime *lpDate, _In_opt_ BOOL bIsSecure,
                                                  _In_opt_ BOOL bIsHttpOnly)
@@ -336,10 +333,10 @@ HRESULT CHttpServer::CRequest::AddResponseCookie(_In_z_ LPCWSTR szNameW, _In_z_ 
     return MX_E_NotReady;
   if (HasHeadersBeenSent() != FALSE)
     return E_FAIL;
-  return sResponse.cHttpCmn.AddCookie(szNameW, szValueW, szDomainW, szPathW, lpDate, bIsSecure, bIsHttpOnly);
+  return cResponse->cHttpCmn.AddCookie(szNameW, szValueW, szDomainW, szPathW, lpDate, bIsSecure, bIsHttpOnly);
 }
 
-HRESULT CHttpServer::CRequest::RemoveResponseCookie(_In_z_ LPCSTR szNameA)
+HRESULT CHttpServer::CClientRequest::RemoveResponseCookie(_In_z_ LPCSTR szNameA)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -347,10 +344,10 @@ HRESULT CHttpServer::CRequest::RemoveResponseCookie(_In_z_ LPCSTR szNameA)
     return MX_E_NotReady;
   if (HasHeadersBeenSent() != FALSE)
     return E_FAIL;
-  return sResponse.cHttpCmn.RemoveCookie(szNameA);
+  return cResponse->cHttpCmn.RemoveCookie(szNameA);
 }
 
-HRESULT CHttpServer::CRequest::RemoveResponseCookie(_In_z_ LPCWSTR szNameW)
+HRESULT CHttpServer::CClientRequest::RemoveResponseCookie(_In_z_ LPCWSTR szNameW)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -358,10 +355,10 @@ HRESULT CHttpServer::CRequest::RemoveResponseCookie(_In_z_ LPCWSTR szNameW)
     return MX_E_NotReady;
   if (HasHeadersBeenSent() != FALSE)
     return E_FAIL;
-  return sResponse.cHttpCmn.RemoveCookie(szNameW);
+  return cResponse->cHttpCmn.RemoveCookie(szNameW);
 }
 
-HRESULT CHttpServer::CRequest::RemoveAllResponseCookies()
+HRESULT CHttpServer::CClientRequest::RemoveAllResponseCookies()
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
@@ -369,67 +366,67 @@ HRESULT CHttpServer::CRequest::RemoveAllResponseCookies()
     return MX_E_NotReady;
   if (HasHeadersBeenSent() != FALSE)
     return E_FAIL;
-  sResponse.cHttpCmn.RemoveAllCookies();
+  cResponse->cHttpCmn.RemoveAllCookies();
   return S_OK;
 }
 
-CHttpCookie* CHttpServer::CRequest::GetResponseCookie(_In_ SIZE_T nIndex) const
+CHttpCookie* CHttpServer::CClientRequest::GetResponseCookie(_In_ SIZE_T nIndex) const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
-  return sResponse.cHttpCmn.GetCookie(nIndex);
+  return cResponse->cHttpCmn.GetCookie(nIndex);
 }
 
-CHttpCookie* CHttpServer::CRequest::GetResponseCookie(_In_z_ LPCSTR szNameA) const
+CHttpCookie* CHttpServer::CClientRequest::GetResponseCookie(_In_z_ LPCSTR szNameA) const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
-  return sResponse.cHttpCmn.GetCookie(szNameA);
+  return cResponse->cHttpCmn.GetCookie(szNameA);
 }
 
-CHttpCookie* CHttpServer::CRequest::GetResponseCookie(_In_z_ LPCWSTR szNameW) const
+CHttpCookie* CHttpServer::CClientRequest::GetResponseCookie(_In_z_ LPCWSTR szNameW) const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
-  return sResponse.cHttpCmn.GetCookie(szNameW);
+  return cResponse->cHttpCmn.GetCookie(szNameW);
 }
 
-CHttpCookieArray* CHttpServer::CRequest::GetResponseCookies() const
+CHttpCookieArray* CHttpServer::CClientRequest::GetResponseCookies() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return NULL;
-  return sResponse.cHttpCmn.GetCookies();
+  return cResponse->cHttpCmn.GetCookies();
 }
 
-SIZE_T CHttpServer::CRequest::GetResponseCookiesCount() const
+SIZE_T CHttpServer::CClientRequest::GetResponseCookiesCount() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateBuildingResponse)
     return 0;
-  return sResponse.cHttpCmn.GetCookiesCount();
+  return cResponse->cHttpCmn.GetCookiesCount();
 }
 
-HRESULT CHttpServer::CRequest::SendHeaders()
+HRESULT CHttpServer::CClientRequest::SendHeaders()
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
   if (nState != StateBuildingResponse)
     return MX_E_NotReady;
-  if (sResponse.bDirect == FALSE)
+  if (cResponse->bDirect == FALSE)
     return MX_E_InvalidState;
   return BuildAndInsertOrSendHeaderStream();
 }
 
-HRESULT CHttpServer::CRequest::SendResponse(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen)
+HRESULT CHttpServer::CClientRequest::SendResponse(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
   SIZE_T nWritten;
@@ -441,11 +438,11 @@ HRESULT CHttpServer::CRequest::SendResponse(_In_ LPCVOID lpData, _In_ SIZE_T nDa
     return S_OK;
   if (lpData == NULL)
     return E_POINTER;
-  if (sResponse.bDirect == FALSE)
+  if (cResponse->bDirect == FALSE)
   {
-    if (sResponse.aStreamsList.GetCount() > 0 && sResponse.bLastStreamIsData != FALSE)
+    if (cResponse->aStreamsList.GetCount() > 0 && cResponse->bLastStreamIsData != FALSE)
     {
-      CStream *lpStream = sResponse.aStreamsList.GetElementAt(sResponse.aStreamsList.GetCount()-1);
+      CStream *lpStream = cResponse->aStreamsList.GetElementAt(cResponse->aStreamsList.GetCount()-1);
       hRes = lpStream->Write(lpData, nDataLen, nWritten);
       if (SUCCEEDED(hRes) && nDataLen != nWritten)
         hRes = MX_E_WriteFault;
@@ -462,18 +459,18 @@ HRESULT CHttpServer::CRequest::SendResponse(_In_ LPCVOID lpData, _In_ SIZE_T nDa
         hRes = cStream->Write(lpData, nDataLen, nWritten);
       if (SUCCEEDED(hRes))
       {
-        if (sResponse.aStreamsList.AddElement(cStream.Get()) != FALSE)
+        if (cResponse->aStreamsList.AddElement(cStream.Get()) != FALSE)
           cStream.Detach();
         else
           hRes = E_OUTOFMEMORY;
       }
       if (SUCCEEDED(hRes))
-        sResponse.bLastStreamIsData = TRUE;
+        cResponse->bLastStreamIsData = TRUE;
     }
     if (FAILED(hRes))
       return hRes;
-    sResponse.szMimeTypeHintA = NULL;
-    sResponse.cStrFileNameA.Empty();
+    cResponse->szMimeTypeHintA = NULL;
+    cResponse->cStrFileNameA.Empty();
   }
   else
   {
@@ -487,7 +484,7 @@ HRESULT CHttpServer::CRequest::SendResponse(_In_ LPCVOID lpData, _In_ SIZE_T nDa
   return S_OK;
 }
 
-HRESULT CHttpServer::CRequest::SendFile(_In_z_ LPCWSTR szFileNameW)
+HRESULT CHttpServer::CClientRequest::SendFile(_In_z_ LPCWSTR szFileNameW)
 {
   TAutoRefCounted<CFileStream> cStream;
   HRESULT hRes;
@@ -505,7 +502,7 @@ HRESULT CHttpServer::CRequest::SendFile(_In_z_ LPCWSTR szFileNameW)
   return hRes;
 }
 
-HRESULT CHttpServer::CRequest::SendStream(_In_ CStream *lpStream, _In_opt_z_ LPCWSTR szFileNameW)
+HRESULT CHttpServer::CClientRequest::SendStream(_In_ CStream *lpStream, _In_opt_z_ LPCWSTR szFileNameW)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
   CStringA cStrTempNameA;
@@ -518,11 +515,11 @@ HRESULT CHttpServer::CRequest::SendStream(_In_ CStream *lpStream, _In_opt_z_ LPC
   if (lpStream == NULL)
     return E_POINTER;
   //direct send?
-  if (sResponse.bDirect == FALSE)
+  if (cResponse->bDirect == FALSE)
   {
     //extract name if needed
     bSetInfo = FALSE;
-    if (szFileNameW != NULL && *szFileNameW != 0 && sResponse.aStreamsList.GetCount() == 0)
+    if (szFileNameW != NULL && *szFileNameW != 0 && cResponse->aStreamsList.GetCount() == 0)
     {
       sW[0] = StrChrW(szFileNameW, L'\\', TRUE);
       if (sW[0] == NULL)
@@ -536,21 +533,21 @@ HRESULT CHttpServer::CRequest::SendStream(_In_ CStream *lpStream, _In_opt_z_ LPC
       bSetInfo = TRUE;
     }
     //add to list
-    if (sResponse.aStreamsList.AddElement(lpStream) == FALSE)
+    if (cResponse->aStreamsList.AddElement(lpStream) == FALSE)
       return E_OUTOFMEMORY;
     lpStream->AddRef();
     //set response info
     if (bSetInfo != FALSE)
     {
-      sResponse.szMimeTypeHintA = CHttpCommon::GetMimeType(szFileNameW);
-      sResponse.cStrFileNameA.Attach(cStrTempNameA.Detach());
+      cResponse->szMimeTypeHintA = CHttpCommon::GetMimeType(szFileNameW);
+      cResponse->cStrFileNameA.Attach(cStrTempNameA.Detach());
     }
     else
     {
-      sResponse.szMimeTypeHintA = NULL;
-      sResponse.cStrFileNameA.Empty();
+      cResponse->szMimeTypeHintA = NULL;
+      cResponse->cStrFileNameA.Empty();
     }
-    sResponse.bLastStreamIsData = FALSE;
+    cResponse->bLastStreamIsData = FALSE;
   }
   else
   {
@@ -562,7 +559,7 @@ HRESULT CHttpServer::CRequest::SendStream(_In_ CStream *lpStream, _In_opt_z_ LPC
   return S_OK;
 }
 
-HRESULT CHttpServer::CRequest::SendErrorPage(_In_ LONG nStatusCode, _In_ HRESULT hErrorCode,
+HRESULT CHttpServer::CClientRequest::SendErrorPage(_In_ LONG nStatusCode, _In_ HRESULT hErrorCode,
                                              _In_opt_z_ LPCSTR szBodyExplanationA)
 {
   CStringA cStrResponseA;
@@ -584,51 +581,80 @@ HRESULT CHttpServer::CRequest::SendErrorPage(_In_ LONG nStatusCode, _In_ HRESULT
   return SendResponse((LPCSTR)cStrResponseA, cStrResponseA.GetLength());
 }
 
-HANDLE CHttpServer::CRequest::GetUnderlyingSocket() const
+HANDLE CHttpServer::CClientRequest::GetUnderlyingSocket() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   return (nState == StateBuildingResponse) ? hConn : NULL;
 }
 
-CSockets* CHttpServer::CRequest::GetUnderlyingSocketManager() const
+CSockets* CHttpServer::CClientRequest::GetUnderlyingSocketManager() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   return (nState == StateBuildingResponse) ? const_cast<CSockets*>(lpSocketMgr) : NULL;
 }
 
-VOID CHttpServer::CRequest::ResetForNewRequest()
+HRESULT CHttpServer::CClientRequest::Initialize(_In_ CHttpServer *_lpHttpServer, _In_ CSockets *_lpSocketMgr,
+                                                _In_ HANDLE _hConn, _In_ DWORD dwMaxHeaderSize)
 {
-  nState = CRequest::StateInitializing;
-  MX_HTTP_DEBUG_PRINT(1, ("HttpServer(State/0x%p): StateInitializing [ResetForNewRequest]\n", this));
+  MX_ASSERT(_lpHttpServer != NULL);
+  MX_ASSERT(_lpSocketMgr != NULL);
+  MX_ASSERT(_hConn != NULL);
+  lpHttpServer = _lpHttpServer;
+  lpSocketMgr = _lpSocketMgr;
+  hConn = _hConn;
+
+  if (_lpHttpServer->ShouldLog(1) != FALSE)
+  {
+    _lpHttpServer->Log(L"HttpServer(State/0x%p): StateInitializing", this);
+  }
+
+  cRequest.Attach(MX_DEBUG_NEW CRequest(lpHttpServer));
+  cResponse.Attach(MX_DEBUG_NEW CResponse(lpHttpServer));
+  if ((!cRequest) || (!cResponse))
+    return E_OUTOFMEMORY;
+  cRequest->cHttpCmn.SetOption_MaxHeaderSize(dwMaxHeaderSize);
+  cResponse->cHttpCmn.SetOption_MaxHeaderSize(dwMaxHeaderSize);
+
+  //done
+  return S_OK;
+}
+
+VOID CHttpServer::CClientRequest::ResetForNewRequest()
+{
+  nState = CClientRequest::StateInitializing;
+  if (lpHttpServer->ShouldLog(1) != FALSE)
+  {
+    lpHttpServer->Log(L"HttpServer(State/0x%p): StateInitializing [ResetForNewRequest]", this);
+  }
   _InterlockedExchange(&nFlags, 0);
   //----
-  sRequest.ResetForNewRequest();
-  sResponse.ResetForNewRequest();
+  cRequest->ResetForNewRequest();
+  cResponse->ResetForNewRequest();
   return;
 }
 
-BOOL CHttpServer::CRequest::IsKeepAliveRequest() const
+BOOL CHttpServer::CClientRequest::IsKeepAliveRequest() const
 {
   int nHttpVersion[2];
 
-  nHttpVersion[0] = sRequest.cHttpCmn.GetRequestVersionMajor();
-  nHttpVersion[1] = sRequest.cHttpCmn.GetRequestVersionMinor();
-  return (nHttpVersion[0] > 0) ? sRequest.cHttpCmn.IsKeepAliveRequest() : FALSE;
+  nHttpVersion[0] = cRequest->cHttpCmn.GetRequestVersionMajor();
+  nHttpVersion[1] = cRequest->cHttpCmn.GetRequestVersionMinor();
+  return (nHttpVersion[0] > 0) ? cRequest->cHttpCmn.IsKeepAliveRequest() : FALSE;
 }
 
-BOOL CHttpServer::CRequest::HasErrorBeenSent() const
+BOOL CHttpServer::CClientRequest::HasErrorBeenSent() const
 {
   return ((__InterlockedRead(const_cast<LONG volatile*>(&nFlags)) & REQUEST_FLAG_ErrorPageSent) != 0) ? TRUE : FALSE;
 }
 
-BOOL CHttpServer::CRequest::HasHeadersBeenSent() const
+BOOL CHttpServer::CClientRequest::HasHeadersBeenSent() const
 {
   return ((__InterlockedRead(const_cast<LONG volatile*>(&nFlags)) & REQUEST_FLAG_HeadersSent) != 0) ? TRUE : FALSE;
 }
 
-HRESULT CHttpServer::CRequest::BuildAndInsertOrSendHeaderStream()
+HRESULT CHttpServer::CClientRequest::BuildAndInsertOrSendHeaderStream()
 {
   TAutoRefCounted<CMemoryStream> cHdrStream;
   CStringA cStrTempA;
@@ -639,7 +665,10 @@ HRESULT CHttpServer::CRequest::BuildAndInsertOrSendHeaderStream()
 
   if ((_InterlockedOr(&nFlags, REQUEST_FLAG_HeadersSent) & REQUEST_FLAG_HeadersSent) != 0)
   {
-    MX_HTTP_DEBUG_PRINT(1, ("HttpServer(ResponseHeaders/0x%p): Already sent!\n", this));
+    if (lpHttpServer->ShouldLog(1) != FALSE)
+    {
+      lpHttpServer->Log(L"HttpServer(ResponseHeaders/0x%p): Already sent!", this);
+    }
     return S_OK;
   }
 
@@ -648,9 +677,9 @@ HRESULT CHttpServer::CRequest::BuildAndInsertOrSendHeaderStream()
   //status
   if (SUCCEEDED(hRes))
   {
-    if ((nStatus = sResponse.nStatus) == 0)
+    if ((nStatus = cResponse->nStatus) == 0)
     {
-      if (sResponse.cHttpCmn.GetHeader<CHttpHeaderRespLocation>() != NULL)
+      if (cResponse->cHttpCmn.GetHeader<CHttpHeaderRespLocation>() != NULL)
         nStatus = 302;
       else
         nStatus = 200;
@@ -658,13 +687,13 @@ HRESULT CHttpServer::CRequest::BuildAndInsertOrSendHeaderStream()
     }
     else
     {
-      sA = (sResponse.cStrReasonA.IsEmpty() != FALSE) ? CHttpServer::LocateError(nStatus) :
-                                                        (LPCSTR)(sResponse.cStrReasonA);
+      sA = (cResponse->cStrReasonA.IsEmpty() != FALSE) ? CHttpServer::LocateError(nStatus) :
+                                                         (LPCSTR)(cResponse->cStrReasonA);
     }
     if (sA == NULL || *sA == 0)
       sA = "Undefined";
-    nHttpVersion[0] = sRequest.cHttpCmn.GetRequestVersionMajor();
-    nHttpVersion[1] = sRequest.cHttpCmn.GetRequestVersionMinor();
+    nHttpVersion[0] = cRequest->cHttpCmn.GetRequestVersionMajor();
+    nHttpVersion[1] = cRequest->cHttpCmn.GetRequestVersionMinor();
     if (nHttpVersion[0] == 0)
     {
       nHttpVersion[0] = 1;
@@ -677,7 +706,7 @@ HRESULT CHttpServer::CRequest::BuildAndInsertOrSendHeaderStream()
   {
     CHttpHeaderBase *lpHdr;
 
-    lpHdr = sResponse.cHttpCmn.GetHeader("Date");
+    lpHdr = cResponse->cHttpCmn.GetHeader("Date");
     if (lpHdr != NULL)
     {
       hRes = lpHdr->Build(cStrTempA);
@@ -700,7 +729,7 @@ HRESULT CHttpServer::CRequest::BuildAndInsertOrSendHeaderStream()
   {
     CHttpHeaderRespLocation *lpHdr;
 
-    lpHdr = sResponse.cHttpCmn.GetHeader<CHttpHeaderRespLocation>();
+    lpHdr = cResponse->cHttpCmn.GetHeader<CHttpHeaderRespLocation>();
     if (lpHdr != NULL)
     {
       hRes = lpHdr->Build(cStrTempA);
@@ -713,7 +742,7 @@ HRESULT CHttpServer::CRequest::BuildAndInsertOrSendHeaderStream()
   {
     CHttpHeaderBase *lpHdr;
 
-    lpHdr = sResponse.cHttpCmn.GetHeader("Server");
+    lpHdr = cResponse->cHttpCmn.GetHeader("Server");
     if (lpHdr != NULL)
     {
       hRes = lpHdr->Build(cStrTempA);
@@ -730,7 +759,7 @@ HRESULT CHttpServer::CRequest::BuildAndInsertOrSendHeaderStream()
   {
     CHttpHeaderBase *lpHdr;
 
-    lpHdr = sResponse.cHttpCmn.GetHeader("Connection");
+    lpHdr = cResponse->cHttpCmn.GetHeader("Connection");
     if (lpHdr != NULL)
     {
       hRes = lpHdr->Build(cStrTempA);
@@ -743,19 +772,19 @@ HRESULT CHttpServer::CRequest::BuildAndInsertOrSendHeaderStream()
     }
   }
   //content type
-  if (SUCCEEDED(hRes) && sResponse.aStreamsList.GetCount() > 0)
+  if (SUCCEEDED(hRes) && cResponse->aStreamsList.GetCount() > 0)
   {
     CHttpHeaderEntContentType *lpHdr;
 
-    lpHdr = sResponse.cHttpCmn.GetHeader<CHttpHeaderEntContentType>();
+    lpHdr = cResponse->cHttpCmn.GetHeader<CHttpHeaderEntContentType>();
     if (lpHdr == NULL)
     {
       //only send automatic "Content-Type" header if not direct response
-      if (sResponse.bDirect == FALSE)
+      if (cResponse->bDirect == FALSE)
       {
-        if (sResponse.szMimeTypeHintA != NULL)
-          hRes = cHdrStream->WriteString("Content-Type:%s\r\n", sResponse.szMimeTypeHintA);
-        else if (sResponse.bLastStreamIsData != FALSE)
+        if (cResponse->szMimeTypeHintA != NULL)
+          hRes = cHdrStream->WriteString("Content-Type:%s\r\n", cResponse->szMimeTypeHintA);
+        else if (cResponse->bLastStreamIsData != FALSE)
           hRes = cHdrStream->WriteString("Content-Type:text/html; charset=utf-8\r\n");
         else
           hRes = cHdrStream->WriteString("Content-Type:application/octet-stream\r\n");
@@ -776,20 +805,20 @@ HRESULT CHttpServer::CRequest::BuildAndInsertOrSendHeaderStream()
     ULONGLONG nTotalLength, nLen;
     SIZE_T i, nCount;
 
-    lpHdr2 = sResponse.cHttpCmn.GetHeader<CHttpHeaderGenTransferEncoding>();
+    lpHdr2 = cResponse->cHttpCmn.GetHeader<CHttpHeaderGenTransferEncoding>();
     if (lpHdr2 == NULL || lpHdr2->GetEncoding() != CHttpHeaderGenTransferEncoding::EncodingChunked)
     {
-      lpHdr = sResponse.cHttpCmn.GetHeader<CHttpHeaderEntContentLength>();
+      lpHdr = cResponse->cHttpCmn.GetHeader<CHttpHeaderEntContentLength>();
       if (lpHdr == NULL)
       {
         //only send automatic "Content-Length" header if not direct response
-        if (sResponse.bDirect == FALSE)
+        if (cResponse->bDirect == FALSE)
         {
           nTotalLength = 0ui64;
-          nCount = sResponse.aStreamsList.GetCount();
+          nCount = cResponse->aStreamsList.GetCount();
           for (i = 0; i < nCount; i++)
           {
-            nLen = sResponse.aStreamsList[i]->GetLength();
+            nLen = cResponse->aStreamsList[i]->GetLength();
             if (nLen + nTotalLength < nTotalLength)
             {
               hRes = MX_E_BadLength;
@@ -815,10 +844,10 @@ HRESULT CHttpServer::CRequest::BuildAndInsertOrSendHeaderStream()
     CHttpHeaderBase *lpHdr;
     SIZE_T i, nCount;
 
-    nCount = sResponse.cHttpCmn.GetHeadersCount();
+    nCount = cResponse->cHttpCmn.GetHeadersCount();
     for (i=0; SUCCEEDED(hRes) && i<nCount; i++)
     {
-      lpHdr = sResponse.cHttpCmn.GetHeader(i);
+      lpHdr = cResponse->cHttpCmn.GetHeader(i);
       if (StrCompareA(lpHdr->GetName(), "Content-Type") != 0 &&
           StrCompareA(lpHdr->GetName(), "Content-Length") != 0 &&
           StrCompareA(lpHdr->GetName(), "Date") != 0 &&
@@ -838,10 +867,10 @@ HRESULT CHttpServer::CRequest::BuildAndInsertOrSendHeaderStream()
     CHttpCookie *lpCookie;
     SIZE_T i, nCount;
 
-    nCount = sResponse.cHttpCmn.GetCookiesCount();
+    nCount = cResponse->cHttpCmn.GetCookiesCount();
     for (i=0; SUCCEEDED(hRes) && i<nCount; i++)
     {
-      lpCookie = sResponse.cHttpCmn.GetCookie(i);
+      lpCookie = cResponse->cHttpCmn.GetCookie(i);
       hRes = lpCookie->ToString(cStrTempA);
       if (SUCCEEDED(hRes))
         hRes = cHdrStream->WriteString("Set-Cookie:%s\r\n", (LPSTR)cStrTempA);
@@ -853,9 +882,9 @@ HRESULT CHttpServer::CRequest::BuildAndInsertOrSendHeaderStream()
   //add at the beginning of stream list if not direct, else send
   if (SUCCEEDED(hRes))
   {
-    if (sResponse.bDirect == FALSE)
+    if (cResponse->bDirect == FALSE)
     {
-      if (sResponse.aStreamsList.InsertElementAt(cHdrStream.Get(), 0) != FALSE)
+      if (cResponse->aStreamsList.InsertElementAt(cHdrStream.Get(), 0) != FALSE)
         cHdrStream.Detach();
       else
         hRes = E_OUTOFMEMORY;
@@ -865,35 +894,38 @@ HRESULT CHttpServer::CRequest::BuildAndInsertOrSendHeaderStream()
       hRes = lpHttpServer->cSocketMgr.SendStream(hConn, cHdrStream.Get());
     }
   }
-  MX_HTTP_DEBUG_PRINT(1, ("HttpServer(ResponseHeaders/0x%p): 0x%08X\n", this, hRes));
+  if (lpHttpServer->ShouldLog(1) != FALSE)
+  {
+    lpHttpServer->Log(L"HttpServer(ResponseHeaders/0x%p): 0x%08X", this, hRes);
+  }
   //done
   return hRes;
 }
 
-HRESULT CHttpServer::CRequest::SendQueuedStreams()
+HRESULT CHttpServer::CClientRequest::SendQueuedStreams()
 {
   CStream *lpStream;
   SIZE_T i, nCount;
   HRESULT hRes;
 
   hRes = S_OK;
-  nCount = sResponse.aStreamsList.GetCount();
-  for (i=0; SUCCEEDED(hRes) && i<nCount; i++)
+  nCount = cResponse->aStreamsList.GetCount();
+  for (i = 0; SUCCEEDED(hRes) && i < nCount; i++)
   {
-    lpStream = sResponse.aStreamsList.GetElementAt(i);
+    lpStream = cResponse->aStreamsList.GetElementAt(i);
     hRes = lpHttpServer->cSocketMgr.SendStream(hConn, lpStream);
   }
   //done
   return hRes;
 }
 
-VOID CHttpServer::CRequest::MarkLinkAsClosed()
+VOID CHttpServer::CClientRequest::MarkLinkAsClosed()
 {
   _InterlockedOr(&nFlags, REQUEST_FLAG_LinkClosed);
   return;
 }
 
-BOOL CHttpServer::CRequest::IsLinkClosed() const
+BOOL CHttpServer::CClientRequest::IsLinkClosed() const
 {
   return ((__InterlockedRead(const_cast<LONG volatile*>(&nFlags)) & REQUEST_FLAG_LinkClosed) != 0) ? TRUE : FALSE;
 }

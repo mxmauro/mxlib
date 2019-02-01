@@ -66,7 +66,7 @@ typedef struct {
 //-----------------------------------------------------------
 
 static LONG volatile nSocketInitCount = 0;
-static LONG volatile nIsVistaOrLater = -1;
+static LONG volatile nOSVersion = -1;
 static lpfnSetFileCompletionNotificationModes volatile fnSetFileCompletionNotificationModes = NULL;
 
 //-----------------------------------------------------------
@@ -575,13 +575,17 @@ HRESULT CSockets::CConnection::CreateSocket(_In_ eFamily nFamily, _In_ DWORD dwP
   nYes = 1;
   if (::setsockopt(sck, IPPROTO_TCP, TCP_NODELAY, (char*)&nYes, (int)sizeof(nYes)) == SOCKET_ERROR)
     return MX_HRESULT_FROM_LASTSOCKETERROR();
-  //packet size on pre-vista
-  if (__InterlockedRead(&nIsVistaOrLater) < 0)
+
+  //detect OS version
+  if (__InterlockedRead(&nOSVersion) < 0)
   {
     HINSTANCE hKernel32Dll;
-    LONG nIsVista;
+    LONG _nOSVersion = 0;
 
-    nIsVista = (::IsWindowsVistaOrGreater() != FALSE) ? 1 : 0;
+    if (::IsWindows8OrGreater() != FALSE)
+      _nOSVersion = 0x0602;
+    else if (::IsWindowsVistaOrGreater() != FALSE)
+      _nOSVersion = 0x0600;
 
     hKernel32Dll = ::GetModuleHandleW(L"kernel32.dll");
     if (hKernel32Dll != NULL)
@@ -589,10 +593,13 @@ HRESULT CSockets::CConnection::CreateSocket(_In_ eFamily nFamily, _In_ DWORD dwP
       fnSetFileCompletionNotificationModes = (lpfnSetFileCompletionNotificationModes)::GetProcAddress(hKernel32Dll,
                                                                 "SetFileCompletionNotificationModes");
     }
+
 #pragma warning(default : 4996)
-    _InterlockedExchange(&nIsVistaOrLater, nIsVista);
+    _InterlockedExchange(&nOSVersion, _nOSVersion);
   }
-  if (__InterlockedRead(&nIsVistaOrLater) == 0)
+
+  //packet size on pre-vista
+  if (__InterlockedRead(&nOSVersion) < 0x0600)
   {
     //Vista and later uses an auto tune algorithm better than a static one
     unsigned int nBufSize;
@@ -602,6 +609,13 @@ HRESULT CSockets::CConnection::CreateSocket(_In_ eFamily nFamily, _In_ DWORD dwP
       return MX_HRESULT_FROM_LASTSOCKETERROR();
     nBufSize = 65536;
     if (::setsockopt(sck, SOL_SOCKET, SO_SNDBUF, (char*)&nBufSize, (int)sizeof(nBufSize)) == SOCKET_ERROR)
+      return MX_HRESULT_FROM_LASTSOCKETERROR();
+  }
+  //loopback fast path on Win8+
+  if (__InterlockedRead(&nOSVersion) >= 0x0602)
+  {
+    nYes = 1;
+    if (::WSAIoctl(sck, SIO_LOOPBACK_FAST_PATH, &nYes, sizeof(nYes), NULL, 0, &dw, NULL, NULL) == SOCKET_ERROR)
       return MX_HRESULT_FROM_LASTSOCKETERROR();
   }
   //miscellaneous options
@@ -703,9 +717,11 @@ HRESULT CSockets::CConnection::SetupClient()
     return E_OUTOFMEMORY;
   cRwList.QueueLast(lpPacket);
   hRes = S_OK;
-  MX_IPC_DEBUG_PRINT(2, ("%lu MX::CSockets::CConnection::SetupClient) Clock=%lums / Ovr=0x%p / Type=%lu\n",
-                         ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(),
-                         lpPacket->GetType()));
+  if (lpIpc->ShouldLog(2) != FALSE)
+  {
+    lpIpc->Log(L"CSockets::SetupClient) Clock=%lums / Ovr=0x%p / Type=%lu", cHiResTimer.GetElapsedTimeMs(),
+               lpPacket->GetOverlapped(), lpPacket->GetType());
+  }
   if (fnConnectEx != NULL)
   {
     //do connect
@@ -839,9 +855,12 @@ HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwMaxResolverTimeoutMs,
   }
   else
   {
-    MX_IPC_DEBUG_PRINT(2, ("%lu MX::CSockets::CConnection::ResolveAddress) Clock=%lums / This=0x%p / Ovr=0x%p / "
-                           "Type=%lu\n", ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(), this,
-                           sHostResolver.lpPacket->GetOverlapped(), sHostResolver.lpPacket->GetType()));
+    if (lpIpc->ShouldLog(2) != FALSE)
+    {
+      lpIpc->Log(L"CSockets::ResolveAddress) Clock=%lums / This=0x%p / Ovr=0x%p / Type=%lu",
+                 cHiResTimer.GetElapsedTimeMs(), this, sHostResolver.lpPacket->GetOverlapped(),
+                 sHostResolver.lpPacket->GetType());
+    }
     //create resolver and attach packet. no need to lock because it is called on socket creation
     sHostResolver.lpResolver = MX_DEBUG_NEW CHostResolver(MX_BIND_MEMBER_CALLBACK(&CConnection::HostResolveCallback,
                                                                                   this));
@@ -888,9 +907,12 @@ HRESULT CSockets::CConnection::SendReadPacket(_In_ CPacket *lpPacket)
   sWsaBuf.buf = (char*)(lpPacket->GetBuffer());
   sWsaBuf.len = (ULONG)dwToRead;
   dwReaded = dwFlags = 0;
-  MX_IPC_DEBUG_PRINT(2, ("%lu MX::CSockets::CConnection::SendReadPacket) Clock=%lums / Ovr=0x%p / Type=%lu / "
-                         "Bytes=%lu\n", ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(),
-                         lpPacket->GetOverlapped(), lpPacket->GetType(), lpPacket->GetBytesInUse()));
+  if (lpIpc->ShouldLog(2) != FALSE)
+  {
+    lpIpc->Log(L"CSockets::SendReadPacket) Clock=%lums / Ovr=0x%p / Type=%lu / Bytes=%lu",
+               cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(), lpPacket->GetType(),
+               lpPacket->GetBytesInUse());
+  }
   hRes = S_OK;
   if (::WSARecv(sck, &sWsaBuf, 1, &dwReaded, &dwFlags, lpPacket->GetOverlapped(), NULL) == SOCKET_ERROR)
   {
@@ -913,9 +935,12 @@ HRESULT CSockets::CConnection::SendWritePacket(_In_ CPacket *lpPacket)
   sWsaBuf.buf = (char*)(lpPacket->GetBuffer());
   sWsaBuf.len = (ULONG)(lpPacket->GetBytesInUse());
   dwWritten = 0;
-  MX_IPC_DEBUG_PRINT(2, ("%lu MX::CSockets::CConnection::SendWritePacket) Clock=%lums / Ovr=0x%p / Type=%lu / "
-                         "Bytes=%lu\n", ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(),
-                         lpPacket->GetOverlapped(), lpPacket->GetType(), lpPacket->GetBytesInUse()));
+  if (lpIpc->ShouldLog(2) != FALSE)
+  {
+    lpIpc->Log(L"CSockets::SendWritePacket) Clock=%lums / Ovr=0x%p / Type=%lu / Bytes=%lu",
+               cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(), lpPacket->GetType(),
+               lpPacket->GetBytesInUse());
+  }
   hRes = S_OK;
   if (::WSASend(sck, &sWsaBuf, 1, &dwWritten, 0, lpPacket->GetOverlapped(), NULL) == SOCKET_ERROR)
   {
@@ -941,9 +966,12 @@ VOID CSockets::CConnection::HostResolveCallback(_In_ CHostResolver *lpResolver)
       {
         RESOLVEADDRESS_PACKET_DATA *lpData = (RESOLVEADDRESS_PACKET_DATA*)(sHostResolver.lpPacket->GetBuffer());
 
-        MX_IPC_DEBUG_PRINT(2, ("%lu MX::CSockets::CConnection::HostResolveCallback) Clock=%lums / Ovr=0x%p / "
-                               "Type=%lu\n", ::MxGetCurrentThreadId(), cHiResTimer.GetElapsedTimeMs(),
-                               sHostResolver.lpPacket->GetOverlapped(), sHostResolver.lpPacket->GetType()));
+        if (lpIpc->ShouldLog(2) != FALSE)
+        {
+          lpIpc->Log(L"CSockets::HostResolveCallback) Clock = %lums / Ovr = 0x%p / Type=%lu",
+                     cHiResTimer.GetElapsedTimeMs(), sHostResolver.lpPacket->GetOverlapped(),
+                     sHostResolver.lpPacket->GetType());
+        }
         lpData->hRes = sHostResolver.lpResolver->GetErrorCode();
         if (SUCCEEDED(lpData->hRes))
         {

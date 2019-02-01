@@ -37,28 +37,18 @@
 #include "..\Streams.h"
 #include "..\TimedEventQueue.h"
 #include "..\Debug.h"
-
-#ifdef _DEBUG
-  #define MX_IPC_DEBUG_OUTPUT
-#else //_DEBUG
-  //#define MX_IPC_DEBUG_OUTPUT
-#endif //_DEBUG
-
-#ifdef MX_IPC_DEBUG_OUTPUT
-  #include "..\HiResTimer.h"
+#include "..\Loggable.h"
+#include "..\HiResTimer.h"
 
   #define MX_IPC_DEBUG_PRINT(level, output) if (MX::CIpc::nDebugLevel >= level) {  \
                                               MX::DebugPrint output;               \
                                             }
-#else //MX_IPC_DEBUG_OUTPUT
-  #define MX_IPC_DEBUG_PRINT(level, output)
-#endif //MX_IPC_DEBUG_OUTPUT
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-class CIpc : public virtual CBaseMemObj
+class CIpc : public virtual CBaseMemObj, public CLoggable
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CIpc);
 protected:
@@ -629,9 +619,7 @@ protected:
       TPendingListHelperGeneric<CTimedEventQueue::CEvent*> cActiveList;
     } sWriteTimeout;
     CCriticalSection cOnDataReceivedCS;
-#ifdef MX_IPC_DEBUG_OUTPUT
     CHiResTimer cHiResTimer;
-#endif //MX_IPC_DEBUG_OUTPUT
   };
 
   //----
@@ -641,11 +629,6 @@ protected:
 
   virtual HRESULT OnInternalInitialize() = 0;
   virtual VOID OnInternalFinalize() = 0;
-
-  /*
-  VOID CloseConnection(_In_ CConnectionBase *lpConn, _In_ HRESULT hErrorCode);
-  VOID ReleaseAndRemoveConnectionIfClosed(_In_ CConnectionBase *lpConn);
-  */
 
   VOID FireOnEngineError(_In_ HRESULT hErrorCode);
   HRESULT FireOnCreate(_In_ CConnectionBase *lpConn);

@@ -116,6 +116,9 @@
     <ClInclude Include="Include\MemoryStream.h">
       <Filter>Header Files\Streams</Filter>
     </ClInclude>
+    <ClInclude Include="Include\Loggable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\DateTime\DateTime.cpp">
@@ -174,6 +177,9 @@
     </ClCompile>
     <ClCompile Include="Source\MemoryStream.cpp">
       <Filter>Source Files\Streams</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Loggable.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
