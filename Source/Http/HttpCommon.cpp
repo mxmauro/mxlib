@@ -392,10 +392,15 @@ headers_end_reached:
           {
             //content or chunked transfer is not allowed
             if (nContentLength != ULONGLONG_MAX || (nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0)
-              goto err_invalid_data;
-            //no content... we are done
-            sParser.nState = StateDone;
-            goto done;
+            {
+              sParser.nErrorCode = 400;
+            }
+            else
+            {
+              //no content... we are done
+              sParser.nState = StateDone;
+              goto done;
+            }
           }
         }
         //if transfer encoding is set, then ignore content-length
@@ -438,6 +443,18 @@ headers_end_reached:
         nToRead = nDataSize - (szDataA - (LPCSTR)lpData);
         if ((ULONGLONG)nToRead > nContentLength - nIdentityBodyReadedContentLength)
           nToRead = (SIZE_T)(nContentLength - nIdentityBodyReadedContentLength);
+        if (ShouldLog(1) != FALSE && nContentLength > 0ui64)
+        {
+          double dbl;
+          int _pre_pct, _post_pct;
+
+          dbl = (double)nIdentityBodyReadedContentLength / (double)nContentLength;
+          _pre_pct = (int)(dbl * 10.0);
+          dbl += (double)nToRead / (double)nContentLength;
+          _post_pct = (int)(dbl * 10.0);
+          if (_pre_pct != _post_pct && _post_pct < 10)
+            Log(L"HttpCommon(Body/0x%p): %ld0%%", this, _post_pct);
+        }
         hRes = ProcessContent(szDataA, nToRead);
         if (FAILED(hRes))
           goto done;

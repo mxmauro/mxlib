@@ -1627,6 +1627,10 @@ handle_redirect_or_auth_processdocument:
     CHttpBodyParserBase *lpBodyParser = NULL;
     CStringW cStrFullFileNameW;
 
+    if (ShouldLog(1) != FALSE)
+    {
+      Log(L"HttpClient(ResponseHeadersReceived/0x%p)", this);
+    }
     if (cHeadersReceivedCallback)
     {
       CHttpHeaderEntContentType *lpContentTypeHeader;
@@ -1706,6 +1710,10 @@ handle_redirect_or_auth_processdocument:
   }
   if (SUCCEEDED(hRes) && bFireDocumentCompleted != FALSE)
   {
+    if (ShouldLog(1) != FALSE)
+    {
+      Log(L"HttpClient(DocumentCompleted/0x%p)", this);
+    }
     if (cDocumentCompletedCallback)
       hRes = cDocumentCompletedCallback(this);
   }

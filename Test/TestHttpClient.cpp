@@ -26,6 +26,8 @@
 
 #define SIMPLE_TEST
 
+#define LOG_LEVEL 0
+
 //-----------------------------------------------------------
 
 class CMyHttpClient : public MX::CHttpClient
@@ -39,6 +41,10 @@ public:
 public:
   MX::CSslCertificateArray *lpCerts;
 };
+
+//-----------------------------------------------------------
+
+static LONG volatile nLogMutex = 0;
 
 //-----------------------------------------------------------
 
@@ -64,6 +70,8 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
 #endif //SIMPLE_TEST
 
 static HRESULT CheckHttpClientResponse(_In_ CMyHttpClient &cHttpClient, _In_ BOOL bExpectHtml);
+
+static HRESULT OnLog(_In_z_ LPCWSTR szInfoW);
 
 //-----------------------------------------------------------
 
@@ -92,7 +100,12 @@ int TestHttpClient()
     hRes = cSckMgr.Initialize();
   }
   if (SUCCEEDED(hRes))
+  {
+    cSckMgr.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
+    cSckMgr.SetLogLevel(LOG_LEVEL);
+
     hRes = cCerts.ImportFromWindowsStore();
+  }
 
 #ifdef SIMPLE_TEST
   if (SUCCEEDED(hRes))
@@ -199,16 +212,18 @@ static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificate
   DWORD dwStartTime, dwEndTime;
   HRESULT hRes;
 
-  //cProxy.SetUseIE();
-  cProxy.SetManual(L"127.0.0.1:808");
-  cProxy.SetCredentials(L"guest", L"invitado");
-  cHttpClient.SetProxy(cProxy);
+  cProxy.SetUseIE();
+  //cProxy.SetManual(L"127.0.0.1:808");
+  //cProxy.SetCredentials(L"guest", L"invitado");
+  //cHttpClient.SetProxy(cProxy);
   cHttpClient.lpCerts = lpCerts;
   //cHttpClient.SetOptionFlags(0);
   //cHttpClient.SetOptionFlags(MX::CHttpClient::OptionKeepConnectionOpen);
   cHttpClient.On(MX_BIND_CALLBACK(&OnDocumentCompleted));
   cHttpClient.On(MX_BIND_CALLBACK(&OnError));
   cHttpClient.On(MX_BIND_CALLBACK(&OnQueryCertificates));
+  cHttpClient.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
+  cHttpClient.SetLogLevel(LOG_LEVEL);
 
   wprintf_s(L"[HttpClient/SimpleTest1] Downloading...\n");
   dwStartTime = dwEndTime = ::GetTickCount();
@@ -223,7 +238,8 @@ static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificate
   }
   if (SUCCEEDED(hRes))
   {
-    while (cHttpClient.IsDocumentComplete() == FALSE && cHttpClient.IsClosed() == FALSE);
+    while (cHttpClient.IsDocumentComplete() == FALSE && cHttpClient.IsClosed() == FALSE)
+      ::Sleep(50);
 #pragma warning(suppress : 28159)
     dwEndTime = ::GetTickCount();
     hRes = CheckHttpClientResponse(cHttpClient, TRUE);
@@ -269,6 +285,8 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
   cHttpClient.On(MX_BIND_CALLBACK(&OnDocumentCompleted));
   cHttpClient.On(MX_BIND_CALLBACK(&OnError));
   cHttpClient.On(MX_BIND_CALLBACK(&OnQueryCertificates));
+  cHttpClient.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
+  cHttpClient.SetLogLevel(LOG_LEVEL);
   {
     Console::CPrintLock cPrintLock;
 
@@ -379,4 +397,12 @@ static HRESULT CheckHttpClientResponse(_In_ CMyHttpClient &cHttpClient, _In_ BOO
   }
   lpBodyParser->Release();
   return hRes;
+}
+
+static HRESULT OnLog(_In_z_ LPCWSTR szInfoW)
+{
+  MX::CFastLock cLock(&nLogMutex);
+
+  wprintf_s(L"%s\n", szInfoW);
+  return S_OK;
 }
