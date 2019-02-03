@@ -38,7 +38,6 @@ FORCEINLINE int InterlockedExchangeAdd(_Inout_ _Interlocked_operand_ int volatil
 #define FLAG_Disconnected                              0x0001
 #define FLAG_HandshakeCompleted                        0x0002
 #define FLAG_WantsRead                                 0x0004
-#define FLAG_ForceRead                                 0x0008
 
 //-----------------------------------------------------------
 
@@ -295,7 +294,6 @@ HRESULT CIpcSslLayer::OnData(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize)
   if (SUCCEEDED(hRes))
   {
     _InterlockedAnd(&(ssl_data->nFlags), ~FLAG_WantsRead);
-    _InterlockedOr(&(ssl_data->nFlags), FLAG_ForceRead);
     hRes = HandleSsl(TRUE);
   }
   //done
@@ -387,20 +385,12 @@ HRESULT CIpcSslLayer::ExecSslRead()
 {
   BYTE aBuffer[4096];
   int r;
-  BOOL bSomethingProcessed, bForceRead;
+  BOOL bSomethingProcessed;
   HRESULT hRes;
 
   bSomethingProcessed = FALSE;
-  //bForceRead = ((_InterlockedAnd(&(ssl_data->nFlags), (~FLAG_ForceRead)) &
-  //              (FLAG_ForceRead | FLAG_HandshakeCompleted)) == FLAG_HandshakeCompleted) ? FALSE : TRUE;
-  bForceRead = ((_InterlockedAnd(&(ssl_data->nFlags), (~FLAG_ForceRead)) & FLAG_ForceRead) != 0) ? TRUE : FALSE;
   do
   {
-    if (bForceRead == FALSE && SSL_has_pending(ssl_data->lpSslSession) == 0)
-    {
-      return (bSomethingProcessed != FALSE) ? S_OK : S_FALSE;
-    }
-    bForceRead = FALSE;
     ERR_clear_error();
     r = SSL_read(ssl_data->lpSslSession, aBuffer, (int)sizeof(aBuffer));
     if (r > 0)

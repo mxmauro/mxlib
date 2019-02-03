@@ -24,6 +24,12 @@
 #include "..\Include\Loggable.h"
 #include <stdio.h>
 
+#ifdef _DEBUG
+  #define DEBUGOUTPUT_LOG
+#else //_DEBUG
+  //#define DEBUGOUTPUT_LOG
+#endif //_DEBUG
+
 //-----------------------------------------------------------
 
 namespace MX {
@@ -138,6 +144,11 @@ HRESULT CLoggable::WriteLogCommon(_In_ BOOL bAddError, _In_ HRESULT hResError, _
   SIZE_T nTotal, nBufLen = MX_ARRAYLEN(szTempBufW);
   HRESULT hRes;
 
+#ifndef DEBUGOUTPUT_LOG
+  if (!cCallback)
+    return E_FAIL;
+#endif //!DEBUGOUTPUT_LOG
+
   ::GetSystemTime(&sSt);
   lpszBufW = szTempBufW;
   count[0] = _snwprintf_s(szTempBufW, MX_ARRAYLEN(szTempBufW), _TRUNCATE, L"#%4lu.%4lu) [%02lu:%02lu:%02lu.%03lu] ",
@@ -173,7 +184,7 @@ HRESULT CLoggable::WriteLogCommon(_In_ BOOL bAddError, _In_ HRESULT hResError, _
     nTotal = nBufLen - 1;
   lpszBufW[nTotal] = 0;
 
-  hRes = cCallback(lpszBufW);
+  hRes = (cCallback) ? cCallback(lpszBufW) : S_OK;
 #ifdef DEBUGOUTPUT_LOG
   ::OutputDebugStringW(lpszBufW);
 #endif //DEBUGOUTPUT_LOG
