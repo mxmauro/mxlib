@@ -163,7 +163,7 @@ SSL_CTX* GetSslContext(_In_ BOOL bServerSide, _In_z_ LPCSTR szVersionA)
       if (lpSsl == NULL)
         return NULL;
       lpCiphers = SSL_get_ciphers(lpSsl);
-      for (cipherIdx=0; cipherIdx<sk_SSL_CIPHER_num(lpCiphers); cipherIdx++)
+      for (cipherIdx = 0; cipherIdx < sk_SSL_CIPHER_num(lpCiphers); cipherIdx++)
       {
         bEnable = TRUE;
         lpCipher = sk_SSL_CIPHER_value(lpCiphers, cipherIdx);
@@ -200,6 +200,7 @@ SSL_CTX* GetSslContext(_In_ BOOL bServerSide, _In_z_ LPCSTR szVersionA)
       //SSL_CTX_sess_set_remove_cb(lpSslCtx, RemoveSessionCallbackStatic);
       SSL_CTX_set_timeout(lpSslCtx, 3600);
       SSL_CTX_sess_set_cache_size(lpSslCtx, 1024);
+      SSL_CTX_set_read_ahead(lpSslCtx, 1);
       //----
       __InterlockedExchangePointer((volatile LPVOID *)&(lpSslContexts[(bServerSide != FALSE) ? 1 : 0][idx]), lpSslCtx);
     }
@@ -234,8 +235,12 @@ static HRESULT _OpenSSL_Init()
 #endif //_DEBUG
       CRYPTO_set_mem_functions(&my_malloc_withinfo, &my_realloc_withinfo, &my_free);
       //init lib
-      OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_LOAD_CRYPTO_STRINGS |
-                       OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, NULL);
+      if (OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_LOAD_CRYPTO_STRINGS |
+                           OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, NULL) == 0)
+      {
+        return E_OUTOFMEMORY;
+      }
+      ERR_clear_error();
       //register shutdown callback
       hRes = MX::RegisterFinalizer(&OpenSSL_Shutdown, OPENSSL_FINALIZER_PRIORITY);
       if (FAILED(hRes))

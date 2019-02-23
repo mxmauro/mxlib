@@ -44,6 +44,7 @@ public:
   CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool);
   ~CSockets();
 
+  VOID SetOption_BackLogSize(_In_ DWORD dwSize);
   VOID SetOption_MaxAcceptsToPost(_In_ DWORD dwCount);
   VOID SetOption_MaxResolverTimeoutMs(_In_ DWORD dwTimeoutMs);
 
@@ -76,7 +77,7 @@ private:
     HRESULT CreateSocket(_In_ eFamily nFamily, _In_ DWORD dwPacketSize);
     VOID ShutdownLink(_In_ BOOL bAbortive);
 
-    HRESULT SetupListener();
+    HRESULT SetupListener(_In_ int nBackLogSize);
     HRESULT SetupClient();
     HRESULT SetupAcceptEx(_In_ CConnection *lpListenConn);
 
@@ -147,7 +148,7 @@ private:
     };
 
 private:
-  DWORD dwMaxAcceptsToPost, dwMaxResolverTimeoutMs;
+  DWORD dwBackLogSize, dwMaxAcceptsToPost, dwMaxResolverTimeoutMs;
 };
 
 } //namespace MX

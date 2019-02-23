@@ -150,7 +150,7 @@ If bRebuild <> False Then
 	I = CreateConfiguration()
 	If I = 0 Then
 		WScript.Echo "Configuring..."
-		S = "perl.exe -d:Confess Configure " & szConfigDebug & szConfigurationTarget & " " & szDefineNoErr & " no-sock no-rc2 no-idea no-cast no-md2 no-mdc2 no-camellia no-shared "
+		S = "perl.exe -d:Confess Configure " & szConfigDebug & szConfigurationTarget & " " & szDefineNoErr & " no-asm no-sock no-rc2 no-idea no-cast no-md2 no-mdc2 no-camellia no-shared "
 		S = S & "-DOPENSSL_NO_DGRAM -DOPENSSL_NO_CAPIENG -DUNICODE -D_UNICODE "
 		If Len(szIsDebug) = 0 Then S = S & "-DOPENSSL_NO_FILENAMES "
 		S = S & Chr(34) & "--config=" & szScriptPath & "Temp\compiler_config.conf" & Chr(34)

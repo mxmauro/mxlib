@@ -610,7 +610,6 @@ public:
     //remove the node
     MX_ASSERT(lpDelNode->lpRight == NULL || lpDelNode->lpLeft == NULL);
     n = (lpDelNode->lpLeft == NULL) ? lpDelNode->lpRight : lpDelNode->lpLeft;
-
     if (n != NULL)
     {
       n->lpParent = lpDelNode->lpParent;

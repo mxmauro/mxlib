@@ -231,7 +231,7 @@ int StrNCompareAW(_In_z_ LPCSTR szSrcA1, _In_z_ LPCWSTR szSrcW2, _In_ SIZE_T nLe
   {
     usStr[0].Length = (USHORT)((nLen > MX_ARRAYLEN(szTempBufW)) ? MX_ARRAYLEN(szTempBufW) : nLen);
     for (i=0; i<usStr[0].Length; i++)
-      szTempBufW[i] = aToUnicodeChar[szSrcA1[i]];
+      szTempBufW[i] = aToUnicodeChar[((UCHAR*)szSrcA1)[i]];
     usStr[0].Length <<= 1;
     usStr[1].Length = usStr[1].MaximumLength =  usStr[0].MaximumLength = usStr[0].Length;
     res = ::MxRtlCompareUnicodeString(&usStr[0], &usStr[1], bCaseInsensitive);

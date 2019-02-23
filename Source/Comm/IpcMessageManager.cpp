@@ -340,7 +340,7 @@ HRESULT CIpcMessageManager::SendMultipleBlocks(_Out_ LPDWORD lpdwMsgId, _In_ SIZ
 HRESULT CIpcMessageManager::SendMultipleBlocks(_Out_ LPDWORD lpdwMsgId, _In_ OnMultiBlockCallback cMultiBlockCallback,
                                                _In_opt_ LPVOID lpContext)
 {
-  MX::CIpc::CAutoMultiSendLock cMultiSendLock(lpIpc->StartMultiSendBlock(hConn));
+  CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   LPVOID lpMsg;
   SIZE_T nIndex, nMsgSize, nTotalMsgSize;
   DWORD dwMsgId;
@@ -353,49 +353,58 @@ HRESULT CIpcMessageManager::SendMultipleBlocks(_Out_ LPDWORD lpdwMsgId, _In_ OnM
   if (!cMultiBlockCallback)
     return E_POINTER;
 
-  if (cMultiSendLock.IsLocked() == FALSE)
-    return MX_E_Cancelled;
-  nIndex = nTotalMsgSize = 0;
-  do
+  if (cAutoRundownProt.IsAcquired() != FALSE)
   {
-    lpMsg = NULL;
-    nMsgSize = 0;
-    cMultiBlockCallback(nIndex, &lpMsg, &nMsgSize, lpContext);
-    if (lpMsg != NULL)
+    MX::CIpc::CAutoMultiSendLock cMultiSendLock(lpIpc->StartMultiSendBlock(hConn));
+
+    if (cMultiSendLock.IsLocked() == FALSE)
+      return MX_E_Cancelled;
+    nIndex = nTotalMsgSize = 0;
+    do
     {
-      if (nMsgSize > dwMaxMessageSize ||
-          nTotalMsgSize + nMsgSize < nTotalMsgSize ||
-          nTotalMsgSize >(SIZE_T)dwMaxMessageSize)
+      lpMsg = NULL;
+      nMsgSize = 0;
+      cMultiBlockCallback(nIndex, &lpMsg, &nMsgSize, lpContext);
+      if (lpMsg != NULL)
       {
-        MX_ASSERT(FALSE);
-        return MX_E_InvalidData;
+        if (nMsgSize > dwMaxMessageSize ||
+            nTotalMsgSize + nMsgSize < nTotalMsgSize ||
+            nTotalMsgSize >(SIZE_T)dwMaxMessageSize)
+        {
+          MX_ASSERT(FALSE);
+          return MX_E_InvalidData;
+        }
+        nTotalMsgSize += nMsgSize;
+        nIndex++;
       }
-      nTotalMsgSize += nMsgSize;
-      nIndex++;
     }
+    while (lpMsg != NULL);
+    if (nIndex == 0)
+      return E_INVALIDARG;
+    //get message id
+    dwMsgId = GetNextId();
+    //header
+    hRes = SendHeader(dwMsgId, nTotalMsgSize);
+    //body
+    nIndex = 0;
+    while (SUCCEEDED(hRes))
+    {
+      lpMsg = NULL;
+      nMsgSize = 0;
+      cMultiBlockCallback(nIndex++, &lpMsg, &nMsgSize, lpContext);
+      if (lpMsg == NULL)
+        break;
+      if (nMsgSize > 0)
+        hRes = lpIpc->SendMsg(hConn, lpMsg, nMsgSize);
+    }
+    //end of message
+    if (SUCCEEDED(hRes))
+      hRes = SendEndOfMessageMark(dwMsgId);
   }
-  while (lpMsg != NULL);
-  if (nIndex == 0)
-    return E_INVALIDARG;
-  //get message id
-  dwMsgId = GetNextId();
-  //header
-  hRes = SendHeader(dwMsgId, nTotalMsgSize);
-  //body
-  nIndex = 0;
-  while (SUCCEEDED(hRes))
+  else
   {
-    lpMsg = NULL;
-    nMsgSize = 0;
-    cMultiBlockCallback(nIndex++, &lpMsg, &nMsgSize, lpContext);
-    if (lpMsg == NULL)
-      break;
-    if (nMsgSize > 0)
-      hRes = lpIpc->SendMsg(hConn, lpMsg, nMsgSize);
+    hRes = MX_E_Cancelled;
   }
-  //end of message
-  if (SUCCEEDED(hRes))
-    hRes = SendEndOfMessageMark(dwMsgId);
   //done
   if (SUCCEEDED(hRes))
     *lpdwMsgId = dwMsgId;

@@ -51,12 +51,14 @@ public:
   COpenSSLCircularBufferBIO() : MX::CBaseMemObj()
     {
     _InterlockedExchange(&nMutex, 0);
+    nFragmentSize = 0;
     return;
     };
 
 public:
   LONG volatile nMutex;
   MX::CCircularBuffer cBuffer;
+  SIZE_T nFragmentSize;
 };
 
 } //namespace Internals
@@ -183,7 +185,8 @@ HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol
   SSL_set_verify_depth(ssl_data->lpSslSession, 4);
   SSL_set_options(ssl_data->lpSslSession, SSL_OP_NO_SSLv2 | SSL_OP_NO_COMPRESSION | SSL_OP_LEGACY_SERVER_CONNECT |
                                           SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
-  SSL_set_mode(ssl_data->lpSslSession, SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER | SSL_MODE_RELEASE_BUFFERS);
+  SSL_set_mode(ssl_data->lpSslSession, SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
+                                       SSL_MODE_RELEASE_BUFFERS);
   if (ssl_data->bServerSide == FALSE)
     SSL_set_connect_state(ssl_data->lpSslSession);
   else
@@ -373,6 +376,7 @@ HRESULT CIpcSslLayer::HandleSsl(_In_ BOOL bCanWrite)
         hRes = FinalizeHandshake();
         if (FAILED(hRes))
           return hRes;
+        //NOTE: Should we raise a callback?
         bLoop = TRUE;
       }
     }
@@ -410,7 +414,6 @@ HRESULT CIpcSslLayer::ExecSslRead()
     case SSL_ERROR_WANT_WRITE:
     case SSL_ERROR_NONE:
     case SSL_ERROR_ZERO_RETURN:
-      hRes = (bSomethingProcessed != FALSE) ? S_OK : S_FALSE;
       break;
 
     default:
@@ -419,11 +422,10 @@ HRESULT CIpcSslLayer::ExecSslRead()
         DEBUGPRINT_DATA sData = { this, L"ExecSslRead" };
         ERR_print_errors_cb(&DebugPrintSslError, &sData);
       }
-      hRes = MX_E_InvalidData;
-      break;
+      return MX_E_InvalidData;
   }
   //done
-  return hRes;
+  return (bSomethingProcessed != FALSE) ? S_OK : S_FALSE;
 }
 
 HRESULT CIpcSslLayer::SendEncryptedOutput()
@@ -462,24 +464,30 @@ HRESULT CIpcSslLayer::ProcessDataToSend()
   bSomethingWritten = FALSE;
   do
   {
-    ERR_clear_error();
     {
       CFastLock cBufferedOutLock(&(ssl_data->lpBufferedOut->nMutex));
 
-      nAvail = ssl_data->lpBufferedOut->cBuffer.Peek(aTempBuf, sizeof(aTempBuf));
-      if (nAvail > 0)
-      {
-        err = SSL_write(ssl_data->lpSslSession, aTempBuf, (int)nAvail);
-        if (err > 0)
-        {
-          ssl_data->lpBufferedOut->cBuffer.AdvanceReadPtr((SIZE_T)err);
-          bSomethingWritten = TRUE;
-        }
-      }
-      else
+      nAvail = ssl_data->lpBufferedOut->cBuffer.Peek(aTempBuf, (ssl_data->lpBufferedOut->nFragmentSize == 0)
+                                                               ? sizeof(aTempBuf)
+                                                               : ssl_data->lpBufferedOut->nFragmentSize);
+      if (nAvail == 0)
       {
         err = 1;
         break;
+      }
+
+      if (ssl_data->lpBufferedOut->nFragmentSize == 0)
+      {
+        ssl_data->lpBufferedOut->nFragmentSize = nAvail;
+      }
+
+      ERR_clear_error();
+      err = SSL_write(ssl_data->lpSslSession, aTempBuf, (int)nAvail);
+      if (err > 0)
+      {
+        ssl_data->lpBufferedOut->cBuffer.AdvanceReadPtr((SIZE_T)err);
+        ssl_data->lpBufferedOut->nFragmentSize -= (SIZE_T)err;
+        bSomethingWritten = TRUE;
       }
     }
   }
@@ -759,12 +767,12 @@ static int circular_buffer_write(BIO *bi, const char *in, int inl)
     return -1;
   }
 
+  BIO_clear_retry_flags(bi);
   lpBuf = (MX::Internals::COpenSSLCircularBufferBIO*)BIO_get_data(bi);
   if (inl > 0)
   {
     MX::CFastLock cLock(&(lpBuf->nMutex));
 
-    BIO_clear_retry_flags(bi);
     if (FAILED(lpBuf->cBuffer.Write(in, (SIZE_T)inl)))
     {
       BIOerr(BIO_F_MEM_WRITE, ERR_R_MALLOC_FAILURE);
@@ -825,37 +833,33 @@ static int circular_buffer_gets(BIO *bi, char *buf, int size)
   {
     MX::Internals::COpenSSLCircularBufferBIO *lpBuf;
     SIZE_T i, nToRead, nReaded;
-    char *bufEnd, *bufStart;
 
     lpBuf = (MX::Internals::COpenSSLCircularBufferBIO*)BIO_get_data(bi);
-    bufStart = buf;
-    bufEnd = buf + (size-1);
     {
       MX::CFastLock cLock(&(lpBuf->nMutex));
 
-      while (bufStart < bufEnd)
+      nToRead = (SIZE_T)size;
+      nReaded = lpBuf->cBuffer.Peek(buf, nToRead);
+      if (nReaded == 0)
       {
-        nToRead = (SIZE_T)(bufEnd - bufStart);
-        nReaded = lpBuf->cBuffer.Peek(bufStart, nToRead);
-        if (nReaded == 0)
-          break;
-        for (i=0; i<nReaded; i++)
-        {
-          if (bufStart[i] == '\n')
-          {
-            nReaded = i+1;
-            break;
-          }
-        }
-        bufStart += nReaded;
-        lpBuf->cBuffer.AdvanceReadPtr(nReaded);
-        if (*(bufStart-1) == '\n')
-          break;
+        *buf = 0;
+        return 0;
       }
-      *bufStart = 0;
+      for (i = 0; i < nReaded; i++)
+      {
+        if (buf[i] == '\n')
+        {
+          i++;
+          break;
+        }
+      }
+      lpBuf->cBuffer.AdvanceReadPtr(i);
+      buf[i] = 0;
     }
-    return (int)(bufStart - buf);
+    return (int)i;
   }
+  if (buf != NULL)
+    *buf = '\0';
   return 0;
 }
 

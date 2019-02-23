@@ -82,6 +82,7 @@ namespace MX {
 
 CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDispatcherPool)
 {
+  dwBackLogSize = 0;
   dwMaxAcceptsToPost = 4;
   dwMaxResolverTimeoutMs = 3000;
   return;
@@ -90,6 +91,19 @@ CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDi
 CSockets::~CSockets()
 {
   Finalize();
+  return;
+}
+
+VOID CSockets::SetOption_BackLogSize(_In_ DWORD dwSize)
+{
+  CFastLock cInitShutdownLock(&nInitShutdownMutex);
+
+  if (cShuttingDownEv.Get() == NULL)
+  {
+    dwBackLogSize = dwSize;
+    if (dwBackLogSize > 0x7FFFFFFFUL)
+      dwBackLogSize = 0x7FFFFFFFUL;
+  }
   return;
 }
 
@@ -365,7 +379,7 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In
         switch (lpConn->nClass)
         {
           case CIpc::ConnectionClassListener:
-            hRes = lpConn->SetupListener();
+            hRes = lpConn->SetupListener((dwBackLogSize != 0) ? (int)dwBackLogSize : SOMAXCONN);
             if (SUCCEEDED(hRes))
             {
               for (DWORD i = 0; i < dwMaxAcceptsToPost; i++)
@@ -695,10 +709,10 @@ VOID CSockets::CConnection::ShutdownLink(_In_ BOOL bAbortive)
   return;
 }
 
-HRESULT CSockets::CConnection::SetupListener()
+HRESULT CSockets::CConnection::SetupListener(_In_ int nBackLogSize)
 {
   return (::bind(sck, (sockaddr*)&sAddr, SockAddrSizeFromWinSockFamily(sAddr.si_family)) == SOCKET_ERROR ||
-          ::listen(sck, SOMAXCONN) == SOCKET_ERROR) ? MX_HRESULT_FROM_LASTSOCKETERROR() : S_OK;
+          ::listen(sck, nBackLogSize) == SOCKET_ERROR) ? MX_HRESULT_FROM_LASTSOCKETERROR() : S_OK;
 }
 
 HRESULT CSockets::CConnection::SetupClient()
