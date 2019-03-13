@@ -1241,6 +1241,7 @@ HRESULT CJsSQLitePlugin::HResultFromSQLiteErr(_In_ int nError)
       return MX_E_Cancelled;
 
     case SQLITE_BUSY:
+    case SQLITE_LOCKED:
       return MX_E_Busy;
 
     case SQLITE_NOTFOUND:
@@ -1357,14 +1358,15 @@ static BOOL GetTypeFromName(_In_z_ LPCSTR szNameA, _Out_ int *lpnType, _Out_ int
 
 static BOOL MustRetry(_In_ int err, _In_ DWORD dwInitialBusyTimeoutMs, _Inout_ DWORD &dwBusyTimeoutMs)
 {
-  if (err != SQLITE_BUSY || dwInitialBusyTimeoutMs == 0 || dwBusyTimeoutMs == 0)
+  err &= 0xFF;
+  if ((err != SQLITE_BUSY && err != SQLITE_LOCKED) || dwInitialBusyTimeoutMs == 0 || dwBusyTimeoutMs == 0)
     return FALSE;
   if (dwBusyTimeoutMs != INFINITE)
   {
-    if (dwBusyTimeoutMs >= 100)
+    if (dwBusyTimeoutMs >= 50)
     {
-      ::Sleep(100);
-      dwBusyTimeoutMs -= 100;
+      ::Sleep(50);
+      dwBusyTimeoutMs -= 50;
     }
     else
     {
