@@ -35,18 +35,38 @@ CHiResTimer::CHiResTimer() : CBaseMemObj()
 
 VOID CHiResTimer::Reset()
 {
-  if (!NT_SUCCESS(MxNtQueryPerformanceCounter((PLARGE_INTEGER)&liStartCounter, (PLARGE_INTEGER)&liFrequency)))
-    liStartCounter.QuadPart = liFrequency.QuadPart = 0ui64;
+  if (!NT_SUCCESS(::MxNtQueryPerformanceCounter((PLARGE_INTEGER)&uliStartCounter, (PLARGE_INTEGER)&uliFrequency)))
+  {
+    uliStartCounter.HighPart = 0;
+    uliStartCounter.LowPart = ::GetTickCount();
+    uliFrequency.QuadPart = 0ui64;
+  }
   return;
 }
 
-DWORD CHiResTimer::GetElapsedTimeMs()
+DWORD CHiResTimer::GetElapsedTimeMs(_In_opt_ BOOL bReset)
 {
-  ULARGE_INTEGER liCurrCounter, _liFrequency;
+  DWORD dwElapsedMs;
 
-  if (!NT_SUCCESS(MxNtQueryPerformanceCounter((PLARGE_INTEGER)&liCurrCounter, (PLARGE_INTEGER)&_liFrequency)))
-    return 0;
-  return (DWORD)(((liCurrCounter.QuadPart - liStartCounter.QuadPart) * 1000ui64) / liFrequency.QuadPart);
+  if (uliFrequency.QuadPart != 0ui64)
+  {
+    ULARGE_INTEGER liCurrCounter, _liFrequency;
+
+    ::MxNtQueryPerformanceCounter((PLARGE_INTEGER)&liCurrCounter, (PLARGE_INTEGER)&_liFrequency);
+
+    dwElapsedMs = (DWORD)(((liCurrCounter.QuadPart - uliStartCounter.QuadPart) * 1000ui64) / uliFrequency.QuadPart);
+    if (bReset != FALSE)
+      uliStartCounter.QuadPart = liCurrCounter.QuadPart;
+  }
+  else
+  {
+    DWORD dwCurrCounter = ::GetTickCount();
+
+    dwElapsedMs = dwCurrCounter - uliStartCounter.LowPart;
+    if (bReset != FALSE)
+      uliStartCounter.LowPart = dwCurrCounter;
+  }
+  return dwElapsedMs;
 }
 
 } //namespace MX

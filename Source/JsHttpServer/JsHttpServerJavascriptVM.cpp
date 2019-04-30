@@ -91,7 +91,7 @@ HRESULT CJsHttpServer::InitializeJVM(_In_ CJavascriptVM *lpJvm, _In_ CClientRequ
   HRESULT hRes;
 
   //init JVM
-  lpJvm->On(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequireJsModule, this));
+  lpJvm->SetRequireModuleCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequireJsModule, this));
   hRes = lpJvm->Initialize();
   __EXIT_ON_ERROR(hRes);
 
@@ -175,7 +175,7 @@ HRESULT CJsHttpServer::InitializeJVM(_In_ CJavascriptVM *lpJvm, _In_ CClientRequ
 
   //remote ip and port
   lpSckMgr = lpRequest->GetUnderlyingSocketManager();
-  hConn = lpRequest->GetUnderlyingSocket();
+  hConn = lpRequest->GetUnderlyingSocketHandle();
   if (hConn == NULL || lpSckMgr == NULL)
     return E_UNEXPECTED;
   hRes = lpSckMgr->GetPeerAddress(hConn, &sAddr);
@@ -270,14 +270,14 @@ HRESULT CJsHttpServer::InitializeJVM(_In_ CJavascriptVM *lpJvm, _In_ CClientRequ
   __EXIT_ON_ERROR(hRes);
 
   nCount = lpRequest->GetRequestHeadersCount();
-  for (i=0; i<nCount; i++)
+  for (i = 0; i < nCount; i++)
   {
     CHttpHeaderBase *lpHdr;
 
     lpHdr = lpRequest->GetRequestHeader(i);
-    hRes = lpHdr->Build(cStrTempA);
+    hRes = lpHdr->Build(cStrTempA, lpRequest->GetBrowser());
     __EXIT_ON_ERROR(hRes);
-    hRes = lpJvm->AddObjectStringProperty("request.headers", lpHdr->GetName(), (LPCSTR)cStrTempA,
+    hRes = lpJvm->AddObjectStringProperty("request.headers", lpHdr->GetHeaderName(), (LPCSTR)cStrTempA,
                                           CJavascriptVM::PropertyFlagEnumerable);
     __EXIT_ON_ERROR(hRes);
   }

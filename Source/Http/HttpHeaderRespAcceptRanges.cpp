@@ -41,36 +41,69 @@ CHttpHeaderRespAcceptRanges::~CHttpHeaderRespAcceptRanges()
 HRESULT CHttpHeaderRespAcceptRanges::Parse(_In_z_ LPCSTR szValueA)
 {
   eRange _nRange = RangeUnsupported;
+  LPCSTR szStartA;
+  BOOL bGotItem = FALSE;
 
   if (szValueA == NULL)
     return E_POINTER;
-  nRange = RangeUnsupported;
-  //skip spaces
-  szValueA = SkipSpaces(szValueA);
-  //check expectation
-  if (StrNCompareA(szValueA, "none", 4, TRUE) == 0)
+  //parse range type
+  bGotItem = FALSE;
+  do
   {
-    szValueA += 4;
-    _nRange = RangeNone;
-  }
-  else if (StrNCompareA(szValueA, "bytes", 5, TRUE) == 0)
-  {
-    szValueA += 5;
-    _nRange = RangeBytes;
-  }
-  else
-  {
-    return MX_E_Unsupported;
-  }
-  //skip spaces and check for end
-  if (*SkipSpaces(szValueA) != 0)
+    //skip spaces
     szValueA = SkipSpaces(szValueA);
+    if (*szValueA == 0)
+      break;
+
+    //get range type
+    szValueA = GetToken(szStartA = szValueA);
+    if (szValueA == szStartA)
+      goto skip_null_listitem;
+
+    if (bGotItem != FALSE)
+      return MX_E_Unsupported; //only one range type is supported
+    bGotItem = TRUE;
+
+    //check range type
+    switch ((SIZE_T)(szValueA - szStartA))
+    {
+      case 4:
+        if (StrNCompareA(szStartA, "none", 4, TRUE) == 0)
+          _nRange = RangeNone;
+        else
+          return MX_E_Unsupported;
+        break;
+
+      case 5:
+        if (StrNCompareA(szStartA, "bytes", 5, TRUE) == 0)
+          _nRange = RangeBytes;
+        else
+          return MX_E_Unsupported;
+        break;
+
+      default:
+        return MX_E_Unsupported;
+    }
+
+skip_null_listitem:
+    //skip spaces
+    szValueA = SkipSpaces(szValueA);
+
+    //check for separator or end
+    if (*szValueA == ',')
+      szValueA++;
+    else if (*szValueA != 0)
+      return MX_E_InvalidData;
+  }
+  while (*szValueA != 0);
   //done
+  if (bGotItem == FALSE)
+    return MX_E_InvalidData;
   nRange = _nRange;
   return S_OK;
 }
 
-HRESULT CHttpHeaderRespAcceptRanges::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderRespAcceptRanges::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   switch (nRange)
   {

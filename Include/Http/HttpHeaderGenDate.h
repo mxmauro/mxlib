@@ -41,7 +41,7 @@ public:
 
   HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
 
   HRESULT SetDate(_In_ CDateTime &cDt);
   CDateTime GetDate() const;

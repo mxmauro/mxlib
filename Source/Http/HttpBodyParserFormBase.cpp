@@ -116,7 +116,7 @@ HRESULT CHttpBodyParserFormBase::AddField(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR
     {
       //if the item has an empty index, find next index
       cStrIndexW.Empty();
-      for (i=0; i<lpField->GetSubIndexesCount(); i++)
+      for (i = 0; i < lpField->GetSubIndexesCount(); i++)
       {
         lpChildField = lpField->GetSubIndexAt(i);
 
@@ -135,7 +135,7 @@ HRESULT CHttpBodyParserFormBase::AddField(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR
       //calculate new index (increment the biggest by 1)
       if (cStrIndexW.IsEmpty() == FALSE)
       {
-        for (szIdxW=(LPCWSTR)cStrIndexW+(cStrIndexW.GetLength()-1); szIdxW>=(LPCWSTR)cStrIndexW; szIdxW--)
+        for (szIdxW = (LPCWSTR)cStrIndexW + (cStrIndexW.GetLength() - 1); szIdxW >= (LPCWSTR)cStrIndexW; szIdxW--)
         {
           *((LPWSTR)szIdxW) += 1;
           if (*szIdxW <= L'9')
@@ -157,7 +157,7 @@ HRESULT CHttpBodyParserFormBase::AddField(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR
       sW = (LPCWSTR)cStrIndexW;
     }
     //look for the subindex
-    for (i=0; i<lpField->GetSubIndexesCount(); i++)
+    for (i = 0; i < lpField->GetSubIndexesCount(); i++)
     {
       lpChildField = lpField->GetSubIndexAt(i);
       if (StrCompareW(sW, lpChildField->GetName(), TRUE) == 0)
@@ -239,7 +239,7 @@ HRESULT CHttpBodyParserFormBase::AddFileField(_In_z_ LPCWSTR szNameW, _In_z_ LPC
     }
   }
   //check indexes
-  for (nCurrIdx=0; nCurrIdx<aSubIndexesList.GetCount(); nCurrIdx++)
+  for (nCurrIdx = 0; nCurrIdx < aSubIndexesList.GetCount(); nCurrIdx++)
   {
     lpField->ClearValue();
     //----
@@ -267,7 +267,7 @@ HRESULT CHttpBodyParserFormBase::AddFileField(_In_z_ LPCWSTR szNameW, _In_z_ LPC
       //calculate new index (increment the biggest by 1)
       if (cStrIndexW.IsEmpty() == FALSE)
       {
-        for (szIdxW=(LPCWSTR)cStrIndexW+(cStrIndexW.GetLength()-1); szIdxW>=(LPCWSTR)cStrIndexW; szIdxW--)
+        for (szIdxW = (LPCWSTR)cStrIndexW + (cStrIndexW.GetLength() - 1); szIdxW >= (LPCWSTR)cStrIndexW; szIdxW--)
         {
           *((LPWSTR)szIdxW) += 1;
           if (*szIdxW <= L'9')

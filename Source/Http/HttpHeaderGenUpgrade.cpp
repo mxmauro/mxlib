@@ -41,8 +41,6 @@ CHttpHeaderGenUpgrade::~CHttpHeaderGenUpgrade()
 HRESULT CHttpHeaderGenUpgrade::Parse(_In_z_ LPCSTR szValueA)
 {
   LPCSTR szStartA;
-  CStringA cStrTempA, cStrTempA_2;
-  CStringW cStrTempW;
   BOOL bGotItem;
   HRESULT hRes;
 
@@ -56,16 +54,23 @@ HRESULT CHttpHeaderGenUpgrade::Parse(_In_z_ LPCSTR szValueA)
     szValueA = SkipSpaces(szValueA);
     if (*szValueA == 0)
       break;
+
+    //get product
+    szValueA = SkipUntil(szStartA = szValueA, ";, \t");
+    if (szStartA == szValueA)
+      goto skip_null_listitem;
+
     bGotItem = TRUE;
-    //upgrade
-    szValueA = Advance(szStartA = szValueA, ";, \t");
-    if (cStrTempA.CopyN(szStartA, (SIZE_T)(szValueA-szStartA)) == FALSE)
-      return E_OUTOFMEMORY;
-    hRes = AddProduct((LPCSTR)cStrTempA);
+
+    //add product
+    hRes = AddProduct(szStartA, (SIZE_T)(szValueA - szStartA));
     if (FAILED(hRes))
       return hRes;
+
+skip_null_listitem:
     //skip spaces
     szValueA = SkipSpaces(szValueA);
+
     //check for separator or end
     if (*szValueA == ',')
       szValueA++;
@@ -77,13 +82,14 @@ HRESULT CHttpHeaderGenUpgrade::Parse(_In_z_ LPCSTR szValueA)
   return (bGotItem != FALSE) ? S_OK : MX_E_InvalidData;
 }
 
-HRESULT CHttpHeaderGenUpgrade::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderGenUpgrade::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   SIZE_T i, nCount;
 
   cStrDestA.Empty();
+  //fill products
   nCount = cProductsList.GetCount();
-  for (i=0; i<nCount; i++)
+  for (i = 0; i < nCount; i++)
   {
     if (cStrDestA.IsEmpty() == FALSE)
     {
@@ -97,39 +103,41 @@ HRESULT CHttpHeaderGenUpgrade::Build(_Inout_ CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderGenUpgrade::AddProduct(_In_z_ LPCSTR szProductA)
+HRESULT CHttpHeaderGenUpgrade::AddProduct(_In_z_ LPCSTR szProductA, _In_ SIZE_T nProductLen)
 {
-  LPCSTR szStartA, szEndA;
+  LPCSTR szStartA, szProductEndA;
   CStringA cStrTempA;
 
+  if (nProductLen == (SIZE_T)-1)
+    nProductLen = StrLenA(szProductA);
+  if (nProductLen == 0)
+    return MX_E_InvalidData;
   if (szProductA == NULL)
     return E_POINTER;
-  //skip spaces
-  szProductA = SkipSpaces(szProductA);
-  //get upgrade
-  szProductA = GetToken(szStartA = szProductA);
+  szProductEndA = szProductA + nProductLen;
+  //validate and set new value
+  if (cStrTempA.CopyN(szProductA, nProductLen) == FALSE)
+    return E_OUTOFMEMORY;
+  //validate
+  szProductA = GetToken(szStartA = szProductA, nProductLen);
+  if (szProductA == szStartA)
+    return MX_E_InvalidData;
   //check slash separator
-  if (*szProductA == '/')
+  if (szProductA < szProductEndA && *szProductA == '/')
   {
-    szProductA = GetToken(++szProductA);
-    if (*(szProductA-1) == '/' || *szProductA == '/') //no subtype?
+    szProductA++;
+    szProductA = GetToken(szProductA, (SIZE_T)(szProductEndA - szProductA));
+    if (*(szProductA-1) == '/' || (szProductA < szProductEndA && *szProductA == '/')) //no subtype?
       return MX_E_InvalidData;
   }
-  else if (szProductA == szStartA)
-  {
-    return MX_E_InvalidData;
-  }
-  szEndA = szProductA;
-  //skip spaces and check for end
-  if (*SkipSpaces(szProductA) != 0)
+  //check for end
+  if (szProductA != szProductEndA)
     return MX_E_InvalidData;
   //set new value
-  if (cStrTempA.CopyN(szStartA, (SIZE_T)(szEndA-szStartA)) == FALSE)
-    return E_OUTOFMEMORY;
   if (cProductsList.AddElement((LPSTR)cStrTempA) == FALSE)
     return E_OUTOFMEMORY;
-  //done
   cStrTempA.Detach();
+  //done
   return S_OK;
 }
 

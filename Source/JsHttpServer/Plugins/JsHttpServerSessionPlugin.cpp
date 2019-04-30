@@ -187,7 +187,7 @@ HRESULT CJsHttpServerSessionPlugin::RegenerateSessionId()
 
   *szCurrentIdA = 0;
   //----
-  hConn = lpRequest->GetUnderlyingSocket();
+  hConn = lpRequest->GetUnderlyingSocketHandle();
   lpSckMgr = lpRequest->GetUnderlyingSocketManager();
   if (hConn == NULL || lpSckMgr == NULL)
     return E_UNEXPECTED;

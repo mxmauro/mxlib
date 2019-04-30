@@ -41,9 +41,9 @@ public:
 
   HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
 
-  HRESULT SetType(_In_z_ LPCSTR szTypeA);
+  HRESULT SetType(_In_z_ LPCSTR szTypeA, _In_ SIZE_T nTypeLen = (SIZE_T)-1);
   LPCSTR GetType() const;
 
   HRESULT AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);

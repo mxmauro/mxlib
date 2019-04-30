@@ -39,47 +39,57 @@ CHttpHeaderReqReferer::~CHttpHeaderReqReferer()
 
 HRESULT CHttpHeaderReqReferer::Parse(_In_z_ LPCSTR szValueA)
 {
-  return SetReferer(szValueA);
-}
+  LPCSTR szStartA;
+  HRESULT hRes;
 
-HRESULT CHttpHeaderReqReferer::Build(_Inout_ CStringA &cStrDestA)
-{
-  if (cStrDestA.Copy((LPSTR)cStrRefererA) == FALSE)
-  {
-    cStrDestA.Empty();
-    return E_OUTOFMEMORY;
-  }
+  if (szValueA == NULL)
+    return E_POINTER;
+
+  //skip spaces
+  szValueA = SkipSpaces(szValueA);
+
+  //get referer
+  szValueA = SkipUntil(szStartA = szValueA, " \t");
+  if (szValueA == szStartA)
+    return MX_E_InvalidData;
+
+  //set referer
+  hRes = SetReferer(szStartA, (SIZE_T)(szValueA - szStartA));
+  if (FAILED(hRes))
+    return hRes;
+
+  //skip spaces and check for end
+  if (*CHttpHeaderBase::SkipSpaces(szValueA) != 0)
+    return MX_E_InvalidData;
   //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqReferer::SetReferer(_In_z_ LPCSTR szRefererA)
+HRESULT CHttpHeaderReqReferer::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
-  LPCSTR szStartA, szEndA;
+  return (cStrDestA.Copy((LPCSTR)cStrRefererA) != FALSE) ? S_OK : E_OUTOFMEMORY;
+}
+
+HRESULT CHttpHeaderReqReferer::SetReferer(_In_z_ LPCSTR szRefererA, _In_ SIZE_T nRefererLen)
+{
   CUrl cUrl;
   HRESULT hRes;
 
+  if (nRefererLen == (SIZE_T)-1)
+    nRefererLen = StrLenA(szRefererA);
+  if (nRefererLen == 0)
+    return MX_E_InvalidData;
   if (szRefererA == NULL)
     return E_POINTER;
-  //skip spaces
-  szRefererA = SkipSpaces(szRefererA);
-  //get host
-  szRefererA = Advance(szStartA = szRefererA, " \t");
-  if (szRefererA == szStartA)
-    return MX_E_InvalidData;
-  szEndA = szRefererA;
-  //skip spaces and check for end
-  if (*CHttpHeaderBase::SkipSpaces(szRefererA) != 0)
-    return MX_E_InvalidData;
+  //some checks
+  hRes = cUrl.ParseFromString(szRefererA, nRefererLen);
+  if (FAILED(hRes))
+    return hRes;
   //set new value
-  hRes = cUrl.ParseFromString(szStartA, (SIZE_T)(szEndA-szStartA));
-  if (SUCCEEDED(hRes))
-  {
-    if (cStrRefererA.CopyN(szStartA, (SIZE_T)(szEndA-szStartA)) == FALSE)
-      hRes = E_OUTOFMEMORY;
-  }
+  if (cStrRefererA.CopyN(szRefererA, nRefererLen) == FALSE)
+    return E_OUTOFMEMORY;
   //done
-  return hRes;
+  return S_OK;
 }
 
 LPCSTR CHttpHeaderReqReferer::GetReferer() const

@@ -26,6 +26,13 @@
 #pragma comment(lib, "ws2_32.lib")
 
 //-----------------------------------------------------------
+typedef struct tagSYNC_RESOLVE {
+  MX::CWindowsEvent cEvent;
+  SOCKADDR_INET *lpAddr;
+  HRESULT volatile hRes;
+} SYNC_RESOLVE, *LPSYNC_RESOLVE;
+
+//-----------------------------------------------------------
 
 static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCSTR szStrA, _In_ SIZE_T nLen);
 static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCWSTR szStrW, _In_ SIZE_T nLen);
@@ -38,12 +45,9 @@ static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCWSTR szStrW, _In_
 
 namespace MX {
 
-CHostResolver::CHostResolver(_In_ OnNotifyCallback cCallback, _In_opt_ LPVOID lpUserData) :
-               TEventNotifyBase<CHostResolver>(cCallback, lpUserData)
+CHostResolver::CHostResolver() : CBaseMemObj()
 {
   lpInternal = MX::Internals::CIPAddressResolver::Get();
-  MemSet(&sAddr, 0, sizeof(sAddr));
-  hErrorCode = MX_E_Timeout;
   return;
 }
 
@@ -55,46 +59,58 @@ CHostResolver::~CHostResolver()
   return;
 }
 
-HRESULT CHostResolver::Resolve(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily)
+HRESULT CHostResolver::Resolve(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _Out_ SOCKADDR_INET &sAddr)
 {
-  if (szHostNameA == NULL)
-    return E_POINTER;
-  if (*szHostNameA == 0)
-    return E_INVALIDARG;
-  if (nDesiredFamily != AF_UNSPEC && nDesiredFamily != AF_INET && nDesiredFamily != AF_INET6)
-    return E_INVALIDARG;
-  if (lpInternal == NULL)
-    return E_OUTOFMEMORY;
-  return __resolver->ResolveAddr(&sAddr, szHostNameA, nDesiredFamily);
-}
-
-HRESULT CHostResolver::Resolve(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily)
-{
-  CStringA cStrTempA;
+  SYNC_RESOLVE sSyncData;
   HRESULT hRes;
 
-  if (szHostNameW == NULL)
-    return E_POINTER;
-  if (*szHostNameW == 0)
-    return E_INVALIDARG;
-  if (nDesiredFamily != AF_UNSPEC && nDesiredFamily != AF_INET && nDesiredFamily != AF_INET6)
-    return E_INVALIDARG;
-  if (lpInternal == NULL)
-    return E_OUTOFMEMORY;
-  hRes = Punycode_Encode(cStrTempA, szHostNameW);
+  MemSet(&sAddr, 0, sizeof(sAddr));
+
+  sSyncData.lpAddr = &sAddr;
+  sSyncData.hRes = E_FAIL;
+  hRes = sSyncData.cEvent.Create(TRUE, FALSE);
   if (SUCCEEDED(hRes))
-    hRes = __resolver->ResolveAddr(&sAddr, (LPCSTR)cStrTempA, nDesiredFamily);
+  {
+    hRes = ResolveAsync(szHostNameA, nDesiredFamily, INFINITE,
+                        MX_BIND_MEMBER_CALLBACK(&CHostResolver::OnSyncResolution, this), &sSyncData);
+    if (SUCCEEDED(hRes))
+      hRes = __InterlockedRead(&(sSyncData.hRes));
+  }
+  //done
   return hRes;
 }
 
-HRESULT CHostResolver::ResolveAsync(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _In_ DWORD dwTimeoutMs)
+HRESULT CHostResolver::Resolve(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _Out_ SOCKADDR_INET &sAddr)
+{
+  SYNC_RESOLVE sSyncData;
+  HRESULT hRes;
+
+  MemSet(&sAddr, 0, sizeof(sAddr));
+
+  sSyncData.lpAddr = &sAddr;
+  sSyncData.hRes = E_FAIL;
+  hRes = sSyncData.cEvent.Create(TRUE, FALSE);
+  if (SUCCEEDED(hRes))
+  {
+    hRes = ResolveAsync(szHostNameW, nDesiredFamily, INFINITE,
+                        MX_BIND_MEMBER_CALLBACK(&CHostResolver::OnSyncResolution, this), &sSyncData);
+    if (SUCCEEDED(hRes))
+      hRes = __InterlockedRead(&(sSyncData.hRes));
+  }
+  //done
+  return hRes;
+}
+
+HRESULT CHostResolver::ResolveAsync(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _In_ DWORD dwTimeoutMs,
+                                    _In_ OnResultCallback cCallback, _In_opt_ LPVOID lpUserData)
 {
   if (lpInternal == NULL)
     return E_OUTOFMEMORY;
-  return __resolver->Resolve(this, &sAddr, &hErrorCode, szHostNameA, nDesiredFamily, dwTimeoutMs);
+  return __resolver->Resolve(this, szHostNameA, nDesiredFamily, dwTimeoutMs, cCallback, lpUserData);
 }
 
-HRESULT CHostResolver::ResolveAsync(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _In_ DWORD dwTimeoutMs)
+HRESULT CHostResolver::ResolveAsync(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _In_ DWORD dwTimeoutMs,
+                                    _In_ OnResultCallback cCallback, _In_opt_ LPVOID lpUserData)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -103,7 +119,7 @@ HRESULT CHostResolver::ResolveAsync(_In_z_ LPCWSTR szHostNameW, _In_ int nDesire
     return E_POINTER;
   hRes = Punycode_Encode(cStrTempA, szHostNameW);
   if (SUCCEEDED(hRes))
-    hRes = ResolveAsync((LPSTR)cStrTempA, nDesiredFamily, dwTimeoutMs);
+    hRes = ResolveAsync((LPCSTR)cStrTempA, nDesiredFamily, dwTimeoutMs, cCallback, lpUserData);
   return hRes;
 }
 
@@ -526,6 +542,17 @@ BOOL CHostResolver::IsValidIPV6(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddr
       return FALSE;
   }
   return TRUE;
+}
+
+VOID CHostResolver::OnSyncResolution(_In_ CHostResolver *lpResolver, _In_ SOCKADDR_INET &sAddr,
+                                     _In_ HRESULT hrErrorCode, _In_opt_ LPVOID lpUserData)
+{
+  LPSYNC_RESOLVE lpSyncData = (LPSYNC_RESOLVE)lpUserData;
+
+  MemCopy(lpSyncData->lpAddr, &sAddr, sizeof(sAddr));
+  _InterlockedExchange(&(lpSyncData->hRes), hrErrorCode);
+  lpSyncData->cEvent.Set();
+  return;
 }
 
 } //namespace MX

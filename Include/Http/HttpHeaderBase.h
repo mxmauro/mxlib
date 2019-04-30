@@ -31,11 +31,11 @@
 
 //-----------------------------------------------------------
 
-#define MX_DECLARE_HTTPHEADER_NAME(__name)    \
-            static LPCSTR GetNameStatic()     \
-              { return #__name; };              \
-            virtual LPCSTR GetName() const    \
-              { return GetNameStatic(); };
+#define MX_DECLARE_HTTPHEADER_NAME(__name)          \
+            static LPCSTR GetHeaderNameStatic()     \
+              { return #__name; };                  \
+            virtual LPCSTR GetHeaderName() const    \
+              { return GetHeaderNameStatic(); };
 
 //-----------------------------------------------------------
 
@@ -48,6 +48,10 @@ public:
     DuplicateBehaviorError, DuplicateBehaviorReplace, DuplicateBehaviorAppend, DuplicateBehaviorAdd
   } eDuplicateBehavior;
 
+  typedef enum {
+    BrowserOther, BrowserIE, BrowserIE6, BrowserOpera, BrowserGecko, BrowserChrome, BrowserSafari, BrowserKonqueror
+  } eBrowser;
+
 protected:
   CHttpHeaderBase();
 public:
@@ -57,13 +61,13 @@ public:
   template<class T>
   static HRESULT Create(_In_ BOOL bIsRequest, _Out_ T **lplpHeader)
     {
-    return Create(T::GetNameStatic(), bIsRequest, reinterpret_cast<CHttpHeaderBase**>(lplpHeader));
+    return Create(T::GetHeaderNameStatic(), bIsRequest, reinterpret_cast<CHttpHeaderBase**>(lplpHeader));
     };
 
-  virtual LPCSTR GetName() const = 0;
+  virtual LPCSTR GetHeaderName() const = 0;
 
   virtual HRESULT Parse(_In_z_ LPCSTR szValueA) = 0;
-  virtual HRESULT Build(_Inout_ CStringA &cStrDestA) = 0;
+  virtual HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser) = 0;
 
   virtual eDuplicateBehavior GetDuplicateBehavior() const
     {
@@ -71,14 +75,19 @@ public:
     };
 
   //helpers
-  static LPCSTR SkipSpaces(_In_z_ LPCSTR sA);
-  static LPCWSTR SkipSpaces(_In_z_ LPCWSTR sW);
+  static LPCSTR SkipSpaces(_In_z_ LPCSTR sA, _In_opt_ SIZE_T nMaxLen = (SIZE_T)-1);
+  static LPCSTR SkipUntil(_In_z_ LPCSTR sA, _In_opt_z_ LPCSTR szStopCharsA = NULL,
+                          _In_opt_ SIZE_T nMaxLen = (SIZE_T)-1);
 
-  static LPCSTR GetToken(_In_z_ LPCSTR sA, _In_opt_z_ LPCSTR szStopCharsA=NULL);
-  static LPCWSTR GetToken(_In_z_ LPCWSTR sW, _In_opt_z_ LPCWSTR szStopCharsW=NULL);
+  static LPCSTR GetToken(_In_z_ LPCSTR sA, _In_opt_ SIZE_T nMaxLen = (SIZE_T)-1);
+  static HRESULT GetQuotedString(_Out_ CStringA &cStrA, _Inout_ LPCSTR &sA);
 
-  static LPCSTR Advance(_In_z_ LPCSTR sA, _In_opt_z_ LPCSTR szStopCharsA=NULL);
-  static LPCWSTR Advance(_In_z_ LPCWSTR sW, _In_opt_z_ LPCWSTR szStopCharsW=NULL);
+  static HRESULT GetParamNameAndValue(_Out_ CStringA &cStrTokenA, _Out_ CStringW &cStrValueW, _Inout_ LPCSTR &sA,
+                                      _Out_opt_ LPBOOL lpbExtendedParam = NULL);
+
+  static BOOL RawISO_8859_1_to_UTF8(_Out_ CStringW &cStrDestW, _In_ LPCWSTR szSrcW, _In_ SIZE_T nSrcLen);
+
+  static eBrowser GetBrowserFromUserAgent(_In_ LPCSTR szUserAgentA, _In_opt_ SIZE_T nUserAgentLen = (SIZE_T)-1);
 };
 
 } //namespace MX
@@ -97,6 +106,7 @@ public:
 #include "HttpHeaderGenConnection.h"
 #include "HttpHeaderGenDate.h"
 #include "HttpHeaderGenTransferEncoding.h"
+#include "HttpHeaderGenSecWebSocketExtensions.h"
 #include "HttpHeaderGenUpgrade.h"
 #include "HttpHeaderReqAccept.h"
 #include "HttpHeaderReqAcceptCharset.h"
@@ -109,12 +119,18 @@ public:
 #include "HttpHeaderReqIfModifiedSinceOrIfUnmodifiedSince.h"
 #include "HttpHeaderReqRange.h"
 #include "HttpHeaderReqReferer.h"
+#include "HttpHeaderReqSecWebSocketKey.h"
+#include "HttpHeaderReqSecWebSocketProtocol.h"
+#include "HttpHeaderReqSecWebSocketVersion.h"
 #include "HttpHeaderRespAcceptRanges.h"
 #include "HttpHeaderRespAge.h"
 #include "HttpHeaderRespCacheControl.h"
 #include "HttpHeaderRespETag.h"
 #include "HttpHeaderRespLocation.h"
 #include "HttpHeaderRespRetryAfter.h"
+#include "HttpHeaderRespSecWebSocketAccept.h"
+#include "HttpHeaderRespSecWebSocketProtocol.h"
+#include "HttpHeaderRespSecWebSocketVersion.h"
 #include "HttpHeaderRespWwwProxyAuthenticate.h"
 #include "HttpHeaderGeneric.h"
 

@@ -84,7 +84,7 @@ CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDi
 {
   dwBackLogSize = 0;
   dwMaxAcceptsToPost = 4;
-  dwMaxResolverTimeoutMs = 3000;
+  dwAddressResolverTimeoutMs = 3000;
   return;
 }
 
@@ -120,17 +120,17 @@ VOID CSockets::SetOption_MaxAcceptsToPost(_In_ DWORD dwCount)
   return;
 }
 
-VOID CSockets::SetOption_MaxResolverTimeoutMs(_In_ DWORD dwTimeoutMs)
+VOID CSockets::SetOption_AddressResolverTimeout(_In_ DWORD dwTimeoutMs)
 {
   CFastLock cInitShutdownLock(&nInitShutdownMutex);
 
   if (cShuttingDownEv.Get() == NULL)
   {
-    dwMaxResolverTimeoutMs = dwTimeoutMs;
-    if (dwMaxResolverTimeoutMs < 100)
-      dwMaxResolverTimeoutMs = 100;
-    else if (dwMaxResolverTimeoutMs > 180000)
-      dwMaxResolverTimeoutMs = 180000;
+    dwAddressResolverTimeoutMs = dwTimeoutMs;
+    if (dwAddressResolverTimeoutMs < 100)
+      dwAddressResolverTimeoutMs = 100;
+    else if (dwAddressResolverTimeoutMs > 180000)
+      dwAddressResolverTimeoutMs = 180000;
   }
   return;
 }
@@ -169,7 +169,7 @@ HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCr
   if (SUCCEEDED(hRes))
     hRes = cConn->CreateSocket(nFamily, 0);
   if (SUCCEEDED(hRes))
-    hRes = cConn->ResolveAddress(dwMaxResolverTimeoutMs, nFamily, szBindAddressA, nPort);
+    hRes = cConn->ResolveAddress(dwAddressResolverTimeoutMs, nFamily, szBindAddressA, nPort);
   //done
   if (FAILED(hRes))
   {
@@ -235,7 +235,7 @@ HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA
   if (SUCCEEDED(hRes))
     hRes = cConn->CreateSocket(nFamily, dwPacketSize);
   if (SUCCEEDED(hRes))
-    hRes = cConn->ResolveAddress(dwMaxResolverTimeoutMs, nFamily, szAddressA, nPort);
+    hRes = cConn->ResolveAddress(dwAddressResolverTimeoutMs, nFamily, szAddressA, nPort);
   //done
   if (FAILED(hRes))
   {
@@ -829,7 +829,7 @@ HRESULT CSockets::CConnection::SetupAcceptEx(_In_ CConnection *lpIncomingConn)
   return S_OK;
 }
 
-HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwMaxResolverTimeoutMs, _In_ eFamily nFamily,
+HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _In_ eFamily nFamily,
                                               _In_opt_z_ LPCSTR szAddressA, _In_opt_ int nPort)
 {
   CFastLock cHostResolverLock(&(sHostResolver.nMutex));
@@ -876,14 +876,15 @@ HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwMaxResolverTimeoutMs,
                  sHostResolver.lpPacket->GetType());
     }
     //create resolver and attach packet. no need to lock because it is called on socket creation
-    sHostResolver.lpResolver = MX_DEBUG_NEW CHostResolver(MX_BIND_MEMBER_CALLBACK(&CConnection::HostResolveCallback,
-                                                                                  this));
+    sHostResolver.lpResolver = MX_DEBUG_NEW CHostResolver();
     if (sHostResolver.lpResolver != NULL)
     {
       //start address resolving with a timeout
       AddRef();
       hRes = sHostResolver.lpResolver->ResolveAsync(szAddressA, FamilyToWinSockFamily(nFamily),
-                                                    dwMaxResolverTimeoutMs);
+                                                    dwResolverTimeoutMs,
+                                                    MX_BIND_MEMBER_CALLBACK(&CConnection::HostResolveCallback, this),
+                                                    NULL);
       if (FAILED(hRes))
         Release();
     }
@@ -965,7 +966,8 @@ HRESULT CSockets::CConnection::SendWritePacket(_In_ CPacket *lpPacket)
   return hRes;
 }
 
-VOID CSockets::CConnection::HostResolveCallback(_In_ CHostResolver *lpResolver)
+VOID CSockets::CConnection::HostResolveCallback(_In_ CHostResolver *lpResolver, _In_ SOCKADDR_INET &sAddr,
+                                                _In_ HRESULT hrErrorCode, _In_opt_ LPVOID lpUserData)
 {
   HRESULT hRes;
 
@@ -973,10 +975,10 @@ VOID CSockets::CConnection::HostResolveCallback(_In_ CHostResolver *lpResolver)
     CFastLock cHostResolverLock(&(sHostResolver.nMutex));
 
     //get myself and increase reference count if we are not destroying
-    if (IsClosed() == FALSE)
+    if (IsClosed() == FALSE && sHostResolver.lpResolver == lpResolver)
     {
       //process resolver result
-      if (sHostResolver.lpResolver->IsCanceled() == FALSE)
+      if (SUCCEEDED(hrErrorCode))
       {
         RESOLVEADDRESS_PACKET_DATA *lpData = (RESOLVEADDRESS_PACKET_DATA*)(sHostResolver.lpPacket->GetBuffer());
 
@@ -986,11 +988,11 @@ VOID CSockets::CConnection::HostResolveCallback(_In_ CHostResolver *lpResolver)
                      cHiResTimer.GetElapsedTimeMs(), sHostResolver.lpPacket->GetOverlapped(),
                      sHostResolver.lpPacket->GetType());
         }
-        lpData->hRes = sHostResolver.lpResolver->GetErrorCode();
+        lpData->hRes = hrErrorCode;
         if (SUCCEEDED(lpData->hRes))
         {
           //copy address
-          MemCopy(&(lpData->sAddr), &(sHostResolver.lpResolver->GetResolvedAddr()), sizeof(lpData->sAddr));
+          MemCopy(&(lpData->sAddr), &sAddr, sizeof(sAddr));
           switch (lpData->sAddr.si_family)
           {
             case AF_INET:
@@ -1008,8 +1010,10 @@ VOID CSockets::CConnection::HostResolveCallback(_In_ CHostResolver *lpResolver)
       }
       else
       {
-        hRes = MX_E_Cancelled;
+        hRes = hrErrorCode;
       }
+
+      sHostResolver.lpResolver = NULL;
     }
     else
     {
@@ -1021,14 +1025,14 @@ VOID CSockets::CConnection::HostResolveCallback(_In_ CHostResolver *lpResolver)
       FreePacket(sHostResolver.lpPacket);
       sHostResolver.lpPacket = NULL;
     }
-    sHostResolver.lpResolver->Release();
-    sHostResolver.lpResolver = NULL;
   }
   //----
   if (FAILED(hRes))
     Close(hRes);
   //release myself
   Release();
+  //done with resolver
+  delete lpResolver;
   return;
 }
 

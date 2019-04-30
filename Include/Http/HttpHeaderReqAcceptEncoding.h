@@ -34,20 +34,20 @@ namespace MX {
 class CHttpHeaderReqAcceptEncoding : public CHttpHeaderBase
 {
 public:
-  class CType : public virtual CBaseMemObj
+  class CEncoding : public virtual CBaseMemObj
   {
   public:
-    CType();
-    ~CType();
+    CEncoding();
+    ~CEncoding();
 
-    HRESULT SetType(_In_z_ LPCSTR szTypeA);
-    LPCSTR GetType() const;
+    HRESULT SetEncoding(_In_z_ LPCSTR szEncodingA, _In_opt_ SIZE_T nEncodingLen = (SIZE_T)-1);
+    LPCSTR GetEncoding() const;
 
     HRESULT SetQ(_In_ double q);
     double GetQ() const;
 
   private:
-    CStringA cStrTypeA;
+    CStringA cStrEncodingA;
     double q;
   };
 
@@ -61,21 +61,22 @@ public:
 
   HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
     return DuplicateBehaviorAppend;
     };
 
-  HRESULT AddType(_In_z_ LPCSTR szTypeA, _Out_opt_ CType **lplpType=NULL);
+  HRESULT AddEncoding(_In_z_ LPCSTR szEncodingA, _In_opt_ SIZE_T nEncodingLen = (SIZE_T)-1,
+                      _Out_opt_ CEncoding **lplpEncoding = NULL);
 
-  SIZE_T GetTypesCount() const;
-  CType* GetType(_In_ SIZE_T nIndex) const;
-  CType* GetType(_In_z_ LPCSTR szTypeA) const;
+  SIZE_T GetEncodingsCount() const;
+  CEncoding* GetEncoding(_In_ SIZE_T nIndex) const;
+  CEncoding* GetEncoding(_In_z_ LPCSTR szEncodingA) const;
 
 private:
-  TArrayListWithDelete<CType*> cTypesList;
+  TArrayListWithDelete<CEncoding*> cEncodingsList;
 };
 
 } //namespace MX

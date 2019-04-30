@@ -32,7 +32,7 @@
 
 namespace MX {
 
-class CJsHttpServer : public virtual CBaseMemObj, public CLoggable
+class CJsHttpServer : public virtual CBaseMemObj, public CHttpServer
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CJsHttpServer);
 public:
@@ -51,10 +51,14 @@ public:
                             _Inout_ CStringA &cStrCodeA)> OnRequireJsModuleCallback;
 
   typedef Callback<VOID (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
-                         _In_ HRESULT hErrorCode)> OnErrorCallback;
+                         _In_ HRESULT hrErrorCode)> OnErrorCallback;
 
   typedef Callback<VOID (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ CJavascriptVM &cJvm,
                          _In_ HRESULT hRunErrorCode)> OnJavascriptErrorCallback;
+
+  typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ HANDLE hShutdownEv,
+                            _Inout_ CHttpServer::WEBSOCKET_REQUEST_CALLBACK_DATA &sData)>
+                            OnWebSocketRequestReceivedCallback;
 
   //--------
 
@@ -63,30 +67,13 @@ public:
                 _In_opt_ CLoggable *lpLogParent = NULL);
   ~CJsHttpServer();
 
-  VOID SetOption_MaxRequestTimeoutMs(_In_ DWORD dwTimeoutMs);
-  VOID SetOption_MaxHeaderSize(_In_ DWORD dwSize);
-  VOID SetOption_MaxFieldSize(_In_ DWORD dwSize);
-  VOID SetOption_MaxFileSize(_In_ ULONGLONG ullSize);
-  VOID SetOption_MaxFilesCount(_In_ DWORD dwCount);
-  BOOL SetOption_TemporaryFolder(_In_opt_z_ LPCWSTR szFolderW);
-  VOID SetOption_MaxBodySizeInMemory(_In_ DWORD dwSize);
-  VOID SetOption_MaxBodySize(_In_ ULONGLONG ullSize);
 
-  VOID On(_In_ OnNewRequestObjectCallback cNewRequestObjectCallback);
-  VOID On(_In_ OnRequestCallback cRequestCallback);
-  VOID On(_In_ OnRequireJsModuleCallback cRequireJsModuleCallback);
-  VOID On(_In_ OnErrorCallback cErrorCallback);
-  VOID On(_In_ OnJavascriptErrorCallback cJavascriptErrorCallback);
-
-  HRESULT StartListening(_In_ int nPort, _In_opt_ CIpcSslLayer::eProtocol nProtocol=CIpcSslLayer::ProtocolUnknown,
-                         _In_opt_ CSslCertificate *lpSslCertificate=NULL, _In_opt_ CCryptoRSA *lpSslKey=NULL);
-  HRESULT StartListening(_In_z_ LPCSTR szBindAddressA, _In_ int nPort,
-                         _In_opt_ CIpcSslLayer::eProtocol nProtocol=CIpcSslLayer::ProtocolUnknown,
-                         _In_opt_ CSslCertificate *lpSslCertificate=NULL, _In_opt_ CCryptoRSA *lpSslKey=NULL);
-  HRESULT StartListening(_In_z_ LPCWSTR szBindAddressW, _In_ int nPort,
-                         _In_opt_ CIpcSslLayer::eProtocol nProtocol=CIpcSslLayer::ProtocolUnknown,
-                         _In_opt_ CSslCertificate *lpSslCertificate=NULL, _In_opt_ CCryptoRSA *lpSslKey=NULL);
-  VOID StopListening();
+  VOID SetNewRequestObjectCallback(_In_ OnNewRequestObjectCallback cNewRequestObjectCallback);
+  VOID SetRequestCallback(_In_ OnRequestCallback cRequestCallback);
+  VOID SetRequireJsModuleCallback(_In_ OnRequireJsModuleCallback cRequireJsModuleCallback);
+  VOID SetErrorCallback(_In_ OnErrorCallback cErrorCallback);
+  VOID SetJavascriptErrorCallback(_In_ OnJavascriptErrorCallback cJavascriptErrorCallback);
+  VOID SetWebSocketRequestReceivedCallback(_In_ OnWebSocketRequestReceivedCallback cWebSocketRequestReceivedCallback);
 
   static CClientRequest* GetServerRequestFromContext(_In_ DukTape::duk_context *lpCtx);
 
@@ -120,13 +107,20 @@ public:
   };
 
 private:
+  using CHttpServer::SetNewRequestObjectCallback;
+  using CHttpServer::SetRequestHeadersReceivedCallback;
+  using CHttpServer::SetRequestCompletedCallback;
+  using CHttpServer::SetWebSocketRequestReceivedCallback;
+  using CHttpServer::SetErrorCallback;
+
   VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest,
                           _In_ HANDLE hShutdownEv);
-
   HRESULT OnRequireJsModule(_In_ DukTape::duk_context *lpCtx, _In_ CJavascriptVM::CRequireModuleContext *lpReqContext,
                             _Inout_ CStringA &cStrCodeA);
-
-  VOID OnError(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest, _In_ HRESULT hErrorCode);
+  VOID OnError(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest, _In_ HRESULT hrErrorCode);
+  HRESULT OnWebSocketRequestReceived(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest,
+                                     _In_ HANDLE hShutdownEv,
+                                     _Inout_ CHttpServer::WEBSOCKET_REQUEST_CALLBACK_DATA &sData);
 
   HRESULT InitializeJVM(_In_ CJavascriptVM *lpJvm, _In_ CClientRequest *lpRequest);
 
@@ -147,14 +141,13 @@ private:
                          _In_z_ LPCSTR szFileNameA, _In_ int nLine, _In_z_ LPCSTR szStackTraceA);
 
 private:
-  CHttpServer cHttpServer;
-  //----
   BOOL bShowStackTraceOnError;
   OnNewRequestObjectCallback cNewRequestObjectCallback;
   OnRequestCallback cRequestCallback;
   OnRequireJsModuleCallback cRequireJsModuleCallback;
   OnErrorCallback cErrorCallback;
   OnJavascriptErrorCallback cJavascriptErrorCallback;
+  OnWebSocketRequestReceivedCallback cWebSocketRequestReceivedCallback;
 };
 
 //-----------------------------------------------------------

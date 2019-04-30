@@ -97,11 +97,14 @@ public:
     };
 
   template<class _Comparator>
-  BOOL SortedInsert(_In_ TType elem, _In_ _Comparator lpCompareFunc, _In_opt_ LPVOID lpContext=NULL)
+  BOOL SortedInsert(_In_ TType elem, _In_ _Comparator lpCompareFunc, _In_opt_ LPVOID lpContext = NULL,
+                    _In_opt_ BOOL bDontInsertDuplicates = FALSE, _Out_opt_ LPBOOL lpbAlreadyOnList = NULL)
     {
     SIZE_T nIndex, nMin, nMax;
     int res;
 
+    if (lpbAlreadyOnList != NULL)
+      *lpbAlreadyOnList = FALSE;
     if (lpCompareFunc == NULL)
       return FALSE;
     nMin = 1; //shifted by one to avoid problems with negative indexes
@@ -109,9 +112,15 @@ public:
     while (nMin <= nMax)
     {
       nIndex = nMin + (nMax - nMin) / 2;
-      res = lpCompareFunc(lpContext, &elem, &lpItems[nIndex-1]);
+      res = lpCompareFunc(lpContext, &elem, &lpItems[nIndex - 1]);
       if (res == 0)
       {
+        if (bDontInsertDuplicates != FALSE)
+        {
+          if (lpbAlreadyOnList != NULL)
+            *lpbAlreadyOnList = TRUE;
+          return TRUE;
+        }
         nMin = nIndex;
         break;
       }
@@ -120,7 +129,7 @@ public:
       else
         nMin = nIndex + 1;
     }
-    return InsertElementAt(elem, nMin-1);
+    return InsertElementAt(elem, nMin - 1);
     };
 
   template<class _Comparator, class _KeyType>
@@ -456,11 +465,14 @@ public:
     };
 
   template<class _Comparator>
-  BOOL SortedInsert(_In_ TType *lpElem, _In_ _Comparator lpCompareFunc, _In_opt_ LPVOID lpContext=NULL)
+  BOOL SortedInsert(_In_ TType *lpElem, _In_ _Comparator lpCompareFunc, _In_opt_ LPVOID lpContext = NULL,
+                    _In_opt_ BOOL bDontInsertDuplicates = FALSE, _Out_opt_ LPBOOL lpbAlreadyOnList = NULL)
     {
     SIZE_T nIndex, nMin, nMax;
     int res;
 
+    if (lpbAlreadyOnList != NULL)
+      *lpbAlreadyOnList = FALSE;
     if (lpElem == NULL && lpCompareFunc == NULL)
       return FALSE;
     if (nCount == 0)
@@ -470,15 +482,24 @@ public:
     while (nMin <= nMax)
     {
       nIndex = (nMin + nMax) / 2;
-      res = lpCompareFunc(lpContext, lpElem, &lpItems[nIndex-1]);
+      res = lpCompareFunc(lpContext, lpElem, &lpItems[nIndex - 1]);
       if (res == 0)
-        return InsertElementAt(lpElem, nIndex-1);
+      {
+        if (bDontInsertDuplicates != FALSE)
+        {
+          if (lpbAlreadyOnList != NULL)
+            *lpbAlreadyOnList = TRUE;
+          return TRUE;
+        }
+        nMin = nIndex;
+        break;
+      }
       if (res < 0)
         nMax = nIndex - 1;
       else
         nMin = nIndex + 1;
     }
-    return InsertElementAt(lpElem, nMin-1);
+    return InsertElementAt(lpElem, nMin - 1);
     };
 
   template<class _Comparator, class _KeyType>

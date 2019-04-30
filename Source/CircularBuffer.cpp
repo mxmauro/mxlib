@@ -46,11 +46,11 @@ SIZE_T CCircularBuffer::Find(_In_ BYTE nToScan, _In_ SIZE_T nStartPos)
   SIZE_T i, nSize1,  nSize2;
 
   GetReadPtr(&lpPtr1, &nSize1, &lpPtr2, &nSize2);
-  if (nStartPos >= nSize1+nSize2)
+  if (nStartPos >= nSize1 + nSize2)
     return (SIZE_T)-1;
   if (nStartPos < nSize1)
   {
-    for (i=nStartPos; i<nSize1; i++)
+    for (i = nStartPos; i < nSize1; i++)
     {
       if (lpPtr1[i] == nToScan)
         return i;
@@ -61,10 +61,10 @@ SIZE_T CCircularBuffer::Find(_In_ BYTE nToScan, _In_ SIZE_T nStartPos)
   {
     i = nStartPos - nSize1;
   }
-  for (; i<nSize2; i++)
+  for (; i < nSize2; i++)
   {
     if (lpPtr2[i] == nToScan)
-      return i+nSize1;
+      return i + nSize1;
   }
   return (SIZE_T)-1;
 }
@@ -84,7 +84,7 @@ VOID CCircularBuffer::GetReadPtr(_Out_opt_ LPBYTE *lplpPtr1, _Out_opt_ SIZE_T *l
     return;
   if (lplpPtr1 != NULL)
     *lplpPtr1 = lpData + nStart;
-  if (nStart <= nSize-nLen)
+  if (nStart <= nSize - nLen)
   {
     if (lpnSize1 != NULL)
       *lpnSize1 = nLen;
@@ -92,11 +92,11 @@ VOID CCircularBuffer::GetReadPtr(_Out_opt_ LPBYTE *lplpPtr1, _Out_opt_ SIZE_T *l
   else
   {
     if (lpnSize1 != NULL)
-      *lpnSize1 = nSize-nStart;
+      *lpnSize1 = nSize - nStart;
     if (lplpPtr2 != NULL)
       *lplpPtr2 = lpData;
     if (lpnSize2 != NULL)
-      *lpnSize2 = nLen - (nSize-nStart);
+      *lpnSize2 = nLen - (nSize - nStart);
   }
   return;
 }
@@ -107,11 +107,11 @@ HRESULT CCircularBuffer::AdvanceReadPtr(_In_ SIZE_T nCount)
     return E_FAIL;
   if (nCount > nLen)
     return E_INVALIDARG;
-  MX_ASSERT(nStart+nCount >= nStart);
-  if (nStart < nSize-nCount)
+  MX_ASSERT(nStart + nCount >= nStart);
+  if (nStart < nSize - nCount)
     nStart += nCount;
   else
-    nStart -= nSize-nCount;
+    nStart -= nSize - nCount;
   nLen -= nCount;
   return S_OK;
 }
@@ -131,9 +131,9 @@ VOID CCircularBuffer::GetWritePtr(_Out_opt_ LPBYTE *lplpPtr1, _Out_opt_ SIZE_T *
     *lpnSize2 = 0;
   if (lpData == NULL || nSize == nLen)
     return;
-  if (nStart < nSize-nLen)
+  if (nStart < nSize - nLen)
   {
-    nEnd = nStart+nLen;
+    nEnd = nStart + nLen;
     if (lplpPtr1 != NULL)
       *lplpPtr1 = lpData + nEnd;
     if (lpnSize1 != NULL)
@@ -149,7 +149,7 @@ VOID CCircularBuffer::GetWritePtr(_Out_opt_ LPBYTE *lplpPtr1, _Out_opt_ SIZE_T *
   else
   {
     if (lplpPtr1 != NULL)
-      *lplpPtr1 = lpData + (nStart - (nSize-nLen));
+      *lplpPtr1 = lpData + (nStart - (nSize - nLen));
     if (lpnSize1 != NULL)
       *lpnSize1 = nSize - nLen;
   }
@@ -160,7 +160,7 @@ HRESULT CCircularBuffer::AdvanceWritePtr(_In_ SIZE_T nCount)
 {
   if (lpData == NULL)
     return E_FAIL;
-  if (nCount > nSize-nLen)
+  if (nCount > nSize - nLen)
     return E_INVALIDARG;
   nLen += nCount;
   return S_OK;
@@ -171,7 +171,7 @@ SIZE_T CCircularBuffer::GetAvailableForRead() const
   SIZE_T nSize1, nSize2;
 
   const_cast<CCircularBuffer*>(this)->GetReadPtr(NULL, &nSize1, NULL, &nSize2);
-  return nSize1+nSize2;
+  return nSize1 + nSize2;
 }
 
 SIZE_T CCircularBuffer::Peek(_Out_writes_(nToRead) LPVOID lpDest, _In_ SIZE_T nToRead)
@@ -189,7 +189,7 @@ SIZE_T CCircularBuffer::Peek(_Out_writes_(nToRead) LPVOID lpDest, _In_ SIZE_T nT
     nToRead -= nSize1;
     if (nToRead > nSize2)
       nToRead = nSize2;
-    MemCopy((LPBYTE)lpDest+nReaded, lpPtr2, nToRead);
+    MemCopy((LPBYTE)lpDest + nReaded, lpPtr2, nToRead);
     nReaded += nToRead;
   }
   return nReaded;
@@ -222,8 +222,8 @@ HRESULT CCircularBuffer::Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLength, _In_ 
     if (bExpandIfNeeded == FALSE)
       return MX_E_BufferOverflow;
     _nCap = nSize << 1;
-    if (_nCap < nSize || _nCap < nLen+nSrcLength)
-      _nCap = nLen+nSrcLength;
+    if (_nCap < nSize || _nCap < nLen + nSrcLength)
+      _nCap = nLen + nSrcLength;
     hRes = SetBufferSize(_nCap);
     if (FAILED(hRes))
       return hRes;
@@ -235,9 +235,9 @@ HRESULT CCircularBuffer::Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLength, _In_ 
   }
   else
   {
-    MX_ASSERT(nSrcLength <= nSize1+nSize2);
+    MX_ASSERT(nSrcLength <= nSize1 + nSize2);
     MemCopy(lpPtr1, lpSrc, nSize1);
-    MemCopy(lpPtr2, (LPBYTE)lpSrc+nSize1, nSrcLength-nSize1);
+    MemCopy(lpPtr2, (LPBYTE)lpSrc + nSize1, nSrcLength - nSize1);
   }
   return AdvanceWritePtr(nSrcLength);
 }
@@ -276,9 +276,9 @@ HRESULT CCircularBuffer::SetBufferSize(_In_ SIZE_T _nSize)
     }
     else
     {
-      nTemp = nSize-nStart;
-      MemCopy(lpNewData, lpData+nStart, nTemp);
-      MemCopy(lpNewData+nTemp, lpData, nLen-nTemp);
+      nTemp = nSize - nStart;
+      MemCopy(lpNewData, lpData + nStart, nTemp);
+      MemCopy(lpNewData + nTemp, lpData, nLen-nTemp);
     }
     MX_FREE(lpData);
     lpData = lpNewData;
@@ -298,17 +298,17 @@ VOID CCircularBuffer::ReArrangeBuffer()
     while (nStart != nSize)
     {
       //calculate block to move
-      nEndAreaLen = nSize-nStart;
+      nEndAreaLen = nSize - nStart;
       nStartAreaLen = nLen - nEndAreaLen;
       if ((nToMove = nEndAreaLen) > 4096)
         nToMove = 4096;
       //move from the buffer ending area to the temp buffer
-      MemCopy(aTempBuffer, lpData+(nSize-nToMove), nToMove);
+      MemCopy(aTempBuffer, lpData + (nSize - nToMove), nToMove);
       //move from the pre buffer ending area 'nToMove' bytes ahead
       if (nToMove < nEndAreaLen)
-        MemMove(lpData+nStart+nToMove, lpData+nStart, nEndAreaLen-nToMove);
+        MemMove(lpData + nStart + nToMove, lpData + nStart, nEndAreaLen - nToMove);
       //move from the buffer starting area 'nToMove' bytes ahead
-      MemMove(lpData+nStart+nToMove, lpData, nStartAreaLen);
+      MemMove(lpData + nStart + nToMove, lpData, nStartAreaLen);
       //move from the temp buffer to the buffer starting area
       MemCopy(lpData, aTempBuffer, nToMove);
       //advance start position

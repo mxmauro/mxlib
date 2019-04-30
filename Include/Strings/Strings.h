@@ -71,6 +71,9 @@ VOID StrNToUpperA(_Inout_updates_(nLen) LPSTR szSrcA, _In_ SIZE_T nLen);
 VOID StrToUpperW(_Inout_z_ LPWSTR szSrcW);
 VOID StrNToUpperW(_Inout_updates_(nLen) LPWSTR szSrcW, _In_ SIZE_T nLen);
 
+HRESULT StrToDoubleA(_In_ LPCSTR szSrcA, _In_ SIZE_T nLen, double *lpnValue);
+HRESULT StrToDoubleW(_In_ LPCWSTR szSrcW, _In_ SIZE_T nLen, double *lpnValue);
+
 //-----------------------------------------------------------
 
 class CStringA : public virtual CBaseMemObj

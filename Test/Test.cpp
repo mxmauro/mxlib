@@ -36,6 +36,10 @@
 #pragma comment(lib, "JsLib.lib")
 #pragma comment(lib, "JsHttpServer.lib")
 
+#ifdef _DEBUG
+  #define USE_PATH_TO_SOURCE
+#endif //_DEBUG
+
 //-----------------------------------------------------------
 
 int wmain(int argc, WCHAR* argv[])
@@ -89,6 +93,20 @@ BOOL ShouldAbort()
 
 HRESULT GetAppPath(_Out_ MX::CStringW &cStrPathW)
 {
+#ifdef USE_PATH_TO_SOURCE
+#define __WIDEN_(x) L##x
+#define __WIDEN(x) __WIDEN_(x)
+  LPCWSTR sW;
+
+  if (cStrPathW.Copy(__WIDEN(__FILE__)) == FALSE)
+    return E_OUTOFMEMORY;
+  sW = (LPCWSTR)MX::StrChrW((LPCWSTR)cStrPathW, L'\\', TRUE) + 1;
+  cStrPathW.Delete((SIZE_T)(sW - (LPCWSTR)cStrPathW), (SIZE_T)-1);
+  if (cStrPathW.ConcatN(L"Data\\", 5) == FALSE)
+    return E_OUTOFMEMORY;
+#undef __WIDEN_
+#undef __WIDEN
+#else //USE_PATH_TO_SOURCE
   DWORD dw;
   LPWSTR sW;
 
@@ -98,7 +116,8 @@ HRESULT GetAppPath(_Out_ MX::CStringW &cStrPathW)
   ((LPWSTR)cStrPathW)[dw] = 0;
   sW = (LPWSTR)MX::StrChrW((LPWSTR)cStrPathW, L'\\', TRUE);
   if (sW != NULL)
-    *(sW+1) = 0;
+    sW[1] = 0;
   cStrPathW.Refresh();
+#endif //USE_PATH_TO_SOURCE
   return S_OK;
 }

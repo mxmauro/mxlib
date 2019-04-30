@@ -155,7 +155,7 @@ public:
   template<class T>
   T* GetHeader() const
     {
-    return reinterpret_cast<T*>(GetHeader(T::GetNameStatic()));
+    return reinterpret_cast<T*>(GetHeader(T::GetHeaderNameStatic()));
     };
   CHttpHeaderBase* GetHeader(_In_z_ LPCSTR szNameA) const;
 
@@ -196,15 +196,26 @@ public:
   LONG GetResponseStatus() const;
   LPCSTR GetResponseReasonA() const;
 
-  static BOOL IsValidVerb(_In_z_ LPCSTR szVerbA);
+  static BOOL IsValidVerb(_In_ LPCSTR szStrA, _In_ SIZE_T nStrLen);
+
   static BOOL IsValidNameChar(_In_ CHAR chA);
 
-  static BOOL EncodeQuotedString(_Inout_ CStringA &cStrA);
+  static BOOL FromISO_8859_1(_Out_ CStringW &cStrDestW, _In_ LPCSTR szStrA, _In_ SIZE_T nStrLen);
+  static BOOL ToISO_8859_1(_Out_ CStringA &cStrDestA, _In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen);
+
+  static BOOL BuildQuotedString(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA, _In_ SIZE_T nStrLen,
+                                _In_ BOOL bDontQuoteIfToken);
+  static BOOL BuildQuotedString(_Out_ CStringA &cStrA, _In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen,
+                                _In_ BOOL bDontQuoteIfToken);
+  static BOOL BuildExtendedValueString(_Out_ CStringA &cStrA, _In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen);
+
+  //static BOOL EncodeQuotedString(_Inout_ CStringA &cStrA);
 
   static LPCSTR GetMimeType(_In_z_ LPCSTR szFileNameA);
   static LPCSTR GetMimeType(_In_z_ LPCWSTR szFileNameW);
 
   static HRESULT ParseDate(_Out_ CDateTime &cDt, _In_z_ LPCSTR szDateTimeA);
+  static HRESULT ParseDate(_Out_ CDateTime &cDt, _In_z_ LPCWSTR szDateTimeW);
 
   static HRESULT _GetTempPath(_Out_ MX::CStringW &cStrPathW);
 

@@ -25,6 +25,7 @@
 #define _MX_IPC_MESSAGE_MANAGER_H
 
 #include "IpcCommon.h"
+#include "..\ArrayList.h"
 
 //-----------------------------------------------------------
 
@@ -69,9 +70,9 @@ public:
   HRESULT SendMultipleBlocks(_Out_ LPDWORD lpdwMsgId, _In_ SIZE_T nBlocksCount, ...);
   HRESULT SendMultipleBlocks(_Out_ LPDWORD lpdwMsgId, _In_ SIZE_T nBlocksCount, _In_ LPMULTIBLOCK lpBlocks);
   HRESULT SendMultipleBlocks(_Out_ LPDWORD lpdwMsgId, _In_ OnMultiBlockCallback cMultiBlockCallback,
-                             _In_opt_ LPVOID lpContext=NULL);
+                             _In_opt_ LPVOID lpContext = NULL);
 
-  HRESULT WaitForReply(_In_ DWORD dwId, _Deref_out_ CMessage **lplpMessage, _In_opt_ DWORD dwTimeoutMs=INFINITE);
+  HRESULT WaitForReply(_In_ DWORD dwId, _Deref_out_ CMessage **lplpMessage, _In_opt_ DWORD dwTimeoutMs = INFINITE);
   HRESULT WaitForReplyAsync(_In_ DWORD dwId, _In_ OnMessageReplyCallback cCallback, _In_opt_ LPVOID lpUserData);
 
   CIpc* GetIpc() const

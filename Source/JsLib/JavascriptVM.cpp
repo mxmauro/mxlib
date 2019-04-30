@@ -68,7 +68,7 @@ CJavascriptVM::~CJavascriptVM()
   return;
 }
 
-VOID CJavascriptVM::On(_In_ OnRequireModuleCallback _cRequireModuleCallback)
+VOID CJavascriptVM::SetRequireModuleCallback(_In_ OnRequireModuleCallback _cRequireModuleCallback)
 {
   cRequireModuleCallback = _cRequireModuleCallback;
   return;

@@ -55,6 +55,16 @@ public:
     return hIOCP;
     };
 
+  bool operator!() const
+    {
+    return (hIOCP == NULL) ? true : false;
+    };
+
+  operator bool() const
+    {
+    return (hIOCP != NULL) ? true : false;
+    };
+
 private:
   HANDLE hIOCP;
 };
@@ -77,12 +87,12 @@ public:
 
   VOID SetOption_MinThreadsCount(_In_opt_ DWORD dwCount = 0);
   VOID SetOption_MaxThreadsCount(_In_opt_ DWORD dwCount = 0);
-  VOID SetOption_WorkerThreadIdleTimeoutMs(_In_opt_ DWORD dwTimeoutMs = 2000);
+  VOID SetOption_WorkerThreadIdleTime(_In_opt_ DWORD dwTimeoutMs = 2000);
   VOID SetOption_ShutdownThreadThreshold(_In_opt_ DWORD dwThreshold = 2);
 
-  VOID On(_In_opt_ OnThreadStartCallback cThreadStartCallback);
-  VOID On(_In_opt_ OnThreadEndCallback cThreadEndCallback);
-  VOID On(_In_opt_ OnThreadStartErrorCallback cThreadStartErrorCallback);
+  VOID SetThreadStartCallback(_In_opt_ OnThreadStartCallback cThreadStartCallback);
+  VOID SetThreadEndCallback(_In_opt_ OnThreadEndCallback cThreadEndCallback);
+  VOID SetThreadStartErrorCallback(_In_opt_ OnThreadStartErrorCallback cThreadStartErrorCallback);
 
   HRESULT Initialize();
   VOID Finalize();

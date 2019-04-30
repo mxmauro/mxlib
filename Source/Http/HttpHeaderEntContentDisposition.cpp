@@ -43,8 +43,8 @@ CHttpHeaderEntContentDisposition::~CHttpHeaderEntContentDisposition()
 HRESULT CHttpHeaderEntContentDisposition::Parse(_In_z_ LPCSTR szValueA)
 {
   LPCSTR szStartA;
-  CStringA cStrTempA, cStrTempA_2;
-  CStringW cStrTempW;
+  CStringA cStrTokenA;
+  CStringW cStrValueW;
   CDateTime cDt;
   ULONG nHasItem;
   HRESULT hRes;
@@ -53,13 +53,11 @@ HRESULT CHttpHeaderEntContentDisposition::Parse(_In_z_ LPCSTR szValueA)
     return E_POINTER;
   //skip spaces
   szValueA = SkipSpaces(szValueA);
-  //mime type
-  szValueA = Advance(szStartA = szValueA, ";, \t");
-  if (cStrTempA.CopyN(szStartA, (SIZE_T)(szValueA-szStartA)) == FALSE)
-    return E_OUTOFMEMORY;
+  //type
+  szValueA = SkipUntil(szStartA = szValueA, ";, \t");
   if (szValueA == szStartA)
     return MX_E_InvalidData;
-  hRes = SetType((LPCSTR)cStrTempA);
+  hRes = SetType(szStartA, (SIZE_T)(szValueA - szStartA));
   if (FAILED(hRes))
     return hRes;
   //skip spaces
@@ -71,112 +69,147 @@ HRESULT CHttpHeaderEntContentDisposition::Parse(_In_z_ LPCSTR szValueA)
     szValueA++;
     do
     {
+      BOOL bExtendedParam;
+
       //skip spaces
       szValueA = SkipSpaces(szValueA);
       if (*szValueA == 0)
         break;
-      //parse name
-      szValueA = GetToken(szStartA = szValueA);
-      if (cStrTempA.CopyN(szStartA, (SIZE_T)(szValueA-szStartA)) == FALSE)
-        return E_OUTOFMEMORY;
-      //skip spaces
-      szValueA = SkipSpaces(szValueA);
-      //is equal sign?
-      if (*szValueA++ != '=')
-        return MX_E_InvalidData;
-      //skip spaces
-      szValueA = SkipSpaces(szValueA);
-      //parse value
-      if (*szValueA == '"')
-      {
-        szValueA = Advance(szStartA = ++szValueA, "\"");
-        if (*szValueA != '"')
-          return MX_E_InvalidData;
-        if (cStrTempA_2.CopyN(szStartA, (SIZE_T)(szValueA-szStartA)) == FALSE)
-          return E_OUTOFMEMORY;
-        szValueA++;
-      }
-      else
-      {
-        szValueA = Advance(szStartA = szValueA, " \t;,");
-        if (cStrTempA_2.CopyN(szStartA, (SIZE_T)(szValueA-szStartA)) == FALSE)
-          return E_OUTOFMEMORY;
-      }
+
+      //get parameter
+      hRes = GetParamNameAndValue(cStrTokenA, cStrValueW, szValueA, &bExtendedParam);
+      if (FAILED(hRes))
+        return (hRes == MX_E_NoData) ? MX_E_InvalidData : hRes;
+
       //add parameter
-      if (StrCompareA((LPSTR)cStrTempA, "filename", TRUE) == 0)
+      if (StrCompareA((LPCSTR)cStrTokenA, "name", TRUE) == 0)
       {
-        if ((nHasItem & 0x0001) != 0)
-          return MX_E_InvalidData;
-        nHasItem |= 0x0001;
-        //set filename
-        hRes = Utf8_Decode(cStrTempW, (LPSTR)cStrTempA_2);
-        if (SUCCEEDED(hRes))
-          hRes = SetFileName((LPWSTR)cStrTempW);
+        if (bExtendedParam == FALSE)
+        {
+          if ((nHasItem & 0x0001) != 0)
+            return MX_E_InvalidData;
+          nHasItem |= 0x0001;
+          //extended filename set?
+          if ((nHasItem & 0x0010) == 0)
+          {
+            CStringW cStrNameW;
+
+            //the returned value is ISO-8859-1, convert to UTF-8
+            if (RawISO_8859_1_to_UTF8(cStrNameW, (LPCWSTR)cStrValueW, cStrValueW.GetLength()) == FALSE)
+              return E_OUTOFMEMORY;
+            //set name
+            hRes = SetName((LPCWSTR)cStrNameW);
+          }
+          else
+          {
+            hRes = S_OK; //ignore this filename if the extended filename was set
+          }
+        }
+        else
+        {
+          if ((nHasItem & 0x0010) != 0)
+            return MX_E_InvalidData;
+          nHasItem |= 0x0010;
+          //set name
+          hRes = SetName((LPCWSTR)cStrValueW);
+        }
       }
-      else if (StrCompareA((LPSTR)cStrTempA, "creation-date", TRUE) == 0)
+      else if (StrCompareA((LPCSTR)cStrTokenA, "filename", TRUE) == 0)
       {
-        if ((nHasItem & 0x0002) != 0)
-          return MX_E_InvalidData;
-        nHasItem |= 0x0002;
-        //set creation date
-        hRes = CHttpCommon::ParseDate(cDt, (LPSTR)cStrTempA_2);
-        if (SUCCEEDED(hRes))
-          hRes = SetCreationDate(cDt);
+        if (bExtendedParam == FALSE)
+        {
+          if ((nHasItem & 0x0002) != 0)
+            return MX_E_InvalidData;
+          nHasItem |= 0x0002;
+          //extended filename set?
+          if ((nHasItem & 0x0020) == 0)
+          {
+            CStringW cStrFileNameW;
+
+            //the returned value is ISO-8859-1, convert to UTF-8
+            if (RawISO_8859_1_to_UTF8(cStrFileNameW, (LPCWSTR)cStrValueW, cStrValueW.GetLength()) == FALSE)
+              return E_OUTOFMEMORY;
+            //set filename
+            hRes = SetFileName((LPCWSTR)cStrFileNameW);
+          }
+          else
+          {
+            hRes = S_OK; //ignore this filename if the extended filename was set
+          }
+        }
+        else
+        {
+          if ((nHasItem & 0x0020) != 0)
+            return MX_E_InvalidData;
+          nHasItem |= 0x0020;
+          //set filename
+          hRes = SetFileName((LPCWSTR)cStrValueW);
+        }
       }
-      else if (StrCompareA((LPSTR)cStrTempA, "modification-date", TRUE) == 0)
+      else if (StrCompareA((LPCSTR)cStrTokenA, "creation-date", TRUE) == 0)
       {
         if ((nHasItem & 0x0004) != 0)
           return MX_E_InvalidData;
         nHasItem |= 0x0004;
         //set creation date
-        hRes = CHttpCommon::ParseDate(cDt, (LPSTR)cStrTempA_2);
+        hRes = CHttpCommon::ParseDate(cDt, (LPCWSTR)cStrValueW);
         if (SUCCEEDED(hRes))
-          hRes = SetModificationDate(cDt);
+          hRes = SetCreationDate(cDt);
       }
-      else if (StrCompareA((LPSTR)cStrTempA, "read-date", TRUE) == 0)
+      else if (StrCompareA((LPCSTR)cStrTokenA, "modification-date", TRUE) == 0)
       {
         if ((nHasItem & 0x0008) != 0)
           return MX_E_InvalidData;
         nHasItem |= 0x0008;
         //set creation date
-        hRes = CHttpCommon::ParseDate(cDt, (LPSTR)cStrTempA_2);
+        hRes = CHttpCommon::ParseDate(cDt, (LPCWSTR)cStrValueW);
+        if (SUCCEEDED(hRes))
+          hRes = SetModificationDate(cDt);
+      }
+      else if (StrCompareA((LPCSTR)cStrTokenA, "read-date", TRUE) == 0)
+      {
+        if ((nHasItem & 0x0040) != 0)
+          return MX_E_InvalidData;
+        nHasItem |= 0x0040;
+        //set creation date
+        hRes = CHttpCommon::ParseDate(cDt, (LPCWSTR)cStrValueW);
         if (SUCCEEDED(hRes))
           hRes = SetReadDate(cDt);
       }
-      else if (StrCompareA((LPSTR)cStrTempA, "size", TRUE) == 0)
+      else if (StrCompareA((LPCSTR)cStrTokenA, "size", TRUE) == 0)
       {
         ULONGLONG nTemp, nSize;
-        LPSTR sA = (LPSTR)cStrTempA_2;
+        LPCWSTR sW = (LPCWSTR)cStrValueW;
 
-        //parse value
-        if (*sA < '0' || *sA > '9')
+        if ((nHasItem & 0x0080) != 0)
           return MX_E_InvalidData;
-        while (*sA == '0')
-          sA++;
-        nSize = 0;
-        while (*sA >= '0' && *sA <= '9')
+        nHasItem |= 0x0080;
+        //parse value
+        if (*sW < L'0' || *sW > L'9')
+          return MX_E_InvalidData;
+        while (*sW == L'0')
+          sW++;
+        nSize = 0ui64;
+        while (*sW >= L'0' && *sW <= L'9')
         {
           nTemp = nSize * 10ui64;
           if (nTemp < nSize)
             return MX_E_ArithmeticOverflow;
-          nSize = nTemp + (ULONGLONG)(*sA - '0');
+          nSize = nTemp + (ULONGLONG)(*sW - '0');
           if (nSize < nTemp)
             return MX_E_ArithmeticOverflow;
-          sA++;
+          sW++;
         }
         hRes = SetSize(nSize);
       }
       else
       {
         //add parameter
-        hRes = Utf8_Decode(cStrTempW, (LPSTR)cStrTempA_2);
-        if (SUCCEEDED(hRes))
-          hRes = AddParam((LPSTR)cStrTempA, (LPWSTR)cStrTempW);
+        hRes = AddParam((LPCSTR)cStrTokenA, (LPCWSTR)cStrValueW);
       }
       if (FAILED(hRes))
         return hRes;
-      //skip spaces
-      szValueA = SkipSpaces(szValueA);
+
       //check for separator or end
       if (*szValueA == ';')
         szValueA++;
@@ -192,10 +225,9 @@ HRESULT CHttpHeaderEntContentDisposition::Parse(_In_z_ LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentDisposition::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderEntContentDisposition::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   SIZE_T i, nCount;
-  LPWSTR sW;
   CStringA cStrTempA;
   HRESULT hRes;
 
@@ -206,16 +238,53 @@ HRESULT CHttpHeaderEntContentDisposition::Build(_Inout_ CStringA &cStrDestA)
   }
   if (cStrDestA.Copy((LPCSTR)cStrTypeA) == FALSE)
     return E_OUTOFMEMORY;
+  //name
+  if (cStrNameW.IsEmpty() == FALSE)
+  {
+    CStringA cStrTempA_2;
+
+    if (nBrowser == BrowserIE || nBrowser == BrowserIE6)
+    {
+      if (CHttpCommon::BuildExtendedValueString(cStrTempA, (LPCWSTR)cStrNameW, cStrFileNameW.GetLength()) == FALSE)
+        return E_OUTOFMEMORY;
+      //remove UTF-8'' prefix
+      if (cStrDestA.AppendFormat("; name=\"%s\"", (LPCSTR)cStrTempA + 7) == FALSE)
+        return E_OUTOFMEMORY;
+    }
+    else
+    {
+      if (CHttpCommon::BuildQuotedString(cStrTempA, (LPCWSTR)cStrNameW, cStrNameW.GetLength(), FALSE) == FALSE ||
+          CHttpCommon::BuildExtendedValueString(cStrTempA_2, (LPCWSTR)cStrNameW, cStrNameW.GetLength()) == FALSE ||
+          cStrDestA.AppendFormat("; name=%s; name*=%s", (LPCSTR)cStrTempA, (LPCSTR)cStrTempA_2) == FALSE)
+      {
+        return E_OUTOFMEMORY;
+      }
+    }
+  }
   //filename
   if (cStrFileNameW.IsEmpty() == FALSE)
   {
-    hRes = Utf8_Encode(cStrTempA, (LPWSTR)cStrFileNameW);
-    if (FAILED(hRes))
-      return hRes;
-    if (CHttpCommon::EncodeQuotedString(cStrTempA) == FALSE)
-      return E_OUTOFMEMORY;
-    if (cStrDestA.AppendFormat("; filename=\"%s\"", (LPSTR)cStrTempA) == FALSE)
-      return E_OUTOFMEMORY;
+    CStringA cStrTempA_2;
+
+    if (nBrowser == BrowserIE || nBrowser == BrowserIE6)
+    {
+      if (CHttpCommon::BuildExtendedValueString(cStrTempA, (LPCWSTR)cStrFileNameW, cStrFileNameW.GetLength()) == FALSE)
+        return E_OUTOFMEMORY;
+      //remove UTF-8'' prefix
+      if (cStrDestA.AppendFormat("; filename=\"%s\"", (LPCSTR)cStrTempA + 7) == FALSE)
+        return E_OUTOFMEMORY;
+    }
+    else
+    {
+      if (CHttpCommon::BuildQuotedString(cStrTempA, (LPCWSTR)cStrFileNameW,
+                                         cStrFileNameW.GetLength(), FALSE) == FALSE ||
+          CHttpCommon::BuildExtendedValueString(cStrTempA_2, (LPCWSTR)cStrFileNameW,
+                                                cStrFileNameW.GetLength()) == FALSE ||
+          cStrDestA.AppendFormat("; filename=%s; filename*=%s", (LPCSTR)cStrTempA, (LPCSTR)cStrTempA_2) == FALSE)
+      {
+        return E_OUTOFMEMORY;
+      }
+    }
   }
   //creation date
   if (cCreationDt.GetTicks() != 0)
@@ -252,62 +321,37 @@ HRESULT CHttpHeaderEntContentDisposition::Build(_Inout_ CStringA &cStrDestA)
   }
   //parameters
   nCount = cParamsList.GetCount();
-  for (i=0; i<nCount; i++)
+  for (i = 0; i < nCount; i++)
   {
-    if (cStrDestA.AppendFormat("; %s=", cParamsList[i]->szNameA) == FALSE)
+    if (CHttpCommon::BuildQuotedString(cStrTempA, cParamsList[i]->szValueW, StrLenW(cParamsList[i]->szValueW),
+                                       FALSE) == FALSE)
+    {
       return E_OUTOFMEMORY;
-    sW = cParamsList[i]->szValueW;
-    while (*sW != 0)
-    {
-      if (*sW < 33 || *sW > 126 || CHttpCommon::IsValidNameChar((CHAR)(*sW)) == FALSE)
-        break;
-      sW++;
     }
-    if (*sW == 0)
-    {
-      if (cStrDestA.AppendFormat("%S", cParamsList[i]->szValueW) == FALSE)
-        return E_OUTOFMEMORY;
-    }
-    else
-    {
-      hRes = Utf8_Encode(cStrTempA, cParamsList[i]->szValueW);
-      if (FAILED(hRes))
-        return hRes;
-      if (CHttpCommon::EncodeQuotedString(cStrTempA) == FALSE)
-        return E_OUTOFMEMORY;
-      if (cStrDestA.AppendFormat("\"%s\"", (LPCSTR)cStrTempA) == FALSE)
-        return E_OUTOFMEMORY;
-    }
+    if (cStrDestA.AppendFormat(";%s=%s", cParamsList[i]->szNameA, (LPCSTR)cStrTempA) == FALSE)
+      return E_OUTOFMEMORY;
   }
   //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentDisposition::SetType(_In_z_ LPCSTR szTypeA)
+HRESULT CHttpHeaderEntContentDisposition::SetType(_In_z_ LPCSTR szTypeA, _In_ SIZE_T nTypeLen)
 {
-  LPCSTR szStartA, szEndA;
+  LPCSTR szStartA;
 
+  if (nTypeLen == (SIZE_T)-1)
+    nTypeLen = StrLenA(szTypeA);
+  if (nTypeLen == 0)
+    return MX_E_InvalidData;
   if (szTypeA == NULL)
     return E_POINTER;
-  //skip spaces
-  szTypeA = SkipSpaces(szTypeA);
   //get token
-  szTypeA = GetToken(szStartA = szTypeA);
-  switch ((SIZE_T)(szTypeA-szStartA))
-  {
-    case 0:
-      return MX_E_InvalidData;
-    case 2:
-      if ((szStartA[0] == 'X' || szStartA[0] == 'x') && szStartA[1] == '-')
-        return MX_E_InvalidData;
-      break;
-  }
-  szEndA = szTypeA;
-  //skip spaces and check for end
-  if (*SkipSpaces(szTypeA) != 0)
+  szStartA = szTypeA;
+  szTypeA = GetToken(szTypeA, nTypeLen);
+  if ((SIZE_T)(szTypeA - szStartA) != nTypeLen)
     return MX_E_InvalidData;
   //set new value
-  if (cStrTypeA.CopyN(szStartA, (SIZE_T)(szEndA-szStartA)) == FALSE)
+  if (cStrTypeA.CopyN(szStartA, nTypeLen) == FALSE)
     return E_OUTOFMEMORY;
   //done
   return S_OK;
@@ -318,12 +362,41 @@ LPCSTR CHttpHeaderEntContentDisposition::GetType() const
   return (LPCSTR)cStrTypeA;
 }
 
-HRESULT CHttpHeaderEntContentDisposition::SetFileName(_In_opt_z_ LPCWSTR szFileNameW)
+HRESULT CHttpHeaderEntContentDisposition::SetName(_In_opt_z_ LPCWSTR szNameW, _In_ SIZE_T nNameLen)
 {
+  if (nNameLen == (SIZE_T)-1)
+    nNameLen = StrLenW(szNameW);
   //set new value
-  if (szFileNameW != NULL && *szFileNameW != 0)
+  if (nNameLen > 0)
   {
-    if (cStrFileNameW.Copy(szFileNameW) == FALSE)
+    if (szNameW == NULL)
+      return E_POINTER;
+    if (cStrNameW.CopyN(szNameW, nNameLen) == FALSE)
+      return E_OUTOFMEMORY;
+  }
+  else
+  {
+    cStrNameW.Empty();
+  }
+  //done
+  return S_OK;
+}
+
+LPCWSTR CHttpHeaderEntContentDisposition::GetName() const
+{
+  return (LPCWSTR)cStrNameW;
+}
+
+HRESULT CHttpHeaderEntContentDisposition::SetFileName(_In_opt_z_ LPCWSTR szFileNameW, _In_ SIZE_T nFileNameLen)
+{
+  if (nFileNameLen == (SIZE_T)-1)
+    nFileNameLen = StrLenW(szFileNameW);
+  //set new value
+  if (nFileNameLen > 0)
+  {
+    if (szFileNameW == NULL)
+      return E_POINTER;
+    if (cStrFileNameW.CopyN(szFileNameW, nFileNameLen) == FALSE)
       return E_OUTOFMEMORY;
     bHasFileName = TRUE;
   }
@@ -338,7 +411,12 @@ HRESULT CHttpHeaderEntContentDisposition::SetFileName(_In_opt_z_ LPCWSTR szFileN
 
 LPCWSTR CHttpHeaderEntContentDisposition::GetFileName() const
 {
-  return (bHasFileName != FALSE) ? (LPCWSTR)cStrFileNameW : NULL;
+  return (LPCWSTR)cStrFileNameW;
+}
+
+BOOL CHttpHeaderEntContentDisposition::HasFileName() const
+{
+  return bHasFileName;
 }
 
 HRESULT CHttpHeaderEntContentDisposition::SetCreationDate(_In_ CDateTime &cDt)
@@ -392,25 +470,19 @@ ULONGLONG CHttpHeaderEntContentDisposition::GetSize() const
 HRESULT CHttpHeaderEntContentDisposition::AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW)
 {
   TAutoFreePtr<PARAMETER> cNewParam;
-  LPCSTR szStartA, szEndA;
+  LPCSTR szStartA;
   SIZE_T nNameLen, nValueLen;
 
   if (szNameA == NULL)
     return E_POINTER;
   if (szValueW == NULL)
     szValueW = L"";
-  //skip spaces
-  szNameA = CHttpHeaderBase::SkipSpaces(szNameA);
   //get token
   szNameA = CHttpHeaderBase::GetToken(szStartA = szNameA);
-  if (szStartA == szNameA)
-    return MX_E_InvalidData;
-  szEndA = szNameA;
-  //skip spaces and check for end
-  if (*CHttpHeaderBase::SkipSpaces(szNameA) != 0)
+  if (szStartA == szNameA || *szNameA != 0)
     return MX_E_InvalidData;
   //get name and value length
-  nNameLen = (SIZE_T)(szEndA-szStartA);
+  nNameLen = (SIZE_T)(szNameA - szStartA);
   nValueLen = (StrLenW(szValueW) + 1) * sizeof(WCHAR);
   //create new item
   cNewParam.Attach((LPPARAMETER)MX_MALLOC(sizeof(PARAMETER) + nNameLen + nValueLen));
@@ -418,13 +490,13 @@ HRESULT CHttpHeaderEntContentDisposition::AddParam(_In_z_ LPCSTR szNameA, _In_z_
     return E_OUTOFMEMORY;
   MemCopy(cNewParam->szNameA, szStartA, nNameLen);
   cNewParam->szNameA[nNameLen] = 0;
-  cNewParam->szValueW = (LPWSTR)((LPBYTE)(cNewParam->szNameA) + (nNameLen+1));
+  cNewParam->szValueW = (LPWSTR)((LPBYTE)(cNewParam->szNameA) + (nNameLen + 1));
   MemCopy(cNewParam->szValueW, szValueW, nValueLen);
   //add to list
   if (cParamsList.AddElement(cNewParam.Get()) == FALSE)
     return E_OUTOFMEMORY;
-  //done
   cNewParam.Detach();
+  //done
   return S_OK;
 }
 
@@ -447,10 +519,10 @@ LPCWSTR CHttpHeaderEntContentDisposition::GetParamValue(_In_z_ LPCSTR szNameA) c
 {
   SIZE_T i, nCount;
 
-  if (szNameA != NULL && szNameA[0] != 0)
+  if (szNameA != NULL && *szNameA != 0)
   {
     nCount = cParamsList.GetCount();
-    for (i=0; i<nCount; i++)
+    for (i = 0; i < nCount; i++)
     {
       if (StrCompareA(cParamsList[i]->szNameA, szNameA, TRUE) == 0)
         return cParamsList[i]->szValueW;

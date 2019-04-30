@@ -61,7 +61,7 @@ namespace MX {
 CNamedPipes::CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDispatcherPool)
 {
   _InterlockedExchange(&nRemoteConnCounter, 0);
-  dwMaxWaitTimeoutMs = 1000;
+  dwConnectTimeoutMs = 1000;
   lpSecDescr = (PSECURITY_DESCRIPTOR)((::IsWindowsVistaOrGreater() != FALSE) ? aSecDescriptorVistaOrLater :
                                                                                aSecDescriptorXP);
   return;
@@ -73,17 +73,17 @@ CNamedPipes::~CNamedPipes()
   return;
 }
 
-VOID CNamedPipes::SetOption_MaxWaitTimeoutMs(_In_ DWORD dwTimeoutMs)
+VOID CNamedPipes::SetOption_ConnectTimeout(_In_ DWORD dwTimeoutMs)
 {
   CFastLock cInitShutdownLock(&nInitShutdownMutex);
 
   if (cShuttingDownEv.Get() == NULL)
   {
-    dwMaxWaitTimeoutMs = dwTimeoutMs;
-    if (dwMaxWaitTimeoutMs < 100)
-      dwMaxWaitTimeoutMs = 100;
-    else if (dwMaxWaitTimeoutMs > 180000)
-      dwMaxWaitTimeoutMs = 180000;
+    dwConnectTimeoutMs = dwTimeoutMs;
+    if (dwConnectTimeoutMs < 100)
+      dwConnectTimeoutMs = 100;
+    else if (dwConnectTimeoutMs > 180000)
+      dwConnectTimeoutMs = 180000;
   }
   return;
 }
@@ -197,7 +197,7 @@ HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreate
   }
   hRes = FireOnCreate(cConn.Get());
   if (SUCCEEDED(hRes))
-    hRes = cConn->CreateClient((LPCWSTR)cStrTempW, dwMaxWaitTimeoutMs, lpSecDescr);
+    hRes = cConn->CreateClient((LPCWSTR)cStrTempW, dwConnectTimeoutMs, lpSecDescr);
   if (SUCCEEDED(hRes))
     hRes = cConn->HandleConnected();
   if (SUCCEEDED(hRes))
@@ -260,7 +260,7 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
   //now wait until connected (may be not necessary)
   if (bConnected == FALSE)
   {
-    if (::WaitForSingleObject(sConnOvr.hEvent, dwMaxWaitTimeoutMs) != WAIT_OBJECT_0)
+    if (::WaitForSingleObject(sConnOvr.hEvent, dwConnectTimeoutMs) != WAIT_OBJECT_0)
       return MX_E_BrokenPipe;
     if (::GetOverlappedResult(cLocalPipe, &sConnOvr, &dw, FALSE) == FALSE)
     {

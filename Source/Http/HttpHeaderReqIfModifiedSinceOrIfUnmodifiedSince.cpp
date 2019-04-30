@@ -48,11 +48,13 @@ HRESULT CHttpHeaderReqIfXXXSinceBase::Parse(_In_z_ LPCSTR szValueA)
   szValueA = SkipSpaces(szValueA);
   //parse date
   hRes = CHttpCommon::ParseDate(cDt, szValueA);
+  if (FAILED(hRes))
+    return (hRes == E_OUTOFMEMORY) ? hRes : MX_E_InvalidData;
   //done
-  return hRes;
+  return S_OK;
 }
 
-HRESULT CHttpHeaderReqIfXXXSinceBase::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderReqIfXXXSinceBase::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   return cDt.Format(cStrDestA, "%a, %d %b %Y %H:%m:%S %z");
 }

@@ -49,9 +49,24 @@ public:
   MX::TAutoRefCounted<MX::CJsHttpServerSessionPlugin> cSessionJsObj;
 };
 
+class CTestWebSocket : public MX::CWebSocket
+{
+public:
+  CTestWebSocket();
+  ~CTestWebSocket();
+
+  virtual HRESULT OnConnected();
+  virtual HRESULT OnTextMessage(_In_ LPCSTR szMsgA, _In_ SIZE_T nMsgLength);
+  virtual HRESULT OnBinaryMessage(_In_ LPVOID lpData, _In_ SIZE_T nDataSize);
+
+  virtual SIZE_T GetMaxMessageSize() const;
+  virtual VOID OnPongFrame();
+  virtual VOID OnCloseFrame(_In_ USHORT wCode, _In_  HRESULT hrErrorCode);
+};
+
 //-----------------------------------------------------------
 
-static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode);
+static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hrErrorCode);
 static HRESULT OnNewRequestObject(_Out_ MX::CJsHttpServer::CClientRequest **lplpRequest);
 static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
                          _Outptr_result_maybenull_ MX::CJavascriptVM **lplpJvm, _Out_ MX::CStringA &cStrCodeA);
@@ -60,7 +75,10 @@ static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHtt
                                  _Inout_ MX::CJavascriptVM::CRequireModuleContext *lpReqContext,
                                  _Inout_ MX::CStringA &cStrCodeA);
 static VOID OnError(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
-                    _In_ HRESULT hErrorCode);
+                    _In_ HRESULT hrErrorCode);
+static HRESULT OnWebSocketRequestReceived(_In_ MX::CJsHttpServer *lpHttp,
+                                          _In_ MX::CJsHttpServer::CClientRequest *lpRequest, _In_ HANDLE hShutdownEv,
+                                          _Inout_ MX::CHttpServer::WEBSOCKET_REQUEST_CALLBACK_DATA &sData);
 static VOID DeleteSessionFiles();
 static HRESULT OnSessionLoadSave(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin, _In_ BOOL bLoading);
 static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR szFileNameW);
@@ -97,7 +115,7 @@ int TestJsHttpServer(_In_ BOOL bUseSSL)
     hRes = cWorkerPool.Initialize();
   if (SUCCEEDED(hRes))
   {
-    cSckMgr.On(MX_BIND_CALLBACK(&OnEngineError));
+    cSckMgr.SetEngineErrorCallback(MX_BIND_CALLBACK(&OnEngineError));
     hRes = cSckMgr.Initialize();
   }
   if (SUCCEEDED(hRes) && bUseSSL != FALSE)
@@ -125,10 +143,11 @@ int TestJsHttpServer(_In_ BOOL bUseSSL)
   }
   if (SUCCEEDED(hRes))
   {
-    cJsHttpServer.On(MX_BIND_CALLBACK(&OnNewRequestObject));
-    cJsHttpServer.On(MX_BIND_CALLBACK(&OnRequest));
-    cJsHttpServer.On(MX_BIND_CALLBACK(&OnRequireJsModule));
-    cJsHttpServer.On(MX_BIND_CALLBACK(&OnError));
+    cJsHttpServer.SetNewRequestObjectCallback(MX_BIND_CALLBACK(&OnNewRequestObject));
+    cJsHttpServer.SetRequestCallback(MX_BIND_CALLBACK(&OnRequest));
+    cJsHttpServer.SetRequireJsModuleCallback(MX_BIND_CALLBACK(&OnRequireJsModule));
+    cJsHttpServer.SetErrorCallback(MX_BIND_CALLBACK(&OnError));
+    cJsHttpServer.SetWebSocketRequestReceivedCallback(MX_BIND_CALLBACK(&OnWebSocketRequestReceived));
   }
   if (SUCCEEDED(hRes))
   {
@@ -147,7 +166,7 @@ int TestJsHttpServer(_In_ BOOL bUseSSL)
   return (int)hRes;
 }
 
-static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode)
+static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hrErrorCode)
 {
   return;
 }
@@ -273,9 +292,18 @@ static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHtt
 }
 
 static VOID OnError(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
-                    _In_ HRESULT hErrorCode)
+                    _In_ HRESULT hrErrorCode)
 {
   return;
+}
+
+static HRESULT OnWebSocketRequestReceived(_In_ MX::CJsHttpServer *lpHttp,
+                                          _In_ MX::CJsHttpServer::CClientRequest *lpRequest, _In_ HANDLE hShutdownEv,
+                                          _Inout_ MX::CHttpServer::WEBSOCKET_REQUEST_CALLBACK_DATA &sData)
+{
+  sData.nSelectedProtocol = 0;
+  sData.lpWebSocket = MX_DEBUG_NEW CTestWebSocket();
+  return (sData.lpWebSocket != NULL) ? S_OK : E_OUTOFMEMORY;
 }
 
 static VOID DeleteSessionFiles()
@@ -658,4 +686,71 @@ static HRESULT OnLog(_In_z_ LPCWSTR szInfoW)
 
   wprintf_s(L"%s\n", szInfoW);
   return S_OK;
+}
+
+//-----------------------------------------------------------
+
+CTestWebSocket::CTestWebSocket() : MX::CWebSocket()
+{
+  return;
+}
+
+CTestWebSocket::~CTestWebSocket()
+{
+  return;
+}
+
+HRESULT CTestWebSocket::OnConnected()
+{
+  static const LPCSTR szWelcomeMsgA = "Welcome to the MX WebSocket demo!!!";
+  HRESULT hRes;
+
+  hRes = BeginTextMessage();
+  if (SUCCEEDED(hRes))
+    hRes = SendTextMessage(szWelcomeMsgA);
+  if (SUCCEEDED(hRes))
+    hRes = EndMessage();
+  //done
+  return hRes;
+}
+
+HRESULT CTestWebSocket::OnTextMessage(_In_ LPCSTR szMsgA, _In_ SIZE_T nMsgLength)
+{
+  HRESULT hRes;
+
+  hRes = BeginTextMessage();
+  if (SUCCEEDED(hRes))
+    hRes = SendTextMessage(szMsgA, nMsgLength);
+  if (SUCCEEDED(hRes))
+    hRes = EndMessage();
+  //done
+  return hRes;
+}
+
+HRESULT CTestWebSocket::OnBinaryMessage(_In_ LPVOID lpData, _In_ SIZE_T nDataSize)
+{
+  HRESULT hRes;
+
+  hRes = BeginBinaryMessage();
+  if (SUCCEEDED(hRes))
+    hRes = SendBinaryMessage(lpData, nDataSize);
+  if (SUCCEEDED(hRes))
+    hRes = EndMessage();
+  //done
+  return hRes;
+}
+
+SIZE_T CTestWebSocket::GetMaxMessageSize() const
+{
+  return 1048596;
+}
+
+VOID CTestWebSocket::OnPongFrame()
+{
+  return;
+}
+
+VOID CTestWebSocket::OnCloseFrame(_In_ USHORT wCode, _In_  HRESULT hrErrorCode)
+{
+  return;
 }

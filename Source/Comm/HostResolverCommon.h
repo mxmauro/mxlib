@@ -28,16 +28,16 @@
 #include "..\..\Include\WaitableObjects.h"
 #include "..\..\Include\Threads.h"
 #include "..\..\Include\LinkedList.h"
+#include "..\..\Include\RefCounted.h"
 #include "..\..\Include\AutoPtr.h"
 #include "..\..\Include\Strings\Strings.h"
 #include "..\..\Include\Finalizer.h"
-#include "..\..\Include\TimedEventQueue.h"
 #include "..\..\Include\Http\punycode.h"
+#include <ws2def.h>
 
 //-----------------------------------------------------------
 
-#define FLAG_TimedOut                                 0x0002
-#define FLAG_Processing                               0x0004
+#define MAX_SIMULTANEOUS_THREADS                           4
 
 //-----------------------------------------------------------
 
@@ -56,45 +56,53 @@ namespace MX {
 
 namespace Internals {
 
-class CIPAddressResolver : public virtual CBaseMemObj, protected CThread
+class CIPAddressResolver : public TRefCounted<CThread>
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CIPAddressResolver);
-protected:
-  CIPAddressResolver();
 public:
+  CIPAddressResolver();
   ~CIPAddressResolver();
 
   static CIPAddressResolver* Get();
-  VOID Release();
+  static VOID Shutdown();
 
-  HRESULT Resolve(_In_ MX::CHostResolver *lpHostResolver, _In_ PSOCKADDR_INET lpAddr, _In_ HRESULT *lphErrorCode,
-                  _In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _In_ DWORD dwTimeoutMs);
+  HRESULT Resolve(_In_ MX::CHostResolver *lpHostResolver, _In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily,
+                  _In_ DWORD dwTimeoutMs, _In_ CHostResolver::OnResultCallback cCallback, _In_ LPVOID lpUserData);
   VOID Cancel(_In_ MX::CHostResolver *lpHostResolver);
 
-  HRESULT ResolveAddr(_Out_ PSOCKADDR_INET lpAddress, _In_z_ LPCSTR szAddressA, _In_ int nDesiredFamily=AF_UNSPEC);
-
 private:
-  class CItem : public CTimedEventQueue::CEvent, public TLnkLstNode<CItem>
+  class CItem : public TRefCounted<CBaseMemObj>, public TLnkLstNode<CItem>
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CItem);
   public:
-    CItem(MX::CHostResolver *lpHostResolver, _In_ OnNotifyCallback cCallback) :
-          CTimedEventQueue::CEvent(cCallback, NULL), TLnkLstNode<CItem>()
+    CItem(_In_ CHostResolver *_lpHostResolver, CHostResolver::OnResultCallback _cCallback,
+          _In_ LPVOID _lpUserData, _In_ int _nDesiredFamily, _In_ DWORD dwTimeoutMs);
+    ~CItem();
+
+    VOID CallCallback();
+
+    VOID SetErrorCode(_In_ HRESULT hRes);
+    HRESULT GetErrorCode() const
       {
-      cHostResolver = lpHostResolver;
-      lpAddr = NULL;
-      nDesiredFamily = 0;
-      _InterlockedExchange(&nTimeoutCalled, 0);
-      return;
+      return __InterlockedRead(&(const_cast<CItem*>(this)->hrErrorCode));
       };
 
   public:
-    TAutoRefCounted<MX::CHostResolver> cHostResolver;
-    PSOCKADDR_INET lpAddr;
-    HRESULT *lphErrorCode;
-    CStringA cStrHostNameA;
+    LONG volatile nMutex;
+    MX::CHostResolver *lpHostResolver;
+    CHostResolver::OnResultCallback cCallback;
+    LPVOID lpUserData;
+    union {
+      LPVOID lp;
+      LPCSTR szStrA;
+      LPCWSTR szStrW;
+    } uHostName;
     int nDesiredFamily;
-    LONG volatile nTimeoutCalled;
+    DWORD dwTimeoutMs;
+    SOCKADDR_INET sAddr;
+    LONG volatile hrErrorCode;
+    HANDLE hCancelAsync;
+    LONG volatile nAssignedSlot;
   };
 
   //----
@@ -103,21 +111,53 @@ private:
   VOID AddRef();
 
   VOID ThreadProc();
-  VOID OnTimeout(_In_ CTimedEventQueue::CEvent *lpEvent);
-  BOOL ProcessQueued();
-  VOID CancelAll();
-  BOOL FlushCompleted();
+  CItem* GetNextItemToProcess(_In_ LONG nSlot);
+  VOID ProcessMulti();
+  BOOL ProcessSingle();
+  VOID Process(_In_ CItem *lpItemToProcess);
+  VOID ResolveItem(_In_ CItem *lpItem);
+  VOID ResolverWorkerThread(_In_ SIZE_T nParam);
+  VOID CancelPending();
+  VOID FlushFinished();
 
 private:
-  typedef INT(WSAAPI *LPFN_GETADDRINFOW)(_In_opt_ PCWSTR pNodeName, _In_opt_ PCWSTR pServiceName,
-                                          _In_opt_ const ADDRINFOW *pHints, _Deref_out_ PADDRINFOW *ppResult);
-  typedef VOID (WSAAPI * LPFN_FREEADDRINFOW)(_In_opt_ PADDRINFOW pAddrInfo);
+  typedef struct addrinfoexW {
+    int                 ai_flags;       // AI_PASSIVE, AI_CANONNAME, AI_NUMERICHOST
+    int                 ai_family;      // PF_xxx
+    int                 ai_socktype;    // SOCK_xxx
+    int                 ai_protocol;    // 0 or IPPROTO_xxx for IPv4 and IPv6
+    size_t              ai_addrlen;     // Length of ai_addr
+    PWSTR               ai_canonname;   // Canonical name for nodename
+    _Field_size_bytes_(ai_addrlen) struct sockaddr *ai_addr;        // Binary address
+    _Field_size_(ai_bloblen) void *ai_blob;
+    size_t              ai_bloblen;
+    LPGUID              ai_provider;
+    struct addrinfoexW *ai_next;        // Next structure in linked list
+  } ADDRINFOEXW, *PADDRINFOEXW, *LPADDRINFOEXW;
 
-  CCriticalSection cs;
+  typedef INT (WSAAPI *lpfnGetAddrInfoExW)(_In_opt_ PCWSTR pName, _In_opt_ PCWSTR pServiceName, _In_ DWORD dwNameSpace,
+                                           _In_opt_ LPGUID lpNspId, _In_opt_ const ADDRINFOEXW *hints,
+                                           _Outptr_ PADDRINFOEXW *ppResult, _In_opt_ struct timeval *timeout,
+                                           _In_opt_ LPOVERLAPPED lpOverlapped, _In_opt_ LPVOID lpCompletionRoutine,
+                                           _Out_opt_ LPHANDLE lpNameHandle);
+  typedef void (WSAAPI *lpfnFreeAddrInfoExW)(PADDRINFOEXW pAddrInfoEx);
+  typedef INT (WSAAPI *lpfnGetAddrInfoExCancel)(_In_ LPHANDLE lpHandle);
+  typedef INT (WSAAPI *lpfnGetAddrInfoExOverlappedResult)(_In_ LPOVERLAPPED lpOverlapped);
+
+  LONG volatile nRwMutex;
   LONG volatile nRefCount;
-  CSystemTimedEventQueue *lpTimedEventQueue;
-  TLnkLst<CItem> cQueuedItemsList, cProcessedItemsList;
-  CWindowsEvent cQueueChangedEv;
+  HINSTANCE hWs2_32Dll;
+  lpfnGetAddrInfoExW fnGetAddrInfoExW;
+  lpfnFreeAddrInfoExW fnFreeAddrInfoExW;
+  lpfnGetAddrInfoExCancel fnGetAddrInfoExCancel;
+  lpfnGetAddrInfoExOverlappedResult fnGetAddrInfoExOverlappedResult;
+
+  TLnkLst<CItem> cItemsList;
+  CWindowsEvent cWakeUpWorkerEv;
+  struct {
+    TClassWorkerThread<CIPAddressResolver> cThread;
+    LONG volatile nWorking;
+  } sWorkers[MAX_SIMULTANEOUS_THREADS];
 };
 
 } //namespace Internals

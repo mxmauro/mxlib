@@ -29,22 +29,23 @@
 namespace MX {
 
 CJsHttpServer::CJsHttpServer(_In_ CSockets &cSocketMgr, _In_ CIoCompletionPortThreadPool &cWorkerPool,
-                             _In_opt_ CLoggable *lpLogParent) : CBaseMemObj(), CLoggable(),
-                                                                cHttpServer(cSocketMgr, cWorkerPool, this)
+                             _In_opt_ CLoggable *lpLogParent) : CBaseMemObj(),
+                                                                CHttpServer(cSocketMgr, cWorkerPool, lpLogParent)
 {
-  SetLogParent(lpLogParent);
-  //----
   cNewRequestObjectCallback = NullCallback();
   cRequestCallback = NullCallback();
   cRequireJsModuleCallback = NullCallback();
   cErrorCallback = NullCallback();
   cJavascriptErrorCallback = NullCallback();
+  cWebSocketRequestReceivedCallback = NullCallback();
   //----
   bShowStackTraceOnError = TRUE;
   //----
-  cHttpServer.On(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnNewRequestObject, this));
-  cHttpServer.On(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequestCompleted, this));
-  cHttpServer.On(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnError, this));
+  CHttpServer::SetNewRequestObjectCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnNewRequestObject, this));
+  CHttpServer::SetRequestCompletedCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequestCompleted, this));
+  CHttpServer::SetErrorCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnError, this));
+  CHttpServer::SetWebSocketRequestReceivedCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnWebSocketRequestReceived,
+                                                                           this));
   return;
 }
 
@@ -54,106 +55,40 @@ CJsHttpServer::~CJsHttpServer()
   return;
 }
 
-VOID CJsHttpServer::SetOption_MaxRequestTimeoutMs(_In_ DWORD dwTimeoutMs)
-{
-  cHttpServer.SetOption_MaxRequestTimeoutMs(dwTimeoutMs);
-  return;
-}
-
-VOID CJsHttpServer::SetOption_MaxHeaderSize(_In_ DWORD dwSize)
-{
-  cHttpServer.SetOption_MaxHeaderSize(dwSize);
-  return;
-}
-
-VOID CJsHttpServer::SetOption_MaxFieldSize(_In_ DWORD dwSize)
-{
-  cHttpServer.SetOption_MaxFieldSize(dwSize);
-  return;
-}
-
-VOID CJsHttpServer::SetOption_MaxFileSize(_In_ ULONGLONG ullSize)
-{
-  cHttpServer.SetOption_MaxFileSize(ullSize);
-  return;
-}
-
-VOID CJsHttpServer::SetOption_MaxFilesCount(_In_ DWORD dwCount)
-{
-  cHttpServer.SetOption_MaxFilesCount(dwCount);
-  return;
-}
-
-BOOL CJsHttpServer::SetOption_TemporaryFolder(_In_opt_z_ LPCWSTR szFolderW)
-{
-  return cHttpServer.SetOption_TemporaryFolder(szFolderW);
-}
-
-VOID CJsHttpServer::SetOption_MaxBodySizeInMemory(_In_ DWORD dwSize)
-{
-  cHttpServer.SetOption_MaxBodySizeInMemory(dwSize);
-  return;
-}
-
-VOID CJsHttpServer::SetOption_MaxBodySize(_In_ ULONGLONG ullSize)
-{
-  cHttpServer.SetOption_MaxBodySize(ullSize);
-  return;
-}
-
-VOID CJsHttpServer::On(_In_ OnNewRequestObjectCallback _cNewRequestObjectCallback)
+VOID CJsHttpServer::SetNewRequestObjectCallback(_In_ OnNewRequestObjectCallback _cNewRequestObjectCallback)
 {
   cNewRequestObjectCallback = _cNewRequestObjectCallback;
   return;
 }
 
-VOID CJsHttpServer::On(_In_ OnRequestCallback _cRequestCallback)
+VOID CJsHttpServer::SetRequestCallback(_In_ OnRequestCallback _cRequestCallback)
 {
   cRequestCallback = _cRequestCallback;
   return;
 }
 
-VOID CJsHttpServer::On(_In_ OnRequireJsModuleCallback _cRequireJsModuleCallback)
+VOID CJsHttpServer::SetRequireJsModuleCallback(_In_ OnRequireJsModuleCallback _cRequireJsModuleCallback)
 {
   cRequireJsModuleCallback = _cRequireJsModuleCallback;
   return;
 }
 
-VOID CJsHttpServer::On(_In_ OnErrorCallback _cErrorCallback)
+VOID CJsHttpServer::SetErrorCallback(_In_ OnErrorCallback _cErrorCallback)
 {
   cErrorCallback = _cErrorCallback;
   return;
 }
 
-VOID CJsHttpServer::On(_In_ OnJavascriptErrorCallback _cJavascriptErrorCallback)
+VOID CJsHttpServer::SetJavascriptErrorCallback(_In_ OnJavascriptErrorCallback _cJavascriptErrorCallback)
 {
   cJavascriptErrorCallback = _cJavascriptErrorCallback;
   return;
 }
 
-HRESULT CJsHttpServer::StartListening(_In_ int nPort, _In_opt_ CIpcSslLayer::eProtocol nProtocol,
-                                      _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CCryptoRSA *lpSslKey)
+VOID CJsHttpServer::SetWebSocketRequestReceivedCallback(_In_ OnWebSocketRequestReceivedCallback
+                                                        _cWebSocketRequestReceivedCallback)
 {
-  return cHttpServer.StartListening(nPort, nProtocol, lpSslCertificate, lpSslKey);
-}
-
-HRESULT CJsHttpServer::StartListening(_In_z_ LPCSTR szBindAddressA, _In_ int nPort,
-                                      _In_opt_ CIpcSslLayer::eProtocol nProtocol,
-                                      _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CCryptoRSA *lpSslKey)
-{
-  return cHttpServer.StartListening(szBindAddressA, nPort, nProtocol, lpSslCertificate, lpSslKey);
-}
-
-HRESULT CJsHttpServer::StartListening(_In_z_ LPCWSTR szBindAddressW, _In_ int nPort,
-                                      _In_opt_ CIpcSslLayer::eProtocol nProtocol,
-                                      _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CCryptoRSA *lpSslKey)
-{
-  return cHttpServer.StartListening(szBindAddressW, nPort, nProtocol, lpSslCertificate, lpSslKey);
-}
-
-VOID CJsHttpServer::StopListening()
-{
-  cHttpServer.StopListening();
+  cWebSocketRequestReceivedCallback = _cWebSocketRequestReceivedCallback;
   return;
 }
 
@@ -298,15 +233,28 @@ HRESULT CJsHttpServer::OnRequireJsModule(_In_ DukTape::duk_context *lpCtx,
 }
 
 VOID CJsHttpServer::OnError(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *_lpRequest,
-                            _In_ HRESULT hErrorCode)
+                            _In_ HRESULT hrErrorCode)
 {
   if (cErrorCallback)
   {
     CClientRequest *lpRequest = static_cast<CClientRequest*>(_lpRequest);
 
-    cErrorCallback(this, lpRequest, hErrorCode);
+    cErrorCallback(this, lpRequest, hrErrorCode);
   }
   return;
+}
+
+HRESULT CJsHttpServer::OnWebSocketRequestReceived(_In_ CHttpServer *lpHttp,
+                                                  _In_ CHttpServer::CClientRequest *_lpRequest, _In_ HANDLE hShutdownEv,
+                                                  _Inout_ CHttpServer::WEBSOCKET_REQUEST_CALLBACK_DATA &sData)
+{
+  if (cWebSocketRequestReceivedCallback)
+  {
+    CClientRequest *lpRequest = static_cast<CClientRequest*>(_lpRequest);
+
+    return cWebSocketRequestReceivedCallback(this, lpRequest, hShutdownEv, sData);
+  }
+  return MX_E_Unsupported;
 }
 
 HRESULT CJsHttpServer::ResetAndDisableClientCache(_In_ CClientRequest *lpRequest)

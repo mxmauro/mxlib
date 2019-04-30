@@ -91,7 +91,7 @@ int TestJavascript()
   HRESULT hRes;
 
   wprintf_s(L"Initializing Javascript VM... ");
-  cJvm.On(MX_BIND_CALLBACK(&OnRequireModule));
+  cJvm.SetRequireModuleCallback(MX_BIND_CALLBACK(&OnRequireModule));
   hRes = cJvm.Initialize();
   if (FAILED(hRes))
   {

@@ -37,11 +37,11 @@ CHttpHeaderBase::~CHttpHeaderBase()
   return;
 }
 
-#define CHECK_AND_CREATE_HEADER(_hdr)                                              \
-    if (StrCompareA(szHeaderNameA, CHttpHeader##_hdr::GetNameStatic(), TRUE) == 0) \
-    {                                                                              \
-      *lplpHeader = MX_DEBUG_NEW CHttpHeader##_hdr();                              \
-      return (*lplpHeader != NULL) ? S_OK : E_OUTOFMEMORY;                         \
+#define CHECK_AND_CREATE_HEADER(_hdr)                                                    \
+    if (StrCompareA(szHeaderNameA, CHttpHeader##_hdr::GetHeaderNameStatic(), TRUE) == 0) \
+    {                                                                                    \
+      *lplpHeader = MX_DEBUG_NEW CHttpHeader##_hdr();                                    \
+      return (*lplpHeader != NULL) ? S_OK : E_OUTOFMEMORY;                               \
     }
 HRESULT CHttpHeaderBase::Create(_In_ LPCSTR szHeaderNameA, _In_ BOOL bIsRequest, _Out_ CHttpHeaderBase **lplpHeader)
 {
@@ -71,6 +71,9 @@ HRESULT CHttpHeaderBase::Create(_In_ LPCSTR szHeaderNameA, _In_ BOOL bIsRequest,
     CHECK_AND_CREATE_HEADER(ReqIfUnmodifiedSince);
     CHECK_AND_CREATE_HEADER(ReqRange);
     CHECK_AND_CREATE_HEADER(ReqReferer);
+    CHECK_AND_CREATE_HEADER(ReqSecWebSocketKey);
+    CHECK_AND_CREATE_HEADER(ReqSecWebSocketProtocol);
+    CHECK_AND_CREATE_HEADER(ReqSecWebSocketVersion);
   }
   else
   {
@@ -82,6 +85,9 @@ HRESULT CHttpHeaderBase::Create(_In_ LPCSTR szHeaderNameA, _In_ BOOL bIsRequest,
     CHECK_AND_CREATE_HEADER(RespRetryAfter);
     CHECK_AND_CREATE_HEADER(RespWwwAuthenticate);
     CHECK_AND_CREATE_HEADER(RespProxyAuthenticate);
+    CHECK_AND_CREATE_HEADER(RespSecWebSocketAccept);
+    CHECK_AND_CREATE_HEADER(RespSecWebSocketProtocol);
+    CHECK_AND_CREATE_HEADER(RespSecWebSocketVersion);
   }
   //----
   CHECK_AND_CREATE_HEADER(EntAllow);
@@ -97,12 +103,13 @@ HRESULT CHttpHeaderBase::Create(_In_ LPCSTR szHeaderNameA, _In_ BOOL bIsRequest,
   CHECK_AND_CREATE_HEADER(GenConnection);
   CHECK_AND_CREATE_HEADER(GenDate);
   CHECK_AND_CREATE_HEADER(GenTransferEncoding);
+  CHECK_AND_CREATE_HEADER(GenSecWebSocketExtensions);
   CHECK_AND_CREATE_HEADER(GenUpgrade);
   //else create a generic header
   lpGenericHdr = MX_DEBUG_NEW CHttpHeaderGeneric();
   if (lpGenericHdr == NULL)
     return E_OUTOFMEMORY;
-  hRes = lpGenericHdr->SetName(szHeaderNameA);
+  hRes = lpGenericHdr->SetHeaderName(szHeaderNameA);
   if (SUCCEEDED(hRes))
     *lplpHeader = lpGenericHdr;
   else
@@ -111,68 +118,309 @@ HRESULT CHttpHeaderBase::Create(_In_ LPCSTR szHeaderNameA, _In_ BOOL bIsRequest,
 }
 #undef CHECK_AND_CREATE_HEADER
 
-LPCSTR CHttpHeaderBase::SkipSpaces(_In_z_ LPCSTR sA)
+LPCSTR CHttpHeaderBase::SkipSpaces(_In_z_ LPCSTR sA, _In_opt_ SIZE_T nMaxLen)
 {
-  while (*sA == ' ' || *sA == '\t')
-    sA++;
-  return sA;
-}
-
-LPCWSTR CHttpHeaderBase::SkipSpaces(_In_z_ LPCWSTR sW)
-{
-  while (*sW == L' ' || *sW == L'\t')
-    sW++;
-  return sW;
-}
-
-LPCSTR CHttpHeaderBase::GetToken(_In_z_ LPCSTR sA, _In_opt_z_ LPCSTR szStopCharsA)
-{
-  while (*sA != 0)
+  if (nMaxLen == (SIZE_T)-1)
   {
-    if (CHttpCommon::IsValidNameChar(*sA) == FALSE)
-      break;
-    if (szStopCharsA !=NULL && StrChrA(szStopCharsA, *sA) != NULL)
-      break;
+    while (*sA == ' ' || *sA == '\t')
+      sA++;
+  }
+  else while (nMaxLen > 0 && (*sA == ' ' || *sA == '\t'))
+  {
+    nMaxLen--;
     sA++;
   }
   return sA;
 }
 
-LPCWSTR CHttpHeaderBase::GetToken(_In_z_ LPCWSTR sW, _In_opt_z_ LPCWSTR szStopCharsW)
+LPCSTR CHttpHeaderBase::SkipUntil(_In_z_ LPCSTR sA, _In_opt_z_ LPCSTR szStopCharsA, _In_opt_ SIZE_T nMaxLen)
 {
-  while (*sW != 0)
+  while (nMaxLen > 0 && *sA != 0)
   {
-    if (*sW < 31 || *sW > 127)
-      break;
-    if (CHttpCommon::IsValidNameChar((CHAR)*sW) == FALSE)
-      break;
-    if (szStopCharsW !=NULL && StrChrW(szStopCharsW, *sW) != NULL)
-      break;
-    sW++;
-  }
-  return sW;
-}
-
-LPCSTR CHttpHeaderBase::Advance(_In_z_ LPCSTR sA, _In_opt_z_ LPCSTR szStopCharsA)
-{
-  while (*sA != 0)
-  {
-    if (szStopCharsA !=NULL && StrChrA(szStopCharsA, *sA) != NULL)
+    if (szStopCharsA != NULL && StrChrA(szStopCharsA, *sA) != NULL)
       break;
     sA++;
+    if (nMaxLen != (SIZE_T)-1)
+      nMaxLen--;
   }
   return sA;
 }
 
-LPCWSTR CHttpHeaderBase::Advance(_In_z_ LPCWSTR sW, _In_opt_z_ LPCWSTR szStopCharsW)
+LPCSTR CHttpHeaderBase::GetToken(_In_z_ LPCSTR sA, _In_opt_ SIZE_T nMaxLen)
 {
-  while (*sW != 0)
+  static LPCSTR szSeparatorsA = "()<>@,;:\\\"/[]?={}";
+
+  while (nMaxLen > 0 && *sA != 0)
   {
-    if (szStopCharsW !=NULL && StrChrW(szStopCharsW, *sW) != NULL)
+    if (*((UCHAR*)sA) < 0x21 || *((UCHAR*)sA) > 0x7E)
       break;
-    sW++;
+    if (StrChrA(szSeparatorsA, *sA) != NULL)
+      break;
+    sA++;
+    if (nMaxLen != (SIZE_T)-1)
+      nMaxLen--;
   }
-  return sW;
+  return sA;
+}
+
+HRESULT CHttpHeaderBase::GetQuotedString(_Out_ CStringA &cStrA, _Inout_ LPCSTR &sA)
+{
+  LPCSTR szStartA;
+
+  cStrA.Empty();
+
+  if (*sA++ != '"')
+    return E_INVALIDARG;
+  while (*sA != '"')
+  {
+    szStartA = sA;
+    while (*((UCHAR*)sA) >= 0x20 && *sA != '\\' && *sA != '"')
+      sA++;
+    if (sA > szStartA)
+    {
+      if (cStrA.ConcatN(szStartA, (SIZE_T)(sA - szStartA)) == FALSE)
+        return E_OUTOFMEMORY;
+    }
+    if (*((UCHAR*)sA) < 0x20)
+      return E_INVALIDARG;
+    if (*sA == '\\')
+    {
+      sA++;
+      if (*((UCHAR*)sA) < 0x20)
+        return E_INVALIDARG;
+      if (cStrA.ConcatN(sA, 1) == FALSE)
+        return E_OUTOFMEMORY;
+      sA++;
+    }
+  }
+  if (*sA == '"')
+    sA++;
+  return S_OK;
+}
+
+HRESULT CHttpHeaderBase::GetParamNameAndValue(_Out_ CStringA &cStrTokenA, _Out_ CStringW &cStrValueW,
+                                              _Inout_ LPCSTR &sA, _Out_opt_ LPBOOL lpbExtendedParam)
+{
+  CStringA cStrValueA;
+  LPCSTR szStartA;
+  BOOL bExtendedParam = FALSE;
+  HRESULT hRes;
+
+  cStrTokenA.Empty();
+  cStrValueW.Empty();
+  if (lpbExtendedParam != NULL)
+    *lpbExtendedParam = FALSE;
+
+  //get token
+  sA = GetToken(szStartA = sA);
+  if (sA == szStartA)
+    return MX_E_InvalidData;
+  if (*(sA - 1) != '*')
+  {
+    if (cStrTokenA.CopyN(szStartA, (SIZE_T)(sA - szStartA)) == FALSE)
+      return E_OUTOFMEMORY;
+  }
+  else
+  {
+    bExtendedParam = TRUE;
+    if (cStrTokenA.CopyN(szStartA, (SIZE_T)(sA - szStartA) - 1) == FALSE)
+      return E_OUTOFMEMORY;
+  }
+  //skip spaces
+  sA = SkipSpaces(sA);
+  //is equal sign?
+  if (*sA != '=')
+  {
+    return (*sA == 0 || *sA == ',' || *sA == ';') ? MX_E_NoData : MX_E_InvalidData;
+  }
+  //skip spaces
+  sA = SkipSpaces(sA + 1);
+  //parse value
+  if (bExtendedParam != FALSE)
+  {
+    int nType = 0;
+
+    if (MX::StrNCompareA(sA, "UTF-8'", 6, TRUE) == 0)
+    {
+      sA += 6;
+      nType = 1;
+    }
+    else if (MX::StrNCompareA(sA, "ISO-8859-1'", 11, TRUE) == 0)
+    {
+      sA += 11;
+      nType = 2;
+    }
+    if (nType != 0)
+    {
+      while (*sA != 0 && *sA != '\'')
+        sA++;
+      if (*sA != '\'')
+        return MX_E_InvalidData;
+      sA++;
+      //get value
+      while (*sA != 0)
+      {
+        BYTE chA, i;
+
+        szStartA = sA;
+        while (*sA >= 32 && *sA <= 126 && *sA != '%')
+          sA++;
+        if (sA > szStartA)
+        {
+          if (cStrValueA.CopyN(szStartA, (SIZE_T)(sA - szStartA)) == FALSE)
+            return E_OUTOFMEMORY;
+        }
+        if (*sA != '%')
+          break;
+        sA++;
+        //pct-encoded char
+        chA = 0;
+        for (i = 0; i < 2; i++)
+        {
+          if (*sA >= '0' && *sA <= '9')
+            chA = (chA << 4) + (BYTE)(*sA - '0');
+          else if (*sA >= 'A' && *sA <= 'A')
+            chA = (chA << 4) + (BYTE)(*sA - 'A' + 10);
+          else if (*sA >= 'a' && *sA <= 'f')
+            chA = (chA << 4) + (BYTE)(*sA - 'a' + 10);
+          else
+            return MX_E_InvalidData;
+        }
+        if (cStrValueA.CopyN((LPCSTR)&chA, 1) == FALSE)
+          return E_OUTOFMEMORY;
+      }
+      if (nType == 1)
+      {
+        hRes = Utf8_Decode(cStrValueW, (LPCSTR)cStrValueA, cStrValueA.GetLength());
+        if (FAILED(hRes))
+          return (hRes == E_OUTOFMEMORY) ? hRes : MX_E_InvalidData;
+      }
+      else
+      {
+        if (CHttpCommon::FromISO_8859_1(cStrValueW, (LPCSTR)cStrValueA, cStrValueA.GetLength()) == FALSE)
+          return E_OUTOFMEMORY;
+      }
+      goto done;
+    }
+  }
+  //try quoted string
+  if (*sA == '"')
+  {
+    hRes = GetQuotedString(cStrValueA, sA);
+    if (FAILED(hRes))
+      return (hRes == E_OUTOFMEMORY) ? hRes : MX_E_InvalidData;
+    if (CHttpCommon::FromISO_8859_1(cStrValueW, (LPCSTR)cStrValueA, cStrValueA.GetLength()) == FALSE)
+      return E_OUTOFMEMORY;
+  }
+  else
+  {
+    //try token
+    sA = GetToken(szStartA = sA);
+    if (cStrValueA.CopyN(szStartA, (SIZE_T)(sA - szStartA)) == FALSE ||
+        CHttpCommon::FromISO_8859_1(cStrValueW, (LPCSTR)cStrValueA, cStrValueA.GetLength()) == FALSE)
+    {
+      return E_OUTOFMEMORY;
+    }
+  }
+done:
+  sA = SkipSpaces(sA);
+  if (lpbExtendedParam != NULL)
+    *lpbExtendedParam = bExtendedParam;
+  return S_OK;
+}
+
+BOOL CHttpHeaderBase::RawISO_8859_1_to_UTF8(_Out_ CStringW &cStrDestW, _In_ LPCWSTR szSrcW, _In_ SIZE_T nSrcLen)
+{
+  CHAR szInputA[4];
+  WCHAR szDestW[2];
+  LPCWSTR szSrcEndW = szSrcW + nSrcLen;
+  int len;
+  SIZE_T nInputLen;
+
+  cStrDestW.Empty();
+
+  nInputLen = 0;
+  while (szSrcW < szSrcEndW || nInputLen > 0)
+  {
+    while (nInputLen < 4 && szSrcW < szSrcEndW)
+      szInputA[nInputLen++] = (CHAR)(UCHAR)(*szSrcW++);
+
+    len = Utf8_DecodeChar(szDestW, szInputA, nInputLen);
+    if (len > 0)
+    {
+      if (cStrDestW.ConcatN(szDestW, (szDestW[1] != 0) ? 2 : 1) == FALSE)
+        return FALSE;
+    }
+    else
+    {
+      len = 1; //if no output, eat the front character
+    }
+    //eat "len" characters from input
+    MemMove(szInputA, szInputA + (SIZE_T)len, nInputLen - (SIZE_T)len);
+    nInputLen -= (SIZE_T)len;
+  }
+  return TRUE;
+}
+
+CHttpHeaderBase::eBrowser CHttpHeaderBase::GetBrowserFromUserAgent(_In_ LPCSTR szUserAgentA,
+                                                                   _In_opt_ SIZE_T nUserAgentLen)
+{
+  LPCSTR sA;
+
+  if (nUserAgentLen == (SIZE_T)-1)
+    nUserAgentLen = StrLenA(szUserAgentA);
+  if (szUserAgentA == NULL || nUserAgentLen == 0)
+    return BrowserOther;
+
+  sA = StrNFindA(szUserAgentA, "MSIE ", nUserAgentLen);
+  if (sA != NULL)
+  {
+    SIZE_T nOffset = (SIZE_T)(sA - szUserAgentA);
+
+    if (nOffset + 6 < nUserAgentLen && sA[6] == '.')
+    {
+      switch (sA[5])
+      {
+        case '4':
+        case '5':
+          return BrowserIE6;
+
+        case '6':
+          if (nOffset + 8 < nUserAgentLen &&
+              StrNCompareA(sA + 8, "SV1", nUserAgentLen - (nOffset + 8)) != NULL)
+          {
+            return BrowserIE6;
+          }
+          break;
+      }
+    }
+    return BrowserIE;
+  }
+
+  sA = StrNFindA(szUserAgentA, "Opera ", nUserAgentLen);
+  if (sA != NULL)
+    return BrowserOpera;
+
+  sA = StrNFindA(szUserAgentA, "Gecko/", nUserAgentLen);
+  if (sA != NULL)
+    return BrowserGecko;
+
+  sA = StrNFindA(szUserAgentA, "Chrome/", nUserAgentLen);
+  if (sA != NULL)
+    return BrowserChrome;
+
+  sA = StrNFindA(szUserAgentA, "Safari/", nUserAgentLen);
+  if (sA != NULL)
+    return BrowserSafari;
+  sA = StrNFindA(szUserAgentA, "Mac OS X", nUserAgentLen);
+  if (sA != NULL)
+    return BrowserSafari;
+
+  sA = StrNFindA(szUserAgentA, "Konqueror", nUserAgentLen);
+  if (sA != NULL)
+    return BrowserKonqueror;
+
+  return BrowserOther;
 }
 
 } //namespace MX

@@ -22,6 +22,7 @@
  *       access to or use of the software to any third party.
  **/
 #include "..\..\Include\Http\HttpHeaderRespETag.h"
+#include <wtypes.h>
 
 //-----------------------------------------------------------
 
@@ -40,7 +41,7 @@ CHttpHeaderRespETag::~CHttpHeaderRespETag()
 
 HRESULT CHttpHeaderRespETag::Parse(_In_z_ LPCSTR szValueA)
 {
-  LPCSTR szStartA, szEndA;
+  LPCSTR szStartA;
   CStringA cStrTempA;
   BOOL _bIsWeak;
   HRESULT hRes;
@@ -59,31 +60,25 @@ HRESULT CHttpHeaderRespETag::Parse(_In_z_ LPCSTR szValueA)
   //get entity
   if (*szValueA != '"')
   {
-    szValueA = Advance(szStartA = szValueA, " \t");
+    szValueA = SkipUntil(szStartA = szValueA, " \t");
     if (szValueA == szStartA)
       return MX_E_InvalidData;
-    szEndA = szValueA;
+    if (cStrTempA.CopyN(szStartA, (SIZE_T)(szValueA - szStartA)) == FALSE)
+      return E_OUTOFMEMORY;
   }
   else
   {
-    szStartA = ++szValueA;
-    while (*szValueA != 0 && *szValueA != '"')
-    {
-      if (*szValueA == L'\\' && szValueA[1] != 0)
-        szValueA++;
-      szValueA++;
-    }
-    if (*szValueA != '"')
+    hRes = GetQuotedString(cStrTempA, szValueA);
+    if (FAILED(hRes))
+      return hRes;
+    if (cStrTempA.IsEmpty() != FALSE)
       return MX_E_InvalidData;
-    szEndA = szValueA++;
   }
   //skip spaces and check for end
   if (*SkipSpaces(szValueA) != 0)
     return MX_E_InvalidData;
   //set entity name
-  if (cStrTempA.CopyN(szStartA, (SIZE_T)(szEndA-szStartA)) == FALSE)
-    return E_OUTOFMEMORY;
-  hRes = SetEntity((LPSTR)cStrTempA);
+  hRes = SetTag((LPCSTR)cStrTempA, cStrTempA.GetLength());
   if (FAILED(hRes))
     return hRes;
   //set entity weak
@@ -92,13 +87,12 @@ HRESULT CHttpHeaderRespETag::Parse(_In_z_ LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderRespETag::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderRespETag::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   CStringA cStrTempA;
-  HRESULT hRes;
 
   cStrDestA.Empty();
-  if (cStrEntityW.IsEmpty() == FALSE)
+  if (cStrTagA.IsEmpty() == FALSE)
   {
     //weak
     if (bIsWeak != FALSE)
@@ -107,54 +101,42 @@ HRESULT CHttpHeaderRespETag::Build(_Inout_ CStringA &cStrDestA)
         return E_OUTOFMEMORY;
     }
     //entity
-    hRes = Utf8_Encode(cStrTempA, cStrEntityW);
-    if (FAILED(hRes))
-      return hRes;
-    if (CHttpCommon::EncodeQuotedString(cStrTempA) == FALSE)
+    if (CHttpCommon::BuildQuotedString(cStrTempA, (LPCSTR)cStrTagA, cStrTagA.GetLength(), FALSE) == FALSE ||
+        cStrDestA.ConcatN((LPCSTR)cStrTempA, cStrTempA.GetLength()) == FALSE)
+    {
       return E_OUTOFMEMORY;
-    if (cStrDestA.AppendFormat("\"%s\"", (LPCSTR)cStrTempA) == FALSE)
-      return E_OUTOFMEMORY;
+    }
   }
   //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderRespETag::SetEntity(_In_z_ LPCSTR szEntityA)
+HRESULT CHttpHeaderRespETag::SetTag(_In_z_ LPCSTR szTagA, _In_ SIZE_T nTagLen)
 {
-  MX::CStringW cStrTempW;
-  HRESULT hRes;
+  SIZE_T i;
 
-  if (szEntityA == NULL)
-    return E_POINTER;
-  hRes = Utf8_Decode(cStrTempW, szEntityA);
-  if (FAILED(hRes))
-    return hRes;
-  //done
-  return SetEntity((LPCWSTR)cStrTempW);
-}
-
-HRESULT CHttpHeaderRespETag::SetEntity(_In_z_ LPCWSTR szEntityW)
-{
-  LPCWSTR sW;
-
-  if (szEntityW == NULL)
+  if (nTagLen == (SIZE_T)-1)
+    nTagLen = StrLenA(szTagA);
+  if (nTagLen == 0)
+    return MX_E_InvalidData;
+  if (szTagA == NULL)
     return E_POINTER;
   //check for invalid characters
-  for (sW=szEntityW; *sW!=0; sW++)
+  for (i = 0; i < nTagLen; i++)
   {
-    if (*sW < 32 || *sW == L'"')
+    if (((UCHAR)szTagA[i]) < 0x20 || ((UCHAR)szTagA[i]) > 0x7E || szTagA[i] == '"')
       return MX_E_InvalidData;
   }
   //check completed
-  if (cStrEntityW.Copy(szEntityW) == FALSE)
+  if (cStrTagA.CopyN(szTagA, nTagLen) == FALSE)
     return E_OUTOFMEMORY;
   //done
   return S_OK;
 }
 
-LPCWSTR CHttpHeaderRespETag::GetEntity() const
+LPCSTR CHttpHeaderRespETag::GetTag() const
 {
-  return (LPCWSTR)cStrEntityW;
+  return (LPCSTR)cStrTagA;
 }
 
 HRESULT CHttpHeaderRespETag::SetWeak(_In_ BOOL _bIsWeak)

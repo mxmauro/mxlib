@@ -24,7 +24,7 @@
 #include "TestHttpClient.h"
 #include <Http\HttpClient.h>
 
-#define SIMPLE_TEST
+//#define SIMPLE_TEST
 
 #define LOG_LEVEL 0
 
@@ -48,7 +48,7 @@ static LONG volatile nLogMutex = 0;
 
 //-----------------------------------------------------------
 
-static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode);
+static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hrErrorCode);
 static HRESULT OnResponseHeadersReceived(_In_ MX::CHttpClient *lpHttp, _In_z_ LPCWSTR szFileNameW,
                                          _In_opt_ PULONGLONG lpnContentSize, _In_z_ LPCSTR szTypeA,
                                          _In_ BOOL bTreatAsAttachment, _Inout_ MX::CStringW &cStrFullFileNameW,
@@ -58,7 +58,7 @@ static HRESULT OnResponseHeadersReceived_BigDownload(_In_ MX::CHttpClient *lpHtt
                                           _In_ BOOL bTreatAsAttachment, _Inout_ MX::CStringW &cStrFullFileNameW,
                                          _Inout_ MX::CHttpBodyParserBase **lplpBodyParser);
 static HRESULT OnDocumentCompleted(_In_ MX::CHttpClient *lpHttp);
-static VOID OnError(_In_ MX::CHttpClient *lpHttp, _In_ HRESULT hErrorCode);
+static VOID OnError(_In_ MX::CHttpClient *lpHttp, _In_ HRESULT hrErrorCode);
 static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *lpHttp, _Inout_ MX::CIpcSslLayer::eProtocol &nProtocol,
                                    _Inout_ MX::CSslCertificateArray **lplpCheckCertificates,
                                    _Inout_ MX::CSslCertificate **lplpSelfCert, _Inout_ MX::CCryptoRSA **lplpPrivKey);
@@ -96,7 +96,7 @@ int TestHttpClient()
   hRes = cDispatcherPool.Initialize();
   if (SUCCEEDED(hRes))
   {
-    cSckMgr.On(MX_BIND_CALLBACK(&OnEngineError));
+    cSckMgr.SetEngineErrorCallback(MX_BIND_CALLBACK(&OnEngineError));
     hRes = cSckMgr.Initialize();
   }
   if (SUCCEEDED(hRes))
@@ -154,7 +154,7 @@ int TestHttpClient()
   return (int)hRes;
 }
 
-static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode)
+static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hrErrorCode)
 {
   return;
 }
@@ -188,7 +188,7 @@ static HRESULT OnDocumentCompleted(_In_ MX::CHttpClient *lpHttp)
   return S_OK;
 }
 
-static VOID OnError(_In_ MX::CHttpClient *lpHttp, _In_ HRESULT hErrorCode)
+static VOID OnError(_In_ MX::CHttpClient *lpHttp, _In_ HRESULT hrErrorCode)
 {
   return;
 }
@@ -282,9 +282,9 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
   cHttpClient.lpCerts = lpThreadData->lpCerts;
   //cHttpClient.SetOptionFlags(0);
   //cHttpClient.SetOptionFlags(MX::CHttpClient::OptionKeepConnectionOpen);
-  cHttpClient.On(MX_BIND_CALLBACK(&OnDocumentCompleted));
-  cHttpClient.On(MX_BIND_CALLBACK(&OnError));
-  cHttpClient.On(MX_BIND_CALLBACK(&OnQueryCertificates));
+  cHttpClient.SetDocumentCompletedCallback(MX_BIND_CALLBACK(&OnDocumentCompleted));
+  cHttpClient.SetErrorCallback(MX_BIND_CALLBACK(&OnError));
+  cHttpClient.SetQueryCertificatesCallback(MX_BIND_CALLBACK(&OnQueryCertificates));
   cHttpClient.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
   cHttpClient.SetLogLevel(LOG_LEVEL);
   {
@@ -300,13 +300,13 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
   if (lpThreadData->nIndex == 1)
   {
     bExpectHtml = FALSE;
-    cHttpClient.On(MX_BIND_CALLBACK(&OnResponseHeadersReceived_BigDownload));
+    cHttpClient.SetHeadersReceivedCallback(MX_BIND_CALLBACK(&OnResponseHeadersReceived_BigDownload));
     hRes = cHttpClient.Open("http://ipv4.download.thinkbroadband.com/512MB.zip");
   }
   else
   {
     bExpectHtml = TRUE;
-    cHttpClient.On(MX_BIND_CALLBACK(&OnResponseHeadersReceived));
+    cHttpClient.SetHeadersReceivedCallback(MX_BIND_CALLBACK(&OnResponseHeadersReceived));
     switch (lpThreadData->nIndex % 3)
     {
       case 0:

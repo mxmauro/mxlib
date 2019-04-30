@@ -41,6 +41,7 @@
 #define REQUEST_FLAG_ErrorPageSent                    0x0004
 #define REQUEST_FLAG_LinkClosed                       0x0008
 #define REQUEST_FLAG_HeadersSent                      0x0010
+#define REQUEST_FLAG_RequestTimeoutProcessed          0x0020
 
 //-----------------------------------------------------------
 

@@ -42,13 +42,17 @@ public:
 
   HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
 
-  HRESULT SetType(_In_z_ LPCSTR szTypeA);
+  HRESULT SetType(_In_z_ LPCSTR szTypeA, _In_ SIZE_T nTypeLen = (SIZE_T)-1);
   LPCSTR GetType() const;
 
-  HRESULT SetFileName(_In_opt_z_ LPCWSTR szFileNameW);
-  LPCWSTR GetFileName() const; //NULL if no filename parameter
+  HRESULT SetName(_In_opt_z_ LPCWSTR szNameW, _In_ SIZE_T nNameLen = (SIZE_T)-1);
+  LPCWSTR GetName() const;
+
+  HRESULT SetFileName(_In_opt_z_ LPCWSTR szFileNameW, _In_ SIZE_T nFileNameLen = (SIZE_T)-1);
+  LPCWSTR GetFileName() const;
+  BOOL HasFileName() const;
 
   HRESULT SetCreationDate(_In_ CDateTime &cDt);
   CDateTime GetCreationDate() const; //ticks=0 if no creation date parameter
@@ -76,8 +80,9 @@ private:
   } PARAMETER, *LPPARAMETER;
 
   CStringA cStrTypeA;
-  BOOL bHasFileName;
+  CStringW cStrNameW;
   CStringW cStrFileNameW;
+  BOOL bHasFileName;
   CDateTime cCreationDt;
   CDateTime cModificationDt;
   CDateTime cReadDt;

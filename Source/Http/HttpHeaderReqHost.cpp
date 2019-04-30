@@ -39,25 +39,26 @@ CHttpHeaderReqHost::~CHttpHeaderReqHost()
 
 HRESULT CHttpHeaderReqHost::Parse(_In_z_ LPCSTR szValueA)
 {
-  LPCSTR szStartA, szEndA;
-  CUrl cTempUrl;
-  HRESULT hRes;
+  LPCSTR szHostStartA, szHostEndA;
   int nPort;
+  HRESULT hRes;
 
   if (szValueA == NULL)
     return E_POINTER;
   //skip spaces
   szValueA = SkipSpaces(szValueA);
   //get host
-  szValueA = Advance(szStartA = szValueA, ": \t");
-  if (szValueA == szStartA)
+  szValueA = SkipUntil(szHostStartA = szValueA, ": \t");
+  if (szValueA == szHostStartA)
     return MX_E_InvalidData;
-  szEndA = szValueA;
+  szHostEndA = szValueA;
   //parse port if any
   nPort = -1;
   if (*szValueA == ':')
   {
     szValueA++;
+    while (*szValueA == '0')
+      szValueA++;
     nPort = 0;
     while (*szValueA >= '0' && *szValueA <= '9')
     {
@@ -71,25 +72,16 @@ HRESULT CHttpHeaderReqHost::Parse(_In_z_ LPCSTR szValueA)
   //skip spaces and check for end
   if (*CHttpHeaderBase::SkipSpaces(szValueA) != 0)
     return MX_E_InvalidData;
-  //some checks
-  hRes = cTempUrl.SetHost(szStartA, (SIZE_T)(szEndA-szStartA));
+  //set new value
+  hRes = cUrl.SetHost(szHostStartA, (SIZE_T)(szHostEndA - szHostStartA));
   if (SUCCEEDED(hRes) && nPort > 0)
-    hRes = cTempUrl.SetPort(nPort);
+    hRes = cUrl.SetPort(nPort);
   if (FAILED(hRes))
     return (hRes == E_INVALIDARG) ? MX_E_InvalidData : hRes;
-  //set new value
-  try
-  {
-    cUrl = cTempUrl;
-  }
-  catch (LONG hr)
-  {
-    return hr;
-  }
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqHost::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderReqHost::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   if (cStrDestA.Copy(cUrl.GetHost()) == FALSE)
     return E_OUTOFMEMORY;
@@ -102,26 +94,20 @@ HRESULT CHttpHeaderReqHost::Build(_Inout_ CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqHost::SetHost(_In_z_ LPCWSTR szHostW)
+HRESULT CHttpHeaderReqHost::SetHost(_In_z_ LPCWSTR szHostW, _In_opt_ SIZE_T nHostLen)
 {
-  CUrl cTempUrl;
   HRESULT hRes;
 
+  if (nHostLen == (SIZE_T)-1)
+    nHostLen = StrLenW(szHostW);
+  if (nHostLen == 0)
+    return MX_E_InvalidData;
   if (szHostW == NULL)
     return E_POINTER;
   //some checks
-  hRes = cTempUrl.SetHost(szHostW);
+  hRes = cUrl.SetHost(szHostW);
   if (FAILED(hRes))
     return (hRes == E_INVALIDARG) ? MX_E_InvalidData : hRes;
-  //set new value
-  try
-  {
-    cUrl = cTempUrl;
-  }
-  catch (LONG hr)
-  {
-    return hr;
-  }
   return S_OK;
 }
 

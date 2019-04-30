@@ -24,6 +24,8 @@
 #include "..\..\Include\Strings\Strings.h"
 #include "..\..\Include\WaitableObjects.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
 
 //-----------------------------------------------------------
 
@@ -45,6 +47,7 @@ typedef int (__cdecl *lpfn__stdio_common_vsnwprintf_s)(_In_ unsigned __int64 _Op
 
 //-----------------------------------------------------------
 
+static __declspec(thread) int strtodbl_error = 0;
 static LONG volatile nInitialized = 0;
 static CHAR volatile aToLowerChar[256] = { 0 };
 static WCHAR volatile aToUnicodeChar[256] = { 0 };
@@ -62,6 +65,8 @@ extern const lpfn__stdio_common_vsnwprintf_s mx__stdio_common_vsnwprintf_s_defau
 //-----------------------------------------------------------
 
 static VOID InitializeTables();
+static void dblconv_invalid_parameter(const wchar_t * expression, const wchar_t * function, const wchar_t * file,
+                                      unsigned int line, uintptr_t pReserved);
 
 //-----------------------------------------------------------
 
@@ -446,6 +451,75 @@ VOID StrNToUpperW(_Inout_updates_(nLen) LPWSTR szSrcW, _In_ SIZE_T nLen)
     }
   }
   return;
+}
+
+HRESULT StrToDoubleA(_In_ LPCSTR szSrcA, _In_ SIZE_T nLen, double *lpnValue)
+{
+  CStringA cStrTempA;
+  _invalid_parameter_handler lpOldHandler;
+  _CRT_DOUBLE dblval;
+  HRESULT hRes;
+
+  if (lpnValue == NULL)
+    return E_POINTER;
+  *lpnValue = 0.0;
+
+  if (nLen == 0)
+    return S_OK;
+  if (szSrcA == NULL)
+    return (nLen == (SIZE_T)-1) ? S_OK : E_POINTER;
+
+  if (nLen != (SIZE_T)-1)
+  {
+    if (cStrTempA.CopyN(szSrcA, nLen) == FALSE)
+      return E_OUTOFMEMORY;
+    szSrcA = (LPCSTR)cStrTempA;
+  }
+
+  lpOldHandler = _set_thread_local_invalid_parameter_handler(&dblconv_invalid_parameter);
+  strtodbl_error = 0;
+
+  hRes = S_OK;
+  switch (_atodbl(&dblval, (char*)szSrcA))
+  {
+    case _OVERFLOW:
+      hRes = MX_E_ArithmeticOverflow;
+      break;
+    case _UNDERFLOW:
+      hRes = MX_E_ArithmeticUnderflow;
+      break;
+    default:
+      if (strtodbl_error == 0)
+        *lpnValue = dblval.x;
+      else
+        hRes = E_INVALIDARG;
+      break;
+  }
+
+  _set_thread_local_invalid_parameter_handler(lpOldHandler);
+  //done
+  return hRes;
+}
+
+HRESULT StrToDoubleW(_In_ LPCWSTR szSrcW, _In_ SIZE_T nLen, double *lpnValue)
+{
+  CStringA cStrTempA;
+
+  if (lpnValue == NULL)
+    return E_POINTER;
+  if (nLen == 0)
+  {
+    *lpnValue = 0.0;
+    return S_OK;
+  }
+  if (nLen == (SIZE_T)-1)
+    nLen = StrLenW(szSrcW);
+  if (cStrTempA.CopyN(szSrcW, nLen) == FALSE)
+  {
+    *lpnValue = 0.0;
+    return E_OUTOFMEMORY;
+  }
+  return StrToDoubleA((LPCSTR)cStrTempA, (SIZE_T)-1, lpnValue);
 }
 
 //-----------------------------------------------------------
@@ -1613,5 +1687,12 @@ static VOID InitializeTables()
       }
     }
   }
+  return;
+}
+
+static void dblconv_invalid_parameter(const wchar_t * expression, const wchar_t * function, const wchar_t * file,
+                                      unsigned int line, uintptr_t pReserved)
+{
+  strtodbl_error = 1;
   return;
 }

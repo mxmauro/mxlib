@@ -44,8 +44,8 @@ public:
   virtual BOOL Pause();
   virtual BOOL Resume();
   virtual BOOL IsRunning();
-  virtual BOOL CheckForAbort(_In_opt_ DWORD dwTimeout=0, _In_opt_ DWORD dwEventCount=0,
-                             _In_opt_ LPHANDLE lphEventList=NULL, _Out_opt_ LPDWORD lpdwHitEvent=NULL);
+  virtual BOOL CheckForAbort(_In_opt_ DWORD dwTimeout = 0, _In_opt_ DWORD dwEventCount = 0,
+                             _In_opt_ LPHANDLE lphEventList = NULL, _Out_opt_ LPDWORD lpdwHitEvent = NULL);
 
   static VOID SetThreadName(_In_ DWORD dwThreadId, _In_opt_z_ LPCSTR szName);
   virtual VOID SetThreadName(_In_opt_z_ LPCSTR szName);
@@ -53,7 +53,7 @@ public:
   virtual BOOL SetPriority(_In_ int nPriority);
   virtual int GetPriority() const;
 
-  virtual BOOL SetStackSize(_In_opt_ DWORD dwStackSize=0);
+  virtual BOOL SetStackSize(_In_opt_ DWORD dwStackSize = 0);
   virtual DWORD GetStackSize() const;
 
   virtual HANDLE GetKillEvent()
@@ -72,10 +72,10 @@ public:
 
   HRESULT SetAutoDelete(_In_ BOOL bAutoDelete);
 
-  virtual BOOL Wait(_In_opt_ DWORD dwTimeout=0, _In_opt_ DWORD dwEventCount=0,
-                    _In_opt_ LPHANDLE lphEventList=NULL, _Out_opt_ LPDWORD lpdwHitEvent=NULL);
+  virtual BOOL Wait(_In_opt_ DWORD dwTimeout = 0, _In_opt_ DWORD dwEventCount = 0,
+                    _In_opt_ LPHANDLE lphEventList = NULL, _Out_opt_ LPDWORD lpdwHitEvent = NULL);
 
-  virtual VOID ThreadProc()=0;
+  virtual VOID ThreadProc() = 0;
 
 private:
   static unsigned int __stdcall CommonThreadProc(_In_ LPVOID _lpParameter);
@@ -125,13 +125,13 @@ public:
 
   virtual BOOL Start(_In_opt_ BOOL bSuspended=FALSE)
     {
-    if (lpObject==NULL || (lpStartRoutine==NULL && lpStartRoutineWithParam==NULL))
+    if (lpObject == NULL || (lpStartRoutine == NULL && lpStartRoutineWithParam == NULL))
       return FALSE;
     return CThread::Start(bSuspended);
     };
   
   virtual BOOL Start(_In_ TClass *_lpObject, _In_ VOID (TClass::* _lpStartRoutine)(),
-                     _In_ BOOL bSuspended=FALSE)
+                     _In_ BOOL bSuspended = FALSE)
     {
     lpObject = _lpObject;
     lpStartRoutine = _lpStartRoutine;

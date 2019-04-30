@@ -37,7 +37,7 @@ public:
   CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool);
   ~CNamedPipes();
 
-  VOID SetOption_MaxWaitTimeoutMs(_In_ DWORD dwTimeoutMs);
+  VOID SetOption_ConnectTimeout(_In_ DWORD dwTimeoutMs);
 
   HRESULT CreateListener(_In_z_ LPCSTR szServerNameA, _In_ OnCreateCallback cCreateCallback,
                          _In_opt_z_ LPCWSTR szSecutityDescriptorA=NULL);
@@ -111,7 +111,7 @@ private:
 
 private:
   LONG volatile nRemoteConnCounter;
-  DWORD dwMaxWaitTimeoutMs;
+  DWORD dwConnectTimeoutMs;
   PSECURITY_DESCRIPTOR lpSecDescr;
 };
 

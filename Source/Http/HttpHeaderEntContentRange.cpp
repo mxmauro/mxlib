@@ -51,9 +51,9 @@ HRESULT CHttpHeaderEntContentRange::Parse(_In_z_ LPCSTR szValueA)
   szValueA = SkipSpaces(szValueA);
   //check units
   if (StrCompareA(szValueA, "bytes", TRUE) != 0 || (szValueA[5] != ' ' && szValueA[5] != '\t'))
-    return MX_E_InvalidData;
+    return MX_E_Unsupported;
   //skip spaces
-  szValueA = SkipSpaces(szValueA+5);
+  szValueA = SkipSpaces(szValueA + 5);
   //get first byte
   if (*szValueA < '0' || *szValueA > '9')
     return MX_E_InvalidData;
@@ -136,7 +136,7 @@ HRESULT CHttpHeaderEntContentRange::Parse(_In_z_ LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentRange::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderEntContentRange::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   //fill ranges
   if (cStrDestA.Format("bytes %I64u-%I64u/", nByteStart, nByteEnd) == FALSE)

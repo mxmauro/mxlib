@@ -41,9 +41,9 @@ public:
 
   HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
 
-  HRESULT AddConnection(_In_z_ LPCSTR szConnectionA);
+  HRESULT AddConnection(_In_z_ LPCSTR szConnectionA, _In_ SIZE_T nConnectionLen = (SIZE_T)-1);
 
   SIZE_T GetConnectionsCount() const;
   LPCSTR GetConnection(_In_ SIZE_T nIndex) const;

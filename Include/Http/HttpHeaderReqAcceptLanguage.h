@@ -40,7 +40,7 @@ public:
     CLanguage();
     ~CLanguage();
 
-    HRESULT SetLanguage(_In_z_ LPCSTR szLanguageA);
+    HRESULT SetLanguage(_In_z_ LPCSTR szLanguageA, _In_opt_ SIZE_T nLanguageLen = (SIZE_T)-1);
     LPCSTR GetLanguage() const;
 
     HRESULT SetQ(_In_ double q);
@@ -61,14 +61,15 @@ public:
 
   HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
     return DuplicateBehaviorAppend;
     };
 
-  HRESULT AddLanguage(_In_z_ LPCSTR szLanguageA, _Out_opt_ CLanguage **lplpLanguage=NULL);
+  HRESULT AddLanguage(_In_z_ LPCSTR szLanguageA, _In_opt_ SIZE_T nLanguageLen = (SIZE_T)-1,
+                      _Out_opt_ CLanguage **lplpLanguage=NULL);
 
   SIZE_T GetLanguagesCount() const;
   CLanguage* GetLanguage(_In_ SIZE_T nIndex) const;

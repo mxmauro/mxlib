@@ -39,46 +39,75 @@ CHttpHeaderEntContentLanguage::~CHttpHeaderEntContentLanguage()
 
 HRESULT CHttpHeaderEntContentLanguage::Parse(_In_z_ LPCSTR szValueA)
 {
-  return SetLanguage(szValueA);
+  LPCSTR szStartA;
+  HRESULT hRes;
+
+  if (szValueA == NULL)
+    return E_POINTER;
+  //skip spaces
+  szValueA = SkipSpaces(szValueA);
+  //mark start
+  szStartA = szValueA;
+  //get language
+  while (*szValueA >= 0x21 && *szValueA <= 0x7E)
+    szValueA++;
+  //set language
+  hRes = SetLanguage(szStartA, (SIZE_T)(szValueA - szStartA));
+  if (FAILED(hRes))
+    return hRes;
+  //skip spaces and check for end
+  if (*SkipSpaces(szValueA) != 0)
+    return MX_E_InvalidData;
+  //done
+  return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentLanguage::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderEntContentLanguage::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
-  if (cStrDestA.Copy((LPSTR)cStrLanguageA) == FALSE)
+  if (cStrDestA.CopyN((LPCSTR)cStrLanguageA, cStrLanguageA.GetLength()) == FALSE)
     return E_OUTOFMEMORY;
   //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentLanguage::SetLanguage(_In_z_ LPCSTR szLanguageA)
+HRESULT CHttpHeaderEntContentLanguage::SetLanguage(_In_z_ LPCSTR szLanguageA, _In_ SIZE_T nLanguageLen)
 {
-  LPCSTR szStartA, szStartA_2, szEndA;
+  LPCSTR szLanguageEndA, szStartA[2];
 
+  if (nLanguageLen == (SIZE_T)-1)
+    nLanguageLen = StrLenA(szLanguageA);
+  if (nLanguageLen == 0)
+    return MX_E_InvalidData;
   if (szLanguageA == NULL)
     return E_POINTER;
-  //skip spaces
-  szLanguageA = CHttpHeaderBase::SkipSpaces(szLanguageA);
-  //mark start
-  szStartA = szLanguageA;
+  szLanguageEndA = szLanguageA + nLanguageLen;
+
   //get language
-  while ((*szLanguageA >= 'A' && *szLanguageA <= 'Z') || (*szLanguageA >= 'a' && *szLanguageA <= 'z'))
-    szLanguageA++;
-  if (szLanguageA == szStartA || szLanguageA > szStartA+8)
-    return MX_E_InvalidData;
-  if (*szLanguageA == '-')
+  szStartA[0] = szLanguageA;
+  while (szLanguageA < szLanguageEndA &&
+         (*szLanguageA >= 'A' && *szLanguageA <= 'Z') || (*szLanguageA >= 'a' && *szLanguageA <= 'z'))
   {
-    szStartA_2 = ++szLanguageA;
-    while ((*szLanguageA >= 'A' && *szLanguageA <= 'Z') || (*szLanguageA >= 'a' && *szLanguageA <= 'z'))
+    szLanguageA++;
+  }
+  if (szLanguageA == szStartA[0] || szLanguageA > szStartA[0] + 8)
+    return MX_E_InvalidData;
+  if (szLanguageA < szLanguageEndA && *szLanguageA == '-')
+  {
+    szStartA[1] = ++szLanguageA;
+    while (szLanguageA < szLanguageEndA &&
+           (*szLanguageA >= 'A' && *szLanguageA <= 'Z') || (*szLanguageA >= 'a' && *szLanguageA <= 'z'))
+    {
       szLanguageA++;
-    if (szLanguageA == szStartA_2 || szLanguageA > szStartA_2+8)
+    }
+    if (szLanguageA == szStartA[1] || szLanguageA > szStartA[1] + 8)
       return MX_E_InvalidData;
   }
-  szEndA = szLanguageA;
-  //skip spaces and check for end
-  if (*SkipSpaces(szLanguageA) != 0)
+
+  //check for end
+  if (szLanguageA != szLanguageEndA)
     return MX_E_InvalidData;
   //set new value
-  if (cStrLanguageA.CopyN(szStartA, (SIZE_T)(szEndA-szStartA)) == FALSE)
+  if (cStrLanguageA.CopyN(szStartA[0], (SIZE_T)(szLanguageEndA - szStartA[0])) == FALSE)
     return E_OUTOFMEMORY;
   //done
   return S_OK;

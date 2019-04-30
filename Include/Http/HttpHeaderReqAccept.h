@@ -40,7 +40,7 @@ public:
     CType();
     ~CType();
 
-    HRESULT SetType(_In_z_ LPCSTR szTypeA);
+    HRESULT SetType(_In_z_ LPCSTR szTypeA, _In_ SIZE_T nTypeLen = (SIZE_T)-1);
     LPCSTR GetType() const;
 
     HRESULT SetQ(_In_ double q);
@@ -74,14 +74,14 @@ public:
 
   HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
     return DuplicateBehaviorAppend;
     };
 
-  HRESULT AddType(_In_z_ LPCSTR szTypeA, _Out_opt_ CType **lplpType=NULL);
+  HRESULT AddType(_In_z_ LPCSTR szTypeA, _In_opt_ SIZE_T nTypeLen = (SIZE_T)-1, _Out_opt_ CType **lplpType = NULL);
 
   SIZE_T GetTypesCount() const;
   CType* GetType(_In_ SIZE_T nIndex) const;

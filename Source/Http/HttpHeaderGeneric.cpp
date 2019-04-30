@@ -38,7 +38,7 @@ CHttpHeaderGeneric::~CHttpHeaderGeneric()
   return;
 }
 
-HRESULT CHttpHeaderGeneric::SetName(_In_z_ LPCSTR szNameA)
+HRESULT CHttpHeaderGeneric::SetHeaderName(_In_z_ LPCSTR szNameA)
 {
   SIZE_T i;
 
@@ -46,17 +46,17 @@ HRESULT CHttpHeaderGeneric::SetName(_In_z_ LPCSTR szNameA)
     return E_POINTER;
   if (*szNameA == 0)
     return E_INVALIDARG;
-  for (i=0; szNameA[i]!=0; i++)
+  for (i = 0; szNameA[i] != 0; i++)
   {
     if (CHttpCommon::IsValidNameChar(szNameA[i]) == FALSE)
       return E_INVALIDARG;
   }
-  return (cStrNameA.Copy(szNameA) != FALSE) ? S_OK : E_OUTOFMEMORY;
+  return (cStrHeaderNameA.Copy(szNameA) != FALSE) ? S_OK : E_OUTOFMEMORY;
 }
 
-LPCSTR CHttpHeaderGeneric::GetName() const
+LPCSTR CHttpHeaderGeneric::GetHeaderName() const
 {
-  return (LPCSTR)cStrNameA;
+  return (LPCSTR)cStrHeaderNameA;
 }
 
 HRESULT CHttpHeaderGeneric::Parse(_In_z_ LPCSTR szValueA)
@@ -64,30 +64,36 @@ HRESULT CHttpHeaderGeneric::Parse(_In_z_ LPCSTR szValueA)
   return SetValue(szValueA);
 }
 
-HRESULT CHttpHeaderGeneric::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderGeneric::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
-  if (cStrDestA.Copy((LPSTR)cStrValueA) == FALSE)
+  if (cStrDestA.CopyN((LPCSTR)cStrValueA, cStrValueA.GetLength()) == FALSE)
     return E_OUTOFMEMORY;
   //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderGeneric::SetValue(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderGeneric::SetValue(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szStartA, szEndA;
+  LPCSTR szStartA, szEndA, szValueEndA;
 
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  if (nValueLen == 0)
+    return MX_E_InvalidData;
   if (szValueA == NULL)
     return E_POINTER;
-  szStartA = szEndA = szValueA = SkipSpaces(szValueA);
-  while (*szValueA != 0)
+  szValueEndA = szValueA + nValueLen;
+  //parse value
+  szStartA = szEndA = szValueA = SkipSpaces(szValueA, nValueLen);
+  while (szValueA < szValueEndA)
   {
     if (*((LPBYTE)szValueA) < 32)
       return MX_E_InvalidData;
     szEndA = ++szValueA;
-    szValueA = SkipSpaces(szValueA);
+    szValueA = SkipSpaces(szValueA, (SIZE_T)(szValueEndA - szValueA));
   }
   //set value
-  if (cStrValueA.CopyN(szStartA, (SIZE_T)(szEndA-szStartA)) == FALSE)
+  if (cStrValueA.CopyN(szStartA, (SIZE_T)(szEndA - szStartA)) == FALSE)
     return E_OUTOFMEMORY;
   //done
   return S_OK;

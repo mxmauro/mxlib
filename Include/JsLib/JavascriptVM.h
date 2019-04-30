@@ -301,7 +301,7 @@ public:
   CJavascriptVM();
   ~CJavascriptVM();
 
-  VOID On(_In_ OnRequireModuleCallback cRequireModuleCallback);
+  VOID SetRequireModuleCallback(_In_ OnRequireModuleCallback cRequireModuleCallback);
 
   HRESULT Initialize();
   VOID Finalize();

@@ -40,9 +40,9 @@ public:
 
   HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
 
-  HRESULT SetHost(_In_z_ LPCWSTR szHostW);
+  HRESULT SetHost(_In_z_ LPCWSTR szHostW, _In_opt_ SIZE_T nHostLen = (SIZE_T)-1);
   LPCWSTR GetHost() const;
 
   HRESULT SetPort(_In_ int nPort);

@@ -195,57 +195,93 @@ CIoCompletionPortThreadPool::~CIoCompletionPortThreadPool()
 
 VOID CIoCompletionPortThreadPool::SetOption_MinThreadsCount(_In_opt_ DWORD dwCount)
 {
-  dwMinThreadsCount = (dwCount == 0) ? GetNumberOfProcessors() * 2 : dwCount;
-  if (dwMinThreadsCount > 8192)
-    dwMinThreadsCount = 8192;
-  if (dwMaxThreadsCount < dwMinThreadsCount)
-    dwMaxThreadsCount = dwMinThreadsCount;
-  if (dwShutdownThreadThreshold > dwMaxThreadsCount)
-    dwShutdownThreadThreshold = dwMaxThreadsCount;
+  CAutoSlimRWLShared cLock(&nSlimMutex);
+
+  if (!cIOCP)
+  {
+    dwMinThreadsCount = (dwCount == 0) ? GetNumberOfProcessors() * 2 : dwCount;
+    if (dwMinThreadsCount > 8192)
+      dwMinThreadsCount = 8192;
+    if (dwMaxThreadsCount < dwMinThreadsCount)
+      dwMaxThreadsCount = dwMinThreadsCount;
+    if (dwShutdownThreadThreshold > dwMaxThreadsCount)
+      dwShutdownThreadThreshold = dwMaxThreadsCount;
+  }
   return;
 }
 
 VOID CIoCompletionPortThreadPool::SetOption_MaxThreadsCount(_In_opt_ DWORD dwCount)
 {
-  dwMaxThreadsCount = (dwCount == 0) ? GetNumberOfProcessors() * 2 : dwCount;
-  if (dwMaxThreadsCount > 8192)
-    dwMaxThreadsCount = 8192;
-  if (dwMaxThreadsCount > dwMaxThreadsCount)
-    dwMinThreadsCount = dwMaxThreadsCount;
-  if (dwShutdownThreadThreshold > dwMaxThreadsCount)
-    dwShutdownThreadThreshold = dwMaxThreadsCount;
+  CAutoSlimRWLShared cLock(&nSlimMutex);
+
+  if (!cIOCP)
+  {
+    dwMaxThreadsCount = (dwCount == 0) ? GetNumberOfProcessors() * 2 : dwCount;
+    if (dwMaxThreadsCount > 8192)
+      dwMaxThreadsCount = 8192;
+    if (dwMaxThreadsCount > dwMaxThreadsCount)
+      dwMinThreadsCount = dwMaxThreadsCount;
+    if (dwShutdownThreadThreshold > dwMaxThreadsCount)
+      dwShutdownThreadThreshold = dwMaxThreadsCount;
+  }
   return;
 }
 
-VOID CIoCompletionPortThreadPool::SetOption_WorkerThreadIdleTimeoutMs(_In_opt_ DWORD dwTimeoutMs)
+VOID CIoCompletionPortThreadPool::SetOption_WorkerThreadIdleTime(_In_opt_ DWORD dwTimeoutMs)
 {
-  dwWorkerThreadIdleTimeoutMs = dwTimeoutMs;
+  CAutoSlimRWLShared cLock(&nSlimMutex);
+
+  if (!cIOCP)
+  {
+    dwWorkerThreadIdleTimeoutMs = dwTimeoutMs;
+  }
   return;
 }
 
 VOID CIoCompletionPortThreadPool::SetOption_ShutdownThreadThreshold(_In_opt_ DWORD dwThreshold)
 {
-  dwShutdownThreadThreshold = dwThreshold;
-  if (dwShutdownThreadThreshold > dwMaxThreadsCount)
-    dwShutdownThreadThreshold = dwMaxThreadsCount;
+  CAutoSlimRWLShared cLock(&nSlimMutex);
+
+  if (!cIOCP)
+  {
+    dwShutdownThreadThreshold = dwThreshold;
+    if (dwShutdownThreadThreshold > dwMaxThreadsCount)
+      dwShutdownThreadThreshold = dwMaxThreadsCount;
+  }
   return;
 }
 
-VOID CIoCompletionPortThreadPool::On(_In_opt_ OnThreadStartCallback _cThreadStartCallback)
+VOID CIoCompletionPortThreadPool::SetThreadStartCallback(_In_opt_ OnThreadStartCallback _cThreadStartCallback)
 {
-  cThreadStartCallback = _cThreadStartCallback;
+  CAutoSlimRWLShared cLock(&nSlimMutex);
+
+  if (!cIOCP)
+  {
+    cThreadStartCallback = _cThreadStartCallback;
+  }
   return;
 }
 
-VOID CIoCompletionPortThreadPool::On(_In_opt_ OnThreadEndCallback _cThreadEndCallback)
+VOID CIoCompletionPortThreadPool::SetThreadEndCallback(_In_opt_ OnThreadEndCallback _cThreadEndCallback)
 {
-  cThreadEndCallback = _cThreadEndCallback;
+  CAutoSlimRWLShared cLock(&nSlimMutex);
+
+  if (!cIOCP)
+  {
+    cThreadEndCallback = _cThreadEndCallback;
+  }
   return;
 }
 
-VOID CIoCompletionPortThreadPool::On(_In_opt_ OnThreadStartErrorCallback _cThreadStartErrorCallback)
+VOID CIoCompletionPortThreadPool::SetThreadStartErrorCallback(_In_opt_ OnThreadStartErrorCallback
+                                                              _cThreadStartErrorCallback)
 {
-  cThreadStartErrorCallback = _cThreadStartErrorCallback;
+  CAutoSlimRWLShared cLock(&nSlimMutex);
+
+  if (!cIOCP)
+  {
+    cThreadStartErrorCallback = _cThreadStartErrorCallback;
+  }
   return;
 }
 
@@ -276,7 +312,7 @@ HRESULT CIoCompletionPortThreadPool::Attach(_In_ HANDLE h, _In_ OnPacketCallback
 {
   CAutoSlimRWLShared cLock(&nSlimMutex);
 
-  if ((HANDLE)cIOCP == NULL)
+  if (!cIOCP)
     return E_FAIL;
   if (h == NULL || h == INVALID_HANDLE_VALUE)
     return E_INVALIDARG;
@@ -289,7 +325,7 @@ HRESULT CIoCompletionPortThreadPool::Post(_In_ OnPacketCallback &cCallback, _In_
 {
   CAutoSlimRWLShared cLock(&nSlimMutex);
 
-  if ((HANDLE)cIOCP == NULL)
+  if (!cIOCP)
     return E_FAIL;
   if ((!cCallback) || lpOvr == NULL)
     return E_POINTER;

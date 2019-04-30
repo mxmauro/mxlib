@@ -69,7 +69,7 @@ HRESULT CHttpHeaderEntContentLength::Parse(_In_z_ LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentLength::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderEntContentLength::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   if (cStrDestA.Format("%I64u", nLength) == FALSE)
     return E_OUTOFMEMORY;

@@ -41,7 +41,7 @@ public:
 
   HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
@@ -54,7 +54,7 @@ public:
   HRESULT SetPrivate(_In_ BOOL bPrivate);
   BOOL GetPrivate() const;
 
-  HRESULT AddPrivateField(_In_z_ LPCSTR szFieldA);
+  HRESULT AddPrivateField(_In_z_ LPCSTR szFieldA, _In_ SIZE_T nFieldLen = (SIZE_T)-1);
 
   SIZE_T GetPrivateFieldsCount() const;
   LPCSTR GetPrivateField(_In_ SIZE_T nIndex) const;
@@ -63,7 +63,7 @@ public:
   HRESULT SetNoCache(_In_ BOOL bNoCache);
   BOOL GetNoCache() const;
 
-  HRESULT AddNoCacheField(_In_z_ LPCSTR szFieldA);
+  HRESULT AddNoCacheField(_In_z_ LPCSTR szFieldA, _In_ SIZE_T nFieldLen = (SIZE_T)-1);
 
   SIZE_T GetNoCacheFieldsCount() const;
   LPCSTR GetNoCacheField(_In_ SIZE_T nIndex) const;

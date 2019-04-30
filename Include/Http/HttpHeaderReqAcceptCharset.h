@@ -34,20 +34,20 @@ namespace MX {
 class CHttpHeaderReqAcceptCharset : public CHttpHeaderBase
 {
 public:
-  class CType : public virtual CBaseMemObj
+  class CCharset : public virtual CBaseMemObj
   {
   public:
-    CType();
-    ~CType();
+    CCharset();
+    ~CCharset();
 
-    HRESULT SetType(_In_z_ LPCSTR szTypeA);
-    LPCSTR GetType() const;
+    HRESULT SetCharset(_In_z_ LPCSTR szCharsetA, _In_opt_ SIZE_T nCharsetLen = (SIZE_T)-1);
+    LPCSTR GetCharset() const;
 
     HRESULT SetQ(_In_ double q);
     double GetQ() const;
 
   private:
-    CStringA cStrTypeA;
+    CStringA cStrCharsetA;
     double q;
   };
 
@@ -61,21 +61,22 @@ public:
 
   HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
     return DuplicateBehaviorAppend;
     };
 
-  HRESULT AddType(_In_z_ LPCSTR szTypeA, _Out_opt_ CType **lplpType=NULL);
+  HRESULT AddCharset(_In_z_ LPCSTR szCharsetA, _In_opt_ SIZE_T nCharsetLen = (SIZE_T)-1,
+                     _Out_opt_ CCharset **lplpCharset = NULL);
 
-  SIZE_T GetTypesCount() const;
-  CType* GetType(_In_ SIZE_T nIndex) const;
-  CType* GetType(_In_z_ LPCSTR szTypeA) const;
+  SIZE_T GetCharsetsCount() const;
+  CCharset* GetCharset(_In_ SIZE_T nIndex) const;
+  CCharset* GetCharset(_In_z_ LPCSTR szCharsetA) const;
 
 private:
-  TArrayListWithDelete<CType*> cTypesList;
+  TArrayListWithDelete<CCharset*> cCharsetsList;
 };
 
 } //namespace MX

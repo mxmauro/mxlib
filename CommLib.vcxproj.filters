@@ -236,6 +236,30 @@
     <ClInclude Include="Source\Http\HttpAuthCache.h">
       <Filter>Source Files\Http</Filter>
     </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderReqSecWebSocketKey.h">
+      <Filter>Header Files\Http\Header Parser\Request</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderRespSecWebSocketVersion.h">
+      <Filter>Header Files\Http\Header Parser\Response</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderReqSecWebSocketVersion.h">
+      <Filter>Header Files\Http\Header Parser\Request</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderRespSecWebSocketProtocol.h">
+      <Filter>Header Files\Http\Header Parser\Response</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderReqSecWebSocketProtocol.h">
+      <Filter>Header Files\Http\Header Parser\Request</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderRespSecWebSocketAccept.h">
+      <Filter>Header Files\Http\Header Parser\Response</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpHeaderGenSecWebSocketExtensions.h">
+      <Filter>Header Files\Http\Header Parser\General</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\WebSockets.h">
+      <Filter>Header Files\Http</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Http\HttpCookie.cpp">
@@ -419,6 +443,30 @@
       <Filter>Source Files\Http</Filter>
     </ClCompile>
     <ClCompile Include="Source\Http\HttpAuthCache.cpp">
+      <Filter>Source Files\Http</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderReqSecWebSocketKey.cpp">
+      <Filter>Source Files\Http\Header Parser\Request</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderRespSecWebSocketVersion.cpp">
+      <Filter>Source Files\Http\Header Parser\Response</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderReqSecWebSocketVersion.cpp">
+      <Filter>Source Files\Http\Header Parser\Request</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderReqSecWebSocketProtocol.cpp">
+      <Filter>Source Files\Http\Header Parser\Request</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderRespSecWebSocketProtocol.cpp">
+      <Filter>Source Files\Http\Header Parser\Response</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderRespSecWebSocketAccept.cpp">
+      <Filter>Source Files\Http\Header Parser\Response</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpHeaderGenSecWebSocketExtensions.cpp">
+      <Filter>Source Files\Http\Header Parser\General</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\WebSockets.cpp">
       <Filter>Source Files\Http</Filter>
     </ClCompile>
   </ItemGroup>

@@ -96,11 +96,8 @@ HRESULT MySqlInitialize()
   if (hDll == NULL)
   {
     MX::CFastLock cLock(&nMutex);
-    CStringW cStrTempW;
     HINSTANCE _hDll;
-    LPWSTR sW;
     DWORD dw;
-    HRESULT hRes;
 
     if (hDll == NULL)
     {
@@ -147,20 +144,19 @@ HRESULT MySqlInitialize()
       lpfn_mysql_stmt_attr_set         _fn_mysql_stmt_attr_set = NULL;
       lpfn_mysql_get_client_version    _fn_mysql_get_client_version = NULL;
       MYSQL *lpSQLite;
+      WCHAR szDllNameW[4096];
+      DWORD dwLen;
+      HRESULT hRes;
 
       //get application path
-      if (cStrTempW.EnsureBuffer(2100) == FALSE)
-        return E_OUTOFMEMORY;
-      dw = ::GetModuleFileNameW(NULL, (LPWSTR)cStrTempW, 2048);
-      ((LPWSTR)cStrTempW)[dw] = 0;
-      sW = (LPWSTR)MX::StrChrW((LPWSTR)cStrTempW, L'\\', TRUE);
-      if (sW != NULL)
-        *(sW+1) = 0;
-      cStrTempW.Refresh();
-      if (cStrTempW.Concat(L"libmariadb.dll") == FALSE)
-        return E_OUTOFMEMORY;
+      dwLen = ::GetModuleFileNameW(NULL, szDllNameW, MX_ARRAYLEN(szDllNameW) - 20);
+      if (dwLen == 0)
+        return MX_E_ProcNotFound;
+      if (szDllNameW[dwLen - 1] != L'\\')
+        szDllNameW[dwLen++] = L'\\';
+      MX::MemCopy(szDllNameW + dwLen, L"libmariadb.dll", (14 + 1) * sizeof(WCHAR));
       //load library
-      _hDll = ::LoadLibraryW((LPCWSTR)cStrTempW);
+      _hDll = ::LoadLibraryW(szDllNameW);
       if (_hDll == NULL)
         return MX_HRESULT_FROM_LASTERROR();
 

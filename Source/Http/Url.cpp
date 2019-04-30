@@ -36,16 +36,18 @@ static struct tagValidSchemes {
   MX::CUrl::eScheme nCode;
   int nDefaultPort;
 } aValidSchemes[] = {
-  { L"mailto",      MX::CUrl::SchemeMailTo,      -1 },
-  { L"news",        MX::CUrl::SchemeNews,        -1 },
-  { L"http",        MX::CUrl::SchemeHttp,        80 },
-  { L"https",       MX::CUrl::SchemeHttps,      443 },
-  { L"ftp",         MX::CUrl::SchemeFtp,         21 },
-  { L"file",        MX::CUrl::SchemeFile,        -1 },
-  { L"resource",    MX::CUrl::SchemeResource,    -1 },
-  { L"nntp",        MX::CUrl::SchemeNntp,        -1 },
-  { L"gopher",      MX::CUrl::SchemeGopher,      -1 },
-  { NULL,           MX::CUrl::SchemeUnknown,     -1 }
+  { L"mailto",      MX::CUrl::SchemeMailTo,           -1 },
+  { L"news",        MX::CUrl::SchemeNews,             -1 },
+  { L"http",        MX::CUrl::SchemeHttp,             80 },
+  { L"https",       MX::CUrl::SchemeHttps,           443 },
+  { L"ftp",         MX::CUrl::SchemeFtp,              21 },
+  { L"file",        MX::CUrl::SchemeFile,             -1 },
+  { L"resource",    MX::CUrl::SchemeResource,         -1 },
+  { L"nntp",        MX::CUrl::SchemeNntp,             -1 },
+  { L"gopher",      MX::CUrl::SchemeGopher,           -1 },
+  { L"ws",          MX::CUrl::SchemeWebSocket,        80 },
+  { L"wss",         MX::CUrl::SchemeSecureWebSocket, 443 },
+  { NULL,           MX::CUrl::SchemeUnknown,          -1 }
 };
 
 //-----------------------------------------------------------
@@ -1646,7 +1648,7 @@ HRESULT CUrl::Merge(_In_ const CUrl& cOtherUrl)
   sOther.szHostW = cOtherUrl.GetHost();
   sBase.szPathW = GetPath();
   sOther.szPathW = cOtherUrl.GetPath();
-  for (k=1; k<=2; k++)
+  for (k = 1; k <= 2; k++)
   {
     lpParts = (k == 1) ? &sBase : &sOther;
     sW = lpParts->szPathW;

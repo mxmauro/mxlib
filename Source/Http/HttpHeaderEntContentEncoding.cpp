@@ -41,53 +41,81 @@ CHttpHeaderEntContentEncoding::~CHttpHeaderEntContentEncoding()
 HRESULT CHttpHeaderEntContentEncoding::Parse(_In_z_ LPCSTR szValueA)
 {
   eEncoding _nEncoding = EncodingUnsupported;
+  LPCSTR szStartA;
+  BOOL bGotItem;
 
   if (szValueA == NULL)
     return E_POINTER;
-  nEncoding = EncodingUnsupported;
-  //skip spaces
-  szValueA = SkipSpaces(szValueA);
-  //check encoding
-  if (StrNCompareA(szValueA, "x-gzip", 6, TRUE) == 0)
+  //parse encodings
+  bGotItem = FALSE;
+  do
   {
-    _nEncoding = EncodingGZip;
-    szValueA += 6;
+    //skip spaces
+    szValueA = SkipSpaces(szValueA);
+    if (*szValueA == 0)
+      break;
+
+    //get encoding
+    szValueA = GetToken(szStartA = szValueA);
+    if (szValueA == szStartA)
+      goto skip_null_listitem;
+
+    if (bGotItem != FALSE)
+      return MX_E_Unsupported; //only one encoding is supported
+    bGotItem = TRUE;
+
+    //check encoding
+    switch ((SIZE_T)(szValueA - szStartA))
+    {
+      case 4:
+        if (StrNCompareA(szStartA, "gzip", 4, TRUE) == 0)
+          _nEncoding = EncodingGZip;
+        else if (StrNCompareA(szStartA, "7bit", 4, TRUE) != 0 && StrNCompareA(szStartA, "8bit", 4, TRUE) != 0)
+          return MX_E_Unsupported;
+        break;
+
+      case 6:
+        if (StrNCompareA(szStartA, "x-gzip", 6, TRUE) == 0)
+          _nEncoding = EncodingGZip;
+        else if (StrNCompareA(szStartA, "binary", 6, TRUE) != 0)
+          return MX_E_Unsupported;
+        break;
+
+      case 7:
+        if (StrNCompareA(szStartA, "deflate", 7, TRUE) == 0)
+          _nEncoding = EncodingDeflate;
+        else
+          return MX_E_Unsupported;
+        break;
+
+      case 8:
+        if (StrNCompareA(szStartA, "identity", 8, TRUE) != 0)
+          return MX_E_Unsupported;
+        break;
+
+      default:
+        return MX_E_Unsupported;
+    }
+
+skip_null_listitem:
+    //skip spaces
+    szValueA = SkipSpaces(szValueA);
+
+    //check for separator or end
+    if (*szValueA == ',')
+      szValueA++;
+    else if (*szValueA != 0)
+      return MX_E_InvalidData;
   }
-  else if (StrNCompareA(szValueA, "gzip", 4, TRUE) == 0)
-  {
-    _nEncoding = EncodingGZip;
-    szValueA += 4;
-  }
-  else if (StrNCompareA(szValueA, "deflate", 7, TRUE) == 0)
-  {
-    _nEncoding = EncodingDeflate;
-    szValueA += 7;
-  }
-  else if (StrNCompareA(szValueA, "7bit", 4, TRUE) == 0 || StrNCompareA(szValueA, "8bit", 4, TRUE) == 0)
-  {
-    szValueA += 4;
-  }
-  else if (StrNCompareA(szValueA, "binary", 6, TRUE) == 0)
-  {
-    szValueA += 6;
-  }
-  else if (StrNCompareA(szValueA, "identity", 8, TRUE) == 0)
-  {
-    szValueA += 8;
-  }
-  else
-  {
-    return MX_E_Unsupported;
-  }
-  //skip spaces and check for end
-  if (*SkipSpaces(szValueA) != 0)
-    return MX_E_InvalidData;
+  while (*szValueA != 0);
   //done
+  if (bGotItem == FALSE)
+    return MX_E_InvalidData;
   nEncoding = _nEncoding;
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentEncoding::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderEntContentEncoding::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   switch (nEncoding)
   {

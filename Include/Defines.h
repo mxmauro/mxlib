@@ -101,6 +101,7 @@
 #define MX_SCODE_FACILITY               0xF18
 #define MX_E_DuplicateKey               MX_E_AlreadyExists
 #define MX_E_ConstraintsCheckFailed     MAKE_HRESULT(1, MX_SCODE_FACILITY, 1) //0x8F180001
+#define MX_E_ArithmeticUnderflow        MAKE_HRESULT(1, MX_SCODE_FACILITY, 2) //0x8F180002
 
 #ifdef __cplusplus
 extern "C" {

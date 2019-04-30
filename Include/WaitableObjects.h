@@ -25,17 +25,8 @@
 #define _MX_WAITABLEOBJECTS_H
 
 #include "Defines.h"
-#include <intrin.h>
+#include "AtomicOps.h"
 #include "AutoHandle.h"
-
-#pragma intrinsic (_InterlockedExchange)
-#pragma intrinsic (_InterlockedCompareExchange)
-#pragma intrinsic (_InterlockedExchangeAdd)
-#if defined(_M_X64)
-  #pragma intrinsic (_InterlockedExchangeAdd64)
-  #pragma intrinsic (_InterlockedExchange64)
-  #pragma intrinsic (_InterlockedCompareExchange64)
-#endif //_M_X64
 
 //-----------------------------------------------------------
 
@@ -43,38 +34,6 @@ namespace MX {
 
 BOOL IsMultiProcessor();
 VOID _YieldProcessor();
-
-#define __InterlockedRead(lpnValue) _InterlockedExchangeAdd(lpnValue, 0L)
-
-#if defined(_M_IX86)
-
-#define __InterlockedReadPointer(lpValue)                                                          \
-           ((LPVOID)_InterlockedExchangeAdd((LONG volatile*)lpValue, 0L))
-#define __InterlockedExchangePointer(lpValue, lpPtr)                                               \
-           ((LPVOID)_InterlockedExchange((LONG volatile*)lpValue, PtrToLong(lpPtr)))
-#define __InterlockedCompareExchangePointer(lpValue, lpExchange, lpComperand)                      \
-           ((LPVOID)_InterlockedCompareExchange((LONG volatile*)lpValue, (LONG)lpExchange,         \
-                                                PtrToLong(lpComperand)))
-
-#elif defined(_M_X64)
-
-#define __InterlockedReadPointer(lpValue)                                                          \
-           ((LPVOID)_InterlockedExchangeAdd64((__int64 volatile*)lpValue, 0i64))
-#define __InterlockedExchangePointer(lpValue, lpPtr)                                               \
-           ((LPVOID)_InterlockedExchange64((__int64 volatile*)lpValue, (__int64)lpPtr))
-#define __InterlockedCompareExchangePointer(lpValue, lpExchange, lpComperand)                      \
-           ((LPVOID)_InterlockedCompareExchange64((__int64 volatile*)lpValue, (__int64)lpExchange, \
-                                                  (__int64)lpComperand))
-
-#endif
-
-#define __InterlockedReadSizeT(lpnValue)                                                           \
-           ((SIZE_T)__InterlockedReadPointer((LPVOID volatile*)lpnValue))
-#define __InterlockedExchangeSizeT(lpnValue, nNewValue)                                            \
-           ((SIZE_T)__InterlockedExchangePointer((LPVOID volatile*)lpnValue, (LPVOID)nNewValue))
-#define __InterlockedCompareExchangeSizeT(lpnValue, nExchange, nComperand)                         \
-           ((SIZE_T)__InterlockedCompareExchangePointer((LPVOID volatile*)lpnValue,                \
-                                                        (LPVOID)nExchange, (LPVOID)nComperand))
 
 //-----------------------------------------------------------
 

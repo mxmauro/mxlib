@@ -65,7 +65,7 @@ HRESULT CHttpHeaderReqExpect::Parse(_In_z_ LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqExpect::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderReqExpect::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   switch (nExpectation)
   {

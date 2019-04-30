@@ -30,13 +30,13 @@ static LONG volatile nLogMutex = 0;
 
 //-----------------------------------------------------------
 
-static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode);
-static VOID OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
-                                     _In_ HANDLE hShutdownEv, _Inout_ MX::CHttpBodyParserBase **lplpBodyParser);
+static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hrErrorCode);
+static HRESULT OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
+                                        _In_ HANDLE hShutdownEv, _Inout_ MX::CHttpBodyParserBase **lplpBodyParser);
 static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
                                _In_ HANDLE hShutdownEv);
 static VOID OnError(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
-                    _In_ HRESULT hErrorCode);
+                    _In_ HRESULT hrErrorCode);
 
 static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR szFileNameW);
 
@@ -68,7 +68,7 @@ int TestHttpServer(_In_ BOOL bUseSSL)
     hRes = cWorkerPool.Initialize();
   if (SUCCEEDED(hRes))
   {
-    cSckMgr.On(MX_BIND_CALLBACK(&OnEngineError));
+    cSckMgr.SetEngineErrorCallback(MX_BIND_CALLBACK(&OnEngineError));
     hRes = cSckMgr.Initialize();
   }
   if (SUCCEEDED(hRes) && bUseSSL != FALSE)
@@ -96,9 +96,9 @@ int TestHttpServer(_In_ BOOL bUseSSL)
   }
   if (SUCCEEDED(hRes))
   {
-    cHttpServer.On(MX_BIND_CALLBACK(&OnRequestHeadersReceived));
-    cHttpServer.On(MX_BIND_CALLBACK(&OnRequestCompleted));
-    cHttpServer.On(MX_BIND_CALLBACK(&OnError));
+    cHttpServer.SetRequestHeadersReceivedCallback(MX_BIND_CALLBACK(&OnRequestHeadersReceived));
+    cHttpServer.SetRequestCompletedCallback(MX_BIND_CALLBACK(&OnRequestCompleted));
+    cHttpServer.SetErrorCallback(MX_BIND_CALLBACK(&OnError));
   }
   if (SUCCEEDED(hRes))
   {
@@ -117,15 +117,15 @@ int TestHttpServer(_In_ BOOL bUseSSL)
   return (int)hRes;
 }
 
-static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hErrorCode)
+static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hrErrorCode)
 {
   return;
 }
 
-static VOID OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
-                                     _In_ HANDLE hShutdownEv, _Inout_ MX::CHttpBodyParserBase **lplpBodyParser)
+static HRESULT OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
+                                        _In_ HANDLE hShutdownEv, _Inout_ MX::CHttpBodyParserBase **lplpBodyParser)
 {
-  return;
+  return S_OK;
 }
 
 static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
@@ -162,7 +162,7 @@ static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServe
 }
 
 static VOID OnError(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
-                    _In_ HRESULT hErrorCode)
+                    _In_ HRESULT hrErrorCode)
 {
   return;
 }

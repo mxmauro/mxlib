@@ -26,13 +26,7 @@
 
 //-----------------------------------------------------------
 
-typedef enum {
-  ValueTypeNone, ValueTypeToken, ValueTypeQuotedString
-} eValueType;
-
-//-----------------------------------------------------------
-
-static HRESULT GetUInt64(_In_z_ LPCSTR szValueA, _Out_ ULONGLONG &nValue);
+static HRESULT GetUInt64(_In_z_ LPCWSTR szValueW, _Out_ ULONGLONG &nValue);
 
 //-----------------------------------------------------------
 
@@ -52,176 +46,111 @@ CHttpHeaderReqCacheControl::CHttpHeaderReqCacheControl() : CHttpHeaderBase()
 
 CHttpHeaderReqCacheControl::~CHttpHeaderReqCacheControl()
 {
-  cExtensionsList.RemoveAllElements();
   return;
 }
 
 HRESULT CHttpHeaderReqCacheControl::Parse(_In_z_ LPCSTR szValueA)
 {
-  LPCSTR szNameStartA, szNameEndA, szStartA;
-  CStringA cStrTempA;
-  CStringW cStrTempW;
+  CStringA cStrTokenA;
+  CStringW cStrValueW;
   ULONGLONG nValue;
-  ULONG nGotItems;
-  eValueType nValueType;
+  ULONG nHasItem;
   HRESULT hRes;
 
   if (szValueA == NULL)
     return E_POINTER;
   //parse
-  nGotItems = 0;
+  nHasItem = 0;
   do
   {
     //skip spaces
     szValueA = SkipSpaces(szValueA);
     if (*szValueA == 0)
       break;
-    //token
-    szNameEndA = szValueA = Advance(szNameStartA = szValueA, "=, \t");
-    if (szNameStartA == szNameEndA)
-      return MX_E_InvalidData;
-    //skip spaces
-    szValueA = SkipSpaces(szValueA);
-    //value
-    nValueType = ValueTypeNone;
-    cStrTempA.Empty();
-    if (*szValueA == '=')
-    {
-      //skip spaces
-      szValueA = SkipSpaces(szValueA+1);
-      //parse value
-      if (*szValueA == '"')
-      {
-        nValueType = ValueTypeQuotedString;
-        szValueA = Advance(szStartA = ++szValueA, "\"");
-        if (*szValueA != '"')
-          return MX_E_InvalidData;
-        if (cStrTempA.CopyN(szStartA, (SIZE_T)(szValueA-szStartA)) == FALSE)
-          return E_OUTOFMEMORY;
-        szValueA++;
-      }
-      else
-      {
-        nValueType = ValueTypeToken;
-        szValueA = Advance(szStartA = szValueA, " \t,");
-        if (cStrTempA.CopyN(szStartA, (SIZE_T)(szValueA-szStartA)) == FALSE)
-          return E_OUTOFMEMORY;
-      }
-    }
+    if (*szValueA == ',')
+      goto skip_null_listitem;
+
+    //get parameter
+    hRes = GetParamNameAndValue(cStrTokenA, cStrValueW, szValueA);
+    if (FAILED(hRes) && hRes != MX_E_NoData)
+      return hRes;
+
     //set item value
-    hRes = S_FALSE;
-    switch ((SIZE_T)(szNameEndA-szNameStartA))
+    if (StrCompareA((LPCSTR)cStrTokenA, "max-age", TRUE) == 0)
     {
-      case 7:
-        if (StrNCompareA(szNameStartA, "max-age", 7, TRUE) == 0)
-        {
-          if (nValueType != ValueTypeToken || (nGotItems & 0x0001) != 0)
-            return MX_E_InvalidData; //no value provided or token already specified
-          nGotItems |= 0x0001;
-          //parse delta seconds
-          hRes = GetUInt64((LPSTR)cStrTempA, nValue);
-          if (SUCCEEDED(hRes))
-            hRes = SetMaxAge(nValue);
-          break;
-        }
-        break;
-
-      case 8:
-        if (StrNCompareA(szNameStartA, "no-cache", 8, TRUE) == 0)
-        {
-          if (nValueType != ValueTypeNone || (nGotItems & 0x0002) != 0)
-            return MX_E_InvalidData; //value provided or token already specified
-          nGotItems |= 0x0002;
-          //set value
-          hRes = SetNoCache(TRUE);
-          break;
-        }
-        if (StrNCompareA(szNameStartA, "no-store", 8, TRUE) == 0)
-        {
-          if (nValueType != ValueTypeNone || (nGotItems & 0x0004) != 0)
-            return MX_E_InvalidData; //value provided or token already specified
-          nGotItems |= 0x0004;
-          //set value
-          hRes = SetNoStore(TRUE);
-          break;
-        }
-        break;
-
-      case 9:
-        if (StrNCompareA(szNameStartA, "max-stale", 9, TRUE) == 0)
-        {
-          if (nValueType != ValueTypeToken || (nGotItems & 0x0008) != 0)
-            return MX_E_InvalidData; //no value provided or token already specified
-          nGotItems |= 0x0008;
-          //parse delta seconds
-          hRes = GetUInt64((LPSTR)cStrTempA, nValue);
-          if (SUCCEEDED(hRes))
-            hRes = SetMaxStale(nValue);
-          break;
-        }
-        if (StrNCompareA(szNameStartA, "min-fresh", 9, TRUE) == 0)
-        {
-          if (nValueType != ValueTypeToken || (nGotItems & 0x0010) != 0)
-            return MX_E_InvalidData; //no value provided or token already specified
-          nGotItems |= 0x0010;
-          //parse delta seconds
-          hRes = GetUInt64((LPSTR)cStrTempA, nValue);
-          if (SUCCEEDED(hRes))
-            hRes = SetMinFresh(nValue);
-          break;
-        }
-        break;
-
-      case 12:
-        if (StrNCompareA(szNameStartA, "no-transform", 12, TRUE) == 0)
-        {
-          if (nValueType != ValueTypeNone || (nGotItems & 0x0020) != 0)
-            return MX_E_InvalidData; //value provided or token already specified
-          nGotItems |= 0x0020;
-          //set value
-          hRes = SetNoTransform(TRUE);
-          break;
-        }
-        break;
-
-      case 14:
-        if (StrNCompareA(szNameStartA, "only-if-cached", 14, TRUE) == 0)
-        {
-          if (nValueType != ValueTypeNone || (nGotItems & 0x0040) != 0)
-            return MX_E_InvalidData; //value provided or token already specified
-          nGotItems |= 0x0040;
-          //set value
-          hRes = SetOnlyIfCached(TRUE);
-          break;
-        }
-        break;
+      if ((nHasItem & 0x0001) != 0)
+        return MX_E_InvalidData;
+      nHasItem |= 0x0001;
+      //parse delta seconds
+      hRes = GetUInt64((LPCWSTR)cStrValueW, nValue);
+      if (SUCCEEDED(hRes))
+        hRes = SetMaxAge(nValue);
     }
-    if (hRes == S_FALSE)
+    else if (StrCompareA((LPCSTR)cStrTokenA, "no-cache", TRUE) == 0)
     {
-      nGotItems |= 0x1000;
+      if ((nHasItem & 0x0002) != 0)
+        return MX_E_InvalidData;
+      nHasItem |= 0x0002;
+      //set value
+      hRes = SetNoCache(TRUE);
+    }
+    else if (StrCompareA((LPCSTR)cStrTokenA, "no-store", TRUE) == 0)
+    {
+      if ((nHasItem & 0x0004) != 0)
+        return MX_E_InvalidData;
+      nHasItem |= 0x0004;
+      //set value
+      hRes = SetNoStore(TRUE);
+    }
+    else if (StrCompareA((LPCSTR)cStrTokenA, "max-stale", TRUE) == 0)
+    {
+      if ((nHasItem & 0x0008) != 0)
+        return MX_E_InvalidData;
+      nHasItem |= 0x0008;
+      //parse delta seconds
+      hRes = GetUInt64((LPCWSTR)cStrValueW, nValue);
+      if (SUCCEEDED(hRes))
+        hRes = SetMaxStale(nValue);
+    }
+    else if (StrCompareA((LPCSTR)cStrTokenA, "min-fresh", TRUE) == 0)
+    {
+      if ((nHasItem & 0x0010) != 0)
+        return MX_E_InvalidData;
+      nHasItem |= 0x0010;
+      //parse delta seconds
+      hRes = GetUInt64((LPCWSTR)cStrValueW, nValue);
+      if (SUCCEEDED(hRes))
+        hRes = SetMinFresh(nValue);
+    }
+    else if (StrCompareA((LPCSTR)cStrTokenA, "no-transform", TRUE) == 0)
+    {
+      if ((nHasItem & 0x0020) != 0)
+        return MX_E_InvalidData;
+      nHasItem |= 0x0020;
+      //set value
+      hRes = SetNoTransform(TRUE);
+    }
+    else if (StrCompareA((LPCSTR)cStrTokenA, "only-if-cached", TRUE) == 0)
+    {
+      if ((nHasItem & 0x0040) != 0)
+        return MX_E_InvalidData;
+      nHasItem |= 0x0040;
+      //set value
+      hRes = SetOnlyIfCached(TRUE);
+    }
+    else
+    {
+      nHasItem |= 0x1000;
       //parse cache extension
-      cStrTempW.Empty();
-      switch (nValueType)
-      {
-        case ValueTypeToken:
-          if (cStrTempW.Copy((LPSTR)cStrTempA) == FALSE)
-            return E_OUTOFMEMORY;
-          break;
-
-        case ValueTypeQuotedString:
-          hRes = Utf8_Decode(cStrTempW, (LPSTR)cStrTempA);
-          if (FAILED(hRes))
-            return hRes;
-          break;
-      }
-      if (cStrTempA.CopyN(szNameStartA, (SIZE_T)(szNameEndA-szNameStartA)) == FALSE)
-        return E_OUTOFMEMORY;
-      hRes = AddExtension((LPSTR)cStrTempA, (LPWSTR)cStrTempW);
+      hRes = AddExtension((LPCSTR)cStrTokenA, (LPCWSTR)cStrValueW);
     }
     if (FAILED(hRes))
       return hRes;
+
     //skip spaces
     szValueA = SkipSpaces(szValueA);
+
+skip_null_listitem:
     //check for separator or end
     if (*szValueA == ',')
       szValueA++;
@@ -230,15 +159,13 @@ HRESULT CHttpHeaderReqCacheControl::Parse(_In_z_ LPCSTR szValueA)
   }
   while (*szValueA != 0);
   //done
-  return (nGotItems != 0) ? S_OK : MX_E_InvalidData;
+  return (nHasItem != 0) ? S_OK : MX_E_InvalidData;
 }
 
-HRESULT CHttpHeaderReqCacheControl::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderReqCacheControl::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   SIZE_T i, nCount;
-  LPCWSTR sW;
   CStringA cStrTempA;
-  HRESULT hRes;
 
   cStrDestA.Empty();
   if (bNoCache != FALSE)
@@ -278,34 +205,17 @@ HRESULT CHttpHeaderReqCacheControl::Build(_Inout_ CStringA &cStrDestA)
   }
   //extensions
   nCount = cExtensionsList.GetCount();
-  for (i=0; i<nCount; i++)
+  for (i = 0; i < nCount; i++)
   {
-    if (cStrDestA.AppendFormat(",%s=", cExtensionsList[i]->szNameA) == FALSE)
+    if (CHttpCommon::BuildQuotedString(cStrTempA, cExtensionsList[i]->szValueW, StrLenW(cExtensionsList[i]->szValueW),
+                                       FALSE) == FALSE)
+    {
       return E_OUTOFMEMORY;
-    sW = cExtensionsList[i]->szValueW;
-    while (*sW != 0)
-    {
-      if (*sW < 33 || *sW > 126 || CHttpCommon::IsValidNameChar((CHAR)(*sW)) == FALSE)
-        break;
-      sW++;
     }
-    if (*sW == 0)
-    {
-      if (cStrDestA.AppendFormat("%S", cExtensionsList[i]->szValueW) == FALSE)
-        return E_OUTOFMEMORY;
-    }
-    else
-    {
-      hRes = Utf8_Encode(cStrTempA, cExtensionsList[i]->szValueW);
-      if (FAILED(hRes))
-        return hRes;
-      if (CHttpCommon::EncodeQuotedString(cStrTempA) == FALSE)
-        return E_OUTOFMEMORY;
-      if (cStrDestA.AppendFormat("\"%s\"", (LPCSTR)cStrTempA) == FALSE)
-        return E_OUTOFMEMORY;
-    }
+    if (cStrDestA.AppendFormat(",%s=%s", cExtensionsList[i]->szNameA, (LPCSTR)cStrTempA) == FALSE)
+      return E_OUTOFMEMORY;
   }
-  if (cStrTempA.GetLength() > 0)
+  if (cStrTempA.IsEmpty() == FALSE)
     cStrTempA.Delete(0, 1); //delete initial comma
   //done
   return S_OK;
@@ -462,24 +372,24 @@ LPCWSTR CHttpHeaderReqCacheControl::GetExtensionValue(_In_z_ LPCSTR szNameA) con
 
 //-----------------------------------------------------------
 
-static HRESULT GetUInt64(_In_z_ LPCSTR szValueA, _Out_ ULONGLONG &nValue)
+static HRESULT GetUInt64(_In_z_ LPCWSTR szValueW, _Out_ ULONGLONG &nValue)
 {
   ULONGLONG nTemp;
 
   nValue = 0ui64;
-  while (*szValueA == ' ' || *szValueA == '\t')
-    szValueA++;
-  if (*szValueA < '0' || *szValueA > '9')
+  if (*szValueW < L'0' || *szValueW > L'9')
     return MX_E_InvalidData;
-  while (*szValueA >= '0' && *szValueA <= '9')
+  while (*szValueW == L'0')
+    szValueW++;
+  while (*szValueW >= L'0' && *szValueW <= L'9')
   {
     nTemp = nValue * 10ui64;
     if (nTemp < nValue)
       return MX_E_ArithmeticOverflow;
-    nValue = nTemp + (ULONGLONG)(*szValueA - '0');
+    nValue = nTemp + (ULONGLONG)(*szValueW - L'0');
     if (nValue < nTemp)
       return MX_E_ArithmeticOverflow;
-    szValueA++;
+    szValueW++;
   }
-  return S_OK;
+  return (*szValueW == 0) ? S_OK : MX_E_InvalidData;
 }

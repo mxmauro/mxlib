@@ -432,9 +432,9 @@ not_boundary_end:
         else
         {
           sA = (LPSTR)cStrBoundaryA;
-          if (*szDataA != sA[sParser.nBoundaryPos-3])
+          if (*szDataA != sA[sParser.nBoundaryPos - 3])
             goto not_boundary_end;
-          if (sA[sParser.nBoundaryPos-2] == 0)
+          if (sA[sParser.nBoundaryPos - 2] == 0)
           {
             //boundary detected, add accumulated value
             if (IsEntityTooLarge() == FALSE)
@@ -525,22 +525,22 @@ HRESULT CHttpBodyParserMultipartFormData::ParseHeader(_Inout_ CStringA &cStrLine
     szLineA++;
   //get header name
   szNameStartA = szNameEndA = szLineA;
-  while (*szNameEndA!=0 && *szNameEndA!=':')
+  while (*szNameEndA != 0 && *szNameEndA != ':')
     szNameEndA++;
   if (*szNameEndA != ':')
     return MX_E_InvalidData;
   //skip blanks
-  szLineA = szNameEndA+1;
-  while (*szLineA==' ' || *szLineA=='\t')
+  szLineA = szNameEndA + 1;
+  while (*szLineA == ' ' || *szLineA == '\t')
     szLineA++;
   //get header value
   szValueStartA = szValueEndA = szLineA;
   while (*szValueEndA != 0)
     szValueEndA++;
-  while (szValueEndA > szValueStartA && (*(szValueEndA-1)==' ' || *(szValueEndA-1)=='\t'))
+  while (szValueEndA > szValueStartA && (*(szValueEndA-1) == ' ' || *(szValueEndA-1) == '\t'))
     szValueEndA--;
   //parse header
-  switch ((SIZE_T)(szNameEndA-szNameStartA))
+  switch ((SIZE_T)(szNameEndA - szNameStartA))
   {
     case 19:
       if (StrNCompareA(szNameStartA, "Content-Disposition", 19, TRUE) == 0)
@@ -564,18 +564,16 @@ HRESULT CHttpBodyParserMultipartFormData::ParseHeader(_Inout_ CStringA &cStrLine
         if (StrCompareA(cHeader->GetType(), "form-data", TRUE) != 0)
           return MX_E_InvalidData;
         //name parameter
-        sW = cHeader->GetParamValue("name");
-        if (sW == NULL || *sW == 0)
+        sW = cHeader->GetName();
+        if (*sW == 0)
           return MX_E_InvalidData;
         if (sParser.sCurrentBlock.sContentDisposition.cStrNameW.Copy(sW) == FALSE)
           return E_OUTOFMEMORY;
         //filename parameter
-        sParser.sCurrentBlock.sContentDisposition.bHasFileName = FALSE;
-        sW = cHeader->GetFileName();
-        if (sW != NULL)
+        sParser.sCurrentBlock.sContentDisposition.bHasFileName = cHeader->HasFileName();
+        if (sParser.sCurrentBlock.sContentDisposition.bHasFileName != FALSE)
         {
-          sParser.sCurrentBlock.sContentDisposition.bHasFileName = TRUE;
-          if (sParser.sCurrentBlock.sContentDisposition.cStrFileNameW.Copy(sW) == FALSE)
+          if (sParser.sCurrentBlock.sContentDisposition.cStrFileNameW.Copy(cHeader->GetFileName()) == FALSE)
             return E_OUTOFMEMORY;
         }
         //done

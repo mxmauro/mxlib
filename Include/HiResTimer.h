@@ -38,10 +38,10 @@ public:
 
   VOID Reset();
 
-  DWORD GetElapsedTimeMs();
+  DWORD GetElapsedTimeMs(_In_opt_ BOOL bReset = FALSE);
 
 private:
-  ULARGE_INTEGER liStartCounter, liCurrCounter, liFrequency;
+  ULARGE_INTEGER uliStartCounter, uliFrequency;
 };
 
 } //namespace MX

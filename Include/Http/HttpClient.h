@@ -26,7 +26,6 @@
 
 #include "..\Defines.h"
 #include "..\Callbacks.h"
-#include "..\TimedEventQueue.h"
 #include "..\Comm\Sockets.h"
 #include "..\Comm\IpcSslLayer.h"
 #include "HttpCommon.h"
@@ -55,7 +54,8 @@ public:
     StateWaitingForRedirection,
     StateRetryingAuthentication,
     StateEstablishingProxyTunnelConnection,
-    StateWaitingProxyTunnelConnectionResponse
+    StateWaitingProxyTunnelConnectionResponse,
+    StateNoOp
   } eState;
 
   //--------
@@ -68,7 +68,7 @@ public:
 
   typedef Callback<VOID (_In_ CHttpClient *lpHttp)> OnDymanicRequestBodyStartCallback;
 
-  typedef Callback<VOID (_In_ CHttpClient *lpHttp, _In_ HRESULT hErrorCode)> OnErrorCallback;
+  typedef Callback<VOID (_In_ CHttpClient *lpHttp, _In_ HRESULT hrErrorCode)> OnErrorCallback;
 
   typedef Callback<HRESULT (_In_ CHttpClient *lpHttp, _Inout_ CIpcSslLayer::eProtocol &nProtocol,
                             _Inout_ CSslCertificateArray **lplpCheckCertificates, _Inout_ CSslCertificate **lplpSelfCert,
@@ -80,7 +80,8 @@ public:
   CHttpClient(_In_ CSockets &cSocketMgr, _In_opt_ CLoggable *lpLogParent = NULL);
   ~CHttpClient();
 
-  VOID SetOption_MaxResponseTimeoutMs(_In_ DWORD dwTimeoutMs);
+  VOID SetOption_ResponseHeaderTimeout(_In_ DWORD dwTimeoutMs);
+  VOID SetOption_ResponseBodyLimits(_In_ DWORD dwMinimumThroughputInBps, _In_ DWORD dwSecondsOfLowThroughput);
   VOID SetOption_MaxRedirectionsCount(_In_ DWORD dwCount);
   VOID SetOption_MaxHeaderSize(_In_ DWORD dwSize);
   VOID SetOption_MaxFieldSize(_In_ DWORD dwSize);
@@ -92,11 +93,11 @@ public:
   VOID SetOption_KeepConnectionOpen(_In_ BOOL bKeep);
   VOID SetOption_AcceptCompressedContent(_In_ BOOL bAccept);
 
-  VOID On(_In_ OnHeadersReceivedCallback cHeadersReceivedCallback);
-  VOID On(_In_ OnDocumentCompletedCallback cDocumentCompletedCallback);
-  VOID On(_In_ OnDymanicRequestBodyStartCallback cDymanicRequestBodyStartCallback);
-  VOID On(_In_ OnErrorCallback cErrorCallback);
-  VOID On(_In_ OnQueryCertificatesCallback cQueryCertificatesCallback);
+  VOID SetHeadersReceivedCallback(_In_ OnHeadersReceivedCallback cHeadersReceivedCallback);
+  VOID SetDocumentCompletedCallback(_In_ OnDocumentCompletedCallback cDocumentCompletedCallback);
+  VOID SetDymanicRequestBodyStartCallback(_In_ OnDymanicRequestBodyStartCallback cDymanicRequestBodyStartCallback);
+  VOID SetErrorCallback(_In_ OnErrorCallback cErrorCallback);
+  VOID SetQueryCertificatesCallback(_In_ OnQueryCertificatesCallback cQueryCertificatesCallback);
 
   HRESULT SetRequestMethodAuto();
   HRESULT SetRequestMethod(_In_z_ LPCSTR szMethodA);
@@ -183,28 +184,29 @@ private:
 
   HRESULT OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIpc::CREATE_CALLBACK_DATA &sData);
   VOID OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
-                       _In_ HRESULT hErrorCode);
+                       _In_ HRESULT hrErrorCode);
   HRESULT OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_opt_ CIpc::CUserData *lpUserData,
-                          _Inout_ CIpc::CLayerList &cLayersList, _In_ HRESULT hErrorCode);
+                          _In_ HRESULT hrErrorCode);
   HRESULT OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData);
 
-  VOID OnRedirectOrRetryAuth(_In_ CTimedEventQueue::CEvent *lpEvent);
-  VOID OnResponseTimeout(_In_ CTimedEventQueue::CEvent *lpEvent);
+  VOID OnRedirectOrRetryAuth(_In_ LONG nTimerId, _In_ LPVOID lpUserData);
+  VOID OnResponseHeadersTimeout(_In_ LONG nTimerId, _In_ LPVOID lpUserData);
+  VOID OnResponseBodyTimeout(_In_ LONG nTimerId, _In_ LPVOID lpUserData);
   VOID OnAfterSendRequestHeaders(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie,
                                  _In_ CIpc::CUserData *lpUserData);
   VOID OnAfterSendRequestBody(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie,
                               _In_ CIpc::CUserData *lpUserData);
 
-  VOID SetErrorOnRequestAndClose(_In_ HRESULT hErrorCode);
+  VOID SetErrorOnRequestAndClose(_In_ HRESULT hrErrorCode);
 
   HRESULT SetupRedirectOrRetry(_In_ DWORD dwDelayMs);
-
-  HRESULT UpdateResponseTimeoutEvent();
+  HRESULT SetupResponseHeadersTimeout();
 
   HRESULT AddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_opt_ CIpc::CREATE_CALLBACK_DATA *lpData);
 
   HRESULT BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA);
-  HRESULT BuildRequestHeaderAdd(_Inout_ CStringA &cStrReqHdrsA, _In_z_ LPCSTR szNameA, _In_z_ LPCSTR szDefaultValueA);
+  HRESULT BuildRequestHeaderAdd(_Inout_ CStringA &cStrReqHdrsA, _In_z_ LPCSTR szNameA, _In_z_ LPCSTR szDefaultValueA,
+                                _In_ CHttpHeaderBase::eBrowser nBrowser);
   HRESULT AddRequestHeadersForBody(_Inout_ CStringA &cStrReqHdrsA);
 
   HRESULT SendTunnelConnect();
@@ -234,17 +236,16 @@ private:
 private:
   CCriticalSection cMutex;
   CSockets &cSocketMgr;
-  CSystemTimedEventQueue *lpTimedEventQueue;
-  TPendingListHelperGeneric<CTimedEventQueue::CEvent*> cPendingEvents;
-  TPendingListHelperGeneric<HANDLE> cPendingHandles;
   LONG volatile nRundownLock;
+  LONG volatile nPendingHandlesCounter;
   eState nState;
   HANDLE hConn;
   CProxy cProxy;
   CSecureStringW cStrAuthUserNameW, cStrAuthUserPasswordW;
   HRESULT hLastErrorCode;
-
-  DWORD dwResponseTimeoutMs;
+  DWORD dwResponseHeaderTimeoutMs;
+  DWORD dwResponseBodyMinimumThroughputInBps;
+  DWORD dwResponseBodySecondsOfLowThroughput;
   DWORD dwMaxRedirCount;
   DWORD dwMaxFieldSize;
   ULONGLONG ullMaxFileSize;
@@ -292,14 +293,15 @@ private:
 
   public:
     CHttpCommon cHttpCmn;
-    CTimedEventQueue::CEvent *lpTimeoutEvent;
     CStringW cStrDownloadFileNameW;
+    LONG volatile nTimerId;
+    DWORD dwBodyLowThroughputCcounter;
   } cResponse;
 
   struct {
-    CTimedEventQueue::CEvent *lpEvent;
     CUrl cUrl;
     DWORD dwRedirectCounter;
+    LONG volatile nTimerId;
   } sRedirectOrRetryAuth;
 
   struct {

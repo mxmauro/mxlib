@@ -39,7 +39,6 @@ CHttpHeaderReqAcceptLanguage::CHttpHeaderReqAcceptLanguage() : CHttpHeaderBase()
 
 CHttpHeaderReqAcceptLanguage::~CHttpHeaderReqAcceptLanguage()
 {
-  cLanguagesList.RemoveAllElements();
   return;
 }
 
@@ -47,9 +46,9 @@ HRESULT CHttpHeaderReqAcceptLanguage::Parse(_In_z_ LPCSTR szValueA)
 {
   CLanguage *lpLanguage;
   LPCSTR szStartA;
-  CStringA cStrTempA, cStrTempA_2;
-  CStringW cStrTempW;
+  CStringA cStrTempA;
   BOOL bGotItem;
+  double nDbl;
   HRESULT hRes;
 
   if (szValueA == NULL)
@@ -62,41 +61,55 @@ HRESULT CHttpHeaderReqAcceptLanguage::Parse(_In_z_ LPCSTR szValueA)
     szValueA = SkipSpaces(szValueA);
     if (*szValueA == 0)
       break;
-    bGotItem = TRUE;
+
     //mime type
-    szValueA = Advance(szStartA = szValueA, ";,");
-    if (cStrTempA.CopyN(szStartA, (SIZE_T)(szValueA-szStartA)) == FALSE)
-      return E_OUTOFMEMORY;
-    hRes = AddLanguage((LPSTR)cStrTempA, &lpLanguage);
+    szValueA = SkipUntil(szStartA = szValueA, ";, \t");
+    if (szValueA == szStartA)
+      goto skip_null_listitem;
+
+    bGotItem = TRUE;
+
+    //add to list
+    hRes = AddLanguage(szStartA, (SIZE_T)(szValueA - szStartA), &lpLanguage);
     if (FAILED(hRes))
       return hRes;
+
+    //skip spaces
+    szValueA = SkipSpaces(szValueA);
+
     //parameter
     if (*szValueA == ';')
     {
       //skip spaces
-      szValueA = SkipSpaces(szValueA+1);
+      szValueA = SkipSpaces(szValueA + 1);
       if (*szValueA++ != 'q')
         return MX_E_InvalidData;
+
       //skip spaces
       szValueA = SkipSpaces(szValueA);
+
       //is equal sign?
       if (*szValueA++ != '=')
         return MX_E_InvalidData;
+
       //skip spaces
       szValueA = SkipSpaces(szValueA);
+
       //parse value
       szStartA = szValueA;
       while ((*szValueA >= '0' && *szValueA <= '9') || *szValueA == '.')
         szValueA++;
-      if (cStrTempA_2.CopyN(szStartA, (SIZE_T)(szValueA-szStartA)) == FALSE)
-        return E_OUTOFMEMORY;
-      //add parameter
-      hRes = lpLanguage->SetQ(atof((LPCSTR)cStrTempA_2));
+      hRes = StrToDoubleA(szStartA, (SIZE_T)(szValueA - szStartA), &nDbl);
+      if (SUCCEEDED(hRes))
+        hRes = lpLanguage->SetQ(nDbl);
       if (FAILED(hRes))
         return hRes;
     }
+
+skip_null_listitem:
     //skip spaces
     szValueA = SkipSpaces(szValueA);
+
     //check for separator or end
     if (*szValueA == ',')
       szValueA++;
@@ -108,14 +121,15 @@ HRESULT CHttpHeaderReqAcceptLanguage::Parse(_In_z_ LPCSTR szValueA)
   return (bGotItem != FALSE) ? S_OK : MX_E_InvalidData;
 }
 
-HRESULT CHttpHeaderReqAcceptLanguage::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderReqAcceptLanguage::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
+  CStringA cStrTempA;
   SIZE_T i, nCount;
   CLanguage *lpLanguage;
 
   cStrDestA.Empty();
   nCount = cLanguagesList.GetCount();
-  for (i=0; i<nCount; i++)
+  for (i = 0; i < nCount; i++)
   {
     lpLanguage = cLanguagesList.GetElementAt(i);
     if (cStrDestA.IsEmpty() == FALSE)
@@ -126,9 +140,9 @@ HRESULT CHttpHeaderReqAcceptLanguage::Build(_Inout_ CStringA &cStrDestA)
     if (cStrDestA.Concat(lpLanguage->GetLanguage()) == FALSE)
       return E_OUTOFMEMORY;
     //q
-    if (lpLanguage->GetQ() < 1.0)
+    if (lpLanguage->GetQ() < 1.0 - 0.00000001)
     {
-      if (cStrDestA.AppendFormat("; q=%f", lpLanguage->GetQ()) == FALSE)
+      if (cStrDestA.AppendFormat(";q=%f", lpLanguage->GetQ()) == FALSE)
         return E_OUTOFMEMORY;
       RemoveTrailingZeroDecimals(cStrDestA);
     }
@@ -137,7 +151,8 @@ HRESULT CHttpHeaderReqAcceptLanguage::Build(_Inout_ CStringA &cStrDestA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqAcceptLanguage::AddLanguage(_In_z_ LPCSTR szLanguageA, _Out_opt_ CLanguage **lplpLanguage)
+HRESULT CHttpHeaderReqAcceptLanguage::AddLanguage(_In_z_ LPCSTR szLanguageA, _In_opt_ SIZE_T nLanguageLen,
+                                                  _Out_opt_ CLanguage **lplpLanguage)
 {
   TAutoDeletePtr<CLanguage> cNewLanguage;
   SIZE_T i, nCount;
@@ -145,18 +160,22 @@ HRESULT CHttpHeaderReqAcceptLanguage::AddLanguage(_In_z_ LPCSTR szLanguageA, _Ou
 
   if (lplpLanguage != NULL)
     *lplpLanguage = NULL;
+  if (nLanguageLen == (SIZE_T)-1)
+    nLanguageLen = StrLenA(szLanguageA);
+  if (nLanguageLen == 0)
+    return MX_E_InvalidData;
   if (szLanguageA == NULL)
     return E_POINTER;
   //create new type
   cNewLanguage.Attach(MX_DEBUG_NEW CLanguage());
   if (!cNewLanguage)
     return E_OUTOFMEMORY;
-  hRes = cNewLanguage->SetLanguage(szLanguageA);
+  hRes = cNewLanguage->SetLanguage(szLanguageA, nLanguageLen);
   if (FAILED(hRes))
     return hRes;
   //check if already exists in list
   nCount = cLanguagesList.GetCount();
-  for (i=0; i<nCount; i++)
+  for (i = 0; i < nCount; i++)
   {
     if (StrCompareA(cLanguagesList[i]->GetLanguage(), cNewLanguage->GetLanguage(), TRUE) == 0)
     {
@@ -189,10 +208,10 @@ CHttpHeaderReqAcceptLanguage::CLanguage* CHttpHeaderReqAcceptLanguage::GetLangua
 {
   SIZE_T i, nCount;
 
-  if (szLanguageA != NULL && szLanguageA[0] != 0)
+  if (szLanguageA != NULL && *szLanguageA != 0)
   {
     nCount = cLanguagesList.GetCount();
-    for (i=0; i<nCount; i++)
+    for (i = 0; i < nCount; i++)
     {
       if (StrCompareA(cLanguagesList[i]->GetLanguage(), szLanguageA, TRUE) == 0)
         return cLanguagesList.GetElementAt(i);
@@ -215,30 +234,39 @@ CHttpHeaderReqAcceptLanguage::CLanguage::~CLanguage()
   return;
 }
 
-HRESULT CHttpHeaderReqAcceptLanguage::CLanguage::SetLanguage(_In_z_ LPCSTR szLanguageA)
+HRESULT CHttpHeaderReqAcceptLanguage::CLanguage::SetLanguage(_In_z_ LPCSTR szLanguageA, _In_opt_ SIZE_T nLanguageLen)
 {
-  LPCSTR szStartA, szStartA_2, szEndA;
+  LPCSTR szLanguageEndA, szStartA[2];
 
+  if (nLanguageLen == (SIZE_T)-1)
+    nLanguageLen = StrLenA(szLanguageA);
+  if (nLanguageLen == 0)
+    return MX_E_InvalidData;
   if (szLanguageA == NULL)
     return E_POINTER;
-  //skip spaces
-  szLanguageA = CHttpHeaderBase::SkipSpaces(szLanguageA);
+  szLanguageEndA = szLanguageA + nLanguageLen;
+
   //mark start
-  szStartA = szLanguageA;
+  szStartA[0] = szLanguageA;
   //get language
-  if (szLanguageA[0] != '*')
+  if (*szLanguageA != '*')
   {
-    while ((*szLanguageA >= 'A' && *szLanguageA <= 'Z') || (*szLanguageA >= 'a' && *szLanguageA <= 'z'))
-      szLanguageA++;
-    if (szLanguageA == szStartA || szLanguageA > szStartA+8)
-      return MX_E_InvalidData;
-    if (*szLanguageA == '-')
+    while (szLanguageA < szLanguageEndA &&
+           (*szLanguageA >= 'A' && *szLanguageA <= 'Z') || (*szLanguageA >= 'a' && *szLanguageA <= 'z'))
     {
-      szStartA_2 = ++szLanguageA;
-      while ((*szLanguageA >= 'A' && *szLanguageA <= 'Z') || (*szLanguageA >= 'a' && *szLanguageA <= 'z') ||
-             (*szLanguageA >= '0' && *szLanguageA <= '9'))
+      szLanguageA++;
+    }
+    if (szLanguageA == szStartA[0] || szLanguageA > szStartA[0] + 8)
+      return MX_E_InvalidData;
+    if (szLanguageA < szLanguageEndA && *szLanguageA == '-')
+    {
+      szStartA[1] = ++szLanguageA;
+      while (szLanguageA < szLanguageEndA &&
+             (*szLanguageA >= 'A' && *szLanguageA <= 'Z') || (*szLanguageA >= 'a' && *szLanguageA <= 'z'))
+      {
         szLanguageA++;
-      if (szLanguageA == szStartA_2 || szLanguageA > szStartA_2+8)
+      }
+      if (szLanguageA == szStartA[1] || szLanguageA > szStartA[1] + 8)
         return MX_E_InvalidData;
     }
   }
@@ -246,14 +274,10 @@ HRESULT CHttpHeaderReqAcceptLanguage::CLanguage::SetLanguage(_In_z_ LPCSTR szLan
   {
     szLanguageA++;
   }
-  if (szLanguageA == szStartA)
-    return MX_E_InvalidData;
-  szEndA = szLanguageA;
-  //skip spaces and check for end
-  if (*CHttpHeaderBase::SkipSpaces(szLanguageA) != 0)
+  if (szLanguageA != szLanguageEndA)
     return MX_E_InvalidData;
   //set new value
-  if (cStrLanguageA.CopyN(szStartA, (SIZE_T)(szEndA-szStartA)) == FALSE)
+  if (cStrLanguageA.CopyN(szStartA[0], (SIZE_T)(szLanguageEndA - szStartA[0])) == FALSE)
     return E_OUTOFMEMORY;
   //done
   return S_OK;
@@ -283,13 +307,12 @@ double CHttpHeaderReqAcceptLanguage::CLanguage::GetQ() const
 
 static VOID RemoveTrailingZeroDecimals(_Inout_ MX::CStringA &cStrA)
 {
-  SIZE_T nCount = 0;
-  SIZE_T nOfs, nLen = cStrA.GetLength();
+  SIZE_T nOfs, nCount = 0, nLen = cStrA.GetLength();
   LPCSTR sA = (LPCSTR)cStrA;
 
-  for (nOfs=nLen; nOfs >= 2; nOfs--)
+  for (nOfs = nLen; nOfs >= 2; nOfs--)
   {
-    if (sA[nOfs-1] != '0' || sA[nOfs-2] == '.')
+    if (sA[nOfs - 1] != '0' || sA[nOfs - 2] == '.')
       break;
   }
   if (nOfs < nLen)

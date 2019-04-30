@@ -41,8 +41,8 @@ CHttpHeaderEntContentType::~CHttpHeaderEntContentType()
 HRESULT CHttpHeaderEntContentType::Parse(_In_z_ LPCSTR szValueA)
 {
   LPCSTR szStartA;
-  CStringA cStrTempA, cStrTempA_2;
-  CStringW cStrTempW;
+  CStringA cStrTokenA;
+  CStringW cStrValueW;
   HRESULT hRes;
 
   if (szValueA == NULL)
@@ -50,12 +50,10 @@ HRESULT CHttpHeaderEntContentType::Parse(_In_z_ LPCSTR szValueA)
   //skip spaces
   szValueA = SkipSpaces(szValueA);
   //mime type
-  szValueA = Advance(szStartA = szValueA, ";, \t");
-  if (cStrTempA.CopyN(szStartA, (SIZE_T)(szValueA-szStartA)) == FALSE)
-    return E_OUTOFMEMORY;
+  szValueA = SkipUntil(szStartA = szValueA, ";, \t");
   if (szValueA == szStartA)
     return MX_E_InvalidData;
-  hRes = SetType((LPCSTR)cStrTempA);
+  hRes = SetType(szStartA, (SIZE_T)(szValueA - szStartA));
   if (FAILED(hRes))
     return hRes;
   //skip spaces
@@ -66,45 +64,23 @@ HRESULT CHttpHeaderEntContentType::Parse(_In_z_ LPCSTR szValueA)
     szValueA++;
     do
     {
+      BOOL bExtendedParam;
+
       //skip spaces
       szValueA = SkipSpaces(szValueA);
       if (*szValueA == 0)
         break;
-      //parse name
-      szValueA = GetToken(szStartA = szValueA);
-      if (cStrTempA.CopyN(szStartA, (SIZE_T)(szValueA-szStartA)) == FALSE)
-        return E_OUTOFMEMORY;
-      //skip spaces
-      szValueA = SkipSpaces(szValueA);
-      //is equal sign?
-      if (*szValueA++ != '=')
-        return MX_E_InvalidData;
-      //skip spaces
-      szValueA = SkipSpaces(szValueA);
-      //parse value
-      if (*szValueA == '"')
-      {
-        szValueA = Advance(szStartA = ++szValueA, "\"");
-        if (*szValueA != '"')
-          return MX_E_InvalidData;
-        if (cStrTempA_2.CopyN(szStartA, (SIZE_T)(szValueA-szStartA)) == FALSE)
-          return E_OUTOFMEMORY;
-        szValueA++;
-      }
-      else
-      {
-        szValueA = Advance(szStartA = szValueA, " \t;,");
-        if (cStrTempA_2.CopyN(szStartA, (SIZE_T)(szValueA-szStartA)) == FALSE)
-          return E_OUTOFMEMORY;
-      }
+
+      //get parameter
+      hRes = GetParamNameAndValue(cStrTokenA, cStrValueW, szValueA, &bExtendedParam);
+      if (FAILED(hRes))
+        return (hRes == MX_E_NoData) ? MX_E_InvalidData : hRes;
+
       //add parameter
-      hRes = Utf8_Decode(cStrTempW, (LPSTR)cStrTempA_2);
-      if (SUCCEEDED(hRes))
-        hRes = AddParam((LPSTR)cStrTempA, (LPWSTR)cStrTempW);
+      hRes = AddParam((LPCSTR)cStrTokenA, (LPCWSTR)cStrValueW);
       if (FAILED(hRes))
         return hRes;
-      //skip spaces
-      szValueA = SkipSpaces(szValueA);
+
       //check for separator or end
       if (*szValueA == ';')
         szValueA++;
@@ -120,73 +96,60 @@ HRESULT CHttpHeaderEntContentType::Parse(_In_z_ LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentType::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderEntContentType::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   SIZE_T i, nCount;
-  LPWSTR sW;
   CStringA cStrTempA;
-  HRESULT hRes;
 
   if (cStrTypeA.IsEmpty() != FALSE)
+  {
+    cStrDestA.Empty();
     return S_OK;
+  }
   if (cStrDestA.Copy((LPCSTR)cStrTypeA) == FALSE)
     return E_OUTOFMEMORY;
   //parameters
   nCount = cParamsList.GetCount();
-  for (i=0; i<nCount; i++)
+  for (i = 0; i < nCount; i++)
   {
-    if (cStrDestA.AppendFormat("; %s=", cParamsList[i]->szNameA) == FALSE)
+    if (CHttpCommon::BuildQuotedString(cStrTempA, cParamsList[i]->szValueW, StrLenW(cParamsList[i]->szValueW),
+                                       FALSE) == FALSE)
+    {
       return E_OUTOFMEMORY;
-    sW = cParamsList[i]->szValueW;
-    while (*sW != 0)
-    {
-      if (*sW < 33 || *sW > 126 || CHttpCommon::IsValidNameChar((CHAR)(*sW)) == FALSE)
-        break;
-      sW++;
     }
-    if (*sW == 0)
-    {
-      if (cStrDestA.AppendFormat("%S", cParamsList[i]->szValueW) == FALSE)
-        return E_OUTOFMEMORY;
-    }
-    else
-    {
-      hRes = Utf8_Encode(cStrTempA, cParamsList[i]->szValueW);
-      if (FAILED(hRes))
-        return hRes;
-      if (CHttpCommon::EncodeQuotedString(cStrTempA) == FALSE)
-        return E_OUTOFMEMORY;
-      if (cStrDestA.AppendFormat("\"%s\"", (LPCSTR)cStrTempA) == FALSE)
-        return E_OUTOFMEMORY;
-    }
+    if (cStrDestA.AppendFormat("; %s=%s", cParamsList[i]->szNameA, (LPCSTR)cStrTempA) == FALSE)
+      return E_OUTOFMEMORY;
   }
   //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentType::SetType(_In_z_ LPCSTR szTypeA)
+HRESULT CHttpHeaderEntContentType::SetType(_In_z_ LPCSTR szTypeA, _In_ SIZE_T nTypeLen)
 {
-  LPCSTR szStartA, szEndA;
+  LPCSTR szStartA, szTypeEndA;
 
+  if (nTypeLen == (SIZE_T)-1)
+    nTypeLen = StrLenA(szTypeA);
+  if (nTypeLen == 0)
+    return MX_E_InvalidData;
   if (szTypeA == NULL)
     return E_POINTER;
-  //skip spaces
-  szTypeA = SkipSpaces(szTypeA);
+  szTypeEndA = szTypeA + nTypeLen;
+  szStartA = szTypeA;
   //get mime type
-  szTypeA = GetToken(szStartA = szTypeA);
+  szTypeA = GetToken(szTypeA, nTypeLen);
   //check slash separator
-  if (*szTypeA++ != '/')
+  if (szTypeA >= szTypeEndA || *szTypeA++ != '/')
     return MX_E_InvalidData;
   //get mime subtype
-  szTypeA = GetToken(szTypeA);
-  if (*(szTypeA-1) == '/' || *szTypeA == '/') //no subtype?
+  szTypeA = GetToken(szTypeA, (SIZE_T)(szTypeEndA - szTypeA));
+  if (*(szTypeA-1) == '/' || (szTypeA < szTypeEndA && *szTypeA == '/')) //no subtype?
     return MX_E_InvalidData;
-  szEndA = szTypeA;
-  //skip spaces and check for end
-  if (*SkipSpaces(szTypeA) != 0)
+  //check for end
+  if (szTypeA != szTypeEndA)
     return MX_E_InvalidData;
   //set new value
-  if (cStrTypeA.CopyN(szStartA, (SIZE_T)(szEndA-szStartA)) == FALSE)
+  if (cStrTypeA.CopyN(szStartA, nTypeLen) == FALSE)
     return E_OUTOFMEMORY;
   //done
   return S_OK;
@@ -200,25 +163,19 @@ LPCSTR CHttpHeaderEntContentType::GetType() const
 HRESULT CHttpHeaderEntContentType::AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW)
 {
   TAutoFreePtr<PARAMETER> cNewParam;
-  LPCSTR szStartA, szEndA;
+  LPCSTR szStartA;
   SIZE_T nNameLen, nValueLen;
 
   if (szNameA == NULL)
     return E_POINTER;
   if (szValueW == NULL)
     szValueW = L"";
-  //skip spaces
-  szNameA = CHttpHeaderBase::SkipSpaces(szNameA);
   //get token
   szNameA = CHttpHeaderBase::GetToken(szStartA = szNameA);
-  if (szStartA == szNameA)
-    return MX_E_InvalidData;
-  szEndA = szNameA;
-  //skip spaces and check for end
-  if (*CHttpHeaderBase::SkipSpaces(szNameA) != 0)
+  if (szStartA == szNameA || *szNameA != 0)
     return MX_E_InvalidData;
   //get name and value length
-  nNameLen = (SIZE_T)(szEndA-szStartA);
+  nNameLen = (SIZE_T)(szNameA - szStartA);
   nValueLen = (StrLenW(szValueW) + 1) * sizeof(WCHAR);
   //create new item
   cNewParam.Attach((LPPARAMETER)MX_MALLOC(sizeof(PARAMETER) + nNameLen + nValueLen));
@@ -226,13 +183,13 @@ HRESULT CHttpHeaderEntContentType::AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCWST
     return E_OUTOFMEMORY;
   MemCopy(cNewParam->szNameA, szStartA, nNameLen);
   cNewParam->szNameA[nNameLen] = 0;
-  cNewParam->szValueW = (LPWSTR)((LPBYTE)(cNewParam->szNameA) + (nNameLen+1));
+  cNewParam->szValueW = (LPWSTR)((LPBYTE)(cNewParam->szNameA) + (nNameLen + 1));
   MemCopy(cNewParam->szValueW, szValueW, nValueLen);
   //add to list
   if (cParamsList.AddElement(cNewParam.Get()) == FALSE)
     return E_OUTOFMEMORY;
-  //done
   cNewParam.Detach();
+  //done
   return S_OK;
 }
 
@@ -255,10 +212,10 @@ LPCWSTR CHttpHeaderEntContentType::GetParamValue(_In_z_ LPCSTR szNameA) const
 {
   SIZE_T i, nCount;
 
-  if (szNameA != NULL && szNameA[0] != 0)
+  if (szNameA != NULL && *szNameA != 0)
   {
     nCount = cParamsList.GetCount();
-    for (i=0; i<nCount; i++)
+    for (i = 0; i < nCount; i++)
     {
       if (StrCompareA(cParamsList[i]->szNameA, szNameA, TRUE) == 0)
         return cParamsList[i]->szValueW;

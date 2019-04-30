@@ -172,6 +172,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Include\ArrayList.h" />
+    <ClInclude Include="Include\AtomicOps.h" />
     <ClInclude Include="Include\AutoHandle.h" />
     <ClInclude Include="Include\AutoPtr.h" />
     <ClInclude Include="Include\CircularBuffer.h" />
@@ -179,7 +180,6 @@
     <ClInclude Include="Include\Debug.h" />
     <ClInclude Include="Include\Defines.h" />
     <ClInclude Include="Include\Callbacks.h" />
-    <ClInclude Include="Include\EventNotifyBase.h" />
     <ClInclude Include="Include\FileStream.h" />
     <ClInclude Include="Include\Finalizer.h" />
     <ClInclude Include="Include\FnvHash.h" />
@@ -198,7 +198,7 @@
     <ClInclude Include="Include\Strings\Strings.h" />
     <ClInclude Include="Include\Strings\Utf8.h" />
     <ClInclude Include="Include\Threads.h" />
-    <ClInclude Include="Include\TimedEventQueue.h" />
+    <ClInclude Include="Include\TimedEvent.h" />
     <ClInclude Include="Include\WaitableObjects.h" />
   </ItemGroup>
   <ItemGroup>
@@ -220,7 +220,7 @@
     <ClCompile Include="Source\Strings\Strings.cpp" />
     <ClCompile Include="Source\Strings\Utf8.cpp" />
     <ClCompile Include="Source\Threads.cpp" />
-    <ClCompile Include="Source\TimedEventQueue.cpp" />
+    <ClCompile Include="Source\TimedEvent.cpp" />
     <ClCompile Include="Source\WaitableObjects.cpp" />
   </ItemGroup>
   <ItemGroup>

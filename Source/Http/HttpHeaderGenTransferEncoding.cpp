@@ -41,36 +41,69 @@ CHttpHeaderGenTransferEncoding::~CHttpHeaderGenTransferEncoding()
 HRESULT CHttpHeaderGenTransferEncoding::Parse(_In_z_ LPCSTR szValueA)
 {
   eEncoding _nEncoding = EncodingUnsupported;
+  LPCSTR szStartA;
+  BOOL bGotItem;
 
   if (szValueA == NULL)
     return E_POINTER;
-  nEncoding = EncodingUnsupported;
-  //skip spaces
-  szValueA = SkipSpaces(szValueA);
-  //check Encoding
-  if (StrNCompareA(szValueA, "identity", 8, TRUE) == 0)
+  //parse encodings
+  bGotItem = FALSE;
+  do
   {
-    _nEncoding = EncodingIdentity;
-    szValueA += 8;
+    //skip spaces
+    szValueA = SkipSpaces(szValueA);
+    if (*szValueA == 0)
+      break;
+
+    //get encoding
+    szValueA = GetToken(szStartA = szValueA);
+    if (szValueA == szStartA)
+      goto skip_null_listitem;
+
+    if (bGotItem != FALSE)
+      return MX_E_Unsupported; //only one encoding is supported
+    bGotItem = TRUE;
+
+    //check encoding
+    switch ((SIZE_T)(szValueA - szStartA))
+    {
+      case 7:
+        if (StrNCompareA(szStartA, "chunked", 7, TRUE) == 0)
+          _nEncoding = EncodingChunked;
+        else
+          return MX_E_Unsupported;
+        break;
+
+      case 8:
+        if (StrNCompareA(szStartA, "identity", 8, TRUE) == 0)
+          _nEncoding = EncodingIdentity;
+        else
+          return MX_E_Unsupported;
+        break;
+
+      default:
+        return MX_E_Unsupported;
+    }
+
+skip_null_listitem:
+    //skip spaces
+    szValueA = SkipSpaces(szValueA);
+
+    //check for separator or end
+    if (*szValueA == ',')
+      szValueA++;
+    else if (*szValueA != 0)
+      return MX_E_InvalidData;
   }
-  else if (StrNCompareA(szValueA, "chunked", 7, TRUE) == 0)
-  {
-    _nEncoding = EncodingChunked;
-    szValueA += 7;
-  }
-  else
-  {
-    return MX_E_Unsupported;
-  }
-  //skip spaces and check for end
-  if (*SkipSpaces(szValueA) != 0)
-    return MX_E_InvalidData;
+  while (*szValueA != 0);
   //done
+  if (bGotItem == FALSE)
+    return MX_E_InvalidData;
   nEncoding = _nEncoding;
   return S_OK;
 }
 
-HRESULT CHttpHeaderGenTransferEncoding::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderGenTransferEncoding::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   switch (nEncoding)
   {
@@ -78,6 +111,7 @@ HRESULT CHttpHeaderGenTransferEncoding::Build(_Inout_ CStringA &cStrDestA)
       if (cStrDestA.Copy("identity") == FALSE)
         return E_OUTOFMEMORY;
       return S_OK;
+
     case EncodingChunked:
       if (cStrDestA.Copy("chunked") == FALSE)
         return E_OUTOFMEMORY;

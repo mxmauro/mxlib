@@ -92,8 +92,8 @@ private:
     struct {
       struct {
         CStringW cStrNameW;
-        BOOL bHasFileName;
         CStringW cStrFileNameW;
+        BOOL bHasFileName;
       } sContentDisposition;
       CStringA cStrContentTypeA;
       BOOL bContentTransferEncoding;

@@ -47,7 +47,7 @@ public:
 
   HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
 
   HRESULT SetEncoding(_In_ eEncoding nEncoding);
   eEncoding GetEncoding() const;

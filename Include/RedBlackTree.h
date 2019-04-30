@@ -396,7 +396,7 @@ public:
     return NULL;
     };
 
-  BOOL Insert(_In_ _RbTreeNode *lpNewNode, _In_opt_ BOOL bAllowDuplicates=FALSE)
+  BOOL Insert(_In_ _RbTreeNode *lpNewNode, _In_opt_ BOOL bAllowDuplicates = FALSE)
     {
     _RbTreeNode *lpNode, *lpParent, *lpUncle;
     int res;

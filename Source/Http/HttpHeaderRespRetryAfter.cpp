@@ -85,7 +85,7 @@ done:
   return hRes;
 }
 
-HRESULT CHttpHeaderRespRetryAfter::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderRespRetryAfter::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   return (cStrDestA.Format(cStrDestA, "%I64u", nSeconds) != FALSE) ? S_OK : E_OUTOFMEMORY;
 }

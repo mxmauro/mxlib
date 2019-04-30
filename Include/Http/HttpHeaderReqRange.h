@@ -41,7 +41,7 @@ public:
 
   HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
 
   HRESULT AddRangeSet(_In_ ULONGLONG nByteStart, _In_ ULONGLONG nByteEnd);
 

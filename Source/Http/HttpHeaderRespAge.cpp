@@ -71,7 +71,7 @@ HRESULT CHttpHeaderRespAge::Parse(_In_z_ LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderRespAge::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderRespAge::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   if (cStrDestA.Format("%I64u", nAge) == FALSE)
     return E_OUTOFMEMORY;

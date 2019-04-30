@@ -9,6 +9,7 @@
 *.log
 *.obj
 *.ilk
+*.pyc
 /bin/
 /Libs/
 /obj/
@@ -18,4 +19,5 @@
 /Source/OpenSSL/setenv.bat
 /Source/OpenSSL/Generated/
 /Source/OpenSSL/Temp/
-*.pyc
+/Test/Data/*.sqlite
+/Test/Data/session/

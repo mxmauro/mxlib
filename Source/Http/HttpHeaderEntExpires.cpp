@@ -53,7 +53,7 @@ HRESULT CHttpHeaderEntExpires::Parse(_In_z_ LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntExpires::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderEntExpires::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   return cDt.Format(cStrDestA, "%a, %d %b %Y %H:%m:%S %z");
 }

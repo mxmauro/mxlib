@@ -214,6 +214,8 @@ static HRESULT InitApis()
       LPVOID _fnWinHttpGetProxyForUrl = NULL;
       LPVOID _fnWinHttpGetDefaultProxyConfiguration = NULL;
       LPVOID _fnGlobalFree = NULL;
+      WCHAR szDllNameW[4096];
+      DWORD dwLen;
 
       hDll = ::GetModuleHandleW(L"kernel32.dll");
       if (hDll == NULL)
@@ -226,7 +228,13 @@ err_procnotfound:
       if (_fnGlobalFree == NULL)
         goto err_procnotfound;
 
-      hDll = ::LoadLibraryW(L"winhttp.dll");
+      dwLen = ::GetWindowsDirectoryW(szDllNameW, MX_ARRAYLEN(szDllNameW) - 16);
+      if (dwLen == 0)
+        goto err_procnotfound;
+      if (szDllNameW[dwLen] != L'\\')
+        szDllNameW[dwLen++] = L'\\';
+      MX::MemCopy(szDllNameW + dwLen, L"winhttp.dll", (11 + 1) * sizeof(WCHAR));
+      hDll = ::LoadLibraryW(szDllNameW);
       if (hDll == NULL)
         goto err_procnotfound;
       _fnWinHttpOpen = ::GetProcAddress(hDll, "WinHttpOpen");

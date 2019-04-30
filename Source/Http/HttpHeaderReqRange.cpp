@@ -52,7 +52,7 @@ HRESULT CHttpHeaderReqRange::Parse(_In_z_ LPCSTR szValueA)
   if (StrNCompareA(szValueA, "bytes", 5, TRUE) != 0)
     return MX_E_InvalidData;
   //skip spaces
-  szValueA = SkipSpaces(szValueA+5);
+  szValueA = SkipSpaces(szValueA + 5);
   //check equal sign
   if (*szValueA++ != '=')
     return MX_E_InvalidData;
@@ -63,9 +63,12 @@ HRESULT CHttpHeaderReqRange::Parse(_In_z_ LPCSTR szValueA)
     szValueA = SkipSpaces(szValueA);
     if (*szValueA == 0)
       break;
+
     sRangeSet.nByteStart = sRangeSet.nByteEnd = 0ui64;
+
     //skip spaces
     szValueA = SkipSpaces(szValueA);
+
     //get starting byte
     if (*szValueA != '-')
     {
@@ -84,11 +87,14 @@ HRESULT CHttpHeaderReqRange::Parse(_In_z_ LPCSTR szValueA)
       //skip spaces
       szValueA = SkipSpaces(szValueA);
     }
+
     //check range separator
     if (*szValueA++ != '-')
       return MX_E_InvalidData;
+
     //skip spaces
     szValueA = SkipSpaces(szValueA);
+
     //get ending byte
     if (*szValueA >= '0' && *szValueA <= '9')
     {
@@ -107,12 +113,15 @@ HRESULT CHttpHeaderReqRange::Parse(_In_z_ LPCSTR szValueA)
     {
       sRangeSet.nByteEnd = ULONGLONG_MAX;
     }
+
     //check values
     if (sRangeSet.nByteStart > sRangeSet.nByteEnd)
       return MX_E_InvalidData;
+
     //add range
     if (cRangeSetsList.AddElement(&sRangeSet) == FALSE)
       return E_OUTOFMEMORY;
+
     //skip spaces
     szValueA = SkipSpaces(szValueA);
     //check for separator or end
@@ -126,7 +135,7 @@ HRESULT CHttpHeaderReqRange::Parse(_In_z_ LPCSTR szValueA)
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqRange::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderReqRange::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   SIZE_T i, nCount;
 
@@ -137,7 +146,7 @@ HRESULT CHttpHeaderReqRange::Build(_Inout_ CStringA &cStrDestA)
   //fill ranges
   if (cStrDestA.CopyN("bytes", 5) == FALSE)
     return E_OUTOFMEMORY;
-  for (i=0; i<nCount; i++)
+  for (i = 0; i < nCount; i++)
   {
     if (cStrDestA.AppendFormat("%c%I64u-%I64u", ((i == 0) ? '=' : ','), cRangeSetsList[i].nByteStart,
                                cRangeSetsList[i].nByteEnd) == FALSE)

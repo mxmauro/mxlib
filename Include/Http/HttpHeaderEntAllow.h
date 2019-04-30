@@ -41,14 +41,14 @@ public:
 
   HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
     return DuplicateBehaviorAppend;
     };
 
-  HRESULT AddVerb(_In_z_ LPCSTR szVerbA);
+  HRESULT AddVerb(_In_z_ LPCSTR szVerbA, _In_ SIZE_T nVerbLen = (SIZE_T)-1);
 
   SIZE_T GetVerbsCount() const;
   LPCSTR GetVerb(_In_ SIZE_T nIndex) const;

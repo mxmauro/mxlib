@@ -40,15 +40,16 @@ public:
     CEntity();
     ~CEntity();
 
-    HRESULT SetTag(_In_z_ LPCSTR szTagA);
-    HRESULT SetTag(_In_z_ LPCWSTR szTagW);
-    LPCWSTR GetTag() const;
+    HRESULT SetTag(_In_z_ LPCSTR szTagA, _In_opt_ SIZE_T nTagLen = (SIZE_T)-1);
+    LPCSTR GetTag() const;
 
     HRESULT SetWeak(_In_ BOOL bIsWeak);
     BOOL GetWeak() const;
 
   private:
-    CStringW cStrTagW;
+    friend class CHttpHeaderReqIfXXXMatchBase;
+
+    CStringA cStrTagA;
     BOOL bIsWeak;
   };
 
@@ -61,14 +62,14 @@ public:
 
   HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
 
-  HRESULT AddEntity(_In_z_ LPCSTR szEntityA, _Out_opt_ CEntity **lplpEntity=NULL);
-  HRESULT AddEntity(_In_z_ LPCWSTR szEntityW, _Out_opt_ CEntity **lplpEntity=NULL);
+  HRESULT AddEntity(_In_z_ LPCSTR szTagA, _In_opt_ SIZE_T nTagLen = (SIZE_T)-1,
+                    _Out_opt_ CEntity **lplpEntity=NULL);
 
   SIZE_T GetEntitiesCount() const;
   CEntity* GetEntity(_In_ SIZE_T nIndex) const;
-  CEntity* GetEntity(_In_z_ LPCWSTR szTagW) const;
+  CEntity* GetEntity(_In_z_ LPCSTR szTagA) const;
 
 private:
   TArrayListWithDelete<CEntity*> cEntitiesList;

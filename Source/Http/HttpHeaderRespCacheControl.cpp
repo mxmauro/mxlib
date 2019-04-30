@@ -26,18 +26,11 @@
 
 //-----------------------------------------------------------
 
-typedef enum {
-  ValueTypeNone, ValueTypeToken, ValueTypeQuotedString
-} eValueType;
+static HRESULT GetUInt64(_In_z_ LPCWSTR szValueW, _Out_ ULONGLONG &nValue);
 
 //-----------------------------------------------------------
 
-static HRESULT GetUInt64(_In_z_ LPCSTR szValueA, _Out_ ULONGLONG &nValue);
-
-//-----------------------------------------------------------
-
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderRespCacheControl::CHttpHeaderRespCacheControl() : CHttpHeaderBase()
 {
@@ -55,265 +48,201 @@ CHttpHeaderRespCacheControl::CHttpHeaderRespCacheControl() : CHttpHeaderBase()
 
 CHttpHeaderRespCacheControl::~CHttpHeaderRespCacheControl()
 {
-  cPrivateFieldsList.RemoveAllElements();
-  cNoCacheFieldsList.RemoveAllElements();
-  cExtensionsList.RemoveAllElements();
   return;
 }
 
 HRESULT CHttpHeaderRespCacheControl::Parse(_In_z_ LPCSTR szValueA)
 {
-  LPCSTR szNameStartA, szNameEndA, szStartA, szFieldA;
-  CStringA cStrTempA, cStrFieldA;
-  CStringW cStrTempW;
+  CStringA cStrTokenA;
+  CStringW cStrValueW;
   ULONGLONG nValue;
-  ULONG nGotItems;
-  eValueType nValueType;
+  ULONG nHasItem;
   HRESULT hRes;
 
   if (szValueA == NULL)
     return E_POINTER;
   //parse
-  nGotItems = 0;
+  nHasItem = 0;
   do
   {
     //skip spaces
     szValueA = SkipSpaces(szValueA);
     if (*szValueA == 0)
       break;
-    //token
-    szNameEndA = szValueA = Advance(szNameStartA = szValueA, "=, \t");
-    if (szNameStartA == szNameEndA)
-      return MX_E_InvalidData;
-    //skip spaces
-    szValueA = SkipSpaces(szValueA);
-    //value
-    nValueType = ValueTypeNone;
-    cStrTempA.Empty();
-    if (*szValueA == '=')
+    if (*szValueA == ',')
+      goto skip_null_listitem;
+
+    //get parameter
+    hRes = GetParamNameAndValue(cStrTokenA, cStrValueW, szValueA);
+    if (FAILED(hRes) && hRes != MX_E_NoData)
+      return hRes;
+
+    //add parameter
+    if (StrCompareA((LPCSTR)cStrTokenA, "public", TRUE) == 0)
     {
-      //skip spaces
-      szValueA = SkipSpaces(szValueA+1);
-      //parse value
-      if (*szValueA == '"')
+      if (cStrValueW.IsEmpty() == FALSE || (nHasItem & 0x0001) != 0)
+        return MX_E_InvalidData;
+      nHasItem |= 0x0001;
+      //set value
+      hRes = SetPublic(TRUE);
+    }
+    else if (StrCompareA((LPCSTR)cStrTokenA, "max-age", TRUE) == 0)
+    {
+      if ((nHasItem & 0x0002) != 0)
+        return MX_E_InvalidData;
+      nHasItem |= 0x0002;
+      //parse delta seconds
+      hRes = GetUInt64((LPCWSTR)cStrValueW, nValue);
+      if (SUCCEEDED(hRes))
+        hRes = SetMaxAge(nValue);
+    }
+    else if (StrCompareA((LPCSTR)cStrTokenA, "private", TRUE) == 0)
+    {
+      if ((nHasItem & 0x0004) != 0)
+        return MX_E_InvalidData;
+      nHasItem |= 0x0004;
+      //set value
+      hRes = SetPrivate(TRUE);
+      //parse fields
+      if (SUCCEEDED(hRes) && cStrValueW.IsEmpty() == FALSE)
       {
-        nValueType = ValueTypeQuotedString;
-        szValueA = Advance(szStartA = ++szValueA, "\"");
-        if (*szValueA != '"')
-          return MX_E_InvalidData;
-        if (cStrTempA.CopyN(szStartA, (SIZE_T)(szValueA-szStartA)) == FALSE)
-          return E_OUTOFMEMORY;
-        szValueA++;
-      }
-      else
-      {
-        nValueType = ValueTypeToken;
-        szValueA = Advance(szStartA = szValueA, " \t,");
-        if (cStrTempA.CopyN(szStartA, (SIZE_T)(szValueA-szStartA)) == FALSE)
-          return E_OUTOFMEMORY;
+        LPCWSTR szStartW, szFieldW = (LPCWSTR)cStrValueW;
+        CStringA cStrTempA;
+
+        while (SUCCEEDED(hRes) && *szFieldW != 0)
+        {
+          //skip spaces
+          while (*szFieldW == L' ' || *szFieldW == L'\t')
+            szFieldW++;
+          if (*szFieldW == 0)
+            break;
+
+          //add field
+          szStartW = szFieldW;
+          while (*szFieldW >= 0x21 && *szFieldW <= 0x7E && *szFieldW != L',')
+            szFieldW++;
+          if (szFieldW > szStartW)
+          {
+            if (cStrTempA.CopyN(szStartW, (SIZE_T)(szFieldW - szStartW)) == FALSE)
+              hRes = AddPrivateField((LPCSTR)cStrTempA);
+            else
+              hRes = E_OUTOFMEMORY;
+            if (FAILED(hRes))
+              break;
+          }
+
+          //skip spaces
+          while (*szFieldW == L' ' || *szFieldW == L'\t')
+            szFieldW++;
+          //check for separator or end
+          if (*szFieldW == ',')
+            szFieldW++;
+          else if (*szFieldW != 0)
+            return MX_E_InvalidData;
+        }
       }
     }
-    //set item value
-    hRes = S_FALSE;
-    switch ((SIZE_T)(szNameEndA-szNameStartA))
+    else if (StrCompareA((LPCSTR)cStrTokenA, "s-maxage", TRUE) == 0)
     {
-      case 6:
-        if (StrNCompareA(szNameStartA, "public", 6, TRUE) == 0)
-        {
-          if (nValueType != ValueTypeNone || (nGotItems & 0x0001) != 0)
-            return MX_E_InvalidData; //value provided or token already specified
-          nGotItems |= 0x0001;
-          //set value
-          hRes = SetPublic(TRUE);
-          break;
-        }
-        break;
-
-      case 7:
-        if (StrNCompareA(szNameStartA, "max-age", 7, TRUE) == 0)
-        {
-          if (nValueType != ValueTypeToken || (nGotItems & 0x0002) != 0)
-            return MX_E_InvalidData; //no value provided or token already specified
-          nGotItems |= 0x0002;
-          //parse delta seconds
-          hRes = GetUInt64((LPSTR)cStrTempA, nValue);
-          if (SUCCEEDED(hRes))
-            hRes = SetMaxAge(nValue);
-          break;
-        }
-        if (StrNCompareA(szNameStartA, "private", 7, TRUE) == 0)
-        {
-          if ((nValueType != ValueTypeNone && nValueType != ValueTypeQuotedString) || (nGotItems & 0x0004) != 0)
-            return MX_E_InvalidData; //non quoted value provided or token already specified
-          nGotItems |= 0x0004;
-          //set value
-          hRes = SetPrivate(TRUE);
-          if (SUCCEEDED(hRes) && nValueType == ValueTypeQuotedString)
-          {
-            //parse fields
-            szFieldA = (LPSTR)cStrTempA;
-            while (SUCCEEDED(hRes) && *szFieldA != 0)
-            {
-              //skip spaces
-              szFieldA = SkipSpaces(szFieldA);
-              if (*szFieldA == 0)
-                break;
-              szFieldA = GetToken(szStartA = szFieldA, ",");
-              if (szFieldA == szStartA)
-              {
-                hRes = MX_E_InvalidData;
-                break;
-              }
-              //add field
-              if (cStrTempA.CopyN(szStartA, (SIZE_T)(szFieldA-szStartA)) == FALSE)
-              {
-                hRes = E_OUTOFMEMORY;
-                break;
-              }
-              hRes = AddPrivateField((LPSTR)cStrTempA);
-              if (FAILED(hRes))
-                break;
-              //skip spaces
-              szFieldA = SkipSpaces(szFieldA);
-              //check for separator or end
-              if (*szFieldA == ',')
-                szFieldA++;
-              else if (*szFieldA != 0)
-                hRes = MX_E_InvalidData;
-            }
-          }
-          break;
-        }
-        break;
-
-      case 8:
-        if (StrNCompareA(szNameStartA, "s-maxage", 8, TRUE) == 0)
-        {
-          if (nValueType != ValueTypeToken || (nGotItems & 0x0008) != 0)
-            return MX_E_InvalidData; //no value provided or token already specified
-          nGotItems |= 0x0008;
-          //parse delta seconds
-          hRes = GetUInt64((LPSTR)cStrTempA, nValue);
-          if (SUCCEEDED(hRes))
-            hRes = SetSharedMaxAge(nValue);
-          break;
-        }
-        if (StrNCompareA(szNameStartA, "no-cache", 8, TRUE) == 0)
-        {
-          if ((nValueType != ValueTypeNone && nValueType != ValueTypeQuotedString) || (nGotItems & 0x0010) != 0)
-            return MX_E_InvalidData; //non quoted value provided or token already specified
-          nGotItems |= 0x0010;
-          //set value
-          hRes = SetNoCache(TRUE);
-          if (SUCCEEDED(hRes) && nValueType == ValueTypeQuotedString)
-          {
-            //parse fields
-            szFieldA = (LPSTR)cStrTempA;
-            while (SUCCEEDED(hRes) && *szFieldA != 0)
-            {
-              //skip spaces
-              szFieldA = SkipSpaces(szFieldA);
-              if (*szFieldA == 0)
-                break;
-              szFieldA = GetToken(szStartA = szFieldA, ",");
-              if (szFieldA == szStartA)
-              {
-                hRes = MX_E_InvalidData;
-                break;
-              }
-              //add field
-              if (cStrTempA.CopyN(szStartA, (SIZE_T)(szFieldA-szStartA)) == FALSE)
-              {
-                hRes = E_OUTOFMEMORY;
-                break;
-              }
-              hRes = AddNoCacheField((LPSTR)cStrTempA);
-              if (FAILED(hRes))
-                break;
-              //skip spaces
-              szFieldA = SkipSpaces(szFieldA);
-              //check for separator or end
-              if (*szFieldA == ',')
-                szFieldA++;
-              else if (*szFieldA != 0)
-                hRes = MX_E_InvalidData;
-            }
-          }
-          break;
-        }
-        if (StrNCompareA(szNameStartA, "no-store", 8, TRUE) == 0)
-        {
-          if (nValueType != ValueTypeNone || (nGotItems & 0x0020) != 0)
-            return MX_E_InvalidData; //value provided or token already specified
-          nGotItems |= 0x0020;
-          //set value
-          hRes = SetNoStore(TRUE);
-          break;
-        }
-        break;
-
-      case 12:
-        if (StrNCompareA(szNameStartA, "no-transform", 12, TRUE) == 0)
-        {
-          if (nValueType != ValueTypeNone || (nGotItems & 0x0040) != 0)
-            return MX_E_InvalidData; //value provided or token already specified
-          nGotItems |= 0x0040;
-          //set value
-          hRes = SetNoTransform(TRUE);
-          break;
-        }
-        break;
-
-      case 15:
-        if (StrNCompareA(szNameStartA, "must-revalidate", 15, TRUE) == 0)
-        {
-          if (nValueType != ValueTypeNone || (nGotItems & 0x0080) != 0)
-            return MX_E_InvalidData; //value provided or token already specified
-          nGotItems |= 0x0080;
-          //set value
-          hRes = SetMustRevalidate(TRUE);
-          break;
-        }
-        break;
-
-      case 16:
-        if (StrNCompareA(szNameStartA, "proxy-revalidate", 16, TRUE) == 0)
-        {
-          if (nValueType != ValueTypeNone || (nGotItems & 0x0100) != 0)
-            return MX_E_InvalidData; //value provided or token already specified
-          nGotItems |= 0x0100;
-          //set value
-          hRes = SetProxyRevalidate(TRUE);
-          break;
-        }
-        break;
+      if ((nHasItem & 0x0008) != 0)
+        return MX_E_InvalidData;
+      nHasItem |= 0x0008;
+      //parse delta seconds
+      hRes = GetUInt64((LPCWSTR)cStrValueW, nValue);
+      if (SUCCEEDED(hRes))
+        hRes = SetSharedMaxAge(nValue);
     }
-    if (hRes == S_FALSE)
+    else if (StrCompareA((LPCSTR)cStrTokenA, "no-cache", TRUE) == 0)
     {
-      nGotItems |= 0x1000;
+      if ((nHasItem & 0x0010) != 0)
+        return MX_E_InvalidData;
+      nHasItem |= 0x0010;
+      //set value
+      hRes = SetNoCache(TRUE);
+      //parse fields
+      if (SUCCEEDED(hRes) && cStrValueW.IsEmpty() == FALSE)
+      {
+        LPCWSTR szStartW, szFieldW = (LPCWSTR)cStrValueW;
+        CStringA cStrTempA;
+
+        while (SUCCEEDED(hRes) && *szFieldW != 0)
+        {
+          //skip spaces
+          while (*szFieldW == L' ' || *szFieldW == L'\t')
+            szFieldW++;
+          if (*szFieldW == 0)
+            break;
+
+          //add field
+          szStartW = szFieldW;
+          while (*szFieldW >= 0x21 && *szFieldW <= 0x7E && *szFieldW != L',')
+            szFieldW++;
+          if (szFieldW > szStartW)
+          {
+            if (cStrTempA.CopyN(szStartW, (SIZE_T)(szFieldW - szStartW)) == FALSE)
+              hRes = AddNoCacheField((LPCSTR)cStrTempA);
+            else
+              hRes = E_OUTOFMEMORY;
+            if (FAILED(hRes))
+              break;
+          }
+
+          //skip spaces
+          while (*szFieldW == L' ' || *szFieldW == L'\t')
+            szFieldW++;
+          //check for separator or end
+          if (*szFieldW == ',')
+            szFieldW++;
+          else if (*szFieldW != 0)
+            return MX_E_InvalidData;
+        }
+      }
+    }
+    else if (StrCompareA((LPCSTR)cStrTokenA, "no-store", TRUE) == 0)
+    {
+      if ((nHasItem & 0x0020) != 0)
+        return MX_E_InvalidData;
+      nHasItem |= 0x0020;
+      //set value
+      hRes = SetNoStore(TRUE);
+    }
+    else if (StrCompareA((LPCSTR)cStrTokenA, "no-transform", TRUE) == 0)
+    {
+      if ((nHasItem & 0x0040) != 0)
+        return MX_E_InvalidData;
+      nHasItem |= 0x0040;
+      //set value
+      hRes = SetNoTransform(TRUE);
+    }
+    else if (StrCompareA((LPCSTR)cStrTokenA, "must-revalidate", TRUE) == 0)
+    {
+      if ((nHasItem & 0x0080) != 0)
+        return MX_E_InvalidData;
+      nHasItem |= 0x0080;
+      //set value
+      hRes = SetMustRevalidate(TRUE);
+    }
+    else if (StrCompareA((LPCSTR)cStrTokenA, "proxy-revalidate", TRUE) == 0)
+    {
+      if ((nHasItem & 0x0100) != 0)
+        return MX_E_InvalidData;
+      nHasItem |= 0x0100;
+      //set value
+      hRes = SetProxyRevalidate(TRUE);
+    }
+    else
+    {
+      nHasItem |= 0x1000;
       //parse cache extension
-      cStrTempW.Empty();
-      switch (nValueType)
-      {
-        case ValueTypeToken:
-          if (cStrTempW.Copy((LPSTR)cStrTempA) == FALSE)
-            return E_OUTOFMEMORY;
-          break;
-
-        case ValueTypeQuotedString:
-          hRes = Utf8_Decode(cStrTempW, (LPSTR)cStrTempA);
-          if (FAILED(hRes))
-            return hRes;
-          break;
-      }
-      if (cStrTempA.CopyN(szNameStartA, (SIZE_T)(szNameEndA-szNameStartA)) == FALSE)
-        return E_OUTOFMEMORY;
-      hRes = AddExtension((LPSTR)cStrTempA, (LPWSTR)cStrTempW);
+      hRes = AddExtension((LPCSTR)cStrTokenA, (LPCWSTR)cStrValueW);
     }
     if (FAILED(hRes))
       return hRes;
+
     //skip spaces
     szValueA = SkipSpaces(szValueA);
+
+skip_null_listitem:
     //check for separator or end
     if (*szValueA == ',')
       szValueA++;
@@ -322,15 +251,13 @@ HRESULT CHttpHeaderRespCacheControl::Parse(_In_z_ LPCSTR szValueA)
   }
   while (*szValueA != 0);
   //done
-  return (nGotItems != 0) ? S_OK : MX_E_InvalidData;
+  return (nHasItem != 0) ? S_OK : MX_E_InvalidData;
 }
 
-HRESULT CHttpHeaderRespCacheControl::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderRespCacheControl::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   SIZE_T i, nCount;
-  LPCWSTR sW;
   CStringA cStrTempA;
-  HRESULT hRes;
 
   cStrDestA.Empty();
   if (bPublic != FALSE)
@@ -343,9 +270,11 @@ HRESULT CHttpHeaderRespCacheControl::Build(_Inout_ CStringA &cStrDestA)
     if (cStrDestA.Concat(",private") == FALSE)
       return E_OUTOFMEMORY;
     nCount = cPrivateFieldsList.GetCount();
-    for (i=0; i<nCount; i++)
+    for (i = 0; i < nCount; i++)
     {
-      if (cStrDestA.AppendFormat("%c%s", ((i == 0) ? '"' : ','), cPrivateFieldsList.GetElementAt(i)) == FALSE)
+      if (cStrDestA.Concat((i == 0) ? "=\"" : ",") == FALSE)
+        return E_OUTOFMEMORY;
+      if (cStrDestA.Concat(cPrivateFieldsList.GetElementAt(i)) == FALSE)
         return E_OUTOFMEMORY;
     }
     if (nCount > 0)
@@ -359,9 +288,11 @@ HRESULT CHttpHeaderRespCacheControl::Build(_Inout_ CStringA &cStrDestA)
     if (cStrDestA.Concat(",no-cache") == FALSE)
       return E_OUTOFMEMORY;
     nCount = cNoCacheFieldsList.GetCount();
-    for (i=0; i<nCount; i++)
+    for (i = 0; i < nCount; i++)
     {
-      if (cStrDestA.AppendFormat("%c%s", ((i == 0) ? '"' : ','), cNoCacheFieldsList.GetElementAt(i)) == FALSE)
+      if (cStrDestA.Concat((i == 0) ? "=\"" : ",") == FALSE)
+        return E_OUTOFMEMORY;
+      if (cStrDestA.Concat(cNoCacheFieldsList.GetElementAt(i)) == FALSE)
         return E_OUTOFMEMORY;
     }
     if (nCount > 0)
@@ -402,34 +333,17 @@ HRESULT CHttpHeaderRespCacheControl::Build(_Inout_ CStringA &cStrDestA)
   }
   //extensions
   nCount = cExtensionsList.GetCount();
-  for (i=0; i<nCount; i++)
+  for (i = 0; i < nCount; i++)
   {
-    if (cStrDestA.AppendFormat(",%s=", cExtensionsList[i]->szNameA) == FALSE)
+    if (CHttpCommon::BuildQuotedString(cStrTempA, cExtensionsList[i]->szValueW, StrLenW(cExtensionsList[i]->szValueW),
+                                       FALSE) == FALSE)
+    {
       return E_OUTOFMEMORY;
-    sW = cExtensionsList[i]->szValueW;
-    while (*sW != 0)
-    {
-      if (*sW < 33 || *sW > 126 || CHttpCommon::IsValidNameChar((CHAR)(*sW)) == FALSE)
-        break;
-      sW++;
     }
-    if (*sW == 0)
-    {
-      if (cStrDestA.AppendFormat("%S", cExtensionsList[i]->szValueW) == FALSE)
-        return E_OUTOFMEMORY;
-    }
-    else
-    {
-      hRes = Utf8_Encode(cStrTempA, cExtensionsList[i]->szValueW);
-      if (FAILED(hRes))
-        return hRes;
-      if (CHttpCommon::EncodeQuotedString(cStrTempA) == FALSE)
-        return E_OUTOFMEMORY;
-      if (cStrDestA.AppendFormat("\"%s\"", (LPCSTR)cStrTempA) == FALSE)
-        return E_OUTOFMEMORY;
-    }
+    if (cStrDestA.AppendFormat(",%s=%s", cExtensionsList[i]->szNameA, (LPCSTR)cStrTempA) == FALSE)
+      return E_OUTOFMEMORY;
   }
-  if (cStrTempA.GetLength() > 0)
+  if (cStrTempA.IsEmpty() == FALSE)
     cStrTempA.Delete(0, 1); //delete initial comma
   //done
   return S_OK;
@@ -457,30 +371,31 @@ BOOL CHttpHeaderRespCacheControl::GetPrivate() const
   return bPrivate;
 }
 
-HRESULT CHttpHeaderRespCacheControl::AddPrivateField(_In_z_ LPCSTR szFieldA)
+HRESULT CHttpHeaderRespCacheControl::AddPrivateField(_In_z_ LPCSTR szFieldA, _In_ SIZE_T nFieldLen)
 {
-  LPCSTR szStartA, szEndA;
+  LPCSTR szStartA;
   CStringA cStrTempA;
 
+  if (nFieldLen == (SIZE_T)-1)
+    nFieldLen = StrLenA(szFieldA);
+  if (nFieldLen == 0)
+    return MX_E_InvalidData;
   if (szFieldA == NULL)
     return E_POINTER;
-  //skip spaces
-  szFieldA = CHttpHeaderBase::SkipSpaces(szFieldA);
   //get token
-  szFieldA = CHttpHeaderBase::GetToken(szStartA = szFieldA);
+  szFieldA = CHttpHeaderBase::GetToken(szStartA = szFieldA, nFieldLen);
   if (szStartA == szFieldA)
     return MX_E_InvalidData;
-  szEndA = szFieldA;
-  //skip spaces and check for end
-  if (*CHttpHeaderBase::SkipSpaces(szFieldA) != 0)
+  //check for end
+  if (szFieldA != szStartA + nFieldLen)
     return MX_E_InvalidData;
   //set new value
-  if (cStrTempA.CopyN(szStartA, (SIZE_T)(szEndA-szStartA)) == FALSE)
+  if (cStrTempA.CopyN(szStartA, nFieldLen) == FALSE)
     return E_OUTOFMEMORY;
   if (cPrivateFieldsList.AddElement((LPSTR)cStrTempA) == FALSE)
     return E_OUTOFMEMORY;
-  //done
   cStrTempA.Detach();
+  //done
   return S_OK;
 }
 
@@ -498,10 +413,10 @@ BOOL CHttpHeaderRespCacheControl::HasPrivateField(_In_z_ LPCSTR szFieldA) const
 {
   SIZE_T i, nCount;
 
-  if (szFieldA != NULL && szFieldA[0] != 0)
+  if (szFieldA != NULL && *szFieldA != 0)
   {
     nCount = cPrivateFieldsList.GetCount();
-    for (i=0; i<nCount; i++)
+    for (i = 0; i < nCount; i++)
     {
       if (StrCompareA(cPrivateFieldsList.GetElementAt(i), szFieldA, TRUE) == 0)
         return TRUE;
@@ -521,30 +436,31 @@ BOOL CHttpHeaderRespCacheControl::GetNoCache() const
   return bNoCache;
 }
 
-HRESULT CHttpHeaderRespCacheControl::AddNoCacheField(_In_z_ LPCSTR szFieldA)
+HRESULT CHttpHeaderRespCacheControl::AddNoCacheField(_In_z_ LPCSTR szFieldA, _In_ SIZE_T nFieldLen)
 {
-  LPCSTR szStartA, szEndA;
+  LPCSTR szStartA;
   CStringA cStrTempA;
 
+  if (nFieldLen == (SIZE_T)-1)
+    nFieldLen = StrLenA(szFieldA);
+  if (nFieldLen == 0)
+    return MX_E_InvalidData;
   if (szFieldA == NULL)
     return E_POINTER;
-  //skip spaces
-  szFieldA = CHttpHeaderBase::SkipSpaces(szFieldA);
   //get token
-  szFieldA = CHttpHeaderBase::GetToken(szStartA = szFieldA);
+  szFieldA = GetToken(szStartA = szFieldA, nFieldLen);
   if (szStartA == szFieldA)
     return MX_E_InvalidData;
-  szEndA = szFieldA;
-  //skip spaces and check for end
-  if (*CHttpHeaderBase::SkipSpaces(szFieldA) != 0)
+  //check for end
+  if (szFieldA != szStartA + nFieldLen)
     return MX_E_InvalidData;
   //set new value
-  if (cStrTempA.CopyN(szStartA, (SIZE_T)(szEndA-szStartA)) == FALSE)
+  if (cStrTempA.CopyN(szStartA, nFieldLen) == FALSE)
     return E_OUTOFMEMORY;
   if (cNoCacheFieldsList.AddElement((LPSTR)cStrTempA) == FALSE)
     return E_OUTOFMEMORY;
-  //done
   cStrTempA.Detach();
+  //done
   return S_OK;
 }
 
@@ -562,10 +478,10 @@ BOOL CHttpHeaderRespCacheControl::HasNoCacheField(_In_z_ LPCSTR szFieldA) const
 {
   SIZE_T i, nCount;
 
-  if (szFieldA != NULL && szFieldA[0] != 0)
+  if (szFieldA != NULL && *szFieldA != 0)
   {
     nCount = cNoCacheFieldsList.GetCount();
-    for (i=0; i<nCount; i++)
+    for (i = 0; i < nCount; i++)
     {
       if (StrCompareA(cNoCacheFieldsList.GetElementAt(i), szFieldA, TRUE) == 0)
         return TRUE;
@@ -714,24 +630,24 @@ LPCWSTR CHttpHeaderRespCacheControl::GetExtensionValue(_In_z_ LPCSTR szNameA) co
 
 //-----------------------------------------------------------
 
-static HRESULT GetUInt64(_In_z_ LPCSTR szValueA, _Out_ ULONGLONG &nValue)
+static HRESULT GetUInt64(_In_z_ LPCWSTR szValueW, _Out_ ULONGLONG &nValue)
 {
   ULONGLONG nTemp;
 
   nValue = 0ui64;
-  while (*szValueA == ' ' || *szValueA == '\t')
-    szValueA++;
-  if (*szValueA < '0' || *szValueA > '9')
+  if (*szValueW < L'0' || *szValueW > L'9')
     return MX_E_InvalidData;
-  while (*szValueA >= '0' && *szValueA <= '9')
+  while (*szValueW == L'0')
+    szValueW++;
+  while (*szValueW >= L'0' && *szValueW <= L'9')
   {
     nTemp = nValue * 10ui64;
     if (nTemp < nValue)
       return MX_E_ArithmeticOverflow;
-    nValue = nTemp + (ULONGLONG)(*szValueA - '0');
+    nValue = nTemp + (ULONGLONG)(*szValueW - L'0');
     if (nValue < nTemp)
       return MX_E_ArithmeticOverflow;
-    szValueA++;
+    szValueW++;
   }
-  return S_OK;
+  return (*szValueW == 0) ? S_OK : MX_E_InvalidData;
 }

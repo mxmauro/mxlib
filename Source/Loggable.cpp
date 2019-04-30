@@ -30,6 +30,10 @@
   //#define DEBUGOUTPUT_LOG
 #endif //_DEBUG
 
+#ifdef DEBUGOUTPUT_LOG
+  #include "..\Include\Debug.h"
+#endif //DEBUGOUTPUT_LOG
+
 //-----------------------------------------------------------
 
 namespace MX {
@@ -186,7 +190,7 @@ HRESULT CLoggable::WriteLogCommon(_In_ BOOL bAddError, _In_ HRESULT hResError, _
 
   hRes = (cCallback) ? cCallback(lpszBufW) : S_OK;
 #ifdef DEBUGOUTPUT_LOG
-  ::OutputDebugStringW(lpszBufW);
+  DebugPrint("%S\n", lpszBufW);
 #endif //DEBUGOUTPUT_LOG
   if (lpszBufW != szTempBufW)
     MX_FREE(lpszBufW);

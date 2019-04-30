@@ -78,7 +78,7 @@ HRESULT CHttpHeaderRespWwwProxyAuthenticateCommon::Parse(_In_z_ LPCSTR szValueA)
   return hRes;
 }
 
-HRESULT CHttpHeaderRespWwwProxyAuthenticateCommon::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderRespWwwProxyAuthenticateCommon::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
   cStrDestA.Empty();
   return MX_E_Unsupported;

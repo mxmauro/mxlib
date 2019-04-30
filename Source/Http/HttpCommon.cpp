@@ -90,13 +90,12 @@ CHttpCommon::~CHttpCommon()
 
 VOID CHttpCommon::SetOption_MaxHeaderSize(_In_ DWORD dwSize)
 {
-  dwMaxHeaderSize = dwSize;
-  if (dwMaxHeaderSize < 2048)
+  if (dwSize < 2048)
     dwMaxHeaderSize = 2048;
-  else if (dwMaxHeaderSize > 327680)
+  else if (dwSize > 327680)
     dwMaxHeaderSize = 327680;
   else
-    dwMaxHeaderSize = (dwMaxHeaderSize + 16383) & (~16383);
+    dwMaxHeaderSize = (dwSize + 16383) & (~16383);
   return;
 }
 
@@ -602,7 +601,7 @@ HRESULT CHttpCommon::AddHeader(_In_z_ LPCSTR szNameA, _Out_opt_ CHttpHeaderBase 
     nCount = cHeaders.GetCount();
     for (i=0; i<nCount; i++)
     {
-      if (StrCompareA(cHeaders[i]->GetName(), szNameA, TRUE) == 0)
+      if (StrCompareA(cHeaders[i]->GetHeaderName(), szNameA, TRUE) == 0)
       {
         nDuplicateBehavior = cHeaders[i]->GetDuplicateBehavior();
         if (nDuplicateBehavior == CHttpHeaderBase::DuplicateBehaviorError)
@@ -706,7 +705,7 @@ HRESULT CHttpCommon::RemoveHeader(_In_z_ LPCSTR szNameA)
   i = cHeaders.GetCount();
   while ((i--) > 0)
   {
-    if (StrCompareA(szNameA, cHeaders[i]->GetName(), TRUE) == 0)
+    if (StrCompareA(szNameA, cHeaders[i]->GetHeaderName(), TRUE) == 0)
     {
       cHeaders.RemoveElementAt(i);
       bFound = TRUE;
@@ -753,12 +752,12 @@ CHttpHeaderBase* CHttpCommon::GetHeader(_In_z_ LPCSTR szNameA) const
 {
   SIZE_T i, nCount;
 
-  if (szNameA != NULL && szNameA[0] != 0)
+  if (szNameA != NULL && *szNameA != 0)
   {
     nCount = cHeaders.GetCount();
-    for (i=0; i<nCount; i++)
+    for (i = 0; i <nCount; i++)
     {
-      if (StrCompareA(szNameA, cHeaders[i]->GetName(), TRUE) == 0)
+      if (StrCompareA(szNameA, cHeaders[i]->GetHeaderName(), TRUE) == 0)
         return cHeaders.GetElementAt(i);
     }
   }
@@ -1123,16 +1122,15 @@ HRESULT CHttpCommon::ParseHeader(_Inout_ CStringA &cStrLineA)
   if (*szNameEndA != ':')
     return MX_E_InvalidData;
   //skip blanks
-  szLineA = szNameEndA+1;
-  while (*szLineA==' ' || *szLineA=='\t')
+  szLineA = szNameEndA + 1;
+  while (*szLineA == ' ' || *szLineA == '\t')
     szLineA++;
   //get header value
   szValueStartA = szValueEndA = szLineA;
   while (*szValueEndA != 0)
     szValueEndA++;
-  while (szValueEndA > szValueStartA && (*(szValueEndA-1)==' ' || *(szValueEndA-1)=='\t'))
+  while (szValueEndA > szValueStartA && (*(szValueEndA-1) == ' ' || *(szValueEndA-1) == '\t'))
     szValueEndA--;
-
   //is a cookie?
   if (bActAsServer != FALSE &&
       (((SIZE_T)(szNameEndA-szNameStartA) == 6 && StrNCompareA(szNameStartA, "Cookie", 6, TRUE) == 0) ||
@@ -1183,7 +1181,7 @@ HRESULT CHttpCommon::ParseHeader(_Inout_ CStringA &cStrLineA)
     if (FAILED(hRes))
       return hRes;
     //cache some header values
-    if (StrCompareA(lpHeader->GetName(), "Transfer-Encoding", TRUE) == 0)
+    if (StrCompareA(lpHeader->GetHeaderName(), "Transfer-Encoding", TRUE) == 0)
     {
       CHttpHeaderGenTransferEncoding *lpHdr = (CHttpHeaderGenTransferEncoding*)lpHeader;
 
@@ -1198,13 +1196,13 @@ HRESULT CHttpCommon::ParseHeader(_Inout_ CStringA &cStrLineA)
           return MX_E_Unsupported;
       }
     }
-    else if (StrCompareA(lpHeader->GetName(), "Content-Length", TRUE) == 0)
+    else if (StrCompareA(lpHeader->GetHeaderName(), "Content-Length", TRUE) == 0)
     {
       CHttpHeaderEntContentLength *lpHdr = (CHttpHeaderEntContentLength*)lpHeader;
 
       nContentLength = lpHdr->GetLength();
     }
-    else if (StrCompareA(lpHeader->GetName(), "Content-Encoding", TRUE) == 0)
+    else if (StrCompareA(lpHeader->GetHeaderName(), "Content-Encoding", TRUE) == 0)
     {
       CHttpHeaderEntContentEncoding *lpHdr = (CHttpHeaderEntContentEncoding*)lpHeader;
 
@@ -1222,7 +1220,7 @@ HRESULT CHttpCommon::ParseHeader(_Inout_ CStringA &cStrLineA)
           return MX_E_Unsupported;
       }
     }
-    else if (StrCompareA(lpHeader->GetName(), "Connection", TRUE) == 0)
+    else if (StrCompareA(lpHeader->GetHeaderName(), "Connection", TRUE) == 0)
     {
       CHttpHeaderGenConnection *lpHdr = (CHttpHeaderGenConnection*)lpHeader;
 
@@ -1239,7 +1237,7 @@ HRESULT CHttpCommon::ParseHeader(_Inout_ CStringA &cStrLineA)
         nHeaderFlags |= HEADER_FLAG_ConnectionClose;
       }
     }
-    else if (StrCompareA(lpHeader->GetName(), "Upgrade", TRUE) == 0)
+    else if (StrCompareA(lpHeader->GetHeaderName(), "Upgrade", TRUE) == 0)
     {
       CHttpHeaderGenUpgrade *lpHdr = (CHttpHeaderGenUpgrade*)lpHeader;
 
@@ -1248,7 +1246,7 @@ HRESULT CHttpCommon::ParseHeader(_Inout_ CStringA &cStrLineA)
         nHeaderFlags |= HEADER_FLAG_UpgradeWebSocket;
       }
     }
-    else if (bActAsServer != FALSE && StrCompareA(lpHeader->GetName(), "Host", TRUE) == 0)
+    else if (bActAsServer != FALSE && StrCompareA(lpHeader->GetHeaderName(), "Host", TRUE) == 0)
     {
       CHttpHeaderReqHost *lpHdr = (CHttpHeaderReqHost*)lpHeader;
 
@@ -1345,15 +1343,13 @@ HRESULT CHttpCommon::FlushContent()
   return hRes;
 }
 
-BOOL CHttpCommon::IsValidVerb(_In_z_ LPCSTR szVerbA)
+BOOL CHttpCommon::IsValidVerb(_In_ LPCSTR szStrA, _In_ SIZE_T nStrLen)
 {
-  if (szVerbA != NULL && szVerbA[0] != 0)
+  if (szStrA != NULL && nStrLen > 0)
   {
-    SIZE_T nMethod;
-
-    for (nMethod=0; nMethod<MX_ARRAYLEN(sVerbs); nMethod++)
+    for (SIZE_T nMethod = 0; nMethod < MX_ARRAYLEN(sVerbs); nMethod++)
     {
-      if (StrNCompareA(szVerbA, sVerbs[nMethod].szNameA, sVerbs[nMethod].nNameLen, FALSE) == 0)
+      if (nStrLen == sVerbs[nMethod].nNameLen && StrNCompareA(szStrA, sVerbs[nMethod].szNameA, nStrLen, FALSE) == 0)
         return TRUE;
     }
   }

@@ -40,17 +40,16 @@ public:
 
   HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
 
-  HRESULT SetEntity(_In_z_ LPCSTR szEntityA);
-  HRESULT SetEntity(_In_z_ LPCWSTR szEntityW);
-  LPCWSTR GetEntity() const;
+  HRESULT SetTag(_In_z_ LPCSTR szTagA, _In_ SIZE_T nTagLen = (SIZE_T)-1);
+  LPCSTR GetTag() const;
 
   HRESULT SetWeak(_In_ BOOL bIsWeak);
   BOOL GetWeak() const;
 
 private:
-  CStringW cStrEntityW;
+  CStringA cStrTagA;
   BOOL bIsWeak;
 };
 

@@ -1349,6 +1349,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow()
           SYSTEMTIME sSt;
         } u;
         LPCSTR sA = lpRow[i];
+        HRESULT hRes;
 
         switch (lpFieldInfo->nType)
         {
@@ -1403,7 +1404,9 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow()
           case MYSQL_TYPE_FLOAT:
           case MYSQL_TYPE_DOUBLE:
           case MYSQL_TYPE_NEWDECIMAL:
-            u.nDbl = atof(sA);
+            hRes = StrToDoubleA(sA, (SIZE_T)-1, &(u.nDbl));
+            if (FAILED(hRes))
+              MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
             DukTape::duk_push_number(lpCtx, u.nDbl);
             break;
 

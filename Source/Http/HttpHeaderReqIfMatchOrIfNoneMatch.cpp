@@ -35,7 +35,6 @@ CHttpHeaderReqIfXXXMatchBase::CHttpHeaderReqIfXXXMatchBase(_In_opt_ BOOL _bIsMat
 
 CHttpHeaderReqIfXXXMatchBase::~CHttpHeaderReqIfXXXMatchBase()
 {
-  cEntitiesList.RemoveAllElements();
   return;
 }
 
@@ -43,8 +42,7 @@ HRESULT CHttpHeaderReqIfXXXMatchBase::Parse(_In_z_ LPCSTR szValueA)
 {
   CEntity *lpEntity;
   LPCSTR szStartA;
-  CStringA cStrTempA, cStrTempA_2;
-  CStringW cStrTempW;
+  CStringA cStrTempA;
   BOOL bIsWeak, bGotItem;
   HRESULT hRes;
 
@@ -58,7 +56,11 @@ HRESULT CHttpHeaderReqIfXXXMatchBase::Parse(_In_z_ LPCSTR szValueA)
     szValueA = SkipSpaces(szValueA);
     if (*szValueA == 0)
       break;
+    if (*szValueA == ',')
+      goto skip_null_listitem;
+
     bGotItem = TRUE;
+
     //is weak?
     bIsWeak = FALSE;
     if (szValueA[0] == 'W' && szValueA[1] == '/')
@@ -66,16 +68,35 @@ HRESULT CHttpHeaderReqIfXXXMatchBase::Parse(_In_z_ LPCSTR szValueA)
       szValueA += 2;
       bIsWeak = TRUE;
     }
+
     //get entity
-    szValueA = Advance(szStartA = szValueA, ",");
-    if (cStrTempA.CopyN(szStartA, (SIZE_T)(szValueA-szStartA)) == FALSE)
-      return E_OUTOFMEMORY;
-    hRes = AddEntity((LPSTR)cStrTempA, &lpEntity);
+    if (*szValueA != '"')
+    {
+      szValueA = SkipUntil(szStartA = szValueA, " \t");
+      if (szValueA == szStartA)
+        return MX_E_InvalidData;
+      if (cStrTempA.CopyN(szStartA, (SIZE_T)(szValueA - szStartA)) == FALSE)
+        return E_OUTOFMEMORY;
+    }
+    else
+    {
+      hRes = GetQuotedString(cStrTempA, szValueA);
+      if (FAILED(hRes))
+        return hRes;
+      if (cStrTempA.IsEmpty() != FALSE)
+        return MX_E_InvalidData;
+    }
+
+    //get entity
+    hRes = AddEntity((LPCSTR)cStrTempA, cStrTempA.GetLength(), &lpEntity);
     if (FAILED(hRes))
       return hRes;
     lpEntity->SetWeak(bIsWeak);
+
     //skip spaces
     szValueA = SkipSpaces(szValueA);
+
+skip_null_listitem:
     //check for separator or end
     if (*szValueA == ',')
       szValueA++;
@@ -87,16 +108,16 @@ HRESULT CHttpHeaderReqIfXXXMatchBase::Parse(_In_z_ LPCSTR szValueA)
   return (bGotItem != FALSE) ? S_OK : MX_E_InvalidData;
 }
 
-HRESULT CHttpHeaderReqIfXXXMatchBase::Build(_Inout_ CStringA &cStrDestA)
+HRESULT CHttpHeaderReqIfXXXMatchBase::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
 {
-  SIZE_T i, nCount;
   CStringA cStrTempA;
+  SIZE_T i, nCount;
   CEntity *lpEntity;
-  HRESULT hRes;
 
   cStrDestA.Empty();
+
   nCount = cEntitiesList.GetCount();
-  for (i=0; i<nCount; i++)
+  for (i = 0; i < nCount; i++)
   {
     lpEntity = cEntitiesList.GetElementAt(i);
     if (cStrDestA.IsEmpty() == FALSE)
@@ -111,19 +132,19 @@ HRESULT CHttpHeaderReqIfXXXMatchBase::Build(_Inout_ CStringA &cStrDestA)
         return E_OUTOFMEMORY;
     }
     //entity
-    hRes = Utf8_Encode(cStrTempA, lpEntity->GetTag());
-    if (FAILED(hRes))
-      return hRes;
-    if (CHttpCommon::EncodeQuotedString(cStrTempA) == FALSE)
+    if (CHttpCommon::BuildQuotedString(cStrTempA, (LPCSTR)(lpEntity->GetTag()), lpEntity->cStrTagA.GetLength(),
+                                       FALSE) == FALSE ||
+        cStrDestA.ConcatN((LPCSTR)cStrTempA, cStrTempA.GetLength()) == FALSE)
+    {
       return E_OUTOFMEMORY;
-    if (cStrDestA.AppendFormat("\"%s\"", (LPCSTR)cStrTempA) == FALSE)
-      return E_OUTOFMEMORY;
+    }
   }
   //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqIfXXXMatchBase::AddEntity(_In_z_ LPCSTR szTagA, _Out_opt_ CEntity **lplpEntity)
+HRESULT CHttpHeaderReqIfXXXMatchBase::AddEntity(_In_z_ LPCSTR szTagA, _In_opt_ SIZE_T nTagLen,
+                                                _Out_opt_ CEntity **lplpEntity)
 {
   TAutoDeletePtr<CEntity> cNewEntity;
   SIZE_T i, nCount;
@@ -131,57 +152,29 @@ HRESULT CHttpHeaderReqIfXXXMatchBase::AddEntity(_In_z_ LPCSTR szTagA, _Out_opt_ 
 
   if (lplpEntity != NULL)
     *lplpEntity = NULL;
+  if (nTagLen == (SIZE_T)-1)
+    nTagLen = StrLenA(szTagA);
+  if (nTagLen == 0)
+    return MX_E_InvalidData;
   if (szTagA == NULL)
     return E_POINTER;
+  //check for duplicates
+  nCount = cEntitiesList.GetCount();
+  for (i = 0; i < nCount; i++)
+  {
+    if (cEntitiesList[i]->cStrTagA.GetLength() == nTagLen &&
+        StrNCompareA(cEntitiesList[i]->GetTag(), szTagA, nTagLen, TRUE) == 0)
+    {
+      return MX_E_AlreadyExists;
+    }
+  }
   //create new type
   cNewEntity.Attach(MX_DEBUG_NEW CEntity());
   if (!cNewEntity)
     return E_OUTOFMEMORY;
-  hRes = cNewEntity->SetTag(szTagA);
+  hRes = cNewEntity->SetTag(szTagA, nTagLen);
   if (FAILED(hRes))
     return hRes;
-  //check if already exists in list
-  nCount = cEntitiesList.GetCount();
-  for (i=0; i<nCount; i++)
-  {
-    if (StrCompareW(cEntitiesList[i]->GetTag(), cNewEntity->GetTag()) == 0)
-      return MX_E_AlreadyExists;
-  }
-  //add to list
-  if (cEntitiesList.AddElement(cNewEntity.Get()) == FALSE)
-    return E_OUTOFMEMORY;
-  //done
-  if (lplpEntity != NULL)
-    *lplpEntity = cNewEntity.Detach();
-  else
-    cNewEntity.Detach();
-  return S_OK;
-}
-
-HRESULT CHttpHeaderReqIfXXXMatchBase::AddEntity(_In_z_ LPCWSTR szTagW, _Out_opt_ CEntity **lplpEntity)
-{
-  TAutoDeletePtr<CEntity> cNewEntity;
-  SIZE_T i, nCount;
-  HRESULT hRes;
-
-  if (lplpEntity != NULL)
-    *lplpEntity = NULL;
-  if (szTagW == NULL)
-    return E_POINTER;
-  //create new type
-  cNewEntity.Attach(MX_DEBUG_NEW CEntity());
-  if (!cNewEntity)
-    return E_OUTOFMEMORY;
-  hRes = cNewEntity->SetTag(szTagW);
-  if (FAILED(hRes))
-    return hRes;
-  //check if already exists in list
-  nCount = cEntitiesList.GetCount();
-  for (i=0; i<nCount; i++)
-  {
-    if (StrCompareW(cEntitiesList[i]->GetTag(), cNewEntity->GetTag()) == 0)
-      return MX_E_AlreadyExists;
-  }
   //add to list
   if (cEntitiesList.AddElement(cNewEntity.Get()) == FALSE)
     return E_OUTOFMEMORY;
@@ -203,16 +196,16 @@ CHttpHeaderReqIfXXXMatchBase::CEntity* CHttpHeaderReqIfXXXMatchBase::GetEntity(_
   return (nIndex < cEntitiesList.GetCount()) ? cEntitiesList.GetElementAt(nIndex) : NULL;
 }
 
-CHttpHeaderReqIfXXXMatchBase::CEntity* CHttpHeaderReqIfXXXMatchBase::GetEntity(_In_z_ LPCWSTR szTagW) const
+CHttpHeaderReqIfXXXMatchBase::CEntity* CHttpHeaderReqIfXXXMatchBase::GetEntity(_In_z_ LPCSTR szTagA) const
 {
   SIZE_T i, nCount;
 
-  if (szTagW != NULL && szTagW[0] != 0)
+  if (szTagA != NULL && *szTagA != 0)
   {
     nCount = cEntitiesList.GetCount();
-    for (i=0; i<nCount; i++)
+    for (i = 0; i < nCount; i++)
     {
-      if (StrCompareW(cEntitiesList[i]->GetTag(), szTagW, TRUE) == 0)
+      if (StrCompareA(cEntitiesList[i]->GetTag(), szTagA, TRUE) == 0)
         return cEntitiesList.GetElementAt(i);
     }
   }
@@ -233,94 +226,32 @@ CHttpHeaderReqIfXXXMatchBase::CEntity::~CEntity()
   return;
 }
 
-HRESULT CHttpHeaderReqIfXXXMatchBase::CEntity::SetTag(_In_z_ LPCSTR szTagA)
+HRESULT CHttpHeaderReqIfXXXMatchBase::CEntity::SetTag(_In_z_ LPCSTR szTagA, _In_opt_ SIZE_T nTagLen)
 {
-  LPCSTR szStartA, szEndA;
-  CStringA cStrTempA;
-  HRESULT hRes;
+  SIZE_T i;
 
+  if (nTagLen == (SIZE_T)-1)
+    nTagLen = StrLenA(szTagA);
+  if (nTagLen == 0)
+    return MX_E_InvalidData;
   if (szTagA == NULL)
     return E_POINTER;
-  //skip spaces
-  szTagA = CHttpHeaderBase::SkipSpaces(szTagA);
-  //get entity
-  if (szTagA[0] == '"')
+  //check for invalid characters
+  for (i = 0; i < nTagLen; i++)
   {
-    szTagA = CHttpHeaderBase::Advance(szStartA = ++szTagA, "\"");
-    if (*szTagA != '"')
+    if (((UCHAR)szTagA[i]) < 0x20 || ((UCHAR)szTagA[i]) > 0x7E || szTagA[i] == '"')
       return MX_E_InvalidData;
-    szEndA = szTagA;
-    szTagA++;
   }
-  else if (szTagA[0] != '*')
-  {
-    szTagA = CHttpHeaderBase::Advance(szStartA = szTagA, " \t;,");
-    if (szTagA == szStartA)
-      return MX_E_InvalidData;
-    szEndA = szTagA;
-  }
-  else
-  {
-    szStartA = szTagA++;
-    szEndA = szTagA;
-  }
-  if (szEndA == szStartA)
-    return MX_E_InvalidData;
-  //skip spaces and check for end
-  if (*CHttpHeaderBase::SkipSpaces(szTagA) != 0)
-    return MX_E_InvalidData;
-  //set new value
-  if (cStrTempA.CopyN(szStartA, (SIZE_T)(szEndA-szStartA)) == FALSE)
-    return E_OUTOFMEMORY;
-  hRes = Utf8_Decode(cStrTagW, (LPSTR)cStrTempA);
-  //done
-  return hRes;
-}
-
-HRESULT CHttpHeaderReqIfXXXMatchBase::CEntity::SetTag(_In_z_ LPCWSTR szTagW)
-{
-  LPCWSTR szStartW, szEndW;
-
-  if (szTagW == NULL)
-    return E_POINTER;
-  //skip spaces
-  szTagW = CHttpHeaderBase::SkipSpaces(szTagW);
-  //get entity
-  if (szTagW[0] == L'"')
-  {
-    szTagW = CHttpHeaderBase::Advance(szStartW = ++szTagW, L"\"");
-    if (*szTagW != L'"')
-      return MX_E_InvalidData;
-    szEndW = szTagW;
-    szTagW++;
-  }
-  else if (szTagW[0] != L'*')
-  {
-    szTagW = CHttpHeaderBase::Advance(szStartW = szTagW, L" \t;,");
-    if (szTagW == szStartW)
-      return MX_E_InvalidData;
-    szEndW = szTagW;
-  }
-  else
-  {
-    szStartW = szTagW++;
-    szEndW = szTagW;
-  }
-  if (szEndW == szStartW)
-    return MX_E_InvalidData;
-  //skip spaces and check for end
-  if (*CHttpHeaderBase::SkipSpaces(szTagW) != 0)
-    return MX_E_InvalidData;
-  //set new value
-  if (cStrTagW.CopyN(szStartW, (SIZE_T)(szEndW-szStartW)) == FALSE)
+  //check completed
+  if (cStrTagA.CopyN(szTagA, nTagLen) == FALSE)
     return E_OUTOFMEMORY;
   //done
   return S_OK;
 }
 
-LPCWSTR CHttpHeaderReqIfXXXMatchBase::CEntity::GetTag() const
+LPCSTR CHttpHeaderReqIfXXXMatchBase::CEntity::GetTag() const
 {
-  return (LPCWSTR)cStrTagW;
+  return (LPCSTR)cStrTagA;
 }
 
 HRESULT CHttpHeaderReqIfXXXMatchBase::CEntity::SetWeak(_In_ BOOL _bIsWeak)

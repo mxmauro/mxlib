@@ -35,14 +35,14 @@
 #include "..\CircularBuffer.h"
 #include "..\Callbacks.h"
 #include "..\Streams.h"
-#include "..\TimedEventQueue.h"
 #include "..\Debug.h"
 #include "..\Loggable.h"
 #include "..\HiResTimer.h"
+#include "..\RedBlackTree.h"
 
-  #define MX_IPC_DEBUG_PRINT(level, output) if (MX::CIpc::nDebugLevel >= level) {  \
-                                              MX::DebugPrint output;               \
-                                            }
+#define MX_IPC_DEBUG_PRINT(level, output) if (MX::CIpc::nDebugLevel >= level) {  \
+                                            MX::DebugPrint output;               \
+                                          }
 
 //-----------------------------------------------------------
 
@@ -117,15 +117,15 @@ public:
 
   //--------
 
-  typedef Callback<VOID (_In_ CIpc *lpIpc, _In_ HRESULT hErrorCode)> OnEngineErrorCallback;
+  typedef Callback<VOID (_In_ CIpc *lpIpc, _In_ HRESULT hrErrorCode)> OnEngineErrorCallback;
 
   typedef Callback<HRESULT (_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CUserData *lpUserData,
-                            _Inout_ CLayerList &cLayersList, _In_ HRESULT hErrorCode)> OnConnectCallback;
+                            _In_ HRESULT hrErrorCode)> OnConnectCallback;
   typedef Callback<VOID (_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CUserData *lpUserData,
-                         _In_ HRESULT hErrorCode)> OnDisconnectCallback;
+                         _In_ HRESULT hrErrorCode)> OnDisconnectCallback;
   typedef Callback<HRESULT (_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CUserData *lpUserData)> OnDataReceivedCallback;
   typedef Callback<VOID (_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CUserData *lpUserData,
-                         _In_ HRESULT hErrorCode)> OnDestroyCallback;
+                         _In_ HRESULT hrErrorCode)> OnDestroyCallback;
 
   typedef Callback<VOID (_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie,
                          _In_ CUserData *lpUserData)> OnAfterWriteSignalCallback;
@@ -136,7 +136,6 @@ public:
     OnDisconnectCallback &cDisconnectCallback;
     OnDataReceivedCallback &cDataReceivedCallback;
     OnDestroyCallback &cDestroyCallback;
-    DWORD &dwWriteTimeoutMs;
     TAutoRefCounted<CUserData> &cUserData;
   } CREATE_CALLBACK_DATA;
 
@@ -186,12 +185,11 @@ public:
   VOID SetOption_PacketSize(_In_ DWORD dwSize);
   VOID SetOption_ReadAheadCount(_In_ DWORD dwCount);
   VOID SetOption_MaxFreePacketsCount(_In_ DWORD dwCount);
-  VOID SetOption_MaxWriteTimeoutMs(_In_ DWORD dwTimeoutMs);
   //NOTE: Disabling ZeroReads can lead to receive WSAENOBUFFS on low memory conditions.
   VOID SetOption_EnableZeroReads(_In_ BOOL bEnable);
   VOID SetOption_OutgoingPacketsLimitCount(_In_ DWORD dwCount);
 
-  VOID On(_In_ OnEngineErrorCallback cEngineErrorCallback);
+  VOID SetEngineErrorCallback(_In_ OnEngineErrorCallback cEngineErrorCallback);
 
   HRESULT Initialize();
   VOID Finalize();
@@ -205,10 +203,15 @@ public:
   virtual HRESULT GetBufferedMessage(_In_ HANDLE h, _Out_ LPVOID lpMsg, _Inout_ SIZE_T *lpnMsgSize);
   virtual HRESULT ConsumeBufferedMessage(_In_ HANDLE h, _In_ SIZE_T nConsumedBytes);
 
-  HRESULT Close(_In_opt_ HANDLE h, _In_opt_ HRESULT hErrorCode=S_OK);
+  HRESULT Close(_In_opt_ HANDLE h, _In_opt_ HRESULT hrErrorCode = S_OK);
 
   HRESULT IsConnected(_In_ HANDLE h);
-  HRESULT IsClosed(_In_ HANDLE h, _Out_opt_ HRESULT *lphErrorCode=NULL);
+  HRESULT IsClosed(_In_ HANDLE h, _Out_opt_ HRESULT *lphErrorCode = NULL);
+
+  HRESULT GetReadStats(_In_ HANDLE h, _Out_opt_ PULONGLONG lpullBytesTransferred, _Out_opt_ float *lpnThroughputKbps);
+  HRESULT GetWriteStats(_In_ HANDLE h, _Out_opt_ PULONGLONG lpullBytesTransferred, _Out_opt_ float *lpnThroughputKbps);
+
+  HRESULT GetErrorCode(_In_ HANDLE h);
 
   HRESULT PauseInputProcessing(_In_ HANDLE h);
   HRESULT ResumeInputProcessing(_In_ HANDLE h);
@@ -216,8 +219,15 @@ public:
   HRESULT ResumeOutputProcessing(_In_ HANDLE h);
 
   //NOTE: On success, the connection will own the layer
-  HRESULT AddLayer(_In_ HANDLE h, _In_ CLayer *lpLayer, _In_opt_ BOOL bFront=TRUE);
+  HRESULT AddLayer(_In_ HANDLE h, _In_ CLayer *lpLayer, _In_opt_ BOOL bFront = TRUE);
 
+  HRESULT SetConnectCallback(_In_ HANDLE h, _In_ OnConnectCallback cConnectCallback);
+  HRESULT SetDisconnectCallback(_In_ HANDLE h, _In_ OnDisconnectCallback cDisconnectCallback);
+  HRESULT SetDataReceivedCallback(_In_ HANDLE h, _In_ OnDataReceivedCallback cDataReceivedCallback);
+  HRESULT SetDestroyCallback(_In_ HANDLE h, _In_ OnDestroyCallback cDestroyCallback);
+
+  //NOTE: On success, the connection will own the user data
+  HRESULT SetUserData(_In_ HANDLE h, _In_ CUserData *lpUserData);
   CUserData* GetUserData(_In_ HANDLE h);
 
   eConnectionClass GetClass(_In_ HANDLE h);
@@ -530,9 +540,6 @@ protected:
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CConnectionBase);
   protected:
-    typedef TArrayList<CTimedEventQueue::CEvent*> __TEventArray;
-
-  protected:
     CConnectionBase(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass);
   public:
     virtual ~CConnectionBase();
@@ -543,8 +550,6 @@ protected:
       };
 
     virtual VOID ShutdownLink(_In_ BOOL bAbortive);
-
-    VOID DoCancelEventsCallback(_In_ __TEventArray &cEventsList);
 
     HRESULT SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
     HRESULT SendStream(_In_ CStream *lpStream);
@@ -579,8 +584,8 @@ protected:
 
     HRESULT SendDataToLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize, _In_ CLayer *lpCurrLayer, _In_ BOOL bIsMsg);
 
-    HRESULT MarkLastWriteActivity(_In_ BOOL bSet);
-    VOID OnWriteTimeout(_In_ CTimedEventQueue::CEvent *lpEvent);
+    VOID UpdateStats(_In_ BOOL bRead, _In_ DWORD dwBytesTransferred);
+    VOID GetStats(_In_ BOOL bRead, _Out_ PULONGLONG lpullBytesTransferred, _Out_opt_ float *lpnThroughputKbps);
 
   protected:
     friend class CIpc;
@@ -588,7 +593,7 @@ protected:
     LONG volatile nMutex;
     CIpc *lpIpc;
     CIpc::eConnectionClass nClass;
-    LONG volatile hErrorCode;
+    LONG volatile hrErrorCode;
     LONG volatile nFlags;
     CPacketList cReadedList;
     LONG volatile nNextReadOrder;
@@ -597,7 +602,6 @@ protected:
     LONG volatile nNextWriteOrder;
     LONG volatile nNextWriteOrderToProcess;
     LONG volatile nOutstandingReads, nOutstandingWrites, nOutstandingWritesBeingSent;
-    DWORD dwWriteTimeoutMs;
     CPacketList cRwList;
     struct {
       LONG volatile nMutex;
@@ -613,11 +617,15 @@ protected:
     OnConnectCallback cConnectCallback;
     OnDisconnectCallback cDisconnectCallback;
     OnDataReceivedCallback cDataReceivedCallback;
-    CSystemTimedEventQueue *lpTimedEventQueue;
-    struct {
-      LONG volatile nMutex;
-      TPendingListHelperGeneric<CTimedEventQueue::CEvent*> cActiveList;
-    } sWriteTimeout;
+    struct tagStats {
+      LONG nRwMutex;
+      ULONGLONG ullBytesTransferred, ullPrevBytesTransferred;
+      struct {
+        ULARGE_INTEGER uliStartCounter, uliFrequency;
+      } sWatchdogTimer;
+      float nAvgRate;
+      float nTransferRateHistory[4];
+    } sReadStats, sWriteStats;
     CCriticalSection cOnDataReceivedCS;
     CHiResTimer cHiResTimer;
   };
@@ -630,10 +638,10 @@ protected:
   virtual HRESULT OnInternalInitialize() = 0;
   virtual VOID OnInternalFinalize() = 0;
 
-  VOID FireOnEngineError(_In_ HRESULT hErrorCode);
+  VOID FireOnEngineError(_In_ HRESULT hrErrorCode);
   HRESULT FireOnCreate(_In_ CConnectionBase *lpConn);
   VOID FireOnDestroy(_In_ CConnectionBase *lpConn);
-  HRESULT FireOnConnect(_In_ CConnectionBase *lpConn, _In_ HRESULT hErrorCode);
+  HRESULT FireOnConnect(_In_ CConnectionBase *lpConn, _In_ HRESULT hrErrorCode);
   VOID FireOnDisconnect(_In_ CConnectionBase *lpConn);
   HRESULT FireOnDataReceived(_In_ CConnectionBase *lpConn);
 
@@ -658,7 +666,6 @@ protected:
   DWORD dwReadAhead, dwMaxOutgoingPackets;
   BOOL bDoZeroReads;
   DWORD dwMaxFreePackets;
-  DWORD dwMaxWriteTimeoutMs;
   CWindowsEvent cShuttingDownEv;
   OnEngineErrorCallback cEngineErrorCallback;
   struct {

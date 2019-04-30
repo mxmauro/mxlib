@@ -39,7 +39,7 @@ public:
   typedef enum {
     SchemeUnknown=-1, SchemeNone=0,
     SchemeMailTo, SchemeNews, SchemeHttp, SchemeHttps, SchemeFtp,
-    SchemeFile, SchemeResource, SchemeNntp, SchemeGopher
+    SchemeFile, SchemeResource, SchemeNntp, SchemeGopher, SchemeWebSocket, SchemeSecureWebSocket
   } eScheme;
 
   typedef enum {

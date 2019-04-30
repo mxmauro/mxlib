@@ -26,7 +26,6 @@
 
 #include "..\Defines.h"
 #include "..\Callbacks.h"
-#include "..\TimedEventQueue.h"
 #include "..\Comm\Sockets.h"
 #include "..\Comm\IpcSslLayer.h"
 #include "HttpCommon.h"
@@ -35,12 +34,13 @@
 #include "HttpBodyParserMultipartFormData.h"
 #include "HttpBodyParserUrlEncodedForm.h"
 #include "HttpBodyParserIgnore.h"
+#include "WebSockets.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-class CHttpServer : public virtual CBaseMemObj, public CLoggable, private CCriticalSection
+class CHttpServer : public virtual CThread, public CLoggable, private CCriticalSection
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CHttpServer);
 public:
@@ -49,12 +49,22 @@ public:
   //--------
 
   typedef Callback<HRESULT (_Out_ CClientRequest **lplpRequest)> OnNewRequestObjectCallback;
-  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ HANDLE hShutdownEv,
-                         _Outptr_ _Maybenull_ CHttpBodyParserBase **lplpBodyParser)> OnRequestHeadersReceivedCallback;
+  typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ HANDLE hShutdownEv,
+                            _Outptr_ _Maybenull_ CHttpBodyParserBase **lplpBodyParser)>
+                            OnRequestHeadersReceivedCallback;
   typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
                          _In_ HANDLE hShutdownEv)> OnRequestCompletedCallback;
+  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
+                         _In_ HRESULT hrErrorCode)> OnErrorCallback;
 
-  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ HRESULT hErrorCode)> OnErrorCallback;
+  typedef struct {
+    LPCSTR *lpszProtocolsA;
+    int nSelectedProtocol;
+    CWebSocket *lpWebSocket;
+  } WEBSOCKET_REQUEST_CALLBACK_DATA;
+
+  typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ HANDLE hShutdownEv,
+                            _Inout_ WEBSOCKET_REQUEST_CALLBACK_DATA &sData)> OnWebSocketRequestReceivedCallback;
 
   //--------
 
@@ -63,7 +73,10 @@ public:
               _In_opt_ CLoggable *lpLogParent = NULL);
   ~CHttpServer();
 
-  VOID SetOption_MaxRequestTimeoutMs(_In_ DWORD dwTimeoutMs);
+  VOID SetOption_MaxConnectionsPerIp(_In_ DWORD dwLimit);
+  VOID SetOption_RequestHeaderTimeout(_In_ DWORD dwTimeoutMs);
+  VOID SetOption_RequestBodyLimits(_In_ DWORD dwMinimumThroughputInBps, _In_ DWORD dwSecondsOfLowThroughput);
+  VOID SetOption_ResponseLimits(_In_ DWORD dwMinimumThroughputInBps, _In_ DWORD dwSecondsOfLowThroughput);
   VOID SetOption_MaxHeaderSize(_In_ DWORD dwSize);
   VOID SetOption_MaxFieldSize(_In_ DWORD dwSize);
   VOID SetOption_MaxFileSize(_In_ ULONGLONG ullSize);
@@ -72,19 +85,20 @@ public:
   VOID SetOption_MaxBodySizeInMemory(_In_ DWORD dwSize);
   VOID SetOption_MaxBodySize(_In_ ULONGLONG ullSize);
 
-  VOID On(_In_ OnNewRequestObjectCallback cNewRequestObjectCallback);
-  VOID On(_In_ OnRequestHeadersReceivedCallback cRequestHeadersReceivedCallback);
-  VOID On(_In_ OnRequestCompletedCallback cRequestCompletedCallback);
-  VOID On(_In_ OnErrorCallback cErrorCallback);
+  VOID SetNewRequestObjectCallback(_In_ OnNewRequestObjectCallback cNewRequestObjectCallback);
+  VOID SetRequestHeadersReceivedCallback(_In_ OnRequestHeadersReceivedCallback cRequestHeadersReceivedCallback);
+  VOID SetRequestCompletedCallback(_In_ OnRequestCompletedCallback cRequestCompletedCallback);
+  VOID SetWebSocketRequestReceivedCallback(_In_ OnWebSocketRequestReceivedCallback cWebSocketRequestReceivedCallback);
+  VOID SetErrorCallback(_In_ OnErrorCallback cErrorCallback);
 
-  HRESULT StartListening(_In_ int nPort, _In_opt_ CIpcSslLayer::eProtocol nProtocol=CIpcSslLayer::ProtocolUnknown,
-                         _In_opt_ CSslCertificate *lpSslCertificate=NULL, _In_opt_ CCryptoRSA *lpSslKey=NULL);
+  HRESULT StartListening(_In_ int nPort, _In_opt_ CIpcSslLayer::eProtocol nProtocol = CIpcSslLayer::ProtocolUnknown,
+                         _In_opt_ CSslCertificate *lpSslCertificate = NULL, _In_opt_ CCryptoRSA *lpSslKey = NULL);
   HRESULT StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ int nPort,
-                         _In_opt_ CIpcSslLayer::eProtocol nProtocol=CIpcSslLayer::ProtocolUnknown,
-                         _In_opt_ CSslCertificate *lpSslCertificate=NULL, _In_opt_ CCryptoRSA *lpSslKey=NULL);
+                         _In_opt_ CIpcSslLayer::eProtocol nProtocol = CIpcSslLayer::ProtocolUnknown,
+                         _In_opt_ CSslCertificate *lpSslCertificate = NULL, _In_opt_ CCryptoRSA *lpSslKey = NULL);
   HRESULT StartListening(_In_opt_z_ LPCWSTR szBindAddressW, _In_ int nPort,
-                         _In_opt_ CIpcSslLayer::eProtocol nProtocol=CIpcSslLayer::ProtocolUnknown,
-                         _In_opt_ CSslCertificate *lpSslCertificate=NULL, _In_opt_ CCryptoRSA *lpSslKey=NULL);
+                         _In_opt_ CIpcSslLayer::eProtocol nProtocol = CIpcSslLayer::ProtocolUnknown,
+                         _In_opt_ CSslCertificate *lpSslCertificate = NULL, _In_opt_ CCryptoRSA *lpSslKey = NULL);
   VOID StopListening();
 
 public:
@@ -96,7 +110,7 @@ public:
   public:
     ~CClientRequest();
 
-    VOID End(_In_opt_ HRESULT hErrorCode=S_OK);
+    VOID End(_In_opt_ HRESULT hrErrorCode=S_OK);
 
     VOID EnableDirectResponse();
 
@@ -125,36 +139,37 @@ public:
 
     VOID ResetResponse();
 
-    HRESULT SetResponseStatus(_In_ LONG nStatus, _In_opt_ LPCSTR szReasonA=NULL);
+    HRESULT SetResponseStatus(_In_ LONG nStatus, _In_opt_ LPCSTR szReasonA = NULL);
 
     template<class T>
-    HRESULT AddResponseHeader(_Out_opt_ T **lplpHeader=NULL, _In_ BOOL bReplaceExisting=TRUE)
+    HRESULT AddResponseHeader(_Out_opt_ T **lplpHeader = NULL, _In_ BOOL bReplaceExisting = TRUE)
       {
-      return AddResponseHeader(T::GetNameStatic(), reinterpret_cast<CHttpHeaderBase**>(lplpHeader), bReplaceExisting);
-      };
-    HRESULT AddResponseHeader(_In_z_ LPCSTR szNameA, _Out_opt_ CHttpHeaderBase **lplpHeader=NULL,
-                              _In_ BOOL bReplaceExisting=TRUE);
-
-    template<class T>
-    HRESULT AddResponseHeader(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen=(SIZE_T)-1,
-                              _Out_opt_ T **lplpHeader=NULL, _In_ BOOL bReplaceExisting=TRUE)
-      {
-      return AddResponseHeader(T::GetNameStatic(), szValueA, nValueLen, reinterpret_cast<CHttpHeaderBase**>(lplpHeader),
+      return AddResponseHeader(T::GetHeaderNameStatic(), reinterpret_cast<CHttpHeaderBase**>(lplpHeader),
                                bReplaceExisting);
       };
-    HRESULT AddResponseHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen=(SIZE_T)-1,
-                              _Out_opt_ CHttpHeaderBase **lplpHeader=NULL, _In_ BOOL bReplaceExisting=TRUE);
+    HRESULT AddResponseHeader(_In_z_ LPCSTR szNameA, _Out_opt_ CHttpHeaderBase **lplpHeader = NULL,
+                              _In_ BOOL bReplaceExisting = TRUE);
+
+    template<class T>
+    HRESULT AddResponseHeader(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1,
+                              _Out_opt_ T **lplpHeader = NULL, _In_ BOOL bReplaceExisting = TRUE)
+      {
+      return AddResponseHeader(T::GetHeaderNameStatic(), szValueA, nValueLen,
+                               reinterpret_cast<CHttpHeaderBase**>(lplpHeader), bReplaceExisting);
+      };
+    HRESULT AddResponseHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1,
+                              _Out_opt_ CHttpHeaderBase **lplpHeader = NULL, _In_ BOOL bReplaceExisting = TRUE);
 
     //NOTE: Unicode values will be UTF-8 & URL encoded
     template<class T>
     HRESULT AddResponseHeader(_In_z_ LPCWSTR szValueW, _In_opt_ SIZE_T nValueLen=(SIZE_T)-1,
-                              _Out_opt_ T **lplpHeader=NULL, _In_ BOOL bReplaceExisting=TRUE)
+                              _Out_opt_ T **lplpHeader = NULL, _In_ BOOL bReplaceExisting = TRUE)
       {
       return AddResponseHeader(T::GetNameStatic(), szValueW, nValueLen, reinterpret_cast<CHttpHeaderBase**>(lplpHeader),
                                bReplaceExisting);
       };
     HRESULT AddResponseHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW, _In_opt_ SIZE_T nValueLen=(SIZE_T)-1,
-                              _Out_opt_ CHttpHeaderBase **lplpHeader=NULL, _In_ BOOL bReplaceExisting=TRUE);
+                              _Out_opt_ CHttpHeaderBase **lplpHeader = NULL, _In_ BOOL bReplaceExisting = TRUE);
 
     HRESULT RemoveResponseHeader(_In_z_ LPCSTR szNameA);
     HRESULT RemoveResponseHeader(_In_ CHttpHeaderBase *lpHeader);
@@ -172,12 +187,12 @@ public:
 
     HRESULT AddResponseCookie(_In_ CHttpCookie &cSrc);
     HRESULT AddResponseCookie(_In_ CHttpCookieArray &cSrc);
-    HRESULT AddResponseCookie(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _In_opt_z_ LPCSTR szDomainA=NULL,
-                              _In_opt_z_ LPCSTR szPathA=NULL, _In_opt_ const CDateTime *lpDate=NULL,
-                              _In_opt_ BOOL bIsSecure=FALSE, _In_opt_ BOOL bIsHttpOnly=FALSE);
-    HRESULT AddResponseCookie(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW, _In_opt_z_ LPCWSTR szDomainW=NULL,
-                              _In_opt_z_ LPCWSTR szPathW=NULL, _In_opt_ const CDateTime *lpDate=NULL,
-                              _In_opt_ BOOL bIsSecure=FALSE, _In_opt_ BOOL bIsHttpOnly=FALSE);
+    HRESULT AddResponseCookie(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _In_opt_z_ LPCSTR szDomainA = NULL,
+                              _In_opt_z_ LPCSTR szPathA = NULL, _In_opt_ const CDateTime *lpDate = NULL,
+                              _In_opt_ BOOL bIsSecure = FALSE, _In_opt_ BOOL bIsHttpOnly = FALSE);
+    HRESULT AddResponseCookie(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW, _In_opt_z_ LPCWSTR szDomainW = NULL,
+                              _In_opt_z_ LPCWSTR szPathW = NULL, _In_opt_ const CDateTime *lpDate = NULL,
+                              _In_opt_ BOOL bIsSecure = FALSE, _In_opt_ BOOL bIsHttpOnly = FALSE);
     HRESULT RemoveResponseCookie(_In_z_ LPCSTR szNameA);
     HRESULT RemoveResponseCookie(_In_z_ LPCWSTR szNameW);
     HRESULT RemoveAllResponseCookies();
@@ -187,14 +202,19 @@ public:
     CHttpCookieArray* GetResponseCookies() const;
     SIZE_T GetResponseCookiesCount() const;
 
+    CHttpHeaderBase::eBrowser GetBrowser() const
+      {
+      return nBrowser;
+      };
+
     HRESULT SendHeaders();
     HRESULT SendResponse(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen);
     HRESULT SendFile(_In_z_ LPCWSTR szFileNameW);
     HRESULT SendStream(_In_ CStream *lpStream, _In_opt_z_ LPCWSTR szFileNameW=NULL);
 
-    HRESULT SendErrorPage(_In_ LONG nStatusCode, _In_ HRESULT hErrorCode, _In_opt_z_ LPCSTR szBodyExplanationA=NULL);
+    HRESULT SendErrorPage(_In_ LONG nStatusCode, _In_ HRESULT hrErrorCode, _In_opt_z_ LPCSTR szBodyExplanationA = NULL);
 
-    HANDLE GetUnderlyingSocket() const;
+    HANDLE GetUnderlyingSocketHandle() const;
     CSockets* GetUnderlyingSocketManager() const;
 
     virtual HRESULT OnSetup()
@@ -218,11 +238,14 @@ public:
     BOOL HasHeadersBeenSent() const;
 
     HRESULT BuildAndInsertOrSendHeaderStream();
+    HRESULT BuildAndSendWebSocketHeaderStream();
 
     HRESULT SendQueuedStreams();
 
     VOID MarkLinkAsClosed();
     BOOL IsLinkClosed() const;
+
+    VOID QueryBrowser();
 
   private:
     friend class CHttpServer;
@@ -233,6 +256,9 @@ public:
       StateReceivingRequestHeaders,
       StateReceivingRequestBody,
       StateBuildingResponse,
+      StateSendingResponse,
+      StateNegotiatingWebSocket,
+      StateWebSocket,
       StateError
     } eState;
 
@@ -242,8 +268,8 @@ public:
     public:
       CRequest(_In_ CHttpServer *lpHttpServer) : CBaseMemObj(), cHttpCmn(TRUE, lpHttpServer)
         {
-        _InterlockedExchange(&(sTimeout.nMutex), 0);
-        liLastRead.QuadPart = 0ui64;
+        dwHeadersTimeoutCounterSecs = DWORD_MAX;
+        dwBodyLowThroughputCcounter = 0;
         return;
         };
 
@@ -252,7 +278,8 @@ public:
         cUrl.Reset();
         cStrMethodA.Empty();
         cHttpCmn.ResetParser();
-        liLastRead.QuadPart = 0ui64;
+        dwHeadersTimeoutCounterSecs = DWORD_MAX;
+        dwBodyLowThroughputCcounter = 0;
         return;
         };
 
@@ -260,11 +287,8 @@ public:
       CUrl cUrl;
       CStringA cStrMethodA;
       CHttpCommon cHttpCmn;
-      struct {
-        LONG volatile nMutex;
-        TPendingListHelperGeneric<CTimedEventQueue::CEvent*> cActiveList;
-      } sTimeout;
-      ULARGE_INTEGER liLastRead;
+      DWORD dwHeadersTimeoutCounterSecs;
+      DWORD dwBodyLowThroughputCcounter;
     };
 
   private:
@@ -277,6 +301,7 @@ public:
         bLastStreamIsData = FALSE;
         szMimeTypeHintA = NULL;
         bDirect = FALSE;
+        dwLowThroughputCcounter = 0;
         return;
         };
 
@@ -290,6 +315,7 @@ public:
         szMimeTypeHintA = NULL;
         cStrFileNameA.Empty();
         bDirect = FALSE;
+        dwLowThroughputCcounter = 0;
         return;
         };
 
@@ -302,56 +328,62 @@ public:
       LPCSTR szMimeTypeHintA;
       CStringA cStrFileNameA;
       BOOL bDirect;
+      DWORD dwLowThroughputCcounter;
     };
 
   private:
+    typedef struct tagWEBSOCKET_INFO {
+      CHttpHeaderReqSecWebSocketKey *lpReqSecWebSocketKeyHeader;
+      LPCSTR szProtocolsA[1];
+    } WEBSOCKET_INFO, *LPWEBSOCKET_INFO;
+
+  private:
     OVERLAPPED sOvr;
+    CHttpHeaderBase::eBrowser nBrowser;
     CCriticalSection cMutex;
     CHttpServer *lpHttpServer;
     CSockets *lpSocketMgr;
     HANDLE hConn;
+    SOCKADDR_INET sPeerAddr;
     eState nState;
     LONG volatile nFlags;
     MX::TAutoDeletePtr<CRequest> cRequest;
     MX::TAutoDeletePtr<CResponse> cResponse;
+    MX::TAutoFreePtr<WEBSOCKET_INFO> cWebSocketInfo;
   };
 
 private:
   friend class CClientRequest;
 
-  typedef TArrayList<CTimedEventQueue::CEvent*> __TEventArray;
+  VOID ThreadProc();
 
   HRESULT OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIpc::CREATE_CALLBACK_DATA &sData);
   VOID OnListenerSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
-                               _In_ HRESULT hErrorCode);
+                               _In_ HRESULT hrErrorCode);
 
   VOID OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
-                       _In_ HRESULT hErrorCode);
-  HRESULT OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
-                          _Inout_ CIpc::CLayerList &cLayersList, _In_ HRESULT hErrorCode);
+                       _In_ HRESULT hrErrorCode);
+  HRESULT OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData, _In_ HRESULT hrErrorCode);
   HRESULT OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData);
-
-  VOID OnRequestTimeout(_In_ CTimedEventQueue::CEvent *lpEvent);
 
   VOID OnRequestCompleted(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
                           _In_ HRESULT hRes);
 
-  HRESULT QuickSendErrorResponseAndReset(_In_ CClientRequest *lpRequest, _In_ LONG nErrorCode, _In_ HRESULT hErrorCode,
+  HRESULT QuickSendErrorResponseAndReset(_In_ CClientRequest *lpRequest, _In_ LONG nErrorCode, _In_ HRESULT hrErrorCode,
                                          _In_ BOOL bForceClose);
 
   HRESULT GenerateErrorPage(_Out_ CStringA &cStrResponseA, _In_ CClientRequest *lpRequest, _In_ LONG nErrorCode,
-                            _In_ HRESULT hErrorCode, _In_opt_z_ LPCSTR szBodyExplanationA=NULL);
+                            _In_ HRESULT hrErrorCode, _In_opt_z_ LPCSTR szBodyExplanationA=NULL);
   static LPCSTR LocateError(_In_ LONG nErrorCode);
 
   VOID OnAfterSendResponse(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie, _In_ CIpc::CUserData *lpUserData);
 
-  HRESULT SetupTimeoutEvent(_In_ CClientRequest *lpRequest, _In_ DWORD dwTimeoutMs);
-  VOID CancelAllTimeoutEvents(_In_ CClientRequest *lpRequest);
-
-  VOID DoCancelEventsCallback(_In_ __TEventArray &cEventsList);
+  HRESULT CheckForWebSocket(_In_ CClientRequest *lpRequest);
+  HRESULT InitiateWebSocket(_In_ CClientRequest *lpRequest, _In_ WEBSOCKET_REQUEST_CALLBACK_DATA &sData,
+                            _Out_ BOOL &bFatal);
 
   VOID OnRequestDestroyed(_In_ CClientRequest *lpRequest);
-  VOID OnRequestEnding(_In_ CClientRequest *lpRequest, _In_ HRESULT hErrorCode);
+  VOID OnRequestEnding(_In_ CClientRequest *lpRequest, _In_ HRESULT hrErrorCode);
 
   HRESULT OnDownloadStarted(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW, _In_ LPVOID lpUserParam);
 
@@ -360,8 +392,10 @@ private:
   CIoCompletionPortThreadPool &cWorkerPool;
   //NOTE: CIoCompletionPortThreadPool::Post needs a non-dynamic variable
   CIoCompletionPortThreadPool::OnPacketCallback cRequestCompletedWP;
-
-  DWORD dwMaxRequestTimeoutMs;
+  DWORD dwMaxConnectionsPerIp;
+  DWORD dwRequestHeaderTimeoutMs;
+  DWORD dwRequestBodyMinimumThroughputInBps, dwResponseMinimumThroughputInBps;
+  DWORD dwRequestBodySecondsOfLowThroughput, dwResponseSecondsOfLowThroughput;
   DWORD dwMaxHeaderSize;
   DWORD dwMaxFieldSize;
   ULONGLONG ullMaxFileSize;
@@ -377,14 +411,14 @@ private:
     TAutoDeletePtr<CSslCertificate> cSslCertificate;
     TAutoDeletePtr<CCryptoRSA> cSslPrivateKey;
   } sSsl;
-  CSystemTimedEventQueue *lpTimedEventQueue;
   LONG volatile nRundownLock;
   HANDLE hAcceptConn;
   OnNewRequestObjectCallback cNewRequestObjectCallback;
   OnRequestHeadersReceivedCallback cRequestHeadersReceivedCallback;
   OnRequestCompletedCallback cRequestCompletedCallback;
+  OnWebSocketRequestReceivedCallback cWebSocketRequestReceivedCallback;
   OnErrorCallback cErrorCallback;
-  LONG volatile nRequestsMutex;
+  LONG volatile nRequestsListRwMutex;
   TLnkLst<CClientRequest> cRequestsList;
   CWindowsEvent cShutdownEv;
 };

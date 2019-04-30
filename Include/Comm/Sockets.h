@@ -26,7 +26,6 @@
 
 #include "IpcCommon.h"
 #include "HostResolver.h"
-#include "..\TimedEventQueue.h"
 
 //-----------------------------------------------------------
 
@@ -46,20 +45,20 @@ public:
 
   VOID SetOption_BackLogSize(_In_ DWORD dwSize);
   VOID SetOption_MaxAcceptsToPost(_In_ DWORD dwCount);
-  VOID SetOption_MaxResolverTimeoutMs(_In_ DWORD dwTimeoutMs);
+  VOID SetOption_AddressResolverTimeout(_In_ DWORD dwTimeoutMs);
 
   HRESULT CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
-                         _In_opt_z_ LPCSTR szBindAddressA=NULL, _In_opt_ CUserData *lpUserData=NULL,
-                         _Out_opt_ HANDLE *h=NULL);
+                         _In_opt_z_ LPCSTR szBindAddressA = NULL, _In_opt_ CUserData *lpUserData = NULL,
+                         _Out_opt_ HANDLE *h = NULL);
   HRESULT CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
-                         _In_opt_z_ LPCWSTR szBindAddressW=NULL, _In_opt_ CUserData *lpUserData=NULL,
-                         _Out_opt_ HANDLE *h=NULL);
+                         _In_opt_z_ LPCWSTR szBindAddressW = NULL, _In_opt_ CUserData *lpUserData = NULL,
+                         _Out_opt_ HANDLE *h = NULL);
   HRESULT ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA, _In_ int nPort,
-                          _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData=NULL,
-                          _Out_opt_ HANDLE *h=NULL);
+                          _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData = NULL,
+                          _Out_opt_ HANDLE *h = NULL);
   HRESULT ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCWSTR szAddressW, _In_ int nPort,
-                          _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData=NULL,
-                          _Out_opt_ HANDLE *h=NULL);
+                          _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData = NULL,
+                          _Out_opt_ HANDLE *h = NULL);
 
   HRESULT GetLocalAddress(_In_ HANDLE h, _Out_ PSOCKADDR_INET lpAddr);
   HRESULT GetPeerAddress(_In_ HANDLE h, _Out_ PSOCKADDR_INET lpAddr);
@@ -81,13 +80,14 @@ private:
     HRESULT SetupClient();
     HRESULT SetupAcceptEx(_In_ CConnection *lpListenConn);
 
-    HRESULT ResolveAddress(_In_ DWORD dwMaxResolverTimeoutMs, _In_ eFamily nFamily, _In_opt_z_ LPCSTR szAddressA,
+    HRESULT ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _In_ eFamily nFamily, _In_opt_z_ LPCSTR szAddressA,
                            _In_opt_ int nPort);
 
     HRESULT SendReadPacket(_In_ CPacket *lpPacket);
     HRESULT SendWritePacket(_In_ CPacket *lpPacket);
 
-    VOID HostResolveCallback(_In_ CHostResolver *lpResolver);
+    VOID HostResolveCallback(_In_ CHostResolver *lpResolver, _In_ SOCKADDR_INET &sAddr, _In_ HRESULT hrErrorCode,
+                             _In_opt_ LPVOID lpUserData);
 
     VOID ConnectWaiterThreadProc();
 
@@ -148,7 +148,7 @@ private:
     };
 
 private:
-  DWORD dwBackLogSize, dwMaxAcceptsToPost, dwMaxResolverTimeoutMs;
+  DWORD dwBackLogSize, dwMaxAcceptsToPost, dwAddressResolverTimeoutMs;
 };
 
 } //namespace MX

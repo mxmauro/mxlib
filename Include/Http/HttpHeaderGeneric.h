@@ -42,23 +42,23 @@ public:
   CHttpHeaderGeneric();
   ~CHttpHeaderGeneric();
 
-  HRESULT SetName(_In_z_ LPCSTR szNameA);
-  LPCSTR GetName() const;
+  HRESULT SetHeaderName(_In_z_ LPCSTR szNameA);
+  LPCSTR GetHeaderName() const;
 
   HRESULT Parse(_In_z_ LPCSTR szValueA);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
     return DuplicateBehaviorAdd;
     };
 
-  HRESULT SetValue(_In_z_ LPCSTR szValueA);
+  HRESULT SetValue(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
   LPCSTR GetValue() const;
 
 private:
-  CStringA cStrNameA;
+  CStringA cStrHeaderNameA;
   CStringA cStrValueA;
 };
 
