@@ -8,6 +8,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <openssl/crypto.h>
 #include <openssl/bio.h>
 #include <openssl/x509.h>
@@ -175,16 +176,61 @@ static int test_store_ctx(void)
     return testresult;
 }
 
+OPT_TEST_DECLARE_USAGE("roots.pem untrusted.pem bad.pem\n")
+
+#ifndef OPENSSL_NO_SM2
+static int test_sm2_id(void)
+{
+    /* we only need an X509 structure, no matter if it's a real SM2 cert */
+    X509 *x = NULL;
+    BIO *bio = NULL;
+    int ret = 0;
+    ASN1_OCTET_STRING *v = NULL, *v2 = NULL;
+    char *sm2id = "this is an ID";
+
+    bio = BIO_new_file(bad_f, "r");
+    if (bio == NULL)
+        goto err;
+
+    x = PEM_read_bio_X509(bio, NULL, 0, NULL);
+    if (x == NULL)
+        goto err;
+
+    v = ASN1_OCTET_STRING_new();
+    if (v == NULL)
+        goto err;
+
+    if (!ASN1_OCTET_STRING_set(v, (unsigned char *)sm2id, (int)strlen(sm2id))) {
+        ASN1_OCTET_STRING_free(v);
+        goto err;
+    }
+
+    X509_set0_sm2_id(x, v);
+
+    v2 = X509_get0_sm2_id(x);
+    if (!TEST_ptr(v2)
+            || !TEST_int_eq(ASN1_OCTET_STRING_cmp(v, v2), 0))
+        goto err;
+
+    ret = 1;
+ err:
+    X509_free(x);
+    BIO_free(bio);
+    return ret;
+}
+#endif
+
 int setup_tests(void)
 {
     if (!TEST_ptr(roots_f = test_get_argument(0))
             || !TEST_ptr(untrusted_f = test_get_argument(1))
-            || !TEST_ptr(bad_f = test_get_argument(2))) {
-        TEST_error("usage: verify_extra_test roots.pem untrusted.pem bad.pem\n");
+            || !TEST_ptr(bad_f = test_get_argument(2)))
         return 0;
-    }
 
     ADD_TEST(test_alt_chains_cert_forgery);
     ADD_TEST(test_store_ctx);
+#ifndef OPENSSL_NO_SM2
+    ADD_TEST(test_sm2_id);
+#endif
     return 1;
 }

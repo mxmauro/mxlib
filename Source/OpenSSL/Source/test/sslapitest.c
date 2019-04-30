@@ -306,9 +306,10 @@ static int test_keylog(void)
     SSL_CTX *cctx = NULL, *sctx = NULL;
     SSL *clientssl = NULL, *serverssl = NULL;
     int testresult = 0;
-    struct sslapitest_log_counts expected = {0};
+    struct sslapitest_log_counts expected;
 
     /* Clean up logging space */
+    memset(&expected, 0, sizeof(expected));
     memset(client_log_buffer, 0, sizeof(client_log_buffer));
     memset(server_log_buffer, 0, sizeof(server_log_buffer));
     client_log_buffer_index = 0;
@@ -387,11 +388,12 @@ static int test_keylog_no_master_key(void)
     SSL *clientssl = NULL, *serverssl = NULL;
     SSL_SESSION *sess = NULL;
     int testresult = 0;
-    struct sslapitest_log_counts expected = {0};
+    struct sslapitest_log_counts expected;
     unsigned char buf[1];
     size_t readbytes, written;
 
     /* Clean up logging space */
+    memset(&expected, 0, sizeof(expected));
     memset(client_log_buffer, 0, sizeof(client_log_buffer));
     memset(server_log_buffer, 0, sizeof(server_log_buffer));
     client_log_buffer_index = 0;
@@ -579,6 +581,51 @@ end:
 
     return testresult;
 }
+
+static int test_no_ems(void)
+{
+    SSL_CTX *cctx = NULL, *sctx = NULL;
+    SSL *clientssl = NULL, *serverssl = NULL;
+    int testresult = 0;
+
+    if (!create_ssl_ctx_pair(TLS_server_method(), TLS_client_method(),
+                             TLS1_VERSION, TLS1_2_VERSION,
+                             &sctx, &cctx, cert, privkey)) {
+        printf("Unable to create SSL_CTX pair\n");
+        goto end;
+    }
+
+    SSL_CTX_set_options(sctx, SSL_OP_NO_EXTENDED_MASTER_SECRET);
+
+    if (!create_ssl_objects(sctx, cctx, &serverssl, &clientssl, NULL, NULL)) {
+        printf("Unable to create SSL objects\n");
+        goto end;
+    }
+
+    if (!create_ssl_connection(serverssl, clientssl, SSL_ERROR_NONE)) {
+        printf("Creating SSL connection failed\n");
+        goto end;
+    }
+
+    if (SSL_get_extms_support(serverssl)) {
+        printf("Server reports Extended Master Secret support\n");
+        goto end;
+    }
+
+    if (SSL_get_extms_support(clientssl)) {
+        printf("Client reports Extended Master Secret support\n");
+        goto end;
+    }
+    testresult = 1;
+
+end:
+    SSL_free(serverssl);
+    SSL_free(clientssl);
+    SSL_CTX_free(sctx);
+    SSL_CTX_free(cctx);
+
+    return testresult;
+}
 #endif
 
 static int execute_test_large_message(const SSL_METHOD *smeth,
@@ -657,7 +704,8 @@ static int execute_test_large_message(const SSL_METHOD *smeth,
     return testresult;
 }
 
-#if !defined(OPENSSL_NO_TLS1_2) && !defined(OPENSSL_NO_KTLS)
+#if !defined(OPENSSL_NO_TLS1_2) && !defined(OPENSSL_NO_KTLS) \
+    && !defined(OPENSSL_NO_SOCK)
 
 /* sock must be connected */
 static int ktls_chk_platform(int sock)
@@ -675,6 +723,8 @@ static int ping_pong_query(SSL *clientssl, SSL *serverssl, int cfd, int sfd)
     size_t err = 0;
     char crec_wseq_before[TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE];
     char crec_wseq_after[TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE];
+    char crec_rseq_before[TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE];
+    char crec_rseq_after[TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE];
     char srec_wseq_before[TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE];
     char srec_wseq_after[TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE];
     char srec_rseq_before[TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE];
@@ -682,6 +732,8 @@ static int ping_pong_query(SSL *clientssl, SSL *serverssl, int cfd, int sfd)
 
     cbuf[0] = count++;
     memcpy(crec_wseq_before, &clientssl->rlayer.write_sequence,
+            TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE);
+    memcpy(crec_rseq_before, &clientssl->rlayer.read_sequence,
             TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE);
     memcpy(srec_wseq_before, &serverssl->rlayer.write_sequence,
             TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE);
@@ -707,6 +759,8 @@ static int ping_pong_query(SSL *clientssl, SSL *serverssl, int cfd, int sfd)
     }
 
     memcpy(crec_wseq_after, &clientssl->rlayer.write_sequence,
+            TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE);
+    memcpy(crec_rseq_after, &clientssl->rlayer.read_sequence,
             TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE);
     memcpy(srec_wseq_after, &serverssl->rlayer.write_sequence,
             TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE);
@@ -738,16 +792,33 @@ static int ping_pong_query(SSL *clientssl, SSL *serverssl, int cfd, int sfd)
             goto end;
     }
 
-    if (!TEST_mem_ne(srec_rseq_before, TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE,
-                     srec_rseq_after, TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE))
-        goto end;
+    if (clientssl->mode & SSL_MODE_NO_KTLS_RX) {
+        if (!TEST_mem_ne(crec_rseq_before, TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE,
+                         crec_rseq_after, TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE))
+            goto end;
+    } else {
+        if (!TEST_mem_eq(crec_rseq_before, TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE,
+                         crec_rseq_after, TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE))
+            goto end;
+    }
+
+    if (serverssl->mode & SSL_MODE_NO_KTLS_RX) {
+        if (!TEST_mem_ne(srec_rseq_before, TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE,
+                         srec_rseq_after, TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE))
+            goto end;
+    } else {
+        if (!TEST_mem_eq(srec_rseq_before, TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE,
+                         srec_rseq_after, TLS_CIPHER_AES_GCM_128_REC_SEQ_SIZE))
+            goto end;
+    }
 
     return 1;
 end:
     return 0;
 }
 
-static int execute_test_ktls(int cis_ktls_tx, int sis_ktls_tx)
+static int execute_test_ktls(int cis_ktls_tx, int cis_ktls_rx,
+                             int sis_ktls_tx, int sis_ktls_rx)
 {
     SSL_CTX *cctx = NULL, *sctx = NULL;
     SSL *clientssl = NULL, *serverssl = NULL;
@@ -782,6 +853,16 @@ static int execute_test_ktls(int cis_ktls_tx, int sis_ktls_tx)
             goto end;
     }
 
+    if (!cis_ktls_rx) {
+        if (!TEST_true(SSL_set_mode(clientssl, SSL_MODE_NO_KTLS_RX)))
+            goto end;
+    }
+
+    if (!sis_ktls_rx) {
+        if (!TEST_true(SSL_set_mode(serverssl, SSL_MODE_NO_KTLS_RX)))
+            goto end;
+    }
+
     if (!TEST_true(create_ssl_connection(serverssl, clientssl,
                                                 SSL_ERROR_NONE)))
         goto end;
@@ -799,6 +880,22 @@ static int execute_test_ktls(int cis_ktls_tx, int sis_ktls_tx)
             goto end;
     } else {
         if (!TEST_true(BIO_get_ktls_send(serverssl->wbio)))
+            goto end;
+    }
+
+    if (!cis_ktls_rx) {
+        if (!TEST_false(BIO_get_ktls_recv(clientssl->rbio)))
+            goto end;
+    } else {
+        if (!TEST_true(BIO_get_ktls_recv(clientssl->rbio)))
+            goto end;
+    }
+
+    if (!sis_ktls_rx) {
+        if (!TEST_false(BIO_get_ktls_recv(serverssl->rbio)))
+            goto end;
+    } else {
+        if (!TEST_true(BIO_get_ktls_recv(serverssl->rbio)))
             goto end;
     }
 
@@ -821,24 +918,84 @@ end:
     return testresult;
 }
 
+static int test_ktls_no_txrx_client_no_txrx_server(void)
+{
+    return execute_test_ktls(0, 0, 0, 0);
+}
+
+static int test_ktls_no_rx_client_no_txrx_server(void)
+{
+    return execute_test_ktls(1, 0, 0, 0);
+}
+
+static int test_ktls_no_tx_client_no_txrx_server(void)
+{
+    return execute_test_ktls(0, 1, 0, 0);
+}
+
+static int test_ktls_client_no_txrx_server(void)
+{
+    return execute_test_ktls(1, 1, 0, 0);
+}
+
+static int test_ktls_no_txrx_client_no_rx_server(void)
+{
+    return execute_test_ktls(0, 0, 1, 0);
+}
+
+static int test_ktls_no_rx_client_no_rx_server(void)
+{
+    return execute_test_ktls(1, 0, 1, 0);
+}
+
+static int test_ktls_no_tx_client_no_rx_server(void)
+{
+    return execute_test_ktls(0, 1, 1, 0);
+}
+
+static int test_ktls_client_no_rx_server(void)
+{
+    return execute_test_ktls(1, 1, 1, 0);
+}
+
+static int test_ktls_no_txrx_client_no_tx_server(void)
+{
+    return execute_test_ktls(0, 0, 0, 1);
+}
+
+static int test_ktls_no_rx_client_no_tx_server(void)
+{
+    return execute_test_ktls(1, 0, 0, 1);
+}
+
+static int test_ktls_no_tx_client_no_tx_server(void)
+{
+    return execute_test_ktls(0, 1, 0, 1);
+}
+
+static int test_ktls_client_no_tx_server(void)
+{
+    return execute_test_ktls(1, 1, 0, 1);
+}
+
+static int test_ktls_no_txrx_client_server(void)
+{
+    return execute_test_ktls(0, 0, 1, 1);
+}
+
+static int test_ktls_no_rx_client_server(void)
+{
+    return execute_test_ktls(1, 0, 1, 1);
+}
+
+static int test_ktls_no_tx_client_server(void)
+{
+    return execute_test_ktls(0, 1, 1, 1);
+}
+
 static int test_ktls_client_server(void)
 {
-    return execute_test_ktls(1, 1);
-}
-
-static int test_ktls_no_client_server(void)
-{
-    return execute_test_ktls(0, 1);
-}
-
-static int test_ktls_client_no_server(void)
-{
-    return execute_test_ktls(1, 0);
-}
-
-static int test_ktls_no_client_no_server(void)
-{
-    return execute_test_ktls(0, 0);
+    return execute_test_ktls(1, 1, 1, 1);
 }
 
 #endif
@@ -4434,6 +4591,58 @@ static int test_export_key_mat_early(int idx)
 
     return testresult;
 }
+
+#define NUM_KEY_UPDATE_MESSAGES 40
+/*
+ * Test KeyUpdate.
+ */
+static int test_key_update(void)
+{
+    SSL_CTX *cctx = NULL, *sctx = NULL;
+    SSL *clientssl = NULL, *serverssl = NULL;
+    int testresult = 0, i, j;
+    char buf[20];
+    static char *mess = "A test message";
+
+    if (!TEST_true(create_ssl_ctx_pair(TLS_server_method(),
+                                       TLS_client_method(),
+                                       TLS1_3_VERSION,
+                                       0,
+                                       &sctx, &cctx, cert, privkey))
+            || !TEST_true(create_ssl_objects(sctx, cctx, &serverssl, &clientssl,
+                                             NULL, NULL))
+            || !TEST_true(create_ssl_connection(serverssl, clientssl,
+                                                SSL_ERROR_NONE)))
+        goto end;
+
+    for (j = 0; j < 2; j++) {
+        /* Send lots of KeyUpdate messages */
+        for (i = 0; i < NUM_KEY_UPDATE_MESSAGES; i++) {
+            if (!TEST_true(SSL_key_update(clientssl,
+                                          (j == 0)
+                                          ? SSL_KEY_UPDATE_NOT_REQUESTED
+                                          : SSL_KEY_UPDATE_REQUESTED))
+                    || !TEST_true(SSL_do_handshake(clientssl)))
+                goto end;
+        }
+
+        /* Check that sending and receiving app data is ok */
+        if (!TEST_int_eq(SSL_write(clientssl, mess, strlen(mess)), strlen(mess))
+                || !TEST_int_eq(SSL_read(serverssl, buf, sizeof(buf)),
+                                         strlen(mess)))
+            goto end;
+    }
+
+    testresult = 1;
+
+ end:
+    SSL_free(serverssl);
+    SSL_free(clientssl);
+    SSL_CTX_free(sctx);
+    SSL_CTX_free(cctx);
+
+    return testresult;
+}
 #endif /* OPENSSL_NO_TLS1_3 */
 
 static int test_ssl_clear(int idx)
@@ -4495,11 +4704,15 @@ static int get_MFL_from_client_hello(BIO *bio, int *mfl_codemfl_code)
 {
     long len;
     unsigned char *data;
-    PACKET pkt = {0}, pkt2 = {0}, pkt3 = {0};
+    PACKET pkt, pkt2, pkt3;
     unsigned int MFL_code = 0, type = 0;
 
     if (!TEST_uint_gt( len = BIO_get_mem_data( bio, (char **) &data ), 0 ) )
         goto end;
+
+    memset(&pkt, 0, sizeof(pkt));
+    memset(&pkt2, 0, sizeof(pkt2));
+    memset(&pkt3, 0, sizeof(pkt3));
 
     if (!TEST_true( PACKET_buf_init( &pkt, data, len ) )
                /* Skip the record header */
@@ -4918,18 +5131,14 @@ static struct info_cb_states_st {
         {SSL_CB_LOOP, "TWCCS"}, {SSL_CB_LOOP, "TWEE"}, {SSL_CB_LOOP, "TWSC"},
         {SSL_CB_LOOP, "TRSCV"}, {SSL_CB_LOOP, "TWFIN"}, {SSL_CB_LOOP, "TED"},
         {SSL_CB_EXIT, NULL}, {SSL_CB_LOOP, "TED"}, {SSL_CB_LOOP, "TRFIN"},
-        {SSL_CB_HANDSHAKE_DONE, NULL}, {SSL_CB_HANDSHAKE_START, NULL},
-        {SSL_CB_LOOP, "TWST"}, {SSL_CB_HANDSHAKE_DONE, NULL},
-        {SSL_CB_HANDSHAKE_START, NULL}, {SSL_CB_LOOP, "TWST"},
-        {SSL_CB_HANDSHAKE_DONE, NULL}, {SSL_CB_EXIT, NULL},
-        {SSL_CB_ALERT, NULL}, {SSL_CB_HANDSHAKE_START, NULL},
-        {SSL_CB_LOOP, "PINIT "}, {SSL_CB_LOOP, "PINIT "}, {SSL_CB_LOOP, "TRCH"},
-        {SSL_CB_LOOP, "TWSH"}, {SSL_CB_LOOP, "TWCCS"}, {SSL_CB_LOOP, "TWEE"},
-        {SSL_CB_LOOP, "TWFIN"}, {SSL_CB_LOOP, "TED"}, {SSL_CB_EXIT, NULL},
-        {SSL_CB_LOOP, "TED"}, {SSL_CB_LOOP, "TRFIN"},
-        {SSL_CB_HANDSHAKE_DONE, NULL}, {SSL_CB_HANDSHAKE_START, NULL},
-        {SSL_CB_LOOP, "TWST"}, {SSL_CB_HANDSHAKE_DONE, NULL},
-        {SSL_CB_EXIT, NULL}, {0, NULL},
+        {SSL_CB_HANDSHAKE_DONE, NULL}, {SSL_CB_LOOP, "TWST"},
+        {SSL_CB_LOOP, "TWST"}, {SSL_CB_EXIT, NULL}, {SSL_CB_ALERT, NULL},
+        {SSL_CB_HANDSHAKE_START, NULL}, {SSL_CB_LOOP, "PINIT "},
+        {SSL_CB_LOOP, "PINIT "}, {SSL_CB_LOOP, "TRCH"}, {SSL_CB_LOOP, "TWSH"},
+        {SSL_CB_LOOP, "TWCCS"}, {SSL_CB_LOOP, "TWEE"}, {SSL_CB_LOOP, "TWFIN"},
+        {SSL_CB_LOOP, "TED"}, {SSL_CB_EXIT, NULL}, {SSL_CB_LOOP, "TED"},
+        {SSL_CB_LOOP, "TRFIN"}, {SSL_CB_HANDSHAKE_DONE, NULL},
+        {SSL_CB_LOOP, "TWST"}, {SSL_CB_EXIT, NULL}, {0, NULL},
     }, {
         /* TLSv1.3 client followed by resumption */
         {SSL_CB_HANDSHAKE_START, NULL}, {SSL_CB_LOOP, "PINIT "},
@@ -4937,20 +5146,16 @@ static struct info_cb_states_st {
         {SSL_CB_LOOP, "TRSH"}, {SSL_CB_LOOP, "TREE"}, {SSL_CB_LOOP, "TRSC"},
         {SSL_CB_LOOP, "TRSCV"}, {SSL_CB_LOOP, "TRFIN"}, {SSL_CB_LOOP, "TWCCS"},
         {SSL_CB_LOOP, "TWFIN"},  {SSL_CB_HANDSHAKE_DONE, NULL},
-        {SSL_CB_EXIT, NULL}, {SSL_CB_HANDSHAKE_START, NULL},
-        {SSL_CB_LOOP, "SSLOK "}, {SSL_CB_LOOP, "SSLOK "}, {SSL_CB_LOOP, "TRST"},
-        {SSL_CB_HANDSHAKE_DONE, NULL},  {SSL_CB_EXIT, NULL},
-        {SSL_CB_HANDSHAKE_START, NULL}, {SSL_CB_LOOP, "SSLOK "},
-        {SSL_CB_LOOP, "SSLOK "}, {SSL_CB_LOOP, "TRST"},
-        {SSL_CB_HANDSHAKE_DONE, NULL},  {SSL_CB_EXIT, NULL},
+        {SSL_CB_EXIT, NULL}, {SSL_CB_LOOP, "SSLOK "}, {SSL_CB_LOOP, "SSLOK "},
+        {SSL_CB_LOOP, "TRST"}, {SSL_CB_EXIT, NULL}, {SSL_CB_LOOP, "SSLOK "},
+        {SSL_CB_LOOP, "SSLOK "}, {SSL_CB_LOOP, "TRST"}, {SSL_CB_EXIT, NULL},
         {SSL_CB_ALERT, NULL}, {SSL_CB_HANDSHAKE_START, NULL},
         {SSL_CB_LOOP, "PINIT "}, {SSL_CB_LOOP, "TWCH"}, {SSL_CB_EXIT, NULL},
         {SSL_CB_LOOP, "TWCH"}, {SSL_CB_LOOP, "TRSH"},  {SSL_CB_LOOP, "TREE"},
         {SSL_CB_LOOP, "TRFIN"}, {SSL_CB_LOOP, "TWCCS"}, {SSL_CB_LOOP, "TWFIN"},
         {SSL_CB_HANDSHAKE_DONE, NULL}, {SSL_CB_EXIT, NULL},
-        {SSL_CB_HANDSHAKE_START, NULL}, {SSL_CB_LOOP, "SSLOK "},
-        {SSL_CB_LOOP, "SSLOK "}, {SSL_CB_LOOP, "TRST"},
-        {SSL_CB_HANDSHAKE_DONE, NULL}, {SSL_CB_EXIT, NULL}, {0, NULL},
+        {SSL_CB_LOOP, "SSLOK "}, {SSL_CB_LOOP, "SSLOK "}, {SSL_CB_LOOP, "TRST"},
+        {SSL_CB_EXIT, NULL}, {0, NULL},
     }, {
         /* TLSv1.3 server, early_data */
         {SSL_CB_HANDSHAKE_START, NULL}, {SSL_CB_LOOP, "PINIT "},
@@ -4959,8 +5164,7 @@ static struct info_cb_states_st {
         {SSL_CB_HANDSHAKE_DONE, NULL}, {SSL_CB_EXIT, NULL},
         {SSL_CB_HANDSHAKE_START, NULL}, {SSL_CB_LOOP, "TED"},
         {SSL_CB_LOOP, "TED"}, {SSL_CB_LOOP, "TWEOED"}, {SSL_CB_LOOP, "TRFIN"},
-        {SSL_CB_HANDSHAKE_DONE, NULL}, {SSL_CB_HANDSHAKE_START, NULL},
-        {SSL_CB_LOOP, "TWST"}, {SSL_CB_HANDSHAKE_DONE, NULL},
+        {SSL_CB_HANDSHAKE_DONE, NULL}, {SSL_CB_LOOP, "TWST"},
         {SSL_CB_EXIT, NULL}, {0, NULL},
     }, {
         /* TLSv1.3 client, early_data */
@@ -4971,9 +5175,8 @@ static struct info_cb_states_st {
         {SSL_CB_LOOP, "TED"}, {SSL_CB_LOOP, "TRSH"}, {SSL_CB_LOOP, "TREE"},
         {SSL_CB_LOOP, "TRFIN"}, {SSL_CB_LOOP, "TPEDE"}, {SSL_CB_LOOP, "TWEOED"},
         {SSL_CB_LOOP, "TWFIN"}, {SSL_CB_HANDSHAKE_DONE, NULL},
-        {SSL_CB_EXIT, NULL}, {SSL_CB_HANDSHAKE_START, NULL},
-        {SSL_CB_LOOP, "SSLOK "}, {SSL_CB_LOOP, "SSLOK "}, {SSL_CB_LOOP, "TRST"},
-        {SSL_CB_HANDSHAKE_DONE, NULL}, {SSL_CB_EXIT, NULL}, {0, NULL},
+        {SSL_CB_EXIT, NULL}, {SSL_CB_LOOP, "SSLOK "}, {SSL_CB_LOOP, "SSLOK "},
+        {SSL_CB_LOOP, "TRST"}, {SSL_CB_EXIT, NULL}, {0, NULL},
     }, {
         {0, NULL},
     }
@@ -5012,8 +5215,11 @@ static void sslapi_info_callback(const SSL *s, int where, int ret)
         return;
     }
 
-    /* Check that, if we've got SSL_CB_HANDSHAKE_DONE we are not in init */
-    if ((where & SSL_CB_HANDSHAKE_DONE) && SSL_in_init((SSL *)s) != 0) {
+    /*
+     * Check that, if we've got SSL_CB_HANDSHAKE_DONE we are not in init
+     */
+    if ((where & SSL_CB_HANDSHAKE_DONE)
+            && SSL_in_init((SSL *)s) != 0) {
         info_cb_failed = 1;
         return;
     }
@@ -5592,7 +5798,7 @@ static int test_shutdown(int tst)
 
     if (tst == 3) {
         if (!TEST_true(create_bare_ssl_connection(serverssl, clientssl,
-                                                  SSL_ERROR_NONE))
+                                                  SSL_ERROR_NONE, 1))
                 || !TEST_ptr_ne(sess = SSL_get_session(clientssl), NULL)
                 || !TEST_false(SSL_SESSION_is_resumable(sess)))
             goto end;
@@ -6029,6 +6235,9 @@ static int test_ca_names(int tst)
     return testresult;
 }
 
+
+OPT_TEST_DECLARE_USAGE("certfile privkeyfile srpvfile tmpfile\n")
+
 int setup_tests(void)
 {
     if (!TEST_ptr(cert = test_get_argument(0))
@@ -6053,11 +6262,24 @@ int setup_tests(void)
 #endif
     }
 
-#if !defined(OPENSSL_NO_TLS1_2) && !defined(OPENSSL_NO_KTLS)
+#if !defined(OPENSSL_NO_TLS1_2) && !defined(OPENSSL_NO_KTLS) \
+    && !defined(OPENSSL_NO_SOCK)
+    ADD_TEST(test_ktls_no_txrx_client_no_txrx_server);
+    ADD_TEST(test_ktls_no_rx_client_no_txrx_server);
+    ADD_TEST(test_ktls_no_tx_client_no_txrx_server);
+    ADD_TEST(test_ktls_client_no_txrx_server);
+    ADD_TEST(test_ktls_no_txrx_client_no_rx_server);
+    ADD_TEST(test_ktls_no_rx_client_no_rx_server);
+    ADD_TEST(test_ktls_no_tx_client_no_rx_server);
+    ADD_TEST(test_ktls_client_no_rx_server);
+    ADD_TEST(test_ktls_no_txrx_client_no_tx_server);
+    ADD_TEST(test_ktls_no_rx_client_no_tx_server);
+    ADD_TEST(test_ktls_no_tx_client_no_tx_server);
+    ADD_TEST(test_ktls_client_no_tx_server);
+    ADD_TEST(test_ktls_no_txrx_client_server);
+    ADD_TEST(test_ktls_no_rx_client_server);
+    ADD_TEST(test_ktls_no_tx_client_server);
     ADD_TEST(test_ktls_client_server);
-    ADD_TEST(test_ktls_no_client_server);
-    ADD_TEST(test_ktls_client_no_server);
-    ADD_TEST(test_ktls_no_client_no_server);
 #endif
     ADD_TEST(test_large_message_tls);
     ADD_TEST(test_large_message_tls_read_ahead);
@@ -6089,6 +6311,7 @@ int setup_tests(void)
 #endif
 #ifndef OPENSSL_NO_TLS1_2
     ADD_TEST(test_client_hello_cb);
+    ADD_TEST(test_no_ems);
 #endif
 #ifndef OPENSSL_NO_TLS1_3
     ADD_ALL_TESTS(test_early_data_read_write, 3);
@@ -6126,6 +6349,7 @@ int setup_tests(void)
     ADD_ALL_TESTS(test_export_key_mat, 6);
 #ifndef OPENSSL_NO_TLS1_3
     ADD_ALL_TESTS(test_export_key_mat_early, 3);
+    ADD_TEST(test_key_update);
 #endif
     ADD_ALL_TESTS(test_ssl_clear, 2);
     ADD_ALL_TESTS(test_max_fragment_len_ext, OSSL_NELEM(max_fragment_len_test));

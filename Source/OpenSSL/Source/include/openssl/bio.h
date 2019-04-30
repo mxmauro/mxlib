@@ -145,15 +145,27 @@ extern "C" {
 
 # define BIO_CTRL_DGRAM_SET_PEEK_MODE      71
 
-/* internal BIO see include/internal/bio.h:
+/*
+ * internal BIO see include/internal/bio.h:
  * # define BIO_CTRL_SET_KTLS_SEND                 72
  * # define BIO_CTRL_SET_KTLS_SEND_CTRL_MSG        74
- * # define BIO_CTRL_CLEAR_KTLS_CTRL_MSG      75
+ * # define BIO_CTRL_CLEAR_KTLS_CTRL_MSG           75
  */
 
-#  define BIO_CTRL_GET_KTLS_SEND                 73
+# define BIO_CTRL_GET_KTLS_SEND                 73
+# define BIO_CTRL_GET_KTLS_RECV                 76
+
+# ifndef OPENSSL_NO_KTLS
 #  define BIO_get_ktls_send(b)         \
-     BIO_ctrl(b, BIO_CTRL_GET_KTLS_SEND, 0, NULL)
+     (BIO_method_type(b) == BIO_TYPE_SOCKET \
+      && BIO_ctrl(b, BIO_CTRL_GET_KTLS_SEND, 0, NULL))
+#  define BIO_get_ktls_recv(b)         \
+     (BIO_method_type(b) == BIO_TYPE_SOCKET \
+      && BIO_ctrl(b, BIO_CTRL_GET_KTLS_RECV, 0, NULL))
+# else
+#  define BIO_get_ktls_send(b)  (0)
+#  define BIO_get_ktls_recv(b)  (0)
+# endif
 
 /* modifiers */
 # define BIO_FP_READ             0x02
@@ -641,16 +653,16 @@ int BIO_sock_non_fatal_error(int error);
 int BIO_fd_should_retry(int i);
 int BIO_fd_non_fatal_error(int error);
 int BIO_dump_cb(int (*cb) (const void *data, size_t len, void *u),
-                void *u, const char *s, int len);
+                void *u, const void *s, int len);
 int BIO_dump_indent_cb(int (*cb) (const void *data, size_t len, void *u),
-                       void *u, const char *s, int len, int indent);
-int BIO_dump(BIO *b, const char *bytes, int len);
-int BIO_dump_indent(BIO *b, const char *bytes, int len, int indent);
+                       void *u, const void *s, int len, int indent);
+int BIO_dump(BIO *b, const void *bytes, int len);
+int BIO_dump_indent(BIO *b, const void *bytes, int len, int indent);
 # ifndef OPENSSL_NO_STDIO
-int BIO_dump_fp(FILE *fp, const char *s, int len);
-int BIO_dump_indent_fp(FILE *fp, const char *s, int len, int indent);
+int BIO_dump_fp(FILE *fp, const void *s, int len);
+int BIO_dump_indent_fp(FILE *fp, const void *s, int len, int indent);
 # endif
-int BIO_hex_string(BIO *out, int indent, int width, unsigned char *data,
+int BIO_hex_string(BIO *out, int indent, int width, const void *data,
                    int datalen);
 
 # ifndef OPENSSL_NO_SOCK
