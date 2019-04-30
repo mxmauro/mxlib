@@ -57,6 +57,8 @@ and agreed to irrevocably license their contributions under the Duktape
 * Edward Betts (https://github.com/edwardbetts)
 * Ozhan Duz (https://github.com/webfolderio)
 * Akos Kiss (https://github.com/akosthekiss)
+* TheBrokenRail (https://github.com/TheBrokenRail)
+* Jesse Doyle (https://github.com/jessedoyle)
 
 Other contributions
 ===================
