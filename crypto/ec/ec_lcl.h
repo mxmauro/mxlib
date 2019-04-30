@@ -15,7 +15,6 @@
 #include <openssl/bn.h>
 #include "internal/refcount.h"
 #include "internal/ec_int.h"
-#include "curve448/curve448_lcl.h"
 
 #if defined(__SUNPRO_C)
 # if __SUNPRO_C >= 0x520
@@ -154,6 +153,13 @@ struct ec_method_st {
     int (*field_sqr) (const EC_GROUP *, BIGNUM *r, const BIGNUM *a, BN_CTX *);
     int (*field_div) (const EC_GROUP *, BIGNUM *r, const BIGNUM *a,
                       const BIGNUM *b, BN_CTX *);
+    /*-
+     * 'field_inv' computes the multipicative inverse of a in the field,
+     * storing the result in r.
+     *
+     * If 'a' is zero (or equivalent), you'll get an EC_R_CANNOT_INVERT error.
+     */
+    int (*field_inv) (const EC_GROUP *, BIGNUM *r, const BIGNUM *a, BN_CTX *);
     /* e.g. to Montgomery */
     int (*field_encode) (const EC_GROUP *, BIGNUM *r, const BIGNUM *a,
                          BN_CTX *);
@@ -303,13 +309,10 @@ struct ec_point_st {
 static ossl_inline int ec_point_is_compat(const EC_POINT *point,
                                           const EC_GROUP *group)
 {
-    if (group->meth != point->meth
-        || (group->curve_name != 0
-            && point->curve_name != 0
-            && group->curve_name != point->curve_name))
-        return 0;
-
-    return 1;
+    return group->meth == point->meth
+           && (group->curve_name == 0
+               || point->curve_name == 0
+               || group->curve_name == point->curve_name);
 }
 
 NISTP224_PRE_COMP *EC_nistp224_pre_comp_dup(NISTP224_PRE_COMP *);
@@ -390,6 +393,8 @@ int ec_GFp_simple_field_mul(const EC_GROUP *, BIGNUM *r, const BIGNUM *a,
                             const BIGNUM *b, BN_CTX *);
 int ec_GFp_simple_field_sqr(const EC_GROUP *, BIGNUM *r, const BIGNUM *a,
                             BN_CTX *);
+int ec_GFp_simple_field_inv(const EC_GROUP *, BIGNUM *r, const BIGNUM *a,
+                            BN_CTX *);
 int ec_GFp_simple_blind_coordinates(const EC_GROUP *group, EC_POINT *p,
                                     BN_CTX *ctx);
 int ec_GFp_simple_ladder_pre(const EC_GROUP *group,
@@ -412,6 +417,8 @@ int ec_GFp_mont_group_copy(EC_GROUP *, const EC_GROUP *);
 int ec_GFp_mont_field_mul(const EC_GROUP *, BIGNUM *r, const BIGNUM *a,
                           const BIGNUM *b, BN_CTX *);
 int ec_GFp_mont_field_sqr(const EC_GROUP *, BIGNUM *r, const BIGNUM *a,
+                          BN_CTX *);
+int ec_GFp_mont_field_inv(const EC_GROUP *, BIGNUM *r, const BIGNUM *a,
                           BN_CTX *);
 int ec_GFp_mont_field_encode(const EC_GROUP *, BIGNUM *r, const BIGNUM *a,
                              BN_CTX *);
@@ -584,6 +591,8 @@ int ec_key_simple_oct2priv(EC_KEY *eckey, const unsigned char *buf, size_t len);
 int ec_key_simple_generate_key(EC_KEY *eckey);
 int ec_key_simple_generate_public_key(EC_KEY *eckey);
 int ec_key_simple_check_key(const EC_KEY *eckey);
+
+int ec_curve_nid_from_params(const EC_GROUP *group);
 
 /* EC_METHOD definitions */
 

@@ -237,7 +237,7 @@ int X509_STORE_up_ref(X509_STORE *vfy)
     if (CRYPTO_UP_REF(&vfy->references, &i, vfy->lock) <= 0)
         return 0;
 
-    REF_PRINT_COUNT("X509_STORE", a);
+    REF_PRINT_COUNT("X509_STORE", vfy);
     REF_ASSERT_ISNT(i < 2);
     return ((i > 1) ? 1 : 0);
 }
@@ -296,6 +296,9 @@ int X509_STORE_CTX_get_by_subject(X509_STORE_CTX *vs, X509_LOOKUP_TYPE type,
 
     if (ctx == NULL)
         return 0;
+
+    stmp.type = X509_LU_NONE;
+    stmp.data.ptr = NULL;
 
     CRYPTO_THREAD_write_lock(ctx->lock);
     tmp = X509_OBJECT_retrieve_by_subject(ctx->objs, type, name);

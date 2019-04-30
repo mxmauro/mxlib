@@ -219,6 +219,22 @@ my @smime_cms_tests = (
 	"-CAfile", catfile($smdir, "smroot.pem") ]
     ],
 
+    [ "signed content DER format, RSA key, CAdES-BES compatible",
+      [ "-sign", "-cades", "-in", $smcont, "-outform", "DER", "-nodetach",
+        "-certfile", catfile($smdir, "smroot.pem"),
+        "-signer", catfile($smdir, "smrsa1.pem"), "-out", "test.cms" ],
+      [ "-verify", "-in", "test.cms", "-inform", "DER",
+        "-CAfile", catfile($smdir, "smroot.pem"), "-out", "smtst.txt" ]
+    ],
+
+    [ "signed content DER format, RSA key, SHA256 md, CAdES-BES compatible",
+      [ "-sign", "-cades", "-md", "sha256", "-in", $smcont, "-outform",
+        "DER", "-nodetach", "-certfile", catfile($smdir, "smroot.pem"),
+        "-signer", catfile($smdir, "smrsa1.pem"), "-out", "test.cms" ],
+      [ "-verify", "-in", "test.cms", "-inform", "DER",
+        "-CAfile", catfile($smdir, "smroot.pem"), "-out", "smtst.txt" ]
+    ],
+
     [ "enveloped content test streaming S/MIME format, DES, 3 recipients, keyid",
       [ "-encrypt", "-in", $smcont,
 	"-stream", "-out", "test.cms", "-keyid",
@@ -304,6 +320,14 @@ my @smime_cms_param_tests = (
       [ "-sign", "-in", $smcont, "-outform", "PEM", "-nodetach",
 	"-signer", catfile($smdir, "smrsa1.pem"), "-keyopt", "rsa_padding_mode:pss",
 	"-out", "test.cms" ],
+      [ "-verify", "-in", "test.cms", "-inform", "PEM",
+	"-CAfile", catfile($smdir, "smroot.pem"), "-out", "smtst.txt" ]
+    ],
+
+    [ "signed content test streaming PEM format, RSA keys, PSS signature, saltlen=-3",
+      [ "-sign", "-in", $smcont, "-outform", "PEM", "-nodetach",
+	"-signer", catfile($smdir, "smrsa1.pem"), "-keyopt", "rsa_padding_mode:pss",
+	"-keyopt", "rsa_pss_saltlen:-3", "-out", "test.cms" ],
       [ "-verify", "-in", "test.cms", "-inform", "PEM",
 	"-CAfile", catfile($smdir, "smroot.pem"), "-out", "smtst.txt" ]
     ],

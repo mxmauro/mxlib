@@ -58,12 +58,15 @@ static ERR_STRING_DATA ERR_str_libraries[] = {
     {ERR_PACK(ERR_LIB_UI, 0, 0), "UI routines"},
     {ERR_PACK(ERR_LIB_FIPS, 0, 0), "FIPS routines"},
     {ERR_PACK(ERR_LIB_CMS, 0, 0), "CMS routines"},
+    {ERR_PACK(ERR_LIB_CRMF, 0, 0), "CRMF routines"},
     {ERR_PACK(ERR_LIB_HMAC, 0, 0), "HMAC routines"},
     {ERR_PACK(ERR_LIB_CT, 0, 0), "CT routines"},
     {ERR_PACK(ERR_LIB_ASYNC, 0, 0), "ASYNC routines"},
     {ERR_PACK(ERR_LIB_KDF, 0, 0), "KDF routines"},
     {ERR_PACK(ERR_LIB_OSSL_STORE, 0, 0), "STORE routines"},
     {ERR_PACK(ERR_LIB_SM2, 0, 0), "SM2 routines"},
+    {ERR_PACK(ERR_LIB_ESS, 0, 0), "ESS routines"},
+    {ERR_PACK(ERR_LIB_PROV, 0, 0), "Provider routines"},
     {0, NULL},
 };
 
@@ -523,8 +526,24 @@ static unsigned long get_error_values(int inc, int top, const char **file,
         return ERR_R_INTERNAL_ERROR;
     }
 
+    while (es->bottom != es->top) {
+        if (es->err_flags[es->top] & ERR_FLAG_CLEAR) {
+            err_clear(es, es->top);
+            es->top = es->top > 0 ? es->top - 1 : ERR_NUM_ERRORS - 1;
+            continue;
+        }
+        i = (es->bottom + 1) % ERR_NUM_ERRORS;
+        if (es->err_flags[i] & ERR_FLAG_CLEAR) {
+            es->bottom = i;
+            err_clear(es, es->bottom);
+            continue;
+        }
+        break;
+    }
+
     if (es->bottom == es->top)
         return 0;
+
     if (top)
         i = es->top;            /* last error */
     else
@@ -741,6 +760,18 @@ int err_shelve_state(void **state)
 {
     int saveerrno = get_last_sys_error();
 
+    /*
+     * Note, at present our only caller is OPENSSL_init_crypto(), indirectly
+     * via ossl_init_load_crypto_nodelete(), by which point the requested
+     * "base" initialization has already been performed, so the below call is a
+     * NOOP, that re-enters OPENSSL_init_crypto() only to quickly return.
+     *
+     * If are no other valid callers of this function, the call below can be
+     * removed, avoiding the re-entry into OPENSSL_init_crypto().  If there are
+     * potential uses that are not from inside OPENSSL_init_crypto(), then this
+     * call is needed, but some care is required to make sure that the re-entry
+     * remains a NOOP.
+     */
     if (!OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL))
         return 0;
 
@@ -778,20 +809,31 @@ int ERR_get_next_error_library(void)
     return ret;
 }
 
-void ERR_set_error_data(char *data, int flags)
+static int err_set_error_data_int(char *data, int flags)
 {
     ERR_STATE *es;
     int i;
 
     es = ERR_get_state();
     if (es == NULL)
-        return;
+        return 0;
 
     i = es->top;
 
     err_clear_data(es, i);
     es->err_data[i] = data;
     es->err_data_flags[i] = flags;
+
+    return 1;
+}
+
+void ERR_set_error_data(char *data, int flags)
+{
+    /*
+     * This function is void so we cannot propagate the error return. Since it
+     * is also in the public API we can't change the return type.
+     */
+    err_set_error_data_int(data, flags);
 }
 
 void ERR_add_error_data(int num, ...)
@@ -831,7 +873,8 @@ void ERR_add_error_vdata(int num, va_list args)
         }
         OPENSSL_strlcat(str, a, (size_t)s + 1);
     }
-    ERR_set_error_data(str, ERR_TXT_MALLOCED | ERR_TXT_STRING);
+    if (!err_set_error_data_int(str, ERR_TXT_MALLOCED | ERR_TXT_STRING))
+        OPENSSL_free(str);
 }
 
 int ERR_set_mark(void)
@@ -889,25 +932,6 @@ int ERR_clear_last_mark(void)
     return 1;
 }
 
-#ifdef UINTPTR_T
-# undef UINTPTR_T
-#endif
-/*
- * uintptr_t is the answer, but unfortunately C89, current "least common
- * denominator" doesn't define it. Most legacy platforms typedef it anyway,
- * so that attempt to fill the gaps means that one would have to identify
- * that track these gaps, which would be undesirable. Macro it is...
- */
-#if defined(__VMS) && __INITIAL_POINTER_SIZE==64
-/*
- * But we can't use size_t on VMS, because it adheres to sizeof(size_t)==4
- * even in 64-bit builds, which means that it won't work as mask.
- */
-# define UINTPTR_T unsigned long long
-#else
-# define UINTPTR_T size_t
-#endif
-
 void err_clear_last_constant_time(int clear)
 {
     ERR_STATE *es;
@@ -919,11 +943,11 @@ void err_clear_last_constant_time(int clear)
 
     top = es->top;
 
-    es->err_flags[top] &= ~(0 - clear);
-    es->err_buffer[top] &= ~(0UL - clear);
-    es->err_file[top] = (const char *)((UINTPTR_T)es->err_file[top] &
-                                       ~((UINTPTR_T)0 - clear));
-    es->err_line[top] |= 0 - clear;
-
-    es->top = (top + ERR_NUM_ERRORS - clear) % ERR_NUM_ERRORS;
+    /*
+     * Flag error as cleared but remove it elsewhere to avoid two errors
+     * accessing the same error stack location, revealing timing information.
+     */
+    clear = constant_time_select_int(constant_time_eq_int(clear, 0),
+                                     0, ERR_FLAG_CLEAR);
+    es->err_flags[top] |= clear;
 }
