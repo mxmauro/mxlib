@@ -44,36 +44,117 @@
 
 int wmain(int argc, WCHAR* argv[])
 {
-  if (argc >= 2)
+  BOOL bUseSSL = FALSE;
+  DWORD dwLogLevel = 0;
+  int nTest = 0;
+
+  if (argc < 2)
   {
-    if (_wcsicmp(argv[1], L"HttpServer") == 0)
+    wprintf_s(L"Use: Test.exe test-module [options]\n\n");
+    wprintf_s(L"Where 'test-module' can be:\n");
+    wprintf_s(L"    HttpServer, HttpClient, Javascript or JsHttpServer\n\n");
+    wprintf_s(L"And 'options' can be:\n");
+    wprintf_s(L"    /ssl: Enable SSL on HttpServer and JsHttpServer\n");
+    wprintf_s(L"    /v #: Set the verbosity level to #\n");
+    return 1;
+  }
+  for (int arg_idx = 1; arg_idx < argc; arg_idx++)
+  {
+    if (argv[arg_idx][0] == L'/' || argv[arg_idx][0] == L'-')
     {
-      BOOL bUseSSL;
+      if (_wcsicmp(argv[arg_idx] + 1, L"ssl") == 0)
+      {
+        bUseSSL = TRUE;
+      }
+      else if (_wcsicmp(argv[arg_idx] + 1, L"v") == 0)
+      {
+        LPWSTR sW;
 
-      bUseSSL = (argc >= 3 && (argv[2][0] == L'/' || argv[2][0] == L'-') &&
-                 _wcsicmp(argv[2]+1, L"ssl") == 0) ? TRUE : FALSE;
-      return TestHttpServer(bUseSSL);
+        if ((++arg_idx) >= argc)
+        {
+          wprintf_s(L"Error: Missing parameter for verbosity argument.\n");
+          return 1;
+        }
+        dwLogLevel = 0;
+        for (sW = argv[arg_idx]; *sW != 0; sW++)
+        {
+          if (*sW >= L'0' && *sW <= L'9')
+          {
+            dwLogLevel = dwLogLevel * 10 + (DWORD)(*sW - L'0');
+            if (dwLogLevel > 1000)
+              goto err_cmdline_invalidverbosity;
+          }
+          else
+          {
+err_cmdline_invalidverbosity:
+            wprintf_s(L"Error: Invalid log level for verbosity argument.\n");
+            return 1;
+          }
+        }
+      }
+      else
+      {
+        wprintf_s(L"Error: Invalid command-line argument (%s).\n", argv[arg_idx]);
+        return 1;
+      }
     }
-    if (_wcsicmp(argv[1], L"HttpClient") == 0)
+    else
     {
-      return TestHttpClient();
-    }
-    if (_wcsicmp(argv[1], L"Javascript") == 0)
-    {
-      return TestJavascript();
-    }
-    if (_wcsicmp(argv[1], L"JsHttpServer") == 0)
-    {
-      BOOL bUseSSL;
-
-      bUseSSL = (argc >= 3 && (argv[2][0] == L'/' || argv[2][0] == L'-') &&
-                 _wcsicmp(argv[2]+1, L"ssl") == 0) ? TRUE : FALSE;
-      return TestJsHttpServer(bUseSSL);
+      if (_wcsicmp(argv[arg_idx], L"HttpServer") == 0)
+      {
+        if (nTest != 0)
+        {
+err_cmdline_alreadyspecified:
+          wprintf_s(L"Error: Test to execute already specified.\n");
+          return 1;
+        }
+        nTest = 1;
+      }
+      else if (_wcsicmp(argv[1], L"HttpClient") == 0)
+      {
+        if (nTest != 0)
+          goto err_cmdline_alreadyspecified;
+        nTest = 2;
+      }
+      else if (_wcsicmp(argv[1], L"Javascript") == 0)
+      {
+        if (nTest != 0)
+          goto err_cmdline_alreadyspecified;
+        nTest = 3;
+      }
+      else if (_wcsicmp(argv[1], L"JsHttpServer") == 0)
+      {
+        if (nTest != 0)
+          goto err_cmdline_alreadyspecified;
+        nTest = 4;
+      }
+      else
+      {
+        wprintf_s(L"Error: An unknown test name has been specified (%s).\n", argv[arg_idx]);
+        return 1;
+      }
     }
   }
-  wprintf_s(L"Use: Test.exe test-module\n\n");
-  wprintf_s(L"Where 'test-module' can be:\n");
-  wprintf_s(L"    HttpServer, HttpClient, Javascript or JsHttpServer\n");
+  if (nTest == 0)
+  {
+    wprintf_s(L"Error: No test name has been specified.\n");
+    return 1;
+  }
+
+  switch (nTest)
+  {
+    case 1:
+      return TestHttpServer(bUseSSL, dwLogLevel);
+
+    case 2:
+      return TestHttpClient(dwLogLevel);
+
+    case 3:
+      return TestJavascript(dwLogLevel);
+
+    case 4:
+      return TestJsHttpServer(bUseSSL, dwLogLevel);
+  }
   return 0;
 }
 

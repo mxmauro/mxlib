@@ -24,9 +24,7 @@
 #include "TestHttpClient.h"
 #include <Http\HttpClient.h>
 
-//#define SIMPLE_TEST
-
-#define LOG_LEVEL 0
+#define SIMPLE_TEST
 
 //-----------------------------------------------------------
 
@@ -64,7 +62,7 @@ static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *lpHttp, _Inout_ MX::CIp
                                    _Inout_ MX::CSslCertificate **lplpSelfCert, _Inout_ MX::CCryptoRSA **lplpPrivKey);
 
 #ifdef SIMPLE_TEST
-static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificateArray *lpCerts);
+static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificateArray *lpCerts, _In_ DWORD dwLogLevel);
 #else //SIMPLE_TEST
 static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpParam);
 #endif //SIMPLE_TEST
@@ -81,12 +79,13 @@ typedef struct {
   MX::CSockets *lpSckMgr;
   MX::CSslCertificateArray *lpCerts;
   MX::CWorkerThread cWorkerThreads;
+  DWORD dwLogLevel;
 } THREAD_DATA;
 #endif //!SIMPLE_TEST
 
 //-----------------------------------------------------------
 
-int TestHttpClient()
+int TestHttpClient(_In_ DWORD dwLogLevel)
 {
   MX::CIoCompletionPortThreadPool cDispatcherPool;
   MX::CSockets cSckMgr(cDispatcherPool);
@@ -102,7 +101,7 @@ int TestHttpClient()
   if (SUCCEEDED(hRes))
   {
     cSckMgr.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
-    cSckMgr.SetLogLevel(LOG_LEVEL);
+    cSckMgr.SetLogLevel(dwLogLevel);
 
     hRes = cCerts.ImportFromWindowsStore();
   }
@@ -110,7 +109,7 @@ int TestHttpClient()
 #ifdef SIMPLE_TEST
   if (SUCCEEDED(hRes))
   {
-    hRes = SimpleTest1(&cSckMgr, &cCerts);
+    hRes = SimpleTest1(&cSckMgr, &cCerts, dwLogLevel);
   }
 #else //SIMPLE_TEST
   if (SUCCEEDED(hRes))
@@ -124,6 +123,7 @@ int TestHttpClient()
       sThreadData[i].nIndex = (int)i + 1;
       sThreadData[i].lpSckMgr = &cSckMgr;
       sThreadData[i].lpCerts = &cCerts;
+      sThreadData[i].dwLogLevel = dwLogLevel;
       if (sThreadData[i].cWorkerThreads.SetRoutine(&HttpClientJob, &sThreadData[i]) == FALSE ||
           sThreadData[i].cWorkerThreads.Start() == FALSE)
       {
@@ -205,7 +205,7 @@ static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *_lpHttp, _Inout_ MX::CI
 }
 
 #ifdef SIMPLE_TEST
-static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificateArray *lpCerts)
+static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificateArray *lpCerts, _In_ DWORD dwLogLevel)
 {
   CMyHttpClient cHttpClient(*lpSckMgr);
   MX::CProxy cProxy;
@@ -219,22 +219,31 @@ static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificate
   cHttpClient.lpCerts = lpCerts;
   //cHttpClient.SetOptionFlags(0);
   //cHttpClient.SetOptionFlags(MX::CHttpClient::OptionKeepConnectionOpen);
-  cHttpClient.On(MX_BIND_CALLBACK(&OnDocumentCompleted));
-  cHttpClient.On(MX_BIND_CALLBACK(&OnError));
-  cHttpClient.On(MX_BIND_CALLBACK(&OnQueryCertificates));
+  cHttpClient.SetDocumentCompletedCallback(MX_BIND_CALLBACK(&OnDocumentCompleted));
+  cHttpClient.SetErrorCallback(MX_BIND_CALLBACK(&OnError));
+  cHttpClient.SetQueryCertificatesCallback(MX_BIND_CALLBACK(&OnQueryCertificates));
+  cHttpClient.SetLogLevel(dwLogLevel);
   cHttpClient.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
-  cHttpClient.SetLogLevel(LOG_LEVEL);
 
   wprintf_s(L"[HttpClient/SimpleTest1] Downloading...\n");
   dwStartTime = dwEndTime = ::GetTickCount();
 
-  cHttpClient.On(MX_BIND_CALLBACK(&OnResponseHeadersReceived));
+  //cHttpClient.SetHeadersReceivedCallback(MX_BIND_CALLBACK(&OnResponseHeadersReceived));
+  cHttpClient.SetHeadersReceivedCallback(MX_BIND_CALLBACK(&OnResponseHeadersReceived_BigDownload));
 
-  hRes = cHttpClient.SetAuthCredentials(L"guest", L"guest");
+  //hRes = cHttpClient.SetAuthCredentials(L"guest", L"guest");
+  hRes = S_OK;
   if (SUCCEEDED(hRes))
   {
+    cHttpClient.SetOption_MaxBodySizeInMemory(0);
+
+    hRes = cHttpClient.AddRequestHeader("x-version", L"3");
+    if (SUCCEEDED(hRes))
+      hRes = cHttpClient.AddRequestHeader("license", L"39F2E487ED3D3489C49756833E5F7C7D1CEF7482FE9EF46B2549A0968DE83C99");
+    if (SUCCEEDED(hRes))
+      hRes = cHttpClient.Open("https://airgap.trapmine.com/ml_model_check");
     //hRes = cHttpClient.Open("https://jigsaw.w3.org/HTTP/Basic/");
-    hRes = cHttpClient.Open("https://jigsaw.w3.org/HTTP/Digest/");
+    //hRes = cHttpClient.Open("https://jigsaw.w3.org/HTTP/Digest/");
   }
   if (SUCCEEDED(hRes))
   {
@@ -286,7 +295,7 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
   cHttpClient.SetErrorCallback(MX_BIND_CALLBACK(&OnError));
   cHttpClient.SetQueryCertificatesCallback(MX_BIND_CALLBACK(&OnQueryCertificates));
   cHttpClient.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
-  cHttpClient.SetLogLevel(LOG_LEVEL);
+  cHttpClient.SetLogLevel(lpThreadData->dwLogLevel);
   {
     Console::CPrintLock cPrintLock;
 

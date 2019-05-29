@@ -48,9 +48,9 @@ public:
   CIpcSslLayer();
   ~CIpcSslLayer();
 
-  HRESULT Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol,
-                     _In_opt_ CSslCertificateArray *lpCheckCertificates, _In_opt_ CSslCertificate *lpSelfCert=NULL,
-                     _In_opt_ CCryptoRSA *lpPrivKey=NULL);
+  HRESULT Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol, _In_opt_ LPCSTR szHostNameA = NULL,
+                     _In_opt_ CSslCertificateArray *lpCheckCertificates = NULL,
+                     _In_opt_ CSslCertificate *lpSelfCert = NULL, _In_opt_ CCryptoRSA *lpPrivKey = NULL);
 
 private:
   HRESULT OnConnect();

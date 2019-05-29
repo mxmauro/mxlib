@@ -91,12 +91,13 @@ public:
   VOID SetWebSocketRequestReceivedCallback(_In_ OnWebSocketRequestReceivedCallback cWebSocketRequestReceivedCallback);
   VOID SetErrorCallback(_In_ OnErrorCallback cErrorCallback);
 
-  HRESULT StartListening(_In_ int nPort, _In_opt_ CIpcSslLayer::eProtocol nProtocol = CIpcSslLayer::ProtocolUnknown,
-                         _In_opt_ CSslCertificate *lpSslCertificate = NULL, _In_opt_ CCryptoRSA *lpSslKey = NULL);
-  HRESULT StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ int nPort,
+  HRESULT StartListening(_In_ CSockets::eFamily nFamily, _In_ int nPort,
                          _In_opt_ CIpcSslLayer::eProtocol nProtocol = CIpcSslLayer::ProtocolUnknown,
                          _In_opt_ CSslCertificate *lpSslCertificate = NULL, _In_opt_ CCryptoRSA *lpSslKey = NULL);
-  HRESULT StartListening(_In_opt_z_ LPCWSTR szBindAddressW, _In_ int nPort,
+  HRESULT StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSockets::eFamily nFamily, _In_ int nPort,
+                         _In_opt_ CIpcSslLayer::eProtocol nProtocol = CIpcSslLayer::ProtocolUnknown,
+                         _In_opt_ CSslCertificate *lpSslCertificate = NULL, _In_opt_ CCryptoRSA *lpSslKey = NULL);
+  HRESULT StartListening(_In_opt_z_ LPCWSTR szBindAddressW, _In_ CSockets::eFamily nFamily, _In_ int nPort,
                          _In_opt_ CIpcSslLayer::eProtocol nProtocol = CIpcSslLayer::ProtocolUnknown,
                          _In_opt_ CSslCertificate *lpSslCertificate = NULL, _In_opt_ CCryptoRSA *lpSslKey = NULL);
   VOID StopListening();

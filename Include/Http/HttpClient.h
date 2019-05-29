@@ -217,6 +217,9 @@ private:
 
   HRESULT OnDownloadStarted(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW, _In_ LPVOID lpUserParam);
 
+  VOID ResetRequestForNewRequest();
+  VOID ResetResponseForNewRequest();
+
 private:
   class CPostDataItem : public virtual CBaseMemObj, public TLnkLstNode<CPostDataItem>
   {
@@ -262,41 +265,26 @@ private:
   OnErrorCallback cErrorCallback;
   OnQueryCertificatesCallback cQueryCertificatesCallback;
 
-  class CRequest : public CBaseMemObj
-  {
-  public:
-    CRequest(_In_ CHttpClient *lpHttpClient);
-    ~CRequest();
-
-    VOID ResetForNewRequest();
-
-  public:
+  struct {
+    CHttpCommon cHttpCmn;
     CUrl cUrl;
     CStringA cStrMethodA;
-    CHttpCommon cHttpCmn;
     struct {
       TLnkLst<CPostDataItem> cList;
       BOOL bHasRaw;
       BOOL bIsDynamic;
     } sPostData;
-    CHAR szBoundary[32];
+    CHAR szBoundaryA[32];
     BOOL bUsingMultiPartFormData;
     BOOL bUsingProxy;
-  } cRequest;
+  } sRequest;
 
-  class CResponse : public CBaseMemObj
-  {
-  public:
-    CResponse(_In_ CHttpClient *lpHttpClient);
-
-    VOID ResetForNewRequest();
-
-  public:
+  struct {
     CHttpCommon cHttpCmn;
     CStringW cStrDownloadFileNameW;
     LONG volatile nTimerId;
     DWORD dwBodyLowThroughputCcounter;
-  } cResponse;
+  } sResponse;
 
   struct {
     CUrl cUrl;

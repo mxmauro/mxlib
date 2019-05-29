@@ -28,4 +28,4 @@
 
 //-----------------------------------------------------------
 
-int TestHttpClient();
+int TestHttpClient(_In_ DWORD dwLogLevel);

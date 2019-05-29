@@ -26,6 +26,7 @@
 
 #include "IpcCommon.h"
 #include "HostResolver.h"
+#include "..\ArrayList.h"
 
 //-----------------------------------------------------------
 
@@ -37,7 +38,7 @@ class CSockets : public CIpc
 {
 public:
   typedef enum {
-    FamilyUnknown=0, FamilyIPv4=1, FamilyIPv6
+    FamilyIPv4=1, FamilyIPv6
   } eFamily;
 
   CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool);
@@ -70,18 +71,17 @@ private:
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CConnection);
   public:
-    CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass);
+    CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass, _In_ eFamily nFamily);
     ~CConnection();
 
-    HRESULT CreateSocket(_In_ eFamily nFamily, _In_ DWORD dwPacketSize);
+    HRESULT CreateSocket(_In_ DWORD dwPacketSize);
     VOID ShutdownLink(_In_ BOOL bAbortive);
 
     HRESULT SetupListener(_In_ int nBackLogSize);
     HRESULT SetupClient();
     HRESULT SetupAcceptEx(_In_ CConnection *lpListenConn);
 
-    HRESULT ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _In_ eFamily nFamily, _In_opt_z_ LPCSTR szAddressA,
-                           _In_opt_ int nPort);
+    HRESULT ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _In_opt_z_ LPCSTR szAddressA, _In_opt_ int nPort);
 
     HRESULT SendReadPacket(_In_ CPacket *lpPacket);
     HRESULT SendWritePacket(_In_ CPacket *lpPacket);
@@ -94,32 +94,10 @@ private:
   protected:
     friend class CSockets;
 
-    typedef BOOL (WINAPI *lpfnAcceptEx)(_In_ SOCKET sListenSocket, _In_ SOCKET sAcceptSocket, _In_ PVOID lpOutputBuffer,
-                                        _In_ DWORD dwReceiveDataLength, _In_ DWORD dwLocalAddressLength,
-                                        _In_ DWORD dwRemoteAddressLength, _Out_ LPDWORD lpdwBytesReceived,
-                                        _Inout_ LPOVERLAPPED lpOverlapped);
-    typedef BOOL (WINAPI *lpfnConnectEx)(_In_ SOCKET s, _In_ const struct sockaddr FAR *name, _In_ int namelen,
-                                         _In_opt_ PVOID lpSendBuffer, _In_ DWORD dwSendDataLength,
-                                         _Out_ LPDWORD lpdwBytesSent, _Inout_ LPOVERLAPPED lpOverlapped);
-    typedef VOID (WINAPI *lpfnGetAcceptExSockaddrs)(_In_ PVOID lpOutputBuffer, _In_ DWORD dwReceiveDataLength,
-                                                    _In_ DWORD dwLocalAddressLength, _In_ DWORD dwRemoteAddressLength,
-                                                    _Deref_out_ struct sockaddr **LocalSockaddr,
-                                                    _Out_ LPINT LocalSockaddrLength,
-                                                    _Deref_out_ struct sockaddr **RemoteSockaddr,
-                                                    _Out_ LPINT RemoteSockaddrLength);
-    typedef BOOL (WINAPI *lpfnDisconnectEx)(_In_ SOCKET hSocket, _In_ LPOVERLAPPED lpOverlapped, _In_ DWORD dwFlags,
-                                            _In_ DWORD reserved);
-
-  protected:
     LONG volatile nRwHandleInUse;
     SOCKADDR_INET sAddr;
-    union {
-      lpfnAcceptEx fnAcceptEx;
-      lpfnConnectEx fnConnectEx;
-    };
-    lpfnGetAcceptExSockaddrs fnGetAcceptExSockaddrs;
-    lpfnDisconnectEx fnDisconnectEx;
     SOCKET sck;
+    eFamily nFamily;
     struct {
       LONG volatile nMutex;
       CHostResolver *lpResolver;
@@ -149,6 +127,10 @@ private:
 
 private:
   DWORD dwBackLogSize, dwMaxAcceptsToPost, dwAddressResolverTimeoutMs;
+  struct tagReusableSockets {
+    LONG volatile nMutex;
+    TArrayList<SOCKET> aList;
+  } sReusableSockets[2];
 };
 
 } //namespace MX

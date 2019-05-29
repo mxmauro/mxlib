@@ -788,7 +788,7 @@ HRESULT CSslCertificateArray::ImportFromWindowsStore()
   DWORD dwLen;
   HRESULT hRes;
 
-  dwLen = ::GetWindowsDirectoryW(szDllNameW, MX_ARRAYLEN(szDllNameW) - 16);
+  dwLen = ::GetSystemDirectoryW(szDllNameW, MX_ARRAYLEN(szDllNameW) - 16);
   if (dwLen == 0)
     return MX_E_ProcNotFound;
   if (szDllNameW[dwLen - 1] != L'\\')

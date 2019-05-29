@@ -47,7 +47,7 @@ static HRESULT OnLog(_In_z_ LPCWSTR szInfoW);
 
 //-----------------------------------------------------------
 
-int TestHttpServer(_In_ BOOL bUseSSL)
+int TestHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
 {
   MX::CIoCompletionPortThreadPool cDispatcherPool, cWorkerPool;
   MX::CSockets cSckMgr(cDispatcherPool);
@@ -57,7 +57,7 @@ int TestHttpServer(_In_ BOOL bUseSSL)
   HRESULT hRes;
 
   cHttpServer.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
-  cHttpServer.SetLogLevel(5);
+  cHttpServer.SetLogLevel(dwLogLevel);
 
   cSckMgr.SetOption_MaxAcceptsToPost(24);
   //cSckMgr.SetOption_PacketSize(32768);
@@ -103,9 +103,14 @@ int TestHttpServer(_In_ BOOL bUseSSL)
   if (SUCCEEDED(hRes))
   {
     if (bUseSSL != FALSE)
-      hRes = cHttpServer.StartListening(443, MX::CIpcSslLayer::ProtocolTLSv1_2, &cSslCert, &cSslPrivateKey);
+    {
+      hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv4, 443, MX::CIpcSslLayer::ProtocolTLSv1_2, &cSslCert,
+                                        &cSslPrivateKey);
+    }
     else
-      hRes = cHttpServer.StartListening(80);
+    {
+      hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv4, 80);
+    }
   }
   //----
   if (SUCCEEDED(hRes))
@@ -149,11 +154,42 @@ static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServe
     }
     else
     {
+      MX::CHttpHeaderRespAcceptRanges *lpHdrAcceptRanges;
+      MX::CHttpHeaderGenConnection *lpHdrConnection;
+      MX::CHttpHeaderEntLastModified *lpHdrLastModified;
+
       //HANDLE h = lpRequest->GetUnderlyingSocket();
       //MX::CSockets *lpMgr = lpRequest->GetUnderlyingSocketManager();
 
       //lpMgr->PauseOutputProcessing(h);
-      hRes = lpRequest->SendResponse("<html><body>test OK</body></html>", 6 + 6 + 7 + 7 + 7);
+      hRes = lpRequest->AddResponseHeader<MX::CHttpHeaderRespAcceptRanges>(&lpHdrAcceptRanges);
+      if (SUCCEEDED(hRes))
+        hRes = lpHdrAcceptRanges->SetRange(MX::CHttpHeaderRespAcceptRanges::RangeBytes);
+      //----
+      if (SUCCEEDED(hRes))
+      {
+        hRes = lpRequest->AddResponseHeader<MX::CHttpHeaderGenConnection>(&lpHdrConnection);
+        if (SUCCEEDED(hRes))
+          hRes = lpHdrConnection->AddConnection("close", 5);
+      }
+      //----
+      if (SUCCEEDED(hRes))
+      {
+        MX::CDateTime cDt;
+
+        hRes = lpRequest->AddResponseHeader<MX::CHttpHeaderEntLastModified>(&lpHdrLastModified);
+        if (SUCCEEDED(hRes))
+        {
+          hRes = cDt.SetFromNow(FALSE);
+          if (SUCCEEDED(hRes))
+            hRes = lpHdrLastModified->SetDate(cDt);
+        }
+      }
+      //----
+      if (SUCCEEDED(hRes))
+      {
+        hRes = lpRequest->SendResponse("<html><body>test OK</body></html>", 6 + 6 + 7 + 7 + 7);
+      }
       //lpMgr->ResumeOutputProcessing(h);
     }
   }

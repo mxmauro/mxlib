@@ -360,13 +360,14 @@ VOID CHttpServer::SetErrorCallback(_In_ OnErrorCallback _cErrorCallback)
   return;
 }
 
-HRESULT CHttpServer::StartListening(_In_ int nPort, _In_opt_ CIpcSslLayer::eProtocol nProtocol,
+HRESULT CHttpServer::StartListening(_In_ CSockets::eFamily nFamily, _In_ int nPort
+                                    , _In_opt_ CIpcSslLayer::eProtocol nProtocol,
                                     _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CCryptoRSA *lpSslKey)
 {
-  return StartListening((LPCSTR)NULL, nPort, nProtocol, lpSslCertificate, lpSslKey);
+  return StartListening((LPCSTR)NULL, nFamily, nPort, nProtocol, lpSslCertificate, lpSslKey);
 }
 
-HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ int nPort,
+HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSockets::eFamily nFamily, _In_ int nPort,
                                     _In_opt_ CIpcSslLayer::eProtocol nProtocol,
                                     _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CCryptoRSA *lpSslKey)
 {
@@ -450,9 +451,8 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ int n
     }
     if (SUCCEEDED(hRes))
     {
-      hRes = cSocketMgr.CreateListener(CSockets::FamilyUnknown, nPort,
-                                       MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnSocketCreate, this), szBindAddressA,
-                                       NULL, &hAcceptConn);
+      hRes = cSocketMgr.CreateListener(nFamily, nPort, MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnSocketCreate, this),
+                                       szBindAddressA, NULL, &hAcceptConn);
     }
     if (FAILED(hRes))
     {
@@ -469,7 +469,7 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ int n
   return hRes;
 }
 
-HRESULT CHttpServer::StartListening(_In_opt_z_ LPCWSTR szBindAddressW, _In_ int nPort,
+HRESULT CHttpServer::StartListening(_In_opt_z_ LPCWSTR szBindAddressW, _In_ CSockets::eFamily nFamily, _In_ int nPort,
                                     _In_opt_ CIpcSslLayer::eProtocol nProtocol,
                                     _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CCryptoRSA *lpSslKey)
 {
@@ -482,7 +482,7 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCWSTR szBindAddressW, _In_ int 
     if (FAILED(hRes))
       return hRes;
   }
-  return StartListening((LPSTR)cStrTempA, nPort, nProtocol, lpSslCertificate, lpSslKey);
+  return StartListening((LPSTR)cStrTempA, nFamily, nPort, nProtocol, lpSslCertificate, lpSslKey);
 }
 
 VOID CHttpServer::StopListening()
@@ -696,7 +696,8 @@ HRESULT CHttpServer::OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIp
           cLayer.Attach(MX_DEBUG_NEW CIpcSslLayer());
           if (!cLayer)
             return E_OUTOFMEMORY;
-          hRes = cLayer->Initialize(TRUE, sSsl.nProtocol, NULL, sSsl.cSslCertificate.Get(), sSsl.cSslPrivateKey.Get());
+          hRes = cLayer->Initialize(TRUE, sSsl.nProtocol, NULL, NULL, sSsl.cSslCertificate.Get(),
+                                    sSsl.cSslPrivateKey.Get());
           if (FAILED(hRes))
             return hRes;
           sData.cLayersList.PushTail(cLayer.Detach());

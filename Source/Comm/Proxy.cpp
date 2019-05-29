@@ -228,7 +228,7 @@ err_procnotfound:
       if (_fnGlobalFree == NULL)
         goto err_procnotfound;
 
-      dwLen = ::GetWindowsDirectoryW(szDllNameW, MX_ARRAYLEN(szDllNameW) - 16);
+      dwLen = ::GetSystemDirectoryW(szDllNameW, MX_ARRAYLEN(szDllNameW) - 16);
       if (dwLen == 0)
         goto err_procnotfound;
       if (szDllNameW[dwLen] != L'\\')

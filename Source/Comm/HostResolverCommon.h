@@ -108,7 +108,6 @@ private:
   //----
 private:
   BOOL Initialize();
-  VOID AddRef();
 
   VOID ThreadProc();
   CItem* GetNextItemToProcess(_In_ LONG nSlot);
@@ -145,7 +144,6 @@ private:
   typedef INT (WSAAPI *lpfnGetAddrInfoExOverlappedResult)(_In_ LPOVERLAPPED lpOverlapped);
 
   LONG volatile nRwMutex;
-  LONG volatile nRefCount;
   HINSTANCE hWs2_32Dll;
   lpfnGetAddrInfoExW fnGetAddrInfoExW;
   lpfnFreeAddrInfoExW fnFreeAddrInfoExW;

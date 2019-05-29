@@ -48,7 +48,6 @@ CIPAddressResolver::CIPAddressResolver() : TRefCounted<CThread>()
   SIZE_T nSlot;
 
   SlimRWL_Initialize(&nRwMutex);
-  _InterlockedExchange(&nRefCount, 1);
 
   for (nSlot = 0; nSlot < MAX_SIMULTANEOUS_THREADS; nSlot++)
     _InterlockedExchange(&(sWorkers[nSlot].nWorking), 0);
@@ -59,7 +58,7 @@ CIPAddressResolver::CIPAddressResolver() : TRefCounted<CThread>()
   fnGetAddrInfoExCancel = NULL;
   fnGetAddrInfoExOverlappedResult = NULL;
 
-  dwLen = ::GetModuleFileNameW(NULL, szDllNameW, MX_ARRAYLEN(szDllNameW) - 16);
+  dwLen = ::GetSystemDirectoryW(szDllNameW, MX_ARRAYLEN(szDllNameW) - 16);
   if (dwLen > 0)
   {
     if (szDllNameW[dwLen - 1] != L'\\')
@@ -220,12 +219,6 @@ BOOL CIPAddressResolver::Initialize()
   if (FAILED(cWakeUpWorkerEv.Create(TRUE, FALSE)) || Start() == FALSE)
     return FALSE;
   return TRUE;
-}
-
-VOID CIPAddressResolver::AddRef()
-{
-  _InterlockedIncrement(&nRefCount);
-  return;
 }
 
 VOID CIPAddressResolver::ThreadProc()
@@ -666,7 +659,7 @@ CIPAddressResolver::CItem::~CItem()
 
 VOID CIPAddressResolver::CItem::SetErrorCode(_In_ HRESULT hRes)
 {
-  _InterlockedCompareExchange(&hrErrorCode, MX_E_Cancelled, S_FALSE);
+  _InterlockedCompareExchange(&hrErrorCode, hRes, S_FALSE);
   if (hCancelAsync != NULL)
     ::SetEvent(hCancelAsync);
   return;

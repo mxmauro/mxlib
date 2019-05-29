@@ -26,9 +26,9 @@
 #include "..\..\Include\CircularBuffer.h"
 #include "..\..\Include\Comm\SslCertificates.h"
 #include <intrin.h>
-FORCEINLINE int InterlockedExchangeAdd(_Inout_ _Interlocked_operand_ int volatile *Addend, _In_ int Value)
+static FORCEINLINE int InterlockedExchangeAdd(_Inout_ _Interlocked_operand_ int volatile *Addend, _In_ int Value)
 {
-  return (int)_InterlockedExchangeAdd((volatile long*)Addend, (long)Value);
+  return (int)_InterlockedExchangeAdd((LONG volatile *)Addend, (LONG)Value);
 }
 #include "..\OpenSSL\Source\crypto\x509\x509_lcl.h"
 #include "..\OpenSSL\Source\crypto\include\internal\x509_int.h"
@@ -137,9 +137,9 @@ CIpcSslLayer::~CIpcSslLayer()
   return;
 }
 
-HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol,
-                                 _In_opt_ CSslCertificateArray *lpCheckCertificates, _In_opt_ CSslCertificate *lpSelfCert,
-                                 _In_opt_ CCryptoRSA *lpPrivKey)
+HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol, _In_opt_ LPCSTR szHostNameA,
+                                 _In_opt_ CSslCertificateArray *lpCheckCertificates,
+                                 _In_opt_ CSslCertificate *lpSelfCert, _In_opt_ CCryptoRSA *lpPrivKey)
 {
   X509_STORE *lpStore;
   HRESULT hRes;
@@ -188,9 +188,23 @@ HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol
   SSL_set_mode(ssl_data->lpSslSession, SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
                                        SSL_MODE_RELEASE_BUFFERS);
   if (ssl_data->bServerSide == FALSE)
+  {
     SSL_set_connect_state(ssl_data->lpSslSession);
+    if (szHostNameA != NULL && *szHostNameA != 0)
+    {
+      ERR_clear_error();
+      if (SSL_set_tlsext_host_name(ssl_data->lpSslSession, szHostNameA) <= 0)
+      {
+        int err = ERR_get_error();
+        return (err == ((ERR_LIB_SSL << 24) | (SSL_F_SSL3_CTRL << 12) | SSL_R_SSL3_EXT_INVALID_SERVERNAME))
+               ? MX_E_InvalidData : E_OUTOFMEMORY;
+      }
+    }
+  }
   else
+  {
     SSL_set_accept_state(ssl_data->lpSslSession);
+  }
   //create i/o objects
   ssl_data->lpBufferedOut = MX_DEBUG_NEW MX::Internals::COpenSSLCircularBufferBIO();
   if (ssl_data->lpBufferedOut == NULL)

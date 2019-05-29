@@ -28,4 +28,4 @@
 
 //-----------------------------------------------------------
 
-int TestJavascript();
+int TestJavascript(_In_ DWORD dwLogLevel);

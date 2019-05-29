@@ -45,9 +45,14 @@ static __inline HRESULT MX_HRESULT_FROM_LASTSOCKETERROR()
 #define TypeAcceptEx          (CPacket::eType)((int)CPacket::TypeMAX + 4)
 #define TypeConnect           (CPacket::eType)((int)CPacket::TypeMAX + 5)
 #define TypeConnectEx         (CPacket::eType)((int)CPacket::TypeMAX + 6)
+#define TypeDisconnectEx      (CPacket::eType)((int)CPacket::TypeMAX + 7)
 
 #define SO_UPDATE_ACCEPT_CONTEXT    0x700B
 #define SO_UPDATE_CONNECT_CONTEXT   0x7010
+
+#ifndef TF_REUSE_SOCKET
+  #define TF_REUSE_SOCKET     0x02
+#endif //!TF_REUSE_SOCKET
 
 #define TCP_KEEPALIVE_MS             45000
 
@@ -56,6 +61,22 @@ static __inline HRESULT MX_HRESULT_FROM_LASTSOCKETERROR()
 #endif //!FILE_SKIP_SET_EVENT_ON_HANDLE
 
 typedef BOOL (WINAPI *lpfnSetFileCompletionNotificationModes)(_In_ HANDLE FileHandle, _In_ UCHAR Flags);
+
+typedef BOOL (WINAPI *lpfnAcceptEx)(_In_ SOCKET sListenSocket, _In_ SOCKET sAcceptSocket, _In_ PVOID lpOutputBuffer,
+                                    _In_ DWORD dwReceiveDataLength, _In_ DWORD dwLocalAddressLength,
+                                    _In_ DWORD dwRemoteAddressLength, _Out_ LPDWORD lpdwBytesReceived,
+                                    _Inout_ LPOVERLAPPED lpOverlapped);
+typedef BOOL (WINAPI *lpfnConnectEx)(_In_ SOCKET s, _In_ const struct sockaddr FAR *name, _In_ int namelen,
+                                     _In_opt_ PVOID lpSendBuffer, _In_ DWORD dwSendDataLength,
+                                     _Out_ LPDWORD lpdwBytesSent, _Inout_ LPOVERLAPPED lpOverlapped);
+typedef VOID (WINAPI *lpfnGetAcceptExSockaddrs)(_In_ PVOID lpOutputBuffer, _In_ DWORD dwReceiveDataLength,
+                                                _In_ DWORD dwLocalAddressLength, _In_ DWORD dwRemoteAddressLength,
+                                                _Deref_out_ struct sockaddr **LocalSockaddr,
+                                                _Out_ LPINT LocalSockaddrLength,
+                                                _Deref_out_ struct sockaddr **RemoteSockaddr,
+                                                _Out_ LPINT RemoteSockaddrLength);
+typedef BOOL (WINAPI *lpfnDisconnectEx)(_In_ SOCKET hSocket, _In_ LPOVERLAPPED lpOverlapped, _In_ DWORD dwFlags,
+                                        _In_ DWORD reserved);
 
 typedef struct {
   HRESULT MX_UNALIGNED hRes;
@@ -82,9 +103,13 @@ namespace MX {
 
 CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDispatcherPool)
 {
+  SIZE_T i;
+
   dwBackLogSize = 0;
   dwMaxAcceptsToPost = 4;
   dwAddressResolverTimeoutMs = 3000;
+  for (i = 0; i < MX_ARRAYLEN(sReusableSockets); i++)
+    _InterlockedExchange(&(sReusableSockets[i].nMutex), 0);
   return;
 }
 
@@ -147,13 +172,10 @@ HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCr
     *h = NULL;
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
-  if ((nFamily != FamilyUnknown && nFamily != FamilyIPv4 && nFamily != FamilyIPv6) ||
-      nPort < 1 || nPort > 65535 || (!cCreateCallback))
-  {
+  if ((nFamily != FamilyIPv4 && nFamily != FamilyIPv6) || nPort < 1 || nPort > 65535 || (!cCreateCallback))
     return E_INVALIDARG;
-  }
   //create connection
-  cConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassListener));
+  cConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassListener, nFamily));
   if (!cConn)
     return E_OUTOFMEMORY;
   if (h != NULL)
@@ -167,9 +189,9 @@ HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCr
   }
   hRes = FireOnCreate(cConn.Get());
   if (SUCCEEDED(hRes))
-    hRes = cConn->CreateSocket(nFamily, 0);
+    hRes = cConn->CreateSocket(0);
   if (SUCCEEDED(hRes))
-    hRes = cConn->ResolveAddress(dwAddressResolverTimeoutMs, nFamily, szBindAddressA, nPort);
+    hRes = cConn->ResolveAddress(dwAddressResolverTimeoutMs, szBindAddressA, nPort);
   //done
   if (FAILED(hRes))
   {
@@ -213,13 +235,12 @@ HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA
     return MX_E_Cancelled;
   if (szAddressA == NULL)
     return E_POINTER;
-  if ((nFamily != FamilyUnknown && nFamily != FamilyIPv4 && nFamily != FamilyIPv6) ||
-      *szAddressA == 0 || nPort < 1 || nPort > 65535 || (!cCreateCallback))
-  {
+  if ((nFamily != FamilyIPv4 && nFamily != FamilyIPv6) || *szAddressA == 0 || nPort < 1 || nPort > 65535)
     return E_INVALIDARG;
-  }
+  if (!cCreateCallback)
+    return E_POINTER;
   //create connection
-  cConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassClient));
+  cConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassClient, nFamily));
   if (!cConn)
     return E_OUTOFMEMORY;
   if (h != NULL)
@@ -233,9 +254,9 @@ HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA
   }
   hRes = FireOnCreate(cConn.Get());
   if (SUCCEEDED(hRes))
-    hRes = cConn->CreateSocket(nFamily, dwPacketSize);
+    hRes = cConn->CreateSocket(dwPacketSize);
   if (SUCCEEDED(hRes))
-    hRes = cConn->ResolveAddress(dwAddressResolverTimeoutMs, nFamily, szAddressA, nPort);
+    hRes = cConn->ResolveAddress(dwAddressResolverTimeoutMs, szAddressA, nPort);
   //done
   if (FAILED(hRes))
   {
@@ -318,6 +339,23 @@ HRESULT CSockets::OnInternalInitialize()
 
 VOID CSockets::OnInternalFinalize()
 {
+  SIZE_T i;
+
+  for (i = 0; i < MX_ARRAYLEN(sReusableSockets); i++)
+  {
+    CFastLock cLock(&(sReusableSockets[i].nMutex));
+    SIZE_T nCount;
+    SOCKET *lpSck;
+
+    nCount = sReusableSockets[i].aList.GetCount();
+    lpSck = sReusableSockets[i].aList.GetBuffer();
+    while (nCount > 0)
+    {
+      ::closesocket(*lpSck);
+      lpSck++;
+      nCount--;
+    }
+  }
   return;
 }
 
@@ -327,7 +365,7 @@ HRESULT CSockets::CreateServerConnection(_In_ CConnection *lpListenConn)
   HRESULT hRes;
 
   //create connection
-  cIncomingConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassServer));
+  cIncomingConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassServer, lpListenConn->nFamily));
   if (!cIncomingConn)
     return E_OUTOFMEMORY;
   cIncomingConn->cCreateCallback = lpListenConn->cCreateCallback;
@@ -339,10 +377,7 @@ HRESULT CSockets::CreateServerConnection(_In_ CConnection *lpListenConn)
   }
   hRes = FireOnCreate(cIncomingConn.Get());
   if (SUCCEEDED(hRes))
-  {
-    hRes = cIncomingConn->CreateSocket((lpListenConn->sAddr.si_family == AF_INET) ? FamilyIPv4 : FamilyIPv6,
-                                       dwPacketSize);
-  }
+    hRes = cIncomingConn->CreateSocket(dwPacketSize);
   if (SUCCEEDED(hRes))
     hRes = lpListenConn->SetupAcceptEx(cIncomingConn.Get());
   //done
@@ -420,17 +455,26 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In
       }
       if (SUCCEEDED(hRes))
       {
+        static const GUID sGuid_GetAcceptExSockAddrs = {
+          0xB5367DF2, 0xCBAC, 0x11CF, { 0x95, 0xCA, 0x00, 0x80, 0x5F, 0x48, 0xA1, 0x92 }
+        };
         sockaddr *lpLocalAddr, *lpPeerAddr;
         INT nLocalAddrLen, nPeerAddrLen;
+        lpfnGetAcceptExSockaddrs fnGetAcceptExSockaddrs;
+        DWORD dw;
 
-        //get peer address
         lpLocalAddr = lpPeerAddr = NULL;
         nLocalAddrLen = nPeerAddrLen = 0;
-        if (lpIncomingConn->fnGetAcceptExSockaddrs != NULL)
+        //get extension function addresses and peer address
+        fnGetAcceptExSockaddrs = NULL;
+        dw = 0;
+        if (::WSAIoctl(lpIncomingConn->sck, SIO_GET_EXTENSION_FUNCTION_POINTER, (LPVOID)&sGuid_GetAcceptExSockAddrs,
+                       (DWORD)sizeof(sGuid_GetAcceptExSockAddrs), &fnGetAcceptExSockaddrs,
+                       (DWORD)sizeof(fnGetAcceptExSockaddrs), &dw, NULL, NULL) != SOCKET_ERROR &&
+            fnGetAcceptExSockaddrs != NULL)
         {
-          lpIncomingConn->fnGetAcceptExSockaddrs(lpPacket->GetBuffer(), 0, lpPacket->GetBytesInUse(),
-                                                 lpPacket->GetBytesInUse(), &lpLocalAddr, &nLocalAddrLen, &lpPeerAddr,
-                                                 &nPeerAddrLen);
+          fnGetAcceptExSockaddrs(lpPacket->GetBuffer(), 0, lpPacket->GetBytesInUse(), lpPacket->GetBytesInUse(),
+                                 &lpLocalAddr, &nLocalAddrLen, &lpPeerAddr, &nPeerAddrLen);
         }
         if (lpPeerAddr != NULL && nPeerAddrLen >= (INT)SockAddrSizeFromWinSockFamily(lpConn->sAddr.si_family))
         {
@@ -503,6 +547,29 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In
       lpConn->cRwList.Remove(lpPacket);
       FreePacket(lpPacket);
       break;
+
+    case TypeDisconnectEx:
+      {
+      SOCKET sck = (SOCKET)(lpPacket->GetUserData());
+
+      if (SUCCEEDED(hRes))
+      {
+        SIZE_T nIndex = (lpConn->nFamily == FamilyIPv4) ? 0 : 1;
+
+        {
+          CFastLock cLock(&(sReusableSockets[nIndex].nMutex));
+
+          if (sReusableSockets[nIndex].aList.AddElement(sck) == FALSE)
+            ::closesocket(sck);
+        }
+      }
+      else
+      {
+        ::closesocket(sck);
+      }
+      FreePacket(lpPacket);
+      }
+      break;
   }
   //done
   return hRes;
@@ -510,17 +577,16 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In
 
 //-----------------------------------------------------------
 
-CSockets::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass) : CConnectionBase(lpIpc,
-                                                                                                           nClass)
+CSockets::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass,
+                                   _In_ eFamily _nFamily) : CConnectionBase(lpIpc, nClass)
 {
   SlimRWL_Initialize(&nRwHandleInUse);
   MemSet(&sAddr, 0, sizeof(sAddr));
   sck = NULL;
-  fnAcceptEx = NULL;
-  fnGetAcceptExSockaddrs = NULL;
   MemSet(&sHostResolver, 0, sizeof(sConnectWaiter));
   MemSet(&sConnectWaiter, 0, sizeof(sConnectWaiter));
   _InterlockedExchange(&nReadThrottle, 128);
+  nFamily = _nFamily;
   return;
 }
 
@@ -532,55 +598,44 @@ CSockets::CConnection::~CConnection()
   return;
 }
 
-HRESULT CSockets::CConnection::CreateSocket(_In_ eFamily nFamily, _In_ DWORD dwPacketSize)
+HRESULT CSockets::CConnection::CreateSocket(_In_ DWORD dwPacketSize)
 {
-  static const GUID sGuid_AcceptEx = {
-    0xB5367DF1, 0xCBAC, 0x11CF, { 0x95, 0xCA, 0x00, 0x80, 0x5F, 0x48, 0xA1, 0x92 }
-  };
-  static const GUID sGuid_ConnectEx = {
-    0x25A207B9, 0xDDF3, 0x4660, { 0x8E, 0xE9, 0x76, 0xE5, 0x8C, 0x74, 0x06, 0x3E }
-  };
-  static const GUID sGuid_GetAcceptExSockAddrs = {
-    0xB5367DF2, 0xCBAC, 0x11CF, { 0x95, 0xCA, 0x00, 0x80, 0x5F, 0x48, 0xA1, 0x92 }
-  };
   u_long nYes;
   struct tcp_keepalive sKeepAliveData;
   DWORD dw;
 
   //create socket
-  sck = ::WSASocketW(FamilyToWinSockFamily(nFamily), SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
-  if (sck == NULL || sck == INVALID_SOCKET)
+  if (nClass == ConnectionClassServer)
   {
-    sck = NULL;
-    return MX_HRESULT_FROM_LASTSOCKETERROR();
+    SIZE_T nIndex = (nFamily == eFamily::FamilyIPv4) ? 0 : 1;
+    struct tagReusableSockets *lpReusableSockets = &(reinterpret_cast<CSockets*>(lpIpc)->sReusableSockets[nIndex]);
+
+    {
+      CFastLock cLock(&(lpReusableSockets->nMutex));
+      SIZE_T nCount;
+
+      nCount = lpReusableSockets->aList.GetCount();
+      if (nCount > 0)
+      {
+        nCount--;
+        sck = lpReusableSockets->aList.GetElementAt(nCount);
+        lpReusableSockets->aList.RemoveElementAt(nCount);
+
+        //done
+        return S_OK;
+      }
+    }
+  }
+  if (sck == NULL)
+  {
+    sck = ::WSASocketW(FamilyToWinSockFamily(nFamily), SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
+    if (sck == NULL || sck == INVALID_SOCKET)
+    {
+      sck = NULL;
+      return MX_HRESULT_FROM_LASTSOCKETERROR();
+    }
   }
   ::SetHandleInformation((HANDLE)sck, HANDLE_FLAG_INHERIT, 0);
-  switch (nClass)
-  {
-    case CIpc::ConnectionClassListener:
-      //get AcceptEx function' address
-      if (::WSAIoctl(sck, SIO_GET_EXTENSION_FUNCTION_POINTER, (LPVOID)&sGuid_AcceptEx, (DWORD)sizeof(sGuid_AcceptEx),
-                     &fnAcceptEx, (DWORD)sizeof(fnAcceptEx), &dw, NULL, NULL) == SOCKET_ERROR)
-        return MX_HRESULT_FROM_LASTSOCKETERROR();
-      if (fnAcceptEx == NULL)
-        return MX_E_ProcNotFound;
-      break;
-
-    case CIpc::ConnectionClassServer:
-      //get GetAcceptExSockaddrs function's address if available
-      if (::WSAIoctl(sck, SIO_GET_EXTENSION_FUNCTION_POINTER, (LPVOID)&sGuid_GetAcceptExSockAddrs,
-                     (DWORD)sizeof(sGuid_GetAcceptExSockAddrs), &fnGetAcceptExSockaddrs,
-                     (DWORD)sizeof(fnGetAcceptExSockaddrs), &dw, NULL, NULL) == SOCKET_ERROR)
-        fnGetAcceptExSockaddrs = NULL;
-      break;
-
-    case CIpc::ConnectionClassClient:
-      //get ConnectEx function's address if available
-      if (::WSAIoctl(sck, SIO_GET_EXTENSION_FUNCTION_POINTER, (LPVOID)&sGuid_ConnectEx, (DWORD)sizeof(sGuid_ConnectEx),
-                     &fnConnectEx, (DWORD)sizeof(fnConnectEx), &dw, NULL, NULL) == SOCKET_ERROR)
-        fnConnectEx = NULL;
-      break;
-  }
   //non-blocking
   nYes = 1;
   if (::ioctlsocket(sck, FIONBIO, &nYes) == SOCKET_ERROR)
@@ -670,8 +725,25 @@ VOID CSockets::CConnection::ShutdownLink(_In_ BOOL bAbortive)
 
     if (sck != NULL)
     {
+      static const GUID sGuid_DisconnectEx = {
+        0x7FDA2E11, 0x8630, 0x436F, { 0xA0, 0x31, 0xF5, 0x36, 0xA6, 0xEE, 0xC1, 0x57 }
+      };
+      lpfnDisconnectEx fnDisconnectEx;
       LINGER sLinger;
 
+      //get extension function addresses
+      fnDisconnectEx = NULL;
+      if (nClass == ConnectionClassServer && lpIpc->IsShuttingDown() == FALSE && IsConnected() != FALSE)
+      {
+        DWORD dw = 0;
+
+        if (::WSAIoctl(sck, SIO_GET_EXTENSION_FUNCTION_POINTER, (LPVOID)&sGuid_DisconnectEx,
+                       (DWORD)sizeof(sGuid_DisconnectEx), &fnDisconnectEx, (DWORD)sizeof(fnDisconnectEx), &dw, NULL,
+                       NULL) == SOCKET_ERROR)
+        {
+          fnDisconnectEx = NULL;
+        }
+      }
       if (bAbortive != FALSE)
       {
         //abortive close on error
@@ -681,12 +753,40 @@ VOID CSockets::CConnection::ShutdownLink(_In_ BOOL bAbortive)
       }
       else
       {
-        ::shutdown(sck, SD_SEND);
+        if (fnDisconnectEx == NULL)
+          ::shutdown(sck, SD_SEND);
         sLinger.l_onoff = 0;
         sLinger.l_linger = 0;
         ::setsockopt(sck, SOL_SOCKET, SO_LINGER, (char*)&sLinger, (int)sizeof(sLinger));
       }
-      ::closesocket(sck);
+      if (fnDisconnectEx != NULL)
+      {
+        CIpc::CPacket *lpPacket;
+
+        lpPacket = GetPacket(TypeDisconnectEx);
+        if (lpPacket != NULL)
+        {
+          lpPacket->SetUserData((LPVOID)sck);
+          AddRef();
+          if (fnDisconnectEx(sck, lpPacket->GetOverlapped(), TF_REUSE_SOCKET, 0) == FALSE)
+          {
+            HRESULT hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
+            if (FAILED(hRes) && hRes != MX_E_IoPending)
+            {
+              Release();
+              ::closesocket(sck);
+            }
+          }
+        }
+        else
+        {
+          ::closesocket(sck);
+        }
+      }
+      else
+      {
+        ::closesocket(sck);
+      }
       sck = NULL;
     }
   }
@@ -717,11 +817,24 @@ HRESULT CSockets::CConnection::SetupListener(_In_ int nBackLogSize)
 
 HRESULT CSockets::CConnection::SetupClient()
 {
+  static const GUID sGuid_ConnectEx = {
+    0x25A207B9, 0xDDF3, 0x4660, { 0x8E, 0xE9, 0x76, 0xE5, 0x8C, 0x74, 0x06, 0x3E }
+  };
   CPacket *lpPacket;
   SOCKADDR_INET sBindAddr;
+  lpfnConnectEx fnConnectEx;
   DWORD dw;
   HRESULT hRes;
 
+  //get extension function addresses
+  fnConnectEx = NULL;
+  dw = 0;
+  if (::WSAIoctl(sck, SIO_GET_EXTENSION_FUNCTION_POINTER, (LPVOID)&sGuid_ConnectEx, (DWORD)sizeof(sGuid_ConnectEx),
+                 &fnConnectEx, (DWORD)sizeof(fnConnectEx), &dw, NULL, NULL) == SOCKET_ERROR)
+  {
+    fnConnectEx = NULL;
+  }
+  //----
   MemSet(&sBindAddr, 0, sizeof(sBindAddr));
   sBindAddr.si_family = sAddr.si_family;
   if (::bind(sck, (sockaddr*)&sBindAddr, SockAddrSizeFromWinSockFamily(sAddr.si_family)) == SOCKET_ERROR)
@@ -803,10 +916,23 @@ HRESULT CSockets::CConnection::SetupClient()
 
 HRESULT CSockets::CConnection::SetupAcceptEx(_In_ CConnection *lpIncomingConn)
 {
+  static const GUID sGuid_AcceptEx = {
+    0xB5367DF1, 0xCBAC, 0x11CF, { 0x95, 0xCA, 0x00, 0x80, 0x5F, 0x48, 0xA1, 0x92 }
+  };
   CPacket *lpPacket;
+  lpfnAcceptEx fnAcceptEx;
   DWORD dw;
   HRESULT hRes;
 
+  //get extension function addresses
+  fnAcceptEx = NULL;
+  dw = 0;
+  if (::WSAIoctl(sck, SIO_GET_EXTENSION_FUNCTION_POINTER, (LPVOID)&sGuid_AcceptEx, (DWORD)sizeof(sGuid_AcceptEx),
+                 &fnAcceptEx, (DWORD)sizeof(fnAcceptEx), &dw, NULL, NULL) == SOCKET_ERROR ||
+      fnAcceptEx == NULL)
+  {
+    return MX_E_ProcNotFound;
+  }
   lpPacket = GetPacket(TypeAcceptEx);
   if (lpPacket == NULL)
     return E_OUTOFMEMORY;
@@ -829,8 +955,8 @@ HRESULT CSockets::CConnection::SetupAcceptEx(_In_ CConnection *lpIncomingConn)
   return S_OK;
 }
 
-HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _In_ eFamily nFamily,
-                                              _In_opt_z_ LPCSTR szAddressA, _In_opt_ int nPort)
+HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _In_opt_z_ LPCSTR szAddressA,
+                                              _In_opt_ int nPort)
 {
   CFastLock cHostResolverLock(&(sHostResolver.nMutex));
   RESOLVEADDRESS_PACKET_DATA *lpData;
@@ -850,49 +976,62 @@ HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _I
   //queue
   cRwList.QueueLast(sHostResolver.lpPacket);
   //is a numeric IP address?
-  if (CHostResolver::IsValidIPV4(szAddressA, nAddrLen, &(lpData->sAddr)) != FALSE ||
-      CHostResolver::IsValidIPV6(szAddressA, nAddrLen, &(lpData->sAddr)) != FALSE)
+  switch (nFamily)
   {
-    switch (lpData->sAddr.si_family)
-    {
-      case AF_INET:
+    case FamilyIPv4:
+      if (CHostResolver::IsValidIPV4(szAddressA, nAddrLen, &(lpData->sAddr)) != FALSE)
+      {
         lpData->sAddr.Ipv4.sin_port = htons(lpData->wPort);
-        break;
-      case AF_INET6:
+
+        AddRef();
+        hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, sHostResolver.lpPacket->GetOverlapped());
+        if (FAILED(hRes))
+          Release();
+        goto done;
+      }
+      break;
+
+    case FamilyIPv6:
+      if (CHostResolver::IsValidIPV6(szAddressA, nAddrLen, &(lpData->sAddr)) != FALSE)
+      {
         lpData->sAddr.Ipv6.sin6_port = htons(lpData->wPort);
-        break;
-    }
+
+        AddRef();
+        hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, sHostResolver.lpPacket->GetOverlapped());
+        if (FAILED(hRes))
+          Release();
+        goto done;
+      }
+      break;
+
+    default:
+      return E_INVALIDARG;
+  }
+  //try to resolve the address
+  if (lpIpc->ShouldLog(2) != FALSE)
+  {
+    lpIpc->Log(L"CSockets::ResolveAddress) Clock=%lums / This=0x%p / Ovr=0x%p / Type=%lu",
+                cHiResTimer.GetElapsedTimeMs(), this, sHostResolver.lpPacket->GetOverlapped(),
+                sHostResolver.lpPacket->GetType());
+  }
+  //create resolver and attach packet. no need to lock because it is called on socket creation
+  sHostResolver.lpResolver = MX_DEBUG_NEW CHostResolver();
+  if (sHostResolver.lpResolver != NULL)
+  {
+    //start address resolving with a timeout
     AddRef();
-    hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, sHostResolver.lpPacket->GetOverlapped());
+    hRes = sHostResolver.lpResolver->ResolveAsync(szAddressA, FamilyToWinSockFamily(nFamily),
+                                                  dwResolverTimeoutMs,
+                                                  MX_BIND_MEMBER_CALLBACK(&CConnection::HostResolveCallback, this),
+                                                  NULL);
     if (FAILED(hRes))
       Release();
   }
   else
   {
-    if (lpIpc->ShouldLog(2) != FALSE)
-    {
-      lpIpc->Log(L"CSockets::ResolveAddress) Clock=%lums / This=0x%p / Ovr=0x%p / Type=%lu",
-                 cHiResTimer.GetElapsedTimeMs(), this, sHostResolver.lpPacket->GetOverlapped(),
-                 sHostResolver.lpPacket->GetType());
-    }
-    //create resolver and attach packet. no need to lock because it is called on socket creation
-    sHostResolver.lpResolver = MX_DEBUG_NEW CHostResolver();
-    if (sHostResolver.lpResolver != NULL)
-    {
-      //start address resolving with a timeout
-      AddRef();
-      hRes = sHostResolver.lpResolver->ResolveAsync(szAddressA, FamilyToWinSockFamily(nFamily),
-                                                    dwResolverTimeoutMs,
-                                                    MX_BIND_MEMBER_CALLBACK(&CConnection::HostResolveCallback, this),
-                                                    NULL);
-      if (FAILED(hRes))
-        Release();
-    }
-    else
-    {
-      hRes = E_OUTOFMEMORY;
-    }
+    hRes = E_OUTOFMEMORY;
   }
+done:
   //done
   if (FAILED(hRes))
   {
@@ -1153,8 +1292,6 @@ static int FamilyToWinSockFamily(_In_ MX::CSockets::eFamily nFamily)
 {
   switch (nFamily)
   {
-    case MX::CSockets::FamilyUnknown:
-      return AF_UNSPEC;
     case MX::CSockets::FamilyIPv4:
       return AF_INET;
     case MX::CSockets::FamilyIPv6:

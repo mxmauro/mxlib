@@ -31,8 +31,9 @@
 #include "..\Include\LinkedList.h"
 #include "..\Include\Finalizer.h"
 
-#define STATE_Processed                               0x0001
-#define STATE_Canceled                                0x0002
+#define _FLAG_Running                                 0x0001
+#define _FLAG_Canceled                                0x0002
+#define _FLAG_OneShot                                 0x0004
 
 #define MINIMUM_DUE_TIME_CHANGE_THRESHOLD_MS              10
 
@@ -61,15 +62,14 @@ public:
       };
 
     VOID Setup(_In_ DWORD _dwTimeoutMs, _In_ MX::TimedEvent::OnTimeoutCallback _cCallback, _In_ LPVOID _lpUserData,
-               _In_ BOOL _bOneShot)
+               _In_ BOOL bOneShot)
       {
       nId = 0;
       dwTimeoutMs = _dwTimeoutMs;
       nDueTime = 0ui64;
       cCallback = _cCallback;
       lpUserData = _lpUserData;
-      bOneShot = _bOneShot;
-      _InterlockedExchange(&nIsRunning, 0);
+      _InterlockedExchange(&nFlags, (bOneShot != FALSE) ? _FLAG_OneShot : 0);
       lpNextInFreeList = NULL;
       return;
       };
@@ -94,7 +94,7 @@ public:
 
     __inline VOID WaitWhileRunning()
       {
-      while (__InterlockedRead(&nIsRunning) != 0)
+      while ((__InterlockedRead(&nFlags) & _FLAG_Running) != 0)
         _YieldProcessor();
       return;
       };
@@ -111,8 +111,7 @@ public:
     ULONGLONG nDueTime;
     MX::TimedEvent::OnTimeoutCallback cCallback;
     LPVOID lpUserData;
-    BOOL bOneShot;
-    LONG volatile nIsRunning;
+    LONG volatile nFlags;
     CTimer *lpNextInFreeList;
   };
 
@@ -179,12 +178,13 @@ HRESULT SetTimeout(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In_
   TAutoRefCounted<Internals::CTimerHandler> cHandler;
 
   cHandler.Attach(Internals::CTimerHandler::Get());
+  if (!cHandler)
   {
     if (lpnTimerId != NULL)
       _InterlockedExchange(lpnTimerId, 0);
     return E_OUTOFMEMORY;
   }
-  return cHandler->AddTimer(lpnTimerId, dwTimeoutMs, cCallback, lpUserData, FALSE);
+  return cHandler->AddTimer(lpnTimerId, dwTimeoutMs, cCallback, lpUserData, TRUE);
 }
 
 HRESULT SetInterval(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In_ OnTimeoutCallback cCallback,
@@ -199,7 +199,7 @@ HRESULT SetInterval(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In
       _InterlockedExchange(lpnTimerId, 0);
     return E_OUTOFMEMORY;
   }
-  return cHandler->AddTimer(lpnTimerId, dwTimeoutMs, cCallback, lpUserData, TRUE);
+  return cHandler->AddTimer(lpnTimerId, dwTimeoutMs, cCallback, lpUserData, FALSE);
 }
 
 VOID Clear(_Inout_ LONG volatile *lpnTimerId)
@@ -390,6 +390,8 @@ VOID CTimerHandler::RemoveTimer(_Out_ LONG volatile *lpnTimerId)
       {
         lpTimer = sQueue.cSortedByIdList.GetElementAt(nIndex);
 
+        _InterlockedOr(&(lpTimer->nFlags), _FLAG_Canceled);
+
         sQueue.cSortedByIdList.RemoveElementAt(nIndex);
         lpTimer->RemoveNode();
       }
@@ -449,7 +451,7 @@ DWORD CTimerHandler::ProcessQueue()
         if (lpTimer->nDueTime <= uliCurrTime.QuadPart)
         {
           //got a timed-out item
-          _InterlockedExchange(&(lpTimer->nIsRunning), 1);
+          _InterlockedOr(&(lpTimer->nFlags), _FLAG_Running);
         }
         else
         {
@@ -469,7 +471,7 @@ DWORD CTimerHandler::ProcessQueue()
         CFastLock cLock(&(sQueue.nMutex));
 
         lpTimer->RemoveNode();
-        if (lpTimer->bOneShot == FALSE)
+        if ((__InterlockedRead(&(lpTimer->nFlags)) & (_FLAG_OneShot | _FLAG_Canceled)) != 0)
         {
           FreeTimer(lpTimer);
         }
@@ -478,7 +480,7 @@ DWORD CTimerHandler::ProcessQueue()
           lpTimer->CalculateDueTime(&uliCurrTime);
           sQueue.cTree.Insert(lpTimer, TRUE);
 
-          _InterlockedExchange(&(lpTimer->nIsRunning), 0);
+          _InterlockedAnd(&(lpTimer->nFlags), ~_FLAG_Running);
         }
       }
     }

@@ -91,7 +91,7 @@ static HRESULT OnLog(_In_z_ LPCWSTR szInfoW);
 
 //-----------------------------------------------------------
 
-int TestJsHttpServer(_In_ BOOL bUseSSL)
+int TestJsHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
 {
   MX::CIoCompletionPortThreadPool cDispatcherPool, cWorkerPool;
   MX::CSockets cSckMgr(cDispatcherPool);
@@ -103,7 +103,7 @@ int TestJsHttpServer(_In_ BOOL bUseSSL)
   DeleteSessionFiles();
 
   cJsHttpServer.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
-  cJsHttpServer.SetLogLevel(5);
+  cJsHttpServer.SetLogLevel(dwLogLevel);
 
   cWorkerPool.SetOption_MinThreadsCount(4);
   cSckMgr.SetOption_MaxAcceptsToPost(24);
@@ -152,9 +152,14 @@ int TestJsHttpServer(_In_ BOOL bUseSSL)
   if (SUCCEEDED(hRes))
   {
     if (bUseSSL != FALSE)
-      hRes = cJsHttpServer.StartListening(443, MX::CIpcSslLayer::ProtocolTLSv1_2, &cSslCert, &cSslPrivateKey);
+    {
+      hRes = cJsHttpServer.StartListening(MX::CSockets::FamilyIPv4, 443, MX::CIpcSslLayer::ProtocolTLSv1_2,
+                                          &cSslCert, &cSslPrivateKey);
+    }
     else
-      hRes = cJsHttpServer.StartListening(80);
+    {
+      hRes = cJsHttpServer.StartListening(MX::CSockets::FamilyIPv4, 80);
+    }
   }
   //----
   if (SUCCEEDED(hRes))
