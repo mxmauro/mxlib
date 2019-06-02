@@ -802,6 +802,7 @@ static int test_rand_drbg_reseed(void)
     /* fill 'randomness' buffer with some arbitrary data */
     memset(rand_add_buf, 'r', sizeof(rand_add_buf));
 
+#ifndef FIPS_MODE
     /*
      * Test whether all three DRBGs are reseeded by RAND_add().
      * The before_reseed time has to be measured here and passed into the
@@ -827,6 +828,20 @@ static int test_rand_drbg_reseed(void)
     if (!TEST_true(test_drbg_reseed(0, master, public, private, 0, 0, 0, 0)))
         goto error;
     reset_drbg_hook_ctx();
+#else /* FIPS_MODE */
+    /*
+     * In FIPS mode, random data provided by the application via RAND_add()
+     * is not considered a trusted entropy source. It is only treated as
+     * additional_data and no reseeding is forced. This test assures that
+     * no reseeding occurs.
+     */
+    before_reseed = time(NULL);
+    RAND_add(rand_add_buf, sizeof(rand_add_buf), sizeof(rand_add_buf));
+    if (!TEST_true(test_drbg_reseed(1, master, public, private, 0, 0, 0,
+                                    before_reseed)))
+        goto error;
+    reset_drbg_hook_ctx();
+#endif
 
     rv = 1;
 
@@ -1249,7 +1264,8 @@ static const size_t crngt_num_cases = 6;
 
 static size_t crngt_case, crngt_idx;
 
-static int crngt_entropy_cb(unsigned char *buf)
+static int crngt_entropy_cb(unsigned char *buf, unsigned char *md,
+                            unsigned int *md_size)
 {
     size_t i, z;
 
@@ -1261,7 +1277,7 @@ static int crngt_entropy_cb(unsigned char *buf)
         z--;
     for (i = 0; i < CRNGT_BUFSIZ; i++)
         buf[i] = (unsigned char)(i + 'A' + z);
-    return 1;
+    return EVP_Digest(buf, CRNGT_BUFSIZ, md, md_size, EVP_sha256(), NULL);
 }
 
 static int test_crngt(int n)
