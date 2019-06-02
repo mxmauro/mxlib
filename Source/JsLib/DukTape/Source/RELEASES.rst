@@ -3396,6 +3396,9 @@ Planned
 2.4.0 (XXXX-XX-XX)
 ------------------
 
+* Add duk_to_stacktrace() and duk_safe_to_stacktrace() to make it easier to
+  get stacktraces in C code (GH-2059, GH-2086)
+
 * Add duk_push_bare_array() to push an Array instance which doesn't
   inherit from anything (GH-2064)
 
@@ -3411,6 +3414,17 @@ Planned
 * Disable Proxy wrapper for 'duk' console binding because it is no longer
   the preferred console implementation method (GH-2055)
 
+* Update UnicodeData.txt and SpecialCasing.txt used for building internal
+  Unicode control data to Unicode version 12.1.0 (GH-2085)
+
+* Use bare objects/arrays in more places internally: variable map and
+  formals array of functions loaded from bytecode (to match behavior of
+  compiled functions), context dump array for duk_push_context_dump(),
+  and error tracedata (GH-2089)
+
+* Fix incorrect handling of zero-length dynamic buffer in base-64 fast path
+  decoder (GH-2027, GH-2088)
+
 * Fix Object.getOwnPropertySymbols() behavior for the virtual properties
   of arrays, Strings, and buffer objects: string keys were incorrectly
   included in the result (GH-1978, GH-1979)
@@ -3422,15 +3436,25 @@ Planned
   '-DFOO(bar)=quux', which were used in some examples but were not
   actually functional (GH-2013, GH-2014)
 
+* Fix error handling corner case when a property-based call (foo.bar())
+  caused an error and Duktape.errCreate returned a callable value (such
+  as Float64Array); this caused an assertion failure (GH-2061, GH-2087)
+
 * Fix several assertion failures with possible memory unsafe behavior
   (GH-2025, GH-2026, GH-2031, GH-2033, GH-2035, GH-2036, GH-2065)
+
+* Fix compile error for extras/eventloop due to missing a header file
+  (c_eventloop.h) in the dist package (GH-2090)
 
 * Trivial fixes and cleanups: Windows Date provider return code check
   consistency (GH-1956)
 
-* Various portability fixes (GH-1931, GH-1976)
+* Fix MSVC ARM64 detection (GH-2078)
 
-* Add duk_to_stacktrace() and duk_safe_to_stacktrace() to make it easier to get stacktraces in C
+* Improve assertion coverage for internal structures during mark-and-sweep
+  (GH-2092)
+
+* Various portability fixes (GH-1931, GH-1976)
 
 3.0.0 (XXXX-XX-XX)
 ------------------

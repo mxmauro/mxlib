@@ -2329,7 +2329,7 @@ DUK_LOCAL DUK__NOINLINE_PERF void duk__handle_op_trycatch(duk_hthread *thr, duk_
 		env->target = target;  /* always provideThis=true */
 		DUK_HOBJECT_INCREF(thr, target);
 		env->has_this = 1;
-		DUK_ASSERT_HOBJENV_VALID(env);
+		DUK_HOBJENV_ASSERT_VALID(env);
 		DUK_DDD(DUK_DDDPRINT("environment for with binding: %!iO", env));
 
 		DUK_ASSERT(act == thr->callstack_curr);
@@ -4152,7 +4152,7 @@ DUK_LOCAL DUK_NOINLINE DUK_HOT void duk__js_execute_bytecode_inner(duk_hthread *
 			 * arguments to deal with potentially changed \
 			 * valstack base pointer! \
 			 */ \
-			duk_call_setup_propcall_error(thr, tv__targ, (barg), (carg)); \
+			duk_call_setup_propcall_error(thr, (barg), (carg)); \
 		} \
 		DUK__REPLACE_TOP_A_BREAK(); \
 	}
