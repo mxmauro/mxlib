@@ -24,9 +24,12 @@ extern "C" {
 # define EVP_KDF_HKDF       NID_hkdf
 # define EVP_KDF_SSHKDF     NID_sshkdf
 # define EVP_KDF_SS         NID_sskdf
+# define EVP_KDF_X963       NID_x963kdf
 
 EVP_KDF_CTX *EVP_KDF_CTX_new_id(int id);
+EVP_KDF_CTX *EVP_KDF_CTX_new(const EVP_KDF *kdf);
 void EVP_KDF_CTX_free(EVP_KDF_CTX *ctx);
+const EVP_KDF *EVP_KDF_CTX_kdf(EVP_KDF_CTX *ctx);
 
 void EVP_KDF_reset(EVP_KDF_CTX *ctx);
 int EVP_KDF_ctrl(EVP_KDF_CTX *ctx, int cmd, ...);
@@ -35,6 +38,11 @@ int EVP_KDF_ctrl_str(EVP_KDF_CTX *ctx, const char *type, const char *value);
 size_t EVP_KDF_size(EVP_KDF_CTX *ctx);
 int EVP_KDF_derive(EVP_KDF_CTX *ctx, unsigned char *key, size_t keylen);
 
+int EVP_KDF_nid(const EVP_KDF *kdf);
+# define EVP_get_kdfbynid(a)    EVP_get_kdfbyname(OBJ_nid2sn(a))
+# define EVP_get_kdfbyobj(a)    EVP_get_kdfbynid(OBJ_obj2nid(a))
+# define EVP_KDF_name(o)        OBJ_nid2sn(EVP_KDF_nid(o))
+const EVP_KDF *EVP_get_kdfbyname(const char *name);
 
 # define EVP_KDF_CTRL_SET_PASS          0x01 /* unsigned char *, size_t */
 # define EVP_KDF_CTRL_SET_SALT          0x02 /* unsigned char *, size_t */
@@ -57,6 +65,7 @@ int EVP_KDF_derive(EVP_KDF_CTX *ctx, unsigned char *key, size_t keylen);
 # define EVP_KDF_CTRL_SET_MAC           0x13 /* EVP_MAC * */
 # define EVP_KDF_CTRL_SET_MAC_SIZE      0x14 /* size_t */
 # define EVP_KDF_CTRL_SET_SSKDF_INFO    0x15 /* unsigned char *, size_t */
+# define EVP_KDF_CTRL_SET_SHARED_INFO   EVP_KDF_CTRL_SET_SSKDF_INFO
 
 # define EVP_KDF_HKDF_MODE_EXTRACT_AND_EXPAND  0
 # define EVP_KDF_HKDF_MODE_EXTRACT_ONLY        1

@@ -54,6 +54,9 @@ struct ossl_provider_st {
     OSSL_provider_get_param_types_fn *get_param_types;
     OSSL_provider_get_params_fn *get_params;
     OSSL_provider_query_operation_fn *query_operation;
+
+    /* Provider side data */
+    void *provctx;
 };
 DEFINE_STACK_OF(OSSL_PROVIDER)
 
@@ -76,7 +79,6 @@ struct provider_store_st {
     CRYPTO_RWLOCK *lock;
     unsigned int use_fallbacks:1;
 };
-static int provider_store_index = -1;
 
 static void provider_store_free(void *vstore)
 {
@@ -89,7 +91,7 @@ static void provider_store_free(void *vstore)
     OPENSSL_free(store);
 }
 
-static void *provider_store_new(void)
+static void *provider_store_new(OPENSSL_CTX *ctx)
 {
     struct provider_store_st *store = OPENSSL_zalloc(sizeof(*store));
     const struct predefined_providers_st *p = NULL;
@@ -131,23 +133,12 @@ static const OPENSSL_CTX_METHOD provider_store_method = {
     provider_store_free,
 };
 
-static CRYPTO_ONCE provider_store_init_flag = CRYPTO_ONCE_STATIC_INIT;
-DEFINE_RUN_ONCE_STATIC(do_provider_store_init)
-{
-    return OPENSSL_init_crypto(0, NULL)
-        && (provider_store_index =
-            openssl_ctx_new_index(&provider_store_method)) != -1;
-}
-
-
 static struct provider_store_st *get_provider_store(OPENSSL_CTX *libctx)
 {
     struct provider_store_st *store = NULL;
 
-    if (!RUN_ONCE(&provider_store_init_flag, do_provider_store_init))
-        return NULL;
-
-    store = openssl_ctx_get_data(libctx, provider_store_index);
+    store = openssl_ctx_get_data(libctx, OPENSSL_CTX_PROVIDER_STORE_INDEX,
+                                 &provider_store_method);
     if (store == NULL)
         CRYPTOerr(CRYPTO_F_GET_PROVIDER_STORE, ERR_R_INTERNAL_ERROR);
     return store;
@@ -275,7 +266,7 @@ void ossl_provider_free(OSSL_PROVIDER *prov)
          */
         if (ref < 2 && prov->flag_initialized) {
             if (prov->teardown != NULL)
-                prov->teardown();
+                prov->teardown(prov->provctx);
             prov->flag_initialized = 0;
         }
 
@@ -284,7 +275,9 @@ void ossl_provider_free(OSSL_PROVIDER *prov)
          * the store.  All we have to do here is clean it out.
          */
         if (ref == 0) {
+#ifndef FIPS_MODE
             DSO_free(prov->module);
+#endif
             OPENSSL_free(prov->name);
             OPENSSL_free(prov->path);
             sk_INFOPAIR_pop_free(prov->parameters, free_infopair);
@@ -347,9 +340,11 @@ static const OSSL_DISPATCH *core_dispatch; /* Define further down */
 /*
  * Internal version that doesn't affect the store flags, and thereby avoid
  * locking.  Direct callers must remember to set the store flags when
- * appropriate
+ * appropriate. The libctx parameter is only necessary when FIPS_MODE is set
+ * (i.e. we are being called from inside the FIPS module) - it is ignored for
+ * other uses.
  */
-static int provider_activate(OSSL_PROVIDER *prov)
+static int provider_activate(OSSL_PROVIDER *prov, OPENSSL_CTX *libctx)
 {
     const OSSL_DISPATCH *provider_dispatch = NULL;
 
@@ -361,6 +356,9 @@ static int provider_activate(OSSL_PROVIDER *prov)
      * a loadable module.
      */
     if (prov->init_function == NULL) {
+#ifdef FIPS_MODE
+        return 0;
+#else
         if (prov->module == NULL) {
             char *allocated_path = NULL;
             const char *module_path = NULL;
@@ -398,14 +396,38 @@ static int provider_activate(OSSL_PROVIDER *prov)
         if (prov->module != NULL)
             prov->init_function = (OSSL_provider_init_fn *)
                 DSO_bind_func(prov->module, "OSSL_provider_init");
+#endif
     }
 
+    /*
+     * We call the initialise function for the provider.
+     *
+     * If FIPS_MODE is defined then we are inside the FIPS module and are about
+     * to recursively initialise ourselves. We need to do this so that we can
+     * get all the provider callback functions set up in order for us to be able
+     * to make EVP calls from within the FIPS module itself. Only algorithms
+     * from the FIPS module itself are available via the FIPS module EVP
+     * interface, i.e. we only ever have one provider available inside the FIPS
+     * module - the FIPS provider itself.
+     *
+     * For modules in general we cannot know what value will be used for the
+     * provctx - it is a "black box". But for the FIPS module we know that the
+     * provctx is really a library context. We default the provctx value to the
+     * same library context as was used for the EVP call that caused this call
+     * to "provider_activate".
+     */
+#ifdef FIPS_MODE
+    prov->provctx = libctx;
+#endif
     if (prov->init_function == NULL
-        || !prov->init_function(prov, core_dispatch, &provider_dispatch)) {
+        || !prov->init_function(prov, core_dispatch, &provider_dispatch,
+                                &prov->provctx)) {
         CRYPTOerr(CRYPTO_F_PROVIDER_ACTIVATE, ERR_R_INIT_FAIL);
         ERR_add_error_data(2, "name=", prov->name);
+#ifndef FIPS_MODE
         DSO_free(prov->module);
         prov->module = NULL;
+#endif
         return 0;
     }
 
@@ -438,7 +460,7 @@ static int provider_activate(OSSL_PROVIDER *prov)
 
 int ossl_provider_activate(OSSL_PROVIDER *prov)
 {
-    if (provider_activate(prov)) {
+    if (provider_activate(prov, NULL)) {
         CRYPTO_THREAD_write_lock(prov->store->lock);
         prov->store->use_fallbacks = 0;
         CRYPTO_THREAD_unlock(prov->store->lock);
@@ -446,6 +468,11 @@ int ossl_provider_activate(OSSL_PROVIDER *prov)
     }
 
     return 0;
+}
+
+void *ossl_provider_ctx(const OSSL_PROVIDER *prov)
+{
+    return prov->provctx;
 }
 
 
@@ -510,7 +537,7 @@ int ossl_provider_forall_loaded(OPENSSL_CTX *ctx,
                  */
                 if (prov->flag_fallback) {
                     activated_fallback_count++;
-                    provider_activate(prov);
+                    provider_activate(prov, ctx);
                 }
             }
 
@@ -548,43 +575,53 @@ int ossl_provider_set_fallback(OSSL_PROVIDER *prov)
 }
 
 /* Getters of Provider Object data */
-const char *ossl_provider_name(OSSL_PROVIDER *prov)
+const char *ossl_provider_name(const OSSL_PROVIDER *prov)
 {
     return prov->name;
 }
 
-const DSO *ossl_provider_dso(OSSL_PROVIDER *prov)
+const DSO *ossl_provider_dso(const OSSL_PROVIDER *prov)
 {
     return prov->module;
 }
 
-const char *ossl_provider_module_name(OSSL_PROVIDER *prov)
+const char *ossl_provider_module_name(const OSSL_PROVIDER *prov)
 {
+#ifdef FIPS_MODE
+    return NULL;
+#else
     return DSO_get_filename(prov->module);
+#endif
 }
 
-const char *ossl_provider_module_path(OSSL_PROVIDER *prov)
+const char *ossl_provider_module_path(const OSSL_PROVIDER *prov)
 {
+#ifdef FIPS_MODE
+    return NULL;
+#else
     /* FIXME: Ensure it's a full path */
     return DSO_get_filename(prov->module);
+#endif
 }
 
 /* Wrappers around calls to the provider */
 void ossl_provider_teardown(const OSSL_PROVIDER *prov)
 {
     if (prov->teardown != NULL)
-        prov->teardown();
+        prov->teardown(prov->provctx);
 }
 
 const OSSL_ITEM *ossl_provider_get_param_types(const OSSL_PROVIDER *prov)
 {
-    return prov->get_param_types == NULL ? NULL : prov->get_param_types(prov);
+    return prov->get_param_types == NULL
+        ? NULL : prov->get_param_types(prov->provctx);
 }
 
 int ossl_provider_get_params(const OSSL_PROVIDER *prov,
                              const OSSL_PARAM params[])
 {
-    return prov->get_params == NULL ? 0 : prov->get_params(prov, params);
+    return prov->get_params == NULL
+        ? 0 : prov->get_params(prov->provctx, params);
 }
 
 
@@ -592,7 +629,7 @@ const OSSL_ALGORITHM *ossl_provider_query_operation(const OSSL_PROVIDER *prov,
                                                     int operation_id,
                                                     int *no_cache)
 {
-    return prov->query_operation(prov, operation_id, no_cache);
+    return prov->query_operation(prov->provctx, operation_id, no_cache);
 }
 
 /*-
@@ -644,6 +681,8 @@ static int core_get_params(const OSSL_PROVIDER *prov, const OSSL_PARAM params[])
 static const OSSL_DISPATCH core_dispatch_[] = {
     { OSSL_FUNC_CORE_GET_PARAM_TYPES, (void (*)(void))core_get_param_types },
     { OSSL_FUNC_CORE_GET_PARAMS, (void (*)(void))core_get_params },
+    { OSSL_FUNC_CORE_PUT_ERROR, (void (*)(void))ERR_put_error },
+    { OSSL_FUNC_CORE_ADD_ERROR_VDATA, (void (*)(void))ERR_add_error_vdata },
     { 0, NULL }
 };
 static const OSSL_DISPATCH *core_dispatch = core_dispatch_;

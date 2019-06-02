@@ -1848,6 +1848,8 @@ __owur int SSL_read_early_data(SSL *s, void *buf, size_t num,
                                size_t *readbytes);
 __owur int SSL_peek(SSL *ssl, void *buf, int num);
 __owur int SSL_peek_ex(SSL *ssl, void *buf, size_t num, size_t *readbytes);
+__owur ossl_ssize_t SSL_sendfile(SSL *s, int fd, off_t offset, size_t size,
+                                 int flags);
 __owur int SSL_write(SSL *ssl, const void *buf, int num);
 __owur int SSL_write_ex(SSL *s, const void *buf, size_t num, size_t *written);
 __owur int SSL_write_early_data(SSL *s, const void *buf, size_t num,
@@ -2150,7 +2152,7 @@ size_t SSL_CTX_get_num_tickets(const SSL_CTX *ctx);
 #  define SSL_cache_hit(s) SSL_session_reused(s)
 # endif
 
-__owur int SSL_session_reused(SSL *s);
+__owur int SSL_session_reused(const SSL *s);
 __owur int SSL_is_server(const SSL *s);
 
 __owur __owur SSL_CONF_CTX *SSL_CONF_CTX_new(void);
