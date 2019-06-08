@@ -106,7 +106,7 @@ public:
   template<class T>
   HRESULT AddRequestHeader(_Out_ T **lplpHeader=NULL)
     {
-    return AddRequestHeader(T::GetNameStatic(), reinterpret_cast<CHttpHeaderBase**>(lplpHeader));
+    return AddRequestHeader(T::GetHeaderNameStatic(), reinterpret_cast<CHttpHeaderBase**>(lplpHeader));
     };
   HRESULT AddRequestHeader(_In_z_ LPCSTR szNameA, _Out_ CHttpHeaderBase **lplpHeader, _In_ BOOL bReplaceExisting=TRUE);
   HRESULT AddRequestHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _Out_opt_ CHttpHeaderBase **lplpHeader=NULL,
@@ -164,7 +164,7 @@ public:
   template<class T>
   T* GetResponseHeader() const
     {
-    return reinterpret_cast<T*>(GetResponseHeader(T::GetNameStatic()));
+    return reinterpret_cast<T*>(GetResponseHeader(T::GetHeaderNameStatic()));
     };
 
   CHttpHeaderBase* GetResponseHeader(_In_z_ LPCSTR szNameA) const;

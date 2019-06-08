@@ -129,7 +129,7 @@ public:
     template<class T>
     T* GetRequestHeader() const
       {
-      return reinterpret_cast<T*>(GetRequestHeader(T::GetNameStatic()));
+      return reinterpret_cast<T*>(GetRequestHeader(T::GetHeaderNameStatic()));
       };
     CHttpHeaderBase* GetRequestHeader(_In_z_ LPCSTR szNameA) const;
 
@@ -166,8 +166,8 @@ public:
     HRESULT AddResponseHeader(_In_z_ LPCWSTR szValueW, _In_opt_ SIZE_T nValueLen=(SIZE_T)-1,
                               _Out_opt_ T **lplpHeader = NULL, _In_ BOOL bReplaceExisting = TRUE)
       {
-      return AddResponseHeader(T::GetNameStatic(), szValueW, nValueLen, reinterpret_cast<CHttpHeaderBase**>(lplpHeader),
-                               bReplaceExisting);
+      return AddResponseHeader(T::GetHeaderNameStatic(), szValueW, nValueLen,
+                               reinterpret_cast<CHttpHeaderBase**>(lplpHeader), bReplaceExisting);
       };
     HRESULT AddResponseHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW, _In_opt_ SIZE_T nValueLen=(SIZE_T)-1,
                               _Out_opt_ CHttpHeaderBase **lplpHeader = NULL, _In_ BOOL bReplaceExisting = TRUE);
@@ -182,7 +182,7 @@ public:
     template<class T>
     T* GetResponseHeader() const
       {
-      return reinterpret_cast<T*>(GetResponseHeader(T::GetNameStatic()));
+      return reinterpret_cast<T*>(GetResponseHeader(T::GetHeaderNameStatic()));
       };
     CHttpHeaderBase* GetResponseHeader(_In_z_ LPCSTR szNameA) const;
 

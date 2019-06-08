@@ -120,7 +120,7 @@ public:
   template<class T>
   HRESULT AddHeader(_Out_opt_ T **lplpHeader=NULL, _In_ BOOL bReplaceExisting=TRUE)
     {
-    return AddHeader(T::GetNameStatic(), reinterpret_cast<CHttpHeaderBase**>(lplpHeader), bReplaceExisting);
+    return AddHeader(T::GetHeaderNameStatic(), reinterpret_cast<CHttpHeaderBase**>(lplpHeader), bReplaceExisting);
     };
   HRESULT AddHeader(_In_z_ LPCSTR szNameA, _Out_opt_ CHttpHeaderBase **lplpHeader=NULL,
                     _In_ BOOL bReplaceExisting=TRUE);
@@ -128,7 +128,7 @@ public:
   template<class T>
   HRESULT AddHeader(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen=(SIZE_T)-1, _Out_opt_ T **lplpHeader=NULL)
     {
-    return AddHeader(T::GetNameStatic(), szValueA, nValueLen, reinterpret_cast<CHttpHeaderBase**>(lplpHeader),
+    return AddHeader(T::GetHeaderNameStatic(), szValueA, nValueLen, reinterpret_cast<CHttpHeaderBase**>(lplpHeader),
                      bReplaceExisting);
     };
   HRESULT AddHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen=(SIZE_T)-1,
@@ -139,7 +139,7 @@ public:
   HRESULT AddHeader(_In_z_ LPCWSTR szValueW, _In_opt_ SIZE_T nValueLen=(SIZE_T)-1, _Out_opt_ T **lplpHeader=NULL,
                     _In_ BOOL bReplaceExisting=TRUE)
     {
-    return AddHeader(T::GetNameStatic(), szValueW, nValueLen, reinterpret_cast<CHttpHeaderBase**>(lplpHeader),
+    return AddHeader(T::GetHeaderNameStatic(), szValueW, nValueLen, reinterpret_cast<CHttpHeaderBase**>(lplpHeader),
                      bReplaceExisting);
     };
   HRESULT AddHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW, _In_opt_ SIZE_T nValueLen=(SIZE_T)-1,
