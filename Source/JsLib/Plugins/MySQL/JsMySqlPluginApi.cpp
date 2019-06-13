@@ -144,7 +144,7 @@ HRESULT MySqlInitialize()
       lpfn_mysql_stmt_attr_set         _fn_mysql_stmt_attr_set = NULL;
       lpfn_mysql_get_client_version    _fn_mysql_get_client_version = NULL;
       MYSQL *lpSQLite;
-      WCHAR szDllNameW[4096];
+      WCHAR szDllNameW[4096], *sW;
       DWORD dwLen;
       HRESULT hRes;
 
@@ -152,9 +152,10 @@ HRESULT MySqlInitialize()
       dwLen = ::GetModuleFileNameW(NULL, szDllNameW, MX_ARRAYLEN(szDllNameW) - 20);
       if (dwLen == 0)
         return MX_E_ProcNotFound;
-      if (szDllNameW[dwLen - 1] != L'\\')
-        szDllNameW[dwLen++] = L'\\';
-      MX::MemCopy(szDllNameW + dwLen, L"libmariadb.dll", (14 + 1) * sizeof(WCHAR));
+      szDllNameW[dwLen] = 0;
+      sW = (LPWSTR)MX::StrChrW(szDllNameW, L'\\', TRUE);
+      sW = (sW != NULL) ? (sW + 1) : szDllNameW;
+      MX::MemCopy(sW, L"libmariadb.dll", (14 + 1) * sizeof(WCHAR));
       //load library
       _hDll = ::LoadLibraryW(szDllNameW);
       if (_hDll == NULL)
