@@ -143,21 +143,6 @@ regenerate_session_id:
   return hRes;
 }
 
-LPCSTR CJsHttpServerSessionPlugin::GetSessionId() const
-{
-  return szCurrentIdA;
-}
-
-CJsHttpServer* CJsHttpServerSessionPlugin::GetServer() const
-{
-  return lpHttpServer;
-}
-
-CHttpServer::CClientRequest* CJsHttpServerSessionPlugin::GetRequest() const
-{
-  return lpRequest;
-}
-
 CPropertyBag* CJsHttpServerSessionPlugin::GetBag() const
 {
   return const_cast<CPropertyBag*>(&cBag);

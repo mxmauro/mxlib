@@ -30,7 +30,7 @@
 
 namespace MX {
 
-template <typename TType, SIZE_T nGranularity=32>
+template <typename TType, SIZE_T nGranularity = 32>
 class TArrayList : public virtual CBaseMemObj
 {
 public:
@@ -62,13 +62,13 @@ public:
     return TRUE;
     };
 
-  virtual BOOL InsertElementAt(_In_ TType elem, _In_ SIZE_T nIndex=(SIZE_T)-1)
+  virtual BOOL InsertElementAt(_In_ TType elem, _In_ SIZE_T nIndex = (SIZE_T)-1)
     {
     if (nIndex >= nCount)
       nIndex = nCount;
-    if (SetSize(nCount+1) == FALSE)
+    if (SetSize(nCount + 1) == FALSE)
       return FALSE;
-    MemMove(&lpItems[nIndex+1], &lpItems[nIndex], (nCount-nIndex)*sizeof(TType));
+    MemMove(&lpItems[nIndex + 1], &lpItems[nIndex], (nCount - nIndex) * sizeof(TType));
     lpItems[nIndex] = elem;
     nCount++;
     return TRUE;
@@ -83,17 +83,17 @@ public:
     while (nMin <= nMax)
     {
       nIndex = nMin + (nMax - nMin) / 2;
-      if (elem == lpItems[nIndex-1])
+      if (elem == lpItems[nIndex - 1])
       {
         nMin = nIndex;
         break;
       }
-      if (elem < lpItems[nIndex-1])
+      if (elem < lpItems[nIndex - 1])
         nMax = nIndex - 1;
       else
         nMin = nIndex + 1;
     }
-    return InsertElementAt(elem, nMin-1);
+    return InsertElementAt(elem, nMin - 1);
     };
 
   template<class _Comparator>
@@ -133,14 +133,14 @@ public:
     };
 
   template<class _Comparator, class _KeyType>
-  TType* BinarySearchPtr(_In_ _KeyType lpKey, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext=NULL)
+  TType* BinarySearchPtr(_In_ _KeyType lpKey, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
     SIZE_T nIndex = BinarySearch(lpKey, lpSearchFunc, lpContext);
-    return (nIndex != (SIZE_T)-1) ? lpItems+nIndex : NULL;
+    return (nIndex != (SIZE_T)-1) ? lpItems + nIndex : NULL;
     };
 
   template<class _Comparator, class _KeyType>
-  SIZE_T BinarySearch(_In_ _KeyType lpKey, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext=NULL)
+  SIZE_T BinarySearch(_In_ _KeyType lpKey, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
     SIZE_T nMid, nMin, nMax;
     int res;
@@ -152,7 +152,7 @@ public:
     while (nMin <= nMax)
     {
       nMid = nMin + (nMax - nMin) / 2;
-      res = lpSearchFunc(lpContext, lpKey, &lpItems[nMid-1]);
+      res = lpSearchFunc(lpContext, lpKey, &lpItems[nMid - 1]);
       if (res == 0)
         return nMid - 1;
       if (res < 0)
@@ -196,7 +196,7 @@ public:
     }
     if (_nCount < nCount)
     {
-      for (i=_nCount; i<nCount; i++)
+      for (i = _nCount; i < nCount; i++)
         OnDeleteItem(lpItems[i]);
     }
     nCount = _nCount;
@@ -208,14 +208,14 @@ public:
     return nSize;
     };
 
-  virtual BOOL SetSize(_In_ SIZE_T _nSize, _In_ BOOL bForceRealloc=FALSE)
+  virtual BOOL SetSize(_In_ SIZE_T _nSize, _In_ BOOL bForceRealloc = FALSE)
     {
     TType *lpNewItems;
     SIZE_T i;
 
     if (_nSize != nSize)
     {
-      if (_nSize>nSize || bForceRealloc!=FALSE)
+      if (_nSize > nSize || bForceRealloc != FALSE)
       {
         //first try to allocate new block (or relocated one)
         if (_nSize > 0)
@@ -223,10 +223,10 @@ public:
           if (nSize > 0 && bForceRealloc == FALSE)
           {
             //don't granulate on first allocation
-            _nSize = (_nSize+nGranularity-1) / nGranularity;
+            _nSize = (_nSize + nGranularity - 1) / nGranularity;
             _nSize *= nGranularity;
           }
-          lpNewItems = (TType*)MX_MALLOC(_nSize*sizeof(TType));
+          lpNewItems = (TType*)MX_MALLOC(_nSize * sizeof(TType));
           if (lpNewItems == NULL)
             return FALSE;
         }
@@ -235,19 +235,19 @@ public:
         //free old pointers if needed
         if (_nSize < nCount)
         {
-          for (i=_nSize; i<nCount; i++)
+          for (i = _nSize; i < nCount; i++)
             OnDeleteItem(lpItems[i]);
-          MemSet(&lpItems[_nSize], 0, (nCount-_nSize)*sizeof(TType));
+          MemSet(&lpItems[_nSize], 0, (nCount - _nSize) * sizeof(TType));
         }
         //move old data to new
         if (_nSize > 0)
         {
           //copy old
           i = (nCount <= _nSize) ? nCount : _nSize;
-          MemCopy(lpNewItems, lpItems, i*sizeof(TType));
+          MemCopy(lpNewItems, lpItems, i * sizeof(TType));
           //initialize the rest to null
           if (_nSize > nCount)
-            MemSet(&lpNewItems[nCount], 0, (_nSize-nCount)*sizeof(TType));
+            MemSet(&lpNewItems[nCount], 0, (_nSize - nCount) * sizeof(TType));
         }
         //release old pointer
         MX_FREE(lpItems);
@@ -265,11 +265,11 @@ public:
     return (nCount == 0) ? TRUE : FALSE;
     };
 
-  virtual SIZE_T GetIndexOf(_In_ TType elem, _In_ SIZE_T nStartIndex=0) const
+  virtual SIZE_T GetIndexOf(_In_ TType elem, _In_ SIZE_T nStartIndex = 0) const
     {
     SIZE_T i;
 
-    for (i=nStartIndex; i<nCount; i++)
+    for (i = nStartIndex; i < nCount; i++)
     {
       if (elem == lpItems[i])
         return i;
@@ -284,7 +284,7 @@ public:
 
   virtual TType GetLastElement() const
     {
-    return (nCount > 0) ? GetElementAt(nCount-1) : (TType)0;
+    return (nCount > 0) ? GetElementAt(nCount - 1) : (TType)0;
     };
 
   virtual TType* GetBuffer() const
@@ -317,21 +317,21 @@ public:
     return;
     };
 
-  virtual BOOL RemoveElementAt(_In_ SIZE_T nIndex, _In_ SIZE_T nItemsCount=1, _In_ BOOL bDoFinalize=TRUE)
+  virtual BOOL RemoveElementAt(_In_ SIZE_T nIndex, _In_ SIZE_T nItemsCount = 1, _In_ BOOL bDoFinalize = TRUE)
     {
     SIZE_T i;
 
-    if (nIndex >= nCount || nItemsCount == 0 || nIndex+nItemsCount < nIndex)
+    if (nIndex >= nCount || nItemsCount == 0 || nIndex + nItemsCount < nIndex)
       return FALSE;
-    if (nIndex+nItemsCount > nCount)
-      nItemsCount = nCount-nIndex;
+    if (nIndex + nItemsCount > nCount)
+      nItemsCount = nCount - nIndex;
     nCount -= nItemsCount;
     if (bDoFinalize != FALSE)
     {
-      for (i=0; i<nItemsCount; i++)
-        OnDeleteItem(lpItems[nIndex+i]);
+      for (i = 0; i < nItemsCount; i++)
+        OnDeleteItem(lpItems[nIndex + i]);
     }
-    MemMove(&lpItems[nIndex], &lpItems[nIndex+nItemsCount], (nCount-nIndex)*sizeof(TType));
+    MemMove(&lpItems[nIndex], &lpItems[nIndex + nItemsCount], (nCount - nIndex) * sizeof(TType));
     return TRUE;
     };
 
@@ -339,12 +339,32 @@ public:
     {
     SIZE_T i;
 
-    for (i=0; i<nCount; i++)
+    for (i = 0; i < nCount; i++)
       OnDeleteItem(lpItems[i]);
     MX_FREE(lpItems);
     lpItems = NULL;
     nCount = nSize = 0;
     return;
+    };
+
+  virtual TType* ReserveBlock(_In_ SIZE_T nItemsCount, _In_ SIZE_T nIndex = (SIZE_T)-1)
+    {
+    if (SetSize(nCount + nItemsCount) == FALSE)
+      return FALSE;
+    if (nIndex > nCount)
+      nIndex = nCount;
+    MemMove(&lpItems[nIndex + nItemsCount], &lpItems[nIndex], (nCount - nIndex) * sizeof(TType));
+    MemSet(&lpItems[nIndex], 0, nItemsCount * sizeof(TType));
+    nCount += nItemsCount;
+    return &lpItems[nIndex];
+    };
+
+  virtual TType* PopBlock(_In_ SIZE_T nItemsCount)
+    {
+    if (nItemsCount > nCount)
+      return NULL;
+    nCount -= nItemsCount;
+    return &lpItems[nCount];
     };
 
 protected:
@@ -360,8 +380,8 @@ private:
 
 //-----------------------------------------------------------
 
-template <typename TType, SIZE_T nGranularity=32>
-class TArrayListWithFree : public TArrayList<TType,nGranularity>
+template <typename TType, SIZE_T nGranularity = 32>
+class TArrayListWithFree : public TArrayList<TType, nGranularity>
 {
 public:
   virtual ~TArrayListWithFree()
@@ -380,8 +400,8 @@ protected:
 
 //-----------------------------------------------------------
 
-template <typename TType, SIZE_T nGranularity=32>
-class TArrayListWithRelease : public TArrayList<TType,nGranularity>
+template <typename TType, SIZE_T nGranularity = 32>
+class TArrayListWithRelease : public TArrayList<TType, nGranularity>
 {
 public:
   virtual ~TArrayListWithRelease()
@@ -401,8 +421,8 @@ protected:
 
 //-----------------------------------------------------------
 
-template <typename TType, SIZE_T nGranularity=32>
-class TArrayListWithDelete : public TArrayList<TType,nGranularity>
+template <typename TType, SIZE_T nGranularity = 32>
+class TArrayListWithDelete : public TArrayList<TType, nGranularity>
 {
 public:
   virtual ~TArrayListWithDelete()
@@ -422,7 +442,7 @@ protected:
 
 //-----------------------------------------------------------
 
-template <typename TType, SIZE_T nGranularity=32>
+template <typename TType, SIZE_T nGranularity = 32>
 class TArrayList4Structs : public virtual CBaseMemObj
 {
 public:
@@ -452,13 +472,13 @@ public:
     return TRUE;
     };
 
-  virtual BOOL InsertElementAt(_In_ TType *lpElem, _In_ SIZE_T nIndex=(SIZE_T)-1)
+  virtual BOOL InsertElementAt(_In_ TType *lpElem, _In_ SIZE_T nIndex = (SIZE_T)-1)
     {
     if (nIndex >= nCount)
       nIndex = nCount;
-    if (SetSize(nCount+1) == FALSE)
+    if (SetSize(nCount + 1) == FALSE)
       return FALSE;
-    MemMove(&lpItems[nIndex+1], &lpItems[nIndex], (nCount-nIndex)*sizeof(TType));
+    MemMove(&lpItems[nIndex + 1], &lpItems[nIndex], (nCount - nIndex) * sizeof(TType));
     MemCopy(&lpItems[nIndex], lpElem, sizeof(TType));
     nCount++;
     return TRUE;
@@ -503,14 +523,14 @@ public:
     };
 
   template<class _Comparator, class _KeyType>
-  TType* BinarySearchPtr(_In_ _KeyType lpKey, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext=NULL)
+  TType* BinarySearchPtr(_In_ _KeyType lpKey, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
     SIZE_T nIndex = BinarySearch(lpKey, lpSearchFunc, lpContext);
-    return (nIndex != (SIZE_T)-1) ? lpItems+nIndex : NULL;
+    return (nIndex != (SIZE_T)-1) ? lpItems + nIndex : NULL;
     };
 
   template<class _Comparator, class _KeyType>
-  SIZE_T BinarySearch(_In_ _KeyType lpKey, _In_ _Comparator lpCompareFunc, _In_opt_ LPVOID lpContext=NULL)
+  SIZE_T BinarySearch(_In_ _KeyType lpKey, _In_ _Comparator lpCompareFunc, _In_opt_ LPVOID lpContext = NULL)
     {
     SIZE_T nMid, nMin, nMax;
     int res;
@@ -522,7 +542,7 @@ public:
     while (nMin <= nMax)
     {
       nMid = nMin + (nMax - nMin) / 2;
-      res = lpCompareFunc(lpContext, lpKey, &lpItems[nMid-1]);
+      res = lpCompareFunc(lpContext, lpKey, &lpItems[nMid - 1]);
       if (res == 0)
         return nMid - 1;
       if (res < 0)
@@ -571,7 +591,7 @@ public:
     }
     if (_nCount < nCount)
     {
-      for (i=_nCount; i<nCount; i++)
+      for (i = _nCount; i < nCount; i++)
         OnDeleteItem(lpItems[i]);
     }
     nCount = _nCount;
@@ -583,7 +603,7 @@ public:
     return nSize;
     };
 
-  virtual BOOL SetSize(_In_ SIZE_T _nSize, _In_ BOOL bForceRealloc=FALSE)
+  virtual BOOL SetSize(_In_ SIZE_T _nSize, _In_ BOOL bForceRealloc = FALSE)
     {
     TType *lpNewItems;
     SIZE_T k;
@@ -597,10 +617,10 @@ public:
           if (nSize > 0 && bForceRealloc == FALSE)
           {
             //don't granulate on first allocation
-            _nSize = (_nSize+nGranularity-1) / nGranularity;
+            _nSize = (_nSize + nGranularity - 1) / nGranularity;
             _nSize *= nGranularity;
           }
-          lpNewItems = (TType*)MX_MALLOC(_nSize*sizeof(TType));
+          lpNewItems = (TType*)MX_MALLOC(_nSize * sizeof(TType));
           if (lpNewItems == NULL)
             return FALSE;
         }
@@ -610,19 +630,19 @@ public:
         if (_nSize < nCount)
         {
           //WARNING: Check "OnItemDelete" method to avoid errors
-          for (k=_nSize; k<nCount; k++)
+          for (k = _nSize; k < nCount; k++)
             OnDeleteItem(lpItems[k]);
-          MemSet(&lpItems[_nSize], 0, (nCount-_nSize)*sizeof(TType));
+          MemSet(&lpItems[_nSize], 0, (nCount - _nSize) * sizeof(TType));
         }
         //move old data to new
         if (_nSize > 0)
         {
           //copy old
           k = (nCount <= _nSize) ? nCount : _nSize;
-          MemCopy(lpNewItems, lpItems, k*sizeof(TType));
+          MemCopy(lpNewItems, lpItems, k * sizeof(TType));
           //initialize the rest to null
           if (_nSize > nCount)
-            MemSet(&lpNewItems[nCount], 0, (_nSize-nCount)*sizeof(TType));
+            MemSet(&lpNewItems[nCount], 0, (_nSize - nCount) * sizeof(TType));
         }
         MX_FREE(lpItems);
         lpItems = lpNewItems;
@@ -639,21 +659,21 @@ public:
     return (nCount == 0) ? TRUE : FALSE;
     };
 
-  virtual BOOL RemoveElementAt(_In_ SIZE_T nIndex, _In_ SIZE_T nItemsCount=1, _In_ BOOL bDoFinalize=TRUE)
+  virtual BOOL RemoveElementAt(_In_ SIZE_T nIndex, _In_ SIZE_T nItemsCount = 1, _In_ BOOL bDoFinalize = TRUE)
     {
     SIZE_T i;
 
-    if (nIndex >= nCount || nItemsCount == 0 || nIndex+nItemsCount < nIndex)
+    if (nIndex >= nCount || nItemsCount == 0 || nIndex + nItemsCount < nIndex)
       return FALSE;
-    if (nIndex+nItemsCount > nCount)
-      nItemsCount = nCount-nIndex;
+    if (nIndex + nItemsCount > nCount)
+      nItemsCount = nCount - nIndex;
     nCount -= nItemsCount;
     if (bDoFinalize != FALSE)
     {
-      for (i=0; i<nItemsCount; i++)
-        OnDeleteItem(lpItems[nIndex+i]);
+      for (i = 0; i < nItemsCount; i++)
+        OnDeleteItem(lpItems[nIndex + i]);
     }
-    MemMove(&lpItems[nIndex], &lpItems[nIndex+nItemsCount], (nCount-nIndex)*sizeof(TType));
+    MemMove(&lpItems[nIndex], &lpItems[nIndex + nItemsCount], (nCount - nIndex) * sizeof(TType));
     return TRUE;
     };
 
@@ -661,7 +681,7 @@ public:
     {
     SIZE_T i;
 
-    for (i=0; i<nCount; i++)
+    for (i = 0; i < nCount; i++)
       OnDeleteItem(lpItems[i]);
     MX_FREE(lpItems);
     lpItems = NULL;
@@ -669,14 +689,14 @@ public:
     return;
     };
 
-  virtual TType* ReserveBlock(_In_ SIZE_T nItemsCount, _In_ SIZE_T nIndex=(SIZE_T)-1)
+  virtual TType* ReserveBlock(_In_ SIZE_T nItemsCount, _In_ SIZE_T nIndex = (SIZE_T)-1)
     {
-    if (SetSize(nCount+nItemsCount) == FALSE)
+    if (SetSize(nCount + nItemsCount) == FALSE)
       return FALSE;
     if (nIndex > nCount)
       nIndex = nCount;
-    MemMove(&lpItems[nIndex+nItemsCount], &lpItems[nIndex], (nCount-nIndex)*sizeof(TType));
-    MemSet(&lpItems[nIndex], 0, nItemsCount*sizeof(TType));
+    MemMove(&lpItems[nIndex + nItemsCount], &lpItems[nIndex], (nCount - nIndex) * sizeof(TType));
+    MemSet(&lpItems[nIndex], 0, nItemsCount * sizeof(TType));
     nCount += nItemsCount;
     return &lpItems[nIndex];
     };

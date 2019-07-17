@@ -213,6 +213,11 @@ CJsError::CJsError(_In_z_ LPCSTR szMessageA, _In_ DukTape::duk_context *lpCtx, _
 
 CJsError::CJsError(_In_ const CJsError &obj)
 {
+  lpStrMessageA = NULL;
+  lpStrFileNameA = NULL;
+  nLine = 0;
+  lpStrStackTraceA = NULL;
+  //----
   *this = obj;
   return;
 }
@@ -225,22 +230,24 @@ CJsError::~CJsError()
 
 CJsError& CJsError::operator=(_In_ const CJsError &obj)
 {
-  Cleanup();
-  //----
-  lpStrMessageA = obj.lpStrMessageA;
-  if (obj.lpStrMessageA != NULL)
-    obj.lpStrMessageA->AddRef();
-  //----
-  lpStrFileNameA = obj.lpStrFileNameA;
-  if (obj.lpStrFileNameA != NULL)
-    obj.lpStrFileNameA->AddRef();
-  //----
-  nLine = obj.nLine;
-  //----
-  lpStrStackTraceA = obj.lpStrStackTraceA;
-  if (obj.lpStrStackTraceA != NULL)
-    obj.lpStrStackTraceA->AddRef();
-  //----
+  if (this != &obj)
+  {
+    Cleanup();
+    //----
+    lpStrMessageA = obj.lpStrMessageA;
+    if (obj.lpStrMessageA != NULL)
+      obj.lpStrMessageA->AddRef();
+    //----
+    lpStrFileNameA = obj.lpStrFileNameA;
+    if (obj.lpStrFileNameA != NULL)
+      obj.lpStrFileNameA->AddRef();
+    //----
+    nLine = obj.nLine;
+    //----
+    lpStrStackTraceA = obj.lpStrStackTraceA;
+    if (obj.lpStrStackTraceA != NULL)
+      obj.lpStrStackTraceA->AddRef();
+  }
   return *this;
 }
 
@@ -305,8 +312,11 @@ CJsWindowsError::CJsWindowsError(_In_ const CJsWindowsError &obj) : CJsError()
 
 CJsWindowsError& CJsWindowsError::operator=(_In_ const CJsWindowsError &obj)
 {
-  CJsError::operator=(obj);
-  hRes = obj.hRes;
+  if (this != &obj)
+  {
+    CJsError::operator=(obj);
+    hRes = obj.hRes;
+  }
   return *this;
 }
 

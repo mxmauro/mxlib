@@ -43,7 +43,6 @@ public:
   typedef Callback<HRESULT (_Out_ CClientRequest **lplpRequest)> OnNewRequestObjectCallback;
 
   typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
-                            _Outptr_result_maybenull_ CJavascriptVM **lplpJvm,
                             _Out_ CStringA &cStrCodeA)> OnRequestCallback;
 
   typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
@@ -67,7 +66,6 @@ public:
                 _In_opt_ CLoggable *lpLogParent = NULL);
   ~CJsHttpServer();
 
-
   VOID SetNewRequestObjectCallback(_In_ OnNewRequestObjectCallback cNewRequestObjectCallback);
   VOID SetRequestCallback(_In_ OnRequestCallback cRequestCallback);
   VOID SetRequireJsModuleCallback(_In_ OnRequireJsModuleCallback cRequireJsModuleCallback);
@@ -79,6 +77,11 @@ public:
 
 protected:
   virtual HRESULT OnNewRequestObject(_Out_ CHttpServer::CClientRequest **lplpRequest);
+
+private:
+  class CJsHttpServerJVM : public CJavascriptVM, public TLnkLstNode<CJsHttpServerJVM>
+  {
+  };
 
 public:
   class CClientRequest : public CHttpServer::CClientRequest
@@ -94,16 +97,32 @@ public:
     HRESULT OnSetup();
     VOID OnCleanup();
 
-    HRESULT CreateJVM(_Outptr_result_maybenull_ CJavascriptVM **lplpJvm);
+    HRESULT AttachJVM();
+    VOID DiscardVM();
+
+    CJavascriptVM* GetVM(_Out_opt_ LPBOOL lpbIsNew) const
+      {
+      if (lpbIsNew != NULL)
+        *lpbIsNew = (sFlags.nIsNew) != 0 ? TRUE : FALSE;
+      return lpJVM;
+      };
 
   public:
     TArrayListWithDelete<CStringA*> cOutputBuffersList;
 
   private:
+    VOID FreeJVM();
+
+  private:
     friend class CJsHttpServer;
 
     CJsHttpServer *lpJsHttpServer;
-    BOOL bDetached;
+    CJsHttpServerJVM *lpJVM;
+    struct {
+      int nIsNew : 1;
+      int nDetached : 1;
+      int nDiscardedVM : 1;
+    } sFlags;
   };
 
 private:
@@ -122,8 +141,6 @@ private:
                                      _In_ HANDLE hShutdownEv,
                                      _Inout_ CHttpServer::WEBSOCKET_REQUEST_CALLBACK_DATA &sData);
 
-  HRESULT InitializeJVM(_In_ CJavascriptVM *lpJvm, _In_ CClientRequest *lpRequest);
-
   HRESULT TransformJavascriptCode(_Inout_ MX::CStringA &cStrCodeA);
   BOOL TransformJavascriptCode_ConvertToPrint(_Inout_ MX::CStringA &cStrCodeA, _Inout_ SIZE_T nNonCodeBlockStart,
                                               _Inout_ SIZE_T &nCurrPos);
@@ -140,6 +157,9 @@ private:
   HRESULT BuildErrorPage(_In_ CClientRequest *lpRequest, _In_ HRESULT hr, _In_z_ LPCSTR szDescriptionA,
                          _In_z_ LPCSTR szFileNameA, _In_ int nLine, _In_z_ LPCSTR szStackTraceA);
 
+  HRESULT AllocAndInitVM(_Out_ CJsHttpServerJVM **lplpJVM, _Out_ BOOL &bIsNew, _In_ CClientRequest *lpRequest);
+  VOID FreeVM(_In_ CJsHttpServerJVM *lpJVM);
+
 private:
   BOOL bShowStackTraceOnError;
   OnNewRequestObjectCallback cNewRequestObjectCallback;
@@ -148,6 +168,10 @@ private:
   OnErrorCallback cErrorCallback;
   OnJavascriptErrorCallback cJavascriptErrorCallback;
   OnWebSocketRequestReceivedCallback cWebSocketRequestReceivedCallback;
+  struct {
+    LONG volatile nMutex;
+    TLnkLst<CJsHttpServerJVM> aJvmList;
+  } sVMs;
 };
 
 //-----------------------------------------------------------

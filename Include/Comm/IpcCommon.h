@@ -131,7 +131,6 @@ public:
                          _In_ CUserData *lpUserData)> OnAfterWriteSignalCallback;
 
   typedef struct {
-    CLayerList &cLayersList;
     OnConnectCallback &cConnectCallback;
     OnDisconnectCallback &cDisconnectCallback;
     OnDataReceivedCallback &cDataReceivedCallback;
@@ -182,12 +181,10 @@ protected:
 public:
   virtual ~CIpc();
 
-  VOID SetOption_PacketSize(_In_ DWORD dwSize);
   VOID SetOption_ReadAheadCount(_In_ DWORD dwCount);
-  VOID SetOption_MaxFreePacketsCount(_In_ DWORD dwCount);
   //NOTE: Disabling ZeroReads can lead to receive WSAENOBUFFS on low memory conditions.
   VOID SetOption_EnableZeroReads(_In_ BOOL bEnable);
-  VOID SetOption_OutgoingPacketsLimitCount(_In_ DWORD dwCount);
+  VOID SetOption_OutgoingBytesLimitCount(_In_ DWORD dwCount);
 
   VOID SetEngineErrorCallback(_In_ OnEngineErrorCallback cEngineErrorCallback);
 
@@ -235,12 +232,12 @@ public:
   BOOL IsShuttingDown();
 
 protected:
-  class CPacket : public virtual CBaseMemObj, public TLnkLstNode<CPacket>
+  class CPacketBase : public virtual CBaseMemObj, public TLnkLstNode<CPacketBase>
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CPacket);
+    MX_DISABLE_COPY_CONSTRUCTOR(CPacketBase);
   public:
     typedef enum {
-      TypeDiscard=0,
+      TypeDiscard = 0,
       TypeInitialSetup,
       TypeZeroRead, TypeRead,
       TypeWriteRequest, TypeWrite,
@@ -248,7 +245,8 @@ protected:
       TypeMAX=TypeResumeIoProcessing
     } eType;
 
-    explicit CPacket(_In_ DWORD dwPacketSize) : CBaseMemObj(), TLnkLstNode<CPacket>()
+  public:
+    CPacketBase() : CBaseMemObj(), TLnkLstNode<CPacketBase>()
       {
       MemSet(&sOvr, 0, sizeof(sOvr));
       nType = TypeDiscard;
@@ -257,28 +255,26 @@ protected:
       lpStream = NULL;
       nStreamReadOffset = 0ui64;
       cAfterWriteSignalCallback = NullCallback();
-      lpUserData = NULL;
+      uUserData.lpPtr = NULL;
       dwInUseSize = 0;
-      lpBuffer = (LPBYTE)MX_MALLOC((SIZE_T)dwPacketSize);
+      lpChainedPacket = NULL;
       return;
       };
 
-    ~CPacket()
+    ~CPacketBase()
       {
-      MX_FREE(lpBuffer);
       MX_RELEASE(lpStream);
       return;
       };
 
-    static CPacket* FromOverlapped(_In_ LPOVERLAPPED lpOvr)
+    static CPacketBase* FromOverlapped(_In_ LPOVERLAPPED lpOvr)
       {
-      return (CPacket*)((char*)lpOvr - (char*)&(((CPacket*)0)->sOvr));
+      return (CPacketBase*)((char*)lpOvr - (char*)&(((CPacketBase*)0)->sOvr));
       };
 
-    __inline LPBYTE GetBuffer()
-      {
-      return lpBuffer;
-      };
+    virtual LPBYTE GetBuffer() const = 0;
+    virtual DWORD GetBufferSize() const = 0;
+    virtual DWORD GetClassSize() const = 0;
 
     __inline CConnectionBase* GetConn()
       {
@@ -296,7 +292,8 @@ protected:
       sOvr.Pointer = NULL;
       MX_RELEASE(lpStream);
       cAfterWriteSignalCallback = NullCallback();
-      lpUserData = NULL;
+      uUserData.lpPtr = NULL;
+      lpChainedPacket = NULL;
       return;
       };
 
@@ -367,15 +364,26 @@ protected:
       return &sOvr;
       };
 
-    __inline VOID SetUserData(_In_opt_ LPVOID _lpUserData)
+    __inline VOID SetUserData(_In_opt_ LPVOID lpUserData)
       {
-      lpUserData = _lpUserData;
+      uUserData.lpPtr = lpUserData;
       return;
       };
 
     __inline LPVOID GetUserData() const
       {
-      return lpUserData;
+      return uUserData.lpPtr;
+      };
+
+    __inline VOID SetUserDataDW(_In_ DWORD dwValue)
+      {
+      uUserData.dwValue = dwValue;
+      return;
+      };
+
+    __inline DWORD GetUserDataDW() const
+      {
+      return uUserData.dwValue;
       };
 
     __inline VOID SetAfterWriteSignalCallback(_In_ CIpc::OnAfterWriteSignalCallback cCallback)
@@ -386,13 +394,24 @@ protected:
 
     __inline VOID InvokeAfterWriteSignalCallback(_In_ CIpc *lpIpc, _In_ CUserData *_lpUserData)
       {
-      cAfterWriteSignalCallback(lpIpc, (HANDLE)lpConn, lpUserData, _lpUserData);
+      cAfterWriteSignalCallback(lpIpc, (HANDLE)lpConn, uUserData.lpPtr, _lpUserData);
       return;
       };
 
     __inline BOOL HasAfterWriteSignalCallback() const
       {
       return (cAfterWriteSignalCallback != false) ? TRUE : FALSE;
+      };
+
+    __inline VOID ChainPacket(_In_ CPacketBase *lpPacket)
+      {
+      lpChainedPacket = lpPacket;
+      return;
+      };
+
+    __inline CPacketBase* GetChainedPacket() const
+      {
+      return lpChainedPacket;
       };
 
   private:
@@ -402,15 +421,40 @@ protected:
     CConnectionBase *lpConn;
     CStream *lpStream;
     ULONGLONG nStreamReadOffset;
-    LPVOID lpUserData;
+    union {
+      LPVOID lpPtr;
+      DWORD dwValue;
+    } uUserData;
     union {
       DWORD dwInUseSize;
       DWORD dwCookie;
     };
-    LPBYTE lpBuffer;
     CIpc::OnAfterWriteSignalCallback cAfterWriteSignalCallback;
+    CPacketBase *lpChainedPacket;
   };
 
+  template<SIZE_T Size>
+  class TPacket : public CPacketBase
+  {
+  public:
+    virtual LPBYTE GetBuffer() const
+      {
+      return const_cast<LPBYTE>(aBuffer);
+      };
+
+    virtual DWORD GetBufferSize() const
+      {
+      return (DWORD)sizeof(aBuffer);
+      };
+
+    virtual DWORD GetClassSize() const
+      {
+      return (DWORD)Size;
+      };
+
+  public:
+    BYTE aBuffer[Size - sizeof(CPacketBase)];
+  };
   //----
 
 protected:
@@ -433,14 +477,14 @@ protected:
 
     VOID DiscardAll()
       {
-      CPacket *lpPacket;
+      CPacketBase *lpPacket;
 
-      while ((lpPacket=DequeueFirst()) != NULL)
+      while ((lpPacket = DequeueFirst()) != NULL)
         delete lpPacket;
       return;
       };
 
-    VOID QueueFirst(_In_ CPacket *lpPacket)
+    VOID QueueFirst(_In_ CPacketBase *lpPacket)
       {
       if (lpPacket != NULL)
       {
@@ -452,7 +496,7 @@ protected:
       return;
       };
 
-    VOID QueueLast(_In_ CPacket *lpPacket)
+    VOID QueueLast(_In_ CPacketBase *lpPacket)
       {
       if (lpPacket != NULL)
       {
@@ -464,23 +508,23 @@ protected:
       return;
       };
 
-    CPacket* DequeueFirst()
+    CPacketBase* DequeueFirst()
       {
       CFastLock cLock(&nMutex);
 
-      CPacket *lpPacket = cList.PopHead();
-      if (lpPacket != NULL)
+      CPacketBase *CPacketBase = cList.PopHead();
+      if (CPacketBase != NULL)
         nCount--;
-      return lpPacket;
+      return CPacketBase;
       };
 
-    VOID QueueSorted(_In_ CPacket *lpPacket)
+    VOID QueueSorted(_In_ CPacketBase *lpPacket)
       {
       CFastLock cLock(&nMutex);
-      TLnkLst<CPacket>::IteratorRev it;
-      CPacket *lpCurrPacket;
+      TLnkLst<CPacketBase>::IteratorRev it;
+      CPacketBase *lpCurrPacket;
 
-      for (lpCurrPacket=it.Begin(cList); lpCurrPacket!=NULL; lpCurrPacket=it.Next())
+      for (lpCurrPacket = it.Begin(cList); lpCurrPacket != NULL; lpCurrPacket = it.Next())
       {
         if (lpPacket->GetOrder() > lpCurrPacket->GetOrder())
           break;
@@ -493,10 +537,10 @@ protected:
       return;
       };
 
-    CPacket* Dequeue(_In_ ULONG nOrder)
+    CPacketBase* Dequeue(_In_ ULONG nOrder)
       {
       CFastLock cLock(&nMutex);
-      CPacket *lpPacket;
+      CPacketBase *lpPacket;
 
       lpPacket = cList.GetHead();
       if (lpPacket != NULL && lpPacket->GetOrder() == nOrder)
@@ -508,7 +552,7 @@ protected:
       return NULL;
       };
 
-    VOID Remove(_In_ CPacket *lpPacket)
+    VOID Remove(_In_ CPacketBase *lpPacket)
       {
       CFastLock cLock(&nMutex);
 
@@ -527,7 +571,7 @@ protected:
 
   private:
     LONG volatile nMutex;
-    TLnkLst<CPacket> cList;
+    TLnkLst<CPacketBase> cList;
     SIZE_T nCount;
   };
 
@@ -557,7 +601,7 @@ protected:
 
     HRESULT SendResumeIoProcessingPacket(_In_ BOOL bInput);
 
-    HRESULT WriteMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
+    //HRESULT WriteMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
 
     VOID Close(_In_ HRESULT hRes);
 
@@ -571,16 +615,20 @@ protected:
     HRESULT HandleConnected();
 
     HRESULT DoZeroRead(_In_ SIZE_T nPacketsCount);
-    HRESULT DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacket *lpReusePacket=NULL);
+    HRESULT DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacketBase *lpReusePacket = NULL);
 
-    CPacket* GetPacket(_In_ CPacket::eType nType);
-    VOID FreePacket(_In_ CPacket *lpPacket);
+    HRESULT SendPackets(_Inout_ CPacketBase **lplpFirstPacket, _Inout_ CPacketBase **lplpLastPacket,
+                        _Inout_ SIZE_T *lpnChainLength, _In_ BOOL bFlushAll);
+
+    CPacketBase* GetPacket(_In_ CPacketBase::eType nType, _In_ SIZE_T nDesiredSize, _In_ BOOL bRealSize);
+    VOID FreePacket(_In_ CPacketBase *lpPacket);
 
     CIoCompletionPortThreadPool& GetDispatcherPool();
     CIoCompletionPortThreadPool::OnPacketCallback& GetDispatcherPoolPacketCallback();
 
-    virtual HRESULT SendReadPacket(_In_ CPacket *lpPacket) = 0;
-    virtual HRESULT SendWritePacket(_In_ CPacket *lpPacket) = 0;
+    virtual HRESULT SendReadPacket(_In_ CPacketBase *lpPacket) = 0;
+    virtual HRESULT SendWritePacket(_In_ CPacketBase *lpPacket) = 0;
+    virtual SIZE_T GetMultiWriteMaxCount() const = 0;
 
     HRESULT SendDataToLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize, _In_ CLayer *lpCurrLayer, _In_ BOOL bIsMsg);
 
@@ -601,12 +649,17 @@ protected:
     CPacketList cWritePendingList;
     LONG volatile nNextWriteOrder;
     LONG volatile nNextWriteOrderToProcess;
-    LONG volatile nOutstandingReads, nOutstandingWrites, nOutstandingWritesBeingSent;
+    LONG volatile nIncomingReads, nOutgoingWrites, nOutgoingBytes;
     CPacketList cRwList;
     struct {
       LONG volatile nMutex;
       CCircularBuffer cBuffer;
     } sReceivedData;
+    struct {
+      CPacketBase *lpFirstPacket;
+      CPacketBase *lpLastPacket;
+      SIZE_T nChainLength;
+    } sSendingData;
     struct {
       LONG volatile nRwMutex;
       CLayerList cList;
@@ -645,16 +698,17 @@ protected:
   VOID FireOnDisconnect(_In_ CConnectionBase *lpConn);
   HRESULT FireOnDataReceived(_In_ CConnectionBase *lpConn);
 
-  CPacket* GetPacket(_In_ CConnectionBase *lpConn, _In_ CPacket::eType nType);
-  VOID FreePacket(_In_ CPacket *lpPacket);
+  CPacketBase* GetPacket(_In_ CConnectionBase *lpConn, _In_ CPacketBase::eType nType, _In_ SIZE_T nDesiredSize,
+                         _In_ BOOL bRealSize);
+  VOID FreePacket(_In_ CPacketBase *lpPacket);
 
   CConnectionBase* CheckAndGetConnection(_In_opt_ HANDLE h);
 
   VOID OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
                           _In_ HRESULT hRes);
 
-  virtual HRESULT OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes);
-  virtual HRESULT OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes) = 0;
+  virtual BOOL OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket, _In_ HRESULT hRes);
+  virtual HRESULT OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket, _In_ HRESULT hRes) = 0;
   virtual BOOL ZeroReadsSupported() const = 0;
 
 protected:
@@ -662,17 +716,17 @@ protected:
   LONG volatile nRundownProt;
   CIoCompletionPortThreadPool &cDispatcherPool;
   CIoCompletionPortThreadPool::OnPacketCallback cDispatcherPoolPacketCallback;
-  DWORD dwPacketSize;
-  DWORD dwReadAhead, dwMaxOutgoingPackets;
+  DWORD dwReadAhead, dwMaxOutgoingBytes;
   BOOL bDoZeroReads;
-  DWORD dwMaxFreePackets;
   CWindowsEvent cShuttingDownEv;
   OnEngineErrorCallback cEngineErrorCallback;
   struct {
-    LONG volatile nSlimMutex;
+    LONG volatile nRwMutex;
     TRedBlackTree<CConnectionBase,SIZE_T> cTree;
   } sConnections;
-  CPacketList cFreePacketsList;
+  CPacketList cFreePacketsList32768;
+  CPacketList cFreePacketsList4096;
+  CPacketList cFreePacketsList256;
 };
 
 } //namespace MX

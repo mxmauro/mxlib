@@ -82,7 +82,7 @@ public:
     }
     while (nOrigVal != nInitVal);
 #ifdef _DEBUG
-    MX_ASSERT(!(nNewVal <= -(2147483647L / 2L) || (nNewVal & 0x80000000) || nNewVal > 500));
+    MX_ASSERT(!(nNewVal <= -(2147483647L / 2L) || (nNewVal & 0x80000000) || nNewVal > 0x01000000));
 #endif //_DEBUG
     if (nNewVal == 0)
     {

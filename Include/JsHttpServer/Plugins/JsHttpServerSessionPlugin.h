@@ -45,9 +45,21 @@ public:
                 _In_opt_z_ LPCWSTR szPathW=NULL, _In_opt_ int nExpireTimeInSeconds=-1,
                 _In_opt_ BOOL bIsSecure=FALSE, _In_opt_ BOOL bIsHttpOnly=FALSE);
 
-  LPCSTR GetSessionId() const;
-  CJsHttpServer* GetServer() const;
-  CHttpServer::CClientRequest* GetRequest() const;
+  LPCSTR GetSessionId() const
+    {
+    return szCurrentIdA;
+    };
+
+  CJsHttpServer* GetServer() const
+    {
+    return lpHttpServer;
+    };
+
+  CJsHttpServer::CClientRequest* GetRequest() const
+    {
+    return lpRequest;
+    };
+
   CPropertyBag* GetBag() const;
 
   MX_JS_DECLARE_WITH_PROXY(CJsHttpServerSessionPlugin, "Session")

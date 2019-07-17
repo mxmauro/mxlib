@@ -211,6 +211,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Test\Console.h" />
+    <ClInclude Include="Test\Logger.h" />
     <ClInclude Include="Test\Test.h" />
     <ClInclude Include="Test\TestHttpClient.h" />
     <ClInclude Include="Test\TestHttpServer.h" />
@@ -219,6 +220,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Test\Console.cpp" />
+    <ClCompile Include="Test\Logger.cpp" />
     <ClCompile Include="Test\Test.cpp" />
     <ClCompile Include="Test\TestHttpClient.cpp" />
     <ClCompile Include="Test\TestHttpServer.cpp" />
@@ -233,7 +235,10 @@
     <None Include="Test\Data\Web\index.jss" />
     <None Include="Test\Data\Web\moment.min.js" />
     <None Include="Test\Data\Web\mysql_test.jss" />
+    <None Include="Test\Data\Web\sqlite_test.jss" />
+    <None Include="Test\Data\Web\static_sample.html" />
     <None Include="Test\Data\Web\top.jss" />
+    <None Include="Test\Data\Web\websocket_test.jss" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Test\Data\Web\images\header_background.png" />

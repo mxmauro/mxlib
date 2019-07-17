@@ -1,6 +1,9 @@
 ﻿<%
 var session = require("session");
-require("./top.jss");
+var topHtml = require("./top.jss");
+var bottomHtml = require("./bottom.jss");
+
+topHtml.render();
 %>
 <form action="index.jss" method="post" enctype="multipart/form-data">
 <div>
@@ -17,5 +20,5 @@ require("./top.jss");
 </div>
 </form>
 <%
-require("./bottom.jss");
+bottomHtml.render();
 %>

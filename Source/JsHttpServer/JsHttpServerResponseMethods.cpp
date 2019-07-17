@@ -50,7 +50,7 @@ namespace Internals {
 
 namespace JsHttpServer {
 
-HRESULT AddResponseMethods(_In_ CJavascriptVM &cJvm, _In_ MX::CHttpServer::CClientRequest *lpRequest)
+HRESULT AddResponseMethods(_In_ CJavascriptVM &cJvm)
 {
   HRESULT hRes;
 

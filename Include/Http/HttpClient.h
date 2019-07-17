@@ -202,7 +202,7 @@ private:
   HRESULT SetupRedirectOrRetry(_In_ DWORD dwDelayMs);
   HRESULT SetupResponseHeadersTimeout();
 
-  HRESULT AddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_opt_ CIpc::CREATE_CALLBACK_DATA *lpData);
+  HRESULT AddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h);
 
   HRESULT BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA);
   HRESULT BuildRequestHeaderAdd(_Inout_ CStringA &cStrReqHdrsA, _In_z_ LPCSTR szNameA, _In_z_ LPCSTR szDefaultValueA,

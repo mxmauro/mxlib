@@ -389,6 +389,32 @@ private:
   HRESULT OnDownloadStarted(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW, _In_ LPVOID lpUserParam);
 
 private:
+  class CRequestLimiter : public TRedBlackTreeNode<CRequestLimiter, PSOCKADDR_INET>
+  {
+  public:
+    CRequestLimiter(_In_ PSOCKADDR_INET lpAddr) : TRedBlackTreeNode<CRequestLimiter, PSOCKADDR_INET>()
+      {
+      MemCopy(&sAddr, lpAddr, sizeof(SOCKADDR_INET));
+      _InterlockedExchange(&nCount, 1);
+      return;
+      };
+
+    virtual PSOCKADDR_INET GetNodeKey() const
+      {
+      return &(const_cast<CRequestLimiter*>(this)->sAddr);
+      };
+
+    virtual int CompareKeys(_In_ PSOCKADDR_INET key) const
+      {
+      return MemCompare(key, GetNodeKey(), sizeof(SOCKADDR_INET));
+      };
+
+  public:
+    SOCKADDR_INET sAddr;
+    LONG volatile nCount;
+  };
+
+private:
   CSockets &cSocketMgr;
   CIoCompletionPortThreadPool &cWorkerPool;
   //NOTE: CIoCompletionPortThreadPool::Post needs a non-dynamic variable
@@ -422,6 +448,11 @@ private:
   LONG volatile nRequestsListRwMutex;
   TLnkLst<CClientRequest> cRequestsList;
   CWindowsEvent cShutdownEv;
+
+  struct {
+    LONG volatile nRwMutex;
+    TRedBlackTree<CRequestLimiter, PSOCKADDR_INET> cTree;
+  } sRequestLimiter;
 };
 
 } //namespace MX

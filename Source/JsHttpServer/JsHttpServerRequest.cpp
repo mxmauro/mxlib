@@ -29,26 +29,29 @@ namespace MX {
 
 CJsHttpServer::CClientRequest::CClientRequest() : CHttpServer::CClientRequest()
 {
-  bDetached = FALSE;
   lpJsHttpServer = NULL;
+  lpJVM = NULL;
+  sFlags.nIsNew = sFlags.nDetached = sFlags.nDiscardedVM = 0;
   return;
 }
 
 CJsHttpServer::CClientRequest::~CClientRequest()
 {
+  if (lpJVM != NULL)
+    delete lpJVM;
   return;
 }
 
 VOID CJsHttpServer::CClientRequest::Detach()
 {
-  bDetached = TRUE;
+  sFlags.nDetached = 1;
   return;
 }
 
 HRESULT CJsHttpServer::CClientRequest::OnSetup()
 {
-  bDetached = FALSE;
-  return __super::OnSetup();;
+  sFlags.nDetached = 0;
+  return __super::OnSetup();
 }
 
 VOID CJsHttpServer::CClientRequest::OnCleanup()
@@ -57,27 +60,52 @@ VOID CJsHttpServer::CClientRequest::OnCleanup()
   return;
 }
 
-HRESULT CJsHttpServer::CClientRequest::CreateJVM(_Outptr_result_maybenull_ CJavascriptVM **lplpJvm)
+HRESULT CJsHttpServer::CClientRequest::AttachJVM()
 {
+  BOOL bIsNew;
   HRESULT hRes;
 
-  if (lplpJvm == NULL)
-    return E_POINTER;
-
-  *lplpJvm = MX_DEBUG_NEW CJavascriptVM();
-  if ((*lplpJvm) == NULL)
-    return E_OUTOFMEMORY;
-
   //initialize javascript engine
-  hRes = lpJsHttpServer->InitializeJVM(*lplpJvm, this);
-  if (FAILED(hRes))
+  hRes = lpJsHttpServer->AllocAndInitVM(&lpJVM, bIsNew, this);
+  if (SUCCEEDED(hRes))
   {
-    delete *lplpJvm;
-    *lplpJvm = NULL;
+    sFlags.nIsNew = (bIsNew != FALSE) ? 1 : 0;
   }
 
   //done
   return hRes;
+}
+
+VOID CJsHttpServer::CClientRequest::DiscardVM()
+{
+  sFlags.nDiscardedVM = 1;
+  return;
+}
+
+VOID CJsHttpServer::CClientRequest::FreeJVM()
+{
+  if (lpJVM != NULL)
+  {
+    if (lpJsHttpServer != NULL && sFlags.nDiscardedVM == 0)
+    {
+      lpJVM->RemoveCachedModules();
+
+      lpJVM->RunNativeProtectedAndGetError(0, 0, [](_In_ DukTape::duk_context *lpCtx) -> VOID
+      {
+        //called twice. see: https://duktape.org/api.html#duk_gc
+        DukTape::duk_gc(lpCtx, 0);
+        DukTape::duk_gc(lpCtx, 0);
+      });
+
+      lpJsHttpServer->FreeVM(lpJVM);
+    }
+    else
+    {
+      delete lpJVM;
+    }
+    lpJVM = NULL;
+  }
+  return;
 }
 
 } //namespace MX

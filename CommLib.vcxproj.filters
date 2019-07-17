@@ -209,9 +209,6 @@
     <ClInclude Include="Include\Comm\HostResolver.h">
       <Filter>Header Files\Comm</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Comm\HostResolverCommon.h">
-      <Filter>Source Files\Comm</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Http\HttpServerCommon.h">
       <Filter>Source Files\Http</Filter>
     </ClInclude>
@@ -414,9 +411,6 @@
     </ClCompile>
     <ClCompile Include="Source\Http\HttpHeaderEntContentDisposition.cpp">
       <Filter>Source Files\Http\Header Parser\Entity</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Comm\HostResolverIpAddrResolver.cpp">
-      <Filter>Source Files\Comm</Filter>
     </ClCompile>
     <ClCompile Include="Source\Http\HttpServerRequest.cpp">
       <Filter>Source Files\Http</Filter>

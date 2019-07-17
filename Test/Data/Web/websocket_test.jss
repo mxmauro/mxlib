@@ -1,5 +1,8 @@
 ﻿<%
-require("./top.jss");
+var topHtml = require("./top.jss");
+var bottomHtml = require("./bottom.jss");
+
+topHtml.render();
 %>
 <p>WebSocket Log</p>
 <hr />
@@ -139,5 +142,5 @@ function addToLog(parent, text, color)
 }
 </script>
 <%
-require("./bottom.jss");
+bottomHtml.render();
 %>

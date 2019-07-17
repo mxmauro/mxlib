@@ -1136,7 +1136,7 @@ HRESULT CHttpClient::OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIp
   //setup SSL layer
   if (sRequest.cUrl.GetSchemeCode() == CUrl::SchemeHttps && sRequest.bUsingProxy == FALSE)
   {
-    HRESULT hRes = AddSslLayer(lpIpc, h, &sData);
+    HRESULT hRes = AddSslLayer(lpIpc, h);
     if (FAILED(hRes))
       return hRes;
   }
@@ -1329,7 +1329,7 @@ restart:
           if (nRespStatus == 200)
           {
             //add ssl layer
-            hRes = AddSslLayer(lpIpc, h, NULL);
+            hRes = AddSslLayer(lpIpc, h);
             if (SUCCEEDED(hRes))
             {
               nState = StateSendingRequestHeaders;
@@ -1960,7 +1960,7 @@ HRESULT CHttpClient::SetupResponseHeadersTimeout()
                                     MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnResponseHeadersTimeout, this), NULL);
 }
 
-HRESULT CHttpClient::AddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_opt_ CIpc::CREATE_CALLBACK_DATA *lpData)
+HRESULT CHttpClient::AddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h)
 {
   CIpcSslLayer::eProtocol nProtocol;
   CSslCertificateArray *lpCheckCertificates;
@@ -1989,20 +1989,13 @@ HRESULT CHttpClient::AddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_opt_ CI
   if (!cLayer)
     return E_OUTOFMEMORY;
   hRes = cLayer->Initialize(FALSE, nProtocol, (LPCSTR)cStrHostNameA, lpCheckCertificates, lpSelfCert, lpPrivKey);
-  if (FAILED(hRes))
-    return hRes;
-  if (lpData != NULL)
-  {
-    lpData->cLayersList.PushTail(cLayer.Detach());
-  }
-  else
+  if (SUCCEEDED(hRes))
   {
     hRes = lpIpc->AddLayer(h, cLayer);
-    if (FAILED(hRes))
-      return hRes;
-    cLayer.Detach();
+    if (SUCCEEDED(hRes))
+      cLayer.Detach();
   }
-  return S_OK;
+  return hRes;
 }
 
 HRESULT CHttpClient::BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA)

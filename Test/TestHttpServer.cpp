@@ -22,11 +22,8 @@
  *       access to or use of the software to any third party.
  **/
 #include "TestHttpServer.h"
+#include "Logger.h"
 #include <Http\HttpServer.h>
-
-//-----------------------------------------------------------
-
-static LONG volatile nLogMutex = 0;
 
 //-----------------------------------------------------------
 
@@ -58,10 +55,16 @@ int TestHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
 
   cHttpServer.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
   cHttpServer.SetLogLevel(dwLogLevel);
+  cSckMgr.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
+  cSckMgr.SetLogLevel(dwLogLevel);
 
-  cSckMgr.SetOption_MaxAcceptsToPost(24);
+  cSckMgr.SetOption_MaxAcceptsToPost(128);
   //cSckMgr.SetOption_PacketSize(32768);
   cHttpServer.SetOption_MaxFilesCount(10);
+  //cSckMgr.SetOption_EnableZeroReads(FALSE);
+
+  //cDispatcherPool.SetOption_MaxThreadsCount(32);
+  //cDispatcherPool.SetOption_WorkerThreadIdleTime(INFINITE);
 
   hRes = cDispatcherPool.Initialize();
   if (SUCCEEDED(hRes))
@@ -104,12 +107,12 @@ int TestHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
   {
     if (bUseSSL != FALSE)
     {
-      hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv4, 443, MX::CIpcSslLayer::ProtocolTLSv1_2, &cSslCert,
+      hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv6, 443, MX::CIpcSslLayer::ProtocolTLSv1_2, &cSslCert,
                                         &cSslPrivateKey);
     }
     else
     {
-      hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv4, 80);
+      hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv6, 80);
     }
   }
   //----
@@ -143,7 +146,8 @@ static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServe
   hRes = BuildWebFileName(cStrFileNameW, szExtensionW, lpRequest->GetUrl()->GetPath());
   if (SUCCEEDED(hRes))
   {
-    if (MX::StrCompareW(szExtensionW, L".dat", TRUE) == 0)
+    if (MX::StrCompareW(szExtensionW, L".html", TRUE) == 0 ||
+        MX::StrCompareW(szExtensionW, L".dat", TRUE) == 0)
     {
       hRes = lpRequest->SendFile((LPCWSTR)cStrFileNameW);
       if (hRes == MX_HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) ||
@@ -188,7 +192,10 @@ static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServe
       //----
       if (SUCCEEDED(hRes))
       {
-        hRes = lpRequest->SendResponse("<html><body>test OK</body></html>", 6 + 6 + 7 + 7 + 7);
+        static LPCSTR szMessageA = "<html><body>test OK</body></html>";
+        static SIZE_T nMessageLen = strlen(szMessageA);
+
+        hRes = lpRequest->SendResponse(szMessageA, nMessageLen);
       }
       //lpMgr->ResumeOutputProcessing(h);
     }
@@ -265,8 +272,6 @@ static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ L
 
 static HRESULT OnLog(_In_z_ LPCWSTR szInfoW)
 {
-  MX::CFastLock cLock(&nLogMutex);
-
-  wprintf_s(L"%s\n", szInfoW);
+  Logger::Log(L"%s\n", szInfoW);
   return S_OK;
 }

@@ -83,6 +83,7 @@ HRESULT CStream::Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod)
 {
   return E_NOTIMPL;
 }
+
 HRESULT CStream::CopyTo(_In_ CStream *lpTarget, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
                         _In_opt_ ULONGLONG nStartOffset)
 {
@@ -130,5 +131,23 @@ HRESULT CStream::CopyTo(_In_ CStream *lpTarget, _In_ SIZE_T nBytes, _Out_ SIZE_T
   //done
   return (hRes == MX_E_EndOfFileReached) ? S_OK : hRes;
 }
+
+VOID CStream::SetChainedStream(_In_opt_ CStream *lpStream)
+{
+  if (lpNextStream != NULL)
+    lpNextStream->Release();
+  lpNextStream = lpStream;
+  if (lpNextStream != NULL)
+    lpNextStream->AddRef();
+  return;
+}
+
+CStream* CStream::GetChainedStream() const
+{
+  if (lpNextStream != NULL)
+    lpNextStream->AddRef();
+  return lpNextStream;
+}
+
 
 } //namespace MX

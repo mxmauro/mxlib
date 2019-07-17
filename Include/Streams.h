@@ -44,9 +44,16 @@ public:
 
 public:
   CStream() : TRefCounted<CBaseMemObj>()
-    { };
+    {
+    lpNextStream = NULL;
+    return;
+    };
   virtual ~CStream()
-    { };
+    {
+    if (lpNextStream != NULL)
+      lpNextStream->Release();
+    return;
+    };
 
   virtual HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesRead,
                        _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX) = 0;
@@ -63,6 +70,12 @@ public:
 
   HRESULT CopyTo(_In_ CStream *lpTarget, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
                  _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX);
+
+  VOID SetChainedStream(_In_opt_ CStream *lpStream);
+  CStream* GetChainedStream() const;
+
+private:
+  CStream *lpNextStream;
 };
 
 } //namespace MX

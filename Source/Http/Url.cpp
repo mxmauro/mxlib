@@ -293,13 +293,13 @@ HRESULT CUrl::SetHost(_In_z_ LPCSTR szHostA, _In_opt_ SIZE_T nHostLen)
   if (szHostA == NULL)
     return E_POINTER;
   //is an IP address
-  if (CHostResolver::IsValidIPV4(szHostA, nHostLen) != FALSE || CHostResolver::IsValidIPV6(szHostA, nHostLen) != FALSE)
+  if (HostResolver::IsValidIPV4(szHostA, nHostLen) != FALSE || HostResolver::IsValidIPV6(szHostA, nHostLen) != FALSE)
   {
     if (cStrTempW.CopyN(szHostA, nHostLen) == FALSE)
       return E_OUTOFMEMORY;
   }
   else if (nHostLen > 2 && szHostA[0] == '[' && szHostA[nHostLen-1] == ']' &&
-           CHostResolver::IsValidIPV6(szHostA+1, nHostLen-2) != FALSE)
+           HostResolver::IsValidIPV6(szHostA+1, nHostLen-2) != FALSE)
   {
     if (cStrTempW.CopyN(L"[", 1) == FALSE ||
         cStrTempW.ConcatN(szHostA, nHostLen) == FALSE ||
@@ -1987,17 +1987,20 @@ BOOL CUrl::IsValidHostAddress(_In_z_ LPCSTR szHostA, _In_opt_ SIZE_T nHostLen)
   if (nHostLen == 0)
     return FALSE;
   //check for IPv4
-  if (CHostResolver::IsValidIPV4(szHostA, nHostLen) != FALSE)
+  if (HostResolver::IsValidIPV4(szHostA, nHostLen) != FALSE)
     return TRUE;
   //check for IPv6
-  if (CHostResolver::IsValidIPV6(szHostA, nHostLen) != FALSE)
+  if (HostResolver::IsValidIPV6(szHostA, nHostLen) != FALSE)
     return TRUE;
-  if (szHostA[0] == '[' && szHostA[nHostLen-1] == ']' && CHostResolver::IsValidIPV6(szHostA+1, nHostLen-2) != FALSE)
+  if (szHostA[0] == '[' && szHostA[nHostLen - 1] == ']' &&
+      HostResolver::IsValidIPV6(szHostA + 1, nHostLen - 2) != FALSE)
+  {
     return TRUE;
+  }
   //check for a valid name
-  if (szHostA[0] == '.' || szHostA[nHostLen-1] == '.')
+  if (szHostA[0] == '.' || szHostA[nHostLen - 1] == '.')
     return FALSE;
-  for (i=0; i<nHostLen-1; i++)
+  for (i = 0; i<nHostLen - 1; i++)
   {
     if (szHostA[i] == '.' && szHostA[i+1] == '.')
       return FALSE;
@@ -2016,19 +2019,22 @@ BOOL CUrl::IsValidHostAddress(_In_z_ LPCWSTR szHostW, _In_opt_ SIZE_T nHostLen)
   if (nHostLen == 0)
     return FALSE;
   //check for IPv4
-  if (CHostResolver::IsValidIPV4(szHostW, nHostLen) != FALSE)
+  if (HostResolver::IsValidIPV4(szHostW, nHostLen) != FALSE)
     return TRUE;
   //check for IPv6
-  if (CHostResolver::IsValidIPV6(szHostW, nHostLen) != FALSE)
+  if (HostResolver::IsValidIPV6(szHostW, nHostLen) != FALSE)
     return TRUE;
-  if (szHostW[0] == L'[' && szHostW[nHostLen-1] == L']' && CHostResolver::IsValidIPV6(szHostW+1, nHostLen-2) != FALSE)
-    return TRUE;
-  //check for a valid name
-  if (szHostW[0] == L'.' || szHostW[nHostLen-1] == L'.')
-    return FALSE;
-  for (i=0; i<nHostLen-1; i++)
+  if (szHostW[0] == L'[' && szHostW[nHostLen - 1] == L']' &&
+      HostResolver::IsValidIPV6(szHostW + 1, nHostLen - 2) != FALSE)
   {
-    if (szHostW[i] == L'.' && szHostW[i+1] == L'.')
+    return TRUE;
+  }
+  //check for a valid name
+  if (szHostW[0] == L'.' || szHostW[nHostLen - 1] == L'.')
+    return FALSE;
+  for (i = 0; i < nHostLen - 1; i++)
+  {
+    if (szHostW[i] == L'.' && szHostW[i + 1] == L'.')
       return FALSE;
     if (StrChrW(L":/?#[]@!$&'()*+,;=\"", szHostW[i]) != NULL)
       return FALSE;
@@ -2064,22 +2070,24 @@ static HRESULT ValidateHostAddress(_Inout_ MX::CStringW &cStrHostW)
     return MX_E_InvalidData;
   sW = (LPCWSTR)cStrHostW;
   //check for IPv4
-  if (MX::CHostResolver::IsValidIPV4(sW, nLen) != FALSE)
+  if (MX::HostResolver::IsValidIPV4(sW, nLen) != FALSE)
     return S_OK;
   //check for IPv6
-  if (MX::CHostResolver::IsValidIPV6(sW, nLen) != FALSE)
+  if (MX::HostResolver::IsValidIPV6(sW, nLen) != FALSE)
   {
     //insert brackets
     return (cStrHostW.Insert(L"[", 0) != FALSE &&
             cStrHostW.ConcatN(L"]", 1) != FALSE) ? S_OK : E_OUTOFMEMORY;
   }
-  if (nLen > 2 && sW[0] == L'[' && sW[nLen-1] == L']' &&
-      MX::CHostResolver::IsValidIPV6(sW+1, nLen-2) != FALSE)
+  if (nLen > 2 && sW[0] == L'[' && sW[nLen - 1] == L']' &&
+      MX::HostResolver::IsValidIPV6(sW + 1, nLen - 2) != FALSE)
+  {
     return S_OK;
+  }
   //check for a valid name
   if (sW[0] == L'.' || sW[nLen-1] == L'.')
     return MX_E_InvalidData;
-  for (i=0; i<nLen-1; i++)
+  for (i = 0; i < nLen - 1; i++)
   {
     if (sW[0] == L'.' && sW[1] == L'.')
       return MX_E_InvalidData;
@@ -2475,13 +2483,15 @@ static BOOL IsLocalHost(_In_z_ LPCSTR szHostA)
 
   if (MX::StrCompareA(szHostA, "localhost") == 0)
     return TRUE;
-  if (MX::CHostResolver::IsValidIPV4(szHostA, (SIZE_T)-1, &sAddr) != FALSE)
+  if (MX::HostResolver::IsValidIPV4(szHostA, (SIZE_T)-1, &sAddr) != FALSE)
   {
     if (sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b1 == 127 && sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b2 == 0 &&
         sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b3 == 0 && sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b4 == 1)
+    {
       return TRUE;
+    }
   }
-  if (MX::CHostResolver::IsValidIPV6(szHostA, (SIZE_T)-1, &sAddr) != FALSE)
+  if (MX::HostResolver::IsValidIPV6(szHostA, (SIZE_T)-1, &sAddr) != FALSE)
   {
     if (sAddr.Ipv6.sin6_addr.u.Word[0] == 0 && sAddr.Ipv6.sin6_addr.u.Word[1] == 0 &&
         sAddr.Ipv6.sin6_addr.u.Word[2] == 0 && sAddr.Ipv6.sin6_addr.u.Word[3] == 0 &&
@@ -2489,10 +2499,14 @@ static BOOL IsLocalHost(_In_z_ LPCSTR szHostA)
     {
       if (sAddr.Ipv6.sin6_addr.u.Word[5] == 0 && sAddr.Ipv6.sin6_addr.u.Word[6] == 0 &&
           sAddr.Ipv6.sin6_addr.u.Word[7] == 1)
+      {
         return TRUE;
+      }
       if ((sAddr.Ipv6.sin6_addr.u.Word[5] == 0 || sAddr.Ipv6.sin6_addr.u.Word[5] == 0xFFFF) &&
           sAddr.Ipv6.sin6_addr.u.Word[6] == 0x7F00 && sAddr.Ipv6.sin6_addr.u.Word[7] == 0x0001)
+      {
         return TRUE;
+      }
     }
   }
   return FALSE;
@@ -2504,13 +2518,15 @@ static BOOL IsLocalHost(_In_z_ LPCWSTR szHostW)
 
   if (MX::StrCompareW(szHostW, L"localhost") == 0)
     return TRUE;
-  if (MX::CHostResolver::IsValidIPV4(szHostW, (SIZE_T)-1, &sAddr) != FALSE)
+  if (MX::HostResolver::IsValidIPV4(szHostW, (SIZE_T)-1, &sAddr) != FALSE)
   {
     if (sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b1 == 127 && sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b2 == 0 &&
         sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b3 == 0 && sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b4 == 1)
+    {
       return TRUE;
+    }
   }
-  if (MX::CHostResolver::IsValidIPV6(szHostW, (SIZE_T)-1, &sAddr) != FALSE)
+  if (MX::HostResolver::IsValidIPV6(szHostW, (SIZE_T)-1, &sAddr) != FALSE)
   {
     if (sAddr.Ipv6.sin6_addr.u.Word[0] == 0 && sAddr.Ipv6.sin6_addr.u.Word[1] == 0 &&
         sAddr.Ipv6.sin6_addr.u.Word[2] == 0 && sAddr.Ipv6.sin6_addr.u.Word[3] == 0 &&
@@ -2518,10 +2534,14 @@ static BOOL IsLocalHost(_In_z_ LPCWSTR szHostW)
     {
       if (sAddr.Ipv6.sin6_addr.u.Word[5] == 0 && sAddr.Ipv6.sin6_addr.u.Word[6] == 0 &&
           sAddr.Ipv6.sin6_addr.u.Word[7] == 1)
+      {
         return TRUE;
+      }
       if ((sAddr.Ipv6.sin6_addr.u.Word[5] == 0 || sAddr.Ipv6.sin6_addr.u.Word[5] == 0xFFFF) &&
           sAddr.Ipv6.sin6_addr.u.Word[6] == 0x7F00 && sAddr.Ipv6.sin6_addr.u.Word[7] == 0x0001)
+      {
         return TRUE;
+      }
     }
   }
   return FALSE;

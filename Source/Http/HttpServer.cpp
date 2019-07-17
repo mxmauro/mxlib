@@ -125,7 +125,7 @@ CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr, _In_ CIoCompletionPortThrea
   //----
   SetLogParent(lpLogParent);
   //----
-  dwMaxConnectionsPerIp = 100;
+  dwMaxConnectionsPerIp = 0xFFFFFFFFUL;
   dwRequestHeaderTimeoutMs = 30000;
   dwRequestBodyMinimumThroughputInBps = 256;
   dwRequestBodySecondsOfLowThroughput = 10;
@@ -149,6 +149,8 @@ CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr, _In_ CIoCompletionPortThrea
   cErrorCallback = NullCallback();
   SlimRWL_Initialize(&nRequestsListRwMutex);
   _InterlockedExchange(&nDownloadNameGeneratorCounter, 0);
+  //----
+  SlimRWL_Initialize(&(sRequestLimiter.nRwMutex));
   return;
 }
 
@@ -189,6 +191,17 @@ CHttpServer::~CHttpServer()
       _YieldProcessor();
   }
   while (b == FALSE);
+
+  {
+    CAutoSlimRWLExclusive cLimiterLock(&(sRequestLimiter.nRwMutex));
+    CRequestLimiter *lpLimiter;
+
+    while ((lpLimiter = sRequestLimiter.cTree.GetFirst()) != NULL)
+    {
+      lpLimiter->RemoveNode();
+      delete lpLimiter;
+    }
+  }
   return;
 }
 
@@ -198,7 +211,7 @@ VOID CHttpServer::SetOption_MaxConnectionsPerIp(_In_ DWORD dwLimit)
 
   if (hAcceptConn == NULL)
   {
-    dwMaxConnectionsPerIp = (dwLimit > 1) ? dwLimit : 1;
+    dwMaxConnectionsPerIp = (dwLimit == 0) ? 0xFFFFFFFFUL : dwLimit;
   }
   return;
 }
@@ -624,8 +637,8 @@ VOID CHttpServer::ThreadProc()
                   lpRequest->nState = CClientRequest::StateError;
                   if (ShouldLog(1) != FALSE)
                   {
-                    Log(L"HttpServer(State/0x%p/0x%p/0x%p): StateError [%08X]", lpRequest,
-                        &(lpRequest->cRequest->cHttpCmn), &(lpRequest->cResponse->cHttpCmn), MX_E_Timeout);
+                    Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateError [%08X]", lpRequest, lpRequest->hConn,
+                        MX_E_Timeout);
                   }
                 }
               }
@@ -698,9 +711,14 @@ HRESULT CHttpServer::OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIp
             return E_OUTOFMEMORY;
           hRes = cLayer->Initialize(TRUE, sSsl.nProtocol, NULL, NULL, sSsl.cSslCertificate.Get(),
                                     sSsl.cSslPrivateKey.Get());
+          if (SUCCEEDED(hRes))
+          {
+            hRes = lpIpc->AddLayer(h, cLayer.Get());
+            if (SUCCEEDED(hRes))
+              cLayer.Detach();
+          }
           if (FAILED(hRes))
             return hRes;
-          sData.cLayersList.PushTail(cLayer.Detach());
         }
       }
       //add to list
@@ -734,14 +752,41 @@ VOID CHttpServer::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
 
   if (lpRequest != NULL)
   {
-    CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
-
-    if (lpRequest->hConn == h)
+    if (lpRequest->sPeerAddr.si_family != 0)
     {
-      //mark link as closed
-      lpRequest->MarkLinkAsClosed();
+      CAutoSlimRWLShared cLimiterLock(&(sRequestLimiter.nRwMutex));
+      CRequestLimiter *lpLimiter;
 
-      lpRequest->hConn = NULL;
+      lpLimiter = sRequestLimiter.cTree.Find(&(lpRequest->sPeerAddr));
+      if (lpLimiter != NULL)
+      {
+        if ((DWORD)_InterlockedDecrement(&(lpLimiter->nCount)) == 0)
+        {
+          cLimiterLock.UpgradeToExclusive();
+
+          lpLimiter = sRequestLimiter.cTree.Find(&(lpRequest->sPeerAddr));
+          if (lpLimiter != NULL)
+          {
+            if (__InterlockedRead(&(lpLimiter->nCount)) == 0)
+            {
+              lpLimiter->RemoveNode();
+              delete lpLimiter;
+            }
+          }
+        }
+      }
+    }
+
+    {
+      CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
+
+      if (lpRequest->hConn == h)
+      {
+        //mark link as closed
+        lpRequest->MarkLinkAsClosed();
+
+        lpRequest->hConn = NULL;
+      }
     }
   }
   //raise error notification
@@ -757,41 +802,41 @@ HRESULT CHttpServer::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc:
 
   MX_ASSERT(lpUserData != NULL);
   //count connections from the same IP
-  if (SUCCEEDED(cSocketMgr.GetPeerAddress(h, &(lpNewRequest->sPeerAddr))))
+  if (SUCCEEDED(cSocketMgr.GetPeerAddress(h, &(lpNewRequest->sPeerAddr))) && dwMaxConnectionsPerIp != 0xFFFFFFFFUL)
   {
-    CAutoSlimRWLShared cListLock(&nRequestsListRwMutex);
-    TLnkLst<CClientRequest>::Iterator it;
-    CClientRequest *lpRequest;
-    SIZE_T nCount;
+    CAutoSlimRWLShared cLimiterLock(&(sRequestLimiter.nRwMutex));
+    CRequestLimiter *lpLimiter;
 
-    nCount = 0;
-    for (lpRequest = it.Begin(cRequestsList); lpRequest != NULL; lpRequest = it.Next())
+    lpLimiter = sRequestLimiter.cTree.Find(&(lpNewRequest->sPeerAddr));
+    if (lpLimiter != NULL)
     {
-      switch (lpNewRequest->sPeerAddr.si_family)
-      {
-        case AF_INET:
-          if (lpRequest->sPeerAddr.si_family == AF_INET &&
-              MemCompare(&(lpRequest->sPeerAddr.Ipv4), &(lpNewRequest->sPeerAddr.Ipv4),
-                         sizeof(lpNewRequest->sPeerAddr.Ipv4)) == 0)
-          {
-            nCount++;
-          }
-          break;
+      if ((DWORD)_InterlockedIncrement(&(lpLimiter->nCount)) > dwMaxConnectionsPerIp)
+        return E_ACCESSDENIED;
+    }
+    else
+    {
+      MX::TRedBlackTreeNode<MX::CHttpServer::CRequestLimiter,PSOCKADDR_INET> *_lpMatchingLimiter;
 
-        case AF_INET6:
-          if (lpRequest->sPeerAddr.si_family == AF_INET6 &&
-              MemCompare(&(lpRequest->sPeerAddr.Ipv6), &(lpNewRequest->sPeerAddr.Ipv6),
-                         sizeof(lpNewRequest->sPeerAddr.Ipv6)) == 0)
-          {
-            nCount++;
-          }
-          break;
+      lpLimiter = MX_DEBUG_NEW CRequestLimiter(&(lpNewRequest->sPeerAddr));
+      if (lpLimiter == NULL)
+        return E_OUTOFMEMORY;
+      cLimiterLock.UpgradeToExclusive();
+
+      if (sRequestLimiter.cTree.Insert(lpLimiter, FALSE, &_lpMatchingLimiter) == FALSE)
+      {
+        CRequestLimiter *lpMatchingLimiter = static_cast<CRequestLimiter*>(_lpMatchingLimiter);
+
+        delete lpLimiter;
+
+        if ((DWORD)_InterlockedIncrement(&(lpMatchingLimiter->nCount)) > dwMaxConnectionsPerIp)
+          return E_ACCESSDENIED;
       }
-      if (nCount > (SIZE_T)dwMaxConnectionsPerIp)
-        return  E_ACCESSDENIED;
     }
   }
-
+  else
+  {
+    lpNewRequest->sPeerAddr.si_family = 0;
+  }
   //done
   return S_OK;
 }
@@ -816,8 +861,7 @@ HRESULT CHttpServer::OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ 
     lpRequest->nState = CClientRequest::StateReceivingRequestHeaders;
     if (ShouldLog(1) != FALSE)
     {
-      Log(L"HttpServer(State/0x%p/0x%p/0x%p): StateReceivingRequestHeaders", lpRequest,
-          &(lpRequest->cRequest->cHttpCmn), &(lpRequest->cResponse->cHttpCmn));
+      Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateReceivingRequestHeaders", lpRequest, h);
     }
   }
 
@@ -884,8 +928,8 @@ on_websocket_request:
                   lpRequest->nState = CClientRequest::StateReceivingRequestBody;
                   if (ShouldLog(1) != FALSE)
                   {
-                    Log(L"HttpServer(State/0x%p/0x%p/0x%p): StateReceivingRequestBody", lpRequest,
-                        &(lpRequest->cRequest->cHttpCmn), &(lpRequest->cResponse->cHttpCmn));
+                    Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateReceivingRequestBody", lpRequest,
+                        lpRequest->hConn);
                   }
                 }
                 break;
@@ -936,8 +980,7 @@ on_websocket_request:
                 lpRequest->nState = CClientRequest::StateBuildingResponse;
                 if (ShouldLog(1) != FALSE)
                 {
-                  Log(L"HttpServer(State/0x%p/0x%p/0x%p): StateBuildingResponse", lpRequest,
-                      &(lpRequest->cRequest->cHttpCmn), &(lpRequest->cResponse->cHttpCmn));
+                  Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateBuildingResponse", lpRequest, lpRequest->hConn);
                 }
                 break;
             }
@@ -1141,8 +1184,7 @@ HRESULT CHttpServer::QuickSendErrorResponseAndReset(_In_ CClientRequest *lpReque
   lpRequest->nState = CClientRequest::StateError;
   if (ShouldLog(1) != FALSE)
   {
-    Log(L"HttpServer(State/0x%p/0x%p/0x%p): StateError [%ld/%08X]", lpRequest, &(lpRequest->cRequest->cHttpCmn),
-        &(lpRequest->cResponse->cHttpCmn), nErrorCode, hrErrorCode);
+    Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateError [%ld/%08X]", lpRequest, lpRequest->hConn, hrErrorCode);
   }
   return hRes;
 }
@@ -1161,16 +1203,16 @@ VOID CHttpServer::OnAfterSendResponse(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVO
   {
     if (ShouldLog(1) != FALSE)
     {
-      Log(L"HttpServer(OnAfterSendResponse/0x%p/0x%p/0x%p): Closing", lpRequest, &(lpRequest->cRequest->cHttpCmn),
-          &(lpRequest->cResponse->cHttpCmn));
+      Log(L"HttpServer(OnAfterSendResponse/Req:0x%p/Conn:0x%p): Closing", lpRequest, lpRequest->hConn);
     }
     cSocketMgr.Close(lpRequest->hConn);
   }
   return;
 }
 
-HRESULT CHttpServer::GenerateErrorPage(_Out_ CStringA &cStrResponseA, _In_ CClientRequest *lpRequest, _In_ LONG nErrorCode,
-                                       _In_ HRESULT hrErrorCode, _In_opt_z_ LPCSTR szBodyExplanationA)
+HRESULT CHttpServer::GenerateErrorPage(_Out_ CStringA &cStrResponseA, _In_ CClientRequest *lpRequest,
+                                       _In_ LONG nErrorCode, _In_ HRESULT hrErrorCode,
+                                       _In_opt_z_ LPCSTR szBodyExplanationA)
 {
   CDateTime cDtNow;
   LPCSTR szErrMsgA;
@@ -1196,19 +1238,19 @@ HRESULT CHttpServer::GenerateErrorPage(_Out_ CStringA &cStrResponseA, _In_ CClie
     nHttpVersion[0] = 1;
     nHttpVersion[1] = 0;
   }
-  if (cStrResponseA.Format("HTTP/%d.%d %03d %s\r\nServer:%s\r\n", nHttpVersion[0], nHttpVersion[1], nErrorCode,
+  if (cStrResponseA.Format("HTTP/%d.%d %03d %s\r\nServer: %s\r\n", nHttpVersion[0], nHttpVersion[1], nErrorCode,
                            szErrMsgA, szServerInfoA) == FALSE)
   {
     return E_OUTOFMEMORY;
   }
   if (SUCCEEDED(hrErrorCode))
   {
-    if (cStrResponseA.AppendFormat("X-ErrorCode:0x%08X\r\n", hrErrorCode) == FALSE)
+    if (cStrResponseA.AppendFormat("X-ErrorCode: 0x%08X\r\n", hrErrorCode) == FALSE)
       return E_OUTOFMEMORY;
   }
   hRes = cDtNow.SetFromNow(FALSE);
   if (SUCCEEDED(hRes))
-    hRes = cDtNow.AppendFormat(cStrResponseA, "Date:%a, %d %b %Y %H:%M:%S %z\r\n");
+    hRes = cDtNow.AppendFormat(cStrResponseA, "Date: %a, %d %b %Y %H:%M:%S %z\r\n");
   if (FAILED(hRes))
     return hRes;
   if (bHasBody != FALSE)
@@ -1219,7 +1261,7 @@ HRESULT CHttpServer::GenerateErrorPage(_Out_ CStringA &cStrResponseA, _In_ CClie
       szBodyExplanationA = "";
     if (cStrBodyA.Format(szServerErrorFormatA, nErrorCode, szErrMsgA, nErrorCode, szErrMsgA,
                          szBodyExplanationA) == FALSE ||
-        cStrResponseA.AppendFormat("Cache-Control:private\r\nContent-Length:%Iu\r\nContent-Type:text/html\r\n\r\n",
+        cStrResponseA.AppendFormat("Cache-Control: private\r\nContent-Length: %Iu\r\nContent-Type: text/html\r\n\r\n",
                                    cStrBodyA.GetLength()) == FALSE ||
         cStrResponseA.ConcatN((LPCSTR)cStrBodyA, cStrBodyA.GetLength()) == FALSE)
     {
@@ -1458,8 +1500,7 @@ VOID CHttpServer::OnRequestEnding(_In_ CClientRequest *lpRequest, _In_ HRESULT h
     lpRequest->nState = CClientRequest::StateError;
     if (ShouldLog(1) != FALSE)
     {
-      Log(L"HttpServer(State/0x%p/0x%p/0x%p): StateError [%08X]", lpRequest, &(lpRequest->cRequest->cHttpCmn),
-          &(lpRequest->cResponse->cHttpCmn), hrErrorCode);
+      Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateError [%08X]", lpRequest, lpRequest->hConn, hrErrorCode);
     }
   }
   lpRequest->OnCleanup();

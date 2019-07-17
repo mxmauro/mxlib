@@ -21,19 +21,227 @@
  *    c. Distribute, sub-license, rent, lease, loan [or grant any third party
  *       access to or use of the software to any third party.
  **/
-#include "HostResolverCommon.h"
+#include "..\..\Include\Comm\HostResolver.h"
+#include "..\..\Include\WaitableObjects.h"
+#include "..\..\Include\Threads.h"
+#include "..\..\Include\RefCounted.h"
+#include "..\..\Include\AutoPtr.h"
+#include "..\..\Include\Strings\Strings.h"
+#include "..\..\Include\Finalizer.h"
+#include "..\..\Include\Http\punycode.h"
+#include "..\..\Include\RedBlackTree.h"
+#include "..\..\Include\TimedEvent.h"
+#include <ws2def.h>
+#include <VersionHelpers.h>
 
 #pragma comment(lib, "ws2_32.lib")
 
+#define _FLAG_Canceled                                0x0001
+#define _FLAG_Completed                               0x0002
+
+#define HOSTRESOLVER_FINALIZER_PRIORITY                10020
+#define MAX_ITEMS_IN_FREE_LIST                           128
+
+#define S_DONE                               ((HRESULT)100L)
+
 //-----------------------------------------------------------
+
 typedef struct tagSYNC_RESOLVE {
   MX::CWindowsEvent cEvent;
   SOCKADDR_INET *lpAddr;
   HRESULT volatile hRes;
 } SYNC_RESOLVE, *LPSYNC_RESOLVE;
 
+typedef struct addrinfoexW {
+  int                 ai_flags;       // AI_PASSIVE, AI_CANONNAME, AI_NUMERICHOST
+  int                 ai_family;      // PF_xxx
+  int                 ai_socktype;    // SOCK_xxx
+  int                 ai_protocol;    // 0 or IPPROTO_xxx for IPv4 and IPv6
+  size_t              ai_addrlen;     // Length of ai_addr
+  PWSTR               ai_canonname;   // Canonical name for nodename
+  _Field_size_bytes_(ai_addrlen) struct sockaddr *ai_addr;        // Binary address
+  _Field_size_(ai_bloblen) void *ai_blob;
+  size_t              ai_bloblen;
+  LPGUID              ai_provider;
+  struct addrinfoexW *ai_next;        // Next structure in linked list
+} ADDRINFOEXW, *PADDRINFOEXW, *LPADDRINFOEXW;
+
 //-----------------------------------------------------------
 
+typedef INT (WSAAPI *lpfnGetAddrInfoExW)(_In_opt_ PCWSTR pName, _In_opt_ PCWSTR pServiceName, _In_ DWORD dwNameSpace,
+                                         _In_opt_ LPGUID lpNspId, _In_opt_ const ADDRINFOEXW *hints,
+                                         _Outptr_ PADDRINFOEXW *ppResult, _In_opt_ struct timeval *timeout,
+                                         _In_opt_ LPOVERLAPPED lpOverlapped, _In_opt_ LPVOID lpCompletionRoutine,
+                                         _Out_opt_ LPHANDLE lpNameHandle);
+typedef void (WSAAPI *lpfnFreeAddrInfoExW)(PADDRINFOEXW pAddrInfoEx);
+typedef INT (WSAAPI *lpfnGetAddrInfoExCancel)(_In_ LPHANDLE lpHandle);
+typedef INT (WSAAPI *lpfnGetAddrInfoExOverlappedResult)(_In_ LPOVERLAPPED lpOverlapped);
+
+//-----------------------------------------------------------
+
+namespace MX {
+
+namespace Internals {
+
+class CHostResolver : public TRefCounted<CBaseMemObj>
+{
+  MX_DISABLE_COPY_CONSTRUCTOR(CHostResolver);
+public:
+  class CAsyncItem : public TRedBlackTreeNode<CAsyncItem, ULONG>
+  {
+    MX_DISABLE_COPY_CONSTRUCTOR(CAsyncItem);
+  public:
+    CAsyncItem(_In_ CHostResolver *_lpResolver, _In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily,
+               _In_ DWORD dwTimeoutMs, _In_ PSOCKADDR_INET lpSockAddr, _In_ HostResolver::OnResultCallback cCallback,
+               _In_ LPVOID lpUserData,
+               _In_ lpfnFreeAddrInfoExW _fnFreeAddrInfoExW) : TRedBlackTreeNode<CAsyncItem, ULONG>()
+      {
+      lpResolver = _lpResolver;
+      fnFreeAddrInfoExW = _fnFreeAddrInfoExW;
+      hCancel = NULL;
+      lpAddrInfoExW = NULL;
+      MemSet(&(sOvr), 0, sizeof(sOvr));
+      Setup(szHostNameW, nDesiredFamily, dwTimeoutMs, lpSockAddr, cCallback, lpUserData);
+      return;
+      };
+
+    ~CAsyncItem()
+      {
+      ResetAsync();
+      return;
+      };
+
+    virtual ULONG GetNodeKey() const
+      {
+      return (ULONG)nId;
+      };
+
+    VOID Setup(_In_z_ LPCWSTR szHostNameW, _In_ int _nDesiredFamily, _In_ DWORD _dwTimeoutMs,
+               _In_ PSOCKADDR_INET _lpSockAddr, _In_ HostResolver::OnResultCallback _cCallback, _In_ LPVOID _lpUserData)
+      {
+      nId = 0;
+      cStrHostNameW.Empty();
+      cStrHostNameW.Copy(szHostNameW);
+      nDesiredFamily = _nDesiredFamily;
+      dwTimeoutMs = _dwTimeoutMs;
+      cCallback = _cCallback;
+      lpUserData = _lpUserData;
+      _InterlockedExchange(&nFlags, 0);
+      lpSockAddr = _lpSockAddr;
+      hr = S_FALSE;
+      lpNextInFreeList = NULL;
+      return;
+      };
+
+    __inline VOID WaitUntilCompleted()
+      {
+      while ((__InterlockedRead(&nFlags) & _FLAG_Completed) == 0)
+        ::MxSleep(1);
+      return;
+      };
+
+    __inline VOID InvokeCallback()
+      {
+      cCallback(nId, lpSockAddr, hr, lpUserData);
+      return;
+      };
+
+    VOID ResetAsync()
+      {
+      if (lpAddrInfoExW != NULL)
+      {
+        fnFreeAddrInfoExW(lpAddrInfoExW);
+        lpAddrInfoExW = NULL;
+      }
+      hCancel = NULL;
+      MemSet(&(sOvr), 0, sizeof(sOvr));
+      return;
+      };
+
+  public:
+    CHostResolver *lpResolver;
+    lpfnFreeAddrInfoExW fnFreeAddrInfoExW;
+    LONG nId;
+    CStringW cStrHostNameW;
+    int nDesiredFamily;
+    DWORD dwTimeoutMs;
+    HostResolver::OnResultCallback cCallback;
+    LPVOID lpUserData;
+    LONG volatile nFlags;
+    PSOCKADDR_INET lpSockAddr;
+    HRESULT hr;
+    OVERLAPPED sOvr;
+    HANDLE hCancel;
+    PADDRINFOEXW lpAddrInfoExW;
+    CAsyncItem *lpNextInFreeList;
+  };
+
+public:
+  CHostResolver();
+  ~CHostResolver();
+
+  static CHostResolver* Get();
+  static VOID Shutdown();
+
+  HRESULT AddResolver(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _Out_ PSOCKADDR_INET lpSockAddr,
+                      _In_ DWORD dwTimeoutMs, _In_opt_ HostResolver::OnResultCallback cCallback,
+                      _In_opt_ LPVOID lpUserData, _Out_opt_ LONG volatile *lpnResolverId);
+  HRESULT AddResolver(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _Out_ PSOCKADDR_INET lpSockAddr,
+                      _In_ DWORD dwTimeoutMs, _In_opt_ HostResolver::OnResultCallback cCallback,
+                      _In_opt_ LPVOID lpUserData, _Out_ LONG volatile *lpnResolverId);
+  HRESULT AddResolverCommon(_Out_ LONG volatile *lpnResolverId, _In_ CAsyncItem *lpNewAsyncItem);
+  VOID RemoveResolver(_Out_ LONG volatile *lpnResolverId);
+
+private:
+  CAsyncItem* AllocAsyncItem(_In_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _In_ DWORD dwTimeoutMs,
+                             _Out_ PSOCKADDR_INET lpSockAddr, _In_ HostResolver::OnResultCallback cCallback,
+                             _In_ LPVOID lpUserData);
+  VOID FreeAsyncItem(_In_ CAsyncItem *lpAsyncItem);
+
+  static VOID WINAPI AsyncQueryCompleteCallback(_In_ DWORD dwError, _In_ DWORD dwBytes, _In_ LPOVERLAPPED lpOvr);
+  VOID CompleteAsync(_In_ CAsyncItem *lpAsyncItem, _In_ DWORD dwError);
+
+  HRESULT ProcessResultsA(_In_ PSOCKADDR_INET lpSockAddr, _In_ PADDRINFOA lpAddrInfoA, _In_ int nFamily);
+  HRESULT ProcessResultsExW(_In_ PSOCKADDR_INET lpSockAddr, _In_ PADDRINFOEXW lpAddrInfoExW, _In_ int nFamily);
+
+private:
+  LONG volatile nRundownLock;
+  LONG volatile nNextResolverId;
+  HINSTANCE hWs2_32Dll;
+  lpfnGetAddrInfoExW fnGetAddrInfoExW;
+  lpfnFreeAddrInfoExW fnFreeAddrInfoExW;
+  lpfnGetAddrInfoExCancel fnGetAddrInfoExCancel;
+  lpfnGetAddrInfoExOverlappedResult fnGetAddrInfoExOverlappedResult;
+  struct {
+    LONG volatile nMutex;
+    TRedBlackTree<CAsyncItem, ULONG> cTree;
+  } sAsyncTasks;
+  struct {
+    LONG volatile nMutex;
+    CAsyncItem *lpFirst;
+    int nListCount;
+  } sFreeAsyncItems;
+};
+
+} //namespace Internals
+
+} //namespace MX
+
+//-----------------------------------------------------------
+
+static LONG volatile nHostResolverRwMutex = 0;
+static MX::Internals::CHostResolver *lpHostResolver = NULL;
+
+//-----------------------------------------------------------
+
+static __inline HRESULT MX_HRESULT_FROM_LASTSOCKETERROR()
+{
+  HRESULT hRes = MX_HRESULT_FROM_WIN32(::WSAGetLastError());
+  return (hRes != MX_HRESULT_FROM_WIN32(WSAEWOULDBLOCK)) ? hRes : MX_E_IoPending;
+}
+
+static VOID OnSyncResolution(_In_ LONG nResolverId, _In_ SOCKADDR_INET &sAddr, _In_ HRESULT hrErrorCode,
+                             _In_ LPVOID lpUserData);
 static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCSTR szStrA, _In_ SIZE_T nLen);
 static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCWSTR szStrW, _In_ SIZE_T nLen);
 
@@ -45,93 +253,57 @@ static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCWSTR szStrW, _In_
 
 namespace MX {
 
-CHostResolver::CHostResolver() : CBaseMemObj()
+namespace HostResolver {
+
+HRESULT Resolve(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _Out_ PSOCKADDR_INET lpSockAddr,
+                _In_ DWORD dwTimeoutMs, _In_opt_ OnResultCallback cCallback, _In_opt_ LPVOID lpUserData,
+                _Out_opt_ LONG volatile *lpnResolverId)
 {
-  lpInternal = MX::Internals::CIPAddressResolver::Get();
-  return;
-}
+  TAutoRefCounted<Internals::CHostResolver> cHandler;
 
-CHostResolver::~CHostResolver()
-{
-  Cancel();
-  if (lpInternal != NULL)
-    __resolver->Release();
-  return;
-}
+  if (lpSockAddr != NULL)
+    MemSet(lpSockAddr, 0, sizeof(SOCKADDR_INET));
+  if (lpnResolverId != NULL)
+    _InterlockedExchange(lpnResolverId, 0);
 
-HRESULT CHostResolver::Resolve(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _Out_ SOCKADDR_INET &sAddr)
-{
-  SYNC_RESOLVE sSyncData;
-  HRESULT hRes;
-
-  MemSet(&sAddr, 0, sizeof(sAddr));
-
-  sSyncData.lpAddr = &sAddr;
-  sSyncData.hRes = E_FAIL;
-  hRes = sSyncData.cEvent.Create(TRUE, FALSE);
-  if (SUCCEEDED(hRes))
-  {
-    hRes = ResolveAsync(szHostNameA, nDesiredFamily, INFINITE,
-                        MX_BIND_MEMBER_CALLBACK(&CHostResolver::OnSyncResolution, this), &sSyncData);
-    if (SUCCEEDED(hRes))
-      hRes = __InterlockedRead(&(sSyncData.hRes));
-  }
-  //done
-  return hRes;
-}
-
-HRESULT CHostResolver::Resolve(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _Out_ SOCKADDR_INET &sAddr)
-{
-  SYNC_RESOLVE sSyncData;
-  HRESULT hRes;
-
-  MemSet(&sAddr, 0, sizeof(sAddr));
-
-  sSyncData.lpAddr = &sAddr;
-  sSyncData.hRes = E_FAIL;
-  hRes = sSyncData.cEvent.Create(TRUE, FALSE);
-  if (SUCCEEDED(hRes))
-  {
-    hRes = ResolveAsync(szHostNameW, nDesiredFamily, INFINITE,
-                        MX_BIND_MEMBER_CALLBACK(&CHostResolver::OnSyncResolution, this), &sSyncData);
-    if (SUCCEEDED(hRes))
-      hRes = __InterlockedRead(&(sSyncData.hRes));
-  }
-  //done
-  return hRes;
-}
-
-HRESULT CHostResolver::ResolveAsync(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _In_ DWORD dwTimeoutMs,
-                                    _In_ OnResultCallback cCallback, _In_opt_ LPVOID lpUserData)
-{
-  if (lpInternal == NULL)
+  cHandler.Attach(Internals::CHostResolver::Get());
+  if (!cHandler)
     return E_OUTOFMEMORY;
-  return __resolver->Resolve(this, szHostNameA, nDesiredFamily, dwTimeoutMs, cCallback, lpUserData);
+  return cHandler->AddResolver(szHostNameA, nDesiredFamily, lpSockAddr, dwTimeoutMs, cCallback, lpUserData,
+                               lpnResolverId);
 }
 
-HRESULT CHostResolver::ResolveAsync(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _In_ DWORD dwTimeoutMs,
-                                    _In_ OnResultCallback cCallback, _In_opt_ LPVOID lpUserData)
+HRESULT Resolve(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _Out_ PSOCKADDR_INET lpSockAddr,
+                _In_ DWORD dwTimeoutMs, _In_opt_ OnResultCallback cCallback, _In_opt_ LPVOID lpUserData,
+                _Out_opt_ LONG volatile *lpnResolverId)
 {
-  CStringA cStrTempA;
-  HRESULT hRes;
+  TAutoRefCounted<Internals::CHostResolver> cHandler;
 
-  if (szHostNameW == NULL)
-    return E_POINTER;
-  hRes = Punycode_Encode(cStrTempA, szHostNameW);
-  if (SUCCEEDED(hRes))
-    hRes = ResolveAsync((LPCSTR)cStrTempA, nDesiredFamily, dwTimeoutMs, cCallback, lpUserData);
-  return hRes;
+  if (lpSockAddr != NULL)
+    MemSet(lpSockAddr, 0, sizeof(SOCKADDR_INET));
+  if (lpnResolverId != NULL)
+    _InterlockedExchange(lpnResolverId, 0);
+
+  cHandler.Attach(Internals::CHostResolver::Get());
+  if (!cHandler)
+    return E_OUTOFMEMORY;
+  return cHandler->AddResolver(szHostNameW, nDesiredFamily, lpSockAddr, dwTimeoutMs, cCallback, lpUserData,
+                               lpnResolverId);
 }
 
-VOID CHostResolver::Cancel()
+VOID Cancel(_Inout_ LONG volatile *lpnResolverId)
 {
-  if (lpInternal != NULL)
-    __resolver->Cancel(this);
+  TAutoRefCounted<Internals::CHostResolver> cHandler;
+
+  cHandler.Attach(Internals::CHostResolver::Get());
+  if (cHandler)
+    cHandler->RemoveResolver(lpnResolverId);
+  else if (lpnResolverId != NULL)
+    _InterlockedExchange(lpnResolverId, 0);
   return;
 }
 
-BOOL CHostResolver::IsValidIPV4(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen,
-                                _Out_opt_ PSOCKADDR_INET lpAddress)
+BOOL IsValidIPV4(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen, _Out_opt_ PSOCKADDR_INET lpAddress)
 {
   SIZE_T i, j, nLen, nBlocksCount;
   DWORD dw, dwBase, dwValue, dwTempValue;
@@ -150,10 +322,11 @@ BOOL CHostResolver::IsValidIPV4(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddre
     return FALSE;
   if (nAddressLen == (SIZE_T)-1)
     nAddressLen = MX::StrLenA(szAddressA);
-  for (nBlocksCount=0; nBlocksCount<4; nBlocksCount++)
+  for (nBlocksCount = 0; nBlocksCount < 4; nBlocksCount++)
   {
     sBlocks[nBlocksCount].szStartA = szAddressA;
-    for (nLen=0; nLen<nAddressLen && szAddressA[nLen]!='.' && szAddressA[nLen]!='/' && szAddressA[nLen]!='%';
+    for (nLen = 0;
+         nLen < nAddressLen && szAddressA[nLen] != '.' && szAddressA[nLen] != '/' && szAddressA[nLen] != '%';
          nLen++);
     {
       sBlocks[nBlocksCount].nLen = nLen;
@@ -165,12 +338,12 @@ BOOL CHostResolver::IsValidIPV4(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddre
     }
     if (nBlocksCount == 3)
       return FALSE;
-    szAddressA += nLen+1;
-    nAddressLen -= nLen+1;
+    szAddressA += nLen + 1;
+    nAddressLen -= nLen + 1;
   }
   if (nBlocksCount < 2)
     return FALSE;
-  for (i=0; i<nBlocksCount; i++)
+  for (i = 0; i < nBlocksCount; i++)
   {
     dwValue = 0;
     dwBase = 10;
@@ -193,7 +366,7 @@ BOOL CHostResolver::IsValidIPV4(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddre
         sBlocks[i].nLen--;
       }
     }
-    for (j=0; j<sBlocks[i].nLen; j++,sA++)
+    for (j = 0; j < sBlocks[i].nLen; j++,sA++)
     {
       if (*sA >= '0' && *sA <= '9')
         dw = (DWORD)(*sA - '0');
@@ -212,7 +385,7 @@ BOOL CHostResolver::IsValidIPV4(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddre
       if (dwValue < dwTempValue)
         return FALSE; //if overflow, not a valid ipv4 address
     }
-    if (i < nBlocksCount-1)
+    if (i < nBlocksCount - 1)
     {
       if (dwValue > 255)
         return FALSE;
@@ -224,15 +397,14 @@ BOOL CHostResolver::IsValidIPV4(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddre
     if (lpAddress != NULL)
     {
       LPBYTE d = (LPBYTE)&(lpAddress->Ipv4.sin_addr.S_un.S_un_b.s_b1);
-      for (j=0; dwValue>0; j++,dwValue/=0x100)
-        d[i-j] = (BYTE)(dwValue & 0xFF);
+      for (j = 0; dwValue > 0; j++,dwValue /= 0x100)
+        d[i - j] = (BYTE)(dwValue & 0xFF);
     }
   }
   return TRUE;
 }
 
-BOOL CHostResolver::IsValidIPV4(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen,
-                                _Out_opt_ PSOCKADDR_INET lpAddress)
+BOOL IsValidIPV4(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen, _Out_opt_ PSOCKADDR_INET lpAddress)
 {
   SIZE_T i, j, nLen, nBlocksCount;
   DWORD dw, dwBase, dwValue, dwTempValue;
@@ -251,10 +423,11 @@ BOOL CHostResolver::IsValidIPV4(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddr
     return FALSE;
   if (nAddressLen == (SIZE_T)-1)
     nAddressLen = MX::StrLenW(szAddressW);
-  for (nBlocksCount=0; nBlocksCount<4; nBlocksCount++)
+  for (nBlocksCount = 0; nBlocksCount < 4; nBlocksCount++)
   {
     sBlocks[nBlocksCount].szStartW = szAddressW;
-    for (nLen=0; nLen<nAddressLen && szAddressW[nLen]!=L'.' && szAddressW[nLen]!=L'/' && szAddressW[nLen]!=L'%';
+    for (nLen = 0;
+         nLen < nAddressLen && szAddressW[nLen] != L'.' && szAddressW[nLen] != L'/' && szAddressW[nLen] != L'%';
          nLen++);
     {
       sBlocks[nBlocksCount].nLen = nLen;
@@ -266,12 +439,12 @@ BOOL CHostResolver::IsValidIPV4(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddr
     }
     if (nBlocksCount == 3)
       return FALSE;
-    szAddressW += nLen+1;
-    nAddressLen -= nLen+1;
+    szAddressW += nLen + 1;
+    nAddressLen -= nLen + 1;
   }
   if (nBlocksCount < 2)
     return FALSE;
-  for (i=0; i<nBlocksCount; i++)
+  for (i = 0; i < nBlocksCount; i++)
   {
     dwValue = 0;
     dwBase = 10;
@@ -294,7 +467,7 @@ BOOL CHostResolver::IsValidIPV4(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddr
         sBlocks[i].nLen--;
       }
     }
-    for (j=0; j<sBlocks[i].nLen; j++,sW++)
+    for (j = 0; j < sBlocks[i].nLen; j++,sW++)
     {
       if (*sW >= L'0' && *sW <= L'9')
         dw = (DWORD)(*sW - L'0');
@@ -325,15 +498,14 @@ BOOL CHostResolver::IsValidIPV4(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddr
     if (lpAddress != NULL)
     {
       LPBYTE d = (LPBYTE)&(lpAddress->Ipv4.sin_addr.S_un.S_un_b.s_b1);
-      for (j=0; dwValue>0; j++,dwValue/=0x100)
-        d[i-j] = (BYTE)(dwValue & 0xFF);
+      for (j = 0; dwValue > 0; j++,dwValue /= 0x100)
+        d[i - j] = (BYTE)(dwValue & 0xFF);
     }
   }
   return TRUE;
 }
 
-BOOL CHostResolver::IsValidIPV6(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen,
-                                _Out_opt_ PSOCKADDR_INET lpAddress)
+BOOL IsValidIPV6(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen, _Out_opt_ PSOCKADDR_INET lpAddress)
 {
   SIZE_T i, k, nSlots, nLastColonPos;
   BOOL bIPv4, bIPv6;
@@ -350,12 +522,12 @@ BOOL CHostResolver::IsValidIPV6(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddre
   if (nAddressLen == (SIZE_T)-1)
     nAddressLen = StrLenA(szAddressA);
   w = lpAddress->Ipv6.sin6_addr.u.Word;
-  if (nAddressLen >= 2 && szAddressA[0] == '[' && szAddressA[nAddressLen-1] == ']')
+  if (nAddressLen >= 2 && szAddressA[0] == '[' && szAddressA[nAddressLen - 1] == ']')
   {
     szAddressA++;
     nAddressLen -= 2;
   }
-  for (i=0; i<nAddressLen; i++)
+  for (i = 0; i < nAddressLen; i++)
   {
     if (szAddressA[i] == '/' || szAddressA[i] == '%')
     {
@@ -366,9 +538,9 @@ BOOL CHostResolver::IsValidIPV6(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddre
   if (nAddressLen < 2)
     return FALSE;
   //IPv4 inside?
-  for (nLastColonPos=nAddressLen; nLastColonPos>0; nLastColonPos--)
+  for (nLastColonPos = nAddressLen; nLastColonPos > 0; nLastColonPos--)
   {
-    if (szAddressA[nLastColonPos-1] == ':')
+    if (szAddressA[nLastColonPos - 1] == ':')
       break;
   }
   if (nLastColonPos == 0)
@@ -376,16 +548,16 @@ BOOL CHostResolver::IsValidIPV6(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddre
   nLastColonPos--;
   bIPv4 = FALSE;
   nSlots = 0;
-  if (nLastColonPos < nAddressLen-1)
+  if (nLastColonPos < nAddressLen - 1)
   {
     SOCKADDR_INET sTempAddrV4;
 
-    if (IsValidIPV4(szAddressA+nLastColonPos+1, nAddressLen-nLastColonPos-1, &sTempAddrV4) != FALSE)
+    if (IsValidIPV4(szAddressA + nLastColonPos + 1, nAddressLen - nLastColonPos - 1, &sTempAddrV4) != FALSE)
     {
       w[6] = sTempAddrV4.Ipv4.sin_addr.S_un.S_un_w.s_w1;
       w[7] = sTempAddrV4.Ipv4.sin_addr.S_un.S_un_w.s_w2;
       nAddressLen = nLastColonPos;
-      if (nLastColonPos > 0 && szAddressA[nLastColonPos-1] == ':')
+      if (nLastColonPos > 0 && szAddressA[nLastColonPos - 1] == ':')
         nAddressLen++;
       bIPv4 = TRUE;
       nSlots = 2;
@@ -399,27 +571,27 @@ BOOL CHostResolver::IsValidIPV6(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddre
     SIZE_T nPos, nLeftSlots, nRightSlots;
 
     nPos = (SIZE_T)(sA - szAddressA);
-    nRightSlots = Helper_IPv6_Fill(w, szAddressA+nPos+2, nAddressLen-nPos-2);
-    if (nRightSlots == (SIZE_T)-1 || nRightSlots+nSlots > 8)
+    nRightSlots = Helper_IPv6_Fill(w, szAddressA + nPos + 2, nAddressLen - nPos - 2);
+    if (nRightSlots == (SIZE_T)-1 || nRightSlots + nSlots > 8)
       return FALSE;
     k = 8 - nSlots - nRightSlots;
-    for (i=nRightSlots; i>0; i--)
+    for (i = nRightSlots; i > 0; i--)
     {
-      w[i+k-1] = w[i-1];
-      w[i-1] = 0;
+      w[i + k - 1] = w[i - 1];
+      w[i - 1] = 0;
     }
     nLeftSlots = Helper_IPv6_Fill(w, szAddressA, nPos);
-    if (nLeftSlots == (SIZE_T)-1 || nLeftSlots+nRightSlots+nSlots > 7)
+    if (nLeftSlots == (SIZE_T)-1 || nLeftSlots + nRightSlots + nSlots > 7)
       return FALSE;
   }
   else
   {
-    if (Helper_IPv6_Fill(w, szAddressA, nAddressLen) != 8-nSlots)
+    if (Helper_IPv6_Fill(w, szAddressA, nAddressLen) != 8 - nSlots)
       return FALSE;
   }
   //Now check the results in the bIPv6-address range only
   bIPv6 = FALSE;
-  for (i=0; i<nSlots; i++)
+  for (i = 0; i < nSlots; i++)
   {
     if (w[i] != 0 || (i == 5 && w[i] != 0xFFFF))
       bIPv6 = TRUE;
@@ -427,7 +599,7 @@ BOOL CHostResolver::IsValidIPV6(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddre
   //check IPv4 validity
   if (bIPv4 != FALSE && bIPv6 == FALSE)
   {
-    for (i=0; i<5; i++)
+    for (i = 0; i < 5; i++)
     {
       if (w[i] != 0)
         return FALSE;
@@ -438,8 +610,7 @@ BOOL CHostResolver::IsValidIPV6(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddre
   return TRUE;
 }
 
-BOOL CHostResolver::IsValidIPV6(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen,
-                                _Out_opt_ PSOCKADDR_INET lpAddress)
+BOOL IsValidIPV6(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen, _Out_opt_ PSOCKADDR_INET lpAddress)
 {
   SIZE_T i, k, nSlots, nLastColonPos;
   BOOL bIPv4, bIPv6;
@@ -456,12 +627,12 @@ BOOL CHostResolver::IsValidIPV6(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddr
   if (nAddressLen == (SIZE_T)-1)
     nAddressLen = StrLenW(szAddressW);
   w = lpAddress->Ipv6.sin6_addr.u.Word;
-  if (nAddressLen >= 2 && szAddressW[0] == L'[' && szAddressW[nAddressLen-1] == L']')
+  if (nAddressLen >= 2 && szAddressW[0] == L'[' && szAddressW[nAddressLen - 1] == L']')
   {
     szAddressW++;
     nAddressLen -= 2;
   }
-  for (i=0; i<nAddressLen; i++)
+  for (i = 0; i < nAddressLen; i++)
   {
     if (szAddressW[i] == L'/' || szAddressW[i] == L'%')
     {
@@ -472,9 +643,9 @@ BOOL CHostResolver::IsValidIPV6(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddr
   if (nAddressLen < 2)
     return FALSE;
   //IPv4 inside?
-  for (nLastColonPos=nAddressLen; nLastColonPos>0; nLastColonPos--)
+  for (nLastColonPos = nAddressLen; nLastColonPos > 0; nLastColonPos--)
   {
-    if (szAddressW[nLastColonPos-1] == L':')
+    if (szAddressW[nLastColonPos - 1] == L':')
       break;
   }
   if (nLastColonPos == 0)
@@ -482,16 +653,16 @@ BOOL CHostResolver::IsValidIPV6(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddr
   nLastColonPos--;
   bIPv4 = FALSE;
   nSlots = 0;
-  if (nLastColonPos < nAddressLen-1)
+  if (nLastColonPos < nAddressLen - 1)
   {
     SOCKADDR_INET sTempAddrV4;
 
-    if (IsValidIPV4(szAddressW+nLastColonPos+1, nAddressLen-nLastColonPos-1, &sTempAddrV4) != FALSE)
+    if (IsValidIPV4(szAddressW + nLastColonPos + 1, nAddressLen - nLastColonPos - 1, &sTempAddrV4) != FALSE)
     {
       w[6] = sTempAddrV4.Ipv4.sin_addr.S_un.S_un_w.s_w1;
       w[7] = sTempAddrV4.Ipv4.sin_addr.S_un.S_un_w.s_w2;
       nAddressLen = nLastColonPos;
-      if (nLastColonPos > 0 && szAddressW[nLastColonPos-1] == L':')
+      if (nLastColonPos > 0 && szAddressW[nLastColonPos - 1] == L':')
         nAddressLen++;
       bIPv4 = TRUE;
       nSlots = 2;
@@ -504,28 +675,28 @@ BOOL CHostResolver::IsValidIPV6(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddr
   {
     SIZE_T nPos, nLeftSlots, nRightSlots;
 
-    nPos = (SIZE_T)(sW-szAddressW);
-    nRightSlots = Helper_IPv6_Fill(w, szAddressW+nPos+2, nAddressLen-nPos-2);
-    if (nRightSlots == (SIZE_T)-1 || nRightSlots+nSlots > 8)
+    nPos = (SIZE_T)(sW - szAddressW);
+    nRightSlots = Helper_IPv6_Fill(w, szAddressW + nPos + 2, nAddressLen - nPos - 2);
+    if (nRightSlots == (SIZE_T)-1 || nRightSlots + nSlots > 8)
       return FALSE;
     k = 8 - nSlots - nRightSlots;
-    for (i=nRightSlots; i>0; i--)
+    for (i = nRightSlots; i > 0; i--)
     {
-      w[i+k-1] = w[i-1];
-      w[i-1] = 0;
+      w[i + k - 1] = w[i - 1];
+      w[i - 1] = 0;
     }
     nLeftSlots = Helper_IPv6_Fill(w, szAddressW, nPos);
-    if (nLeftSlots == (SIZE_T)-1 || nLeftSlots+nRightSlots+nSlots > 7)
+    if (nLeftSlots == (SIZE_T)-1 || nLeftSlots + nRightSlots + nSlots > 7)
       return FALSE;
   }
   else
   {
-    if (Helper_IPv6_Fill(w, szAddressW, nAddressLen) != 8-nSlots)
+    if (Helper_IPv6_Fill(w, szAddressW, nAddressLen) != 8 - nSlots)
       return FALSE;
   }
   //Now check the results in the bIPv6-address range only
   bIPv6 = FALSE;
-  for (i=0; i<nSlots; i++)
+  for (i = 0; i < nSlots; i++)
   {
     if (w[i] != 0 || (i == 5 && w[i] != 0xFFFF))
       bIPv6 = TRUE;
@@ -533,7 +704,7 @@ BOOL CHostResolver::IsValidIPV6(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddr
   //check IPv4 validity
   if (bIPv4 != FALSE && bIPv6 == FALSE)
   {
-    for (i=0; i<5; i++)
+    for (i = 0; i < 5; i++)
     {
       if (w[i] != 0)
         return FALSE;
@@ -544,20 +715,586 @@ BOOL CHostResolver::IsValidIPV6(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddr
   return TRUE;
 }
 
-VOID CHostResolver::OnSyncResolution(_In_ CHostResolver *lpResolver, _In_ SOCKADDR_INET &sAddr,
-                                     _In_ HRESULT hrErrorCode, _In_opt_ LPVOID lpUserData)
-{
-  LPSYNC_RESOLVE lpSyncData = (LPSYNC_RESOLVE)lpUserData;
-
-  MemCopy(lpSyncData->lpAddr, &sAddr, sizeof(sAddr));
-  _InterlockedExchange(&(lpSyncData->hRes), hrErrorCode);
-  lpSyncData->cEvent.Set();
-  return;
-}
+} //namespace HostResolver
 
 } //namespace MX
 
 //-----------------------------------------------------------
+
+namespace MX {
+
+namespace Internals {
+
+CHostResolver::CHostResolver() : TRefCounted<CBaseMemObj>()
+{
+  WCHAR szDllNameW[4096];
+  DWORD dwLen;
+
+  RundownProt_Initialize(&nRundownLock);
+  _InterlockedExchange(&nNextResolverId, 0);
+
+  _InterlockedExchange(&(sAsyncTasks.nMutex), 0);
+  MemSet(&sFreeAsyncItems, 0, sizeof(sFreeAsyncItems));
+
+  hWs2_32Dll = NULL;
+  fnGetAddrInfoExW = NULL;
+  fnFreeAddrInfoExW = NULL;
+  fnGetAddrInfoExCancel = NULL;
+  fnGetAddrInfoExOverlappedResult = NULL;
+
+  dwLen = ::GetSystemDirectoryW(szDllNameW, MX_ARRAYLEN(szDllNameW) - 16);
+  if (dwLen > 0)
+  {
+    if (szDllNameW[dwLen - 1] != L'\\')
+      szDllNameW[dwLen++] = L'\\';
+    MX::MemCopy(szDllNameW + dwLen, L"ws2_32.dll", (10 + 1) * sizeof(WCHAR));
+    //load library
+    hWs2_32Dll = ::LoadLibraryW(szDllNameW);
+    if (hWs2_32Dll != NULL)
+    {
+      fnGetAddrInfoExW = (lpfnGetAddrInfoExW)::GetProcAddress(hWs2_32Dll, "GetAddrInfoExW");
+      fnFreeAddrInfoExW = (lpfnFreeAddrInfoExW)::GetProcAddress(hWs2_32Dll, "FreeAddrInfoExW");
+      if (::IsWindows8OrGreater() != FALSE)
+      {
+        fnGetAddrInfoExCancel = (lpfnGetAddrInfoExCancel)::GetProcAddress(hWs2_32Dll, "GetAddrInfoExCancel");
+        fnGetAddrInfoExOverlappedResult = (lpfnGetAddrInfoExOverlappedResult)
+          ::GetProcAddress(hWs2_32Dll, "GetAddrInfoExOverlappedResult");
+      }
+      if (fnGetAddrInfoExW == NULL || fnFreeAddrInfoExW == NULL)
+      {
+        fnGetAddrInfoExW = NULL;
+        fnFreeAddrInfoExW = NULL;
+        fnGetAddrInfoExCancel = NULL;
+        fnGetAddrInfoExOverlappedResult = NULL;
+
+        ::FreeLibrary(hWs2_32Dll);
+        hWs2_32Dll = NULL;
+      }
+      else if (fnGetAddrInfoExCancel == NULL || fnGetAddrInfoExOverlappedResult == NULL)
+      {
+        fnGetAddrInfoExCancel = NULL;
+        fnGetAddrInfoExOverlappedResult = NULL;
+      }
+    }
+  }
+  return;
+}
+
+CHostResolver::~CHostResolver()
+{
+  CAsyncItem *lpAsyncItem;
+
+  RundownProt_WaitForRelease(&nRundownLock);
+
+  //remove items in list
+  while ((lpAsyncItem = sAsyncTasks.cTree.GetFirst()) != NULL)
+  {
+    LONG volatile nId = lpAsyncItem->nId;
+    RemoveResolver(&nId);
+  }
+
+  //free list of items
+  while ((lpAsyncItem = sFreeAsyncItems.lpFirst) != NULL)
+  {
+    sFreeAsyncItems.lpFirst = lpAsyncItem->lpNextInFreeList;
+    delete lpAsyncItem;
+  }
+
+  //free library
+  if (hWs2_32Dll != NULL)
+    ::FreeLibrary(hWs2_32Dll);
+  return;
+}
+
+CHostResolver* CHostResolver::Get()
+{
+  CAutoSlimRWLShared cLock(&nHostResolverRwMutex);
+
+  if (lpHostResolver == NULL)
+  {
+    cLock.UpgradeToExclusive();
+
+    if (lpHostResolver == NULL)
+    {
+      CHostResolver *_lpHostResolver;
+
+      _lpHostResolver = MX_DEBUG_NEW CHostResolver();
+      if (_lpHostResolver == NULL)
+        return NULL;
+      //register shutdown callback
+      if (FAILED(MX::RegisterFinalizer(&CHostResolver::Shutdown, HOSTRESOLVER_FINALIZER_PRIORITY)))
+      {
+        _lpHostResolver->Release();
+        return NULL;
+      }
+      lpHostResolver = _lpHostResolver;
+    }
+  }
+  lpHostResolver->AddRef();
+  return lpHostResolver;
+}
+
+VOID CHostResolver::Shutdown()
+{
+  CAutoSlimRWLExclusive cLock(&nHostResolverRwMutex);
+
+  MX_RELEASE(lpHostResolver);
+  return;
+}
+
+HRESULT CHostResolver::AddResolver(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _Out_ PSOCKADDR_INET lpSockAddr,
+                                   _In_ DWORD dwTimeoutMs, _In_opt_ HostResolver::OnResultCallback cCallback,
+                                   _In_opt_ LPVOID lpUserData, _Out_opt_ LONG volatile *lpnResolverId)
+{
+  TAutoDeletePtr<CAsyncItem> cNewAsyncItem;
+  HRESULT hRes;
+
+  if (szHostNameA == NULL || lpSockAddr == NULL)
+    return E_POINTER;
+  if (*szHostNameA == 0 || (nDesiredFamily != AF_UNSPEC && nDesiredFamily != AF_INET && nDesiredFamily != AF_INET6))
+    return E_INVALIDARG;
+
+  {
+    CAutoRundownProtection cAutoRundownProt(&nRundownLock);
+    CStringW cStrTempW;
+
+    if (cAutoRundownProt.IsAcquired() == FALSE)
+      return MX_E_NotReady;
+
+    if (nDesiredFamily == AF_INET || nDesiredFamily == AF_UNSPEC)
+    {
+      if (HostResolver::IsValidIPV4(szHostNameA, StrLenA(szHostNameA), lpSockAddr) != FALSE)
+        return S_OK;
+    }
+    if (nDesiredFamily == AF_INET6 || nDesiredFamily == AF_UNSPEC)
+    {
+      if (HostResolver::IsValidIPV6(szHostNameA, StrLenA(szHostNameA), lpSockAddr) != FALSE)
+        return S_OK;
+    }
+
+    //solve sync if no callback or not cancelable function
+    if ((!cCallback) || fnGetAddrInfoExW == NULL || fnGetAddrInfoExCancel == NULL)
+    {
+      if (fnGetAddrInfoExW != NULL)
+      {
+        PADDRINFOEXW lpAddrInfoExW;
+        ADDRINFOEXW sHintAddrInfoExW;
+        timeval tv;
+        INT res;
+
+        if (cStrTempW.Copy(szHostNameA) == FALSE)
+          return E_OUTOFMEMORY;
+
+        tv.tv_sec = (long)(dwTimeoutMs / 1000);
+        tv.tv_usec = (long)(dwTimeoutMs % 1000);
+
+        MemSet(&sHintAddrInfoExW, 0, sizeof(sHintAddrInfoExW));
+        sHintAddrInfoExW.ai_family = nDesiredFamily;
+        res = fnGetAddrInfoExW((LPCWSTR)cStrTempW, NULL, NS_DNS, NULL, &sHintAddrInfoExW, &lpAddrInfoExW,
+                               ((dwTimeoutMs != INFINITE) ? &tv : NULL), NULL, NULL, NULL);
+        if (res == NO_ERROR)
+        {
+          //process results
+          hRes = ProcessResultsExW(lpSockAddr, lpAddrInfoExW, nDesiredFamily);
+
+          //free results
+          fnFreeAddrInfoExW(lpAddrInfoExW);
+        }
+        else
+        {
+          hRes = MX_HRESULT_FROM_WIN32((DWORD)res);
+        }
+      }
+      else
+      {
+        PADDRINFOA lpAddrInfoA;
+        ADDRINFOA sHintAddrInfoA;
+
+        MemSet(&sHintAddrInfoA, 0, sizeof(sHintAddrInfoA));
+        sHintAddrInfoA.ai_family = nDesiredFamily;
+        if (::getaddrinfo(szHostNameA, NULL, &sHintAddrInfoA, &lpAddrInfoA) != SOCKET_ERROR)
+        {
+          //process results
+          hRes = ProcessResultsA(lpSockAddr, lpAddrInfoA, nDesiredFamily);
+
+          //free results
+          ::freeaddrinfo(lpAddrInfoA);
+        }
+        else
+        {
+          hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
+        }
+      }
+      //done
+      return hRes;
+    }
+
+    //create a new async item
+    if (cStrTempW.Copy(szHostNameA) == FALSE)
+      return E_OUTOFMEMORY;
+    cNewAsyncItem.Attach(AllocAsyncItem((LPCWSTR)cStrTempW, nDesiredFamily, dwTimeoutMs, lpSockAddr, cCallback,
+                                        lpUserData));
+    if (!cNewAsyncItem)
+      return E_OUTOFMEMORY;
+
+    //jump to common code
+    return AddResolverCommon(lpnResolverId, cNewAsyncItem.Detach());
+  }
+}
+
+HRESULT CHostResolver::AddResolver(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _Out_ PSOCKADDR_INET lpSockAddr,
+                                   _In_ DWORD dwTimeoutMs, _In_opt_ HostResolver::OnResultCallback cCallback,
+                                   _In_opt_ LPVOID lpUserData, _Out_ LONG volatile *lpnResolverId)
+{
+  TAutoDeletePtr<CAsyncItem> cNewAsyncItem;
+  HRESULT hRes;
+
+  if (szHostNameW == NULL || lpSockAddr == NULL)
+    return E_POINTER;
+  if (*szHostNameW == 0 || (nDesiredFamily != AF_UNSPEC && nDesiredFamily != AF_INET && nDesiredFamily != AF_INET6))
+    return E_INVALIDARG;
+
+  {
+    CAutoRundownProtection cAutoRundownProt(&nRundownLock);
+
+    if (cAutoRundownProt.IsAcquired() == FALSE)
+      return MX_E_NotReady;
+
+    if (nDesiredFamily == AF_INET || nDesiredFamily == AF_UNSPEC)
+    {
+      if (HostResolver::IsValidIPV4(szHostNameW, StrLenW(szHostNameW), lpSockAddr) != FALSE)
+        return S_OK;
+    }
+    if (nDesiredFamily == AF_INET6 || nDesiredFamily == AF_UNSPEC)
+    {
+      if (HostResolver::IsValidIPV6(szHostNameW, StrLenW(szHostNameW), lpSockAddr) != FALSE)
+        return S_OK;
+    }
+
+    //solve sync if no callback or not cancelable function
+    if ((!cCallback) || fnGetAddrInfoExW == NULL || fnGetAddrInfoExCancel == NULL)
+    {
+      if (fnGetAddrInfoExW != NULL)
+      {
+        PADDRINFOEXW lpAddrInfoExW;
+        ADDRINFOEXW sHintAddrInfoExW;
+        timeval tv;
+        INT res;
+
+        tv.tv_sec = (long)(dwTimeoutMs / 1000);
+        tv.tv_usec = (long)(dwTimeoutMs % 1000);
+
+        MemSet(&sHintAddrInfoExW, 0, sizeof(sHintAddrInfoExW));
+        sHintAddrInfoExW.ai_family = nDesiredFamily;
+        res = fnGetAddrInfoExW(szHostNameW, NULL, NS_DNS, NULL, &sHintAddrInfoExW, &lpAddrInfoExW,
+                               ((dwTimeoutMs != INFINITE) ? &tv : NULL), NULL, NULL, NULL);
+        if (res == NO_ERROR)
+        {
+          //process results
+          hRes = ProcessResultsExW(lpSockAddr, lpAddrInfoExW, nDesiredFamily);
+
+          //free results
+          fnFreeAddrInfoExW(lpAddrInfoExW);
+        }
+        else
+        {
+          hRes = MX_HRESULT_FROM_WIN32((DWORD)res);
+        }
+      }
+      else
+      {
+        PADDRINFOA lpAddrInfoA;
+        ADDRINFOA sHintAddrInfoA;
+        CStringA cStrTempA;
+
+        hRes = Punycode_Encode(cStrTempA, szHostNameW);
+        if (FAILED(hRes))
+          return hRes;
+
+        MemSet(&sHintAddrInfoA, 0, sizeof(sHintAddrInfoA));
+        sHintAddrInfoA.ai_family = nDesiredFamily;
+        if (::getaddrinfo((LPCSTR)cStrTempA, NULL, &sHintAddrInfoA, &lpAddrInfoA) != SOCKET_ERROR)
+        {
+          //process results
+          hRes = ProcessResultsA(lpSockAddr, lpAddrInfoA, nDesiredFamily);
+
+          //free results
+          ::freeaddrinfo(lpAddrInfoA);
+        }
+        else
+        {
+          hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
+        }
+      }
+    }
+
+    //create a new async item
+    cNewAsyncItem.Attach(AllocAsyncItem(szHostNameW, nDesiredFamily, dwTimeoutMs, lpSockAddr, cCallback, lpUserData));
+    if (!cNewAsyncItem)
+      return E_OUTOFMEMORY;
+
+    //jump to common code
+    return AddResolverCommon(lpnResolverId, cNewAsyncItem.Detach());
+  }
+}
+
+HRESULT CHostResolver::AddResolverCommon(_Out_ LONG volatile *lpnResolverId, _In_ CAsyncItem *lpNewAsyncItem)
+{
+  //assign resolver id
+  do
+  {
+    lpNewAsyncItem->nId = _InterlockedIncrement(&nNextResolverId);
+  }
+  while (lpNewAsyncItem->nId == 0);
+
+  //insert into tree
+  {
+    CFastLock cQueueLock(&(sAsyncTasks.nMutex));
+    ADDRINFOEXW sHintAddrInfoExW;
+    timeval tv;
+    INT res;
+
+    _InterlockedExchange(lpnResolverId, lpNewAsyncItem->nId);
+
+    sAsyncTasks.cTree.Insert(lpNewAsyncItem, TRUE);
+
+    tv.tv_sec = (long)(lpNewAsyncItem->dwTimeoutMs / 1000);
+    tv.tv_usec = (long)(lpNewAsyncItem->dwTimeoutMs % 1000);
+
+    MemSet(&sHintAddrInfoExW, 0, sizeof(sHintAddrInfoExW));
+    sHintAddrInfoExW.ai_family = lpNewAsyncItem->nDesiredFamily;
+    res = fnGetAddrInfoExW((LPCWSTR)(lpNewAsyncItem->cStrHostNameW), NULL, NS_DNS, NULL, &sHintAddrInfoExW,
+                           &(lpNewAsyncItem->lpAddrInfoExW), ((lpNewAsyncItem->dwTimeoutMs != INFINITE) ? &tv : NULL),
+                           &(lpNewAsyncItem->sOvr), &CHostResolver::AsyncQueryCompleteCallback,
+                           &(lpNewAsyncItem->hCancel));
+    if (res != WSA_IO_PENDING && res != ERROR_IO_PENDING)
+    {
+      sAsyncTasks.cTree.Remove(lpNewAsyncItem);
+      FreeAsyncItem(lpNewAsyncItem);
+      return MX_HRESULT_FROM_WIN32((DWORD)res);
+    }
+  }
+
+  //done
+  return MX_E_IoPending;
+}
+
+VOID CHostResolver::RemoveResolver(_Out_ LONG volatile *lpnResolverId)
+{
+  if (lpnResolverId != NULL)
+  {
+    ULONG nResolver = (ULONG)_InterlockedExchange(lpnResolverId, 0);
+    CAsyncItem *lpAsyncItem = NULL;
+
+    if (nResolver != 0)
+    {
+      CFastLock cQueueLock(&(sAsyncTasks.nMutex));
+
+      lpAsyncItem = sAsyncTasks.cTree.Find(nResolver);
+      if (lpAsyncItem != NULL)
+      {
+        //only running async tasks are in the tree and can be canceled
+        _InterlockedOr(&(lpAsyncItem->nFlags), _FLAG_Canceled);
+
+        lpAsyncItem->RemoveNode();
+      }
+    }
+
+    if (lpAsyncItem != NULL)
+    {
+      fnGetAddrInfoExCancel(&(lpAsyncItem->hCancel));
+
+      lpAsyncItem->WaitUntilCompleted();
+      FreeAsyncItem(lpAsyncItem);
+    }
+  }
+  return;
+}
+
+CHostResolver::CAsyncItem* CHostResolver::AllocAsyncItem(_In_ LPCWSTR szHostNameW, _In_ int nDesiredFamily,
+                                                         _In_ DWORD dwTimeoutMs, _Out_ PSOCKADDR_INET lpSockAddr,
+                                                         _In_ HostResolver::OnResultCallback cCallback,
+                                                         _In_ LPVOID lpUserData)
+{
+  CFastLock cLock(&(sFreeAsyncItems.nMutex));
+  CAsyncItem *lpAsyncItem;
+
+  if (sFreeAsyncItems.lpFirst != NULL)
+  {
+    MX_ASSERT(sFreeAsyncItems.nListCount > 0);
+    (sFreeAsyncItems.nListCount)--;
+
+    lpAsyncItem = sFreeAsyncItems.lpFirst;
+    sFreeAsyncItems.lpFirst = lpAsyncItem->lpNextInFreeList;
+
+    lpAsyncItem->Setup(szHostNameW, nDesiredFamily, dwTimeoutMs, lpSockAddr, cCallback, lpUserData);
+  }
+  else
+  {
+    lpAsyncItem = MX_DEBUG_NEW CAsyncItem(this, szHostNameW, nDesiredFamily, dwTimeoutMs, lpSockAddr, cCallback,
+                                          lpUserData, fnFreeAddrInfoExW);
+  }
+  if (lpAsyncItem->cStrHostNameW.IsEmpty() != FALSE)
+  {
+    delete lpAsyncItem;
+    lpAsyncItem = NULL;
+  }
+  return lpAsyncItem;
+}
+
+VOID CHostResolver::FreeAsyncItem(_In_ CAsyncItem *lpAsyncItem)
+{
+  CFastLock cLock(&(sFreeAsyncItems.nMutex));
+
+  if (sFreeAsyncItems.nListCount < MAX_ITEMS_IN_FREE_LIST)
+  {
+    lpAsyncItem->ResetAsync();
+
+    lpAsyncItem->lpNextInFreeList = sFreeAsyncItems.lpFirst;
+    sFreeAsyncItems.lpFirst = lpAsyncItem;
+    (sFreeAsyncItems.nListCount)++;
+  }
+  else
+  {
+    delete lpAsyncItem;
+  }
+  return;
+}
+
+VOID WINAPI CHostResolver::AsyncQueryCompleteCallback(_In_ DWORD dwError, _In_ DWORD dwBytes, _In_ LPOVERLAPPED lpOvr)
+{
+  MX::Internals::CHostResolver::CAsyncItem *lpAsyncItem;
+
+  UNREFERENCED_PARAMETER(dwBytes);
+
+  lpAsyncItem = CONTAINING_RECORD(lpOvr, Internals::CHostResolver::CAsyncItem, sOvr);
+  lpAsyncItem->lpResolver->CompleteAsync(lpAsyncItem, dwError);
+  return;
+}
+
+VOID CHostResolver::CompleteAsync(_In_ CAsyncItem *lpAsyncItem, _In_ DWORD dwError)
+{
+  CAutoRundownProtection cAutoRundownProt(&nRundownLock);
+
+  if (cAutoRundownProt.IsAcquired() == FALSE)
+  {
+    //if rundown is active, we are just canceling
+    _InterlockedOr(&(lpAsyncItem->nFlags), _FLAG_Completed);
+    return;
+  }
+
+  {
+    CFastLock cQueueLock(&(sAsyncTasks.nMutex));
+
+    //if it was canceled BEFORE callback is called, we don't call the callback
+    if ((__InterlockedRead(&(lpAsyncItem->nFlags)) & _FLAG_Canceled) != 0)
+    {
+      _InterlockedOr(&(lpAsyncItem->nFlags), _FLAG_Completed);
+      return;
+    }
+  }
+
+  //process normally
+  if (dwError == NO_ERROR)
+  {
+    lpAsyncItem->hr = ProcessResultsExW(lpAsyncItem->lpSockAddr, lpAsyncItem->lpAddrInfoExW,
+                                        lpAsyncItem->nDesiredFamily);
+  }
+  else if (dwError == ERROR_TIMEOUT || dwError == WSA_OPERATION_ABORTED || dwError == WSA_WAIT_TIMEOUT ||
+           dwError == WSAETIMEDOUT)
+  {
+    lpAsyncItem->hr = MX_E_Timeout;
+  }
+  else
+  {
+    lpAsyncItem->hr = MX_HRESULT_FROM_WIN32(dwError);
+  }
+
+  lpAsyncItem->InvokeCallback();
+
+  {
+    CFastLock cQueueLock(&(sAsyncTasks.nMutex));
+
+    //if it was canceled WHILE/AFTER the callback was called
+    if ((__InterlockedRead(&(lpAsyncItem->nFlags)) & _FLAG_Canceled) != 0)
+    {
+      //the item was removed from the list and let cancel to free the item
+      _InterlockedOr(&(lpAsyncItem->nFlags), _FLAG_Completed);
+    }
+    else
+    {
+      lpAsyncItem->RemoveNode();
+      FreeAsyncItem(lpAsyncItem);
+    }
+  }
+  return;
+}
+
+HRESULT CHostResolver::ProcessResultsA(_In_ PSOCKADDR_INET lpSockAddr, _In_ PADDRINFOA lpAddrInfoA, _In_ int nFamily)
+{
+  PADDRINFOA lpCurrAddrInfoA;
+
+  for (lpCurrAddrInfoA = lpAddrInfoA; lpCurrAddrInfoA != NULL; lpCurrAddrInfoA = lpCurrAddrInfoA->ai_next)
+  {
+    if ((nFamily == AF_INET || nFamily == AF_UNSPEC) &&
+        lpCurrAddrInfoA->ai_family == PF_INET &&
+        lpCurrAddrInfoA->ai_addrlen >= sizeof(SOCKADDR_IN))
+    {
+      MX::MemCopy(&(lpSockAddr->Ipv4), lpCurrAddrInfoA->ai_addr, sizeof(sockaddr_in));
+      return S_OK;
+    }
+    if ((nFamily == AF_INET6 || nFamily == AF_UNSPEC) &&
+        lpCurrAddrInfoA->ai_family == PF_INET6 &&
+        lpCurrAddrInfoA->ai_addrlen >= sizeof(SOCKADDR_IN6))
+    {
+      MX::MemCopy(&(lpSockAddr->Ipv6), lpCurrAddrInfoA->ai_addr, sizeof(SOCKADDR_IN6));
+      return S_OK;
+    }
+  }
+  return MX_E_NotFound;
+}
+
+HRESULT CHostResolver::ProcessResultsExW(_In_ PSOCKADDR_INET lpSockAddr, _In_ PADDRINFOEXW lpAddrInfoExW,
+                                         _In_ int nFamily)
+{
+  PADDRINFOEXW lpCurrAddrInfoExW;
+
+  for (lpCurrAddrInfoExW = lpAddrInfoExW; lpCurrAddrInfoExW != NULL; lpCurrAddrInfoExW = lpCurrAddrInfoExW->ai_next)
+  {
+    if ((nFamily == AF_INET || nFamily == AF_UNSPEC) &&
+        lpCurrAddrInfoExW->ai_family == PF_INET &&
+        lpCurrAddrInfoExW->ai_addrlen >= sizeof(SOCKADDR_IN))
+    {
+      MX::MemCopy(&(lpSockAddr->Ipv4), lpCurrAddrInfoExW->ai_addr, sizeof(SOCKADDR_IN));
+      return S_OK;
+    }
+    if ((nFamily == AF_INET6 || nFamily == AF_UNSPEC) &&
+        lpCurrAddrInfoExW->ai_family == PF_INET6 &&
+        lpCurrAddrInfoExW->ai_addrlen >= sizeof(SOCKADDR_IN6))
+    {
+      MX::MemCopy(&(lpSockAddr->Ipv6), lpCurrAddrInfoExW->ai_addr, sizeof(SOCKADDR_IN6));
+      return S_OK;
+    }
+  }
+  return MX_E_NotFound;
+}
+
+} //namespace Internals
+
+} //namespace MX
+
+//-----------------------------------------------------------
+
+static VOID OnSyncResolution(_In_ LONG nResolverId, _In_ SOCKADDR_INET &sAddr, _In_ HRESULT hrErrorCode,
+                             _In_ LPVOID lpUserData)
+{
+  LPSYNC_RESOLVE lpSyncData = (LPSYNC_RESOLVE)lpUserData;
+
+  MX::MemCopy(lpSyncData->lpAddr, &sAddr, sizeof(sAddr));
+  _InterlockedExchange(&(lpSyncData->hRes), hrErrorCode);
+  lpSyncData->cEvent.Set();
+  return;
+}
 
 #pragma warning(suppress: 6101)
 static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCSTR szStrA, _In_ SIZE_T nLen)
@@ -572,12 +1309,12 @@ static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCSTR szStrA, _In_ 
     return (SIZE_T)-1;
   nSlot = 0;
   dwValue = 0;
-  for (i=0; i<nLen; i++)
+  for (i = 0; i < nLen; i++)
   {
     if (szStrA[i] == ':')
     {
       //trailing : is not allowed
-      if (i == nLen-1 || nSlot == 8)
+      if (i == nLen - 1 || nSlot == 8)
         return (SIZE_T)-1;
       lpnAddr[nSlot++] = (WORD)dwValue;
       dwValue = 0;
@@ -618,12 +1355,12 @@ static SIZE_T Helper_IPv6_Fill(_Out_ LPWORD lpnAddr, _In_z_ LPCWSTR szStrW, _In_
     return (SIZE_T)-1;
   nSlot = 0;
   dwValue = 0;
-  for (i=0; i<nLen; i++)
+  for (i = 0; i < nLen; i++)
   {
     if (szStrW[i] == L':')
     {
       //trailing : is not allowed
-      if (i == nLen-1 || nSlot == 8)
+      if (i == nLen - 1 || nSlot == 8)
         return (SIZE_T)-1;
       lpnAddr[nSlot++] = (WORD)dwValue;
       dwValue = 0;

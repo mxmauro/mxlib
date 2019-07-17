@@ -31,9 +31,9 @@
 
 //-----------------------------------------------------------
 
-typedef BOOL(WINAPI *lpfnGetQueuedCompletionStatusEx)(_In_ HANDLE CompletionPort, _Out_ LPOVERLAPPED_ENTRY lpEntries,
-                                                      _In_ ULONG ulCount, _Out_ PULONG ulNumEntriesRemoved,
-                                                      _In_ DWORD dwMilliseconds, _In_ BOOL fAlertable);
+typedef BOOL (WINAPI *lpfnGetQueuedCompletionStatusEx)(_In_ HANDLE CompletionPort, _Out_ LPOVERLAPPED_ENTRY lpEntries,
+                                                       _In_ ULONG ulCount, _Out_ PULONG ulNumEntriesRemoved,
+                                                       _In_ DWORD dwMilliseconds, _In_ BOOL fAlertable);
 
 //-----------------------------------------------------------
 
@@ -45,26 +45,27 @@ namespace MX {
 
 CIoCompletionPort::CIoCompletionPort()
 {
-  lpfnGetQueuedCompletionStatusEx _fnGetQueuedCompletionStatusEx;
-  HINSTANCE hKernel32Dll;
+  if (fnGetQueuedCompletionStatusEx == NULL)
+  {
+    LPVOID _fnGetQueuedCompletionStatusEx;
+    HINSTANCE hDll;
 
-  _fnGetQueuedCompletionStatusEx = NULL;
-  hKernel32Dll = ::GetModuleHandleW(L"kernelbase.dll");
-  if (hKernel32Dll != NULL)
-  {
-    _fnGetQueuedCompletionStatusEx = (lpfnGetQueuedCompletionStatusEx)::GetProcAddress(hKernel32Dll,
-                                                                                       "GetQueuedCompletionStatusEx");
-  }
-  if (_fnGetQueuedCompletionStatusEx == NULL)
-  {
-    hKernel32Dll = ::GetModuleHandleW(L"kernel32.dll");
-    if (hKernel32Dll != NULL)
+    _fnGetQueuedCompletionStatusEx = NULL;
+    hDll = ::GetModuleHandleW(L"kernelbase.dll");
+    if (hDll != NULL)
     {
-      _fnGetQueuedCompletionStatusEx = (lpfnGetQueuedCompletionStatusEx)::GetProcAddress(hKernel32Dll,
-                                                                                         "GetQueuedCompletionStatusEx");
+      _fnGetQueuedCompletionStatusEx = ::GetProcAddress(hDll, "GetQueuedCompletionStatusEx");
     }
+    if (_fnGetQueuedCompletionStatusEx == NULL)
+    {
+      hDll = ::GetModuleHandleW(L"kernel32.dll");
+      if (hDll != NULL)
+      {
+        _fnGetQueuedCompletionStatusEx = ::GetProcAddress(hDll, "GetQueuedCompletionStatusEx");
+      }
+    }
+    _InterlockedExchangePointer((LPVOID volatile*)&fnGetQueuedCompletionStatusEx, _fnGetQueuedCompletionStatusEx);
   }
-  _InterlockedExchangePointer((LPVOID volatile*)&fnGetQueuedCompletionStatusEx, _fnGetQueuedCompletionStatusEx);
   hIOCP = NULL;
   return;
 }
@@ -140,7 +141,7 @@ HRESULT CIoCompletionPort::Get(_Out_ LPOVERLAPPED_ENTRY lpEntries, _Inout_ ULONG
       nEntriesCount = 0;
       return MX_HRESULT_FROM_LASTERROR();
     }
-    for (i=0; i<nRemoved; i++)
+    for (i = 0; i < nRemoved; i++)
     {
 #pragma warning(suppress : 6386)
       lpEntries[i].Internal = lpEntries[i].lpOverlapped->Internal =
@@ -219,7 +220,7 @@ VOID CIoCompletionPortThreadPool::SetOption_MaxThreadsCount(_In_opt_ DWORD dwCou
     dwMaxThreadsCount = (dwCount == 0) ? GetNumberOfProcessors() * 2 : dwCount;
     if (dwMaxThreadsCount > 8192)
       dwMaxThreadsCount = 8192;
-    if (dwMaxThreadsCount > dwMaxThreadsCount)
+    if (dwMinThreadsCount > dwMaxThreadsCount)
       dwMinThreadsCount = dwMaxThreadsCount;
     if (dwShutdownThreadThreshold > dwMaxThreadsCount)
       dwShutdownThreadThreshold = dwMaxThreadsCount;
@@ -292,7 +293,7 @@ HRESULT CIoCompletionPortThreadPool::Initialize()
   HRESULT hRes;
 
   InternalFinalize();
-  hRes = cIOCP.Initialize(dwMaxThreadsCount);
+  hRes = cIOCP.Initialize(0x7FFFFFFFUL /*dwMaxThreadsCount*/);
   for (i=0; SUCCEEDED(hRes) && i<dwMinThreadsCount; i++)
     hRes = StartThread(TRUE);
   if (FAILED(hRes))
@@ -386,7 +387,7 @@ HRESULT CIoCompletionPortThreadPool::StartThread(_In_ BOOL bInitial)
   lpThread = MX_DEBUG_NEW CThread();
   if (lpThread != NULL)
   {
-    lpThread->nFlags = (bInitial != FALSE) ? 0 : THREAD_FLAGS_CanExit;
+    lpThread->nFlags = (bInitial != FALSE || dwWorkerThreadIdleTimeoutMs == INFINITE) ? 0 : THREAD_FLAGS_CanExit;
     if (lpThread->Start(this, &CIoCompletionPortThreadPool::ThreadProc, (SIZE_T)lpThread, TRUE) != FALSE)
     {
       {
@@ -421,7 +422,7 @@ HRESULT CIoCompletionPortThreadPool::StartThread(_In_ BOOL bInitial)
 VOID CIoCompletionPortThreadPool::ThreadProc(_In_ SIZE_T nParam)
 {
   CThread *lpThread = (CThread*)nParam;
-  OVERLAPPED_ENTRY sOvrEntries[4], *lpOvrEntry, *lpOvrEntryEnd;
+  OVERLAPPED_ENTRY sOvrEntries[8], *lpOvrEntry, *lpOvrEntryEnd;
   ULONG nOvrEntriesCount;
   LPVOID lpThreadCustomParam;
   DWORD dwTimeout;
@@ -442,7 +443,7 @@ VOID CIoCompletionPortThreadPool::ThreadProc(_In_ SIZE_T nParam)
     {
       nActive = __InterlockedRead(&(sThreads.nActiveCount));
       nBusy = __InterlockedRead(&(sThreads.nBusyCount));
-      if (nBusy+(LONG)dwShutdownThreadThreshold < nActive)
+      if (nBusy + (LONG)dwShutdownThreadThreshold < nActive)
         dwTimeout = dwWorkerThreadIdleTimeoutMs;
     }
     nOvrEntriesCount = (ULONG)MX_ARRAYLEN(sOvrEntries);

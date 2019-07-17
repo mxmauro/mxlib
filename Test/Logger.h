@@ -27,22 +27,8 @@
 
 //-----------------------------------------------------------
 
-namespace Console {
+namespace Logger {
 
-BOOL Initialize();
+VOID Log(_In_z_ LPCWSTR szFormatW, ...);
 
-BOOL MustQuit();
-
-VOID SetCursorPosition(_In_ int X, _In_ int Y);
-VOID GetCursorPosition(_Out_ int *lpnX, _Out_ int *lpnY);
-
-VOID PrintTimestamp();
-
-class CPrintLock
-{
-public:
-  CPrintLock();
-  ~CPrintLock();
-};
-
-}; //namespace Console
+}; //namespace Logger

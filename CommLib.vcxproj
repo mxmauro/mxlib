@@ -229,13 +229,11 @@
     <ClInclude Include="Include\Http\WebSockets.h" />
     <ClInclude Include="Include\Http\punycode.h" />
     <ClInclude Include="Include\Http\Url.h" />
-    <ClInclude Include="Source\Comm\HostResolverCommon.h" />
     <ClInclude Include="Source\Http\HttpAuthCache.h" />
     <ClInclude Include="Source\Http\HttpServerCommon.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Comm\HostResolver.cpp" />
-    <ClCompile Include="Source\Comm\HostResolverIpAddrResolver.cpp" />
     <ClCompile Include="Source\Comm\IpcCommon.cpp" />
     <ClCompile Include="Source\Comm\IpcMessageManager.cpp" />
     <ClCompile Include="Source\Comm\IpcSslLayer.cpp" />

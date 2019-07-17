@@ -41,6 +41,7 @@
 
 namespace DukTape {
 
+#pragma check_stack(off)
 #pragma warning(disable : 4101 4703 4244 4267 6262 6385 6011 6387)
 #include "DukTape\Source\dist\duktape.c"
 #define snprintf mx_sprintf_s
@@ -48,6 +49,7 @@ namespace DukTape {
 #include "DukTape\Source\extras\module-node\duk_module_node.c"
 #undef snprintf
 #pragma warning(default : 4101 4703 4244 4267 6262 6385 6011 6387)
+#pragma check_stack()
 
 } //namespace DukTape
 

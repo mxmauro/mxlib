@@ -54,7 +54,7 @@ namespace Internals {
 
 namespace JsHttpServer {
 
-HRESULT AddHelpersMethods(_In_ CJavascriptVM &cJvm, _In_ MX::CHttpServer::CClientRequest *lpRequest)
+HRESULT AddHelpersMethods(_In_ CJavascriptVM &cJvm)
 {
   HRESULT hRes;
 
@@ -67,35 +67,25 @@ HRESULT AddHelpersMethods(_In_ CJavascriptVM &cJvm, _In_ MX::CHttpServer::CClien
   hRes = cJvm.AddNativeFunction("urldecode", MX_BIND_CALLBACK(&OnUrlDecode), 1);
   __EXIT_ON_ERROR(hRes);
 
-  try
+  hRes = cJvm.RunNativeProtectedAndGetError(0, 0, [](_In_ DukTape::duk_context *lpCtx) -> VOID
   {
-    cJvm.RunNativeProtected(0, 0, [](_In_ DukTape::duk_context *lpCtx) -> VOID
-    {
-      DukTape::duk_push_string(lpCtx, "function vardump(obj)\n"
-                               "{ return Duktape.enc('jx', obj, null, 2); }\n");
-      DukTape::duk_push_string(lpCtx, (const char *)(__FILE__));
-      DukTape::duk_eval_raw(lpCtx, NULL, 0, DUK_COMPILE_EVAL);
-      DukTape::duk_pop(lpCtx);
+    DukTape::duk_push_string(lpCtx, "function vardump(obj)\n"
+                              "{ return Duktape.enc('jx', obj, null, 2); }\n");
+    DukTape::duk_push_string(lpCtx, (const char *)(__FILE__));
+    DukTape::duk_eval_raw(lpCtx, NULL, 0, DUK_COMPILE_EVAL);
+    DukTape::duk_pop(lpCtx);
 
-      DukTape::duk_eval_raw(lpCtx, "function SystemExit(msg) {\r\n"
-                                     "Error.call(this, \"\");\r\n"
-                                     "this.message = msg;\r\n"
-                                     "this.name = \"SystemExit\";\r\n"
-                                     "return this; }\r\n"
-                                   "SystemExit.prototype = Object.create(Error.prototype);\r\n"
-                                   "SystemExit.prototype.constructor=SystemExit;\r\n", 0,
-                            DUK_COMPILE_EVAL | DUK_COMPILE_NOSOURCE | DUK_COMPILE_STRLEN | DUK_COMPILE_NOFILENAME);
-      return;
-    });
-  }
-  catch (CJsWindowsError &e)
-  {
-    return e.GetHResult();
-  }
-  catch (CJsError &)
-  {
-    return E_FAIL;
-  }
+    DukTape::duk_eval_raw(lpCtx, "function SystemExit(msg) {\r\n"
+                                    "Error.call(this, \"\");\r\n"
+                                    "this.message = msg;\r\n"
+                                    "this.name = \"SystemExit\";\r\n"
+                                    "return this; }\r\n"
+                                  "SystemExit.prototype = Object.create(Error.prototype);\r\n"
+                                  "SystemExit.prototype.constructor=SystemExit;\r\n", 0,
+                          DUK_COMPILE_EVAL | DUK_COMPILE_NOSOURCE | DUK_COMPILE_STRLEN | DUK_COMPILE_NOFILENAME);
+    return;
+  });
+  __EXIT_ON_ERROR(hRes);
 
   hRes = cJvm.CreateObject("HASH");
   __EXIT_ON_ERROR(hRes);

@@ -1,7 +1,10 @@
 ﻿<%
 var session = require("session");
 var moment = require("./moment.min.js");
-require("./top.jss");
+var topHtml = require("./top.jss");
+var bottomHtml = require("./bottom.jss");
+
+topHtml.render();
 %>
 <div class="caption">REQUEST</div>
 <pre><%= Duktape.enc('jc', request, null, 4) %></pre>
@@ -20,5 +23,5 @@ else
 <pre>R: <% echo(Duktape.enc('jc', request).replace(/[\\"']/g, '\\$&').replace(/\u0000/g, '\\0')); %></pre>
 <%
 //session.RegenerateId();
-require("./bottom.jss");
+bottomHtml.render();
 %>

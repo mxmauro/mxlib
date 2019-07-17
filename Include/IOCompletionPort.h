@@ -113,7 +113,7 @@ public:
 
   BOOL IsDynamicGrowable() const
     {
-    return (dwMaxThreadsCount > dwMinThreadsCount) ? TRUE : FALSE;
+    return (dwMaxThreadsCount > dwMinThreadsCount && dwWorkerThreadIdleTimeoutMs != INFINITE) ? TRUE : FALSE;
     };
 
   static DWORD GetNumberOfProcessors();

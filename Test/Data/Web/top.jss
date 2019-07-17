@@ -1,6 +1,8 @@
 <%
 if (request.path.indexOf("/top.jss", request.path.length - "/top.jss".length) !== -1)
 	die("Invalid access");
+
+function render() {
 %>
 <!DOCTYPE html>
 <html>
@@ -29,3 +31,10 @@ if (request.path.indexOf("/top.jss", request.path.length - "/top.jss".length) !=
 	<a href="sqlite_test.jss">SQLite test</a>&nbsp;|&nbsp;
 	<a href="websocket_test.jss">WebSocket test</a>
 </div>
+<%
+}
+
+module.exports = {
+	render
+};
+%>

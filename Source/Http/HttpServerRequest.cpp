@@ -25,7 +25,13 @@
 
 //-----------------------------------------------------------
 
-static const LPCSTR szServerInfoA = "MX-Library";
+static const CHAR szServerInfoA[] = "MX-Library";
+static const SIZE_T nServerInfoLen = MX_ARRAYLEN(szServerInfoA) - 1;
+
+//-----------------------------------------------------------
+
+static HRESULT WriteToStream(_In_ MX::CMemoryStream *lpStream, _In_ LPCSTR szStrA,
+                             _In_opt_ SIZE_T nStrLen = (SIZE_T)-1);
 
 //-----------------------------------------------------------
 
@@ -610,7 +616,7 @@ HRESULT CHttpServer::CClientRequest::Initialize(_In_ CHttpServer *_lpHttpServer,
   hConn = _hConn;
   if (_lpHttpServer->ShouldLog(1) != FALSE)
   {
-    _lpHttpServer->Log(L"HttpServer(State/0x%p): StateInitializing", this);
+    _lpHttpServer->Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateInitializing", this, hConn);
   }
 
   cRequest.Attach(MX_DEBUG_NEW CRequest(lpHttpServer));
@@ -628,7 +634,7 @@ VOID CHttpServer::CClientRequest::ResetForNewRequest()
   nState = CClientRequest::StateInitializing;
   if (lpHttpServer->ShouldLog(1) != FALSE)
   {
-    lpHttpServer->Log(L"HttpServer(State/0x%p): StateInitializing [ResetForNewRequest]", this);
+    lpHttpServer->Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateInitializing [ResetForNewRequest]", this, hConn);
   }
   _InterlockedExchange(&nFlags, 0);
   //----
@@ -670,7 +676,7 @@ HRESULT CHttpServer::CClientRequest::BuildAndInsertOrSendHeaderStream()
   {
     if (lpHttpServer->ShouldLog(1) != FALSE)
     {
-      lpHttpServer->Log(L"HttpServer(ResponseHeaders/0x%p): Already sent!", this);
+      lpHttpServer->Log(L"HttpServer(ResponseHeaders/Req:0x%p/Conn:0x%p): Already sent!", this, hConn);
     }
     return S_OK;
   }
@@ -714,7 +720,15 @@ HRESULT CHttpServer::CClientRequest::BuildAndInsertOrSendHeaderStream()
     {
       hRes = lpHdr->Build(cStrTempA, nBrowser);
       if (SUCCEEDED(hRes))
-        hRes = cHdrStream->WriteString("Date:%s\r\n", (LPSTR)cStrTempA);
+      {
+        hRes = WriteToStream(cHdrStream, "Date: ", 5);
+        if (SUCCEEDED(hRes))
+        {
+          hRes = WriteToStream(cHdrStream, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+          if (SUCCEEDED(hRes))
+            hRes = WriteToStream(cHdrStream, "\r\n", 2);
+        }
+      }
     }
     else
     {
@@ -722,9 +736,11 @@ HRESULT CHttpServer::CClientRequest::BuildAndInsertOrSendHeaderStream()
 
       hRes = cDtNow.SetFromNow(FALSE);
       if (SUCCEEDED(hRes))
-        hRes = cDtNow.Format(cStrTempA, "%a, %d %b %Y %H:%M:%S %z");
-      if (SUCCEEDED(hRes))
-        hRes = cHdrStream->WriteString("Date:%s\r\n", (LPSTR)cStrTempA);
+      {
+        hRes = cDtNow.Format(cStrTempA, "Date: %a, %d %b %Y %H:%M:%S %z\r\n");
+        if (SUCCEEDED(hRes))
+          hRes = WriteToStream(cHdrStream, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+      }
     }
   }
   //location (if any)
@@ -737,24 +753,38 @@ HRESULT CHttpServer::CClientRequest::BuildAndInsertOrSendHeaderStream()
     {
       hRes = lpHdr->Build(cStrTempA, nBrowser);
       if (SUCCEEDED(hRes))
-        hRes = cHdrStream->WriteString("Location:%s\r\n", (LPSTR)cStrTempA);
+      {
+        hRes = WriteToStream(cHdrStream, "Location: ", 10);
+        if (SUCCEEDED(hRes))
+        {
+          hRes = WriteToStream(cHdrStream, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+          if (SUCCEEDED(hRes))
+            hRes = WriteToStream(cHdrStream, "\r\n", 2);
+        }
+      }
     }
   }
   //server
   if (SUCCEEDED(hRes))
   {
-    CHttpHeaderBase *lpHdr;
+    hRes = WriteToStream(cHdrStream, "Server: ", 8);
+    if (SUCCEEDED(hRes))
+    {
+      CHttpHeaderBase *lpHdr;
 
-    lpHdr = cResponse->cHttpCmn.GetHeader("Server");
-    if (lpHdr != NULL)
-    {
-      hRes = lpHdr->Build(cStrTempA, nBrowser);
+      lpHdr = cResponse->cHttpCmn.GetHeader("Server");
+      if (lpHdr != NULL)
+      {
+        hRes = lpHdr->Build(cStrTempA, nBrowser);
+        if (SUCCEEDED(hRes))
+          hRes = WriteToStream(cHdrStream, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+      }
+      else
+      {
+        hRes = WriteToStream(cHdrStream, szServerInfoA, nServerInfoLen);
+      }
       if (SUCCEEDED(hRes))
-        hRes = cHdrStream->WriteString("Server:%s\r\n", (LPSTR)cStrTempA);
-    }
-    else
-    {
-      hRes = cHdrStream->WriteString("Server:%s\r\n", szServerInfoA);
+        hRes = WriteToStream(cHdrStream, "\r\n", 2);
     }
   }
   //connection
@@ -767,11 +797,19 @@ HRESULT CHttpServer::CClientRequest::BuildAndInsertOrSendHeaderStream()
     {
       hRes = lpHdr->Build(cStrTempA, nBrowser);
       if (SUCCEEDED(hRes))
-        hRes = cHdrStream->WriteString("Connection:%s\r\n", (LPSTR)cStrTempA);
+      {
+        hRes = WriteToStream(cHdrStream, "Connection: ", 12);
+        if (SUCCEEDED(hRes))
+        {
+          hRes = WriteToStream(cHdrStream, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+          if (SUCCEEDED(hRes))
+            hRes = WriteToStream(cHdrStream, "\r\n", 2);
+        }
+      }
     }
     else if (IsKeepAliveRequest() != FALSE)
     {
-      hRes = cHdrStream->WriteString("Connection:Keep-Alive\r\n");
+      hRes = WriteToStream(cHdrStream, "Connection: Keep-Alive\r\n", 24);
     }
   }
   //content type
@@ -786,18 +824,38 @@ HRESULT CHttpServer::CClientRequest::BuildAndInsertOrSendHeaderStream()
       if (cResponse->bDirect == FALSE)
       {
         if (cResponse->szMimeTypeHintA != NULL)
-          hRes = cHdrStream->WriteString("Content-Type:%s\r\n", cResponse->szMimeTypeHintA);
+        {
+          hRes = WriteToStream(cHdrStream, "Content-Type: ", 14);
+          if (SUCCEEDED(hRes))
+          {
+            hRes = WriteToStream(cHdrStream, cResponse->szMimeTypeHintA);
+            if (SUCCEEDED(hRes))
+              hRes = WriteToStream(cHdrStream, "\r\n", 2);
+          }
+        }
         else if (cResponse->bLastStreamIsData != FALSE)
-          hRes = cHdrStream->WriteString("Content-Type:text/html; charset=utf-8\r\n");
+        {
+          hRes = WriteToStream(cHdrStream, "Content-Type: text/html; charset=utf-8\r\n", 40);
+        }
         else
-          hRes = cHdrStream->WriteString("Content-Type:application/octet-stream\r\n");
+        {
+          hRes = WriteToStream(cHdrStream, "Content-Type: application/octet-stream\r\n", 40);
+        }
       }
     }
     else
     {
       hRes = lpHdr->Build(cStrTempA, nBrowser);
       if (SUCCEEDED(hRes))
-        hRes = cHdrStream->WriteString("Content-Type:%s\r\n", (LPSTR)cStrTempA);
+      {
+        hRes = WriteToStream(cHdrStream, "Content-Type: ", 14);
+        if (SUCCEEDED(hRes))
+        {
+          hRes = WriteToStream(cHdrStream, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+          if (SUCCEEDED(hRes))
+            hRes = WriteToStream(cHdrStream, "\r\n", 2);
+        }
+      }
     }
   }
   //content length
@@ -830,14 +888,22 @@ HRESULT CHttpServer::CClientRequest::BuildAndInsertOrSendHeaderStream()
             nTotalLength += nLen;
           }
           if (SUCCEEDED(hRes))
-            hRes = cHdrStream->WriteString("Content-Length:%I64u\r\n", nTotalLength);
+            hRes = cHdrStream->WriteString("Content-Length: %I64u\r\n", nTotalLength);
         }
       }
       else
       {
         hRes = lpHdr->Build(cStrTempA, nBrowser);
         if (SUCCEEDED(hRes))
-          hRes = cHdrStream->WriteString("Content-Length:%s\r\n", (LPCSTR)cStrTempA);
+        {
+          hRes = WriteToStream(cHdrStream, "Content-Length: ", 16);
+          if (SUCCEEDED(hRes))
+          {
+            hRes = WriteToStream(cHdrStream, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+            if (SUCCEEDED(hRes))
+              hRes = WriteToStream(cHdrStream, "\r\n", 2);
+          }
+        }
       }
     }
   }
@@ -860,7 +926,15 @@ HRESULT CHttpServer::CClientRequest::BuildAndInsertOrSendHeaderStream()
       {
         hRes = lpHdr->Build(cStrTempA, nBrowser);
         if (SUCCEEDED(hRes))
-          hRes = cHdrStream->WriteString("%s:%s\r\n", lpHdr->GetHeaderName(), (LPCSTR)cStrTempA);
+        {
+          hRes = WriteToStream(cHdrStream, lpHdr->GetHeaderName());
+          if (SUCCEEDED(hRes))
+          {
+            hRes = WriteToStream(cHdrStream, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+            if (SUCCEEDED(hRes))
+              hRes = WriteToStream(cHdrStream, "\r\n", 2);
+          }
+        }
       }
     }
   }
@@ -876,12 +950,20 @@ HRESULT CHttpServer::CClientRequest::BuildAndInsertOrSendHeaderStream()
       lpCookie = cResponse->cHttpCmn.GetCookie(i);
       hRes = lpCookie->ToString(cStrTempA);
       if (SUCCEEDED(hRes))
-        hRes = cHdrStream->WriteString("Set-Cookie:%s\r\n", (LPSTR)cStrTempA);
+      {
+        hRes = WriteToStream(cHdrStream, "Set-Cookie: ", 12);
+        if (SUCCEEDED(hRes))
+        {
+          hRes = WriteToStream(cHdrStream, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+          if (SUCCEEDED(hRes))
+            hRes = WriteToStream(cHdrStream, "\r\n", 2);
+        }
+      }
     }
   }
   //add end of header
   if (SUCCEEDED(hRes))
-    hRes = cHdrStream->WriteString("\r\n");
+    hRes = WriteToStream(cHdrStream, "\r\n", 2);
   //add at the beginning of stream list if not direct, else send
   if (SUCCEEDED(hRes))
   {
@@ -899,7 +981,7 @@ HRESULT CHttpServer::CClientRequest::BuildAndInsertOrSendHeaderStream()
   }
   if (lpHttpServer->ShouldLog(1) != FALSE)
   {
-    lpHttpServer->Log(L"HttpServer(ResponseHeaders/0x%p): 0x%08X", this, hRes);
+    lpHttpServer->Log(L"HttpServer(ResponseHeaders/Req:0x%p/Conn:0x%p): 0x%08X", this, hConn, hRes);
   }
   //done
   return hRes;
@@ -916,7 +998,7 @@ HRESULT CHttpServer::CClientRequest::BuildAndSendWebSocketHeaderStream()
   {
     if (lpHttpServer->ShouldLog(1) != FALSE)
     {
-      lpHttpServer->Log(L"HttpServer(WebSocketResponseHeaders/0x%p): Already sent!", this);
+      lpHttpServer->Log(L"HttpServer(WebSocketResponseHeaders/Req:0x%p/Conn:0x%p): Already sent!", this, hConn);
     }
     return S_OK;
   }
@@ -943,18 +1025,24 @@ HRESULT CHttpServer::CClientRequest::BuildAndSendWebSocketHeaderStream()
   //server
   if (SUCCEEDED(hRes))
   {
-    CHttpHeaderBase *lpHdr;
+    hRes = WriteToStream(cHdrStream, "Server: ", 8);
+    if (SUCCEEDED(hRes))
+    {
+      CHttpHeaderBase *lpHdr;
 
-    lpHdr = cResponse->cHttpCmn.GetHeader("Server");
-    if (lpHdr != NULL)
-    {
-      hRes = lpHdr->Build(cStrTempA, nBrowser);
+      lpHdr = cResponse->cHttpCmn.GetHeader("Server");
+      if (lpHdr != NULL)
+      {
+        hRes = lpHdr->Build(cStrTempA, nBrowser);
+        if (SUCCEEDED(hRes))
+          hRes = WriteToStream(cHdrStream, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+      }
+      else
+      {
+        hRes = WriteToStream(cHdrStream, szServerInfoA, nServerInfoLen);
+      }
       if (SUCCEEDED(hRes))
-        hRes = cHdrStream->WriteString("Server:%s\r\n", (LPSTR)cStrTempA);
-    }
-    else
-    {
-      hRes = cHdrStream->WriteString("Server:%s\r\n", szServerInfoA);
+        hRes = WriteToStream(cHdrStream, "\r\n", 2);
     }
   }
   //rest of headers
@@ -977,14 +1065,22 @@ HRESULT CHttpServer::CClientRequest::BuildAndSendWebSocketHeaderStream()
       {
         hRes = lpHdr->Build(cStrTempA, nBrowser);
         if (SUCCEEDED(hRes))
-          hRes = cHdrStream->WriteString("%s:%s\r\n", lpHdr->GetHeaderName(), (LPCSTR)cStrTempA);
+        {
+          hRes = WriteToStream(cHdrStream, lpHdr->GetHeaderName());
+          if (SUCCEEDED(hRes))
+          {
+            hRes = WriteToStream(cHdrStream, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+            if (SUCCEEDED(hRes))
+              hRes = WriteToStream(cHdrStream, "\r\n", 2);
+          }
+        }
       }
     }
   }
 
   //add end of header
   if (SUCCEEDED(hRes))
-    hRes = cHdrStream->WriteString("\r\n");
+    hRes = WriteToStream(cHdrStream, "\r\n", 2);
   //send headers
   if (SUCCEEDED(hRes))
   {
@@ -992,7 +1088,7 @@ HRESULT CHttpServer::CClientRequest::BuildAndSendWebSocketHeaderStream()
   }
   if (lpHttpServer->ShouldLog(1) != FALSE)
   {
-    lpHttpServer->Log(L"HttpServer(WebSocketResponseHeaders/0x%p): 0x%08X", this, hRes);
+    lpHttpServer->Log(L"HttpServer(WebSocketResponseHeaders/Req:0x%p/Conn:0x%p): 0x%08X", this, hConn, hRes);
   }
   //done
   return hRes;
@@ -1045,3 +1141,18 @@ VOID CHttpServer::CClientRequest::QueryBrowser()
 }
 
 } //namespace MX
+
+//-----------------------------------------------------------
+
+static HRESULT WriteToStream(_In_ MX::CMemoryStream *lpStream, _In_ LPCSTR szStrA, _In_opt_ SIZE_T nStrLen)
+{
+  SIZE_T nWritten;
+  HRESULT hRes;
+
+  if (nStrLen == (SIZE_T)-1)
+    nStrLen = MX::StrLenA(szStrA);
+  hRes = lpStream->Write(szStrA, nStrLen, nWritten);
+  if (SUCCEEDED(hRes) && nStrLen != nWritten)
+    hRes = MX_E_WriteFault;
+  return hRes;
+}

@@ -48,38 +48,21 @@ namespace MX {
 CIpc::CIpc(_In_ CIoCompletionPortThreadPool &_cDispatcherPool) : CBaseMemObj(), CLoggable(),
                                                                  cDispatcherPool(_cDispatcherPool)
 {
-  dwPacketSize = 4096;
   dwReadAhead = 4;
-  dwMaxFreePackets = 4096;
   bDoZeroReads = TRUE;
-  dwMaxOutgoingPackets = 16;
+  dwMaxOutgoingBytes = 16 * 32768;
   //----
   cDispatcherPoolPacketCallback = MX_BIND_MEMBER_CALLBACK(&CIpc::OnDispatcherPacket, this);
   _InterlockedExchange(&nInitShutdownMutex, 0);
   RundownProt_Initialize(&nRundownProt);
   cEngineErrorCallback = NullCallback();
-  SlimRWL_Initialize(&(sConnections.nSlimMutex));
+  SlimRWL_Initialize(&(sConnections.nRwMutex));
   return;
 }
 
 CIpc::~CIpc()
 {
-  Finalize();
-  return;
-}
-
-VOID CIpc::SetOption_PacketSize(_In_ DWORD dwSize)
-{
-  CFastLock cInitShutdownLock(&nInitShutdownMutex);
-
-  if (cShuttingDownEv.Get() == NULL)
-  {
-    dwPacketSize = dwSize;
-    if (dwPacketSize < 1024)
-      dwPacketSize = 1024;
-    else if (dwPacketSize > 32768)
-      dwPacketSize = 32768;
-  }
+  MX_ASSERT(cShuttingDownEv.Get() == NULL);
   return;
 }
 
@@ -98,19 +81,6 @@ VOID CIpc::SetOption_ReadAheadCount(_In_ DWORD dwCount)
   return;
 }
 
-VOID CIpc::SetOption_MaxFreePacketsCount(_In_ DWORD dwCount)
-{
-  CFastLock cInitShutdownLock(&nInitShutdownMutex);
-
-  if (cShuttingDownEv.Get() == NULL)
-  {
-    dwMaxFreePackets = dwCount;
-    if (dwMaxFreePackets > 102400)
-      dwMaxFreePackets = 102400;
-  }
-  return;
-}
-
 VOID CIpc::SetOption_EnableZeroReads(_In_ BOOL bEnable)
 {
   CFastLock cInitShutdownLock(&nInitShutdownMutex);
@@ -122,15 +92,17 @@ VOID CIpc::SetOption_EnableZeroReads(_In_ BOOL bEnable)
   return;
 }
 
-VOID CIpc::SetOption_OutgoingPacketsLimitCount(_In_ DWORD dwCount)
+VOID CIpc::SetOption_OutgoingBytesLimitCount(_In_ DWORD dwCount)
 {
   CFastLock cInitShutdownLock(&nInitShutdownMutex);
 
   if (cShuttingDownEv.Get() == NULL)
   {
-    dwMaxOutgoingPackets = dwCount;
-    if (dwMaxOutgoingPackets < 2)
-      dwMaxOutgoingPackets = 2;
+    dwMaxOutgoingBytes = dwCount;
+    if (dwMaxOutgoingBytes < 1024)
+      dwMaxOutgoingBytes = 1024;
+    else if (dwMaxOutgoingBytes > 0x01000000)
+      dwMaxOutgoingBytes = 0x01000000;
   }
   return;
 }
@@ -674,7 +646,7 @@ VOID CIpc::InternalFinalize()
   do
   {
     {
-      CAutoSlimRWLShared cConnListLock(&(sConnections.nSlimMutex));
+      CAutoSlimRWLShared cConnListLock(&(sConnections.nRwMutex));
       TRedBlackTree<CConnectionBase, SIZE_T>::Iterator it;
 
       for (lpConn = it.Begin(sConnections.cTree); lpConn != NULL; lpConn = it.Next())
@@ -699,7 +671,7 @@ VOID CIpc::InternalFinalize()
   do
   {
     {
-      CAutoSlimRWLShared cConnListLock(&(sConnections.nSlimMutex));
+      CAutoSlimRWLShared cConnListLock(&(sConnections.nRwMutex));
 
       b = sConnections.cTree.IsEmpty();
     }
@@ -708,10 +680,15 @@ VOID CIpc::InternalFinalize()
   }
   while (b == FALSE);
 
-  //remove free packets
-  cFreePacketsList.DiscardAll();
-  //almost done
+  //finish internal stuff
   OnInternalFinalize();
+
+  //remove free packets
+  cFreePacketsList32768.DiscardAll();
+  cFreePacketsList4096.DiscardAll();
+  cFreePacketsList256.DiscardAll();
+
+  //done
   cShuttingDownEv.Close();
   RundownProt_Initialize(&nRundownProt);
   return;
@@ -731,7 +708,6 @@ HRESULT CIpc::FireOnCreate(_In_ CConnectionBase *lpConn)
   if (lpConn->cCreateCallback)
   {
     CREATE_CALLBACK_DATA sCallbackData = {
-      lpConn->sLayers.cList,
       lpConn->cConnectCallback, lpConn->cDisconnectCallback,
       lpConn->cDataReceivedCallback, lpConn->cDestroyCallback,
       lpConn->cUserData
@@ -790,18 +766,43 @@ HRESULT CIpc::FireOnDataReceived(_In_ CConnectionBase *lpConn)
   return lpConn->cDataReceivedCallback(this, lpConn, lpConn->cUserData);
 }
 
-CIpc::CPacket* CIpc::GetPacket(_In_ CConnectionBase *lpConn, _In_ CPacket::eType nType)
+CIpc::CPacketBase* CIpc::GetPacket(_In_ CConnectionBase *lpConn, _In_ CPacketBase::eType nType,
+                                   _In_ SIZE_T nDesiredSize, _In_ BOOL bRealSize)
 {
-  CPacket *lpPacket;
+  CPacketBase *lpPacket;
+  CPacketList *lpList;
 
-  lpPacket = cFreePacketsList.DequeueFirst();
+  if (bRealSize != FALSE)
+    nDesiredSize += sizeof(CPacketBase);
+
+  if (nDesiredSize <= 256)
+  {
+    lpList = &cFreePacketsList256;
+  }
+  else if (nDesiredSize <= 4096)
+  {
+    lpList = &cFreePacketsList4096;
+  }
+  else
+  {
+    MX_ASSERT(nDesiredSize <= 32768);
+    lpList = &cFreePacketsList256;
+  }
+
+  lpPacket = lpList->DequeueFirst();
   if (lpPacket == NULL)
   {
-    lpPacket = MX_DEBUG_NEW CPacket(dwPacketSize);
-    if (lpPacket != NULL && lpPacket->GetBuffer() == NULL)
+    if (nDesiredSize <= 256)
     {
-      delete lpPacket;
-      lpPacket = NULL;
+      lpPacket = MX_DEBUG_NEW TPacket<256>();
+    }
+    else if (nDesiredSize <= 4096)
+    {
+      lpPacket = MX_DEBUG_NEW TPacket<4096>();
+    }
+    else
+    {
+      lpPacket = MX_DEBUG_NEW TPacket<32768>();
     }
   }
   if (lpPacket != NULL)
@@ -812,18 +813,46 @@ CIpc::CPacket* CIpc::GetPacket(_In_ CConnectionBase *lpConn, _In_ CPacket::eType
   return lpPacket;
 }
 
-VOID CIpc::FreePacket(_In_ CPacket *lpPacket)
+VOID CIpc::FreePacket(_In_ CPacketBase *lpPacket)
 {
   //DebugPrint("FreePacket: Ovr=0x%p\n", lpPacket->GetOverlapped());
-  if (cFreePacketsList.GetCount() < (SIZE_T)dwMaxFreePackets)
+  CPacketList *lpList;
+  SIZE_T nMaxItemsInList;
+  CPacketBase *lpNextPacket;
+
+  do
   {
-    lpPacket->Reset(CPacket::TypeDiscard, NULL);
-    cFreePacketsList.QueueLast(lpPacket);
+    lpNextPacket = lpPacket->GetChainedPacket();
+
+    if (lpPacket->GetClassSize() <= 256)
+    {
+      lpList = &cFreePacketsList256;
+      nMaxItemsInList = 1024;
+    }
+    else if (lpPacket->GetClassSize() <= 4096)
+    {
+      lpList = &cFreePacketsList4096;
+      nMaxItemsInList = 4096;
+    }
+    else
+    {
+      MX_ASSERT(lpPacket->GetClassSize() <= 32768);
+      lpList = &cFreePacketsList256;
+      nMaxItemsInList = 4096;
+    }
+    if (lpList->GetCount() < nMaxItemsInList)
+    {
+      lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
+      lpList->QueueLast(lpPacket);
+    }
+    else
+    {
+      delete lpPacket;
+    }
+
+    lpPacket = lpNextPacket;
   }
-  else
-  {
-    delete lpPacket;
-  }
+  while (lpPacket != NULL);
   return;
 }
 
@@ -831,7 +860,7 @@ CIpc::CConnectionBase* CIpc::CheckAndGetConnection(_In_opt_ HANDLE h)
 {
   if (h != NULL)
   {
-    CAutoSlimRWLShared cConnListLock(&(sConnections.nSlimMutex));
+    CAutoSlimRWLShared cConnListLock(&(sConnections.nRwMutex));
     CConnectionBase *lpConn;
 
     lpConn = sConnections.cTree.Find((SIZE_T)h);
@@ -848,15 +877,18 @@ VOID CIpc::OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWO
                               _In_ HRESULT hRes)
 {
   CConnectionBase *lpConn;
-  CPacket *lpPacket, *lpStreamPacket;
+  CPacketBase *lpPacket;
   CLayer *lpLayer;
   SIZE_T nReaded;
   HRESULT hRes2;
   LPVOID lpOrigOverlapped;
-  CPacket::eType nOrigOverlappedType;
+  CPacketBase::eType nOrigOverlappedType;
   BOOL bQueueNewRead, bJumpFromResumeInputProcessing;
 
-  lpPacket = CPacket::FromOverlapped(lpOvr);
+  lpPacket = CPacketBase::FromOverlapped(lpOvr);
+  if (OnPreprocessPacket(dwBytes, lpPacket, hRes) != FALSE)
+    return;
+
   lpConn = lpPacket->GetConn();
   lpConn->AddRef();
 
@@ -868,345 +900,443 @@ VOID CIpc::OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWO
         lpConn->cHiResTimer.GetElapsedTimeMs(), lpConn, lpPacket->GetOverlapped(), lpPacket->GetType(), dwBytes, hRes);
   }
 
-  hRes2 = OnPreprocessPacket(dwBytes, lpPacket, hRes);
-  if (hRes2 == S_FALSE)
+  switch (lpPacket->GetType())
   {
-    switch (lpPacket->GetType())
-    {
-      case CPacket::TypeInitialSetup:
-        if (SUCCEEDED(hRes))
-        {
-          hRes = (bDoZeroReads != FALSE && ZeroReadsSupported() != FALSE) ? lpConn->DoZeroRead((SIZE_T)dwReadAhead)
-                                                                          : lpConn->DoRead((SIZE_T)dwReadAhead);
-        }
-        //notify all layers about connection
+    case CPacketBase::TypeInitialSetup:
+      if (SUCCEEDED(hRes))
+      {
+        hRes = (bDoZeroReads != FALSE && ZeroReadsSupported() != FALSE) ? lpConn->DoZeroRead((SIZE_T)dwReadAhead)
+                                                                        : lpConn->DoRead((SIZE_T)dwReadAhead);
+      }
+
+      //notify all layers about connection
+      {
+        CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
+
+        lpLayer = lpConn->sLayers.cList.GetTail();
+      }
+      while (SUCCEEDED(hRes) && lpLayer != NULL)
+      {
+        hRes = lpLayer->OnConnect();
         {
           CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
 
-          lpLayer = lpConn->sLayers.cList.GetTail();
+          lpLayer = lpLayer->GetPrevEntry();
         }
-        while (SUCCEEDED(hRes) && lpLayer != NULL)
-        {
-          hRes = lpLayer->OnConnect();
-          {
-            CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
+      }
+      _InterlockedOr(&(lpConn->nFlags), FLAG_InitialSetupExecuted);
 
-            lpLayer = lpLayer->GetPrevEntry();
-          }
-        }
-        _InterlockedOr(&(lpConn->nFlags), FLAG_InitialSetupExecuted);
-        //fire main connect
-        if (SUCCEEDED(hRes))
-          hRes = FireOnConnect(lpConn, S_OK);
+      //fire main connect
+      if (SUCCEEDED(hRes))
+        hRes = FireOnConnect(lpConn, S_OK);
+
+      //free packet
+      lpConn->cRwList.Remove(lpPacket);
+      FreePacket(lpPacket);
+      break;
+
+    case CPacketBase::TypeZeroRead:
+      lpConn->cRwList.Remove(lpPacket);
+      if (SUCCEEDED(hRes) || hRes == MX_E_MoreData)
+      {
+        hRes = lpConn->DoRead(1, lpPacket);
+      }
+      else
+      {
         //free packet
-        lpConn->cRwList.Remove(lpPacket);
         FreePacket(lpPacket);
-        break;
+      }
+      MX_ASSERT_ALWAYS(_InterlockedDecrement(&(lpConn->nIncomingReads)) >= 0);
+      break;
 
-      case CPacket::TypeZeroRead:
-        lpConn->cRwList.Remove(lpPacket);
-        if (SUCCEEDED(hRes) || hRes == MX_E_MoreData)
+    case CPacketBase::TypeRead:
+      bQueueNewRead = FALSE;
+      if (SUCCEEDED(hRes))
+      {
+        lpPacket->SetBytesInUse(dwBytes);
+        if (dwBytes > 0)
         {
-          hRes = lpConn->DoRead(1, lpPacket);
-        }
-        else
-        {
-          //free packet
-          FreePacket(lpPacket);
-        }
-        MX_ASSERT_ALWAYS(_InterlockedDecrement(&(lpConn->nOutstandingReads)) >= 0);
-        break;
+          lpConn->UpdateStats(TRUE, dwBytes);
 
-      case CPacket::TypeRead:
-        bQueueNewRead = FALSE;
-        if (SUCCEEDED(hRes))
-        {
-          lpPacket->SetBytesInUse(dwBytes);
-          if (dwBytes > 0)
-          {
-            lpConn->UpdateStats(TRUE, dwBytes);
+          bQueueNewRead = TRUE;
+          //move packet to readed list
+          lpConn->cRwList.Remove(lpPacket);
+          lpConn->cReadedList.QueueSorted(lpPacket);
+          //----
+          bJumpFromResumeInputProcessing = FALSE;
 
-            bQueueNewRead = TRUE;
-            //move packet to readed list
-            lpConn->cRwList.Remove(lpPacket);
-            lpConn->cReadedList.QueueSorted(lpPacket);
-            //----
-            bJumpFromResumeInputProcessing = FALSE;
-            //process queued packets if input processing is not paused
+          //process queued packets if input processing is not paused
 check_pending_read_req:
-            if ((__InterlockedRead(&(lpConn->nFlags)) & FLAG_InputProcessingPaused) == 0)
-            {
-              {
-                CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
-
-                lpLayer = lpConn->sLayers.cList.GetHead();
-              }
-              //get next sequenced block
-              while (SUCCEEDED(hRes) && IsShuttingDown() == FALSE)
-              {
-                lpPacket = lpConn->cReadedList.Dequeue(__InterlockedRead(&(lpConn->nNextReadOrderToProcess)));
-                if (lpPacket == NULL)
-                  break;
-                if (lpLayer != NULL)
-                {
-                  hRes = lpLayer->OnData(lpPacket->GetBuffer(), (SIZE_T)(lpPacket->GetBytesInUse()));
-                }
-                else
-                {
-                  CFastLock cRecBufLock(&(lpConn->sReceivedData.nMutex));
-
-                  hRes = lpConn->sReceivedData.cBuffer.Write(lpPacket->GetBuffer(),
-                                                             (SIZE_T)(lpPacket->GetBytesInUse()));
-                  _InterlockedOr(&(lpConn->nFlags), FLAG_NewReceivedDataAvailable);
-                }
-                FreePacket(lpPacket);
-                _InterlockedIncrement(&(lpConn->nNextReadOrderToProcess));
-              }
-            }
-            if (bJumpFromResumeInputProcessing != FALSE)
-              break;
-          }
-          else
+          if ((__InterlockedRead(&(lpConn->nFlags)) & FLAG_InputProcessingPaused) == 0)
           {
-            if (ShouldLog(1) != FALSE)
             {
-              Log(L"CIpc::GracefulShutdown A) Clock=%lums / This=0x%p", lpConn->cHiResTimer.GetElapsedTimeMs(), lpConn);
+              CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
+
+              lpLayer = lpConn->sLayers.cList.GetHead();
             }
-            _InterlockedOr(&(lpConn->nFlags), FLAG_GracefulShutdown);
-            //free packet
-            lpConn->cRwList.Remove(lpPacket);
-            FreePacket(lpPacket);
+
+            //get next sequenced block
+            while (SUCCEEDED(hRes) && IsShuttingDown() == FALSE)
+            {
+              lpPacket = lpConn->cReadedList.Dequeue(__InterlockedRead(&(lpConn->nNextReadOrderToProcess)));
+              if (lpPacket == NULL)
+                break;
+              if (lpLayer != NULL)
+              {
+                hRes = lpLayer->OnData(lpPacket->GetBuffer(), (SIZE_T)(lpPacket->GetBytesInUse()));
+              }
+              else
+              {
+                CFastLock cRecBufLock(&(lpConn->sReceivedData.nMutex));
+
+                hRes = lpConn->sReceivedData.cBuffer.Write(lpPacket->GetBuffer(),
+                                                            (SIZE_T)(lpPacket->GetBytesInUse()));
+                _InterlockedOr(&(lpConn->nFlags), FLAG_NewReceivedDataAvailable);
+              }
+              FreePacket(lpPacket);
+              _InterlockedIncrement(&(lpConn->nNextReadOrderToProcess));
+            }
           }
+          if (bJumpFromResumeInputProcessing != FALSE)
+            break;
         }
         else
         {
+          if (ShouldLog(1) != FALSE)
+          {
+            Log(L"CIpc::GracefulShutdown A) Clock=%lums / This=0x%p", lpConn->cHiResTimer.GetElapsedTimeMs(), lpConn);
+          }
+          _InterlockedOr(&(lpConn->nFlags), FLAG_GracefulShutdown);
+
           //free packet
           lpConn->cRwList.Remove(lpPacket);
           FreePacket(lpPacket);
         }
-        //setup a new read-ahead
-        if (SUCCEEDED(hRes) && bQueueNewRead != FALSE && lpConn->IsClosedOrGracefulShutdown() == FALSE)
-        {
-          hRes = (bDoZeroReads != FALSE && ZeroReadsSupported() != FALSE) ? lpConn->DoZeroRead(1) : lpConn->DoRead(1);
-        }
-        //done
-        MX_ASSERT_ALWAYS(_InterlockedDecrement(&(lpConn->nOutstandingReads)) >= 0);
-        break;
-
-      case CPacket::TypeWriteRequest:
+      }
+      else
+      {
+        //free packet
         lpConn->cRwList.Remove(lpPacket);
-        lpConn->cWritePendingList.QueueSorted(lpPacket);
+        FreePacket(lpPacket);
+      }
+
+      //setup a new read-ahead
+      if (SUCCEEDED(hRes) && bQueueNewRead != FALSE && lpConn->IsClosedOrGracefulShutdown() == FALSE)
+      {
+        hRes = (bDoZeroReads != FALSE && ZeroReadsSupported() != FALSE) ? lpConn->DoZeroRead(1) : lpConn->DoRead(1);
+      }
+
+      //done
+      MX_ASSERT_ALWAYS(_InterlockedDecrement(&(lpConn->nIncomingReads)) >= 0);
+      break;
+
+    case CPacketBase::TypeWriteRequest:
+      lpConn->cRwList.Remove(lpPacket);
+      lpConn->cWritePendingList.QueueSorted(lpPacket);
+
 check_pending_write_req:
-        //process queued packets if output processing is not paused
-        if ((__InterlockedRead(&(lpConn->nFlags)) & FLAG_OutputProcessingPaused) == 0)
+      //increment outstanding writes do keep the connection open while the chain is built
+      _InterlockedIncrement(&(lpConn->nOutgoingWrites));
+
+      //process queued packets if output processing is not paused
+      if (SUCCEEDED(hRes) && (__InterlockedRead(&(lpConn->nFlags)) & FLAG_OutputProcessingPaused) == 0 &&
+          (DWORD)__InterlockedRead(&(lpConn->nOutgoingBytes)) < dwMaxOutgoingBytes)
+      {
+        CPacketBase *lpFirstPacket, *lpLastPacket;
+        SIZE_T nChainLength;
+        ULONG nNextToProcess;
+
+        nNextToProcess = (ULONG)__InterlockedRead(&(lpConn->nNextWriteOrderToProcess));
+
+write_req_restart:
+        //get next sequenced block to write
+        lpPacket = lpConn->cWritePendingList.Dequeue(nNextToProcess);
+        if (lpPacket != NULL)
         {
+          //process an after-write signal
+          if (lpPacket->HasAfterWriteSignalCallback() != FALSE)
           {
-            CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
-
-            lpLayer = lpConn->sLayers.cList.GetTail();
-          }
-          //loop
-          while (SUCCEEDED(hRes) &&
-                 (DWORD)__InterlockedRead(&(lpConn->nOutstandingWritesBeingSent)) < dwMaxOutgoingPackets)
-          {
-            //get next sequenced block to write
-            lpPacket = lpConn->cWritePendingList.Dequeue(lpConn->nNextWriteOrderToProcess);
-            if (lpPacket == NULL)
-              break;
-            //process an after-write signal
-            if (lpPacket->HasAfterWriteSignalCallback() != FALSE)
+            //if some chain must be written, requeue and wait
+            if (__InterlockedRead(&(lpConn->nOutgoingBytes)) == 0)
             {
-              if (__InterlockedRead(&(lpConn->nOutstandingWritesBeingSent)) == 0)
-              {
-                //call callback
-                TAutoRefCounted<CUserData> cUserData(lpConn->cUserData);
+              //call callback
+              TAutoRefCounted<CUserData> cUserData(lpConn->cUserData);
 
-                lpPacket->InvokeAfterWriteSignalCallback(this, cUserData);
-                //free packet
-                FreePacket(lpPacket);
-                //go to next packet
-                _InterlockedIncrement(&(lpConn->nNextWriteOrderToProcess));
-                //decrement the outstanding writes incremented by the send/recheck and close if needed
-                MX_ASSERT_ALWAYS(__InterlockedRead(&(lpConn->nOutstandingWrites)) >= 1);
-                if (_InterlockedDecrement(&(lpConn->nOutstandingWrites)) == 0 && lpConn->IsClosed() != FALSE)
-                  lpConn->ShutdownLink(FAILED(__InterlockedRead(&(lpConn->hrErrorCode))));
-                continue; //loop
-              }
-              //there still exists packets being sent so requeue and wait
-              lpConn->cWritePendingList.QueueSorted(lpPacket);
-              break;
+              lpPacket->InvokeAfterWriteSignalCallback(this, cUserData);
+              //free packet
+              FreePacket(lpPacket);
+
+              //go to next packet
+              nNextToProcess++;
+              //decrement the outstanding writes incremented by the send
+              _InterlockedDecrement(&(lpConn->nOutgoingWrites));
+
+              _InterlockedExchange(&(lpConn->nNextWriteOrderToProcess), (LONG)nNextToProcess);
+              goto write_req_restart; //loop
             }
-            //process a stream
-            lpStreamPacket = NULL;
-            if (lpPacket->HasStream() != FALSE)
+
+            //if some chain must be written or there still exists packets being sent, requeue and wait
+            lpConn->cWritePendingList.QueueSorted(lpPacket);
+
+            _InterlockedExchange(&(lpConn->nNextWriteOrderToProcess), (LONG)nNextToProcess);
+            goto write_req_after_all;
+          }
+
+          //start processing a serie of packets
+          lpFirstPacket = lpLastPacket = NULL;
+          nChainLength = 0;
+
+write_req_process_packet:
+          //process a stream?
+          if (lpPacket->HasStream() != FALSE)
+          {
+            CPacketBase *lpNewPacket;
+
+            hRes = S_OK;
+            while (SUCCEEDED(hRes) && nChainLength < lpConn->GetMultiWriteMaxCount() &&
+                    (DWORD)__InterlockedRead(&(lpConn->nOutgoingBytes)) < dwMaxOutgoingBytes)
             {
-              lpStreamPacket = lpPacket;
-              lpPacket = GetPacket(lpConn, CPacket::TypeWrite);
-              if (lpPacket == NULL)
+              lpNewPacket = GetPacket(lpConn, CPacketBase::TypeWrite, 32768, FALSE);
+              if (lpNewPacket == NULL)
               {
-                //dealing with an error, requeue
-                //lpConn->cWritePendingList.QueueSorted(lpStreamPacket);
-                lpConn->cWritePendingList.QueueFirst(lpStreamPacket);
-                //set error
                 hRes = E_OUTOFMEMORY;
                 break;
               }
+
               //read from stream
               nReaded = 0;
-              hRes = lpStreamPacket->ReadStream(lpPacket->GetBuffer(), (SIZE_T)dwPacketSize, nReaded);
-              if (SUCCEEDED(hRes) && nReaded > (SIZE_T)dwPacketSize)
+              hRes = lpPacket->ReadStream(lpNewPacket->GetBuffer(), (SIZE_T)(lpNewPacket->GetBufferSize()), nReaded);
+              if (SUCCEEDED(hRes) && nReaded > (SIZE_T)(lpNewPacket->GetBufferSize()))
               {
                 MX_ASSERT(FALSE);
                 hRes = MX_E_InvalidData;
               }
-              if (hRes == MX_E_EndOfFileReached)
+              //end of stream reached?
+              if (FAILED(hRes) && hRes != MX_E_EndOfFileReached)
               {
-                hRes = S_OK;
-              }
-              else if (FAILED(hRes))
-              {
-                FreePacket(lpPacket);
-                //dealing with an error, requeue
-                //lpConn->cWritePendingList.QueueSorted(lpStreamPacket);
-                lpConn->cWritePendingList.QueueFirst(lpStreamPacket);
+                FreePacket(lpNewPacket);
                 break;
               }
-              lpPacket->SetBytesInUse((DWORD)nReaded);
               //end of stream reached?
               if (nReaded == 0)
               {
+                FreePacket(lpNewPacket);
+
+                //reached the end of the stream so free "stream" packet
                 FreePacket(lpPacket);
-                //free "stream" packet
-                FreePacket(lpStreamPacket);
+                lpPacket = NULL;
                 //go to next packet
-                _InterlockedIncrement(&(lpConn->nNextWriteOrderToProcess));
-                //decrement the outstanding writes incremented by the send and close if needed
-                MX_ASSERT_ALWAYS(__InterlockedRead(&(lpConn->nOutstandingWrites)) >= 1);
-                if (_InterlockedDecrement(&(lpConn->nOutstandingWrites)) == 0 && lpConn->IsClosed() != FALSE)
-                  lpConn->ShutdownLink(FAILED(lpConn->hrErrorCode));
-                continue; //loop
+                nNextToProcess++;
+                //decrement the outstanding writes incremented by the send
+                _InterlockedDecrement(&(lpConn->nOutgoingWrites));
+
+                hRes = S_OK;
+                break;
+              }
+
+              //process packet's data
+              lpNewPacket->SetBytesInUse((DWORD)nReaded);
+              hRes = S_OK;
+
+              //does the connection has a layer?
+              {
+                CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
+
+                lpLayer = lpConn->sLayers.cList.GetTail();
+              }
+              if (lpLayer != NULL)
+              {
+                //capture chained packets
+                lpConn->sSendingData.lpFirstPacket = lpFirstPacket;
+                lpConn->sSendingData.lpLastPacket = lpLastPacket;
+                lpConn->sSendingData.nChainLength = nChainLength;
+
+                hRes = lpLayer->OnSendMsg(lpNewPacket->GetBuffer(), (SIZE_T)(lpNewPacket->GetBytesInUse()));
+
+                //after capturing chained packets
+                lpFirstPacket = lpConn->sSendingData.lpFirstPacket;
+                lpLastPacket = lpConn->sSendingData.lpLastPacket;
+                nChainLength = lpConn->sSendingData.nChainLength;
+
+                FreePacket(lpNewPacket);
+              }
+              else
+              {
+                //directly add to chain
+                if (lpFirstPacket == NULL)
+                  lpFirstPacket = lpNewPacket;
+                else
+                  lpLastPacket->ChainPacket(lpNewPacket);
+                lpLastPacket = lpNewPacket;
+                nChainLength++;
               }
             }
+
+            //at this point we reached the end of the stream, fulfilled the max outgoing bytes or an error was raised
+          }
+          else
+          {
             //does the connection has a layer?
+            {
+              CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
+
+              lpLayer = lpConn->sLayers.cList.GetTail();
+            }
             if (lpLayer != NULL)
             {
+              //capture chained packets
+              lpConn->sSendingData.lpFirstPacket = lpFirstPacket;
+              lpConn->sSendingData.lpLastPacket = lpLastPacket;
+              lpConn->sSendingData.nChainLength = nChainLength;
+
               hRes = lpLayer->OnSendMsg(lpPacket->GetBuffer(), (SIZE_T)(lpPacket->GetBytesInUse()));
+
+              //after capturing chained packets
+              lpFirstPacket = lpConn->sSendingData.lpFirstPacket;
+              lpLastPacket = lpConn->sSendingData.lpLastPacket;
+              nChainLength = lpConn->sSendingData.nChainLength;
+
               FreePacket(lpPacket);
             }
             else
             {
-              //do real write
-              lpConn->cRwList.QueueLast(lpPacket);
-              lpPacket->SetType(CPacket::TypeWrite);
-              _InterlockedIncrement(&(lpConn->nOutstandingWrites));
-              _InterlockedIncrement(&(lpConn->nOutstandingWritesBeingSent));
-              switch (hRes = lpConn->SendWritePacket(lpPacket))
-              {
-                case S_FALSE:
-                  _InterlockedDecrement(&(lpConn->nOutstandingWritesBeingSent));
-                  if (_InterlockedDecrement(&(lpConn->nOutstandingWrites)) == 0 && lpConn->IsClosed() != FALSE)
-                    lpConn->ShutdownLink(FAILED(__InterlockedRead(&(lpConn->hrErrorCode))));
-                  if (ShouldLog(1) != FALSE)
-                  {
-                    Log(L"CIpc::GracefulShutdown B) Clock=%lums / This=0x%p",
-                        lpConn->cHiResTimer.GetElapsedTimeMs(), this);
-                  }
-                  _InterlockedOr(&(lpConn->nFlags), FLAG_GracefulShutdown);
-                  //free packet
-                  lpConn->cRwList.Remove(lpPacket);
-                  FreePacket(lpPacket);
-                  hRes = S_OK;
-                  break;
+              //directly add to chain
+              if (lpFirstPacket == NULL)
+                lpFirstPacket = lpPacket;
+              else
+                lpLastPacket->ChainPacket(lpPacket);
+              lpLastPacket = lpPacket;
+              nChainLength++;
+            }
+            lpPacket = NULL;
+            hRes = S_OK;
 
-                case S_OK:
-                case 0x80070000 | ERROR_IO_PENDING:
-                  lpConn->AddRef();
-                  hRes = S_OK;
-                  break;
-
-                default:
-                  _InterlockedDecrement(&(lpConn->nOutstandingWritesBeingSent));
-                  if (_InterlockedDecrement(&(lpConn->nOutstandingWrites)) == 0 && lpConn->IsClosed() != FALSE)
-                    lpConn->ShutdownLink(FAILED(__InterlockedRead(&(lpConn->hrErrorCode))));
-                  break;
-              }
-            }
-            //here, the packet was sent or discarded if an error happened
-            //if packet's origin was a stream, then requeue but don't increment next write to process
-            if (lpStreamPacket != NULL)
-            {
-              lpConn->cWritePendingList.QueueFirst(lpStreamPacket);
-              //lpConn->cWritePendingList.QueueSorted(lpStreamPacket);
-            }
-            else
-            {
-              //increment next write to process if processed a non-stream packet
-              _InterlockedIncrement(&(lpConn->nNextWriteOrderToProcess));
-              //decrement the outstanding writes incremented by the send and close if needed
-              MX_ASSERT_ALWAYS(__InterlockedRead(&(lpConn->nOutstandingWrites)) >= 1);
-              if (_InterlockedDecrement(&(lpConn->nOutstandingWrites)) == 0 && lpConn->IsClosed() != FALSE)
-                lpConn->ShutdownLink(FAILED(__InterlockedRead(&(lpConn->hrErrorCode))));
-            }
+            //go to next packet
+            nNextToProcess++;
+            //decrement the outstanding writes incremented by the send
+            _InterlockedDecrement(&(lpConn->nOutgoingWrites));
           }
-        }
-        break;
 
-      case CPacket::TypeWrite:
-        if (SUCCEEDED(hRes))
-        {
-          MX_ASSERT(dwBytes != 0);
-          if (dwBytes == lpPacket->GetBytesInUse())
+          //let's try to partially flush the chain of packets
+          if (SUCCEEDED(hRes) && nChainLength > 0)
           {
-            lpConn->UpdateStats(FALSE, dwBytes);
+            hRes = lpConn->SendPackets(&lpFirstPacket, &lpLastPacket, &nChainLength, FALSE);
           }
-          else
+
+          //if we are done with the previous packet, try to process the next one
+          if (SUCCEEDED(hRes) && lpPacket == NULL &&
+              (DWORD)__InterlockedRead(&(lpConn->nOutgoingBytes)) < dwMaxOutgoingBytes &&
+              nChainLength < lpConn->GetMultiWriteMaxCount())
           {
-            hRes = MX_E_WriteFault;
+            if (nChainLength == 0)
+            {
+              _InterlockedExchange(&(lpConn->nNextWriteOrderToProcess), (LONG)nNextToProcess);
+              goto write_req_restart;
+            }
+
+            //get next packet
+            lpPacket = lpConn->cWritePendingList.Dequeue(nNextToProcess);
+            if (lpPacket != NULL)
+            {
+              if (lpPacket->HasAfterWriteSignalCallback() == FALSE)
+                goto write_req_process_packet;
+
+              //if it is an after write signal, it will be re-queued below
+            }
           }
+
+          //at this point we cannot process more packets due to a fulfilled chain or an error
+
+          //first flush completely the chain
+          if (SUCCEEDED(hRes) && nChainLength > 0)
+          {
+            hRes = lpConn->SendPackets(&lpFirstPacket, &lpLastPacket, &nChainLength, TRUE);
+          }
+
+          //free chained packets left. if no error here, then the chain should be empty
+          MX_ASSERT(FAILED(hRes) || lpFirstPacket == NULL);
+          if (lpFirstPacket != NULL)
+            FreePacket(lpFirstPacket);
+
+          //if we have a packet here, it must be a stream or an after send callback and we should
+          //re-queue it in order to reprocess
+          if (lpPacket != NULL)
+          {
+            MX_ASSERT(lpPacket->HasStream() != FALSE || lpPacket->HasAfterWriteSignalCallback() != FALSE);
+
+            lpConn->cWritePendingList.QueueFirst(lpPacket);
+            lpPacket = NULL;
+          }
+
+          _InterlockedExchange(&(lpConn->nNextWriteOrderToProcess), (LONG)nNextToProcess);
+
+          if (__InterlockedRead(&(lpConn->nOutgoingBytes)) == 0)
+            goto write_req_restart;
         }
-        //----
-        MX_ASSERT_ALWAYS(__InterlockedRead(&(lpConn->nOutstandingWrites)) >= 1);
-        MX_ASSERT_ALWAYS(__InterlockedRead(&(lpConn->nOutstandingWritesBeingSent)) >= 1);
-        //----
-        _InterlockedDecrement(&(lpConn->nOutstandingWritesBeingSent));
-        if (_InterlockedDecrement(&(lpConn->nOutstandingWrites)) == 0 && lpConn->IsClosed() != FALSE)
-          lpConn->ShutdownLink(FAILED(__InterlockedRead(&(lpConn->hrErrorCode))));
-        //free packet
-        lpConn->cRwList.Remove(lpPacket);
-        FreePacket(lpPacket);
-        //check for pending write packets
-        if (SUCCEEDED(hRes))
-          goto check_pending_write_req;
-        break;
+      }
 
-      case CPacket::TypeDiscard:
-        //ignore
-        MX_ASSERT(FALSE);
-        break;
+write_req_after_all:
+      //decrement the outstanding write incremented at the beginning of this section and close if needed
+      MX_ASSERT_ALWAYS(__InterlockedRead(&(lpConn->nOutgoingWrites)) >= 1);
+      if (_InterlockedDecrement(&(lpConn->nOutgoingWrites)) == 0 && lpConn->IsClosed() != FALSE)
+        lpConn->ShutdownLink(FAILED(__InterlockedRead(&(lpConn->hrErrorCode))));
+      break;
 
-      case CPacket::TypeResumeIoProcessing:
-        lpConn->cRwList.Remove(lpPacket);
-        hRes = S_OK;
-        if (lpPacket->GetOrder() == 1)
+    case CPacketBase::TypeWrite:
+      if (SUCCEEDED(hRes))
+      {
+        MX_ASSERT(dwBytes != 0);
+        if (dwBytes == lpPacket->GetUserDataDW())
         {
-          //check pending write packets
-          FreePacket(lpPacket);
-          bJumpFromResumeInputProcessing = TRUE;
-          goto check_pending_read_req;
+          lpConn->UpdateStats(FALSE, dwBytes);
         }
-        //else check pending write packets
-        FreePacket(lpPacket);
+        else
+        {
+          hRes = MX_E_WriteFault;
+        }
+      }
+
+      MX_ASSERT_ALWAYS(__InterlockedRead(&(lpConn->nOutgoingWrites)) >= 1);
+      MX_ASSERT_ALWAYS((DWORD)__InterlockedRead(&(lpConn->nOutgoingBytes)) >= lpPacket->GetUserDataDW());
+
+      _InterlockedAdd(&(lpConn->nOutgoingBytes), -((LONG)(lpPacket->GetUserDataDW())));
+      if (_InterlockedDecrement(&(lpConn->nOutgoingWrites)) == 0 && lpConn->IsClosed() != FALSE)
+        lpConn->ShutdownLink(FAILED(__InterlockedRead(&(lpConn->hrErrorCode))));
+
+      //free packet
+      lpConn->cRwList.Remove(lpPacket);
+      FreePacket(lpPacket);
+
+      //check for pending write packets
+      if (SUCCEEDED(hRes))
         goto check_pending_write_req;
+      break;
 
-      default:
-        hRes = OnCustomPacket(dwBytes, lpPacket, hRes);
-        break;
-    }
+    case CPacketBase::TypeDiscard:
+      //ignore
+      MX_ASSERT(FALSE);
+      break;
+
+    case CPacketBase::TypeResumeIoProcessing:
+      lpConn->cRwList.Remove(lpPacket);
+      hRes = S_OK;
+      if (lpPacket->GetOrder() == 1)
+      {
+        //check pending read packets
+        FreePacket(lpPacket);
+        bJumpFromResumeInputProcessing = TRUE;
+        goto check_pending_read_req;
+      }
+
+      //else check pending write packets
+      FreePacket(lpPacket);
+      goto check_pending_write_req;
+
+    default:
+      hRes = OnCustomPacket(dwBytes, lpPacket, hRes);
+      break;
   }
-  else
-  {
-    hRes = hRes2;
-  }
+
   //new message queued? graceful closing?
   if (lpConn->IsClosedOrGracefulShutdown() == FALSE)
   {
@@ -1215,11 +1345,9 @@ check_pending_write_req:
       hRes2 = FireOnDataReceived(lpConn);
       if (SUCCEEDED(hRes))
         hRes = hRes2;
-
     }
   }
-  else if (__InterlockedRead(&(lpConn->nOutstandingReads)) == 0 &&
-           __InterlockedRead(&(lpConn->nOutstandingWrites)) == 0)
+  else if (__InterlockedRead(&(lpConn->nIncomingReads)) == 0 && __InterlockedRead(&(lpConn->nOutgoingWrites)) == 0)
   {
     if ((_InterlockedOr(&(lpConn->nFlags), FLAG_ShutdownProcessed) & FLAG_ShutdownProcessed) == 0)
     {
@@ -1268,6 +1396,7 @@ check_pending_write_req:
       }
     }
   }
+
   //on error terminate connection
   if (FAILED(hRes))
   {
@@ -1285,6 +1414,7 @@ check_pending_write_req:
     }
     lpConn->Close(hRes);
   }
+
   //release connection reference
   lpConn->Release();
   if (ShouldLog(1) != FALSE)
@@ -1297,9 +1427,9 @@ check_pending_write_req:
   return;
 }
 
-HRESULT CIpc::OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes)
+BOOL CIpc::OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket, _In_ HRESULT hRes)
 {
-  return S_FALSE;
+  return FALSE;
 }
 
 //-----------------------------------------------------------
@@ -1317,9 +1447,9 @@ CIpc::CConnectionBase::CConnectionBase(_In_ CIpc *_lpIpc, _In_ CIpc::eConnection
   _InterlockedExchange(&nNextReadOrderToProcess, 1);
   _InterlockedExchange(&nNextWriteOrder, 0);
   _InterlockedExchange(&nNextWriteOrderToProcess, 1);
-  _InterlockedExchange(&nOutstandingReads, 0);
-  _InterlockedExchange(&nOutstandingWrites, 0);
-  _InterlockedExchange(&nOutstandingWritesBeingSent, 0);
+  _InterlockedExchange(&nIncomingReads, 0);
+  _InterlockedExchange(&nOutgoingWrites, 0);
+  _InterlockedExchange(&nOutgoingBytes, 0);
   cCreateCallback = NullCallback();
   cDestroyCallback = NullCallback();
   cConnectCallback = NullCallback();
@@ -1334,11 +1464,11 @@ CIpc::CConnectionBase::CConnectionBase(_In_ CIpc *_lpIpc, _In_ CIpc::eConnection
 
 CIpc::CConnectionBase::~CConnectionBase()
 {
-  CPacket *lpPacket;
+  CPacketBase *lpPacket;
   CLayer *lpLayer;
 
   {
-    CAutoSlimRWLExclusive cConnListLock(&(lpIpc->sConnections.nSlimMutex));
+    CAutoSlimRWLExclusive cConnListLock(&(lpIpc->sConnections.nRwMutex));
 
     RemoveNode();
   }
@@ -1364,7 +1494,7 @@ VOID CIpc::CConnectionBase::ShutdownLink(_In_ BOOL bAbortive)
 
 HRESULT CIpc::CConnectionBase::SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize)
 {
-  CPacket *lpPacket;
+  CPacketBase *lpPacket;
   LPBYTE s;
   DWORD dwToSendThisRound;
   HRESULT hRes;
@@ -1380,18 +1510,20 @@ HRESULT CIpc::CConnectionBase::SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSiz
   while (nDataSize > 0)
   {
     //get a free buffer
-    lpPacket = lpIpc->GetPacket(this, CIpc::CPacket::TypeWriteRequest);
+    lpPacket = lpIpc->GetPacket(this, CIpc::CPacketBase::TypeWriteRequest, ((nDataSize > 8192) ? 32768 : 4096), FALSE);
     if (lpPacket == NULL)
       return E_OUTOFMEMORY;
     //fill buffer
-    dwToSendThisRound = (nDataSize > (SIZE_T)(lpIpc->dwPacketSize)) ? lpIpc->dwPacketSize : (DWORD)nDataSize;
+    dwToSendThisRound = lpPacket->GetBufferSize();
+    if (nDataSize < (SIZE_T)dwToSendThisRound)
+      dwToSendThisRound = (DWORD)nDataSize;
     lpPacket->SetBytesInUse(dwToSendThisRound);
-    MemCopy(lpPacket->GetBuffer(), s, (SIZE_T)(lpPacket->GetBytesInUse()));
+    MemCopy(lpPacket->GetBuffer(), s, (SIZE_T)dwToSendThisRound);
     //prepare
     lpPacket->SetOrder(_InterlockedIncrement(&nNextWriteOrder));
     cRwList.QueueLast(lpPacket);
     AddRef();
-    _InterlockedIncrement(&nOutstandingWrites);
+    _InterlockedIncrement(&nOutgoingWrites);
     if (lpIpc->ShouldLog(1) != FALSE)
     {
       lpIpc->Log(L"CIpc::SendMsg) Clock=%lums / Ovr=0x%p / Type=%lu / Bytes=%lu", cHiResTimer.GetElapsedTimeMs(),
@@ -1400,8 +1532,8 @@ HRESULT CIpc::CConnectionBase::SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSiz
     hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
     if (FAILED(hRes))
     {
-      MX_ASSERT_ALWAYS(__InterlockedRead(&nOutstandingWrites) >= 1);
-      _InterlockedDecrement(&nOutstandingWrites);
+      MX_ASSERT_ALWAYS(__InterlockedRead(&nOutgoingWrites) >= 1);
+      _InterlockedDecrement(&nOutgoingWrites);
       Release();
       return hRes;
     }
@@ -1414,12 +1546,12 @@ HRESULT CIpc::CConnectionBase::SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSiz
 
 HRESULT CIpc::CConnectionBase::SendStream(_In_ CStream *lpStream)
 {
-  CPacket *lpPacket;
+  CPacketBase *lpPacket;
   HRESULT hRes;
 
   MX_ASSERT(lpStream != NULL);
   //get a free buffer
-  lpPacket = lpIpc->GetPacket(this, CIpc::CPacket::TypeWriteRequest);
+  lpPacket = lpIpc->GetPacket(this, CIpc::CPacketBase::TypeWriteRequest, 0, FALSE);
   if (lpPacket == NULL)
     return E_OUTOFMEMORY;
   //prepare
@@ -1427,7 +1559,7 @@ HRESULT CIpc::CConnectionBase::SendStream(_In_ CStream *lpStream)
   lpPacket->SetOrder(_InterlockedIncrement(&nNextWriteOrder));
   cRwList.QueueLast(lpPacket);
   AddRef();
-  _InterlockedIncrement(&nOutstandingWrites);
+  _InterlockedIncrement(&nOutgoingWrites);
   if (lpIpc->ShouldLog(1) != FALSE)
   {
     lpIpc->Log(L"CIpc::SendStream) Clock=%lums / Ovr=0x%p / Type=%lu", cHiResTimer.GetElapsedTimeMs(),
@@ -1436,7 +1568,7 @@ HRESULT CIpc::CConnectionBase::SendStream(_In_ CStream *lpStream)
   hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
   if (FAILED(hRes))
   {
-    _InterlockedDecrement(&nOutstandingWrites);
+    _InterlockedDecrement(&nOutgoingWrites);
     Release();
   }
   return hRes;
@@ -1444,12 +1576,12 @@ HRESULT CIpc::CConnectionBase::SendStream(_In_ CStream *lpStream)
 
 HRESULT CIpc::CConnectionBase::AfterWriteSignal(_In_ OnAfterWriteSignalCallback cCallback, _In_opt_ LPVOID lpCookie)
 {
-  CPacket *lpPacket;
+  CPacketBase *lpPacket;
   HRESULT hRes;
 
   MX_ASSERT(cCallback != false);
   //get a free buffer
-  lpPacket = lpIpc->GetPacket(this, CIpc::CPacket::TypeWriteRequest);
+  lpPacket = lpIpc->GetPacket(this, CIpc::CPacketBase::TypeWriteRequest, 0, FALSE);
   if (lpPacket == NULL)
     return E_OUTOFMEMORY;
   //prepare
@@ -1458,7 +1590,7 @@ HRESULT CIpc::CConnectionBase::AfterWriteSignal(_In_ OnAfterWriteSignalCallback 
   lpPacket->SetUserData(lpCookie);
   cRwList.QueueLast(lpPacket);
   AddRef();
-  _InterlockedIncrement(&nOutstandingWrites);
+  _InterlockedIncrement(&nOutgoingWrites);
   if (lpIpc->ShouldLog(1) != FALSE)
   {
     lpIpc->Log(L"CIpc::AfterWriteSignal) Clock=%lums / Ovr=0x%p / Type=%lu", cHiResTimer.GetElapsedTimeMs(),
@@ -1467,7 +1599,7 @@ HRESULT CIpc::CConnectionBase::AfterWriteSignal(_In_ OnAfterWriteSignalCallback 
   hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
   if (FAILED(hRes))
   {
-    _InterlockedDecrement(&nOutstandingWrites);
+    _InterlockedDecrement(&nOutgoingWrites);
     Release();
   }
   return hRes;
@@ -1475,11 +1607,11 @@ HRESULT CIpc::CConnectionBase::AfterWriteSignal(_In_ OnAfterWriteSignalCallback 
 
 HRESULT CIpc::CConnectionBase::SendResumeIoProcessingPacket(_In_ BOOL bInput)
 {
-  CPacket *lpPacket;
+  CPacketBase *lpPacket;
   HRESULT hRes;
 
   //get a free buffer
-  lpPacket = lpIpc->GetPacket(this, CIpc::CPacket::TypeResumeIoProcessing);
+  lpPacket = lpIpc->GetPacket(this, CIpc::CPacketBase::TypeResumeIoProcessing, 0, FALSE);
   if (lpPacket == NULL)
     return E_OUTOFMEMORY;
   //prepare
@@ -1502,70 +1634,6 @@ HRESULT CIpc::CConnectionBase::SendResumeIoProcessingPacket(_In_ BOOL bInput)
   return hRes;
 }
 
-HRESULT CIpc::CConnectionBase::WriteMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize)
-{
-  CPacket *lpPacket;
-  HRESULT hRes;
-
-  if (nDataSize == 0)
-    return S_OK;
-  if (lpData == NULL)
-    return E_POINTER;
-  if (nDataSize > 0x7FFFFFFF)
-    return E_INVALIDARG;
-  if (IsClosed() != FALSE)
-  {
-    hRes = GetErrorCode();
-    return (SUCCEEDED(hRes)) ? E_FAIL : hRes;
-  }
-  //do write
-  while (nDataSize > 0)
-  {
-    //get a free buffer
-    lpPacket = lpIpc->GetPacket(this, CIpc::CPacket::TypeWrite);
-    if (lpPacket == NULL)
-      return E_OUTOFMEMORY;
-    //fill buffer
-    lpPacket->SetBytesInUse((nDataSize > (SIZE_T)(lpIpc->dwPacketSize)) ? lpIpc->dwPacketSize : (DWORD)nDataSize);
-    MemCopy(lpPacket->GetBuffer(), lpData, (SIZE_T)(lpPacket->GetBytesInUse()));
-    //next block
-    lpData = (LPBYTE)lpData + (SIZE_T)(lpPacket->GetBytesInUse());
-    nDataSize -= (SIZE_T)(lpPacket->GetBytesInUse());
-    //prepare
-    cRwList.QueueLast(lpPacket);
-    _InterlockedIncrement(&nOutstandingWrites);
-    _InterlockedIncrement(&nOutstandingWritesBeingSent);
-    switch (hRes = SendWritePacket(lpPacket))
-    {
-      case S_FALSE:
-        _InterlockedDecrement(&nOutstandingWritesBeingSent);
-        if (_InterlockedDecrement(&nOutstandingWrites) == 0 && IsClosed() != FALSE)
-          ShutdownLink(FAILED(__InterlockedRead(&hrErrorCode)));
-        if (lpIpc->ShouldLog(1) != FALSE)
-        {
-          lpIpc->Log(L"CIpc::GracefulShutdown D) Clock=%lums / This=0x%p", cHiResTimer.GetElapsedTimeMs(), this);
-        }
-        _InterlockedOr(&nFlags, FLAG_GracefulShutdown);
-        //free packet
-        cRwList.Remove(lpPacket);
-        FreePacket(lpPacket);
-        return S_OK;
-
-      case S_OK:
-      case 0x80070000 | ERROR_IO_PENDING:
-        AddRef();
-        break;
-
-      default:
-        _InterlockedDecrement(&nOutstandingWritesBeingSent);
-        if (_InterlockedDecrement(&nOutstandingWrites) == 0 && IsClosed() != FALSE)
-          ShutdownLink(FAILED(__InterlockedRead(&hrErrorCode)));
-        return hRes;
-    }
-  }
-  return S_OK;
-}
-
 VOID CIpc::CConnectionBase::Close(_In_ HRESULT hRes)
 {
   LONG nInitVal, nOrigVal, nNewVal;
@@ -1582,7 +1650,7 @@ VOID CIpc::CConnectionBase::Close(_In_ HRESULT hRes)
   }
   while (nOrigVal != nInitVal);
   _InterlockedCompareExchange(&hrErrorCode, hRes, S_OK);
-  if (hRes != S_OK || __InterlockedRead(&nOutstandingWrites) == 0)
+  if (hRes != S_OK || __InterlockedRead(&nOutgoingWrites) == 0)
     ShutdownLink(FAILED(__InterlockedRead(&hrErrorCode)));
   //when closing call the "final" release to remove from list
   if ((nInitVal & FLAG_Closed) == 0)
@@ -1623,7 +1691,7 @@ HRESULT CIpc::CConnectionBase::GetErrorCode()
 
 HRESULT CIpc::CConnectionBase::HandleConnected()
 {
-  CPacket *lpPacket;
+  CPacketBase *lpPacket;
   DWORD dwCurrTickMs;
   HRESULT hRes;
 
@@ -1656,7 +1724,7 @@ HRESULT CIpc::CConnectionBase::HandleConnected()
     }
   }
   //send initial setup packet
-  lpPacket = lpIpc->GetPacket(this, CPacket::TypeInitialSetup);
+  lpPacket = lpIpc->GetPacket(this, CPacketBase::TypeInitialSetup, 0, FALSE);
   if (lpPacket == NULL)
     return E_OUTOFMEMORY;
   cRwList.QueueLast(lpPacket);
@@ -1678,12 +1746,13 @@ HRESULT CIpc::CConnectionBase::HandleConnected()
   return S_OK;
 }
 
-CIpc::CPacket* CIpc::CConnectionBase::GetPacket(_In_ CPacket::eType nType)
+CIpc::CPacketBase* CIpc::CConnectionBase::GetPacket(_In_ CPacketBase::eType nType, _In_ SIZE_T nDesiredSize,
+                                                    _In_ BOOL bRealSize)
 {
-  return lpIpc->GetPacket(this, nType);
+  return lpIpc->GetPacket(this, nType, nDesiredSize, bRealSize);
 }
 
-VOID CIpc::CConnectionBase::FreePacket(_In_ CPacket *lpPacket)
+VOID CIpc::CConnectionBase::FreePacket(_In_ CPacketBase *lpPacket)
 {
   lpIpc->FreePacket(lpPacket);
   return;
@@ -1701,20 +1770,20 @@ CIoCompletionPortThreadPool::OnPacketCallback& CIpc::CConnectionBase::GetDispatc
 
 HRESULT CIpc::CConnectionBase::DoZeroRead(_In_ SIZE_T nPacketsCount)
 {
-  CPacket *lpPacket;
+  CPacketBase *lpPacket;
   HRESULT hRes;
 
   while (nPacketsCount > 0)
   {
-    lpPacket = lpIpc->GetPacket(this, CPacket::TypeZeroRead);
+    lpPacket = lpIpc->GetPacket(this, CPacketBase::TypeZeroRead, 4096, FALSE);
     if (lpPacket == NULL)
       return E_OUTOFMEMORY;
     cRwList.QueueLast(lpPacket);
-    _InterlockedIncrement(&nOutstandingReads);
+    _InterlockedIncrement(&nIncomingReads);
     switch (hRes = SendReadPacket(lpPacket))
     {
       case S_FALSE:
-        MX_ASSERT_ALWAYS(_InterlockedDecrement(&nOutstandingReads) >= 0);
+        MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);
         if (lpIpc->ShouldLog(1) != FALSE)
         {
           lpIpc->Log(L"CIpc::GracefulShutdown E) Clock=%lums / This=0x%p", cHiResTimer.GetElapsedTimeMs(), this);
@@ -1731,7 +1800,7 @@ HRESULT CIpc::CConnectionBase::DoZeroRead(_In_ SIZE_T nPacketsCount)
         break;
 
       default:
-        MX_ASSERT_ALWAYS(_InterlockedDecrement(&nOutstandingReads) >= 0);
+        MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);
         return hRes;
     }
     nPacketsCount--;
@@ -1740,34 +1809,34 @@ HRESULT CIpc::CConnectionBase::DoZeroRead(_In_ SIZE_T nPacketsCount)
   return S_OK;
 }
 
-HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacket *lpReusePacket)
+HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacketBase *lpReusePacket)
 {
   CFastLock cReadLock(&nMutex);
-  CPacket *lpPacket;
+  CPacketBase *lpPacket;
   HRESULT hRes;
 
   while (nPacketsCount > 0)
   {
     if (lpReusePacket != NULL)
     {
-      lpReusePacket->Reset(CPacket::TypeRead, this);
+      lpReusePacket->Reset(CPacketBase::TypeRead, this);
       lpPacket = lpReusePacket;
       lpReusePacket = NULL;
     }
     else
     {
-      lpPacket = lpIpc->GetPacket(this, CPacket::TypeRead);
+      lpPacket = lpIpc->GetPacket(this, CPacketBase::TypeRead, 4096, FALSE);
       if (lpPacket == NULL)
         return E_OUTOFMEMORY;
     }
     lpPacket->SetOrder(_InterlockedIncrement(&nNextReadOrder));
-    lpPacket->SetBytesInUse(lpIpc->dwPacketSize);
+    lpPacket->SetBytesInUse(lpPacket->GetBufferSize());
     cRwList.QueueLast(lpPacket);
-    _InterlockedIncrement(&nOutstandingReads);
+    _InterlockedIncrement(&nIncomingReads);
     switch (hRes = SendReadPacket(lpPacket))
     {
       case S_FALSE:
-        MX_ASSERT_ALWAYS(_InterlockedDecrement(&nOutstandingReads) >= 0);
+        MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);
         if (lpIpc->ShouldLog(1) != FALSE)
         {
           lpIpc->Log(L"CIpc::GracefulShutdown F) Clock=%lums / This=0x%p", cHiResTimer.GetElapsedTimeMs(), this);
@@ -1784,13 +1853,101 @@ HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacke
         break;
 
       default:
-        MX_ASSERT_ALWAYS(_InterlockedDecrement(&nOutstandingReads) >= 0);
+        MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);
         return hRes;
     }
     nPacketsCount--;
   }
   //done
   return S_OK;
+}
+
+HRESULT CIpc::CConnectionBase::SendPackets(_Inout_ CPacketBase **lplpFirstPacket, _Inout_ CPacketBase **lplpLastPacket,
+                                           _Inout_ SIZE_T *lpnChainLength, _In_ BOOL bFlushAll)
+{
+  CPacketBase *lpCurrPacket, *lpPrevPacket, *lpChainStart;
+  DWORD dwTotalBytes;
+  SIZE_T nToExtract, nMultiWriteMaxCount;
+  HRESULT hRes;
+
+  nMultiWriteMaxCount = GetMultiWriteMaxCount();
+  if (bFlushAll == FALSE && (*lpnChainLength) < nMultiWriteMaxCount)
+    return S_OK;
+
+  while ((*lpnChainLength) > 0)
+  {
+    //extract packets for this round
+    lpChainStart = lpPrevPacket = (*lplpFirstPacket);
+    lpCurrPacket = lpChainStart->GetChainedPacket();
+
+    nToExtract = ((*lpnChainLength) < nMultiWriteMaxCount) ? (*lpnChainLength) : nMultiWriteMaxCount;
+    for (SIZE_T i = nToExtract; i > 1; i--)
+    {
+      lpPrevPacket = lpCurrPacket;
+      lpCurrPacket = lpCurrPacket->GetChainedPacket();
+    }
+    lpPrevPacket->ChainPacket(NULL);
+
+    //set the next round
+    *lplpFirstPacket = lpCurrPacket;
+    if (lpCurrPacket == NULL)
+      *lplpLastPacket = NULL;
+    *lpnChainLength -= nToExtract;
+
+    //calculate the number of bytes to send in this round
+    dwTotalBytes = 0;
+    for (lpCurrPacket = lpChainStart; lpCurrPacket != NULL; lpCurrPacket = lpCurrPacket->GetChainedPacket())
+    {
+      dwTotalBytes += lpCurrPacket->GetBytesInUse();
+    }
+    lpChainStart->SetUserDataDW(dwTotalBytes);
+
+    //do real write
+    cRwList.QueueLast(lpChainStart);
+    lpChainStart->SetType(CPacketBase::TypeWrite);
+    _InterlockedIncrement(&nOutgoingWrites);
+    _InterlockedAdd(&nOutgoingBytes, (LONG)dwTotalBytes);
+    AddRef();
+    switch (hRes = SendWritePacket(lpChainStart))
+    {
+      case S_FALSE:
+        _InterlockedAdd(&nOutgoingBytes, -((LONG)dwTotalBytes));
+        _InterlockedDecrement(&nOutgoingWrites);
+        if (lpIpc->ShouldLog(1) != FALSE)
+        {
+          lpIpc->Log(L"CIpc::GracefulShutdown B) Clock=%lums / This=0x%p", cHiResTimer.GetElapsedTimeMs(), this);
+        }
+        _InterlockedOr(&nFlags, FLAG_GracefulShutdown);
+        //free packet
+        cRwList.Remove(lpChainStart);
+        FreePacket(lpChainStart);
+        //release connection
+        Release();
+        break;
+
+      case 0x80070000 | ERROR_IO_PENDING:
+        hRes = S_OK;
+        //fall into S_OK
+
+      case S_OK:
+        break;
+
+      default:
+        _InterlockedAdd(&nOutgoingBytes, -((LONG)dwTotalBytes));
+        _InterlockedDecrement(&nOutgoingWrites);
+        //free packet
+        cRwList.Remove(lpChainStart);
+        FreePacket(lpChainStart);
+        //release connection
+        Release();
+        break;
+    }
+
+    if (hRes != S_OK || bFlushAll == FALSE)
+      break;
+  }
+  //done
+  return (hRes != S_FALSE) ? hRes : S_OK;
 }
 
 HRESULT CIpc::CConnectionBase::SendDataToLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize, _In_ CLayer *lpCurrLayer,
@@ -1829,8 +1986,43 @@ HRESULT CIpc::CConnectionBase::SendDataToLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T n
 
       lpLayer = lpCurrLayer->GetPrevEntry();
     }
-    hRes = (lpLayer != NULL) ? (lpLayer->OnSendMsg(lpMsg, nMsgSize)) : WriteMsg(lpMsg, nMsgSize);
+    if (lpLayer != NULL)
+    {
+      hRes = lpLayer->OnSendMsg(lpMsg, nMsgSize);
+    }
+    else
+    {
+      hRes = S_OK;
+      while (nMsgSize > 0)
+      {
+        CPacketBase *lpPacket;
+        SIZE_T nToCopy;
+
+        lpPacket = lpIpc->GetPacket(this, CIpc::CPacketBase::TypeWriteRequest, ((nMsgSize > 8192) ? 32768 : 4096), FALSE);
+        if (lpPacket == NULL)
+        {
+          hRes = E_OUTOFMEMORY;
+          break;
+        }
+        nToCopy = lpPacket->GetBufferSize();
+        if (nToCopy > nMsgSize)
+          nToCopy = nMsgSize;
+        MemCopy(lpPacket->GetBuffer(), lpMsg, nToCopy);
+        //advance
+        lpMsg = (LPCVOID)((LPBYTE)lpMsg + nToCopy);
+        nMsgSize -= nToCopy;
+
+        //add to list
+        if (sSendingData.lpFirstPacket == NULL)
+          sSendingData.lpFirstPacket = lpPacket;
+        else
+          sSendingData.lpLastPacket->ChainPacket(lpPacket);
+        sSendingData.lpLastPacket = lpPacket;
+        (sSendingData.nChainLength)++;
+      }
+    }
   }
+  //done
   return hRes;
 }
 
@@ -1913,24 +2105,6 @@ VOID CIpc::CConnectionBase::GetStats(_In_ BOOL bRead, _Out_ PULONGLONG lpullByte
   }
   return;
 }
-
-/*
-VOID CIpc::CConnectionBase::OnWriteTimeout(_In_ CTimedEventQueue::CEvent *lpEvent)
-{
-  {
-    CFastLock cWriteTimeoutLock(&(sWriteTimeout.nMutex));
-
-    sWriteTimeout.cActiveList.Remove(lpEvent);
-  }
-  //close connection if not canceled
-  if (lpEvent->IsCanceled() == FALSE)
-    Close(MX_E_Timeout);
-  //release event and myself
-  lpEvent->Release();
-  Release();
-  return;
-}
-*/
 
 //-----------------------------------------------------------
 

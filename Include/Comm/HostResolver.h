@@ -34,42 +34,31 @@
 
 namespace MX {
 
-class CHostResolver : public CBaseMemObj
-{
-  MX_DISABLE_COPY_CONSTRUCTOR(CHostResolver);
-public:
-  typedef Callback <VOID (_In_ CHostResolver *lpResolver, _In_ SOCKADDR_INET &sAddr, _In_ HRESULT hrErrorCode,
-                          _In_opt_ LPVOID lpUserData)> OnResultCallback;
+namespace HostResolver {
 
-public:
-  CHostResolver();
-  ~CHostResolver();
+typedef Callback <VOID (_In_ LONG nResolverId, _In_ PSOCKADDR_INET lpSockAddr, _In_ HRESULT hrErrorCode,
+                        _In_ LPVOID lpUserData)> OnResultCallback;
 
-  HRESULT Resolve(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _Out_ SOCKADDR_INET &sAddr);
-  HRESULT Resolve(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _Out_ SOCKADDR_INET &sAddr);
+//-----------------------------------------------------------
 
-  HRESULT ResolveAsync(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _In_ DWORD dwTimeoutMs,
-                       _In_ OnResultCallback cCallback, _In_opt_ LPVOID lpUserData = NULL);
-  HRESULT ResolveAsync(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _In_ DWORD dwTimeoutMs,
-                       _In_ OnResultCallback cCallback, _In_opt_ LPVOID lpUserData = NULL);
-  VOID Cancel();
+HRESULT Resolve(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _Out_ PSOCKADDR_INET lpSockAddr,
+                _In_ DWORD dwTimeoutMs, _In_opt_ OnResultCallback cCallback = NullCallback(),
+                _In_opt_ LPVOID lpUserData = NULL, _Out_opt_ LONG volatile *lpnResolverId = NULL);
+HRESULT Resolve(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _Out_ PSOCKADDR_INET lpSockAddr,
+                _In_ DWORD dwTimeoutMs, _In_opt_ OnResultCallback cCallback = NullCallback(),
+                _In_opt_ LPVOID lpUserData = NULL, _Out_opt_ LONG volatile *lpnResolverId = NULL);
+VOID Cancel(_Inout_ LONG volatile *lpnResolverId);
 
-  static BOOL IsValidIPV4(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen=(SIZE_T)-1,
-                          _Out_opt_ PSOCKADDR_INET lpAddress=NULL);
-  static BOOL IsValidIPV4(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen=(SIZE_T)-1,
-                          _Out_opt_ PSOCKADDR_INET lpAddress=NULL);
-  static BOOL IsValidIPV6(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen=(SIZE_T)-1,
-                          _Out_opt_ PSOCKADDR_INET lpAddress=NULL);
-  static BOOL IsValidIPV6(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen=(SIZE_T)-1,
-                          _Out_opt_ PSOCKADDR_INET lpAddress=NULL);
+BOOL IsValidIPV4(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen = (SIZE_T)-1,
+                 _Out_opt_ PSOCKADDR_INET lpAddress = NULL);
+BOOL IsValidIPV4(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen = (SIZE_T)-1,
+                 _Out_opt_ PSOCKADDR_INET lpAddress = NULL);
+BOOL IsValidIPV6(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen = (SIZE_T)-1,
+                 _Out_opt_ PSOCKADDR_INET lpAddress = NULL);
+BOOL IsValidIPV6(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen = (SIZE_T)-1,
+                 _Out_opt_ PSOCKADDR_INET lpAddress = NULL);
 
-private:
-  VOID OnSyncResolution(_In_ CHostResolver *lpResolver, _In_ SOCKADDR_INET &sAddr, _In_ HRESULT hrErrorCode,
-                        _In_opt_ LPVOID lpUserData);
-
-private:
-  LPVOID lpInternal;
-};
+} //namespace HostResolver
 
 } //namespace MX
 

@@ -29,8 +29,8 @@
 
 //-----------------------------------------------------------
 
-#define TypeListenRequest (CPacket::eType)((int)CPacket::TypeMAX + 1)
-#define TypeListen        (CPacket::eType)((int)CPacket::TypeMAX + 2)
+#define TypeListenRequest (CPacketBase::eType)((int)CPacketBase::TypeMAX + 1)
+#define TypeListen        (CPacketBase::eType)((int)CPacketBase::TypeMAX + 2)
 
 //-----------------------------------------------------------
 
@@ -191,7 +191,7 @@ HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreate
   cConn->cCreateCallback = cCreateCallback;
   cConn->cUserData = lpUserData;
   {
-    CAutoSlimRWLExclusive cConnListLock(&(sConnections.nSlimMutex));
+    CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
 
     sConnections.cTree.Insert(cConn.Get());
   }
@@ -241,7 +241,7 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
   GenerateUniquePipeName(szBufW, MX_ARRAYLEN(szBufW), (DWORD)((ULONG_PTR)this),
                          (DWORD)_InterlockedIncrement(&nRemoteConnCounter));
   cLocalPipe.Attach(::CreateNamedPipeW(szBufW, PIPE_ACCESS_DUPLEX | FILE_FLAG_WRITE_THROUGH | FILE_FLAG_OVERLAPPED,
-                                       PIPE_READMODE_BYTE | PIPE_TYPE_BYTE | PIPE_WAIT, 1, dwPacketSize, dwPacketSize,
+                                       PIPE_READMODE_BYTE | PIPE_TYPE_BYTE | PIPE_WAIT, 1, 4096, 4096,
                                        10000, &sSecAttrib));
   if (cLocalPipe == NULL || cLocalPipe == INVALID_HANDLE_VALUE)
     return MX_HRESULT_FROM_LASTERROR();
@@ -295,7 +295,7 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
   cConn->cCreateCallback = cCreateCallback;
   cConn->cUserData = lpUserData;
   {
-    CAutoSlimRWLExclusive cConnListLock(&(sConnections.nSlimMutex));
+    CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
 
     sConnections.cTree.Insert(cConn.Get());
   }
@@ -362,13 +362,13 @@ HRESULT CNamedPipes::CreateServerConnection(_In_ CServerInfo *lpServerInfo, _In_
   cConn->cCreateCallback = _cCreateCallback;
   cConn->cServerInfo = lpServerInfo;
   {
-    CAutoSlimRWLExclusive cConnListLock(&(sConnections.nSlimMutex));
+    CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
 
     sConnections.cTree.Insert(cConn.Get());
   }
   hRes = FireOnCreate(cConn.Get());
   if (SUCCEEDED(hRes))
-    hRes = cConn->CreateServer(dwPacketSize);
+    hRes = cConn->CreateServer();
   //done
   if (FAILED(hRes))
   {
@@ -378,12 +378,7 @@ HRESULT CNamedPipes::CreateServerConnection(_In_ CServerInfo *lpServerInfo, _In_
   return hRes;
 }
 
-HRESULT CNamedPipes::OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes)
-{
-  return S_FALSE;
-}
-
-HRESULT CNamedPipes::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes)
+HRESULT CNamedPipes::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket, _In_ HRESULT hRes)
 {
   CConnection *lpConn;
   HRESULT hOrigRes;
@@ -493,10 +488,10 @@ CNamedPipes::CConnection::~CConnection()
   return;
 }
 
-HRESULT CNamedPipes::CConnection::CreateServer(_In_ DWORD dwPacketSize)
+HRESULT CNamedPipes::CConnection::CreateServer()
 {
   SECURITY_ATTRIBUTES sSecAttrib;
-  CPacket *lpPacket;
+  CPacketBase *lpPacket;
   HRESULT hRes;
 
   //create server pipe endpoint
@@ -505,7 +500,7 @@ HRESULT CNamedPipes::CConnection::CreateServer(_In_ DWORD dwPacketSize)
   sSecAttrib.lpSecurityDescriptor = cServerInfo->lpSecDescr;
   hPipe = ::CreateNamedPipeW((LPWSTR)(cServerInfo->cStrNameW), PIPE_ACCESS_DUPLEX|FILE_FLAG_WRITE_THROUGH|
                              FILE_FLAG_OVERLAPPED, PIPE_READMODE_BYTE|PIPE_TYPE_BYTE|PIPE_WAIT,
-                             PIPE_UNLIMITED_INSTANCES, dwPacketSize, dwPacketSize, 10000, &sSecAttrib);
+                             PIPE_UNLIMITED_INSTANCES, 4096, 4096, 10000, &sSecAttrib);
   if (hPipe == NULL || hPipe == INVALID_HANDLE_VALUE)
   {
     hPipe = NULL;
@@ -517,7 +512,7 @@ HRESULT CNamedPipes::CConnection::CreateServer(_In_ DWORD dwPacketSize)
   if (FAILED(hRes))
     return hRes;
   //wait for connection
-  lpPacket = GetPacket(TypeListenRequest);
+  lpPacket = GetPacket(TypeListenRequest, 0, FALSE);
   if (lpPacket == NULL)
     return E_OUTOFMEMORY;
   cRwList.QueueLast(lpPacket);
@@ -594,7 +589,7 @@ VOID CNamedPipes::CConnection::ShutdownLink(_In_ BOOL bAbortive)
   return;
 }
 
-HRESULT CNamedPipes::CConnection::SendReadPacket(_In_ CPacket *lpPacket)
+HRESULT CNamedPipes::CConnection::SendReadPacket(_In_ CPacketBase *lpPacket)
 {
   CAutoSlimRWLShared cHandleInUseLock(&nRwHandleInUse);
   DWORD dwReaded;
@@ -612,7 +607,7 @@ HRESULT CNamedPipes::CConnection::SendReadPacket(_In_ CPacket *lpPacket)
   return S_OK;
 }
 
-HRESULT CNamedPipes::CConnection::SendWritePacket(_In_ CPacket *lpPacket)
+HRESULT CNamedPipes::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket)
 {
   CAutoSlimRWLShared cHandleInUseLock(&nRwHandleInUse);
   DWORD dwWritten;

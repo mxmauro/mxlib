@@ -55,9 +55,18 @@ public:
     return;
     };
 
-  virtual KeyType GetNodeKey() const
+  virtual KeyType GetNodeKey() const = 0;
+
+  //Returns -1 if key is less than "this" node's key, 1 if greater or 0 if equal
+  virtual int CompareKeys(_In_ KeyType key) const
     {
-    return (KeyType)0;
+    KeyType this_key = GetNodeKey();
+
+    if (key < this_key)
+      return -1;
+    if (key > this_key)
+      return 1;
+    return 0;
     };
 
   _RbTreeNode* GetNextNode()
@@ -123,13 +132,13 @@ public:
 
   _inline classOrStruct* GetNextEntry()
     {
-    RedBlackTreeNode *lpNode = GetNextNode();
+    _RbTreeNode *lpNode = GetNextNode();
     return (lpNode != NULL) ? (lpNode->GetEntry()) : NULL;
     };
 
   _inline classOrStruct* GetPrevEntry()
     {
-    RedBlackTreeNode *lpNode = GetPrevNode();
+    _RbTreeNode *lpNode = GetPrevNode();
     return (lpNode != NULL) ? (lpNode->GetEntry()) : NULL;
     };
 
@@ -217,7 +226,7 @@ public:
 
     while (lpNode != NULL)
     {
-      comp = CompareKeys(_key, lpNode->GetNodeKey());
+      comp = lpNode->CompareKeys(_key);
       if (comp == 0)
         return lpNode->GetEntry();
       lpNode = (comp < 0) ? lpNode->lpLeft : lpNode->lpRight;
@@ -257,7 +266,7 @@ public:
 
     while (lpNode != NULL)
     {
-      comp = CompareKeys(_key, lpNode->GetNodeKey());
+      comp = lpNode->CompareKeys(_key);
       if (comp == 0)
         return lpNode->GetEntry();
       if (comp < 0)
@@ -295,7 +304,7 @@ public:
 
     while (lpNode != NULL)
     {
-      comp = CompareKeys(_key, lpNode->GetNodeKey());
+      comp = lpNode->CompareKeys(_key);
       if (comp == 0)
         return lpNode->GetEntry();
       if (comp > 0)
@@ -332,7 +341,7 @@ public:
 
     while (lpNode != NULL)
     {
-      comp = CompareKeys(_key, lpNode->GetNodeKey());
+      comp = lpNode->CompareKeys(_key);
       if (comp < 0)
       {
         if (lpNode->lpLeft == NULL)
@@ -368,7 +377,7 @@ public:
 
     while (lpNode != NULL)
     {
-      comp = CompareKeys(_key, lpNode->GetNodeKey());
+      comp = lpNode->CompareKeys(_key);
       if (comp > 0)
       {
         if (lpNode->lpRight == NULL)
@@ -396,7 +405,8 @@ public:
     return NULL;
     };
 
-  BOOL Insert(_In_ _RbTreeNode *lpNewNode, _In_opt_ BOOL bAllowDuplicates = FALSE)
+  BOOL Insert(_In_ _RbTreeNode *lpNewNode, _In_opt_ BOOL bAllowDuplicates = FALSE,
+              _In_opt_ _RbTreeNode **lplpMatchingNode = NULL)
     {
     _RbTreeNode *lpNode, *lpParent, *lpUncle;
     int res;
@@ -404,6 +414,9 @@ public:
     MX_ASSERT(lpNewNode != NULL);
     MX_ASSERT(lpNewNode->lpParent == NULL);
     MX_ASSERT(lpNewNode->lpLeft == NULL && lpNewNode->lpRight == NULL);
+
+    if (lplpMatchingNode != NULL)
+      *lplpMatchingNode = NULL;
     if (lpRoot == NULL)
     {
       lpNewNode->lpParent = NULL;
@@ -423,9 +436,13 @@ public:
     do
     {
       lpParent = lpNode;
-      res = CompareKeys(lpNewNode->GetNodeKey(), lpNode->GetNodeKey());
+      res = lpNode->CompareKeys(lpNewNode->GetNodeKey());
       if (res == 0 && bAllowDuplicates == FALSE)
+      {
+        if (lplpMatchingNode != NULL)
+          *lplpMatchingNode = lpNode;
         return FALSE;
+      }
       lpNode = (res < 0) ? lpNode->lpLeft : lpNode->lpRight;
     }
     while (lpNode != NULL);
@@ -691,15 +708,6 @@ public:
 private:
   friend class Iterator;
   friend class IteratorRev;
-
-  _inline int CompareKeys(_In_ KeyType key1, _In_ KeyType key2)
-    {
-    if (key1 < key2)
-      return -1;
-    if (key1 > key2)
-      return 1;
-    return 0;
-    };
 
   VOID LeftRotate(_Inout_ _RbTreeNode *lpNode)
     {

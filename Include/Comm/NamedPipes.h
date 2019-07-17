@@ -77,13 +77,17 @@ private:
     CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass);
     ~CConnection();
 
-    HRESULT CreateServer(_In_ DWORD dwPacketSize);
+    HRESULT CreateServer();
     HRESULT CreateClient(_In_z_ LPCWSTR szServerNameW, _In_ DWORD dwMaxWriteTimeoutMs,
                          _In_ PSECURITY_DESCRIPTOR lpSecDescr);
     VOID ShutdownLink(_In_ BOOL bAbortive);
 
-    HRESULT SendReadPacket(_In_ CPacket *lpPacket);
-    HRESULT SendWritePacket(_In_ CPacket *lpPacket);
+    HRESULT SendReadPacket(_In_ CPacketBase *lpPacket);
+    HRESULT SendWritePacket(_In_ CPacketBase *lpPacket);
+    SIZE_T GetMultiWriteMaxCount() const
+      {
+      return 1;
+      };
 
   protected:
     friend class CNamedPipes;
@@ -101,8 +105,7 @@ private:
 
   HRESULT CreateServerConnection(_In_ CServerInfo *lpServerInfo, _In_ OnCreateCallback cCreateCallback);
 
-  HRESULT OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes);
-  HRESULT OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes);
+  HRESULT OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket, _In_ HRESULT hRes);
 
   BOOL ZeroReadsSupported() const
     {

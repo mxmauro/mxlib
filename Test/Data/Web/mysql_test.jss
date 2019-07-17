@@ -14,7 +14,10 @@ SetUnhandledExceptionHandler(function(err) {
 	}
 });
 
-require("./top.jss");
+var topHtml = require("./top.jss");
+var bottomHtml = require("./bottom.jss");
+
+topHtml.render();
 
 var mysql = new MySQL();
 mysql.connect('localhost', 'root', 'blaster');
@@ -52,5 +55,6 @@ while (row !== null) {
 <%
 	row = mysql.fetchRow();
 }
-require("./bottom.jss");
+
+bottomHtml.render();
 %>

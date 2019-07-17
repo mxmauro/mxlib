@@ -38,6 +38,9 @@
     <ClInclude Include="Test\TestJsHttpServer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Test\Logger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Test\Test.cpp">
@@ -56,6 +59,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Test\TestJsHttpServer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Test\Logger.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -82,6 +88,15 @@
       <Filter>Data\Web</Filter>
     </None>
     <None Include="Test\Data\Web\top.jss">
+      <Filter>Data\Web</Filter>
+    </None>
+    <None Include="Test\Data\Web\sqlite_test.jss">
+      <Filter>Data\Web</Filter>
+    </None>
+    <None Include="Test\Data\Web\static_sample.html">
+      <Filter>Data\Web</Filter>
+    </None>
+    <None Include="Test\Data\Web\websocket_test.jss">
       <Filter>Data\Web</Filter>
     </None>
   </ItemGroup>

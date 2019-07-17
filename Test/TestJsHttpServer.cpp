@@ -38,15 +38,6 @@ class CTestJsRequest : public MX::CJsHttpServer::CClientRequest
 public:
   CTestJsRequest() : MX::CJsHttpServer::CClientRequest()
     { };
-
-  VOID Reset()
-    {
-    cSessionJsObj.Release();
-    return;
-    };
-
-public:
-  MX::TAutoRefCounted<MX::CJsHttpServerSessionPlugin> cSessionJsObj;
 };
 
 class CTestWebSocket : public MX::CWebSocket
@@ -69,7 +60,7 @@ public:
 static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hrErrorCode);
 static HRESULT OnNewRequestObject(_Out_ MX::CJsHttpServer::CClientRequest **lplpRequest);
 static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
-                         _Outptr_result_maybenull_ MX::CJavascriptVM **lplpJvm, _Out_ MX::CStringA &cStrCodeA);
+                         _Out_ MX::CStringA &cStrCodeA);
 static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
                                  _Inout_ MX::CJavascriptVM &cJvm,
                                  _Inout_ MX::CJavascriptVM::CRequireModuleContext *lpReqContext,
@@ -183,14 +174,12 @@ static HRESULT OnNewRequestObject(_Out_ MX::CJsHttpServer::CClientRequest **lplp
 }
 
 static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *_lpRequest,
-                         _Outptr_result_maybenull_ MX::CJavascriptVM **lplpJvm, _Out_ MX::CStringA &cStrCodeA)
+                         _Out_ MX::CStringA &cStrCodeA)
 {
   CTestJsRequest *lpRequest = static_cast<CTestJsRequest*>(_lpRequest);
   MX::CStringW cStrFileNameW;
   LPCWSTR szExtensionW;
   HRESULT hRes;
-
-  lpRequest->Reset();
 
   hRes = BuildWebFileName(cStrFileNameW, szExtensionW, lpRequest->GetUrl()->GetPath());
   if (FAILED(hRes))
@@ -198,17 +187,30 @@ static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer:
   //check extension
   if (MX::StrCompareW(szExtensionW, L".jss", TRUE) == 0)
   {
-    hRes = lpRequest->CreateJVM(lplpJvm);
+    hRes = lpRequest->AttachJVM();
     if (SUCCEEDED(hRes))
-      hRes = LoadTxtFile(cStrCodeA, (LPCWSTR)cStrFileNameW);
-    if (SUCCEEDED(hRes))
-      hRes = MX::CJsHttpServerSessionPlugin::Register(**lplpJvm);
-    if (SUCCEEDED(hRes))
-      hRes = MX::CJsMySqlPlugin::Register(**lplpJvm);
-    if (SUCCEEDED(hRes))
-      hRes = MX::CJsSQLitePlugin::Register(**lplpJvm);
-    if (SUCCEEDED(hRes))
-      hRes = (*lplpJvm)->AddNativeFunction("getExecutablePath", MX_BIND_CALLBACK(&OnGetExecutablePath), 0);
+    {
+      MX::CJavascriptVM *lpJVM;
+      BOOL bIsNew;
+
+      lpJVM = lpRequest->GetVM(&bIsNew);
+
+      if (bIsNew != FALSE)
+      {
+        hRes = MX::CJsHttpServerSessionPlugin::Register(*lpJVM);
+        if (SUCCEEDED(hRes))
+          hRes = MX::CJsMySqlPlugin::Register(*lpJVM);
+        if (SUCCEEDED(hRes))
+          hRes = MX::CJsSQLitePlugin::Register(*lpJVM);
+        if (SUCCEEDED(hRes))
+          hRes = lpJVM->AddNativeFunction("getExecutablePath", MX_BIND_CALLBACK(&OnGetExecutablePath), 0);
+      }
+
+      if (SUCCEEDED(hRes))
+      {
+        hRes = LoadTxtFile(cStrCodeA, (LPCWSTR)cStrFileNameW);
+      }
+    }
     if (hRes == MX_E_FileNotFound || hRes == MX_E_PathNotFound)
     {
       hRes = lpRequest->SendErrorPage(404, E_INVALIDARG);
@@ -247,17 +249,17 @@ static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHtt
 
   if (MX::StrCompareW(lpReqContext->GetId(), L"session") == 0)
   {
-    if (!(lpRequest->cSessionJsObj))
-    {
-      lpRequest->cSessionJsObj.Attach(MX_DEBUG_NEW MX::CJsHttpServerSessionPlugin(cJvm));
-      if (!(lpRequest->cSessionJsObj))
-        return E_OUTOFMEMORY;
-      hRes = lpRequest->cSessionJsObj->Setup(lpRequest, MX_BIND_CALLBACK(&OnSessionLoadSave), NULL, NULL, L"/",
-                                             2*60*60, FALSE, TRUE);
-      if (FAILED(hRes))
-        return hRes;
-    }
-    hRes = lpReqContext->ReplaceModuleExportsWithObject(lpRequest->cSessionJsObj);
+    MX::TAutoRefCounted<MX::CJsHttpServerSessionPlugin> cSessionJsObj;
+
+    cSessionJsObj.Attach(MX_DEBUG_NEW MX::CJsHttpServerSessionPlugin(cJvm));
+    if (!cSessionJsObj)
+      return E_OUTOFMEMORY;
+    hRes = cSessionJsObj->Setup(lpRequest, MX_BIND_CALLBACK(&OnSessionLoadSave), NULL, NULL, L"/", 2*60*60, FALSE,
+                                TRUE);
+    if (FAILED(hRes))
+      return hRes;
+
+    hRes = lpReqContext->ReplaceModuleExportsWithObject(cSessionJsObj);
     //done
     return hRes;
   }

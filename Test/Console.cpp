@@ -26,10 +26,27 @@
 //-----------------------------------------------------------
 
 static LONG volatile nPrintLock = 0;
+static LONG volatile nMustQuit = 0;
+
+//-----------------------------------------------------------
+
+static BOOL WINAPI _ConsoleHandlerRoutine(_In_ DWORD dwCtrlType);
 
 //-----------------------------------------------------------
 
 namespace Console {
+
+BOOL Initialize()
+{
+  if (::SetConsoleCtrlHandler(_ConsoleHandlerRoutine, TRUE) == FALSE)
+    return FALSE;
+  return TRUE;
+}
+
+BOOL MustQuit()
+{
+  return (__InterlockedRead(&nMustQuit) != 0) ? TRUE : FALSE;
+}
 
 VOID SetCursorPosition(_In_ int X, _In_ int Y)
 {
@@ -77,3 +94,20 @@ CPrintLock::~CPrintLock()
 }
 
 }; //namespace Console
+
+//-----------------------------------------------------------
+
+static BOOL WINAPI _ConsoleHandlerRoutine(_In_ DWORD dwCtrlType)
+{
+  switch (dwCtrlType)
+  {
+    case CTRL_C_EVENT:
+    case CTRL_BREAK_EVENT:
+    case CTRL_CLOSE_EVENT:
+    case CTRL_LOGOFF_EVENT:
+    case CTRL_SHUTDOWN_EVENT:
+      _InterlockedExchange(&nMustQuit, 1);
+      return TRUE;
+  }
+  return FALSE;
+}

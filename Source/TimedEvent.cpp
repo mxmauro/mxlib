@@ -105,8 +105,24 @@ public:
       return;
       };
 
+    __inline BOOL SetAsRunningIfNotCanceled()
+      {
+      LONG initVal, newVal;
+
+      newVal = __InterlockedRead(&nFlags);
+      do
+      {
+        initVal = newVal;
+        if ((initVal & _FLAG_Canceled) != 0)
+          return FALSE; //timer was canceled
+        newVal = _InterlockedCompareExchange(&nFlags, initVal | _FLAG_Running, initVal);
+      }
+      while (newVal != initVal);
+      return TRUE;
+      };
+
   public:
-    ULONG nId;
+    LONG nId;
     DWORD dwTimeoutMs;
     ULONGLONG nDueTime;
     MX::TimedEvent::OnTimeoutCallback cCallback;
@@ -138,7 +154,7 @@ private:
   VOID FreeTimer(_In_ CTimer *lpTimer);
 
   static int InsertByIdCompareFunc(_In_ LPVOID lpContext, _In_ CTimer **lplpElem1, _In_ CTimer **lplpElem2);
-  static int SearchByIdCompareFunc(_In_ LPVOID lpContext, _In_ PULONG lpKey, _In_ CTimer **lplpElem);
+  static int SearchByIdCompareFunc(_In_ LPVOID lpContext, _In_ PLONG lpKey, _In_ CTimer **lplpElem);
 
 private:
   LONG volatile nRundownLock;
@@ -321,7 +337,6 @@ HRESULT CTimerHandler::AddTimer(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTi
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   TAutoDeletePtr<CTimer> cNewTimer;
-  ULONG nTimerId;
 
   if (lpnTimerId == NULL)
     return E_POINTER;
@@ -347,9 +362,9 @@ HRESULT CTimerHandler::AddTimer(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTi
   //assign timer id
   do
   {
-    nTimerId = cNewTimer->nId = (ULONG)_InterlockedIncrement(&nNextTimerId);
+    cNewTimer->nId = _InterlockedIncrement(&nNextTimerId);
   }
-  while (nTimerId == 0);
+  while (cNewTimer->nId == 0);
 
   //calculate due time
   cNewTimer->CalculateDueTime(NULL);
@@ -364,22 +379,23 @@ HRESULT CTimerHandler::AddTimer(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTi
       _InterlockedExchange(lpnTimerId, 0);
       return E_OUTOFMEMORY;
     }
+
+    _InterlockedExchange(lpnTimerId, cNewTimer->nId);
     sQueue.cTree.Insert(cNewTimer.Detach(), TRUE);
   }
   sQueue.cChangedEvent.Set();
 
   //done
-  _InterlockedExchange(lpnTimerId, (LONG)nTimerId);
   return S_OK;
 }
 
 VOID CTimerHandler::RemoveTimer(_Out_ LONG volatile *lpnTimerId)
 {
-  CTimer *lpTimer = NULL;
-
   if (lpnTimerId != NULL)
   {
-    ULONG nTimerId = (ULONG)_InterlockedExchange(lpnTimerId, 0);
+    CTimer *lpTimer = NULL;
+
+    LONG nTimerId = _InterlockedExchange(lpnTimerId, 0);
     if (nTimerId != 0)
     {
       CFastLock cQueueLock(&(sQueue.nMutex));
@@ -396,14 +412,14 @@ VOID CTimerHandler::RemoveTimer(_Out_ LONG volatile *lpnTimerId)
         lpTimer->RemoveNode();
       }
     }
-  }
 
-  if (lpTimer != NULL)
-  {
-    sQueue.cChangedEvent.Set();
+    if (lpTimer != NULL)
+    {
+      sQueue.cChangedEvent.Set();
 
-    lpTimer->WaitWhileRunning();
-    FreeTimer(lpTimer);
+      lpTimer->WaitWhileRunning();
+      FreeTimer(lpTimer);
+    }
   }
   return;
 }
@@ -446,12 +462,18 @@ DWORD CTimerHandler::ProcessQueue()
       CFastLock cLock(&(sQueue.nMutex));
 
       lpTimer = sQueue.cTree.GetFirst();
+check_timer:
       if (lpTimer != NULL)
       {
         if (lpTimer->nDueTime <= uliCurrTime.QuadPart)
         {
           //got a timed-out item
-          _InterlockedOr(&(lpTimer->nFlags), _FLAG_Running);
+          if (lpTimer->SetAsRunningIfNotCanceled() == FALSE)
+          {
+            //the timer was canceled so jump to next
+            lpTimer = lpTimer->GetNextEntry();
+            goto check_timer;
+          }
         }
         else
         {
@@ -469,18 +491,27 @@ DWORD CTimerHandler::ProcessQueue()
 
       {
         CFastLock cLock(&(sQueue.nMutex));
+        LONG nFlags = __InterlockedRead(&(lpTimer->nFlags));
 
-        lpTimer->RemoveNode();
-        if ((__InterlockedRead(&(lpTimer->nFlags)) & (_FLAG_OneShot | _FLAG_Canceled)) != 0)
+        if ((nFlags & _FLAG_Canceled) != 0)
         {
-          FreeTimer(lpTimer);
+          //timer was canceled so just let's keep the cancel code to continue it's task
+          _InterlockedAnd(&(lpTimer->nFlags), ~_FLAG_Running);
         }
         else
         {
-          lpTimer->CalculateDueTime(&uliCurrTime);
-          sQueue.cTree.Insert(lpTimer, TRUE);
+          lpTimer->RemoveNode();
+          if ((nFlags & _FLAG_OneShot) != 0)
+          {
+            FreeTimer(lpTimer);
+          }
+          else
+          {
+            lpTimer->CalculateDueTime(&uliCurrTime);
+            sQueue.cTree.Insert(lpTimer, TRUE);
 
-          _InterlockedAnd(&(lpTimer->nFlags), ~_FLAG_Running);
+            _InterlockedAnd(&(lpTimer->nFlags), ~_FLAG_Running);
+          }
         }
       }
     }
@@ -537,7 +568,7 @@ int CTimerHandler::InsertByIdCompareFunc(_In_ LPVOID lpContext, _In_ CTimer **lp
   return 0;
 }
 
-int CTimerHandler::SearchByIdCompareFunc(_In_ LPVOID lpContext, _In_ PULONG lpKey, _In_ CTimer **lplpElem)
+int CTimerHandler::SearchByIdCompareFunc(_In_ LPVOID lpContext, _In_ PLONG lpKey, _In_ CTimer **lplpElem)
 {
   if ((*lpKey) < (*lplpElem)->nId)
     return -1;
@@ -549,50 +580,3 @@ int CTimerHandler::SearchByIdCompareFunc(_In_ LPVOID lpContext, _In_ PULONG lpKe
 } //namespace Internals
 
 } //namespace MX
-
-
-/*
-
-
-//-----------------------------------------------------------
-
-
-
-VOID CTimedEventQueue::ProcessCanceled()
-{
-  CEvent *lpEvent;
-
-  do
-  {
-    {
-      CFastLock cLock(&nRemovedTreeMutex);
-
-      lpEvent = cRemovedTree.GetFirst();
-      if (lpEvent != NULL)
-      {
-#ifdef _DEBUG
-        MX_ASSERT(nRemovedTreeCounter > 0);
-        nRemovedTreeCounter--;
-#endif //_DEBUG
-
-        lpEvent->SetState(CEvent::StateProcessing);
-        lpEvent->RemoveNode();
-      }
-#ifdef _DEBUG
-      else
-      {
-        MX_ASSERT(nRemovedTreeCounter == 0);
-      }
-#endif //_DEBUG
-    }
-    if (lpEvent != NULL)
-    {
-      lpEvent->InvokeCallback();
-      lpEvent->SetStateIf(CEvent::StateProcessed, CEvent::StateProcessing);
-      lpEvent->Release();
-    }
-  }
-  while (lpEvent != NULL);
-  return;
-}
-*/

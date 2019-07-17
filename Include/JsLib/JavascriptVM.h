@@ -321,6 +321,8 @@ public:
                                  _In_opt_ BOOL bCatchUnhandled=FALSE);
   VOID RunNativeProtected(_In_ DukTape::duk_idx_t nArgsCount, _In_ DukTape::duk_idx_t nRetValuesCount,
                           _In_ lpfnProtectedFunction fnFunc, _In_opt_ BOOL bCatchUnhandled=FALSE);
+  HRESULT RunNativeProtectedAndGetError(_In_ DukTape::duk_idx_t nArgsCount, _In_ DukTape::duk_idx_t nRetValuesCount,
+                                        _In_ lpfnProtectedFunction fnFunc, _In_opt_ BOOL bCatchUnhandled=FALSE);
 
   HRESULT RegisterException(_In_z_ LPCSTR szExceptionNameA, _In_ lpfnThrowExceptionCallback fnThrowExceptionCallback);
   HRESULT UnregisterException(_In_z_ LPCSTR szExceptionNameA);
@@ -418,6 +420,8 @@ public:
   static VOID GetObjectType(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nObjIdx,
                             _Out_ MX::CStringA &cStrTypeA);
   VOID GetObjectType(_In_ DukTape::duk_idx_t nObjIdx, _Out_ MX::CStringA &cStrTypeA);
+
+  HRESULT RemoveCachedModules();
 
   static HRESULT AddSafeString(_Inout_ CStringA &cStrCodeA, _In_z_ LPCSTR szStrA, _In_opt_ SIZE_T nStrLen=(SIZE_T)-1);
   static HRESULT AddSafeString(_Inout_ CStringA &cStrCodeA, _In_z_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen=(SIZE_T)-1);

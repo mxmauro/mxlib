@@ -48,6 +48,12 @@ int wmain(int argc, WCHAR* argv[])
   DWORD dwLogLevel = 0;
   int nTest = 0;
 
+  if (Console::Initialize() == FALSE)
+  {
+    wprintf_s(L"Error: Unable to initialize console.\n\n");
+    return -1;
+  }
+
   if (argc < 2)
   {
     wprintf_s(L"Use: Test.exe test-module [options]\n\n");
@@ -165,6 +171,11 @@ BOOL ShouldAbort()
   if (__InterlockedRead(&nDoAbort) != 0)
     return TRUE;
   if (_kbhit() != 0 && _getwch() == 27)
+  {
+    _InterlockedExchange(&nDoAbort, 1);
+    return TRUE;
+  }
+  if (Console::MustQuit() != FALSE)
   {
     _InterlockedExchange(&nDoAbort, 1);
     return TRUE;

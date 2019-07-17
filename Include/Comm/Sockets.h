@@ -67,6 +67,8 @@ public:
   //--------
 
 private:
+  friend class CConnection;
+
   class CConnection : public CConnectionBase
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CConnection);
@@ -74,22 +76,27 @@ private:
     CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass, _In_ eFamily nFamily);
     ~CConnection();
 
-    HRESULT CreateSocket(_In_ DWORD dwPacketSize);
+    HRESULT CreateSocket();
     VOID ShutdownLink(_In_ BOOL bAbortive);
 
-    HRESULT SetupListener(_In_ int nBackLogSize);
+    HRESULT SetupListener(_In_ int nBackLogSize, _In_ DWORD dwMaxAcceptsToPost);
     HRESULT SetupClient();
-    HRESULT SetupAcceptEx(_In_ CConnection *lpListenConn);
+    HRESULT SetupAcceptEx(_In_ CConnection *lpIncomingConn);
 
     HRESULT ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _In_opt_z_ LPCSTR szAddressA, _In_opt_ int nPort);
 
-    HRESULT SendReadPacket(_In_ CPacket *lpPacket);
-    HRESULT SendWritePacket(_In_ CPacket *lpPacket);
+    HRESULT SendReadPacket(_In_ CPacketBase *lpPacket);
+    HRESULT SendWritePacket(_In_ CPacketBase *lpPacket);
+    SIZE_T GetMultiWriteMaxCount() const
+      {
+      return 16;
+      };
 
-    VOID HostResolveCallback(_In_ CHostResolver *lpResolver, _In_ SOCKADDR_INET &sAddr, _In_ HRESULT hrErrorCode,
+    VOID HostResolveCallback(_In_ LONG nResolverId, _In_ PSOCKADDR_INET lpSockAddr, _In_ HRESULT hrErrorCode,
                              _In_opt_ LPVOID lpUserData);
 
     VOID ConnectWaiterThreadProc();
+    VOID ListenerThreadProc();
 
   protected:
     friend class CSockets;
@@ -100,14 +107,21 @@ private:
     eFamily nFamily;
     struct {
       LONG volatile nMutex;
-      CHostResolver *lpResolver;
-      CPacket *lpPacket;
+      LONG volatile nResolverId;
+      CPacketBase *lpPacket;
     } sHostResolver;
-    struct {
-      LONG volatile nMutex;
+    struct tagConnectWaiter {
       TClassWorkerThread<CConnection> *lpWorkerThread;
-      CPacket *lpPacket;
-    } sConnectWaiter;
+      CPacketBase *lpPacket;
+    } *lpConnectWaiter;
+    struct tagListener {
+      TClassWorkerThread<CConnection> *lpWorkerThread;
+      HANDLE hAcceptSelect;
+      HANDLE hAcceptCompleted;
+      LONG volatile nAcceptsInProgress;
+      DWORD dwMaxAcceptsToPost;
+      LPVOID fnAcceptEx;
+    } *lpListener;
     LONG volatile nReadThrottle;
   };
 
@@ -117,8 +131,8 @@ private:
 
   HRESULT CreateServerConnection(_In_ CConnection *lpListenConn);
 
-  HRESULT OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes);
-  HRESULT OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacket *lpPacket, _In_ HRESULT hRes);
+  BOOL OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket, _In_ HRESULT hRes);
+  HRESULT OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket, _In_ HRESULT hRes);
 
   BOOL ZeroReadsSupported() const
     {
@@ -131,6 +145,11 @@ private:
     LONG volatile nMutex;
     TArrayList<SOCKET> aList;
   } sReusableSockets[2];
+  struct tagDisconnectingSockets {
+    LONG volatile nMutex;
+    TArrayList<SOCKET> aList;
+  } sDisconnectingSockets[2];
+  ULONG nFlags;
 };
 
 } //namespace MX

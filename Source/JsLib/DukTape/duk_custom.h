@@ -98,12 +98,11 @@ static __forceinline int DukTapeSprintf(char *buffer, const char *format, ...)
 #undef DUK_USE_ASSERTIONS
 #undef DUK_USE_DEBUG
 #ifdef _DEBUG
+  #define DUK_USE_ASSERTIONS
   //#define DUK_USE_DEBUG
 #endif //_DEBUG
 #ifdef DUK_USE_DEBUG
   extern LONG nDebugLevel;
-
-  #define DUK_USE_ASSERTIONS
 
   #define DUK_USE_DEBUG
   #undef DUK_USE_DEBUG_LEVEL

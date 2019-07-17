@@ -14,7 +14,10 @@ SetUnhandledExceptionHandler(function(err) {
 	}
 });
 
-require("./top.jss");
+var topHtml = require("./top.jss");
+var bottomHtml = require("./bottom.jss");
+
+topHtml.render();
 
 var sqlite = new SQLite();
 sqlite.connect(getExecutablePath() + 'mxlib_test.sqlite');
@@ -49,5 +52,6 @@ while (row !== null) {
 <%
 	row = sqlite.fetchRow();
 }
-require("./bottom.jss");
+
+bottomHtml.render();
 %>
