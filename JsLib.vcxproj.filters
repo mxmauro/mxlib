@@ -50,9 +50,6 @@
     <ClCompile Include="Source\JsLib\DukTape\Source\dist\duktape.c">
       <Filter>Source Files\DukTape</Filter>
     </ClCompile>
-    <ClCompile Include="Source\JsLib\DukTape\Source\extras\module-duktape\duk_module_duktape.c">
-      <Filter>Source Files\DukTape\Extras</Filter>
-    </ClCompile>
     <ClCompile Include="Source\JsLib\JavascriptVMException.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -86,6 +83,9 @@
     <ClCompile Include="Source\JsLib\Plugins\SQLite\internals\custom_sqlite3_mem.cpp">
       <Filter>Source Files\Plugins\SQLite\Internals</Filter>
     </ClCompile>
+    <ClCompile Include="Source\JsLib\DukTape\Source\extras\module-node\duk_module_node.c">
+      <Filter>Source Files\DukTape\Extras</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\JsLib\JavascriptVM.h">
@@ -103,9 +103,6 @@
     <ClInclude Include="Source\JsLib\DukTape\Source\dist\duktape.h">
       <Filter>Source Files\DukTape</Filter>
     </ClInclude>
-    <ClInclude Include="Source\JsLib\DukTape\Source\extras\module-duktape\duk_module_duktape.h">
-      <Filter>Source Files\DukTape\Extras</Filter>
-    </ClInclude>
     <ClInclude Include="Source\JsLib\DukTape\duk_custom.h">
       <Filter>Source Files\DukTape</Filter>
     </ClInclude>
@@ -120,6 +117,9 @@
     </ClInclude>
     <ClInclude Include="Source\JsLib\Plugins\SQLite\internals\config.h">
       <Filter>Source Files\Plugins\SQLite\Internals</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\JsLib\DukTape\Source\extras\module-node\duk_module_node.h">
+      <Filter>Source Files\DukTape\Extras</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

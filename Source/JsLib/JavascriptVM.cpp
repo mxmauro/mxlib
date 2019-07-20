@@ -86,55 +86,67 @@ HRESULT CJavascriptVM::Initialize()
     return E_OUTOFMEMORY;
   hRes = RunNativeProtectedAndGetError(0, 0, [this](_In_ DukTape::duk_context *lpCtx) -> VOID
   {
+    DukTape::duk_push_global_stash(lpCtx);
+    //setup the global internal object
+    DukTape::duk_push_bare_object(lpCtx);
+    DukTape::duk_put_prop_string(lpCtx, -2, "mxjslib");
+
+    //get our internal global object
+    DukTape::duk_get_prop_string(lpCtx, -1, "mxjslib");
+
     //setup "jsVM" accessible only from native for callbacks
-    DukTape::duk_push_global_object(lpCtx);
     DukTape::duk_push_pointer(lpCtx, this);
-    DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""jsVM");
-    DukTape::duk_pop(lpCtx);
+    DukTape::duk_put_prop_string(lpCtx, -2, "\xff" "jsVM");
+
     //setup "unhandledExceptionHandler"
-    DukTape::duk_push_global_object(lpCtx);
     DukTape::duk_push_null(lpCtx);
-    DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""unhandledExceptionHandler");
-    DukTape::duk_pop(lpCtx);
-    //add debug output
+    DukTape::duk_put_prop_string(lpCtx, -2, "\xff" "unhandledExceptionHandler");
+
+    //done with internal objects
+    DukTape::duk_pop_2(lpCtx);
+
+    //setup global functions and methods
     DukTape::duk_push_global_object(lpCtx);
+
+    //add debug output
     DukTape::duk_push_c_function(lpCtx, &OnDebugString, 1);
     DukTape::duk_put_prop_string(lpCtx, -2, "DebugPrint");
-    DukTape::duk_pop(lpCtx);
+
 #ifdef _DEBUG
     //add IS_DEBUG_BUILD property
-    DukTape::duk_push_global_object(lpCtx);
     DukTape::duk_push_boolean(lpCtx, 1);
     DukTape::duk_put_prop_string(lpCtx, -2, "IS_DEBUG_BUILD");
-    DukTape::duk_pop(lpCtx);
 #endif //_DEBUG
+
     //add unhandled exception handler
-    DukTape::duk_push_global_object(lpCtx);
     DukTape::duk_push_c_function(lpCtx, &OnSetUnhandledExceptionHandler, 1);
     DukTape::duk_put_prop_string(lpCtx, -2, "SetUnhandledExceptionHandler");
-    DukTape::duk_pop(lpCtx);
+
     //add windows error message retrieval
-    DukTape::duk_push_global_object(lpCtx);
     DukTape::duk_push_c_function(lpCtx, &OnFormatErrorMessage, 1);
     DukTape::duk_put_prop_string(lpCtx, -2, "FormatErrorMessage");
-    DukTape::duk_pop(lpCtx);
+
     //setup DukTape's Node.js-like module loading framework
     DukTape::duk_push_object(lpCtx);
     DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::OnNodeJsResolveModule, MX_JS_VARARGS);
     DukTape::duk_put_prop_string(lpCtx, -2, "resolve");
     DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::OnNodeJsLoadModule, MX_JS_VARARGS);
     DukTape::duk_put_prop_string(lpCtx, -2, "load");
+
     DukTape::duk_module_node_init(lpCtx);
+
+    //done with global object
+    DukTape::duk_pop(lpCtx);
 
     //add WindowsError exception
     DukTape::duk_eval_raw(lpCtx, "function WindowsError(_hr) {\r\n"
-                                    "this.hr = _hr;\r\n"
-                                    "Error.call(this, \"\");\r\n"
-                                    "this.message = FormatErrorMessage(_hr);\r\n"
-                                    "this.name = \"WindowsError\";\r\n"
-                                    "return this; }\r\n"
-                                  "WindowsError.prototype = Object.create(Error.prototype);\r\n"
-                                  "WindowsError.prototype.constructor=WindowsError;\r\n", 0,
+                                     "this.hr = _hr;\r\n"
+                                     "Error.call(this, \"\");\r\n"
+                                     "this.message = FormatErrorMessage(_hr);\r\n"
+                                     "this.name = \"WindowsError\";\r\n"
+                                     "return this; }\r\n"
+                                 "WindowsError.prototype = Object.create(Error.prototype);\r\n"
+                                 "WindowsError.prototype.constructor=WindowsError;\r\n", 0,
                           DUK_COMPILE_EVAL | DUK_COMPILE_NOSOURCE | DUK_COMPILE_STRLEN | DUK_COMPILE_NOFILENAME);
     return;
   });
@@ -161,10 +173,16 @@ CJavascriptVM* CJavascriptVM::FromContext(_In_ DukTape::duk_context *lpCtx)
 {
   CJavascriptVM *lpVM;
 
-  DukTape::duk_push_global_object(lpCtx);
-  DukTape::duk_get_prop_string(lpCtx, -1, "\xff""\xff""jsVM");
+  //push our internal global object
+  DukTape::duk_push_global_stash(lpCtx);
+  DukTape::duk_get_prop_string(lpCtx, -1, "mxjslib");
+
+  //get property
+  DukTape::duk_get_prop_string(lpCtx, -1, "\xff" "jsVM");
   lpVM = reinterpret_cast<MX::CJavascriptVM*>(DukTape::duk_to_pointer(lpCtx, -1));
-  DukTape::duk_pop_2(lpCtx);
+
+  //done with our internal global object
+  DukTape::duk_pop_3(lpCtx);
   return lpVM;
 }
 
@@ -1622,9 +1640,21 @@ BOOL CJavascriptVM::HandleException(_In_ DukTape::duk_context *lpCtx, _In_ DukTa
     }
     if (bCatchUnhandled != FALSE)
     {
-      DukTape::duk_push_global_object(lpCtx);
-      DukTape::duk_get_prop_string(lpCtx, -1, "\xff""\xff""unhandledExceptionHandler");
+      //push our internal global object
+      DukTape::duk_push_global_stash(lpCtx);
+      DukTape::duk_get_prop_string(lpCtx, -1, "mxjslib");
+
+      //get handler
+      if (DukTape::duk_is_bare_object(lpCtx, -1) != 0)
+        DukTape::duk_get_prop_string(lpCtx, -1, "\xff" "unhandledExceptionHandler");
+      else
+        DukTape::duk_push_null(lpCtx);
+
+      //done with internal global object
       DukTape::duk_remove(lpCtx, -2);
+      DukTape::duk_remove(lpCtx, -2);
+
+      //call the handler
       if (DukTape::duk_is_function(lpCtx, -1) != 0)
       {
         DukTape::duk_dup(lpCtx, nStackIndex);
@@ -1728,7 +1758,11 @@ static DukTape::duk_ret_t OnSetUnhandledExceptionHandler(_In_ DukTape::duk_conte
 {
   LPVOID func = 0;
 
-  DukTape::duk_push_global_object(lpCtx);
+  //push our internal global object
+  DukTape::duk_push_global_stash(lpCtx);
+  DukTape::duk_get_prop_string(lpCtx, -1, "mxjslib");
+
+  //push the new handler
   if (DukTape::duk_is_undefined(lpCtx, 0) == 0 && DukTape::duk_is_null(lpCtx, 0) == 0)
   {
     DukTape::duk_require_function(lpCtx, 0);
@@ -1738,8 +1772,12 @@ static DukTape::duk_ret_t OnSetUnhandledExceptionHandler(_In_ DukTape::duk_conte
   {
     DukTape::duk_push_null(lpCtx);
   }
-  DukTape::duk_put_prop_string(lpCtx, -2, "\xff""\xff""unhandledExceptionHandler");
-  DukTape::duk_pop(lpCtx);
+
+  //set new handler
+  DukTape::duk_put_prop_string(lpCtx, -2, "\xff" "unhandledExceptionHandler");
+
+  //done with internal global object
+  DukTape::duk_pop_2(lpCtx);
   return 0;
 }
 

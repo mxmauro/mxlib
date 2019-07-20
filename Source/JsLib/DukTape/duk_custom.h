@@ -23,6 +23,8 @@
 
 #define DUK_USE_REGEXP_CANON_WORKAROUND
 
+#define DUK_USE_JSON_STRINGIFY_FASTPATH
+
 //--------------------------------
 
 #undef DUK_USE_VERBOSE_ERRORS
