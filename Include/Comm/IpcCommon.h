@@ -54,6 +54,7 @@ class CIpc : public virtual CBaseMemObj, public CLoggable
 protected:
   class CConnectionBase;
 public:
+  class CPacketBase;
   class CLayer;
 
 #ifdef MX_IPC_DEBUG_OUTPUT
@@ -101,13 +102,24 @@ public:
 
     HANDLE GetConn();
 
-    HRESULT SendProcessedDataToNextLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize);
-    HRESULT SendMsgToNextLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize);
+    VOID IncrementOutgoingWrites();
+    VOID DecrementOutgoingWrites();
+
+    VOID FreePacket(_In_ CPacketBase *lpPacket);
+
+    HRESULT ReadStream(_In_ CPacketBase *lpStreamPacket, _Out_ CPacketBase **lplpPacket);
+
+    HRESULT SendReadDataToNextLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize);
+    HRESULT SendWriteDataToNextLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize);
+    //NOTE: The next layer will be responsible for freeing the packet on success or failure
+    HRESULT SendAfterWritePacketToNextLayer(_In_ CPacketBase *lpPacket);
 
     virtual HRESULT OnConnect() = 0;
     virtual HRESULT OnDisconnect() = 0;
-    virtual HRESULT OnData(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize) = 0;
-    virtual HRESULT OnSendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize) = 0;
+    virtual HRESULT OnReceivedData(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize) = 0;
+    //NOTE: The OnSendPacket is responsible for freeing the packet on success or failure
+    virtual HRESULT OnSendPacket(_In_ CPacketBase *lpPacket) = 0;
+    virtual VOID OnShutdown() = 0;
 
   private:
     LPVOID lpConn;
@@ -231,7 +243,7 @@ public:
 
   BOOL IsShuttingDown();
 
-protected:
+public:
   class CPacketBase : public virtual CBaseMemObj, public TLnkLstNode<CPacketBase>
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CPacketBase);
@@ -433,6 +445,7 @@ protected:
     CPacketBase *lpChainedPacket;
   };
 
+protected:
   template<SIZE_T Size>
   class TPacket : public CPacketBase
   {
@@ -455,9 +468,10 @@ protected:
   public:
     BYTE aBuffer[Size - sizeof(CPacketBase)];
   };
+
   //----
 
-protected:
+public:
   class CPacketList : public virtual CBaseMemObj
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CPacketList);
@@ -595,13 +609,12 @@ protected:
 
     virtual VOID ShutdownLink(_In_ BOOL bAbortive);
 
-    HRESULT SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
+    HRESULT SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize, _In_ BOOL bIgnoreLayers);
     HRESULT SendStream(_In_ CStream *lpStream);
     HRESULT AfterWriteSignal(_In_ OnAfterWriteSignalCallback cCallback, _In_opt_ LPVOID lpCookie);
+    HRESULT AfterWriteSignal(_In_ CPacketBase *lpPacket);
 
     HRESULT SendResumeIoProcessingPacket(_In_ BOOL bInput);
-
-    //HRESULT WriteMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
 
     VOID Close(_In_ HRESULT hRes);
 
@@ -614,11 +627,16 @@ protected:
 
     HRESULT HandleConnected();
 
-    HRESULT DoZeroRead(_In_ SIZE_T nPacketsCount);
-    HRESULT DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacketBase *lpReusePacket = NULL);
+    VOID IncrementOutgoingWrites();
+    VOID DecrementOutgoingWrites();
+
+    HRESULT DoZeroRead(_In_ SIZE_T nPacketsCount, _Inout_ CPacketList &cQueuedPacketsList);
+    HRESULT DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacketBase *lpReusePacket,
+                   _Inout_ CPacketList &cQueuedPacketsList);
 
     HRESULT SendPackets(_Inout_ CPacketBase **lplpFirstPacket, _Inout_ CPacketBase **lplpLastPacket,
-                        _Inout_ SIZE_T *lpnChainLength, _In_ BOOL bFlushAll);
+                        _Inout_ SIZE_T *lpnChainLength, _In_ BOOL bFlushAll,
+                        _Inout_ CPacketList &cQueuedPacketsList);
 
     CPacketBase* GetPacket(_In_ CPacketBase::eType nType, _In_ SIZE_T nDesiredSize, _In_ BOOL bRealSize);
     VOID FreePacket(_In_ CPacketBase *lpPacket);
@@ -626,11 +644,15 @@ protected:
     CIoCompletionPortThreadPool& GetDispatcherPool();
     CIoCompletionPortThreadPool::OnPacketCallback& GetDispatcherPoolPacketCallback();
 
-    virtual HRESULT SendReadPacket(_In_ CPacketBase *lpPacket) = 0;
-    virtual HRESULT SendWritePacket(_In_ CPacketBase *lpPacket) = 0;
+    HRESULT ReadStream(_In_ CPacketBase *lpStreamPacket, _Out_ CPacketBase **lplpPacket);
+
+    virtual HRESULT SendReadPacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwRead) = 0;
+    virtual HRESULT SendWritePacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwWritten) = 0;
     virtual SIZE_T GetMultiWriteMaxCount() const = 0;
 
-    HRESULT SendDataToLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize, _In_ CLayer *lpCurrLayer, _In_ BOOL bIsMsg);
+    HRESULT SendReadDataToNextLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize, _In_ CLayer *lpCurrLayer);
+    HRESULT SendWriteDataToNextLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize, _In_ CLayer *lpCurrLayer);
+    HRESULT SendAfterWritePacketToNextLayer(_In_ CPacketBase *lpPacket, _In_ CLayer *lpCurrLayer);
 
     VOID UpdateStats(_In_ BOOL bRead, _In_ DWORD dwBytesTransferred);
     VOID GetStats(_In_ BOOL bRead, _Out_ PULONGLONG lpullBytesTransferred, _Out_opt_ float *lpnThroughputKbps);
@@ -638,7 +660,7 @@ protected:
   protected:
     friend class CIpc;
 
-    LONG volatile nMutex;
+    LONG volatile nReadMutex;
     CIpc *lpIpc;
     CIpc::eConnectionClass nClass;
     LONG volatile hrErrorCode;
@@ -655,11 +677,6 @@ protected:
       LONG volatile nMutex;
       CCircularBuffer cBuffer;
     } sReceivedData;
-    struct {
-      CPacketBase *lpFirstPacket;
-      CPacketBase *lpLastPacket;
-      SIZE_T nChainLength;
-    } sSendingData;
     struct {
       LONG volatile nRwMutex;
       CLayerList cList;

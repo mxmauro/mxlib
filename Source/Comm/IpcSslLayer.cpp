@@ -80,7 +80,8 @@ typedef struct tagSSL_LAYER_DATA {
   BIO_METHOD *lpBioMthd;
   BIO *lpInBio;
   BIO *lpOutBio;
-  MX::Internals::COpenSSLCircularBufferBIO *lpBufferedOut;
+  MX::CIpc::CPacketList *lpOutgoingPacketsList;
+  SIZE_T nSizeUsedInLastPacket;
   MX::CSslCertificateArray *lpCertArray;
   struct tagPeerCert {
     MX::CSslCertificate *lpCert;
@@ -124,7 +125,7 @@ CIpcSslLayer::~CIpcSslLayer()
       SSL_free(ssl_data->lpSslSession);
       ssl_data->lpSslSession = NULL;
     }
-    MX_DELETE(ssl_data->lpBufferedOut);
+    MX_DELETE(ssl_data->lpOutgoingPacketsList);
     MX_DELETE(ssl_data->sPeerCert.lpCert);
     if (ssl_data->lpBioMthd != NULL)
     {
@@ -206,8 +207,8 @@ HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol
     SSL_set_accept_state(ssl_data->lpSslSession);
   }
   //create i/o objects
-  ssl_data->lpBufferedOut = MX_DEBUG_NEW MX::Internals::COpenSSLCircularBufferBIO();
-  if (ssl_data->lpBufferedOut == NULL)
+  ssl_data->lpOutgoingPacketsList = MX_DEBUG_NEW MX::CIpc::CPacketList();
+  if (ssl_data->lpOutgoingPacketsList == NULL)
     return E_OUTOFMEMORY;
   ssl_data->lpBioMthd = BIO_circular_buffer_mem();
   if (ssl_data->lpBioMthd == NULL)
@@ -294,7 +295,22 @@ HRESULT CIpcSslLayer::OnDisconnect()
   return HandleSsl(FALSE);
 }
 
-HRESULT CIpcSslLayer::OnData(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize)
+VOID CIpcSslLayer::OnShutdown()
+{
+  if (lpInternalData != NULL)
+  {
+    CIpc::CPacketBase *lpPacket;
+
+    while ((lpPacket = ssl_data->lpOutgoingPacketsList->DequeueFirst()) != NULL)
+    {
+      FreePacket(lpPacket);
+      DecrementOutgoingWrites();
+    }
+  }
+  return;
+}
+
+HRESULT CIpcSslLayer::OnReceivedData(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize)
 {
   HRESULT hRes;
 
@@ -315,60 +331,73 @@ HRESULT CIpcSslLayer::OnData(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize)
   }
   //done
   if (FAILED(hRes))
+  {
     _InterlockedCompareExchange(&hNetworkError, (LONG)hRes, 0);
+  }
   return hRes;
 }
 
-HRESULT CIpcSslLayer::OnSendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize)
+HRESULT CIpcSslLayer::OnSendPacket(_In_ CIpc::CPacketBase *lpPacket)
 {
   HRESULT hRes;
 
   if (lpInternalData == NULL)
+  {
+    FreePacket(lpPacket);
     return MX_E_NotReady;
+  }
   hRes = (HRESULT)__InterlockedRead(&hNetworkError);
   if (FAILED(hRes))
-    return hRes;
-  if (nDataSize == 0)
-    return S_OK;
-  //DebugPrint("CIpcSslLayer::OnSendMsg %lums\n", ::GetTickCount());
-  //add to buffered output
   {
-    CFastLock cBufferedOutLock(&(ssl_data->lpBufferedOut->nMutex));
-
-    hRes = ssl_data->lpBufferedOut->cBuffer.Write(lpData, nDataSize);
+    FreePacket(lpPacket);
+    return hRes;
   }
+  //DebugPrint("CIpcSslLayer::OnSendMsg %lums\n", ::GetTickCount());
+  //add to the outgoing list
+  IncrementOutgoingWrites();
+  ssl_data->lpOutgoingPacketsList->QueueLast(lpPacket);
+
   //process ssl
   if (SUCCEEDED(hRes))
+  {
     hRes = HandleSsl(TRUE);
+  }
+
   //done
   if (FAILED(hRes))
+  {
     _InterlockedCompareExchange(&hNetworkError, (LONG)hRes, 0);
+  }
   return hRes;
 }
 
 HRESULT CIpcSslLayer::HandleSsl(_In_ BOOL bCanWrite)
 {
   CFastLock cLock(&nMutex);
+  SIZE_T nProcessedOutgoingPackets;
+  CIpc::CPacketBase *lpAfterWritePacket = NULL;
   BOOL bLoop = TRUE;
   LONG nCurrFlags;
   HRESULT hRes;
 
+  nProcessedOutgoingPackets = 0;
   while (bLoop != FALSE)
   {
+    hRes = S_OK;
     bLoop = FALSE;
     nCurrFlags = __InterlockedRead(&(ssl_data->nFlags));
     //process encrypted input
     hRes = ExecSslRead();
     if (FAILED(hRes))
-      return hRes;
+      break;
     if (hRes == S_OK)
       bLoop = TRUE;
     //process unencrypted output
-    if ((nCurrFlags & FLAG_WantsRead) == 0)
+    if ((nCurrFlags & FLAG_WantsRead) == 0 && lpAfterWritePacket == NULL)
     {
-      hRes = ProcessDataToSend();
+      hRes = ProcessOutgoingData(&nProcessedOutgoingPackets, &lpAfterWritePacket);
       if (FAILED(hRes))
-        return hRes;
+        break;
       if (hRes == S_OK)
         bLoop = TRUE;
     }
@@ -377,7 +406,7 @@ HRESULT CIpcSslLayer::HandleSsl(_In_ BOOL bCanWrite)
     {
       hRes = SendEncryptedOutput();
       if (FAILED(hRes))
-        return hRes;
+        break;
       if (hRes == S_OK)
         bLoop = TRUE;
     }
@@ -389,14 +418,35 @@ HRESULT CIpcSslLayer::HandleSsl(_In_ BOOL bCanWrite)
         _InterlockedOr(&(ssl_data->nFlags), FLAG_HandshakeCompleted);
         hRes = FinalizeHandshake();
         if (FAILED(hRes))
-          return hRes;
+          break;
         //NOTE: Should we raise a callback?
         bLoop = TRUE;
       }
     }
   }
+  if (hRes == S_FALSE)
+    hRes = S_OK;
+  //count outgoing packets
+  while (nProcessedOutgoingPackets > 0)
+  {
+    DecrementOutgoingWrites();
+    nProcessedOutgoingPackets--;
+  }
+  //process the after write packet if someone appeared
+  if (lpAfterWritePacket != NULL)
+  {
+    if (SUCCEEDED(hRes))
+    {
+      hRes = SendAfterWritePacketToNextLayer(lpAfterWritePacket);
+    }
+    else
+    {
+      FreePacket(lpAfterWritePacket);
+    }
+    DecrementOutgoingWrites();
+  }
   //done
-  return S_OK;
+  return hRes;
 }
 
 HRESULT CIpcSslLayer::ExecSslRead()
@@ -413,7 +463,7 @@ HRESULT CIpcSslLayer::ExecSslRead()
     r = SSL_read(ssl_data->lpSslSession, aBuffer, (int)sizeof(aBuffer));
     if (r > 0)
     {
-      hRes = SendProcessedDataToNextLayer(aBuffer, (SIZE_T)r);
+      hRes = SendReadDataToNextLayer(aBuffer, (SIZE_T)r);
       if (FAILED(hRes))
         return hRes;
       bSomethingProcessed = TRUE;
@@ -459,7 +509,7 @@ HRESULT CIpcSslLayer::SendEncryptedOutput()
     nToProcess = BIO_read(ssl_data->lpOutBio, aBuffer, (int)nAvailable);
     if (nToProcess <= 0)
       break;
-    hRes = SendMsgToNextLayer(aBuffer, nToProcess);
+    hRes = SendWriteDataToNextLayer(aBuffer, nToProcess);
     if (FAILED(hRes))
       return hRes;
     bSomethingProcessed = TRUE;
@@ -468,41 +518,101 @@ HRESULT CIpcSslLayer::SendEncryptedOutput()
   return (bSomethingProcessed != FALSE) ? S_OK : S_FALSE;
 }
 
-HRESULT CIpcSslLayer::ProcessDataToSend()
+HRESULT CIpcSslLayer::ProcessOutgoingData(_Inout_ PSIZE_T lpnProcessedPackets,
+                                          _Inout_ CIpc::CPacketBase **lplpAfterWritePacket)
 {
-  BYTE aTempBuf[2048];
   BOOL bSomethingWritten;
-  SIZE_T nAvail;
   int err;
 
   bSomethingWritten = FALSE;
   do
   {
-    {
-      CFastLock cBufferedOutLock(&(ssl_data->lpBufferedOut->nMutex));
+    CIpc::CPacketBase *lpPacket;
+    SIZE_T nAvail;
 
-      nAvail = ssl_data->lpBufferedOut->cBuffer.Peek(aTempBuf, (ssl_data->lpBufferedOut->nFragmentSize == 0)
-                                                               ? sizeof(aTempBuf)
-                                                               : ssl_data->lpBufferedOut->nFragmentSize);
-      if (nAvail == 0)
+    lpPacket = ssl_data->lpOutgoingPacketsList->DequeueFirst();
+    if (lpPacket == NULL)
+    {
+      err = 1;
+      break;
+    }
+    if (lpPacket->HasAfterWriteSignalCallback() != FALSE)
+    {
+      *lplpAfterWritePacket = lpPacket;
+      err = 1;
+      break;
+    }
+
+    if (lpPacket->HasStream() != FALSE)
+    {
+      CIpc::CPacketBase *lpNewPacket;
+      HRESULT hRes;
+
+      hRes = ReadStream(lpPacket, &lpNewPacket);
+      if (hRes == MX_E_EndOfFileReached)
       {
+        //free the stream
+        FreePacket(lpPacket);
+        (*lpnProcessedPackets)++;
+
+        err = 1;
+        continue;
+      }
+      else if (FAILED(hRes))
+      {
+        return hRes;
+      }
+      
+      //we have a data packet so increment the outgoing packets and assume we are dealing with a normal data packet
+      //
+      //the packet we be queued in the front if the whole data cannot be processed in this round
+      //
+      //also requeue the stream
+      ssl_data->lpOutgoingPacketsList->QueueFirst(lpPacket);
+
+      IncrementOutgoingWrites();
+      lpPacket = lpNewPacket;
+    }
+
+    //get available bytes (taking into account send fragmentation)
+    nAvail = lpPacket->GetBytesInUse() - ssl_data->nSizeUsedInLastPacket;
+    if (nAvail == 0)
+    {
+      FreePacket(lpPacket);
+      (*lpnProcessedPackets)++;
+
+      err = 1;
+      break;
+    }
+
+    ERR_clear_error();
+    err = SSL_write(ssl_data->lpSslSession, lpPacket->GetBuffer() + ssl_data->nSizeUsedInLastPacket, (int)nAvail);
+    if (err > 0)
+    {
+      bSomethingWritten = TRUE;
+
+      if (err == (int)nAvail)
+      {
+        FreePacket(lpPacket);
+        (*lpnProcessedPackets)++;
+
+        ssl_data->nSizeUsedInLastPacket = 0;
+      }
+      else
+      {
+        ssl_data->nSizeUsedInLastPacket += err;
+        //requeue packet for next round
+        ssl_data->lpOutgoingPacketsList->QueueFirst(lpPacket);
+
+        //stop
         err = 1;
         break;
       }
-
-      if (ssl_data->lpBufferedOut->nFragmentSize == 0)
-      {
-        ssl_data->lpBufferedOut->nFragmentSize = nAvail;
-      }
-
-      ERR_clear_error();
-      err = SSL_write(ssl_data->lpSslSession, aTempBuf, (int)nAvail);
-      if (err > 0)
-      {
-        ssl_data->lpBufferedOut->cBuffer.AdvanceReadPtr((SIZE_T)err);
-        ssl_data->lpBufferedOut->nFragmentSize -= (SIZE_T)err;
-        bSomethingWritten = TRUE;
-      }
+    }
+    else
+    {
+      //couldn't send so requeue packet for next round
+      ssl_data->lpOutgoingPacketsList->QueueFirst(lpPacket);
     }
   }
   while (err > 0);

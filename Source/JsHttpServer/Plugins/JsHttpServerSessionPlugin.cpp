@@ -39,13 +39,27 @@ CJsHttpServerSessionPlugin::CJsHttpServerSessionPlugin(_In_ DukTape::duk_context
   nExpireTimeInSeconds = 0;
   bIsSecure = bIsHttpOnly = FALSE;
   szSessionVarNameA = SESSION_ID_COOKIE_NAME;
+  bDirty = FALSE;
   return;
 }
 
 CJsHttpServerSessionPlugin::~CJsHttpServerSessionPlugin()
 {
-  _Save();
+  Save();
   return;
+}
+
+HRESULT CJsHttpServerSessionPlugin::Save()
+{
+  HRESULT hRes = S_OK;
+
+  if (*szCurrentIdA != 0 && bDirty != FALSE)
+  {
+    hRes = cLoadSaveCallback(this, FALSE);
+    if (SUCCEEDED(hRes))
+      bDirty = FALSE;
+  }
+  return hRes;
 }
 
 HRESULT CJsHttpServerSessionPlugin::Setup(_In_ CJsHttpServer::CClientRequest *_lpRequest,
@@ -229,17 +243,15 @@ HRESULT CJsHttpServerSessionPlugin::RegenerateSessionId()
   return S_OK;
 }
 
-HRESULT CJsHttpServerSessionPlugin::_Save()
-{
-  return cLoadSaveCallback(this, FALSE);
-}
-
-DukTape::duk_ret_t CJsHttpServerSessionPlugin::Save()
+DukTape::duk_ret_t CJsHttpServerSessionPlugin::_Save()
 {
   DukTape::duk_context *lpCtx = GetContext();
+  HRESULT hRes;
 
-  DukTape::duk_push_boolean(lpCtx, (SUCCEEDED(_Save())) ? 1 : 0);
-  return 1;
+  hRes = Save();
+  if (FAILED(hRes))
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+  return 0;
 }
 
 DukTape::duk_ret_t CJsHttpServerSessionPlugin::RegenerateId()
@@ -265,6 +277,7 @@ DukTape::duk_ret_t CJsHttpServerSessionPlugin::RegenerateId()
     MX_JS_THROW_WINDOWS_ERROR(GetContext(), hRes);
   //on success
   cBag.Reset();
+  bDirty = TRUE;
   return 0;
 }
 
@@ -334,27 +347,44 @@ int CJsHttpServerSessionPlugin::OnProxySetNamedProperty(_In_z_ LPCSTR szPropName
   if (DukTape::duk_is_undefined(lpCtx, nValueIndex) != 0)
   {
     hRes = cBag.Clear(szPropNameA);
+    bDirty = TRUE;
     return 0;
   }
   if (DukTape::duk_is_null(lpCtx, nValueIndex) != 0)
   {
     hRes = cBag.SetNull(szPropNameA);
-    return (SUCCEEDED(hRes)) ? 0 : -1;
+    if (SUCCEEDED(hRes))
+    {
+      bDirty = TRUE;
+      return 0;
+    }
   }
-  if (DukTape::duk_is_boolean(lpCtx, nValueIndex) != 0)
+  else if (DukTape::duk_is_boolean(lpCtx, nValueIndex) != 0)
   {
     hRes = cBag.SetDouble(szPropNameA, DukTape::duk_get_boolean(lpCtx, nValueIndex) ? 1.0 : 0.0);
-    return (SUCCEEDED(hRes)) ? 0 : -1;
+    return (SUCCEEDED(hRes)) ? 0 : -1; if (SUCCEEDED(hRes))
+    {
+      bDirty = TRUE;
+      return 0;
+    }
   }
-  if (DukTape::duk_is_number(lpCtx, nValueIndex) != 0)
+  else if (DukTape::duk_is_number(lpCtx, nValueIndex) != 0)
   {
     hRes = cBag.SetDouble(szPropNameA, DukTape::duk_get_number(lpCtx, nValueIndex));
-    return (SUCCEEDED(hRes)) ? 0 : -1;
+    if (SUCCEEDED(hRes))
+    {
+      bDirty = TRUE;
+      return 0;
+    }
   }
-  if (DukTape::duk_is_string(lpCtx, nValueIndex) != 0)
+  else if (DukTape::duk_is_string(lpCtx, nValueIndex) != 0)
   {
     hRes = cBag.SetString(szPropNameA, DukTape::duk_get_string(lpCtx, nValueIndex));
-    return (SUCCEEDED(hRes)) ? 0 : -1;
+    if (SUCCEEDED(hRes))
+    {
+      bDirty = TRUE;
+      return 0;
+    }
   }
   return -1; //throw error
 }
@@ -368,7 +398,10 @@ int CJsHttpServerSessionPlugin::OnProxyDeleteNamedProperty(_In_z_ LPCSTR szPropN
 {
   if (szPropNameA[0] == 'i' && szPropNameA[1] == 'd' && szPropNameA[2] == 0)
     return -1; //cannot delete property
-  cBag.Clear(szPropNameA);
+  if (SUCCEEDED(cBag.Clear(szPropNameA)))
+  {
+    bDirty = TRUE;
+  }
   return 1;
 }
 

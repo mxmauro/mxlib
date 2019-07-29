@@ -44,7 +44,7 @@ CHttpServer::CClientRequest::CClientRequest() : CIpc::CUserData(), TLnkLstNode<C
   lpSocketMgr = NULL;
   hConn = NULL;
   MemSet(&sPeerAddr, 0, sizeof(sPeerAddr));
-  nState = CClientRequest::StateInitializing;
+  nState = StateInitializing;
   nBrowser = CHttpHeaderBase::BrowserOther;
   _InterlockedExchange(&nFlags, 0);
   return;
@@ -629,9 +629,14 @@ HRESULT CHttpServer::CClientRequest::Initialize(_In_ CHttpServer *_lpHttpServer,
   return S_OK;
 }
 
-VOID CHttpServer::CClientRequest::ResetForNewRequest()
+HRESULT CHttpServer::CClientRequest::ResetForNewRequest()
 {
-  nState = CClientRequest::StateInitializing;
+  HRESULT hRes;
+
+  hRes = SetState(StateInitializing);
+  if (FAILED(hRes))
+    return hRes;
+
   if (lpHttpServer->ShouldLog(1) != FALSE)
   {
     lpHttpServer->Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateInitializing [ResetForNewRequest]", this, hConn);
@@ -641,7 +646,30 @@ VOID CHttpServer::CClientRequest::ResetForNewRequest()
   cRequest->ResetForNewRequest();
   cResponse->ResetForNewRequest();
   cWebSocketInfo.Reset();
-  return;
+  //done
+  return S_OK;
+}
+
+HRESULT CHttpServer::CClientRequest::SetState(_In_ eState nNewState)
+{
+  if (nState != StateBuildingResponse && nNewState == StateBuildingResponse)
+  {
+    HRESULT hRes;
+
+    hRes = lpHttpServer->cSocketMgr.PauseInputProcessing(hConn);
+    if (FAILED(hRes))
+      return hRes;
+  }
+  else if (nState == StateBuildingResponse && nNewState != StateBuildingResponse)
+  {
+    HRESULT hRes;
+
+    hRes = lpHttpServer->cSocketMgr.ResumeInputProcessing(hConn);
+    if (FAILED(hRes))
+      return hRes;
+  }
+  nState = nNewState;
+  return S_OK;
 }
 
 BOOL CHttpServer::CClientRequest::IsKeepAliveRequest() const
@@ -987,7 +1015,7 @@ HRESULT CHttpServer::CClientRequest::BuildAndInsertOrSendHeaderStream()
   return hRes;
 }
 
-HRESULT CHttpServer::CClientRequest::BuildAndSendWebSocketHeaderStream()
+HRESULT CHttpServer::CClientRequest::BuildAndSendWebSocketHeaderStream(_In_z_ LPCSTR szProtocolA)
 {
   TAutoRefCounted<CMemoryStream> cHdrStream;
   CStringA cStrTempA;
@@ -1045,6 +1073,60 @@ HRESULT CHttpServer::CClientRequest::BuildAndSendWebSocketHeaderStream()
         hRes = WriteToStream(cHdrStream, "\r\n", 2);
     }
   }
+  //connection
+  if (SUCCEEDED(hRes))
+  {
+    hRes = WriteToStream(cHdrStream, "Connection: upgrade\r\n", 21);
+  }
+  //upgrade
+  if (SUCCEEDED(hRes))
+  {
+    hRes = WriteToStream(cHdrStream, "Upgrade: websocket\r\n", 20);
+  }
+  //websocket protocol
+  if (SUCCEEDED(hRes))
+  {
+    hRes = WriteToStream(cHdrStream, "Sec-WebSocket-Protocol: ", 24);
+    if (SUCCEEDED(hRes))
+    {
+      hRes = WriteToStream(cHdrStream, szProtocolA, StrLenA(szProtocolA));
+      if (SUCCEEDED(hRes))
+        hRes = WriteToStream(cHdrStream, "\r\n", 2);
+    }
+  }
+
+  //websocket accept
+  if (SUCCEEDED(hRes))
+  {
+    TAutoDeletePtr<CHttpHeaderRespSecWebSocketAccept> cRespSecWebSocketAcceptHeader;
+
+    cRespSecWebSocketAcceptHeader.Attach(MX_DEBUG_NEW CHttpHeaderRespSecWebSocketAccept());
+    if (cRespSecWebSocketAcceptHeader)
+    {
+      CHttpHeaderReqSecWebSocketKey *lpReqSecWebSocketKeyHeader = cWebSocketInfo->lpReqSecWebSocketKeyHeader;
+
+      hRes = cRespSecWebSocketAcceptHeader->SetKey(lpReqSecWebSocketKeyHeader->GetKey(),
+                                                    lpReqSecWebSocketKeyHeader->GetKeyLength());
+      if (SUCCEEDED(hRes))
+      {
+        hRes = cRespSecWebSocketAcceptHeader->Build(cStrTempA, nBrowser);
+        if (SUCCEEDED(hRes))
+        {
+          hRes = WriteToStream(cHdrStream, "Sec-WebSocket-Accept: ", 22);
+          if (SUCCEEDED(hRes))
+          {
+            hRes = WriteToStream(cHdrStream, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+            if (SUCCEEDED(hRes))
+              hRes = WriteToStream(cHdrStream, "\r\n", 2);
+          }
+        }
+      }
+    }
+    else
+    {
+      hRes = E_OUTOFMEMORY;
+    }
+  }
   //rest of headers
   if (SUCCEEDED(hRes))
   {
@@ -1060,8 +1142,10 @@ HRESULT CHttpServer::CClientRequest::BuildAndSendWebSocketHeaderStream()
           StrCompareA(lpHdr->GetHeaderName(), "Date") != 0 &&
           StrCompareA(lpHdr->GetHeaderName(), "Server") != 0 &&
           StrCompareA(lpHdr->GetHeaderName(), "Connection") != 0 &&
-          StrCompareA(lpHdr->GetHeaderName(), "Location") != 0 ||
-          StrCompareA(lpHdr->GetHeaderName(), "Upgrade") != 0)
+          StrCompareA(lpHdr->GetHeaderName(), "Location") != 0 &&
+          StrCompareA(lpHdr->GetHeaderName(), "Upgrade") != 0 &&
+          StrCompareA(lpHdr->GetHeaderName(), "Sec-WebSocket-Protocol") != 0 &&
+          StrCompareA(lpHdr->GetHeaderName(), "Sec-WebSocket-Accept") != 0)
       {
         hRes = lpHdr->Build(cStrTempA, nBrowser);
         if (SUCCEEDED(hRes))

@@ -55,14 +55,15 @@ public:
 private:
   HRESULT OnConnect();
   HRESULT OnDisconnect();
+  VOID OnShutdown();
 
-  HRESULT OnData(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
-  HRESULT OnSendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
+  HRESULT OnReceivedData(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
+  HRESULT OnSendPacket(_In_ CIpc::CPacketBase *lpPacket);
 
   HRESULT HandleSsl(_In_ BOOL bCanWrite);
   HRESULT ExecSslRead();
   HRESULT SendEncryptedOutput();
-  HRESULT ProcessDataToSend();
+  HRESULT ProcessOutgoingData(_Inout_ PSIZE_T lpnProcessedPackets, _Inout_ CIpc::CPacketBase **lplpAfterWritePacket);
   HRESULT FinalizeHandshake();
 
 private:

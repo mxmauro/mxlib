@@ -33,13 +33,6 @@ static LONG volatile nLogMutex = 0;
 
 //-----------------------------------------------------------
 
-class CTestJsRequest : public MX::CJsHttpServer::CClientRequest
-{
-public:
-  CTestJsRequest() : MX::CJsHttpServer::CClientRequest()
-    { };
-};
-
 class CTestWebSocket : public MX::CWebSocket
 {
 public:
@@ -82,6 +75,45 @@ static HRESULT OnLog(_In_z_ LPCWSTR szInfoW);
 
 //-----------------------------------------------------------
 
+class CTestJsRequest : public MX::CJsHttpServer::CClientRequest
+{
+public:
+  CTestJsRequest() : MX::CJsHttpServer::CClientRequest()
+    { };
+
+  HRESULT InitializeSession(_Inout_ MX::CJavascriptVM &cJvm,
+                            _Inout_ MX::CJavascriptVM::CRequireModuleContext *lpReqContext)
+    {
+    HRESULT hRes;
+
+    MX_ASSERT(!cSessionJsObj);
+    cSessionJsObj.Attach(MX_DEBUG_NEW MX::CJsHttpServerSessionPlugin(cJvm));
+    if (!cSessionJsObj)
+      return E_OUTOFMEMORY;
+    hRes = cSessionJsObj->Setup(this, MX_BIND_CALLBACK(&OnSessionLoadSave), NULL, NULL, L"/", 2 * 60 * 60, FALSE,
+                                TRUE);
+    if (FAILED(hRes))
+      return hRes;
+    return lpReqContext->ReplaceModuleExportsWithObject(cSessionJsObj);
+    };
+
+private:
+  VOID OnCleanup()
+    {
+    if (cSessionJsObj)
+    {
+      cSessionJsObj->Save();
+      cSessionJsObj.Release();
+    }
+    return;
+    };
+
+private:
+  MX::TAutoRefCounted<MX::CJsHttpServerSessionPlugin> cSessionJsObj;
+};
+
+//-----------------------------------------------------------\
+
 int TestJsHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
 {
   MX::CIoCompletionPortThreadPool cDispatcherPool, cWorkerPool;
@@ -95,6 +127,8 @@ int TestJsHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
 
   cJsHttpServer.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
   cJsHttpServer.SetLogLevel(dwLogLevel);
+  cSckMgr.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
+  cSckMgr.SetLogLevel(dwLogLevel);
 
   cWorkerPool.SetOption_MinThreadsCount(4);
   cSckMgr.SetOption_MaxAcceptsToPost(24);
@@ -249,19 +283,7 @@ static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHtt
 
   if (MX::StrCompareW(lpReqContext->GetId(), L"session") == 0)
   {
-    MX::TAutoRefCounted<MX::CJsHttpServerSessionPlugin> cSessionJsObj;
-
-    cSessionJsObj.Attach(MX_DEBUG_NEW MX::CJsHttpServerSessionPlugin(cJvm));
-    if (!cSessionJsObj)
-      return E_OUTOFMEMORY;
-    hRes = cSessionJsObj->Setup(lpRequest, MX_BIND_CALLBACK(&OnSessionLoadSave), NULL, NULL, L"/", 2*60*60, FALSE,
-                                TRUE);
-    if (FAILED(hRes))
-      return hRes;
-
-    hRes = lpReqContext->ReplaceModuleExportsWithObject(cSessionJsObj);
-    //done
-    return hRes;
+    return lpRequest->InitializeSession(cJvm, lpReqContext);
   }
   //----
   hRes = BuildWebFileName(cStrFileNameW, szExtensionW, lpReqContext->GetId());

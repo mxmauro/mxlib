@@ -1297,7 +1297,7 @@ err_cannot_resolve:
   return hRes;
 }
 
-HRESULT CSockets::CConnection::SendReadPacket(_In_ CPacketBase *lpPacket)
+HRESULT CSockets::CConnection::SendReadPacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwRead)
 {
   WSABUF sWsaBuf;
   DWORD dwToRead, dwRead, dwFlags;
@@ -1305,7 +1305,10 @@ HRESULT CSockets::CConnection::SendReadPacket(_In_ CPacketBase *lpPacket)
   HRESULT hRes;
 
   if (sck == NULL)
+  {
+    *lpdwRead = 0;
     return S_FALSE;
+  }
   dwToRead = lpPacket->GetBytesInUse();
   nCurrThrottle = __InterlockedRead(&nReadThrottle);
   if (dwToRead > (DWORD)nCurrThrottle)
@@ -1322,14 +1325,9 @@ HRESULT CSockets::CConnection::SendReadPacket(_In_ CPacketBase *lpPacket)
                cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(), lpPacket->GetType(),
                lpPacket->GetBytesInUse());
   }
-  hRes = S_OK;
   if (::WSARecv(sck, &sWsaBuf, 1, &dwRead, &dwFlags, lpPacket->GetOverlapped(), NULL) != SOCKET_ERROR)
   {
-    if (IS_COMPLETE_SYNC_AVAILABLE())
-    {
-      reinterpret_cast<CSockets*>(lpIpc)->OnDispatcherPacket(&(GetDispatcherPool()), dwRead,
-                                                             lpPacket->GetOverlapped(), S_OK);
-    }
+    hRes = (IS_COMPLETE_SYNC_AVAILABLE()) ? S_OK : MX_E_IoPending;
   }
   else
   {
@@ -1337,10 +1335,11 @@ HRESULT CSockets::CConnection::SendReadPacket(_In_ CPacketBase *lpPacket)
     if (hRes == HRESULT_FROM_WIN32(WSAESHUTDOWN) || hRes == HRESULT_FROM_WIN32(WSAEDISCON))
       hRes = S_FALSE;
   }
+  *lpdwRead = dwRead;
   return hRes;
 }
 
-HRESULT CSockets::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket)
+HRESULT CSockets::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwWritten)
 {
   CAutoSlimRWLShared cHandleInUseLock(&nRwHandleInUse);
   CPacketBase *lpCurrPacket;
@@ -1349,7 +1348,10 @@ HRESULT CSockets::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket)
   HRESULT hRes;
 
   if (sck == NULL)
+  {
+    *lpdwWritten = 0;
     return S_FALSE;
+  }
   dwBuffersCount = 0;
   for (lpCurrPacket = lpPacket; lpCurrPacket != NULL; lpCurrPacket = lpCurrPacket->GetChainedPacket())
   {
@@ -1365,14 +1367,9 @@ HRESULT CSockets::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket)
     }
   }
   dwWritten = 0;
-  hRes = S_OK;
   if (::WSASend(sck, aWsaBuf, dwBuffersCount, &dwWritten, 0, lpPacket->GetOverlapped(), NULL) != SOCKET_ERROR)
   {
-    if (IS_COMPLETE_SYNC_AVAILABLE())
-    {
-      reinterpret_cast<CSockets*>(lpIpc)->OnDispatcherPacket(&(GetDispatcherPool()), dwWritten,
-                                                             lpPacket->GetOverlapped(), S_OK);
-    }
+    hRes = (IS_COMPLETE_SYNC_AVAILABLE()) ? S_OK : MX_E_IoPending;
   }
   else
   {
@@ -1380,6 +1377,7 @@ HRESULT CSockets::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket)
     if (hRes == HRESULT_FROM_WIN32(WSAESHUTDOWN) || hRes == HRESULT_FROM_WIN32(WSAEDISCON))
       hRes = S_FALSE;
   }
+  *lpdwWritten = dwWritten;
   return hRes;
 }
 

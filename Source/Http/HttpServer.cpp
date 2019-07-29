@@ -634,7 +634,7 @@ VOID CHttpServer::ThreadProc()
                 else if (nTimedOut == 2)
                 {
                   cSocketMgr.Close(lpRequest->hConn, hRes);
-                  lpRequest->nState = CClientRequest::StateError;
+                  lpRequest->SetState(CClientRequest::StateError);
                   if (ShouldLog(1) != FALSE)
                   {
                     Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateError [%08X]", lpRequest, lpRequest->hConn,
@@ -853,12 +853,15 @@ HRESULT CHttpServer::OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ 
 
   MX_ASSERT(lpUserData != NULL);
 
+full_restart:
   if (lpRequest->nState == CClientRequest::StateInitializing)
   {
     hRes = lpRequest->OnSetup();
     if (FAILED(hRes))
       goto done;
-    lpRequest->nState = CClientRequest::StateReceivingRequestHeaders;
+    hRes = lpRequest->SetState(CClientRequest::StateReceivingRequestHeaders);
+    if (FAILED(hRes))
+      goto done;
     if (ShouldLog(1) != FALSE)
     {
       Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateReceivingRequestHeaders", lpRequest, h);
@@ -873,10 +876,12 @@ restart:
     CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
     CHttpCommon::eState nParserState;
     SIZE_T nMsgUsed;
+    BOOL bBreakLoop;
 
     //loop
-    while (SUCCEEDED(hRes) && bFireRequestHeadersReceivedCallback == FALSE && bFireRequestCompleted == FALSE &&
-           bFireWebSocketRequestReceivedCallback == FALSE)
+    bBreakLoop = FALSE;
+    while (SUCCEEDED(hRes) && bBreakLoop == FALSE && bFireRequestHeadersReceivedCallback == FALSE &&
+           bFireRequestCompleted == FALSE && bFireWebSocketRequestReceivedCallback == FALSE)
     {
       //get buffered message
       nMsgSize = sizeof(aMsgBuf);
@@ -918,14 +923,18 @@ on_websocket_request:
                     goto on_request_error;
                   }
                   bFireWebSocketRequestReceivedCallback = TRUE;
-                  lpRequest->nState = CClientRequest::StateNegotiatingWebSocket;
+                  hRes = lpRequest->SetState(CClientRequest::StateNegotiatingWebSocket);
+                  if (FAILED(hRes))
+                    goto on_request_error;
                 }
                 else
                 {
                   //normal http request
                   if (lpRequest->cRequest->cHttpCmn.GetErrorCode() == 0)
                     bFireRequestHeadersReceivedCallback = TRUE; //fire events only if no error
-                  lpRequest->nState = CClientRequest::StateReceivingRequestBody;
+                  hRes = lpRequest->SetState(CClientRequest::StateReceivingRequestBody);
+                  if (FAILED(hRes))
+                    goto on_request_error;
                   if (ShouldLog(1) != FALSE)
                   {
                     Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateReceivingRequestBody", lpRequest,
@@ -977,7 +986,9 @@ on_websocket_request:
                 {
                   bFireRequestHeadersReceivedCallback = TRUE;
                 }
-                lpRequest->nState = CClientRequest::StateBuildingResponse;
+                hRes = lpRequest->SetState(CClientRequest::StateBuildingResponse);
+                if (FAILED(hRes))
+                  goto on_request_error;
                 if (ShouldLog(1) != FALSE)
                 {
                   Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateBuildingResponse", lpRequest, lpRequest->hConn);
@@ -993,20 +1004,11 @@ on_request_error:
           }
           break;
 
-        case CClientRequest::StateBuildingResponse:
-          //we should not receive data after receiving the request, except some extra \r\n
-          hRes = cSocketMgr.ConsumeBufferedMessage(h, nMsgSize);
-          for (nMsgUsed=0; nMsgUsed<nMsgSize && (aMsgBuf[nMsgUsed] == '\r' || aMsgBuf[nMsgUsed] == '\n'); nMsgUsed++);
-          if (nMsgUsed < nMsgSize)
-          {
-            _InterlockedOr(&(lpRequest->nFlags), REQUEST_FLAG_DontKeepAlive);
-          }
-          break;
+        case CClientRequest::StateInitializing:
+          goto full_restart;
 
         default:
-        //case CRequest::StateClosed:
-        //case CRequest::StateError:
-          hRes = cSocketMgr.ConsumeBufferedMessage(h, nMsgSize);
+          bBreakLoop = TRUE;
           break;
       }
     }
@@ -1129,7 +1131,7 @@ on_request_error:
 done:
   if (SUCCEEDED(hRes) && cFireWebSocketOnConnected)
   {
-    cFireWebSocketOnConnected->OnConnected();
+    hRes = cFireWebSocketOnConnected->OnConnected();
     cFireWebSocketOnConnected.Release();
   }
 
@@ -1176,12 +1178,15 @@ HRESULT CHttpServer::QuickSendErrorResponseAndReset(_In_ CClientRequest *lpReque
                                          MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnAfterSendResponse, this), lpRequest);
     }
   }
+  if (SUCCEEDED(hRes))
+  {
+    hRes = lpRequest->SetState(CClientRequest::StateError);
+  }
   if (bForceClose != FALSE || FAILED(hRes))
   {
     cSocketMgr.Close(lpRequest->hConn, hRes);
   }
   //done
-  lpRequest->nState = CClientRequest::StateError;
   if (ShouldLog(1) != FALSE)
   {
     Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateError [%ld/%08X]", lpRequest, lpRequest->hConn, hrErrorCode);
@@ -1197,16 +1202,15 @@ VOID CHttpServer::OnAfterSendResponse(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVO
 
   if ((__InterlockedRead(&(lpRequest->nFlags)) & REQUEST_FLAG_DontKeepAlive) == 0)
   {
-    lpRequest->ResetForNewRequest();
+    HRESULT hRes = lpRequest->ResetForNewRequest();
+    if (SUCCEEDED(hRes))
+      return;
   }
-  else
+  if (ShouldLog(1) != FALSE)
   {
-    if (ShouldLog(1) != FALSE)
-    {
-      Log(L"HttpServer(OnAfterSendResponse/Req:0x%p/Conn:0x%p): Closing", lpRequest, lpRequest->hConn);
-    }
-    cSocketMgr.Close(lpRequest->hConn);
+    Log(L"HttpServer(OnAfterSendResponse/Req:0x%p/Conn:0x%p): Closing", lpRequest, lpRequest->hConn);
   }
+  cSocketMgr.Close(lpRequest->hConn);
   return;
 }
 
@@ -1363,10 +1367,6 @@ HRESULT CHttpServer::CheckForWebSocket(_In_ CClientRequest *lpRequest)
 HRESULT CHttpServer::InitiateWebSocket(_In_ CClientRequest *lpRequest, _In_ WEBSOCKET_REQUEST_CALLBACK_DATA &sData,
                                        _Out_ BOOL &bFatal)
 {
-  CHttpHeaderGenConnection *lpRespConnHeader;
-  CHttpHeaderGenUpgrade *lpRespUpgradeHeader;
-  CHttpHeaderRespSecWebSocketAccept *lpRespSecWebSocketAcceptHeader;
-  CHttpHeaderRespSecWebSocketProtocol *lpRespSecWebSocketProtocolHeader;
   TAutoRefCounted<CWebSocket> cWebSocket;
   int nProtocolsCount;
   HRESULT hRes;
@@ -1383,42 +1383,13 @@ HRESULT CHttpServer::InitiateWebSocket(_In_ CClientRequest *lpRequest, _In_ WEBS
   if (sData.nSelectedProtocol >= nProtocolsCount)
     return MX_E_InvalidData;
 
-  hRes = lpRequest->AddResponseHeader<CHttpHeaderGenConnection>(&lpRespConnHeader);
-  if (SUCCEEDED(hRes))
-    hRes = lpRespConnHeader->AddConnection("upgrade", 7);
-  if (FAILED(hRes))
-    return hRes;
-
-  hRes = lpRequest->AddResponseHeader<CHttpHeaderGenUpgrade>(&lpRespUpgradeHeader);
-  if (SUCCEEDED(hRes))
-    hRes = lpRespUpgradeHeader->AddProduct("websocket", 9);
-  if (FAILED(hRes))
-    return hRes;
-
-  hRes = lpRequest->AddResponseHeader<CHttpHeaderRespSecWebSocketAccept>(&lpRespSecWebSocketAcceptHeader);
-  if (SUCCEEDED(hRes))
-  {
-    CHttpHeaderReqSecWebSocketKey *lpReqSecWebSocketKeyHeader = lpRequest->cWebSocketInfo->lpReqSecWebSocketKeyHeader;
-
-    hRes = lpRespSecWebSocketAcceptHeader->SetKey(lpReqSecWebSocketKeyHeader->GetKey(),
-                                                  lpReqSecWebSocketKeyHeader->GetKeyLength());
-  }
-  if (FAILED(hRes))
-    return hRes;
-
-  hRes = lpRequest->AddResponseHeader<CHttpHeaderRespSecWebSocketProtocol>(&lpRespSecWebSocketProtocolHeader);
-  if (SUCCEEDED(hRes))
-    hRes = lpRespSecWebSocketProtocolHeader->SetProtocol(sData.lpszProtocolsA[sData.nSelectedProtocol]);
-  if (FAILED(hRes))
-    return hRes;
-
   //pause processing
   hRes = lpRequest->lpSocketMgr->PauseInputProcessing(lpRequest->hConn);
   if (FAILED(hRes))
     return hRes;
 
   //send headers
-  hRes = lpRequest->BuildAndSendWebSocketHeaderStream();
+  hRes = lpRequest->BuildAndSendWebSocketHeaderStream(sData.lpszProtocolsA[sData.nSelectedProtocol]);
   if (FAILED(hRes))
   {
     if (FAILED(lpRequest->lpSocketMgr->ResumeInputProcessing(lpRequest->hConn)))
@@ -1452,7 +1423,9 @@ HRESULT CHttpServer::InitiateWebSocket(_In_ CClientRequest *lpRequest, _In_ WEBS
     return hRes;
 
   //set new state, just to avoid some background task doing stuff on client request
-  lpRequest->nState = CClientRequest::StateWebSocket;
+  hRes = lpRequest->SetState(CClientRequest::StateWebSocket);
+  if (FAILED(hRes))
+    return hRes;
 
   //resume input processing
   hRes = lpRequest->lpSocketMgr->ResumeInputProcessing(lpRequest->hConn);
@@ -1477,6 +1450,11 @@ VOID CHttpServer::OnRequestEnding(_In_ CClientRequest *lpRequest, _In_ HRESULT h
 
   lpRequest->cRequest->dwHeadersTimeoutCounterSecs = 0;
   //----
+  if (SUCCEEDED(hRes))
+  {
+    hRes = lpRequest->SetState(CClientRequest::StateSendingResponse);
+  }
+  lpRequest->OnCleanup();
   if (lpRequest->cResponse->bDirect == FALSE)
   {
     if (SUCCEEDED(hRes) && lpRequest->HasErrorBeenSent() == FALSE)
@@ -1486,7 +1464,6 @@ VOID CHttpServer::OnRequestEnding(_In_ CClientRequest *lpRequest, _In_ HRESULT h
   }
   if (SUCCEEDED(hRes))
   {
-    lpRequest->nState = CClientRequest::StateSendingResponse;
     if (lpRequest->IsKeepAliveRequest() == FALSE)
     {
       _InterlockedOr(&(lpRequest->nFlags), REQUEST_FLAG_DontKeepAlive);
@@ -1496,14 +1473,13 @@ VOID CHttpServer::OnRequestEnding(_In_ CClientRequest *lpRequest, _In_ HRESULT h
   }
   if (FAILED(hRes))
   {
+    lpRequest->SetState(CClientRequest::StateError);
     cSocketMgr.Close(lpRequest->hConn, hRes);
-    lpRequest->nState = CClientRequest::StateError;
     if (ShouldLog(1) != FALSE)
     {
       Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateError [%08X]", lpRequest, lpRequest->hConn, hrErrorCode);
     }
   }
-  lpRequest->OnCleanup();
   return;
 }
 

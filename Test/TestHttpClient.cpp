@@ -219,6 +219,9 @@ static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificate
   cHttpClient.lpCerts = lpCerts;
   //cHttpClient.SetOptionFlags(0);
   //cHttpClient.SetOptionFlags(MX::CHttpClient::OptionKeepConnectionOpen);
+
+  cHttpClient.SetOption_ResponseHeaderTimeout(INFINITE);
+
   cHttpClient.SetDocumentCompletedCallback(MX_BIND_CALLBACK(&OnDocumentCompleted));
   cHttpClient.SetErrorCallback(MX_BIND_CALLBACK(&OnError));
   cHttpClient.SetQueryCertificatesCallback(MX_BIND_CALLBACK(&OnQueryCertificates));
@@ -260,7 +263,7 @@ static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificate
         wprintf_s(L"[HttpClient/SimpleTest1] Cancelled by user.\n");
         break;
       case S_FALSE:
-        wprintf_s(L"[HttpClient/SimpleTest1] Body is NOT complete.\n");
+        wprintf_s(L"[HttpClient/SimpleTest1] Body is NOT complete. Download in %lums\n", dwEndTime - dwStartTime);
         break;
       case S_OK:
         wprintf_s(L"[HttpClient/SimpleTest1] Successful download in %lums / Status:%ld\n", dwEndTime - dwStartTime,

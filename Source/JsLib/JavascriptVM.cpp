@@ -263,10 +263,10 @@ VOID CJavascriptVM::RunNativeProtected(_In_ DukTape::duk_context *lpCtx, _In_ Du
       DukTape::duk_pop(lpCtx);
     }
   }
-  catch (CJsError &e)
+  catch (CJsError &)
   {
     //DukTape::duk_set_top(lpCtx, nStackTop);
-    throw e;
+    throw;
   }
   catch (HRESULT hRes)
   {

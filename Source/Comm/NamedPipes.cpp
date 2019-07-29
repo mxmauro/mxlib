@@ -589,39 +589,61 @@ VOID CNamedPipes::CConnection::ShutdownLink(_In_ BOOL bAbortive)
   return;
 }
 
-HRESULT CNamedPipes::CConnection::SendReadPacket(_In_ CPacketBase *lpPacket)
+HRESULT CNamedPipes::CConnection::SendReadPacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwRead)
 {
   CAutoSlimRWLShared cHandleInUseLock(&nRwHandleInUse);
-  DWORD dwReaded;
+  DWORD dwRead;
   HRESULT hRes;
 
   if (hPipe == NULL)
+  {
+    *lpdwRead = 0;
     return S_FALSE;
-  if (::ReadFile(hPipe, lpPacket->GetBuffer(), lpPacket->GetBytesInUse(), &dwReaded,
-                 lpPacket->GetOverlapped()) == FALSE)
+  }
+  if (::ReadFile(hPipe, lpPacket->GetBuffer(), lpPacket->GetBytesInUse(), &dwRead,
+                 lpPacket->GetOverlapped()) != FALSE)
+  {
+    hRes = MX_E_IoPending;
+  }
+  else
   {
     hRes = MX_HRESULT_FROM_LASTERROR();
-    return (hRes == MX_E_BrokenPipe || hRes == MX_E_NoData || hRes == MX_E_PipeNotConnected &&
-            hRes == HRESULT_FROM_WIN32(ERROR_GEN_FAILURE)) ? S_FALSE : hRes;
+    if (hRes == MX_E_BrokenPipe || hRes == MX_E_NoData || hRes == MX_E_PipeNotConnected ||
+        hRes == HRESULT_FROM_WIN32(ERROR_GEN_FAILURE))
+    {
+      hRes = S_FALSE;
+    }
   }
-  return S_OK;
+  *lpdwRead = dwRead;
+  return hRes;
 }
 
-HRESULT CNamedPipes::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket)
+HRESULT CNamedPipes::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwWritten)
 {
   CAutoSlimRWLShared cHandleInUseLock(&nRwHandleInUse);
   DWORD dwWritten;
   HRESULT hRes;
 
   if (hPipe == NULL)
+  {
+    *lpdwWritten = 0;
     return S_FALSE;
+  }
   if (::WriteFile(hPipe, lpPacket->GetBuffer(), lpPacket->GetBytesInUse(), &dwWritten,
-                  lpPacket->GetOverlapped()) == FALSE)
+                  lpPacket->GetOverlapped()) != FALSE)
+  {
+    hRes = MX_E_IoPending;
+  }
+  else
   {
     hRes = MX_HRESULT_FROM_LASTERROR();
-    return (hRes == MX_E_BrokenPipe || hRes == HRESULT_FROM_WIN32(ERROR_NO_DATA) ||
-            hRes == MX_E_PipeNotConnected && hRes == HRESULT_FROM_WIN32(ERROR_GEN_FAILURE)) ? S_FALSE : hRes;
+    if (hRes == MX_E_BrokenPipe || hRes == MX_E_NoData || hRes == MX_E_PipeNotConnected ||
+        hRes == HRESULT_FROM_WIN32(ERROR_GEN_FAILURE))
+    {
+      hRes = S_FALSE;
+    }
   }
+  *lpdwWritten = dwWritten;
   return S_OK;
 }
 

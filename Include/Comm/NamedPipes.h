@@ -82,8 +82,8 @@ private:
                          _In_ PSECURITY_DESCRIPTOR lpSecDescr);
     VOID ShutdownLink(_In_ BOOL bAbortive);
 
-    HRESULT SendReadPacket(_In_ CPacketBase *lpPacket);
-    HRESULT SendWritePacket(_In_ CPacketBase *lpPacket);
+    HRESULT SendReadPacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwRead);
+    HRESULT SendWritePacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwWritten);
     SIZE_T GetMultiWriteMaxCount() const
       {
       return 1;

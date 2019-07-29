@@ -85,8 +85,8 @@ private:
 
     HRESULT ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _In_opt_z_ LPCSTR szAddressA, _In_opt_ int nPort);
 
-    HRESULT SendReadPacket(_In_ CPacketBase *lpPacket);
-    HRESULT SendWritePacket(_In_ CPacketBase *lpPacket);
+    HRESULT SendReadPacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwRead);
+    HRESULT SendWritePacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwWritten);
     SIZE_T GetMultiWriteMaxCount() const
       {
       return 16;

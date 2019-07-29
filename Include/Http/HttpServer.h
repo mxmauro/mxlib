@@ -229,26 +229,6 @@ public:
       };
 
   private:
-    HRESULT Initialize(_In_ CHttpServer *lpHttpServer, _In_ CSockets *lpSocketMgr, _In_ HANDLE hConn,
-                       _In_ DWORD dwMaxHeaderSize);
-
-    VOID ResetForNewRequest();
-
-    BOOL IsKeepAliveRequest() const;
-    BOOL HasErrorBeenSent() const;
-    BOOL HasHeadersBeenSent() const;
-
-    HRESULT BuildAndInsertOrSendHeaderStream();
-    HRESULT BuildAndSendWebSocketHeaderStream();
-
-    HRESULT SendQueuedStreams();
-
-    VOID MarkLinkAsClosed();
-    BOOL IsLinkClosed() const;
-
-    VOID QueryBrowser();
-
-  private:
     friend class CHttpServer;
 
     typedef enum {
@@ -264,6 +244,28 @@ public:
     } eState;
 
   private:
+    HRESULT Initialize(_In_ CHttpServer *lpHttpServer, _In_ CSockets *lpSocketMgr, _In_ HANDLE hConn,
+                       _In_ DWORD dwMaxHeaderSize);
+
+    HRESULT ResetForNewRequest();
+
+    HRESULT SetState(_In_ eState nNewState);
+
+    BOOL IsKeepAliveRequest() const;
+    BOOL HasErrorBeenSent() const;
+    BOOL HasHeadersBeenSent() const;
+
+    HRESULT BuildAndInsertOrSendHeaderStream();
+    HRESULT BuildAndSendWebSocketHeaderStream(_In_z_ LPCSTR szProtocolA);
+
+    HRESULT SendQueuedStreams();
+
+    VOID MarkLinkAsClosed();
+    BOOL IsLinkClosed() const;
+
+    VOID QueryBrowser();
+
+  private:
     class CRequest : public CBaseMemObj
     {
     public:
@@ -276,8 +278,6 @@ public:
 
       VOID ResetForNewRequest()
         {
-        cUrl.Reset();
-        cStrMethodA.Empty();
         cHttpCmn.ResetParser();
         dwHeadersTimeoutCounterSecs = DWORD_MAX;
         dwBodyLowThroughputCcounter = 0;
@@ -285,8 +285,6 @@ public:
         };
 
     public:
-      CUrl cUrl;
-      CStringA cStrMethodA;
       CHttpCommon cHttpCmn;
       DWORD dwHeadersTimeoutCounterSecs;
       DWORD dwBodyLowThroughputCcounter;

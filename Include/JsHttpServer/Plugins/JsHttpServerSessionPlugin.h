@@ -41,9 +41,10 @@ public:
   ~CJsHttpServerSessionPlugin();
 
   HRESULT Setup(_In_ CJsHttpServer::CClientRequest *lpRequest, _In_ OnLoadSaveCallback cLoadSaveCallback,
-                _In_opt_z_ LPCWSTR szSessionVarNameW=NULL, _In_opt_z_ LPCWSTR szDomainW=NULL,
-                _In_opt_z_ LPCWSTR szPathW=NULL, _In_opt_ int nExpireTimeInSeconds=-1,
-                _In_opt_ BOOL bIsSecure=FALSE, _In_opt_ BOOL bIsHttpOnly=FALSE);
+                _In_opt_z_ LPCWSTR szSessionVarNameW = NULL, _In_opt_z_ LPCWSTR szDomainW = NULL,
+                _In_opt_z_ LPCWSTR szPathW = NULL, _In_opt_ int nExpireTimeInSeconds = -1,
+                _In_opt_ BOOL bIsSecure = FALSE, _In_opt_ BOOL bIsHttpOnly = FALSE);
+  HRESULT Save();
 
   LPCSTR GetSessionId() const
     {
@@ -65,8 +66,8 @@ public:
   MX_JS_DECLARE_WITH_PROXY(CJsHttpServerSessionPlugin, "Session")
 
   MX_JS_BEGIN_MAP(CJsHttpServerSessionPlugin)
-    MX_JS_MAP_METHOD("Save", &CJsHttpServerSessionPlugin::Save, 0)
-    MX_JS_MAP_METHOD("RegenerateId", &CJsHttpServerSessionPlugin::RegenerateId, 0)
+    MX_JS_MAP_METHOD("save", &CJsHttpServerSessionPlugin::_Save, 0)
+    MX_JS_MAP_METHOD("regenerateId", &CJsHttpServerSessionPlugin::RegenerateId, 0)
   MX_JS_END_MAP()
 
 private:
@@ -75,9 +76,8 @@ private:
   static BOOL IsValidSessionId(_In_z_ LPCSTR szSessionIdA);
 
   HRESULT RegenerateSessionId();
-  HRESULT _Save();
 
-  DukTape::duk_ret_t Save();
+  DukTape::duk_ret_t _Save();
   DukTape::duk_ret_t RegenerateId();
 
   int OnProxyHasNamedProperty(_In_z_ LPCSTR szPropNameA);
@@ -103,6 +103,7 @@ private:
   LPCSTR szSessionVarNameA;
   int nExpireTimeInSeconds;
   BOOL bIsSecure, bIsHttpOnly;
+  BOOL bDirty;
 };
 
 } //namespace MX
