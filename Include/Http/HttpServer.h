@@ -223,9 +223,10 @@ public:
       return S_OK;
       };
 
-    virtual VOID OnCleanup()
+    //Return FALSE if you encounter an error during cleanup and the request object cannot be reused
+    virtual BOOL OnCleanup()
       {
-      return;
+      return TRUE;
       };
 
   private:

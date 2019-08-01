@@ -51,13 +51,13 @@ VOID CJsHttpServer::CClientRequest::Detach()
 HRESULT CJsHttpServer::CClientRequest::OnSetup()
 {
   sFlags.nDetached = 0;
-  return __super::OnSetup();
+  return CHttpServer::CClientRequest::OnSetup();
 }
 
-VOID CJsHttpServer::CClientRequest::OnCleanup()
+BOOL CJsHttpServer::CClientRequest::OnCleanup()
 {
-  __super::OnCleanup();
-  return;
+  FreeJVM();
+  return CHttpServer::CClientRequest::OnCleanup();
 }
 
 HRESULT CJsHttpServer::CClientRequest::AttachJVM()

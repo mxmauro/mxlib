@@ -98,14 +98,14 @@ public:
     };
 
 private:
-  VOID OnCleanup()
+  BOOL OnCleanup()
     {
     if (cSessionJsObj)
     {
       cSessionJsObj->Save();
       cSessionJsObj.Release();
     }
-    return;
+    return MX::CJsHttpServer::CClientRequest::OnCleanup();
     };
 
 private:

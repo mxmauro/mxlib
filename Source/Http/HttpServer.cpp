@@ -1454,7 +1454,10 @@ VOID CHttpServer::OnRequestEnding(_In_ CClientRequest *lpRequest, _In_ HRESULT h
   {
     hRes = lpRequest->SetState(CClientRequest::StateSendingResponse);
   }
-  lpRequest->OnCleanup();
+  if (lpRequest->OnCleanup() == FALSE)
+  {
+    _InterlockedOr(&(lpRequest->nFlags), REQUEST_FLAG_DontKeepAlive);
+  }
   if (lpRequest->cResponse->bDirect == FALSE)
   {
     if (SUCCEEDED(hRes) && lpRequest->HasErrorBeenSent() == FALSE)

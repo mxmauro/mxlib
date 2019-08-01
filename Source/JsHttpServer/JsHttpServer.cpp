@@ -250,7 +250,6 @@ on_init_error:
   //done
   if (bDetached == FALSE)
   {
-    lpRequest->FreeJVM();
     lpRequest->End(S_OK);
   }
   return;

@@ -95,12 +95,12 @@ public:
     VOID Detach();
 
     HRESULT OnSetup();
-    VOID OnCleanup();
+    BOOL OnCleanup();
 
     HRESULT AttachJVM();
     VOID DiscardVM();
 
-    CJavascriptVM* GetVM(_Out_opt_ LPBOOL lpbIsNew) const
+    CJavascriptVM* GetVM(_Out_opt_ LPBOOL lpbIsNew = NULL) const
       {
       if (lpbIsNew != NULL)
         *lpbIsNew = (sFlags.nIsNew) != 0 ? TRUE : FALSE;
