@@ -88,19 +88,16 @@ VOID CJsHttpServer::CClientRequest::FreeJVM()
   {
     if (lpJsHttpServer != NULL && sFlags.nDiscardedVM == 0)
     {
-      lpJVM->RemoveCachedModules();
-
-      lpJVM->RunNativeProtectedAndGetError(0, 0, [](_In_ DukTape::duk_context *lpCtx) -> VOID
+      if (FAILED(lpJVM->Reset()))
       {
-        //called twice. see: https://duktape.org/api.html#duk_gc
-        DukTape::duk_gc(lpCtx, 0);
-        DukTape::duk_gc(lpCtx, 0);
-      });
+        goto delete_vm;
+      }
 
       lpJsHttpServer->FreeVM(lpJVM);
     }
     else
     {
+delete_vm:
       delete lpJVM;
     }
     lpJVM = NULL;

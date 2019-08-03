@@ -231,20 +231,43 @@ VOID CJavascriptVM::RunNativeProtected(_In_ DukTape::duk_context *lpCtx, _In_ Du
                                        _In_opt_ BOOL bCatchUnhandled)
 {
   RUN_NATIVE_PROTECTED_DATA sData;
+
+#ifdef DUK_USE_DEBUG
   DukTape::duk_idx_t nBaseIdx, nStackTop;
+#endif //DUK_USE_DEBUG
   HRESULT hRes = S_OK;
 
+#ifdef DUK_USE_DEBUG
   nStackTop = DukTape::duk_get_top(lpCtx);
+  nBaseIdx = nStackTop - nArgsCount;
+#endif //DUK_USE_DEBUG
   sData.fnFunc = fnFunc;
   sData.nRetValuesCount = nRetValuesCount;
   //do safe call
   try
   {
-    nBaseIdx = nStackTop - nArgsCount;
     if (DukTape::duk_safe_call(lpCtx, &CJavascriptVM::_RunNativeProtectedHelper, &sData, nArgsCount,
                                (nRetValuesCount > 0) ? nRetValuesCount : 1) != DUK_EXEC_SUCCESS)
     {
-      if (HandleException(lpCtx, nBaseIdx, bCatchUnhandled) != FALSE)
+#ifdef DUK_USE_DEBUG
+      if (DukTape::nDebugLevel >= 3)
+      {
+        DukTape::duk_idx_t k, nNewStackTop = DukTape::duk_get_top(lpCtx);
+
+        DebugPrint("DukTape: Exception detected => %lu / %lu / %lu\n", nStackTop, nBaseIdx, nNewStackTop);
+        for (k = 0; k < nNewStackTop; k++)
+        {
+          if (DukTape::duk_get_error_code(lpCtx, k) != 0)
+          {
+            DukTape::duk_get_prop_string(lpCtx, k, "stack");
+            DebugPrint("DukTape:     %lu) %s\n", k, DukTape::duk_safe_to_string(lpCtx, -1));
+            DukTape::duk_pop(lpCtx);
+          }
+        }
+      }
+#endif //DUK_USE_DEBUG
+
+      if (HandleException(lpCtx, -1, bCatchUnhandled) != FALSE)
       {
         //the unhandled exception handler handled took control and might returned some value
         //because it didn't throw any new exception, assume success
@@ -1028,7 +1051,7 @@ VOID CJavascriptVM::GetObjectType(_In_ DukTape::duk_idx_t nObjIdx, _Out_ MX::CSt
   return;
 }
 
-HRESULT CJavascriptVM::RemoveCachedModules()
+HRESULT CJavascriptVM::Reset()
 {
   HRESULT hRes;
 
@@ -1040,6 +1063,20 @@ HRESULT CJavascriptVM::RemoveCachedModules()
     DukTape::duk_push_bare_object(lpCtx);
     DukTape::duk_put_prop_string(lpCtx, -2, "\xff" "requireCache");
     DukTape::duk_pop(lpCtx);
+
+    //reset unhandled exception handler
+    DukTape::duk_push_global_stash(lpCtx);
+    DukTape::duk_get_prop_string(lpCtx, -1, "mxjslib");
+    if (DukTape::duk_is_bare_object(lpCtx, -1) != 0)
+    {
+      DukTape::duk_push_null(lpCtx);
+      DukTape::duk_put_prop_string(lpCtx, -2, "\xff" "unhandledExceptionHandler");
+    }
+    DukTape::duk_pop_2(lpCtx);
+
+    //called twice. see: https://duktape.org/api.html#duk_gc
+    DukTape::duk_gc(lpCtx, 0);
+    DukTape::duk_gc(lpCtx, 0);
     return;
   });
   return hRes;
@@ -1651,8 +1688,8 @@ BOOL CJavascriptVM::HandleException(_In_ DukTape::duk_context *lpCtx, _In_ DukTa
         DukTape::duk_push_null(lpCtx);
 
       //done with internal global object
-      DukTape::duk_remove(lpCtx, -2);
-      DukTape::duk_remove(lpCtx, -2);
+      DukTape::duk_remove(lpCtx, -2); //mxjslib
+      DukTape::duk_remove(lpCtx, -2); //global stash
 
       //call the handler
       if (DukTape::duk_is_function(lpCtx, -1) != 0)

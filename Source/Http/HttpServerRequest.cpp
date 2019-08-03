@@ -958,9 +958,13 @@ HRESULT CHttpServer::CClientRequest::BuildAndInsertOrSendHeaderStream()
           hRes = WriteToStream(cHdrStream, lpHdr->GetHeaderName());
           if (SUCCEEDED(hRes))
           {
-            hRes = WriteToStream(cHdrStream, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+            hRes = WriteToStream(cHdrStream, ": ", 2);
             if (SUCCEEDED(hRes))
-              hRes = WriteToStream(cHdrStream, "\r\n", 2);
+            {
+              hRes = WriteToStream(cHdrStream, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+              if (SUCCEEDED(hRes))
+                hRes = WriteToStream(cHdrStream, "\r\n", 2);
+            }
           }
         }
       }

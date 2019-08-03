@@ -458,7 +458,6 @@ headers_end_reached:
         if (FAILED(hRes))
           goto done;
         szDataA += (SIZE_T)nToRead;
-        szDataA--;
         nIdentityBodyReadedContentLength += (ULONGLONG)nToRead;
         if (nIdentityBodyReadedContentLength == nContentLength)
         {
@@ -466,6 +465,7 @@ headers_end_reached:
           hRes = FlushContent();
           goto done;
         }
+        BACKWARD_CHAR();
         }
         break;
 
@@ -544,7 +544,7 @@ chunk_data_begin:
         if (FAILED(hRes))
           goto done;
         szDataA += (SIZE_T)nToRead;
-        szDataA--;
+        BACKWARD_CHAR();
         sParser.sChunk.nReaded += (ULONGLONG)nToRead;
         nIdentityBodyReadedContentLength += (ULONGLONG)nToRead;
         if (sParser.sChunk.nReaded == sParser.sChunk.nSize)

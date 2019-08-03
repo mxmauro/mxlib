@@ -1247,7 +1247,7 @@ HRESULT CHttpServer::GenerateErrorPage(_Out_ CStringA &cStrResponseA, _In_ CClie
   {
     return E_OUTOFMEMORY;
   }
-  if (SUCCEEDED(hrErrorCode))
+  if (FAILED(hrErrorCode))
   {
     if (cStrResponseA.AppendFormat("X-ErrorCode: 0x%08X\r\n", hrErrorCode) == FALSE)
       return E_OUTOFMEMORY;

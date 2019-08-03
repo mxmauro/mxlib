@@ -137,9 +137,8 @@ on_init_error:
   }
   if ((lpUrl->GetPath())[0] != L'/') //only accept absolute paths
   {
-    hRes = lpRequest->SendErrorPage(403, E_INVALIDARG);
     ResetAndDisableClientCache(lpRequest);
-    hRes = lpRequest->SendErrorPage(500, hRes);
+    hRes = lpRequest->SendErrorPage(403, E_INVALIDARG);
     lpRequest->End(hRes);
     return;
   }
@@ -170,7 +169,7 @@ on_init_error:
     hRes = (lpRequest->lpJVM != NULL) ? TransformJavascriptCode(cStrCodeA) : MX_E_NotReady;
     if (FAILED(hRes))
       goto on_init_error;
-    if (cStrCodeA.InsertN("var _code = (function() {\r\n  'use strict';\r\n", 0, 44) == FALSE ||
+    if (cStrCodeA.InsertN("var _code = (function() {  'use strict';  ", 0, 42) == FALSE ||
         cStrCodeA.ConcatN("\r\n});\r\n_code();\r\ndelete _code;\r\n", 32) == FALSE)
     {
       hRes = E_OUTOFMEMORY;
@@ -352,6 +351,13 @@ HRESULT CJsHttpServer::AllocAndInitVM(_Out_ CJsHttpServerJVM **lplpJVM, _Out_ BO
     CFastLock cLock(&(sVMs.nMutex));
 
     cJVM.Attach(sVMs.aJvmList.PopHead());
+    if (cJVM)
+    {
+      if (FAILED(cJVM->Reset()))
+      {
+        cJVM.Reset();
+      }
+    }
     if (!cJVM)
     {
       cJVM.Attach(MX_DEBUG_NEW CJsHttpServerJVM());
@@ -392,9 +398,6 @@ HRESULT CJsHttpServer::AllocAndInitVM(_Out_ CJsHttpServerJVM **lplpJVM, _Out_ BO
   }
   else
   {
-    hRes = cJVM->RemoveCachedModules();
-    __EXIT_ON_ERROR(hRes);
-
     //delete a previously set request object
     hRes = cJVM->RunNativeProtectedAndGetError(0, 0, [](_In_ DukTape::duk_context *lpCtx) -> VOID
     {
