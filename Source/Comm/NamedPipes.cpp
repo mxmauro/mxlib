@@ -32,6 +32,17 @@
 #define TypeListenRequest (CPacketBase::eType)((int)CPacketBase::TypeMAX + 1)
 #define TypeListen        (CPacketBase::eType)((int)CPacketBase::TypeMAX + 2)
 
+#ifndef FILE_SKIP_COMPLETION_PORT_ON_SUCCESS
+  #define FILE_SKIP_COMPLETION_PORT_ON_SUCCESS    0x1
+#endif //!FILE_SKIP_COMPLETION_PORT_ON_SUCCESS
+#ifndef FILE_SKIP_SET_EVENT_ON_HANDLE
+  #define FILE_SKIP_SET_EVENT_ON_HANDLE           0x2
+#endif //!FILE_SKIP_SET_EVENT_ON_HANDLE
+
+//-----------------------------------------------------------
+
+typedef BOOL (WINAPI *lpfnSetFileCompletionNotificationModes)(_In_ HANDLE FileHandle, _In_ UCHAR Flags);
+
 //-----------------------------------------------------------
 
 //D:(A;;0x12019F;;;WD)
@@ -50,6 +61,9 @@ static const BYTE aSecDescriptorVistaOrLater[] = {
   0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00
 };
 
+static LONG volatile nOSVersion = -1;
+static lpfnSetFileCompletionNotificationModes volatile fnSetFileCompletionNotificationModes = NULL;
+
 //-----------------------------------------------------------
 
 static VOID GenerateUniquePipeName(_Out_ LPWSTR szNameW, _In_ SIZE_T nNameSize, _In_ DWORD dwVal1, _In_ DWORD dwVal2);
@@ -64,6 +78,42 @@ CNamedPipes::CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CI
   dwConnectTimeoutMs = 1000;
   lpSecDescr = (PSECURITY_DESCRIPTOR)((::IsWindowsVistaOrGreater() != FALSE) ? aSecDescriptorVistaOrLater :
                                                                                aSecDescriptorXP);
+  //detect OS version
+  if (__InterlockedRead(&nOSVersion) < 0)
+  {
+    LONG _nOSVersion = 0;
+
+    if (::IsWindowsVistaOrGreater() != FALSE)
+      _nOSVersion = 0x0600;
+#pragma warning(default : 4996)
+    _InterlockedExchange(&nOSVersion, _nOSVersion);
+  }
+
+  if (__InterlockedRead(&nOSVersion) >= 0x0600)
+  {
+    if (fnSetFileCompletionNotificationModes == NULL)
+    {
+      LPVOID _fnSetFileCompletionNotificationModes;
+      HINSTANCE hDll;
+
+      _fnSetFileCompletionNotificationModes = NULL;
+      hDll = ::GetModuleHandleW(L"kernelbase.dll");
+      if (hDll != NULL)
+      {
+        _fnSetFileCompletionNotificationModes = ::GetProcAddress(hDll, "SetFileCompletionNotificationModes");
+      }
+      if (_fnSetFileCompletionNotificationModes == NULL)
+      {
+        hDll = ::GetModuleHandleW(L"kernel32.dll");
+        if (hDll != NULL)
+        {
+          _fnSetFileCompletionNotificationModes = ::GetProcAddress(hDll, "SetFileCompletionNotificationModes");
+        }
+      }
+      _InterlockedExchangePointer((LPVOID volatile*)&fnSetFileCompletionNotificationModes,
+                                  _fnSetFileCompletionNotificationModes);
+    }
+  }
   return;
 }
 
@@ -185,8 +235,6 @@ HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreate
   cConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassClient));
   if (!cConn)
     return E_OUTOFMEMORY;
-  if (h != NULL)
-    *h = reinterpret_cast<HANDLE>(cConn.Get());
   //setup connection
   cConn->cCreateCallback = cCreateCallback;
   cConn->cUserData = lpUserData;
@@ -203,7 +251,12 @@ HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreate
   if (SUCCEEDED(hRes))
     FireOnConnect(cConn.Get(), hRes);
   //done
-  if (FAILED(hRes))
+  if (SUCCEEDED(hRes))
+  {
+    if (h != NULL)
+      *h = reinterpret_cast<HANDLE>(cConn.Get());
+  }
+  else
   {
     cConn->Close(hRes);
     if (h != NULL)
@@ -253,8 +306,8 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
   sConnOvr.hEvent = cConnEv.Get();
   bConnected = ::ConnectNamedPipe(cLocalPipe, &sConnOvr);
   //create other party pipe
-  cRemotePipe.Attach(::CreateFileW(szBufW, GENERIC_READ|GENERIC_WRITE, 0, &sSecAttrib, OPEN_EXISTING,
-                                   FILE_FLAG_WRITE_THROUGH|FILE_FLAG_OVERLAPPED, NULL));
+  cRemotePipe.Attach(::CreateFileW(szBufW, GENERIC_READ | GENERIC_WRITE, 0, &sSecAttrib, OPEN_EXISTING,
+                                   FILE_FLAG_WRITE_THROUGH | FILE_FLAG_OVERLAPPED, NULL));
   if (cRemotePipe == NULL || cRemotePipe == INVALID_HANDLE_VALUE)
     return MX_HRESULT_FROM_LASTERROR();
   //now wait until connected (may be not necessary)
@@ -267,6 +320,15 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
       hRes = MX_HRESULT_FROM_LASTERROR();
       if (hRes != MX_HRESULT_FROM_WIN32(ERROR_PIPE_CONNECTED))
         return hRes;
+    }
+  }
+  //IOCP options
+  if (fnSetFileCompletionNotificationModes != NULL)
+  {
+    if (fnSetFileCompletionNotificationModes(cLocalPipe, FILE_SKIP_SET_EVENT_ON_HANDLE |
+                                                         FILE_SKIP_COMPLETION_PORT_ON_SUCCESS) == FALSE)
+    {
+      return MX_HRESULT_FROM_LASTERROR();
     }
   }
   //change wait mode
@@ -507,6 +569,15 @@ HRESULT CNamedPipes::CConnection::CreateServer()
     return MX_HRESULT_FROM_LASTERROR();
   }
   ::SetHandleInformation(hPipe, HANDLE_FLAG_INHERIT, 0);
+  //IOCP options
+  if (fnSetFileCompletionNotificationModes != NULL)
+  {
+    if (fnSetFileCompletionNotificationModes(hPipe, FILE_SKIP_SET_EVENT_ON_HANDLE |
+                                             FILE_SKIP_COMPLETION_PORT_ON_SUCCESS) == FALSE)
+    {
+      return MX_HRESULT_FROM_LASTERROR();
+    }
+  }
   //attach to completion port
   hRes = GetDispatcherPool().Attach(hPipe, GetDispatcherPoolPacketCallback());
   if (FAILED(hRes))
@@ -560,6 +631,15 @@ HRESULT CNamedPipes::CConnection::CreateClient(_In_z_ LPCWSTR szServerNameW, _In
       dwMaxWriteTimeoutMs = 0;
     }
   }
+  //IOCP options
+  if (fnSetFileCompletionNotificationModes != NULL)
+  {
+    if (fnSetFileCompletionNotificationModes(hPipe, FILE_SKIP_SET_EVENT_ON_HANDLE |
+                                             FILE_SKIP_COMPLETION_PORT_ON_SUCCESS) == FALSE)
+    {
+      return MX_HRESULT_FROM_LASTERROR();
+    }
+  }
   //attach to completion port
   hRes = GetDispatcherPool().Attach(hPipe, GetDispatcherPoolPacketCallback());
   if (FAILED(hRes))
@@ -600,10 +680,11 @@ HRESULT CNamedPipes::CConnection::SendReadPacket(_In_ CPacketBase *lpPacket, _Ou
     *lpdwRead = 0;
     return S_FALSE;
   }
+  dwRead = 0;
   if (::ReadFile(hPipe, lpPacket->GetBuffer(), lpPacket->GetBytesInUse(), &dwRead,
                  lpPacket->GetOverlapped()) != FALSE)
   {
-    hRes = MX_E_IoPending;
+    hRes = (fnSetFileCompletionNotificationModes != NULL) ? S_OK : MX_E_IoPending;
   }
   else
   {
@@ -629,10 +710,11 @@ HRESULT CNamedPipes::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket, _O
     *lpdwWritten = 0;
     return S_FALSE;
   }
+  dwWritten = 0;
   if (::WriteFile(hPipe, lpPacket->GetBuffer(), lpPacket->GetBytesInUse(), &dwWritten,
                   lpPacket->GetOverlapped()) != FALSE)
   {
-    hRes = MX_E_IoPending;
+    hRes = (fnSetFileCompletionNotificationModes != NULL) ? S_OK : MX_E_IoPending;
   }
   else
   {
@@ -644,7 +726,7 @@ HRESULT CNamedPipes::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket, _O
     }
   }
   *lpdwWritten = dwWritten;
-  return S_OK;
+  return hRes;
 }
 
 } //namespace MX

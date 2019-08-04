@@ -66,11 +66,11 @@ static __inline HRESULT MX_HRESULT_FROM_LASTSOCKETERROR()
 #endif //!FILE_SKIP_SET_EVENT_ON_HANDLE
 
 #define MGRFLAGS_TcpHasIfsHandles                     0x0001
-#define MGRFLAGS_CanCumpleteSync                      0x0002
+#define MGRFLAGS_CanCompleteSync                      0x0002
 
 #define IS_COMPLETE_SYNC_AVAILABLE()                                                                                  \
-          (((reinterpret_cast<CSockets*>(lpIpc)->nFlags) & (MGRFLAGS_TcpHasIfsHandles | MGRFLAGS_CanCumpleteSync)) == \
-           (MGRFLAGS_TcpHasIfsHandles | MGRFLAGS_CanCumpleteSync))
+          (((reinterpret_cast<CSockets*>(lpIpc)->nFlags) & (MGRFLAGS_TcpHasIfsHandles | MGRFLAGS_CanCompleteSync)) == \
+           (MGRFLAGS_TcpHasIfsHandles | MGRFLAGS_CanCompleteSync))
 
 //-----------------------------------------------------------
 
@@ -215,7 +215,7 @@ CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDi
 
   if (fnSetFileCompletionNotificationModes != NULL)
   {
-    nFlags |= MGRFLAGS_CanCumpleteSync;
+    nFlags |= MGRFLAGS_CanCompleteSync;
   }
   return;
 }
@@ -865,7 +865,7 @@ HRESULT CSockets::CConnection::CreateSocket()
     if (::setsockopt(sck, SOL_SOCKET, SO_SNDBUF, (char*)&nBufSize, (int)sizeof(nBufSize)) == SOCKET_ERROR)
       return MX_HRESULT_FROM_LASTSOCKETERROR();
   }
-  //miscellaneous options
+  //IOCP options
   if (fnSetFileCompletionNotificationModes != NULL)
   {
     UCHAR flags = FILE_SKIP_SET_EVENT_ON_HANDLE;
