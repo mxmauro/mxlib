@@ -1252,6 +1252,7 @@ write_req_after_all:
       hRes = S_OK;
       while (SUCCEEDED(hRes) &&
              (__InterlockedRead(&(lpConn->nFlags)) & FLAG_InputProcessingPaused) == 0 &&
+             lpConn->IsClosedOrGracefulShutdown() == FALSE &&
              (ULONG)__InterlockedRead(&(lpConn->nIncomingReads)) < dwReadAhead)
       {
         hRes = (bDoZeroReads != FALSE && ZeroReadsSupported() != FALSE)
