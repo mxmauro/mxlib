@@ -609,7 +609,7 @@ protected:
 
     virtual VOID ShutdownLink(_In_ BOOL bAbortive);
 
-    HRESULT SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize, _In_ BOOL bIgnoreLayers);
+    HRESULT SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize, _In_opt_ CLayer *lpToLayer);
     HRESULT SendStream(_In_ CStream *lpStream);
     HRESULT AfterWriteSignal(_In_ OnAfterWriteSignalCallback cCallback, _In_opt_ LPVOID lpCookie);
     HRESULT AfterWriteSignal(_In_ CPacketBase *lpPacket);

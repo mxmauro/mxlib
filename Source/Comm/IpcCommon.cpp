@@ -165,7 +165,11 @@ HRESULT CIpc::SendMsg(_In_ HANDLE h, _In_reads_bytes_(nMsgSize) LPCVOID lpMsg, _
     return E_INVALIDARG;
   //send real message
   if (cConn->IsClosed() == FALSE)
-    return cConn->SendMsg(lpMsg, nMsgSize, FALSE);
+  {
+    CAutoSlimRWLShared cLayersLock(&(cConn->sLayers.nRwMutex));
+
+    return cConn->SendMsg(lpMsg, nMsgSize, cConn->sLayers.cList.GetTail());
+  }
   hRes = cConn->GetErrorCode();
   return (SUCCEEDED(hRes)) ? E_FAIL : hRes;
 }
@@ -1466,7 +1470,7 @@ VOID CIpc::CConnectionBase::ShutdownLink(_In_ BOOL bAbortive)
   return;
 }
 
-HRESULT CIpc::CConnectionBase::SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize, _In_ BOOL bIgnoreLayers)
+HRESULT CIpc::CConnectionBase::SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize, _In_opt_ CLayer *lpToLayer)
 {
   CPacketBase *lpPacket;
   LPBYTE s;
@@ -1499,30 +1503,26 @@ HRESULT CIpc::CConnectionBase::SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSiz
                  lpPacket->GetOverlapped(), lpPacket->GetType(), lpPacket->GetBytesInUse());
     }
     //send packet
+    if (lpToLayer != NULL)
     {
-      CAutoSlimRWLShared cLayersLock(&(sLayers.nRwMutex));
-      CIpc::CLayer *lpLayer;
-
-      lpLayer = (bIgnoreLayers == FALSE) ? sLayers.cList.GetTail() : NULL;
-      if (lpLayer != NULL)
+      hRes = lpToLayer->OnSendPacket(lpPacket);
+      if (FAILED(hRes))
+        return hRes;
+    }
+    else
+    {
+      //prepare
+      lpPacket->SetOrder(_InterlockedIncrement(&nNextWriteOrder));
+      cRwList.QueueLast(lpPacket);
+      AddRef();
+      _InterlockedIncrement(&nOutgoingWrites);
+      hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
+      if (FAILED(hRes))
       {
-        hRes = lpLayer->OnSendPacket(lpPacket);
-      }
-      else
-      {
-        //prepare
-        lpPacket->SetOrder(_InterlockedIncrement(&nNextWriteOrder));
-        cRwList.QueueLast(lpPacket);
-        AddRef();
-        _InterlockedIncrement(&nOutgoingWrites);
-        hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
-        if (FAILED(hRes))
-        {
-          MX_ASSERT_ALWAYS(__InterlockedRead(&nOutgoingWrites) >= 1);
-          _InterlockedDecrement(&nOutgoingWrites);
-          Release();
-          return hRes;
-        }
+        MX_ASSERT_ALWAYS(__InterlockedRead(&nOutgoingWrites) >= 1);
+        _InterlockedDecrement(&nOutgoingWrites);
+        Release();
+        return hRes;
       }
     }
     //next block
@@ -2128,7 +2128,7 @@ HRESULT CIpc::CConnectionBase::SendWriteDataToNextLayer(_In_ LPCVOID lpMsg, _In_
   }
   else
   {
-    hRes = SendMsg(lpMsg, nMsgSize, TRUE);
+    hRes = SendMsg(lpMsg, nMsgSize, NULL);
   }
   //done
   return hRes;
