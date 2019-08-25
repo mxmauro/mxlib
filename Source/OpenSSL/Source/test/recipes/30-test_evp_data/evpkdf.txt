@@ -306,6 +306,7 @@ Result = INTERNAL_ERROR
 Title = PBKDF2 tests
 
 KDF = PBKDF2
+Ctrl.pkcs5 = pkcs5:1
 Ctrl.pass = pass:password
 Ctrl.salt = salt:salt
 Ctrl.iter = iter:1
@@ -313,6 +314,7 @@ Ctrl.digest = digest:sha1
 Output = 0c60c80f961f0e71f3a9b524af6012062fe037a6
 
 KDF = PBKDF2
+Ctrl.pkcs5 = pkcs5:1
 Ctrl.pass = pass:password
 Ctrl.salt = salt:salt
 Ctrl.iter = iter:1
@@ -320,6 +322,7 @@ Ctrl.digest = digest:sha256
 Output = 120fb6cffcf8b32c43e7225256c4f837a86548c92ccc35480805987cb70be17b
 
 KDF = PBKDF2
+Ctrl.pkcs5 = pkcs5:1
 Ctrl.pass = pass:password
 Ctrl.salt = salt:salt
 Ctrl.iter = iter:1
@@ -327,6 +330,7 @@ Ctrl.digest = digest:sha512
 Output = 867f70cf1ade02cff3752599a3a53dc4af34c7a669815ae5d513554e1c8cf252c02d470a285a0501bad999bfe943c08f050235d7d68b1da55e63f73b60a57fce
 
 KDF = PBKDF2
+Ctrl.pkcs5 = pkcs5:1
 Ctrl.pass = pass:password
 Ctrl.salt = salt:salt
 Ctrl.iter = iter:2
@@ -334,6 +338,7 @@ Ctrl.digest = digest:sha1
 Output = ea6c014dc72d6f8ccd1ed92ace1d41f0d8de8957
 
 KDF = PBKDF2
+Ctrl.pkcs5 = pkcs5:1
 Ctrl.pass = pass:password
 Ctrl.salt = salt:salt
 Ctrl.iter = iter:2
@@ -341,6 +346,7 @@ Ctrl.digest = digest:sha256
 Output = ae4d0c95af6b46d32d0adff928f06dd02a303f8ef3c251dfd6e2d85a95474c43
 
 KDF = PBKDF2
+Ctrl.pkcs5 = pkcs5:1
 Ctrl.pass = pass:password
 Ctrl.salt = salt:salt
 Ctrl.iter = iter:2
@@ -348,6 +354,7 @@ Ctrl.digest = digest:sha512
 Output = e1d9c16aa681708a45f5c7c4e215ceb66e011a2e9f0040713f18aefdb866d53cf76cab2868a39b9f7840edce4fef5a82be67335c77a6068e04112754f27ccf4e
 
 KDF = PBKDF2
+Ctrl.pkcs5 = pkcs5:1
 Ctrl.pass = pass:password
 Ctrl.salt = salt:salt
 Ctrl.iter = iter:4096
@@ -355,6 +362,7 @@ Ctrl.digest = digest:sha1
 Output = 4b007901b765489abead49d926f721d065a429c1
 
 KDF = PBKDF2
+Ctrl.pkcs5 = pkcs5:1
 Ctrl.pass = pass:password
 Ctrl.salt = salt:salt
 Ctrl.iter = iter:4096
@@ -362,6 +370,7 @@ Ctrl.digest = digest:sha256
 Output = c5e478d59288c841aa530db6845c4c8d962893a001ce4e11a4963873aa98134a
 
 KDF = PBKDF2
+Ctrl.pkcs5 = pkcs5:1
 Ctrl.pass = pass:password
 Ctrl.salt = salt:salt
 Ctrl.iter = iter:4096
@@ -390,6 +399,7 @@ Ctrl.digest = digest:sha512
 Output = 8c0511f4c6e597c6ac6315d8f0362e225f3c501495ba23b868c005174dc4ee71115b59f9e60cd9532fa33e0f75aefe30225c583a186cd82bd4daea9724a3d3b8
 
 KDF = PBKDF2
+Ctrl.pkcs5 = pkcs5:1
 Ctrl.hexpass = hexpass:7061737300776f7264
 Ctrl.hexsalt = hexsalt:7361006c74
 Ctrl.iter = iter:4096
@@ -397,6 +407,7 @@ Ctrl.digest = digest:sha1
 Output = 56fa6aa75548099dcc37d7f03425e0c3
 
 KDF = PBKDF2
+Ctrl.pkcs5 = pkcs5:1
 Ctrl.hexpass = hexpass:7061737300776f7264
 Ctrl.hexsalt = hexsalt:7361006c74
 Ctrl.iter = iter:4096
@@ -404,6 +415,7 @@ Ctrl.digest = digest:sha256
 Output = 89b69d0516f829893c696226650a8687
 
 KDF = PBKDF2
+Ctrl.pkcs5 = pkcs5:1
 Ctrl.hexpass = hexpass:7061737300776f7264
 Ctrl.hexsalt = hexsalt:7361006c74
 Ctrl.iter = iter:4096
@@ -413,6 +425,7 @@ Output = 9d9e9c4cd21fe4be24d5b8244c759665
 Title = PBKDF2 tests for empty inputs
 
 KDF = PBKDF2
+Ctrl.pkcs5 = pkcs5:1
 Ctrl.pass = pass:
 Ctrl.salt = salt:salt
 Ctrl.iter = iter:1
@@ -420,6 +433,7 @@ Ctrl.digest = digest:sha1
 Output = a33dddc30478185515311f8752895d36ea4363a2
 
 KDF = PBKDF2
+Ctrl.pkcs5 = pkcs5:1
 Ctrl.pass = pass:
 Ctrl.salt = salt:salt
 Ctrl.iter = iter:1
@@ -427,6 +441,7 @@ Ctrl.digest = digest:sha256
 Output = f135c27993baf98773c5cdb40a5706ce6a345cde
 
 KDF = PBKDF2
+Ctrl.pkcs5 = pkcs5:1
 Ctrl.pass = pass:
 Ctrl.salt = salt:salt
 Ctrl.iter = iter:1
@@ -6473,3 +6488,18 @@ Ctrl.digest = digest:SHA512
 Ctrl.hexsecret = hexsecret:0037cd001a0ad87f35ddf58ab355d6144ba2ed0749a7435dab548ba0bfbe723c047e2396b4eef99653412a92c8db74bb5c03063f2eb0525ae87356750ae3676faa86
 Ctrl.hexinfo = hexinfo:eb17da8851c41c7ac6710b1c49f324f8
 Output = 829a28b81f9e95b5f306604067499c07d5944ca034ed130d513951f7143e4e162bad8adb2833e53b8235c293cd2a809659ac7f7e392cba6a543660e5d95070c0c9e6a9cdc38123e22da61bb4cbb6ad6d1a58a069e934fc231bd9fe39a24afcbf322ccea385f0418f3b01c1edd6e7124593a1cefe3e48fcd95daaf72cfd973c59
+
+Title = X9.42 KDF tests (from RFC2631 test vectors)
+
+KDF = X942KDF
+Ctrl.digest = digest:SHA1
+Ctrl.hexsecret = hexsecret:000102030405060708090a0b0c0d0e0f10111213
+Ctrl.cekalg = cekalg:id-smime-alg-CMS3DESwrap
+Output = a09661392376f7044d9052a397883246b67f5f1ef63eb5fb
+
+KDF = X942KDF
+Ctrl.digest = digest:SHA1
+Ctrl.hexsecret = hexsecret:000102030405060708090a0b0c0d0e0f10111213
+Ctrl.cekalg = cekalg:id-smime-alg-CMSRC2wrap
+Ctrl.hexukm = hexukm:0123456789abcdeffedcba98765432010123456789abcdeffedcba98765432010123456789abcdeffedcba98765432010123456789abcdeffedcba9876543201
+Output = 48950c46e0530075403cce72889604e0

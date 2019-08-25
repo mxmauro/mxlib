@@ -1,5 +1,5 @@
-SOURCE[../../../libcrypto]=\
-        sha2.c
+$COMMON=sha2_prov.c sha3_prov.c digest_common.c
 
-SOURCE[../../fips]=\
-        sha2.c
+SOURCE[../../../libcrypto]=$COMMON
+SOURCE[../../fips]=$COMMON
+SOURCE[../../legacy]= digest_common.c

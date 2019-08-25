@@ -17,6 +17,7 @@
 # include <openssl/ec.h>
 # include <openssl/rand_drbg.h>
 # include "internal/tsan_assist.h"
+# include "internal/rand_int.h"
 
 # include "internal/numbers.h"
 
@@ -53,7 +54,13 @@
 # define DRBG_MAX_LENGTH                         INT32_MAX
 
 /* The default nonce */
+#ifdef CHARSET_EBCDIC
+# define DRBG_DEFAULT_PERS_STRING      { 0x4f, 0x70, 0x65, 0x6e, 0x53, 0x53, \
+     0x4c, 0x20, 0x4e, 0x49, 0x53, 0x54, 0x20, 0x53, 0x50, 0x20, 0x38, 0x30, \
+     0x30, 0x2d, 0x39, 0x30, 0x41, 0x20, 0x44, 0x52, 0x42, 0x47, 0x00};
+#else
 # define DRBG_DEFAULT_PERS_STRING                "OpenSSL NIST SP 800-90A DRBG"
+#endif
 
 /*
  * Maximum allocation size for RANDOM_POOL buffers
@@ -81,6 +88,24 @@
  *                                1.5 * (RAND_DRBG_STRENGTH / 8))
  */
 
+/*
+ * Initial allocation minimum.
+ *
+ * There is a distinction between the secure and normal allocation minimums.
+ * Ideally, the secure allocation size should be a power of two.  The normal
+ * allocation size doesn't have any such restriction.
+ *
+ * The secure value is based on 128 bits of secure material, which is 16 bytes.
+ * Typically, the DRBGs will set a minimum larger than this so optimal
+ * allocation ought to take place (for full quality seed material).
+ *
+ * The normal value has been chosed by noticing that the rand_drbg_get_nonce
+ * function is usually the largest of the built in allocation (twenty four
+ * bytes and then appending another sixteen bytes).  This means the buffer ends
+ * with 40 bytes.  The value of forty eight is comfortably above this which
+ * allows some slack in the platform specific values used.
+ */
+# define RAND_POOL_MIN_ALLOCATION(secure) ((secure) ? 16 : 48)
 
 /* DRBG status values */
 typedef enum drbg_status_e {
@@ -129,7 +154,7 @@ typedef struct rand_drbg_method_st {
 #define HASH_PRNG_MAX_SEEDLEN    (888/8)
 
 typedef struct rand_drbg_hash_st {
-    const EVP_MD *md;
+    EVP_MD *md;
     EVP_MD_CTX *ctx;
     size_t blocklen;
     unsigned char V[HASH_PRNG_MAX_SEEDLEN];
@@ -139,7 +164,7 @@ typedef struct rand_drbg_hash_st {
 } RAND_DRBG_HASH;
 
 typedef struct rand_drbg_hmac_st {
-    const EVP_MD *md;
+    EVP_MD *md;
     HMAC_CTX *ctx;
     size_t blocklen;
     unsigned char K[EVP_MAX_MD_SIZE];
@@ -152,7 +177,7 @@ typedef struct rand_drbg_hmac_st {
 typedef struct rand_drbg_ctr_st {
     EVP_CIPHER_CTX *ctx;
     EVP_CIPHER_CTX *ctx_df;
-    const EVP_CIPHER *cipher;
+    EVP_CIPHER *cipher;
     size_t keylen;
     unsigned char K[32];
     unsigned char V[16];
@@ -179,9 +204,11 @@ struct rand_pool_st {
     size_t len; /* current number of random bytes contained in the pool */
 
     int attached;  /* true pool was attached to existing buffer */
+    int secure;    /* 1: allocated on the secure heap, 0: otherwise */
 
     size_t min_len; /* minimum number of random bytes requested */
     size_t max_len; /* maximum number of random bytes (allocated buffer size) */
+    size_t alloc_len; /* current number of bytes allocated */
     size_t entropy; /* current entropy count in bits */
     size_t entropy_requested; /* requested entropy count in bits */
 };
@@ -192,6 +219,8 @@ struct rand_pool_st {
  */
 struct rand_drbg_st {
     CRYPTO_RWLOCK *lock;
+    /* The library context this DRBG is associated with, if any */
+    OPENSSL_CTX *libctx;
     RAND_DRBG *parent;
     int secure; /* 1: allocated on the secure heap, 0: otherwise */
     int type; /* the nid of the underlying algorithm */
@@ -334,18 +363,11 @@ int drbg_hmac_init(RAND_DRBG *drbg);
  * Entropy call back for the FIPS 140-2 section 4.9.2 Conditional Tests.
  * These need to be exposed for the unit tests.
  */
-int rand_crngt_get_entropy_cb(unsigned char *buf, unsigned char *md,
+int rand_crngt_get_entropy_cb(OPENSSL_CTX *ctx, RAND_POOL *pool,
+                              unsigned char *buf, unsigned char *md,
                               unsigned int *md_size);
-extern int (*crngt_get_entropy)(unsigned char *buf, unsigned char *md,
+extern int (*crngt_get_entropy)(OPENSSL_CTX *ctx, RAND_POOL *pool,
+                                unsigned char *buf, unsigned char *md,
                                 unsigned int *md_size);
-int rand_crngt_init(void);
-void rand_crngt_cleanup(void);
-
-/*
- * Expose the run once initialisation function for the unit tests because.
- * they need to restart from scratch to validate the first block is skipped
- * properly.
- */
-int rand_crngt_single_init(void);
 
 #endif
