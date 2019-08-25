@@ -35,12 +35,26 @@
  *  Limit check helpers.
  */
 
+/* Check native stack space if DUK_USE_NATIVE_STACK_CHECK() defined. */
+DUK_INTERNAL void duk_native_stack_check(duk_hthread *thr) {
+#if defined(DUK_USE_NATIVE_STACK_CHECK)
+	if (DUK_USE_NATIVE_STACK_CHECK() != 0) {
+		DUK_ERROR_RANGE(thr, DUK_STR_NATIVE_STACK_LIMIT);
+	}
+#else
+	DUK_UNREF(thr);
+#endif
+}
+
 /* Allow headroom for calls during error augmentation (see GH-191).
  * We allow space for 10 additional recursions, with one extra
  * for, e.g. a print() call at the deepest level, and an extra
  * +1 for protected call wrapping.
  */
 #define DUK__AUGMENT_CALL_RELAX_COUNT  (10 + 2)
+
+/* Stack space required by call handling entry. */
+#define DUK__CALL_HANDLING_REQUIRE_STACK  8
 
 DUK_LOCAL DUK_NOINLINE void duk__call_c_recursion_limit_check_slowpath(duk_hthread *thr) {
 	/* When augmenting an error, the effective limit is a bit higher.
@@ -56,13 +70,15 @@ DUK_LOCAL DUK_NOINLINE void duk__call_c_recursion_limit_check_slowpath(duk_hthre
 #endif
 
 	DUK_D(DUK_DPRINT("call prevented because C recursion limit reached"));
-	DUK_ERROR_RANGE(thr, DUK_STR_C_CALLSTACK_LIMIT);
+	DUK_ERROR_RANGE(thr, DUK_STR_NATIVE_STACK_LIMIT);
 	DUK_WO_NORETURN(return;);
 }
 
 DUK_LOCAL DUK_ALWAYS_INLINE void duk__call_c_recursion_limit_check(duk_hthread *thr) {
 	DUK_ASSERT(thr->heap->call_recursion_depth >= 0);
 	DUK_ASSERT(thr->heap->call_recursion_depth <= thr->heap->call_recursion_limit);
+
+	duk_native_stack_check(thr);
 
 	/* This check is forcibly inlined because it's very cheap and almost
 	 * always passes.  The slow path is forcibly noinline.
@@ -183,11 +199,10 @@ DUK_LOCAL void duk__create_arguments_object(duk_hthread *thr,
 	DUK_ASSERT(i_argbase >= 0);
 	DUK_ASSERT(num_stack_args >= 0);
 
-	duk_push_hobject(thr, func);
-	duk_get_prop_stridx_short(thr, -1, DUK_STRIDX_INT_FORMALS);
-	formals = duk_get_hobject(thr, -1);
+	formals = (duk_hobject *) duk_hobject_get_formals(thr, (duk_hobject *) func);
 	if (formals) {
-		n_formals = (duk_idx_t) duk_get_length(thr, -1);
+		n_formals = (duk_idx_t) ((duk_harray *) formals)->length;
+		duk_push_hobject(thr, formals);
 	} else {
 		/* This shouldn't happen without tampering of internal
 		 * properties: if a function accesses 'arguments', _Formals
@@ -196,8 +211,8 @@ DUK_LOCAL void duk__create_arguments_object(duk_hthread *thr,
 		 */
 		DUK_D(DUK_DPRINT("_Formals is undefined when creating arguments, use n_formals == 0"));
 		n_formals = 0;
+		duk_push_undefined(thr);
 	}
-	duk_remove_m2(thr);  /* leave formals on stack for later use */
 	i_formals = duk_require_top_index(thr);
 
 	DUK_ASSERT(n_formals >= 0);
@@ -626,7 +641,8 @@ DUK_LOCAL void duk__handle_bound_chain_for_call(duk_hthread *thr,
 		DUK_ASSERT(func != NULL);
 		DUK_ASSERT(!DUK_HOBJECT_HAS_BOUNDFUNC(func));
 		DUK_ASSERT(DUK_HOBJECT_HAS_COMPFUNC(func) ||
-		           DUK_HOBJECT_HAS_NATFUNC(func));
+		           DUK_HOBJECT_HAS_NATFUNC(func) ||
+		           DUK_HOBJECT_IS_PROXY(func));
 	}
 #endif
 }
@@ -1011,7 +1027,7 @@ DUK_LOCAL void duk__update_func_caller_prop(duk_hthread *thr, duk_hobject *func)
 	/* XXX: check .caller writability? */
 
 	/* Backup 'caller' property and update its value. */
-	tv_caller = duk_hobject_find_existing_entry_tval_ptr(thr->heap, func, DUK_HTHREAD_STRING_CALLER(thr));
+	tv_caller = duk_hobject_find_entry_tval_ptr_stridx(thr->heap, func, DUK_STRIDX_CALLER);
 	if (tv_caller) {
 		/* If caller is global/eval code, 'caller' should be set to
 		 * 'null'.
@@ -1198,6 +1214,8 @@ DUK_LOCAL duk_hobject *duk__resolve_target_func_and_this_binding(duk_hthread *th
 		tv_func = DUK_GET_TVAL_POSIDX(thr, idx_func);
 		DUK_ASSERT(tv_func != NULL);
 
+		DUK_DD(DUK_DDPRINT("target func: %!iT", tv_func));
+
 		if (DUK_TVAL_IS_OBJECT(tv_func)) {
 			func = DUK_TVAL_GET_OBJECT(tv_func);
 
@@ -1329,7 +1347,7 @@ DUK_LOCAL duk_hobject *duk__resolve_target_func_and_this_binding(duk_hthread *th
 	 * (which would be dangerous).
 	 */
 	if (DUK_TVAL_IS_OBJECT(tv_func)) {
-		duk_tval *tv_wrap = duk_hobject_find_existing_entry_tval_ptr(thr->heap, DUK_TVAL_GET_OBJECT(tv_func), DUK_HTHREAD_STRING_INT_TARGET(thr));
+		duk_tval *tv_wrap = duk_hobject_find_entry_tval_ptr_stridx(thr->heap, DUK_TVAL_GET_OBJECT(tv_func), DUK_STRIDX_INT_TARGET);
 		if (tv_wrap != NULL) {
 			DUK_DD(DUK_DDPRINT("delayed error from GETPROPC: %!T", tv_wrap));
 			duk_push_tval(thr, tv_wrap);
@@ -1819,6 +1837,7 @@ DUK_LOCAL void duk__call_env_setup(duk_hthread *thr, duk_hobject *func, duk_acti
 
 	if (DUK_LIKELY(func != NULL)) {
 		if (DUK_LIKELY(DUK_HOBJECT_HAS_NEWENV(func))) {
+			DUK_STATS_INC(thr->heap, stats_envrec_newenv);
 			if (DUK_LIKELY(!DUK_HOBJECT_HAS_CREATEARGS(func))) {
 				/* Use a new environment but there's no 'arguments' object;
 				 * delayed environment initialization.  This is the most
@@ -1855,6 +1874,7 @@ DUK_LOCAL void duk__call_env_setup(duk_hthread *thr, duk_hobject *func, duk_acti
 
 			DUK_ASSERT(!DUK_HOBJECT_HAS_CREATEARGS(func));
 
+			DUK_STATS_INC(thr->heap, stats_envrec_oldenv);
 			duk__handle_oldenv_for_call(thr, func, act);
 
 			DUK_ASSERT(act->lex_env != NULL);
@@ -1864,6 +1884,7 @@ DUK_LOCAL void duk__call_env_setup(duk_hthread *thr, duk_hobject *func, duk_acti
 		/* Lightfuncs are always native functions and have "newenv". */
 		DUK_ASSERT(act->lex_env == NULL);
 		DUK_ASSERT(act->var_env == NULL);
+		DUK_STATS_INC(thr->heap, stats_envrec_newenv);
 	}
 }
 
@@ -2033,6 +2054,26 @@ DUK_LOCAL duk_int_t duk__handle_call_raw(duk_hthread *thr,
 	duk__call_thread_state_update(thr);
 
 	/*
+	 *  Increase call recursion depth as early as possible so that if we
+	 *  enter a recursive call for any reason there's a backstop to native
+	 *  recursion.  This can happen e.g. for almost any property read
+	 *  because it may cause a getter call or a Proxy trap (GC and finalizers
+	 *  are not an issue because they are not recursive).  If we end up
+	 *  doing an Ecma-to-Ecma call, revert the increase.  (See GH-2032.)
+	 *
+	 *  For similar reasons, ensure there is a known value stack spare
+	 *  even before we actually prepare the value stack for the target
+	 *  function.  If this isn't done, early recursion may consume the
+	 *  value stack space.
+	 *
+	 *  XXX: Should bump yield preventcount early, for the same reason.
+	 */
+
+	duk__call_c_recursion_limit_check(thr);
+	thr->heap->call_recursion_depth++;
+	duk_require_stack(thr, DUK__CALL_HANDLING_REQUIRE_STACK);
+
+	/*
 	 *  Resolve final target function; handle bound functions and special
 	 *  functions like .call() and .apply().  Also figure out the effective
 	 *  'this' binding, which replaces the current value at idx_func + 1.
@@ -2175,6 +2216,7 @@ DUK_LOCAL duk_int_t duk__handle_call_raw(duk_hthread *thr,
 			DUK_ASSERT((act->flags & DUK_ACT_FLAG_PREVENT_YIELD) == 0);
 			DUK_REFZERO_CHECK_FAST(thr);
 			DUK_ASSERT(thr->ptr_curr_pc == NULL);
+			thr->heap->call_recursion_depth--;  /* No recursion increase for this case. */
 			return 1;  /* 1=reuse executor */
 		}
 		DUK_ASSERT(use_tailcall == 0);
@@ -2183,12 +2225,6 @@ DUK_LOCAL duk_int_t duk__handle_call_raw(duk_hthread *thr,
 		DUK_ASSERT((act->flags & DUK_ACT_FLAG_PREVENT_YIELD) == 0);
 		act->flags |= DUK_ACT_FLAG_PREVENT_YIELD;
 		thr->callstack_preventcount++;
-
-		/* XXX: we could just do this on entry regardless of reuse, as long
-		 * as recursion depth is decreased for e2e case.
-		 */
-		duk__call_c_recursion_limit_check(thr);
-		thr->heap->call_recursion_depth++;
 
 		/* [ ... func this | arg1 ... argN ] ('this' must precede new bottom) */
 
@@ -2223,12 +2259,6 @@ DUK_LOCAL duk_int_t duk__handle_call_raw(duk_hthread *thr,
 		DUK_ASSERT((act->flags & DUK_ACT_FLAG_PREVENT_YIELD) == 0);
 		act->flags |= DUK_ACT_FLAG_PREVENT_YIELD;
 		thr->callstack_preventcount++;
-
-		/* XXX: we could just do this on entry regardless of reuse, as long
-		 * as recursion depth is decreased for e2e case.
-		 */
-		duk__call_c_recursion_limit_check(thr);
-		thr->heap->call_recursion_depth++;
 
 		/* For native calls must be NULL so we don't sync back */
 		DUK_ASSERT(thr->ptr_curr_pc == NULL);
@@ -2739,6 +2769,7 @@ DUK_INTERNAL duk_int_t duk_handle_safe_call(duk_hthread *thr,
 #if defined(DUK_USE_CPP_EXCEPTIONS)
 	catch (duk_fatal_exception &exc) {
 		DUK_D(DUK_DPRINT("rethrow duk_fatal_exception"));
+		DUK_UNREF(exc);
 		throw;
 	} catch (std::exception &exc) {
 		const char *what = exc.what();
@@ -2876,7 +2907,7 @@ DUK_INTERNAL DUK_NOINLINE DUK_COLD void duk_call_setup_propcall_error(duk_hthrea
 	duk_push_error_object(thr,
 	                      DUK_ERR_TYPE_ERROR | DUK_ERRCODE_FLAG_NOBLAME_FILELINE,
 	                      "%s not callable (property %s of %s)", str_targ, str_key, str_base);
-	duk_put_prop_stridx(thr, -2, DUK_STRIDX_INT_TARGET);  /* Marker property, reuse _Target. */
+	duk_xdef_prop_stridx(thr, -2, DUK_STRIDX_INT_TARGET, DUK_PROPDESC_FLAGS_NONE);  /* Marker property, reuse _Target. */
 	/* [ <nargs> target base key { _Target: error } ] */
 	duk_replace(thr, entry_top - 1);
 #else
@@ -2887,7 +2918,7 @@ DUK_INTERNAL DUK_NOINLINE DUK_COLD void duk_call_setup_propcall_error(duk_hthrea
 	                      DUK_ERR_TYPE_ERROR | DUK_ERRCODE_FLAG_NOBLAME_FILELINE,
 	                      "%s not callable (property %s of %s)", str_targ, str_key, str_base);
 	/* [ <nargs> target base key {} str_targ str_key str_base error ] */
-	duk_put_prop_stridx(thr, -5, DUK_STRIDX_INT_TARGET);  /* Marker property, reuse _Target. */
+	duk_xdef_prop_stridx(thr, -5, DUK_STRIDX_INT_TARGET, DUK_PROPDESC_FLAGS_NONE);  /* Marker property, reuse _Target. */
 	/* [ <nargs> target base key { _Target: error } str_targ str_key str_base ] */
 	duk_swap(thr, -4, entry_top - 1);
 	/* [ <nargs> { _Target: error } base key target str_targ str_key str_base ] */

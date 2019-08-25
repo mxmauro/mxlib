@@ -28,17 +28,16 @@ Main features:
 * Minimal platform dependencies
 * Combined reference counting and mark-and-sweep garbage collection with finalization
 * Custom features like coroutines
-* Property virtualization using a subset of ECMAScript E2015 Proxy object
+* Property virtualization using a subset of ECMAScript ES2015 Proxy object
 * Bytecode dump/load for caching compiled functions
 * Distributable includes an optional logging framework, CommonJS-based module
-  loading implementations, etc
-* Liberal license
+  loading implementations, CBOR bindings, etc
+* Liberal MIT license (see LICENSE.txt)
 
 See [duktape.org](http://duktape.org/) for packaged end-user downloads
 and documentation.  The end user downloads are also available from the
 [duktape-releases](https://github.com/svaarala/duktape-releases) repo
-as both binaries and in unpacked form as git tags.  Snapshot builds from
-master are available in [duktape.org/snapshots](http://duktape.org/snapshots).
+as both binaries and in unpacked form as git tags.
 
 Have fun!
 
@@ -65,14 +64,11 @@ distributables available from [duktape.org/download.html](http://duktape.org/dow
 See [duktape.org/guide.html#gettingstarted](http://duktape.org/guide.html#gettingstarted)
 for the basics.
 
-Automatically generated bleeding edge snapshots from master are available at
-[duktape.org/snapshots](http://duktape.org/snapshots).
-
 The distributable `src/` directory contains a `duk_config.h` configuration
-header and amalgamated sources for Duktape default configuration.  Use
-`python tools/configure.py` to create header and sources for customized
-configuration options, see http://wiki.duktape.org/Configuring.html.  For
-example, to enable fastint support (example for Linux):
+header and amalgamated sources for Duktape default configuration.  If
+necessary, use `python tools/configure.py` to create header and sources for
+customized configuration options, see http://wiki.duktape.org/Configuring.html.
+For example, to enable fastint support (example for Linux):
 
     $ tar xvfJ duktape-2.0.0.tar.xz
     $ cd duktape-2.0.0
@@ -87,6 +83,7 @@ example, to enable fastint support (example for Linux):
 
 You can also clone this repository, make modifications, and build a source
 distributable on Linux, macOS, and Windows using `python util/dist.py`.
+You'll need Python 2 and Python YAML binding.
 
 Getting started: modifying and rebuilding the distributable
 -----------------------------------------------------------
@@ -118,6 +115,23 @@ Getting started: other development (Linux only)
 Other development stuff, such as building the website and running test cases,
 is based on a `Makefile` **intended for Linux only**.  See detailed
 instructions in http://wiki.duktape.org/DevelopmentSetup.html.
+
+There are some Docker images which can simplify the development setup.
+These are also **intended for Linux only**.  For example:
+
+    # Build Docker images.  This takes a long time.
+    $ make docker-images
+
+    # Equivalent of 'make dist', but runs inside a container.
+    $ make docker-dist-src-wd
+
+    # Run a shell with /work/duktape containing a disposable master snapshot.
+    $ make docker-shell-master
+
+    # Run a shell with /work/duktape mounted from current directory.
+    # This allows editing, building, testing, etc with an interactive
+    # shell running in the container.
+    $ make docker-shell-wdmount
 
 Branch policy
 -------------
