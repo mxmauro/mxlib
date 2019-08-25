@@ -30,6 +30,9 @@
     <Filter Include="Source Files\Plugins\SQLite\Internals">
       <UniqueIdentifier>{7ab51c90-ff71-47fd-9136-0dd800c13f1f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Plugins\JsonWebToken">
+      <UniqueIdentifier>{44dfb734-d3fb-4532-85cf-771f9044b551}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\JsLib\JavascriptVM.cpp">
@@ -86,6 +89,9 @@
     <ClCompile Include="Source\JsLib\DukTape\Source\extras\module-node\duk_module_node.c">
       <Filter>Source Files\DukTape\Extras</Filter>
     </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\JsonWebToken\JsonWebTokenPlugin.cpp">
+      <Filter>Source Files\Plugins\JsonWebToken</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\JsLib\JavascriptVM.h">
@@ -120,6 +126,9 @@
     </ClInclude>
     <ClInclude Include="Source\JsLib\DukTape\Source\extras\module-node\duk_module_node.h">
       <Filter>Source Files\DukTape\Extras</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\JsLib\Plugins\JsonWebTokenPlugin.h">
+      <Filter>Header Files\Plugins</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

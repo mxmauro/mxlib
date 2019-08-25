@@ -37,6 +37,7 @@
     <ClCompile Include="Source\JsLib\JavascriptVMJsObjectBase.cpp" />
     <ClCompile Include="Source\JsLib\JavascriptVMProxyCallbacks.cpp" />
     <ClCompile Include="Source\JsLib\JavascriptVMRequireModuleContext.cpp" />
+    <ClCompile Include="Source\JsLib\Plugins\JsonWebToken\JsonWebTokenPlugin.cpp" />
     <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPlugin.cpp" />
     <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginApi.cpp" />
     <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginException.cpp" />
@@ -56,6 +57,7 @@
   <ItemGroup>
     <ClInclude Include="Include\JsLib\JavascriptVM.h" />
     <ClInclude Include="Include\JsLib\Plugins\JsMySqlPlugin.h" />
+    <ClInclude Include="Include\JsLib\Plugins\JsonWebTokenPlugin.h" />
     <ClInclude Include="Include\JsLib\Plugins\JsSQLitePlugin.h" />
     <ClInclude Include="Source\JsLib\DukTape\duk_custom.h" />
     <ClInclude Include="Source\JsLib\DukTape\Source\dist\duktape.h">

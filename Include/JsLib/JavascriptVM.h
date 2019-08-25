@@ -74,19 +74,19 @@ public:                                                                         
   static HRESULT _Register(_In_ DukTape::duk_context *lpCtx, _In_ BOOL bUseProxy,               \
                            _In_opt_ lpfnCreateObject fnCreateObject)                            \
     {                                                                                           \
-    return _RegisterHelper(lpCtx, _GetMapEntries(), _name, "\xff""\xff" _name "_prototype",     \
-                            fnCreateObject, bUseProxy, &_cls::OnRegister, &_cls::OnUnregister); \
+    return _RegisterHelper(lpCtx, _GetMapEntries(), bUseProxy, _name, fnCreateObject,           \
+                           &_cls::OnRegister, &_cls::OnUnregister);                             \
     };                                                                                          \
                                                                                                 \
 public:                                                                                         \
   static HRESULT Unregister(_In_ DukTape::duk_context *lpCtx)                                   \
     {                                                                                           \
-    _UnregisterHelper(lpCtx, _name, "\xff""\xff" _name "_prototype", &_cls::OnUnregister);      \
+    _UnregisterHelper(lpCtx, _name, &_cls::OnUnregister);                                       \
     };                                                                                          \
                                                                                                 \
   HRESULT PushThis()                                                                            \
     {                                                                                           \
-    return _PushThisHelper(_name, "\xff""\xff" _name "_prototype");                             \
+    return _PushThisHelper(_name);                                                              \
     };
 
 #define __MX_JS_DECLARE_CREATE_OBJECT(_cls)                                                     \
@@ -103,10 +103,18 @@ private:                                                                        
     static MAP_ENTRY _entries[] = {
 
 #define MX_JS_END_MAP()                                                                         \
-      { NULL, NULL, NULL, NULL, 0 }                                                             \
+      { NULL, NULL, NULL, NULL, 0, 0, 0 }                                                       \
     };                                                                                          \
     return _entries;                                                                            \
     };
+
+#define MX_JS_MAP_STATIC_METHOD(_name, _func, _argsCount)                                       \
+        { _name,                                                                                \
+          [](_In_ DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t                            \
+          {                                                                                     \
+            return _CallStaticMethodHelper(lpCtx, static_cast<lpfnCallStaticFunc>(_func));      \
+          },                                                                                    \
+          NULL, NULL, _argsCount, 0, 1 },
 
 #define MX_JS_MAP_METHOD(_name, _func, _argsCount)                                              \
         { _name,                                                                                \
@@ -114,7 +122,24 @@ private:                                                                        
           {                                                                                     \
             return _CallMethodHelper(lpCtx, static_cast<lpfnCallFunc>(_func));                  \
           },                                                                                    \
-          NULL, NULL, _argsCount },
+          NULL, NULL, _argsCount, 0, 0 },
+
+#define MX_JS_MAP_STATIC_PROPERTY(_name, _getFunc, _setFunc, _enumerable )                      \
+        { _name, NULL,                                                                          \
+          [](_In_ DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t                            \
+          {                                                                                     \
+            return _CallStaticMethodHelper(lpCtx, static_cast<lpfnCallStaticFunc>(_getFunc));   \
+          },                                                                                    \
+          [](_In_ DukTape::duk_context *lpCtx) -> DukTape::duk_ret_t                            \
+          {                                                                                     \
+            if (_setFunc == NULL)                                                               \
+            {                                                                                   \
+              MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_NOTIMPL);                                      \
+              return 0;                                                                         \
+            }                                                                                   \
+            return _CallStaticMethodHelper(lpCtx, static_cast<lpfnCallStaticFunc>(_setFunc));   \
+          },                                                                                    \
+          0, _enumerable, 1 },
 
 #define MX_JS_MAP_PROPERTY(_name, _getFunc, _setFunc, _enumerable )                             \
         { _name, NULL,                                                                          \
@@ -131,7 +156,7 @@ private:                                                                        
             }                                                                                   \
             return _CallMethodHelper(lpCtx, static_cast<lpfnCallFunc>(_setFunc));               \
           },                                                                                    \
-          _enumerable },
+          0, _enumerable, 0 },
 
 #define MX_JS_THROW_WINDOWS_ERROR(ctx, hr)                                                      \
           MX::CJavascriptVM::ThrowWindowsError((ctx), (HRESULT)(hr), (LPCSTR)(__FILE__),        \
@@ -506,14 +531,14 @@ public:
 
 protected:
   typedef DukTape::duk_ret_t (CJsObjectBase::*lpfnCallFunc)();
+  typedef DukTape::duk_ret_t (*lpfnCallStaticFunc)(_In_ DukTape::duk_context *lpCtx);
 
   typedef struct {
     LPCSTR szNameA;
     DukTape::duk_c_function fnInvoke, fnGetter, fnSetter;
-    union {
-      DukTape::duk_idx_t nArgsCount;
-      BOOL bEnumerable;
-    };
+    DukTape::duk_idx_t nArgsCount;
+    ULONG nEnumerable : 1;
+    ULONG nStatic : 1;
   } MAP_ENTRY;
 
 protected:
@@ -525,19 +550,19 @@ protected:
   static VOID OnUnregister(_In_ DukTape::duk_context *lpCtx)
     { };
 
-  static HRESULT _RegisterHelper(_In_ DukTape::duk_context *lpCtx, _In_ MAP_ENTRY *lpEntries,
-                                 _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPrototypeNameA,
-                                 _In_opt_ lpfnCreateObject fnCreateObject, _In_ BOOL bUseProxy,
+  static HRESULT _RegisterHelper(_In_ DukTape::duk_context *lpCtx, _In_ MAP_ENTRY *lpEntries, _In_ BOOL bUseProxy,
+                                 _In_z_ LPCSTR szObjectNameA, _In_opt_ lpfnCreateObject fnCreateObject,
                                  _In_ lpfnRegisterUnregisterCallback fnRegisterCallback,
                                  _In_ lpfnRegisterUnregisterCallback fnUnregisterCallback);
   static VOID _UnregisterHelper(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                _In_z_ LPCSTR szPrototypeNameA,
                                 _In_ lpfnRegisterUnregisterCallback fnUnregisterCallback);
 
-  static DukTape::duk_ret_t _CreateHelper(_In_ DukTape::duk_context *lpCtx);
-  HRESULT _PushThisHelper(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPrototypeNameA);
+  static DukTape::duk_ret_t _ConstructorHelper(_In_ DukTape::duk_context *lpCtx);
+  HRESULT _PushThisHelper(_In_z_ LPCSTR szObjectNameA);
+  static VOID _SetupMapEntries(_In_ DukTape::duk_context *lpCtx, _In_ MAP_ENTRY *lpEntries, _In_ BOOL bStatic);
   static DukTape::duk_ret_t _FinalReleaseHelper(_In_ DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _CallMethodHelper(_In_ DukTape::duk_context *lpCtx, _In_ lpfnCallFunc fnFunc);
+  static DukTape::duk_ret_t _CallStaticMethodHelper(_In_ DukTape::duk_context *lpCtx, _In_ lpfnCallStaticFunc fnFunc);
   static DukTape::duk_ret_t _ProxyHasPropHelper(_In_ DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _ProxyGetPropHelper(_In_ DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _ProxySetPropHelper(_In_ DukTape::duk_context *lpCtx);

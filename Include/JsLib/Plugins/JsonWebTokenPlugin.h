@@ -21,43 +21,36 @@
  *    c. Distribute, sub-license, rent, lease, loan [or grant any third party
  *       access to or use of the software to any third party.
  **/
-#ifndef _MX_DIGESTALGORITHM_SHAx_H
-#define _MX_DIGESTALGORITHM_SHAx_H
+#ifndef _MX_JS_JSONWEBTOKEN_PLUGIN_H
+#define _MX_JS_JSONWEBTOKEN_PLUGIN_H
 
-#include "BaseDigestAlgorithm.h"
+#include "..\JavascriptVM.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-class CDigestAlgorithmSecureHash : public CBaseDigestAlgorithm
+class CJsonWebTokenPlugin : public CJsObjectBase
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CDigestAlgorithmSecureHash);
+  MX_DISABLE_COPY_CONSTRUCTOR(CJsonWebTokenPlugin);
 public:
-  typedef enum {
-    AlgorithmSHA1=0, AlgorithmSHA224, AlgorithmSHA256, AlgorithmSHA384, AlgorithmSHA512
-  } eAlgorithm;
+  CJsonWebTokenPlugin(_In_ DukTape::duk_context *lpCtx);
+  ~CJsonWebTokenPlugin();
 
-  CDigestAlgorithmSecureHash();
-  ~CDigestAlgorithmSecureHash();
+  MX_JS_DECLARE_CREATABLE(CJsonWebTokenPlugin, "JWT")
 
-  HRESULT BeginDigest();
-  HRESULT BeginDigest(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey = NULL, _In_opt_ SIZE_T nKeyLen = 0);
-  HRESULT DigestStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
-  HRESULT EndDigest();
-
-  LPBYTE GetResult() const;
-  SIZE_T GetResultSize() const;
+  MX_JS_BEGIN_MAP(CJsonWebTokenPlugin)
+    MX_JS_MAP_STATIC_METHOD("create", &CJsonWebTokenPlugin::Create, 3) //object,secret,options
+    MX_JS_MAP_STATIC_METHOD("verify", &CJsonWebTokenPlugin::Verify, 3) //string,secret,options
+  MX_JS_END_MAP()
 
 private:
-  VOID CleanUp(_In_ BOOL bZeroData);
-
-private:
-  LPVOID lpInternalData;
+  static DukTape::duk_ret_t Create(_In_ DukTape::duk_context *lpCtx);
+  static DukTape::duk_ret_t Verify(_In_ DukTape::duk_context *lpCtx);
 };
 
 } //namespace MX
 
 //-----------------------------------------------------------
 
-#endif //_MX_DIGESTALGORITHM_SHAx_H
+#endif //_MX_JS_JSONWEBTOKEN_PLUGIN_H

@@ -70,6 +70,7 @@ HRESULT CDigestAlgorithmMessageDigest::BeginDigest()
 HRESULT CDigestAlgorithmMessageDigest::BeginDigest(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey,
                                                    _In_opt_ SIZE_T nKeyLen)
 {
+  int ret;
   HRESULT hRes;
 
   if (nAlgorithm != AlgorithmMD2 && nAlgorithm != AlgorithmMD4 && nAlgorithm != AlgorithmMD5)
@@ -114,21 +115,12 @@ HRESULT CDigestAlgorithmMessageDigest::BeginDigest(_In_ eAlgorithm nAlgorithm, _
     }
   }
   //initialize
-  if (mdx_data->lpKey == NULL)
+  ret = (mdx_data->lpKey == NULL) ? EVP_DigestInit_ex(mdx_data->lpMdCtx, mdx_data->lpMd, NULL)
+                                  : EVP_DigestSignInit(mdx_data->lpMdCtx, NULL, mdx_data->lpMd, NULL, mdx_data->lpKey);
+  if (ret <= 0)
   {
-    if (!EVP_DigestInit_ex(mdx_data->lpMdCtx, mdx_data->lpMd, NULL))
-    {
-      CleanUp(TRUE);
-      return E_OUTOFMEMORY;
-    }
-  }
-  else
-  {
-    if (EVP_DigestSignInit(mdx_data->lpMdCtx, NULL, mdx_data->lpMd, NULL, mdx_data->lpKey) <= 0)
-    {
-      CleanUp(TRUE);
-      return E_OUTOFMEMORY;
-    }
+    CleanUp(TRUE);
+    return E_OUTOFMEMORY;
   }
   //done
   return S_OK;
@@ -136,27 +128,40 @@ HRESULT CDigestAlgorithmMessageDigest::BeginDigest(_In_ eAlgorithm nAlgorithm, _
 
 HRESULT CDigestAlgorithmMessageDigest::DigestStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 {
+  int ret;
+
   if (lpData == NULL && nDataLength > 0)
     return E_POINTER;
   if (lpInternalData == NULL || mdx_data->lpMdCtx == NULL)
     return MX_E_NotReady;
-  EVP_DigestUpdate(mdx_data->lpMdCtx, lpData, nDataLength);
-  return S_OK;
+  ret = EVP_DigestUpdate(mdx_data->lpMdCtx, lpData, nDataLength); //NOTE: EVP_DigestSignUpdate == EVP_DigestUpdate
+  return (ret > 0) ? S_OK : E_FAIL;
 }
 
 HRESULT CDigestAlgorithmMessageDigest::EndDigest()
 {
-  unsigned int nOutputSize;
+  union {
+    unsigned int nOutputSizeUI;
+    size_t nOutputSizeST;
+  };
+  int ret;
 
   if (lpInternalData == NULL || mdx_data->lpMdCtx == NULL)
     return MX_E_NotReady;
   if (mdx_data->lpKey == NULL)
-    EVP_DigestFinal_ex(mdx_data->lpMdCtx, mdx_data->aOutput, &nOutputSize);
+  {
+    ret = EVP_DigestFinal_ex(mdx_data->lpMdCtx, mdx_data->aOutput, &nOutputSizeUI);
+    if (ret > 0)
+      mdx_data->nOutputSize = (SIZE_T)nOutputSizeUI;
+  }
   else
-    EVP_DigestFinal(mdx_data->lpMdCtx, mdx_data->aOutput, &nOutputSize);
-  mdx_data->nOutputSize = (SIZE_T)nOutputSize;
+  {
+    ret = EVP_DigestSignFinal(mdx_data->lpMdCtx, mdx_data->aOutput, &nOutputSizeST);
+    if (ret > 0)
+      mdx_data->nOutputSize = nOutputSizeST;
+  }
   CleanUp(FALSE);
-  return S_OK;
+  return (ret > 0) ? S_OK : E_FAIL;
 }
 
 LPBYTE CDigestAlgorithmMessageDigest::GetResult() const

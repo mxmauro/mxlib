@@ -26,6 +26,7 @@
 #include <JsHttpServer\Plugins\JsHttpServerSessionPlugin.h>
 #include <JsLib\Plugins\JsMySqlPlugin.h>
 #include <JsLib\Plugins\JsSQLitePlugin.h>
+#include <JsLib\Plugins\JsonWebTokenPlugin.h>
 
 //-----------------------------------------------------------
 
@@ -236,6 +237,8 @@ static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer:
           hRes = MX::CJsMySqlPlugin::Register(*lpJVM);
         if (SUCCEEDED(hRes))
           hRes = MX::CJsSQLitePlugin::Register(*lpJVM);
+        if (SUCCEEDED(hRes))
+          hRes = MX::CJsonWebTokenPlugin::Register(*lpJVM);
         if (SUCCEEDED(hRes))
           hRes = lpJVM->AddNativeFunction("getExecutablePath", MX_BIND_CALLBACK(&OnGetExecutablePath), 0);
       }

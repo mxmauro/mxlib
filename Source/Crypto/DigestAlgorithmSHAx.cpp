@@ -70,6 +70,7 @@ HRESULT CDigestAlgorithmSecureHash::BeginDigest()
 HRESULT CDigestAlgorithmSecureHash::BeginDigest(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey,
                                                 _In_opt_ SIZE_T nKeyLen)
 {
+  int ret;
   HRESULT hRes;
 
   if (nAlgorithm != AlgorithmSHA1 && nAlgorithm != AlgorithmSHA224 && nAlgorithm != AlgorithmSHA256 &&
@@ -117,21 +118,13 @@ HRESULT CDigestAlgorithmSecureHash::BeginDigest(_In_ eAlgorithm nAlgorithm, _In_
     }
   }
   //initialize
-  if (shax_data->lpKey == NULL)
+  ret = (shax_data->lpKey == NULL) ? EVP_DigestInit_ex(shax_data->lpMdCtx, shax_data->lpMd, NULL)
+                                   : EVP_DigestSignInit(shax_data->lpMdCtx, NULL, shax_data->lpMd,
+                                                        NULL, shax_data->lpKey);
+  if (ret <= 0)
   {
-    if (!EVP_DigestInit_ex(shax_data->lpMdCtx, shax_data->lpMd, NULL))
-    {
-      CleanUp(TRUE);
-      return E_OUTOFMEMORY;
-    }
-  }
-  else
-  {
-    if (EVP_DigestSignInit(shax_data->lpMdCtx, NULL, shax_data->lpMd, NULL, shax_data->lpKey) <= 0)
-    {
-      CleanUp(TRUE);
-      return E_OUTOFMEMORY;
-    }
+    CleanUp(TRUE);
+    return E_OUTOFMEMORY;
   }
   //done
   return S_OK;
@@ -139,27 +132,40 @@ HRESULT CDigestAlgorithmSecureHash::BeginDigest(_In_ eAlgorithm nAlgorithm, _In_
 
 HRESULT CDigestAlgorithmSecureHash::DigestStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
 {
+  int ret;
+
   if (lpData == NULL && nDataLength > 0)
     return E_POINTER;
   if (lpInternalData == NULL || shax_data->lpMdCtx == NULL)
     return MX_E_NotReady;
-  EVP_DigestUpdate(shax_data->lpMdCtx, lpData, nDataLength);
-  return S_OK;
+  ret = EVP_DigestUpdate(shax_data->lpMdCtx, lpData, nDataLength); //NOTE: EVP_DigestSignUpdate == EVP_DigestUpdate
+  return (ret > 0) ? S_OK : E_FAIL;
 }
 
 HRESULT CDigestAlgorithmSecureHash::EndDigest()
 {
-  unsigned int nOutputSize;
+  union {
+    unsigned int nOutputSizeUI;
+    size_t nOutputSizeST;
+  };
+  int ret;
 
   if (lpInternalData == NULL || shax_data->lpMdCtx == NULL)
     return MX_E_NotReady;
   if (shax_data->lpKey == NULL)
-    EVP_DigestFinal_ex(shax_data->lpMdCtx, shax_data->aOutput, &nOutputSize);
+  {
+    ret = EVP_DigestFinal_ex(shax_data->lpMdCtx, shax_data->aOutput, &nOutputSizeUI);
+    if (ret > 0)
+      shax_data->nOutputSize = (SIZE_T)nOutputSizeUI;
+  }
   else
-    EVP_DigestFinal(shax_data->lpMdCtx, shax_data->aOutput, &nOutputSize);
-  shax_data->nOutputSize = (SIZE_T)nOutputSize;
+  {
+    ret = EVP_DigestSignFinal(shax_data->lpMdCtx, shax_data->aOutput, &nOutputSizeST);
+    if (ret > 0)
+      shax_data->nOutputSize = nOutputSizeST;
+  }
   CleanUp(FALSE);
-  return S_OK;
+  return (ret > 0) ? S_OK : E_FAIL;
 }
 
 LPBYTE CDigestAlgorithmSecureHash::GetResult() const
