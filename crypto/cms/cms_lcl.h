@@ -317,8 +317,6 @@ struct CMS_OtherKeyAttribute_st {
 
 /* ESS structures */
 
-# ifdef HEADER_X509V3_H
-
 struct CMS_ReceiptRequest_st {
     ASN1_OCTET_STRING *signedContentIdentifier;
     CMS_ReceiptsFrom *receiptsFrom;
@@ -332,7 +330,6 @@ struct CMS_ReceiptsFrom_st {
         STACK_OF(GENERAL_NAMES) *receiptList;
     } d;
 };
-# endif
 
 struct CMS_Receipt_st {
     int32_t version;
@@ -416,6 +413,8 @@ int cms_RecipientInfo_kari_encrypt(const CMS_ContentInfo *cms,
 /* PWRI routines */
 int cms_RecipientInfo_pwri_crypt(const CMS_ContentInfo *cms, CMS_RecipientInfo *ri,
                                  int en_de);
+/* SignerInfo routines */
+int CMS_si_check_attributes(const CMS_SignerInfo *si);
 
 DECLARE_ASN1_ITEM(CMS_CertificateChoices)
 DECLARE_ASN1_ITEM(CMS_DigestedData)

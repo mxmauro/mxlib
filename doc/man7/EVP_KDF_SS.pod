@@ -11,7 +11,7 @@ SSKDF derives a key using input such as a shared secret key (that was generated
 during the execution of a key establishment scheme) and fixedinfo.
 SSKDF is also informally referred to as 'Concat KDF'.
 
-=head2 Auxilary function
+=head2 Auxiliary function
 
 The implementation uses a selectable auxiliary function H, which can be one of:
 
@@ -102,7 +102,7 @@ EVP_KDF_CTX *kctx = EVP_KDF_CTX_new_id(EVP_KDF_SS);
 The output length of an SSKDF is specified via the C<keylen>
 parameter to the L<EVP_KDF_derive(3)> function.
 
-=head1 EXAMPLE
+=head1 EXAMPLES
 
 This example derives 10 bytes using H(x) = SHA-256, with the secret key "secret"
 and fixedinfo value "label":
@@ -126,8 +126,6 @@ and fixedinfo value "label":
   }
 
   EVP_KDF_CTX_free(kctx);
-
-=head1 EXAMPLE
 
 This example derives 10 bytes using H(x) = HMAC(SHA-256), with the secret key "secret",
 fixedinfo value "label" and salt "salt":
@@ -157,8 +155,6 @@ fixedinfo value "label" and salt "salt":
   }
 
   EVP_KDF_CTX_free(kctx);
-
-=head1 EXAMPLE
 
 This example derives 10 bytes using H(x) = KMAC128(x,salt,outlen), with the secret key "secret"
 fixedinfo value "label", salt of "salt" and KMAC outlen of 20:
@@ -211,7 +207,7 @@ L<EVP_KDF_CTX(3)/CONTROLS>
 
 =head1 HISTORY
 
-This functionality was added to OpenSSL 3.0.0.
+This functionality was added to OpenSSL 3.0.
 
 =head1 COPYRIGHT
 

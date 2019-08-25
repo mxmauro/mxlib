@@ -15,6 +15,7 @@
 
 #include <openssl/evp.h>
 #include <openssl/kdf.h>
+#include <openssl/core_names.h>
 #include "testutil.h"
 
 static int test_kdf_tls1_prf(void)
@@ -74,24 +75,57 @@ static int test_kdf_pbkdf2(void)
 {
     int ret;
     EVP_KDF_CTX *kctx;
-    unsigned char out[32];
-    static const unsigned char expected[sizeof(out)] = {
-        0xae, 0x4d, 0x0c, 0x95, 0xaf, 0x6b, 0x46, 0xd3,
-        0x2d, 0x0a, 0xdf, 0xf9, 0x28, 0xf0, 0x6d, 0xd0,
-        0x2a, 0x30, 0x3f, 0x8e, 0xf3, 0xc2, 0x51, 0xdf,
-        0xd6, 0xe2, 0xd8, 0x5a, 0x95, 0x47, 0x4c, 0x43
+    unsigned char out[25];
+    size_t len = 0;
+    const unsigned char expected[sizeof(out)] = {
+        0x34, 0x8c, 0x89, 0xdb, 0xcb, 0xd3, 0x2b, 0x2f,
+        0x32, 0xd8, 0x14, 0xb8, 0x11, 0x6e, 0x84, 0xcf,
+        0x2b, 0x17, 0x34, 0x7e, 0xbc, 0x18, 0x00, 0x18,
+        0x1c
     };
 
-    ret =
-        TEST_ptr(kctx = EVP_KDF_CTX_new_id(EVP_KDF_PBKDF2))
-        && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_PASS, "password",
-                                    (size_t)8), 0)
-        && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_SALT, "salt",
-                                    (size_t)4), 0)
-        && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_ITER, 2), 0)
-        && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_MD, EVP_sha256()), 0)
-        && TEST_int_gt(EVP_KDF_derive(kctx, out, sizeof(out)), 0)
-        && TEST_mem_eq(out, sizeof(out), expected, sizeof(expected));
+    if (sizeof(len) > 32)
+        len = SIZE_MAX;
+
+    ret = TEST_ptr(kctx = EVP_KDF_CTX_new_id(EVP_KDF_PBKDF2))
+          && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_PASS,
+                                      "passwordPASSWORDpassword",
+                                      (size_t)24), 0)
+          && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_SALT,
+                                      "saltSALTsaltSALTsaltSALTsaltSALTsalt",
+                                      (size_t)36), 0)
+          && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_ITER, 4096), 0)
+          && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_MD, EVP_sha256()),
+                         0)
+          && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_PBKDF2_PKCS5_MODE,
+                                            0), 0)
+          && TEST_int_gt(EVP_KDF_derive(kctx, out, sizeof(out)), 0)
+          && TEST_mem_eq(out, sizeof(out), expected, sizeof(expected))
+          /* A key length that is too small should fail */
+          && TEST_int_eq(EVP_KDF_derive(kctx, out, 112 / 8 - 1), 0)
+          /* A key length that is too large should fail */
+          && (len == 0 || TEST_int_eq(EVP_KDF_derive(kctx, out, len), 0))
+          /* Salt length less than 128 bits should fail */
+          && TEST_int_eq(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_SALT,
+                                      "123456781234567",
+                                      (size_t)15), 0)
+          /* A small iteration count should fail */
+          && TEST_int_eq(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_ITER, 1), 0)
+          && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_PBKDF2_PKCS5_MODE,
+                                      1), 0)
+          /* Small salts will pass if the "pkcs5" mode is enabled */
+          && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_SALT,
+                                      "123456781234567",
+                                      (size_t)15), 0)
+          /* A small iteration count will pass if "pkcs5" mode is enabled */
+          && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_ITER, 1), 0)
+          /*
+           * If the "pkcs5" mode is disabled then the small salt and iter will
+           * fail when the derive gets called.
+           */
+          && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_PBKDF2_PKCS5_MODE,
+                                      0), 0)
+          && TEST_int_eq(EVP_KDF_derive(kctx, out, sizeof(out)), 0);
 
     EVP_KDF_CTX_free(kctx);
     return ret;
@@ -227,7 +261,6 @@ static int test_kdf_ss_hmac(void)
 {
     int ret;
     EVP_KDF_CTX *kctx;
-    const EVP_MAC *mac;
     unsigned char out[16];
     static const unsigned char z[] = {
         0xb7,0x4a,0x14,0x9a,0x16,0x15,0x46,0xf8,0xc2,0x0b,0x06,0xac,0x4e,0xd4
@@ -246,8 +279,8 @@ static int test_kdf_ss_hmac(void)
 
     ret =
         TEST_ptr(kctx = EVP_KDF_CTX_new_id(EVP_KDF_SS))
-        && TEST_ptr(mac = EVP_get_macbyname("HMAC"))
-        && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_MAC, mac), 0)
+        && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_MAC,
+                                    OSSL_MAC_NAME_HMAC), 0)
         && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_MD,  EVP_sha256()), 0)
         && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_KEY, z, sizeof(z)), 0)
         && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_SSKDF_INFO, other,
@@ -266,7 +299,6 @@ static int test_kdf_ss_kmac(void)
     int ret;
     EVP_KDF_CTX *kctx;
     unsigned char out[64];
-    const EVP_MAC *mac;
     static const unsigned char z[] = {
         0xb7,0x4a,0x14,0x9a,0x16,0x15,0x46,0xf8,0xc2,0x0b,0x06,0xac,0x4e,0xd4
     };
@@ -287,8 +319,8 @@ static int test_kdf_ss_kmac(void)
 
     ret =
         TEST_ptr(kctx = EVP_KDF_CTX_new_id(EVP_KDF_SS))
-        && TEST_ptr(mac = EVP_get_macbyname("KMAC128"))
-        && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_MAC, mac), 0)
+        && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_MAC,
+                                    OSSL_MAC_NAME_KMAC128), 0)
         && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_KEY, z,
                                     sizeof(z)), 0)
         && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_SSKDF_INFO, other,
@@ -374,6 +406,37 @@ static int test_kdf_get_kdf(void)
         && TEST_ptr_eq(kdf1, kdf2);
 }
 
+#ifndef OPENSSL_NO_CMS
+static int test_kdf_x942_asn1(void)
+{
+    int ret;
+    EVP_KDF_CTX *kctx = NULL;
+    unsigned char out[24];
+    /* RFC2631 Section 2.1.6 Test data */
+    static const unsigned char z[] = {
+        0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,
+        0x0e,0x0f,0x10,0x11,0x12,0x13
+    };
+    static const unsigned char expected[sizeof(out)] = {
+        0xa0,0x96,0x61,0x39,0x23,0x76,0xf7,0x04,
+        0x4d,0x90,0x52,0xa3,0x97,0x88,0x32,0x46,
+        0xb6,0x7f,0x5f,0x1e,0xf6,0x3e,0xb5,0xfb
+    };
+
+    ret =
+        TEST_ptr(kctx = EVP_KDF_CTX_new_id(EVP_KDF_X942))
+        && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_MD, EVP_sha1()), 0)
+        && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_KEY, z, sizeof(z)), 0)
+        && TEST_int_gt(EVP_KDF_ctrl(kctx, EVP_KDF_CTRL_SET_CEK_ALG,
+                                    SN_id_smime_alg_CMS3DESwrap), 0)
+        && TEST_int_gt(EVP_KDF_derive(kctx, out, sizeof(out)), 0)
+        && TEST_mem_eq(out, sizeof(out), expected, sizeof(expected));
+
+    EVP_KDF_CTX_free(kctx);
+    return ret;
+}
+#endif /* OPENSSL_NO_CMS */
+
 int setup_tests(void)
 {
     ADD_TEST(test_kdf_get_kdf);
@@ -388,5 +451,8 @@ int setup_tests(void)
     ADD_TEST(test_kdf_ss_kmac);
     ADD_TEST(test_kdf_sshkdf);
     ADD_TEST(test_kdf_x963);
+#ifndef OPENSSL_NO_CMS
+    ADD_TEST(test_kdf_x942_asn1);
+#endif
     return 1;
 }

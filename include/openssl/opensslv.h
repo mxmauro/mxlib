@@ -78,7 +78,7 @@ extern "C" {
 
 /* For checking general API compatibility when preprocessing */
 # define OPENSSL_VERSION_PREREQ(maj,min)                                \
-    ((OPENSSL_VERSION_MAJOR << 16) + OPENSSL_VERSION_MINOR >= (maj << 16) + min)
+    ((OPENSSL_VERSION_MAJOR << 16) + OPENSSL_VERSION_MINOR >= ((maj) << 16) + (min))
 
 /* Helper macros for CPP string composition */
 #   define OPENSSL_MSTR_HELPER(x) #x
@@ -119,9 +119,9 @@ const char *OPENSSL_version_build_metadata(void);
     "OpenSSL " OPENSSL_FULL_VERSION_STR " " OPENSSL_RELEASE_DATE
 
 /*
- * SECTION 3: BACKWARD COMPATIBILITY
+ * SECTION 4: BACKWARD COMPATIBILITY
  */
-# include <openssl/opensslconf.h>
+# include <openssl/macros.h>
 
 # if !OPENSSL_API_4
 /* Synthesize OPENSSL_VERSION_NUMBER with the layout 0xMNN00PPSL */

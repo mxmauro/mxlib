@@ -148,8 +148,12 @@ int CRYPTO_mem_ctrl(int mode);
 size_t OPENSSL_strlcpy(char *dst, const char *src, size_t siz);
 size_t OPENSSL_strlcat(char *dst, const char *src, size_t siz);
 size_t OPENSSL_strnlen(const char *str, size_t maxlen);
-char *OPENSSL_buf2hexstr(const unsigned char *buffer, long len);
-unsigned char *OPENSSL_hexstr2buf(const char *str, long *len);
+int OPENSSL_buf2hexstr_ex(char *str, size_t str_n, size_t *strlen,
+                          const unsigned char *buf, size_t buflen);
+char *OPENSSL_buf2hexstr(const unsigned char *buf, long buflen);
+int OPENSSL_hexstr2buf_ex(unsigned char *buf, size_t buf_n, size_t *buflen,
+                          const char *str);
+unsigned char *OPENSSL_hexstr2buf(const char *str, long *buflen);
 int OPENSSL_hexchar2int(unsigned char c);
 
 # define OPENSSL_MALLOC_MAX_NELEMS(type)  (((1U<<(sizeof(int)*8-1))-1)/sizeof(type))
@@ -310,12 +314,16 @@ size_t CRYPTO_secure_used(void);
 void OPENSSL_cleanse(void *ptr, size_t len);
 
 # ifndef OPENSSL_NO_CRYPTO_MDEBUG
-#  define OPENSSL_mem_debug_push(info) \
-        CRYPTO_mem_debug_push(info, OPENSSL_FILE, OPENSSL_LINE)
-#  define OPENSSL_mem_debug_pop() \
-        CRYPTO_mem_debug_pop()
-int CRYPTO_mem_debug_push(const char *info, const char *file, int line);
-int CRYPTO_mem_debug_pop(void);
+#  if !OPENSSL_API_3
+#    define OPENSSL_mem_debug_push(info) \
+         CRYPTO_mem_debug_push(info, OPENSSL_FILE, OPENSSL_LINE)
+#    define OPENSSL_mem_debug_pop() \
+         CRYPTO_mem_debug_pop()
+#  endif
+DEPRECATEDIN_3(int CRYPTO_mem_debug_push(const char *info,
+                                         const char *file, int line))
+DEPRECATEDIN_3(int CRYPTO_mem_debug_pop(void))
+
 void CRYPTO_get_alloc_counts(int *mcount, int *rcount, int *fcount);
 
 /*-
@@ -395,8 +403,8 @@ int CRYPTO_memcmp(const void * in_a, const void * in_b, size_t len);
 /* OPENSSL_INIT_BASE_ONLY                    0x00040000L */
 # define OPENSSL_INIT_NO_ATEXIT              0x00080000L
 /* OPENSSL_INIT flag range 0x03f00000 reserved for OPENSSL_init_ssl() */
-# define OPENSSL_INIT_NO_ADD_ALL_MACS        0x04000000L
-# define OPENSSL_INIT_ADD_ALL_MACS           0x08000000L
+/* FREE: 0x04000000L */
+/* FREE: 0x08000000L */
 # define OPENSSL_INIT_NO_ADD_ALL_KDFS        0x10000000L
 # define OPENSSL_INIT_ADD_ALL_KDFS           0x20000000L
 /* FREE: 0x40000000L */
@@ -415,6 +423,7 @@ void OPENSSL_cleanup(void);
 int OPENSSL_init_crypto(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings);
 int OPENSSL_atexit(void (*handler)(void));
 void OPENSSL_thread_stop(void);
+void OPENSSL_thread_stop_ex(OPENSSL_CTX *ctx);
 
 /* Low-level control of initialization */
 OPENSSL_INIT_SETTINGS *OPENSSL_INIT_new(void);
