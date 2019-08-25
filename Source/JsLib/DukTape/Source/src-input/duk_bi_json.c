@@ -379,7 +379,7 @@ DUK_LOCAL duk_small_int_t duk__dec_string_escape(duk_json_dec_ctx *js_ctx, duk_u
 		return 1;  /* syntax error */
 	}
 
-	DUK_RAW_WRITE_XUTF8(*ext_p, cp);
+	DUK_RAW_WRITEINC_XUTF8(*ext_p, cp);
 
 	return 0;
 }
@@ -1323,7 +1323,7 @@ DUK_LOCAL void duk__enc_quote_string(duk_json_enc_ctx *js_ctx, duk_hstring *h_st
 					q = duk__emit_esc_auto_fast(js_ctx, cp, q);
 				} else {
 					/* as is */
-					DUK_RAW_WRITE_XUTF8(q, cp);
+					DUK_RAW_WRITEINC_XUTF8(q, cp);
 				}
 			}
 		}
@@ -2087,7 +2087,7 @@ DUK_LOCAL duk_bool_t duk__enc_value(duk_json_enc_ctx *js_ctx, duk_idx_t idx_hold
 #endif
 		case DUK_HOBJECT_CLASS_BOOLEAN: {
 			DUK_DDD(DUK_DDDPRINT("value is a Boolean/Buffer/Pointer object -> get internal value"));
-			duk_get_prop_stridx_short(thr, -1, DUK_STRIDX_INT_VALUE);
+			duk_xget_owndataprop_stridx_short(thr, -1, DUK_STRIDX_INT_VALUE);
 			duk_remove_m2(thr);
 			break;
 		}

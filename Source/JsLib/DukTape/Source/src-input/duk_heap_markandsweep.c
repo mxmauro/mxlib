@@ -1177,6 +1177,12 @@ DUK_LOCAL void duk__dump_stats(duk_heap *heap) {
 	                 (long) heap->stats_getvar_all));
 	DUK_D(DUK_DPRINT("stats putvar: all=%ld",
 	                 (long) heap->stats_putvar_all));
+	DUK_D(DUK_DPRINT("stats envrec: delayedcreate=%ld, create=%ld, newenv=%ld, oldenv=%ld, pushclosure=%ld",
+	                 (long) heap->stats_envrec_delayedcreate,
+	                 (long) heap->stats_envrec_create,
+	                 (long) heap->stats_envrec_newenv,
+	                 (long) heap->stats_envrec_oldenv,
+	                 (long) heap->stats_envrec_pushclosure));
 }
 #endif  /* DUK_USE_DEBUG */
 
@@ -1354,11 +1360,20 @@ DUK_INTERNAL void duk_heap_mark_and_sweep(duk_heap *heap, duk_small_uint_t flags
 	 *
 	 *  The object insertions go to the front of the list, so they do not
 	 *  cause an infinite loop (they are not compacted).
+	 *
+	 *  At present compaction is not allowed when mark-and-sweep runs
+	 *  during error handling because it involves a duk_safe_call()
+	 *  interfering with error state.
 	 */
 
 	if ((flags & DUK_MS_FLAG_EMERGENCY) &&
 	    !(flags & DUK_MS_FLAG_NO_OBJECT_COMPACTION)) {
-		duk__compact_objects(heap);
+		if (heap->lj.type != DUK_LJ_TYPE_UNKNOWN) {
+			DUK_D(DUK_DPRINT("lj.type (%ld) not DUK_LJ_TYPE_UNKNOWN, skip object compaction", (long) heap->lj.type));
+		} else {
+			DUK_D(DUK_DPRINT("object compaction"));
+			duk__compact_objects(heap);
+		}
 	}
 
 	/*
@@ -1382,8 +1397,8 @@ DUK_INTERNAL void duk_heap_mark_and_sweep(duk_heap *heap, duk_small_uint_t flags
 	 */
 
 	DUK_ASSERT(heap->ms_prevent_count == 1);
-	heap->ms_prevent_count = 0;
 	DUK_ASSERT(heap->ms_running == 1);
+	heap->ms_prevent_count = 0;
 	heap->ms_running = 0;
 
 	/*

@@ -35,6 +35,8 @@ static duk_ret_t test_func(duk_context *ctx, void *udata) {
 	(void) duk_call_method(ctx, 0);
 	(void) duk_call_prop(ctx, 0, 0);
 	(void) duk_call(ctx, 0);
+	(void) duk_cbor_decode(ctx, 0, 0);
+	(void) duk_cbor_encode(ctx, 0, 0);
 	(void) duk_char_code_at(ctx, 0, 0);
 	(void) duk_check_stack_top(ctx, 0);
 	(void) duk_check_stack(ctx, 0);
@@ -287,6 +289,8 @@ static duk_ret_t test_func(duk_context *ctx, void *udata) {
 	(void) duk_require_buffer(ctx, 0, NULL);
 	(void) duk_require_c_function(ctx, 0);
 	(void) duk_require_callable(ctx, 0);
+	(void) duk_require_constructable(ctx, 0);
+	(void) duk_require_constructor_call(ctx);
 	(void) duk_require_context(ctx, 0);
 	(void) duk_require_function(ctx, 0);
 	(void) duk_require_heapptr(ctx, 0);
@@ -310,6 +314,7 @@ static duk_ret_t test_func(duk_context *ctx, void *udata) {
 	(void) duk_resume(ctx, NULL);
 	(void) duk_safe_call(ctx, NULL, NULL, 0, 0);
 	(void) duk_safe_to_lstring(ctx, 0, NULL);
+	(void) duk_safe_to_stacktrace(ctx, 0);
 	(void) duk_safe_to_string(ctx, 0);
 	(void) duk_samevalue(ctx, 0, 0);
 	(void) duk_seal(ctx, 0);
@@ -341,6 +346,7 @@ static duk_ret_t test_func(duk_context *ctx, void *udata) {
 	(void) duk_to_object(ctx, 0);
 	(void) duk_to_pointer(ctx, 0);
 	(void) duk_to_primitive(ctx, 0, 0);
+	(void) duk_to_stacktrace(ctx, 0);
 	(void) duk_to_string(ctx, 0);
 	(void) duk_to_uint16(ctx, 0);
 	(void) duk_to_uint32(ctx, 0);
