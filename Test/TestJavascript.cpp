@@ -1,26 +1,22 @@
-/*
- * Original code by Mauro H. Leggieri (http://www.mauroleggieri.com.ar)
+/* Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the LICENSE file distributed with
+ * this work for additional information regarding copyright ownership.
  *
- * Copyright (C) 2006-2015. All rights reserved.
+ * Also, if exists, check the Licenses directory for information about
+ * third-party modules.
  *
- * This software is provided 'as-is', without any express or implied warranty.
- * In no event will the authors be held liable for any damages arising from
- * the use of this software.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * 1. The origin of this software must not be misrepresented; you must not
- *    claim that you wrote the original software.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * 2. This notice may not be removed or altered from any source distribution.
- *
- * 3. YOU MAY NOT:
- *
- *    a. Modify, translate, adapt, alter, or create derivative works from
- *       this software.
- *    b. Copy (other than one back-up copy), distribute, publicly display,
- *       transmit, sell, rent, lease or otherwise exploit this software.
- *    c. Distribute, sub-license, rent, lease, loan [or grant any third party
- *       access to or use of the software to any third party.
- **/
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include "TestJavascript.h"
 #include <JsLib\JavascriptVM.h>
 #include <Strings\Strings.h>
@@ -160,14 +156,14 @@ int TestJavascript(_In_ DWORD dwLogLevel)
              "obj.blabla = 2;\n"
              "obj[1] = obj.blabla;\n"
              "delete obj.blabla;\n"
-             "obj[1] = 'Ã±andÃº';\n" //ñandú
+             "obj[1] = 'Ã±andÃº';\n" //ï¿½andï¿½
              "obj.Print('          v1: ' + globalValue.toString());\n"
              "obj.Print('          v2: ' + session.value.toString());\n"
              "obj.Print('          Suma: ' + ext.add(globalValue, session['value']).toString());\n"
              "obj.Print('Multiplicacion: ' + ext.mult(globalValue, session['value']).toString());\n"
              "session.value2 = 200.0;\n"
              "obj.Print('Session value2: ' + session.value2.toString());\n",
-             L"código/html/main/index.js");
+             L"cï¿½digo/html/main/index.js");
   }
   catch (MX::CJsError &e)
   {
@@ -183,7 +179,7 @@ static HRESULT OnRequireModule(_In_ DukTape::duk_context *lpCtx,
                                _In_ MX::CJavascriptVM::CRequireModuleContext *lpReqCtx,
                                _Inout_ MX::CStringA &cStrCodeA)
 {
-  if (wcscmp(lpReqCtx->GetId(), L"código/html/child/add.js") == 0)
+  if (wcscmp(lpReqCtx->GetId(), L"cï¿½digo/html/child/add.js") == 0)
   {
     return (cStrCodeA.Copy("DebugPrint('Start Hi from add.js');\n"
                            "var _mult = require('./mult.js');\n"
@@ -207,7 +203,7 @@ static HRESULT OnRequireModule(_In_ DukTape::duk_context *lpCtx,
                            "};\n"
                            "DebugPrint('End Hi from add.js');\n") != FALSE) ? S_OK : E_OUTOFMEMORY;
   }
-  else if (wcscmp(lpReqCtx->GetId(), L"código/html/child/mult.js") == 0)
+  else if (wcscmp(lpReqCtx->GetId(), L"cï¿½digo/html/child/mult.js") == 0)
   {
     return (cStrCodeA.Copy("DebugPrint('Start Hi from mult.js');\n"
                            "exports.mult = function(a, b)\n"

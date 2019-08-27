@@ -1,13 +1,22 @@
-/*
- * Original code by Elbert Mai (http://www.mauroleggieri.com.ar) published at
- * http://www.codeproject.com/Articles/136799/Lightweight-Generic-C-Callbacks-or-Yet-Another-Del
+/* Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the LICENSE file distributed with
+ * this work for additional information regarding copyright ownership.
  *
- * Copyright (C) 2010. All rights reserved.
+ * Also, if exists, check the Licenses directory for information about
+ * third-party modules.
  *
- * IMPORTANT: The original CodeProject license is located at the bottom of this file to make code more readable.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * Code slightly modified and adapted to Mauro Leggieri's library.
- **/
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #ifndef _MX_CALLBACKS_H
 #define _MX_CALLBACKS_H
 
@@ -622,7 +631,7 @@ CALLBACK_TEMPLATE_GEN(8)
  *   7. Indemnity. You agree to defend, indemnify and hold harmless the Author
  *      and the Publisher from and against any claims, suits, losses, damages,
  *      liabilities, costs, and expenses (including reasonable legal or
- *      attorneys’ fees) resulting from or relating to any use of the Work by
+ *      attorneysï¿½ fees) resulting from or relating to any use of the Work by
  *      You.
  *
  *   8. Limitation on Liability. EXCEPT TO THE EXTENT REQUIRED BY APPLICABLE

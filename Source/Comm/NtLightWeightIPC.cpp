@@ -1,71 +1,22 @@
-/*
- * Original code by Mauro H. Leggieri (http://www.mauroleggieri.com.ar)
+/* Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the LICENSE file distributed with
+ * this work for additional information regarding copyright ownership.
  *
- * Copyright (C) 2006-2014. All rights reserved.
+ * Also, if exists, check the Licenses directory for information about
+ * third-party modules.
  *
- * This software is provided 'as-is', without any express or implied warranty.
- * In no event will the authors be held liable for any damages arising from
- * the use of this software.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
- * 1. The origin of this software must not be misrepresented; you must not
- *    claim that you wrote the original software.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * 2. This notice may not be removed or altered from any source distribution.
- *
- * 3. YOU MAY NOT:
- *
- *    a. Modify, translate, adapt, alter, or create derivative works from
- *       this software.
- *    b. Copy (other than one back-up copy), distribute, publicly display,
- *       transmit, sell, rent, lease or otherwise exploit this software.
- *    c. Distribute, sub-license, rent, lease, loan [or grant any third party
- *       access to or use of] the software to any third party.
- **/
-
-//-----------------------------------------------------------
-
-//Fowler/Noll/Vo- hash
-//
-// The basis of this hash algorithm was taken from an idea sent
-// as reviewer comments to the IEEE POSIX P1003.2 committee by:
-//
-//      Phong Vo (http://www.research.att.com/info/kpv/)
-//      Glenn Fowler (http://www.research.att.com/~gsf/)
-//
-// In a subsequent ballot round:
-//
-//      Landon Curt Noll (http://www.isthe.com/chongo/)
-//
-// improved on their algorithm.  Some people tried this hash
-// and found that it worked rather well.  In an EMail message
-// to Landon, they named it the ``Fowler/Noll/Vo'' or FNV hash.
-//
-// FNV hashes are designed to be fast while maintaining a low
-// collision rate. The FNV speed allows one to quickly hash lots
-// of data while maintaining a reasonable collision rate.  See:
-//
-//      http://www.isthe.com/chongo/tech/comp/fnv/index.html
-//
-// for more details as well as other forms of the FNV hash.
-//
-// ***************
-//
-// Please do not copyright this code.  This code is in the public domain.
-//
-// LANDON CURT NOLL DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-// INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO
-// EVENT SHALL LANDON CURT NOLL BE LIABLE FOR ANY SPECIAL, INDIRECT OR
-// CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF
-// USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
-// OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-// PERFORMANCE OF THIS SOFTWARE.
-//
-// By:
-// chongo <Landon Curt Noll> /\oo/\
-//      http://www.isthe.com/chongo/
-//
-// Share and Enjoy! :-)
-//
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include "NtLightWeightIPC.h"
 
 //-----------------------------------------------------------
