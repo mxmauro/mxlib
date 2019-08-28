@@ -10,6 +10,8 @@
 /* Dispatch functions for ccm mode */
 
 #include "cipher_locl.h"
+#include "internal/ciphers/cipher_ccm.h"
+#include "internal/providercommonerr.h"
 
 static int ccm_cipher_internal(PROV_CCM_CTX *ctx, unsigned char *out,
                                size_t *padlen, const unsigned char *in,
@@ -349,7 +351,7 @@ static int ccm_cipher_internal(PROV_CCM_CTX *ctx, unsigned char *out,
 
     /* EVP_*Final() doesn't return any data */
     if (in == NULL && out != NULL)
-        return 1;
+        goto finish;
 
     if (!ctx->iv_set)
         goto err;
@@ -388,6 +390,7 @@ static int ccm_cipher_internal(PROV_CCM_CTX *ctx, unsigned char *out,
         }
     }
     olen = len;
+finish:
     rv = 1;
 err:
     *padlen = olen;
