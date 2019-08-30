@@ -1,4 +1,0 @@
-SUBDIRS=digests ciphers macs exchange keymgmt
-
-SOURCE[../../libcrypto]=\
-        provider_err.c provlib.c
