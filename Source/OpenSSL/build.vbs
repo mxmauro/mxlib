@@ -171,7 +171,8 @@ If bRebuild <> False Then
 			I = RunApp("NMAKE /S build_libs_nodep", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
 		End If
 		If I = 0 Then
-			I = RunApp("NMAKE /S build_modules_nodep", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
+			I = RunApp("NMAKE /S build_engines_nodep", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
+			'I = RunApp("NMAKE /S build_modules_nodep", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
 		End If
 
 		If I = 0 Then
