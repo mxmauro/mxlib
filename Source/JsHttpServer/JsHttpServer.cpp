@@ -332,13 +332,13 @@ HRESULT CJsHttpServer::AllocAndInitVM(_Out_ CJsHttpServerJVM **lplpJVM, _Out_ BO
                                       _In_ CClientRequest *lpRequest)
 {
   TAutoDeletePtr<CJsHttpServerJVM> cJVM;
-  CStringA cStrTempA, cStrTempA_2;
+  CStringA cStrTempA;
+  CStringW cStrTempW;
+  SOCKADDR_INET sSockAddr;
   CUrl *lpUrl;
-  CHAR szBufA[32];
   TAutoRefCounted<CHttpBodyParserBase> cBodyParser;
   CSockets *lpSckMgr;
   HANDLE hConn;
-  SOCKADDR_INET sAddr;
   SIZE_T i, nCount;
   HRESULT hRes;
 
@@ -447,15 +447,18 @@ HRESULT CJsHttpServer::AllocAndInitVM(_Out_ CJsHttpServerJVM **lplpJVM, _Out_ BO
   nCount = lpUrl->GetQueryStringCount();
   for (i = 0; i < nCount; i++)
   {
-    if (StrCompareW(lpUrl->GetQueryStringName(i), L"session_id") == 0)
-      continue; //skip session id query
-    hRes = Utf8_Encode(cStrTempA, lpUrl->GetQueryStringName(i));
-    __EXIT_ON_ERROR(hRes);
-    hRes = Utf8_Encode(cStrTempA_2, lpUrl->GetQueryStringValue(i));
-    __EXIT_ON_ERROR(hRes);
-    hRes = cJVM->AddObjectStringProperty("request.query", (LPCSTR)cStrTempA, (LPCSTR)cStrTempA_2,
-                                          CJavascriptVM::PropertyFlagEnumerable);
-    __EXIT_ON_ERROR(hRes);
+    if (StrCompareW(lpUrl->GetQueryStringName(i), L"session_id") != 0) //skip session id query
+    {
+      CStringA cStrValueA;
+
+      hRes = Utf8_Encode(cStrTempA, lpUrl->GetQueryStringName(i));
+      __EXIT_ON_ERROR(hRes);
+      hRes = Utf8_Encode(cStrValueA, lpUrl->GetQueryStringValue(i));
+      __EXIT_ON_ERROR(hRes);
+      hRes = cJVM->AddObjectStringProperty("request.query", (LPCSTR)cStrTempA, (LPCSTR)cStrValueA,
+                                            CJavascriptVM::PropertyFlagEnumerable);
+      __EXIT_ON_ERROR(hRes);
+    }
   }
 
   //remote ip and port
@@ -463,90 +466,41 @@ HRESULT CJsHttpServer::AllocAndInitVM(_Out_ CJsHttpServerJVM **lplpJVM, _Out_ BO
   hConn = lpRequest->GetUnderlyingSocketHandle();
   if (hConn == NULL || lpSckMgr == NULL)
     return E_UNEXPECTED;
-  hRes = lpSckMgr->GetPeerAddress(hConn, &sAddr);
+  hRes = lpSckMgr->GetPeerAddress(hConn, &sSockAddr);
   __EXIT_ON_ERROR(hRes);
   hRes = cJVM->CreateObject("request.remote");
   __EXIT_ON_ERROR(hRes);
-  switch (sAddr.si_family)
+
+  switch (sSockAddr.si_family)
   {
     case AF_INET:
-      if (cStrTempA.Format("%lu.%lu.%lu.%lu", sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b1,
-          sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b2, sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b3,
-          sAddr.Ipv4.sin_addr.S_un.S_un_b.s_b4) == FALSE)
-      {
-        return E_OUTOFMEMORY;
-      }
+      hRes = HostResolver::FormatAddress(&sSockAddr, cStrTempW);
+      __EXIT_ON_ERROR(hRes);
       hRes = cJVM->AddObjectStringProperty("request.remote", "family", "ipv4", CJavascriptVM::PropertyFlagEnumerable);
       __EXIT_ON_ERROR(hRes);
-      hRes = cJVM->AddObjectStringProperty("request.remote", "address", (LPCSTR)cStrTempA,
+      hRes = cJVM->AddObjectStringProperty("request.remote", "address", (LPCWSTR)cStrTempW,
                                             CJavascriptVM::PropertyFlagEnumerable);
       __EXIT_ON_ERROR(hRes);
-      hRes = cJVM->AddObjectNumericProperty("request.remote", "port", (double)htons(sAddr.Ipv4.sin_port),
+      hRes = cJVM->AddObjectNumericProperty("request.remote", "port", (double)htons(sSockAddr.Ipv4.sin_port),
                                              CJavascriptVM::PropertyFlagEnumerable);
       __EXIT_ON_ERROR(hRes);
       break;
 
     case AF_INET6:
-      if (cStrTempA.Format("%4x:%4x:%4x:%4x:%4x:%4x:%4x:%4x", sAddr.Ipv6.sin6_addr.u.Word[0],
-          sAddr.Ipv6.sin6_addr.u.Word[1], sAddr.Ipv6.sin6_addr.u.Word[2],
-          sAddr.Ipv6.sin6_addr.u.Word[3], sAddr.Ipv6.sin6_addr.u.Word[4],
-          sAddr.Ipv6.sin6_addr.u.Word[5], sAddr.Ipv6.sin6_addr.u.Word[6],
-          sAddr.Ipv6.sin6_addr.u.Word[7]) == FALSE)
-      {
-        return E_OUTOFMEMORY;
-      }
-      for (i = 0; i < 8; i++)
-      {
-        szBufA[(i << 1)] = '0';
-        szBufA[(i << 1) + 1] = ':';
-      }
-      szBufA[15] = 0; //--> "0:0:0:0:0:0:0:0"
-      for (i = 8; i >= 2; i--)
-      {
-        LPCSTR sA = StrFindA((LPCSTR)cStrTempA, szBufA);
-        if (sA != NULL)
-        {
-          if (i == 8) //special case for all values equal to zero
-          {
-            if (cStrTempA.Copy("::") == FALSE)
-              return E_OUTOFMEMORY;
-          }
-          else if (sA == (LPCSTR)cStrTempA)
-          {
-            //the group of zeros are at the beginning
-            cStrTempA.Delete(0, (i << 1) - 1);
-            if (cStrTempA.InsertN(":", 0, 1) == FALSE)
-              return E_OUTOFMEMORY;
-          }
-
-          else if (sA[(i << 1) - 1] == 0)
-          {
-            //the group of zeros are at the end
-            cStrTempA.Delete((SIZE_T)(sA - (LPCSTR)cStrTempA), (i << 1) - 1);
-            if (cStrTempA.ConcatN(":", 1) == FALSE)
-              return E_OUTOFMEMORY;
-          }
-          else
-          {
-            //they are in the middle
-            cStrTempA.Delete((SIZE_T)(sA - (LPCSTR)cStrTempA), (i << 1) - 1);
-          }
-          break;
-        }
-        szBufA[(i << 1) + 1 - 2] = 0;
-      }
+      hRes = HostResolver::FormatAddress(&sSockAddr, cStrTempW);
+      __EXIT_ON_ERROR(hRes);
       hRes = cJVM->AddObjectStringProperty("request.family", "family", "ipv6", CJavascriptVM::PropertyFlagEnumerable);
       __EXIT_ON_ERROR(hRes);
-      hRes = cJVM->AddObjectStringProperty("request.remote", "address", (LPCSTR)cStrTempA,
+      hRes = cJVM->AddObjectStringProperty("request.remote", "address", (LPCWSTR)cStrTempW,
                                             CJavascriptVM::PropertyFlagEnumerable);
       __EXIT_ON_ERROR(hRes);
-      hRes = cJVM->AddObjectNumericProperty("request.remote", "port", (double)htons(sAddr.Ipv6.sin6_port),
+      hRes = cJVM->AddObjectNumericProperty("request.remote", "port", (double)htons(sSockAddr.Ipv6.sin6_port),
                                              CJavascriptVM::PropertyFlagEnumerable);
       __EXIT_ON_ERROR(hRes);
       break;
 
     default:
-      hRes = E_NOTIMPL;
+      __EXIT_ON_ERROR(MX_E_Unsupported);
       break;
   }
 

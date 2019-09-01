@@ -711,6 +711,99 @@ BOOL IsValidIPV6(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen, _Out_op
   return TRUE;
 }
 
+HRESULT FormatAddress(_In_ PSOCKADDR_INET lpAddress, _Out_ CStringA &cStrDestA)
+{
+  CStringW cStrTempW;
+  HRESULT hRes;
+
+  hRes = FormatAddress(lpAddress, cStrTempW);
+  if (SUCCEEDED(hRes))
+  {
+    if (cStrDestA.CopyN((LPCWSTR)cStrTempW, cStrTempW.GetLength()) == FALSE)
+      hRes = E_OUTOFMEMORY;
+  }
+  if (FAILED(hRes))
+    cStrDestA.Empty();
+  return hRes;
+}
+
+HRESULT FormatAddress(_In_ PSOCKADDR_INET lpAddress, _Out_ CStringW &cStrDestW)
+{
+  WCHAR szBufW[32];
+  SIZE_T i;
+
+  cStrDestW.Empty();
+
+  if (lpAddress == NULL)
+    return E_POINTER;
+  switch (lpAddress->si_family)
+  {
+    case AF_INET:
+      if (cStrDestW.Format(L"%lu.%lu.%lu.%lu", lpAddress->Ipv4.sin_addr.S_un.S_un_b.s_b1,
+                           lpAddress->Ipv4.sin_addr.S_un.S_un_b.s_b2, lpAddress->Ipv4.sin_addr.S_un.S_un_b.s_b3,
+                           lpAddress->Ipv4.sin_addr.S_un.S_un_b.s_b4) == FALSE)
+      {
+        return E_OUTOFMEMORY;
+      }
+      break;
+
+    case AF_INET6:
+      if (cStrDestW.Format(L"%4x:%4x:%4x:%4x:%4x:%4x:%4x:%4x", lpAddress->Ipv6.sin6_addr.u.Word[0],
+                           lpAddress->Ipv6.sin6_addr.u.Word[1], lpAddress->Ipv6.sin6_addr.u.Word[2],
+                           lpAddress->Ipv6.sin6_addr.u.Word[3], lpAddress->Ipv6.sin6_addr.u.Word[4],
+                           lpAddress->Ipv6.sin6_addr.u.Word[5], lpAddress->Ipv6.sin6_addr.u.Word[6],
+                           lpAddress->Ipv6.sin6_addr.u.Word[7]) == FALSE)
+      {
+        return E_OUTOFMEMORY;
+      }
+      for (i = 0; i < 8; i++)
+      {
+        szBufW[(i << 1)] = L'0';
+        szBufW[(i << 1) + 1] = L':';
+      }
+      szBufW[15] = 0; //--> "0:0:0:0:0:0:0:0"
+      for (i = 8; i >= 2; i--)
+      {
+        LPCWSTR sW = StrFindW((LPCWSTR)cStrDestW, szBufW);
+        if (sW != NULL)
+        {
+          if (i == 8) //special case for all values equal to zero
+          {
+            if (cStrDestW.Copy("::") == FALSE)
+              return E_OUTOFMEMORY;
+          }
+          else if (sW == (LPCWSTR)cStrDestW)
+          {
+            //the group of zeros are at the beginning
+            cStrDestW.Delete(0, (i << 1) - 1);
+            if (cStrDestW.InsertN(L":", 0, 1) == FALSE)
+              return E_OUTOFMEMORY;
+          }
+          else if (sW[(i << 1) - 1] == 0)
+          {
+            //the group of zeros are at the end
+            cStrDestW.Delete((SIZE_T)(sW - (LPCWSTR)cStrDestW), (i << 1) - 1);
+            if (cStrDestW.ConcatN(L":", 1) == FALSE)
+              return E_OUTOFMEMORY;
+          }
+          else
+          {
+            //they are in the middle
+            cStrDestW.Delete((SIZE_T)(sW - (LPCWSTR)cStrDestW), (i << 1) - 1);
+          }
+          break;
+        }
+        szBufW[(i << 1) + 1 - 2] = 0;
+      }
+      break;
+
+    default:
+      return MX_E_Unsupported;
+  }
+  //done
+  return S_OK;
+}
+
 } //namespace HostResolver
 
 } //namespace MX

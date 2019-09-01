@@ -25,6 +25,7 @@
 #if (!defined(_WS2DEF_)) && (!defined(_WINSOCKAPI_))
   #include <WS2tcpip.h>
 #endif //!_WS2DEF_ && !_WINSOCKAPI_
+#include "..\Strings\Strings.h"
 
 //-----------------------------------------------------------
 
@@ -53,6 +54,9 @@ BOOL IsValidIPV6(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen = (SIZE_T
                  _Out_opt_ PSOCKADDR_INET lpAddress = NULL);
 BOOL IsValidIPV6(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen = (SIZE_T)-1,
                  _Out_opt_ PSOCKADDR_INET lpAddress = NULL);
+
+HRESULT FormatAddress(_In_ PSOCKADDR_INET lpAddress, _Out_ CStringA &cStrDestA);
+HRESULT FormatAddress(_In_ PSOCKADDR_INET lpAddress, _Out_ CStringW &cStrDestW);
 
 } //namespace HostResolver
 
