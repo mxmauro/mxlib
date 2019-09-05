@@ -729,7 +729,8 @@ HRESULT FormatAddress(_In_ PSOCKADDR_INET lpAddress, _Out_ CStringA &cStrDestA)
 
 HRESULT FormatAddress(_In_ PSOCKADDR_INET lpAddress, _Out_ CStringW &cStrDestW)
 {
-  WCHAR szBufW[32];
+  static const LPCWSTR szZeroIpv6AddrW = L"0:0:0:0:0:0:0:0";
+  LPCWSTR sW;
   SIZE_T i;
 
   cStrDestW.Empty();
@@ -748,7 +749,7 @@ HRESULT FormatAddress(_In_ PSOCKADDR_INET lpAddress, _Out_ CStringW &cStrDestW)
       break;
 
     case AF_INET6:
-      if (cStrDestW.Format(L"%4x:%4x:%4x:%4x:%4x:%4x:%4x:%4x", lpAddress->Ipv6.sin6_addr.u.Word[0],
+      if (cStrDestW.Format(L"%x:%x:%x:%x:%x:%x:%x:%x", lpAddress->Ipv6.sin6_addr.u.Word[0],
                            lpAddress->Ipv6.sin6_addr.u.Word[1], lpAddress->Ipv6.sin6_addr.u.Word[2],
                            lpAddress->Ipv6.sin6_addr.u.Word[3], lpAddress->Ipv6.sin6_addr.u.Word[4],
                            lpAddress->Ipv6.sin6_addr.u.Word[5], lpAddress->Ipv6.sin6_addr.u.Word[6],
@@ -756,44 +757,37 @@ HRESULT FormatAddress(_In_ PSOCKADDR_INET lpAddress, _Out_ CStringW &cStrDestW)
       {
         return E_OUTOFMEMORY;
       }
-      for (i = 0; i < 8; i++)
-      {
-        szBufW[(i << 1)] = L'0';
-        szBufW[(i << 1) + 1] = L':';
-      }
-      szBufW[15] = 0; //--> "0:0:0:0:0:0:0:0"
       for (i = 8; i >= 2; i--)
       {
-        LPCWSTR sW = StrFindW((LPCWSTR)cStrDestW, szBufW);
+        sW = StrNFindW((LPCWSTR)cStrDestW, szZeroIpv6AddrW, (i << 1) - 1);
         if (sW != NULL)
-        {
-          if (i == 8) //special case for all values equal to zero
-          {
-            if (cStrDestW.Copy("::") == FALSE)
-              return E_OUTOFMEMORY;
-          }
-          else if (sW == (LPCWSTR)cStrDestW)
-          {
-            //the group of zeros are at the beginning
-            cStrDestW.Delete(0, (i << 1) - 1);
-            if (cStrDestW.InsertN(L":", 0, 1) == FALSE)
-              return E_OUTOFMEMORY;
-          }
-          else if (sW[(i << 1) - 1] == 0)
-          {
-            //the group of zeros are at the end
-            cStrDestW.Delete((SIZE_T)(sW - (LPCWSTR)cStrDestW), (i << 1) - 1);
-            if (cStrDestW.ConcatN(L":", 1) == FALSE)
-              return E_OUTOFMEMORY;
-          }
-          else
-          {
-            //they are in the middle
-            cStrDestW.Delete((SIZE_T)(sW - (LPCWSTR)cStrDestW), (i << 1) - 1);
-          }
           break;
-        }
-        szBufW[(i << 1) + 1 - 2] = 0;
+      }
+      if (i == 8) //special case for all values equal to zero
+      {
+        if (cStrDestW.CopyN(L"::", 2) == FALSE)
+          return E_OUTOFMEMORY;
+      }
+      else if (sW == (LPCWSTR)cStrDestW)
+      {
+        //delete the group of zeros are at the beginning
+        cStrDestW.Delete(0, (i << 1) - 1);
+        //and replace with a new colon
+        if (cStrDestW.InsertN(L":", 0, 1) == FALSE)
+          return E_OUTOFMEMORY;
+      }
+      else if (sW[(i << 1) - 1] == 0)
+      {
+        //delete the group of zeros are at the end
+        cStrDestW.Delete((SIZE_T)(sW - (LPCWSTR)cStrDestW), (i << 1) - 1);
+        //and replace with a new colon
+        if (cStrDestW.ConcatN(L":", 1) == FALSE)
+          return E_OUTOFMEMORY;
+      }
+      else
+      {
+        //they are in the middle
+        cStrDestW.Delete((SIZE_T)(sW - (LPCWSTR)cStrDestW), (i << 1) - 1);
       }
       break;
 
