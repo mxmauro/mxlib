@@ -24,6 +24,7 @@
 #include "TestJavascript.h"
 #include "TestJsHttpServer.h"
 #include "Comm\SslCertificates.h"
+#include "Comm\HostResolver.h"
 
 #pragma comment(lib, "MxLib.lib")
 #pragma comment(lib, "CommLib.lib")
@@ -49,7 +50,6 @@ int wmain(int argc, WCHAR* argv[])
     wprintf_s(L"Error: Unable to initialize console.\n\n");
     return -1;
   }
-
   if (argc < 2)
   {
     wprintf_s(L"Use: Test.exe test-module [options]\n\n");
@@ -70,15 +70,13 @@ int wmain(int argc, WCHAR* argv[])
       }
       else if (_wcsicmp(argv[arg_idx] + 1, L"v") == 0)
       {
-        LPWSTR sW;
-
         if ((++arg_idx) >= argc)
         {
           wprintf_s(L"Error: Missing parameter for verbosity argument.\n");
           return 1;
         }
         dwLogLevel = 0;
-        for (sW = argv[arg_idx]; *sW != 0; sW++)
+        for (LPWSTR sW = argv[arg_idx]; *sW != 0; sW++)
         {
           if (*sW >= L'0' && *sW <= L'9')
           {
