@@ -203,6 +203,7 @@ private:
 private:
   LONG volatile nRundownLock;
   LONG volatile nNextResolverId;
+  DWORD dwOsVersion;
   HINSTANCE hWs2_32Dll;
   lpfnGetAddrInfoExW fnGetAddrInfoExW;
   lpfnFreeAddrInfoExW fnFreeAddrInfoExW;
@@ -837,6 +838,13 @@ CHostResolver::CHostResolver() : TRefCounted<CBaseMemObj>()
   _InterlockedExchange(&(sAsyncTasks.nMutex), 0);
   MemSet(&sFreeAsyncItems, 0, sizeof(sFreeAsyncItems));
 
+  if (::IsWindows8OrGreater() != FALSE)
+    dwOsVersion = 0x0800;
+  else if (::IsWindows7OrGreater() != FALSE)
+    dwOsVersion = 0x0700;
+  else
+    dwOsVersion = 0x0600;
+
   hWs2_32Dll = NULL;
   fnGetAddrInfoExW = NULL;
   fnFreeAddrInfoExW = NULL;
@@ -849,17 +857,18 @@ CHostResolver::CHostResolver() : TRefCounted<CBaseMemObj>()
     if (szDllNameW[dwLen - 1] != L'\\')
       szDllNameW[dwLen++] = L'\\';
     MX::MemCopy(szDllNameW + dwLen, L"ws2_32.dll", (10 + 1) * sizeof(WCHAR));
+
     //load library
     hWs2_32Dll = ::LoadLibraryW(szDllNameW);
     if (hWs2_32Dll != NULL)
     {
       fnGetAddrInfoExW = (lpfnGetAddrInfoExW)::GetProcAddress(hWs2_32Dll, "GetAddrInfoExW");
       fnFreeAddrInfoExW = (lpfnFreeAddrInfoExW)::GetProcAddress(hWs2_32Dll, "FreeAddrInfoExW");
-      if (::IsWindows8OrGreater() != FALSE)
+      if (dwOsVersion >= 0x0800)
       {
         fnGetAddrInfoExCancel = (lpfnGetAddrInfoExCancel)::GetProcAddress(hWs2_32Dll, "GetAddrInfoExCancel");
-        fnGetAddrInfoExOverlappedResult = (lpfnGetAddrInfoExOverlappedResult)
-          ::GetProcAddress(hWs2_32Dll, "GetAddrInfoExOverlappedResult");
+        fnGetAddrInfoExOverlappedResult =
+            (lpfnGetAddrInfoExOverlappedResult)::GetProcAddress(hWs2_32Dll, "GetAddrInfoExOverlappedResult");
       }
       if (fnGetAddrInfoExW == NULL || fnFreeAddrInfoExW == NULL)
       {
@@ -991,8 +1000,10 @@ HRESULT CHostResolver::AddResolver(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredF
 
         MemSet(&sHintAddrInfoExW, 0, sizeof(sHintAddrInfoExW));
         sHintAddrInfoExW.ai_family = nDesiredFamily;
+        lpAddrInfoExW = NULL;
+        //NOTE: Windows 7 does NOT support timeout at all despite the documentation says a different thing.
         res = fnGetAddrInfoExW((LPCWSTR)cStrTempW, NULL, NS_DNS, NULL, &sHintAddrInfoExW, &lpAddrInfoExW,
-                               ((dwTimeoutMs != INFINITE) ? &tv : NULL), NULL, NULL, NULL);
+                               ((dwOsVersion >= 0x0800 && dwTimeoutMs != INFINITE) ? &tv : NULL), NULL, NULL, NULL);
         if (res == NO_ERROR)
         {
           //process results
@@ -1013,6 +1024,7 @@ HRESULT CHostResolver::AddResolver(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredF
 
         MemSet(&sHintAddrInfoA, 0, sizeof(sHintAddrInfoA));
         sHintAddrInfoA.ai_family = nDesiredFamily;
+        lpAddrInfoA = NULL;
         if (::getaddrinfo(szHostNameA, NULL, &sHintAddrInfoA, &lpAddrInfoA) != SOCKET_ERROR)
         {
           //process results
@@ -1087,8 +1099,10 @@ HRESULT CHostResolver::AddResolver(_In_z_ LPCWSTR szHostNameW, _In_ int nDesired
 
         MemSet(&sHintAddrInfoExW, 0, sizeof(sHintAddrInfoExW));
         sHintAddrInfoExW.ai_family = nDesiredFamily;
+        lpAddrInfoExW = NULL;
+        //NOTE: Windows 7 does NOT support timeout at all despite the documentation says a different thing.
         res = fnGetAddrInfoExW(szHostNameW, NULL, NS_DNS, NULL, &sHintAddrInfoExW, &lpAddrInfoExW,
-                               ((dwTimeoutMs != INFINITE) ? &tv : NULL), NULL, NULL, NULL);
+                               ((dwOsVersion >= 0x0800 && dwTimeoutMs != INFINITE) ? &tv : NULL), NULL, NULL, NULL);
         if (res == NO_ERROR)
         {
           //process results
@@ -1114,6 +1128,7 @@ HRESULT CHostResolver::AddResolver(_In_z_ LPCWSTR szHostNameW, _In_ int nDesired
 
         MemSet(&sHintAddrInfoA, 0, sizeof(sHintAddrInfoA));
         sHintAddrInfoA.ai_family = nDesiredFamily;
+        lpAddrInfoA = NULL;
         if (::getaddrinfo((LPCSTR)cStrTempA, NULL, &sHintAddrInfoA, &lpAddrInfoA) != SOCKET_ERROR)
         {
           //process results
@@ -1164,6 +1179,7 @@ HRESULT CHostResolver::AddResolverCommon(_Out_ LONG volatile *lpnResolverId, _In
 
     MemSet(&sHintAddrInfoExW, 0, sizeof(sHintAddrInfoExW));
     sHintAddrInfoExW.ai_family = lpNewAsyncItem->nDesiredFamily;
+    //NOTE: If we are here, we are using Windows 8+
     res = fnGetAddrInfoExW((LPCWSTR)(lpNewAsyncItem->cStrHostNameW), NULL, NS_DNS, NULL, &sHintAddrInfoExW,
                            &(lpNewAsyncItem->lpAddrInfoExW), ((lpNewAsyncItem->dwTimeoutMs != INFINITE) ? &tv : NULL),
                            &(lpNewAsyncItem->sOvr), &CHostResolver::AsyncQueryCompleteCallback,
