@@ -971,28 +971,30 @@ check_pending_read_req:
               lpPacket = lpConn->cReadedList.Dequeue(__InterlockedRead(&(lpConn->nNextReadOrderToProcess)));
               if (lpPacket != NULL)
               {
-                CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
-
-                lpLayer = lpConn->sLayers.cList.GetHead();
-                if (lpLayer != NULL)
                 {
-                  hRes = lpLayer->OnReceivedData(lpPacket->GetBuffer(), (SIZE_T)(lpPacket->GetBytesInUse()));
-                }
-                else
-                {
-                  CFastLock cRecBufLock(&(lpConn->sReceivedData.nMutex));
+                  CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
 
-                  hRes = lpConn->sReceivedData.cBuffer.Write(lpPacket->GetBuffer(),
-                                                             (SIZE_T)(lpPacket->GetBytesInUse()));
-                  _InterlockedOr(&(lpConn->nFlags), FLAG_NewReceivedDataAvailable);
+                  lpLayer = lpConn->sLayers.cList.GetHead();
+                  if (lpLayer != NULL)
+                  {
+                    hRes = lpLayer->OnReceivedData(lpPacket->GetBuffer(), (SIZE_T)(lpPacket->GetBytesInUse()));
+                  }
+                  else
+                  {
+                    CFastLock cRecBufLock(&(lpConn->sReceivedData.nMutex));
+
+                    hRes = lpConn->sReceivedData.cBuffer.Write(lpPacket->GetBuffer(),
+                                                               (SIZE_T)(lpPacket->GetBytesInUse()));
+                    _InterlockedOr(&(lpConn->nFlags), FLAG_NewReceivedDataAvailable);
+                  }
                 }
+                FreePacket(lpPacket);
+                _InterlockedIncrement(&(lpConn->nNextReadOrderToProcess));
               }
               else
               {
                 break;
               }
-              FreePacket(lpPacket);
-              _InterlockedIncrement(&(lpConn->nNextReadOrderToProcess));
             }
           }
           else
@@ -1043,172 +1045,174 @@ check_pending_write_req:
       lpConn->IncrementOutgoingWrites();
 
       //process queued packets if output processing is not paused
-      if (SUCCEEDED(hRes) && (__InterlockedRead(&(lpConn->nFlags)) & FLAG_OutputProcessingPaused) == 0 &&
-          (DWORD)__InterlockedRead(&(lpConn->nOutgoingBytes)) < dwMaxOutgoingBytes)
+      while (SUCCEEDED(hRes) && (__InterlockedRead(&(lpConn->nFlags)) & FLAG_OutputProcessingPaused) == 0 &&
+             (DWORD)__InterlockedRead(&(lpConn->nOutgoingBytes)) < dwMaxOutgoingBytes)
       {
         CPacketBase *lpFirstPacket, *lpLastPacket;
+        BOOL bAdvanceToNextPacket;
+        ULONG nPacketOrder;
         SIZE_T nChainLength;
-        ULONG nNextToProcess;
 
-        nNextToProcess = (ULONG)__InterlockedRead(&(lpConn->nNextWriteOrderToProcess));
-
-write_req_restart:
         //get next sequenced block to write
-        lpPacket = lpConn->cWritePendingList.Dequeue(nNextToProcess);
-        if (lpPacket != NULL)
+        lpPacket = lpConn->cWritePendingList.Dequeue((ULONG)__InterlockedRead(&(lpConn->nNextWriteOrderToProcess)));
+        if (lpPacket == NULL)
+          break;
+
+        //process an after-write signal
+        if (lpPacket->HasAfterWriteSignalCallback() != FALSE)
         {
-          //process an after-write signal
-          if (lpPacket->HasAfterWriteSignalCallback() != FALSE)
+          //if some chain must be written, requeue and wait
+          if (__InterlockedRead(&(lpConn->nOutgoingBytes)) == 0)
           {
-            //if some chain must be written, requeue and wait
-            if (__InterlockedRead(&(lpConn->nOutgoingBytes)) == 0)
-            {
-              //call callback
-              TAutoRefCounted<CUserData> cUserData(lpConn->cUserData);
+            //call callback
+            TAutoRefCounted<CUserData> cUserData(lpConn->cUserData);
 
-              lpPacket->InvokeAfterWriteSignalCallback(this, cUserData);
-              //free packet
-              FreePacket(lpPacket);
-
-              //go to next packet
-              nNextToProcess++;
-              //decrement the outstanding writes incremented by the send
-              lpConn->DecrementOutgoingWrites();
-
-              _InterlockedExchange(&(lpConn->nNextWriteOrderToProcess), (LONG)nNextToProcess);
-              goto write_req_restart; //loop
-            }
-
-            //if some chain must be written or there still exists packets being sent, requeue and wait
-            lpConn->cWritePendingList.QueueSorted(lpPacket);
-
-            _InterlockedExchange(&(lpConn->nNextWriteOrderToProcess), (LONG)nNextToProcess);
-            goto write_req_after_all;
-          }
-
-          //start processing a serie of packets
-          lpFirstPacket = lpLastPacket = NULL;
-          nChainLength = 0;
-
-write_req_process_packet:
-          //process a stream?
-          if (lpPacket->HasStream() != FALSE)
-          {
-            hRes = S_OK;
-            while (SUCCEEDED(hRes) && nChainLength < lpConn->GetMultiWriteMaxCount() &&
-                    (DWORD)__InterlockedRead(&(lpConn->nOutgoingBytes)) < dwMaxOutgoingBytes)
-            {
-              CPacketBase *lpNewPacket;
-
-              hRes = lpConn->ReadStream(lpPacket, &lpNewPacket);
-
-              //end of stream reached?
-              if (hRes == MX_E_EndOfFileReached)
-              {
-                //reached the end of the stream so free "stream" packet
-                FreePacket(lpPacket);
-                lpPacket = NULL;
-                //go to next packet
-                nNextToProcess++;
-                //decrement the outstanding writes incremented by the send
-                lpConn->DecrementOutgoingWrites();
-
-                hRes = S_OK;
-                break;
-              }
-              if (FAILED(hRes))
-                break;
-
-              //add to chain
-              if (lpFirstPacket == NULL)
-                lpFirstPacket = lpNewPacket;
-              else
-                lpLastPacket->ChainPacket(lpNewPacket);
-              lpLastPacket = lpNewPacket;
-              nChainLength++;
-            }
-
-            //at this point we reached the end of the stream, fulfilled the max outgoing bytes or an error was raised
-          }
-          else
-          {
-            //add to chain
-            if (lpFirstPacket == NULL)
-              lpFirstPacket = lpPacket;
-            else
-              lpLastPacket->ChainPacket(lpPacket);
-            lpLastPacket = lpPacket;
-            nChainLength++;
-
-            lpPacket = NULL;
-            hRes = S_OK;
-
-            //go to next packet
-            nNextToProcess++;
+            lpPacket->InvokeAfterWriteSignalCallback(this, cUserData);
+            //free packet
+            FreePacket(lpPacket);
 
             //decrement the outstanding writes incremented by the send
             lpConn->DecrementOutgoingWrites();
+
+            //go to next packet
+            _InterlockedIncrement(&(lpConn->nNextWriteOrderToProcess));
+            continue; //loop
           }
 
-          //let's try to partially flush the chain of packets
-          if (SUCCEEDED(hRes) && nChainLength > 0)
-          {
-            hRes = lpConn->SendPackets(&lpFirstPacket, &lpLastPacket, &nChainLength, FALSE, cQueuedPacketsList);
-          }
-
-          //if we are done with the previous packet, try to process the next one
-          if (SUCCEEDED(hRes) && lpPacket == NULL &&
-              (DWORD)__InterlockedRead(&(lpConn->nOutgoingBytes)) < dwMaxOutgoingBytes &&
-              nChainLength < lpConn->GetMultiWriteMaxCount())
-          {
-            if (nChainLength == 0)
-            {
-              _InterlockedExchange(&(lpConn->nNextWriteOrderToProcess), (LONG)nNextToProcess);
-              goto write_req_restart;
-            }
-
-            //get next packet
-            lpPacket = lpConn->cWritePendingList.Dequeue(nNextToProcess);
-            if (lpPacket != NULL)
-            {
-              if (lpPacket->HasAfterWriteSignalCallback() == FALSE)
-                goto write_req_process_packet;
-
-              //if it is an after write signal, it will be re-queued below
-            }
-          }
-
-          //at this point we cannot process more packets due to a fulfilled chain or an error
-
-          //first flush completely the chain
-          if (SUCCEEDED(hRes) && nChainLength > 0)
-          {
-            hRes = lpConn->SendPackets(&lpFirstPacket, &lpLastPacket, &nChainLength, TRUE, cQueuedPacketsList);
-          }
-
-          //free chained packets left. if no error here, then the chain should be empty
-          MX_ASSERT(FAILED(hRes) || lpFirstPacket == NULL);
-          if (lpFirstPacket != NULL)
-            FreePacket(lpFirstPacket);
-
-          //if we have a packet here, it must be a stream or an after send callback and we should
-          //re-queue it in order to reprocess
-          if (lpPacket != NULL)
-          {
-            MX_ASSERT(lpPacket->HasStream() != FALSE || lpPacket->HasAfterWriteSignalCallback() != FALSE);
-
-            lpConn->cWritePendingList.QueueFirst(lpPacket);
-            lpPacket = NULL;
-          }
-
-          _InterlockedExchange(&(lpConn->nNextWriteOrderToProcess), (LONG)nNextToProcess);
+          //if some chain must be written or there still exists packets being sent, requeue and wait
+          lpConn->cWritePendingList.QueueFirst(lpPacket);
 
           if (__InterlockedRead(&(lpConn->nOutgoingBytes)) == 0)
-            goto write_req_restart;
+            continue;
+          break;
+        }
+
+        //start processing a series of packets
+        lpFirstPacket = lpLastPacket = NULL;
+        nChainLength = 0;
+
+write_req_process_packet:
+        bAdvanceToNextPacket = FALSE;
+        nPacketOrder = lpPacket->GetOrder();
+
+        //process a stream?
+        if (lpPacket->HasStream() != FALSE)
+        {
+          hRes = S_OK;
+          while (SUCCEEDED(hRes) && nChainLength < lpConn->GetMultiWriteMaxCount() &&
+                  (DWORD)__InterlockedRead(&(lpConn->nOutgoingBytes)) < dwMaxOutgoingBytes)
+          {
+            CPacketBase *lpNewPacket;
+
+            hRes = lpConn->ReadStream(lpPacket, &lpNewPacket);
+
+            //end of stream reached?
+            if (hRes == MX_E_EndOfFileReached)
+            {
+              //reached the end of the stream so free "stream" packet
+              FreePacket(lpPacket);
+              lpPacket = NULL;
+
+              //go to next packet
+              bAdvanceToNextPacket = TRUE;
+
+              hRes = S_OK;
+              break;
+            }
+            if (FAILED(hRes))
+              break;
+
+            //add to chain
+            if (lpFirstPacket == NULL)
+              lpFirstPacket = lpNewPacket;
+            else
+              lpLastPacket->ChainPacket(lpNewPacket);
+            lpLastPacket = lpNewPacket;
+            nChainLength++;
+          }
+
+          //at this point we reached the end of the stream, fulfilled the max outgoing bytes or an error was raised
+        }
+        else
+        {
+          //add to chain
+          if (lpFirstPacket == NULL)
+            lpFirstPacket = lpPacket;
+          else
+            lpLastPacket->ChainPacket(lpPacket);
+          lpLastPacket = lpPacket;
+          nChainLength++;
+
+          lpPacket = NULL;
+          hRes = S_OK;
+
+          //go to next packet
+          bAdvanceToNextPacket = TRUE;
+        }
+
+        //let's try to partially flush the chain of packets
+        if (SUCCEEDED(hRes) && nChainLength > 0)
+        {
+          hRes = lpConn->SendPackets(&lpFirstPacket, &lpLastPacket, &nChainLength, FALSE, cQueuedPacketsList);
+        }
+
+        if (bAdvanceToNextPacket != FALSE)
+        {
+          //decrement the outstanding writes incremented by the send
+          lpConn->DecrementOutgoingWrites();
+
+          //try to process the next one if we have room
+          if (SUCCEEDED(hRes) && (DWORD)__InterlockedRead(&(lpConn->nOutgoingBytes)) < dwMaxOutgoingBytes &&
+              nChainLength < lpConn->GetMultiWriteMaxCount())
+          {
+            //get next packet
+            lpPacket = lpConn->cWritePendingList.Dequeue(nPacketOrder + 1);
+            if (lpPacket != NULL)
+            {
+              //if it is an after write signal, do not use and requeue it
+              if (lpPacket->HasAfterWriteSignalCallback() != FALSE)
+              {
+                lpConn->cWritePendingList.QueueFirst(lpPacket);
+                lpPacket = NULL;
+              }
+            }
+
+            //if we have a valid packet we can process
+            if (lpPacket != NULL)
+            {
+              _InterlockedIncrement(&(lpConn->nNextWriteOrderToProcess));
+              goto write_req_process_packet;
+            }
+          }
+        }
+
+        //at this point we cannot process more packets due to a fulfilled chain or an error
+
+        //first flush completely the chain
+        if (SUCCEEDED(hRes) && nChainLength > 0)
+        {
+          hRes = lpConn->SendPackets(&lpFirstPacket, &lpLastPacket, &nChainLength, TRUE, cQueuedPacketsList);
+        }
+
+        //free chained packets left. if no error here, then the chain should be empty
+        MX_ASSERT(FAILED(hRes) || lpFirstPacket == NULL);
+        if (lpFirstPacket != NULL)
+          FreePacket(lpFirstPacket);
+
+        //at this point, if we have a packet, requeue it
+        if (lpPacket != NULL)
+        {
+          MX_ASSERT(lpPacket->HasStream() != FALSE || lpPacket->HasAfterWriteSignalCallback() != FALSE);
+
+          lpConn->cWritePendingList.QueueFirst(lpPacket);
+          lpPacket = NULL;
+        }
+        else
+        {
+          _InterlockedIncrement(&(lpConn->nNextWriteOrderToProcess));
         }
       }
 
-write_req_after_all:
       //decrement the outstanding write incremented at the beginning of this section and close if needed
       lpConn->DecrementOutgoingWrites();
       break;

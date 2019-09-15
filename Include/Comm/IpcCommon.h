@@ -521,11 +521,12 @@ public:
     CPacketBase* DequeueFirst()
       {
       CFastLock cLock(&nMutex);
+      CPacketBase *lpPacket;
 
-      CPacketBase *CPacketBase = cList.PopHead();
-      if (CPacketBase != NULL)
+      lpPacket = cList.PopHead();
+      if (lpPacket != NULL)
         nCount--;
-      return CPacketBase;
+      return lpPacket;
       };
 
     VOID QueueSorted(_In_ CPacketBase *lpPacket)

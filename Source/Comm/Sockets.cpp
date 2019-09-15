@@ -913,6 +913,8 @@ HRESULT CSockets::CConnection::CreateSocket()
 
 VOID CSockets::CConnection::ShutdownLink(_In_ BOOL bAbortive)
 {
+  SOCKET sckToClose = NULL;
+
   {
     CAutoSlimRWLExclusive cHandleInUseLock(&nRwHandleInUse);
 
@@ -948,7 +950,7 @@ VOID CSockets::CConnection::ShutdownLink(_In_ BOOL bAbortive)
       if (fnDisconnectEx == NULL)
       {
 use_default_close_method:
-        ::closesocket(sck);
+        sckToClose = sck;
         goto after_close;
       }
 
@@ -1022,6 +1024,9 @@ after_close:
   }
   //cancel host resolver
   HostResolver::Cancel(&(sHostResolver.nResolverId));
+  //close socket
+  if (sckToClose != NULL)
+    ::closesocket(sckToClose);
   //call base
   CConnectionBase::ShutdownLink(bAbortive);
   return;
