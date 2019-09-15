@@ -1078,6 +1078,22 @@ HRESULT CJavascriptVM::Reset()
   return hRes;
 }
 
+HRESULT CJavascriptVM::RunGC()
+{
+  HRESULT hRes;
+
+  if (lpCtx == NULL)
+    return E_FAIL;
+  hRes = RunNativeProtectedAndGetError(0, 0, [](_In_ DukTape::duk_context *lpCtx) -> VOID
+  {
+    //called twice. see: https://duktape.org/api.html#duk_gc
+    DukTape::duk_gc(lpCtx, 0);
+    DukTape::duk_gc(lpCtx, 0);
+    return;
+  });
+  return hRes;
+}
+
 HRESULT CJavascriptVM::AddSafeString(_Inout_ CStringA &cStrCodeA, _In_z_ LPCSTR szStrA, _In_opt_ SIZE_T nStrLen)
 {
   LPCSTR szStartA;

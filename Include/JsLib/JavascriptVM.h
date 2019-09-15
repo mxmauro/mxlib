@@ -442,6 +442,7 @@ public:
   VOID GetObjectType(_In_ DukTape::duk_idx_t nObjIdx, _Out_ MX::CStringA &cStrTypeA);
 
   HRESULT Reset();
+  HRESULT RunGC();
 
   static HRESULT AddSafeString(_Inout_ CStringA &cStrCodeA, _In_z_ LPCSTR szStrA, _In_opt_ SIZE_T nStrLen=(SIZE_T)-1);
   static HRESULT AddSafeString(_Inout_ CStringA &cStrCodeA, _In_z_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen=(SIZE_T)-1);
