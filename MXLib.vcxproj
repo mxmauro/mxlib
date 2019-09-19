@@ -194,6 +194,7 @@
     <ClInclude Include="Include\PropertyBag.h" />
     <ClInclude Include="Include\RedBlackTree.h" />
     <ClInclude Include="Include\RefCounted.h" />
+    <ClInclude Include="Include\StackTrace.h" />
     <ClInclude Include="Include\Streams.h" />
     <ClInclude Include="Include\Strings\Strings.h" />
     <ClInclude Include="Include\Strings\Utf8.h" />
@@ -216,6 +217,7 @@
     <ClCompile Include="Source\MemoryStream.cpp" />
     <ClCompile Include="Source\NtDefs.cpp" />
     <ClCompile Include="Source\PropertyBag.cpp" />
+    <ClCompile Include="Source\StackTrace.cpp" />
     <ClCompile Include="Source\Streams.cpp" />
     <ClCompile Include="Source\Strings\Strings.cpp" />
     <ClCompile Include="Source\Strings\Utf8.cpp" />

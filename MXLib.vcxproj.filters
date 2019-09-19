@@ -119,6 +119,9 @@
     <ClInclude Include="Include\AtomicOps.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Include\StackTrace.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\DateTime\DateTime.cpp">
@@ -179,6 +182,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\TimedEvent.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\StackTrace.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
