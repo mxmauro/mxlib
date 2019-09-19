@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 #include "..\..\Include\Comm\IpcCommon.h"
+#include "..\..\Include\StackTrace.h"
 
 //-----------------------------------------------------------
 
@@ -1007,11 +1008,13 @@ check_pending_read_req:
         }
         else
         {
-          if (ShouldLog(1) != FALSE)
+          BOOL bLog;
+
+          bLog = ((_InterlockedOr(&lpConn->nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) ? TRUE : FALSE;
+          if (bLog != FALSE && ShouldLog(1) != FALSE)
           {
             Log(L"CIpc::GracefulShutdown A) Clock=%lums / This=0x%p", lpConn->cHiResTimer.GetElapsedTimeMs(), lpConn);
           }
-          _InterlockedOr(&(lpConn->nFlags), FLAG_GracefulShutdown);
 
           //free packet
           lpConn->cRwList.Remove(lpPacket);
@@ -1362,13 +1365,15 @@ write_req_process_packet:
         hRes == HRESULT_FROM_NT(STATUS_LOCAL_DISCONNECT) ||
         hRes == HRESULT_FROM_NT(STATUS_REMOTE_DISCONNECT))
     {
-      if (ShouldLog(1) != FALSE)
+      BOOL bLog;
+
+      bLog = ((_InterlockedOr(&lpConn->nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) ? TRUE : FALSE;
+      if (bLog != FALSE && ShouldLog(1) != FALSE)
       {
         Log(L"CIpc::GracefulShutdown C) Clock=%lums / This=0x%p / Res=0x%08X", lpConn->cHiResTimer.GetElapsedTimeMs(),
             this, hRes);
       }
       hRes = S_OK;
-      _InterlockedOr(&(lpConn->nFlags), FLAG_GracefulShutdown);
     }
     lpConn->Close(hRes);
   }
@@ -1578,33 +1583,33 @@ HRESULT CIpc::CConnectionBase::SendStream(_In_ CStream *lpStream)
 
 HRESULT CIpc::CConnectionBase::AfterWriteSignal(_In_ OnAfterWriteSignalCallback cCallback, _In_opt_ LPVOID lpCookie)
 {
-  CPacketBase *lpPacket;
-  HRESULT hRes;
+CPacketBase *lpPacket;
+HRESULT hRes;
 
-  MX_ASSERT(cCallback != false);
-  //get a free buffer
-  lpPacket = lpIpc->GetPacket(this, CIpc::CPacketBase::TypeWriteRequest, 0, FALSE);
-  if (lpPacket == NULL)
-    return E_OUTOFMEMORY;
-  lpPacket->SetAfterWriteSignalCallback(cCallback);
-  lpPacket->SetUserData(lpCookie);
+MX_ASSERT(cCallback != false);
+//get a free buffer
+lpPacket = lpIpc->GetPacket(this, CIpc::CPacketBase::TypeWriteRequest, 0, FALSE);
+if (lpPacket == NULL)
+return E_OUTOFMEMORY;
+lpPacket->SetAfterWriteSignalCallback(cCallback);
+lpPacket->SetUserData(lpCookie);
+{
+  CAutoSlimRWLShared cLayersLock(&(sLayers.nRwMutex));
+  CIpc::CLayer *lpLayer;
+
+  lpLayer = sLayers.cList.GetTail();
+  if (lpLayer != NULL)
   {
-    CAutoSlimRWLShared cLayersLock(&(sLayers.nRwMutex));
-    CIpc::CLayer *lpLayer;
-
-    lpLayer = sLayers.cList.GetTail();
-    if (lpLayer != NULL)
-    {
-      hRes = lpLayer->OnSendPacket(lpPacket);
-    }
-    else
-    {
-      hRes = AfterWriteSignal(lpPacket);
-    }
+    hRes = lpLayer->OnSendPacket(lpPacket);
   }
-  if (FAILED(hRes))
-    FreePacket(lpPacket);
-  return hRes;
+  else
+  {
+    hRes = AfterWriteSignal(lpPacket);
+  }
+}
+if (FAILED(hRes))
+FreePacket(lpPacket);
+return hRes;
 }
 
 HRESULT CIpc::CConnectionBase::AfterWriteSignal(_In_ CPacketBase *lpPacket)
@@ -1619,7 +1624,7 @@ HRESULT CIpc::CConnectionBase::AfterWriteSignal(_In_ CPacketBase *lpPacket)
   if (lpIpc->ShouldLog(1) != FALSE)
   {
     lpIpc->Log(L"CIpc::AfterWriteSignal) Clock=%lums / Ovr=0x%p / Type=%lu", cHiResTimer.GetElapsedTimeMs(),
-                lpPacket->GetOverlapped(), lpPacket->GetType());
+      lpPacket->GetOverlapped(), lpPacket->GetType());
   }
   hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
   if (FAILED(hRes))
@@ -1647,8 +1652,8 @@ HRESULT CIpc::CConnectionBase::SendResumeIoProcessingPacket(_In_ BOOL bInput)
   if (lpIpc->ShouldLog(1) != FALSE)
   {
     lpIpc->Log(L"CIpc::SendResumeIoProcessingPacket[%s]) Clock=%lums / Ovr=0x%p / Type=%lu",
-               ((bInput != FALSE) ? L"Input" : L"Output"), cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(),
-               lpPacket->GetType());
+      ((bInput != FALSE) ? L"Input" : L"Output"), cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(),
+      lpPacket->GetType());
   }
   hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
   if (FAILED(hRes))
@@ -1673,9 +1678,20 @@ VOID CIpc::CConnectionBase::Close(_In_ HRESULT hRes)
     if (SUCCEEDED(hRes) && (nInitVal & FLAG_Closed) == 0)
       nNewVal |= FLAG_GracefulShutdown;
     nOrigVal = _InterlockedCompareExchange(&nFlags, nNewVal, nInitVal);
-  }
-  while (nOrigVal != nInitVal);
+  } while (nOrigVal != nInitVal);
   _InterlockedCompareExchange(&hrErrorCode, hRes, S_OK);
+  if ((hRes & 0x0F000000) != 0)
+  {
+    SIZE_T nStack[10];
+
+    StackTrace::Get(nStack, 10);
+    for (SIZE_T i = 0; i < 10; i++)
+    {
+      if (nStack[i] == 0)
+        break;
+      DebugPrint("Close stack #%i: 0x%IX\n", i + 1, nStack[i]);
+    }
+  }
   if (hRes != S_OK || __InterlockedRead(&nOutgoingWrites) == 0)
     ShutdownLink(FAILED(__InterlockedRead(&hrErrorCode)));
   //when closing call the "final" release to remove from list
@@ -1826,16 +1842,20 @@ HRESULT CIpc::CConnectionBase::DoZeroRead(_In_ SIZE_T nPacketsCount, _Inout_ CPa
     switch (hRes)
     {
       case S_FALSE:
+        {
+        BOOL bLog;
+
         MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);
-        if (lpIpc->ShouldLog(1) != FALSE)
+        bLog = ((_InterlockedOr(&nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) ? TRUE : FALSE;
+        if (bLog != FALSE && lpIpc->ShouldLog(1) != FALSE)
         {
           lpIpc->Log(L"CIpc::GracefulShutdown E) Clock=%lums / This=0x%p", cHiResTimer.GetElapsedTimeMs(), this);
         }
-        _InterlockedOr(&nFlags, FLAG_GracefulShutdown);
         //free packet
         cRwList.Remove(lpPacket);
         FreePacket(lpPacket);
         Release();
+        }
         return S_OK;
 
       case S_OK:
@@ -1892,16 +1912,21 @@ HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacke
     switch (hRes)
     {
       case S_FALSE:
+      {
+        BOOL bLog;
+
         MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);
-        if (lpIpc->ShouldLog(1) != FALSE)
+        bLog = ((_InterlockedOr(&nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) ? TRUE : FALSE;
+        if (bLog != FALSE && lpIpc->ShouldLog(1) != FALSE)
         {
           lpIpc->Log(L"CIpc::GracefulShutdown F) Clock=%lums / This=0x%p", cHiResTimer.GetElapsedTimeMs(), this);
         }
-        _InterlockedOr(&nFlags, FLAG_GracefulShutdown);
+
         //free packet
         cRwList.Remove(lpPacket);
         FreePacket(lpPacket);
         Release();
+        }
         return S_OK;
 
       case S_OK:
@@ -2016,18 +2041,22 @@ HRESULT CIpc::CConnectionBase::SendPackets(_Inout_ CPacketBase **lplpFirstPacket
     switch (hRes)
     {
       case S_FALSE:
+        {
+        BOOL bLog;
+
         _InterlockedAdd(&nOutgoingBytes, -((LONG)dwTotalBytes));
         _InterlockedDecrement(&nOutgoingWrites);
-        if (lpIpc->ShouldLog(1) != FALSE)
+        bLog = ((_InterlockedOr(&nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) ? TRUE : FALSE;
+        if (bLog != FALSE && lpIpc->ShouldLog(1) != FALSE)
         {
           lpIpc->Log(L"CIpc::GracefulShutdown B) Clock=%lums / This=0x%p", cHiResTimer.GetElapsedTimeMs(), this);
         }
-        _InterlockedOr(&nFlags, FLAG_GracefulShutdown);
         //free packet
         cRwList.Remove(lpChainStart);
         FreePacket(lpChainStart);
         //release connection
         Release();
+        }
         break;
 
       case S_OK:
