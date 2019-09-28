@@ -477,10 +477,10 @@ private:
 
 //-----------------------------------------------------------
 
-class CJsObjectBase : public virtual TRefCounted<CBaseMemObj>
+class MX_NOVTABLE CJsObjectBase : public virtual TRefCounted<CBaseMemObj>
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CJsObjectBase);
-public:
+protected:
   CJsObjectBase(_In_ DukTape::duk_context *lpCtx) : TRefCounted<CBaseMemObj>()
     {
     MX_ASSERT(lpCtx != NULL);
@@ -489,6 +489,7 @@ public:
     return;
     };
 
+public:
   ~CJsObjectBase()
     { };
 

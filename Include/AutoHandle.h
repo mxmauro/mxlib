@@ -111,11 +111,11 @@ protected:
 
 //-----------------------------------------------------------
 
-class CWindowsRemoteHandle
+class CWindowsRemoteHandle : public virtual CBaseMemObj
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CWindowsRemoteHandle);
 public:
-  CWindowsRemoteHandle()
+  CWindowsRemoteHandle() : CBaseMemObj()
     {
     hProc = h = NULL;
     return;

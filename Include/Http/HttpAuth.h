@@ -30,9 +30,9 @@
 
 namespace MX {
 
-class CHttpBaseAuth : public TRefCounted<CBaseMemObj>
+class MX_NOVTABLE CHttpAuthBase : public TRefCounted<CBaseMemObj>
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CHttpBaseAuth);
+  MX_DISABLE_COPY_CONSTRUCTOR(CHttpAuthBase);
 public:
   typedef enum {
     TypeBasic=1,
@@ -40,13 +40,13 @@ public:
   } Type;
 
 protected:
-  CHttpBaseAuth() : TRefCounted<CBaseMemObj>()
+  CHttpAuthBase() : TRefCounted<CBaseMemObj>()
     {
     return;
     };
 
 public:
-  ~CHttpBaseAuth()
+  ~CHttpAuthBase()
     { }
 
   SIZE_T GetId()
@@ -60,12 +60,12 @@ public:
 
   virtual BOOL IsReauthenticateRequst() const = 0;
 
-  virtual BOOL IsSameThan(_In_ CHttpBaseAuth *lpCompareTo) = 0;
+  virtual BOOL IsSameThan(_In_ CHttpAuthBase *lpCompareTo) = 0;
 };
 
 //--------
 
-class CHttpAuthBasic : public CHttpBaseAuth
+class CHttpAuthBasic : public CHttpAuthBase
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CHttpAuthBasic);
 public:
@@ -87,7 +87,7 @@ public:
     return FALSE;
     };
 
-  BOOL IsSameThan(_In_ CHttpBaseAuth *lpCompareTo);
+  BOOL IsSameThan(_In_ CHttpAuthBase *lpCompareTo);
 
 private:
   CStringW cStrRealmW;
@@ -96,7 +96,7 @@ private:
 
 //--------
 
-class CHttpAuthDigest : public CHttpBaseAuth
+class CHttpAuthDigest : public CHttpAuthBase
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CHttpAuthDigest);
 public:
@@ -118,7 +118,7 @@ public:
     return bStale;
     };
 
-  BOOL IsSameThan(_In_ CHttpBaseAuth *lpCompareTo);
+  BOOL IsSameThan(_In_ CHttpAuthBase *lpCompareTo);
 
 private:
   CStringW cStrRealmW, cStrDomainW;

@@ -239,7 +239,7 @@ static DukTape::duk_ret_t OnHash(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR
                                  _In_z_ LPCSTR szFunctionNameA)
 
 {
-  MX::TAutoDeletePtr<MX::CBaseDigestAlgorithm> cDigest;
+  MX::TAutoDeletePtr<MX::CDigestAlgorithmBase> cDigest;
   MX::CStringA cStrTempA;
   SIZE_T i, nSize;
   LPBYTE lpResult;

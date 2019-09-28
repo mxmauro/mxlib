@@ -44,7 +44,7 @@
 
 namespace MX {
 
-class CIpc : public virtual CBaseMemObj, public CLoggable
+class MX_NOVTABLE CIpc : public virtual CBaseMemObj, public CLoggable
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CIpc);
 protected:
@@ -67,19 +67,25 @@ public:
 
   //--------
 
-  class CUserData : public virtual TRefCounted<CBaseMemObj>
+  class MX_NOVTABLE CUserData : public virtual TRefCounted<CBaseMemObj>
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CUserData);
-  public:
+  protected:
     CUserData() : TRefCounted<CBaseMemObj>()
-      { };
+      {
+      return;
+      };
+
+  public:
     virtual ~CUserData()
-      { };
+      {
+      return;
+      };
   };
 
   //--------
 
-  class CLayer : public virtual CBaseMemObj, public TLnkLstNode<CLayer>
+  class MX_NOVTABLE CLayer : public virtual CBaseMemObj, public TLnkLstNode<CLayer>
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CLayer);
   protected:
@@ -240,7 +246,7 @@ public:
   BOOL IsShuttingDown();
 
 public:
-  class CPacketBase : public virtual CBaseMemObj, public TLnkLstNode<CPacketBase>
+  class MX_NOVTABLE CPacketBase : public virtual CBaseMemObj, public TLnkLstNode<CPacketBase>
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CPacketBase);
   public:
@@ -591,7 +597,8 @@ public:
 protected:
   friend class CLayer;
 
-  class CConnectionBase : public virtual TRefCounted<CBaseMemObj>, public TRedBlackTreeNode<CConnectionBase,SIZE_T>
+  class MX_NOVTABLE CConnectionBase : public virtual TRefCounted<CBaseMemObj>,
+                                      public TRedBlackTreeNode<CConnectionBase,SIZE_T>
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CConnectionBase);
   protected:

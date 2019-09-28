@@ -27,11 +27,12 @@
 
 namespace MX {
 
-class CThread : public virtual CBaseMemObj
+class MX_NOVTABLE CThread : public virtual CBaseMemObj
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CThread);
-public:
+protected:
   CThread();
+public:
   virtual ~CThread();
 
   virtual BOOL Start(_In_opt_ BOOL bSuspended=FALSE);

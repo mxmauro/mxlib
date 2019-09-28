@@ -30,7 +30,7 @@
 
 namespace MX {
 
-class CHttpBodyParserBase : public virtual TRefCounted<CBaseMemObj>
+class MX_NOVTABLE CHttpBodyParserBase : public virtual TRefCounted<CBaseMemObj>
 {
 protected:
   CHttpBodyParserBase();

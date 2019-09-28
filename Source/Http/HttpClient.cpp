@@ -1405,7 +1405,7 @@ handle_redirect_or_auth_ignore_body:
           else if (nRespStatus == _HTTP_STATUS_Unauthorized && cStrAuthUserNameW.IsEmpty() == FALSE &&
                    sAuthorization.nSeen401Or407Counter < DEFAULT_MAX_AUTHORIZATION_COUNT)
           {
-            TAutoRefCounted<CHttpBaseAuth> cHttpAuth;
+            TAutoRefCounted<CHttpAuthBase> cHttpAuth;
             CHttpHeaderRespWwwAuthenticate *lpHeader;
 
             if (sAuthorization.bSeen401 == FALSE)
@@ -1424,7 +1424,7 @@ handle_redirect_or_auth_ignore_body:
           else if (nRespStatus == _HTTP_STATUS_ProxyAuthenticationRequired && *(cProxy._GetUserName()) != 0 &&
                    sAuthorization.nSeen401Or407Counter < DEFAULT_MAX_AUTHORIZATION_COUNT)
           {
-            TAutoRefCounted<CHttpBaseAuth> cHttpAuth;
+            TAutoRefCounted<CHttpAuthBase> cHttpAuth;
             CHttpHeaderRespProxyAuthenticate *lpHeader;
 
             if (sAuthorization.bSeen407 == FALSE)
@@ -1527,7 +1527,7 @@ handle_redirect_or_auth_processbody:
                     (nRespStatus == _HTTP_STATUS_ProxyAuthenticationRequired && *(cProxy._GetUserName()) != 0)) &&
                    sAuthorization.nSeen401Or407Counter < DEFAULT_MAX_AUTHORIZATION_COUNT)
           {
-            TAutoRefCounted<CHttpBaseAuth> cHttpAuth;
+            TAutoRefCounted<CHttpAuthBase> cHttpAuth;
 
             (sAuthorization.nSeen401Or407Counter)++;
 
@@ -2139,7 +2139,7 @@ HRESULT CHttpClient::BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA)
   {
     if (cStrAuthUserNameW.IsEmpty() == FALSE)
     {
-      CHttpBaseAuth *lpHttpAuth;
+      CHttpAuthBase *lpHttpAuth;
 
       //check if there is a previous authentication for this web request
       lpHttpAuth = HttpAuthCache::Lookup(sRequest.cUrl);
@@ -2147,7 +2147,7 @@ HRESULT CHttpClient::BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA)
       {
         switch (lpHttpAuth->GetType())
         {
-          case CHttpBaseAuth::TypeBasic:
+          case CHttpAuthBase::TypeBasic:
             hRes = ((CHttpAuthBasic*)lpHttpAuth)->MakeAuthenticateResponse(cStrTempA, (LPCWSTR)cStrAuthUserNameW,
                                                                            (LPCWSTR)cStrAuthUserPasswordW, FALSE);
             if (FAILED(hRes))
@@ -2156,7 +2156,7 @@ HRESULT CHttpClient::BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA)
               return E_OUTOFMEMORY;
             break;
 
-          case CHttpBaseAuth::TypeDigest:
+          case CHttpAuthBase::TypeDigest:
             {
             CStringA cStrPathA;
             LPCSTR szMethodA;
@@ -2425,7 +2425,7 @@ HRESULT CHttpClient::SendTunnelConnect()
 {
   MX::CStringA cStrReqHdrsA, cStrTempA;
   CHttpHeaderBase *lpHeader;
-  CHttpBaseAuth *lpHttpAuth;
+  CHttpAuthBase *lpHttpAuth;
   SIZE_T nIndex;
   HRESULT hRes;
 
@@ -2476,7 +2476,7 @@ HRESULT CHttpClient::SendTunnelConnect()
   {
     switch (lpHttpAuth->GetType())
     {
-      case CHttpBaseAuth::TypeBasic:
+      case CHttpAuthBase::TypeBasic:
         hRes = ((CHttpAuthBasic*)lpHttpAuth)->MakeAuthenticateResponse(cStrTempA, cProxy._GetUserName(),
                                                                        cProxy.GetUserPassword(), TRUE);
         if (FAILED(hRes))
@@ -2485,7 +2485,7 @@ HRESULT CHttpClient::SendTunnelConnect()
           return E_OUTOFMEMORY;
         break;
 
-      case CHttpBaseAuth::TypeDigest:
+      case CHttpAuthBase::TypeDigest:
         {
         //for proxy the url is the same than the one being requested
         CStringA cStrPathA;

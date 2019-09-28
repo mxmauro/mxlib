@@ -17,18 +17,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "..\..\Include\Crypto\BaseCrypto.h"
+#include "..\..\Include\Crypto\CryptoBase.h"
 
 //-------------------------------------------------------
 
 namespace MX {
 
-CBaseCrypto::CBaseCrypto() : CBaseMemObj()
+CCryptoBase::CCryptoBase() : CBaseMemObj()
 {
   return;
 }
 
-SIZE_T CBaseCrypto::GetAvailableEncryptedData()
+SIZE_T CCryptoBase::GetAvailableEncryptedData()
 {
   SIZE_T nSize1, nSize2;
 
@@ -36,7 +36,7 @@ SIZE_T CBaseCrypto::GetAvailableEncryptedData()
   return nSize1+nSize2;
 }
 
-SIZE_T CBaseCrypto::GetEncryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize)
+SIZE_T CCryptoBase::GetEncryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize)
 {
   LPBYTE lpPtr1, lpPtr2;
   SIZE_T nSize1, nSize2;
@@ -59,7 +59,7 @@ SIZE_T CBaseCrypto::GetEncryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_
   return nDestSize;
 }
 
-SIZE_T CBaseCrypto::GetAvailableDecryptedData()
+SIZE_T CCryptoBase::GetAvailableDecryptedData()
 {
   SIZE_T nSize1, nSize2;
 
@@ -67,7 +67,7 @@ SIZE_T CBaseCrypto::GetAvailableDecryptedData()
   return nSize1+nSize2;
 }
 
-SIZE_T CBaseCrypto::GetDecryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize)
+SIZE_T CCryptoBase::GetDecryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize)
 {
   LPBYTE lpPtr1, lpPtr2;
   SIZE_T nSize1, nSize2;

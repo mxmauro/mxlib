@@ -28,7 +28,7 @@
 namespace MX {
 
 template <class T>
-class TRefCounted : public T
+class MX_NOVTABLE TRefCounted : public T
 {
 public:
   TRefCounted() : T()

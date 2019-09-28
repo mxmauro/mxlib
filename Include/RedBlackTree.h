@@ -30,7 +30,7 @@ template <class classOrStruct, typename KeyType>
 class TRedBlackTree;
 
 template <class classOrStruct, typename KeyType>
-class TRedBlackTreeNode : public virtual CBaseMemObj
+class MX_NOVTABLE TRedBlackTreeNode : public virtual CBaseMemObj
 {
 public:
   typedef TRedBlackTree<classOrStruct, KeyType> _RbTree;

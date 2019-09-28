@@ -28,7 +28,7 @@
 
 namespace MX {
 
-class CHttpBodyParserFormBase : public CHttpBodyParserBase
+class MX_NOVTABLE CHttpBodyParserFormBase : public CHttpBodyParserBase
 {
 protected:
   CHttpBodyParserFormBase();

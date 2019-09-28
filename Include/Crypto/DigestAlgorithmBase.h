@@ -17,42 +17,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef _MX_BASECRYPTO_H
-#define _MX_BASECRYPTO_H
+#ifndef _MX_DIGESTALGORITHMBASE_H
+#define _MX_DIGESTALGORITHMBASE_H
 
 #include "..\Defines.h"
-#include "..\CircularBuffer.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-class CBaseCrypto : public virtual CBaseMemObj
+class MX_NOVTABLE CDigestAlgorithmBase : public virtual CBaseMemObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CBaseCrypto);
+  MX_DISABLE_COPY_CONSTRUCTOR(CDigestAlgorithmBase);
 protected:
-  CBaseCrypto();
+  CDigestAlgorithmBase();
 
 public:
-  virtual HRESULT BeginEncrypt()=0;
-  virtual HRESULT EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)=0;
-  virtual HRESULT EndEncrypt()=0;
-  SIZE_T GetAvailableEncryptedData();
-  SIZE_T GetEncryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize);
+  virtual HRESULT BeginDigest()=0;
+  virtual HRESULT DigestStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)=0;
+  HRESULT DigestWordLE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount);
+  HRESULT DigestWordBE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount);
+  HRESULT DigestDWordLE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount);
+  HRESULT DigestDWordBE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount);
+  HRESULT DigestQWordLE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCount);
+  HRESULT DigestQWordBE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCount);
+  virtual HRESULT EndDigest()=0;
 
-  virtual HRESULT BeginDecrypt()=0;
-  virtual HRESULT DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)=0;
-  virtual HRESULT EndDecrypt()=0;
-  SIZE_T GetAvailableDecryptedData();
-  SIZE_T GetDecryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize);
-
-protected:
-  CCircularBuffer cEncryptedData;
-  CCircularBuffer cDecryptedData;
+  virtual LPBYTE GetResult() const=0;
+  virtual SIZE_T GetResultSize() const=0;
 };
 
 } //namespace MX
 
 //-----------------------------------------------------------
 
-#endif //_MX_BASECRYPTO_H
+#endif //_MX_DIGESTALGORITHMBASE_H

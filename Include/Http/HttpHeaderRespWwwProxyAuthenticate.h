@@ -27,7 +27,7 @@
 
 namespace MX {
 
-class CHttpHeaderRespWwwProxyAuthenticateCommon : public CHttpHeaderBase
+class MX_NOVTABLE CHttpHeaderRespWwwProxyAuthenticateCommon : public CHttpHeaderBase
 {
 protected:
   CHttpHeaderRespWwwProxyAuthenticateCommon();
@@ -38,10 +38,10 @@ public:
 
   HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
 
-  CHttpBaseAuth* GetHttpAuth();
+  CHttpAuthBase* GetHttpAuth();
 
 private:
-  TAutoRefCounted<CHttpBaseAuth> cHttpAuth;
+  TAutoRefCounted<CHttpAuthBase> cHttpAuth;
 };
 
 //--------

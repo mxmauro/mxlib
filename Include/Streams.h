@@ -28,7 +28,7 @@
 
 namespace MX {
 
-class CStream : public virtual TRefCounted<CBaseMemObj>
+class MX_NOVTABLE CStream : public virtual TRefCounted<CBaseMemObj>
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CStream);
 public:
@@ -38,12 +38,14 @@ public:
     SeekEnd,
   } eSeekMethod;
 
-public:
+protected:
   CStream() : TRefCounted<CBaseMemObj>()
     {
     lpNextStream = NULL;
     return;
     };
+
+public:
   virtual ~CStream()
     {
     if (lpNextStream != NULL)

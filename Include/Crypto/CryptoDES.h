@@ -20,13 +20,13 @@
 #ifndef _MX_CRYPTO_DES_H
 #define _MX_CRYPTO_DES_H
 
-#include "BaseCrypto.h"
+#include "CryptoBase.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-class CCryptoDES : public CBaseCrypto
+class CCryptoDES : public CCryptoBase
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CCryptoDES);
 public:

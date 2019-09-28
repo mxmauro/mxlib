@@ -20,13 +20,13 @@
 #ifndef _MX_DIGESTALGORITHM_SHAx_H
 #define _MX_DIGESTALGORITHM_SHAx_H
 
-#include "BaseDigestAlgorithm.h"
+#include "DigestAlgorithmBase.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-class CDigestAlgorithmSecureHash : public CBaseDigestAlgorithm
+class CDigestAlgorithmSecureHash : public CDigestAlgorithmBase
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CDigestAlgorithmSecureHash);
 public:

@@ -46,14 +46,14 @@ typedef struct {
 } ENCDEC_CONTEXT;
 
 typedef struct {
-  MX::CBaseDigestAlgorithm *lpSigner;
+  MX::CDigestAlgorithmBase *lpSigner;
   int md_type;
   LPBYTE lpSignature;
   SIZE_T nSignatureSize, nMaxSignatureSize;
 } SIGN_CONTEXT;
 
 typedef struct {
-  MX::CBaseDigestAlgorithm *lpVerifier;
+  MX::CDigestAlgorithmBase *lpVerifier;
   int md_type;
 } VERIFY_CONTEXT;
 
@@ -70,14 +70,14 @@ typedef struct tagRSA_DATA {
 //-----------------------------------------------------------
 
 static HRESULT GetDigest(_In_ MX::CCryptoRSA::eHashAlgorithm nHashAlgorithm, _Out_ int &md_type,
-                         _Out_ MX::CBaseDigestAlgorithm **lplpDigest);
+                         _Out_ MX::CDigestAlgorithmBase **lplpDigest);
 static int InitializeFromPEM_PasswordCallback(char *buf, int size, int rwflag, void *userdata);
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-CCryptoRSA::CCryptoRSA() : CBaseCrypto()
+CCryptoRSA::CCryptoRSA() : CCryptoBase()
 {
   lpInternalData = NULL;
   return;
@@ -803,7 +803,7 @@ HRESULT CCryptoRSA::BeginSign()
 
 HRESULT CCryptoRSA::BeginSign(_In_ eHashAlgorithm nAlgorithm)
 {
-  TAutoDeletePtr<MX::CBaseDigestAlgorithm> cDigest;
+  TAutoDeletePtr<MX::CDigestAlgorithmBase> cDigest;
   int md_type;
   HRESULT hRes;
 
@@ -911,7 +911,7 @@ HRESULT CCryptoRSA::BeginVerify()
 
 HRESULT CCryptoRSA::BeginVerify(_In_ eHashAlgorithm nAlgorithm)
 {
-  TAutoDeletePtr<MX::CBaseDigestAlgorithm> cDigest;
+  TAutoDeletePtr<MX::CDigestAlgorithmBase> cDigest;
   int md_type;
   HRESULT hRes;
 
@@ -1071,7 +1071,7 @@ VOID CCryptoRSA::CleanUp(_In_ int nWhat, _In_ BOOL bZeroData)
 //-----------------------------------------------------------
 
 static HRESULT GetDigest(_In_ MX::CCryptoRSA::eHashAlgorithm nHashAlgorithm, _Out_ int &md_type,
-                         _Out_ MX::CBaseDigestAlgorithm **lplpDigest)
+                         _Out_ MX::CDigestAlgorithmBase **lplpDigest)
 {
   HRESULT hRes;
 

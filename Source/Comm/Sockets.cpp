@@ -31,6 +31,8 @@
 
 #define MAX_TOTAL_ACCEPTS_TO_POST                     0x1000
 
+#define MAX_ACCEPT_ERRORS_PER_CYCLE                       16
+
 static __inline HRESULT MX_HRESULT_FROM_LASTSOCKETERROR()
 {
   HRESULT hRes = MX_HRESULT_FROM_WIN32(::WSAGetLastError());
@@ -559,29 +561,28 @@ VOID CSockets::OnInternalFinalize()
 
 HRESULT CSockets::CreateServerConnection(_In_ CConnection *lpListenConn)
 {
-  TAutoDeletePtr<CConnection> cIncomingConn;
+  CConnection *lpIncomingConn;
   HRESULT hRes;
 
   //create connection
-  cIncomingConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassServer, lpListenConn->nFamily));
-  if (!cIncomingConn)
+  lpIncomingConn = MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassServer, lpListenConn->nFamily);
+  if (lpIncomingConn == NULL)
     return E_OUTOFMEMORY;
-  cIncomingConn->cCreateCallback = lpListenConn->cCreateCallback;
-  MemCopy(&(cIncomingConn->sAddr), &(lpListenConn->sAddr), sizeof(lpListenConn->sAddr));
+  lpIncomingConn->cCreateCallback = lpListenConn->cCreateCallback;
+  MemCopy(&(lpIncomingConn->sAddr), &(lpListenConn->sAddr), sizeof(lpListenConn->sAddr));
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
 
-    sConnections.cTree.Insert(cIncomingConn.Get());
+    sConnections.cTree.Insert(lpIncomingConn);
   }
-  hRes = FireOnCreate(cIncomingConn.Get());
+  hRes = FireOnCreate(lpIncomingConn);
   if (SUCCEEDED(hRes))
-    hRes = cIncomingConn->CreateSocket();
+    hRes = lpIncomingConn->CreateSocket();
   if (SUCCEEDED(hRes))
-    hRes = lpListenConn->SetupAcceptEx(cIncomingConn.Get());
+    hRes = lpListenConn->SetupAcceptEx(lpIncomingConn);
   //done
   if (FAILED(hRes))
-    cIncomingConn->Close(hRes);
-  cIncomingConn.Detach();
+    lpIncomingConn->Close(hRes);
   return hRes;
 }
 
@@ -740,7 +741,6 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket,
       hRes = S_OK;
       }
       break;
-
 
     case TypeConnect:
       //get result from packet
@@ -979,10 +979,11 @@ use_default_close_method:
 
       if (fnDisconnectEx(sck, lpPacket->GetOverlapped(), TF_REUSE_SOCKET, 0) != FALSE)
       {
+        //NOTE: Should we post ever if sync is not available on success?
         if (IS_COMPLETE_SYNC_AVAILABLE())
         {
-          reinterpret_cast<CSockets*>(lpIpc)->OnDispatcherPacket(&(GetDispatcherPool()), 0,
-                                                                  lpPacket->GetOverlapped(), S_OK);
+          reinterpret_cast<CSockets*>(lpIpc)->OnDispatcherPacket(&(GetDispatcherPool()), 0, lpPacket->GetOverlapped(),
+                                                                 S_OK);
         }
       }
       else
@@ -1280,7 +1281,6 @@ HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _I
     hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, sHostResolver.lpPacket->GetOverlapped());
     if (FAILED(hRes))
       goto err_cannot_resolve;
-
   }
   else if (hRes != MX_E_IoPending)
   {
@@ -1518,7 +1518,7 @@ VOID CSockets::CConnection::ConnectWaiterThreadProc()
 VOID CSockets::CConnection::ListenerThreadProc()
 {
   HANDLE hEvents[3];
-  DWORD dw, dwErrorsCount;
+  DWORD dw, dwTimeoutMs;
 
   hEvents[0] = lpListener->lpWorkerThread->GetKillEvent();
   hEvents[1] = lpListener->hAcceptSelect;
@@ -1529,8 +1529,9 @@ VOID CSockets::CConnection::ListenerThreadProc()
     ::ResetEvent(lpListener->hAcceptSelect);
     ::ResetEvent(lpListener->hAcceptCompleted);
 
-    dwErrorsCount = 0;
-    while (dwErrorsCount < 64 &&
+    /*
+    DWORD dwErrorsCount = 0;
+    while (dwErrorsCount < MAX_ACCEPT_ERRORS_PER_CYCLE &&
            ::WaitForSingleObject(hEvents[0], 0) != WAIT_OBJECT_0 &&
            __InterlockedIncrementIfLessThan(&(lpListener->nAcceptsInProgress),
                                             (LONG)(lpListener->dwMaxAcceptsToPost)) != FALSE)
@@ -1547,8 +1548,8 @@ VOID CSockets::CConnection::ListenerThreadProc()
       else
       {
         _InterlockedDecrement(&(lpListener->nAcceptsInProgress));
-
-        if (hRes != MX_HRESULT_FROM_WIN32(ERROR_NETNAME_DELETED) && hRes != MX_HRESULT_FROM_WIN32(WSAECONNRESET) &&
+        if (hRes != MX_HRESULT_FROM_WIN32(ERROR_NETNAME_DELETED) &&
+            hRes != MX_HRESULT_FROM_WIN32(WSAECONNRESET) && hRes != MX_HRESULT_FROM_WIN32(WSAECONNABORTED) &&
             hRes != HRESULT_FROM_NT(STATUS_LOCAL_DISCONNECT) && hRes != HRESULT_FROM_NT(STATUS_REMOTE_DISCONNECT))
         {
           ((CSockets*)lpIpc)->FireOnEngineError(hRes);
@@ -1557,7 +1558,61 @@ VOID CSockets::CConnection::ListenerThreadProc()
       }
     }
 
-    dw = ::WaitForMultipleObjects(3, hEvents, FALSE, INFINITE);
+    if (dwErrorsCount == MAX_ACCEPT_ERRORS_PER_CYCLE)
+    {
+      if (dwTimeoutMs == INFINITE)
+      {
+        dwTimeoutMs = 5;
+      }
+      else
+      {
+        if ((dwTimeoutMs *= 2) > 1000)
+          dwTimeoutMs = 1000;
+      }
+    }
+    else
+    {
+      dwTimeoutMs = INFINITE;
+    }
+    */
+
+    if (__InterlockedIncrementIfLessThan(&(lpListener->nAcceptsInProgress),
+                                         (LONG)(lpListener->dwMaxAcceptsToPost)) != FALSE)
+    {
+      HRESULT hRes;
+
+      hRes = ((CSockets*)lpIpc)->CreateServerConnection(this);
+      if (SUCCEEDED(hRes))
+      {
+        dwTimeoutMs = 0;
+      }
+      else
+      {
+        _InterlockedDecrement(&(lpListener->nAcceptsInProgress));
+        if (hRes != MX_HRESULT_FROM_WIN32(ERROR_NETNAME_DELETED) &&
+            hRes != MX_HRESULT_FROM_WIN32(WSAECONNRESET) && hRes != MX_HRESULT_FROM_WIN32(WSAECONNABORTED) &&
+            hRes != HRESULT_FROM_NT(STATUS_LOCAL_DISCONNECT) && hRes != HRESULT_FROM_NT(STATUS_REMOTE_DISCONNECT))
+        {
+          ((CSockets*)lpIpc)->FireOnEngineError(hRes);
+        }
+
+        if (dwTimeoutMs == 0 || dwTimeoutMs == INFINITE)
+        {
+          dwTimeoutMs = 5;
+        }
+        else
+        {
+          if ((dwTimeoutMs <<= 1) > 1000)
+            dwTimeoutMs = 1000;
+        }
+      }
+    }
+    else
+    {
+      dwTimeoutMs = INFINITE;
+    }
+
+    dw = ::WaitForMultipleObjects(3, hEvents, FALSE, dwTimeoutMs);
     if (dw == WAIT_OBJECT_0)
       break;
 

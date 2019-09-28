@@ -28,7 +28,7 @@
 namespace MX {
 
 template <class T>
-class TAutoPtrBase : public virtual CBaseMemObj
+class MX_NOVTABLE TAutoPtrBase : public virtual CBaseMemObj
 {
 public:
   TAutoPtrBase() : CBaseMemObj()

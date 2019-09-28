@@ -213,7 +213,7 @@ HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreate
                                      _In_opt_ CUserData *lpUserData, _Out_opt_ HANDLE *h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  TAutoDeletePtr<CConnection> cConn;
+  CConnection *lpNewConn;
   CStringW cStrTempW;
   HRESULT hRes;
 
@@ -228,37 +228,36 @@ HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreate
   if (cStrTempW.Format(L"\\\\.\\pipe\\%s", szServerNameW) == FALSE)
     return E_OUTOFMEMORY;
   //create connection
-  cConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassClient));
-  if (!cConn)
+  lpNewConn = MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassClient);
+  if (lpNewConn == NULL)
     return E_OUTOFMEMORY;
   //setup connection
-  cConn->cCreateCallback = cCreateCallback;
-  cConn->cUserData = lpUserData;
+  lpNewConn->cCreateCallback = cCreateCallback;
+  lpNewConn->cUserData = lpUserData;
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
 
-    sConnections.cTree.Insert(cConn.Get());
+    sConnections.cTree.Insert(lpNewConn);
   }
-  hRes = FireOnCreate(cConn.Get());
+  hRes = FireOnCreate(lpNewConn);
   if (SUCCEEDED(hRes))
-    hRes = cConn->CreateClient((LPCWSTR)cStrTempW, dwConnectTimeoutMs, lpSecDescr);
+    hRes = lpNewConn->CreateClient((LPCWSTR)cStrTempW, dwConnectTimeoutMs, lpSecDescr);
   if (SUCCEEDED(hRes))
-    hRes = cConn->HandleConnected();
+    hRes = lpNewConn->HandleConnected();
   if (SUCCEEDED(hRes))
-    FireOnConnect(cConn.Get(), hRes);
+    FireOnConnect(lpNewConn, hRes);
   //done
   if (SUCCEEDED(hRes))
   {
     if (h != NULL)
-      *h = reinterpret_cast<HANDLE>(cConn.Get());
+      *h = reinterpret_cast<HANDLE>(lpNewConn);
   }
   else
   {
-    cConn->Close(hRes);
+    lpNewConn->Close(hRes);
     if (h != NULL)
       *h = NULL;
   }
-  cConn.Detach();
   return hRes;
 }
 
@@ -267,7 +266,7 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
                                                   _In_opt_ CUserData *lpUserData)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  TAutoDeletePtr<CConnection> cConn;
+  CConnection *lpNewConn;
   SECURITY_ATTRIBUTES sSecAttrib;
   OVERLAPPED sConnOvr;
   CWindowsEvent cConnEv;
@@ -338,8 +337,8 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
     return MX_HRESULT_FROM_LASTERROR();
   }
   //associate the local pipe with a connection and the given (optional) custom data
-  cConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassServer));
-  if (!cConn)
+  lpNewConn = MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassServer);
+  if (lpNewConn == NULL)
   {
     if (hRemotePipe != NULL)
     {
@@ -349,32 +348,31 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
     return E_OUTOFMEMORY;
   }
   //setup connection
-  cConn->hPipe = cLocalPipe.Detach();
-  cConn->cCreateCallback = cCreateCallback;
-  cConn->cUserData = lpUserData;
+  lpNewConn->hPipe = cLocalPipe.Detach();
+  lpNewConn->cCreateCallback = cCreateCallback;
+  lpNewConn->cUserData = lpUserData;
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
 
-    sConnections.cTree.Insert(cConn.Get());
+    sConnections.cTree.Insert(lpNewConn);
   }
-  hRes = FireOnCreate(cConn.Get());
+  hRes = FireOnCreate(lpNewConn);
   if (SUCCEEDED(hRes))
-    hRes = cDispatcherPool.Attach(cConn->hPipe, cDispatcherPoolPacketCallback);
+    hRes = cDispatcherPool.Attach(lpNewConn->hPipe, cDispatcherPoolPacketCallback);
   if (SUCCEEDED(hRes))
-    hRes = cConn->HandleConnected();
+    hRes = lpNewConn->HandleConnected();
   if (SUCCEEDED(hRes))
-    FireOnConnect(cConn.Get(), hRes);
+    FireOnConnect(lpNewConn, hRes);
   //done
   if (FAILED(hRes))
   {
-    cConn->Close(hRes);
+    lpNewConn->Close(hRes);
     if (hRemotePipe != NULL)
     {
       CWindowsRemoteHandle::CloseRemoteHandleSEH(hProc, hRemotePipe);
       hRemotePipe = NULL;
     }
   }
-  cConn.Detach();
   return hRes;
 }
 
@@ -409,30 +407,27 @@ VOID CNamedPipes::OnInternalFinalize()
 
 HRESULT CNamedPipes::CreateServerConnection(_In_ CServerInfo *lpServerInfo, _In_ OnCreateCallback _cCreateCallback)
 {
-  TAutoDeletePtr<CConnection> cConn;
+  CConnection *lpNewConn;
   HRESULT hRes;
 
   //create connection
-  cConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassServer));
-  if (!cConn)
+  lpNewConn = MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassServer);
+  if (lpNewConn == NULL)
     return E_OUTOFMEMORY;
   //setup connection
-  cConn->cCreateCallback = _cCreateCallback;
-  cConn->cServerInfo = lpServerInfo;
+  lpNewConn->cCreateCallback = _cCreateCallback;
+  lpNewConn->cServerInfo = lpServerInfo;
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
 
-    sConnections.cTree.Insert(cConn.Get());
+    sConnections.cTree.Insert(lpNewConn);
   }
-  hRes = FireOnCreate(cConn.Get());
+  hRes = FireOnCreate(lpNewConn);
   if (SUCCEEDED(hRes))
-    hRes = cConn->CreateServer();
+    hRes = lpNewConn->CreateServer();
   //done
   if (FAILED(hRes))
-  {
-    cConn->Close(hRes);
-  }
-  cConn.Detach();
+    lpNewConn->Close(hRes);
   return hRes;
 }
 
@@ -677,8 +672,7 @@ HRESULT CNamedPipes::CConnection::SendReadPacket(_In_ CPacketBase *lpPacket, _Ou
     return S_FALSE;
   }
   dwRead = 0;
-  if (::ReadFile(hPipe, lpPacket->GetBuffer(), lpPacket->GetBytesInUse(), &dwRead,
-                 lpPacket->GetOverlapped()) != FALSE)
+  if (::ReadFile(hPipe, lpPacket->GetBuffer(), lpPacket->GetBytesInUse(), &dwRead, lpPacket->GetOverlapped()) != FALSE)
   {
     hRes = (fnSetFileCompletionNotificationModes != NULL) ? S_OK : MX_E_IoPending;
   }

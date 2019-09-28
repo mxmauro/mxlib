@@ -20,13 +20,13 @@
 #ifndef _MX_CRYPTO_RSA_H
 #define _MX_CRYPTO_RSA_H
 
-#include "BaseCrypto.h"
+#include "CryptoBase.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-class CCryptoRSA : public CBaseCrypto
+class CCryptoRSA : public CCryptoBase
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CCryptoRSA);
 public:

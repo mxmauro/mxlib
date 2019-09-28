@@ -1624,7 +1624,7 @@ HRESULT CIpc::CConnectionBase::AfterWriteSignal(_In_ CPacketBase *lpPacket)
   if (lpIpc->ShouldLog(1) != FALSE)
   {
     lpIpc->Log(L"CIpc::AfterWriteSignal) Clock=%lums / Ovr=0x%p / Type=%lu", cHiResTimer.GetElapsedTimeMs(),
-      lpPacket->GetOverlapped(), lpPacket->GetType());
+               lpPacket->GetOverlapped(), lpPacket->GetType());
   }
   hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
   if (FAILED(hRes))
@@ -1652,8 +1652,8 @@ HRESULT CIpc::CConnectionBase::SendResumeIoProcessingPacket(_In_ BOOL bInput)
   if (lpIpc->ShouldLog(1) != FALSE)
   {
     lpIpc->Log(L"CIpc::SendResumeIoProcessingPacket[%s]) Clock=%lums / Ovr=0x%p / Type=%lu",
-      ((bInput != FALSE) ? L"Input" : L"Output"), cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(),
-      lpPacket->GetType());
+               ((bInput != FALSE) ? L"Input" : L"Output"), cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(),
+               lpPacket->GetType());
   }
   hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
   if (FAILED(hRes))
@@ -1678,7 +1678,8 @@ VOID CIpc::CConnectionBase::Close(_In_ HRESULT hRes)
     if (SUCCEEDED(hRes) && (nInitVal & FLAG_Closed) == 0)
       nNewVal |= FLAG_GracefulShutdown;
     nOrigVal = _InterlockedCompareExchange(&nFlags, nNewVal, nInitVal);
-  } while (nOrigVal != nInitVal);
+  }
+  while (nOrigVal != nInitVal);
   _InterlockedCompareExchange(&hrErrorCode, hRes, S_OK);
   if ((hRes & 0x0F000000) != 0)
   {
@@ -1912,7 +1913,7 @@ HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacke
     switch (hRes)
     {
       case S_FALSE:
-      {
+        {
         BOOL bLog;
 
         MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);

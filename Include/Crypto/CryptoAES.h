@@ -20,13 +20,13 @@
 #ifndef _MX_CRYPTO_AES_H
 #define _MX_CRYPTO_AES_H
 
-#include "BaseCrypto.h"
+#include "CryptoBase.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-class CCryptoAES : public CBaseCrypto
+class CCryptoAES : public CCryptoBase
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CCryptoAES);
 public:

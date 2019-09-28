@@ -50,7 +50,7 @@ public:
   CStringW cStrHostW;
   int nPort;
   CStringW cStrPathW;
-  TAutoRefCounted<CHttpBaseAuth> cHttpAuth;
+  TAutoRefCounted<CHttpAuthBase> cHttpAuth;
   DWORD dwLastUsedTickMs;
 };
 
@@ -76,13 +76,13 @@ namespace MX {
 
 namespace HttpAuthCache {
 
-HRESULT Add(_In_ CUrl &cUrl, _In_ CHttpBaseAuth *lpHttpAuth)
+HRESULT Add(_In_ CUrl &cUrl, _In_ CHttpAuthBase *lpHttpAuth)
 {
   return Add(cUrl.GetSchemeCode(), cUrl.GetHost(), cUrl.GetPort(), cUrl.GetPath(), lpHttpAuth);
 }
 
 HRESULT Add(_In_ CUrl::eScheme nScheme, _In_z_ LPCWSTR szHostW, _In_ int nPort, _In_z_ LPCWSTR szPathW,
-            _In_ CHttpBaseAuth *lpHttpAuth)
+            _In_ CHttpAuthBase *lpHttpAuth)
 {
   MX::CAutoSlimRWLExclusive cLock(&nRwMutex);
   MX::TAutoDeletePtr<MX::Internals::CHttpAuthCacheItem> cNewCachedItem;
@@ -197,7 +197,7 @@ HRESULT Add(_In_ CUrl::eScheme nScheme, _In_z_ LPCWSTR szHostW, _In_ int nPort, 
   return S_OK;
 }
 
-VOID Remove(_In_ CHttpBaseAuth *lpHttpAuth)
+VOID Remove(_In_ CHttpAuthBase *lpHttpAuth)
 {
   MX::CAutoSlimRWLExclusive cLock(&nRwMutex);
   SIZE_T nIdx;
@@ -232,15 +232,15 @@ VOID RemoveAll()
   return;
 }
 
-CHttpBaseAuth* Lookup(_In_ CUrl &cUrl)
+CHttpAuthBase* Lookup(_In_ CUrl &cUrl)
 {
   return Lookup(cUrl.GetSchemeCode(), cUrl.GetHost(), cUrl.GetPort(), cUrl.GetPath());
 }
 
-CHttpBaseAuth* Lookup(_In_ CUrl::eScheme nScheme, _In_z_ LPCWSTR szHostW, _In_ int nPort, _In_z_ LPCWSTR szPathW)
+CHttpAuthBase* Lookup(_In_ CUrl::eScheme nScheme, _In_z_ LPCWSTR szHostW, _In_ int nPort, _In_z_ LPCWSTR szPathW)
 {
   MX::CAutoSlimRWLShared cLock(&nRwMutex);
-  CHttpBaseAuth *lpHttpAuth;
+  CHttpAuthBase *lpHttpAuth;
   SIZE_T nIdx, nBestMatchIdx, nBestMatchPathLen;
 
   if (szHostW == NULL || szPathW == NULL || nPort < 0 || nPort > 65535)

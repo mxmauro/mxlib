@@ -59,9 +59,11 @@ SIZE_T TryMemCopy(_Out_ LPVOID lpDest, _In_ LPCVOID lpSrc, _In_ SIZE_T nCount);
     _class(_In_ const _class& cSrc) = delete;              \
     _class& operator=(_In_ const _class& cSrc) = delete
 
+#define MX_NOVTABLE __declspec(novtable)
+
 //-----------------------------------------------------------
 
-class __declspec(novtable) CBaseMemObj
+class MX_NOVTABLE CBaseMemObj
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CBaseMemObj);
 public:

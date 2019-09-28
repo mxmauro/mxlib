@@ -80,7 +80,7 @@ HRESULT CHttpHeaderRespWwwProxyAuthenticateCommon::Build(_Inout_ CStringA &cStrD
   return MX_E_Unsupported;
 }
 
-CHttpBaseAuth* CHttpHeaderRespWwwProxyAuthenticateCommon::GetHttpAuth()
+CHttpAuthBase* CHttpHeaderRespWwwProxyAuthenticateCommon::GetHttpAuth()
 {
   return cHttpAuth.Get();
 }

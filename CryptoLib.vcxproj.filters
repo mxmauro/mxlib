@@ -14,12 +14,6 @@
     <ClInclude Include="Include\Crypto\Base64.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Crypto\BaseCrypto.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Include\Crypto\BaseDigestAlgorithm.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Include\Crypto\CryptoAES.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -41,15 +35,15 @@
     <ClInclude Include="Source\Crypto\InitOpenSSL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Include\Crypto\CryptoBase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Crypto\DigestAlgorithmBase.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Crypto\Base64.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Crypto\BaseCrypto.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Crypto\BaseDigestAlgorithm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Crypto\CryptoAES.cpp">
@@ -71,6 +65,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\Crypto\InitOpenSSL.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Crypto\CryptoBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Crypto\DigestAlgorithmBase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

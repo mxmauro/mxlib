@@ -30,15 +30,15 @@ namespace MX {
 
 namespace HttpAuthCache {
 
-HRESULT Add(_In_ CUrl &cUrl, _In_ CHttpBaseAuth *lpHttpAuth);
+HRESULT Add(_In_ CUrl &cUrl, _In_ CHttpAuthBase *lpHttpAuth);
 HRESULT Add(_In_ CUrl::eScheme nScheme, _In_z_ LPCWSTR szHostW, _In_ int nPort, _In_z_ LPCWSTR szPathW,
-            _In_ CHttpBaseAuth *lpHttpAuth);
+            _In_ CHttpAuthBase *lpHttpAuth);
 
-VOID Remove(_In_ CHttpBaseAuth *lpHttpAuth);
+VOID Remove(_In_ CHttpAuthBase *lpHttpAuth);
 VOID RemoveAll();
 
-CHttpBaseAuth* Lookup(_In_ CUrl &cUrl);
-CHttpBaseAuth* Lookup(_In_ CUrl::eScheme nScheme, _In_z_ LPCWSTR szHostW, _In_ int nPort, _In_z_ LPCWSTR szPathW);
+CHttpAuthBase* Lookup(_In_ CUrl &cUrl);
+CHttpAuthBase* Lookup(_In_ CUrl::eScheme nScheme, _In_z_ LPCWSTR szHostW, _In_ int nPort, _In_z_ LPCWSTR szPathW);
 
 } //namespace HttpAuthCache
 

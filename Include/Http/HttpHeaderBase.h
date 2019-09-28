@@ -37,7 +37,7 @@
 
 namespace MX {
 
-class CHttpHeaderBase : public virtual CBaseMemObj
+class MX_NOVTABLE CHttpHeaderBase : public virtual CBaseMemObj
 {
 public:
   typedef enum {

@@ -27,7 +27,7 @@
 
 namespace MX {
 
-class CHttpHeaderReqIfXXXSinceBase : public CHttpHeaderBase
+class MX_NOVTABLE CHttpHeaderReqIfXXXSinceBase : public CHttpHeaderBase
 {
 protected:
   CHttpHeaderReqIfXXXSinceBase(_In_ BOOL bIfModified);

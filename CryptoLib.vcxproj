@@ -20,8 +20,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\Crypto\Base64.h" />
-    <ClInclude Include="Include\Crypto\BaseCrypto.h" />
-    <ClInclude Include="Include\Crypto\BaseDigestAlgorithm.h" />
+    <ClInclude Include="Include\Crypto\CryptoBase.h" />
+    <ClInclude Include="Include\Crypto\DigestAlgorithmBase.h" />
     <ClInclude Include="Include\Crypto\CryptoAES.h" />
     <ClInclude Include="Include\Crypto\CryptoDES.h" />
     <ClInclude Include="Include\Crypto\CryptoRSA.h" />
@@ -32,8 +32,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Crypto\Base64.cpp" />
-    <ClCompile Include="Source\Crypto\BaseCrypto.cpp" />
-    <ClCompile Include="Source\Crypto\BaseDigestAlgorithm.cpp" />
+    <ClCompile Include="Source\Crypto\CryptoBase.cpp" />
+    <ClCompile Include="Source\Crypto\DigestAlgorithmBase.cpp" />
     <ClCompile Include="Source\Crypto\CryptoAES.cpp" />
     <ClCompile Include="Source\Crypto\CryptoDES.cpp" />
     <ClCompile Include="Source\Crypto\CryptoRSA.cpp" />

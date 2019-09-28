@@ -27,7 +27,7 @@
 
 namespace MX {
 
-class CHttpHeaderReqIfXXXMatchBase : public CHttpHeaderBase
+class MX_NOVTABLE CHttpHeaderReqIfXXXMatchBase : public CHttpHeaderBase
 {
 public:
   class CEntity : public virtual CBaseMemObj

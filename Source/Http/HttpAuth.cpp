@@ -42,7 +42,7 @@ static HRESULT GetNextPair(_Inout_ LPCSTR &szValueA, _Out_ LPCSTR *lpszNameStart
 static HRESULT Decode(_Inout_ MX::CStringW &cStrW, _In_z_ LPCSTR szValueA, _In_ BOOL bIsUTF8);
 static HRESULT Encode(_Inout_ MX::CStringA &cStrA, _In_z_ LPCWSTR szValueW, _In_ BOOL bAppend, _In_ BOOL bIsUTF8);
 
-static HRESULT BeginHashing(_Out_ MX::CBaseDigestAlgorithm **lplpDigAlg, _In_ int nAlgorithm);
+static HRESULT BeginHashing(_Out_ MX::CDigestAlgorithmBase **lplpDigAlg, _In_ int nAlgorithm);
 static BOOL ConvertToHex(_Out_ MX::CStringA &cStrA, _In_ LPCVOID lpData, _In_ SIZE_T nDataLen);
 static int ParseQOP(_In_opt_z_ LPCSTR szValueA);
 
@@ -50,7 +50,7 @@ static int ParseQOP(_In_opt_z_ LPCSTR szValueA);
 
 namespace MX {
 
-CHttpAuthBasic::CHttpAuthBasic() : CHttpBaseAuth()
+CHttpAuthBasic::CHttpAuthBasic() : CHttpAuthBase()
 {
   bCharsetIsUtf8 = FALSE;
   return;
@@ -174,7 +174,7 @@ HRESULT CHttpAuthBasic::MakeAuthenticateResponse(_Out_ CStringA &cStrDestA, _In_
   return hRes;
 }
 
-BOOL CHttpAuthBasic::IsSameThan(_In_ CHttpBaseAuth *_lpCompareTo)
+BOOL CHttpAuthBasic::IsSameThan(_In_ CHttpAuthBase *_lpCompareTo)
 {
   CHttpAuthBasic *lpCompareTo;
 
@@ -193,7 +193,7 @@ BOOL CHttpAuthBasic::IsSameThan(_In_ CHttpBaseAuth *_lpCompareTo)
 
 //--------
 
-CHttpAuthDigest::CHttpAuthDigest() : CHttpBaseAuth()
+CHttpAuthDigest::CHttpAuthDigest() : CHttpAuthBase()
 {
   bStale = bUserHash = FALSE;
   nAlgorithm = _ALGORITHM_MD5;
@@ -403,7 +403,7 @@ HRESULT CHttpAuthDigest::MakeAuthenticateResponse(_Out_ CStringA &cStrDestA, _In
                                                   _In_z_ LPCWSTR szPasswordW, _In_z_ LPCSTR szMethodA,
                                                   _In_z_ LPCSTR szUriPathA, _In_ BOOL bIsProxy)
 {
-  TAutoDeletePtr<CBaseDigestAlgorithm> cDigAlg;
+  TAutoDeletePtr<CDigestAlgorithmBase> cDigAlg;
   CSecureStringA cStrTempA, cStrHashKeyA[2], cStrResponseA, cStrUserNameA;
   CHAR szCNonceA[32], szNonceCountA[32];
   LONG _nNonceCount;
@@ -454,7 +454,7 @@ HRESULT CHttpAuthDigest::MakeAuthenticateResponse(_Out_ CStringA &cStrDestA, _In
     //username
     if (bUserHash != FALSE)
     {
-      TAutoDeletePtr<CBaseDigestAlgorithm> cDigAlgUserHash;
+      TAutoDeletePtr<CDigestAlgorithmBase> cDigAlgUserHash;
 
       hRes = BeginHashing(&cDigAlgUserHash, nAlgorithm);
       if (SUCCEEDED(hRes))
@@ -530,7 +530,7 @@ HRESULT CHttpAuthDigest::MakeAuthenticateResponse(_Out_ CStringA &cStrDestA, _In
     //session-ize (HA1 = DIGEST(HA1:nonce:cnonce)
     if (SUCCEEDED(hRes) && bAlgorithmSession != FALSE)
     {
-      TAutoDeletePtr<CBaseDigestAlgorithm> cDigAlgSess;
+      TAutoDeletePtr<CDigestAlgorithmBase> cDigAlgSess;
 
       hRes = BeginHashing(&cDigAlgSess, nAlgorithm);
       if (SUCCEEDED(hRes))
@@ -771,7 +771,7 @@ HRESULT CHttpAuthDigest::MakeAuthenticateResponse(_Out_ CStringA &cStrDestA, _In
   return hRes;
 }
 
-BOOL CHttpAuthDigest::IsSameThan(_In_ CHttpBaseAuth *_lpCompareTo)
+BOOL CHttpAuthDigest::IsSameThan(_In_ CHttpAuthBase *_lpCompareTo)
 {
   CHttpAuthDigest *lpCompareTo;
 
@@ -811,7 +811,7 @@ BOOL CHttpAuthDigest::IsSameThan(_In_ CHttpBaseAuth *_lpCompareTo)
 
 //-----------------------------------------------------------
 
-static HRESULT BeginHashing(_Out_ MX::CBaseDigestAlgorithm **lplpDigAlg, _In_ int nAlgorithm)
+static HRESULT BeginHashing(_Out_ MX::CDigestAlgorithmBase **lplpDigAlg, _In_ int nAlgorithm)
 {
   HRESULT hRes;
 

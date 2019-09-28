@@ -17,23 +17,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "..\..\Include\Crypto\BaseDigestAlgorithm.h"
+#include "..\..\Include\Crypto\DigestAlgorithmBase.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-CBaseDigestAlgorithm::CBaseDigestAlgorithm() : CBaseMemObj()
+CDigestAlgorithmBase::CDigestAlgorithmBase() : CBaseMemObj()
 {
   return;
 }
 
-HRESULT CBaseDigestAlgorithm::DigestWordLE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount)
+HRESULT CDigestAlgorithmBase::DigestWordLE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount)
 {
   return DigestStream(lpnValues, nCount * sizeof(WORD));
 }
 
-HRESULT CBaseDigestAlgorithm::DigestWordBE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount)
+HRESULT CDigestAlgorithmBase::DigestWordBE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount)
 {
   WORD aTempValues[32];
   SIZE_T i;
@@ -54,12 +54,12 @@ HRESULT CBaseDigestAlgorithm::DigestWordBE(_In_ LPWORD lpnValues, _In_ SIZE_T nC
   return hRes;
 }
 
-HRESULT CBaseDigestAlgorithm::DigestDWordLE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount)
+HRESULT CDigestAlgorithmBase::DigestDWordLE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount)
 {
   return DigestStream(lpnValues, nCount * sizeof(DWORD));
 }
 
-HRESULT CBaseDigestAlgorithm::DigestDWordBE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount)
+HRESULT CDigestAlgorithmBase::DigestDWordBE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount)
 {
   DWORD aTempValues[32];
   SIZE_T i;
@@ -82,12 +82,12 @@ HRESULT CBaseDigestAlgorithm::DigestDWordBE(_In_ LPDWORD lpnValues, _In_ SIZE_T 
   return hRes;
 }
 
-HRESULT CBaseDigestAlgorithm::DigestQWordLE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCount)
+HRESULT CDigestAlgorithmBase::DigestQWordLE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCount)
 {
   return DigestStream(lpnValues, nCount * sizeof(ULONGLONG));
 }
 
-HRESULT CBaseDigestAlgorithm::DigestQWordBE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCount)
+HRESULT CDigestAlgorithmBase::DigestQWordBE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCount)
 {
   ULONGLONG aTempValues[32];
   SIZE_T i;
