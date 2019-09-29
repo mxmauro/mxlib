@@ -607,7 +607,9 @@ public:
     };
 
 protected:
-  typedef TRefCounted<CStringA> CRefCountedStringA;
+  class CRefCountedStringA : public TRefCounted<CStringA>
+  {
+  };
 
 private:
   friend class CJavascriptVM;

@@ -30,13 +30,14 @@ namespace MX {
 template <class T>
 class MX_NOVTABLE TRefCounted : public T
 {
-public:
+protected:
   TRefCounted() : T()
     {
     _InterlockedExchange(&nRefCount, 1);
     return;
     };
 
+public:
   virtual ~TRefCounted()
     {
     return;
