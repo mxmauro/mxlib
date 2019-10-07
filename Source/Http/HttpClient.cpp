@@ -1242,10 +1242,16 @@ HRESULT CHttpClient::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_opt_ C
 //NOTE: "CIpc" guarantees no simultaneous calls to 'OnSocketDataReceived' will be received from different threads
 HRESULT CHttpClient::OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData)
 {
+  CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   BYTE aMsgBuf[4096];
   SIZE_T nMsgSize, nMsgUsed;
   BOOL bCheckConnection, bFireResponseHeadersReceivedCallback, bFireDocumentCompleted, nHandleResponseHeadersTimer;
   HRESULT hRes;
+
+  if (cAutoRundownProt.IsAcquired() == FALSE)
+  {
+    return MX_E_Cancelled;
+  }
 
   nMsgSize = nMsgUsed = 0;
   bCheckConnection = TRUE;
@@ -1863,8 +1869,12 @@ VOID CHttpClient::OnResponseBodyTimeout(_In_ LONG nTimerId, _In_ LPVOID lpUserDa
 VOID CHttpClient::OnAfterSendRequestHeaders(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie,
                                             _In_ CIpc::CUserData *lpUserData)
 {
+  CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   BOOL bFireDymanicRequestBodyStartCallback = FALSE;
   HRESULT hRes = S_OK;
+
+  if (cAutoRundownProt.IsAcquired() == FALSE)
+    return;
 
   {
     CCriticalSection::CAutoLock cLock(cMutex);
@@ -1904,6 +1914,7 @@ VOID CHttpClient::OnAfterSendRequestHeaders(_In_ CIpc *lpIpc, _In_ HANDLE h, _In
   }
   if (SUCCEEDED(hRes) && bFireDymanicRequestBodyStartCallback != FALSE && cDymanicRequestBodyStartCallback)
     cDymanicRequestBodyStartCallback(this);
+
   //raise error event if any
   if (FAILED(hRes) && cErrorCallback)
     cErrorCallback(this, hRes);
@@ -1913,7 +1924,11 @@ VOID CHttpClient::OnAfterSendRequestHeaders(_In_ CIpc *lpIpc, _In_ HANDLE h, _In
 VOID CHttpClient::OnAfterSendRequestBody(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie,
                                          _In_ CIpc::CUserData *lpUserData)
 {
+  CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   HRESULT hRes = S_OK;
+
+  if (cAutoRundownProt.IsAcquired() == FALSE)
+    return;
 
   {
     CCriticalSection::CAutoLock cLock(cMutex);

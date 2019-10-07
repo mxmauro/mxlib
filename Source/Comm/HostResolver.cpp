@@ -26,7 +26,6 @@
 #include "..\..\Include\Finalizer.h"
 #include "..\..\Include\Http\punycode.h"
 #include "..\..\Include\RedBlackTree.h"
-#include "..\..\Include\TimedEvent.h"
 #include <ws2def.h>
 #include <VersionHelpers.h>
 
