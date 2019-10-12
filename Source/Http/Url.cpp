@@ -2374,11 +2374,11 @@ static HRESULT ToStringEncode(_Inout_ MX::CStringA &cStrDestA, _In_z_ LPCWSTR sz
     }
     if (nSize <= 0)
       return MX_E_InvalidData;
-    for (i=0; i<nSize; i++)
+    for (i = 0; i < nSize; i++)
     {
       _chA[0] = '%';
-      _chA[1] = szHexaNumA[((*((UCHAR*)chA[i])) >> 4) & 0x0F];
-      _chA[2] = szHexaNumA[( *((UCHAR*)chA[i])      ) & 0x0F];
+      _chA[1] = szHexaNumA[(((UCHAR*)chA)[i] >> 4) & 0x0F];
+      _chA[2] = szHexaNumA[(((UCHAR*)chA)[i]     ) & 0x0F];
       if (cStrDestA.ConcatN(_chA, 3) == FALSE)
         return E_OUTOFMEMORY;
     }
