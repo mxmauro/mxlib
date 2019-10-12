@@ -32,6 +32,10 @@
 
 //-----------------------------------------------------------
 
+static VOID GetAnsiAppPath(_Out_ CHAR szPathA[4096]);
+
+//-----------------------------------------------------------
+
 namespace MX {
 
 namespace Internals {
@@ -274,6 +278,31 @@ DukTape::duk_ret_t CJsMySqlPlugin::Connect()
   _CALLAPI(mysql_options)(jsmysql_data->lpDB, MYSQL_OPT_RECONNECT, &nTemp);
   nTemp = 1;
   _CALLAPI(mysql_options)(jsmysql_data->lpDB, MYSQL_SECURE_AUTH, &nTemp);
+  if (StrCompareA(szHostA, "shared-mem") == 0)
+  {
+    CHAR szPathA[4096];
+
+    GetAnsiAppPath(szPathA);
+    _CALLAPI(mysql_options)(jsmysql_data->lpDB, MYSQL_PLUGIN_DIR, szPathA);
+    _CALLAPI(mysql_options)(jsmysql_data->lpDB, MYSQL_SHARED_MEMORY_BASE_NAME, "MYSQL");
+    nTemp = MYSQL_PROTOCOL_MEMORY;
+    _CALLAPI(mysql_options)(jsmysql_data->lpDB, MYSQL_OPT_PROTOCOL, &nTemp);
+    //----
+    szHostA = "localhost";
+    nPort = 0;
+  }
+  else if (StrCompareA(szHostA, "named-pipes") == 0)
+  {
+    CHAR szPathA[4096];
+
+    GetAnsiAppPath(szPathA);
+    _CALLAPI(mysql_options)(jsmysql_data->lpDB, MYSQL_PLUGIN_DIR, szPathA);
+    nTemp = MYSQL_PROTOCOL_PIPE;
+    _CALLAPI(mysql_options)(jsmysql_data->lpDB, MYSQL_OPT_PROTOCOL, &nTemp);
+    //----
+    szHostA = ".";
+    nPort = 0;
+  }
   //do connection
   if (_CALLAPI(mysql_real_connect)(jsmysql_data->lpDB, szHostA, (szUserNameA != NULL) ? szUserNameA : "",
                                    (szPasswordA != NULL) ? szPasswordA : "", NULL, (UINT)nPort, NULL,
@@ -1791,3 +1820,36 @@ HRESULT CJsMySqlPlugin::HResultFromMySqlErr(_In_ int nError)
 }
 
 } //namespace MX
+
+//-----------------------------------------------------------
+
+static VOID GetAnsiAppPath(_Out_ CHAR szPathA[4096])
+{
+  WCHAR szPathW[4096], *sW;
+  DWORD dwLen;
+  int nLen;
+
+  //get application path
+  dwLen = ::GetModuleFileNameW(NULL, szPathW, MX_ARRAYLEN(szPathW) - 2);
+  if (dwLen == 0)
+  {
+    strcpy_s(szPathA, MX_ARRAYLEN(szPathA), ".\\");
+    return;
+  }
+  szPathW[dwLen] = 0;
+  sW = (LPWSTR)MX::StrChrW(szPathW, L'\\', TRUE);
+  if (sW == NULL)
+  {
+    strcpy_s(szPathA, MX_ARRAYLEN(szPathA), ".\\");
+    return;
+  }
+  sW[1] = 0;
+  nLen = ::WideCharToMultiByte(CP_ACP, 0, szPathW, (int)MX::StrLenW(szPathW), szPathA, 4096, NULL, NULL);
+  if (nLen <= 0)
+  {
+    strcpy_s(szPathA, MX_ARRAYLEN(szPathA), ".\\");
+    return;
+  }
+  szPathA[nLen] = 0;
+  return;
+}
