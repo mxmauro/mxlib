@@ -187,9 +187,11 @@ class CFastLock : public virtual CBaseMemObj
 public:
   CFastLock(_Inout_ LONG volatile *_lpnLock) : CBaseMemObj()
     {
+    LONG nTid = (LONG)::MxGetCurrentThreadId();
+
     nFlagMask = 0;
     lpnLock = _lpnLock;
-    while (_InterlockedCompareExchange(lpnLock, 1, 0) != 0)
+    while (_InterlockedCompareExchange(lpnLock, nTid, 0) != 0)
       _YieldProcessor();
     return;
     };
