@@ -10,19 +10,21 @@
 #include <custom_conf.h>
 #else
 #define PROTOCOL_VERSION		10
-#define MARIADB_CLIENT_VERSION_STR	"10.3.6"
-#define MARIADB_BASE_VERSION		"mariadb-10.3"
-#define MARIADB_VERSION_ID		100306
-#define MYSQL_VERSION_ID		100306
+#define MARIADB_CLIENT_VERSION_STR	"10.4.3"
+#define MARIADB_BASE_VERSION		"mariadb-10.4"
+#define MARIADB_VERSION_ID		100403
 #define MARIADB_PORT	        	3306
 #define MARIADB_UNIX_ADDR               "/tmp/mysql.sock"
-#define MYSQL_CONFIG_NAME		"my"
 
-#define MARIADB_PACKAGE_VERSION "3.0.7"
-#define MARIADB_PACKAGE_VERSION_ID 30007
+#define MYSQL_CONFIG_NAME               "my"
+#define MYSQL_VERSION_ID                100403
+#define MYSQL_SERVER_VERSION            "10.4.3-MariaDB"
+
+#define MARIADB_PACKAGE_VERSION "3.1.4"
+#define MARIADB_PACKAGE_VERSION_ID 30104
 #define MARIADB_SYSTEM_TYPE "Windows"
 #define MARIADB_MACHINE_TYPE "AMD64"
-#define MARIADB_PLUGINDIR "lib/mariadb/plugin"
+#define MARIADB_PLUGINDIR "C:/Program Files/mariadb-connector-c/C:/Program Files/mariadb-connector-c/lib/mariadb/plugin"
 
 /* mysqld compile time options */
 #ifndef MYSQL_CHARSET
@@ -31,6 +33,6 @@
 #endif
 
 /* Source information */
-#define CC_SOURCE_REVISION "334964f0711c3fd027f634a239eee57bc912f7ff"
+#define CC_SOURCE_REVISION "544b6f1d12f0e5b2a141129075ff2d64feb0e4c9"
 
 #endif /* _mariadb_version_h_ */

@@ -7,4 +7,4 @@ ROBOCOPY "%~dp0Web" "%~1\Web" /COPYALL /IS /IT /XJ /E /XF *.~* /NP >NUL 2>NUL
 REM Resetting ROBOCOPY errorlevel to zero
 CMD /c "EXIT /b 0"
 
-"%~dp0..\..\SupportFiles\7za.exe" -y -o"%~1" x "%~dp0..\..\SupportFiles\MariaDB 3_0_7\MariaDB_%~2.zip" libmariadb.dll >NUL 2>NUL
+"%~dp0..\..\SupportFiles\7za.exe" -y -o"%~1" e "%~dp0..\..\SupportFiles\MariaDB 3_1_4\MariaDB_%~2.zip" libmariadb.dll pvio_shmem.dll pvio_npipe.dll >NUL 2>NUL
