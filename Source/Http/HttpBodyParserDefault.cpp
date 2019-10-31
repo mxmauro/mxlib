@@ -76,7 +76,7 @@ HRESULT CHttpBodyParserDefault::Read(_Out_writes_to_(nToRead, *lpnReaded) LPVOID
     nOfs = nOffset;
     while (nToRead > 0)
     {
-      MX::MemSet(&sOvr, 0, sizeof(sOvr));
+      ::MxMemSet(&sOvr, 0, sizeof(sOvr));
       sOvr.Offset = dwOfs[0];
       sOvr.OffsetHigh = dwOfs[1];
       dwToRead = (nToRead > 65536) ? 65536 : (DWORD)nToRead;
@@ -93,7 +93,7 @@ HRESULT CHttpBodyParserDefault::Read(_Out_writes_to_(nToRead, *lpnReaded) LPVOID
   }
   else
   {
-    MemCopy(lpDest, cMemBuffer.Get() + (SIZE_T)nOffset, nToRead);
+    MxMemCopy(lpDest, cMemBuffer.Get() + (SIZE_T)nOffset, nToRead);
     if (lpnReaded != NULL)
       *lpnReaded = nToRead;
   }
@@ -279,12 +279,12 @@ err_nomem:
       lpPtr = (LPBYTE)MX_MALLOC(nNewSize);
       if (lpPtr == NULL)
         goto err_nomem;
-      MemCopy(lpPtr, cMemBuffer.Get(), (SIZE_T)nSize);
+      MxMemCopy(lpPtr, cMemBuffer.Get(), (SIZE_T)nSize);
       cMemBuffer.Attach(lpPtr);
       nMemBufferSize = nNewSize;
     }
     //add data to buffer
-    MemCopy(cMemBuffer.Get() + (SIZE_T)nSize, lpData, nDataSize);
+    MxMemCopy(cMemBuffer.Get() + (SIZE_T)nSize, lpData, nDataSize);
     nSize += (ULONGLONG)nDataSize;
     nDataSize = 0;
   }

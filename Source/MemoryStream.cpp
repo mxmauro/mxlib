@@ -98,7 +98,7 @@ HRESULT CMemoryStream::Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_
   }
   if (nBytes > nSize - nReadPos)
     nBytes = nSize - nReadPos;
-  MemCopy(lpDest, lpData + nReadPos, nBytes);
+  MxMemCopy(lpDest, lpData + nReadPos, nBytes);
   if (nStartOffset == ULONGLONG_MAX)
     nCurrPos += nBytes;
   //done
@@ -138,7 +138,7 @@ HRESULT CMemoryStream::Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_
       nBytes = nSize - nWritePos;
     }
   }
-  MemCopy(lpData + nWritePos, lpSrc, nBytes);
+  MxMemCopy(lpData + nWritePos, lpSrc, nBytes);
   if (nStartOffset == ULONGLONG_MAX)
     nCurrPos += nBytes;
   if (nSize < nWritePos + nBytes)

@@ -177,10 +177,10 @@ HRESULT CHttpHeaderEntContentType::AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCWST
   cNewParam.Attach((LPPARAMETER)MX_MALLOC(sizeof(PARAMETER) + nNameLen + nValueLen));
   if (!cNewParam)
     return E_OUTOFMEMORY;
-  MemCopy(cNewParam->szNameA, szStartA, nNameLen);
+  MxMemCopy(cNewParam->szNameA, szStartA, nNameLen);
   cNewParam->szNameA[nNameLen] = 0;
   cNewParam->szValueW = (LPWSTR)((LPBYTE)(cNewParam->szNameA) + (nNameLen + 1));
-  MemCopy(cNewParam->szValueW, szValueW, nValueLen);
+  MxMemCopy(cNewParam->szValueW, szValueW, nValueLen);
   //add to list
   if (cParamsList.AddElement(cNewParam.Get()) == FALSE)
     return E_OUTOFMEMORY;

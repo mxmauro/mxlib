@@ -85,7 +85,7 @@ CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr, _In_opt_ CLoggable *lpLogPa
   //----
   sRequest.sPostData.bHasRaw = FALSE;
   sRequest.sPostData.bIsDynamic = FALSE;
-  MemSet(sRequest.szBoundaryA, 0, sizeof(sRequest.szBoundaryA));
+  MxMemSet(sRequest.szBoundaryA, 0, sizeof(sRequest.szBoundaryA));
   sRequest.bUsingMultiPartFormData = FALSE;
   sRequest.bUsingProxy = FALSE;
   _InterlockedExchange(&(sResponse.nTimerId), 0);
@@ -2703,7 +2703,7 @@ VOID CHttpClient::GenerateRequestBoundary()
   SIZE_T i, val;
 
   //build boundary name
-  MemCopy(sRequest.szBoundaryA, "MXLIB_HTTP_", 11);
+  MxMemCopy(sRequest.szBoundaryA, "MXLIB_HTTP_", 11);
 #pragma warning(suppress : 28159)
   dw = ::GetTickCount();
   value = fnv_64a_buf(&dw, 4, FNV1A_64_INIT);
@@ -2833,9 +2833,9 @@ CHttpClient::CPostDataItem::CPostDataItem(_In_z_ LPCSTR _szNameA, _In_z_ LPCSTR 
     if (szNameA != NULL)
     {
       szValueA = szNameA + nNameLen + 1;
-      MemCopy(szNameA, _szNameA, nNameLen);
+      MxMemCopy(szNameA, _szNameA, nNameLen);
       szNameA[nNameLen] = 0;
-      MemCopy(szValueA, _szValueA, nValueLen);
+      MxMemCopy(szValueA, _szValueA, nValueLen);
       szValueA[nValueLen] = 0;
     }
   }
@@ -2855,9 +2855,9 @@ CHttpClient::CPostDataItem::CPostDataItem(_In_z_ LPCSTR _szNameA, _In_z_ LPCSTR 
     if (szNameA != NULL)
     {
       szValueA = szNameA + nNameLen + 1;
-      MemCopy(szNameA, _szNameA, nNameLen);
+      MxMemCopy(szNameA, _szNameA, nNameLen);
       szNameA[nNameLen] = 0;
-      MemCopy(szValueA, _szFileNameA, nValueLen);
+      MxMemCopy(szValueA, _szFileNameA, nValueLen);
       szValueA[nValueLen] = 0;
     }
   }

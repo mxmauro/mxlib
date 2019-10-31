@@ -125,7 +125,7 @@ HRESULT CJsHttpServerSessionPlugin::Setup(_In_ CJsHttpServer::CClientRequest *_l
   }
   if (i < nCount && IsValidSessionId(lpSessionIdCookie->GetValue()) != FALSE)
   {
-    MemCopy(szCurrentIdA, lpSessionIdCookie->GetValue(), StrLenA(lpSessionIdCookie->GetValue())+1);
+    MxMemCopy(szCurrentIdA, lpSessionIdCookie->GetValue(), StrLenA(lpSessionIdCookie->GetValue())+1);
     hRes = cLoadSaveCallback(this, TRUE);
     if (FAILED(hRes) && hRes != E_OUTOFMEMORY)
       goto regenerate_session_id;

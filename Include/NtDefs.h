@@ -1186,10 +1186,9 @@ LONG MxGetProcessorArchitecture();
 HANDLE MxOpenProcess(_In_ DWORD dwDesiredAccess, _In_ BOOL bInheritHandle, _In_ DWORD dwProcessId);
 HANDLE MxOpenThread(_In_ DWORD dwDesiredAccess, _In_ BOOL bInheritHandle, _In_ DWORD dwThreadId);
 
-NTSTATUS MxCreateFile(_Out_ HANDLE *lphFile, _In_ LPCWSTR szFileNameW, _In_opt_ DWORD dwDesiredAccess=GENERIC_READ,
-                      _In_opt_ DWORD dwShareMode=FILE_SHARE_READ, _In_opt_ DWORD dwCreationDisposition=OPEN_EXISTING,
-                      _In_opt_ DWORD dwFlagsAndAttributes=FILE_ATTRIBUTE_NORMAL,
-                      _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes=NULL);
+NTSTATUS MxCreateFile(_Out_ HANDLE *lphFile, _In_ LPCWSTR szFileNameW, _In_ DWORD dwDesiredAccess,
+                      _In_ DWORD dwShareMode, _In_ DWORD dwCreationDisposition, _In_ DWORD dwFlagsAndAttributes,
+                      _In_ LPSECURITY_ATTRIBUTES lpSecurityAttributes);
 
 //1 or 0 on success, STATUS_NOT_SUPPORTED if o.s. bitness is < 64 or STATUS_### on error
 NTSTATUS MxIsWow64(_In_ HANDLE hProcess);
@@ -1226,8 +1225,8 @@ SIZE_T __stdcall MxCallCDeclWithSEH2(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExcep
 SIZE_T __stdcall MxCallCDeclWithSEH3(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_ SIZE_T nParam1,
                                      _In_ SIZE_T nParam2, _In_ SIZE_T nParam3);
 #elif defined(_M_X64)
-SIZE_T __stdcall MxCallWithSEH(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_opt_ SIZE_T nParam1=0,
-                               _In_opt_ SIZE_T nParam2=0, _In_opt_ SIZE_T nParam3=0);
+SIZE_T __stdcall MxCallWithSEH(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_opt_ SIZE_T nParam1,
+                               _In_opt_ SIZE_T nParam2, _In_opt_ SIZE_T nParam3);
 #endif
 
 VOID MxSleep(_In_ DWORD dwTimeMs);

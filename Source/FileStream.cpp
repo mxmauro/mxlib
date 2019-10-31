@@ -120,7 +120,7 @@ HRESULT CFileStream::Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T 
   liOffset.QuadPart = nStartOffset;
   while (nBytes > 0)
   {
-    MemSet(&sIoStatus, 0, sizeof(sIoStatus));
+    MxMemSet(&sIoStatus, 0, sizeof(sIoStatus));
     nToWrite = (nBytes < 65536) ? (ULONG)nBytes : 65536;
     nNtStatus = ::MxNtWriteFile(cFileH, NULL, NULL, NULL, &sIoStatus, (PVOID)lpSrc, nToWrite,
                                 (nStartOffset != ULONGLONG_MAX) ? (PLARGE_INTEGER)&liOffset : NULL, NULL);

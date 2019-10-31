@@ -542,7 +542,7 @@ is_buffer1:     DukTape::duk_get_buffer_data(lpCtx, ndx, &nLen);
           cInputBindings.Attach((MYSQL_BIND*)MX_MALLOC((SIZE_T)nInputParams * sizeof(MYSQL_BIND) + nSize));
           if (!cInputBindings)
             MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
-          MemSet(cInputBindings.Get(), 0, (SIZE_T)nInputParams * sizeof(MYSQL_BIND) + nSize);
+          MxMemSet(cInputBindings.Get(), 0, (SIZE_T)nInputParams * sizeof(MYSQL_BIND) + nSize);
 
           lpPtr = (LPBYTE)cInputBindings.Get() + (SIZE_T)nInputParams * sizeof(MYSQL_BIND);
           for (nParam = 0; nParam < nInputParams; nParam++)
@@ -634,7 +634,7 @@ is_buffer1:     DukTape::duk_get_buffer_data(lpCtx, ndx, &nLen);
                 lpBind->buffer_type = MYSQL_TYPE_VAR_STRING;
                 lpBind->buffer = lpPtr;
                 lpBind->buffer_length = (ULONG)nLen;
-                MemCopy(lpBind->buffer, s, nLen);
+                MxMemCopy(lpBind->buffer, s, nLen);
 
                 lpPtr += nLen;
                 break;
@@ -673,7 +673,7 @@ is_buffer2:     s = DukTape::duk_get_buffer_data(lpCtx, ndx, &nLen);
                 lpBind->buffer_type = MYSQL_TYPE_LONG_BLOB;
                 lpBind->buffer = lpPtr;
                 lpBind->buffer_length = (ULONG)nLen;
-                MemCopy(lpBind->buffer, s, nLen);
+                MxMemCopy(lpBind->buffer, s, nLen);
 
                 lpPtr += nLen;
                 break;
@@ -781,7 +781,7 @@ is_buffer2:     s = DukTape::duk_get_buffer_data(lpCtx, ndx, &nLen);
                                                                       sizeof(my_bool))));
           if (!(jsmysql_data->cOutputBindings))
             MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
-          MemSet(jsmysql_data->cOutputBindings.Get(), 0, jsmysql_data->nFieldsCount * (sizeof(MYSQL_BIND) +
+          MxMemSet(jsmysql_data->cOutputBindings.Get(), 0, jsmysql_data->nFieldsCount * (sizeof(MYSQL_BIND) +
                                                          sizeof(ULONG) + sizeof(my_bool) + sizeof(my_bool)));
 
           lpBind = jsmysql_data->cOutputBindings.Get();
@@ -1220,7 +1220,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow()
             {
               LPBYTE p = (LPBYTE)(DukTape::duk_push_fixed_buffer(lpCtx, (DukTape::duk_size_t)(lpLengthPtr[i])));
 
-              MemCopy(p, lpBind[i].buffer, (SIZE_T)lpLengthPtr[i]);
+              MxMemCopy(p, lpBind[i].buffer, (SIZE_T)lpLengthPtr[i]);
               DukTape::duk_push_buffer_object(lpCtx, -1, 0, (DukTape::duk_size_t)(lpLengthPtr[i]),
                                               DUK_BUFOBJ_UINT8ARRAY);
               DukTape::duk_remove(lpCtx, -2);
@@ -1382,8 +1382,8 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow()
             u.ull = 0;
             if (lpnRowLengths[i] >= 1 && lpnRowLengths[i] <= 8)
             {
-              MemSet(aTempBuf, 0, 8);
-              MemCopy(aTempBuf, lpRow[i], lpnRowLengths[i]);
+              MxMemSet(aTempBuf, 0, 8);
+              MxMemCopy(aTempBuf, lpRow[i], lpnRowLengths[i]);
               if ((lpFieldInfo->nFlags & UNSIGNED_FLAG) != 0)
               {
                 u.ull = *((ULONGLONG*)aTempBuf); //SAFE because MySQL is little endian
@@ -1391,7 +1391,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow()
               else
               {
                 if ((aTempBuf[lpnRowLengths[i] - 1] & 0x80) != 0)
-                  MemSet(aTempBuf + lpnRowLengths[i], 0xFF, 8 - lpnRowLengths[i]);
+                  MxMemSet(aTempBuf + lpnRowLengths[i], 0xFF, 8 - lpnRowLengths[i]);
                 u.ll = *((LONGLONG*)aTempBuf); //SAFE because MySQL is little endian
               }
             }
@@ -1461,7 +1461,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow()
               MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_InvalidData);
             }
 
-            MX::MemSet(&(u.sSt), 0, sizeof(u.sSt));
+            ::MxMemSet(&(u.sSt), 0, sizeof(u.sSt));
             u.sSt.wDay = (WORD)(sA[8] - '0') * 10 + (WORD)(sA[9] - '0');
             u.sSt.wMonth = (WORD)(sA[5] - '0') * 10 + (WORD)(sA[6] - '0');
             u.sSt.wYear = (WORD)(sA[0] - '0') * 1000 + (WORD)(sA[1] - '0') * 100 +
@@ -1558,7 +1558,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow()
             if ((lpFieldInfo->nFlags & BINARY_FLAG) != 0)
             {
               p = (LPBYTE)(DukTape::duk_push_fixed_buffer(lpCtx, (DukTape::duk_size_t)(lpnRowLengths[i])));
-              MemCopy(p, lpRow[i], (SIZE_T)(lpnRowLengths[i]));
+              MxMemCopy(p, lpRow[i], (SIZE_T)(lpnRowLengths[i]));
               DukTape::duk_push_buffer_object(lpCtx, -1, 0, (DukTape::duk_size_t)(lpnRowLengths[i]),
                                               DUK_BUFOBJ_UINT8ARRAY);
               DukTape::duk_remove(lpCtx, -2);

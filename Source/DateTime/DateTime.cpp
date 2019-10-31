@@ -656,7 +656,7 @@ HRESULT CDateTime::SetFromNow(_In_ BOOL bLocal)
   nGmtOffset = 0;
   if (bLocal != FALSE)
   {
-    MemSet(&sTzi, 0, sizeof(sTzi));
+    MxMemSet(&sTzi, 0, sizeof(sTzi));
     if (::GetTimeZoneInformation(&sTzi) != TIME_ZONE_ID_INVALID)
       nGmtOffset = (int)(sTzi.Bias);
   }
@@ -1777,7 +1777,7 @@ static BOOL ConvertCustomSettingsA2W(_Out_ MX::CDateTime::LPCUSTOMSETTINGSW lpCu
 {
   int i;
 
-  MemSet(lpCustomW, 0, sizeof(MX::CDateTime::CUSTOMSETTINGSW));
+  MxMemSet(lpCustomW, 0, sizeof(MX::CDateTime::CUSTOMSETTINGSW));
   for (i=0; i<7; i++)
   {
     if (lpCustomA->szShortDayNamesA[i] != NULL)
@@ -1898,9 +1898,9 @@ static VOID FixCustomSettings(_Out_ MX::CDateTime::LPCUSTOMSETTINGSW lpOut, _In_
   int i;
 
   if (lpIn != NULL)
-    MX::MemCopy(lpOut, lpIn, sizeof(MX::CDateTime::CUSTOMSETTINGSW));
+    ::MxMemCopy(lpOut, lpIn, sizeof(MX::CDateTime::CUSTOMSETTINGSW));
   else
-    MX::MemSet(lpOut, 0, sizeof(MX::CDateTime::CUSTOMSETTINGSW));
+    ::MxMemSet(lpOut, 0, sizeof(MX::CDateTime::CUSTOMSETTINGSW));
   for (i=0; i<7; i++)
   {
     if (lpOut->szShortDayNamesW[i] == NULL)

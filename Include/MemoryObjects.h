@@ -24,25 +24,42 @@
 
 //-----------------------------------------------------------
 
+#ifdef __cplusplus
+extern "C" {
+#endif //__cplusplus
+
+void* MxMemAlloc(size_t nSize);
+void* MxMemRealloc(void *lpPtr, size_t nSize);
+void* MxMemAllocD(size_t nSize, const char *szFilenameA, int nLineNumber);
+void* MxMemReallocD(void *lpPtr, size_t nSize, const char *szFilenameA, int nLineNumber);
+void MxMemFree(void *lpPtr);
+size_t MxMemSize(void *lpPtr);
+
+#ifdef __cplusplus
+} //extern "C"
+#endif //__cplusplus
+
+//-----------------------------------------------------------
+
+#ifdef __cplusplus
+extern "C" {
+#endif //__cplusplus
+
+void MxMemSet(void *lpDest, int nVal, size_t nCount);
+void MxMemCopy(void *lpDest, const void *lpSrc, size_t nCount);
+void MxMemMove(void *lpDest, const void *lpSrc, size_t nCount);
+int MxMemCompare(const void *lpSrc1, const void *lpSrc2, size_t nCount);
+size_t __stdcall MxTryMemCopy(void *lpDest, const void *lpSrc, size_t nCount);
+
+#ifdef __cplusplus
+} //extern "C"
+#endif //__cplusplus
+
+//-----------------------------------------------------------
+
+#ifdef __cplusplus
+
 namespace MX {
-
-//-----------------------------------------------------------
-
-LPVOID MemAlloc(_In_ SIZE_T nSize);
-LPVOID MemRealloc(_In_opt_ LPVOID lpPtr, _In_ SIZE_T nSize);
-LPVOID MemAllocD(_In_ SIZE_T nSize, _In_opt_z_ const char *szFilenameA, _In_ int nLineNumber);
-LPVOID MemReallocD(_In_opt_ LPVOID lpPtr, _In_ SIZE_T nSize, _In_opt_z_ const char *szFilenameA, _In_ int nLineNumber);
-VOID MemFree(_In_opt_ LPVOID lpPtr);
-SIZE_T MemSize(_In_opt_ LPVOID lpPtr);
-
-VOID MemSet(_Out_writes_bytes_all_(nCount) LPVOID lpDest, _In_ int nVal, _In_ SIZE_T nCount);
-VOID MemCopy(_Out_writes_bytes_all_(nCount) LPVOID lpDest, _In_ LPCVOID lpSrc, _In_ SIZE_T nCount);
-VOID MemMove(_Out_writes_bytes_all_(nCount) LPVOID lpDest, _In_ LPCVOID lpSrc, _In_ SIZE_T nCount);
-int MemCompare(_In_ LPCVOID lpSrc1, _In_ LPCVOID lpSrc2, _In_ SIZE_T nCount);
-
-SIZE_T TryMemCopy(_Out_ LPVOID lpDest, _In_ LPCVOID lpSrc, _In_ SIZE_T nCount);
-
-//-----------------------------------------------------------
 
 #if defined(_DEBUG) || defined(MX_TRACEALLOC)
 
@@ -127,6 +144,8 @@ protected:
 };
 
 } //namespace MX
+
+#endif //__cplusplus
 
 //-----------------------------------------------------------
 

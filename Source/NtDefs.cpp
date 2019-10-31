@@ -311,7 +311,7 @@ LONG MxGetProcessorArchitecture()
       fnRtlGetNativeSystemInformation = (lpfnRtlGetNativeSystemInformation)MxGetProcedureAddress(
                                                    DllBase, "RtlGetNativeSystemInformation");
     }
-    MX::MemSet(&sProcInfo, 0, sizeof(sProcInfo));
+    ::MxMemSet(&sProcInfo, 0, sizeof(sProcInfo));
     if (fnRtlGetNativeSystemInformation != NULL)
       nNtStatus = fnRtlGetNativeSystemInformation(MxSystemProcessorInformation, &sProcInfo, sizeof(sProcInfo), NULL);
     else
@@ -331,7 +331,7 @@ HANDLE MxOpenProcess(_In_ DWORD dwDesiredAccess, _In_ BOOL bInheritHandle, _In_ 
 
   sClientId.UniqueProcess = (SIZE_T)(ULONG_PTR)(dwProcessId);
   sClientId.UniqueThread = 0;
-  MX::MemSet(&sObjAttr, 0, sizeof(sObjAttr));
+  ::MxMemSet(&sObjAttr, 0, sizeof(sObjAttr));
   sObjAttr.Length = (ULONG)sizeof(sObjAttr);
   sObjAttr.Attributes = (bInheritHandle != FALSE) ? OBJ_INHERIT : 0;
   nNtStatus = ::MxNtOpenProcess(&hProc, dwDesiredAccess, &sObjAttr, &sClientId);
@@ -347,7 +347,7 @@ HANDLE MxOpenThread(_In_ DWORD dwDesiredAccess, _In_ BOOL bInheritHandle, _In_ D
 
   sClientId.UniqueProcess = 0;
   sClientId.UniqueThread = (SIZE_T)(ULONG_PTR)(dwThreadId);
-  MX::MemSet(&sObjAttr, 0, sizeof(sObjAttr));
+  ::MxMemSet(&sObjAttr, 0, sizeof(sObjAttr));
   sObjAttr.Length = (ULONG)sizeof(sObjAttr);
   sObjAttr.Attributes = (bInheritHandle != FALSE) ? OBJ_INHERIT : 0;
   nNtStatus = ::MxNtOpenThread(&hThread, dwDesiredAccess, &sObjAttr, &sClientId);
@@ -443,7 +443,7 @@ NTSTATUS MxCreateFile(_Out_ HANDLE *lphFile, _In_ LPCWSTR szFileNameW, _In_opt_ 
   if (fnRtlDosPathNameToNtPathName_U(szFileNameW, &usNtPath, NULL, NULL) == FALSE)
     return STATUS_OBJECT_NAME_NOT_FOUND;
   //--------
-  MX::MemSet(&sObjAttr, 0, sizeof(sObjAttr));
+  ::MxMemSet(&sObjAttr, 0, sizeof(sObjAttr));
   sObjAttr.Length = (ULONG)sizeof(sObjAttr);
   sObjAttr.ObjectName = &usNtPath;
   if (lpSecurityAttributes != NULL)
@@ -452,7 +452,7 @@ NTSTATUS MxCreateFile(_Out_ HANDLE *lphFile, _In_ LPCWSTR szFileNameW, _In_opt_ 
       sObjAttr.Attributes |= OBJ_INHERIT;
     sObjAttr.SecurityDescriptor = lpSecurityAttributes->lpSecurityDescriptor;
   }
-  MX::MemSet(&sIoStatus, 0, sizeof(sIoStatus));
+  ::MxMemSet(&sIoStatus, 0, sizeof(sIoStatus));
   nNtStatus = ::MxNtCreateFile(&h, dwDesiredAccess, &sObjAttr, &sIoStatus, NULL, dwFlagsAndAttributes & 0x00007FA7,
                                dwShareMode, dwCreationDisposition, nFlags, NULL, 0);
   if (NT_SUCCESS(nNtStatus))
@@ -512,7 +512,7 @@ SIZE_T MxReadMem(_In_ HANDLE hProcess, _Out_writes_bytes_(nBytesCount) LPVOID lp
   if (nBytesCount == 0)
     return 0;
   if (hProcess == __CURRENTPROCESS)
-    return MX::TryMemCopy(lpDest, lpSrc, nBytesCount);
+    return ::MxTryMemCopy(lpDest, lpSrc, nBytesCount);
   nReaded = 0;
   nStatus = ::MxNtReadVirtualMemory(hProcess, lpSrc, lpDest, nBytesCount, &nReaded);
   if (nStatus == STATUS_PARTIAL_COPY)
@@ -528,7 +528,7 @@ BOOL MxWriteMem(_In_ HANDLE hProcess, _In_ LPVOID lpDest, _In_ LPVOID lpSrc, _In
   if (nBytesCount == 0)
     return TRUE;
   if (hProcess == __CURRENTPROCESS)
-    return (MX::TryMemCopy(lpDest, lpSrc, nBytesCount) == nBytesCount) ? TRUE : FALSE;
+    return (::MxTryMemCopy(lpDest, lpSrc, nBytesCount) == nBytesCount) ? TRUE : FALSE;
   nWritten = 0;
   nStatus = ::MxNtWriteVirtualMemory(hProcess, lpDest, lpSrc, nBytesCount, &nWritten);
   return (NT_SUCCESS(nStatus) ||

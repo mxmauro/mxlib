@@ -902,7 +902,7 @@ DukTape::duk_ret_t CJsSQLitePlugin::FetchRow()
 
           d = (LPBYTE)(DukTape::duk_push_fixed_buffer(lpCtx, (DukTape::duk_size_t)val_len));
 
-          MemCopy(d, val.p, (SIZE_T)val_len);
+          MxMemCopy(d, val.p, (SIZE_T)val_len);
           DukTape::duk_push_buffer_object(lpCtx, -1, 0, (DukTape::duk_size_t)val_len, DUK_BUFOBJ_UINT8ARRAY);
           DukTape::duk_remove(lpCtx, -2);
           break;

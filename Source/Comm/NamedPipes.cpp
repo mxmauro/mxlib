@@ -38,6 +38,7 @@
 //-----------------------------------------------------------
 
 typedef BOOL (WINAPI *lpfnSetFileCompletionNotificationModes)(_In_ HANDLE FileHandle, _In_ UCHAR Flags);
+typedef BOOL (WINAPI *lpfnCancelIoEx)(_In_ HANDLE hFile, _In_opt_ LPOVERLAPPED lpOverlapped);
 
 //-----------------------------------------------------------
 
@@ -59,6 +60,7 @@ static const BYTE aSecDescriptorVistaOrLater[] = {
 
 static LONG volatile nOSVersion = -1;
 static lpfnSetFileCompletionNotificationModes volatile fnSetFileCompletionNotificationModes = NULL;
+static lpfnCancelIoEx volatile fnCancelIoEx = NULL;
 
 //-----------------------------------------------------------
 
@@ -108,6 +110,28 @@ CNamedPipes::CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CI
       }
       _InterlockedExchangePointer((LPVOID volatile*)&fnSetFileCompletionNotificationModes,
                                   _fnSetFileCompletionNotificationModes);
+    }
+
+    if (fnCancelIoEx == NULL)
+    {
+      LPVOID _fnCancelIoEx;
+      HINSTANCE hDll;
+
+      _fnCancelIoEx = NULL;
+      hDll = ::GetModuleHandleW(L"kernelbase.dll");
+      if (hDll != NULL)
+      {
+        _fnCancelIoEx = ::GetProcAddress(hDll, "CancelIoEx");
+      }
+      if (_fnCancelIoEx == NULL)
+      {
+        hDll = ::GetModuleHandleW(L"kernel32.dll");
+        if (hDll != NULL)
+        {
+          _fnCancelIoEx = ::GetProcAddress(hDll, "CancelIoEx");
+        }
+      }
+      _InterlockedExchangePointer((LPVOID volatile*)&fnCancelIoEx, _fnCancelIoEx);
     }
   }
   return;
@@ -297,7 +321,7 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
   hRes = cConnEv.Create(TRUE, FALSE);
   if (FAILED(hRes))
     return hRes;
-  MemSet(&sConnOvr, 0, sizeof(sConnOvr));
+  MxMemSet(&sConnOvr, 0, sizeof(sConnOvr));
   sConnOvr.hEvent = cConnEv.Get();
   bConnected = ::ConnectNamedPipe(cLocalPipe, &sConnOvr);
   //create other party pipe
@@ -537,7 +561,9 @@ CNamedPipes::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionCl
 
 CNamedPipes::CConnection::~CConnection()
 {
-  MX_ASSERT(hPipe == NULL);
+  MX_ASSERT(fnCancelIoEx != NULL || hPipe == NULL);
+  if (hPipe != NULL)
+    ::CloseHandle(hPipe);
   return;
 }
 
@@ -651,8 +677,15 @@ VOID CNamedPipes::CConnection::ShutdownLink(_In_ BOOL bAbortive)
     if (hPipe != NULL)
     {
       ::DisconnectNamedPipe(hPipe);
-      ::CloseHandle(hPipe);
-      hPipe = NULL;
+      if (fnCancelIoEx != NULL)
+      {
+        fnCancelIoEx(hPipe, NULL);
+      }
+      else
+      {
+        ::CloseHandle(hPipe);
+        hPipe = NULL;
+      }
     }
   }
   //call base

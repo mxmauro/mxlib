@@ -229,7 +229,7 @@ err_procnotfound:
         goto err_procnotfound;
       if (szDllNameW[dwLen] != L'\\')
         szDllNameW[dwLen++] = L'\\';
-      MX::MemCopy(szDllNameW + dwLen, L"winhttp.dll", (11 + 1) * sizeof(WCHAR));
+      ::MxMemCopy(szDllNameW + dwLen, L"winhttp.dll", (11 + 1) * sizeof(WCHAR));
       hDll = ::LoadLibraryW(szDllNameW);
       if (hDll == NULL)
         goto err_procnotfound;
@@ -310,7 +310,7 @@ static HRESULT GetProxyConfiguration(_In_opt_z_ LPCWSTR szTargetUrlW, _Out_ MX::
     hRes = MX_HRESULT_FROM_LASTERROR();
     if (hRes == E_OUTOFMEMORY)
       goto done;
-    MX::MemSet(&sIeProxy, 0, sizeof(sIeProxy));
+    ::MxMemSet(&sIeProxy, 0, sizeof(sIeProxy));
   }
   if (sIeProxy.fAutoDetect == FALSE && sIeProxy.lpszProxy != NULL)
   {
@@ -568,7 +568,7 @@ static BOOL IsValidProxyValue(_Inout_ MX::CStringW &cStrProxyW, _Out_ int *lpnPo
 
 static VOID CleanupSensibleData(_Inout_ MX::CStringW &cStrW)
 {
-  MX::MemSet((LPWSTR)cStrW, '*', cStrW.GetLength() * 2);
+  ::MxMemSet((LPWSTR)cStrW, '*', cStrW.GetLength() * 2);
   cStrW.Empty();
   return;
 }

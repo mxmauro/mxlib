@@ -95,7 +95,7 @@ public:
       fnFreeAddrInfoExW = _fnFreeAddrInfoExW;
       hCancel = NULL;
       lpAddrInfoExW = NULL;
-      MemSet(&(sOvr), 0, sizeof(sOvr));
+      MxMemSet(&(sOvr), 0, sizeof(sOvr));
       Setup(szHostNameW, nDesiredFamily, dwTimeoutMs, lpSockAddr, cCallback, lpUserData);
       return;
       };
@@ -149,7 +149,7 @@ public:
         lpAddrInfoExW = NULL;
       }
       hCancel = NULL;
-      MemSet(&(sOvr), 0, sizeof(sOvr));
+      MxMemSet(&(sOvr), 0, sizeof(sOvr));
       return;
       };
 
@@ -258,7 +258,7 @@ HRESULT Resolve(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _Out_ PSOCKA
   TAutoRefCounted<Internals::CHostResolver> cHandler;
 
   if (lpSockAddr != NULL)
-    MemSet(lpSockAddr, 0, sizeof(SOCKADDR_INET));
+    MxMemSet(lpSockAddr, 0, sizeof(SOCKADDR_INET));
   if (lpnResolverId != NULL)
     _InterlockedExchange(lpnResolverId, 0);
 
@@ -276,7 +276,7 @@ HRESULT Resolve(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _Out_ PSOCK
   TAutoRefCounted<Internals::CHostResolver> cHandler;
 
   if (lpSockAddr != NULL)
-    MemSet(lpSockAddr, 0, sizeof(SOCKADDR_INET));
+    MxMemSet(lpSockAddr, 0, sizeof(SOCKADDR_INET));
   if (lpnResolverId != NULL)
     _InterlockedExchange(lpnResolverId, 0);
 
@@ -312,7 +312,7 @@ BOOL IsValidIPV4(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen, _Out_opt
 
   if (lpAddress == NULL)
     lpAddress = &sTempAddr;
-  MX::MemSet(lpAddress, 0, sizeof(SOCKADDR_INET));
+  ::MxMemSet(lpAddress, 0, sizeof(SOCKADDR_INET));
   lpAddress->si_family = AF_INET;
   if (szAddressA == NULL)
     return FALSE;
@@ -413,7 +413,7 @@ BOOL IsValidIPV4(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen, _Out_op
 
   if (lpAddress == NULL)
     lpAddress = &sTempAddr;
-  MX::MemSet(lpAddress, 0, sizeof(SOCKADDR_INET));
+  ::MxMemSet(lpAddress, 0, sizeof(SOCKADDR_INET));
   lpAddress->si_family = AF_INET;
   if (szAddressW == NULL)
     return FALSE;
@@ -511,7 +511,7 @@ BOOL IsValidIPV6(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen, _Out_opt
 
   if (lpAddress == NULL)
     lpAddress = &sTempAddr;
-  MX::MemSet(lpAddress, 0, sizeof(SOCKADDR_INET));
+  ::MxMemSet(lpAddress, 0, sizeof(SOCKADDR_INET));
   lpAddress->si_family = AF_INET6;
   if (szAddressA == NULL)
     return FALSE;
@@ -616,7 +616,7 @@ BOOL IsValidIPV6(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen, _Out_op
 
   if (lpAddress == NULL)
     lpAddress = &sTempAddr;
-  MX::MemSet(lpAddress, 0, sizeof(SOCKADDR_INET));
+  ::MxMemSet(lpAddress, 0, sizeof(SOCKADDR_INET));
   lpAddress->si_family = AF_INET6;
   if (szAddressW == NULL)
     return FALSE;
@@ -835,7 +835,7 @@ CHostResolver::CHostResolver() : TRefCounted<CBaseMemObj>()
   _InterlockedExchange(&nNextResolverId, 0);
 
   _InterlockedExchange(&(sAsyncTasks.nMutex), 0);
-  MemSet(&sFreeAsyncItems, 0, sizeof(sFreeAsyncItems));
+  MxMemSet(&sFreeAsyncItems, 0, sizeof(sFreeAsyncItems));
 
   if (::IsWindows8OrGreater() != FALSE)
     dwOsVersion = 0x0800;
@@ -855,7 +855,7 @@ CHostResolver::CHostResolver() : TRefCounted<CBaseMemObj>()
   {
     if (szDllNameW[dwLen - 1] != L'\\')
       szDllNameW[dwLen++] = L'\\';
-    MX::MemCopy(szDllNameW + dwLen, L"ws2_32.dll", (10 + 1) * sizeof(WCHAR));
+    ::MxMemCopy(szDllNameW + dwLen, L"ws2_32.dll", (10 + 1) * sizeof(WCHAR));
 
     //load library
     hWs2_32Dll = ::LoadLibraryW(szDllNameW);
@@ -997,7 +997,7 @@ HRESULT CHostResolver::AddResolver(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredF
         tv.tv_sec = (long)(dwTimeoutMs / 1000);
         tv.tv_usec = (long)(dwTimeoutMs % 1000);
 
-        MemSet(&sHintAddrInfoExW, 0, sizeof(sHintAddrInfoExW));
+        MxMemSet(&sHintAddrInfoExW, 0, sizeof(sHintAddrInfoExW));
         sHintAddrInfoExW.ai_family = nDesiredFamily;
         lpAddrInfoExW = NULL;
         //NOTE: Windows 7 does NOT support timeout at all despite the documentation says a different thing.
@@ -1021,7 +1021,7 @@ HRESULT CHostResolver::AddResolver(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredF
         PADDRINFOA lpAddrInfoA;
         ADDRINFOA sHintAddrInfoA;
 
-        MemSet(&sHintAddrInfoA, 0, sizeof(sHintAddrInfoA));
+        MxMemSet(&sHintAddrInfoA, 0, sizeof(sHintAddrInfoA));
         sHintAddrInfoA.ai_family = nDesiredFamily;
         lpAddrInfoA = NULL;
         if (::getaddrinfo(szHostNameA, NULL, &sHintAddrInfoA, &lpAddrInfoA) != SOCKET_ERROR)
@@ -1096,7 +1096,7 @@ HRESULT CHostResolver::AddResolver(_In_z_ LPCWSTR szHostNameW, _In_ int nDesired
         tv.tv_sec = (long)(dwTimeoutMs / 1000);
         tv.tv_usec = (long)(dwTimeoutMs % 1000);
 
-        MemSet(&sHintAddrInfoExW, 0, sizeof(sHintAddrInfoExW));
+        MxMemSet(&sHintAddrInfoExW, 0, sizeof(sHintAddrInfoExW));
         sHintAddrInfoExW.ai_family = nDesiredFamily;
         lpAddrInfoExW = NULL;
         //NOTE: Windows 7 does NOT support timeout at all despite the documentation says a different thing.
@@ -1125,7 +1125,7 @@ HRESULT CHostResolver::AddResolver(_In_z_ LPCWSTR szHostNameW, _In_ int nDesired
         if (FAILED(hRes))
           return hRes;
 
-        MemSet(&sHintAddrInfoA, 0, sizeof(sHintAddrInfoA));
+        MxMemSet(&sHintAddrInfoA, 0, sizeof(sHintAddrInfoA));
         sHintAddrInfoA.ai_family = nDesiredFamily;
         lpAddrInfoA = NULL;
         if (::getaddrinfo((LPCSTR)cStrTempA, NULL, &sHintAddrInfoA, &lpAddrInfoA) != SOCKET_ERROR)
@@ -1176,7 +1176,7 @@ HRESULT CHostResolver::AddResolverCommon(_Out_ LONG volatile *lpnResolverId, _In
     tv.tv_sec = (long)(lpNewAsyncItem->dwTimeoutMs / 1000);
     tv.tv_usec = (long)(lpNewAsyncItem->dwTimeoutMs % 1000);
 
-    MemSet(&sHintAddrInfoExW, 0, sizeof(sHintAddrInfoExW));
+    MxMemSet(&sHintAddrInfoExW, 0, sizeof(sHintAddrInfoExW));
     sHintAddrInfoExW.ai_family = lpNewAsyncItem->nDesiredFamily;
     //NOTE: If we are here, we are using Windows 8+
     res = fnGetAddrInfoExW((LPCWSTR)(lpNewAsyncItem->cStrHostNameW), NULL, NS_DNS, NULL, &sHintAddrInfoExW,
@@ -1356,14 +1356,14 @@ HRESULT CHostResolver::ProcessResultsA(_In_ PSOCKADDR_INET lpSockAddr, _In_ PADD
         lpCurrAddrInfoA->ai_family == PF_INET &&
         lpCurrAddrInfoA->ai_addrlen >= sizeof(SOCKADDR_IN))
     {
-      MX::MemCopy(&(lpSockAddr->Ipv4), lpCurrAddrInfoA->ai_addr, sizeof(sockaddr_in));
+      ::MxMemCopy(&(lpSockAddr->Ipv4), lpCurrAddrInfoA->ai_addr, sizeof(sockaddr_in));
       return S_OK;
     }
     if ((nFamily == AF_INET6 || nFamily == AF_UNSPEC) &&
         lpCurrAddrInfoA->ai_family == PF_INET6 &&
         lpCurrAddrInfoA->ai_addrlen >= sizeof(SOCKADDR_IN6))
     {
-      MX::MemCopy(&(lpSockAddr->Ipv6), lpCurrAddrInfoA->ai_addr, sizeof(SOCKADDR_IN6));
+      ::MxMemCopy(&(lpSockAddr->Ipv6), lpCurrAddrInfoA->ai_addr, sizeof(SOCKADDR_IN6));
       return S_OK;
     }
   }
@@ -1381,14 +1381,14 @@ HRESULT CHostResolver::ProcessResultsExW(_In_ PSOCKADDR_INET lpSockAddr, _In_ PA
         lpCurrAddrInfoExW->ai_family == PF_INET &&
         lpCurrAddrInfoExW->ai_addrlen >= sizeof(SOCKADDR_IN))
     {
-      MX::MemCopy(&(lpSockAddr->Ipv4), lpCurrAddrInfoExW->ai_addr, sizeof(SOCKADDR_IN));
+      ::MxMemCopy(&(lpSockAddr->Ipv4), lpCurrAddrInfoExW->ai_addr, sizeof(SOCKADDR_IN));
       return S_OK;
     }
     if ((nFamily == AF_INET6 || nFamily == AF_UNSPEC) &&
         lpCurrAddrInfoExW->ai_family == PF_INET6 &&
         lpCurrAddrInfoExW->ai_addrlen >= sizeof(SOCKADDR_IN6))
     {
-      MX::MemCopy(&(lpSockAddr->Ipv6), lpCurrAddrInfoExW->ai_addr, sizeof(SOCKADDR_IN6));
+      ::MxMemCopy(&(lpSockAddr->Ipv6), lpCurrAddrInfoExW->ai_addr, sizeof(SOCKADDR_IN6));
       return S_OK;
     }
   }
@@ -1406,7 +1406,7 @@ static VOID OnSyncResolution(_In_ LONG nResolverId, _In_ SOCKADDR_INET &sAddr, _
 {
   LPSYNC_RESOLVE lpSyncData = (LPSYNC_RESOLVE)lpUserData;
 
-  MX::MemCopy(lpSyncData->lpAddr, &sAddr, sizeof(sAddr));
+  ::MxMemCopy(lpSyncData->lpAddr, &sAddr, sizeof(sAddr));
   _InterlockedExchange(&(lpSyncData->hRes), hrErrorCode);
   lpSyncData->cEvent.Set();
   return;

@@ -9,39 +9,87 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
+    <Filter Include="Source Files\zlib">
+      <UniqueIdentifier>{27940ca6-70c6-471c-b487-4406a8279663}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\minizip">
+      <UniqueIdentifier>{fd8fca6a-c491-426b-ae29-d4548dc793cd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\zlib">
+      <UniqueIdentifier>{f136329e-df95-4fe4-af30-2d4c747a4fdf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\minizip">
+      <UniqueIdentifier>{961fab85-0379-4312-8a6f-680f620027da}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source\ZipLib\Source\adler32.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\ZipLib\Source\compress.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\ZipLib\Source\crc32.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\ZipLib\Source\deflate.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\ZipLib\Source\inffast.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\ZipLib\Source\inflate.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\ZipLib\Source\inftrees.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\ZipLib\Source\trees.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\ZipLib\Source\uncompr.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\ZipLib\ZipLib.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\ZipLib\Source\compress.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\Source\crc32.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\Source\deflate.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\Source\inffast.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\Source\inflate.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\Source\inftrees.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\Source\trees.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\Source\uncompr.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
     <ClCompile Include="Source\ZipLib\Source\zutil.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\Source\adler32.c">
+      <Filter>Source Files\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_crypt.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_crypt_win32.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_os_win32.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_buf.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_mem.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_os_win32.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_zlib.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_zip.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_zip_rw.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\mz_custom.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\ZipFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -51,37 +99,67 @@
     <None Include="Source\ZipLib\Source\README" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Source\ZipLib\Source\crc32.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\ZipLib\Source\deflate.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\ZipLib\Source\inffast.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\ZipLib\Source\inffixed.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\ZipLib\Source\inflate.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\ZipLib\Source\inftrees.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\ZipLib\Source\trees.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\ZipLib\Source\zconf.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Include\ZipLib\ZipLib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Source\ZipLib\Source\zlib.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\Source\crc32.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\Source\deflate.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\Source\inffast.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\Source\inffixed.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\Source\inflate.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\Source\inftrees.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\Source\trees.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\Source\zconf.h">
+      <Filter>Header Files\zlib</Filter>
     </ClInclude>
     <ClInclude Include="Source\ZipLib\Source\zutil.h">
+      <Filter>Header Files\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz.h">
+      <Filter>Header Files\minizip</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_crypt.h">
+      <Filter>Header Files\minizip</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm.h">
+      <Filter>Header Files\minizip</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_buf.h">
+      <Filter>Header Files\minizip</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_mem.h">
+      <Filter>Header Files\minizip</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_os.h">
+      <Filter>Header Files\minizip</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_zip.h">
+      <Filter>Header Files\minizip</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_zlib.h">
+      <Filter>Header Files\minizip</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_zip_rw.h">
+      <Filter>Header Files\minizip</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\ZipLib\ZipFile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

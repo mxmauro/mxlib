@@ -19,6 +19,67 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_crypt.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_crypt_win32.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_os_win32.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_buf.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_mem.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_os_win32.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_zlib.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_zip.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_zip_rw.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\mz_custom.c" />
     <ClCompile Include="Source\ZipLib\Source\adler32.c" />
     <ClCompile Include="Source\ZipLib\Source\compress.c" />
     <ClCompile Include="Source\ZipLib\Source\crc32.c" />
@@ -28,6 +89,7 @@
     <ClCompile Include="Source\ZipLib\Source\inftrees.c" />
     <ClCompile Include="Source\ZipLib\Source\trees.c" />
     <ClCompile Include="Source\ZipLib\Source\uncompr.c" />
+    <ClCompile Include="Source\ZipLib\ZipFile.cpp" />
     <ClCompile Include="Source\ZipLib\ZipLib.cpp" />
     <ClCompile Include="Source\ZipLib\Source\zutil.c" />
   </ItemGroup>
@@ -37,6 +99,16 @@
     <None Include="Source\ZipLib\Source\README" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Include\ZipLib\ZipFile.h" />
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz.h" />
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_crypt.h" />
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm.h" />
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_buf.h" />
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_mem.h" />
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_os.h" />
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_zlib.h" />
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_zip.h" />
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_zip_rw.h" />
     <ClInclude Include="Source\ZipLib\Source\crc32.h" />
     <ClInclude Include="Source\ZipLib\Source\deflate.h" />
     <ClInclude Include="Source\ZipLib\Source\inffast.h" />
@@ -133,6 +205,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <EnablePREfast>false</EnablePREfast>
       <DisableSpecificWarnings>6385</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\ZipLib\Source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -149,6 +222,7 @@
       <ExceptionHandling>SyncCThrow</ExceptionHandling>
       <EnablePREfast>false</EnablePREfast>
       <DisableSpecificWarnings>6385</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\ZipLib\Source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -167,6 +241,7 @@
       <ExceptionHandling>Async</ExceptionHandling>
       <EnablePREfast>false</EnablePREfast>
       <DisableSpecificWarnings>6385</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\ZipLib\Source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -187,6 +262,7 @@
       <ExceptionHandling>Async</ExceptionHandling>
       <EnablePREfast>false</EnablePREfast>
       <DisableSpecificWarnings>6385</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\ZipLib\Source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

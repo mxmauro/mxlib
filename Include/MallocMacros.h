@@ -42,18 +42,17 @@
 #else //MX_MALLOC || MX_FREE || MX_REALLOC || MX__MSIZE
 
   #if defined(_DEBUG)
-    #define MX_MALLOC(nSize)                       MX::MemAllocD((SIZE_T)(nSize), __FILE__, __LINE__)
-    #define MX_REALLOC(lpPtr, nNewSize)            MX::MemReallocD((LPVOID)(lpPtr), (SIZE_T)(nNewSize), __FILE__, \
-                                                                    __LINE__)
-    #define MX_MALLOC_D(nSize, _f, _l)             MX::MemAllocD((SIZE_T)(nSize), _f, _l)
-    #define MX_REALLOC_D(lpPtr, nNewSize, _f, _l)  MX::MemReallocD((LPVOID)(lpPtr), (SIZE_T)(nNewSize), _f, _l)
+    #define MX_MALLOC(nSize)                       MxMemAllocD((size_t)(nSize), __FILE__, __LINE__)
+    #define MX_REALLOC(lpPtr, nNewSize)            MxMemReallocD((void*)(lpPtr), (size_t)(nNewSize), __FILE__, __LINE__)
+    #define MX_MALLOC_D(nSize, _f, _l)             MxMemAllocD((size_t)(nSize), _f, _l)
+    #define MX_REALLOC_D(lpPtr, nNewSize, _f, _l)  MxMemReallocD((void*)(lpPtr), (size_t)(nNewSize), _f, _l)
   #else //_DEBUG
-    #define MX_MALLOC(nSize)              MX::MemAlloc((SIZE_T)(nSize))
-    #define MX_REALLOC(lpPtr, nNewSize)   MX::MemRealloc((LPVOID)(lpPtr), (SIZE_T)(nNewSize))
+    #define MX_MALLOC(nSize)              MxMemAlloc((size_t)(nSize))
+    #define MX_REALLOC(lpPtr, nNewSize)   MxMemRealloc((void*)(lpPtr), (size_t)(nNewSize))
   #endif //_DEBUG
 
-  #define MX_FREE(lpPtr)                if (lpPtr != NULL) { MX::MemFree((LPVOID)(lpPtr));  lpPtr = NULL; }
-  #define MX__MSIZE(lpPtr)              MX::MemSize((LPVOID)(lpPtr))
+  #define MX_FREE(lpPtr)                if (lpPtr != NULL) { MxMemFree((void*)(lpPtr));  lpPtr = NULL; }
+  #define MX__MSIZE(lpPtr)              MxMemSize((void*)(lpPtr))
 #endif //MX_MALLOC || MX_FREE || MX_REALLOC || MX__MSIZE
 
 //-----------------------------------------------------------

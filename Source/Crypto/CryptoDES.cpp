@@ -58,7 +58,7 @@ CCryptoDES::~CCryptoDES()
   {
     CleanUp(FALSE, TRUE);
     CleanUp(TRUE, TRUE);
-    MemSet(lpInternalData, 0, sizeof(DES_DATA));
+    MxMemSet(lpInternalData, 0, sizeof(DES_DATA));
     MX_FREE(lpInternalData);
   }
   return;
@@ -90,7 +90,7 @@ HRESULT CCryptoDES::BeginEncrypt(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lp
     lpInternalData = MX_MALLOC(sizeof(DES_DATA));
     if (lpInternalData == NULL)
       return E_OUTOFMEMORY;
-    MemSet(lpInternalData, 0, sizeof(DES_DATA));
+    MxMemSet(lpInternalData, 0, sizeof(DES_DATA));
   }
   CleanUp(TRUE, TRUE);
   //create context
@@ -238,7 +238,7 @@ HRESULT CCryptoDES::BeginDecrypt(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lp
     lpInternalData = MX_MALLOC(sizeof(DES_DATA));
     if (lpInternalData == NULL)
       return E_OUTOFMEMORY;
-    MemSet(lpInternalData, 0, sizeof(DES_DATA));
+    MxMemSet(lpInternalData, 0, sizeof(DES_DATA));
   }
   CleanUp(FALSE, TRUE);
   //create context
@@ -365,7 +365,7 @@ VOID CCryptoDES::CleanUp(_In_ BOOL bEncoder, _In_ BOOL bZeroData)
   struct tagDES_DATA::tagCipherInfo *lpInfo = (bEncoder != FALSE) ? &(des_data->sEncryptor) : &(des_data->sDecryptor);
 
   if (lpInfo->lpTempOutputBuf != NULL)
-    MemSet(lpInfo->lpTempOutputBuf, 0, lpInfo->nTempOutputSize);
+    MxMemSet(lpInfo->lpTempOutputBuf, 0, lpInfo->nTempOutputSize);
   MX_FREE(lpInfo->lpTempOutputBuf);
   lpInfo->nTempOutputSize = 0;
   //----
@@ -386,8 +386,8 @@ VOID CCryptoDES::CleanUp(_In_ BOOL bEncoder, _In_ BOOL bZeroData)
       cEncryptedData.GetReadPtr(&lpPtr1, &nSize1, &lpPtr2, &nSize2);
     else
       cDecryptedData.GetReadPtr(&lpPtr1, &nSize1, &lpPtr2, &nSize2);
-    MemSet(lpPtr1, 0, nSize1);
-    MemSet(lpPtr2, 0, nSize2);
+    MxMemSet(lpPtr1, 0, nSize1);
+    MxMemSet(lpPtr2, 0, nSize2);
   }
   return;
 }

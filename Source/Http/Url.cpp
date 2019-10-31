@@ -177,9 +177,9 @@ CUrl& CUrl::operator=(_In_ const CUrl& cSrc) throw(...)
       if (!cNewItem)
         throw (LONG)E_OUTOFMEMORY;
       cNewItem->szValueW = cNewItem->szNameW + (nNameLen + 1);
-      MemCopy(cNewItem->szNameW, cSrc.cQueryStringsList[i]->szNameW, nNameLen * sizeof(WCHAR));
+      MxMemCopy(cNewItem->szNameW, cSrc.cQueryStringsList[i]->szNameW, nNameLen * sizeof(WCHAR));
       cNewItem->szNameW[nNameLen] = 0;
-      MemCopy(cNewItem->szValueW, cSrc.cQueryStringsList[i]->szValueW, nValueLen * sizeof(WCHAR));
+      MxMemCopy(cNewItem->szValueW, cSrc.cQueryStringsList[i]->szValueW, nValueLen * sizeof(WCHAR));
       cNewItem->szValueW[nValueLen] = 0;
       if (cNewQueryStringsList.AddElement(cNewItem.Get()) == FALSE)
         throw (LONG)E_OUTOFMEMORY;
@@ -512,9 +512,9 @@ HRESULT CUrl::AddQueryString(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW, _I
   if (!cNewItem)
     return E_OUTOFMEMORY;
   cNewItem->szValueW = cNewItem->szNameW + (nNameLen + 1);
-  MemCopy(cNewItem->szNameW, szNameW, nNameLen * sizeof(WCHAR));
+  MxMemCopy(cNewItem->szNameW, szNameW, nNameLen * sizeof(WCHAR));
   cNewItem->szNameW[nNameLen] = 0;
-  MemCopy(cNewItem->szValueW, szValueW, nValueLen * sizeof(WCHAR));
+  MxMemCopy(cNewItem->szValueW, szValueW, nValueLen * sizeof(WCHAR));
   cNewItem->szValueW[nValueLen] = 0;
   //add to list
   if (cQueryStringsList.AddElement(cNewItem.Get()) == FALSE)
@@ -1758,9 +1758,9 @@ merge_copyqueryandfrag:
     if (!cNewItem)
       return E_OUTOFMEMORY;
     cNewItem->szValueW = cNewItem->szNameW + (nNameLen + 1);
-    MemCopy(cNewItem->szNameW, cOtherUrl.cQueryStringsList[i]->szNameW, nNameLen * sizeof(WCHAR));
+    MxMemCopy(cNewItem->szNameW, cOtherUrl.cQueryStringsList[i]->szNameW, nNameLen * sizeof(WCHAR));
     cNewItem->szNameW[nNameLen] = 0;
-    MemCopy(cNewItem->szValueW, cOtherUrl.cQueryStringsList[i]->szValueW, nValueLen * sizeof(WCHAR));
+    MxMemCopy(cNewItem->szValueW, cOtherUrl.cQueryStringsList[i]->szValueW, nValueLen * sizeof(WCHAR));
     cNewItem->szValueW[nValueLen] = 0;
     if (cQueryStringsList.AddElement(cNewItem.Get()) == FALSE)
       return E_OUTOFMEMORY;

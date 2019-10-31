@@ -129,7 +129,7 @@ static HRESULT MX_HRESULT_FROM_NT(_In_ NTSTATUS nNtStatus)
 
 __inline HRESULT MX_HRESULT_FROM_LASTERROR()
 {
-  return MX_HRESULT_FROM_WIN32(::MxGetLastWin32Error());
+  return MX_HRESULT_FROM_WIN32(MxGetLastWin32Error());
 }
 
 #ifdef __cplusplus

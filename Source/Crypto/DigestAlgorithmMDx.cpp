@@ -52,7 +52,7 @@ CDigestAlgorithmMessageDigest::~CDigestAlgorithmMessageDigest()
   if (lpInternalData != NULL)
   {
     CleanUp(TRUE);
-    MemSet(lpInternalData, 0, sizeof(MDx_DATA));
+    MxMemSet(lpInternalData, 0, sizeof(MDx_DATA));
     MX_FREE(lpInternalData);
   }
   return;
@@ -83,7 +83,7 @@ HRESULT CDigestAlgorithmMessageDigest::BeginDigest(_In_ eAlgorithm nAlgorithm, _
     lpInternalData = MX_MALLOC(sizeof(MDx_DATA));
     if (lpInternalData == NULL)
       return E_OUTOFMEMORY;
-    MemSet(lpInternalData, 0, sizeof(MDx_DATA));
+    MxMemSet(lpInternalData, 0, sizeof(MDx_DATA));
   }
   CleanUp(TRUE);
   //create context
@@ -189,7 +189,7 @@ VOID CDigestAlgorithmMessageDigest::CleanUp(_In_ BOOL bZeroData)
   }
   //----
   if (bZeroData != FALSE)
-    MemSet(mdx_data->aOutput, 0, sizeof(mdx_data->aOutput));
+    MxMemSet(mdx_data->aOutput, 0, sizeof(mdx_data->aOutput));
   return;
 }
 

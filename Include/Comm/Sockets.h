@@ -117,6 +117,7 @@ private:
       LONG volatile nAcceptsInProgress;
       DWORD dwMaxAcceptsToPost;
       LPVOID fnAcceptEx;
+      LPVOID fnGetAcceptExSockaddrs;
     } *lpListener;
     LONG volatile nReadThrottle;
   };

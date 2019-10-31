@@ -242,7 +242,7 @@ CTimerHandler::CTimerHandler() : TRefCounted<CThread>()
   _InterlockedExchange(&nNextTimerId, 0);
   _InterlockedExchange(&nThreadMutex, 0);
   _InterlockedExchange(&(sQueue.nMutex), 0);
-  MemSet(&sFreeTimers, 0, sizeof(sFreeTimers));
+  MxMemSet(&sFreeTimers, 0, sizeof(sFreeTimers));
   return;
 }
 

@@ -74,7 +74,7 @@ HRESULT CPropertyBag::SetNull(_In_z_ LPCSTR szNameA)
   if (lpNewProp == NULL)
     return E_OUTOFMEMORY;
   lpNewProp->szNameA = (LPSTR)(lpNewProp + 1);
-  MemCopy(lpNewProp->szNameA, szNameA, nNameLen);
+  MxMemCopy(lpNewProp->szNameA, szNameA, nNameLen);
   lpNewProp->nType = PropertyTypeNull;
   if (Insert(lpNewProp) == FALSE)
   {
@@ -100,7 +100,7 @@ HRESULT CPropertyBag::SetDWord(_In_z_ LPCSTR szNameA, _In_ DWORD dwValue)
   if (lpNewProp == NULL)
     return E_OUTOFMEMORY;
   lpNewProp->szNameA = (LPSTR)(lpNewProp + 1);
-  MemCopy(lpNewProp->szNameA, szNameA, nNameLen);
+  MxMemCopy(lpNewProp->szNameA, szNameA, nNameLen);
   lpNewProp->nType = PropertyTypeDWord;
   lpNewProp->u.dwValue = dwValue;
   if (Insert(lpNewProp) == FALSE)
@@ -127,7 +127,7 @@ HRESULT CPropertyBag::SetQWord(_In_z_ LPCSTR szNameA, _In_ ULONGLONG ullValue)
   if (lpNewProp == NULL)
     return E_OUTOFMEMORY;
   lpNewProp->szNameA = (LPSTR)(lpNewProp + 1);
-  MemCopy(lpNewProp->szNameA, szNameA, nNameLen);
+  MxMemCopy(lpNewProp->szNameA, szNameA, nNameLen);
   lpNewProp->nType = PropertyTypeQWord;
   lpNewProp->u.ullValue = ullValue;
   if (Insert(lpNewProp) == FALSE)
@@ -154,7 +154,7 @@ HRESULT CPropertyBag::SetDouble(_In_z_ LPCSTR szNameA, _In_ double nValue)
   if (lpNewProp == NULL)
     return E_OUTOFMEMORY;
   lpNewProp->szNameA = (LPSTR)(lpNewProp + 1);
-  MemCopy(lpNewProp->szNameA, szNameA, nNameLen);
+  MxMemCopy(lpNewProp->szNameA, szNameA, nNameLen);
   lpNewProp->nType = PropertyTypeDouble;
   lpNewProp->u.dblValue = nValue;
   if (Insert(lpNewProp) == FALSE)
@@ -182,10 +182,10 @@ HRESULT CPropertyBag::SetString(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA)
   if (lpNewProp == NULL)
     return E_OUTOFMEMORY;
   lpNewProp->szNameA = (LPSTR)(lpNewProp + 1);
-  MemCopy(lpNewProp->szNameA, szNameA, nNameLen);
+  MxMemCopy(lpNewProp->szNameA, szNameA, nNameLen);
   lpNewProp->nType = PropertyTypeAnsiString;
   lpNewProp->u.szValueA = (LPSTR)((LPBYTE)(lpNewProp+1) + nNameLen);
-  MemCopy(lpNewProp->u.szValueA, szValueA, nValueLen);
+  MxMemCopy(lpNewProp->u.szValueA, szValueA, nValueLen);
   if (Insert(lpNewProp) == FALSE)
   {
     MX_FREE(lpNewProp);
@@ -211,10 +211,10 @@ HRESULT CPropertyBag::SetString(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW)
   if (lpNewProp == NULL)
     return E_OUTOFMEMORY;
   lpNewProp->szNameA = (LPSTR)(lpNewProp + 1);
-  MemCopy(lpNewProp->szNameA, szNameA, nNameLen);
+  MxMemCopy(lpNewProp->szNameA, szNameA, nNameLen);
   lpNewProp->nType = PropertyTypeWideString;
   lpNewProp->u.szValueW = (LPWSTR)((LPBYTE)(lpNewProp+1) + nNameLen);
-  MemCopy(lpNewProp->u.szValueW, szValueW, nValueLen);
+  MxMemCopy(lpNewProp->u.szValueW, szValueW, nValueLen);
   if (Insert(lpNewProp) == FALSE)
   {
     MX_FREE(lpNewProp);

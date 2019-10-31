@@ -179,13 +179,13 @@ SIZE_T CCircularBuffer::Peek(_Out_writes_(nToRead) LPVOID lpDest, _In_ SIZE_T nT
     return 0;
   GetReadPtr(&lpPtr1, &nSize1, &lpPtr2, &nSize2);
   nReaded = (nToRead < nSize1) ? nToRead : nSize1;
-  MemCopy(lpDest, lpPtr1, nReaded);
+  MxMemCopy(lpDest, lpPtr1, nReaded);
   if (nToRead > nSize1)
   {
     nToRead -= nSize1;
     if (nToRead > nSize2)
       nToRead = nSize2;
-    MemCopy((LPBYTE)lpDest + nReaded, lpPtr2, nToRead);
+    MxMemCopy((LPBYTE)lpDest + nReaded, lpPtr2, nToRead);
     nReaded += nToRead;
   }
   return nReaded;
@@ -227,13 +227,13 @@ HRESULT CCircularBuffer::Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLength, _In_ 
   GetWritePtr(&lpPtr1, &nSize1, &lpPtr2, &nSize2);
   if (nSrcLength <= nSize1)
   {
-    MemCopy(lpPtr1, lpSrc, nSrcLength);
+    MxMemCopy(lpPtr1, lpSrc, nSrcLength);
   }
   else
   {
     MX_ASSERT(nSrcLength <= nSize1 + nSize2);
-    MemCopy(lpPtr1, lpSrc, nSize1);
-    MemCopy(lpPtr2, (LPBYTE)lpSrc + nSize1, nSrcLength - nSize1);
+    MxMemCopy(lpPtr1, lpSrc, nSize1);
+    MxMemCopy(lpPtr2, (LPBYTE)lpSrc + nSize1, nSrcLength - nSize1);
   }
   return AdvanceWritePtr(nSrcLength);
 }
@@ -268,13 +268,13 @@ HRESULT CCircularBuffer::SetBufferSize(_In_ SIZE_T _nSize)
       return E_OUTOFMEMORY;
     if (nStart+nLen <= nSize)
     {
-      MemCopy(lpNewData, lpData+nStart, nLen);
+      MxMemCopy(lpNewData, lpData+nStart, nLen);
     }
     else
     {
       nTemp = nSize - nStart;
-      MemCopy(lpNewData, lpData + nStart, nTemp);
-      MemCopy(lpNewData + nTemp, lpData, nLen-nTemp);
+      MxMemCopy(lpNewData, lpData + nStart, nTemp);
+      MxMemCopy(lpNewData + nTemp, lpData, nLen-nTemp);
     }
     MX_FREE(lpData);
     lpData = lpNewData;
@@ -299,14 +299,14 @@ VOID CCircularBuffer::ReArrangeBuffer()
       if ((nToMove = nEndAreaLen) > 4096)
         nToMove = 4096;
       //move from the buffer ending area to the temp buffer
-      MemCopy(aTempBuffer, lpData + (nSize - nToMove), nToMove);
+      MxMemCopy(aTempBuffer, lpData + (nSize - nToMove), nToMove);
       //move from the pre buffer ending area 'nToMove' bytes ahead
       if (nToMove < nEndAreaLen)
-        MemMove(lpData + nStart + nToMove, lpData + nStart, nEndAreaLen - nToMove);
+        MxMemMove(lpData + nStart + nToMove, lpData + nStart, nEndAreaLen - nToMove);
       //move from the buffer starting area 'nToMove' bytes ahead
-      MemMove(lpData + nStart + nToMove, lpData, nStartAreaLen);
+      MxMemMove(lpData + nStart + nToMove, lpData, nStartAreaLen);
       //move from the temp buffer to the buffer starting area
-      MemCopy(lpData, aTempBuffer, nToMove);
+      MxMemCopy(lpData, aTempBuffer, nToMove);
       //advance start position
       nStart += nToMove;
     }

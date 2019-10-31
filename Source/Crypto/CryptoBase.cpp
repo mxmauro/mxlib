@@ -46,14 +46,14 @@ SIZE_T CCryptoBase::GetEncryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_
   cEncryptedData.GetReadPtr(&lpPtr1, &nSize1, &lpPtr2, &nSize2);
   if (nDestSize <= nSize1)
   {
-    MemCopy(lpDest, lpPtr1, nDestSize);
+    MxMemCopy(lpDest, lpPtr1, nDestSize);
   }
   else
   {
     if (nDestSize > nSize1+nSize2)
       nDestSize = nSize1+nSize2;
-    MemCopy(lpDest,                lpPtr1, nSize1);
-    MemCopy((LPBYTE)lpDest+nSize1, lpPtr2, nDestSize-nSize1);
+    MxMemCopy(lpDest,                lpPtr1, nSize1);
+    MxMemCopy((LPBYTE)lpDest+nSize1, lpPtr2, nDestSize-nSize1);
   }
   cEncryptedData.AdvanceReadPtr(nDestSize);
   return nDestSize;
@@ -77,14 +77,14 @@ SIZE_T CCryptoBase::GetDecryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_
   cDecryptedData.GetReadPtr(&lpPtr1, &nSize1, &lpPtr2, &nSize2);
   if (nDestSize <= nSize1)
   {
-    MemCopy(lpDest, lpPtr1, nDestSize);
+    MxMemCopy(lpDest, lpPtr1, nDestSize);
   }
   else
   {
     if (nDestSize > nSize1+nSize2)
       nDestSize = nSize1+nSize2;
-    MemCopy(lpDest,                lpPtr1, nSize1);
-    MemCopy((LPBYTE)lpDest+nSize1, lpPtr2, nDestSize-nSize1);
+    MxMemCopy(lpDest,                lpPtr1, nSize1);
+    MxMemCopy((LPBYTE)lpDest+nSize1, lpPtr2, nDestSize-nSize1);
   }
   cDecryptedData.AdvanceReadPtr(nDestSize);
   return nDestSize;

@@ -37,16 +37,16 @@
 //--------------------------------
 
 #undef DUK_MEMCPY
-#define DUK_MEMCPY       MX::MemCopy
+#define DUK_MEMCPY       ::MxMemCopy
 
 #undef DUK_MEMMOVE
-#define DUK_MEMMOVE      MX::MemMove
+#define DUK_MEMMOVE      ::MxMemMove
 
 #undef DUK_MEMCMP
-#define DUK_MEMCMP       MX::MemCompare
+#define DUK_MEMCMP       ::MxMemCompare
 
 #undef DUK_MEMSET
-#define DUK_MEMSET       MX::MemSet
+#define DUK_MEMSET       ::MxMemSet
 
 //--------------------------------
 
@@ -81,7 +81,7 @@ static __forceinline int DukTapeSprintf(char *buffer, const char *format, ...)
   va_end(argptr);
   if (ret >= 0)
   {
-    MX::MemCopy(buffer, tempbuf, ret);
+    ::MxMemCopy(buffer, tempbuf, ret);
     buffer[ret] = 0;
   }
   else

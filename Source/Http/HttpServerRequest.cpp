@@ -35,11 +35,11 @@ namespace MX {
 
 CHttpServer::CClientRequest::CClientRequest() : CIpc::CUserData(), TLnkLstNode<CClientRequest>()
 {
-  MemSet(&sOvr, 0, sizeof(sOvr));
+  MxMemSet(&sOvr, 0, sizeof(sOvr));
   lpHttpServer = NULL;
   lpSocketMgr = NULL;
   hConn = NULL;
-  MemSet(&sPeerAddr, 0, sizeof(sPeerAddr));
+  MxMemSet(&sPeerAddr, 0, sizeof(sPeerAddr));
   nState = StateInitializing;
   nBrowser = CHttpHeaderBase::BrowserOther;
   _InterlockedExchange(&nFlags, 0);

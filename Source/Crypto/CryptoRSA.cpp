@@ -93,7 +93,7 @@ CCryptoRSA::~CCryptoRSA()
     CleanUp(WhatVerifier, TRUE);
     if (rsa_data->lpRsa != NULL)
       RSA_free(rsa_data->lpRsa);
-    MemSet(rsa_data, 0, sizeof(RSA_DATA));
+    MxMemSet(rsa_data, 0, sizeof(RSA_DATA));
     MX_FREE(lpInternalData);
   }
   return;
@@ -118,7 +118,7 @@ HRESULT CCryptoRSA::GenerateKeys(_In_ SIZE_T nBitsCount)
     lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
     if (lpInternalData == NULL)
       return E_OUTOFMEMORY;
-    MemSet(lpInternalData, 0, sizeof(RSA_DATA));
+    MxMemSet(lpInternalData, 0, sizeof(RSA_DATA));
   }
   if (rsa_data->sEncryptor.lpInputBuf != NULL || rsa_data->sDecryptor.lpInputBuf != NULL ||
       rsa_data->sSignContext.lpSigner != NULL || rsa_data->sVerifyContext.lpVerifier != NULL)
@@ -187,7 +187,7 @@ HRESULT CCryptoRSA::SetPublicKeyFromDER(_In_ LPCVOID lpKey, _In_ SIZE_T nKeySize
     lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
     if (lpInternalData == NULL)
       return E_OUTOFMEMORY;
-    MemSet(lpInternalData, 0, sizeof(RSA_DATA));
+    MxMemSet(lpInternalData, 0, sizeof(RSA_DATA));
   }
   if (rsa_data->sEncryptor.lpInputBuf != NULL || rsa_data->sDecryptor.lpInputBuf != NULL ||
       rsa_data->sSignContext.lpSigner != NULL || rsa_data->sVerifyContext.lpVerifier != NULL)
@@ -354,7 +354,7 @@ SIZE_T CCryptoRSA::GetPublicKey(_Out_opt_ LPVOID lpDest)
     return 0;
   len = i2d_RSAPublicKey(rsa_data->lpRsa, (unsigned char**)&lpData);
   if (len > 0 && lpData != NULL && lpDest != NULL)
-    MX::MemCopy(lpDest, lpData, (SIZE_T)len);
+    ::MxMemCopy(lpDest, lpData, (SIZE_T)len);
   if (lpData != NULL)
     OPENSSL_free(lpData);
   return (len > 0) ? (SIZE_T)len : 0;
@@ -381,7 +381,7 @@ HRESULT CCryptoRSA::SetPrivateKeyFromDER(_In_ LPCVOID lpKey, _In_ SIZE_T nKeySiz
     lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
     if (lpInternalData == NULL)
       return E_OUTOFMEMORY;
-    MemSet(lpInternalData, 0, sizeof(RSA_DATA));
+    MxMemSet(lpInternalData, 0, sizeof(RSA_DATA));
   }
   if (rsa_data->sEncryptor.lpInputBuf != NULL || rsa_data->sDecryptor.lpInputBuf != NULL ||
       rsa_data->sSignContext.lpSigner != NULL || rsa_data->sVerifyContext.lpVerifier != NULL)
@@ -488,7 +488,7 @@ HRESULT CCryptoRSA::SetPrivateKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR
     lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
     if (lpInternalData == NULL)
       return E_OUTOFMEMORY;
-    MemSet(lpInternalData, 0, sizeof(RSA_DATA));
+    MxMemSet(lpInternalData, 0, sizeof(RSA_DATA));
   }
   if (rsa_data->sEncryptor.lpInputBuf != NULL || rsa_data->sDecryptor.lpInputBuf != NULL ||
       rsa_data->sSignContext.lpSigner != NULL || rsa_data->sVerifyContext.lpVerifier != NULL)
@@ -560,7 +560,7 @@ SIZE_T CCryptoRSA::GetPrivateKey(_Out_opt_ LPVOID lpDest)
     return 0;
   len = i2d_RSAPrivateKey(rsa_data->lpRsa, (unsigned char**)&lpData);
   if (len > 0 && lpData != NULL && lpDest != NULL)
-    MX::MemCopy(lpDest, lpData, (SIZE_T)len);
+    ::MxMemCopy(lpDest, lpData, (SIZE_T)len);
   if (lpData != NULL)
     OPENSSL_free(lpData);
   return (len > 0) ? (SIZE_T)len : 0;
@@ -605,7 +605,7 @@ HRESULT CCryptoRSA::BeginEncrypt(_In_ ePadding nPadding, _In_opt_ BOOL bUsePubli
     lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
     if (lpInternalData == NULL)
       return E_OUTOFMEMORY;
-    MemSet(lpInternalData, 0, sizeof(RSA_DATA));
+    MxMemSet(lpInternalData, 0, sizeof(RSA_DATA));
   }
   if (rsa_data->lpRsa == NULL)
     return MX_E_NotReady;
@@ -644,7 +644,7 @@ HRESULT CCryptoRSA::EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
     CleanUp(WhatEncoder, TRUE);
     return MX_E_InvalidData;
   }
-  MemCopy(rsa_data->sEncryptor.lpInputBuf + rsa_data->sEncryptor.nCurrInputSize, lpData, nDataLength);
+  MxMemCopy(rsa_data->sEncryptor.lpInputBuf + rsa_data->sEncryptor.nCurrInputSize, lpData, nDataLength);
   rsa_data->sEncryptor.nCurrInputSize += nDataLength;
   return S_OK;
 }
@@ -718,7 +718,7 @@ HRESULT CCryptoRSA::BeginDecrypt(_In_ ePadding nPadding, _In_opt_ BOOL bUsePriva
     lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
     if (lpInternalData == NULL)
       return E_OUTOFMEMORY;
-    MemSet(lpInternalData, 0, sizeof(RSA_DATA));
+    MxMemSet(lpInternalData, 0, sizeof(RSA_DATA));
   }
   if (rsa_data->lpRsa == NULL)
     return MX_E_NotReady;
@@ -757,7 +757,7 @@ HRESULT CCryptoRSA::DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
     CleanUp(WhatDecoder, TRUE);
     return MX_E_InvalidData;
   }
-  MemCopy(rsa_data->sDecryptor.lpInputBuf + rsa_data->sDecryptor.nCurrInputSize, lpData, nDataLength);
+  MxMemCopy(rsa_data->sDecryptor.lpInputBuf + rsa_data->sDecryptor.nCurrInputSize, lpData, nDataLength);
   rsa_data->sDecryptor.nCurrInputSize += nDataLength;
   return S_OK;
 }
@@ -818,7 +818,7 @@ HRESULT CCryptoRSA::BeginSign(_In_ eHashAlgorithm nAlgorithm)
     lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
     if (lpInternalData == NULL)
       return E_OUTOFMEMORY;
-    MemSet(lpInternalData, 0, sizeof(RSA_DATA));
+    MxMemSet(lpInternalData, 0, sizeof(RSA_DATA));
   }
   if (rsa_data->lpRsa == NULL)
     return MX_E_NotReady;
@@ -853,7 +853,7 @@ HRESULT CCryptoRSA::SignStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)
     lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
     if (lpInternalData == NULL)
       return E_OUTOFMEMORY;
-    MemSet(lpInternalData, 0, sizeof(RSA_DATA));
+    MxMemSet(lpInternalData, 0, sizeof(RSA_DATA));
   }
   if (rsa_data->sSignContext.lpSigner == NULL)
     return MX_E_NotReady;
@@ -926,7 +926,7 @@ HRESULT CCryptoRSA::BeginVerify(_In_ eHashAlgorithm nAlgorithm)
     lpInternalData = MX_MALLOC(sizeof(RSA_DATA));
     if (lpInternalData == NULL)
       return E_OUTOFMEMORY;
-    MemSet(lpInternalData, 0, sizeof(RSA_DATA));
+    MxMemSet(lpInternalData, 0, sizeof(RSA_DATA));
   }
   if (rsa_data->lpRsa == NULL)
     return MX_E_NotReady;
@@ -993,13 +993,13 @@ VOID CCryptoRSA::CleanUp(_In_ int nWhat, _In_ BOOL bZeroData)
   {
     case WhatEncoder:
       if (rsa_data->sEncryptor.lpInputBuf != NULL)
-        MemSet(rsa_data->sEncryptor.lpInputBuf, 0, rsa_data->sEncryptor.nMaxInputSize);
+        MxMemSet(rsa_data->sEncryptor.lpInputBuf, 0, rsa_data->sEncryptor.nMaxInputSize);
       MX_FREE(rsa_data->sEncryptor.lpInputBuf);
       rsa_data->sEncryptor.nCurrInputSize = 0;
       rsa_data->sEncryptor.nMaxInputSize = 0;
       //----
       if (rsa_data->sEncryptor.lpOutputBuf != NULL)
-        MemSet(rsa_data->sEncryptor.lpOutputBuf, 0, rsa_data->sEncryptor.nMaxOutputSize);
+        MxMemSet(rsa_data->sEncryptor.lpOutputBuf, 0, rsa_data->sEncryptor.nMaxOutputSize);
       MX_FREE(rsa_data->sEncryptor.lpOutputBuf);
       rsa_data->sEncryptor.nMaxOutputSize = 0;
       //----
@@ -1012,20 +1012,20 @@ VOID CCryptoRSA::CleanUp(_In_ int nWhat, _In_ BOOL bZeroData)
         SIZE_T nSize1, nSize2;
 
         cEncryptedData.GetReadPtr(&lpPtr1, &nSize1, &lpPtr2, &nSize2);
-        MemSet(lpPtr1, 0, nSize1);
-        MemSet(lpPtr2, 0, nSize2);
+        MxMemSet(lpPtr1, 0, nSize1);
+        MxMemSet(lpPtr2, 0, nSize2);
       }
       break;
 
     case WhatDecoder:
       if (rsa_data->sDecryptor.lpInputBuf != NULL)
-        MemSet(rsa_data->sDecryptor.lpInputBuf, 0, rsa_data->sDecryptor.nMaxInputSize);
+        MxMemSet(rsa_data->sDecryptor.lpInputBuf, 0, rsa_data->sDecryptor.nMaxInputSize);
       MX_FREE(rsa_data->sDecryptor.lpInputBuf);
       rsa_data->sDecryptor.nCurrInputSize = 0;
       rsa_data->sDecryptor.nMaxInputSize = 0;
       //----
       if (rsa_data->sDecryptor.lpOutputBuf != NULL)
-        MemSet(rsa_data->sDecryptor.lpOutputBuf, 0, rsa_data->sDecryptor.nMaxOutputSize);
+        MxMemSet(rsa_data->sDecryptor.lpOutputBuf, 0, rsa_data->sDecryptor.nMaxOutputSize);
       MX_FREE(rsa_data->sDecryptor.lpOutputBuf);
       rsa_data->sDecryptor.nMaxOutputSize = 0;
       //----
@@ -1038,8 +1038,8 @@ VOID CCryptoRSA::CleanUp(_In_ int nWhat, _In_ BOOL bZeroData)
         SIZE_T nSize1, nSize2;
 
         cDecryptedData.GetReadPtr(&lpPtr1, &nSize1, &lpPtr2, &nSize2);
-        MemSet(lpPtr1, 0, nSize1);
-        MemSet(lpPtr2, 0, nSize2);
+        MxMemSet(lpPtr1, 0, nSize1);
+        MxMemSet(lpPtr2, 0, nSize2);
       }
       break;
 
@@ -1051,7 +1051,7 @@ VOID CCryptoRSA::CleanUp(_In_ int nWhat, _In_ BOOL bZeroData)
       if (bZeroData != FALSE)
       {
         if (rsa_data->sSignContext.lpSignature != NULL)
-          MemSet(rsa_data->sSignContext.lpSignature, 0, rsa_data->sSignContext.nMaxSignatureSize);
+          MxMemSet(rsa_data->sSignContext.lpSignature, 0, rsa_data->sSignContext.nMaxSignatureSize);
         MX_FREE(rsa_data->sSignContext.lpSignature);
         rsa_data->sSignContext.nSignatureSize = rsa_data->sSignContext.nMaxSignatureSize = 0;
       }
@@ -1166,6 +1166,6 @@ static int InitializeFromPEM_PasswordCallback(char *buf, int size, int rwflag, v
     size = 0;
   if (nPassLen >(SIZE_T)size)
     nPassLen = (SIZE_T)size;
-  MX::MemCopy(buf, userdata, nPassLen);
+  ::MxMemCopy(buf, userdata, nPassLen);
   return (int)nPassLen;
 }

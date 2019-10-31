@@ -47,6 +47,7 @@ public:
     {
     ULONG nNewVal = (ULONG)_InterlockedIncrement(&nRefCount);
     MX_ASSERT((nNewVal & 0xC0000000) == 0);
+    MX_ASSERT(nNewVal > 0);
     return nNewVal;
     };
 
@@ -74,7 +75,7 @@ public:
     do
     {
       nInitVal = nOrigVal;
-      nNewVal = (nInitVal != 0) ? (nInitVal-1) : (-(2147483647L/2L));
+      nNewVal = (nInitVal != 0) ? (nInitVal - 1) : (-(2147483647L / 2L));
       nOrigVal = _InterlockedCompareExchange(&nRefCount, nNewVal, nInitVal);
     }
     while (nOrigVal != nInitVal);

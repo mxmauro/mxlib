@@ -151,7 +151,7 @@ HRESULT MySqlInitialize()
       szDllNameW[dwLen] = 0;
       sW = (LPWSTR)MX::StrChrW(szDllNameW, L'\\', TRUE);
       sW = (sW != NULL) ? (sW + 1) : szDllNameW;
-      MX::MemCopy(sW, L"libmariadb.dll", (14 + 1) * sizeof(WCHAR));
+      ::MxMemCopy(sW, L"libmariadb.dll", (14 + 1) * sizeof(WCHAR));
       //load library
       _hDll = ::LoadLibraryW(szDllNameW);
       if (_hDll == NULL)

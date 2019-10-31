@@ -52,7 +52,7 @@ CDigestAlgorithmSecureHash::~CDigestAlgorithmSecureHash()
   if (lpInternalData != NULL)
   {
     CleanUp(TRUE);
-    MemSet(lpInternalData, 0, sizeof(SHAx_DATA));
+    MxMemSet(lpInternalData, 0, sizeof(SHAx_DATA));
     MX_FREE(lpInternalData);
   }
   return;
@@ -86,7 +86,7 @@ HRESULT CDigestAlgorithmSecureHash::BeginDigest(_In_ eAlgorithm nAlgorithm, _In_
     lpInternalData = MX_MALLOC(sizeof(SHAx_DATA));
     if (lpInternalData == NULL)
       return E_OUTOFMEMORY;
-    MemSet(lpInternalData, 0, sizeof(SHAx_DATA));
+    MxMemSet(lpInternalData, 0, sizeof(SHAx_DATA));
   }
   CleanUp(TRUE);
   //create context
@@ -193,7 +193,7 @@ VOID CDigestAlgorithmSecureHash::CleanUp(_In_ BOOL bZeroData)
   }
   //----
   if (bZeroData != FALSE)
-    MemSet(shax_data->aOutput, 0, sizeof(shax_data->aOutput));
+    MxMemSet(shax_data->aOutput, 0, sizeof(shax_data->aOutput));
   return;
 }
 

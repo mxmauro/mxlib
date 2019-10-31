@@ -902,7 +902,7 @@ VOID CJavascriptVM::GetDate(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_
 
   if (lpSt == NULL)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_POINTER);
-  MX::MemSet(lpSt, 0, sizeof(SYSTEMTIME));
+  ::MxMemSet(lpSt, 0, sizeof(SYSTEMTIME));
 
   nObjIdx = DukTape::duk_normalize_index(lpCtx, nObjIdx);
 

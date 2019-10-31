@@ -404,7 +404,7 @@ DukTape::duk_ret_t CJsonWebTokenPlugin::Verify(_In_ DukTape::duk_context *lpCtx)
 
   //and verify
   if (cBase64Dec.GetOutputLength() != cHmacHash.GetResultSize() ||
-      MemCompare(cBase64Dec.GetBuffer(), cHmacHash.GetResult(), cHmacHash.GetResultSize()) != 0)
+      ::MxMemCompare(cBase64Dec.GetBuffer(), cHmacHash.GetResult(), cHmacHash.GetResultSize()) != 0)
   {
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, TRUST_E_BAD_DIGEST);
   }

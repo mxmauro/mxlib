@@ -452,7 +452,7 @@ VOID CZipLib::Cleanup()
   nLevel = nGZipHdrState = 0;
   if (lpStream != NULL)
   {
-    MemSet(lpStream, 0, sizeof(z_stream));
+    MxMemSet(lpStream, 0, sizeof(z_stream));
     __stream->zalloc = &my_alloc_func;
     __stream->zfree = &my_free_func;
   }
@@ -559,7 +559,7 @@ static voidpf my_alloc_func(voidpf opaque, uInt items, uInt size)
 
   p = MX_MALLOC((SIZE_T)items * (SIZE_T)size);
   if (p != NULL)
-    MX::MemSet(p, 0, size);
+    ::MxMemSet(p, 0, size);
   return (voidpf)p;
 }
 

@@ -41,7 +41,7 @@ CJsMySqlError::CJsMySqlError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk
   nLen = MX::StrLenA(sA);
   if (nLen >= MX_ARRAYLEN(szSqlStateA))
     nLen = MX_ARRAYLEN(szSqlStateA) - 1;
-  MX::MemCopy(szSqlStateA, sA, nLen);
+  ::MxMemCopy(szSqlStateA, sA, nLen);
   szSqlStateA[nLen]  = 0;
   DukTape::duk_pop(lpCtx);
   return;
@@ -63,7 +63,7 @@ CJsMySqlError& CJsMySqlError::operator=(_In_ const CJsMySqlError &obj)
   CJsWindowsError::operator=(obj);
   //----
   nDbError = obj.nDbError;
-  MX::MemCopy(szSqlStateA, obj.szSqlStateA, sizeof(szSqlStateA));
+  ::MxMemCopy(szSqlStateA, obj.szSqlStateA, sizeof(szSqlStateA));
   //----
   return *this;
 }

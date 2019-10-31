@@ -376,8 +376,8 @@ CThreadPool::CThreadPool()
 {
   hIOCP = NULL;
   nMinWorkerThreads = nWorkerThreadsCreateAhead = nThreadShutdownThresholdMs = 0;
-  MemSet(&sActiveThreads, 0, sizeof(sActiveThreads));
-  MemSet(&sWorkItems, 0, sizeof(sWorkItems));
+  MxMemSet(&sActiveThreads, 0, sizeof(sActiveThreads));
+  MxMemSet(&sWorkItems, 0, sizeof(sWorkItems));
   sWorkItems.sList.lpNext = sWorkItems.sList.lpPrev = &(sWorkItems.sList);
   _InterlockedExchange(&nInUse, 0);
   return;
@@ -561,7 +561,7 @@ DWORD CThreadPool::InitializeWorker()
     lplpNewList = (CWorkerThread**)MX_MALLOC((sActiveThreads.nSize+32) * sizeof(CWorkerThread*));
     if (lplpNewList == NULL)
       return ERROR_NOT_ENOUGH_MEMORY;
-    MemCopy(lplpNewList, sActiveThreads.lplpWorkerThreadsList, sActiveThreads.nCount*sizeof(CWorkerThread*));
+    MxMemCopy(lplpNewList, sActiveThreads.lplpWorkerThreadsList, sActiveThreads.nCount*sizeof(CWorkerThread*));
     MX_FREE(sActiveThreads.lplpWorkerThreadsList);
     sActiveThreads.lplpWorkerThreadsList = lplpNewList;
     sActiveThreads.nSize += 32;
@@ -593,7 +593,7 @@ VOID CThreadPool::RemoveWorker(_In_ CWorkerThread *lpWorker)
   }
   MX_ASSERT(i < sActiveThreads.nCount);
   delete sActiveThreads.lplpWorkerThreadsList[i];
-  MemMove(sActiveThreads.lplpWorkerThreadsList+i, sActiveThreads.lplpWorkerThreadsList+i+1,
+  MxMemMove(sActiveThreads.lplpWorkerThreadsList+i, sActiveThreads.lplpWorkerThreadsList+i+1,
           (sActiveThreads.nCount-i-1)*sizeof(CWorkerThread*));
   (sActiveThreads.nCount)--;
   return;
@@ -691,6 +691,6 @@ VOID CThreadPool::WorkerThreadProc(_In_ SIZE_T nParam)
 
 static int MyExceptionFilter(_Out_ EXCEPTION_POINTERS *lpDest, _In_ EXCEPTION_POINTERS *lpSrc)
 {
-  MX::MemCopy(lpDest, lpSrc, sizeof(EXCEPTION_POINTERS));
+  ::MxMemCopy(lpDest, lpSrc, sizeof(EXCEPTION_POINTERS));
   return EXCEPTION_EXECUTE_HANDLER;
 }

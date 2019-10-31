@@ -596,7 +596,7 @@ BOOL CStringA::ConcatN(_In_reads_or_z_opt_(nSrcLen) LPCSTR szSrcA, _In_ SIZE_T n
     return FALSE; //overflow
   if (EnsureBuffer(nLen + nSrcLen + 1) == FALSE)
     return FALSE;
-  MemCopy(szStrA + nLen, szSrcA, nSrcLen);
+  MxMemCopy(szStrA + nLen, szSrcA, nSrcLen);
   nLen += nSrcLen;
   szStrA[nLen] = 0;
   return TRUE;
@@ -886,8 +886,8 @@ BOOL CStringA::InsertN(_In_reads_or_z_opt_(nSrcLen) LPCSTR szSrcA, _In_ SIZE_T n
   if (nInsertPosition > nLen)
     nInsertPosition = nLen;
   sA = szStrA + nInsertPosition;
-  MemMove(sA+nSrcLen, sA, (nLen - nInsertPosition));
-  MemCopy(sA, szSrcA, nSrcLen);
+  MxMemMove(sA+nSrcLen, sA, (nLen - nInsertPosition));
+  MxMemCopy(sA, szSrcA, nSrcLen);
   nLen += nSrcLen;
   szStrA[nLen] = 0;
   return TRUE;
@@ -907,7 +907,7 @@ VOID CStringA::Delete(_In_ SIZE_T nStartChar, _In_ SIZE_T nChars)
     k = nLen - nChars - nStartChar;
     sA = szStrA + nStartChar;
     nLen -= nChars;
-    MemMove(sA, sA + nChars, k);
+    MxMemMove(sA, sA + nChars, k);
     szStrA[nLen] = 0;
   }
   return;
@@ -978,7 +978,7 @@ BOOL CStringA::EnsureBuffer(_In_ SIZE_T nChars)
     szNewStrA = (LPSTR)MX_MALLOC(nChars);
     if (szNewStrA == NULL)
       return FALSE;
-    MemCopy(szNewStrA, szStrA, nLen);
+    MxMemCopy(szNewStrA, szStrA, nLen);
     Empty(); //<<--- to secure delete on derived classes
     szStrA = szNewStrA;
     nSize = nChars;
@@ -1015,7 +1015,7 @@ LPWSTR CStringA::Ansi2Wide(_In_z_ LPCSTR szStrA, _In_ SIZE_T nSrcLen)
 VOID CSecureStringA::Empty()
 {
   if (szStrA != NULL && nSize > 0)
-    MX::MemSet(szStrA, '*', nSize);
+    ::MxMemSet(szStrA, '*', nSize);
   CStringA::Empty();
   return;
 }
@@ -1027,7 +1027,7 @@ BOOL CSecureStringA::Concat(_In_ LONGLONG nSrc)
 
   mx_sprintf_s(szTempA, MX_ARRAYLEN(szTempA), "%I64d", nSrc);
   bRet = CStringA::Concat(szTempA);
-  MX::MemSet(szTempA, 0, sizeof(szTempA));
+  ::MxMemSet(szTempA, 0, sizeof(szTempA));
   return bRet;
 }
 
@@ -1038,7 +1038,7 @@ BOOL CSecureStringA::Concat(_In_ ULONGLONG nSrc)
 
   mx_sprintf_s(szTempA, MX_ARRAYLEN(szTempA), "%I64u", nSrc);
   bRet = CStringA::Concat(szTempA);
-  MX::MemSet(szTempA, 0, sizeof(szTempA));
+  ::MxMemSet(szTempA, 0, sizeof(szTempA));
   return bRet;
 }
 
@@ -1056,11 +1056,11 @@ BOOL CSecureStringA::AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCWS
     if (nChars < 510)
     {
       bRet = ConcatN(szTempBufW, (size_t)nChars);
-      MX::MemSet(szTempBufW, 0, sizeof(szTempBufW));
+      ::MxMemSet(szTempBufW, 0, sizeof(szTempBufW));
     }
     else
     {
-      MX::MemSet(szTempBufW, 0, sizeof(szTempBufW));
+      ::MxMemSet(szTempBufW, 0, sizeof(szTempBufW));
       nBufSize = nChars * 2;
       while (1)
       {
@@ -1070,15 +1070,15 @@ BOOL CSecureStringA::AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCWS
         nChars = mx_vsnwprintf(szTempW, (SIZE_T)nBufSize, szFormatW, argptr);
         if (nChars < nBufSize - 2)
           break;
-        MX::MemSet(szTempW, 0, (SIZE_T)(nBufSize + 1) * sizeof(WCHAR));
+        ::MxMemSet(szTempW, 0, (SIZE_T)(nBufSize + 1) * sizeof(WCHAR));
         nBufSize += 4096;
         MX_FREE(szTempW);
       }
       bRet = ConcatN(szTempW, (SIZE_T)nChars);
-      MX::MemSet(szTempW, 0, (SIZE_T)(nBufSize + 1) * sizeof(WCHAR));
+      ::MxMemSet(szTempW, 0, (SIZE_T)(nBufSize + 1) * sizeof(WCHAR));
       MX_FREE(szTempW);
     }
-    MX::MemSet(szTempBufW, 0, sizeof(szTempBufW));
+    ::MxMemSet(szTempBufW, 0, sizeof(szTempBufW));
     if (bRet == FALSE)
       return FALSE;
   }
@@ -1224,7 +1224,7 @@ BOOL CStringW::ConcatN(_In_reads_or_z_opt_(nSrcLen) LPCWSTR szSrcW, _In_ SIZE_T 
     return FALSE; //overflow
   if (EnsureBuffer(nLen + nSrcLen + 1) == FALSE)
     return FALSE;
-  MemCopy(szStrW + nLen, szSrcW, nSrcLen * sizeof(WCHAR));
+  MxMemCopy(szStrW + nLen, szSrcW, nSrcLen * sizeof(WCHAR));
   nLen += nSrcLen;
   szStrW[nLen] = 0;
   return TRUE;
@@ -1447,8 +1447,8 @@ BOOL CStringW::InsertN(_In_reads_or_z_opt_(nSrcLen) LPCWSTR szSrcW, _In_ SIZE_T 
   if (nInsertPosition > nLen)
     nInsertPosition = nLen;
   sW = szStrW + nInsertPosition;
-  MemMove(sW+nSrcLen, sW, (nLen - nInsertPosition) * sizeof(WCHAR));
-  MemCopy(sW, szSrcW, nSrcLen * sizeof(WCHAR));
+  MxMemMove(sW+nSrcLen, sW, (nLen - nInsertPosition) * sizeof(WCHAR));
+  MxMemCopy(sW, szSrcW, nSrcLen * sizeof(WCHAR));
   nLen += nSrcLen;
   szStrW[nLen] = 0;
   return TRUE;
@@ -1468,7 +1468,7 @@ VOID CStringW::Delete(_In_ SIZE_T nStartChar, _In_ SIZE_T nChars)
     k = nLen - nChars - nStartChar;
     sW = szStrW + nStartChar;
     nLen -= nChars;
-    MemMove(sW, sW + nChars, k * sizeof(WCHAR));
+    MxMemMove(sW, sW + nChars, k * sizeof(WCHAR));
     szStrW[nLen] = 0;
   }
   return;
@@ -1539,7 +1539,7 @@ BOOL CStringW::EnsureBuffer(_In_ SIZE_T nChars)
     szNewStrW = (LPWSTR)MX_MALLOC(nChars*sizeof(WCHAR));
     if (szNewStrW == NULL)
       return FALSE;
-    MemCopy(szNewStrW, szStrW, nLen*sizeof(WCHAR));
+    MxMemCopy(szNewStrW, szStrW, nLen*sizeof(WCHAR));
     Empty(); //<<--- to secure delete on derived classes
     szStrW = szNewStrW;
     nSize = nChars;
@@ -1576,7 +1576,7 @@ LPSTR CStringW::Wide2Ansi(_In_z_ LPCWSTR szStrW, _In_ SIZE_T nSrcLen)
 VOID CSecureStringW::Empty()
 {
   if (szStrW != NULL && nSize > 0)
-    MX::MemSet(szStrW, '*', nSize * 2);
+    ::MxMemSet(szStrW, '*', nSize * 2);
   CStringW::Empty();
   return;
 }
@@ -1588,7 +1588,7 @@ BOOL CSecureStringW::Concat(_In_ LONGLONG nSrc)
 
   mx_swprintf_s(szTempW, MX_ARRAYLEN(szTempW), L"%I64d", nSrc);
   bRet = CStringW::Concat(szTempW);
-  MX::MemSet(szTempW, 0, sizeof(szTempW));
+  ::MxMemSet(szTempW, 0, sizeof(szTempW));
   return bRet;
 }
 
@@ -1599,7 +1599,7 @@ BOOL CSecureStringW::Concat(_In_ ULONGLONG nSrc)
 
   mx_swprintf_s(szTempW, MX_ARRAYLEN(szTempW), L"%I64u", nSrc);
   bRet = CStringW::Concat(szTempW);
-  MX::MemSet(szTempW, 0, sizeof(szTempW));
+  ::MxMemSet(szTempW, 0, sizeof(szTempW));
   return bRet;
 }
 
@@ -1617,11 +1617,11 @@ BOOL CSecureStringW::AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCST
     if (nChars < 510)
     {
       bRet = ConcatN(szTempBufA, (size_t)nChars);
-      MX::MemSet(szTempBufA, 0, sizeof(szTempBufA));
+      ::MxMemSet(szTempBufA, 0, sizeof(szTempBufA));
     }
     else
     {
-      MX::MemSet(szTempBufA, 0, sizeof(szTempBufA));
+      ::MxMemSet(szTempBufA, 0, sizeof(szTempBufA));
       nBufSize = nChars * 2;
       while (1)
       {
@@ -1631,12 +1631,12 @@ BOOL CSecureStringW::AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCST
         nChars = mx_vsnprintf(szTempA, (size_t)nBufSize, szFormatA, argptr);
         if (nChars < nBufSize - 2)
           break;
-        MX::MemSet(szTempA, 0, (SIZE_T)(nBufSize + 1) * sizeof(CHAR));
+        ::MxMemSet(szTempA, 0, (SIZE_T)(nBufSize + 1) * sizeof(CHAR));
         nBufSize += 4096;
         MX_FREE(szTempA);
       }
       bRet = ConcatN(szTempA, (size_t)nChars);
-      MX::MemSet(szTempA, 0, (SIZE_T)(nBufSize + 1) * sizeof(CHAR));
+      ::MxMemSet(szTempA, 0, (SIZE_T)(nBufSize + 1) * sizeof(CHAR));
       MX_FREE(szTempA);
     }
     if (bRet == FALSE)

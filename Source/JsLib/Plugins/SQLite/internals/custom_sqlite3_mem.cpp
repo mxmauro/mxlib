@@ -45,7 +45,7 @@ static void x_free(void *pPrior)
 
 static int x_memsize(void *pPrior)
 {
-  return (int)MX::MemSize(pPrior);
+  return (int)::MxMemSize(pPrior);
 }
 
 static void* x_realloc(void *pPrior, int nByte)

@@ -351,7 +351,7 @@ VOID CIoCompletionPortThreadPool::InternalFinalize()
       TLnkLst<CThread>::Iterator it;
       CThread *lpThread;
 
-      MemSet(&sDummyOvr, 0, sizeof(sDummyOvr));
+      MxMemSet(&sDummyOvr, 0, sizeof(sDummyOvr));
       for (lpThread = it.Begin(sThreads.cList); lpThread != NULL; lpThread = it.Next())
       {
         cIOCP.Post(0, 0, &sDummyOvr);

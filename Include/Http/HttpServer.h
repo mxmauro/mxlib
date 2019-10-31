@@ -389,7 +389,7 @@ private:
   public:
     CRequestLimiter(_In_ PSOCKADDR_INET lpAddr) : TRedBlackTreeNode<CRequestLimiter, PSOCKADDR_INET>()
       {
-      MemCopy(&sAddr, lpAddr, sizeof(SOCKADDR_INET));
+      MxMemCopy(&sAddr, lpAddr, sizeof(SOCKADDR_INET));
       _InterlockedExchange(&nCount, 1);
       return;
       };
@@ -401,7 +401,7 @@ private:
 
     virtual int CompareKeys(_In_ PSOCKADDR_INET key) const
       {
-      return MemCompare(key, GetNodeKey(), sizeof(SOCKADDR_INET));
+      return ::MxMemCompare(key, GetNodeKey(), sizeof(SOCKADDR_INET));
       };
 
   public:

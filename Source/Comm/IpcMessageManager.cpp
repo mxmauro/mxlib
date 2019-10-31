@@ -224,7 +224,7 @@ HRESULT CIpcMessageManager::ProcessIncomingPacket()
         nToRead = cCurrMessage->nDataLen - nCurrMsgSize;
         if (nToRead > nRemaining)
           nToRead = nRemaining;
-        MemCopy(cCurrMessage->lpData+nCurrMsgSize, s, nToRead);
+        MxMemCopy(cCurrMessage->lpData+nCurrMsgSize, s, nToRead);
         s += nToRead;
         nRemaining -= nToRead;
         nCurrMsgSize += nToRead;
@@ -602,7 +602,7 @@ VOID CIpcMessageManager::FlushReceivedReplies()
   //process only if we are not resetting
   for (;;)
   {
-    MemSet(&sItem, 0, sizeof(sItem));
+    MxMemSet(&sItem, 0, sizeof(sItem));
 
     {
       CFastLock cLock1(&(sReceivedMsgReplies.nMutex));
@@ -643,7 +643,7 @@ VOID CIpcMessageManager::CancelWaitingReplies()
   //cancel reply waiters
   do
   {
-    MemSet(&sItem, 0, sizeof(sItem));
+    MxMemSet(&sItem, 0, sizeof(sItem));
     {
       CFastLock cLock(&(sWaitingForReply.nMutex));
       SIZE_T nCount;
@@ -733,7 +733,7 @@ int CIpcMessageManager::ReplyMsgWaitCompareFunc(_In_ LPVOID lpContext, _In_ REPL
 CIpcMessageManager::CMessage::CMessage(_In_ CIpcMessageManager *_lpMgr) : TRefCounted<CBaseMemObj>(),
                                                                                 TLnkLstNode<CMessage>()
 {
-  MemSet(&sOvr, 0, sizeof(sOvr));
+  MxMemSet(&sOvr, 0, sizeof(sOvr));
   lpMgr = _lpMgr;
   dwId = 0;
   lpData = NULL;

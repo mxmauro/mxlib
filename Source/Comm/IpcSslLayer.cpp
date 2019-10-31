@@ -128,7 +128,7 @@ CIpcSslLayer::~CIpcSslLayer()
       BIO_meth_free(ssl_data->lpBioMthd);
       ssl_data->lpBioMthd = NULL;
     }
-    MemSet(lpInternalData, 0, sizeof(SSL_LAYER_DATA));
+    MxMemSet(lpInternalData, 0, sizeof(SSL_LAYER_DATA));
     MX_FREE(lpInternalData);
   }
   return;
@@ -153,7 +153,7 @@ HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol
     lpInternalData = MX_MALLOC(sizeof(SSL_LAYER_DATA));
     if (lpInternalData == NULL)
       return E_OUTOFMEMORY;
-    MemSet(lpInternalData, 0, sizeof(SSL_LAYER_DATA));
+    MxMemSet(lpInternalData, 0, sizeof(SSL_LAYER_DATA));
   }
   ssl_data->bServerSide = bServerSide;
   ssl_data->nProtocol = nProtocol;

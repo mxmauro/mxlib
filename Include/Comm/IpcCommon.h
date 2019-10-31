@@ -262,7 +262,7 @@ public:
   public:
     CPacketBase() : CBaseMemObj(), TLnkLstNode<CPacketBase>()
       {
-      MemSet(&sOvr, 0, sizeof(sOvr));
+      MxMemSet(&sOvr, 0, sizeof(sOvr));
       nType = TypeDiscard;
       nOrder = 0;
       lpConn = NULL;

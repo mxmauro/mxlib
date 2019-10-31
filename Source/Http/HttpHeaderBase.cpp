@@ -352,7 +352,7 @@ BOOL CHttpHeaderBase::RawISO_8859_1_to_UTF8(_Out_ CStringW &cStrDestW, _In_ LPCW
       len = 1; //if no output, eat the front character
     }
     //eat "len" characters from input
-    MemMove(szInputA, szInputA + (SIZE_T)len, nInputLen - (SIZE_T)len);
+    MxMemMove(szInputA, szInputA + (SIZE_T)len, nInputLen - (SIZE_T)len);
     nInputLen -= (SIZE_T)len;
   }
   return TRUE;

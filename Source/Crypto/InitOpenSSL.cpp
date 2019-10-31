@@ -294,16 +294,16 @@ static void NTAPI OnTlsCallback(_In_ PVOID DllHandle, _In_ DWORD dwReason, _In_ 
 
 static void* __cdecl my_malloc_withinfo(size_t _Size, const char *_filename, int _linenum)
 {
-  return MX::MemAllocD(_Size, _filename, _linenum);
+  return ::MxMemAllocD(_Size, _filename, _linenum);
 }
 
 static void* __cdecl my_realloc_withinfo(void *_Memory, size_t _NewSize, const char *_filename, int _linenum)
 {
-  return MX::MemReallocD(_Memory, _NewSize, _filename, _linenum);
+  return ::MxMemReallocD(_Memory, _NewSize, _filename, _linenum);
 }
 
 static void __cdecl my_free(void * _Memory, const char *_filename, int _linenum)
 {
-  MX::MemFree(_Memory);
+  ::MxMemFree(_Memory);
   return;
 }

@@ -31,13 +31,13 @@ namespace MX {
 
 CHttpHeaderRespSecWebSocketAccept::CHttpHeaderRespSecWebSocketAccept() : CHttpHeaderBase()
 {
-  MX::MemSet(aSHA1, 0, sizeof(aSHA1));
+  ::MxMemSet(aSHA1, 0, sizeof(aSHA1));
   return;
 }
 
 CHttpHeaderRespSecWebSocketAccept::~CHttpHeaderRespSecWebSocketAccept()
 {
-  MX::MemSet(aSHA1, 0, sizeof(aSHA1));
+  ::MxMemSet(aSHA1, 0, sizeof(aSHA1));
   return;
 }
 
@@ -68,7 +68,7 @@ HRESULT CHttpHeaderRespSecWebSocketAccept::Parse(_In_z_ LPCSTR szValueA)
   if (SUCCEEDED(hRes))
   {
     if (cDecoder.GetOutputLength() == 20)
-      MX::MemCopy(aSHA1, cDecoder.GetBuffer(), 20);
+      ::MxMemCopy(aSHA1, cDecoder.GetBuffer(), 20);
     else
       hRes = MX_E_InvalidData;
   }
@@ -131,7 +131,7 @@ HRESULT CHttpHeaderRespSecWebSocketAccept::SetKey(_In_ LPVOID lpKey, _In_ SIZE_T
     return hRes;
 
   //store the hash
-  MX::MemCopy(aSHA1, cDigestSHA1.GetResult(), 20);
+  ::MxMemCopy(aSHA1, cDigestSHA1.GetResult(), 20);
 
   //done
   return S_OK;

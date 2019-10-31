@@ -68,7 +68,7 @@ HRESULT RegisterFinalizer(_In_ lpfnFinalizer fnFinalizer, _In_ SIZE_T nPriority)
       return E_OUTOFMEMORY;
     if (lpList != NULL)
     {
-      MemCopy(lpNewList, lpList, nListCount*sizeof(FINALIZER_ITEM));
+      MxMemCopy(lpNewList, lpList, nListCount*sizeof(FINALIZER_ITEM));
       nSize = 0;
       MxNtFreeVirtualMemory(MX_CURRENTPROCESS, (PVOID*)&lpList, &nSize, MEM_RELEASE);
     }
@@ -82,7 +82,7 @@ HRESULT RegisterFinalizer(_In_ lpfnFinalizer fnFinalizer, _In_ SIZE_T nPriority)
       break;
   }
   //insert new item at position 'i'
-  MemMove(lpList+(i+1), lpList+i, (nListCount-i) * sizeof(FINALIZER_ITEM));
+  MxMemMove(lpList+(i+1), lpList+i, (nListCount-i) * sizeof(FINALIZER_ITEM));
   lpList[i].fnFinalizer = fnFinalizer;
   lpList[i].nPriority = nPriority;
   nListCount++;

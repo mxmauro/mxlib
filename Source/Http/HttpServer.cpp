@@ -1347,7 +1347,7 @@ HRESULT CHttpServer::CheckForWebSocket(_In_ CClientRequest *lpRequest)
 
         sA = lpReqSecWebSocketProtocolHeader->GetProtocol(i);
         nSize = StrLenA(sA) + 1;
-        MemCopy((LPSTR)(lpRequest->cWebSocketInfo->szProtocolsA[i]), sA, nSize);
+        MxMemCopy((LPSTR)(lpRequest->cWebSocketInfo->szProtocolsA[i]), sA, nSize);
         nOffset += nSize;
       }
       lpRequest->cWebSocketInfo->szProtocolsA[nCount] = NULL;

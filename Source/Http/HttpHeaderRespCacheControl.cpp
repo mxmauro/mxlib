@@ -579,10 +579,10 @@ HRESULT CHttpHeaderRespCacheControl::AddExtension(_In_z_ LPCSTR szNameA, _In_z_ 
   cNewExtension.Attach((LPEXTENSION)MX_MALLOC(sizeof(EXTENSION) + nNameLen + nValueLen));
   if (!cNewExtension)
     return E_OUTOFMEMORY;
-  MemCopy(cNewExtension->szNameA, szStartA, nNameLen);
+  MxMemCopy(cNewExtension->szNameA, szStartA, nNameLen);
   cNewExtension->szNameA[nNameLen] = 0;
   cNewExtension->szValueW = (LPWSTR)((LPBYTE)cNewExtension.Get() + nNameLen);
-  MemCopy(cNewExtension->szValueW, szValueW, nValueLen);
+  MxMemCopy(cNewExtension->szValueW, szValueW, nValueLen);
   //add to list
   if (cExtensionsList.AddElement(cNewExtension.Get()) == FALSE)
     return E_OUTOFMEMORY;

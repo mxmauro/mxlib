@@ -174,7 +174,7 @@ HRESULT CLoggable::WriteLogCommon(_In_ BOOL bAddError, _In_ HRESULT hResError, _
     if (lpszBufW == NULL)
       return E_OUTOFMEMORY;
     nBufLen = 4096;
-    MemCopy(lpszBufW, szTempBufW, (SIZE_T)count[0] * sizeof(WCHAR));
+    MxMemCopy(lpszBufW, szTempBufW, (SIZE_T)count[0] * sizeof(WCHAR));
     count[1] = _vsnwprintf_s(lpszBufW + (SIZE_T)count[0], nBufLen - (SIZE_T)count[0], _TRUNCATE, szFormatW, argptr);
     if (count[1] < 0)
       count[1] = (int)(unsigned int)wcslen(lpszBufW + (SIZE_T)count[0]);

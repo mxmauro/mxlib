@@ -1429,8 +1429,8 @@ CIpc::CConnectionBase::CConnectionBase(_In_ CIpc *_lpIpc, _In_ CIpc::eConnection
   cDisconnectCallback = NullCallback();
   cDataReceivedCallback = NullCallback();
   _InterlockedExchange(&nReadMutex, 0);
-  MemSet(&sReadStats, 0, sizeof(sReadStats));
-  MemSet(&sWriteStats, 0, sizeof(sWriteStats));
+  MxMemSet(&sReadStats, 0, sizeof(sReadStats));
+  MxMemSet(&sWriteStats, 0, sizeof(sWriteStats));
   SlimRWL_Initialize(&(sLayers.nRwMutex));
   _InterlockedExchange(&(sReceivedData.nMutex), 0);
   return;
@@ -1501,7 +1501,7 @@ HRESULT CIpc::CConnectionBase::SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSiz
     if (nDataSize < (SIZE_T)dwToSendThisRound)
       dwToSendThisRound = (DWORD)nDataSize;
     lpPacket->SetBytesInUse(dwToSendThisRound);
-    MemCopy(lpPacket->GetBuffer(), s, (SIZE_T)dwToSendThisRound);
+    MxMemCopy(lpPacket->GetBuffer(), s, (SIZE_T)dwToSendThisRound);
     if (lpIpc->ShouldLog(1) != FALSE)
     {
       lpIpc->Log(L"CIpc::SendMsg) Clock=%lums / Ovr=0x%p / Type=%lu / Bytes=%lu", cHiResTimer.GetElapsedTimeMs(),
@@ -2143,7 +2143,7 @@ HRESULT CIpc::CConnectionBase::SendWriteDataToNextLayer(_In_ LPCVOID lpMsg, _In_
       nToCopy = lpPacket->GetBufferSize();
       if (nToCopy > nMsgSize)
         nToCopy = nMsgSize;
-      MemCopy(lpPacket->GetBuffer(), lpMsg, nToCopy);
+      MxMemCopy(lpPacket->GetBuffer(), lpMsg, nToCopy);
       lpPacket->SetBytesInUse((DWORD)nToCopy);
 
       //send packet

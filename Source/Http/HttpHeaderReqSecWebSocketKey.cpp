@@ -112,7 +112,7 @@ HRESULT CHttpHeaderReqSecWebSocketKey::InternalSetKey(_In_ LPVOID lpKey, _In_ SI
     if (lpNewKey == NULL)
       return E_POINTER;
     cKey.Attach(lpNewKey);
-    MemCopy(lpNewKey, lpKey, nKeyLen);
+    MxMemCopy(lpNewKey, lpKey, nKeyLen);
   }
   else
   {

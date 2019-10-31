@@ -60,7 +60,7 @@ VOID DebugPrintV(_In_z_ LPCSTR szFormatA, va_list ap)
   {
     RTL_OSVERSIONINFOW sOviW;
 
-    MemSet(&sOviW, 0, sizeof(sOviW));
+    MxMemSet(&sOviW, 0, sizeof(sOviW));
     sOviW.dwOSVersionInfoSize = (DWORD) sizeof(sOviW);
     if (!NT_SUCCESS(::RtlGetVersion(&sOviW)))
       return;

@@ -49,15 +49,15 @@ CWebSocket::CWebSocket() : CIpc::CUserData()
   sReceive.sCurrentMessage.nOpcode = _OPCODE_NONE;
   sReceive.sCurrentMessage.lpData = NULL;
   sReceive.sCurrentMessage.nFilledFrame = sReceive.sCurrentMessage.nTotalDataLength = 0;
-  MemSet(&(sReceive.sCurrentControlFrame), 0, sizeof(sReceive.sCurrentControlFrame));
+  MxMemSet(&(sReceive.sCurrentControlFrame), 0, sizeof(sReceive.sCurrentControlFrame));
   sReceive.hrCloseError = S_OK;
   //----
-  MemSet(&(sSend.sFrameHeader), 0, sizeof(sSend.sFrameHeader));
+  MxMemSet(&(sSend.sFrameHeader), 0, sizeof(sSend.sFrameHeader));
   sSend.sFrameHeader.nOpcode = _OPCODE_NONE;
   sSend.lpFrameData = NULL;
   sSend.nFilledFrame = 0;
   //----
-  MemSet(&sReceiveCache, 0, sizeof(sReceiveCache));
+  MxMemSet(&sReceiveCache, 0, sizeof(sReceiveCache));
   return;
 }
 
@@ -161,7 +161,7 @@ HRESULT CWebSocket::SendBinaryMessage(_In_ LPVOID lpData, _In_ SIZE_T nDataLen)
       nToWrite = (ULONG)nDataLen;
 
     //copy data
-    MemCopy(sSend.lpFrameData, lpData, nToWrite);
+    MxMemCopy(sSend.lpFrameData, lpData, nToWrite);
 
     //advance pointer
     lpData = (LPBYTE)lpData + nToWrite;
@@ -186,7 +186,7 @@ HRESULT CWebSocket::EndMessage()
       return hRes;
 
     //finalize send
-    MemSet(&(sSend.sFrameHeader), 0, sizeof(sSend.sFrameHeader));
+    MxMemSet(&(sSend.sFrameHeader), 0, sizeof(sSend.sFrameHeader));
     sSend.sFrameHeader.nOpcode = _OPCODE_NONE;
     sSend.lpFrameData = NULL;
     sSend.nFilledFrame = 0;
@@ -205,7 +205,7 @@ HRESULT CWebSocket::SendClose(_In_ USHORT wCode, _In_opt_z_ LPCSTR szReasonA)
   nReasonLen = StrLenA(szReasonA);
   if (nReasonLen > 123)
     nReasonLen = 123;
-  MemCopy(aPayload + 2, szReasonA, nReasonLen);
+  MxMemCopy(aPayload + 2, szReasonA, nReasonLen);
   return InternalSendControlFrame(_OPCODE_ConnectionClose, aPayload, 2 + (ULONG)nReasonLen);
 }
 
@@ -451,7 +451,7 @@ validate_message_length:
         }
         else
         {
-          MemCopy(sReceive.sCurrentMessage.lpData, lpMsg, nToRead);
+          MxMemCopy(sReceive.sCurrentMessage.lpData, lpMsg, nToRead);
           lpMsg += nToRead;
         }
 
@@ -495,7 +495,7 @@ validate_message_length:
         }
         else
         {
-          MemCopy(sReceive.sCurrentControlFrame.aBuffer + sReceive.sCurrentControlFrame.nFilledFrame, lpMsg, nToRead);
+          MxMemCopy(sReceive.sCurrentControlFrame.aBuffer + sReceive.sCurrentControlFrame.nFilledFrame, lpMsg, nToRead);
           lpMsg += nToRead;
         }
 
@@ -544,7 +544,7 @@ validate_message_length:
             nBuffersCount = sReceive.sCurrentMessage.aReceivedDataList.GetCount();
             for (i = 0; i < nBuffersCount; i++)
             {
-              MemCopy(lpData, sReceive.sCurrentMessage.aReceivedDataList.GetElementAt(i),
+              MxMemCopy(lpData, sReceive.sCurrentMessage.aReceivedDataList.GetElementAt(i),
                       (i < nBuffersCount - 1) ? RECEIVE_DATA_BLOCK_SIZE :
                                                 sReceive.sCurrentMessage.nTotalDataLength -
                                                 (nBuffersCount - 1) * RECEIVE_DATA_BLOCK_SIZE);
@@ -625,7 +625,7 @@ validate_message_length:
       }
 
       //reset control frame state
-      MemSet(&(sReceive.sCurrentControlFrame), 0, sizeof(sReceive.sCurrentControlFrame));
+      MxMemSet(&(sReceive.sCurrentControlFrame), 0, sizeof(sReceive.sCurrentControlFrame));
 
       //reset state to read next frame
       sReceive.nState = 0;
@@ -742,7 +742,7 @@ HRESULT CWebSocket::InternalSendFrame(_In_ BOOL bFinalFrame)
   sSend.sFrameHeader.nFin = (bFinalFrame != FALSE) ? 1 : 0;
   sSend.sFrameHeader.nPayloadLen = (sSend.nFilledFrame <= 125) ?(BYTE)sSend.nFilledFrame : 126;
 
-  MemCopy(aTempBuffer, &(sSend.sFrameHeader), sizeof(FRAME_HEADER));
+  MxMemCopy(aTempBuffer, &(sSend.sFrameHeader), sizeof(FRAME_HEADER));
   nTempBufferLen = sizeof(FRAME_HEADER);
 
   //prepare mask
@@ -804,7 +804,7 @@ HRESULT CWebSocket::InternalSendControlFrame(_In_ BYTE nOpcode, _In_ LPVOID lpPa
   MX_ASSERT(nPayloadSize <= 125);
 
   lpFrameData = BuildFrame(aFrameBuffer, nPayloadSize, TRUE, 0, nOpcode);
-  MemCopy(lpFrameData, lpPayload, nPayloadSize);
+  MxMemCopy(lpFrameData, lpPayload, nPayloadSize);
   EncodeFrame(aFrameBuffer);
 
   //send frame

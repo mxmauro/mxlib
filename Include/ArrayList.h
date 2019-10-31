@@ -64,7 +64,7 @@ public:
       nIndex = nCount;
     if (SetSize(nCount + 1) == FALSE)
       return FALSE;
-    MemMove(&lpItems[nIndex + 1], &lpItems[nIndex], (nCount - nIndex) * sizeof(TType));
+    MxMemMove(&lpItems[nIndex + 1], &lpItems[nIndex], (nCount - nIndex) * sizeof(TType));
     lpItems[nIndex] = elem;
     nCount++;
     return TRUE;
@@ -233,17 +233,17 @@ public:
         {
           for (i = _nSize; i < nCount; i++)
             OnDeleteItem(lpItems[i]);
-          MemSet(&lpItems[_nSize], 0, (nCount - _nSize) * sizeof(TType));
+          MxMemSet(&lpItems[_nSize], 0, (nCount - _nSize) * sizeof(TType));
         }
         //move old data to new
         if (_nSize > 0)
         {
           //copy old
           i = (nCount <= _nSize) ? nCount : _nSize;
-          MemCopy(lpNewItems, lpItems, i * sizeof(TType));
+          MxMemCopy(lpNewItems, lpItems, i * sizeof(TType));
           //initialize the rest to null
           if (_nSize > nCount)
-            MemSet(&lpNewItems[nCount], 0, (_nSize - nCount) * sizeof(TType));
+            MxMemSet(&lpNewItems[nCount], 0, (_nSize - nCount) * sizeof(TType));
         }
         //release old pointer
         MX_FREE(lpItems);
@@ -327,7 +327,7 @@ public:
       for (i = 0; i < nItemsCount; i++)
         OnDeleteItem(lpItems[nIndex + i]);
     }
-    MemMove(&lpItems[nIndex], &lpItems[nIndex + nItemsCount], (nCount - nIndex) * sizeof(TType));
+    MxMemMove(&lpItems[nIndex], &lpItems[nIndex + nItemsCount], (nCount - nIndex) * sizeof(TType));
     return TRUE;
     };
 
@@ -349,8 +349,8 @@ public:
       return FALSE;
     if (nIndex > nCount)
       nIndex = nCount;
-    MemMove(&lpItems[nIndex + nItemsCount], &lpItems[nIndex], (nCount - nIndex) * sizeof(TType));
-    MemSet(&lpItems[nIndex], 0, nItemsCount * sizeof(TType));
+    MxMemMove(&lpItems[nIndex + nItemsCount], &lpItems[nIndex], (nCount - nIndex) * sizeof(TType));
+    MxMemSet(&lpItems[nIndex], 0, nItemsCount * sizeof(TType));
     nCount += nItemsCount;
     return &lpItems[nIndex];
     };
@@ -464,7 +464,7 @@ public:
     {
     if (nIndex >= nCount)
       return FALSE;
-    MemCopy(&lpItems[nIndex], lpElem, sizeof(TType));
+    MxMemCopy(&lpItems[nIndex], lpElem, sizeof(TType));
     return TRUE;
     };
 
@@ -474,8 +474,8 @@ public:
       nIndex = nCount;
     if (SetSize(nCount + 1) == FALSE)
       return FALSE;
-    MemMove(&lpItems[nIndex + 1], &lpItems[nIndex], (nCount - nIndex) * sizeof(TType));
-    MemCopy(&lpItems[nIndex], lpElem, sizeof(TType));
+    MxMemMove(&lpItems[nIndex + 1], &lpItems[nIndex], (nCount - nIndex) * sizeof(TType));
+    MxMemCopy(&lpItems[nIndex], lpElem, sizeof(TType));
     nCount++;
     return TRUE;
     };
@@ -628,17 +628,17 @@ public:
           //WARNING: Check "OnItemDelete" method to avoid errors
           for (k = _nSize; k < nCount; k++)
             OnDeleteItem(lpItems[k]);
-          MemSet(&lpItems[_nSize], 0, (nCount - _nSize) * sizeof(TType));
+          MxMemSet(&lpItems[_nSize], 0, (nCount - _nSize) * sizeof(TType));
         }
         //move old data to new
         if (_nSize > 0)
         {
           //copy old
           k = (nCount <= _nSize) ? nCount : _nSize;
-          MemCopy(lpNewItems, lpItems, k * sizeof(TType));
+          MxMemCopy(lpNewItems, lpItems, k * sizeof(TType));
           //initialize the rest to null
           if (_nSize > nCount)
-            MemSet(&lpNewItems[nCount], 0, (_nSize - nCount) * sizeof(TType));
+            MxMemSet(&lpNewItems[nCount], 0, (_nSize - nCount) * sizeof(TType));
         }
         MX_FREE(lpItems);
         lpItems = lpNewItems;
@@ -669,7 +669,7 @@ public:
       for (i = 0; i < nItemsCount; i++)
         OnDeleteItem(lpItems[nIndex + i]);
     }
-    MemMove(&lpItems[nIndex], &lpItems[nIndex + nItemsCount], (nCount - nIndex) * sizeof(TType));
+    MxMemMove(&lpItems[nIndex], &lpItems[nIndex + nItemsCount], (nCount - nIndex) * sizeof(TType));
     return TRUE;
     };
 
@@ -691,8 +691,8 @@ public:
       return FALSE;
     if (nIndex > nCount)
       nIndex = nCount;
-    MemMove(&lpItems[nIndex + nItemsCount], &lpItems[nIndex], (nCount - nIndex) * sizeof(TType));
-    MemSet(&lpItems[nIndex], 0, nItemsCount * sizeof(TType));
+    MxMemMove(&lpItems[nIndex + nItemsCount], &lpItems[nIndex], (nCount - nIndex) * sizeof(TType));
+    MxMemSet(&lpItems[nIndex], 0, nItemsCount * sizeof(TType));
     nCount += nItemsCount;
     return &lpItems[nIndex];
     };

@@ -82,12 +82,6 @@
 
 //-----------------------------------------------------------
 
-extern "C" {
-
-size_t __stdcall MxTryMemCopy(_Out_writes_(nCount) void *lpDest, _In_ const void *lpSrc, _In_ size_t nCount);
-
-}; //extern "C"
-
 #ifdef DO_HEAP_CHECK
 static VOID InitializeBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk, _In_ SIZE_T nSize, _In_opt_z_ const char *szFilenameA,
                             _In_ int nLineNumber, _In_ LPVOID lpRetAddress);
@@ -123,9 +117,11 @@ static struct {
 
 //-----------------------------------------------------------
 
-namespace MX {
+#ifdef __cplusplus
+extern "C" {
+#endif //__cplusplus
 
-LPVOID MemAlloc(_In_ SIZE_T nSize)
+void* MxMemAlloc(_In_ size_t nSize)
 {
 #ifdef USE_CRT_ALLOC
 
@@ -165,7 +161,7 @@ LPVOID MemAlloc(_In_ SIZE_T nSize)
 #endif //USE_CRT_ALLOC
 }
 
-LPVOID MemAllocD(_In_ SIZE_T nSize, _In_opt_z_ const char *szFilenameA, _In_ int nLineNumber)
+void* MxMemAllocD(_In_ size_t nSize, _In_opt_z_ const char *szFilenameA, _In_ int nLineNumber)
 {
 #ifdef USE_CRT_ALLOC
 
@@ -205,7 +201,7 @@ LPVOID MemAllocD(_In_ SIZE_T nSize, _In_opt_z_ const char *szFilenameA, _In_ int
 #endif //USE_CRT_ALLOC
 }
 
-LPVOID MemRealloc(_In_opt_ LPVOID lpPtr, _In_ SIZE_T nSize)
+void* MxMemRealloc(_In_opt_ void *lpPtr, _In_ size_t nSize)
 {
 #ifdef USE_CRT_ALLOC
 
@@ -225,11 +221,11 @@ LPVOID MemRealloc(_In_opt_ LPVOID lpPtr, _In_ SIZE_T nSize)
 
   if (nSize == 0)
   {
-    MemFree(lpPtr);
+    ::MxMemFree(lpPtr);
     return NULL;
   }
   if (lpPtr == NULL)
-    return MemAllocD(nSize, NULL, 0);
+    return ::MxMemAllocD(nSize, NULL, 0);
 
 #ifdef DO_HEAP_CHECK
   lpRetAddress = _ReturnAddress();
@@ -259,7 +255,7 @@ LPVOID MemRealloc(_In_opt_ LPVOID lpPtr, _In_ SIZE_T nSize)
 #endif //USE_CRT_ALLOC
 }
 
-LPVOID MemReallocD(_In_opt_ LPVOID lpPtr, _In_ SIZE_T nSize, _In_opt_z_ const char *szFilenameA, _In_ int nLineNumber)
+void* MxMemReallocD(_In_opt_ void *lpPtr, _In_ size_t nSize, _In_opt_z_ const char *szFilenameA, _In_ int nLineNumber)
 {
 #ifdef USE_CRT_ALLOC
 
@@ -279,11 +275,11 @@ LPVOID MemReallocD(_In_opt_ LPVOID lpPtr, _In_ SIZE_T nSize, _In_opt_z_ const ch
 
   if (nSize == 0)
   {
-    MemFree(lpPtr);
+    ::MxMemFree(lpPtr);
     return NULL;
   }
   if (lpPtr == NULL)
-    return MemAllocD(nSize, szFilenameA, nLineNumber);
+    return ::MxMemAllocD(nSize, szFilenameA, nLineNumber);
 
 #ifdef DO_HEAP_CHECK
   lpRetAddress = _ReturnAddress();
@@ -313,7 +309,7 @@ LPVOID MemReallocD(_In_opt_ LPVOID lpPtr, _In_ SIZE_T nSize, _In_opt_z_ const ch
 #endif //USE_CRT_ALLOC
 }
 
-VOID MemFree(_In_opt_ LPVOID lpPtr)
+void MxMemFree(_In_opt_ void *lpPtr)
 {
 #ifdef USE_CRT_ALLOC
 
@@ -344,7 +340,7 @@ VOID MemFree(_In_opt_ LPVOID lpPtr)
   return;
 }
 
-SIZE_T MemSize(_In_opt_ LPVOID lpPtr)
+size_t MxMemSize(_In_opt_ void *lpPtr)
 {
 #ifdef USE_CRT_ALLOC
 
@@ -376,7 +372,17 @@ SIZE_T MemSize(_In_opt_ LPVOID lpPtr)
 #endif //USE_CRT_ALLOC
 }
 
-VOID MemSet(_Out_writes_bytes_all_(nCount) LPVOID lpDest, _In_ int nVal, _In_ SIZE_T nCount)
+#ifdef __cplusplus
+} //extern "C"
+#endif //__cplusplus
+
+//-----------------------------------------------------------
+
+#ifdef __cplusplus
+extern "C" {
+#endif //__cplusplus
+
+void MxMemSet(_Out_writes_bytes_all_(nCount) void *lpDest, _In_ int nVal, _In_ size_t nCount)
 {
   SIZE_T n;
 
@@ -408,7 +414,7 @@ VOID MemSet(_Out_writes_bytes_all_(nCount) LPVOID lpDest, _In_ int nVal, _In_ SI
   return;
 }
 
-VOID MemCopy(_Out_writes_bytes_all_(nCount) LPVOID lpDest, _In_ LPCVOID lpSrc, _In_ SIZE_T nCount)
+void MxMemCopy(_Out_writes_bytes_all_(nCount) void *lpDest, _In_ const void *lpSrc, _In_ size_t nCount)
 {
   if (XISALIGNED(lpSrc) && XISALIGNED(lpDest))
   {
@@ -430,7 +436,7 @@ VOID MemCopy(_Out_writes_bytes_all_(nCount) LPVOID lpDest, _In_ LPCVOID lpSrc, _
   return;
 }
 
-VOID MemMove(_Out_writes_bytes_all_(nCount) LPVOID lpDest, _In_ LPCVOID lpSrc, _In_ SIZE_T nCount)
+void MxMemMove(_Out_writes_bytes_all_(nCount) void *lpDest, _In_ const void *lpSrc, _In_ size_t nCount)
 {
   LPBYTE s, d;
 
@@ -491,7 +497,7 @@ VOID MemMove(_Out_writes_bytes_all_(nCount) LPVOID lpDest, _In_ LPCVOID lpSrc, _
   return;
 }
 
-int MemCompare(_In_ LPCVOID lpSrc1, _In_ LPCVOID lpSrc2, _In_ SIZE_T nCount)
+int MxMemCompare(_In_ const void *lpSrc1, _In_ const void *lpSrc2, _In_ size_t nCount)
 {
   if (XISALIGNED(lpSrc1) && XISALIGNED(lpSrc2))
   {
@@ -515,12 +521,11 @@ int MemCompare(_In_ LPCVOID lpSrc1, _In_ LPCVOID lpSrc2, _In_ SIZE_T nCount)
   return 0;
 }
 
-SIZE_T TryMemCopy(_Out_ LPVOID lpDest, _In_ LPCVOID lpSrc, _In_ SIZE_T nCount)
-{
-  return MxTryMemCopy(lpDest, lpSrc, nCount);
-}
+#ifdef __cplusplus
+} //extern "C"
+#endif //__cplusplus
 
-} //namespace MX
+//-----------------------------------------------------------
 
 #ifdef DO_HEAP_CHECK
 static VOID InitializeBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk, _In_ SIZE_T nSize, _In_opt_z_ const char *szFilenameA,

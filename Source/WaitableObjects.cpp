@@ -87,7 +87,7 @@ BOOL IsMultiProcessor()
       fnRtlGetNativeSystemInformation =
         (lpfnRtlGetNativeSystemInformation)MxGetProcedureAddress(DllBase, "RtlGetNativeSystemInformation");
     }
-    MX::MemSet(&sBasicInfo, 0, sizeof(sBasicInfo));
+    ::MxMemSet(&sBasicInfo, 0, sizeof(sBasicInfo));
     if (fnRtlGetNativeSystemInformation != NULL)
       nNtStatus = fnRtlGetNativeSystemInformation(MxSystemBasicInformation, &sBasicInfo, sizeof(sBasicInfo), NULL);
     else
@@ -138,7 +138,7 @@ HRESULT CWindowsEvent::Create(_In_ BOOL bManualReset, _In_ BOOL bInitialState, _
     MX_UNICODE_STRING usName;
     NTSTATUS nNtStatus;
 
-    MemSet(&sObjAttr, 0, sizeof(sObjAttr));
+    MxMemSet(&sObjAttr, 0, sizeof(sObjAttr));
     sObjAttr.Length = (ULONG)sizeof(sObjAttr);
     sObjAttr.Attributes = 0x00000080; //OBJ_OPENIF
     if (szNameW != NULL)
@@ -190,7 +190,7 @@ HRESULT CWindowsEvent::Open(_In_z_ LPCWSTR szNameW, _In_opt_ BOOL bInherit)
     MX_UNICODE_STRING usName;
     NTSTATUS nNtStatus;
 
-    MemSet(&sObjAttr, 0, sizeof(sObjAttr));
+    MxMemSet(&sObjAttr, 0, sizeof(sObjAttr));
     sObjAttr.Length = (ULONG)sizeof(sObjAttr);
     sObjAttr.Attributes = 0x00000080; //OBJ_OPENIF
     if (bInherit != FALSE)
@@ -262,7 +262,7 @@ HRESULT CWindowsMutex::Create(_In_opt_z_ LPCWSTR szNameW, _In_ BOOL bInitialOwne
     MX_UNICODE_STRING usName;
     NTSTATUS nNtStatus;
 
-    MemSet(&sObjAttr, 0, sizeof(sObjAttr));
+    MxMemSet(&sObjAttr, 0, sizeof(sObjAttr));
     sObjAttr.Length = (ULONG)sizeof(sObjAttr);
     sObjAttr.Attributes = 0x00000080; //OBJ_OPENIF
     if (szNameW != NULL)
@@ -312,7 +312,7 @@ HRESULT CWindowsMutex::Open(_In_opt_z_ LPCWSTR szNameW, _In_ BOOL bQueryOnly, _I
     MX_UNICODE_STRING usName;
     NTSTATUS nNtStatus;
 
-    MemSet(&sObjAttr, 0, sizeof(sObjAttr));
+    MxMemSet(&sObjAttr, 0, sizeof(sObjAttr));
     sObjAttr.Length = (ULONG)sizeof(sObjAttr);
     sObjAttr.Attributes = 0x00000080; //OBJ_OPENIF
     if (bInherit != FALSE)
@@ -566,7 +566,7 @@ static NTSTATUS GetRootDirHandle(_Out_ PHANDLE lphRootDir)
   _h = NULL;
 
   //get OS version
-  MX::MemSet(&sOviW, 0, sizeof(sOviW));
+  ::MxMemSet(&sOviW, 0, sizeof(sOviW));
   sOviW.dwOSVersionInfoSize = (DWORD)sizeof(sOviW);
   ::MxRtlGetVersion(&sOviW);
 
@@ -611,7 +611,7 @@ static NTSTATUS GetRootDirHandle(_Out_ PHANDLE lphRootDir)
   usName.Length *= 2;
 
   //initialize object attributes
-  MX::MemSet(&sObjAttr, 0, sizeof(sObjAttr));
+  ::MxMemSet(&sObjAttr, 0, sizeof(sObjAttr));
   sObjAttr.Length = (ULONG)sizeof(sObjAttr);
   sObjAttr.Attributes = OBJ_CASE_INSENSITIVE;
   sObjAttr.ObjectName = &usName;
@@ -647,7 +647,7 @@ static NTSTATUS GetRootDirHandle(_Out_ PHANDLE lphRootDir)
           HANDLE _hChild = NULL;
 
           //initialize object attributes
-          MX::MemSet(&sObjAttr, 0, sizeof(sObjAttr));
+          ::MxMemSet(&sObjAttr, 0, sizeof(sObjAttr));
           sObjAttr.Length = (ULONG)sizeof(sObjAttr);
           sObjAttr.Attributes = OBJ_CASE_INSENSITIVE;
           sObjAttr.ObjectName = &usName;

@@ -132,7 +132,7 @@ VOID CBase64Encoder::ConsumeOutput(_In_ SIZE_T nChars)
     if (nChars > nLength)
       nChars = nLength;
     nLength -= nChars;
-    MX::MemMove(szBufferA, szBufferA + nChars, nLength);
+    ::MxMemMove(szBufferA, szBufferA + nChars, nLength);
     szBufferA[nLength] = 0;
   }
   return;
@@ -156,7 +156,7 @@ BOOL CBase64Encoder::AddToBuffer(_In_ CHAR szDataA[4])
     szNewBufferA = (LPSTR)MX_MALLOC(nNewSize);
     if (szNewBufferA == NULL)
       return FALSE;
-    MX::MemCopy(szNewBufferA, szBufferA, nLength);
+    ::MxMemCopy(szNewBufferA, szBufferA, nLength);
     MX_FREE(szBufferA);
     szBufferA = szNewBufferA;
     nSize = nNewSize;
@@ -279,7 +279,7 @@ VOID CBase64Decoder::ConsumeOutput(_In_ SIZE_T nBytes)
     if (nBytes > nLength)
       nBytes = nLength;
     nLength -= nBytes;
-    MX::MemMove(lpBuffer, lpBuffer + nBytes, nLength);
+    ::MxMemMove(lpBuffer, lpBuffer + nBytes, nLength);
   }
   return;
 }
@@ -306,7 +306,7 @@ BOOL CBase64Decoder::AddToBuffer(_In_ LPBYTE aData, _In_ SIZE_T nLen)
     lpNewBuffer = (LPBYTE)MX_MALLOC(nNewSize);
     if (lpNewBuffer == NULL)
       return FALSE;
-    MX::MemCopy(lpNewBuffer, lpBuffer, nLength);
+    ::MxMemCopy(lpNewBuffer, lpBuffer, nLength);
     MX_FREE(lpBuffer);
     lpBuffer = lpNewBuffer;
     nSize = nNewSize;
