@@ -50,6 +50,11 @@ public:
 
   CFileStream* Clone();
 
+  virtual HANDLE GetHandle() const
+    {
+    return (const_cast<CFileStream*>(this))->cFileH.Get();
+    };
+
 private:
   CWindowsHandle cFileH;
 #ifdef _DEBUG

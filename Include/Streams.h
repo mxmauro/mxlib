@@ -72,6 +72,15 @@ public:
   VOID SetChainedStream(_In_opt_ CStream *lpStream);
   CStream* GetChainedStream() const;
 
+  operator HANDLE() const
+    {
+    return GetHandle();
+    };
+  virtual HANDLE GetHandle() const
+    {
+    return NULL;
+    };
+
 private:
   CStream *lpNextStream;
 };
