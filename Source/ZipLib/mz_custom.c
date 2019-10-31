@@ -36,11 +36,13 @@
 
 #include "MiniZipSource\mz_crypt.c"
 #include "MiniZipSource\mz_crypt_win32.c"
+#include "MiniZipSource\mz_os.c"
 #include "MiniZipSource\mz_os_win32.c"
 #include "MiniZipSource\mz_strm.c"
 #include "MiniZipSource\mz_strm_buf.c"
 #include "MiniZipSource\mz_strm_mem.c"
 #include "MiniZipSource\mz_strm_os_win32.c"
+#include "MiniZipSource\mz_strm_split.c"
 #include "MiniZipSource\mz_strm_zlib.c"
 #include "MiniZipSource\mz_zip.c"
 #include "MiniZipSource\mz_zip_rw.c"

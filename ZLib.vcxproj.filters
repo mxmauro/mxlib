@@ -92,6 +92,12 @@
     <ClCompile Include="Source\ZipLib\ZipFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_os.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_split.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Source\ZipLib\Source\ChangeLog" />
@@ -161,6 +167,12 @@
     </ClInclude>
     <ClInclude Include="Include\ZipLib\ZipFile.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_os.h">
+      <Filter>Header Files\minizip</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_split.h">
+      <Filter>Header Files\minizip</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

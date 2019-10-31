@@ -31,6 +31,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_os.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Source\ZipLib\MiniZipSource\mz_os_win32.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
@@ -56,6 +62,12 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_os_win32.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_split.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -102,10 +114,12 @@
     <ClInclude Include="Include\ZipLib\ZipFile.h" />
     <ClInclude Include="Source\ZipLib\MiniZipSource\mz.h" />
     <ClInclude Include="Source\ZipLib\MiniZipSource\mz_crypt.h" />
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_os.h" />
     <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm.h" />
     <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_buf.h" />
     <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_mem.h" />
     <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_os.h" />
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_split.h" />
     <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_zlib.h" />
     <ClInclude Include="Source\ZipLib\MiniZipSource\mz_zip.h" />
     <ClInclude Include="Source\ZipLib\MiniZipSource\mz_zip_rw.h" />
