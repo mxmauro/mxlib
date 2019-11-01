@@ -40,11 +40,6 @@
 
 //-----------------------------------------------------------
 
-static voidpf my_alloc_func(voidpf opaque, uInt items, uInt size);
-static void my_free_func(voidpf opaque, voidpf address);
-
-//-----------------------------------------------------------
-
 namespace MX {
 
 CZipLib::CZipLib(_In_ BOOL _bUseZipLibHeader)
@@ -453,8 +448,6 @@ VOID CZipLib::Cleanup()
   if (lpStream != NULL)
   {
     MxMemSet(lpStream, 0, sizeof(z_stream));
-    __stream->zalloc = &my_alloc_func;
-    __stream->zfree = &my_free_func;
   }
   bEndReached = FALSE;
   wTemp16 = 0;
@@ -553,18 +546,24 @@ casgzh_cont41:
 
 //-----------------------------------------------------------
 
-static voidpf my_alloc_func(voidpf opaque, uInt items, uInt size)
+extern "C" {
+
+voidpf zcalloc(voidpf opaque, uInt items, uInt size)
 {
   LPVOID p;
 
+  UNREFERENCED_PARAMETER(opaque);
   p = MX_MALLOC((SIZE_T)items * (SIZE_T)size);
   if (p != NULL)
     ::MxMemSet(p, 0, size);
   return (voidpf)p;
 }
 
-static void my_free_func(voidpf opaque, voidpf address)
+void zcfree(voidpf opaque, voidpf ptr)
 {
-  MX_FREE(address);
+  UNREFERENCED_PARAMETER(opaque);
+  MX_FREE(ptr);
   return;
 }
+
+}; //extern "C"

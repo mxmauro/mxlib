@@ -34,6 +34,8 @@
   #define FSCTL_GET_REPARSE_POINT 0x900A8
 #endif //!FSCTL_GET_REPARSE_POINT
 
+#define HAVE_ZLIB
+
 #include "MiniZipSource\mz_crypt.c"
 #include "MiniZipSource\mz_crypt_win32.c"
 #include "MiniZipSource\mz_os.c"

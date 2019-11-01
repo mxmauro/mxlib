@@ -48,9 +48,8 @@ public:
   HRESULT GetFileInfo(_Out_opt_ PULONGLONG lpnFileSize, _Out_opt_ LPDWORD lpdwFileAttributes,
                       _Out_opt_ LPSYSTEMTIME lpFileTime);
 
-  HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nToRead);
-  HRESULT Read(_Out_ CStream *lpStream, _In_ SIZE_T nToRead);
-
+  HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nToRead, _Out_opt_ SIZE_T *lpnRead = NULL);
+  HRESULT Read(_Out_ CStream *lpStream, _In_ SIZE_T nToRead, _Out_opt_ SIZE_T *lpnRead = NULL);
 
 private:
   HRESULT CreateOrOpenArchive(_In_z_ LPCWSTR szFileNameW, _In_ int mode);

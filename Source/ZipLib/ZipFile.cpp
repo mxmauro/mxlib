@@ -339,59 +339,86 @@ HRESULT CZipFile::GetFileInfo(_Out_opt_ PULONGLONG lpnFileSize, _Out_opt_ LPDWOR
   return S_OK;
 }
 
-HRESULT CZipFile::Read(_Out_ LPVOID lpDest, _In_ SIZE_T nToRead)
+HRESULT CZipFile::Read(_Out_ LPVOID lpDest, _In_ SIZE_T nToRead, _Out_opt_ SIZE_T *lpnRead)
 {
+  BOOL bFirstRead;
+
+  if (lpnRead != NULL)
+    *lpnRead = 0;
   if (lpDest == NULL && nToRead > 0)
     return E_POINTER;
 
   if (lpData == NULL || zc_data->bFileIsOpen == FALSE)
     return MX_E_NotReady;
 
+  bFirstRead = TRUE;
   while (nToRead > 0)
   {
-    unsigned int nToReadThisRound;
-    HRESULT hRes;
+    int32_t read, nToReadThisRound;
 
     nToReadThisRound = (nToRead > 65536) ? 65536 : (unsigned int)nToRead;
 
-    hRes = mzError_2_HRESULT(mz_zip_entry_read(zc_data->zip_handle, lpDest, nToReadThisRound));
-    if (FAILED(hRes))
-      return hRes;
+    read = mz_zip_entry_read(zc_data->zip_handle, lpDest, nToReadThisRound);
+    if (read < MZ_OK)
+      return mzError_2_HRESULT(read);
+    if (read == 0 && bFirstRead != FALSE)
+      return MX_E_EndOfFileReached;
 
-    lpDest = (LPBYTE)lpDest + (SIZE_T)nToReadThisRound;
-    nToRead -= (SIZE_T)nToReadThisRound;
+    bFirstRead = FALSE;
+    if (lpnRead != NULL)
+      *lpnRead += (SIZE_T)read;
+
+    if (read < nToReadThisRound)
+      break;
+
+    lpDest = (LPBYTE)lpDest + (SIZE_T)read;
+    nToRead -= (SIZE_T)read;
   }
 
   //done
   return S_OK;
 }
 
-HRESULT CZipFile::Read(_Out_ CStream *lpStream, _In_ SIZE_T nToRead)
+HRESULT CZipFile::Read(_Out_ CStream *lpStream, _In_ SIZE_T nToRead, _Out_opt_ SIZE_T *lpnRead)
 {
+  BOOL bFirstRead;
+
+  if (lpnRead != NULL)
+    *lpnRead = 0;
   if (lpStream == NULL && nToRead > 0)
     return E_POINTER;
 
   if (lpData == NULL || zc_data->bFileIsOpen == FALSE)
     return MX_E_NotReady;
 
+  bFirstRead = TRUE;
   while (nToRead > 0)
   {
-    unsigned int nToReadThisRound;
+    int32_t read, nToReadThisRound;
     SIZE_T nBytesWritten;
     HRESULT hRes;
 
     nToReadThisRound = (nToRead > sizeof(zc_data->aTempBuffer)) ? (unsigned int)sizeof(zc_data->aTempBuffer)
                                                                 : (unsigned int)nToRead;
 
-    hRes = mzError_2_HRESULT(mz_zip_entry_read(zc_data->zip_handle, zc_data->aTempBuffer, nToReadThisRound));
-    if (SUCCEEDED(hRes))
-    {
-      hRes = lpStream->Write(zc_data->aTempBuffer, nToReadThisRound, nBytesWritten);
-    }
+    read = mz_zip_entry_read(zc_data->zip_handle, zc_data->aTempBuffer, nToReadThisRound);
+    if (read < MZ_OK)
+      return mzError_2_HRESULT(read);
+    if (read == 0 && bFirstRead != FALSE)
+      return MX_E_EndOfFileReached;
+
+    hRes = lpStream->Write(zc_data->aTempBuffer, nToReadThisRound, nBytesWritten);
     if (FAILED(hRes))
       return hRes;
 
-    nToRead -= (SIZE_T)nToReadThisRound;
+    bFirstRead = FALSE;
+    if (lpnRead != NULL)
+      *lpnRead += (SIZE_T)read;
+
+    if (read < nToReadThisRound)
+      break;
+
+    nToRead -= (SIZE_T)read;
   }
 
   //done
@@ -418,9 +445,9 @@ HRESULT CZipFile::CreateOrOpenArchive(_In_z_ LPCWSTR szFileNameW, _In_ int mode)
     return hRes;
 
   zc_data->zip_stream = mz_stream_os_create(NULL);
-  if (mz_stream_os_open(&(zc_data->zip_stream), (LPCSTR)cStrUtf8FileNameA, (int32_t)mode) != MZ_OK)
+  if (mz_stream_os_open(zc_data->zip_stream, (LPCSTR)cStrUtf8FileNameA, (int32_t)mode) != MZ_OK)
   {
-    hRes = MX_HRESULT_FROM_WIN32(mz_stream_os_error(&(zc_data->zip_stream)));
+    hRes = MX_HRESULT_FROM_WIN32(mz_stream_os_error(zc_data->zip_stream));
     CloseArchive();
     return hRes;
   }
@@ -432,7 +459,7 @@ HRESULT CZipFile::CreateOrOpenArchive(_In_z_ LPCWSTR szFileNameW, _In_ int mode)
     return E_OUTOFMEMORY;
   }
 
-  hRes = mzError_2_HRESULT(mz_zip_open(zc_data->zip_handle, &(zc_data->zip_stream),
+  hRes = mzError_2_HRESULT(mz_zip_open(zc_data->zip_handle, zc_data->zip_stream,
                            (int32_t)(mode & (MZ_OPEN_MODE_READ | MZ_OPEN_MODE_WRITE | MZ_OPEN_MODE_APPEND))));
   if (FAILED(hRes))
   {
