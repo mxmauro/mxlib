@@ -1536,7 +1536,8 @@ VOID CSockets::CConnection::ListenerThreadProc()
   hEvents[1] = lpListener->hAcceptSelect;
   hEvents[2] = lpListener->hAcceptCompleted;
 
-  while (lpIpc->IsShuttingDown() == FALSE)
+  dwTimeoutMs = INFINITE;
+  while (lpIpc->IsShuttingDown() == FALSE && IsClosed() == FALSE)
   {
     ::ResetEvent(lpListener->hAcceptSelect);
     ::ResetEvent(lpListener->hAcceptCompleted);
