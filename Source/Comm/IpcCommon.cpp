@@ -1680,7 +1680,10 @@ VOID CIpc::CConnectionBase::Close(_In_ HRESULT hRes)
     nOrigVal = _InterlockedCompareExchange(&nFlags, nNewVal, nInitVal);
   }
   while (nOrigVal != nInitVal);
-  _InterlockedCompareExchange(&hrErrorCode, hRes, S_OK);
+  if ((nInitVal & FLAG_Closed) == 0)
+  {
+    _InterlockedCompareExchange(&hrErrorCode, hRes, S_OK);
+  }
   if ((hRes & 0x0F000000) != 0)
   {
     SIZE_T nStack[10];
