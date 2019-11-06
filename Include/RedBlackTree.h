@@ -26,42 +26,28 @@
 
 namespace MX {
 
-template <class classOrStruct, typename KeyType>
+template <class T>
 class TRedBlackTree;
 
-template <class classOrStruct, typename KeyType>
-class MX_NOVTABLE TRedBlackTreeNode : public virtual CBaseMemObj
+template <class T>
+class TRedBlackTreeNode
 {
 public:
-  typedef TRedBlackTree<classOrStruct, KeyType> _RbTree;
-  typedef TRedBlackTreeNode<classOrStruct, KeyType> _RbTreeNode;
+  typedef TRedBlackTree<T> _RbTree;
+  typedef TRedBlackTreeNode<T> _RbTreeNode;
 
-  template <class classOrStruct, typename KeyType>
+  template <class T>
   friend class TRedBlackTree;
 
-  friend class TRedBlackTree<classOrStruct, KeyType>;
+  friend class TRedBlackTree<T>;
 
 public:
-  TRedBlackTreeNode() : CBaseMemObj()
+  TRedBlackTreeNode()
     {
     bRed = FALSE;
     lpTree = NULL;
     lpLeft = lpRight = lpParent = NULL;
     return;
-    };
-
-  virtual KeyType GetNodeKey() const = 0;
-
-  //Returns -1 if key is less than "this" node's key, 1 if greater or 0 if equal
-  virtual int CompareKeys(_In_ KeyType key) const
-    {
-    KeyType this_key = GetNodeKey();
-
-    if (key < this_key)
-      return -1;
-    if (key > this_key)
-      return 1;
-    return 0;
     };
 
   _RbTreeNode* GetNextNode()
@@ -125,19 +111,19 @@ public:
     return (this) ? lpParent : NULL;
     };
 
-  _inline classOrStruct* GetNextEntry()
+  _inline T* GetNextEntry()
     {
     _RbTreeNode *lpNode = GetNextNode();
     return (lpNode != NULL) ? (lpNode->GetEntry()) : NULL;
     };
 
-  _inline classOrStruct* GetPrevEntry()
+  _inline T* GetPrevEntry()
     {
     _RbTreeNode *lpNode = GetPrevNode();
     return (lpNode != NULL) ? (lpNode->GetEntry()) : NULL;
     };
 
-  _inline classOrStruct* GetParentEntry()
+  _inline T* GetParentEntry()
     {
     return (lpParent != NULL) ? (lpParent->GetEntry()) : NULL;
     };
@@ -147,9 +133,9 @@ public:
     return lpTree;
     };
 
-  _inline classOrStruct* GetEntry()
+  _inline T* GetEntry()
     {
-    return static_cast<classOrStruct*>(this);
+    return static_cast<T*>(this);
     };
 
   _inline VOID RemoveNode()
@@ -187,17 +173,17 @@ private:
 
 //-----------------------------------------------------------
 
-template <class classOrStruct, typename KeyType>
-class TRedBlackTree
+template <class T>
+class TRedBlackTree : public virtual CBaseMemObj
 {
 public:
-  typedef TRedBlackTree<classOrStruct, KeyType> _RbTree;
-  typedef TRedBlackTreeNode<classOrStruct, KeyType> _RbTreeNode;
+  typedef TRedBlackTree<T> _RbTree;
+  typedef TRedBlackTreeNode<T> _RbTreeNode;
 
   MX_DISABLE_COPY_CONSTRUCTOR(_RbTree);
 
 public:
-  TRedBlackTree()
+  TRedBlackTree() : CBaseMemObj()
     {
     lpRoot = NULL;
     nItemsCount = 0;
@@ -214,14 +200,14 @@ public:
     return nItemsCount;
     };
 
-  _inline classOrStruct* Find(_In_ KeyType _key)
+  template<class _Comparator, class _KeyType>
+  _inline T* Find(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
     _RbTreeNode *lpNode = lpRoot;
-    int comp;
 
     while (lpNode != NULL)
     {
-      comp = lpNode->CompareKeys(_key);
+      int comp = lpSearchFunc(lpContext, _key, lpNode->GetEntry());
       if (comp == 0)
         return lpNode->GetEntry();
       lpNode = (comp < 0) ? lpNode->lpLeft : lpNode->lpRight;
@@ -229,7 +215,7 @@ public:
     return NULL;
     };
 
-  _inline classOrStruct* GetFirst()
+  _inline T* GetFirst()
     {
     _RbTreeNode *lpNode;
 
@@ -241,7 +227,7 @@ public:
     return lpNode->GetEntry();
     };
 
-  _inline classOrStruct* GetLast()
+  _inline T* GetLast()
     {
     _RbTreeNode *lpNode;
 
@@ -254,14 +240,15 @@ public:
     };
 
   //Try to get entry with key greater or equal to the specified one. Else get nearest less.
-  _inline classOrStruct* GetCeiling(_In_ KeyType _key)
+  template<class _Comparator, class _KeyType>
+  _inline T* GetCeiling(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
     _RbTreeNode *lpNode = lpRoot, *lpParent;
     int comp;
 
     while (lpNode != NULL)
     {
-      comp = lpNode->CompareKeys(_key);
+      int comp = lpSearchFunc(lpContext, _key, lpNode->GetEntry());
       if (comp == 0)
         return lpNode->GetEntry();
       if (comp < 0)
@@ -292,14 +279,14 @@ public:
     };
 
   //Try to get entry with key less or equal to the specified one. Else get nearest greater.
-  _inline classOrStruct* GetFloor(_In_ KeyType _key)
+  template<class _Comparator, class _KeyType>
+  _inline T* GetFloor(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
     _RbTreeNode *lpNode = lpRoot, *lpParent;
-    int comp;
 
     while (lpNode != NULL)
     {
-      comp = lpNode->CompareKeys(_key);
+      int comp = lpSearchFunc(lpContext, _key, lpNode->GetEntry());
       if (comp == 0)
         return lpNode->GetEntry();
       if (comp > 0)
@@ -329,14 +316,14 @@ public:
     };
 
   //Try to get entry with key greater or equal to the specified one. Else null
-  _inline classOrStruct* GetHigher(_In_ KeyType _key)
+  template<class _Comparator, class _KeyType>
+  _inline T* GetHigher(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
     _RbTreeNode *lpNode = lpRoot, *lpParent;
-    int comp;
 
     while (lpNode != NULL)
     {
-      comp = lpNode->CompareKeys(_key);
+      int comp = lpSearchFunc(lpContext, _key, lpNode->GetEntry());
       if (comp < 0)
       {
         if (lpNode->lpLeft == NULL)
@@ -365,14 +352,14 @@ public:
     };
 
   //Try to get entry with key less or equal to the specified one. Else null
-  _inline classOrStruct* GetLower(_In_ KeyType _key)
+  template<class _Comparator, class _KeyType>
+  _inline T* GetLower(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
     _RbTreeNode *lpNode = lpRoot, *lpParent;
-    int comp;
 
     while (lpNode != NULL)
     {
-      comp = lpNode->CompareKeys(_key);
+      int comp = lpSearchFunc(lpContext, _key, lpNode->GetEntry());
       if (comp > 0)
       {
         if (lpNode->lpRight == NULL)
@@ -400,18 +387,19 @@ public:
     return NULL;
     };
 
-  BOOL Insert(_In_ _RbTreeNode *lpNewNode, _In_opt_ BOOL bAllowDuplicates = FALSE,
-              _In_opt_ _RbTreeNode **lplpMatchingNode = NULL)
+  template<class _Comparator>
+  BOOL Insert(_In_ _RbTreeNode *lpNewNode, _In_ _Comparator lpCompareFunc, _In_opt_ BOOL bAllowDuplicates = FALSE,
+              _In_opt_ T **lplpMatchingEntry = NULL, _In_opt_ LPVOID lpContext = NULL)
     {
     _RbTreeNode *lpNode, *lpParent, *lpUncle;
-    int res;
+    int comp;
 
     MX_ASSERT(lpNewNode != NULL);
     MX_ASSERT(lpNewNode->lpParent == NULL);
     MX_ASSERT(lpNewNode->lpLeft == NULL && lpNewNode->lpRight == NULL);
 
-    if (lplpMatchingNode != NULL)
-      *lplpMatchingNode = NULL;
+    if (lplpMatchingEntry != NULL)
+      *lplpMatchingEntry = NULL;
     if (lpRoot == NULL)
     {
       lpNewNode->lpParent = NULL;
@@ -431,19 +419,19 @@ public:
     do
     {
       lpParent = lpNode;
-      res = lpNode->CompareKeys(lpNewNode->GetNodeKey());
-      if (res == 0 && bAllowDuplicates == FALSE)
+      comp = lpCompareFunc(lpContext, lpNewNode->GetEntry(), lpNode->GetEntry());
+      if (comp == 0 && bAllowDuplicates == FALSE)
       {
-        if (lplpMatchingNode != NULL)
-          *lplpMatchingNode = lpNode;
+        if (lplpMatchingEntry != NULL)
+          *lplpMatchingEntry = lpNode->GetEntry();
         return FALSE;
       }
-      lpNode = (res < 0) ? lpNode->lpLeft : lpNode->lpRight;
+      lpNode = (comp < 0) ? lpNode->lpLeft : lpNode->lpRight;
     }
     while (lpNode != NULL);
     lpNewNode->lpLeft = lpNewNode->lpRight = NULL;
     lpNewNode->lpParent = lpParent;
-    if (res < 0)
+    if (comp < 0)
       lpParent->lpLeft = lpNewNode;
     else
       lpParent->lpRight = lpNewNode;
@@ -861,18 +849,18 @@ public:
   class Iterator
   {
   public:
-    classOrStruct* Begin(_In_ _RbTree &_tree)
+    T* Begin(_In_ _RbTree &_tree)
       {
       lpNextCursor = _tree.GetFirstNode();
       return Next();
       };
 
-    classOrStruct* Begin(_In_ const _RbTree &_tree)
+    T* Begin(_In_ const _RbTree &_tree)
       {
       return Begin(const_cast<_RbTree&>(_tree));
       };
 
-    classOrStruct* Next()
+    T* Next()
       {
       _RbTreeNode *lpCursor = lpNextCursor;
       if (lpCursor == NULL)
@@ -890,18 +878,18 @@ public:
   class IteratorRev
   {
   public:
-    classOrStruct* Begin(_In_ _RbTree &_tree)
+    T* Begin(_In_ _RbTree &_tree)
       {
       lpNextCursor = _tree.GetLast();
       return Next();
       };
 
-    classOrStruct* Begin(_In_ const _RbTree &_tree)
+    T* Begin(_In_ const _RbTree &_tree)
       {
       return Begin(const_cast<_RbTree&>(_tree));
       };
 
-    classOrStruct* Next()
+    T* Next()
       {
       _RbTreeNode *lpCursor = lpNextCursor;
       if (lpCursor == NULL)
@@ -915,7 +903,7 @@ public:
   };
 
 private:
-  template <class classOrStruct, typename KeyType>
+  template <class T>
   friend class TRedBlackTreeNode;
 
   _RbTreeNode *lpRoot;

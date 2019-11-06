@@ -429,14 +429,4 @@ SIZE_T CPropertyBag::Find(_In_z_ LPCSTR szNameA)
   return cPropertiesList.BinarySearch(szNameA, &CPropertyBag::SearchCompareFunc, NULL);
 }
 
-int CPropertyBag::InsertCompareFunc(_In_ LPVOID lpContext, _In_ PROPERTY **lpItem1, _In_ PROPERTY **lpItem2)
-{
-  return StrCompareA((*lpItem1)->szNameA, (*lpItem2)->szNameA, TRUE);
-}
-
-int CPropertyBag::SearchCompareFunc(_In_ LPVOID lpContext, _In_ LPCVOID lpKey, _In_ PROPERTY **lpItem)
-{
-  return StrCompareA((LPCSTR)lpKey, (*lpItem)->szNameA, TRUE);
-}
-
 } //namespace MX

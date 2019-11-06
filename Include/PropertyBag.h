@@ -90,8 +90,15 @@ private:
   BOOL Insert(_In_ PROPERTY *lpNewProp);
   SIZE_T Find(_In_z_ LPCSTR szNameA);
 
-  static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ PROPERTY **lpItem1, _In_ PROPERTY **lpItem2);
-  static int SearchCompareFunc(_In_ LPVOID lpContext, _In_ LPCVOID lpKey, _In_ PROPERTY **lpItem);
+  static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ PROPERTY **lpItem1, _In_ PROPERTY **lpItem2)
+    {
+    return StrCompareA((*lpItem1)->szNameA, (*lpItem2)->szNameA, TRUE);
+    };
+
+  static int SearchCompareFunc(_In_ LPVOID lpContext, _In_ LPCVOID lpKey, _In_ PROPERTY **lpItem)
+    {
+    return StrCompareA((LPCSTR)lpKey, (*lpItem)->szNameA, TRUE);
+    };
 
 private:
   TArrayListWithFree<PROPERTY*> cPropertiesList;

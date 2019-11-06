@@ -292,7 +292,7 @@ HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCr
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
 
-    sConnections.cTree.Insert(cConn.Get());
+    sConnections.cTree.Insert(cConn.Get(), &CConnectionBase::InsertCompareFunc);
   }
   hRes = FireOnCreate(cConn.Get());
   if (SUCCEEDED(hRes))
@@ -357,7 +357,7 @@ HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
 
-    sConnections.cTree.Insert(cConn.Get());
+    sConnections.cTree.Insert(cConn.Get(), &CConnectionBase::InsertCompareFunc);
   }
   hRes = FireOnCreate(cConn.Get());
   if (SUCCEEDED(hRes))
@@ -573,7 +573,7 @@ HRESULT CSockets::CreateServerConnection(_In_ CConnection *lpListenConn)
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
 
-    sConnections.cTree.Insert(cIncomingConn.Get());
+    sConnections.cTree.Insert(cIncomingConn.Get(), &CConnectionBase::InsertCompareFunc);
   }
   cIncomingConn->AddRef();
 

@@ -597,19 +597,13 @@ public:
 protected:
   friend class CLayer;
 
-  class MX_NOVTABLE CConnectionBase : public virtual TRefCounted<CBaseMemObj>,
-                                      public TRedBlackTreeNode<CConnectionBase,SIZE_T>
+  class MX_NOVTABLE CConnectionBase : public virtual TRefCounted<CBaseMemObj>, public TRedBlackTreeNode<CConnectionBase>
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CConnectionBase);
   protected:
     CConnectionBase(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass);
   public:
     virtual ~CConnectionBase();
-
-    SIZE_T GetNodeKey() const
-      {
-      return (SIZE_T)this;
-      };
 
     virtual VOID ShutdownLink(_In_ BOOL bAbortive);
 
@@ -660,6 +654,25 @@ protected:
 
     VOID UpdateStats(_In_ BOOL bRead, _In_ DWORD dwBytesTransferred);
     VOID GetStats(_In_ BOOL bRead, _Out_ PULONGLONG lpullBytesTransferred, _Out_opt_ float *lpnThroughputKbps);
+
+  protected:
+    static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ CConnectionBase *lpConn1, _In_ CConnectionBase *lpConn2)
+      {
+      if ((SIZE_T)lpConn1 < (SIZE_T)lpConn2)
+        return -1;
+      if ((SIZE_T)lpConn1 > (SIZE_T)lpConn2)
+        return 1;
+      return 0;
+      };
+
+    static int SearchCompareFunc(_In_ LPVOID lpContext, _In_ SIZE_T key, _In_ CConnectionBase *lpConn)
+      {
+      if (key < (SIZE_T)lpConn)
+        return -1;
+      if (key > (SIZE_T)lpConn)
+        return 1;
+      return 0;
+      };
 
   protected:
     friend class CIpc;
@@ -743,7 +756,7 @@ protected:
   OnEngineErrorCallback cEngineErrorCallback;
   struct {
     LONG volatile nRwMutex;
-    TRedBlackTree<CConnectionBase,SIZE_T> cTree;
+    TRedBlackTree<CConnectionBase> cTree;
   } sConnections;
   CPacketList cFreePacketsList32768;
   CPacketList cFreePacketsList4096;

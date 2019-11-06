@@ -40,6 +40,11 @@ namespace MX {
 class CHttpCookie : public virtual CBaseMemObj
 {
 public:
+  typedef enum {
+    SameSiteNone, SameSiteLax, SameSiteStrict
+  } eSameSite;
+
+public:
   CHttpCookie();
   CHttpCookie(_In_ const CHttpCookie& cSrc) throw(...);
   ~CHttpCookie();
@@ -85,6 +90,9 @@ public:
   VOID SetHttpOnlyFlag(_In_ BOOL bIsHttpOnly);
   BOOL GetHttpOnlyFlag() const;
 
+  HRESULT SetSameSite(_In_ eSameSite nSameSite);
+  eSameSite GetSameSite() const;
+
   HRESULT ToString(_Inout_ CStringA& cStrDestA, _In_ BOOL bAddAttributes=TRUE);
 
   HRESULT DoesDomainMatch(_In_z_ LPCSTR szDomainToMatchA);
@@ -101,6 +109,7 @@ private:
   CStringA cStrDomainA;
   CStringA cStrPathA;
   CDateTime cExpiresDt;
+  eSameSite nSameSite;
 };
 
 //-----------------------------------------------------------
