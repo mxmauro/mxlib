@@ -261,7 +261,7 @@ HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreate
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
 
-    sConnections.cTree.Insert(lpNewConn);
+    sConnections.cTree.Insert(lpNewConn, &CConnectionBase::InsertCompareFunc);
   }
   hRes = FireOnCreate(lpNewConn);
   if (SUCCEEDED(hRes))
@@ -378,7 +378,7 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
 
-    sConnections.cTree.Insert(lpNewConn);
+    sConnections.cTree.Insert(lpNewConn, &CConnectionBase::InsertCompareFunc);
   }
   hRes = FireOnCreate(lpNewConn);
   if (SUCCEEDED(hRes))
@@ -444,7 +444,7 @@ HRESULT CNamedPipes::CreateServerConnection(_In_ CServerInfo *lpServerInfo, _In_
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
 
-    sConnections.cTree.Insert(lpNewConn);
+    sConnections.cTree.Insert(lpNewConn, &CConnectionBase::InsertCompareFunc);
   }
   hRes = FireOnCreate(lpNewConn);
   if (SUCCEEDED(hRes))

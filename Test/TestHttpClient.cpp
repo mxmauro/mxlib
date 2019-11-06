@@ -20,7 +20,7 @@
 #include "TestHttpClient.h"
 #include <Http\HttpClient.h>
 
-#define SIMPLE_TEST
+//#define SIMPLE_TEST
 
 //-----------------------------------------------------------
 
@@ -230,6 +230,9 @@ static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificate
   //cHttpClient.SetHeadersReceivedCallback(MX_BIND_CALLBACK(&OnResponseHeadersReceived));
   cHttpClient.SetHeadersReceivedCallback(MX_BIND_CALLBACK(&OnResponseHeadersReceived_BigDownload));
 
+  hRes = cHttpClient.Open("http://www.sitepoint.com/forums/showthread.php?"
+                          "390414-Reading-from-socket-connection-SLOW");
+  /*
   //hRes = cHttpClient.SetAuthCredentials(L"guest", L"guest");
   hRes = S_OK;
   if (SUCCEEDED(hRes))
@@ -244,6 +247,8 @@ static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificate
     //hRes = cHttpClient.Open("https://jigsaw.w3.org/HTTP/Basic/");
     //hRes = cHttpClient.Open("https://jigsaw.w3.org/HTTP/Digest/");
   }
+  */
+
   if (SUCCEEDED(hRes))
   {
     while (cHttpClient.IsDocumentComplete() == FALSE && cHttpClient.IsClosed() == FALSE)

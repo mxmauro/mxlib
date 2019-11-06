@@ -47,12 +47,14 @@ namespace MX {
 CHttpCookie::CHttpCookie() : CBaseMemObj()
 {
   nFlags = 0;
+  nSameSite = SameSiteNone;
   return;
 }
 
 CHttpCookie::CHttpCookie(_In_ const CHttpCookie& cSrc) throw(...) : CBaseMemObj()
 {
   nFlags = 0;
+  nSameSite = SameSiteNone;
   operator=(cSrc);
   return;
 }
@@ -78,6 +80,7 @@ CHttpCookie& CHttpCookie::operator=(_In_ const CHttpCookie& cSrc) throw(...)
       throw (LONG)E_OUTOFMEMORY;
 
     nFlags = cSrc.nFlags;
+    nSameSite = cSrc.nSameSite;
     cStrNameA.Attach(cStrTempNameA.Detach());
     cStrValueA.Attach(cStrTempValueA.Detach());
     cStrDomainA.Attach(cStrTempDomainA.Detach());
@@ -95,6 +98,7 @@ VOID CHttpCookie::Clear()
   cStrPathA.Empty();
   cExpiresDt.Clear();
   nFlags = 0;
+  nSameSite = SameSiteNone;
   return;
 }
 
@@ -326,6 +330,19 @@ BOOL CHttpCookie::GetHttpOnlyFlag() const
   return ((nFlags & COOKIE_FLAG_HTTPONLY) != 0) ? TRUE : FALSE;
 }
 
+HRESULT CHttpCookie::SetSameSite(_In_ eSameSite _nSameSite)
+{
+  if (_nSameSite != SameSiteNone && _nSameSite != SameSiteLax && _nSameSite != SameSiteStrict)
+    return E_INVALIDARG;
+  nSameSite = _nSameSite;
+  return S_OK;
+}
+
+CHttpCookie::eSameSite CHttpCookie::GetSameSite() const
+{
+  return nSameSite;
+}
+
 HRESULT CHttpCookie::ToString(_Inout_ CStringA& cStrDestA, _In_ BOOL bAddAttributes)
 {
   CDateTime cTempDt, *lpDt;
@@ -391,6 +408,17 @@ HRESULT CHttpCookie::ToString(_Inout_ CStringA& cStrDestA, _In_ BOOL bAddAttribu
     {
       if (cStrDestA.Concat("; HttpOnly") == FALSE)
         return E_OUTOFMEMORY;
+    }
+    switch (nSameSite)
+    {
+      case SameSiteLax:
+        if (cStrDestA.Concat("; SameSite=Lax") == FALSE)
+          return E_OUTOFMEMORY;
+        break;
+      case SameSiteStrict:
+        if (cStrDestA.Concat("; SameSite=Strict") == FALSE)
+          return E_OUTOFMEMORY;
+        break;
     }
   }
   return S_OK;
@@ -575,6 +603,25 @@ HRESULT CHttpCookie::ParseFromResponseHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE
       hRes = SetDomain((LPSTR)cStrTempValueA);
       if (FAILED(hRes))
         return hRes;
+    }
+    else if (StrCompareA((LPSTR)cStrTempNameA, "SameSite", TRUE) == 0)
+    {
+      if (cStrTempValueA.IsEmpty() != FALSE || StrCompareA((LPCSTR)cStrTempValueA, "none", TRUE) == 0)
+      {
+        nSameSite = SameSiteNone;
+      }
+      else if (StrCompareA((LPCSTR)cStrTempValueA, "lax", TRUE) == 0)
+      {
+        nSameSite = SameSiteLax;
+      }
+      else if (StrCompareA((LPCSTR)cStrTempValueA, "strict", TRUE) == 0)
+      {
+        nSameSite = SameSiteStrict;
+      }
+      else
+      {
+        return MX_E_InvalidData;
+      }
     }
     else
     {

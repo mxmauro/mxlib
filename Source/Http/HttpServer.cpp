@@ -753,14 +753,14 @@ VOID CHttpServer::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
       CAutoSlimRWLShared cLimiterLock(&(sRequestLimiter.nRwMutex));
       CRequestLimiter *lpLimiter;
 
-      lpLimiter = sRequestLimiter.cTree.Find(&(lpRequest->sPeerAddr));
+      lpLimiter = sRequestLimiter.cTree.Find(&(lpRequest->sPeerAddr), &CRequestLimiter::SearchCompareFunc);
       if (lpLimiter != NULL)
       {
         if ((DWORD)_InterlockedDecrement(&(lpLimiter->nCount)) == 0)
         {
           cLimiterLock.UpgradeToExclusive();
 
-          lpLimiter = sRequestLimiter.cTree.Find(&(lpRequest->sPeerAddr));
+          lpLimiter = sRequestLimiter.cTree.Find(&(lpRequest->sPeerAddr), &CRequestLimiter::SearchCompareFunc);
           if (lpLimiter != NULL)
           {
             if (__InterlockedRead(&(lpLimiter->nCount)) == 0)
@@ -803,7 +803,7 @@ HRESULT CHttpServer::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc:
     CAutoSlimRWLShared cLimiterLock(&(sRequestLimiter.nRwMutex));
     CRequestLimiter *lpLimiter;
 
-    lpLimiter = sRequestLimiter.cTree.Find(&(lpNewRequest->sPeerAddr));
+    lpLimiter = sRequestLimiter.cTree.Find(&(lpNewRequest->sPeerAddr), &CRequestLimiter::SearchCompareFunc);
     if (lpLimiter != NULL)
     {
       if ((DWORD)_InterlockedIncrement(&(lpLimiter->nCount)) > dwMaxConnectionsPerIp)
@@ -811,17 +811,16 @@ HRESULT CHttpServer::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc:
     }
     else
     {
-      MX::TRedBlackTreeNode<MX::CHttpServer::CRequestLimiter,PSOCKADDR_INET> *_lpMatchingLimiter;
+      MX::CHttpServer::CRequestLimiter *lpMatchingLimiter;
 
       lpLimiter = MX_DEBUG_NEW CRequestLimiter(&(lpNewRequest->sPeerAddr));
       if (lpLimiter == NULL)
         return E_OUTOFMEMORY;
       cLimiterLock.UpgradeToExclusive();
 
-      if (sRequestLimiter.cTree.Insert(lpLimiter, FALSE, &_lpMatchingLimiter) == FALSE)
+      if (sRequestLimiter.cTree.Insert(lpLimiter, &CRequestLimiter::InsertCompareFunc, FALSE,
+                                       &lpMatchingLimiter) == FALSE)
       {
-        CRequestLimiter *lpMatchingLimiter = static_cast<CRequestLimiter*>(_lpMatchingLimiter);
-
         delete lpLimiter;
 
         if ((DWORD)_InterlockedIncrement(&(lpMatchingLimiter->nCount)) > dwMaxConnectionsPerIp)

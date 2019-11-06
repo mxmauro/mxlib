@@ -26,15 +26,15 @@
 
 namespace MX {
 
-template <typename classOrStruct>
+template <typename T>
 class TLnkLst;
 
-template <typename classOrStruct>
+template <typename T>
 class TLnkLstNode
 {
 public:
-  typedef TLnkLst<classOrStruct> _LnkLstList;
-  typedef TLnkLstNode<classOrStruct> _LnkLstNode;
+  typedef TLnkLst<T> _LnkLstList;
+  typedef TLnkLstNode<T> _LnkLstNode;
 
   TLnkLstNode()
     {
@@ -53,12 +53,12 @@ public:
     return lpPrev;
     };
 
-  _inline classOrStruct* GetNextEntry()
+  _inline T* GetNextEntry()
     {
     return (lpNext != NULL) ? (lpNext->GetEntry()) : NULL;
     };
 
-  _inline classOrStruct* GetPrevEntry()
+  _inline T* GetPrevEntry()
     {
     return (lpPrev != NULL) ? (lpPrev->GetEntry()) : NULL;
     };
@@ -68,9 +68,9 @@ public:
     return lpList;
     };
 
-  _inline classOrStruct* GetEntry()
+  _inline T* GetEntry()
     {
-    return static_cast<classOrStruct*>(this);
+    return static_cast<T*>(this);
     };
 
   _inline VOID RemoveNode()
@@ -81,7 +81,7 @@ public:
     };
 
 private:
-  template <typename classOrStruct>
+  template <typename T>
   friend class TLnkLst;
 
   _LnkLstList *lpList;
@@ -90,14 +90,14 @@ private:
 
 //-----------------------------------------------------------
 
-template <typename classOrStruct>
-class TLnkLst
+template <typename T>
+class TLnkLst : public virtual CBaseMemObj
 {
 public:
-  typedef TLnkLst<classOrStruct> _LnkLstList;
-  typedef TLnkLstNode<classOrStruct> _LnkLstNode;
+  typedef TLnkLst<T> _LnkLstList;
+  typedef TLnkLstNode<T> _LnkLstNode;
 
-  TLnkLst()
+  TLnkLst() : CBaseMemObj()
     {
     lpHead = lpTail = NULL;
 #ifdef _DEBUG
@@ -220,17 +220,17 @@ public:
     return;
     };
 
-  _inline classOrStruct* GetHead()
+  _inline T* GetHead()
     {
     return (lpHead != NULL) ? (lpHead->GetEntry()) : NULL;
     };
 
-  _inline classOrStruct* GetTail()
+  _inline T* GetTail()
     {
     return (lpTail != NULL) ? (lpTail->GetEntry()) : NULL;
     };
 
-  _inline classOrStruct* PopHead()
+  _inline T* PopHead()
     {
     _LnkLstNode *lpNode;
 
@@ -240,7 +240,7 @@ public:
     return lpNode->GetEntry();
     };
 
-  _inline classOrStruct* PopTail()
+  _inline T* PopTail()
     {
     _LnkLstNode *lpNode;
 
@@ -269,18 +269,18 @@ public:
   class Iterator
   {
   public:
-    classOrStruct* Begin(_In_ _LnkLstList &_list)
+    T* Begin(_In_ _LnkLstList &_list)
       {
       lpNextCursor = _list.lpHead;
       return Next();
       };
 
-    classOrStruct* Begin(_In_ const _LnkLstList &_list)
+    T* Begin(_In_ const _LnkLstList &_list)
       {
       return Begin(const_cast<_LnkLstList&>(_list));
       };
 
-    classOrStruct* Next()
+    T* Next()
       {
       lpCursor = lpNextCursor;
       if (lpCursor == NULL)
@@ -298,18 +298,18 @@ public:
   class IteratorRev
   {
   public:
-    classOrStruct* Begin(_In_ _LnkLstList &_list)
+    T* Begin(_In_ _LnkLstList &_list)
       {
       lpNextCursor = _list.lpTail;
       return Next();
       };
 
-    classOrStruct* Begin(_In_ const _LnkLstList &_list)
+    T* Begin(_In_ const _LnkLstList &_list)
       {
       return Begin(const_cast<_LnkLstList&>(_list));
       };
 
-    classOrStruct* Next()
+    T* Next()
       {
       lpCursor = lpNextCursor;
       if (lpCursor == NULL)

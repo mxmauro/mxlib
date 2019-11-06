@@ -451,7 +451,7 @@ BOOL RundownProt_Acquire(_In_ LONG volatile *lpnValue)
     initVal = newVal;
     if ((initVal & 0x80000000L) != 0)
       return FALSE;
-    newVal = _InterlockedCompareExchange(lpnValue, initVal+1, initVal);
+    newVal = _InterlockedCompareExchange(lpnValue, initVal + 1, initVal);
   }
   while (newVal != initVal);
   return TRUE;
