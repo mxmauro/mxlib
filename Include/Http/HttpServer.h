@@ -384,24 +384,24 @@ private:
   HRESULT OnDownloadStarted(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW, _In_ LPVOID lpUserParam);
 
 private:
-  class CRequestLimiter : public TRedBlackTreeNode<CRequestLimiter, PSOCKADDR_INET>
+  class CRequestLimiter : public virtual CBaseMemObj, public TRedBlackTreeNode<CRequestLimiter>
   {
   public:
-    CRequestLimiter(_In_ PSOCKADDR_INET lpAddr) : TRedBlackTreeNode<CRequestLimiter, PSOCKADDR_INET>()
+    CRequestLimiter(_In_ PSOCKADDR_INET lpAddr) : CBaseMemObj(), TRedBlackTreeNode<CRequestLimiter>()
       {
       MxMemCopy(&sAddr, lpAddr, sizeof(SOCKADDR_INET));
       _InterlockedExchange(&nCount, 1);
       return;
       };
 
-    virtual PSOCKADDR_INET GetNodeKey() const
+    static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ CRequestLimiter *lpLim1, _In_ CRequestLimiter *lpLim2)
       {
-      return &(const_cast<CRequestLimiter*>(this)->sAddr);
+      return ::MxMemCompare(&(lpLim1->sAddr), &(lpLim2->sAddr), sizeof(SOCKADDR_INET));
       };
 
-    virtual int CompareKeys(_In_ PSOCKADDR_INET key) const
+    static int SearchCompareFunc(_In_ LPVOID lpContext, _In_ PSOCKADDR_INET key, _In_ CRequestLimiter *lpLim)
       {
-      return ::MxMemCompare(key, GetNodeKey(), sizeof(SOCKADDR_INET));
+      return ::MxMemCompare(key, &(lpLim->sAddr), sizeof(SOCKADDR_INET));
       };
 
   public:
@@ -446,7 +446,7 @@ private:
 
   struct {
     LONG volatile nRwMutex;
-    TRedBlackTree<CRequestLimiter, PSOCKADDR_INET> cTree;
+    TRedBlackTree<CRequestLimiter> cTree;
   } sRequestLimiter;
 };
 

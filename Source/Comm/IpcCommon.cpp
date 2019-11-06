@@ -644,7 +644,7 @@ VOID CIpc::InternalFinalize()
   {
     {
       CAutoSlimRWLShared cConnListLock(&(sConnections.nRwMutex));
-      TRedBlackTree<CConnectionBase, SIZE_T>::Iterator it;
+      TRedBlackTree<CConnectionBase>::Iterator it;
 
       for (lpConn = it.Begin(sConnections.cTree); lpConn != NULL; lpConn = it.Next())
       {
@@ -860,7 +860,7 @@ CIpc::CConnectionBase* CIpc::CheckAndGetConnection(_In_opt_ HANDLE h)
     CAutoSlimRWLShared cConnListLock(&(sConnections.nRwMutex));
     CConnectionBase *lpConn;
 
-    lpConn = sConnections.cTree.Find((SIZE_T)h);
+    lpConn = sConnections.cTree.Find((SIZE_T)h, &CConnectionBase::SearchCompareFunc);
     if (lpConn != NULL)
     {
       if (lpConn->SafeAddRef() > 0)
@@ -1410,7 +1410,7 @@ BOOL CIpc::OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket, _I
 //-----------------------------------------------------------
 
 CIpc::CConnectionBase::CConnectionBase(_In_ CIpc *_lpIpc, _In_ CIpc::eConnectionClass _nClass) :
-                       TRefCounted<CBaseMemObj>(), TRedBlackTreeNode<CIpc::CConnectionBase,SIZE_T>()
+                       TRefCounted<CBaseMemObj>(), TRedBlackTreeNode<CIpc::CConnectionBase>()
 {
   lpIpc = _lpIpc;
   nClass = _nClass;
@@ -1836,6 +1836,8 @@ HRESULT CIpc::CConnectionBase::DoZeroRead(_In_ SIZE_T nPacketsCount, _Inout_ CPa
 
   while (nPacketsCount > 0)
   {
+    if (IsClosed() != FALSE)
+      return MX_E_Cancelled;
     lpPacket = lpIpc->GetPacket(this, CPacketBase::TypeZeroRead, 4096, FALSE);
     if (lpPacket == NULL)
       return E_OUTOFMEMORY;
@@ -1891,6 +1893,12 @@ HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacke
 
   while (nPacketsCount > 0)
   {
+    if (IsClosed() != FALSE)
+    {
+      if (lpReusePacket != NULL)
+        FreePacket(lpReusePacket);
+      return MX_E_Cancelled;
+    }
     if (lpReusePacket != NULL)
     {
       lpReusePacket->Reset(CPacketBase::TypeRead, this);
@@ -2009,6 +2017,9 @@ HRESULT CIpc::CConnectionBase::SendPackets(_Inout_ CPacketBase **lplpFirstPacket
 
   while ((*lpnChainLength) > 0)
   {
+    if (IsClosed() != FALSE)
+      return MX_E_Cancelled;
+
     //extract packets for this round
     lpChainStart = lpPrevPacket = (*lplpFirstPacket);
     lpCurrPacket = lpChainStart->GetChainedPacket();

@@ -1025,6 +1025,7 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl)
     return E_INVALIDARG;
   if (cUrl.GetHost()[0] == 0)
     return E_INVALIDARG;
+
   if (cUrl.GetPort() >= 0)
     nUrlPort = cUrl.GetPort();
   else if (cUrl.GetSchemeCode() == CUrl::SchemeHttps)
@@ -1074,7 +1075,7 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl)
     if (sResponse.cHttpCmn.GetParserState() != CHttpCommon::StateDone ||
         StrCompareW(sRequest.cUrl.GetScheme(), cUrl.GetScheme()) != 0 ||
         StrCompareW(sRequest.cUrl.GetHost(), szConnectHostW) != 0 ||
-        sRequest.cUrl.GetPort() != nConnectPort)
+        nUrlPort != nConnectPort)
     {
       cSocketMgr.Close(hConn, S_OK);
       hConn = NULL;
@@ -1099,7 +1100,6 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl)
     {
       GenerateRequestBoundary();
 
-      sRequest.cUrl.SetPort(nUrlPort);
       hRes = cSocketMgr.ConnectToServer(CSockets::FamilyIPv4, szConnectHostW, nConnectPort,
                                         MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnSocketCreate, this), NULL, &hConn);
     }
@@ -1487,12 +1487,9 @@ handle_redirect_or_auth_processbody:
                 CHttpHeaderRespLocation *lpHeader = sResponse.cHttpCmn.GetHeader<CHttpHeaderRespLocation>();
                 if (lpHeader != NULL)
                 {
+                  hRes = cUrlTemp.ParseFromString(lpHeader->GetLocation());
                   if (SUCCEEDED(hRes))
-                  {
-                    hRes = cUrlTemp.ParseFromString(lpHeader->GetLocation());
-                    if (SUCCEEDED(hRes))
-                      hRes = sRedirectOrRetryAuth.cUrl.Merge(cUrlTemp);
-                  }
+                    hRes = sRedirectOrRetryAuth.cUrl.Merge(cUrlTemp);
                 }
                 else
                 {
@@ -1800,28 +1797,28 @@ VOID CHttpClient::OnRedirectOrRetryAuth(_In_ LONG nTimerId, _In_ LPVOID lpUserDa
 VOID CHttpClient::OnResponseHeadersTimeout(_In_ LONG nTimerId, _In_ LPVOID lpUserData)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
+  HRESULT hRes;
 
   if (cAutoRundownProt.IsAcquired() != FALSE)
+    return;
+
+  hRes = S_OK;
+
   {
-    HRESULT hRes;
+    CCriticalSection::CAutoLock cLock(cMutex);
 
-    hRes = S_OK;
+    if (_InterlockedCompareExchange(&(sResponse.nTimerId), 0, nTimerId) == nTimerId)
     {
-      CCriticalSection::CAutoLock cLock(cMutex);
-
-      if (_InterlockedCompareExchange(&(sResponse.nTimerId), 0, nTimerId) == nTimerId)
+      if (nState == StateReceivingResponseHeaders || nState == StateReceivingResponseBody ||
+          nState == StateWaitingProxyTunnelConnectionResponse)
       {
-        if (nState == StateReceivingResponseHeaders || nState == StateReceivingResponseBody ||
-            nState == StateWaitingProxyTunnelConnectionResponse)
-        {
-          SetErrorOnRequestAndClose(hRes = MX_E_Timeout);
-        }
+        SetErrorOnRequestAndClose(hRes = MX_E_Timeout);
       }
     }
-    //raise error event if any
-    if (FAILED(hRes) && cErrorCallback)
-      cErrorCallback(this, hRes);
   }
+  //raise error event if any
+  if (FAILED(hRes) && cErrorCallback)
+    cErrorCallback(this, hRes);
   return;
 }
 
@@ -1899,7 +1896,9 @@ VOID CHttpClient::OnAfterSendRequestHeaders(_In_ CIpc *lpIpc, _In_ HANDLE h, _In
         nState = StateReceivingResponseHeaders;
 
         //set response headers timeout
+        cMutex.Unlock();
         hRes = SetupResponseHeadersTimeout();
+        cMutex.Lock();
       }
       else
       {
@@ -1925,7 +1924,7 @@ VOID CHttpClient::OnAfterSendRequestBody(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ L
                                          _In_ CIpc::CUserData *lpUserData)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
-  HRESULT hRes = S_OK;
+  BOOL bSetTimeouts;
 
   if (cAutoRundownProt.IsAcquired() == FALSE)
     return;
@@ -1933,17 +1932,27 @@ VOID CHttpClient::OnAfterSendRequestBody(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ L
   {
     CCriticalSection::CAutoLock cLock(cMutex);
 
-    if (h == hConn && nState == StateReceivingResponseHeaders)
-    {
-      //set response headers timeout
-      hRes = SetupResponseHeadersTimeout();
-    }
-    if (FAILED(hRes))
-      SetErrorOnRequestAndClose(hRes);
+    bSetTimeouts = (h == hConn && nState == StateReceivingResponseHeaders) ? TRUE : FALSE;
   }
-  //raise error event if any
-  if (FAILED(hRes) && cErrorCallback)
-    cErrorCallback(this, hRes);
+  //set response headers timeout
+  if (bSetTimeouts != FALSE)
+  {
+    HRESULT hRes;
+
+    hRes = SetupResponseHeadersTimeout();
+    if (FAILED(hRes))
+    {
+      {
+        CCriticalSection::CAutoLock cLock(cMutex);
+
+        SetErrorOnRequestAndClose(hRes);
+      }
+
+      //raise error event if any
+      if (cErrorCallback)
+        cErrorCallback(this, hRes);
+    }
+  }
   return;
 }
 

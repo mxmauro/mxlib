@@ -82,14 +82,14 @@ class CHostResolver : public TRefCounted<CBaseMemObj>
 {
   MX_DISABLE_COPY_CONSTRUCTOR(CHostResolver);
 public:
-  class CAsyncItem : public TRedBlackTreeNode<CAsyncItem, ULONG>
+  class CAsyncItem : public virtual CBaseMemObj, public TRedBlackTreeNode<CAsyncItem>
   {
     MX_DISABLE_COPY_CONSTRUCTOR(CAsyncItem);
   public:
     CAsyncItem(_In_ CHostResolver *_lpResolver, _In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily,
                _In_ DWORD dwTimeoutMs, _In_ PSOCKADDR_INET lpSockAddr, _In_ HostResolver::OnResultCallback cCallback,
                _In_ LPVOID lpUserData,
-               _In_ lpfnFreeAddrInfoExW _fnFreeAddrInfoExW) : TRedBlackTreeNode<CAsyncItem, ULONG>()
+               _In_ lpfnFreeAddrInfoExW _fnFreeAddrInfoExW) : CBaseMemObj(), TRedBlackTreeNode<CAsyncItem>()
       {
       lpResolver = _lpResolver;
       fnFreeAddrInfoExW = _fnFreeAddrInfoExW;
@@ -104,11 +104,6 @@ public:
       {
       ResetAsync();
       return;
-      };
-
-    virtual ULONG GetNodeKey() const
-      {
-      return (ULONG)nId;
       };
 
     VOID Setup(_In_z_ LPCWSTR szHostNameW, _In_ int _nDesiredFamily, _In_ DWORD _dwTimeoutMs,
@@ -151,6 +146,24 @@ public:
       hCancel = NULL;
       MxMemSet(&(sOvr), 0, sizeof(sOvr));
       return;
+      };
+
+    static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ CAsyncItem *lpAsyncItem1, _In_ CAsyncItem *lpAsyncItem2)
+      {
+      if ((ULONG)(lpAsyncItem1->nId) < (ULONG)(lpAsyncItem2->nId))
+        return -1;
+      if ((ULONG)(lpAsyncItem1->nId) > (ULONG)(lpAsyncItem2->nId))
+        return 1;
+      return 0;
+      };
+
+    static int SearchCompareFunc(_In_ LPVOID lpContext, _In_ ULONG key, _In_ CAsyncItem *lpAsyncItem)
+      {
+      if (key < (ULONG)(lpAsyncItem->nId))
+        return -1;
+      if (key > (ULONG)(lpAsyncItem->nId))
+        return 1;
+      return 0;
       };
 
   public:
@@ -210,7 +223,7 @@ private:
   lpfnGetAddrInfoExOverlappedResult fnGetAddrInfoExOverlappedResult;
   struct {
     LONG volatile nMutex;
-    TRedBlackTree<CAsyncItem, ULONG> cTree;
+    TRedBlackTree<CAsyncItem> cTree;
   } sAsyncTasks;
   struct {
     LONG volatile nMutex;
@@ -1171,7 +1184,7 @@ HRESULT CHostResolver::AddResolverCommon(_Out_ LONG volatile *lpnResolverId, _In
 
     _InterlockedExchange(lpnResolverId, lpNewAsyncItem->nId);
 
-    sAsyncTasks.cTree.Insert(lpNewAsyncItem, TRUE);
+    sAsyncTasks.cTree.Insert(lpNewAsyncItem, &CAsyncItem::InsertCompareFunc, TRUE);
 
     tv.tv_sec = (long)(lpNewAsyncItem->dwTimeoutMs / 1000);
     tv.tv_usec = (long)(lpNewAsyncItem->dwTimeoutMs % 1000);
@@ -1206,7 +1219,7 @@ VOID CHostResolver::RemoveResolver(_Out_ LONG volatile *lpnResolverId)
     {
       CFastLock cQueueLock(&(sAsyncTasks.nMutex));
 
-      lpAsyncItem = sAsyncTasks.cTree.Find(nResolver);
+      lpAsyncItem = sAsyncTasks.cTree.Find(nResolver, &CAsyncItem::SearchCompareFunc);
       if (lpAsyncItem != NULL)
       {
         //only running async tasks are in the tree and can be canceled

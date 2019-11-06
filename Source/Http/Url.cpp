@@ -1288,16 +1288,12 @@ parse_params:
       }
       //find the = sign
       i = FindChar(szUrlA, nPos, "=", NULL);
-      if (i == (SIZE_T)-1)
-        i = nPos;
-      if (i > 0)
-      {
-        //from 0 to 'i' we have the name
-        //from 'i+1' to 'nPos' we have the value
-        hRes = AddQueryString(szUrlA, szUrlA+(i+1), nPos-(i+1), i);
-        if (FAILED(hRes))
-          goto done;
-      }
+      if (i != (SIZE_T)-1)
+        hRes = AddQueryString(szUrlA, szUrlA + (i + 1), nPos - (i + 1), i);
+      else
+        hRes = AddQueryString(szUrlA, "", 0, nPos);
+      if (FAILED(hRes))
+        goto done;
       szUrlA += nPos;
       nSrcLen -= nPos;
     }

@@ -72,44 +72,39 @@ public:
 
   virtual BOOL SortedInsert(_In_ TType elem)
     {
-    SIZE_T nIndex, nMin, nMax;
+    SIZE_T nIndex;
 
-    nMin = 1; //shifted by one to avoid problems with negative indexes
-    nMax = nCount; //if count == 0, loop will not enter
-    while (nMin <= nMax)
+    if (SetSize(nCount + 1) == FALSE)
+      return FALSE;
+    nIndex = nCount;
+    while (nIndex > 0 && elem < lpItems[nIndex - 1])
     {
-      nIndex = nMin + (nMax - nMin) / 2;
-      if (elem == lpItems[nIndex - 1])
-      {
-        nMin = nIndex;
-        break;
-      }
-      if (elem < lpItems[nIndex - 1])
-        nMax = nIndex - 1;
-      else
-        nMin = nIndex + 1;
+      lpItems[nIndex] = lpItems[nIndex - 1];
+      nIndex--;
     }
-    return InsertElementAt(elem, nMin - 1);
+    lpItems[nIndex] = elem;
+    nCount++;
+    return TRUE;
     };
 
   template<class _Comparator>
   BOOL SortedInsert(_In_ TType elem, _In_ _Comparator lpCompareFunc, _In_opt_ LPVOID lpContext = NULL,
                     _In_opt_ BOOL bDontInsertDuplicates = FALSE, _Out_opt_ LPBOOL lpbAlreadyOnList = NULL)
     {
-    SIZE_T nIndex, nMin, nMax;
-    int res;
+    SIZE_T nIndex;
 
     if (lpbAlreadyOnList != NULL)
       *lpbAlreadyOnList = FALSE;
     if (lpCompareFunc == NULL)
       return FALSE;
-    nMin = 1; //shifted by one to avoid problems with negative indexes
-    nMax = nCount; //if count == 0, loop will not enter
-    while (nMin <= nMax)
+
+    if (SetSize(nCount + 1) == FALSE)
+      return FALSE;
+    nIndex = nCount;
+    while (nIndex > 0)
     {
-      nIndex = nMin + (nMax - nMin) / 2;
-      res = lpCompareFunc(lpContext, &elem, &lpItems[nIndex - 1]);
-      if (res == 0)
+      int comp = lpCompareFunc(lpContext, &elem, &lpItems[nIndex - 1]);
+      if (comp == 0)
       {
         if (bDontInsertDuplicates != FALSE)
         {
@@ -117,44 +112,46 @@ public:
             *lpbAlreadyOnList = TRUE;
           return TRUE;
         }
-        nMin = nIndex;
-        break;
       }
-      if (res < 0)
-        nMax = nIndex - 1;
-      else
-        nMin = nIndex + 1;
+      if (comp >= 0)
+        break;
+      lpItems[nIndex] = lpItems[nIndex - 1];
+      nIndex--;
     }
-    return InsertElementAt(elem, nMin - 1);
+    lpItems[nIndex] = elem;
+    nCount++;
+    return TRUE;
     };
 
   template<class _Comparator, class _KeyType>
-  TType* BinarySearchPtr(_In_ _KeyType lpKey, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
+  TType* BinarySearchPtr(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
-    SIZE_T nIndex = BinarySearch(lpKey, lpSearchFunc, lpContext);
+    SIZE_T nIndex = BinarySearch(_key, lpSearchFunc, lpContext);
     return (nIndex != (SIZE_T)-1) ? lpItems + nIndex : NULL;
     };
 
   template<class _Comparator, class _KeyType>
-  SIZE_T BinarySearch(_In_ _KeyType lpKey, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
+  SIZE_T BinarySearch(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
-    SIZE_T nMid, nMin, nMax;
-    int res;
+    SIZE_T nBase, n;
 
-    if (lpKey == NULL || lpSearchFunc == NULL)
+    if (lpSearchFunc == NULL)
       return (SIZE_T)-1;
-    nMin = 1; //shifted by one to avoid problems with negative indexes
-    nMax = nCount; //if count == 0, loop will not enter
-    while (nMin <= nMax)
+    nBase = 0;
+    n = nCount;
+    while (n > 0)
     {
-      nMid = nMin + (nMax - nMin) / 2;
-      res = lpSearchFunc(lpContext, lpKey, &lpItems[nMid - 1]);
-      if (res == 0)
-        return nMid - 1;
-      if (res < 0)
-        nMax = nMid - 1;
-      else
-        nMin = nMid + 1;
+      SIZE_T nMid = nBase + (n >> 1);
+
+      int comp = lpSearchFunc(lpContext, _key, &lpItems[nMid]);
+      if (comp == 0)
+        return nMid;
+      if (comp > 0)
+      {
+        nBase = nMid + 1;
+        n--;
+      }
+      n >>= 1;
     }
     return (SIZE_T)-1;
     };
@@ -484,22 +481,20 @@ public:
   BOOL SortedInsert(_In_ TType *lpElem, _In_ _Comparator lpCompareFunc, _In_opt_ LPVOID lpContext = NULL,
                     _In_opt_ BOOL bDontInsertDuplicates = FALSE, _Out_opt_ LPBOOL lpbAlreadyOnList = NULL)
     {
-    SIZE_T nIndex, nMin, nMax;
-    int res;
+    SIZE_T nIndex;
 
     if (lpbAlreadyOnList != NULL)
       *lpbAlreadyOnList = FALSE;
     if (lpElem == NULL && lpCompareFunc == NULL)
       return FALSE;
-    if (nCount == 0)
-      return InsertElementAt(lpElem);
-    nMin = 1; //shifted by one to avoid problems with negative indexes
-    nMax = nCount;
-    while (nMin <= nMax)
+
+    if (SetSize(nCount + 1) == FALSE)
+      return FALSE;
+    nIndex = nCount;
+    while (nIndex > 0)
     {
-      nIndex = (nMin + nMax) / 2;
-      res = lpCompareFunc(lpContext, lpElem, &lpItems[nIndex - 1]);
-      if (res == 0)
+      int comp = lpCompareFunc(lpContext, lpElem, &lpItems[nIndex - 1]);
+      if (comp == 0)
       {
         if (bDontInsertDuplicates != FALSE)
         {
@@ -507,44 +502,46 @@ public:
             *lpbAlreadyOnList = TRUE;
           return TRUE;
         }
-        nMin = nIndex;
-        break;
       }
-      if (res < 0)
-        nMax = nIndex - 1;
-      else
-        nMin = nIndex + 1;
+      if (comp >= 0)
+        break;
+      MxMemCopy(&lpItems[nIndex], &lpItems[nIndex - 1], sizeof(TType));
+      nIndex--;
     }
-    return InsertElementAt(lpElem, nMin - 1);
+    MxMemCopy(&lpItems[nIndex], lpElem, sizeof(TType));
+    nCount++;
+    return TRUE;
     };
 
   template<class _Comparator, class _KeyType>
-  TType* BinarySearchPtr(_In_ _KeyType lpKey, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
+  TType* BinarySearchPtr(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
-    SIZE_T nIndex = BinarySearch(lpKey, lpSearchFunc, lpContext);
+    SIZE_T nIndex = BinarySearch(_key, lpSearchFunc, lpContext);
     return (nIndex != (SIZE_T)-1) ? lpItems + nIndex : NULL;
     };
 
   template<class _Comparator, class _KeyType>
-  SIZE_T BinarySearch(_In_ _KeyType lpKey, _In_ _Comparator lpCompareFunc, _In_opt_ LPVOID lpContext = NULL)
+  SIZE_T BinarySearch(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
-    SIZE_T nMid, nMin, nMax;
-    int res;
+    SIZE_T nBase, n;
 
-    if (lpKey == NULL || lpCompareFunc == NULL)
+    if (_key == NULL || lpSearchFunc == NULL)
       return (SIZE_T)-1;
-    nMin = 1; //shifted by one to avoid problems with negative indexes
-    nMax = nCount; //if count == 0, loop will not enter
-    while (nMin <= nMax)
+    nBase = 0;
+    n = nCount;
+    while (n > 0)
     {
-      nMid = nMin + (nMax - nMin) / 2;
-      res = lpCompareFunc(lpContext, lpKey, &lpItems[nMid - 1]);
-      if (res == 0)
-        return nMid - 1;
-      if (res < 0)
-        nMax = nMid - 1;
-      else
-        nMin = nMid + 1;
+      SIZE_T nMid = nBase + (n >> 1);
+
+      int comp = lpSearchFunc(lpContext, _key, &lpItems[nMid]);
+      if (comp == 0)
+        return nMid;
+      if (comp > 0)
+      {
+        nBase = nMid + 1;
+        n--;
+      }
+      n >>= 1;
     }
     return (SIZE_T)-1;
     };
