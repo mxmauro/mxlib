@@ -212,12 +212,12 @@ DukTape::duk_ret_t CJsMySqlPlugin::Connect()
   }
 
   //default options
-  sOptions.nConnectTimeout = 30;
-  sOptions.nReadTimeout = sOptions.nWriteTimeout = 45;
+  sOptions.nConnectTimeout = 30000;
+  sOptions.nReadTimeout = sOptions.nWriteTimeout = 45000;
   if (nOptionsParam != DUK_IDX_MAX)
   {
     //connect timeout option
-    DukTape::duk_get_prop_string(lpCtx, 0, "connectTimeout");
+    DukTape::duk_get_prop_string(lpCtx, 0, "connectTimeoutMs");
     if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
     {
       sOptions.nConnectTimeout = CJavascriptVM::GetInt(lpCtx, -1);
@@ -226,7 +226,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::Connect()
     }
     DukTape::duk_pop(lpCtx);
     //read timeout option
-    DukTape::duk_get_prop_string(lpCtx, 0, "readTimeout");
+    DukTape::duk_get_prop_string(lpCtx, 0, "readTimeoutMs");
     if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
     {
       sOptions.nReadTimeout = CJavascriptVM::GetInt(lpCtx, -1);
@@ -235,7 +235,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::Connect()
     }
     DukTape::duk_pop(lpCtx);
     //write timeout option
-    DukTape::duk_get_prop_string(lpCtx, 0, "writeTimeout");
+    DukTape::duk_get_prop_string(lpCtx, 0, "writeTimeoutMs");
     if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
     {
       sOptions.nWriteTimeout = CJavascriptVM::GetInt(lpCtx, -1);
