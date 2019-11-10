@@ -113,51 +113,6 @@ namespace MX {
 CJsMySqlPlugin::CJsMySqlPlugin(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
 {
   lpInternal = NULL;
-  //default options
-  sOptions.nConnectTimeout = 30;
-  sOptions.nReadTimeout = sOptions.nWriteTimeout = 45;
-
-  //has options in constructor?
-  if (DukTape::duk_get_top(lpCtx) > 0)
-  {
-    if (duk_is_object(lpCtx, 0) == 1)
-    {
-      //connect timeout option
-      DukTape::duk_get_prop_string(lpCtx, 0, "connectTimeout");
-      if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
-      {
-        if (DukTape::duk_is_boolean(lpCtx, -1) != 0)
-          sOptions.nConnectTimeout = (DukTape::duk_require_boolean(lpCtx, -1) != 0) ? 1 : 0;
-        else
-          sOptions.nConnectTimeout = (long)DukTape::duk_require_int(lpCtx, -1);
-      }
-      DukTape::duk_pop(lpCtx);
-      //read timeout option
-      DukTape::duk_get_prop_string(lpCtx, 0, "readTimeout");
-      if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
-      {
-        if (DukTape::duk_is_boolean(lpCtx, -1) != 0)
-          sOptions.nReadTimeout = (DukTape::duk_require_boolean(lpCtx, -1) != 0) ? 1 : 0;
-        else
-          sOptions.nReadTimeout = (long)DukTape::duk_require_int(lpCtx, -1);
-      }
-      DukTape::duk_pop(lpCtx);
-      //write timeout option
-      DukTape::duk_get_prop_string(lpCtx, 0, "writeTimeout");
-      if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
-      {
-        if (DukTape::duk_is_boolean(lpCtx, -1) != 0)
-          sOptions.nWriteTimeout = (DukTape::duk_require_boolean(lpCtx, -1) != 0) ? 1 : 0;
-        else
-          sOptions.nWriteTimeout = (long)DukTape::duk_require_int(lpCtx, -1);
-      }
-      DukTape::duk_pop(lpCtx);
-    }
-    else if (duk_is_null_or_undefined(lpCtx, 0) == 0)
-    {
-      MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
-    }
-  }
   return;
 }
 
@@ -213,14 +168,29 @@ DukTape::duk_ret_t CJsMySqlPlugin::Connect()
 {
   DukTape::duk_context *lpCtx = GetContext();
   LPCSTR szHostA, szUserNameA, szPasswordA, szDbNameA;
-  DukTape::duk_idx_t nParamsCount;
+  DukTape::duk_idx_t nParamsCount, nOptionsParam;
   int nPort;
   long nTemp;
+  struct {
+    long nConnectTimeout;
+    long nReadTimeout, nWriteTimeout;
+  } sOptions;
   HRESULT hRes;
 
   Disconnect();
   //get parameters
   nParamsCount = DukTape::duk_get_top(lpCtx);
+
+  //last one may be options
+  nOptionsParam = DUK_IDX_MAX;
+  if (nParamsCount > 0)
+  {
+    if (duk_is_object(lpCtx, nParamsCount - 1) == 1)
+    {
+      nParamsCount--;
+      nOptionsParam = nParamsCount;
+    }
+  }
   if (nParamsCount < 1 || nParamsCount > 5)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
   szHostA = DukTape::duk_require_string(lpCtx, 0);
@@ -240,6 +210,41 @@ DukTape::duk_ret_t CJsMySqlPlugin::Connect()
     if (nPort < 1 || nPort > 65535)
       MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
   }
+
+  //default options
+  sOptions.nConnectTimeout = 30;
+  sOptions.nReadTimeout = sOptions.nWriteTimeout = 45;
+  if (nOptionsParam != DUK_IDX_MAX)
+  {
+    //connect timeout option
+    DukTape::duk_get_prop_string(lpCtx, 0, "connectTimeout");
+    if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
+    {
+      sOptions.nConnectTimeout = CJavascriptVM::GetInt(lpCtx, -1);
+      if (sOptions.nConnectTimeout < 0)
+        MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+    }
+    DukTape::duk_pop(lpCtx);
+    //read timeout option
+    DukTape::duk_get_prop_string(lpCtx, 0, "readTimeout");
+    if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
+    {
+      sOptions.nReadTimeout = CJavascriptVM::GetInt(lpCtx, -1);
+      if (sOptions.nReadTimeout < 0)
+        MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+    }
+    DukTape::duk_pop(lpCtx);
+    //write timeout option
+    DukTape::duk_get_prop_string(lpCtx, 0, "writeTimeout");
+    if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
+    {
+      sOptions.nWriteTimeout = CJavascriptVM::GetInt(lpCtx, -1);
+      if (sOptions.nWriteTimeout < 0)
+        MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+    }
+    DukTape::duk_pop(lpCtx);
+  }
+
   //initialize APIs
   hRes = Internals::API::MySqlInitialize();
   if (FAILED(hRes))
@@ -258,18 +263,18 @@ DukTape::duk_ret_t CJsMySqlPlugin::Connect()
   }
   if (sOptions.nConnectTimeout > 0)
   {
-    nTemp = sOptions.nConnectTimeout;
+    nTemp = sOptions.nConnectTimeout / 1000;
     _CALLAPI(mysql_options)(jsmysql_data->lpDB, MYSQL_OPT_CONNECT_TIMEOUT, &nTemp);
   }
   _CALLAPI(mysql_options)(jsmysql_data->lpDB, MYSQL_OPT_GUESS_CONNECTION, L"");
   if (sOptions.nReadTimeout > 0)
   {
-    nTemp = sOptions.nReadTimeout;
+    nTemp = sOptions.nReadTimeout / 1000;
     _CALLAPI(mysql_options)(jsmysql_data->lpDB, MYSQL_OPT_READ_TIMEOUT, &nTemp);
   }
   if (sOptions.nWriteTimeout > 0)
   {
-    nTemp = sOptions.nWriteTimeout;
+    nTemp = sOptions.nWriteTimeout / 1000;
     _CALLAPI(mysql_options)(jsmysql_data->lpDB, MYSQL_OPT_WRITE_TIMEOUT, &nTemp);
   }
   nTemp = 0; //<<---Seeing LibMariaDB code, this fix the issue

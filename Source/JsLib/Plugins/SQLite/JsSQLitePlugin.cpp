@@ -239,7 +239,7 @@ DukTape::duk_ret_t CJsSQLitePlugin::Connect()
   Disconnect();
   //get parameters
   nParamsCount = DukTape::duk_get_top(lpCtx);
-  if (nParamsCount < 1)
+  if (nParamsCount < 1 || nParamsCount > 2)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
 
   szDatabaseNameA = DukTape::duk_require_string(lpCtx, 0);
@@ -248,7 +248,7 @@ DukTape::duk_ret_t CJsSQLitePlugin::Connect()
   bDontCreate = FALSE;
   bReadOnly = FALSE;
   dwBusyTimeoutMs = _DEFAULT_BUSY_TIMEOUT_MS;
-  if (nParamsCount > 1)
+  if (nParamsCount == 2)
   {
     if (duk_is_object(lpCtx, 1) == 1)
     {

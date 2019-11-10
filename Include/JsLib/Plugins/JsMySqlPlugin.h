@@ -82,10 +82,6 @@ private:
 
 private:
   LPVOID lpInternal;
-  struct {
-    long nConnectTimeout;
-    long nReadTimeout, nWriteTimeout;
-  } sOptions;
 };
 
 //-----------------------------------------------------------
