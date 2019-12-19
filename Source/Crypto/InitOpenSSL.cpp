@@ -33,6 +33,8 @@
 
 #define OPENSSL_FINALIZER_PRIORITY 10000
 
+#define AVAILABLE_CIPHER_SUITES "ALL:!EXPORT:!LOW:!aNULL:!eNULL:!SSLv2:!ADH:!EDH:!DH:!IDEA:!FZA:!RC4"
+
 //-----------------------------------------------------------
 
 static LONG volatile nInitialized = 0;
@@ -114,10 +116,6 @@ HRESULT GetLastErrorCode(_In_ BOOL bDefaultIsInvalidData)
 SSL_CTX* GetSslContext(_In_ BOOL bServerSide, _In_z_ LPCSTR szVersionA)
 {
   static LONG volatile nSslContextMutex = 0;
-  static const WORD aDisallowedCiphers[] ={
-    0x000B, 0x000C, 0x000D, 0x0011, 0x0012, 0x0013, 0x002F, 0x0030, 0x0031, 0x0032, 0x0033, 0x0034,
-    0x0035, 0x0036, 0x0037, 0x0038, 0x0039, 0x003A
-  };
   int idx;
 
   if (szVersionA == NULL)
@@ -136,57 +134,13 @@ SSL_CTX* GetSslContext(_In_ BOOL bServerSide, _In_z_ LPCSTR szVersionA)
   {
     MX::CFastLock cSslLock(&nSslContextMutex);
     SSL_CTX *lpSslCtx;
-    SSL *lpSsl;
-    CStringA cStrCipherListA;
-    STACK_OF(SSL_CIPHER) *lpCiphers;
-    const SSL_CIPHER *lpCipher;
-    unsigned long _id;
-    int cipherIdx;
-    SIZE_T i;
-    BOOL bEnable;
 
     if (lpSslContexts[(bServerSide != FALSE) ? 1 : 0][idx] == NULL)
     {
       lpSslCtx = SSL_CTX_new((bServerSide != FALSE) ? TLS_server_method() : TLS_client_method());
       if (lpSslCtx == NULL)
         return NULL;
-      if (cStrCipherListA.Copy("DEFAULT:!NULL:!aNULL:!IDEA:!FZA") == FALSE)
-      {
-        SSL_CTX_free(lpSslCtx);
-        return NULL;
-      }
-      lpSsl = SSL_new(lpSslCtx);
-      if (lpSsl == NULL)
-        return NULL;
-      lpCiphers = SSL_get_ciphers(lpSsl);
-      for (cipherIdx = 0; cipherIdx < sk_SSL_CIPHER_num(lpCiphers); cipherIdx++)
-      {
-        bEnable = TRUE;
-        lpCipher = sk_SSL_CIPHER_value(lpCiphers, cipherIdx);
-        if (SSL_CIPHER_get_bits(lpCipher, NULL) < 80)
-        {
-          bEnable = FALSE;
-        }
-        else
-        {
-          _id = SSL_CIPHER_get_id(lpCipher);
-          for (i=0; i<MX_ARRAYLEN(aDisallowedCiphers) && _id != (unsigned long)aDisallowedCiphers[i]; i++);
-          if (i < MX_ARRAYLEN(aDisallowedCiphers))
-            bEnable = FALSE;
-        }
-        if (bEnable == FALSE)
-        {
-          if (cStrCipherListA.ConcatN(":!", 2) == FALSE ||
-              cStrCipherListA.Concat(SSL_CIPHER_get_name(lpCipher)) == FALSE)
-          {
-            SSL_free(lpSsl);
-            SSL_CTX_free(lpSslCtx);
-            return NULL;
-          }
-        }
-      }
-      SSL_free(lpSsl);
-      if (SSL_CTX_set_cipher_list(lpSslCtx, (LPSTR)cStrCipherListA) <= 0)
+      if (SSL_CTX_set_cipher_list(lpSslCtx, AVAILABLE_CIPHER_SUITES) <= 0)
       {
         SSL_CTX_free(lpSslCtx);
         return NULL;
