@@ -193,7 +193,8 @@ HRESULT CZipFile::AddStream(_In_z_ LPCWSTR szFileNameInZipW, _In_ MX::CStream *l
     return hRes;
 
   hRes = mzError_2_HRESULT(mz_zip_entry_write_open(zc_data->zip_handle, &file_info, MZ_COMPRESS_LEVEL_BEST, 0,
-                                                   (LPCSTR)cStrPasswordA_Utf8));
+                                                   (cStrPasswordA_Utf8.IsEmpty() != FALSE)
+                                                   ? NULL : (LPCSTR)cStrPasswordA_Utf8));
   if (SUCCEEDED(hRes))
   {
     ULONGLONG ullToRead;
@@ -265,7 +266,9 @@ HRESULT CZipFile::OpenFile(_In_z_ LPCWSTR szFileNameInZipW, _In_opt_z_ LPCWSTR s
   if (mz_zip_locate_entry(zc_data->zip_handle, (LPCSTR)cStrFileNameA_Utf8, 1) != MZ_OK)
     return MX_E_FileNotFound;
 
-  hRes = mzError_2_HRESULT(mz_zip_entry_read_open(zc_data->zip_handle, 0, (LPCSTR)cStrPasswordA_Utf8));
+  hRes = mzError_2_HRESULT(mz_zip_entry_read_open(zc_data->zip_handle, 0,
+                                                  ((cStrPasswordA_Utf8.IsEmpty() != FALSE)
+                                                   ? NULL : (LPCSTR)cStrPasswordA_Utf8)));
   if (FAILED(hRes))
     return hRes;
 
