@@ -137,7 +137,7 @@ static inline BOOL __InterlockedIncrementIfLessThan(_In_ LONG volatile *lpnValue
 
 namespace MX {
 
-CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDispatcherPool)
+CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDispatcherPool), CNonCopyableObj()
 {
   SIZE_T i;
 
@@ -771,7 +771,7 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket,
 //-----------------------------------------------------------
 
 CSockets::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass,
-                                   _In_ eFamily _nFamily) : CConnectionBase(lpIpc, nClass)
+                                   _In_ eFamily _nFamily) : CConnectionBase(lpIpc, nClass), CNonCopyableObj()
 {
   SlimRWL_Initialize(&nRwHandleInUse);
   MxMemSet(&sAddr, 0, sizeof(sAddr));

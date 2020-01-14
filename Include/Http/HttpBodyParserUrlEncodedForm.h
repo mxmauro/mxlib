@@ -27,10 +27,10 @@
 
 namespace MX {
 
-class CHttpBodyParserUrlEncodedForm : public CHttpBodyParserFormBase
+class CHttpBodyParserUrlEncodedForm : public CHttpBodyParserFormBase, public CNonCopyableObj
 {
 public:
-  CHttpBodyParserUrlEncodedForm(_In_ DWORD dwMaxFieldSize=256000);
+  CHttpBodyParserUrlEncodedForm(_In_ DWORD dwMaxFieldSize = 256000);
   ~CHttpBodyParserUrlEncodedForm();
 
 protected:

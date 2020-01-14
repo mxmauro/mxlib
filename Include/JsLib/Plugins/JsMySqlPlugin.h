@@ -26,9 +26,8 @@
 
 namespace MX {
 
-class CJsMySqlPlugin : public CJsObjectBase
+class CJsMySqlPlugin : public CJsObjectBase, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CJsMySqlPlugin);
 public:
   CJsMySqlPlugin(_In_ DukTape::duk_context *lpCtx);
   ~CJsMySqlPlugin();

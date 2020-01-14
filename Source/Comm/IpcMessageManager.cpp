@@ -61,7 +61,8 @@ namespace MX {
 CIpcMessageManager::CIpcMessageManager(_In_ CIoCompletionPortThreadPool &_cWorkerPool, _In_ CIpc *_lpIpc,
                                        _In_ HANDLE _hConn, _In_ OnMessageReceivedCallback _cMessageReceivedCallback,
                                        _In_opt_ DWORD _dwMaxMessageSize, _In_opt_ DWORD _dwProtocolVersion) :
-                                       TRefCounted<CBaseMemObj>(), CLoggable(), cWorkerPool(_cWorkerPool)
+                                       TRefCounted<CBaseMemObj>(), CLoggable(), CNonCopyableObj(),
+                                       cWorkerPool(_cWorkerPool)
 {
   lpIpc = _lpIpc;
   hConn = _hConn;

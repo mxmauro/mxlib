@@ -30,7 +30,7 @@ namespace MX {
 
 class CHostResolver;
 
-class CSockets : public CIpc
+class CSockets : public CIpc, public CNonCopyableObj
 {
 public:
   typedef enum {
@@ -65,9 +65,8 @@ public:
 private:
   friend class CConnection;
 
-  class CConnection : public CConnectionBase
+  class CConnection : public CConnectionBase, public CNonCopyableObj
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CConnection);
   public:
     CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass, _In_ eFamily nFamily);
     ~CConnection();

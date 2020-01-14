@@ -26,9 +26,8 @@
 
 namespace MX {
 
-class CJsonWebTokenPlugin : public CJsObjectBase
+class CJsonWebTokenPlugin : public CJsObjectBase, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CJsonWebTokenPlugin);
 public:
   CJsonWebTokenPlugin(_In_ DukTape::duk_context *lpCtx);
   ~CJsonWebTokenPlugin();

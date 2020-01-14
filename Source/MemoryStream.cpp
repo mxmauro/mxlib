@@ -23,7 +23,7 @@
 
 namespace MX {
 
-CMemoryStream::CMemoryStream(_In_opt_ SIZE_T nAllocationGranularity) : CStream()
+CMemoryStream::CMemoryStream(_In_opt_ SIZE_T nAllocationGranularity) : CStream(), CNonCopyableObj()
 {
   lpData = NULL;
   nCurrPos = nSize = nAllocated = 0;

@@ -72,16 +72,15 @@ HRESULT StrToDoubleW(_In_ LPCWSTR szSrcW, _In_ SIZE_T nLen, double *lpnValue);
 
 //-----------------------------------------------------------
 
-class CStringA : public virtual CBaseMemObj
+class CStringA : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CStringA);
 public:
   CStringA();
   ~CStringA();
 
   virtual operator LPSTR() const
     {
-    return (szStrA != NULL) ? szStrA : "";
+    return (LPSTR)((szStrA != NULL) ? szStrA : "");
     };
   virtual operator LPCSTR() const
     {
@@ -163,11 +162,7 @@ protected:
 
 class CSecureStringA : public CStringA
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CSecureStringA);
 public:
-  CSecureStringA() : CStringA()
-    { };
-
   VOID Empty();
 
   BOOL Concat(_In_ LONGLONG nSrc);
@@ -178,16 +173,15 @@ public:
 
 //-----------------------------------------------------------
 
-class CStringW : public virtual CBaseMemObj
+class CStringW : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CStringW);
 public:
   CStringW();
   ~CStringW();
 
   virtual operator LPWSTR() const
     {
-    return (szStrW != NULL) ? szStrW : L"";
+    return (LPWSTR)((szStrW != NULL) ? szStrW : L"");
     };
   virtual operator LPCWSTR() const
     {
@@ -269,11 +263,7 @@ protected:
 
 class CSecureStringW : public CStringW
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CSecureStringW);
 public:
-  CSecureStringW() : CStringW()
-    { };
-
   VOID Empty();
 
   BOOL Concat(_In_ LONGLONG nSrc);

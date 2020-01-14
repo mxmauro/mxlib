@@ -25,7 +25,7 @@
 
 namespace MX {
 
-CPropertyBag::CPropertyBag() : CBaseMemObj()
+CPropertyBag::CPropertyBag() : CBaseMemObj(), CNonCopyableObj()
 {
   return;
 }

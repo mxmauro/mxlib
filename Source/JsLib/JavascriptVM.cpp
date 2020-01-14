@@ -1191,12 +1191,14 @@ VOID CJavascriptVM::ThrowWindowsError(_In_ DukTape::duk_context *lpCtx, _In_ HRE
 DukTape::duk_ret_t CJavascriptVM::OnNodeJsResolveModule(_In_ DukTape::duk_context *lpCtx)
 {
   MX::CStringA cStrTempA;
-  LPSTR szRequestedIdA = (LPSTR)DukTape::duk_get_string(lpCtx, 0);
-  LPCSTR szParentIdA = DukTape::duk_get_string(lpCtx, 1);
+  LPCSTR szRequestedIdA, szParentIdA;
   LPSTR p, q, q_last;
 
+  szParentIdA = DukTape::duk_get_string(lpCtx, 1);
   if (szParentIdA == NULL)
     szParentIdA = "";
+
+  szRequestedIdA = (LPCSTR)DukTape::duk_get_string(lpCtx, 0);
   if (szRequestedIdA == NULL)
     szRequestedIdA = "";
 
@@ -1228,19 +1230,16 @@ DukTape::duk_ret_t CJavascriptVM::OnNodeJsResolveModule(_In_ DukTape::duk_contex
   {
     if (cStrTempA.Format("%s/../%s", szParentIdA, szRequestedIdA) == FALSE)
       MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
-    szRequestedIdA = (LPSTR)cStrTempA;
   }
   else
   {
     if (cStrTempA.Copy(szRequestedIdA) == FALSE)
       MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
   }
-  szRequestedIdA = (LPSTR)cStrTempA;
 
   // Resolution loop.  At the top of the loop we're expecting a valid
   // term: '.', '..', or a non-empty identifier not starting with a period.
-  p = szRequestedIdA;
-  q = szRequestedIdA;
+  p = q = (LPSTR)cStrTempA;
   for (;;)
   {
     DukTape::duk_uint_fast8_t c;
@@ -1271,8 +1270,8 @@ DukTape::duk_ret_t CJavascriptVM::OnNodeJsResolveModule(_In_ DukTape::duk_contex
         // q[-2] = last char of previous component (or beyond start of buffer)
         p++;  // eat (first) input slash
 
-        MX_ASSERT(q >= szRequestedIdA);
-        if (q == szRequestedIdA)
+        MX_ASSERT(q >= (LPSTR)cStrTempA);
+        if (q == (LPSTR)cStrTempA)
           goto resolve_error;
 
         MX_ASSERT(*(q - 1) == '/');
@@ -1280,8 +1279,8 @@ DukTape::duk_ret_t CJavascriptVM::OnNodeJsResolveModule(_In_ DukTape::duk_contex
         for (;;)
         {
           //Backtrack to previous slash or start of buffer.
-          MX_ASSERT(q >= szRequestedIdA);
-          if (q == szRequestedIdA)
+          MX_ASSERT(q >= (LPSTR)cStrTempA);
+          if (q == (LPSTR)cStrTempA)
             break;
           if (*(q - 1) == '/')
             break;
@@ -1313,12 +1312,13 @@ eat_dup_slashes:
       p++;
   }
 loop_done:
-  MX_ASSERT(q >= szRequestedIdA);
-  DukTape::duk_push_lstring(lpCtx, szRequestedIdA, (size_t)(q - szRequestedIdA));
+  p = (LPSTR)cStrTempA;
+  MX_ASSERT(q >= p);
+  DukTape::duk_push_lstring(lpCtx, p, (size_t)(q - p));
   return 1;
 
 resolve_error:
-  MX_JS_THROW_ERROR(lpCtx, DUK_ERR_TYPE_ERROR, "cannot resolve module id: %s", szRequestedIdA);
+  MX_JS_THROW_ERROR(lpCtx, DUK_ERR_TYPE_ERROR, "cannot resolve module id: %s", (LPCSTR)cStrTempA);
   return 0;
 }
 

@@ -27,9 +27,8 @@
 
 namespace MX {
 
-class CIpcMessageManager : public virtual TRefCounted<CBaseMemObj>, public CLoggable
+class CIpcMessageManager : public virtual TRefCounted<CBaseMemObj>, public CLoggable, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CIpcMessageManager);
 public:
   typedef struct tagMULTIBLOCK {
     LPVOID lpMsg;
@@ -49,7 +48,7 @@ public:
 public:
   CIpcMessageManager(_In_ CIoCompletionPortThreadPool &cWorkerPool, _In_ CIpc *lpIpc, _In_ HANDLE hConn,
                      _In_ OnMessageReceivedCallback cMessageReceivedCallback,
-                     _In_opt_ DWORD dwMaxMessageSize=0x0FFFFFFFUL, _In_opt_ DWORD dwProtocolVersion=1);
+                     _In_opt_ DWORD dwMaxMessageSize = 0x0FFFFFFFUL, _In_opt_ DWORD dwProtocolVersion = 1);
   ~CIpcMessageManager();
 
   BOOL HasPending() const;

@@ -39,7 +39,7 @@ static lpfnGetQueuedCompletionStatusEx volatile fnGetQueuedCompletionStatusEx = 
 
 namespace MX {
 
-CIoCompletionPort::CIoCompletionPort()
+CIoCompletionPort::CIoCompletionPort() : CBaseMemObj(), CNonCopyableObj()
 {
   if (fnGetQueuedCompletionStatusEx == NULL)
   {
@@ -168,7 +168,7 @@ HRESULT CIoCompletionPort::Get(_Out_ LPOVERLAPPED_ENTRY lpEntries, _Inout_ ULONG
 
 //-----------------------------------------------------------
 
-CIoCompletionPortThreadPool::CIoCompletionPortThreadPool() : CBaseMemObj()
+CIoCompletionPortThreadPool::CIoCompletionPortThreadPool() : CBaseMemObj(), CNonCopyableObj()
 {
   SlimRWL_Initialize(&nSlimMutex);
   cThreadStartCallback = NullCallback();

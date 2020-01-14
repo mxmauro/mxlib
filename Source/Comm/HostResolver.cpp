@@ -78,18 +78,16 @@ namespace MX {
 
 namespace Internals {
 
-class CHostResolver : public TRefCounted<CBaseMemObj>
+class CHostResolver : public TRefCounted<CBaseMemObj>, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CHostResolver);
 public:
-  class CAsyncItem : public virtual CBaseMemObj, public TRedBlackTreeNode<CAsyncItem>
+  class CAsyncItem : public virtual CBaseMemObj, public TRedBlackTreeNode<CAsyncItem>, public CNonCopyableObj
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CAsyncItem);
   public:
     CAsyncItem(_In_ CHostResolver *_lpResolver, _In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily,
                _In_ DWORD dwTimeoutMs, _In_ PSOCKADDR_INET lpSockAddr, _In_ HostResolver::OnResultCallback cCallback,
-               _In_ LPVOID lpUserData,
-               _In_ lpfnFreeAddrInfoExW _fnFreeAddrInfoExW) : CBaseMemObj(), TRedBlackTreeNode<CAsyncItem>()
+               _In_ LPVOID lpUserData, _In_ lpfnFreeAddrInfoExW _fnFreeAddrInfoExW) :
+               CBaseMemObj(), TRedBlackTreeNode<CAsyncItem>(), CNonCopyableObj()
       {
       lpResolver = _lpResolver;
       fnFreeAddrInfoExW = _fnFreeAddrInfoExW;
@@ -839,7 +837,7 @@ namespace MX {
 
 namespace Internals {
 
-CHostResolver::CHostResolver() : TRefCounted<CBaseMemObj>()
+CHostResolver::CHostResolver() : TRefCounted<CBaseMemObj>(), CNonCopyableObj()
 {
   WCHAR szDllNameW[4096];
   DWORD dwLen;

@@ -28,23 +28,22 @@ namespace MX {
 
 class MX_NOVTABLE CDigestAlgorithmBase : public virtual CBaseMemObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CDigestAlgorithmBase);
 protected:
   CDigestAlgorithmBase();
 
 public:
-  virtual HRESULT BeginDigest()=0;
-  virtual HRESULT DigestStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)=0;
+  virtual HRESULT BeginDigest() = 0;
+  virtual HRESULT DigestStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength) = 0;
   HRESULT DigestWordLE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount);
   HRESULT DigestWordBE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount);
   HRESULT DigestDWordLE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount);
   HRESULT DigestDWordBE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount);
   HRESULT DigestQWordLE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCount);
   HRESULT DigestQWordBE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCount);
-  virtual HRESULT EndDigest()=0;
+  virtual HRESULT EndDigest() = 0;
 
-  virtual LPBYTE GetResult() const=0;
-  virtual SIZE_T GetResultSize() const=0;
+  virtual LPBYTE GetResult() const = 0;
+  virtual SIZE_T GetResultSize() const = 0;
 };
 
 } //namespace MX

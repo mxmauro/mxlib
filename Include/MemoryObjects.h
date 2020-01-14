@@ -71,18 +71,26 @@ namespace MX {
 
 #endif //_DEBUG || MX_TRACEALLOC
 
-#define MX_DISABLE_COPY_CONSTRUCTOR(_class)                \
-  private:                                                 \
-    _class(_In_ const _class& cSrc) = delete;              \
-    _class& operator=(_In_ const _class& cSrc) = delete
-
 #define MX_NOVTABLE __declspec(novtable)
+
+//-----------------------------------------------------------
+
+class CNonCopyableObj
+{
+public:
+  CNonCopyableObj()
+    {
+    return;
+    };
+
+  CNonCopyableObj(CNonCopyableObj const&) = delete;
+  CNonCopyableObj& operator=(CNonCopyableObj const&) = delete;
+};
 
 //-----------------------------------------------------------
 
 class MX_NOVTABLE CBaseMemObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CBaseMemObj);
 public:
   void* __cdecl operator new(_In_ size_t nSize)
     {
@@ -138,9 +146,13 @@ public:
 
 protected:
   CBaseMemObj()
-    { };
+    {
+    return;
+    };
   virtual ~CBaseMemObj()
-    { };
+    {
+    return;
+    };
 };
 
 } //namespace MX

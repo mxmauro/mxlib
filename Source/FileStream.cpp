@@ -23,7 +23,7 @@
 
 namespace MX {
 
-CFileStream::CFileStream() : CStream()
+CFileStream::CFileStream() : CStream(), CNonCopyableObj()
 {
 #ifdef _DEBUG
   nCurrentOffset = 0ui64;

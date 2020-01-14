@@ -41,7 +41,7 @@ static const EVP_MD* GetDigest(_In_ MX::CDigestAlgorithmMessageDigest::eAlgorith
 
 namespace MX {
 
-CDigestAlgorithmMessageDigest::CDigestAlgorithmMessageDigest() : CDigestAlgorithmBase()
+CDigestAlgorithmMessageDigest::CDigestAlgorithmMessageDigest() : CDigestAlgorithmBase(), CNonCopyableObj()
 {
   lpInternalData = NULL;
   return;

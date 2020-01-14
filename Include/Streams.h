@@ -30,7 +30,6 @@ namespace MX {
 
 class MX_NOVTABLE CStream : public virtual TRefCounted<CBaseMemObj>
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CStream);
 public:
   typedef enum {
     SeekStart=0,

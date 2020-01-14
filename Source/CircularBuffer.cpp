@@ -23,7 +23,7 @@
 
 namespace MX {
 
-CCircularBuffer::CCircularBuffer() : CBaseMemObj()
+CCircularBuffer::CCircularBuffer() : CBaseMemObj(), CNonCopyableObj()
 {
   lpData = NULL;
   nSize = nStart = nLen = 0;

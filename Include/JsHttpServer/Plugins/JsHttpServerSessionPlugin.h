@@ -26,13 +26,13 @@
 
 namespace MX {
 
-class CJsHttpServerSessionPlugin : public CJsObjectBase
+class CJsHttpServerSessionPlugin : public CJsObjectBase, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CJsHttpServerSessionPlugin);
 public:
   //can be called simultaneously from different threads servicing different requests
   typedef Callback<HRESULT (_In_ CJsHttpServerSessionPlugin *lpPlugin, _In_ BOOL bLoading)> OnLoadSaveCallback;
 
+public:
   CJsHttpServerSessionPlugin(_In_ DukTape::duk_context *lpCtx);
   ~CJsHttpServerSessionPlugin();
 

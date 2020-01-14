@@ -113,9 +113,8 @@ static LONG DecrementIfGreaterThanZero(_Inout_ LONG volatile *lpnValue);
 namespace MX {
 
 CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr, _In_ CIoCompletionPortThreadPool &_cWorkerPool,
-                         _In_opt_ CLoggable *lpLogParent) : CBaseMemObj(), CLoggable(),
-                                                            CCriticalSection(), cSocketMgr(_cSocketMgr),
-                                                            cWorkerPool(_cWorkerPool)
+                         _In_opt_ CLoggable *lpLogParent) : CBaseMemObj(), CLoggable(), CNonCopyableObj(),
+                                                            cSocketMgr(_cSocketMgr), cWorkerPool(_cWorkerPool)
 {
   cRequestCompletedWP = MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnRequestCompleted, this);
   //----
@@ -203,7 +202,7 @@ CHttpServer::~CHttpServer()
 
 VOID CHttpServer::SetOption_MaxConnectionsPerIp(_In_ DWORD dwLimit)
 {
-  CCriticalSection::CAutoLock cLock(*this);
+  CCriticalSection::CAutoLock cLock(cs);
 
   if (hAcceptConn == NULL)
   {
@@ -214,7 +213,7 @@ VOID CHttpServer::SetOption_MaxConnectionsPerIp(_In_ DWORD dwLimit)
 
 VOID CHttpServer::SetOption_RequestHeaderTimeout(_In_ DWORD dwTimeoutMs)
 {
-  CCriticalSection::CAutoLock cLock(*this);
+  CCriticalSection::CAutoLock cLock(cs);
 
   if (hAcceptConn == NULL)
   {
@@ -230,7 +229,7 @@ VOID CHttpServer::SetOption_RequestHeaderTimeout(_In_ DWORD dwTimeoutMs)
 
 VOID CHttpServer::SetOption_RequestBodyLimits(_In_ DWORD dwMinimumThroughputInBps, _In_ DWORD dwSecondsOfLowThroughput)
 {
-  CCriticalSection::CAutoLock cLock(*this);
+  CCriticalSection::CAutoLock cLock(cs);
 
   if (hAcceptConn == NULL)
   {
@@ -242,7 +241,7 @@ VOID CHttpServer::SetOption_RequestBodyLimits(_In_ DWORD dwMinimumThroughputInBp
 
 VOID CHttpServer::SetOption_ResponseLimits(_In_ DWORD dwMinimumThroughputInBps, _In_ DWORD dwSecondsOfLowThroughput)
 {
-  CCriticalSection::CAutoLock cLock(*this);
+  CCriticalSection::CAutoLock cLock(cs);
 
   if (hAcceptConn == NULL)
   {
@@ -254,7 +253,7 @@ VOID CHttpServer::SetOption_ResponseLimits(_In_ DWORD dwMinimumThroughputInBps, 
 
 VOID CHttpServer::SetOption_MaxHeaderSize(_In_ DWORD dwSize)
 {
-  CCriticalSection::CAutoLock cLock(*this);
+  CCriticalSection::CAutoLock cLock(cs);
 
   if (hAcceptConn == NULL)
   {
@@ -265,7 +264,7 @@ VOID CHttpServer::SetOption_MaxHeaderSize(_In_ DWORD dwSize)
 
 VOID CHttpServer::SetOption_MaxFieldSize(_In_ DWORD dwSize)
 {
-  CCriticalSection::CAutoLock cLock(*this);
+  CCriticalSection::CAutoLock cLock(cs);
 
   if (hAcceptConn == NULL)
   {
@@ -276,7 +275,7 @@ VOID CHttpServer::SetOption_MaxFieldSize(_In_ DWORD dwSize)
 
 VOID CHttpServer::SetOption_MaxFileSize(_In_ ULONGLONG ullSize)
 {
-  CCriticalSection::CAutoLock cLock(*this);
+  CCriticalSection::CAutoLock cLock(cs);
 
   if (hAcceptConn == NULL)
   {
@@ -287,7 +286,7 @@ VOID CHttpServer::SetOption_MaxFileSize(_In_ ULONGLONG ullSize)
 
 VOID CHttpServer::SetOption_MaxFilesCount(_In_ DWORD dwCount)
 {
-  CCriticalSection::CAutoLock cLock(*this);
+  CCriticalSection::CAutoLock cLock(cs);
 
   if (hAcceptConn == NULL)
   {
@@ -298,7 +297,7 @@ VOID CHttpServer::SetOption_MaxFilesCount(_In_ DWORD dwCount)
 
 BOOL CHttpServer::SetOption_TemporaryFolder(_In_opt_z_ LPCWSTR szFolderW)
 {
-  CCriticalSection::CAutoLock cLock(*this);
+  CCriticalSection::CAutoLock cLock(cs);
 
   if (hAcceptConn == NULL)
   {
@@ -317,7 +316,7 @@ BOOL CHttpServer::SetOption_TemporaryFolder(_In_opt_z_ LPCWSTR szFolderW)
 
 VOID CHttpServer::SetOption_MaxBodySizeInMemory(_In_ DWORD dwSize)
 {
-  CCriticalSection::CAutoLock cLock(*this);
+  CCriticalSection::CAutoLock cLock(cs);
 
   if (hAcceptConn == NULL)
   {
@@ -328,7 +327,7 @@ VOID CHttpServer::SetOption_MaxBodySizeInMemory(_In_ DWORD dwSize)
 
 VOID CHttpServer::SetOption_MaxBodySize(_In_ ULONGLONG ullSize)
 {
-  CCriticalSection::CAutoLock cLock(*this);
+  CCriticalSection::CAutoLock cLock(cs);
 
   if (hAcceptConn == NULL)
   {
@@ -411,7 +410,7 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSock
   }
   if (SUCCEEDED(hRes))
   {
-    CCriticalSection::CAutoLock cLock(*this);
+    CCriticalSection::CAutoLock cLock(cs);
 
     //set SSL
     if (nProtocol != CIpcSslLayer::ProtocolUnknown)
@@ -501,7 +500,7 @@ VOID CHttpServer::StopListening()
   cShutdownEv.Set();
   //shutdown current listener
   {
-    CCriticalSection::CAutoLock cLock(*this);
+    CCriticalSection::CAutoLock cLock(cs);
 
     if (hAcceptConn != NULL)
     {
@@ -526,7 +525,7 @@ VOID CHttpServer::StopListening()
     {
       _YieldProcessor();
       {
-        CCriticalSection::CAutoLock cLock(*this);
+        CCriticalSection::CAutoLock cLock(cs);
 
         bDone = (hAcceptConn == NULL) ? TRUE : FALSE;
       }
@@ -734,7 +733,7 @@ HRESULT CHttpServer::OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIp
 VOID CHttpServer::OnListenerSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
                                           _In_ HRESULT hrErrorCode)
 {
-  CCriticalSection::CAutoLock cLock(*this);
+  CCriticalSection::CAutoLock cLock(cs);
 
   if (h == hAcceptConn)
     hAcceptConn = NULL;

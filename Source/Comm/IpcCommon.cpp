@@ -19,6 +19,9 @@
  */
 #include "..\..\Include\Comm\IpcCommon.h"
 #include "..\..\Include\StackTrace.h"
+#include <intrin.h>
+
+#pragma intrinsic(_InterlockedExchangeAdd)
 
 //-----------------------------------------------------------
 
@@ -1235,7 +1238,7 @@ write_req_process_packet:
       }
 
       MX_ASSERT_ALWAYS((DWORD)__InterlockedRead(&(lpConn->nOutgoingBytes)) >= lpPacket->GetUserDataDW());
-      _InterlockedAdd(&(lpConn->nOutgoingBytes), -((LONG)(lpPacket->GetUserDataDW())));
+      _InterlockedExchangeAdd(&(lpConn->nOutgoingBytes), -((LONG)(lpPacket->GetUserDataDW())));
 
       lpConn->DecrementOutgoingWrites();
 
@@ -2050,7 +2053,7 @@ HRESULT CIpc::CConnectionBase::SendPackets(_Inout_ CPacketBase **lplpFirstPacket
     cRwList.QueueLast(lpChainStart);
     lpChainStart->SetType(CPacketBase::TypeWrite);
     _InterlockedIncrement(&nOutgoingWrites);
-    _InterlockedAdd(&nOutgoingBytes, (LONG)dwTotalBytes);
+    _InterlockedExchangeAdd(&nOutgoingBytes, (LONG)dwTotalBytes);
     AddRef();
     hRes = SendWritePacket(lpChainStart, &dwWritten);
     switch (hRes)
@@ -2059,7 +2062,7 @@ HRESULT CIpc::CConnectionBase::SendPackets(_Inout_ CPacketBase **lplpFirstPacket
         {
         BOOL bLog;
 
-        _InterlockedAdd(&nOutgoingBytes, -((LONG)dwTotalBytes));
+        _InterlockedExchangeAdd(&nOutgoingBytes, -((LONG)dwTotalBytes));
         _InterlockedDecrement(&nOutgoingWrites);
         bLog = ((_InterlockedOr(&nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) ? TRUE : FALSE;
         if (bLog != FALSE && lpIpc->ShouldLog(1) != FALSE)
@@ -2085,7 +2088,7 @@ HRESULT CIpc::CConnectionBase::SendPackets(_Inout_ CPacketBase **lplpFirstPacket
         break;
 
       default:
-        _InterlockedAdd(&nOutgoingBytes, -((LONG)dwTotalBytes));
+        _InterlockedExchangeAdd(&nOutgoingBytes, -((LONG)dwTotalBytes));
         _InterlockedDecrement(&nOutgoingWrites);
         //free packet
         cRwList.Remove(lpChainStart);
@@ -2324,7 +2327,7 @@ HRESULT CIpc::CLayer::SendAfterWritePacketToNextLayer(_In_ CPacketBase *lpPacket
 
 //-----------------------------------------------------------
 
-CIpc::CMultiSendLock::CMultiSendLock() : CBaseMemObj()
+CIpc::CMultiSendLock::CMultiSendLock() : CBaseMemObj(), CNonCopyableObj()
 {
   lpConn = NULL;
   return;
@@ -2342,7 +2345,7 @@ CIpc::CMultiSendLock::~CMultiSendLock()
 
 //-----------------------------------------------------------
 
-CIpc::CAutoMultiSendLock::CAutoMultiSendLock(_In_ CMultiSendLock *_lpLock) : CBaseMemObj()
+CIpc::CAutoMultiSendLock::CAutoMultiSendLock(_In_ CMultiSendLock *_lpLock) : CBaseMemObj(), CNonCopyableObj()
 {
   lpLock = _lpLock;
   return;

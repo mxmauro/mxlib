@@ -38,9 +38,8 @@ namespace MX {
 
 namespace Internals {
 
-class CFileFieldJsObject : public CJsObjectBase
+class CFileFieldJsObject : public CJsObjectBase, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CFileFieldJsObject);
 public:
   CFileFieldJsObject(_In_ DukTape::duk_context *lpCtx);
 
@@ -70,9 +69,8 @@ private:
 
 //-----------------------------------------------------------
 
-class CRawBodyJsObject : public CJsObjectBase
+class CRawBodyJsObject : public CJsObjectBase, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CRawBodyJsObject);
 public:
   CRawBodyJsObject(_In_ DukTape::duk_context *lpCtx);
 

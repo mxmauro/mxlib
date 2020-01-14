@@ -26,14 +26,14 @@
 
 namespace MX {
 
-class CDigestAlgorithmMessageDigest : public CDigestAlgorithmBase
+class CDigestAlgorithmMessageDigest : public CDigestAlgorithmBase, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CDigestAlgorithmMessageDigest);
 public:
   typedef enum {
     AlgorithmMD5=0, AlgorithmMD4, AlgorithmMD2
   } eAlgorithm;
 
+public:
   CDigestAlgorithmMessageDigest();
   ~CDigestAlgorithmMessageDigest();
 

@@ -28,9 +28,8 @@
 
 namespace MX {
 
-class CPropertyBag : public virtual CBaseMemObj
+class CPropertyBag : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CPropertyBag);
 public:
   typedef enum {
     PropertyTypeUndefined,

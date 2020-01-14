@@ -16,8 +16,9 @@ Set objFS = CreateObject("Scripting.FileSystemObject")
 
 'Check if inside a Visual Studio environment
 If objShell.ExpandEnvironmentStrings("%VCINSTALLDIR%") = "%VCINSTALLDIR%" And _
-        objShell.ExpandEnvironmentStrings("%VisualStudioVersion%") = "%VisualStudioVersion%" And _
-        objShell.ExpandEnvironmentStrings("%MSBuildLoadMicrosoftTargetsReadOnly%") = "%MSBuildLoadMicrosoftTargetsReadOnly%" Then
+		objShell.ExpandEnvironmentStrings("%VisualStudioVersion%") = "%VisualStudioVersion%" And _
+		objShell.ExpandEnvironmentStrings("%MSBuildLoadMicrosoftTargetsReadOnly%") = _
+												"%MSBuildLoadMicrosoftTargetsReadOnly%" Then
 	WScript.Echo "Error: Run this script inside Visual Studio."
 	WScript.Quit 1
 End If
@@ -36,7 +37,8 @@ I = 0
 Do While I < WScript.Arguments.Count
 	S = LCase(WScript.Arguments(I))
 	If S = "/?" Or S = "-?" Or S = "/help" Or S = "-help" Then
-		WScript.Echo "Use: CSCRIPT " & WScript.ScriptName & " /configuration (debug|release) /platform (x86|x64) [/rebuild]"
+		WScript.Echo "Use: CSCRIPT " & WScript.ScriptName & _
+						" /configuration (debug|release) /platform (x86|x64) [/rebuild]"
 		WScript.Quit 1
 
 	ElseIf S = "/configuration" Or S = "-configuration" Then
@@ -137,7 +139,7 @@ End If
 
 If bRebuild = False Then
 	If CheckForNewerFiles(szScriptPath & "Source", dtBuildDate) <> False Or _
-	        CheckForNewerFile(szScriptPath & "build.vbs", dtBuildDate) <> False Then
+			CheckForNewerFile(szScriptPath & "build.vbs", dtBuildDate) <> False Then
 		bRebuild = True
 	End If
 End If
@@ -150,7 +152,8 @@ If bRebuild <> False Then
 	I = CreateConfiguration()
 	If I = 0 Then
 		WScript.Echo "Configuring..."
-		S = "perl.exe -d:Confess Configure " & szConfigDebug & szConfigurationTarget & " " & szDefineNoErr & " no-asm no-sock no-rc2 no-idea no-cast no-md2 no-mdc2 no-camellia no-shared "
+		S = "perl.exe -d:Confess Configure " & szConfigDebug & szConfigurationTarget & " " & szDefineNoErr & _
+			" no-asm no-sock no-rc2 no-idea no-cast no-md2 no-mdc2 no-camellia no-shared "
 		S = S & "-DOPENSSL_NO_DGRAM -DOPENSSL_NO_CAPIENG -DUNICODE -D_UNICODE "
 		If Len(szIsDebug) = 0 Then S = S & "-DOPENSSL_NO_FILENAMES "
 		S = S & Chr(34) & "--config=" & szScriptPath & "Temp\compiler_config.conf" & Chr(34)
@@ -184,13 +187,15 @@ If bRebuild <> False Then
 			RunApp "MD " & Chr(34) & szLibDir & Chr(34), "", "", True
 
 			For I = 0 To 2
-				RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\" & aTargetFiles(I) & Chr(34) & " " & Chr(34) & szLibDir & Chr(34), "", "", False
+				RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\" & aTargetFiles(I) & Chr(34) & " " & Chr(34) & _
+						szLibDir & Chr(34), "", "", False
 			Next
 
 			RunApp "MD " & Chr(34) & szScriptPath & "Generated" & Chr(34), "", "", True
 			RunApp "MD " & Chr(34) & szScriptPath & "Generated\OpenSSL" & Chr(34), "", "", True
 
-			RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\include\openssl\opensslconf.h" & Chr(34) & " " & Chr(34) & szScriptPath & "Generated\OpenSSL" & Chr(34), "", "", False
+			RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\include\openssl\opensslconf.h" & Chr(34) & " " & _
+					Chr(34) & szScriptPath & "Generated\OpenSSL" & Chr(34), "", "", False
 
 			'Clean after compile
 			RunApp "NMAKE clean", szScriptPath & "Source", "", True
@@ -269,7 +274,8 @@ Dim I, nRet, szOutputFile
 		szOutputFile = oFso.GetSpecialFolder(2)
 		If Right(szOutputFile, 1) <> "\" Then szOutputFile = szOutputFile & "\"
 		szOutputFile = szOutputFile & oFso.GetTempName
-		szCmdLine = "CMD.EXE /S /C " & Chr(34) & szCmdLine & " > " & Chr(34) & szOutputFile & Chr(34) & " 2>&1" & Chr(34)
+		szCmdLine = "CMD.EXE /S /C " & Chr(34) & szCmdLine & " > " & Chr(34) & szOutputFile & Chr(34) & " 2>&1" & _
+					Chr(34)
 	Else
 		szCmdLine = "CMD.EXE /S /C " & Chr(34) & szCmdLine & Chr(34)
 	End If
@@ -584,6 +590,7 @@ Dim I, S, Pos
 	objInputFile.Close
 	On Error Goto 0
 
-	RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Temp\makefile" & Chr(34) & " " & Chr(34) & szScriptPath & "Source\makefile" & Chr(34), "", "", False
+	RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Temp\makefile" & Chr(34) & " " & Chr(34) & szScriptPath & _
+			"Source\makefile" & Chr(34), "", "", False
 	Patch_Makefile = 0
 End Function

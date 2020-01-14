@@ -26,9 +26,8 @@
 
 namespace MX {
 
-class CHiResTimer : public virtual CBaseMemObj
+class CHiResTimer : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CHiResTimer);
 public:
   CHiResTimer();
 

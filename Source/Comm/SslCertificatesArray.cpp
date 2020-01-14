@@ -80,7 +80,7 @@ static BOOL Asn1_ValidateLength(_Inout_ LPBYTE lpCurr, _In_ LPBYTE lpEnd);
 
 namespace MX {
 
-CSslCertificateArray::CSslCertificateArray() : CBaseMemObj()
+CSslCertificateArray::CSslCertificateArray() : CBaseMemObj(), CNonCopyableObj()
 {
   return;
 }

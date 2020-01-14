@@ -25,7 +25,7 @@ namespace MX {
 
 namespace Internals {
 
-CFileFieldJsObject::CFileFieldJsObject(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
+CFileFieldJsObject::CFileFieldJsObject(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx), CNonCopyableObj()
 {
   lpFileField = NULL;
   nFilePos = 0ui64;

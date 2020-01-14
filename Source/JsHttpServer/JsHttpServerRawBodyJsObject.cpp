@@ -25,7 +25,7 @@ namespace MX {
 
 namespace Internals {
 
-CRawBodyJsObject::CRawBodyJsObject(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
+CRawBodyJsObject::CRawBodyJsObject(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx), CNonCopyableObj()
 {
   lpBody = NULL;
   return;

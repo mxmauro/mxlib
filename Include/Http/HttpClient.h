@@ -36,9 +36,8 @@
 
 namespace MX {
 
-class CHttpClient : public virtual CBaseMemObj, public CLoggable
+class CHttpClient : public virtual CBaseMemObj, public CLoggable, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CHttpClient);
 public:
   typedef enum {
     StateClosed = 0,
@@ -217,9 +216,8 @@ private:
   VOID ResetResponseForNewRequest();
 
 private:
-  class CPostDataItem : public virtual CBaseMemObj, public TLnkLstNode<CPostDataItem>
+  class CPostDataItem : public virtual CBaseMemObj, public TLnkLstNode<CPostDataItem>, public CNonCopyableObj
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CPostDataItem);
   public:
     CPostDataItem(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA);
     CPostDataItem(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szFileNameA, _In_ CStream *lpStream);

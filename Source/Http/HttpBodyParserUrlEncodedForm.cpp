@@ -25,7 +25,8 @@
 
 namespace MX {
 
-CHttpBodyParserUrlEncodedForm::CHttpBodyParserUrlEncodedForm(_In_ DWORD _dwMaxFieldSize) : CHttpBodyParserFormBase()
+CHttpBodyParserUrlEncodedForm::CHttpBodyParserUrlEncodedForm(_In_ DWORD _dwMaxFieldSize) : CHttpBodyParserFormBase(),
+                                                                                           CNonCopyableObj()
 {
   dwMaxFieldSize = _dwMaxFieldSize;
   if (dwMaxFieldSize < 32768)

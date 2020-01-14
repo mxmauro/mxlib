@@ -176,9 +176,9 @@ public:
 
 public:
   CDateTime(_In_ const CDateTime& cSrc);
-  CDateTime(_In_opt_ LONGLONG nTicks=0, _In_opt_ int nGmtOffset=0);
-  CDateTime(_In_ CTimeSpan &cTs, _In_opt_ int nGmtOffset=0);
-  CDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_opt_ int nGmtOffset=0);
+  CDateTime(_In_opt_ LONGLONG nTicks = 0, _In_opt_ int nGmtOffset = 0);
+  CDateTime(_In_ CTimeSpan &cTs, _In_opt_ int nGmtOffset = 0);
+  CDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_opt_ int nGmtOffset = 0);
   CDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds,
             _In_opt_ int nMilliSeconds=0, _In_opt_ int nGmtOffset=0);
   ~CDateTime();

@@ -79,7 +79,7 @@ static const DWORD dwCRCTable[256] = {
 
 namespace MX {
 
-CDigestAlgorithmCRC32::CDigestAlgorithmCRC32() : CDigestAlgorithmBase()
+CDigestAlgorithmCRC32::CDigestAlgorithmCRC32() : CDigestAlgorithmBase(), CNonCopyableObj()
 {
   dwCurrentCRC = 0;
   return;

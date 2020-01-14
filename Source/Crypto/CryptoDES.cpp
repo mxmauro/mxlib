@@ -46,7 +46,7 @@ static const EVP_CIPHER* GetCipher(_In_ MX::CCryptoDES::eAlgorithm nAlgorithm);
 
 namespace MX {
 
-CCryptoDES::CCryptoDES() : CCryptoBase()
+CCryptoDES::CCryptoDES() : CCryptoBase(), CNonCopyableObj()
 {
   lpInternalData = NULL;
   return;

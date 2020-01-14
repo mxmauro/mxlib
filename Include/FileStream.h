@@ -26,9 +26,8 @@
 
 namespace MX {
 
-class CFileStream : public CStream
+class CFileStream : public CStream, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CFileStream);
 public:
   CFileStream();
   ~CFileStream();

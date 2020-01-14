@@ -27,11 +27,10 @@
 
 namespace MX {
 
-class CZipLib : public virtual CBaseMemObj
+class CZipLib : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CZipLib);
 public:
-  CZipLib(_In_ BOOL bUseZipLibHeader=TRUE);
+  CZipLib(_In_ BOOL bUseZipLibHeader = TRUE);
   virtual ~CZipLib();
 
   HRESULT BeginCompress(_In_ int nCompressionLevel);

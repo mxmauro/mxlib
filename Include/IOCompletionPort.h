@@ -29,9 +29,8 @@
 
 namespace MX {
 
-class CIoCompletionPort : private virtual CBaseMemObj
+class CIoCompletionPort : private virtual CBaseMemObj, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CIoCompletionPort);
 public:
   CIoCompletionPort();
   ~CIoCompletionPort();
@@ -67,9 +66,8 @@ private:
 
 //-----------------------------------------------------------
 
-class CIoCompletionPortThreadPool : public virtual CBaseMemObj
+class CIoCompletionPortThreadPool : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CIoCompletionPortThreadPool);
 public:
   typedef Callback<VOID (_In_ CIoCompletionPortThreadPool *lpPool, _Inout_ LPVOID &lpUserData)> OnThreadStartCallback;
   typedef Callback<VOID (_In_ CIoCompletionPortThreadPool *lpPool, _In_ LPVOID lpUserData)> OnThreadEndCallback;
@@ -118,7 +116,6 @@ private:
   class CThread : public virtual CBaseMemObj, public TClassWorkerThread<CIoCompletionPortThreadPool>,
                   public TLnkLstNode<CThread>
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CThread);
   public:
     CThread() : CBaseMemObj(), TClassWorkerThread<CIoCompletionPortThreadPool>(), TLnkLstNode<CThread>()
       { };

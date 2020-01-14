@@ -26,14 +26,14 @@
 
 namespace MX {
 
-class CDigestAlgorithmSecureHash : public CDigestAlgorithmBase
+class CDigestAlgorithmSecureHash : public CDigestAlgorithmBase, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CDigestAlgorithmSecureHash);
 public:
   typedef enum {
     AlgorithmSHA1=0, AlgorithmSHA224, AlgorithmSHA256, AlgorithmSHA384, AlgorithmSHA512
   } eAlgorithm;
 
+public:
   CDigestAlgorithmSecureHash();
   ~CDigestAlgorithmSecureHash();
 

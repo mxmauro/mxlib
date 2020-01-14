@@ -24,7 +24,9 @@
 namespace MX {
 
 CJavascriptVM::CRequireModuleContext::CRequireModuleContext(_In_ DukTape::duk_context *_lpCtx, _In_z_ LPCWSTR _szIdW,
-               _In_ DukTape::duk_idx_t _nModuleObjectIndex, _In_ DukTape::duk_idx_t _nExportsObjectIndex)
+                                                            _In_ DukTape::duk_idx_t _nModuleObjectIndex,
+                                                            _In_ DukTape::duk_idx_t _nExportsObjectIndex) :
+                                                            CBaseMemObj()
 {
   lpCtx = _lpCtx;
   szIdW = _szIdW;

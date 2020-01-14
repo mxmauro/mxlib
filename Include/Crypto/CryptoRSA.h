@@ -26,9 +26,8 @@
 
 namespace MX {
 
-class CCryptoRSA : public CCryptoBase
+class CCryptoRSA : public CCryptoBase, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CCryptoRSA);
 public:
   typedef enum {
     PaddingNone=0, PaddingPKCS1, PaddingOAEP, PaddingSSLV23
@@ -39,6 +38,7 @@ public:
     HashAlgorithmMD2, HashAlgorithmMD4, HashAlgorithmMD5
   } eHashAlgorithm;
 
+public:
   CCryptoRSA();
   ~CCryptoRSA();
 

@@ -26,9 +26,8 @@
 
 namespace MX {
 
-class CCircularBuffer : public virtual CBaseMemObj
+class CCircularBuffer : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CCircularBuffer);
 public:
   CCircularBuffer();
   ~CCircularBuffer();

@@ -36,9 +36,8 @@
 
 namespace MX {
 
-class CHttpServer : public virtual CThread, public CLoggable, private CCriticalSection
+class CHttpServer : public virtual CThread, public CLoggable, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CHttpServer);
 public:
   class CClientRequest;
 
@@ -101,7 +100,6 @@ public:
 public:
   class CClientRequest : public CIpc::CUserData, public TLnkLstNode<CClientRequest>
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CClientRequest);
   protected:
     CClientRequest();
   public:
@@ -410,6 +408,7 @@ private:
   };
 
 private:
+  CCriticalSection cs;
   CSockets &cSocketMgr;
   CIoCompletionPortThreadPool &cWorkerPool;
   //NOTE: CIoCompletionPortThreadPool::Post needs a non-dynamic variable

@@ -52,7 +52,8 @@ static const LPCSTR szDefaultUserAgentA = "Mozilla/5.0 (compatible; MX-Lib 1.0)"
 namespace MX {
 
 CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr, _In_opt_ CLoggable *lpLogParent) : CBaseMemObj(),
-                         CLoggable(), cSocketMgr(_cSocketMgr), sRequest{ {TRUE, this} }, sResponse{ { FALSE, this} }
+                         CLoggable(), CNonCopyableObj(), cSocketMgr(_cSocketMgr), sRequest{ {TRUE, this} },
+                         sResponse{ { FALSE, this} }
 {
   SetLogParent(lpLogParent);
   //----
@@ -2829,7 +2830,8 @@ VOID CHttpClient::ResetResponseForNewRequest()
 //-----------------------------------------------------------
 //-----------------------------------------------------------
 
-CHttpClient::CPostDataItem::CPostDataItem(_In_z_ LPCSTR _szNameA, _In_z_ LPCSTR _szValueA)
+CHttpClient::CPostDataItem::CPostDataItem(_In_z_ LPCSTR _szNameA, _In_z_ LPCSTR _szValueA) :
+                            CBaseMemObj(), TLnkLstNode<CPostDataItem>(), CNonCopyableObj()
 {
   SIZE_T nNameLen, nValueLen;
 
@@ -2851,7 +2853,8 @@ CHttpClient::CPostDataItem::CPostDataItem(_In_z_ LPCSTR _szNameA, _In_z_ LPCSTR 
   return;
 }
 
-CHttpClient::CPostDataItem::CPostDataItem(_In_z_ LPCSTR _szNameA, _In_z_ LPCSTR _szFileNameA, _In_ CStream *lpStream)
+CHttpClient::CPostDataItem::CPostDataItem(_In_z_ LPCSTR _szNameA, _In_z_ LPCSTR _szFileNameA, _In_ CStream *lpStream) :
+                            CBaseMemObj(), TLnkLstNode<CPostDataItem>(), CNonCopyableObj()
 {
   SIZE_T nNameLen, nValueLen;
 
@@ -2874,7 +2877,8 @@ CHttpClient::CPostDataItem::CPostDataItem(_In_z_ LPCSTR _szNameA, _In_z_ LPCSTR 
   return;
 }
 
-CHttpClient::CPostDataItem::CPostDataItem(_In_ CStream *lpStream)
+CHttpClient::CPostDataItem::CPostDataItem(_In_ CStream *lpStream) : CBaseMemObj(), TLnkLstNode<CPostDataItem>(),
+                                                                    CNonCopyableObj()
 {
   szNameA = szValueA = NULL;
   cStream = lpStream;

@@ -30,7 +30,6 @@ namespace MX {
 
 class CWebSocket : public CIpc::CUserData
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CWebSocket);
 protected:
   CWebSocket();
 public:

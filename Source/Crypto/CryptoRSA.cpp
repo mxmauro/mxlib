@@ -77,7 +77,7 @@ static int InitializeFromPEM_PasswordCallback(char *buf, int size, int rwflag, v
 
 namespace MX {
 
-CCryptoRSA::CCryptoRSA() : CCryptoBase()
+CCryptoRSA::CCryptoRSA() : CCryptoBase(), CNonCopyableObj()
 {
   lpInternalData = NULL;
   return;

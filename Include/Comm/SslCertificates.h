@@ -112,9 +112,8 @@ private:
 
 //-----------------------------------------------------------
 
-class CSslCertificateArray : public virtual CBaseMemObj
+class CSslCertificateArray : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CSslCertificateArray);
 public:
   CSslCertificateArray();
   ~CSslCertificateArray();

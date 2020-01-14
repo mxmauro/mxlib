@@ -26,20 +26,19 @@
 
 namespace MX {
 
-class CMemoryStream : public CStream
+class CMemoryStream : public CStream, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CMemoryStream);
 public:
-  CMemoryStream(_In_opt_ SIZE_T nAllocationGranularity=65536);
+  CMemoryStream(_In_opt_ SIZE_T nAllocationGranularity = 65536);
   ~CMemoryStream();
 
-  HRESULT Create(_In_opt_ SIZE_T nInitialSize=0, _In_opt_ BOOL bGrowable=TRUE);
+  HRESULT Create(_In_opt_ SIZE_T nInitialSize = 0, _In_opt_ BOOL bGrowable = TRUE);
   VOID Close();
 
   HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesRead,
-               _In_opt_ ULONGLONG nStartOffset=ULONGLONG_MAX);
+               _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX);
   HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
-                _In_opt_ ULONGLONG nStartOffset=ULONGLONG_MAX);
+                _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX);
 
   HRESULT Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod=SeekStart);
 

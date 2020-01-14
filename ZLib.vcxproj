@@ -139,6 +139,7 @@
     <ProjectGuid>{2D73596D-540C-4659-BBC2-D8D1437219E5}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>ZLib</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -215,11 +216,13 @@
       <PreprocessorDefinitions>Z_PREFIX;MY_ZCALLOC;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <ExceptionHandling>SyncCThrow</ExceptionHandling>
+      <ExceptionHandling>Async</ExceptionHandling>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <EnablePREfast>false</EnablePREfast>
       <DisableSpecificWarnings>6385</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir)Source\ZipLib\Source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ConformanceMode>true</ConformanceMode>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -233,10 +236,12 @@
       <PreprocessorDefinitions>Z_PREFIX;MY_ZCALLOC;WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <ExceptionHandling>SyncCThrow</ExceptionHandling>
+      <ExceptionHandling>Async</ExceptionHandling>
       <EnablePREfast>false</EnablePREfast>
       <DisableSpecificWarnings>6385</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir)Source\ZipLib\Source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ConformanceMode>true</ConformanceMode>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -256,6 +261,8 @@
       <EnablePREfast>false</EnablePREfast>
       <DisableSpecificWarnings>6385</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir)Source\ZipLib\Source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ConformanceMode>true</ConformanceMode>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -277,6 +284,8 @@
       <EnablePREfast>false</EnablePREfast>
       <DisableSpecificWarnings>6385</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(ProjectDir)Source\ZipLib\Source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ConformanceMode>true</ConformanceMode>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

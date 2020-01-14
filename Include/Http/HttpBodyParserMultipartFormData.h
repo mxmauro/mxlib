@@ -26,7 +26,7 @@
 
 namespace MX {
 
-class CHttpBodyParserMultipartFormData : public CHttpBodyParserFormBase
+class CHttpBodyParserMultipartFormData : public CHttpBodyParserFormBase, public CNonCopyableObj
 {
 public:
   typedef Callback<HRESULT(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW,
@@ -34,8 +34,8 @@ public:
 
 public:
   CHttpBodyParserMultipartFormData(_In_ OnDownloadStartedCallback cDownloadStartedCallback, _In_opt_ LPVOID lpUserData,
-                                   _In_ DWORD dwMaxFieldSize=256000, _In_ ULONGLONG ullMaxFileSize=2097152ui64,
-                                   _In_ DWORD dwMaxFilesCount=4);
+                                   _In_ DWORD dwMaxFieldSize = 256000, _In_ ULONGLONG ullMaxFileSize = 2097152ui64,
+                                   _In_ DWORD dwMaxFilesCount = 4);
   ~CHttpBodyParserMultipartFormData();
 
 protected:

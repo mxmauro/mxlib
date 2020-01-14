@@ -110,7 +110,7 @@ public:
 
 namespace MX {
 
-CJsMySqlPlugin::CJsMySqlPlugin(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
+CJsMySqlPlugin::CJsMySqlPlugin(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx), CNonCopyableObj()
 {
   lpInternal = NULL;
   return;

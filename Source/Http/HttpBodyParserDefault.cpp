@@ -27,7 +27,8 @@ namespace MX {
 
 CHttpBodyParserDefault::CHttpBodyParserDefault(_In_ OnDownloadStartedCallback _cDownloadStartedCallback,
                                                _In_opt_ LPVOID _lpUserParam, _In_ DWORD _dwMaxBodySizeInMemory,
-                                               _In_ ULONGLONG _ullMaxBodySize) : CHttpBodyParserBase()
+                                               _In_ ULONGLONG _ullMaxBodySize) :
+                                               CHttpBodyParserBase(), CNonCopyableObj()
 {
   _InterlockedExchange(&nMutex, 0);
   cDownloadStartedCallback = _cDownloadStartedCallback;

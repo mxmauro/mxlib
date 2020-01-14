@@ -520,7 +520,7 @@ HRESULT StrToDoubleW(_In_ LPCWSTR szSrcW, _In_ SIZE_T nLen, double *lpnValue)
 
 //-----------------------------------------------------------
 
-CStringA::CStringA() : CBaseMemObj()
+CStringA::CStringA() : CBaseMemObj(), CNonCopyableObj()
 {
   szStrA = NULL;
   nSize = nLen = 0;
@@ -1087,7 +1087,7 @@ BOOL CSecureStringA::AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCWS
 
 //-----------------------------------------------------------
 
-CStringW::CStringW() : CBaseMemObj()
+CStringW::CStringW() : CBaseMemObj(), CNonCopyableObj()
 {
   szStrW = NULL;
   nSize = nLen = 0;

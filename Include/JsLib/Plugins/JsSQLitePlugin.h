@@ -26,9 +26,8 @@
 
 namespace MX {
 
-class CJsSQLitePlugin : public CJsObjectBase
+class CJsSQLitePlugin : public CJsObjectBase, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CJsSQLitePlugin);
 public:
   CJsSQLitePlugin(_In_ DukTape::duk_context *lpCtx);
   ~CJsSQLitePlugin();

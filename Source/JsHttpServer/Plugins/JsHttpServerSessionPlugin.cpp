@@ -29,7 +29,8 @@
 
 namespace MX {
 
-CJsHttpServerSessionPlugin::CJsHttpServerSessionPlugin(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
+CJsHttpServerSessionPlugin::CJsHttpServerSessionPlugin(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx),
+                                                                                           CNonCopyableObj()
 {
   *szCurrentIdA = 0;
   nExpireTimeInSeconds = 0;

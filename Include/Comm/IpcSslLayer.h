@@ -29,9 +29,8 @@
 
 namespace MX {
 
-class CIpcSslLayer : public CIpc::CLayer, public CLoggable
+class CIpcSslLayer : public CIpc::CLayer, public CLoggable, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CIpcSslLayer);
 public:
   typedef enum {
     ProtocolUnknown=0,

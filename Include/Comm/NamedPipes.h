@@ -26,9 +26,8 @@
 
 namespace MX {
 
-class CNamedPipes : public CIpc
+class CNamedPipes : public CIpc, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CNamedPipes);
 public:
   CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool);
   ~CNamedPipes();
@@ -49,9 +48,8 @@ public:
   HRESULT ImpersonateConnectionClient(_In_ HANDLE h);
 
 private:
-  class CServerInfo : public virtual TRefCounted<CBaseMemObj>
+  class CServerInfo : public virtual TRefCounted<CBaseMemObj>, public CNonCopyableObj
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CServerInfo);
   public:
     CServerInfo();
     ~CServerInfo();
@@ -66,9 +64,8 @@ private:
   //----
 
 private:
-  class CConnection : public CConnectionBase
+  class CConnection : public CConnectionBase, public CNonCopyableObj
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CConnection);
   public:
     CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass);
     ~CConnection();

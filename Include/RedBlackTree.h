@@ -21,7 +21,7 @@
 #define _MX_REDBLACKTREE_H
 
 #include "Defines.h"
-#include <map>
+
 //-----------------------------------------------------------
 
 namespace MX {
@@ -174,16 +174,14 @@ private:
 //-----------------------------------------------------------
 
 template <class T>
-class TRedBlackTree : public virtual CBaseMemObj
+class TRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
 {
 public:
   typedef TRedBlackTree<T> _RbTree;
   typedef TRedBlackTreeNode<T> _RbTreeNode;
 
-  MX_DISABLE_COPY_CONSTRUCTOR(_RbTree);
-
 public:
-  TRedBlackTree() : CBaseMemObj()
+  TRedBlackTree() : CBaseMemObj(), CNonCopyableObj()
     {
     lpRoot = NULL;
     nItemsCount = 0;

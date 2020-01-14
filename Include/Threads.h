@@ -29,14 +29,13 @@ namespace MX {
 
 class MX_NOVTABLE CThread : public virtual CBaseMemObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CThread);
 protected:
   CThread();
 public:
   virtual ~CThread();
 
-  virtual BOOL Start(_In_opt_ BOOL bSuspended=FALSE);
-  virtual BOOL Stop(_In_opt_ DWORD dwTimeout=INFINITE);
+  virtual BOOL Start(_In_opt_ BOOL bSuspended = FALSE);
+  virtual BOOL Stop(_In_opt_ DWORD dwTimeout = INFINITE);
   virtual BOOL StopAsync();
   virtual BOOL Pause();
   virtual BOOL Resume();
@@ -87,9 +86,8 @@ protected:
 
 //-----------------------------------------------------------
 
-class CWorkerThread : public CThread
+class CWorkerThread : public CThread, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CWorkerThread);
 public:
   typedef VOID (__cdecl *lpfnWorkerThread)(_In_ CWorkerThread *lpWrkThread, _In_opt_ LPVOID lpParam);
 
@@ -109,11 +107,10 @@ private:
 //-----------------------------------------------------------
 
 template <class TClass>
-class TClassWorkerThread : public CThread
+class TClassWorkerThread : public CThread, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(TClassWorkerThread<TClass>);
 public:
-  TClassWorkerThread()
+  TClassWorkerThread() : CThread(), CNonCopyableObj()
     {
     lpObject = NULL;
     lpStartRoutine = NULL;
@@ -138,7 +135,7 @@ public:
     }
 
   virtual BOOL Start(_In_ TClass *_lpObject, _In_ VOID (TClass::* _lpStartRoutine)(SIZE_T),
-                     _In_ SIZE_T _nParam, _In_ BOOL bSuspended=FALSE)
+                     _In_ SIZE_T _nParam, _In_ BOOL bSuspended = FALSE)
     {
     lpObject = _lpObject;
     lpStartRoutine = NULL;

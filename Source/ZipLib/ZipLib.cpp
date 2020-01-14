@@ -42,7 +42,7 @@
 
 namespace MX {
 
-CZipLib::CZipLib(_In_ BOOL _bUseZipLibHeader)
+CZipLib::CZipLib(_In_ BOOL _bUseZipLibHeader) : CBaseMemObj(), CNonCopyableObj()
 {
   bUseZipLibHeader = _bUseZipLibHeader;
   nInUse = INUSE_None;

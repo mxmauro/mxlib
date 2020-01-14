@@ -26,9 +26,8 @@
 
 namespace MX {
 
-class CDigestAlgorithmCRC32 : public CDigestAlgorithmBase
+class CDigestAlgorithmCRC32 : public CDigestAlgorithmBase, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CDigestAlgorithmCRC32);
 public:
   CDigestAlgorithmCRC32();
   ~CDigestAlgorithmCRC32();

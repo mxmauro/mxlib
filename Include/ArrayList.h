@@ -379,7 +379,7 @@ class TArrayListWithFree : public TArrayList<TType, nGranularity>
 public:
   virtual ~TArrayListWithFree()
     {
-    RemoveAllElements();
+    TArrayList<TType, nGranularity>::RemoveAllElements();
     return;
     };
 
@@ -399,7 +399,7 @@ class TArrayListWithRelease : public TArrayList<TType, nGranularity>
 public:
   virtual ~TArrayListWithRelease()
     {
-    RemoveAllElements();
+    TArrayList<TType, nGranularity>::RemoveAllElements();
     return;
     };
 
@@ -420,7 +420,7 @@ class TArrayListWithDelete : public TArrayList<TType, nGranularity>
 public:
   virtual ~TArrayListWithDelete()
     {
-    RemoveAllElements();
+    TArrayList<TType, nGranularity>::RemoveAllElements();
     return;
     };
 

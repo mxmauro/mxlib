@@ -26,9 +26,8 @@
 
 namespace MX {
 
-class CCryptoAES : public CCryptoBase
+class CCryptoAES : public CCryptoBase, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CCryptoAES);
 public:
   typedef enum {
     AlgorithmAes128Ecb=0, AlgorithmAes128Cbc, AlgorithmAes128Cfb,
@@ -39,6 +38,7 @@ public:
     AlgorithmAes256Ofb, AlgorithmAes256Cfb1, AlgorithmAes256Cfb8
   } eAlgorithm;
 
+public:
   CCryptoAES();
   ~CCryptoAES();
 

@@ -140,10 +140,10 @@ class TAutoFreePtr : public TAutoPtrBase<T>
 public:
   virtual ~TAutoFreePtr()
     {
-    if (lpPtr != NULL)
+    if (TAutoPtrBase<T>::lpPtr != NULL)
     {
-      OnDeleteItem(lpPtr);
-      lpPtr = NULL;
+      OnDeleteItem(TAutoPtrBase<T>::lpPtr);
+      TAutoPtrBase<T>::lpPtr = NULL;
     }
     return;
     };
@@ -164,10 +164,10 @@ class TAutoDeletePtr : public TAutoPtrBase<T>
 public:
   virtual ~TAutoDeletePtr()
     {
-    if (lpPtr != NULL)
+    if (TAutoPtrBase<T>::lpPtr != NULL)
     {
-      OnDeleteItem(lpPtr);
-      lpPtr = NULL;
+      OnDeleteItem(TAutoPtrBase<T>::lpPtr);
+      TAutoPtrBase<T>::lpPtr = NULL;
     }
     return;
     };
@@ -189,10 +189,10 @@ class TAutoDeleteArrayPtr : public TAutoPtrBase<T>
 public:
   virtual ~TAutoDeleteArrayPtr()
     {
-    if (lpPtr != NULL)
+    if (TAutoPtrBase<T>::lpPtr != NULL)
     {
-      OnDeleteItem(lpPtr);
-      lpPtr = NULL;
+      OnDeleteItem(TAutoPtrBase<T>::lpPtr);
+      TAutoPtrBase<T>::lpPtr = NULL;
     }
     return;
     };

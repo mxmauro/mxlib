@@ -34,7 +34,7 @@ CHttpBodyParserMultipartFormData::CHttpBodyParserMultipartFormData(
                                                  _In_ OnDownloadStartedCallback _cDownloadStartedCallback,
                                                  _In_opt_ LPVOID _lpUserData, _In_ DWORD _dwMaxFieldSize,
                                                  _In_ ULONGLONG _ullMaxFileSize, _In_ DWORD _dwMaxFilesCount) :
-                                  CHttpBodyParserFormBase()
+                                  CHttpBodyParserFormBase(), CNonCopyableObj()
 {
   cDownloadStartedCallback = _cDownloadStartedCallback;
   lpUserData = _lpUserData;

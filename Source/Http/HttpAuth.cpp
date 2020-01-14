@@ -50,7 +50,7 @@ static int ParseQOP(_In_opt_z_ LPCSTR szValueA);
 
 namespace MX {
 
-CHttpAuthBasic::CHttpAuthBasic() : CHttpAuthBase()
+CHttpAuthBasic::CHttpAuthBasic() : CHttpAuthBase(), CNonCopyableObj()
 {
   bCharsetIsUtf8 = FALSE;
   return;
@@ -193,7 +193,7 @@ BOOL CHttpAuthBasic::IsSameThan(_In_ CHttpAuthBase *_lpCompareTo)
 
 //--------
 
-CHttpAuthDigest::CHttpAuthDigest() : CHttpAuthBase()
+CHttpAuthDigest::CHttpAuthDigest() : CHttpAuthBase(), CNonCopyableObj()
 {
   bStale = bUserHash = FALSE;
   nAlgorithm = _ALGORITHM_MD5;

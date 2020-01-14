@@ -27,9 +27,8 @@
 
 namespace MX {
 
-class CZipFile : public virtual CBaseMemObj
+class CZipFile : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CZipFile);
 public:
   CZipFile();
   ~CZipFile();

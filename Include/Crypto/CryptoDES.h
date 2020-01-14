@@ -26,9 +26,8 @@
 
 namespace MX {
 
-class CCryptoDES : public CCryptoBase
+class CCryptoDES : public CCryptoBase, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CCryptoDES);
 public:
   typedef enum {
     AlgorithmDesEcb=0, AlgorithmDesCbc, AlgorithmDesCfb,
@@ -37,6 +36,7 @@ public:
     AlgorithmTripleDesOfb, AlgorithmTripleDesCfb1, AlgorithmTripleDesCfb8
   } eAlgorithm;
 
+public:
   CCryptoDES();
   ~CCryptoDES();
 

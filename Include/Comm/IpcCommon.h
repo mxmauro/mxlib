@@ -46,7 +46,6 @@ namespace MX {
 
 class MX_NOVTABLE CIpc : public virtual CBaseMemObj, public CLoggable
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CIpc);
 protected:
   class CConnectionBase;
 public:
@@ -69,7 +68,6 @@ public:
 
   class MX_NOVTABLE CUserData : public virtual TRefCounted<CBaseMemObj>
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CUserData);
   protected:
     CUserData() : TRefCounted<CBaseMemObj>()
       {
@@ -87,7 +85,6 @@ public:
 
   class MX_NOVTABLE CLayer : public virtual CBaseMemObj, public TLnkLstNode<CLayer>
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CLayer);
   protected:
     CLayer() : CBaseMemObj(), TLnkLstNode<CLayer>()
       {
@@ -156,9 +153,8 @@ public:
 
   //--------
 
-  class CMultiSendLock : public virtual CBaseMemObj
+  class CMultiSendLock : public virtual CBaseMemObj, public CNonCopyableObj
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CMultiSendLock);
   private:
     friend class CIpc;
 
@@ -172,9 +168,8 @@ public:
 
   //--------
 
-  class CAutoMultiSendLock : public virtual CBaseMemObj
+  class CAutoMultiSendLock : public virtual CBaseMemObj, public CNonCopyableObj
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CAutoMultiSendLock);
   public:
     CAutoMultiSendLock(_In_ CMultiSendLock *lpLock);
     ~CAutoMultiSendLock();
@@ -246,9 +241,8 @@ public:
   BOOL IsShuttingDown();
 
 public:
-  class MX_NOVTABLE CPacketBase : public virtual CBaseMemObj, public TLnkLstNode<CPacketBase>
+  class MX_NOVTABLE CPacketBase : public virtual CBaseMemObj, public TLnkLstNode<CPacketBase>, public CNonCopyableObj
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CPacketBase);
   public:
     typedef enum {
       TypeDiscard = 0,
@@ -260,7 +254,7 @@ public:
     } eType;
 
   public:
-    CPacketBase() : CBaseMemObj(), TLnkLstNode<CPacketBase>()
+    CPacketBase() : CBaseMemObj(), TLnkLstNode<CPacketBase>(), CNonCopyableObj()
       {
       MxMemSet(&sOvr, 0, sizeof(sOvr));
       nType = TypeDiscard;
@@ -474,11 +468,10 @@ protected:
   //----
 
 public:
-  class CPacketList : public virtual CBaseMemObj
+  class CPacketList : public virtual CBaseMemObj, public CNonCopyableObj
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CPacketList);
   public:
-    CPacketList() : CBaseMemObj()
+    CPacketList() : CBaseMemObj(), CNonCopyableObj()
       {
       _InterlockedExchange(&nMutex, 0);
       nCount = 0;
@@ -599,7 +592,6 @@ protected:
 
   class MX_NOVTABLE CConnectionBase : public virtual TRefCounted<CBaseMemObj>, public TRedBlackTreeNode<CConnectionBase>
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CConnectionBase);
   protected:
     CConnectionBase(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass);
   public:

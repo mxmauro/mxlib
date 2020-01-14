@@ -167,9 +167,8 @@ namespace MX {
 
 class CJsObjectBase;
 
-class CJavascriptVM : public virtual CBaseMemObj
+class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CJavascriptVM);
 public:
   typedef enum {
     PropertyFlagWritable   = 0x01,
@@ -226,11 +225,10 @@ public:
 
   //--------
 
-  class CProxyCallbacks
+  class CProxyCallbacks : public virtual CBaseMemObj
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CProxyCallbacks);
   public:
-    CProxyCallbacks()
+    CProxyCallbacks() : CBaseMemObj()
       {
       cProxyHasNamedPropertyCallback = NullCallback();
       cProxyHasIndexedPropertyCallback = NullCallback();
@@ -242,6 +240,26 @@ public:
       cProxyDeleteIndexedPropertyCallback = NullCallback();
       cProxyGetPropertyNameCallback = NullCallback();
       return;
+      };
+
+    CProxyCallbacks(CProxyCallbacks const &cSrc) : CBaseMemObj()
+      {
+      operator=(cSrc);
+      return;
+      };
+
+    CProxyCallbacks& operator=(CProxyCallbacks const &cSrc)
+      {
+      cProxyHasNamedPropertyCallback = cSrc.cProxyHasNamedPropertyCallback;
+      cProxyHasIndexedPropertyCallback = cSrc.cProxyHasIndexedPropertyCallback;
+      cProxyGetNamedPropertyCallback = cSrc.cProxyGetNamedPropertyCallback;
+      cProxyGetIndexedPropertyCallback = cSrc.cProxyGetIndexedPropertyCallback;
+      cProxySetNamedPropertyCallback = cSrc.cProxySetNamedPropertyCallback;
+      cProxySetIndexedPropertyCallback = cSrc.cProxySetIndexedPropertyCallback;
+      cProxyDeleteNamedPropertyCallback = cSrc.cProxyDeleteNamedPropertyCallback;
+      cProxyDeleteIndexedPropertyCallback = cSrc.cProxyDeleteIndexedPropertyCallback;
+      cProxyGetPropertyNameCallback = cSrc.cProxyGetPropertyNameCallback;
+      return *this;
       };
 
   public:
@@ -265,9 +283,8 @@ public:
 
   //--------
 
-  class CRequireModuleContext
+  class CRequireModuleContext : public virtual CBaseMemObj
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CRequireModuleContext);
   protected:
     CRequireModuleContext(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCWSTR szIdW,
                           _In_ DukTape::duk_idx_t nModuleObjectIndex, _In_ DukTape::duk_idx_t nExportsObjectIndex);
@@ -479,7 +496,6 @@ private:
 
 class MX_NOVTABLE CJsObjectBase : public virtual TRefCounted<CBaseMemObj>
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CJsObjectBase);
 protected:
   CJsObjectBase(_In_ DukTape::duk_context *lpCtx) : TRefCounted<CBaseMemObj>()
     {

@@ -26,11 +26,10 @@
 
 namespace MX {
 
-class CWindowsHandle : public virtual CBaseMemObj
+class CWindowsHandle : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CWindowsHandle);
 public:
-  CWindowsHandle() : CBaseMemObj()
+  CWindowsHandle() : CBaseMemObj(), CNonCopyableObj()
     {
     h = NULL;
     return;
@@ -111,11 +110,10 @@ protected:
 
 //-----------------------------------------------------------
 
-class CWindowsRemoteHandle : public virtual CBaseMemObj
+class CWindowsRemoteHandle : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CWindowsRemoteHandle);
 public:
-  CWindowsRemoteHandle() : CBaseMemObj()
+  CWindowsRemoteHandle() : CBaseMemObj(), CNonCopyableObj()
     {
     hProc = h = NULL;
     return;

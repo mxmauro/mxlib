@@ -66,7 +66,8 @@ static BOOL IsContentTypeHeader(_In_z_ LPCSTR szHeaderA);
 
 namespace MX {
 
-CHttpCommon::CHttpCommon(_In_ BOOL _bActAsServer, _In_ CLoggable *lpLogHandler) : CBaseMemObj(), CLoggable()
+CHttpCommon::CHttpCommon(_In_ BOOL _bActAsServer, _In_ CLoggable *lpLogHandler) : CBaseMemObj(), CLoggable(),
+                                                                                  CNonCopyableObj()
 {
   bActAsServer = _bActAsServer;
   dwMaxHeaderSize = 16384;

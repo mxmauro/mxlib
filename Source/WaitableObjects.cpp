@@ -579,7 +579,7 @@ static NTSTATUS GetRootDirHandle(_Out_ PHANDLE lphRootDir)
   }
 
   //check name
-  usName.Buffer = L"\\BaseNamedObjects";
+  usName.Buffer = (PWSTR)L"\\BaseNamedObjects";
   if (sOviW.dwMajorVersion >= 6)
   {
     nNtStatus = ::MxNtOpenProcessToken(MX_CURRENTPROCESS, TOKEN_QUERY, &hProcessToken);

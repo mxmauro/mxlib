@@ -70,7 +70,7 @@ static VOID GenerateUniquePipeName(_Out_ LPWSTR szNameW, _In_ SIZE_T nNameSize, 
 
 namespace MX {
 
-CNamedPipes::CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDispatcherPool)
+CNamedPipes::CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDispatcherPool), CNonCopyableObj()
 {
   _InterlockedExchange(&nRemoteConnCounter, 0);
   dwConnectTimeoutMs = 1000;
@@ -525,7 +525,7 @@ pipe_connected:
 
 //-----------------------------------------------------------
 
-CNamedPipes::CServerInfo::CServerInfo() : TRefCounted<CBaseMemObj>()
+CNamedPipes::CServerInfo::CServerInfo() : TRefCounted<CBaseMemObj>(), CNonCopyableObj()
 {
   lpSecDescr = NULL;
   return;
@@ -552,7 +552,7 @@ HRESULT CNamedPipes::CServerInfo::Init(_In_z_ LPCWSTR szServerNameW, _In_ PSECUR
 //-----------------------------------------------------------
 
 CNamedPipes::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass) :
-                          CConnectionBase(lpIpc, nClass)
+                          CConnectionBase(lpIpc, nClass), CNonCopyableObj()
 {
   SlimRWL_Initialize(&nRwHandleInUse);
   hPipe = NULL;

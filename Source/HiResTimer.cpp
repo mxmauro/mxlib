@@ -23,7 +23,7 @@
 
 namespace MX {
 
-CHiResTimer::CHiResTimer() : CBaseMemObj()
+CHiResTimer::CHiResTimer() : CBaseMemObj(), CNonCopyableObj()
 {
   Reset();
   return;

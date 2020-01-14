@@ -32,7 +32,6 @@ namespace MX {
 
 class MX_NOVTABLE CHttpAuthBase : public TRefCounted<CBaseMemObj>
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CHttpAuthBase);
 public:
   typedef enum {
     TypeBasic=1,
@@ -65,9 +64,8 @@ public:
 
 //--------
 
-class CHttpAuthBasic : public CHttpAuthBase
+class CHttpAuthBasic : public CHttpAuthBase, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CHttpAuthBasic);
 public:
   CHttpAuthBasic();
   ~CHttpAuthBasic();
@@ -96,9 +94,8 @@ private:
 
 //--------
 
-class CHttpAuthDigest : public CHttpAuthBase
+class CHttpAuthDigest : public CHttpAuthBase, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CHttpAuthDigest);
 public:
   CHttpAuthDigest();
   ~CHttpAuthDigest();

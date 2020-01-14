@@ -29,20 +29,19 @@ namespace MX {
 
 class MX_NOVTABLE CCryptoBase : public virtual CBaseMemObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CCryptoBase);
 protected:
   CCryptoBase();
 
 public:
-  virtual HRESULT BeginEncrypt()=0;
-  virtual HRESULT EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)=0;
-  virtual HRESULT EndEncrypt()=0;
+  virtual HRESULT BeginEncrypt() = 0;
+  virtual HRESULT EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength) = 0;
+  virtual HRESULT EndEncrypt() = 0;
   SIZE_T GetAvailableEncryptedData();
   SIZE_T GetEncryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize);
 
-  virtual HRESULT BeginDecrypt()=0;
-  virtual HRESULT DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength)=0;
-  virtual HRESULT EndDecrypt()=0;
+  virtual HRESULT BeginDecrypt() = 0;
+  virtual HRESULT DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength) = 0;
+  virtual HRESULT EndDecrypt() = 0;
   SIZE_T GetAvailableDecryptedData();
   SIZE_T GetDecryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize);
 

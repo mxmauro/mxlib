@@ -30,7 +30,6 @@ namespace MX {
 
 class CJsHttpServer : public virtual CBaseMemObj, public CHttpServer
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CJsHttpServer);
 public:
   class CClientRequest;
   class CRequireModuleContext;
@@ -82,7 +81,6 @@ private:
 public:
   class CClientRequest : public CHttpServer::CClientRequest
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CClientRequest);
   protected:
     CClientRequest();
   public:

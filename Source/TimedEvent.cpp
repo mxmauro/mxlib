@@ -42,16 +42,14 @@ namespace MX {
 
 namespace Internals {
 
-class CTimerHandler : public TRefCounted<CThread>
+class CTimerHandler : public TRefCounted<CThread>, public CNonCopyableObj
 {
-  MX_DISABLE_COPY_CONSTRUCTOR(CTimerHandler);
 public:
-  class CTimer : public virtual CBaseMemObj, public TRedBlackTreeNode<CTimer>
+  class CTimer : public virtual CBaseMemObj, public TRedBlackTreeNode<CTimer>, public CNonCopyableObj
   {
-    MX_DISABLE_COPY_CONSTRUCTOR(CTimer);
   public:
     CTimer(_In_ DWORD dwTimeoutMs, _In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_ LPVOID lpUserData,
-           _In_ BOOL bOneShot) : CBaseMemObj(), TRedBlackTreeNode<CTimer>()
+           _In_ BOOL bOneShot) : CBaseMemObj(), TRedBlackTreeNode<CTimer>(), CNonCopyableObj()
       {
       Setup(dwTimeoutMs, cCallback, lpUserData, bOneShot);
       return;
@@ -240,7 +238,7 @@ namespace MX {
 
 namespace Internals {
 
-CTimerHandler::CTimerHandler() : TRefCounted<CThread>()
+CTimerHandler::CTimerHandler() : TRefCounted<CThread>(), CNonCopyableObj()
 {
   RundownProt_Initialize(&nRundownLock);
   _InterlockedExchange(&nNextTimerId, 0);

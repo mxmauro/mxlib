@@ -53,7 +53,7 @@ static HRESULT mzError_2_HRESULT(_In_ int32_t err);
 
 namespace MX {
 
-CZipFile::CZipFile() : CBaseMemObj()
+CZipFile::CZipFile() : CBaseMemObj(), CNonCopyableObj()
 {
   lpData = MX_MALLOC(sizeof(ZIPCREATOR_DATA));
   if (lpData != NULL)
@@ -116,8 +116,7 @@ HRESULT CZipFile::AddFile(_In_z_ LPCWSTR szFileNameInZipW, _In_z_ LPCWSTR szSrcF
   return hRes;
 }
 
-HRESULT CZipFile::AddStream(_In_z_ LPCWSTR szFileNameInZipW, _In_ MX::CStream *lpStream,
-                               _In_opt_z_ LPCWSTR szPasswordW)
+HRESULT CZipFile::AddStream(_In_z_ LPCWSTR szFileNameInZipW, _In_ MX::CStream *lpStream, _In_opt_z_ LPCWSTR szPasswordW)
 {
   mz_zip_file file_info;
   CStringA cStrFileNameA_Utf8;

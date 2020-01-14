@@ -172,7 +172,7 @@ private:
 
 namespace MX {
 
-CJsSQLitePlugin::CJsSQLitePlugin(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
+CJsSQLitePlugin::CJsSQLitePlugin(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx), CNonCopyableObj()
 {
   lpInternal = NULL;
   return;
