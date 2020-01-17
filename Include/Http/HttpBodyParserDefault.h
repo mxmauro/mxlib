@@ -40,7 +40,7 @@ public:
                          _In_ DWORD dwMaxBodySizeInMemory = 32768, _In_ ULONGLONG ullMaxBodySize = 10ui64*1048576ui64);
   ~CHttpBodyParserDefault();
 
-  virtual LPCSTR GetType() const
+  LPCSTR GetType() const
     {
     return "default";
     };

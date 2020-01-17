@@ -25,9 +25,8 @@
 
 static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hrErrorCode);
 static HRESULT OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
-                                        _In_ HANDLE hShutdownEv, _Inout_ MX::CHttpBodyParserBase **lplpBodyParser);
-static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
-                               _In_ HANDLE hShutdownEv);
+                                        _Inout_ MX::CHttpBodyParserBase **lplpBodyParser);
+static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest);
 static VOID OnError(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
                     _In_ HRESULT hrErrorCode);
 
@@ -127,13 +126,12 @@ static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hrErrorCode)
 }
 
 static HRESULT OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
-                                        _In_ HANDLE hShutdownEv, _Inout_ MX::CHttpBodyParserBase **lplpBodyParser)
+                                        _Inout_ MX::CHttpBodyParserBase **lplpBodyParser)
 {
   return S_OK;
 }
 
-static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
-                               _In_ HANDLE hShutdownEv)
+static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest)
 {
   MX::CStringW cStrFileNameW;
   LPCWSTR szExtensionW;

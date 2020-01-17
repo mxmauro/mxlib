@@ -58,7 +58,7 @@ static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHtt
 static VOID OnError(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
                     _In_ HRESULT hrErrorCode);
 static HRESULT OnWebSocketRequestReceived(_In_ MX::CJsHttpServer *lpHttp,
-                                          _In_ MX::CJsHttpServer::CClientRequest *lpRequest, _In_ HANDLE hShutdownEv,
+                                          _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
                                           _Inout_ MX::CHttpServer::WEBSOCKET_REQUEST_CALLBACK_DATA &sData);
 static VOID DeleteSessionFiles();
 static HRESULT OnSessionLoadSave(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin, _In_ BOOL bLoading);
@@ -326,7 +326,7 @@ static VOID OnError(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CCli
 }
 
 static HRESULT OnWebSocketRequestReceived(_In_ MX::CJsHttpServer *lpHttp,
-                                          _In_ MX::CJsHttpServer::CClientRequest *lpRequest, _In_ HANDLE hShutdownEv,
+                                          _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
                                           _Inout_ MX::CHttpServer::WEBSOCKET_REQUEST_CALLBACK_DATA &sData)
 {
   sData.nSelectedProtocol = 0;

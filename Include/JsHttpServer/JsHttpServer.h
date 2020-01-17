@@ -50,7 +50,7 @@ public:
   typedef Callback<VOID (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ CJavascriptVM &cJvm,
                          _In_ HRESULT hRunErrorCode)> OnJavascriptErrorCallback;
 
-  typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ HANDLE hShutdownEv,
+  typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
                             _Inout_ CHttpServer::WEBSOCKET_REQUEST_CALLBACK_DATA &sData)>
                             OnWebSocketRequestReceivedCallback;
 
@@ -126,13 +126,11 @@ private:
   using CHttpServer::SetWebSocketRequestReceivedCallback;
   using CHttpServer::SetErrorCallback;
 
-  VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest,
-                          _In_ HANDLE hShutdownEv);
+  VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest);
   HRESULT OnRequireJsModule(_In_ DukTape::duk_context *lpCtx, _In_ CJavascriptVM::CRequireModuleContext *lpReqContext,
                             _Inout_ CStringA &cStrCodeA);
   VOID OnError(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest, _In_ HRESULT hrErrorCode);
   HRESULT OnWebSocketRequestReceived(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest,
-                                     _In_ HANDLE hShutdownEv,
                                      _Inout_ CHttpServer::WEBSOCKET_REQUEST_CALLBACK_DATA &sData);
 
   HRESULT TransformJavascriptCode(_Inout_ MX::CStringA &cStrCodeA);

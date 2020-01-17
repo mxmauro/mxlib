@@ -1017,9 +1017,8 @@ on_request_error:
       NULL
     };
 
-    hRes = (cWebSocketRequestReceivedCallback) ? cWebSocketRequestReceivedCallback(this, lpRequest, cShutdownEv.Get(),
-                                                                                   sData)
-                                                : MX_E_Unsupported;
+    hRes = (cWebSocketRequestReceivedCallback) ? cWebSocketRequestReceivedCallback(this, lpRequest, sData)
+                                               : MX_E_Unsupported;
     {
       CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
 
@@ -1054,9 +1053,7 @@ on_request_error:
   {
     CHttpBodyParserBase *lpBodyParser = NULL;
 
-    hRes = (cRequestHeadersReceivedCallback) ? cRequestHeadersReceivedCallback(this, lpRequest, cShutdownEv.Get(),
-                                                                               &lpBodyParser)
-                                             : S_OK;
+    hRes = (cRequestHeadersReceivedCallback) ? cRequestHeadersReceivedCallback(this, lpRequest, &lpBodyParser) : S_OK;
     {
       CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
 
@@ -1143,9 +1140,13 @@ VOID CHttpServer::OnRequestCompleted(_In_ CIoCompletionPortThreadPool *lpPool, _
   if (SUCCEEDED(hRes))
   {
     if (cRequestCompletedCallback)
-      cRequestCompletedCallback(this, lpRequest, cShutdownEv.Get());
+    {
+      cRequestCompletedCallback(this, lpRequest);
+    }
     else
+    {
       lpRequest->End();
+    }
   }
   else
   {

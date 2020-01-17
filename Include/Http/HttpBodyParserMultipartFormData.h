@@ -38,6 +38,11 @@ public:
                                    _In_ DWORD dwMaxFilesCount = 4);
   ~CHttpBodyParserMultipartFormData();
 
+  LPCSTR GetType() const
+    {
+    return "multipart/form-data";
+    };
+
 protected:
   HRESULT Initialize(_In_ CHttpCommon &cHttpCmn);;
   HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);

@@ -101,8 +101,7 @@ VOID CJsHttpServer::SetWebSocketRequestReceivedCallback(_In_ OnWebSocketRequestR
   return;
 }
 
-VOID CJsHttpServer::OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *_lpRequest,
-                                       _In_ HANDLE hShutdownEv)
+VOID CJsHttpServer::OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *_lpRequest)
 {
   CClientRequest *lpRequest = static_cast<CClientRequest*>(_lpRequest);
   int nOrigThreadPriority = -1000000;
@@ -124,6 +123,14 @@ on_init_error:
     lpRequest->End(hRes);
     return;
   }
+
+  //shutting down?
+  if (lpRequest->MustAbort() != FALSE)
+  {
+    hRes = MX_E_Cancelled;
+    goto on_init_error;
+  }
+
   //build path
   lpUrl = lpRequest->GetUrl();
   if (lpUrl == NULL) //only accept absolute paths
@@ -152,10 +159,16 @@ on_init_error:
     //the callback owns the request now
     return;
   }
-
   if (FAILED(hRes))
   {
     lpRequest->DiscardVM();
+    goto on_init_error;
+  }
+
+  //shutting down?
+  if (lpRequest->MustAbort() != FALSE)
+  {
+    hRes = MX_E_Cancelled;
     goto on_init_error;
   }
 
@@ -282,14 +295,14 @@ VOID CJsHttpServer::OnError(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientR
 }
 
 HRESULT CJsHttpServer::OnWebSocketRequestReceived(_In_ CHttpServer *lpHttp,
-                                                  _In_ CHttpServer::CClientRequest *_lpRequest, _In_ HANDLE hShutdownEv,
+                                                  _In_ CHttpServer::CClientRequest *_lpRequest,
                                                   _Inout_ CHttpServer::WEBSOCKET_REQUEST_CALLBACK_DATA &sData)
 {
   if (cWebSocketRequestReceivedCallback)
   {
     CClientRequest *lpRequest = static_cast<CClientRequest*>(_lpRequest);
 
-    return cWebSocketRequestReceivedCallback(this, lpRequest, hShutdownEv, sData);
+    return cWebSocketRequestReceivedCallback(this, lpRequest, sData);
   }
   return MX_E_Unsupported;
 }

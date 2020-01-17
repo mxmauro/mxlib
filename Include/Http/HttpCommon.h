@@ -31,8 +31,6 @@
 #include "..\ZipLib\ZipLib.h"
 #include "HttpCookie.h"
 #include "Url.h"
-#include "HttpHeaderBase.h"
-#include "HttpBodyParserBase.h"
 #include <intsafe.h>
 
 //-----------------------------------------------------------
@@ -255,6 +253,11 @@ private:
 };
 
 } //namespace MX
+
+//-----------------------------------------------------------
+
+#include "HttpHeaderBase.h"
+#include "HttpBodyParserBase.h"
 
 //-----------------------------------------------------------
 

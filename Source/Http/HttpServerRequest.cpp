@@ -64,6 +64,11 @@ VOID CHttpServer::CClientRequest::End(_In_opt_ HRESULT hrErrorCode)
   return;
 }
 
+BOOL CHttpServer::CClientRequest::MustAbort() const
+{
+  return (lpHttpServer != NULL) ? lpHttpServer->cShutdownEv.Wait(0) : TRUE;
+}
+
 VOID CHttpServer::CClientRequest::EnableDirectResponse()
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));

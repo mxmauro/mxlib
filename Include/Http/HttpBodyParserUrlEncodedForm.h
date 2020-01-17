@@ -33,6 +33,11 @@ public:
   CHttpBodyParserUrlEncodedForm(_In_ DWORD dwMaxFieldSize = 256000);
   ~CHttpBodyParserUrlEncodedForm();
 
+  LPCSTR GetType() const
+    {
+    return "application/x-www-form-urlencoded";
+    };
+
 protected:
   HRESULT Initialize(_In_ CHttpCommon &cHttpCmn);
   HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);

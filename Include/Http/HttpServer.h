@@ -44,11 +44,10 @@ public:
   //--------
 
   typedef Callback<HRESULT (_Out_ CClientRequest **lplpRequest)> OnNewRequestObjectCallback;
-  typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ HANDLE hShutdownEv,
+  typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
                             _Outptr_ _Maybenull_ CHttpBodyParserBase **lplpBodyParser)>
                             OnRequestHeadersReceivedCallback;
-  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
-                         _In_ HANDLE hShutdownEv)> OnRequestCompletedCallback;
+  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest)> OnRequestCompletedCallback;
   typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
                          _In_ HRESULT hrErrorCode)> OnErrorCallback;
 
@@ -58,7 +57,7 @@ public:
     CWebSocket *lpWebSocket;
   } WEBSOCKET_REQUEST_CALLBACK_DATA;
 
-  typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ HANDLE hShutdownEv,
+  typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
                             _Inout_ WEBSOCKET_REQUEST_CALLBACK_DATA &sData)> OnWebSocketRequestReceivedCallback;
 
   //--------
@@ -105,7 +104,9 @@ public:
   public:
     ~CClientRequest();
 
-    VOID End(_In_opt_ HRESULT hrErrorCode=S_OK);
+    VOID End(_In_opt_ HRESULT hrErrorCode = S_OK);
+
+    BOOL MustAbort() const;
 
     VOID EnableDirectResponse();
 
