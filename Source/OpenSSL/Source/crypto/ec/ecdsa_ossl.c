@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2002-2019 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -11,8 +11,8 @@
 #include <openssl/err.h>
 #include <openssl/obj_mac.h>
 #include <openssl/rand.h>
-#include "internal/bn_int.h"
-#include "ec_lcl.h"
+#include "crypto/bn.h"
+#include "ec_local.h"
 
 int ossl_ecdsa_sign(int type, const unsigned char *dgst, int dlen,
                     unsigned char *sig, unsigned int *siglen,
@@ -309,7 +309,7 @@ int ossl_ecdsa_verify(int type, const unsigned char *dgst, int dgst_len,
         goto err;
     ret = ECDSA_do_verify(dgst, dgst_len, s, eckey);
  err:
-    OPENSSL_clear_free(der, derlen);
+    OPENSSL_free(der);
     ECDSA_SIG_free(s);
     return ret;
 }

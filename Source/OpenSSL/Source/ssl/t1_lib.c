@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2019 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -18,7 +18,7 @@
 #include <openssl/dh.h>
 #include <openssl/bn.h>
 #include "internal/nelem.h"
-#include "ssl_locl.h"
+#include "ssl_local.h"
 #include <openssl/ct.h>
 
 static const SIGALG_LOOKUP *find_sig_alg(SSL *s, X509 *x, EVP_PKEY *pkey);
@@ -2563,27 +2563,23 @@ static int check_cert_usable(SSL *s, const SIGALG_LOOKUP *sig, X509 *x,
 {
     const SIGALG_LOOKUP *lu;
     int mdnid, pknid, default_mdnid;
-    int mandatory_md = 0;
     size_t i;
 
     /* If the EVP_PKEY reports a mandatory digest, allow nothing else. */
     ERR_set_mark();
-    switch (EVP_PKEY_get_default_digest_nid(pkey, &default_mdnid)) {
-    case 2:
-        mandatory_md = 1;
-        break;
-    case 1:
-    default: /* If it didn't report a mandatory NID, for whatever reasons,
-              * just clear the error and allow all hashes to be used. */
-        break;
-    }
+    if (EVP_PKEY_get_default_digest_nid(pkey, &default_mdnid) == 2 &&
+        sig->hash != default_mdnid)
+            return 0;
+
+    /* If it didn't report a mandatory NID, for whatever reasons,
+     * just clear the error and allow all hashes to be used. */
     ERR_pop_to_mark();
+
     if (s->s3->tmp.peer_cert_sigalgs != NULL) {
         for (i = 0; i < s->s3->tmp.peer_cert_sigalgslen; i++) {
             lu = tls1_lookup_sigalg(s->s3->tmp.peer_cert_sigalgs[i]);
             if (lu == NULL
-                || !X509_get_signature_info(x, &mdnid, &pknid, NULL, NULL)
-                || (mandatory_md && mdnid != default_mdnid))
+                || !X509_get_signature_info(x, &mdnid, &pknid, NULL, NULL))
                 continue;
             /*
              * TODO this does not differentiate between the
@@ -2596,7 +2592,7 @@ static int check_cert_usable(SSL *s, const SIGALG_LOOKUP *sig, X509 *x,
         }
         return 0;
     }
-    return !mandatory_md || sig->hash == default_mdnid;
+    return 1;
 }
 
 /*
@@ -2778,6 +2774,26 @@ int tls_choose_sigalg(SSL *s, int fatalerrs)
 #endif
                         break;
                 }
+#ifndef OPENSSL_NO_GOST
+                /*
+                 * Some Windows-based implementations do not send GOST algorithms indication
+                 * in supported_algorithms extension, so when we have GOST-based ciphersuite,
+                 * we have to assume GOST support.
+                 */
+                if (i == s->shared_sigalgslen && s->s3->tmp.new_cipher->algorithm_auth & (SSL_aGOST01 | SSL_aGOST12)) {
+                  if ((lu = tls1_get_legacy_sigalg(s, -1)) == NULL) {
+                    if (!fatalerrs)
+                      return 1;
+                    SSLfatal(s, SSL_AD_HANDSHAKE_FAILURE,
+                             SSL_F_TLS_CHOOSE_SIGALG,
+                             SSL_R_NO_SUITABLE_SIGNATURE_ALGORITHM);
+                    return 0;
+                  } else {
+                    i = 0;
+                    sig_idx = lu->sig_idx;
+                  }
+                }
+#endif
                 if (i == s->shared_sigalgslen) {
                     if (!fatalerrs)
                         return 1;

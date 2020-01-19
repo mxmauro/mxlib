@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2016 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2019 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -11,7 +11,7 @@
 #include "internal/cryptlib.h"
 #include <openssl/asn1t.h>
 #include <openssl/objects.h>
-#include "asn1_locl.h"
+#include "asn1_local.h"
 
 int ASN1_TYPE_get(const ASN1_TYPE *a)
 {

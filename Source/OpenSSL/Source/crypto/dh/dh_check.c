@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include "internal/cryptlib.h"
 #include <openssl/bn.h>
-#include "dh_locl.h"
+#include "dh_local.h"
 
 # define DH_NUMBER_ITERATIONS_FOR_PRIME 64
 
@@ -164,7 +164,8 @@ int DH_check_pub_key_ex(const DH *dh, const BIGNUM *pub_key)
 {
     int errflags = 0;
 
-    (void)DH_check(dh, &errflags);
+    if (!DH_check_pub_key(dh, pub_key, &errflags))
+        return 0;
 
     if ((errflags & DH_CHECK_PUBKEY_TOO_SMALL) != 0)
         DHerr(DH_F_DH_CHECK_PUB_KEY_EX, DH_R_CHECK_PUBKEY_TOO_SMALL);

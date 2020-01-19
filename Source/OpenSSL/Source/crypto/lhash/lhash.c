@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2019 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -13,9 +13,9 @@
 #include <openssl/crypto.h>
 #include <openssl/lhash.h>
 #include <openssl/err.h>
-#include "internal/ctype.h"
-#include "internal/lhash.h"
-#include "lhash_lcl.h"
+#include "crypto/ctype.h"
+#include "crypto/lhash.h"
+#include "lhash_local.h"
 
 /*
  * A hashing implementation that appears to be based on the linear hashing
