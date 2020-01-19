@@ -26,8 +26,7 @@ static FORCEINLINE int InterlockedExchangeAdd(_Inout_ _Interlocked_operand_ int 
 {
   return (int)_InterlockedExchangeAdd((LONG volatile *)Addend, (LONG)Value);
 }
-#include "..\OpenSSL\Source\crypto\x509\x509_lcl.h"
-#include "..\OpenSSL\Source\crypto\include\internal\x509_int.h"
+#include "..\OpenSSL\Source\crypto\x509\x509_local.h"
 
 //-----------------------------------------------------------
 
@@ -229,9 +228,9 @@ HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol
   SSL_ctrl(ssl_data->lpSslSession, SSL_CTRL_SET_VERIFY_CERT_STORE, 1, lpStore); //do add reference
   if (X509_STORE_set_ex_data(lpStore, 0, (void*)ssl_data) <= 0)
     return E_OUTOFMEMORY;
-  ((x509_store_st*)lpStore)->get_issuer = &my_X509_STORE_get1_issuer;
-  ((x509_store_st*)lpStore)->lookup_certs = &my_X509_STORE_get1_certs;
-  ((x509_store_st*)lpStore)->lookup_crls = &my_X509_STORE_get1_crls;
+  X509_STORE_set_get_issuer(lpStore, &my_X509_STORE_get1_issuer);
+  X509_STORE_set_lookup_certs(lpStore, &my_X509_STORE_get1_certs);
+  X509_STORE_set_lookup_crls(lpStore, &my_X509_STORE_get1_crls);
   //setup server/client certificate if provided
   ssl_data->lpCertArray = lpCheckCertificates;
   if (lpSelfCert != NULL)
@@ -703,11 +702,16 @@ static int my_X509_STORE_get1_issuer(X509 **issuer, X509_STORE_CTX *ctx, X509 *x
   if (lpSslLayerData->lpCertArray != NULL)
   {
     cert = lookup_cert_by_subject(lpSslLayerData->lpCertArray, X509_get_issuer_name(x));
-    if (cert != NULL && ctx->check_issued(ctx, x, cert))
+    if (cert != NULL)
     {
-      X509_up_ref(cert);
-      *issuer = cert;
-      return 1;
+      X509_STORE_CTX_check_issued_fn fnCheckIssued = X509_STORE_CTX_get_check_issued(ctx);
+
+      if (fnCheckIssued(ctx, x, cert) != 0)
+      {
+        X509_up_ref(cert);
+        *issuer = cert;
+        return 1;
+      }
     }
   }
   return 0;
@@ -769,7 +773,6 @@ static STACK_OF(X509_CRL) *my_X509_STORE_get1_crls(X509_STORE_CTX *ctx, X509_NAM
     }
   }
   return NULL;
-  //return X509_STORE_get1_crls(ctx, nm);
 }
 
 static X509* lookup_cert_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ X509_NAME *name)
