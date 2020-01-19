@@ -497,7 +497,7 @@ Dim I, S
 	objRE1.Global = False
 
 	Set objRE2 = New RegExp
-	objRE2.Pattern = "^\s*#\s*include\s+\" & Chr(34) & "rand_lcl\.h\" & Chr(34) & "\s*"
+	objRE2.Pattern = "^\s*#\s*include\s+\" & Chr(34) & "rand_local\.h\" & Chr(34) & "\s*"
 	objRE2.IgnoreCase = True
 	objRE2.Global = False
 
@@ -528,7 +528,7 @@ Dim I, S
 		If objRE1.Test(S) <> False Then
 			S = ""
 		ElseIf objRE2.Test(S) <> False Then
-			S = "#include " & Chr(34) & "..\Source\crypto\rand\rand_lcl.h" & Chr(34)
+			S = "#include " & Chr(34) & "..\Source\crypto\rand\rand_local.h" & Chr(34)
 		End If
 
 		objOutputFile.Write S & vbCrLf
