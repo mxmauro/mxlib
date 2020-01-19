@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2019 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright (c) 2002, Oracle and/or its affiliates. All rights reserved
  * Copyright 2005 Nokia. All rights reserved.
  *
@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <openssl/objects.h>
 #include "internal/nelem.h"
-#include "ssl_locl.h"
+#include "ssl_local.h"
 #include <openssl/md5.h>
 #include <openssl/dh.h>
 #include <openssl/rand.h>

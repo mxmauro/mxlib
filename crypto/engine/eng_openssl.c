@@ -1,5 +1,5 @@
 /*
- * Copyright 2001-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2001-2019 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright (c) 2002, Oracle and/or its affiliates. All rights reserved
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <openssl/crypto.h>
 #include "internal/cryptlib.h"
-#include "internal/engine.h"
+#include "crypto/engine.h"
 #include <openssl/pem.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>

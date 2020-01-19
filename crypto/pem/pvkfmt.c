@@ -1,5 +1,5 @@
 /*
- * Copyright 2005-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2005-2019 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -844,9 +844,9 @@ static int i2b_PVK(unsigned char **out, EVP_PKEY *pk, int enclevel,
         if (!EVP_EncryptInit_ex(cctx, EVP_rc4(), NULL, keybuf, NULL))
             goto error;
         OPENSSL_cleanse(keybuf, 20);
-        if (!EVP_DecryptUpdate(cctx, p, &enctmplen, p, pklen - 8))
+        if (!EVP_EncryptUpdate(cctx, p, &enctmplen, p, pklen - 8))
             goto error;
-        if (!EVP_DecryptFinal_ex(cctx, p + enctmplen, &enctmplen))
+        if (!EVP_EncryptFinal_ex(cctx, p + enctmplen, &enctmplen))
             goto error;
     }
 

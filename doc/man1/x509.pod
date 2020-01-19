@@ -11,7 +11,7 @@ B<openssl> B<x509>
 [B<-help>]
 [B<-inform DER|PEM>]
 [B<-outform DER|PEM>]
-[B<-keyform DER|PEM>]
+[B<-keyform DER|PEM|ENGINE>]
 [B<-CAform DER|PEM>]
 [B<-CAkeyform DER|PEM>]
 [B<-in filename>]
@@ -61,6 +61,7 @@ B<openssl> B<x509>
 [B<-clrext>]
 [B<-extfile filename>]
 [B<-extensions section>]
+[B<-sigopt nm:v>]
 [B<-rand file...>]
 [B<-writerand file>]
 [B<-engine id>]
@@ -365,6 +366,11 @@ key identifier extensions.
 If the input is a certificate request then a self signed certificate
 is created using the supplied private key using the subject name in
 the request.
+
+=item B<-sigopt nm:v>
+
+Pass options to the signature algorithm during sign or verify operations.
+Names and values of these options are algorithm-specific.
 
 =item B<-passin arg>
 

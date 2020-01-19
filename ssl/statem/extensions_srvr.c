@@ -8,8 +8,8 @@
  */
 
 #include <openssl/ocsp.h>
-#include "../ssl_locl.h"
-#include "statem_locl.h"
+#include "../ssl_local.h"
+#include "statem_local.h"
 #include "internal/cryptlib.h"
 
 #define COOKIE_STATE_FORMAT_VERSION     0
@@ -1487,6 +1487,10 @@ EXT_RETURN tls_construct_stoc_status_request(SSL *s, WPACKET *pkt,
                                              unsigned int context, X509 *x,
                                              size_t chainidx)
 {
+    /* We don't currently support this extension inside a CertificateRequest */
+    if (context == SSL_EXT_TLS1_3_CERTIFICATE_REQUEST)
+        return EXT_RETURN_NOT_SENT;
+
     if (!s->ext.status_expected)
         return EXT_RETURN_NOT_SENT;
 

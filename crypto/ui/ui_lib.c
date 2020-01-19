@@ -1,5 +1,5 @@
 /*
- * Copyright 2001-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2001-2019 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -13,7 +13,7 @@
 #include <openssl/buffer.h>
 #include <openssl/ui.h>
 #include <openssl/err.h>
-#include "ui_locl.h"
+#include "ui_local.h"
 
 UI *UI_new(void)
 {
