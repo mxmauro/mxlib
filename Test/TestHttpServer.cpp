@@ -41,9 +41,9 @@ static HRESULT OnLog(_In_z_ LPCWSTR szInfoW);
 
 int TestHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
 {
-  MX::CIoCompletionPortThreadPool cDispatcherPool, cWorkerPool;
+  MX::CIoCompletionPortThreadPool cDispatcherPool;
   MX::CSockets cSckMgr(cDispatcherPool);
-  MX::CHttpServer cHttpServer(cSckMgr, cWorkerPool);
+  MX::CHttpServer cHttpServer(cSckMgr);
   MX::CSslCertificate cSslCert;
   MX::CCryptoRSA cSslPrivateKey;
   HRESULT hRes;
@@ -60,10 +60,9 @@ int TestHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
 
   //cDispatcherPool.SetOption_MaxThreadsCount(32);
   //cDispatcherPool.SetOption_WorkerThreadIdleTime(INFINITE);
+  cDispatcherPool.SetOption_ThreadStackSize(256 * 1024);
 
   hRes = cDispatcherPool.Initialize();
-  if (SUCCEEDED(hRes))
-    hRes = cWorkerPool.Initialize();
   if (SUCCEEDED(hRes))
   {
     cSckMgr.SetEngineErrorCallback(MX_BIND_CALLBACK(&OnEngineError));

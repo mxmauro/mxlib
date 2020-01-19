@@ -41,30 +41,32 @@ class CHttpServer : public virtual CThread, public CLoggable, public CNonCopyabl
 public:
   class CClientRequest;
 
-  //--------
-
-  typedef Callback<HRESULT (_Out_ CClientRequest **lplpRequest)> OnNewRequestObjectCallback;
-  typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
-                            _Outptr_ _Maybenull_ CHttpBodyParserBase **lplpBodyParser)>
-                            OnRequestHeadersReceivedCallback;
-  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest)> OnRequestCompletedCallback;
-  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
-                         _In_ HRESULT hrErrorCode)> OnErrorCallback;
-
+public:
   typedef struct {
     LPCSTR *lpszProtocolsA;
     int nSelectedProtocol;
     CWebSocket *lpWebSocket;
   } WEBSOCKET_REQUEST_CALLBACK_DATA;
 
+public:
+  typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _Out_ CClientRequest **lplpRequest)> OnNewRequestObjectCallback;
+
+  typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
+                            _Outptr_ _Maybenull_ CHttpBodyParserBase **lplpBodyParser)>
+                            OnRequestHeadersReceivedCallback;
+
+  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest)> OnRequestCompletedCallback;
+
   typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
                             _Inout_ WEBSOCKET_REQUEST_CALLBACK_DATA &sData)> OnWebSocketRequestReceivedCallback;
+
+  typedef Callback<VOID(_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
+                        _In_ HRESULT hrErrorCode)> OnErrorCallback;
 
   //--------
 
 public:
-  CHttpServer(_In_ CSockets &cSocketMgr, _In_ CIoCompletionPortThreadPool &cWorkerPool,
-              _In_opt_ CLoggable *lpLogParent = NULL);
+  CHttpServer(_In_ CSockets &cSocketMgr, _In_opt_ CLoggable *lpLogParent = NULL);
   ~CHttpServer();
 
   VOID SetOption_MaxConnectionsPerIp(_In_ DWORD dwLimit);
@@ -104,9 +106,10 @@ public:
   public:
     ~CClientRequest();
 
-    VOID End(_In_opt_ HRESULT hrErrorCode = S_OK);
+    virtual VOID End(_In_opt_ HRESULT hrErrorCode = S_OK);
 
     BOOL MustAbort() const;
+    HANDLE GetAbortEvent() const;
 
     VOID EnableDirectResponse();
 
@@ -209,6 +212,8 @@ public:
     HRESULT SendStream(_In_ CStream *lpStream, _In_opt_z_ LPCWSTR szFileNameW=NULL);
 
     HRESULT SendErrorPage(_In_ LONG nStatusCode, _In_ HRESULT hrErrorCode, _In_opt_z_ LPCSTR szBodyExplanationA = NULL);
+
+    HRESULT ResetAndDisableClientCache();
 
     HANDLE GetUnderlyingSocketHandle() const;
     CSockets* GetUnderlyingSocketManager() const;
@@ -333,7 +338,6 @@ public:
     } WEBSOCKET_INFO, *LPWEBSOCKET_INFO;
 
   private:
-    OVERLAPPED sOvr;
     CHttpHeaderBase::eBrowser nBrowser;
     CCriticalSection cMutex;
     CHttpServer *lpHttpServer;
@@ -360,9 +364,6 @@ private:
                        _In_ HRESULT hrErrorCode);
   HRESULT OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData, _In_ HRESULT hrErrorCode);
   HRESULT OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData);
-
-  VOID OnRequestCompleted(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
-                          _In_ HRESULT hRes);
 
   HRESULT QuickSendErrorResponseAndReset(_In_ CClientRequest *lpRequest, _In_ LONG nErrorCode, _In_ HRESULT hrErrorCode,
                                          _In_ BOOL bForceClose);
@@ -411,9 +412,6 @@ private:
 private:
   CCriticalSection cs;
   CSockets &cSocketMgr;
-  CIoCompletionPortThreadPool &cWorkerPool;
-  //NOTE: CIoCompletionPortThreadPool::Post needs a non-dynamic variable
-  CIoCompletionPortThreadPool::OnPacketCallback cRequestCompletedWP;
   DWORD dwMaxConnectionsPerIp;
   DWORD dwRequestHeaderTimeoutMs;
   DWORD dwRequestBodyMinimumThroughputInBps, dwResponseMinimumThroughputInBps;
@@ -435,6 +433,7 @@ private:
   } sSsl;
   LONG volatile nRundownLock;
   HANDLE hAcceptConn;
+
   OnNewRequestObjectCallback cNewRequestObjectCallback;
   OnRequestHeadersReceivedCallback cRequestHeadersReceivedCallback;
   OnRequestCompletedCallback cRequestCompletedCallback;

@@ -26,9 +26,12 @@
 
 //-----------------------------------------------------------
 
-#define __EXIT_ON_ERROR(_hres)  if (FAILED(_hres)) return _hres
+#define __REQUEST_FLAGS_IsNew                     0x00000001
+#define __REQUEST_FLAGS_DiscardVM                 0x00000002
+#define __REQUEST_FLAGS_DebugShowStack            0x00000004
+#define __REQUEST_FLAGS_DebugShowFileNameAndLine  0x00000008
 
-//-----------------------------------------------------------
+#define __EXIT_ON_ERROR(_hres)  if (FAILED(_hres)) return _hres
 
 #define INTERNAL_REQUEST_PROPERTY "\xff""\xff""jsHttpServerRequest"
 

@@ -48,9 +48,11 @@ public:
 //-----------------------------------------------------------
 
 static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hrErrorCode);
-static HRESULT OnNewRequestObject(_Out_ MX::CJsHttpServer::CClientRequest **lplpRequest);
-static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
-                         _Out_ MX::CStringA &cStrCodeA);
+static HRESULT OnNewRequestObject(_In_ MX::CJsHttpServer *lpHttp,
+                                  _Out_ MX::CJsHttpServer::CClientRequest **lplpRequest);
+static VOID OnRequestCompleted(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest);
+static VOID OnProcessJsRequest(_In_ MX::CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
+                               _In_ HRESULT hRes);
 static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
                                  _Inout_ MX::CJavascriptVM &cJvm,
                                  _Inout_ MX::CJavascriptVM::CRequireModuleContext *lpReqContext,
@@ -76,7 +78,10 @@ class CTestJsRequest : public MX::CJsHttpServer::CClientRequest
 {
 public:
   CTestJsRequest() : MX::CJsHttpServer::CClientRequest()
-    { };
+    {
+    ::MxMemSet(&sOvr, 0, sizeof(sOvr));
+    return;
+    };
 
   HRESULT InitializeSession(_Inout_ MX::CJavascriptVM &cJvm,
                             _Inout_ MX::CJavascriptVM::CRequireModuleContext *lpReqContext)
@@ -94,6 +99,10 @@ public:
     return lpReqContext->ReplaceModuleExportsWithObject(cSessionJsObj);
     };
 
+public:
+  OVERLAPPED sOvr;
+  MX::CStringW cStrFileNameW;
+
 private:
   BOOL OnCleanup()
     {
@@ -109,36 +118,54 @@ private:
   MX::TAutoRefCounted<MX::CJsHttpServerSessionPlugin> cSessionJsObj;
 };
 
-//-----------------------------------------------------------\
+//-----------------------------------------------------------
+
+class CJsTest : public virtual MX::CBaseMemObj
+{
+public:
+  CJsTest() : MX::CBaseMemObj(), cSckMgr(cDispatcherPool), cJsHttpServer(cSckMgr)
+    {
+    cProcessJsRequest = MX_BIND_CALLBACK(&OnProcessJsRequest);
+    return;
+    };
+
+public:
+  MX::CIoCompletionPortThreadPool cDispatcherPool, cWorkerPool;
+  MX::CSockets cSckMgr;
+  MX::CJsHttpServer cJsHttpServer;
+  MX::CSslCertificate cSslCert;
+  MX::CCryptoRSA cSslPrivateKey;
+  MX::CIoCompletionPortThreadPool::OnPacketCallback cProcessJsRequest;
+};
+
+//-----------------------------------------------------------
 
 int TestJsHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
 {
-  MX::CIoCompletionPortThreadPool cDispatcherPool, cWorkerPool;
-  MX::CSockets cSckMgr(cDispatcherPool);
-  MX::CJsHttpServer cJsHttpServer(cSckMgr, cWorkerPool);
-  MX::CSslCertificate cSslCert;
-  MX::CCryptoRSA cSslPrivateKey;
+  CJsTest cTest;
   HRESULT hRes;
 
   DeleteSessionFiles();
 
-  cJsHttpServer.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
-  cJsHttpServer.SetLogLevel(dwLogLevel);
-  cSckMgr.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
-  cSckMgr.SetLogLevel(dwLogLevel);
+  cTest.cJsHttpServer.SetOption_MaxFilesCount(10);
+  cTest.cJsHttpServer.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
+  cTest.cJsHttpServer.SetLogLevel(dwLogLevel);
+  cTest.cSckMgr.SetOption_MaxAcceptsToPost(24);
+  //cTest.cSckMgr.SetOption_PacketSize(16384);
+  cTest.cSckMgr.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
+  cTest.cSckMgr.SetLogLevel(dwLogLevel);
 
-  cWorkerPool.SetOption_MinThreadsCount(4);
-  cSckMgr.SetOption_MaxAcceptsToPost(24);
-  //cSckMgr.SetOption_PacketSize(16384);
-  cJsHttpServer.SetOption_MaxFilesCount(10);
+  cTest.cDispatcherPool.SetOption_ThreadStackSize(256 * 1024);
+  cTest.cWorkerPool.SetOption_ThreadStackSize(256 * 1024);
+  cTest.cWorkerPool.SetOption_MinThreadsCount(4);
 
-  hRes = cDispatcherPool.Initialize();
+  hRes = cTest.cDispatcherPool.Initialize();
   if (SUCCEEDED(hRes))
-    hRes = cWorkerPool.Initialize();
+    hRes = cTest.cWorkerPool.Initialize();
   if (SUCCEEDED(hRes))
   {
-    cSckMgr.SetEngineErrorCallback(MX_BIND_CALLBACK(&OnEngineError));
-    hRes = cSckMgr.Initialize();
+    cTest.cSckMgr.SetEngineErrorCallback(MX_BIND_CALLBACK(&OnEngineError));
+    hRes = cTest.cSckMgr.Initialize();
   }
   if (SUCCEEDED(hRes) && bUseSSL != FALSE)
   {
@@ -152,7 +179,7 @@ int TestJsHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
     if (SUCCEEDED(hRes))
       hRes = LoadTxtFile(cStrTempA, (LPCWSTR)cStrTempW);
     if (SUCCEEDED(hRes))
-      hRes = cSslCert.InitializeFromPEM((LPCSTR)cStrTempA);
+      hRes = cTest.cSslCert.InitializeFromPEM((LPCSTR)cStrTempA);
     //load private key
     if (SUCCEEDED(hRes))
       hRes = GetAppPath(cStrTempW);
@@ -161,26 +188,26 @@ int TestJsHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
     if (SUCCEEDED(hRes))
       hRes = LoadTxtFile(cStrTempA, (LPCWSTR)cStrTempW);
     if (SUCCEEDED(hRes))
-      hRes = cSslPrivateKey.SetPrivateKeyFromPEM((LPCSTR)cStrTempA);
+      hRes = cTest.cSslPrivateKey.SetPrivateKeyFromPEM((LPCSTR)cStrTempA);
   }
   if (SUCCEEDED(hRes))
   {
-    cJsHttpServer.SetNewRequestObjectCallback(MX_BIND_CALLBACK(&OnNewRequestObject));
-    cJsHttpServer.SetRequestCallback(MX_BIND_CALLBACK(&OnRequest));
-    cJsHttpServer.SetRequireJsModuleCallback(MX_BIND_CALLBACK(&OnRequireJsModule));
-    cJsHttpServer.SetErrorCallback(MX_BIND_CALLBACK(&OnError));
-    cJsHttpServer.SetWebSocketRequestReceivedCallback(MX_BIND_CALLBACK(&OnWebSocketRequestReceived));
+    cTest.cJsHttpServer.SetNewRequestObjectCallback(MX_BIND_CALLBACK(&OnNewRequestObject));
+    cTest.cJsHttpServer.SetRequestCompletedCallback(MX_BIND_CALLBACK(&OnRequestCompleted));
+    cTest.cJsHttpServer.SetRequireJsModuleCallback(MX_BIND_CALLBACK(&OnRequireJsModule));
+    cTest.cJsHttpServer.SetWebSocketRequestReceivedCallback(MX_BIND_CALLBACK(&OnWebSocketRequestReceived));
+    cTest.cJsHttpServer.SetErrorCallback(MX_BIND_CALLBACK(&OnError));
   }
   if (SUCCEEDED(hRes))
   {
     if (bUseSSL != FALSE)
     {
-      hRes = cJsHttpServer.StartListening(MX::CSockets::FamilyIPv4, 443, MX::CIpcSslLayer::ProtocolTLSv1_2,
-                                          &cSslCert, &cSslPrivateKey);
+      hRes = cTest.cJsHttpServer.StartListening(MX::CSockets::FamilyIPv4, 443, MX::CIpcSslLayer::ProtocolTLSv1_2,
+                                                &(cTest.cSslCert), &(cTest.cSslPrivateKey));
     }
     else
     {
-      hRes = cJsHttpServer.StartListening(MX::CSockets::FamilyIPv4, 80);
+      hRes = cTest.cJsHttpServer.StartListening(MX::CSockets::FamilyIPv4, 80);
     }
   }
   //----
@@ -198,25 +225,67 @@ static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hrErrorCode)
   return;
 }
 
-static HRESULT OnNewRequestObject(_Out_ MX::CJsHttpServer::CClientRequest **lplpRequest)
+static HRESULT OnNewRequestObject(_In_ MX::CJsHttpServer *lpHttp, _Out_ MX::CJsHttpServer::CClientRequest **lplpRequest)
 {
   *lplpRequest = MX_DEBUG_NEW CTestJsRequest();
   return ((*lplpRequest) != NULL) ? S_OK : E_OUTOFMEMORY;
 }
 
-static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *_lpRequest,
-                         _Out_ MX::CStringA &cStrCodeA)
+static VOID OnRequestCompleted(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *_lpRequest)
 {
+  CJsTest *lpJsTest = CONTAINING_RECORD(lpHttp, CJsTest, cJsHttpServer);
   CTestJsRequest *lpRequest = static_cast<CTestJsRequest*>(_lpRequest);
-  MX::CStringW cStrFileNameW;
   LPCWSTR szExtensionW;
   HRESULT hRes;
 
-  hRes = BuildWebFileName(cStrFileNameW, szExtensionW, lpRequest->GetUrl()->GetPath());
+  hRes = BuildWebFileName(lpRequest->cStrFileNameW, szExtensionW, lpRequest->GetUrl()->GetPath());
   if (FAILED(hRes))
-    return hRes;
+  {
+    hRes = lpRequest->SendErrorPage(500, hRes);
+    lpRequest->End(hRes);
+    return;
+  }
+
   //check extension
   if (MX::StrCompareW(szExtensionW, L".jss", TRUE) == 0)
+  {
+    lpRequest->AddRef();
+    hRes = lpJsTest->cWorkerPool.Post(lpJsTest->cProcessJsRequest, 0, &(lpRequest->sOvr));
+    if (FAILED(hRes))
+    {
+      lpRequest->Release();
+      hRes = lpRequest->SendErrorPage(500, hRes);
+      lpRequest->End(hRes);
+    }
+  }
+  else if (MX::StrCompareW(szExtensionW, L".css", TRUE) == 0 ||
+           MX::StrCompareW(szExtensionW, L".js", TRUE) == 0 ||
+           MX::StrCompareW(szExtensionW, L".jpg", TRUE) == 0 ||
+           MX::StrCompareW(szExtensionW, L".png", TRUE) == 0 ||
+           MX::StrCompareW(szExtensionW, L".gif", TRUE) == 0 ||
+           MX::StrCompareW(szExtensionW, L".dat", TRUE) == 0)
+  {
+    hRes = lpRequest->SendFile((LPCWSTR)(lpRequest->cStrFileNameW));
+    if (hRes == MX_E_FileNotFound || hRes == MX_E_PathNotFound)
+    {
+      hRes = lpRequest->SendErrorPage(404, E_INVALIDARG);
+    }
+    lpRequest->End(hRes);
+  }
+  else
+  {
+    hRes = lpRequest->SendErrorPage(404, E_INVALIDARG);
+    lpRequest->End(hRes);
+  }
+  return;
+}
+
+static VOID OnProcessJsRequest(_In_ MX::CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
+                               _In_ HRESULT hRes)
+{
+  CTestJsRequest *lpRequest = CONTAINING_RECORD(lpOvr, CTestJsRequest, sOvr);
+
+  if (SUCCEEDED(hRes))
   {
     hRes = lpRequest->AttachJVM();
     if (SUCCEEDED(hRes))
@@ -241,33 +310,31 @@ static HRESULT OnRequest(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer:
 
       if (SUCCEEDED(hRes))
       {
-        hRes = LoadTxtFile(cStrCodeA, (LPCWSTR)cStrFileNameW);
+        MX::CStringA cStrCodeA;
+
+        hRes = LoadTxtFile(cStrCodeA, (LPCWSTR)(lpRequest->cStrFileNameW));
+        if (SUCCEEDED(hRes))
+        {
+          hRes = lpRequest->RunScript(cStrCodeA);
+        }
+        else if (hRes == MX_E_FileNotFound || hRes == MX_E_PathNotFound)
+        {
+          hRes = lpRequest->SendErrorPage(404, E_INVALIDARG);
+        }
       }
     }
-    if (hRes == MX_E_FileNotFound || hRes == MX_E_PathNotFound)
+    else
     {
-      hRes = lpRequest->SendErrorPage(404, E_INVALIDARG);
-    }
-  }
-  else if (MX::StrCompareW(szExtensionW, L".css", TRUE) == 0 ||
-           MX::StrCompareW(szExtensionW, L".js", TRUE) == 0 ||
-           MX::StrCompareW(szExtensionW, L".jpg", TRUE) == 0 ||
-           MX::StrCompareW(szExtensionW, L".png", TRUE) == 0 ||
-           MX::StrCompareW(szExtensionW, L".gif", TRUE) == 0 ||
-           MX::StrCompareW(szExtensionW, L".dat", TRUE) == 0)
-  {
-    hRes = lpRequest->SendFile((LPCWSTR)cStrFileNameW);
-    if (hRes == MX_HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) ||
-        hRes == MX_HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND))
-    {
-      hRes = lpRequest->SendErrorPage(404, E_INVALIDARG);
+      hRes = lpRequest->SendErrorPage(500, hRes);
     }
   }
   else
   {
-    hRes = lpRequest->SendErrorPage(404, E_INVALIDARG);
+    hRes = lpRequest->SendErrorPage(500, hRes);
   }
-  return hRes;
+  lpRequest->End(hRes);
+  lpRequest->Release();
+  return;
 }
 
 static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *_lpRequest,

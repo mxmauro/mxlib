@@ -112,12 +112,10 @@ static LONG DecrementIfGreaterThanZero(_Inout_ LONG volatile *lpnValue);
 
 namespace MX {
 
-CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr, _In_ CIoCompletionPortThreadPool &_cWorkerPool,
+CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr,
                          _In_opt_ CLoggable *lpLogParent) : CBaseMemObj(), CLoggable(), CNonCopyableObj(),
-                                                            cSocketMgr(_cSocketMgr), cWorkerPool(_cWorkerPool)
+                                                            cSocketMgr(_cSocketMgr)
 {
-  cRequestCompletedWP = MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnRequestCompleted, this);
-  //----
   SetLogParent(lpLogParent);
   //----
   dwMaxConnectionsPerIp = 0xFFFFFFFFUL;
@@ -680,7 +678,7 @@ HRESULT CHttpServer::OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIp
       //create new request object
       if (cNewRequestObjectCallback)
       {
-        hRes = cNewRequestObjectCallback(&cNewRequest);
+        hRes = cNewRequestObjectCallback(this, &cNewRequest);
         if (FAILED(hRes))
           return hRes;
       }
@@ -1036,9 +1034,9 @@ on_request_error:
         {
           if (bFatal == FALSE)
           {
-            QuickSendErrorResponseAndReset(lpRequest, (hRes == MX_E_Unsupported ||
-                                            hRes == MX_E_InvalidData) ? 400 : 500,
-                                            hRes, TRUE); //ignore return code
+            QuickSendErrorResponseAndReset(lpRequest,
+                                           ((hRes == MX_E_Unsupported || hRes == MX_E_InvalidData) ? 400 : 500),
+                                           hRes, TRUE); //ignore return code
           }
           else
           {
@@ -1103,22 +1101,33 @@ on_request_error:
       }
     }
   }
-  if (SUCCEEDED(hRes) && bFireRequestCompleted != FALSE)
-  {
-    lpRequest->AddRef();
-    hRes = cWorkerPool.Post(cRequestCompletedWP, 0, &(lpRequest->sOvr));
-    if (FAILED(hRes))
-    {
-      lpRequest->Release();
-      QuickSendErrorResponseAndReset(lpRequest, 500, hRes, TRUE); //ignore return code
-    }
-  }
-  //restart on success
   if (SUCCEEDED(hRes))
   {
-    if (bFireRequestHeadersReceivedCallback != FALSE || bFireRequestCompleted != FALSE)
+    if (bFireRequestCompleted != FALSE)
+    {
+      TAutoRefCounted<CClientRequest> cClientRequest(lpRequest);
+
+      if (cShutdownEv.Wait(0) == FALSE)
+      {
+        if (cRequestCompletedCallback)
+        {
+          cRequestCompletedCallback(this, cClientRequest);
+        }
+        else
+        {
+          QuickSendErrorResponseAndReset(cClientRequest, 500, E_NOTIMPL, TRUE); //ignore return code
+        }
+      }
+      else
+      {
+        QuickSendErrorResponseAndReset(cClientRequest, 500, MX_E_Cancelled, TRUE); //ignore return code
+      }
+      goto restart;
+    }
+    if (bFireRequestHeadersReceivedCallback != FALSE)
       goto restart;
   }
+
 done:
   if (SUCCEEDED(hRes) && cFireWebSocketOnConnected)
   {
@@ -1130,30 +1139,6 @@ done:
   if (FAILED(hRes) && cErrorCallback)
     cErrorCallback(this, lpRequest, hRes);
   return hRes;
-}
-
-VOID CHttpServer::OnRequestCompleted(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes,
-                                     _In_ OVERLAPPED *lpOvr, _In_ HRESULT hRes)
-{
-  CClientRequest *lpRequest = (CClientRequest*)((char*)lpOvr - (char*)&(((CClientRequest*)0)->sOvr));
-
-  if (SUCCEEDED(hRes))
-  {
-    if (cRequestCompletedCallback)
-    {
-      cRequestCompletedCallback(this, lpRequest);
-    }
-    else
-    {
-      lpRequest->End();
-    }
-  }
-  else
-  {
-    lpRequest->End(hRes);
-  }
-  lpRequest->Release();
-  return;
 }
 
 HRESULT CHttpServer::QuickSendErrorResponseAndReset(_In_ CClientRequest *lpRequest, _In_ LONG nErrorCode,

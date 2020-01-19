@@ -35,7 +35,6 @@ namespace MX {
 
 CHttpServer::CClientRequest::CClientRequest() : CIpc::CUserData(), TLnkLstNode<CClientRequest>()
 {
-  MxMemSet(&sOvr, 0, sizeof(sOvr));
   lpHttpServer = NULL;
   lpSocketMgr = NULL;
   hConn = NULL;
@@ -49,7 +48,9 @@ CHttpServer::CClientRequest::CClientRequest() : CIpc::CUserData(), TLnkLstNode<C
 CHttpServer::CClientRequest::~CClientRequest()
 {
   if (lpHttpServer != NULL)
+  {
     lpHttpServer->OnRequestDestroyed(this);
+  }
   return;
 }
 
@@ -67,6 +68,11 @@ VOID CHttpServer::CClientRequest::End(_In_opt_ HRESULT hrErrorCode)
 BOOL CHttpServer::CClientRequest::MustAbort() const
 {
   return (lpHttpServer != NULL) ? lpHttpServer->cShutdownEv.Wait(0) : TRUE;
+}
+
+HANDLE CHttpServer::CClientRequest::GetAbortEvent() const
+{
+  return (lpHttpServer != NULL) ? lpHttpServer->cShutdownEv.Get() : NULL;
 }
 
 VOID CHttpServer::CClientRequest::EnableDirectResponse()
@@ -589,6 +595,19 @@ HRESULT CHttpServer::CClientRequest::SendErrorPage(_In_ LONG nStatusCode, _In_ H
     _InterlockedOr(&nFlags, REQUEST_FLAG_ErrorPageSent);
   }
   return SendResponse((LPCSTR)cStrResponseA, cStrResponseA.GetLength());
+}
+
+HRESULT CHttpServer::CClientRequest::ResetAndDisableClientCache()
+{
+  HRESULT hRes;
+
+  ResetResponse();
+  hRes = AddResponseHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  if (SUCCEEDED(hRes))
+    hRes = AddResponseHeader("Pragma", "no-cache");
+  if (SUCCEEDED(hRes))
+    hRes = AddResponseHeader("Expires", "0");
+  return hRes;
 }
 
 HANDLE CHttpServer::CClientRequest::GetUnderlyingSocketHandle() const
