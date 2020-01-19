@@ -83,6 +83,7 @@ public:
   VOID SetOption_MaxThreadsCount(_In_opt_ DWORD dwCount = 0);
   VOID SetOption_WorkerThreadIdleTime(_In_opt_ DWORD dwTimeoutMs = 2000);
   VOID SetOption_ShutdownThreadThreshold(_In_opt_ DWORD dwThreshold = 2);
+  VOID SetOption_ThreadStackSize(_In_opt_ DWORD dwStackSize = 0);
 
   VOID SetThreadStartCallback(_In_opt_ OnThreadStartCallback cThreadStartCallback);
   VOID SetThreadEndCallback(_In_opt_ OnThreadEndCallback cThreadEndCallback);
@@ -118,7 +119,10 @@ private:
   {
   public:
     CThread() : CBaseMemObj(), TClassWorkerThread<CIoCompletionPortThreadPool>(), TLnkLstNode<CThread>()
-      { };
+      {
+      return;
+      };
+
   public:
     LONG nFlags;
   };
@@ -135,6 +139,7 @@ private:
   OnThreadStartErrorCallback cThreadStartErrorCallback;
   DWORD dwMinThreadsCount, dwMaxThreadsCount;
   DWORD dwWorkerThreadIdleTimeoutMs, dwShutdownThreadThreshold;
+  DWORD dwThreadStackSize;
   CIoCompletionPort cIOCP;
   struct {
     LONG volatile nMutex;

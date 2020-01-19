@@ -177,6 +177,7 @@ CIoCompletionPortThreadPool::CIoCompletionPortThreadPool() : CBaseMemObj(), CNon
   dwMinThreadsCount = dwMaxThreadsCount = GetNumberOfProcessors() * 2;
   dwWorkerThreadIdleTimeoutMs = 2000;
   dwShutdownThreadThreshold = 2;
+  dwThreadStackSize = 0;
   _InterlockedExchange(&(sThreads.nMutex), 0);
   _InterlockedExchange(&(sThreads.nActiveCount), 0);
   _InterlockedExchange(&(sThreads.nBusyCount), 0);
@@ -244,6 +245,17 @@ VOID CIoCompletionPortThreadPool::SetOption_ShutdownThreadThreshold(_In_opt_ DWO
     dwShutdownThreadThreshold = dwThreshold;
     if (dwShutdownThreadThreshold > dwMaxThreadsCount)
       dwShutdownThreadThreshold = dwMaxThreadsCount;
+  }
+  return;
+}
+
+VOID CIoCompletionPortThreadPool::SetOption_ThreadStackSize(_In_opt_ DWORD dwStackSize)
+{
+  CAutoSlimRWLShared cLock(&nSlimMutex);
+
+  if (!cIOCP)
+  {
+    dwThreadStackSize = dwStackSize;
   }
   return;
 }
@@ -383,6 +395,7 @@ HRESULT CIoCompletionPortThreadPool::StartThread(_In_ BOOL bInitial)
   lpThread = MX_DEBUG_NEW CThread();
   if (lpThread != NULL)
   {
+    lpThread->SetStackSize(dwThreadStackSize);
     lpThread->nFlags = (bInitial != FALSE || dwWorkerThreadIdleTimeoutMs == INFINITE) ? 0 : THREAD_FLAGS_CanExit;
     if (lpThread->Start(this, &CIoCompletionPortThreadPool::ThreadProc, (SIZE_T)lpThread, TRUE) != FALSE)
     {
