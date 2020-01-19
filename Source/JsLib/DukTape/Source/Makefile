@@ -202,7 +202,7 @@ EMCC = emcc
 #EMCCOPTS = -s TOTAL_MEMORY=2097152 -s TOTAL_STACK=524288 --memory-init-file 0
 EMCCOPTS = -O2 -std=c99 -Wall --memory-init-file 0 -s WASM=0 -s POLYFILL_OLD_MATH_FUNCTIONS
 EMCCOPTS_DUKVM = -O2 -std=c99 -Wall --memory-init-file 0 -DEMSCRIPTEN -s WASM=0
-EMCCOPTS_DUKWEB_EXPORT = -s EXPORTED_FUNCTIONS='["_dukweb_is_open", "_dukweb_open","_dukweb_close","_dukweb_eval"]' -s 'EXTRA_EXPORTED_RUNTIME_METHODS=["ccall","cwrap"]'
+EMCCOPTS_DUKWEB_EXPORT = -s EXPORTED_FUNCTIONS='["_main","_dukweb_is_open", "_dukweb_open","_dukweb_close","_dukweb_eval"]' -s 'EXTRA_EXPORTED_RUNTIME_METHODS=["ccall","cwrap"]'
 EMDUKOPTS = -s TOTAL_MEMORY=268435456 -DDUK_CMDLINE_PRINTALERT_SUPPORT
 EMDUKOPTS += -DEMSCRIPTEN  # enable stdin workaround in duk_cmdline.c
 
@@ -574,9 +574,8 @@ emduk.js: prep/emduk
 # and providing an eval() facility from both sides.  This is a placeholder now
 # and doesn't do anything useful yet.
 dukweb.js: prep/dukweb
-	$(EMCC) $(EMCCOPTS_DUKVM) $(EMCCOPTS_DUKWEB_EXPORT) \
+	$(EMCC) $(EMCCOPTS_DUKVM) $(EMCCOPTS_DUKWEB_EXPORT) --post-js dukweb/dukweb_extra.js \
 		-Iprep/dukweb prep/dukweb/duktape.c dukweb/dukweb.c -o dukweb.js
-	cat dukweb/dukweb_extra.js >> dukweb.js
 	@wc dukweb.js
 literal_intern_test: prep/nondebug misc/literal_intern_test.c
 	$(CC) -o $@ -std=c99 -O2 -fstrict-aliasing -Wall -Wextra \
@@ -627,7 +626,7 @@ test: apitest ecmatest
 
 # Set of miscellaneous tests for release.
 .PHONY: releasetest
-releasetest: configuretest xmldoctest closuretest bluebirdtest luajstest jsinterpretertest lodashtest underscoretest emscriptenluatest emscriptenduktest emscripteninceptiontest emscriptenmandeltest emscriptentest errorinjecttest
+releasetest: configuretest xmldoctest closuretest bluebirdtest luajstest jsinterpretertest lodashtest underscoretest emscriptenluatest emscriptenduktest emscriptenmandeltest emscriptentest errorinjecttest
 	@echo ""
 	@echo "### Release tests successful!"  # These tests now have output checks.
 
@@ -1167,28 +1166,50 @@ massif-deepmerge: massif-test-dev-deepmerge
 massif-arcfour: massif-test-dev-arcfour
 
 # Docker targets for building images and running specific targets in a
-# docker container for easier reproducibility.
+# docker container for easier reproducibility.  Creating the images
+# initially takes a long time.
+.PHONY: docker-prepare
+docker-prepare:
+	cd docker && for subdir in duktape-*; do \
+		if [ -f ~/.gitconfig ]; then cp ~/.gitconfig $$subdir/gitconfig; else touch docker/$$subdir/gitconfig; fi; \
+		cp prepare_repo.sh $$subdir/; \
+	done
+
+.PHONY: docker-images-x64
+docker-images-x64: docker-prepare
+	docker build --build-arg UID=$(shell id -u) --build-arg GID=$(shell id -g) -t duktape-base-ubuntu-18.04-x64 docker/duktape-base-ubuntu-18.04-x64
+	docker build -t duktape-dist-ubuntu-18.04-x64 docker/duktape-dist-ubuntu-18.04-x64
+	docker build -t duktape-site-ubuntu-18.04-x64 docker/duktape-site-ubuntu-18.04-x64
+	docker build -t duktape-duk-ubuntu-18.04-x64 docker/duktape-duk-ubuntu-18.04-x64
+	docker build -t duktape-shell-ubuntu-18.04-x64 docker/duktape-shell-ubuntu-18.04-x64
+	docker build -t duktape-release-1-ubuntu-18.04-x64 docker/duktape-release-1-ubuntu-18.04-x64
+
+.PHONY: docker-images-s390x
+docker-images-s390x: docker-prepare
+	docker build --build-arg UID=$(shell id -u) --build-arg GID=$(shell id -g) -t duktape-base-ubuntu-18.04-s390x docker/duktape-base-ubuntu-18.04-s390x
+	docker build -t duktape-shell-ubuntu-18.04-s390x docker/duktape-shell-ubuntu-18.04-s390x
+
 .PHONY: docker-images
-docker-images:
-	if [ -f ~/.gitconfig ]; then cp ~/.gitconfig docker/duktape-base-ubuntu-18.04/gitconfig; else touch docker/duktape-base-ubuntu-18.04/gitconfig; fi
-	docker build --build-arg UID=$(shell id -u) --build-arg GID=$(shell id -g) -t duktape-base-ubuntu-18.04 docker/duktape-base-ubuntu-18.04
-	docker build -t duktape-dist-ubuntu-18.04 docker/duktape-dist-ubuntu-18.04
-	docker build -t duktape-site-ubuntu-18.04 docker/duktape-site-ubuntu-18.04
-	docker build -t duktape-shell-ubuntu-18.04 docker/duktape-shell-ubuntu-18.04
+docker-images: docker-images-x64
 
 .PHONY: docker-clean
 docker-clean:
-	-docker rmi duktape-shell-ubuntu-18.04:latest
-	-docker rmi duktape-site-ubuntu-18.04:latest
-	-docker rmi duktape-dist-ubuntu-18.04:latest
-	-docker rmi duktape-base-ubuntu-18.04:latest
+	-rm -f docker/*/gitconfig docker/*/prepare_repo.sh
+	-docker rmi duktape-release-1-ubuntu-18.04-x64:latest
+	-docker rmi duktape-shell-ubuntu-18.04-x64:latest
+	-docker rmi duktape-duk-ubuntu-18.04-x64:latest
+	-docker rmi duktape-site-ubuntu-18.04-x64:latest
+	-docker rmi duktape-dist-ubuntu-18.04-x64:latest
+	-docker rmi duktape-base-ubuntu-18.04-x64:latest
+	-docker rmi duktape-shell-ubuntu-18.04-s390x:latest
+	-docker rmi duktape-base-ubuntu-18.04-s390x:latest
 	@echo ""
 	@echo "Now run 'docker system prune' to free disk space."
 
 .PHONY: docker-dist-src-master
 docker-dist-src-master:
 	rm -f docker-input.zip docker-output.zip
-	docker run --rm -i duktape-dist-ubuntu-18.04 > docker-output.zip
+	docker run --rm -i duktape-dist-ubuntu-18.04-x64 > docker-output.zip
 	unzip -t docker-output.zip ; true  # avoid failure due to leading garbage
 
 .PHONY: docker-dist-src-wd
@@ -1196,13 +1217,13 @@ docker-dist-src-wd:
 	rm -f docker-input.zip docker-output.zip
 	#git archive --format zip --output docker-input.zip HEAD
 	zip -1 -q -r docker-input.zip .
-	docker run --rm -i -e STDIN_ZIP=1 duktape-dist-ubuntu-18.04 < docker-input.zip > docker-output.zip
+	docker run --rm -i -e STDIN_ZIP=1 duktape-dist-ubuntu-18.04-x64 < docker-input.zip > docker-output.zip
 	unzip -t docker-output.zip ; true  # avoid failure due to leading garbage
 
 .PHONY: docker-dist-site-master
 docker-dist-site-master:
 	rm -f docker-input.zip docker-output.zip
-	docker run --rm -i duktape-site-ubuntu-18.04 > docker-output.zip
+	docker run --rm -i duktape-site-ubuntu-18.04-x64 > docker-output.zip
 	unzip -t docker-output.zip ; true  # avoid failure due to leading garbage
 
 .PHONY: docker-dist-site-wd
@@ -1210,13 +1231,40 @@ docker-dist-site-wd:
 	rm -f docker-input.zip docker-output.zip
 	#git archive --format zip --output docker-input.zip HEAD
 	zip -1 -q -r docker-input.zip .
-	docker run --rm -i -e STDIN_ZIP=1 duktape-site-ubuntu-18.04 < docker-input.zip > docker-output.zip
+	docker run --rm -i -e STDIN_ZIP=1 duktape-site-ubuntu-18.04-x64 < docker-input.zip > docker-output.zip
 	unzip -t docker-output.zip ; true  # avoid failure due to leading garbage
+
+.PHONY: docker-duk-wd
+docker-duk-wd:
+	rm -f docker-input.zip docker-output.zip
+	#git archive --format zip --output docker-input.zip HEAD
+	zip -1 -q -r docker-input.zip .
+	docker run --rm -i -e STDIN_ZIP=1 duktape-duk-ubuntu-18.04-x64 < docker-input.zip > docker-output.zip
+	unzip -t docker-output.zip ; true  # avoid failure due to leading garbage
+	unzip -o docker-output.zip ; true
+
+.PHONY: docker-duk-master
+docker-duk-master:
+	rm -f docker-input.zip docker-output.zip
+	docker run --rm -i duktape-duk-ubuntu-18.04-x64 > docker-output.zip
+	unzip -t docker-output.zip ; true  # avoid failure due to leading garbage
+	unzip -o docker-output.zip ; true
 
 .PHONY: docker-shell-master
 docker-shell-master:
-	docker run --rm -ti duktape-shell-ubuntu-18.04
+	docker run --rm -ti duktape-shell-ubuntu-18.04-x64
+
+.PHONY: docker-shell-wd
+docker-shell-wd:
+	docker run -v $(shell pwd):/work/duktape-host --rm -ti duktape-shell-ubuntu-18.04-x64
 
 .PHONY: docker-shell-wdmount
 docker-shell-wdmount:
-	docker run -v $(shell pwd):/work/duktape --rm -ti duktape-shell-ubuntu-18.04
+	docker run -v $(shell pwd):/work/duktape --rm -ti duktape-shell-ubuntu-18.04-x64
+
+.PHONY: docker-release-1-wd
+docker-release-1-wd:
+	rm -f docker-input.zip docker-output.zip
+	#git archive --format zip --output docker-input.zip HEAD
+	zip -1 -q -r docker-input.zip .
+	docker run --rm -i -e STDIN_ZIP=1 duktape-release-1-ubuntu-18.04-x64 < docker-input.zip

@@ -3540,19 +3540,29 @@ Miscellaneous:
 
 * Various portability fixes (GH-1931, GH-1976)
 
-Planned
-=======
-
-2.5.0 (XXXX-XX-XX)
+2.5.0 (2019-11-24)
 ------------------
 
 * Rename the 'global' binding to 'globalThis' to match updated
   proposal-global; enable the binding by default; update
   polyfills/global.js (GH-2160)
 
+* Add duk_pull() API call (GH-2184)
+
 * Add experimental duk_cbor_encode() and duk_cbor_decode() API calls (GH-2163)
 
 * Move CBOR extra into an actual Duktape built-in, enabled by default (GH-2163)
+
+* Include "end of input" in error message if SyntaxError occurs at end of
+  file (GH-2152, GH-2165)
+
+* Add missing DUK_DEFPROP_xxx convenience constants for the 'EC' combination
+  (like DUK_DEFPROP_EC, DUK_DEFPROP_HAVE_EC, etc) which were accidentally
+  missing from the API header (GH-2187)
+
+* Fix behavior of proxied Array objects for: Array.isArray(), duk_is_array(),
+  Object.prototype.toString(), JSON.stringify(), Array.prototype.concat()
+  (GH-2041, GH-2175, GH-2176)
 
 * Fix a harmless assert in Math.atan2() when compiling with gcc -m32 (GH-2164)
 
@@ -3560,14 +3570,24 @@ Planned
 
 * Fix compile warning when base64 support disabled (GH-2159)
 
-* Fix some C++ compile warnings (GH-2161)
+* Fix some compile warnings (GH-2161, GH-2172)
 
-* Include "end of input" in error message if SyntaxError occurs at end of
-  file (GH-2152, GH-2165)
+* Add RISC-V architecture detection in duk_config.h; previous versions
+  also compiled on RISC-V but identified as "generic" (GH-2174)
 
-* Minor performance and footprint improvements (GH-2167)
+* Avoid ast/endian.h header on Solaris (GH-2180)
+
+* Minor performance and footprint improvements (GH-2167, GH-2177)
+
+Planned
+=======
 
 3.0.0 (XXXX-XX-XX)
 ------------------
 
-* TBD
+* Remove prepared source variants other than src/ (matches Duktape 2.x
+  src-noline/) from the distributable (GH-2209)
+
+* Accept unlabelled function statements outside of top level for strict
+  functions (using hoist semantics), previously they were rejected with
+  a SyntaxError (GH-2213)
