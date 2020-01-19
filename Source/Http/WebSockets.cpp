@@ -303,12 +303,16 @@ loop:
           if (sReceive.sFrameHeader.nRsv != 0)
             return MX_E_Unsupported;
 
+          /*
+          NOTE: This is not always respected
+
           //check for masking (client->server must mask / server->client must not)
           if (sReceive.sFrameHeader.nPayloadLen != 0)
           {
             if (sReceive.sFrameHeader.nMask != ((bServerSide != FALSE) ? 1 : 0))
               return MX_E_InvalidData;
           }
+          */
 
           //validate opcode
           switch (sReceive.sFrameHeader.nOpcode)
@@ -516,7 +520,6 @@ validate_message_length:
       //check if we reached a final frame
       if (sReceive.sFrameHeader.nFin != 0)
       {
-
         //final frame for message
         if (sReceive.sCurrentMessage.nTotalDataLength > 0)
         {
@@ -582,7 +585,7 @@ validate_message_length:
           if (sReceive.sCurrentControlFrame.nFilledFrame >= 2)
           {
             wCode = ((USHORT)(sReceive.sCurrentControlFrame.aBuffer[1]) |
-              ((USHORT)(sReceive.sCurrentControlFrame.aBuffer[0]) << 8));
+                    ((USHORT)(sReceive.sCurrentControlFrame.aBuffer[0]) << 8));
           }
           switch (wCode)
           {
