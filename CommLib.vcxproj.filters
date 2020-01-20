@@ -212,9 +212,6 @@
     <ClInclude Include="Source\Http\HttpServerCommon.h">
       <Filter>Source Files\Http</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Comm\IpcMessageManager.h">
-      <Filter>Header Files\Comm</Filter>
-    </ClInclude>
     <ClInclude Include="Include\Http\EMail.h">
       <Filter>Header Files\Http</Filter>
     </ClInclude>
@@ -417,9 +414,6 @@
     </ClCompile>
     <ClCompile Include="Source\Http\HttpCommonHelpers.cpp">
       <Filter>Source Files\Http</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Comm\IpcMessageManager.cpp">
-      <Filter>Source Files\Comm</Filter>
     </ClCompile>
     <ClCompile Include="Source\Http\EMail.cpp">
       <Filter>Source Files\Http</Filter>

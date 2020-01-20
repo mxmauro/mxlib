@@ -176,7 +176,6 @@
   <ItemGroup>
     <ClInclude Include="Include\Comm\HostResolver.h" />
     <ClInclude Include="Include\Comm\IpcCommon.h" />
-    <ClInclude Include="Include\Comm\IpcMessageManager.h" />
     <ClInclude Include="Include\Comm\IpcSslLayer.h" />
     <ClInclude Include="Include\Comm\NamedPipes.h" />
     <ClInclude Include="Include\Comm\Proxy.h" />
@@ -244,7 +243,6 @@
   <ItemGroup>
     <ClCompile Include="Source\Comm\HostResolver.cpp" />
     <ClCompile Include="Source\Comm\IpcCommon.cpp" />
-    <ClCompile Include="Source\Comm\IpcMessageManager.cpp" />
     <ClCompile Include="Source\Comm\IpcSslLayer.cpp" />
     <ClCompile Include="Source\Comm\Proxy.cpp" />
     <ClCompile Include="Source\Comm\Sockets.cpp" />
