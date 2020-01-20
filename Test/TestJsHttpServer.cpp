@@ -257,26 +257,26 @@ static VOID OnRequestCompleted(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpS
       hRes = lpRequest->SendErrorPage(500, hRes);
       lpRequest->End(hRes);
     }
+
+    return;
   }
-  else if (MX::StrCompareW(szExtensionW, L".css", TRUE) == 0 ||
-           MX::StrCompareW(szExtensionW, L".js", TRUE) == 0 ||
-           MX::StrCompareW(szExtensionW, L".jpg", TRUE) == 0 ||
-           MX::StrCompareW(szExtensionW, L".png", TRUE) == 0 ||
-           MX::StrCompareW(szExtensionW, L".gif", TRUE) == 0 ||
-           MX::StrCompareW(szExtensionW, L".dat", TRUE) == 0)
+
+  if (MX::StrCompareW(szExtensionW, L".css", TRUE) == 0 || MX::StrCompareW(szExtensionW, L".js", TRUE) == 0 ||
+      MX::StrCompareW(szExtensionW, L".jpg", TRUE) == 0 || MX::StrCompareW(szExtensionW, L".png", TRUE) == 0 ||
+      MX::StrCompareW(szExtensionW, L".gif", TRUE) == 0 || MX::StrCompareW(szExtensionW, L".dat", TRUE) == 0)
   {
     hRes = lpRequest->SendFile((LPCWSTR)(lpRequest->cStrFileNameW));
     if (hRes == MX_E_FileNotFound || hRes == MX_E_PathNotFound)
     {
-      hRes = lpRequest->SendErrorPage(404, E_INVALIDARG);
+      hRes = lpRequest->SendErrorPage(404, MX_E_FileNotFound);
     }
+
     lpRequest->End(hRes);
+    return;
   }
-  else
-  {
-    hRes = lpRequest->SendErrorPage(404, E_INVALIDARG);
-    lpRequest->End(hRes);
-  }
+
+  hRes = lpRequest->SendErrorPage(404, MX_E_FileNotFound);
+  lpRequest->End(hRes);
   return;
 }
 

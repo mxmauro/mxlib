@@ -38,11 +38,6 @@ public:
   class CField;
   class CFileField;
 
-  LPCSTR GetType() const
-    {
-    return "form";
-    };
-
   SIZE_T GetFieldsCount() const;
   CField* GetField(_In_ SIZE_T nIndex) const;
 

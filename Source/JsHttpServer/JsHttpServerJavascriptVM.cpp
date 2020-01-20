@@ -187,35 +187,35 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
 
   switch (sSockAddr.si_family)
   {
-  case AF_INET:
-    hRes = HostResolver::FormatAddress(&sSockAddr, cStrTempW);
-    __EXIT_ON_ERROR(hRes);
-    hRes = cJVM->AddObjectStringProperty("request.remote", "family", "ipv4", CJavascriptVM::PropertyFlagEnumerable);
-    __EXIT_ON_ERROR(hRes);
-    hRes = cJVM->AddObjectStringProperty("request.remote", "address", (LPCWSTR)cStrTempW,
-                                         CJavascriptVM::PropertyFlagEnumerable);
-    __EXIT_ON_ERROR(hRes);
-    hRes = cJVM->AddObjectNumericProperty("request.remote", "port", (double)htons(sSockAddr.Ipv4.sin_port),
-                                          CJavascriptVM::PropertyFlagEnumerable);
-    __EXIT_ON_ERROR(hRes);
-    break;
+    case AF_INET:
+      hRes = HostResolver::FormatAddress(&sSockAddr, cStrTempW);
+      __EXIT_ON_ERROR(hRes);
+      hRes = cJVM->AddObjectStringProperty("request.remote", "family", "ipv4", CJavascriptVM::PropertyFlagEnumerable);
+      __EXIT_ON_ERROR(hRes);
+      hRes = cJVM->AddObjectStringProperty("request.remote", "address", (LPCWSTR)cStrTempW,
+                                           CJavascriptVM::PropertyFlagEnumerable);
+      __EXIT_ON_ERROR(hRes);
+      hRes = cJVM->AddObjectNumericProperty("request.remote", "port", (double)htons(sSockAddr.Ipv4.sin_port),
+                                            CJavascriptVM::PropertyFlagEnumerable);
+      __EXIT_ON_ERROR(hRes);
+      break;
 
-  case AF_INET6:
-    hRes = HostResolver::FormatAddress(&sSockAddr, cStrTempW);
-    __EXIT_ON_ERROR(hRes);
-    hRes = cJVM->AddObjectStringProperty("request.family", "family", "ipv6", CJavascriptVM::PropertyFlagEnumerable);
-    __EXIT_ON_ERROR(hRes);
-    hRes = cJVM->AddObjectStringProperty("request.remote", "address", (LPCWSTR)cStrTempW,
-                                         CJavascriptVM::PropertyFlagEnumerable);
-    __EXIT_ON_ERROR(hRes);
-    hRes = cJVM->AddObjectNumericProperty("request.remote", "port", (double)htons(sSockAddr.Ipv6.sin6_port),
-                                          CJavascriptVM::PropertyFlagEnumerable);
-    __EXIT_ON_ERROR(hRes);
-    break;
+    case AF_INET6:
+      hRes = HostResolver::FormatAddress(&sSockAddr, cStrTempW);
+      __EXIT_ON_ERROR(hRes);
+      hRes = cJVM->AddObjectStringProperty("request.family", "family", "ipv6", CJavascriptVM::PropertyFlagEnumerable);
+      __EXIT_ON_ERROR(hRes);
+      hRes = cJVM->AddObjectStringProperty("request.remote", "address", (LPCWSTR)cStrTempW,
+                                           CJavascriptVM::PropertyFlagEnumerable);
+      __EXIT_ON_ERROR(hRes);
+      hRes = cJVM->AddObjectNumericProperty("request.remote", "port", (double)htons(sSockAddr.Ipv6.sin6_port),
+                                            CJavascriptVM::PropertyFlagEnumerable);
+      __EXIT_ON_ERROR(hRes);
+      break;
 
-  default:
-    __EXIT_ON_ERROR(MX_E_Unsupported);
-    break;
+    default:
+      __EXIT_ON_ERROR(MX_E_Unsupported);
+      break;
   }
 
   //add request headers
@@ -284,7 +284,8 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
       lpJsObj->Release();
       __EXIT_ON_ERROR(hRes);
     }
-    else if (StrCompareA(cBodyParser->GetType(), "form") == 0)
+    else if (StrCompareA(cBodyParser->GetType(), "multipart/form-data") == 0 ||
+             StrCompareA(cBodyParser->GetType(), "application/x-www-form-urlencoded") == 0)
     {
       CHttpBodyParserFormBase *lpParser = (CHttpBodyParserFormBase*)(cBodyParser.Get());
 
