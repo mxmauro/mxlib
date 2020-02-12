@@ -123,6 +123,7 @@ public:
       }
       return TRUE;
       };
+
   public:
     TAutoFreePtr<BYTE> cData;
     SIZE_T nSize;
@@ -172,7 +173,7 @@ private:
 
 namespace MX {
 
-CJsSQLitePlugin::CJsSQLitePlugin(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx), CNonCopyableObj()
+CJsSQLitePlugin::CJsSQLitePlugin() : CJsObjectBase(), CNonCopyableObj()
 {
   lpInternal = NULL;
   return;
@@ -180,7 +181,7 @@ CJsSQLitePlugin::CJsSQLitePlugin(_In_ DukTape::duk_context *lpCtx) : CJsObjectBa
 
 CJsSQLitePlugin::~CJsSQLitePlugin()
 {
-  Disconnect();
+  Disconnect(NULL);
   return;
 }
 
@@ -225,9 +226,8 @@ VOID CJsSQLitePlugin::OnUnregister(_In_ DukTape::duk_context *lpCtx)
   return;
 }
 
-DukTape::duk_ret_t CJsSQLitePlugin::Connect()
+DukTape::duk_ret_t CJsSQLitePlugin::Connect(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
   MX::CStringW cStrFileNameW;
   DukTape::duk_idx_t nParamsCount;
   LPCSTR szDatabaseNameA;
@@ -236,7 +236,7 @@ DukTape::duk_ret_t CJsSQLitePlugin::Connect()
   int err, flags;
   HRESULT hRes;
 
-  Disconnect();
+  Disconnect(lpCtx);
   //get parameters
   nParamsCount = DukTape::duk_get_top(lpCtx);
   if (nParamsCount < 1 || nParamsCount > 2)
@@ -329,7 +329,7 @@ DukTape::duk_ret_t CJsSQLitePlugin::Connect()
     }
     delete jssqlite_data;
     lpInternal = NULL;
-    ThrowDbError(__FILE__, __LINE__, err, hRes);
+    ThrowDbError(lpCtx, __FILE__, __LINE__, err, hRes);
   }
   sqlite3_extended_result_codes(jssqlite_data->lpDB, 1);
 
@@ -363,7 +363,7 @@ DukTape::duk_ret_t CJsSQLitePlugin::Connect()
       ::DeleteFileW((LPCWSTR)cStrFileNameW);
     }
     
-    ThrowDbError(__FILE__, __LINE__, err);
+    ThrowDbError(lpCtx, __FILE__, __LINE__, err);
   }
 
   jssqlite_data->dwBusyTimeoutMs = dwBusyTimeoutMs;
@@ -371,11 +371,11 @@ DukTape::duk_ret_t CJsSQLitePlugin::Connect()
   return 0;
 }
 
-DukTape::duk_ret_t CJsSQLitePlugin::Disconnect()
+DukTape::duk_ret_t CJsSQLitePlugin::Disconnect(_In_opt_ DukTape::duk_context *lpCtx)
 {
   if (lpInternal != NULL)
   {
-    QueryClose();
+    QueryClose(lpCtx);
     delete jssqlite_data;
     lpInternal = NULL;
   }
@@ -383,10 +383,9 @@ DukTape::duk_ret_t CJsSQLitePlugin::Disconnect()
   return 0;
 }
 
-DukTape::duk_ret_t CJsSQLitePlugin::Query()
+DukTape::duk_ret_t CJsSQLitePlugin::Query(_In_ DukTape::duk_context *lpCtx)
 {
   Internals::CAutoLockDB(jssqlite_data);
-  DukTape::duk_context *lpCtx = GetContext();
   LPCSTR szQueryA;
   SIZE_T nQueryLegth;
   DukTape::duk_idx_t nParamsCount;
@@ -407,7 +406,7 @@ DukTape::duk_ret_t CJsSQLitePlugin::Query()
   if (*szQueryA == 0)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
   //close previous query if any
-  QueryClose();
+  QueryClose(lpCtx);
   //validate arguments
   nQueryLegth = StrLenA(szQueryA);
   if (nQueryLegth > 0xFFFFFFFF)
@@ -424,7 +423,7 @@ DukTape::duk_ret_t CJsSQLitePlugin::Query()
   if (err != SQLITE_OK)
   {
     jssqlite_data->lpStmt = NULL;
-    ThrowDbError(__FILE__, __LINE__);
+    ThrowDbError(lpCtx, __FILE__, __LINE__);
   }
 
   try
@@ -471,13 +470,13 @@ DukTape::duk_ret_t CJsSQLitePlugin::Query()
           case DUK_TYPE_NULL:
             err = sqlite3_bind_null(jssqlite_data->lpStmt, nParam + 1);
             if (err != SQLITE_OK)
-              ThrowDbError(__FILE__, __LINE__);
+              ThrowDbError(lpCtx, __FILE__, __LINE__);
             break;
 
           case DUK_TYPE_BOOLEAN:
             err = sqlite3_bind_int(jssqlite_data->lpStmt, nParam + 1, DukTape::duk_get_boolean(lpCtx, ndx) ? 1 : 0);
             if (err != SQLITE_OK)
-              ThrowDbError(__FILE__, __LINE__);
+              ThrowDbError(lpCtx, __FILE__, __LINE__);
             break;
 
           case DUK_TYPE_NUMBER:
@@ -491,19 +490,19 @@ DukTape::duk_ret_t CJsSQLitePlugin::Query()
             {
               err = sqlite3_bind_double(jssqlite_data->lpStmt, nParam + 1, dbl);
               if (err != SQLITE_OK)
-                ThrowDbError(__FILE__, __LINE__);
+                ThrowDbError(lpCtx, __FILE__, __LINE__);
             }
             else if (ll >= (LONGLONG)LONG_MIN || ll <= (LONGLONG)LONG_MAX)
             {
               err = sqlite3_bind_int(jssqlite_data->lpStmt, nParam + 1, (LONG)ll);
               if (err != SQLITE_OK)
-                ThrowDbError(__FILE__, __LINE__);
+                ThrowDbError(lpCtx, __FILE__, __LINE__);
             }
             else
             {
               err = sqlite3_bind_int64(jssqlite_data->lpStmt, nParam + 1, ll);
               if (err != SQLITE_OK)
-                ThrowDbError(__FILE__, __LINE__);
+                ThrowDbError(lpCtx, __FILE__, __LINE__);
             }
             }
             break;
@@ -512,7 +511,7 @@ DukTape::duk_ret_t CJsSQLitePlugin::Query()
             s = (LPVOID)DukTape::duk_get_lstring(lpCtx, ndx, &nLen);
             err = sqlite3_bind_text(jssqlite_data->lpStmt, nParam + 1, (const char*)s, (int)nLen, SQLITE_TRANSIENT);
             if (err != SQLITE_OK)
-              ThrowDbError(__FILE__, __LINE__);
+              ThrowDbError(lpCtx, __FILE__, __LINE__);
             break;
 
           case DUK_TYPE_OBJECT:
@@ -530,7 +529,7 @@ DukTape::duk_ret_t CJsSQLitePlugin::Query()
               err = sqlite3_bind_text(jssqlite_data->lpStmt, nParam + 1, szBufA, (int)MX::StrLenA(szBufA),
                                       SQLITE_TRANSIENT);
               if (err != SQLITE_OK)
-                ThrowDbError(__FILE__, __LINE__);
+                ThrowDbError(lpCtx, __FILE__, __LINE__);
             }
             else
             {
@@ -544,13 +543,13 @@ is_buffer:  s = DukTape::duk_get_buffer_data(lpCtx, ndx, &nLen);
             {
               err = sqlite3_bind_blob(jssqlite_data->lpStmt, nParam + 1, s, (int)nLen, SQLITE_TRANSIENT);
               if (err != SQLITE_OK)
-                ThrowDbError(__FILE__, __LINE__);
+                ThrowDbError(lpCtx, __FILE__, __LINE__);
             }
             else
             {
               err = sqlite3_bind_blob64(jssqlite_data->lpStmt, nParam + 1, s, (sqlite3_uint64)nLen, SQLITE_TRANSIENT);
               if (err != SQLITE_OK)
-                ThrowDbError(__FILE__, __LINE__);
+                ThrowDbError(lpCtx, __FILE__, __LINE__);
             }
             break;
 
@@ -583,7 +582,7 @@ is_buffer:  s = DukTape::duk_get_buffer_data(lpCtx, ndx, &nLen);
         break;
 
       default:
-        ThrowDbError(__FILE__, __LINE__);
+        ThrowDbError(lpCtx, __FILE__, __LINE__);
     }
 
     //get some data
@@ -604,7 +603,7 @@ is_buffer:  s = DukTape::duk_get_buffer_data(lpCtx, ndx, &nLen);
         {
           LPCSTR sA;
 
-          cFieldInfo.Attach(MX_DEBUG_NEW Internals::CJsSQLiteFieldInfo(lpCtx));
+          cFieldInfo.Attach(MX_DEBUG_NEW Internals::CJsSQLiteFieldInfo());
           if (!cFieldInfo)
             MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
           //name
@@ -681,7 +680,7 @@ is_buffer:  s = DukTape::duk_get_buffer_data(lpCtx, ndx, &nLen);
   }
   catch (...)
   {
-    QueryClose();
+    QueryClose(lpCtx);
     throw;
   }
 
@@ -689,14 +688,16 @@ is_buffer:  s = DukTape::duk_get_buffer_data(lpCtx, ndx, &nLen);
   return 0;
 }
 
-DukTape::duk_ret_t CJsSQLitePlugin::QueryAndFetch()
+DukTape::duk_ret_t CJsSQLitePlugin::QueryAndFetch(_In_ DukTape::duk_context *lpCtx)
 {
-  Query();
-  return FetchRow();
+  Query(lpCtx);
+  return FetchRow(lpCtx);
 }
 
-DukTape::duk_ret_t CJsSQLitePlugin::QueryClose()
+DukTape::duk_ret_t CJsSQLitePlugin::QueryClose(_In_opt_ DukTape::duk_context *lpCtx)
 {
+  UNREFERENCED_PARAMETER(lpCtx);
+
   if (lpInternal != NULL)
   {
     if (jssqlite_data->lpStmt != NULL)
@@ -712,9 +713,8 @@ DukTape::duk_ret_t CJsSQLitePlugin::QueryClose()
   return 0;
 }
 
-DukTape::duk_ret_t CJsSQLitePlugin::EscapeString()
+DukTape::duk_ret_t CJsSQLitePlugin::EscapeString(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
   CStringA cStrResultA;
   DukTape::duk_idx_t nParamsCount;
   BOOL bIsLikeStatement;
@@ -765,9 +765,8 @@ DukTape::duk_ret_t CJsSQLitePlugin::EscapeString()
   return 1;
 }
 
-DukTape::duk_ret_t CJsSQLitePlugin::Utf8Truncate()
+DukTape::duk_ret_t CJsSQLitePlugin::Utf8Truncate(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
   CStringA cStrResultA;
   DukTape::duk_size_t nStrLen;
   DukTape::duk_uint_t nMaxLength;
@@ -795,10 +794,9 @@ DukTape::duk_ret_t CJsSQLitePlugin::Utf8Truncate()
   return 1;
 }
 
-DukTape::duk_ret_t CJsSQLitePlugin::FetchRow()
+DukTape::duk_ret_t CJsSQLitePlugin::FetchRow(_In_ DukTape::duk_context *lpCtx)
 {
   Internals::CAutoLockDB(jssqlite_data);
-  DukTape::duk_context *lpCtx = GetContext();
   Internals::CJsSQLiteFieldInfo *lpFieldInfo;
   SIZE_T i, nFieldsCount;
   int err;
@@ -851,7 +849,7 @@ DukTape::duk_ret_t CJsSQLitePlugin::FetchRow()
         break;
 
       default:
-        ThrowDbError(__FILE__, __LINE__);
+        ThrowDbError(lpCtx, __FILE__, __LINE__);
     }
   }
 
@@ -1037,10 +1035,8 @@ fetchrow_set_time:
   return 1;
 }
 
-DukTape::duk_ret_t CJsSQLitePlugin::BeginTransaction()
+DukTape::duk_ret_t CJsSQLitePlugin::BeginTransaction(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   if (lpInternal == NULL)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_NotReady);
 
@@ -1088,37 +1084,31 @@ DukTape::duk_ret_t CJsSQLitePlugin::BeginTransaction()
     default:
       MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
   }
-  return Query();
+  return Query(lpCtx);
 }
 
-DukTape::duk_ret_t CJsSQLitePlugin::CommitTransaction()
+DukTape::duk_ret_t CJsSQLitePlugin::CommitTransaction(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   if (lpInternal == NULL)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_NotReady);
 
   DukTape::duk_set_top(lpCtx, 0);
   DukTape::duk_push_lstring(lpCtx, "COMMIT TRANSACTION;", 19);
-  return Query();
+  return Query(lpCtx);
 }
 
-DukTape::duk_ret_t CJsSQLitePlugin::RollbackTransaction()
+DukTape::duk_ret_t CJsSQLitePlugin::RollbackTransaction(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   if (lpInternal == NULL)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_NotReady);
 
   DukTape::duk_set_top(lpCtx, 0);
   DukTape::duk_push_lstring(lpCtx, "ROLLBACK TRANSACTION;", 21);
-  return Query();
+  return Query(lpCtx);
 }
 
-DukTape::duk_ret_t CJsSQLitePlugin::getAffectedRows()
+DukTape::duk_ret_t CJsSQLitePlugin::getAffectedRows(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   if (lpInternal != NULL)
     DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)(jssqlite_data->nAffectedRows));
   else
@@ -1126,10 +1116,8 @@ DukTape::duk_ret_t CJsSQLitePlugin::getAffectedRows()
   return 1;
 }
 
-DukTape::duk_ret_t CJsSQLitePlugin::getInsertId()
+DukTape::duk_ret_t CJsSQLitePlugin::getInsertId(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   if (lpInternal != NULL)
     DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)(jssqlite_data->nLastInsertId));
   else
@@ -1137,10 +1125,8 @@ DukTape::duk_ret_t CJsSQLitePlugin::getInsertId()
   return 1;
 }
 
-DukTape::duk_ret_t CJsSQLitePlugin::getFieldsCount()
+DukTape::duk_ret_t CJsSQLitePlugin::getFieldsCount(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   if (lpInternal != NULL && (jssqlite_data->dwFlags & QUERY_FLAGS_HAS_RESULTS) != 0)
     DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)(jssqlite_data->nFieldsCount));
   else
@@ -1148,10 +1134,8 @@ DukTape::duk_ret_t CJsSQLitePlugin::getFieldsCount()
   return 1;
 }
 
-DukTape::duk_ret_t CJsSQLitePlugin::getFields()
+DukTape::duk_ret_t CJsSQLitePlugin::getFields(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   if (lpInternal != NULL && (jssqlite_data->dwFlags & QUERY_FLAGS_HAS_RESULTS) != 0)
   {
     Internals::CJsSQLiteFieldInfo *lpFieldInfo;
@@ -1164,7 +1148,7 @@ DukTape::duk_ret_t CJsSQLitePlugin::getFields()
     for (i = 0; i < nCount; i++)
     {
       lpFieldInfo = jssqlite_data->aFieldsList.GetElementAt(i);
-      lpFieldInfo->PushThis();
+      lpFieldInfo->PushThis(lpCtx);
       DukTape::duk_put_prop_index(lpCtx, -2, (DukTape::duk_uarridx_t)i);
     }
   }
@@ -1175,16 +1159,16 @@ DukTape::duk_ret_t CJsSQLitePlugin::getFields()
   return 1;
 }
 
-VOID CJsSQLitePlugin::ThrowDbError(_In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line)
+VOID CJsSQLitePlugin::ThrowDbError(_In_ DukTape::duk_context *lpCtx, _In_opt_ LPCSTR filename,
+                                   _In_opt_ DukTape::duk_int_t line)
 {
-  ThrowDbError(filename, line, sqlite3_extended_errcode(jssqlite_data->lpDB));
+  ThrowDbError(lpCtx, filename, line, sqlite3_extended_errcode(jssqlite_data->lpDB));
   return;
 }
 
-VOID CJsSQLitePlugin::ThrowDbError(_In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line, _In_ int err,
-                                   _In_opt_ HRESULT hRes)
+VOID CJsSQLitePlugin::ThrowDbError(_In_ DukTape::duk_context *lpCtx, _In_opt_ LPCSTR filename,
+                                   _In_opt_ DukTape::duk_int_t line, _In_ int err, _In_opt_ HRESULT hRes)
 {
-  DukTape::duk_context *lpCtx = GetContext();
   LPCSTR sA;
 
   if (err == 0)

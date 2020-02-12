@@ -169,6 +169,9 @@ CJavascriptVM* CJavascriptVM::FromContext(_In_ DukTape::duk_context *lpCtx)
 {
   CJavascriptVM *lpVM;
 
+  if (lpCtx == NULL)
+    return NULL;
+
   //push our internal global object
   DukTape::duk_push_global_stash(lpCtx);
   DukTape::duk_get_prop_string(lpCtx, -1, "mxjslib");
@@ -494,9 +497,9 @@ HRESULT CJavascriptVM::AddJsObjectProperty(_In_z_ LPCSTR szPropertyNameA, _In_ C
 {
   HRESULT hRes;
 
-  if (lpCtx == NULL || lpCtx != lpObject->GetContext())
+  if (lpCtx == NULL)
     return E_FAIL;
-  hRes = lpObject->PushThis();
+  hRes = lpObject->PushThis(lpCtx);
   if (SUCCEEDED(hRes))
   {
     hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
@@ -766,9 +769,9 @@ HRESULT CJavascriptVM::AddObjectJsObjectProperty(_In_z_ LPCSTR szObjectNameA, _I
 
   if (szObjectNameA == NULL)
     return E_POINTER;
-  if (lpCtx == NULL || lpCtx != lpObject->GetContext())
+  if (lpCtx == NULL)
     return E_FAIL;
-  hRes = lpObject->PushThis();
+  hRes = lpObject->PushThis(lpCtx);
   if (SUCCEEDED(hRes))
   {
     hRes = Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),

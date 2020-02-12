@@ -31,10 +31,10 @@ namespace MX {
 
 namespace Internals {
 
-class CJsSQLiteFieldInfo : public CJsObjectBase
+class CJsSQLiteFieldInfo : public CJsObjectBase, public CNonCopyableObj
 {
 public:
-  CJsSQLiteFieldInfo(_In_ DukTape::duk_context *lpCtx);
+  CJsSQLiteFieldInfo();
   ~CJsSQLiteFieldInfo();
 
   MX_JS_DECLARE(CJsSQLiteFieldInfo, "SQLiteLFieldInfo")
@@ -50,13 +50,13 @@ public:
   MX_JS_END_MAP()
 
 private:
-  DukTape::duk_ret_t getName();
-  DukTape::duk_ret_t getOriginalName();
-  DukTape::duk_ret_t getTable();
-  DukTape::duk_ret_t getOriginalTable();
-  DukTape::duk_ret_t getDatabase();
-  DukTape::duk_ret_t getIsNumeric();
-  DukTape::duk_ret_t getType();
+  DukTape::duk_ret_t getName(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getOriginalName(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getTable(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getOriginalTable(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getDatabase(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getIsNumeric(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getType(_In_ DukTape::duk_context *lpCtx);
 
 private:
   friend class CJsSQLitePlugin;

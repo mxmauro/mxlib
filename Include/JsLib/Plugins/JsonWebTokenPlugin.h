@@ -29,7 +29,7 @@ namespace MX {
 class CJsonWebTokenPlugin : public CJsObjectBase, public CNonCopyableObj
 {
 public:
-  CJsonWebTokenPlugin(_In_ DukTape::duk_context *lpCtx);
+  CJsonWebTokenPlugin();
   ~CJsonWebTokenPlugin();
 
   MX_JS_DECLARE_CREATABLE(CJsonWebTokenPlugin, "JWT")

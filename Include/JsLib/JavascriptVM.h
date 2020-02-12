@@ -79,15 +79,17 @@ public:                                                                         
     _UnregisterHelper(lpCtx, _name, &_cls::OnUnregister);                                       \
     };                                                                                          \
                                                                                                 \
-  HRESULT PushThis()                                                                            \
+  HRESULT PushThis(_In_ DukTape::duk_context *lpCtx)                                            \
     {                                                                                           \
-    return _PushThisHelper(_name);                                                              \
+    return _PushThisHelper(lpCtx, _name);                                                       \
     };
 
 #define __MX_JS_DECLARE_CREATE_OBJECT(_cls)                                                     \
 private:                                                                                        \
-  static CJsObjectBase* _CreateObject(_In_ DukTape::duk_context *lpCtx)                         \
-    { return MX_DEBUG_NEW _cls(lpCtx); };
+  static CJsObjectBase* _CreateObject()                                                         \
+    {                                                                                           \
+    return MX_DEBUG_NEW _cls();                                                                 \
+    };
 
 #define MX_JS_BEGIN_MAP(_cls)                                                                   \
 private:                                                                                        \
@@ -497,11 +499,8 @@ private:
 class MX_NOVTABLE CJsObjectBase : public virtual TRefCounted<CBaseMemObj>
 {
 protected:
-  CJsObjectBase(_In_ DukTape::duk_context *lpCtx) : TRefCounted<CBaseMemObj>()
+  CJsObjectBase() : TRefCounted<CBaseMemObj>()
     {
-    MX_ASSERT(lpCtx != NULL);
-    lpJVM = CJavascriptVM::FromContext(lpCtx);
-    MX_ASSERT(lpJVM != NULL);
     return;
     };
 
@@ -509,41 +508,33 @@ public:
   ~CJsObjectBase()
     { };
 
-  virtual HRESULT PushThis() = 0;
+  virtual HRESULT PushThis(_In_ DukTape::duk_context *lpCtx) = 0;
 
   static CJsObjectBase* FromObject(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_int_t nIndex);
 
   //return 1 if has, 0 if has not, -1 to pass to original object
-  virtual int OnProxyHasNamedProperty(_In_z_ LPCSTR szPropNameA);
-  virtual int OnProxyHasIndexedProperty(_In_ int nIndex);
+  virtual int OnProxyHasNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA);
+  virtual int OnProxyHasIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex);
 
   //return 1 if a value was pushed, 0 to pass to original object, -1 to throw an error
-  virtual int OnProxyGetNamedProperty(_In_z_ LPCSTR szPropNameA);
-  virtual int OnProxyGetIndexedProperty(_In_ int nIndex);
+  virtual int OnProxyGetNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA);
+  virtual int OnProxyGetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex);
 
   //return 1 if a new value was pushed, 0 to set the original passed value, -1 to throw an error
-  virtual int OnProxySetNamedProperty(_In_z_ LPCSTR szPropNameA, _In_ DukTape::duk_idx_t nValueIndex);
-  virtual int OnProxySetIndexedProperty(_In_ int nIndex, _In_ DukTape::duk_idx_t nValueIndex);
+  virtual int OnProxySetNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA,
+                                      _In_ DukTape::duk_idx_t nValueIndex);
+  virtual int OnProxySetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex,
+                                        _In_ DukTape::duk_idx_t nValueIndex);
 
   //return 1 if delete must proceed, 0 to silently ignore, -1 to throw an error
-  virtual int OnProxyDeleteNamedProperty(_In_z_ LPCSTR szPropNameA);
-  virtual int OnProxyDeleteIndexedProperty(_In_ int nIndex);
+  virtual int OnProxyDeleteNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA);
+  virtual int OnProxyDeleteIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex);
 
   //return NULL/Empty String to end enumeration
-  virtual LPCSTR OnProxyGetPropertyName(_In_ int nIndex);
-
-  CJavascriptVM& GetJavascriptVM() const
-    {
-    return *lpJVM;
-    };
-
-  DukTape::duk_context* GetContext() const
-    {
-    return (DukTape::duk_context*)GetJavascriptVM();
-    };
+  virtual LPCSTR OnProxyGetPropertyName(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex);
 
 protected:
-  typedef DukTape::duk_ret_t (CJsObjectBase::*lpfnCallFunc)();
+  typedef DukTape::duk_ret_t (CJsObjectBase::*lpfnCallFunc)(_In_ DukTape::duk_context *lpCtx);
   typedef DukTape::duk_ret_t (*lpfnCallStaticFunc)(_In_ DukTape::duk_context *lpCtx);
 
   typedef struct {
@@ -555,7 +546,7 @@ protected:
   } MAP_ENTRY;
 
 protected:
-  typedef CJsObjectBase* (*lpfnCreateObject)(_In_ DukTape::duk_context *lpCtx);
+  typedef CJsObjectBase* (*lpfnCreateObject)();
   typedef VOID (*lpfnRegisterUnregisterCallback)(_In_ DukTape::duk_context *lpCtx);
 
   static VOID OnRegister(_In_ DukTape::duk_context *lpCtx)
@@ -571,7 +562,7 @@ protected:
                                 _In_ lpfnRegisterUnregisterCallback fnUnregisterCallback);
 
   static DukTape::duk_ret_t _ConstructorHelper(_In_ DukTape::duk_context *lpCtx);
-  HRESULT _PushThisHelper(_In_z_ LPCSTR szObjectNameA);
+  HRESULT _PushThisHelper(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA);
   static VOID _SetupMapEntries(_In_ DukTape::duk_context *lpCtx, _In_ MAP_ENTRY *lpEntries, _In_ BOOL bStatic);
   static DukTape::duk_ret_t _FinalReleaseHelper(_In_ DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _CallMethodHelper(_In_ DukTape::duk_context *lpCtx, _In_ lpfnCallFunc fnFunc);
@@ -581,9 +572,6 @@ protected:
   static DukTape::duk_ret_t _ProxySetPropHelper(_In_ DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _ProxyDeletePropHelper(_In_ DukTape::duk_context *lpCtx);
   static DukTape::duk_ret_t _ProxyOwnKeysHelper(_In_ DukTape::duk_context *lpCtx);
-
-private:
-  CJavascriptVM *lpJVM;
 };
 
 //-----------------------------------------------------------

@@ -25,7 +25,7 @@ namespace MX {
 
 namespace Internals {
 
-CJsMySqlFieldInfo::CJsMySqlFieldInfo(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx)
+CJsMySqlFieldInfo::CJsMySqlFieldInfo() : CJsObjectBase(), CNonCopyableObj()
 {
   nDecimalsCount = nCharSet = nFlags = 0;
   nType = MYSQL_TYPE_NULL;
@@ -37,18 +37,14 @@ CJsMySqlFieldInfo::~CJsMySqlFieldInfo()
   return;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getName()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getName(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrNameA, cStrNameA.GetLength());
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getOriginalName()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getOriginalName(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   if (cStrOriginalNameA.IsEmpty() == FALSE)
     DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrOriginalNameA, cStrOriginalNameA.GetLength());
   else
@@ -56,18 +52,14 @@ DukTape::duk_ret_t CJsMySqlFieldInfo::getOriginalName()
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getTable()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getTable(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTableA, cStrTableA.GetLength());
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getOriginalTable()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getOriginalTable(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   if (cStrOriginalTableA.IsEmpty() == FALSE)
     DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrOriginalTableA, cStrOriginalTableA.GetLength());
   else
@@ -75,130 +67,98 @@ DukTape::duk_ret_t CJsMySqlFieldInfo::getOriginalTable()
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getDatabase()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getDatabase(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrDatabaseA, cStrDatabaseA.GetLength());
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getDecimalsCount()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getDecimalsCount(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_uint(lpCtx, nDecimalsCount);
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getCharSet()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getCharSet(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_uint(lpCtx, nCharSet);
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getCanBeNull()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getCanBeNull(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_boolean(lpCtx, (nFlags & NOT_NULL_FLAG) ? 0 : 1);
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getIsPrimaryKey()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getIsPrimaryKey(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_boolean(lpCtx, (nFlags & PRI_KEY_FLAG) ? 1 : 0);
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getIsUniqueKey()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getIsUniqueKey(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_boolean(lpCtx, (nFlags & UNIQUE_KEY_FLAG) ? 1 : 0);
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getIsKey()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getIsKey(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_boolean(lpCtx, (nFlags & (PRI_KEY_FLAG | UNIQUE_KEY_FLAG | MULTIPLE_KEY_FLAG)) ? 1 : 0);
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getIsUnsigned()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getIsUnsigned(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_boolean(lpCtx, (nFlags & UNSIGNED_FLAG) ? 1 : 0);
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getIsZeroFill()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getIsZeroFill(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_boolean(lpCtx, (nFlags & ZEROFILL_FLAG) ? 1 : 0);
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getIsBinary()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getIsBinary(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_boolean(lpCtx, (nFlags & BINARY_FLAG) ? 1 : 0);
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getIsAutoIncrement()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getIsAutoIncrement(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_boolean(lpCtx, (nFlags & AUTO_INCREMENT_FLAG) ? 1 : 0);
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getIsEnum()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getIsEnum(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_boolean(lpCtx, (nFlags & ENUM_FLAG) ? 1 : 0);
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getIsSet()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getIsSet(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_boolean(lpCtx, (nFlags & SET_FLAG) ? 1 : 0);
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getHasDefault()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getHasDefault(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_boolean(lpCtx, (nFlags & NO_DEFAULT_VALUE_FLAG) ? 0 : 1);
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getIsNumeric()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getIsNumeric(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_boolean(lpCtx, (nFlags & NUM_FLAG) ? 1 : 0);
   return 1;
 }
 
-DukTape::duk_ret_t CJsMySqlFieldInfo::getType()
+DukTape::duk_ret_t CJsMySqlFieldInfo::getType(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_uint(lpCtx, (DukTape::duk_uint_t)nType);
   return 1;
 }

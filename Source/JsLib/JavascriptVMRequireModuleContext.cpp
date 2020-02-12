@@ -169,10 +169,9 @@ HRESULT CJavascriptVM::CRequireModuleContext::AddNullProperty(_In_z_ LPCSTR szPr
 HRESULT CJavascriptVM::CRequireModuleContext::AddJsObjectProperty(_In_z_ LPCSTR szPropertyNameA,
                                                                   _In_ CJsObjectBase *lpObject, _In_opt_ int nFlags)
 {
-  CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   HRESULT hRes;
 
-  hRes = lpObject->PushThis();
+  hRes = lpObject->PushThis(lpCtx);
   if (SUCCEEDED(hRes))
   {
     hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, nExportsObjectIndex, szPropertyNameA, TRUE, nFlags,
@@ -217,7 +216,7 @@ HRESULT CJavascriptVM::CRequireModuleContext::ReplaceModuleExportsWithObject(_In
 
   if (lpObject == NULL)
     return E_POINTER;
-  hRes = lpObject->PushThis();
+  hRes = lpObject->PushThis(lpCtx);
   if (SUCCEEDED(hRes))
     hRes = ReplaceModuleExports();
   return hRes;

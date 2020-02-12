@@ -90,10 +90,10 @@ namespace MX {
 
 namespace Internals {
 
-class CJsMySqlFieldInfo : public CJsObjectBase
+class CJsMySqlFieldInfo : public CJsObjectBase, public CNonCopyableObj
 {
 public:
-  CJsMySqlFieldInfo(_In_ DukTape::duk_context *lpCtx);
+  CJsMySqlFieldInfo();
   ~CJsMySqlFieldInfo();
 
   MX_JS_DECLARE(CJsMySqlFieldInfo, "MySqlLFieldInfo")
@@ -122,26 +122,26 @@ public:
   MX_JS_END_MAP()
 
 private:
-  DukTape::duk_ret_t getName();
-  DukTape::duk_ret_t getOriginalName();
-  DukTape::duk_ret_t getTable();
-  DukTape::duk_ret_t getOriginalTable();
-  DukTape::duk_ret_t getDatabase();
-  DukTape::duk_ret_t getDecimalsCount();
-  DukTape::duk_ret_t getCharSet();
-  DukTape::duk_ret_t getCanBeNull();
-  DukTape::duk_ret_t getIsPrimaryKey();
-  DukTape::duk_ret_t getIsUniqueKey();
-  DukTape::duk_ret_t getIsKey();
-  DukTape::duk_ret_t getIsUnsigned();
-  DukTape::duk_ret_t getIsZeroFill();
-  DukTape::duk_ret_t getIsBinary();
-  DukTape::duk_ret_t getIsAutoIncrement();
-  DukTape::duk_ret_t getIsEnum();
-  DukTape::duk_ret_t getIsSet();
-  DukTape::duk_ret_t getHasDefault();
-  DukTape::duk_ret_t getIsNumeric();
-  DukTape::duk_ret_t getType();
+  DukTape::duk_ret_t getName(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getOriginalName(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getTable(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getOriginalTable(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getDatabase(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getDecimalsCount(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getCharSet(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getCanBeNull(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getIsPrimaryKey(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getIsUniqueKey(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getIsKey(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getIsUnsigned(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getIsZeroFill(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getIsBinary(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getIsAutoIncrement(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getIsEnum(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getIsSet(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getHasDefault(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getIsNumeric(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getType(_In_ DukTape::duk_context *lpCtx);
 
 private:
   friend class CJsMySqlPlugin;

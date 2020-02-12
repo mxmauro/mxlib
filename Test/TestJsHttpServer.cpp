@@ -89,7 +89,7 @@ public:
     HRESULT hRes;
 
     MX_ASSERT(!cSessionJsObj);
-    cSessionJsObj.Attach(MX_DEBUG_NEW MX::CJsHttpServerSessionPlugin(cJvm));
+    cSessionJsObj.Attach(MX_DEBUG_NEW MX::CJsHttpServerSessionPlugin());
     if (!cSessionJsObj)
       return E_OUTOFMEMORY;
     hRes = cSessionJsObj->Setup(this, MX_BIND_CALLBACK(&OnSessionLoadSave), NULL, NULL, L"/", 2 * 60 * 60, FALSE,

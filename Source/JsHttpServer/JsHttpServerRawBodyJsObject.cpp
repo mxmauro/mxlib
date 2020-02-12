@@ -25,7 +25,7 @@ namespace MX {
 
 namespace Internals {
 
-CRawBodyJsObject::CRawBodyJsObject(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx), CNonCopyableObj()
+CRawBodyJsObject::CRawBodyJsObject() : CJsObjectBase(), CNonCopyableObj()
 {
   lpBody = NULL;
   return;
@@ -37,9 +37,8 @@ VOID CRawBodyJsObject::Initialize(_In_ CHttpBodyParserDefault *_lpBody)
   return;
 }
 
-DukTape::duk_ret_t CRawBodyJsObject::getSize()
+DukTape::duk_ret_t CRawBodyJsObject::getSize(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
   ULONGLONG nSize;
 
   nSize = lpBody->GetSize();
@@ -49,9 +48,8 @@ DukTape::duk_ret_t CRawBodyJsObject::getSize()
   return 1;
 }
 
-DukTape::duk_ret_t CRawBodyJsObject::ToString()
+DukTape::duk_ret_t CRawBodyJsObject::ToString(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
   CStringA cStrTempA;
   HRESULT hRes;
 
@@ -62,9 +60,8 @@ DukTape::duk_ret_t CRawBodyJsObject::ToString()
   return 1;
 }
 
-DukTape::duk_ret_t CRawBodyJsObject::Read()
+DukTape::duk_ret_t CRawBodyJsObject::Read(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
   DukTape::duk_uint_t nOffset, nToRead;
   LPVOID lpBuf;
   SIZE_T nReaded;

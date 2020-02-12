@@ -276,7 +276,7 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
 
       hRes = lpParser->ToString(cStrTempA);
       __EXIT_ON_ERROR(hRes);
-      lpJsObj = MX_DEBUG_NEW Internals::CRawBodyJsObject(*cJVM);
+      lpJsObj = MX_DEBUG_NEW Internals::CRawBodyJsObject();
       if (!lpJsObj)
         return E_OUTOFMEMORY;
       lpJsObj->Initialize(lpParser);
@@ -378,7 +378,7 @@ HRESULT CJsHttpServer::CJvmManager::InsertPostFileField(_In_ CJavascriptVM &cJvm
   {
     Internals::CFileFieldJsObject *lpJsObj;
 
-    lpJsObj = MX_DEBUG_NEW Internals::CFileFieldJsObject(cJvm);
+    lpJsObj = MX_DEBUG_NEW Internals::CFileFieldJsObject();
     if (!lpJsObj)
       return E_OUTOFMEMORY;
     lpJsObj->Initialize(lpFileField);

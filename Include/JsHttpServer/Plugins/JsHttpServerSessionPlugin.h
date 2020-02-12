@@ -33,7 +33,7 @@ public:
   typedef Callback<HRESULT (_In_ CJsHttpServerSessionPlugin *lpPlugin, _In_ BOOL bLoading)> OnLoadSaveCallback;
 
 public:
-  CJsHttpServerSessionPlugin(_In_ DukTape::duk_context *lpCtx);
+  CJsHttpServerSessionPlugin();
   ~CJsHttpServerSessionPlugin();
 
   HRESULT Setup(_In_ CJsHttpServer::CClientRequest *lpRequest, _In_ OnLoadSaveCallback cLoadSaveCallback,
@@ -73,20 +73,21 @@ private:
 
   HRESULT RegenerateSessionId();
 
-  DukTape::duk_ret_t _Save();
-  DukTape::duk_ret_t RegenerateId();
+  DukTape::duk_ret_t _Save(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t RegenerateId(_In_ DukTape::duk_context *lpCtx);
 
-  int OnProxyHasNamedProperty(_In_z_ LPCSTR szPropNameA);
-  int OnProxyHasIndexedProperty(_In_ int nIndex);
+  int OnProxyHasNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA);
+  int OnProxyHasIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex);
 
-  int OnProxyGetNamedProperty(_In_z_ LPCSTR szPropNameA);
-  int OnProxyGetIndexedProperty(_In_ int nIndex);
+  int OnProxyGetNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA);
+  int OnProxyGetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex);
 
-  int OnProxySetNamedProperty(_In_z_ LPCSTR szPropNameA, _In_ DukTape::duk_idx_t nValueIndex);
-  int OnProxySetIndexedProperty(_In_ int nIndex, _In_ DukTape::duk_idx_t nValueIndex);
+  int OnProxySetNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA,
+                              _In_ DukTape::duk_idx_t nValueIndex);
+  int OnProxySetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex, _In_ DukTape::duk_idx_t nValueIndex);
 
-  int OnProxyDeleteNamedProperty(_In_z_ LPCSTR szPropNameA);
-  int OnProxyDeleteIndexedProperty(_In_ int nIndex);
+  int OnProxyDeleteNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA);
+  int OnProxyDeleteIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex);
 
 private:
   CPropertyBag cBag;

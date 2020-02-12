@@ -25,7 +25,7 @@ namespace MX {
 
 namespace Internals {
 
-CFileFieldJsObject::CFileFieldJsObject(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx), CNonCopyableObj()
+CFileFieldJsObject::CFileFieldJsObject() : CJsObjectBase(), CNonCopyableObj()
 {
   lpFileField = NULL;
   nFilePos = 0ui64;
@@ -38,17 +38,14 @@ VOID CFileFieldJsObject::Initialize(_In_ CHttpBodyParserFormBase::CFileField *_l
   return;
 }
 
-DukTape::duk_ret_t CFileFieldJsObject::getType()
+DukTape::duk_ret_t CFileFieldJsObject::getType(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_string(lpCtx, lpFileField->GetType());
   return 1;
 }
 
-DukTape::duk_ret_t CFileFieldJsObject::getFileName()
+DukTape::duk_ret_t CFileFieldJsObject::getFileName(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
   CStringA cStrTempA;
   HRESULT hRes;
 
@@ -59,17 +56,14 @@ DukTape::duk_ret_t CFileFieldJsObject::getFileName()
   return 1;
 }
 
-DukTape::duk_ret_t CFileFieldJsObject::getFileSize()
+DukTape::duk_ret_t CFileFieldJsObject::getFileSize(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
-
   DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)(lpFileField->GetSize()));
   return 1;
 }
 
-DukTape::duk_ret_t CFileFieldJsObject::SeekFile()
+DukTape::duk_ret_t CFileFieldJsObject::SeekFile(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
   DukTape::duk_double_t nPos;
 
   nPos = DukTape::duk_require_number(lpCtx, 0);
@@ -80,9 +74,8 @@ DukTape::duk_ret_t CFileFieldJsObject::SeekFile()
   return 0;
 }
 
-DukTape::duk_ret_t CFileFieldJsObject::ReadFile()
+DukTape::duk_ret_t CFileFieldJsObject::ReadFile(_In_ DukTape::duk_context *lpCtx)
 {
-  DukTape::duk_context *lpCtx = GetContext();
   DukTape::duk_uint_t nToRead;
   DukTape::duk_idx_t nParamsCount;
   DukTape::duk_bool_t bAsBuffer;

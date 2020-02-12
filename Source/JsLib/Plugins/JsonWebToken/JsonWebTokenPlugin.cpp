@@ -38,7 +38,7 @@ static MX::CDigestAlgorithmSecureHash::eAlgorithm GetHsAlgorithm(_In_z_ LPCSTR s
 
 namespace MX {
 
-CJsonWebTokenPlugin::CJsonWebTokenPlugin(_In_ DukTape::duk_context *lpCtx) : CJsObjectBase(lpCtx), CNonCopyableObj()
+CJsonWebTokenPlugin::CJsonWebTokenPlugin() : CJsObjectBase(), CNonCopyableObj()
 {
   return;
 }

@@ -29,7 +29,7 @@ namespace MX {
 class CJsSQLitePlugin : public CJsObjectBase, public CNonCopyableObj
 {
 public:
-  CJsSQLitePlugin(_In_ DukTape::duk_context *lpCtx);
+  CJsSQLitePlugin();
   ~CJsSQLitePlugin();
 
   MX_JS_DECLARE_CREATABLE(CJsSQLitePlugin, "SQLite")
@@ -57,25 +57,25 @@ protected:
   static VOID OnUnregister(_In_ DukTape::duk_context *lpCtx);
 
 private:
-  DukTape::duk_ret_t Connect();
-  DukTape::duk_ret_t Disconnect();
-  DukTape::duk_ret_t Query();
-  DukTape::duk_ret_t QueryAndFetch();
-  DukTape::duk_ret_t QueryClose();
-  DukTape::duk_ret_t EscapeString();
-  DukTape::duk_ret_t Utf8Truncate();
-  DukTape::duk_ret_t FetchRow();
-  DukTape::duk_ret_t BeginTransaction();
-  DukTape::duk_ret_t CommitTransaction();
-  DukTape::duk_ret_t RollbackTransaction();
-  DukTape::duk_ret_t getAffectedRows();
-  DukTape::duk_ret_t getInsertId();
-  DukTape::duk_ret_t getFieldsCount();
-  DukTape::duk_ret_t getFields();
+  DukTape::duk_ret_t Connect(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t Disconnect(_In_opt_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t Query(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t QueryAndFetch(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t QueryClose(_In_opt_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t EscapeString(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t Utf8Truncate(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t FetchRow(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t BeginTransaction(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t CommitTransaction(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t RollbackTransaction(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getAffectedRows(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getInsertId(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getFieldsCount(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getFields(_In_ DukTape::duk_context *lpCtx);
 
-  VOID ThrowDbError(_In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line);
-  VOID ThrowDbError(_In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line, _In_ int err,
-                    _In_opt_ HRESULT hRes = S_OK);
+  VOID ThrowDbError(_In_ DukTape::duk_context *lpCtx, _In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line);
+  VOID ThrowDbError(_In_ DukTape::duk_context *lpCtx, _In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line,
+                    _In_ int err, _In_opt_ HRESULT hRes = S_OK);
 
   HRESULT HResultFromSQLiteErr(_In_ int nError);
 

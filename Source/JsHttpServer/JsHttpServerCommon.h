@@ -44,7 +44,7 @@ namespace Internals {
 class CFileFieldJsObject : public CJsObjectBase, public CNonCopyableObj
 {
 public:
-  CFileFieldJsObject(_In_ DukTape::duk_context *lpCtx);
+  CFileFieldJsObject();
 
   VOID Initialize(_In_ CHttpBodyParserFormBase::CFileField *lpFileField);
 
@@ -59,11 +59,11 @@ public:
   MX_JS_END_MAP()
 
 private:
-  DukTape::duk_ret_t getType();
-  DukTape::duk_ret_t getFileName();
-  DukTape::duk_ret_t getFileSize();
-  DukTape::duk_ret_t SeekFile();
-  DukTape::duk_ret_t ReadFile();
+  DukTape::duk_ret_t getType(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getFileName(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t getFileSize(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t SeekFile(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t ReadFile(_In_ DukTape::duk_context *lpCtx);
 
 private:
   CHttpBodyParserFormBase::CFileField *lpFileField;
@@ -75,7 +75,7 @@ private:
 class CRawBodyJsObject : public CJsObjectBase, public CNonCopyableObj
 {
 public:
-  CRawBodyJsObject(_In_ DukTape::duk_context *lpCtx);
+  CRawBodyJsObject();
 
   VOID Initialize(_In_ CHttpBodyParserDefault *lpBody);
 
@@ -88,9 +88,9 @@ public:
   MX_JS_END_MAP()
 
 private:
-  DukTape::duk_ret_t getSize();
-  DukTape::duk_ret_t ToString();
-  DukTape::duk_ret_t Read();
+  DukTape::duk_ret_t getSize(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t ToString(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t Read(_In_ DukTape::duk_context *lpCtx);
 
 private:
   CHttpBodyParserDefault *lpBody;
