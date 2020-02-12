@@ -1660,6 +1660,12 @@ DukTape::duk_ret_t CJsMySqlPlugin::RollbackTransaction(_In_ DukTape::duk_context
   return Query(lpCtx);
 }
 
+DukTape::duk_ret_t CJsMySqlPlugin::isConnected(_In_ DukTape::duk_context *lpCtx)
+{
+  DukTape::duk_push_boolean(lpCtx, (lpInternal != NULL) ? 1 : 0);
+  return 1;
+}
+
 DukTape::duk_ret_t CJsMySqlPlugin::getAffectedRows(_In_ DukTape::duk_context *lpCtx)
 {
   if (lpInternal != NULL)
@@ -1718,14 +1724,19 @@ VOID CJsMySqlPlugin::ThrowDbError(_In_ DukTape::duk_context *lpCtx, _In_opt_ LPC
   LPCSTR sA;
   int err;
 
-  DukTape::duk_get_global_string(lpCtx, "MySqlError");
-
   if (jsmysql_data->lpStmt != NULL)
     err = (int)_CALLAPI(mysql_stmt_errno)(jsmysql_data->lpStmt);
   else
     err = (int)_CALLAPI(mysql_errno)(jsmysql_data->lpDB);
   if (err == 0)
     err = ER_UNKNOWN_ERROR;
+
+  if (err < ER_ERROR_FIRST || err > ER_ERROR_LAST)
+  {
+    Disconnect(lpCtx);
+  }
+
+  DukTape::duk_get_global_string(lpCtx, "MySqlError");
   DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)HResultFromMySqlErr(err));
   DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)err);
 

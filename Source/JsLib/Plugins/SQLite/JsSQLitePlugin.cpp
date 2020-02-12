@@ -72,6 +72,13 @@ static void myFuncConcatStep(sqlite3_context *ctx, int argc, sqlite3_value **arg
 static void myFuncConcatFinal(sqlite3_context *ctx);
 static void myFuncFree(_In_ void *ptr);
 
+static __inline BOOL IsSQLiteFatalError(int err)
+{
+  err &= 0xFF;
+  return (err != SQLITE_OK && err != SQLITE_BUSY && err != SQLITE_LOCKED && err != SQLITE_CONSTRAINT &&
+          err != SQLITE_MISMATCH && err != SQLITE_FULL && err != SQLITE_MISMATCH) ? TRUE : FALSE;
+}
+
 //-----------------------------------------------------------
 
 namespace MX {
@@ -362,7 +369,7 @@ DukTape::duk_ret_t CJsSQLitePlugin::Connect(_In_ DukTape::duk_context *lpCtx)
     {
       ::DeleteFileW((LPCWSTR)cStrFileNameW);
     }
-    
+
     ThrowDbError(lpCtx, __FILE__, __LINE__, err);
   }
 
@@ -1107,6 +1114,12 @@ DukTape::duk_ret_t CJsSQLitePlugin::RollbackTransaction(_In_ DukTape::duk_contex
   return Query(lpCtx);
 }
 
+DukTape::duk_ret_t CJsSQLitePlugin::isConnected(_In_ DukTape::duk_context *lpCtx)
+{
+  DukTape::duk_push_boolean(lpCtx, (lpInternal != NULL) ? 1 : 0);
+  return 1;
+}
+
 DukTape::duk_ret_t CJsSQLitePlugin::getAffectedRows(_In_ DukTape::duk_context *lpCtx)
 {
   if (lpInternal != NULL)
@@ -1173,7 +1186,13 @@ VOID CJsSQLitePlugin::ThrowDbError(_In_ DukTape::duk_context *lpCtx, _In_opt_ LP
 
   if (err == 0)
     err = SQLITE_ERROR;
-  if (err == SQLITE_NOMEM || hRes == E_OUTOFMEMORY)
+
+  if (IsSQLiteFatalError(err) != FALSE)
+  {
+    Disconnect(lpCtx);
+  }
+
+  if ((err & 0xFF) == SQLITE_NOMEM || hRes == E_OUTOFMEMORY)
     MX::CJavascriptVM::ThrowWindowsError(lpCtx, E_OUTOFMEMORY, filename, line);
 
   //sA = sqlite3_errmsg(jssqlite_data->lpDB);

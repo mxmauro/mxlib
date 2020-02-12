@@ -47,6 +47,7 @@ public:
     MX_JS_MAP_METHOD("beginTransaction", &CJsMySqlPlugin::BeginTransaction, MX_JS_VARARGS)
     MX_JS_MAP_METHOD("commit", &CJsMySqlPlugin::CommitTransaction, 0)
     MX_JS_MAP_METHOD("rollback", &CJsMySqlPlugin::RollbackTransaction, 0)
+    MX_JS_MAP_PROPERTY("isConnected", &CJsMySqlPlugin::isConnected, NULL, FALSE)
     MX_JS_MAP_PROPERTY("affectedRows", &CJsMySqlPlugin::getAffectedRows, NULL, FALSE)
     MX_JS_MAP_PROPERTY("insertId", &CJsMySqlPlugin::getInsertId, NULL, FALSE)
     MX_JS_MAP_PROPERTY("fields", &CJsMySqlPlugin::getFields, NULL, FALSE)
@@ -70,6 +71,7 @@ private:
   DukTape::duk_ret_t BeginTransaction(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t CommitTransaction(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t RollbackTransaction(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t isConnected(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t getAffectedRows(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t getInsertId(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t getFieldsCount(_In_ DukTape::duk_context *lpCtx);

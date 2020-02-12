@@ -46,6 +46,7 @@ public:
     MX_JS_MAP_METHOD("beginTransaction", &CJsSQLitePlugin::BeginTransaction, MX_JS_VARARGS)
     MX_JS_MAP_METHOD("commit", &CJsSQLitePlugin::CommitTransaction, 0)
     MX_JS_MAP_METHOD("rollback", &CJsSQLitePlugin::RollbackTransaction, 0)
+    MX_JS_MAP_PROPERTY("isConnected", &CJsSQLitePlugin::isConnected, NULL, FALSE)
     MX_JS_MAP_PROPERTY("affectedRows", &CJsSQLitePlugin::getAffectedRows, NULL, FALSE)
     MX_JS_MAP_PROPERTY("insertId", &CJsSQLitePlugin::getInsertId, NULL, FALSE)
     MX_JS_MAP_PROPERTY("fields", &CJsSQLitePlugin::getFields, NULL, FALSE)
@@ -68,6 +69,7 @@ private:
   DukTape::duk_ret_t BeginTransaction(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t CommitTransaction(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t RollbackTransaction(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t isConnected(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t getAffectedRows(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t getInsertId(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t getFieldsCount(_In_ DukTape::duk_context *lpCtx);
