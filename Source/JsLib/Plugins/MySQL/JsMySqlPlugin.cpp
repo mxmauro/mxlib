@@ -122,6 +122,25 @@ CJsMySqlPlugin::~CJsMySqlPlugin()
   return;
 }
 
+BOOL CJsMySqlPlugin::IsConnected() const
+{
+  if (lpInternal != NULL)
+  {
+    CJsMySqlPlugin *lpThis = const_cast<CJsMySqlPlugin*>(this);
+    int err;
+
+    lpThis->QueryClose(NULL);
+
+    if (_CALLAPI(mysql_ping)(jsmysql_data->lpDB) == 0)
+    {
+      return TRUE;
+    }
+    err = _CALLAPI(mysql_errno)(jsmysql_data->lpDB);
+    lpThis->Disconnect(NULL);
+  }
+  return FALSE;
+}
+
 VOID CJsMySqlPlugin::OnRegister(_In_ DukTape::duk_context *lpCtx)
 {
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);

@@ -192,6 +192,11 @@ CJsSQLitePlugin::~CJsSQLitePlugin()
   return;
 }
 
+BOOL CJsSQLitePlugin::IsConnected() const
+{
+  return (lpInternal != NULL) ? TRUE : FALSE;
+}
+
 VOID CJsSQLitePlugin::OnRegister(_In_ DukTape::duk_context *lpCtx)
 {
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);

@@ -53,6 +53,9 @@ public:
     MX_JS_MAP_PROPERTY("fieldsCount", &CJsSQLitePlugin::getFieldsCount, NULL, FALSE)
   MX_JS_END_MAP()
 
+public:
+  BOOL IsConnected() const;
+
 protected:
   static VOID OnRegister(_In_ DukTape::duk_context *lpCtx);
   static VOID OnUnregister(_In_ DukTape::duk_context *lpCtx);

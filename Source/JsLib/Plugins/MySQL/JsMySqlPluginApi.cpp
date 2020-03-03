@@ -48,6 +48,7 @@ lpfn_mysql_options               fn_mysql_options = NULL;
 lpfn_mysql_real_connect          fn_mysql_real_connect = NULL;
 lpfn_mysql_select_db             fn_mysql_select_db = NULL;
 lpfn_mysql_close                 fn_mysql_close = NULL;
+lpfn_mysql_ping                  fn_mysql_ping = NULL;
 lpfn_mysql_real_escape_string    fn_mysql_real_escape_string = NULL;
 lpfn_mysql_escape_string         fn_mysql_escape_string = NULL;
 lpfn_mysql_real_query            fn_mysql_real_query = NULL;
@@ -102,6 +103,7 @@ HRESULT MySqlInitialize()
       lpfn_mysql_real_connect          _fn_mysql_real_connect = NULL;
       lpfn_mysql_select_db             _fn_mysql_select_db = NULL;
       lpfn_mysql_close                 _fn_mysql_close = NULL;
+      lpfn_mysql_ping                  _fn_mysql_ping = NULL;
       lpfn_mysql_real_escape_string    _fn_mysql_real_escape_string = NULL;
       lpfn_mysql_escape_string         _fn_mysql_escape_string = NULL;
       lpfn_mysql_real_query            _fn_mysql_real_query = NULL;
@@ -167,6 +169,7 @@ HRESULT MySqlInitialize()
       LOAD_API(mysql_real_connect);
       LOAD_API(mysql_select_db);
       LOAD_API(mysql_close);
+      LOAD_API(mysql_ping);
       LOAD_API(mysql_real_escape_string);
       LOAD_API(mysql_escape_string);
       LOAD_API(mysql_real_query);
@@ -245,6 +248,7 @@ afterLoad:
       fn_mysql_real_connect         = _fn_mysql_real_connect;
       fn_mysql_select_db            = _fn_mysql_select_db;
       fn_mysql_close                = _fn_mysql_close;
+      fn_mysql_ping                 = _fn_mysql_ping;
       fn_mysql_real_escape_string   = _fn_mysql_real_escape_string;
       fn_mysql_escape_string        = _fn_mysql_escape_string;
       fn_mysql_real_query           = _fn_mysql_real_query;

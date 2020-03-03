@@ -41,7 +41,8 @@ typedef MYSQL*           (__stdcall *lpfn_mysql_real_connect)(MYSQL *mysql, cons
                                                               const LPCSTR passwd, const LPCSTR db, UINT port,
                                                               const LPCSTR unix_socket, ULONG clientflag);
 typedef int              (__stdcall *lpfn_mysql_select_db)(MYSQL *mysql, const LPCSTR db);
-typedef void             (__stdcall *lpfn_mysql_close)(MYSQL *sock);
+typedef void             (__stdcall *lpfn_mysql_close)(MYSQL *mysql);
+typedef int              (__stdcall *lpfn_mysql_ping)(MYSQL *mysql);
 typedef ULONG            (__stdcall *lpfn_mysql_real_escape_string)(MYSQL *mysql, LPCSTR to,const LPCSTR from,
                                                                     ULONG length);
 typedef ULONG            (__stdcall *lpfn_mysql_escape_string)(LPCSTR to,const LPCSTR from, ULONG from_length);
@@ -164,6 +165,7 @@ extern lpfn_mysql_options fn_mysql_options;
 extern lpfn_mysql_real_connect fn_mysql_real_connect;
 extern lpfn_mysql_select_db fn_mysql_select_db;
 extern lpfn_mysql_close fn_mysql_close;
+extern lpfn_mysql_ping fn_mysql_ping;
 extern lpfn_mysql_real_escape_string fn_mysql_real_escape_string;
 extern lpfn_mysql_escape_string fn_mysql_escape_string;
 extern lpfn_mysql_real_query fn_mysql_real_query;
