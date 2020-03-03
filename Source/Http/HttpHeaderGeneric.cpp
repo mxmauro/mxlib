@@ -75,7 +75,10 @@ HRESULT CHttpHeaderGeneric::SetValue(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nVa
   if (nValueLen == (SIZE_T)-1)
     nValueLen = StrLenA(szValueA);
   if (nValueLen == 0)
-    return MX_E_InvalidData;
+  {
+    cStrValueA.Empty();
+    return S_OK;
+  }
   if (szValueA == NULL)
     return E_POINTER;
   szValueEndA = szValueA + nValueLen;
