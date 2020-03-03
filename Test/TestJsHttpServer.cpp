@@ -150,7 +150,7 @@ int TestJsHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
   cTest.cJsHttpServer.SetOption_MaxFilesCount(10);
   cTest.cJsHttpServer.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
   cTest.cJsHttpServer.SetLogLevel(dwLogLevel);
-  cTest.cSckMgr.SetOption_MaxAcceptsToPost(24);
+
   //cTest.cSckMgr.SetOption_PacketSize(16384);
   cTest.cSckMgr.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
   cTest.cSckMgr.SetLogLevel(dwLogLevel);
@@ -202,8 +202,14 @@ int TestJsHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
   {
     if (bUseSSL != FALSE)
     {
+      MX::CSockets::LISTENER_OPTIONS sOptions = { 0 };
+
+      //sOptions.dwBackLogSize = 0;
+      sOptions.dwMaxAcceptsToPost = 128;
+      //sOptions.dwMaxRequestsPerSecond = 0;
+      //sOptions.dwBurstSize = 0;
       hRes = cTest.cJsHttpServer.StartListening(MX::CSockets::FamilyIPv4, 443, MX::CIpcSslLayer::ProtocolTLSv1_2,
-                                                &(cTest.cSslCert), &(cTest.cSslPrivateKey));
+                                                &sOptions, &(cTest.cSslCert), &(cTest.cSslPrivateKey));
     }
     else
     {

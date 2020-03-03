@@ -366,15 +366,17 @@ VOID CHttpServer::SetErrorCallback(_In_ OnErrorCallback _cErrorCallback)
   return;
 }
 
-HRESULT CHttpServer::StartListening(_In_ CSockets::eFamily nFamily, _In_ int nPort
-                                    , _In_opt_ CIpcSslLayer::eProtocol nProtocol,
+HRESULT CHttpServer::StartListening(_In_ CSockets::eFamily nFamily, _In_ int nPort,
+                                    _In_opt_ CIpcSslLayer::eProtocol nProtocol,
+                                    _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions,
                                     _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CCryptoRSA *lpSslKey)
 {
-  return StartListening((LPCSTR)NULL, nFamily, nPort, nProtocol, lpSslCertificate, lpSslKey);
+  return StartListening((LPCSTR)NULL, nFamily, nPort, nProtocol, lpOptions, lpSslCertificate, lpSslKey);
 }
 
 HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSockets::eFamily nFamily, _In_ int nPort,
                                     _In_opt_ CIpcSslLayer::eProtocol nProtocol,
+                                    _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions,
                                     _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CCryptoRSA *lpSslKey)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
@@ -458,7 +460,7 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSock
     if (SUCCEEDED(hRes))
     {
       hRes = cSocketMgr.CreateListener(nFamily, nPort, MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnSocketCreate, this),
-                                       szBindAddressA, NULL, &hAcceptConn);
+                                       szBindAddressA, NULL, lpOptions, &hAcceptConn);
     }
     if (FAILED(hRes))
     {
@@ -477,6 +479,7 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSock
 
 HRESULT CHttpServer::StartListening(_In_opt_z_ LPCWSTR szBindAddressW, _In_ CSockets::eFamily nFamily, _In_ int nPort,
                                     _In_opt_ CIpcSslLayer::eProtocol nProtocol,
+                                    _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions,
                                     _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CCryptoRSA *lpSslKey)
 {
   CStringA cStrTempA;
@@ -488,7 +491,7 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCWSTR szBindAddressW, _In_ CSoc
     if (FAILED(hRes))
       return hRes;
   }
-  return StartListening((LPSTR)cStrTempA, nFamily, nPort, nProtocol, lpSslCertificate, lpSslKey);
+  return StartListening((LPSTR)cStrTempA, nFamily, nPort, nProtocol, lpOptions, lpSslCertificate, lpSslKey);
 }
 
 VOID CHttpServer::StopListening()
