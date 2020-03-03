@@ -33,7 +33,7 @@
 #include "..\Streams.h"
 #include "..\Debug.h"
 #include "..\Loggable.h"
-#include "..\HiResTimer.h"
+#include "..\Timer.h"
 #include "..\RedBlackTree.h"
 
 #define MX_IPC_DEBUG_PRINT(level, output) if (MX::CIpc::nDebugLevel >= level) {  \
@@ -608,13 +608,16 @@ protected:
 
     VOID Close(_In_ HRESULT hRes);
 
-    BOOL IsConnected();
-    BOOL IsGracefulShutdown();
-    BOOL IsClosed();
-    BOOL IsClosedOrGracefulShutdown();
+    BOOL IsConnected() const;
+    BOOL IsGracefulShutdown() const;
+    BOOL IsClosed() const;
+    BOOL IsClosedOrGracefulShutdown() const;
 
-    HRESULT GetErrorCode();
+    CIpc* GetIpc() const;
 
+    HRESULT GetErrorCode() const;
+
+  protected:
     HRESULT HandleConnected();
 
     VOID IncrementOutgoingWrites();
@@ -644,9 +647,6 @@ protected:
     HRESULT SendWriteDataToNextLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize, _In_ CLayer *lpCurrLayer);
     HRESULT SendAfterWritePacketToNextLayer(_In_ CPacketBase *lpPacket, _In_ CLayer *lpCurrLayer);
 
-    VOID UpdateStats(_In_ BOOL bRead, _In_ DWORD dwBytesTransferred);
-    VOID GetStats(_In_ BOOL bRead, _Out_ PULONGLONG lpullBytesTransferred, _Out_opt_ float *lpnThroughputKbps);
-
   protected:
     static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ CConnectionBase *lpConn1, _In_ CConnectionBase *lpConn2)
       {
@@ -669,6 +669,25 @@ protected:
   protected:
     friend class CIpc;
 
+    class CReadWriteStats : public CBaseMemObj
+    {
+    public:
+      CReadWriteStats();
+
+      VOID HandleConnected();
+      VOID Update(_In_ DWORD dwBytesTransferred);
+
+      VOID Get(_Out_ PULONGLONG lpullBytesTransferred, _Out_opt_ float *lpnThroughputKbps = NULL,
+               _Out_opt_ LPDWORD lpdwTimeMarkMs = NULL);
+
+    private:
+      LONG nRwMutex;
+      ULONGLONG ullBytesTransferred, ullPrevBytesTransferred;
+      CTimer cTimer;
+      float nAvgRate, nTransferRateHistory[4];
+    };
+
+  protected:
     LONG volatile nReadMutex;
     CIpc *lpIpc;
     CIpc::eConnectionClass nClass;
@@ -696,17 +715,9 @@ protected:
     OnConnectCallback cConnectCallback;
     OnDisconnectCallback cDisconnectCallback;
     OnDataReceivedCallback cDataReceivedCallback;
-    struct tagStats {
-      LONG nRwMutex;
-      ULONGLONG ullBytesTransferred, ullPrevBytesTransferred;
-      struct {
-        ULARGE_INTEGER uliStartCounter, uliFrequency;
-      } sWatchdogTimer;
-      float nAvgRate;
-      float nTransferRateHistory[4];
-    } sReadStats, sWriteStats;
+    CReadWriteStats cReadStats, cWriteStats;
     CCriticalSection cOnDataReceivedCS;
-    CHiResTimer cHiResTimer;
+    CTimer cLogTimer;
   };
 
   //----

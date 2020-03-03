@@ -350,7 +350,7 @@ HRESULT CIpc::GetReadStats(_In_ HANDLE h, _Out_opt_ PULONGLONG lpullBytesTransfe
     return E_INVALIDARG;
   }
   //done
-  cConn->GetStats(TRUE, lpullBytesTransferred, lpnThroughputKbps);
+  cConn->cReadStats.Get(lpullBytesTransferred, lpnThroughputKbps);
   return S_OK;
 }
 
@@ -378,7 +378,7 @@ HRESULT CIpc::GetWriteStats(_In_ HANDLE h, _Out_opt_ PULONGLONG lpullBytesTransf
     return E_INVALIDARG;
   }
   //done
-  cConn->GetStats(FALSE, lpullBytesTransferred, lpnThroughputKbps);
+  cConn->cWriteStats.Get(lpullBytesTransferred, lpnThroughputKbps);
   return S_OK;
 }
 
@@ -898,8 +898,10 @@ start:
   nOrigOverlappedType = lpPacket->GetType();
   if (ShouldLog(1) != FALSE)
   {
+    lpConn->cLogTimer.Mark();
     Log(L"CIpc::OnDispatcherPacket) Clock=%lums / Conn=0x%p / Ovr=0x%p / Type=%lu / Bytes=%lu / Err=0x%08X",
-        lpConn->cHiResTimer.GetElapsedTimeMs(), lpConn, lpPacket->GetOverlapped(), lpPacket->GetType(), dwBytes, hRes);
+        lpConn->cLogTimer.GetElapsedTimeMs(), lpConn, lpPacket->GetOverlapped(), lpPacket->GetType(), dwBytes, hRes);
+    lpConn->cLogTimer.ResetToLastMark();
   }
 
   switch (lpPacket->GetType())
@@ -956,7 +958,7 @@ start:
         lpPacket->SetBytesInUse(dwBytes);
         if (dwBytes > 0)
         {
-          lpConn->UpdateStats(TRUE, dwBytes);
+          lpConn->cReadStats.Update(dwBytes);
 
           bQueueNewRead = TRUE;
           //move packet to readed list
@@ -1016,7 +1018,9 @@ check_pending_read_req:
           bLog = ((_InterlockedOr(&lpConn->nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) ? TRUE : FALSE;
           if (bLog != FALSE && ShouldLog(1) != FALSE)
           {
-            Log(L"CIpc::GracefulShutdown A) Clock=%lums / This=0x%p", lpConn->cHiResTimer.GetElapsedTimeMs(), lpConn);
+            lpConn->cLogTimer.Mark();
+            Log(L"CIpc::GracefulShutdown A) Clock=%lums / This=0x%p", lpConn->cLogTimer.GetElapsedTimeMs(), lpConn);
+            lpConn->cLogTimer.ResetToLastMark();
           }
 
           //free packet
@@ -1229,7 +1233,7 @@ write_req_process_packet:
         MX_ASSERT(dwBytes != 0);
         if (dwBytes == lpPacket->GetUserDataDW())
         {
-          lpConn->UpdateStats(FALSE, dwBytes);
+          lpConn->cWriteStats.Update(dwBytes);
         }
         else
         {
@@ -1373,8 +1377,10 @@ write_req_process_packet:
       bLog = ((_InterlockedOr(&lpConn->nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) ? TRUE : FALSE;
       if (bLog != FALSE && ShouldLog(1) != FALSE)
       {
-        Log(L"CIpc::GracefulShutdown C) Clock=%lums / This=0x%p / Res=0x%08X", lpConn->cHiResTimer.GetElapsedTimeMs(),
+        lpConn->cLogTimer.Mark();
+        Log(L"CIpc::GracefulShutdown C) Clock=%lums / This=0x%p / Res=0x%08X", lpConn->cLogTimer.GetElapsedTimeMs(),
             this, hRes);
+        lpConn->cLogTimer.ResetToLastMark();
       }
       hRes = S_OK;
     }
@@ -1385,8 +1391,10 @@ write_req_process_packet:
   lpConn->Release();
   if (ShouldLog(1) != FALSE)
   {
+    lpConn->cLogTimer.Mark();
     Log(L"CIpc::OnDispatcherPacket) Clock=%lums / Conn=0x%p / Ovr=0x%p / Type=%lu / Err=0x%08X [EXIT]",
-        lpConn->cHiResTimer.GetElapsedTimeMs(), lpConn, lpOrigOverlapped, nOrigOverlappedType, hRes);
+        lpConn->cLogTimer.GetElapsedTimeMs(), lpConn, lpOrigOverlapped, nOrigOverlappedType, hRes);
+    lpConn->cLogTimer.ResetToLastMark();
   }
   lpConn->Release();
   //done
@@ -1432,8 +1440,6 @@ CIpc::CConnectionBase::CConnectionBase(_In_ CIpc *_lpIpc, _In_ CIpc::eConnection
   cDisconnectCallback = NullCallback();
   cDataReceivedCallback = NullCallback();
   _InterlockedExchange(&nReadMutex, 0);
-  MxMemSet(&sReadStats, 0, sizeof(sReadStats));
-  MxMemSet(&sWriteStats, 0, sizeof(sWriteStats));
   SlimRWL_Initialize(&(sLayers.nRwMutex));
   _InterlockedExchange(&(sReceivedData.nMutex), 0);
   return;
@@ -1507,8 +1513,10 @@ HRESULT CIpc::CConnectionBase::SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSiz
     MxMemCopy(lpPacket->GetBuffer(), s, (SIZE_T)dwToSendThisRound);
     if (lpIpc->ShouldLog(1) != FALSE)
     {
-      lpIpc->Log(L"CIpc::SendMsg) Clock=%lums / Ovr=0x%p / Type=%lu / Bytes=%lu", cHiResTimer.GetElapsedTimeMs(),
+      cLogTimer.Mark();
+      lpIpc->Log(L"CIpc::SendMsg) Clock=%lums / Ovr=0x%p / Type=%lu / Bytes=%lu", cLogTimer.GetElapsedTimeMs(),
                  lpPacket->GetOverlapped(), lpPacket->GetType(), lpPacket->GetBytesInUse());
+      cLogTimer.ResetToLastMark();
     }
     //send packet
     if (lpToLayer != NULL)
@@ -1570,8 +1578,10 @@ HRESULT CIpc::CConnectionBase::SendStream(_In_ CStream *lpStream)
       _InterlockedIncrement(&nOutgoingWrites);
       if (lpIpc->ShouldLog(1) != FALSE)
       {
-        lpIpc->Log(L"CIpc::SendStream) Clock=%lums / Ovr=0x%p / Type=%lu", cHiResTimer.GetElapsedTimeMs(),
+        cLogTimer.Mark();
+        lpIpc->Log(L"CIpc::SendStream) Clock=%lums / Ovr=0x%p / Type=%lu", cLogTimer.GetElapsedTimeMs(),
                    lpPacket->GetOverlapped(), lpPacket->GetType());
+        cLogTimer.ResetToLastMark();
       }
       hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
       if (FAILED(hRes))
@@ -1626,8 +1636,10 @@ HRESULT CIpc::CConnectionBase::AfterWriteSignal(_In_ CPacketBase *lpPacket)
   _InterlockedIncrement(&nOutgoingWrites);
   if (lpIpc->ShouldLog(1) != FALSE)
   {
-    lpIpc->Log(L"CIpc::AfterWriteSignal) Clock=%lums / Ovr=0x%p / Type=%lu", cHiResTimer.GetElapsedTimeMs(),
+    cLogTimer.Mark();
+    lpIpc->Log(L"CIpc::AfterWriteSignal) Clock=%lums / Ovr=0x%p / Type=%lu", cLogTimer.GetElapsedTimeMs(),
                lpPacket->GetOverlapped(), lpPacket->GetType());
+    cLogTimer.ResetToLastMark();
   }
   hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
   if (FAILED(hRes))
@@ -1654,9 +1666,11 @@ HRESULT CIpc::CConnectionBase::SendResumeIoProcessingPacket(_In_ BOOL bInput)
   AddRef();
   if (lpIpc->ShouldLog(1) != FALSE)
   {
+    cLogTimer.Mark();
     lpIpc->Log(L"CIpc::SendResumeIoProcessingPacket[%s]) Clock=%lums / Ovr=0x%p / Type=%lu",
-               ((bInput != FALSE) ? L"Input" : L"Output"), cHiResTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(),
+               ((bInput != FALSE) ? L"Input" : L"Output"), cLogTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(),
                lpPacket->GetType());
+    cLogTimer.ResetToLastMark();
   }
   hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
   if (FAILED(hRes))
@@ -1706,72 +1720,58 @@ VOID CIpc::CConnectionBase::Close(_In_ HRESULT hRes)
   {
     if (lpIpc->ShouldLog(1) != FALSE)
     {
-      lpIpc->Log(L"CIpc::Close) Clock=%lums / This=0x%p / Res=0x%08X", cHiResTimer.GetElapsedTimeMs(), this, hRes);
+      cLogTimer.Mark();
+      lpIpc->Log(L"CIpc::Close) Clock=%lums / This=0x%p / Res=0x%08X", cLogTimer.GetElapsedTimeMs(), this, hRes);
+      cLogTimer.ResetToLastMark();
     }
     Release();
   }
   return;
 }
 
-BOOL CIpc::CConnectionBase::IsGracefulShutdown()
+BOOL CIpc::CConnectionBase::IsGracefulShutdown() const
 {
-  return ((__InterlockedRead(&nFlags) & FLAG_GracefulShutdown) != 0) ? TRUE : FALSE;
+  return ((__InterlockedRead(&(const_cast<CIpc::CConnectionBase*>(this)->nFlags)) & FLAG_GracefulShutdown) != 0)
+         ? TRUE : FALSE;
 }
 
-BOOL CIpc::CConnectionBase::IsClosed()
+BOOL CIpc::CConnectionBase::IsClosed() const
 {
-  return ((__InterlockedRead(&nFlags) & FLAG_Closed) != 0) ? TRUE : FALSE;
+  return ((__InterlockedRead(&(const_cast<CIpc::CConnectionBase*>(this)->nFlags)) & FLAG_Closed) != 0) ? TRUE : FALSE;
 }
 
-BOOL CIpc::CConnectionBase::IsClosedOrGracefulShutdown()
+BOOL CIpc::CConnectionBase::IsClosedOrGracefulShutdown() const
 {
-  return ((__InterlockedRead(&nFlags) & (FLAG_GracefulShutdown | FLAG_Closed)) != 0) ? TRUE : FALSE;
+  return ((__InterlockedRead(&(const_cast<CIpc::CConnectionBase*>(this)->nFlags)) &
+           (FLAG_GracefulShutdown | FLAG_Closed)) != 0) ? TRUE : FALSE;
 }
 
-BOOL CIpc::CConnectionBase::IsConnected()
+BOOL CIpc::CConnectionBase::IsConnected() const
 {
-  return ((__InterlockedRead(&nFlags) & FLAG_Connected) != 0) ? TRUE : FALSE;
+  return ((__InterlockedRead(&(const_cast<CIpc::CConnectionBase*>(this)->nFlags)) & FLAG_Connected) != 0)
+         ? TRUE : FALSE;
 }
 
-HRESULT CIpc::CConnectionBase::GetErrorCode()
+CIpc* CIpc::CConnectionBase::GetIpc() const
 {
-  return (HRESULT)__InterlockedRead(&hrErrorCode);
+  return lpIpc;
+}
+
+HRESULT CIpc::CConnectionBase::GetErrorCode() const
+{
+  return (HRESULT)__InterlockedRead(&(const_cast<CIpc::CConnectionBase*>(this)->hrErrorCode));
 }
 
 HRESULT CIpc::CConnectionBase::HandleConnected()
 {
   CPacketBase *lpPacket;
-  DWORD dwCurrTickMs;
   HRESULT hRes;
 
   //mark as connected
   _InterlockedOr(&nFlags, FLAG_Connected);
   //initialize read/write stats
-  dwCurrTickMs = ::GetTickCount();
-  if (dwCurrTickMs == 0)
-    dwCurrTickMs = 1;
-  {
-    CAutoSlimRWLExclusive cLock(&(sReadStats.nRwMutex));
-
-    if (!NT_SUCCESS(::MxNtQueryPerformanceCounter((PLARGE_INTEGER)(&(sReadStats.sWatchdogTimer.uliStartCounter)),
-                                                  (PLARGE_INTEGER)(&(sReadStats.sWatchdogTimer.uliFrequency)))))
-    {
-      sReadStats.sWatchdogTimer.uliStartCounter.HighPart = 0;
-      sReadStats.sWatchdogTimer.uliStartCounter.LowPart = ::GetTickCount();
-      sReadStats.sWatchdogTimer.uliFrequency.QuadPart = 0ui64;
-    }
-  }
-  {
-    CAutoSlimRWLExclusive cLock(&(sWriteStats.nRwMutex));
-
-    if (!NT_SUCCESS(::MxNtQueryPerformanceCounter((PLARGE_INTEGER)(&(sWriteStats.sWatchdogTimer.uliStartCounter)),
-                                                  (PLARGE_INTEGER)(&(sWriteStats.sWatchdogTimer.uliFrequency)))))
-    {
-      sWriteStats.sWatchdogTimer.uliStartCounter.HighPart = 0;
-      sWriteStats.sWatchdogTimer.uliStartCounter.LowPart = ::GetTickCount();
-      sWriteStats.sWatchdogTimer.uliFrequency.QuadPart = 0ui64;
-    }
-  }
+  cReadStats.HandleConnected();
+  cWriteStats.HandleConnected();
   //send initial setup packet
   lpPacket = lpIpc->GetPacket(this, CPacketBase::TypeInitialSetup, 0, FALSE);
   if (lpPacket == NULL)
@@ -1780,8 +1780,10 @@ HRESULT CIpc::CConnectionBase::HandleConnected()
   AddRef();
   if (lpIpc->ShouldLog(1) != FALSE)
   {
-    lpIpc->Log(L"CIpc::HandleConnected) Clock=%lums / Ovr=0x%p / Type=%lu", cHiResTimer.GetElapsedTimeMs(),
+    cLogTimer.Mark();
+    lpIpc->Log(L"CIpc::HandleConnected) Clock=%lums / Ovr=0x%p / Type=%lu", cLogTimer.GetElapsedTimeMs(),
                lpPacket->GetOverlapped(), lpPacket->GetType());
+    cLogTimer.ResetToLastMark();
   }
   hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
   if (FAILED(hRes))
@@ -1858,7 +1860,9 @@ HRESULT CIpc::CConnectionBase::DoZeroRead(_In_ SIZE_T nPacketsCount, _Inout_ CPa
         bLog = ((_InterlockedOr(&nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) ? TRUE : FALSE;
         if (bLog != FALSE && lpIpc->ShouldLog(1) != FALSE)
         {
-          lpIpc->Log(L"CIpc::GracefulShutdown E) Clock=%lums / This=0x%p", cHiResTimer.GetElapsedTimeMs(), this);
+          cLogTimer.Mark();
+          lpIpc->Log(L"CIpc::GracefulShutdown E) Clock=%lums / This=0x%p", cLogTimer.GetElapsedTimeMs(), this);
+          cLogTimer.ResetToLastMark();
         }
         //free packet
         cRwList.Remove(lpPacket);
@@ -1934,7 +1938,9 @@ HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacke
         bLog = ((_InterlockedOr(&nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) ? TRUE : FALSE;
         if (bLog != FALSE && lpIpc->ShouldLog(1) != FALSE)
         {
-          lpIpc->Log(L"CIpc::GracefulShutdown F) Clock=%lums / This=0x%p", cHiResTimer.GetElapsedTimeMs(), this);
+          cLogTimer.Mark();
+          lpIpc->Log(L"CIpc::GracefulShutdown F) Clock=%lums / This=0x%p", cLogTimer.GetElapsedTimeMs(), this);
+          cLogTimer.ResetToLastMark();
         }
 
         //free packet
@@ -2067,7 +2073,9 @@ HRESULT CIpc::CConnectionBase::SendPackets(_Inout_ CPacketBase **lplpFirstPacket
         bLog = ((_InterlockedOr(&nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) ? TRUE : FALSE;
         if (bLog != FALSE && lpIpc->ShouldLog(1) != FALSE)
         {
-          lpIpc->Log(L"CIpc::GracefulShutdown B) Clock=%lums / This=0x%p", cHiResTimer.GetElapsedTimeMs(), this);
+          cLogTimer.Mark();
+          lpIpc->Log(L"CIpc::GracefulShutdown B) Clock=%lums / This=0x%p", cLogTimer.GetElapsedTimeMs(), this);
+          cLogTimer.ResetToLastMark();
         }
         //free packet
         cRwList.Remove(lpChainStart);
@@ -2200,83 +2208,79 @@ HRESULT CIpc::CConnectionBase::SendAfterWritePacketToNextLayer(_In_ CPacketBase 
   return hRes;
 }
 
-VOID CIpc::CConnectionBase::UpdateStats(_In_ BOOL bRead, _In_ DWORD dwBytesTransferred)
+//-----------------------------------------------------------
+
+CIpc::CConnectionBase::CReadWriteStats::CReadWriteStats() : CBaseMemObj()
 {
-  struct tagStats *lpStats = (bRead != FALSE) ? &sReadStats : &sWriteStats;
+  _InterlockedExchange(&nRwMutex, 0);
+  ullBytesTransferred = ullPrevBytesTransferred = 0;
+  nAvgRate = 0.0;
+  ::MxMemSet(nTransferRateHistory, 0, sizeof(nTransferRateHistory));
+  return;
+}
 
+VOID CIpc::CConnectionBase::CReadWriteStats::HandleConnected()
+{
+  CAutoSlimRWLExclusive cLock(&nRwMutex);
+
+  cTimer.Reset();
+  return;
+}
+
+VOID CIpc::CConnectionBase::CReadWriteStats::Update(_In_ DWORD dwBytesTransferred)
+{
+  CAutoSlimRWLExclusive cLock(&nRwMutex);
+  DWORD dwElapsedMs;
+
+  ullBytesTransferred += (ULONGLONG)dwBytesTransferred;
+
+  cTimer.Mark();
+  dwElapsedMs = cTimer.GetElapsedTimeMs();
+  cTimer.ResetToLastMark();
+
+  if (dwElapsedMs >= 500)
   {
-    CAutoSlimRWLExclusive cLock(&(lpStats->nRwMutex));
-    ULARGE_INTEGER uliCurrCounter;
-    DWORD dwElapsedMs;
+    int i, count;
+    ULONGLONG ullDiffBytes;
 
-    lpStats->ullBytesTransferred += (ULONGLONG)dwBytesTransferred;
+    ullDiffBytes = ullBytesTransferred - ullPrevBytesTransferred;
 
-    if (lpStats->sWatchdogTimer.uliFrequency.QuadPart != 0ui64)
+    nTransferRateHistory[3] = nTransferRateHistory[1];
+    nTransferRateHistory[2] = nTransferRateHistory[2];
+    nTransferRateHistory[1] = nTransferRateHistory[0];
+    nTransferRateHistory[0] = (float)((double)ullDiffBytes / ((double)dwElapsedMs * 1.024));
+
+    count = 0;
+    nAvgRate = 0.0f;
+    for (i = 0; i < 4; i++)
     {
-      ULARGE_INTEGER _uliFrequency;
-
-      ::MxNtQueryPerformanceCounter((PLARGE_INTEGER)&uliCurrCounter, (PLARGE_INTEGER)&_uliFrequency);
-      dwElapsedMs = (DWORD)(((uliCurrCounter.QuadPart - lpStats->sWatchdogTimer.uliStartCounter.QuadPart) * 1000ui64) /
-                            lpStats->sWatchdogTimer.uliFrequency.QuadPart);
+      if (nTransferRateHistory[i] > __EPSILON)
+      {
+        nAvgRate += 1.0f / nTransferRateHistory[i];
+        count++;
+      }
     }
-    else
+    if (count > 0)
     {
-      uliCurrCounter.LowPart = ::GetTickCount();
-      dwElapsedMs = uliCurrCounter.LowPart - lpStats->sWatchdogTimer.uliStartCounter.LowPart;
+      nAvgRate = (float)count / nAvgRate;
     }
 
-    if (dwElapsedMs >= 500)
-    {
-      int i, count;
-      ULONGLONG ullDiffBytes;
-
-      ullDiffBytes = lpStats->ullBytesTransferred - lpStats->ullPrevBytesTransferred;
-
-      lpStats->nTransferRateHistory[3] = lpStats->nTransferRateHistory[1];
-      lpStats->nTransferRateHistory[2] = lpStats->nTransferRateHistory[2];
-      lpStats->nTransferRateHistory[1] = lpStats->nTransferRateHistory[0];
-      lpStats->nTransferRateHistory[0] = (float)((double)ullDiffBytes / ((double)dwElapsedMs * 1.024));
-
-      count = 0;
-      lpStats->nAvgRate = 0.0f;
-      for (i = 0; i < 4; i++)
-      {
-        if (lpStats->nTransferRateHistory[i] > __EPSILON)
-        {
-          lpStats->nAvgRate += 1.0f / lpStats->nTransferRateHistory[i];
-          count++;
-        }
-      }
-      if (count > 0)
-        lpStats->nAvgRate = (float)count / lpStats->nAvgRate;
-
-      if (lpStats->sWatchdogTimer.uliFrequency.QuadPart != 0ui64)
-      {
-        lpStats->sWatchdogTimer.uliStartCounter.QuadPart = uliCurrCounter.QuadPart;
-      }
-      else
-      {
-        lpStats->sWatchdogTimer.uliStartCounter.LowPart = uliCurrCounter.LowPart;
-      }
-      lpStats->ullPrevBytesTransferred = lpStats->ullBytesTransferred;
-    }
+    ullPrevBytesTransferred = ullBytesTransferred;
   }
   return;
 }
 
-VOID CIpc::CConnectionBase::GetStats(_In_ BOOL bRead, _Out_ PULONGLONG lpullBytesTransferred,
-                                     _Out_opt_ float *lpnThroughputKbps)
+VOID CIpc::CConnectionBase::CReadWriteStats::Get(_Out_ PULONGLONG lpullBytesTransferred,
+                                                 _Out_opt_ float *lpnThroughputKbps, _Out_opt_ LPDWORD lpdwTimeMarkMs)
 {
-  struct tagStats *lpStats = (bRead != FALSE) ? &sReadStats : &sWriteStats;
+  CAutoSlimRWLShared cLock(&nRwMutex);
 
-  {
-    CAutoSlimRWLShared cLock(&(lpStats->nRwMutex));
-
-    if (lpullBytesTransferred != NULL)
-      *lpullBytesTransferred = lpStats->ullBytesTransferred;
-    if (lpnThroughputKbps != NULL)
-      *lpnThroughputKbps = lpStats->nAvgRate;
-  }
+  if (lpullBytesTransferred != NULL)
+    *lpullBytesTransferred = ullBytesTransferred;
+  if (lpnThroughputKbps != NULL)
+    *lpnThroughputKbps = nAvgRate;
+  if (lpdwTimeMarkMs != NULL)
+    *lpdwTimeMarkMs = cTimer.GetStartTimeMs();
   return;
 }
 
