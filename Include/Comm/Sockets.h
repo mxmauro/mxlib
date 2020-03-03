@@ -37,19 +37,25 @@ public:
     FamilyIPv4=1, FamilyIPv6
   } eFamily;
 
+  typedef struct tagLISTENER_OPTIONS {
+    DWORD dwBackLogSize;
+    DWORD dwMaxAcceptsToPost;
+    DWORD dwMaxRequestsPerSecond;
+    DWORD dwBurstSize;
+  } LISTENER_OPTIONS, *LPLISTENER_OPTIONS;
+
+public:
   CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool);
   ~CSockets();
 
-  VOID SetOption_BackLogSize(_In_ DWORD dwSize);
-  VOID SetOption_MaxAcceptsToPost(_In_ DWORD dwCount);
   VOID SetOption_AddressResolverTimeout(_In_ DWORD dwTimeoutMs);
 
   HRESULT CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
                          _In_opt_z_ LPCSTR szBindAddressA = NULL, _In_opt_ CUserData *lpUserData = NULL,
-                         _Out_opt_ HANDLE *h = NULL);
+                         _In_opt_ LPLISTENER_OPTIONS lpOptions = NULL, _Out_opt_ HANDLE *h = NULL);
   HRESULT CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
                          _In_opt_z_ LPCWSTR szBindAddressW = NULL, _In_opt_ CUserData *lpUserData = NULL,
-                         _Out_opt_ HANDLE *h = NULL);
+                         _In_opt_ LPLISTENER_OPTIONS lpOptions = NULL, _Out_opt_ HANDLE *h = NULL);
   HRESULT ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA, _In_ int nPort,
                           _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData = NULL,
                           _Out_opt_ HANDLE *h = NULL);
@@ -74,7 +80,7 @@ private:
     HRESULT CreateSocket();
     VOID ShutdownLink(_In_ BOOL bAbortive);
 
-    HRESULT SetupListener(_In_ int nBackLogSize, _In_ DWORD dwMaxAcceptsToPost);
+    HRESULT SetupListener();
     HRESULT SetupClient();
     HRESULT SetupAcceptEx(_In_ CConnection *lpIncomingConn);
 
@@ -90,12 +96,62 @@ private:
     VOID HostResolveCallback(_In_ LONG nResolverId, _In_ PSOCKADDR_INET lpSockAddr, _In_ HRESULT hrErrorCode,
                              _In_opt_ LPVOID lpUserData);
 
-    VOID ConnectWaiterThreadProc();
-    VOID ListenerThreadProc();
-
   protected:
     friend class CSockets;
+    friend class CConnectWaiter;
+    friend class CListener;
 
+    class CConnectWaiter : public CBaseMemObj
+    {
+    public:
+      CConnectWaiter(_In_ CConnection *lpConn);
+      ~CConnectWaiter();
+
+      HRESULT Start(_In_ CPacketBase *lpPacket);
+      VOID Stop();
+
+    private:
+      VOID ThreadProc();
+
+    private:
+      CConnection *lpConn;
+      TClassWorkerThread<CConnectWaiter> *lpWorkerThread;
+      CPacketBase *lpPacket;
+    };
+
+  protected:
+    class CListener : public CBaseMemObj
+    {
+    public:
+      CListener(_In_ CConnection *lpConn);
+      ~CListener();
+
+      VOID SetOptions(_In_opt_ LPLISTENER_OPTIONS lpOptions);
+
+      HRESULT Start();
+      VOID Stop();
+
+      BOOL CheckRateLimit();
+
+    private:
+      VOID ThreadProc();
+
+    public:
+      CConnection *lpConn;
+      LISTENER_OPTIONS sOptions;
+      TClassWorkerThread<CListener> *lpWorkerThread;
+      HANDLE hAcceptSelect, hAcceptCompleted;
+      LPVOID fnAcceptEx, fnGetAcceptExSockaddrs;
+      LONG volatile nAcceptsInProgress;
+      LONG volatile nMutex;
+      CTimer cTimer;
+      union {
+        DWORD dwRequestCounter;
+        DWORD dwCurrentExcess;
+      };
+    };
+
+  protected:
     LONG volatile nRwHandleInUse;
     SOCKADDR_INET sAddr;
     SOCKET sck;
@@ -105,20 +161,13 @@ private:
       LONG volatile nResolverId;
       CPacketBase *lpPacket;
     } sHostResolver;
-    struct tagConnectWaiter {
-      TClassWorkerThread<CConnection> *lpWorkerThread;
-      CPacketBase *lpPacket;
-    } *lpConnectWaiter;
-    struct tagListener {
-      TClassWorkerThread<CConnection> *lpWorkerThread;
-      HANDLE hAcceptSelect;
-      HANDLE hAcceptCompleted;
-      LONG volatile nAcceptsInProgress;
-      DWORD dwMaxAcceptsToPost;
-      LPVOID fnAcceptEx;
-      LPVOID fnGetAcceptExSockaddrs;
-    } *lpListener;
+    TAutoDeletePtr<CConnectWaiter> cConnectWaiter;
+    TAutoDeletePtr<CListener> cListener;
     LONG volatile nReadThrottle;
+    struct {
+      DWORD dwCurrentSize;
+      DWORD dwLastTickMs;
+    } sAutoAdjustSndBuf;
   };
 
 private:
@@ -136,7 +185,7 @@ private:
     };
 
 private:
-  DWORD dwBackLogSize, dwMaxAcceptsToPost, dwAddressResolverTimeoutMs;
+  DWORD dwAddressResolverTimeoutMs;
   struct tagReusableSockets {
     LONG volatile nMutex;
     TArrayList<SOCKET> aList;
