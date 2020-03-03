@@ -17,8 +17,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef _MX_HIRESTIMER_H
-#define _MX_HIRESTIMER_H
+#ifndef _MX_TIMER_H
+#define _MX_TIMER_H
 
 #include "Defines.h"
 
@@ -26,21 +26,29 @@
 
 namespace MX {
 
-class CHiResTimer : public virtual CBaseMemObj, public CNonCopyableObj
+class CTimer : public virtual CBaseMemObj
 {
 public:
-  CHiResTimer();
+  CTimer();
+  CTimer(_In_ CTimer const&);
+
+  CTimer& operator=(_In_ CTimer const&);
 
   VOID Reset();
 
-  DWORD GetElapsedTimeMs(_In_opt_ BOOL bReset = FALSE);
+  VOID Mark();
+  VOID ResetToLastMark();
+
+  DWORD GetElapsedTimeMs() const;
+  DWORD GetStartTimeMs() const;
+  DWORD GetMarkTimeMs() const;
 
 private:
-  ULARGE_INTEGER uliStartCounter, uliFrequency;
+  ULARGE_INTEGER uliStart, uliMark, uliFrequency;
 };
 
 } //namespace MX
 
 //-----------------------------------------------------------
 
-#endif //_MX_HIRESTIMER_H
+#endif //_MX_TIMER_H
