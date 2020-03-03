@@ -33,12 +33,13 @@
 
 #define OPENSSL_FINALIZER_PRIORITY 10000
 
-#define AVAILABLE_CIPHER_SUITES "ALL:!EXPORT:!LOW:!aNULL:!eNULL:!SSLv2:!ADH:!EDH:!DH:!IDEA:!FZA:!RC4"
+//#define AVAILABLE_CIPHER_SUITES "ALL:!EXPORT:!LOW:!aNULL:!eNULL:!SSLv2:!ADH:!EDH:!DH:!IDEA:!FZA:!RC4"
+#define AVAILABLE_CIPHER_SUITES "HIGH:!aNULL:!MD5"
 
 //-----------------------------------------------------------
 
 static LONG volatile nInitialized = 0;
-static SSL_CTX* volatile lpSslContexts[2][1] ={ 0 };
+static SSL_CTX* volatile lpSslContexts[2][1] = { 0 };
 
 //-----------------------------------------------------------
 
