@@ -69,8 +69,8 @@ HRESULT CCryptoAES::BeginEncrypt()
   return BeginEncrypt(AlgorithmAes256Ecb, NULL, 0, NULL, TRUE);
 }
 
-HRESULT CCryptoAES::BeginEncrypt(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey, _In_opt_ SIZE_T nKeyLen,
-                                 _In_opt_ LPCVOID lpInitVector, _In_opt_ BOOL bUsePadding)
+HRESULT CCryptoAES::BeginEncrypt(_In_ CCryptoAES::eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey,
+                                 _In_opt_ SIZE_T nKeyLen, _In_opt_ LPCVOID lpInitVector, _In_opt_ BOOL bUsePadding)
 {
   HRESULT hRes;
 

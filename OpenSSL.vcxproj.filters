@@ -10,8 +10,5 @@
     <None Include="Source\OpenSSL\build.vbs">
       <Filter>Builder Files</Filter>
     </None>
-    <None Include="Source\OpenSSL\compiler_config.conf">
-      <Filter>Builder Files</Filter>
-    </None>
   </ItemGroup>
 </Project>

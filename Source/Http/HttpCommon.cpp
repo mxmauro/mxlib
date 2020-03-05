@@ -485,9 +485,9 @@ headers_end_reached:
           }
           sParser.sChunk.nSize <<= 4;
           if (*szDataA >= '0' && *szDataA <= '9')
-            sParser.sChunk.nSize |= (ULONGLONG)(*szDataA - '0');
+            sParser.sChunk.nSize |= (ULONGLONG)(*szDataA) - (ULONGLONG)'0';
           else
-            sParser.sChunk.nSize |= (ULONGLONG)(((*szDataA) & 0xDF) - 'A' + 10);
+            sParser.sChunk.nSize |= (ULONGLONG)((*szDataA) & 0xDF) - (ULONGLONG)'A' + 10ui64;
           break;
         }
         //end of chunk size

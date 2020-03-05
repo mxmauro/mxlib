@@ -381,7 +381,7 @@ HRESULT CZipFile::Read(_Out_ LPVOID lpDest, _In_ SIZE_T nToRead, _Out_opt_ SIZE_
   return S_OK;
 }
 
-HRESULT CZipFile::Read(_Out_ CStream *lpStream, _In_ SIZE_T nToRead, _Out_opt_ SIZE_T *lpnRead)
+HRESULT CZipFile::Read(_In_ CStream *lpStream, _In_ SIZE_T nToRead, _Out_opt_ SIZE_T *lpnRead)
 {
   BOOL bFirstRead;
 

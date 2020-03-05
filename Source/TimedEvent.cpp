@@ -139,7 +139,7 @@ public:
   BOOL Initialize();
 
   HRESULT AddTimer(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs,
-                   _In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_ LPVOID lpUserData, _In_ BOOL bOneShot);
+                   _In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot);
   VOID RemoveTimer(_Inout_ LONG volatile *lpnTimerId);
 
 private:
@@ -147,8 +147,8 @@ private:
 
   DWORD ProcessQueue();
 
-  CTimer* AllocTimer(_In_ DWORD dwTimeoutMs, _In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_ LPVOID lpUserData,
-                     _In_ BOOL bOneShot);
+  CTimer* AllocTimer(_In_ DWORD dwTimeoutMs, _In_ MX::TimedEvent::OnTimeoutCallback cCallback,
+                     _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot);
   VOID FreeTimer(_In_ CTimer *lpTimer);
 
   static int InsertByIdCompareFunc(_In_ LPVOID lpContext, _In_ CTimer **lplpElem1, _In_ CTimer **lplpElem2);
@@ -187,7 +187,7 @@ namespace MX {
 namespace TimedEvent {
 
 HRESULT SetTimeout(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In_ OnTimeoutCallback cCallback,
-                   _In_ LPVOID lpUserData)
+                   _In_opt_ LPVOID lpUserData)
 {
   TAutoRefCounted<Internals::CTimerHandler> cHandler;
 
@@ -202,7 +202,7 @@ HRESULT SetTimeout(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In_
 }
 
 HRESULT SetInterval(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In_ OnTimeoutCallback cCallback,
-                    _In_ LPVOID lpUserData)
+                    _In_opt_ LPVOID lpUserData)
 {
   TAutoRefCounted<Internals::CTimerHandler> cHandler;
 
@@ -330,7 +330,7 @@ BOOL CTimerHandler::Initialize()
 }
 
 HRESULT CTimerHandler::AddTimer(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs,
-                                _In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_ LPVOID lpUserData,
+                                _In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_opt_ LPVOID lpUserData,
                                 _In_ BOOL bOneShot)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
@@ -529,7 +529,7 @@ check_timer:
 
 CTimerHandler::CTimer* CTimerHandler::AllocTimer(_In_ DWORD dwTimeoutMs,
                                                  _In_ MX::TimedEvent::OnTimeoutCallback cCallback,
-                                                 _In_ LPVOID lpUserData, _In_ BOOL bOneShot)
+                                                 _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot)
 {
   CFastLock cLock(&(sFreeTimers.nMutex));
 

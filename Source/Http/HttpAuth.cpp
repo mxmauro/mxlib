@@ -440,7 +440,7 @@ HRESULT CHttpAuthDigest::MakeAuthenticateResponse(_Out_ CStringA &cStrDestA, _In
     dw = ::GetTickCount();
     nCNonce = fnv_64a_buf(&dw, sizeof(dw), nCNonce);
 
-    mx_sprintf_s(szCNonceA, MX_ARRAYLEN(szCNonceA), "%16x", nCNonce);
+    mx_sprintf_s(szCNonceA, MX_ARRAYLEN(szCNonceA), "%16Ix", nCNonce);
   }
 
   //nonce count
@@ -476,7 +476,10 @@ HRESULT CHttpAuthDigest::MakeAuthenticateResponse(_Out_ CStringA &cStrDestA, _In
           {
             hRes = cDigAlgUserHash->EndDigest();
             if (SUCCEEDED(hRes))
-              hRes = ConvertToHex(cStrUserNameA, cDigAlgUserHash->GetResult(), cDigAlgUserHash->GetResultSize());
+            {
+              if (ConvertToHex(cStrUserNameA, cDigAlgUserHash->GetResult(), cDigAlgUserHash->GetResultSize()) == FALSE)
+                hRes = E_OUTOFMEMORY;
+            }
           }
         }
       }
@@ -942,6 +945,9 @@ static HRESULT GetNextPair(_Inout_ LPCSTR &szValueA, _Out_ LPCSTR *lpszNameStart
                            _Out_ MX::CStringA &cStrValueA)
 {
   LPCSTR szValueStartA;
+
+  *lpszNameStartA = NULL;
+  *lpnNameLen = 0;
 
 loop:
   if (*szValueA == 0)

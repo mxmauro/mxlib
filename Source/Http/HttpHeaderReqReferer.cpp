@@ -66,7 +66,7 @@ HRESULT CHttpHeaderReqReferer::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser 
   return (cStrDestA.Copy((LPCSTR)cStrRefererA) != FALSE) ? S_OK : E_OUTOFMEMORY;
 }
 
-HRESULT CHttpHeaderReqReferer::SetReferer(_In_z_ LPCSTR szRefererA, _In_ SIZE_T nRefererLen)
+HRESULT CHttpHeaderReqReferer::SetReferer(_In_z_ LPCSTR szRefererA, _In_opt_ SIZE_T nRefererLen)
 {
   CUrl cUrl;
   HRESULT hRes;

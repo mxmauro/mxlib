@@ -339,7 +339,9 @@ BOOL CHttpHeaderBase::RawISO_8859_1_to_UTF8(_Out_ CStringW &cStrDestW, _In_ LPCW
   while (szSrcW < szSrcEndW || nInputLen > 0)
   {
     while (nInputLen < 4 && szSrcW < szSrcEndW)
+    {
       szInputA[nInputLen++] = (CHAR)(UCHAR)(*szSrcW++);
+    }
 
     len = Utf8_DecodeChar(szDestW, szInputA, nInputLen);
     if (len > 0)

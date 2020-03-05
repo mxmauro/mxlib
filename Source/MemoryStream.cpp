@@ -148,7 +148,7 @@ HRESULT CMemoryStream::Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_
   return S_OK;
 }
 
-HRESULT CMemoryStream::Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod)
+HRESULT CMemoryStream::Seek(_In_ ULONGLONG nPosition, _In_opt_ CStream::eSeekMethod nMethod)
 {
   switch (nMethod)
   {

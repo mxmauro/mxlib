@@ -33,7 +33,7 @@ HRESULT Utf8_Decode(_Inout_ CStringW &cStrDestW, _In_z_ LPCSTR szSrcA, _In_opt_ 
                     _In_opt_ BOOL bAppend=FALSE);
 
 int Utf8_EncodeChar(_Out_opt_ CHAR szDestA[], _In_ WCHAR chW, _In_opt_ WCHAR chSurrogatePairW=0);
-int Utf8_DecodeChar(_Out_opt_ WCHAR szDestW[], _In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen=(SIZE_T)-1);
+int Utf8_DecodeChar(_Out_opt_ WCHAR szDestW[], _In_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen=(SIZE_T)-1);
 
 SIZE_T Utf8_StrLen(_In_z_ LPCSTR szSrcA);
 

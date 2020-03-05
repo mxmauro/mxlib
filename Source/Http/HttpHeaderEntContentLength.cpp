@@ -53,7 +53,7 @@ HRESULT CHttpHeaderEntContentLength::Parse(_In_z_ LPCSTR szValueA)
     nTemp = nLength * 10ui64;
     if (nTemp < nLength)
       return MX_E_ArithmeticOverflow;
-    nLength = nTemp + (ULONGLONG)(*szValueA - '0');
+    nLength = nTemp + (ULONGLONG)(*szValueA) - (ULONGLONG)'0';
     if (nLength < nTemp)
       return MX_E_ArithmeticOverflow;
     szValueA++;

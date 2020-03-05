@@ -32,7 +32,7 @@
 
 //-----------------------------------------------------------
 
-static VOID GetAnsiAppPath(_Out_ CHAR szPathA[4096]);
+static VOID GetAnsiAppPath(_Out_ LPSTR szPathA, _In_ SIZE_T nMaxPathLen);
 
 //-----------------------------------------------------------
 
@@ -306,7 +306,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::Connect(_In_ DukTape::duk_context *lpCtx)
   {
     CHAR szPathA[4096];
 
-    GetAnsiAppPath(szPathA);
+    GetAnsiAppPath(szPathA, MX_ARRAYLEN(szPathA));
     _CALLAPI(mysql_options)(jsmysql_data->lpDB, MYSQL_PLUGIN_DIR, szPathA);
     _CALLAPI(mysql_options)(jsmysql_data->lpDB, MYSQL_SHARED_MEMORY_BASE_NAME, "MYSQL");
     nTemp = MYSQL_PROTOCOL_MEMORY;
@@ -319,7 +319,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::Connect(_In_ DukTape::duk_context *lpCtx)
   {
     CHAR szPathA[4096];
 
-    GetAnsiAppPath(szPathA);
+    GetAnsiAppPath(szPathA, MX_ARRAYLEN(szPathA));
     _CALLAPI(mysql_options)(jsmysql_data->lpDB, MYSQL_PLUGIN_DIR, szPathA);
     nTemp = MYSQL_PROTOCOL_PIPE;
     _CALLAPI(mysql_options)(jsmysql_data->lpDB, MYSQL_OPT_PROTOCOL, &nTemp);
@@ -1841,7 +1841,7 @@ HRESULT CJsMySqlPlugin::HResultFromMySqlErr(_In_ int nError)
 
 //-----------------------------------------------------------
 
-static VOID GetAnsiAppPath(_Out_ CHAR szPathA[4096])
+static VOID GetAnsiAppPath(_Out_ LPSTR szPathA, _In_ SIZE_T nMaxPathLen)
 {
   WCHAR szPathW[4096], *sW;
   DWORD dwLen;
@@ -1851,21 +1851,21 @@ static VOID GetAnsiAppPath(_Out_ CHAR szPathA[4096])
   dwLen = ::GetModuleFileNameW(NULL, szPathW, MX_ARRAYLEN(szPathW) - 2);
   if (dwLen == 0)
   {
-    strcpy_s(szPathA, MX_ARRAYLEN(szPathA), ".\\");
+    strcpy_s(szPathA, nMaxPathLen, ".\\");
     return;
   }
   szPathW[dwLen] = 0;
   sW = (LPWSTR)MX::StrChrW(szPathW, L'\\', TRUE);
   if (sW == NULL)
   {
-    strcpy_s(szPathA, MX_ARRAYLEN(szPathA), ".\\");
+    strcpy_s(szPathA, nMaxPathLen, ".\\");
     return;
   }
   sW[1] = 0;
   nLen = ::WideCharToMultiByte(CP_ACP, 0, szPathW, (int)MX::StrLenW(szPathW), szPathA, 4096, NULL, NULL);
   if (nLen <= 0)
   {
-    strcpy_s(szPathA, MX_ARRAYLEN(szPathA), ".\\");
+    strcpy_s(szPathA, nMaxPathLen, ".\\");
     return;
   }
   szPathA[nLen] = 0;

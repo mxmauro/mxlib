@@ -311,10 +311,10 @@ static HRESULT encode_var_int(_In_ SIZE_T bias, _In_ SIZE_T delta, _Inout_ MX::C
 static SIZE_T decode_digit(_In_ CHAR v)
 {
   if (isdigit(v))
-    return 22 + (v - '0');
+    return 22 + (SIZE_T)v - (SIZE_T)'0';
   if (islower(v))
-    return v - 'a';
+    return (SIZE_T)v - (SIZE_T)'a';
   if (isupper(v))
-    return v - 'A';
+    return (SIZE_T)v - (SIZE_T)'A';
   return (SIZE_T)-1;
 }

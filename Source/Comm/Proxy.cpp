@@ -136,7 +136,7 @@ VOID CProxy::SetUseIE()
   return;
 }
 
-HRESULT CProxy::SetCredentials(_In_z_ LPCWSTR szUserNameW, _In_z_ LPCWSTR szPasswordW)
+HRESULT CProxy::SetCredentials(_In_opt_z_ LPCWSTR szUserNameW, _In_opt_z_ LPCWSTR szPasswordW)
 {
   if (szUserNameW != NULL && *szUserNameW != 0)
   {

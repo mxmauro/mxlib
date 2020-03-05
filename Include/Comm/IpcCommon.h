@@ -257,7 +257,7 @@ public:
     CPacketBase() : CBaseMemObj(), TLnkLstNode<CPacketBase>(), CNonCopyableObj()
       {
       MxMemSet(&sOvr, 0, sizeof(sOvr));
-      nType = TypeDiscard;
+      nType = CPacketBase::TypeDiscard;
       nOrder = 0;
       lpConn = NULL;
       lpStream = NULL;
@@ -411,7 +411,7 @@ public:
       return (cAfterWriteSignalCallback != false) ? TRUE : FALSE;
       };
 
-    __inline VOID ChainPacket(_In_ CPacketBase *lpPacket)
+    __inline VOID ChainPacket(_In_opt_ CPacketBase *lpPacket)
       {
       lpChainedPacket = lpPacket;
       return;
@@ -677,7 +677,7 @@ protected:
       VOID HandleConnected();
       VOID Update(_In_ DWORD dwBytesTransferred);
 
-      VOID Get(_Out_ PULONGLONG lpullBytesTransferred, _Out_opt_ float *lpnThroughputKbps = NULL,
+      VOID Get(_Out_opt_ PULONGLONG lpullBytesTransferred, _Out_opt_ float *lpnThroughputKbps = NULL,
                _Out_opt_ LPDWORD lpdwTimeMarkMs = NULL);
 
     private:

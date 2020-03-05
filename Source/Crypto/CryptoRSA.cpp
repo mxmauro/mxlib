@@ -571,7 +571,7 @@ HRESULT CCryptoRSA::BeginEncrypt()
   return BeginEncrypt(PaddingPKCS1);
 }
 
-HRESULT CCryptoRSA::BeginEncrypt(_In_ ePadding nPadding, _In_opt_ BOOL bUsePublicKey)
+HRESULT CCryptoRSA::BeginEncrypt(_In_ CCryptoRSA::ePadding nPadding, _In_opt_ BOOL bUsePublicKey)
 {
   int padSize, padding;
   HRESULT hRes;
@@ -615,7 +615,7 @@ HRESULT CCryptoRSA::BeginEncrypt(_In_ ePadding nPadding, _In_opt_ BOOL bUsePubli
   //initialize
   rsa_data->sEncryptor.padding = padding;
   rsa_data->sEncryptor.bUsePrivateKey = !bUsePublicKey;
-  rsa_data->sEncryptor.nMaxInputSize = (SIZE_T)(RSA_size(rsa_data->lpRsa) - padSize);
+  rsa_data->sEncryptor.nMaxInputSize = (SIZE_T)RSA_size(rsa_data->lpRsa) - (SIZE_T)padSize;
   rsa_data->sEncryptor.lpInputBuf = (LPBYTE)MX_MALLOC(rsa_data->sEncryptor.nMaxInputSize);
   rsa_data->sEncryptor.nMaxOutputSize = (SIZE_T)RSA_size(rsa_data->lpRsa);
   rsa_data->sEncryptor.lpOutputBuf = (LPBYTE)MX_MALLOC(rsa_data->sEncryptor.nMaxOutputSize);
@@ -801,7 +801,7 @@ HRESULT CCryptoRSA::BeginSign()
   return BeginSign(HashAlgorithmSHA1);
 }
 
-HRESULT CCryptoRSA::BeginSign(_In_ eHashAlgorithm nAlgorithm)
+HRESULT CCryptoRSA::BeginSign(_In_ CCryptoRSA::eHashAlgorithm nAlgorithm)
 {
   TAutoDeletePtr<MX::CDigestAlgorithmBase> cDigest;
   int md_type;

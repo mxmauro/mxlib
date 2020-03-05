@@ -75,7 +75,7 @@ HRESULT CHttpHeaderReqRange::Parse(_In_z_ LPCSTR szValueA)
         nTemp = sRangeSet.nByteStart * 10ui64;
         if (nTemp < sRangeSet.nByteStart)
           return MX_E_ArithmeticOverflow;
-        sRangeSet.nByteStart = nTemp + (ULONGLONG)(*szValueA - '0');
+        sRangeSet.nByteStart = nTemp + (ULONGLONG)(*szValueA) - (ULONGLONG)'0';
         if (sRangeSet.nByteStart < nTemp)
           return MX_E_ArithmeticOverflow;
         szValueA++;
@@ -99,7 +99,7 @@ HRESULT CHttpHeaderReqRange::Parse(_In_z_ LPCSTR szValueA)
         nTemp = sRangeSet.nByteEnd * 10ui64;
         if (nTemp < sRangeSet.nByteEnd)
           return MX_E_ArithmeticOverflow;
-        sRangeSet.nByteEnd = nTemp + (ULONGLONG)(*szValueA - '0');
+        sRangeSet.nByteEnd = nTemp + (ULONGLONG)(*szValueA) - (ULONGLONG)'0';
         if (sRangeSet.nByteEnd < nTemp)
           return MX_E_ArithmeticOverflow;
         szValueA++;

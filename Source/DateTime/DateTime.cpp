@@ -621,8 +621,8 @@ pfs_skip_phrase:
       nDay = nYDay;
       for (nMonth=1; nMonth<=12; nMonth++)
       {
-        nTemp = (SIZE_T)(aDateTimeMonthDays[nMonth] - aDateTimeMonthDays[nMonth-1] +
-                         ((bAlternateFlag!=FALSE && i==2) ? 1 : 0));
+        nTemp = (SIZE_T)aDateTimeMonthDays[nMonth] - (SIZE_T)aDateTimeMonthDays[nMonth-1] +
+                ((bAlternateFlag != FALSE && i== 2) ? 1 : 0);
         if (nTemp >= (SIZE_T)nDay)
           break;
         nDay -= (int)nTemp;
@@ -737,7 +737,7 @@ HRESULT CDateTime::SetGmtOffset(_In_ int _nGmtOffset, _In_ BOOL bAdjustTime)
     return E_INVALIDARG;
   if (bAdjustTime != FALSE)
   {
-    hRes = Add((LONGLONG)(_nGmtOffset-nGmtOffset), UnitsMinutes);
+    hRes = Add((LONGLONG)_nGmtOffset - (LONGLONG)nGmtOffset, CDateTime::UnitsMinutes);
     if (FAILED(hRes))
       return hRes;
   }
@@ -996,12 +996,12 @@ HRESULT CDateTime::Add(_In_ CTimeSpan &cTs)
   return Add(cTs.GetTicks(), UnitsTicks);
 }
 
-HRESULT CDateTime::Add(_In_ int nCount, _In_ eUnits nUnits)
+HRESULT CDateTime::Add(_In_ int nCount, _In_ CDateTime::eUnits nUnits)
 {
   return Add((LONGLONG)nCount, nUnits);
 }
 
-HRESULT CDateTime::Add(_In_ LONGLONG nCount, _In_ eUnits nUnits)
+HRESULT CDateTime::Add(_In_ LONGLONG nCount, _In_ CDateTime::eUnits nUnits)
 {
   CTimeSpan cNewTicks, cTs;
   int k, nYear, nMonth, nDay;
@@ -1154,7 +1154,7 @@ LONGLONG CDateTime::GetDiff(_In_ const CDateTime& cFromDt, _In_ eUnits nUnits)
         nTemp[i] = (aDateTimeMonthDays[nMonth[i]] - aDateTimeMonthDays[nMonth[i]-1]);
         if (IsLeapYear(nYear[i]) != FALSE)
           nTemp[i]++;
-        nDblTemp[i] = (double)(nYear[i]*12 + nMonth[i]) + (double)(nDay[i]-1) / (double)nTemp[i];
+        nDblTemp[i] = (double)(nYear[i] * 12 + nMonth[i]) + (double)(nDay[i] - 1) / (double)nTemp[i];
       }
       nDiff = (LONGLONG)(nDblTemp[0] - nDblTemp[1]);
       if (nUnits == UnitsYear)

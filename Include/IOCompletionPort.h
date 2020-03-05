@@ -120,6 +120,7 @@ private:
   public:
     CThread() : CBaseMemObj(), TClassWorkerThread<CIoCompletionPortThreadPool>(), TLnkLstNode<CThread>()
       {
+      nFlags = 0;
       return;
       };
 

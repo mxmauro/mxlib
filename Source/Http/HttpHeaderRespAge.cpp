@@ -53,7 +53,7 @@ HRESULT CHttpHeaderRespAge::Parse(_In_z_ LPCSTR szValueA)
     nTemp = _nAge * 10ui64;
     if (nTemp < _nAge)
       return MX_E_ArithmeticOverflow;
-    _nAge = nTemp + (ULONGLONG)(*szValueA - '0');
+    _nAge = nTemp + (ULONGLONG)(*szValueA) - (ULONGLONG)'0';
     if (_nAge < nTemp)
       return MX_E_ArithmeticOverflow;
     szValueA++;

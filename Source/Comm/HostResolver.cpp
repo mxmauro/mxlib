@@ -194,14 +194,14 @@ public:
                       _In_opt_ LPVOID lpUserData, _Out_opt_ LONG volatile *lpnResolverId);
   HRESULT AddResolver(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _Out_ PSOCKADDR_INET lpSockAddr,
                       _In_ DWORD dwTimeoutMs, _In_opt_ HostResolver::OnResultCallback cCallback,
-                      _In_opt_ LPVOID lpUserData, _Out_ LONG volatile *lpnResolverId);
+                      _In_opt_ LPVOID lpUserData, _Out_opt_ LONG volatile *lpnResolverId);
   HRESULT AddResolverCommon(_Out_ LONG volatile *lpnResolverId, _In_ CAsyncItem *lpNewAsyncItem);
   VOID RemoveResolver(_Out_ LONG volatile *lpnResolverId);
 
 private:
   CAsyncItem* AllocAsyncItem(_In_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _In_ DWORD dwTimeoutMs,
                              _Out_ PSOCKADDR_INET lpSockAddr, _In_ HostResolver::OnResultCallback cCallback,
-                             _In_ LPVOID lpUserData);
+                             _In_opt_ LPVOID lpUserData);
   VOID FreeAsyncItem(_In_ CAsyncItem *lpAsyncItem);
 
   static VOID WINAPI AsyncQueryCompleteCallback(_In_ DWORD dwError, _In_ DWORD dwBytes, _In_ LPOVERLAPPED lpOvr);
@@ -1052,6 +1052,9 @@ HRESULT CHostResolver::AddResolver(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredF
       return hRes;
     }
 
+    if (lpnResolverId == NULL)
+      return E_INVALIDARG;
+
     //create a new async item
     if (cStrTempW.Copy(szHostNameA) == FALSE)
       return E_OUTOFMEMORY;
@@ -1067,7 +1070,7 @@ HRESULT CHostResolver::AddResolver(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredF
 
 HRESULT CHostResolver::AddResolver(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _Out_ PSOCKADDR_INET lpSockAddr,
                                    _In_ DWORD dwTimeoutMs, _In_opt_ HostResolver::OnResultCallback cCallback,
-                                   _In_opt_ LPVOID lpUserData, _Out_ LONG volatile *lpnResolverId)
+                                   _In_opt_ LPVOID lpUserData, _Out_opt_ LONG volatile *lpnResolverId)
 {
   TAutoDeletePtr<CAsyncItem> cNewAsyncItem;
   HRESULT hRes;
@@ -1154,6 +1157,9 @@ HRESULT CHostResolver::AddResolver(_In_z_ LPCWSTR szHostNameW, _In_ int nDesired
       }
     }
 
+    if (lpnResolverId == NULL)
+      return E_INVALIDARG;
+
     //create a new async item
     cNewAsyncItem.Attach(AllocAsyncItem(szHostNameW, nDesiredFamily, dwTimeoutMs, lpSockAddr, cCallback, lpUserData));
     if (!cNewAsyncItem)
@@ -1194,7 +1200,7 @@ HRESULT CHostResolver::AddResolverCommon(_Out_ LONG volatile *lpnResolverId, _In
                            &(lpNewAsyncItem->lpAddrInfoExW), ((lpNewAsyncItem->dwTimeoutMs != INFINITE) ? &tv : NULL),
                            &(lpNewAsyncItem->sOvr), &CHostResolver::AsyncQueryCompleteCallback,
                            &(lpNewAsyncItem->hCancel));
-    if (res != WSA_IO_PENDING && res != ERROR_IO_PENDING)
+    if (res != WSA_IO_PENDING) // WSA_IO_PENDING == ERROR_IO_PENDING
     {
       sAsyncTasks.cTree.Remove(lpNewAsyncItem);
       FreeAsyncItem(lpNewAsyncItem);
@@ -1241,7 +1247,7 @@ VOID CHostResolver::RemoveResolver(_Out_ LONG volatile *lpnResolverId)
 CHostResolver::CAsyncItem* CHostResolver::AllocAsyncItem(_In_ LPCWSTR szHostNameW, _In_ int nDesiredFamily,
                                                          _In_ DWORD dwTimeoutMs, _Out_ PSOCKADDR_INET lpSockAddr,
                                                          _In_ HostResolver::OnResultCallback cCallback,
-                                                         _In_ LPVOID lpUserData)
+                                                         _In_opt_ LPVOID lpUserData)
 {
   CFastLock cLock(&(sFreeAsyncItems.nMutex));
   CAsyncItem *lpAsyncItem;

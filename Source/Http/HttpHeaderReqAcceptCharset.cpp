@@ -230,7 +230,7 @@ CHttpHeaderReqAcceptCharset::CCharset::~CCharset()
   return;
 }
 
-HRESULT CHttpHeaderReqAcceptCharset::CCharset::SetCharset(_In_z_ LPCSTR szCharsetA, _In_ SIZE_T nCharsetLen)
+HRESULT CHttpHeaderReqAcceptCharset::CCharset::SetCharset(_In_z_ LPCSTR szCharsetA, _In_opt_ SIZE_T nCharsetLen)
 {
   LPCSTR szCharsetEndA, szStartA;
 

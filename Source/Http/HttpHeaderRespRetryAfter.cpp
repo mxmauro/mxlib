@@ -61,7 +61,7 @@ HRESULT CHttpHeaderRespRetryAfter::Parse(_In_z_ LPCSTR szValueA)
         nTemp = _nSeconds * 10ui64;
         if (nTemp < _nSeconds)
           return MX_E_ArithmeticOverflow;
-        _nSeconds = nTemp + (ULONGLONG)(*szValueA - '0');
+        _nSeconds = nTemp + (ULONGLONG)(*szValueA) - (ULONGLONG)'0';
         if (_nSeconds < nTemp)
           return MX_E_ArithmeticOverflow;
         szValueA++;

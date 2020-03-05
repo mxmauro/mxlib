@@ -1172,7 +1172,7 @@ HRESULT CHttpServer::QuickSendErrorResponseAndReset(_In_ CClientRequest *lpReque
   //done
   if (ShouldLog(1) != FALSE)
   {
-    Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateError [%ld/%08X]", lpRequest, lpRequest->hConn, hrErrorCode);
+    Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateError [%08X]", lpRequest, lpRequest->hConn, hrErrorCode);
   }
   return hRes;
 }

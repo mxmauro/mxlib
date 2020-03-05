@@ -114,6 +114,7 @@ public:
     {
     lpObject = NULL;
     lpStartRoutine = NULL;
+    lpStartRoutineWithParam = NULL;
     return;
     };
 

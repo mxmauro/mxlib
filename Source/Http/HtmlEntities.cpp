@@ -521,11 +521,11 @@ WCHAR Decode(_In_ LPCSTR szStrA, _In_ SIZE_T nStrLen, _Out_opt_ LPCSTR *lpszAfte
     while (nStrLen > 0 && *szStrA != 0 && *szStrA != ';')
     {
       if (*szStrA >= '0' && *szStrA <= '9')
-        nDigit = (SIZE_T)(*szStrA - '0');
+        nDigit = (SIZE_T)(*szStrA) - (SIZE_T)'0';
       else if (*szStrA >= 'A' && *szStrA <= 'F')
-        nDigit = (SIZE_T)(*szStrA - 'A') + 10;
+        nDigit = (SIZE_T)(*szStrA) - (SIZE_T)'A' + 10;
       else if (*szStrA >= 'a' && *szStrA <= 'f')
-        nDigit = (SIZE_T)(*szStrA - 'a') + 10;
+        nDigit = (SIZE_T)(*szStrA) - (SIZE_T)'a' + 10;
       else
         return 0; //invalid digit
       if (nDigit >= nBase)

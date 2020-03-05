@@ -397,7 +397,7 @@ DukTape::duk_ret_t CJsSQLitePlugin::Disconnect(_In_opt_ DukTape::duk_context *lp
 
 DukTape::duk_ret_t CJsSQLitePlugin::Query(_In_ DukTape::duk_context *lpCtx)
 {
-  Internals::CAutoLockDB(jssqlite_data);
+  Internals::CAutoLockDB cDbLock(jssqlite_data);
   LPCSTR szQueryA;
   SIZE_T nQueryLegth;
   DukTape::duk_idx_t nParamsCount;
@@ -808,7 +808,7 @@ DukTape::duk_ret_t CJsSQLitePlugin::Utf8Truncate(_In_ DukTape::duk_context *lpCt
 
 DukTape::duk_ret_t CJsSQLitePlugin::FetchRow(_In_ DukTape::duk_context *lpCtx)
 {
-  Internals::CAutoLockDB(jssqlite_data);
+  Internals::CAutoLockDB cDbLock(jssqlite_data);
   Internals::CJsSQLiteFieldInfo *lpFieldInfo;
   SIZE_T i, nFieldsCount;
   int err;

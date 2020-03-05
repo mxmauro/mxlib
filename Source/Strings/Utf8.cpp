@@ -132,7 +132,7 @@ int Utf8_EncodeChar(_Out_opt_ CHAR szDestA[], _In_ WCHAR chW, _In_opt_ WCHAR chS
   return k;
 }
 
-int Utf8_DecodeChar(_Out_opt_ WCHAR szDestW[], _In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen)
+int Utf8_DecodeChar(_Out_opt_ WCHAR szDestW[], _In_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen)
 {
   WCHAR chW[2];
   UCHAR *sA;
@@ -294,7 +294,7 @@ int Utf8_StrNCompareA(_In_z_ LPCSTR szSrcUtf8, _In_z_ LPCSTR szSrcA, _In_ SIZE_T
     nTempBufLen = 0;
     while (nTempBufLen < nLen && nTempBufLen < MX_ARRAYLEN(szTempBufW)-1)
     {
-      res = Utf8_DecodeChar(szTempBufW+nTempBufLen, szSrcUtf8);
+      res = Utf8_DecodeChar(szTempBufW + nTempBufLen, szSrcUtf8);
       if (res <= 0)
         return 1; //on error, the other is less
       nTempBufLen += (szTempBufW[nTempBufLen+1] == 0) ? 1 : 2;
@@ -330,7 +330,7 @@ int Utf8_StrNCompareW(_In_z_ LPCSTR szSrcUtf8, _In_z_ LPCWSTR szSrcW, _In_ SIZE_
     nTempBufLen = 0;
     while (nTempBufLen < nLen && nTempBufLen < MX_ARRAYLEN(szTempBufW)-1)
     {
-      res = Utf8_DecodeChar(szTempBufW+nTempBufLen, szSrcUtf8);
+      res = Utf8_DecodeChar(szTempBufW + nTempBufLen, szSrcUtf8);
       if (res <= 0)
         return 1; //on error, the other is less
       nTempBufLen += (szTempBufW[nTempBufLen+1] == 0) ? 1 : 2;

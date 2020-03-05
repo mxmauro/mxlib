@@ -168,7 +168,7 @@ CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDi
 
   if (__InterlockedRead(&nOSVersion) >= 0x0600)
   {
-    if (fnSetFileCompletionNotificationModes == NULL)
+    if (__InterlockedReadPointer(&fnSetFileCompletionNotificationModes) == NULL)
     {
       LPVOID _fnSetFileCompletionNotificationModes;
       HINSTANCE hDll;
@@ -190,7 +190,7 @@ CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDi
       _InterlockedExchangePointer((LPVOID volatile*)&fnSetFileCompletionNotificationModes,
                                   _fnSetFileCompletionNotificationModes);
     }
-    if (fnCancelIoEx == NULL)
+    if (__InterlockedReadPointer(&fnCancelIoEx) == NULL)
     {
       LPVOID _fnCancelIoEx;
       HINSTANCE hDll;
@@ -213,7 +213,7 @@ CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDi
     }
   }
 
-  if (fnSetFileCompletionNotificationModes != NULL)
+  if (__InterlockedReadPointer(&fnSetFileCompletionNotificationModes) != NULL)
   {
     nFlags |= MGRFLAGS_CanCompleteSync;
   }
@@ -1361,7 +1361,7 @@ HRESULT CSockets::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket, _Out_
 VOID CSockets::CConnection::HostResolveCallback(_In_ LONG nResolverId, _In_ PSOCKADDR_INET lpSockAddr,
                                                 _In_ HRESULT hrErrorCode, _In_opt_ LPVOID lpUserData)
 {
-  HRESULT hRes;
+  HRESULT hRes = S_OK;
 
   if (_InterlockedCompareExchange(&(sHostResolver.nResolverId), 0, nResolverId) == nResolverId)
   {

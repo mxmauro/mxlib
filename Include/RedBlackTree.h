@@ -387,7 +387,7 @@ public:
 
   template<class _Comparator>
   BOOL Insert(_In_ _RbTreeNode *lpNewNode, _In_ _Comparator lpCompareFunc, _In_opt_ BOOL bAllowDuplicates = FALSE,
-              _In_opt_ T **lplpMatchingEntry = NULL, _In_opt_ LPVOID lpContext = NULL)
+              _Out_opt_ T **lplpMatchingEntry = NULL, _In_opt_ LPVOID lpContext = NULL)
     {
     _RbTreeNode *lpNode, *lpParent, *lpUncle;
     int comp;

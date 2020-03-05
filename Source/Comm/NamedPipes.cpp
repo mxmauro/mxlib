@@ -89,7 +89,7 @@ CNamedPipes::CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CI
 
   if (__InterlockedRead(&nOSVersion) >= 0x0600)
   {
-    if (fnSetFileCompletionNotificationModes == NULL)
+    if (__InterlockedReadPointer(&fnSetFileCompletionNotificationModes) == NULL)
     {
       LPVOID _fnSetFileCompletionNotificationModes;
       HINSTANCE hDll;
@@ -112,7 +112,7 @@ CNamedPipes::CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CI
                                   _fnSetFileCompletionNotificationModes);
     }
 
-    if (fnCancelIoEx == NULL)
+    if (__InterlockedReadPointer(&fnCancelIoEx) == NULL)
     {
       LPVOID _fnCancelIoEx;
       HINSTANCE hDll;

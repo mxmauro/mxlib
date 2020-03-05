@@ -611,20 +611,20 @@ CIpc::eConnectionClass CIpc::GetClass(_In_ HANDLE h)
   TAutoRefCounted<CConnectionBase> cConn;
 
   if (cRundownLock.IsAcquired() == FALSE)
-    return ConnectionClassError;
+    return CIpc::ConnectionClassError;
   cConn.Attach(CheckAndGetConnection(h));
   if (!cConn)
-    return ConnectionClassError;
+    return CIpc::ConnectionClassError;
   //check class
   switch (cConn->nClass)
   {
-    case ConnectionClassClient:
-    case ConnectionClassServer:
-    case ConnectionClassListener:
+    case CIpc::ConnectionClassClient:
+    case CIpc::ConnectionClassServer:
+    case CIpc::ConnectionClassListener:
       return cConn->nClass;
   }
   //done
-  return ConnectionClassUnknown;
+  return CIpc::ConnectionClassUnknown;
 }
 
 BOOL CIpc::IsShuttingDown()
@@ -2024,6 +2024,7 @@ HRESULT CIpc::CConnectionBase::SendPackets(_Inout_ CPacketBase **lplpFirstPacket
   if (bFlushAll == FALSE && (*lpnChainLength) < nMultiWriteMaxCount)
     return S_OK;
 
+  hRes = S_OK;
   while ((*lpnChainLength) > 0)
   {
     if (IsClosed() != FALSE)
@@ -2270,7 +2271,7 @@ VOID CIpc::CConnectionBase::CReadWriteStats::Update(_In_ DWORD dwBytesTransferre
   return;
 }
 
-VOID CIpc::CConnectionBase::CReadWriteStats::Get(_Out_ PULONGLONG lpullBytesTransferred,
+VOID CIpc::CConnectionBase::CReadWriteStats::Get(_Out_opt_ PULONGLONG lpullBytesTransferred,
                                                  _Out_opt_ float *lpnThroughputKbps, _Out_opt_ LPDWORD lpdwTimeMarkMs)
 {
   CAutoSlimRWLShared cLock(&nRwMutex);

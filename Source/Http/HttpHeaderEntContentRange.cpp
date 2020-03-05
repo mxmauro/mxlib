@@ -60,7 +60,7 @@ HRESULT CHttpHeaderEntContentRange::Parse(_In_z_ LPCSTR szValueA)
     nTemp = _nByteStart * 10ui64;
     if (nTemp < _nByteStart)
       return MX_E_ArithmeticOverflow;
-    _nByteStart = nTemp + (ULONGLONG)(*szValueA - '0');
+    _nByteStart = nTemp + (ULONGLONG)(*szValueA) - (ULONGLONG)'0';
     if (_nByteStart < nTemp)
       return MX_E_ArithmeticOverflow;
     szValueA++;
@@ -82,7 +82,7 @@ HRESULT CHttpHeaderEntContentRange::Parse(_In_z_ LPCSTR szValueA)
     nTemp = _nByteEnd * 10ui64;
     if (nTemp < _nByteEnd)
       return MX_E_ArithmeticOverflow;
-    _nByteEnd = nTemp + (ULONGLONG)(*szValueA - '0');
+    _nByteEnd = nTemp + (ULONGLONG)(*szValueA) - (ULONGLONG)'0';
     if (_nByteEnd < nTemp)
       return MX_E_ArithmeticOverflow;
     szValueA++;
@@ -108,7 +108,7 @@ HRESULT CHttpHeaderEntContentRange::Parse(_In_z_ LPCSTR szValueA)
       nTemp = _nTotalBytes * 10ui64;
       if (nTemp < _nTotalBytes)
         return MX_E_ArithmeticOverflow;
-      _nTotalBytes = nTemp + (ULONGLONG)(*szValueA - '0');
+      _nTotalBytes = nTemp + (ULONGLONG)(*szValueA) - (ULONGLONG)'0';
       if (_nTotalBytes < nTemp)
         return MX_E_ArithmeticOverflow;
       szValueA++;

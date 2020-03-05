@@ -230,7 +230,7 @@ CHttpHeaderReqAcceptEncoding::CEncoding::~CEncoding()
   return;
 }
 
-HRESULT CHttpHeaderReqAcceptEncoding::CEncoding::SetEncoding(_In_z_ LPCSTR szEncodingA, _In_ SIZE_T nEncodingLen)
+HRESULT CHttpHeaderReqAcceptEncoding::CEncoding::SetEncoding(_In_z_ LPCSTR szEncodingA, _In_opt_ SIZE_T nEncodingLen)
 {
   LPCSTR szEncodingEndA, szStartA;
 

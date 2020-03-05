@@ -567,7 +567,7 @@ HRESULT CHttpCookie::ParseFromResponseHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE
         nTemp = nMaxAge * 10;
         if (nTemp < nMaxAge)
           return E_FAIL;
-        nMaxAge = nTemp + (ULONGLONG)(*sA - '0');
+        nMaxAge = nTemp + (ULONGLONG)(*sA) - (ULONGLONG)'0';
         if (nMaxAge < nTemp)
           return E_FAIL;
         sA++;

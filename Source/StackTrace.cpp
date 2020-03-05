@@ -79,6 +79,8 @@ HRESULT Get(_Out_ SIZE_T *lpnOutput, _In_ SIZE_T nCount, _In_opt_ DWORD dwThread
     return E_INVALIDARG;
   *lpnOutput = 0;
 
+  ::MxMemSet(&sCtx, 0, sizeof(sCtx));
+
   if (dwThreadId == 0 || dwThreadId == ::GetCurrentThreadId())
   {
     if (::GetThreadContext(::GetCurrentThread(), &sCtx) == FALSE)

@@ -75,7 +75,7 @@ HRESULT CStream::WriteStringV(_In_ LPCWSTR szFormatA, _In_ va_list argptr)
   return hRes;
 }
 
-HRESULT CStream::Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod)
+HRESULT CStream::Seek(_In_ ULONGLONG nPosition, _In_opt_ CStream::eSeekMethod nMethod)
 {
   return E_NOTIMPL;
 }

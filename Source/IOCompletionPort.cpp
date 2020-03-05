@@ -41,7 +41,7 @@ namespace MX {
 
 CIoCompletionPort::CIoCompletionPort() : CBaseMemObj(), CNonCopyableObj()
 {
-  if (fnGetQueuedCompletionStatusEx == NULL)
+  if (__InterlockedReadPointer(&fnGetQueuedCompletionStatusEx) == NULL)
   {
     LPVOID _fnGetQueuedCompletionStatusEx;
     HINSTANCE hDll;
@@ -431,7 +431,7 @@ HRESULT CIoCompletionPortThreadPool::StartThread(_In_ BOOL bInitial)
 VOID CIoCompletionPortThreadPool::ThreadProc(_In_ SIZE_T nParam)
 {
   CThread *lpThread = (CThread*)nParam;
-  OVERLAPPED_ENTRY sOvrEntries[8], *lpOvrEntry, *lpOvrEntryEnd;
+  OVERLAPPED_ENTRY sOvrEntries[1], *lpOvrEntry, *lpOvrEntryEnd;
   ULONG nOvrEntriesCount;
   LPVOID lpThreadCustomParam;
   DWORD dwTimeout;

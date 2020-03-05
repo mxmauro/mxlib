@@ -819,7 +819,8 @@ static X509_CRL* lookup_crl_by_subject(_In_ MX::CSslCertificateArray *lpCertArra
 
 static int DebugPrintSslError(const char *str, size_t len, void *u)
 {
-  ((LPDEBUGPRINT_DATA)u)->lpLayer->Log(L"IpcSslLayer/%s: Error: %.*s\n", ((LPDEBUGPRINT_DATA)u)->szDescW, len, str);
+  ((LPDEBUGPRINT_DATA)u)->lpLayer->Log(L"IpcSslLayer/%s: Error: %.*s\n", ((LPDEBUGPRINT_DATA)u)->szDescW,
+                                       (unsigned int)len, str);
   return 1;
 }
 

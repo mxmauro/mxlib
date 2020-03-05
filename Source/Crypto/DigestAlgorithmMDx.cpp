@@ -63,8 +63,8 @@ HRESULT CDigestAlgorithmMessageDigest::BeginDigest()
   return BeginDigest(AlgorithmMD5, NULL, 0);
 }
 
-HRESULT CDigestAlgorithmMessageDigest::BeginDigest(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey,
-                                                   _In_opt_ SIZE_T nKeyLen)
+HRESULT CDigestAlgorithmMessageDigest::BeginDigest(_In_ CDigestAlgorithmMessageDigest::eAlgorithm nAlgorithm,
+                                                   _In_opt_ LPCVOID lpKey, _In_opt_ SIZE_T nKeyLen)
 {
   int ret;
   HRESULT hRes;

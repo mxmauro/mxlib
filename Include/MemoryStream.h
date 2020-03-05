@@ -40,7 +40,7 @@ public:
   HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
                 _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX);
 
-  HRESULT Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod=SeekStart);
+  HRESULT Seek(_In_ ULONGLONG nPosition, _In_opt_ CStream::eSeekMethod nMethod = SeekStart);
 
   ULONGLONG GetLength() const;
 
