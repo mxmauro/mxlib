@@ -65,9 +65,9 @@ public:
 
   typedef Callback<VOID (_In_ CHttpClient *lpHttp, _In_ HRESULT hrErrorCode)> OnErrorCallback;
 
-  typedef Callback<HRESULT (_In_ CHttpClient *lpHttp, _Inout_ CIpcSslLayer::eProtocol &nProtocol,
-                            _Inout_ CSslCertificateArray **lplpCheckCertificates, _Inout_ CSslCertificate **lplpSelfCert,
-                            _Inout_ CCryptoRSA **lplpPrivKey)> OnQueryCertificatesCallback;
+  typedef Callback<HRESULT (_In_ CHttpClient *lpHttp, _Inout_ CSslCertificateArray **lplpCheckCertificates,
+                            _Inout_ CSslCertificate **lplpSelfCert,
+                            _Inout_ CEncryptionKey **lplpPrivKey)> OnQueryCertificatesCallback;
 
   //--------
 

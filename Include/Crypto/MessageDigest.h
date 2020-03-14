@@ -17,33 +17,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef _MX_DIGESTALGORITHM_MDx_H
-#define _MX_DIGESTALGORITHM_MDx_H
+#ifndef _MX_MESSAGE_DIGEST_H
+#define _MX_MESSAGE_DIGEST_H
 
-#include "DigestAlgorithmBase.h"
+#include "..\Defines.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-class CDigestAlgorithmMessageDigest : public CDigestAlgorithmBase, public CNonCopyableObj
+class CMessageDigest : public virtual CBaseMemObj, public CNonCopyableObj
 {
 public:
   typedef enum {
-    AlgorithmMD5=0, AlgorithmMD4, AlgorithmMD2
+    AlgorithmCRC32 = 0,
+    AlgorithmMD5, AlgorithmMD4,
+    AlgorithmSHA1, AlgorithmSHA224, AlgorithmSHA256, AlgorithmSHA384,
+    AlgorithmSHA512, AlgorithmSHA512_224, AlgorithmSHA512_256,
+    AlgorithmSHA3_224, AlgorithmSHA3_256, AlgorithmSHA3_384, AlgorithmSHA3_512,
+    AlgorithmBlake2s_256, AlgorithmBlake2b_512
   } eAlgorithm;
 
 public:
-  CDigestAlgorithmMessageDigest();
-  ~CDigestAlgorithmMessageDigest();
+  CMessageDigest();
+  ~CMessageDigest();
 
-  HRESULT BeginDigest();
-  HRESULT BeginDigest(_In_ eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey=NULL, _In_opt_ SIZE_T nKeyLen=0);
+  HRESULT BeginDigest(_In_z_ LPCSTR szAlgorithmA, _In_opt_ LPCVOID lpKey = NULL, _In_opt_ SIZE_T nKeyLen = 0);
+  HRESULT BeginDigest(_In_ MX::CMessageDigest::eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey = NULL,
+                      _In_opt_ SIZE_T nKeyLen = 0);
+
   HRESULT DigestStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
+  HRESULT DigestWordLE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount);
+  HRESULT DigestWordBE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount);
+  HRESULT DigestDWordLE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount);
+  HRESULT DigestDWordBE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount);
+  HRESULT DigestQWordLE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCount);
+  HRESULT DigestQWordBE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCount);
+
   HRESULT EndDigest();
 
   LPBYTE GetResult() const;
   SIZE_T GetResultSize() const;
+
+  //NOTE: Returns -1 if unsupported
+  static MX::CMessageDigest::eAlgorithm GetAlgorithm(_In_z_ LPCSTR szAlgorithmA);
 
 private:
   VOID CleanUp(_In_ BOOL bZeroData);
@@ -56,4 +73,4 @@ private:
 
 //-----------------------------------------------------------
 
-#endif //_MX_DIGESTALGORITHM_MDx_H
+#endif //_MX_MESSAGE_DIGEST_H

@@ -47,6 +47,7 @@ public:
   SIZE_T Read(_Out_writes_(nToRead) LPVOID lpDest, _In_ SIZE_T nToRead);
   HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLength, _In_ BOOL bExpandIfNeeded=TRUE);
 
+  HRESULT EnsureWritableSize(_In_ SIZE_T nSize);
   HRESULT SetBufferSize(_In_ SIZE_T nSize);
   SIZE_T GetBufferSize() const
     {

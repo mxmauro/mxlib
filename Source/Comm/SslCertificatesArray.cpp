@@ -20,6 +20,7 @@
 #include "..\..\Include\Comm\SslCertificates.h"
 #include "..\..\Include\AutoHandle.h"
 #include "..\..\Include\Crypto\Base64.h"
+#include "..\..\Include\Crypto\SecureBuffer.h"
 #include "..\Crypto\InitOpenSSL.h"
 #include "..\..\Include\Strings\Utf8.h"
 #include "..\..\Include\AutoPtr.h"
@@ -94,7 +95,7 @@ VOID CSslCertificateArray::Reset()
 {
   cCertsList.RemoveAllElements();
   cCertCrlsList.RemoveAllElements();
-  cRsaKeysList.RemoveAllElements();
+  cKeysList.RemoveAllElements();
   return;
 }
 
@@ -112,13 +113,13 @@ HRESULT CSslCertificateArray::AddFromMemory(_In_ LPCVOID lpData, _In_ SIZE_T nDa
   if (((LPBYTE)lpData)[0] == (V_ASN1_CONSTRUCTED | V_ASN1_SEQUENCE) &&
       Asn1_ValidateLength((LPBYTE)lpData + 1, (LPBYTE)lpData + nDataLen) != FALSE)
   {
-    hRes = AddCertificateFromDER(lpData, nDataLen, szPasswordA);
+    hRes = AddCertificateFromDER(lpData, nDataLen);
     if (hRes == MX_E_InvalidData)
       hRes = AddCrlFromDER(lpData, nDataLen);
     if (hRes == MX_E_InvalidData)
-      hRes = AddPrivateKeyFromDER(lpData, nDataLen, szPasswordA);
+      hRes = AddPrivateKeyFromDER(lpData, nDataLen);
     if (hRes == MX_E_InvalidData)
-      hRes = AddPublicKeyFromDER(lpData, nDataLen, szPasswordA);
+      hRes = AddPublicKeyFromDER(lpData, nDataLen);
     if (FAILED(hRes))
       return hRes;
   }
@@ -285,23 +286,22 @@ HRESULT CSslCertificateArray::AddFromFile(_In_z_ LPCWSTR szFileNameW, _In_opt_z_
   return AddFromMemory(aTempBuf.Get(), (SIZE_T)dwSizeLo, szPasswordA);
 }
 
-HRESULT CSslCertificateArray::AddPublicKeyFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen,
-                                                  _In_opt_z_ LPCSTR szPasswordA)
+HRESULT CSslCertificateArray::AddPublicKeyFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen)
 {
-  TAutoDeletePtr<CCryptoRSA> cRsa;
+  TAutoDeletePtr<CEncryptionKey> cKey;
   HRESULT hRes;
 
   //create object
-  cRsa.Attach(MX_DEBUG_NEW CCryptoRSA());
-  if (!cRsa)
+  cKey.Attach(MX_DEBUG_NEW CEncryptionKey());
+  if (!cKey)
     return E_OUTOFMEMORY;
   //set public key
-  hRes = cRsa->SetPublicKeyFromDER(lpData, nDataLen, szPasswordA);
+  hRes = cKey->SetPublicKeyFromDER(lpData, nDataLen);
   if (SUCCEEDED(hRes))
   {
     //add to list
-    if (cRsaKeysList.AddElement(cRsa.Get()) != FALSE)
-      cRsa.Detach();
+    if (cKeysList.AddElement(cKey.Get()) != FALSE)
+      cKey.Detach();
     else
       hRes = E_OUTOFMEMORY;
   }
@@ -312,20 +312,20 @@ HRESULT CSslCertificateArray::AddPublicKeyFromDER(_In_ LPCVOID lpData, _In_ SIZE
 HRESULT CSslCertificateArray::AddPublicKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA,
                                                   _In_opt_ SIZE_T nPemLen)
 {
-  TAutoDeletePtr<CCryptoRSA> cRsa;
+  TAutoDeletePtr<CEncryptionKey> cKey;
   HRESULT hRes;
 
   //create object
-  cRsa.Attach(MX_DEBUG_NEW CCryptoRSA());
-  if (!cRsa)
+  cKey.Attach(MX_DEBUG_NEW CEncryptionKey());
+  if (!cKey)
     return E_OUTOFMEMORY;
   //set public key
-  hRes = cRsa->SetPublicKeyFromPEM(szPemA, szPasswordA, nPemLen);
+  hRes = cKey->SetPublicKeyFromPEM(szPemA, szPasswordA, nPemLen);
   if (SUCCEEDED(hRes))
   {
     //add to list
-    if (cRsaKeysList.AddElement(cRsa.Get()) != FALSE)
-      cRsa.Detach();
+    if (cKeysList.AddElement(cKey.Get()) != FALSE)
+      cKey.Detach();
     else
       hRes = E_OUTOFMEMORY;
   }
@@ -333,23 +333,22 @@ HRESULT CSslCertificateArray::AddPublicKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_
   return hRes;
 }
 
-HRESULT CSslCertificateArray::AddPrivateKeyFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen,
-                                                   _In_opt_z_ LPCSTR szPasswordA)
+HRESULT CSslCertificateArray::AddPrivateKeyFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen)
 {
-  TAutoDeletePtr<CCryptoRSA> cRsa;
+  TAutoDeletePtr<CEncryptionKey> cKey;
   HRESULT hRes;
 
   //create object
-  cRsa.Attach(MX_DEBUG_NEW CCryptoRSA());
-  if (!cRsa)
+  cKey.Attach(MX_DEBUG_NEW CEncryptionKey());
+  if (!cKey)
     return E_OUTOFMEMORY;
   //set private key
-  hRes = cRsa->SetPrivateKeyFromDER(lpData, nDataLen, szPasswordA);
+  hRes = cKey->SetPrivateKeyFromDER(lpData, nDataLen);
   if (SUCCEEDED(hRes))
   {
     //add to list
-    if (cRsaKeysList.AddElement(cRsa.Get()) != FALSE)
-      cRsa.Detach();
+    if (cKeysList.AddElement(cKey.Get()) != FALSE)
+      cKey.Detach();
     else
       hRes = E_OUTOFMEMORY;
   }
@@ -360,20 +359,20 @@ HRESULT CSslCertificateArray::AddPrivateKeyFromDER(_In_ LPCVOID lpData, _In_ SIZ
 HRESULT CSslCertificateArray::AddPrivateKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA,
                                                    _In_opt_ SIZE_T nPemLen)
 {
-  TAutoDeletePtr<CCryptoRSA> cRsa;
+  TAutoDeletePtr<CEncryptionKey> cKey;
   HRESULT hRes;
 
   //create object
-  cRsa.Attach(MX_DEBUG_NEW CCryptoRSA());
-  if (!cRsa)
+  cKey.Attach(MX_DEBUG_NEW CEncryptionKey());
+  if (!cKey)
     return E_OUTOFMEMORY;
   //set public key
-  hRes = cRsa->SetPrivateKeyFromPEM(szPemA, szPasswordA, nPemLen);
+  hRes = cKey->SetPrivateKeyFromPEM(szPemA, szPasswordA, nPemLen);
   if (SUCCEEDED(hRes))
   {
     //add to list
-    if (cRsaKeysList.AddElement(cRsa.Get()) != FALSE)
-      cRsa.Detach();
+    if (cKeysList.AddElement(cKey.Get()) != FALSE)
+      cKey.Detach();
     else
       hRes = E_OUTOFMEMORY;
   }
@@ -381,12 +380,10 @@ HRESULT CSslCertificateArray::AddPrivateKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt
   return hRes;
 }
 
-HRESULT CSslCertificate::InitializeFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA)
+HRESULT CSslCertificate::InitializeFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen)
 {
   X509 *lpNewX509;
-  PKCS12 *lpPkcs12;
-  EVP_PKEY *lpEvpKey;
-  const unsigned char *buf;
+  BIO *lpBio;
   HRESULT hRes;
 
   if (lpData == NULL)
@@ -397,31 +394,19 @@ HRESULT CSslCertificate::InitializeFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDat
   hRes = Internals::OpenSSL::Init();
   if (FAILED(hRes))
     return hRes;
-  ERR_clear_error();
-  buf = (unsigned char*)lpData;
-  lpNewX509 = d2i_X509(NULL, &buf, (long)nDataLen);
-  if (lpNewX509 != NULL)
-    goto done;
-  hRes = Internals::OpenSSL::GetLastErrorCode(FALSE);
-  if (hRes == E_OUTOFMEMORY)
-    return hRes;
-  //try to extract from a pkcs12
-  ERR_clear_error();
-  buf = (const unsigned char*)lpData;
-  lpPkcs12 = d2i_PKCS12(NULL, &buf, (long)nDataLen);
-  if (lpPkcs12 == NULL)
-    return Internals::OpenSSL::GetLastErrorCode(TRUE);
-  if (!PKCS12_parse(lpPkcs12, szPasswordA, &lpEvpKey, &lpNewX509, NULL))
-  {
-    hRes = Internals::OpenSSL::GetLastErrorCode(TRUE);
-    PKCS12_free(lpPkcs12);
-    return hRes;
-  }
-  if (lpEvpKey != NULL)
-    EVP_PKEY_free(lpEvpKey);
-  PKCS12_free(lpPkcs12);
 
-done:
+  ERR_clear_error();
+  lpBio = BIO_new_mem_buf((void *)lpData, (int)nDataLen);
+  if (lpBio == NULL)
+    return E_OUTOFMEMORY;
+
+  ERR_clear_error();
+  lpNewX509 = d2i_X509_bio(lpBio, NULL);
+  BIO_free(lpBio);
+  if (lpNewX509 == NULL)
+    return MX_E_InvalidData;
+
+  //done
   if (lpX509)
     X509_free(_x509);
   lpX509 = lpNewX509;
@@ -436,7 +421,7 @@ HRESULT CSslCertificate::InitializeFromPEM(_In_ LPCSTR szPemA, _In_opt_z_ LPCSTR
 
   if (szPemA == NULL)
     return E_POINTER;
-  if (nPemLen == -1)
+  if (nPemLen == (SIZE_T)-1)
     nPemLen = StrLenA(szPemA);
   if (nPemLen == 0 || nPemLen > 0x7FFFFFFF)
     return E_INVALIDARG;
@@ -463,6 +448,7 @@ HRESULT CSslCertificateArray::AddCertificateFromDER(_In_ LPCVOID lpData, _In_ SI
                                                     _In_opt_z_ LPCSTR szPasswordA)
 {
   TAutoDeletePtr<CSslCertificate> cNewCert;
+  TAutoDeletePtr<CEncryptionKey> cNewKey;
   PKCS12 *lpPkcs12;
   const unsigned char *buf;
   HRESULT hRes;
@@ -471,128 +457,48 @@ HRESULT CSslCertificateArray::AddCertificateFromDER(_In_ LPCVOID lpData, _In_ SI
     return E_POINTER;
   if (nDataLen == 0 || nDataLen > 0x7FFFFFFF)
     return E_INVALIDARG;
-  //check if we are dealing with a PKCS12 certificate
+
   hRes = Internals::OpenSSL::Init();
   if (FAILED(hRes))
     return hRes;
+
+  //first check if we are dealing with a PKCS12 certificate
   ERR_clear_error();
   buf = (const unsigned char *)lpData;
   lpPkcs12 = d2i_PKCS12(NULL, &buf, (long)nDataLen);
   if (lpPkcs12 != NULL)
   {
-    TAutoDeletePtr<CCryptoRSA> cNewRsa;
     EVP_PKEY *lpEvpKey = NULL;
     X509 *lpX509 = NULL;
 
     //a pkcs12 can have a certificate and a private key so parse both
     ERR_clear_error();
-    if (PKCS12_parse(lpPkcs12, szPasswordA, &lpEvpKey, &lpX509, NULL))
+    if (PKCS12_parse(lpPkcs12, szPasswordA, &lpEvpKey, &lpX509, NULL) > 0)
     {
       hRes = S_OK;
 
       if (lpX509 != NULL)
       {
-        TAutoFreePtr<BYTE> cTempBuffer;
-        unsigned char *buf2;
-        int nTempBufSize;
+        CSecureBuffer cTempBuffer;
+        BIO *lpBio;
 
-        ERR_clear_error();
-        nTempBufSize = i2d_X509(lpX509, NULL);
-        if (nTempBufSize > 0)
+        lpBio = cTempBuffer.CreateBIO();
+        if (lpBio != NULL)
         {
-          cTempBuffer.Attach((LPBYTE)MX_MALLOC((SIZE_T)nTempBufSize));
-          if (cTempBuffer)
-          {
-            ERR_clear_error();
-            buf2 = (unsigned char *)cTempBuffer.Get();
-            nTempBufSize = i2d_X509(lpX509, &buf2);
-            if (nTempBufSize > 0)
-            {
-              //create certificate from temporary buffer
-              cNewCert.Attach(MX_DEBUG_NEW CSslCertificate());
-              if (cNewCert)
-              {
-                hRes = cNewCert->InitializeFromDER(cTempBuffer.Get(), (SIZE_T)nTempBufSize);
-                if (SUCCEEDED(hRes))
-                {
-                  if (cCertsList.AddElement(cNewCert.Get()) != FALSE)
-                    cNewCert.Detach();
-                  else
-                    hRes = E_OUTOFMEMORY;
-                }
-              }
-              else
-              {
-                hRes = E_OUTOFMEMORY;
-              }
-            }
-            else
-            {
-              hRes = Internals::OpenSSL::GetLastErrorCode(TRUE);
-            }
-          }
-          else
-          {
-            hRes = E_OUTOFMEMORY;
-          }
-        }
-        else
-        {
-          hRes = Internals::OpenSSL::GetLastErrorCode(TRUE);
-        }
-        X509_free(lpX509);
-        if (FAILED(hRes))
-        {
-          if (lpEvpKey != NULL)
-            EVP_PKEY_free(lpEvpKey);
-          PKCS12_free(lpPkcs12);
-          return hRes;
-        }
-      }
-      if (lpEvpKey != NULL)
-      {
-        RSA *lpTempRsa;
-
-        lpTempRsa = EVP_PKEY_get1_RSA(lpEvpKey);
-        if (lpTempRsa != NULL)
-        {
-          TAutoFreePtr<BYTE> cTempBuffer;
-          unsigned char *buf2;
-          int nTempBufSize;
-
           ERR_clear_error();
-          nTempBufSize = i2d_RSAPrivateKey(lpTempRsa, NULL);
-          if (nTempBufSize > 0)
+          if (i2d_X509_bio(lpBio, lpX509) > 0)
           {
-            cTempBuffer.Attach((LPBYTE)MX_MALLOC((SIZE_T)nTempBufSize));
-            if (cTempBuffer)
+            //create certificate from temporary buffer
+            cNewCert.Attach(MX_DEBUG_NEW CSslCertificate());
+            if (cNewCert)
             {
-              ERR_clear_error();
-              buf2 = (unsigned char *)cTempBuffer.Get();
-              nTempBufSize = i2d_RSAPrivateKey(lpTempRsa, &buf2);
-              if (nTempBufSize > 0)
+              hRes = cNewCert->InitializeFromDER(cTempBuffer.GetBuffer(), cTempBuffer.GetLength());
+              if (SUCCEEDED(hRes))
               {
-                //create private key from temporary buffer
-                cNewRsa.Attach(MX_DEBUG_NEW CCryptoRSA());
-                if (cNewRsa)
-                {
-                  hRes = cNewRsa->SetPrivateKeyFromDER(cTempBuffer.Get(), (SIZE_T)nTempBufSize);
-                  if (SUCCEEDED(hRes))
-                  {
-                    if (cRsaKeysList.AddElement(cNewRsa.Get()) != FALSE)
-                      cNewRsa.Detach();
-                    else
-                      hRes = E_OUTOFMEMORY;
-                  }
-                }
+                if (cCertsList.AddElement(cNewCert.Get()) != FALSE)
+                  cNewCert.Detach();
                 else
-                {
                   hRes = E_OUTOFMEMORY;
-                }
-              }
-              else
-              {
-                hRes = Internals::OpenSSL::GetLastErrorCode(TRUE);
               }
             }
             else
@@ -602,8 +508,62 @@ HRESULT CSslCertificateArray::AddCertificateFromDER(_In_ LPCVOID lpData, _In_ SI
           }
           else
           {
-            hRes = Internals::OpenSSL::GetLastErrorCode(TRUE);
+            hRes = Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
           }
+
+          BIO_free(lpBio);
+        }
+        else
+        {
+          hRes = E_OUTOFMEMORY;
+        }
+
+        X509_free(lpX509);
+
+        if (FAILED(hRes))
+        {
+          if (lpEvpKey != NULL)
+            EVP_PKEY_free(lpEvpKey);
+          PKCS12_free(lpPkcs12);
+          return hRes;
+        }
+      }
+
+      if (lpEvpKey != NULL)
+      {
+        CSecureBuffer cTempBuffer;
+        BIO *lpBio;
+
+        lpBio = cTempBuffer.CreateBIO();
+        if (lpBio != NULL)
+        {
+          ERR_clear_error();
+          if (i2d_PrivateKey_bio(lpBio, lpEvpKey) > 0)
+          {
+            //create certificate from temporary buffer
+            cNewKey.Attach(MX_DEBUG_NEW CEncryptionKey());
+            if (cNewKey)
+            {
+              hRes = cNewKey->SetPrivateKeyFromDER(cTempBuffer.GetBuffer(), cTempBuffer.GetLength());
+              if (SUCCEEDED(hRes))
+              {
+                if (cKeysList.AddElement(cNewKey.Get()) != FALSE)
+                  cNewKey.Detach();
+                else
+                  hRes = E_OUTOFMEMORY;
+              }
+            }
+            else
+            {
+              hRes = E_OUTOFMEMORY;
+            }
+          }
+          else
+          {
+            hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
+          }
+
+          BIO_free(lpBio);
         }
 
         EVP_PKEY_free(lpEvpKey);
@@ -615,29 +575,36 @@ HRESULT CSslCertificateArray::AddCertificateFromDER(_In_ LPCVOID lpData, _In_ SI
         }
       }
     }
-    else if (Internals::OpenSSL::GetLastErrorCode(FALSE) == E_OUTOFMEMORY)
+    else if (Internals::OpenSSL::GetLastErrorCode(S_OK) == E_OUTOFMEMORY)
     {
       PKCS12_free(lpPkcs12);
       return E_OUTOFMEMORY;
     }
 
     PKCS12_free(lpPkcs12);
-    return S_OK;
   }
-  hRes = Internals::OpenSSL::GetLastErrorCode(FALSE);
-  if (hRes == E_OUTOFMEMORY)
-    return hRes;
+  else
+  {
+    hRes = Internals::OpenSSL::GetLastErrorCode(S_OK);
+    if (hRes == E_OUTOFMEMORY)
+      return hRes;
+  }
+
+  //if we reach here, try a normal certificate
+
   //create object
   cNewCert.Attach(MX_DEBUG_NEW CSslCertificate());
   if (!cNewCert)
     return E_OUTOFMEMORY;
-  hRes = cNewCert->InitializeFromDER(lpData, nDataLen, szPasswordA);
+  hRes = cNewCert->InitializeFromDER(lpData, nDataLen);
   if (FAILED(hRes))
     return hRes;
+
   //add to list
   if (cCertsList.AddElement(cNewCert.Get()) == FALSE)
     return E_OUTOFMEMORY;
   cNewCert.Detach();
+
   //done
   return S_OK;
 }
@@ -677,10 +644,12 @@ HRESULT CSslCertificateCrl::InitializeFromDER(_In_ LPCVOID lpData, _In_ SIZE_T n
   hRes = Internals::OpenSSL::Init();
   if (FAILED(hRes))
     return hRes;
-  ERR_clear_error();
+
   lpBio = BIO_new_mem_buf((void*)lpData, (int)nDataLen);
   if (lpBio == NULL)
     return E_OUTOFMEMORY;
+
+  ERR_clear_error();
   lpNewX509Crl = d2i_X509_CRL_bio(lpBio, NULL);
   BIO_free(lpBio);
   if (lpNewX509Crl == NULL)
@@ -701,7 +670,7 @@ HRESULT CSslCertificateCrl::InitializeFromPEM(_In_ LPCSTR szPemA, _In_opt_z_ LPC
 
   if (szPemA == NULL)
     return E_POINTER;
-  if (nPemLen == -1)
+  if (nPemLen == (SIZE_T)-1)
     nPemLen = StrLenA(szPemA);
   if (nPemLen == 0 || nPemLen > 0x7FFFFFFF)
     return E_INVALIDARG;

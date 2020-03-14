@@ -132,7 +132,6 @@ CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr,
   ullMaxBodySize = 10485760ui64;
   //----
   SlimRWL_Initialize(&(sSsl.nRwMutex));
-  sSsl.nProtocol = CIpcSslLayer::ProtocolUnknown;
   RundownProt_Initialize(&nRundownLock);
   hAcceptConn = NULL;
   cNewRequestObjectCallback = NullCallback();
@@ -367,35 +366,18 @@ VOID CHttpServer::SetErrorCallback(_In_ OnErrorCallback _cErrorCallback)
 }
 
 HRESULT CHttpServer::StartListening(_In_ CSockets::eFamily nFamily, _In_ int nPort,
-                                    _In_opt_ CIpcSslLayer::eProtocol nProtocol,
                                     _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions,
-                                    _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CCryptoRSA *lpSslKey)
+                                    _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CEncryptionKey *lpSslKey)
 {
-  return StartListening((LPCSTR)NULL, nFamily, nPort, nProtocol, lpOptions, lpSslCertificate, lpSslKey);
+  return StartListening((LPCSTR)NULL, nFamily, nPort, lpOptions, lpSslCertificate, lpSslKey);
 }
 
 HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSockets::eFamily nFamily, _In_ int nPort,
-                                    _In_opt_ CIpcSslLayer::eProtocol nProtocol,
                                     _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions,
-                                    _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CCryptoRSA *lpSslKey)
+                                    _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CEncryptionKey *lpSslKey)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   HRESULT hRes;
-
-  switch (nProtocol)
-  {
-    case CIpcSslLayer::ProtocolUnknown:
-      break;
-    case CIpcSslLayer::ProtocolTLSv1_0:
-    case CIpcSslLayer::ProtocolTLSv1_1:
-    case CIpcSslLayer::ProtocolTLSv1_2:
-      if (lpSslCertificate == NULL)
-        return E_POINTER;
-      break;
-
-    default:
-      return E_INVALIDARG;
-  }
 
   StopListening();
   if (cAutoRundownProt.IsAcquired() == FALSE)
@@ -413,11 +395,10 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSock
     CCriticalSection::CAutoLock cLock(cs);
 
     //set SSL
-    if (nProtocol != CIpcSslLayer::ProtocolUnknown)
+    if (lpSslCertificate != NULL)
     {
       CAutoSlimRWLExclusive cSslLock(&(sSsl.nRwMutex));
 
-      sSsl.nProtocol = nProtocol;
       sSsl.cSslCertificate.Attach(MX_DEBUG_NEW CSslCertificate());
       if (sSsl.cSslCertificate)
       {
@@ -436,24 +417,21 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSock
       }
       if (SUCCEEDED(hRes) && lpSslKey != NULL)
       {
-        SIZE_T nSize;
-        LPVOID lpBuf;
-
-        nSize = lpSslKey->GetPrivateKey();
-        if (nSize > 0)
+        sSsl.cSslPrivateKey.Attach(MX_DEBUG_NEW CEncryptionKey());
+        if (sSsl.cSslPrivateKey)
         {
-          sSsl.cSslPrivateKey.Attach(MX_DEBUG_NEW CCryptoRSA());
-          lpBuf = MX_MALLOC(nSize);
-          if (sSsl.cSslPrivateKey && lpBuf != NULL)
+          try
           {
-            nSize = lpSslKey->GetPrivateKey(lpBuf);
-            hRes = sSsl.cSslPrivateKey->SetPrivateKeyFromDER(lpBuf, nSize);
+            *(sSsl.cSslPrivateKey) = *lpSslKey;
           }
-          else
+          catch (LONG _hRes)
           {
-            hRes = E_OUTOFMEMORY;
+            hRes = _hRes;
           }
-          MX_FREE(lpBuf);
+        }
+        else
+        {
+          hRes = E_OUTOFMEMORY;
         }
       }
     }
@@ -466,7 +444,6 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSock
     {
       CAutoSlimRWLExclusive cSslLock(&(sSsl.nRwMutex));
 
-      sSsl.nProtocol = CIpcSslLayer::ProtocolUnknown;
       sSsl.cSslCertificate.Reset();
       sSsl.cSslPrivateKey.Reset();
 
@@ -478,9 +455,8 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSock
 }
 
 HRESULT CHttpServer::StartListening(_In_opt_z_ LPCWSTR szBindAddressW, _In_ CSockets::eFamily nFamily, _In_ int nPort,
-                                    _In_opt_ CIpcSslLayer::eProtocol nProtocol,
                                     _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions,
-                                    _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CCryptoRSA *lpSslKey)
+                                    _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CEncryptionKey *lpSslKey)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -491,7 +467,7 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCWSTR szBindAddressW, _In_ CSoc
     if (FAILED(hRes))
       return hRes;
   }
-  return StartListening((LPSTR)cStrTempA, nFamily, nPort, nProtocol, lpOptions, lpSslCertificate, lpSslKey);
+  return StartListening((LPSTR)cStrTempA, nFamily, nPort, lpOptions, lpSslCertificate, lpSslKey);
 }
 
 VOID CHttpServer::StopListening()
@@ -512,7 +488,6 @@ VOID CHttpServer::StopListening()
     {
       CAutoSlimRWLExclusive cSslLock(&(sSsl.nRwMutex));
 
-      sSsl.nProtocol = CIpcSslLayer::ProtocolUnknown;
       sSsl.cSslCertificate.Reset();
       sSsl.cSslPrivateKey.Reset();
     }
@@ -700,13 +675,12 @@ HRESULT CHttpServer::OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIp
       {
         CAutoSlimRWLShared cSslLock(&(sSsl.nRwMutex));
 
-        if (sSsl.nProtocol != CIpcSslLayer::ProtocolUnknown)
+        if (sSsl.cSslCertificate)
         {
-          cLayer.Attach(MX_DEBUG_NEW CIpcSslLayer());
+          cLayer.Attach(MX_DEBUG_NEW CIpcSslLayer(lpIpc));
           if (!cLayer)
             return E_OUTOFMEMORY;
-          hRes = cLayer->Initialize(TRUE, sSsl.nProtocol, NULL, NULL, sSsl.cSslCertificate.Get(),
-                                    sSsl.cSslPrivateKey.Get());
+          hRes = cLayer->Initialize(TRUE, NULL, NULL, sSsl.cSslCertificate.Get(), sSsl.cSslPrivateKey.Get());
           if (SUCCEEDED(hRes))
           {
             hRes = lpIpc->AddLayer(h, cLayer.Get());

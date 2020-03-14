@@ -45,7 +45,7 @@ int TestHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
   MX::CSockets cSckMgr(cDispatcherPool);
   MX::CHttpServer cHttpServer(cSckMgr);
   MX::CSslCertificate cSslCert;
-  MX::CCryptoRSA cSslPrivateKey;
+  MX::CEncryptionKey cSslPrivateKey;
   HRESULT hRes;
 
   cHttpServer.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
@@ -106,8 +106,7 @@ int TestHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
       sOptions.dwMaxAcceptsToPost = 128;
       //sOptions.dwMaxRequestsPerSecond = 0;
       //sOptions.dwBurstSize = 0;
-      hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv6, 443, MX::CIpcSslLayer::ProtocolTLSv1_2, &sOptions,
-                                        &cSslCert, &cSslPrivateKey);
+      hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv6, 443, &sOptions, &cSslCert, &cSslPrivateKey);
     }
     else
     {

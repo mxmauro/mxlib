@@ -22,14 +22,8 @@
 #include "..\..\Include\Crypto\Base64.h"
 #include "..\..\Include\AutoPtr.h"
 #include "..\..\Include\Strings\Utf8.h"
-#include "..\..\Include\Crypto\DigestAlgorithmSHAx.h"
-#include "..\..\Include\Crypto\DigestAlgorithmMDx.h"
+#include "..\..\Include\Crypto\MessageDigest.h"
 #include "..\..\Include\FnvHash.h"
-
-#define _ALGORITHM_MD5                                     0
-#define _ALGORITHM_SHA1                                    1
-#define _ALGORITHM_SHA256                                  2
-#define _ALGORITHM_SHA512                                  3
 
 //-----------------------------------------------------------
 
@@ -42,7 +36,6 @@ static HRESULT GetNextPair(_Inout_ LPCSTR &szValueA, _Out_ LPCSTR *lpszNameStart
 static HRESULT Decode(_Inout_ MX::CStringW &cStrW, _In_z_ LPCSTR szValueA, _In_ BOOL bIsUTF8);
 static HRESULT Encode(_Inout_ MX::CStringA &cStrA, _In_z_ LPCWSTR szValueW, _In_ BOOL bAppend, _In_ BOOL bIsUTF8);
 
-static HRESULT BeginHashing(_Out_ MX::CDigestAlgorithmBase **lplpDigAlg, _In_ int nAlgorithm);
 static BOOL ConvertToHex(_Out_ MX::CStringA &cStrA, _In_ LPCVOID lpData, _In_ SIZE_T nDataLen);
 static int ParseQOP(_In_opt_z_ LPCSTR szValueA);
 
@@ -196,7 +189,7 @@ BOOL CHttpAuthBasic::IsSameThan(_In_ CHttpAuthBase *_lpCompareTo)
 CHttpAuthDigest::CHttpAuthDigest() : CHttpAuthBase(), CNonCopyableObj()
 {
   bStale = bUserHash = FALSE;
-  nAlgorithm = _ALGORITHM_MD5;
+  nAlgorithm = (int)MX::CMessageDigest::AlgorithmMD5;
   nQop = 0;
   bCharsetIsUtf8 = FALSE;
   _InterlockedExchange(&nNonceCount, 0);
@@ -214,7 +207,7 @@ HRESULT CHttpAuthDigest::Parse(_In_z_ LPCSTR szValueA)
   CStringA _cStrRealmA, _cStrNonceA, _cStrDomainA, _cStrOpaqueA;
   DWORD dwFields = 0;
   BOOL _bStale = FALSE, _bUserHash = FALSE;
-  int _nAlgorithm = _ALGORITHM_MD5;
+  int _nAlgorithm = (int)MX::CMessageDigest::AlgorithmMD5;
   BOOL _bAlgorithmSession = FALSE;
   int _nQop = 0;
   LPCSTR szNameStartA;
@@ -349,24 +342,10 @@ HRESULT CHttpAuthDigest::Parse(_In_z_ LPCSTR szValueA)
             _bAlgorithmSession = TRUE;
             cStrValueA.Delete(nAlgLen - 5, 5);
           }
-          if (StrCompareA((LPCSTR)cStrValueA, "sha-1", TRUE) == 0 || StrCompareA((LPCSTR)cStrValueA, "sha1", TRUE) == 0)
-          {
-            _nAlgorithm = _ALGORITHM_SHA1;
-          }
-          else if (StrCompareA((LPCSTR)cStrValueA, "sha-256", TRUE) == 0 ||
-                   StrCompareA((LPCSTR)cStrValueA, "sha256", TRUE) == 0)
-          {
-            _nAlgorithm = _ALGORITHM_SHA256;
-          }
-          else if (StrCompareA((LPCSTR)cStrValueA, "sha-512", TRUE) == 0 ||
-                   StrCompareA((LPCSTR)cStrValueA, "sha512", TRUE) == 0)
-          {
-            _nAlgorithm = _ALGORITHM_SHA512;
-          }
-          else if (StrCompareA((LPCSTR)cStrValueA, "md5", TRUE) != 0)
-          {
-            return E_NOTIMPL;
-          }
+
+          _nAlgorithm = (int)MX::CMessageDigest::GetAlgorithm((LPCSTR)cStrValueA);
+          if (_nAlgorithm == -1)
+            return MX_E_Unsupported;
         }
         break;
     }
@@ -403,7 +382,7 @@ HRESULT CHttpAuthDigest::MakeAuthenticateResponse(_Out_ CStringA &cStrDestA, _In
                                                   _In_z_ LPCWSTR szPasswordW, _In_z_ LPCSTR szMethodA,
                                                   _In_z_ LPCSTR szUriPathA, _In_ BOOL bIsProxy)
 {
-  TAutoDeletePtr<CDigestAlgorithmBase> cDigAlg;
+  CMessageDigest cDigest;
   CSecureStringA cStrTempA, cStrHashKeyA[2], cStrResponseA, cStrUserNameA;
   CHAR szCNonceA[32], szNonceCountA[32];
   LONG _nNonceCount;
@@ -448,15 +427,15 @@ HRESULT CHttpAuthDigest::MakeAuthenticateResponse(_Out_ CStringA &cStrDestA, _In
   mx_sprintf_s(szNonceCountA, MX_ARRAYLEN(szNonceCountA), ":%08lx:", (ULONG)_nNonceCount);
 
   //HA1 = DIGEST(encoded(username):realm:encoded(password))
-  hRes = BeginHashing(&cDigAlg, nAlgorithm);
+  hRes = cDigest.BeginDigest((CMessageDigest::eAlgorithm)nAlgorithm);
   if (SUCCEEDED(hRes))
   {
     //username
     if (bUserHash != FALSE)
     {
-      TAutoDeletePtr<CDigestAlgorithmBase> cDigAlgUserHash;
+      CMessageDigest cDigestUserHash;
 
-      hRes = BeginHashing(&cDigAlgUserHash, nAlgorithm);
+      hRes = cDigestUserHash.BeginDigest((CMessageDigest::eAlgorithm)nAlgorithm);
       if (SUCCEEDED(hRes))
       {
         //add user name
@@ -469,15 +448,15 @@ HRESULT CHttpAuthDigest::MakeAuthenticateResponse(_Out_ CStringA &cStrDestA, _In
 
         if (SUCCEEDED(hRes))
         {
-          hRes = cDigAlgUserHash->DigestStream((LPCSTR)cStrTempA, cStrTempA.GetLength());
+          hRes = cDigestUserHash.DigestStream((LPCSTR)cStrTempA, cStrTempA.GetLength());
 
           //add result hash
           if (SUCCEEDED(hRes))
           {
-            hRes = cDigAlgUserHash->EndDigest();
+            hRes = cDigestUserHash.EndDigest();
             if (SUCCEEDED(hRes))
             {
-              if (ConvertToHex(cStrUserNameA, cDigAlgUserHash->GetResult(), cDigAlgUserHash->GetResultSize()) == FALSE)
+              if (ConvertToHex(cStrUserNameA, cDigestUserHash.GetResult(), cDigestUserHash.GetResultSize()) == FALSE)
                 hRes = E_OUTOFMEMORY;
             }
           }
@@ -506,69 +485,80 @@ HRESULT CHttpAuthDigest::MakeAuthenticateResponse(_Out_ CStringA &cStrDestA, _In
       }
     }
     if (SUCCEEDED(hRes))
-      hRes = cDigAlg->DigestStream((LPCSTR)cStrUserNameA, cStrUserNameA.GetLength());
+      hRes = cDigest.DigestStream((LPCSTR)cStrUserNameA, cStrUserNameA.GetLength());
     //realm
     if (SUCCEEDED(hRes))
     {
-      hRes = cDigAlg->DigestStream(":", 1);
+      hRes = cDigest.DigestStream(":", 1);
       if (SUCCEEDED(hRes))
       {
         hRes = Encode(cStrTempA, (LPCWSTR)cStrRealmW, FALSE, bCharsetIsUtf8);
         if (SUCCEEDED(hRes))
-          hRes = cDigAlg->DigestStream((LPCSTR)cStrTempA, cStrTempA.GetLength());
+          hRes = cDigest.DigestStream((LPCSTR)cStrTempA, cStrTempA.GetLength());
       }
     }
     //password
     if (SUCCEEDED(hRes))
     {
-      hRes = cDigAlg->DigestStream(":", 1);
+      hRes = cDigest.DigestStream(":", 1);
       if (SUCCEEDED(hRes))
       {
         hRes = Encode(cStrTempA, szPasswordW, FALSE, bCharsetIsUtf8);
         if (SUCCEEDED(hRes))
-          hRes = cDigAlg->DigestStream((LPCSTR)cStrTempA, cStrTempA.GetLength());
+          hRes = cDigest.DigestStream((LPCSTR)cStrTempA, cStrTempA.GetLength());
       }
     }
 
     //session-ize (HA1 = DIGEST(HA1:nonce:cnonce)
-    if (SUCCEEDED(hRes) && bAlgorithmSession != FALSE)
+    if (SUCCEEDED(hRes))
     {
-      TAutoDeletePtr<CDigestAlgorithmBase> cDigAlgSess;
-
-      hRes = BeginHashing(&cDigAlgSess, nAlgorithm);
-      if (SUCCEEDED(hRes))
+      if (bAlgorithmSession != FALSE)
       {
-        //HA1
-        if (ConvertToHex(cStrTempA, cDigAlg->GetResult(), cDigAlg->GetResultSize()) != FALSE)
-          hRes = cDigAlg->DigestStream((LPCSTR)cStrTempA, cStrTempA.GetLength());
-        else
-          hRes = E_OUTOFMEMORY;
-        //nonce
+        CMessageDigest cDigestSession;
+
+        hRes = cDigestSession.BeginDigest((CMessageDigest::eAlgorithm)nAlgorithm);
         if (SUCCEEDED(hRes))
         {
-          hRes = cDigAlg->DigestStream(":", 1);
+          //HA1
+          if (ConvertToHex(cStrTempA, cDigest.GetResult(), cDigest.GetResultSize()) != FALSE)
+            hRes = cDigestSession.DigestStream((LPCSTR)cStrTempA, cStrTempA.GetLength());
+          else
+            hRes = E_OUTOFMEMORY;
+          //nonce
           if (SUCCEEDED(hRes))
-            hRes = cDigAlg->DigestStream((LPCSTR)cStrNonceA, cStrNonceA.GetLength());
-        }
-        //cnonce
-        if (SUCCEEDED(hRes))
-        {
-          hRes = cDigAlg->DigestStream(":", 1);
+          {
+            hRes = cDigestSession.DigestStream(":", 1);
+            if (SUCCEEDED(hRes))
+              hRes = cDigestSession.DigestStream((LPCSTR)cStrNonceA, cStrNonceA.GetLength());
+          }
+          //cnonce
           if (SUCCEEDED(hRes))
-            hRes = cDigAlg->DigestStream(szCNonceA, StrLenA(szCNonceA));
+          {
+            hRes = cDigestSession.DigestStream(":", 1);
+            if (SUCCEEDED(hRes))
+              hRes = cDigestSession.DigestStream(szCNonceA, StrLenA(szCNonceA));
+          }
+          if (SUCCEEDED(hRes))
+            hRes = cDigestSession.EndDigest();
+          //convert result to hex
+          if (SUCCEEDED(hRes))
+          {
+            if (ConvertToHex(cStrHashKeyA[0], cDigestSession.GetResult(), cDigestSession.GetResultSize()) == FALSE)
+              hRes = E_OUTOFMEMORY;
+          }
         }
-        //replace digest
-        if (SUCCEEDED(hRes))
-          cDigAlg.Attach(cDigAlgSess.Detach());
       }
-    }
-    if (SUCCEEDED(hRes))
-      hRes = cDigAlg->EndDigest();
-    //convert result to hex
-    if (SUCCEEDED(hRes))
-    {
-      if (ConvertToHex(cStrHashKeyA[0], cDigAlg->GetResult(), cDigAlg->GetResultSize()) == FALSE)
-        hRes = E_OUTOFMEMORY;
+      else
+      {
+        if (SUCCEEDED(hRes))
+          hRes = cDigest.EndDigest();
+        //convert result to hex
+        if (SUCCEEDED(hRes))
+        {
+          if (ConvertToHex(cStrHashKeyA[0], cDigest.GetResult(), cDigest.GetResultSize()) == FALSE)
+            hRes = E_OUTOFMEMORY;
+        }
+      }
     }
   }
 
@@ -576,26 +566,25 @@ HRESULT CHttpAuthDigest::MakeAuthenticateResponse(_Out_ CStringA &cStrDestA, _In
   //HA2 = DIGEST(method:path)
   if (SUCCEEDED(hRes))
   {
-    cDigAlg.Reset();
-    hRes = BeginHashing(&cDigAlg, nAlgorithm);
+    hRes = cDigest.BeginDigest((CMessageDigest::eAlgorithm)nAlgorithm);
     if (SUCCEEDED(hRes))
     {
       //method
-      hRes = cDigAlg->DigestStream(szMethodA, StrLenA(szMethodA));
+      hRes = cDigest.DigestStream(szMethodA, StrLenA(szMethodA));
       //uri
       if (SUCCEEDED(hRes))
       {
-        hRes = cDigAlg->DigestStream(":", 1);
+        hRes = cDigest.DigestStream(":", 1);
         if (SUCCEEDED(hRes))
-          hRes = cDigAlg->DigestStream(szUriPathA, StrLenA(szUriPathA));
+          hRes = cDigest.DigestStream(szUriPathA, StrLenA(szUriPathA));
       }
     }
     if (SUCCEEDED(hRes))
-      hRes = cDigAlg->EndDigest();
+      hRes = cDigest.EndDigest();
     //convert result to hex
     if (SUCCEEDED(hRes))
     {
-      if (ConvertToHex(cStrHashKeyA[1], cDigAlg->GetResult(), cDigAlg->GetResultSize()) == FALSE)
+      if (ConvertToHex(cStrHashKeyA[1], cDigest.GetResult(), cDigest.GetResultSize()) == FALSE)
         hRes = E_OUTOFMEMORY;
     }
   }
@@ -603,44 +592,43 @@ HRESULT CHttpAuthDigest::MakeAuthenticateResponse(_Out_ CStringA &cStrDestA, _In
   //build response value
   if (SUCCEEDED(hRes))
   {
-    cDigAlg.Reset();
-    hRes = BeginHashing(&cDigAlg, nAlgorithm);
+    hRes = cDigest.BeginDigest((CMessageDigest::eAlgorithm)nAlgorithm);
     if (SUCCEEDED(hRes))
     {
       //HA1
-      hRes = cDigAlg->DigestStream((LPCSTR)cStrHashKeyA[0], cStrHashKeyA[0].GetLength());
+      hRes = cDigest.DigestStream((LPCSTR)cStrHashKeyA[0], cStrHashKeyA[0].GetLength());
       //nonce
       if (SUCCEEDED(hRes))
       {
-        hRes = cDigAlg->DigestStream(":", 1);
+        hRes = cDigest.DigestStream(":", 1);
         if (SUCCEEDED(hRes))
-          hRes = cDigAlg->DigestStream((LPCSTR)cStrNonceA, cStrNonceA.GetLength());
+          hRes = cDigest.DigestStream((LPCSTR)cStrNonceA, cStrNonceA.GetLength());
       }
       //use AUTH qop?
       if (SUCCEEDED(hRes) && (nQop & 1) != 0)
       {
         //nonce count (this has the colon separators at the start and end of string)
-        hRes = cDigAlg->DigestStream(szNonceCountA, StrLenA(szNonceCountA));
+        hRes = cDigest.DigestStream(szNonceCountA, StrLenA(szNonceCountA));
         //cnonce
         if (SUCCEEDED(hRes))
-          hRes = cDigAlg->DigestStream(szCNonceA, StrLenA(szCNonceA));
+          hRes = cDigest.DigestStream(szCNonceA, StrLenA(szCNonceA));
         //qop
         if (SUCCEEDED(hRes))
-          hRes = cDigAlg->DigestStream(":auth", 5);
+          hRes = cDigest.DigestStream(":auth", 5);
       }
       //HA2
       if (SUCCEEDED(hRes))
       {
-        hRes = cDigAlg->DigestStream(":", 1);
+        hRes = cDigest.DigestStream(":", 1);
         if (SUCCEEDED(hRes))
-          hRes = cDigAlg->DigestStream((LPCSTR)cStrHashKeyA[1], cStrHashKeyA[1].GetLength());
+          hRes = cDigest.DigestStream((LPCSTR)cStrHashKeyA[1], cStrHashKeyA[1].GetLength());
       }
       if (SUCCEEDED(hRes))
-        hRes = cDigAlg->EndDigest();
+        hRes = cDigest.EndDigest();
       //convert result to hex
       if (SUCCEEDED(hRes))
       {
-        if (ConvertToHex(cStrResponseA, cDigAlg->GetResult(), cDigAlg->GetResultSize()) == FALSE)
+        if (ConvertToHex(cStrResponseA, cDigest.GetResult(), cDigest.GetResultSize()) == FALSE)
           hRes = E_OUTOFMEMORY;
       }
     }
@@ -813,43 +801,6 @@ BOOL CHttpAuthDigest::IsSameThan(_In_ CHttpAuthBase *_lpCompareTo)
 } //namespace MX
 
 //-----------------------------------------------------------
-
-static HRESULT BeginHashing(_Out_ MX::CDigestAlgorithmBase **lplpDigAlg, _In_ int nAlgorithm)
-{
-  HRESULT hRes;
-
-  if (nAlgorithm == _ALGORITHM_SHA1 || nAlgorithm == _ALGORITHM_SHA256 || nAlgorithm == _ALGORITHM_SHA512)
-  {
-    MX::CDigestAlgorithmSecureHash *lpDigAlg;
-
-    lpDigAlg = MX_DEBUG_NEW MX::CDigestAlgorithmSecureHash();
-    if (lpDigAlg == NULL)
-      return E_OUTOFMEMORY;
-    hRes = lpDigAlg->BeginDigest((nAlgorithm == _ALGORITHM_SHA1) ? MX::CDigestAlgorithmSecureHash::AlgorithmSHA1
-                                 :
-                                 ((nAlgorithm == _ALGORITHM_SHA256) ? MX::CDigestAlgorithmSecureHash::AlgorithmSHA256
-                                 : MX::CDigestAlgorithmSecureHash::AlgorithmSHA512)
-    );
-    if (SUCCEEDED(hRes))
-      *lplpDigAlg = lpDigAlg;
-    else
-      delete lpDigAlg;
-  }
-  else
-  {
-    MX::CDigestAlgorithmMessageDigest *lpDigAlg;
-
-    lpDigAlg = MX_DEBUG_NEW MX::CDigestAlgorithmMessageDigest();
-    if (lpDigAlg == NULL)
-      return E_OUTOFMEMORY;
-    hRes = lpDigAlg->BeginDigest(MX::CDigestAlgorithmMessageDigest::AlgorithmMD5);
-    if (SUCCEEDED(hRes))
-      *lplpDigAlg = lpDigAlg;
-    else
-      delete lpDigAlg;
-  }
-  return hRes;
-}
 
 static BOOL ConvertToHex(_Out_ MX::CStringA &cStrA, _In_ LPCVOID lpData, _In_ SIZE_T nDataLen)
 {

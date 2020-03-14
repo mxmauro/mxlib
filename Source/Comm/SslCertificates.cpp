@@ -24,9 +24,6 @@
 #include <OpenSSL\x509.h>
 #include <OpenSSL\x509v3.h>
 
-#define _x509                                ((X509*)lpX509)
-#define _x509Crl                      ((X509_CRL*)lpX509Crl)
-
 //-----------------------------------------------------------
 
 static HRESULT Asn1TimeToDateTime(_In_ const ASN1_TIME *lpTime, _Out_ MX::CDateTime &cDt);
@@ -43,7 +40,7 @@ CSslCertificate::CSslCertificate() : CBaseMemObj()
   return;
 }
 
-CSslCertificate::CSslCertificate(_In_ const CSslCertificate& cSrc) throw(...) : CBaseMemObj()
+CSslCertificate::CSslCertificate(_In_ const CSslCertificate &cSrc) throw(...) : CBaseMemObj()
 {
   lpX509 = NULL;
   operator=(cSrc);
@@ -53,39 +50,33 @@ CSslCertificate::CSslCertificate(_In_ const CSslCertificate& cSrc) throw(...) : 
 CSslCertificate::~CSslCertificate()
 {
   if (lpX509 != NULL)
-    X509_free(_x509);
+    X509_free(lpX509);
   return;
 }
 
-CSslCertificate& CSslCertificate::operator=(_In_ const CSslCertificate& cSrc) throw(...)
+CSslCertificate& CSslCertificate::operator=(_In_ const CSslCertificate &cSrc) throw(...)
 {
   if (this != &cSrc)
   {
-    X509 *lpNewX509;
     HRESULT hRes;
 
     hRes = Internals::OpenSSL::Init();
     if (FAILED(hRes))
       throw (LONG)hRes;
-    //duplicate
-    lpNewX509 = NULL;
-    if (cSrc.lpX509 != NULL)
-    {
-      lpNewX509 = X509_dup((X509*)(cSrc.lpX509));
-      if (lpNewX509 == NULL)
-        throw (LONG)E_OUTOFMEMORY;
-    }
-    //replace original
+    //deref old
     if (lpX509 != NULL)
-      X509_free(_x509);
-    lpX509 = lpNewX509;
+      X509_free(lpX509);
+    //increment reference on new
+    if (cSrc.lpX509 != NULL)
+      X509_up_ref(cSrc.lpX509);
+    lpX509 = cSrc.lpX509;
   }
   return *this;
 }
 
 LONG CSslCertificate::GetVersion() const
 {
-  return (lpX509 != NULL) ? (LONG)X509_get_version(_x509) : 0;
+  return (lpX509 != NULL) ? (LONG)X509_get_version(lpX509) : 0;
 }
 
 LPBYTE CSslCertificate::GetSerial() const
@@ -94,7 +85,7 @@ LPBYTE CSslCertificate::GetSerial() const
 
   if (lpX509 == NULL)
     return NULL;
-  bs = X509_get_serialNumber(_x509);
+  bs = X509_get_serialNumber(lpX509);
   return (LPBYTE)(bs->data);
 }
 
@@ -104,24 +95,24 @@ SIZE_T CSslCertificate::GetSerialLength() const
 
   if (lpX509 == NULL)
     return NULL;
-  bs = X509_get_serialNumber(_x509);
+  bs = X509_get_serialNumber(lpX509);
   return (SIZE_T)(unsigned int)(bs->length);
 }
 
-HRESULT CSslCertificate::GetSubject(_In_ eInformation nInfo, _Inout_ CStringW &cStrW)
+HRESULT CSslCertificate::GetSubject(_In_ MX::CSslCertificate::eInformation nInfo, _Inout_ CStringW &cStrW)
 {
   cStrW.Empty();
   if (lpX509 == NULL)
     return MX_E_NotReady;
-  return GetName(X509_get_subject_name(_x509), nInfo, cStrW);
+  return GetName(X509_get_subject_name(lpX509), nInfo, cStrW);
 }
 
-HRESULT CSslCertificate::GetIssuer(_In_ eInformation nInfo, _Inout_ CStringW &cStrW)
+HRESULT CSslCertificate::GetIssuer(_In_ MX::CSslCertificate::eInformation nInfo, _Inout_ CStringW &cStrW)
 {
   cStrW.Empty();
   if (lpX509 == NULL)
     return MX_E_NotReady;
-  return GetName(X509_get_issuer_name(_x509), nInfo, cStrW);
+  return GetName(X509_get_issuer_name(lpX509), nInfo, cStrW);
 }
 
 HRESULT CSslCertificate::GetValidFrom(_Inout_ CDateTime &cDt)
@@ -130,7 +121,7 @@ HRESULT CSslCertificate::GetValidFrom(_Inout_ CDateTime &cDt)
   cDt.SetGmtOffset(0);
   if (lpX509 == NULL)
     return MX_E_NotReady;
-  return Asn1TimeToDateTime(X509_get_notBefore(_x509), cDt);
+  return Asn1TimeToDateTime(X509_get_notBefore(lpX509), cDt);
 }
 
 HRESULT CSslCertificate::GetValidUntil(_Inout_ CDateTime &cDt)
@@ -139,7 +130,7 @@ HRESULT CSslCertificate::GetValidUntil(_Inout_ CDateTime &cDt)
   cDt.SetGmtOffset(0);
   if (lpX509 == NULL)
     return MX_E_NotReady;
-  return Asn1TimeToDateTime(X509_get_notAfter(_x509), cDt);
+  return Asn1TimeToDateTime(X509_get_notAfter(lpX509), cDt);
 }
 
 HRESULT CSslCertificate::IsDateValid()
@@ -161,12 +152,7 @@ HRESULT CSslCertificate::IsDateValid()
 
 BOOL CSslCertificate::IsCaCert() const
 {
-  return (lpX509 != NULL && X509_check_ca(_x509) >= 1) ? TRUE : FALSE;
-}
-
-LPVOID CSslCertificate::GetOpenSSL_X509()
-{
-  return lpX509;
+  return (lpX509 != NULL && X509_check_ca(lpX509) >= 1) ? TRUE : FALSE;
 }
 
 //-----------------------------------------------------------
@@ -178,16 +164,43 @@ CSslCertificateCrl::CSslCertificateCrl() : CBaseMemObj()
   return;
 }
 
+CSslCertificateCrl::CSslCertificateCrl(_In_ const CSslCertificateCrl &cSrc) throw(...) : CBaseMemObj()
+{
+  lpX509Crl = NULL;
+  operator=(cSrc);
+  return;
+}
+
 CSslCertificateCrl::~CSslCertificateCrl()
 {
   if (lpX509Crl != NULL)
-    X509_CRL_free(_x509Crl);
+    X509_CRL_free(lpX509Crl);
   return;
+}
+
+CSslCertificateCrl& CSslCertificateCrl::operator=(const CSslCertificateCrl &cSrc) throw(...)
+{
+  if (this != &cSrc)
+  {
+    HRESULT hRes;
+
+    hRes = Internals::OpenSSL::Init();
+    if (FAILED(hRes))
+      throw (LONG)hRes;
+    //deref old
+    if (lpX509Crl != NULL)
+      X509_CRL_free(lpX509Crl);
+    //increment reference on new
+    if (cSrc.lpX509Crl != NULL)
+      X509_CRL_up_ref(cSrc.lpX509Crl);
+    lpX509Crl = cSrc.lpX509Crl;
+  }
+  return *this;
 }
 
 LONG CSslCertificateCrl::GetVersion() const
 {
-  return (lpX509Crl != NULL) ? (LONG)X509_CRL_get_version(_x509Crl) : 0;
+  return (lpX509Crl != NULL) ? (LONG)X509_CRL_get_version(lpX509Crl) : 0;
 }
 
 HRESULT CSslCertificateCrl::GetIssuer(_In_ eInformation nInfo, _Inout_ CStringW &cStrW)
@@ -195,7 +208,7 @@ HRESULT CSslCertificateCrl::GetIssuer(_In_ eInformation nInfo, _Inout_ CStringW 
   cStrW.Empty();
   if (lpX509Crl == NULL)
     return MX_E_NotReady;
-  return GetName(X509_CRL_get_issuer(_x509Crl), (MX::CSslCertificate::eInformation)nInfo, cStrW);
+  return GetName(X509_CRL_get_issuer(lpX509Crl), (MX::CSslCertificate::eInformation)nInfo, cStrW);
 }
 
 HRESULT CSslCertificateCrl::GetUpdate(_Inout_ CDateTime &cDt)
@@ -204,7 +217,7 @@ HRESULT CSslCertificateCrl::GetUpdate(_Inout_ CDateTime &cDt)
   cDt.SetGmtOffset(0);
   if (lpX509Crl == NULL)
     return MX_E_NotReady;
-  return Asn1TimeToDateTime(X509_CRL_get_lastUpdate(_x509Crl), cDt);
+  return Asn1TimeToDateTime(X509_CRL_get_lastUpdate(lpX509Crl), cDt);
 }
 
 HRESULT CSslCertificateCrl::GetNextUpdate(_Inout_ CDateTime &cDt)
@@ -213,7 +226,7 @@ HRESULT CSslCertificateCrl::GetNextUpdate(_Inout_ CDateTime &cDt)
   cDt.SetGmtOffset(0);
   if (lpX509Crl == NULL)
     return MX_E_NotReady;
-  return Asn1TimeToDateTime(X509_CRL_get_nextUpdate(_x509Crl), cDt);
+  return Asn1TimeToDateTime(X509_CRL_get_nextUpdate(lpX509Crl), cDt);
 }
 
 SIZE_T CSslCertificateCrl::GetRevokedEntriesCount() const
@@ -223,7 +236,7 @@ SIZE_T CSslCertificateCrl::GetRevokedEntriesCount() const
 
   if (lpX509Crl == NULL)
     return 0;
-  rev = X509_CRL_get_REVOKED(_x509Crl);
+  rev = X509_CRL_get_REVOKED(lpX509Crl);
   count = sk_X509_REVOKED_num(rev);
   return (count > 0) ? (SIZE_T)count : 0;
 }
@@ -237,7 +250,7 @@ LPBYTE CSslCertificateCrl::GetRevokedEntrySerial(_In_ SIZE_T nEntryIndex) const
 
   if (lpX509Crl == NULL)
     return NULL;
-  rev = X509_CRL_get_REVOKED(_x509Crl);
+  rev = X509_CRL_get_REVOKED(lpX509Crl);
   count = sk_X509_REVOKED_num(rev);
   if (count <= 0 || nEntryIndex >= (SIZE_T)count)
     return NULL;
@@ -255,7 +268,7 @@ SIZE_T CSslCertificateCrl::GetRevokedEntrySerialLength(_In_ SIZE_T nEntryIndex) 
 
   if (lpX509Crl == NULL)
     return 0;
-  rev = X509_CRL_get_REVOKED(_x509Crl);
+  rev = X509_CRL_get_REVOKED(lpX509Crl);
   count = sk_X509_REVOKED_num(rev);
   if (count <= 0 || nEntryIndex >= (SIZE_T)count)
     return 0;
@@ -274,43 +287,12 @@ HRESULT CSslCertificateCrl::GetRevokedEntryDate(_In_ SIZE_T nEntryIndex, _Inout_
   cDt.SetGmtOffset(0);
   if (lpX509Crl == NULL)
     return MX_E_NotReady;
-  rev = X509_CRL_get_REVOKED(_x509Crl);
+  rev = X509_CRL_get_REVOKED(lpX509Crl);
   count = sk_X509_REVOKED_num(rev);
   if (count <= 0 || nEntryIndex >= (SIZE_T)count)
     return E_INVALIDARG;
   r = sk_X509_REVOKED_value(rev, (int)nEntryIndex);
   return Asn1TimeToDateTime(X509_REVOKED_get0_revocationDate(r), cDt);
-}
-
-HRESULT CSslCertificateCrl::operator=(const CSslCertificateCrl& cSrc)
-{
-  if (this != &cSrc)
-  {
-    X509_CRL *lpNewX509Crl;
-    HRESULT hRes;
-
-    hRes = Internals::OpenSSL::Init();
-    if (FAILED(hRes))
-      throw (LONG)hRes;
-    //duplicate
-    lpNewX509Crl = NULL;
-    if (cSrc.lpX509Crl != NULL)
-    {
-      lpNewX509Crl = X509_CRL_dup((X509_CRL*)(cSrc.lpX509Crl));
-      if (lpNewX509Crl == NULL)
-        return E_OUTOFMEMORY;
-    }
-    //replace original
-    if (lpX509Crl != NULL)
-      X509_CRL_free(_x509Crl);
-    lpX509Crl = lpNewX509Crl;
-  }
-  return S_OK;
-}
-
-LPVOID CSslCertificateCrl::GetOpenSSL_X509Crl()
-{
-  return lpX509Crl;
 }
 
 } //namespace MX
@@ -383,7 +365,7 @@ static HRESULT GetName(_In_ X509_NAME *lpName, _In_ MX::CSslCertificate::eInform
 
   utf8_data_len = ASN1_STRING_to_UTF8(&utf8_data, data);
   if (utf8_data_len < 0)
-    return MX::Internals::OpenSSL::GetLastErrorCode(TRUE);
+    return MX::Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
 
   hRes = MX::Utf8_Decode(cStrW, (LPCSTR)utf8_data, (SIZE_T)(unsigned int)utf8_data_len);
   OPENSSL_free(utf8_data);

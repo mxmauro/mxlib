@@ -88,17 +88,14 @@ public:
   VOID SetErrorCallback(_In_ OnErrorCallback cErrorCallback);
 
   HRESULT StartListening(_In_ CSockets::eFamily nFamily, _In_ int nPort,
-                         _In_opt_ CIpcSslLayer::eProtocol nProtocol = CIpcSslLayer::ProtocolUnknown,
                          _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions = NULL,
-                         _In_opt_ CSslCertificate *lpSslCertificate = NULL, _In_opt_ CCryptoRSA *lpSslKey = NULL);
+                         _In_opt_ CSslCertificate *lpSslCertificate = NULL, _In_opt_ CEncryptionKey *lpSslKey = NULL);
   HRESULT StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSockets::eFamily nFamily, _In_ int nPort,
-                         _In_opt_ CIpcSslLayer::eProtocol nProtocol = CIpcSslLayer::ProtocolUnknown,
                          _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions = NULL,
-                         _In_opt_ CSslCertificate *lpSslCertificate = NULL, _In_opt_ CCryptoRSA *lpSslKey = NULL);
+                         _In_opt_ CSslCertificate *lpSslCertificate = NULL, _In_opt_ CEncryptionKey *lpSslKey = NULL);
   HRESULT StartListening(_In_opt_z_ LPCWSTR szBindAddressW, _In_ CSockets::eFamily nFamily, _In_ int nPort,
-                         _In_opt_ CIpcSslLayer::eProtocol nProtocol = CIpcSslLayer::ProtocolUnknown,
                          _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions = NULL,
-                         _In_opt_ CSslCertificate *lpSslCertificate = NULL, _In_opt_ CCryptoRSA *lpSslKey = NULL);
+                         _In_opt_ CSslCertificate *lpSslCertificate = NULL, _In_opt_ CEncryptionKey *lpSslKey = NULL);
   VOID StopListening();
 
 public:
@@ -430,9 +427,8 @@ private:
   LONG volatile nDownloadNameGeneratorCounter;
   struct {
     LONG volatile nRwMutex;
-    CIpcSslLayer::eProtocol nProtocol;
     TAutoDeletePtr<CSslCertificate> cSslCertificate;
-    TAutoDeletePtr<CCryptoRSA> cSslPrivateKey;
+    TAutoDeletePtr<CEncryptionKey> cSslPrivateKey;
   } sSsl;
   LONG volatile nRundownLock;
   HANDLE hAcceptConn;

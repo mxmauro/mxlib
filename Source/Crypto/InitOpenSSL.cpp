@@ -39,7 +39,7 @@
 //-----------------------------------------------------------
 
 static LONG volatile nInitialized = 0;
-static SSL_CTX* volatile lpSslContexts[2][1] = { 0 };
+static SSL_CTX* volatile lpSslContexts[2] = { NULL, NULL };
 
 //-----------------------------------------------------------
 
@@ -85,11 +85,11 @@ HRESULT Init()
   return _OpenSSL_Init();
 }
 
-HRESULT GetLastErrorCode(_In_ BOOL bDefaultIsInvalidData)
+HRESULT GetLastErrorCode(_In_ HRESULT hResDefault)
 {
   unsigned long err;
   BOOL bHasError = FALSE;
-  HRESULT hRes = (bDefaultIsInvalidData != FALSE) ? MX_E_InvalidData : S_OK;
+  HRESULT hRes = hResDefault;
 
   while ((err = ERR_get_error()) != 0)
   {
@@ -109,34 +109,21 @@ HRESULT GetLastErrorCode(_In_ BOOL bDefaultIsInvalidData)
   {
     ERR_clear_error();
     if (hRes == S_OK)
-      hRes = MX_E_InvalidData;
+      hRes = hResDefault;
   }
   return hRes;
 }
 
-SSL_CTX* GetSslContext(_In_ BOOL bServerSide, _In_z_ LPCSTR szVersionA)
+SSL_CTX* GetSslContext(_In_ BOOL bServerSide)
 {
   static LONG volatile nSslContextMutex = 0;
-  int idx;
 
-  if (szVersionA == NULL)
-    return NULL;
-  if (MX::StrCompareA(szVersionA, "tls") == 0 || MX::StrCompareA(szVersionA, "tls1.0") == 0 ||
-      MX::StrCompareA(szVersionA, "tls1.1") == 0 || MX::StrCompareA(szVersionA, "tls1.2") == 0)
-  {
-    idx = 0;
-  }
-  else
-  {
-    return NULL;
-  }
-  //----
-  if (lpSslContexts[(bServerSide != FALSE) ? 1 : 0][idx] == NULL)
+  if (lpSslContexts[(bServerSide != FALSE) ? 1 : 0] == NULL)
   {
     MX::CFastLock cSslLock(&nSslContextMutex);
     SSL_CTX *lpSslCtx;
 
-    if (lpSslContexts[(bServerSide != FALSE) ? 1 : 0][idx] == NULL)
+    if (lpSslContexts[(bServerSide != FALSE) ? 1 : 0] == NULL)
     {
       lpSslCtx = SSL_CTX_new((bServerSide != FALSE) ? TLS_server_method() : TLS_client_method());
       if (lpSslCtx == NULL)
@@ -152,12 +139,22 @@ SSL_CTX* GetSslContext(_In_ BOOL bServerSide, _In_z_ LPCSTR szVersionA)
       SSL_CTX_set_timeout(lpSslCtx, 3600);
       SSL_CTX_sess_set_cache_size(lpSslCtx, 1024);
       SSL_CTX_set_read_ahead(lpSslCtx, 1);
+      if (bServerSide != FALSE)
+      {
+        SSL_CTX_set_min_proto_version(lpSslCtx, TLS1_2_VERSION);
+        SSL_CTX_set_max_proto_version(lpSslCtx, TLS_MAX_VERSION);
+      }
+      else
+      {
+        SSL_CTX_set_min_proto_version(lpSslCtx, TLS1_VERSION);
+        SSL_CTX_set_max_proto_version(lpSslCtx, TLS_MAX_VERSION);
+      }
       //----
-      __InterlockedExchangePointer((volatile LPVOID *)&(lpSslContexts[(bServerSide != FALSE) ? 1 : 0][idx]), lpSslCtx);
+      __InterlockedExchangePointer((volatile LPVOID *)&(lpSslContexts[(bServerSide != FALSE) ? 1 : 0]), lpSslCtx);
     }
   }
   //done
-  return lpSslContexts[(bServerSide != FALSE) ? 1 : 0][idx];
+  return lpSslContexts[(bServerSide != FALSE) ? 1 : 0];
 }
 
 } //namespace OpenSSL
@@ -210,17 +207,12 @@ static VOID OpenSSL_Shutdown()
 {
   SIZE_T i;
 
-  for (i=0; i<MX_ARRAYLEN(lpSslContexts[0]); i++)
+  for (i = 0; i < MX_ARRAYLEN(lpSslContexts); i++)
   {
-    if (lpSslContexts[1][i] != NULL)
+    if (lpSslContexts[i] != NULL)
     {
-      SSL_CTX_free(lpSslContexts[1][i]);
-      lpSslContexts[1][i] = NULL;
-    }
-    if (lpSslContexts[0][i] != NULL)
-    {
-      SSL_CTX_free(lpSslContexts[0][i]);
-      lpSslContexts[0][i] = NULL;
+      SSL_CTX_free(lpSslContexts[i]);
+      lpSslContexts[i] = NULL;
     }
   }
   //----

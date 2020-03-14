@@ -134,7 +134,7 @@ public:
   MX::CSockets cSckMgr;
   MX::CJsHttpServer cJsHttpServer;
   MX::CSslCertificate cSslCert;
-  MX::CCryptoRSA cSslPrivateKey;
+  MX::CEncryptionKey cSslPrivateKey;
   MX::CIoCompletionPortThreadPool::OnPacketCallback cProcessJsRequest;
 };
 
@@ -174,7 +174,7 @@ int TestJsHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
 
     //load SSL certificate
     hRes = GetAppPath(cStrTempW);
-    if (SUCCEEDED(hRes) && cStrTempW.Concat(L"Web\\Certificates\\ssl.crt") == FALSE)
+    if (SUCCEEDED(hRes) && cStrTempW.Concat(L"Web\\Certificates\\webserver_ssl_cert.pem") == FALSE)
       hRes = E_OUTOFMEMORY;
     if (SUCCEEDED(hRes))
       hRes = LoadTxtFile(cStrTempA, (LPCWSTR)cStrTempW);
@@ -183,7 +183,7 @@ int TestJsHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
     //load private key
     if (SUCCEEDED(hRes))
       hRes = GetAppPath(cStrTempW);
-    if (SUCCEEDED(hRes) && cStrTempW.Concat(L"Web\\Certificates\\ssl.key") == FALSE)
+    if (SUCCEEDED(hRes) && cStrTempW.Concat(L"Web\\Certificates\\webserver_ssl_priv_key.pem") == FALSE)
       hRes = E_OUTOFMEMORY;
     if (SUCCEEDED(hRes))
       hRes = LoadTxtFile(cStrTempA, (LPCWSTR)cStrTempW);
@@ -208,8 +208,8 @@ int TestJsHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
       sOptions.dwMaxAcceptsToPost = 128;
       //sOptions.dwMaxRequestsPerSecond = 0;
       //sOptions.dwBurstSize = 0;
-      hRes = cTest.cJsHttpServer.StartListening(MX::CSockets::FamilyIPv4, 443, MX::CIpcSslLayer::ProtocolTLSv1_2,
-                                                &sOptions, &(cTest.cSslCert), &(cTest.cSslPrivateKey));
+      hRes = cTest.cJsHttpServer.StartListening(MX::CSockets::FamilyIPv4, 443, &sOptions, &(cTest.cSslCert),
+                                                &(cTest.cSslPrivateKey));
     }
     else
     {

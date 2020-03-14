@@ -32,20 +32,12 @@ namespace MX {
 class CIpcSslLayer : public CIpc::CLayer, public CLoggable, public CNonCopyableObj
 {
 public:
-  typedef enum {
-    ProtocolUnknown=0,
-    ProtocolTLSv1_0,
-    ProtocolTLSv1_1,
-    ProtocolTLSv1_2,
-  } eProtocol;
-
-public:
-  CIpcSslLayer();
+  CIpcSslLayer(_In_opt_ CLoggable *lpLogParent = NULL);
   ~CIpcSslLayer();
 
-  HRESULT Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol, _In_opt_ LPCSTR szHostNameA = NULL,
+  HRESULT Initialize(_In_ BOOL bServerSide, _In_opt_ LPCSTR szHostNameA = NULL,
                      _In_opt_ CSslCertificateArray *lpCheckCertificates = NULL,
-                     _In_opt_ CSslCertificate *lpSelfCert = NULL, _In_opt_ CCryptoRSA *lpPrivKey = NULL);
+                     _In_opt_ CSslCertificate *lpSelfCert = NULL, _In_opt_ CEncryptionKey *lpPrivKey = NULL);
 
 private:
   HRESULT OnConnect();

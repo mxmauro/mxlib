@@ -24,7 +24,6 @@
 #define NO_SYS_TYPES_H
 #include <OpenSSL\ssl.h>
 #include <OpenSSL\err.h>
-#include "..\..\Include\Comm\SslCertificates.h"
 
 //-----------------------------------------------------------
 
@@ -36,9 +35,9 @@ namespace OpenSSL {
 
 HRESULT Init();
 
-HRESULT GetLastErrorCode(_In_ BOOL bDefaultIsInvalidData);
+HRESULT GetLastErrorCode(_In_ HRESULT hResDefault);
 
-SSL_CTX* GetSslContext(_In_ BOOL bServerSide, _In_z_ LPCSTR szVersionA);
+SSL_CTX* GetSslContext(_In_ BOOL bServerSide);
 
 } //namespace OpenSSL
 

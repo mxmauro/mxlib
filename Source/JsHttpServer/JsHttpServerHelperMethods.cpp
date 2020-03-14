@@ -19,8 +19,7 @@
  */
 #include "JsHttpServerCommon.h"
 #include "..\..\Include\Http\HtmlEntities.h"
-#include "..\..\Include\Crypto\DigestAlgorithmMDx.h"
-#include "..\..\Include\Crypto\DigestAlgorithmSHAx.h"
+#include "..\..\Include\Crypto\MessageDigest.h"
 
 //-----------------------------------------------------------
 
@@ -83,15 +82,7 @@ HRESULT AddHelpersMethods(_In_ CJavascriptVM &cJvm)
   });
   __EXIT_ON_ERROR(hRes);
 
-  hRes = cJvm.CreateObject("HASH");
-  __EXIT_ON_ERROR(hRes);
-  hRes = cJvm.AddObjectNumericProperty("HASH", "MD5", 1.0, CJavascriptVM::PropertyFlagEnumerable);
-  __EXIT_ON_ERROR(hRes);
-  hRes = cJvm.AddObjectNumericProperty("HASH", "SHA1", 2.0, CJavascriptVM::PropertyFlagEnumerable);
-  __EXIT_ON_ERROR(hRes);
-  hRes = cJvm.AddObjectNumericProperty("HASH", "SHA256", 3.0, CJavascriptVM::PropertyFlagEnumerable);
-  __EXIT_ON_ERROR(hRes);
-  hRes = cJvm.AddNativeFunction("hash", MX_BIND_CALLBACK(&OnHash), 2);
+  hRes = cJvm.AddNativeFunction("hash", MX_BIND_CALLBACK(&OnHash), MX_JS_VARARGS);
   __EXIT_ON_ERROR(hRes);
   hRes = cJvm.AddNativeFunction("die", MX_BIND_CALLBACK(&OnDie), MX_JS_VARARGS);
   __EXIT_ON_ERROR(hRes);
@@ -239,82 +230,42 @@ static DukTape::duk_ret_t OnHash(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR
                                  _In_z_ LPCSTR szFunctionNameA)
 
 {
-  MX::TAutoDeletePtr<MX::CDigestAlgorithmBase> cDigest;
+  MX::CMessageDigest cDigest;
   MX::CStringA cStrTempA;
-  SIZE_T i, nSize;
-  LPBYTE lpResult;
-  LPCSTR szBufA;
-  int nType;
+  LPCSTR szBufA, szAlgorithmA, szKeyA;
+  DukTape::duk_idx_t nArgsCount;
   HRESULT hRes;
 
+  nArgsCount = DukTape::duk_get_top(lpCtx);
+  if (nArgsCount < 2 || nArgsCount > 3)
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+
   szBufA = DukTape::duk_require_string(lpCtx, 0);
-  nType = (int)DukTape::duk_require_int(lpCtx, 1);
-  switch (nType)
-  {
-    case 1: //MD5
-      {
-      MX::CDigestAlgorithmMessageDigest *lpPtr;
+  szAlgorithmA = DukTape::duk_require_string(lpCtx, 1);
+  szKeyA = (nArgsCount > 2) ? DukTape::duk_require_string(lpCtx, 2) : "";
 
-      lpPtr = MX_DEBUG_NEW MX::CDigestAlgorithmMessageDigest();
-      if (lpPtr != NULL)
-        hRes = lpPtr->BeginDigest(MX::CDigestAlgorithmMessageDigest::AlgorithmMD5);
-      else
-        hRes = E_OUTOFMEMORY;
-      cDigest.Attach(lpPtr);
-      }
-      break;
-
-    case 2: //SHA1
-    case 3: //SHA256
-      {
-      MX::CDigestAlgorithmSecureHash *lpPtr;
-
-      lpPtr = MX_DEBUG_NEW MX::CDigestAlgorithmSecureHash();
-      if (lpPtr != NULL)
-      {
-        switch (nType)
-        {
-          case 2:
-            hRes = lpPtr->BeginDigest(MX::CDigestAlgorithmSecureHash::AlgorithmSHA1);
-            break;
-          case 3:
-            hRes = lpPtr->BeginDigest(MX::CDigestAlgorithmSecureHash::AlgorithmSHA256);
-            break;
-        }
-      }
-      else
-      {
-        hRes = E_OUTOFMEMORY;
-      }
-      cDigest.Attach(lpPtr);
-      }
-      break;
-
-    default:
-      hRes = E_INVALIDARG;
-      break;
-  }
+  hRes = cDigest.BeginDigest(szAlgorithmA, szKeyA, MX::StrLenA(szKeyA));
+  if (SUCCEEDED(hRes))
+    hRes = cDigest.DigestStream(szBufA, MX::StrLenA(szBufA));
+  if (SUCCEEDED(hRes))
+    hRes = cDigest.EndDigest();
   if (SUCCEEDED(hRes))
   {
-    hRes = cDigest->DigestStream(szBufA, MX::StrLenA(szBufA));
-    if (SUCCEEDED(hRes))
-      hRes = cDigest->EndDigest();
-    if (SUCCEEDED(hRes))
+    LPBYTE lpResult = cDigest.GetResult();
+    SIZE_T nSize = cDigest.GetResultSize();
+
+    for (SIZE_T i = 0; i < nSize; i++)
     {
-      lpResult = cDigest->GetResult();
-      nSize = cDigest->GetResultSize();
-      for (i=0; i<nSize; i++)
+      if (cStrTempA.AppendFormat("%02X", lpResult[i]) == FALSE)
       {
-        if (cStrTempA.AppendFormat(L"%02X", lpResult[i]) == FALSE)
-        {
-          hRes = E_OUTOFMEMORY;
-          break;
-        }
+        hRes = E_OUTOFMEMORY;
+        break;
       }
     }
   }
   if (FAILED(hRes))
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+
   //push result
   DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
   return 1;

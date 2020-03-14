@@ -3,7 +3,7 @@ REM %1 has $(TargetDir), %2 has $(PlatformTarget)
 
 MD "%~1\Web" >NUL 2>NUL
 
-ROBOCOPY "%~dp0Web" "%~1\Web" /COPYALL /IS /IT /XJ /E /XF *.~* /NP >NUL 2>NUL
+ROBOCOPY "%~dp0Web" "%~1\Web" /COPY:DAT /IS /IT /XJ /E /XF *.~* /NP >NUL 2>NUL
 REM Resetting ROBOCOPY errorlevel to zero
 CMD /c "EXIT /b 0"
 

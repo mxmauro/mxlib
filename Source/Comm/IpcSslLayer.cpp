@@ -26,6 +26,7 @@ static FORCEINLINE int InterlockedExchangeAdd(_Inout_ _Interlocked_operand_ int 
 {
   return (int)_InterlockedExchangeAdd((LONG volatile *)Addend, (LONG)Value);
 }
+#include "..\OpenSSL\Source\include\internal\bio.h"
 #include "..\OpenSSL\Source\crypto\x509\x509_local.h"
 
 //-----------------------------------------------------------
@@ -36,30 +37,6 @@ static FORCEINLINE int InterlockedExchangeAdd(_Inout_ _Interlocked_operand_ int 
 
 //-----------------------------------------------------------
 
-namespace MX {
-
-namespace Internals {
-
-class COpenSSLCircularBufferBIO : public virtual MX::CBaseMemObj
-{
-public:
-  COpenSSLCircularBufferBIO() : MX::CBaseMemObj()
-    {
-    _InterlockedExchange(&nMutex, 0);
-    nFragmentSize = 0;
-    return;
-    };
-
-public:
-  LONG volatile nMutex;
-  MX::CCircularBuffer cBuffer;
-  SIZE_T nFragmentSize;
-};
-
-} //namespace Internals
-
-} //namespace MX
-
 typedef struct {
   MX::CIpcSslLayer *lpLayer;
   LPCWSTR szDescW;
@@ -68,11 +45,9 @@ typedef struct {
 typedef struct tagSSL_LAYER_DATA {
   LONG volatile nFlags;
   BOOL bServerSide;
-  MX::CIpcSslLayer::eProtocol nProtocol;
   //----
   SSL_CTX *lpSslCtx;
   SSL *lpSslSession;
-  BIO_METHOD *lpBioMthd;
   BIO *lpInBio;
   BIO *lpOutBio;
   MX::CIpc::CPacketList *lpOutgoingPacketsList;
@@ -102,8 +77,9 @@ static BIO_METHOD *BIO_circular_buffer_mem();
 
 namespace MX {
 
-CIpcSslLayer::CIpcSslLayer() : CIpc::CLayer(), CLoggable()
+CIpcSslLayer::CIpcSslLayer(_In_opt_ CLoggable *lpLogParent) : CIpc::CLayer(), CLoggable()
 {
+  SetLogParent(lpLogParent);
   _InterlockedExchange(&nMutex, 0);
   _InterlockedExchange(&hNetworkError, 0);
   lpInternalData = NULL;
@@ -122,26 +98,19 @@ CIpcSslLayer::~CIpcSslLayer()
     }
     MX_DELETE(ssl_data->lpOutgoingPacketsList);
     MX_DELETE(ssl_data->sPeerCert.lpCert);
-    if (ssl_data->lpBioMthd != NULL)
-    {
-      BIO_meth_free(ssl_data->lpBioMthd);
-      ssl_data->lpBioMthd = NULL;
-    }
     MxMemSet(lpInternalData, 0, sizeof(SSL_LAYER_DATA));
     MX_FREE(lpInternalData);
   }
   return;
 }
 
-HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol, _In_opt_ LPCSTR szHostNameA,
+HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_opt_ LPCSTR szHostNameA,
                                  _In_opt_ CSslCertificateArray *lpCheckCertificates,
-                                 _In_opt_ CSslCertificate *lpSelfCert, _In_opt_ CCryptoRSA *lpPrivKey)
+                                 _In_opt_ CSslCertificate *lpSelfCert, _In_opt_ CEncryptionKey *lpPrivKey)
 {
   X509_STORE *lpStore;
   HRESULT hRes;
 
-  if (nProtocol != ProtocolTLSv1_0 && nProtocol != ProtocolTLSv1_1 && nProtocol != ProtocolTLSv1_2)
-    return E_INVALIDARG;
   if (bServerSide != FALSE && lpSelfCert == NULL)
     return E_POINTER;
   hRes = Internals::OpenSSL::Init();
@@ -155,21 +124,9 @@ HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol
     MxMemSet(lpInternalData, 0, sizeof(SSL_LAYER_DATA));
   }
   ssl_data->bServerSide = bServerSide;
-  ssl_data->nProtocol = nProtocol;
   //create SSL context
   ERR_clear_error();
-  switch (nProtocol)
-  {
-    case ProtocolTLSv1_0:
-      ssl_data->lpSslCtx = Internals::OpenSSL::GetSslContext(bServerSide, "tls1.0");
-      break;
-    case ProtocolTLSv1_1:
-      ssl_data->lpSslCtx = Internals::OpenSSL::GetSslContext(bServerSide, "tls1.1");
-      break;
-    case ProtocolTLSv1_2:
-      ssl_data->lpSslCtx = Internals::OpenSSL::GetSslContext(bServerSide, "tls1.2");
-      break;
-  }
+  ssl_data->lpSslCtx = Internals::OpenSSL::GetSslContext(bServerSide);
   if (ssl_data->lpSslCtx == NULL)
     return E_OUTOFMEMORY;
   //create session
@@ -179,7 +136,7 @@ HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol
   //init some stuff
   SSL_set_verify(ssl_data->lpSslSession, SSL_VERIFY_NONE, NULL);
   SSL_set_verify_depth(ssl_data->lpSslSession, 4);
-  SSL_set_options(ssl_data->lpSslSession, SSL_OP_NO_SSLv2 | SSL_OP_NO_COMPRESSION | SSL_OP_LEGACY_SERVER_CONNECT |
+  SSL_set_options(ssl_data->lpSslSession, SSL_OP_NO_COMPRESSION | SSL_OP_LEGACY_SERVER_CONNECT |
                                           SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
   SSL_set_mode(ssl_data->lpSslSession, SSL_MODE_ENABLE_PARTIAL_WRITE | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER |
                                        SSL_MODE_RELEASE_BUFFERS);
@@ -205,13 +162,10 @@ HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol
   ssl_data->lpOutgoingPacketsList = MX_DEBUG_NEW MX::CIpc::CPacketList();
   if (ssl_data->lpOutgoingPacketsList == NULL)
     return E_OUTOFMEMORY;
-  ssl_data->lpBioMthd = BIO_circular_buffer_mem();
-  if (ssl_data->lpBioMthd == NULL)
-    return E_OUTOFMEMORY;
-  ssl_data->lpInBio = BIO_new(ssl_data->lpBioMthd);
+  ssl_data->lpInBio = BIO_new(BIO_circular_buffer_mem());
   if (ssl_data->lpInBio == NULL)
     return E_OUTOFMEMORY;
-  ssl_data->lpOutBio = BIO_new(ssl_data->lpBioMthd);
+  ssl_data->lpOutBio = BIO_new(BIO_circular_buffer_mem());
   if (ssl_data->lpOutBio == NULL)
   {
     BIO_free(ssl_data->lpInBio);
@@ -235,25 +189,25 @@ HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_ eProtocol nProtocol
   ssl_data->lpCertArray = lpCheckCertificates;
   if (lpSelfCert != NULL)
   {
-    if (lpSelfCert->GetOpenSSL_X509() == NULL)
+    if (lpSelfCert->GetX509() == NULL)
       return MX_E_NotReady;
-    if (SSL_use_certificate(ssl_data->lpSslSession, (X509*)(lpSelfCert->GetOpenSSL_X509())) <= 0)
-      return Internals::OpenSSL::GetLastErrorCode(TRUE);
+    if (SSL_use_certificate(ssl_data->lpSslSession, lpSelfCert->GetX509()) <= 0)
+      return Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
     //setup private key if provided
     if (lpPrivKey != NULL)
     {
       TAutoFreePtr<BYTE> aTempBuf;
-      SIZE_T nSize;
+      TAutoDeletePtr<CSecureBuffer> cBuffer;
 
-      nSize = lpPrivKey->GetPrivateKey(NULL);
-      if (nSize == 0)
-        return E_INVALIDARG;
-      aTempBuf.Attach((LPBYTE)MX_MALLOC(nSize));
-      if (!aTempBuf)
-        return E_OUTOFMEMORY;
-      lpPrivKey->GetPrivateKey(aTempBuf.Get());
-      if (SSL_use_PrivateKey_ASN1(EVP_PKEY_RSA, ssl_data->lpSslSession, aTempBuf.Get(), (long)nSize) <= 0)
-        return Internals::OpenSSL::GetLastErrorCode(TRUE);
+      hRes = lpPrivKey->GetPrivateKey(&cBuffer);
+      if (FAILED(hRes))
+        return hRes;
+      ERR_clear_error();
+      if (SSL_use_PrivateKey_ASN1(EVP_PKEY_RSA, ssl_data->lpSslSession, cBuffer->GetBuffer(),
+                                  (long)(cBuffer->GetLength())) <= 0)
+      {
+        return Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
+      }
       if (SSL_check_private_key(ssl_data->lpSslSession) == 0)
         return MX_E_InvalidData;
     }
@@ -787,7 +741,7 @@ static X509* lookup_cert_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, 
   for (i=0; i<nCount; i++)
   {
     lpCert = lpCertArray->cCertsList.GetElementAt(i);
-    lpX509 = (X509*)(lpCert->GetOpenSSL_X509());
+    lpX509 = lpCert->GetX509();
     if (lpX509 != NULL && X509_NAME_cmp(X509_get_subject_name(lpX509), name) == 0 &&
         X509_cmp_time(X509_get_notBefore(lpX509), NULL) < 0 &&
         X509_cmp_time(X509_get_notAfter(lpX509), NULL) > 0)
@@ -810,7 +764,7 @@ static X509_CRL* lookup_crl_by_subject(_In_ MX::CSslCertificateArray *lpCertArra
   for (i=0; i<nCount; i++)
   {
     lpCertCrl = lpCertArray->cCertCrlsList.GetElementAt(i);
-    lpX509Crl = (X509_CRL*)(lpCertCrl->GetOpenSSL_X509Crl());
+    lpX509Crl = lpCertCrl->GetX509Crl();
     if (lpX509Crl != NULL && X509_NAME_cmp(X509_CRL_get_issuer(lpX509Crl), name) == 0)
       return lpX509Crl;
   }
@@ -819,26 +773,18 @@ static X509_CRL* lookup_crl_by_subject(_In_ MX::CSslCertificateArray *lpCertArra
 
 static int DebugPrintSslError(const char *str, size_t len, void *u)
 {
-  ((LPDEBUGPRINT_DATA)u)->lpLayer->Log(L"IpcSslLayer/%s: Error: %.*s\n", ((LPDEBUGPRINT_DATA)u)->szDescW,
+  while (len > 0 && (str[len - 1] == '\n' || str[len - 1] == '\r'))
+    len--;
+  ((LPDEBUGPRINT_DATA)u)->lpLayer->Log(L"IpcSslLayer/%s: Error: %.*S\n", ((LPDEBUGPRINT_DATA)u)->szDescW,
                                        (unsigned int)len, str);
   return 1;
 }
 
 //-----------------------------------------------------------
 
-static int circular_buffer_new(BIO *bi);
-static int circular_buffer_free(BIO *bi);
-static int circular_buffer_read(BIO *bi, char *out, int outl);
-static int circular_buffer_write(BIO *bi, const char *in, int inl);
-static long circular_buffer_ctrl(BIO *bi, int cmd, long num, void *ptr);
-static int circular_buffer_gets(BIO *bi, char *buf, int size);
-static int circular_buffer_puts(BIO *bi, const char *str);
-
-static int circular_buffer_new(BIO *bi)
+static int circular_buffer_create(BIO *bi)
 {
-  MX::Internals::COpenSSLCircularBufferBIO *lpBuf;
-
-  lpBuf = MX_DEBUG_NEW MX::Internals::COpenSSLCircularBufferBIO();
+  MX::CCircularBuffer *lpBuf = MX_DEBUG_NEW MX::CCircularBuffer();
   if (lpBuf == NULL)
     return 0;
   BIO_set_data(bi, lpBuf);
@@ -847,13 +793,13 @@ static int circular_buffer_new(BIO *bi)
   return 1;
 }
 
-static int circular_buffer_free(BIO *bi)
+static int circular_buffer_destroy(BIO *bi)
 {
-  MX::Internals::COpenSSLCircularBufferBIO *lpBuf;
+  MX::CCircularBuffer *lpBuf;
 
   if (bi == NULL)
     return 0;
-  lpBuf = (MX::Internals::COpenSSLCircularBufferBIO*)BIO_get_data(bi);
+  lpBuf = (MX::CCircularBuffer*)BIO_get_data(bi);
   if (lpBuf != NULL && BIO_get_shutdown(bi) != 0 && BIO_get_init(bi) != 0)
   {
     delete lpBuf;
@@ -862,35 +808,46 @@ static int circular_buffer_free(BIO *bi)
   return 1;
 }
 
-static int circular_buffer_read(BIO *bi, char *out, int outl)
+static int circular_buffer_read_old(BIO *bi, char *out, int outl)
 {
-  MX::Internals::COpenSSLCircularBufferBIO *lpBuf;
+  MX::CCircularBuffer *lpBuf = (MX::CCircularBuffer *)BIO_get_data(bi);
+  SIZE_T nAvailable;
   int ret;
 
-  lpBuf = (MX::Internals::COpenSSLCircularBufferBIO*)BIO_get_data(bi);
+  BIO_clear_retry_flags(bi);
+  nAvailable = lpBuf->GetAvailableForRead();
+  ret = (outl > 0 && (SIZE_T)outl > nAvailable) ? (int)nAvailable : outl;
+  if (out != NULL && ret > 0)
   {
-    MX::CFastLock cLock(&(lpBuf->nMutex));
-    SIZE_T nAvailable;
-
-    BIO_clear_retry_flags(bi);
-    nAvailable = lpBuf->cBuffer.GetAvailableForRead();
-    ret = (outl > 0 && (SIZE_T)outl > nAvailable) ? (int)nAvailable : outl;
-    if (out != NULL && ret > 0)
-    {
-      ret = (int)(lpBuf->cBuffer.Read(out, (SIZE_T)ret));
-    }
-    else if (nAvailable == 0)
-    {
-      ret = -1;
-      BIO_set_retry_read(bi);
-    }
+    ret = (int)(lpBuf->Read(out, (SIZE_T)ret));
+  }
+  else if (nAvailable == 0)
+  {
+    ret = -1;
+    BIO_set_retry_read(bi);
   }
   return ret;
 }
 
-static int circular_buffer_write(BIO *bi, const char *in, int inl)
+static int circular_buffer_read(BIO *bio, char *data, size_t datal, size_t *readbytes)
 {
-  MX::Internals::COpenSSLCircularBufferBIO *lpBuf;
+  int ret;
+
+  if (datal > INT_MAX)
+    datal = INT_MAX;
+  ret = circular_buffer_read_old(bio, data, (int)datal);
+  if (ret <= 0)
+  {
+    *readbytes = 0;
+    return ret;
+  }
+  *readbytes = (size_t)ret;
+  return 1;
+}
+
+static int circular_buffer_write_old(BIO *bi, const char *in, int inl)
+{
+  MX::CCircularBuffer *lpBuf;
 
   if (in == NULL)
   {
@@ -904,12 +861,10 @@ static int circular_buffer_write(BIO *bi, const char *in, int inl)
   }
 
   BIO_clear_retry_flags(bi);
-  lpBuf = (MX::Internals::COpenSSLCircularBufferBIO*)BIO_get_data(bi);
+  lpBuf = (MX::CCircularBuffer*)BIO_get_data(bi);
   if (inl > 0)
   {
-    MX::CFastLock cLock(&(lpBuf->nMutex));
-
-    if (FAILED(lpBuf->cBuffer.Write(in, (SIZE_T)inl)))
+    if (FAILED(lpBuf->Write(in, (SIZE_T)inl)))
     {
       BIOerr(BIO_F_MEM_WRITE, ERR_R_MALLOC_FAILURE);
       return -1;
@@ -918,41 +873,51 @@ static int circular_buffer_write(BIO *bi, const char *in, int inl)
   return inl;
 }
 
+static int circular_buffer_write(BIO *bio, const char *data, size_t datal, size_t *written)
+{
+  int ret;
+
+  if (datal > INT_MAX)
+    datal = INT_MAX;
+  ret = circular_buffer_write_old(bio, data, (int)datal);
+  if (ret <= 0)
+  {
+    *written = 0;
+    return ret;
+  }
+  *written = (size_t)ret;
+  return 1;
+}
+
 static long circular_buffer_ctrl(BIO *bi, int cmd, long num, void *ptr)
 {
-  MX::Internals::COpenSSLCircularBufferBIO *lpBuf;
-
-  lpBuf = (MX::Internals::COpenSSLCircularBufferBIO*)BIO_get_data(bi);
+  MX::CCircularBuffer *lpBuf = (MX::CCircularBuffer*)BIO_get_data(bi);
+  switch (cmd)
   {
-    MX::CFastLock cLock(&(lpBuf->nMutex));
+    case BIO_CTRL_RESET:
+      lpBuf->SetBufferSize(0);
+      return 1;
 
-    switch (cmd)
-    {
-      case BIO_CTRL_RESET:
-        lpBuf->cBuffer.SetBufferSize(0);
-        return 1;
+    case BIO_CTRL_GET_CLOSE:
+      return (long)BIO_get_shutdown(bi);
 
-      case BIO_CTRL_GET_CLOSE:
-        return (long)BIO_get_shutdown(bi);
+    case BIO_CTRL_SET_CLOSE:
+      BIO_set_shutdown(bi, (int)num);
+      return 1;
 
-      case BIO_CTRL_SET_CLOSE:
-        BIO_set_shutdown(bi, (int)num);
-        return 1;
+    case BIO_CTRL_PENDING:
+      {
+      SIZE_T nAvail = lpBuf->GetAvailableForRead();
 
-      case BIO_CTRL_PENDING:
-        {
-        SIZE_T nAvail = lpBuf->cBuffer.GetAvailableForRead();
+      if (nAvail > (SIZE_T)LONG_MAX)
+        nAvail = (SIZE_T)LONG_MAX;
+      return (long)nAvail;
+      }
+      break;
 
-        if (nAvail > (SIZE_T)LONG_MAX)
-          nAvail = (SIZE_T)LONG_MAX;
-        return (long)nAvail;
-        }
-        break;
-
-      case BIO_CTRL_DUP:
-      case BIO_CTRL_FLUSH:
-        return 1;
-    }
+    case BIO_CTRL_DUP:
+    case BIO_CTRL_FLUSH:
+      return 1;
   }
   return 0;
 }
@@ -967,31 +932,26 @@ static int circular_buffer_gets(BIO *bi, char *buf, int size)
   BIO_clear_retry_flags(bi);
   if (size > 0)
   {
-    MX::Internals::COpenSSLCircularBufferBIO *lpBuf;
+    MX::CCircularBuffer *lpBuf = (MX::CCircularBuffer *)BIO_get_data(bi);
     SIZE_T i, nToRead, nReaded;
 
-    lpBuf = (MX::Internals::COpenSSLCircularBufferBIO*)BIO_get_data(bi);
+    nToRead = (SIZE_T)size;
+    nReaded = lpBuf->Peek(buf, nToRead);
+    if (nReaded == 0)
     {
-      MX::CFastLock cLock(&(lpBuf->nMutex));
-
-      nToRead = (SIZE_T)size;
-      nReaded = lpBuf->cBuffer.Peek(buf, nToRead);
-      if (nReaded == 0)
-      {
-        *buf = 0;
-        return 0;
-      }
-      for (i = 0; i < nReaded; i++)
-      {
-        if (buf[i] == '\n')
-        {
-          i++;
-          break;
-        }
-      }
-      lpBuf->cBuffer.AdvanceReadPtr(i);
-      buf[i] = 0;
+      *buf = 0;
+      return 0;
     }
+    for (i = 0; i < nReaded; i++)
+    {
+      if (buf[i] == '\n')
+      {
+        i++;
+        break;
+      }
+    }
+    lpBuf->AdvanceReadPtr(i);
+    buf[i] = 0;
     return (int)i;
   }
   if (buf != NULL)
@@ -1001,23 +961,24 @@ static int circular_buffer_gets(BIO *bi, char *buf, int size)
 
 static int circular_buffer_puts(BIO *bi, const char *str)
 {
-  return circular_buffer_write(bi, str, (int)MX::StrLenA(str));
+  return circular_buffer_write_old(bi, str, (int)MX::StrLenA(str));
 }
 
 static BIO_METHOD *BIO_circular_buffer_mem()
 {
-  BIO_METHOD *lpBioMthd;
-
-  lpBioMthd = BIO_meth_new(BIO_TYPE_MEM, "circular memory buffer");
-  if (lpBioMthd != NULL)
-  {
-    BIO_meth_set_write(lpBioMthd, &circular_buffer_write);
-    BIO_meth_set_read(lpBioMthd, &circular_buffer_read);
-    BIO_meth_set_puts(lpBioMthd, &circular_buffer_puts);
-    BIO_meth_set_gets(lpBioMthd, &circular_buffer_gets);
-    BIO_meth_set_ctrl(lpBioMthd, &circular_buffer_ctrl);
-    BIO_meth_set_create(lpBioMthd, &circular_buffer_new);
-    BIO_meth_set_destroy(lpBioMthd, &circular_buffer_free);
-  }
-  return lpBioMthd;
+  static const BIO_METHOD circular_buffer_mem = {
+    BIO_TYPE_MEM,
+    (char*)"circular memory buffer",
+    &circular_buffer_write,
+    &circular_buffer_write_old,
+    &circular_buffer_read,
+    &circular_buffer_read_old,
+    &circular_buffer_puts,
+    &circular_buffer_gets,
+    &circular_buffer_ctrl,
+    &circular_buffer_create,
+    &circular_buffer_destroy,
+    NULL
+  };
+  return (BIO_METHOD*)&circular_buffer_mem;
 }

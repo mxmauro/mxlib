@@ -14,31 +14,22 @@
     <ClInclude Include="Include\Crypto\Base64.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Crypto\CryptoAES.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Include\Crypto\CryptoDES.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Include\Crypto\CryptoRSA.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Include\Crypto\DigestAlgorithmCRC32.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Include\Crypto\DigestAlgorithmMDx.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Include\Crypto\DigestAlgorithmSHAx.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Crypto\InitOpenSSL.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Crypto\CryptoBase.h">
+    <ClInclude Include="Include\Crypto\MessageDigest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Crypto\DigestAlgorithmBase.h">
+    <ClInclude Include="Include\Crypto\SymmetricCipher.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Crypto\AsymmetricCipher.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Crypto\SecureBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Crypto\EncryptionKey.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -46,31 +37,22 @@
     <ClCompile Include="Source\Crypto\Base64.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Crypto\CryptoAES.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Crypto\CryptoDES.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Crypto\CryptoRSA.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Crypto\DigestAlgorithmCRC32.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Crypto\DigestAlgorithmMDx.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Crypto\DigestAlgorithmSHAx.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Crypto\InitOpenSSL.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Crypto\CryptoBase.cpp">
+    <ClCompile Include="Source\Crypto\MessageDigest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Crypto\DigestAlgorithmBase.cpp">
+    <ClCompile Include="Source\Crypto\SymmetricCipher.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Crypto\AsymmetricCipher.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Crypto\SecureBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Crypto\EncryptionKey.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

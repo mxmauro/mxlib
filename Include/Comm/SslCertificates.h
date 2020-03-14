@@ -23,8 +23,10 @@
 #include "..\Defines.h"
 #include "..\DateTime\DateTime.h"
 #include "..\ArrayList.h"
-#include "..\Crypto\CryptoRSA.h"
+#include "..\Crypto\EncryptionKey.h"
 #include "..\Strings\Strings.h"
+typedef struct x509_st X509;
+typedef struct X509_crl_st X509_CRL;
 
 //-----------------------------------------------------------
 
@@ -49,16 +51,17 @@ public:
 
   CSslCertificate& operator=(_In_ const CSslCertificate& cSrc) throw(...);
 
-  HRESULT InitializeFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA=NULL);
-  HRESULT InitializeFromPEM(_In_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA=NULL, _In_opt_ SIZE_T nPemLen=(SIZE_T)-1);
+  HRESULT InitializeFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen);
+  HRESULT InitializeFromPEM(_In_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA = NULL,
+                            _In_opt_ SIZE_T nPemLen = (SIZE_T)-1);
 
   LONG GetVersion() const;
 
   LPBYTE GetSerial() const;
   SIZE_T GetSerialLength() const;
 
-  HRESULT GetSubject(_In_ eInformation nInfo, _Inout_ CStringW &cStrW);
-  HRESULT GetIssuer(_In_ eInformation nInfo, _Inout_ CStringW &cStrW);
+  HRESULT GetSubject(_In_ MX::CSslCertificate::eInformation nInfo, _Inout_ CStringW &cStrW);
+  HRESULT GetIssuer(_In_ MX::CSslCertificate::eInformation nInfo, _Inout_ CStringW &cStrW);
 
   HRESULT GetValidFrom(_Inout_ CDateTime &cDt);
   HRESULT GetValidUntil(_Inout_ CDateTime &cDt);
@@ -66,28 +69,34 @@ public:
   HRESULT IsDateValid(); //returns S_OK if valid, S_FALSE if not, or an error
   BOOL IsCaCert() const;
 
-  LPVOID GetOpenSSL_X509();
+  X509* GetX509() const
+    {
+    return lpX509;
+    };
 
 private:
-  LPVOID lpX509;
+  X509 *lpX509;
 };
 
 //-----------------------------------------------------------
 
 class CSslCertificateCrl : public virtual CBaseMemObj
 {
-private:
-  CSslCertificateCrl(_In_ const CSslCertificateCrl& cSrc);
 public:
   typedef enum {
     InfoOrganization = 1, InfoUnit, InfoCommonName, InfoCountry, InfoStateProvince, InfoTown
   } eInformation;
 
+public:
   CSslCertificateCrl();
+  CSslCertificateCrl(_In_ const CSslCertificateCrl &cSrc) throw(...);
   ~CSslCertificateCrl();
 
+  CSslCertificateCrl& operator=(_In_ const CSslCertificateCrl &cSrc) throw(...);
+
   HRESULT InitializeFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen);
-  HRESULT InitializeFromPEM(_In_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA=NULL, _In_opt_ SIZE_T nPemLen=(SIZE_T)-1);
+  HRESULT InitializeFromPEM(_In_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA = NULL,
+                            _In_opt_ SIZE_T nPemLen = (SIZE_T)-1);
 
   LONG GetVersion() const;
 
@@ -102,12 +111,13 @@ public:
   SIZE_T GetRevokedEntrySerialLength(_In_ SIZE_T nEntryIndex) const;
   HRESULT GetRevokedEntryDate(_In_ SIZE_T nEntryIndex, _Inout_ CDateTime &cDt);
 
-  HRESULT operator=(const CSslCertificateCrl& cSrc);
-
-  LPVOID GetOpenSSL_X509Crl();
+  X509_CRL* GetX509Crl() const
+    {
+    return lpX509Crl;
+    };
 
 private:
-  LPVOID lpX509Crl;
+  X509_CRL *lpX509Crl;
 };
 
 //-----------------------------------------------------------
@@ -120,30 +130,31 @@ public:
 
   VOID Reset();
 
-  HRESULT AddFromMemory(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA=NULL);
-  HRESULT AddFromFile(_In_z_ LPCWSTR szFileNameW, _In_opt_z_ LPCSTR szPasswordA=NULL);
+  HRESULT AddFromMemory(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA = NULL);
+  HRESULT AddFromFile(_In_z_ LPCWSTR szFileNameW, _In_opt_z_ LPCSTR szPasswordA = NULL);
 
-  HRESULT AddPublicKeyFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA=NULL);
-  HRESULT AddPublicKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA=NULL,
-                              _In_opt_ SIZE_T nPemLen=(SIZE_T)-1);
+  HRESULT AddPublicKeyFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen);
+  HRESULT AddPublicKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA = NULL,
+                              _In_opt_ SIZE_T nPemLen = (SIZE_T)-1);
 
-  HRESULT AddPrivateKeyFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA=NULL);
-  HRESULT AddPrivateKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA=NULL,
-                               _In_opt_ SIZE_T nPemLen=(SIZE_T)-1);
+  HRESULT AddPrivateKeyFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen);
+  HRESULT AddPrivateKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA = NULL,
+                               _In_opt_ SIZE_T nPemLen = (SIZE_T)-1);
 
-  HRESULT AddCertificateFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA=NULL);
-  HRESULT AddCertificateFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA=NULL,
-                                _In_opt_ SIZE_T nPemLen=(SIZE_T)-1);
+  HRESULT AddCertificateFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA = NULL);
+  HRESULT AddCertificateFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA = NULL,
+                                _In_opt_ SIZE_T nPemLen = (SIZE_T)-1);
 
   HRESULT AddCrlFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen);
-  HRESULT AddCrlFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA=NULL, _In_opt_ SIZE_T nPemLen=(SIZE_T)-1);
+  HRESULT AddCrlFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA = NULL,
+                        _In_opt_ SIZE_T nPemLen = (SIZE_T)-1);
 
   HRESULT ImportFromWindowsStore();
 
 public:
   TArrayListWithDelete<CSslCertificate*> cCertsList;
   TArrayListWithDelete<CSslCertificateCrl*> cCertCrlsList;
-  TArrayListWithDelete<CCryptoRSA*> cRsaKeysList;
+  TArrayListWithDelete<CEncryptionKey*> cKeysList;
 };
 
 } //namespace MX

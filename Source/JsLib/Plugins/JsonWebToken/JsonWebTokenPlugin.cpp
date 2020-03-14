@@ -21,7 +21,7 @@
 #include "..\..\..\..\Include\Strings\Utf8.h"
 #include "..\..\..\..\Include\DateTime\DateTime.h"
 #include "..\..\..\..\Include\Crypto\Base64.h"
-#include "..\..\..\..\Include\Crypto\DigestAlgorithmSHAx.h"
+#include "..\..\..\..\Include\Crypto\MessageDigest.h"
 
 //-----------------------------------------------------------
 
@@ -32,7 +32,7 @@ static VOID GetOptionalTimestamp(_In_ DukTape::duk_context *lpCtx, _In_ DukTape:
 static HRESULT EncodeAndConcatBuffer(_Inout_ MX::CStringA &cStrEncodedDataA, _In_ LPVOID lpBuffer,
                                      _In_ SIZE_T nBufferLen);
 static HRESULT DecodeBase64Buffer(_In_ MX::CBase64Decoder &cBase64Dec, _In_ LPCSTR szEncodedA, _In_ SIZE_T nEncodedLen);
-static MX::CDigestAlgorithmSecureHash::eAlgorithm GetHsAlgorithm(_In_z_ LPCSTR szAlgorithmA);
+static MX::CMessageDigest::eAlgorithm GetHsAlgorithm(_In_z_ LPCSTR szAlgorithmA);
 
 //-----------------------------------------------------------
 
@@ -50,13 +50,13 @@ CJsonWebTokenPlugin::~CJsonWebTokenPlugin()
 
 DukTape::duk_ret_t CJsonWebTokenPlugin::Create(_In_ DukTape::duk_context *lpCtx)
 {
-  CDigestAlgorithmSecureHash::eAlgorithm nHsAlgorithm;
+  CMessageDigest::eAlgorithm nHsAlgorithm;
   CDateTime cDtNotBefore, cDtExpiresAfter, cDtIssuedAt;
   CStringA cStrAudienceA, cStrSubjectA, cStrIssuerA, cStrJwtIdA, cStrEncodedDataA;
   CSecureStringA cStrKeyA;
   LPCSTR sA;
   LONGLONG nTemp;
-  CDigestAlgorithmSecureHash cHmacHash;
+  CMessageDigest cHmacHash;
   HRESULT hRes;
 
   //check if the payload is an object
@@ -91,7 +91,7 @@ DukTape::duk_ret_t CJsonWebTokenPlugin::Create(_In_ DukTape::duk_context *lpCtx)
   if (sA == NULL || *sA == 0)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
   nHsAlgorithm = GetHsAlgorithm(sA);
-  if (nHsAlgorithm == (CDigestAlgorithmSecureHash::eAlgorithm)-1)
+  if (nHsAlgorithm == (CMessageDigest::eAlgorithm)-1)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_Unsupported);
   DukTape::duk_pop(lpCtx);
 
@@ -143,13 +143,13 @@ DukTape::duk_ret_t CJsonWebTokenPlugin::Create(_In_ DukTape::duk_context *lpCtx)
   //add algorithm
   switch (nHsAlgorithm)
   {
-    case CDigestAlgorithmSecureHash::AlgorithmSHA256:
+    case CMessageDigest::AlgorithmSHA256:
       DukTape::duk_push_sprintf(lpCtx, "HS256");
       break;
-    case CDigestAlgorithmSecureHash::AlgorithmSHA384:
+    case CMessageDigest::AlgorithmSHA384:
       DukTape::duk_push_sprintf(lpCtx, "HS384");
       break;
-    case CDigestAlgorithmSecureHash::AlgorithmSHA512:
+    case CMessageDigest::AlgorithmSHA512:
       DukTape::duk_push_sprintf(lpCtx, "HS512");
       break;
   }
@@ -261,7 +261,7 @@ DukTape::duk_ret_t CJsonWebTokenPlugin::Create(_In_ DukTape::duk_context *lpCtx)
 
 DukTape::duk_ret_t CJsonWebTokenPlugin::Verify(_In_ DukTape::duk_context *lpCtx)
 {
-  CDigestAlgorithmSecureHash::eAlgorithm nHsAlgorithm;
+  CMessageDigest::eAlgorithm nHsAlgorithm;
   CDateTime cDtNow;
   ULONG nThreshold;
   BOOL bIgnoreTimestamp;
@@ -270,7 +270,7 @@ DukTape::duk_ret_t CJsonWebTokenPlugin::Verify(_In_ DukTape::duk_context *lpCtx)
   CSecureStringA cStrKeyA;
   LPCSTR sA;
   SIZE_T nDotOffsets[2];
-  CDigestAlgorithmSecureHash cHmacHash;
+  CMessageDigest cHmacHash;
   CBase64Decoder cBase64Dec;
   HRESULT hRes;
 
@@ -329,7 +329,7 @@ DukTape::duk_ret_t CJsonWebTokenPlugin::Verify(_In_ DukTape::duk_context *lpCtx)
   if (sA == NULL || *sA == 0)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
   nHsAlgorithm = GetHsAlgorithm(sA);
-  if (nHsAlgorithm == (CDigestAlgorithmSecureHash::eAlgorithm)-1)
+  if (nHsAlgorithm == (CMessageDigest::eAlgorithm)-1)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_Unsupported);
   DukTape::duk_pop(lpCtx);
 
@@ -430,15 +430,15 @@ DukTape::duk_ret_t CJsonWebTokenPlugin::Verify(_In_ DukTape::duk_context *lpCtx)
   sA = DukTape::duk_require_string(lpCtx, -1);
   switch (nHsAlgorithm)
   {
-    case CDigestAlgorithmSecureHash::AlgorithmSHA256:
+    case CMessageDigest::AlgorithmSHA256:
       if (StrCompareA(sA, "HS256", FALSE) != 0)
         MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
       break;
-    case CDigestAlgorithmSecureHash::AlgorithmSHA384:
+    case CMessageDigest::AlgorithmSHA384:
       if (StrCompareA(sA, "HS384", FALSE) != 0)
         MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
       break;
-    case CDigestAlgorithmSecureHash::AlgorithmSHA512:
+    case CMessageDigest::AlgorithmSHA512:
       if (StrCompareA(sA, "HS512", FALSE) != 0)
         MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
       break;
@@ -841,13 +841,13 @@ static HRESULT DecodeBase64Buffer(_In_ MX::CBase64Decoder &cBase64Dec, _In_ LPCS
   return hRes;
 }
 
-static MX::CDigestAlgorithmSecureHash::eAlgorithm GetHsAlgorithm(_In_z_ LPCSTR szAlgorithmA)
+static MX::CMessageDigest::eAlgorithm GetHsAlgorithm(_In_z_ LPCSTR szAlgorithmA)
 {
   if (MX::StrCompareA(szAlgorithmA, "HS256", TRUE) == 0)
-    return MX::CDigestAlgorithmSecureHash::AlgorithmSHA256;
+    return MX::CMessageDigest::AlgorithmSHA256;
   if (MX::StrCompareA(szAlgorithmA, "HS384", TRUE) == 0)
-    return MX::CDigestAlgorithmSecureHash::AlgorithmSHA384;
+    return MX::CMessageDigest::AlgorithmSHA384;
   if (MX::StrCompareA(szAlgorithmA, "HS512", TRUE) == 0)
-    return MX::CDigestAlgorithmSecureHash::AlgorithmSHA512;
-  return (MX::CDigestAlgorithmSecureHash::eAlgorithm)-1;
+    return MX::CMessageDigest::AlgorithmSHA512;
+  return (MX::CMessageDigest::eAlgorithm)-1;
 }

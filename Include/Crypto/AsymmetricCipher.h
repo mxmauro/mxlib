@@ -17,70 +17,59 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef _MX_CRYPTO_RSA_H
-#define _MX_CRYPTO_RSA_H
+#ifndef _MX_ASYMMETRIC_CIPHER_H
+#define _MX_ASYMMETRIC_CIPHER_H
 
-#include "CryptoBase.h"
+#include "..\Defines.h"
+#include "EncryptionKey.h"
+#include "MessageDigest.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-class CCryptoRSA : public CCryptoBase, public CNonCopyableObj
+class CAsymmetricCipher : public virtual CBaseMemObj, public CNonCopyableObj
 {
 public:
   typedef enum {
     PaddingNone=0, PaddingPKCS1, PaddingOAEP, PaddingSSLV23
   } ePadding;
 
-  typedef enum {
-    HashAlgorithmSHA1=0, HashAlgorithmSHA224, HashAlgorithmSHA256, HashAlgorithmSHA384, HashAlgorithmSHA512,
-    HashAlgorithmMD2, HashAlgorithmMD4, HashAlgorithmMD5
-  } eHashAlgorithm;
-
 public:
-  CCryptoRSA();
-  ~CCryptoRSA();
+  CAsymmetricCipher();
+  ~CAsymmetricCipher();
 
-  HRESULT GenerateKeys(_In_ SIZE_T nBitsCount);
-  SIZE_T GetBitsCount() const;
+  HRESULT SetKey(_In_ CEncryptionKey *lpKey);
 
-  BOOL HasPrivateKey() const;
-
-  HRESULT SetPublicKeyFromDER(_In_ LPCVOID lpKey, _In_ SIZE_T nKeySize, _In_opt_z_ LPCSTR szPasswordA=NULL);
-  HRESULT SetPublicKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA=NULL,
-                              _In_opt_ SIZE_T nPemLen=(SIZE_T)-1);
-  SIZE_T GetPublicKey(_Out_opt_ LPVOID lpDest=NULL);
-
-  HRESULT SetPrivateKeyFromDER(_In_ LPCVOID lpKey, _In_ SIZE_T nKeySize, _In_opt_z_ LPCSTR szPasswordA=NULL);
-  HRESULT SetPrivateKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA=NULL,
-                              _In_opt_ SIZE_T nPemLen=(SIZE_T)-1);
-  SIZE_T GetPrivateKey(_Out_opt_ LPVOID lpDest=NULL);
-
-  HRESULT BeginEncrypt();
-  HRESULT BeginEncrypt(_In_ ePadding nPadding, _In_opt_ BOOL bUsePublicKey=TRUE);
+  HRESULT BeginEncrypt(_In_opt_ MX::CAsymmetricCipher::ePadding nPadding = MX::CAsymmetricCipher::PaddingPKCS1,
+                       _In_opt_ BOOL bUsePublicKey = TRUE);
   HRESULT EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
   HRESULT EndEncrypt();
 
-  HRESULT BeginDecrypt();
-  HRESULT BeginDecrypt(_In_ ePadding nPadding, _In_opt_ BOOL bUsePrivateKey=TRUE);
+  SIZE_T GetAvailableEncryptedData() const;
+  SIZE_T GetEncryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize);
+
+  HRESULT BeginDecrypt(_In_opt_ MX::CAsymmetricCipher::ePadding nPadding = MX::CAsymmetricCipher::PaddingPKCS1,
+                       _In_opt_ BOOL bUsePrivateKey = TRUE);
   HRESULT DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
   HRESULT EndDecrypt();
 
-  HRESULT BeginSign();
-  HRESULT BeginSign(_In_ eHashAlgorithm nAlgorithm);
+  SIZE_T GetAvailableDecryptedData() const;
+  SIZE_T GetDecryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize);
+
+  HRESULT BeginSign(_In_ MX::CMessageDigest::eAlgorithm nAlgorithm);
   HRESULT SignStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
   HRESULT EndSign();
+
   LPBYTE GetSignature() const;
   SIZE_T GetSignatureSize() const;
 
-  HRESULT BeginVerify();
-  HRESULT BeginVerify(_In_ eHashAlgorithm nAlgorithm);
+  HRESULT BeginVerify(_In_ MX::CMessageDigest::eAlgorithm nAlgorithm);
   HRESULT VerifyStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
   HRESULT EndVerify(_In_ LPCVOID lpSignature, _In_ SIZE_T nSignatureLen);
 
 private:
-  VOID CleanUp(_In_ int nWhat, _In_ BOOL bZeroData);
+  HRESULT InternalInitialize();
 
 private:
   LPVOID lpInternalData;
@@ -90,4 +79,5 @@ private:
 
 //-----------------------------------------------------------
 
-#endif //_MX_CRYPTO_RSA_H
+#endif //_MX_ASYMMETRIC_CIPHER_H
+

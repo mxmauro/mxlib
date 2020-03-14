@@ -53,9 +53,9 @@ static HRESULT OnResponseHeadersReceived_BigDownload(_In_ MX::CHttpClient *lpHtt
                                          _Inout_ MX::CHttpBodyParserBase **lplpBodyParser);
 static HRESULT OnDocumentCompleted(_In_ MX::CHttpClient *lpHttp);
 static VOID OnError(_In_ MX::CHttpClient *lpHttp, _In_ HRESULT hrErrorCode);
-static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *lpHttp, _Inout_ MX::CIpcSslLayer::eProtocol &nProtocol,
-                                   _Inout_ MX::CSslCertificateArray **lplpCheckCertificates,
-                                   _Inout_ MX::CSslCertificate **lplpSelfCert, _Inout_ MX::CCryptoRSA **lplpPrivKey);
+static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *lpHttp, _Inout_ MX::CSslCertificateArray **lplpCertificates,
+                                   _Inout_ MX::CSslCertificate **lplpSelfCert,
+                                   _Inout_ MX::CEncryptionKey **lplpPrivKey);
 
 #ifdef SIMPLE_TEST
 static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificateArray *lpCerts, _In_ DWORD dwLogLevel);
@@ -189,14 +189,12 @@ static VOID OnError(_In_ MX::CHttpClient *lpHttp, _In_ HRESULT hrErrorCode)
   return;
 }
 
-static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *_lpHttp, _Inout_ MX::CIpcSslLayer::eProtocol &nProtocol,
-                                   _Inout_ MX::CSslCertificateArray **lplpCheckCertificates,
-                                   _Inout_ MX::CSslCertificate **lplpSelfCert, _Inout_ MX::CCryptoRSA **lplpPrivKey)
+static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *_lpHttp, _Inout_ MX::CSslCertificateArray **lplpCertificates,
+                                   _Inout_ MX::CSslCertificate **lplpSelfCert, _Inout_ MX::CEncryptionKey **lplpPrivKey)
 {
   CMyHttpClient *lpHttp = static_cast<CMyHttpClient*>(_lpHttp);
 
-  nProtocol = MX::CIpcSslLayer::ProtocolTLSv1_2;
-  *lplpCheckCertificates = lpHttp->lpCerts;
+  *lplpCertificates = lpHttp->lpCerts;
   return S_OK;
 }
 

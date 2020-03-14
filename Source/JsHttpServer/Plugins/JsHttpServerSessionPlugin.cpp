@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 #include "..\..\..\Include\JsHttpServer\Plugins\JsHttpServerSessionPlugin.h"
-#include "..\..\..\Include\Crypto\DigestAlgorithmSHAx.h"
+#include "..\..\..\Include\Crypto\MessageDigest.h"
 #include "..\..\..\Include\Http\punycode.h"
 
 //-----------------------------------------------------------
@@ -172,7 +172,7 @@ BOOL CJsHttpServerSessionPlugin::IsValidSessionId(_In_z_ LPCSTR szSessionIdA)
 
 HRESULT CJsHttpServerSessionPlugin::RegenerateSessionId()
 {
-  CDigestAlgorithmSecureHash cDigest;
+  CMessageDigest cDigest;
   ULARGE_INTEGER liSysTime;
   CSockets *lpSckMgr;
   HANDLE hConn;
@@ -189,7 +189,7 @@ HRESULT CJsHttpServerSessionPlugin::RegenerateSessionId()
   //calculate hash
   hRes = lpSckMgr->GetPeerAddress(hConn, &sAddr);
   if (SUCCEEDED(hRes))
-    hRes = cDigest.BeginDigest(CDigestAlgorithmSecureHash::AlgorithmSHA1);
+    hRes = cDigest.BeginDigest(CMessageDigest::AlgorithmSHA1);
   if (SUCCEEDED(hRes))
   {
     switch (sAddr.si_family)

@@ -1983,22 +1983,20 @@ HRESULT CHttpClient::SetupResponseHeadersTimeout()
 
 HRESULT CHttpClient::AddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h)
 {
-  CIpcSslLayer::eProtocol nProtocol;
   CSslCertificateArray *lpCheckCertificates;
   CSslCertificate *lpSelfCert;
-  CCryptoRSA *lpPrivKey;
+  CEncryptionKey *lpPrivKey;
   CStringA cStrHostNameA;
   TAutoDeletePtr<CIpcSslLayer> cLayer;
   HRESULT hRes;
 
-  nProtocol = CIpcSslLayer::ProtocolUnknown;
   lpCheckCertificates = NULL;
   lpSelfCert = NULL;
   lpPrivKey = NULL;
   //query for client certificates
   if (!cQueryCertificatesCallback)
     return MX_E_NotReady;
-  hRes = cQueryCertificatesCallback(this, nProtocol, &lpCheckCertificates, &lpSelfCert, &lpPrivKey);
+  hRes = cQueryCertificatesCallback(this, &lpCheckCertificates, &lpSelfCert, &lpPrivKey);
   if (FAILED(hRes))
     return hRes;
   //get host name
@@ -2006,10 +2004,10 @@ HRESULT CHttpClient::AddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h)
   if (FAILED(hRes))
     return hRes;
   //add ssl layer
-  cLayer.Attach(MX_DEBUG_NEW CIpcSslLayer());
+  cLayer.Attach(MX_DEBUG_NEW CIpcSslLayer(lpIpc));
   if (!cLayer)
     return E_OUTOFMEMORY;
-  hRes = cLayer->Initialize(FALSE, nProtocol, (LPCSTR)cStrHostNameA, lpCheckCertificates, lpSelfCert, lpPrivKey);
+  hRes = cLayer->Initialize(FALSE, (LPCSTR)cStrHostNameA, lpCheckCertificates, lpSelfCert, lpPrivKey);
   if (SUCCEEDED(hRes))
   {
     hRes = lpIpc->AddLayer(h, cLayer);

@@ -19,7 +19,7 @@
  */
 #include "..\..\Include\Http\HttpHeaderRespSecWebSocketAccept.h"
 #include "..\..\Include\Crypto\Base64.h"
-#include "..\..\Include\Crypto\DigestAlgorithmSHAx.h"
+#include "..\..\Include\Crypto\MessageDigest.h"
 
 //-----------------------------------------------------------
 
@@ -104,7 +104,7 @@ HRESULT CHttpHeaderRespSecWebSocketAccept::Build(_Inout_ CStringA &cStrDestA, _I
 HRESULT CHttpHeaderRespSecWebSocketAccept::SetKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen)
 {
   CBase64Encoder cEncoder;
-  CDigestAlgorithmSecureHash cDigestSHA1;
+  CMessageDigest cDigest;
   HRESULT hRes;
 
   if (lpKey == NULL && nKeyLen > 0)
@@ -120,18 +120,22 @@ HRESULT CHttpHeaderRespSecWebSocketAccept::SetKey(_In_ LPVOID lpKey, _In_ SIZE_T
     return hRes;
 
   //hash the base64 output plus the guid
-  hRes = cDigestSHA1.BeginDigest(CDigestAlgorithmSecureHash::AlgorithmSHA1);
+  hRes = cDigest.BeginDigest(CMessageDigest::AlgorithmSHA1);
   if (SUCCEEDED(hRes))
-    hRes = cDigestSHA1.DigestStream(cEncoder.GetBuffer(), cEncoder.GetOutputLength());
-  if (SUCCEEDED(hRes))
-    hRes = cDigestSHA1.DigestStream(szGuidA, StrLenA(szGuidA));
-  if (SUCCEEDED(hRes))
-    hRes = cDigestSHA1.EndDigest();
+  {
+    hRes = cDigest.DigestStream(cEncoder.GetBuffer(), cEncoder.GetOutputLength());
+    if (SUCCEEDED(hRes))
+    {
+      hRes = cDigest.DigestStream(szGuidA, StrLenA(szGuidA));
+      if (SUCCEEDED(hRes))
+        hRes = cDigest.EndDigest();
+    }
+  }
   if (FAILED(hRes))
     return hRes;
 
   //store the hash
-  ::MxMemCopy(aSHA1, cDigestSHA1.GetResult(), 20);
+  ::MxMemCopy(aSHA1, cDigest.GetResult(), 20);
 
   //done
   return S_OK;

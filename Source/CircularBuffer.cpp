@@ -238,6 +238,18 @@ HRESULT CCircularBuffer::Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLength, _In_ 
   return AdvanceWritePtr(nSrcLength);
 }
 
+HRESULT CCircularBuffer::EnsureWritableSize(_In_ SIZE_T _nSize)
+{
+  SIZE_T nWritableSize[2], nRemaining;
+
+  GetWritePtr(NULL, &nWritableSize[0], NULL, &nWritableSize[1]);
+  if (_nSize <= nWritableSize[0] + nWritableSize[1])
+    return S_OK; //enough space available
+  //grow
+  nRemaining = _nSize - (nWritableSize[0] + nWritableSize[1]);
+  return SetBufferSize(nSize + nRemaining);
+}
+
 HRESULT CCircularBuffer::SetBufferSize(_In_ SIZE_T _nSize)
 {
   LPBYTE lpNewData;
@@ -250,7 +262,7 @@ HRESULT CCircularBuffer::SetBufferSize(_In_ SIZE_T _nSize)
   }
   else if (lpData == NULL)
   {
-    _nSize = (_nSize + (size_t)4095) & (size_t)(~0x0FFF);
+    _nSize = (_nSize + (SIZE_T)4095) & (SIZE_T)(~0x0FFF);
     lpData = (LPBYTE)MX_MALLOC(_nSize);
     if (lpData == NULL)
       return E_OUTOFMEMORY;

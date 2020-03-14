@@ -19,27 +19,21 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Include\Crypto\AsymmetricCipher.h" />
     <ClInclude Include="Include\Crypto\Base64.h" />
-    <ClInclude Include="Include\Crypto\CryptoBase.h" />
-    <ClInclude Include="Include\Crypto\DigestAlgorithmBase.h" />
-    <ClInclude Include="Include\Crypto\CryptoAES.h" />
-    <ClInclude Include="Include\Crypto\CryptoDES.h" />
-    <ClInclude Include="Include\Crypto\CryptoRSA.h" />
-    <ClInclude Include="Include\Crypto\DigestAlgorithmCRC32.h" />
-    <ClInclude Include="Include\Crypto\DigestAlgorithmMDx.h" />
-    <ClInclude Include="Include\Crypto\DigestAlgorithmSHAx.h" />
+    <ClInclude Include="Include\Crypto\EncryptionKey.h" />
+    <ClInclude Include="Include\Crypto\SecureBuffer.h" />
+    <ClInclude Include="Include\Crypto\SymmetricCipher.h" />
+    <ClInclude Include="Include\Crypto\MessageDigest.h" />
     <ClInclude Include="Source\Crypto\InitOpenSSL.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Crypto\AsymmetricCipher.cpp" />
     <ClCompile Include="Source\Crypto\Base64.cpp" />
-    <ClCompile Include="Source\Crypto\CryptoBase.cpp" />
-    <ClCompile Include="Source\Crypto\DigestAlgorithmBase.cpp" />
-    <ClCompile Include="Source\Crypto\CryptoAES.cpp" />
-    <ClCompile Include="Source\Crypto\CryptoDES.cpp" />
-    <ClCompile Include="Source\Crypto\CryptoRSA.cpp" />
-    <ClCompile Include="Source\Crypto\DigestAlgorithmCRC32.cpp" />
-    <ClCompile Include="Source\Crypto\DigestAlgorithmMDx.cpp" />
-    <ClCompile Include="Source\Crypto\DigestAlgorithmSHAx.cpp" />
+    <ClCompile Include="Source\Crypto\EncryptionKey.cpp" />
+    <ClCompile Include="Source\Crypto\SecureBuffer.cpp" />
+    <ClCompile Include="Source\Crypto\SymmetricCipher.cpp" />
+    <ClCompile Include="Source\Crypto\MessageDigest.cpp" />
     <ClCompile Include="Source\Crypto\InitOpenSSL.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
