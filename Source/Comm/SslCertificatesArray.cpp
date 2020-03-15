@@ -113,7 +113,7 @@ HRESULT CSslCertificateArray::AddFromMemory(_In_ LPCVOID lpData, _In_ SIZE_T nDa
   if (((LPBYTE)lpData)[0] == (V_ASN1_CONSTRUCTED | V_ASN1_SEQUENCE) &&
       Asn1_ValidateLength((LPBYTE)lpData + 1, (LPBYTE)lpData + nDataLen) != FALSE)
   {
-    hRes = AddCertificateFromDER(lpData, nDataLen);
+    hRes = AddCertificateFromDER(lpData, nDataLen, szPasswordA);
     if (hRes == MX_E_InvalidData)
       hRes = AddCrlFromDER(lpData, nDataLen);
     if (hRes == MX_E_InvalidData)
@@ -473,7 +473,8 @@ HRESULT CSslCertificateArray::AddCertificateFromDER(_In_ LPCVOID lpData, _In_ SI
 
     //a pkcs12 can have a certificate and a private key so parse both
     ERR_clear_error();
-    if (PKCS12_parse(lpPkcs12, szPasswordA, &lpEvpKey, &lpX509, NULL) > 0)
+    if (PKCS12_parse(lpPkcs12, szPasswordA, &lpEvpKey, &lpX509, NULL) > 0 &&
+        (lpEvpKey != NULL || lpX509 != NULL))
     {
       hRes = S_OK;
 
@@ -574,14 +575,17 @@ HRESULT CSslCertificateArray::AddCertificateFromDER(_In_ LPCVOID lpData, _In_ SI
           return hRes;
         }
       }
-    }
-    else if (Internals::OpenSSL::GetLastErrorCode(S_OK) == E_OUTOFMEMORY)
-    {
+
       PKCS12_free(lpPkcs12);
-      return E_OUTOFMEMORY;
+
+      //done
+      return S_OK;
     }
 
+    hRes = Internals::OpenSSL::GetLastErrorCode(S_OK);
     PKCS12_free(lpPkcs12);
+    if (hRes == E_OUTOFMEMORY)
+      return hRes;
   }
   else
   {
