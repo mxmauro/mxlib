@@ -458,4 +458,7 @@
       <Filter>Source Files\Http</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="CommLib.ruleset" />
+  </ItemGroup>
 </Project>

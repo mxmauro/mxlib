@@ -1319,7 +1319,7 @@ HRESULT CHttpCommon::FlushContent()
         nSize = cBodyDecoder->GetData(aTempBuf, sizeof(aTempBuf));
         if (ShouldLog(1) != FALSE)
         {
-          Log(L"HttpCommon(Body/0x%p): %.*S", this, nSize, (LPCSTR)aTempBuf);
+          Log(L"HttpCommon(Body/0x%p): %.*S", this, (unsigned int)nSize, (LPCSTR)aTempBuf);
         }
         //parse body
         hRes = cBodyParser->Parse(aTempBuf, nSize);

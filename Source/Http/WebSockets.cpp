@@ -651,7 +651,7 @@ SIZE_T CWebSocket::CalculateFrameSize(_In_ ULONG nPayloadSize)
   return nSize + (SIZE_T)nPayloadSize;
 }
 
-LPBYTE CWebSocket::BuildFrame(_In_ LPVOID lpFrame, _In_ ULONG nPayloadSize, _In_ BOOL bFin, _In_ BYTE nRSV,
+LPBYTE CWebSocket::BuildFrame(_Out_ LPVOID lpFrame, _In_ ULONG nPayloadSize, _In_ BOOL bFin, _In_ BYTE nRSV,
                               _In_ BYTE nOpcode)
 {
   LPBYTE d;

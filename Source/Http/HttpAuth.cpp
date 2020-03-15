@@ -899,6 +899,7 @@ static HRESULT GetNextPair(_Inout_ LPCSTR &szValueA, _Out_ LPCSTR *lpszNameStart
 
   *lpszNameStartA = NULL;
   *lpnNameLen = 0;
+  cStrValueA.Empty();
 
 loop:
   if (*szValueA == 0)

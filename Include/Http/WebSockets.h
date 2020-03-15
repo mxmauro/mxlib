@@ -62,7 +62,7 @@ private:
   HRESULT OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData);
 
   SIZE_T CalculateFrameSize(_In_ ULONG nPayloadSize);
-  LPBYTE BuildFrame(_In_ LPVOID lpFrame, _In_ ULONG nPayloadSize, _In_ BOOL bFin, _In_ BYTE nRSV, _In_ BYTE nOpcode);
+  LPBYTE BuildFrame(_Out_ LPVOID lpFrame, _In_ ULONG nPayloadSize, _In_ BOOL bFin, _In_ BYTE nRSV, _In_ BYTE nOpcode);
   VOID EncodeFrame(_In_ LPVOID lpFrame);
 
   HRESULT InternalSendFrame(_In_ BOOL bFinalFrame);

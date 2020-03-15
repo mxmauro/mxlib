@@ -47,7 +47,8 @@ public:
   HRESULT GetFileInfo(_Out_opt_ PULONGLONG lpnFileSize, _Out_opt_ LPDWORD lpdwFileAttributes,
                       _Out_opt_ LPSYSTEMTIME lpFileTime);
 
-  HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nToRead, _Out_opt_ SIZE_T *lpnRead = NULL);
+  HRESULT Read(_Out_writes_bytes_to_opt_(nToRead, *lpnRead) LPVOID lpDest, _In_ SIZE_T nToRead,
+               _Out_opt_ SIZE_T *lpnRead = NULL);
   HRESULT Read(_In_ CStream *lpStream, _In_ SIZE_T nToRead, _Out_opt_ SIZE_T *lpnRead = NULL);
 
 private:
