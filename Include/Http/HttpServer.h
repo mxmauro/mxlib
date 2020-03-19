@@ -99,7 +99,7 @@ public:
   VOID StopListening();
 
 public:
-  class CClientRequest : public CIpc::CUserData, public TLnkLstNode<CClientRequest>
+  class CClientRequest : public CIpc::CUserData
   {
   protected:
     CClientRequest();
@@ -338,6 +338,7 @@ public:
     } WEBSOCKET_INFO, *LPWEBSOCKET_INFO;
 
   private:
+    CLnkLstNode cListNode;
     CHttpHeaderBase::eBrowser nBrowser;
     CCriticalSection cMutex;
     CHttpServer *lpHttpServer;
@@ -384,29 +385,37 @@ private:
   HRESULT OnDownloadStarted(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW, _In_ LPVOID lpUserParam);
 
 private:
-  class CRequestLimiter : public virtual CBaseMemObj, public TRedBlackTreeNode<CRequestLimiter>
+  class CRequestLimiter : public virtual CBaseMemObj
   {
   public:
-    CRequestLimiter(_In_ PSOCKADDR_INET lpAddr) : CBaseMemObj(), TRedBlackTreeNode<CRequestLimiter>()
+    CRequestLimiter(_In_ PSOCKADDR_INET lpAddr) : CBaseMemObj()
       {
       MxMemCopy(&sAddr, lpAddr, sizeof(SOCKADDR_INET));
       _InterlockedExchange(&nCount, 1);
       return;
       };
 
-    static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ CRequestLimiter *lpLim1, _In_ CRequestLimiter *lpLim2)
+    static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ CRedBlackTreeNode *lpNode1,
+                                 _In_ CRedBlackTreeNode *lpNode2)
       {
-      return ::MxMemCompare(&(lpLim1->sAddr), &(lpLim2->sAddr), sizeof(SOCKADDR_INET));
+      CRequestLimiter *lpLimiter1 = CONTAINING_RECORD(lpNode1, CRequestLimiter, cTreeNode);
+      CRequestLimiter *lpLimiter2 = CONTAINING_RECORD(lpNode2, CRequestLimiter, cTreeNode);
+      return ::MxMemCompare(&(lpLimiter1->sAddr), &(lpLimiter2->sAddr), sizeof(SOCKADDR_INET));
       };
 
-    static int SearchCompareFunc(_In_ LPVOID lpContext, _In_ PSOCKADDR_INET key, _In_ CRequestLimiter *lpLim)
+    static int SearchCompareFunc(_In_ LPVOID lpContext, _In_ PSOCKADDR_INET key, _In_ CRedBlackTreeNode *lpNode)
       {
-      return ::MxMemCompare(key, &(lpLim->sAddr), sizeof(SOCKADDR_INET));
+      CRequestLimiter *lpLimiter = CONTAINING_RECORD(lpNode, CRequestLimiter, cTreeNode);
+
+      return ::MxMemCompare(key, &(lpLimiter->sAddr), sizeof(SOCKADDR_INET));
       };
 
-  public:
+  private:
+    friend class CHttpServer;
+
     SOCKADDR_INET sAddr;
     LONG volatile nCount;
+    CRedBlackTreeNode cTreeNode;
   };
 
 private:
@@ -439,12 +448,12 @@ private:
   OnWebSocketRequestReceivedCallback cWebSocketRequestReceivedCallback;
   OnErrorCallback cErrorCallback;
   LONG volatile nRequestsListRwMutex;
-  TLnkLst<CClientRequest> cRequestsList;
+  CLnkLst cRequestsList;
   CWindowsEvent cShutdownEv;
 
   struct {
     LONG volatile nRwMutex;
-    TRedBlackTree<CRequestLimiter> cTree;
+    CRedBlackTree cTree;
   } sRequestLimiter;
 };
 

@@ -97,7 +97,7 @@ CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr, _In_opt_ CLoggable *lpLogPa
 CHttpClient::~CHttpClient()
 {
   LONG volatile nWait = 0;
-  CPostDataItem *lpItem;
+  CLnkLstNode *lpNode;
 
   RundownProt_WaitForRelease(&nRundownLock);
   //close current connection
@@ -118,8 +118,12 @@ CHttpClient::~CHttpClient()
   while (__InterlockedRead(&nPendingHandlesCounter) > 0)
     _YieldProcessor();
   //delete request's post data
-  while ((lpItem = sRequest.sPostData.cList.PopHead()) != NULL)
+  while ((lpNode = sRequest.sPostData.cList.PopHead()) != NULL)
+  {
+    CPostDataItem *lpItem = CONTAINING_RECORD(lpNode, CPostDataItem, cListNode);
+
     delete lpItem;
+  }
   return;
 }
 
@@ -475,7 +479,7 @@ HRESULT CHttpClient::RemoveAllRequestCookies()
 HRESULT CHttpClient::AddRequestPostData(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
-  TAutoDeletePtr<CPostDataItem> cItem;
+  CPostDataItem *lpNewItem;
   LPCSTR sA;
 
   if (nState != StateClosed)
@@ -484,7 +488,7 @@ HRESULT CHttpClient::AddRequestPostData(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szV
     return E_POINTER;
   if (*szNameA == 0)
     return E_INVALIDARG;
-  for (sA=szNameA; *sA!=0 && CHttpCommon::IsValidNameChar(*sA)!=FALSE; sA++);
+  for (sA = szNameA; *sA != 0 && CHttpCommon::IsValidNameChar(*sA) != FALSE; sA++);
   if (*sA != 0)
     return E_INVALIDARG;
   if (sRequest.sPostData.cList.IsEmpty() == FALSE)
@@ -493,10 +497,15 @@ HRESULT CHttpClient::AddRequestPostData(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szV
       return E_FAIL;
   }
   //create new pair
-  cItem.Attach(MX_DEBUG_NEW CPostDataItem(szNameA, ((szValueA != NULL) ? szValueA : "")));
-  if (!cItem || cItem->szNameA == NULL)
+  lpNewItem = MX_DEBUG_NEW CPostDataItem(szNameA, ((szValueA != NULL) ? szValueA : ""));
+  if (lpNewItem == NULL)
     return E_OUTOFMEMORY;
-  sRequest.sPostData.cList.PushTail(cItem.Detach());
+  if (lpNewItem->szNameA == NULL)
+  {
+    delete lpNewItem;
+    return E_OUTOFMEMORY;
+  }
+  sRequest.sPostData.cList.PushTail(&(lpNewItem->cListNode));
   sRequest.sPostData.bHasRaw = FALSE;
   return S_OK;
 }
@@ -521,7 +530,7 @@ HRESULT CHttpClient::AddRequestPostData(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR s
 HRESULT CHttpClient::AddRequestPostDataFile(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szFileNameA, _In_ CStream *lpStream)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
-  TAutoDeletePtr<CPostDataItem> cItem;
+  CPostDataItem *lpNewItem;
   LPCSTR sA;
 
   if (nState != StateClosed)
@@ -549,10 +558,15 @@ HRESULT CHttpClient::AddRequestPostDataFile(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR
       return E_FAIL;
   }
   //create new pair
-  cItem.Attach(MX_DEBUG_NEW CPostDataItem(szNameA, sA, lpStream));
-  if (!cItem || cItem->szNameA == NULL)
+  lpNewItem = MX_DEBUG_NEW CPostDataItem(szNameA, sA, lpStream);
+  if (lpNewItem == NULL)
     return E_OUTOFMEMORY;
-  sRequest.sPostData.cList.PushTail(cItem.Detach());
+  if (lpNewItem->szNameA == NULL)
+  {
+    delete lpNewItem;
+    return E_OUTOFMEMORY;
+  }
+  sRequest.sPostData.cList.PushTail(&(lpNewItem->cListNode));
   sRequest.sPostData.bHasRaw = FALSE;
   return S_OK;
 }
@@ -577,18 +591,19 @@ HRESULT CHttpClient::AddRequestPostDataFile(_In_z_ LPCWSTR szNameW, _In_z_ LPCWS
 HRESULT CHttpClient::AddRequestRawPostData(_In_ LPCVOID lpData, _In_ SIZE_T nLength)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
-  TAutoDeletePtr<CPostDataItem> cItem;
-  TAutoRefCounted<CMemoryStream> cStream;
-  SIZE_T nWritten;
   HRESULT hRes;
 
   if (nState != StateClosed && nState != StateSendingDynamicRequestBody)
     return MX_E_NotReady;
   if (lpData == NULL && nLength > 0)
     return E_POINTER;
-  
+
   if (nState == StateClosed)
   {
+    TAutoRefCounted<CMemoryStream> cStream;
+    CPostDataItem *lpNewItem;
+    SIZE_T nWritten;
+
     if (sRequest.sPostData.cList.IsEmpty() == FALSE)
     {
       if (sRequest.sPostData.bHasRaw == FALSE)
@@ -608,10 +623,11 @@ HRESULT CHttpClient::AddRequestRawPostData(_In_ LPCVOID lpData, _In_ SIZE_T nLen
     if (FAILED(hRes))
       return hRes;
     //create new pair
-    cItem.Attach(MX_DEBUG_NEW CPostDataItem(cStream.Get()));
-    if (!cItem)
+    
+    lpNewItem = MX_DEBUG_NEW CPostDataItem(cStream.Get());
+    if (lpNewItem == NULL)
       return E_OUTOFMEMORY;
-    sRequest.sPostData.cList.PushTail(cItem.Detach());
+    sRequest.sPostData.cList.PushTail(&(lpNewItem->cListNode));
     sRequest.sPostData.bHasRaw = TRUE;
   }
   else
@@ -628,7 +644,6 @@ HRESULT CHttpClient::AddRequestRawPostData(_In_ LPCVOID lpData, _In_ SIZE_T nLen
 HRESULT CHttpClient::AddRequestRawPostData(_In_ CStream *lpStream)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
-  TAutoDeletePtr<CPostDataItem> cItem;
 
   if (nState != StateClosed && nState != StateSendingDynamicRequestBody)
     return MX_E_NotReady;
@@ -636,16 +651,18 @@ HRESULT CHttpClient::AddRequestRawPostData(_In_ CStream *lpStream)
     return E_POINTER;
   if (nState == StateClosed)
   {
+    CPostDataItem *lpNewItem;
+
     if (sRequest.sPostData.cList.IsEmpty() == FALSE)
     {
       if (sRequest.sPostData.bHasRaw == FALSE)
         return E_FAIL;
     }
     //create new pair
-    cItem.Attach(MX_DEBUG_NEW CPostDataItem(lpStream));
-    if (!cItem)
+    lpNewItem = MX_DEBUG_NEW CPostDataItem(lpStream);
+    if (lpNewItem == NULL)
       return E_OUTOFMEMORY;
-    sRequest.sPostData.cList.PushTail(cItem.Detach());
+    sRequest.sPostData.cList.PushTail(&(lpNewItem->cListNode));
     sRequest.sPostData.bHasRaw = TRUE;
   }
   else
@@ -696,8 +713,8 @@ HRESULT CHttpClient::SignalEndOfPostData()
 HRESULT CHttpClient::RemoveRequestPostData(_In_opt_z_ LPCSTR szNameA)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
-  TLnkLst<CPostDataItem>::Iterator it;
-  CPostDataItem *lpItem;
+  CLnkLst::Iterator it;
+  CLnkLstNode *lpNode;
   BOOL bGotOne;
 
   if (nState != StateClosed)
@@ -705,11 +722,13 @@ HRESULT CHttpClient::RemoveRequestPostData(_In_opt_z_ LPCSTR szNameA)
   bGotOne = FALSE;
   if (szNameA != NULL && *szNameA != 0)
   {
-    for (lpItem=it.Begin(sRequest.sPostData.cList); lpItem!=NULL; lpItem=it.Next())
+    for (lpNode = it.Begin(sRequest.sPostData.cList); lpNode != NULL; lpNode = it.Next())
     {
+      CPostDataItem *lpItem = CONTAINING_RECORD(lpNode, CPostDataItem, cListNode);
+
       if (lpItem->szNameA != NULL && StrCompareA(szNameA, lpItem->szNameA) == 0)
       {
-        lpItem->RemoveNode();
+        lpNode->Remove();
         delete lpItem;
         bGotOne = TRUE;
       }
@@ -717,11 +736,13 @@ HRESULT CHttpClient::RemoveRequestPostData(_In_opt_z_ LPCSTR szNameA)
   }
   else
   {
-    for (lpItem=it.Begin(sRequest.sPostData.cList); lpItem!=NULL; lpItem=it.Next())
+    for (lpNode = it.Begin(sRequest.sPostData.cList); lpNode != NULL; lpNode = it.Next())
     {
+      CPostDataItem *lpItem = CONTAINING_RECORD(lpNode, CPostDataItem, cListNode);
+
       if (lpItem->szNameA == NULL)
       {
-        lpItem->RemoveNode();
+        lpNode->Remove();
         delete lpItem;
         bGotOne = TRUE;
       }
@@ -748,12 +769,16 @@ HRESULT CHttpClient::RemoveRequestPostData(_In_opt_z_ LPCWSTR szNameW)
 HRESULT CHttpClient::RemoveAllRequestPostData()
 {
   CCriticalSection::CAutoLock cLock(cMutex);
-  CPostDataItem *lpItem;
+  CLnkLstNode *lpNode;
 
   if (nState != StateClosed)
     return MX_E_NotReady;
-  while ((lpItem=sRequest.sPostData.cList.PopHead()) != NULL)
+  while ((lpNode = sRequest.sPostData.cList.PopHead()) != NULL)
+  {
+    CPostDataItem *lpItem = CONTAINING_RECORD(lpNode, CPostDataItem, cListNode);
+
     delete lpItem;
+  }
   return S_OK;
 }
 
@@ -2330,8 +2355,8 @@ HRESULT CHttpClient::BuildRequestHeaderAdd(_Inout_ CStringA &cStrReqHdrsA, _In_z
 
 HRESULT CHttpClient::AddRequestHeadersForBody(_Inout_ CStringA &cStrReqHdrsA)
 {
-  TLnkLst<CPostDataItem>::Iterator it;
-  CPostDataItem *lpItem;
+  CLnkLst::Iterator it;
+  CLnkLstNode *lpNode;
   BOOL bHasContentLengthHeader, bHasContentTypeHeader;
   ULONGLONG nLen;
 
@@ -2343,8 +2368,10 @@ HRESULT CHttpClient::AddRequestHeadersForBody(_Inout_ CStringA &cStrReqHdrsA)
   {
     if (bHasContentLengthHeader == FALSE)
     {
-      for (lpItem = it.Begin(sRequest.sPostData.cList); lpItem != NULL; lpItem = it.Next())
+      for (lpNode = it.Begin(sRequest.sPostData.cList); lpNode != NULL; lpNode = it.Next())
       {
+        CPostDataItem *lpItem = CONTAINING_RECORD(lpNode, CPostDataItem, cListNode);
+
         nLen += lpItem->cStream->GetLength();
       }
       //add content length
@@ -2356,8 +2383,10 @@ HRESULT CHttpClient::AddRequestHeadersForBody(_Inout_ CStringA &cStrReqHdrsA)
   }
   else
   {
-    for (lpItem=it.Begin(sRequest.sPostData.cList); lpItem!=NULL; lpItem=it.Next())
+    for (lpNode = it.Begin(sRequest.sPostData.cList); lpNode != NULL; lpNode = it.Next())
     {
+      CPostDataItem *lpItem = CONTAINING_RECORD(lpNode, CPostDataItem, cListNode);
+
       if (lpItem->cStream)
       {
         nLen = ULONGLONG_MAX;
@@ -2404,8 +2433,10 @@ HRESULT CHttpClient::AddRequestHeadersForBody(_Inout_ CStringA &cStrReqHdrsA)
       if (bHasContentLengthHeader == FALSE)
       {
         nLen = 0ui64;
-        for (lpItem = it.Begin(sRequest.sPostData.cList); lpItem != NULL; lpItem = it.Next())
+        for (lpNode = it.Begin(sRequest.sPostData.cList); lpNode != NULL; lpNode = it.Next())
         {
+          CPostDataItem *lpItem = CONTAINING_RECORD(lpNode, CPostDataItem, cListNode);
+
           nLen += 4ui64 + 27ui64 + 2ui64; //size of boundary start
           nLen += 38ui64; //size of 'Content-Disposition: form-data; name="'
           nLen += (ULONGLONG)StrLenA(lpItem->szNameA);
@@ -2587,15 +2618,17 @@ HRESULT CHttpClient::SendRequestHeaders()
 
 HRESULT CHttpClient::SendRequestBody()
 {
-  TLnkLst<CPostDataItem>::Iterator it;
-  CPostDataItem *lpItem;
+  CLnkLst::Iterator it;
+  CLnkLstNode *lpNode;
   CStringA cStrTempA;
   HRESULT hRes;
 
   if (sRequest.sPostData.cList.IsEmpty() == FALSE && sRequest.sPostData.bHasRaw != FALSE)
   {
-    for (lpItem=it.Begin(sRequest.sPostData.cList); lpItem!=NULL; lpItem=it.Next())
+    for (lpNode = it.Begin(sRequest.sPostData.cList); lpNode != NULL; lpNode = it.Next())
     {
+      CPostDataItem *lpItem = CONTAINING_RECORD(lpNode, CPostDataItem, cListNode);
+
       //send data stream
       hRes = cSocketMgr.SendStream(hConn, lpItem->cStream.Get());
       if (FAILED(hRes))
@@ -2612,8 +2645,10 @@ HRESULT CHttpClient::SendRequestBody()
 
     if (cStrTempA.EnsureBuffer(MAX_FORM_SIZE_4_REQUEST + 2) == FALSE)
       return E_OUTOFMEMORY;
-    for (lpItem=it.Begin(sRequest.sPostData.cList); lpItem!=NULL; lpItem=it.Next())
+    for (lpNode = it.Begin(sRequest.sPostData.cList); lpNode != NULL; lpNode = it.Next())
     {
+      CPostDataItem *lpItem = CONTAINING_RECORD(lpNode, CPostDataItem, cListNode);
+
       //add separator
       if (cStrTempA.IsEmpty() == FALSE)
       {
@@ -2645,8 +2680,10 @@ HRESULT CHttpClient::SendRequestBody()
   }
   else
   {
-    for (lpItem=it.Begin(sRequest.sPostData.cList); lpItem!=NULL; lpItem=it.Next())
+    for (lpNode = it.Begin(sRequest.sPostData.cList); lpNode != NULL; lpNode = it.Next())
     {
+      CPostDataItem *lpItem = CONTAINING_RECORD(lpNode, CPostDataItem, cListNode);
+
       //add boundary start and content disposition
       if (cStrTempA.Format("----%s\r\nContent-Disposition: form-data; name=\"%s\"", sRequest.szBoundaryA,
                            lpItem->szNameA) == FALSE)
@@ -2808,10 +2845,14 @@ HRESULT CHttpClient::OnDownloadStarted(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR sz
 
 VOID CHttpClient::ResetRequestForNewRequest()
 {
-  CPostDataItem *lpItem;
+  CLnkLstNode *lpNode;
 
-  while ((lpItem = sRequest.sPostData.cList.PopHead()) != NULL)
+  while ((lpNode = sRequest.sPostData.cList.PopHead()) != NULL)
+  {
+    CPostDataItem *lpItem = CONTAINING_RECORD(lpNode, CPostDataItem, cListNode);
+
     delete lpItem;
+  }
   sRequest.sPostData.bHasRaw = FALSE;
   sRequest.sPostData.bIsDynamic = FALSE;
   return;
@@ -2828,8 +2869,8 @@ VOID CHttpClient::ResetResponseForNewRequest()
 //-----------------------------------------------------------
 //-----------------------------------------------------------
 
-CHttpClient::CPostDataItem::CPostDataItem(_In_z_ LPCSTR _szNameA, _In_z_ LPCSTR _szValueA) :
-                            CBaseMemObj(), TLnkLstNode<CPostDataItem>(), CNonCopyableObj()
+CHttpClient::CPostDataItem::CPostDataItem(_In_z_ LPCSTR _szNameA, _In_z_ LPCSTR _szValueA) : CBaseMemObj(),
+                                                                                             CNonCopyableObj()
 {
   SIZE_T nNameLen, nValueLen;
 
@@ -2851,8 +2892,8 @@ CHttpClient::CPostDataItem::CPostDataItem(_In_z_ LPCSTR _szNameA, _In_z_ LPCSTR 
   return;
 }
 
-CHttpClient::CPostDataItem::CPostDataItem(_In_z_ LPCSTR _szNameA, _In_z_ LPCSTR _szFileNameA, _In_ CStream *lpStream) :
-                            CBaseMemObj(), TLnkLstNode<CPostDataItem>(), CNonCopyableObj()
+CHttpClient::CPostDataItem::CPostDataItem(_In_z_ LPCSTR _szNameA, _In_z_ LPCSTR _szFileNameA,
+                                          _In_ CStream *lpStream) : CBaseMemObj(), CNonCopyableObj()
 {
   SIZE_T nNameLen, nValueLen;
 
@@ -2875,8 +2916,7 @@ CHttpClient::CPostDataItem::CPostDataItem(_In_z_ LPCSTR _szNameA, _In_z_ LPCSTR 
   return;
 }
 
-CHttpClient::CPostDataItem::CPostDataItem(_In_ CStream *lpStream) : CBaseMemObj(), TLnkLstNode<CPostDataItem>(),
-                                                                    CNonCopyableObj()
+CHttpClient::CPostDataItem::CPostDataItem(_In_ CStream *lpStream) : CBaseMemObj(), CNonCopyableObj()
 {
   szNameA = szValueA = NULL;
   cStream = lpStream;

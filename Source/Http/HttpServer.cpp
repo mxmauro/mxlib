@@ -148,7 +148,6 @@ CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr,
 
 CHttpServer::~CHttpServer()
 {
-  TLnkLst<CClientRequest>::Iterator it;
   CClientRequest *lpRequest;
   BOOL b;
 
@@ -160,15 +159,21 @@ CHttpServer::~CHttpServer()
   //terminate current connections and wait
   do
   {
+    lpRequest = NULL;
+
     {
       CAutoSlimRWLShared cListLock(&nRequestsListRwMutex);
+      CLnkLst::Iterator it;
 
       b = cRequestsList.IsEmpty();
-      for (lpRequest = it.Begin(cRequestsList); lpRequest != NULL; lpRequest = it.Next())
+      for (CLnkLstNode *lpNode = it.Begin(cRequestsList); lpNode != NULL; lpNode = it.Next())
       {
-        if ((_InterlockedOr(&(lpRequest->nFlags), REQUEST_FLAG_CloseInDestructorMark) &
+        CClientRequest *_lpRequest = CONTAINING_RECORD(lpNode, CClientRequest, cListNode);
+
+        if ((_InterlockedOr(&(_lpRequest->nFlags), REQUEST_FLAG_CloseInDestructorMark) &
              REQUEST_FLAG_CloseInDestructorMark) == 0)
         {
+          lpRequest = _lpRequest;
           lpRequest->AddRef();
           break;
         }
@@ -186,11 +191,13 @@ CHttpServer::~CHttpServer()
 
   {
     CAutoSlimRWLExclusive cLimiterLock(&(sRequestLimiter.nRwMutex));
-    CRequestLimiter *lpLimiter;
+    CRedBlackTreeNode *lpNode;
 
-    while ((lpLimiter = sRequestLimiter.cTree.GetFirst()) != NULL)
+    while ((lpNode = sRequestLimiter.cTree.GetFirst()) != NULL)
     {
-      lpLimiter->RemoveNode();
+      CRequestLimiter *lpLimiter = CONTAINING_RECORD(lpNode, CRequestLimiter, cTreeNode);
+
+      lpNode->Remove();
       delete lpLimiter;
     }
   }
@@ -518,7 +525,6 @@ VOID CHttpServer::ThreadProc()
   while (CheckForAbort(1000) == FALSE)
   {
     CAutoRundownProtection cAutoRundownProt(&nRundownLock);
-    TLnkLst<CClientRequest>::Iterator it;
     CClientRequest *lpRequest;
 
     if (cAutoRundownProt.IsAcquired() != FALSE)
@@ -527,88 +533,98 @@ VOID CHttpServer::ThreadProc()
 
       {
         CAutoSlimRWLShared cListLock(&nRequestsListRwMutex);
+        CLnkLst::Iterator it;
 
-        for (lpRequest = it.Begin(cRequestsList); lpRequest != NULL; lpRequest = it.Next())
+        for (CLnkLstNode *lpNode = it.Begin(cRequestsList); lpNode != NULL; lpNode = it.Next())
         {
+          lpRequest = CONTAINING_RECORD(lpNode, CClientRequest, cListNode);
+
           _InterlockedAnd(&(lpRequest->nFlags), ~REQUEST_FLAG_RequestTimeoutProcessed);
         }
       }
+
       //process request's timeout
       do
       {
+        lpRequest = NULL;
+
         {
           CAutoSlimRWLShared cListLock(&nRequestsListRwMutex);
+          CLnkLst::Iterator it;
 
-          for (lpRequest = it.Begin(cRequestsList); lpRequest != NULL; lpRequest = it.Next())
+          for (CLnkLstNode *lpNode = it.Begin(cRequestsList); lpNode != NULL; lpNode = it.Next())
           {
-            if ((_InterlockedOr(&(lpRequest->nFlags), REQUEST_FLAG_RequestTimeoutProcessed) &
+            CClientRequest *_lpRequest = CONTAINING_RECORD(lpNode, CClientRequest, cListNode);
+
+            if ((_InterlockedOr(&(_lpRequest->nFlags), REQUEST_FLAG_RequestTimeoutProcessed) &
                  REQUEST_FLAG_RequestTimeoutProcessed) == 0)
             {
-              CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
+              CCriticalSection::CAutoLock cLock(_lpRequest->cMutex);
 
-              if (lpRequest->IsLinkClosed() == FALSE && lpRequest->hConn != NULL)
+              if (_lpRequest->IsLinkClosed() == FALSE && _lpRequest->hConn != NULL)
               {
                 int nTimedOut = 0;
 
-                if (lpRequest->nState == CClientRequest::StateReceivingRequestHeaders)
+                if (_lpRequest->nState == CClientRequest::StateReceivingRequestHeaders)
                 {
-                  if (lpRequest->cRequest->dwHeadersTimeoutCounterSecs > 0)
+                  if (_lpRequest->cRequest->dwHeadersTimeoutCounterSecs > 0)
                   {
-                    if ((--(lpRequest->cRequest->dwHeadersTimeoutCounterSecs)) == 0)
+                    if ((--(_lpRequest->cRequest->dwHeadersTimeoutCounterSecs)) == 0)
                       nTimedOut = 1;
                   }
                 }
-                else if (lpRequest->nState == CClientRequest::StateReceivingRequestBody)
+                else if (_lpRequest->nState == CClientRequest::StateReceivingRequestBody)
                 {
                   float nReadKbps;
 
-                  if (SUCCEEDED(cSocketMgr.GetReadStats(lpRequest->hConn, NULL, &nReadKbps)))
+                  if (SUCCEEDED(cSocketMgr.GetReadStats(_lpRequest->hConn, NULL, &nReadKbps)))
                   {
                     if ((DWORD)(int)nReadKbps < dwRequestBodyMinimumThroughputInBps)
                     {
-                      if ((++(lpRequest->cRequest->dwBodyLowThroughputCcounter)) >= dwRequestBodySecondsOfLowThroughput)
+                      if ((++(_lpRequest->cRequest->dwBodyLowThroughputCcounter)) >= dwRequestBodySecondsOfLowThroughput)
                         nTimedOut = 1;
                     }
                     else
                     {
-                      lpRequest->cRequest->dwBodyLowThroughputCcounter = 0;
+                      _lpRequest->cRequest->dwBodyLowThroughputCcounter = 0;
                     }
                   }
                 }
-                else if (lpRequest->nState == CClientRequest::StateSendingResponse)
+                else if (_lpRequest->nState == CClientRequest::StateSendingResponse)
                 {
                   float nWriteKbps;
 
-                  if (SUCCEEDED(cSocketMgr.GetWriteStats(lpRequest->hConn, NULL, &nWriteKbps)))
+                  if (SUCCEEDED(cSocketMgr.GetWriteStats(_lpRequest->hConn, NULL, &nWriteKbps)))
                   {
                     if ((DWORD)(int)nWriteKbps < dwResponseMinimumThroughputInBps)
                     {
-                      if ((++(lpRequest->cResponse->dwLowThroughputCcounter)) >= dwResponseMinimumThroughputInBps)
+                      if ((++(_lpRequest->cResponse->dwLowThroughputCcounter)) >= dwResponseMinimumThroughputInBps)
                         nTimedOut = 2;
                     }
                     else
                     {
-                      lpRequest->cResponse->dwLowThroughputCcounter = 0;
+                      _lpRequest->cResponse->dwLowThroughputCcounter = 0;
                     }
                   }
                 }
 
                 if (nTimedOut == 1)
                 {
-                  hRes = QuickSendErrorResponseAndReset(lpRequest, 408, MX_E_Timeout, TRUE);
+                  hRes = QuickSendErrorResponseAndReset(_lpRequest, 408, MX_E_Timeout, TRUE);
                   if (FAILED(hRes) && cErrorCallback)
                   {
+                    lpRequest = _lpRequest;
                     lpRequest->AddRef();
                     break;
                   }
                 }
                 else if (nTimedOut == 2)
                 {
-                  cSocketMgr.Close(lpRequest->hConn, hRes);
-                  lpRequest->SetState(CClientRequest::StateError);
+                  cSocketMgr.Close(_lpRequest->hConn, hRes);
+                  _lpRequest->SetState(CClientRequest::StateError);
                   if (ShouldLog(1) != FALSE)
                   {
-                    Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateError [%08X]", lpRequest, lpRequest->hConn,
+                    Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): StateError [%08X]", _lpRequest, _lpRequest->hConn,
                         MX_E_Timeout);
                   }
                 }
@@ -695,7 +711,7 @@ HRESULT CHttpServer::OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIp
       {
         CAutoSlimRWLExclusive cListLock(&nRequestsListRwMutex);
 
-        cRequestsList.PushTail(cNewRequest.Get());
+        cRequestsList.PushTail(&(cNewRequest->cListNode));
       }
       sData.cUserData = cNewRequest;
       }
@@ -725,21 +741,25 @@ VOID CHttpServer::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
     if (lpRequest->sPeerAddr.si_family != 0)
     {
       CAutoSlimRWLShared cLimiterLock(&(sRequestLimiter.nRwMutex));
-      CRequestLimiter *lpLimiter;
+      CRedBlackTreeNode *lpNode;
 
-      lpLimiter = sRequestLimiter.cTree.Find(&(lpRequest->sPeerAddr), &CRequestLimiter::SearchCompareFunc);
-      if (lpLimiter != NULL)
+      lpNode = sRequestLimiter.cTree.Find(&(lpRequest->sPeerAddr), &CRequestLimiter::SearchCompareFunc);
+      if (lpNode != NULL)
       {
+        CRequestLimiter *lpLimiter = CONTAINING_RECORD(lpNode, CRequestLimiter, cTreeNode);
+
         if ((DWORD)_InterlockedDecrement(&(lpLimiter->nCount)) == 0)
         {
           cLimiterLock.UpgradeToExclusive();
 
-          lpLimiter = sRequestLimiter.cTree.Find(&(lpRequest->sPeerAddr), &CRequestLimiter::SearchCompareFunc);
-          if (lpLimiter != NULL)
+          lpNode = sRequestLimiter.cTree.Find(&(lpRequest->sPeerAddr), &CRequestLimiter::SearchCompareFunc);
+          if (lpNode != NULL)
           {
+            lpLimiter = CONTAINING_RECORD(lpNode, CRequestLimiter, cTreeNode);
+
             if (__InterlockedRead(&(lpLimiter->nCount)) == 0)
             {
-              lpLimiter->RemoveNode();
+              lpNode->Remove();
               delete lpLimiter;
             }
           }
@@ -775,27 +795,32 @@ HRESULT CHttpServer::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc:
   if (SUCCEEDED(cSocketMgr.GetPeerAddress(h, &(lpNewRequest->sPeerAddr))) && dwMaxConnectionsPerIp != 0xFFFFFFFFUL)
   {
     CAutoSlimRWLShared cLimiterLock(&(sRequestLimiter.nRwMutex));
-    CRequestLimiter *lpLimiter;
+    CRedBlackTreeNode *lpNode;
 
-    lpLimiter = sRequestLimiter.cTree.Find(&(lpNewRequest->sPeerAddr), &CRequestLimiter::SearchCompareFunc);
-    if (lpLimiter != NULL)
+    lpNode = sRequestLimiter.cTree.Find(&(lpNewRequest->sPeerAddr), &CRequestLimiter::SearchCompareFunc);
+    if (lpNode != NULL)
     {
+      CRequestLimiter *lpLimiter = CONTAINING_RECORD(lpNode, CRequestLimiter, cTreeNode);
+
       if ((DWORD)_InterlockedIncrement(&(lpLimiter->nCount)) > dwMaxConnectionsPerIp)
         return E_ACCESSDENIED;
     }
     else
     {
-      MX::CHttpServer::CRequestLimiter *lpMatchingLimiter;
+      CRequestLimiter *lpNewLimiter;
+      CRedBlackTreeNode *lpMatchingNode;
 
-      lpLimiter = MX_DEBUG_NEW CRequestLimiter(&(lpNewRequest->sPeerAddr));
-      if (lpLimiter == NULL)
+      lpNewLimiter = MX_DEBUG_NEW CRequestLimiter(&(lpNewRequest->sPeerAddr));
+      if (lpNewLimiter == NULL)
         return E_OUTOFMEMORY;
       cLimiterLock.UpgradeToExclusive();
 
-      if (sRequestLimiter.cTree.Insert(lpLimiter, &CRequestLimiter::InsertCompareFunc, FALSE,
-                                       &lpMatchingLimiter) == FALSE)
+      if (sRequestLimiter.cTree.Insert(&(lpNewLimiter->cTreeNode), &CRequestLimiter::InsertCompareFunc, FALSE,
+                                       &lpMatchingNode) == FALSE)
       {
-        delete lpLimiter;
+        CRequestLimiter *lpMatchingLimiter = CONTAINING_RECORD(lpNode, CRequestLimiter, cTreeNode);
+
+        delete lpNewLimiter;
 
         if ((DWORD)_InterlockedIncrement(&(lpMatchingLimiter->nCount)) > dwMaxConnectionsPerIp)
           return E_ACCESSDENIED;
@@ -1397,7 +1422,7 @@ VOID CHttpServer::OnRequestDestroyed(_In_ CClientRequest *lpRequest)
 {
   CAutoSlimRWLExclusive cListLock(&nRequestsListRwMutex);
 
-  lpRequest->RemoveNode();
+  lpRequest->cListNode.Remove();
   return;
 }
 

@@ -358,13 +358,12 @@ VOID CIoCompletionPortThreadPool::InternalFinalize()
   do
   {
     b = FALSE;
+
     {
       CFastLock cLock(&(sThreads.nMutex));
-      TLnkLst<CThread>::Iterator it;
-      CThread *lpThread;
 
       MxMemSet(&sDummyOvr, 0, sizeof(sDummyOvr));
-      for (lpThread = it.Begin(sThreads.cList); lpThread != NULL; lpThread = it.Next())
+      for (SIZE_T nCount = sThreads.cList.GetCount(); nCount > 0; nCount--)
       {
         cIOCP.Post(0, 0, &sDummyOvr);
         b = TRUE;
@@ -402,7 +401,7 @@ HRESULT CIoCompletionPortThreadPool::StartThread(_In_ BOOL bInitial)
       {
         CFastLock cLock(&(sThreads.nMutex));
 
-        sThreads.cList.PushTail(lpThread);
+        sThreads.cList.PushTail(&(lpThread->cListNode));
       }
       _InterlockedIncrement(&(sThreads.nActiveCount));
       lpThread->Resume();
@@ -508,7 +507,7 @@ VOID CIoCompletionPortThreadPool::ThreadProc(_In_ SIZE_T nParam)
   {
     CFastLock cLock(&(sThreads.nMutex));
 
-    lpThread->RemoveNode();
+    lpThread->cListNode.Remove();
     _InterlockedDecrement(&(sThreads.nActiveCount));
   }
   delete lpThread;

@@ -114,11 +114,10 @@ public:
   static DWORD GetNumberOfProcessors();
 
 private:
-  class CThread : public virtual CBaseMemObj, public TClassWorkerThread<CIoCompletionPortThreadPool>,
-                  public TLnkLstNode<CThread>
+  class CThread : public virtual CBaseMemObj, public TClassWorkerThread<CIoCompletionPortThreadPool>
   {
   public:
-    CThread() : CBaseMemObj(), TClassWorkerThread<CIoCompletionPortThreadPool>(), TLnkLstNode<CThread>()
+    CThread() : CBaseMemObj(), TClassWorkerThread<CIoCompletionPortThreadPool>()
       {
       nFlags = 0;
       return;
@@ -126,6 +125,7 @@ private:
 
   public:
     LONG nFlags;
+    CLnkLstNode cListNode;
   };
 
   VOID InternalFinalize();
@@ -147,7 +147,7 @@ private:
     LONG volatile nShuttingDown;
     LONG volatile nBusyCount;
     LONG volatile nActiveCount;
-    TLnkLst<CThread> cList;
+    CLnkLst cList;
   } sThreads;
 };
 

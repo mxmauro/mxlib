@@ -26,83 +26,51 @@
 
 namespace MX {
 
-template <typename T>
-class TLnkLst;
+class CLnkLst;
 
-template <typename T>
-class TLnkLstNode
+class CLnkLstNode
 {
 public:
-  typedef TLnkLst<T> _LnkLstList;
-  typedef TLnkLstNode<T> _LnkLstNode;
-
-  TLnkLstNode()
+  CLnkLstNode()
     {
     lpNext = lpPrev = NULL;
     lpList = NULL;
     return;
     };
 
-  _inline _LnkLstNode* GetNextNode()
+  _inline CLnkLstNode* GetNext()
     {
     return lpNext;
     };
 
-  _inline _LnkLstNode* GetPrevNode()
+  _inline CLnkLstNode* GetPrev()
     {
     return lpPrev;
     };
 
-  _inline T* GetNextEntry()
-    {
-    return (lpNext != NULL) ? (lpNext->GetEntry()) : NULL;
-    };
-
-  _inline T* GetPrevEntry()
-    {
-    return (lpPrev != NULL) ? (lpPrev->GetEntry()) : NULL;
-    };
-
-  _inline _LnkLstList* GetLinkedList()
+  _inline CLnkLst* GetList()
     {
     return lpList;
     };
 
-  _inline T* GetEntry()
-    {
-    return static_cast<T*>(this);
-    };
-
-  _inline VOID RemoveNode()
-    {
-    if (lpList != NULL)
-      lpList->Remove(this);
-    return;
-    };
+  _inline VOID Remove();
 
 private:
-  template <typename T>
-  friend class TLnkLst;
+  friend class CLnkLst;
 
-  _LnkLstList *lpList;
-  _LnkLstNode *lpNext, *lpPrev;
+  CLnkLst *lpList;
+  CLnkLstNode *lpNext, *lpPrev;
 };
 
 //-----------------------------------------------------------
 
-template <typename T>
-class TLnkLst : public virtual CBaseMemObj
+class CLnkLst : public virtual CBaseMemObj, public CNonCopyableObj
 {
 public:
-  typedef TLnkLst<T> _LnkLstList;
-  typedef TLnkLstNode<T> _LnkLstNode;
-
-  TLnkLst() : CBaseMemObj()
+  CLnkLst() : CBaseMemObj(), CNonCopyableObj()
     {
     lpHead = lpTail = NULL;
-#ifdef _DEBUG
     nCount = 0;
-#endif //_DEBUG
     return;
     };
 
@@ -111,7 +79,7 @@ public:
     return (lpHead == NULL) ? TRUE : FALSE;
     };
 
-  _inline VOID Remove(_Inout_ _LnkLstNode *lpNode)
+  _inline VOID Remove(_In_ CLnkLstNode *lpNode)
     {
     MX_ASSERT(lpNode->lpList == this);
     lpNode->lpList = NULL;
@@ -124,13 +92,11 @@ public:
     if (lpNode->lpPrev != NULL)
       lpNode->lpPrev->lpNext = lpNode->lpNext;
     lpNode->lpNext = lpNode->lpPrev = NULL;
-#ifdef _DEBUG
     nCount--;
-#endif //_DEBUG
     return;
     };
 
-  _inline VOID PushHead(_Inout_ _LnkLstNode *lpNode)
+  _inline VOID PushHead(_In_ CLnkLstNode *lpNode)
     {
     MX_ASSERT(lpNode != NULL);
     MX_ASSERT(lpNode->lpList == NULL);
@@ -142,13 +108,11 @@ public:
     lpHead = lpNode;
     if (lpTail == NULL)
       lpTail = lpNode;
-#ifdef _DEBUG
     nCount++;
-#endif //_DEBUG
     return;
     };
 
-  _inline VOID PushTail(_Inout_ _LnkLstNode *lpNode)
+  _inline VOID PushTail(_In_ CLnkLstNode *lpNode)
     {
     MX_ASSERT(lpNode != NULL);
     MX_ASSERT(lpNode->lpList == NULL);
@@ -160,13 +124,11 @@ public:
     lpTail = lpNode;
     if (lpHead == NULL)
       lpHead = lpNode;
-#ifdef _DEBUG
     nCount++;
-#endif //_DEBUG
     return;
     };
 
-  _inline VOID PushAfter(_Inout_ _LnkLstNode *lpNode, _Inout_ _LnkLstNode *lpAfterNode)
+  _inline VOID PushAfter(_In_ CLnkLstNode *lpNode, _In_ CLnkLstNode *lpAfterNode)
     {
     if (lpAfterNode == lpTail)
     {
@@ -186,14 +148,12 @@ public:
       if (lpAfterNode->lpNext != NULL)
         lpAfterNode->lpNext->lpPrev = lpNode;
       lpAfterNode->lpNext = lpNode;
-#ifdef _DEBUG
       nCount++;
-#endif //_DEBUG
     }
     return;
     };
 
-  _inline VOID PushBefore(_Inout_ _LnkLstNode *lpNode, _Inout_ _LnkLstNode *lpBeforeNode)
+  _inline VOID PushBefore(_In_ CLnkLstNode *lpNode, _In_ CLnkLstNode *lpBeforeNode)
     {
     if (lpBeforeNode == lpHead)
     {
@@ -213,41 +173,39 @@ public:
       if (lpBeforeNode->lpPrev != NULL)
         lpBeforeNode->lpPrev->lpNext = lpNode;
       lpBeforeNode->lpPrev = lpNode;
-#ifdef _DEBUG
       nCount++;
-#endif //_DEBUG
     }
     return;
     };
 
-  _inline T* GetHead()
+  _inline CLnkLstNode* GetHead()
     {
-    return (lpHead != NULL) ? (lpHead->GetEntry()) : NULL;
+    return lpHead;
     };
 
-  _inline T* GetTail()
+  _inline CLnkLstNode* GetTail()
     {
-    return (lpTail != NULL) ? (lpTail->GetEntry()) : NULL;
+    return lpTail;
     };
 
-  _inline T* PopHead()
+  _inline CLnkLstNode* PopHead()
     {
-    _LnkLstNode *lpNode;
+    CLnkLstNode *lpNode;
 
     if ((lpNode = lpHead) == NULL)
       return NULL;
     Remove(lpHead);
-    return lpNode->GetEntry();
+    return lpNode;
     };
 
-  _inline T* PopTail()
+  _inline CLnkLstNode* PopTail()
     {
-    _LnkLstNode *lpNode;
+    CLnkLstNode *lpNode;
 
     if ((lpNode = lpTail) == NULL)
       return NULL;
     Remove(lpTail);
-    return lpNode->GetEntry();
+    return lpNode;
     };
 
   _inline VOID RemoveAll()
@@ -257,76 +215,81 @@ public:
     return;
     };
 
-#ifdef _DEBUG
-  _inline ULONG GetItemsCount() const
+  _inline SIZE_T GetCount() const
     {
     return nCount;
     };
-#endif //_DEBUG
 
   //---------------------------------------------------------
 
+public:
   class Iterator
   {
   public:
-    T* Begin(_In_ _LnkLstList &_list)
+    CLnkLstNode* Begin(_In_ CLnkLst &cList)
       {
-      lpNextCursor = _list.lpHead;
+      lpNextCursor = cList.lpHead;
       return Next();
       };
 
-    T* Begin(_In_ const _LnkLstList &_list)
+    CLnkLstNode* Begin(_In_ const CLnkLst &cList)
       {
-      return Begin(const_cast<_LnkLstList&>(_list));
+      return Begin(const_cast<CLnkLst&>(cList));
       };
 
-    T* Next()
+    CLnkLstNode* Next()
       {
       lpCursor = lpNextCursor;
       if (lpCursor == NULL)
         return NULL;
       lpNextCursor = lpCursor->lpNext;
-      return lpCursor->GetEntry();
+      return lpCursor;
       };
 
   private:
-    _LnkLstNode *lpCursor, *lpNextCursor;
+    CLnkLstNode *lpCursor, *lpNextCursor;
   };
 
   //---------------------------------------------------------
 
+public:
   class IteratorRev
   {
   public:
-    T* Begin(_In_ _LnkLstList &_list)
+    CLnkLstNode* Begin(_In_ CLnkLst &cList)
       {
-      lpNextCursor = _list.lpTail;
+      lpNextCursor = cList.lpTail;
       return Next();
       };
 
-    T* Begin(_In_ const _LnkLstList &_list)
+    CLnkLstNode* Begin(_In_ const CLnkLst &cList)
       {
-      return Begin(const_cast<_LnkLstList&>(_list));
+      return Begin(const_cast<CLnkLst&>(cList));
       };
 
-    T* Next()
+    CLnkLstNode* Next()
       {
       lpCursor = lpNextCursor;
       if (lpCursor == NULL)
         return NULL;
       lpNextCursor = lpCursor->lpPrev;
-      return lpCursor->GetEntry();
+      return lpCursor;
       };
 
   private:
-    _LnkLstNode *lpCursor, *lpNextCursor;
+    CLnkLstNode *lpCursor, *lpNextCursor;
   };
 
 private:
-  _LnkLstNode *lpHead, *lpTail;
-#ifdef _DEBUG
-  ULONG nCount;
-#endif //_DEBUG
+  CLnkLstNode *lpHead, *lpTail;
+  SIZE_T nCount;
+};
+
+_inline VOID CLnkLstNode::Remove()
+{
+  if (lpList != NULL)
+    lpList->Remove(this);
+  return;
 };
 
 } //namespace MX

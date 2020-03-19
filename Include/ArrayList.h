@@ -64,24 +64,7 @@ public:
       nIndex = nCount;
     if (SetSize(nCount + 1) == FALSE)
       return FALSE;
-    MxMemMove(&lpItems[nIndex + 1], &lpItems[nIndex], (nCount - nIndex) * sizeof(TType));
-    lpItems[nIndex] = elem;
-    nCount++;
-    return TRUE;
-    };
-
-  virtual BOOL SortedInsert(_In_ TType elem)
-    {
-    SIZE_T nIndex;
-
-    if (SetSize(nCount + 1) == FALSE)
-      return FALSE;
-    nIndex = nCount;
-    while (nIndex > 0 && elem < lpItems[nIndex - 1])
-    {
-      lpItems[nIndex] = lpItems[nIndex - 1];
-      nIndex--;
-    }
+    ::MxMemMove(&lpItems[nIndex + 1], &lpItems[nIndex], (nCount - nIndex) * sizeof(TType));
     lpItems[nIndex] = elem;
     nCount++;
     return TRUE;
@@ -277,7 +260,7 @@ public:
 
   virtual TType GetLastElement() const
     {
-    return (nCount > 0) ? GetElementAt(nCount - 1) : (TType)0;
+    return (nCount > 0) ? GetElementAt(nCount - 1) : TType{};
     };
 
   virtual TType* GetBuffer() const

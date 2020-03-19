@@ -33,7 +33,7 @@ static HRESULT WriteToStream(_In_ MX::CMemoryStream *lpStream, _In_ LPCSTR szStr
 
 namespace MX {
 
-CHttpServer::CClientRequest::CClientRequest() : CIpc::CUserData(), TLnkLstNode<CClientRequest>()
+CHttpServer::CClientRequest::CClientRequest() : CIpc::CUserData()
 {
   lpHttpServer = NULL;
   lpSocketMgr = NULL;

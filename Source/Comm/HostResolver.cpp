@@ -81,19 +81,19 @@ namespace Internals {
 class CHostResolver : public TRefCounted<CBaseMemObj>, public CNonCopyableObj
 {
 public:
-  class CAsyncItem : public virtual CBaseMemObj, public TRedBlackTreeNode<CAsyncItem>, public CNonCopyableObj
+  class CAsyncItem : public virtual CBaseMemObj, public CNonCopyableObj
   {
   public:
     CAsyncItem(_In_ CHostResolver *_lpResolver, _In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily,
                _In_ DWORD dwTimeoutMs, _In_ PSOCKADDR_INET lpSockAddr, _In_ HostResolver::OnResultCallback cCallback,
                _In_ LPVOID lpUserData, _In_ lpfnFreeAddrInfoExW _fnFreeAddrInfoExW) :
-               CBaseMemObj(), TRedBlackTreeNode<CAsyncItem>(), CNonCopyableObj()
+               CBaseMemObj(), CNonCopyableObj()
       {
       lpResolver = _lpResolver;
       fnFreeAddrInfoExW = _fnFreeAddrInfoExW;
       hCancel = NULL;
       lpAddrInfoExW = NULL;
-      MxMemSet(&(sOvr), 0, sizeof(sOvr));
+      ::MxMemSet(&(sOvr), 0, sizeof(sOvr));
       Setup(szHostNameW, nDesiredFamily, dwTimeoutMs, lpSockAddr, cCallback, lpUserData);
       return;
       };
@@ -146,8 +146,12 @@ public:
       return;
       };
 
-    static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ CAsyncItem *lpAsyncItem1, _In_ CAsyncItem *lpAsyncItem2)
+    static int InsertCompareFunc(_In_opt_ LPVOID lpContext, _In_ CRedBlackTreeNode *lpNode1,
+                                 _In_ CRedBlackTreeNode *lpNode2)
       {
+      CAsyncItem *lpAsyncItem1 = CONTAINING_RECORD(lpNode1, CAsyncItem, cTreeNode);
+      CAsyncItem *lpAsyncItem2 = CONTAINING_RECORD(lpNode2, CAsyncItem, cTreeNode);
+
       if ((ULONG)(lpAsyncItem1->nId) < (ULONG)(lpAsyncItem2->nId))
         return -1;
       if ((ULONG)(lpAsyncItem1->nId) > (ULONG)(lpAsyncItem2->nId))
@@ -155,8 +159,10 @@ public:
       return 0;
       };
 
-    static int SearchCompareFunc(_In_ LPVOID lpContext, _In_ ULONG key, _In_ CAsyncItem *lpAsyncItem)
+    static int SearchCompareFunc(_In_ LPVOID lpContext, _In_ ULONG key, _In_ CRedBlackTreeNode *lpNode)
       {
+      CAsyncItem *lpAsyncItem = CONTAINING_RECORD(lpNode, CAsyncItem, cTreeNode);
+
       if (key < (ULONG)(lpAsyncItem->nId))
         return -1;
       if (key > (ULONG)(lpAsyncItem->nId))
@@ -165,6 +171,7 @@ public:
       };
 
   public:
+    CRedBlackTreeNode cTreeNode;
     CHostResolver *lpResolver;
     lpfnFreeAddrInfoExW fnFreeAddrInfoExW;
     LONG nId;
@@ -221,7 +228,7 @@ private:
   lpfnGetAddrInfoExOverlappedResult fnGetAddrInfoExOverlappedResult;
   struct {
     LONG volatile nMutex;
-    TRedBlackTree<CAsyncItem> cTree;
+    CRedBlackTree cTree;
   } sAsyncTasks;
   struct {
     LONG volatile nMutex;
@@ -902,13 +909,16 @@ CHostResolver::CHostResolver() : TRefCounted<CBaseMemObj>(), CNonCopyableObj()
 
 CHostResolver::~CHostResolver()
 {
+  CRedBlackTreeNode *lpNode;
   CAsyncItem *lpAsyncItem;
 
   RundownProt_WaitForRelease(&nRundownLock);
 
   //remove items in list
-  while ((lpAsyncItem = sAsyncTasks.cTree.GetFirst()) != NULL)
+  while ((lpNode = sAsyncTasks.cTree.GetFirst()) != NULL)
   {
+    lpAsyncItem = CONTAINING_RECORD(lpNode, CAsyncItem, cTreeNode);
+
     LONG volatile nId = lpAsyncItem->nId;
     RemoveResolver(&nId);
   }
@@ -1188,7 +1198,7 @@ HRESULT CHostResolver::AddResolverCommon(_Out_ LONG volatile *lpnResolverId, _In
 
     _InterlockedExchange(lpnResolverId, lpNewAsyncItem->nId);
 
-    sAsyncTasks.cTree.Insert(lpNewAsyncItem, &CAsyncItem::InsertCompareFunc, TRUE);
+    sAsyncTasks.cTree.Insert(&(lpNewAsyncItem->cTreeNode), &CAsyncItem::InsertCompareFunc, TRUE);
 
     tv.tv_sec = (long)(lpNewAsyncItem->dwTimeoutMs / 1000);
     tv.tv_usec = (long)(lpNewAsyncItem->dwTimeoutMs % 1000);
@@ -1202,7 +1212,7 @@ HRESULT CHostResolver::AddResolverCommon(_Out_ LONG volatile *lpnResolverId, _In
                            &(lpNewAsyncItem->hCancel));
     if (res != WSA_IO_PENDING) // WSA_IO_PENDING == ERROR_IO_PENDING
     {
-      sAsyncTasks.cTree.Remove(lpNewAsyncItem);
+      sAsyncTasks.cTree.Remove(&(lpNewAsyncItem->cTreeNode));
       FreeAsyncItem(lpNewAsyncItem);
       return MX_HRESULT_FROM_WIN32((DWORD)res);
     }
@@ -1222,14 +1232,17 @@ VOID CHostResolver::RemoveResolver(_Out_ LONG volatile *lpnResolverId)
     if (nResolver != 0)
     {
       CFastLock cQueueLock(&(sAsyncTasks.nMutex));
+      CRedBlackTreeNode *lpNode;
 
-      lpAsyncItem = sAsyncTasks.cTree.Find(nResolver, &CAsyncItem::SearchCompareFunc);
-      if (lpAsyncItem != NULL)
+      lpNode = sAsyncTasks.cTree.Find(nResolver, &CAsyncItem::SearchCompareFunc);
+      if (lpNode != NULL)
       {
+        lpAsyncItem = CONTAINING_RECORD(lpNode, CAsyncItem, cTreeNode);
+
         //only running async tasks are in the tree and can be canceled
         _InterlockedOr(&(lpAsyncItem->nFlags), _FLAG_Canceled);
 
-        lpAsyncItem->RemoveNode();
+        lpNode->Remove();
       }
     }
 
@@ -1356,7 +1369,7 @@ VOID CHostResolver::CompleteAsync(_In_ CAsyncItem *lpAsyncItem, _In_ DWORD dwErr
     }
     else
     {
-      lpAsyncItem->RemoveNode();
+      lpAsyncItem->cTreeNode.Remove();
       FreeAsyncItem(lpAsyncItem);
     }
   }

@@ -45,17 +45,17 @@ namespace Internals {
 class CTimerHandler : public TRefCounted<CThread>, public CNonCopyableObj
 {
 public:
-  class CTimer : public virtual CBaseMemObj, public TRedBlackTreeNode<CTimer>, public CNonCopyableObj
+  class CTimer : public virtual CBaseMemObj, public CNonCopyableObj
   {
   public:
-    CTimer(_In_ DWORD dwTimeoutMs, _In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_ LPVOID lpUserData,
-           _In_ BOOL bOneShot) : CBaseMemObj(), TRedBlackTreeNode<CTimer>(), CNonCopyableObj()
+    CTimer(_In_ DWORD dwTimeoutMs, _In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_opt_ LPVOID lpUserData,
+           _In_ BOOL bOneShot) : CBaseMemObj(), CNonCopyableObj()
       {
       Setup(dwTimeoutMs, cCallback, lpUserData, bOneShot);
       return;
       };
 
-    VOID Setup(_In_ DWORD _dwTimeoutMs, _In_ MX::TimedEvent::OnTimeoutCallback _cCallback, _In_ LPVOID _lpUserData,
+    VOID Setup(_In_ DWORD _dwTimeoutMs, _In_ MX::TimedEvent::OnTimeoutCallback _cCallback, _In_opt_ LPVOID _lpUserData,
                _In_ BOOL bOneShot)
       {
       nId = 0;
@@ -110,8 +110,12 @@ public:
       return TRUE;
       };
 
-    static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ CTimer *lpTimer1, _In_ CTimer *lpTimer2)
+    static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ CRedBlackTreeNode *lpNode1,
+                                 _In_ CRedBlackTreeNode *lpNode2)
       {
+      CTimer *lpTimer1 = CONTAINING_RECORD(lpNode1, CTimer, cTreeNode);
+      CTimer *lpTimer2 = CONTAINING_RECORD(lpNode2, CTimer, cTreeNode);
+
       if (lpTimer1->nDueTime < lpTimer2->nDueTime)
         return -1;
       if (lpTimer1->nDueTime > lpTimer2->nDueTime)
@@ -121,6 +125,7 @@ public:
 
   public:
     LONG nId;
+    CRedBlackTreeNode cTreeNode;
     DWORD dwTimeoutMs;
     ULONGLONG nDueTime;
     MX::TimedEvent::OnTimeoutCallback cCallback;
@@ -162,7 +167,7 @@ private:
     LONG volatile nMutex;
     CWindowsEvent cChangedEvent;
     TArrayList<CTimer*> cSortedByIdList;
-    TRedBlackTree<CTimer> cTree;
+    CRedBlackTree cTree;
   } sQueue;
   struct {
     LONG volatile nMutex;
@@ -250,6 +255,7 @@ CTimerHandler::CTimerHandler() : TRefCounted<CThread>(), CNonCopyableObj()
 
 CTimerHandler::~CTimerHandler()
 {
+  CRedBlackTreeNode *lpNode;
   CTimer *lpTimer;
 
   RundownProt_WaitForRelease(&nRundownLock);
@@ -258,9 +264,10 @@ CTimerHandler::~CTimerHandler()
 
   //remove items in list
   sQueue.cSortedByIdList.RemoveAllElements();
-  while ((lpTimer = sQueue.cTree.GetFirst()) != NULL)
+  while ((lpNode = sQueue.cTree.GetFirst()) != NULL)
   {
-    lpTimer->RemoveNode();
+    lpTimer = CONTAINING_RECORD(lpNode, CTimer, cTreeNode);
+    lpNode->Remove();
     delete lpTimer;
   }
 
@@ -379,7 +386,8 @@ HRESULT CTimerHandler::AddTimer(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTi
     }
 
     _InterlockedExchange(lpnTimerId, cNewTimer->nId);
-    sQueue.cTree.Insert(cNewTimer.Detach(), &CTimer::InsertCompareFunc, TRUE);
+    sQueue.cTree.Insert(&(cNewTimer->cTreeNode), &CTimer::InsertCompareFunc, TRUE);
+    cNewTimer.Detach();
   }
   sQueue.cChangedEvent.Set();
 
@@ -407,7 +415,7 @@ VOID CTimerHandler::RemoveTimer(_Inout_ LONG volatile *lpnTimerId)
         _InterlockedOr(&(lpTimer->nFlags), _FLAG_Canceled);
 
         sQueue.cSortedByIdList.RemoveElementAt(nIndex);
-        lpTimer->RemoveNode();
+        lpTimer->cTreeNode.Remove();
       }
     }
 
@@ -446,8 +454,8 @@ DWORD CTimerHandler::ProcessQueue()
 {
   ULARGE_INTEGER uliCurrTime;
   DWORD dwTimeoutMs;
-  CTimer *lpTimer;
   ULONGLONG nDiff;
+  CTimer *lpTimer;
 
   //signal expired events
   MxNtQuerySystemTime(&uliCurrTime);
@@ -458,9 +466,12 @@ DWORD CTimerHandler::ProcessQueue()
   {
     {
       CFastLock cLock(&(sQueue.nMutex));
+      CRedBlackTreeNode *lpNode;
 
-      lpTimer = sQueue.cTree.GetFirst();
+      lpNode = sQueue.cTree.GetFirst();
 check_timer:
+      lpTimer = (lpNode != NULL) ? CONTAINING_RECORD(lpNode, CTimer, cTreeNode) : NULL;
+
       if (lpTimer != NULL)
       {
         if (lpTimer->nDueTime <= uliCurrTime.QuadPart)
@@ -469,7 +480,7 @@ check_timer:
           if (lpTimer->SetAsRunningIfNotCanceled() == FALSE)
           {
             //the timer was canceled so jump to next
-            lpTimer = lpTimer->GetNextEntry();
+            lpNode = lpTimer->cTreeNode.GetNext();
             goto check_timer;
           }
         }
@@ -498,7 +509,7 @@ check_timer:
         }
         else
         {
-          lpTimer->RemoveNode();
+          lpTimer->cTreeNode.Remove();
           if ((nFlags & _FLAG_OneShot) != 0)
           {
             SIZE_T nIndex;
@@ -515,7 +526,7 @@ check_timer:
           else
           {
             lpTimer->CalculateDueTime(&uliCurrTime);
-            sQueue.cTree.Insert(lpTimer, &CTimer::InsertCompareFunc, TRUE);
+            sQueue.cTree.Insert(&(lpTimer->cTreeNode), &CTimer::InsertCompareFunc, TRUE);
 
             _InterlockedAnd(&(lpTimer->nFlags), ~_FLAG_Running);
           }
@@ -524,6 +535,8 @@ check_timer:
     }
   }
   while (lpTimer != NULL);
+
+  //done
   return dwTimeoutMs;
 }
 

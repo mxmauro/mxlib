@@ -216,7 +216,7 @@ private:
   VOID ResetResponseForNewRequest();
 
 private:
-  class CPostDataItem : public virtual CBaseMemObj, public TLnkLstNode<CPostDataItem>, public CNonCopyableObj
+  class CPostDataItem : public virtual CBaseMemObj, public CNonCopyableObj
   {
   public:
     CPostDataItem(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA);
@@ -224,7 +224,10 @@ private:
     CPostDataItem(_In_ CStream *lpStream);
     ~CPostDataItem();
 
-  public:
+  private:
+    friend class CHttpClient;
+
+    CLnkLstNode cListNode;
     LPSTR szNameA, szValueA;
     SIZE_T nValueLen;
     TAutoRefCounted<CStream> cStream;
@@ -264,7 +267,7 @@ private:
     CUrl cUrl;
     CStringA cStrMethodA;
     struct {
-      TLnkLst<CPostDataItem> cList;
+      CLnkLst cList;
       BOOL bHasRaw;
       BOOL bIsDynamic;
     } sPostData;

@@ -246,7 +246,7 @@ HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCr
                                  _In_opt_ LPLISTENER_OPTIONS lpOptions, _Out_opt_ HANDLE *h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  TAutoRefCounted<CConnection> cConn;
+  TAutoRefCounted<CConnection> cNewConn;
   HRESULT hRes;
 
   if (h != NULL)
@@ -256,33 +256,34 @@ HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCr
   if ((nFamily != FamilyIPv4 && nFamily != FamilyIPv6) || nPort < 1 || nPort > 65535 || (!cCreateCallback))
     return E_INVALIDARG;
   //create connection
-  cConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassListener, nFamily));
-  if (!(cConn && cConn->cListener))
+  cNewConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassListener, nFamily));
+  if (!(cNewConn && cNewConn->cListener))
     return E_OUTOFMEMORY;
-  cConn->cListener->SetOptions(lpOptions);
-
-  if (h != NULL)
-    *h = reinterpret_cast<HANDLE>(cConn.Get());
-  cConn->cCreateCallback = cCreateCallback;
-  cConn->cUserData = lpUserData;
+  cNewConn->cListener->SetOptions(lpOptions);
+  //setup connection
+  cNewConn->cCreateCallback = cCreateCallback;
+  cNewConn->cUserData = lpUserData;
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
 
-    sConnections.cTree.Insert(cConn.Get(), &CConnectionBase::InsertCompareFunc);
+    sConnections.cTree.Insert(&(cNewConn->cTreeNode), &CConnectionBase::InsertCompareFunc);
   }
-  hRes = FireOnCreate(cConn.Get());
+  hRes = FireOnCreate(cNewConn.Get());
   if (SUCCEEDED(hRes))
-    hRes = cConn->CreateSocket();
+    hRes = cNewConn->CreateSocket();
   if (SUCCEEDED(hRes))
-    hRes = cConn->ResolveAddress(dwAddressResolverTimeoutMs, szBindAddressA, nPort);
+    hRes = cNewConn->ResolveAddress(dwAddressResolverTimeoutMs, szBindAddressA, nPort);
   //done
-  if (FAILED(hRes))
+  if (SUCCEEDED(hRes))
   {
-    cConn->Close(hRes);
     if (h != NULL)
-      *h = NULL;
+      *h = reinterpret_cast<HANDLE>(cNewConn.Get());
   }
-  cConn.Detach();
+  else
+  {
+    cNewConn->Close(hRes);
+  }
+  cNewConn.Detach();
   return hRes;
 }
 
@@ -309,7 +310,7 @@ HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA
                                   _Out_opt_ HANDLE *h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
-  TAutoRefCounted<CConnection> cConn;
+  TAutoRefCounted<CConnection> cNewConn;
   HRESULT hRes;
 
   if (h != NULL)
@@ -323,31 +324,32 @@ HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA
   if (!cCreateCallback)
     return E_POINTER;
   //create connection
-  cConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassClient, nFamily));
-  if (!cConn)
+  cNewConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassClient, nFamily));
+  if (!cNewConn)
     return E_OUTOFMEMORY;
-  if (h != NULL)
-    *h = reinterpret_cast<HANDLE>(cConn.Get());
-  cConn->cCreateCallback = cCreateCallback;
-  cConn->cUserData = lpUserData;
+  cNewConn->cCreateCallback = cCreateCallback;
+  cNewConn->cUserData = lpUserData;
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
 
-    sConnections.cTree.Insert(cConn.Get(), &CConnectionBase::InsertCompareFunc);
+    sConnections.cTree.Insert(&(cNewConn->cTreeNode), &CConnectionBase::InsertCompareFunc);
   }
-  hRes = FireOnCreate(cConn.Get());
+  hRes = FireOnCreate(cNewConn.Get());
   if (SUCCEEDED(hRes))
-    hRes = cConn->CreateSocket();
+    hRes = cNewConn->CreateSocket();
   if (SUCCEEDED(hRes))
-    hRes = cConn->ResolveAddress(dwAddressResolverTimeoutMs, szAddressA, nPort);
+    hRes = cNewConn->ResolveAddress(dwAddressResolverTimeoutMs, szAddressA, nPort);
   //done
-  if (FAILED(hRes))
+  if (SUCCEEDED(hRes))
   {
-    cConn->Close(hRes);
     if (h != NULL)
-      *h = NULL;
+      *h = reinterpret_cast<HANDLE>(cNewConn.Get());
   }
-  cConn.Detach();
+  else
+  {
+    cNewConn->Close(hRes);
+  }
+  cNewConn.Detach();
   return hRes;
 }
 
@@ -549,7 +551,7 @@ HRESULT CSockets::CreateServerConnection(_In_ CConnection *lpListenConn)
   {
     CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
 
-    sConnections.cTree.Insert(cIncomingConn.Get(), &CConnectionBase::InsertCompareFunc);
+    sConnections.cTree.Insert(&(cIncomingConn->cTreeNode), &CConnectionBase::InsertCompareFunc);
   }
   cIncomingConn->AddRef();
 

@@ -26,23 +26,12 @@
 
 namespace MX {
 
-template <class T>
-class TRedBlackTree;
+class CRedBlackTree;
 
-template <class T>
-class TRedBlackTreeNode
+class CRedBlackTreeNode
 {
 public:
-  typedef TRedBlackTree<T> _RbTree;
-  typedef TRedBlackTreeNode<T> _RbTreeNode;
-
-  template <class T>
-  friend class TRedBlackTree;
-
-  friend class TRedBlackTree<T>;
-
-public:
-  TRedBlackTreeNode()
+  CRedBlackTreeNode()
     {
     bRed = FALSE;
     lpTree = NULL;
@@ -50,9 +39,9 @@ public:
     return;
     };
 
-  _RbTreeNode* GetNextNode()
+  CRedBlackTreeNode* GetNext()
     {
-    _RbTreeNode *lpSucc, *lpNode2;
+    CRedBlackTreeNode *lpSucc, *lpNode2;
 
     if (lpRight != NULL)
     {
@@ -73,9 +62,9 @@ public:
     return lpSucc;
     };
 
-  _RbTreeNode* GetPrevNode()
+  CRedBlackTreeNode* GetPrev()
     {
-    _RbTreeNode *lpPred, *lpNode2;
+    CRedBlackTreeNode *lpPred, *lpNode2;
 
     if (lpLeft != NULL)
     {
@@ -96,54 +85,27 @@ public:
     return lpPred;
     };
 
-  _inline _RbTreeNode* GetLeftNode()
+  _inline CRedBlackTreeNode* GetLeft()
     {
     return (this) ? lpLeft : NULL;
     };
 
-  _inline _RbTreeNode* GetRightNode()
+  _inline CRedBlackTreeNode* GetRight()
     {
     return (this) ? lpRight : NULL;
     };
 
-  _inline _RbTreeNode* GetParentNode()
+  _inline CRedBlackTreeNode* GetParent()
     {
     return (this) ? lpParent : NULL;
     };
 
-  _inline T* GetNextEntry()
-    {
-    _RbTreeNode *lpNode = GetNextNode();
-    return (lpNode != NULL) ? (lpNode->GetEntry()) : NULL;
-    };
-
-  _inline T* GetPrevEntry()
-    {
-    _RbTreeNode *lpNode = GetPrevNode();
-    return (lpNode != NULL) ? (lpNode->GetEntry()) : NULL;
-    };
-
-  _inline T* GetParentEntry()
-    {
-    return (lpParent != NULL) ? (lpParent->GetEntry()) : NULL;
-    };
-
-  _inline _RbTree* GetTree()
+  _inline CRedBlackTree* GetTree()
     {
     return lpTree;
     };
 
-  _inline T* GetEntry()
-    {
-    return static_cast<T*>(this);
-    };
-
-  _inline VOID RemoveNode()
-    {
-    if (lpTree != NULL)
-      lpTree->Remove(this);
-    return;
-    };
+  _inline VOID Remove();
 
 private:
   _inline BOOL IsRed()
@@ -166,25 +128,22 @@ private:
     };
 
 private:
+  friend class CRedBlackTree;
+
   BOOL bRed;
-  _RbTree *lpTree;
-  _RbTreeNode *lpLeft, *lpRight, *lpParent;
+  CRedBlackTree *lpTree;
+  CRedBlackTreeNode *lpLeft, *lpRight, *lpParent;
 };
 
 //-----------------------------------------------------------
 
-template <class T>
-class TRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
+class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
 {
 public:
-  typedef TRedBlackTree<T> _RbTree;
-  typedef TRedBlackTreeNode<T> _RbTreeNode;
-
-public:
-  TRedBlackTree() : CBaseMemObj(), CNonCopyableObj()
+  CRedBlackTree() : CBaseMemObj(), CNonCopyableObj()
     {
     lpRoot = NULL;
-    nItemsCount = 0;
+    nCount = 0;
     return;
     };
 
@@ -193,66 +152,62 @@ public:
     return (lpRoot == NULL) ? TRUE : FALSE;
     };
 
-  _inline SIZE_T GetCount() const
-    {
-    return nItemsCount;
-    };
-
   template<class _Comparator, class _KeyType>
-  _inline T* Find(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
+  _inline CRedBlackTreeNode* Find(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
-    _RbTreeNode *lpNode = lpRoot;
+    CRedBlackTreeNode *lpNode = lpRoot;
 
     while (lpNode != NULL)
     {
-      int comp = lpSearchFunc(lpContext, _key, lpNode->GetEntry());
+      int comp = lpSearchFunc(lpContext, _key, lpNode);
       if (comp == 0)
-        return lpNode->GetEntry();
+        return lpNode;
       lpNode = (comp < 0) ? lpNode->lpLeft : lpNode->lpRight;
     }
     return NULL;
     };
 
-  _inline T* GetFirst()
+  _inline CRedBlackTreeNode* GetFirst()
     {
-    _RbTreeNode *lpNode;
+    CRedBlackTreeNode *lpNode;
 
     if (lpRoot == NULL)
       return NULL;
     lpNode = lpRoot;
     while (lpNode->lpLeft != NULL)
       lpNode = lpNode->lpLeft;
-    return lpNode->GetEntry();
+    return lpNode;
     };
 
-  _inline T* GetLast()
+  _inline CRedBlackTreeNode* GetLast()
     {
-    _RbTreeNode *lpNode;
+    CRedBlackTreeNode *lpNode;
 
     if (lpRoot == NULL)
       return NULL;
     lpNode = lpRoot;
     while (lpNode->lpRight != NULL)
       lpNode = lpNode->lpRight;
-    return lpNode->GetEntry();
+    return lpNode;
     };
 
   //Try to get entry with key greater or equal to the specified one. Else get nearest less.
   template<class _Comparator, class _KeyType>
-  _inline T* GetCeiling(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
+  _inline CRedBlackTreeNode* GetCeiling(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc,
+                                        _In_opt_ LPVOID lpContext = NULL)
     {
-    _RbTreeNode *lpNode = lpRoot, *lpParent;
+    CRedBlackTreeNode *lpNode = lpRoot, *lpParent;
     int comp;
 
     while (lpNode != NULL)
     {
-      int comp = lpSearchFunc(lpContext, _key, lpNode->GetEntry());
+      int comp = lpSearchFunc(lpContext, _key, lpNode);
       if (comp == 0)
-        return lpNode->GetEntry();
+        return lpNode;
       if (comp < 0)
       {
         if (lpNode->lpLeft == NULL)
-          return lpNode->GetEntry();
+          return lpNode;
         lpNode = lpNode->lpLeft;
       }
       else
@@ -269,7 +224,7 @@ public:
             lpNode = lpParent;
             lpParent = lpParent->lpParent;
           }
-          return (lpParent != NULL) ? lpParent->GetEntry() : NULL;
+          return lpParent;
         }
       }
     }
@@ -278,19 +233,20 @@ public:
 
   //Try to get entry with key less or equal to the specified one. Else get nearest greater.
   template<class _Comparator, class _KeyType>
-  _inline T* GetFloor(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
+  _inline CRedBlackTreeNode* GetFloor(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc,
+                                      _In_opt_ LPVOID lpContext = NULL)
     {
-    _RbTreeNode *lpNode = lpRoot, *lpParent;
+    CRedBlackTreeNode *lpNode = lpRoot, *lpParent;
 
     while (lpNode != NULL)
     {
-      int comp = lpSearchFunc(lpContext, _key, lpNode->GetEntry());
+      int comp = lpSearchFunc(lpContext, _key, lpNode);
       if (comp == 0)
-        return lpNode->GetEntry();
+        return lpNode;
       if (comp > 0)
       {
         if (lpNode->lpRight == NULL)
-          return lpNode->GetEntry();
+          return lpNode;
         lpNode = lpNode->lpRight;
       }
       else
@@ -306,7 +262,7 @@ public:
             lpNode = lpParent;
             lpParent = lpParent->lpParent;
           }
-          return (lpParent != NULL) ? lpParent->GetEntry() : NULL;
+          return lpParent;
         }
       }
     }
@@ -315,17 +271,18 @@ public:
 
   //Try to get entry with key greater or equal to the specified one. Else null
   template<class _Comparator, class _KeyType>
-  _inline T* GetHigher(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
+  _inline CRedBlackTreeNode* GetHigher(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc,
+                                       _In_opt_ LPVOID lpContext = NULL)
     {
-    _RbTreeNode *lpNode = lpRoot, *lpParent;
+    CRedBlackTreeNode *lpNode = lpRoot, *lpParent;
 
     while (lpNode != NULL)
     {
-      int comp = lpSearchFunc(lpContext, _key, lpNode->GetEntry());
+      int comp = lpSearchFunc(lpContext, _key, lpNode);
       if (comp < 0)
       {
         if (lpNode->lpLeft == NULL)
-          return lpNode->GetEntry();
+          return lpNode;
         lpNode = lpNode->lpLeft;
       }
       else
@@ -342,7 +299,7 @@ public:
             lpNode = lpParent;
             lpParent = lpParent->lpParent;
           }
-          return (lpParent != NULL) ? lpParent->GetEntry() : NULL;
+          return lpParent;
         }
       }
     }
@@ -351,17 +308,18 @@ public:
 
   //Try to get entry with key less or equal to the specified one. Else null
   template<class _Comparator, class _KeyType>
-  _inline T* GetLower(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
+  _inline CRedBlackTreeNode* GetLower(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc,
+                                      _In_opt_ LPVOID lpContext = NULL)
     {
-    _RbTreeNode *lpNode = lpRoot, *lpParent;
+    CRedBlackTreeNode *lpNode = lpRoot, *lpParent;
 
     while (lpNode != NULL)
     {
-      int comp = lpSearchFunc(lpContext, _key, lpNode->GetEntry());
+      int comp = lpSearchFunc(lpContext, _key, lpNode);
       if (comp > 0)
       {
         if (lpNode->lpRight == NULL)
-          return lpNode->GetEntry();
+          return lpNode;
         lpNode = lpNode->lpRight;
       }
       else
@@ -378,7 +336,7 @@ public:
             lpNode = lpParent;
             lpParent = lpParent->lpParent;
           }
-          return (lpParent != NULL) ? lpParent->GetEntry() : NULL;
+          return lpParent;
         }
       }
     }
@@ -386,18 +344,18 @@ public:
     };
 
   template<class _Comparator>
-  BOOL Insert(_In_ _RbTreeNode *lpNewNode, _In_ _Comparator lpCompareFunc, _In_opt_ BOOL bAllowDuplicates = FALSE,
-              _Out_opt_ T **lplpMatchingEntry = NULL, _In_opt_ LPVOID lpContext = NULL)
+  BOOL Insert(_In_ CRedBlackTreeNode *lpNewNode, _In_ _Comparator lpCompareFunc, _In_opt_ BOOL bAllowDuplicates = FALSE,
+              _Out_opt_ CRedBlackTreeNode **lplpMatchingNode = NULL, _In_opt_ LPVOID lpContext = NULL)
     {
-    _RbTreeNode *lpNode, *lpParent, *lpUncle;
+    CRedBlackTreeNode *lpNode, *lpParent, *lpUncle;
     int comp;
 
     MX_ASSERT(lpNewNode != NULL);
     MX_ASSERT(lpNewNode->lpParent == NULL);
     MX_ASSERT(lpNewNode->lpLeft == NULL && lpNewNode->lpRight == NULL);
 
-    if (lplpMatchingEntry != NULL)
-      *lplpMatchingEntry = NULL;
+    if (lplpMatchingNode != NULL)
+      *lplpMatchingNode = NULL;
     if (lpRoot == NULL)
     {
       lpNewNode->lpParent = NULL;
@@ -405,7 +363,7 @@ public:
       lpNewNode->lpTree = this;
       lpNewNode->bRed = FALSE;
       lpRoot = lpNewNode;
-      nItemsCount++;
+      nCount++;
       return TRUE;
     }
 
@@ -417,11 +375,11 @@ public:
     do
     {
       lpParent = lpNode;
-      comp = lpCompareFunc(lpContext, lpNewNode->GetEntry(), lpNode->GetEntry());
+      comp = lpCompareFunc(lpContext, lpNewNode, lpNode);
       if (comp == 0 && bAllowDuplicates == FALSE)
       {
-        if (lplpMatchingEntry != NULL)
-          *lplpMatchingEntry = lpNode->GetEntry();
+        if (lplpMatchingNode != NULL)
+          *lplpMatchingNode = lpNode;
         return FALSE;
       }
       lpNode = (comp < 0) ? lpNode->lpLeft : lpNode->lpRight;
@@ -459,70 +417,71 @@ public:
     lpNode = lpNewNode;
     while (lpNode != NULL && lpNode != lpRoot && lpNode->lpParent->bRed != FALSE)
     {
-      if (lpNode->GetParentNode() == lpNode->GetParentNode()->GetParentNode()->GetLeftNode())
+      if (lpNode->GetParent() == lpNode->GetParent()->GetParent()->GetLeft())
       {
-        lpUncle = lpNode->GetParentNode()->GetParentNode()->GetRightNode();
+        lpUncle = lpNode->GetParent()->GetParent()->GetRight();
         if (lpUncle->IsRed() != FALSE)
         {
-          lpNode->GetParentNode()->SetBlack();
+          lpNode->GetParent()->SetBlack();
           lpUncle->SetBlack();
-          lpNode->GetParentNode()->GetParentNode()->SetRed();
-          lpNode = lpNode->GetParentNode()->GetParentNode();
+          lpNode->GetParent()->GetParent()->SetRed();
+          lpNode = lpNode->GetParent()->GetParent();
         }
         else
         {
-          if (lpNode == lpNode->GetParentNode()->GetRightNode())
+          if (lpNode == lpNode->GetParent()->GetRight())
           {
-            lpNode = lpNode->GetParentNode();
+            lpNode = lpNode->GetParent();
             LeftRotate(lpNode);
           }
-          lpNode->GetParentNode()->SetBlack();
-          lpNode->GetParentNode()->GetParentNode()->SetRed();
-          RightRotate(lpNode->GetParentNode()->GetParentNode());
+          lpNode->GetParent()->SetBlack();
+          lpNode->GetParent()->GetParent()->SetRed();
+          RightRotate(lpNode->GetParent()->GetParent());
         }
       }
       else
       {
-        lpUncle = lpNode->GetParentNode()->GetParentNode()->GetLeftNode();
+        lpUncle = lpNode->GetParent()->GetParent()->GetLeft();
         if (lpUncle->IsRed() != FALSE)
         {
-          lpNode->GetParentNode()->SetBlack();
+          lpNode->GetParent()->SetBlack();
           lpUncle->SetBlack();
-          lpNode->GetParentNode()->GetParentNode()->SetRed();
-          lpNode = lpNode->GetParentNode()->GetParentNode();
+          lpNode->GetParent()->GetParent()->SetRed();
+          lpNode = lpNode->GetParent()->GetParent();
         }
         else
         {
-          if (lpNode == lpNode->GetParentNode()->GetLeftNode())
+          if (lpNode == lpNode->GetParent()->GetLeft())
           {
-            lpNode = lpNode->GetParentNode();
+            lpNode = lpNode->GetParent();
             RightRotate(lpNode);
           }
-          lpNode->GetParentNode()->SetBlack();
-          lpNode->GetParentNode()->GetParentNode()->SetRed();
-          LeftRotate(lpNode->GetParentNode()->GetParentNode());
+          lpNode->GetParent()->SetBlack();
+          lpNode->GetParent()->GetParent()->SetRed();
+          LeftRotate(lpNode->GetParent()->GetParent());
         }
       }
     }
     lpRoot->bRed = FALSE; //first node is always black
-    nItemsCount++;
+    nCount++;
 #ifdef _DEBUG
     Check(lpRoot);
 #endif //_DEBUG
     return TRUE;
     };
 
-  VOID Remove(_In_ _RbTreeNode *lpDelNode)
+  VOID Remove(_In_ CRedBlackTreeNode *lpDelNode)
     {
-    _RbTreeNode *n;
+    CRedBlackTreeNode *n;
 
     MX_ASSERT(lpDelNode != NULL);
     MX_ASSERT(lpDelNode->lpTree == this);
-    MX_ASSERT(lpDelNode == lpRoot || lpDelNode->lpLeft != NULL || lpDelNode->lpRight != NULL || lpDelNode->lpParent != NULL);
+    MX_ASSERT(lpDelNode == lpRoot || lpDelNode->lpLeft != NULL || lpDelNode->lpRight != NULL ||
+              lpDelNode->lpParent != NULL);
 
     if (lpDelNode->lpLeft != NULL && lpDelNode->lpRight != NULL)
     {
-      _RbTreeNode *lpSucc, *lpSuccRight, *lpSuccParent;
+      CRedBlackTreeNode *lpSucc, *lpSuccRight, *lpSuccParent;
       BOOL bSuccIsRed;
 
 #ifdef _DEBUG
@@ -618,8 +577,8 @@ public:
       else
         lpDelNode->lpParent->lpRight = n;
 
-      lpDelNode->lpLeft = lpDelNode->lpRight = (_RbTreeNode *)1;
-      lpDelNode->lpParent = (_RbTreeNode *)1;
+      lpDelNode->lpLeft = lpDelNode->lpRight = (CRedBlackTreeNode*)1;
+      lpDelNode->lpParent = (CRedBlackTreeNode*)1;
 
 #ifdef _DEBUG
       Check(lpRoot);
@@ -634,7 +593,7 @@ public:
     }
     else if (lpDelNode->lpParent == NULL)
     {
-      MX_ASSERT(nItemsCount == 1);
+      MX_ASSERT(nCount == 1);
       lpRoot = NULL; //we are the only node
     }
     else
@@ -662,12 +621,24 @@ public:
     lpDelNode->lpTree = NULL;
     lpDelNode->lpLeft = lpDelNode->lpRight = NULL;
     lpDelNode->lpParent = NULL;
-    nItemsCount--;
+    nCount--;
     return;
     };
 
+  _inline VOID RemoveAll()
+    {
+    while (lpRoot != NULL)
+      Remove(lpRoot);
+    return;
+    };
+
+  _inline SIZE_T GetCount() const
+    {
+    return nCount;
+    };
+
 #ifdef _DEBUG
-  VOID Check(_In_ _RbTreeNode *lpNode)
+  VOID Check(_In_ CRedBlackTreeNode *lpNode)
     {
     if (lpNode == NULL)
       return;
@@ -690,9 +661,9 @@ private:
   friend class Iterator;
   friend class IteratorRev;
 
-  VOID LeftRotate(_Inout_ _RbTreeNode *lpNode)
+  VOID LeftRotate(_In_ CRedBlackTreeNode *lpNode)
     {
-    _RbTreeNode *lpChild;
+    CRedBlackTreeNode *lpChild;
 
     if (lpNode != NULL)
     {
@@ -715,9 +686,9 @@ private:
     return;
     };
 
-  VOID RightRotate(_Inout_ _RbTreeNode *lpNode)
+  VOID RightRotate(_In_ CRedBlackTreeNode *lpNode)
     {
-    _RbTreeNode *lpChild;
+    CRedBlackTreeNode *lpChild;
 
     if (lpNode != NULL)
     {
@@ -740,77 +711,77 @@ private:
     return;
     };
 
-  VOID DeleteFixup(_Inout_ _RbTreeNode *lpNode)
+  VOID DeleteFixup(_In_ CRedBlackTreeNode *lpNode)
     {
-    _RbTreeNode *lpSibling;
+    CRedBlackTreeNode *lpSibling;
 
     while (lpNode != lpRoot && lpNode->IsRed() == FALSE)
     {
-      if (lpNode == lpNode->GetParentNode()->GetLeftNode())
+      if (lpNode == lpNode->GetParent()->GetLeft())
       {
-        lpSibling = lpNode->GetParentNode()->GetRightNode();
+        lpSibling = lpNode->GetParent()->GetRight();
         if (lpSibling->IsRed() != FALSE)
         {
           lpSibling->SetBlack();
-          lpNode->GetParentNode()->SetRed();
-          LeftRotate(lpNode->GetParentNode());
-          lpSibling = lpNode->GetParentNode()->GetRightNode();
+          lpNode->GetParent()->SetRed();
+          LeftRotate(lpNode->GetParent());
+          lpSibling = lpNode->GetParent()->GetRight();
         }
-        if (lpSibling->GetRightNode()->IsRed() == FALSE && lpSibling->GetLeftNode()->IsRed() == FALSE)
+        if (lpSibling->GetRight()->IsRed() == FALSE && lpSibling->GetLeft()->IsRed() == FALSE)
         {
           lpSibling->SetRed();
-          lpNode = lpNode->GetParentNode();
+          lpNode = lpNode->GetParent();
         }
         else
         {
-          if (lpSibling->GetRightNode()->IsRed() == FALSE)
+          if (lpSibling->GetRight()->IsRed() == FALSE)
           {
-            lpSibling->GetLeftNode()->SetBlack();
+            lpSibling->GetLeft()->SetBlack();
             lpSibling->SetRed();
             RightRotate(lpSibling);
-            lpSibling = lpNode->GetParentNode()->GetRightNode();
+            lpSibling = lpNode->GetParent()->GetRight();
           }
-          if (lpNode->GetParentNode()->IsRed() != FALSE)
+          if (lpNode->GetParent()->IsRed() != FALSE)
             lpSibling->SetRed();
           else
             lpSibling->SetBlack();
-          lpNode->GetParentNode()->SetBlack();
-          lpSibling->GetRightNode()->SetBlack();
-          LeftRotate(lpNode->GetParentNode());
+          lpNode->GetParent()->SetBlack();
+          lpSibling->GetRight()->SetBlack();
+          LeftRotate(lpNode->GetParent());
           lpNode = lpRoot; //exit
         }
       }
       else
       {
-        lpSibling = lpNode->GetParentNode()->GetLeftNode();
+        lpSibling = lpNode->GetParent()->GetLeft();
         if (lpSibling->IsRed() != FALSE)
         {
           lpSibling->SetBlack();
-          lpNode->GetParentNode()->SetRed();
-          RightRotate(lpNode->GetParentNode());
-          lpSibling = lpNode->GetParentNode()->GetLeftNode();
+          lpNode->GetParent()->SetRed();
+          RightRotate(lpNode->GetParent());
+          lpSibling = lpNode->GetParent()->GetLeft();
         }
-        if (lpSibling->GetRightNode()->IsRed() == FALSE && lpSibling->GetLeftNode()->IsRed() == FALSE)
+        if (lpSibling->GetRight()->IsRed() == FALSE && lpSibling->GetLeft()->IsRed() == FALSE)
         {
           lpSibling->SetRed();
-          lpNode = lpNode->GetParentNode();
+          lpNode = lpNode->GetParent();
         }
         else
         {
-          if (lpSibling->GetLeftNode()->IsRed() == FALSE)
+          if (lpSibling->GetLeft()->IsRed() == FALSE)
           {
-            lpSibling->GetRightNode()->SetBlack();
+            lpSibling->GetRight()->SetBlack();
             lpSibling->SetRed();
             LeftRotate(lpSibling);
-            lpSibling = lpNode->GetParentNode()->GetLeftNode();
+            lpSibling = lpNode->GetParent()->GetLeft();
           }
-          if (lpNode->GetParentNode()->IsRed() != FALSE)
+          if (lpNode->GetParent()->IsRed() != FALSE)
             lpSibling->SetRed();
           else
             lpSibling->SetBlack();
-          lpNode->GetParentNode()->SetBlack();
-          lpSibling->GetLeftNode()->SetBlack();
-          RightRotate(lpNode->GetParentNode());
+          lpNode->GetParent()->SetBlack();
+          lpSibling->GetLeft()->SetBlack();
+          RightRotate(lpNode->GetParent());
           lpNode = lpRoot; //exit
         }
       }
@@ -819,94 +790,77 @@ private:
     return;
     };
 
-  _inline _RbTreeNode* GetFirstNode()
-    {
-    _RbTreeNode *lpNode = lpRoot;
-    if (lpNode != NULL)
-    {
-      while (lpNode->lpLeft != NULL)
-        lpNode = lpNode->lpLeft;
-    }
-    return lpNode;
-    };
-
-  _inline _RbTreeNode* GetLastNode()
-    {
-    _RbTreeNode *lpNode = lpRoot;
-    if (lpNode != NULL)
-    {
-      while (lpNode->lpRight != NULL)
-        lpNode = lpNode->lpRight;
-    }
-    return lpNode;
-    };
-
   //---------------------------------------------------------
 
 public:
   class Iterator
   {
   public:
-    T* Begin(_In_ _RbTree &_tree)
+    CRedBlackTreeNode* Begin(_In_ CRedBlackTree &cTree)
       {
-      lpNextCursor = _tree.GetFirstNode();
+      lpNextCursor = cTree.GetFirst();
       return Next();
       };
 
-    T* Begin(_In_ const _RbTree &_tree)
+    CRedBlackTreeNode* Begin(_In_ const CRedBlackTree &cTree)
       {
-      return Begin(const_cast<_RbTree&>(_tree));
+      return Begin(const_cast<CRedBlackTree&>(cTree));
       };
 
-    T* Next()
+    CRedBlackTreeNode* Next()
       {
-      _RbTreeNode *lpCursor = lpNextCursor;
+      CRedBlackTreeNode *lpCursor = lpNextCursor;
       if (lpCursor == NULL)
         return NULL;
-      lpNextCursor = lpCursor->GetNextNode();
-      return lpCursor->GetEntry();
+      lpNextCursor = lpCursor->GetNext();
+      return lpCursor;
       };
 
   private:
-    _RbTreeNode *lpNextCursor;
+    CRedBlackTreeNode *lpNextCursor;
   };
 
   //---------------------------------------------------------
 
+public:
   class IteratorRev
   {
   public:
-    T* Begin(_In_ _RbTree &_tree)
+    CRedBlackTreeNode* Begin(_In_ CRedBlackTree &cTree)
       {
-      lpNextCursor = _tree.GetLast();
+      lpNextCursor = cTree.GetLast();
       return Next();
       };
 
-    T* Begin(_In_ const _RbTree &_tree)
+    CRedBlackTreeNode* Begin(_In_ const CRedBlackTree &cTree)
       {
-      return Begin(const_cast<_RbTree&>(_tree));
+      return Begin(const_cast<CRedBlackTree&>(cTree));
       };
 
-    T* Next()
+    CRedBlackTreeNode* Next()
       {
-      _RbTreeNode *lpCursor = lpNextCursor;
+      CRedBlackTreeNode *lpCursor = lpNextCursor;
       if (lpCursor == NULL)
         return NULL;
-      lpNextCursor = lpCursor->GetPrevNode();
-      return lpCursor->GetEntry();
+      lpNextCursor = lpCursor->GetPrev();
+      return lpCursor;
       };
 
   private:
-    _RbTreeNode *lpNextCursor;
+    CRedBlackTreeNode *lpNextCursor;
   };
 
 private:
-  template <class T>
-  friend class TRedBlackTreeNode;
-
-  _RbTreeNode *lpRoot;
-  SIZE_T nItemsCount;
+  CRedBlackTreeNode *lpRoot;
+  SIZE_T nCount;
 };
+
+_inline VOID CRedBlackTreeNode::Remove()
+{
+  if (lpTree != NULL)
+    lpTree->Remove(this);
+  return;
+}
 
 } //namespace MX
 

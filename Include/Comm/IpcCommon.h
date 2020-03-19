@@ -83,10 +83,10 @@ public:
 
   //--------
 
-  class MX_NOVTABLE CLayer : public virtual CBaseMemObj, public TLnkLstNode<CLayer>
+  class MX_NOVTABLE CLayer : public virtual CBaseMemObj
   {
   protected:
-    CLayer() : CBaseMemObj(), TLnkLstNode<CLayer>()
+    CLayer() : CBaseMemObj()
       {
       lpConn = NULL;
       return;
@@ -122,9 +122,8 @@ public:
 
   private:
     LPVOID lpConn;
+    CLnkLstNode cListNode;
   };
-
-  typedef TLnkLst<CLayer> CLayerList;
 
   //--------
 
@@ -241,8 +240,13 @@ public:
   BOOL IsShuttingDown();
 
 public:
-  class MX_NOVTABLE CPacketBase : public virtual CBaseMemObj, public TLnkLstNode<CPacketBase>, public CNonCopyableObj
+  class CPacketList;
+
+  class MX_NOVTABLE CPacketBase : public virtual CBaseMemObj, public CNonCopyableObj
   {
+  public:
+    friend class CPacketList;
+
   public:
     typedef enum {
       TypeDiscard = 0,
@@ -254,7 +258,7 @@ public:
     } eType;
 
   public:
-    CPacketBase() : CBaseMemObj(), TLnkLstNode<CPacketBase>(), CNonCopyableObj()
+    CPacketBase() : CBaseMemObj(), CNonCopyableObj()
       {
       MxMemSet(&sOvr, 0, sizeof(sOvr));
       nType = CPacketBase::TypeDiscard;
@@ -425,6 +429,7 @@ public:
   private:
     __declspec(align(8)) OVERLAPPED sOvr;
     eType volatile nType;
+    CLnkLstNode cListNode;
     ULONG nOrder;
     CConnectionBase *lpConn;
     CStream *lpStream;
@@ -474,7 +479,6 @@ public:
     CPacketList() : CBaseMemObj(), CNonCopyableObj()
       {
       _InterlockedExchange(&nMutex, 0);
-      nCount = 0;
       return;
       };
 
@@ -499,8 +503,7 @@ public:
       {
         CFastLock cLock(&nMutex);
 
-        cList.PushHead(lpPacket);
-        nCount++;
+        cList.PushHead(&(lpPacket->cListNode));
       }
       return;
       };
@@ -511,8 +514,7 @@ public:
       {
         CFastLock cLock(&nMutex);
 
-        cList.PushTail(lpPacket);
-        nCount++;
+        cList.PushTail(&(lpPacket->cListNode));
       }
       return;
       };
@@ -520,44 +522,49 @@ public:
     CPacketBase* DequeueFirst()
       {
       CFastLock cLock(&nMutex);
-      CPacketBase *lpPacket;
+      CLnkLstNode *lpNode;
 
-      lpPacket = cList.PopHead();
-      if (lpPacket != NULL)
-        nCount--;
-      return lpPacket;
+      lpNode = cList.PopHead();
+      if (lpNode == NULL)
+        return NULL;
+      return CONTAINING_RECORD(lpNode, CPacketBase, cListNode);
       };
 
     VOID QueueSorted(_In_ CPacketBase *lpPacket)
       {
       CFastLock cLock(&nMutex);
-      TLnkLst<CPacketBase>::IteratorRev it;
-      CPacketBase *lpCurrPacket;
+      CLnkLst::IteratorRev it;
+      CLnkLstNode *lpNode;
 
-      for (lpCurrPacket = it.Begin(cList); lpCurrPacket != NULL; lpCurrPacket = it.Next())
+      for (lpNode = it.Begin(cList); lpNode != NULL; lpNode = it.Next())
       {
+        CPacketBase *lpCurrPacket = CONTAINING_RECORD(lpNode, CPacketBase, cListNode);
+
         if (lpPacket->GetOrder() > lpCurrPacket->GetOrder())
           break;
       }
-      if (lpCurrPacket != NULL)
-        cList.PushAfter(lpPacket, lpCurrPacket);
+      if (lpNode != NULL)
+        cList.PushAfter(&(lpPacket->cListNode), lpNode);
       else
-        cList.PushHead(lpPacket);
-      nCount++;
+        cList.PushHead(&(lpPacket->cListNode));
       return;
       };
 
     CPacketBase* Dequeue(_In_ ULONG nOrder)
       {
       CFastLock cLock(&nMutex);
-      CPacketBase *lpPacket;
+      CLnkLstNode *lpNode;
 
-      lpPacket = cList.GetHead();
-      if (lpPacket != NULL && lpPacket->GetOrder() == nOrder)
+      lpNode = cList.GetHead();
+      if (lpNode != NULL)
       {
-        lpPacket->RemoveNode();
-        nCount--;
-        return lpPacket;
+        CPacketBase *lpPacket = CONTAINING_RECORD(lpNode, CPacketBase, cListNode);
+
+        if (lpPacket->GetOrder() == nOrder)
+        {
+          lpNode->Remove();
+          return lpPacket;
+        }
       }
       return NULL;
       };
@@ -566,9 +573,8 @@ public:
       {
       CFastLock cLock(&nMutex);
 
-      MX_ASSERT(lpPacket->GetLinkedList() == &cList);
-      lpPacket->RemoveNode();
-      nCount--;
+      MX_ASSERT(lpPacket->cListNode.GetList() == &cList);
+      lpPacket->cListNode.Remove();
       return;
       };
 
@@ -576,13 +582,12 @@ public:
       {
       CFastLock cLock(const_cast<LONG volatile *>(&nMutex));
 
-      return nCount;
+      return cList.GetCount();
       };
 
   private:
     LONG volatile nMutex;
-    TLnkLst<CPacketBase> cList;
-    SIZE_T nCount;
+    CLnkLst cList;
   };
 
   //----
@@ -590,7 +595,7 @@ public:
 protected:
   friend class CLayer;
 
-  class MX_NOVTABLE CConnectionBase : public virtual TRefCounted<CBaseMemObj>, public TRedBlackTreeNode<CConnectionBase>
+  class MX_NOVTABLE CConnectionBase : public virtual TRefCounted<CBaseMemObj>
   {
   protected:
     CConnectionBase(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass);
@@ -648,8 +653,12 @@ protected:
     HRESULT SendAfterWritePacketToNextLayer(_In_ CPacketBase *lpPacket, _In_ CLayer *lpCurrLayer);
 
   protected:
-    static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ CConnectionBase *lpConn1, _In_ CConnectionBase *lpConn2)
+    static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ CRedBlackTreeNode *lpNode1,
+                                 _In_ CRedBlackTreeNode *lpNode2)
       {
+      CConnectionBase *lpConn1 = CONTAINING_RECORD(lpNode1, CConnectionBase, cTreeNode);
+      CConnectionBase *lpConn2 = CONTAINING_RECORD(lpNode2, CConnectionBase, cTreeNode);
+
       if ((SIZE_T)lpConn1 < (SIZE_T)lpConn2)
         return -1;
       if ((SIZE_T)lpConn1 > (SIZE_T)lpConn2)
@@ -657,8 +666,10 @@ protected:
       return 0;
       };
 
-    static int SearchCompareFunc(_In_ LPVOID lpContext, _In_ SIZE_T key, _In_ CConnectionBase *lpConn)
+    static int SearchCompareFunc(_In_ LPVOID lpContext, _In_ SIZE_T key, _In_ CRedBlackTreeNode *lpNode)
       {
+      CConnectionBase *lpConn = CONTAINING_RECORD(lpNode, CConnectionBase, cTreeNode);
+
       if (key < (SIZE_T)lpConn)
         return -1;
       if (key > (SIZE_T)lpConn)
@@ -689,6 +700,7 @@ protected:
 
   protected:
     LONG volatile nReadMutex;
+    CRedBlackTreeNode cTreeNode;
     CIpc *lpIpc;
     CIpc::eConnectionClass nClass;
     LONG volatile hrErrorCode;
@@ -707,7 +719,7 @@ protected:
     } sReceivedData;
     struct {
       LONG volatile nRwMutex;
-      CLayerList cList;
+      CLnkLst cList;
     } sLayers;
     TAutoRefCounted<CUserData> cUserData;
     OnCreateCallback cCreateCallback;
@@ -759,7 +771,7 @@ protected:
   OnEngineErrorCallback cEngineErrorCallback;
   struct {
     LONG volatile nRwMutex;
-    TRedBlackTree<CConnectionBase> cTree;
+    CRedBlackTree cTree;
   } sConnections;
   CPacketList cFreePacketsList32768;
   CPacketList cFreePacketsList4096;

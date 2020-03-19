@@ -83,8 +83,10 @@ protected:
   virtual HRESULT OnNewRequestObject(_In_ CHttpServer *lpHttp, _Out_ CHttpServer::CClientRequest **lplpRequest);
 
 private:
-  class CJvm : public CJavascriptVM, public TLnkLstNode<CJvm>
+  class CJvm : public CJavascriptVM
   {
+  public:
+    CLnkLstNode cListNode;
   };
 
 private:
@@ -106,7 +108,7 @@ private:
 
   private:
     LONG volatile nMutex;
-    TLnkLst<CJvm> aJvmList;
+    CLnkLst cJvmList;
   };
 
 public:

@@ -32,10 +32,12 @@ CJsHttpServer::CJvmManager::CJvmManager() : TRefCounted<CBaseMemObj>()
 CJsHttpServer::CJvmManager::~CJvmManager()
 {
   CFastLock cLock(&nMutex);
-  CJsHttpServer::CJvm *lpJVM;
+  CLnkLstNode *lpNode;
 
-  while ((lpJVM = aJvmList.PopHead()) != NULL)
+  while ((lpNode = cJvmList.PopHead()) != NULL)
   {
+    CJsHttpServer::CJvm *lpJVM = CONTAINING_RECORD(lpNode, CJsHttpServer::CJvm, cListNode);
+
     delete lpJVM;
   }
   return;
@@ -59,8 +61,11 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
   bIsNew = FALSE;
   {
     CFastLock cLock(&nMutex);
+    CLnkLstNode *lpNode;
 
-    cJVM.Attach(aJvmList.PopHead());
+    lpNode = cJvmList.PopHead();
+    if (lpNode != NULL)
+      cJVM.Attach(CONTAINING_RECORD(lpNode, CJsHttpServer::CJvm, cListNode));
     if (cJVM)
     {
       if (FAILED(cJVM->Reset()))
@@ -315,7 +320,7 @@ VOID CJsHttpServer::CJvmManager::FreeVM(_In_ CJvm *lpJVM)
 {
   CFastLock cLock(&nMutex);
 
-  aJvmList.PushTail(lpJVM);
+  cJvmList.PushTail(&(lpJVM->cListNode));
   return;
 }
 
