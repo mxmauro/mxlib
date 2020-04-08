@@ -29,7 +29,7 @@ namespace MX {
 
 namespace TimedEvent {
 
-typedef Callback <VOID (_In_ LONG nTimerId, _In_ LPVOID lpUserData)> OnTimeoutCallback;
+typedef Callback <VOID (_In_ LONG nTimerId, _In_ LPVOID lpUserData, _In_opt_ LPBOOL lpbCancel)> OnTimeoutCallback;
 
 //-----------------------------------------------------------
 

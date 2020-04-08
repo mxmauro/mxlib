@@ -35,42 +35,51 @@ CHttpHeaderReqRange::~CHttpHeaderReqRange()
   return;
 }
 
-HRESULT CHttpHeaderReqRange::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderReqRange::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
+  LPCSTR szValueEndA;
   RANGESET sRangeSet;
   ULONGLONG nTemp;
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //skip spaces
-  szValueA = SkipSpaces(szValueA);
+  szValueA = SkipSpaces(szValueA, szValueEndA);
+
   //check units
-  if (StrNCompareA(szValueA, "bytes", 5, TRUE) != 0)
+  if ((SIZE_T)(szValueEndA - szValueA) < 5 && StrNCompareA(szValueA, "bytes", 5, TRUE) != 0)
     return MX_E_InvalidData;
+
   //skip spaces
-  szValueA = SkipSpaces(szValueA + 5);
+  szValueA = SkipSpaces(szValueA + 5, szValueEndA);
+
   //check equal sign
-  if (*szValueA++ != '=')
+  if (szValueA > szValueEndA || *szValueA != '=')
     return MX_E_InvalidData;
+  szValueA++;
+
   //parse sets
   do
   {
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
-    if (*szValueA == 0)
+    szValueA = SkipSpaces(szValueA, szValueEndA);
+    if (szValueA >= szValueEndA)
       break;
 
     sRangeSet.nByteStart = sRangeSet.nByteEnd = 0ui64;
 
-    //skip spaces
-    szValueA = SkipSpaces(szValueA);
-
     //get starting byte
-    if (*szValueA != '-')
+    if (szValueA < szValueEndA && *szValueA != '-')
     {
       if (*szValueA < '0' || *szValueA > '9')
         return MX_E_InvalidData;
-      while (*szValueA >= '0' && *szValueA <= '9')
+
+      while (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
       {
         nTemp = sRangeSet.nByteStart * 10ui64;
         if (nTemp < sRangeSet.nByteStart)
@@ -80,21 +89,23 @@ HRESULT CHttpHeaderReqRange::Parse(_In_z_ LPCSTR szValueA)
           return MX_E_ArithmeticOverflow;
         szValueA++;
       }
+
       //skip spaces
-      szValueA = SkipSpaces(szValueA);
+      szValueA = SkipSpaces(szValueA, szValueEndA);
     }
 
     //check range separator
-    if (*szValueA++ != '-')
+    if (szValueA >= szValueEndA || *szValueA != '-')
       return MX_E_InvalidData;
+    szValueA++;
 
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
+    szValueA = SkipSpaces(szValueA, szValueEndA);
 
     //get ending byte
-    if (*szValueA >= '0' && *szValueA <= '9')
+    if (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
     {
-      while (*szValueA >= '0' && *szValueA <= '9')
+      while (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
       {
         nTemp = sRangeSet.nByteEnd * 10ui64;
         if (nTemp < sRangeSet.nByteEnd)
@@ -119,19 +130,24 @@ HRESULT CHttpHeaderReqRange::Parse(_In_z_ LPCSTR szValueA)
       return E_OUTOFMEMORY;
 
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
+    szValueA = SkipSpaces(szValueA, szValueEndA);
+
     //check for separator or end
-    if (*szValueA == ',')
-      szValueA++;
-    else if (*szValueA != 0)
-      return MX_E_InvalidData;
+    if (szValueA < szValueEndA)
+    {
+      if (*szValueA == ',')
+        szValueA++;
+      else
+        return MX_E_InvalidData;
+    }
   }
-  while (*szValueA != 0);
+  while (szValueA < szValueEndA);
+
   //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqRange::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderReqRange::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   SIZE_T i, nCount;
 
@@ -139,6 +155,7 @@ HRESULT CHttpHeaderReqRange::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nB
   nCount = cRangeSetsList.GetCount();
   if (nCount == 0)
     return S_OK;
+
   //fill ranges
   if (cStrDestA.CopyN("bytes", 5) == FALSE)
     return E_OUTOFMEMORY;
@@ -148,6 +165,7 @@ HRESULT CHttpHeaderReqRange::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nB
                                cRangeSetsList[i].nByteEnd) == FALSE)
       return E_OUTOFMEMORY;
   }
+
   //done
   return S_OK;
 }
@@ -158,10 +176,12 @@ HRESULT CHttpHeaderReqRange::AddRangeSet(_In_ ULONGLONG nByteStart, _In_ ULONGLO
 
   if (nByteStart > nByteEnd)
     return E_INVALIDARG;
+
   sNewRangeSet.nByteStart = nByteStart;
   sNewRangeSet.nByteEnd = nByteEnd;
   if (cRangeSetsList.AddElement(&sNewRangeSet) == FALSE)
     return E_OUTOFMEMORY;
+
   //done
   return S_OK;
 }

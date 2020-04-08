@@ -30,7 +30,7 @@
 #define _OPCODE_NONE               15
 #define _OPCODE_ControlFrameMask 0x08
 
-#define MAX_PAYLOAD_SIZE                               32768
+#define MAX_FRAME_PAYLOAD_SIZE                        131072
 #define SEND_PAYLOAD_SIZE                              16384
 #define RECEIVE_DATA_BLOCK_SIZE                        16384
 
@@ -42,6 +42,8 @@ namespace MX {
 
 CWebSocket::CWebSocket() : CIpc::CUserData()
 {
+  lpIpc = NULL;
+  hConn = NULL;
   bServerSide = FALSE;
   //----
   sReceive.nState = 0;
@@ -130,6 +132,7 @@ HRESULT CWebSocket::SendBinaryMessage(_In_ LPVOID lpData, _In_ SIZE_T nDataLen)
     return S_OK;
   if (lpData == NULL)
     return E_POINTER;
+
   //begin framing
   while (nDataLen > 0)
   {
@@ -161,7 +164,7 @@ HRESULT CWebSocket::SendBinaryMessage(_In_ LPVOID lpData, _In_ SIZE_T nDataLen)
       nToWrite = (ULONG)nDataLen;
 
     //copy data
-    MxMemCopy(sSend.lpFrameData, lpData, nToWrite);
+    ::MxMemCopy(sSend.lpFrameData, lpData, nToWrite);
 
     //advance pointer
     lpData = (LPBYTE)lpData + nToWrite;
@@ -186,7 +189,7 @@ HRESULT CWebSocket::EndMessage()
       return hRes;
 
     //finalize send
-    MxMemSet(&(sSend.sFrameHeader), 0, sizeof(sSend.sFrameHeader));
+    ::MxMemSet(&(sSend.sFrameHeader), 0, sizeof(sSend.sFrameHeader));
     sSend.sFrameHeader.nOpcode = _OPCODE_NONE;
     sSend.lpFrameData = NULL;
     sSend.nFilledFrame = 0;
@@ -205,7 +208,8 @@ HRESULT CWebSocket::SendClose(_In_ USHORT wCode, _In_opt_z_ LPCSTR szReasonA)
   nReasonLen = StrLenA(szReasonA);
   if (nReasonLen > 123)
     nReasonLen = 123;
-  MxMemCopy(aPayload + 2, szReasonA, nReasonLen);
+  ::MxMemCopy(aPayload + 2, szReasonA, nReasonLen);
+  //NOTE: InternalSendControlFrame modifies the payload if mask is active
   return InternalSendControlFrame(_OPCODE_ConnectionClose, aPayload, 2 + (ULONG)nReasonLen);
 }
 
@@ -214,7 +218,20 @@ HRESULT CWebSocket::SendPing()
   DWORD dw = (DWORD)(SIZE_T)this;
 
   dw ^= XOR_PING;
+  //NOTE: InternalSendControlFrame modifies the payload if mask is active
   return InternalSendControlFrame(_OPCODE_Ping, &dw, (ULONG)sizeof(dw));
+}
+
+BOOL CWebSocket::IsClosed() const
+{
+  return (sReceive.nState == 1000) ? TRUE : FALSE;
+}
+
+VOID CWebSocket::Close(_In_opt_ HRESULT hrErrorCode)
+{
+  if (hConn != NULL)
+    lpIpc->Close(hConn, hrErrorCode);
+  return;
 }
 
 HRESULT CWebSocket::OnConnected()
@@ -259,6 +276,7 @@ VOID CWebSocket::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUs
     sReceive.nState = 1000;
     OnCloseFrame((SUCCEEDED(hrErrorCode) ? 1000 : 1006), hrErrorCode);
   }
+  hConn = NULL;
   return;
 }
 
@@ -269,7 +287,7 @@ HRESULT CWebSocket::OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ C
   HRESULT hRes;
 
   //closed?
-  if (sReceive.nState == 1000)
+  if (hConn == NULL || sReceive.nState == 1000)
   {
     return sReceive.hrCloseError;
   }
@@ -283,7 +301,8 @@ loop:
     return hRes;
   if (nMsgSize == 0)
     return S_OK; //nothing else to do
-  lpIpc->ConsumeBufferedMessage(hConn, nMsgSize);
+
+  //start parsing
   lpMsg = aMsgBuf;
 
   //on header?
@@ -344,6 +363,7 @@ loop:
           if (sReceive.sFrameHeader.nPayloadLen < 126)
           {
             sReceive.nPayloadLen = (ULONGLONG)(sReceive.sFrameHeader.nPayloadLen);
+
 jump_to_maskkey_or_payloaddata:
             if (sReceive.sFrameHeader.nMask != 0)
             {
@@ -360,8 +380,10 @@ jump_to_maskkey_or_payloaddata:
             //control frames cannot be large
             if ((sReceive.sFrameHeader.nOpcode & 0x08) != 0)
               return MX_E_InvalidData;
+
             //prepare for large payload
             sReceive.nPayloadLen = 0;
+
             //jump to 16-bit or 64-bit payload length
             sReceive.nState = (sReceive.sFrameHeader.nPayloadLen == 126) ? 2 : 4;
           }
@@ -374,6 +396,7 @@ jump_to_maskkey_or_payloaddata:
       //reading 16-bit payload length
       ((LPBYTE)&(sReceive.nPayloadLen))[3 - sReceive.nState] = *lpMsg++;
       nMsgSize--;
+
       if ((++(sReceive.nState)) == 4)
         goto jump_to_maskkey_or_payloaddata;
     }
@@ -383,9 +406,11 @@ jump_to_maskkey_or_payloaddata:
       //reading 64-bit payload length
       ((LPBYTE)&(sReceive.nPayloadLen))[11 - sReceive.nState] = *lpMsg++;
       nMsgSize--;
+
       if ((++(sReceive.nState)) == 12 && sReceive.sFrameHeader.nMask == 0)
       {
         sReceive.nState = 16; //jump to payload data
+
 validate_message_length:
         if ((ULONGLONG)(sReceive.sCurrentMessage.nTotalDataLength) + sReceive.nPayloadLen < sReceive.nPayloadLen)
           return MX_E_InvalidData;
@@ -402,12 +427,22 @@ validate_message_length:
       //reading 32-bit masking key
       sReceive.uMasking.nKey[sReceive.nState - 12] = *lpMsg++;
       nMsgSize--;
+
       if ((++(sReceive.nState)) == 16)
         goto validate_message_length;
     }
   }
   if (sReceive.nState < 16)
+  {
+consume_used_and_loop:
+    if (lpMsg > aMsgBuf)
+    {
+      hRes = lpIpc->ConsumeBufferedMessage(hConn, (SIZE_T)(lpMsg - aMsgBuf));
+      if (FAILED(hRes))
+        return hRes;
+    }
     goto loop;
+  }
 
   //if we reach here, we are processing the payload
   if (nMsgSize > 0)
@@ -455,7 +490,7 @@ validate_message_length:
         }
         else
         {
-          MxMemCopy(sReceive.sCurrentMessage.lpData, lpMsg, nToRead);
+          ::MxMemCopy(sReceive.sCurrentMessage.lpData, lpMsg, nToRead);
           lpMsg += nToRead;
         }
 
@@ -493,13 +528,15 @@ validate_message_length:
 
           while (d < dEnd)
           {
-            *d++ = *lpMsg++ ^sReceive.uMasking.nKey[nMaskIdx & 3];
+            *d++ = (*lpMsg) ^sReceive.uMasking.nKey[nMaskIdx & 3];
+            lpMsg++;
             nMaskIdx++;
           }
         }
         else
         {
-          MxMemCopy(sReceive.sCurrentControlFrame.aBuffer + sReceive.sCurrentControlFrame.nFilledFrame, lpMsg, nToRead);
+          ::MxMemCopy(sReceive.sCurrentControlFrame.aBuffer + sReceive.sCurrentControlFrame.nFilledFrame, lpMsg,
+                      nToRead);
           lpMsg += nToRead;
         }
 
@@ -529,10 +566,6 @@ validate_message_length:
           {
             //fast path
             lpData = sReceive.sCurrentMessage.aReceivedDataList.GetElementAt(0);
-            if (sReceive.sCurrentMessage.nOpcode == _OPCODE_Text)
-              OnTextMessage((LPCSTR)lpData, sReceive.sCurrentMessage.nTotalDataLength);
-            else
-              OnBinaryMessage(lpData, sReceive.sCurrentMessage.nTotalDataLength);
           }
           else
           {
@@ -547,19 +580,20 @@ validate_message_length:
             nBuffersCount = sReceive.sCurrentMessage.aReceivedDataList.GetCount();
             for (i = 0; i < nBuffersCount; i++)
             {
-              MxMemCopy(lpData, sReceive.sCurrentMessage.aReceivedDataList.GetElementAt(i),
-                      (i < nBuffersCount - 1) ? RECEIVE_DATA_BLOCK_SIZE :
-                                                sReceive.sCurrentMessage.nTotalDataLength -
-                                                (nBuffersCount - 1) * RECEIVE_DATA_BLOCK_SIZE);
+              ::MxMemCopy(lpData, sReceive.sCurrentMessage.aReceivedDataList.GetElementAt(i),
+                          (i < nBuffersCount - 1)
+                          ? RECEIVE_DATA_BLOCK_SIZE
+                          : sReceive.sCurrentMessage.nTotalDataLength - (nBuffersCount - 1) * RECEIVE_DATA_BLOCK_SIZE);
               lpData += RECEIVE_DATA_BLOCK_SIZE;
             }
 
             lpData = aFullMsgBuf.Get();
-            if (sReceive.sCurrentMessage.nOpcode == _OPCODE_Text)
-              OnTextMessage((LPCSTR)lpData, sReceive.sCurrentMessage.nTotalDataLength);
-            else
-              OnBinaryMessage(lpData, sReceive.sCurrentMessage.nTotalDataLength);
           }
+
+          if (sReceive.sCurrentMessage.nOpcode == _OPCODE_Text)
+            OnTextMessage((LPCSTR)lpData, sReceive.sCurrentMessage.nTotalDataLength);
+          else
+            OnBinaryMessage(lpData, sReceive.sCurrentMessage.nTotalDataLength);
         }
 
         //reset message
@@ -568,10 +602,6 @@ validate_message_length:
         sReceive.sCurrentMessage.lpData = NULL;
         sReceive.sCurrentMessage.nFilledFrame = sReceive.sCurrentMessage.nTotalDataLength = 0;
       }
-
-      //reset state to read next frame
-      sReceive.nState = 0;
-      sReceive.uMasking.dwKey = 0;
     }
     else
     {
@@ -616,6 +646,7 @@ validate_message_length:
           return sReceive.hrCloseError;
 
         case _OPCODE_Ping:
+          //NOTE: InternalSendControlFrame modifies the payload if mask is active
           hRes = InternalSendControlFrame(_OPCODE_Pong, sReceive.sCurrentControlFrame.aBuffer,
                                           (ULONG)(sReceive.sCurrentControlFrame.nFilledFrame));
           if (FAILED(hRes))
@@ -628,190 +659,128 @@ validate_message_length:
       }
 
       //reset control frame state
-      MxMemSet(&(sReceive.sCurrentControlFrame), 0, sizeof(sReceive.sCurrentControlFrame));
-
-      //reset state to read next frame
-      sReceive.nState = 0;
-      sReceive.uMasking.dwKey = 0;
+      ::MxMemSet(&(sReceive.sCurrentControlFrame), 0, sizeof(sReceive.sCurrentControlFrame));
     }
+
+    //reset state to read next frame
+    sReceive.nState = 0;
+    sReceive.uMasking.dwKey = 0;
   }
 
   //jump to start
-  goto loop;
+  goto consume_used_and_loop;
 }
 
-SIZE_T CWebSocket::CalculateFrameSize(_In_ ULONG nPayloadSize)
+SIZE_T CWebSocket::BuildFrame(_In_ LPFRAME_HEADER lpFrame, _In_ LPBYTE lpPayload, _In_ ULONG nPayloadSize,
+                              _In_ BYTE nOpcode, _In_ BOOL bFinal)
 {
-  SIZE_T nSize;
+  SIZE_T nFrameLength, nExtendedLength;
 
-  MX_ASSERT(nPayloadSize <= MAX_PAYLOAD_SIZE);
-  nSize = (nPayloadSize > 125) ? 4 : 2;
-  if (bServerSide == FALSE)
-    nSize += 4; //client side MUST always mask
-  return nSize + (SIZE_T)nPayloadSize;
-}
+  nFrameLength = (SIZE_T)FIELD_OFFSET(FRAME_HEADER, aExtended);
 
-LPBYTE CWebSocket::BuildFrame(_Out_ LPVOID lpFrame, _In_ ULONG nPayloadSize, _In_ BOOL bFin, _In_ BYTE nRSV,
-                              _In_ BYTE nOpcode)
-{
-  LPBYTE d;
-  ULONG i;
-
-  MX_ASSERT(lpFrame != NULL);
-  MX_ASSERT(nPayloadSize <= MAX_PAYLOAD_SIZE);
-
-  ((FRAME_HEADER*)lpFrame)->nOpcode = nOpcode;
-  ((FRAME_HEADER*)lpFrame)->nRsv = nRSV;
-  ((FRAME_HEADER*)lpFrame)->nFin = bFin ? 1 : 0;
-  ((FRAME_HEADER*)lpFrame)->nPayloadLen = (nPayloadSize > 125) ? 126 : (BYTE)nPayloadSize;
-  d = (LPBYTE)lpFrame + 2;
-
-  if (nPayloadSize > 125)
+  lpFrame->nOpcode = nOpcode;
+  lpFrame->nFin = (bFinal != FALSE) ? 1 : 0;
+  lpFrame->nRsv = 0;
+  if (nPayloadSize >= 65536)
   {
-    *d++ = (BYTE)(nPayloadSize >> 8);
-    *d++ = (BYTE)(nPayloadSize & 0xFF);
+    lpFrame->nPayloadLen = 127;
+    nExtendedLength = 8;
+    lpFrame->aExtended[0] = lpFrame->aExtended[1] = lpFrame->aExtended[2] = lpFrame->aExtended[3] = 0;
+    lpFrame->aExtended[4] = (BYTE)((nPayloadSize >> 24) & 255);
+    lpFrame->aExtended[5] = (BYTE)((nPayloadSize >> 16) & 255);
+    lpFrame->aExtended[6] = (BYTE)((nPayloadSize >>  8) & 255);
+    lpFrame->aExtended[7] = (BYTE)( nPayloadSize        & 255);
   }
-
-  if (bServerSide == FALSE)
+  else if (nPayloadSize >= 126)
   {
-    DWORD dw;
-    union {
-      BYTE nKey[4];
-      DWORD dwKey;
-    } uMasking;
-
-    ((FRAME_HEADER*)lpFrame)->nMask = 1;
-
-    dw = ::GetTickCount();
-    uMasking.dwKey = fnv_32a_buf(&dw, 4, FNV1A_32_INIT);
-    dw = (DWORD)(SIZE_T)this;
-    uMasking.dwKey = fnv_32a_buf(&dw, 4, uMasking.dwKey);
-    uMasking.dwKey = fnv_32a_buf(&lpFrame, sizeof(LPBYTE), uMasking.dwKey);
-    uMasking.dwKey = fnv_32a_buf(&nPayloadSize, sizeof(nPayloadSize), uMasking.dwKey);
-    uMasking.dwKey = fnv_32a_buf(lpFrame, 2, uMasking.dwKey);
-
-    for (i = 0; i < 4; i++)
-      *d++ = uMasking.nKey[i];
+    lpFrame->nPayloadLen = 126;
+    nExtendedLength = 2;
+    lpFrame->aExtended[0] = (BYTE)((nPayloadSize >> 8) & 255);
+    lpFrame->aExtended[1] = (BYTE)( nPayloadSize       & 255);
   }
   else
   {
-    ((FRAME_HEADER*)lpFrame)->nMask = 0;
+    lpFrame->nPayloadLen = (BYTE)nPayloadSize;
+    nExtendedLength = 0;
   }
-  return d;
-}
-
-VOID CWebSocket::EncodeFrame(_In_ LPVOID _lpFrame)
-{
-  if (bServerSide == FALSE)
-  {
-    FRAME_HEADER *lpFrame = (FRAME_HEADER*)_lpFrame;
-    LPBYTE d;
-    ULONG i, nPayloadLen;
-    LPBYTE lpMask;
-
-    d = (LPBYTE)(lpFrame + 1);
-    if (lpFrame->nPayloadLen < 126)
-    {
-      nPayloadLen = (ULONG)(lpFrame->nPayloadLen);
-    }
-    else
-    {
-      nPayloadLen = (ULONG)(*d++);
-      nPayloadLen = (nPayloadLen << 8) | (ULONG)(*d++);
-      d += 2;
-    }
-
-    lpMask = d;
-    d += 4;
-
-    for (i = 0; i < nPayloadLen; i++,d++)
-    {
-      *d ^= lpMask[i & 3];
-    }
-  }
-  return;
-}
-
-HRESULT CWebSocket::InternalSendFrame(_In_ BOOL bFinalFrame)
-{
-  BYTE aTempBuffer[sizeof(FRAME_HEADER) + 2 + 4];
-  SIZE_T nTempBufferLen;
-  union {
-    BYTE nKey[4];
-    DWORD dwKey;
-  } uMasking;
-  HRESULT hRes;
-
-  sSend.sFrameHeader.nFin = (bFinalFrame != FALSE) ? 1 : 0;
-  sSend.sFrameHeader.nPayloadLen = (sSend.nFilledFrame <= 125) ?(BYTE)sSend.nFilledFrame : 126;
-
-  MxMemCopy(aTempBuffer, &(sSend.sFrameHeader), sizeof(FRAME_HEADER));
-  nTempBufferLen = sizeof(FRAME_HEADER);
 
   //prepare mask
   if (bServerSide == FALSE)
   {
-    DWORD dw;
-    LPBYTE d;
+    SIZE_T nThis;
+    union {
+      DWORD dw;
+      BYTE b[4];
+    } uMasking;
+    LPBYTE d, dEnd;
+    ULONG i;
 
-    sSend.sFrameHeader.nMask = 1;
+    lpFrame->nMask = 1;
 
-    dw = ::GetTickCount();
-    uMasking.dwKey = fnv_32a_buf(&dw, 4, FNV1A_32_INIT);
-    dw = (DWORD)(SIZE_T)this;
-    uMasking.dwKey = fnv_32a_buf(&dw, 4, uMasking.dwKey);
-    uMasking.dwKey = fnv_32a_buf(&(sSend.sFrameHeader), sizeof(sSend.sFrameHeader), uMasking.dwKey);
-    uMasking.dwKey = fnv_32a_buf(&(sSend.nFilledFrame), sizeof(sSend.nFilledFrame), uMasking.dwKey);
+    uMasking.dw = ::GetTickCount();
+    uMasking.dw = fnv_32a_buf(&(uMasking.dw), 4, FNV1A_32_INIT);
+    nThis = (SIZE_T)this;
+    uMasking.dw = fnv_32a_buf(&nThis, sizeof(nThis), uMasking.dw);
+    uMasking.dw = fnv_32a_buf(lpFrame, nFrameLength, uMasking.dw);
+    uMasking.dw = fnv_32a_buf(lpPayload, nPayloadSize, uMasking.dw);
 
     //encode frame
-    d = sSend.cFrameBuffer.Get();
-    for (dw = 0; dw < sSend.nFilledFrame; dw++, d++)
+    dEnd = (d = lpPayload) + (SIZE_T)nPayloadSize;
+    for (i = 0; d < dEnd; i++, d++)
     {
-      *d ^= uMasking.nKey[dw & 3];
+      *d ^= uMasking.b[i & 3];
     }
+
+    lpFrame->aExtended[nExtendedLength    ] = uMasking.b[0];
+    lpFrame->aExtended[nExtendedLength + 1] = uMasking.b[1];
+    lpFrame->aExtended[nExtendedLength + 2] = uMasking.b[2];
+    lpFrame->aExtended[nExtendedLength + 3] = uMasking.b[3];
+    nExtendedLength += 4;
   }
   else
   {
-    sSend.sFrameHeader.nMask = 0;
+    lpFrame->nMask = 0;
   }
 
-  //add extended payload size
-  if (sSend.nFilledFrame > 125)
-  {
-    aTempBuffer[nTempBufferLen++] = (BYTE)(sSend.nFilledFrame >> 8);
-    aTempBuffer[nTempBufferLen++] = (BYTE)(sSend.nFilledFrame & 0xFF);
-  }
+  //done
+  return nFrameLength + nExtendedLength;
+}
 
-  //add masking key
-  if (bServerSide == FALSE)
-  {
-    aTempBuffer[nTempBufferLen++] = uMasking.nKey[0];
-    aTempBuffer[nTempBufferLen++] = uMasking.nKey[1];
-    aTempBuffer[nTempBufferLen++] = uMasking.nKey[2];
-    aTempBuffer[nTempBufferLen++] = uMasking.nKey[3];
-  }
 
-  //send header
-  hRes = lpIpc->SendMsg(hConn, aTempBuffer, nTempBufferLen);
-  //send data
+HRESULT CWebSocket::InternalSendFrame(_In_ BOOL bFinalFrame)
+{
+  SIZE_T nFrameLength;
+  HRESULT hRes;
+
+  nFrameLength = BuildFrame(&(sSend.sFrameHeader), sSend.cFrameBuffer.Get(), sSend.nFilledFrame,
+                            sSend.sFrameHeader.nOpcode, bFinalFrame);
+
+  //send header and data
+  hRes = lpIpc->SendMsg(hConn, &(sSend.sFrameHeader), nFrameLength);
   if (SUCCEEDED(hRes))
     hRes = lpIpc->SendMsg(hConn, sSend.cFrameBuffer.Get(), (SIZE_T)(sSend.nFilledFrame));
+
   //done
   return hRes;
 }
 
 HRESULT CWebSocket::InternalSendControlFrame(_In_ BYTE nOpcode, _In_ LPVOID lpPayload, _In_ ULONG nPayloadSize)
 {
-  BYTE aFrameBuffer[32 + 128], *lpFrameData;
+  FRAME_HEADER sFrameHeader;
+  SIZE_T nFrameLength;
+  HRESULT hRes;
 
   MX_ASSERT(nPayloadSize <= 125);
 
-  lpFrameData = BuildFrame(aFrameBuffer, nPayloadSize, TRUE, 0, nOpcode);
-  MxMemCopy(lpFrameData, lpPayload, nPayloadSize);
-  EncodeFrame(aFrameBuffer);
+  nFrameLength = BuildFrame(&sFrameHeader, (LPBYTE)lpPayload, nPayloadSize, nOpcode, TRUE);
 
-  //send frame
-  return lpIpc->SendMsg(hConn, &aFrameBuffer, CalculateFrameSize(nPayloadSize));
+  //send header and data
+  hRes = lpIpc->SendMsg(hConn, &sFrameHeader, nFrameLength);
+  if (SUCCEEDED(hRes) && nPayloadSize > 0)
+    hRes = lpIpc->SendMsg(hConn, lpPayload, (SIZE_T)nPayloadSize);
+
+  //done
+  return hRes;
 }
 
 LPBYTE CWebSocket::GetReceiveBufferFromCache()
@@ -860,6 +829,44 @@ VOID CWebSocket::PutAllReceiveBuffersOnCache()
       PutReceiveBufferOnCache(lpBuffers[i]);
   }
   sReceive.sCurrentMessage.aReceivedDataList.RemoveAllElements();
+  return;
+}
+
+HRESULT CWebSocket::SetupIpc(_In_ CIpc *_lpIpc, _In_ HANDLE _hConn, _In_ BOOL _bServerSide)
+{
+  CIpc::CHANGE_CALLBACKS_DATA sNewCallbacks;
+  HRESULT hRes;
+
+  //setup new connections callbacks
+  sNewCallbacks.bDataReceivedCallbackIsValid = TRUE;
+  sNewCallbacks.cDataReceivedCallback = MX_BIND_MEMBER_CALLBACK(&CWebSocket::OnSocketDataReceived, this);
+  sNewCallbacks.bDestroyCallbackIsValid = TRUE;
+  sNewCallbacks.cDestroyCallback = MX_BIND_MEMBER_CALLBACK(&CWebSocket::OnSocketDestroy, this);
+  sNewCallbacks.bUserDataIsValid = TRUE;
+  sNewCallbacks.cUserData = this;
+  hRes = _lpIpc->SetCallbacks(_hConn, sNewCallbacks);
+  if (FAILED(hRes))
+    return hRes;
+
+  //set websocket parameters
+  lpIpc = _lpIpc;
+  hConn = _hConn;
+  bServerSide = _bServerSide;
+
+  //done
+  return S_OK;
+}
+
+VOID CWebSocket::FireConnectedAndInitialRead()
+{
+  TAutoRefCounted<CWebSocket> cWebSocket = this;
+  HRESULT hRes;
+
+  hRes = OnConnected();
+  if (SUCCEEDED(hRes))
+    hRes = OnSocketDataReceived(lpIpc, hConn, this);
+  if (FAILED(hRes))
+    lpIpc->Close(hConn, hRes);
   return;
 }
 

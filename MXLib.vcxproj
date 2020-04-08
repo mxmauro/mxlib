@@ -205,6 +205,7 @@
     <ClInclude Include="Include\Threads.h" />
     <ClInclude Include="Include\TimedEvent.h" />
     <ClInclude Include="Include\WaitableObjects.h" />
+    <ClInclude Include="Source\Internals\SystemDll.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\CircularBuffer.cpp" />
@@ -214,6 +215,7 @@
     <ClCompile Include="Source\FileStream.cpp" />
     <ClCompile Include="Source\Finalizer.cpp" />
     <ClCompile Include="Source\FnvHash.cpp" />
+    <ClCompile Include="Source\Internals\SystemDll.cpp" />
     <ClCompile Include="Source\Timer.cpp" />
     <ClCompile Include="Source\IOCompletionPort.cpp" />
     <ClCompile Include="Source\Loggable.cpp" />

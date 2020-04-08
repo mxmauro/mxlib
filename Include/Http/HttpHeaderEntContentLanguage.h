@@ -34,9 +34,9 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Content-Language)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
   HRESULT SetLanguage(_In_z_ LPCSTR szLanguageA, _In_ SIZE_T nLanguageLen = (SIZE_T)-1);
   LPCSTR GetLanguage() const;

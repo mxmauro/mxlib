@@ -56,9 +56,9 @@ protected:
 public:
   ~CHttpHeaderReqIfXXXMatchBase();
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
   HRESULT AddEntity(_In_z_ LPCSTR szTagA, _In_opt_ SIZE_T nTagLen = (SIZE_T)-1,
                     _Out_opt_ CEntity **lplpEntity=NULL);

@@ -22,6 +22,7 @@
 
 #include "..\Defines.h"
 #include "..\Http\HttpServer.h"
+#include "..\Http\HttpBodyParserFormBase.h"
 #include "..\JsLib\JavascriptVM.h"
 
 //-----------------------------------------------------------
@@ -51,9 +52,10 @@ public:
   typedef Callback<VOID (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
                          _In_ HRESULT hrErrorCode)> OnErrorCallback;
 
-  typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
-                            _Inout_ CHttpServer::WEBSOCKET_REQUEST_CALLBACK_DATA &sData)>
-                            OnWebSocketRequestReceivedCallback;
+  typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ int nVersion,
+                            _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount, _Out_ int &nSelectedProtocol,
+                            _In_ TArrayList<int> &aSupportedVersions,
+                            _Out_ _Maybenull_ CWebSocket **lplpWebSocket)> OnWebSocketRequestReceivedCallback;
 
   //--------
 
@@ -106,6 +108,9 @@ private:
     HRESULT InsertPostFileField(_In_ CJavascriptVM &cJvm, _In_ CHttpBodyParserFormBase::CFileField *lpFileField,
                                 _In_ LPCSTR szBaseObjectNameA);
 
+    VOID ParseJsonBody(_In_ DukTape::duk_context *lpCtx, _In_ LPVOID v, _In_opt_z_ LPCSTR szPropNameA,
+                       _In_ DukTape::duk_uarridx_t nArrayIndex) throw();
+
   private:
     LONG volatile nMutex;
     CLnkLst cJvmList;
@@ -156,7 +161,9 @@ private:
                                    _Outptr_ _Maybenull_ CHttpBodyParserBase **lplpBodyParser);
   VOID OnRequestCompleted(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest);
   HRESULT OnWebSocketRequestReceived(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest,
-                                      _Inout_ WEBSOCKET_REQUEST_CALLBACK_DATA &sData);
+                                     _In_ int nVersion, _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount,
+                                     _Out_ int &nSelectedProtocol, _In_ TArrayList<int> &aSupportedVersions,
+                                     _Out_ _Maybenull_ CWebSocket **lplpWebSocket);
   VOID OnError(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest, _In_ HRESULT hrErrorCode);
 
 private:

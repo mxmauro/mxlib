@@ -36,6 +36,8 @@ public:
     CCharset();
     ~CCharset();
 
+    CCharset& operator=(_In_ const CCharset &cSrc) throw(...);
+
     HRESULT SetCharset(_In_z_ LPCSTR szCharsetA, _In_opt_ SIZE_T nCharsetLen = (SIZE_T)-1);
     LPCSTR GetCharset() const;
 
@@ -43,6 +45,8 @@ public:
     double GetQ() const;
 
   private:
+    friend class CHttpHeaderReqAcceptCharset;
+
     CStringA cStrCharsetA;
     double q;
   };
@@ -55,13 +59,13 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Accept-Charset)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return DuplicateBehaviorAppend;
+    return DuplicateBehaviorMerge;
     };
 
   HRESULT AddCharset(_In_z_ LPCSTR szCharsetA, _In_opt_ SIZE_T nCharsetLen = (SIZE_T)-1,
@@ -71,8 +75,10 @@ public:
   CCharset* GetCharset(_In_ SIZE_T nIndex) const;
   CCharset* GetCharset(_In_z_ LPCSTR szCharsetA) const;
 
+  HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
+
 private:
-  TArrayListWithDelete<CCharset*> cCharsetsList;
+  TArrayListWithDelete<CCharset*> aCharsetsList;
 };
 
 } //namespace MX

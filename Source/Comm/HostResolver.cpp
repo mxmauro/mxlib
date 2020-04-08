@@ -26,6 +26,7 @@
 #include "..\..\Include\Finalizer.h"
 #include "..\..\Include\Http\punycode.h"
 #include "..\..\Include\RedBlackTree.h"
+#include "..\Internals\SystemDll.h"
 #include <ws2def.h>
 #include <VersionHelpers.h>
 
@@ -846,9 +847,6 @@ namespace Internals {
 
 CHostResolver::CHostResolver() : TRefCounted<CBaseMemObj>(), CNonCopyableObj()
 {
-  WCHAR szDllNameW[4096];
-  DWORD dwLen;
-
   RundownProt_Initialize(&nRundownLock);
   _InterlockedExchange(&nNextResolverId, 0);
 
@@ -868,40 +866,31 @@ CHostResolver::CHostResolver() : TRefCounted<CBaseMemObj>(), CNonCopyableObj()
   fnGetAddrInfoExCancel = NULL;
   fnGetAddrInfoExOverlappedResult = NULL;
 
-  dwLen = ::GetSystemDirectoryW(szDllNameW, MX_ARRAYLEN(szDllNameW) - 16);
-  if (dwLen > 0)
+  //load library
+  if (SUCCEEDED(Internals::LoadSystemDll(L"ws2_32.dll", &hWs2_32Dll)))
   {
-    if (szDllNameW[dwLen - 1] != L'\\')
-      szDllNameW[dwLen++] = L'\\';
-    ::MxMemCopy(szDllNameW + dwLen, L"ws2_32.dll", (10 + 1) * sizeof(WCHAR));
-
-    //load library
-    hWs2_32Dll = ::LoadLibraryW(szDllNameW);
-    if (hWs2_32Dll != NULL)
+    fnGetAddrInfoExW = (lpfnGetAddrInfoExW)::GetProcAddress(hWs2_32Dll, "GetAddrInfoExW");
+    fnFreeAddrInfoExW = (lpfnFreeAddrInfoExW)::GetProcAddress(hWs2_32Dll, "FreeAddrInfoExW");
+    if (dwOsVersion >= 0x0800)
     {
-      fnGetAddrInfoExW = (lpfnGetAddrInfoExW)::GetProcAddress(hWs2_32Dll, "GetAddrInfoExW");
-      fnFreeAddrInfoExW = (lpfnFreeAddrInfoExW)::GetProcAddress(hWs2_32Dll, "FreeAddrInfoExW");
-      if (dwOsVersion >= 0x0800)
-      {
-        fnGetAddrInfoExCancel = (lpfnGetAddrInfoExCancel)::GetProcAddress(hWs2_32Dll, "GetAddrInfoExCancel");
-        fnGetAddrInfoExOverlappedResult =
-            (lpfnGetAddrInfoExOverlappedResult)::GetProcAddress(hWs2_32Dll, "GetAddrInfoExOverlappedResult");
-      }
-      if (fnGetAddrInfoExW == NULL || fnFreeAddrInfoExW == NULL)
-      {
-        fnGetAddrInfoExW = NULL;
-        fnFreeAddrInfoExW = NULL;
-        fnGetAddrInfoExCancel = NULL;
-        fnGetAddrInfoExOverlappedResult = NULL;
+      fnGetAddrInfoExCancel = (lpfnGetAddrInfoExCancel)::GetProcAddress(hWs2_32Dll, "GetAddrInfoExCancel");
+      fnGetAddrInfoExOverlappedResult =
+          (lpfnGetAddrInfoExOverlappedResult)::GetProcAddress(hWs2_32Dll, "GetAddrInfoExOverlappedResult");
+    }
+    if (fnGetAddrInfoExW == NULL || fnFreeAddrInfoExW == NULL)
+    {
+      fnGetAddrInfoExW = NULL;
+      fnFreeAddrInfoExW = NULL;
+      fnGetAddrInfoExCancel = NULL;
+      fnGetAddrInfoExOverlappedResult = NULL;
 
-        ::FreeLibrary(hWs2_32Dll);
-        hWs2_32Dll = NULL;
-      }
-      else if (fnGetAddrInfoExCancel == NULL || fnGetAddrInfoExOverlappedResult == NULL)
-      {
-        fnGetAddrInfoExCancel = NULL;
-        fnGetAddrInfoExOverlappedResult = NULL;
-      }
+      ::FreeLibrary(hWs2_32Dll);
+      hWs2_32Dll = NULL;
+    }
+    else if (fnGetAddrInfoExCancel == NULL || fnGetAddrInfoExOverlappedResult == NULL)
+    {
+      fnGetAddrInfoExCancel = NULL;
+      fnGetAddrInfoExOverlappedResult = NULL;
     }
   }
   return;

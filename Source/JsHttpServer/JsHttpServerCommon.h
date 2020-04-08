@@ -23,6 +23,9 @@
 #include "..\..\Include\JsHttpServer\JsHttpServer.h"
 #include "..\..\Include\Strings\Strings.h"
 #include "..\..\Include\Strings\Utf8.h"
+#include "..\..\Include\Http\HttpBodyParserDefault.h"
+#include "..\..\Include\Http\HttpBodyParserFormBase.h"
+#include "..\..\Include\Http\HttpBodyParserJSON.h"
 
 //-----------------------------------------------------------
 

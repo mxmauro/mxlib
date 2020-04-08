@@ -37,21 +37,27 @@ CHttpHeaderRespSecWebSocketVersion::~CHttpHeaderRespSecWebSocketVersion()
   return;
 }
 
-HRESULT CHttpHeaderRespSecWebSocketVersion::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderRespSecWebSocketVersion::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
+  LPCSTR szValueEndA;
   BOOL bGotItem;
   int nVersion;
   HRESULT hRes;
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //parse
   bGotItem = FALSE;
   do
   {
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
-    if (*szValueA == 0)
+    szValueA = SkipSpaces(szValueA, szValueEndA);
+    if (szValueA >= szValueEndA)
       break;
     if (*szValueA == ',')
       goto skip_null_listitem;
@@ -60,7 +66,7 @@ HRESULT CHttpHeaderRespSecWebSocketVersion::Parse(_In_z_ LPCSTR szValueA)
 
     //get value
     nVersion = 0;
-    while (*szValueA >= '0' && *szValueA <= '9')
+    while (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
     {
       nVersion = nVersion * 10 + (int)((*szValueA) - '0');
       if (nVersion > 255)
@@ -72,21 +78,29 @@ HRESULT CHttpHeaderRespSecWebSocketVersion::Parse(_In_z_ LPCSTR szValueA)
       return hRes;
 
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
+    szValueA = SkipSpaces(szValueA, szValueEndA);
 
 skip_null_listitem:
     //check for separator or end
-    if (*szValueA == ',')
-      szValueA++;
-    else if (*szValueA != 0)
-      return MX_E_InvalidData;
+    if (szValueA < szValueEndA)
+    {
+      if (*szValueA == ',')
+        szValueA++;
+      else
+        return MX_E_InvalidData;
+    }
   }
-  while (*szValueA != 0);
+  while (szValueA < szValueEndA);
+
+  //do we got one?
+  if (bGotItem == FALSE)
+    return MX_E_InvalidData;
+
   //done
-  return (bGotItem != FALSE) ? S_OK : MX_E_InvalidData;
+  return S_OK;
 }
 
-HRESULT CHttpHeaderRespSecWebSocketVersion::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderRespSecWebSocketVersion::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   SIZE_T i, nCount;
 
@@ -109,12 +123,13 @@ HRESULT CHttpHeaderRespSecWebSocketVersion::Build(_Inout_ CStringA &cStrDestA, _
 
 HRESULT CHttpHeaderRespSecWebSocketVersion::AddVersion(_In_ int nVersion)
 {
-  if (nVersion < 0 || nVersion > 255)
+  if (nVersion < 13 || nVersion > 255)
     return E_INVALIDARG;
 
   //add version to list
   if (cVersionsList.SortedInsert(nVersion, &VersionCompareFunc, NULL, TRUE) == FALSE)
     return E_OUTOFMEMORY;
+
   //done
   return S_OK;
 }
@@ -127,6 +142,25 @@ SIZE_T CHttpHeaderRespSecWebSocketVersion::GetVersionsCount() const
 int CHttpHeaderRespSecWebSocketVersion::GetVersion(_In_ SIZE_T nIndex) const
 {
   return (nIndex < cVersionsList.GetCount()) ? cVersionsList.GetElementAt(nIndex) : -1;
+}
+
+
+HRESULT CHttpHeaderRespSecWebSocketVersion::Merge(_In_ CHttpHeaderBase *_lpHeader)
+{
+  CHttpHeaderRespSecWebSocketVersion *lpHeader = reinterpret_cast<CHttpHeaderRespSecWebSocketVersion*>(_lpHeader);
+  SIZE_T i, nCount;
+  HRESULT hRes;
+
+  nCount = lpHeader->GetVersionsCount();
+  for (i = 0; i < nCount; i++)
+  {
+    hRes = AddVersion(lpHeader->GetVersion(i));
+    if (FAILED(hRes))
+      return hRes;
+  }
+
+  //done
+  return S_OK;
 }
 
 } //namespace MX

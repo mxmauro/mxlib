@@ -268,8 +268,6 @@ HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreate
     hRes = cNewConn->CreateClient((LPCWSTR)cStrTempW, dwConnectTimeoutMs, lpSecDescr);
   if (SUCCEEDED(hRes))
     hRes = cNewConn->HandleConnected();
-  if (SUCCEEDED(hRes))
-    hRes = FireOnConnect(cNewConn.Get(), hRes);
   //done
   if (SUCCEEDED(hRes))
   {
@@ -384,8 +382,6 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
     hRes = cDispatcherPool.Attach(cNewConn->hPipe, cDispatcherPoolPacketCallback);
   if (SUCCEEDED(hRes))
     hRes = cNewConn->HandleConnected();
-  if (SUCCEEDED(hRes))
-    hRes = FireOnConnect(cNewConn, hRes);
   //done
   if (FAILED(hRes))
   {

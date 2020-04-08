@@ -34,25 +34,30 @@ CHttpHeaderGenUpgrade::~CHttpHeaderGenUpgrade()
   return;
 }
 
-HRESULT CHttpHeaderGenUpgrade::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderGenUpgrade::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szStartA;
+  LPCSTR szValueEndA, szStartA;
   BOOL bGotItem;
   HRESULT hRes;
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //parse
   bGotItem = FALSE;
   do
   {
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
-    if (*szValueA == 0)
+    szValueA = SkipSpaces(szValueA, szValueEndA);
+    if (szValueA >= szValueEndA)
       break;
 
     //get product
-    szValueA = SkipUntil(szStartA = szValueA, ";, \t");
+    szValueA = SkipUntil(szStartA = szValueA, szValueEndA, ";, \t");
     if (szStartA == szValueA)
       goto skip_null_listitem;
 
@@ -65,20 +70,28 @@ HRESULT CHttpHeaderGenUpgrade::Parse(_In_z_ LPCSTR szValueA)
 
 skip_null_listitem:
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
+    szValueA = SkipSpaces(szValueA, szValueEndA);
 
     //check for separator or end
-    if (*szValueA == ',')
-      szValueA++;
-    else if (*szValueA != 0)
-      return MX_E_InvalidData;
+    if (szValueA < szValueEndA)
+    {
+      if (*szValueA == ',')
+        szValueA++;
+      else
+        return MX_E_InvalidData;
+    }
   }
-  while (*szValueA != 0);
+  while (szValueA < szValueEndA);
+
+  //do we got one?
+  if (bGotItem == FALSE)
+    return MX_E_InvalidData;
+
   //done
-  return (bGotItem != FALSE) ? S_OK : MX_E_InvalidData;
+  return S_OK;
 }
 
-HRESULT CHttpHeaderGenUpgrade::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderGenUpgrade::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   SIZE_T i, nCount;
 
@@ -111,28 +124,31 @@ HRESULT CHttpHeaderGenUpgrade::AddProduct(_In_z_ LPCSTR szProductA, _In_ SIZE_T 
   if (szProductA == NULL)
     return E_POINTER;
   szProductEndA = szProductA + nProductLen;
-  //validate and set new value
-  if (cStrTempA.CopyN(szProductA, nProductLen) == FALSE)
-    return E_OUTOFMEMORY;
+
   //validate
-  szProductA = GetToken(szStartA = szProductA, nProductLen);
+  szProductA = GetToken(szStartA = szProductA, szProductEndA);
   if (szProductA == szStartA)
     return MX_E_InvalidData;
+
   //check slash separator
   if (szProductA < szProductEndA && *szProductA == '/')
   {
     szProductA++;
-    szProductA = GetToken(szProductA, (SIZE_T)(szProductEndA - szProductA));
+    szProductA = GetToken(szProductA, szProductEndA);
     if (*(szProductA-1) == '/' || (szProductA < szProductEndA && *szProductA == '/')) //no subtype?
       return MX_E_InvalidData;
   }
   //check for end
   if (szProductA != szProductEndA)
     return MX_E_InvalidData;
+
   //set new value
+  if (cStrTempA.CopyN(szStartA, nProductLen) == FALSE)
+    return E_OUTOFMEMORY;
   if (cProductsList.AddElement((LPSTR)cStrTempA) == FALSE)
     return E_OUTOFMEMORY;
   cStrTempA.Detach();
+
   //done
   return S_OK;
 }

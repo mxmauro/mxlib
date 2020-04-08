@@ -36,9 +36,9 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Content-Disposition)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
   HRESULT SetType(_In_z_ LPCSTR szTypeA, _In_ SIZE_T nTypeLen = (SIZE_T)-1);
   LPCSTR GetType() const;
@@ -83,7 +83,7 @@ private:
   CDateTime cModificationDt;
   CDateTime cReadDt;
   ULONGLONG nSize;
-  TArrayListWithFree<LPPARAMETER> cParamsList;
+  TArrayListWithFree<LPPARAMETER> aParamsList;
 };
 
 } //namespace MX

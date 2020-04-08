@@ -35,25 +35,30 @@ CHttpHeaderGenConnection::~CHttpHeaderGenConnection()
   return;
 }
 
-HRESULT CHttpHeaderGenConnection::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderGenConnection::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szStartA;
+  LPCSTR szValueEndA, szStartA;
   BOOL bGotItem;
   HRESULT hRes;
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //parse tokens
   bGotItem = FALSE;
   do
   {
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
-    if (*szValueA == 0)
+    szValueA = SkipSpaces(szValueA, szValueEndA);
+    if (szValueA >= szValueEndA)
       break;
 
     //get connection
-    szValueA = SkipUntil(szStartA = szValueA, ";, \t");
+    szValueA = SkipUntil(szStartA = szValueA, szValueEndA, ";, \t");
     if (szValueA == szStartA)
       goto skip_null_listitem;
 
@@ -66,20 +71,28 @@ HRESULT CHttpHeaderGenConnection::Parse(_In_z_ LPCSTR szValueA)
 
 skip_null_listitem:
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
+    szValueA = SkipSpaces(szValueA, szValueEndA);
 
     //check for separator or end
-    if (*szValueA == ',')
-      szValueA++;
-    else if (*szValueA != 0)
-      return MX_E_InvalidData;
+    if (szValueA < szValueEndA)
+    {
+      if (*szValueA == ',')
+        szValueA++;
+      else
+        return MX_E_InvalidData;
+    }
   }
-  while (*szValueA != 0);
+  while (szValueA < szValueEndA);
+
+  //do we got one?
+  if (bGotItem == FALSE)
+    return MX_E_InvalidData;
+
   //done
-  return (bGotItem != FALSE) ? S_OK : MX_E_InvalidData;
+  return S_OK;
 }
 
-HRESULT CHttpHeaderGenConnection::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderGenConnection::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   SIZE_T i, nCount;
 
@@ -110,19 +123,19 @@ HRESULT CHttpHeaderGenConnection::AddConnection(_In_z_ LPCSTR szConnectionA, _In
     return MX_E_InvalidData;
   if (szConnectionA == NULL)
     return E_POINTER;
+
   //get token
-  szConnectionA = CHttpHeaderBase::GetToken(szStartA = szConnectionA, nConnectionLen);
-  if (szStartA == szConnectionA)
+  szConnectionA = GetToken(szStartA = szConnectionA, szConnectionA + nConnectionLen);
+  if (szStartA == szConnectionA || szConnectionA != szStartA + nConnectionLen)
     return MX_E_InvalidData;
-  //check for end
-  if (szConnectionA != szStartA + nConnectionLen)
-    return MX_E_InvalidData;
+
   //create new item
   if (cStrTempA.CopyN(szStartA, nConnectionLen) == FALSE)
     return E_OUTOFMEMORY;
   if (cConnectionsList.AddElement((LPSTR)cStrTempA) == FALSE)
     return E_OUTOFMEMORY;
   cStrTempA.Detach();
+
   //done
   return S_OK;
 }

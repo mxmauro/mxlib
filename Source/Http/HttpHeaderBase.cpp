@@ -18,12 +18,13 @@
  * limitations under the License.
  */
 #include "..\..\Include\Http\HttpHeaderBase.h"
+#include "..\..\Include\AutoPtr.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-CHttpHeaderBase::CHttpHeaderBase() : CBaseMemObj()
+CHttpHeaderBase::CHttpHeaderBase() : TRefCounted<CBaseMemObj>()
 {
   return;
 }
@@ -33,15 +34,18 @@ CHttpHeaderBase::~CHttpHeaderBase()
   return;
 }
 
-#define CHECK_AND_CREATE_HEADER(_hdr)                                                    \
-    if (StrCompareA(szHeaderNameA, CHttpHeader##_hdr::GetHeaderNameStatic(), TRUE) == 0) \
-    {                                                                                    \
-      *lplpHeader = MX_DEBUG_NEW CHttpHeader##_hdr();                                    \
-      return (*lplpHeader != NULL) ? S_OK : E_OUTOFMEMORY;                               \
+#define CHECK_AND_CREATE_HEADER(_hdr)                                                                    \
+    szNameA = CHttpHeader##_hdr::GetHeaderNameStatic();                                                  \
+    if (StrNCompareA(szHeaderNameA, szNameA, nHeaderNameLen, TRUE) == 0 && szNameA[nHeaderNameLen] == 0) \
+    {                                                                                                    \
+      *lplpHeader = MX_DEBUG_NEW CHttpHeader##_hdr();                                                    \
+      return (*lplpHeader != NULL) ? S_OK : E_OUTOFMEMORY;                                               \
     }
-HRESULT CHttpHeaderBase::Create(_In_ LPCSTR szHeaderNameA, _In_ BOOL bIsRequest, _Out_ CHttpHeaderBase **lplpHeader)
+HRESULT CHttpHeaderBase::Create(_In_ LPCSTR szHeaderNameA, _In_ BOOL bIsRequest, _Out_ CHttpHeaderBase **lplpHeader,
+                                _In_opt_ SIZE_T nHeaderNameLen)
 {
-  CHttpHeaderGeneric *lpGenericHdr;
+  TAutoRefCounted<CHttpHeaderGeneric> cHeaderGeneric;
+  LPCSTR szNameA;
   HRESULT hRes;
 
   if (lplpHeader == NULL)
@@ -49,8 +53,11 @@ HRESULT CHttpHeaderBase::Create(_In_ LPCSTR szHeaderNameA, _In_ BOOL bIsRequest,
   *lplpHeader = NULL;
   if (szHeaderNameA == NULL)
     return E_POINTER;
-  if (*szHeaderNameA == 0)
+  if (nHeaderNameLen == (SIZE_T)-1)
+    nHeaderNameLen = StrLenA(szHeaderNameA);
+  if (nHeaderNameLen == 0)
     return E_INVALIDARG;
+
   //create header
   if (bIsRequest != FALSE)
   {
@@ -101,101 +108,106 @@ HRESULT CHttpHeaderBase::Create(_In_ LPCSTR szHeaderNameA, _In_ BOOL bIsRequest,
   CHECK_AND_CREATE_HEADER(GenTransferEncoding);
   CHECK_AND_CREATE_HEADER(GenSecWebSocketExtensions);
   CHECK_AND_CREATE_HEADER(GenUpgrade);
+
   //else create a generic header
-  lpGenericHdr = MX_DEBUG_NEW CHttpHeaderGeneric();
-  if (lpGenericHdr == NULL)
+  cHeaderGeneric.Attach(MX_DEBUG_NEW CHttpHeaderGeneric());
+  if (!cHeaderGeneric)
     return E_OUTOFMEMORY;
-  hRes = lpGenericHdr->SetHeaderName(szHeaderNameA);
+  hRes = cHeaderGeneric->SetHeaderName(szHeaderNameA, nHeaderNameLen);
   if (SUCCEEDED(hRes))
-    *lplpHeader = lpGenericHdr;
-  else
-    delete lpGenericHdr;
+    *lplpHeader = cHeaderGeneric.Detach();
   return hRes;
 }
 #undef CHECK_AND_CREATE_HEADER
 
-LPCSTR CHttpHeaderBase::SkipSpaces(_In_z_ LPCSTR sA, _In_opt_ SIZE_T nMaxLen)
+HRESULT CHttpHeaderBase::Parse(_In_z_ LPCWSTR szValueW, _In_opt_ SIZE_T nValueLen)
 {
-  if (nMaxLen == (SIZE_T)-1)
-  {
-    while (*sA == ' ' || *sA == '\t')
-      sA++;
-  }
-  else while (nMaxLen > 0 && (*sA == ' ' || *sA == '\t'))
-  {
-    nMaxLen--;
+  CStringA cStrTempA;
+  HRESULT hRes;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenW(szValueW);
+  hRes = Utf8_Encode(cStrTempA, szValueW, nValueLen);
+  if (FAILED(hRes))
+    return hRes;
+  return Parse((LPCSTR)cStrTempA, cStrTempA.GetLength());
+}
+
+HRESULT CHttpHeaderBase::Merge(_In_ CHttpHeaderBase *lpHeader)
+{
+  return (lpHeader == NULL) ? E_POINTER : MX_E_Unsupported;
+}
+
+LPCSTR CHttpHeaderBase::SkipSpaces(_In_ LPCSTR sA, _In_ LPCSTR szEndA)
+{
+  while (sA < szEndA && (*sA == ' ' || *sA == '\t'))
     sA++;
-  }
   return sA;
 }
 
-LPCSTR CHttpHeaderBase::SkipUntil(_In_z_ LPCSTR sA, _In_opt_z_ LPCSTR szStopCharsA, _In_opt_ SIZE_T nMaxLen)
+LPCSTR CHttpHeaderBase::SkipUntil(_In_ LPCSTR sA, _In_ LPCSTR szEndA, _In_opt_z_ LPCSTR szStopCharsA)
 {
-  while (nMaxLen > 0 && *sA != 0)
+  while (sA < szEndA)
   {
     if (szStopCharsA != NULL && StrChrA(szStopCharsA, *sA) != NULL)
       break;
     sA++;
-    if (nMaxLen != (SIZE_T)-1)
-      nMaxLen--;
   }
   return sA;
 }
 
-LPCSTR CHttpHeaderBase::GetToken(_In_z_ LPCSTR sA, _In_opt_ SIZE_T nMaxLen)
+LPCSTR CHttpHeaderBase::GetToken(_In_ LPCSTR sA, _In_ LPCSTR szEndA)
 {
   static LPCSTR szSeparatorsA = "()<>@,;:\\\"/[]?={}";
 
-  while (nMaxLen > 0 && *sA != 0)
+  while (sA < szEndA)
   {
-    if (*((UCHAR*)sA) < 0x21 || *((UCHAR*)sA) > 0x7E)
-      break;
-    if (StrChrA(szSeparatorsA, *sA) != NULL)
+    if (*((UCHAR*)sA) < 0x21 || *((UCHAR*)sA) > 0x7E || StrChrA(szSeparatorsA, *sA) != NULL)
       break;
     sA++;
-    if (nMaxLen != (SIZE_T)-1)
-      nMaxLen--;
   }
   return sA;
 }
 
-HRESULT CHttpHeaderBase::GetQuotedString(_Out_ CStringA &cStrA, _Inout_ LPCSTR &sA)
+HRESULT CHttpHeaderBase::GetQuotedString(_Out_ CStringA &cStrA, _Inout_ LPCSTR &sA, _In_ LPCSTR szEndA)
 {
   LPCSTR szStartA;
 
   cStrA.Empty();
 
-  if (*sA++ != '"')
+  if (sA >= szEndA || *sA != '"')
     return E_INVALIDARG;
-  while (*sA != '"')
+  sA++;
+  while (sA < szEndA && *sA != '"')
   {
     szStartA = sA;
-    while (*((UCHAR*)sA) >= 0x20 && *sA != '\\' && *sA != '"')
+    while (sA < szEndA && *((UCHAR*)sA) >= 0x20 && *sA != '\\' && *sA != '"')
       sA++;
     if (sA > szStartA)
     {
       if (cStrA.ConcatN(szStartA, (SIZE_T)(sA - szStartA)) == FALSE)
         return E_OUTOFMEMORY;
     }
-    if (*((UCHAR*)sA) < 0x20)
+    if (sA >= szEndA || *((UCHAR*)sA) < 0x20)
       return E_INVALIDARG;
     if (*sA == '\\')
     {
       sA++;
-      if (*((UCHAR*)sA) < 0x20)
+      if (sA >= szEndA || *((UCHAR*)sA) < 0x20)
         return E_INVALIDARG;
       if (cStrA.ConcatN(sA, 1) == FALSE)
         return E_OUTOFMEMORY;
       sA++;
     }
   }
-  if (*sA == '"')
-    sA++;
+  if (sA >= szEndA || *sA != '"')
+    return E_INVALIDARG;
+  sA++;
   return S_OK;
 }
 
 HRESULT CHttpHeaderBase::GetParamNameAndValue(_Out_ CStringA &cStrTokenA, _Out_ CStringW &cStrValueW,
-                                              _Inout_ LPCSTR &sA, _Out_opt_ LPBOOL lpbExtendedParam)
+                                              _Inout_ LPCSTR &sA, _In_ LPCSTR szEndA, _Out_opt_ LPBOOL lpbExtendedParam)
 {
   CStringA cStrValueA;
   LPCSTR szStartA;
@@ -208,7 +220,7 @@ HRESULT CHttpHeaderBase::GetParamNameAndValue(_Out_ CStringA &cStrTokenA, _Out_ 
     *lpbExtendedParam = FALSE;
 
   //get token
-  sA = GetToken(szStartA = sA);
+  sA = GetToken(szStartA = sA, szEndA);
   if (sA == szStartA)
     return MX_E_InvalidData;
   if (*(sA - 1) != '*')
@@ -223,53 +235,56 @@ HRESULT CHttpHeaderBase::GetParamNameAndValue(_Out_ CStringA &cStrTokenA, _Out_ 
       return E_OUTOFMEMORY;
   }
   //skip spaces
-  sA = SkipSpaces(sA);
+  sA = SkipSpaces(sA, szEndA);
+  //end?
+  if (sA >= szEndA)
+    return MX_E_NoData;
   //is equal sign?
   if (*sA != '=')
-  {
-    return (*sA == 0 || *sA == ',' || *sA == ';') ? MX_E_NoData : MX_E_InvalidData;
-  }
+    return (*sA == ',' || *sA == ';') ? MX_E_NoData : MX_E_InvalidData;
   //skip spaces
-  sA = SkipSpaces(sA + 1);
+  sA = SkipSpaces(sA + 1, szEndA);
   //parse value
   if (bExtendedParam != FALSE)
   {
     int nType = 0;
 
-    if (MX::StrNCompareA(sA, "UTF-8'", 6, TRUE) == 0)
+    if ((SIZE_T)(szEndA - sA) >= 6 && MX::StrNCompareA(sA, "UTF-8'", 6, TRUE) == 0)
     {
       sA += 6;
       nType = 1;
     }
-    else if (MX::StrNCompareA(sA, "ISO-8859-1'", 11, TRUE) == 0)
+    else if ((SIZE_T)(szEndA - sA) >= 11 && MX::StrNCompareA(sA, "ISO-8859-1'", 11, TRUE) == 0)
     {
       sA += 11;
       nType = 2;
     }
     if (nType != 0)
     {
-      while (*sA != 0 && *sA != '\'')
+      while (sA < szEndA && *sA != '\'')
         sA++;
-      if (*sA != '\'')
+      if (sA >= szEndA || *sA != '\'')
         return MX_E_InvalidData;
       sA++;
       //get value
-      while (*sA != 0)
+      while (sA < szEndA)
       {
         BYTE chA, i;
 
         szStartA = sA;
-        while (*sA >= 32 && *sA <= 126 && *sA != '%')
+        while (sA < szEndA && *sA >= 32 && *sA <= 126 && *sA != '%')
           sA++;
         if (sA > szStartA)
         {
           if (cStrValueA.CopyN(szStartA, (SIZE_T)(sA - szStartA)) == FALSE)
             return E_OUTOFMEMORY;
         }
-        if (*sA != '%')
+        if (sA < szEndA || *sA != '%')
           break;
         sA++;
         //pct-encoded char
+        if ((SIZE_T)(szEndA - sA) < 2)
+          return MX_E_InvalidData;
         chA = 0;
         for (i = 0; i < 2; i++)
         {
@@ -281,6 +296,7 @@ HRESULT CHttpHeaderBase::GetParamNameAndValue(_Out_ CStringA &cStrTokenA, _Out_ 
             chA = (chA << 4) + (BYTE)(*sA - 'a' + 10);
           else
             return MX_E_InvalidData;
+          sA++;
         }
         if (cStrValueA.CopyN((LPCSTR)&chA, 1) == FALSE)
           return E_OUTOFMEMORY;
@@ -293,33 +309,33 @@ HRESULT CHttpHeaderBase::GetParamNameAndValue(_Out_ CStringA &cStrTokenA, _Out_ 
       }
       else
       {
-        if (CHttpCommon::FromISO_8859_1(cStrValueW, (LPCSTR)cStrValueA, cStrValueA.GetLength()) == FALSE)
+        if (Http::FromISO_8859_1(cStrValueW, (LPCSTR)cStrValueA, cStrValueA.GetLength()) == FALSE)
           return E_OUTOFMEMORY;
       }
       goto done;
     }
   }
   //try quoted string
-  if (*sA == '"')
+  if (sA < szEndA && *sA == '"')
   {
-    hRes = GetQuotedString(cStrValueA, sA);
+    hRes = GetQuotedString(cStrValueA, sA, szEndA);
     if (FAILED(hRes))
       return (hRes == E_OUTOFMEMORY) ? hRes : MX_E_InvalidData;
-    if (CHttpCommon::FromISO_8859_1(cStrValueW, (LPCSTR)cStrValueA, cStrValueA.GetLength()) == FALSE)
+    if (Http::FromISO_8859_1(cStrValueW, (LPCSTR)cStrValueA, cStrValueA.GetLength()) == FALSE)
       return E_OUTOFMEMORY;
   }
   else
   {
     //try token
-    sA = GetToken(szStartA = sA);
+    sA = GetToken(szStartA = sA, szEndA);
     if (cStrValueA.CopyN(szStartA, (SIZE_T)(sA - szStartA)) == FALSE ||
-        CHttpCommon::FromISO_8859_1(cStrValueW, (LPCSTR)cStrValueA, cStrValueA.GetLength()) == FALSE)
+        Http::FromISO_8859_1(cStrValueW, (LPCSTR)cStrValueA, cStrValueA.GetLength()) == FALSE)
     {
       return E_OUTOFMEMORY;
     }
   }
 done:
-  sA = SkipSpaces(sA);
+  sA = SkipSpaces(sA, szEndA);
   if (lpbExtendedParam != NULL)
     *lpbExtendedParam = bExtendedParam;
   return S_OK;
@@ -360,65 +376,140 @@ BOOL CHttpHeaderBase::RawISO_8859_1_to_UTF8(_Out_ CStringW &cStrDestW, _In_ LPCW
   return TRUE;
 }
 
-CHttpHeaderBase::eBrowser CHttpHeaderBase::GetBrowserFromUserAgent(_In_ LPCSTR szUserAgentA,
-                                                                   _In_opt_ SIZE_T nUserAgentLen)
+
+//-----------------------------------------------------------
+
+CHttpHeaderArray::CHttpHeaderArray(_In_ const CHttpHeaderArray &cSrc) throw(...) :
+                  TArrayListWithRelease<CHttpHeaderBase*>()
 {
-  LPCSTR sA;
+  operator=(cSrc);
+  return;
+}
 
-  if (nUserAgentLen == (SIZE_T)-1)
-    nUserAgentLen = StrLenA(szUserAgentA);
-  if (szUserAgentA == NULL || nUserAgentLen == 0)
-    return BrowserOther;
-
-  sA = StrNFindA(szUserAgentA, "MSIE ", nUserAgentLen);
-  if (sA != NULL)
+CHttpHeaderArray& CHttpHeaderArray::operator=(_In_ const CHttpHeaderArray &cSrc) throw(...)
+{
+  if (this != &cSrc)
   {
-    SIZE_T nOffset = (SIZE_T)(sA - szUserAgentA);
+    TArrayListWithRelease<CHttpHeaderBase*> aNewList;
+    SIZE_T i, nCount;
 
-    if (nOffset + 6 < nUserAgentLen && sA[6] == '.')
+    nCount = cSrc.GetCount();
+    for (i = 0; i < nCount; i++)
     {
-      switch (sA[5])
-      {
-        case '4':
-        case '5':
-          return BrowserIE6;
+      CHttpHeaderBase *lpHeader = cSrc.GetElementAt(i);
 
-        case '6':
-          if (nOffset + 8 < nUserAgentLen &&
-              StrNCompareA(sA + 8, "SV1", nUserAgentLen - (nOffset + 8)) != NULL)
-          {
-            return BrowserIE6;
-          }
-          break;
+      if (AddElement(lpHeader) == FALSE)
+        throw (LONG)E_OUTOFMEMORY;
+      lpHeader->AddRef();
+    }
+    this->Transfer(aNewList);
+  }
+  return *this;
+}
+
+//NOTE: Returns -1 if not found
+SIZE_T CHttpHeaderArray::Find(_In_z_ LPCSTR szNameA) const
+{
+  SIZE_T i, nCount;
+
+  if (szNameA == NULL || *szNameA == 0)
+    return (SIZE_T)-1;
+  nCount = GetCount();
+  for (i = 0; i < nCount; i++)
+  {
+    if (StrCompareA(GetElementAt(i)->GetHeaderName(), szNameA, TRUE) == 0)
+      return i;
+  }
+  return (SIZE_T)-1;
+}
+
+SIZE_T CHttpHeaderArray::Find(_In_z_ LPCWSTR szNameW) const
+{
+  SIZE_T i, nCount;
+
+  if (szNameW == NULL || *szNameW == 0)
+    return (SIZE_T)-1;
+  nCount = GetCount();
+  for (i = 0; i < nCount; i++)
+  {
+    if (StrCompareAW(GetElementAt(i)->GetHeaderName(), szNameW, TRUE) == 0)
+      return i;
+  }
+  return (SIZE_T)-1;
+}
+
+HRESULT CHttpHeaderArray::Merge(_In_ const CHttpHeaderArray &cSrc, _In_ BOOL bForceReplaceExisting)
+{
+  SIZE_T i, nCount;
+  HRESULT hRes;
+
+  hRes = S_OK;
+  nCount = cSrc.GetCount();
+  for (i = 0; SUCCEEDED(hRes) && i < nCount; i++)
+  {
+    hRes = Merge(cSrc.GetElementAt(i), bForceReplaceExisting);
+    if (hRes == MX_E_AlreadyExists)
+      hRes = S_OK;
+  }
+  return hRes;
+}
+
+HRESULT CHttpHeaderArray::Merge(_In_ CHttpHeaderBase *lpSrc, _In_ BOOL bForceReplaceExisting)
+{
+  TAutoDeletePtr<CHttpHeaderBase> cHeader;
+  CHttpHeaderBase *lpHeader = NULL;
+  SIZE_T nHeaderIndex = (SIZE_T)-1;
+  CHttpHeaderBase::eDuplicateBehavior nDuplicateBehavior;
+  HRESULT hRes;
+
+  if (lpSrc == NULL)
+    return E_POINTER;
+
+  nDuplicateBehavior = CHttpHeaderBase::DuplicateBehaviorReplace;
+  if (bForceReplaceExisting == FALSE)
+  {
+    SIZE_T i, nCount;
+
+    nDuplicateBehavior = CHttpHeaderBase::DuplicateBehaviorAdd;
+    nCount = GetCount();
+    for (i = 0; i < nCount; i++)
+    {
+      lpHeader = GetElementAt(i);
+      if (StrCompareA(lpHeader->GetHeaderName(), lpSrc->GetHeaderName(), TRUE) == 0)
+      {
+        nDuplicateBehavior = lpHeader->GetDuplicateBehavior();
+        if (nDuplicateBehavior == CHttpHeaderBase::DuplicateBehaviorError)
+          return MX_E_AlreadyExists;
+        nHeaderIndex = i;
+        break;
       }
     }
-    return BrowserIE;
   }
+  switch (nDuplicateBehavior)
+  {
+    case CHttpHeaderBase::DuplicateBehaviorReplace:
+      if (AddElement(lpSrc) == FALSE)
+        return E_OUTOFMEMORY;
+      lpSrc->AddRef();
 
-  sA = StrNFindA(szUserAgentA, "Opera ", nUserAgentLen);
-  if (sA != NULL)
-    return BrowserOpera;
+      if (nHeaderIndex != (SIZE_T)-1)
+        RemoveElementAt(nHeaderIndex);
+      break;
 
-  sA = StrNFindA(szUserAgentA, "Gecko/", nUserAgentLen);
-  if (sA != NULL)
-    return BrowserGecko;
+    case CHttpHeaderBase::DuplicateBehaviorMerge:
+      hRes = lpHeader->Merge(lpSrc);
+      if (FAILED(hRes))
+        return hRes;
+      break;
 
-  sA = StrNFindA(szUserAgentA, "Chrome/", nUserAgentLen);
-  if (sA != NULL)
-    return BrowserChrome;
-
-  sA = StrNFindA(szUserAgentA, "Safari/", nUserAgentLen);
-  if (sA != NULL)
-    return BrowserSafari;
-  sA = StrNFindA(szUserAgentA, "Mac OS X", nUserAgentLen);
-  if (sA != NULL)
-    return BrowserSafari;
-
-  sA = StrNFindA(szUserAgentA, "Konqueror", nUserAgentLen);
-  if (sA != NULL)
-    return BrowserKonqueror;
-
-  return BrowserOther;
+    default:
+      if (AddElement(lpSrc) == FALSE)
+        return E_OUTOFMEMORY;
+      lpSrc->AddRef();
+      break;
+  }
+  //done
+  return S_OK;
 }
 
 } //namespace MX

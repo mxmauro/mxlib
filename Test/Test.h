@@ -30,6 +30,14 @@
 
 //-----------------------------------------------------------
 
+extern DWORD dwLogLevel;
+
+//-----------------------------------------------------------
+
 BOOL ShouldAbort();
 
 HRESULT GetAppPath(_Out_ MX::CStringW &cStrPathW);
+
+BOOL DoesCmdLineParamExist(_In_z_ LPCWSTR szParamNameW);
+HRESULT GetCmdLineParamString(_In_z_ LPCWSTR szParamNameW, _Out_ MX::CStringW &cStrParamValueW);
+HRESULT GetCmdLineParamUInt(_In_z_ LPCWSTR szParamNameW, _Out_ LPDWORD lpdwValue);

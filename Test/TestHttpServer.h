@@ -24,4 +24,4 @@
 
 //-----------------------------------------------------------
 
-int TestHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel);
+int TestHttpServer();

@@ -35,13 +35,13 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Cache-Control)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return DuplicateBehaviorAppend;
+    return DuplicateBehaviorMerge;
     };
 
   HRESULT SetPublic(_In_ BOOL bPublic);
@@ -90,6 +90,8 @@ public:
   LPCWSTR GetExtensionValue(_In_ SIZE_T nIndex) const;
   LPCWSTR GetExtensionValue(_In_z_ LPCSTR szNameA) const;
 
+  HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
+
 private:
   typedef struct {
     LPWSTR szValueW;
@@ -98,16 +100,16 @@ private:
 
   BOOL bPublic;
   BOOL bPrivate;
-  TArrayListWithFree<LPSTR> cPrivateFieldsList;
+  TArrayListWithFree<LPCSTR> cPrivateFieldsList;
   BOOL bNoCache;
-  TArrayListWithFree<LPSTR> cNoCacheFieldsList;
+  TArrayListWithFree<LPCSTR> cNoCacheFieldsList;
   BOOL bNoStore;
   BOOL bNoTransform;
   BOOL bMustRevalidate;
   BOOL bProxyRevalidate;
   ULONGLONG nMaxAge;
   ULONGLONG nSMaxAge;
-  TArrayListWithFree<LPEXTENSION> cExtensionsList;
+  TArrayListWithFree<LPEXTENSION> aExtensionsList;
 };
 
 } //namespace MX

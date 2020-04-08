@@ -163,22 +163,23 @@ VOID CJsHttpServer::OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpS
 
   if (FAILED(hRes))
   {
-    lpRequest->ResetAndDisableClientCache();
-    hRes = lpRequest->SendErrorPage(500, hRes);
-    lpRequest->End(hRes);
+    lpRequest->SendErrorPage(500, hRes);
   }
   return;
 }
 
-HRESULT CJsHttpServer::OnWebSocketRequestReceived(_In_ CHttpServer *lpHttp,
-                                                  _In_ CHttpServer::CClientRequest *_lpRequest,
-                                                  _Inout_ CHttpServer::WEBSOCKET_REQUEST_CALLBACK_DATA &sData)
+HRESULT CJsHttpServer::OnWebSocketRequestReceived(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *_lpReq,
+                                                  _In_ int nVersion, _In_opt_ LPCSTR *szProtocolsA,
+                                                  _In_ SIZE_T nProtocolsCount, _Out_ int &nSelectedProtocol,
+                                                  _In_ TArrayList<int> &aSupportedVersions,
+                                                  _Out_ _Maybenull_ CWebSocket **lplpWebSocket)
 {
   if (cWebSocketRequestReceivedCallback)
   {
-    CClientRequest *lpRequest = static_cast<CClientRequest*>(_lpRequest);
+    CClientRequest *lpRequest = static_cast<CClientRequest*>(_lpReq);
 
-    return cWebSocketRequestReceivedCallback(this, lpRequest, sData);
+    return cWebSocketRequestReceivedCallback(this, lpRequest, nVersion, szProtocolsA, nProtocolsCount,
+                                             nSelectedProtocol, aSupportedVersions, lplpWebSocket);
   }
   return MX_E_Unsupported;
 }

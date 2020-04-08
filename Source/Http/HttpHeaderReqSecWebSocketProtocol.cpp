@@ -37,25 +37,31 @@ CHttpHeaderReqSecWebSocketProtocol::~CHttpHeaderReqSecWebSocketProtocol()
   return;
 }
 
-HRESULT CHttpHeaderReqSecWebSocketProtocol::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderReqSecWebSocketProtocol::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szStartA;
+  LPCSTR szValueEndA, szStartA;
   BOOL bGotItem;
   HRESULT hRes;
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //parse
   bGotItem = FALSE;
+
   do
   {
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
-    if (*szValueA == 0)
+    szValueA = SkipSpaces(szValueA, szValueEndA);
+    if (szValueA >= szValueEndA)
       break;
 
     //protocol
-    szValueA = SkipUntil(szStartA = szValueA, ";, \t");
+    szValueA = SkipUntil(szStartA = szValueA, szValueEndA, ";, \t");
     if (szValueA == szStartA)
       goto skip_null_listitem;
 
@@ -68,26 +74,34 @@ HRESULT CHttpHeaderReqSecWebSocketProtocol::Parse(_In_z_ LPCSTR szValueA)
 
 skip_null_listitem:
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
+    szValueA = SkipSpaces(szValueA, szValueEndA);
 
     //check for separator or end
-    if (*szValueA == ',')
-      szValueA++;
-    else if (*szValueA != 0)
-      return MX_E_InvalidData;
+    if (szValueA < szValueEndA)
+    {
+      if (*szValueA == ',')
+        szValueA++;
+      else
+        return MX_E_InvalidData;
+    }
   }
-  while (*szValueA != 0);
+  while (szValueA < szValueEndA);
+
+  //do we got one?
+  if (bGotItem == FALSE)
+    return MX_E_InvalidData;
+
   //done
-  return (bGotItem != FALSE) ? S_OK : MX_E_InvalidData;
+  return S_OK;
 }
 
-HRESULT CHttpHeaderReqSecWebSocketProtocol::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderReqSecWebSocketProtocol::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   SIZE_T i, nCount;
 
   cStrDestA.Empty();
 
-  nCount = cProtocolsList.GetCount();
+  nCount = aProtocolsList.GetCount();
   for (i = 0; i < nCount; i++)
   {
     if (cStrDestA.IsEmpty() == FALSE)
@@ -95,9 +109,10 @@ HRESULT CHttpHeaderReqSecWebSocketProtocol::Build(_Inout_ CStringA &cStrDestA, _
       if (cStrDestA.ConcatN(",", 1) == FALSE)
         return E_OUTOFMEMORY;
     }
-    if (cStrDestA.Concat(cProtocolsList.GetElementAt(i)) == FALSE)
+    if (cStrDestA.Concat(aProtocolsList.GetElementAt(i)) == FALSE)
       return E_OUTOFMEMORY;
   }
+
   //done
   return S_OK;
 }
@@ -115,14 +130,15 @@ HRESULT CHttpHeaderReqSecWebSocketProtocol::AddProtocol(_In_z_ LPCSTR szProtocol
   if (szProtocolA == NULL)
     return E_POINTER;
 
-  szProtocolA = GetToken(szStartA = szProtocolA, nProtocolLen);
+  szProtocolA = GetToken(szStartA = szProtocolA, szProtocolA + nProtocolLen);
   if (szProtocolA != szStartA + nProtocolLen)
     return MX_E_InvalidData;
 
   if (cStrNewProtocolA.CopyN(szStartA, nProtocolLen) == FALSE)
     return E_OUTOFMEMORY;
+
   //add protocol to list
-  if (cProtocolsList.SortedInsert((LPSTR)cStrNewProtocolA, &ProtocolCompareFunc, NULL, TRUE,
+  if (aProtocolsList.SortedInsert((LPSTR)cStrNewProtocolA, &ProtocolCompareFunc, NULL, TRUE,
                                   &bAlreadyOnList) == FALSE)
   {
     return E_OUTOFMEMORY;
@@ -135,12 +151,32 @@ HRESULT CHttpHeaderReqSecWebSocketProtocol::AddProtocol(_In_z_ LPCSTR szProtocol
 
 SIZE_T CHttpHeaderReqSecWebSocketProtocol::GetProtocolsCount() const
 {
-  return cProtocolsList.GetCount();
+  return aProtocolsList.GetCount();
 }
 
 LPCSTR CHttpHeaderReqSecWebSocketProtocol::GetProtocol(_In_ SIZE_T nIndex) const
 {
-  return (nIndex < cProtocolsList.GetCount()) ? cProtocolsList.GetElementAt(nIndex) : NULL;
+  return (nIndex < aProtocolsList.GetCount()) ? aProtocolsList.GetElementAt(nIndex) : NULL;
+}
+
+BOOL CHttpHeaderReqSecWebSocketProtocol::HasProtocol(_In_z_ LPCSTR szProtocolA, _In_ SIZE_T nProtocolLen) const
+{
+  SIZE_T i, nCount;
+
+  if (nProtocolLen == (SIZE_T)-1)
+    nProtocolLen = StrLenA(szProtocolA);
+  if (nProtocolLen > 0)
+  {
+    nCount = aProtocolsList.GetCount();
+    for (i = 0; i < nCount; i++)
+    {
+      LPCSTR sA = aProtocolsList.GetElementAt(i);
+
+      if (StrNCompareA(sA, szProtocolA, nProtocolLen, TRUE) == 0 && sA[nProtocolLen] == 0)
+        return TRUE;
+    }
+  }
+  return FALSE;
 }
 
 } //namespace MX

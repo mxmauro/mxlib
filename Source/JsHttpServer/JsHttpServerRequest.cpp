@@ -132,7 +132,9 @@ HRESULT CJsHttpServer::CClientRequest::RunScript(_In_ LPCSTR szCodeA)
     {
       CStringA cStrBodyA;
 
-      hRes = ResetAndDisableClientCache();
+      hRes = ResetResponse();
+      if (SUCCEEDED(hRes))
+        hRes = DisableClientCache();
       if (SUCCEEDED(hRes))
       {
         if (cStrBodyA.Format("Error: %s", e.GetDescription()) != FALSE)
@@ -160,7 +162,9 @@ HRESULT CJsHttpServer::CClientRequest::RunScript(_In_ LPCSTR szCodeA)
   }
   catch (CJsWindowsError &e)
   {
-    hRes = ResetAndDisableClientCache();
+    hRes = ResetResponse();
+    if (SUCCEEDED(hRes))
+      hRes = DisableClientCache();
     if (SUCCEEDED(hRes))
     {
       BOOL bShowFileNameAndLine = ((__InterlockedRead(&nFlags) & __REQUEST_FLAGS_DebugShowFileNameAndLine) != 0);
@@ -174,7 +178,9 @@ HRESULT CJsHttpServer::CClientRequest::RunScript(_In_ LPCSTR szCodeA)
   }
   catch (CJsError &e)
   {
-    hRes = ResetAndDisableClientCache();
+    hRes = ResetResponse();
+    if (SUCCEEDED(hRes))
+      hRes = DisableClientCache();
     if (SUCCEEDED(hRes))
     {
       BOOL bShowFileNameAndLine = ((__InterlockedRead(&nFlags) & __REQUEST_FLAGS_DebugShowFileNameAndLine) != 0);

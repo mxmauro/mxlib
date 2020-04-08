@@ -36,6 +36,8 @@ public:
     CEncoding();
     ~CEncoding();
 
+    CEncoding& operator=(_In_ const CEncoding &cSrc) throw(...);
+
     HRESULT SetEncoding(_In_z_ LPCSTR szEncodingA, _In_opt_ SIZE_T nEncodingLen = (SIZE_T)-1);
     LPCSTR GetEncoding() const;
 
@@ -43,6 +45,8 @@ public:
     double GetQ() const;
 
   private:
+    friend class CHttpHeaderReqAcceptEncoding;
+
     CStringA cStrEncodingA;
     double q;
   };
@@ -55,13 +59,13 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Accept-Encoding)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return DuplicateBehaviorAppend;
+    return DuplicateBehaviorMerge;
     };
 
   HRESULT AddEncoding(_In_z_ LPCSTR szEncodingA, _In_opt_ SIZE_T nEncodingLen = (SIZE_T)-1,
@@ -71,8 +75,10 @@ public:
   CEncoding* GetEncoding(_In_ SIZE_T nIndex) const;
   CEncoding* GetEncoding(_In_z_ LPCSTR szEncodingA) const;
 
+  HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
+
 private:
-  TArrayListWithDelete<CEncoding*> cEncodingsList;
+  TArrayListWithDelete<CEncoding*> aEncodingsList;
 };
 
 } //namespace MX

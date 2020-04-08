@@ -30,6 +30,9 @@
     <Filter Include="Native Visualizations">
       <UniqueIdentifier>{3bc48389-2576-4cfb-939f-642a6c86d301}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Internals">
+      <UniqueIdentifier>{0b731336-3f5c-4e71-8db6-e5ef95042945}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\DateTime\DateTime.h">
@@ -122,6 +125,9 @@
     <ClInclude Include="Include\Timer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Internals\SystemDll.h">
+      <Filter>Source Files\Internals</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\DateTime\DateTime.cpp">
@@ -186,6 +192,9 @@
     </ClCompile>
     <ClCompile Include="Source\Timer.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Internals\SystemDll.cpp">
+      <Filter>Source Files\Internals</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

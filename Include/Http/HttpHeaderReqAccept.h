@@ -36,6 +36,8 @@ public:
     CType();
     ~CType();
 
+    CType& operator=(_In_ const CType &cSrc) throw(...);
+
     HRESULT SetType(_In_z_ LPCSTR szTypeA, _In_ SIZE_T nTypeLen = (SIZE_T)-1);
     LPCSTR GetType() const;
 
@@ -50,14 +52,17 @@ public:
     LPCWSTR GetParamValue(_In_z_ LPCSTR szNameA) const;
 
   private:
+    friend class CHttpHeaderReqAccept;
+
     typedef struct {
       LPWSTR szValueW;
       CHAR szNameA[1];
     } PARAMETER, *LPPARAMETER;
 
+  private:
     CStringA cStrTypeA;
     double q;
-    TArrayListWithFree<LPPARAMETER> cParamsList;
+    TArrayListWithFree<LPPARAMETER> aParamsList;
   };
 
   //----
@@ -68,13 +73,13 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Accept)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return DuplicateBehaviorAppend;
+    return DuplicateBehaviorMerge;
     };
 
   HRESULT AddType(_In_z_ LPCSTR szTypeA, _In_opt_ SIZE_T nTypeLen = (SIZE_T)-1, _Out_opt_ CType **lplpType = NULL);
@@ -83,8 +88,10 @@ public:
   CType* GetType(_In_ SIZE_T nIndex) const;
   CType* GetType(_In_z_ LPCSTR szTypeA) const;
 
+  HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
+
 private:
-  TArrayListWithDelete<CType*> cTypesList;
+  TArrayListWithDelete<CType*> aTypesList;
 };
 
 } //namespace MX

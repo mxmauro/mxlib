@@ -20,8 +20,6 @@
 #include "TestHttpClient.h"
 #include <Http\HttpClient.h>
 
-//#define SIMPLE_TEST
-
 //-----------------------------------------------------------
 
 class CMyHttpClient : public MX::CHttpClient
@@ -33,12 +31,29 @@ public:
     };
 
 public:
-  MX::CSslCertificateArray *lpCerts;
+  MX::CSslCertificateArray *lpCertificates;
 };
 
 //-----------------------------------------------------------
 
 static LONG volatile nLogMutex = 0;
+
+//-----------------------------------------------------------
+
+class CTestHttpClientWebSocket : public MX::CWebSocket
+{
+public:
+  CTestHttpClientWebSocket();
+  ~CTestHttpClientWebSocket();
+
+  virtual HRESULT OnConnected();
+  virtual HRESULT OnTextMessage(_In_ LPCSTR szMsgA, _In_ SIZE_T nMsgLength);
+  virtual HRESULT OnBinaryMessage(_In_ LPVOID lpData, _In_ SIZE_T nDataSize);
+
+  virtual SIZE_T GetMaxMessageSize() const;
+  virtual VOID OnPongFrame();
+  virtual VOID OnCloseFrame(_In_ USHORT wCode, _In_  HRESULT hrErrorCode);
+};
 
 //-----------------------------------------------------------
 
@@ -51,41 +66,39 @@ static HRESULT OnResponseHeadersReceived_BigDownload(_In_ MX::CHttpClient *lpHtt
                                          _In_opt_ PULONGLONG lpnContentSize, _In_z_ LPCSTR szTypeA,
                                           _In_ BOOL bTreatAsAttachment, _Inout_ MX::CStringW &cStrFullFileNameW,
                                          _Inout_ MX::CHttpBodyParserBase **lplpBodyParser);
-static HRESULT OnDocumentCompleted(_In_ MX::CHttpClient *lpHttp);
+static VOID OnDocumentCompleted(_In_ MX::CHttpClient *lpHttp);
 static VOID OnError(_In_ MX::CHttpClient *lpHttp, _In_ HRESULT hrErrorCode);
 static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *lpHttp, _Inout_ MX::CSslCertificateArray **lplpCertificates,
                                    _Inout_ MX::CSslCertificate **lplpSelfCert,
                                    _Inout_ MX::CEncryptionKey **lplpPrivKey);
 
-#ifdef SIMPLE_TEST
-static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificateArray *lpCerts, _In_ DWORD dwLogLevel);
-#else //SIMPLE_TEST
+static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificateArray *lpCertificates);
+static HRESULT WebSocketTest(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificateArray *lpCertificates);
 static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpParam);
-#endif //SIMPLE_TEST
 
 static HRESULT CheckHttpClientResponse(_In_ CMyHttpClient &cHttpClient, _In_ BOOL bExpectHtml);
 
 static HRESULT OnLog(_In_z_ LPCWSTR szInfoW);
 
+static BOOL _GetTempPath(_Out_ MX::CStringW &cStrPathW);
+
 //-----------------------------------------------------------
 
-#ifndef SIMPLE_TEST
 typedef struct {
   int nIndex;
   MX::CSockets *lpSckMgr;
-  MX::CSslCertificateArray *lpCerts;
+  MX::CSslCertificateArray *lpCertificates;
   MX::CWorkerThread cWorkerThreads;
   DWORD dwLogLevel;
 } THREAD_DATA;
-#endif //!SIMPLE_TEST
 
 //-----------------------------------------------------------
 
-int TestHttpClient(_In_ DWORD dwLogLevel)
+int TestHttpClient()
 {
   MX::CIoCompletionPortThreadPool cDispatcherPool;
   MX::CSockets cSckMgr(cDispatcherPool);
-  MX::CSslCertificateArray cCerts;
+  MX::CSslCertificateArray cCertificates;
   HRESULT hRes;
 
   hRes = cDispatcherPool.Initialize();
@@ -99,52 +112,56 @@ int TestHttpClient(_In_ DWORD dwLogLevel)
     cSckMgr.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
     cSckMgr.SetLogLevel(dwLogLevel);
 
-    hRes = cCerts.ImportFromWindowsStore();
+    hRes = cCertificates.ImportFromWindowsStore();
   }
 
-#ifdef SIMPLE_TEST
   if (SUCCEEDED(hRes))
   {
-    hRes = SimpleTest1(&cSckMgr, &cCerts, dwLogLevel);
-  }
-#else //SIMPLE_TEST
-  if (SUCCEEDED(hRes))
-  {
-    THREAD_DATA sThreadData[20];
-    BOOL bActive;
-    SIZE_T i;
-
-    for (i = 0; SUCCEEDED(hRes) && i < MX_ARRAYLEN(sThreadData); i++)
+    if (DoesCmdLineParamExist(L"simple1") != FALSE)
     {
-      sThreadData[i].nIndex = (int)i + 1;
-      sThreadData[i].lpSckMgr = &cSckMgr;
-      sThreadData[i].lpCerts = &cCerts;
-      sThreadData[i].dwLogLevel = dwLogLevel;
-      if (sThreadData[i].cWorkerThreads.SetRoutine(&HttpClientJob, &sThreadData[i]) == FALSE ||
-          sThreadData[i].cWorkerThreads.Start() == FALSE)
-      {
-        hRes = E_OUTOFMEMORY;
-      }
+      hRes = SimpleTest1(&cSckMgr, &cCertificates);
     }
-    //----
-    if (SUCCEEDED(hRes))
+    else if (DoesCmdLineParamExist(L"websocket") != FALSE)
     {
-      do
+      hRes = WebSocketTest(&cSckMgr, &cCertificates);
+    }
+    else
+    {
+      THREAD_DATA sThreadData[20];
+      BOOL bActive;
+      SIZE_T i;
+
+      for (i = 0; SUCCEEDED(hRes) && i < MX_ARRAYLEN(sThreadData); i++)
       {
-        bActive = FALSE;
-        for (i = 0; i < MX_ARRAYLEN(sThreadData); i++)
+        sThreadData[i].nIndex = (int)i + 1;
+        sThreadData[i].lpSckMgr = &cSckMgr;
+        sThreadData[i].lpCertificates = &cCertificates;
+        sThreadData[i].dwLogLevel = dwLogLevel;
+        if (sThreadData[i].cWorkerThreads.SetRoutine(&HttpClientJob, &sThreadData[i]) == FALSE ||
+            sThreadData[i].cWorkerThreads.Start() == FALSE)
         {
-          if (sThreadData[i].cWorkerThreads.Wait(10) == FALSE)
-            bActive = TRUE;
+          hRes = E_OUTOFMEMORY;
         }
       }
-      while (bActive != FALSE && ShouldAbort() == FALSE);
-    }
+      //----
+      if (SUCCEEDED(hRes))
+      {
+        do
+        {
+          bActive = FALSE;
+          for (i = 0; i < MX_ARRAYLEN(sThreadData); i++)
+          {
+            if (sThreadData[i].cWorkerThreads.Wait(10) == FALSE)
+              bActive = TRUE;
+          }
+        }
+        while (bActive != FALSE && ShouldAbort() == FALSE);
+      }
 
-    for (i = 0; i < MX_ARRAYLEN(sThreadData); i++)
-      sThreadData[i].cWorkerThreads.Stop();
+      for (i = 0; i < MX_ARRAYLEN(sThreadData); i++)
+        sThreadData[i].cWorkerThreads.Stop();
+    }
   }
-#endif //SIMPLE_TEST
 
   //done
   return (int)hRes;
@@ -169,19 +186,16 @@ static HRESULT OnResponseHeadersReceived_BigDownload(_In_ MX::CHttpClient *lpHtt
                                                      _In_ BOOL bTreatAsAttachment, _Inout_ MX::CStringW &cStrFullFileNameW,
                                                      _Inout_ MX::CHttpBodyParserBase **lplpBodyParser)
 {
-  HRESULT hRes;
-
-  hRes = MX::CHttpCommon::_GetTempPath(cStrFullFileNameW);
-  if (FAILED(hRes))
-    return hRes;
+  if (_GetTempPath(cStrFullFileNameW) == FALSE)
+    return E_OUTOFMEMORY;
   if (cStrFullFileNameW.Concat(szFileNameW) == FALSE)
     return E_OUTOFMEMORY;
   return S_OK;
 }
 
-static HRESULT OnDocumentCompleted(_In_ MX::CHttpClient *lpHttp)
+static VOID OnDocumentCompleted(_In_ MX::CHttpClient *lpHttp)
 {
-  return S_OK;
+  return;
 }
 
 static VOID OnError(_In_ MX::CHttpClient *lpHttp, _In_ HRESULT hrErrorCode)
@@ -194,12 +208,13 @@ static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *_lpHttp, _Inout_ MX::CS
 {
   CMyHttpClient *lpHttp = static_cast<CMyHttpClient*>(_lpHttp);
 
-  *lplpCertificates = lpHttp->lpCerts;
+  *lplpCertificates = lpHttp->lpCertificates;
   return S_OK;
 }
 
-#ifdef SIMPLE_TEST
-static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificateArray *lpCerts, _In_ DWORD dwLogLevel)
+//-----------------------------------------------------------
+
+static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificateArray *lpCertificates)
 {
   CMyHttpClient cHttpClient(*lpSckMgr);
   MX::CProxy cProxy;
@@ -210,11 +225,9 @@ static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificate
   //cProxy.SetManual(L"127.0.0.1:808");
   //cProxy.SetCredentials(L"guest", L"invitado");
   //cHttpClient.SetProxy(cProxy);
-  cHttpClient.lpCerts = lpCerts;
+  cHttpClient.lpCertificates = lpCertificates;
   //cHttpClient.SetOptionFlags(0);
   //cHttpClient.SetOptionFlags(MX::CHttpClient::OptionKeepConnectionOpen);
-
-  cHttpClient.SetOption_ResponseHeaderTimeout(INFINITE);
 
   cHttpClient.SetDocumentCompletedCallback(MX_BIND_CALLBACK(&OnDocumentCompleted));
   cHttpClient.SetErrorCallback(MX_BIND_CALLBACK(&OnError));
@@ -249,11 +262,16 @@ static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificate
 
   if (SUCCEEDED(hRes))
   {
-    while (cHttpClient.IsDocumentComplete() == FALSE && cHttpClient.IsClosed() == FALSE)
+    while (ShouldAbort() == FALSE && cHttpClient.IsDocumentComplete() == FALSE && cHttpClient.IsClosed() == FALSE)
+    {
       ::Sleep(50);
+    }
 #pragma warning(suppress : 28159)
     dwEndTime = ::GetTickCount();
-    hRes = CheckHttpClientResponse(cHttpClient, TRUE);
+    if (ShouldAbort() == FALSE)
+      hRes = CheckHttpClientResponse(cHttpClient, TRUE);
+    else
+      hRes = MX_E_Cancelled;
 
     //print results
     switch (hRes)
@@ -261,23 +279,88 @@ static HRESULT SimpleTest1(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificate
       case 0x80070000 | ERROR_CANCELLED:
         wprintf_s(L"[HttpClient/SimpleTest1] Cancelled by user.\n");
         break;
+
       case S_FALSE:
         wprintf_s(L"[HttpClient/SimpleTest1] Body is NOT complete. Download in %lums\n", dwEndTime - dwStartTime);
         break;
+
       case S_OK:
         wprintf_s(L"[HttpClient/SimpleTest1] Successful download in %lums / Status:%ld\n", dwEndTime - dwStartTime,
                   cHttpClient.GetResponseStatus());
         break;
+
       default:
-        wprintf_s(L"[HttpClient/SimpleTest1] Error 0x%08X / Status:%ld\n", hRes,
-                  cHttpClient.GetResponseStatus());
+        wprintf_s(L"[HttpClient/SimpleTest1] Error 0x%08X / Status:%ld\n", hRes, cHttpClient.GetResponseStatus());
         break;
     }
   }
   return hRes;
 }
 
-#else //SIMPLE_TEST
+//-----------------------------------------------------------
+
+static HRESULT WebSocketTest(_In_ MX::CSockets *lpSckMgr, _In_ MX::CSslCertificateArray *lpCertificates)
+{
+  CMyHttpClient cHttpClient(*lpSckMgr);
+  MX::TAutoRefCounted<CTestHttpClientWebSocket> cWebSocket;
+  MX::CHttpClient::OPEN_OPTIONS sOptions;
+  MX::CProxy cProxy;
+  HRESULT hRes;
+
+  cProxy.SetUseIE();
+  cHttpClient.lpCertificates = lpCertificates;
+  cHttpClient.SetErrorCallback(MX_BIND_CALLBACK(&OnError));
+  cHttpClient.SetQueryCertificatesCallback(MX_BIND_CALLBACK(&OnQueryCertificates));
+  cHttpClient.SetLogLevel(dwLogLevel);
+  cHttpClient.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
+
+  cWebSocket.Attach(MX_DEBUG_NEW CTestHttpClientWebSocket());
+  if (!cWebSocket)
+    return E_OUTOFMEMORY;
+
+  ::MxMemSet(&sOptions, 0, sizeof(sOptions));
+  sOptions.sWebSocket.lpSocket = cWebSocket.Get();
+  sOptions.sWebSocket.nVersion = 13;
+  sOptions.sWebSocket.lpszProtocolsA = NULL;
+
+  hRes = cHttpClient.AddRequestHeader("Origin", "http://www.websocket.org");
+  //hRes = cHttpClient.Open("ws://demos.kaazing.com/echo", &sOptions);
+  if (SUCCEEDED(hRes))
+  {
+    hRes = cHttpClient.Open("ws://echo.websocket.org/", &sOptions);
+  }
+  if (SUCCEEDED(hRes))
+  {
+    while (ShouldAbort() == FALSE && cHttpClient.IsDocumentComplete() == FALSE && cHttpClient.IsClosed() == FALSE)
+    {
+      ::Sleep(50);
+    }
+    if (ShouldAbort() == FALSE)
+    {
+      if (cHttpClient.GetResponseStatus() == 101)
+      {
+        while (ShouldAbort() == FALSE && cWebSocket->IsClosed() == FALSE)
+        {
+          ::Sleep(50);
+        }
+      }
+      else
+      {
+        hRes = cHttpClient.GetLastRequestError();
+        wprintf_s(L"[HttpClient/WebSocketTest] Error 0x%08X / Status:%ld\n", hRes, cHttpClient.GetResponseStatus());
+      }
+    }
+    else
+    {
+      hRes = MX_E_Cancelled;
+      wprintf_s(L"[HttpClient/WebSocketTest] Cancelled by user.\n");
+    }
+  }
+  return hRes;
+}
+
+//-----------------------------------------------------------
+
 static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpParam)
 {
   THREAD_DATA *lpThreadData = (THREAD_DATA*)lpParam;
@@ -290,7 +373,9 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
 
   cProxy.SetUseIE();
   cHttpClient.SetProxy(cProxy);
-  cHttpClient.lpCerts = lpThreadData->lpCerts;
+  cHttpClient.lpCertificates = lpThreadData->lpCertificates;
+  cHttpClient.SetOption_MaxBodySize(1024 * 1048576);
+  cHttpClient.SetOption_MaxBodySizeInMemory(1048576);
   //cHttpClient.SetOptionFlags(0);
   //cHttpClient.SetOptionFlags(MX::CHttpClient::OptionKeepConnectionOpen);
   cHttpClient.SetDocumentCompletedCallback(MX_BIND_CALLBACK(&OnDocumentCompleted));
@@ -308,7 +393,8 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
   dwStartTime = dwEndTime = ::GetTickCount();
 
   hRes = E_FAIL;
-  if (lpThreadData->nIndex == 1)
+
+  if (lpThreadData->nIndex == 1 && DoesCmdLineParamExist(L"bigdownload") != FALSE)
   {
     bExpectHtml = FALSE;
     cHttpClient.SetHeadersReceivedCallback(MX_BIND_CALLBACK(&OnResponseHeadersReceived_BigDownload));
@@ -342,6 +428,13 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
     if (lpThreadData->cWorkerThreads.CheckForAbort(0) == FALSE)
     {
       hRes = CheckHttpClientResponse(cHttpClient, bExpectHtml);
+
+      if (lpThreadData->nIndex == 1 && DoesCmdLineParamExist(L"bigdownload") != FALSE)
+      {
+        MX::TAutoRefCounted<MX::CHttpBodyParserBase> cBodyParser;
+
+        cBodyParser.Attach(cHttpClient.GetResponseBodyParser());
+      }
     }
     else
     {
@@ -376,7 +469,6 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
   }
   return;
 }
-#endif //SIMPLE_TEST
 
 static HRESULT CheckHttpClientResponse(_In_ CMyHttpClient &cHttpClient, _In_ BOOL bExpectHtml)
 {
@@ -396,14 +488,22 @@ static HRESULT CheckHttpClientResponse(_In_ CMyHttpClient &cHttpClient, _In_ BOO
     MX::CHttpBodyParserDefault *lpParser = (MX::CHttpBodyParserDefault*)lpBodyParser;
     MX::CStringA cStrBodyA;
 
-    hRes = lpParser->ToString(cStrBodyA);
-    if (SUCCEEDED(hRes) && bExpectHtml != FALSE)
+    if (bExpectHtml != FALSE)
     {
-      if (MX::StrFindA((LPCSTR)cStrBodyA, "<html", FALSE, TRUE) == NULL ||
-          MX::StrFindA((LPCSTR)cStrBodyA, "</html>", TRUE, TRUE) == NULL)
+      hRes = lpParser->ToString(cStrBodyA);
+      if (SUCCEEDED(hRes))
       {
-        hRes = S_FALSE;
+        if (MX::StrFindA((LPCSTR)cStrBodyA, "<html", FALSE, TRUE) == NULL ||
+            MX::StrFindA((LPCSTR)cStrBodyA, "</html>", TRUE, TRUE) == NULL)
+        {
+          hRes = S_FALSE;
+        }
       }
+    }
+    else
+    {
+      lpParser->KeepFile();
+      hRes = S_OK;
     }
   }
   lpBodyParser->Release();
@@ -416,4 +516,105 @@ static HRESULT OnLog(_In_z_ LPCWSTR szInfoW)
 
   wprintf_s(L"%s\n", szInfoW);
   return S_OK;
+}
+
+static BOOL _GetTempPath(_Out_ MX::CStringW &cStrPathW)
+{
+  SIZE_T nLen, nThisLen = 0;
+
+  for (nLen = 2048; nLen <= 65536; nLen <<= 1)
+  {
+    if (cStrPathW.EnsureBuffer(nLen) == FALSE)
+      return FALSE;
+    nThisLen = (SIZE_T)::GetTempPathW((DWORD)nLen, (LPWSTR)cStrPathW);
+    if (nThisLen < nLen - 4)
+      break;
+  }
+  if (nLen > 65536)
+    return FALSE;
+  ((LPWSTR)cStrPathW)[nThisLen] = 0;
+  cStrPathW.Refresh();
+  if (nThisLen > 0 && ((LPWSTR)cStrPathW)[nThisLen - 1] != L'\\')
+  {
+    if (cStrPathW.Concat(L"\\") == FALSE)
+      return FALSE;
+  }
+  return TRUE;
+}
+//-----------------------------------------------------------
+
+CTestHttpClientWebSocket::CTestHttpClientWebSocket() : MX::CWebSocket()
+{
+  return;
+}
+
+CTestHttpClientWebSocket::~CTestHttpClientWebSocket()
+{
+  return;
+}
+
+HRESULT CTestHttpClientWebSocket::OnConnected()
+{
+  static const LPCSTR szWelcomeMsgA = "Welcome to the MX HttpClient WebSocket demo!!!";
+  HRESULT hRes;
+
+  {
+    Console::CPrintLock cPrintLock;
+
+    wprintf_s(L"[HttpClientWS] WebSocket is now connected.\n");
+  }
+
+  hRes = BeginTextMessage();
+  if (SUCCEEDED(hRes))
+    hRes = SendTextMessage(szWelcomeMsgA);
+  if (SUCCEEDED(hRes))
+    hRes = EndMessage();
+  //done
+  return hRes;
+}
+
+HRESULT CTestHttpClientWebSocket::OnTextMessage(_In_ LPCSTR szMsgA, _In_ SIZE_T nMsgLength)
+{
+  {
+    Console::CPrintLock cPrintLock;
+
+    wprintf_s(L"[HttpClientWS] Received text frame [%.*S].\n", (int)nMsgLength, szMsgA);
+  }
+
+  //done
+  return S_OK;
+}
+
+HRESULT CTestHttpClientWebSocket::OnBinaryMessage(_In_ LPVOID lpData, _In_ SIZE_T nDataSize)
+{
+  HRESULT hRes;
+
+  hRes = BeginBinaryMessage();
+  if (SUCCEEDED(hRes))
+    hRes = SendBinaryMessage(lpData, nDataSize);
+  if (SUCCEEDED(hRes))
+    hRes = EndMessage();
+  //done
+  return S_OK;
+}
+
+SIZE_T CTestHttpClientWebSocket::GetMaxMessageSize() const
+{
+  return 1048596;
+}
+
+VOID CTestHttpClientWebSocket::OnPongFrame()
+{
+  Console::CPrintLock cPrintLock;
+
+  wprintf_s(L"[HttpClientWS] Received pong frame.\n");
+  return;
+}
+
+VOID CTestHttpClientWebSocket::OnCloseFrame(_In_ USHORT wCode, _In_  HRESULT hrErrorCode)
+{
+  Console::CPrintLock cPrintLock;
+
+  wprintf_s(L"[HttpClientWS] Received close frame. Code: %u / Error: 0x%08X\n", wCode, hrErrorCode);
+  return;
 }

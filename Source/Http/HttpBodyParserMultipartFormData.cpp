@@ -60,12 +60,12 @@ CHttpBodyParserMultipartFormData::~CHttpBodyParserMultipartFormData()
   return;
 }
 
-HRESULT CHttpBodyParserMultipartFormData::Initialize(_In_ CHttpCommon &cHttpCmn)
+HRESULT CHttpBodyParserMultipartFormData::Initialize(_In_ Internals::CHttpParser &cHttpParser)
 {
   CHttpHeaderEntContentType *lpHeader;
   LPCWSTR szBoundaryW;
 
-  lpHeader = cHttpCmn.GetHeader<CHttpHeaderEntContentType>();
+  lpHeader = cHttpParser.Headers().Find<CHttpHeaderEntContentType>();
   if (lpHeader == NULL)
     return MX_E_InvalidData;
   szBoundaryW = lpHeader->GetParamValue("boundary");
@@ -199,12 +199,9 @@ err_invalid_data:
           //no more headers
           if (sParser.cStrCurrLineA.IsEmpty() == FALSE)
           {
-            if (IsEntityTooLarge() == FALSE) //ignore if 413 error is postponed
-            {
-              hRes = ParseHeader(sParser.cStrCurrLineA);
-              if (FAILED(hRes))
-                goto done;
-            }
+            hRes = ParseHeader(sParser.cStrCurrLineA);
+            if (FAILED(hRes))
+              goto done;
             sParser.cStrCurrLineA.Empty();
           }
           sParser.nState = StateHeadersEnd;
@@ -223,12 +220,9 @@ err_invalid_data:
         //new header arrives, first check if we have a previous defined
         if (sParser.cStrCurrLineA.IsEmpty() == FALSE)
         {
-          if (IsEntityTooLarge() == FALSE) //ignore if 413 error is postponed
-          {
-            hRes = ParseHeader(sParser.cStrCurrLineA);
-            if (FAILED(hRes))
-              goto done;
-          }
+          hRes = ParseHeader(sParser.cStrCurrLineA);
+          if (FAILED(hRes))
+            goto done;
           sParser.cStrCurrLineA.Empty();
         }
         sParser.nState = StateHeaderName;
@@ -250,16 +244,12 @@ err_nomem:  hRes = E_OUTOFMEMORY;
           break;
         }
         //check for valid token char
-        if (CHttpCommon::IsValidNameChar(*szDataA) == FALSE)
+        if (Http::IsValidNameChar(*szDataA) == FALSE)
           goto err_invalid_data;
-        if (sParser.cStrCurrLineA.GetLength() < MAX_HEADER_LINE)
+        if (sParser.cStrCurrLineA.GetLength() > MAX_HEADER_LINE)
         {
-          if (sParser.cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
-            goto err_nomem;
-        }
-        else
-        {
-          MarkEntityAsTooLarge();
+          hRes = MX_E_BadLength;
+          goto done;
         }
         break;
 
@@ -274,12 +264,9 @@ err_nomem:  hRes = E_OUTOFMEMORY;
 on_header_value:
         if (*szDataA == '\r' || *szDataA == '\n')
         {
-          if (IsEntityTooLarge() == FALSE) //ignore if 413 error is postponed
-          {
-            hRes = ParseHeader(sParser.cStrCurrLineA);
-            if (FAILED(hRes))
-              goto done;
-          }
+          hRes = ParseHeader(sParser.cStrCurrLineA);
+          if (FAILED(hRes))
+            goto done;
           sParser.cStrCurrLineA.Empty();
           sParser.nState = (*szDataA == '\r') ? StateNearHeaderValueEnd : StateHeaderStart;
           break;
@@ -292,15 +279,13 @@ on_header_value:
         //check valid value char
         if (*szDataA == 0)
           goto err_invalid_data;
-        if (sParser.cStrCurrLineA.GetLength() < MAX_HEADER_LINE)
+        if (sParser.cStrCurrLineA.GetLength() > MAX_HEADER_LINE)
         {
-          if (sParser.cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
-            goto err_nomem;
+          hRes = MX_E_BadLength;
+          goto done;
         }
-        else
-        {
-          MarkEntityAsTooLarge();
-        }
+        if (sParser.cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
+          goto err_nomem;
         break;
 
       case StateHeaderValueSpaceAfter:
@@ -324,32 +309,23 @@ on_header_value:
           goto err_invalid_data;
 headers_end_reached:
         //verify if required headers are set
-        if (IsEntityTooLarge() == FALSE)
-        {
-          if (sParser.sCurrentBlock.sContentDisposition.cStrNameW.IsEmpty() != FALSE)
-            goto err_invalid_data; //requires header not set
-        }
+        if (sParser.sCurrentBlock.sContentDisposition.cStrNameW.IsEmpty() != FALSE)
+          goto err_invalid_data; //requires header not set
         //if dealing with a file...
         if (sParser.sCurrentBlock.sContentDisposition.bHasFileName != FALSE)
         {
           if ((sParser.nFileUploadCounter++) >= (SIZE_T)dwMaxFilesCount)
           {
-            MarkEntityAsTooLarge(); //too many file uploads
+            hRes = MX_E_BadLength;
+            goto done;
           }
           //switch to file container
-          if (IsEntityTooLarge() == FALSE)
+          if (cDownloadStartedCallback)
           {
-            if (cDownloadStartedCallback)
-            {
-              LPCWSTR sW = (LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrFileNameW);
-              hRes = cDownloadStartedCallback(&(sParser.cFileH), sW, lpUserData);
-              if (SUCCEEDED(hRes) && (!(sParser.cFileH)))
-                hRes = MX_HRESULT_FROM_WIN32(ERROR_FILE_TOO_LARGE);
-            }
-            else
-            {
+            LPCWSTR sW = (LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrFileNameW);
+            hRes = cDownloadStartedCallback(&(sParser.cFileH), sW, lpUserData);
+            if (SUCCEEDED(hRes) && (!(sParser.cFileH)))
               hRes = MX_HRESULT_FROM_WIN32(ERROR_FILE_TOO_LARGE);
-            }
             if (FAILED(hRes))
               goto done;
           }
@@ -433,41 +409,34 @@ not_boundary_end:
           if (sA[sParser.nBoundaryPos - 2] == 0)
           {
             //boundary detected, add accumulated value
-            if (IsEntityTooLarge() == FALSE)
+            if (!(sParser.cFileH))
             {
-              if (!(sParser.cFileH))
-              {
-                hRes = Utf8_Decode(cStrTempW, (LPCSTR)(sParser.cStrCurrLineA));
-                if (SUCCEEDED(hRes))
-                  hRes = AddField((LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrNameW), (LPCWSTR)cStrTempW);
-                if (FAILED(hRes))
-                  goto done;
-              }
-              else
-              {
-                //flush buffers
-                hRes = S_OK;
-                if (sParser.nUsedTempBuf >= 0)
-                {
-                  if (::WriteFile(sParser.cFileH, sParser.aTempBuf, (DWORD)(sParser.nUsedTempBuf), &dw, NULL) == FALSE)
-                    hRes = MX_HRESULT_FROM_LASTERROR();
-                  else if ((SIZE_T)dw != sParser.nUsedTempBuf)
-                    hRes = MX_E_WriteFault;
-                }
-                if (SUCCEEDED(hRes))
-                {
-                  hRes = AddFileField((LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrNameW),
-                                      (LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrFileNameW),
-                                      (LPCSTR)(sParser.sCurrentBlock.cStrContentTypeA), sParser.cFileH.Get());
-                }
-                if (FAILED(hRes))
-                  goto done;
-                sParser.cFileH.Detach();
-              }
+              hRes = Utf8_Decode(cStrTempW, (LPCSTR)(sParser.cStrCurrLineA));
+              if (SUCCEEDED(hRes))
+                hRes = AddField((LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrNameW), (LPCWSTR)cStrTempW);
+              if (FAILED(hRes))
+                goto done;
             }
             else
             {
-              sParser.cFileH.Close();
+              //flush buffers
+              hRes = S_OK;
+              if (sParser.nUsedTempBuf >= 0)
+              {
+                if (::WriteFile(sParser.cFileH, sParser.aTempBuf, (DWORD)(sParser.nUsedTempBuf), &dw, NULL) == FALSE)
+                  hRes = MX_HRESULT_FROM_LASTERROR();
+                else if ((SIZE_T)dw != sParser.nUsedTempBuf)
+                  hRes = MX_E_WriteFault;
+              }
+              if (SUCCEEDED(hRes))
+              {
+                hRes = AddFileField((LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrNameW),
+                                    (LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrFileNameW),
+                                    (LPCSTR)(sParser.sCurrentBlock.cStrContentTypeA), sParser.cFileH.Get());
+              }
+              if (FAILED(hRes))
+                goto done;
+              sParser.cFileH.Detach();
             }
             sParser.cStrCurrLineA.Empty();
             sParser.nState = StateDataEnd;
@@ -512,7 +481,6 @@ done:
 HRESULT CHttpBodyParserMultipartFormData::ParseHeader(_Inout_ CStringA &cStrLineA)
 {
   LPSTR szLineA, szNameStartA, szNameEndA, szValueStartA, szValueEndA;
-  CHAR chA[2];
   HRESULT hRes;
 
   szLineA = (LPSTR)cStrLineA;
@@ -546,25 +514,23 @@ HRESULT CHttpBodyParserMultipartFormData::ParseHeader(_Inout_ CStringA &cStrLine
 
         if (sParser.sCurrentBlock.sContentDisposition.cStrNameW.IsEmpty() == FALSE)
           return MX_E_InvalidData; //header already specified
+
         //parse value
-        chA[0] = *szNameEndA;
-        chA[1] = *szValueEndA;
-        *szNameEndA = *szValueEndA = 0;
         hRes = CHttpHeaderBase::Create<CHttpHeaderEntContentDisposition>(TRUE, &cHeader);
         if (SUCCEEDED(hRes))
-          hRes = cHeader->Parse(szValueStartA);
-        *szNameEndA = chA[0];
-        *szValueEndA = chA[1];
+          hRes = cHeader->Parse(szValueStartA, (SIZE_T)(szValueEndA - szValueStartA));
         if (FAILED(hRes))
           return hRes;
         if (StrCompareA(cHeader->GetType(), "form-data", TRUE) != 0)
           return MX_E_InvalidData;
+
         //name parameter
         sW = cHeader->GetName();
         if (*sW == 0)
           return MX_E_InvalidData;
         if (sParser.sCurrentBlock.sContentDisposition.cStrNameW.Copy(sW) == FALSE)
           return E_OUTOFMEMORY;
+
         //filename parameter
         sParser.sCurrentBlock.sContentDisposition.bHasFileName = cHeader->HasFileName();
         if (sParser.sCurrentBlock.sContentDisposition.bHasFileName != FALSE)
@@ -572,6 +538,7 @@ HRESULT CHttpBodyParserMultipartFormData::ParseHeader(_Inout_ CStringA &cStrLine
           if (sParser.sCurrentBlock.sContentDisposition.cStrFileNameW.Copy(cHeader->GetFileName()) == FALSE)
             return E_OUTOFMEMORY;
         }
+
         //done
         return S_OK;
       }
@@ -584,19 +551,17 @@ HRESULT CHttpBodyParserMultipartFormData::ParseHeader(_Inout_ CStringA &cStrLine
 
         if (sParser.sCurrentBlock.cStrContentTypeA.IsEmpty() == FALSE)
           return MX_E_InvalidData; //header already specified
+
         //parse value
-        chA[0] = *szNameEndA;
-        chA[1] = *szValueEndA;
-        *szNameEndA = *szValueEndA = 0;
         hRes = CHttpHeaderBase::Create<CHttpHeaderEntContentType>(TRUE, &cHeader);
         if (SUCCEEDED(hRes))
-          hRes = cHeader->Parse(szValueStartA);
-        *szNameEndA = chA[0];
-        *szValueEndA = chA[1];
+          hRes = cHeader->Parse(szValueStartA, (SIZE_T)(szValueEndA - szValueStartA));
         if (FAILED(hRes))
           return hRes;
+
         if (sParser.sCurrentBlock.cStrContentTypeA.Copy(cHeader->GetType()) == FALSE)
           return E_OUTOFMEMORY;
+
         //done
         return S_OK;
       }
@@ -609,20 +574,18 @@ HRESULT CHttpBodyParserMultipartFormData::ParseHeader(_Inout_ CStringA &cStrLine
 
         if (sParser.sCurrentBlock.cStrContentTypeA.IsEmpty() == FALSE)
           return MX_E_InvalidData; //header already specified
-        //parse value
-        chA[0] = *szNameEndA;
-        chA[1] = *szValueEndA;
-        *szNameEndA = *szValueEndA = 0;
+
+                                   //parse value
         hRes = CHttpHeaderBase::Create<CHttpHeaderEntContentTransferEncoding>(TRUE, &cHeader);
         if (SUCCEEDED(hRes))
-          hRes = cHeader->Parse(szValueStartA);
-        *szNameEndA = chA[0];
-        *szValueEndA = chA[1];
+          hRes = cHeader->Parse(szValueStartA, (SIZE_T)(szValueEndA - szValueStartA));
         if (FAILED(hRes))
           return hRes;
+
         if (cHeader->GetEncoding() != CHttpHeaderEntContentTransferEncoding::EncodingIdentity)
           return MX_E_InvalidData; //header already specified
         sParser.sCurrentBlock.bContentTransferEncoding = TRUE;
+
         //done
         return S_OK;
       }
@@ -636,38 +599,26 @@ HRESULT CHttpBodyParserMultipartFormData::AccumulateData(_In_ CHAR chA)
 {
   DWORD dw;
 
-  if (IsEntityTooLarge() != FALSE)
-    return S_OK; //ignore if 413 error is postponed
   sParser.aTempBuf[sParser.nUsedTempBuf++] = (BYTE)chA;
   if (!(sParser.cFileH))
   {
-    if (sParser.cStrCurrLineA.GetLength() < (SIZE_T)dwMaxFieldSize)
-    {
-      if (sParser.cStrCurrLineA.ConcatN(&chA, 1) == FALSE)
-        return E_OUTOFMEMORY;
-    }
-    else
-    {
-      MarkEntityAsTooLarge();
-    }
+    if (sParser.cStrCurrLineA.GetLength() > (SIZE_T)dwMaxFieldSize)
+      return MX_E_BadLength;
+    if (sParser.cStrCurrLineA.ConcatN(&chA, 1) == FALSE)
+      return E_OUTOFMEMORY;
   }
   else
   {
-    if ((++sParser.nFileUploadSize) < ullMaxFileSize)
+    if ((++sParser.nFileUploadSize) >= ullMaxFileSize)
+      return HRESULT_FROM_WIN32(ERROR_FILE_TOO_LARGE);
+    //flush current data?
+    if (sParser.nUsedTempBuf >= sizeof(sParser.aTempBuf))
     {
-      //flush current data?
-      if (sParser.nUsedTempBuf >= sizeof(sParser.aTempBuf))
-      {
-        if (::WriteFile(sParser.cFileH, sParser.aTempBuf, (DWORD)(sParser.nUsedTempBuf), &dw, NULL) == FALSE)
-          return MX_HRESULT_FROM_LASTERROR();
-        if ((SIZE_T)dw != sParser.nUsedTempBuf)
-          return MX_E_WriteFault;
-        sParser.nUsedTempBuf = 0;
-      }
-    }
-    else
-    {
-      MarkEntityAsTooLarge();
+      if (::WriteFile(sParser.cFileH, sParser.aTempBuf, (DWORD)(sParser.nUsedTempBuf), &dw, NULL) == FALSE)
+        return MX_HRESULT_FROM_LASTERROR();
+      if ((SIZE_T)dw != sParser.nUsedTempBuf)
+        return MX_E_WriteFault;
+      sParser.nUsedTempBuf = 0;
     }
   }
   return S_OK;

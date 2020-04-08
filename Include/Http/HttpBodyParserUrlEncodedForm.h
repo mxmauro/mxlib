@@ -39,7 +39,7 @@ public:
     };
 
 protected:
-  HRESULT Initialize(_In_ CHttpCommon &cHttpCmn);
+  HRESULT Initialize(_In_ Internals::CHttpParser &cHttpParser);
   HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
 
 private:

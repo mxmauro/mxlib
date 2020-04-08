@@ -34,17 +34,24 @@ CHttpHeaderReqExpect::~CHttpHeaderReqExpect()
   return;
 }
 
-HRESULT CHttpHeaderReqExpect::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderReqExpect::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
+  LPCSTR szValueEndA;
   eExpectation _nExpectation = ExpectationUnsupported;
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   nExpectation = ExpectationUnsupported;
   //skip spaces
-  szValueA = SkipSpaces(szValueA);
+  szValueA = SkipSpaces(szValueA, szValueEndA);
+
   //check expectation
-  if (StrNCompareA(szValueA, "100-continue", 12, TRUE) == 0)
+  if ((SIZE_T)(szValueEndA - szValueA) >= 12 && StrNCompareA(szValueA, "100-continue", 12, TRUE) == 0)
   {
     _nExpectation = Expectation100Continue;
     szValueA += 12;
@@ -53,15 +60,17 @@ HRESULT CHttpHeaderReqExpect::Parse(_In_z_ LPCSTR szValueA)
   {
     return MX_E_Unsupported;
   }
+
   //skip spaces and check for end
-  if (*SkipSpaces(szValueA) != 0)
+  if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
     return MX_E_InvalidData;
+
   //done
   nExpectation = _nExpectation;
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqExpect::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderReqExpect::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   switch (nExpectation)
   {

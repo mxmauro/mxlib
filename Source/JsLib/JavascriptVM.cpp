@@ -20,6 +20,8 @@
 #define _MX_JAVASCRIPT_VM_CPP
 #include "JavascriptVMCommon.h"
 
+#define X_BYTE_ENC(_x,_y)   (((UCHAR)(_x)) ^ ((UCHAR)(_y+0x4A)))
+
 //-----------------------------------------------------------
 
 typedef struct {
@@ -34,6 +36,10 @@ namespace DukTape {
 LONG nDebugLevel = 0;
 #endif //DUK_USE_DEBUG
 } //namespace DukTape
+
+//-----------------------------------------------------------
+
+#include <BigInteger.min.js.h>
 
 //-----------------------------------------------------------
 
@@ -311,13 +317,14 @@ VOID CJavascriptVM::RunNativeProtected(_In_ DukTape::duk_idx_t nArgsCount, _In_ 
   return;
 }
 
-HRESULT CJavascriptVM::RunNativeProtectedAndGetError(_In_ DukTape::duk_idx_t nArgsCount,
+HRESULT CJavascriptVM::RunNativeProtectedAndGetError(_In_ DukTape::duk_context *lpCtx,
+                                                     _In_ DukTape::duk_idx_t nArgsCount,
                                                      _In_ DukTape::duk_idx_t nRetValuesCount,
                                                      _In_ lpfnProtectedFunction fnFunc, _In_opt_ BOOL bCatchUnhandled)
 {
   try
   {
-    RunNativeProtected(nArgsCount, nRetValuesCount, fnFunc, bCatchUnhandled);
+    RunNativeProtected(lpCtx, nArgsCount, nRetValuesCount, fnFunc, bCatchUnhandled);
   }
   catch (CJsWindowsError &e)
   {
@@ -330,6 +337,13 @@ HRESULT CJavascriptVM::RunNativeProtectedAndGetError(_In_ DukTape::duk_idx_t nAr
   }
 #pragma warning(default : 4101)
   return S_OK;
+}
+
+HRESULT CJavascriptVM::RunNativeProtectedAndGetError(_In_ DukTape::duk_idx_t nArgsCount,
+                                                     _In_ DukTape::duk_idx_t nRetValuesCount,
+                                                     _In_ lpfnProtectedFunction fnFunc, _In_opt_ BOOL bCatchUnhandled)
+{
+  return RunNativeProtectedAndGetError(lpCtx, nArgsCount, nRetValuesCount, fnFunc, bCatchUnhandled);
 }
 
 HRESULT CJavascriptVM::RegisterException(_In_z_ LPCSTR szExceptionNameA,
@@ -1189,6 +1203,55 @@ VOID CJavascriptVM::ThrowWindowsError(_In_ DukTape::duk_context *lpCtx, _In_ HRE
 
   DukTape::duk_throw_raw(lpCtx);
   return;
+}
+
+HRESULT CJavascriptVM::AddBigIntegerSupport(_In_ DukTape::duk_context *lpCtx)
+{
+  return RunNativeProtectedAndGetError(lpCtx, 0, 0, [](_In_ DukTape::duk_context *lpCtx) -> VOID
+  {
+    DukTape::duk_push_global_object(lpCtx);
+    DukTape::duk_get_prop_string(lpCtx, -1, "BigInteger");
+    if (DukTape::duk_is_undefined(lpCtx, -1) != 0)
+    {
+      CSecureStringA cStrTempA;
+      LPSTR sA;
+      SIZE_T i;
+
+      DukTape::duk_pop(lpCtx); //pop undefined
+
+      //generate code
+      if (cStrTempA.EnsureBuffer(sizeof(aBigIntegerJs) + 1) == FALSE)
+        MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+
+      sA = (LPSTR)cStrTempA;
+      for (i = 0; i < sizeof(aBigIntegerJs); i++)
+        sA[i] = X_BYTE_ENC(aBigIntegerJs[i], i);
+      sA[i] = 0;
+      cStrTempA.Refresh();
+      if (cStrTempA.InsertN("(function (undefined) {\r\n", 0, 25) == FALSE ||
+          cStrTempA.ConcatN("return bigInt; })()\r\n", 20) == FALSE)
+      {
+        MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+      }
+
+      //run code
+      DukTape::duk_eval_raw(lpCtx, (LPCSTR)cStrTempA, 0, DUK_COMPILE_EVAL | DUK_COMPILE_NOSOURCE | DUK_COMPILE_STRLEN |
+                                                         DUK_COMPILE_NOFILENAME);
+      DukTape::duk_put_prop_string(lpCtx, -2, "BigInteger");
+
+      DukTape::duk_pop(lpCtx); //pop global object
+    }
+    else
+    {
+      DukTape::duk_pop_2(lpCtx); //pop BigInteger and global object
+    }
+    return;
+  });
+}
+
+HRESULT CJavascriptVM::AddBigIntegerSupport()
+{
+  return AddBigIntegerSupport(lpCtx);
 }
 
 DukTape::duk_ret_t CJavascriptVM::OnNodeJsResolveModule(_In_ DukTape::duk_context *lpCtx)

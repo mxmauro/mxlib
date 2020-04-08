@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Build Files">
+      <UniqueIdentifier>{2728a88a-cfb2-4bb5-9220-f09b4b0c6fb6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Source\RapidJSON\build.vbs">
+      <Filter>Build Files</Filter>
+    </None>
+  </ItemGroup>
+</Project>

@@ -20,10 +20,9 @@
 #ifndef _MX_HTTPHEADERBASE_H
 #define _MX_HTTPHEADERBASE_H
 
-#include "..\Defines.h"
-#include "HttpCommon.h"
-#include "..\LinkedList.h"
-#include "..\Strings\Utf8.h"
+#include "HttpUtils.h"
+#include "..\RefCounted.h"
+#include "..\ArrayList.h"
 
 //-----------------------------------------------------------
 
@@ -37,23 +36,20 @@
 
 namespace MX {
 
-class MX_NOVTABLE CHttpHeaderBase : public virtual CBaseMemObj
+class MX_NOVTABLE CHttpHeaderBase : public virtual TRefCounted<CBaseMemObj>
 {
 public:
   typedef enum {
-    DuplicateBehaviorError, DuplicateBehaviorReplace, DuplicateBehaviorAppend, DuplicateBehaviorAdd
+    DuplicateBehaviorError, DuplicateBehaviorReplace, DuplicateBehaviorAdd, DuplicateBehaviorMerge
   } eDuplicateBehavior;
-
-  typedef enum {
-    BrowserOther, BrowserIE, BrowserIE6, BrowserOpera, BrowserGecko, BrowserChrome, BrowserSafari, BrowserKonqueror
-  } eBrowser;
 
 protected:
   CHttpHeaderBase();
 public:
   ~CHttpHeaderBase();
 
-  static HRESULT Create(_In_ LPCSTR szHeaderNameA, _In_ BOOL bIsRequest, _Out_ CHttpHeaderBase **lplpHeader);
+  static HRESULT Create(_In_ LPCSTR szHeaderNameA, _In_ BOOL bIsRequest, _Out_ CHttpHeaderBase **lplpHeader,
+                        _In_opt_ SIZE_T nHeaderNameLen = (SIZE_T)-1);
   template<class T>
   static HRESULT Create(_In_ BOOL bIsRequest, _Out_ T **lplpHeader)
     {
@@ -62,28 +58,61 @@ public:
 
   virtual LPCSTR GetHeaderName() const = 0;
 
-  virtual HRESULT Parse(_In_z_ LPCSTR szValueA) = 0;
-  virtual HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser) = 0;
+  virtual HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1) = 0;
+  //NOTE: Unicode values will be UTF-8 & URL encoded
+  HRESULT Parse(_In_z_ LPCWSTR szValueW, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+
+  virtual HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser) = 0;
 
   virtual eDuplicateBehavior GetDuplicateBehavior() const
     {
     return DuplicateBehaviorError;
     };
 
-  //helpers
-  static LPCSTR SkipSpaces(_In_z_ LPCSTR sA, _In_opt_ SIZE_T nMaxLen = (SIZE_T)-1);
-  static LPCSTR SkipUntil(_In_z_ LPCSTR sA, _In_opt_z_ LPCSTR szStopCharsA = NULL,
-                          _In_opt_ SIZE_T nMaxLen = (SIZE_T)-1);
+  virtual HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
 
-  static LPCSTR GetToken(_In_z_ LPCSTR sA, _In_opt_ SIZE_T nMaxLen = (SIZE_T)-1);
-  static HRESULT GetQuotedString(_Out_ CStringA &cStrA, _Inout_ LPCSTR &sA);
+protected:
+  //helpers
+  static LPCSTR SkipSpaces(_In_ LPCSTR sA, _In_ LPCSTR szEndA);
+  static LPCSTR SkipUntil(_In_ LPCSTR sA, _In_ LPCSTR szEndA, _In_opt_z_ LPCSTR szStopCharsA = NULL);
+
+  static LPCSTR GetToken(_In_ LPCSTR sA, _In_ LPCSTR szEndA);
+  static HRESULT GetQuotedString(_Out_ CStringA &cStrA, _Inout_ LPCSTR &sA, _In_ LPCSTR szEndA);
 
   static HRESULT GetParamNameAndValue(_Out_ CStringA &cStrTokenA, _Out_ CStringW &cStrValueW, _Inout_ LPCSTR &sA,
-                                      _Out_opt_ LPBOOL lpbExtendedParam = NULL);
+                                      _In_ LPCSTR szEndA, _Out_opt_ LPBOOL lpbExtendedParam = NULL);
 
   static BOOL RawISO_8859_1_to_UTF8(_Out_ CStringW &cStrDestW, _In_ LPCWSTR szSrcW, _In_ SIZE_T nSrcLen);
+};
 
-  static eBrowser GetBrowserFromUserAgent(_In_ LPCSTR szUserAgentA, _In_opt_ SIZE_T nUserAgentLen = (SIZE_T)-1);
+//-----------------------------------------------------------
+
+class CHttpHeaderArray : public TArrayListWithRelease<CHttpHeaderBase*>
+{
+private:
+public:
+  CHttpHeaderArray() : TArrayListWithRelease<CHttpHeaderBase*>()
+    { };
+  CHttpHeaderArray(_In_ const CHttpHeaderArray& cSrc) throw(...);
+
+  CHttpHeaderArray& operator=(_In_ const CHttpHeaderArray& cSrc) throw(...);
+
+  //NOTE: Returns -1 if not found
+  SIZE_T Find(_In_z_ LPCSTR szNameA) const;
+  //NOTE: Returns -1 if not found
+  SIZE_T Find(_In_z_ LPCWSTR szNameW) const;
+
+  template<class T>
+  T* Find() const
+    {
+    SIZE_T nIndex = Find(T::GetHeaderNameStatic());
+    if (nIndex == (SIZE_T)-1)
+      return NULL;
+    return reinterpret_cast<T*>(GetElementAt(nIndex));
+    };
+
+  HRESULT Merge(_In_ const CHttpHeaderArray& cSrc, _In_ BOOL bForceReplaceExisting);
+  HRESULT Merge(_In_ CHttpHeaderBase *lpSrc, _In_ BOOL bForceReplaceExisting);
 };
 
 } //namespace MX

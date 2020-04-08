@@ -19,6 +19,7 @@
  */
 #include "..\..\Include\Http\HttpHeaderReqAccept.h"
 #include <stdlib.h>
+#include "..\..\Include\AutoPtr.h"
 
 //-----------------------------------------------------------
 
@@ -38,10 +39,10 @@ CHttpHeaderReqAccept::~CHttpHeaderReqAccept()
   return;
 }
 
-HRESULT CHttpHeaderReqAccept::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderReqAccept::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
   CType *lpType;
-  LPCSTR szStartA;
+  LPCSTR szValueEndA, szStartA;
   CStringA cStrTokenA;
   CStringW cStrValueW;
   BOOL bGotItem;
@@ -50,17 +51,22 @@ HRESULT CHttpHeaderReqAccept::Parse(_In_z_ LPCSTR szValueA)
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //parse
   bGotItem = FALSE;
   do
   {
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
-    if (*szValueA == 0)
+    szValueA = SkipSpaces(szValueA, szValueEndA);
+    if (szValueA >= szValueEndA)
       break;
 
     //type
-    szValueA = SkipUntil(szStartA = szValueA, ";, \t");
+    szValueA = SkipUntil(szStartA = szValueA, szValueEndA, ";, \t");
     if (szValueA == szStartA)
       goto skip_null_listitem;
 
@@ -72,23 +78,23 @@ HRESULT CHttpHeaderReqAccept::Parse(_In_z_ LPCSTR szValueA)
       return hRes;
 
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
+    szValueA = SkipSpaces(szValueA, szValueEndA);
 
     //parameters
-    if (*szValueA == ';')
+    if (szValueA < szValueEndA && *szValueA == ';')
     {
       szValueA++;
       do
       {
         //skip spaces
-        szValueA = SkipSpaces(szValueA);
-        if (*szValueA == 0 || *szValueA == ',')
+        szValueA = SkipSpaces(szValueA, szValueEndA);
+        if (szValueA >= szValueEndA || *szValueA == ',')
           break;
         if (*szValueA == ';')
           goto skip_null_listitem2;
 
         //get parameter
-        hRes = GetParamNameAndValue(cStrTokenA, cStrValueW, szValueA);
+        hRes = GetParamNameAndValue(cStrTokenA, cStrValueW, szValueA, szValueEndA);
         if (FAILED(hRes) && hRes != MX_E_NoData)
           return hRes;
 
@@ -113,44 +119,55 @@ HRESULT CHttpHeaderReqAccept::Parse(_In_z_ LPCSTR szValueA)
           return hRes;
 
         //skip spaces
-        szValueA = SkipSpaces(szValueA);
+        szValueA = SkipSpaces(szValueA, szValueEndA);
 
 skip_null_listitem2:
         //check for separator or end
-        if (*szValueA == ';')
-          szValueA++;
-        else if (*szValueA != 0 && *szValueA != ',')
-          return MX_E_InvalidData;
+        if (szValueA < szValueEndA)
+        {
+          if (*szValueA == ';')
+            szValueA++;
+          else if (*szValueA != ',')
+            return MX_E_InvalidData;
+        }
       }
-      while (*szValueA != 0 && *szValueA != ',');
+      while (szValueA < szValueEndA && *szValueA != ',');
     }
 
 skip_null_listitem:
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
+    szValueA = SkipSpaces(szValueA, szValueEndA);
 
     //check for separator or end
-    if (*szValueA == ',')
-      szValueA++;
-    else if (*szValueA != 0)
-      return MX_E_InvalidData;
+    if (szValueA < szValueEndA)
+    {
+      if (*szValueA == ',')
+        szValueA++;
+      else
+        return MX_E_InvalidData;
+    }
   }
-  while (*szValueA != 0);
+  while (szValueA < szValueEndA);
+
+  //do we got one?
+  if (bGotItem == FALSE)
+    return MX_E_InvalidData;
+
   //done
-  return (bGotItem != FALSE) ? S_OK : MX_E_InvalidData;
+  return S_OK;
 }
 
-HRESULT CHttpHeaderReqAccept::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderReqAccept::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   CStringA cStrTempA;
   SIZE_T i, nCount, nParamIdx, nParamsCount;
   CType *lpType;
 
   cStrDestA.Empty();
-  nCount = cTypesList.GetCount();
+  nCount = aTypesList.GetCount();
   for (i = 0; i < nCount; i++)
   {
-    lpType = cTypesList.GetElementAt(i);
+    lpType = aTypesList.GetElementAt(i);
     if (cStrDestA.IsEmpty() == FALSE)
     {
       if (cStrDestA.ConcatN(",", 1) == FALSE)
@@ -169,8 +186,8 @@ HRESULT CHttpHeaderReqAccept::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser n
     nParamsCount = lpType->GetParamsCount();
     for (nParamIdx = 0; nParamIdx < nParamsCount; nParamIdx++)
     {
-      if (CHttpCommon::BuildQuotedString(cStrTempA, lpType->GetParamValue(nParamIdx),
-                                         StrLenW(lpType->GetParamValue(nParamIdx)), FALSE) == FALSE)
+      if (Http::BuildQuotedString(cStrTempA, lpType->GetParamValue(nParamIdx),
+                                  StrLenW(lpType->GetParamValue(nParamIdx)), FALSE) == FALSE)
       {
         return E_OUTOFMEMORY;
       }
@@ -196,6 +213,7 @@ HRESULT CHttpHeaderReqAccept::AddType(_In_z_ LPCSTR szTypeA, _In_opt_ SIZE_T nTy
     return MX_E_InvalidData;
   if (szTypeA == NULL)
     return E_POINTER;
+
   //create new type
   cNewType.Attach(MX_DEBUG_NEW CType());
   if (!cNewType)
@@ -203,19 +221,22 @@ HRESULT CHttpHeaderReqAccept::AddType(_In_z_ LPCSTR szTypeA, _In_opt_ SIZE_T nTy
   hRes = cNewType->SetType(szTypeA, nTypeLen);
   if (FAILED(hRes))
     return hRes;
+
   //check if already exists in list
-  nCount = cTypesList.GetCount();
+  nCount = aTypesList.GetCount();
   for (i = 0; i < nCount; i++)
   {
-    if (StrCompareA(cTypesList[i]->GetType(), cNewType->GetType(), TRUE) == 0)
+    if (StrCompareA(aTypesList[i]->GetType(), cNewType->GetType(), TRUE) == 0)
     {
-      cTypesList.RemoveElementAt(i); //remove previous definition
+      aTypesList.RemoveElementAt(i); //remove previous definition
       break;
     }
   }
+
   //add to list
-  if (cTypesList.AddElement(cNewType.Get()) == FALSE)
+  if (aTypesList.AddElement(cNewType.Get()) == FALSE)
     return E_OUTOFMEMORY;
+
   //done
   if (lplpType != NULL)
     *lplpType = cNewType.Detach();
@@ -226,12 +247,12 @@ HRESULT CHttpHeaderReqAccept::AddType(_In_z_ LPCSTR szTypeA, _In_opt_ SIZE_T nTy
 
 SIZE_T CHttpHeaderReqAccept::GetTypesCount() const
 {
-  return cTypesList.GetCount();
+  return aTypesList.GetCount();
 }
 
 CHttpHeaderReqAccept::CType* CHttpHeaderReqAccept::GetType(_In_ SIZE_T nIndex) const
 {
-  return (nIndex < cTypesList.GetCount()) ? cTypesList.GetElementAt(nIndex) : NULL;
+  return (nIndex < aTypesList.GetCount()) ? aTypesList.GetElementAt(nIndex) : NULL;
 }
 
 CHttpHeaderReqAccept::CType* CHttpHeaderReqAccept::GetType(_In_z_ LPCSTR szTypeA) const
@@ -240,14 +261,110 @@ CHttpHeaderReqAccept::CType* CHttpHeaderReqAccept::GetType(_In_z_ LPCSTR szTypeA
 
   if (szTypeA != NULL && *szTypeA != 0)
   {
-    nCount = cTypesList.GetCount();
+    nCount = aTypesList.GetCount();
     for (i = 0; i < nCount; i++)
     {
-      if (StrCompareA(cTypesList[i]->GetType(), szTypeA, TRUE) == 0)
-        return cTypesList.GetElementAt(i);
+      if (StrCompareA(aTypesList[i]->GetType(), szTypeA, TRUE) == 0)
+        return aTypesList.GetElementAt(i);
     }
   }
   return NULL;
+}
+
+HRESULT CHttpHeaderReqAccept::Merge(_In_ CHttpHeaderBase *_lpHeader)
+{
+  CHttpHeaderReqAccept *lpHeader = reinterpret_cast<CHttpHeaderReqAccept*>(_lpHeader);
+  SIZE_T i, nCount, nThisIndex, nThisCount;
+
+  nCount = lpHeader->aTypesList.GetCount();
+  nThisCount = aTypesList.GetCount();
+  for (i = 0; i < nCount; i++)
+  {
+    CType *lpType = lpHeader->aTypesList.GetElementAt(i);
+
+    for (nThisIndex = 0; nThisIndex < nThisCount; nThisIndex++)
+    {
+      CType *lpThisType = aTypesList.GetElementAt(nThisIndex);
+
+      if (StrCompareA((LPCSTR)(lpType->cStrTypeA), (LPCSTR)(lpThisType->cStrTypeA), TRUE) == 0)
+        break;
+    }
+    if (nThisIndex < nThisCount)
+    {
+      //have a match, add/replace parameters
+      CType *lpThisType = aTypesList.GetElementAt(nThisIndex);
+      SIZE_T nParamsIndex, nParamsCount, nThisParamsIndex, nThisParamsCount;
+
+      lpThisType->q = lpType->q;
+
+      nThisParamsCount = lpThisType->aParamsList.GetCount();
+      nParamsCount = lpType->aParamsList.GetCount();
+      for (nParamsIndex = 0; nParamsIndex < nParamsCount; nParamsIndex++)
+      {
+        CType::LPPARAMETER lpParam = lpType->aParamsList.GetElementAt(nParamsIndex);
+        TAutoFreePtr<CType::PARAMETER> cNewParam;
+        SIZE_T nNameLen, nValueLen;
+
+        for (nThisParamsIndex = 0; nThisParamsIndex < nThisParamsCount; nThisParamsIndex++)
+        {
+          CType::LPPARAMETER lpThisParam = lpThisType->aParamsList.GetElementAt(nThisParamsIndex);
+
+          if (StrCompareA(lpParam->szNameA, lpThisParam->szNameA, TRUE) == 0)
+            break;
+        }
+        if (nThisParamsIndex < nThisParamsCount)
+        {
+          //parameter was found, replace
+          lpThisType->aParamsList.RemoveElementAt(nThisIndex);
+        }
+
+        //add the source parameter
+
+        //get name and value length
+        nNameLen = StrLenA(lpParam->szNameA) + 1;
+        nValueLen = (StrLenW(lpParam->szValueW) + 1) * sizeof(WCHAR);
+
+        //create new item
+        cNewParam.Attach((CType::LPPARAMETER)MX_MALLOC(sizeof(CType::PARAMETER) + nNameLen + nValueLen));
+        if (!cNewParam)
+          return E_OUTOFMEMORY;
+        ::MxMemCopy(cNewParam->szNameA, lpParam->szNameA, nNameLen);
+        cNewParam->szNameA[nNameLen] = 0;
+        cNewParam->szValueW = (LPWSTR)((LPBYTE)(cNewParam->szNameA) + (nNameLen + 1));
+        ::MxMemCopy(cNewParam->szValueW, lpParam->szValueW, nValueLen);
+
+        if (lpThisType->aParamsList.AddElement(cNewParam.Get()) == FALSE)
+          return E_OUTOFMEMORY;
+        cNewParam.Detach();
+      }
+    }
+    else
+    {
+      TAutoDeletePtr<CType> cNewType;
+
+      //add a duplicate
+      cNewType.Attach(MX_DEBUG_NEW CType());
+      if (!cNewType)
+        return E_OUTOFMEMORY;
+      try
+      {
+        *(cNewType.Get()) = *lpType;
+      }
+      catch (LONG hr)
+      {
+        return (HRESULT)hr;
+      }
+
+      //add to list
+      if (aTypesList.AddElement(cNewType.Get()) == FALSE)
+        return E_OUTOFMEMORY;
+      cNewType.Detach();
+      nThisCount++;
+    }
+  }
+
+  //done
+  return S_OK;
 }
 
 //-----------------------------------------------------------
@@ -264,6 +381,51 @@ CHttpHeaderReqAccept::CType::~CType()
   return;
 }
 
+CHttpHeaderReqAccept::CType&
+CHttpHeaderReqAccept::CType::operator=(_In_ const CHttpHeaderReqAccept::CType &cSrc) throw(...)
+{
+  if (this != &cSrc)
+  {
+    CStringA cStrTempTypeA;
+    TArrayListWithFree<LPPARAMETER> cTempParamsList;
+    SIZE_T i, nCount;
+
+    if (cStrTempTypeA.CopyN((LPCSTR)(cSrc.cStrTypeA), cSrc.cStrTypeA.GetLength()) == FALSE)
+      throw (LONG)E_OUTOFMEMORY;
+
+    nCount = cSrc.aParamsList.GetCount();
+    for (i = 0; i < nCount; i++)
+    {
+      CType::LPPARAMETER lpParam = cSrc.aParamsList.GetElementAt(i);
+      TAutoFreePtr<PARAMETER> cNewParam;
+      SIZE_T nNameLen, nValueLen;
+
+      //get name and value length
+      nNameLen = StrLenA(lpParam->szNameA);
+      nValueLen = (StrLenW(lpParam->szValueW) + 1) * sizeof(WCHAR);
+
+      //create new item
+      cNewParam.Attach((LPPARAMETER)MX_MALLOC(sizeof(PARAMETER) + nNameLen + nValueLen));
+      if (!cNewParam)
+        throw (LONG)E_OUTOFMEMORY;
+      ::MxMemCopy(cNewParam->szNameA, lpParam->szNameA, nNameLen);
+      cNewParam->szNameA[nNameLen] = 0;
+      cNewParam->szValueW = (LPWSTR)((LPBYTE)(cNewParam->szNameA) + (nNameLen + 1));
+      ::MxMemCopy(cNewParam->szValueW, lpParam->szValueW, nValueLen);
+
+      //add to list
+      if (cTempParamsList.AddElement(cNewParam.Get()) == FALSE)
+        throw (LONG)E_OUTOFMEMORY;
+      cNewParam.Detach();
+    }
+
+    cStrTypeA.Attach(cStrTempTypeA.Detach());
+    q = cSrc.q;
+    aParamsList.Attach(cTempParamsList.Detach(), nCount);
+  }
+  return *this;
+}
+
 HRESULT CHttpHeaderReqAccept::CType::SetType(_In_z_ LPCSTR szTypeA, _In_ SIZE_T nTypeLen)
 {
   LPCSTR szStartA, szTypeEndA;
@@ -276,27 +438,33 @@ HRESULT CHttpHeaderReqAccept::CType::SetType(_In_z_ LPCSTR szTypeA, _In_ SIZE_T 
     return E_POINTER;
   szTypeEndA = szTypeA + nTypeLen;
   szStartA = szTypeA;
+
   //get mime type
   if (*szTypeA != '*')
-    szTypeA = GetToken(szTypeA, nTypeLen);
+    szTypeA = GetToken(szTypeA, szTypeEndA);
   else
     szTypeA++;
+
   //check slash separator
   if (szTypeA >= szTypeEndA || *szTypeA++ != '/')
     return MX_E_InvalidData;
+
   //get mime subtype
   if (*szTypeA != '*')
-    szTypeA = GetToken(szTypeA, (SIZE_T)(szTypeEndA - szTypeA));
+    szTypeA = GetToken(szTypeA, szTypeEndA);
   else
     szTypeA++;
   if (*(szTypeA - 1) == '/' || (szTypeA < szTypeEndA && *szTypeA == '/')) //no subtype?
     return MX_E_InvalidData;
+
   //check for end
   if (szTypeA != szTypeEndA)
     return MX_E_InvalidData;
+
   //set new value
   if (cStrTypeA.CopyN(szStartA, nTypeLen) == FALSE)
     return E_OUTOFMEMORY;
+
   //done
   return S_OK;
 }
@@ -329,42 +497,48 @@ HRESULT CHttpHeaderReqAccept::CType::AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCW
     return E_POINTER;
   if (szValueW == NULL)
     szValueW = L"";
+
+  nNameLen = StrLenA(szNameA);
+
   //get token
-  szNameA = CHttpHeaderBase::GetToken(szStartA = szNameA);
-  if (szStartA == szNameA || *szNameA != 0)
+  szNameA = CHttpHeaderBase::GetToken(szStartA = szNameA, szNameA + nNameLen);
+  if (szStartA == szNameA || szNameA != szStartA + nNameLen)
     return MX_E_InvalidData;
-  //get name and value length
-  nNameLen = (SIZE_T)(szNameA - szStartA);
+
+  //get value length
   nValueLen = (StrLenW(szValueW) + 1) * sizeof(WCHAR);
+
   //create new item
   cNewParam.Attach((LPPARAMETER)MX_MALLOC(sizeof(PARAMETER) + nNameLen + nValueLen));
   if (!cNewParam)
     return E_OUTOFMEMORY;
-  MxMemCopy(cNewParam->szNameA, szStartA, nNameLen);
+  ::MxMemCopy(cNewParam->szNameA, szStartA, nNameLen);
   cNewParam->szNameA[nNameLen] = 0;
   cNewParam->szValueW = (LPWSTR)((LPBYTE)(cNewParam->szNameA) + (nNameLen + 1));
-  MxMemCopy(cNewParam->szValueW, szValueW, nValueLen);
+  ::MxMemCopy(cNewParam->szValueW, szValueW, nValueLen);
+
   //add to list
-  if (cParamsList.AddElement(cNewParam.Get()) == FALSE)
+  if (aParamsList.AddElement(cNewParam.Get()) == FALSE)
     return E_OUTOFMEMORY;
   cNewParam.Detach();
+
   //done
   return S_OK;
 }
 
 SIZE_T CHttpHeaderReqAccept::CType::GetParamsCount() const
 {
-  return cParamsList.GetCount();
+  return aParamsList.GetCount();
 }
 
 LPCSTR CHttpHeaderReqAccept::CType::GetParamName(_In_ SIZE_T nIndex) const
 {
-  return (nIndex < cParamsList.GetCount()) ? cParamsList[nIndex]->szNameA : NULL;
+  return (nIndex < aParamsList.GetCount()) ? aParamsList[nIndex]->szNameA : NULL;
 }
 
 LPCWSTR CHttpHeaderReqAccept::CType::GetParamValue(_In_ SIZE_T nIndex) const
 {
-  return (nIndex < cParamsList.GetCount()) ? cParamsList[nIndex]->szValueW : NULL;
+  return (nIndex < aParamsList.GetCount()) ? aParamsList[nIndex]->szValueW : NULL;
 }
 
 LPCWSTR CHttpHeaderReqAccept::CType::GetParamValue(_In_z_ LPCSTR szNameA) const
@@ -373,11 +547,11 @@ LPCWSTR CHttpHeaderReqAccept::CType::GetParamValue(_In_z_ LPCSTR szNameA) const
 
   if (szNameA != NULL && szNameA[0] != 0)
   {
-    nCount = cParamsList.GetCount();
-    for (i=0; i<nCount; i++)
+    nCount = aParamsList.GetCount();
+    for (i = 0; i < nCount; i++)
     {
-      if (StrCompareA(cParamsList[i]->szNameA, szNameA, TRUE) == 0)
-        return cParamsList[i]->szValueW;
+      if (StrCompareA(aParamsList[i]->szNameA, szNameA, TRUE) == 0)
+        return aParamsList[i]->szValueW;
     }
   }
   return NULL;

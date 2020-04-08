@@ -18,7 +18,10 @@ var topHtml = require("./top.jss");
 var bottomHtml = require("./bottom.jss");
 
 topHtml.render();
-
+%>
+<div class="row">
+	<div class="col">
+<%
 var sqlite = new SQLite();
 sqlite.connect(getExecutablePath() + 'mxlib_test.sqlite');
 
@@ -43,15 +46,23 @@ sqlite.query("INSERT INTO `test_table` VALUES (" +
                  "'char dat\\a', X'426C6F622044617461', ?" +
              ");", 123.4, new Date(Date.UTC(2015, 11, 3, 3, 45, 56)), "text data");
 %>
-<pre>Last Insert ID: <% echo(htmlentities(sqlite.insertId.toString())); %></pre>
+		<pre>Last Insert ID: <% echo(htmlentities(sqlite.insertId.toString())); %></pre>
 <%
 var row = sqlite.queryAndFetchRow('SELECT * FROM `test_table`;');
 while (row !== null) {
 %>
-<pre>Row #<%= row.id %>: <%= vardump(row) %></pre>
+		<div class="card border-primary mb-3">
+			<div class="card-header bg-primary text-white">Row #<%= row.id %></div>
+			<div class="card-body text-primary">
+				<pre><%= vardump(row) %></pre>
+			</div>
+		</div>
 <%
 	row = sqlite.fetchRow();
 }
-
+%>
+	</div>
+</div>
+<%
 bottomHtml.render();
 %>

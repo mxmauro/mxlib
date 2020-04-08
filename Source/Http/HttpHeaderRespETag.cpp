@@ -35,28 +35,35 @@ CHttpHeaderRespETag::~CHttpHeaderRespETag()
   return;
 }
 
-HRESULT CHttpHeaderRespETag::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderRespETag::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szStartA;
+  LPCSTR szValueEndA, szStartA;
   CStringA cStrTempA;
   BOOL _bIsWeak;
   HRESULT hRes;
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //skip spaces
-  szValueA = SkipSpaces(szValueA);
+  szValueA = SkipSpaces(szValueA, szValueEndA);
+
   //is weak?
   _bIsWeak = FALSE;
-  if (szValueA[0] == 'W' && szValueA[1] == '/')
+  if ((SIZE_T)(szValueEndA - szValueA) >= 2 && szValueA[0] == 'W' && szValueA[1] == '/')
   {
     szValueA += 2;
     _bIsWeak = TRUE;
   }
+
   //get entity
-  if (*szValueA != '"')
+  if (szValueA < szValueEndA && *szValueA != '"')
   {
-    szValueA = SkipUntil(szStartA = szValueA, " \t");
+    szValueA = SkipUntil(szStartA = szValueA, szValueEndA, " \t");
     if (szValueA == szStartA)
       return MX_E_InvalidData;
     if (cStrTempA.CopyN(szStartA, (SIZE_T)(szValueA - szStartA)) == FALSE)
@@ -64,26 +71,30 @@ HRESULT CHttpHeaderRespETag::Parse(_In_z_ LPCSTR szValueA)
   }
   else
   {
-    hRes = GetQuotedString(cStrTempA, szValueA);
+    hRes = GetQuotedString(cStrTempA, szValueA, szValueEndA);
     if (FAILED(hRes))
       return hRes;
     if (cStrTempA.IsEmpty() != FALSE)
       return MX_E_InvalidData;
   }
+
   //skip spaces and check for end
-  if (*SkipSpaces(szValueA) != 0)
+  if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
     return MX_E_InvalidData;
+
   //set entity name
   hRes = SetTag((LPCSTR)cStrTempA, cStrTempA.GetLength());
   if (FAILED(hRes))
     return hRes;
+
   //set entity weak
   SetWeak(_bIsWeak);
+
   //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderRespETag::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderRespETag::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   CStringA cStrTempA;
 
@@ -96,8 +107,9 @@ HRESULT CHttpHeaderRespETag::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nB
       if (cStrDestA.ConcatN("W/", 2) == FALSE)
         return E_OUTOFMEMORY;
     }
+
     //entity
-    if (CHttpCommon::BuildQuotedString(cStrTempA, (LPCSTR)cStrTagA, cStrTagA.GetLength(), FALSE) == FALSE ||
+    if (Http::BuildQuotedString(cStrTempA, (LPCSTR)cStrTagA, cStrTagA.GetLength(), FALSE) == FALSE ||
         cStrDestA.ConcatN((LPCSTR)cStrTempA, cStrTempA.GetLength()) == FALSE)
     {
       return E_OUTOFMEMORY;
@@ -117,15 +129,18 @@ HRESULT CHttpHeaderRespETag::SetTag(_In_z_ LPCSTR szTagA, _In_ SIZE_T nTagLen)
     return MX_E_InvalidData;
   if (szTagA == NULL)
     return E_POINTER;
+
   //check for invalid characters
   for (i = 0; i < nTagLen; i++)
   {
     if (((UCHAR)szTagA[i]) < 0x20 || ((UCHAR)szTagA[i]) > 0x7E || szTagA[i] == '"')
       return MX_E_InvalidData;
   }
+
   //check completed
   if (cStrTagA.CopyN(szTagA, nTagLen) == FALSE)
     return E_OUTOFMEMORY;
+
   //done
   return S_OK;
 }

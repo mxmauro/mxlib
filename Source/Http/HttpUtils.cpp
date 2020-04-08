@@ -17,7 +17,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "..\..\Include\Http\HttpCommon.h"
+#include "..\..\Include\Http\HttpUtils.h"
+#include "..\..\Include\Strings\Utf8.h"
+
+//-----------------------------------------------------------
+
+#define MAX_VERB_LENGTH                                   24
+static struct {
+  LPCSTR szNameA;
+  SIZE_T nNameLen;
+} sVerbs[] = {
+  { "CHECKOUT", 8 }, { "CONNECT",      7 }, { "COPY",   4 }, { "DELETE",   6 },
+  { "GET",      3 }, { "HEAD",         4 }, { "LOCK",   4 }, { "MKCOL",    5 },
+  { "MOVE",     4 }, { "MKACTIVITY",  10 }, { "MERGE",  5 }, { "M-SEARCH", 7 },
+  { "NOTIFY",   6 }, { "OPTIONS",      7 }, { "PATCH",  5 }, { "POST",     4 },
+  { "PROPFIND", 8 }, { "PROPPATCH",    9 }, { "PUT",    3 }, { "PURGE",    5 },
+  { "REPORT",   6 }, { "SUBSCRIBE",    9 }, { "SEARCH", 6 }, { "TRACE",    5 },
+  { "UNLOCK",   6 }, { "UNSUBSCRIBE", 11 }
+};
 
 //-----------------------------------------------------------
 
@@ -28,7 +45,82 @@ static CHAR UTF16_to_ISO_8859_1(_In_ WCHAR chW);
 
 namespace MX {
 
-BOOL CHttpCommon::IsValidNameChar(_In_ CHAR chA)
+namespace Http {
+
+eBrowser GetBrowserFromUserAgent(_In_ LPCSTR szUserAgentA, _In_opt_ SIZE_T nUserAgentLen)
+{
+  LPCSTR sA;
+
+  if (nUserAgentLen == (SIZE_T)-1)
+    nUserAgentLen = StrLenA(szUserAgentA);
+  if (szUserAgentA == NULL || nUserAgentLen == 0)
+    return BrowserOther;
+
+  sA = StrNFindA(szUserAgentA, "MSIE ", nUserAgentLen);
+  if (sA != NULL)
+  {
+    SIZE_T nOffset = (SIZE_T)(sA - szUserAgentA);
+
+    if (nOffset + 6 < nUserAgentLen && sA[6] == '.')
+    {
+      switch (sA[5])
+      {
+        case '4':
+        case '5':
+          return BrowserIE6;
+
+        case '6':
+          if (nOffset + 8 < nUserAgentLen &&
+              StrNCompareA(sA + 8, "SV1", nUserAgentLen - (nOffset + 8)) != NULL)
+          {
+            return BrowserIE6;
+          }
+          break;
+      }
+    }
+    return BrowserIE;
+  }
+
+  sA = StrNFindA(szUserAgentA, "Opera ", nUserAgentLen);
+  if (sA != NULL)
+    return BrowserOpera;
+
+  sA = StrNFindA(szUserAgentA, "Gecko/", nUserAgentLen);
+  if (sA != NULL)
+    return BrowserGecko;
+
+  sA = StrNFindA(szUserAgentA, "Chrome/", nUserAgentLen);
+  if (sA != NULL)
+    return BrowserChrome;
+
+  sA = StrNFindA(szUserAgentA, "Safari/", nUserAgentLen);
+  if (sA != NULL)
+    return BrowserSafari;
+  sA = StrNFindA(szUserAgentA, "Mac OS X", nUserAgentLen);
+  if (sA != NULL)
+    return BrowserSafari;
+
+  sA = StrNFindA(szUserAgentA, "Konqueror", nUserAgentLen);
+  if (sA != NULL)
+    return BrowserKonqueror;
+
+  return BrowserOther;
+}
+
+LPCSTR IsValidVerb(_In_ LPCSTR szStrA, _In_ SIZE_T nStrLen)
+{
+  if (szStrA != NULL && nStrLen > 0)
+  {
+    for (SIZE_T nMethod = 0; nMethod < MX_ARRAYLEN(sVerbs); nMethod++)
+    {
+      if (nStrLen == sVerbs[nMethod].nNameLen && StrNCompareA(szStrA, sVerbs[nMethod].szNameA, nStrLen, FALSE) == 0)
+        return sVerbs[nMethod].szNameA;
+    }
+  }
+  return NULL;
+}
+
+BOOL IsValidNameChar(_In_ CHAR chA)
 {
   static LPCSTR szInvalidA = "()<>@,;:\\\"/[]?={}";
 
@@ -41,7 +133,7 @@ BOOL CHttpCommon::IsValidNameChar(_In_ CHAR chA)
 
 /*
 //like Google Chrome and IE
-BOOL CHttpCommon::EncodeQuotedString(_Inout_ CStringA &cStrA)
+BOOL EncodeQuotedString(_Inout_ CStringA &cStrA)
 {
   SIZE_T nOffset;
   LPSTR sA, szToInsertA;
@@ -83,7 +175,7 @@ BOOL CHttpCommon::EncodeQuotedString(_Inout_ CStringA &cStrA)
 }
 */
 
-BOOL CHttpCommon::FromISO_8859_1(_Out_ CStringW &cStrDestW, _In_ LPCSTR szStrA, _In_ SIZE_T nStrLen)
+BOOL FromISO_8859_1(_Out_ CStringW &cStrDestW, _In_ LPCSTR szStrA, _In_ SIZE_T nStrLen)
 {
   WCHAR chW;
   LPCSTR szStrEndA = szStrA + nStrLen;
@@ -101,7 +193,7 @@ BOOL CHttpCommon::FromISO_8859_1(_Out_ CStringW &cStrDestW, _In_ LPCSTR szStrA, 
   return TRUE;
 }
 
-BOOL CHttpCommon::ToISO_8859_1(_Out_ CStringA &cStrDestA, _In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen)
+BOOL ToISO_8859_1(_Out_ CStringA &cStrDestA, _In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen)
 {
   CHAR chA;
   LPCWSTR szStrEndW = szStrW + nStrLen;
@@ -126,8 +218,7 @@ BOOL CHttpCommon::ToISO_8859_1(_Out_ CStringA &cStrDestA, _In_ LPCWSTR szStrW, _
   return TRUE;
 }
 
-BOOL CHttpCommon::BuildQuotedString(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA, _In_ SIZE_T nStrLen,
-                                    _In_ BOOL bDontQuoteIfToken)
+BOOL BuildQuotedString(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA, _In_ SIZE_T nStrLen, _In_ BOOL bDontQuoteIfToken)
 {
   static LPCSTR szSeparatorsA = "()<>@,;:\\\"/[]?={}";
   LPCSTR szStrEndA = szStrA + nStrLen;
@@ -175,8 +266,7 @@ BOOL CHttpCommon::BuildQuotedString(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA, _
   return TRUE;
 }
 
-BOOL CHttpCommon::BuildQuotedString(_Out_ CStringA &cStrA, _In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen,
-                                    _In_ BOOL bDontQuoteIfToken)
+BOOL BuildQuotedString(_Out_ CStringA &cStrA, _In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen, _In_ BOOL bDontQuoteIfToken)
 {
   static LPCWSTR szSeparatorsW = L"()<>@,;:\\\"/[]?={}";
   CStringA cStrTempA;
@@ -231,7 +321,7 @@ BOOL CHttpCommon::BuildQuotedString(_Out_ CStringA &cStrA, _In_ LPCWSTR szStrW, 
   return TRUE;
 }
 
-BOOL CHttpCommon::BuildExtendedValueString(_Out_ CStringA &cStrA, _In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen)
+BOOL BuildExtendedValueString(_Out_ CStringA &cStrA, _In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen)
 {
   static const LPCSTR szHexaA = "0123456789ABCDEF";
   LPCSTR sA;
@@ -263,7 +353,7 @@ BOOL CHttpCommon::BuildExtendedValueString(_Out_ CStringA &cStrA, _In_ LPCWSTR s
   return cStrA.InsertN("UTF-8''", 0, 7);
 }
 
-LPCSTR CHttpCommon::GetMimeType(_In_z_ LPCSTR szFileNameA)
+LPCSTR GetMimeType(_In_z_ LPCSTR szFileNameA)
 {
   LPCSTR szExtA;
 
@@ -275,7 +365,7 @@ LPCSTR CHttpCommon::GetMimeType(_In_z_ LPCSTR szFileNameA)
   return GetMimeTypeFromExtension((szExtA > szFileNameA && *(szExtA-1) == '.') ? (szExtA-1) : "");
 }
 
-LPCSTR CHttpCommon::GetMimeType(_In_z_ LPCWSTR szFileNameW)
+LPCSTR GetMimeType(_In_z_ LPCWSTR szFileNameW)
 {
   LPCWSTR szExtW;
   CHAR szExtA[8];
@@ -304,15 +394,31 @@ LPCSTR CHttpCommon::GetMimeType(_In_z_ LPCWSTR szFileNameW)
   return GetMimeTypeFromExtension(".");
 }
 
-HRESULT CHttpCommon::ParseDate(_Out_ CDateTime &cDt, _In_z_ LPCSTR szDateTimeA)
+HRESULT ParseDate(_Out_ CDateTime &cDt, _In_z_ LPCSTR szDateTimeA, _In_opt_ SIZE_T nDateTimeLen)
 {
+  CStringA cStrTempA;
   HRESULT hRes;
 
   cDt.Clear();
   if (szDateTimeA == NULL)
     return E_POINTER;
-  if (*szDateTimeA == 0)
+
+  if (nDateTimeLen == (SIZE_T)-1)
+  {
+    if (StrLenA(szDateTimeA) == 0)
+      return MX_E_InvalidData;
+  }
+  else if (nDateTimeLen > 0)
+  {
+    if (cStrTempA.CopyN(szDateTimeA, nDateTimeLen) == FALSE)
+      return E_OUTOFMEMORY;
+    szDateTimeA = (LPCSTR)cStrTempA;
+  }
+  else
+  {
     return MX_E_InvalidData;
+  }
+
   //parse date
   hRes = cDt.SetFromString(szDateTimeA, "%a, %d %b %Y %H:%M:%S %z");
   if (FAILED(hRes))
@@ -329,15 +435,31 @@ HRESULT CHttpCommon::ParseDate(_Out_ CDateTime &cDt, _In_z_ LPCSTR szDateTimeA)
   return hRes;
 }
 
-HRESULT CHttpCommon::ParseDate(_Out_ CDateTime &cDt, _In_z_ LPCWSTR szDateTimeW)
+HRESULT ParseDate(_Out_ CDateTime &cDt, _In_z_ LPCWSTR szDateTimeW, _In_opt_ SIZE_T nDateTimeLen)
 {
+  CStringW cStrTempW;
   HRESULT hRes;
 
   cDt.Clear();
   if (szDateTimeW == NULL)
     return E_POINTER;
-  if (*szDateTimeW == 0)
+
+  if (nDateTimeLen == (SIZE_T)-1)
+  {
+    if (StrLenW(szDateTimeW) == 0)
+      return MX_E_InvalidData;
+  }
+  else if (nDateTimeLen > 0)
+  {
+    if (cStrTempW.CopyN(szDateTimeW, nDateTimeLen) == FALSE)
+      return E_OUTOFMEMORY;
+    szDateTimeW = (LPCWSTR)cStrTempW;
+  }
+  else
+  {
     return MX_E_InvalidData;
+  }
+
   //parse date
   hRes = cDt.SetFromString(szDateTimeW, L"%a, %d %b %Y %H:%M:%S %z");
   if (FAILED(hRes))
@@ -354,29 +476,7 @@ HRESULT CHttpCommon::ParseDate(_Out_ CDateTime &cDt, _In_z_ LPCWSTR szDateTimeW)
   return hRes;
 }
 
-HRESULT CHttpCommon::_GetTempPath(_Out_ MX::CStringW &cStrPathW)
-{
-  SIZE_T nLen, nThisLen=0;
-
-  for (nLen=2048; nLen<=65536; nLen<<=1)
-  {
-    if (cStrPathW.EnsureBuffer(nLen) == FALSE)
-      return E_OUTOFMEMORY;
-    nThisLen = (SIZE_T)::GetTempPathW((DWORD)nLen, (LPWSTR)cStrPathW);
-    if (nThisLen < nLen - 4)
-      break;
-  }
-  if (nLen > 65536)
-    return ERROR_BUFFER_ALL_ZEROS;
-  ((LPWSTR)cStrPathW)[nThisLen] = 0;
-  cStrPathW.Refresh();
-  if (nThisLen > 0 && ((LPWSTR)cStrPathW)[nThisLen - 1] != L'\\')
-  {
-    if (cStrPathW.Concat(L"\\") == FALSE)
-      return E_OUTOFMEMORY;
-  }
-  return S_OK;
-}
+} //namespace Http
 
 } //namespace MX
 
@@ -390,104 +490,104 @@ static LPCSTR GetMimeTypeFromExtension(_In_z_ LPCSTR szExtA)
     {
       case 'c':
       case 'C':
-        if (MX::StrCompareA(szExtA+2, "ss", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "ss", TRUE) == 0)
           return "text/css";
         break;
 
       case 'g':
       case 'G':
-        if (MX::StrCompareA(szExtA+2, "if", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "if", TRUE) == 0)
           return "image/gif";
         break;
 
       case 'j':
       case 'J':
-        if (MX::StrCompareA(szExtA+2, "s", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "s", TRUE) == 0)
           return "application/javascript";
-        if (MX::StrCompareA(szExtA+2, "peg", TRUE) == 0 ||
-            MX::StrCompareA(szExtA+2, "pg", TRUE) == 0 ||
-            MX::StrCompareA(szExtA+2, "pe", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "peg", TRUE) == 0 ||
+            MX::StrCompareA(szExtA + 2, "pg", TRUE) == 0 ||
+            MX::StrCompareA(szExtA + 2, "pe", TRUE) == 0)
           return "image/jpeg";
         break;
 
       case 'p':
       case 'P':
-        if (MX::StrCompareA(szExtA+2, "ng", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "ng", TRUE) == 0)
           return "image/png";
         break;
 
       case 'm':
       case 'M':
-        if (MX::StrCompareA(szExtA+2, "pga", TRUE) == 0 ||
-            MX::StrCompareA(szExtA+2, "p2", TRUE) == 0 ||
-            MX::StrCompareA(szExtA+2, "p3", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "pga", TRUE) == 0 ||
+            MX::StrCompareA(szExtA + 2, "p2", TRUE) == 0 ||
+            MX::StrCompareA(szExtA + 2, "p3", TRUE) == 0)
           return "audio/mpeg";
         //----
-        if (MX::StrCompareA(szExtA+2, "idi", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "idi", TRUE) == 0)
           return "audio/midi";
         //----
-        if (MX::StrCompareA(szExtA+2, "ov", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "ov", TRUE) == 0)
           return "video/x-quicktime";
         //----
-        if (MX::StrCompareA(szExtA+2, "peg", TRUE) == 0 ||
-            MX::StrCompareA(szExtA+2, "pg", TRUE) == 0 ||
-            MX::StrCompareA(szExtA+2, "pe", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "peg", TRUE) == 0 ||
+            MX::StrCompareA(szExtA + 2, "pg", TRUE) == 0 ||
+            MX::StrCompareA(szExtA + 2, "pe", TRUE) == 0)
           return "video/mpeg";
         break;
 
       case 'k':
       case 'K':
-        if (MX::StrCompareA(szExtA+2, "ar", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "ar", TRUE) == 0)
           return "audio/midi";
         break;
 
       case 'a':
       case 'A':
-        if (MX::StrCompareA(szExtA+2, "u", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "u", TRUE) == 0)
           return "audio/basic";
         //----
-        if (MX::StrCompareA(szExtA+2, "vi", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "vi", TRUE) == 0)
           return "video/x-msvideo";
         break;
 
       case 's':
       case 'S':
-        if (MX::StrCompareA(szExtA+2, "nd", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "nd", TRUE) == 0)
           return "audio/basic";
         break;
 
       case 'r':
       case 'R':
-        if (MX::StrCompareA(szExtA+2, "a", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "a", TRUE) == 0)
           return "audio/x-realaudio";
         //----
-        if (MX::StrCompareA(szExtA+2, "tf", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "tf", TRUE) == 0)
           return "text/rtf";
         break;
 
       case 'w':
       case 'W':
-        if (MX::StrCompareA(szExtA+2, "av", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "av", TRUE) == 0)
           return "audio/x-wav";
         break;
 
       case 'q':
       case 'Q':
-        if (MX::StrCompareA(szExtA+2, "t", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "t", TRUE) == 0)
           return "video/x-quicktime";
         break;
 
       case 'h':
       case 'H':
-        if (MX::StrCompareA(szExtA+2, "tm", TRUE) == 0 ||
-            MX::StrCompareA(szExtA+2, "tml", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "tm", TRUE) == 0 ||
+            MX::StrCompareA(szExtA + 2, "tml", TRUE) == 0)
           return "text/html";
         break;
 
       case 'x':
       case 'X':
-        if (MX::StrCompareA(szExtA+2, "ml", TRUE) == 0 ||
-            MX::StrCompareA(szExtA+2, "sl", TRUE) == 0)
+        if (MX::StrCompareA(szExtA + 2, "ml", TRUE) == 0 ||
+            MX::StrCompareA(szExtA + 2, "sl", TRUE) == 0)
           return "text/xml";
         break;
     }

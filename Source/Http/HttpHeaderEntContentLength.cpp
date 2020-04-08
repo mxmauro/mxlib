@@ -34,21 +34,30 @@ CHttpHeaderEntContentLength::~CHttpHeaderEntContentLength()
   return;
 }
 
-HRESULT CHttpHeaderEntContentLength::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderEntContentLength::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
+  LPCSTR szValueEndA;
   ULONGLONG nTemp;
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //skip spaces
-  szValueA = SkipSpaces(szValueA);
+  szValueA = SkipSpaces(szValueA, szValueEndA);
+
   //parse value
-  if (*szValueA < '0' || *szValueA > '9')
+  if (szValueA >= szValueEndA || *szValueA < '0' || *szValueA > '9')
     return MX_E_InvalidData;
-  while (*szValueA == '0')
+
+  while (szValueA < szValueEndA && *szValueA == '0')
     szValueA++;
+
   nLength = 0;
-  while (*szValueA >= '0' && *szValueA <= '9')
+  while (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
   {
     nTemp = nLength * 10ui64;
     if (nTemp < nLength)
@@ -58,14 +67,16 @@ HRESULT CHttpHeaderEntContentLength::Parse(_In_z_ LPCSTR szValueA)
       return MX_E_ArithmeticOverflow;
     szValueA++;
   }
+
   //skip spaces and check for end
-  if (*SkipSpaces(szValueA) != 0)
+  if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
     return MX_E_InvalidData;
+
   //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentLength::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderEntContentLength::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   if (cStrDestA.Format("%I64u", nLength) == FALSE)
     return E_OUTOFMEMORY;

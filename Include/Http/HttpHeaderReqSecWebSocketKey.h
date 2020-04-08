@@ -34,20 +34,29 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Sec-WebSocket-Key)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+
+  HRESULT GenerateKey(_In_ SIZE_T nKeyLen);
 
   HRESULT SetKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen);
 
-  LPBYTE GetKey() const;
-  SIZE_T GetKeyLength() const;
+  LPBYTE GetKey() const
+    {
+    return lpKey;
+    };
+  SIZE_T GetKeyLength() const
+    {
+    return nKeyLength;
+    };
 
 private:
   HRESULT InternalSetKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen);
+  VOID SecureFreeKey();
 
 private:
-  TAutoFreePtr<BYTE> cKey;
+  LPBYTE lpKey;
   SIZE_T nKeyLength;
 };
 

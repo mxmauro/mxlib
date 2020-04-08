@@ -20,6 +20,7 @@
 #include "InitOpenSSL.h"
 #include "..\..\Include\WaitableObjects.h"
 #include "..\..\Include\Finalizer.h"
+#include "..\..\Include\FnvHash.h"
 #include "..\..\Include\Strings\Strings.h"
 #include <OpenSSL\ssl.h>
 #include <OpenSSL\err.h>
@@ -133,22 +134,35 @@ SSL_CTX* GetSslContext(_In_ BOOL bServerSide)
         SSL_CTX_free(lpSslCtx);
         return NULL;
       }
-      SSL_CTX_set_session_cache_mode(lpSslCtx, SSL_SESS_CACHE_SERVER);
-      //SSL_CTX_sess_set_new_cb(lpSslCtx, NewSessionCallbackStatic);
-      //SSL_CTX_sess_set_remove_cb(lpSslCtx, RemoveSessionCallbackStatic);
-      SSL_CTX_set_timeout(lpSslCtx, 3600);
-      SSL_CTX_sess_set_cache_size(lpSslCtx, 1024);
-      SSL_CTX_set_read_ahead(lpSslCtx, 1);
+      //----
       if (bServerSide != FALSE)
       {
+        Fnv64_t nId;
+        LPVOID lp;
+
         SSL_CTX_set_min_proto_version(lpSslCtx, TLS1_2_VERSION);
         SSL_CTX_set_max_proto_version(lpSslCtx, TLS_MAX_VERSION);
+
+        lp = &lpSslCtx;
+        nId = fnv_64a_buf(&lp, sizeof(lp), FNV1A_64_INIT);
+        lp = (LPVOID)&nSslContextMutex;
+        nId = fnv_64a_buf(&lp, sizeof(lp), nId);
+        SSL_CTX_set_session_id_context(lpSslCtx, (unsigned char*)&nId, (unsigned int)sizeof(nId));
+        SSL_CTX_set_session_cache_mode(lpSslCtx, SSL_SESS_CACHE_SERVER);
+        SSL_CTX_sess_set_cache_size(lpSslCtx, 131072);
       }
       else
       {
         SSL_CTX_set_min_proto_version(lpSslCtx, TLS1_VERSION);
         SSL_CTX_set_max_proto_version(lpSslCtx, TLS_MAX_VERSION);
+
+        SSL_CTX_set_session_cache_mode(lpSslCtx, SSL_SESS_CACHE_CLIENT);
+        SSL_CTX_sess_set_cache_size(lpSslCtx, 10240);
       }
+      //SSL_CTX_sess_set_new_cb(lpSslCtx, NewSessionCallbackStatic);
+      //SSL_CTX_sess_set_remove_cb(lpSslCtx, RemoveSessionCallbackStatic);
+      SSL_CTX_set_timeout(lpSslCtx, 300);
+      SSL_CTX_set_read_ahead(lpSslCtx, 1);
       //----
       __InterlockedExchangePointer((volatile LPVOID *)&(lpSslContexts[(bServerSide != FALSE) ? 1 : 0]), lpSslCtx);
     }

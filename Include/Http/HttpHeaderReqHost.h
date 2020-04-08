@@ -21,6 +21,7 @@
 #define _MX_HTTPHEADERREQUESTHOST_H
 
 #include "HttpHeaderBase.h"
+#include "Url.h"
 
 //-----------------------------------------------------------
 
@@ -34,9 +35,9 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Host)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
   HRESULT SetHost(_In_z_ LPCWSTR szHostW, _In_opt_ SIZE_T nHostLen = (SIZE_T)-1);
   LPCWSTR GetHost() const;

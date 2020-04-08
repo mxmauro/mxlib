@@ -19,6 +19,7 @@
  */
 #include "..\..\Include\Http\HttpHeaderReqSecWebSocketKey.h"
 #include "..\..\Include\Crypto\Base64.h"
+#include "..\..\Include\Crypto\SecureRandom.h"
 
 //-----------------------------------------------------------
 
@@ -26,29 +27,35 @@ namespace MX {
 
 CHttpHeaderReqSecWebSocketKey::CHttpHeaderReqSecWebSocketKey() : CHttpHeaderBase()
 {
+  lpKey = NULL;
   nKeyLength = 0;
   return;
 }
 
 CHttpHeaderReqSecWebSocketKey::~CHttpHeaderReqSecWebSocketKey()
 {
+  SecureFreeKey();
   return;
 }
 
-HRESULT CHttpHeaderReqSecWebSocketKey::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderReqSecWebSocketKey::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
   CBase64Decoder cDecoder;
-  LPCSTR szStartA;
+  LPCSTR szValueEndA, szStartA;
   HRESULT hRes;
 
   if (szValueA == NULL)
     return E_POINTER;
 
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //skip spaces
-  szStartA = SkipSpaces(szValueA);
+  szStartA = SkipSpaces(szValueA, szValueEndA);
 
   //reach the end
-  for (szValueA = szStartA; *szValueA > L' '; szValueA++);
+  for (szValueA = szStartA; szValueA < szValueEndA && *szValueA > ' '; szValueA++);
   if (szValueA == szStartA)
     return MX_E_InvalidData;
 
@@ -58,34 +65,38 @@ HRESULT CHttpHeaderReqSecWebSocketKey::Parse(_In_z_ LPCSTR szValueA)
     hRes = cDecoder.Process(szStartA, (SIZE_T)(szValueA - szStartA));
   if (SUCCEEDED(hRes))
     hRes = cDecoder.End();
+
   //and set key
   if (SUCCEEDED(hRes))
+  {
     hRes = InternalSetKey(cDecoder.GetBuffer(), cDecoder.GetOutputLength());
+    ::MxMemSet(cDecoder.GetBuffer(), 0, cDecoder.GetOutputLength());
+  }
   if (FAILED(hRes))
     return hRes;
 
   //check after data
-  if (*SkipSpaces(szValueA) != 0)
+  if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
     return MX_E_InvalidData;
 
   //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqSecWebSocketKey::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderReqSecWebSocketKey::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   CBase64Encoder cEncoder;
   HRESULT hRes;
 
   cStrDestA.Empty();
 
-  if (nKeyLength == 0)
+  if (lpKey == NULL)
     return MX_E_NotReady;
 
   //start encoding
   hRes = cEncoder.Begin(cEncoder.GetRequiredSpace(nKeyLength));
   if (SUCCEEDED(hRes))
-    hRes = cEncoder.Process(cKey.Get(), nKeyLength);
+    hRes = cEncoder.Process(lpKey, nKeyLength);
   if (SUCCEEDED(hRes))
     hRes = cEncoder.End();
   if (FAILED(hRes))
@@ -95,6 +106,27 @@ HRESULT CHttpHeaderReqSecWebSocketKey::Build(_Inout_ CStringA &cStrDestA, _In_ e
   return (cStrDestA.CopyN(cEncoder.GetBuffer(), cEncoder.GetOutputLength()) != FALSE) ? S_OK : E_OUTOFMEMORY;
 }
 
+HRESULT CHttpHeaderReqSecWebSocketKey::GenerateKey(_In_ SIZE_T nKeyLen)
+{
+  LPBYTE lpNewKey;
+
+  if (nKeyLen == 0)
+    return E_INVALIDARG;
+
+  lpNewKey = (LPBYTE)MX_MALLOC(nKeyLen);
+  if (lpNewKey == NULL)
+    return E_POINTER;
+  SecureRandom::Generate(lpNewKey, nKeyLen);
+
+  SecureFreeKey();
+
+  lpKey = lpNewKey;
+  nKeyLength = nKeyLen;
+
+  //done
+  return S_OK;
+}
+
 HRESULT CHttpHeaderReqSecWebSocketKey::SetKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen)
 {
   if (lpKey == NULL && nKeyLen > 0)
@@ -102,7 +134,7 @@ HRESULT CHttpHeaderReqSecWebSocketKey::SetKey(_In_ LPVOID lpKey, _In_ SIZE_T nKe
   return InternalSetKey(lpKey, nKeyLen);
 }
 
-HRESULT CHttpHeaderReqSecWebSocketKey::InternalSetKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen)
+HRESULT CHttpHeaderReqSecWebSocketKey::InternalSetKey(_In_ LPVOID _lpKey, _In_ SIZE_T nKeyLen)
 {
   if (nKeyLen > 0)
   {
@@ -111,26 +143,31 @@ HRESULT CHttpHeaderReqSecWebSocketKey::InternalSetKey(_In_ LPVOID lpKey, _In_ SI
     lpNewKey = (LPBYTE)MX_MALLOC(nKeyLen);
     if (lpNewKey == NULL)
       return E_POINTER;
-    cKey.Attach(lpNewKey);
-    MxMemCopy(lpNewKey, lpKey, nKeyLen);
+    ::MxMemCopy(lpNewKey, _lpKey, nKeyLen);
+
+    SecureFreeKey();
+
+    lpKey = lpNewKey;
+    nKeyLength = nKeyLen;
   }
   else
   {
-    cKey.Reset();
+    SecureFreeKey();
   }
-  nKeyLength = nKeyLen;
   //done
   return S_OK;
 }
 
-LPBYTE CHttpHeaderReqSecWebSocketKey::GetKey() const
+VOID CHttpHeaderReqSecWebSocketKey::SecureFreeKey()
 {
-  return (const_cast<TAutoFreePtr<BYTE>&>(cKey)).Get();
-}
-
-SIZE_T CHttpHeaderReqSecWebSocketKey::GetKeyLength() const
-{
-  return nKeyLength;
+  if (lpKey != NULL)
+  {
+    ::MxMemSet(lpKey, 0, nKeyLength);
+    MX_FREE(lpKey);
+  }
+  lpKey = NULL;
+  nKeyLength = 0;
+  return;
 }
 
 } //namespace MX

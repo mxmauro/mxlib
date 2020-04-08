@@ -34,25 +34,30 @@ CHttpHeaderRespAcceptRanges::~CHttpHeaderRespAcceptRanges()
   return;
 }
 
-HRESULT CHttpHeaderRespAcceptRanges::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderRespAcceptRanges::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
   eRange _nRange = RangeUnsupported;
-  LPCSTR szStartA;
+  LPCSTR szValueEndA, szStartA;
   BOOL bGotItem = FALSE;
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //parse range type
   bGotItem = FALSE;
   do
   {
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
-    if (*szValueA == 0)
+    szValueA = SkipSpaces(szValueA, szValueEndA);
+    if (szValueA >= szValueEndA)
       break;
 
     //get range type
-    szValueA = GetToken(szStartA = szValueA);
+    szValueA = GetToken(szStartA = szValueA, szValueEndA);
     if (szValueA == szStartA)
       goto skip_null_listitem;
 
@@ -83,23 +88,29 @@ HRESULT CHttpHeaderRespAcceptRanges::Parse(_In_z_ LPCSTR szValueA)
 
 skip_null_listitem:
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
+    szValueA = SkipSpaces(szValueA, szValueEndA);
 
     //check for separator or end
-    if (*szValueA == ',')
-      szValueA++;
-    else if (*szValueA != 0)
-      return MX_E_InvalidData;
+    if (szValueA < szValueEndA)
+    {
+      if (*szValueA == ',')
+        szValueA++;
+      else
+        return MX_E_InvalidData;
+    }
   }
-  while (*szValueA != 0);
-  //done
+  while (szValueA < szValueEndA);
+
+  //do we got one?
   if (bGotItem == FALSE)
     return MX_E_InvalidData;
+
+  //done
   nRange = _nRange;
   return S_OK;
 }
 
-HRESULT CHttpHeaderRespAcceptRanges::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderRespAcceptRanges::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   switch (nRange)
   {
@@ -121,6 +132,8 @@ HRESULT CHttpHeaderRespAcceptRanges::SetRange(_In_ eRange _nRange)
 {
   if (_nRange != RangeNone && _nRange != RangeBytes && _nRange != RangeUnsupported)
     return E_INVALIDARG;
+
+  //done
   nRange = _nRange;
   return S_OK;
 }

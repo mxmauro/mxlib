@@ -41,29 +41,35 @@ CHttpHeaderRespSecWebSocketAccept::~CHttpHeaderRespSecWebSocketAccept()
   return;
 }
 
-HRESULT CHttpHeaderRespSecWebSocketAccept::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderRespSecWebSocketAccept::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
   CBase64Decoder cDecoder;
-  LPCSTR szStartA;
+  LPCSTR szValueEndA, szStartA;
   HRESULT hRes;
 
   if (szValueA == NULL)
     return E_POINTER;
 
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //skip spaces
-  szStartA = SkipSpaces(szValueA);
+  szStartA = SkipSpaces(szValueA, szValueEndA);
 
   //reach the end
-  for (szValueA = szStartA; *szValueA > L' '; szValueA++);
+  for (szValueA = szStartA; szValueA < szValueEndA && *szValueA > ' '; szValueA++);
   if (szValueA == szStartA)
     return MX_E_InvalidData;
 
   //start decoding
   hRes = cDecoder.Begin(cDecoder.GetRequiredSpace((SIZE_T)(szValueA - szStartA)));
   if (SUCCEEDED(hRes))
+  {
     hRes = cDecoder.Process(szStartA, (SIZE_T)(szValueA - szStartA));
-  if (SUCCEEDED(hRes))
-    hRes = cDecoder.End();
+    if (SUCCEEDED(hRes))
+      hRes = cDecoder.End();
+  }
   //and set key
   if (SUCCEEDED(hRes))
   {
@@ -76,14 +82,14 @@ HRESULT CHttpHeaderRespSecWebSocketAccept::Parse(_In_z_ LPCSTR szValueA)
     return hRes;
 
   //check after data
-  if (*SkipSpaces(szValueA) != 0)
+  if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
     return MX_E_InvalidData;
 
   //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderRespSecWebSocketAccept::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderRespSecWebSocketAccept::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   CBase64Encoder cEncoder;
   HRESULT hRes;
@@ -91,9 +97,11 @@ HRESULT CHttpHeaderRespSecWebSocketAccept::Build(_Inout_ CStringA &cStrDestA, _I
   //start encoding
   hRes = cEncoder.Begin(cEncoder.GetRequiredSpace(sizeof(aSHA1)));
   if (SUCCEEDED(hRes))
+  {
     hRes = cEncoder.Process(aSHA1, sizeof(aSHA1));
-  if (SUCCEEDED(hRes))
-    hRes = cEncoder.End();
+    if (SUCCEEDED(hRes))
+      hRes = cEncoder.End();
+  }
   if (FAILED(hRes))
     return hRes;
 
@@ -113,9 +121,11 @@ HRESULT CHttpHeaderRespSecWebSocketAccept::SetKey(_In_ LPVOID lpKey, _In_ SIZE_T
   //convert key to base64
   hRes = cEncoder.Begin(cEncoder.GetRequiredSpace(nKeyLen));
   if (SUCCEEDED(hRes))
+  {
     hRes = cEncoder.Process(lpKey, nKeyLen);
-  if (SUCCEEDED(hRes))
-    hRes = cEncoder.End();
+    if (SUCCEEDED(hRes))
+      hRes = cEncoder.End();
+  }
   if (FAILED(hRes))
     return hRes;
 
@@ -144,6 +154,19 @@ HRESULT CHttpHeaderRespSecWebSocketAccept::SetKey(_In_ LPVOID lpKey, _In_ SIZE_T
 LPBYTE CHttpHeaderRespSecWebSocketAccept::GetSHA1() const
 {
   return const_cast<LPBYTE>(aSHA1);
+}
+
+HRESULT CHttpHeaderRespSecWebSocketAccept::VerifyKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen)
+{
+  CHttpHeaderRespSecWebSocketAccept cVerifier;
+  HRESULT hRes;
+
+  hRes = cVerifier.SetKey(lpKey, nKeyLen);
+  if (SUCCEEDED(hRes))
+  {
+    hRes = (::MxMemCompare(aSHA1, cVerifier.aSHA1, sizeof(aSHA1)) == 0) ? S_OK : S_FALSE;
+  }
+  return hRes;
 }
 
 } //namespace MX

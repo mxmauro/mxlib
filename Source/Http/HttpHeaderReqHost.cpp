@@ -33,30 +33,37 @@ CHttpHeaderReqHost::~CHttpHeaderReqHost()
   return;
 }
 
-HRESULT CHttpHeaderReqHost::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderReqHost::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szHostStartA, szHostEndA;
+  LPCSTR szValueEndA, szHostStartA, szHostEndA;
   int nPort;
   HRESULT hRes;
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //skip spaces
-  szValueA = SkipSpaces(szValueA);
+  szValueA = SkipSpaces(szValueA, szValueEndA);
+
   //get host
-  szValueA = SkipUntil(szHostStartA = szValueA, ": \t");
+  szValueA = SkipUntil(szHostStartA = szValueA, szValueEndA, ": \t");
   if (szValueA == szHostStartA)
     return MX_E_InvalidData;
   szHostEndA = szValueA;
+
   //parse port if any
   nPort = -1;
-  if (*szValueA == ':')
+  if (szValueA < szValueEndA && *szValueA == ':')
   {
     szValueA++;
-    while (*szValueA == '0')
+    while (szValueA < szValueEndA && *szValueA == '0')
       szValueA++;
     nPort = 0;
-    while (*szValueA >= '0' && *szValueA <= '9')
+    while (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
     {
       nPort = nPort * 10 + (int)(*szValueA++ - '0');
       if (nPort > 65535)
@@ -65,22 +72,27 @@ HRESULT CHttpHeaderReqHost::Parse(_In_z_ LPCSTR szValueA)
     if (nPort == 0)
       return MX_E_InvalidData;
   }
+
   //skip spaces and check for end
-  if (*CHttpHeaderBase::SkipSpaces(szValueA) != 0)
+  if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
     return MX_E_InvalidData;
+
   //set new value
   hRes = cUrl.SetHost(szHostStartA, (SIZE_T)(szHostEndA - szHostStartA));
   if (SUCCEEDED(hRes) && nPort > 0)
     hRes = cUrl.SetPort(nPort);
   if (FAILED(hRes))
     return (hRes == E_INVALIDARG) ? MX_E_InvalidData : hRes;
+
+  //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqHost::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderReqHost::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   if (cStrDestA.Copy(cUrl.GetHost()) == FALSE)
     return E_OUTOFMEMORY;
+
   if (cStrDestA.IsEmpty() == FALSE && cUrl.GetPort() > 0)
   {
     if (cStrDestA.AppendFormat(":%d", cUrl.GetPort()) == FALSE)
@@ -100,10 +112,13 @@ HRESULT CHttpHeaderReqHost::SetHost(_In_z_ LPCWSTR szHostW, _In_opt_ SIZE_T nHos
     return MX_E_InvalidData;
   if (szHostW == NULL)
     return E_POINTER;
+
   //some checks
   hRes = cUrl.SetHost(szHostW);
   if (FAILED(hRes))
     return (hRes == E_INVALIDARG) ? MX_E_InvalidData : hRes;
+
+  //done
   return S_OK;
 }
 

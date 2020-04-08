@@ -129,8 +129,7 @@ public:
 
   typedef Callback<VOID (_In_ CIpc *lpIpc, _In_ HRESULT hrErrorCode)> OnEngineErrorCallback;
 
-  typedef Callback<HRESULT (_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CUserData *lpUserData,
-                            _In_ HRESULT hrErrorCode)> OnConnectCallback;
+  typedef Callback<HRESULT (_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CUserData *lpUserData)> OnConnectCallback;
   typedef Callback<VOID (_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CUserData *lpUserData,
                          _In_ HRESULT hrErrorCode)> OnDisconnectCallback;
   typedef Callback<HRESULT (_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CUserData *lpUserData)> OnDataReceivedCallback;
@@ -149,6 +148,26 @@ public:
   } CREATE_CALLBACK_DATA;
 
   typedef Callback<HRESULT (_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CREATE_CALLBACK_DATA &sData)> OnCreateCallback;
+
+  struct CHANGE_CALLBACKS_DATA {
+    CHANGE_CALLBACKS_DATA()
+      {
+      bConnectCallbackIsValid = bDisconnectCallbackIsValid = bDataReceivedCallbackIsValid = 0;
+      bDestroyCallbackIsValid = bUserDataIsValid = 0;
+      return;
+      };
+
+    ULONG bConnectCallbackIsValid : 1;
+    ULONG bDisconnectCallbackIsValid : 1;
+    ULONG bDataReceivedCallbackIsValid : 1;
+    ULONG bDestroyCallbackIsValid : 1;
+    ULONG bUserDataIsValid : 1;
+    OnConnectCallback cConnectCallback;
+    OnDisconnectCallback cDisconnectCallback;
+    OnDataReceivedCallback cDataReceivedCallback;
+    OnDestroyCallback cDestroyCallback;
+    TAutoRefCounted<CUserData> cUserData;
+  };
 
   //--------
 
@@ -226,13 +245,9 @@ public:
   //NOTE: On success, the connection will own the layer
   HRESULT AddLayer(_In_ HANDLE h, _In_ CLayer *lpLayer, _In_opt_ BOOL bFront = TRUE);
 
-  HRESULT SetConnectCallback(_In_ HANDLE h, _In_ OnConnectCallback cConnectCallback);
-  HRESULT SetDisconnectCallback(_In_ HANDLE h, _In_ OnDisconnectCallback cDisconnectCallback);
-  HRESULT SetDataReceivedCallback(_In_ HANDLE h, _In_ OnDataReceivedCallback cDataReceivedCallback);
-  HRESULT SetDestroyCallback(_In_ HANDLE h, _In_ OnDestroyCallback cDestroyCallback);
+  //NOTE: On success, the connection will own the user data if changed
+  HRESULT SetCallbacks(_In_ HANDLE h, _In_ CHANGE_CALLBACKS_DATA &cCallbacks);
 
-  //NOTE: On success, the connection will own the user data
-  HRESULT SetUserData(_In_ HANDLE h, _In_ CUserData *lpUserData);
   CUserData* GetUserData(_In_ HANDLE h);
 
   eConnectionClass GetClass(_In_ HANDLE h);
@@ -743,7 +758,7 @@ protected:
   VOID FireOnEngineError(_In_ HRESULT hrErrorCode);
   HRESULT FireOnCreate(_In_ CConnectionBase *lpConn);
   VOID FireOnDestroy(_In_ CConnectionBase *lpConn);
-  HRESULT FireOnConnect(_In_ CConnectionBase *lpConn, _In_ HRESULT hrErrorCode);
+  HRESULT FireOnConnect(_In_ CConnectionBase *lpConn);
   VOID FireOnDisconnect(_In_ CConnectionBase *lpConn);
   HRESULT FireOnDataReceived(_In_ CConnectionBase *lpConn);
 

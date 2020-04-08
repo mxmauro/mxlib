@@ -99,6 +99,9 @@
     <None Include="Test\Data\Web\websocket_test.jss">
       <Filter>Data\Web</Filter>
     </None>
+    <None Include="Test\Data\Web\json_xhr.jss">
+      <Filter>Data\Web</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Test\Data\Web\images\header_background.png">

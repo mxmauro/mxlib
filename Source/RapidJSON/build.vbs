@@ -1,0 +1,100 @@
+'
+' Copyright (C) 2014-2020 Mauro H. Leggieri, Buenos Aires, Argentina.
+' All rights reserved.
+'
+
+Option Explicit
+Dim oFso
+Dim szScriptPath
+Dim nErr
+
+
+Set oFso = CreateObject("Scripting.FileSystemObject")
+
+'Check if inside a Visual Studio environment
+If CheckVisualStudioCommandPrompt() = False Then
+	WScript.Echo "Error: Run this script inside Visual Studio."
+	WScript.Quit 1
+End If
+
+
+'Setup directories
+szScriptPath = Left(WScript.ScriptFullName, Len(WScript.ScriptFullName) - Len(WScript.ScriptName))
+
+
+'Copy files
+nErr = CopyFiles("Source\include\rapidjson", "..\..\Include\RapidJSON", "*")
+If nErr <> 0 Then
+	WScript.Echo "Errors detected while copying files."
+	WScript.Quit nErr
+End If
+
+
+'Done
+WScript.Echo "RapidJSON files are up-to-date"
+WScript.Quit 0
+
+
+'-------------------------------------------------------------------------------
+
+Function CheckVisualStudioCommandPrompt
+Dim oShell
+
+	Set oShell = CreateObject("WScript.Shell")
+	If oShell.ExpandEnvironmentStrings("%VCINSTALLDIR%") <> "%VCINSTALLDIR%" Or _
+	    oShell.ExpandEnvironmentStrings("%VisualStudioVersion%") <> "%VisualStudioVersion%" Or _
+	    oShell.ExpandEnvironmentStrings("%MSBuildLoadMicrosoftTargetsReadOnly%") <> _
+	                                    "%MSBuildLoadMicrosoftTargetsReadOnly%" Then
+		CheckVisualStudioCommandPrompt = True
+	Else
+		CheckVisualStudioCommandPrompt = False
+	End If
+	Set oShell = Nothing
+End Function
+
+Function CopyFiles(szSrcFolder, szDestFolder, szFileMask)
+Dim nErr, S
+
+	If Len(szFileMask) > 0 Then szFileMask = " " & szFileMask
+	S = "ROBOCOPY.EXE " & Chr(34) & szScriptPath & szSrcFolder & Chr(34) & " " & _
+												Chr(34) & szScriptPath & szDestFolder & Chr(34) & " " & _
+												szFileMask & " /COPY:DAT /XO /NDL /NJH /NJS /NP /NS /NC /E"
+	nErr = RunApp(S, szScriptPath, "", True)
+	If nErr < 8 Then nErr = 0
+	CopyFiles = nErr
+End Function
+
+Function RunApp(szCmdLine, szCurFolder, szEnvPath, bHide)
+Dim oFile, oExec, oShell, oShellEnv
+Dim I, nRet, szOutputFile
+
+	WScript.Echo "Running: " & szCmdLine
+	Set oShell = CreateObject("WScript.Shell")
+	On Error Resume Next
+	If szCurFolder <> "" Then oShell.CurrentDirectory = szCurFolder
+	If szEnvPath <> "" Then
+		Set oShellEnv = oShell.Environment("PROCESS")
+		oShellEnv("PATH") = szEnvPath & ";" & oShellEnv("PATH")
+	End If
+	If bHide = False Then
+		szOutputFile = oFso.GetSpecialFolder(2)
+		If Right(szOutputFile, 1) <> "\" Then szOutputFile = szOutputFile & "\"
+		szOutputFile = szOutputFile & oFso.GetTempName
+		szCmdLine = "CMD.EXE /S /C " & Chr(34) & szCmdLine & " > " & Chr(34) & szOutputFile & Chr(34) & " 2>&1" & Chr(34)
+	End If
+	nRet = oShell.Run(szCmdLine, 0, True)
+	I = Err.Number
+	If I <> 0 Then nRet = I
+	On Error Goto 0
+	If bHide = False Then
+		If oFso.FileExists(szOutputFile) <> False Then
+			Set oFile = oFso.OpenTextFile(szOutputFile, 1)
+			If Not oFile.AtEndOfStream Then WScript.Echo oFile.ReadAll
+			oFile.Close
+			On Error Resume Next
+			oFso.DeleteFile szOutputFile
+			On Error Goto 0
+		End If
+	End If
+	RunApp = nRet
+End Function

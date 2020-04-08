@@ -4,6 +4,10 @@ if (request.path.indexOf("/bottom.jss", request.path.length - "/bottom.jss".leng
 
 function render() {
 %>
+			</div>
+		</div>
+	</div>
+</div>
 </body>
 </html>
 <%

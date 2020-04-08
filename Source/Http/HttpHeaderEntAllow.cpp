@@ -30,29 +30,34 @@ CHttpHeaderEntAllow::CHttpHeaderEntAllow() : CHttpHeaderBase()
 
 CHttpHeaderEntAllow::~CHttpHeaderEntAllow()
 {
-  cVerbsList.RemoveAllElements();
+  aVerbsList.RemoveAllElements();
   return;
 }
 
-HRESULT CHttpHeaderEntAllow::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderEntAllow::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szStartA;
+  LPCSTR szStartA, szValueEndA;
   BOOL bGotItem;
   HRESULT hRes;
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //parse verbs
   bGotItem = FALSE;
   do
   {
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
-    if (*szValueA == 0)
+    szValueA = SkipSpaces(szValueA, szValueEndA);
+    if (szValueA >= szValueEndA)
       break;
 
     //get verb
-    szValueA = GetToken(szStartA = szValueA);
+    szValueA = GetToken(szStartA = szValueA, szValueEndA);
     if (szValueA == szStartA)
       goto skip_null_listitem;
 
@@ -65,26 +70,29 @@ HRESULT CHttpHeaderEntAllow::Parse(_In_z_ LPCSTR szValueA)
 
 skip_null_listitem:
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
+    szValueA = SkipSpaces(szValueA, szValueEndA);
 
     //check for separator or end
-    if (*szValueA == ',')
-      szValueA++;
-    else if (*szValueA != 0)
-      return MX_E_InvalidData;
+    if (szValueA < szValueEndA)
+    {
+      if (*szValueA == ',')
+        szValueA++;
+      else
+        return MX_E_InvalidData;
+    }
   }
-  while (*szValueA != 0);
+  while (szValueA < szValueEndA);
   //done
   return (bGotItem != FALSE) ? S_OK : MX_E_InvalidData;
 }
 
-HRESULT CHttpHeaderEntAllow::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderEntAllow::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   SIZE_T i, nCount;
 
   cStrDestA.Empty();
   //fill verbs
-  nCount = cVerbsList.GetCount();
+  nCount = aVerbsList.GetCount();
   for (i = 0; i < nCount; i++)
   {
     if (cStrDestA.IsEmpty() == FALSE)
@@ -92,7 +100,7 @@ HRESULT CHttpHeaderEntAllow::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nB
       if (cStrDestA.ConcatN(",", 1) == FALSE)
         return E_OUTOFMEMORY;
     }
-    if (cStrDestA.Concat(cVerbsList.GetElementAt(i)) == FALSE)
+    if (cStrDestA.Concat(aVerbsList.GetElementAt(i)) == FALSE)
       return E_OUTOFMEMORY;
   }
   //done
@@ -109,48 +117,82 @@ HRESULT CHttpHeaderEntAllow::AddVerb(_In_z_ LPCSTR szVerbA, _In_ SIZE_T nVerbLen
     return MX_E_InvalidData;
   if (szVerbA == NULL)
     return E_POINTER;
+
   //convert to uppercase, validate and set new value
   if (cStrTempA.CopyN(szVerbA, nVerbLen) == FALSE)
     return E_OUTOFMEMORY;
   StrToUpperA((LPSTR)cStrTempA);
+
   //validate
-  if (CHttpCommon::IsValidVerb((LPCSTR)cStrTempA, cStrTempA.GetLength()) == FALSE)
+  if (Http::IsValidVerb((LPCSTR)cStrTempA, cStrTempA.GetLength()) == FALSE)
     return MX_E_InvalidData;
+
   //add to list if not there
   if (HasVerb((LPCSTR)cStrTempA) == FALSE)
   {
-    if (cVerbsList.AddElement((LPSTR)cStrTempA) == FALSE)
+    if (aVerbsList.AddElement((LPCSTR)cStrTempA) == FALSE)
       return E_OUTOFMEMORY;
     cStrTempA.Detach();
   }
+
   //done
   return S_OK;
 }
 
 SIZE_T CHttpHeaderEntAllow::GetVerbsCount() const
 {
-  return cVerbsList.GetCount();
+  return aVerbsList.GetCount();
 }
 
 LPCSTR CHttpHeaderEntAllow::GetVerb(_In_ SIZE_T nIndex) const
 {
-  return (nIndex < cVerbsList.GetCount()) ? cVerbsList.GetElementAt(nIndex) : NULL;
+  return (nIndex < aVerbsList.GetCount()) ? aVerbsList.GetElementAt(nIndex) : NULL;
 }
 
-BOOL CHttpHeaderEntAllow::HasVerb(_In_z_ LPCSTR szVerbA) const
+BOOL CHttpHeaderEntAllow::HasVerb(_In_z_ LPCSTR szVerbA, _In_ SIZE_T nVerbLen) const
 {
   SIZE_T i, nCount;
 
-  if (szVerbA != NULL && *szVerbA != 0)
+  if (nVerbLen == (SIZE_T)-1)
+    nVerbLen = StrLenA(szVerbA);
+  if (nVerbLen > 0)
   {
-    nCount = cVerbsList.GetCount();
-    for (i=0; i < nCount; i++)
+    nCount = aVerbsList.GetCount();
+    for (i = 0; i < nCount; i++)
     {
-      if (StrCompareA(cVerbsList.GetElementAt(i), szVerbA, TRUE) == 0)
+      LPCSTR sA = aVerbsList.GetElementAt(i);
+
+      if (StrNCompareA(sA, szVerbA, nVerbLen, TRUE) == 0 && sA[nVerbLen] == 0)
         return TRUE;
     }
   }
   return FALSE;
+}
+
+HRESULT CHttpHeaderEntAllow::Merge(_In_ CHttpHeaderBase *_lpHeader)
+{
+  CHttpHeaderEntAllow *lpHeader = reinterpret_cast<CHttpHeaderEntAllow*>(_lpHeader);
+  SIZE_T i, nCount;
+
+  nCount = lpHeader->aVerbsList.GetCount();
+  for (i = 0; i < nCount; i++)
+  {
+    LPCSTR szVerbA = lpHeader->aVerbsList.GetElementAt(i);
+
+    if (HasVerb(szVerbA) == FALSE)
+    {
+      CStringA cStrTempA;
+
+      if (cStrTempA.Copy(szVerbA) == FALSE)
+        return E_OUTOFMEMORY;
+      if (aVerbsList.AddElement((LPCSTR)cStrTempA) == FALSE)
+        return E_OUTOFMEMORY;
+      cStrTempA.Detach();
+    }
+  }
+
+  //done
+  return S_OK;
 }
 
 } //namespace MX

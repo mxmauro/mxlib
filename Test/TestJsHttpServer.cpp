@@ -30,11 +30,11 @@ static LONG volatile nLogMutex = 0;
 
 //-----------------------------------------------------------
 
-class CTestWebSocket : public MX::CWebSocket
+class CTestJsHttpServerWebSocket : public MX::CWebSocket
 {
 public:
-  CTestWebSocket();
-  ~CTestWebSocket();
+  CTestJsHttpServerWebSocket();
+  ~CTestJsHttpServerWebSocket();
 
   virtual HRESULT OnConnected();
   virtual HRESULT OnTextMessage(_In_ LPCSTR szMsgA, _In_ SIZE_T nMsgLength);
@@ -60,8 +60,10 @@ static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHtt
 static VOID OnError(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
                     _In_ HRESULT hrErrorCode);
 static HRESULT OnWebSocketRequestReceived(_In_ MX::CJsHttpServer *lpHttp,
-                                          _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
-                                          _Inout_ MX::CHttpServer::WEBSOCKET_REQUEST_CALLBACK_DATA &sData);
+                                          _In_ MX::CJsHttpServer::CClientRequest *lpRequest, _In_ int nVersion,
+                                          _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount,
+                                          _Out_ int &nSelectedProtocol, _In_ MX::TArrayList<int> &aSupportedVersions,
+                                          _Out_ _Maybenull_ MX::CWebSocket **lplpWebSocket);
 static VOID DeleteSessionFiles();
 static HRESULT OnSessionLoadSave(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin, _In_ BOOL bLoading);
 static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR szFileNameW);
@@ -140,12 +142,15 @@ public:
 
 //-----------------------------------------------------------
 
-int TestJsHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
+int TestJsHttpServer()
 {
   CJsTest cTest;
+  BOOL bUseSSL;
   HRESULT hRes;
 
   DeleteSessionFiles();
+
+  bUseSSL = DoesCmdLineParamExist(L"ssl");
 
   cTest.cJsHttpServer.SetOption_MaxFilesCount(10);
   cTest.cJsHttpServer.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
@@ -205,7 +210,7 @@ int TestJsHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
       MX::CSockets::LISTENER_OPTIONS sOptions = { 0 };
 
       //sOptions.dwBackLogSize = 0;
-      sOptions.dwMaxAcceptsToPost = 128;
+      sOptions.dwMaxAcceptsToPost = 16;
       //sOptions.dwMaxRequestsPerSecond = 0;
       //sOptions.dwBurstSize = 0;
       hRes = cTest.cJsHttpServer.StartListening(MX::CSockets::FamilyIPv4, 443, &sOptions, &(cTest.cSslCert),
@@ -241,10 +246,15 @@ static VOID OnRequestCompleted(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpS
 {
   CJsTest *lpJsTest = CONTAINING_RECORD(lpHttp, CJsTest, cJsHttpServer);
   CTestJsRequest *lpRequest = static_cast<CTestJsRequest*>(_lpRequest);
-  LPCWSTR szExtensionW;
+  LPCWSTR szExtensionW = NULL;
   HRESULT hRes;
+  MX::CUrl *lpUrl;
 
-  hRes = BuildWebFileName(lpRequest->cStrFileNameW, szExtensionW, lpRequest->GetUrl()->GetPath());
+  lpUrl = lpRequest->GetUrl();
+  if (lpUrl != NULL)
+    hRes = BuildWebFileName(lpRequest->cStrFileNameW, szExtensionW, lpUrl->GetPath());
+  else
+    hRes = MX_E_Cancelled;
   if (FAILED(hRes))
   {
     hRes = lpRequest->SendErrorPage(500, hRes);
@@ -291,6 +301,11 @@ static VOID OnProcessJsRequest(_In_ MX::CIoCompletionPortThreadPool *lpPool, _In
 {
   CTestJsRequest *lpRequest = CONTAINING_RECORD(lpOvr, CTestJsRequest, sOvr);
 
+  if (SUCCEEDED(hRes))
+  {
+    if (lpRequest->IsAlive() == FALSE)
+      hRes = MX_E_Cancelled;
+  }
   if (SUCCEEDED(hRes))
   {
     hRes = lpRequest->AttachJVM();
@@ -399,12 +414,14 @@ static VOID OnError(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CCli
 }
 
 static HRESULT OnWebSocketRequestReceived(_In_ MX::CJsHttpServer *lpHttp,
-                                          _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
-                                          _Inout_ MX::CHttpServer::WEBSOCKET_REQUEST_CALLBACK_DATA &sData)
+                                          _In_ MX::CJsHttpServer::CClientRequest *lpRequest, _In_ int nVersion,
+                                          _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount,
+                                          _Out_ int &nSelectedProtocol, _In_ MX::TArrayList<int> &aSupportedVersions,
+                                          _Out_ _Maybenull_ MX::CWebSocket **lplpWebSocket)
 {
-  sData.nSelectedProtocol = 0;
-  sData.lpWebSocket = MX_DEBUG_NEW CTestWebSocket();
-  return (sData.lpWebSocket != NULL) ? S_OK : E_OUTOFMEMORY;
+  nSelectedProtocol = 0;
+  *lplpWebSocket = MX_DEBUG_NEW CTestJsHttpServerWebSocket();
+  return ((*lplpWebSocket) != NULL) ? S_OK : E_OUTOFMEMORY;
 }
 
 static VOID DeleteSessionFiles()
@@ -791,19 +808,19 @@ static HRESULT OnLog(_In_z_ LPCWSTR szInfoW)
 
 //-----------------------------------------------------------
 
-CTestWebSocket::CTestWebSocket() : MX::CWebSocket()
+CTestJsHttpServerWebSocket::CTestJsHttpServerWebSocket() : MX::CWebSocket()
 {
   return;
 }
 
-CTestWebSocket::~CTestWebSocket()
+CTestJsHttpServerWebSocket::~CTestJsHttpServerWebSocket()
 {
   return;
 }
 
-HRESULT CTestWebSocket::OnConnected()
+HRESULT CTestJsHttpServerWebSocket::OnConnected()
 {
-  static const LPCSTR szWelcomeMsgA = "Welcome to the MX WebSocket demo!!!";
+  static const LPCSTR szWelcomeMsgA = "Welcome to the MX JsHttpServer WebSocket demo!!!";
   HRESULT hRes;
 
   hRes = BeginTextMessage();
@@ -815,7 +832,7 @@ HRESULT CTestWebSocket::OnConnected()
   return hRes;
 }
 
-HRESULT CTestWebSocket::OnTextMessage(_In_ LPCSTR szMsgA, _In_ SIZE_T nMsgLength)
+HRESULT CTestJsHttpServerWebSocket::OnTextMessage(_In_ LPCSTR szMsgA, _In_ SIZE_T nMsgLength)
 {
   HRESULT hRes;
 
@@ -828,7 +845,7 @@ HRESULT CTestWebSocket::OnTextMessage(_In_ LPCSTR szMsgA, _In_ SIZE_T nMsgLength
   return hRes;
 }
 
-HRESULT CTestWebSocket::OnBinaryMessage(_In_ LPVOID lpData, _In_ SIZE_T nDataSize)
+HRESULT CTestJsHttpServerWebSocket::OnBinaryMessage(_In_ LPVOID lpData, _In_ SIZE_T nDataSize)
 {
   HRESULT hRes;
 
@@ -841,17 +858,17 @@ HRESULT CTestWebSocket::OnBinaryMessage(_In_ LPVOID lpData, _In_ SIZE_T nDataSiz
   return hRes;
 }
 
-SIZE_T CTestWebSocket::GetMaxMessageSize() const
+SIZE_T CTestJsHttpServerWebSocket::GetMaxMessageSize() const
 {
   return 1048596;
 }
 
-VOID CTestWebSocket::OnPongFrame()
+VOID CTestJsHttpServerWebSocket::OnPongFrame()
 {
   return;
 }
 
-VOID CTestWebSocket::OnCloseFrame(_In_ USHORT wCode, _In_  HRESULT hrErrorCode)
+VOID CTestJsHttpServerWebSocket::OnCloseFrame(_In_ USHORT wCode, _In_  HRESULT hrErrorCode)
 {
   return;
 }

@@ -638,7 +638,7 @@ public:
     };
 
 #ifdef _DEBUG
-  VOID Check(_In_ CRedBlackTreeNode *lpNode)
+  VOID Check(_In_opt_ CRedBlackTreeNode *lpNode)
     {
     if (lpNode == NULL)
       return;

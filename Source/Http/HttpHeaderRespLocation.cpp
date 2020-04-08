@@ -33,19 +33,23 @@ CHttpHeaderRespLocation::~CHttpHeaderRespLocation()
   return;
 }
 
-HRESULT CHttpHeaderRespLocation::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderRespLocation::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szStartA;
+  LPCSTR szValueEndA, szStartA;
   HRESULT hRes;
 
   if (szValueA == NULL)
     return E_POINTER;
 
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //skip spaces
-  szValueA = SkipSpaces(szValueA);
+  szValueA = SkipSpaces(szValueA, szValueEndA);
 
   //get location
-  szValueA = SkipUntil(szStartA = szValueA, " \t");
+  szValueA = SkipUntil(szStartA = szValueA, szValueEndA, " \t");
   if (szValueA == szStartA)
     return MX_E_InvalidData;
 
@@ -55,13 +59,14 @@ HRESULT CHttpHeaderRespLocation::Parse(_In_z_ LPCSTR szValueA)
     return hRes;
 
   //skip spaces and check for end
-  if (*CHttpHeaderBase::SkipSpaces(szValueA) != 0)
+  if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
     return MX_E_InvalidData;
+
   //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderRespLocation::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderRespLocation::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   return (cStrDestA.Copy((LPCSTR)cStrLocationA) != FALSE) ? S_OK : E_OUTOFMEMORY;
 }
@@ -77,13 +82,16 @@ HRESULT CHttpHeaderRespLocation::SetLocation(_In_z_ LPCSTR szLocationA, _In_ SIZ
     return MX_E_InvalidData;
   if (szLocationA == NULL)
     return E_POINTER;
+
   //some checks
   hRes = cUrl.ParseFromString(szLocationA, nLocationLen);
   if (FAILED(hRes))
     return hRes;
+
   //set new value
   if (cStrLocationA.CopyN(szLocationA, nLocationLen) == FALSE)
     return E_OUTOFMEMORY;
+
   //done
   return S_OK;
 }

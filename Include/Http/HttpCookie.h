@@ -23,6 +23,7 @@
 #include "..\Defines.h"
 #include "..\ArrayList.h"
 #include "..\AutoPtr.h"
+#include "..\RefCounted.h"
 #include "..\DateTime\DateTime.h"
 #include "..\Strings\Strings.h"
 
@@ -37,7 +38,7 @@
 
 namespace MX {
 
-class CHttpCookie : public virtual CBaseMemObj
+class CHttpCookie : public virtual TRefCounted<CBaseMemObj>
 {
 public:
   typedef enum {
@@ -81,7 +82,7 @@ public:
   //NOTE: Path will be UTF-8 decoded
   HRESULT GetPath(_Inout_ CStringW &cStrDestW);
 
-  VOID SetExpireDate(_In_opt_ const CDateTime *lpDate=NULL);
+  VOID SetExpireDate(_In_opt_ const CDateTime *lpDate = NULL);
   CDateTime* GetExpireDate() const;
 
   VOID SetSecureFlag(_In_ BOOL bIsSecure);
@@ -93,14 +94,14 @@ public:
   HRESULT SetSameSite(_In_ eSameSite nSameSite);
   eSameSite GetSameSite() const;
 
-  HRESULT ToString(_Inout_ CStringA& cStrDestA, _In_ BOOL bAddAttributes=TRUE);
+  HRESULT ToString(_Inout_ CStringA& cStrDestA, _In_ BOOL bAddAttributes = TRUE);
 
   HRESULT DoesDomainMatch(_In_z_ LPCSTR szDomainToMatchA);
   //NOTE: Domain will be PUNY encoded
   HRESULT DoesDomainMatch(_In_z_ LPCWSTR szDomainToMatchW);
-  HRESULT HasExpired(_In_opt_ const CDateTime *lpDate=NULL);
+  HRESULT HasExpired(_In_opt_ const CDateTime *lpDate = NULL);
 
-  HRESULT ParseFromResponseHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen=(SIZE_T)-1);
+  HRESULT ParseFromResponseHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen = (SIZE_T)-1);
 
 private:
   ULONG nFlags;
@@ -114,22 +115,27 @@ private:
 
 //-----------------------------------------------------------
 
-class CHttpCookieArray : public TArrayListWithDelete<CHttpCookie*>
+class CHttpCookieArray : public TArrayListWithRelease<CHttpCookie*>
 {
 private:
 public:
-  CHttpCookieArray() : TArrayListWithDelete<CHttpCookie*>()
+  CHttpCookieArray() : TArrayListWithRelease<CHttpCookie*>()
     { };
   CHttpCookieArray(_In_ const CHttpCookieArray& cSrc) throw(...);
 
   CHttpCookieArray& operator=(_In_ const CHttpCookieArray& cSrc) throw(...);
 
-  HRESULT ParseFromRequestHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen=(SIZE_T)-1);
+  HRESULT ParseFromRequestHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen = (SIZE_T)-1);
 
-  HRESULT Update(_In_ const CHttpCookieArray& cSrc, _In_ BOOL bReplaceExisting);
-  HRESULT Update(_In_ const CHttpCookie& cSrc, _In_ BOOL bReplaceExisting);
+  //NOTE: Returns -1 if not found
+  SIZE_T Find(_In_z_ LPCSTR szNameA) const;
+  //NOTE: Returns -1 if not found
+  SIZE_T Find(_In_z_ LPCWSTR szNameW) const;
 
-  HRESULT RemoveExpiredAndInvalid(_In_opt_ const CDateTime *lpDate=NULL);
+  HRESULT Merge(_In_ const CHttpCookieArray& cSrc, _In_ BOOL bReplaceExisting);
+  HRESULT Merge(_In_ CHttpCookie *lpSrc, _In_ BOOL bReplaceExisting);
+
+  HRESULT RemoveExpiredAndInvalid(_In_opt_ const CDateTime *lpDate = NULL);
 };
 
 } //namespace MX

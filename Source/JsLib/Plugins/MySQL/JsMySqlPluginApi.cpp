@@ -20,6 +20,7 @@
 #include "JsMySqlPluginCommon.h"
 #include <locale.h>
 #include "..\..\..\..\Include\Finalizer.h"
+#include "..\..\..\Internals\SystemDll.h"
 
 //-----------------------------------------------------------
 
@@ -142,22 +143,12 @@ HRESULT MySqlInitialize()
       lpfn_mysql_stmt_attr_set         _fn_mysql_stmt_attr_set = NULL;
       lpfn_mysql_get_client_version    _fn_mysql_get_client_version = NULL;
       MYSQL *lpSQLite;
-      WCHAR szDllNameW[4096], *sW;
-      DWORD dwLen;
       HRESULT hRes;
 
-      //get application path
-      dwLen = ::GetModuleFileNameW(NULL, szDllNameW, MX_ARRAYLEN(szDllNameW) - 20);
-      if (dwLen == 0)
-        return MX_E_ProcNotFound;
-      szDllNameW[dwLen] = 0;
-      sW = (LPWSTR)MX::StrChrW(szDllNameW, L'\\', TRUE);
-      sW = (sW != NULL) ? (sW + 1) : szDllNameW;
-      ::MxMemCopy(sW, L"libmariadb.dll", (14 + 1) * sizeof(WCHAR));
       //load library
-      _hDll = ::LoadLibraryW(szDllNameW);
-      if (_hDll == NULL)
-        return MX_HRESULT_FROM_LASTERROR();
+      hRes = Internals::LoadAppDll(L"libmariadb.dll", &_hDll);
+      if (FAILED(hRes))
+        return hRes;
 
       //load apis
 #define LOAD_API(x) _fn_##x = (lpfn_##x)::GetProcAddress(_hDll, #x); \

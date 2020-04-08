@@ -143,7 +143,7 @@ static DukTape::duk_ret_t OnSetCookie(_In_ DukTape::duk_context *lpCtx, _In_z_ L
                                       _In_z_ LPCSTR szFunctionNameA)
 {
   MX::CJsHttpServer::CClientRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
-  MX::CHttpCookie cCookie;
+  MX::TAutoRefCounted<MX::CHttpCookie> cCookie;
   MX::CStringW cStrTempW;
   DukTape::duk_idx_t nParamsCount;
   LPCSTR szNameA, szValueA, szPathA, szDomainA;
@@ -174,36 +174,49 @@ static DukTape::duk_ret_t OnSetCookie(_In_ DukTape::duk_context *lpCtx, _In_z_ L
     bIsSecure = (MX::CJavascriptVM::GetInt(lpCtx, 5) != 0) ? TRUE : FALSE;
   if (nParamsCount > 6 && duk_is_null_or_undefined(lpCtx, 6) == 0)
     bIsHttpOnly = (MX::CJavascriptVM::GetInt(lpCtx, 6) != 0) ? TRUE : FALSE;
+
   //setup cookie
-  hRes = cCookie.SetName(szNameA);
+  cCookie.Attach(MX_DEBUG_NEW MX::CHttpCookie());
+  if (!cCookie)
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+  hRes = cCookie->SetName(szNameA);
   if (SUCCEEDED(hRes) && szValueA != NULL)
-    hRes = cCookie.SetValue(szValueA);
+  {
+    hRes = cCookie->SetValue(szValueA);
+  }
   if (SUCCEEDED(hRes) && szDomainA != NULL)
   {
     hRes = MX::Utf8_Decode(cStrTempW, szDomainA);
     if (SUCCEEDED(hRes))
-      hRes = cCookie.SetDomain((LPCWSTR)cStrTempW);
+      hRes = cCookie->SetDomain((LPCWSTR)cStrTempW);
   }
   if (SUCCEEDED(hRes) && szPathA != NULL)
-    hRes = cCookie.SetPath(szPathA);
+  {
+    hRes = cCookie->SetPath(szPathA);
+  }
   if (SUCCEEDED(hRes) && bHasExpireDt != FALSE)
   {
     MX::CDateTime cExpireDt;
 
     hRes = cExpireDt.SetFromNow(FALSE);
     if (SUCCEEDED(hRes))
+    {
       hRes = cExpireDt.Add((int)nExpire, MX::CDateTime::UnitsSeconds);
-    if (SUCCEEDED(hRes))
-      cCookie.SetExpireDate(&cExpireDt);
+      if (SUCCEEDED(hRes))
+        cCookie->SetExpireDate(&cExpireDt);
+    }
   }
+
   if (SUCCEEDED(hRes))
   {
-    cCookie.SetSecureFlag(bIsSecure);
-    cCookie.SetHttpOnlyFlag(bIsHttpOnly);
+    cCookie->SetSecureFlag(bIsSecure);
+    cCookie->SetHttpOnlyFlag(bIsHttpOnly);
     hRes = lpRequest->AddResponseCookie(cCookie);
   }
   if (FAILED(hRes))
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+
+  //done
   return 0;
 }
 

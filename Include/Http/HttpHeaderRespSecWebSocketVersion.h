@@ -34,14 +34,21 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Sec-WebSocket-Version)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+
+  eDuplicateBehavior GetDuplicateBehavior() const
+    {
+    return DuplicateBehaviorMerge;
+    };
 
   HRESULT AddVersion(_In_ int nVersion);
 
   SIZE_T GetVersionsCount() const;
   int GetVersion(_In_ SIZE_T nIndex) const;
+
+  HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
 
 private:
   TArrayList<int> cVersionsList;

@@ -34,9 +34,9 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Referer)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
   HRESULT SetReferer(_In_z_ LPCSTR szRefererA, _In_opt_ SIZE_T nRefererLen = (SIZE_T)-1);
   LPCSTR GetReferer() const;

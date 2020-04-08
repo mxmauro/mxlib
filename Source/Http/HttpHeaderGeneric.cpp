@@ -34,20 +34,23 @@ CHttpHeaderGeneric::~CHttpHeaderGeneric()
   return;
 }
 
-HRESULT CHttpHeaderGeneric::SetHeaderName(_In_z_ LPCSTR szNameA)
+HRESULT CHttpHeaderGeneric::SetHeaderName(_In_z_ LPCSTR szNameA, _In_opt_ SIZE_T nNameLen)
 {
   SIZE_T i;
 
   if (szNameA == NULL)
     return E_POINTER;
-  if (*szNameA == 0)
+  if (nNameLen == (SIZE_T)-1)
+    nNameLen = StrLenA(szNameA);
+  if (nNameLen == 0)
     return E_INVALIDARG;
-  for (i = 0; szNameA[i] != 0; i++)
+
+  for (i = 0; i < nNameLen; i++)
   {
-    if (CHttpCommon::IsValidNameChar(szNameA[i]) == FALSE)
+    if (Http::IsValidNameChar(szNameA[i]) == FALSE)
       return E_INVALIDARG;
   }
-  return (cStrHeaderNameA.Copy(szNameA) != FALSE) ? S_OK : E_OUTOFMEMORY;
+  return (cStrHeaderNameA.CopyN(szNameA, nNameLen) != FALSE) ? S_OK : E_OUTOFMEMORY;
 }
 
 LPCSTR CHttpHeaderGeneric::GetHeaderName() const
@@ -55,12 +58,12 @@ LPCSTR CHttpHeaderGeneric::GetHeaderName() const
   return (LPCSTR)cStrHeaderNameA;
 }
 
-HRESULT CHttpHeaderGeneric::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderGeneric::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  return SetValue(szValueA);
+  return SetValue(szValueA, nValueLen);
 }
 
-HRESULT CHttpHeaderGeneric::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderGeneric::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   if (cStrDestA.CopyN((LPCSTR)cStrValueA, cStrValueA.GetLength()) == FALSE)
     return E_OUTOFMEMORY;
@@ -82,18 +85,21 @@ HRESULT CHttpHeaderGeneric::SetValue(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nVa
   if (szValueA == NULL)
     return E_POINTER;
   szValueEndA = szValueA + nValueLen;
+
   //parse value
-  szStartA = szEndA = szValueA = SkipSpaces(szValueA, nValueLen);
+  szStartA = szEndA = szValueA = SkipSpaces(szValueA, szValueEndA);
   while (szValueA < szValueEndA)
   {
     if (*((LPBYTE)szValueA) < 32)
       return MX_E_InvalidData;
     szEndA = ++szValueA;
-    szValueA = SkipSpaces(szValueA, (SIZE_T)(szValueEndA - szValueA));
+    szValueA = SkipSpaces(szValueA, szValueEndA);
   }
+
   //set value
   if (cStrValueA.CopyN(szStartA, (SIZE_T)(szEndA - szStartA)) == FALSE)
     return E_OUTOFMEMORY;
+
   //done
   return S_OK;
 }

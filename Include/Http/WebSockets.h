@@ -23,6 +23,10 @@
 #include "..\Comm\IpcCommon.h"
 #include "..\AutoPtr.h"
 #include "..\ArrayList.h"
+namespace MX {
+class CHttpServer;
+class CHttpClient;
+} //namespace MX
 
 //-----------------------------------------------------------
 
@@ -48,6 +52,10 @@ public:
   HRESULT SendClose(_In_ USHORT wCode, _In_opt_z_ LPCSTR szReasonA = NULL);
   HRESULT SendPing();
 
+  BOOL IsClosed() const;
+
+  VOID Close(_In_opt_ HRESULT hrErrorCode = S_OK);
+
   virtual HRESULT OnConnected();
   virtual HRESULT OnTextMessage(_In_ LPCSTR szMsgA, _In_ SIZE_T nMsgLength);
   virtual HRESULT OnBinaryMessage(_In_ LPVOID lpData, _In_ SIZE_T nDataSize);
@@ -57,22 +65,9 @@ public:
   virtual SIZE_T GetMaxMessageSize() const;
 
 private:
-  VOID OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
-                       _In_ HRESULT hrErrorCode);
-  HRESULT OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData);
+  friend class CHttpServer;
+  friend class CHttpClient;
 
-  SIZE_T CalculateFrameSize(_In_ ULONG nPayloadSize);
-  LPBYTE BuildFrame(_Out_ LPVOID lpFrame, _In_ ULONG nPayloadSize, _In_ BOOL bFin, _In_ BYTE nRSV, _In_ BYTE nOpcode);
-  VOID EncodeFrame(_In_ LPVOID lpFrame);
-
-  HRESULT InternalSendFrame(_In_ BOOL bFinalFrame);
-  HRESULT InternalSendControlFrame(_In_ BYTE nOpcode, _In_ LPVOID lpPayload, _In_ ULONG nPayloadSize);
-
-  LPBYTE GetReceiveBufferFromCache();
-  VOID PutReceiveBufferOnCache(_In_ LPBYTE lpBuffer);
-  VOID PutAllReceiveBuffersOnCache();
-
-private:
 #pragma pack(1)
   typedef struct tagFRAME_HEADER {
     BYTE nOpcode : 4;
@@ -80,7 +75,8 @@ private:
     BYTE nFin : 1;
     BYTE nPayloadLen : 7;
     BYTE nMask : 1;
-  } FRAME_HEADER;
+    BYTE aExtended[8 + 4];
+  } FRAME_HEADER, *LPFRAME_HEADER;
 
   typedef struct tagRECEIVED_DATA {
     ULONG nSize;
@@ -89,8 +85,26 @@ private:
 #pragma pack()
 
 private:
-  friend class CHttpServer;
+  VOID OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
+                       _In_ HRESULT hrErrorCode);
+  HRESULT OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData);
 
+  SIZE_T BuildFrame(_In_ LPFRAME_HEADER lpFrame, _In_ LPBYTE lpPayload, _In_ ULONG nPayloadSize, _In_ BYTE nOpcode,
+                    _In_ BOOL bFinal);
+
+  HRESULT InternalSendFrame(_In_ BOOL bFinalFrame);
+  HRESULT InternalSendControlFrame(_In_ BYTE nOpcode, _In_ LPVOID lpPayload, _In_ ULONG nPayloadSize);
+
+  LPBYTE GetReceiveBufferFromCache();
+  VOID PutReceiveBufferOnCache(_In_ LPBYTE lpBuffer);
+  VOID PutAllReceiveBuffersOnCache();
+
+  HRESULT SetupIpc(_In_ CIpc *lpIpc, _In_ HANDLE hComm, _In_ BOOL bServerSide);
+  VOID FireConnectedAndInitialRead();
+
+private:
+
+private:
   CIpc *lpIpc;
   HANDLE hConn;
   BOOL bServerSide;

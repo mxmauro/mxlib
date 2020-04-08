@@ -140,7 +140,7 @@ VOID CHttpBodyParserDefault::KeepFile()
   return;
 }
 
-HRESULT CHttpBodyParserDefault::Initialize(_In_ CHttpCommon &cHttpCmn)
+HRESULT CHttpBodyParserDefault::Initialize(_In_ Internals::CHttpParser &cHttpParser)
 {
   //done
   return S_OK;
@@ -191,13 +191,7 @@ HRESULT CHttpBodyParserDefault::Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T n
 
   //check if size is greater than max size or overflow
   if (nSize + (ULONGLONG)nDataSize >= ullMaxBodySize || nSize + (ULONGLONG)nDataSize < nSize)
-  {
-    MarkEntityAsTooLarge();
-    return S_OK; //error 413 will be sent after body is parsed
-  }
-
-  if (IsEntityTooLarge() != FALSE)
-    return S_OK; //error 413 will be sent after body is parsed
+    return MX_E_BadLength;
 
   //begin
   hRes = S_OK;

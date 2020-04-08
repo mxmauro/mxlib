@@ -187,6 +187,7 @@
     <ClInclude Include="Include\Http\EMail.h" />
     <ClInclude Include="Include\Http\HtmlEntities.h" />
     <ClInclude Include="Include\Http\HttpAuth.h" />
+    <ClInclude Include="Include\Http\HttpBodyParserJSON.h" />
     <ClInclude Include="Include\Http\HttpHeaderBase.h" />
     <ClInclude Include="Include\Http\HttpBodyParserBase.h" />
     <ClInclude Include="Include\Http\HttpBodyParserFormBase.h" />
@@ -237,6 +238,7 @@
     <ClInclude Include="Include\Http\HttpHeaderRespSecWebSocketAccept.h" />
     <ClInclude Include="Include\Http\HttpHeaderRespWwwProxyAuthenticate.h" />
     <ClInclude Include="Include\Http\HttpServer.h" />
+    <ClInclude Include="Include\Http\HttpUtils.h" />
     <ClInclude Include="Include\Http\WebSockets.h" />
     <ClInclude Include="Include\Http\punycode.h" />
     <ClInclude Include="Include\Http\Url.h" />
@@ -254,7 +256,8 @@
     <ClCompile Include="Source\Http\EMail.cpp" />
     <ClCompile Include="Source\Http\HttpAuth.cpp" />
     <ClCompile Include="Source\Http\HttpAuthCache.cpp" />
-    <ClCompile Include="Source\Http\HttpCommonHelpers.cpp" />
+    <ClCompile Include="Source\Http\HttpBodyParserJSON.cpp" />
+    <ClCompile Include="Source\Http\HttpUtils.cpp" />
     <ClCompile Include="Source\Http\HttpHeaderBase.cpp" />
     <ClCompile Include="Source\Http\HttpBodyParserBase.cpp" />
     <ClCompile Include="Source\Http\HttpBodyParserFormBase.cpp" />
@@ -262,7 +265,7 @@
     <ClCompile Include="Source\Http\HttpBodyParserMultipartFormData.cpp" />
     <ClCompile Include="Source\Http\HttpBodyParserUrlEncodedForm.cpp" />
     <ClCompile Include="Source\Http\HttpClient.cpp" />
-    <ClCompile Include="Source\Http\HttpCommon.cpp" />
+    <ClCompile Include="Source\Http\HttpCommonParser.cpp" />
     <ClCompile Include="Source\Http\HttpBodyParserDefault.cpp" />
     <ClCompile Include="Source\Http\HttpCookie.cpp" />
     <ClCompile Include="Source\Http\HttpHeaderEntAllow.cpp" />

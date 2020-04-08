@@ -27,11 +27,11 @@
 
 //-----------------------------------------------------------
 
-static LPCSTR SkipSpaces(_In_z_ LPCSTR sA);
-static LPCSTR GetToken(_In_z_ LPCSTR sA, _In_opt_z_ LPCSTR szStopCharsA = NULL);
-static LPCSTR Advance(_In_z_ LPCSTR sA, _In_opt_z_ LPCSTR szStopCharsA = NULL);
-static HRESULT GetNextPair(_Inout_ LPCSTR &szValueA, _Out_ LPCSTR *lpszNameStartA, _Out_ SIZE_T *lpnNameLen,
-                           _Out_ MX::CStringA &cStrValueA);
+static LPCSTR SkipSpaces(_In_ LPCSTR sA, _In_ LPCSTR szEndA);
+static LPCSTR GetToken(_In_ LPCSTR sA, _In_ LPCSTR szEndA);
+static LPCSTR Advance(_In_ LPCSTR sA, _In_ LPCSTR szEndA, _In_opt_z_ LPCSTR szStopCharsA = NULL);
+static HRESULT GetNextPair(_Inout_ LPCSTR &szValueA, _In_ LPCSTR szValueEndA, _Out_ LPCSTR *lpszNameStartA,
+                           _Out_ SIZE_T *lpnNameLen, _Out_ MX::CStringA &cStrValueA);
 
 static HRESULT Decode(_Inout_ MX::CStringW &cStrW, _In_z_ LPCSTR szValueA, _In_ BOOL bIsUTF8);
 static HRESULT Encode(_Inout_ MX::CStringA &cStrA, _In_z_ LPCWSTR szValueW, _In_ BOOL bAppend, _In_ BOOL bIsUTF8);
@@ -54,17 +54,20 @@ CHttpAuthBasic::~CHttpAuthBasic()
   return;
 }
 
-HRESULT CHttpAuthBasic::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpAuthBasic::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
   MX::CStringA cStrValueA;
   CStringA _cStrRealmA;
   DWORD dwFields = 0;
-  LPCSTR szNameStartA;
+  LPCSTR szValueEndA, szNameStartA;
   SIZE_T nNameLen;
   HRESULT hRes;
 
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
   //parse tokens
-  while ((hRes = GetNextPair(szValueA, &szNameStartA, &nNameLen, cStrValueA)) != S_FALSE)
+  while ((hRes = GetNextPair(szValueA, szValueEndA, &szNameStartA, &nNameLen, cStrValueA)) != S_FALSE)
   {
     if (FAILED(hRes))
       return hRes;
@@ -201,7 +204,7 @@ CHttpAuthDigest::~CHttpAuthDigest()
   return;
 }
 
-HRESULT CHttpAuthDigest::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpAuthDigest::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
   MX::CStringA cStrValueA;
   CStringA _cStrRealmA, _cStrNonceA, _cStrDomainA, _cStrOpaqueA;
@@ -210,12 +213,15 @@ HRESULT CHttpAuthDigest::Parse(_In_z_ LPCSTR szValueA)
   int _nAlgorithm = (int)MX::CMessageDigest::AlgorithmMD5;
   BOOL _bAlgorithmSession = FALSE;
   int _nQop = 0;
-  LPCSTR szNameStartA;
+  LPCSTR szValueEndA, szNameStartA;
   SIZE_T nNameLen;
   HRESULT hRes;
 
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
   //parse tokens
-  while ((hRes = GetNextPair(szValueA, &szNameStartA, &nNameLen, cStrValueA)) != S_FALSE)
+  while ((hRes = GetNextPair(szValueA, szValueEndA, &szNameStartA, &nNameLen, cStrValueA)) != S_FALSE)
   {
     if (FAILED(hRes))
       return hRes;
@@ -861,29 +867,27 @@ static int ParseQOP(_In_opt_z_ LPCSTR szValueA)
   return res;
 }
 
-static LPCSTR SkipSpaces(_In_z_ LPCSTR sA)
+static LPCSTR SkipSpaces(_In_ LPCSTR sA, _In_ LPCSTR szEndA)
 {
-  while (*sA == ' ' || *sA == '\t')
+  while (sA < szEndA && (*sA == ' ' || *sA == '\t'))
     sA++;
   return sA;
 }
 
-static LPCSTR GetToken(_In_z_ LPCSTR sA, _In_opt_z_ LPCSTR szStopCharsA)
+static LPCSTR GetToken(_In_ LPCSTR sA, _In_ LPCSTR szEndA)
 {
-  while (*sA != 0)
+  while (sA < szEndA)
   {
-    if (MX::CHttpCommon::IsValidNameChar(*sA) == FALSE)
-      break;
-    if (szStopCharsA != NULL && MX::StrChrA(szStopCharsA, *sA) != NULL)
+    if (MX::Http::IsValidNameChar(*sA) == FALSE)
       break;
     sA++;
   }
   return sA;
 }
 
-static LPCSTR Advance(_In_z_ LPCSTR sA, _In_opt_z_ LPCSTR szStopCharsA)
+static LPCSTR Advance(_In_ LPCSTR sA, _In_ LPCSTR szEndA, _In_opt_z_ LPCSTR szStopCharsA)
 {
-  while (*sA != 0)
+  while (sA < szEndA)
   {
     if (szStopCharsA != NULL && MX::StrChrA(szStopCharsA, *sA) != NULL)
       break;
@@ -892,8 +896,8 @@ static LPCSTR Advance(_In_z_ LPCSTR sA, _In_opt_z_ LPCSTR szStopCharsA)
   return sA;
 }
 
-static HRESULT GetNextPair(_Inout_ LPCSTR &szValueA, _Out_ LPCSTR *lpszNameStartA, _Out_ SIZE_T *lpnNameLen,
-                           _Out_ MX::CStringA &cStrValueA)
+static HRESULT GetNextPair(_Inout_ LPCSTR &szValueA, _In_ LPCSTR szValueEndA, _Out_ LPCSTR *lpszNameStartA,
+                           _Out_ SIZE_T *lpnNameLen, _Out_ MX::CStringA &cStrValueA)
 {
   LPCSTR szValueStartA;
 
@@ -902,33 +906,34 @@ static HRESULT GetNextPair(_Inout_ LPCSTR &szValueA, _Out_ LPCSTR *lpszNameStart
   cStrValueA.Empty();
 
 loop:
-  if (*szValueA == 0)
+  if (szValueA >= szValueEndA)
     return S_FALSE;
   //skip spaces
-  szValueA = SkipSpaces(szValueA);
+  szValueA = SkipSpaces(szValueA, szValueEndA);
   //get key
-  if (*szValueA == ',')
+  if (szValueA < szValueEndA && *szValueA == ',')
   {
     szValueA++;
     goto loop;
   }
   //parse name
-  szValueA = GetToken(*lpszNameStartA = szValueA);
-  if (*lpszNameStartA == szValueA)
+  szValueA = GetToken(*lpszNameStartA = szValueA, szValueEndA);
+  if (szValueA >= szValueEndA || (*lpszNameStartA) == szValueA)
     return MX_E_InvalidData;
   *lpnNameLen = (SIZE_T)(szValueA - (*lpszNameStartA));
   //skip spaces
-  szValueA = SkipSpaces(szValueA);
+  szValueA = SkipSpaces(szValueA, szValueEndA);
   //is equal sign?
-  if (*szValueA++ != '=')
+  if (szValueA >= szValueEndA || (*szValueA) != '=')
     return MX_E_InvalidData;
+  szValueA++;
   //skip spaces
-  szValueA = SkipSpaces(szValueA);
+  szValueA = SkipSpaces(szValueA, szValueEndA);
   //parse value
-  if (*szValueA == '"')
+  if (szValueA < szValueEndA && *szValueA == '"')
   {
-    szValueA = Advance(szValueStartA = ++szValueA, "\"");
-    if (*szValueA != '"')
+    szValueA = Advance(szValueStartA = ++szValueA, szValueEndA, "\"");
+    if (szValueA >= szValueEndA || *szValueA != '"')
       return MX_E_InvalidData;
     if (cStrValueA.CopyN(szValueStartA, (SIZE_T)(szValueA - szValueStartA)) == FALSE)
       return E_OUTOFMEMORY;
@@ -936,7 +941,7 @@ loop:
   }
   else
   {
-    szValueA = Advance(szValueStartA = szValueA, " \t;,");
+    szValueA = Advance(szValueStartA = szValueA, szValueEndA, " \t;,");
     if (cStrValueA.CopyN(szValueStartA, (SIZE_T)(szValueA - szValueStartA)) == FALSE)
       return E_OUTOFMEMORY;
   }

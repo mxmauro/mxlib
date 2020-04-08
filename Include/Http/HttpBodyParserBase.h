@@ -39,25 +39,11 @@ public:
 
   virtual LPCSTR GetType() const = 0;
 
-  BOOL IsEntityTooLarge() const
-    {
-    return bEntityTooLarge;
-    };
-
-  VOID MarkEntityAsTooLarge()
-    {
-    bEntityTooLarge = TRUE;
-    return;
-    };
-
 protected:
-  friend class CHttpCommon;
+  friend class Internals::CHttpParser;
 
-  virtual HRESULT Initialize(_In_ CHttpCommon &cHttpCmn) = 0;
+  virtual HRESULT Initialize(_In_ Internals::CHttpParser &cHttpParser) = 0;
   virtual HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize) = 0;
-
-protected:
-  BOOL bEntityTooLarge;
 };
 
 } //namespace MX

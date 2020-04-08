@@ -82,7 +82,7 @@ public:
 
 //-----------------------------------------------------------
 
-int TestJavascript(_In_ DWORD dwLogLevel)
+int TestJavascript()
 {
   MX::CJavascriptVM cJvm;
   HRESULT hRes;

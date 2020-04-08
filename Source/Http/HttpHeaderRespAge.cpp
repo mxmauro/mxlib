@@ -34,21 +34,29 @@ CHttpHeaderRespAge::~CHttpHeaderRespAge()
   return;
 }
 
-HRESULT CHttpHeaderRespAge::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderRespAge::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
+  LPCSTR szValueEndA;
   ULONGLONG _nAge, nTemp;
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   _nAge = 0ui64;
+
   //skip spaces
-  szValueA = SkipSpaces(szValueA);
+  szValueA = SkipSpaces(szValueA, szValueEndA);
+
   //get first byte
-  if (*szValueA < '0' || *szValueA > '9')
+  if (szValueA >= szValueEndA || *szValueA < '0' || *szValueA > '9')
     return MX_E_InvalidData;
-  while (*szValueA == '0')
+  while (szValueA < szValueEndA && *szValueA == '0')
     szValueA++;
-  while (*szValueA >= '0' && *szValueA <= '9')
+  while (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
   {
     nTemp = _nAge * 10ui64;
     if (nTemp < _nAge)
@@ -58,16 +66,19 @@ HRESULT CHttpHeaderRespAge::Parse(_In_z_ LPCSTR szValueA)
       return MX_E_ArithmeticOverflow;
     szValueA++;
   }
+
   //skip spaces and check for end
-  if (*SkipSpaces(szValueA) != 0)
+  if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
     return MX_E_InvalidData;
+
   //set new value
   nAge = _nAge;
+
   //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderRespAge::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderRespAge::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   if (cStrDestA.Format("%I64u", nAge) == FALSE)
     return E_OUTOFMEMORY;

@@ -34,29 +34,37 @@ CHttpHeaderRespRetryAfter::~CHttpHeaderRespRetryAfter()
   return;
 }
 
-HRESULT CHttpHeaderRespRetryAfter::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderRespRetryAfter::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
   CDateTime cDt;
   ULONGLONG _nSeconds, nTemp;
-  LPCSTR sA;
+  LPCSTR szValueEndA;
   HRESULT hRes;
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //skip spaces
-  szValueA = SkipSpaces(szValueA);
+  szValueA = SkipSpaces(szValueA, szValueEndA);
+
   //check if only digits
-  sA = szValueA;
-  if (*szValueA >= '0' && *szValueA <= '9')
+  if (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
   {
-    while (*sA >= '0' && *sA <= '9')
+    LPCSTR sA = szValueA;
+
+    while (sA < szValueEndA && *sA >= '0' && *sA <= '9')
       sA++;
-    if (*SkipSpaces(sA) == 0)
+    if (SkipSpaces(sA, szValueEndA) == szValueEndA)
     {
       while (*szValueA == '0')
         szValueA++;
+
       _nSeconds = 0;
-      while (*szValueA >= '0' && *szValueA <= '9')
+      while (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
       {
         nTemp = _nSeconds * 10ui64;
         if (nTemp < _nSeconds)
@@ -70,10 +78,12 @@ HRESULT CHttpHeaderRespRetryAfter::Parse(_In_z_ LPCSTR szValueA)
       goto done;
     }
   }
+
   //else assume a date
-  hRes = CHttpCommon::ParseDate(cDt, szValueA);
+  hRes = Http::ParseDate(cDt, szValueA, (SIZE_T)(szValueEndA - szValueA));
   if (SUCCEEDED(hRes))
     hRes = SetDate(cDt);
+
   //done
 done:
   if (FAILED(hRes))
@@ -81,7 +91,7 @@ done:
   return hRes;
 }
 
-HRESULT CHttpHeaderRespRetryAfter::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderRespRetryAfter::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   return (cStrDestA.Format(cStrDestA, "%I64u", nSeconds) != FALSE) ? S_OK : E_OUTOFMEMORY;
 }

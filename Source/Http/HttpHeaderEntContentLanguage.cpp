@@ -33,35 +33,46 @@ CHttpHeaderEntContentLanguage::~CHttpHeaderEntContentLanguage()
   return;
 }
 
-HRESULT CHttpHeaderEntContentLanguage::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderEntContentLanguage::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szStartA;
+  LPCSTR szValueEndA, szStartA;
   HRESULT hRes;
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //skip spaces
-  szValueA = SkipSpaces(szValueA);
+  szValueA = SkipSpaces(szValueA, szValueEndA);
+
   //mark start
   szStartA = szValueA;
+
   //get language
-  while (*szValueA >= 0x21 && *szValueA <= 0x7E)
+  while (szValueA < szValueEndA && *szValueA >= 0x21 && *szValueA <= 0x7E)
     szValueA++;
+
   //set language
   hRes = SetLanguage(szStartA, (SIZE_T)(szValueA - szStartA));
   if (FAILED(hRes))
     return hRes;
+
   //skip spaces and check for end
-  if (*SkipSpaces(szValueA) != 0)
+  if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
     return MX_E_InvalidData;
+
   //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentLanguage::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderEntContentLanguage::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   if (cStrDestA.CopyN((LPCSTR)cStrLanguageA, cStrLanguageA.GetLength()) == FALSE)
     return E_OUTOFMEMORY;
+
   //done
   return S_OK;
 }
@@ -87,6 +98,7 @@ HRESULT CHttpHeaderEntContentLanguage::SetLanguage(_In_z_ LPCSTR szLanguageA, _I
   }
   if (szLanguageA == szStartA[0] || szLanguageA > szStartA[0] + 8)
     return MX_E_InvalidData;
+
   while (szLanguageA < szLanguageEndA && *szLanguageA == '-')
   {
     szStartA[1] = ++szLanguageA;
@@ -103,9 +115,11 @@ HRESULT CHttpHeaderEntContentLanguage::SetLanguage(_In_z_ LPCSTR szLanguageA, _I
   //check for end
   if (szLanguageA != szLanguageEndA)
     return MX_E_InvalidData;
+
   //set new value
   if (cStrLanguageA.CopyN(szStartA[0], (SIZE_T)(szLanguageEndA - szStartA[0])) == FALSE)
     return E_OUTOFMEMORY;
+
   //done
   return S_OK;
 }

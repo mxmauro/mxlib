@@ -39,11 +39,24 @@
 
 //-----------------------------------------------------------
 
-int wmain(int argc, WCHAR* argv[])
+DWORD dwLogLevel = 0;
+
+//-----------------------------------------------------------
+
+static struct {
+  int argc;
+  LPWSTR *argv;
+} sCmdLineParams = { 0, NULL };
+
+//-----------------------------------------------------------
+
+int wmain(_In_ int argc, _In_ WCHAR* argv[])
 {
-  BOOL bUseSSL = FALSE;
-  DWORD dwLogLevel = 0;
   int nTest = 0;
+  HRESULT hRes;
+
+  sCmdLineParams.argc = argc;
+  sCmdLineParams.argv = argv;
 
   if (Console::Initialize() == FALSE)
   {
@@ -60,100 +73,54 @@ int wmain(int argc, WCHAR* argv[])
     wprintf_s(L"    /v #: Set the verbosity level to #\n");
     return 1;
   }
-  for (int arg_idx = 1; arg_idx < argc; arg_idx++)
+
+  //get test
+  if (_wcsicmp(argv[1], L"HttpServer") == 0)
   {
-    if (argv[arg_idx][0] == L'/' || argv[arg_idx][0] == L'-')
-    {
-      if (_wcsicmp(argv[arg_idx] + 1, L"ssl") == 0)
-      {
-        bUseSSL = TRUE;
-      }
-      else if (_wcsicmp(argv[arg_idx] + 1, L"v") == 0)
-      {
-        if ((++arg_idx) >= argc)
-        {
-          wprintf_s(L"Error: Missing parameter for verbosity argument.\n");
-          return 1;
-        }
-        dwLogLevel = 0;
-        for (LPWSTR sW = argv[arg_idx]; *sW != 0; sW++)
-        {
-          if (*sW >= L'0' && *sW <= L'9')
-          {
-            dwLogLevel = dwLogLevel * 10 + (DWORD)(*sW - L'0');
-            if (dwLogLevel > 1000)
-              goto err_cmdline_invalidverbosity;
-          }
-          else
-          {
-err_cmdline_invalidverbosity:
-            wprintf_s(L"Error: Invalid log level for verbosity argument.\n");
-            return 1;
-          }
-        }
-      }
-      else
-      {
-        wprintf_s(L"Error: Invalid command-line argument (%s).\n", argv[arg_idx]);
-        return 1;
-      }
-    }
-    else
-    {
-      if (_wcsicmp(argv[arg_idx], L"HttpServer") == 0)
-      {
-        if (nTest != 0)
-        {
-err_cmdline_alreadyspecified:
-          wprintf_s(L"Error: Test to execute already specified.\n");
-          return 1;
-        }
-        nTest = 1;
-      }
-      else if (_wcsicmp(argv[1], L"HttpClient") == 0)
-      {
-        if (nTest != 0)
-          goto err_cmdline_alreadyspecified;
-        nTest = 2;
-      }
-      else if (_wcsicmp(argv[1], L"Javascript") == 0)
-      {
-        if (nTest != 0)
-          goto err_cmdline_alreadyspecified;
-        nTest = 3;
-      }
-      else if (_wcsicmp(argv[1], L"JsHttpServer") == 0)
-      {
-        if (nTest != 0)
-          goto err_cmdline_alreadyspecified;
-        nTest = 4;
-      }
-      else
-      {
-        wprintf_s(L"Error: An unknown test name has been specified (%s).\n", argv[arg_idx]);
-        return 1;
-      }
-    }
+    nTest = 1;
   }
-  if (nTest == 0)
+  else if (_wcsicmp(argv[1], L"HttpClient") == 0)
   {
-    wprintf_s(L"Error: No test name has been specified.\n");
+    nTest = 2;
+  }
+  else if (_wcsicmp(argv[1], L"Javascript") == 0)
+  {
+    nTest = 3;
+  }
+  else if (_wcsicmp(argv[1], L"JsHttpServer") == 0)
+  {
+    nTest = 4;
+  }
+  else
+  {
+    wprintf_s(L"Error: An unknown test name has been specified (%s).\n", argv[1]);
     return 1;
+  }
+
+  //get log level
+  hRes = GetCmdLineParamUInt(L"v", &dwLogLevel);
+  if (SUCCEEDED(hRes))
+  {
+    if (dwLogLevel > 1000)
+    {
+      wprintf_s(L"Error: Invalid log level for verbosity argument.\n");
+      return 1;
+    }
   }
 
   switch (nTest)
   {
     case 1:
-      return TestHttpServer(bUseSSL, dwLogLevel);
+      return TestHttpServer();
 
     case 2:
-      return TestHttpClient(dwLogLevel);
+      return TestHttpClient();
 
     case 3:
-      return TestJavascript(dwLogLevel);
+      return TestJavascript();
 
     case 4:
-      return TestJsHttpServer(bUseSSL, dwLogLevel);
+      return TestJsHttpServer();
   }
   return 0;
 }
@@ -206,4 +173,56 @@ HRESULT GetAppPath(_Out_ MX::CStringW &cStrPathW)
   cStrPathW.Refresh();
 #endif //USE_PATH_TO_SOURCE
   return S_OK;
+}
+
+BOOL DoesCmdLineParamExist(_In_z_ LPCWSTR szParamNameW)
+{
+  for (int arg_idx = 2; arg_idx < sCmdLineParams.argc; arg_idx++)
+  {
+    if (sCmdLineParams.argv[arg_idx][0] == L'/' || sCmdLineParams.argv[arg_idx][0] == L'-')
+    {
+      if (_wcsicmp(sCmdLineParams.argv[arg_idx] + 1, szParamNameW) == 0)
+        return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+HRESULT GetCmdLineParam(_In_z_ LPCWSTR szParamNameW, _Out_opt_ MX::CStringW &cStrParamValueW)
+{
+  cStrParamValueW.Empty();
+
+  for (int arg_idx = 2; arg_idx < sCmdLineParams.argc; arg_idx++)
+  {
+    if (sCmdLineParams.argv[arg_idx][0] == L'/' || sCmdLineParams.argv[arg_idx][0] == L'-')
+    {
+      if (_wcsicmp(sCmdLineParams.argv[arg_idx] + 1, szParamNameW) == 0)
+      {
+        if (arg_idx < sCmdLineParams.argc - 1)
+          return MX_E_InvalidData;
+        return (cStrParamValueW.Copy(sCmdLineParams.argv[arg_idx + 1]) != FALSE) ? S_OK : E_OUTOFMEMORY;
+      }
+    }
+  }
+  return MX_E_NotFound;
+}
+
+HRESULT GetCmdLineParamUInt(_In_z_ LPCWSTR szParamNameW, _Out_ LPDWORD lpdwValue)
+{
+  *lpdwValue = 0;
+
+  for (int arg_idx = 2; arg_idx < sCmdLineParams.argc; arg_idx++)
+  {
+    if (sCmdLineParams.argv[arg_idx][0] == L'/' || sCmdLineParams.argv[arg_idx][0] == L'-')
+    {
+      if (_wcsicmp(sCmdLineParams.argv[arg_idx] + 1, szParamNameW) == 0)
+      {
+        LPWSTR sW;
+
+        *lpdwValue = wcstoul(sCmdLineParams.argv[arg_idx + 1], &sW, 10);
+        return S_OK;
+      }
+    }
+  }
+  return MX_E_NotFound;
 }

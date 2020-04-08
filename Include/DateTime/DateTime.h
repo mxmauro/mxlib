@@ -192,10 +192,10 @@ public:
   HRESULT SetFromTicks(_In_ LONGLONG nTicks);
   HRESULT SetFromSystemTime(_In_ const SYSTEMTIME& sSrcSysTime);
   HRESULT SetFromFileTime(_In_ const FILETIME& sSrcFileTime);
-  HRESULT SetFromString(_In_z_ LPCSTR szDateA, _In_z_ LPCSTR szFormatA, _In_opt_ LPCUSTOMSETTINGSA lpCustomA=NULL,
-                        _In_opt_ int nTwoDigitsYearRule=0); //0=use OS
-  HRESULT SetFromString(_In_z_ LPCWSTR szDateW, _In_z_ LPCWSTR szFormatW, _In_opt_ LPCUSTOMSETTINGSW lpCustomW=NULL,
-                        _In_opt_ int nTwoDigitsYearRule=0); //0=use OS
+  HRESULT SetFromString(_In_z_ LPCSTR szDateA, _In_z_ LPCSTR szFormatA, _In_opt_ LPCUSTOMSETTINGSA lpCustomA = NULL,
+                        _In_opt_ int nTwoDigitsYearRule = 0); //0=use OS
+  HRESULT SetFromString(_In_z_ LPCWSTR szDateW, _In_z_ LPCWSTR szFormatW, _In_opt_ LPCUSTOMSETTINGSW lpCustomW = NULL,
+                        _In_opt_ int nTwoDigitsYearRule = 0); //0=use OS
   HRESULT SetFromNow(_In_ BOOL bLocal);
   HRESULT SetFromUnixTime(_In_ int nTime);
   HRESULT SetFromUnixTime(_In_ LONGLONG nTime);

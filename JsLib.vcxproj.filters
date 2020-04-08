@@ -33,6 +33,9 @@
     <Filter Include="Source Files\Plugins\JsonWebToken">
       <UniqueIdentifier>{44dfb734-d3fb-4532-85cf-771f9044b551}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\BigInteger">
+      <UniqueIdentifier>{a5c42574-85ba-4c87-86fd-6afe52c486d9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\JsLib\JavascriptVM.cpp">
@@ -135,5 +138,10 @@
     <Text Include="Source\JsLib\DukTape\Source\LICENSE.txt">
       <Filter>Source Files\DukTape</Filter>
     </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Source\JsLib\BigInteger\BigInteger.min.js">
+      <Filter>Source Files\BigInteger</Filter>
+    </None>
   </ItemGroup>
 </Project>

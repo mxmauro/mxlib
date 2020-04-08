@@ -254,6 +254,12 @@
     <ClInclude Include="Include\Http\WebSockets.h">
       <Filter>Header Files\Http</Filter>
     </ClInclude>
+    <ClInclude Include="Include\Http\HttpBodyParserJSON.h">
+      <Filter>Header Files\Http\Body Parser</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpUtils.h">
+      <Filter>Header Files\Http</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Http\HttpCookie.cpp">
@@ -279,9 +285,6 @@
     </ClCompile>
     <ClCompile Include="Source\Comm\HostResolver.cpp">
       <Filter>Source Files\Comm</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Http\HttpCommon.cpp">
-      <Filter>Source Files\Http</Filter>
     </ClCompile>
     <ClCompile Include="Source\Comm\SslCertificates.cpp">
       <Filter>Source Files\Comm</Filter>
@@ -412,9 +415,6 @@
     <ClCompile Include="Source\Http\HttpServerRequest.cpp">
       <Filter>Source Files\Http</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Http\HttpCommonHelpers.cpp">
-      <Filter>Source Files\Http</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Http\EMail.cpp">
       <Filter>Source Files\Http</Filter>
     </ClCompile>
@@ -455,6 +455,15 @@
       <Filter>Source Files\Http\Header Parser\General</Filter>
     </ClCompile>
     <ClCompile Include="Source\Http\WebSockets.cpp">
+      <Filter>Source Files\Http</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpBodyParserJSON.cpp">
+      <Filter>Source Files\Http\Body Parser</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpCommonParser.cpp">
+      <Filter>Source Files\Http</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpUtils.cpp">
       <Filter>Source Files\Http</Filter>
     </ClCompile>
   </ItemGroup>

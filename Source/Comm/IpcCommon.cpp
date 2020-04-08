@@ -507,7 +507,7 @@ HRESULT CIpc::AddLayer(_In_ HANDLE h, _In_ CLayer *lpLayer, _In_opt_ BOOL bFront
   return hRes;
 }
 
-HRESULT CIpc::SetConnectCallback(_In_ HANDLE h, _In_ OnConnectCallback cConnectCallback)
+HRESULT CIpc::SetCallbacks(_In_ HANDLE h, _In_ CHANGE_CALLBACKS_DATA &cCallbacks)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoRefCounted<CConnectionBase> cConn;
@@ -518,71 +518,26 @@ HRESULT CIpc::SetConnectCallback(_In_ HANDLE h, _In_ OnConnectCallback cConnectC
   if (!cConn)
     return E_INVALIDARG;
   //set new callback
-  cConn->cConnectCallback = cConnectCallback;
-  //done
-  return S_OK;
-}
-
-HRESULT CIpc::SetDisconnectCallback(_In_ HANDLE h, _In_ OnDisconnectCallback cDisconnectCallback)
-{
-  CAutoRundownProtection cRundownLock(&nRundownProt);
-  TAutoRefCounted<CConnectionBase> cConn;
-
-  if (cRundownLock.IsAcquired() == FALSE)
-    return MX_E_Cancelled;
-  cConn.Attach(CheckAndGetConnection(h));
-  if (!cConn)
-    return E_INVALIDARG;
-  //set new callback
-  cConn->cDisconnectCallback = cDisconnectCallback;
-  //done
-  return S_OK;
-}
-
-HRESULT CIpc::SetDataReceivedCallback(_In_ HANDLE h, _In_ OnDataReceivedCallback cDataReceivedCallback)
-{
-  CAutoRundownProtection cRundownLock(&nRundownProt);
-  TAutoRefCounted<CConnectionBase> cConn;
-
-  if (cRundownLock.IsAcquired() == FALSE)
-    return MX_E_Cancelled;
-  cConn.Attach(CheckAndGetConnection(h));
-  if (!cConn)
-    return E_INVALIDARG;
-  //set new callback
-  cConn->cDataReceivedCallback = cDataReceivedCallback;
-  //done
-  return S_OK;
-}
-
-HRESULT CIpc::SetDestroyCallback(_In_ HANDLE h, _In_ OnDestroyCallback cDestroyCallback)
-{
-  CAutoRundownProtection cRundownLock(&nRundownProt);
-  TAutoRefCounted<CConnectionBase> cConn;
-
-  if (cRundownLock.IsAcquired() == FALSE)
-    return MX_E_Cancelled;
-  cConn.Attach(CheckAndGetConnection(h));
-  if (!cConn)
-    return E_INVALIDARG;
-  //set new callback
-  cConn->cDestroyCallback = cDestroyCallback;
-  //done
-  return S_OK;
-}
-
-HRESULT CIpc::SetUserData(_In_ HANDLE h, _In_ CUserData *lpUserData)
-{
-  CAutoRundownProtection cRundownLock(&nRundownProt);
-  TAutoRefCounted<CConnectionBase> cConn;
-
-  if (cRundownLock.IsAcquired() == FALSE)
-    return MX_E_Cancelled;
-  cConn.Attach(CheckAndGetConnection(h));
-  if (!cConn)
-    return E_INVALIDARG;
-  //set new user data
-  cConn->cUserData.Attach(lpUserData);
+  if (cCallbacks.bConnectCallbackIsValid != 0)
+  {
+    cConn->cConnectCallback = cCallbacks.cConnectCallback;
+  }
+  if (cCallbacks.bDisconnectCallbackIsValid != 0)
+  {
+    cConn->cDisconnectCallback = cCallbacks.cDisconnectCallback;
+  }
+  if (cCallbacks.bDataReceivedCallbackIsValid != 0)
+  {
+    cConn->cDataReceivedCallback = cCallbacks.cDataReceivedCallback;
+  }
+  if (cCallbacks.bDestroyCallbackIsValid != 0)
+  {
+    cConn->cDestroyCallback = cCallbacks.cDestroyCallback;
+  }
+  if (cCallbacks.bUserDataIsValid != 0)
+  {
+    cConn->cUserData = cCallbacks.cUserData;
+  }
   //done
   return S_OK;
 }
@@ -747,14 +702,14 @@ VOID CIpc::FireOnDestroy(_In_ CConnectionBase *lpConn)
   return;
 }
 
-HRESULT CIpc::FireOnConnect(_In_ CConnectionBase *lpConn, _In_ HRESULT hrErrorCode)
+HRESULT CIpc::FireOnConnect(_In_ CConnectionBase *lpConn)
 {
   HRESULT hRes = S_OK;
 
   if (lpConn->IsClosed() == FALSE)
   {
     if (lpConn->cConnectCallback)
-      hRes = lpConn->cConnectCallback(this, (HANDLE)lpConn, lpConn->cUserData, hrErrorCode);
+      hRes = lpConn->cConnectCallback(this, (HANDLE)lpConn, lpConn->cUserData);
   }
   return hRes;
 }
@@ -946,7 +901,7 @@ start:
 
       //fire main connect
       if (SUCCEEDED(hRes))
-        hRes = FireOnConnect(lpConn, S_OK);
+        hRes = FireOnConnect(lpConn);
 
       //free packet
       lpConn->cRwList.Remove(lpPacket);

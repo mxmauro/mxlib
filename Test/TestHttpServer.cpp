@@ -39,14 +39,17 @@ static HRESULT OnLog(_In_z_ LPCWSTR szInfoW);
 
 //-----------------------------------------------------------
 
-int TestHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
+int TestHttpServer()
 {
   MX::CIoCompletionPortThreadPool cDispatcherPool;
   MX::CSockets cSckMgr(cDispatcherPool);
   MX::CHttpServer cHttpServer(cSckMgr);
   MX::CSslCertificate cSslCert;
   MX::CEncryptionKey cSslPrivateKey;
+  BOOL bUseSSL;
   HRESULT hRes;
+
+  bUseSSL = DoesCmdLineParamExist(L"ssl");
 
   cHttpServer.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
   cHttpServer.SetLogLevel(dwLogLevel);
@@ -74,7 +77,7 @@ int TestHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
 
     //load SSL certificate
     hRes = GetAppPath(cStrTempW);
-    if (SUCCEEDED(hRes) && cStrTempW.Concat(L"Web\\Certificates\\ssl.crt") == FALSE)
+    if (SUCCEEDED(hRes) && cStrTempW.Concat(L"Web\\Certificates\\webserver_ssl_cert.pem") == FALSE)
       hRes = E_OUTOFMEMORY;
     if (SUCCEEDED(hRes))
       hRes = LoadTxtFile(cStrTempA, (LPCWSTR)cStrTempW);
@@ -83,7 +86,7 @@ int TestHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
     //load private key
     if (SUCCEEDED(hRes))
       hRes = GetAppPath(cStrTempW);
-    if (SUCCEEDED(hRes) && cStrTempW.Concat(L"Web\\Certificates\\ssl.key") == FALSE)
+    if (SUCCEEDED(hRes) && cStrTempW.Concat(L"Web\\Certificates\\webserver_ssl_priv_key.pem") == FALSE)
       hRes = E_OUTOFMEMORY;
     if (SUCCEEDED(hRes))
       hRes = LoadTxtFile(cStrTempA, (LPCWSTR)cStrTempW);
@@ -103,14 +106,14 @@ int TestHttpServer(_In_ BOOL bUseSSL, _In_ DWORD dwLogLevel)
       MX::CSockets::LISTENER_OPTIONS sOptions = { 0 };
 
       //sOptions.dwBackLogSize = 0;
-      sOptions.dwMaxAcceptsToPost = 128;
+      sOptions.dwMaxAcceptsToPost = 16;
       //sOptions.dwMaxRequestsPerSecond = 0;
       //sOptions.dwBurstSize = 0;
-      hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv6, 443, &sOptions, &cSslCert, &cSslPrivateKey);
+      hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv4, 443, &sOptions, &cSslCert, &cSslPrivateKey);
     }
     else
     {
-      hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv6, 80);
+      hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv4, 80);
     }
   }
   //----
@@ -155,35 +158,35 @@ static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServe
     }
     else
     {
-      MX::CHttpHeaderRespAcceptRanges *lpHdrAcceptRanges;
-      MX::CHttpHeaderGenConnection *lpHdrConnection;
-      MX::CHttpHeaderEntLastModified *lpHdrLastModified;
+      MX::TAutoRefCounted<MX::CHttpHeaderRespAcceptRanges> cHeaderRespAcceptRanges;
+      MX::TAutoRefCounted<MX::CHttpHeaderGenConnection> cHeaderGenConnection;
+      MX::TAutoRefCounted<MX::CHttpHeaderEntLastModified> cHeaderEntLastModified;
 
       //HANDLE h = lpRequest->GetUnderlyingSocket();
       //MX::CSockets *lpMgr = lpRequest->GetUnderlyingSocketManager();
 
       //lpMgr->PauseOutputProcessing(h);
-      hRes = lpRequest->AddResponseHeader<MX::CHttpHeaderRespAcceptRanges>(&lpHdrAcceptRanges);
+      hRes = lpRequest->AddResponseHeader<MX::CHttpHeaderRespAcceptRanges>(&cHeaderRespAcceptRanges);
       if (SUCCEEDED(hRes))
-        hRes = lpHdrAcceptRanges->SetRange(MX::CHttpHeaderRespAcceptRanges::RangeBytes);
+        hRes = cHeaderRespAcceptRanges->SetRange(MX::CHttpHeaderRespAcceptRanges::RangeBytes);
       //----
       if (SUCCEEDED(hRes))
       {
-        hRes = lpRequest->AddResponseHeader<MX::CHttpHeaderGenConnection>(&lpHdrConnection);
+        hRes = lpRequest->AddResponseHeader<MX::CHttpHeaderGenConnection>(&cHeaderGenConnection);
         if (SUCCEEDED(hRes))
-          hRes = lpHdrConnection->AddConnection("close", 5);
+          hRes = cHeaderGenConnection->AddConnection("close", 5);
       }
       //----
       if (SUCCEEDED(hRes))
       {
         MX::CDateTime cDt;
 
-        hRes = lpRequest->AddResponseHeader<MX::CHttpHeaderEntLastModified>(&lpHdrLastModified);
+        hRes = lpRequest->AddResponseHeader<MX::CHttpHeaderEntLastModified>(&cHeaderEntLastModified);
         if (SUCCEEDED(hRes))
         {
           hRes = cDt.SetFromNow(FALSE);
           if (SUCCEEDED(hRes))
-            hRes = lpHdrLastModified->SetDate(cDt);
+            hRes = cHeaderEntLastModified->SetDate(cDt);
         }
       }
       //----

@@ -41,7 +41,7 @@ CHttpBodyParserUrlEncodedForm::~CHttpBodyParserUrlEncodedForm()
   return;
 }
 
-HRESULT CHttpBodyParserUrlEncodedForm::Initialize(_In_ CHttpCommon &cHttpCmn)
+HRESULT CHttpBodyParserUrlEncodedForm::Initialize(_In_ Internals::CHttpParser &cHttpParser)
 {
   return S_OK;
 }
@@ -91,16 +91,13 @@ HRESULT CHttpBodyParserUrlEncodedForm::Parse(_In_opt_ LPCVOID lpData, _In_opt_ S
     return S_OK;
   }
 
-  //begin
-  hRes = S_OK;
   //check if size is greater than max size or overflow
   if (nCurrContentSize+nDataSize < nCurrContentSize || nCurrContentSize+nDataSize > (SIZE_T)dwMaxFieldSize)
-  {
-    MarkEntityAsTooLarge();
-  }
+    return MX_E_BadLength;
 
   //process data
-  for (szDataA=(LPCSTR)lpData; szDataA!=(LPCSTR)lpData+nDataSize; szDataA++)
+  hRes = S_OK;
+  for (szDataA = (LPCSTR)lpData; szDataA != (LPCSTR)lpData + nDataSize; szDataA++)
   {
     switch (sParser.nState)
     {
@@ -119,14 +116,11 @@ err_invalid_data:
       case StateName:
         if (*szDataA == '=' || *szDataA == '&')
         {
-          if (IsEntityTooLarge() == FALSE)
-          {
-            hRes = CUrl::Decode(cStrTempA, (LPCSTR)(sParser.cStrCurrA), sParser.cStrCurrA.GetLength());
-            if (SUCCEEDED(hRes))
-              hRes = Utf8_Decode(sParser.cStrCurrFieldNameW, (LPCSTR)cStrTempA, cStrTempA.GetLength());
-            if (FAILED(hRes))
-              goto done;
-          }
+          hRes = CUrl::Decode(cStrTempA, (LPCSTR)(sParser.cStrCurrA), sParser.cStrCurrA.GetLength());
+          if (SUCCEEDED(hRes))
+            hRes = Utf8_Decode(sParser.cStrCurrFieldNameW, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+          if (FAILED(hRes))
+            goto done;
           sParser.cStrCurrA.Empty();
           if (*szDataA == '&')
           {
@@ -138,29 +132,23 @@ err_invalid_data:
         if (*((unsigned char*)szDataA) < 32 || (*szDataA & 0x80) != 0)
           goto err_invalid_data;
         //add character to name
-        if (IsEntityTooLarge() == FALSE)
+        if (sParser.cStrCurrA.ConcatN(szDataA, 1) == FALSE)
         {
-          if (sParser.cStrCurrA.ConcatN(szDataA, 1) == FALSE)
-          {
-            hRes = E_OUTOFMEMORY;
-            goto done;
-          }
+          hRes = E_OUTOFMEMORY;
+          goto done;
         }
         break;
 
       case StateValue:
         if (*szDataA == '&')
         {
-          if (IsEntityTooLarge() == FALSE)
-          {
-            hRes = CUrl::Decode(cStrTempA, (LPCSTR)(sParser.cStrCurrA), sParser.cStrCurrA.GetLength());
-            if (SUCCEEDED(hRes))
-              hRes = Utf8_Decode(cStrTempW, (LPCSTR)cStrTempA, cStrTempA.GetLength());
-            if (SUCCEEDED(hRes))
-              hRes = AddField((LPCWSTR)(sParser.cStrCurrFieldNameW), (LPCWSTR)cStrTempW);
-            if (FAILED(hRes))
-              goto done;
-          }
+          hRes = CUrl::Decode(cStrTempA, (LPCSTR)(sParser.cStrCurrA), sParser.cStrCurrA.GetLength());
+          if (SUCCEEDED(hRes))
+            hRes = Utf8_Decode(cStrTempW, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+          if (SUCCEEDED(hRes))
+            hRes = AddField((LPCWSTR)(sParser.cStrCurrFieldNameW), (LPCWSTR)cStrTempW);
+          if (FAILED(hRes))
+            goto done;
           sParser.nState = StateNameStart;
           sParser.cStrCurrFieldNameW.Empty();
           sParser.cStrCurrA.Empty();
@@ -169,13 +157,10 @@ err_invalid_data:
           if (*((unsigned char*)szDataA) < 32 || (*szDataA & 0x80) != 0)
             goto err_invalid_data;
           //add character to value
-          if (IsEntityTooLarge() == FALSE)
+          if (sParser.cStrCurrA.ConcatN(szDataA, 1) == FALSE)
           {
-            if (sParser.cStrCurrA.ConcatN(szDataA, 1) == FALSE)
-            {
-              hRes = E_OUTOFMEMORY;
-              goto done;
-            }
+            hRes = E_OUTOFMEMORY;
+            goto done;
           }
           break;
 

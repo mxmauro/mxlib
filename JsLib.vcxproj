@@ -91,6 +91,26 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </Text>
   </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="Source\JsLib\BigInteger\BigInteger.min.js">
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CSCRIPT //NoLogo "$(ProjectDir)Utilities\File2Inc\File2Inc.vbs" -i "%(FullPath)" -o "$(IntDir)%(Filename)%(Extension).h" -n aBigIntegerJs --static</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Packing BigInterger code...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)%(Filename)%(Extension).h</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</LinkObjects>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CSCRIPT //NoLogo "$(ProjectDir)Utilities\File2Inc\File2Inc.vbs" -i "%(FullPath)" -o "$(IntDir)%(Filename)%(Extension).h" -n aBigIntegerJs --static</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Packing BigInterger code...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(IntDir)%(Filename)%(Extension).h</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkObjects>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CSCRIPT //NoLogo "$(ProjectDir)Utilities\File2Inc\File2Inc.vbs" -i "%(FullPath)" -o "$(IntDir)%(Filename)%(Extension).h" -n aBigIntegerJs --static</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Packing BigInterger code...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)%(Filename)%(Extension).h</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CSCRIPT //NoLogo "$(ProjectDir)Utilities\File2Inc\File2Inc.vbs" -i "%(FullPath)" -o "$(IntDir)%(Filename)%(Extension).h" -n aBigIntegerJs --static</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Packing BigInterger code...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(IntDir)%(Filename)%(Extension).h</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkObjects>
+    </CustomBuild>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{11F49497-A8D8-4D57-8611-BB73FA2634FB}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
@@ -176,7 +196,7 @@
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <ExceptionHandling>Async</ExceptionHandling>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source\JsLib\DukTape\Source\dist;$(ProjectDir)Source\JsLib\Plugins\MySQL\internals;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(IntDir);$(ProjectDir)Source\JsLib\DukTape\Source\dist;$(ProjectDir)Source\JsLib\Plugins\MySQL\internals;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <EnablePREfast>false</EnablePREfast>
       <ConformanceMode>true</ConformanceMode>
@@ -197,7 +217,7 @@
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <ExceptionHandling>Async</ExceptionHandling>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source\JsLib\DukTape\Source\dist;$(ProjectDir)Source\JsLib\Plugins\MySQL\internals;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(IntDir);$(ProjectDir)Source\JsLib\DukTape\Source\dist;$(ProjectDir)Source\JsLib\Plugins\MySQL\internals;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnablePREfast>false</EnablePREfast>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
@@ -219,7 +239,7 @@
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <ExceptionHandling>Async</ExceptionHandling>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source\JsLib\DukTape\Source\dist;$(ProjectDir)Source\JsLib\Plugins\MySQL\internals;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(IntDir);$(ProjectDir)Source\JsLib\DukTape\Source\dist;$(ProjectDir)Source\JsLib\Plugins\MySQL\internals;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <UseFullPaths>false</UseFullPaths>
       <EnablePREfast>false</EnablePREfast>
       <ConformanceMode>true</ConformanceMode>
@@ -244,7 +264,7 @@
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <ExceptionHandling>Async</ExceptionHandling>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source\JsLib\DukTape\Source\dist;$(ProjectDir)Source\JsLib\Plugins\MySQL\internals;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(IntDir);$(ProjectDir)Source\JsLib\DukTape\Source\dist;$(ProjectDir)Source\JsLib\Plugins\MySQL\internals;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <UseFullPaths>false</UseFullPaths>
       <EnablePREfast>false</EnablePREfast>
       <ConformanceMode>true</ConformanceMode>

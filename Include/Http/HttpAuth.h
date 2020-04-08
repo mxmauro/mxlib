@@ -55,7 +55,7 @@ public:
 
   virtual Type GetType() const = 0;
 
-  virtual HRESULT Parse(_In_z_ LPCSTR szValueA) = 0;
+  virtual HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1) = 0;
 
   virtual BOOL IsReauthenticateRequst() const = 0;
 
@@ -75,7 +75,7 @@ public:
     return TypeBasic;
     };
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
   HRESULT MakeAuthenticateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCWSTR szUserNameW, _In_z_ LPCWSTR szPasswordW,
                                    _In_ BOOL bIsProxy);
@@ -105,7 +105,7 @@ public:
     return TypeDigest;
     };
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
   HRESULT MakeAuthenticateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCWSTR szUserNameW, _In_z_ LPCWSTR szPasswordW,
                                    _In_z_ LPCSTR szMethodA, _In_z_ LPCSTR szUriPathA, _In_ BOOL bIsProxy);

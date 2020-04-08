@@ -55,8 +55,8 @@ public:
       return;
       };
 
-    VOID Setup(_In_ DWORD _dwTimeoutMs, _In_ MX::TimedEvent::OnTimeoutCallback _cCallback, _In_opt_ LPVOID _lpUserData,
-               _In_ BOOL bOneShot)
+    VOID Setup(_In_ DWORD _dwTimeoutMs, _In_ MX::TimedEvent::OnTimeoutCallback _cCallback,
+               _In_opt_ LPVOID _lpUserData, _In_ BOOL bOneShot)
       {
       nId = 0;
       dwTimeoutMs = _dwTimeoutMs;
@@ -88,10 +88,12 @@ public:
       return;
       };
 
-    __inline VOID InvokeCallback()
+    __inline BOOL InvokeCallback()
       {
-      cCallback(nId, lpUserData);
-      return;
+      BOOL bCancel = FALSE;
+
+      cCallback(nId, lpUserData, (((__InterlockedRead(&nFlags) & _FLAG_OneShot) != 0) ? NULL : &bCancel));
+      return bCancel;
       };
 
     __inline BOOL SetAsRunningIfNotCanceled()
@@ -143,8 +145,8 @@ public:
 
   BOOL Initialize();
 
-  HRESULT AddTimer(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs,
-                   _In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot);
+  HRESULT AddTimer(_Out_ LONG volatile *lpnTimerId, _In_ MX::TimedEvent::OnTimeoutCallback cCallback,
+                   _In_ DWORD dwTimeoutMs, _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot);
   VOID RemoveTimer(_Inout_ LONG volatile *lpnTimerId);
 
 private:
@@ -152,7 +154,7 @@ private:
 
   DWORD ProcessQueue();
 
-  CTimer* AllocTimer(_In_ DWORD dwTimeoutMs, _In_ MX::TimedEvent::OnTimeoutCallback cCallback,
+  CTimer* AllocTimer(_In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_ DWORD dwTimeoutMs,
                      _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot);
   VOID FreeTimer(_In_ CTimer *lpTimer);
 
@@ -203,7 +205,7 @@ HRESULT SetTimeout(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In_
       _InterlockedExchange(lpnTimerId, 0);
     return E_OUTOFMEMORY;
   }
-  return cHandler->AddTimer(lpnTimerId, dwTimeoutMs, cCallback, lpUserData, TRUE);
+  return cHandler->AddTimer(lpnTimerId, cCallback, dwTimeoutMs, lpUserData, TRUE);
 }
 
 HRESULT SetInterval(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In_ OnTimeoutCallback cCallback,
@@ -218,7 +220,7 @@ HRESULT SetInterval(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In
       _InterlockedExchange(lpnTimerId, 0);
     return E_OUTOFMEMORY;
   }
-  return cHandler->AddTimer(lpnTimerId, dwTimeoutMs, cCallback, lpUserData, FALSE);
+  return cHandler->AddTimer(lpnTimerId, cCallback, dwTimeoutMs, lpUserData, FALSE);
 }
 
 VOID Clear(_Inout_ LONG volatile *lpnTimerId)
@@ -227,9 +229,13 @@ VOID Clear(_Inout_ LONG volatile *lpnTimerId)
 
   cHandler.Attach(Internals::CTimerHandler::Get());
   if (cHandler)
+  {
     cHandler->RemoveTimer(lpnTimerId);
+  }
   else if (lpnTimerId != NULL)
+  {
     _InterlockedExchange(lpnTimerId, 0);
+  }
   return;
 }
 
@@ -336,9 +342,8 @@ BOOL CTimerHandler::Initialize()
   return TRUE;
 }
 
-HRESULT CTimerHandler::AddTimer(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs,
-                                _In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_opt_ LPVOID lpUserData,
-                                _In_ BOOL bOneShot)
+HRESULT CTimerHandler::AddTimer(_Out_ LONG volatile *lpnTimerId, _In_ MX::TimedEvent::OnTimeoutCallback cCallback,
+                                _In_ DWORD dwTimeoutMs, _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   TAutoDeletePtr<CTimer> cNewTimer;
@@ -357,7 +362,7 @@ HRESULT CTimerHandler::AddTimer(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTi
   }
 
   //create new timer
-  cNewTimer.Attach(AllocTimer(dwTimeoutMs, cCallback, lpUserData, bOneShot));
+  cNewTimer.Attach(AllocTimer(cCallback, dwTimeoutMs, lpUserData, bOneShot));
   if (!cNewTimer)
   {
     _InterlockedExchange(lpnTimerId, 0);
@@ -427,6 +432,8 @@ VOID CTimerHandler::RemoveTimer(_Inout_ LONG volatile *lpnTimerId)
       FreeTimer(lpTimer);
     }
   }
+
+  //done
   return;
 }
 
@@ -496,7 +503,7 @@ check_timer:
     //fire event
     if (lpTimer != NULL)
     {
-      lpTimer->InvokeCallback();
+      BOOL bCancel = lpTimer->InvokeCallback();
 
       {
         CFastLock cLock(&(sQueue.nMutex));
@@ -510,7 +517,7 @@ check_timer:
         else
         {
           lpTimer->cTreeNode.Remove();
-          if ((nFlags & _FLAG_OneShot) != 0)
+          if (bCancel != FALSE || (nFlags & _FLAG_OneShot) != 0)
           {
             SIZE_T nIndex;
 
@@ -540,9 +547,8 @@ check_timer:
   return dwTimeoutMs;
 }
 
-CTimerHandler::CTimer* CTimerHandler::AllocTimer(_In_ DWORD dwTimeoutMs,
-                                                 _In_ MX::TimedEvent::OnTimeoutCallback cCallback,
-                                                 _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot)
+CTimerHandler::CTimer* CTimerHandler::AllocTimer(_In_ MX::TimedEvent::OnTimeoutCallback cCallback,
+                                                 _In_ DWORD dwTimeoutMs, _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot)
 {
   CFastLock cLock(&(sFreeTimers.nMutex));
 

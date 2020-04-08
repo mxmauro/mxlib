@@ -35,23 +35,26 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Allow)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return DuplicateBehaviorAppend;
+    return DuplicateBehaviorMerge;
     };
 
   HRESULT AddVerb(_In_z_ LPCSTR szVerbA, _In_ SIZE_T nVerbLen = (SIZE_T)-1);
 
   SIZE_T GetVerbsCount() const;
   LPCSTR GetVerb(_In_ SIZE_T nIndex) const;
-  BOOL HasVerb(_In_z_ LPCSTR szVerbA) const;
+
+  BOOL HasVerb(_In_z_ LPCSTR szVerbA, _In_ SIZE_T nVerbLen = (SIZE_T)-1) const;
+
+  HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
 
 private:
-  TArrayListWithFree<LPSTR> cVerbsList;
+  TArrayListWithFree<LPCSTR> aVerbsList;
 };
 
 } //namespace MX

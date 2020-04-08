@@ -64,16 +64,16 @@ HRESULT CJsHttpServerSessionPlugin::Setup(_In_ CJsHttpServer::CClientRequest *_l
                                           _In_opt_z_ LPCWSTR szPathW, _In_opt_ int _nExpireTimeInSeconds,
                                           _In_opt_ BOOL _bIsSecure, _In_opt_ BOOL _bIsHttpOnly)
 {
-  CHttpCookie *lpSessionIdCookie;
+  TAutoRefCounted<CHttpCookie> cSessionIdCookie;
   MX::CDateTime cExpireDt;
-  SIZE_T i, nCount;
+  SIZE_T i;
   HRESULT hRes;
 
   if (_lpRequest == NULL || (!_cLoadSaveCallback))
     return E_POINTER;
   if (szSessionVarNameW != NULL && *szSessionVarNameW != 0)
   {
-    for (i=0; szSessionVarNameW[i] != 0; i++)
+    for (i = 0; szSessionVarNameW[i] != 0; i++)
     {
       if (i > 64)
         return E_INVALIDARG;
@@ -115,17 +115,23 @@ HRESULT CJsHttpServerSessionPlugin::Setup(_In_ CJsHttpServer::CClientRequest *_l
   bIsHttpOnly = _bIsHttpOnly;
 
   //initialize session data
-  lpSessionIdCookie = NULL;
-  nCount = lpRequest->GetRequestCookiesCount();
-  for (i=0; i<nCount; i++)
+  for (i = 0; ; i++)
   {
-    lpSessionIdCookie = lpRequest->GetRequestCookie(i);
-    if (StrCompareA(lpSessionIdCookie->GetName(), szSessionVarNameA) == 0)
+    cSessionIdCookie.Attach(lpRequest->GetRequestCookie(i));
+    if (!cSessionIdCookie)
       break;
+    if (StrCompareA(cSessionIdCookie->GetName(), szSessionVarNameA) == 0)
+      break;
+    cSessionIdCookie.Release();
   }
-  if (i < nCount && IsValidSessionId(lpSessionIdCookie->GetValue()) != FALSE)
+  if (cSessionIdCookie)
   {
-    MxMemCopy(szCurrentIdA, lpSessionIdCookie->GetValue(), StrLenA(lpSessionIdCookie->GetValue())+1);
+    LPCSTR szValueA = cSessionIdCookie->GetValue();
+
+    if (IsValidSessionId(szValueA) == FALSE)
+      goto regenerate_session_id;
+
+    ::MxMemCopy(szCurrentIdA, szValueA, StrLenA(szValueA) + 1);
     hRes = cLoadSaveCallback(this, TRUE);
     if (FAILED(hRes) && hRes != E_OUTOFMEMORY)
       goto regenerate_session_id;

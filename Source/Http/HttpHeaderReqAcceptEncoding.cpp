@@ -19,6 +19,7 @@
  */
 #include "..\..\Include\Http\HttpHeaderReqAcceptEncoding.h"
 #include <stdlib.h>
+#include "..\..\Include\AutoPtr.h"
 
 //-----------------------------------------------------------
 
@@ -38,10 +39,10 @@ CHttpHeaderReqAcceptEncoding::~CHttpHeaderReqAcceptEncoding()
   return;
 }
 
-HRESULT CHttpHeaderReqAcceptEncoding::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderReqAcceptEncoding::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
   CEncoding *lpEncoding;
-  LPCSTR szStartA;
+  LPCSTR szValueEndA, szStartA;
   CStringA cStrTempA;
   BOOL bGotItem;
   double nDbl;
@@ -49,17 +50,22 @@ HRESULT CHttpHeaderReqAcceptEncoding::Parse(_In_z_ LPCSTR szValueA)
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //parse
   bGotItem = FALSE;
   do
   {
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
-    if (*szValueA == 0)
+    szValueA = SkipSpaces(szValueA, szValueEndA);
+    if (szValueA >= szValueEndA)
       break;
 
     //encoding
-    szValueA = SkipUntil(szStartA = szValueA, ";, \t");
+    szValueA = SkipUntil(szStartA = szValueA, szValueEndA, ";, \t");
     if (szValueA == szStartA)
       goto skip_null_listitem;
 
@@ -71,29 +77,30 @@ HRESULT CHttpHeaderReqAcceptEncoding::Parse(_In_z_ LPCSTR szValueA)
       return hRes;
 
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
+    szValueA = SkipSpaces(szValueA, szValueEndA);
 
     //parameter
-    if (*szValueA == ';')
+    if (szValueA < szValueEndA && *szValueA == ';')
     {
       //skip spaces
-      szValueA = SkipSpaces(szValueA + 1);
-      if (*szValueA++ != 'q')
+      szValueA = SkipSpaces(szValueA + 1, szValueEndA);
+      if (szValueA >= szValueEndA || *szValueA != 'q')
         return MX_E_InvalidData;
+      szValueA++;
 
       //skip spaces
-      szValueA = SkipSpaces(szValueA);
+      szValueA = SkipSpaces(szValueA, szValueEndA);
 
       //is equal sign?
-      if (*szValueA++ != '=')
+      if (szValueA >= szValueEndA || *szValueA != '=')
         return MX_E_InvalidData;
 
       //skip spaces
-      szValueA = SkipSpaces(szValueA);
+      szValueA = SkipSpaces(szValueA, szValueEndA);
 
       //parse value
       szStartA = szValueA;
-      while ((*szValueA >= '0' && *szValueA <= '9') || *szValueA == '.')
+      while (szValueA < szValueEndA && ((*szValueA >= '0' && *szValueA <= '9') || *szValueA == '.'))
         szValueA++;
       hRes = StrToDoubleA(szStartA, (SIZE_T)(szValueA - szStartA), &nDbl);
       if (SUCCEEDED(hRes))
@@ -104,30 +111,38 @@ HRESULT CHttpHeaderReqAcceptEncoding::Parse(_In_z_ LPCSTR szValueA)
 
 skip_null_listitem:
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
+    szValueA = SkipSpaces(szValueA, szValueEndA);
 
     //check for separator or end
-    if (*szValueA == ',')
-      szValueA++;
-    else if (*szValueA != 0)
-      return MX_E_InvalidData;
+    if (szValueA < szValueEndA)
+    {
+      if (*szValueA == ',')
+        szValueA++;
+      else
+        return MX_E_InvalidData;
+    }
   }
-  while (*szValueA != 0);
+  while (szValueA < szValueEndA);
+
+  //do we got one?
+  if (bGotItem == FALSE)
+    return MX_E_InvalidData;
+
   //done
-  return (bGotItem != FALSE) ? S_OK : MX_E_InvalidData;
+  return S_OK;
 }
 
-HRESULT CHttpHeaderReqAcceptEncoding::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderReqAcceptEncoding::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   CStringA cStrTempA;
   SIZE_T i, nCount;
   CEncoding *lpEncoding;
 
   cStrDestA.Empty();
-  nCount = cEncodingsList.GetCount();
+  nCount = aEncodingsList.GetCount();
   for (i = 0; i < nCount; i++)
   {
-    lpEncoding = cEncodingsList.GetElementAt(i);
+    lpEncoding = aEncodingsList.GetElementAt(i);
     if (cStrDestA.IsEmpty() == FALSE)
     {
       if (cStrDestA.ConcatN(",", 1) == FALSE)
@@ -135,6 +150,7 @@ HRESULT CHttpHeaderReqAcceptEncoding::Build(_Inout_ CStringA &cStrDestA, _In_ eB
     }
     if (cStrDestA.Concat(lpEncoding->GetEncoding()) == FALSE)
       return E_OUTOFMEMORY;
+
     //q
     if (lpEncoding->GetQ() < 1.0 - 0.00000001)
     {
@@ -162,6 +178,7 @@ HRESULT CHttpHeaderReqAcceptEncoding::AddEncoding(_In_z_ LPCSTR szEncodingA, _In
     return MX_E_InvalidData;
   if (szEncodingA == NULL)
     return E_POINTER;
+
   //create new type
   cNewEncoding.Attach(MX_DEBUG_NEW CEncoding());
   if (!cNewEncoding)
@@ -169,19 +186,22 @@ HRESULT CHttpHeaderReqAcceptEncoding::AddEncoding(_In_z_ LPCSTR szEncodingA, _In
   hRes = cNewEncoding->SetEncoding(szEncodingA, nEncodingLen);
   if (FAILED(hRes))
     return hRes;
+
   //check if already exists in list
-  nCount = cEncodingsList.GetCount();
+  nCount = aEncodingsList.GetCount();
   for (i = 0; i < nCount; i++)
   {
-    if (StrCompareA(cEncodingsList[i]->GetEncoding(), cNewEncoding->GetEncoding(), TRUE) == 0)
+    if (StrCompareA(aEncodingsList[i]->GetEncoding(), cNewEncoding->GetEncoding(), TRUE) == 0)
     {
-      cEncodingsList.RemoveElementAt(i); //remove previous definition
+      aEncodingsList.RemoveElementAt(i); //remove previous definition
       break;
     }
   }
+
   //add to list
-  if (cEncodingsList.AddElement(cNewEncoding.Get()) == FALSE)
+  if (aEncodingsList.AddElement(cNewEncoding.Get()) == FALSE)
     return E_OUTOFMEMORY;
+
   //done
   if (lplpEncoding != NULL)
     *lplpEncoding = cNewEncoding.Detach();
@@ -192,12 +212,12 @@ HRESULT CHttpHeaderReqAcceptEncoding::AddEncoding(_In_z_ LPCSTR szEncodingA, _In
 
 SIZE_T CHttpHeaderReqAcceptEncoding::GetEncodingsCount() const
 {
-  return cEncodingsList.GetCount();
+  return aEncodingsList.GetCount();
 }
 
 CHttpHeaderReqAcceptEncoding::CEncoding* CHttpHeaderReqAcceptEncoding::GetEncoding(_In_ SIZE_T nIndex) const
 {
-  return (nIndex < cEncodingsList.GetCount()) ? cEncodingsList.GetElementAt(nIndex) : NULL;
+  return (nIndex < aEncodingsList.GetCount()) ? aEncodingsList.GetElementAt(nIndex) : NULL;
 }
 
 CHttpHeaderReqAcceptEncoding::CEncoding* CHttpHeaderReqAcceptEncoding::GetEncoding(_In_z_ LPCSTR szEncodingA) const
@@ -206,14 +226,68 @@ CHttpHeaderReqAcceptEncoding::CEncoding* CHttpHeaderReqAcceptEncoding::GetEncodi
 
   if (szEncodingA != NULL && *szEncodingA != 0)
   {
-    nCount = cEncodingsList.GetCount();
+    nCount = aEncodingsList.GetCount();
     for (i = 0; i < nCount; i++)
     {
-      if (StrCompareA(cEncodingsList[i]->GetEncoding(), szEncodingA, TRUE) == 0)
-        return cEncodingsList.GetElementAt(i);
+      if (StrCompareA(aEncodingsList[i]->GetEncoding(), szEncodingA, TRUE) == 0)
+        return aEncodingsList.GetElementAt(i);
     }
   }
   return NULL;
+}
+
+HRESULT CHttpHeaderReqAcceptEncoding::Merge(_In_ CHttpHeaderBase *_lpHeader)
+{
+  CHttpHeaderReqAcceptEncoding *lpHeader = reinterpret_cast<CHttpHeaderReqAcceptEncoding*>(_lpHeader);
+  SIZE_T i, nCount, nThisIndex, nThisCount;
+
+  nCount = lpHeader->aEncodingsList.GetCount();
+  nThisCount = aEncodingsList.GetCount();
+  for (i = 0; i < nCount; i++)
+  {
+    CEncoding *lpEncoding = lpHeader->aEncodingsList.GetElementAt(i);
+
+    for (nThisIndex = 0; nThisIndex < nThisCount; nThisIndex++)
+    {
+      CEncoding *lpThisEncoding = aEncodingsList.GetElementAt(nThisIndex);
+
+      if (StrCompareA((LPCSTR)(lpEncoding->cStrEncodingA), (LPCSTR)(lpThisEncoding->cStrEncodingA), TRUE) == 0)
+        break;
+    }
+    if (nThisIndex < nThisCount)
+    {
+      //have a match, add/replace parameters
+      CEncoding *lpThisEncoding = aEncodingsList.GetElementAt(nThisIndex);
+
+      lpThisEncoding->q = lpEncoding->q;
+    }
+    else
+    {
+      TAutoDeletePtr<CEncoding> cNewEncoding;
+
+      //add a duplicate
+      cNewEncoding.Attach(MX_DEBUG_NEW CEncoding());
+      if (!cNewEncoding)
+        return E_OUTOFMEMORY;
+      try
+      {
+        *(cNewEncoding.Get()) = *lpEncoding;
+      }
+      catch (LONG hr)
+      {
+        return (HRESULT)hr;
+      }
+
+      //add to list
+      if (aEncodingsList.AddElement(cNewEncoding.Get()) == FALSE)
+        return E_OUTOFMEMORY;
+      cNewEncoding.Detach();
+      nThisCount++;
+    }
+  }
+
+  //done
+  return S_OK;
 }
 
 //-----------------------------------------------------------
@@ -228,6 +302,22 @@ CHttpHeaderReqAcceptEncoding::CEncoding::CEncoding() : CBaseMemObj()
 CHttpHeaderReqAcceptEncoding::CEncoding::~CEncoding()
 {
   return;
+}
+
+CHttpHeaderReqAcceptEncoding::CEncoding&
+CHttpHeaderReqAcceptEncoding::CEncoding::operator=(_In_ const CHttpHeaderReqAcceptEncoding::CEncoding &cSrc) throw(...)
+{
+  if (this != &cSrc)
+  {
+    CStringA cStrTempEncodingA;
+
+    if (cStrTempEncodingA.CopyN((LPCSTR)(cSrc.cStrEncodingA), cSrc.cStrEncodingA.GetLength()) == FALSE)
+      throw (LONG)E_OUTOFMEMORY;
+
+    cStrEncodingA.Attach(cStrTempEncodingA.Detach());
+    q = cSrc.q;
+  }
+  return *this;
 }
 
 HRESULT CHttpHeaderReqAcceptEncoding::CEncoding::SetEncoding(_In_z_ LPCSTR szEncodingA, _In_opt_ SIZE_T nEncodingLen)
@@ -247,7 +337,7 @@ HRESULT CHttpHeaderReqAcceptEncoding::CEncoding::SetEncoding(_In_z_ LPCSTR szEnc
   //get language
   if (*szEncodingA != '*')
   {
-    szEncodingA = CHttpHeaderBase::GetToken(szEncodingA, nEncodingLen);
+    szEncodingA = CHttpHeaderBase::GetToken(szEncodingA, szEncodingEndA);
   }
   else
   {
@@ -255,9 +345,11 @@ HRESULT CHttpHeaderReqAcceptEncoding::CEncoding::SetEncoding(_In_z_ LPCSTR szEnc
   }
   if (szEncodingA != szEncodingEndA)
     return MX_E_InvalidData;
+
   //set new value
-  if (cStrEncodingA.CopyN(szStartA, (SIZE_T)(szEncodingEndA - szStartA)) == FALSE)
+  if (cStrEncodingA.CopyN(szStartA, nEncodingLen) == FALSE)
     return E_OUTOFMEMORY;
+
   //done
   return S_OK;
 }

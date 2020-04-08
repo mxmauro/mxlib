@@ -241,6 +241,7 @@
     <None Include="Test\Data\Web\increment_cookie_val.jss" />
     <None Include="Test\Data\Web\index.css" />
     <None Include="Test\Data\Web\index.jss" />
+    <None Include="Test\Data\Web\json_xhr.jss" />
     <None Include="Test\Data\Web\moment.min.js" />
     <None Include="Test\Data\Web\mysql_test.jss" />
     <None Include="Test\Data\Web\sqlite_test.jss" />

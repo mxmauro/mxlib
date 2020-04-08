@@ -145,7 +145,7 @@ CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDi
 {
   SIZE_T i;
 
-  dwAddressResolverTimeoutMs = 3000;
+  dwAddressResolverTimeoutMs = 20000;
   for (i = 0; i < MX_ARRAYLEN(sDisconnectingSockets); i++)
     _InterlockedExchange(&(sDisconnectingSockets[i].nMutex), 0);
   for (i = 0; i < MX_ARRAYLEN(sReusableSockets); i++)
@@ -737,8 +737,6 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket,
       }
       if (SUCCEEDED(hRes))
         hRes = lpConn->HandleConnected();
-      if (FAILED(hRes))
-        FireOnConnect(lpConn, hRes);
       //free packet
       lpConn->cRwList.Remove(lpPacket);
       FreePacket(lpPacket);
@@ -1793,6 +1791,7 @@ VOID CSockets::CConnection::CListener::ThreadProc()
     if (dw == WAIT_OBJECT_0)
       break;
 
+    /*
     if (dw == WAIT_OBJECT_0 + 2)
     {
       if (sOptions.dwMaxAcceptsToPost < MAX_TOTAL_ACCEPTS_TO_POST - 10)
@@ -1804,6 +1803,7 @@ VOID CSockets::CConnection::CListener::ThreadProc()
         sOptions.dwMaxAcceptsToPost = MAX_TOTAL_ACCEPTS_TO_POST;
       }
     }
+    */
   }
   //done
   return;

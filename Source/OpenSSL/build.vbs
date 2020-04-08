@@ -1,27 +1,24 @@
 '
-' Copyright (C) 2014-2016 Mauro H. Leggieri, Buenos Aires, Argentina.
+' Copyright (C) 2014-2020 Mauro H. Leggieri, Buenos Aires, Argentina.
 ' All rights reserved.
 '
 
 Option Explicit
+Dim oFso, oFile
 Dim szPlatform, szPlatformPath, szConfiguration, szConfigurationTarget, szConfigDebug
 Dim szScriptPath, szFileName, szDefineNoErr, szIsDebug
 Dim szPerlPath, szNasmPath, szObjDir, szLibDir
-Dim I, S, dtBuildDate, aTargetFiles, bRebuild
-Dim objFS, objShell, oFile
+Dim I, nErr, S, dtBuildDate, aTargetFiles, bRebuild
 
 
-Set objShell = CreateObject("WScript.Shell")
-Set objFS = CreateObject("Scripting.FileSystemObject")
+Set oFso = CreateObject("Scripting.FileSystemObject")
 
 'Check if inside a Visual Studio environment
-If objShell.ExpandEnvironmentStrings("%VCINSTALLDIR%") = "%VCINSTALLDIR%" And _
-		objShell.ExpandEnvironmentStrings("%VisualStudioVersion%") = "%VisualStudioVersion%" And _
-		objShell.ExpandEnvironmentStrings("%MSBuildLoadMicrosoftTargetsReadOnly%") = _
-												"%MSBuildLoadMicrosoftTargetsReadOnly%" Then
+If CheckVisualStudioCommandPrompt() = False Then
 	WScript.Echo "Error: Run this script inside Visual Studio."
 	WScript.Quit 1
 End If
+
 
 'Check command-line arguments
 If WScript.Arguments.Count = 0 Then
@@ -110,12 +107,14 @@ If Len(szPlatform) = 0 Then
 	WScript.Quit 1
 End If
 
-'Setup directorie
-szScriptPath = Left(Wscript.ScriptFullName, Len(Wscript.ScriptFullName)-Len(Wscript.ScriptName))
+
+'Setup directories
+szScriptPath = Left(WScript.ScriptFullName, Len(WScript.ScriptFullName) - Len(WScript.ScriptName))
 szObjDir = szScriptPath & "..\..\obj\" & szPlatformPath & "\" & szConfiguration & "\OpenSSL"
 szLibDir = szScriptPath & "..\..\Libs\" & szPlatformPath & "\" & szConfiguration
 szPerlPath = szScriptPath & "..\..\Utilities\Perl5\bin"
 szNasmPath = szScriptPath & "..\..\Utilities\Nasm"
+
 
 'Check if we have to rebuild the libraries
 aTargetFiles = Array("libssl.lib", "libcrypto.lib", "ossl_static.pdb")
@@ -123,17 +122,18 @@ If bRebuild = False Then
 	WScript.Echo "Checking if source files were modified..."
 	For I = 0 To 2
 		szFileName = szLibDir & "\" & aTargetFiles(I)
-		If objFS.FileExists(szFileName) = False Then
+		If oFso.FileExists(szFileName) = False Then
 			WScript.Echo "Library " & Chr(34) & aTargetFiles(I) & Chr(34) & " was not found... rebuilding"
 			bRebuild = True
 			Exit For
 		End If
-		Set oFile = objFS.getFile(szFileName)
+		Set oFile = oFso.getFile(szFileName)
 		If I = 0 Then
 			dtBuildDate = oFile.DateLastModified
 		Else
 			If oFile.DateLastModified < dtBuildDate Then dtBuildDate = oFile.DateLastModified
 		End If
+		Set oFile = Nothing
 	Next
 End If
 
@@ -144,87 +144,109 @@ If bRebuild = False Then
 	End If
 End If
 
-'Rebuild
-If bRebuild <> False Then
-	RunApp "MD " & Chr(34) & szScriptPath & "Temp" & Chr(34), "", "", True
-
-	WScript.Echo "Creating configuration settings..."
-	I = CreateConfiguration()
-	If I = 0 Then
-		WScript.Echo "Configuring..."
-		S = "perl.exe -d:Confess Configure " & szConfigDebug & szConfigurationTarget & " " & szDefineNoErr & _
-			" no-asm no-sock no-rc2 no-idea no-cast no-md2 no-mdc2 no-camellia no-shared "
-		S = S & "-DOPENSSL_NO_DGRAM -DOPENSSL_NO_CAPIENG -DUNICODE -D_UNICODE "
-		If Len(szIsDebug) = 0 Then S = S & "-DOPENSSL_NO_FILENAMES "
-		S = S & Chr(34) & "--config=" & szScriptPath & "Temp\compiler_config.conf" & Chr(34)
-		I = RunApp(S, szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
-	End If
-	If I = 0 Then
-		I = Patch_Makefile()
-	End If
-	If I = 0 Then
-		I = Patch_RAND_WIN_C()
-	End If
-	If I = 0 Then
-		RunApp "NMAKE clean", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, True
-
-		WScript.Echo "Compiling..."
-		I = RunApp("NMAKE /S build_generated", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
-		If I = 0 Then
-			I = RunApp("NMAKE /S build_libs_nodep", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
-		End If
-		If I = 0 Then
-			I = RunApp("NMAKE /S build_engines_nodep", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
-			'I = RunApp("NMAKE /S build_modules_nodep", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
-		End If
-
-		If I = 0 Then
-			'Pause 5 seconds because NMake's processes may still creating the lib WTF?????
-			WScript.Sleep(5000)
-
-			'Move needed files
-			RunApp "MD " & Chr(34) & szObjDir & Chr(34), "", "", True
-			RunApp "MD " & Chr(34) & szLibDir & Chr(34), "", "", True
-
-			For I = 0 To 2
-				RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\" & aTargetFiles(I) & Chr(34) & " " & Chr(34) & _
-						szLibDir & Chr(34), "", "", False
-			Next
-
-			RunApp "MD " & Chr(34) & szScriptPath & "Generated" & Chr(34), "", "", True
-			RunApp "MD " & Chr(34) & szScriptPath & "Generated\OpenSSL" & Chr(34), "", "", True
-
-			RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\include\openssl\opensslconf.h" & Chr(34) & " " & _
-					Chr(34) & szScriptPath & "Generated\OpenSSL" & Chr(34), "", "", False
-
-			'Clean after compile
-			RunApp "NMAKE clean", szScriptPath & "Source", "", True
-
-			WScript.Echo "Done!"
-			I = 0
-		Else
-			WScript.Echo "Errors detected while compiling project."
-		End If
-	Else
-		WScript.Echo "Errors detected while preparing files."
-	End If
-Else
+'Rebuild?
+If bRebuild = False Then
 	WScript.Echo "Libraries are up-to-date"
-	I = 0
+	WScript.Quit 0
 End If
-WScript.Quit I
+
+
+'Start rebuilding
+RunApp "MD " & Chr(34) & szScriptPath & "Temp" & Chr(34), "", "", True
+
+WScript.Echo "Creating configuration settings..."
+nErr = CreateConfiguration()
+If nErr = 0 Then
+	WScript.Echo "Configuring..."
+	S = "perl.exe -d:Confess Configure " & szConfigDebug & szConfigurationTarget & " " & szDefineNoErr & _
+	             " no-asm no-sock no-rc2 no-idea no-cast no-md2 no-mdc2 no-camellia no-shared "
+	S = S & "-DOPENSSL_NO_DGRAM -DOPENSSL_NO_CAPIENG -DUNICODE -D_UNICODE "
+	If Len(szIsDebug) = 0 Then S = S & "-DOPENSSL_NO_FILENAMES "
+	S = S & Chr(34) & "--config=" & szScriptPath & "Temp\compiler_config.conf" & Chr(34)
+	nErr = RunApp(S, szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
+End If
+If nErr = 0 Then
+	nErr = Patch_Makefile()
+End If
+If nErr = 0 Then
+	nErr = Patch_RAND_WIN_C()
+End If
+If nErr <> 0 Then
+	WScript.Echo "Errors detected while preparing files."
+	WScript.Quit nErr
+End If
+
+
+'Compile
+RunApp "NMAKE clean", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, True
+
+WScript.Echo "Compiling..."
+nErr = RunApp("NMAKE /S build_generated", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
+If nErr = 0 Then
+	nErr = RunApp("NMAKE /S build_libs_nodep", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
+End If
+If nErr = 0 Then
+	nErr = RunApp("NMAKE /S build_engines_nodep", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
+	'nErr = RunApp("NMAKE /S build_modules_nodep", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
+End If
+
+If nErr <> 0 Then
+	WScript.Echo "Errors detected while compiling project."
+	WScript.Quit nErr
+End If
+
+'Pause 5 seconds because NMake's processes may still creating the lib WTF?????
+WScript.Sleep(5000)
+
+'Move needed files
+RunApp "MD " & Chr(34) & szObjDir & Chr(34), "", "", True
+RunApp "MD " & Chr(34) & szLibDir & Chr(34), "", "", True
+
+For I = 0 To 2
+	RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\" & aTargetFiles(I) & Chr(34) & " " & _
+											Chr(34) & szLibDir & Chr(34), "", "", False
+Next
+
+RunApp "MD " & Chr(34) & szScriptPath & "Generated" & Chr(34), "", "", True
+RunApp "MD " & Chr(34) & szScriptPath & "Generated\OpenSSL" & Chr(34), "", "", True
+
+RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\include\openssl\opensslconf.h" & Chr(34) & " " & _
+										Chr(34) & szScriptPath & "Generated\OpenSSL" & Chr(34), "", "", False
+
+'Clean after compile
+RunApp "NMAKE clean", szScriptPath & "Source", "", True
+
+WScript.Echo "Done!"
+WScript.Quit 0
+
 
 '-------------------------------------------------------------------------------
+
+Function CheckVisualStudioCommandPrompt
+Dim oShell
+
+	Set oShell = CreateObject("WScript.Shell")
+	If oShell.ExpandEnvironmentStrings("%VCINSTALLDIR%") <> "%VCINSTALLDIR%" Or _
+	    oShell.ExpandEnvironmentStrings("%VisualStudioVersion%") <> "%VisualStudioVersion%" Or _
+	    oShell.ExpandEnvironmentStrings("%MSBuildLoadMicrosoftTargetsReadOnly%") <> _
+	                                    "%MSBuildLoadMicrosoftTargetsReadOnly%" Then
+		CheckVisualStudioCommandPrompt = True
+	Else
+		CheckVisualStudioCommandPrompt = False
+	End If
+	Set oShell = Nothing
+End Function
 
 Function CheckForNewerFile(szFile, dtBuildDate)
 Dim oFile
 
 	CheckForNewerFile = False
-	Set oFile = objFS.getFile(szFile)
+	Set oFile = oFso.getFile(szFile)
 	If oFile.DateLastModified > dtBuildDate Then
 		WScript.Echo "File: " & Chr(34) & szFile & Chr(34) & " is newer... rebuilding"
 		CheckForNewerFile = True
 	End If
+	Set oFile = Nothing
 End Function
 
 Function CheckForNewerFiles(szFolder, dtBuildDate)
@@ -232,7 +254,7 @@ Dim f, oFolder
 Dim S, lS
 
 	CheckForNewerFiles = False
-	Set oFolder = objFS.GetFolder(szFolder)
+	Set oFolder = oFso.GetFolder(szFolder)
 	For Each f in oFolder.SubFolders
 		If CheckForNewerFiles(szFolder & "\" & f.name, dtBuildDate) <> False Then
 			CheckForNewerFiles = True
@@ -258,7 +280,7 @@ Dim S, lS
 End Function
 
 Function RunApp(szCmdLine, szCurFolder, szEnvPath, bHide)
-Dim oFso, oFile, oExec, oShell, objShellEnv
+Dim oFile, oExec, oShell, oShellEnv
 Dim I, nRet, szOutputFile
 
 	WScript.Echo "Running: " & szCmdLine
@@ -266,16 +288,14 @@ Dim I, nRet, szOutputFile
 	On Error Resume Next
 	If szCurFolder <> "" Then oShell.CurrentDirectory = szCurFolder
 	If szEnvPath <> "" Then
-		Set objShellEnv = objShell.Environment("PROCESS")
-		objShellEnv("PATH") = szEnvPath & ";" & objShellEnv("PATH")
+		Set oShellEnv = oShell.Environment("PROCESS")
+		oShellEnv("PATH") = szEnvPath & ";" & oShellEnv("PATH")
 	End If
 	If bHide = False Then
-		Set oFso = CreateObject("Scripting.FileSystemObject")
 		szOutputFile = oFso.GetSpecialFolder(2)
 		If Right(szOutputFile, 1) <> "\" Then szOutputFile = szOutputFile & "\"
 		szOutputFile = szOutputFile & oFso.GetTempName
-		szCmdLine = "CMD.EXE /S /C " & Chr(34) & szCmdLine & " > " & Chr(34) & szOutputFile & Chr(34) & " 2>&1" & _
-					Chr(34)
+		szCmdLine = "CMD.EXE /S /C " & Chr(34) & szCmdLine & " > " & Chr(34) & szOutputFile & Chr(34) & " 2>&1" & Chr(34)
 	Else
 		szCmdLine = "CMD.EXE /S /C " & Chr(34) & szCmdLine & Chr(34)
 	End If
@@ -291,6 +311,7 @@ Dim I, nRet, szOutputFile
 			On Error Resume Next
 			oFso.DeleteFile szOutputFile
 			On Error Goto 0
+			Set oFile = Nothing
 		End If
 	End If
 	RunApp = nRet
@@ -321,14 +342,14 @@ Dim I, S, nArea
 	objRE4.Global = False
 
 	On Error Resume Next
-	Set objInputFile = objFS.OpenTextFile(szScriptPath & "Source\Configurations\10-main.conf", 1)
+	Set objInputFile = oFso.OpenTextFile(szScriptPath & "Source\Configurations\10-main.conf", 1)
 	I = Err.Number
 	If I <> 0 Then
 		CreateConfiguration = I
 		On Error Goto 0
 		Exit Function
 	End If
-	Set objOutputFile = objFS.CreateTextFile(szScriptPath & "Temp\compiler_config.conf", True)
+	Set objOutputFile = oFso.CreateTextFile(szScriptPath & "Temp\compiler_config.conf", True)
 	I = Err.Number
 	If I <> 0 Then
 		CreateConfiguration = I
@@ -502,14 +523,14 @@ Dim I, S
 	objRE2.Global = False
 
 	On Error Resume Next
-	Set objInputFile = objFS.OpenTextFile(szScriptPath & "Source\crypto\rand\rand_win.c", 1)
+	Set objInputFile = oFso.OpenTextFile(szScriptPath & "Source\crypto\rand\rand_win.c", 1)
 	I = Err.Number
 	If I <> 0 Then
 		Patch_RAND_WIN_C = I
 		On Error Goto 0
 		Exit Function
 	End If
-	Set objOutputFile = objFS.CreateTextFile(szScriptPath & "Temp\rand_win.c", True)
+	Set objOutputFile = oFso.CreateTextFile(szScriptPath & "Temp\rand_win.c", True)
 	I = Err.Number
 	If I <> 0 Then
 		Patch_RAND_WIN_C = I
@@ -550,14 +571,14 @@ Dim objRE, objInputFile, objOutputFile
 Dim I, S, Pos
 
 	On Error Resume Next
-	Set objInputFile = objFS.OpenTextFile(szScriptPath & "Source\makefile", 1)
+	Set objInputFile = oFso.OpenTextFile(szScriptPath & "Source\makefile", 1)
 	I = Err.Number
 	If I <> 0 Then
 		Patch_Makefile = I
 		On Error Goto 0
 		Exit Function
 	End If
-	Set objOutputFile = objFS.CreateTextFile(szScriptPath & "Temp\makefile", True)
+	Set objOutputFile = oFso.CreateTextFile(szScriptPath & "Temp\makefile", True)
 	I = Err.Number
 	If I <> 0 Then
 		Patch_Makefile = I

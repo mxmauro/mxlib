@@ -44,14 +44,14 @@ static HRESULT GetPairA(_Inout_ LPCSTR &szSrcA, _Inout_ SIZE_T &nSrcLen, _In_ BO
 
 namespace MX {
 
-CHttpCookie::CHttpCookie() : CBaseMemObj()
+CHttpCookie::CHttpCookie() : TRefCounted<CBaseMemObj>()
 {
   nFlags = 0;
   nSameSite = SameSiteNone;
   return;
 }
 
-CHttpCookie::CHttpCookie(_In_ const CHttpCookie& cSrc) throw(...) : CBaseMemObj()
+CHttpCookie::CHttpCookie(_In_ const CHttpCookie& cSrc) throw(...) : TRefCounted<CBaseMemObj>()
 {
   nFlags = 0;
   nSameSite = SameSiteNone;
@@ -109,7 +109,7 @@ HRESULT CHttpCookie::SetName(_In_z_ LPCSTR szNameA)
 
   if (szNameA == NULL)
     return E_POINTER;
-  for (sA=szNameA; *sA!=0 && *sA!=';' && *sA!=',' && *((LPBYTE)sA)>32; sA++);
+  for (sA = szNameA; *sA != 0 && *sA != ';' && *sA != ',' && *((LPBYTE)sA) > 32; sA++);
   //for (sA=szNameA; *sA!=0 && CHttpCommon::IsValidNameChar(*sA)!=FALSE; sA++);
   if (*sA != 0)
     return E_INVALIDARG;
@@ -150,7 +150,7 @@ HRESULT CHttpCookie::SetValue(_In_z_ LPCSTR szValueA)
 
   if (szValueA == NULL)
     return E_POINTER;
-  for (sA=szValueA; *sA!=0 && *sA!=';'; sA++);
+  for (sA = szValueA; *sA != 0 && *sA != ';'; sA++);
   if (*sA != 0)
     return E_INVALIDARG;
   if (cStrTempA.Copy(szValueA) == FALSE)
@@ -181,7 +181,7 @@ HRESULT CHttpCookie::SetValue(_In_z_ LPCWSTR szValueW)
 
 LPCSTR CHttpCookie::GetValue() const
 {
-  return (LPSTR)cStrValueA;
+  return (LPCSTR)cStrValueA;
 }
 
 HRESULT CHttpCookie::GetValue(_Inout_ CStringW &cStrDestW)
@@ -196,7 +196,7 @@ HRESULT CHttpCookie::SetDomain(_In_z_ LPCSTR szDomainA)
 
   if (szDomainA == NULL)
     return E_POINTER;
-  for (sA=szDomainA; *sA!=0; sA++)
+  for (sA = szDomainA; *sA != 0; sA++)
   {
     if (*sA < 0x21 || *sA > 0x7E || *sA == '=' || *sA == ';' || *sA == ',')
       return E_INVALIDARG;
@@ -222,7 +222,7 @@ HRESULT CHttpCookie::SetDomain(_In_z_ LPCWSTR szDomainW)
 
 LPCSTR CHttpCookie::GetDomain() const
 {
-  return (LPSTR)cStrDomainA;
+  return (LPCSTR)cStrDomainA;
 }
 
 HRESULT CHttpCookie::GetDomain(_Inout_ CStringW &cStrDestW)
@@ -249,9 +249,9 @@ HRESULT CHttpCookie::SetPath(_In_z_ LPCSTR szPathA)
 
   if (szPathA == NULL)
     return E_POINTER;
-  for (sA=szPathA; *sA!=0; sA++)
+  for (sA = szPathA; *sA != 0; sA++)
   {
-    if (*sA < 0x21 || *sA > 0x7E || strchr("=;, \t", *sA) != NULL)
+    if (*sA < 0x21 || *sA > 0x7E || MX::StrChrA("=;, \t", *sA) != NULL)
       return E_INVALIDARG;
   }
   if (cStrTempA.Copy(szPathA) == FALSE)
@@ -275,7 +275,7 @@ HRESULT CHttpCookie::SetPath(_In_z_ LPCWSTR szPathW)
 
 LPCSTR CHttpCookie::GetPath() const
 {
-  return (LPSTR)cStrPathA;
+  return (LPCSTR)cStrPathA;
 }
 
 HRESULT CHttpCookie::GetPath(_Inout_ CStringW &cStrDestW)
@@ -587,7 +587,7 @@ HRESULT CHttpCookie::ParseFromResponseHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE
     {
       MX::CDateTime cExpireDt;
 
-      hRes = CHttpCommon::ParseDate(cExpireDt, (LPSTR)cStrTempValueA);
+      hRes = Http::ParseDate(cExpireDt, (LPSTR)cStrTempValueA);
       if (FAILED(hRes))
         return hRes;
       SetExpireDate(&cExpireDt);
@@ -633,7 +633,7 @@ HRESULT CHttpCookie::ParseFromResponseHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE
 
 //-----------------------------------------------------------
 
-CHttpCookieArray::CHttpCookieArray(_In_ const CHttpCookieArray& cSrc) throw(...) : TArrayListWithDelete<CHttpCookie*>()
+CHttpCookieArray::CHttpCookieArray(_In_ const CHttpCookieArray& cSrc) throw(...) : TArrayListWithRelease<CHttpCookie*>()
 {
   operator=(cSrc);
   return;
@@ -643,20 +643,17 @@ CHttpCookieArray& CHttpCookieArray::operator=(_In_ const CHttpCookieArray& cSrc)
 {
   if (this != &cSrc)
   {
-    TArrayListWithDelete<CHttpCookie*> aNewList;
-    TAutoDeletePtr<CHttpCookie> cNewCookie;
+    TArrayListWithRelease<CHttpCookie*> aNewList;
     SIZE_T i, nCount;
 
     nCount = cSrc.GetCount();
     for (i = 0; i < nCount; i++)
     {
-      cNewCookie.Attach(MX_DEBUG_NEW CHttpCookie());
-      if (!cNewCookie)
+      CHttpCookie *lpCookie = cSrc.GetElementAt(i);
+
+      if (AddElement(lpCookie) == FALSE)
         throw (LONG)E_OUTOFMEMORY;
-      *(cNewCookie.Get()) = *(cSrc.GetElementAt(i));
-      if (AddElement(cNewCookie.Get()) == FALSE)
-        throw (LONG)E_OUTOFMEMORY;
-      cNewCookie.Detach();
+      lpCookie->AddRef();
     }
     this->Transfer(aNewList);
   }
@@ -666,7 +663,7 @@ CHttpCookieArray& CHttpCookieArray::operator=(_In_ const CHttpCookieArray& cSrc)
 HRESULT CHttpCookieArray::ParseFromRequestHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen)
 {
   CStringA cStrNameA, cStrValueA;
-  TAutoDeletePtr<CHttpCookie> cCookie;
+  TAutoRefCounted<CHttpCookie> cCookie;
   HRESULT hRes;
 
   if (nSrcLen == (SIZE_T)-1)
@@ -704,49 +701,74 @@ HRESULT CHttpCookieArray::ParseFromRequestHeader(_In_z_ LPCSTR szSrcA, _In_opt_ 
   return S_OK;
 }
 
-HRESULT CHttpCookieArray::Update(_In_ const CHttpCookieArray& cSrc, _In_ BOOL bReplaceExisting)
+SIZE_T CHttpCookieArray::Find(_In_z_ LPCSTR szNameA) const
+{
+  SIZE_T i, nCount;
+
+  if (szNameA == NULL || *szNameA == 0)
+    return (SIZE_T)-1;
+  nCount = GetCount();
+  for (i = 0; i < nCount; i++)
+  {
+    if (StrCompareA(GetElementAt(i)->GetName(), szNameA, TRUE) == 0)
+      return i;
+  }
+  return (SIZE_T)-1;
+}
+
+SIZE_T CHttpCookieArray::Find(_In_z_ LPCWSTR szNameW) const
+{
+  SIZE_T i, nCount;
+
+  if (szNameW == NULL || *szNameW == 0)
+    return (SIZE_T)-1;
+  nCount = GetCount();
+  for (i = 0; i < nCount; i++)
+  {
+    if (StrCompareAW(GetElementAt(i)->GetName(), szNameW, TRUE) == 0)
+      return i;
+  }
+  return (SIZE_T)-1;
+}
+
+HRESULT CHttpCookieArray::Merge(_In_ const CHttpCookieArray& cSrc, _In_ BOOL bReplaceExisting)
 {
   SIZE_T i, nCount;
   HRESULT hRes;
 
   hRes = S_OK;
   nCount = cSrc.GetCount();
-  for (i=0; SUCCEEDED(hRes) && i<nCount; i++)
-    hRes = Update(*cSrc.GetElementAt(i), bReplaceExisting);
+  for (i = 0; SUCCEEDED(hRes) && i < nCount; i++)
+  {
+    hRes = Merge(cSrc.GetElementAt(i), bReplaceExisting);
+    if (hRes == MX_E_AlreadyExists)
+      hRes = S_OK;
+  }
   return hRes;
 }
 
-HRESULT CHttpCookieArray::Update(_In_ const CHttpCookie& cSrc, _In_ BOOL bReplaceExisting)
+HRESULT CHttpCookieArray::Merge(_In_ CHttpCookie *lpSrc, _In_ BOOL bReplaceExisting)
 {
-  TAutoDeletePtr<CHttpCookie> cNewCookie;
   SIZE_T nIdx, nCount;
-  HRESULT hRes;
 
-  hRes = S_OK;
+  if (lpSrc == NULL)
+    return E_POINTER;
+
   nCount = GetCount();
-  for (nIdx=0; nIdx<nCount; nIdx++)
+  for (nIdx = 0; nIdx < nCount; nIdx++)
   {
-    if (StrCompareA(cSrc.GetName(), GetElementAt(nIdx)->GetName(), TRUE) == 0)
+    if (StrCompareA(lpSrc->GetName(), GetElementAt(nIdx)->GetName(), TRUE) == 0)
     {
       if (bReplaceExisting == FALSE)
-        return S_OK;
+        return MX_E_AlreadyExists;
       break;
     }
   }
-  cNewCookie.Attach(MX_DEBUG_NEW CHttpCookie());
-  if (!cNewCookie)
+
+  if (AddElement(lpSrc) == FALSE)
     return E_OUTOFMEMORY;
-  try
-  {
-    *(cNewCookie.Get()) = cSrc;
-  }
-  catch (LONG hr)
-  {
-    return hr;
-  }
-  if (AddElement(cNewCookie.Get()) == FALSE)
-    return E_OUTOFMEMORY;
-  cNewCookie.Detach();
+  lpSrc->AddRef();
+
   if (nIdx < nCount)
     RemoveElementAt(nIdx);
   //done
@@ -775,14 +797,19 @@ HRESULT CHttpCookieArray::RemoveExpiredAndInvalid(_In_opt_ const CDateTime *lpDa
       return hRes;
     lpDate = &cTempDt;
   }
+
   nCount = GetCount();
   while (nCount > 0)
   {
     lpCookie = GetElementAt(--nCount);
     if (lpCookie->GetName()[0] == 0 || lpCookie->GetValue()[0] == 0 ||
         lpCookie->HasExpired(lpDate) == S_OK)
+    {
       RemoveElementAt(nCount);
+    }
   }
+
+  //done
   return S_OK;
 }
 

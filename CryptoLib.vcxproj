@@ -23,6 +23,7 @@
     <ClInclude Include="Include\Crypto\Base64.h" />
     <ClInclude Include="Include\Crypto\EncryptionKey.h" />
     <ClInclude Include="Include\Crypto\SecureBuffer.h" />
+    <ClInclude Include="Include\Crypto\SecureRandom.h" />
     <ClInclude Include="Include\Crypto\SymmetricCipher.h" />
     <ClInclude Include="Include\Crypto\MessageDigest.h" />
     <ClInclude Include="Source\Crypto\InitOpenSSL.h" />
@@ -32,6 +33,7 @@
     <ClCompile Include="Source\Crypto\Base64.cpp" />
     <ClCompile Include="Source\Crypto\EncryptionKey.cpp" />
     <ClCompile Include="Source\Crypto\SecureBuffer.cpp" />
+    <ClCompile Include="Source\Crypto\SecureRandom.cpp" />
     <ClCompile Include="Source\Crypto\SymmetricCipher.cpp" />
     <ClCompile Include="Source\Crypto\MessageDigest.cpp" />
     <ClCompile Include="Source\Crypto\InitOpenSSL.cpp" />

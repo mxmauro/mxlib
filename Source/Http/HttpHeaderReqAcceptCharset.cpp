@@ -19,6 +19,7 @@
  */
 #include "..\..\Include\Http\HttpHeaderReqAcceptCharset.h"
 #include <stdlib.h>
+#include "..\..\Include\AutoPtr.h"
 
 //-----------------------------------------------------------
 
@@ -38,10 +39,10 @@ CHttpHeaderReqAcceptCharset::~CHttpHeaderReqAcceptCharset()
   return;
 }
 
-HRESULT CHttpHeaderReqAcceptCharset::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderReqAcceptCharset::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
   CCharset *lpCharset;
-  LPCSTR szStartA;
+  LPCSTR szValueEndA, szStartA;
   CStringA cStrTempA;
   BOOL bGotItem;
   double nDbl;
@@ -49,17 +50,22 @@ HRESULT CHttpHeaderReqAcceptCharset::Parse(_In_z_ LPCSTR szValueA)
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //parse
   bGotItem = FALSE;
   do
   {
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
-    if (*szValueA == 0)
+    szValueA = SkipSpaces(szValueA, szValueEndA);
+    if (szValueA >= szValueEndA)
       break;
 
     //charset
-    szValueA = SkipUntil(szStartA = szValueA, ";, \t");
+    szValueA = SkipUntil(szStartA = szValueA, szValueEndA, ";, \t");
     if (szValueA == szStartA)
       goto skip_null_listitem;
 
@@ -71,29 +77,31 @@ HRESULT CHttpHeaderReqAcceptCharset::Parse(_In_z_ LPCSTR szValueA)
       return hRes;
 
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
+    szValueA = SkipSpaces(szValueA, szValueEndA);
 
     //parameter
-    if (*szValueA == ';')
+    if (szValueA < szValueEndA && *szValueA == ';')
     {
       //skip spaces
-      szValueA = SkipSpaces(szValueA + 1);
-      if (*szValueA++ != 'q')
+      szValueA = SkipSpaces(szValueA + 1, szValueEndA);
+      if (szValueA >= szValueEndA || *szValueA != 'q')
         return MX_E_InvalidData;
+      szValueA++;
 
       //skip spaces
-      szValueA = SkipSpaces(szValueA);
+      szValueA = SkipSpaces(szValueA, szValueEndA);
 
       //is equal sign?
-      if (*szValueA++ != '=')
+      if (szValueA >= szValueEndA || *szValueA != '=')
         return MX_E_InvalidData;
+      szValueA++;
 
       //skip spaces
-      szValueA = SkipSpaces(szValueA);
+      szValueA = SkipSpaces(szValueA, szValueEndA);
 
       //parse value
       szStartA = szValueA;
-      while ((*szValueA >= '0' && *szValueA <= '9') || *szValueA == '.')
+      while (szValueA < szValueEndA && ((*szValueA >= '0' && *szValueA <= '9') || *szValueA == '.'))
         szValueA++;
       hRes = StrToDoubleA(szStartA, (SIZE_T)(szValueA - szStartA), &nDbl);
       if (SUCCEEDED(hRes))
@@ -104,30 +112,38 @@ HRESULT CHttpHeaderReqAcceptCharset::Parse(_In_z_ LPCSTR szValueA)
 
 skip_null_listitem:
     //skip spaces
-    szValueA = SkipSpaces(szValueA);
+    szValueA = SkipSpaces(szValueA, szValueEndA);
 
     //check for separator or end
-    if (*szValueA == ',')
-      szValueA++;
-    else if (*szValueA != 0)
-      return MX_E_InvalidData;
+    if (szValueA < szValueEndA)
+    {
+      if (*szValueA == ',')
+        szValueA++;
+      else
+        return MX_E_InvalidData;
+    }
   }
-  while (*szValueA != 0);
+  while (szValueA < szValueEndA);
+
+  //do we got one?
+  if (bGotItem == FALSE)
+    return MX_E_InvalidData;
+
   //done
-  return (bGotItem != FALSE) ? S_OK : MX_E_InvalidData;
+  return S_OK;
 }
 
-HRESULT CHttpHeaderReqAcceptCharset::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderReqAcceptCharset::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   CStringA cStrTempA;
   SIZE_T i, nCount;
   CCharset *lpCharset;
 
   cStrDestA.Empty();
-  nCount = cCharsetsList.GetCount();
+  nCount = aCharsetsList.GetCount();
   for (i = 0; i < nCount; i++)
   {
-    lpCharset = cCharsetsList.GetElementAt(i);
+    lpCharset = aCharsetsList.GetElementAt(i);
     if (cStrDestA.IsEmpty() == FALSE)
     {
       if (cStrDestA.ConcatN(",", 1) == FALSE)
@@ -170,17 +186,17 @@ HRESULT CHttpHeaderReqAcceptCharset::AddCharset(_In_z_ LPCSTR szCharsetA, _In_op
   if (FAILED(hRes))
     return hRes;
   //check if already exists in list
-  nCount = cCharsetsList.GetCount();
+  nCount = aCharsetsList.GetCount();
   for (i = 0; i < nCount; i++)
   {
-    if (StrCompareA(cCharsetsList[i]->GetCharset(), cNewCharset->GetCharset(), TRUE) == 0)
+    if (StrCompareA(aCharsetsList[i]->GetCharset(), cNewCharset->GetCharset(), TRUE) == 0)
     {
-      cCharsetsList.RemoveElementAt(i); //remove previous definition
+      aCharsetsList.RemoveElementAt(i); //remove previous definition
       break;
     }
   }
   //add to list
-  if (cCharsetsList.AddElement(cNewCharset.Get()) == FALSE)
+  if (aCharsetsList.AddElement(cNewCharset.Get()) == FALSE)
     return E_OUTOFMEMORY;
   //done
   if (lplpCharset != NULL)
@@ -192,12 +208,12 @@ HRESULT CHttpHeaderReqAcceptCharset::AddCharset(_In_z_ LPCSTR szCharsetA, _In_op
 
 SIZE_T CHttpHeaderReqAcceptCharset::GetCharsetsCount() const
 {
-  return cCharsetsList.GetCount();
+  return aCharsetsList.GetCount();
 }
 
 CHttpHeaderReqAcceptCharset::CCharset* CHttpHeaderReqAcceptCharset::GetCharset(_In_ SIZE_T nIndex) const
 {
-  return (nIndex < cCharsetsList.GetCount()) ? cCharsetsList.GetElementAt(nIndex) : NULL;
+  return (nIndex < aCharsetsList.GetCount()) ? aCharsetsList.GetElementAt(nIndex) : NULL;
 }
 
 CHttpHeaderReqAcceptCharset::CCharset* CHttpHeaderReqAcceptCharset::GetCharset(_In_z_ LPCSTR szCharsetA) const
@@ -206,14 +222,68 @@ CHttpHeaderReqAcceptCharset::CCharset* CHttpHeaderReqAcceptCharset::GetCharset(_
 
   if (szCharsetA != NULL && *szCharsetA != 0)
   {
-    nCount = cCharsetsList.GetCount();
+    nCount = aCharsetsList.GetCount();
     for (i = 0; i < nCount; i++)
     {
-      if (StrCompareA(cCharsetsList[i]->GetCharset(), szCharsetA, TRUE) == 0)
-        return cCharsetsList.GetElementAt(i);
+      if (StrCompareA(aCharsetsList[i]->GetCharset(), szCharsetA, TRUE) == 0)
+        return aCharsetsList.GetElementAt(i);
     }
   }
   return NULL;
+}
+
+HRESULT CHttpHeaderReqAcceptCharset::Merge(_In_ CHttpHeaderBase *_lpHeader)
+{
+  CHttpHeaderReqAcceptCharset *lpHeader = reinterpret_cast<CHttpHeaderReqAcceptCharset*>(_lpHeader);
+  SIZE_T i, nCount, nThisIndex, nThisCount;
+
+  nCount = lpHeader->aCharsetsList.GetCount();
+  nThisCount = aCharsetsList.GetCount();
+  for (i = 0; i < nCount; i++)
+  {
+    CCharset *lpCharset = lpHeader->aCharsetsList.GetElementAt(i);
+
+    for (nThisIndex = 0; nThisIndex < nThisCount; nThisIndex++)
+    {
+      CCharset *lpThisCharset = aCharsetsList.GetElementAt(nThisIndex);
+
+      if (StrCompareA((LPCSTR)(lpCharset->cStrCharsetA), (LPCSTR)(lpThisCharset->cStrCharsetA), TRUE) == 0)
+        break;
+    }
+    if (nThisIndex < nThisCount)
+    {
+      //have a match, add/replace parameters
+      CCharset *lpThisCharset = aCharsetsList.GetElementAt(nThisIndex);
+
+      lpThisCharset->q = lpCharset->q;
+    }
+    else
+    {
+      TAutoDeletePtr<CCharset> cNewCharset;
+
+      //add a duplicate
+      cNewCharset.Attach(MX_DEBUG_NEW CCharset());
+      if (!cNewCharset)
+        return E_OUTOFMEMORY;
+      try
+      {
+        *(cNewCharset.Get()) = *lpCharset;
+      }
+      catch (LONG hr)
+      {
+        return (HRESULT)hr;
+      }
+
+      //add to list
+      if (aCharsetsList.AddElement(cNewCharset.Get()) == FALSE)
+        return E_OUTOFMEMORY;
+      cNewCharset.Detach();
+      nThisCount++;
+    }
+  }
+
+  //done
+  return S_OK;
 }
 
 //-----------------------------------------------------------
@@ -228,6 +298,22 @@ CHttpHeaderReqAcceptCharset::CCharset::CCharset() : CBaseMemObj()
 CHttpHeaderReqAcceptCharset::CCharset::~CCharset()
 {
   return;
+}
+
+CHttpHeaderReqAcceptCharset::CCharset&
+CHttpHeaderReqAcceptCharset::CCharset::operator=(_In_ const CHttpHeaderReqAcceptCharset::CCharset &cSrc) throw(...)
+{
+  if (this != &cSrc)
+  {
+    CStringA cStrTempCharsetA;
+
+    if (cStrTempCharsetA.CopyN((LPCSTR)(cSrc.cStrCharsetA), cSrc.cStrCharsetA.GetLength()) == FALSE)
+      throw (LONG)E_OUTOFMEMORY;
+
+    cStrCharsetA.Attach(cStrTempCharsetA.Detach());
+    q = cSrc.q;
+  }
+  return *this;
 }
 
 HRESULT CHttpHeaderReqAcceptCharset::CCharset::SetCharset(_In_z_ LPCSTR szCharsetA, _In_opt_ SIZE_T nCharsetLen)
@@ -247,7 +333,7 @@ HRESULT CHttpHeaderReqAcceptCharset::CCharset::SetCharset(_In_z_ LPCSTR szCharse
   //get language
   if (*szCharsetA != '*')
   {
-    szCharsetA = CHttpHeaderBase::GetToken(szCharsetA, nCharsetLen);
+    szCharsetA = CHttpHeaderBase::GetToken(szCharsetA, szCharsetEndA);
   }
   else
   {
@@ -255,9 +341,11 @@ HRESULT CHttpHeaderReqAcceptCharset::CCharset::SetCharset(_In_z_ LPCSTR szCharse
   }
   if (szCharsetA != szCharsetEndA)
     return MX_E_InvalidData;
+
   //set new value
-  if (cStrCharsetA.CopyN(szStartA, (SIZE_T)(szCharsetEndA - szStartA)) == FALSE)
+  if (cStrCharsetA.CopyN(szStartA, nCharsetLen) == FALSE)
     return E_OUTOFMEMORY;
+
   //done
   return S_OK;
 }

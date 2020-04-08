@@ -4,13 +4,19 @@
 '
 
 Option Explicit
-Dim szScriptPath, szFileName
-Dim szPythonPath, szOrigFolder
-Dim I, S, dtBuildDate, aTargetFiles, bRebuild
-Dim objFS, oFile
+Dim oFso, oFile
+Dim szScriptPath, szFileName, szPythonPath, szOrigFolder
+Dim I, nErr, S, dtBuildDate, aTargetFiles, bRebuild
 
 
-Set objFS = CreateObject("Scripting.FileSystemObject")
+Set oFso = CreateObject("Scripting.FileSystemObject")
+
+'Check if inside a Visual Studio environment
+If CheckVisualStudioCommandPrompt() = False Then
+	WScript.Echo "Error: Run this script inside Visual Studio."
+	WScript.Quit 1
+End If
+
 
 'Check command-line arguments
 bRebuild = False
@@ -37,31 +43,33 @@ Do While I < WScript.Arguments.Count
 Loop
 
 'Setup directorie
-szScriptPath = Left(Wscript.ScriptFullName, Len(Wscript.ScriptFullName)-Len(Wscript.ScriptName))
+szScriptPath = Left(Wscript.ScriptFullName, Len(Wscript.ScriptFullName) - Len(Wscript.ScriptName))
 szPythonPath = szScriptPath & "..\..\..\Utilities\Python27"
 
+
 'Check if we have to rebuild the libraries
-aTargetFiles = Array("Source\dist\duktape.c", "Source\dist\duktape.h", "Source\dist\duk_config.h", "Source\dist\duk_source_meta.json")
+aTargetFiles = Array("Source\dist\duktape.c", "Source\dist\duktape.h", "Source\dist\duk_config.h", _
+                     "Source\dist\duk_source_meta.json")
 If bRebuild = False Then
 	WScript.Echo "Checking if source files were modified..."
 	For I = 0 To 3
 		szFileName = szScriptPath & "\" & aTargetFiles(I)
-		If objFS.FileExists(szFileName) = False Then
+		If oFso.FileExists(szFileName) = False Then
 			WScript.Echo "Library " & Chr(34) & aTargetFiles(I) & Chr(34) & " was not found... rebuilding"
 			bRebuild = True
 			Exit For
 		End If
-		Set oFile = objFS.getFile(szFileName)
+		Set oFile = oFso.getFile(szFileName)
 		If I = 0 Then
 			dtBuildDate = oFile.DateLastModified
 		Else
 			If oFile.DateLastModified < dtBuildDate Then dtBuildDate = oFile.DateLastModified
 		End If
+		Set oFile = Nothing
 	Next
 End If
 
 If bRebuild = False Then
-
 	If CheckForNewerFile(szScriptPath & "duk_custom.h", dtBuildDate) <> False Or _
 	        CheckForNewerFile(szScriptPath & "build.vbs", dtBuildDate) <> False Or _
 	        CheckForNewerFiles(szScriptPath & "Source\config", dtBuildDate) <> False Or _
@@ -70,41 +78,60 @@ If bRebuild = False Then
 	End If
 End If
 
-'Rebuild
-If bRebuild <> False Then
-	WScript.Echo "Building..."
-
-	RunApp "RD /S /Q " & Chr(34) & szScriptPath & "Source\dist" & Chr(34), szScriptPath & "Source", "", True
-	RunApp "MD " & Chr(34) & szScriptPath & "Source\dist" & Chr(34), szScriptPath & "Source", "", True
-
-	S = Chr(34) & szPythonPath & "\python.exe" & Chr(34) & " " & Chr(34) & szScriptPath & "Source\tools\configure.py" & Chr(34)
-	S = S & " --fixup-file " & Chr(34) & szScriptPath & "duk_custom.h" & Chr(34) & " --output-directory " & Chr(34) & szScriptPath & "Source\dist" & Chr(34)
-	I = RunApp(S, szScriptPath & "Source", "", False)
-	If I = 0 Then
-		'Pause 5 seconds because Python's processes may still creating the lib WTF?????
-		WScript.Sleep(5000)
-
-		'Copy needed files
-		RunApp "MD " & Chr(34) & szScriptPath & "..\..\..\Include\JsLib\DukTape" & Chr(34), szScriptPath & "Source", "", True
-		RunApp "COPY /Y " & Chr(34) & szScriptPath & "Source\dist\duk_config.h" & Chr(34) & " " & Chr(34) & szScriptPath & "..\..\..\Include\JsLib\DukTape" & Chr(34), szScriptPath & "Source", "", False
-		RunApp "COPY /Y " & Chr(34) & szScriptPath & "Source\dist\duktape.h" & Chr(34) & " " & Chr(34) & szScriptPath & "..\..\..\Include\JsLib\DukTape" & Chr(34), szScriptPath & "Source", "", False
-	Else
-		WScript.Echo "Errors detected while building distributable files."
-	End If
-
-Else
+'Rebuild?
+If bRebuild = False Then
 	WScript.Echo "Distributable files are up-to-date"
-	I = 0
+	WScript.Quit 0
 End If
-WScript.Quit I
+
+'Start rebuilding
+WScript.Echo "Building..."
+
+RunApp "RD /S /Q " & Chr(34) & szScriptPath & "Source\dist" & Chr(34), szScriptPath & "Source", "", True
+RunApp "MD " & Chr(34) & szScriptPath & "Source\dist" & Chr(34), szScriptPath & "Source", "", True
+
+S = Chr(34) & szPythonPath & "\python.exe" & Chr(34) & " " & Chr(34) & szScriptPath & "Source\tools\configure.py" & Chr(34)
+S = S & " --fixup-file " & Chr(34) & szScriptPath & "duk_custom.h" & Chr(34) & " --output-directory " & Chr(34) & szScriptPath & "Source\dist" & Chr(34)
+nErr = RunApp(S, szScriptPath & "Source", "", False)
+If nErr <> 0 Then
+	WScript.Echo "Errors detected while building distributable files."
+	WScript.Quit nErr
+End If
+
+'Pause 5 seconds because Python's processes may still creating the lib WTF?????
+WScript.Sleep(5000)
+
+'Copy needed files
+RunApp "MD " & Chr(34) & szScriptPath & "..\..\..\Include\JsLib\DukTape" & Chr(34), szScriptPath & "Source", "", True
+RunApp "COPY /Y " & Chr(34) & szScriptPath & "Source\dist\duk_config.h" & Chr(34) & " " & Chr(34) & szScriptPath & "..\..\..\Include\JsLib\DukTape" & Chr(34), szScriptPath & "Source", "", False
+RunApp "COPY /Y " & Chr(34) & szScriptPath & "Source\dist\duktape.h" & Chr(34) & " " & Chr(34) & szScriptPath & "..\..\..\Include\JsLib\DukTape" & Chr(34), szScriptPath & "Source", "", False
+
+WScript.Echo "Done!"
+WScript.Quit 0
+
 
 '-------------------------------------------------------------------------------
+
+Function CheckVisualStudioCommandPrompt
+Dim oShell
+
+	Set oShell = CreateObject("WScript.Shell")
+	If oShell.ExpandEnvironmentStrings("%VCINSTALLDIR%") <> "%VCINSTALLDIR%" Or _
+	    oShell.ExpandEnvironmentStrings("%VisualStudioVersion%") <> "%VisualStudioVersion%" Or _
+	    oShell.ExpandEnvironmentStrings("%MSBuildLoadMicrosoftTargetsReadOnly%") <> _
+	                                    "%MSBuildLoadMicrosoftTargetsReadOnly%" Then
+		CheckVisualStudioCommandPrompt = True
+	Else
+		CheckVisualStudioCommandPrompt = False
+	End If
+	Set oShell = Nothing
+End Function
 
 Function CheckForNewerFile(szFile, dtBuildDate)
 Dim oFile
 
 	CheckForNewerFile = False
-	Set oFile = objFS.getFile(szFile)
+	Set oFile = oFso.getFile(szFile)
 	If oFile.DateLastModified > dtBuildDate Then
 		WScript.Echo "File: " & Chr(34) & szFile & Chr(34) & " is newer... rebuilding"
 		CheckForNewerFile = True
@@ -115,7 +142,7 @@ Function CheckForNewerFiles(szFolder, dtBuildDate)
 Dim f, oFolder
 
 	CheckForNewerFiles = False
-	Set oFolder = objFS.GetFolder(szFolder)
+	Set oFolder = oFso.GetFolder(szFolder)
 	For Each f in oFolder.SubFolders
 		If CheckForNewerFiles(szFolder & "\" & f.name, dtBuildDate) <> False Then
 			CheckForNewerFiles = True
@@ -131,7 +158,7 @@ Dim f, oFolder
 End Function
 
 Function RunApp(szCmdLine, szCurFolder, szEnvPath, bHide)
-Dim oFso, oFile, oExec, oShell, objShellEnv
+Dim oFile, oExec, oShell, oShellEnv
 Dim I, nRet, szOutputFile
 
 	WScript.Echo "Running: " & szCmdLine
@@ -139,11 +166,10 @@ Dim I, nRet, szOutputFile
 	On Error Resume Next
 	If szCurFolder <> "" Then oShell.CurrentDirectory = szCurFolder
 	If szEnvPath <> "" Then
-		Set objShellEnv = objShell.Environment("PROCESS")
-		objShellEnv("PATH") = szEnvPath & ";" & objShellEnv("PATH")
+		Set oShellEnv = oShell.Environment("PROCESS")
+		oShellEnv("PATH") = szEnvPath & ";" & oShellEnv("PATH")
 	End If
 	If bHide = False Then
-		Set oFso = CreateObject("Scripting.FileSystemObject")
 		szOutputFile = oFso.GetSpecialFolder(2)
 		If Right(szOutputFile, 1) <> "\" Then szOutputFile = szOutputFile & "\"
 		szOutputFile = szOutputFile & oFso.GetTempName

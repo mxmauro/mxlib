@@ -145,6 +145,8 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
                                        CJavascriptVM::PropertyFlagEnumerable);
   __EXIT_ON_ERROR(hRes);
   lpUrl = lpRequest->GetUrl();
+  if (lpUrl == NULL)
+    return E_UNEXPECTED;
   //host
   hRes = Utf8_Encode(cStrTempA, lpUrl->GetHost());
   __EXIT_ON_ERROR(hRes);
@@ -227,15 +229,17 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
   hRes = cJVM->CreateObject("request.headers");
   __EXIT_ON_ERROR(hRes);
 
-  nCount = lpRequest->GetRequestHeadersCount();
-  for (i = 0; i < nCount; i++)
+  for (i = 0; ; i++)
   {
-    CHttpHeaderBase *lpHdr;
+    TAutoRefCounted<CHttpHeaderBase> cHeader;
 
-    lpHdr = lpRequest->GetRequestHeader(i);
-    hRes = lpHdr->Build(cStrTempA, lpRequest->GetBrowser());
+    cHeader.Attach(lpRequest->GetRequestHeader(i));
+    if (!cHeader)
+      break;
+
+    hRes = cHeader->Build(cStrTempA, lpRequest->GetBrowser());
     __EXIT_ON_ERROR(hRes);
-    hRes = cJVM->AddObjectStringProperty("request.headers", lpHdr->GetHeaderName(), (LPCSTR)cStrTempA,
+    hRes = cJVM->AddObjectStringProperty("request.headers", cHeader->GetHeaderName(), (LPCSTR)cStrTempA,
                                          CJavascriptVM::PropertyFlagEnumerable);
     __EXIT_ON_ERROR(hRes);
   }
@@ -243,13 +247,15 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
   //add cookies
   hRes = cJVM->CreateObject("request.cookies");
   __EXIT_ON_ERROR(hRes);
-  nCount = lpRequest->GetRequestCookiesCount();
-  for (i = 0; i < nCount; i++)
+  for (i = 0; ; i++)
   {
-    CHttpCookie *lpCookie;
+    TAutoRefCounted<CHttpCookie> cCookie;
 
-    lpCookie = lpRequest->GetRequestCookie(i);
-    if (cStrTempA.Copy(lpCookie->GetName()) == FALSE)
+    cCookie.Attach(lpRequest->GetRequestCookie(i));
+    if (!cCookie)
+      break;
+
+    if (cStrTempA.Copy(cCookie->GetName()) == FALSE)
       return E_OUTOFMEMORY;
     for (LPSTR sA = (LPSTR)cStrTempA; *sA != 0; sA++)
     {
@@ -260,7 +266,7 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
     if (hRes == S_FALSE)
     {
       //don't add duplicates
-      hRes = cJVM->AddObjectStringProperty("request.cookies", (LPCSTR)cStrTempA, lpCookie->GetValue(),
+      hRes = cJVM->AddObjectStringProperty("request.cookies", (LPCSTR)cStrTempA, cCookie->GetValue(),
                                            CJavascriptVM::PropertyFlagEnumerable);
     }
     __EXIT_ON_ERROR(hRes);
@@ -308,6 +314,28 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
         hRes = InsertPostFileField(*cJVM, lpParser->GetFileField(i), "request.files");
         __EXIT_ON_ERROR(hRes);
       }
+    }
+    else if (StrCompareA(cBodyParser->GetType(), "application/json") == 0)
+    {
+      CHttpBodyParserJSON *lpParser = (CHttpBodyParserJSON*)(cBodyParser.Get());
+
+      rapidjson::Document &d = lpParser->GetDocument();
+
+      hRes = cJVM->CreateObject("request.json");
+      __EXIT_ON_ERROR(hRes);
+
+      hRes = cJVM->RunNativeProtectedAndGetError(0, 0, [this, &d](_In_ DukTape::duk_context *lpCtx) -> VOID
+      {
+        const rapidjson::Value *v;
+
+        DukTape::duk_push_global_object(lpCtx);
+        DukTape::duk_get_prop_string(lpCtx, -1, "request");
+        v = &d;
+        ParseJsonBody(lpCtx, (LPVOID)v, "json", 0);
+        DukTape::duk_pop_2(lpCtx);
+        return;
+      });
+      __EXIT_ON_ERROR(hRes);
     }
   }
 
@@ -392,6 +420,133 @@ HRESULT CJsHttpServer::CJvmManager::InsertPostFileField(_In_ CJavascriptVM &cJvm
     lpJsObj->Release();
   }
   return hRes;
+}
+
+VOID CJsHttpServer::CJvmManager::ParseJsonBody(_In_ DukTape::duk_context *lpCtx, _In_ LPVOID _v,
+                                               _In_opt_z_ LPCSTR szPropNameA,
+                                               _In_ DukTape::duk_uarridx_t nArrayIndex) throw()
+{
+  const rapidjson::Value *v = (const rapidjson::Value*)_v;
+
+  switch (v->GetType())
+  {
+    case rapidjson::kNullType:
+      DukTape::duk_push_null(lpCtx);
+
+      if (szPropNameA != NULL)
+        DukTape::duk_put_prop_string(lpCtx, -2, szPropNameA);
+      else
+        DukTape::duk_put_prop_index(lpCtx, -2, nArrayIndex);
+      break;
+
+    case rapidjson::kFalseType:
+    case rapidjson::kTrueType:
+      DukTape::duk_push_boolean(lpCtx, ((v->GetType() == rapidjson::kFalseType) ? 0 : 1));
+
+      if (szPropNameA != NULL)
+        DukTape::duk_put_prop_string(lpCtx, -2, szPropNameA);
+      else
+        DukTape::duk_put_prop_index(lpCtx, -2, nArrayIndex);
+      break;
+
+    case rapidjson::kStringType:
+      DukTape::duk_push_string(lpCtx, v->GetString());
+
+      if (szPropNameA != NULL)
+        DukTape::duk_put_prop_string(lpCtx, -2, szPropNameA);
+      else
+        DukTape::duk_put_prop_index(lpCtx, -2, nArrayIndex);
+      break;
+
+    case rapidjson::kNumberType:
+      if (v->IsInt() != false)
+      {
+        DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)(v->GetInt()));
+      }
+      else if (v->IsLosslessDouble() != false)
+      {
+        DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)(v->GetDouble()));
+      }
+      else
+      {
+        HRESULT hRes;
+
+        hRes = CJavascriptVM::AddBigIntegerSupport(lpCtx);
+        if (FAILED(hRes))
+          MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+
+        //push big number constructor
+        DukTape::duk_push_global_object(lpCtx);
+        DukTape::duk_get_prop_string(lpCtx, -1, "BigInteger");
+        DukTape::duk_remove(lpCtx, -2);
+
+        //push argument
+        if (v->IsUint64())
+        {
+          DukTape::duk_push_sprintf(lpCtx, "%I64u", v->GetUint64());
+        }
+        else if (v->IsInt64())
+        {
+          DukTape::duk_push_sprintf(lpCtx, "%I64d", v->GetInt64());
+        }
+        else
+        {
+          MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_Unsupported);
+        }
+
+        //create object
+        DukTape::duk_new(lpCtx, 1);
+      }
+
+      if (szPropNameA != NULL)
+        DukTape::duk_put_prop_string(lpCtx, -2, szPropNameA);
+      else
+        DukTape::duk_put_prop_index(lpCtx, -2, nArrayIndex);
+      break;
+
+    case rapidjson::kObjectType:
+      {
+      rapidjson::Value::ConstObject o = v->GetObjectW();
+
+      DukTape::duk_push_object(lpCtx);
+
+      for (rapidjson::Value::ConstMemberIterator it = o.MemberBegin(); it != o.MemberEnd(); ++it)
+      {
+        const rapidjson::Value *v = &(it->value);
+
+        ParseJsonBody(lpCtx, (LPVOID)v, it->name.GetString(), 0);
+      }
+
+      if (szPropNameA != NULL)
+        DukTape::duk_put_prop_string(lpCtx, -2, szPropNameA);
+      else
+        DukTape::duk_put_prop_index(lpCtx, -2, nArrayIndex);
+      }
+      break;
+
+    case rapidjson::kArrayType:
+      {
+      rapidjson::Value::ConstArray a = v->GetArray();
+      DukTape::duk_uarridx_t nIdx;
+
+      DukTape::duk_push_array(lpCtx);
+
+      nIdx = 0;
+      for (rapidjson::Value::ConstValueIterator it = a.Begin(); it != a.End(); ++it)
+      {
+        const rapidjson::Value *__v = it;
+
+        ParseJsonBody(lpCtx, (LPVOID)__v, NULL, nIdx++);
+      }
+
+      if (szPropNameA != NULL)
+        DukTape::duk_put_prop_string(lpCtx, -2, szPropNameA);
+      else
+        DukTape::duk_put_prop_index(lpCtx, -2, nArrayIndex);
+      }
+      break;
+  }
+  return;
 }
 
 //-----------------------------------------------------------

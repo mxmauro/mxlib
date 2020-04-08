@@ -34,9 +34,9 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Content-Length)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
   HRESULT SetLength(_In_ ULONGLONG nLength);
   ULONGLONG GetLength() const;

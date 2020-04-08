@@ -353,15 +353,20 @@ public:
 
   static CJavascriptVM* FromContext(_In_ DukTape::duk_context *lpCtx);
 
-  VOID Run(_In_z_ LPCSTR szCodeA, _In_opt_z_ LPCWSTR szFileNameW=NULL, _In_opt_ BOOL bIgnoreResult=TRUE);
+  VOID Run(_In_z_ LPCSTR szCodeA, _In_opt_z_ LPCWSTR szFileNameW = NULL, _In_opt_ BOOL bIgnoreResult = TRUE);
 
   static VOID RunNativeProtected(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nArgsCount,
                                  _In_ DukTape::duk_idx_t nRetValuesCount, _In_ lpfnProtectedFunction fnFunc,
                                  _In_opt_ BOOL bCatchUnhandled=FALSE);
   VOID RunNativeProtected(_In_ DukTape::duk_idx_t nArgsCount, _In_ DukTape::duk_idx_t nRetValuesCount,
-                          _In_ lpfnProtectedFunction fnFunc, _In_opt_ BOOL bCatchUnhandled=FALSE);
+                          _In_ lpfnProtectedFunction fnFunc, _In_opt_ BOOL bCatchUnhandled = FALSE);
+
+  static HRESULT RunNativeProtectedAndGetError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nArgsCount,
+                                               _In_ DukTape::duk_idx_t nRetValuesCount,
+                                               _In_ lpfnProtectedFunction fnFunc,
+                                               _In_opt_ BOOL bCatchUnhandled = FALSE);
   HRESULT RunNativeProtectedAndGetError(_In_ DukTape::duk_idx_t nArgsCount, _In_ DukTape::duk_idx_t nRetValuesCount,
-                                        _In_ lpfnProtectedFunction fnFunc, _In_opt_ BOOL bCatchUnhandled=FALSE);
+                                        _In_ lpfnProtectedFunction fnFunc, _In_opt_ BOOL bCatchUnhandled = FALSE);
 
   HRESULT RegisterException(_In_z_ LPCSTR szExceptionNameA, _In_ lpfnThrowExceptionCallback fnThrowExceptionCallback);
   HRESULT UnregisterException(_In_z_ LPCSTR szExceptionNameA);
@@ -468,6 +473,9 @@ public:
 
   static VOID ThrowWindowsError(_In_ DukTape::duk_context *lpCtx, _In_ HRESULT hr, _In_opt_ LPCSTR filename=NULL,
                                 _In_opt_ DukTape::duk_int_t line=0);
+
+  static HRESULT AddBigIntegerSupport(_In_ DukTape::duk_context *lpCtx);
+  HRESULT AddBigIntegerSupport();
 
 private:
   //static DukTape::duk_ret_t OnModSearch(_In_ DukTape::duk_context *lpCtx);

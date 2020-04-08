@@ -34,23 +34,31 @@ CHttpHeaderReqIfXXXSinceBase::~CHttpHeaderReqIfXXXSinceBase()
   return;
 }
 
-HRESULT CHttpHeaderReqIfXXXSinceBase::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderReqIfXXXSinceBase::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
+  LPCSTR szValueEndA;
   HRESULT hRes;
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //skip spaces
-  szValueA = SkipSpaces(szValueA);
+  szValueA = SkipSpaces(szValueA, szValueEndA);
+
   //parse date
-  hRes = CHttpCommon::ParseDate(cDt, szValueA);
+  hRes = Http::ParseDate(cDt, szValueA, (SIZE_T)(szValueEndA - szValueA));
   if (FAILED(hRes))
     return (hRes == E_OUTOFMEMORY) ? hRes : MX_E_InvalidData;
+
   //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderReqIfXXXSinceBase::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderReqIfXXXSinceBase::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   return cDt.Format(cStrDestA, "%a, %d %b %Y %H:%m:%S %z");
 }

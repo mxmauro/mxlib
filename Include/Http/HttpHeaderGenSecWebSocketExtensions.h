@@ -36,6 +36,8 @@ public:
     CExtension();
     ~CExtension();
 
+    CExtension &operator=(_In_ const CExtension &cSrc) throw(...);
+
     HRESULT SetExtension(_In_z_ LPCSTR szExtensionA, _In_ SIZE_T nExtensionLen = (SIZE_T)-1);
     LPCSTR GetExtension() const;
 
@@ -47,13 +49,16 @@ public:
     LPCWSTR GetParamValue(_In_z_ LPCSTR szNameA) const;
 
   private:
+    friend class CHttpHeaderGenSecWebSocketExtensions;
+
     typedef struct {
       LPWSTR szValueW;
       CHAR szNameA[1];
     } PARAMETER, *LPPARAMETER;
 
+  private:
     CStringA cStrExtensionA;
-    TArrayListWithFree<LPPARAMETER> cParamsList;
+    TArrayListWithFree<LPPARAMETER> aParamsList;
   };
 
   //----
@@ -64,13 +69,13 @@ public:
 
   MX_DECLARE_HTTPHEADER_NAME(Sec-WebSocket-Extensions)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA);
+  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser);
+  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return DuplicateBehaviorAppend;
+    return DuplicateBehaviorMerge;
     };
 
   HRESULT AddExtension(_In_z_ LPCSTR szExtensionA, _In_opt_ SIZE_T nExtension = (SIZE_T)-1,
@@ -80,7 +85,11 @@ public:
   CExtension* GetExtension(_In_ SIZE_T nIndex) const;
   CExtension* GetExtension(_In_z_ LPCSTR szTypeA) const;
 
+  HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
+
 private:
+  friend class CExtension;
+
   TArrayListWithDelete<CExtension*> cExtensionsList;
 };
 

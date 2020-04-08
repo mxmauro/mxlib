@@ -33,23 +33,36 @@ CHttpHeaderEntExpires::~CHttpHeaderEntExpires()
   return;
 }
 
-HRESULT CHttpHeaderEntExpires::Parse(_In_z_ LPCSTR szValueA)
+HRESULT CHttpHeaderEntExpires::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
+  LPCSTR szValueEndA;
   HRESULT hRes;
 
   if (szValueA == NULL)
     return E_POINTER;
+
+  if (nValueLen == (SIZE_T)-1)
+    nValueLen = StrLenA(szValueA);
+  szValueEndA = szValueA + nValueLen;
+
   //skip spaces
-  szValueA = SkipSpaces(szValueA);
+  szValueA = SkipSpaces(szValueA, szValueEndA);
   //parse date
-  hRes = CHttpCommon::ParseDate(cDt, szValueA);
-  if (FAILED(hRes)) //an invalid "expires" is interpreted as "now"
+  hRes = Http::ParseDate(cDt, szValueA, (SIZE_T)(szValueEndA - szValueA));
+  if (FAILED(hRes))
+  {
+    if (hRes == E_OUTOFMEMORY)
+      return hRes;
+
+    //an invalid "expires" is interpreted as "now"
     cDt.SetFromNow(FALSE);
+  }
+
   //done
   return S_OK;
 }
 
-HRESULT CHttpHeaderEntExpires::Build(_Inout_ CStringA &cStrDestA, _In_ eBrowser nBrowser)
+HRESULT CHttpHeaderEntExpires::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
   return cDt.Format(cStrDestA, "%a, %d %b %Y %H:%m:%S %z");
 }

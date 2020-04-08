@@ -1,13 +1,14 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2026
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29905.134
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MXLib", "MXLib.vcxproj", "{0C906B7D-55F9-4ED1-A7E1-96B84A648703}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CommLib", "CommLib.vcxproj", "{E4280DFD-C300-440C-BCA4-B2CF3948EDEA}"
 	ProjectSection(ProjectDependencies) = postProject
 		{67F7A801-6E62-4204-8005-2431194915A2} = {67F7A801-6E62-4204-8005-2431194915A2}
+		{76140E59-7A08-41B7-9414-0F38B8E436BB} = {76140E59-7A08-41B7-9414-0F38B8E436BB}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZLib", "ZLib.vcxproj", "{2D73596D-540C-4659-BBC2-D8D1437219E5}"
@@ -34,6 +35,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "JsLib", "JsLib.vcxproj", "{
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "JsHttpServer", "JsHttpServer.vcxproj", "{34E4685A-F936-43F8-81FB-416CE8316EE6}"
 	ProjectSection(ProjectDependencies) = postProject
+		{76140E59-7A08-41B7-9414-0F38B8E436BB} = {76140E59-7A08-41B7-9414-0F38B8E436BB}
 		{11F49497-A8D8-4D57-8611-BB73FA2634FB} = {11F49497-A8D8-4D57-8611-BB73FA2634FB}
 		{E4280DFD-C300-440C-BCA4-B2CF3948EDEA} = {E4280DFD-C300-440C-BCA4-B2CF3948EDEA}
 	EndProjectSection
@@ -44,10 +46,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DukTape", "DukTape.vcxproj"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "OpenSSL", "OpenSSL.vcxproj", "{67F7A801-6E62-4204-8005-2431194915A2}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RapidJSON", "RapidJSON.vcxproj", "{76140E59-7A08-41B7-9414-0F38B8E436BB}"
+EndProject
 Global
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
 		Debug|x64 = Debug|x64
@@ -131,6 +132,14 @@ Global
 		{67F7A801-6E62-4204-8005-2431194915A2}.Release|Win32.Build.0 = Release|Win32
 		{67F7A801-6E62-4204-8005-2431194915A2}.Release|x64.ActiveCfg = Release|x64
 		{67F7A801-6E62-4204-8005-2431194915A2}.Release|x64.Build.0 = Release|x64
+		{76140E59-7A08-41B7-9414-0F38B8E436BB}.Debug|Win32.ActiveCfg = Debug|Win32
+		{76140E59-7A08-41B7-9414-0F38B8E436BB}.Debug|Win32.Build.0 = Debug|Win32
+		{76140E59-7A08-41B7-9414-0F38B8E436BB}.Debug|x64.ActiveCfg = Debug|x64
+		{76140E59-7A08-41B7-9414-0F38B8E436BB}.Debug|x64.Build.0 = Debug|x64
+		{76140E59-7A08-41B7-9414-0F38B8E436BB}.Release|Win32.ActiveCfg = Release|Win32
+		{76140E59-7A08-41B7-9414-0F38B8E436BB}.Release|Win32.Build.0 = Release|Win32
+		{76140E59-7A08-41B7-9414-0F38B8E436BB}.Release|x64.ActiveCfg = Release|x64
+		{76140E59-7A08-41B7-9414-0F38B8E436BB}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -138,9 +147,13 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{2FD2C206-BBC6-401C-9A97-0523A166F62D} = {AB48AFCA-7E75-453F-B534-0D32DE1758A6}
 		{67F7A801-6E62-4204-8005-2431194915A2} = {AB48AFCA-7E75-453F-B534-0D32DE1758A6}
+		{76140E59-7A08-41B7-9414-0F38B8E436BB} = {AB48AFCA-7E75-453F-B534-0D32DE1758A6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {56063354-2E0E-4CA9-B3AB-7E9A334B647E}
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
 	EndGlobalSection
 	GlobalSection(Performance) = preSolution
 		HasPerformanceSessions = true

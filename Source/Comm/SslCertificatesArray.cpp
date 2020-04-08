@@ -24,6 +24,7 @@
 #include "..\Crypto\InitOpenSSL.h"
 #include "..\..\Include\Strings\Utf8.h"
 #include "..\..\Include\AutoPtr.h"
+#include "..\Internals\SystemDll.h"
 #include <wincrypt.h>
 #include <OpenSSL\des.h>
 #include <OpenSSL\aes.h>
@@ -753,19 +754,11 @@ HRESULT CSslCertificateArray::ImportFromWindowsStore()
   lpfnCertEnumCertificatesInStore fnCertEnumCertificatesInStore;
   lpfnCertEnumCRLsInStore fnCertEnumCRLsInStore;
   lpfnCertCloseStore fnCertCloseStore;
-  WCHAR szDllNameW[4096];
-  DWORD dwLen;
   HRESULT hRes;
 
-  dwLen = ::GetSystemDirectoryW(szDllNameW, MX_ARRAYLEN(szDllNameW) - 16);
-  if (dwLen == 0)
-    return MX_E_ProcNotFound;
-  if (szDllNameW[dwLen - 1] != L'\\')
-    szDllNameW[dwLen++] = L'\\';
-  ::MxMemCopy(szDllNameW + dwLen, L"crypt32.dll", (11 + 1) * sizeof(WCHAR));
-  hCrypt32DLL = ::LoadLibraryW(szDllNameW);
-  if (hCrypt32DLL == NULL)
-    return MX_HRESULT_FROM_LASTERROR();
+  hRes = Internals::LoadSystemDll(L"crypt32.dll", &hCrypt32DLL);
+  if (FAILED(hRes))
+    return hRes;
   fnCertOpenSystemStoreW = (lpfnCertOpenSystemStoreW)::GetProcAddress(hCrypt32DLL, "CertOpenSystemStoreW");
   fnCertEnumCertificatesInStore = (lpfnCertEnumCertificatesInStore)::GetProcAddress(hCrypt32DLL,
                                                                                     "CertEnumCertificatesInStore");

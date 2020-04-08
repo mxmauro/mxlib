@@ -35,7 +35,7 @@ CHttpBodyParserIgnore::~CHttpBodyParserIgnore()
   return;
 }
 
-HRESULT CHttpBodyParserIgnore::Initialize(_In_ CHttpCommon &cHttpCmn)
+HRESULT CHttpBodyParserIgnore::Initialize(_In_ Internals::CHttpParser &cHttpParser)
 {
   return S_OK;
 }
