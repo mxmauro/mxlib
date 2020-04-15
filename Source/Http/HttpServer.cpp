@@ -1648,12 +1648,26 @@ HRESULT CHttpServer::FillResponseWithError(_In_ CClientRequest *lpRequest, _In_ 
     }
     if (cStrBodyA.IsEmpty() != FALSE)
     {
-      static const LPCSTR szServerErrorFormatA = "<html>"
-                                                 "<head><title>Error: %03d %s</title></head>"
-                                                 "<body style=\"font-size:10pt; font-family:\"Trebuchet MS\",Geneva,"
-                                                               "Helvetica,sans-serif;\">"
-                                                   "<div>Error <b>%03d</b>: %s</div>"
-                                                   "%s%s"
+      static const LPCSTR szServerErrorFormatA = "<!DOCTYPE html>"
+                                                 "<html lang=\"en\">"
+                                                 "<head>"
+                                                 "<meta name=\"viewport\" content=\"width=device-width, "
+                                                                                   "initial-scale=1\">"
+                                                 "<meta charset=\"utf-8\">"
+                                                 "<title>Error: %03d %s</title>"
+                                                 "<style>"
+                                                 "body {"
+                                                 "	font-family: 'Trebuchet MS', Geneva, Helvetica, sans-serif;"
+                                                 "	font-size: 10pt;"
+                                                 "}"
+                                                 ".header {"
+                                                 "	font-size: 11pt;"
+                                                 "}"
+                                                 "</style>"
+                                                 "</head>"
+                                                 "<body>"
+                                                 "<div class=\"header\">Error <b>%03d</b>: %s</div>"
+                                                 "%s%s"
                                                  "</body>"
                                                  "</html>";
       if (cStrBodyA.Format(szServerErrorFormatA, nStatusCode, szStatusMessageA, nStatusCode, szStatusMessageA,

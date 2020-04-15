@@ -336,6 +336,8 @@ static VOID OnProcessJsRequest(_In_ MX::CIoCompletionPortThreadPool *lpPool, _In
         hRes = LoadTxtFile(cStrCodeA, (LPCWSTR)(lpRequest->cStrFileNameW));
         if (SUCCEEDED(hRes))
         {
+          lpRequest->DisplayDebugInfoOnError(TRUE, TRUE);
+
           hRes = lpRequest->RunScript(cStrCodeA);
         }
         else if (hRes == MX_E_FileNotFound || hRes == MX_E_PathNotFound)

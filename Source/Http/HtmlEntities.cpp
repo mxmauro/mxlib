@@ -289,6 +289,8 @@ static HTMLENTITY_DEF aHtmlEntities[] = {
 //-----------------------------------------------------------
 
 static int HtmlEntities_Compare(void *, const void *key, const void *datum);
+static BOOL AddString(_Inout_ MX::CStringA &cStrA, _In_ LPCSTR szStartA, _In_ LPCSTR szCurrentA);
+static BOOL AddString(_Inout_ MX::CStringW &cStrW, _In_ LPCWSTR szStartW, _In_ LPCWSTR szCurrentW);
 
 //-----------------------------------------------------------
 
@@ -306,189 +308,266 @@ LPCSTR Get(_In_ WCHAR chW)
   return (lpDef != NULL) ? lpDef->szNameA : NULL;
 }
 
-HRESULT ConvertTo(_Inout_ CStringA &cStrA)
+HRESULT ConvertTo(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA, _In_ SIZE_T nStrLen)
 {
   static const LPCSTR szHexaNumA = "0123456789ABCDEF";
-  CStringW cStrTempW;
   WCHAR chW[2];
-  SIZE_T nOfs, nLen;
-  union {
-    LPSTR sA;
-    LPBYTE lpB;
-  };
+  LPCSTR szStartA, szEndA, szEntityA;
+  CHAR szTempBufA[8];
   int nChars;
 
-  sA = (LPSTR)cStrA;
-  nOfs = 0;
-  nLen = cStrA.GetLength();
-  while (nOfs < nLen)
+  cStrA.Empty();
+
+  if (nStrLen == (SIZE_T)-1)
+    nStrLen = StrLenA(szStrA);
+  if (szStrA == NULL && nStrLen > 0)
+    return E_POINTER;
+  szEndA = szStrA + nStrLen;
+
+  //preallocate some buffer
+  if (cStrA.EnsureBuffer(nStrLen + 1) == FALSE)
+    return E_OUTOFMEMORY;
+
+  szStartA = szStrA;
+  while (szStrA < szEndA)
   {
-    nChars = MX::Utf8_DecodeChar(chW, sA + nOfs, nLen - nOfs);
-    if (nChars > 0 && chW[1] == 0)
+    if ((*((LPBYTE)szStrA)) < 32)
     {
-      //decoded a non-surrogate pair
-      LPCSTR szEntityA = Get(chW[0]);
+      if (AddString(cStrA, szStartA, szStrA) == FALSE)
+        return E_OUTOFMEMORY;
 
-      if (szEntityA != NULL)
-      {
-        cStrA.Delete(nOfs, (SIZE_T)nChars);
-        if (cStrA.InsertN("&;", nOfs, 2) == FALSE)
-          return E_OUTOFMEMORY;
-        if (cStrA.Insert(szEntityA, nOfs+1) == FALSE)
-          return E_OUTOFMEMORY;
-        nOfs += 2 + MX::StrLenA(szEntityA);
-        sA = (LPSTR)cStrA;
-        nLen = cStrA.GetLength();
-      }
-      else
-      {
-        nOfs += (SIZE_T)nChars;
-      }
-    }
-    else if (*(((LPBYTE)sA) + nOfs) < 32)
-    {
-      CHAR szTempBufA[8];
-
+      //add entity
       szTempBufA[0] = L'&';
       szTempBufA[1] = L'#';
       szTempBufA[2] = L'x';
-      szTempBufA[3] = szHexaNumA[(lpB[nOfs] >> 4) & 0x0F];
-      szTempBufA[4] = szHexaNumA[ lpB[nOfs]       & 0x0F];
+      szTempBufA[3] = szHexaNumA[((*((LPBYTE)szStrA)) >> 4) & 0x0F];
+      szTempBufA[4] = szHexaNumA[(*((LPBYTE)szStrA)) & 0x0F];
       szTempBufA[5] = L';';
-      cStrA.Delete(nOfs, 1);
-      if (cStrA.InsertN(szTempBufA, nOfs, 6) == FALSE)
+      if (cStrA.ConcatN(szTempBufA, 6) == FALSE)
         return E_OUTOFMEMORY;
-      nOfs += 6;
-      sA = (LPSTR)cStrA;
-      nLen = cStrA.GetLength();
+
+      //advance pointer
+      szStrA++;
+      szStartA = szStrA;
+      continue;
     }
-    else
+
+    nChars = Utf8_DecodeChar(chW, szStrA, (SIZE_T)(szEndA - szStrA));
+    if (nChars > 0 && chW[1] == 0)
     {
-      nOfs++;
+      //decoded a non-surrogate pair
+      szEntityA = Get(chW[0]);
+      if (szEntityA != NULL)
+      {
+        if (AddString(cStrA, szStartA, szStrA) == FALSE)
+          return E_OUTOFMEMORY;
+
+        //add entity
+        if (cStrA.ConcatN("&", 1) == FALSE ||
+            cStrA.Concat(szEntityA) == FALSE ||
+            cStrA.ConcatN(";", 1) == FALSE)
+        {
+          return E_OUTOFMEMORY;
+        }
+
+        //advance pointer
+        szStrA += (SIZE_T)nChars;
+        szStartA = szStrA;
+        continue;
+      }
     }
+
+    //advance pointer
+    szStrA += (nChars > 0) ? (SIZE_T)nChars : 1;
   }
+
+  //flush remaining
+  if (AddString(cStrA, szStartA, szStrA) == FALSE)
+    return E_OUTOFMEMORY;
+
   //done
   return S_OK;
 }
 
-HRESULT ConvertTo(_Inout_ CStringW &cStrW)
+HRESULT ConvertTo(_Out_ CStringW &cStrW, _In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen)
 {
   static const LPCWSTR szHexaNumW = L"0123456789ABCDEF";
   WCHAR szTempBufW[32];
-  LPWSTR sW;
-  SIZE_T i, nOfs, nLen;
+  LPCSTR szEntityA;
+  LPCWSTR szStartW, szEndW;
+  SIZE_T i;
 
-  sW = (LPWSTR)cStrW;
-  nOfs = 0;
-  nLen = cStrW.GetLength();
-  while (nOfs < nLen)
+  cStrW.Empty();
+
+  if (nStrLen == (SIZE_T)-1)
+    nStrLen = StrLenW(szStrW);
+  if (szStrW == NULL && nStrLen > 0)
+    return E_POINTER;
+  szEndW = szStrW + nStrLen;
+
+  //preallocate some buffer
+  if (cStrW.EnsureBuffer(nStrLen + 1) == FALSE)
+    return E_OUTOFMEMORY;
+
+  szStartW = szStrW;
+  while (szStrW < szEndW)
   {
-    LPCSTR szEntityA = Get(sW[nOfs]);
-    if (szEntityA != NULL)
+    if ((*szStrW) < 32)
     {
-      //quick convert
-      for (i=0; szEntityA[i] != 0 && i < 32; i++)
-        szTempBufW[i] = (WCHAR)(UCHAR)szEntityA[i];
-      cStrW.Delete(nOfs, 1);
-      if (cStrW.InsertN(L"&;", nOfs, 2) == FALSE)
+      if (AddString(cStrW, szStartW, szStrW) == FALSE)
         return E_OUTOFMEMORY;
-#pragma warning(suppress: 6054)
-      if (cStrW.InsertN(szTempBufW, nOfs+1, i) == FALSE)
-        return E_OUTOFMEMORY;
-      nOfs += 2 + i;
-      sW = (LPWSTR)cStrW;
-      nLen = cStrW.GetLength();
-    }
-    else if (sW[nOfs] < 32)
-    {
+
+      //add entity
       szTempBufW[0] = L'&';
       szTempBufW[1] = L'#';
       szTempBufW[2] = L'x';
-      szTempBufW[3] = szHexaNumW[((ULONG)(sW[nOfs]) >> 4) & 0x0F];
-      szTempBufW[4] = szHexaNumW[ (ULONG)(sW[nOfs])       & 0x0F];
+      szTempBufW[3] = szHexaNumW[((*szStrW) >> 4) & 0x0F];
+      szTempBufW[4] = szHexaNumW[(*szStrW) & 0x0F];
       szTempBufW[5] = L';';
-      cStrW.Delete(nOfs, 1);
-      if (cStrW.InsertN(szTempBufW, nOfs, 6) == FALSE)
+      if (cStrW.ConcatN(szTempBufW, 6) == FALSE)
         return E_OUTOFMEMORY;
-      nOfs += 6;
-      sW = (LPWSTR)cStrW;
-      nLen = cStrW.GetLength();
+
+      //advance pointer
+      szStrW++;
+      szStartW = szStrW;
+      continue;
     }
-    else
+
+    szEntityA = Get(*szStrW);
+    if (szEntityA != NULL)
     {
-      nOfs++;
+      if (AddString(cStrW, szStartW, szStrW) == FALSE)
+        return E_OUTOFMEMORY;
+
+      //quick convert
+      for (i = 0; szEntityA[i] != 0 && i < 32; i++)
+        szTempBufW[i] = (WCHAR)(UCHAR)szEntityA[i];
+
+      //add entity
+      if (cStrW.ConcatN("&", 1) == FALSE ||
+          cStrW.ConcatN(szTempBufW, i) == FALSE ||
+          cStrW.ConcatN(";", 1) == FALSE)
+      {
+        return E_OUTOFMEMORY;
+      }
+
+      //advance pointer
+      szStrW++;
+      szStartW = szStrW;
+      continue;
     }
+
+    //advance pointer
+    szStrW++;
   }
+
+  //flush remaining
+  if (AddString(cStrW, szStartW, szStrW) == FALSE)
+    return E_OUTOFMEMORY;
+
   //done
   return S_OK;
 }
 
-HRESULT ConvertFrom(_Inout_ CStringA &cStrA)
+HRESULT ConvertFrom(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA, _In_ SIZE_T nStrLen)
 {
-  LPCSTR sA, szEndA;
+  LPCSTR szStartA, szEndA, szDecodeEndA;
   CHAR szBufA[8];
-  SIZE_T nOfs, nLen, nEntityLen;
   int r;
   WCHAR chW;
 
-  sA = (LPCSTR)cStrA;
-  nLen = cStrA.GetLength();
-  while (*sA != 0)
+  cStrA.Empty();
+
+  if (nStrLen == (SIZE_T)-1)
+    nStrLen = StrLenA(szStrA);
+  if (szStrA == NULL && nStrLen > 0)
+    return E_POINTER;
+  szEndA = szStrA + nStrLen;
+
+  //preallocate some buffer
+  if (cStrA.EnsureBuffer(nStrLen + 1) == FALSE)
+    return E_OUTOFMEMORY;
+
+  szStartA = szStrA;
+  while (szStrA < szEndA)
   {
-    chW = Decode(sA, nLen, &szEndA);
+    chW = Decode(szStrA, (SIZE_T)(szEndA - szStrA), &szDecodeEndA);
     if (chW != 0)
     {
-      nOfs = (SIZE_T)(szEndA - (LPCSTR)cStrA);
-      nEntityLen = (SIZE_T)(szEndA - sA);
-      cStrA.Delete(nOfs, nEntityLen);
+      if (AddString(cStrA, szStartA, szStrA) == FALSE)
+        return E_OUTOFMEMORY;
 
+      //add character
       r = Utf8_EncodeChar(szBufA, chW);
       if (r < 0)
         r = 0;
       if (r > 0)
       {
-        if (cStrA.InsertN(szBufA, nOfs, (SIZE_T)r) == FALSE)
+        if (cStrA.ConcatN(szBufA, (SIZE_T)r) == FALSE)
           return E_OUTOFMEMORY;
-        nOfs += (SIZE_T)r;
       }
-      sA = (LPCSTR)cStrA + nOfs;
-      nLen = cStrA.GetLength();
+
+      //advance pointer
+      szStrA = szStrA = szDecodeEndA;
     }
     else
     {
-      sA++;
+      //advance pointer
+      szStrA++;
     }
   }
+
+  //flush remaining
+  if (AddString(cStrA, szStartA, szStrA) == FALSE)
+    return E_OUTOFMEMORY;
+
   //done
   return S_OK;
 }
 
-HRESULT ConvertFrom(_Inout_ CStringW &cStrW)
+HRESULT ConvertFrom(_Out_ CStringW &cStrW, _In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen)
 {
-  LPCWSTR sW, szEndW;
-  SIZE_T nOfs, nLen, nEntityLen;
+  LPCWSTR szStartW, szEndW, szDecodeEndW;
   WCHAR chW;
 
-  sW = (LPCWSTR)cStrW;
-  nLen = cStrW.GetLength();
-  while (*sW != 0)
+  cStrW.Empty();
+
+  if (nStrLen == (SIZE_T)-1)
+    nStrLen = StrLenW(szStrW);
+  if (szStrW == NULL && nStrLen > 0)
+    return E_POINTER;
+  szEndW = szStrW + nStrLen;
+
+  //preallocate some buffer
+  if (cStrW.EnsureBuffer(nStrLen + 1) == FALSE)
+    return E_OUTOFMEMORY;
+
+  szStartW = szStrW;
+  while (szStrW < szEndW)
   {
-    chW = Decode(sW, nLen, &szEndW);
+    chW = Decode(szStrW, (SIZE_T)(szEndW - szStrW), &szDecodeEndW);
     if (chW != 0)
     {
-      nOfs = (SIZE_T)(szEndW - (LPCWSTR)cStrW);
-      nEntityLen = (SIZE_T)(szEndW - sW);
-      cStrW.Delete(nOfs, nEntityLen);
-      if (cStrW.InsertN(&chW, nOfs, 1) == FALSE)
+      if (AddString(cStrW, szStartW, szStrW) == FALSE)
         return E_OUTOFMEMORY;
-      sW = (LPCWSTR)cStrW + nOfs + 1;
-      nLen = cStrW.GetLength();
+
+      if (cStrW.ConcatN(&chW, 1) == FALSE)
+        return E_OUTOFMEMORY;
+
+      //advance pointer
+      szStrW = szStartW = szDecodeEndW;
     }
     else
     {
-      sW++;
+      //advance pointer
+      szStrW++;
     }
   }
+
+  //flush remaining
+  if (AddString(cStrW, szStartW, szStrW) == FALSE)
+    return E_OUTOFMEMORY;
+
   //done
   return S_OK;
 }
@@ -501,6 +580,7 @@ WCHAR Decode(_In_ LPCSTR szStrA, _In_ SIZE_T nStrLen, _Out_opt_ LPCSTR *lpszAfte
     return 0;
   if ((--nStrLen) == 0)
     return 0;
+
   szStrA++;
   if (*szStrA == '#')
   {
@@ -518,6 +598,7 @@ WCHAR Decode(_In_ LPCSTR szStrA, _In_ SIZE_T nStrLen, _Out_opt_ LPCSTR *lpszAfte
       szStrA++;
       nStrLen--;
     }
+
     while (nStrLen > 0 && *szStrA != 0 && *szStrA != ';')
     {
       if (*szStrA >= '0' && *szStrA <= '9')
@@ -530,6 +611,7 @@ WCHAR Decode(_In_ LPCSTR szStrA, _In_ SIZE_T nStrLen, _Out_opt_ LPCSTR *lpszAfte
         return 0; //invalid digit
       if (nDigit >= nBase)
         return 0; //invalid digit
+
       //check overflow
       chTempW = chW * (WCHAR)nBase;
       if (chTempW < chW)
@@ -537,10 +619,12 @@ WCHAR Decode(_In_ LPCSTR szStrA, _In_ SIZE_T nStrLen, _Out_opt_ LPCSTR *lpszAfte
       chW = chTempW + (WCHAR)nDigit;
       if (chW < chTempW)
         return 0;
+
       //advance
       szStrA++;
       nStrLen--;
     }
+
     //has value?
     if (nStrLen > 0 && *szStrA == ';')
     {
@@ -554,11 +638,12 @@ WCHAR Decode(_In_ LPCSTR szStrA, _In_ SIZE_T nStrLen, _Out_opt_ LPCSTR *lpszAfte
     LPCSTR sA;
     SIZE_T i, j;
 
-    for (i=0; i<sizeof(aHtmlEntities) / sizeof(aHtmlEntities[0]); i++)
+    for (i = 0; i<MX_ARRAYLEN(aHtmlEntities); i++)
     {
       sA = aHtmlEntities[i].szNameA;
-      for (j=0; j < nStrLen && sA[j] != 0 && szStrA[j] == sA[j]; j++);
-      if (sA[j] == 0 && nStrLen-1 > j && szStrA[j] == ';')
+      for (j = 0; j < nStrLen && sA[j] != 0 && szStrA[j] == sA[j]; j++);
+
+      if (sA[j] == 0 && nStrLen - 1 > j && szStrA[j] == ';')
       {
         if (lpszAfterEntityA != NULL)
           *lpszAfterEntityA = szStrA + (j + 1);
@@ -566,6 +651,7 @@ WCHAR Decode(_In_ LPCSTR szStrA, _In_ SIZE_T nStrLen, _Out_opt_ LPCSTR *lpszAfte
       }
     }
   }
+
   //invalid entity
   return 0;
 }
@@ -578,6 +664,7 @@ WCHAR Decode(_In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen, _Out_opt_ LPCWSTR *lpszAf
     return 0;
   if ((--nStrLen) == 0)
     return 0;
+
   szStrW++;
   if (*szStrW == L'#')
   {
@@ -595,6 +682,7 @@ WCHAR Decode(_In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen, _Out_opt_ LPCWSTR *lpszAf
       szStrW++;
       nStrLen--;
     }
+
     while (nStrLen > 0 && *szStrW != 0 && *szStrW != L';')
     {
       if (*szStrW >= L'0' && *szStrW <= L'9')
@@ -607,6 +695,7 @@ WCHAR Decode(_In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen, _Out_opt_ LPCWSTR *lpszAf
         return 0; //invalid digit
       if (nDigit >= nBase)
         return 0; //invalid digit
+
       //check overflow
       chTempW = chW * (WCHAR)nBase;
       if (chTempW < chW)
@@ -614,10 +703,12 @@ WCHAR Decode(_In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen, _Out_opt_ LPCWSTR *lpszAf
       chW = chTempW + (WCHAR)nDigit;
       if (chW < chTempW)
         return 0;
+
       //advance
       szStrW++;
       nStrLen--;
     }
+
     //has value?
     if (nStrLen > 0 && *szStrW == L';')
     {
@@ -631,11 +722,12 @@ WCHAR Decode(_In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen, _Out_opt_ LPCWSTR *lpszAf
     LPCSTR sA;
     SIZE_T i, j;
 
-    for (i=0; i<sizeof(aHtmlEntities) / sizeof(aHtmlEntities[0]); i++)
+    for (i = 0; i < MX_ARRAYLEN(aHtmlEntities); i++)
     {
       sA = aHtmlEntities[i].szNameA;
       for (j=0; j < nStrLen && sA[j] != 0 && szStrW[j] == (WCHAR)((UCHAR)sA[j]); j++);
-      if (sA[j] == 0 && nStrLen-1 > j && szStrW[j] == L';')
+
+      if (sA[j] == 0 && nStrLen - 1 > j && szStrW[j] == L';')
       {
         if (lpszAfterEntityW != NULL)
           *lpszAfterEntityW = szStrW + (j + 1);
@@ -643,6 +735,7 @@ WCHAR Decode(_In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen, _Out_opt_ LPCWSTR *lpszAf
       }
     }
   }
+
   //invalid entity
   return 0;
 }
@@ -660,4 +753,24 @@ static int HtmlEntities_Compare(void *, const void *key, const void *datum)
   if (*((WCHAR*)key) > ((HTMLENTITY_DEF*)datum)->chCharCodeW)
     return 1;
   return 0;
+}
+
+static BOOL AddString(_Inout_ MX::CStringA &cStrA, _In_ LPCSTR szStartA, _In_ LPCSTR szCurrentA)
+{
+  if (szCurrentA > szStartA)
+  {
+    if (cStrA.ConcatN(szStartA, (SIZE_T)(szCurrentA - szStartA)) == FALSE)
+      return FALSE;
+  }
+  return TRUE;
+}
+
+static BOOL AddString(_Inout_ MX::CStringW &cStrW, _In_ LPCWSTR szStartW, _In_ LPCWSTR szCurrentW)
+{
+  if (szCurrentW > szStartW)
+  {
+    if (cStrW.ConcatN(szStartW, (SIZE_T)(szCurrentW - szStartW)) == FALSE)
+      return FALSE;
+  }
+  return TRUE;
 }

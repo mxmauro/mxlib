@@ -109,6 +109,21 @@ inline DWORD __InterlockedClampU(_In_ LONG volatile *lpnValue, _In_ DWORD dwMini
   return newVal;
 }
 
+inline LONG __InterlockedAndOr(_In_ LONG volatile *lpnValue, _In_ LONG nToAdd, _In_ LONG nToRemove)
+{
+  LONG initVal, newVal;
+
+  newVal = __InterlockedRead(lpnValue);
+  do
+  {
+    initVal = newVal;
+    newVal = (newVal & (~nToRemove)) | nToAdd;
+    newVal = _InterlockedCompareExchange(lpnValue, newVal, initVal);
+  }
+  while (newVal != initVal);
+  return newVal;
+}
+
 } //namespace MX
 
 //-----------------------------------------------------------

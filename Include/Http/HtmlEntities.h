@@ -31,13 +31,13 @@ namespace HtmlEntities {
 
 LPCSTR Get(_In_ WCHAR chW);
 
-HRESULT ConvertTo(_Inout_ CStringA &cStrA);
-HRESULT ConvertTo(_Inout_ CStringW &cStrW);
-HRESULT ConvertFrom(_Inout_ CStringA &cStrA);
-HRESULT ConvertFrom(_Inout_ CStringW &cStrW);
+HRESULT ConvertTo(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA, _In_ SIZE_T nStrLen = (SIZE_T)-1);
+HRESULT ConvertTo(_Out_ CStringW &cStrW, _In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen = (SIZE_T)-1);
+HRESULT ConvertFrom(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA, _In_ SIZE_T nStrLen = (SIZE_T)-1);
+HRESULT ConvertFrom(_Out_ CStringW &cStrW, _In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen = (SIZE_T)-1);
 
-WCHAR Decode(_In_ LPCSTR szStrA, _In_ SIZE_T nStrLen=(SIZE_T)-1, _Out_opt_ LPCSTR *lpszAfterEntityA=NULL);
-WCHAR Decode(_In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen=(SIZE_T)-1, _Out_opt_ LPCWSTR *lpszAfterEntityW=NULL);
+WCHAR Decode(_In_ LPCSTR szStrA, _In_ SIZE_T nStrLen = (SIZE_T)-1, _Out_opt_ LPCSTR *lpszAfterEntityA = NULL);
+WCHAR Decode(_In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen = (SIZE_T)-1, _Out_opt_ LPCWSTR *lpszAfterEntityW = NULL);
 
 } //namespace HtmlEntities
 

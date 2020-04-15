@@ -108,11 +108,11 @@ static DukTape::duk_ret_t OnHtmlEntities(_In_ DukTape::duk_context *lpCtx, _In_z
   HRESULT hRes;
 
   szBufA = DukTape::duk_to_string(lpCtx, 0); //convert to string if other type
-  hRes = (cStrTempA.Copy(szBufA) != FALSE) ? S_OK : E_OUTOFMEMORY;
-  if (SUCCEEDED(hRes))
-    hRes = MX::HtmlEntities::ConvertTo(cStrTempA);
+
+  hRes = MX::HtmlEntities::ConvertTo(cStrTempA, szBufA);
   if (FAILED(hRes))
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+
   //push result
   DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
   return 1;

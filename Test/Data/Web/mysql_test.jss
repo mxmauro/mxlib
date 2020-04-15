@@ -49,7 +49,7 @@ mysql.query("INSERT INTO `test_table` VALUES (" +
                 "'char dat\\a', X'426C6F622044617461', ?" +
             ");", 123.4, new Date(Date.UTC(2015, 11, 3, 3, 45, 56)), "text data");
 %>
-		<pre>Last Insert ID: <% echo(htmlentities(sqlite.insertId.toString())); %></pre>
+		<pre>Last Insert ID: <% echo(htmlentities(mysql.insertId.toString())); %></pre>
 <%
 var row = mysql.queryAndFetchRow('SELECT * FROM `test_table`;');
 while (row !== null) {

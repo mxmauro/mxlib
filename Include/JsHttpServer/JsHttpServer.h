@@ -127,6 +127,8 @@ public:
     HRESULT OnSetup();
     BOOL OnCleanup();
 
+    VOID DisplayDebugInfoOnError(_In_ BOOL bFilename, _In_ BOOL bStackTrace);
+
     HRESULT AttachJVM();
     VOID DiscardVM();
 

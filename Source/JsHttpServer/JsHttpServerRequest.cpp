@@ -45,6 +45,25 @@ CJsHttpServer::CClientRequest::~CClientRequest()
   return;
 }
 
+VOID CJsHttpServer::CClientRequest::DisplayDebugInfoOnError(_In_ BOOL bFilename, _In_ BOOL bStackTrace)
+{
+  LONG nAddFlags = 0;
+  LONG nRemoveFlags = 0;
+
+  if (bFilename != FALSE)
+    nAddFlags |= __REQUEST_FLAGS_DebugShowFileNameAndLine;
+  else
+    nRemoveFlags |= __REQUEST_FLAGS_DebugShowFileNameAndLine;
+  //----
+  if (bStackTrace != FALSE)
+    nAddFlags |= __REQUEST_FLAGS_DebugShowStack;
+  else
+    nRemoveFlags |= __REQUEST_FLAGS_DebugShowStack;
+  //----
+    __InterlockedAndOr(&nFlags, nAddFlags, nRemoveFlags);
+  return;
+}
+
 HRESULT CJsHttpServer::CClientRequest::OnSetup()
 {
   return CHttpServer::CClientRequest::OnSetup();
@@ -53,6 +72,7 @@ HRESULT CJsHttpServer::CClientRequest::OnSetup()
 BOOL CJsHttpServer::CClientRequest::OnCleanup()
 {
   FreeJVM();
+  _InterlockedExchange(&nFlags, 0);
   return CHttpServer::CClientRequest::OnCleanup();
 }
 
@@ -130,67 +150,34 @@ HRESULT CJsHttpServer::CClientRequest::RunScript(_In_ LPCSTR szCodeA)
   {
     if (*(e.GetDescription()) != 0)
     {
-      CStringA cStrBodyA;
+      BOOL bShowFileNameAndLine = ((__InterlockedRead(&nFlags) & __REQUEST_FLAGS_DebugShowFileNameAndLine) != 0);
+      BOOL bShowStack = ((__InterlockedRead(&nFlags) & __REQUEST_FLAGS_DebugShowStack) != 0);
 
-      hRes = ResetResponse();
-      if (SUCCEEDED(hRes))
-        hRes = DisableClientCache();
-      if (SUCCEEDED(hRes))
-      {
-        if (cStrBodyA.Format("Error: %s", e.GetDescription()) != FALSE)
-        {
-          hRes = HtmlEntities::ConvertTo(cStrBodyA);
-          if (SUCCEEDED(hRes))
-          {
-            if (cStrBodyA.InsertN("<html><body><pre>", 0, 6 + 6 + 5) != FALSE &&
-                cStrBodyA.ConcatN("</pre></body></html>", 6 + 7 + 7) != FALSE)
-            {
-              hRes = SendResponse((LPCSTR)cStrBodyA, cStrBodyA.GetLength());
-            }
-            else
-            {
-              hRes = E_OUTOFMEMORY;
-            }
-          }
-        }
-        else
-        {
-          hRes = E_OUTOFMEMORY;
-        }
-      }
+      hRes = BuildErrorPage(E_UNEXPECTED, e.GetDescription(),
+                            ((bShowFileNameAndLine != FALSE) ? e.GetFileName() : NULL),
+                            ((bShowFileNameAndLine != FALSE) ? e.GetLineNumber() : 0),
+                            ((bShowStack != FALSE) ? e.GetStackTrace() : NULL));
     }
   }
   catch (CJsWindowsError &e)
   {
-    hRes = ResetResponse();
-    if (SUCCEEDED(hRes))
-      hRes = DisableClientCache();
-    if (SUCCEEDED(hRes))
-    {
-      BOOL bShowFileNameAndLine = ((__InterlockedRead(&nFlags) & __REQUEST_FLAGS_DebugShowFileNameAndLine) != 0);
-      BOOL bShowStack = ((__InterlockedRead(&nFlags) & __REQUEST_FLAGS_DebugShowStack) != 0);
+    BOOL bShowFileNameAndLine = ((__InterlockedRead(&nFlags) & __REQUEST_FLAGS_DebugShowFileNameAndLine) != 0);
+    BOOL bShowStack = ((__InterlockedRead(&nFlags) & __REQUEST_FLAGS_DebugShowStack) != 0);
 
-      hRes = BuildErrorPage(e.GetHResult(), e.GetDescription(),
-                            ((bShowFileNameAndLine != FALSE) ? e.GetFileName() : NULL),
-                            ((bShowFileNameAndLine != FALSE) ? e.GetLineNumber() : 0),
-                            ((bShowStack != FALSE) ? e.GetStackTrace() : NULL));
-    }
+    hRes = BuildErrorPage(e.GetHResult(), e.GetDescription(),
+                          ((bShowFileNameAndLine != FALSE) ? e.GetFileName() : NULL),
+                          ((bShowFileNameAndLine != FALSE) ? e.GetLineNumber() : 0),
+                          ((bShowStack != FALSE) ? e.GetStackTrace() : NULL));
   }
   catch (CJsError &e)
   {
-    hRes = ResetResponse();
-    if (SUCCEEDED(hRes))
-      hRes = DisableClientCache();
-    if (SUCCEEDED(hRes))
-    {
-      BOOL bShowFileNameAndLine = ((__InterlockedRead(&nFlags) & __REQUEST_FLAGS_DebugShowFileNameAndLine) != 0);
-      BOOL bShowStack = ((__InterlockedRead(&nFlags) & __REQUEST_FLAGS_DebugShowStack) != 0);
+    BOOL bShowFileNameAndLine = ((__InterlockedRead(&nFlags) & __REQUEST_FLAGS_DebugShowFileNameAndLine) != 0);
+    BOOL bShowStack = ((__InterlockedRead(&nFlags) & __REQUEST_FLAGS_DebugShowStack) != 0);
 
-      hRes = BuildErrorPage(E_FAIL, e.GetDescription(),
-                            ((bShowFileNameAndLine != FALSE) ? e.GetFileName() : NULL),
-                            ((bShowFileNameAndLine != FALSE) ? e.GetLineNumber() : 0),
-                            ((bShowStack != FALSE) ? e.GetStackTrace() : NULL));
-    }
+    hRes = BuildErrorPage(E_FAIL, e.GetDescription(),
+                          ((bShowFileNameAndLine != FALSE) ? e.GetFileName() : NULL),
+                          ((bShowFileNameAndLine != FALSE) ? e.GetLineNumber() : 0),
+                          ((bShowStack != FALSE) ? e.GetStackTrace() : NULL));
   }
   catch (...)
   {
@@ -229,42 +216,115 @@ HRESULT CJsHttpServer::CClientRequest::BuildErrorPage(_In_ HRESULT hr, _In_opt_z
                                                       _In_z_ LPCSTR szFileNameA, _In_ int nLine,
                                                       _In_z_ LPCSTR szStackTraceA)
 {
-  CStringA cStrBodyA;
+  CStringA cStrBodyA, cStrTempA;
   HRESULT hRes;
 
+  if (cStrBodyA.Copy("<style>"
+                     "*, ::after, ::before {"
+                     "	box-sizing: border-box;"
+                     "}"
+                     ".row {"
+                     "	display: flex;"
+                     "	width: 100%;"
+                     "	flex-flow: row wrap;"
+                     "	margin: 0 -5px 0 -5px;"
+                     "}"
+                     ".label, .text {"
+                     "	width: 100%;"
+                     "	padding: 2px 5px;"
+                     "	position: relative;"
+                     "	min-height: 1px;"
+                     "}"
+                     ".label {"
+                     "	font-weight: bold;"
+                     "}"
+                     ".stack {"
+                     "	margin: 1px 0 0 0;"
+                     "}"
+                     "@media (min-width: 576px) {"
+                     "	.label {"
+                     "		flex: 0 0 10%;"
+                     "		max-width: 10%;"
+                     "		text-align: right;"
+                     "	}"
+                     "	.text {"
+                     "		flex: 0 0 90%;"
+                     "		max-width: 90%;"
+                     "	}"
+                     "}"
+                     "@media (max-width: 575px) {"
+                     "	.row + .row {"
+                     "		margin-top: 5px;"
+                     "	}"
+                     "}"
+                     "</style>"
+                     "<div>") == FALSE)
+  {
+    return E_OUTOFMEMORY;
+  }
+
+  //error code
+  if (cStrBodyA.AppendFormat("<div class=\"row\"><div class=\"label\">Error:</div>"
+                             "<div class=\"text\">0x%08X</div></div>", hr) == FALSE)
+  {
+    return E_OUTOFMEMORY;
+  }
+
+  //message
   if (szDescriptionA != NULL && *szDescriptionA != 0)
   {
-    if (cStrBodyA.Format("Error 0x%08X: %s", hr, szDescriptionA) == FALSE)
+    hRes = HtmlEntities::ConvertTo(cStrTempA, szDescriptionA);
+    if (FAILED(hRes))
+      return hRes;
+    //add to body
+    if (cStrBodyA.AppendFormat("<div class=\"row\"><div class=\"label\">Description:</div>"
+                               "<div class=\"text\">%s</div></div>", (LPCSTR)cStrTempA) == FALSE)
+    {
       return E_OUTOFMEMORY;
+    }
   }
-  else
-  {
-    if (cStrBodyA.Format("Error 0x%08X", hr) == FALSE)
-      return E_OUTOFMEMORY;
-  }
+
+  //filename
   if (szFileNameA != NULL && *szFileNameA != 0)
   {
+    hRes = HtmlEntities::ConvertTo(cStrTempA, szFileNameA);
+    if (FAILED(hRes))
+      return hRes;
     if (nLine > 0)
     {
-      if (cStrBodyA.AppendFormat(" @ %s(%lu)", szFileNameA, nLine) == FALSE)
+      if (cStrTempA.AppendFormat("(%lu)", nLine) == FALSE)
         return E_OUTOFMEMORY;
     }
-    else
+    //add to body
+    if (cStrBodyA.AppendFormat("<div class=\"row\"><div class=\"label\">File:</div>"
+                               "<div class=\"text\">%s</div></div>", (LPCSTR)cStrTempA) == FALSE)
     {
-      if (cStrBodyA.ConcatN(" @ ", 3) == FALSE || cStrBodyA.Concat(szFileNameA) == FALSE)
-        return E_OUTOFMEMORY;
+      return E_OUTOFMEMORY;
     }
   }
+
+  //stack
   if (szStackTraceA != NULL && *szStackTraceA != 0)
   {
-    if (cStrBodyA.ConcatN("\r\nStack trace:\r\n", 16) == FALSE || cStrBodyA.Concat(szStackTraceA) == FALSE)
+    hRes = HtmlEntities::ConvertTo(cStrTempA, szStackTraceA);
+    if (FAILED(hRes))
+      return hRes;
+    //add to body
+    if (cStrBodyA.AppendFormat("<div class=\"row\"><div class=\"label\">Stack:</div>"
+                               "<div class=\"text\"><pre class=\"stack\">%s</pre></div></div>",
+                               (LPCSTR)cStrTempA) == FALSE)
+    {
       return E_OUTOFMEMORY;
+    }
   }
-  hRes = HtmlEntities::ConvertTo(cStrBodyA);
-  if (FAILED(hRes))
-    return hRes;
-  if (cStrBodyA.InsertN("<pre>", 0, 5) == FALSE || cStrBodyA.ConcatN("</pre>", 6) == FALSE)
+
+  //close
+  if (cStrBodyA.ConcatN("</div>", 6) == FALSE)
+  {
     return E_OUTOFMEMORY;
+  }
+
+  //send error page
   return SendErrorPage(500, hr, (LPCSTR)cStrBodyA);
 }
 
