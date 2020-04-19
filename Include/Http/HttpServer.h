@@ -227,7 +227,8 @@ public:
       StateWebSocket,
       StateGracefulTermination,
       StateTerminated,
-      StateKeepingAlive
+      StateKeepingAlive,
+      StateLingerClose
     } eState;
 
     typedef enum {
@@ -262,6 +263,8 @@ public:
 
     HRESULT StartTimeoutTimers(_In_ int nTimers);
     VOID StopTimeoutTimers(_In_ int nTimers);
+
+    static LPCWSTR GetNamedState(_In_ eState nState);
 
   private:
     CLnkLstNode cListNode;
@@ -387,7 +390,7 @@ private:
 
   LONG volatile nDownloadNameGeneratorCounter;
   struct {
-    LONG volatile nRwMutex;
+    RWLOCK sRwMutex;
     TAutoDeletePtr<CSslCertificate> cSslCertificate;
     TAutoDeletePtr<CEncryptionKey> cSslPrivateKey;
   } sSsl;
@@ -400,12 +403,12 @@ private:
   OnWebSocketRequestReceivedCallback cWebSocketRequestReceivedCallback;
   OnCustomErrorPageCallback cCustomErrorPageCallback;
   OnErrorCallback cErrorCallback;
-  LONG volatile nRequestsListRwMutex;
+  RWLOCK sRequestsListRwMutex;
   CLnkLst cRequestsList;
   CWindowsEvent cShutdownEv;
 
   struct {
-    LONG volatile nRwMutex;
+    RWLOCK sRwMutex;
     CRedBlackTree cTree;
   } sRequestLimiter;
 };

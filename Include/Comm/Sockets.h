@@ -66,6 +66,8 @@ public:
   HRESULT GetLocalAddress(_In_ HANDLE h, _Out_ PSOCKADDR_INET lpAddr);
   HRESULT GetPeerAddress(_In_ HANDLE h, _Out_ PSOCKADDR_INET lpAddr);
 
+  HRESULT Disable(_In_ HANDLE h, _In_ BOOL bReceive, _In_ BOOL bSend);
+
   //--------
 
 private:
@@ -152,7 +154,7 @@ private:
     };
 
   protected:
-    LONG volatile nRwHandleInUse;
+    RWLOCK sRwHandleInUse;
     SOCKADDR_INET sAddr;
     SOCKET sck;
     eFamily nFamily;

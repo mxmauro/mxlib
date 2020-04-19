@@ -214,8 +214,8 @@ int mx_vsnprintf(_Out_writes_z_(nMaxCount) char *lpDest, _In_ size_t nMaxCount,
   }
   if (fn_vsnprintf == NULL)
   {
-    PVOID DllBase = MxGetDllHandle(L"ntdll.dll");
-    fn_vsnprintf = (lpfn_vsnprintf)MxGetProcedureAddress(DllBase, "_vsnprintf");
+    PVOID DllBase = ::MxGetDllHandle(L"ntdll.dll");
+    fn_vsnprintf = (lpfn_vsnprintf)::MxGetProcedureAddress(DllBase, "_vsnprintf");
     if (fn_vsnprintf == NULL)
       fn_vsnprintf = (lpfn_vsnprintf)1;
   }
@@ -255,8 +255,8 @@ int mx_vsnwprintf(_Out_writes_z_(nMaxCount) wchar_t *lpDest, _In_ size_t nMaxCou
   }
   if (fn_vsnwprintf == NULL)
   {
-    PVOID DllBase = MxGetDllHandle(L"ntdll.dll");
-    fn_vsnwprintf = (lpfn_vsnwprintf)MxGetProcedureAddress(DllBase, "_vsnwprintf");
+    PVOID DllBase = ::MxGetDllHandle(L"ntdll.dll");
+    fn_vsnwprintf = (lpfn_vsnwprintf)::MxGetProcedureAddress(DllBase, "_vsnwprintf");
     if (fn_vsnwprintf == NULL)
       fn_vsnwprintf = (lpfn_vsnwprintf)1;
   }
@@ -371,8 +371,8 @@ NTSTATUS MxCreateFile(_Out_ HANDLE *lphFile, _In_ LPCWSTR szFileNameW, _In_opt_ 
     return STATUS_INVALID_PARAMETER;
   if (fnRtlDosPathNameToNtPathName_U == NULL)
   {
-    PVOID DllBase = MxGetDllHandle(L"ntdll.dll");
-    fnRtlDosPathNameToNtPathName_U = (lpfnRtlDosPathNameToNtPathName_U)MxGetProcedureAddress(DllBase,
+    PVOID DllBase = ::MxGetDllHandle(L"ntdll.dll");
+    fnRtlDosPathNameToNtPathName_U = (lpfnRtlDosPathNameToNtPathName_U)::MxGetProcedureAddress(DllBase,
                                                           "RtlDosPathNameToNtPathName_U");
     if (fnRtlDosPathNameToNtPathName_U == NULL)
       fnRtlDosPathNameToNtPathName_U = (lpfnRtlDosPathNameToNtPathName_U)1;

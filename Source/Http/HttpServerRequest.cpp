@@ -38,7 +38,7 @@ CHttpServer::CClientRequest::CClientRequest() : CIpc::CUserData()
   lpHttpServer = NULL;
   lpSocketMgr = NULL;
   hConn = NULL;
-  MxMemSet(&sPeerAddr, 0, sizeof(sPeerAddr));
+  ::MxMemSet(&sPeerAddr, 0, sizeof(sPeerAddr));
   nState = StateInactive;
   _InterlockedExchange(&nFlags, 0);
   hrErrorCode = S_OK;
@@ -873,12 +873,13 @@ HRESULT CHttpServer::CClientRequest::Initialize(_In_ CHttpServer *_lpHttpServer,
   MX_ASSERT(_lpSocketMgr != NULL);
   MX_ASSERT(_hConn != NULL);
   lpHttpServer = _lpHttpServer;
-  cRequestParser.SetLogParent(lpHttpServer);
+  cRequestParser.SetLogParent(_lpHttpServer);
   lpSocketMgr = _lpSocketMgr;
   hConn = _hConn;
   if (_lpHttpServer->ShouldLog(1) != FALSE)
   {
-    _lpHttpServer->Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): State=Inactive", this, hConn);
+    _lpHttpServer->Log(L"HttpServer(State/Req:0x%p/Conn:0x%p/Parser:0x%p): State=Inactive", this, hConn,
+                       &cRequestParser);
   }
   cRequestParser.SetOption_MaxHeaderSize(dwMaxHeaderSize);
   //done
@@ -904,6 +905,58 @@ HRESULT CHttpServer::CClientRequest::ResetForNewRequest()
 HRESULT CHttpServer::CClientRequest::SetState(_In_ eState nNewState)
 {
   HRESULT hRes;
+
+  if (lpHttpServer->ShouldLog(1) != FALSE)
+  {
+    BOOL b = FALSE;
+
+    switch (nState)
+    {
+      case StateInactive:
+      case StateKeepingAlive:
+        if (nNewState != StateReceivingRequestHeaders && nNewState != StateTerminated)
+          b = TRUE;
+        break;
+
+      case StateReceivingRequestHeaders:
+        if (nNewState != StateNegotiatingWebSocket && nNewState != StateAfterHeaders &&
+            nNewState != StateBuildingResponse)
+        {
+          b = TRUE;
+        }
+        break;
+
+      case StateAfterHeaders:
+        if (nNewState != StateReceivingRequestBody && nNewState != StateBuildingResponse)
+          b = TRUE;
+        break;
+
+      case StateReceivingRequestBody:
+        if (nNewState != StateBuildingResponse)
+          b = TRUE;
+        break;
+
+      case StateBuildingResponse:
+        if (nNewState != StateSendingResponse)
+          b = TRUE;
+        break;
+
+      case StateSendingResponse:
+        if (nNewState != StateKeepingAlive && nNewState != StateTerminated && nNewState != StateLingerClose)
+          b = TRUE;
+        break;
+
+      case StateNegotiatingWebSocket:
+        if (nNewState != StateWebSocket)
+          b = TRUE;
+        break;
+    }
+    if (b != FALSE)
+    {
+      lpHttpServer->Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): Unexpected NewState=%s from State=%s", this, hConn,
+                        GetNamedState(nNewState), GetNamedState(nState));
+    }
+  }
 
   switch (nState)
   {
@@ -935,46 +988,7 @@ HRESULT CHttpServer::CClientRequest::SetState(_In_ eState nNewState)
 
   if (lpHttpServer->ShouldLog(1) != FALSE)
   {
-    LPCWSTR sW = L"Closed";
-
-    switch (nState)
-    {
-      case StateInactive:
-        sW = L"Inactive";
-        break;
-      case StateReceivingRequestHeaders:
-        sW = L"Receiving headers";
-        break;
-      case StateAfterHeaders:
-        sW = L"Received headers";
-        break;
-      case StateReceivingRequestBody:
-        sW = L"Receiving body";
-        break;
-      case StateBuildingResponse:
-        sW = L"Building response";
-        break;
-      case StateSendingResponse:
-        sW = L"Sending response";
-        break;
-      case StateNegotiatingWebSocket:
-        sW = L"Negotiating WebSocket";
-        break;
-      case StateWebSocket:
-        sW = L"WebSocket";
-        break;
-      case StateGracefulTermination:
-        sW = L"Graceful Termination";
-        break;
-      case StateTerminated:
-        sW = L"Terminated";
-        break;
-      case StateKeepingAlive:
-        sW = L"Keeping Alive";
-        break;
-    }
-
-    lpHttpServer->Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): State=%s", this, hConn, sW);
+    lpHttpServer->Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): State=%s", this, hConn, GetNamedState(nState));
   }
   return S_OK;
 }
@@ -1155,6 +1169,10 @@ HRESULT CHttpServer::CClientRequest::SendHeaders()
     else if (IsKeepAliveRequest() != FALSE)
     {
       hRes = WriteToStream(cHdrStream, "Connection: Keep-Alive\r\n", 24);
+    }
+    else
+    {
+      hRes = WriteToStream(cHdrStream, "Connection: Close\r\n", 19);
     }
   }
 
@@ -1451,6 +1469,7 @@ HRESULT CHttpServer::CClientRequest::StartTimeoutTimers(_In_ int nTimers)
     if (FAILED(hRes))
       goto done;
   }
+  hRes = S_OK;
 
 done:
   if (FAILED(hRes))
@@ -1477,6 +1496,49 @@ VOID CHttpServer::CClientRequest::StopTimeoutTimers(_In_ int nTimers)
     MX::TimedEvent::Clear(&nKeepAliveTimeoutTimerId);
   }
   return;
+}
+
+LPCWSTR CHttpServer::CClientRequest::GetNamedState(_In_ eState nState)
+{
+  switch (nState)
+  {
+    case StateInactive:
+      return L"Inactive";
+
+    case StateReceivingRequestHeaders:
+      return L"Receiving headers";
+
+    case StateAfterHeaders:
+      return L"Received headers";
+
+    case StateReceivingRequestBody:
+      return L"Receiving body";
+
+    case StateBuildingResponse:
+      return L"Building response";
+
+    case StateSendingResponse:
+      return L"Sending response";
+
+    case StateNegotiatingWebSocket:
+      return L"Negotiating WebSocket";
+
+    case StateWebSocket:
+      return L"WebSocket";
+
+    case StateGracefulTermination:
+      return L"Graceful Termination";
+
+    case StateTerminated:
+      return L"Terminated";
+
+    case StateKeepingAlive:
+      return L"Keeping Alive";
+
+    case StateLingerClose:
+      return L"Linger Close";
+  }
+  return L"Closed";
 }
 
 } //namespace MX

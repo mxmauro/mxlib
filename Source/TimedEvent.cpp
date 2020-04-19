@@ -184,7 +184,7 @@ private:
 
 //-----------------------------------------------------------
 
-static LONG volatile nTimerHandlerRwMutex = 0;
+static MX::RWLOCK sTimerHandlerRwMutex = MX_RWLOCK_INIT;
 static MX::Internals::CTimerHandler *lpTimerHandler = NULL;
 
 //-----------------------------------------------------------
@@ -288,7 +288,7 @@ CTimerHandler::~CTimerHandler()
 
 CTimerHandler* CTimerHandler::Get()
 {
-  CAutoSlimRWLShared cLock(&nTimerHandlerRwMutex);
+  CAutoSlimRWLShared cLock(&sTimerHandlerRwMutex);
 
   if (lpTimerHandler == NULL)
   {
@@ -321,7 +321,7 @@ CTimerHandler* CTimerHandler::Get()
 
 VOID CTimerHandler::Shutdown()
 {
-  CAutoSlimRWLExclusive cLock(&nTimerHandlerRwMutex);
+  CAutoSlimRWLExclusive cLock(&sTimerHandlerRwMutex);
 
   MX_RELEASE(lpTimerHandler);
   return;

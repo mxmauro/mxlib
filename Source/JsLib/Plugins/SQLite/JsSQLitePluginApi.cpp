@@ -59,6 +59,7 @@ HRESULT SQLiteInitialize()
       if (FAILED(hRes))
         return hRes;
 
+      //done
       _InterlockedExchange(&nInitialized, 1);
     }
   }

@@ -60,7 +60,7 @@ public:
 
 //-----------------------------------------------------------
 
-static LONG volatile nRwMutex = 0;
+static MX::RWLOCK sRwMutex = MX_RWLOCK_INIT;
 static MX::Internals::CHttpAuthCacheItem* aList[MAX_CACHED_ITEMS] = { 0 };
 static LONG volatile nShutdownAdded = 0;
 
@@ -84,7 +84,7 @@ HRESULT Add(_In_ CUrl &cUrl, _In_ CHttpAuthBase *lpHttpAuth)
 HRESULT Add(_In_ CUrl::eScheme nScheme, _In_z_ LPCWSTR szHostW, _In_ int nPort, _In_z_ LPCWSTR szPathW,
             _In_ CHttpAuthBase *lpHttpAuth)
 {
-  MX::CAutoSlimRWLExclusive cLock(&nRwMutex);
+  MX::CAutoSlimRWLExclusive cLock(&sRwMutex);
   MX::TAutoDeletePtr<MX::Internals::CHttpAuthCacheItem> cNewCachedItem;
   SIZE_T nIdx, nFreeSlotIdx = (SIZE_T)-1;
   int nIsSame = 0;
@@ -199,7 +199,7 @@ HRESULT Add(_In_ CUrl::eScheme nScheme, _In_z_ LPCWSTR szHostW, _In_ int nPort, 
 
 VOID Remove(_In_ CHttpAuthBase *lpHttpAuth)
 {
-  MX::CAutoSlimRWLExclusive cLock(&nRwMutex);
+  MX::CAutoSlimRWLExclusive cLock(&sRwMutex);
   SIZE_T nIdx;
 
   for (nIdx = 0; nIdx < MAX_CACHED_ITEMS; nIdx++)
@@ -217,7 +217,7 @@ VOID Remove(_In_ CHttpAuthBase *lpHttpAuth)
 
 VOID RemoveAll()
 {
-  MX::CAutoSlimRWLExclusive cLock(&nRwMutex);
+  MX::CAutoSlimRWLExclusive cLock(&sRwMutex);
   SIZE_T nIdx;
 
   for (nIdx = 0; nIdx < MAX_CACHED_ITEMS; nIdx++)
@@ -239,7 +239,7 @@ CHttpAuthBase* Lookup(_In_ CUrl &cUrl)
 
 CHttpAuthBase* Lookup(_In_ CUrl::eScheme nScheme, _In_z_ LPCWSTR szHostW, _In_ int nPort, _In_z_ LPCWSTR szPathW)
 {
-  MX::CAutoSlimRWLShared cLock(&nRwMutex);
+  MX::CAutoSlimRWLShared cLock(&sRwMutex);
   CHttpAuthBase *lpHttpAuth;
   SIZE_T nIdx, nBestMatchIdx, nBestMatchPathLen;
 

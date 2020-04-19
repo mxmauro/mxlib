@@ -187,6 +187,7 @@
     <ClInclude Include="Include\FileStream.h" />
     <ClInclude Include="Include\Finalizer.h" />
     <ClInclude Include="Include\FnvHash.h" />
+    <ClInclude Include="Include\TaskQueue.h" />
     <ClInclude Include="Include\Timer.h" />
     <ClInclude Include="Include\IOCompletionPort.h" />
     <ClInclude Include="Include\LinkedList.h" />
@@ -216,6 +217,7 @@
     <ClCompile Include="Source\Finalizer.cpp" />
     <ClCompile Include="Source\FnvHash.cpp" />
     <ClCompile Include="Source\Internals\SystemDll.cpp" />
+    <ClCompile Include="Source\TaskQueue.cpp" />
     <ClCompile Include="Source\Timer.cpp" />
     <ClCompile Include="Source\IOCompletionPort.cpp" />
     <ClCompile Include="Source\Loggable.cpp" />

@@ -128,6 +128,9 @@
     <ClInclude Include="Source\Internals\SystemDll.h">
       <Filter>Source Files\Internals</Filter>
     </ClInclude>
+    <ClInclude Include="Include\TaskQueue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\DateTime\DateTime.cpp">
@@ -195,6 +198,9 @@
     </ClCompile>
     <ClCompile Include="Source\Internals\SystemDll.cpp">
       <Filter>Source Files\Internals</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\TaskQueue.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

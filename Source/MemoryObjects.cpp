@@ -97,7 +97,7 @@ static VOID DumpLeaks();
 //-----------------------------------------------------------
 
 #ifdef DO_HEAP_CHECK
-typedef void(*_PVFV)(void);
+typedef void (*_PVFV)(void);
 
 #pragma section(".CRT$XTY", long, read)  // NOLINT
 static __declspec(allocate(".CRT$XTY")) _PVFV my_exit_funcs[] = { &DumpLeaks };

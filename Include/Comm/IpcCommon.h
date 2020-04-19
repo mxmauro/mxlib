@@ -707,7 +707,7 @@ protected:
                _Out_opt_ LPDWORD lpdwTimeMarkMs = NULL);
 
     private:
-      LONG nRwMutex;
+      RWLOCK sRwMutex;
       ULONGLONG ullBytesTransferred, ullPrevBytesTransferred;
       CTimer cTimer;
       float nAvgRate, nTransferRateHistory[4];
@@ -733,7 +733,7 @@ protected:
       CCircularBuffer cBuffer;
     } sReceivedData;
     struct {
-      LONG volatile nRwMutex;
+      RWLOCK sRwMutex;
       CLnkLst cList;
     } sLayers;
     TAutoRefCounted<CUserData> cUserData;
@@ -785,12 +785,12 @@ protected:
   CWindowsEvent cShuttingDownEv;
   OnEngineErrorCallback cEngineErrorCallback;
   struct {
-    LONG volatile nRwMutex;
+    RWLOCK sRwMutex;
     CRedBlackTree cTree;
   } sConnections;
   CPacketList cFreePacketsList32768;
   CPacketList cFreePacketsList4096;
-  CPacketList cFreePacketsList256;
+  CPacketList cFreePacketsList512;
 };
 
 } //namespace MX

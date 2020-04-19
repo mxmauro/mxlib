@@ -79,7 +79,7 @@ static lpfnWinHttpGetProxyForUrl fnWinHttpGetProxyForUrl = NULL;
 static lpfnWinHttpGetDefaultProxyConfiguration fnWinHttpGetDefaultProxyConfiguration = NULL;
 static lpfnGlobalFree fnGlobalFree = NULL;
 static struct {
-  LONG volatile nRwMutex;
+  MX::RWLOCK sRwMutex;
   MX::CStringW cStrProxyW;
   MX::CStringW cStrAutoConfigUrlW;
 } sIeProxySettings{};
@@ -349,7 +349,7 @@ VOID CIEProxyResolver::RetrieveProxySettings()
   }
 
   {
-    MX::CAutoSlimRWLExclusive cLock(&(sIeProxySettings.nRwMutex));
+    MX::CAutoSlimRWLExclusive cLock(&(sIeProxySettings.sRwMutex));
 
     sIeProxySettings.cStrProxyW.Attach(cStrNewProxyW.Detach());
     sIeProxySettings.cStrAutoConfigUrlW.Attach(cStrNewAutoConfigUrlW.Detach());
@@ -506,7 +506,7 @@ static HRESULT GetProxyConfiguration(_In_opt_z_ LPCWSTR szTargetUrlW, _Out_ MX::
   }
 
   {
-    MX::CAutoSlimRWLShared cLock(&(sIeProxySettings.nRwMutex));
+    MX::CAutoSlimRWLShared cLock(&(sIeProxySettings.sRwMutex));
 
     if (sIeProxySettings.cStrProxyW.IsEmpty() == FALSE)
     {
@@ -529,7 +529,7 @@ static HRESULT GetProxyConfiguration(_In_opt_z_ LPCWSTR szTargetUrlW, _Out_ MX::
     LPWSTR szProxyW = NULL;
 
     {
-      MX::CAutoSlimRWLShared cLock(&(sIeProxySettings.nRwMutex));
+      MX::CAutoSlimRWLShared cLock(&(sIeProxySettings.sRwMutex));
       LPCWSTR sW = (LPCWSTR)(sIeProxySettings.cStrAutoConfigUrlW);
       if (*sW == 0)
         sW = NULL;

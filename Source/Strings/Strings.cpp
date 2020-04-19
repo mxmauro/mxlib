@@ -44,7 +44,6 @@ typedef int (__cdecl *lpfn__stdio_common_vsnwprintf_s)(_In_ unsigned __int64 _Op
 //-----------------------------------------------------------
 
 static __declspec(thread) int strtodbl_error = 0;
-static LONG volatile nInitialized = 0;
 static CHAR volatile aToLowerChar[256] = { 0 };
 static WCHAR volatile aToUnicodeChar[256] = { 0 };
 
@@ -1651,21 +1650,18 @@ BOOL CSecureStringW::AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCST
 
 static VOID InitializeTables()
 {
-  static LONG volatile nMutex = 0;
+  static LONG volatile nInitialized = 0;
 
-  if (nInitialized == 0)
+  switch (_InterlockedCompareExchange(&nInitialized, 2, 0))
   {
-    MX::CFastLock cLock(&nMutex);
-    CHAR chA[4];
-    WCHAR chW[4];
-    SIZE_T i, j;
-    MX_ANSI_STRING sAnsiStr;
-    MX_UNICODE_STRING sUnicodeStr;
-
-    if (nInitialized == 0)
-    {
-      for (i=1; i<256; i++)
+    case 0: //initializing
+      for (SIZE_T i = 1; i < 256; i++)
       {
+        CHAR chA[4];
+        WCHAR chW[4];
+        MX_ANSI_STRING sAnsiStr;
+        MX_UNICODE_STRING sUnicodeStr;
+
         chA[0] = (CHAR)i;
         sAnsiStr.Buffer = chA;
         sAnsiStr.Length = sAnsiStr.MaximumLength = 1;
@@ -1674,15 +1670,26 @@ static VOID InitializeTables()
         sUnicodeStr.MaximumLength = (USHORT)sizeof(chW);
         ::MxRtlAnsiStringToUnicodeString(&sUnicodeStr, &sAnsiStr, FALSE);
         aToUnicodeChar[i] = (sUnicodeStr.Length == 2) ? chW[0] : (WCHAR)i;
-        for (j=0; j<(SIZE_T)(sUnicodeStr.Length) / sizeof(WCHAR); j++)
+
+        for (SIZE_T j = 0; j < (SIZE_T)(sUnicodeStr.Length) / sizeof(WCHAR); j++)
           chW[j] = ::MxRtlDowncaseUnicodeChar(chW[j]);
         sAnsiStr.Length = 0;
         sAnsiStr.MaximumLength = (USHORT)sizeof(chA);
         ::MxRtlUnicodeStringToAnsiString(&sAnsiStr, &sUnicodeStr, FALSE);
         aToLowerChar[i] = (sAnsiStr.Length == 1) ? chA[0] : (CHAR)i;
       }
-    }
+
+      //initialization completed
+      _InterlockedExchange(&nInitialized, 1);
+      break;
+
+    case 2: //another thread is initializing, just spin
+      while (__InterlockedRead(&nInitialized) == 2)
+        ::MxSleep(5);
+      break;
   }
+
+  //done
   return;
 }
 

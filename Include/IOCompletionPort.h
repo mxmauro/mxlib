@@ -84,6 +84,7 @@ public:
   VOID SetOption_WorkerThreadIdleTime(_In_opt_ DWORD dwTimeoutMs = 2000);
   VOID SetOption_ShutdownThreadThreshold(_In_opt_ DWORD dwThreshold = 2);
   VOID SetOption_ThreadStackSize(_In_opt_ DWORD dwStackSize = 0);
+  VOID SetOption_ThreadPriority(_In_opt_ int nPriority = THREAD_PRIORITY_NORMAL);
 
   VOID SetThreadStartCallback(_In_opt_ OnThreadStartCallback cThreadStartCallback);
   VOID SetThreadEndCallback(_In_opt_ OnThreadEndCallback cThreadEndCallback);
@@ -134,13 +135,13 @@ private:
   VOID ThreadProc(_In_ SIZE_T nParam);
 
 private:
-  LONG volatile nSlimMutex;
   OnThreadStartCallback cThreadStartCallback;
   OnThreadEndCallback cThreadEndCallback;
   OnThreadStartErrorCallback cThreadStartErrorCallback;
   DWORD dwMinThreadsCount, dwMaxThreadsCount;
   DWORD dwWorkerThreadIdleTimeoutMs, dwShutdownThreadThreshold;
   DWORD dwThreadStackSize;
+  int nThreadPriority;
   CIoCompletionPort cIOCP;
   struct {
     LONG volatile nMutex;

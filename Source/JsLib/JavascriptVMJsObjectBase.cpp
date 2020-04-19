@@ -354,7 +354,8 @@ VOID CJsObjectBase::_SetupMapEntries(_In_ DukTape::duk_context *lpCtx, _In_ MAP_
     {
       //a property
       DukTape::duk_push_string(lpCtx, lpEntries->szNameA);
-      nDukFlags = DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_HAVE_CONFIGURABLE | DUK_DEFPROP_HAVE_GETTER;
+      nDukFlags = DUK_DEFPROP_HAVE_ENUMERABLE | DUK_DEFPROP_HAVE_CONFIGURABLE | DUK_DEFPROP_HAVE_GETTER |
+                  DUK_DEFPROP_CONFIGURABLE;
       if (lpEntries->nEnumerable != 0)
         nDukFlags |= DUK_DEFPROP_ENUMERABLE;
       DukTape::duk_push_c_function(lpCtx, lpEntries->fnGetter, 0);

@@ -259,7 +259,7 @@ HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreate
   cNewConn->cCreateCallback = cCreateCallback;
   cNewConn->cUserData = lpUserData;
   {
-    CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
+    CAutoSlimRWLExclusive cConnListLock(&(sConnections.sRwMutex));
 
     sConnections.cTree.Insert(&(cNewConn->cTreeNode), &CConnectionBase::InsertCompareFunc);
   }
@@ -373,7 +373,7 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
   cNewConn->cCreateCallback = cCreateCallback;
   cNewConn->cUserData = lpUserData;
   {
-    CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
+    CAutoSlimRWLExclusive cConnListLock(&(sConnections.sRwMutex));
 
     sConnections.cTree.Insert(&(cNewConn->cTreeNode), &CConnectionBase::InsertCompareFunc);
   }
@@ -438,7 +438,7 @@ HRESULT CNamedPipes::CreateServerConnection(_In_ CServerInfo *lpServerInfo, _In_
   cNewConn->cCreateCallback = _cCreateCallback;
   cNewConn->cServerInfo = lpServerInfo;
   {
-    CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
+    CAutoSlimRWLExclusive cConnListLock(&(sConnections.sRwMutex));
 
     sConnections.cTree.Insert(&(cNewConn->cTreeNode), &CConnectionBase::InsertCompareFunc);
   }
@@ -553,7 +553,7 @@ HRESULT CNamedPipes::CServerInfo::Init(_In_z_ LPCWSTR szServerNameW, _In_ PSECUR
 CNamedPipes::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass) :
                           CConnectionBase(lpIpc, nClass), CNonCopyableObj()
 {
-  SlimRWL_Initialize(&nRwHandleInUse);
+  SlimRWL_Initialize(&sRwHandleInUse);
   hPipe = NULL;
   return;
 }
@@ -671,7 +671,7 @@ HRESULT CNamedPipes::CConnection::CreateClient(_In_z_ LPCWSTR szServerNameW, _In
 VOID CNamedPipes::CConnection::ShutdownLink(_In_ BOOL bAbortive)
 {
   {
-    CAutoSlimRWLExclusive cHandleInUseLock(&nRwHandleInUse);
+    CAutoSlimRWLExclusive cHandleInUseLock(&sRwHandleInUse);
 
     if (hPipe != NULL)
     {
@@ -694,7 +694,7 @@ VOID CNamedPipes::CConnection::ShutdownLink(_In_ BOOL bAbortive)
 
 HRESULT CNamedPipes::CConnection::SendReadPacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwRead)
 {
-  CAutoSlimRWLShared cHandleInUseLock(&nRwHandleInUse);
+  CAutoSlimRWLShared cHandleInUseLock(&sRwHandleInUse);
   DWORD dwRead;
   HRESULT hRes;
 
@@ -723,7 +723,7 @@ HRESULT CNamedPipes::CConnection::SendReadPacket(_In_ CPacketBase *lpPacket, _Ou
 
 HRESULT CNamedPipes::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwWritten)
 {
-  CAutoSlimRWLShared cHandleInUseLock(&nRwHandleInUse);
+  CAutoSlimRWLShared cHandleInUseLock(&sRwHandleInUse);
   DWORD dwWritten;
   HRESULT hRes;
 
@@ -731,6 +731,14 @@ HRESULT CNamedPipes::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket, _O
   {
     *lpdwWritten = 0;
     return S_FALSE;
+  }
+  if (lpIpc->ShouldLog(2) != FALSE)
+  {
+    cLogTimer.Mark();
+    lpIpc->Log(L"CNamedPipes::SendWritePacket) Clock=%lums / Conn=0x%p / Ovr=0x%p / Type=%lu / Bytes=%lu",
+               cLogTimer.GetElapsedTimeMs(), this, lpPacket->GetOverlapped(), lpPacket->GetType(),
+               lpPacket->GetBytesInUse());
+    cLogTimer.ResetToLastMark();
   }
   dwWritten = 0;
   if (::WriteFile(hPipe, lpPacket->GetBuffer(), lpPacket->GetBytesInUse(), &dwWritten,

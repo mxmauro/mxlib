@@ -135,7 +135,7 @@ CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr,
   dwMaxBodySizeInMemory = 32768;
   ullMaxBodySize = 10485760ui64;
   //----
-  SlimRWL_Initialize(&(sSsl.nRwMutex));
+  SlimRWL_Initialize(&(sSsl.sRwMutex));
   RundownProt_Initialize(&nRundownLock);
   hAcceptConn = NULL;
   cNewRequestObjectCallback = NullCallback();
@@ -144,54 +144,110 @@ CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr,
   cWebSocketRequestReceivedCallback = NullCallback();
   cCustomErrorPageCallback = NullCallback();
   cErrorCallback = NullCallback();
-  SlimRWL_Initialize(&nRequestsListRwMutex);
+  SlimRWL_Initialize(&sRequestsListRwMutex);
   _InterlockedExchange(&nDownloadNameGeneratorCounter, 0);
   //----
-  SlimRWL_Initialize(&(sRequestLimiter.nRwMutex));
+  SlimRWL_Initialize(&(sRequestLimiter.sRwMutex));
   return;
 }
 
 CHttpServer::~CHttpServer()
 {
+  TArrayListWithRelease<CClientRequest*> cFastClose;
+  CLnkLst::Iterator it;
+  CClientRequest *lpRequest;
+
   RundownProt_WaitForRelease(&nRundownLock);
+  BOOL b;
 
   //stop current server
   StopListening();
 
-  //terminate current connections and wait
+  //terminate all requests
+  b = TRUE;
   {
-    CAutoSlimRWLShared cListLock(&nRequestsListRwMutex);
-    CLnkLst::Iterator it;
+    CAutoSlimRWLShared cListLock(&sRequestsListRwMutex);
 
-    for (CLnkLstNode *lpNode = it.Begin(cRequestsList); lpNode != NULL; lpNode = it.Next())
+    if (cRequestsList.GetCount() > 0 && cFastClose.SetSize(cRequestsList.GetCount()) != FALSE)
     {
-      CClientRequest *lpRequest = CONTAINING_RECORD(lpNode, CClientRequest, cListNode);
-      CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
-
-      if (lpRequest->nState != CClientRequest::StateTerminated)
+      for (CLnkLstNode *lpNode = it.Begin(cRequestsList); lpNode != NULL; lpNode = it.Next())
       {
-        TerminateRequest(lpRequest, MX_E_Cancelled);
+        lpRequest = CONTAINING_RECORD(lpNode, CClientRequest, cListNode);
+        b = cFastClose.AddElement(lpRequest);
+        if (b == FALSE)
+          break;
+        lpRequest->AddRef();
       }
     }
   }
 
-  for (;;)
+  if (b != FALSE)
   {
-    BOOL b;
-
+    //using fast close
+    CClientRequest **lplpRequest = cFastClose.GetBuffer();
+    for (SIZE_T nCount = cFastClose.GetCount(); nCount > 0; nCount--, lplpRequest++)
     {
-      CAutoSlimRWLShared cListLock(&nRequestsListRwMutex);
+      CCriticalSection::CAutoLock cLock((*lplpRequest)->cMutex);
+
+      if ((*lplpRequest)->nState != CClientRequest::StateTerminated)
+      {
+        TerminateRequest((*lplpRequest), MX_E_Cancelled);
+      }
+    }
+
+    cFastClose.RemoveAllElements();
+  }
+  else
+  {
+    //using slow path
+    do
+    {
+      lpRequest = NULL;
+
+      {
+        CAutoSlimRWLShared cListLock(&sRequestsListRwMutex);
+
+        for (CLnkLstNode *lpNode = it.Begin(cRequestsList); lpNode != NULL; lpNode = it.Next())
+        {
+          CClientRequest *_lpRequest = CONTAINING_RECORD(lpNode, CClientRequest, cListNode);
+          CCriticalSection::CAutoLock cLock(_lpRequest->cMutex);
+
+          if ((_InterlockedOr(&(_lpRequest->nFlags), REQUEST_FLAG_ClosingOnShutdown) &
+               REQUEST_FLAG_ClosingOnShutdown) == 0 &&
+              _lpRequest->nState != CClientRequest::StateTerminated)
+          {
+            lpRequest = _lpRequest;
+            lpRequest->AddRef();
+
+            TerminateRequest(lpRequest, MX_E_Cancelled);
+            break;
+          }
+        }
+      }
+
+      if (lpRequest != NULL)
+      {
+        lpRequest->Release();
+      }
+    }
+    while (lpRequest != NULL);
+  }
+
+  do
+  {
+    {
+      CAutoSlimRWLShared cListLock(&sRequestsListRwMutex);
 
       b = cRequestsList.IsEmpty();
     }
-    if (b != FALSE)
-      break;
-    ::MxSleep(10);
+    if (b == FALSE)
+      ::MxSleep(10);
   }
+  while (b == FALSE);
 
   //remove limiters
   {
-    CAutoSlimRWLExclusive cLimiterLock(&(sRequestLimiter.nRwMutex));
+    CAutoSlimRWLExclusive cLimiterLock(&(sRequestLimiter.sRwMutex));
     CRedBlackTreeNode *lpNode;
 
     while ((lpNode = sRequestLimiter.cTree.GetFirst()) != NULL)
@@ -202,6 +258,8 @@ CHttpServer::~CHttpServer()
       delete lpLimiter;
     }
   }
+
+  //done
   return;
 }
 
@@ -436,7 +494,7 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSock
       //set SSL
       if (lpSslCertificate != NULL)
       {
-        CAutoSlimRWLExclusive cSslLock(&(sSsl.nRwMutex));
+        CAutoSlimRWLExclusive cSslLock(&(sSsl.sRwMutex));
 
         sSsl.cSslCertificate.Attach(MX_DEBUG_NEW CSslCertificate());
         if (sSsl.cSslCertificate)
@@ -484,7 +542,7 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSock
     if (FAILED(hRes))
     {
       {
-        CAutoSlimRWLExclusive cSslLock(&(sSsl.nRwMutex));
+        CAutoSlimRWLExclusive cSslLock(&(sSsl.sRwMutex));
 
         sSsl.cSslCertificate.Reset();
         sSsl.cSslPrivateKey.Reset();
@@ -534,7 +592,7 @@ VOID CHttpServer::StopListening()
     }
     //ssl
     {
-      CAutoSlimRWLExclusive cSslLock(&(sSsl.nRwMutex));
+      CAutoSlimRWLExclusive cSslLock(&(sSsl.sRwMutex));
 
       sSsl.cSslCertificate.Reset();
       sSsl.cSslPrivateKey.Reset();
@@ -684,6 +742,12 @@ VOID CHttpServer::OnGracefulTerminationTimerCallback(_In_ LONG nTimerId, _In_ LP
 
           bStopTimers = TRUE;
           break;
+
+        case CClientRequest::StateLingerClose:
+          TerminateRequest(lpRequest, S_OK);
+
+          bStopTimers = TRUE;
+          break;
       }
     }
 
@@ -770,7 +834,7 @@ HRESULT CHttpServer::OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIp
         return hRes;
       //add ssl layer
       {
-        CAutoSlimRWLShared cSslLock(&(sSsl.nRwMutex));
+        CAutoSlimRWLShared cSslLock(&(sSsl.sRwMutex));
 
         if (sSsl.cSslCertificate)
         {
@@ -793,7 +857,7 @@ HRESULT CHttpServer::OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIp
 
       //add to list
       {
-        CAutoSlimRWLExclusive cListLock(&nRequestsListRwMutex);
+        CAutoSlimRWLExclusive cListLock(&sRequestsListRwMutex);
 
         cRequestsList.PushTail(&(cNewRequest.Detach()->cListNode));
       }
@@ -825,7 +889,7 @@ VOID CHttpServer::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
   {
     if (lpRequest->sPeerAddr.si_family != 0)
     {
-      CAutoSlimRWLShared cLimiterLock(&(sRequestLimiter.nRwMutex));
+      CAutoSlimRWLShared cLimiterLock(&(sRequestLimiter.sRwMutex));
       CRedBlackTreeNode *lpNode;
 
       lpNode = sRequestLimiter.cTree.Find(&(lpRequest->sPeerAddr), &CRequestLimiter::SearchCompareFunc);
@@ -870,7 +934,7 @@ VOID CHttpServer::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
     lpRequest->StopTimeoutTimers(CClientRequest::TimeoutTimerAll);
 
     {
-      CAutoSlimRWLExclusive cListLock(&nRequestsListRwMutex);
+      CAutoSlimRWLExclusive cListLock(&sRequestsListRwMutex);
 
       if (lpRequest->cListNode.GetList() == &cRequestsList)
       {
@@ -895,7 +959,7 @@ HRESULT CHttpServer::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc:
   //count connections from the same IP
   if (SUCCEEDED(cSocketMgr.GetPeerAddress(h, &(lpRequest->sPeerAddr))) && dwMaxConnectionsPerIp != 0xFFFFFFFFUL)
   {
-    CAutoSlimRWLShared cLimiterLock(&(sRequestLimiter.nRwMutex));
+    CAutoSlimRWLShared cLimiterLock(&(sRequestLimiter.sRwMutex));
     CRedBlackTreeNode *lpNode;
 
     lpNode = sRequestLimiter.cTree.Find(&(lpRequest->sPeerAddr), &CRequestLimiter::SearchCompareFunc);
@@ -1099,6 +1163,7 @@ on_request_error:
 
         case CClientRequest::StateTerminated:
         case CClientRequest::StateGracefulTermination:
+        case CClientRequest::StateLingerClose:
           hRes = cSocketMgr.ConsumeBufferedMessage(h, nMsgSize);
           if (FAILED(hRes))
             goto on_request_error;
@@ -1409,6 +1474,7 @@ VOID CHttpServer::OnAfterSendResponse(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVO
                                       _In_ CIpc::CUserData *lpUserData)
 {
   CClientRequest *lpRequest = (CClientRequest*)lpUserData;
+  BOOL bKeepAlive = FALSE;
   HRESULT hRes;
 
   lpRequest->StopTimeoutTimers(CClientRequest::TimeoutTimerAll);
@@ -1419,33 +1485,55 @@ VOID CHttpServer::OnAfterSendResponse(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVO
     if (lpRequest->nState == CClientRequest::StateGracefulTermination ||
         (__InterlockedRead(&(lpRequest->nFlags)) & REQUEST_FLAG_DontKeepAlive) != 0)
     {
-      TerminateRequest(lpRequest, S_OK);
-      return;
+linger_close:
+      lpRequest->SetState(CClientRequest::StateLingerClose);
+
+      if (FAILED(cSocketMgr.Disable(lpRequest->hConn, FALSE, TRUE)))
+      {
+        TerminateRequest(lpRequest, S_OK);
+        return;
+      }
+    }
+    else
+    {
+      //resetting request
+      hRes = lpRequest->ResetForNewRequest();
+      if (FAILED(hRes))
+        goto linger_close;
+
+      bKeepAlive = TRUE;
+    }
+  }
+
+  if (bKeepAlive != FALSE)
+  {
+    //if we reach here, we reinitiated for a new consecutive request, might be some data already sent by the server
+    //waiting to be read
+    hRes = lpRequest->StartTimeoutTimers(CClientRequest::TimeoutTimerKeepAlive);
+    if (SUCCEEDED(hRes))
+    {
+      hRes = OnSocketDataReceived(lpIpc, h, lpUserData);
     }
 
-    //resetting request
-    hRes = lpRequest->ResetForNewRequest();
+    {
+      CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
+
+      if (FAILED(hRes) && lpRequest->nState != CClientRequest::StateTerminated)
+      {
+        TerminateRequest(lpRequest, hRes);
+      }
+    }
+  }
+  else
+  {
+    //instead, if we reach here, start a linger close timeout
+    hRes = lpRequest->StartTimeoutTimers(CClientRequest::TimeoutTimerGracefulTermination);
     if (FAILED(hRes))
     {
+      CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
+
+      //close link if we cannot setup the linger close
       TerminateRequest(lpRequest, S_OK);
-      return;
-    }
-  }
-
-  //if we reach here, we reinitiated for a new consecutive request, might be some data already sent by the server
-  //waiting to be read
-  hRes = lpRequest->StartTimeoutTimers(CClientRequest::TimeoutTimerKeepAlive);
-  if (SUCCEEDED(hRes))
-  {
-    hRes = OnSocketDataReceived(lpIpc, h, lpUserData);
-  }
-
-  {
-    CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
-
-    if (FAILED(hRes) && lpRequest->nState != CClientRequest::StateTerminated)
-    {
-      TerminateRequest(lpRequest, hRes);
     }
   }
 
@@ -1684,15 +1772,21 @@ HRESULT CHttpServer::FillResponseWithError(_In_ CClientRequest *lpRequest, _In_ 
       {
         case '<':
           hRes = cHeader->SetType("text/html", 9);
+          if (SUCCEEDED(hRes))
+            hRes = cHeader->AddParam("charset", L"utf-8");
           break;
 
         case '{':
         case '[':
           hRes = cHeader->SetType("application/json", 16);
+          if (SUCCEEDED(hRes))
+            hRes = cHeader->AddParam("charset", L"utf-8");
           break;
 
         default:
           hRes = cHeader->SetType("text/plain", 10);
+          if (SUCCEEDED(hRes))
+            hRes = cHeader->AddParam("charset", L"utf-8");
           break;
       }
     }
@@ -1959,7 +2053,7 @@ HRESULT CHttpServer::ProcessWebSocket(_In_ CClientRequest *lpRequest, _In_ CWebS
     //if we reach here, an error is fatal and leads to a hard close
     bFatal = TRUE;
     {
-      CAutoSlimRWLExclusive cListLock(&nRequestsListRwMutex);
+      CAutoSlimRWLExclusive cListLock(&sRequestsListRwMutex);
 
       lpRequest->cListNode.Remove();
       lpRequest->Release();
@@ -2012,6 +2106,7 @@ HRESULT CHttpServer::ProcessWebSocket(_In_ CClientRequest *lpRequest, _In_ CWebS
 VOID CHttpServer::OnRequestEnding(_In_ CClientRequest *lpRequest, _In_ HRESULT hrErrorCode)
 {
   int nTimersToStart;
+  HRESULT hRes;
 
   nTimersToStart = 0;
 
@@ -2028,8 +2123,7 @@ VOID CHttpServer::OnRequestEnding(_In_ CClientRequest *lpRequest, _In_ HRESULT h
 
     if (SUCCEEDED(hrErrorCode))
     {
-      HRESULT hRes = S_OK;
-
+      hRes = S_OK;
       if (lpRequest->nState != CClientRequest::StateSendingResponse)
       {
         hRes = lpRequest->SetState(CClientRequest::StateSendingResponse);
@@ -2048,7 +2142,6 @@ VOID CHttpServer::OnRequestEnding(_In_ CClientRequest *lpRequest, _In_ HRESULT h
           hRes = lpRequest->SendQueuedStreams();
       }
 
-      //and wait until completed
       if (SUCCEEDED(hRes))
       {
         if (lpRequest->IsKeepAliveRequest() == FALSE)
@@ -2056,15 +2149,9 @@ VOID CHttpServer::OnRequestEnding(_In_ CClientRequest *lpRequest, _In_ HRESULT h
           _InterlockedOr(&(lpRequest->nFlags), REQUEST_FLAG_DontKeepAlive);
         }
 
-        hRes = cSocketMgr.AfterWriteSignal(lpRequest->hConn,
-                                           MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnAfterSendResponse, this), lpRequest);
-        if (SUCCEEDED(hRes))
-        {
-          nTimersToStart |= CClientRequest::TimeoutTimerThroughput;
-        }
+        nTimersToStart |= CClientRequest::TimeoutTimerThroughput;
       }
-      //on failure terminate all
-      if (FAILED(hRes))
+      else
       {
         nTimersToStart = 0;
         TerminateRequest(lpRequest, hRes);
@@ -2077,17 +2164,25 @@ VOID CHttpServer::OnRequestEnding(_In_ CClientRequest *lpRequest, _In_ HRESULT h
   }
 
   lpRequest->StopTimeoutTimers(CClientRequest::TimeoutTimerAll);
+  hRes = lpRequest->StartTimeoutTimers(nTimersToStart);
 
-  if (nTimersToStart != 0)
   {
-    HRESULT hRes = lpRequest->StartTimeoutTimers(nTimersToStart);
+    CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
+
+    if (SUCCEEDED(hRes))
+    {
+      //and wait until completed
+      hRes = cSocketMgr.AfterWriteSignal(lpRequest->hConn,
+                                         MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnAfterSendResponse, this), lpRequest);
+    }
     if (FAILED(hRes))
     {
-      CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
-
-      TerminateRequest(lpRequest, hrErrorCode);
+      TerminateRequest(lpRequest, hRes);
     }
   }
+
+  if (FAILED(hRes))
+    lpRequest->StopTimeoutTimers(CClientRequest::TimeoutTimerAll);
   return;
 }
 

@@ -30,6 +30,7 @@ class CLoggable : public virtual CBaseMemObj
 {
 public:
   typedef Callback <HRESULT (_In_z_ LPCWSTR szInfoW)> OnLogCallback;
+
 public:
   CLoggable();
   CLoggable(_In_ OnLogCallback cCallback);

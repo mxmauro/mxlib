@@ -173,9 +173,9 @@ class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
 {
 public:
   typedef enum {
-    PropertyFlagWritable   = 0x01,
-    PropertyFlagEnumerable = 0x02,
-    PropertyFlagDeletable  = 0x04
+    PropertyFlagWritable     = 0x01,
+    PropertyFlagEnumerable   = 0x02,
+    PropertyFlagConfigurable = 0x04
   } ePropertyFlags;
 
   //----

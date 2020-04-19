@@ -187,7 +187,7 @@ HRESULT AddPropertyCommon(_In_ DukTape::duk_context *lpCtx, _In_opt_z_ LPCSTR sz
     }
     if ((nFlags & MX::CJavascriptVM::PropertyFlagEnumerable) != 0)
       nDukFlags |= DUK_DEFPROP_ENUMERABLE;
-    if ((nFlags & MX::CJavascriptVM::PropertyFlagDeletable) != 0)
+    if ((nFlags & MX::CJavascriptVM::PropertyFlagConfigurable) != 0)
       nDukFlags |= DUK_DEFPROP_CONFIGURABLE;
     //create lambda for property getter
     if (cGetValueCallback)

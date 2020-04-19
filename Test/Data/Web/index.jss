@@ -4,6 +4,7 @@ var moment = require("./moment.min.js");
 var topHtml = require("./top.jss");
 var bottomHtml = require("./bottom.jss");
 
+setHeader("x-req-address", requestAddress);
 topHtml.render();
 %>
 <div class="row">
@@ -19,6 +20,8 @@ topHtml.render();
 			<div class="card-header bg-primary text-white">SESSION</div>
 			<div class="card-body text-primary">
 				<pre>ID: <%= session.id %></pre>
+				<pre>Unique ID: <%= getUniqueId().toString() %></pre>
+				<pre>Request Address: <%= requestAddress %></pre>
 				<pre>INTVAL: <%
 				if (typeof session.intValue === 'undefined')
 					echo("Undefined");

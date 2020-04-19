@@ -264,7 +264,7 @@ HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCr
   cNewConn->cCreateCallback = cCreateCallback;
   cNewConn->cUserData = lpUserData;
   {
-    CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
+    CAutoSlimRWLExclusive cConnListLock(&(sConnections.sRwMutex));
 
     sConnections.cTree.Insert(&(cNewConn->cTreeNode), &CConnectionBase::InsertCompareFunc);
   }
@@ -330,7 +330,7 @@ HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA
   cNewConn->cCreateCallback = cCreateCallback;
   cNewConn->cUserData = lpUserData;
   {
-    CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
+    CAutoSlimRWLExclusive cConnListLock(&(sConnections.sRwMutex));
 
     sConnections.cTree.Insert(&(cNewConn->cTreeNode), &CConnectionBase::InsertCompareFunc);
   }
@@ -377,21 +377,25 @@ HRESULT CSockets::GetLocalAddress(_In_ HANDLE h, _Out_ PSOCKADDR_INET lpAddr)
   int namelen;
 
   if (lpAddr != NULL)
-    MxMemSet(lpAddr, 0, sizeof(SOCKADDR_INET));
+    ::MxMemSet(lpAddr, 0, sizeof(SOCKADDR_INET));
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
   if (h == NULL || lpAddr == NULL)
     return E_POINTER;
+
+  //get connection
   cConn.Attach((CConnection*)CheckAndGetConnection(h));
   if (!cConn)
     return E_INVALIDARG;
+
   //copy local info
   namelen = (int)sizeof(SOCKADDR_INET);
   if (::getsockname(cConn->sck, (sockaddr*)lpAddr, &namelen) != 0)
   {
-    MxMemSet(lpAddr, 0, sizeof(SOCKADDR_INET));
+    ::MxMemSet(lpAddr, 0, sizeof(SOCKADDR_INET));
     return MX_HRESULT_FROM_LASTSOCKETERROR();
   }
+
   //done
   return S_OK;
 }
@@ -402,16 +406,54 @@ HRESULT CSockets::GetPeerAddress(_In_ HANDLE h, _Out_ PSOCKADDR_INET lpAddr)
   TAutoRefCounted<CConnection> cConn;
 
   if (lpAddr != NULL)
-    MxMemSet(lpAddr, 0, sizeof(SOCKADDR_INET));
+    ::MxMemSet(lpAddr, 0, sizeof(SOCKADDR_INET));
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
   if (h == NULL || lpAddr == NULL)
     return E_POINTER;
+
+  //get connection
   cConn.Attach((CConnection*)CheckAndGetConnection(h));
   if (!cConn)
     return E_INVALIDARG;
+
   //copy peer info
-  MxMemCopy(lpAddr, &(cConn->sAddr), sizeof(cConn->sAddr));
+  ::MxMemCopy(lpAddr, &(cConn->sAddr), sizeof(cConn->sAddr));
+
+  //done
+  return S_OK;
+}
+
+HRESULT CSockets::Disable(_In_ HANDLE h, _In_ BOOL bReceive, _In_ BOOL bSend)
+{
+  CAutoRundownProtection cRundownLock(&nRundownProt);
+  TAutoRefCounted<CConnection> cConn;
+  int nHow;
+
+  if (cRundownLock.IsAcquired() == FALSE)
+    return MX_E_Cancelled;
+  if (bReceive != FALSE)
+  {
+    nHow = (bSend != FALSE) ? SD_BOTH : SD_RECEIVE;
+  }
+  else if (bSend == FALSE)
+  {
+    return E_INVALIDARG;
+  }
+  else
+  {
+    nHow = SD_SEND;
+  }
+
+  //get connection
+  cConn.Attach((CConnection *)CheckAndGetConnection(h));
+  if (!cConn)
+    return E_INVALIDARG;
+
+  //shutdown
+  if (::shutdown(cConn->sck, nHow) != 0)
+    return MX_HRESULT_FROM_LASTSOCKETERROR();
+
   //done
   return S_OK;
 }
@@ -549,7 +591,7 @@ HRESULT CSockets::CreateServerConnection(_In_ CConnection *lpListenConn)
   cIncomingConn->cCreateCallback = lpListenConn->cCreateCallback;
   MxMemCopy(&(cIncomingConn->sAddr), &(lpListenConn->sAddr), sizeof(lpListenConn->sAddr));
   {
-    CAutoSlimRWLExclusive cConnListLock(&(sConnections.nRwMutex));
+    CAutoSlimRWLExclusive cConnListLock(&(sConnections.sRwMutex));
 
     sConnections.cTree.Insert(&(cIncomingConn->cTreeNode), &CConnectionBase::InsertCompareFunc);
   }
@@ -751,7 +793,7 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket,
 CSockets::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass,
                                    _In_ eFamily _nFamily) : CConnectionBase(lpIpc, nClass), CNonCopyableObj()
 {
-  SlimRWL_Initialize(&nRwHandleInUse);
+  SlimRWL_Initialize(&sRwHandleInUse);
   MxMemSet(&sAddr, 0, sizeof(sAddr));
   sck = NULL;
   ::MxMemSet(&sHostResolver, 0, sizeof(sHostResolver));
@@ -896,7 +938,7 @@ VOID CSockets::CConnection::ShutdownLink(_In_ BOOL bAbortive)
   SOCKET sckToClose = NULL;
 
   {
-    CAutoSlimRWLExclusive cHandleInUseLock(&nRwHandleInUse);
+    CAutoSlimRWLExclusive cHandleInUseLock(&sRwHandleInUse);
 
     if (sck != NULL)
     {
@@ -907,11 +949,13 @@ VOID CSockets::CConnection::ShutdownLink(_In_ BOOL bAbortive)
       LINGER sLinger;
 
       //get extension function addresses
+      /*
       if (nClass == ConnectionClassServer && lpIpc->IsShuttingDown() == FALSE && IsConnected() != FALSE &&
           fnCancelIoEx != NULL)
       {
         fnDisconnectEx = GetDisconnectEx(sck);
       }
+      */
       if (bAbortive != FALSE)
       {
         //abortive close on error
@@ -921,7 +965,7 @@ VOID CSockets::CConnection::ShutdownLink(_In_ BOOL bAbortive)
       }
       else
       {
-        if (fnDisconnectEx == NULL)
+        //if (fnDisconnectEx == NULL)
           ::shutdown(sck, SD_SEND);
         sLinger.l_onoff = 0;
         sLinger.l_linger = 0;
@@ -952,7 +996,7 @@ use_default_close_method:
       lpSckMgr = reinterpret_cast<CSockets*>(lpIpc);
       nArrIdx = (nFamily == FamilyIPv4) ? 0 : 1;
 
-      MxMemCopy(lpPacket->GetBuffer(), &nFamily, sizeof(eFamily));
+      ::MxMemCopy(lpPacket->GetBuffer(), &nFamily, sizeof(eFamily));
       lpPacket->SetUserData((LPVOID)sck);
 
       {
@@ -1284,7 +1328,7 @@ HRESULT CSockets::CConnection::SendReadPacket(_In_ CPacketBase *lpPacket, _Out_ 
 
 HRESULT CSockets::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwWritten)
 {
-  CAutoSlimRWLShared cHandleInUseLock(&nRwHandleInUse);
+  CAutoSlimRWLShared cHandleInUseLock(&sRwHandleInUse);
   CPacketBase *lpCurrPacket;
   WSABUF aWsaBuf[16];
   DWORD dwBuffersCount, dwWritten;
@@ -1309,8 +1353,8 @@ HRESULT CSockets::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket, _Out_
     if (lpIpc->ShouldLog(2) != FALSE)
     {
       cLogTimer.Mark();
-      lpIpc->Log(L"CSockets::SendWritePacket) Clock=%lums / Ovr=0x%p / Type=%lu / Bytes=%lu",
-                 cLogTimer.GetElapsedTimeMs(), lpCurrPacket->GetOverlapped(), lpCurrPacket->GetType(),
+      lpIpc->Log(L"CSockets::SendWritePacket) Clock=%lums / Conn=0x%p / Ovr=0x%p / Type=%lu / Bytes=%lu",
+                 cLogTimer.GetElapsedTimeMs(), this, lpCurrPacket->GetOverlapped(), lpCurrPacket->GetType(),
                  lpCurrPacket->GetBytesInUse());
       cLogTimer.ResetToLastMark();
     }
@@ -1815,8 +1859,8 @@ VOID CSockets::CConnection::CListener::ThreadProc()
 
 static HRESULT Winsock_Init()
 {
-  static LONG volatile nMutex = 0;
   static LONG volatile nInitialized = 0;
+  static LONG volatile nMutex = 0;
 
   if (__InterlockedRead(&nInitialized) == 0)
   {
@@ -1830,6 +1874,7 @@ static HRESULT Winsock_Init()
       hRes = MX_HRESULT_FROM_WIN32(::WSAStartup(MAKEWORD(2, 2), &sWsaData));
       if (FAILED(hRes))
         return hRes;
+
       //register shutdown callback
       hRes = MX::RegisterFinalizer(&Winsock_Shutdown, SOCKETS_FINALIZER_PRIORITY);
       if (FAILED(hRes))
@@ -1837,6 +1882,7 @@ static HRESULT Winsock_Init()
         Winsock_Shutdown();
         return hRes;
       }
+
       //done
       _InterlockedExchange(&nInitialized, 1);
     }

@@ -170,7 +170,6 @@ HRESULT CIoCompletionPort::Get(_Out_ LPOVERLAPPED_ENTRY lpEntries, _Inout_ ULONG
 
 CIoCompletionPortThreadPool::CIoCompletionPortThreadPool() : CBaseMemObj(), CNonCopyableObj()
 {
-  SlimRWL_Initialize(&nSlimMutex);
   cThreadStartCallback = NullCallback();
   cThreadEndCallback = NullCallback();
   cThreadStartErrorCallback = NullCallback();
@@ -178,6 +177,7 @@ CIoCompletionPortThreadPool::CIoCompletionPortThreadPool() : CBaseMemObj(), CNon
   dwWorkerThreadIdleTimeoutMs = 2000;
   dwShutdownThreadThreshold = 2;
   dwThreadStackSize = 0;
+  nThreadPriority = THREAD_PRIORITY_NORMAL;
   _InterlockedExchange(&(sThreads.nMutex), 0);
   _InterlockedExchange(&(sThreads.nActiveCount), 0);
   _InterlockedExchange(&(sThreads.nBusyCount), 0);
@@ -193,8 +193,6 @@ CIoCompletionPortThreadPool::~CIoCompletionPortThreadPool()
 
 VOID CIoCompletionPortThreadPool::SetOption_MinThreadsCount(_In_opt_ DWORD dwCount)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
-
   if (!cIOCP)
   {
     dwMinThreadsCount = (dwCount == 0) ? GetNumberOfProcessors() * 2 : dwCount;
@@ -210,8 +208,6 @@ VOID CIoCompletionPortThreadPool::SetOption_MinThreadsCount(_In_opt_ DWORD dwCou
 
 VOID CIoCompletionPortThreadPool::SetOption_MaxThreadsCount(_In_opt_ DWORD dwCount)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
-
   if (!cIOCP)
   {
     dwMaxThreadsCount = (dwCount == 0) ? GetNumberOfProcessors() * 2 : dwCount;
@@ -227,8 +223,6 @@ VOID CIoCompletionPortThreadPool::SetOption_MaxThreadsCount(_In_opt_ DWORD dwCou
 
 VOID CIoCompletionPortThreadPool::SetOption_WorkerThreadIdleTime(_In_opt_ DWORD dwTimeoutMs)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
-
   if (!cIOCP)
   {
     dwWorkerThreadIdleTimeoutMs = dwTimeoutMs;
@@ -238,8 +232,6 @@ VOID CIoCompletionPortThreadPool::SetOption_WorkerThreadIdleTime(_In_opt_ DWORD 
 
 VOID CIoCompletionPortThreadPool::SetOption_ShutdownThreadThreshold(_In_opt_ DWORD dwThreshold)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
-
   if (!cIOCP)
   {
     dwShutdownThreadThreshold = dwThreshold;
@@ -251,8 +243,6 @@ VOID CIoCompletionPortThreadPool::SetOption_ShutdownThreadThreshold(_In_opt_ DWO
 
 VOID CIoCompletionPortThreadPool::SetOption_ThreadStackSize(_In_opt_ DWORD dwStackSize)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
-
   if (!cIOCP)
   {
     dwThreadStackSize = dwStackSize;
@@ -260,10 +250,22 @@ VOID CIoCompletionPortThreadPool::SetOption_ThreadStackSize(_In_opt_ DWORD dwSta
   return;
 }
 
+VOID CIoCompletionPortThreadPool::SetOption_ThreadPriority(_In_opt_ int nPriority)
+{
+  if (!cIOCP)
+  {
+    if (nPriority < -31)
+      nThreadPriority = -31;
+    else if (nPriority > 31)
+      nThreadPriority = 31;
+    else
+      nThreadPriority = nPriority;
+  }
+  return;
+}
+
 VOID CIoCompletionPortThreadPool::SetThreadStartCallback(_In_opt_ OnThreadStartCallback _cThreadStartCallback)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
-
   if (!cIOCP)
   {
     cThreadStartCallback = _cThreadStartCallback;
@@ -273,8 +275,6 @@ VOID CIoCompletionPortThreadPool::SetThreadStartCallback(_In_opt_ OnThreadStartC
 
 VOID CIoCompletionPortThreadPool::SetThreadEndCallback(_In_opt_ OnThreadEndCallback _cThreadEndCallback)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
-
   if (!cIOCP)
   {
     cThreadEndCallback = _cThreadEndCallback;
@@ -285,8 +285,6 @@ VOID CIoCompletionPortThreadPool::SetThreadEndCallback(_In_opt_ OnThreadEndCallb
 VOID CIoCompletionPortThreadPool::SetThreadStartErrorCallback(_In_opt_ OnThreadStartErrorCallback
                                                               _cThreadStartErrorCallback)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
-
   if (!cIOCP)
   {
     cThreadStartErrorCallback = _cThreadStartErrorCallback;
@@ -296,7 +294,6 @@ VOID CIoCompletionPortThreadPool::SetThreadStartErrorCallback(_In_opt_ OnThreadS
 
 HRESULT CIoCompletionPortThreadPool::Initialize()
 {
-  CAutoSlimRWLExclusive cLock(&nSlimMutex);
   DWORD i;
   HRESULT hRes;
 
@@ -311,16 +308,12 @@ HRESULT CIoCompletionPortThreadPool::Initialize()
 
 VOID CIoCompletionPortThreadPool::Finalize()
 {
-  CAutoSlimRWLExclusive cLock(&nSlimMutex);
-
   InternalFinalize();
   return;
 }
 
 HRESULT CIoCompletionPortThreadPool::Attach(_In_ HANDLE h, _In_ OnPacketCallback &cCallback)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
-
   if (!cIOCP)
     return E_FAIL;
   if (h == NULL || h == INVALID_HANDLE_VALUE)
@@ -332,8 +325,6 @@ HRESULT CIoCompletionPortThreadPool::Attach(_In_ HANDLE h, _In_ OnPacketCallback
 
 HRESULT CIoCompletionPortThreadPool::Post(_In_ OnPacketCallback &cCallback, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr)
 {
-  CAutoSlimRWLShared cLock(&nSlimMutex);
-
   if (!cIOCP)
     return E_FAIL;
   if ((!cCallback) || lpOvr == NULL)
@@ -442,6 +433,9 @@ VOID CIoCompletionPortThreadPool::ThreadProc(_In_ SIZE_T nParam)
   lpThreadCustomParam = NULL;
   if (cThreadStartCallback)
     cThreadStartCallback(this, lpThreadCustomParam);
+
+  ::SetThreadPriority(::GetCurrentThread(), nThreadPriority);
+
   //main loop
   bShutdown = FALSE;
   while (bShutdown == FALSE)
@@ -454,6 +448,7 @@ VOID CIoCompletionPortThreadPool::ThreadProc(_In_ SIZE_T nParam)
       if (nBusy + (LONG)dwShutdownThreadThreshold < nActive)
         dwTimeout = dwWorkerThreadIdleTimeoutMs;
     }
+
     nOvrEntriesCount = (ULONG)MX_ARRAYLEN(sOvrEntries);
     hRes = cIOCP.Get(sOvrEntries, nOvrEntriesCount, dwTimeout);
     if (hRes == MX_E_Timeout)
@@ -464,8 +459,10 @@ VOID CIoCompletionPortThreadPool::ThreadProc(_In_ SIZE_T nParam)
         break; //shutdown worker thread
       continue;
     }
+
     //increment busy thread count
     nBusy = _InterlockedIncrement(&(sThreads.nBusyCount));
+
     //start a new worker thread if all of them are busy
     if (__InterlockedRead(&(sThreads.nShuttingDown)) == 0)
     {
@@ -477,6 +474,7 @@ VOID CIoCompletionPortThreadPool::ThreadProc(_In_ SIZE_T nParam)
           cThreadStartErrorCallback(this, hRes2);
       }
     }
+
     //process entries
     lpOvrEntryEnd = (lpOvrEntry = sOvrEntries) + nOvrEntriesCount;
     while (lpOvrEntry < lpOvrEntryEnd)
@@ -497,12 +495,15 @@ VOID CIoCompletionPortThreadPool::ThreadProc(_In_ SIZE_T nParam)
       }
       lpOvrEntry++;
     }
+
     //decrement busy thread count
     _InterlockedDecrement(&(sThreads.nBusyCount));
   }
+
   //notify
   if (cThreadEndCallback)
     cThreadEndCallback(this, lpThreadCustomParam);
+
   //remove worker thread from list
   {
     CFastLock cLock(&(sThreads.nMutex));
@@ -511,6 +512,8 @@ VOID CIoCompletionPortThreadPool::ThreadProc(_In_ SIZE_T nParam)
     _InterlockedDecrement(&(sThreads.nActiveCount));
   }
   delete lpThread;
+
+  //done
   return;
 }
 

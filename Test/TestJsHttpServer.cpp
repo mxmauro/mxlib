@@ -23,6 +23,7 @@
 #include <JsLib\Plugins\JsMySqlPlugin.h>
 #include <JsLib\Plugins\JsSQLitePlugin.h>
 #include <JsLib\Plugins\JsonWebTokenPlugin.h>
+#include <TaskQueue.h>
 
 //-----------------------------------------------------------
 
@@ -51,8 +52,7 @@ static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hrErrorCode);
 static HRESULT OnNewRequestObject(_In_ MX::CJsHttpServer *lpHttp,
                                   _Out_ MX::CJsHttpServer::CClientRequest **lplpRequest);
 static VOID OnRequestCompleted(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest);
-static VOID OnProcessJsRequest(_In_ MX::CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
-                               _In_ HRESULT hRes);
+static VOID OnProcessJsRequest(_In_ MX::CTaskQueue *lpQueue, _In_ MX::CTaskQueue::CTask *lpTask);
 static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
                                  _Inout_ MX::CJavascriptVM &cJvm,
                                  _Inout_ MX::CJavascriptVM::CRequireModuleContext *lpReqContext,
@@ -71,12 +71,13 @@ static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ L
                                 _In_z_ LPCWSTR szPathW);
 static DukTape::duk_ret_t OnGetExecutablePath(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
                                               _In_z_ LPCSTR szFunctionNameA);
-
+static DukTape::duk_ret_t OnGetUniqueId(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                        _In_z_ LPCSTR szFunctionNameA);
 static HRESULT OnLog(_In_z_ LPCWSTR szInfoW);
 
 //-----------------------------------------------------------
 
-class CTestJsRequest : public MX::CJsHttpServer::CClientRequest
+class CTestJsRequest : public MX::CJsHttpServer::CClientRequest, public MX::CTaskQueue::CTask
 {
 public:
   CTestJsRequest() : MX::CJsHttpServer::CClientRequest()
@@ -127,17 +128,16 @@ class CJsTest : public virtual MX::CBaseMemObj
 public:
   CJsTest() : MX::CBaseMemObj(), cSckMgr(cDispatcherPool), cJsHttpServer(cSckMgr)
     {
-    cProcessJsRequest = MX_BIND_CALLBACK(&OnProcessJsRequest);
     return;
     };
 
 public:
-  MX::CIoCompletionPortThreadPool cDispatcherPool, cWorkerPool;
+  MX::CIoCompletionPortThreadPool cDispatcherPool;
+  MX::CTaskQueue cTaskQueue;
   MX::CSockets cSckMgr;
   MX::CJsHttpServer cJsHttpServer;
   MX::CSslCertificate cSslCert;
   MX::CEncryptionKey cSslPrivateKey;
-  MX::CIoCompletionPortThreadPool::OnPacketCallback cProcessJsRequest;
 };
 
 //-----------------------------------------------------------
@@ -161,12 +161,13 @@ int TestJsHttpServer()
   cTest.cSckMgr.SetLogLevel(dwLogLevel);
 
   cTest.cDispatcherPool.SetOption_ThreadStackSize(256 * 1024);
-  cTest.cWorkerPool.SetOption_ThreadStackSize(256 * 1024);
-  cTest.cWorkerPool.SetOption_MinThreadsCount(4);
+  cTest.cTaskQueue.SetOption_ThreadStackSize(256 * 1024);
+  cTest.cTaskQueue.SetOption_MinThreadsCount(4);
+  cTest.cTaskQueue.SetOption_ThreadPriority(THREAD_PRIORITY_BELOW_NORMAL);
 
   hRes = cTest.cDispatcherPool.Initialize();
   if (SUCCEEDED(hRes))
-    hRes = cTest.cWorkerPool.Initialize();
+    hRes = cTest.cTaskQueue.Initialize();
   if (SUCCEEDED(hRes))
   {
     cTest.cSckMgr.SetEngineErrorCallback(MX_BIND_CALLBACK(&OnEngineError));
@@ -266,7 +267,7 @@ static VOID OnRequestCompleted(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpS
   if (MX::StrCompareW(szExtensionW, L".jss", TRUE) == 0)
   {
     lpRequest->AddRef();
-    hRes = lpJsTest->cWorkerPool.Post(lpJsTest->cProcessJsRequest, 0, &(lpRequest->sOvr));
+    hRes = lpJsTest->cTaskQueue.QueueTask(lpRequest, MX_BIND_CALLBACK(&OnProcessJsRequest));
     if (FAILED(hRes))
     {
       lpRequest->Release();
@@ -296,16 +297,12 @@ static VOID OnRequestCompleted(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpS
   return;
 }
 
-static VOID OnProcessJsRequest(_In_ MX::CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
-                               _In_ HRESULT hRes)
+static VOID OnProcessJsRequest(_In_ MX::CTaskQueue *lpQueue, _In_ MX::CTaskQueue::CTask *lpTask)
 {
-  CTestJsRequest *lpRequest = CONTAINING_RECORD(lpOvr, CTestJsRequest, sOvr);
+  CTestJsRequest *lpRequest = (CTestJsRequest*)lpTask;
+  HRESULT hRes;
 
-  if (SUCCEEDED(hRes))
-  {
-    if (lpRequest->IsAlive() == FALSE)
-      hRes = MX_E_Cancelled;
-  }
+  hRes = (lpRequest->IsAlive() != FALSE) ? S_OK : MX_E_Cancelled;
   if (SUCCEEDED(hRes))
   {
     hRes = lpRequest->AttachJVM();
@@ -327,6 +324,18 @@ static VOID OnProcessJsRequest(_In_ MX::CIoCompletionPortThreadPool *lpPool, _In
           hRes = MX::CJsonWebTokenPlugin::Register(*lpJVM);
         if (SUCCEEDED(hRes))
           hRes = lpJVM->AddNativeFunction("getExecutablePath", MX_BIND_CALLBACK(&OnGetExecutablePath), 0);
+        if (SUCCEEDED(hRes))
+          hRes = lpJVM->AddNativeFunction("getUniqueId", MX_BIND_CALLBACK(&OnGetUniqueId), 0);
+      }
+
+      if (SUCCEEDED(hRes))
+      {
+        CHAR szBufA[64];
+
+        _snprintf_s(szBufA, MX_ARRAYLEN(szBufA), _TRUNCATE, "0x%p", lpRequest);
+        hRes = lpJVM->AddStringProperty("requestAddress", szBufA,
+                                        MX::CJavascriptVM::PropertyFlagEnumerable |
+                                        MX::CJavascriptVM::PropertyFlagConfigurable);
       }
 
       if (SUCCEEDED(hRes))
@@ -797,6 +806,15 @@ static DukTape::duk_ret_t OnGetExecutablePath(_In_ DukTape::duk_context *lpCtx, 
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
 
   MX::CJavascriptVM::PushString(lpCtx, (LPCWSTR)cStrPathW, cStrPathW.GetLength());
+  return 1;
+}
+
+static DukTape::duk_ret_t OnGetUniqueId(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                        _In_z_ LPCSTR szFunctionNameA)
+{
+  static LONG volatile nUniqueId = 0;
+
+  DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)_InterlockedIncrement(&nUniqueId));
   return 1;
 }
 

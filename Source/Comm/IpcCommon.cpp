@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 #include "..\..\Include\Comm\IpcCommon.h"
+#include "..\..\Include\ArrayList.h"
 #include "..\..\Include\StackTrace.h"
 #include <intrin.h>
 
@@ -34,7 +35,7 @@
 #define FLAG_NewReceivedDataAvailable                 0x0008
 #define FLAG_GracefulShutdown                         0x0010
 #define FLAG_InSendTransaction                        0x0020
-#define FLAG_ClosingOnShutDown                        0x0040
+#define FLAG_ClosingOnShutdown                        0x0040
 #define FLAG_InitialSetupExecuted                     0x0080
 #define FLAG_InputProcessingPaused                    0x0100
 #define FLAG_OutputProcessingPaused                   0x0200
@@ -56,7 +57,7 @@ CIpc::CIpc(_In_ CIoCompletionPortThreadPool &_cDispatcherPool) : CBaseMemObj(), 
   _InterlockedExchange(&nInitShutdownMutex, 0);
   RundownProt_Initialize(&nRundownProt);
   cEngineErrorCallback = NullCallback();
-  SlimRWL_Initialize(&(sConnections.nRwMutex));
+  SlimRWL_Initialize(&(sConnections.sRwMutex));
   return;
 }
 
@@ -166,7 +167,7 @@ HRESULT CIpc::SendMsg(_In_ HANDLE h, _In_reads_bytes_(nMsgSize) LPCVOID lpMsg, _
   //send real message
   if (cConn->IsClosed() == FALSE)
   {
-    CAutoSlimRWLShared cLayersLock(&(cConn->sLayers.nRwMutex));
+    CAutoSlimRWLShared cLayersLock(&(cConn->sLayers.sRwMutex));
     CLnkLstNode *lpNode = cConn->sLayers.cList.GetTail();
 
     return cConn->SendMsg(lpMsg, nMsgSize, ((lpNode != NULL) ? CONTAINING_RECORD(lpNode, CLayer, cListNode) : NULL));
@@ -487,7 +488,7 @@ HRESULT CIpc::AddLayer(_In_ HANDLE h, _In_ CLayer *lpLayer, _In_opt_ BOOL bFront
   //add layer
   hRes = S_OK;
   {
-    CAutoSlimRWLExclusive cLayersLock(&(cConn->sLayers.nRwMutex));
+    CAutoSlimRWLExclusive cLayersLock(&(cConn->sLayers.sRwMutex));
 
     if (bFront != FALSE)
       cConn->sLayers.cList.PushHead(&(lpLayer->cListNode));
@@ -604,14 +605,14 @@ VOID CIpc::InternalFinalize()
     lpConn = NULL;
 
     {
-      CAutoSlimRWLShared cConnListLock(&(sConnections.nRwMutex));
+      CAutoSlimRWLShared cConnListLock(&(sConnections.sRwMutex));
       CRedBlackTree::Iterator it;
 
       for (CRedBlackTreeNode *lpNode = it.Begin(sConnections.cTree); lpNode != NULL; lpNode = it.Next())
       {
         CConnectionBase *_lpConn = CONTAINING_RECORD(lpNode, CConnectionBase, cTreeNode);
 
-        if ((_InterlockedOr(&(_lpConn->nFlags), FLAG_ClosingOnShutDown) & FLAG_ClosingOnShutDown) == 0)
+        if ((_InterlockedOr(&(_lpConn->nFlags), FLAG_ClosingOnShutdown) & FLAG_ClosingOnShutdown) == 0)
         {
           if (_lpConn->SafeAddRef() > 0)
           {
@@ -634,12 +635,12 @@ VOID CIpc::InternalFinalize()
   do
   {
     {
-      CAutoSlimRWLShared cConnListLock(&(sConnections.nRwMutex));
+      CAutoSlimRWLShared cConnListLock(&(sConnections.sRwMutex));
 
       b = sConnections.cTree.IsEmpty();
     }
     if (b == FALSE)
-      MX::_YieldProcessor();
+      ::MxSleep(10);
   }
   while (b == FALSE);
 
@@ -649,7 +650,7 @@ VOID CIpc::InternalFinalize()
   //remove free packets
   cFreePacketsList32768.DiscardAll();
   cFreePacketsList4096.DiscardAll();
-  cFreePacketsList256.DiscardAll();
+  cFreePacketsList512.DiscardAll();
 
   //done
   cShuttingDownEv.Close();
@@ -742,9 +743,9 @@ CIpc::CPacketBase* CIpc::GetPacket(_In_ CConnectionBase *lpConn, _In_ CPacketBas
   if (bRealSize != FALSE)
     nDesiredSize += sizeof(CPacketBase);
 
-  if (nDesiredSize <= 256)
+  if (nDesiredSize <= 512)
   {
-    lpList = &cFreePacketsList256;
+    lpList = &cFreePacketsList512;
   }
   else if (nDesiredSize <= 4096)
   {
@@ -753,15 +754,15 @@ CIpc::CPacketBase* CIpc::GetPacket(_In_ CConnectionBase *lpConn, _In_ CPacketBas
   else
   {
     MX_ASSERT(nDesiredSize <= 32768);
-    lpList = &cFreePacketsList256;
+    lpList = &cFreePacketsList32768;
   }
 
   lpPacket = lpList->DequeueFirst();
   if (lpPacket == NULL)
   {
-    if (nDesiredSize <= 256)
+    if (nDesiredSize <= 512)
     {
-      lpPacket = MX_DEBUG_NEW TPacket<256>();
+      lpPacket = MX_DEBUG_NEW TPacket<512>();
     }
     else if (nDesiredSize <= 4096)
     {
@@ -791,10 +792,10 @@ VOID CIpc::FreePacket(_In_ CPacketBase *lpPacket)
   {
     lpNextPacket = lpPacket->GetChainedPacket();
 
-    if (lpPacket->GetClassSize() <= 256)
+    if (lpPacket->GetClassSize() <= 512)
     {
-      lpList = &cFreePacketsList256;
-      nMaxItemsInList = 1024;
+      lpList = &cFreePacketsList512;
+      nMaxItemsInList = 4096;
     }
     else if (lpPacket->GetClassSize() <= 4096)
     {
@@ -804,11 +805,13 @@ VOID CIpc::FreePacket(_In_ CPacketBase *lpPacket)
     else
     {
       MX_ASSERT(lpPacket->GetClassSize() <= 32768);
-      lpList = &cFreePacketsList256;
+      lpList = &cFreePacketsList512;
       nMaxItemsInList = 4096;
     }
     if (lpList->GetCount() < nMaxItemsInList)
     {
+      //We don't care if count becomes greater than 'nMaxItemsInList' because several threads
+      //are freeing packets and list grows beyond the limit
       lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
       lpList->QueueLast(lpPacket);
     }
@@ -827,7 +830,7 @@ CIpc::CConnectionBase* CIpc::CheckAndGetConnection(_In_opt_ HANDLE h)
 {
   if (h != NULL)
   {
-    CAutoSlimRWLShared cConnListLock(&(sConnections.nRwMutex));
+    CAutoSlimRWLShared cConnListLock(&(sConnections.sRwMutex));
     CRedBlackTreeNode *lpNode;
 
     lpNode = sConnections.cTree.Find((SIZE_T)h, &CConnectionBase::SearchCompareFunc);
@@ -868,7 +871,8 @@ start:
   {
     lpConn->cLogTimer.Mark();
     Log(L"CIpc::OnDispatcherPacket) Clock=%lums / Conn=0x%p / Ovr=0x%p / Type=%lu / Bytes=%lu / Err=0x%08X",
-        lpConn->cLogTimer.GetElapsedTimeMs(), lpConn, lpPacket->GetOverlapped(), lpPacket->GetType(), dwBytes, hRes);
+        lpConn->cLogTimer.GetElapsedTimeMs(), lpConn, lpPacket->GetOverlapped(), lpPacket->GetType(), dwBytes,
+        ((hRes == MX_E_OperationAborted && lpConn->IsClosed() != FALSE) ? S_OK : hRes));
     lpConn->cLogTimer.ResetToLastMark();
   }
 
@@ -884,7 +888,7 @@ start:
 
       //notify all layers about connection
       {
-        CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
+        CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.sRwMutex));
         CLnkLstNode *lpNode;
 
         lpNode = lpConn->sLayers.cList.GetTail();
@@ -949,7 +953,7 @@ check_pending_read_req:
               if (lpPacket != NULL)
               {
                 {
-                  CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
+                  CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.sRwMutex));
                   CLnkLstNode *lpNode;
 
                   lpNode = lpConn->sLayers.cList.GetHead();
@@ -1302,7 +1306,7 @@ write_req_process_packet:
       lpConn->cOnDataReceivedCS.Unlock();
       //notify all layers about disconnection
       {
-        CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.nRwMutex));
+        CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.sRwMutex));
         CLnkLstNode *lpNode;
 
         lpNode = lpConn->sLayers.cList.GetHead();
@@ -1366,7 +1370,8 @@ write_req_process_packet:
   {
     lpConn->cLogTimer.Mark();
     Log(L"CIpc::OnDispatcherPacket) Clock=%lums / Conn=0x%p / Ovr=0x%p / Type=%lu / Err=0x%08X [EXIT]",
-        lpConn->cLogTimer.GetElapsedTimeMs(), lpConn, lpOrigOverlapped, nOrigOverlappedType, hRes);
+        lpConn->cLogTimer.GetElapsedTimeMs(), lpConn, lpOrigOverlapped, nOrigOverlappedType,
+        ((hRes == MX_E_OperationAborted && lpConn->IsClosed() != FALSE) ? S_OK : hRes));
     lpConn->cLogTimer.ResetToLastMark();
   }
   lpConn->Release();
@@ -1413,7 +1418,7 @@ CIpc::CConnectionBase::CConnectionBase(_In_ CIpc *_lpIpc, _In_ CIpc::eConnection
   cDisconnectCallback = NullCallback();
   cDataReceivedCallback = NullCallback();
   _InterlockedExchange(&nReadMutex, 0);
-  SlimRWL_Initialize(&(sLayers.nRwMutex));
+  SlimRWL_Initialize(&(sLayers.sRwMutex));
   _InterlockedExchange(&(sReceivedData.nMutex), 0);
   return;
 }
@@ -1424,7 +1429,7 @@ CIpc::CConnectionBase::~CConnectionBase()
   CLnkLstNode *lpNode;
 
   {
-    CAutoSlimRWLExclusive cConnListLock(&(lpIpc->sConnections.nRwMutex));
+    CAutoSlimRWLExclusive cConnListLock(&(lpIpc->sConnections.sRwMutex));
 
     cTreeNode.Remove();
   }
@@ -1450,7 +1455,7 @@ CIpc::CConnectionBase::~CConnectionBase()
 VOID CIpc::CConnectionBase::ShutdownLink(_In_ BOOL bAbortive)
 {
   //call the shutdown for all layers
-  CAutoSlimRWLShared cLayersLock(&(sLayers.nRwMutex));
+  CAutoSlimRWLShared cLayersLock(&(sLayers.sRwMutex));
   CLnkLst::Iterator it;
   CLnkLstNode *lpNode;
 
@@ -1540,7 +1545,7 @@ HRESULT CIpc::CConnectionBase::SendStream(_In_ CStream *lpStream)
   lpPacket->SetStream(lpStream);
   //send packet
   {
-    CAutoSlimRWLShared cLayersLock(&(sLayers.nRwMutex));
+    CAutoSlimRWLShared cLayersLock(&(sLayers.sRwMutex));
     CLnkLstNode *lpNode;
 
     lpNode = sLayers.cList.GetTail();
@@ -1588,7 +1593,7 @@ HRESULT CIpc::CConnectionBase::AfterWriteSignal(_In_ OnAfterWriteSignalCallback 
   lpPacket->SetAfterWriteSignalCallback(cCallback);
   lpPacket->SetUserData(lpCookie);
   {
-    CAutoSlimRWLShared cLayersLock(&(sLayers.nRwMutex));
+    CAutoSlimRWLShared cLayersLock(&(sLayers.sRwMutex));
     CLnkLstNode *lpNode;
 
     lpNode = sLayers.cList.GetTail();
@@ -1620,8 +1625,8 @@ HRESULT CIpc::CConnectionBase::AfterWriteSignal(_In_ CPacketBase *lpPacket)
   if (lpIpc->ShouldLog(1) != FALSE)
   {
     cLogTimer.Mark();
-    lpIpc->Log(L"CIpc::AfterWriteSignal) Clock=%lums / Ovr=0x%p / Type=%lu", cLogTimer.GetElapsedTimeMs(),
-               lpPacket->GetOverlapped(), lpPacket->GetType());
+    lpIpc->Log(L"CIpc::AfterWriteSignal) Clock=%lums / Conn=0x%p / Ovr=0x%p / Type=%lu", cLogTimer.GetElapsedTimeMs(),
+               this, lpPacket->GetOverlapped(), lpPacket->GetType());
     cLogTimer.ResetToLastMark();
   }
   hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
@@ -2203,7 +2208,7 @@ HRESULT CIpc::CConnectionBase::SendAfterWritePacketToNextLayer(_In_ CPacketBase 
 
 CIpc::CConnectionBase::CReadWriteStats::CReadWriteStats() : CBaseMemObj()
 {
-  _InterlockedExchange(&nRwMutex, 0);
+  SlimRWL_Initialize(&sRwMutex);
   ullBytesTransferred = ullPrevBytesTransferred = 0;
   nAvgRate = 0.0;
   ::MxMemSet(nTransferRateHistory, 0, sizeof(nTransferRateHistory));
@@ -2212,7 +2217,7 @@ CIpc::CConnectionBase::CReadWriteStats::CReadWriteStats() : CBaseMemObj()
 
 VOID CIpc::CConnectionBase::CReadWriteStats::HandleConnected()
 {
-  CAutoSlimRWLExclusive cLock(&nRwMutex);
+  CAutoSlimRWLExclusive cLock(&sRwMutex);
 
   cTimer.Reset();
   return;
@@ -2220,7 +2225,7 @@ VOID CIpc::CConnectionBase::CReadWriteStats::HandleConnected()
 
 VOID CIpc::CConnectionBase::CReadWriteStats::Update(_In_ DWORD dwBytesTransferred)
 {
-  CAutoSlimRWLExclusive cLock(&nRwMutex);
+  CAutoSlimRWLExclusive cLock(&sRwMutex);
   DWORD dwElapsedMs;
 
   ullBytesTransferred += (ULONGLONG)dwBytesTransferred;
@@ -2264,7 +2269,7 @@ VOID CIpc::CConnectionBase::CReadWriteStats::Update(_In_ DWORD dwBytesTransferre
 VOID CIpc::CConnectionBase::CReadWriteStats::Get(_Out_opt_ PULONGLONG lpullBytesTransferred,
                                                  _Out_opt_ float *lpnThroughputKbps, _Out_opt_ LPDWORD lpdwTimeMarkMs)
 {
-  CAutoSlimRWLShared cLock(&nRwMutex);
+  CAutoSlimRWLShared cLock(&sRwMutex);
 
   if (lpullBytesTransferred != NULL)
     *lpullBytesTransferred = ullBytesTransferred;

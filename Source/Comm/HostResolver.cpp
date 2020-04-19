@@ -244,7 +244,7 @@ private:
 
 //-----------------------------------------------------------
 
-static LONG volatile nHostResolverRwMutex = 0;
+static MX::RWLOCK sHostResolverRwMutex = MX_RWLOCK_INIT;
 static MX::Internals::CHostResolver *lpHostResolver = NULL;
 
 //-----------------------------------------------------------
@@ -927,7 +927,7 @@ CHostResolver::~CHostResolver()
 
 CHostResolver* CHostResolver::Get()
 {
-  CAutoSlimRWLShared cLock(&nHostResolverRwMutex);
+  CAutoSlimRWLShared cLock(&sHostResolverRwMutex);
 
   if (lpHostResolver == NULL)
   {
@@ -955,7 +955,7 @@ CHostResolver* CHostResolver::Get()
 
 VOID CHostResolver::Shutdown()
 {
-  CAutoSlimRWLExclusive cLock(&nHostResolverRwMutex);
+  CAutoSlimRWLExclusive cLock(&sHostResolverRwMutex);
 
   MX_RELEASE(lpHostResolver);
   return;

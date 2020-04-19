@@ -121,7 +121,7 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
     hRes = cJVM->RunNativeProtectedAndGetError(0, 0, [](_In_ DukTape::duk_context *lpCtx) -> VOID
     {
       DukTape::duk_push_global_object(lpCtx);
-      DukTape::duk_del_prop_string(lpCtx, -1, "request");
+      DukTape::duk_del_prop_string(lpCtx, -1, "request"); //does not raise error if does not exist
       DukTape::duk_pop(lpCtx);
     });
     __EXIT_ON_ERROR(hRes);
@@ -142,7 +142,7 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
   hRes = cJVM->CreateObject("request");
   __EXIT_ON_ERROR(hRes);
   hRes = cJVM->AddObjectStringProperty("request", "method", lpRequest->GetMethod(),
-                                       CJavascriptVM::PropertyFlagEnumerable);
+                                       CJavascriptVM::PropertyFlagEnumerable | CJavascriptVM::PropertyFlagConfigurable);
   __EXIT_ON_ERROR(hRes);
   lpUrl = lpRequest->GetUrl();
   if (lpUrl == NULL)
@@ -150,16 +150,19 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
   //host
   hRes = Utf8_Encode(cStrTempA, lpUrl->GetHost());
   __EXIT_ON_ERROR(hRes);
-  hRes = cJVM->AddObjectStringProperty("request", "host", (LPCSTR)cStrTempA, CJavascriptVM::PropertyFlagEnumerable);
+  hRes = cJVM->AddObjectStringProperty("request", "host", (LPCSTR)cStrTempA,
+                                       CJavascriptVM::PropertyFlagEnumerable | CJavascriptVM::PropertyFlagConfigurable);
   __EXIT_ON_ERROR(hRes);
   //port
   hRes = cJVM->AddObjectNumericProperty("request", "port", (double)(lpUrl->GetPort()),
-                                        CJavascriptVM::PropertyFlagEnumerable);
+                                        CJavascriptVM::PropertyFlagEnumerable |
+                                        CJavascriptVM::PropertyFlagConfigurable);
   __EXIT_ON_ERROR(hRes);
   //path
   hRes = Utf8_Encode(cStrTempA, lpUrl->GetPath());
   __EXIT_ON_ERROR(hRes);
-  hRes = cJVM->AddObjectStringProperty("request", "path", (LPCSTR)cStrTempA, CJavascriptVM::PropertyFlagEnumerable);
+  hRes = cJVM->AddObjectStringProperty("request", "path", (LPCSTR)cStrTempA,
+                                       CJavascriptVM::PropertyFlagEnumerable | CJavascriptVM::PropertyFlagConfigurable);
   __EXIT_ON_ERROR(hRes);
 
   //query strings
@@ -177,7 +180,8 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
       hRes = Utf8_Encode(cStrValueA, lpUrl->GetQueryStringValue(i));
       __EXIT_ON_ERROR(hRes);
       hRes = cJVM->AddObjectStringProperty("request.query", (LPCSTR)cStrTempA, (LPCSTR)cStrValueA,
-                                           CJavascriptVM::PropertyFlagEnumerable);
+                                           CJavascriptVM::PropertyFlagEnumerable |
+                                           CJavascriptVM::PropertyFlagConfigurable);
       __EXIT_ON_ERROR(hRes);
     }
   }
@@ -197,26 +201,34 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
     case AF_INET:
       hRes = HostResolver::FormatAddress(&sSockAddr, cStrTempW);
       __EXIT_ON_ERROR(hRes);
-      hRes = cJVM->AddObjectStringProperty("request.remote", "family", "ipv4", CJavascriptVM::PropertyFlagEnumerable);
+      hRes = cJVM->AddObjectStringProperty("request.remote", "family", "ipv4",
+                                           CJavascriptVM::PropertyFlagEnumerable |
+                                           CJavascriptVM::PropertyFlagConfigurable);
       __EXIT_ON_ERROR(hRes);
       hRes = cJVM->AddObjectStringProperty("request.remote", "address", (LPCWSTR)cStrTempW,
-                                           CJavascriptVM::PropertyFlagEnumerable);
+                                           CJavascriptVM::PropertyFlagEnumerable |
+                                           CJavascriptVM::PropertyFlagConfigurable);
       __EXIT_ON_ERROR(hRes);
       hRes = cJVM->AddObjectNumericProperty("request.remote", "port", (double)htons(sSockAddr.Ipv4.sin_port),
-                                            CJavascriptVM::PropertyFlagEnumerable);
+                                            CJavascriptVM::PropertyFlagEnumerable |
+                                            CJavascriptVM::PropertyFlagConfigurable);
       __EXIT_ON_ERROR(hRes);
       break;
 
     case AF_INET6:
       hRes = HostResolver::FormatAddress(&sSockAddr, cStrTempW);
       __EXIT_ON_ERROR(hRes);
-      hRes = cJVM->AddObjectStringProperty("request.family", "family", "ipv6", CJavascriptVM::PropertyFlagEnumerable);
+      hRes = cJVM->AddObjectStringProperty("request.family", "family", "ipv6",
+                                           CJavascriptVM::PropertyFlagEnumerable |
+                                           CJavascriptVM::PropertyFlagConfigurable);
       __EXIT_ON_ERROR(hRes);
       hRes = cJVM->AddObjectStringProperty("request.remote", "address", (LPCWSTR)cStrTempW,
-                                           CJavascriptVM::PropertyFlagEnumerable);
+                                           CJavascriptVM::PropertyFlagEnumerable |
+                                           CJavascriptVM::PropertyFlagConfigurable);
       __EXIT_ON_ERROR(hRes);
       hRes = cJVM->AddObjectNumericProperty("request.remote", "port", (double)htons(sSockAddr.Ipv6.sin6_port),
-                                            CJavascriptVM::PropertyFlagEnumerable);
+                                            CJavascriptVM::PropertyFlagEnumerable |
+                                            CJavascriptVM::PropertyFlagConfigurable);
       __EXIT_ON_ERROR(hRes);
       break;
 
@@ -240,7 +252,8 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
     hRes = cHeader->Build(cStrTempA, lpRequest->GetBrowser());
     __EXIT_ON_ERROR(hRes);
     hRes = cJVM->AddObjectStringProperty("request.headers", cHeader->GetHeaderName(), (LPCSTR)cStrTempA,
-                                         CJavascriptVM::PropertyFlagEnumerable);
+                                         CJavascriptVM::PropertyFlagEnumerable |
+                                         CJavascriptVM::PropertyFlagConfigurable);
     __EXIT_ON_ERROR(hRes);
   }
 
@@ -267,7 +280,8 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
     {
       //don't add duplicates
       hRes = cJVM->AddObjectStringProperty("request.cookies", (LPCSTR)cStrTempA, cCookie->GetValue(),
-                                           CJavascriptVM::PropertyFlagEnumerable);
+                                           CJavascriptVM::PropertyFlagEnumerable |
+                                           CJavascriptVM::PropertyFlagConfigurable);
     }
     __EXIT_ON_ERROR(hRes);
   }
@@ -291,7 +305,9 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
       if (!lpJsObj)
         return E_OUTOFMEMORY;
       lpJsObj->Initialize(lpParser);
-      hRes = cJVM->AddObjectJsObjectProperty("request", "rawbody", lpJsObj, CJavascriptVM::PropertyFlagEnumerable);
+      hRes = cJVM->AddObjectJsObjectProperty("request", "rawbody", lpJsObj,
+                                             CJavascriptVM::PropertyFlagEnumerable |
+                                             CJavascriptVM::PropertyFlagConfigurable);
       lpJsObj->Release();
       __EXIT_ON_ERROR(hRes);
     }
@@ -381,7 +397,8 @@ HRESULT CJsHttpServer::CJvmManager::InsertPostField(_In_ CJavascriptVM &cJvm,
     __EXIT_ON_ERROR(hRes);
 
     hRes = cJvm.AddObjectStringProperty(szBaseObjectNameA, (LPCSTR)cStrNameA, (LPCSTR)cStrValueA,
-                                        CJavascriptVM::PropertyFlagEnumerable);
+                                        CJavascriptVM::PropertyFlagEnumerable |
+                                        CJavascriptVM::PropertyFlagConfigurable);
   }
   return hRes;
 }
@@ -416,7 +433,8 @@ HRESULT CJsHttpServer::CJvmManager::InsertPostFileField(_In_ CJavascriptVM &cJvm
       return E_OUTOFMEMORY;
     lpJsObj->Initialize(lpFileField);
     hRes = cJvm.AddObjectJsObjectProperty(szBaseObjectNameA, (LPCSTR)cStrNameA, lpJsObj,
-                                          CJavascriptVM::PropertyFlagEnumerable);
+                                          CJavascriptVM::PropertyFlagEnumerable |
+                                          CJavascriptVM::PropertyFlagConfigurable);
     lpJsObj->Release();
   }
   return hRes;

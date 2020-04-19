@@ -210,6 +210,7 @@ static HRESULT _OpenSSL_Init()
         OpenSSL_Shutdown();
         return hRes;
       }
+
       //done
       _InterlockedExchange(&nInitialized, 1);
     }
@@ -238,8 +239,6 @@ static VOID OpenSSL_Shutdown()
 
   OPENSSL_thread_stop();
   OPENSSL_cleanup();
-
-  _InterlockedExchange(&nInitialized, 0);
   return;
 }
 

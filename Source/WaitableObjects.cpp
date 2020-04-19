@@ -40,6 +40,8 @@ typedef struct {
 } __SYSTEM_BASIC_INFORMATION;
 #pragma pack(8)
 
+typedef int (*_PIFV)(void);
+
 //-----------------------------------------------------------
 
 typedef NTSTATUS (NTAPI *lpfnRtlGetNativeSystemInformation)(_In_ MX_SYSTEM_INFORMATION_CLASS SystemInformationClass,
@@ -53,6 +55,14 @@ typedef HANDLE (WINAPI *lpfnCreateMutexW)(_In_opt_ LPSECURITY_ATTRIBUTES lpMutex
                                           _In_opt_ LPCWSTR lpName);
 typedef HANDLE (WINAPI *lpfnOpenMutexW)(_In_ DWORD dwDesiredAccess, _In_ BOOL bInheritHandle, _In_opt_ LPCWSTR lpName);
 
+typedef VOID (WINAPI *lpfnInitializeSRWLock)(_Out_ PSRWLOCK SRWLock);
+typedef VOID (WINAPI *lpfnReleaseSRWLockExclusive)(_Inout_ PSRWLOCK SRWLock);
+typedef VOID (WINAPI *lpfnReleaseSRWLockShared)(_Inout_ PSRWLOCK SRWLock);
+typedef VOID (WINAPI *lpfnAcquireSRWLockExclusive)(_Inout_ PSRWLOCK SRWLock);
+typedef VOID (WINAPI *lpfnAcquireSRWLockShared)(_Inout_ PSRWLOCK SRWLock);
+typedef BOOLEAN (WINAPI *lpfnTryAcquireSRWLockExclusive)(_Inout_ PSRWLOCK SRWLock);
+typedef BOOLEAN (WINAPI *lpfnTryAcquireSRWLockShared)(_Inout_ PSRWLOCK SRWLock);
+
 //-----------------------------------------------------------
 
 static LONG volatile nProcessorsCount = 0;
@@ -62,10 +72,23 @@ static lpfnOpenEventW fnOpenEventW = NULL;
 static lpfnCreateMutexW fnCreateMutexW = NULL;
 static lpfnOpenMutexW fnOpenMutexW = NULL;
 
+static lpfnInitializeSRWLock fnInitializeSRWLock = NULL;
+static lpfnReleaseSRWLockExclusive fnReleaseSRWLockExclusive = NULL;
+static lpfnReleaseSRWLockShared fnReleaseSRWLockShared = NULL;
+static lpfnAcquireSRWLockExclusive fnAcquireSRWLockExclusive = NULL;
+static lpfnAcquireSRWLockShared fnAcquireSRWLockShared = NULL;
+static lpfnTryAcquireSRWLockExclusive fnTryAcquireSRWLockExclusive = NULL;
+static lpfnTryAcquireSRWLockShared fnTryAcquireSRWLockShared = NULL;
+
 //-----------------------------------------------------------
 
-static VOID InitializeKernel32Apis();
+static int __cdecl InitializeKernel32Apis();
 static NTSTATUS GetRootDirHandle(_Out_ PHANDLE lphRootDir);
+
+//-----------------------------------------------------------
+
+#pragma section(".CRT$XIC", long, read)
+extern "C" __declspec(allocate(".CRT$XIC")) const _PIFV ___mx_waitable_init = &InitializeKernel32Apis;
 
 //-----------------------------------------------------------
 
@@ -81,19 +104,19 @@ BOOL IsMultiProcessor()
     NTSTATUS nNtStatus;
 
     fnRtlGetNativeSystemInformation = NULL;
-    DllBase = MxGetDllHandle(L"ntdll.dll");
+    DllBase = ::MxGetDllHandle(L"ntdll.dll");
     if (DllBase != NULL)
     {
-      fnRtlGetNativeSystemInformation =
-        (lpfnRtlGetNativeSystemInformation)MxGetProcedureAddress(DllBase, "RtlGetNativeSystemInformation");
+      fnRtlGetNativeSystemInformation = (lpfnRtlGetNativeSystemInformation)
+                                        ::MxGetProcedureAddress(DllBase, "RtlGetNativeSystemInformation");
     }
     ::MxMemSet(&sBasicInfo, 0, sizeof(sBasicInfo));
     if (fnRtlGetNativeSystemInformation != NULL)
       nNtStatus = fnRtlGetNativeSystemInformation(MxSystemBasicInformation, &sBasicInfo, sizeof(sBasicInfo), NULL);
     else
       nNtStatus = ::MxNtQuerySystemInformation(MxSystemProcessorInformation, &sBasicInfo, sizeof(sBasicInfo), NULL);
-    _InterlockedExchange(&nProcessorsCount, (NT_SUCCESS(nNtStatus) && sBasicInfo.NumberOfProcessors > 1) ?
-                                             (LONG)(sBasicInfo.NumberOfProcessors) : 1);
+    _InterlockedExchange(&nProcessorsCount, (NT_SUCCESS(nNtStatus) && sBasicInfo.NumberOfProcessors > 1)
+                                            ? (LONG)(sBasicInfo.NumberOfProcessors) : 1);
   }
   return (__InterlockedRead(&nProcessorsCount) > 1) ? TRUE : FALSE;
 }
@@ -342,91 +365,141 @@ HRESULT CWindowsMutex::Open(_In_opt_z_ LPCWSTR szNameW, _In_ BOOL bQueryOnly, _I
 
 //-----------------------------------------------------------
 
-VOID SlimRWL_Initialize(_In_ LONG volatile *lpnValue)
+VOID SlimRWL_Initialize(_In_ LPRWLOCK lpLock)
 {
-  _InterlockedExchange(lpnValue, 0);
+  InitializeKernel32Apis();
+
+  if (fnInitializeSRWLock != NULL)
+    fnInitializeSRWLock(&(lpLock->sOsLock));
+  else
+    _InterlockedExchange(&(lpLock->nValue), 0);
   return;
 }
 
-BOOL SlimRWL_TryAcquireShared(_In_ LONG volatile *lpnValue)
+BOOL SlimRWL_TryAcquireShared(_In_ LPRWLOCK lpLock)
 {
-  LONG initVal, newVal;
-
-  newVal = __InterlockedRead(lpnValue);
-  do
+  if (fnInitializeSRWLock != NULL)
   {
-    initVal = newVal;
-    if ((initVal & 0x80000000L) != 0)
-      return FALSE; //a writer is active
-    MX_ASSERT(((ULONG)initVal & 0x7FFFFFFFUL) != 0x7FFFFFFFUL); //check overflows
-    newVal = _InterlockedCompareExchange(lpnValue, initVal+1, initVal);
+    if (fnTryAcquireSRWLockShared(&(lpLock->sOsLock)) == FALSE)
+      return FALSE;
   }
-  while (newVal != initVal);
+  else
+  {
+    LONG initVal, newVal;
+
+    newVal = __InterlockedRead(&(lpLock->nValue));
+    do
+    {
+      initVal = newVal;
+      if ((initVal & 0x80000000L) != 0)
+        return FALSE; //a writer is active
+      MX_ASSERT(((ULONG)initVal & 0x7FFFFFFFUL) != 0x7FFFFFFFUL); //check overflows
+      newVal = _InterlockedCompareExchange(&(lpLock->nValue), initVal + 1, initVal);
+    }
+    while (newVal != initVal);
+  }
   return TRUE;
 }
 
-VOID SlimRWL_AcquireShared(_In_ LONG volatile *lpnValue)
+VOID SlimRWL_AcquireShared(_In_ LPRWLOCK lpLock)
 {
-  while (SlimRWL_TryAcquireShared(lpnValue) == FALSE)
-    _YieldProcessor();
+  if (fnInitializeSRWLock != NULL)
+  {
+    fnAcquireSRWLockShared(&(lpLock->sOsLock));
+  }
+  else
+  {
+    while (SlimRWL_TryAcquireShared(lpLock) == FALSE)
+      _YieldProcessor();
+  }
 #ifdef SHOW_SLIMRWL_DEBUG_INFO
   DebugPrint("SlimRWL_AcquireShared: %lu\n", MxGetCurrentThreadId());
 #endif //SHOW_SLIMRWL_DEBUG_INFO
   return;
 }
 
-VOID SlimRWL_ReleaseShared(_In_ LONG volatile *lpnValue)
+VOID SlimRWL_ReleaseShared(_In_ LPRWLOCK lpLock)
 { 
-  LONG initVal, newVal;
-
-  newVal = __InterlockedRead(lpnValue);
-  do
+  if (fnInitializeSRWLock != NULL)
   {
-    initVal = newVal;
-    MX_ASSERT((initVal & 0x7FFFFFFFL) != 0);
-    newVal = (initVal & 0x80000000L) | ((initVal & 0x7FFFFFFFL) - 1);
-    newVal = _InterlockedCompareExchange(lpnValue, newVal, initVal);
+    fnReleaseSRWLockShared(&(lpLock->sOsLock));
   }
-  while (newVal != initVal);
+  else
+  {
+    LONG initVal, newVal;
+
+    newVal = __InterlockedRead(&(lpLock->nValue));
+    do
+    {
+      initVal = newVal;
+      MX_ASSERT((initVal & 0x7FFFFFFFL) != 0);
+      newVal = (initVal & 0x80000000L) | ((initVal & 0x7FFFFFFFL) - 1);
+      newVal = _InterlockedCompareExchange(&(lpLock->nValue), newVal, initVal);
+    }
+    while (newVal != initVal);
+  }
 #ifdef SHOW_SLIMRWL_DEBUG_INFO
   DebugPrint("SlimRWL_ReleaseShared: %lu\n", MxGetCurrentThreadId());
 #endif //SHOW_SLIMRWL_DEBUG_INFO
   return;
 }
 
-BOOL SlimRWL_TryAcquireExclusive(_In_ LONG volatile *lpnValue)
+BOOL SlimRWL_TryAcquireExclusive(_In_ LPRWLOCK lpLock)
 {
-  LONG initVal, newVal;
-
-  newVal = __InterlockedRead(lpnValue);
-  do
+  if (fnInitializeSRWLock != NULL)
   {
-    initVal = newVal;
-    if ((initVal & 0x80000000L) != 0)
-      return FALSE; //another writer is active or waiting
-    newVal = _InterlockedCompareExchange(lpnValue, initVal | 0x80000000L, initVal);
+    if (fnTryAcquireSRWLockExclusive(&(lpLock->sOsLock)) == FALSE)
+      return FALSE;
   }
-  while (newVal != initVal);
-  //wait until no readers
-  while ((__InterlockedRead(lpnValue) & 0x7FFFFFFFL) != 0)
-    _YieldProcessor();
+  else
+  {
+    LONG initVal, newVal;
+
+    newVal = __InterlockedRead(&(lpLock->nValue));
+    do
+    {
+      initVal = newVal;
+      if ((initVal & 0x80000000L) != 0)
+        return FALSE; //another writer is active or waiting
+      newVal = _InterlockedCompareExchange(&(lpLock->nValue), initVal | 0x80000000L, initVal);
+    }
+    while (newVal != initVal);
+
+    //wait until no readers
+    while ((__InterlockedRead(&(lpLock->nValue)) & 0x7FFFFFFFL) != 0)
+      _YieldProcessor();
+  }
   return TRUE;
 }
 
-VOID SlimRWL_AcquireExclusive(_In_ LONG volatile *lpnValue)
+VOID SlimRWL_AcquireExclusive(_In_ LPRWLOCK lpLock)
 {
-  while (SlimRWL_TryAcquireExclusive(lpnValue) == FALSE)
-    _YieldProcessor();
+  if (fnInitializeSRWLock != NULL)
+  {
+    fnAcquireSRWLockExclusive(&(lpLock->sOsLock));
+  }
+  else
+  {
+    while (SlimRWL_TryAcquireExclusive(lpLock) == FALSE)
+      _YieldProcessor();
+  }
 #ifdef SHOW_SLIMRWL_DEBUG_INFO
   DebugPrint("SlimRWL_AcquireExclusive: %lu\n", MxGetCurrentThreadId());
 #endif //SHOW_SLIMRWL_DEBUG_INFO
   return;
 }
 
-VOID SlimRWL_ReleaseExclusive(_In_ LONG volatile *lpnValue)
+VOID SlimRWL_ReleaseExclusive(_In_ LPRWLOCK lpLock)
 {
-  MX_ASSERT(__InterlockedRead(lpnValue) == 0x80000000L);
-  _InterlockedExchange(lpnValue, 0);
+  if (fnInitializeSRWLock != NULL)
+  {
+    fnReleaseSRWLockExclusive(&(lpLock->sOsLock));
+  }
+  else
+  {
+    MX_ASSERT(__InterlockedRead(&(lpLock->nValue)) == 0x80000000L);
+    _InterlockedExchange(&(lpLock->nValue), 0);
+  }
 #ifdef SHOW_SLIMRWL_DEBUG_INFO
   DebugPrint("SlimRWL_ReleaseExclusive: %lu\n", MxGetCurrentThreadId());
 #endif //SHOW_SLIMRWL_DEBUG_INFO
@@ -479,7 +552,7 @@ VOID RundownProt_WaitForRelease(_In_ LONG volatile *lpnValue)
   _InterlockedOr(lpnValue, 0x80000000L);
   //wait until no locks active
   while (__InterlockedRead(lpnValue) != 0x80000000L)
-    _YieldProcessor();
+    ::MxSleep(10);
   return;
 }
 
@@ -487,35 +560,51 @@ VOID RundownProt_WaitForRelease(_In_ LONG volatile *lpnValue)
 
 //-----------------------------------------------------------
 
-static VOID InitializeKernel32Apis()
+#define _GETAPI(_api) fn##_api = (lpfn##_api)::MxGetProcedureAddress(hDll, #_api)
+static int __cdecl InitializeKernel32Apis()
 {
   static LONG volatile nInitialized = 0;
-  static LONG volatile nMutex = 0;
 
-  if (__InterlockedRead(&nInitialized) == 0)
+  switch (_InterlockedCompareExchange(&nInitialized, 2, 0))
   {
-    MX::CFastLock cLock(&nMutex);
-
-    if (__InterlockedRead(&nInitialized) == 0)
-    {
+    case 0: //initializing
+      {
       PVOID hDll;
 
       hDll = ::MxGetDllHandle(L"kernelbase.dll");
       if (hDll != NULL)
       {
-        fnCreateEventW = (lpfnCreateEventW)::MxGetProcedureAddress(hDll, "CreateEventW");
-        fnOpenEventW = (lpfnOpenEventW)::MxGetProcedureAddress(hDll, "OpenEventW");
+        _GETAPI(CreateEventW);
+        _GETAPI(OpenEventW);
         if (fnCreateEventW == NULL || fnOpenEventW == NULL)
         {
           fnCreateEventW = NULL;
           fnOpenEventW = NULL;
         }
-        fnCreateMutexW = (lpfnCreateMutexW)::MxGetProcedureAddress(hDll, "CreateMutexW");
-        fnOpenMutexW = (lpfnOpenMutexW)::MxGetProcedureAddress(hDll, "OpenMutexW");
+        _GETAPI(CreateMutexW);
+        _GETAPI(OpenMutexW);
         if (fnCreateMutexW == NULL || fnOpenMutexW == NULL)
         {
           fnCreateMutexW = NULL;
           fnOpenMutexW = NULL;
+        }
+
+        _GETAPI(InitializeSRWLock);
+        _GETAPI(ReleaseSRWLockExclusive);
+        _GETAPI(ReleaseSRWLockShared);
+        _GETAPI(AcquireSRWLockExclusive);
+        _GETAPI(AcquireSRWLockShared);
+        _GETAPI(TryAcquireSRWLockExclusive);
+        _GETAPI(TryAcquireSRWLockShared);
+        if (fnInitializeSRWLock == NULL ||
+            fnReleaseSRWLockExclusive == NULL || fnReleaseSRWLockShared == NULL ||
+            fnAcquireSRWLockExclusive == NULL || fnAcquireSRWLockShared == NULL ||
+            fnTryAcquireSRWLockExclusive == NULL || fnTryAcquireSRWLockShared == NULL)
+        {
+          fnInitializeSRWLock = NULL;
+          fnReleaseSRWLockExclusive = NULL;    fnReleaseSRWLockShared = NULL;
+          fnAcquireSRWLockExclusive = NULL;    fnAcquireSRWLockShared = NULL;
+          fnTryAcquireSRWLockExclusive = NULL; fnTryAcquireSRWLockShared = NULL;
         }
       }
 
@@ -524,29 +613,63 @@ static VOID InitializeKernel32Apis()
       {
         if (fnCreateEventW == NULL)
         {
-          fnCreateEventW = (lpfnCreateEventW)::MxGetProcedureAddress(hDll, "CreateEventW");
-          fnOpenEventW = (lpfnOpenEventW)::MxGetProcedureAddress(hDll, "OpenEventW");
+          _GETAPI(CreateEventW);
+          _GETAPI(OpenEventW);
           if (fnCreateEventW == NULL || fnOpenEventW == NULL)
           {
             fnCreateEventW = NULL;
             fnOpenEventW = NULL;
           }
         }
+
         if (fnCreateMutexW == NULL)
         {
-          fnCreateMutexW = (lpfnCreateMutexW)::MxGetProcedureAddress(hDll, "CreateMutexW");
-          fnOpenMutexW = (lpfnOpenMutexW)::MxGetProcedureAddress(hDll, "OpenMutexW");
+          _GETAPI(CreateMutexW);
+          _GETAPI(OpenMutexW);
           if (fnCreateMutexW == NULL || fnOpenMutexW == NULL)
           {
             fnCreateMutexW = NULL;
             fnOpenMutexW = NULL;
           }
         }
+
+        if (fnInitializeSRWLock == NULL)
+        {
+          _GETAPI(InitializeSRWLock);
+          _GETAPI(ReleaseSRWLockExclusive);
+          _GETAPI(ReleaseSRWLockShared);
+          _GETAPI(AcquireSRWLockExclusive);
+          _GETAPI(AcquireSRWLockShared);
+          _GETAPI(TryAcquireSRWLockExclusive);
+          _GETAPI(TryAcquireSRWLockShared);
+          if (fnInitializeSRWLock == NULL ||
+              fnReleaseSRWLockExclusive == NULL || fnReleaseSRWLockShared == NULL ||
+              fnAcquireSRWLockExclusive == NULL || fnAcquireSRWLockShared == NULL ||
+              fnTryAcquireSRWLockExclusive == NULL || fnTryAcquireSRWLockShared == NULL)
+          {
+            fnInitializeSRWLock = NULL;
+            fnReleaseSRWLockExclusive = NULL;    fnReleaseSRWLockShared = NULL;
+            fnAcquireSRWLockExclusive = NULL;    fnAcquireSRWLockShared = NULL;
+            fnTryAcquireSRWLockExclusive = NULL; fnTryAcquireSRWLockShared = NULL;
+          }
+        }
       }
-    }
+
+      //initialization completed
+      _InterlockedExchange(&nInitialized, 1);
+      }
+      break;
+
+    case 2: //another thread is initializing, just spin
+      while (__InterlockedRead(&nInitialized) == 2)
+        ::MxSleep(5);
+      break;
   }
-  return;
+
+  //done
+  return 0;
 }
+#undef _GETAPI
 
 static NTSTATUS GetRootDirHandle(_Out_ PHANDLE lphRootDir)
 {

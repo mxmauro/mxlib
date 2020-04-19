@@ -153,7 +153,7 @@ public:
 
   HRESULT Open(_In_opt_z_ LPCWSTR szNameW = NULL, _In_ BOOL bQueryOnly = FALSE, _In_opt_ BOOL bInherit = FALSE);
 
-  BOOL Lock(_In_ DWORD dwTimeout=INFINITE)
+  BOOL Lock(_In_ DWORD dwTimeout = INFINITE)
     {
     LARGE_INTEGER liTimeout, *lpliTimeout;
 
@@ -215,20 +215,27 @@ private:
 
 //-----------------------------------------------------------
 
-VOID SlimRWL_Initialize(_In_ LONG volatile *lpnValue);
-BOOL SlimRWL_TryAcquireShared(_In_ LONG volatile *lpnValue);
-VOID SlimRWL_AcquireShared(_In_ LONG volatile *lpnValue);
-VOID SlimRWL_ReleaseShared(_In_ LONG volatile *lpnValue);
-BOOL SlimRWL_TryAcquireExclusive(_In_ LONG volatile *lpnValue);
-VOID SlimRWL_AcquireExclusive(_In_ LONG volatile *lpnValue);
-VOID SlimRWL_ReleaseExclusive(_In_ LONG volatile *lpnValue);
+#define MX_RWLOCK_INIT { 0 }
+
+typedef union {
+  LONG volatile nValue;
+  SRWLOCK sOsLock;
+} RWLOCK, *LPRWLOCK;
+
+VOID SlimRWL_Initialize(_In_ LPRWLOCK lpLock);
+BOOL SlimRWL_TryAcquireShared(_In_ LPRWLOCK lpLock);
+VOID SlimRWL_AcquireShared(_In_ LPRWLOCK lpLock);
+VOID SlimRWL_ReleaseShared(_In_ LPRWLOCK lpLock);
+BOOL SlimRWL_TryAcquireExclusive(_In_ LPRWLOCK lpLock);
+VOID SlimRWL_AcquireExclusive(_In_ LPRWLOCK lpLock);
+VOID SlimRWL_ReleaseExclusive(_In_ LPRWLOCK lpLock);
 
 class CAutoSlimRWLBase : public virtual CBaseMemObj
 {
 protected:
-  CAutoSlimRWLBase(_In_ LONG volatile *_lpnValue, _In_ BOOL b) : CBaseMemObj()
+  CAutoSlimRWLBase(_In_ LPRWLOCK _lpLock, _In_ BOOL b) : CBaseMemObj()
     {
-    lpnValue = _lpnValue;
+    lpLock = _lpLock;
     bShared = b;
     return;
     };
@@ -237,9 +244,9 @@ public:
   ~CAutoSlimRWLBase()
     {
     if (bShared == FALSE)
-      SlimRWL_ReleaseExclusive(lpnValue);
+      SlimRWL_ReleaseExclusive(lpLock);
     else
-      SlimRWL_ReleaseShared(lpnValue);
+      SlimRWL_ReleaseShared(lpLock);
     return;
     };
 
@@ -247,9 +254,9 @@ public:
     {
     if (bShared != FALSE)
     {
-      SlimRWL_ReleaseShared(lpnValue);
+      SlimRWL_ReleaseShared(lpLock);
       bShared = FALSE;
-      SlimRWL_AcquireExclusive(lpnValue);
+      SlimRWL_AcquireExclusive(lpLock);
     }
     return;
     };
@@ -258,24 +265,24 @@ public:
     {
     if (bShared == FALSE)
     {
-      SlimRWL_ReleaseExclusive(lpnValue);
+      SlimRWL_ReleaseExclusive(lpLock);
       bShared = TRUE;
-      SlimRWL_AcquireShared(lpnValue);
+      SlimRWL_AcquireShared(lpLock);
     }
     return;
     };
 
 private:
-  LONG volatile *lpnValue;
+  LPRWLOCK lpLock;
   BOOL bShared;
 };
 
 class CAutoSlimRWLShared : public CAutoSlimRWLBase, public CNonCopyableObj
 {
 public:
-  CAutoSlimRWLShared(_In_ LONG volatile *lpnValue) : CAutoSlimRWLBase(lpnValue, TRUE), CNonCopyableObj()
+  CAutoSlimRWLShared(_In_ LPRWLOCK lpLock) : CAutoSlimRWLBase(lpLock, TRUE), CNonCopyableObj()
     {
-    SlimRWL_AcquireShared(lpnValue);
+    SlimRWL_AcquireShared(lpLock);
     return;
     };
 };
@@ -283,9 +290,9 @@ public:
 class CAutoSlimRWLExclusive : public CAutoSlimRWLBase, public CNonCopyableObj
 {
 public:
-  CAutoSlimRWLExclusive(_In_ LONG volatile *lpnValue) : CAutoSlimRWLBase(lpnValue, FALSE), CNonCopyableObj()
+  CAutoSlimRWLExclusive(_In_ LPRWLOCK lpLock) : CAutoSlimRWLBase(lpLock, FALSE), CNonCopyableObj()
     {
-    SlimRWL_AcquireExclusive(lpnValue);
+    SlimRWL_AcquireExclusive(lpLock);
     return;
     };
 };
