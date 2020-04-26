@@ -191,7 +191,9 @@ public:
 
     HRESULT SendResponse(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen);
     HRESULT SendFile(_In_z_ LPCWSTR szFileNameW);
-    HRESULT SendStream(_In_ CStream *lpStream, _In_opt_z_ LPCWSTR szFileNameW = NULL);
+    HRESULT SendStream(_In_ CStream *lpStream);
+
+    HRESULT SetFileName(_In_opt_z_ LPCWSTR szFileNameW = NULL);
 
     HRESULT SendErrorPage(_In_ LONG nStatusCode, _In_ HRESULT hrErrorCode,
                           _In_opt_z_ LPCSTR szAdditionalExplanationA = NULL);

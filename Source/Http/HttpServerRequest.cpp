@@ -727,9 +727,10 @@ HRESULT CHttpServer::CClientRequest::SendResponse(_In_ LPCVOID lpData, _In_ SIZE
   }
   if (FAILED(hRes))
     return hRes;
+
+  //done
   sResponse.szMimeTypeHintA = NULL;
   sResponse.cStrFileNameW.Empty();
-  //done
   return S_OK;
 }
 
@@ -746,16 +747,18 @@ HRESULT CHttpServer::CClientRequest::SendFile(_In_z_ LPCWSTR szFileNameW)
     return E_OUTOFMEMORY;
   hRes = cStream->Create(szFileNameW);
   if (SUCCEEDED(hRes))
-    hRes = SendStream(cStream, szFileNameW);
+  {
+    hRes = SendStream(cStream);
+    if (SUCCEEDED(hRes))
+      hRes = SetFileName(szFileNameW);
+  }
   //done
   return hRes;
 }
 
-HRESULT CHttpServer::CClientRequest::SendStream(_In_ CStream *lpStream, _In_opt_z_ LPCWSTR szFileNameW)
+HRESULT CHttpServer::CClientRequest::SendStream(_In_ CStream *lpStream)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
-  CStringW cStrTempFileNameW;
-  BOOL bSetInfo;
 
   if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateSendingResponse &&
       nState != StateNegotiatingWebSocket)
@@ -777,9 +780,38 @@ HRESULT CHttpServer::CClientRequest::SendStream(_In_ CStream *lpStream, _In_opt_
   if (nState == StateSendingResponse)
     return MX_E_InvalidState;
 
-  //extract name if needed
-  bSetInfo = FALSE;
-  if (szFileNameW != NULL && *szFileNameW != 0 && sResponse.aStreamsList.GetCount() == 0)
+  //add to list
+  if (sResponse.aStreamsList.AddElement(lpStream) == FALSE)
+    return E_OUTOFMEMORY;
+  lpStream->AddRef();
+
+  //done
+  sResponse.bLastStreamIsData = FALSE;
+  return S_OK;
+}
+
+HRESULT CHttpServer::CClientRequest::SetFileName(_In_opt_z_ LPCWSTR szFileNameW)
+{
+  CCriticalSection::CAutoLock cLock(cMutex);
+  CStringW cStrTempFileNameW;
+
+  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateSendingResponse &&
+      nState != StateNegotiatingWebSocket)
+  {
+    return MX_E_InvalidState;
+  }
+
+  //sending a direct response?
+  if (sResponse.bDirect != FALSE)
+  {
+    return MX_E_InvalidState;
+  }
+
+  if (nState == StateSendingResponse)
+    return MX_E_InvalidState;
+
+  //extract name
+  if (szFileNameW != NULL && *szFileNameW != 0)
   {
     LPCWSTR sW[2];
 
@@ -792,17 +824,10 @@ HRESULT CHttpServer::CClientRequest::SendStream(_In_ CStream *lpStream, _In_opt_
 
     if (cStrTempFileNameW.Copy(((sW[0] > sW[1]) ? sW[0] : sW[1]) + 1) == FALSE)
       return E_OUTOFMEMORY;
-
-    bSetInfo = TRUE;
   }
 
-  //add to list
-  if (sResponse.aStreamsList.AddElement(lpStream) == FALSE)
-    return E_OUTOFMEMORY;
-  lpStream->AddRef();
-
   //set response info
-  if (bSetInfo != FALSE)
+  if (cStrTempFileNameW.IsEmpty() == FALSE)
   {
     sResponse.szMimeTypeHintA = Http::GetMimeType(szFileNameW);
     sResponse.cStrFileNameW.Attach(cStrTempFileNameW.Detach());
@@ -812,7 +837,7 @@ HRESULT CHttpServer::CClientRequest::SendStream(_In_ CStream *lpStream, _In_opt_
     sResponse.szMimeTypeHintA = NULL;
     sResponse.cStrFileNameW.Empty();
   }
-  sResponse.bLastStreamIsData = FALSE;
+
   //done
   return S_OK;
 }
