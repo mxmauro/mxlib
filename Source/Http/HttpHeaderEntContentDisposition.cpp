@@ -251,7 +251,7 @@ HRESULT CHttpHeaderEntContentDisposition::Build(_Inout_ CStringA &cStrDestA, _In
   {
     CStringA cStrTempA_2;
 
-    if (nBrowser == Http::BrowserIE || nBrowser == Http::BrowserIE6)
+    if (nBrowser == Http::BrowserIE || nBrowser == Http::BrowserIE6 || nBrowser == Http::BrowserSafari)
     {
       if (Http::BuildExtendedValueString(cStrTempA, (LPCWSTR)cStrNameW, cStrFileNameW.GetLength()) == FALSE)
         return E_OUTOFMEMORY;
@@ -275,7 +275,9 @@ HRESULT CHttpHeaderEntContentDisposition::Build(_Inout_ CStringA &cStrDestA, _In
   {
     CStringA cStrTempA_2;
 
-    if (nBrowser == Http::BrowserIE || nBrowser == Http::BrowserIE6)
+    //NOTE: If the following code does not work, try a review of
+    //      https://fastmail.blog/2011/06/24/download-non-english-filenames/
+    if (nBrowser == Http::BrowserIE || nBrowser == Http::BrowserIE6 || nBrowser == Http::BrowserSafari)
     {
       if (Http::BuildExtendedValueString(cStrTempA, (LPCWSTR)cStrFileNameW, cStrFileNameW.GetLength()) == FALSE)
         return E_OUTOFMEMORY;

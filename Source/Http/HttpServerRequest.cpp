@@ -728,7 +728,7 @@ HRESULT CHttpServer::CClientRequest::SendResponse(_In_ LPCVOID lpData, _In_ SIZE
   if (FAILED(hRes))
     return hRes;
   sResponse.szMimeTypeHintA = NULL;
-  sResponse.cStrFileNameA.Empty();
+  sResponse.cStrFileNameW.Empty();
   //done
   return S_OK;
 }
@@ -754,10 +754,8 @@ HRESULT CHttpServer::CClientRequest::SendFile(_In_z_ LPCWSTR szFileNameW)
 HRESULT CHttpServer::CClientRequest::SendStream(_In_ CStream *lpStream, _In_opt_z_ LPCWSTR szFileNameW)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
-  CStringA cStrTempNameA;
-  LPCWSTR sW[2];
+  CStringW cStrTempFileNameW;
   BOOL bSetInfo;
-  HRESULT hRes;
 
   if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateSendingResponse &&
       nState != StateNegotiatingWebSocket)
@@ -783,31 +781,36 @@ HRESULT CHttpServer::CClientRequest::SendStream(_In_ CStream *lpStream, _In_opt_
   bSetInfo = FALSE;
   if (szFileNameW != NULL && *szFileNameW != 0 && sResponse.aStreamsList.GetCount() == 0)
   {
+    LPCWSTR sW[2];
+
     sW[0] = StrChrW(szFileNameW, L'\\', TRUE);
     if (sW[0] == NULL)
       sW[0] = szFileNameW;
     sW[1] = StrChrW(szFileNameW, L'/', TRUE);
     if (sW[1] == NULL)
       sW[1] = szFileNameW;
-    hRes = Utf8_Encode(cStrTempNameA, (sW[0] > sW[1]) ? sW[0]+1 : sW[1]+1);
-    if (FAILED(hRes))
-      return hRes;
+
+    if (cStrTempFileNameW.Copy(((sW[0] > sW[1]) ? sW[0] : sW[1]) + 1) == FALSE)
+      return E_OUTOFMEMORY;
+
     bSetInfo = TRUE;
   }
+
   //add to list
   if (sResponse.aStreamsList.AddElement(lpStream) == FALSE)
     return E_OUTOFMEMORY;
   lpStream->AddRef();
+
   //set response info
   if (bSetInfo != FALSE)
   {
     sResponse.szMimeTypeHintA = Http::GetMimeType(szFileNameW);
-    sResponse.cStrFileNameA.Attach(cStrTempNameA.Detach());
+    sResponse.cStrFileNameW.Attach(cStrTempFileNameW.Detach());
   }
   else
   {
     sResponse.szMimeTypeHintA = NULL;
-    sResponse.cStrFileNameA.Empty();
+    sResponse.cStrFileNameW.Empty();
   }
   sResponse.bLastStreamIsData = FALSE;
   //done
@@ -1223,6 +1226,41 @@ HRESULT CHttpServer::CClientRequest::SendHeaders()
     }
   }
 
+  //content disposition
+  if (SUCCEEDED(hRes) && sResponse.aStreamsList.GetCount() > 0 && sResponse.cStrFileNameW.IsEmpty() == FALSE &&
+      sResponse.cHeaders.Find<CHttpHeaderEntContentDisposition>() == NULL)
+  {
+    TAutoRefCounted<CHttpHeaderEntContentDisposition> cHeader;
+
+    cHeader.Attach(MX_DEBUG_NEW CHttpHeaderEntContentDisposition());
+    if (cHeader)
+    {
+      hRes = cHeader->SetType("attachment", 10);
+      if (SUCCEEDED(hRes))
+      {
+        hRes = cHeader->SetFileName((LPCWSTR)(sResponse.cStrFileNameW), sResponse.cStrFileNameW.GetLength());
+        if (SUCCEEDED(hRes))
+        {
+          hRes = cHeader->Build(cStrTempA, cRequestParser.GetRequestBrowser());
+          if (SUCCEEDED(hRes))
+          {
+            hRes = WriteToStream(cHdrStream, "Content-Disposition: ", 21);
+            if (SUCCEEDED(hRes))
+            {
+              hRes = WriteToStream(cHdrStream, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+              if (SUCCEEDED(hRes))
+                hRes = WriteToStream(cHdrStream, "\r\n", 2);
+            }
+          }
+        }
+      }
+    }
+    else
+    {
+      hRes = E_OUTOFMEMORY;
+    }
+  }
+
   //content length
   if (SUCCEEDED(hRes))
   {
@@ -1422,7 +1460,7 @@ VOID CHttpServer::CClientRequest::ResetResponseForNewRequest(_In_ BOOL bPreserve
   sResponse.aStreamsList.RemoveAllElements();
   sResponse.bLastStreamIsData = FALSE;
   sResponse.szMimeTypeHintA = NULL;
-  sResponse.cStrFileNameA.Empty();
+  sResponse.cStrFileNameW.Empty();
   sResponse.bDirect = sResponse.bPreserveWebSocketHeaders = FALSE;
   return;
 }

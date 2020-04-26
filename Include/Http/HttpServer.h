@@ -290,7 +290,7 @@ public:
       TArrayListWithRelease<CStream*> aStreamsList;
       BOOL bLastStreamIsData;
       LPCSTR szMimeTypeHintA;
-      CStringA cStrFileNameA;
+      CStringW cStrFileNameW;
       BOOL bDirect, bPreserveWebSocketHeaders;
     } sResponse;
   };
