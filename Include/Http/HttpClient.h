@@ -37,7 +37,7 @@
 
 namespace MX {
 
-class CHttpClient : public virtual CBaseMemObj, public CLoggable, public CNonCopyableObj
+class CHttpClient : public virtual TRefCounted<CBaseMemObj>, public CLoggable, public CNonCopyableObj
 {
 public:
   typedef enum {

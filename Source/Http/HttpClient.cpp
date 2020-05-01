@@ -61,9 +61,9 @@ static BOOL _GetTempPath(_Out_ MX::CStringW &cStrPathW);
 
 namespace MX {
 
-CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr, _In_opt_ CLoggable *lpLogParent) : CBaseMemObj(), CLoggable(),
-                                                                                        CNonCopyableObj(),
-                                                                                        cSocketMgr(_cSocketMgr)
+CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr,
+                         _In_opt_ CLoggable *lpLogParent) : TRefCounted<CBaseMemObj>(), CLoggable(), CNonCopyableObj(),
+                                                            cSocketMgr(_cSocketMgr)
 {
   SetLogParent(lpLogParent);
   sResponse.cParser.SetLogParent(this);
