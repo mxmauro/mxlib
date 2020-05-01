@@ -134,6 +134,7 @@ CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr,
   dwMaxFilesCount = 4;
   dwMaxBodySizeInMemory = 32768;
   ullMaxBodySize = 10485760ui64;
+  dwMaxIncomingBytesWhileSending = 52428800; //50mb
   //----
   SlimRWL_Initialize(&(sSsl.sRwMutex));
   RundownProt_Initialize(&nRundownLock);
@@ -427,6 +428,18 @@ VOID CHttpServer::SetOption_MaxBodySize(_In_ ULONGLONG ullSize)
   if (hAcceptConn == NULL)
   {
     ullMaxBodySize = ullSize;
+  }
+  return;
+}
+
+VOID CHttpServer::SetOption_MaxIncomingBytesWhileSending(_In_ DWORD _dwMaxIncomingBytesWhileSending)
+{
+  CCriticalSection::CAutoLock cLock(cs);
+
+  if (hAcceptConn == NULL)
+  {
+    dwMaxIncomingBytesWhileSending = (_dwMaxIncomingBytesWhileSending > 16384) ? _dwMaxIncomingBytesWhileSending
+                                                                               : 16384;
   }
   return;
 }
@@ -1167,6 +1180,17 @@ on_request_error:
           hRes = cSocketMgr.ConsumeBufferedMessage(h, nMsgSize);
           if (FAILED(hRes))
             goto on_request_error;
+          break;
+
+        case CClientRequest::StateBuildingResponse:
+        case CClientRequest::StateSendingResponse:
+          //if we start to receive data in other state, check if the client is not flooding us
+          if (nMsgSize > (SIZE_T)dwMaxIncomingBytesWhileSending)
+          {
+            hRes = MX_E_InvalidState;
+            goto on_request_error;
+          }
+          bBreakLoop = TRUE;
           break;
 
         default:

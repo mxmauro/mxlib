@@ -96,6 +96,7 @@ public:
   BOOL SetOption_TemporaryFolder(_In_opt_z_ LPCWSTR szFolderW);
   VOID SetOption_MaxBodySizeInMemory(_In_ DWORD dwSize);
   VOID SetOption_MaxBodySize(_In_ ULONGLONG ullSize);
+  VOID SetOption_MaxRawRequestBodySizeInMemory(_In_ DWORD dwSize);
   VOID SetOption_KeepConnectionOpen(_In_ BOOL bKeep);
   VOID SetOption_AcceptCompressedContent(_In_ BOOL bAccept);
 
@@ -269,6 +270,7 @@ private:
   CStringW cStrTemporaryFolderW;
   DWORD dwMaxBodySizeInMemory;
   ULONGLONG ullMaxBodySize;
+  DWORD dwMaxRawRequestBodySizeInMemory;
   BOOL bKeepConnectionOpen;
   BOOL bAcceptCompressedContent;
 
@@ -287,7 +289,7 @@ private:
     struct {
       CLnkLst cList;
       BOOL bHasRaw;
-      BOOL bIsDynamic;
+      LONG nDynamicFlags;
     } sPostData;
     CHAR szBoundaryA[32];
     BOOL bUsingMultiPartFormData;

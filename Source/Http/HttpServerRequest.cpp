@@ -104,16 +104,12 @@ HRESULT CHttpServer::CClientRequest::EnableDirectResponse()
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
   HRESULT hRes;
 
-  if (nState != StateBuildingResponse)
+  if (nState != StateBuildingResponse && nState != StateAfterHeaders)
     return MX_E_InvalidState;
 
-  hRes = SendHeaders();
+  hRes = SetState(StateSendingResponse);
   if (SUCCEEDED(hRes))
-  {
-    hRes = SetState(StateSendingResponse);
-    if (SUCCEEDED(hRes))
-      sResponse.bDirect = TRUE;
-  }
+    sResponse.bDirect = TRUE;
   return hRes;
 }
 
@@ -692,7 +688,10 @@ HRESULT CHttpServer::CClientRequest::SendResponse(_In_ LPCVOID lpData, _In_ SIZE
     if (nState != StateSendingResponse)
       return MX_E_InvalidState;
 
-    return lpHttpServer->cSocketMgr.SendMsg(hConn, lpData, nDataLen);
+    hRes = SendHeaders(); //send headers if we didn't before
+    if (SUCCEEDED(hRes))
+      hRes = lpHttpServer->cSocketMgr.SendMsg(hConn, lpData, nDataLen);
+    return hRes;
   }
   if (nState == StateSendingResponse)
     return MX_E_InvalidState;
@@ -771,10 +770,15 @@ HRESULT CHttpServer::CClientRequest::SendStream(_In_ CStream *lpStream)
   //sending a direct response?
   if (sResponse.bDirect != FALSE)
   {
+    HRESULT hRes;
+
     if (nState != StateSendingResponse)
       return MX_E_InvalidState;
 
-    return lpHttpServer->cSocketMgr.SendStream(hConn, lpStream);
+    hRes = SendHeaders(); //send headers if we didn't before
+    if (SUCCEEDED(hRes))
+      hRes = lpHttpServer->cSocketMgr.SendStream(hConn, lpStream);
+    return hRes;
   }
 
   if (nState == StateSendingResponse)
@@ -1051,10 +1055,6 @@ HRESULT CHttpServer::CClientRequest::SendHeaders()
 
   if ((_InterlockedOr(&nFlags, REQUEST_FLAG_HeadersSent) & REQUEST_FLAG_HeadersSent) != 0)
   {
-    if (lpHttpServer->ShouldLog(1) != FALSE)
-    {
-      lpHttpServer->Log(L"HttpServer(ResponseHeaders/Req:0x%p/Conn:0x%p): Already sent!", this, hConn);
-    }
     return S_FALSE;
   }
 

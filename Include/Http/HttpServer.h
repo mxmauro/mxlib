@@ -79,6 +79,7 @@ public:
   BOOL SetOption_TemporaryFolder(_In_opt_z_ LPCWSTR szFolderW);
   VOID SetOption_MaxBodySizeInMemory(_In_ DWORD dwSize);
   VOID SetOption_MaxBodySize(_In_ ULONGLONG ullSize);
+  VOID SetOption_MaxIncomingBytesWhileSending(_In_ DWORD dwMaxIncomingBytesWhileSending);
 
   VOID SetNewRequestObjectCallback(_In_ OnNewRequestObjectCallback cNewRequestObjectCallback);
   VOID SetRequestHeadersReceivedCallback(_In_ OnRequestHeadersReceivedCallback cRequestHeadersReceivedCallback);
@@ -389,6 +390,7 @@ private:
   CStringW cStrTemporaryFolderW;
   DWORD dwMaxBodySizeInMemory;
   ULONGLONG ullMaxBodySize;
+  DWORD dwMaxIncomingBytesWhileSending;
 
   LONG volatile nDownloadNameGeneratorCounter;
   struct {
