@@ -51,15 +51,16 @@ CWebSocket::CWebSocket() : CIpc::CUserData()
   sReceive.sCurrentMessage.nOpcode = _OPCODE_NONE;
   sReceive.sCurrentMessage.lpData = NULL;
   sReceive.sCurrentMessage.nFilledFrame = sReceive.sCurrentMessage.nTotalDataLength = 0;
-  MxMemSet(&(sReceive.sCurrentControlFrame), 0, sizeof(sReceive.sCurrentControlFrame));
-  sReceive.hrCloseError = S_OK;
+  ::MxMemSet(&(sReceive.sCurrentControlFrame), 0, sizeof(sReceive.sCurrentControlFrame));
+  _InterlockedExchange(&hrCloseError, S_FALSE);
   //----
-  MxMemSet(&(sSend.sFrameHeader), 0, sizeof(sSend.sFrameHeader));
+  FastLock_Initialize(&(sSend.nSendInProgressMutex));
+  ::MxMemSet(&(sSend.sFrameHeader), 0, sizeof(sSend.sFrameHeader));
   sSend.sFrameHeader.nOpcode = _OPCODE_NONE;
   sSend.lpFrameData = NULL;
   sSend.nFilledFrame = 0;
   //----
-  MxMemSet(&sReceiveCache, 0, sizeof(sReceiveCache));
+  ::MxMemSet(&sReceiveCache, 0, sizeof(sReceiveCache));
   return;
 }
 
@@ -76,32 +77,42 @@ CWebSocket::~CWebSocket()
 
 HRESULT CWebSocket::BeginTextMessage()
 {
-  if (sSend.sFrameHeader.nOpcode != _OPCODE_NONE)
-    return MX_E_OperationInProgress;
+  FastLock_Enter(&(sSend.nSendInProgressMutex));
+
   sSend.sFrameHeader.nOpcode = _OPCODE_Text;
+
   //create frame buffer if not done yet
   if (!(sSend.cFrameBuffer))
   {
     sSend.cFrameBuffer.Attach((LPBYTE)MX_MALLOC(SEND_PAYLOAD_SIZE));
     if (!(sSend.cFrameBuffer))
+    {
+      FastLock_Exit(&(sSend.nSendInProgressMutex));
       return E_OUTOFMEMORY;
+    }
   }
+
   //done
   return S_OK;
 }
 
 HRESULT CWebSocket::BeginBinaryMessage()
 {
-  if (sSend.sFrameHeader.nOpcode != _OPCODE_NONE)
-    return MX_E_OperationInProgress;
+  FastLock_Enter(&(sSend.nSendInProgressMutex));
+
   sSend.sFrameHeader.nOpcode = _OPCODE_Binary;
+
   //create frame buffer if not done yet
   if (!(sSend.cFrameBuffer))
   {
     sSend.cFrameBuffer.Attach((LPBYTE)MX_MALLOC(SEND_PAYLOAD_SIZE));
     if (!(sSend.cFrameBuffer))
+    {
+      FastLock_Exit(&(sSend.nSendInProgressMutex));
       return E_OUTOFMEMORY;
+    }
   }
+
   //done
   return S_OK;
 }
@@ -126,12 +137,17 @@ HRESULT CWebSocket::SendTextMessage(_In_ LPCWSTR szMsgW, _In_ SIZE_T nMsgLen)
 
 HRESULT CWebSocket::SendBinaryMessage(_In_ LPVOID lpData, _In_ SIZE_T nDataLen)
 {
-  if (sSend.sFrameHeader.nOpcode == _OPCODE_NONE)
+  if (FastLock_IsActive(&(sSend.nSendInProgressMutex)) != ::GetCurrentThreadId())
     return MX_E_NotReady;
+
   if (nDataLen == 0)
     return S_OK;
   if (lpData == NULL)
+  {
+    //on error, unlock
+    FastLock_Exit(&(sSend.nSendInProgressMutex));
     return E_POINTER;
+  }
 
   //begin framing
   while (nDataLen > 0)
@@ -171,13 +187,14 @@ HRESULT CWebSocket::SendBinaryMessage(_In_ LPVOID lpData, _In_ SIZE_T nDataLen)
     nDataLen -= nToWrite;
     sSend.nFilledFrame += nToWrite;
   }
+
   //done
   return S_OK;
 }
 
 HRESULT CWebSocket::EndMessage()
 {
-  if (sSend.sFrameHeader.nOpcode == _OPCODE_NONE)
+  if (FastLock_IsActive(&(sSend.nSendInProgressMutex)) != ::GetCurrentThreadId())
     return MX_E_NotReady;
 
   if (sSend.nFilledFrame > 0)
@@ -186,14 +203,22 @@ HRESULT CWebSocket::EndMessage()
 
     hRes = InternalSendFrame(TRUE);
     if (FAILED(hRes))
+    {
+      //on error, unlock
+      FastLock_Exit(&(sSend.nSendInProgressMutex));
       return hRes;
-
-    //finalize send
-    ::MxMemSet(&(sSend.sFrameHeader), 0, sizeof(sSend.sFrameHeader));
-    sSend.sFrameHeader.nOpcode = _OPCODE_NONE;
-    sSend.lpFrameData = NULL;
-    sSend.nFilledFrame = 0;
+    }
   }
+
+  //finalize send
+  ::MxMemSet(&(sSend.sFrameHeader), 0, sizeof(sSend.sFrameHeader));
+  sSend.sFrameHeader.nOpcode = _OPCODE_NONE;
+  sSend.lpFrameData = NULL;
+  sSend.nFilledFrame = 0;
+
+  //unlock
+  FastLock_Exit(&(sSend.nSendInProgressMutex));
+
   //done
   return S_OK;
 }
@@ -224,7 +249,7 @@ HRESULT CWebSocket::SendPing()
 
 BOOL CWebSocket::IsClosed() const
 {
-  return (sReceive.nState == 1000) ? TRUE : FALSE;
+  return (__InterlockedRead(&(const_cast<CWebSocket*>(this)->hrCloseError)) != S_FALSE) ? TRUE : FALSE;
 }
 
 VOID CWebSocket::Close(_In_opt_ HRESULT hrErrorCode)
@@ -256,10 +281,6 @@ VOID CWebSocket::OnPongFrame()
 
 VOID CWebSocket::OnCloseFrame(_In_ USHORT wCode, _In_  HRESULT hrErrorCode)
 {
-  if (SUCCEEDED(hrErrorCode))
-    SendClose(wCode);
-  if (sReceive.nState != 1000)
-    lpIpc->Close(hConn, hrErrorCode);
   return;
 }
 
@@ -271,10 +292,11 @@ SIZE_T CWebSocket::GetMaxMessageSize() const
 VOID CWebSocket::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
                                  _In_ HRESULT hrErrorCode)
 {
-  if (sReceive.nState != 1000)
+  if (_InterlockedCompareExchange(&hrCloseError, hrErrorCode, S_FALSE) == S_FALSE)
   {
-    sReceive.nState = 1000;
-    OnCloseFrame((SUCCEEDED(hrErrorCode) ? 1000 : 1006), hrErrorCode);
+    HRESULT hRes = __InterlockedRead(&hrErrorCode);
+
+    OnCloseFrame((SUCCEEDED(hRes) ? 1000 : 1006), hRes);
   }
   hConn = NULL;
   return;
@@ -287,10 +309,12 @@ HRESULT CWebSocket::OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ C
   HRESULT hRes;
 
   //closed?
-  if (hConn == NULL || sReceive.nState == 1000)
+  /*
+  if (hConn == NULL || __InterlockedRead(&hrCloseError) != S_FALSE)
   {
     return sReceive.hrCloseError;
   }
+  */
 
   //start of loop
 loop:
@@ -611,6 +635,7 @@ consume_used_and_loop:
         case _OPCODE_ConnectionClose:
           {
           USHORT wCode = 1000;
+          BOOL bChanged = FALSE;
 
           if (sReceive.sCurrentControlFrame.nFilledFrame >= 2)
           {
@@ -620,30 +645,40 @@ consume_used_and_loop:
           switch (wCode)
           {
             case 1000:
+              bChanged = (_InterlockedCompareExchange(&hrCloseError, S_OK, S_FALSE) == S_FALSE) ? TRUE : FALSE;
               break;
 
             case 1001:
-              sReceive.hrCloseError = MX_HRESULT_FROM_WIN32(WSAECONNRESET);
+              bChanged = (_InterlockedCompareExchange(&hrCloseError, MX_HRESULT_FROM_WIN32(WSAECONNRESET),
+                                                      S_FALSE) == S_FALSE) ? TRUE : FALSE;
               break;
 
             case 1002:
-              sReceive.hrCloseError = MX_E_Unsupported;
+              bChanged = (_InterlockedCompareExchange(&hrCloseError, MX_E_Unsupported,
+                                                      S_FALSE) == S_FALSE) ? TRUE : FALSE;
               break;
 
             case 1003:
-              sReceive.hrCloseError = MX_E_InvalidData;
+              bChanged = (_InterlockedCompareExchange(&hrCloseError, MX_E_InvalidData,
+                                                      S_FALSE) == S_FALSE) ? TRUE : FALSE;
               break;
 
             default:
-              sReceive.hrCloseError = E_FAIL;
+              bChanged = (_InterlockedCompareExchange(&hrCloseError, E_FAIL, S_FALSE) == S_FALSE) ? TRUE : FALSE;
               break;
           }
 
           //closed state
-          sReceive.nState = 1000;
-          OnCloseFrame(wCode, sReceive.hrCloseError);
+          if (bChanged != FALSE)
+          {
+            OnCloseFrame(wCode, __InterlockedRead(&hrCloseError));
+
+            if (wCode == 1000)
+              SendClose(wCode);
+            lpIpc->Close(hConn, S_OK);
           }
-          return sReceive.hrCloseError;
+          }
+          return S_OK;
 
         case _OPCODE_Ping:
           //NOTE: InternalSendControlFrame modifies the payload if mask is active

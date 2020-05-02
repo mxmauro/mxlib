@@ -54,7 +54,7 @@ CIpc::CIpc(_In_ CIoCompletionPortThreadPool &_cDispatcherPool) : CBaseMemObj(), 
   dwMaxOutgoingBytes = 16 * 32768;
   //----
   cDispatcherPoolPacketCallback = MX_BIND_MEMBER_CALLBACK(&CIpc::OnDispatcherPacket, this);
-  _InterlockedExchange(&nInitShutdownMutex, 0);
+  FastLock_Initialize(&nInitShutdownMutex);
   RundownProt_Initialize(&nRundownProt);
   cEngineErrorCallback = NullCallback();
   SlimRWL_Initialize(&(sConnections.sRwMutex));
@@ -1417,9 +1417,9 @@ CIpc::CConnectionBase::CConnectionBase(_In_ CIpc *_lpIpc, _In_ CIpc::eConnection
   cConnectCallback = NullCallback();
   cDisconnectCallback = NullCallback();
   cDataReceivedCallback = NullCallback();
-  _InterlockedExchange(&nReadMutex, 0);
+  FastLock_Initialize(&nReadMutex);
   SlimRWL_Initialize(&(sLayers.sRwMutex));
-  _InterlockedExchange(&(sReceivedData.nMutex), 0);
+  FastLock_Initialize(&(sReceivedData.nMutex));
   return;
 }
 

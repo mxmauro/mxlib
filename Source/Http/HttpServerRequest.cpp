@@ -746,11 +746,7 @@ HRESULT CHttpServer::CClientRequest::SendFile(_In_z_ LPCWSTR szFileNameW)
     return E_OUTOFMEMORY;
   hRes = cStream->Create(szFileNameW);
   if (SUCCEEDED(hRes))
-  {
     hRes = SendStream(cStream);
-    if (SUCCEEDED(hRes))
-      hRes = SetFileName(szFileNameW);
-  }
   //done
   return hRes;
 }
@@ -794,24 +790,33 @@ HRESULT CHttpServer::CClientRequest::SendStream(_In_ CStream *lpStream)
   return S_OK;
 }
 
+HRESULT CHttpServer::CClientRequest::SetMimeTypeFromFileName(_In_opt_z_ LPCWSTR szFileNameW)
+{
+  CCriticalSection::CAutoLock cLock(cMutex);
+
+  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+    return MX_E_InvalidState;
+
+  //sending a direct response?
+  if (sResponse.bDirect != FALSE)
+    return MX_E_InvalidState;
+
+  //set response info
+  sResponse.szMimeTypeHintA = (szFileNameW != FALSE) ? Http::GetMimeType(szFileNameW) : NULL;
+  //done
+  return S_OK;
+}
+
 HRESULT CHttpServer::CClientRequest::SetFileName(_In_opt_z_ LPCWSTR szFileNameW)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
   CStringW cStrTempFileNameW;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateSendingResponse &&
-      nState != StateNegotiatingWebSocket)
-  {
+  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
     return MX_E_InvalidState;
-  }
 
   //sending a direct response?
   if (sResponse.bDirect != FALSE)
-  {
-    return MX_E_InvalidState;
-  }
-
-  if (nState == StateSendingResponse)
     return MX_E_InvalidState;
 
   //extract name
@@ -1236,7 +1241,12 @@ HRESULT CHttpServer::CClientRequest::SendHeaders()
           {
             hRes = WriteToStream(cHdrStream, sResponse.szMimeTypeHintA);
             if (SUCCEEDED(hRes))
-              hRes = WriteToStream(cHdrStream, "\r\n", 2);
+            {
+              if (StrNCompareA(sResponse.szMimeTypeHintA, "text/", 5) == 0)
+                hRes = WriteToStream(cHdrStream, "; charset=utf-8\r\n", 17);
+              else
+                hRes = WriteToStream(cHdrStream, "\r\n", 2);
+            }
           }
         }
         else if (sResponse.bLastStreamIsData != FALSE)

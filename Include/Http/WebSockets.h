@@ -103,8 +103,6 @@ private:
   VOID FireConnectedAndInitialRead();
 
 private:
-
-private:
   CIpc *lpIpc;
   HANDLE hConn;
   BOOL bServerSide;
@@ -128,10 +126,10 @@ private:
       BYTE aBuffer[128];
       SIZE_T nFilledFrame;
     } sCurrentControlFrame;
-    HRESULT hrCloseError;
   } sReceive;
 
   struct {
+    LONG volatile nSendInProgressMutex;
     FRAME_HEADER sFrameHeader;
     TAutoFreePtr<BYTE> cFrameBuffer;
     LPBYTE lpFrameData;
@@ -142,6 +140,8 @@ private:
     LPBYTE lpBuffer[4];
     SIZE_T nNextBufferIndex;
   } sReceiveCache;
+
+  LONG volatile hrCloseError;
 };
 
 } //namespace MX

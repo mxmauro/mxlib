@@ -493,7 +493,7 @@ public:
   public:
     CPacketList() : CBaseMemObj(), CNonCopyableObj()
       {
-      _InterlockedExchange(&nMutex, 0);
+      FastLock_Initialize(&nMutex);
       return;
       };
 

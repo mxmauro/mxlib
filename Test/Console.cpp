@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 #include "Console.h"
+#include <WaitableObjects.h>
 
 //-----------------------------------------------------------
 
@@ -78,14 +79,13 @@ VOID PrintTimestamp()
 
 CPrintLock::CPrintLock()
 {
-  while (_InterlockedCompareExchange(&nPrintLock, 1, 0) != 0)
-    MX::_YieldProcessor();
+  MX::FastLock_Enter(&nPrintLock);
   return;
 }
 
 CPrintLock::~CPrintLock()
 {
-  _InterlockedExchange(&nPrintLock, 0);
+  MX::FastLock_Exit(&nPrintLock);
   return;
 }
 

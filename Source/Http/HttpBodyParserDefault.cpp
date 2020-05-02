@@ -30,7 +30,7 @@ CHttpBodyParserDefault::CHttpBodyParserDefault(_In_ OnDownloadStartedCallback _c
                                                _In_ ULONGLONG _ullMaxBodySize) :
                                                CHttpBodyParserBase(), CNonCopyableObj()
 {
-  _InterlockedExchange(&nMutex, 0);
+  FastLock_Initialize(&nMutex);
   cDownloadStartedCallback = _cDownloadStartedCallback;
   lpUserParam = _lpUserParam;
   dwMaxBodySizeInMemory = _dwMaxBodySizeInMemory;

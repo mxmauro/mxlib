@@ -194,6 +194,7 @@ public:
     HRESULT SendFile(_In_z_ LPCWSTR szFileNameW);
     HRESULT SendStream(_In_ CStream *lpStream);
 
+    HRESULT SetMimeTypeFromFileName(_In_opt_z_ LPCWSTR szFileNameW = NULL);
     HRESULT SetFileName(_In_opt_z_ LPCWSTR szFileNameW = NULL);
 
     HRESULT SendErrorPage(_In_ LONG nStatusCode, _In_ HRESULT hrErrorCode,

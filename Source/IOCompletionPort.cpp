@@ -178,7 +178,7 @@ CIoCompletionPortThreadPool::CIoCompletionPortThreadPool() : CBaseMemObj(), CNon
   dwShutdownThreadThreshold = 2;
   dwThreadStackSize = 0;
   nThreadPriority = THREAD_PRIORITY_NORMAL;
-  _InterlockedExchange(&(sThreads.nMutex), 0);
+  FastLock_Initialize(&(sThreads.nMutex));
   _InterlockedExchange(&(sThreads.nActiveCount), 0);
   _InterlockedExchange(&(sThreads.nBusyCount), 0);
   _InterlockedExchange(&(sThreads.nShuttingDown), 0);

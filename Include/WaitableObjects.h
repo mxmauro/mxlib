@@ -176,41 +176,58 @@ public:
 
 //-----------------------------------------------------------
 
+#define MX_FASTLOCK_INIT 0
+
+VOID FastLock_Initialize(_Out_ LONG volatile *lpnLock);
+VOID FastLock_Enter(_Inout_ LONG volatile *lpnLock);
+BOOL FastLock_TryEnter(_Inout_ LONG volatile *lpnLock);
+VOID FastLock_Exit(_Inout_ LONG volatile *lpnLock);
+DWORD FastLock_IsActive(_Inout_ LONG volatile *lpnLock); //NOTE: returns thread id holding the lock if active or 0
+VOID FastLock_Bitmask_Enter(_Inout_ LONG volatile *lpnLock, _In_ int nBitIndex);
+BOOL FastLock_Bitmask_TryEnter(_Inout_ LONG volatile *lpnLock, _In_ int nBitIndex);
+VOID FastLock_Bitmask_Exit(_Inout_ LONG volatile *lpnLock, _In_ int nBitIndex);
+BOOL FastLock_Bitmask_IsActive(_Inout_ LONG volatile *lpnLock, _In_ int nBitIndex);
+
 class CFastLock : public virtual CBaseMemObj, public CNonCopyableObj
 {
 public:
   CFastLock(_Inout_ LONG volatile *_lpnLock) : CBaseMemObj(), CNonCopyableObj()
     {
-    LONG nTid = (LONG)::MxGetCurrentThreadId();
-
-    nFlagMask = 0;
     lpnLock = _lpnLock;
-    while (_InterlockedCompareExchange(lpnLock, nTid, 0) != 0)
-      _YieldProcessor();
-    return;
-    };
-
-  CFastLock(_Inout_ LONG volatile *_lpnLock, _In_ LONG _nFlagMask) : CBaseMemObj(), CNonCopyableObj()
-    {
-    nFlagMask = _nFlagMask;
-    lpnLock = _lpnLock;
-    while ((_InterlockedOr(lpnLock, nFlagMask) & nFlagMask) != 0)
-      _YieldProcessor();
+    FastLock_Enter(lpnLock);
     return;
     };
 
   ~CFastLock()
     {
-    if (nFlagMask == 0)
-      _InterlockedExchange(lpnLock, 0);
-    else
-      _InterlockedAnd(lpnLock, ~nFlagMask);
+    FastLock_Exit(lpnLock);
     return;
     };
 
 private:
   LONG volatile *lpnLock;
-  LONG nFlagMask;
+};
+
+class CFastBitMaskLock : public virtual CBaseMemObj, public CNonCopyableObj
+{
+public:
+  CFastBitMaskLock(_Inout_ LONG volatile *_lpnLock, _In_ int _nBitIndex) : CBaseMemObj(), CNonCopyableObj()
+    {
+    lpnLock = _lpnLock;
+    nBitIndex = _nBitIndex;
+    FastLock_Bitmask_Enter(lpnLock, nBitIndex);
+    return;
+    };
+
+  ~CFastBitMaskLock()
+    {
+    FastLock_Bitmask_Exit(lpnLock, nBitIndex);
+    return;
+    };
+
+private:
+  LONG volatile *lpnLock;
+  int nBitIndex;
 };
 
 //-----------------------------------------------------------

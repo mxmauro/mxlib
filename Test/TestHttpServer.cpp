@@ -150,8 +150,9 @@ static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServe
         MX::StrCompareW(szExtensionW, L".dat", TRUE) == 0)
     {
       hRes = lpRequest->SendFile((LPCWSTR)cStrFileNameW);
-      if (hRes == MX_HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) ||
-          hRes == MX_HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND))
+      if (SUCCEEDED(hRes))
+        hRes = lpRequest->SetMimeTypeFromFileName((LPCWSTR)cStrFileNameW);
+      if (hRes == MX_E_FileNotFound || hRes == MX_E_PathNotFound)
       {
         hRes = lpRequest->SendErrorPage(404, E_INVALIDARG);
       }

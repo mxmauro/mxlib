@@ -25,7 +25,7 @@ namespace MX {
 
 CJsHttpServer::CJvmManager::CJvmManager() : TRefCounted<CBaseMemObj>()
 {
-  _InterlockedExchange(&nMutex, 0);
+  FastLock_Initialize(&nMutex);
   return;
 }
 

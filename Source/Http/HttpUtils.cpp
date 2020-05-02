@@ -36,9 +36,12 @@ static struct {
   { "UNLOCK",   6 }, { "UNSUBSCRIBE", 11 }
 };
 
+static const LPCSTR szDefaultMimeTypeA = "application/octet-stream";
+
 //-----------------------------------------------------------
 
-static LPCSTR GetMimeTypeFromExtension(_In_z_ LPCSTR szExtA);
+static LPCSTR GetMimeTypeFromExtensionA(_In_z_ LPCSTR szExtA);
+static LPCSTR GetMimeTypeFromExtensionW(_In_z_ LPCWSTR szExtW);
 static CHAR UTF16_to_ISO_8859_1(_In_ WCHAR chW);
 
 //-----------------------------------------------------------
@@ -359,39 +362,32 @@ LPCSTR GetMimeType(_In_z_ LPCSTR szFileNameA)
 
   if (szFileNameA == NULL || *szFileNameA == 0)
     return NULL;
+
   szExtA = szFileNameA + StrLenA(szFileNameA);
-  while (szExtA > szFileNameA && *(szExtA-1) != '.' && *(szExtA-1) != '\\' && *(szExtA-1) != '/')
+  while (szExtA > szFileNameA && *(szExtA - 1) != '.' && *(szExtA - 1) != '\\' && *(szExtA - 1) != '/')
+  {
     szExtA--;
-  return GetMimeTypeFromExtension((szExtA > szFileNameA && *(szExtA-1) == '.') ? (szExtA-1) : "");
+  }
+  if (szExtA > szFileNameA && *(szExtA - 1) == '.')
+    return GetMimeTypeFromExtensionA(szExtA);
+  return szDefaultMimeTypeA;
 }
 
 LPCSTR GetMimeType(_In_z_ LPCWSTR szFileNameW)
 {
   LPCWSTR szExtW;
-  CHAR szExtA[8];
-  SIZE_T i;
 
   if (szFileNameW == NULL || *szFileNameW == 0)
     return NULL;
+
   szExtW = szFileNameW + StrLenW(szFileNameW);
-  while (szExtW > szFileNameW && *(szExtW-1) != L'.' && *(szExtW-1) != L'\\' && *(szExtW-1) != L'/')
-    szExtW--;
-  if (szExtW > szFileNameW && *(szExtW-1) == L'.')
+  while (szExtW > szFileNameW && *(szExtW - 1) != L'.' && *(szExtW - 1) != L'\\' && *(szExtW - 1) != L'/')
   {
     szExtW--;
-    for (i=0; i<MX_ARRAYLEN(szExtA) && szExtW[i] != 0; i++)
-    {
-      if (szExtW[i] > 127)
-        break;
-      szExtA[i] = (CHAR)(UCHAR)szExtW[i];
-    }
-    if (i < MX_ARRAYLEN(szExtA) && szExtW[i] == 0)
-    {
-      szExtA[i] = 0;
-      return GetMimeTypeFromExtension(szExtA);
-    }
   }
-  return GetMimeTypeFromExtension(".");
+  if (szExtW > szFileNameW && *(szExtW - 1) == L'.')
+    return GetMimeTypeFromExtensionW(szExtW);
+  return szDefaultMimeTypeA;
 }
 
 HRESULT ParseDate(_Out_ CDateTime &cDt, _In_z_ LPCSTR szDateTimeA, _In_opt_ SIZE_T nDateTimeLen)
@@ -482,117 +478,55 @@ HRESULT ParseDate(_Out_ CDateTime &cDt, _In_z_ LPCWSTR szDateTimeW, _In_opt_ SIZ
 
 //-----------------------------------------------------------
 
-static LPCSTR GetMimeTypeFromExtension(_In_z_ LPCSTR szExtA)
+static LPCSTR GetMimeTypeFromExtensionA(_In_z_ LPCSTR szExtA)
 {
-  if (*szExtA == '.')
+#include "HttpMimeFromExtension.h"
+  CHAR szExtLcA[8];
+  SIZE_T i;
+
+  for (i = 0; i < MX_ARRAYLEN(szExtA) && szExtA[i] != 0; i++)
   {
-    switch (szExtA[1])
+    szExtLcA[i] = MX::CharToLowerA(szExtA[i]);
+  }
+  if (i > 0 && i < MX_ARRAYLEN(szExtLcA) && szExtA[i] == 0)
+  {
+    SIZE_T nBase = 0;
+    SIZE_T n = MX_ARRAYLEN(aMimeTypes);
+
+    szExtLcA[i] = 0;
+    while (n > 0)
     {
-      case 'c':
-      case 'C':
-        if (MX::StrCompareA(szExtA + 2, "ss", TRUE) == 0)
-          return "text/css";
-        break;
+      SIZE_T nMid = nBase + (n >> 1);
 
-      case 'g':
-      case 'G':
-        if (MX::StrCompareA(szExtA + 2, "if", TRUE) == 0)
-          return "image/gif";
-        break;
-
-      case 'j':
-      case 'J':
-        if (MX::StrCompareA(szExtA + 2, "s", TRUE) == 0)
-          return "application/javascript";
-        if (MX::StrCompareA(szExtA + 2, "peg", TRUE) == 0 ||
-            MX::StrCompareA(szExtA + 2, "pg", TRUE) == 0 ||
-            MX::StrCompareA(szExtA + 2, "pe", TRUE) == 0)
-          return "image/jpeg";
-        break;
-
-      case 'p':
-      case 'P':
-        if (MX::StrCompareA(szExtA + 2, "ng", TRUE) == 0)
-          return "image/png";
-        break;
-
-      case 'm':
-      case 'M':
-        if (MX::StrCompareA(szExtA + 2, "pga", TRUE) == 0 ||
-            MX::StrCompareA(szExtA + 2, "p2", TRUE) == 0 ||
-            MX::StrCompareA(szExtA + 2, "p3", TRUE) == 0)
-          return "audio/mpeg";
-        //----
-        if (MX::StrCompareA(szExtA + 2, "idi", TRUE) == 0)
-          return "audio/midi";
-        //----
-        if (MX::StrCompareA(szExtA + 2, "ov", TRUE) == 0)
-          return "video/x-quicktime";
-        //----
-        if (MX::StrCompareA(szExtA + 2, "peg", TRUE) == 0 ||
-            MX::StrCompareA(szExtA + 2, "pg", TRUE) == 0 ||
-            MX::StrCompareA(szExtA + 2, "pe", TRUE) == 0)
-          return "video/mpeg";
-        break;
-
-      case 'k':
-      case 'K':
-        if (MX::StrCompareA(szExtA + 2, "ar", TRUE) == 0)
-          return "audio/midi";
-        break;
-
-      case 'a':
-      case 'A':
-        if (MX::StrCompareA(szExtA + 2, "u", TRUE) == 0)
-          return "audio/basic";
-        //----
-        if (MX::StrCompareA(szExtA + 2, "vi", TRUE) == 0)
-          return "video/x-msvideo";
-        break;
-
-      case 's':
-      case 'S':
-        if (MX::StrCompareA(szExtA + 2, "nd", TRUE) == 0)
-          return "audio/basic";
-        break;
-
-      case 'r':
-      case 'R':
-        if (MX::StrCompareA(szExtA + 2, "a", TRUE) == 0)
-          return "audio/x-realaudio";
-        //----
-        if (MX::StrCompareA(szExtA + 2, "tf", TRUE) == 0)
-          return "text/rtf";
-        break;
-
-      case 'w':
-      case 'W':
-        if (MX::StrCompareA(szExtA + 2, "av", TRUE) == 0)
-          return "audio/x-wav";
-        break;
-
-      case 'q':
-      case 'Q':
-        if (MX::StrCompareA(szExtA + 2, "t", TRUE) == 0)
-          return "video/x-quicktime";
-        break;
-
-      case 'h':
-      case 'H':
-        if (MX::StrCompareA(szExtA + 2, "tm", TRUE) == 0 ||
-            MX::StrCompareA(szExtA + 2, "tml", TRUE) == 0)
-          return "text/html";
-        break;
-
-      case 'x':
-      case 'X':
-        if (MX::StrCompareA(szExtA + 2, "ml", TRUE) == 0 ||
-            MX::StrCompareA(szExtA + 2, "sl", TRUE) == 0)
-          return "text/xml";
-        break;
+      int comp = MX::StrCompareA(szExtA, aMimeTypes[nMid].szExtensionA);
+      if (comp == 0)
+        return aMimeTypes[nMid].szMimeTypeA;
+      if (comp > 0)
+      {
+        nBase = nMid + 1;
+        n--;
+      }
+      n >>= 1;
     }
   }
-  return "application/octet-stream";
+  return szDefaultMimeTypeA;
+}
+
+static LPCSTR GetMimeTypeFromExtensionW(_In_z_ LPCWSTR szExtW)
+{
+  CHAR szExtA[8];
+  SIZE_T i;
+
+  for (i = 0; i < MX_ARRAYLEN(szExtA) && szExtW[i] != 0; i++)
+  {
+    if (szExtW[i] > 127)
+      break;
+    szExtA[i] = (CHAR)(UCHAR)szExtW[i];
+  }
+  if (i >= MX_ARRAYLEN(szExtA) || szExtW[i] != 0)
+    return szDefaultMimeTypeA;
+  szExtA[i] = 0;
+  return GetMimeTypeFromExtensionA(szExtA);
 }
 
 static CHAR UTF16_to_ISO_8859_1(_In_ WCHAR chW)

@@ -147,9 +147,9 @@ CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDi
 
   dwAddressResolverTimeoutMs = 20000;
   for (i = 0; i < MX_ARRAYLEN(sDisconnectingSockets); i++)
-    _InterlockedExchange(&(sDisconnectingSockets[i].nMutex), 0);
+    FastLock_Initialize(&(sDisconnectingSockets[i].nMutex));
   for (i = 0; i < MX_ARRAYLEN(sReusableSockets); i++)
-    _InterlockedExchange(&(sReusableSockets[i].nMutex), 0);
+    FastLock_Initialize(&(sReusableSockets[i].nMutex));
 
   nFlags = 0;
 
@@ -1592,7 +1592,7 @@ CSockets::CConnection::CListener::CListener(_In_ CConnection *_lpConn) : CBaseMe
   hAcceptSelect = hAcceptCompleted = NULL;
   _InterlockedExchange(&nAcceptsInProgress, 0);
   fnAcceptEx = fnGetAcceptExSockaddrs = NULL;
-  _InterlockedExchange(&nMutex, 0);
+  FastLock_Initialize(&nMutex);
   cTimer.Reset();
   dwRequestCounter = 0;
   return;

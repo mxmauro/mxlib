@@ -30,6 +30,8 @@
 
 //-----------------------------------------------------------
 
+typedef int (*_PIFV)(void);
+
 typedef int (__cdecl *lpfn__stdio_common_vsnprintf_s)(_In_ unsigned __int64 _Options,
                                                       _Out_writes_z_(_BufferCount) char* _Buffer,
                                                       _In_ size_t _BufferCount, _In_ size_t _MaxCount,
@@ -59,9 +61,14 @@ extern const lpfn__stdio_common_vsnwprintf_s mx__stdio_common_vsnwprintf_s_defau
 
 //-----------------------------------------------------------
 
-static VOID InitializeTables();
+static int __cdecl InitializeTables();
 static void dblconv_invalid_parameter(const wchar_t * expression, const wchar_t * function, const wchar_t * file,
                                       unsigned int line, uintptr_t pReserved);
+
+//-----------------------------------------------------------
+
+#pragma section(".CRT$XIBA", long, read)
+extern "C" __declspec(allocate(".CRT$XIBA")) const _PIFV ___mx_strings_init = &InitializeTables;
 
 //-----------------------------------------------------------
 
@@ -223,7 +230,6 @@ int StrNCompareAW(_In_z_ LPCSTR szSrcA1, _In_z_ LPCWSTR szSrcW2, _In_ SIZE_T nLe
     return -1;
   if (szSrcW2 == NULL)
     return 1;
-  InitializeTables();
   usStr[0].Buffer = (PWSTR)szTempBufW;
   usStr[1].Buffer = (PWSTR)szSrcW2;
   res = 0;
@@ -377,7 +383,6 @@ VOID StrNToLowerA(_Inout_updates_(nLen) LPSTR szSrcA, _In_ SIZE_T nLen)
 {
   if (szSrcA != NULL)
   {
-    InitializeTables();
     while (nLen > 0)
     {
       *szSrcA = aToLowerChar[*szSrcA];
@@ -1648,49 +1653,34 @@ BOOL CSecureStringW::AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCST
 
 //-----------------------------------------------------------
 
-static VOID InitializeTables()
+static int __cdecl InitializeTables()
 {
-  static LONG volatile nInitialized = 0;
-
-  switch (_InterlockedCompareExchange(&nInitialized, 2, 0))
+  for (SIZE_T i = 1; i < 256; i++)
   {
-    case 0: //initializing
-      for (SIZE_T i = 1; i < 256; i++)
-      {
-        CHAR chA[4];
-        WCHAR chW[4];
-        MX_ANSI_STRING sAnsiStr;
-        MX_UNICODE_STRING sUnicodeStr;
+    CHAR chA[4];
+    WCHAR chW[4];
+    MX_ANSI_STRING sAnsiStr;
+    MX_UNICODE_STRING sUnicodeStr;
 
-        chA[0] = (CHAR)i;
-        sAnsiStr.Buffer = chA;
-        sAnsiStr.Length = sAnsiStr.MaximumLength = 1;
-        sUnicodeStr.Buffer = chW;
-        sUnicodeStr.Length = 0;
-        sUnicodeStr.MaximumLength = (USHORT)sizeof(chW);
-        ::MxRtlAnsiStringToUnicodeString(&sUnicodeStr, &sAnsiStr, FALSE);
-        aToUnicodeChar[i] = (sUnicodeStr.Length == 2) ? chW[0] : (WCHAR)i;
+    chA[0] = (CHAR)i;
+    sAnsiStr.Buffer = chA;
+    sAnsiStr.Length = sAnsiStr.MaximumLength = 1;
+    sUnicodeStr.Buffer = chW;
+    sUnicodeStr.Length = 0;
+    sUnicodeStr.MaximumLength = (USHORT)sizeof(chW);
+    ::MxRtlAnsiStringToUnicodeString(&sUnicodeStr, &sAnsiStr, FALSE);
+    aToUnicodeChar[i] = (sUnicodeStr.Length == 2) ? chW[0] : (WCHAR)i;
 
-        for (SIZE_T j = 0; j < (SIZE_T)(sUnicodeStr.Length) / sizeof(WCHAR); j++)
-          chW[j] = ::MxRtlDowncaseUnicodeChar(chW[j]);
-        sAnsiStr.Length = 0;
-        sAnsiStr.MaximumLength = (USHORT)sizeof(chA);
-        ::MxRtlUnicodeStringToAnsiString(&sAnsiStr, &sUnicodeStr, FALSE);
-        aToLowerChar[i] = (sAnsiStr.Length == 1) ? chA[0] : (CHAR)i;
-      }
-
-      //initialization completed
-      _InterlockedExchange(&nInitialized, 1);
-      break;
-
-    case 2: //another thread is initializing, just spin
-      while (__InterlockedRead(&nInitialized) == 2)
-        ::MxSleep(5);
-      break;
+    for (SIZE_T j = 0; j < (SIZE_T)(sUnicodeStr.Length) / sizeof(WCHAR); j++)
+      chW[j] = ::MxRtlDowncaseUnicodeChar(chW[j]);
+    sAnsiStr.Length = 0;
+    sAnsiStr.MaximumLength = (USHORT)sizeof(chA);
+    ::MxRtlUnicodeStringToAnsiString(&sAnsiStr, &sUnicodeStr, FALSE);
+    aToLowerChar[i] = (sAnsiStr.Length == 1) ? chA[0] : (CHAR)i;
   }
 
   //done
-  return;
+  return 0;
 }
 
 static void dblconv_invalid_parameter(const wchar_t * expression, const wchar_t * function, const wchar_t * file,

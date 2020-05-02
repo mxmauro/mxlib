@@ -266,13 +266,17 @@ static VOID OnRequestCompleted(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpS
   //check extension
   if (MX::StrCompareW(szExtensionW, L".jss", TRUE) == 0)
   {
-    lpRequest->AddRef();
-    hRes = lpJsTest->cTaskQueue.QueueTask(lpRequest, MX_BIND_CALLBACK(&OnProcessJsRequest));
-    if (FAILED(hRes))
+    hRes = lpRequest->SetMimeTypeFromFileName(L".html");
+    if (SUCCEEDED(hRes))
     {
-      lpRequest->Release();
-      hRes = lpRequest->SendErrorPage(500, hRes);
-      lpRequest->End(hRes);
+      lpRequest->AddRef();
+      hRes = lpJsTest->cTaskQueue.QueueTask(lpRequest, MX_BIND_CALLBACK(&OnProcessJsRequest));
+      if (FAILED(hRes))
+      {
+        lpRequest->Release();
+        hRes = lpRequest->SendErrorPage(500, hRes);
+        lpRequest->End(hRes);
+      }
     }
 
     return;
@@ -283,6 +287,8 @@ static VOID OnRequestCompleted(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpS
       MX::StrCompareW(szExtensionW, L".gif", TRUE) == 0 || MX::StrCompareW(szExtensionW, L".dat", TRUE) == 0)
   {
     hRes = lpRequest->SendFile((LPCWSTR)(lpRequest->cStrFileNameW));
+    if (SUCCEEDED(hRes))
+      hRes = lpRequest->SetFileName((LPCWSTR)(lpRequest->cStrFileNameW));
     if (hRes == MX_E_FileNotFound || hRes == MX_E_PathNotFound)
     {
       hRes = lpRequest->SendErrorPage(404, MX_E_FileNotFound);

@@ -2,7 +2,7 @@
 SetUnhandledExceptionHandler(function(err) {
 	resetOutput();
 	if (err instanceof MySqlError) {
-		s = err.message;
+		var s = err.message;
 		s = s + " [" + err.dbError.toString() + "]";
 		die(s);
 	}

@@ -80,7 +80,7 @@ namespace MX {
 CIpcSslLayer::CIpcSslLayer(_In_opt_ CLoggable *lpLogParent) : CIpc::CLayer(), CLoggable()
 {
   SetLogParent(lpLogParent);
-  _InterlockedExchange(&nMutex, 0);
+  FastLock_Initialize(&nMutex);
   _InterlockedExchange(&hNetworkError, 0);
   lpInternalData = NULL;
   return;

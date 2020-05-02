@@ -850,7 +850,7 @@ CHostResolver::CHostResolver() : TRefCounted<CBaseMemObj>(), CNonCopyableObj()
   RundownProt_Initialize(&nRundownLock);
   _InterlockedExchange(&nNextResolverId, 0);
 
-  _InterlockedExchange(&(sAsyncTasks.nMutex), 0);
+  FastLock_Initialize(&(sAsyncTasks.nMutex));
   MxMemSet(&sFreeAsyncItems, 0, sizeof(sFreeAsyncItems));
 
   if (::IsWindows8OrGreater() != FALSE)

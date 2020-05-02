@@ -87,8 +87,8 @@ static NTSTATUS GetRootDirHandle(_Out_ PHANDLE lphRootDir);
 
 //-----------------------------------------------------------
 
-#pragma section(".CRT$XIC", long, read)
-extern "C" __declspec(allocate(".CRT$XIC")) const _PIFV ___mx_waitable_init = &InitializeKernel32Apis;
+#pragma section(".CRT$XIBA", long, read)
+extern "C" __declspec(allocate(".CRT$XIBA")) const _PIFV ___mx_waitable_init = &InitializeKernel32Apis;
 
 //-----------------------------------------------------------
 
@@ -134,7 +134,6 @@ VOID _YieldProcessor()
 
 CWindowsEvent::CWindowsEvent() : CWindowsHandle()
 {
-  InitializeKernel32Apis();
   return;
 }
 
@@ -258,7 +257,6 @@ BOOL CWindowsEvent::Wait(_In_ DWORD dwTimeoutMs)
 
 CWindowsMutex::CWindowsMutex() : CWindowsHandle()
 {
-  InitializeKernel32Apis();
   return;
 }
 
@@ -365,10 +363,74 @@ HRESULT CWindowsMutex::Open(_In_opt_z_ LPCWSTR szNameW, _In_ BOOL bQueryOnly, _I
 
 //-----------------------------------------------------------
 
+VOID FastLock_Initialize(_Out_ LONG volatile *lpnLock)
+{
+  _InterlockedExchange(lpnLock, 0);
+  return;
+}
+
+VOID FastLock_Enter(_Inout_ LONG volatile *lpnLock)
+{
+  LONG nTid = (LONG)::MxGetCurrentThreadId();
+
+  while (_InterlockedCompareExchange(lpnLock, nTid, 0) != 0)
+    _YieldProcessor();
+  return;
+}
+
+BOOL FastLock_TryEnter(_Inout_ LONG volatile *lpnLock)
+{
+  LONG nTid = (LONG)::MxGetCurrentThreadId();
+
+  return (_InterlockedCompareExchange(lpnLock, nTid, 0) == 0) ? TRUE : FALSE;
+}
+
+VOID FastLock_Exit(_Inout_ LONG volatile *lpnLock)
+{
+  _InterlockedExchange(lpnLock, 0);
+  return;
+}
+
+DWORD FastLock_IsActive(_Inout_ LONG volatile *lpnLock)
+{
+  return (DWORD)__InterlockedRead(lpnLock);
+}
+
+VOID FastLock_Bitmask_Enter(_Inout_ LONG volatile *lpnLock, _In_ int nBitIndex)
+{
+  LONG nMask = 1L << nBitIndex;
+
+  while ((_InterlockedOr(lpnLock, nMask) & nMask) != 0)
+    _YieldProcessor();
+  return;
+}
+
+BOOL FastLock_Bitmask_TryEnter(_Inout_ LONG volatile *lpnLock, _In_ int nBitIndex)
+{
+  LONG nMask = 1L << nBitIndex;
+
+  return ((_InterlockedOr(lpnLock, nMask) & nMask) == 0) ? TRUE : FALSE;
+}
+
+VOID FastLock_Bitmask_Exit(_Inout_ LONG volatile *lpnLock, _In_ int nBitIndex)
+{
+  LONG nMask = 1L << nBitIndex;
+
+  _InterlockedAnd(lpnLock, ~nMask);
+  return;
+}
+
+BOOL FastLock_Bitmask_IsActive(_Inout_ LONG volatile *lpnLock, _In_ int nBitIndex)
+{
+  LONG nMask = 1L << nBitIndex;
+
+  return ((__InterlockedRead(lpnLock) & nMask) != 0) ? TRUE : FALSE;
+}
+
+//-----------------------------------------------------------
+
 VOID SlimRWL_Initialize(_In_ LPRWLOCK lpLock)
 {
-  InitializeKernel32Apis();
-
   if (fnInitializeSRWLock != NULL)
     fnInitializeSRWLock(&(lpLock->sOsLock));
   else
@@ -563,107 +625,90 @@ VOID RundownProt_WaitForRelease(_In_ LONG volatile *lpnValue)
 #define _GETAPI(_api) fn##_api = (lpfn##_api)::MxGetProcedureAddress(hDll, #_api)
 static int __cdecl InitializeKernel32Apis()
 {
-  static LONG volatile nInitialized = 0;
+  PVOID hDll;
 
-  switch (_InterlockedCompareExchange(&nInitialized, 2, 0))
+  hDll = ::MxGetDllHandle(L"kernelbase.dll");
+  if (hDll != NULL)
   {
-    case 0: //initializing
+    _GETAPI(CreateEventW);
+    _GETAPI(OpenEventW);
+    if (fnCreateEventW == NULL || fnOpenEventW == NULL)
+    {
+      fnCreateEventW = NULL;
+      fnOpenEventW = NULL;
+    }
+    _GETAPI(CreateMutexW);
+    _GETAPI(OpenMutexW);
+    if (fnCreateMutexW == NULL || fnOpenMutexW == NULL)
+    {
+      fnCreateMutexW = NULL;
+      fnOpenMutexW = NULL;
+    }
+
+    _GETAPI(InitializeSRWLock);
+    _GETAPI(ReleaseSRWLockExclusive);
+    _GETAPI(ReleaseSRWLockShared);
+    _GETAPI(AcquireSRWLockExclusive);
+    _GETAPI(AcquireSRWLockShared);
+    _GETAPI(TryAcquireSRWLockExclusive);
+    _GETAPI(TryAcquireSRWLockShared);
+    if (fnInitializeSRWLock == NULL ||
+        fnReleaseSRWLockExclusive == NULL || fnReleaseSRWLockShared == NULL ||
+        fnAcquireSRWLockExclusive == NULL || fnAcquireSRWLockShared == NULL ||
+        fnTryAcquireSRWLockExclusive == NULL || fnTryAcquireSRWLockShared == NULL)
+    {
+      fnInitializeSRWLock = NULL;
+      fnReleaseSRWLockExclusive = NULL;    fnReleaseSRWLockShared = NULL;
+      fnAcquireSRWLockExclusive = NULL;    fnAcquireSRWLockShared = NULL;
+      fnTryAcquireSRWLockExclusive = NULL; fnTryAcquireSRWLockShared = NULL;
+    }
+  }
+
+  hDll = ::MxGetDllHandle(L"kernel32.dll");
+  if (hDll != NULL)
+  {
+    if (fnCreateEventW == NULL)
+    {
+      _GETAPI(CreateEventW);
+      _GETAPI(OpenEventW);
+      if (fnCreateEventW == NULL || fnOpenEventW == NULL)
       {
-      PVOID hDll;
+        fnCreateEventW = NULL;
+        fnOpenEventW = NULL;
+      }
+    }
 
-      hDll = ::MxGetDllHandle(L"kernelbase.dll");
-      if (hDll != NULL)
+    if (fnCreateMutexW == NULL)
+    {
+      _GETAPI(CreateMutexW);
+      _GETAPI(OpenMutexW);
+      if (fnCreateMutexW == NULL || fnOpenMutexW == NULL)
       {
-        _GETAPI(CreateEventW);
-        _GETAPI(OpenEventW);
-        if (fnCreateEventW == NULL || fnOpenEventW == NULL)
-        {
-          fnCreateEventW = NULL;
-          fnOpenEventW = NULL;
-        }
-        _GETAPI(CreateMutexW);
-        _GETAPI(OpenMutexW);
-        if (fnCreateMutexW == NULL || fnOpenMutexW == NULL)
-        {
-          fnCreateMutexW = NULL;
-          fnOpenMutexW = NULL;
-        }
-
-        _GETAPI(InitializeSRWLock);
-        _GETAPI(ReleaseSRWLockExclusive);
-        _GETAPI(ReleaseSRWLockShared);
-        _GETAPI(AcquireSRWLockExclusive);
-        _GETAPI(AcquireSRWLockShared);
-        _GETAPI(TryAcquireSRWLockExclusive);
-        _GETAPI(TryAcquireSRWLockShared);
-        if (fnInitializeSRWLock == NULL ||
-            fnReleaseSRWLockExclusive == NULL || fnReleaseSRWLockShared == NULL ||
-            fnAcquireSRWLockExclusive == NULL || fnAcquireSRWLockShared == NULL ||
-            fnTryAcquireSRWLockExclusive == NULL || fnTryAcquireSRWLockShared == NULL)
-        {
-          fnInitializeSRWLock = NULL;
-          fnReleaseSRWLockExclusive = NULL;    fnReleaseSRWLockShared = NULL;
-          fnAcquireSRWLockExclusive = NULL;    fnAcquireSRWLockShared = NULL;
-          fnTryAcquireSRWLockExclusive = NULL; fnTryAcquireSRWLockShared = NULL;
-        }
+        fnCreateMutexW = NULL;
+        fnOpenMutexW = NULL;
       }
+    }
 
-      hDll = ::MxGetDllHandle(L"kernel32.dll");
-      if (hDll != NULL)
+    if (fnInitializeSRWLock == NULL)
+    {
+      _GETAPI(InitializeSRWLock);
+      _GETAPI(ReleaseSRWLockExclusive);
+      _GETAPI(ReleaseSRWLockShared);
+      _GETAPI(AcquireSRWLockExclusive);
+      _GETAPI(AcquireSRWLockShared);
+      _GETAPI(TryAcquireSRWLockExclusive);
+      _GETAPI(TryAcquireSRWLockShared);
+      if (fnInitializeSRWLock == NULL ||
+          fnReleaseSRWLockExclusive == NULL || fnReleaseSRWLockShared == NULL ||
+          fnAcquireSRWLockExclusive == NULL || fnAcquireSRWLockShared == NULL ||
+          fnTryAcquireSRWLockExclusive == NULL || fnTryAcquireSRWLockShared == NULL)
       {
-        if (fnCreateEventW == NULL)
-        {
-          _GETAPI(CreateEventW);
-          _GETAPI(OpenEventW);
-          if (fnCreateEventW == NULL || fnOpenEventW == NULL)
-          {
-            fnCreateEventW = NULL;
-            fnOpenEventW = NULL;
-          }
-        }
-
-        if (fnCreateMutexW == NULL)
-        {
-          _GETAPI(CreateMutexW);
-          _GETAPI(OpenMutexW);
-          if (fnCreateMutexW == NULL || fnOpenMutexW == NULL)
-          {
-            fnCreateMutexW = NULL;
-            fnOpenMutexW = NULL;
-          }
-        }
-
-        if (fnInitializeSRWLock == NULL)
-        {
-          _GETAPI(InitializeSRWLock);
-          _GETAPI(ReleaseSRWLockExclusive);
-          _GETAPI(ReleaseSRWLockShared);
-          _GETAPI(AcquireSRWLockExclusive);
-          _GETAPI(AcquireSRWLockShared);
-          _GETAPI(TryAcquireSRWLockExclusive);
-          _GETAPI(TryAcquireSRWLockShared);
-          if (fnInitializeSRWLock == NULL ||
-              fnReleaseSRWLockExclusive == NULL || fnReleaseSRWLockShared == NULL ||
-              fnAcquireSRWLockExclusive == NULL || fnAcquireSRWLockShared == NULL ||
-              fnTryAcquireSRWLockExclusive == NULL || fnTryAcquireSRWLockShared == NULL)
-          {
-            fnInitializeSRWLock = NULL;
-            fnReleaseSRWLockExclusive = NULL;    fnReleaseSRWLockShared = NULL;
-            fnAcquireSRWLockExclusive = NULL;    fnAcquireSRWLockShared = NULL;
-            fnTryAcquireSRWLockExclusive = NULL; fnTryAcquireSRWLockShared = NULL;
-          }
-        }
+        fnInitializeSRWLock = NULL;
+        fnReleaseSRWLockExclusive = NULL;    fnReleaseSRWLockShared = NULL;
+        fnAcquireSRWLockExclusive = NULL;    fnAcquireSRWLockShared = NULL;
+        fnTryAcquireSRWLockExclusive = NULL; fnTryAcquireSRWLockShared = NULL;
       }
-
-      //initialization completed
-      _InterlockedExchange(&nInitialized, 1);
-      }
-      break;
-
-    case 2: //another thread is initializing, just spin
-      while (__InterlockedRead(&nInitialized) == 2)
-        ::MxSleep(5);
-      break;
+    }
   }
 
   //done
