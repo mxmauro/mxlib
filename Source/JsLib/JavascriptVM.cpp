@@ -296,6 +296,18 @@ VOID CJavascriptVM::RunNativeProtected(_In_ DukTape::duk_context *lpCtx, _In_ Du
     //DukTape::duk_set_top(lpCtx, nStackTop);
     throw;
   }
+  catch (std::bad_alloc &e)
+  {
+    UNREFERENCED_PARAMETER(e);
+    //DukTape::duk_set_top(lpCtx, nStackTop);
+    throw CJsWindowsError(E_OUTOFMEMORY);
+  }
+  catch (std::runtime_error &e)
+  {
+    UNREFERENCED_PARAMETER(e);
+    //DukTape::duk_set_top(lpCtx, nStackTop);
+    throw CJsWindowsError(MX_E_InvalidData);
+  }
   catch (HRESULT hRes)
   {
     //DukTape::duk_set_top(lpCtx, nStackTop);

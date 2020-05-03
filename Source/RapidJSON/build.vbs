@@ -25,7 +25,15 @@ szScriptPath = Left(WScript.ScriptFullName, Len(WScript.ScriptFullName) - Len(WS
 'Copy files
 nErr = CopyFiles("Source\include\rapidjson", "..\..\Include\RapidJSON", "*")
 If nErr <> 0 Then
-	WScript.Echo "Errors detected while copying files."
+	WScript.Echo "Errors detected while copying files. [" & CStr(nErr) & "]"
+	WScript.Quit nErr
+End If
+
+
+'Create the "include-all" file
+nErr = CreateIncludeAll(szScriptPath & "..\..\Include\RapidJSON\rapidjson-all.h")
+If nErr <> 0 Then
+	WScript.Echo "Errors detected while creating the include-all file. [" & CStr(nErr) & "]"
 	WScript.Quit nErr
 End If
 
@@ -62,6 +70,39 @@ Dim nErr, S
 	nErr = RunApp(S, szScriptPath, "", True)
 	If nErr < 8 Then nErr = 0
 	CopyFiles = nErr
+End Function
+
+Function CreateIncludeAll(szFileName)
+Dim nErr, oFile
+
+	On Error Resume Next
+	Set oFile = oFso.CreateTextFile(szFileName, True)
+	nErr = Err.Number
+	If nErr <> 0 Then
+		CreateIncludeAll = nErr
+		Exit Function
+	End If
+
+	oFile.WriteLine "#ifndef _RAPIDJSON_INCLUDEALL_H"
+	oFile.WriteLine "#define _RAPIDJSON_INCLUDEALL_H"
+	oFile.WriteLine ""
+	oFile.WriteLine "#include <stdexcept>"
+	oFile.WriteLine ""
+	oFile.WriteLine "#define RAPIDJSON_ASSERT(x) if (x) throw std::runtime_error(#x)"
+	oFile.WriteLine "#define RAPIDJSON_NOEXCEPT_ASSERT(x)"
+	oFile.WriteLine ""
+	oFile.WriteLine "#include " & Chr(34) & "document.h" & Chr(34)
+	oFile.WriteLine "#include " & Chr(34) & "prettywriter.h" & Chr(34)
+	oFile.WriteLine "#include " & Chr(34) & "stringbuffer.h" & Chr(34)
+	oFile.WriteLine "#include " & Chr(34) & "memorybuffer.h" & Chr(34)
+	oFile.WriteLine ""
+	oFile.WriteLine "#endif //_RAPIDJSON_INCLUDEALL_H"
+
+	oFile.Close
+
+	On Error Goto 0
+
+	CreateIncludeAll = 0
 End Function
 
 Function RunApp(szCmdLine, szCurFolder, szEnvPath, bHide)

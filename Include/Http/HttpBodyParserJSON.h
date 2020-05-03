@@ -23,9 +23,7 @@
 #include "HttpBodyParserBase.h"
 #include "..\WaitableObjects.h"
 #include "..\Strings\Strings.h"
-#include "..\RapidJSON\document.h"
-#include "..\RapidJSON\writer.h"
-#include "..\RapidJSON\stringbuffer.h"
+#include "..\RapidJSON\rapidjson-all.h"
 
 //-----------------------------------------------------------
 
