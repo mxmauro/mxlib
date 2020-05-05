@@ -3,7 +3,7 @@
 
 #include <stdexcept>
 
-#define RAPIDJSON_ASSERT(x) if (x) throw std::runtime_error(#x)
+#define RAPIDJSON_ASSERT(x) if (!(x)) throw std::runtime_error(#x)
 #define RAPIDJSON_NOEXCEPT_ASSERT(x)
 
 #include "document.h"

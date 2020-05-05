@@ -88,7 +88,7 @@ Dim nErr, oFile
 	oFile.WriteLine ""
 	oFile.WriteLine "#include <stdexcept>"
 	oFile.WriteLine ""
-	oFile.WriteLine "#define RAPIDJSON_ASSERT(x) if (x) throw std::runtime_error(#x)"
+	oFile.WriteLine "#define RAPIDJSON_ASSERT(x) if (!(x)) throw std::runtime_error(#x)"
 	oFile.WriteLine "#define RAPIDJSON_NOEXCEPT_ASSERT(x)"
 	oFile.WriteLine ""
 	oFile.WriteLine "#include " & Chr(34) & "document.h" & Chr(34)
