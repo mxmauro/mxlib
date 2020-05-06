@@ -943,6 +943,8 @@ HRESULT CHttpServer::CClientRequest::SetState(_In_ eState nNewState)
 {
   HRESULT hRes;
 
+  MX_ASSERT(nNewState == StateTerminated || nNewState != nState);
+  MX_ASSERT(nNewState == StateTerminated || hConn != NULL);
   if (lpHttpServer->ShouldLog(1) != FALSE)
   {
     BOOL b = FALSE;
@@ -1000,7 +1002,7 @@ HRESULT CHttpServer::CClientRequest::SetState(_In_ eState nNewState)
     case StateBuildingResponse:
     case StateAfterHeaders:
     case StateNegotiatingWebSocket:
-      if (nNewState != nState)
+      if (nNewState != nState && nNewState != StateTerminated)
       {
         hRes = lpHttpServer->cSocketMgr.ResumeInputProcessing(hConn);
         if (FAILED(hRes))
@@ -1027,6 +1029,8 @@ HRESULT CHttpServer::CClientRequest::SetState(_In_ eState nNewState)
   {
     lpHttpServer->Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): State=%s", this, hConn, GetNamedState(nState));
   }
+
+  //done
   return S_OK;
 }
 

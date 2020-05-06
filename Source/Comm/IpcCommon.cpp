@@ -879,14 +879,16 @@ start:
   switch (lpPacket->GetType())
   {
     case CPacketBase::TypeInitialSetup:
+      _InterlockedOr(&(lpConn->nFlags), FLAG_InitialSetupExecuted);
+
+      //fire main connect
       if (SUCCEEDED(hRes))
       {
-        hRes = (bDoZeroReads != FALSE && ZeroReadsSupported() != FALSE)
-               ? lpConn->DoZeroRead((SIZE_T)dwReadAhead, cQueuedPacketsList)
-               : lpConn->DoRead((SIZE_T)dwReadAhead, NULL, cQueuedPacketsList);
+        hRes = FireOnConnect(lpConn);
       }
 
       //notify all layers about connection
+      if (SUCCEEDED(hRes))
       {
         CAutoSlimRWLShared cLayersLock(&(lpConn->sLayers.sRwMutex));
         CLnkLstNode *lpNode;
@@ -901,11 +903,14 @@ start:
             lpNode = lpNode->GetPrev();
         }
       }
-      _InterlockedOr(&(lpConn->nFlags), FLAG_InitialSetupExecuted);
 
-      //fire main connect
+      //send read a-head
       if (SUCCEEDED(hRes))
-        hRes = FireOnConnect(lpConn);
+      {
+        hRes = (bDoZeroReads != FALSE && ZeroReadsSupported() != FALSE)
+               ? lpConn->DoZeroRead((SIZE_T)dwReadAhead, cQueuedPacketsList)
+               : lpConn->DoRead((SIZE_T)dwReadAhead, NULL, cQueuedPacketsList);
+      }
 
       //free packet
       lpConn->cRwList.Remove(lpPacket);
@@ -1756,7 +1761,12 @@ HRESULT CIpc::CConnectionBase::HandleConnected()
   HRESULT hRes;
 
   //mark as connected
+#ifdef _DEBUG
+  MX_ASSERT((_InterlockedOr(&nFlags, FLAG_Connected) & FLAG_Connected) == 0);
+#else //_DEBUG
   _InterlockedOr(&nFlags, FLAG_Connected);
+#endif //_DEBUG
+  
   //initialize read/write stats
   cReadStats.HandleConnected();
   cWriteStats.HandleConnected();

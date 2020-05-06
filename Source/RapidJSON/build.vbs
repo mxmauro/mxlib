@@ -96,6 +96,20 @@ Dim nErr, oFile
 	oFile.WriteLine "#include " & Chr(34) & "stringbuffer.h" & Chr(34)
 	oFile.WriteLine "#include " & Chr(34) & "memorybuffer.h" & Chr(34)
 	oFile.WriteLine ""
+	oFile.WriteLine "//------------------------------------------------------------------------------"
+	oFile.WriteLine ""
+	oFile.WriteLine "namespace rapidjson {"
+	oFile.WriteLine ""
+	oFile.WriteLine "__inline const Value* LookupMember(_In_ const Value &parent, _In_z_ LPCSTR szMemberNameA)"
+	oFile.WriteLine "{"
+	oFile.WriteLine "  const rapidjson::Value::ConstMemberIterator &member = parent.FindMember(szMemberNameA);"
+	oFile.WriteLine "  return (member != parent.MemberEnd()) ? &(member->value) : NULL;"
+	oFile.WriteLine "}"
+	oFile.WriteLine ""
+	oFile.WriteLine "} //namespace rapidjson"
+	oFile.WriteLine ""
+	oFile.WriteLine "//------------------------------------------------------------------------------"
+	oFile.WriteLine ""
 	oFile.WriteLine "#endif //_RAPIDJSON_INCLUDEALL_H"
 
 	oFile.Close

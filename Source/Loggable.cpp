@@ -21,7 +21,7 @@
 #include <stdio.h>
 
 #ifdef _DEBUG
-  #define DEBUGOUTPUT_LOG
+  //#define DEBUGOUTPUT_LOG
 #else //_DEBUG
   //#define DEBUGOUTPUT_LOG
 #endif //_DEBUG

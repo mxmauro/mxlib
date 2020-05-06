@@ -41,6 +41,7 @@ CJsHttpServer::CClientRequest::CClientRequest() : CHttpServer::CClientRequest()
 
 CJsHttpServer::CClientRequest::~CClientRequest()
 {
+  MX_ASSERT(GetState() == StateInactive || GetState() == StateWebSocket || GetState() == StateTerminated);
   MX_DELETE(lpJVM);
   return;
 }

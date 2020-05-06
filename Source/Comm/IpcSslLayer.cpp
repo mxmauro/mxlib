@@ -225,7 +225,6 @@ HRESULT CIpcSslLayer::OnConnect()
   //done
   if (FAILED(hRes))
     _InterlockedCompareExchange(&hNetworkError, (LONG)hRes, 0);
-  //done
   return hRes;
 }
 

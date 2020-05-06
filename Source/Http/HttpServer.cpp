@@ -1070,7 +1070,8 @@ restart:
 
     //loop
     bBreakLoop = FALSE;
-    while (bBreakLoop == FALSE && bFireRequestHeadersReceivedCallback == FALSE && bFireRequestCompleted == FALSE &&
+    while (lpRequest->nState != CClientRequest::StateTerminated && bBreakLoop == FALSE &&
+           bFireRequestHeadersReceivedCallback == FALSE && bFireRequestCompleted == FALSE &&
            bFireWebSocketRequestReceivedCallback == FALSE)
     {
       //get buffered message
@@ -1394,13 +1395,27 @@ on_request_error:
   if (bFireRequestCompleted != FALSE)
   {
     TAutoRefCounted<CClientRequest> cClientRequest(lpRequest);
-    BOOL bRestart = FALSE;
 
-    if (cShutdownEv.Wait(0) == FALSE)
+    if (lpRequest->nState != CClientRequest::StateTerminated)
     {
-      if (cRequestCompletedCallback)
+      BOOL bRestart = FALSE;
+
+      if (cShutdownEv.Wait(0) == FALSE)
       {
-        cRequestCompletedCallback(this, lpRequest);
+        if (cRequestCompletedCallback)
+        {
+          cRequestCompletedCallback(this, lpRequest);
+        }
+        else
+        {
+          CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
+
+          nTimersToStop = CClientRequest::TimeoutTimerAll;
+          nTimersToStart = 0;
+
+          OnRequestError(lpRequest, E_NOTIMPL, nTimersToStart);
+          bRestart = TRUE;
+        }
       }
       else
       {
@@ -1409,22 +1424,12 @@ on_request_error:
         nTimersToStop = CClientRequest::TimeoutTimerAll;
         nTimersToStart = 0;
 
-        OnRequestError(lpRequest, E_NOTIMPL, nTimersToStart);
+        OnRequestError(lpRequest, MX_E_Cancelled, nTimersToStart);
         bRestart = TRUE;
       }
+      if (bRestart != FALSE)
+        goto restart;
     }
-    else
-    {
-      CCriticalSection::CAutoLock cLock(lpRequest->cMutex);
-
-      nTimersToStop = CClientRequest::TimeoutTimerAll;
-      nTimersToStart = 0;
-
-      OnRequestError(lpRequest, MX_E_Cancelled, nTimersToStart);
-      bRestart = TRUE;
-    }
-    if (bRestart != FALSE)
-      goto restart;
   }
 
   //done

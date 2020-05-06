@@ -11,4 +11,18 @@
 #include "stringbuffer.h"
 #include "memorybuffer.h"
 
+//------------------------------------------------------------------------------
+
+namespace rapidjson {
+
+__inline const Value* LookupMember(_In_ const Value &parent, _In_z_ LPCSTR szMemberNameA)
+{
+  const rapidjson::Value::ConstMemberIterator &member = parent.FindMember(szMemberNameA);
+  return (member != parent.MemberEnd()) ? &(member->value) : NULL;
+}
+
+} //namespace rapidjson
+
+//------------------------------------------------------------------------------
+
 #endif //_RAPIDJSON_INCLUDEALL_H

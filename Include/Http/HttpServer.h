@@ -216,9 +216,7 @@ public:
       return TRUE;
       };
 
-  private:
-    friend class CHttpServer;
-
+  protected:
     typedef enum {
       StateClosed = 0,
       StateInactive,
@@ -234,6 +232,15 @@ public:
       StateKeepingAlive,
       StateLingerClose
     } eState;
+
+  protected:
+    eState GetState() const
+      {
+      return nState;
+      };
+
+  private:
+    friend class CHttpServer;
 
     typedef enum {
       TimeoutTimerHeaders = 0x01,

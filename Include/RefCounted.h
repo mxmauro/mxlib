@@ -53,18 +53,21 @@ public:
 
   ULONG SafeAddRef()
     {
-    LONG nInitVal, nOrigVal, nNewVal;
+    LONG nInitVal, nNewVal;
 
-    nOrigVal = __InterlockedRead(&nRefCount);
+    nNewVal = __InterlockedRead(&nRefCount);
     do
     {
-      nInitVal = nOrigVal;
-      nNewVal = (nInitVal > 0) ? (nInitVal + 1) : nInitVal;
-      nOrigVal = _InterlockedCompareExchange(&nRefCount, nNewVal, nInitVal);
+      nInitVal = nNewVal;
+      if (nInitVal <= 0)
+      {
+        MX_ASSERT(((ULONG)nInitVal & 0xC0000000) == 0);
+        return 0;
+      }
+      nNewVal = _InterlockedCompareExchange(&nRefCount, nInitVal + 1, nInitVal);
     }
-    while (nOrigVal != nInitVal);
-    MX_ASSERT(((ULONG)nNewVal & 0xC0000000) == 0);
-    return (nNewVal > 0) ? (ULONG)nNewVal : 0;
+    while (nNewVal != nInitVal);
+    return (ULONG)(nInitVal + 1);
     };
 
   ULONG Release()
