@@ -76,8 +76,6 @@ public:
 
   typedef Callback<VOID (_In_ CHttpClient *lpHttp)> OnDymanicRequestBodyStartCallback;
 
-  typedef Callback<VOID (_In_ CHttpClient *lpHttp, _In_ HRESULT hrErrorCode)> OnErrorCallback;
-
   typedef Callback<HRESULT (_In_ CHttpClient *lpHttp, _Inout_ CSslCertificateArray **lplpCheckCertificates,
                             _Inout_ CSslCertificate **lplpSelfCert,
                             _Inout_ CEncryptionKey **lplpPrivKey)> OnQueryCertificatesCallback;
@@ -105,7 +103,6 @@ public:
   VOID SetWebSocketHandshakeCompletedCallback(_In_ OnWebSocketHandshakeCompletedCallback
                                               cWebSocketHandshakeCompletedCallback);
   VOID SetDymanicRequestBodyStartCallback(_In_ OnDymanicRequestBodyStartCallback cDymanicRequestBodyStartCallback);
-  VOID SetErrorCallback(_In_ OnErrorCallback cErrorCallback);
   VOID SetQueryCertificatesCallback(_In_ OnQueryCertificatesCallback cQueryCertificatesCallback);
 
   HRESULT SetRequestMethodAuto();
@@ -278,7 +275,6 @@ private:
   OnDymanicRequestBodyStartCallback cDymanicRequestBodyStartCallback;
   OnDocumentCompletedCallback cDocumentCompletedCallback;
   OnWebSocketHandshakeCompletedCallback cWebSocketHandshakeCompletedCallback;
-  OnErrorCallback cErrorCallback;
   OnQueryCertificatesCallback cQueryCertificatesCallback;
 
   struct {

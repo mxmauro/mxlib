@@ -49,9 +49,6 @@ public:
                             _In_ CJavascriptVM &cJvm, _Inout_ CJavascriptVM::CRequireModuleContext *lpReqContext,
                             _Inout_ CStringA &cStrCodeA)> OnRequireJsModuleCallback;
 
-  typedef Callback<VOID (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
-                         _In_ HRESULT hrErrorCode)> OnErrorCallback;
-
   typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ int nVersion,
                             _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount, _Out_ int &nSelectedProtocol,
                             _In_ TArrayList<int> &aSupportedVersions,
@@ -68,7 +65,6 @@ public:
   VOID SetRequestCompletedCallback(_In_ OnRequestCompletedCallback cRequestCompletedCallback);
   VOID SetRequireJsModuleCallback(_In_ OnRequireJsModuleCallback cRequireJsModuleCallback);
   VOID SetWebSocketRequestReceivedCallback(_In_ OnWebSocketRequestReceivedCallback cWebSocketRequestReceivedCallback);
-  VOID SetErrorCallback(_In_ OnErrorCallback cErrorCallback);
 
   static CClientRequest* GetServerRequestFromContext(_In_ DukTape::duk_context *lpCtx);
 
@@ -79,7 +75,6 @@ public:
   VOID SetRequestCompletedCallback(_In_ CHttpServer::OnRequestCompletedCallback cRequestCompletedCallback) = delete;
   VOID SetWebSocketRequestReceivedCallback(_In_ CHttpServer::OnWebSocketRequestReceivedCallback
                                            cWebSocketRequestReceivedCallback) = delete;
-  VOID SetErrorCallback(_In_ CHttpServer::OnErrorCallback cErrorCallback) = delete;
 
 protected:
   virtual HRESULT OnNewRequestObject(_In_ CHttpServer *lpHttp, _Out_ CHttpServer::CClientRequest **lplpRequest);
@@ -166,7 +161,6 @@ private:
                                      _In_ int nVersion, _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount,
                                      _Out_ int &nSelectedProtocol, _In_ TArrayList<int> &aSupportedVersions,
                                      _Out_ _Maybenull_ CWebSocket **lplpWebSocket);
-  VOID OnError(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest, _In_ HRESULT hrErrorCode);
 
 private:
   OnNewRequestObjectCallback cNewRequestObjectCallback;
@@ -174,7 +168,6 @@ private:
   OnRequestCompletedCallback cRequestCompletedCallback;
   OnRequireJsModuleCallback cRequireJsModuleCallback;
   OnWebSocketRequestReceivedCallback cWebSocketRequestReceivedCallback;
-  OnErrorCallback cErrorCallback;
 
   TAutoRefCounted<CJvmManager> cJvmManager;
 };

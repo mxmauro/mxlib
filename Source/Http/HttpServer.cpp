@@ -144,7 +144,6 @@ CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr,
   cRequestCompletedCallback = NullCallback();
   cWebSocketRequestReceivedCallback = NullCallback();
   cCustomErrorPageCallback = NullCallback();
-  cErrorCallback = NullCallback();
   SlimRWL_Initialize(&sRequestsListRwMutex);
   _InterlockedExchange(&nDownloadNameGeneratorCounter, 0);
   //----
@@ -473,12 +472,6 @@ VOID CHttpServer::SetWebSocketRequestReceivedCallback(_In_ OnWebSocketRequestRec
 VOID CHttpServer::SetCustomErrorPageCallback(_In_ OnCustomErrorPageCallback _cCustomErrorPageCallback)
 {
   cCustomErrorPageCallback = _cCustomErrorPageCallback;
-  return;
-}
-
-VOID CHttpServer::SetErrorCallback(_In_ OnErrorCallback _cErrorCallback)
-{
-  cErrorCallback = _cErrorCallback;
   return;
 }
 
@@ -957,9 +950,8 @@ VOID CHttpServer::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
 
     lpRequest->Release();
   }
-  //raise error notification
-  if (FAILED(hrErrorCode) && cErrorCallback)
-    cErrorCallback(this, NULL, hrErrorCode);
+
+  //done
   return;
 }
 

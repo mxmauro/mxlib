@@ -57,9 +57,6 @@ public:
                             _In_ LPCSTR szStatusMessageA,
                             _In_z_ LPCSTR szAdditionalExplanationA)> OnCustomErrorPageCallback;
 
-  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
-                         _In_ HRESULT hrErrorCode)> OnErrorCallback;
-
   //--------
 
 public:
@@ -86,7 +83,6 @@ public:
   VOID SetRequestCompletedCallback(_In_ OnRequestCompletedCallback cRequestCompletedCallback);
   VOID SetWebSocketRequestReceivedCallback(_In_ OnWebSocketRequestReceivedCallback cWebSocketRequestReceivedCallback);
   VOID SetCustomErrorPageCallback(_In_ OnCustomErrorPageCallback cCustomErrorPageCallback);
-  VOID SetErrorCallback(_In_ OnErrorCallback cErrorCallback);
 
   HRESULT StartListening(_In_ CSockets::eFamily nFamily, _In_ int nPort,
                          _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions = NULL,
@@ -414,7 +410,6 @@ private:
   OnRequestCompletedCallback cRequestCompletedCallback;
   OnWebSocketRequestReceivedCallback cWebSocketRequestReceivedCallback;
   OnCustomErrorPageCallback cCustomErrorPageCallback;
-  OnErrorCallback cErrorCallback;
   RWLOCK sRequestsListRwMutex;
   CLnkLst cRequestsList;
   CWindowsEvent cShutdownEv;

@@ -57,8 +57,6 @@ static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHtt
                                  _Inout_ MX::CJavascriptVM &cJvm,
                                  _Inout_ MX::CJavascriptVM::CRequireModuleContext *lpReqContext,
                                  _Inout_ MX::CStringA &cStrCodeA);
-static VOID OnError(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
-                    _In_ HRESULT hrErrorCode);
 static HRESULT OnWebSocketRequestReceived(_In_ MX::CJsHttpServer *lpHttp,
                                           _In_ MX::CJsHttpServer::CClientRequest *lpRequest, _In_ int nVersion,
                                           _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount,
@@ -202,7 +200,6 @@ int TestJsHttpServer()
     cTest.cJsHttpServer.SetRequestCompletedCallback(MX_BIND_CALLBACK(&OnRequestCompleted));
     cTest.cJsHttpServer.SetRequireJsModuleCallback(MX_BIND_CALLBACK(&OnRequireJsModule));
     cTest.cJsHttpServer.SetWebSocketRequestReceivedCallback(MX_BIND_CALLBACK(&OnWebSocketRequestReceived));
-    cTest.cJsHttpServer.SetErrorCallback(MX_BIND_CALLBACK(&OnError));
   }
   if (SUCCEEDED(hRes))
   {
@@ -422,12 +419,6 @@ static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHtt
 
   //not found
   return MX_E_NotFound;
-}
-
-static VOID OnError(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
-                    _In_ HRESULT hrErrorCode)
-{
-  return;
 }
 
 static HRESULT OnWebSocketRequestReceived(_In_ MX::CJsHttpServer *lpHttp,

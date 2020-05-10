@@ -68,7 +68,6 @@ static HRESULT OnResponseHeadersReceived_BigDownload(_In_ MX::CHttpClient *lpHtt
                                           _In_ BOOL bTreatAsAttachment, _Inout_ MX::CStringW &cStrFullFileNameW,
                                          _Inout_ MX::CHttpBodyParserBase **lplpBodyParser);
 static VOID OnDocumentCompleted(_In_ MX::CHttpClient *lpHttp);
-static VOID OnError(_In_ MX::CHttpClient *lpHttp, _In_ HRESULT hrErrorCode);
 static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *lpHttp, _Inout_ MX::CSslCertificateArray **lplpCertificates,
                                    _Inout_ MX::CSslCertificate **lplpSelfCert,
                                    _Inout_ MX::CEncryptionKey **lplpPrivKey);
@@ -199,11 +198,6 @@ static VOID OnDocumentCompleted(_In_ MX::CHttpClient *lpHttp)
   return;
 }
 
-static VOID OnError(_In_ MX::CHttpClient *lpHttp, _In_ HRESULT hrErrorCode)
-{
-  return;
-}
-
 static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *_lpHttp, _Inout_ MX::CSslCertificateArray **lplpCertificates,
                                    _Inout_ MX::CSslCertificate **lplpSelfCert, _Inout_ MX::CEncryptionKey **lplpPrivKey)
 {
@@ -234,7 +228,6 @@ static HRESULT SimpleTest1(_In_ MX::CSockets &cSocketkMgr, _In_ MX::CSslCertific
   //cHttpClient->SetOptionFlags(MX::CHttpClient::OptionKeepConnectionOpen);
 
   cHttpClient->SetDocumentCompletedCallback(MX_BIND_CALLBACK(&OnDocumentCompleted));
-  cHttpClient->SetErrorCallback(MX_BIND_CALLBACK(&OnError));
   cHttpClient->SetQueryCertificatesCallback(MX_BIND_CALLBACK(&OnQueryCertificates));
   cHttpClient->SetLogLevel(dwLogLevel);
   cHttpClient->SetLogCallback(MX_BIND_CALLBACK(&OnLog));
@@ -317,7 +310,6 @@ static HRESULT WebSocketTest(_In_ MX::CSockets &cSocketMgr, _In_ MX::CSslCertifi
     return E_OUTOFMEMORY;
   cProxy.SetUseIE();
   cHttpClient->lpCertificates = lpCertificates;
-  cHttpClient->SetErrorCallback(MX_BIND_CALLBACK(&OnError));
   cHttpClient->SetQueryCertificatesCallback(MX_BIND_CALLBACK(&OnQueryCertificates));
   cHttpClient->SetLogLevel(dwLogLevel);
   cHttpClient->SetLogCallback(MX_BIND_CALLBACK(&OnLog));
@@ -390,7 +382,6 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
   //cHttpClient->SetOptionFlags(0);
   //cHttpClient->SetOptionFlags(MX::CHttpClient::OptionKeepConnectionOpen);
   cHttpClient->SetDocumentCompletedCallback(MX_BIND_CALLBACK(&OnDocumentCompleted));
-  cHttpClient->SetErrorCallback(MX_BIND_CALLBACK(&OnError));
   cHttpClient->SetQueryCertificatesCallback(MX_BIND_CALLBACK(&OnQueryCertificates));
   cHttpClient->SetLogCallback(MX_BIND_CALLBACK(&OnLog));
   cHttpClient->SetLogLevel(lpThreadData->dwLogLevel);

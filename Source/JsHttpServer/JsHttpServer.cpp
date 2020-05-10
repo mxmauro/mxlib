@@ -31,7 +31,6 @@ CJsHttpServer::CJsHttpServer(_In_ CSockets &cSocketMgr,
   cRequestCompletedCallback = NullCallback();
   cRequireJsModuleCallback = NullCallback();
   cWebSocketRequestReceivedCallback = NullCallback();
-  cErrorCallback = NullCallback();
   //----
   cJvmManager.Attach(MX_DEBUG_NEW CJvmManager());
   //----
@@ -41,7 +40,6 @@ CJsHttpServer::CJsHttpServer(_In_ CSockets &cSocketMgr,
   CHttpServer::SetRequestCompletedCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequestCompleted, this));
   CHttpServer::SetWebSocketRequestReceivedCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnWebSocketRequestReceived,
                                                                            this));
-  CHttpServer::SetErrorCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnError, this));
   return;
 }
 
@@ -80,12 +78,6 @@ VOID CJsHttpServer::SetWebSocketRequestReceivedCallback(_In_ OnWebSocketRequestR
                                                         _cWebSocketRequestReceivedCallback)
 {
   cWebSocketRequestReceivedCallback = _cWebSocketRequestReceivedCallback;
-  return;
-}
-
-VOID CJsHttpServer::SetErrorCallback(_In_ OnErrorCallback _cErrorCallback)
-{
-  cErrorCallback = _cErrorCallback;
   return;
 }
 
@@ -182,18 +174,6 @@ HRESULT CJsHttpServer::OnWebSocketRequestReceived(_In_ CHttpServer *lpHttp, _In_
                                              nSelectedProtocol, aSupportedVersions, lplpWebSocket);
   }
   return MX_E_Unsupported;
-}
-
-VOID CJsHttpServer::OnError(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *_lpRequest,
-                            _In_ HRESULT hrErrorCode)
-{
-  if (cErrorCallback)
-  {
-    CClientRequest *lpRequest = static_cast<CClientRequest*>(_lpRequest);
-
-    cErrorCallback(this, lpRequest, hrErrorCode);
-  }
-  return;
 }
 
 } //namespace MX

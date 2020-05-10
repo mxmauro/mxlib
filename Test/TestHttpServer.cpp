@@ -27,8 +27,6 @@ static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hrErrorCode);
 static HRESULT OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
                                         _Inout_ MX::CHttpBodyParserBase **lplpBodyParser);
 static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest);
-static VOID OnError(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
-                    _In_ HRESULT hrErrorCode);
 
 static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR szFileNameW);
 
@@ -97,7 +95,6 @@ int TestHttpServer()
   {
     cHttpServer.SetRequestHeadersReceivedCallback(MX_BIND_CALLBACK(&OnRequestHeadersReceived));
     cHttpServer.SetRequestCompletedCallback(MX_BIND_CALLBACK(&OnRequestCompleted));
-    cHttpServer.SetErrorCallback(MX_BIND_CALLBACK(&OnError));
   }
   if (SUCCEEDED(hRes))
   {
@@ -202,12 +199,6 @@ static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServe
     }
   }
   lpRequest->End(hRes);
-  return;
-}
-
-static VOID OnError(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
-                    _In_ HRESULT hrErrorCode)
-{
   return;
 }
 

@@ -32,7 +32,7 @@ class CTaskQueue : public virtual TRefCounted<CBaseMemObj>, private MX::CIoCompl
 public:
   class CTask;
 
-  typedef MX::Callback<VOID (_In_ CTaskQueue *lpQueue, _In_ CTaskQueue::CTask *lpTask)> OnRunTaskCallback;
+  typedef MX::Callback<VOID (_In_ CTaskQueue *lpQueue, _In_ CTask *lpTask)> OnRunTaskCallback;
 
 public:
   class CTask : public virtual TRefCounted<CBaseMemObj>

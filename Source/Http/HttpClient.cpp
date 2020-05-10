@@ -90,7 +90,6 @@ CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr,
   cDymanicRequestBodyStartCallback = NullCallback();
   cDocumentCompletedCallback = NullCallback();
   cWebSocketHandshakeCompletedCallback = NullCallback();
-  cErrorCallback = NullCallback();
   cQueryCertificatesCallback = NullCallback();
   _InterlockedExchange(&nPendingHandlesCounter, 0);
   //----
@@ -293,12 +292,6 @@ VOID CHttpClient::SetDymanicRequestBodyStartCallback(_In_ OnDymanicRequestBodySt
                                                      _cDymanicRequestBodyStartCallback)
 {
   cDymanicRequestBodyStartCallback = _cDymanicRequestBodyStartCallback;
-  return;
-}
-
-VOID CHttpClient::SetErrorCallback(_In_ OnErrorCallback _cErrorCallback)
-{
-  cErrorCallback = _cErrorCallback;
   return;
 }
 
@@ -1549,9 +1542,7 @@ VOID CHttpClient::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
                                   _In_ HRESULT hrErrorCode)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
-  BOOL bRaiseDocCompletedCallback, bRaiseErrorCallback;
 
-  bRaiseDocCompletedCallback = bRaiseErrorCallback = FALSE;
   if (cAutoRundownProt.IsAcquired() != FALSE)
   {
     CCriticalSection::CAutoLock cLock(cMutex);
@@ -1570,15 +1561,10 @@ VOID CHttpClient::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
         case StateSendingRequestHeaders:
         case StateSendingDynamicRequestBody:
         case StateReceivingResponseHeaders:
+        case StateReceivingResponseBody:
           nState = StateClosed;
           if (SUCCEEDED(hLastErrorCode)) //preserve first error
             hLastErrorCode = SUCCEEDED(hrErrorCode) ? MX_E_Cancelled : hrErrorCode;
-          bRaiseErrorCallback = TRUE;
-          break;
-
-        case StateReceivingResponseBody:
-          nState = StateDocumentCompleted;
-          bRaiseDocCompletedCallback = TRUE;
           break;
 
         default:
@@ -1589,12 +1575,6 @@ VOID CHttpClient::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
       hConn = NULL;
     }
   }
-
-  //call callbacks
-  if (bRaiseDocCompletedCallback && cDocumentCompletedCallback)
-    cDocumentCompletedCallback(this);
-  if (bRaiseErrorCallback && cErrorCallback)
-    cErrorCallback(this, hrErrorCode);
 
   //done
   _InterlockedDecrement(&nPendingHandlesCounter);
@@ -1626,9 +1606,7 @@ HRESULT CHttpClient::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_opt_ C
       SetErrorOnRequestAndClose(hRes);
   }
 
-  //raise error event if any
-  if (FAILED(hRes) && cErrorCallback)
-    cErrorCallback(this, hRes);
+  //done
   return S_OK;
 }
 
@@ -2347,9 +2325,6 @@ VOID CHttpClient::OnRedirectOrRetryAuth(_In_ LONG nTimerId, _In_ LPVOID lpUserDa
         SetErrorOnRequestAndClose(hRes);
       }
     }
-    //raise error event if any
-    if (FAILED(hRes) && cErrorCallback)
-      cErrorCallback(this, hRes);
   }
   return;
 }
@@ -2405,9 +2380,7 @@ VOID CHttpClient::OnAfterSendRequestHeaders(_In_ CIpc *lpIpc, _In_ HANDLE h, _In
     cDymanicRequestBodyStartCallback(this);
   }
 
-  //raise error event if any
-  if (FAILED(hRes) && cErrorCallback)
-    cErrorCallback(this, hRes);
+  //done
   return;
 }
 
