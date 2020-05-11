@@ -1084,6 +1084,7 @@ HRESULT CHttpClient::Open(_In_z_ LPCWSTR szUrlW, _In_opt_ LPOPEN_OPTIONS lpOptio
     return E_POINTER;
   if (*szUrlW == 0)
     return E_INVALIDARG;
+
   hRes = cUrl.ParseFromString(szUrlW);
   if (SUCCEEDED(hRes))
     hRes = Open(cUrl, lpOptions);
@@ -1104,6 +1105,7 @@ VOID CHttpClient::Close(_In_opt_ BOOL bReuseConn)
     ResetResponseForNewRequest();
     nState = StateClosed;
   }
+
   //clear timeouts
   MX::TimedEvent::Clear(&(sRedirectOrRetryAuth.nTimerId));
   return;
@@ -1542,6 +1544,7 @@ VOID CHttpClient::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
                                   _In_ HRESULT hrErrorCode)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
+  BOOL bRaiseDocCompletedCallback = FALSE;
 
   if (cAutoRundownProt.IsAcquired() != FALSE)
   {
@@ -1554,6 +1557,12 @@ VOID CHttpClient::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
         case StateDocumentCompleted:
           break;
 
+        case StateAfterHeaders:
+          //if we are in this state but parsing is complete, then completion is about to be called
+          if (sResponse.cParser.GetState() == Internals::CHttpParser::StateDone)
+            break;
+          //fall into the rest
+
         case StateWaitingForRedirection:
         case StateRetryingAuthentication:
         case StateEstablishingProxyTunnelConnection:
@@ -1565,15 +1574,23 @@ VOID CHttpClient::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
           nState = StateClosed;
           if (SUCCEEDED(hLastErrorCode)) //preserve first error
             hLastErrorCode = SUCCEEDED(hrErrorCode) ? MX_E_Cancelled : hrErrorCode;
+          bRaiseDocCompletedCallback = TRUE;
           break;
 
         default:
           nState = StateClosed;
+          bRaiseDocCompletedCallback = TRUE;
           break;
       }
 
       hConn = NULL;
     }
+  }
+
+  //call callbacks
+  if (bRaiseDocCompletedCallback != FALSE && cDocumentCompletedCallback)
+  {
+    cDocumentCompletedCallback(this);
   }
 
   //done
