@@ -84,7 +84,7 @@ public:
     __inline VOID WaitWhileRunning()
       {
       while ((__InterlockedRead(&nFlags) & _FLAG_Running) != 0)
-        _YieldProcessor();
+        ::MxSleep(5);
       return;
       };
 

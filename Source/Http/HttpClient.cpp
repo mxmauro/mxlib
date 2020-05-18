@@ -86,6 +86,8 @@ CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr,
   _InterlockedExchange(&(sRedirectOrRetryAuth.nTimerId), 0);
   sAuthorization.bSeen401 = sAuthorization.bSeen407 = FALSE;
   sAuthorization.nSeen401Or407Counter = 0;
+  //----
+  _InterlockedExchange(&nCallInProgressThread, 0);
   cHeadersReceivedCallback = NullCallback();
   cDymanicRequestBodyStartCallback = NullCallback();
   cDocumentCompletedCallback = NullCallback();
@@ -1103,21 +1105,46 @@ HRESULT CHttpClient::Open(_In_z_ LPCWSTR szUrlW, _In_opt_ LPOPEN_OPTIONS lpOptio
 VOID CHttpClient::Close(_In_opt_ BOOL bReuseConn)
 {
   TAutoRefCounted<CConnection> cConnToClose;
-  CCriticalSection::CAutoLock cLock(cMutex);
+  LONG nTid;
+  BOOL bLocked;
 
-  if (nState != StateDocumentCompleted || bReuseConn == FALSE)
   {
-    CAutoSlimRWLExclusive cLock(&(sConnection.sRwMutex));
+    CCriticalSection::CAutoLock cLock(cMutex);
 
-    cConnToClose.Attach(sConnection.cLink.Detach());
+    if (nState != StateDocumentCompleted || bReuseConn == FALSE)
+    {
+      CAutoSlimRWLExclusive cLock(&(sConnection.sRwMutex));
+
+      cConnToClose.Attach(sConnection.cLink.Detach());
+    }
+
+    ResetRequestForNewRequest();
+    ResetResponseForNewRequest();
+    nState = StateClosed;
   }
-
-  ResetRequestForNewRequest();
-  ResetResponseForNewRequest();
-  nState = StateClosed;
 
   //clear timeouts
   MX::TimedEvent::Clear(&(sRedirectOrRetryAuth.nTimerId));
+
+  bLocked = LockThreadCall(FALSE);
+  cHeadersReceivedCallback = NullCallback();
+  cDymanicRequestBodyStartCallback = NullCallback();
+  cDocumentCompletedCallback = NullCallback();
+  cWebSocketHandshakeCompletedCallback = NullCallback();
+  cQueryCertificatesCallback = NullCallback();
+  if (bLocked != FALSE)
+    _InterlockedExchange(&nCallInProgressThread, 0);
+
+  nTid = (LONG)::GetCurrentThreadId();
+  for (;;)
+  {
+    LONG nCurrTid = __InterlockedRead(&nCallInProgressThread);
+    if (nCurrTid == 0 || nCurrTid == nTid)
+      break;
+    ::MxSleep(25);
+  }
+
+ 
 
   //done
   if (cConnToClose)
@@ -1283,18 +1310,6 @@ CHttpCookie* CHttpClient::GetResponseCookieByName(_In_z_ LPCWSTR szNameW) const
   lpCookie = lpCookieArray->GetElementAt(nIndex);
   lpCookie->AddRef();
   return lpCookie;
-}
-
-CHttpClient::CConnection* CHttpClient::GetConnection()
-{
-  CAutoSlimRWLShared cLock(&(sConnection.sRwMutex));
-
-  if (sConnection.cLink)
-  {
-    sConnection.cLink->AddRef();
-    return sConnection.cLink.Get();
-  }
-  return NULL;
 }
 
 HANDLE CHttpClient::GetUnderlyingSocket() const
@@ -1675,9 +1690,14 @@ VOID CHttpClient::OnConnectionClosed(_In_ CConnection *lpConn, _In_ HRESULT hrEr
   }
 
   //call callbacks
-  if (bRaiseDocCompletedCallback != FALSE && cDocumentCompletedCallback)
+  if (bRaiseDocCompletedCallback != FALSE)
   {
-    cDocumentCompletedCallback(this);
+    LockThreadCall(FALSE);
+    if (cDocumentCompletedCallback)
+    {
+      cDocumentCompletedCallback(this);
+    }
+    _InterlockedExchange(&nCallInProgressThread, 0);
   }
 
   //done
@@ -2267,6 +2287,19 @@ on_websocket_negotiated:
     MX::TimedEvent::Clear(&(sRedirectOrRetryAuth.nTimerId));
     hRes = MX::TimedEvent::SetTimeout(&(sRedirectOrRetryAuth.nTimerId), (DWORD)nRedirectOrRetryAuthTimerAction,
                                       MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnRedirectOrRetryAuth, this), NULL);
+    if (SUCCEEDED(hRes))
+    {
+      TAutoRefCounted<CConnection> cTempConnection;
+
+      cTempConnection.Attach(GetConnection());
+      if (lpConn != cTempConnection.Get())
+      {
+        //if the connection is invalidated
+        MX::TimedEvent::Clear(&(sRedirectOrRetryAuth.nTimerId));
+
+        hRes = MX_E_Cancelled;
+      }
+    }
     if (FAILED(hRes))
     {
       //just a fatal error if we cannot set up the timers
@@ -2284,6 +2317,8 @@ on_websocket_negotiated:
     BOOL bRestart = FALSE;
 
     hRes = S_OK;
+
+    LockThreadCall(FALSE);
     if (cHeadersReceivedCallback)
     {
       hRes = cHeadersReceivedCallback(this, (LPCWSTR)(sHeadersCallbackData.cStrFileNameW),
@@ -2291,6 +2326,7 @@ on_websocket_negotiated:
                                       sHeadersCallbackData.bTreatAsAttachment,
                                       sHeadersCallbackData.cStrDownloadFileNameW, &cBodyParser);
     }
+    _InterlockedExchange(&nCallInProgressThread, 0);
 
     {
       CCriticalSection::CAutoLock cLock(cMutex);
@@ -2345,19 +2381,23 @@ on_websocket_negotiated:
 
   if (bFireWebSocketHandshakeCompletedCallback != FALSE)
   {
+    LockThreadCall(FALSE);
     if (cWebSocketHandshakeCompletedCallback)
     {
       cWebSocketHandshakeCompletedCallback(this, sWebSocketHandshakeCallbackData.cWebSocket.Get(),
                                            (LPCSTR)(sWebSocketHandshakeCallbackData.cStrProtocolA));
     }
     sWebSocketHandshakeCallbackData.cWebSocket->FireConnectedAndInitialRead();
+    _InterlockedExchange(&nCallInProgressThread, 0);
   }
   else if (bFireDocumentCompleted != FALSE)
   {
+    LockThreadCall(FALSE);
     if (cDocumentCompletedCallback)
     {
       cDocumentCompletedCallback(this);
     }
+    _InterlockedExchange(&nCallInProgressThread, 0);
   }
 
   //done
@@ -2377,9 +2417,10 @@ HRESULT CHttpClient::OnAddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h)
   lpSelfCert = NULL;
   lpPrivKey = NULL;
   //query for client certificates
-  if (!cQueryCertificatesCallback)
-    return MX_E_NotReady;
-  hRes = cQueryCertificatesCallback(this, &lpCheckCertificates, &lpSelfCert, &lpPrivKey);
+  LockThreadCall(FALSE);
+  hRes = (cQueryCertificatesCallback) ? cQueryCertificatesCallback(this, &lpCheckCertificates, &lpSelfCert, &lpPrivKey)
+                                      : MX_E_NotReady;
+  _InterlockedExchange(&nCallInProgressThread, 0);
   if (FAILED(hRes))
     return hRes;
 
@@ -2483,9 +2524,14 @@ VOID CHttpClient::OnAfterSendRequestHeaders(_In_ CConnection *lpConn)
     if (FAILED(hRes))
       SetErrorOnRequestAndClose(hRes);
   }
-  if (SUCCEEDED(hRes) && bFireDymanicRequestBodyStartCallback != FALSE && cDymanicRequestBodyStartCallback)
+  if (SUCCEEDED(hRes) && bFireDymanicRequestBodyStartCallback != FALSE)
   {
-    cDymanicRequestBodyStartCallback(this);
+    LockThreadCall(FALSE);
+    if (cDymanicRequestBodyStartCallback)
+    {
+      cDymanicRequestBodyStartCallback(this);
+    }
+    _InterlockedExchange(&nCallInProgressThread, 0);
   }
 
   //done
@@ -3470,6 +3516,37 @@ HRESULT CHttpClient::SetupIgnoreBody()
   if (!cBodyParser)
     return E_OUTOFMEMORY;
   return sResponse.cParser.SetBodyParser(cBodyParser);
+}
+
+
+CHttpClient::CConnection* CHttpClient::GetConnection()
+{
+  CAutoSlimRWLShared cLock(&(sConnection.sRwMutex));
+
+  if (sConnection.cLink)
+  {
+    sConnection.cLink->AddRef();
+    return sConnection.cLink.Get();
+  }
+  return NULL;
+}
+
+BOOL CHttpClient::LockThreadCall(_In_ BOOL bAllowRecursive)
+{
+  LONG nTid = (LONG)::GetCurrentThreadId();
+  LONG nOrigValue;
+
+  for (;;)
+  {
+    nOrigValue = _InterlockedCompareExchange(&nCallInProgressThread, nTid, 0);
+    if (nOrigValue == 0)
+      break;
+    if (bAllowRecursive != FALSE && nOrigValue == nTid)
+      return FALSE;
+    //spin (if close is running on other thread while callback is in progress, set a bigger delay)
+    ::MxSleep((bAllowRecursive != FALSE) ? 50 : 5);
+  }
+  return TRUE;
 }
 
 //-----------------------------------------------------------

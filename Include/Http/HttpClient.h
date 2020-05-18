@@ -283,7 +283,8 @@ private:
   HRESULT SetupIgnoreBody();
 
   CConnection* GetConnection();
-  VOID UnlinkConnection();
+
+  BOOL LockThreadCall(_In_ BOOL bAllowRecursive);
 
 private:
   class CPostDataItem : public virtual CBaseMemObj, public CNonCopyableObj
@@ -325,6 +326,7 @@ private:
   BOOL bKeepConnectionOpen;
   BOOL bAcceptCompressedContent;
 
+  LONG volatile nCallInProgressThread;
   OnHeadersReceivedCallback cHeadersReceivedCallback;
   OnDymanicRequestBodyStartCallback cDymanicRequestBodyStartCallback;
   OnDocumentCompletedCallback cDocumentCompletedCallback;
