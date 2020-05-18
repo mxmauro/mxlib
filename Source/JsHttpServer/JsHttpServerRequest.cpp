@@ -111,7 +111,7 @@ CJavascriptVM* CJsHttpServer::CClientRequest::GetVM(_Out_opt_ LPBOOL lpbIsNew) c
   return lpJVM;
 }
 
-HRESULT CJsHttpServer::CClientRequest::RunScript(_In_ LPCSTR szCodeA)
+HRESULT CJsHttpServer::CClientRequest::RunScript(_In_ LPCSTR szCodeA, _In_opt_z_ LPCWSTR szFileNameW)
 {
   MX::CStringA cStrTransformedCodeA;
   HRESULT hRes;
@@ -145,7 +145,9 @@ HRESULT CJsHttpServer::CClientRequest::RunScript(_In_ LPCSTR szCodeA)
   //execute JS code
   try
   {
-    lpJVM->Run(cStrTransformedCodeA, GetUrl()->GetPath());
+    if (szFileNameW == NULL)
+      szFileNameW = GetUrl()->GetPath();
+    lpJVM->Run(cStrTransformedCodeA, szFileNameW);
   }
   catch (CJsHttpServerSystemExit &e)
   {

@@ -47,7 +47,7 @@ public:
     {
     ULONG nNewVal = (ULONG)_InterlockedIncrement(&nRefCount);
     MX_ASSERT((nNewVal & 0xC0000000) == 0);
-    MX_ASSERT(nNewVal > 0);
+    MX_ASSERT(nNewVal > 1);
     return nNewVal;
     };
 
@@ -98,7 +98,7 @@ private:
 
 //-----------------------------------------------------------
 
-template <class T>
+template <class T, bool Safe = false>
 class TAutoRefCounted
 {
 public:
@@ -110,15 +110,27 @@ public:
 
   TAutoRefCounted(_In_opt_ T* _lpPtr)
     {
-    if ((lpPtr = _lpPtr) != NULL)
-      lpPtr->AddRef();
+    if (_lpPtr != NULL)
+    {
+      if (Safe)
+      {
+        lpPtr = (_lpPtr->SafeAddRef() > 0) ? _lpPtr : NULL;
+      }
+      else
+      {
+        _lpPtr->AddRef();
+        lpPtr = _lpPtr;;
+      }
+    }
+    else
+    {
+      lpPtr = NULL;
+    }
     return;
     };
 
-  TAutoRefCounted(_In_ TAutoRefCounted<T> &cPtr)
+  TAutoRefCounted(_In_ TAutoRefCounted<T> &cPtr) : TAutoRefCounted(cPtr.lpPtr)
     {
-    if ((lpPtr = cPtr.lpPtr) != NULL)
-      lpPtr->AddRef();
     return;
     };
 
@@ -180,11 +192,18 @@ public:
     {
     if (_lpPtr != lpPtr)
     {
-      if (_lpPtr != NULL)
-        _lpPtr->AddRef();
       if (lpPtr != NULL)
         lpPtr->Release();
-      lpPtr = _lpPtr;
+      if (Safe)
+      {
+        lpPtr = (_lpPtr->SafeAddRef() > 0) ? _lpPtr : NULL;
+      }
+      else
+      {
+        if (_lpPtr != NULL)
+          _lpPtr->AddRef();
+        lpPtr = _lpPtr;
+      }
     }
     return _lpPtr;
     };
@@ -193,11 +212,7 @@ public:
     {
     if (this != &cPtr)
     {
-      if (cPtr.lpPtr != NULL)
-        cPtr.lpPtr->AddRef();
-      if (lpPtr != NULL)
-        lpPtr->Release();
-      lpPtr = cPtr.lpPtr;
+      return operator=(cPtr.lpPtr);
     }
     return lpPtr;
     };

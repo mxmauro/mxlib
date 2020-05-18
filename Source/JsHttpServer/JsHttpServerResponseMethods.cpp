@@ -31,6 +31,8 @@ static DukTape::duk_ret_t OnSetCookie(_In_ DukTape::duk_context *lpCtx, _In_z_ L
                                       _In_z_ LPCSTR szFunctionNameA);
 static DukTape::duk_ret_t OnSetHeader(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
                                       _In_z_ LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnRemoveHeader(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                         _In_z_ LPCSTR szFunctionNameA);
 static DukTape::duk_ret_t OnObStart(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
                                     _In_z_ LPCSTR szFunctionNameA);
 static DukTape::duk_ret_t OnObEnd(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
@@ -57,6 +59,8 @@ HRESULT AddResponseMethods(_In_ CJavascriptVM &cJvm)
   hRes = cJvm.AddNativeFunction("setCookie", MX_BIND_CALLBACK(&OnSetCookie), MX_JS_VARARGS);
   __EXIT_ON_ERROR(hRes);
   hRes = cJvm.AddNativeFunction("setHeader", MX_BIND_CALLBACK(&OnSetHeader), MX_JS_VARARGS);
+  __EXIT_ON_ERROR(hRes);
+  hRes = cJvm.AddNativeFunction("removeHeader", MX_BIND_CALLBACK(&OnRemoveHeader), 1);
   __EXIT_ON_ERROR(hRes);
   hRes = cJvm.AddNativeFunction("resetOutput", MX_BIND_CALLBACK(&OnResetOutput), 0);
   __EXIT_ON_ERROR(hRes);
@@ -241,6 +245,17 @@ static DukTape::duk_ret_t OnSetHeader(_In_ DukTape::duk_context *lpCtx, _In_z_ L
   hRes = lpRequest->AddResponseHeader(szNameA, szValueA, MX::StrLenA(szValueA), NULL, bReplaceExisting);
   if (FAILED(hRes))
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+  return 0;
+}
+
+static DukTape::duk_ret_t OnRemoveHeader(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
+                                         _In_z_ LPCSTR szFunctionNameA)
+{
+  MX::CJsHttpServer::CClientRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
+  LPCSTR szNameA;
+
+  szNameA = DukTape::duk_require_string(lpCtx, 0);
+  lpRequest->RemoveResponseHeader(szNameA);
   return 0;
 }
 

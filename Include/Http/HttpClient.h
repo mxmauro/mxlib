@@ -62,6 +62,9 @@ public:
       int nVersion;
       LPCSTR *lpszProtocolsA;
     } sWebSocket;
+    struct {
+      LPCSTR szHeaderNameA;
+    } sSendLocalIP;
   } OPEN_OPTIONS, *LPOPEN_OPTIONS;
 
 public:
@@ -198,30 +201,77 @@ public:
   LPCSTR GetRequestBoundary() const;
 
 private:
-  HRESULT InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOptions, _In_ BOOL bRedirectionAuth);
+  class CConnection : public CIpc::CUserData
+  {
+  public:
+    CConnection(_In_ CHttpClient *lpHttpClient);
+    ~CConnection();
 
-  HRESULT OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIpc::CREATE_CALLBACK_DATA &sData);
-  VOID OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
-                       _In_ HRESULT hrErrorCode);
-  HRESULT OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_opt_ CIpc::CUserData *lpUserData);
-  HRESULT OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData);
+    HANDLE GetConn() const
+      {
+      return hConn;
+      };
+
+    BOOL IsClosed() const;
+
+    HRESULT Connect(_In_ CSockets::eFamily nFamily, _In_z_ LPCWSTR szAddressW, _In_ int nPort, _In_ BOOL bUseSSL);
+    VOID Close(_In_ HRESULT hrErrorCode);
+
+    VOID Detach();
+
+    HRESULT SendMsg(_In_reads_bytes_(nMsgSize) LPCVOID lpMsg, _In_ SIZE_T nMsgSize);
+    HRESULT SendStream(_In_ CStream *lpStream);
+    HRESULT SendAfterSendRequestHeaders();
+
+    HRESULT GetBufferedMessage(_Out_ LPVOID lpMsg, _Inout_ SIZE_T *lpnMsgSize);
+    HRESULT ConsumeBufferedMessage(_In_ SIZE_T nConsumedBytes);
+
+  private:
+    friend class CHttpClient;
+
+    CHttpClient* GetHttpClient();
+
+    HRESULT OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIpc::CREATE_CALLBACK_DATA &sData);
+    VOID OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
+                         _In_ HRESULT hrErrorCode);
+    HRESULT OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_opt_ CIpc::CUserData *lpUserData);
+    HRESULT OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData);
+
+    VOID OnAfterSendRequestHeaders(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie,
+                                   _In_ CIpc::CUserData *lpUserData);
+
+  private:
+    CIpc *lpIpc;
+    HANDLE hConn;
+    BOOL bUseSSL;
+    RWLOCK sRwMutex;
+    CHttpClient *lpHttpClient;
+  };
+
+private:
+  friend class CConnection;
+
+  HRESULT InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOptions, _In_ BOOL bRedirectionAuth,
+                       _Outptr_ _Maybenull_ CConnection **lplpConnectionToRelease);
+
+  VOID OnConnectionClosed(_In_ CConnection *lpConn, _In_ HRESULT hrErrorCode);
+  HRESULT OnConnectionEstablished(_In_ CConnection *lpConn);
+  HRESULT OnDataReceived(_In_ CConnection *lpConn);
+  HRESULT OnAddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h);
 
   VOID OnRedirectOrRetryAuth(_In_ LONG nTimerId, _In_ LPVOID lpUserData, _In_opt_ LPBOOL lpbCancel);
-  VOID OnAfterSendRequestHeaders(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie,
-                                 _In_ CIpc::CUserData *lpUserData);
+  VOID OnAfterSendRequestHeaders(_In_ CConnection *lpConn);
 
   VOID SetErrorOnRequestAndClose(_In_ HRESULT hrErrorCode);
-
-  HRESULT AddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h);
 
   HRESULT BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA);
   HRESULT BuildRequestHeaderAdd(_Inout_ CStringA &cStrReqHdrsA, _In_z_ LPCSTR szNameA, _In_z_ LPCSTR szDefaultValueA,
                                 _In_ MX::Http::eBrowser nBrowser);
   HRESULT AddRequestHeadersForBody(_Inout_ CStringA &cStrReqHdrsA);
 
-  HRESULT SendTunnelConnect();
-  HRESULT SendRequestHeaders();
-  HRESULT SendRequestBody();
+  HRESULT SendTunnelConnect(_In_ CConnection *lpConnection);
+  HRESULT SendRequestHeaders(_In_ CConnection *lpConnection);
+  HRESULT SendRequestBody(_In_ CConnection *lpConnection);
 
   VOID GenerateRequestBoundary();
 
@@ -231,6 +281,9 @@ private:
   VOID ResetResponseForNewRequest();
 
   HRESULT SetupIgnoreBody();
+
+  CConnection* GetConnection();
+  VOID UnlinkConnection();
 
 private:
   class CPostDataItem : public virtual CBaseMemObj, public CNonCopyableObj
@@ -253,10 +306,11 @@ private:
 private:
   CCriticalSection cMutex;
   CSockets &cSocketMgr;
-  LONG volatile nRundownLock;
-  LONG volatile nPendingHandlesCounter;
   eState nState;
-  HANDLE hConn;
+  struct {
+    RWLOCK sRwMutex;
+    TAutoRefCounted<CConnection> cLink;
+  } sConnection;
   CProxy cProxy;
   CSecureStringW cStrAuthUserNameW, cStrAuthUserPasswordW;
   HRESULT hLastErrorCode;
@@ -291,6 +345,7 @@ private:
     BOOL bUsingMultiPartFormData;
     BOOL bUsingProxy;
     TAutoRefCounted<CWebSocket> cWebSocket;
+    TAutoRefCounted<CHttpHeaderGeneric> cLocalIpHeader;
   } sRequest;
 
   struct {

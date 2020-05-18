@@ -73,7 +73,31 @@ Dim nErr, S
 End Function
 
 Function CreateIncludeAll(szFileName)
-Dim nErr, oFile
+Dim oFolder, oFile
+Dim nErr, S
+Dim dtBuildDate
+
+	nErr = 1
+	If oFso.FileExists(szFileName) <> False Then
+		nErr = 0
+
+		Set oFile = oFso.getFile(szFileName)
+		dtBuildDate = oFile.DateLastModified
+
+		Set oFolder = oFso.GetFolder(szScriptPath & "..\..\Include\RapidJSON")
+		For Each oFile in oFolder.Files
+			If oFile.DateLastModified > dtBuildDate Then
+				nErr = 1
+				Exit For
+			End If
+		Next
+		Set oFolder = Nothing
+	End If
+	If nErr = 0 Then
+		'File is up-to-date
+		CreateIncludeAll = nErr
+		Exit Function
+	End If
 
 	On Error Resume Next
 	Set oFile = oFso.CreateTextFile(szFileName, True)
@@ -152,4 +176,15 @@ Dim I, nRet, szOutputFile
 		End If
 	End If
 	RunApp = nRet
+End Function
+
+Function CheckForNewerFile(szFile, dtBuildDate)
+Dim oFile
+
+	CheckForNewerFile = False
+	Set oFile = oFso.getFile(szFile)
+	If oFile.DateLastModified > dtBuildDate Then
+		WScript.Echo "File: " & Chr(34) & szFile & Chr(34) & " is newer... rebuilding"
+		CheckForNewerFile = True
+	End If
 End Function

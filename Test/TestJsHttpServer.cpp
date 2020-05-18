@@ -246,13 +246,8 @@ static VOID OnRequestCompleted(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpS
   CTestJsRequest *lpRequest = static_cast<CTestJsRequest*>(_lpRequest);
   LPCWSTR szExtensionW = NULL;
   HRESULT hRes;
-  MX::CUrl *lpUrl;
 
-  lpUrl = lpRequest->GetUrl();
-  if (lpUrl != NULL)
-    hRes = BuildWebFileName(lpRequest->cStrFileNameW, szExtensionW, lpUrl->GetPath());
-  else
-    hRes = MX_E_Cancelled;
+  hRes = BuildWebFileName(lpRequest->cStrFileNameW, szExtensionW, lpRequest->GetUrl()->GetPath());
   if (FAILED(hRes))
   {
     hRes = lpRequest->SendErrorPage(500, hRes);

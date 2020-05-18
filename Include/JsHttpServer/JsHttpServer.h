@@ -129,7 +129,7 @@ public:
 
     CJavascriptVM* GetVM(_Out_opt_ LPBOOL lpbIsNew = NULL) const;
 
-    HRESULT RunScript(_In_ LPCSTR szCodeA);
+    HRESULT RunScript(_In_ LPCSTR szCodeA, _In_opt_z_ LPCWSTR szFileNameW = NULL);
 
   public:
     TArrayListWithDelete<CStringA*> cOutputBuffersList;

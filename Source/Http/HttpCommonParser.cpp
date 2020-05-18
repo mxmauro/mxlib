@@ -383,7 +383,7 @@ headers_end_reached:
         nToRead = nDataSize - (szDataA - (LPCSTR)lpData);
         if ((ULONGLONG)nToRead > sBody.nContentLength - sBody.nIdentityReadedContentLength)
           nToRead = (SIZE_T)(sBody.nContentLength - sBody.nIdentityReadedContentLength);
-        if (ShouldLog(1) != FALSE && sBody.nContentLength > 0ui64)
+        if (ShouldLog(2) != FALSE && sBody.nContentLength > 0ui64)
         {
           double dbl;
           int _pre_pct, _post_pct;
@@ -566,7 +566,7 @@ LPCSTR CHttpParser::GetRequestMethod() const
 
 CUrl* CHttpParser::GetRequestUri() const
 {
-  return const_cast<CUrl *>(&(sRequest.cUrl));
+  return const_cast<CUrl*>(&(sRequest.cUrl));
 }
 
 MX::Http::eBrowser CHttpParser::GetRequestBrowser() const
@@ -890,6 +890,14 @@ HRESULT CHttpParser::ProcessContent(_In_ LPCVOID lpContent, _In_ SIZE_T nContent
         while (SUCCEEDED(hRes) && sBody.cDecoder->GetAvailableData() > 0)
         {
           nSize = sBody.cDecoder->GetData(aTempBuf, sizeof(aTempBuf));
+
+#ifdef _DEBUG
+          if (ShouldLog(2) != FALSE)
+          {
+            Log(L"HttpCommon(BodyData/0x%p): %.*S", this, nSize, aTempBuf);
+          }
+#endif //_DEBUG
+
           //parse body
           hRes = sBody.cParser->Parse(aTempBuf, nSize);
         }
@@ -897,6 +905,13 @@ HRESULT CHttpParser::ProcessContent(_In_ LPCVOID lpContent, _In_ SIZE_T nContent
       break;
 
     default:
+#ifdef _DEBUG
+      if (ShouldLog(2) != FALSE)
+      {
+        Log(L"HttpCommon(BodyData/0x%p): %.*S", this, nContentSize, (char*)lpContent);
+      }
+#endif //_DEBUG
+
       //parse body
       hRes = sBody.cParser->Parse(lpContent, nContentSize);
       break;

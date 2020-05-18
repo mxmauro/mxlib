@@ -136,20 +136,13 @@ VOID CJsHttpServer::OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpS
 
     //build path and only accept absolute ones
     lpUrl = lpRequest->GetUrl();
-    if (lpUrl != NULL)
+    if ((lpUrl->GetPath())[0] == L'/')
     {
-      if ((lpUrl->GetPath())[0] == L'/')
-      {
-        cRequestCompletedCallback(this, lpRequest);
-      }
-      else
-      {
-        hRes = MX_E_Unsupported;
-      }
+      cRequestCompletedCallback(this, lpRequest);
     }
     else
     {
-      hRes = E_NOTIMPL;
+      hRes = MX_E_Unsupported;
     }
   }
 

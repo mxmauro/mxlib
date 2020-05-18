@@ -23,6 +23,7 @@
 
 static const CHAR szServerInfoA[] = "MX-Library";
 static const SIZE_T nServerInfoLen = MX_ARRAYLEN(szServerInfoA) - 1;
+static MX::CUrl cZeroUrl;
 
 //-----------------------------------------------------------
 
@@ -127,7 +128,7 @@ CUrl* CHttpServer::CClientRequest::GetUrl() const
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
   if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
-    return NULL;
+    return &cZeroUrl;
   return cRequestParser.GetRequestUri();
 }
 
@@ -351,10 +352,24 @@ HRESULT CHttpServer::CClientRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _I
 
   //create and add to list
   hRes = CHttpHeaderBase::Create(szNameA, FALSE, &cNewHeader);
-  if (SUCCEEDED(hRes))
-    hRes = cNewHeader->Parse(szValueA, nValueLen);
-  if (SUCCEEDED(hRes))
-    hRes = sResponse.cHeaders.AddElement(cNewHeader.Get());
+  if (FAILED(hRes))
+    return hRes;
+
+  hRes = cNewHeader->Parse(szValueA, nValueLen);
+  if (FAILED(hRes))
+    return hRes;
+
+  if (bReplaceExisting != FALSE)
+  {
+    SIZE_T nIndex;
+
+    while ((nIndex = sResponse.cHeaders.Find(szNameA)) != (SIZE_T)-1)
+    {
+      sResponse.cHeaders.RemoveElementAt(nIndex);
+    }
+  }
+
+  hRes = sResponse.cHeaders.AddElement(cNewHeader.Get());
   if (FAILED(hRes))
     return hRes;
   cNewHeader->AddRef();
@@ -383,10 +398,24 @@ HRESULT CHttpServer::CClientRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _I
 
   //create and add to list
   hRes = CHttpHeaderBase::Create(szNameA, FALSE, &cNewHeader);
-  if (SUCCEEDED(hRes))
-    hRes = cNewHeader->Parse(szValueW, nValueLen);
-  if (SUCCEEDED(hRes))
-    hRes = sResponse.cHeaders.AddElement(cNewHeader.Get());
+  if (FAILED(hRes))
+    return hRes;
+
+  hRes = cNewHeader->Parse(szValueW, nValueLen);
+  if (FAILED(hRes))
+    return hRes;
+
+  if (bReplaceExisting != FALSE)
+  {
+    SIZE_T nIndex;
+
+    while ((nIndex = sResponse.cHeaders.Find(szNameA)) != (SIZE_T)-1)
+    {
+      sResponse.cHeaders.RemoveElementAt(nIndex);
+    }
+  }
+
+  hRes = sResponse.cHeaders.AddElement(cNewHeader.Get());
   if (FAILED(hRes))
     return hRes;
   cNewHeader->AddRef();
@@ -878,6 +907,10 @@ HRESULT CHttpServer::CClientRequest::DisableClientCache()
   if (HasHeadersBeenSent() != FALSE)
     return MX_E_InvalidState;
 
+  RemoveResponseHeader("Cache-Control");
+  RemoveResponseHeader("Pragma");
+  RemoveResponseHeader("Expires");
+
   hRes = AddResponseHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   if (SUCCEEDED(hRes))
     hRes = AddResponseHeader("Pragma", "no-cache");
@@ -1235,7 +1268,7 @@ HRESULT CHttpServer::CClientRequest::SendHeaders()
     }
     else
     {
-      //only send automatic "Content-Type" header if not direct response
+      //only send automatic "Content-Type" header if not direct response and has a body
       if (sResponse.bDirect == FALSE)
       {
         if (sResponse.szMimeTypeHintA != NULL)
@@ -1316,38 +1349,52 @@ HRESULT CHttpServer::CClientRequest::SendHeaders()
       if (lpHeaderEntContentLength == NULL)
       {
         //only send automatic "Content-Length" header if not direct response and no switching protocol
-        if (sResponse.bDirect == FALSE && nStatus != 101)
+        if (sResponse.bDirect == FALSE)
         {
-          nTotalLength = 0ui64;
-          nCount = sResponse.aStreamsList.GetCount();
-          for (i = 0; i < nCount; i++)
+          if (nStatus >= 200 && nStatus != 204 && nStatus != 304)
           {
-            nLen = sResponse.aStreamsList[i]->GetLength();
-            if (nLen + nTotalLength < nTotalLength)
+            nTotalLength = 0ui64;
+            nCount = sResponse.aStreamsList.GetCount();
+            for (i = 0; i < nCount; i++)
             {
-              hRes = MX_E_BadLength;
-              break;
+              nLen = sResponse.aStreamsList[i]->GetLength();
+              if (nLen + nTotalLength < nTotalLength)
+              {
+                hRes = MX_E_BadLength;
+                break;
+              }
+              nTotalLength += nLen;
             }
-            nTotalLength += nLen;
+            if (SUCCEEDED(hRes))
+            {
+              hRes = cHdrStream->WriteString("Content-Length: %I64u\r\n", nTotalLength);
+            }
           }
-          if (SUCCEEDED(hRes))
+          else if (sResponse.aStreamsList.GetCount() > 0)
           {
-            hRes = cHdrStream->WriteString("Content-Length: %I64u\r\n", nTotalLength);
+            hRes = MX_HRESULT_FROM_WIN32(ERROR_DATA_NOT_ACCEPTED);
           }
         }
       }
       else
       {
-        hRes = lpHeaderEntContentLength->Build(cStrTempA, cRequestParser.GetRequestBrowser());
-        if (SUCCEEDED(hRes))
+        if (nStatus >= 200 && nStatus != 204 && nStatus != 304)
         {
-          hRes = WriteToStream(cHdrStream, "Content-Length: ", 16);
+          hRes = lpHeaderEntContentLength->Build(cStrTempA, cRequestParser.GetRequestBrowser());
           if (SUCCEEDED(hRes))
           {
-            hRes = WriteToStream(cHdrStream, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+            hRes = WriteToStream(cHdrStream, "Content-Length: ", 16);
             if (SUCCEEDED(hRes))
-              hRes = WriteToStream(cHdrStream, "\r\n", 2);
+            {
+              hRes = WriteToStream(cHdrStream, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+              if (SUCCEEDED(hRes))
+                hRes = WriteToStream(cHdrStream, "\r\n", 2);
+            }
           }
+        }
+        else
+        {
+          hRes = MX_HRESULT_FROM_WIN32(ERROR_DATA_NOT_ACCEPTED);
         }
       }
     }

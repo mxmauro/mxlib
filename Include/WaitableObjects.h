@@ -326,20 +326,47 @@ class CAutoRundownProtection : public virtual CBaseMemObj, public CNonCopyableOb
 public:
   CAutoRundownProtection(_In_ LONG volatile *_lpnValue) : CBaseMemObj(), CNonCopyableObj()
     {
-    lpnValue = (RundownProt_Acquire(_lpnValue) != FALSE) ? _lpnValue : NULL;
+    Acquire(_lpnValue);
     return;
     };
 
   ~CAutoRundownProtection()
     {
-    if (lpnValue != NULL)
-      RundownProt_Release(lpnValue);
+    Release();
     return;
+    };
+
+  BOOL operator!() const
+    {
+    return (lpnValue == NULL) ? true : false;
+    };
+
+  operator bool() const
+    {
+    return (lpnValue != NULL) ? true : false;
     };
 
   BOOL IsAcquired() const
     {
     return (lpnValue != NULL) ? TRUE : FALSE;
+    };
+
+  BOOL Acquire(_In_ LONG volatile *_lpnValue)
+    {
+    lpnValue = (RundownProt_Acquire(_lpnValue) != FALSE) ? _lpnValue : NULL;
+    return (lpnValue != NULL) ? TRUE : FALSE;
+    };
+
+  VOID Release()
+    {
+    if (lpnValue != NULL)
+    {
+      LONG volatile *lpnValueOrig = lpnValue;
+
+      lpnValue = NULL;
+      RundownProt_Release(lpnValueOrig);
+    }
+    return;
     };
 
 private:

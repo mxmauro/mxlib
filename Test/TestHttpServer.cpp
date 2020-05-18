@@ -234,6 +234,8 @@ static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ L
   LPWSTR sW;
   HRESULT hRes;
 
+  if (*szPathW != L'/')
+    return E_INVALIDARG;
   szExtensionW = NULL;
   hRes = GetAppPath(cStrFullFileNameW);
   if (FAILED(hRes))

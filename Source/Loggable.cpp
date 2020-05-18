@@ -170,7 +170,7 @@ HRESULT CLoggable::WriteLogCommon(_In_ BOOL bAddError, _In_ HRESULT hResError, _
   }
   else
   {
-    lpszBufW = (LPWSTR)MX_MALLOC(4096);
+    lpszBufW = (LPWSTR)MX_MALLOC(4096 * sizeof(WCHAR));
     if (lpszBufW == NULL)
       return E_OUTOFMEMORY;
     nBufLen = 4096;
