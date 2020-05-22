@@ -1219,6 +1219,7 @@ on_request_error:
     int nSelectedProtocol = -1;
     TArrayList<int> aSupportedVersions;
     BOOL bRestart = FALSE;
+    BOOL bFireConnected = FALSE;
 
     if (cShutdownEv.Wait(0) == FALSE)
     {
@@ -1253,6 +1254,10 @@ on_request_error:
             cWebSocket.Release();
           hRes = ProcessWebSocket(lpRequest, cWebSocket, nSelectedProtocol, aSupportedVersions,
                                   sWebSocketRequestReceivedData, bFatal);
+          if (SUCCEEDED(hRes))
+          {
+            bFireConnected = TRUE;
+          }
         }
         if (FAILED(hRes))
         {
@@ -1274,7 +1279,10 @@ on_request_error:
     if (bRestart != FALSE)
       goto restart;
 
-    cWebSocket->FireConnectedAndInitialRead();
+    if (bFireConnected != FALSE && cWebSocket)
+    {
+      cWebSocket->FireConnectedAndInitialRead();
+    }
     return S_OK;
   }
 

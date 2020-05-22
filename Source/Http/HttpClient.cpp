@@ -1126,7 +1126,7 @@ VOID CHttpClient::Close(_In_opt_ BOOL bReuseConn)
   //clear timeouts
   MX::TimedEvent::Clear(&(sRedirectOrRetryAuth.nTimerId));
 
-  bLocked = LockThreadCall(FALSE);
+  bLocked = LockThreadCall(TRUE);
   cHeadersReceivedCallback = NullCallback();
   cDymanicRequestBodyStartCallback = NullCallback();
   cDocumentCompletedCallback = NullCallback();
