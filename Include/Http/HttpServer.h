@@ -57,6 +57,8 @@ public:
                             _In_ LPCSTR szStatusMessageA,
                             _In_z_ LPCSTR szAdditionalExplanationA)> OnCustomErrorPageCallback;
 
+  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest)> OnRequestDestroyedCallback;
+
   //--------
 
 public:
@@ -82,6 +84,7 @@ public:
   VOID SetRequestHeadersReceivedCallback(_In_ OnRequestHeadersReceivedCallback cRequestHeadersReceivedCallback);
   VOID SetRequestCompletedCallback(_In_ OnRequestCompletedCallback cRequestCompletedCallback);
   VOID SetWebSocketRequestReceivedCallback(_In_ OnWebSocketRequestReceivedCallback cWebSocketRequestReceivedCallback);
+  VOID SetRequestDestroyedCallback(_In_ OnRequestDestroyedCallback cRequestDestroyedCallback);
   VOID SetCustomErrorPageCallback(_In_ OnCustomErrorPageCallback cCustomErrorPageCallback);
 
   HRESULT StartListening(_In_ CSockets::eFamily nFamily, _In_ int nPort,
@@ -103,7 +106,7 @@ public:
   public:
     ~CClientRequest();
 
-    virtual VOID End(_In_opt_ HRESULT hrErrorCode = S_OK);
+    VOID End(_In_opt_ HRESULT hrErrorCode = S_OK);
 
     BOOL IsAlive() const;
 
@@ -197,6 +200,8 @@ public:
                           _In_opt_z_ LPCSTR szAdditionalExplanationA = NULL);
 
     HRESULT DisableClientCache();
+
+    VOID IgnoreKeepAlive();
 
     HANDLE GetUnderlyingSocketHandle() const;
     CSockets* GetUnderlyingSocketManager() const;
@@ -409,6 +414,7 @@ private:
   OnRequestHeadersReceivedCallback cRequestHeadersReceivedCallback;
   OnRequestCompletedCallback cRequestCompletedCallback;
   OnWebSocketRequestReceivedCallback cWebSocketRequestReceivedCallback;
+  OnRequestDestroyedCallback cRequestDestroyedCallback;
   OnCustomErrorPageCallback cCustomErrorPageCallback;
   RWLOCK sRequestsListRwMutex;
   CLnkLst cRequestsList;

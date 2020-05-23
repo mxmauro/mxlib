@@ -920,6 +920,12 @@ HRESULT CHttpServer::CClientRequest::DisableClientCache()
   return hRes;
 }
 
+VOID CHttpServer::CClientRequest::IgnoreKeepAlive()
+{
+  _InterlockedOr(&nFlags, REQUEST_FLAG_DontKeepAlive);
+  return;
+}
+
 HANDLE CHttpServer::CClientRequest::GetUnderlyingSocketHandle() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));

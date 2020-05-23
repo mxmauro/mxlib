@@ -143,6 +143,7 @@ CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr,
   cRequestHeadersReceivedCallback = NullCallback();
   cRequestCompletedCallback = NullCallback();
   cWebSocketRequestReceivedCallback = NullCallback();
+  cRequestDestroyedCallback = NullCallback();
   cCustomErrorPageCallback = NullCallback();
   SlimRWL_Initialize(&sRequestsListRwMutex);
   _InterlockedExchange(&nDownloadNameGeneratorCounter, 0);
@@ -466,6 +467,12 @@ VOID CHttpServer::SetWebSocketRequestReceivedCallback(_In_ OnWebSocketRequestRec
                                                       _cWebSocketRequestReceivedCallback)
 {
   cWebSocketRequestReceivedCallback = _cWebSocketRequestReceivedCallback;
+  return;
+}
+
+VOID CHttpServer::SetRequestDestroyedCallback(_In_ OnRequestDestroyedCallback _cRequestDestroyedCallback)
+{
+  cRequestDestroyedCallback = _cRequestDestroyedCallback;
   return;
 }
 
@@ -946,6 +953,12 @@ VOID CHttpServer::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
       {
         lpRequest->cListNode.Remove();
       }
+    }
+
+
+    if (cRequestDestroyedCallback)
+    {
+      cRequestDestroyedCallback(this, lpRequest);
     }
 
     lpRequest->Release();
