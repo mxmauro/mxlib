@@ -54,6 +54,12 @@ public:
                             _In_ TArrayList<int> &aSupportedVersions,
                             _Out_ _Maybenull_ CWebSocket **lplpWebSocket)> OnWebSocketRequestReceivedCallback;
 
+  typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _Inout_ CSecureStringA &cStrBodyA, _In_ LONG nStatusCode,
+                            _In_ LPCSTR szStatusMessageA,
+                            _In_z_ LPCSTR szAdditionalExplanationA)> OnCustomErrorPageCallback;
+
+  typedef Callback<VOID (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest)> OnRequestDestroyedCallback;
+
   //--------
 
 public:
@@ -65,6 +71,8 @@ public:
   VOID SetRequestCompletedCallback(_In_ OnRequestCompletedCallback cRequestCompletedCallback);
   VOID SetRequireJsModuleCallback(_In_ OnRequireJsModuleCallback cRequireJsModuleCallback);
   VOID SetWebSocketRequestReceivedCallback(_In_ OnWebSocketRequestReceivedCallback cWebSocketRequestReceivedCallback);
+  VOID SetRequestDestroyedCallback(_In_ OnRequestDestroyedCallback cRequestDestroyedCallback);
+  VOID SetCustomErrorPageCallback(_In_ OnCustomErrorPageCallback cCustomErrorPageCallback);
 
   static CClientRequest* GetServerRequestFromContext(_In_ DukTape::duk_context *lpCtx);
 
@@ -75,6 +83,8 @@ public:
   VOID SetRequestCompletedCallback(_In_ CHttpServer::OnRequestCompletedCallback cRequestCompletedCallback) = delete;
   VOID SetWebSocketRequestReceivedCallback(_In_ CHttpServer::OnWebSocketRequestReceivedCallback
                                            cWebSocketRequestReceivedCallback) = delete;
+  VOID SetRequestDestroyedCallback(_In_ CHttpServer::OnRequestDestroyedCallback cRequestDestroyedCallback) = delete;
+  VOID SetCustomErrorPageCallback(_In_ CHttpServer::OnCustomErrorPageCallback cCustomErrorPageCallback) = delete;
 
 protected:
   virtual HRESULT OnNewRequestObject(_In_ CHttpServer *lpHttp, _Out_ CHttpServer::CClientRequest **lplpRequest);
@@ -161,6 +171,9 @@ private:
                                      _In_ int nVersion, _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount,
                                      _Out_ int &nSelectedProtocol, _In_ TArrayList<int> &aSupportedVersions,
                                      _Out_ _Maybenull_ CWebSocket **lplpWebSocket);
+  HRESULT OnCustomErrorPage(_In_ CHttpServer *lpHttp, _Inout_ CSecureStringA &cStrBodyA, _In_ LONG nStatusCode,
+                            _In_ LPCSTR szStatusMessageA, _In_z_ LPCSTR szAdditionalExplanationA);
+  VOID OnRequestDestroyed(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest);
 
 private:
   OnNewRequestObjectCallback cNewRequestObjectCallback;
@@ -168,6 +181,8 @@ private:
   OnRequestCompletedCallback cRequestCompletedCallback;
   OnRequireJsModuleCallback cRequireJsModuleCallback;
   OnWebSocketRequestReceivedCallback cWebSocketRequestReceivedCallback;
+  OnRequestDestroyedCallback cRequestDestroyedCallback;
+  OnCustomErrorPageCallback cCustomErrorPageCallback;
 
   TAutoRefCounted<CJvmManager> cJvmManager;
 };

@@ -1598,10 +1598,12 @@ HRESULT CHttpServer::FillResponseWithError(_In_ CClientRequest *lpRequest, _In_ 
       case E_ACCESSDENIED:
         nStatusCode = 403; //forbidden
         break;
+
       case MX_E_BadLength:
       case HRESULT_FROM_WIN32(ERROR_FILE_TOO_LARGE):
         nStatusCode = 413; //entity too large
         break;
+
       case E_INVALIDARG:
       case MX_E_InvalidData:
         nStatusCode = 400; //bad request

@@ -930,16 +930,14 @@ HANDLE CHttpServer::CClientRequest::GetUnderlyingSocketHandle() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
-  return (nState == StateAfterHeaders || nState == StateBuildingResponse || nState == StateSendingResponse ||
-          nState == StateNegotiatingWebSocket) ? hConn : NULL;
+  return hConn;
 }
 
 CSockets* CHttpServer::CClientRequest::GetUnderlyingSocketManager() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
-  return (nState == StateAfterHeaders || nState == StateBuildingResponse || nState == StateSendingResponse ||
-          nState == StateNegotiatingWebSocket) ? const_cast<CSockets*>(lpSocketMgr) : NULL;
+  return lpSocketMgr;
 }
 
 HRESULT CHttpServer::CClientRequest::Initialize(_In_ CHttpServer *_lpHttpServer, _In_ CSockets *_lpSocketMgr,

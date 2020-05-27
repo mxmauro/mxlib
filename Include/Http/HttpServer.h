@@ -53,11 +53,11 @@ public:
                             _In_ TArrayList<int> &aSupportedVersions,
                             _Out_ _Maybenull_ CWebSocket **lplpWebSocket)> OnWebSocketRequestReceivedCallback;
 
+  typedef Callback<VOID(_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest)> OnRequestDestroyedCallback;
+
   typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _Inout_ CSecureStringA &cStrBodyA, _In_ LONG nStatusCode,
                             _In_ LPCSTR szStatusMessageA,
                             _In_z_ LPCSTR szAdditionalExplanationA)> OnCustomErrorPageCallback;
-
-  typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest)> OnRequestDestroyedCallback;
 
   //--------
 

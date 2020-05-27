@@ -31,6 +31,8 @@ CJsHttpServer::CJsHttpServer(_In_ CSockets &cSocketMgr,
   cRequestCompletedCallback = NullCallback();
   cRequireJsModuleCallback = NullCallback();
   cWebSocketRequestReceivedCallback = NullCallback();
+  cRequestDestroyedCallback = NullCallback();
+  cCustomErrorPageCallback = NullCallback();
   //----
   cJvmManager.Attach(MX_DEBUG_NEW CJvmManager());
   //----
@@ -40,6 +42,8 @@ CJsHttpServer::CJsHttpServer(_In_ CSockets &cSocketMgr,
   CHttpServer::SetRequestCompletedCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequestCompleted, this));
   CHttpServer::SetWebSocketRequestReceivedCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnWebSocketRequestReceived,
                                                                            this));
+  CHttpServer::SetRequestDestroyedCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequestDestroyed, this));
+  CHttpServer::SetCustomErrorPageCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnCustomErrorPage, this));
   return;
 }
 
@@ -78,6 +82,18 @@ VOID CJsHttpServer::SetWebSocketRequestReceivedCallback(_In_ OnWebSocketRequestR
                                                         _cWebSocketRequestReceivedCallback)
 {
   cWebSocketRequestReceivedCallback = _cWebSocketRequestReceivedCallback;
+  return;
+}
+
+VOID CJsHttpServer::SetRequestDestroyedCallback(_In_ OnRequestDestroyedCallback _cRequestDestroyedCallback)
+{
+  cRequestDestroyedCallback = _cRequestDestroyedCallback;
+  return;
+}
+
+VOID CJsHttpServer::SetCustomErrorPageCallback(_In_ OnCustomErrorPageCallback _cCustomErrorPageCallback)
+{
+  cCustomErrorPageCallback = _cCustomErrorPageCallback;
   return;
 }
 
@@ -167,6 +183,28 @@ HRESULT CJsHttpServer::OnWebSocketRequestReceived(_In_ CHttpServer *lpHttp, _In_
                                              nSelectedProtocol, aSupportedVersions, lplpWebSocket);
   }
   return MX_E_Unsupported;
+}
+
+HRESULT CJsHttpServer::OnCustomErrorPage(_In_ CHttpServer *lpHttp, _Inout_ CSecureStringA &cStrBodyA,
+                                         _In_ LONG nStatusCode, _In_ LPCSTR szStatusMessageA,
+                                         _In_z_ LPCSTR szAdditionalExplanationA)
+{
+  if (cCustomErrorPageCallback)
+  {
+    return cCustomErrorPageCallback(this, cStrBodyA, nStatusCode, szStatusMessageA, szAdditionalExplanationA);
+  }
+  return S_OK;
+}
+
+VOID CJsHttpServer::OnRequestDestroyed(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *_lpRequest)
+{
+  if (cRequestDestroyedCallback)
+  {
+    CClientRequest *lpRequest = static_cast<CClientRequest*>(_lpRequest);
+
+    cRequestDestroyedCallback(this, lpRequest);
+  }
+  return;
 }
 
 } //namespace MX
