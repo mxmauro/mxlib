@@ -163,6 +163,8 @@ protected:
 class CSecureStringA : public CStringA
 {
 public:
+  ~CSecureStringA();
+
   VOID Empty();
 
   BOOL Concat(_In_ LONGLONG nSrc);
@@ -264,6 +266,8 @@ protected:
 class CSecureStringW : public CStringW
 {
 public:
+  ~CSecureStringW();
+
   VOID Empty();
 
   BOOL Concat(_In_ LONGLONG nSrc);

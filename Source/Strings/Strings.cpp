@@ -533,7 +533,7 @@ CStringA::CStringA() : CBaseMemObj(), CNonCopyableObj()
 
 CStringA::~CStringA()
 {
-  Empty();
+  MX_FREE(szStrA);
   return;
 }
 
@@ -1016,10 +1016,17 @@ LPWSTR CStringA::Ansi2Wide(_In_z_ LPCSTR szStrA, _In_ SIZE_T nSrcLen)
 
 //--------
 
+CSecureStringA::~CSecureStringA()
+{
+  if (szStrA != NULL && nSize > 0)
+    ::MxMemSet(szStrA, 0, nSize);
+  return;
+}
+
 VOID CSecureStringA::Empty()
 {
   if (szStrA != NULL && nSize > 0)
-    ::MxMemSet(szStrA, '*', nSize);
+    ::MxMemSet(szStrA, 0, nSize);
   CStringA::Empty();
   return;
 }
@@ -1100,7 +1107,7 @@ CStringW::CStringW() : CBaseMemObj(), CNonCopyableObj()
 
 CStringW::~CStringW()
 {
-  Empty();
+  MX_FREE(szStrW);
   return;
 }
 
@@ -1577,10 +1584,17 @@ LPSTR CStringW::Wide2Ansi(_In_z_ LPCWSTR szStrW, _In_ SIZE_T nSrcLen)
 
 //--------
 
+CSecureStringW::~CSecureStringW()
+{
+  if (szStrW != NULL && nSize > 0)
+    ::MxMemSet(szStrW, 0, nSize * 2);
+  return;
+}
+
 VOID CSecureStringW::Empty()
 {
   if (szStrW != NULL && nSize > 0)
-    ::MxMemSet(szStrW, '*', nSize * 2);
+    ::MxMemSet(szStrW, 0, nSize * 2);
   CStringW::Empty();
   return;
 }
