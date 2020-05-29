@@ -23,6 +23,7 @@
 #include "TestHttpClient.h"
 #include "TestJavascript.h"
 #include "TestJsHttpServer.h"
+#include "TestRedBlackTree.h"
 #include "Comm\SslCertificates.h"
 #include "Comm\HostResolver.h"
 
@@ -91,6 +92,10 @@ int wmain(_In_ int argc, _In_ WCHAR* argv[])
   {
     nTest = 4;
   }
+  else if (_wcsicmp(argv[1], L"RedBlackTree") == 0)
+  {
+    nTest = 5;
+  }
   else
   {
     wprintf_s(L"Error: An unknown test name has been specified (%s).\n", argv[1]);
@@ -121,6 +126,9 @@ int wmain(_In_ int argc, _In_ WCHAR* argv[])
 
     case 4:
       return TestJsHttpServer();
+
+    case 5:
+      return TestRedBlackTree();
   }
   return 0;
 }

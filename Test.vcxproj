@@ -225,6 +225,7 @@
     <ClInclude Include="Test\TestHttpServer.h" />
     <ClInclude Include="Test\TestJavascript.h" />
     <ClInclude Include="Test\TestJsHttpServer.h" />
+    <ClInclude Include="Test\TestRedBlackTree.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Test\Console.cpp" />
@@ -234,6 +235,7 @@
     <ClCompile Include="Test\TestHttpServer.cpp" />
     <ClCompile Include="Test\TestJavascript.cpp" />
     <ClCompile Include="Test\TestJsHttpServer.cpp" />
+    <ClCompile Include="Test\TestRedBlackTree.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Test\Data\Web\bottom.jss" />
