@@ -145,15 +145,7 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
                                        CJavascriptVM::PropertyFlagEnumerable | CJavascriptVM::PropertyFlagConfigurable);
   __EXIT_ON_ERROR(hRes);
   lpUrl = lpRequest->GetUrl();
-  if (lpUrl->GetSchemeCode() == CUrl::SchemeNone)
-    return E_UNEXPECTED;
 
-  //scheme
-  hRes = Utf8_Encode(cStrTempA, lpUrl->GetScheme());
-  __EXIT_ON_ERROR(hRes);
-  hRes = cJVM->AddObjectStringProperty("request", "scheme", (LPCSTR)cStrTempA,
-                                       CJavascriptVM::PropertyFlagEnumerable | CJavascriptVM::PropertyFlagConfigurable);
-  __EXIT_ON_ERROR(hRes);
   //host
   hRes = Utf8_Encode(cStrTempA, lpUrl->GetHost());
   __EXIT_ON_ERROR(hRes);
