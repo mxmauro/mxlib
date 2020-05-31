@@ -64,7 +64,7 @@ int TestRedBlackTree()
   {
     nCount = nPass * 10000;
 
-    wprintf_s(L"Running RB-Tree test with duplicates (%lu elements)... ", nCount);
+    wprintf_s(L"Running RB-Tree test with duplicates (%Iu elements)... ", nCount);
 
     lpNodes = MX_DEBUG_NEW CNode[nCount];
     if (lpNodes == NULL)
@@ -105,7 +105,7 @@ err_nomem:
 
     //----
 
-    wprintf_s(L"Running RB-Tree test with no duplicates (%lu elements)... ", nCount);
+    wprintf_s(L"Running RB-Tree test with no duplicates (%Iu elements)... ", nCount);
 
     lpNodes = MX_DEBUG_NEW CNode[nCount];
     if (lpNodes == NULL)
