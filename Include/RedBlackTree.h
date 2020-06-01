@@ -87,19 +87,16 @@ public:
 
   _inline CRedBlackTreeNode* GetLeft()
     {
-    MX_ASSERT(this != NULL);
     return (this) ? lpLeft : NULL;
     };
 
   _inline CRedBlackTreeNode* GetRight()
     {
-    MX_ASSERT(this != NULL);
     return (this) ? lpRight : NULL;
     };
 
   _inline CRedBlackTreeNode* GetParent()
     {
-    MX_ASSERT(this != NULL);
     return (this) ? lpParent : NULL;
     };
 
@@ -108,18 +105,16 @@ public:
     return lpTree;
     };
 
-  _inline VOID Remove();
-
-private:
   _inline BOOL IsRed()
     {
-    MX_ASSERT(this != NULL);
     return (this) ? bRed : FALSE;
     };
 
+  _inline VOID Remove();
+
+private:
   _inline VOID SetBlack()
     {
-    MX_ASSERT(this != NULL);
     if (this)
       bRed = FALSE;
     return;
@@ -127,7 +122,6 @@ private:
 
   _inline VOID SetRed()
     {
-    MX_ASSERT(this != NULL);
     if (this)
       bRed = TRUE;
     return;
@@ -353,7 +347,7 @@ public:
   BOOL Insert(_In_ CRedBlackTreeNode *lpNewNode, _In_ _Comparator lpCompareFunc, _In_opt_ BOOL bAllowDuplicates = FALSE,
               _Out_opt_ CRedBlackTreeNode **lplpMatchingNode = NULL, _In_opt_ LPVOID lpContext = NULL)
     {
-    CRedBlackTreeNode *lpNode, *lpParent;
+    CRedBlackTreeNode *lpNode, *lpParent, *lpUncle;
     int comp;
 
     MX_ASSERT(lpNewNode != NULL);
@@ -421,52 +415,50 @@ public:
     //Note that because we use a sentinel for the root node we never
     //need to worry about replacing the root.
     lpNode = lpNewNode;
-    while (lpNode->lpParent != NULL && lpNode->lpParent->bRed != FALSE)
+    while (lpNode != NULL && lpNode != lpRoot && lpNode->lpParent->bRed != FALSE)
     {
-      CRedBlackTreeNode *lpUncle;
-
-      if (lpNode->lpParent == lpNode->lpParent->lpParent->lpLeft)
+      if (lpNode->GetParent() == lpNode->GetParent()->GetParent()->GetLeft())
       {
-        lpUncle = lpNode->lpParent->lpParent->lpRight;
-        if (lpUncle != NULL && lpUncle->bRed != FALSE)
+        lpUncle = lpNode->GetParent()->GetParent()->GetRight();
+        if (lpUncle->IsRed() != FALSE)
         {
-          lpNode->lpParent->bRed = FALSE;
-          lpUncle->bRed = FALSE;
-          lpNode->lpParent->lpParent->bRed = TRUE;
-          lpNode = lpNode->lpParent->lpParent;
+          lpNode->GetParent()->SetBlack();
+          lpUncle->SetBlack();
+          lpNode->GetParent()->GetParent()->SetRed();
+          lpNode = lpNode->GetParent()->GetParent();
         }
         else
         {
-          if (lpNode == lpNode->lpParent->lpRight)
+          if (lpNode == lpNode->GetParent()->GetRight())
           {
-            lpNode = lpNode->lpParent;
+            lpNode = lpNode->GetParent();
             LeftRotate(lpNode);
           }
-          lpNode->lpParent->bRed = FALSE;
-          lpNode->lpParent->lpParent->bRed = TRUE;
-          RightRotate(lpNode->lpParent->lpParent);
+          lpNode->GetParent()->SetBlack();
+          lpNode->GetParent()->GetParent()->SetRed();
+          RightRotate(lpNode->GetParent()->GetParent());
         }
       }
       else
       {
-        lpUncle = lpNode->lpParent->lpParent->lpLeft;
-        if (lpUncle != NULL && lpUncle->bRed != FALSE)
+        lpUncle = lpNode->GetParent()->GetParent()->GetLeft();
+        if (lpUncle->IsRed() != FALSE)
         {
-          lpNode->lpParent->bRed = FALSE;
-          lpUncle->bRed = FALSE;
-          lpNode->lpParent->lpParent->bRed = TRUE;
-          lpNode = lpNode->lpParent->lpParent;
+          lpNode->GetParent()->SetBlack();
+          lpUncle->SetBlack();
+          lpNode->GetParent()->GetParent()->SetRed();
+          lpNode = lpNode->GetParent()->GetParent();
         }
         else
         {
-          if (lpNode == lpNode->lpParent->lpLeft)
+          if (lpNode == lpNode->GetParent()->GetLeft())
           {
-            lpNode = lpNode->lpParent;
+            lpNode = lpNode->GetParent();
             RightRotate(lpNode);
           }
-          lpNode->lpParent->bRed = FALSE;
-          lpNode->lpParent->lpParent->bRed = TRUE;
-          LeftRotate(lpNode->lpParent->lpParent);
+          lpNode->GetParent()->SetBlack();
+          lpNode->GetParent()->GetParent()->SetRed();
+          LeftRotate(lpNode->GetParent()->GetParent());
         }
       }
     }
@@ -480,216 +472,176 @@ public:
 
   VOID Remove(_In_ CRedBlackTreeNode *lpDelNode)
     {
-    CRedBlackTreeNode *lpNode, *lpParentNode;
+    CRedBlackTreeNode *n;
 
     MX_ASSERT(lpDelNode != NULL);
     MX_ASSERT(lpDelNode->lpTree == this);
     MX_ASSERT(lpDelNode == lpRoot || lpDelNode->lpLeft != NULL || lpDelNode->lpRight != NULL ||
               lpDelNode->lpParent != NULL);
 
-    lpNode = lpDelNode;
     if (lpDelNode->lpLeft != NULL && lpDelNode->lpRight != NULL)
     {
-      //swap node to delete with successor
-      CRedBlackTreeNode *lpSucc, *lpSuccRight, *lpSuccParent;
-      BOOL bSuccIsRed;
+      CRedBlackTreeNode *lpSucc;
+      BOOL bIsRed;
+
+      //get the successor
+      lpSucc = lpDelNode->lpRight;
+      while (lpSucc->lpLeft != NULL)
+        lpSucc = lpSucc->lpLeft;
+
+      //swap colors
+      bIsRed = lpSucc->bRed;
+      lpSucc->bRed = lpDelNode->bRed;
+      lpDelNode->bRed = bIsRed;
+
+      //swap left child (we know the successor has no left node)
+      lpSucc->lpLeft = lpDelNode->lpLeft;
+      lpDelNode->lpLeft = NULL;
+
+      //relocate successor left child's parent to correct node
+      if (lpSucc->lpLeft != NULL)
+      {
+        MX_ASSERT(lpSucc->lpLeft->lpParent == lpDelNode);
+        lpSucc->lpLeft->lpParent = lpSucc;
+      }
+
+      //the parent of del-node must now point to successor
+      if (lpDelNode->lpParent != NULL)
+      {
+        if (lpDelNode->lpParent->lpLeft == lpDelNode)
+        {
+          lpDelNode->lpParent->lpLeft = lpSucc;
+        }
+        else
+        {
+          MX_ASSERT(lpDelNode->lpParent->lpRight == lpDelNode);
+          lpDelNode->lpParent->lpRight = lpSucc;
+        }
+      }
+      else
+      {
+        //else the new root is successor
+        MX_ASSERT(lpDelNode == lpRoot);
+        lpRoot = lpSucc;
+      }
+
+      //if the successor is the direct child of del-node...
+      if (lpSucc == lpDelNode->lpRight)
+      {
+        //swap right child
+        lpDelNode->lpRight = lpSucc->lpRight;
+        lpSucc->lpRight = lpDelNode;
+
+        //swap parents
+        lpSucc->lpParent = lpDelNode->lpParent;
+        lpDelNode->lpParent = lpSucc;
+
+        //relocate successor right child's parent to correct node
+        if (lpDelNode->lpRight != NULL)
+        {
+          MX_ASSERT(lpDelNode->lpRight->lpParent == lpSucc);
+          lpDelNode->lpRight->lpParent = lpDelNode;
+        }
+      }
+      else
+      {
+        CRedBlackTreeNode *lpTemp;
+
+        //swap right child
+        lpTemp = lpSucc->lpRight;
+        lpSucc->lpRight = lpDelNode->lpRight;
+        lpDelNode->lpRight = lpTemp;
+
+        //swap parents
+        lpTemp = lpSucc->lpParent;
+        lpSucc->lpParent = lpDelNode->lpParent;
+        lpDelNode->lpParent = lpTemp;
+
+        //relocate del-node & successor right child's parent to correct nodes
+        if (lpDelNode->lpRight != NULL)
+        {
+          MX_ASSERT(lpDelNode->lpRight->lpParent == lpSucc);
+          lpDelNode->lpRight->lpParent = lpDelNode;
+        }
+        if (lpSucc->lpRight != NULL)
+        {
+          MX_ASSERT(lpSucc->lpRight->lpParent == lpDelNode);
+          lpSucc->lpRight->lpParent = lpSucc;
+        }
+
+        //relocate del-node parent childs to correct nodes
+        if (lpDelNode->lpParent != NULL)
+        {
+          if (lpDelNode->lpParent->lpLeft == lpSucc)
+          {
+            lpDelNode->lpParent->lpLeft = lpDelNode;
+          }
+          else
+          {
+            MX_ASSERT(lpDelNode->lpParent->lpRight == lpSucc);
+            lpDelNode->lpParent->lpRight = lpDelNode;
+          }
+        }
+      }
+
+#ifdef _DEBUG
+      CheckTree();
+#endif //_DEBUG
+    }
+
+    //remove the node
+    MX_ASSERT(lpDelNode->lpRight == NULL || lpDelNode->lpLeft == NULL);
+    n = (lpDelNode->lpLeft == NULL) ? lpDelNode->lpRight : lpDelNode->lpLeft;
+    if (n != NULL)
+    {
+      n->lpParent = lpDelNode->lpParent;
+      if (lpDelNode->lpParent == NULL)
+        lpRoot = n;
+      else if (lpDelNode == lpDelNode->lpParent->lpLeft)
+        lpDelNode->lpParent->lpLeft = n;
+      else
+        lpDelNode->lpParent->lpRight = n;
+
+      lpDelNode->lpLeft = lpDelNode->lpRight = (CRedBlackTreeNode*)1;
+      lpDelNode->lpParent = (CRedBlackTreeNode*)1;
+
+      if (lpDelNode->bRed == FALSE)
+      {
+        DeleteFixup(n);
+      }
+
+#ifdef _DEBUG
+      CheckTree();
+#endif //_DEBUG
+    }
+    else if (lpDelNode->lpParent == NULL)
+    {
+      MX_ASSERT(nCount == 1);
+      lpRoot = NULL; //we are the only node
+    }
+    else
+    {
+      if (lpDelNode->bRed == FALSE)
+      {
+        DeleteFixup(lpDelNode);
+      }
 
 #ifdef _DEBUG
       CheckTree();
 #endif //_DEBUG
 
-      lpSucc = lpDelNode->lpRight;
-      if (lpSucc->lpLeft != NULL)
+      if (lpDelNode->lpParent != NULL)
       {
-        while (lpSucc->lpLeft != NULL)
-          lpSucc = lpSucc->lpLeft;
-
-        //swap "lpSucc" and "lpDelNode"
-        lpSuccRight = lpSucc->lpRight;
-        lpSuccParent = lpSucc->lpParent;
-        bSuccIsRed = lpSucc->bRed;
-
-        lpSucc->lpLeft = lpDelNode->lpLeft;
-        lpSucc->lpRight = lpDelNode->lpRight;
-        lpSucc->lpParent = lpDelNode->lpParent;
-        lpSucc->bRed = lpDelNode->bRed;
-
-        //put "lpSucc" in the place of "lpDelNode" and update neighbors
-        if (lpSucc->lpLeft != NULL)
-          lpSucc->lpLeft->lpParent = lpSucc;
-        if (lpSucc->lpRight != NULL)
-          lpSucc->lpRight->lpParent = lpSucc;
-        if (lpSucc->lpParent == NULL)
-          lpRoot = lpSucc;
-        else if (lpSucc->lpParent->lpLeft == lpDelNode)
-          lpSucc->lpParent->lpLeft = lpSucc;
-        else
-          lpSucc->lpParent->lpRight = lpSucc;
-
-        //now put "lpDelNode" in the place of "lpSucc"
-        lpDelNode->lpParent = lpSuccParent;
-        lpDelNode->lpLeft = NULL;
-        lpDelNode->lpRight = lpSuccRight;
-        lpDelNode->bRed = bSuccIsRed;
-
-        //and update neighbors
-        if (lpDelNode->lpParent->lpLeft == lpSucc)
-          lpDelNode->lpParent->lpLeft = lpDelNode;
-        else
-          lpDelNode->lpParent->lpRight = lpDelNode;
-        if (lpDelNode->lpRight != NULL)
-          lpDelNode->lpRight->lpParent = lpDelNode;
+        if (lpDelNode->lpParent->lpLeft == lpDelNode)
+          lpDelNode->lpParent->lpLeft = NULL;
+        else if (lpDelNode->lpParent->lpRight == lpDelNode)
+          lpDelNode->lpParent->lpRight = NULL;
+      }
 
 #ifdef _DEBUG
-        CheckTree();
+      CheckTree();
 #endif //_DEBUG
-      }
-      else
-      {
-        //swap adyacent nodes
-        lpSucc->lpParent = lpDelNode->lpParent;
-        lpDelNode->lpParent = lpSucc;
-        if (lpSucc->lpParent == NULL)
-          lpRoot = lpSucc;
-        else if (lpSucc->lpParent->lpLeft == lpDelNode)
-          lpSucc->lpParent->lpLeft = lpSucc;
-        else
-          lpSucc->lpParent->lpRight = lpSucc;
-
-        lpDelNode->lpRight = lpSucc->lpRight;
-        if (lpSucc->lpRight != NULL)
-          lpSucc->lpRight->lpParent = lpDelNode;
-        lpSucc->lpRight = lpDelNode;
-
-        lpSucc->lpLeft = lpDelNode->lpLeft;
-        if (lpSucc->lpLeft != NULL)
-          lpSucc->lpLeft->lpParent = lpSucc;
-        lpDelNode->lpLeft = NULL;
-
-        bSuccIsRed = lpSucc->bRed;
-        lpSucc->bRed = lpDelNode->bRed;
-        lpDelNode->bRed = bSuccIsRed;
-
-#ifdef _DEBUG
-        CheckTree();
-#endif //_DEBUG
-      }
     }
-
-    lpNode = (lpDelNode->lpLeft != NULL) ? lpDelNode->lpLeft : lpDelNode->lpRight;
-    lpParentNode = lpDelNode->lpParent;
-
-    if (lpNode != NULL)
-    {
-      lpNode->lpParent = lpParentNode;
-    }
-    if (lpParentNode == NULL)
-    {
-      lpRoot = lpNode;
-    }
-    else if (lpDelNode == lpDelNode->lpParent->lpLeft)
-    {
-      lpDelNode->lpParent->lpLeft = lpNode;
-    }
-    else
-    {
-      lpDelNode->lpParent->lpRight = lpNode;
-    }
-
-    if (lpDelNode->bRed == FALSE)
-    {
-      CRedBlackTreeNode *w;
-
-      while (lpNode != lpRoot && IsRed(lpNode) == FALSE)
-      {
-        if (lpNode != NULL)
-        {
-          lpParentNode = lpNode->lpParent;
-        }
-        if (lpNode == lpParentNode->lpLeft)
-        {
-          w = lpParentNode->lpRight;
-          if (w->bRed != FALSE)
-          {
-            w->bRed = FALSE;
-            lpParentNode->bRed = TRUE;
-            LeftRotate(lpParentNode);
-            w = lpParentNode->lpRight;
-          }
-          if (IsRed(w->lpLeft) == FALSE && IsRed(w->lpRight) == FALSE)
-          {
-            w->bRed = TRUE;
-            lpNode = lpParentNode;
-          }
-          else
-          {
-            if (IsRed(w->lpRight) == FALSE)
-            {
-              if (w->lpLeft != NULL)
-              {
-                w->lpLeft->bRed = FALSE;
-              }
-              w->bRed = TRUE;
-              RightRotate(w);
-              w = lpParentNode->lpRight;
-            }
-            w->bRed = lpParentNode->bRed;
-              lpParentNode->bRed = FALSE;
-            if (w->lpRight != NULL)
-            {
-              w->lpRight->bRed = FALSE;
-            }
-            LeftRotate(lpParentNode);
-            lpNode = lpRoot;
-          }
-        }
-        else
-        {
-          w = lpParentNode->lpLeft;
-          if (w->bRed != FALSE)
-          {
-            w->bRed = FALSE;
-            lpParentNode->bRed = TRUE;
-            RightRotate(lpParentNode);
-            w = lpParentNode->lpLeft;
-          }
-          if (IsRed(w->lpLeft) == FALSE && IsRed(w->lpRight) == FALSE)
-          {
-            w->bRed = TRUE;
-            lpNode = lpParentNode;
-          }
-          else
-          {
-            if (IsRed(w->lpLeft) == FALSE)
-            {
-              if (w->lpRight != NULL)
-              {
-                w->lpRight->bRed = FALSE;
-              }
-              w->bRed = TRUE;
-              LeftRotate(w);
-              w = lpParentNode->lpLeft;
-            }
-            w->bRed = lpParentNode->bRed;
-            lpParentNode->bRed = FALSE;
-            if (w->lpLeft != NULL)
-            {
-              w->lpLeft->bRed = FALSE;
-            }
-            RightRotate(lpParentNode);
-            lpNode = lpRoot;
-          }
-        }
-      }
-      if (lpNode != NULL)
-      {
-        lpNode->bRed = FALSE;
-      }
-    }
-
-#ifdef _DEBUG
-    CheckTree();
-#endif //_DEBUG
 
     lpDelNode->lpTree = NULL;
     lpDelNode->lpLeft = lpDelNode->lpRight = NULL;
@@ -720,13 +672,13 @@ public:
       MX_ASSERT(lpRoot->bRed == FALSE);
       MX_ASSERT(lpRoot->lpParent == FALSE);
       CheckColors(lpRoot);
-      CheckBlackCount(lpRoot, 0, &nBlackPathCounter);
+      //CheckBlackCount(lpRoot, 0, &nBlackPathCounter);
     }
     return;
     };
 
   VOID CheckColors(_In_opt_ CRedBlackTreeNode *lpNode)
-  {
+    {
     if (lpNode != NULL)
     {
       if (lpNode->bRed != FALSE)
@@ -773,53 +725,134 @@ private:
 
   VOID LeftRotate(_In_ CRedBlackTreeNode *lpNode)
     {
-    CRedBlackTreeNode *lpRight;
+    if (lpNode != NULL)
+    {
+      CRedBlackTreeNode *lpRight;
 
-    lpRight = lpNode->lpRight;
-    lpNode->lpRight = lpRight->lpLeft;
-    if (lpRight->lpLeft != NULL)
-      lpRight->lpLeft->lpParent = lpNode;
-
-    lpRight->lpParent = lpNode->lpParent;
-
-    if (lpNode->lpParent == NULL)
-      lpRoot = lpRight;
-    else if (lpNode == lpNode->lpParent->lpLeft)
-      lpNode->lpParent->lpLeft = lpRight;
-    else
-      lpNode->lpParent->lpRight = lpRight;
-
-    lpRight->lpLeft = lpNode;
-    lpNode->lpParent = lpRight;
+      lpRight = lpNode->lpRight;
+      lpNode->lpRight = lpRight->lpLeft;
+      if (lpRight->lpLeft != NULL)
+        lpRight->lpLeft->lpParent = lpNode;
+      lpRight->lpParent = lpNode->lpParent;
+      //instead of checking if left->lpParent is the root as in the book, we
+      //count on the root sentinel to implicitly take care of this case
+      if (lpNode->lpParent == NULL)
+        lpRoot = lpRight;
+      else if (lpNode == lpNode->lpParent->lpLeft)
+        lpNode->lpParent->lpLeft = lpRight;
+      else
+        lpNode->lpParent->lpRight = lpRight;
+      lpRight->lpLeft = lpNode;
+      lpNode->lpParent = lpRight;
+    }
     return;
     };
 
   VOID RightRotate(_In_ CRedBlackTreeNode *lpNode)
     {
-    CRedBlackTreeNode *lpLeft;
+    if (lpNode != NULL)
+    {
+      CRedBlackTreeNode *lpLeft;
 
-    lpLeft = lpNode->lpLeft;
-    lpNode->lpLeft = lpLeft->lpRight;
-    if (lpLeft->lpRight != NULL)
-      lpLeft->lpRight->lpParent = lpNode;
-
-    lpLeft->lpParent = lpNode->lpParent;
-
-    if (lpNode->lpParent == NULL)
-      lpRoot = lpLeft;
-    else if (lpNode == lpNode->lpParent->lpRight)
-      lpNode->lpParent->lpRight = lpLeft;
-    else
-      lpNode->lpParent->lpLeft = lpLeft;
-
-    lpLeft->lpRight = lpNode;
-    lpNode->lpParent = lpLeft;
+      lpLeft = lpNode->lpLeft;
+      lpNode->lpLeft = lpLeft->lpRight;
+      if (lpLeft->lpRight != NULL)
+        lpLeft->lpRight->lpParent = lpNode;
+      //instead of checking if left->lpParent is the root as in the book, we
+      //count on the root sentinel to implicitly take care of this case
+      lpLeft->lpParent = lpNode->lpParent;
+      if (lpNode->lpParent == NULL)
+        lpRoot = lpLeft;
+      else if (lpNode == lpNode->lpParent->lpRight)
+        lpNode->lpParent->lpRight = lpLeft;
+      else
+        lpNode->lpParent->lpLeft = lpLeft;
+      lpLeft->lpRight = lpNode;
+      lpNode->lpParent = lpLeft;
+    }
     return;
     };
 
-  BOOL IsRed(_In_ CRedBlackTreeNode *lpNode)
+  VOID DeleteFixup(_In_ CRedBlackTreeNode *lpNode)
     {
-    return (lpNode != NULL) ? lpNode->bRed : FALSE;
+    CRedBlackTreeNode *lpSibling;
+
+    while (lpNode != lpRoot && lpNode->IsRed() == FALSE)
+    {
+      if (lpNode == lpNode->GetParent()->GetLeft())
+      {
+        lpSibling = lpNode->GetParent()->GetRight();
+        if (lpSibling->IsRed() != FALSE)
+        {
+          lpSibling->SetBlack();
+          lpNode->GetParent()->SetRed();
+          LeftRotate(lpNode->GetParent());
+          lpSibling = lpNode->GetParent()->GetRight();
+        }
+        if (lpSibling->GetRight()->IsRed() == FALSE && lpSibling->GetLeft()->IsRed() == FALSE)
+        {
+          lpSibling->SetRed();
+          lpNode = lpNode->GetParent();
+        }
+        else
+        {
+          if (lpSibling->GetRight()->IsRed() == FALSE)
+          {
+            lpSibling->GetLeft()->SetBlack();
+            lpSibling->SetRed();
+            RightRotate(lpSibling);
+            lpSibling = lpNode->GetParent()->GetRight();
+          }
+          if (lpNode->GetParent()->IsRed() != FALSE)
+            lpSibling->SetRed();
+          else
+            lpSibling->SetBlack();
+          lpNode->GetParent()->SetBlack();
+          lpSibling->GetRight()->SetBlack();
+          LeftRotate(lpNode->GetParent());
+
+          break;
+        }
+      }
+      else
+      {
+        lpSibling = lpNode->GetParent()->GetLeft();
+        if (lpSibling->IsRed() != FALSE)
+        {
+          lpSibling->SetBlack();
+          lpNode->GetParent()->SetRed();
+          RightRotate(lpNode->GetParent());
+          lpSibling = lpNode->GetParent()->GetLeft();
+        }
+        if (lpSibling->GetRight()->IsRed() == FALSE && lpSibling->GetLeft()->IsRed() == FALSE)
+        {
+          lpSibling->SetRed();
+          lpNode = lpNode->GetParent();
+        }
+        else
+        {
+          if (lpSibling->GetLeft()->IsRed() == FALSE)
+          {
+            lpSibling->GetRight()->SetBlack();
+            lpSibling->SetRed();
+            LeftRotate(lpSibling);
+            lpSibling = lpNode->GetParent()->GetLeft();
+          }
+          if (lpNode->GetParent()->IsRed() != FALSE)
+            lpSibling->SetRed();
+          else
+            lpSibling->SetBlack();
+          lpNode->GetParent()->SetBlack();
+          lpSibling->GetLeft()->SetBlack();
+          RightRotate(lpNode->GetParent());
+
+          break;
+        }
+      }
+    }
+
+    lpNode->SetBlack();
+    return;
     };
 
   //---------------------------------------------------------
