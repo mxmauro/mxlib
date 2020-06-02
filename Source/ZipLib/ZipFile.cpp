@@ -89,13 +89,14 @@ VOID CZipFile::CloseArchive()
     if (zc_data->zip_handle != NULL)
     {
       mz_zip_close(zc_data->zip_handle);
-      zc_data->zip_handle = NULL;
+      mz_zip_delete(&(zc_data->zip_handle));
+      //zc_data->zip_handle = NULL;
     }
     if (zc_data->zip_stream != NULL)
     {
       mz_stream_os_close(zc_data->zip_stream);
       mz_stream_os_delete(&(zc_data->zip_stream));
-      zc_data->zip_handle = NULL;
+      //zc_data->zip_stream = NULL;
     }
   }
   return;
@@ -122,6 +123,7 @@ HRESULT CZipFile::AddStream(_In_z_ LPCWSTR szFileNameInZipW, _In_ MX::CStream *l
   CStringA cStrFileNameA_Utf8;
   CSecureStringA cStrPasswordA_Utf8;
   CDateTime cDt;
+  LONGLONG t;
   HRESULT hRes;
 
   if (szFileNameInZipW == NULL || lpStream == NULL)
@@ -175,21 +177,51 @@ HRESULT CZipFile::AddStream(_In_z_ LPCWSTR szFileNameInZipW, _In_ MX::CStream *l
     sFt.dwLowDateTime = sBasicInfo.CreationTime.LowPart;
     sFt.dwHighDateTime = sBasicInfo.CreationTime.HighPart;
     hRes = cDt.SetFromFileTime(sFt);
+    if (SUCCEEDED(hRes))
+    {
+      hRes = cDt.GetUnixTime(&t);
+      if (SUCCEEDED(hRes))
+        file_info.creation_date = (time_t)t;
+    }
+    if (FAILED(hRes))
+      return hRes;
+
+    sFt.dwLowDateTime = sBasicInfo.LastWriteTime.LowPart;
+    sFt.dwHighDateTime = sBasicInfo.LastWriteTime.HighPart;
+    hRes = cDt.SetFromFileTime(sFt);
+    if (SUCCEEDED(hRes))
+    {
+      hRes = cDt.GetUnixTime(&t);
+      if (SUCCEEDED(hRes))
+        file_info.modified_date = (time_t)t;
+    }
+    if (FAILED(hRes))
+      return hRes;
+
+    sFt.dwLowDateTime = sBasicInfo.LastAccessTime.LowPart;
+    sFt.dwHighDateTime = sBasicInfo.LastAccessTime.HighPart;
+    hRes = cDt.SetFromFileTime(sFt);
+    if (SUCCEEDED(hRes))
+    {
+      hRes = cDt.GetUnixTime(&t);
+      if (SUCCEEDED(hRes))
+        file_info.accessed_date = (time_t)t;
+    }
+    if (FAILED(hRes))
+      return hRes;
   }
   else
   {
     hRes = cDt.SetFromNow(FALSE);
-  }
-  if (SUCCEEDED(hRes))
-  {
-    LONGLONG t;
-
-    hRes = cDt.GetUnixTime(&t);
     if (SUCCEEDED(hRes))
-      file_info.creation_date = (time_t)t;
+    {
+      hRes = cDt.GetUnixTime(&t);
+      if (SUCCEEDED(hRes))
+        file_info.creation_date = file_info.modified_date = file_info.accessed_date = (time_t)t;
+    }
+    if (FAILED(hRes))
+      return hRes;
   }
-  if (FAILED(hRes))
-    return hRes;
 
   hRes = mzError_2_HRESULT(mz_zip_entry_write_open(zc_data->zip_handle, &file_info, MZ_COMPRESS_LEVEL_BEST, 0,
                                                    (cStrPasswordA_Utf8.IsEmpty() != FALSE)
