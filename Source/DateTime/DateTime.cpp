@@ -221,12 +221,14 @@ HRESULT CDateTime::SetFromString(_In_z_ LPCWSTR szDateW, _In_z_ LPCWSTR szFormat
     return E_INVALIDARG;
   if (nTwoDigitsYearRule > 0 && nTwoDigitsYearRule <= 100)
     return E_INVALIDARG;
+
   FixCustomSettings(&sCustomW, lpCustomW);
   nYear = nMonth = nDay = -1;
   nHours = nMinutes = nSeconds = nMilliSeconds = 0;
   nWeekDay = nWeekNumber = -1;
   nHourFlag = nYDay = 0;
   sTimeZone.bOffsetSpecified = FALSE;
+
 sfs_restart:
   szOldFormatW = NULL;
   while (*szFormatW != 0 && *szDateW != 0)
@@ -247,12 +249,13 @@ sfs_restart:
       }
       if (*szFormatW == 0)
         continue;
+
       switch (*szFormatW)
       {
         case L'a': // abbreviated weekday name
         case L'A': // full weekday name
           //try full first
-          for (i=0; i<7; i++)
+          for (i = 0; i < 7; i++)
           {
             nTemp = CompareStrW(szDateW, sCustomW.szLongDayNamesW[i]);
             if (nTemp != 0)
@@ -261,7 +264,7 @@ sfs_restart:
           if (i >= 7)
           {
             //no match... try short
-            for (i=0; i<7; i++)
+            for (i = 0; i < 7; i++)
             {
               nTemp = CompareStrW(szDateW, sCustomW.szShortDayNamesW[i]);
               if (nTemp != 0)
@@ -290,7 +293,7 @@ pfs_skip_phrase:
         case L'b': // abbreviated month name
         case L'B': // full month name
           //try full first
-          for (i=0; i<12; i++)
+          for (i = 0; i < 12; i++)
           {
             nTemp = CompareStrW(szDateW, sCustomW.szLongMonthNamesW[i]);
             if (nTemp != 0)
@@ -299,7 +302,7 @@ pfs_skip_phrase:
           if (i >= 12)
           {
             //no match... try short
-            for (i=0; i<12; i++)
+            for (i = 0; i < 12; i++)
             {
               nTemp = CompareStrW(szDateW, sCustomW.szShortMonthNamesW[i]);
               if (nTemp != 0)
@@ -339,6 +342,7 @@ pfs_skip_phrase:
               nMaxDigits = 4;
               break;
           }
+
           if (*szDateW < L'0' || *szDateW > L'9')
             return E_FAIL;
           nTemp = 0;
@@ -348,6 +352,7 @@ pfs_skip_phrase:
             szDateW++;
             nMaxDigits--;
           }
+
           switch (*szFormatW)
           {
             case L'd': // mday in decimal (01-31)
@@ -355,58 +360,68 @@ pfs_skip_phrase:
                 return MX_E_ArithmeticOverflow;
               nDay = (int)nTemp;
               break;
+
             case L'H': // 24-hour decimal (00-23)
               if (nTemp > 23)
                 return MX_E_ArithmeticOverflow;
               nHours = (int)nTemp;
               nHourFlag = 0;
               break;
+
             case L'I': // 12-hour decimal (01-12)
               if (nTemp < 1 || nTemp > 12)
                 return MX_E_ArithmeticOverflow;
               nHours = (int)nTemp - 1;
               nHourFlag = -1;
               break;
+
             case L'j': // yday in decimal (001-366)
               if (nTemp < 1 || nTemp > 366)
                 return MX_E_ArithmeticOverflow;
               nYDay = (int)nTemp;
               break;
+
             case L'm': // month in decimal (01-12)
               if (nTemp < 1 || nTemp > 12)
                 return MX_E_ArithmeticOverflow;
               nMonth = (int)nTemp;
               break;
+
             case L'M': // minute in decimal (00-59)
               if (nTemp > 59)
                 return MX_E_ArithmeticOverflow;
               nMinutes = (int)nTemp;
               break;
+
             case L'S': // secs in decimal (00-59)
               if (nTemp > 59)
                 return MX_E_ArithmeticOverflow;
               nSeconds = (int)nTemp;
               break;
+
             case L'f': // milliseconds in decimal (0-999)
               if (nTemp > 999)
                 return MX_E_ArithmeticOverflow;
               nMilliSeconds = (int)nTemp;
               break;
+
             case L'w': // week day in decimal (0-6)
               if (nTemp > 6)
                 return MX_E_ArithmeticOverflow;
               nWeekDay = (int)nTemp;
               break;
+
             case L'U': // sunday week number (00-53)
             case L'W': // monday week number (00-53)
               if (nTemp > 53)
                 return MX_E_ArithmeticOverflow;
               nWeekNumber = (int)((*szFormatW == L'U') ? nTemp : (nTemp+100));
               break;
+
             case L'y': // year w/o century (00-99)
             case L'Y': // year w/ century
               nYear = (int)nTemp;
-              if (nYear <= 99 && i <= 2)
+              if (nYear <= 99)
               {
                 //do two digits year adjustment
                 hRes = DoTwoDigitsYearAdjustment(nYear, nTwoDigitsYearRule);
@@ -420,7 +435,7 @@ pfs_skip_phrase:
           break;
 
         case L'p': // AM/PM designation
-          for (i=0; i<2; i++)
+          for (i = 0; i < 2; i++)
           {
             nTemp = CompareStrW(szDateW, sCustomW.szTimeAmPmW[i]);
             if (nTemp != 0)
@@ -500,6 +515,7 @@ pfs_skip_phrase:
           {
             //use numeric form
             nSign = (*szDateW++ == L'+') ? 1 : -1;
+
             //get hours
             if (szDateW[0] < L'0' || szDateW[0] > L'9' || szDateW[1] < L'0' || szDateW[1] > L'9')
               return E_FAIL;
@@ -508,9 +524,11 @@ pfs_skip_phrase:
               return MX_E_ArithmeticOverflow;
             nTemp *= 60;
             szDateW += 2;
+
             //time separator?
             if (*szDateW == L':')
               szDateW++;
+
             //get minutes
             if (*szDateW >= L'0' && *szDateW <= L'9')
             {
@@ -525,6 +543,7 @@ pfs_skip_phrase:
               if (*szDateW == L':')
                 szDateW++;
             }
+
             //get seconds (not added to final gmt offset)
             if (*szDateW >= L'0' && *szDateW <= L'9')
             {
@@ -535,6 +554,7 @@ pfs_skip_phrase:
                 return MX_E_ArithmeticOverflow;
               szDateW += 2;
             }
+
             //set time offset
             sTimeZone.nOffset = (int)nTemp * nSign;
             if (sTimeZone.nOffset < -12*60 || sTimeZone.nOffset > 14*60)
@@ -603,6 +623,7 @@ pfs_skip_phrase:
   }
   if (*szDateW == 0 && *szFormatW != 0)
     return E_FAIL;
+
   if (nHourFlag == 2 && nHours < 12)
     nHours += 12; //convert to pm
   if (nYear >= 0 && (nMonth < 0 || nDay < 0))
@@ -631,11 +652,13 @@ pfs_skip_phrase:
         return MX_E_ArithmeticOverflow;
     }
   }
+
   if (nYear<0 || nMonth<0 || nDay<0)
     nYear = nMonth = nDay = 1;
   hRes = SetDateTime(nYear, nMonth, nDay, nHours, nMinutes, nSeconds, nMilliSeconds);
   if (FAILED(hRes))
     return hRes;
+
   nGmtOffset = (sTimeZone.bOffsetSpecified != FALSE) ? sTimeZone.nOffset : 0;
   return S_OK;
 }
