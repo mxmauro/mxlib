@@ -133,21 +133,40 @@ HRESULT CSslCertificate::GetValidUntil(_Inout_ CDateTime &cDt)
   return Asn1TimeToDateTime(X509_get_notAfter(lpX509), cDt);
 }
 
-HRESULT CSslCertificate::IsDateValid()
+HRESULT CSslCertificate::IsDateValid(_Out_opt_ PULONG lpnRemainingSecs)
 {
   CDateTime cDtNow, cDt;
   HRESULT hRes;
 
+  if (lpnRemainingSecs != NULL)
+    *lpnRemainingSecs = 0;
+
   hRes = cDtNow.SetFromNow(FALSE);
-  if (hRes == S_OK)
-    hRes = GetValidFrom(cDt);
-  if (hRes == S_OK && cDtNow < cDt)
-    hRes = S_FALSE;
-  if (hRes == S_OK)
-    hRes = GetValidUntil(cDt);
-  if (hRes == S_OK && cDtNow >= cDt)
-    hRes = S_FALSE;
-  return hRes;
+  if (FAILED(hRes))
+    return hRes;
+
+  hRes = GetValidFrom(cDt);
+  if (FAILED(hRes))
+    return hRes;
+  if (cDtNow < cDt)
+    return S_FALSE;
+
+  hRes = GetValidUntil(cDt);
+  if (FAILED(hRes))
+    return hRes;
+  if (cDtNow >= cDt)
+    return S_FALSE;
+  if (lpnRemainingSecs != NULL)
+  {
+    LONGLONG llSecs = cDtNow.GetDiff(cDt, CDateTime::UnitsSeconds);
+    if (llSecs >= 0)
+    {
+      *lpnRemainingSecs = (llSecs <= 0xFFFFFFFFi64) ? llSecs : 0xFFFFFFFF;
+    }
+  }
+
+  //done
+  return S_OK;
 }
 
 BOOL CSslCertificate::IsCaCert() const

@@ -66,7 +66,7 @@ public:
   HRESULT GetValidFrom(_Inout_ CDateTime &cDt);
   HRESULT GetValidUntil(_Inout_ CDateTime &cDt);
 
-  HRESULT IsDateValid(); //returns S_OK if valid, S_FALSE if not, or an error
+  HRESULT IsDateValid(_Out_opt_ PULONG lpnRemainingSecs = NULL); //returns S_OK if valid, S_FALSE if not, or an error
   BOOL IsCaCert() const;
 
   X509* GetX509() const
