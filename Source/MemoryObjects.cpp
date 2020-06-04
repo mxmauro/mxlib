@@ -21,6 +21,7 @@
 #include "..\Include\MemoryObjects.h"
 #include "..\Include\WaitableObjects.h"
 #include "..\Include\Debug.h"
+#include "Internals\MsVcrt.h"
 #include <intrin.h>
 
 #pragma intrinsic (_InterlockedIncrement)
@@ -36,7 +37,7 @@
 //-----------------------------------------------------------
 
 #ifdef DO_HEAP_CHECK
-  #if defined(_M_X64) || defined(_M_IA64) || defined(_M_AMD64)
+  #if defined(_M_X64)
     #define MX_UNALIGNED __unaligned
   #else
     #define MX_UNALIGNED
@@ -99,8 +100,9 @@ static VOID DumpLeaks();
 #ifdef DO_HEAP_CHECK
 typedef void (*_PVFV)(void);
 
+MX_LINKER_FORCE_INCLUDE(___mx_memory_finalize);
 #pragma section(".CRT$XTY", long, read)  // NOLINT
-static __declspec(allocate(".CRT$XTY")) _PVFV my_exit_funcs[] = { &DumpLeaks };
+extern "C" __declspec(allocate(".CRT$XTY")) const _PVFV ___mx_memory_finalize = &DumpLeaks;
 #endif //DO_HEAP_CHECK
 
 //-----------------------------------------------------------

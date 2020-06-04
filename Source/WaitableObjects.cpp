@@ -19,6 +19,7 @@
  */
 #include "..\Include\WaitableObjects.h"
 #include "..\Include\Debug.h"
+#include "Internals\MsVcrt.h"
 
 //#define SHOW_SLIMRWL_DEBUG_INFO
 
@@ -87,6 +88,7 @@ static NTSTATUS GetRootDirHandle(_Out_ PHANDLE lphRootDir);
 
 //-----------------------------------------------------------
 
+MX_LINKER_FORCE_INCLUDE(___mx_waitable_init);
 #pragma section(".CRT$XIBA", long, read)
 extern "C" __declspec(allocate(".CRT$XIBA")) const _PIFV ___mx_waitable_init = &InitializeKernel32Apis;
 

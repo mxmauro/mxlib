@@ -19,8 +19,11 @@
  */
 #include "..\Include\Finalizer.h"
 #include "..\Include\WaitableObjects.h"
+#include "Internals\MsVcrt.h"
 
 //-----------------------------------------------------------
+
+typedef void (*_PVFV)(void);
 
 typedef struct tagFINALIZER_ITEM {
   MX::lpfnFinalizer fnFinalizer;
@@ -29,17 +32,13 @@ typedef struct tagFINALIZER_ITEM {
 
 //-----------------------------------------------------------
 
-static void __cdecl RunFinalizers(void);
+static VOID RunFinalizers();
 
 //-----------------------------------------------------------
 
-#if _MSC_FULL_VER < 140050214
-  #error Unsupported compiler version
-#endif //_MSC_FULL_VER < 140050214
-#pragma section(".CRT$XTS",long,read)
-#pragma data_seg(".CRT$XTS")
-static LPVOID lpfnRunFinalizers = &RunFinalizers;
-#pragma data_seg()
+MX_LINKER_FORCE_INCLUDE(___mx_finalizer);
+#pragma section(".CRT$XTS", long, read)  // NOLINT
+extern "C" __declspec(allocate(".CRT$XTS")) const _PVFV ___mx_finalizer = &RunFinalizers;
 
 static LONG volatile nMutex = 0;
 static FINALIZER_ITEM *lpList = NULL;
@@ -94,7 +93,7 @@ HRESULT RegisterFinalizer(_In_ lpfnFinalizer fnFinalizer, _In_ SIZE_T nPriority)
 
 //-----------------------------------------------------------
 
-static void __cdecl RunFinalizers(void)
+static VOID RunFinalizers()
 {
   MX::CFastLock cLock(&nMutex);
   SIZE_T i;

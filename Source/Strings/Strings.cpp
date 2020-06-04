@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include "..\Internals\MsVcrt.h"
 
 //-----------------------------------------------------------
 
@@ -51,13 +52,11 @@ static WCHAR volatile aToUnicodeChar[256] = { 0 };
 
 extern const lpfn__stdio_common_vsnprintf_s mx__stdio_common_vsnprintf_s_default = NULL;
 extern const lpfn__stdio_common_vsnwprintf_s mx__stdio_common_vsnwprintf_s_default = NULL;
-#if defined (_M_IX86)
-  #pragma comment(linker, "/alternatename:___stdio_common_vsnprintf_s=_mx__stdio_common_vsnprintf_s_default")
-  #pragma comment(linker, "/alternatename:___stdio_common_vsnwprintf_s=_mx__stdio_common_vsnwprintf_s_default")
-#elif defined (_M_IA64) || defined (_M_AMD64)
-  #pragma comment(linker, "/alternatename:__stdio_common_vsnprintf_s=mx__stdio_common_vsnprintf_s_default")
-  #pragma comment(linker, "/alternatename:__stdio_common_vsnwprintf_s=mx__stdio_common_vsnwprintf_s_default")
-#endif
+
+#pragma comment(linker, "/alternatename:" MX_LINKER_SYMBOL_PREFIX "__stdio_common_vsnprintf_s=" \
+                        MX_LINKER_SYMBOL_PREFIX "mx__stdio_common_vsnprintf_s_default")
+#pragma comment(linker, "/alternatename:" MX_LINKER_SYMBOL_PREFIX "__stdio_common_vsnwprintf_s=" \
+                        MX_LINKER_SYMBOL_PREFIX "mx__stdio_common_vsnwprintf_s_default")
 
 //-----------------------------------------------------------
 
@@ -67,6 +66,7 @@ static void dblconv_invalid_parameter(const wchar_t * expression, const wchar_t 
 
 //-----------------------------------------------------------
 
+MX_LINKER_FORCE_INCLUDE(___mx_strings_init);
 #pragma section(".CRT$XIBA", long, read)
 extern "C" __declspec(allocate(".CRT$XIBA")) const _PIFV ___mx_strings_init = &InitializeTables;
 
