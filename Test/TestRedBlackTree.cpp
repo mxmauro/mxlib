@@ -52,6 +52,7 @@ static BOOL CheckTreeNode(_In_ MX::CRedBlackTree &cTree, _In_ CNode *lpNode, _In
 static BOOL CreateTree_Example133CormenPage314(_In_ MX::CRedBlackTree &cTree, _Out_ CNode **lplpNodes);
 static BOOL CreateTree_Example133CormenPage317(_In_ MX::CRedBlackTree &cTree, _Out_ CNode **lplpNodes);
 static BOOL CreateTree_Example133CormenPage317Inverted(_In_ MX::CRedBlackTree &cTree, _Out_ CNode **lplpNodes);
+static HRESULT TestDeletion();
 static HRESULT TestExample133CormenPage314MinimumMaximum();
 static HRESULT TestThreeNodesDeleteRight();
 static HRESULT TestThreeNodesDeleteLeft();
@@ -80,8 +81,8 @@ int TestRedBlackTree()
 
   srand(::GetTickCount());
 
-  wprintf_s(L"Running Example 133 - Cormen Page 314 - Minimum Maximum... ");
-  hRes = TestExample133CormenPage314MinimumMaximum();
+  wprintf_s(L"Running Deletion test... ");
+  hRes = TestDeletion();
   if (FAILED(hRes))
   {
 on_error:
@@ -91,6 +92,12 @@ on_error:
       wprintf_s(L"\nError: Failed.\n");
     return (int)hRes;
   }
+  wprintf_s(L"OK\n");
+
+  wprintf_s(L"Running Example 133 - Cormen Page 314 - Minimum Maximum... ");
+  hRes = TestExample133CormenPage314MinimumMaximum();
+  if (FAILED(hRes))
+    goto on_error;
   wprintf_s(L"OK\n");
 
   wprintf_s(L"Running Delete Right... ");
@@ -219,6 +226,106 @@ static BOOL CreateTree_Example133CormenPage317(_In_ MX::CRedBlackTree &cTree, _O
 static BOOL CreateTree_Example133CormenPage317Inverted(_In_ MX::CRedBlackTree &cTree, _Out_ CNode **lplpNodes)
 {
   return CreateTree(cTree, lplpNodes, 11, 2, 20, 1, 15, 25, 14, 16, 0);
+}
+
+static HRESULT TestDeletion()
+{
+  MX::CRedBlackTree cTree;
+  CNode *lpNodes;
+
+  //        4
+  //       / \
+  //     2     6
+  //    / \   / \
+  //   1   3 5   7
+  if (CreateTree(cTree, &lpNodes, 4, 2, 6, 1, 3, 5, 7, 0) == FALSE)
+    return E_OUTOFMEMORY;
+  if (SearchTree(cTree, 4)->cTreeNode.GetParent() != NULL)
+  {
+on_failure:
+    cTree.RemoveAll();
+    delete[] lpNodes;
+    return E_FAIL;
+  }
+  cTree.Remove(&(SearchTree(cTree, 4)->cTreeNode));
+
+  cTree.RemoveAll();
+  delete[] lpNodes;
+
+  //---------------------------------------------------------------------------
+
+  //       3
+  //      / \
+  //     2   5
+  //    /     \
+  //   1       6
+  if (CreateTree(cTree, &lpNodes, 3, 2, 5, 1, 6) == FALSE)
+    return E_OUTOFMEMORY;
+  if (SearchTree(cTree, 3)->cTreeNode.GetParent() != NULL)
+    goto on_failure;
+
+  cTree.Remove(&(SearchTree(cTree, 3)->cTreeNode));
+
+  cTree.RemoveAll();
+  delete[] lpNodes;
+
+  //---------------------------------------------------------------------------
+
+  //       3
+  //      / \
+  //     2   6
+  //    /   / \
+  //   1   4   7
+  //        \
+  //         5
+  if (CreateTree(cTree, &lpNodes, 3, 2, 6, 1, 4, 7, 5, 0) == FALSE)
+    return E_OUTOFMEMORY;
+  if (SearchTree(cTree, 3)->cTreeNode.GetParent() != NULL)
+    goto on_failure;
+  cTree.Remove(&(SearchTree(cTree, 3)->cTreeNode));
+
+  cTree.RemoveAll();
+  delete[] lpNodes;
+
+  //---------------------------------------------------------------------------
+
+  //       3
+  //      / \
+  //     2   5
+  //    /
+  //   1
+  if (CreateTree(cTree, &lpNodes, 3, 2, 5, 1, 0) == FALSE)
+    return E_OUTOFMEMORY;
+  if (SearchTree(cTree, 3)->cTreeNode.GetParent() != NULL)
+    goto on_failure;
+  cTree.Remove(&(SearchTree(cTree, 3)->cTreeNode));
+
+  cTree.RemoveAll();
+  delete[] lpNodes;
+
+  //---------------------------------------------------------------------------
+
+  //       3
+  //      / \
+  //     2   6
+  //    /   / \
+  //   1   5   8
+  //      /   / \
+  //     4   7   9
+  if (CreateTree(cTree, &lpNodes, 3, 2, 6, 1, 5, 8, 4, 7, 9, 0) == FALSE)
+    return E_OUTOFMEMORY;
+  if (SearchTree(cTree, 3)->cTreeNode.GetParent() != NULL)
+    goto on_failure;
+  cTree.Remove(&(SearchTree(cTree, 6)->cTreeNode));
+
+  cTree.RemoveAll();
+  delete[] lpNodes;
+
+  //---------------------------------------------------------------------------
+
+
+  //done
+  return S_OK;
 }
 
 static HRESULT TestExample133CormenPage314MinimumMaximum()
@@ -666,9 +773,14 @@ static HRESULT TestDuplicates(_In_ SIZE_T nCount)
     nCurrValue = lpNode->nValue;
   }
 
-  for (i = 0; i < nCount; i++)
+  if ((nCount & 1) != 0)
+  {
+    lpNodes[nCount - 1].cTreeNode.Remove();
+  }
+  for (i = 0; i < nCount / 2; i++)
   {
     lpNodes[i].cTreeNode.Remove();
+    lpNodes[(nCount / 2) + i].cTreeNode.Remove();
   }
   delete[] lpNodes;
 
@@ -722,9 +834,14 @@ static HRESULT TestNonDuplicates(_In_ SIZE_T nCount)
     nCurrValue = lpNode->nValue;
   }
 
-  for (i = 0; i < nCount; i++)
+  if ((nCount & 1) != 0)
+  {
+    lpNodes[nCount - 1].cTreeNode.Remove();
+  }
+  for (i = 0; i < nCount / 2; i++)
   {
     lpNodes[i].cTreeNode.Remove();
+    lpNodes[(nCount / 2) + i].cTreeNode.Remove();
   }
   delete[] lpNodes;
 

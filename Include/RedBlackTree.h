@@ -626,10 +626,6 @@ public:
         DeleteFixup(lpDelNode);
       }
 
-#ifdef _DEBUG
-      CheckTree();
-#endif //_DEBUG
-
       if (lpDelNode->lpParent != NULL)
       {
         if (lpDelNode->lpParent->lpLeft == lpDelNode)
@@ -670,50 +666,55 @@ public:
       int nBlackPathCounter = -1;
 
       MX_ASSERT(lpRoot->bRed == FALSE);
-      MX_ASSERT(lpRoot->lpParent == FALSE);
-      CheckColors(lpRoot);
-      //CheckBlackCount(lpRoot, 0, &nBlackPathCounter);
+      MX_ASSERT(lpRoot->lpParent == NULL);
+      CheckRecursive(lpRoot);
+      CheckBlacksRecursive(lpRoot, 1, &nBlackPathCounter);
     }
     return;
     };
 
-  VOID CheckColors(_In_opt_ CRedBlackTreeNode *lpNode)
+  VOID CheckRecursive(_In_opt_ CRedBlackTreeNode *lpNode)
     {
     if (lpNode != NULL)
     {
+      MX_ASSERT(lpNode == lpRoot || lpNode->lpParent != NULL);
+
       if (lpNode->bRed != FALSE)
       {
         MX_ASSERT(lpNode->lpLeft == NULL || lpNode->lpLeft->bRed == FALSE);
         MX_ASSERT(lpNode->lpRight == NULL || lpNode->lpRight->bRed == FALSE);
-        MX_ASSERT(lpNode->lpParent == NULL || lpNode->lpParent->bRed == FALSE);
+        MX_ASSERT(lpNode->lpParent->bRed == FALSE);
       }
-      CheckColors(lpNode->lpLeft);
-      CheckColors(lpNode->lpRight);
+
+      MX_ASSERT(lpNode->lpLeft == NULL || (lpNode->lpLeft != lpNode->lpParent && lpNode->lpLeft->lpParent == lpNode));
+      MX_ASSERT(lpNode->lpRight == NULL || (lpNode->lpRight != lpNode->lpParent && lpNode->lpRight->lpParent == lpNode
+                                            && lpNode->lpRight != lpNode->lpLeft));
+
+      CheckRecursive(lpNode->lpLeft);
+      CheckRecursive(lpNode->lpRight);
     }
     return;
     };
 
-  VOID CheckBlackCount(_In_opt_ CRedBlackTreeNode *lpNode, _In_ int nBlackCount, _In_ int *lpnBlackPathCounter)
+  VOID CheckBlacksRecursive(_In_opt_ CRedBlackTreeNode *lpNode, _In_ int nCounter, _In_ int *lpnBlackPathCounter)
     {
-    if (lpNode == NULL || lpNode->bRed == FALSE)
+    if (lpNode != NULL)
     {
-      nBlackCount++;
-    }
-    if (lpNode == NULL)
-    {
-      if (*lpnBlackPathCounter == -1)
-      {
-        *lpnBlackPathCounter = nBlackCount;
-      }
-      else
-      {
-        MX_ASSERT(nBlackCount == *lpnBlackPathCounter);
-      }
+      if (lpNode->bRed == FALSE)
+        nCounter++;
+      CheckBlacksRecursive(lpNode->lpLeft, nCounter, lpnBlackPathCounter);
+      CheckBlacksRecursive(lpNode->lpRight, nCounter, lpnBlackPathCounter);
     }
     else
     {
-      CheckBlackCount(lpNode->lpLeft, nBlackCount, lpnBlackPathCounter);
-      CheckBlackCount(lpNode->lpRight, nBlackCount, lpnBlackPathCounter);
+      if (*lpnBlackPathCounter == -1)
+      {
+        *lpnBlackPathCounter = nCounter;
+      }
+      else
+      {
+        MX_ASSERT(nCounter == *lpnBlackPathCounter);
+      }
     }
     return;
     };
