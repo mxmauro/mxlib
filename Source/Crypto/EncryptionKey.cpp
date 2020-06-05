@@ -25,13 +25,13 @@
 
 namespace MX {
 
-CEncryptionKey::CEncryptionKey() : CBaseMemObj()
+CEncryptionKey::CEncryptionKey() : TRefCounted<CBaseMemObj>()
 {
   lpKey = NULL;
   return;
 }
 
-CEncryptionKey::CEncryptionKey(_In_ const CEncryptionKey &cSrc) throw(...) : CBaseMemObj()
+CEncryptionKey::CEncryptionKey(_In_ const CEncryptionKey &cSrc) throw(...) : TRefCounted<CBaseMemObj>()
 {
   lpKey = NULL;
   operator=(cSrc);

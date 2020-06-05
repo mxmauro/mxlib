@@ -82,7 +82,7 @@ static BOOL Asn1_ValidateLength(_Inout_ LPBYTE lpCurr, _In_ LPBYTE lpEnd);
 
 namespace MX {
 
-CSslCertificateArray::CSslCertificateArray() : CBaseMemObj(), CNonCopyableObj()
+CSslCertificateArray::CSslCertificateArray() : TRefCounted<CBaseMemObj>(), CNonCopyableObj()
 {
   return;
 }
@@ -289,7 +289,7 @@ HRESULT CSslCertificateArray::AddFromFile(_In_z_ LPCWSTR szFileNameW, _In_opt_z_
 
 HRESULT CSslCertificateArray::AddPublicKeyFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen)
 {
-  TAutoDeletePtr<CEncryptionKey> cKey;
+  TAutoRefCounted<CEncryptionKey> cKey;
   HRESULT hRes;
 
   //create object
@@ -313,7 +313,7 @@ HRESULT CSslCertificateArray::AddPublicKeyFromDER(_In_ LPCVOID lpData, _In_ SIZE
 HRESULT CSslCertificateArray::AddPublicKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA,
                                                   _In_opt_ SIZE_T nPemLen)
 {
-  TAutoDeletePtr<CEncryptionKey> cKey;
+  TAutoRefCounted<CEncryptionKey> cKey;
   HRESULT hRes;
 
   //create object
@@ -336,7 +336,7 @@ HRESULT CSslCertificateArray::AddPublicKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_
 
 HRESULT CSslCertificateArray::AddPrivateKeyFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen)
 {
-  TAutoDeletePtr<CEncryptionKey> cKey;
+  TAutoRefCounted<CEncryptionKey> cKey;
   HRESULT hRes;
 
   //create object
@@ -360,7 +360,7 @@ HRESULT CSslCertificateArray::AddPrivateKeyFromDER(_In_ LPCVOID lpData, _In_ SIZ
 HRESULT CSslCertificateArray::AddPrivateKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA,
                                                    _In_opt_ SIZE_T nPemLen)
 {
-  TAutoDeletePtr<CEncryptionKey> cKey;
+  TAutoRefCounted<CEncryptionKey> cKey;
   HRESULT hRes;
 
   //create object
@@ -448,8 +448,8 @@ HRESULT CSslCertificate::InitializeFromPEM(_In_ LPCSTR szPemA, _In_opt_z_ LPCSTR
 HRESULT CSslCertificateArray::AddCertificateFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen,
                                                     _In_opt_z_ LPCSTR szPasswordA)
 {
-  TAutoDeletePtr<CSslCertificate> cNewCert;
-  TAutoDeletePtr<CEncryptionKey> cNewKey;
+  TAutoRefCounted<CSslCertificate> cNewCert;
+  TAutoRefCounted<CEncryptionKey> cNewKey;
   PKCS12 *lpPkcs12;
   const unsigned char *buf;
   HRESULT hRes;
@@ -617,7 +617,7 @@ HRESULT CSslCertificateArray::AddCertificateFromDER(_In_ LPCVOID lpData, _In_ SI
 HRESULT CSslCertificateArray::AddCertificateFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA,
                                                     _In_opt_ SIZE_T nPemLen)
 {
-  TAutoDeletePtr<CSslCertificate> cNewCert;
+  TAutoRefCounted<CSslCertificate> cNewCert;
   HRESULT hRes;
 
   //create object
@@ -700,7 +700,7 @@ HRESULT CSslCertificateCrl::InitializeFromPEM(_In_ LPCSTR szPemA, _In_opt_z_ LPC
 
 HRESULT CSslCertificateArray::AddCrlFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen)
 {
-  TAutoDeletePtr<CSslCertificateCrl> cNewCert;
+  TAutoRefCounted<CSslCertificateCrl> cNewCert;
   HRESULT hRes;
 
   cNewCert.Attach(MX_DEBUG_NEW CSslCertificateCrl());
@@ -720,7 +720,7 @@ HRESULT CSslCertificateArray::AddCrlFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDa
 HRESULT CSslCertificateArray::AddCrlFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA,
                                             _In_opt_ SIZE_T nPemLen)
 {
-  TAutoDeletePtr<CSslCertificateCrl> cNewCert;
+  TAutoRefCounted<CSslCertificateCrl> cNewCert;
   HRESULT hRes;
 
   cNewCert.Attach(MX_DEBUG_NEW CSslCertificateCrl());

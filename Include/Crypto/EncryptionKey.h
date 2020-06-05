@@ -21,6 +21,7 @@
 #define _MX_ENCRYPTION_KEY_H
 
 #include "..\Defines.h"
+#include "..\RefCounted.h"
 #include "SecureBuffer.h"
 typedef struct evp_pkey_st EVP_PKEY;
 
@@ -28,7 +29,7 @@ typedef struct evp_pkey_st EVP_PKEY;
 
 namespace MX {
 
-class CEncryptionKey : public virtual CBaseMemObj
+class CEncryptionKey : public virtual TRefCounted<CBaseMemObj>
 {
 public:
   typedef enum {

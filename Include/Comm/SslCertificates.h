@@ -21,6 +21,7 @@
 #define _MX_SSLCERTIFICATES_H
 
 #include "..\Defines.h"
+#include "..\RefCounted.h"
 #include "..\DateTime\DateTime.h"
 #include "..\ArrayList.h"
 #include "..\Crypto\EncryptionKey.h"
@@ -38,7 +39,7 @@ class CSslCertificateArray;
 
 namespace MX {
 
-class CSslCertificate : public virtual CBaseMemObj
+class CSslCertificate : public virtual TRefCounted<CBaseMemObj>
 {
 public:
   typedef enum {
@@ -80,7 +81,7 @@ private:
 
 //-----------------------------------------------------------
 
-class CSslCertificateCrl : public virtual CBaseMemObj
+class CSslCertificateCrl : public virtual TRefCounted<CBaseMemObj>
 {
 public:
   typedef enum {
@@ -122,7 +123,7 @@ private:
 
 //-----------------------------------------------------------
 
-class CSslCertificateArray : public virtual CBaseMemObj, public CNonCopyableObj
+class CSslCertificateArray : public virtual TRefCounted<CBaseMemObj>, public CNonCopyableObj
 {
 public:
   CSslCertificateArray();
@@ -152,9 +153,9 @@ public:
   HRESULT ImportFromWindowsStore();
 
 public:
-  TArrayListWithDelete<CSslCertificate*> cCertsList;
-  TArrayListWithDelete<CSslCertificateCrl*> cCertCrlsList;
-  TArrayListWithDelete<CEncryptionKey*> cKeysList;
+  TArrayListWithRelease<CSslCertificate*> cCertsList;
+  TArrayListWithRelease<CSslCertificateCrl*> cCertCrlsList;
+  TArrayListWithRelease<CEncryptionKey*> cKeysList;
 };
 
 } //namespace MX

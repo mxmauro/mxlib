@@ -42,8 +42,8 @@ int TestHttpServer()
   MX::CIoCompletionPortThreadPool cDispatcherPool;
   MX::CSockets cSckMgr(cDispatcherPool);
   MX::CHttpServer cHttpServer(cSckMgr);
-  MX::CSslCertificate cSslCert;
-  MX::CEncryptionKey cSslPrivateKey;
+  MX::TAutoRefCounted<MX::CSslCertificate> cSslCert;
+  MX::TAutoRefCounted<MX::CEncryptionKey> cSslPrivateKey;
   BOOL bUseSSL;
   HRESULT hRes;
 
@@ -80,7 +80,13 @@ int TestHttpServer()
     if (SUCCEEDED(hRes))
       hRes = LoadTxtFile(cStrTempA, (LPCWSTR)cStrTempW);
     if (SUCCEEDED(hRes))
-      hRes = cSslCert.InitializeFromPEM((LPCSTR)cStrTempA);
+    {
+      cSslCert.Attach(MX_DEBUG_NEW MX::CSslCertificate());
+      if (cSslCert)
+        hRes = cSslCert->InitializeFromPEM((LPCSTR)cStrTempA);
+      else
+        hRes = E_OUTOFMEMORY;
+    }
     //load private key
     if (SUCCEEDED(hRes))
       hRes = GetAppPath(cStrTempW);
@@ -89,7 +95,13 @@ int TestHttpServer()
     if (SUCCEEDED(hRes))
       hRes = LoadTxtFile(cStrTempA, (LPCWSTR)cStrTempW);
     if (SUCCEEDED(hRes))
-      hRes = cSslPrivateKey.SetPrivateKeyFromPEM((LPCSTR)cStrTempA);
+    {
+      cSslPrivateKey.Attach(MX_DEBUG_NEW MX::CEncryptionKey());
+      if (cSslPrivateKey)
+        hRes = cSslPrivateKey->SetPrivateKeyFromPEM((LPCSTR)cStrTempA);
+      else
+        hRes = E_OUTOFMEMORY;
+    }
   }
   if (SUCCEEDED(hRes))
   {
@@ -106,7 +118,7 @@ int TestHttpServer()
       sOptions.dwMaxAcceptsToPost = 16;
       //sOptions.dwMaxRequestsPerSecond = 0;
       //sOptions.dwBurstSize = 0;
-      hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv4, 443, &sOptions, &cSslCert, &cSslPrivateKey);
+      hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv4, 443, &sOptions, cSslCert.Get(), cSslPrivateKey.Get());
     }
     else
     {

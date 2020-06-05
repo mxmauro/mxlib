@@ -404,8 +404,8 @@ private:
   LONG volatile nDownloadNameGeneratorCounter;
   struct {
     RWLOCK sRwMutex;
-    TAutoDeletePtr<CSslCertificate> cSslCertificate;
-    TAutoDeletePtr<CEncryptionKey> cSslPrivateKey;
+    TAutoRefCounted<CSslCertificate> cSslCertificate;
+    TAutoRefCounted<CEncryptionKey> cSslPrivateKey;
   } sSsl;
   LONG volatile nRundownLock;
   HANDLE hAcceptConn;

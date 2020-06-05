@@ -39,6 +39,8 @@ public:
                      _In_opt_ CSslCertificateArray *lpCheckCertificates = NULL,
                      _In_opt_ CSslCertificate *lpSelfCert = NULL, _In_opt_ CEncryptionKey *lpPrivKey = NULL);
 
+  BOOL IsPeerCertificateValid() const;
+
 private:
   HRESULT OnConnect();
   HRESULT OnDisconnect();

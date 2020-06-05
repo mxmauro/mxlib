@@ -71,7 +71,7 @@ public:
   //NOTE: Leave cStrFullFileNameW empty to download to temp location (with imposed limitations)
   typedef Callback<HRESULT (_In_ CHttpClient *lpHttp, _In_z_ LPCWSTR szFileNameW, _In_opt_ PULONGLONG lpnContentSize,
                             _In_z_ LPCSTR szTypeA, _In_ BOOL bTreatAsAttachment, _Inout_ CStringW &cStrFullFileNameW,
-                            _Inout_ CHttpBodyParserBase **lpBodyParser)> OnHeadersReceivedCallback;
+                            _Outptr_result_maybenull_ CHttpBodyParserBase **lpBodyParser)> OnHeadersReceivedCallback;
   typedef Callback<VOID (_In_ CHttpClient *lpHttp)> OnDocumentCompletedCallback;
 
   typedef Callback<HRESULT (_In_ CHttpClient *lpHttp, _In_ CWebSocket *lpWebSocket,
@@ -79,9 +79,9 @@ public:
 
   typedef Callback<VOID (_In_ CHttpClient *lpHttp)> OnDymanicRequestBodyStartCallback;
 
-  typedef Callback<HRESULT (_In_ CHttpClient *lpHttp, _Inout_ CSslCertificateArray **lplpCheckCertificates,
-                            _Inout_ CSslCertificate **lplpSelfCert,
-                            _Inout_ CEncryptionKey **lplpPrivKey)> OnQueryCertificatesCallback;
+  typedef Callback<HRESULT (_In_ CHttpClient *lpHttp, _Outptr_result_maybenull_ CSslCertificateArray **lplpCheckCerts,
+                            _Outptr_result_maybenull_ CSslCertificate **lplpSelfCert,
+                            _Outptr_result_maybenull_ CEncryptionKey **lplpPrivKey)> OnQueryCertificatesCallback;
 
   //--------
 

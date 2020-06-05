@@ -2406,19 +2406,16 @@ on_websocket_negotiated:
 
 HRESULT CHttpClient::OnAddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h)
 {
-  CSslCertificateArray *lpCheckCertificates;
-  CSslCertificate *lpSelfCert;
-  CEncryptionKey *lpPrivKey;
+  TAutoRefCounted<CSslCertificateArray> cCheckCertificates;
+  TAutoRefCounted<CSslCertificate> cSelfCert;
+  TAutoRefCounted<CEncryptionKey> cPrivKey;
   CStringA cStrHostNameA;
   TAutoDeletePtr<CIpcSslLayer> cLayer;
   HRESULT hRes;
 
-  lpCheckCertificates = NULL;
-  lpSelfCert = NULL;
-  lpPrivKey = NULL;
   //query for client certificates
   LockThreadCall(FALSE);
-  hRes = (cQueryCertificatesCallback) ? cQueryCertificatesCallback(this, &lpCheckCertificates, &lpSelfCert, &lpPrivKey)
+  hRes = (cQueryCertificatesCallback) ? cQueryCertificatesCallback(this, &cCheckCertificates, &cSelfCert, &cPrivKey)
                                       : MX_E_NotReady;
   _InterlockedExchange(&nCallInProgressThread, 0);
   if (FAILED(hRes))
@@ -2433,7 +2430,7 @@ HRESULT CHttpClient::OnAddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h)
   cLayer.Attach(MX_DEBUG_NEW CIpcSslLayer(lpIpc));
   if (!cLayer)
     return E_OUTOFMEMORY;
-  hRes = cLayer->Initialize(FALSE, (LPCSTR)cStrHostNameA, lpCheckCertificates, lpSelfCert, lpPrivKey);
+  hRes = cLayer->Initialize(FALSE, (LPCSTR)cStrHostNameA, cCheckCertificates.Get(), cSelfCert.Get(), cPrivKey.Get());
   if (SUCCEEDED(hRes))
   {
     hRes = lpIpc->AddLayer(h, cLayer);

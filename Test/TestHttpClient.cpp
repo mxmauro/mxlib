@@ -32,7 +32,7 @@ public:
     };
 
 public:
-  MX::CSslCertificateArray *lpCertificates;
+  MX::TAutoRefCounted<MX::CSslCertificateArray> cCertificates;
 };
 
 //-----------------------------------------------------------
@@ -68,9 +68,10 @@ static HRESULT OnResponseHeadersReceived_BigDownload(_In_ MX::CHttpClient *lpHtt
                                           _In_ BOOL bTreatAsAttachment, _Inout_ MX::CStringW &cStrFullFileNameW,
                                          _Inout_ MX::CHttpBodyParserBase **lplpBodyParser);
 static VOID OnDocumentCompleted(_In_ MX::CHttpClient *lpHttp);
-static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *lpHttp, _Inout_ MX::CSslCertificateArray **lplpCertificates,
-                                   _Inout_ MX::CSslCertificate **lplpSelfCert,
-                                   _Inout_ MX::CEncryptionKey **lplpPrivKey);
+static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *lpHttp,
+                                   _Outptr_opt_result_maybenull_ MX::CSslCertificateArray **lplpCertificates,
+                                   _Outptr_opt_result_maybenull_ MX::CSslCertificate **lplpSelfCert,
+                                   _Outptr_opt_result_maybenull_ MX::CEncryptionKey **lplpPrivKey);
 
 static HRESULT SimpleTest1(_In_ MX::CSockets &cSocketkMgr, _In_ MX::CSslCertificateArray *lpCertificates);
 static HRESULT WebSocketTest(_In_ MX::CSockets &cSocketkMgr, _In_ MX::CSslCertificateArray *lpCertificates);
@@ -87,7 +88,7 @@ static BOOL _GetTempPath(_Out_ MX::CStringW &cStrPathW);
 typedef struct {
   int nIndex;
   MX::CSockets *lpSocketMgr;
-  MX::CSslCertificateArray *lpCertificates;
+  MX::TAutoRefCounted<MX::CSslCertificateArray> cCertificates;
   MX::CWorkerThread cWorkerThreads;
   DWORD dwLogLevel;
 } THREAD_DATA;
@@ -98,7 +99,7 @@ int TestHttpClient()
 {
   MX::CIoCompletionPortThreadPool cDispatcherPool;
   MX::CSockets cSocketMgr(cDispatcherPool);
-  MX::CSslCertificateArray cCertificates;
+  MX::TAutoRefCounted<MX::CSslCertificateArray> cCertificates;
   HRESULT hRes;
 
   hRes = cDispatcherPool.Initialize();
@@ -112,18 +113,22 @@ int TestHttpClient()
     cSocketMgr.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
     cSocketMgr.SetLogLevel(dwLogLevel);
 
-    hRes = cCertificates.ImportFromWindowsStore();
+    cCertificates.Attach(MX_DEBUG_NEW MX::CSslCertificateArray());
+    if (cCertificates)
+      hRes = cCertificates->ImportFromWindowsStore();
+    else
+      hRes = E_OUTOFMEMORY;
   }
 
   if (SUCCEEDED(hRes))
   {
     if (DoesCmdLineParamExist(L"simple1") != FALSE)
     {
-      hRes = SimpleTest1(cSocketMgr, &cCertificates);
+      hRes = SimpleTest1(cSocketMgr, cCertificates.Get());
     }
     else if (DoesCmdLineParamExist(L"websocket") != FALSE)
     {
-      hRes = WebSocketTest(cSocketMgr, &cCertificates);
+      hRes = WebSocketTest(cSocketMgr, cCertificates.Get());
     }
     else
     {
@@ -135,7 +140,7 @@ int TestHttpClient()
       {
         sThreadData[i].nIndex = (int)i + 1;
         sThreadData[i].lpSocketMgr = &cSocketMgr;
-        sThreadData[i].lpCertificates = &cCertificates;
+        sThreadData[i].cCertificates = cCertificates.Get();
         sThreadData[i].dwLogLevel = dwLogLevel;
         if (sThreadData[i].cWorkerThreads.SetRoutine(&HttpClientJob, &sThreadData[i]) == FALSE ||
             sThreadData[i].cWorkerThreads.Start() == FALSE)
@@ -198,12 +203,16 @@ static VOID OnDocumentCompleted(_In_ MX::CHttpClient *lpHttp)
   return;
 }
 
-static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *_lpHttp, _Inout_ MX::CSslCertificateArray **lplpCertificates,
-                                   _Inout_ MX::CSslCertificate **lplpSelfCert, _Inout_ MX::CEncryptionKey **lplpPrivKey)
+static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *_lpHttp,
+                                   _Outptr_opt_result_maybenull_ MX::CSslCertificateArray **lplpCertificates,
+                                   _Outptr_opt_result_maybenull_ MX::CSslCertificate **lplpSelfCert,
+                                   _Outptr_opt_result_maybenull_ MX::CEncryptionKey **lplpPrivKey)
 {
   CMyHttpClient *lpHttp = static_cast<CMyHttpClient*>(_lpHttp);
 
-  *lplpCertificates = lpHttp->lpCertificates;
+  *lplpCertificates = lpHttp->cCertificates.Get();
+  if ((*lplpCertificates) != NULL)
+    (*lplpCertificates)->AddRef();
   return S_OK;
 }
 
@@ -223,7 +232,7 @@ static HRESULT SimpleTest1(_In_ MX::CSockets &cSocketkMgr, _In_ MX::CSslCertific
   //cProxy.SetManual(L"127.0.0.1:808");
   //cProxy.SetCredentials(L"guest", L"invitado");
   //cHttpClient->SetProxy(cProxy);
-  cHttpClient->lpCertificates = lpCertificates;
+  cHttpClient->cCertificates = lpCertificates;
   //cHttpClient->SetOptionFlags(0);
   //cHttpClient->SetOptionFlags(MX::CHttpClient::OptionKeepConnectionOpen);
 
@@ -309,7 +318,7 @@ static HRESULT WebSocketTest(_In_ MX::CSockets &cSocketMgr, _In_ MX::CSslCertifi
   if (!cHttpClient)
     return E_OUTOFMEMORY;
   cProxy.SetUseIE();
-  cHttpClient->lpCertificates = lpCertificates;
+  cHttpClient->cCertificates = lpCertificates;
   cHttpClient->SetQueryCertificatesCallback(MX_BIND_CALLBACK(&OnQueryCertificates));
   cHttpClient->SetLogLevel(dwLogLevel);
   cHttpClient->SetLogCallback(MX_BIND_CALLBACK(&OnLog));
@@ -376,7 +385,7 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
     return;
   cProxy.SetUseIE();
   cHttpClient->SetProxy(cProxy);
-  cHttpClient->lpCertificates = lpThreadData->lpCertificates;
+  cHttpClient->cCertificates = lpThreadData->cCertificates;
   cHttpClient->SetOption_MaxBodySize(1024 * 1048576);
   cHttpClient->SetOption_MaxBodySizeInMemory(1048576);
   //cHttpClient->SetOptionFlags(0);

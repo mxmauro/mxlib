@@ -42,7 +42,40 @@ typedef struct {
   LPCWSTR szDescW;
 } DEBUGPRINT_DATA, *LPDEBUGPRINT_DATA;
 
-typedef struct tagSSL_LAYER_DATA {
+namespace MX {
+
+namespace Internals {
+
+class CSslLayerData : public virtual CBaseMemObj
+{
+public:
+  CSslLayerData(_In_ BOOL _bServerSide) : CBaseMemObj()
+    {
+    _InterlockedExchange(&nFlags, 0);
+    bServerSide = _bServerSide;
+    //----
+    lpSslCtx = NULL;;
+    lpSslSession = NULL;
+    lpInBio = lpOutBio = NULL;
+    lpOutgoingPacketsList = NULL;
+    nSizeUsedInLastPacket = 0;
+    MX::TAutoRefCounted<MX::CSslCertificateArray> cCertArray;
+    sPeerCert.bIsValid = FALSE;
+    return;
+    };
+
+  ~CSslLayerData()
+    {
+    if (lpSslSession != NULL)
+    {
+      SSL_set_session(lpSslSession, NULL);
+      SSL_free(lpSslSession);
+    }
+    MX_DELETE(lpOutgoingPacketsList);
+    return;
+    };
+
+public:
   LONG volatile nFlags;
   BOOL bServerSide;
   //----
@@ -52,14 +85,18 @@ typedef struct tagSSL_LAYER_DATA {
   BIO *lpOutBio;
   MX::CIpc::CPacketList *lpOutgoingPacketsList;
   SIZE_T nSizeUsedInLastPacket;
-  MX::CSslCertificateArray *lpCertArray;
+  MX::TAutoRefCounted<MX::CSslCertificateArray> cCertArray;
   struct tagPeerCert {
-    MX::CSslCertificate *lpCert;
+    MX::TAutoRefCounted<MX::CSslCertificate> cCert;
     BOOL bIsValid;
   } sPeerCert;
-} SSL_LAYER_DATA;
+};
 
-#define ssl_data ((SSL_LAYER_DATA*)lpInternalData)
+}; //namespace Internals
+
+}; //namespace MX
+
+#define ssl_data ((MX::Internals::CSslLayerData*)lpInternalData)
 
 //-----------------------------------------------------------
 
@@ -90,16 +127,8 @@ CIpcSslLayer::~CIpcSslLayer()
 {
   if (lpInternalData != NULL)
   {
-    if (ssl_data->lpSslSession != NULL)
-    {
-      SSL_set_session(ssl_data->lpSslSession, NULL);
-      SSL_free(ssl_data->lpSslSession);
-      ssl_data->lpSslSession = NULL;
-    }
-    MX_DELETE(ssl_data->lpOutgoingPacketsList);
-    MX_DELETE(ssl_data->sPeerCert.lpCert);
-    MxMemSet(lpInternalData, 0, sizeof(SSL_LAYER_DATA));
-    MX_FREE(lpInternalData);
+    delete ssl_data;
+    lpInternalData = NULL;
   }
   return;
 }
@@ -116,23 +145,33 @@ HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_opt_ LPCSTR szHostNa
   hRes = Internals::OpenSSL::Init();
   if (FAILED(hRes))
     return hRes;
-  if (lpInternalData == NULL)
+
+  if (lpInternalData != NULL)
   {
-    lpInternalData = MX_MALLOC(sizeof(SSL_LAYER_DATA));
-    if (lpInternalData == NULL)
-      return E_OUTOFMEMORY;
-    MxMemSet(lpInternalData, 0, sizeof(SSL_LAYER_DATA));
+    delete ssl_data;
   }
-  ssl_data->bServerSide = bServerSide;
+  lpInternalData = MX_DEBUG_NEW Internals::CSslLayerData(bServerSide);
+  if (lpInternalData == NULL)
+    return E_OUTOFMEMORY;
+
   //create SSL context
   ERR_clear_error();
   ssl_data->lpSslCtx = Internals::OpenSSL::GetSslContext(bServerSide);
   if (ssl_data->lpSslCtx == NULL)
-    return E_OUTOFMEMORY;
+  {
+err_nomem:
+    hRes = E_OUTOFMEMORY;
+on_error:
+    delete ssl_data;
+    lpInternalData = NULL;
+    return hRes;
+  }
+
   //create session
   ssl_data->lpSslSession = SSL_new(ssl_data->lpSslCtx);
   if (ssl_data->lpSslSession == NULL)
-    return E_OUTOFMEMORY;
+    goto err_nomem;
+
   //init some stuff
   SSL_set_verify(ssl_data->lpSslSession, SSL_VERIFY_NONE, NULL);
   SSL_set_verify_depth(ssl_data->lpSslSession, 4);
@@ -149,8 +188,9 @@ HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_opt_ LPCSTR szHostNa
       if (SSL_set_tlsext_host_name(ssl_data->lpSslSession, szHostNameA) <= 0)
       {
         int err = ERR_get_error();
-        return (err == ((ERR_LIB_SSL << 24) | (SSL_F_SSL3_CTRL << 12) | SSL_R_SSL3_EXT_INVALID_SERVERNAME))
+        hRes = (err == ((ERR_LIB_SSL << 24) | (SSL_F_SSL3_CTRL << 12) | SSL_R_SSL3_EXT_INVALID_SERVERNAME))
                ? MX_E_InvalidData : E_OUTOFMEMORY;
+        goto on_error;
       }
     }
   }
@@ -158,41 +198,52 @@ HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_opt_ LPCSTR szHostNa
   {
     SSL_set_accept_state(ssl_data->lpSslSession);
   }
+
   //create i/o objects
   ssl_data->lpOutgoingPacketsList = MX_DEBUG_NEW MX::CIpc::CPacketList();
   if (ssl_data->lpOutgoingPacketsList == NULL)
-    return E_OUTOFMEMORY;
+    goto err_nomem;
+
   ssl_data->lpInBio = BIO_new(BIO_circular_buffer_mem());
   if (ssl_data->lpInBio == NULL)
-    return E_OUTOFMEMORY;
+    goto err_nomem;
   ssl_data->lpOutBio = BIO_new(BIO_circular_buffer_mem());
   if (ssl_data->lpOutBio == NULL)
   {
     BIO_free(ssl_data->lpInBio);
     ssl_data->lpInBio = NULL;
-    return E_OUTOFMEMORY;
+    goto err_nomem;
   }
   SSL_set_bio(ssl_data->lpSslSession, ssl_data->lpInBio, ssl_data->lpOutBio);
   if (SSL_set_ex_data(ssl_data->lpSslSession, 0, (void*)ssl_data) <= 0)
-    return E_OUTOFMEMORY;
+    goto err_nomem;
+
   lpStore = X509_STORE_new();
   if (lpStore == NULL)
-    return E_OUTOFMEMORY;
+    goto err_nomem;
   SSL_ctrl(ssl_data->lpSslSession, SSL_CTRL_SET_CHAIN_CERT_STORE, 0, lpStore); //don't add reference
   SSL_ctrl(ssl_data->lpSslSession, SSL_CTRL_SET_VERIFY_CERT_STORE, 1, lpStore); //do add reference
   if (X509_STORE_set_ex_data(lpStore, 0, (void*)ssl_data) <= 0)
-    return E_OUTOFMEMORY;
+    goto err_nomem;
   X509_STORE_set_get_issuer(lpStore, &my_X509_STORE_get1_issuer);
   X509_STORE_set_lookup_certs(lpStore, &my_X509_STORE_get1_certs);
   X509_STORE_set_lookup_crls(lpStore, &my_X509_STORE_get1_crls);
+
   //setup server/client certificate if provided
-  ssl_data->lpCertArray = lpCheckCertificates;
+  ssl_data->cCertArray = lpCheckCertificates;
   if (lpSelfCert != NULL)
   {
     if (lpSelfCert->GetX509() == NULL)
-      return MX_E_NotReady;
+    {
+      hRes = MX_E_NotReady;
+      goto on_error;
+    }
     if (SSL_use_certificate(ssl_data->lpSslSession, lpSelfCert->GetX509()) <= 0)
-      return Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
+    {
+      hRes = Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
+      goto on_error;
+    }
+
     //setup private key if provided
     if (lpPrivKey != NULL)
     {
@@ -201,19 +252,30 @@ HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_opt_ LPCSTR szHostNa
 
       hRes = lpPrivKey->GetPrivateKey(&cBuffer);
       if (FAILED(hRes))
-        return hRes;
+        goto on_error;
+
       ERR_clear_error();
       if (SSL_use_PrivateKey_ASN1(EVP_PKEY_RSA, ssl_data->lpSslSession, cBuffer->GetBuffer(),
                                   (long)(cBuffer->GetLength())) <= 0)
       {
-        return Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
+        hRes = Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
+        goto on_error;
       }
       if (SSL_check_private_key(ssl_data->lpSslSession) == 0)
-        return MX_E_InvalidData;
+      {
+        hRes = MX_E_InvalidData;
+        goto on_error;
+      }
     }
   }
+
   //done
   return S_OK;
+}
+
+BOOL CIpcSslLayer::IsPeerCertificateValid() const
+{
+  return (lpInternalData != NULL) ? ssl_data->sPeerCert.bIsValid : FALSE;
 }
 
 HRESULT CIpcSslLayer::OnConnect()
@@ -623,17 +685,17 @@ HRESULT CIpcSslLayer::FinalizeHandshake()
       OPENSSL_free(lpTempBuf[0]);
       return MX_E_InvalidData;
     }
-    ssl_data->sPeerCert.lpCert = MX_DEBUG_NEW CSslCertificate();
-    if (ssl_data->sPeerCert.lpCert == NULL)
+    ssl_data->sPeerCert.cCert.Attach(MX_DEBUG_NEW CSslCertificate());
+    if (!(ssl_data->sPeerCert.cCert))
     {
       OPENSSL_free(lpTempBuf[0]);
       return E_OUTOFMEMORY;
     }
-    hRes = ssl_data->sPeerCert.lpCert->InitializeFromDER(lpTempBuf[0], (SIZE_T)nLen);
+    hRes = ssl_data->sPeerCert.cCert->InitializeFromDER(lpTempBuf[0], (SIZE_T)nLen);
     OPENSSL_free(lpTempBuf[0]);
     if (FAILED(hRes))
     {
-      MX_DELETE(ssl_data->sPeerCert.lpCert);
+      ssl_data->sPeerCert.cCert.Release();
       return hRes;
     }
   }
@@ -647,14 +709,14 @@ HRESULT CIpcSslLayer::FinalizeHandshake()
 static int my_X509_STORE_get1_issuer(X509 **issuer, X509_STORE_CTX *ctx, X509 *x)
 {
   X509_STORE *lpStore;
-  SSL_LAYER_DATA *lpSslLayerData;
+  MX::Internals::CSslLayerData *lpSslLayerData;
   X509 *cert;
 
   lpStore = X509_STORE_CTX_get0_store(ctx);
-  lpSslLayerData = (SSL_LAYER_DATA*)X509_STORE_get_ex_data(lpStore, 0);
-  if (lpSslLayerData->lpCertArray != NULL)
+  lpSslLayerData = (MX::Internals::CSslLayerData*)X509_STORE_get_ex_data(lpStore, 0);
+  if (lpSslLayerData->cCertArray)
   {
-    cert = lookup_cert_by_subject(lpSslLayerData->lpCertArray, X509_get_issuer_name(x));
+    cert = lookup_cert_by_subject(lpSslLayerData->cCertArray.Get(), X509_get_issuer_name(x));
     if (cert != NULL)
     {
       X509_STORE_CTX_check_issued_fn fnCheckIssued = X509_STORE_CTX_get_check_issued(ctx);
@@ -670,18 +732,18 @@ static int my_X509_STORE_get1_issuer(X509 **issuer, X509_STORE_CTX *ctx, X509 *x
   return 0;
 }
 
-static STACK_OF(X509) *my_X509_STORE_get1_certs(X509_STORE_CTX *ctx, X509_NAME *nm)
+static STACK_OF(X509)* my_X509_STORE_get1_certs(X509_STORE_CTX *ctx, X509_NAME *nm)
 {
   X509_STORE *lpStore;
-  SSL_LAYER_DATA *lpSslLayerData;
+  MX::Internals::CSslLayerData *lpSslLayerData;
   STACK_OF(X509) *sk;
   X509 *cert;
 
   lpStore = X509_STORE_CTX_get0_store(ctx);
-  lpSslLayerData = (SSL_LAYER_DATA*)X509_STORE_get_ex_data(lpStore, 0);
-  if (lpSslLayerData->lpCertArray != NULL)
+  lpSslLayerData = (MX::Internals::CSslLayerData*)X509_STORE_get_ex_data(lpStore, 0);
+  if (lpSslLayerData->cCertArray)
   {
-    cert = lookup_cert_by_subject(lpSslLayerData->lpCertArray, nm);
+    cert = lookup_cert_by_subject(lpSslLayerData->cCertArray.Get(), nm);
     if (cert != NULL)
     {
       sk = sk_X509_new_null();
@@ -699,18 +761,18 @@ static STACK_OF(X509) *my_X509_STORE_get1_certs(X509_STORE_CTX *ctx, X509_NAME *
   return NULL;
 }
 
-static STACK_OF(X509_CRL) *my_X509_STORE_get1_crls(X509_STORE_CTX *ctx, X509_NAME *nm)
+static STACK_OF(X509_CRL)* my_X509_STORE_get1_crls(X509_STORE_CTX *ctx, X509_NAME *nm)
 {
   X509_STORE *lpStore;
-  SSL_LAYER_DATA *lpSslLayerData;
+  MX::Internals::CSslLayerData *lpSslLayerData;
   STACK_OF(X509_CRL) *sk;
   X509_CRL *cert;
 
   lpStore = X509_STORE_CTX_get0_store(ctx);
-  lpSslLayerData = (SSL_LAYER_DATA*)X509_STORE_get_ex_data(lpStore, 0);
-  if (lpSslLayerData->lpCertArray != NULL)
+  lpSslLayerData = (MX::Internals::CSslLayerData*)X509_STORE_get_ex_data(lpStore, 0);
+  if (lpSslLayerData->cCertArray)
   {
-    cert = lookup_crl_by_subject(lpSslLayerData->lpCertArray, nm);
+    cert = lookup_crl_by_subject(lpSslLayerData->cCertArray, nm);
     if (cert != NULL)
     {
       sk = sk_X509_CRL_new_null();
@@ -737,7 +799,7 @@ static X509* lookup_cert_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, 
   if (lpCertArray == NULL || name == NULL)
     return NULL;
   nCount = lpCertArray->cCertsList.GetCount();
-  for (i=0; i<nCount; i++)
+  for (i = 0; i < nCount; i++)
   {
     lpCert = lpCertArray->cCertsList.GetElementAt(i);
     lpX509 = lpCert->GetX509();

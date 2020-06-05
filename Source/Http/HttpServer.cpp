@@ -505,46 +505,13 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSock
     if (SUCCEEDED(hRes))
     {
       //set SSL
-      if (lpSslCertificate != NULL)
       {
         CAutoSlimRWLExclusive cSslLock(&(sSsl.sRwMutex));
 
-        sSsl.cSslCertificate.Attach(MX_DEBUG_NEW CSslCertificate());
-        if (sSsl.cSslCertificate)
-        {
-          try
-          {
-            *(sSsl.cSslCertificate.Get()) = *lpSslCertificate;
-          }
-          catch (LONG hr)
-          {
-            hRes = (HRESULT)hr;
-          }
-        }
-        else
-        {
-          hRes = E_OUTOFMEMORY;
-        }
-        if (SUCCEEDED(hRes) && lpSslKey != NULL)
-        {
-          sSsl.cSslPrivateKey.Attach(MX_DEBUG_NEW CEncryptionKey());
-          if (sSsl.cSslPrivateKey)
-          {
-            try
-            {
-              *(sSsl.cSslPrivateKey) = *lpSslKey;
-            }
-            catch (LONG _hRes)
-            {
-              hRes = _hRes;
-            }
-          }
-          else
-          {
-            hRes = E_OUTOFMEMORY;
-          }
-        }
+        sSsl.cSslCertificate = lpSslCertificate;
+        sSsl.cSslPrivateKey = lpSslKey;
       }
+
       if (SUCCEEDED(hRes))
       {
         hRes = cSocketMgr.CreateListener(nFamily, nPort, MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnSocketCreate, this),
@@ -554,11 +521,14 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSock
     }
     if (FAILED(hRes))
     {
+      TAutoRefCounted<CSslCertificate> cSslCertificate;
+      TAutoRefCounted<CEncryptionKey> cSslPrivateKey;
+
       {
         CAutoSlimRWLExclusive cSslLock(&(sSsl.sRwMutex));
 
-        sSsl.cSslCertificate.Reset();
-        sSsl.cSslPrivateKey.Reset();
+        cSslCertificate.Attach(sSsl.cSslCertificate.Detach());
+        cSslPrivateKey.Attach(cSslPrivateKey.Detach());
       }
 
       cShutdownEv.Close();
@@ -590,6 +560,8 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCWSTR szBindAddressW, _In_ CSoc
 
 VOID CHttpServer::StopListening()
 {
+  TAutoRefCounted<CSslCertificate> cSslCertificate;
+  TAutoRefCounted<CEncryptionKey> cSslPrivateKey;
   BOOL bWait = FALSE;
 
   //shutdown current listener
@@ -603,14 +575,16 @@ VOID CHttpServer::StopListening()
       cSocketMgr.Close(hAcceptConn, MX_E_Cancelled);
       bWait = TRUE;
     }
+
     //ssl
     {
       CAutoSlimRWLExclusive cSslLock(&(sSsl.sRwMutex));
 
-      sSsl.cSslCertificate.Reset();
-      sSsl.cSslPrivateKey.Reset();
+      cSslCertificate.Attach(sSsl.cSslCertificate.Detach());
+      cSslPrivateKey.Attach(cSslPrivateKey.Detach());
     }
   }
+
   //wait until terminated
   if (bWait != FALSE)
   {

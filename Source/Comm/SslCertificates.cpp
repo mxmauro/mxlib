@@ -34,13 +34,13 @@ static HRESULT GetName(_In_ X509_NAME *lpName, _In_ MX::CSslCertificate::eInform
 
 namespace MX {
 
-CSslCertificate::CSslCertificate() : CBaseMemObj()
+CSslCertificate::CSslCertificate() : TRefCounted<CBaseMemObj>()
 {
   lpX509 = NULL;
   return;
 }
 
-CSslCertificate::CSslCertificate(_In_ const CSslCertificate &cSrc) throw(...) : CBaseMemObj()
+CSslCertificate::CSslCertificate(_In_ const CSslCertificate &cSrc) throw(...) : TRefCounted<CBaseMemObj>()
 {
   lpX509 = NULL;
   operator=(cSrc);
@@ -177,13 +177,13 @@ BOOL CSslCertificate::IsCaCert() const
 //-----------------------------------------------------------
 //-----------------------------------------------------------
 
-CSslCertificateCrl::CSslCertificateCrl() : CBaseMemObj()
+CSslCertificateCrl::CSslCertificateCrl() : TRefCounted<CBaseMemObj>()
 {
   lpX509Crl = NULL;
   return;
 }
 
-CSslCertificateCrl::CSslCertificateCrl(_In_ const CSslCertificateCrl &cSrc) throw(...) : CBaseMemObj()
+CSslCertificateCrl::CSslCertificateCrl(_In_ const CSslCertificateCrl &cSrc) throw(...) : TRefCounted<CBaseMemObj>()
 {
   lpX509Crl = NULL;
   operator=(cSrc);
