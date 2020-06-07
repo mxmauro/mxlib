@@ -27,7 +27,7 @@
 //-----------------------------------------------------------
 
 #define MAX_REQUEST_STATUS_LINE_LENGTH                  4096
-#define MAX_HEADER_LENGTH                               4096
+#define MAX_HEADER_LINE                                 4096
 
 #define HEADER_FLAG_TransferEncodingChunked           0x0001
 #define HEADER_FLAG_ContentEncodingGZip               0x0002
@@ -105,7 +105,7 @@ VOID CHttpParser::Reset()
 #define BACKWARD_CHAR()     szDataA--
 HRESULT CHttpParser::Parse(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize, _Out_ SIZE_T &nDataUsed)
 {
-  LPCSTR szDataA, sA;
+  LPCSTR szDataA;
   HRESULT hRes;
 
   nDataUsed = 0;
@@ -115,6 +115,7 @@ HRESULT CHttpParser::Parse(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize, _Out_ SIZ
     return S_OK;
   if (nState == StateError)
     return MX_E_InvalidData;
+
   hRes = S_OK;
   for (szDataA = (LPCSTR)lpData; szDataA != (LPCSTR)lpData + nDataSize; szDataA++)
   {
@@ -123,23 +124,23 @@ HRESULT CHttpParser::Parse(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize, _Out_ SIZ
       case StateStart:
         if (*szDataA == '\r' || *szDataA == '\n')
           break;
-        nState = (bActAsServer != FALSE) ? StateRequestLine : StateStatusLine;
+        nState = StateRequestOrStatusLine;
         BACKWARD_CHAR();
         break;
 
-      case StateRequestLine:
-      case StateStatusLine:
-        if (*szDataA == '\r' || *szDataA == '\n')
+      case StateRequestOrStatusLine:
+        if (*szDataA == '\r')
         {
-          hRes = (nState == StateRequestLine) ? ParseRequestLine((LPCSTR)cStrCurrLineA)
-                                              : ParseStatusLine((LPCSTR)cStrCurrLineA);
-          if (FAILED(hRes))
-            goto done; //if the request/status line fails to parse, it it a not recoverable error
-          //end of request/status line
-          nState = (*szDataA == '\r') ? StateNearRequestOrStatusEnd : StateHeaderStart;
-          cStrCurrLineA.Empty();
+          nState = StateRequestOrStatusLineEnding;
           break;
         }
+        if (*((LPBYTE)szDataA) < 32 && *szDataA != '\t')
+        {
+err_invalid_data:
+          hRes = MX_E_InvalidData;
+          goto done;
+        }
+
         //is status/request line too long?
         if (cStrCurrLineA.GetLength() > MAX_REQUEST_STATUS_LINE_LENGTH)
         {
@@ -147,26 +148,32 @@ err_line_too_long:
           hRes = MX_E_BadLength; //header line too long
           goto done;
         }
+
         //add character to line
         if (cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
         {
-err_nomem:  hRes = E_OUTOFMEMORY;
+err_nomem:
+          hRes = E_OUTOFMEMORY;
           goto done;
         }
         break;
 
-      case StateNearRequestOrStatusEnd:
+      case StateRequestOrStatusLineEnding:
         if (*szDataA != '\n')
-        {
-err_invalid_data:
-          hRes = MX_E_InvalidData;
-          goto done;
-        }
+          goto err_invalid_data;
+
+        hRes = (bActAsServer != FALSE) ? ParseRequestLine((LPCSTR)cStrCurrLineA)
+                                       : ParseStatusLine((LPCSTR)cStrCurrLineA);
+        if (FAILED(hRes))
+          goto done; //if the request/status line fails to parse, it it a not recoverable error
+
+        //end of request/status line
+        cStrCurrLineA.Empty();
         nState = StateHeaderStart;
         break;
 
       case StateHeaderStart:
-        if (*szDataA == '\r' || *szDataA == '\n')
+        if (*szDataA == '\r')
         {
           //no more headers
           if (cStrCurrLineA.IsEmpty() == FALSE)
@@ -176,19 +183,21 @@ err_invalid_data:
               goto done;
             cStrCurrLineA.Empty();
           }
-          nState = StateHeadersEnd;
-          if (*szDataA == '\n')
-            goto headers_end_reached;
+
+          nState = StateHeadersEnding;
           break;
         }
+
         //are we continuing the last header?
         if (*szDataA == ' ' || *szDataA == '\t')
         {
           if (cStrCurrLineA.IsEmpty() != FALSE)
             goto err_invalid_data;
-          nState = StateHeaderValueSpaceAfter;
+          nState = StateHeaderValue;
+          BACKWARD_CHAR();
           break;
         }
+
         //new header arrives, first check if we have a previous defined
         if (cStrCurrLineA.IsEmpty() == FALSE)
         {
@@ -198,106 +207,72 @@ err_invalid_data:
           cStrCurrLineA.Empty();
         }
         nState = StateHeaderName;
-        BACKWARD_CHAR();
-        break;
+        //fall into 'StateHeaderName'
 
       case StateHeaderName:
         //check headers length
         if (dwHeadersLen >= dwMaxHeaderSize)
           goto err_line_too_long;
         dwHeadersLen++;
+
         //end of header name?
         if (*szDataA == ':')
         {
           if (cStrCurrLineA.IsEmpty() != FALSE)
             goto err_invalid_data;
+
           if (cStrCurrLineA.ConcatN(":", 1) == FALSE)
             goto err_nomem;
-          nState = StateHeaderValueSpaceBefore;
+          nState = StateHeaderValue;
           break;
         }
+
         //check for valid token char
         if (Http::IsValidNameChar(*szDataA) == FALSE)
           goto err_invalid_data;
-        if (cStrCurrLineA.GetLength() > MAX_HEADER_LENGTH)
+        if (cStrCurrLineA.GetLength() > MAX_HEADER_LINE)
           goto err_line_too_long;
+
         //add character to line
         if (cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
           goto err_nomem;
-        //ignore IIS bug sending HTTP/ more than once
-        sA = (LPCSTR)cStrCurrLineA;
-        if (sA[0] == 'H' && sA[1] == 'T' && sA[2] == 'T' && sA[3] == 'P' && sA[4] == '/')
-        {
-          dwHeadersLen -= 5;
-          nState = StateIgnoringHeader;
-          cStrCurrLineA.Empty();
-          break;
-        }
         break;
-
-      case StateHeaderValueSpaceBefore:
-        if (*szDataA == ' ' || *szDataA == '\t')
-          break; //ignore spaces
-        //real header begin
-        nState = StateHeaderValue;
-        //fall into 'stHeaderValue'
 
       case StateHeaderValue:
-on_header_value:
-        if (*szDataA == '\r' || *szDataA == '\n')
-        {
-          hRes = ParseHeader(cStrCurrLineA);
-          if (FAILED(hRes))
-            goto done;
-          cStrCurrLineA.Empty();
-          nState = (*szDataA == '\r') ? StateNearHeaderValueEnd : StateHeaderStart;
-          break;
-        }
-        if (*szDataA == ' ' || *szDataA == '\t')
-        {
-          nState = StateHeaderValueSpaceAfter;
-          break;
-        }
-        //check headers length and valid value char
+        //check headers length
         if (dwHeadersLen >= dwMaxHeaderSize)
           goto err_line_too_long;
         dwHeadersLen++;
+
+        if (*szDataA == '\r')
+        {
+          nState = StateHeaderValueEnding;
+          break;
+        }
+
+        //check valid value char
         if (*szDataA == 0)
           goto err_invalid_data;
-        if (cStrCurrLineA.GetLength() > MAX_HEADER_LENGTH)
+
+        //and append
+        if (cStrCurrLineA.GetLength() > MAX_HEADER_LINE)
           goto err_line_too_long;
-        //add character to line
         if (cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
           goto err_nomem;
         break;
 
-      case StateHeaderValueSpaceAfter:
-        if (*szDataA == '\r' || *szDataA == '\n')
-          goto on_header_value;
-        if (*szDataA == ' ' || *szDataA == '\t')
-          break;
-        if (dwHeadersLen >= dwMaxHeaderSize)
-          goto err_line_too_long;
-        dwHeadersLen++;
-        //add character to the line
-        if (cStrCurrLineA.GetLength() > MAX_HEADER_LENGTH)
-          goto err_line_too_long;
-        if (cStrCurrLineA.ConcatN(" ", 1) == FALSE)
-          goto err_nomem;
-        nState = StateHeaderValue;
-        goto on_header_value;
-
-      case StateNearHeaderValueEnd:
+      case StateHeaderValueEnding:
         if (*szDataA != '\n')
           goto err_invalid_data;
+
         nState = StateHeaderStart;
         break;
 
-      case StateHeadersEnd:
+      case StateHeadersEnding:
         if (*szDataA != '\n')
           goto err_invalid_data;
-headers_end_reached:
         szDataA++;
+
         //do some checks
         if (bActAsServer != FALSE)
         {
@@ -343,15 +318,18 @@ headers_end_reached:
             }
           }
         }
+
         //if transfer encoding is set, then ignore content-length
         if ((nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0)
           sBody.nContentLength = ULONGLONG_MAX;
+
         //if no content we are done
         if (sBody.nContentLength == 0)
         {
           nState = StateDone;
           goto done;
         }
+
         nState = StateBodyStart;
         if (ShouldLog(1) != FALSE)
         {
@@ -363,17 +341,6 @@ headers_end_reached:
         nState = ((nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0) ? StateChunkPreStart
                                                                              : StateIdentityBodyStart;
         BACKWARD_CHAR();
-        break;
-
-      case StateIgnoringHeader:
-        if (*szDataA == '\r' || *szDataA == '\n')
-          nState = (*szDataA == '\r') ? StateNearIgnoringHeaderEnd : StateHeaderStart;
-        break;
-
-      case StateNearIgnoringHeaderEnd:
-        if (*szDataA != '\n')
-          goto err_invalid_data;
-        nState = StateHeaderStart;
         break;
 
       case StateIdentityBodyStart:
@@ -442,24 +409,28 @@ headers_end_reached:
             sBody.sChunk.nSize |= (ULONGLONG)((*szDataA) & 0xDF) - (ULONGLONG)'A' + 10ui64;
           break;
         }
+
         //end of chunk size
         if (*szDataA == ' ' || *szDataA == '\t' || *szDataA == ';')
         {
           nState = StateChunkStartIgnoreExtension;
           break;
         }
-        if (*szDataA == '\r')
-        {
-          nState = StateNearEndOfChunkStart;
-          break;
-        }
+
+        if (*szDataA != '\r')
+          goto err_invalid_data;
+
+        nState = StateChunkStartEnding;
+        break;
+
+      case StateChunkStartEnding:
         if (*szDataA != '\n')
           goto err_invalid_data;
-chunk_data_begin:
         if (ShouldLog(1) != FALSE)
         {
           Log(L"HttpCommon(Chunk/0x%p): %I64u", this, sBody.sChunk.nSize);
         }
+
         nState = StateChunkData;
         if (sBody.sChunk.nSize == 0)
         {
@@ -472,15 +443,11 @@ chunk_data_begin:
 
       case StateChunkStartIgnoreExtension:
         if (*szDataA == '\r')
-          nState = StateNearEndOfChunkStart;
-        else if (*szDataA == '\n')
-          goto chunk_data_begin;
+        {
+          nState = StateChunkStartEnding;
+          break;
+        }
         break;
-
-      case StateNearEndOfChunkStart:
-        if (*szDataA != '\n')
-          goto err_invalid_data;
-        goto chunk_data_begin;
 
       case StateChunkData:
         {
@@ -694,10 +661,15 @@ HRESULT CHttpParser::ParseStatusLine(_In_z_ LPCSTR szLineA)
 HRESULT CHttpParser::ParseHeader(_In_ CStringA &cStrLineA)
 {
   TAutoDeletePtr<CHttpHeaderBase> cHeader;
-  LPSTR szLineA, szNameStartA, szNameEndA, szValueStartA, szValueEndA;
+  LPCSTR szLineA, szNameStartA, szNameEndA, szValueStartA, szValueEndA;
   HRESULT hRes;
 
-  szLineA = (LPSTR)cStrLineA;
+  szLineA = (LPCSTR)cStrLineA;
+
+  //ignore IIS bug sending HTTP/ more than once
+  if (szLineA[0] == 'H' && szLineA[1] == 'T' && szLineA[2] == 'T' && szLineA[3] == 'P' && szLineA[4] == '/')
+    return S_OK;
+
   //skip blanks
   while (*szLineA == ' ' || *szLineA == '\t')
     szLineA++;

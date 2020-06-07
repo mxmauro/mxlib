@@ -26,6 +26,7 @@ namespace MX {
 CJsHttpServer::CJsHttpServer(_In_ CSockets &cSocketMgr,
                              _In_opt_ CLoggable *lpLogParent) : CBaseMemObj(), CHttpServer(cSocketMgr, lpLogParent)
 {
+  cQuerySslCertificatesCallback = NullCallback();
   cNewRequestObjectCallback = NullCallback();
   cRequestHeadersReceivedCallback = NullCallback();
   cRequestCompletedCallback = NullCallback();
@@ -36,6 +37,7 @@ CJsHttpServer::CJsHttpServer(_In_ CSockets &cSocketMgr,
   //----
   cJvmManager.Attach(MX_DEBUG_NEW CJvmManager());
   //----
+  CHttpServer::SetQuerySslCertificatesCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnQuerySslCertificates, this));
   CHttpServer::SetNewRequestObjectCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnNewRequestObject, this));
   CHttpServer::SetRequestHeadersReceivedCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequestHeadersReceived,
                                                                          this));
@@ -50,6 +52,12 @@ CJsHttpServer::CJsHttpServer(_In_ CSockets &cSocketMgr,
 CJsHttpServer::~CJsHttpServer()
 {
   StopListening();
+  return;
+}
+
+VOID CJsHttpServer::SetQuerySslCertificatesCallback(_In_ OnQuerySslCertificatesCallback _cQuerySslCertificatesCallback)
+{
+  cQuerySslCertificatesCallback = _cQuerySslCertificatesCallback;
   return;
 }
 
@@ -127,6 +135,13 @@ HRESULT CJsHttpServer::OnNewRequestObject(_In_ CHttpServer *lpHttp, _Out_ CHttpS
     *lplpRequest = lpJsRequest;
   }
   return hRes;
+}
+
+HRESULT CJsHttpServer::OnQuerySslCertificates(_In_ CHttpServer *lpHttp,
+                                              _Outptr_result_maybenull_ CSslCertificate **lplpSslCert,
+                                              _Outptr_result_maybenull_ CEncryptionKey **lplpSslPrivKey)
+{
+  return (cQuerySslCertificatesCallback) ? cQuerySslCertificatesCallback(this, lplpSslCert, lplpSslPrivKey) : S_FALSE;
 }
 
 HRESULT CJsHttpServer::OnRequestHeadersReceived(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *_lpRequest,

@@ -40,10 +40,13 @@ public:
   class CClientRequest;
 
 public:
+  typedef Callback<HRESULT(_In_ CHttpServer *lpHttp, _Outptr_result_maybenull_ CSslCertificate **lplpSslCert,
+                           _Outptr_result_maybenull_ CEncryptionKey **lplpSslPrivKey)> OnQuerySslCertificatesCallback;
+
   typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _Out_ CClientRequest **lplpRequest)> OnNewRequestObjectCallback;
 
   typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
-                            _Outptr_opt_ _Maybenull_ CHttpBodyParserBase **lplpBodyParser)>
+                            _Outptr_result_maybenull_ CHttpBodyParserBase **lplpBodyParser)>
                             OnRequestHeadersReceivedCallback;
 
   typedef Callback<VOID (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest)> OnRequestCompletedCallback;
@@ -51,7 +54,7 @@ public:
   typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ int nVersion,
                             _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount, _Out_ int &nSelectedProtocol,
                             _In_ TArrayList<int> &aSupportedVersions,
-                            _Out_ _Maybenull_ CWebSocket **lplpWebSocket)> OnWebSocketRequestReceivedCallback;
+                            _Outptr_result_maybenull_ CWebSocket **lplpWebSocket)> OnWebSocketRequestReceivedCallback;
 
   typedef Callback<VOID(_In_ CHttpServer *lpHttp, _In_ CClientRequest *lpRequest)> OnRequestDestroyedCallback;
 
@@ -80,6 +83,7 @@ public:
   VOID SetOption_MaxBodySize(_In_ ULONGLONG ullSize);
   VOID SetOption_MaxIncomingBytesWhileSending(_In_ DWORD dwMaxIncomingBytesWhileSending);
 
+  VOID SetQuerySslCertificatesCallback(_In_ OnQuerySslCertificatesCallback cQuerySslCertificatesCallback);
   VOID SetNewRequestObjectCallback(_In_ OnNewRequestObjectCallback cNewRequestObjectCallback);
   VOID SetRequestHeadersReceivedCallback(_In_ OnRequestHeadersReceivedCallback cRequestHeadersReceivedCallback);
   VOID SetRequestCompletedCallback(_In_ OnRequestCompletedCallback cRequestCompletedCallback);
@@ -88,14 +92,11 @@ public:
   VOID SetCustomErrorPageCallback(_In_ OnCustomErrorPageCallback cCustomErrorPageCallback);
 
   HRESULT StartListening(_In_ CSockets::eFamily nFamily, _In_ int nPort,
-                         _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions = NULL,
-                         _In_opt_ CSslCertificate *lpSslCertificate = NULL, _In_opt_ CEncryptionKey *lpSslKey = NULL);
+                         _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions = NULL);
   HRESULT StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSockets::eFamily nFamily, _In_ int nPort,
-                         _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions = NULL,
-                         _In_opt_ CSslCertificate *lpSslCertificate = NULL, _In_opt_ CEncryptionKey *lpSslKey = NULL);
+                         _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions = NULL);
   HRESULT StartListening(_In_opt_z_ LPCWSTR szBindAddressW, _In_ CSockets::eFamily nFamily, _In_ int nPort,
-                         _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions = NULL,
-                         _In_opt_ CSslCertificate *lpSslCertificate = NULL, _In_opt_ CEncryptionKey *lpSslKey = NULL);
+                         _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions = NULL);
   VOID StopListening();
 
 public:
@@ -402,14 +403,10 @@ private:
   DWORD dwMaxIncomingBytesWhileSending;
 
   LONG volatile nDownloadNameGeneratorCounter;
-  struct {
-    RWLOCK sRwMutex;
-    TAutoRefCounted<CSslCertificate> cSslCertificate;
-    TAutoRefCounted<CEncryptionKey> cSslPrivateKey;
-  } sSsl;
   LONG volatile nRundownLock;
   HANDLE hAcceptConn;
 
+  OnQuerySslCertificatesCallback cQuerySslCertificatesCallback;
   OnNewRequestObjectCallback cNewRequestObjectCallback;
   OnRequestHeadersReceivedCallback cRequestHeadersReceivedCallback;
   OnRequestCompletedCallback cRequestCompletedCallback;

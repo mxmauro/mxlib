@@ -79,8 +79,9 @@ protected:
   static LPCSTR GetToken(_In_ LPCSTR sA, _In_ LPCSTR szEndA);
   static HRESULT GetQuotedString(_Out_ CStringA &cStrA, _Inout_ LPCSTR &sA, _In_ LPCSTR szEndA);
 
-  static HRESULT GetParamNameAndValue(_Out_ CStringA &cStrTokenA, _Out_ CStringW &cStrValueW, _Inout_ LPCSTR &sA,
-                                      _In_ LPCSTR szEndA, _Out_opt_ LPBOOL lpbExtendedParam = NULL);
+  static HRESULT GetParamNameAndValue(_In_ BOOL bUseUtf8AsDefaultCharset, _Out_ CStringA &cStrTokenA,
+                                      _Out_ CStringW &cStrValueW, _Inout_ LPCSTR &sA, _In_ LPCSTR szEndA,
+                                      _Out_opt_ LPBOOL lpbExtendedParam = NULL);
 
   static BOOL RawISO_8859_1_to_UTF8(_Out_ CStringW &cStrDestW, _In_ LPCWSTR szSrcW, _In_ SIZE_T nSrcLen);
 };

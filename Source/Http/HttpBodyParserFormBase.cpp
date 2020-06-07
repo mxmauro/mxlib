@@ -416,121 +416,85 @@ static HRESULT ParseNameAndIndexes(_In_z_ LPCWSTR szNameW, _Inout_ MX::CStringW 
                                    _Inout_ MX::TArrayListWithFree<LPCWSTR> &aSubIndexesList)
 {
   MX::CStringW cStrCurrSubIndexW;
-  BOOL bValidChars, bPrevWasSpace;
-  LPCWSTR sW;
+  LPCWSTR sW, szStartW;
 
   cStrNameW.Empty();
   aSubIndexesList.RemoveAllElements();
   if (szNameW == NULL)
     return E_POINTER;
-  //skip blanks
-  while (*szNameW == L' ' || *szNameW == L'\t')
-    szNameW++;
+
   //parse name
-  bValidChars = bPrevWasSpace = FALSE;
-  while (*szNameW != 0 && *szNameW != L'[' && *szNameW != L'\t')
+  while (*szNameW != 0 && *szNameW != L'[')
   {
-    if (*szNameW > L' ' && *szNameW != L'.')
+    szStartW = szNameW;
+    while (*szNameW != 0 && *szNameW != L'[' && *szNameW != L'.')
+      szNameW++;
+    if (szNameW > szStartW)
     {
-      if (bPrevWasSpace != FALSE)
-      {
-        if (cStrNameW.ConcatN(" ", 1) == FALSE)
-          return E_OUTOFMEMORY;
-        bPrevWasSpace = FALSE;
-      }
-      if (cStrNameW.ConcatN(szNameW, 1) == FALSE)
+      if (cStrNameW.ConcatN(szStartW, (SIZE_T)(szNameW - szStartW)) == FALSE)
         return E_OUTOFMEMORY;
-      bValidChars = TRUE;
     }
-    else if (*szNameW == '.')
+    if (*szNameW == L'.')
     {
-      if (bPrevWasSpace != FALSE)
-      {
-        if (cStrNameW.ConcatN(" ", 1) == FALSE)
-          return E_OUTOFMEMORY;
-        bPrevWasSpace = FALSE;
-      }
       if (cStrNameW.ConcatN("_", 1) == FALSE)
         return E_OUTOFMEMORY;
+      szNameW++;
     }
-    else if (*szNameW == L' ' || *szNameW == L'\t')
-    {
-      bPrevWasSpace = TRUE;
-    }
-    szNameW++;
   }
-  if (cStrNameW.IsEmpty() != FALSE || bValidChars == FALSE)
+  if (cStrNameW.IsEmpty() != FALSE)
     return E_INVALIDARG;
-parse_index:
-  //skip blanks
-  while (*szNameW == L' ' || *szNameW == L'\t')
-    szNameW++;
+
   //parse indexes (if any)
-  if (*szNameW == L'[')
+  while (*szNameW == L'[')
   {
     //too much indexes?
     if (aSubIndexesList.GetCount() >= MAX_SUBINDEXES_COUNT)
       return MX_E_Unsupported;
+
     //parse
     cStrCurrSubIndexW.Empty();
     szNameW++;
-    //skip blanks
-    while (*szNameW == L' ' || *szNameW == L'\t')
-      szNameW++;
+
     //parse index
-    bValidChars = bPrevWasSpace = FALSE;
     while (*szNameW != 0 && *szNameW != L']')
     {
-      if (*szNameW > L' ' && *szNameW != L'.')
+      szStartW = szNameW;
+      while (*szNameW != 0 && *szNameW != L']' && *szNameW != L'.')
+        szNameW++;
+      if (szNameW > szStartW)
       {
-        if (bPrevWasSpace != FALSE)
-        {
-          if (cStrCurrSubIndexW.ConcatN(" ", 1) == FALSE)
-            return E_OUTOFMEMORY;
-          bPrevWasSpace = FALSE;
-        }
-        if (cStrCurrSubIndexW.ConcatN(szNameW, 1) == FALSE)
+        if (cStrCurrSubIndexW.ConcatN(szStartW, (SIZE_T)(szNameW - szStartW)) == FALSE)
           return E_OUTOFMEMORY;
-        bValidChars = TRUE;
       }
-      else if (*szNameW == '.')
+      if (*szNameW == L'.')
       {
-        if (bPrevWasSpace != FALSE)
-        {
-          if (cStrCurrSubIndexW.ConcatN(" ", 1) == FALSE)
-            return E_OUTOFMEMORY;
-          bPrevWasSpace = FALSE;
-        }
         if (cStrCurrSubIndexW.ConcatN("_", 1) == FALSE)
           return E_OUTOFMEMORY;
+        szNameW++;
       }
-      else if (*szNameW == L' ' || *szNameW == L'\t')
-      {
-        bPrevWasSpace = TRUE;
-      }
-      szNameW++;
     }
-    if (*szNameW != L']' || (cStrCurrSubIndexW.IsEmpty() == FALSE && bValidChars == FALSE))
+    if (*szNameW != L']')
       return E_INVALIDARG;
     szNameW++; //skip ']'
-    //check if numeric index and remove leading zeroes
+
+    //check if numeric index and remove leading zeros
     if (cStrCurrSubIndexW.IsEmpty() == FALSE && IsNumeric((LPCWSTR)cStrCurrSubIndexW) != FALSE)
     {
-      for (sW=(LPCWSTR)cStrCurrSubIndexW; *sW == L'0'; sW++);
+      for (sW = (LPCWSTR)cStrCurrSubIndexW; *sW == L'0'; sW++);
       if (*sW == 0)
-        sW--; //if all are zeroes, leave one
-      cStrCurrSubIndexW.Delete(0, (SIZE_T)(sW-(LPCWSTR)cStrCurrSubIndexW));
+        sW--; //if all are zeros, leave one
+      cStrCurrSubIndexW.Delete(0, (SIZE_T)(sW - (LPCWSTR)cStrCurrSubIndexW));
     }
-    //add to subindex list
+
+    //add to subindex list (do detach before to avoid inserting the fixed "" string used by CStringW
     sW = cStrCurrSubIndexW.Detach();
     if (aSubIndexesList.AddElement(sW) == FALSE)
     {
       MX_FREE(sW);
       return E_OUTOFMEMORY;
     }
-    //restart
-    goto parse_index;
   }
+
   //skip blanks and check for end
   return (*szNameW == 0) ? S_OK : E_INVALIDARG;
 }
@@ -546,7 +510,7 @@ static int NumericCompare(_In_z_ LPCWSTR szNumber1, _In_z_ LPCWSTR szNumber2)
 {
   SIZE_T nDigitsLeft[2];
 
-  /* NOTE: No need of this because numbers won't have leading zeroes
+  /* NOTE: No need of this because numbers won't have leading zeros
   while (*szNumber1 == L'0')
     szNumber1++;
   while (*szNumber2 == L'0')

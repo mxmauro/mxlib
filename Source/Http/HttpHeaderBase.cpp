@@ -181,19 +181,22 @@ HRESULT CHttpHeaderBase::GetQuotedString(_Out_ CStringA &cStrA, _Inout_ LPCSTR &
   while (sA < szEndA && *sA != '"')
   {
     szStartA = sA;
-    while (sA < szEndA && *((UCHAR*)sA) >= 0x20 && *sA != '\\' && *sA != '"')
+    while (sA < szEndA && (*((UCHAR*)sA) >= 0x20 || *sA == '\t' || *sA == '\r' || *sA == '\n') &&
+           *sA != '\\' && *sA != '"')
+    {
       sA++;
+    }
     if (sA > szStartA)
     {
       if (cStrA.ConcatN(szStartA, (SIZE_T)(sA - szStartA)) == FALSE)
         return E_OUTOFMEMORY;
     }
-    if (sA >= szEndA || *((UCHAR*)sA) < 0x20)
+    if (sA >= szEndA)
       return E_INVALIDARG;
     if (*sA == '\\')
     {
       sA++;
-      if (sA >= szEndA || *((UCHAR*)sA) < 0x20)
+      if (sA >= szEndA || *((UCHAR*)sA) == 0) //we don't support embedding \0
         return E_INVALIDARG;
       if (cStrA.ConcatN(sA, 1) == FALSE)
         return E_OUTOFMEMORY;
@@ -206,11 +209,13 @@ HRESULT CHttpHeaderBase::GetQuotedString(_Out_ CStringA &cStrA, _Inout_ LPCSTR &
   return S_OK;
 }
 
-HRESULT CHttpHeaderBase::GetParamNameAndValue(_Out_ CStringA &cStrTokenA, _Out_ CStringW &cStrValueW,
-                                              _Inout_ LPCSTR &sA, _In_ LPCSTR szEndA, _Out_opt_ LPBOOL lpbExtendedParam)
+HRESULT CHttpHeaderBase::GetParamNameAndValue(_In_ BOOL bUseUtf8AsDefaultCharset, _Out_ CStringA &cStrTokenA,
+                                              _Out_ CStringW &cStrValueW, _Inout_ LPCSTR &sA, _In_ LPCSTR szEndA,
+                                              _Out_opt_ LPBOOL lpbExtendedParam)
 {
   CStringA cStrValueA;
   LPCSTR szStartA;
+  BOOL bUsingUTF8;
   BOOL bExtendedParam = FALSE;
   HRESULT hRes;
 
@@ -218,6 +223,8 @@ HRESULT CHttpHeaderBase::GetParamNameAndValue(_Out_ CStringA &cStrTokenA, _Out_ 
   cStrValueW.Empty();
   if (lpbExtendedParam != NULL)
     *lpbExtendedParam = FALSE;
+
+  bUsingUTF8 = bUseUtf8AsDefaultCharset;
 
   //get token
   sA = GetToken(szStartA = sA, szEndA);
@@ -234,39 +241,45 @@ HRESULT CHttpHeaderBase::GetParamNameAndValue(_Out_ CStringA &cStrTokenA, _Out_ 
     if (cStrTokenA.CopyN(szStartA, (SIZE_T)(sA - szStartA) - 1) == FALSE)
       return E_OUTOFMEMORY;
   }
+
   //skip spaces
   sA = SkipSpaces(sA, szEndA);
+
   //end?
   if (sA >= szEndA)
     return MX_E_NoData;
+
   //is equal sign?
   if (*sA != '=')
     return (*sA == ',' || *sA == ';') ? MX_E_NoData : MX_E_InvalidData;
+
   //skip spaces
   sA = SkipSpaces(sA + 1, szEndA);
   //parse value
   if (bExtendedParam != FALSE)
   {
-    int nType = 0;
-
     if ((SIZE_T)(szEndA - sA) >= 6 && MX::StrNCompareA(sA, "UTF-8'", 6, TRUE) == 0)
     {
       sA += 6;
-      nType = 1;
+      bUsingUTF8 = TRUE;
     }
     else if ((SIZE_T)(szEndA - sA) >= 11 && MX::StrNCompareA(sA, "ISO-8859-1'", 11, TRUE) == 0)
     {
       sA += 11;
-      nType = 2;
+      bUsingUTF8 = FALSE;
     }
-    if (nType != 0)
+
+    if (sA < szEndA && *sA == '\'')
     {
+      //skip language
       while (sA < szEndA && *sA != '\'')
         sA++;
+      //must follow an apostrophe
       if (sA >= szEndA || *sA != '\'')
         return MX_E_InvalidData;
       sA++;
-      //get value
+
+      //now get value
       while (sA < szEndA)
       {
         BYTE chA, i;
@@ -301,40 +314,39 @@ HRESULT CHttpHeaderBase::GetParamNameAndValue(_Out_ CStringA &cStrTokenA, _Out_ 
         if (cStrValueA.CopyN((LPCSTR)&chA, 1) == FALSE)
           return E_OUTOFMEMORY;
       }
-      if (nType == 1)
-      {
-        hRes = Utf8_Decode(cStrValueW, (LPCSTR)cStrValueA, cStrValueA.GetLength());
-        if (FAILED(hRes))
-          return (hRes == E_OUTOFMEMORY) ? hRes : MX_E_InvalidData;
-      }
-      else
-      {
-        if (Http::FromISO_8859_1(cStrValueW, (LPCSTR)cStrValueA, cStrValueA.GetLength()) == FALSE)
-          return E_OUTOFMEMORY;
-      }
-      goto done;
+
+      goto convert_harset;
     }
   }
+
   //try quoted string
   if (sA < szEndA && *sA == '"')
   {
     hRes = GetQuotedString(cStrValueA, sA, szEndA);
     if (FAILED(hRes))
       return (hRes == E_OUTOFMEMORY) ? hRes : MX_E_InvalidData;
-    if (Http::FromISO_8859_1(cStrValueW, (LPCSTR)cStrValueA, cStrValueA.GetLength()) == FALSE)
-      return E_OUTOFMEMORY;
   }
   else
   {
     //try token
     sA = GetToken(szStartA = sA, szEndA);
-    if (cStrValueA.CopyN(szStartA, (SIZE_T)(sA - szStartA)) == FALSE ||
-        Http::FromISO_8859_1(cStrValueW, (LPCSTR)cStrValueA, cStrValueA.GetLength()) == FALSE)
-    {
+    if (cStrValueA.CopyN(szStartA, (SIZE_T)(sA - szStartA)) == FALSE)
       return E_OUTOFMEMORY;
-    }
   }
-done:
+
+convert_harset:
+  if (bUsingUTF8 != FALSE)
+  {
+    hRes = Utf8_Decode(cStrValueW, (LPCSTR)cStrValueA, cStrValueA.GetLength());
+    if (FAILED(hRes))
+      return (hRes == E_OUTOFMEMORY) ? hRes : MX_E_InvalidData;
+  }
+  else
+  {
+    if (Http::FromISO_8859_1(cStrValueW, (LPCSTR)cStrValueA, cStrValueA.GetLength()) == FALSE)
+      return E_OUTOFMEMORY;
+  }
+
   sA = SkipSpaces(sA, szEndA);
   if (lpbExtendedParam != NULL)
     *lpbExtendedParam = bExtendedParam;

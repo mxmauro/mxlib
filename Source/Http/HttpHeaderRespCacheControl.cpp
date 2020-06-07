@@ -77,7 +77,7 @@ HRESULT CHttpHeaderRespCacheControl::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE
       goto skip_null_listitem;
 
     //get parameter
-    hRes = GetParamNameAndValue(cStrTokenA, cStrValueW, szValueA, szValueEndA);
+    hRes = GetParamNameAndValue(TRUE, cStrTokenA, cStrValueW, szValueA, szValueEndA);
     if (FAILED(hRes) && hRes != MX_E_NoData)
       return hRes;
 

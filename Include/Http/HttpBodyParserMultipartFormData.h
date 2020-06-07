@@ -54,19 +54,17 @@ private:
   typedef enum {
     StateBoundary,
     StateBoundaryAfter,
+    StateBoundaryAfter2,
     StateBoundaryAfterEnd,
     StateBoundaryEndCheck,
-    StateBoundaryEndCheck2,
-    StateBoundaryEndCheck3,
-    StateBoundaryEndCheck3End,
+    StateBoundaryEndCheckAfterDashes,
+    StateBoundaryEndCheckAfterDashes2,
 
     StateHeaderStart,
     StateHeaderName,
-    StateHeaderValueSpaceBefore,
     StateHeaderValue,
-    StateHeaderValueSpaceAfter,
-    StateNearHeaderValueEnd,
-    StateHeadersEnd,
+    StateHeaderValueEnding,
+    StateHeadersEnding,
 
     StateData,
     StateDataEnd,
@@ -90,6 +88,7 @@ private:
     eState nState;
     SIZE_T nBoundaryPos;
     CStringA cStrCurrLineA;
+    DWORD dwHeadersLen;
     struct {
       struct {
         CStringW cStrNameW;

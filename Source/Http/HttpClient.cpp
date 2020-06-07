@@ -3759,18 +3759,6 @@ HRESULT CHttpClient::CConnection::OnSocketCreate(_In_ CIpc *_lpIpc, _In_ HANDLE 
   sData.cDataReceivedCallback = MX_BIND_MEMBER_CALLBACK(&CHttpClient::CConnection::OnSocketDataReceived, this);
   sData.cDestroyCallback = MX_BIND_MEMBER_CALLBACK(&CHttpClient::CConnection::OnSocketDestroy, this);
 
-  //setup SSL layer
-  if (bUseSSL != FALSE)
-  {
-    HRESULT hRes = cHttpClient->OnAddSslLayer(lpIpc, h);
-    if (FAILED(hRes))
-    {
-      lpIpc = _lpIpc;
-      hConn = h;
-      return hRes;
-    }
-  }
-
   //done
   return S_OK;
 }
@@ -3803,7 +3791,20 @@ HRESULT CHttpClient::CConnection::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE 
   TAutoRefCounted<CHttpClient> cHttpClient;
 
   cHttpClient.Attach(GetHttpClient());
-  return (cHttpClient) ? cHttpClient->OnConnectionEstablished(this) : MX_E_Cancelled;
+  if (!cHttpClient)
+    return MX_E_Cancelled;
+
+  //setup SSL layer
+  if (bUseSSL != FALSE)
+  {
+    HRESULT hRes;
+
+    hRes = cHttpClient->OnAddSslLayer(lpIpc, h);
+    if (FAILED(hRes))
+      return hRes;
+  }
+
+  return cHttpClient->OnConnectionEstablished(this);
 }
 
 HRESULT CHttpClient::CConnection::OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h,

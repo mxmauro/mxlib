@@ -136,9 +136,9 @@ CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr,
   ullMaxBodySize = 10485760ui64;
   dwMaxIncomingBytesWhileSending = 52428800; //50mb
   //----
-  SlimRWL_Initialize(&(sSsl.sRwMutex));
   RundownProt_Initialize(&nRundownLock);
   hAcceptConn = NULL;
+  cQuerySslCertificatesCallback = NullCallback();
   cNewRequestObjectCallback = NullCallback();
   cRequestHeadersReceivedCallback = NullCallback();
   cRequestCompletedCallback = NullCallback();
@@ -444,6 +444,12 @@ VOID CHttpServer::SetOption_MaxIncomingBytesWhileSending(_In_ DWORD _dwMaxIncomi
   return;
 }
 
+VOID CHttpServer::SetQuerySslCertificatesCallback(_In_ OnQuerySslCertificatesCallback _cQuerySslCertificatesCallback)
+{
+  cQuerySslCertificatesCallback = _cQuerySslCertificatesCallback;
+  return;
+}
+
 VOID CHttpServer::SetNewRequestObjectCallback(_In_ OnNewRequestObjectCallback _cNewRequestObjectCallback)
 {
   cNewRequestObjectCallback = _cNewRequestObjectCallback;
@@ -483,15 +489,13 @@ VOID CHttpServer::SetCustomErrorPageCallback(_In_ OnCustomErrorPageCallback _cCu
 }
 
 HRESULT CHttpServer::StartListening(_In_ CSockets::eFamily nFamily, _In_ int nPort,
-                                    _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions,
-                                    _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CEncryptionKey *lpSslKey)
+                                    _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions)
 {
-  return StartListening((LPCSTR)NULL, nFamily, nPort, lpOptions, lpSslCertificate, lpSslKey);
+  return StartListening((LPCSTR)NULL, nFamily, nPort, lpOptions);
 }
 
 HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSockets::eFamily nFamily, _In_ int nPort,
-                                    _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions,
-                                    _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CEncryptionKey *lpSslKey)
+                                    _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   HRESULT hRes;
@@ -504,33 +508,11 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSock
     hRes = cShutdownEv.Create(TRUE, FALSE);
     if (SUCCEEDED(hRes))
     {
-      //set SSL
-      {
-        CAutoSlimRWLExclusive cSslLock(&(sSsl.sRwMutex));
-
-        sSsl.cSslCertificate = lpSslCertificate;
-        sSsl.cSslPrivateKey = lpSslKey;
-      }
-
-      if (SUCCEEDED(hRes))
-      {
-        hRes = cSocketMgr.CreateListener(nFamily, nPort, MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnSocketCreate, this),
-                                         szBindAddressA, NULL, lpOptions, &hAcceptConn);
-      }
-      
+      hRes = cSocketMgr.CreateListener(nFamily, nPort, MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnSocketCreate, this),
+                                        szBindAddressA, NULL, lpOptions, &hAcceptConn);
     }
     if (FAILED(hRes))
     {
-      TAutoRefCounted<CSslCertificate> cSslCertificate;
-      TAutoRefCounted<CEncryptionKey> cSslPrivateKey;
-
-      {
-        CAutoSlimRWLExclusive cSslLock(&(sSsl.sRwMutex));
-
-        cSslCertificate.Attach(sSsl.cSslCertificate.Detach());
-        cSslPrivateKey.Attach(cSslPrivateKey.Detach());
-      }
-
       cShutdownEv.Close();
     }
   }
@@ -543,8 +525,7 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSock
 }
 
 HRESULT CHttpServer::StartListening(_In_opt_z_ LPCWSTR szBindAddressW, _In_ CSockets::eFamily nFamily, _In_ int nPort,
-                                    _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions,
-                                    _In_opt_ CSslCertificate *lpSslCertificate, _In_opt_ CEncryptionKey *lpSslKey)
+                                    _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -555,7 +536,7 @@ HRESULT CHttpServer::StartListening(_In_opt_z_ LPCWSTR szBindAddressW, _In_ CSoc
     if (FAILED(hRes))
       return hRes;
   }
-  return StartListening((LPSTR)cStrTempA, nFamily, nPort, lpOptions, lpSslCertificate, lpSslKey);
+  return StartListening((LPSTR)cStrTempA, nFamily, nPort, lpOptions);
 }
 
 VOID CHttpServer::StopListening()
@@ -574,14 +555,6 @@ VOID CHttpServer::StopListening()
     {
       cSocketMgr.Close(hAcceptConn, MX_E_Cancelled);
       bWait = TRUE;
-    }
-
-    //ssl
-    {
-      CAutoSlimRWLExclusive cSslLock(&(sSsl.sRwMutex));
-
-      cSslCertificate.Attach(sSsl.cSslCertificate.Detach());
-      cSslPrivateKey.Attach(cSslPrivateKey.Detach());
     }
   }
 
@@ -796,13 +769,13 @@ HRESULT CHttpServer::OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIp
     case CIpc::ConnectionClassServer:
       {
       TAutoRefCounted<CClientRequest> cNewRequest;
-      TAutoDeletePtr<CIpcSslLayer> cLayer;
       HRESULT hRes;
 
       //setup callbacks
       sData.cConnectCallback = MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnSocketConnect, this);
       sData.cDataReceivedCallback = MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnSocketDataReceived, this);
       sData.cDestroyCallback = MX_BIND_MEMBER_CALLBACK(&CHttpServer::OnSocketDestroy, this);
+
       //create new request object
       if (cNewRequestObjectCallback)
       {
@@ -819,26 +792,6 @@ HRESULT CHttpServer::OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIp
       hRes = cNewRequest->Initialize(this, &cSocketMgr, h, dwMaxHeaderSize);
       if (FAILED(hRes))
         return hRes;
-      //add ssl layer
-      {
-        CAutoSlimRWLShared cSslLock(&(sSsl.sRwMutex));
-
-        if (sSsl.cSslCertificate)
-        {
-          cLayer.Attach(MX_DEBUG_NEW CIpcSslLayer(lpIpc));
-          if (!cLayer)
-            return E_OUTOFMEMORY;
-          hRes = cLayer->Initialize(TRUE, NULL, NULL, sSsl.cSslCertificate.Get(), sSsl.cSslPrivateKey.Get());
-          if (SUCCEEDED(hRes))
-          {
-            hRes = lpIpc->AddLayer(h, cLayer.Get());
-            if (SUCCEEDED(hRes))
-              cLayer.Detach();
-          }
-          if (FAILED(hRes))
-            return hRes;
-        }
-      }
 
       sData.cUserData = cNewRequest;
 
@@ -987,6 +940,37 @@ HRESULT CHttpServer::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc:
   else
   {
     lpRequest->sPeerAddr.si_family = 0;
+  }
+
+
+  //add ssl layer
+  if (cQuerySslCertificatesCallback)
+  {
+    TAutoRefCounted<CSslCertificate> cCert;
+    TAutoRefCounted<CEncryptionKey > cPrivKey;
+    TAutoDeletePtr<CIpcSslLayer> cLayer;
+
+    hRes = cQuerySslCertificatesCallback(this, &cCert, &cPrivKey);
+    if (FAILED(hRes))
+      return hRes;
+    if (hRes != S_FALSE)
+    {
+      if (!(cCert && cPrivKey))
+        return E_FAIL;
+
+      cLayer.Attach(MX_DEBUG_NEW CIpcSslLayer(lpIpc));
+      if (!cLayer)
+        return E_OUTOFMEMORY;
+      hRes = cLayer->Initialize(TRUE, NULL, NULL, cCert.Get(), cPrivKey.Get());
+      if (SUCCEEDED(hRes))
+      {
+        hRes = lpIpc->AddLayer(h, cLayer.Get());
+        if (SUCCEEDED(hRes))
+          cLayer.Detach();
+      }
+      if (FAILED(hRes))
+        return hRes;
+    }
   }
 
   //setup request

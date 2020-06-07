@@ -9,8 +9,8 @@ topHtml.render();
 	<div class="col">
 		<div class="card border-primary mb-3">
 			<div class="card-header bg-primary text-white">Form Upload</div>
-			<div class="card-body">
-				<form action="index.jss" method="post" enctype="multipart/form-data">
+			<form action="index.jss" method="post" enctype="multipart/form-data">
+				<div class="card-body">
 					<div class="form-group row">
 						<label for="first#	Ã±ame" class="col-sm-2 col-form-label text-right">Test field:</label>
 						<div class="col-sm-10">
@@ -65,11 +65,11 @@ topHtml.render();
 							<input type="file" class="form-control" name="file4[0][1]" />
 						</div>
 					</div>
-				</form>
-			</div>
-			<div class="card-footer text-primary text-right">
-				<button type="submit" class="btn btn-primary">Send</button>
-			</div>
+				</div>
+				<div class="card-footer text-primary text-right">
+					<button type="submit" class="btn btn-primary">Send</button>
+				</div>
+			</form>
 		</div>
 	</div>
 </div>

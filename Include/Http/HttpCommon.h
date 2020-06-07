@@ -50,21 +50,14 @@ public:
   typedef enum {
     StateStart,
 
-    StateRequestLine,
-    StateStatusLine,
-    StateNearRequestOrStatusEnd,
+    StateRequestOrStatusLine,
+    StateRequestOrStatusLineEnding,
 
     StateHeaderStart,
     StateHeaderName,
-    StateHeaderValueSpaceBefore,
     StateHeaderValue,
-    StateHeaderValueSpaceAfter,
-    StateNearHeaderValueEnd,
-
-    StateHeadersEnd,
-
-    StateIgnoringHeader,
-    StateNearIgnoringHeaderEnd,
+    StateHeaderValueEnding,
+    StateHeadersEnding,
 
     StateBodyStart,
 
@@ -73,8 +66,8 @@ public:
 
     StateChunkPreStart,
     StateChunkStart,
+    StateChunkStartEnding,
     StateChunkStartIgnoreExtension,
-    StateNearEndOfChunkStart,
 
     StateChunkData,
     StateChunkAfterData,

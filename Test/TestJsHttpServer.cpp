@@ -129,6 +129,19 @@ public:
     return;
     };
 
+  HRESULT OnQuerySslCertificates(_In_ MX::CJsHttpServer *lpHttp,
+                                 _Outptr_result_maybenull_ MX::CSslCertificate **lplpSslCert,
+                                 _Outptr_result_maybenull_ MX::CEncryptionKey **lplpSslPrivKey)
+    {
+    UNREFERENCED_PARAMETER(lpHttp);
+
+    *lplpSslCert = cSslCert.Get();
+    (*lplpSslCert)->AddRef();
+    *lplpSslPrivKey = cSslPrivateKey.Get();
+    (*lplpSslPrivKey)->AddRef();
+    return S_OK;
+    };
+
 public:
   MX::CIoCompletionPortThreadPool cDispatcherPool;
   MX::CTaskQueue cTaskQueue;
@@ -219,12 +232,14 @@ int TestJsHttpServer()
     {
       MX::CSockets::LISTENER_OPTIONS sOptions = { 0 };
 
+      cTest.cJsHttpServer.SetQuerySslCertificatesCallback(MX_BIND_MEMBER_CALLBACK(&CJsTest::OnQuerySslCertificates,
+                                                                                  &cTest));
+
       //sOptions.dwBackLogSize = 0;
       sOptions.dwMaxAcceptsToPost = 16;
       //sOptions.dwMaxRequestsPerSecond = 0;
       //sOptions.dwBurstSize = 0;
-      hRes = cTest.cJsHttpServer.StartListening(MX::CSockets::FamilyIPv4, 443, &sOptions, cTest.cSslCert.Get(),
-                                                cTest.cSslPrivateKey.Get());
+      hRes = cTest.cJsHttpServer.StartListening(MX::CSockets::FamilyIPv4, 443, &sOptions);
     }
     else
     {

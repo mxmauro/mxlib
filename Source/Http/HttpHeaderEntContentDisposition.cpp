@@ -81,7 +81,7 @@ HRESULT CHttpHeaderEntContentDisposition::Parse(_In_z_ LPCSTR szValueA, _In_opt_
         break;
 
       //get parameter
-      hRes = GetParamNameAndValue(cStrTokenA, cStrValueW, szValueA, szValueEndA , &bExtendedParam);
+      hRes = GetParamNameAndValue(TRUE, cStrTokenA, cStrValueW, szValueA, szValueEndA , &bExtendedParam);
       if (FAILED(hRes))
         return (hRes == MX_E_NoData) ? MX_E_InvalidData : hRes;
 

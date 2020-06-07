@@ -37,10 +37,13 @@ public:
   class CJsRequestRequireModuleContext;
 
 public:
+  typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _Outptr_result_maybenull_ CSslCertificate **lplpSslCert,
+                            _Outptr_result_maybenull_ CEncryptionKey **lplpSslPrivKey)> OnQuerySslCertificatesCallback;
+
   typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _Out_ CClientRequest **lplpRequest)> OnNewRequestObjectCallback;
 
   typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest,
-                            _Outptr_ _Maybenull_ CHttpBodyParserBase **lplpBodyParser)>
+                            _Outptr_result_maybenull_ CHttpBodyParserBase **lplpBodyParser)>
                             OnRequestHeadersReceivedCallback;
 
   typedef Callback<VOID (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest)> OnRequestCompletedCallback;
@@ -52,7 +55,7 @@ public:
   typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ int nVersion,
                             _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount, _Out_ int &nSelectedProtocol,
                             _In_ TArrayList<int> &aSupportedVersions,
-                            _Out_ _Maybenull_ CWebSocket **lplpWebSocket)> OnWebSocketRequestReceivedCallback;
+                            _Outptr_result_maybenull_ CWebSocket **lplpWebSocket)> OnWebSocketRequestReceivedCallback;
 
   typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _Inout_ CSecureStringA &cStrBodyA, _In_ LONG nStatusCode,
                             _In_ LPCSTR szStatusMessageA,
@@ -66,6 +69,7 @@ public:
   CJsHttpServer(_In_ CSockets &cSocketMgr, _In_opt_ CLoggable *lpLogParent = NULL);
   ~CJsHttpServer();
 
+  VOID SetQuerySslCertificatesCallback(_In_ OnQuerySslCertificatesCallback cQuerySslCertificatesCallback);
   VOID SetNewRequestObjectCallback(_In_ OnNewRequestObjectCallback cNewRequestObjectCallback);
   VOID SetRequestHeadersReceivedCallback(_In_ OnRequestHeadersReceivedCallback cRequestHeadersReceivedCallback);
   VOID SetRequestCompletedCallback(_In_ OnRequestCompletedCallback cRequestCompletedCallback);
@@ -77,6 +81,8 @@ public:
   static CClientRequest* GetServerRequestFromContext(_In_ DukTape::duk_context *lpCtx);
 
   //remove some inherited public methods
+  VOID SetQuerySslCertificatesCallback(_In_ CHttpServer::OnQuerySslCertificatesCallback cQuerySslCertificatesCallback)
+                                       = delete;
   VOID SetNewRequestObjectCallback(_In_ CHttpServer::OnNewRequestObjectCallback cNewRequestObjectCallback) = delete;
   VOID SetRequestHeadersReceivedCallback(_In_ CHttpServer::OnRequestHeadersReceivedCallback
                                          cRequestHeadersReceivedCallback) = delete;
@@ -164,6 +170,8 @@ public:
   };
 
 private:
+  HRESULT OnQuerySslCertificates(_In_ CHttpServer *lpHttp, _Outptr_result_maybenull_ CSslCertificate **lplpSslCert,
+                                 _Outptr_result_maybenull_ CEncryptionKey **lplpSslPrivKey);
   HRESULT OnRequestHeadersReceived(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest,
                                    _Outptr_ _Maybenull_ CHttpBodyParserBase **lplpBodyParser);
   VOID OnRequestCompleted(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest);
@@ -176,6 +184,7 @@ private:
   VOID OnRequestDestroyed(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest);
 
 private:
+  OnQuerySslCertificatesCallback cQuerySslCertificatesCallback;
   OnNewRequestObjectCallback cNewRequestObjectCallback;
   OnRequestHeadersReceivedCallback cRequestHeadersReceivedCallback;
   OnRequestCompletedCallback cRequestCompletedCallback;
