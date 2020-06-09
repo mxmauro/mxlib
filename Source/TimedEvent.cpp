@@ -30,6 +30,7 @@
 #define _FLAG_Running                                 0x0001
 #define _FLAG_Canceled                                0x0002
 #define _FLAG_OneShot                                 0x0004
+#define _FLAG_CanceledInCallback                      0x0008
 
 #define MINIMUM_DUE_TIME_CHANGE_THRESHOLD_MS              10
 
@@ -405,6 +406,7 @@ VOID CTimerHandler::RemoveTimer(_Inout_ LONG volatile *lpnTimerId)
   if (lpnTimerId != NULL)
   {
     CTimer *lpTimer = NULL;
+    BOOL bInsideCallback = (::GetCurrentThreadId() == GetThreadId()) ? TRUE : FALSE;
 
     LONG nTimerId = _InterlockedExchange(lpnTimerId, 0);
     if (nTimerId != 0)
@@ -417,7 +419,8 @@ VOID CTimerHandler::RemoveTimer(_Inout_ LONG volatile *lpnTimerId)
       {
         lpTimer = sQueue.cSortedByIdList.GetElementAt(nIndex);
 
-        _InterlockedOr(&(lpTimer->nFlags), _FLAG_Canceled);
+        _InterlockedOr(&(lpTimer->nFlags), ((bInsideCallback == FALSE) ? _FLAG_Canceled
+                                                                       : (_FLAG_Canceled | _FLAG_CanceledInCallback)));
 
         sQueue.cSortedByIdList.RemoveElementAt(nIndex);
         lpTimer->cTreeNode.Remove();
@@ -428,8 +431,11 @@ VOID CTimerHandler::RemoveTimer(_Inout_ LONG volatile *lpnTimerId)
     {
       sQueue.cChangedEvent.Set();
 
-      lpTimer->WaitWhileRunning();
-      FreeTimer(lpTimer);
+      if (bInsideCallback == FALSE)
+      {
+        lpTimer->WaitWhileRunning();
+        FreeTimer(lpTimer);
+      }
     }
   }
 
@@ -511,8 +517,12 @@ check_timer:
 
         if ((nFlags & _FLAG_Canceled) != 0)
         {
-          //timer was canceled so just let's keep the cancel code to continue it's task
-          _InterlockedAnd(&(lpTimer->nFlags), ~_FLAG_Running);
+          //timer was canceled so just let's keep the cancel code to continue it's task unless it was removed
+          //from the callback
+          if ((_InterlockedAnd(&(lpTimer->nFlags), ~_FLAG_Running) & _FLAG_CanceledInCallback) != 0)
+          {
+            FreeTimer(lpTimer);
+          }
         }
         else
         {
