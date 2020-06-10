@@ -465,18 +465,17 @@ VOID CTimerHandler::ThreadProc()
 
 DWORD CTimerHandler::ProcessQueue()
 {
-  ULARGE_INTEGER uliCurrTime;
   DWORD dwTimeoutMs;
-  ULONGLONG nDiff;
   CTimer *lpTimer;
 
   //signal expired events
-  MxNtQuerySystemTime(&uliCurrTime);
-  uliCurrTime.QuadPart = MX_100NS_TO_MILLISECONDS(uliCurrTime.QuadPart);
-
   dwTimeoutMs = INFINITE;
   do
   {
+    ULARGE_INTEGER uliCurrTime;
+
+    ::MxNtQuerySystemTime(&uliCurrTime);
+
     {
       CFastLock cLock(&(sQueue.nMutex));
       CRedBlackTreeNode *lpNode;
@@ -487,7 +486,9 @@ check_timer:
 
       if (lpTimer != NULL)
       {
-        if (lpTimer->nDueTime <= uliCurrTime.QuadPart)
+        ULONGLONG nNow = MX_100NS_TO_MILLISECONDS(uliCurrTime.QuadPart);
+
+        if (lpTimer->nDueTime <= nNow)
         {
           //got a timed-out item
           if (lpTimer->SetAsRunningIfNotCanceled() == FALSE)
@@ -499,7 +500,7 @@ check_timer:
         }
         else
         {
-          nDiff = lpTimer->nDueTime - uliCurrTime.QuadPart;
+          ULONGLONG nDiff = lpTimer->nDueTime - nNow;
           dwTimeoutMs = (nDiff > 0xFFFFFFFFui64) ? 0xFFFFFFFEUL : (DWORD)nDiff;
           lpTimer = NULL;
         }
