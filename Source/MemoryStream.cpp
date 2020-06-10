@@ -62,7 +62,6 @@ HRESULT CMemoryStream::Create(_In_opt_ SIZE_T nInitialSize, _In_opt_ BOOL bGrowa
   {
     if (EnsureSize(nInitialSize) == FALSE)
       return E_OUTOFMEMORY;
-    nSize = nInitialSize;
   }
   bCanGrow = bGrowable;
   //done
