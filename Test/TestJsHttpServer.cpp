@@ -156,12 +156,24 @@ public:
 int TestJsHttpServer()
 {
   CJsTest cTest;
+  DWORD dwPort;
   BOOL bUseSSL;
   HRESULT hRes;
 
   DeleteSessionFiles();
 
   bUseSSL = DoesCmdLineParamExist(L"ssl");
+
+  hRes = GetCmdLineParamUInt(L"port", &dwPort);
+  if (hRes == MX_E_NotFound)
+  {
+    dwPort = (bUseSSL != FALSE) ? 443 : 80;
+  }
+  else if (FAILED(hRes) || dwPort < 1 || dwPort > 65535)
+  {
+    wprintf_s(L"Error: Invalid server port specified.\n");
+    return (int)(SUCCEEDED(hRes) ? E_INVALIDARG : hRes);
+  }
 
   cTest.cJsHttpServer.SetOption_MaxFilesCount(10);
   cTest.cJsHttpServer.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
@@ -228,23 +240,19 @@ int TestJsHttpServer()
   }
   if (SUCCEEDED(hRes))
   {
+    MX::CSockets::LISTENER_OPTIONS sOptions = { 0 };
+
     if (bUseSSL != FALSE)
     {
-      MX::CSockets::LISTENER_OPTIONS sOptions = { 0 };
-
       cTest.cJsHttpServer.SetQuerySslCertificatesCallback(MX_BIND_MEMBER_CALLBACK(&CJsTest::OnQuerySslCertificates,
                                                                                   &cTest));
+    }
 
-      //sOptions.dwBackLogSize = 0;
-      sOptions.dwMaxAcceptsToPost = 16;
-      //sOptions.dwMaxRequestsPerSecond = 0;
-      //sOptions.dwBurstSize = 0;
-      hRes = cTest.cJsHttpServer.StartListening(MX::CSockets::FamilyIPv4, 443, &sOptions);
-    }
-    else
-    {
-      hRes = cTest.cJsHttpServer.StartListening(MX::CSockets::FamilyIPv4, 80);
-    }
+    //sOptions.dwBackLogSize = 0;
+    sOptions.dwMaxAcceptsToPost = 16;
+    //sOptions.dwMaxRequestsPerSecond = 0;
+    //sOptions.dwBurstSize = 0;
+    hRes = cTest.cJsHttpServer.StartListening(MX::CSockets::FamilyIPv4, (int)dwPort, &sOptions);
   }
   //----
   if (SUCCEEDED(hRes))

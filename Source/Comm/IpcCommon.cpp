@@ -2242,12 +2242,12 @@ VOID CIpc::CConnectionBase::CReadWriteStats::Update(_In_ DWORD dwBytesTransferre
 
   cTimer.Mark();
   dwElapsedMs = cTimer.GetElapsedTimeMs();
-  cTimer.ResetToLastMark();
-
   if (dwElapsedMs >= 500)
   {
     int i, count;
     ULONGLONG ullDiffBytes;
+
+    cTimer.ResetToLastMark();
 
     ullDiffBytes = ullBytesTransferred - ullPrevBytesTransferred;
 

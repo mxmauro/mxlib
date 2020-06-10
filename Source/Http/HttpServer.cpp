@@ -598,6 +598,10 @@ VOID CHttpServer::OnHeadersTimeoutTimerCallback(_In_ LONG nTimerId, _In_ LPVOID 
       switch (lpRequest->nState)
       {
         case CClientRequest::StateReceivingRequestHeaders:
+          if (ShouldLog(1) != FALSE)
+          {
+            Log(L"HttpServer(Req:0x%p/Conn:0x%p): Request headers took too much time", lpRequest, lpRequest->hConn);
+          }
           TerminateRequest(lpRequest, MX_E_Timeout);
 
           bStopTimers = TRUE;
@@ -636,6 +640,10 @@ VOID CHttpServer::OnThroughputTimerCallback(_In_ LONG nTimerId, _In_ LPVOID lpUs
             {
               if ((++(lpRequest->dwLowThroughputCounter)) >= dwRequestBodySecondsOfLowThroughput)
               {
+                if (ShouldLog(1) != FALSE)
+                {
+                  Log(L"HttpServer(Req:0x%p/Conn:0x%p): Request body took too much time", lpRequest, lpRequest->hConn);
+                }
                 TerminateRequest(lpRequest, MX_E_Timeout);
 
                 *lpbCancel = TRUE;
@@ -654,8 +662,12 @@ VOID CHttpServer::OnThroughputTimerCallback(_In_ LONG nTimerId, _In_ LPVOID lpUs
           {
             if ((DWORD)(int)nKbps < dwResponseMinimumThroughputInBps)
             {
-              if ((++(lpRequest->dwLowThroughputCounter)) >= dwResponseMinimumThroughputInBps)
+              if ((++(lpRequest->dwLowThroughputCounter)) >= dwResponseSecondsOfLowThroughput)
               {
+                if (ShouldLog(1) != FALSE)
+                {
+                  Log(L"HttpServer(Req:0x%p/Conn:0x%p): Response took too much time", lpRequest, lpRequest->hConn);
+                }
                 TerminateRequest(lpRequest, MX_E_Timeout);
 
                 *lpbCancel = TRUE;

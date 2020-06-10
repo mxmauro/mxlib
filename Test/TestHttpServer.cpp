@@ -71,10 +71,22 @@ int TestHttpServer()
   MX::CIoCompletionPortThreadPool cDispatcherPool;
   MX::CSockets cSckMgr(cDispatcherPool);
   CMyHttpServer cHttpServer(cSckMgr);
+  DWORD dwPort;
   BOOL bUseSSL;
   HRESULT hRes;
 
   bUseSSL = DoesCmdLineParamExist(L"ssl");
+
+  hRes = GetCmdLineParamUInt(L"port", &dwPort);
+  if (hRes == MX_E_NotFound)
+  {
+    dwPort = (bUseSSL != FALSE) ? 443 : 80;
+  }
+  else if (FAILED(hRes) || dwPort < 1 || dwPort > 65535)
+  {
+    wprintf_s(L"Error: Invalid server port specified.\n");
+    return (int)(SUCCEEDED(hRes) ? E_INVALIDARG : hRes);
+  }
 
   cHttpServer.SetLogCallback(MX_BIND_CALLBACK(&OnLog));
   cHttpServer.SetLogLevel(dwLogLevel);
@@ -137,23 +149,19 @@ int TestHttpServer()
   }
   if (SUCCEEDED(hRes))
   {
+    MX::CSockets::LISTENER_OPTIONS sOptions = { 0 };
+
     if (bUseSSL != FALSE)
     {
-      MX::CSockets::LISTENER_OPTIONS sOptions = { 0 };
-
       cHttpServer.SetQuerySslCertificatesCallback(MX_BIND_MEMBER_CALLBACK(&CMyHttpServer::OnQuerySslCertificates,
                                                                           &cHttpServer));
+    }
 
-      //sOptions.dwBackLogSize = 0;
-      sOptions.dwMaxAcceptsToPost = 16;
-      //sOptions.dwMaxRequestsPerSecond = 0;
-      //sOptions.dwBurstSize = 0;
-      hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv4, 443, &sOptions);
-    }
-    else
-    {
-      hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv4, 80);
-    }
+    //sOptions.dwBackLogSize = 0;
+    sOptions.dwMaxAcceptsToPost = 16;
+    //sOptions.dwMaxRequestsPerSecond = 0;
+    //sOptions.dwBurstSize = 0;
+    hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv4, (int)dwPort, &sOptions);
   }
   //----
   if (SUCCEEDED(hRes))
