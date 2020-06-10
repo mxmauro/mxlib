@@ -161,7 +161,7 @@ HRESULT CSslCertificate::IsDateValid(_Out_opt_ PULONG lpnRemainingSecs)
     LONGLONG llSecs = cDtNow.GetDiff(cDt, CDateTime::UnitsSeconds);
     if (llSecs >= 0)
     {
-      *lpnRemainingSecs = (llSecs <= 0xFFFFFFFFi64) ? llSecs : 0xFFFFFFFF;
+      *lpnRemainingSecs = (llSecs <= 0xFFFFFFFFi64) ? (ULONG)llSecs : 0xFFFFFFFF;
     }
   }
 
