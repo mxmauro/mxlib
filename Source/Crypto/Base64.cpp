@@ -23,9 +23,7 @@
 
 //-----------------------------------------------------------
 
-static const LPCSTR szBase64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                    "abcdefghijklmnopqrstuvwxyz"
-                                    "0123456789+/";
+static const LPCSTR szBase64CharsA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 static const BYTE aDecodeTable[] = "|$$$}rstuvwxyz{$$$=$$$>?@ABCDEFGHIJKLMNOPQRSTUVW$$$$$$XYZ[\\]^_`abcdefghijklmnopq";
 
@@ -80,10 +78,10 @@ HRESULT CBase64Encoder::Process(_In_ LPVOID lpData, _In_ SIZE_T nDataLen)
     aInput[nInputLength++] = *((LPBYTE)lpData);
     if (nInputLength == 3)
     {
-      szDestA[0] = szBase64Chars[(aInput[0] & 0xFC) >> 2];
-      szDestA[1] = szBase64Chars[((aInput[0] & 0x03) << 4) + ((aInput[1] & 0xF0) >> 4)];
-      szDestA[2] = szBase64Chars[((aInput[1] & 0x0F) << 2) + ((aInput[2] & 0xC0) >> 6)];
-      szDestA[3] = szBase64Chars[aInput[2] & 0x3F];
+      szDestA[0] = szBase64CharsA[(aInput[0] & 0xFC) >> 2];
+      szDestA[1] = szBase64CharsA[((aInput[0] & 0x03) << 4) + ((aInput[1] & 0xF0) >> 4)];
+      szDestA[2] = szBase64CharsA[((aInput[1] & 0x0F) << 2) + ((aInput[2] & 0xC0) >> 6)];
+      szDestA[3] = szBase64CharsA[aInput[2] & 0x3F];
       if (AddToBuffer(szDestA) == FALSE)
         return E_OUTOFMEMORY;
       nInputLength = 0;
@@ -103,10 +101,10 @@ HRESULT CBase64Encoder::End()
     for (SIZE_T i=nInputLength; i < 3; i++)
       aInput[i] = 0;
 
-    szDestA[0] = szBase64Chars[(aInput[0] & 0xFC) >> 2];
-    szDestA[1] = szBase64Chars[((aInput[0] & 0x03) << 4) + ((aInput[1] & 0xF0) >> 4)];
-    szDestA[2] = szBase64Chars[((aInput[1] & 0x0F) << 2) + ((aInput[2] & 0xC0) >> 6)];
-    szDestA[3] = szBase64Chars[aInput[2] & 0x3F];
+    szDestA[0] = szBase64CharsA[(aInput[0] & 0xFC) >> 2];
+    szDestA[1] = szBase64CharsA[((aInput[0] & 0x03) << 4) + ((aInput[1] & 0xF0) >> 4)];
+    szDestA[2] = szBase64CharsA[((aInput[1] & 0x0F) << 2) + ((aInput[2] & 0xC0) >> 6)];
+    szDestA[3] = szBase64CharsA[aInput[2] & 0x3F];
     while (nInputLength < 3)
       szDestA[++nInputLength] = '=';
     if (AddToBuffer(szDestA) == FALSE)

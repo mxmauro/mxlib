@@ -24,15 +24,15 @@
 #include "..\RefCounted.h"
 #include "..\Callbacks.h"
 #include "..\ArrayList.h"
+#include "..\Debug.h"
 #include "..\Strings\Strings.h"
+#include "..\DateTime\DateTime.h"
 #include <exception>
 #include <stdexcept>
 #include <functional>
-
 namespace DukTape {
 #include "DukTape\duktape.h"
 } //namespace DukTape
-#include "..\Debug.h"
 
 //-----------------------------------------------------------
 
@@ -302,21 +302,21 @@ public:
     HRESULT AddNativeFunction(_In_z_ LPCSTR szFuncNameA, _In_ OnNativeFunctionCallback cNativeFunctionCallback,
                               _In_ int nArgsCount);
 
-    HRESULT AddProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ BOOL bInitialValueOnStack=FALSE,
-                        _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+    HRESULT AddProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ BOOL bInitialValueOnStack = FALSE,
+                        _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
     HRESULT AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ LPCSTR szValueA,
-                              _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                              _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
     HRESULT AddBooleanProperty(_In_z_ LPCSTR szPropertyNameA, _In_ BOOL bValue,
-                               _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                               _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
     HRESULT AddNumericProperty(_In_z_ LPCSTR szPropertyNameA, _In_ double nValue,
-                               _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                               _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
     HRESULT AddNullProperty(_In_z_ LPCSTR szPropertyNameA,
-                            _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                            _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
     HRESULT AddJsObjectProperty(_In_z_ LPCSTR szPropertyNameA, _In_ CJsObjectBase *lpObject,
-                                _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                                _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
     HRESULT AddPropertyWithCallback(_In_z_ LPCSTR szPropertyNameA, _In_ OnGetPropertyCallback cGetValueCallback,
-                                _In_opt_ OnSetPropertyCallback cSetValueCallback=NullCallback(),
-                                _In_opt_ int nFlags=PropertyFlagEnumerable);
+                                _In_opt_ OnSetPropertyCallback cSetValueCallback = NullCallback(),
+                                _In_opt_ int nFlags = PropertyFlagEnumerable);
 
     HRESULT ReplaceModuleExports();
     HRESULT ReplaceModuleExportsWithObject(_In_ CJsObjectBase *lpObject);
@@ -357,7 +357,7 @@ public:
 
   static VOID RunNativeProtected(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nArgsCount,
                                  _In_ DukTape::duk_idx_t nRetValuesCount, _In_ lpfnProtectedFunction fnFunc,
-                                 _In_opt_ BOOL bCatchUnhandled=FALSE);
+                                 _In_opt_ BOOL bCatchUnhandled = FALSE);
   VOID RunNativeProtected(_In_ DukTape::duk_idx_t nArgsCount, _In_ DukTape::duk_idx_t nRetValuesCount,
                           _In_ lpfnProtectedFunction fnFunc, _In_opt_ BOOL bCatchUnhandled = FALSE);
 
@@ -374,25 +374,25 @@ public:
   HRESULT AddNativeFunction(_In_z_ LPCSTR szFuncNameA, _In_ OnNativeFunctionCallback cNativeFunctionCallback,
                             _In_ int nArgsCount);
 
-  HRESULT AddProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ BOOL bInitialValueOnStack=FALSE,
-                      _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+  HRESULT AddProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ BOOL bInitialValueOnStack = FALSE,
+                      _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ LPCSTR szValueA,
-                            _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                            _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ LPCWSTR szValueW,
-                            _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                            _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddBooleanProperty(_In_z_ LPCSTR szPropertyNameA, _In_ BOOL bValue,
-                             _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                             _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddIntegerProperty(_In_z_ LPCSTR szPropertyNameA, _In_ int nValue,
-                             _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                             _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddNumericProperty(_In_z_ LPCSTR szPropertyNameA, _In_ double nValue,
-                             _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                             _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddNullProperty(_In_z_ LPCSTR szPropertyNameA,
-                          _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                          _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddJsObjectProperty(_In_z_ LPCSTR szPropertyNameA, _In_ CJsObjectBase *lpObject,
-                              _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                              _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddPropertyWithCallback(_In_z_ LPCSTR szPropertyNameA, _In_ OnGetPropertyCallback cGetValueCallback,
-                                  _In_opt_ OnSetPropertyCallback cSetValueCallback=NullCallback(),
-                                  _In_opt_ int nFlags=PropertyFlagEnumerable);
+                                  _In_opt_ OnSetPropertyCallback cSetValueCallback = NullCallback(),
+                                  _In_opt_ int nFlags = PropertyFlagEnumerable);
 
   HRESULT RemoveProperty(_In_z_ LPCSTR szPropertyNameA);
 
@@ -400,33 +400,33 @@ public:
 
   VOID PushProperty(_In_z_ LPCSTR szPropertyNameA);
 
-  HRESULT CreateObject(_In_z_ LPCSTR szObjectNameA, _In_opt_ CProxyCallbacks *lpCallbacks=NULL);
+  HRESULT CreateObject(_In_z_ LPCSTR szObjectNameA, _In_opt_ CProxyCallbacks *lpCallbacks = NULL);
 
   HRESULT AddObjectNativeFunction(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFuncNameA,
                                   _In_ OnNativeFunctionCallback cNativeFunctionCallback, _In_ int nArgsCount);
 
   HRESULT AddObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                            _In_opt_ BOOL bInitialValueOnStack=FALSE,
-                            _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                            _In_opt_ BOOL bInitialValueOnStack = FALSE,
+                            _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddObjectStringProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_z_ LPCSTR szValueA,
-                                  _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                                  _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddObjectStringProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_z_ LPCWSTR szValueW,
-                                  _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                                  _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddObjectBooleanProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_ BOOL bValue,
-                                   _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                                   _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddObjectIntegerProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_ int nValue,
-                                   _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                                   _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddObjectNumericProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_ double nValue,
-                                   _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                                   _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddObjectNullProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                                _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddObjectJsObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
                                     _In_ CJsObjectBase *lpObject,
-                                    _In_opt_ int nFlags=PropertyFlagWritable|PropertyFlagEnumerable);
+                                    _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
   HRESULT AddObjectPropertyWithCallback(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
                                         _In_ OnGetPropertyCallback cGetValueCallback,
-                                        _In_opt_ OnSetPropertyCallback cSetValueCallback=NullCallback(),
-                                        _In_opt_ int nFlags=PropertyFlagEnumerable);
+                                        _In_opt_ OnSetPropertyCallback cSetValueCallback = NullCallback(),
+                                        _In_opt_ int nFlags = PropertyFlagEnumerable);
 
   HRESULT RemoveObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA);
 
@@ -435,19 +435,23 @@ public:
   VOID PushObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA);
 
   //converts from/to utf-8
-  static VOID PushString(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen=(SIZE_T)-1);
-  VOID PushString(_In_z_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen=(SIZE_T)-1);
+  static VOID PushString(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1);
+  VOID PushString(_In_z_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1);
 
   static VOID GetString(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex, _Inout_ CStringW &cStrW,
-                        _In_opt_ BOOL bAppend=FALSE);
-  VOID GetString(_In_ DukTape::duk_idx_t nStackIndex, _Inout_ CStringW &cStrW, _In_opt_ BOOL bAppend=FALSE);
+                        _In_opt_ BOOL bAppend = FALSE);
+  VOID GetString(_In_ DukTape::duk_idx_t nStackIndex, _Inout_ CStringW &cStrW, _In_opt_ BOOL bAppend = FALSE);
 
   //convert SYSTEMTIME from/to JS Date object
-  static VOID PushDate(_In_ DukTape::duk_context *lpCtx, _In_ LPSYSTEMTIME lpSt, _In_opt_ BOOL bAsUtc=TRUE);
-  VOID PushDate(_In_ LPSYSTEMTIME lpSt, _In_opt_ BOOL bAsUtc=TRUE);
+  static VOID PushDate(_In_ DukTape::duk_context *lpCtx, _In_ LPSYSTEMTIME lpSt, _In_opt_ BOOL bAsUtc = TRUE);
+  VOID PushDate(_In_ LPSYSTEMTIME lpSt, _In_opt_ BOOL bAsUtc = TRUE);
+  static VOID PushDate(_In_ DukTape::duk_context *lpCtx, _In_ CDateTime &cDt, _In_opt_ BOOL bAsUtc = TRUE);
+  VOID PushDate(_In_ CDateTime &cDt, _In_opt_ BOOL bAsUtc = TRUE);
 
   static VOID GetDate(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nObjIdx, _Out_ LPSYSTEMTIME lpSt);
   VOID GetDate(_In_ DukTape::duk_idx_t nObjIdx, _Out_ LPSYSTEMTIME lpSt);
+  static VOID GetDate(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nObjIdx, _Out_ CDateTime &cDt);
+  VOID GetDate(_In_ DukTape::duk_idx_t nObjIdx, _Out_ CDateTime &cDt);
 
   //NOTE: Setting 'var a=0;' can lead to 'a == FALSE'. No idea if JS or DukTape.
   //      These methods checks for boolean values first and for integer values
@@ -468,11 +472,13 @@ public:
   HRESULT Reset();
   HRESULT RunGC();
 
-  static HRESULT AddSafeString(_Inout_ CStringA &cStrCodeA, _In_z_ LPCSTR szStrA, _In_opt_ SIZE_T nStrLen=(SIZE_T)-1);
-  static HRESULT AddSafeString(_Inout_ CStringA &cStrCodeA, _In_z_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen=(SIZE_T)-1);
+  static HRESULT AddSafeString(_Inout_ CStringA &cStrCodeA, _In_z_ LPCSTR szStrA,
+                               _In_opt_ SIZE_T nStrLen = (SIZE_T)-1);
+  static HRESULT AddSafeString(_Inout_ CStringA &cStrCodeA, _In_z_ LPCWSTR szStrW,
+                               _In_opt_ SIZE_T nStrLen = (SIZE_T)-1);
 
-  static VOID ThrowWindowsError(_In_ DukTape::duk_context *lpCtx, _In_ HRESULT hr, _In_opt_ LPCSTR filename=NULL,
-                                _In_opt_ DukTape::duk_int_t line=0);
+  static VOID ThrowWindowsError(_In_ DukTape::duk_context *lpCtx, _In_ HRESULT hr, _In_opt_z_ LPCSTR filename = NULL,
+                                _In_opt_ DukTape::duk_int_t line = 0);
 
   static HRESULT AddBigIntegerSupport(_In_ DukTape::duk_context *lpCtx);
   HRESULT AddBigIntegerSupport();

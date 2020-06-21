@@ -21,6 +21,7 @@
 #define _MX_JS_MYSQL_PLUGIN_H
 
 #include "..\JavascriptVM.h"
+#include "..\..\Database\MySqlConnector.h"
 
 //-----------------------------------------------------------
 
@@ -39,10 +40,9 @@ public:
     MX_JS_MAP_METHOD("disconnect", &CJsMySqlPlugin::Disconnect, 0)
     MX_JS_MAP_METHOD("selectDatabase", &CJsMySqlPlugin::SelectDatabase, 1)
     MX_JS_MAP_METHOD("query", &CJsMySqlPlugin::Query, MX_JS_VARARGS)
-    MX_JS_MAP_METHOD("queryAndFetchRow", &CJsMySqlPlugin::QueryAndFetch, MX_JS_VARARGS)
+    MX_JS_MAP_METHOD("queryAndFetchRow", &CJsMySqlPlugin::QueryAndFetchRow, MX_JS_VARARGS)
     MX_JS_MAP_METHOD("queryClose", &CJsMySqlPlugin::QueryClose, 0)
     MX_JS_MAP_METHOD("escapeString", &CJsMySqlPlugin::EscapeString, MX_JS_VARARGS)
-    MX_JS_MAP_METHOD("utf8Truncate", &CJsMySqlPlugin::Utf8Truncate, 2)
     MX_JS_MAP_METHOD("fetchRow", &CJsMySqlPlugin::FetchRow, 0)
     MX_JS_MAP_METHOD("beginTransaction", &CJsMySqlPlugin::BeginTransaction, MX_JS_VARARGS)
     MX_JS_MAP_METHOD("commit", &CJsMySqlPlugin::CommitTransaction, 0)
@@ -50,12 +50,12 @@ public:
     MX_JS_MAP_PROPERTY("isConnected", &CJsMySqlPlugin::isConnected, NULL, FALSE)
     MX_JS_MAP_PROPERTY("affectedRows", &CJsMySqlPlugin::getAffectedRows, NULL, FALSE)
     MX_JS_MAP_PROPERTY("insertId", &CJsMySqlPlugin::getInsertId, NULL, FALSE)
-    MX_JS_MAP_PROPERTY("fields", &CJsMySqlPlugin::getFields, NULL, FALSE)
-    MX_JS_MAP_PROPERTY("fieldsCount", &CJsMySqlPlugin::getFieldsCount, NULL, FALSE)
   MX_JS_END_MAP()
 
 public:
-  BOOL IsConnected() const;
+  VOID SetConnector(_In_ Database::CMySqlConnector *lpConnector);
+  Database::CMySqlConnector* DetachConnector();
+  Database::CMySqlConnector* GetConnector();
 
 protected:
   static VOID OnRegister(_In_ DukTape::duk_context *lpCtx);
@@ -66,7 +66,7 @@ private:
   DukTape::duk_ret_t Disconnect(_In_opt_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t SelectDatabase(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t Query(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t QueryAndFetch(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t QueryAndFetchRow(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t QueryClose(_In_opt_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t EscapeString(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t Utf8Truncate(_In_ DukTape::duk_context *lpCtx);
@@ -77,16 +77,12 @@ private:
   DukTape::duk_ret_t isConnected(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t getAffectedRows(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t getInsertId(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t getFieldsCount(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t getFields(_In_ DukTape::duk_context *lpCtx);
 
-  VOID ThrowDbError(_In_ DukTape::duk_context *lpCtx, _In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line,
-                    _In_opt_ BOOL bOnlyPush = FALSE);
-
-  static HRESULT HResultFromMySqlErr(_In_ int nError);
+  VOID ThrowDbError(_In_ DukTape::duk_context *lpCtx, _In_ HRESULT hRes, _In_opt_ LPCSTR filename,
+                    _In_opt_ DukTape::duk_int_t line);
 
 private:
-  LPVOID lpInternal;
+  TAutoRefCounted<Database::CMySqlConnector> cConnector;
 };
 
 //-----------------------------------------------------------
@@ -107,6 +103,11 @@ public:
     return nDbError;
     };
 
+  __inline LPCSTR GetDbErrorMessage() const
+    {
+    return (LPCSTR)cStrDbErrorMessageA;
+    };
+
   __inline LPCSTR GetSqlState() const
     {
     return szSqlStateA;
@@ -116,6 +117,7 @@ private:
   friend class CJsMySqlPlugin;
 
   int nDbError;
+  CStringA cStrDbErrorMessageA;
   CHAR szSqlStateA[8];
 };
 

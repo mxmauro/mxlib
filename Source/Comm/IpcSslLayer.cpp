@@ -233,12 +233,15 @@ on_error:
   ssl_data->cCertArray = lpCheckCertificates;
   if (lpSelfCert != NULL)
   {
-    if (lpSelfCert->GetX509() == NULL)
+    X509 *lpX509 = lpSelfCert->GetX509();
+
+    if (lpX509 == NULL)
     {
       hRes = MX_E_NotReady;
       goto on_error;
     }
-    if (SSL_use_certificate(ssl_data->lpSslSession, lpSelfCert->GetX509()) <= 0)
+    ERR_clear_error();
+    if (SSL_use_certificate(ssl_data->lpSslSession, lpX509) <= 0)
     {
       hRes = Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
       goto on_error;
@@ -247,16 +250,15 @@ on_error:
     //setup private key if provided
     if (lpPrivKey != NULL)
     {
-      TAutoFreePtr<BYTE> aTempBuf;
-      TAutoDeletePtr<CSecureBuffer> cBuffer;
+      EVP_PKEY *lpKey = lpPrivKey->GetPKey();
 
-      hRes = lpPrivKey->GetPrivateKey(&cBuffer);
-      if (FAILED(hRes))
+      if (lpKey == NULL)
+      {
+        hRes = MX_E_NotReady;
         goto on_error;
-
+      }
       ERR_clear_error();
-      if (SSL_use_PrivateKey_ASN1(EVP_PKEY_RSA, ssl_data->lpSslSession, cBuffer->GetBuffer(),
-                                  (long)(cBuffer->GetLength())) <= 0)
+      if (SSL_use_PrivateKey(ssl_data->lpSslSession, lpKey) <= 0)
       {
         hRes = Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
         goto on_error;

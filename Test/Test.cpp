@@ -31,6 +31,7 @@
 #pragma comment(lib, "CommLib.lib")
 #pragma comment(lib, "ZLib.lib")
 #pragma comment(lib, "CryptoLib.lib")
+#pragma comment(lib, "DatabaseLib.lib")
 #pragma comment(lib, "JsLib.lib")
 #pragma comment(lib, "JsHttpServer.lib")
 

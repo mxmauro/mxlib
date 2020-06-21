@@ -39,20 +39,9 @@
     <ClCompile Include="Source\JsLib\JavascriptVMRequireModuleContext.cpp" />
     <ClCompile Include="Source\JsLib\Plugins\JsonWebToken\JsonWebTokenPlugin.cpp" />
     <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPlugin.cpp" />
-    <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginApi.cpp" />
     <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginException.cpp" />
-    <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginFieldInfo.cpp" />
-    <ClCompile Include="Source\JsLib\Plugins\SQLite\internals\custom_sqlite3_mem.cpp" />
-    <ClCompile Include="Source\JsLib\Plugins\SQLite\internals\sqlite3.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_HAVE_SQLITE_CONFIG_H;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">WIN32;_HAVE_SQLITE_CONFIG_H;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">WIN32;_HAVE_SQLITE_CONFIG_H;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">WIN32;_HAVE_SQLITE_CONFIG_H;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
     <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePlugin.cpp" />
-    <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginApi.cpp" />
     <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginException.cpp" />
-    <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginFieldInfo.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\JsLib\JavascriptVM.h" />
@@ -79,9 +68,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="Source\JsLib\JavascriptVMCommon.h" />
-    <ClInclude Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginCommon.h" />
-    <ClInclude Include="Source\JsLib\Plugins\SQLite\internals\config.h" />
-    <ClInclude Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginCommon.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="Source\JsLib\DukTape\Source\LICENSE.txt">

@@ -37,10 +37,14 @@
 //#define AVAILABLE_CIPHER_SUITES "ALL:!EXPORT:!LOW:!aNULL:!eNULL:!SSLv2:!ADH:!EDH:!DH:!IDEA:!FZA:!RC4"
 #define AVAILABLE_CIPHER_SUITES "HIGH:!aNULL:!MD5"
 
+#define __HEAPS_COUNT 64
+
 //-----------------------------------------------------------
 
 static LONG volatile nInitialized = 0;
 static SSL_CTX* volatile lpSslContexts[2] = { NULL, NULL };
+static HANDLE hHeaps[__HEAPS_COUNT] = { 0 };
+static LONG volatile nNextHeapIndex = 0;
 
 //-----------------------------------------------------------
 
@@ -190,7 +194,24 @@ static HRESULT _OpenSSL_Init()
 
     if (__InterlockedRead(&nInitialized) == 0)
     {
+      SIZE_T i;
+
       //setup memory allocator
+      for (i = 0; i < __HEAPS_COUNT; i++)
+      {
+        hHeaps[i] = ::HeapCreate(0, 1048576, 0);
+        if (hHeaps[i] == NULL)
+        {
+          while (i > 0)
+          {
+            i--;
+            ::HeapDestroy(hHeaps[i]);
+            hHeaps[i] = NULL;
+          }
+          return E_OUTOFMEMORY;
+        }
+      }
+
 #ifdef _DEBUG
       CRYPTO_set_mem_debug(1);
       CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
@@ -200,6 +221,11 @@ static HRESULT _OpenSSL_Init()
       if (OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_LOAD_CRYPTO_STRINGS |
                            OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, NULL) == 0)
       {
+        for (i = 0; i < __HEAPS_COUNT; i++)
+        {
+          ::HeapDestroy(hHeaps[i]);
+          hHeaps[i] = NULL;
+        }
         return E_OUTOFMEMORY;
       }
       ERR_clear_error();
@@ -239,6 +265,12 @@ static VOID OpenSSL_Shutdown()
 
   OPENSSL_thread_stop();
   OPENSSL_cleanup();
+
+  for (i = 0; i < __HEAPS_COUNT; i++)
+  {
+    ::HeapDestroy(hHeaps[i]);
+    hHeaps[i] = NULL;
+  }
   return;
 }
 
@@ -254,16 +286,46 @@ static void NTAPI OnTlsCallback(_In_ PVOID DllHandle, _In_ DWORD dwReason, _In_ 
 
 static void* __cdecl my_malloc_withinfo(size_t _Size, const char *_filename, int _linenum)
 {
-  return ::MxMemAllocD(_Size, _filename, _linenum);
+  SIZE_T nIdx = (::GetCurrentThreadId() >> 2) & (__HEAPS_COUNT - 1);
+  //SIZE_T nIdx = (SIZE_T)_InterlockedIncrement(&nNextHeapIndex) & (__HEAPS_COUNT - 1);
+  LPBYTE lpPtr;
+
+  lpPtr = (LPBYTE)::HeapAlloc(hHeaps[nIdx], 0, (DWORD)(sizeof(SIZE_T) + _Size));
+  if (lpPtr != NULL)
+  {
+    *((PSIZE_T)lpPtr) = nIdx;
+    lpPtr += sizeof(SIZE_T);
+  }
+  return lpPtr;
 }
 
 static void* __cdecl my_realloc_withinfo(void *_Memory, size_t _NewSize, const char *_filename, int _linenum)
 {
-  return ::MxMemReallocD(_Memory, _NewSize, _filename, _linenum);
+  LPBYTE lpPtr, lpNewPtr;
+
+  if (_Memory == NULL)
+    return my_malloc_withinfo(_NewSize, _filename, _linenum);
+  if (_NewSize == 0)
+  {
+    my_free(_Memory, _filename, _linenum);
+    return NULL;
+  }
+
+  lpPtr = (LPBYTE)_Memory - sizeof(SIZE_T);
+
+  lpNewPtr = (LPBYTE)::HeapReAlloc(hHeaps[*((PSIZE_T)lpPtr)], 0, lpPtr, (DWORD)(_NewSize + sizeof(SIZE_T)));
+  if (lpNewPtr != NULL)
+    lpNewPtr += sizeof(SIZE_T);
+  return lpNewPtr;
 }
 
-static void __cdecl my_free(void * _Memory, const char *_filename, int _linenum)
+static void __cdecl my_free(void *_Memory, const char *_filename, int _linenum)
 {
-  ::MxMemFree(_Memory);
+  if (_Memory != NULL)
+  {
+    LPBYTE lpPtr = (LPBYTE)_Memory - sizeof(SIZE_T);
+
+    ::HeapFree(hHeaps[*((PSIZE_T)lpPtr)], 0, lpPtr);
+  }
   return;
 }

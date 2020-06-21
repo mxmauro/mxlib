@@ -30,11 +30,29 @@
 //#define USE_CRT_ALLOC
 #ifdef _DEBUG
   #define DO_HEAP_CHECK
+  #define HEAP_CHECK_CAPTURE_STACK
 #else //_DEBUG
   //#define DO_HEAP_CHECK
+  //#define HEAP_CHECK_CAPTURE_STACK
 #endif //_DEBUG
 
+#if defined(DO_HEAP_CHECK) && defined(HEAP_CHECK_CAPTURE_STACK)
+  #define HEAP_CHECK_STACK_ENTRIES  16
+#endif //DO_HEAP_CHECK && HEAP_CHECK_CAPTURE_STACK
+
 //-----------------------------------------------------------
+
+#if defined(DO_HEAP_CHECK) && defined(HEAP_CHECK_CAPTURE_STACK)
+#include <ImageHlp.h>
+#include <VersionHelpers.h>
+
+typedef USHORT (WINAPI *lpfnRtlCaptureStackBackTrace)(ULONG, ULONG, PVOID *, PULONG);
+typedef BOOL (WINAPI *lpfnSymInitializeW)(_In_ HANDLE hProcess, _In_opt_z_ PCWSTR UserSearchPath,
+                                          _In_ BOOL fInvadeProcess);
+typedef BOOL (WINAPI *lpfnSymFromAddrW)(_In_ HANDLE hProcess, _In_ DWORD64 Address, _Out_opt_ PDWORD64 Displacement,
+                                        _Inout_ PSYMBOL_INFOW Symbol);
+typedef LPAPI_VERSION (WINAPI *lpfnImagehlpApiVersion)(VOID);
+#endif //DO_HEAP_CHECK && HEAP_CHECK_CAPTURE_STACK
 
 #ifdef DO_HEAP_CHECK
   #if defined(_M_X64)
@@ -70,6 +88,9 @@
     SIZE_T nLineNumber;
     LPVOID lpRetAddress;
     DWORD dwTag2[CHECKTAG_COUNT];
+#ifdef HEAP_CHECK_CAPTURE_STACK
+    SIZE_T nStackValues[HEAP_CHECK_STACK_ENTRIES];
+#endif //HEAP_CHECK_CAPTURE_STACK
     MINIDEBUG_POSTBLOCK MX_UNALIGNED *lpPost;
   } MINIDEBUG_PREBLOCK;
   #pragma pack()
@@ -84,6 +105,9 @@
 //-----------------------------------------------------------
 
 #ifdef DO_HEAP_CHECK
+#ifdef HEAP_CHECK_CAPTURE_STACK
+static int __cdecl InitializeMemory();
+#endif //HEAP_CHECK_CAPTURE_STACK
 static VOID InitializeBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk, _In_ SIZE_T nSize, _In_opt_z_ const char *szFilenameA,
                             _In_ int nLineNumber, _In_ LPVOID lpRetAddress);
 static VOID SetBlockTags(_In_ MINIDEBUG_PREBLOCK *pPreBlk, _In_ BOOL bOnFree);
@@ -93,12 +117,30 @@ static VOID LinkBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk);
 static VOID UnlinkBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk);
 static VOID AssertNotTag(_In_ MINIDEBUG_PREBLOCK *pPreBlk);
 static VOID DumpLeaks();
+
+#ifdef HEAP_CHECK_CAPTURE_STACK
+static HINSTANCE hDbgHelpDLL = NULL;
+static lpfnRtlCaptureStackBackTrace fnRtlCaptureStackBackTrace = NULL;
+static lpfnSymInitializeW fnSymInitializeW = NULL;
+static lpfnSymFromAddrW fnSymFromAddrW = NULL;
+static lpfnImagehlpApiVersion fnImagehlpApiVersion = NULL;
+#endif //HEAP_CHECK_CAPTURE_STACK
+
 #endif //DO_HEAP_CHECK
 
 //-----------------------------------------------------------
 
 #ifdef DO_HEAP_CHECK
+#ifdef HEAP_CHECK_CAPTURE_STACK
+typedef int (*_PIFV)(void);
+#endif //HEAP_CHECK_CAPTURE_STACK
 typedef void (*_PVFV)(void);
+
+#ifdef HEAP_CHECK_CAPTURE_STACK
+MX_LINKER_FORCE_INCLUDE(___mx_memory_init);
+#pragma section(".CRT$XIAZ", long, read)
+extern "C" __declspec(allocate(".CRT$XIAZ")) const _PIFV ___mx_memory_init = &InitializeMemory;
+#endif //HEAP_CHECK_CAPTURE_STACK
 
 MX_LINKER_FORCE_INCLUDE(___mx_memory_finalize);
 #pragma section(".CRT$XTY", long, read)  // NOLINT
@@ -530,6 +572,65 @@ int MxMemCompare(_In_ const void *lpSrc1, _In_ const void *lpSrc2, _In_ size_t n
 //-----------------------------------------------------------
 
 #ifdef DO_HEAP_CHECK
+
+#ifdef HEAP_CHECK_CAPTURE_STACK
+static int __cdecl InitializeMemory()
+{
+  HINSTANCE hNtDll;
+
+  hNtDll = ::GetModuleHandleW(L"ntdll.dll");
+  if (hNtDll != NULL)
+  {
+    if (::IsWindowsXPOrGreater() != FALSE)
+    {
+      //use RtlCaptureStackBackTrace only on xp or later
+      fnRtlCaptureStackBackTrace = (lpfnRtlCaptureStackBackTrace)::GetProcAddress(hNtDll,
+                                                                                  "RtlCaptureStackBackTrace");
+    }
+  }
+
+  hDbgHelpDLL = ::LoadLibraryW(L"dbghelp.dll");
+  if (hDbgHelpDLL != NULL)
+  {
+    BOOL b = FALSE;
+
+    fnSymInitializeW = (lpfnSymInitializeW)::GetProcAddress(hDbgHelpDLL, "SymInitializeW");
+    fnSymFromAddrW = (lpfnSymFromAddrW)::GetProcAddress(hDbgHelpDLL, "SymFromAddrW");
+    fnImagehlpApiVersion = (lpfnImagehlpApiVersion)::GetProcAddress(hDbgHelpDLL, "ImagehlpApiVersion");
+    if (fnSymInitializeW != NULL && fnSymFromAddrW != NULL && fnImagehlpApiVersion != NULL)
+    {
+      try
+      {
+        LPAPI_VERSION lpApiVer = fnImagehlpApiVersion();
+
+        if (lpApiVer != NULL &&
+            (lpApiVer->MajorVersion > 4 ||
+             (lpApiVer->MajorVersion == 4 && lpApiVer->MinorVersion > 0) ||
+             (lpApiVer->MajorVersion == 4 && lpApiVer->MinorVersion == 0 && lpApiVer->Revision >= 5)))
+        {
+          b = fnSymInitializeW(::GetCurrentProcess(), NULL, FALSE);
+        }
+      }
+      catch (...)
+      {
+      }
+    }
+    if (b == FALSE)
+    {
+      fnSymInitializeW = NULL;
+      fnSymFromAddrW = NULL;
+      fnImagehlpApiVersion = NULL;
+
+      ::FreeLibrary(hDbgHelpDLL);
+      hDbgHelpDLL = NULL;
+    }
+  }
+
+  //done
+  return 0;
+}
+#endif //HEAP_CHECK_CAPTURE_STACK
+
 static VOID InitializeBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk, _In_ SIZE_T nSize, _In_opt_z_ const char *szFilenameA,
                             _In_ int nLineNumber, _In_ LPVOID lpRetAddress)
 {
@@ -537,6 +638,15 @@ static VOID InitializeBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk, _In_ SIZE_T nSize,
   pPreBlk->szFilenameA = (LPCSTR)szFilenameA;
   pPreBlk->nLineNumber = (SIZE_T)nLineNumber;
   pPreBlk->lpRetAddress = lpRetAddress;
+#ifdef HEAP_CHECK_CAPTURE_STACK
+  ::MxMemSet(pPreBlk->nStackValues, 0, sizeof(pPreBlk->nStackValues));
+  if (fnRtlCaptureStackBackTrace != NULL)
+  {
+    ULONG nHash;
+
+    fnRtlCaptureStackBackTrace(2, HEAP_CHECK_STACK_ENTRIES, (LPVOID*)(pPreBlk->nStackValues), &nHash);
+  }
+#endif //HEAP_CHECK_CAPTURE_STACK
   pPreBlk->lpPost = (MINIDEBUG_POSTBLOCK*)((LPBYTE)pPreBlk + sizeof(MINIDEBUG_PREBLOCK) + nSize);
   SetBlockTags(pPreBlk, FALSE);
   pPreBlk->lpPost->szFilenameA = (LPCSTR)szFilenameA;
@@ -668,7 +778,16 @@ static VOID AssertNotTag(_In_ MINIDEBUG_PREBLOCK *pPreBlk)
 static VOID DumpLeaks()
 {
   MX::CFastLock cLock(&(sAllocatedBlocks.nMutex));
+  CHAR szBufferA[512];
   MINIDEBUG_PREBLOCK *lpBlock;
+#ifdef HEAP_CHECK_CAPTURE_STACK
+  SIZE_T nIdx;
+  struct {
+    SYMBOL_INFOW sSymbolInfoW;
+    WCHAR szNameContinuationW[256];
+  } sFullSymbolInfoW;
+  DWORD64 qwDisp;
+#endif //HEAP_CHECK_CAPTURE_STACK
 
   for (lpBlock=sAllocatedBlocks.lpHead; lpBlock!=NULL; lpBlock=lpBlock->lpNext)
   {
@@ -687,6 +806,49 @@ static VOID DumpLeaks()
                      p, (SIZE_T)((LPBYTE)(lpBlock->lpPost) - p),
                      p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], lpBlock->lpRetAddress);
     }
+
+#ifdef HEAP_CHECK_CAPTURE_STACK
+    if (fnSymFromAddrW != NULL)
+    {
+      for (nIdx = 0; nIdx < HEAP_CHECK_STACK_ENTRIES; nIdx++)
+      {
+        if (lpBlock->nStackValues[nIdx] == 0)
+          break;
+        ::MxMemSet(&(sFullSymbolInfoW.sSymbolInfoW), 0, sizeof(sFullSymbolInfoW.sSymbolInfoW));
+        sFullSymbolInfoW.sSymbolInfoW.SizeOfStruct = (ULONG)sizeof(sFullSymbolInfoW);
+        sFullSymbolInfoW.sSymbolInfoW.MaxNameLen = MX_ARRAYLEN(sFullSymbolInfoW.szNameContinuationW);
+        if (fnSymFromAddrW(::GetCurrentProcess(), (DWORD64)(lpBlock->nStackValues[nIdx]), &qwDisp,
+                           &(sFullSymbolInfoW.sSymbolInfoW)) != FALSE)
+        {
+          sFullSymbolInfoW.szNameContinuationW[MX_ARRAYLEN(sFullSymbolInfoW.szNameContinuationW) - 1] = 0;
+        }
+        else
+        {
+          sFullSymbolInfoW.sSymbolInfoW.Name[0] = 0;
+        }
+        MX::DebugPrint("  %s 0x%IX => %S\n", lpBlock->nStackValues[nIdx], ((nIdx == 0) ? "Stack:" : "      "),
+                       ((sFullSymbolInfoW.sSymbolInfoW.Name[0] != 0) ? sFullSymbolInfoW.sSymbolInfoW.Name
+                                                                     : L"Unknown"));
+      }
+    }
+    else
+    {
+      int len, ofs = 0;
+      for (nIdx = 0; nIdx < HEAP_CHECK_STACK_ENTRIES; nIdx++)
+      {
+        if (lpBlock->nStackValues[nIdx] == 0)
+          break;
+        len = mx_sprintf_s(szBufferA + (SIZE_T)ofs, MX_ARRAYLEN(szBufferA) - (SIZE_T)ofs, "%s0x%IX",
+                           ((nIdx == 0) ? "" : ", "), lpBlock->nStackValues[nIdx]);
+        if (len > 0)
+          ofs += len;
+      }
+      if (ofs > 0)
+      {
+        MX::DebugPrint("  Stack: [%.*s]\n", ofs, szBufferA);
+      }
+    }
+#endif //HEAP_CHECK_CAPTURE_STACK
   }
   return;
 }

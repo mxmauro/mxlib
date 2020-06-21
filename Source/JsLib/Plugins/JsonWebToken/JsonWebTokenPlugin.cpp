@@ -556,12 +556,7 @@ static VOID GetOptionalTimestamp(_In_ DukTape::duk_context *lpCtx, _In_ DukTape:
     MX::CJavascriptVM::GetObjectType(lpCtx, nIdx, cStrTypeA);
     if (MX::StrCompareA((LPCSTR)cStrTypeA, "Date") == 0)
     {
-      SYSTEMTIME sSt;
-
-      MX::CJavascriptVM::GetDate(lpCtx, nIdx, &sSt);
-      hRes = cDt.SetFromSystemTime(sSt);
-      if (FAILED(hRes))
-        MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+      MX::CJavascriptVM::GetDate(lpCtx, nIdx, cDt);
     }
     else if (DukTape::duk_is_string(lpCtx, nIdx) != 0)
     {

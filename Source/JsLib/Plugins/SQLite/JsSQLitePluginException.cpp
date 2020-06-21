@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "JsSQLitePluginCommon.h"
+#include "..\..\..\..\Include\JsLib\Plugins\JsSQLitePlugin.h"
 
 //-----------------------------------------------------------
 
@@ -27,22 +27,16 @@ CJsSQLiteError::CJsSQLiteError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::d
                 CJsWindowsError(lpCtx, nStackIndex)
 {
   LPCSTR sA;
-  SIZE_T nLen;
 
   nDbError = 0;
-  szSqlStateA[0] = 0;
 
   DukTape::duk_get_prop_string(lpCtx, nStackIndex, "dbError");
   nDbError = (int)DukTape::duk_get_int(lpCtx, -1);
   DukTape::duk_pop(lpCtx);
 
-  DukTape::duk_get_prop_string(lpCtx, nStackIndex, "sqlState");
-  sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "000000";
-  nLen = MX::StrLenA(sA);
-  if (nLen >= MX_ARRAYLEN(szSqlStateA))
-    nLen = MX_ARRAYLEN(szSqlStateA) - 1;
-  ::MxMemCopy(szSqlStateA, sA, nLen);
-  szSqlStateA[nLen]  = 0;
+  DukTape::duk_get_prop_string(lpCtx, nStackIndex, "dbErrorMsg");
+  sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "";
+  cStrDbErrorMessageA.Copy(sA);
   DukTape::duk_pop(lpCtx);
   return;
 }
@@ -61,10 +55,10 @@ CJsSQLiteError::~CJsSQLiteError()
 CJsSQLiteError& CJsSQLiteError::operator=(_In_ const CJsSQLiteError &obj)
 {
   CJsWindowsError::operator=(obj);
-  //----
+
   nDbError = obj.nDbError;
-  ::MxMemCopy(szSqlStateA, obj.szSqlStateA, sizeof(szSqlStateA));
-  //----
+  cStrDbErrorMessageA.CopyN((LPCSTR)(obj.cStrDbErrorMessageA), obj.cStrDbErrorMessageA.GetLength());
+
   return *this;
 }
 

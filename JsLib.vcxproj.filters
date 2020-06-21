@@ -27,9 +27,6 @@
     <Filter Include="Source Files\Plugins\SQLite">
       <UniqueIdentifier>{3c63aeca-3b6e-487f-b33e-d0592d48a80c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\Plugins\SQLite\Internals">
-      <UniqueIdentifier>{7ab51c90-ff71-47fd-9136-0dd800c13f1f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source Files\Plugins\JsonWebToken">
       <UniqueIdentifier>{44dfb734-d3fb-4532-85cf-771f9044b551}</UniqueIdentifier>
     </Filter>
@@ -62,32 +59,14 @@
     <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPlugin.cpp">
       <Filter>Source Files\Plugins\MySQL</Filter>
     </ClCompile>
-    <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginApi.cpp">
-      <Filter>Source Files\Plugins\MySQL</Filter>
-    </ClCompile>
     <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginException.cpp">
-      <Filter>Source Files\Plugins\MySQL</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginFieldInfo.cpp">
       <Filter>Source Files\Plugins\MySQL</Filter>
     </ClCompile>
     <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePlugin.cpp">
       <Filter>Source Files\Plugins\SQLite</Filter>
     </ClCompile>
-    <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginApi.cpp">
-      <Filter>Source Files\Plugins\SQLite</Filter>
-    </ClCompile>
     <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginException.cpp">
       <Filter>Source Files\Plugins\SQLite</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginFieldInfo.cpp">
-      <Filter>Source Files\Plugins\SQLite</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\JsLib\Plugins\SQLite\internals\sqlite3.c">
-      <Filter>Source Files\Plugins\SQLite\Internals</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\JsLib\Plugins\SQLite\internals\custom_sqlite3_mem.cpp">
-      <Filter>Source Files\Plugins\SQLite\Internals</Filter>
     </ClCompile>
     <ClCompile Include="Source\JsLib\DukTape\Source\extras\module-node\duk_module_node.c">
       <Filter>Source Files\DukTape\Extras</Filter>
@@ -115,17 +94,8 @@
     <ClInclude Include="Source\JsLib\DukTape\duk_custom.h">
       <Filter>Source Files\DukTape</Filter>
     </ClInclude>
-    <ClInclude Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginCommon.h">
-      <Filter>Source Files\Plugins\MySQL</Filter>
-    </ClInclude>
     <ClInclude Include="Include\JsLib\Plugins\JsSQLitePlugin.h">
       <Filter>Header Files\Plugins</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginCommon.h">
-      <Filter>Source Files\Plugins\SQLite</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\JsLib\Plugins\SQLite\internals\config.h">
-      <Filter>Source Files\Plugins\SQLite\Internals</Filter>
     </ClInclude>
     <ClInclude Include="Source\JsLib\DukTape\Source\extras\module-node\duk_module_node.h">
       <Filter>Source Files\DukTape\Extras</Filter>
@@ -140,8 +110,6 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Source\JsLib\BigInteger\BigInteger.min.js">
-      <Filter>Source Files\BigInteger</Filter>
-    </None>
+    <CustomBuild Include="Source\JsLib\BigInteger\BigInteger.min.js" />
   </ItemGroup>
 </Project>

@@ -21,6 +21,7 @@
 #define _MX_JS_SQLITE_PLUGIN_H
 
 #include "..\JavascriptVM.h"
+#include "..\..\Database\Sqlite3Connector.h"
 
 //-----------------------------------------------------------
 
@@ -38,10 +39,9 @@ public:
     MX_JS_MAP_METHOD("connect", &CJsSQLitePlugin::Connect, MX_JS_VARARGS) //filename[,options]
     MX_JS_MAP_METHOD("disconnect", &CJsSQLitePlugin::Disconnect, 0)
     MX_JS_MAP_METHOD("query", &CJsSQLitePlugin::Query, MX_JS_VARARGS)
-    MX_JS_MAP_METHOD("queryAndFetchRow", &CJsSQLitePlugin::QueryAndFetch, MX_JS_VARARGS)
+    MX_JS_MAP_METHOD("queryAndFetchRow", &CJsSQLitePlugin::QueryAndFetchRow, MX_JS_VARARGS)
     MX_JS_MAP_METHOD("queryClose", &CJsSQLitePlugin::QueryClose, 0)
     MX_JS_MAP_METHOD("escapeString", &CJsSQLitePlugin::EscapeString, MX_JS_VARARGS)
-    MX_JS_MAP_METHOD("utf8Truncate", &CJsSQLitePlugin::Utf8Truncate, 2)
     MX_JS_MAP_METHOD("fetchRow", &CJsSQLitePlugin::FetchRow, 0)
     MX_JS_MAP_METHOD("beginTransaction", &CJsSQLitePlugin::BeginTransaction, MX_JS_VARARGS)
     MX_JS_MAP_METHOD("commit", &CJsSQLitePlugin::CommitTransaction, 0)
@@ -49,12 +49,12 @@ public:
     MX_JS_MAP_PROPERTY("isConnected", &CJsSQLitePlugin::isConnected, NULL, FALSE)
     MX_JS_MAP_PROPERTY("affectedRows", &CJsSQLitePlugin::getAffectedRows, NULL, FALSE)
     MX_JS_MAP_PROPERTY("insertId", &CJsSQLitePlugin::getInsertId, NULL, FALSE)
-    MX_JS_MAP_PROPERTY("fields", &CJsSQLitePlugin::getFields, NULL, FALSE)
-    MX_JS_MAP_PROPERTY("fieldsCount", &CJsSQLitePlugin::getFieldsCount, NULL, FALSE)
   MX_JS_END_MAP()
 
 public:
-  BOOL IsConnected() const;
+  VOID SetConnector(_In_ Database::CSQLite3Connector *lpConnector);
+  Database::CSQLite3Connector* DetachConnector();
+  Database::CSQLite3Connector* GetConnector();
 
 protected:
   static VOID OnRegister(_In_ DukTape::duk_context *lpCtx);
@@ -64,7 +64,7 @@ private:
   DukTape::duk_ret_t Connect(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t Disconnect(_In_opt_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t Query(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t QueryAndFetch(_In_ DukTape::duk_context *lpCtx);
+  DukTape::duk_ret_t QueryAndFetchRow(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t QueryClose(_In_opt_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t EscapeString(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t Utf8Truncate(_In_ DukTape::duk_context *lpCtx);
@@ -75,17 +75,12 @@ private:
   DukTape::duk_ret_t isConnected(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t getAffectedRows(_In_ DukTape::duk_context *lpCtx);
   DukTape::duk_ret_t getInsertId(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t getFieldsCount(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t getFields(_In_ DukTape::duk_context *lpCtx);
 
-  VOID ThrowDbError(_In_ DukTape::duk_context *lpCtx, _In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line);
-  VOID ThrowDbError(_In_ DukTape::duk_context *lpCtx, _In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line,
-                    _In_ int err, _In_opt_ HRESULT hRes = S_OK);
-
-  HRESULT HResultFromSQLiteErr(_In_ int nError);
+  VOID ThrowDbError(_In_ DukTape::duk_context *lpCtx, _In_ HRESULT hRes, _In_opt_ LPCSTR filename,
+                    _In_opt_ DukTape::duk_int_t line);
 
 private:
-  LPVOID lpInternal;
+  TAutoRefCounted<Database::CSQLite3Connector> cConnector;
 };
 
 //-----------------------------------------------------------
@@ -106,16 +101,16 @@ public:
     return nDbError;
     };
 
-  __inline LPCSTR GetSqlState() const
+  __inline LPCSTR GetDbErrorMessage() const
     {
-    return szSqlStateA;
+    return (LPCSTR)cStrDbErrorMessageA;
     };
 
 private:
   friend class CJsSQLitePlugin;
 
   int nDbError;
-  CHAR szSqlStateA[8];
+  CStringA cStrDbErrorMessageA;
 };
 
 } //namespace MX

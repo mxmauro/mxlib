@@ -55,7 +55,8 @@ static void my_duk_fatal_function(void *udata, const char *msg);
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CJavascriptVM::CJavascriptVM() : CBaseMemObj()
 {
@@ -142,11 +143,11 @@ HRESULT CJavascriptVM::Initialize()
 
     //add WindowsError exception
     DukTape::duk_eval_raw(lpCtx, "function WindowsError(_hr) {\r\n"
-                                     "this.hr = _hr;\r\n"
-                                     "Error.call(this, \"\");\r\n"
-                                     "this.message = FormatErrorMessage(_hr);\r\n"
-                                     "this.name = \"WindowsError\";\r\n"
-                                     "return this; }\r\n"
+                                   "this.hr = _hr;\r\n"
+                                   "Error.call(this, \"\");\r\n"
+                                   "this.message = FormatErrorMessage(_hr);\r\n"
+                                   "this.name = \"WindowsError\";\r\n"
+                                   "return this; }\r\n"
                                  "WindowsError.prototype = Object.create(Error.prototype);\r\n"
                                  "WindowsError.prototype.constructor=WindowsError;\r\n", 0,
                           DUK_COMPILE_EVAL | DUK_COMPILE_NOSOURCE | DUK_COMPILE_STRLEN | DUK_COMPILE_NOFILENAME);
@@ -383,7 +384,7 @@ HRESULT CJavascriptVM::UnregisterException(_In_z_ LPCSTR szExceptionNameA)
   if (*szExceptionNameA == 0)
     return E_INVALIDARG;
   nCount = aRegisteredExceptionsList.GetCount();
-  for (i=0; i<nCount; i++)
+  for (i = 0; i < nCount; i++)
   {
     if (MX::StrCompareA(aRegisteredExceptionsList[i].szExceptionNameA, szExceptionNameA, TRUE) == 0)
     {
@@ -515,7 +516,7 @@ HRESULT CJavascriptVM::AddNullProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ i
   if (FAILED(hRes))
     return hRes;
   return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                              NullCallback());
+                                             NullCallback());
 }
 
 HRESULT CJavascriptVM::AddJsObjectProperty(_In_z_ LPCSTR szPropertyNameA, _In_ CJsObjectBase *lpObject,
@@ -923,9 +924,24 @@ VOID CJavascriptVM::PushDate(_In_ LPSYSTEMTIME lpSt, _In_opt_ BOOL bAsUtc)
   return;
 }
 
+VOID CJavascriptVM::PushDate(_In_ DukTape::duk_context *lpCtx, _In_ CDateTime &cDt, _In_opt_ BOOL bAsUtc)
+{
+  SYSTEMTIME sSt;
+
+  cDt.GetSystemTime(sSt);
+  PushDate(lpCtx, &sSt, bAsUtc);
+  return;
+}
+
+VOID CJavascriptVM::PushDate(_In_ CDateTime &cDt, _In_opt_ BOOL bAsUtc)
+{
+  PushDate(lpCtx, cDt, bAsUtc);
+  return;
+}
+
 VOID CJavascriptVM::GetDate(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nObjIdx, _Out_ LPSYSTEMTIME lpSt)
 {
-  static WORD wDaysInMonths[12] ={ 31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+  static WORD wDaysInMonths[12] = { 31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
   static WORD wMonthOffsets[12] = { 0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4 };
   WORD y, w;
 
@@ -993,6 +1009,7 @@ VOID CJavascriptVM::GetDate(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_
     if (lpSt->wDay > w)
       MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
   }
+
   //calculate day of week
   y = lpSt->wYear - ((lpSt->wMonth < 3) ? 1 : 0);
   lpSt->wDayOfWeek = (lpSt->wYear + lpSt->wYear / 4 - lpSt->wYear / 100 + lpSt->wYear / 400 +
@@ -1003,6 +1020,70 @@ VOID CJavascriptVM::GetDate(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_
 VOID CJavascriptVM::GetDate(_In_ DukTape::duk_idx_t nObjIdx, _Out_ LPSYSTEMTIME lpSt)
 {
   GetDate(lpCtx, nObjIdx, lpSt);
+  return;
+}
+
+VOID CJavascriptVM::GetDate(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nObjIdx, _Out_ CDateTime &cDt)
+{
+  int nYear, nMonth, nDay, nHours, nMinutes, nSeconds, nMilliseconds;
+  HRESULT hRes;
+
+  nObjIdx = DukTape::duk_normalize_index(lpCtx, nObjIdx);
+
+  if (DukTape::duk_is_object(lpCtx, nObjIdx) == 0)
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+
+  DukTape::duk_get_prop_string(lpCtx, nObjIdx, "getUTCDate");
+  DukTape::duk_dup(lpCtx, nObjIdx);
+  DukTape::duk_call_method(lpCtx, 0);
+  nDay = DukTape::duk_require_int(lpCtx, -1);
+  DukTape::duk_pop(lpCtx);
+  //----
+  DukTape::duk_get_prop_string(lpCtx, nObjIdx, "getUTCMonth");
+  DukTape::duk_dup(lpCtx, nObjIdx);
+  DukTape::duk_call_method(lpCtx, 0);
+  nMonth = DukTape::duk_require_int(lpCtx, -1) + 1;
+  DukTape::duk_pop(lpCtx);
+  //----
+  DukTape::duk_get_prop_string(lpCtx, nObjIdx, "getUTCFullYear");
+  DukTape::duk_dup(lpCtx, nObjIdx);
+  DukTape::duk_call_method(lpCtx, 0);
+  nYear = DukTape::duk_require_int(lpCtx, -1);
+  DukTape::duk_pop(lpCtx);
+  //----
+  DukTape::duk_get_prop_string(lpCtx, nObjIdx, "getUTCHours");
+  DukTape::duk_dup(lpCtx, nObjIdx);
+  DukTape::duk_call_method(lpCtx, 0);
+  nHours = DukTape::duk_require_int(lpCtx, -1);
+  DukTape::duk_pop(lpCtx);
+  //----
+  DukTape::duk_get_prop_string(lpCtx, nObjIdx, "getUTCMinutes");
+  DukTape::duk_dup(lpCtx, nObjIdx);
+  DukTape::duk_call_method(lpCtx, 0);
+  nMinutes = DukTape::duk_require_int(lpCtx, -1);
+  DukTape::duk_pop(lpCtx);
+  //----
+  DukTape::duk_get_prop_string(lpCtx, nObjIdx, "getUTCSeconds");
+  DukTape::duk_dup(lpCtx, nObjIdx);
+  DukTape::duk_call_method(lpCtx, 0);
+  nSeconds = DukTape::duk_require_int(lpCtx, -1);
+  DukTape::duk_pop(lpCtx);
+  //----
+  DukTape::duk_get_prop_string(lpCtx, nObjIdx, "getUTCMilliseconds");
+  DukTape::duk_dup(lpCtx, nObjIdx);
+  DukTape::duk_call_method(lpCtx, 0);
+  nMilliseconds = DukTape::duk_require_int(lpCtx, -1);
+  DukTape::duk_pop(lpCtx);
+
+  hRes = cDt.SetDateTime(nYear, nMonth, nDay, nHours, nMinutes, nSeconds, nMilliseconds);
+  if (FAILED(hRes))
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+  return;
+}
+
+VOID CJavascriptVM::GetDate(_In_ DukTape::duk_idx_t nObjIdx, _Out_ CDateTime &cDt)
+{
+  GetDate(lpCtx, nObjIdx, cDt);
   return;
 }
 
