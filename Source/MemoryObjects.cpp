@@ -23,6 +23,7 @@
 #include "..\Include\Debug.h"
 #include "Internals\MsVcrt.h"
 #include <intrin.h>
+#include "Internals\SystemDll.h"
 
 #pragma intrinsic (_InterlockedIncrement)
 #pragma intrinsic(_ReturnAddress)
@@ -588,8 +589,11 @@ static int __cdecl InitializeMemory()
                                                                                   "RtlCaptureStackBackTrace");
     }
   }
-
-  hDbgHelpDLL = ::LoadLibraryW(L"dbghelp.dll");
+  //IMPORTANT: Always check these functions does not use memory
+  if (FAILED(MX::Internals::LoadAppDll(L"dbghelp.dll", &hDbgHelpDLL)))
+  {
+    MX::Internals::LoadSystemDll(L"dbghelp.dll", &hDbgHelpDLL);
+  }
   if (hDbgHelpDLL != NULL)
   {
     BOOL b = FALSE;
@@ -815,8 +819,9 @@ static VOID DumpLeaks()
         if (lpBlock->nStackValues[nIdx] == 0)
           break;
         ::MxMemSet(&(sFullSymbolInfoW.sSymbolInfoW), 0, sizeof(sFullSymbolInfoW.sSymbolInfoW));
-        sFullSymbolInfoW.sSymbolInfoW.SizeOfStruct = (ULONG)sizeof(sFullSymbolInfoW);
+        sFullSymbolInfoW.sSymbolInfoW.SizeOfStruct = (ULONG)sizeof(sFullSymbolInfoW.sSymbolInfoW);
         sFullSymbolInfoW.sSymbolInfoW.MaxNameLen = MX_ARRAYLEN(sFullSymbolInfoW.szNameContinuationW);
+        qwDisp = 0;
         if (fnSymFromAddrW(::GetCurrentProcess(), (DWORD64)(lpBlock->nStackValues[nIdx]), &qwDisp,
                            &(sFullSymbolInfoW.sSymbolInfoW)) != FALSE)
         {
@@ -826,9 +831,10 @@ static VOID DumpLeaks()
         {
           sFullSymbolInfoW.sSymbolInfoW.Name[0] = 0;
         }
-        MX::DebugPrint("  %s 0x%IX => %S\n", lpBlock->nStackValues[nIdx], ((nIdx == 0) ? "Stack:" : "      "),
+        MX::DebugPrint("  %s 0x%IX => %S + 0x%IX\n", ((nIdx == 0) ? "Stack:" : "      "), lpBlock->nStackValues[nIdx],
                        ((sFullSymbolInfoW.sSymbolInfoW.Name[0] != 0) ? sFullSymbolInfoW.sSymbolInfoW.Name
-                                                                     : L"Unknown"));
+                                                                     : L"Unknown"),
+                       qwDisp);
       }
     }
     else
