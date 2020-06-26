@@ -43,8 +43,9 @@
 
 static LONG volatile nInitialized = 0;
 static SSL_CTX* volatile lpSslContexts[2] = { NULL, NULL };
+#if defined(__HEAPS_COUNT) && __HEAPS_COUNT > 0
 static HANDLE hHeaps[__HEAPS_COUNT] = { 0 };
-static LONG volatile nNextHeapIndex = 0;
+#endif //__HEAPS_COUNT && __HEAPS_COUNT > 0
 
 //-----------------------------------------------------------
 
@@ -57,9 +58,11 @@ extern "C" {
 static HRESULT _OpenSSL_Init();
 static VOID OpenSSL_Shutdown();
 static void NTAPI OnTlsCallback(_In_ PVOID DllHandle, _In_ DWORD dwReason, _In_ PVOID);
+#if defined(__HEAPS_COUNT) && __HEAPS_COUNT > 0
 static void* __cdecl my_malloc_withinfo(size_t _Size, const char *_filename, int _linenum);
 static void* __cdecl my_realloc_withinfo(void *_Memory, size_t _NewSize, const char *_filename, int _linenum);
 static void __cdecl my_free(void * _Memory, const char *_filename, int _linenum);
+#endif //__HEAPS_COUNT && __HEAPS_COUNT > 0
 
 //-----------------------------------------------------------
 
@@ -194,10 +197,9 @@ static HRESULT _OpenSSL_Init()
 
     if (__InterlockedRead(&nInitialized) == 0)
     {
-      SIZE_T i;
-
+#if defined(__HEAPS_COUNT) && __HEAPS_COUNT > 0
       //setup memory allocator
-      for (i = 0; i < __HEAPS_COUNT; i++)
+      for (SIZE_T i = 0; i < __HEAPS_COUNT; i++)
       {
         hHeaps[i] = ::HeapCreate(0, 1048576, 0);
         if (hHeaps[i] == NULL)
@@ -211,24 +213,29 @@ static HRESULT _OpenSSL_Init()
           return E_OUTOFMEMORY;
         }
       }
+      CRYPTO_set_mem_functions(&my_malloc_withinfo, &my_realloc_withinfo, &my_free);
+#endif //__HEAPS_COUNT && __HEAPS_COUNT > 0
 
 #ifdef _DEBUG
       CRYPTO_set_mem_debug(1);
       CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
 #endif //_DEBUG
-      CRYPTO_set_mem_functions(&my_malloc_withinfo, &my_realloc_withinfo, &my_free);
+
       //init lib
       if (OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_LOAD_CRYPTO_STRINGS |
                            OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, NULL) == 0)
       {
-        for (i = 0; i < __HEAPS_COUNT; i++)
+#if defined(__HEAPS_COUNT) && __HEAPS_COUNT > 0
+        for (SIZE_T i = 0; i < __HEAPS_COUNT; i++)
         {
           ::HeapDestroy(hHeaps[i]);
           hHeaps[i] = NULL;
         }
+#endif //__HEAPS_COUNT && __HEAPS_COUNT > 0
         return E_OUTOFMEMORY;
       }
       ERR_clear_error();
+
       //register shutdown callback
       hRes = MX::RegisterFinalizer(&OpenSSL_Shutdown, OPENSSL_FINALIZER_PRIORITY);
       if (FAILED(hRes))
@@ -246,9 +253,7 @@ static HRESULT _OpenSSL_Init()
 
 static VOID OpenSSL_Shutdown()
 {
-  SIZE_T i;
-
-  for (i = 0; i < MX_ARRAYLEN(lpSslContexts); i++)
+  for (SIZE_T i = 0; i < MX_ARRAYLEN(lpSslContexts); i++)
   {
     if (lpSslContexts[i] != NULL)
     {
@@ -256,7 +261,7 @@ static VOID OpenSSL_Shutdown()
       lpSslContexts[i] = NULL;
     }
   }
-  //----
+
   FIPS_mode_set(0);
   CONF_modules_unload(1);
   EVP_cleanup();
@@ -266,11 +271,13 @@ static VOID OpenSSL_Shutdown()
   OPENSSL_thread_stop();
   OPENSSL_cleanup();
 
-  for (i = 0; i < __HEAPS_COUNT; i++)
+#if defined(__HEAPS_COUNT) && __HEAPS_COUNT > 0
+  for (SIZE_T i = 0; i < __HEAPS_COUNT; i++)
   {
     ::HeapDestroy(hHeaps[i]);
     hHeaps[i] = NULL;
   }
+#endif //__HEAPS_COUNT && __HEAPS_COUNT > 0
   return;
 }
 
@@ -284,10 +291,10 @@ static void NTAPI OnTlsCallback(_In_ PVOID DllHandle, _In_ DWORD dwReason, _In_ 
   return;
 }
 
+#if defined(__HEAPS_COUNT) && __HEAPS_COUNT > 0
 static void* __cdecl my_malloc_withinfo(size_t _Size, const char *_filename, int _linenum)
 {
   SIZE_T nIdx = (::GetCurrentThreadId() >> 2) & (__HEAPS_COUNT - 1);
-  //SIZE_T nIdx = (SIZE_T)_InterlockedIncrement(&nNextHeapIndex) & (__HEAPS_COUNT - 1);
   LPBYTE lpPtr;
 
   lpPtr = (LPBYTE)::HeapAlloc(hHeaps[nIdx], 0, (DWORD)(sizeof(SIZE_T) + _Size));
@@ -329,3 +336,4 @@ static void __cdecl my_free(void *_Memory, const char *_filename, int _linenum)
   }
   return;
 }
+#endif //__HEAPS_COUNT && __HEAPS_COUNT > 0
