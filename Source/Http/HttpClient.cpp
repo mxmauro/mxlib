@@ -1144,8 +1144,6 @@ VOID CHttpClient::Close(_In_opt_ BOOL bReuseConn)
     ::MxSleep(25);
   }
 
- 
-
   //done
   if (cConnToClose)
     cConnToClose->Close(MX_E_Cancelled);

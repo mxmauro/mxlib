@@ -242,8 +242,8 @@ HRESULT CHttpHeaderReqCacheControl::Build(_Inout_ CStringA &cStrDestA, _In_ Http
     if (cStrDestA.AppendFormat(",%s=%s", aExtensionsList[i]->szNameA, (LPCSTR)cStrTempA) == FALSE)
       return E_OUTOFMEMORY;
   }
-  if (cStrTempA.IsEmpty() == FALSE)
-    cStrTempA.Delete(0, 1); //delete initial comma
+  if (cStrDestA.IsEmpty() == FALSE)
+    cStrDestA.Delete(0, 1); //delete initial comma
 
   //done
   return S_OK;
