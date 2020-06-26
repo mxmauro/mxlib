@@ -352,30 +352,35 @@ HRESULT CMySqlConnector::Connect(_In_z_ LPCWSTR szServerHostW, _In_z_ LPCWSTR sz
                                  _In_opt_z_ LPCWSTR szUserPasswordW, _In_opt_z_ LPCWSTR szDatabaseNameW,
                                  _In_opt_ USHORT wServerPort, _In_opt_ CConnectOptions *lpOptions)
 {
-  CStringW cStrServerHostW, cStrUserNameW, cStrDatabaseNameW;
-  CSecureStringW cStrUserPasswordW;
+  CStringA cStrServerHostA, cStrUserNameA, cStrDatabaseNameA;
+  CSecureStringA cStrUserPasswordA;
+  HRESULT hRes;
 
   if (szServerHostW == NULL || szUserNameW == NULL)
     return E_POINTER;
   if (*szServerHostW == 0 || *szUserNameW == 0)
     return E_INVALIDARG;
 
-  if (cStrServerHostW.Copy(szServerHostW) == FALSE)
-    return E_OUTOFMEMORY;
-  if (cStrUserNameW.Copy(szUserNameW) == FALSE)
-    return E_OUTOFMEMORY;
+  hRes = Utf8_Encode(cStrServerHostA, szServerHostW);
+  if (FAILED(hRes))
+    return hRes;
+  hRes = Utf8_Encode(cStrUserNameA, szUserNameW);
+  if (FAILED(hRes))
+    return hRes;
   if (szDatabaseNameW != NULL && *szDatabaseNameW != 0)
   {
-    if (cStrDatabaseNameW.Copy(szDatabaseNameW) == FALSE)
-      return E_OUTOFMEMORY;
+    hRes = Utf8_Encode(cStrDatabaseNameA, szDatabaseNameW);
+    if (FAILED(hRes))
+      return hRes;
   }
   if (szUserPasswordW != NULL && *szUserPasswordW != 0)
   {
-    if (cStrUserPasswordW.Copy(szUserPasswordW) == FALSE)
-      return E_OUTOFMEMORY;
+    hRes = Utf8_Encode(cStrUserPasswordA, szUserPasswordW);
+    if (FAILED(hRes))
+      return hRes;
   }
-  return Connect((LPCWSTR)cStrServerHostW, (LPCWSTR)cStrUserNameW, (LPCWSTR)cStrUserPasswordW,
-                 (LPCWSTR)cStrDatabaseNameW, wServerPort, lpOptions);
+  return Connect((LPCSTR)cStrServerHostA, (LPCSTR)cStrUserNameA, (LPCSTR)cStrUserPasswordA,
+                 (LPCSTR)cStrDatabaseNameA, wServerPort, lpOptions);
 }
 
 VOID CMySqlConnector::Disconnect()

@@ -48,7 +48,11 @@ public:
   VOID SetNull();
   HRESULT SetString(_In_ LPCSTR szStrA, _In_ SIZE_T nLength = (SIZE_T)-1);
   HRESULT SetString(_In_ LPCWSTR szStrW, _In_ SIZE_T nLength = (SIZE_T)-1);
-  VOID SetBoolean(_In_ BOOL nValue);
+  HRESULT SetFormattedString(_In_ LPCSTR szFormatA, ...);
+  HRESULT SetFormattedString(_In_ LPCWSTR szFormatW, ...);
+  HRESULT SetFormattedStringV(_In_ LPCSTR szFormatA, _In_ va_list args);
+  HRESULT SetFormattedStringV(_In_ LPCWSTR szFormatW, _In_ va_list args);
+  VOID SetBoolean(_In_ BOOL bValue);
   VOID SetUInt32(_In_ ULONG nValue);
   VOID SetInt32(_In_ LONG nValue);
   VOID SetUInt64(_In_ ULONGLONG nValue);
@@ -72,6 +76,13 @@ public:
   CDateTime* GetDateTime() const;
   LPBYTE GetBlob() const;
 
+  BOOL GetAsBoolean(_Out_ PBOOL lpbValue);
+  BOOL GetAsUInt32(_Out_ PULONG lpnValue);
+  BOOL GetAsInt32(_Out_ PLONG lpnValue) const;
+  BOOL GetAsUInt64(_Out_ PULONGLONG lpnValue) const;
+  BOOL GetAsInt64(_Out_ PLONGLONG lpnValue) const;
+  BOOL GetAsDouble(_Out_ double *lpnValue) const;
+
 private:
   BOOL EnsureSize(_In_ SIZE_T nNewSize);
 
@@ -93,7 +104,29 @@ private:
   SIZE_T nBufferSize;
 };
 
-typedef TArrayListWithRelease<CField*> CFieldList;
+//-----------------------------------------------------------
+
+class CFieldList : public TArrayListWithRelease<CField*>
+{
+public:
+  CFieldList();
+
+  HRESULT AddNull();
+  HRESULT AddString(_In_ LPCSTR szStrA, _In_ SIZE_T nLength = (SIZE_T)-1);
+  HRESULT AddString(_In_ LPCWSTR szStrW, _In_ SIZE_T nLength = (SIZE_T)-1);
+  HRESULT AddFormattedString(_In_ LPCSTR szFormatA, ...);
+  HRESULT AddFormattedString(_In_ LPCWSTR szFormatW, ...);
+  HRESULT AddFormattedStringV(_In_ LPCSTR szFormatA, _In_ va_list args);
+  HRESULT AddFormattedStringV(_In_ LPCWSTR szFormatW, _In_ va_list args);
+  HRESULT AddBoolean(_In_ BOOL bValue);
+  HRESULT AddUInt32(_In_ ULONG nValue);
+  HRESULT AddInt32(_In_ LONG nValue);
+  HRESULT AddUInt64(_In_ ULONGLONG nValue);
+  HRESULT AddInt64(_In_ LONGLONG nValue);
+  HRESULT AddDouble(_In_ double nValue);
+  HRESULT AddDateTime(_In_ CDateTime &cDt);
+  HRESULT AddBlob(_In_ LPVOID lpData, _In_ SIZE_T nLength);
+};
 
 //-----------------------------------------------------------
 
