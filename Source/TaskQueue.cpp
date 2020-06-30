@@ -25,7 +25,7 @@
 
 namespace MX {
 
-CTaskQueue::CTaskQueue() : TRefCounted<CBaseMemObj>(), CIoCompletionPortThreadPool()
+CTaskQueue::CTaskQueue() : CBaseMemObj(), CIoCompletionPortThreadPool()
 {
   RundownProt_Initialize(&nRundownLock);
   cQueuedTaskCallbackWP = MX_BIND_MEMBER_CALLBACK(&CTaskQueue::OnQueuedTask, this);
@@ -86,13 +86,11 @@ HRESULT CTaskQueue::QueueTask(_In_ CTask *lpTask, _In_ OnRunTaskCallback cCallba
   lpTask->cCallback = cCallback;
 
   _InterlockedIncrement(&nQueuedTasksCount);
-  AddRef();
   lpTask->AddRef();
   hRes = Post(cQueuedTaskCallbackWP, 0, &(lpTask->sOvr));
   if (FAILED(hRes))
   {
     lpTask->Release();
-    Release();
     _InterlockedDecrement(&nQueuedTasksCount);
   }
   return hRes;
@@ -122,7 +120,6 @@ VOID CTaskQueue::OnQueuedTask(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWO
 
   lpTask->Release();
   _InterlockedDecrement(&nQueuedTasksCount);
-  Release();
   return;
 }
 

@@ -24,6 +24,7 @@
 #include "..\DateTime\DateTime.h"
 #include "..\ArrayList.h"
 #include "SslCertificates.h"
+#include "..\Crypto\DhParam.h"
 
 //-----------------------------------------------------------
 
@@ -37,7 +38,8 @@ public:
 
   HRESULT Initialize(_In_ BOOL bServerSide, _In_opt_ LPCSTR szHostNameA = NULL,
                      _In_opt_ CSslCertificateArray *lpCheckCertificates = NULL,
-                     _In_opt_ CSslCertificate *lpSelfCert = NULL, _In_opt_ CEncryptionKey *lpPrivKey = NULL);
+                     _In_opt_ CSslCertificate *lpSelfCert = NULL, _In_opt_ CEncryptionKey *lpPrivKey = NULL,
+                     _In_opt_ CDhParam *lpDhParam = NULL);
 
   BOOL IsPeerCertificateValid() const;
 

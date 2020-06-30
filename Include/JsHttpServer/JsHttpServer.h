@@ -38,7 +38,8 @@ public:
 
 public:
   typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _Outptr_result_maybenull_ CSslCertificate **lplpSslCert,
-                            _Outptr_result_maybenull_ CEncryptionKey **lplpSslPrivKey)> OnQuerySslCertificatesCallback;
+                            _Outptr_result_maybenull_ CEncryptionKey **lplpSslPrivKey,
+                            _Outptr_result_maybenull_ CDhParam **lplpDhParam)> OnQuerySslCertificatesCallback;
 
   typedef Callback<HRESULT (_In_ CJsHttpServer *lpHttp, _Out_ CClientRequest **lplpRequest)> OnNewRequestObjectCallback;
 
@@ -171,7 +172,8 @@ public:
 
 private:
   HRESULT OnQuerySslCertificates(_In_ CHttpServer *lpHttp, _Outptr_result_maybenull_ CSslCertificate **lplpSslCert,
-                                 _Outptr_result_maybenull_ CEncryptionKey **lplpSslPrivKey);
+                                 _Outptr_result_maybenull_ CEncryptionKey **lplpSslPrivKey,
+                                 _Outptr_result_maybenull_ CDhParam **lplpDhParam);
   HRESULT OnRequestHeadersReceived(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest,
                                    _Outptr_ _Maybenull_ CHttpBodyParserBase **lplpBodyParser);
   VOID OnRequestCompleted(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest);

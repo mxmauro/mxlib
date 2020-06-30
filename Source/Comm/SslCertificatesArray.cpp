@@ -481,39 +481,48 @@ HRESULT CSslCertificateArray::AddCertificateFromDER(_In_ LPCVOID lpData, _In_ SI
 
       if (lpX509 != NULL)
       {
-        CSecureBuffer cTempBuffer;
-        BIO *lpBio;
+        TAutoRefCounted<CSecureBuffer> cTempBuffer;
 
-        lpBio = cTempBuffer.CreateBIO();
-        if (lpBio != NULL)
+        cTempBuffer.Attach(MX_DEBUG_NEW CSecureBuffer());
+        if (cTempBuffer)
         {
-          ERR_clear_error();
-          if (i2d_X509_bio(lpBio, lpX509) > 0)
+          BIO *lpBio;
+
+          lpBio = cTempBuffer->CreateBIO();
+          if (lpBio != NULL)
           {
-            //create certificate from temporary buffer
-            cNewCert.Attach(MX_DEBUG_NEW CSslCertificate());
-            if (cNewCert)
+            ERR_clear_error();
+            if (i2d_X509_bio(lpBio, lpX509) > 0)
             {
-              hRes = cNewCert->InitializeFromDER(cTempBuffer.GetBuffer(), cTempBuffer.GetLength());
-              if (SUCCEEDED(hRes))
+              //create certificate from temporary buffer
+              cNewCert.Attach(MX_DEBUG_NEW CSslCertificate());
+              if (cNewCert)
               {
-                if (cCertsList.AddElement(cNewCert.Get()) != FALSE)
-                  cNewCert.Detach();
-                else
-                  hRes = E_OUTOFMEMORY;
+                hRes = cNewCert->InitializeFromDER(cTempBuffer->GetBuffer(), cTempBuffer->GetLength());
+                if (SUCCEEDED(hRes))
+                {
+                  if (cCertsList.AddElement(cNewCert.Get()) != FALSE)
+                    cNewCert.Detach();
+                  else
+                    hRes = E_OUTOFMEMORY;
+                }
+              }
+              else
+              {
+                hRes = E_OUTOFMEMORY;
               }
             }
             else
             {
-              hRes = E_OUTOFMEMORY;
+              hRes = Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
             }
+
+            BIO_free(lpBio);
           }
           else
           {
-            hRes = Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
+            hRes = E_OUTOFMEMORY;
           }
-
-          BIO_free(lpBio);
         }
         else
         {
@@ -533,41 +542,49 @@ HRESULT CSslCertificateArray::AddCertificateFromDER(_In_ LPCVOID lpData, _In_ SI
 
       if (lpEvpKey != NULL)
       {
-        CSecureBuffer cTempBuffer;
-        BIO *lpBio;
+        TAutoRefCounted<CSecureBuffer> cTempBuffer;
 
-        lpBio = cTempBuffer.CreateBIO();
-        if (lpBio != NULL)
+        cTempBuffer.Attach(MX_DEBUG_NEW CSecureBuffer());
+        if (cTempBuffer)
         {
-          ERR_clear_error();
-          if (i2d_PrivateKey_bio(lpBio, lpEvpKey) > 0)
+          BIO *lpBio;
+
+          lpBio = cTempBuffer->CreateBIO();
+          if (lpBio != NULL)
           {
-            //create certificate from temporary buffer
-            cNewKey.Attach(MX_DEBUG_NEW CEncryptionKey());
-            if (cNewKey)
+            ERR_clear_error();
+            if (i2d_PrivateKey_bio(lpBio, lpEvpKey) > 0)
             {
-              hRes = cNewKey->SetPrivateKeyFromDER(cTempBuffer.GetBuffer(), cTempBuffer.GetLength());
-              if (SUCCEEDED(hRes))
+              //create certificate from temporary buffer
+              cNewKey.Attach(MX_DEBUG_NEW CEncryptionKey());
+              if (cNewKey)
               {
-                if (cKeysList.AddElement(cNewKey.Get()) != FALSE)
-                  cNewKey.Detach();
-                else
-                  hRes = E_OUTOFMEMORY;
+                hRes = cNewKey->SetPrivateKeyFromDER(cTempBuffer->GetBuffer(), cTempBuffer->GetLength());
+                if (SUCCEEDED(hRes))
+                {
+                  if (cKeysList.AddElement(cNewKey.Get()) != FALSE)
+                    cNewKey.Detach();
+                  else
+                    hRes = E_OUTOFMEMORY;
+                }
+              }
+              else
+              {
+                hRes = E_OUTOFMEMORY;
               }
             }
             else
             {
-              hRes = E_OUTOFMEMORY;
+              hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
             }
-          }
-          else
-          {
-            hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
-          }
 
-          BIO_free(lpBio);
+            BIO_free(lpBio);
+          }
         }
-
+        else
+        {
+          hRes = E_OUTOFMEMORY;
+        }
         EVP_PKEY_free(lpEvpKey);
 
         if (FAILED(hRes))

@@ -41,6 +41,7 @@ CHttpServer::CClientRequest::CClientRequest() : CIpc::CUserData()
   hConn = NULL;
   ::MxMemSet(&sPeerAddr, 0, sizeof(sPeerAddr));
   nState = StateInactive;
+  RundownProt_Initialize(&nTimerCallbackRundownLock);
   _InterlockedExchange(&nFlags, 0);
   hrErrorCode = S_OK;
   _InterlockedExchange(&nHeadersTimeoutTimerId, 0);

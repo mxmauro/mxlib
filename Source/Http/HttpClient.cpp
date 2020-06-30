@@ -2428,7 +2428,8 @@ HRESULT CHttpClient::OnAddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h)
   cLayer.Attach(MX_DEBUG_NEW CIpcSslLayer(lpIpc));
   if (!cLayer)
     return E_OUTOFMEMORY;
-  hRes = cLayer->Initialize(FALSE, (LPCSTR)cStrHostNameA, cCheckCertificates.Get(), cSelfCert.Get(), cPrivKey.Get());
+  hRes = cLayer->Initialize(FALSE, (LPCSTR)cStrHostNameA, cCheckCertificates.Get(), cSelfCert.Get(), cPrivKey.Get(),
+                            NULL);
   if (SUCCEEDED(hRes))
   {
     hRes = lpIpc->AddLayer(h, cLayer);

@@ -38,7 +38,7 @@
 #endif //_DEBUG
 
 #if defined(DO_HEAP_CHECK) && defined(HEAP_CHECK_CAPTURE_STACK)
-  #define HEAP_CHECK_STACK_ENTRIES  16
+  #define HEAP_CHECK_STACK_ENTRIES  32
 #endif //DO_HEAP_CHECK && HEAP_CHECK_CAPTURE_STACK
 
 //-----------------------------------------------------------
@@ -50,6 +50,7 @@
 typedef USHORT (WINAPI *lpfnRtlCaptureStackBackTrace)(ULONG, ULONG, PVOID *, PULONG);
 typedef BOOL (WINAPI *lpfnSymInitializeW)(_In_ HANDLE hProcess, _In_opt_z_ PCWSTR UserSearchPath,
                                           _In_ BOOL fInvadeProcess);
+typedef BOOL (WINAPI *lpfnSymRefreshModuleList)(_In_ HANDLE hProcess);
 typedef BOOL (WINAPI *lpfnSymFromAddrW)(_In_ HANDLE hProcess, _In_ DWORD64 Address, _Out_opt_ PDWORD64 Displacement,
                                         _Inout_ PSYMBOL_INFOW Symbol);
 typedef LPAPI_VERSION (WINAPI *lpfnImagehlpApiVersion)(VOID);
@@ -123,6 +124,7 @@ static VOID DumpLeaks();
 static HINSTANCE hDbgHelpDLL = NULL;
 static lpfnRtlCaptureStackBackTrace fnRtlCaptureStackBackTrace = NULL;
 static lpfnSymInitializeW fnSymInitializeW = NULL;
+static lpfnSymRefreshModuleList fnSymRefreshModuleList = NULL;
 static lpfnSymFromAddrW fnSymFromAddrW = NULL;
 static lpfnImagehlpApiVersion fnImagehlpApiVersion = NULL;
 #endif //HEAP_CHECK_CAPTURE_STACK
@@ -599,9 +601,11 @@ static int __cdecl InitializeMemory()
     BOOL b = FALSE;
 
     fnSymInitializeW = (lpfnSymInitializeW)::GetProcAddress(hDbgHelpDLL, "SymInitializeW");
+    fnSymRefreshModuleList = (lpfnSymRefreshModuleList)::GetProcAddress(hDbgHelpDLL, "SymRefreshModuleList");
     fnSymFromAddrW = (lpfnSymFromAddrW)::GetProcAddress(hDbgHelpDLL, "SymFromAddrW");
     fnImagehlpApiVersion = (lpfnImagehlpApiVersion)::GetProcAddress(hDbgHelpDLL, "ImagehlpApiVersion");
-    if (fnSymInitializeW != NULL && fnSymFromAddrW != NULL && fnImagehlpApiVersion != NULL)
+    if (fnSymInitializeW != NULL && fnSymRefreshModuleList != NULL && fnSymFromAddrW != NULL &&
+        fnImagehlpApiVersion != NULL)
     {
       try
       {
@@ -612,7 +616,7 @@ static int __cdecl InitializeMemory()
              (lpApiVer->MajorVersion == 4 && lpApiVer->MinorVersion > 0) ||
              (lpApiVer->MajorVersion == 4 && lpApiVer->MinorVersion == 0 && lpApiVer->Revision >= 5)))
         {
-          b = fnSymInitializeW(::GetCurrentProcess(), NULL, FALSE);
+          b = fnSymInitializeW(::GetCurrentProcess(), NULL, TRUE);
         }
       }
       catch (...)
@@ -622,6 +626,7 @@ static int __cdecl InitializeMemory()
     if (b == FALSE)
     {
       fnSymInitializeW = NULL;
+      fnSymRefreshModuleList = NULL;
       fnSymFromAddrW = NULL;
       fnImagehlpApiVersion = NULL;
 
@@ -814,6 +819,11 @@ static VOID DumpLeaks()
 #ifdef HEAP_CHECK_CAPTURE_STACK
     if (fnSymFromAddrW != NULL)
     {
+      if (fnSymRefreshModuleList != NULL)
+      {
+        fnSymRefreshModuleList(::GetCurrentProcess());
+      }
+
       for (nIdx = 0; nIdx < HEAP_CHECK_STACK_ENTRIES; nIdx++)
       {
         if (lpBlock->nStackValues[nIdx] == 0)

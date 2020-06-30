@@ -40,6 +40,7 @@ protected:
 public:
   virtual ~TRefCounted()
     {
+    MX_ASSERT(nRefCount == 0);
     return;
     };
 

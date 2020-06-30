@@ -139,9 +139,12 @@ HRESULT CJsHttpServer::OnNewRequestObject(_In_ CHttpServer *lpHttp, _Out_ CHttpS
 
 HRESULT CJsHttpServer::OnQuerySslCertificates(_In_ CHttpServer *lpHttp,
                                               _Outptr_result_maybenull_ CSslCertificate **lplpSslCert,
-                                              _Outptr_result_maybenull_ CEncryptionKey **lplpSslPrivKey)
+                                              _Outptr_result_maybenull_ CEncryptionKey **lplpSslPrivKey,
+                                              _Outptr_result_maybenull_ CDhParam **lplpDhParam)
 {
-  return (cQuerySslCertificatesCallback) ? cQuerySslCertificatesCallback(this, lplpSslCert, lplpSslPrivKey) : S_FALSE;
+  if (cQuerySslCertificatesCallback)
+    return cQuerySslCertificatesCallback(this, lplpSslCert, lplpSslPrivKey, lplpDhParam);
+  return S_FALSE;
 }
 
 HRESULT CJsHttpServer::OnRequestHeadersReceived(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *_lpRequest,

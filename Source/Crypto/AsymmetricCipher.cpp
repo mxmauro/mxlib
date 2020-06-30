@@ -42,6 +42,8 @@ public:
     nPaddingMode = RSA_PKCS1_PADDING;
     nPaddingSize = 0;
     bUsePrivateKey = FALSE;
+    cOutputBuffer.Attach(MX_DEBUG_NEW CSecureBuffer());
+    cInputBuffer.Attach(MX_DEBUG_NEW CSecureBuffer());
     return;
     };
 
@@ -58,7 +60,7 @@ public:
     {
       CleanOutputBuffers();
     }
-    cInputBuffer.Reset();
+    cInputBuffer->Reset();
     nPaddingSize = 0;
     bUsePrivateKey = FALSE;
     return;
@@ -66,14 +68,14 @@ public:
 
   VOID CleanOutputBuffers()
     {
-    cOutputBuffer.Reset();
+    cOutputBuffer->Reset();
     return;
     };
 
 public:
   BOOL bInUse;
-  MX::CSecureBuffer cOutputBuffer;
-  MX::CSecureBuffer cInputBuffer;
+  TAutoRefCounted<CSecureBuffer> cOutputBuffer;
+  TAutoRefCounted<CSecureBuffer> cInputBuffer;
   int nPaddingMode, nPaddingSize;
   BOOL bUsePrivateKey;
 };
@@ -84,6 +86,7 @@ public:
   CAsymmetricCipherSignerVerifier() : CBaseMemObj()
     {
     bInUse = FALSE;
+    cOutputBuffer.Attach(MX_DEBUG_NEW CSecureBuffer());
     return;
     };
 
@@ -106,14 +109,14 @@ public:
 
   VOID CleanOutputBuffers()
     {
-    cOutputBuffer.Reset();
+    cOutputBuffer->Reset();
     return;
     };
 
 public:
   BOOL bInUse;
-  MX::CSecureBuffer cOutputBuffer;
-  MX::CMessageDigest cDigest;
+  TAutoRefCounted<CSecureBuffer> cOutputBuffer;
+  CMessageDigest cDigest;
 };
 
 class CAsymmetricCipherData : public virtual CBaseMemObj
@@ -279,14 +282,14 @@ HRESULT CAsymmetricCipher::EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataL
     return MX_E_NotReady;
 
   nMaxWritable = EVP_PKEY_size(asymcipher_data->lpKey) - asymcipher_data->cEncryptor.nPaddingSize -
-                 asymcipher_data->cEncryptor.cInputBuffer.GetLength();
+                 asymcipher_data->cEncryptor.cInputBuffer->GetLength();
   if (nDataLength > nMaxWritable)
   {
     asymcipher_data->cEncryptor.Reset(TRUE);
     return MX_E_InvalidData;
   }
 
-  hRes = asymcipher_data->cEncryptor.cInputBuffer.WriteStream(lpData, nDataLength);
+  hRes = asymcipher_data->cEncryptor.cInputBuffer->WriteStream(lpData, nDataLength);
   if (FAILED(hRes))
   {
     asymcipher_data->cEncryptor.Reset(TRUE);
@@ -306,7 +309,7 @@ HRESULT CAsymmetricCipher::EndEncrypt()
   if (lpInternalData == NULL || asymcipher_data->cEncryptor.bInUse == FALSE)
     return MX_E_NotReady;
 
-  lpOut = asymcipher_data->cEncryptor.cOutputBuffer.WriteReserve(EVP_MAX_BLOCK_LENGTH + BLOCK_SIZE);
+  lpOut = asymcipher_data->cEncryptor.cOutputBuffer->WriteReserve(EVP_MAX_BLOCK_LENGTH + BLOCK_SIZE);
   if (lpOut == NULL)
   {
     asymcipher_data->cEncryptor.Reset(TRUE);
@@ -316,15 +319,15 @@ HRESULT CAsymmetricCipher::EndEncrypt()
   ERR_clear_error();
   if (asymcipher_data->cEncryptor.bUsePrivateKey != FALSE)
   {
-    res = RSA_private_encrypt((int)(asymcipher_data->cEncryptor.cInputBuffer.GetLength()),
-                              asymcipher_data->cEncryptor.cInputBuffer.GetBuffer(),
+    res = RSA_private_encrypt((int)(asymcipher_data->cEncryptor.cInputBuffer->GetLength()),
+                              asymcipher_data->cEncryptor.cInputBuffer->GetBuffer(),
                               lpOut, EVP_PKEY_get0_RSA(asymcipher_data->lpKey),
                               asymcipher_data->cEncryptor.nPaddingMode);
   }
   else
   {
-    res = RSA_public_encrypt((int)(asymcipher_data->cEncryptor.cInputBuffer.GetLength()),
-                             asymcipher_data->cEncryptor.cInputBuffer.GetBuffer(),
+    res = RSA_public_encrypt((int)(asymcipher_data->cEncryptor.cInputBuffer->GetLength()),
+                             asymcipher_data->cEncryptor.cInputBuffer->GetBuffer(),
                              lpOut, EVP_PKEY_get0_RSA(asymcipher_data->lpKey),
                              asymcipher_data->cEncryptor.nPaddingMode);
   }
@@ -335,7 +338,7 @@ HRESULT CAsymmetricCipher::EndEncrypt()
     return hRes;
   }
 
-  asymcipher_data->cEncryptor.cOutputBuffer.EndWriteReserve((SIZE_T)res);
+  asymcipher_data->cEncryptor.cOutputBuffer->EndWriteReserve((SIZE_T)res);
   asymcipher_data->cEncryptor.Reset(FALSE);
 
   //done
@@ -344,14 +347,14 @@ HRESULT CAsymmetricCipher::EndEncrypt()
 
 SIZE_T CAsymmetricCipher::GetAvailableEncryptedData() const
 {
-  return (lpInternalData != NULL) ? asymcipher_data->cEncryptor.cOutputBuffer.GetLength() : 0;
+  return (lpInternalData != NULL) ? asymcipher_data->cEncryptor.cOutputBuffer->GetLength() : 0;
 }
 
 SIZE_T CAsymmetricCipher::GetEncryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize)
 {
   if (lpInternalData == NULL)
     return 0;
-  return asymcipher_data->cEncryptor.cOutputBuffer.Read(lpDest, nDestSize);
+  return asymcipher_data->cEncryptor.cOutputBuffer->Read(lpDest, nDestSize);
 }
 
 HRESULT CAsymmetricCipher::BeginDecrypt(_In_opt_ MX::CAsymmetricCipher::ePadding nPadding, _In_opt_ BOOL bUsePrivateKey)
@@ -426,14 +429,14 @@ HRESULT CAsymmetricCipher::DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataL
     return MX_E_NotReady;
 
   nMaxWritable = EVP_PKEY_size(asymcipher_data->lpKey) - asymcipher_data->cDecryptor.nPaddingSize -
-                 asymcipher_data->cDecryptor.cInputBuffer.GetLength();
+                 asymcipher_data->cDecryptor.cInputBuffer->GetLength();
   if (nDataLength > nMaxWritable)
   {
     asymcipher_data->cDecryptor.Reset(TRUE);
     return MX_E_InvalidData;
   }
 
-  hRes = asymcipher_data->cDecryptor.cInputBuffer.WriteStream(lpData, nDataLength);
+  hRes = asymcipher_data->cDecryptor.cInputBuffer->WriteStream(lpData, nDataLength);
   if (FAILED(hRes))
   {
     asymcipher_data->cDecryptor.Reset(TRUE);
@@ -453,7 +456,7 @@ HRESULT CAsymmetricCipher::EndDecrypt()
   if (lpInternalData == NULL || asymcipher_data->cDecryptor.bInUse == FALSE)
     return MX_E_NotReady;
 
-  lpOut = asymcipher_data->cDecryptor.cOutputBuffer.WriteReserve(EVP_MAX_BLOCK_LENGTH + BLOCK_SIZE);
+  lpOut = asymcipher_data->cDecryptor.cOutputBuffer->WriteReserve(EVP_MAX_BLOCK_LENGTH + BLOCK_SIZE);
   if (lpOut == NULL)
   {
     asymcipher_data->cDecryptor.Reset(TRUE);
@@ -463,15 +466,15 @@ HRESULT CAsymmetricCipher::EndDecrypt()
   ERR_clear_error();
   if (asymcipher_data->cDecryptor.bUsePrivateKey != FALSE)
   {
-    res = RSA_private_decrypt((int)(asymcipher_data->cDecryptor.cInputBuffer.GetLength()),
-                              asymcipher_data->cDecryptor.cInputBuffer.GetBuffer(),
+    res = RSA_private_decrypt((int)(asymcipher_data->cDecryptor.cInputBuffer->GetLength()),
+                              asymcipher_data->cDecryptor.cInputBuffer->GetBuffer(),
                               lpOut, EVP_PKEY_get0_RSA(asymcipher_data->lpKey),
                               asymcipher_data->cDecryptor.nPaddingMode);
   }
   else
   {
-    res = RSA_public_decrypt((int)(asymcipher_data->cDecryptor.cInputBuffer.GetLength()),
-                             asymcipher_data->cDecryptor.cInputBuffer.GetBuffer(),
+    res = RSA_public_decrypt((int)(asymcipher_data->cDecryptor.cInputBuffer->GetLength()),
+                             asymcipher_data->cDecryptor.cInputBuffer->GetBuffer(),
                              lpOut, EVP_PKEY_get0_RSA(asymcipher_data->lpKey),
                              asymcipher_data->cDecryptor.nPaddingMode);
   }
@@ -482,7 +485,7 @@ HRESULT CAsymmetricCipher::EndDecrypt()
     return hRes;
   }
 
-  asymcipher_data->cEncryptor.cOutputBuffer.EndWriteReserve((SIZE_T)res);
+  asymcipher_data->cEncryptor.cOutputBuffer->EndWriteReserve((SIZE_T)res);
   asymcipher_data->cEncryptor.Reset(FALSE);
 
   //done
@@ -491,14 +494,14 @@ HRESULT CAsymmetricCipher::EndDecrypt()
 
 SIZE_T CAsymmetricCipher::GetAvailableDecryptedData() const
 {
-  return (lpInternalData != NULL) ? asymcipher_data->cDecryptor.cOutputBuffer.GetLength() : 0;
+  return (lpInternalData != NULL) ? asymcipher_data->cDecryptor.cOutputBuffer->GetLength() : 0;
 }
 
 SIZE_T CAsymmetricCipher::GetDecryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize)
 {
   if (lpInternalData == NULL)
     return 0;
-  return asymcipher_data->cDecryptor.cOutputBuffer.Read(lpDest, nDestSize);
+  return asymcipher_data->cDecryptor.cOutputBuffer->Read(lpDest, nDestSize);
 }
 
 HRESULT CAsymmetricCipher::BeginSign(_In_ MX::CMessageDigest::eAlgorithm nAlgorithm)
@@ -577,14 +580,14 @@ HRESULT CAsymmetricCipher::EndSign()
 
       nSigSize = (size_t)EVP_PKEY_size(asymcipher_data->lpKey);
 
-      lpSig = asymcipher_data->cSigner.cOutputBuffer.WriteReserve(nSigSize);
+      lpSig = asymcipher_data->cSigner.cOutputBuffer->WriteReserve(nSigSize);
       if (lpSig != NULL)
       {
         res = EVP_PKEY_sign(lpKeyCtx, (unsigned char*)lpSig, &nSigSize, asymcipher_data->cSigner.cDigest.GetResult(),
                             asymcipher_data->cSigner.cDigest.GetResultSize());
         if (res > 0)
         {
-          asymcipher_data->cSigner.cOutputBuffer.EndWriteReserve((SIZE_T)res);
+          asymcipher_data->cSigner.cOutputBuffer->EndWriteReserve((SIZE_T)res);
         }
         else if (res == -2)
         {
@@ -628,14 +631,14 @@ LPBYTE CAsymmetricCipher::GetSignature() const
 {
   if (lpInternalData == NULL)
     return NULL;
-  return asymcipher_data->cSigner.cOutputBuffer.GetBuffer();
+  return asymcipher_data->cSigner.cOutputBuffer->GetBuffer();
 }
 
 SIZE_T CAsymmetricCipher::GetSignatureSize() const
 {
   if (lpInternalData == NULL)
     return 0;
-  return asymcipher_data->cSigner.cOutputBuffer.GetLength();
+  return asymcipher_data->cSigner.cOutputBuffer->GetLength();
 }
 
 HRESULT CAsymmetricCipher::BeginVerify(_In_ MX::CMessageDigest::eAlgorithm nAlgorithm)
@@ -764,6 +767,17 @@ HRESULT CAsymmetricCipher::InternalInitialize()
     lpInternalData = MX_DEBUG_NEW MX::Internals::CAsymmetricCipherData();
     if (lpInternalData == NULL)
       return E_OUTOFMEMORY;
+    if (!(asymcipher_data->cEncryptor.cInputBuffer &&
+          asymcipher_data->cEncryptor.cOutputBuffer &&
+          asymcipher_data->cDecryptor.cInputBuffer &&
+          asymcipher_data->cDecryptor.cOutputBuffer &&
+          asymcipher_data->cSigner.cOutputBuffer &&
+          asymcipher_data->cVerifier.cOutputBuffer))
+    {
+      delete asymcipher_data;
+      lpInternalData = NULL;
+      return E_OUTOFMEMORY;
+    }
   }
   //done
   return S_OK;

@@ -243,7 +243,7 @@ VOID CSockets::SetOption_AddressResolverTimeout(_In_ DWORD dwTimeoutMs)
 
 HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
                                  _In_opt_z_ LPCSTR szBindAddressA, _In_opt_ CUserData *lpUserData,
-                                 _In_opt_ LPLISTENER_OPTIONS lpOptions, _Out_opt_ HANDLE *h)
+                                 _In_opt_ CListenerOptions *lpOptions, _Out_opt_ HANDLE *h)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoRefCounted<CConnection> cNewConn;
@@ -289,7 +289,7 @@ HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCr
 
 HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
                                  _In_opt_z_ LPCWSTR szBindAddressW, _In_opt_ CUserData *lpUserData,
-                                 _In_opt_ LPLISTENER_OPTIONS lpOptions, _Out_opt_ HANDLE *h)
+                                 _In_opt_ CListenerOptions *lpOptions, _Out_opt_ HANDLE *h)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -1072,7 +1072,7 @@ HRESULT CSockets::CConnection::SetupListener()
   }
   if (::bind(sck, (sockaddr*)&sAddr, SockAddrSizeFromWinSockFamily(sAddr.si_family)) == SOCKET_ERROR)
     return MX_HRESULT_FROM_LASTSOCKETERROR();
-  if (::listen(sck, ((cListener->sOptions.dwBackLogSize != 0) ? (int)(cListener->sOptions.dwBackLogSize)
+  if (::listen(sck, ((cListener->cOptions.dwBackLogSize != 0) ? (int)(cListener->cOptions.dwBackLogSize)
                                                               : SOMAXCONN)) == SOCKET_ERROR)
   {
     return MX_HRESULT_FROM_LASTSOCKETERROR();
@@ -1584,17 +1584,13 @@ VOID CSockets::CConnection::CConnectWaiter::ThreadProc()
 CSockets::CConnection::CListener::CListener(_In_ CConnection *_lpConn) : CBaseMemObj()
 {
   lpConn = _lpConn;
-  sOptions.dwBackLogSize = 0;
-  sOptions.dwMaxAcceptsToPost = 4;
-  sOptions.dwMaxRequestsPerSecond = 0;
-  sOptions.dwBurstSize = 0;
   lpWorkerThread = NULL;
   hAcceptSelect = hAcceptCompleted = NULL;
   _InterlockedExchange(&nAcceptsInProgress, 0);
   fnAcceptEx = fnGetAcceptExSockaddrs = NULL;
-  FastLock_Initialize(&nMutex);
-  cTimer.Reset();
-  dwRequestCounter = 0;
+  FastLock_Initialize(&(sLimiter.nMutex));
+  sLimiter.cTimer.Reset();
+  sLimiter.dwRequestCounter = 0;
   return;
 }
 
@@ -1608,32 +1604,29 @@ CSockets::CConnection::CListener::~CListener()
   return;
 }
 
-VOID CSockets::CConnection::CListener::SetOptions(_In_opt_ LPLISTENER_OPTIONS lpOptions)
+VOID CSockets::CConnection::CListener::SetOptions(_In_opt_ CListenerOptions *lpOptions)
 {
   if (lpOptions != NULL)
   {
-    sOptions.dwBackLogSize = (lpOptions->dwBackLogSize > 0x7FFFFFFFUL) ? 0x7FFFFFFFUL : lpOptions->dwBackLogSize;
+    cOptions.dwBackLogSize = (lpOptions->dwBackLogSize > 0x7FFFFFFFUL) ? 0x7FFFFFFFUL : lpOptions->dwBackLogSize;
 
     if (lpOptions->dwMaxAcceptsToPost < 1)
-      sOptions.dwMaxAcceptsToPost = 1;
+      cOptions.dwMaxAcceptsToPost = 1;
     else if (lpOptions->dwMaxAcceptsToPost > MAX_TOTAL_ACCEPTS_TO_POST)
-      sOptions.dwMaxAcceptsToPost = MAX_TOTAL_ACCEPTS_TO_POST;
+      cOptions.dwMaxAcceptsToPost = MAX_TOTAL_ACCEPTS_TO_POST;
     else
-      sOptions.dwMaxAcceptsToPost = lpOptions->dwMaxAcceptsToPost;
+      cOptions.dwMaxAcceptsToPost = lpOptions->dwMaxAcceptsToPost;
 
-    if (lpOptions->dwMaxRequestsPerSecond > 0)
+    cOptions.dwMaxRequestsPerSecond = (lpOptions->dwMaxRequestsPerSecond > MAX_ACCEPTS_PER_SECOND)
+                                      ? MAX_ACCEPTS_PER_SECOND : (lpOptions->dwMaxRequestsPerSecond);
+
+    if (lpOptions->dwMaxRequestsBurstSize > 0)
     {
-      sOptions.dwMaxRequestsPerSecond = (lpOptions->dwMaxRequestsPerSecond > MAX_ACCEPTS_PER_SECOND)
-                                        ? MAX_ACCEPTS_PER_SECOND : (lpOptions->dwMaxRequestsPerSecond);
+      cOptions.dwMaxRequestsPerSecond *= 1000;
 
-      if (lpOptions->dwBurstSize > 0)
-      {
-        sOptions.dwMaxRequestsPerSecond *= 1000;
-
-        sOptions.dwBurstSize = (lpOptions->dwBurstSize > MAX_ACCEPTS_PER_SECOND) ? MAX_ACCEPTS_PER_SECOND
-                                                                                 : (lpOptions->dwBurstSize);
-        sOptions.dwBurstSize *= 1000;
-      }
+      cOptions.dwMaxRequestsBurstSize = (lpOptions->dwMaxRequestsBurstSize > MAX_ACCEPTS_PER_SECOND)
+                                        ? MAX_ACCEPTS_PER_SECOND : (lpOptions->dwMaxRequestsBurstSize);
+      cOptions.dwMaxRequestsBurstSize *= 1000;
     }
   }
   return;
@@ -1682,32 +1675,31 @@ VOID CSockets::CConnection::CListener::Stop()
 
 BOOL CSockets::CConnection::CListener::CheckRateLimit()
 {
-  if (sOptions.dwMaxRequestsPerSecond > 0)
+  if (cOptions.dwMaxRequestsPerSecond > 0)
   {
-    if (sOptions.dwBurstSize == 0)
-    {
-      CFastLock cLock(&nMutex);
+    CFastLock cLock(&(sLimiter.nMutex));
 
-      cTimer.Mark();
-      if (cTimer.GetElapsedTimeMs() >= 1000)
+    if (cOptions.dwMaxRequestsBurstSize == 0)
+    {
+      sLimiter.cTimer.Mark();
+      if (sLimiter.cTimer.GetElapsedTimeMs() >= 1000)
       {
-        dwRequestCounter = 1;
-        cTimer.ResetToLastMark();
+        sLimiter.dwRequestCounter = 1;
+        sLimiter.cTimer.ResetToLastMark();
       }
       else
       {
-        if (dwRequestCounter >= sOptions.dwMaxRequestsPerSecond)
+        if (sLimiter.dwRequestCounter >= cOptions.dwMaxRequestsPerSecond)
           return TRUE;
-        (dwRequestCounter)++;
+        (sLimiter.dwRequestCounter)++;
       }
     }
     else
     {
-      CFastLock cLock(&nMutex);
       DWORD dw, dwDiffMs, dwNewExcess;
 
-      cTimer.Mark();
-      dwDiffMs = cTimer.GetElapsedTimeMs();
+      sLimiter.cTimer.Mark();
+      dwDiffMs = sLimiter.cTimer.GetElapsedTimeMs();
       if ((LONG)dwDiffMs < -60000)
       {
         dwDiffMs = 1;
@@ -1717,15 +1709,15 @@ BOOL CSockets::CConnection::CListener::CheckRateLimit()
         dwDiffMs = 0;
       }
 
-      dw = (sOptions.dwMaxRequestsPerSecond * dwDiffMs) / 1000;
-      dwNewExcess = (dwCurrentExcess + 1000 >= dw) ? (dwCurrentExcess + 1000 - dw) : 0;
+      dw = (cOptions.dwMaxRequestsPerSecond * dwDiffMs) / 1000;
+      dwNewExcess = (sLimiter.dwCurrentExcess + 1000 >= dw) ? (sLimiter.dwCurrentExcess + 1000 - dw) : 0;
 
-      if (dwNewExcess > sOptions.dwBurstSize)
+      if (dwNewExcess > cOptions.dwMaxRequestsBurstSize)
         return TRUE;
 
-      dwCurrentExcess = dwNewExcess;
+      sLimiter.dwCurrentExcess = dwNewExcess;
       if (dwDiffMs != 0)
-        cTimer.ResetToLastMark();
+        sLimiter.cTimer.ResetToLastMark();
     }
   }
   return FALSE;
@@ -1796,7 +1788,7 @@ VOID CSockets::CConnection::CListener::ThreadProc()
     }
     */
 
-    if (__InterlockedIncrementIfLessThan(&nAcceptsInProgress, (LONG)(sOptions.dwMaxAcceptsToPost)) != FALSE)
+    if (__InterlockedIncrementIfLessThan(&nAcceptsInProgress, (LONG)(cOptions.dwMaxAcceptsToPost)) != FALSE)
     {
       HRESULT hRes;
 

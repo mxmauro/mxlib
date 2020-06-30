@@ -37,12 +37,24 @@ public:
     FamilyIPv4=1, FamilyIPv6
   } eFamily;
 
-  typedef struct tagLISTENER_OPTIONS {
+  class CListenerOptions : public virtual CBaseMemObj
+  {
+  public:
+    CListenerOptions()
+      {
+      dwBackLogSize = 0;
+      dwMaxAcceptsToPost = 4;
+      dwMaxRequestsPerSecond = 0;
+      dwMaxRequestsBurstSize = 0;
+      return;
+      };
+
+  public:
     DWORD dwBackLogSize;
     DWORD dwMaxAcceptsToPost;
     DWORD dwMaxRequestsPerSecond;
-    DWORD dwBurstSize;
-  } LISTENER_OPTIONS, *LPLISTENER_OPTIONS;
+    DWORD dwMaxRequestsBurstSize;
+  };
 
 public:
   CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool);
@@ -52,10 +64,10 @@ public:
 
   HRESULT CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
                          _In_opt_z_ LPCSTR szBindAddressA = NULL, _In_opt_ CUserData *lpUserData = NULL,
-                         _In_opt_ LPLISTENER_OPTIONS lpOptions = NULL, _Out_opt_ HANDLE *h = NULL);
+                         _In_opt_ CListenerOptions *lpOptions = NULL, _Out_opt_ HANDLE *h = NULL);
   HRESULT CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
                          _In_opt_z_ LPCWSTR szBindAddressW = NULL, _In_opt_ CUserData *lpUserData = NULL,
-                         _In_opt_ LPLISTENER_OPTIONS lpOptions = NULL, _Out_opt_ HANDLE *h = NULL);
+                         _In_opt_ CListenerOptions *lpOptions = NULL, _Out_opt_ HANDLE *h = NULL);
   HRESULT ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA, _In_ int nPort,
                           _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData = NULL,
                           _Out_opt_ HANDLE *h = NULL);
@@ -128,7 +140,7 @@ private:
       CListener(_In_ CConnection *lpConn);
       ~CListener();
 
-      VOID SetOptions(_In_opt_ LPLISTENER_OPTIONS lpOptions);
+      VOID SetOptions(_In_opt_ CListenerOptions *lpOptions);
 
       HRESULT Start();
       VOID Stop();
@@ -140,17 +152,19 @@ private:
 
     public:
       CConnection *lpConn;
-      LISTENER_OPTIONS sOptions;
+      CListenerOptions cOptions;
       TClassWorkerThread<CListener> *lpWorkerThread;
       HANDLE hAcceptSelect, hAcceptCompleted;
       LPVOID fnAcceptEx, fnGetAcceptExSockaddrs;
       LONG volatile nAcceptsInProgress;
-      LONG volatile nMutex;
-      CTimer cTimer;
-      union {
-        DWORD dwRequestCounter;
-        DWORD dwCurrentExcess;
-      };
+      struct {
+        LONG volatile nMutex;
+        CTimer cTimer;
+        union {
+          DWORD dwRequestCounter;
+          DWORD dwCurrentExcess;
+        };
+      } sLimiter;
     };
 
   protected:

@@ -158,8 +158,7 @@ HRESULT CJsHttpServer::CClientRequest::RunScript(_In_ LPCSTR szCodeA, _In_opt_z_
 
       hRes = BuildErrorPage(E_UNEXPECTED, e.GetDescription(),
                             ((bShowFileNameAndLine != FALSE) ? e.GetFileName() : NULL),
-                            ((bShowFileNameAndLine != FALSE) ? e.GetLineNumber() : 0),
-                            ((bShowStack != FALSE) ? e.GetStackTrace() : NULL));
+                            ((bShowFileNameAndLine != FALSE) ? e.GetLineNumber() : 0), NULL);
     }
   }
   catch (CJsWindowsError &e)

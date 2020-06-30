@@ -27,7 +27,7 @@
 
 namespace MX {
 
-class CTaskQueue : public virtual TRefCounted<CBaseMemObj>, private MX::CIoCompletionPortThreadPool
+class CTaskQueue : public virtual CBaseMemObj, private MX::CIoCompletionPortThreadPool
 {
 public:
   class CTask;

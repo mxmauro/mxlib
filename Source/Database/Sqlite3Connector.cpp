@@ -97,6 +97,7 @@ public:
   HRESULT hLastDbRes;
   CStringA cStrLastDbErrorDescriptionA;
   sqlite3_stmt *lpStmt;
+  TArrayListWithRelease<Database::CField*> aInputFieldsList;
   DWORD dwFlags;
 };
 
@@ -431,13 +432,28 @@ err_invalidarg:
           break;
 
         case FieldTypeString:
+          //we don't copy the data so we need to keep a reference to the source field
+          if (sqlite3_data->aInputFieldsList.AddElement(lpField) == FALSE)
+          {
+err_nomem:
+            QueryClose();
+            sqlite3_data->SetCustomErrno(SQLITE_NOMEM, "Out of memory");
+            return E_OUTOFMEMORY;
+          }
+          lpField->AddRef();
+
           err = sqlite3_bind_text(sqlite3_data->lpStmt, (int)nParamIdx + 1, lpField->GetString(),
                                   (int)(lpField->GetLength()), SQLITE_TRANSIENT);
           break;
 
         case FieldTypeBlob:
+          //we don't copy the data so we need to keep a reference to the source field
+          if (sqlite3_data->aInputFieldsList.AddElement(lpField) == FALSE)
+            goto err_nomem;
+          lpField->AddRef();
+
           err = sqlite3_bind_blob(sqlite3_data->lpStmt, (int)nParamIdx + 1, lpField->GetBlob(),
-                                  (int)(lpField->GetLength()), SQLITE_TRANSIENT);
+                                  (int)(lpField->GetLength()), SQLITE_STATIC);
           break;
 
         case FieldTypeDateTime:
@@ -504,13 +520,8 @@ err_invalidarg:
 
         cColumn.Attach(MX_DEBUG_NEW CSQLite3Column());
         if (!(cColumn && cColumn->cField))
-        {
-err_nomem:
-          QueryClose();
-          sqlite3_data->SetCustomErrno(SQLITE_NOMEM, "Out of memory");
-          return E_OUTOFMEMORY;
-        }
-        
+          goto err_nomem;
+
         //name
         sA = sqlite3_column_name(sqlite3_data->lpStmt, (int)i);
         if (cColumn->cStrNameA.Copy((sA != NULL) ? sA : "") == FALSE)
@@ -833,6 +844,7 @@ VOID CSQLite3Connector::QueryClose()
       sqlite3_data->lpStmt = NULL;
     }
 
+    sqlite3_data->aInputFieldsList.RemoveAllElements();
     sqlite3_data->dwFlags = 0;
   }
 

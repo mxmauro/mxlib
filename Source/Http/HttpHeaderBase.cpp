@@ -468,7 +468,7 @@ HRESULT CHttpHeaderArray::Merge(_In_ const CHttpHeaderArray &cSrc, _In_ BOOL bFo
 
 HRESULT CHttpHeaderArray::Merge(_In_ CHttpHeaderBase *lpSrc, _In_ BOOL bForceReplaceExisting)
 {
-  TAutoDeletePtr<CHttpHeaderBase> cHeader;
+  TAutoRefCounted<CHttpHeaderBase> cHeader;
   CHttpHeaderBase *lpHeader = NULL;
   SIZE_T nHeaderIndex = (SIZE_T)-1;
   CHttpHeaderBase::eDuplicateBehavior nDuplicateBehavior;

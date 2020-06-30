@@ -38,6 +38,7 @@ public:
   CSymmetricCipherEncoderDecoder() : CBaseMemObj()
     {
     lpCipherCtx = NULL;
+    cOutputBuffer.Attach(MX_DEBUG_NEW CSecureBuffer());
     return;
     };
 
@@ -63,13 +64,13 @@ public:
 
   VOID CleanOutputBuffers()
     {
-    cOutputBuffer.Reset();
+    cOutputBuffer->Reset();
     return;
     };
 
 public:
   EVP_CIPHER_CTX *lpCipherCtx;
-  MX::CSecureBuffer cOutputBuffer;
+  TAutoRefCounted<CSecureBuffer> cOutputBuffer;
 };
 
 class CSymmetricCipherData : public virtual CBaseMemObj
@@ -216,7 +217,7 @@ HRESULT CSymmetricCipher::EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLe
   {
     nInSize = (nDataLength > BLOCK_SIZE) ? BLOCK_SIZE : (int)nDataLength;
 
-    lpOut = symcipher_data->cEncryptor.cOutputBuffer.WriteReserve(EVP_MAX_BLOCK_LENGTH + BLOCK_SIZE);
+    lpOut = symcipher_data->cEncryptor.cOutputBuffer->WriteReserve(EVP_MAX_BLOCK_LENGTH + BLOCK_SIZE);
     if (lpOut == NULL)
     {
       symcipher_data->cEncryptor.Reset(TRUE);
@@ -232,7 +233,7 @@ HRESULT CSymmetricCipher::EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLe
     lpIn += nInSize;
     nDataLength -= nInSize;
 
-    symcipher_data->cEncryptor.cOutputBuffer.EndWriteReserve((SIZE_T)nOutSize);
+    symcipher_data->cEncryptor.cOutputBuffer->EndWriteReserve((SIZE_T)nOutSize);
   }
 
   //done
@@ -247,7 +248,7 @@ HRESULT CSymmetricCipher::EndEncrypt()
   if (lpInternalData == NULL || symcipher_data->cEncryptor.lpCipherCtx == NULL)
     return MX_E_NotReady;
 
-  lpOut = symcipher_data->cEncryptor.cOutputBuffer.WriteReserve(EVP_MAX_BLOCK_LENGTH + BLOCK_SIZE);
+  lpOut = symcipher_data->cEncryptor.cOutputBuffer->WriteReserve(EVP_MAX_BLOCK_LENGTH + BLOCK_SIZE);
   if (lpOut == NULL)
   {
     symcipher_data->cEncryptor.Reset(TRUE);
@@ -260,7 +261,7 @@ HRESULT CSymmetricCipher::EndEncrypt()
     return MX_E_InvalidData;
   }
 
-  symcipher_data->cEncryptor.cOutputBuffer.EndWriteReserve((SIZE_T)nOutSize);
+  symcipher_data->cEncryptor.cOutputBuffer->EndWriteReserve((SIZE_T)nOutSize);
   symcipher_data->cEncryptor.Reset(FALSE);
 
   //done
@@ -269,14 +270,14 @@ HRESULT CSymmetricCipher::EndEncrypt()
 
 SIZE_T CSymmetricCipher::GetAvailableEncryptedData() const
 {
-  return (lpInternalData != NULL) ? symcipher_data->cEncryptor.cOutputBuffer.GetLength() : 0;
+  return (lpInternalData != NULL) ? symcipher_data->cEncryptor.cOutputBuffer->GetLength() : 0;
 }
 
 SIZE_T CSymmetricCipher::GetEncryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize)
 {
   if (lpInternalData == NULL)
     return 0;
-  return symcipher_data->cEncryptor.cOutputBuffer.Read(lpDest, nDestSize);
+  return symcipher_data->cEncryptor.cOutputBuffer->Read(lpDest, nDestSize);
 }
 
 HRESULT CSymmetricCipher::BeginDecrypt(_In_opt_ BOOL bUsePadding, _In_opt_ LPCVOID lpKey, _In_opt_ SIZE_T nKeyLen,
@@ -351,7 +352,7 @@ HRESULT CSymmetricCipher::DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLe
   {
     nInSize = (nDataLength > BLOCK_SIZE) ? BLOCK_SIZE : (int)nDataLength;
 
-    lpOut = symcipher_data->cDecryptor.cOutputBuffer.WriteReserve(EVP_MAX_BLOCK_LENGTH + BLOCK_SIZE);
+    lpOut = symcipher_data->cDecryptor.cOutputBuffer->WriteReserve(EVP_MAX_BLOCK_LENGTH + BLOCK_SIZE);
     if (lpOut == NULL)
     {
       symcipher_data->cDecryptor.Reset(TRUE);
@@ -367,7 +368,7 @@ HRESULT CSymmetricCipher::DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLe
     lpIn += nInSize;
     nDataLength -= nInSize;
 
-    symcipher_data->cDecryptor.cOutputBuffer.EndWriteReserve((SIZE_T)nOutSize);
+    symcipher_data->cDecryptor.cOutputBuffer->EndWriteReserve((SIZE_T)nOutSize);
   }
 
   //done
@@ -382,7 +383,7 @@ HRESULT CSymmetricCipher::EndDecrypt()
   if (lpInternalData == NULL || symcipher_data->cDecryptor.lpCipherCtx == NULL)
     return MX_E_NotReady;
 
-  lpOut = symcipher_data->cDecryptor.cOutputBuffer.WriteReserve(EVP_MAX_BLOCK_LENGTH + BLOCK_SIZE);
+  lpOut = symcipher_data->cDecryptor.cOutputBuffer->WriteReserve(EVP_MAX_BLOCK_LENGTH + BLOCK_SIZE);
   if (lpOut == NULL)
   {
     symcipher_data->cDecryptor.Reset(TRUE);
@@ -395,7 +396,7 @@ HRESULT CSymmetricCipher::EndDecrypt()
     return MX_E_InvalidData;
   }
 
-  symcipher_data->cDecryptor.cOutputBuffer.EndWriteReserve((SIZE_T)nOutSize);
+  symcipher_data->cDecryptor.cOutputBuffer->EndWriteReserve((SIZE_T)nOutSize);
   symcipher_data->cDecryptor.Reset(FALSE);
 
   //done
@@ -404,14 +405,14 @@ HRESULT CSymmetricCipher::EndDecrypt()
 
 SIZE_T CSymmetricCipher::GetAvailableDecryptedData() const
 {
-  return (lpInternalData != NULL) ? symcipher_data->cDecryptor.cOutputBuffer.GetLength() : 0;
+  return (lpInternalData != NULL) ? symcipher_data->cDecryptor.cOutputBuffer->GetLength() : 0;
 }
 
 SIZE_T CSymmetricCipher::GetDecryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize)
 {
   if (lpInternalData == NULL)
     return 0;
-  return symcipher_data->cDecryptor.cOutputBuffer.Read(lpDest, nDestSize);
+  return symcipher_data->cDecryptor.cOutputBuffer->Read(lpDest, nDestSize);
 }
 
 HRESULT CSymmetricCipher::InternalInitialize()
@@ -426,11 +427,13 @@ HRESULT CSymmetricCipher::InternalInitialize()
     lpInternalData = MX_DEBUG_NEW Internals::CSymmetricCipherData();
     if (lpInternalData == NULL)
       return E_OUTOFMEMORY;
-    if (symcipher_data->lpCipher == NULL)
+    if (!(symcipher_data->lpCipher != NULL &&
+          symcipher_data->cEncryptor.cOutputBuffer &&
+          symcipher_data->cDecryptor.cOutputBuffer))
     {
       delete symcipher_data;
       lpInternalData = NULL;
-      return E_INVALIDARG;
+      return E_OUTOFMEMORY;
     }
   }
   //done

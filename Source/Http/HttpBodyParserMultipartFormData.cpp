@@ -510,7 +510,7 @@ HRESULT CHttpBodyParserMultipartFormData::ParseHeader(_Inout_ CStringA &cStrLine
     case 19:
       if (StrNCompareA(szNameStartA, "Content-Disposition", 19, TRUE) == 0)
       {
-        TAutoDeletePtr<CHttpHeaderEntContentDisposition> cHeader;
+        TAutoRefCounted<CHttpHeaderEntContentDisposition> cHeader;
         LPCWSTR sW;
 
         if (sParser.sCurrentBlock.sContentDisposition.cStrNameW.IsEmpty() == FALSE)
@@ -548,7 +548,7 @@ HRESULT CHttpBodyParserMultipartFormData::ParseHeader(_Inout_ CStringA &cStrLine
     case 12:
       if (StrNCompareA(szNameStartA, "Content-Type", 12, TRUE) == 0)
       {
-        TAutoDeletePtr<CHttpHeaderEntContentType> cHeader;
+        TAutoRefCounted<CHttpHeaderEntContentType> cHeader;
 
         if (sParser.sCurrentBlock.cStrContentTypeA.IsEmpty() == FALSE)
           return MX_E_InvalidData; //header already specified
@@ -571,7 +571,7 @@ HRESULT CHttpBodyParserMultipartFormData::ParseHeader(_Inout_ CStringA &cStrLine
     case 25:
       if (StrNCompareA(szNameStartA, "Content-Transfer-Encoding", 25, TRUE) == 0)
       {
-        TAutoDeletePtr<CHttpHeaderEntContentTransferEncoding> cHeader;
+        TAutoRefCounted<CHttpHeaderEntContentTransferEncoding> cHeader;
 
         if (sParser.sCurrentBlock.cStrContentTypeA.IsEmpty() == FALSE)
           return MX_E_InvalidData; //header already specified

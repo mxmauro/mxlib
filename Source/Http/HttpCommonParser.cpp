@@ -660,7 +660,7 @@ HRESULT CHttpParser::ParseStatusLine(_In_z_ LPCSTR szLineA)
 
 HRESULT CHttpParser::ParseHeader(_In_ CStringA &cStrLineA)
 {
-  TAutoDeletePtr<CHttpHeaderBase> cHeader;
+  TAutoRefCounted<CHttpHeaderBase> cHeader;
   LPCSTR szLineA, szNameStartA, szNameEndA, szValueStartA, szValueEndA;
   HRESULT hRes;
 

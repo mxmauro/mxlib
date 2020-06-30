@@ -135,7 +135,8 @@ CIpcSslLayer::~CIpcSslLayer()
 
 HRESULT CIpcSslLayer::Initialize(_In_ BOOL bServerSide, _In_opt_ LPCSTR szHostNameA,
                                  _In_opt_ CSslCertificateArray *lpCheckCertificates,
-                                 _In_opt_ CSslCertificate *lpSelfCert, _In_opt_ CEncryptionKey *lpPrivKey)
+                                 _In_opt_ CSslCertificate *lpSelfCert, _In_opt_ CEncryptionKey *lpPrivKey,
+                                 _In_opt_ CDhParam *lpDhParam)
 {
   X509_STORE *lpStore;
   HRESULT hRes;
@@ -268,6 +269,24 @@ on_error:
         hRes = MX_E_InvalidData;
         goto on_error;
       }
+    }
+  }
+
+  if (lpDhParam != NULL)
+  {
+    DH *lpDH;
+
+    lpDH = lpDhParam->GetDH();
+    if (lpDH == NULL)
+    {
+      hRes = MX_E_NotReady;
+      goto on_error;
+    }
+    ERR_clear_error();
+    if (SSL_set_tmp_dh(ssl_data->lpSslSession, lpDH) == 0)
+    {
+      hRes = Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
+      goto on_error;
     }
   }
 

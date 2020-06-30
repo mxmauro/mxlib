@@ -48,7 +48,8 @@ public:
 
   HRESULT OnQuerySslCertificates(_In_ MX::CHttpServer *lpHttp,
                                  _Outptr_result_maybenull_ MX::CSslCertificate **lplpSslCert,
-                                 _Outptr_result_maybenull_ MX::CEncryptionKey **lplpSslPrivKey)
+                                 _Outptr_result_maybenull_ MX::CEncryptionKey **lplpSslPrivKey,
+                                 _Outptr_result_maybenull_ MX::CDhParam **lplpDhParam)
     {
     UNREFERENCED_PARAMETER(lpHttp);
 
@@ -56,12 +57,15 @@ public:
     (*lplpSslCert)->AddRef();
     *lplpSslPrivKey = cSslPrivateKey.Get();
     (*lplpSslPrivKey)->AddRef();
+    *lplpDhParam = cSslDhParam.Get();
+    (*lplpDhParam)->AddRef();
     return S_OK;
     };
 
 public:
   MX::TAutoRefCounted<MX::CSslCertificate> cSslCert;
   MX::TAutoRefCounted<MX::CEncryptionKey> cSslPrivateKey;
+  MX::TAutoRefCounted<MX::CDhParam> cSslDhParam;
 };
 
 //-----------------------------------------------------------
@@ -141,6 +145,21 @@ int TestHttpServer()
       else
         hRes = E_OUTOFMEMORY;
     }
+    //load DH param
+    if (SUCCEEDED(hRes))
+      hRes = GetAppPath(cStrTempW);
+    if (SUCCEEDED(hRes) && cStrTempW.Concat(L"Web\\Certificates\\webserver_ssl_dhparam.pem") == FALSE)
+      hRes = E_OUTOFMEMORY;
+    if (SUCCEEDED(hRes))
+      hRes = LoadTxtFile(cStrTempA, (LPCWSTR)cStrTempW);
+    if (SUCCEEDED(hRes))
+    {
+      cHttpServer.cSslDhParam.Attach(MX_DEBUG_NEW MX::CDhParam());
+      if (cHttpServer.cSslDhParam)
+        hRes = cHttpServer.cSslDhParam->SetFromPEM((LPCSTR)cStrTempA);
+      else
+        hRes = E_OUTOFMEMORY;
+    }
   }
   if (SUCCEEDED(hRes))
   {
@@ -149,7 +168,7 @@ int TestHttpServer()
   }
   if (SUCCEEDED(hRes))
   {
-    MX::CSockets::LISTENER_OPTIONS sOptions = { 0 };
+    MX::CSockets::CListenerOptions cOptions;
 
     if (bUseSSL != FALSE)
     {
@@ -157,11 +176,11 @@ int TestHttpServer()
                                                                           &cHttpServer));
     }
 
-    //sOptions.dwBackLogSize = 0;
-    sOptions.dwMaxAcceptsToPost = 16;
-    //sOptions.dwMaxRequestsPerSecond = 0;
-    //sOptions.dwBurstSize = 0;
-    hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv4, (int)dwPort, &sOptions);
+    //cOptions.dwBackLogSize = 0;
+    cOptions.dwMaxAcceptsToPost = 16;
+    //cOptions.dwMaxRequestsPerSecond = 0;
+    //cOptions.dwBurstSize = 0;
+    hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv4, (int)dwPort, &cOptions);
   }
   //----
   if (SUCCEEDED(hRes))

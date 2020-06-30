@@ -193,6 +193,8 @@ public:
   CHAR szLastDbSqlStateA[8];
   MYSQL_RES *lpResultSet;
   MYSQL_STMT *lpStmt;
+  TAutoFreePtr<MYSQL_BIND> cInputBindings;
+  TArrayListWithRelease<Database::CField*> aInputFieldsList;
   TAutoFreePtr<MYSQL_BIND> cOutputBindings;
   TArrayListWithDelete<CBuffer*> aOutputBuffersList;
 };
@@ -574,7 +576,6 @@ on_error:
 
     if (nParamsCount > 0)
     {
-      TAutoFreePtr<MYSQL_BIND> cInputBindings;
       CField *lpField;
       MYSQL_BIND *lpBind;
       SIZE_T nParamIdx, nSize;
@@ -625,13 +626,13 @@ on_error:
         }
       }
 
-      cInputBindings.Attach((MYSQL_BIND*)MX_MALLOC(nParamsCount * sizeof(MYSQL_BIND) + nSize));
-      if (!cInputBindings)
+      mysql_data->cInputBindings.Attach((MYSQL_BIND*)MX_MALLOC(nParamsCount * sizeof(MYSQL_BIND) + nSize));
+      if (!(mysql_data->cInputBindings))
         goto err_nomem;
-      ::MxMemSet(cInputBindings.Get(), 0, nParamsCount * sizeof(MYSQL_BIND) + nSize);
+      ::MxMemSet(mysql_data->cInputBindings.Get(), 0, nParamsCount * sizeof(MYSQL_BIND) + nSize);
 
-      lpPtr = (LPBYTE)cInputBindings.Get() + nParamsCount * sizeof(MYSQL_BIND);
-      lpBind = cInputBindings.Get();
+      lpPtr = (LPBYTE)(mysql_data->cInputBindings.Get()) + nParamsCount * sizeof(MYSQL_BIND);
+      lpBind = mysql_data->cInputBindings.Get();
       for (nParamIdx = 0; nParamIdx < nParamsCount; nParamIdx++, lpBind++)
       {
         lpField = lpInputFieldsList->GetElementAt(nParamIdx);
@@ -698,6 +699,15 @@ on_error:
 
           case FieldTypeString:
           case FieldTypeBlob:
+            //we don't copy the data so we need to keep a reference to the source field
+            if (mysql_data->aInputFieldsList.AddElement(lpField) == FALSE)
+            {
+              mysql_data->SetCustomErrno(ER_OUTOFMEMORY, "Out of memory", "HY001");
+              QueryClose();
+              return E_OUTOFMEMORY;
+            }
+            lpField->AddRef();
+
             if (lpField->GetType() == FieldTypeString)
             {
               lpBind->buffer_type = MYSQL_TYPE_VAR_STRING;
@@ -737,7 +747,7 @@ on_error:
         }
       }
 
-      if (fn_mysql_stmt_bind_param(mysql_data->lpStmt, cInputBindings.Get()) != 0)
+      if (fn_mysql_stmt_bind_param(mysql_data->lpStmt, mysql_data->cInputBindings.Get()) != 0)
       {
         mysql_data->SetErrno();
         goto on_error;
@@ -1509,6 +1519,8 @@ VOID CMySqlConnector::QueryClose()
       fn_mysql_free_result(mysql_data->lpResultSet);
       mysql_data->lpResultSet = NULL;
     }
+    mysql_data->aInputFieldsList.RemoveAllElements();
+    mysql_data->cInputBindings.Reset();
     mysql_data->aOutputBuffersList.RemoveAllElements();
     mysql_data->cOutputBindings.Reset();
   }

@@ -35,7 +35,15 @@
 #define OPENSSL_FINALIZER_PRIORITY 10000
 
 //#define AVAILABLE_CIPHER_SUITES "ALL:!EXPORT:!LOW:!aNULL:!eNULL:!SSLv2:!ADH:!EDH:!DH:!IDEA:!FZA:!RC4"
-#define AVAILABLE_CIPHER_SUITES "HIGH:!aNULL:!MD5"
+//#define AVAILABLE_CIPHER_SUITES "HIGH:!aNULL:!MD5"
+#define AVAILABLE_CIPHER_SUITES "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:"               \
+                                "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:"               \
+                                "ECDHE-ECDSA-CHACHA20-POLY1305-SHA256:ECDHE-RSA-CHACHA20-POLY1305-SHA256:" \
+                                "ECDHE-RSA-ARIA-128-GCM-SHA256:ECDHE-RSA-ARIA256-GCM-SHA384:"              \
+                                "CHACHA20-POLY1305-SHA256:"                                                \
+                                "DHE-RSA-AES256-CCM8:DHE-RSA-AES128-CCM8:DHE-RSA-AES256-GCM-SHA384:"       \
+                                "DHE-RSA-ARIA-128-GCM-SHA256:DHE-RSA-ARIA256-GCM-SHA384"
+                                //"AES128-GCM-SHA256:AES256-GCM-SHA384:" //weak
 
 #define __HEAPS_COUNT 64
 
@@ -146,6 +154,7 @@ SSL_CTX* GetSslContext(_In_ BOOL bServerSide)
       {
         Fnv64_t nId;
         LPVOID lp;
+        DWORD dw;
 
         SSL_CTX_set_min_proto_version(lpSslCtx, TLS1_2_VERSION);
         SSL_CTX_set_max_proto_version(lpSslCtx, TLS_MAX_VERSION);
@@ -154,6 +163,8 @@ SSL_CTX* GetSslContext(_In_ BOOL bServerSide)
         nId = fnv_64a_buf(&lp, sizeof(lp), FNV1A_64_INIT);
         lp = (LPVOID)&nSslContextMutex;
         nId = fnv_64a_buf(&lp, sizeof(lp), nId);
+        dw = ::GetTickCount();
+        nId = fnv_64a_buf(&dw, sizeof(dw), nId);
         SSL_CTX_set_session_id_context(lpSslCtx, (unsigned char*)&nId, (unsigned int)sizeof(nId));
         SSL_CTX_set_session_cache_mode(lpSslCtx, SSL_SESS_CACHE_SERVER);
         SSL_CTX_sess_set_cache_size(lpSslCtx, 131072);

@@ -31,6 +31,8 @@
   #define STATUS_PROCEDURE_NOT_FOUND    0xC000007AL
 #endif //STATUS_PROCEDURE_NOT_FOUND
 
+#define FASTLOCK_SPIN_COUNT 2048
+
 //-----------------------------------------------------------
 
 #pragma pack(8)
@@ -368,15 +370,38 @@ HRESULT CWindowsMutex::Open(_In_opt_z_ LPCWSTR szNameW, _In_ BOOL bQueryOnly, _I
 VOID FastLock_Initialize(_Out_ LONG volatile *lpnLock)
 {
   _InterlockedExchange(lpnLock, 0);
+  IsMultiProcessor();
   return;
 }
 
 VOID FastLock_Enter(_Inout_ LONG volatile *lpnLock)
 {
   LONG nTid = (LONG)::MxGetCurrentThreadId();
+  LONG nCpuCount = __InterlockedRead(&nProcessorsCount);
 
-  while (_InterlockedCompareExchange(lpnLock, nTid, 0) != 0)
-    _YieldProcessor();
+  for (;;)
+  {
+    if (_InterlockedCompareExchange(lpnLock, nTid, 0) == 0)
+      return;
+
+    if (nCpuCount > 1)
+    {
+      for (SIZE_T nSpin = 1; nSpin < FASTLOCK_SPIN_COUNT; nSpin <<= 1)
+      {
+        for (SIZE_T i = 0; i < nSpin; i++)
+        {
+          ::YieldProcessor();
+        }
+
+        if (_InterlockedCompareExchange(lpnLock, nTid, 0) == 0)
+          return;
+      }
+    }
+
+    ::SwitchToThread();
+  }
+  //while (_InterlockedCompareExchange(lpnLock, nTid, 0) != 0)
+  //  _YieldProcessor();
   return;
 }
 
@@ -401,9 +426,31 @@ DWORD FastLock_IsActive(_Inout_ LONG volatile *lpnLock)
 VOID FastLock_Bitmask_Enter(_Inout_ LONG volatile *lpnLock, _In_ int nBitIndex)
 {
   LONG nMask = 1L << nBitIndex;
+  LONG nCpuCount = __InterlockedRead(&nProcessorsCount);
 
-  while ((_InterlockedOr(lpnLock, nMask) & nMask) != 0)
-    _YieldProcessor();
+  for (;;)
+  {
+    if ((_InterlockedOr(lpnLock, nMask) & nMask) == 0)
+      return;
+
+    if (nCpuCount > 1)
+    {
+      for (SIZE_T nSpin = 1; nSpin < FASTLOCK_SPIN_COUNT; nSpin <<= 1)
+      {
+        for (SIZE_T i = 0; i < nSpin; i++)
+        {
+          ::YieldProcessor();
+        }
+
+        if ((_InterlockedOr(lpnLock, nMask) & nMask) == 0)
+          return;
+      }
+    }
+
+    ::SwitchToThread();
+  }
+  //while ((_InterlockedOr(lpnLock, nMask) & nMask) != 0)
+  //  _YieldProcessor();
   return;
 }
 

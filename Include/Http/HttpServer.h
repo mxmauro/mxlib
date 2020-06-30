@@ -41,7 +41,8 @@ public:
 
 public:
   typedef Callback<HRESULT(_In_ CHttpServer *lpHttp, _Outptr_result_maybenull_ CSslCertificate **lplpSslCert,
-                           _Outptr_result_maybenull_ CEncryptionKey **lplpSslPrivKey)> OnQuerySslCertificatesCallback;
+                           _Outptr_result_maybenull_ CEncryptionKey **lplpSslPrivKey,
+                           _Outptr_result_maybenull_ CDhParam **lplpDhParam)> OnQuerySslCertificatesCallback;
 
   typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _Out_ CClientRequest **lplpRequest)> OnNewRequestObjectCallback;
 
@@ -82,6 +83,7 @@ public:
   VOID SetOption_MaxBodySizeInMemory(_In_ DWORD dwSize);
   VOID SetOption_MaxBodySize(_In_ ULONGLONG ullSize);
   VOID SetOption_MaxIncomingBytesWhileSending(_In_ DWORD dwMaxIncomingBytesWhileSending);
+  VOID SetOption_MaxRequestsPerSecond(_In_ DWORD dwMaxRequestsPerSecond, _In_ DWORD dwBurstSize);
 
   VOID SetQuerySslCertificatesCallback(_In_ OnQuerySslCertificatesCallback cQuerySslCertificatesCallback);
   VOID SetNewRequestObjectCallback(_In_ OnNewRequestObjectCallback cNewRequestObjectCallback);
@@ -92,11 +94,11 @@ public:
   VOID SetCustomErrorPageCallback(_In_ OnCustomErrorPageCallback cCustomErrorPageCallback);
 
   HRESULT StartListening(_In_ CSockets::eFamily nFamily, _In_ int nPort,
-                         _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions = NULL);
+                         _In_opt_ CSockets::CListenerOptions *lpOptions = NULL);
   HRESULT StartListening(_In_opt_z_ LPCSTR szBindAddressA, _In_ CSockets::eFamily nFamily, _In_ int nPort,
-                         _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions = NULL);
+                         _In_opt_ CSockets::CListenerOptions *lpOptions = NULL);
   HRESULT StartListening(_In_opt_z_ LPCWSTR szBindAddressW, _In_ CSockets::eFamily nFamily, _In_ int nPort,
-                         _In_opt_ CSockets::LPLISTENER_OPTIONS lpOptions = NULL);
+                         _In_opt_ CSockets::CListenerOptions *lpOptions = NULL);
   VOID StopListening();
 
 public:
@@ -281,6 +283,7 @@ public:
 
   private:
     CLnkLstNode cListNode;
+    LONG volatile nTimerCallbackRundownLock;
     CCriticalSection cMutex;
     CHttpServer *lpHttpServer;
     CSockets *lpSocketMgr;
@@ -331,6 +334,8 @@ private:
                        _In_ HRESULT hrErrorCode);
   HRESULT OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData);
   HRESULT OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData);
+
+  BOOL CheckRateLimit();
 
   VOID TerminateRequest(_In_ CClientRequest *lpRequest, _In_ HRESULT hrErrorCode);
   VOID OnRequestError(_In_ CClientRequest *lpRequest, _In_ HRESULT hrErrorCode, _Inout_ int &nTimersToStart);
@@ -401,10 +406,21 @@ private:
   DWORD dwMaxBodySizeInMemory;
   ULONGLONG ullMaxBodySize;
   DWORD dwMaxIncomingBytesWhileSending;
+  DWORD dwMaxRequestsPerSecond;
+  DWORD dwMaxRequestsBurstSize;
+  struct {
+    LONG volatile nMutex;
+    CTimer cTimer;
+    union {
+      DWORD dwRequestCounter;
+      DWORD dwCurrentExcess;
+    };
+  } sLimiter;
 
   LONG volatile nDownloadNameGeneratorCounter;
   LONG volatile nRundownLock;
   HANDLE hAcceptConn;
+  LONG volatile nActiveRequestsCount;
 
   OnQuerySslCertificatesCallback cQuerySslCertificatesCallback;
   OnNewRequestObjectCallback cNewRequestObjectCallback;
