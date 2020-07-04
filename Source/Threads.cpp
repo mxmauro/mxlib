@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 #include "..\Include\Threads.h"
+#include "Internals\MsVcrt.h"
 #include <process.h>
 #include <ObjBase.h>
 
@@ -43,6 +44,20 @@ typedef struct tagTHREADNAME_INFO {
   DWORD dwFlags;    // Reserved for future use, must be zero.
 } THREADNAME_INFO;
 #pragma pack(pop)
+
+typedef HRESULT (WINAPI *lpfnSetThreadDescription)(_In_ HANDLE hThread, _In_z_ PCWSTR lpThreadDescription);
+
+typedef int (*_PIFV)(void);
+
+//-----------------------------------------------------------
+
+static int __cdecl InitializeThreads();
+
+MX_LINKER_FORCE_INCLUDE(___mx_threads_init);
+#pragma section(".CRT$XIB", long, read)
+extern "C" __declspec(allocate(".CRT$XIB")) const _PIFV ___mx_threads_init = &InitializeThreads;
+
+static lpfnSetThreadDescription fnSetThreadDescription = NULL;
 
 //-----------------------------------------------------------
 
@@ -257,28 +272,52 @@ BOOL CThread::CheckForAbort(_In_opt_ DWORD dwTimeout, _In_opt_ DWORD dwEventCoun
   return FALSE;
 }
 
-VOID CThread::SetThreadName(_In_ DWORD dwThreadId, _In_opt_z_ LPCSTR szName)
+VOID CThread::SetThreadName(_In_ DWORD dwThreadId, _In_opt_z_ LPCSTR szNameA)
 {
   THREADNAME_INFO sInfo;
 
+  if (fnSetThreadDescription != NULL)
+  {
+    HANDLE hThread = ::OpenThread(THREAD_SET_LIMITED_INFORMATION, FALSE, dwThreadId);
+    if (hThread != NULL)
+    {
+      WCHAR szBufW[256];
+      SIZE_T i;
+
+      for (i = 0; i < 255 && szNameA[i] != 0; i++)
+      {
+        szBufW[i] = (WCHAR)(unsigned char)szNameA[i];
+      }
+      szBufW[i] = 0;
+      if (fnSetThreadDescription(hThread, szBufW) >= 0)
+      {
+        ::CloseHandle(hThread);
+        return;
+      }
+      ::CloseHandle(hThread);
+    }
+  }
+
   ::Sleep(10);
   sInfo.dwType = 0x1000;
-  sInfo.szName = (szName != NULL) ? szName : "";
+  sInfo.szName = (szNameA != NULL) ? szNameA : "";
   sInfo.dwThreadID = (DWORD)dwThreadId;
   sInfo.dwFlags = 0;
   __try
   {
-    ::RaiseException(MS_VC_EXCEPTION, 0, sizeof(sInfo)/sizeof(ULONG_PTR), (ULONG_PTR*)&sInfo);
+    ::RaiseException(MS_VC_EXCEPTION, 0, sizeof(sInfo) / sizeof(ULONG_PTR), (ULONG_PTR *)&sInfo);
   }
-  __except(EXCEPTION_EXECUTE_HANDLER)
+  __except (EXCEPTION_EXECUTE_HANDLER)
   { }
   return;
 }
 
-VOID CThread::SetThreadName(_In_opt_z_ LPCSTR szName)
+VOID CThread::SetThreadName(_In_opt_z_ LPCSTR szNameA)
 {
   if (hThread != NULL)
-    SetThreadName(dwThreadId, szName);
+  {
+    SetThreadName(dwThreadId, szNameA);
+  }
   return;
 }
 
@@ -593,8 +632,8 @@ VOID CThreadPool::RemoveWorker(_In_ CWorkerThread *lpWorker)
   }
   MX_ASSERT(i < sActiveThreads.nCount);
   delete sActiveThreads.lplpWorkerThreadsList[i];
-  MxMemMove(sActiveThreads.lplpWorkerThreadsList+i, sActiveThreads.lplpWorkerThreadsList+i+1,
-          (sActiveThreads.nCount-i-1)*sizeof(CWorkerThread*));
+  ::MxMemMove(sActiveThreads.lplpWorkerThreadsList + i, sActiveThreads.lplpWorkerThreadsList + i + 1,
+              (sActiveThreads.nCount - i - 1) * sizeof(CWorkerThread*));
   (sActiveThreads.nCount)--;
   return;
 }
@@ -665,17 +704,22 @@ VOID CThreadPool::WorkerThreadProc(_In_ SIZE_T nParam)
   {
     if (::GetQueuedCompletionStatus(hIOCP, &dwNumberOfBytes, (PULONG_PTR)&lpWorkItem, &lpOvr, nTimeout) == FALSE ||
         lpWorkItem == NULL)
+    {
       break;
+    }
     nTimeout = nThreadShutdownThresholdMs;
+
     //remove task from queue
     {
       CFastLock cLock(&(sWorkItems.nMtx));
 
       RemoveTask(lpWorkItem);
     }
+
     //execute task
     _InterlockedIncrement(&nInUse);
     ExecuteTask(lpWorkItem);
+
     //delete task
     MX_FREE(lpWorkItem);
     _InterlockedDecrement(&nInUse);
@@ -688,6 +732,18 @@ VOID CThreadPool::WorkerThreadProc(_In_ SIZE_T nParam)
 } //namespace MX
 
 //-----------------------------------------------------------
+
+static int __cdecl InitializeThreads()
+{
+  HINSTANCE hDll;
+
+  hDll = ::GetModuleHandleW(L"kernel32.dll");
+  if (hDll != NULL)
+  {
+    fnSetThreadDescription = (lpfnSetThreadDescription)::GetProcAddress(hDll, "SetThreadDescription");
+  }
+  return 0;
+}
 
 static int MyExceptionFilter(_Out_ EXCEPTION_POINTERS *lpDest, _In_ EXCEPTION_POINTERS *lpSrc)
 {

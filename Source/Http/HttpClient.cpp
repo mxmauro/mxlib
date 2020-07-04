@@ -26,6 +26,7 @@
 #include "..\..\Include\Comm\IpcSslLayer.h"
 #include "..\..\Include\Http\Url.h"
 #include "..\..\Include\Http\HttpCommon.h"
+#include "..\..\Include\Http\HttpBodyParserJSON.h"
 #include "..\..\Include\WaitableObjects.h"
 #include "HttpAuthCache.h"
 #include "..\..\Include\Comm\IpcCommon.h"
@@ -2338,11 +2339,22 @@ on_websocket_negotiated:
             //add a default body if none was added
             if (!cBodyParser)
             {
-              cBodyParser.Attach(MX_DEBUG_NEW CHttpBodyParserDefault(
-                MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnDownloadStarted, this), NULL,
-                ((sResponse.cStrDownloadFileNameW.IsEmpty() == FALSE) ? 0 : dwMaxBodySizeInMemory),
-                ((sResponse.cStrDownloadFileNameW.IsEmpty() == FALSE) ? ULONGLONG_MAX
-                  : ullMaxBodySize)));
+              if (sResponse.cStrDownloadFileNameW.IsEmpty() == FALSE)
+              {
+                cBodyParser.Attach(MX_DEBUG_NEW CHttpBodyParserDefault(
+                                   MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnDownloadStarted, this), NULL, 0,
+                                   ULONGLONG_MAX));
+              }
+              else if (StrCompareA((LPCSTR)(sHeadersCallbackData.cStrTypeA), "application/json") == 0)
+              {
+                cBodyParser.Attach(MX_DEBUG_NEW CHttpBodyParserJSON());
+              }
+              else
+              {
+                cBodyParser.Attach(MX_DEBUG_NEW CHttpBodyParserDefault(
+                                   MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnDownloadStarted, this), NULL,
+                                   dwMaxBodySizeInMemory, ullMaxBodySize));
+              }
               if (!cBodyParser)
                 hRes = E_OUTOFMEMORY;
             }

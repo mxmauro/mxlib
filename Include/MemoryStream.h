@@ -46,6 +46,8 @@ public:
 
   BOOL CanGrow() const;
 
+  virtual LPBYTE GetRawBuffer() const;
+
   CMemoryStream* Clone();
 
 private:

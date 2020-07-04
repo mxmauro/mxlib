@@ -201,6 +201,11 @@ CMemoryStream* CMemoryStream::Clone()
   return NULL;
 }
 
+LPBYTE CMemoryStream::GetRawBuffer() const
+{
+  return lpData;
+}
+
 BOOL CMemoryStream::EnsureSize(_In_ SIZE_T nRequiredSize)
 {
   if (nRequiredSize > nAllocated)

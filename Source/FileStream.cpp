@@ -217,4 +217,9 @@ CFileStream* CFileStream::Clone()
   return NULL;
 }
 
+HANDLE CFileStream::GetHandle() const
+{
+  return (const_cast<CFileStream *>(this))->cFileH.Get();
+}
+
 } //namespace MX

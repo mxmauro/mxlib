@@ -178,6 +178,7 @@ CIoCompletionPortThreadPool::CIoCompletionPortThreadPool() : CBaseMemObj(), CNon
   dwShutdownThreadThreshold = 2;
   dwThreadStackSize = 0;
   nThreadPriority = THREAD_PRIORITY_NORMAL;
+  szPoolNameA = NULL;
   FastLock_Initialize(&(sThreads.nMutex));
   _InterlockedExchange(&(sThreads.nActiveCount), 0);
   _InterlockedExchange(&(sThreads.nBusyCount), 0);
@@ -260,6 +261,15 @@ VOID CIoCompletionPortThreadPool::SetOption_ThreadPriority(_In_opt_ int nPriorit
       nThreadPriority = 31;
     else
       nThreadPriority = nPriority;
+  }
+  return;
+}
+
+VOID CIoCompletionPortThreadPool::SetOption_Name(_In_z_ LPCSTR _szPoolNameA)
+{
+  if (!cIOCP)
+  {
+    szPoolNameA = (_szPoolNameA != NULL && *_szPoolNameA != 0) ? _szPoolNameA : NULL;
   }
   return;
 }
@@ -428,6 +438,11 @@ VOID CIoCompletionPortThreadPool::ThreadProc(_In_ SIZE_T nParam)
   LONG nActive, nBusy;
   BOOL bShutdown;
   HRESULT hRes;
+
+  if (szPoolNameA != NULL)
+  {
+    lpThread->SetThreadName(szPoolNameA);
+  }
 
   //notify
   lpThreadCustomParam = NULL;

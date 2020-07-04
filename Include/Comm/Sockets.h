@@ -104,7 +104,7 @@ private:
     HRESULT SendWritePacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwWritten);
     SIZE_T GetMultiWriteMaxCount() const
       {
-      return 16;
+      return 4;
       };
 
     VOID HostResolveCallback(_In_ LONG nResolverId, _In_ PSOCKADDR_INET lpSockAddr, _In_ HRESULT hrErrorCode,

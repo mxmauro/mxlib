@@ -27,6 +27,10 @@ static const LPCSTR szGuidA = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 //-----------------------------------------------------------
 
+static HRESULT CalculateHash(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen, _Out_ BYTE aSHA1[20]);
+
+//-----------------------------------------------------------
+
 namespace MX {
 
 CHttpHeaderRespSecWebSocketAccept::CHttpHeaderRespSecWebSocketAccept() : CHttpHeaderBase()
@@ -111,8 +115,35 @@ HRESULT CHttpHeaderRespSecWebSocketAccept::Build(_Inout_ CStringA &cStrDestA, _I
 
 HRESULT CHttpHeaderRespSecWebSocketAccept::SetKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen)
 {
-  CBase64Encoder cEncoder;
-  CMessageDigest cDigest;
+  return CalculateHash(lpKey, nKeyLen, aSHA1);
+}
+
+LPBYTE CHttpHeaderRespSecWebSocketAccept::GetSHA1() const
+{
+  return const_cast<LPBYTE>(aSHA1);
+}
+
+HRESULT CHttpHeaderRespSecWebSocketAccept::VerifyKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen)
+{
+  BYTE aVerifierSHA1[20];
+  HRESULT hRes;
+
+  hRes = CalculateHash(lpKey, nKeyLen, aVerifierSHA1);
+  if (SUCCEEDED(hRes))
+  {
+    hRes = (::MxMemCompare(aSHA1, aVerifierSHA1, sizeof(aSHA1)) == 0) ? S_OK : S_FALSE;
+  }
+  return hRes;
+}
+
+} //namespace MX
+
+//-----------------------------------------------------------
+
+static HRESULT CalculateHash(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen, _Out_ BYTE aSHA1[20])
+{
+  MX::CBase64Encoder cEncoder;
+  MX::CMessageDigest cDigest;
   HRESULT hRes;
 
   if (lpKey == NULL && nKeyLen > 0)
@@ -130,13 +161,13 @@ HRESULT CHttpHeaderRespSecWebSocketAccept::SetKey(_In_ LPVOID lpKey, _In_ SIZE_T
     return hRes;
 
   //hash the base64 output plus the guid
-  hRes = cDigest.BeginDigest(CMessageDigest::AlgorithmSHA1);
+  hRes = cDigest.BeginDigest(MX::CMessageDigest::AlgorithmSHA1);
   if (SUCCEEDED(hRes))
   {
     hRes = cDigest.DigestStream(cEncoder.GetBuffer(), cEncoder.GetOutputLength());
     if (SUCCEEDED(hRes))
     {
-      hRes = cDigest.DigestStream(szGuidA, StrLenA(szGuidA));
+      hRes = cDigest.DigestStream(szGuidA, MX::StrLenA(szGuidA));
       if (SUCCEEDED(hRes))
         hRes = cDigest.EndDigest();
     }
@@ -150,23 +181,3 @@ HRESULT CHttpHeaderRespSecWebSocketAccept::SetKey(_In_ LPVOID lpKey, _In_ SIZE_T
   //done
   return S_OK;
 }
-
-LPBYTE CHttpHeaderRespSecWebSocketAccept::GetSHA1() const
-{
-  return const_cast<LPBYTE>(aSHA1);
-}
-
-HRESULT CHttpHeaderRespSecWebSocketAccept::VerifyKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen)
-{
-  CHttpHeaderRespSecWebSocketAccept cVerifier;
-  HRESULT hRes;
-
-  hRes = cVerifier.SetKey(lpKey, nKeyLen);
-  if (SUCCEEDED(hRes))
-  {
-    hRes = (::MxMemCompare(aSHA1, cVerifier.aSHA1, sizeof(aSHA1)) == 0) ? S_OK : S_FALSE;
-  }
-  return hRes;
-}
-
-} //namespace MX

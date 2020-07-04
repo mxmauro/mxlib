@@ -58,6 +58,7 @@ public:
   using CIoCompletionPortThreadPool::SetOption_ShutdownThreadThreshold;
   using CIoCompletionPortThreadPool::SetOption_ThreadStackSize;
   using CIoCompletionPortThreadPool::SetOption_ThreadPriority;
+  using CIoCompletionPortThreadPool::SetOption_Name;
 
   HRESULT Initialize();
   VOID Finalize();

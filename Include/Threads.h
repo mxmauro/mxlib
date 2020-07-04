@@ -43,8 +43,8 @@ public:
   virtual BOOL CheckForAbort(_In_opt_ DWORD dwTimeout = 0, _In_opt_ DWORD dwEventCount = 0,
                              _In_opt_ LPHANDLE lphEventList = NULL, _Out_opt_ LPDWORD lpdwHitEvent = NULL);
 
-  static VOID SetThreadName(_In_ DWORD dwThreadId, _In_opt_z_ LPCSTR szName);
-  virtual VOID SetThreadName(_In_opt_z_ LPCSTR szName);
+  static VOID SetThreadName(_In_ DWORD dwThreadId, _In_opt_z_ LPCSTR szNameA);
+  virtual VOID SetThreadName(_In_opt_z_ LPCSTR szNameA);
 
   virtual BOOL SetPriority(_In_ int nPriority);
   virtual int GetPriority() const;

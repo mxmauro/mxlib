@@ -85,6 +85,7 @@ public:
   VOID SetOption_ShutdownThreadThreshold(_In_opt_ DWORD dwThreshold = 2);
   VOID SetOption_ThreadStackSize(_In_opt_ DWORD dwStackSize = 0);
   VOID SetOption_ThreadPriority(_In_opt_ int nPriority = THREAD_PRIORITY_NORMAL);
+  VOID SetOption_Name(_In_z_ LPCSTR szPoolNameA);
 
   VOID SetThreadStartCallback(_In_opt_ OnThreadStartCallback cThreadStartCallback);
   VOID SetThreadEndCallback(_In_opt_ OnThreadEndCallback cThreadEndCallback);
@@ -142,6 +143,7 @@ private:
   DWORD dwWorkerThreadIdleTimeoutMs, dwShutdownThreadThreshold;
   DWORD dwThreadStackSize;
   int nThreadPriority;
+  LPCSTR szPoolNameA;
   CIoCompletionPort cIOCP;
   struct {
     LONG volatile nMutex;
