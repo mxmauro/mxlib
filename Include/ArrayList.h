@@ -74,36 +74,31 @@ public:
   BOOL SortedInsert(_In_ TType elem, _In_ _Comparator lpCompareFunc, _In_opt_ LPVOID lpContext = NULL,
                     _In_opt_ BOOL bDontInsertDuplicates = FALSE, _Out_opt_ LPBOOL lpbAlreadyOnList = NULL)
     {
-    SIZE_T nIndex;
+    SIZE_T nLow, nHigh;
 
     if (lpbAlreadyOnList != NULL)
       *lpbAlreadyOnList = FALSE;
     if (lpCompareFunc == NULL)
       return FALSE;
 
-    if (SetSize(nCount + 1) == FALSE)
-      return FALSE;
-    nIndex = nCount;
-    while (nIndex > 0)
+    nLow = 0;
+    nHigh = nCount;
+    while (nLow < nHigh)
     {
-      int comp = lpCompareFunc(lpContext, &elem, &lpItems[nIndex - 1]);
-      if (comp == 0)
-      {
-        if (bDontInsertDuplicates != FALSE)
-        {
-          if (lpbAlreadyOnList != NULL)
-            *lpbAlreadyOnList = TRUE;
-          return TRUE;
-        }
-      }
-      if (comp >= 0)
-        break;
-      lpItems[nIndex] = lpItems[nIndex - 1];
-      nIndex--;
+      SIZE_T nMid = nLow + ((nHigh - nLow) >> 1);
+      int comp = lpCompareFunc(lpContext, &elem, &lpItems[nMid]);
+      if (comp > 0)
+        nLow = nMid + 1;
+      else
+        nHigh = nMid;
     }
-    lpItems[nIndex] = elem;
-    nCount++;
-    return TRUE;
+    if (bDontInsertDuplicates != FALSE && nLow < nCount && lpCompareFunc(lpContext, &elem, &lpItems[nLow]) == 0)
+    {
+      if (lpbAlreadyOnList != NULL)
+        *lpbAlreadyOnList = TRUE;
+      return TRUE;
+    }
+    return InsertElementAt(elem, nLow);
     };
 
   template<class _Comparator, class _KeyType>
@@ -464,36 +459,31 @@ public:
   BOOL SortedInsert(_In_ TType *lpElem, _In_ _Comparator lpCompareFunc, _In_opt_ LPVOID lpContext = NULL,
                     _In_opt_ BOOL bDontInsertDuplicates = FALSE, _Out_opt_ LPBOOL lpbAlreadyOnList = NULL)
     {
-    SIZE_T nIndex;
+    SIZE_T nLow, nHigh;
 
     if (lpbAlreadyOnList != NULL)
       *lpbAlreadyOnList = FALSE;
     if (lpElem == NULL && lpCompareFunc == NULL)
       return FALSE;
 
-    if (SetSize(nCount + 1) == FALSE)
-      return FALSE;
-    nIndex = nCount;
-    while (nIndex > 0)
+    nLow = 0;
+    nHigh = nCount;
+    while (nLow < nHigh)
     {
-      int comp = lpCompareFunc(lpContext, lpElem, &lpItems[nIndex - 1]);
-      if (comp == 0)
-      {
-        if (bDontInsertDuplicates != FALSE)
-        {
-          if (lpbAlreadyOnList != NULL)
-            *lpbAlreadyOnList = TRUE;
-          return TRUE;
-        }
-      }
-      if (comp >= 0)
-        break;
-      MxMemCopy(&lpItems[nIndex], &lpItems[nIndex - 1], sizeof(TType));
-      nIndex--;
+      SIZE_T nMid = nLow + ((nHigh - nLow) >> 1);
+      int comp = lpCompareFunc(lpContext, lpElem, &lpItems[nMid]);
+      if (comp > 0)
+        nLow = nMid + 1;
+      else
+        nHigh = nMid;
     }
-    MxMemCopy(&lpItems[nIndex], lpElem, sizeof(TType));
-    nCount++;
-    return TRUE;
+    if (bDontInsertDuplicates != FALSE && nLow < nCount && lpCompareFunc(lpContext, lpElem, &lpItems[nLow]) == 0)
+    {
+      if (lpbAlreadyOnList != NULL)
+        *lpbAlreadyOnList = TRUE;
+      return TRUE;
+    }
+    return InsertElementAt(lpElem, nLow);
     };
 
   template<class _Comparator, class _KeyType>
