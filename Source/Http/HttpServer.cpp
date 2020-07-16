@@ -938,8 +938,12 @@ VOID CHttpServer::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
 
 HRESULT CHttpServer::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData)
 {
+  CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   CClientRequest *lpRequest = (CClientRequest*)lpUserData;
   HRESULT hRes;
+
+  if (!cAutoRundownProt)
+    return MX_E_Cancelled;
 
   MX_ASSERT(lpUserData != NULL);
 

@@ -197,7 +197,7 @@ public:
     HRESULT SendStream(_In_ CStream *lpStream);
 
     HRESULT SetMimeTypeFromFileName(_In_opt_z_ LPCWSTR szFileNameW = NULL);
-    HRESULT SetFileName(_In_opt_z_ LPCWSTR szFileNameW = NULL);
+    HRESULT SetFileName(_In_opt_z_ LPCWSTR szFileNameW = NULL, _In_opt_ BOOL bInline = FALSE);
 
     HRESULT SendErrorPage(_In_ LONG nStatusCode, _In_ HRESULT hrErrorCode,
                           _In_opt_z_ LPCSTR szAdditionalExplanationA = NULL);
@@ -307,6 +307,7 @@ public:
       BOOL bLastStreamIsData;
       LPCSTR szMimeTypeHintA;
       CStringW cStrFileNameW;
+      BOOL bIsInline;
       BOOL bDirect, bPreserveWebSocketHeaders;
     } sResponse;
   };

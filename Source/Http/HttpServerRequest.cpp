@@ -52,6 +52,7 @@ CHttpServer::CClientRequest::CClientRequest() : CIpc::CUserData()
   sResponse.nStatus = 0;
   sResponse.bLastStreamIsData = FALSE;
   sResponse.szMimeTypeHintA = NULL;
+  sResponse.bIsInline = FALSE;
   sResponse.bDirect = sResponse.bPreserveWebSocketHeaders = FALSE;
   return;
 }
@@ -760,6 +761,7 @@ HRESULT CHttpServer::CClientRequest::SendResponse(_In_ LPCVOID lpData, _In_ SIZE
   //done
   sResponse.szMimeTypeHintA = NULL;
   sResponse.cStrFileNameW.Empty();
+  sResponse.bIsInline = FALSE;
   return S_OK;
 }
 
@@ -833,11 +835,12 @@ HRESULT CHttpServer::CClientRequest::SetMimeTypeFromFileName(_In_opt_z_ LPCWSTR 
 
   //set response info
   sResponse.szMimeTypeHintA = (szFileNameW != FALSE) ? Http::GetMimeType(szFileNameW) : NULL;
+
   //done
   return S_OK;
 }
 
-HRESULT CHttpServer::CClientRequest::SetFileName(_In_opt_z_ LPCWSTR szFileNameW)
+HRESULT CHttpServer::CClientRequest::SetFileName(_In_opt_z_ LPCWSTR szFileNameW, _In_opt_ BOOL bInline)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
   CStringW cStrTempFileNameW;
@@ -855,13 +858,11 @@ HRESULT CHttpServer::CClientRequest::SetFileName(_In_opt_z_ LPCWSTR szFileNameW)
     LPCWSTR sW[2];
 
     sW[0] = StrChrW(szFileNameW, L'\\', TRUE);
-    if (sW[0] == NULL)
-      sW[0] = szFileNameW;
+    sW[0] = (sW[0] != NULL) ? (sW[0] + 1) : szFileNameW;
     sW[1] = StrChrW(szFileNameW, L'/', TRUE);
-    if (sW[1] == NULL)
-      sW[1] = szFileNameW;
+    sW[1] = (sW[1] != NULL) ? (sW[1] + 1) : szFileNameW;
 
-    if (cStrTempFileNameW.Copy(((sW[0] > sW[1]) ? sW[0] : sW[1]) + 1) == FALSE)
+    if (cStrTempFileNameW.Copy((sW[0] > sW[1]) ? sW[0] : sW[1]) == FALSE)
       return E_OUTOFMEMORY;
   }
 
@@ -870,11 +871,13 @@ HRESULT CHttpServer::CClientRequest::SetFileName(_In_opt_z_ LPCWSTR szFileNameW)
   {
     sResponse.szMimeTypeHintA = Http::GetMimeType(szFileNameW);
     sResponse.cStrFileNameW.Attach(cStrTempFileNameW.Detach());
+    sResponse.bIsInline = bInline;
   }
   else
   {
     sResponse.szMimeTypeHintA = NULL;
     sResponse.cStrFileNameW.Empty();
+    sResponse.bIsInline = FALSE;
   }
 
   //done
@@ -1312,7 +1315,8 @@ HRESULT CHttpServer::CClientRequest::SendHeaders()
     cHeader.Attach(MX_DEBUG_NEW CHttpHeaderEntContentDisposition());
     if (cHeader)
     {
-      hRes = cHeader->SetType("attachment", 10);
+      hRes = (sResponse.bIsInline == FALSE) ? cHeader->SetType("attachment", 10)
+                                            : cHeader->SetType("inline", 6);
       if (SUCCEEDED(hRes))
       {
         hRes = cHeader->SetFileName((LPCWSTR)(sResponse.cStrFileNameW), sResponse.cStrFileNameW.GetLength());
