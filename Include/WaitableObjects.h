@@ -336,7 +336,7 @@ public:
     return;
     };
 
-  BOOL operator!() const
+  bool operator!() const
     {
     return (lpnValue == NULL) ? true : false;
     };

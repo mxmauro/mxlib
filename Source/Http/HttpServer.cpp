@@ -904,13 +904,12 @@ VOID CHttpServer::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CU
 
     lpRequest->SetState(CClientRequest::StateTerminated);
 
-    if (lpRequest->hConn == h)
-    {
-      //mark link as closed
-      lpRequest->MarkLinkAsClosed();
+    MX_ASSERT(lpRequest->hConn == h)
 
-      lpRequest->hConn = NULL;
-    }
+    //mark link as closed
+    lpRequest->MarkLinkAsClosed();
+
+    lpRequest->hConn = NULL;
   }
 
   //stop timers
@@ -1313,6 +1312,8 @@ on_request_error:
 
     if (bFireConnected != FALSE && cWebSocket)
     {
+      lpRequest->StopTimeoutTimers(CClientRequest::TimeoutTimerAll);
+
       cWebSocket->FireConnectedAndInitialRead();
     }
     return S_OK;

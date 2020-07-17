@@ -218,7 +218,7 @@ public:
     return lpPtr;
     };
 
-  BOOL operator!() const
+  bool operator!() const
     {
     return (lpPtr == NULL) ? true : false;
     };
