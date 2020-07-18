@@ -73,8 +73,8 @@ public:
   VOID SetOption_RequestHeaderTimeout(_In_ DWORD dwTimeoutMs);
   VOID SetOption_GracefulTerminationTimeout(_In_ DWORD dwTimeoutMs);
   VOID SetOption_KeepAliveTimeout(_In_ DWORD dwTimeoutMs);
-  VOID SetOption_RequestBodyLimits(_In_ DWORD dwMinimumThroughputInBps, _In_ DWORD dwSecondsOfLowThroughput);
-  VOID SetOption_ResponseLimits(_In_ DWORD dwMinimumThroughputInBps, _In_ DWORD dwSecondsOfLowThroughput);
+  VOID SetOption_RequestBodyLimits(_In_ float nMinimumThroughputInKbps, _In_ DWORD dwSecondsOfLowThroughput);
+  VOID SetOption_ResponseLimits(_In_ float nMinimumThroughputInKbps, _In_ DWORD dwSecondsOfLowThroughput);
   VOID SetOption_MaxHeaderSize(_In_ DWORD dwSize);
   VOID SetOption_MaxFieldSize(_In_ DWORD dwSize);
   VOID SetOption_MaxFileSize(_In_ ULONGLONG ullSize);
@@ -397,7 +397,7 @@ private:
   CSockets &cSocketMgr;
   DWORD dwMaxConnectionsPerIp;
   DWORD dwRequestHeaderTimeoutMs, dwGracefulTerminationTimeoutMs, dwKeepAliveTimeoutMs;
-  DWORD dwRequestBodyMinimumThroughputInBps, dwResponseMinimumThroughputInBps;
+  float nRequestBodyMinimumThroughputInKbps, nResponseMinimumThroughputInKbps;
   DWORD dwRequestBodySecondsOfLowThroughput, dwResponseSecondsOfLowThroughput;
   DWORD dwMaxHeaderSize;
   DWORD dwMaxFieldSize;

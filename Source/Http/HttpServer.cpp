@@ -126,9 +126,9 @@ CHttpServer::CHttpServer(_In_ CSockets &_cSocketMgr,
   dwRequestHeaderTimeoutMs = 30000;
   dwGracefulTerminationTimeoutMs = 30000;
   dwKeepAliveTimeoutMs = 60000;
-  dwRequestBodyMinimumThroughputInBps = 256;
+  nRequestBodyMinimumThroughputInKbps = 0.25f;
   dwRequestBodySecondsOfLowThroughput = 10;
-  dwResponseMinimumThroughputInBps = 256;
+  nResponseMinimumThroughputInKbps = 0.25f;
   dwResponseSecondsOfLowThroughput = 10;
   dwMaxHeaderSize = 16384;
   dwMaxFieldSize = 256000;
@@ -332,25 +332,25 @@ VOID CHttpServer::SetOption_KeepAliveTimeout(_In_ DWORD dwTimeoutMs)
   return;
 }
 
-VOID CHttpServer::SetOption_RequestBodyLimits(_In_ DWORD dwMinimumThroughputInBps, _In_ DWORD dwSecondsOfLowThroughput)
+VOID CHttpServer::SetOption_RequestBodyLimits(_In_ float nMinimumThroughputInKbps, _In_ DWORD dwSecondsOfLowThroughput)
 {
   CCriticalSection::CAutoLock cLock(cs);
 
   if (hAcceptConn == NULL)
   {
-    dwRequestBodyMinimumThroughputInBps = dwMinimumThroughputInBps;
+    nRequestBodyMinimumThroughputInKbps = nMinimumThroughputInKbps;
     dwRequestBodySecondsOfLowThroughput = dwSecondsOfLowThroughput;
   }
   return;
 }
 
-VOID CHttpServer::SetOption_ResponseLimits(_In_ DWORD dwMinimumThroughputInBps, _In_ DWORD dwSecondsOfLowThroughput)
+VOID CHttpServer::SetOption_ResponseLimits(_In_ float nMinimumThroughputInKbps, _In_ DWORD dwSecondsOfLowThroughput)
 {
   CCriticalSection::CAutoLock cLock(cs);
 
   if (hAcceptConn == NULL)
   {
-    dwResponseMinimumThroughputInBps = dwMinimumThroughputInBps;
+    nResponseMinimumThroughputInKbps = nMinimumThroughputInKbps;
     dwResponseSecondsOfLowThroughput = dwSecondsOfLowThroughput;
   }
   return;
@@ -665,7 +665,7 @@ VOID CHttpServer::OnThroughputTimerCallback(_In_ LONG nTimerId, _In_ LPVOID lpUs
         case CClientRequest::StateReceivingRequestBody:
           if (SUCCEEDED(cSocketMgr.GetReadStats(lpRequest->hConn, NULL, &nKbps)))
           {
-            if ((DWORD)(int)nKbps < dwRequestBodyMinimumThroughputInBps)
+            if (nKbps < nRequestBodyMinimumThroughputInKbps)
             {
               if ((++(lpRequest->dwLowThroughputCounter)) >= dwRequestBodySecondsOfLowThroughput)
               {
@@ -689,7 +689,7 @@ VOID CHttpServer::OnThroughputTimerCallback(_In_ LONG nTimerId, _In_ LPVOID lpUs
         case CClientRequest::StateSendingResponse:
           if (SUCCEEDED(cSocketMgr.GetWriteStats(lpRequest->hConn, NULL, &nKbps)))
           {
-            if ((DWORD)(int)nKbps < dwResponseMinimumThroughputInBps)
+            if (nKbps < nResponseMinimumThroughputInKbps)
             {
               if ((++(lpRequest->dwLowThroughputCounter)) >= dwResponseSecondsOfLowThroughput)
               {
