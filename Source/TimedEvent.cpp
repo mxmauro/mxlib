@@ -113,6 +113,15 @@ public:
       return TRUE;
       };
 
+    __inline BOOL SetAsCanceled(_In_ BOOL bInsideCallback)
+      {
+      LONG initVal;
+
+      initVal = _InterlockedOr(&nFlags, ((bInsideCallback == FALSE) ? _FLAG_Canceled
+                                                                    : (_FLAG_Canceled | _FLAG_CanceledInCallback)));
+      return ((initVal & _FLAG_Running) != 0) ? TRUE : FALSE;
+      };
+
     static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ CRedBlackTreeNode *lpNode1,
                                  _In_ CRedBlackTreeNode *lpNode2)
       {
@@ -407,6 +416,7 @@ VOID CTimerHandler::RemoveTimer(_Inout_ LONG volatile *lpnTimerId)
   {
     CTimer *lpTimer = NULL;
     BOOL bInsideCallback = (::GetCurrentThreadId() == GetThreadId()) ? TRUE : FALSE;
+    BOOL bIsRunning = FALSE;
 
     LONG nTimerId = _InterlockedExchange(lpnTimerId, 0);
     if (nTimerId != 0)
@@ -419,8 +429,7 @@ VOID CTimerHandler::RemoveTimer(_Inout_ LONG volatile *lpnTimerId)
       {
         lpTimer = sQueue.cSortedByIdList.GetElementAt(nIndex);
 
-        _InterlockedOr(&(lpTimer->nFlags), ((bInsideCallback == FALSE) ? _FLAG_Canceled
-                                                                       : (_FLAG_Canceled | _FLAG_CanceledInCallback)));
+        bIsRunning = lpTimer->SetAsCanceled(bInsideCallback);
 
         sQueue.cSortedByIdList.RemoveElementAt(nIndex);
         lpTimer->cTreeNode.Remove();
@@ -430,8 +439,11 @@ VOID CTimerHandler::RemoveTimer(_Inout_ LONG volatile *lpnTimerId)
     if (lpTimer != NULL)
     {
       sQueue.cChangedEvent.Set();
-
-      if (bInsideCallback == FALSE)
+      if (bIsRunning == FALSE)
+      {
+        FreeTimer(lpTimer);
+      }
+      else if (bInsideCallback == FALSE)
       {
         lpTimer->WaitWhileRunning();
         FreeTimer(lpTimer);
