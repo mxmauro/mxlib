@@ -110,12 +110,12 @@ HRESULT CField::SetString(_In_ LPCSTR _szStrA, _In_ SIZE_T _nLength)
   return S_OK;
 }
 
-HRESULT CField::SetString(_In_ LPCWSTR szStrW, _In_ SIZE_T nLength)
+HRESULT CField::SetString(_In_ LPCWSTR _szStrW, _In_ SIZE_T _nLength)
 {
   CStringA cStrTempA;
   HRESULT hRes;
 
-  hRes = Utf8_Encode(cStrTempA, szStrW, nLength);
+  hRes = Utf8_Encode(cStrTempA, _szStrW, _nLength);
   if (FAILED(hRes))
     return hRes;
 
