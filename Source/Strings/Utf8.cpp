@@ -142,7 +142,7 @@ int Utf8_DecodeChar(_Out_opt_ WCHAR szDestW[], _In_ LPCSTR szSrcA, _In_opt_ SIZE
     szDestW = chW;
 #pragma warning(suppress : 6386)
   szDestW[0] = szDestW[1] = 0;
-  if (szSrcA == NULL || *szSrcA == 0 || nSrcLen == 0)
+  if (szSrcA == NULL || nSrcLen == 0)
     return 0;
   sA = (UCHAR*)szSrcA;
   if (*sA < 0x80)
