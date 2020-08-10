@@ -51,7 +51,9 @@ VOID CTaskQueue::Finalize()
   RundownProt_WaitForRelease(&nRundownLock);
 
   while (HasPending() != FALSE)
-    ::MxSleep(10);
+  {
+    ::MxSleep(50);
+  }
   CIoCompletionPortThreadPool::Finalize();
   return;
 }

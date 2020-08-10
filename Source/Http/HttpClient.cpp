@@ -23,7 +23,6 @@
 #include "..\..\Include\MemoryStream.h"
 #include "..\..\Include\TimedEvent.h"
 #include "..\..\Include\DateTime\DateTime.h"
-#include "..\..\Include\Comm\IpcSslLayer.h"
 #include "..\..\Include\Http\Url.h"
 #include "..\..\Include\Http\HttpCommon.h"
 #include "..\..\Include\Http\HttpBodyParserJSON.h"
@@ -2420,7 +2419,6 @@ HRESULT CHttpClient::OnAddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h)
   TAutoRefCounted<CSslCertificate> cSelfCert;
   TAutoRefCounted<CEncryptionKey> cPrivKey;
   CStringA cStrHostNameA;
-  TAutoDeletePtr<CIpcSslLayer> cLayer;
   HRESULT hRes;
 
   //query for client certificates
@@ -2437,18 +2435,8 @@ HRESULT CHttpClient::OnAddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h)
     return hRes;
 
   //add ssl layer
-  cLayer.Attach(MX_DEBUG_NEW CIpcSslLayer(lpIpc));
-  if (!cLayer)
-    return E_OUTOFMEMORY;
-  hRes = cLayer->Initialize(FALSE, (LPCSTR)cStrHostNameA, cCheckCertificates.Get(), cSelfCert.Get(), cPrivKey.Get(),
-                            NULL);
-  if (SUCCEEDED(hRes))
-  {
-    hRes = lpIpc->AddLayer(h, cLayer);
-    if (SUCCEEDED(hRes))
-      cLayer.Detach();
-  }
-  return hRes;
+  return lpIpc->InitializeSSL(h, (LPCSTR)cStrHostNameA, cCheckCertificates.Get(), cSelfCert.Get(), cPrivKey.Get(),
+                              NULL);
 }
 
 VOID CHttpClient::OnRedirectOrRetryAuth(_In_ LONG nTimerId, _In_ LPVOID lpUserData, _In_opt_ LPBOOL lpbCancel)

@@ -994,7 +994,6 @@ HRESULT CHttpServer::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc:
     TAutoRefCounted<CSslCertificate> cCert;
     TAutoRefCounted<CEncryptionKey> cPrivKey;
     TAutoRefCounted<CDhParam> cDhParam;
-    TAutoDeletePtr<CIpcSslLayer> cLayer;
 
     hRes = cQuerySslCertificatesCallback(this, &cCert, &cPrivKey, &cDhParam);
     if (FAILED(hRes))
@@ -1004,16 +1003,7 @@ HRESULT CHttpServer::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc:
       if (!(cCert && cPrivKey))
         return E_FAIL;
 
-      cLayer.Attach(MX_DEBUG_NEW CIpcSslLayer(lpIpc));
-      if (!cLayer)
-        return E_OUTOFMEMORY;
-      hRes = cLayer->Initialize(TRUE, NULL, NULL, cCert.Get(), cPrivKey.Get(), cDhParam.Get());
-      if (SUCCEEDED(hRes))
-      {
-        hRes = lpIpc->AddLayer(h, cLayer.Get());
-        if (SUCCEEDED(hRes))
-          cLayer.Detach();
-      }
+      hRes = lpIpc->InitializeSSL(h, NULL, NULL, cCert.Get(), cPrivKey.Get(), cDhParam.Get());
       if (FAILED(hRes))
         return hRes;
     }

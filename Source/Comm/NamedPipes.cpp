@@ -465,6 +465,11 @@ HRESULT CNamedPipes::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPack
     case TypeListenRequest:
       if (SUCCEEDED(hRes))
       {
+        {
+          CFastLock cListLock(&(lpConn->sInUsePackets.nMutex));
+
+          lpConn->sInUsePackets.cList.QueueLast(lpPacket);
+        }
         lpPacket->SetType(TypeListen);
         lpConn->AddRef();
         if (::ConnectNamedPipe(lpConn->hPipe, lpPacket->GetOverlapped()) == FALSE)
@@ -476,14 +481,23 @@ HRESULT CNamedPipes::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPack
             hRes = S_OK;
             goto pipe_connected;
           }
+
           if (hRes == MX_E_IoPending)
+          {
             hRes = S_OK;
+          }
+          else
+          {
+            CFastLock cListLock(&(lpConn->sInUsePackets.nMutex));
+
+            lpConn->sInUsePackets.cList.Remove(lpPacket);
+          }
         }
       }
       if (FAILED(hRes))
       {
-        lpConn->cRwList.Remove(lpPacket);
         FreePacket(lpPacket);
+
         //process connection
         if (lpConn->nClass == CIpc::ConnectionClassServer && lpConn->IsClosed() == FALSE && IsShuttingDown() == FALSE)
         {
@@ -500,9 +514,10 @@ pipe_connected:
       hOrigRes = hRes;
       if (SUCCEEDED(hRes))
         hRes = lpConn->HandleConnected();
+
       //free packet
-      lpConn->cRwList.Remove(lpPacket);
       FreePacket(lpPacket);
+
       //process connection
       if (lpConn->nClass == CIpc::ConnectionClassServer && lpConn->IsClosed() == FALSE && IsShuttingDown() == FALSE)
       {
@@ -518,6 +533,7 @@ pipe_connected:
       hRes = MX_E_InvalidData;
       break;
   }
+
   //done
   return hRes;
 }
@@ -585,6 +601,7 @@ HRESULT CNamedPipes::CConnection::CreateServer()
     return MX_HRESULT_FROM_LASTERROR();
   }
   ::SetHandleInformation(hPipe, HANDLE_FLAG_INHERIT, 0);
+
   //IOCP options
   if (fnSetFileCompletionNotificationModes != NULL)
   {
@@ -594,23 +611,34 @@ HRESULT CNamedPipes::CConnection::CreateServer()
       return MX_HRESULT_FROM_LASTERROR();
     }
   }
+
   //attach to completion port
   hRes = GetDispatcherPool().Attach(hPipe, GetDispatcherPoolPacketCallback());
   if (FAILED(hRes))
     return hRes;
+
   //wait for connection
   lpPacket = GetPacket(TypeListenRequest, 0, FALSE);
   if (lpPacket == NULL)
     return E_OUTOFMEMORY;
-  cRwList.QueueLast(lpPacket);
+  {
+    CFastLock cListLock(&(sInUsePackets.nMutex));
+
+    sInUsePackets.cList.QueueLast(lpPacket);
+  }
   AddRef();
   hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, lpPacket->GetOverlapped());
   if (FAILED(hRes))
   {
-    cRwList.Remove(lpPacket);
+    {
+      CFastLock cListLock(&(sInUsePackets.nMutex));
+
+      sInUsePackets.cList.Remove(lpPacket);
+    }
     FreePacket(lpPacket);
     Release();
   }
+
   //done
   return hRes;
 }

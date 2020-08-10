@@ -17,34 +17,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef _MX_HTTPSERVER_COMMON_H
-#define _MX_HTTPSERVER_COMMON_H
-
-#include "..\..\Include\Http\HttpServer.h"
-#include "..\..\Include\Strings\Utf8.h"
-#include "..\..\Include\FnvHash.h"
-#include "..\..\Include\DateTime\DateTime.h"
-#include "..\..\Include\Http\punycode.h"
-#include "..\..\Include\Http\Url.h"
-#include "..\..\Include\MemoryStream.h"
-#include "..\..\Include\FileStream.h"
+#include "IpcDefs.h"
 
 //-----------------------------------------------------------
 
-#define REQUEST_FLAG_DontKeepAlive                    0x0001
-#define REQUEST_FLAG_ClosingOnShutdown                0x0002
-#define REQUEST_FLAG_ErrorPageSent                    0x0004
-#define REQUEST_FLAG_LinkClosed                       0x0008
-#define REQUEST_FLAG_HeadersSent                      0x0010
-#define REQUEST_FLAG_RequestTimeoutProcessed          0x0020
+namespace MX {
+
+CIpc::CMultiSendLock::CMultiSendLock(_In_ CConnectionBase *_lpConn) : CBaseMemObj(), CNonCopyableObj()
+{
+  lpConn = _lpConn;
+  lpConn->AddRef();
+
+  //apply lock
+  while ((_InterlockedOr(&(_lpConn->nFlags), FLAG_InSendTransaction) & FLAG_InSendTransaction) != 0)
+    _YieldProcessor();
+  return;
+}
+
+CIpc::CMultiSendLock::~CMultiSendLock()
+{
+  _InterlockedAnd(&(lpConn->nFlags), ~FLAG_InSendTransaction);
+  lpConn->Release();
+  return;
+}
 
 //-----------------------------------------------------------
 
-typedef struct {
-  int nErrorCode;
-  LPCSTR szMsgA;
-} HTTPSERVER_ERROR_MSG;
+CIpc::CAutoMultiSendLock::CAutoMultiSendLock(_In_ CMultiSendLock *_lpLock) : CBaseMemObj(), CNonCopyableObj()
+{
+  lpLock = _lpLock;
+  return;
+}
 
-//-----------------------------------------------------------
+CIpc::CAutoMultiSendLock::~CAutoMultiSendLock()
+{
+  if (lpLock != NULL)
+    delete lpLock;
+  return;
+}
 
-#endif //_MX_HTTPSERVER_COMMON_H
+} //namespace MX

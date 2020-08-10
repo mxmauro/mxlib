@@ -26,6 +26,7 @@
 #include <OpenSSL\err.h>
 #include <OpenSSL\conf.h>
 #include <OpenSSL\pkcs12err.h>
+#include <corecrt_share.h>
 
 #pragma comment(lib, "libssl.lib")
 #pragma comment(lib, "libcrypto.lib")
@@ -34,8 +35,6 @@
 
 #define OPENSSL_FINALIZER_PRIORITY 10000
 
-//#define AVAILABLE_CIPHER_SUITES "ALL:!EXPORT:!LOW:!aNULL:!eNULL:!SSLv2:!ADH:!EDH:!DH:!IDEA:!FZA:!RC4"
-//#define AVAILABLE_CIPHER_SUITES "HIGH:!aNULL:!MD5"
 #define AVAILABLE_CIPHER_SUITES "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:"               \
                                 "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:"               \
                                 "ECDHE-ECDSA-CHACHA20-POLY1305-SHA256:ECDHE-RSA-CHACHA20-POLY1305-SHA256:" \
@@ -45,7 +44,16 @@
                                 "DHE-RSA-ARIA-128-GCM-SHA256:DHE-RSA-ARIA256-GCM-SHA384"
                                 //"AES128-GCM-SHA256:AES256-GCM-SHA384:" //weak
 
+//NOTE: This cipher suite can be used for debugging TLS with WireShark
+//#define AVAILABLE_CIPHER_SUITES "AES128-SHA256:AES256-SHA256:AES128-GCM-SHA256:AES256-GCM-SHA384"
+
 #define __HEAPS_COUNT 64
+
+#ifdef _DEBUG
+  #define __ENABLE_KEYLOG_CAPTURE
+#else //_DEBUG
+  //#define __ENABLE_KEYLOG_CAPTURE
+#endif //_DEBUG
 
 //-----------------------------------------------------------
 
@@ -54,6 +62,12 @@ static SSL_CTX* volatile lpSslContexts[2] = { NULL, NULL };
 #if defined(__HEAPS_COUNT) && __HEAPS_COUNT > 0
 static HANDLE hHeaps[__HEAPS_COUNT] = { 0 };
 #endif //__HEAPS_COUNT && __HEAPS_COUNT > 0
+#ifdef __ENABLE_KEYLOG_CAPTURE
+static struct {
+  LONG volatile nMutex;
+  FILE *fp;
+} sKeyLogger = { 0 };
+#endif //__ENABLE_KEYLOG_CAPTURE
 
 //-----------------------------------------------------------
 
@@ -71,6 +85,10 @@ static void* __cdecl my_malloc_withinfo(size_t _Size, const char *_filename, int
 static void* __cdecl my_realloc_withinfo(void *_Memory, size_t _NewSize, const char *_filename, int _linenum);
 static void __cdecl my_free(void * _Memory, const char *_filename, int _linenum);
 #endif //__HEAPS_COUNT && __HEAPS_COUNT > 0
+#ifdef __ENABLE_KEYLOG_CAPTURE
+static VOID InitializeKeyLogger();
+static void ssl_keylog_capture(const SSL *ssl, const char *line);
+#endif //__ENABLE_KEYLOG_CAPTURE
 
 //-----------------------------------------------------------
 
@@ -181,6 +199,14 @@ SSL_CTX* GetSslContext(_In_ BOOL bServerSide)
       //SSL_CTX_sess_set_remove_cb(lpSslCtx, RemoveSessionCallbackStatic);
       SSL_CTX_set_timeout(lpSslCtx, 300);
       SSL_CTX_set_read_ahead(lpSslCtx, 1);
+
+#ifdef __ENABLE_KEYLOG_CAPTURE
+      if (sKeyLogger.fp != NULL)
+      {
+        SSL_CTX_set_keylog_callback(lpSslCtx, ssl_keylog_capture);
+      }
+#endif //__ENABLE_KEYLOG_CAPTURE
+
       //----
       __InterlockedExchangePointer((volatile LPVOID *)&(lpSslContexts[(bServerSide != FALSE) ? 1 : 0]), lpSslCtx);
     }
@@ -255,6 +281,10 @@ static HRESULT _OpenSSL_Init()
         return hRes;
       }
 
+#ifdef __ENABLE_KEYLOG_CAPTURE
+      InitializeKeyLogger();
+#endif //__ENABLE_KEYLOG_CAPTURE
+
       //done
       _InterlockedExchange(&nInitialized, 1);
     }
@@ -289,6 +319,14 @@ static VOID OpenSSL_Shutdown()
     hHeaps[i] = NULL;
   }
 #endif //__HEAPS_COUNT && __HEAPS_COUNT > 0
+
+#ifdef __ENABLE_KEYLOG_CAPTURE
+  if (sKeyLogger.fp != NULL)
+  {
+    fclose(sKeyLogger.fp);
+    sKeyLogger.fp = NULL;
+  }
+#endif //__ENABLE_KEYLOG_CAPTURE
   return;
 }
 
@@ -348,3 +386,27 @@ static void __cdecl my_free(void *_Memory, const char *_filename, int _linenum)
   return;
 }
 #endif //__HEAPS_COUNT && __HEAPS_COUNT > 0
+
+#ifdef __ENABLE_KEYLOG_CAPTURE
+static VOID InitializeKeyLogger()
+{
+  WCHAR szFileNameW[2048];
+  DWORD dw;
+
+  dw = ::GetEnvironmentVariableW(L"SSLKEYLOGFILE", szFileNameW, MX_ARRAYLEN(szFileNameW) - 1);
+  if (dw == 0)
+    return;
+  szFileNameW[dw] = 0;
+
+  sKeyLogger.fp = _wfsopen(szFileNameW, L"a+t", _SH_DENYNO);
+  return;
+}
+
+static void ssl_keylog_capture(const SSL *ssl, const char *line)
+{
+  MX::CFastLock cLock(&(sKeyLogger.nMutex));
+
+  fprintf_s(sKeyLogger.fp, "%s\n", line);
+  return;
+}
+#endif //__ENABLE_KEYLOG_CAPTURE

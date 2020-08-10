@@ -30,20 +30,18 @@
 
 //#define USE_CRT_ALLOC
 #ifdef _DEBUG
-  #define DO_HEAP_CHECK
   #define HEAP_CHECK_CAPTURE_STACK
 #else //_DEBUG
-  //#define DO_HEAP_CHECK
   //#define HEAP_CHECK_CAPTURE_STACK
 #endif //_DEBUG
 
-#if defined(DO_HEAP_CHECK) && defined(HEAP_CHECK_CAPTURE_STACK)
+#if defined(MX_MEMORY_OBJECTS_HEAP_CHECK) && defined(HEAP_CHECK_CAPTURE_STACK)
   #define HEAP_CHECK_STACK_ENTRIES  32
-#endif //DO_HEAP_CHECK && HEAP_CHECK_CAPTURE_STACK
+#endif //MX_MEMORY_OBJECTS_HEAP_CHECK && HEAP_CHECK_CAPTURE_STACK
 
 //-----------------------------------------------------------
 
-#if defined(DO_HEAP_CHECK) && defined(HEAP_CHECK_CAPTURE_STACK)
+#if defined(MX_MEMORY_OBJECTS_HEAP_CHECK) && defined(HEAP_CHECK_CAPTURE_STACK)
 #include <ImageHlp.h>
 #include <VersionHelpers.h>
 
@@ -54,9 +52,11 @@ typedef BOOL (WINAPI *lpfnSymRefreshModuleList)(_In_ HANDLE hProcess);
 typedef BOOL (WINAPI *lpfnSymFromAddrW)(_In_ HANDLE hProcess, _In_ DWORD64 Address, _Out_opt_ PDWORD64 Displacement,
                                         _Inout_ PSYMBOL_INFOW Symbol);
 typedef LPAPI_VERSION (WINAPI *lpfnImagehlpApiVersion)(VOID);
-#endif //DO_HEAP_CHECK && HEAP_CHECK_CAPTURE_STACK
+#endif //MX_MEMORY_OBJECTS_HEAP_CHECK && HEAP_CHECK_CAPTURE_STACK
 
-#ifdef DO_HEAP_CHECK
+#ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
+  #include "..\Include\Strings\Strings.h"
+
   #if defined(_M_X64)
     #define MX_UNALIGNED __unaligned
   #else
@@ -100,13 +100,13 @@ typedef LPAPI_VERSION (WINAPI *lpfnImagehlpApiVersion)(VOID);
   #define EXTRA_ALLOC (sizeof(MINIDEBUG_PREBLOCK)+sizeof(MINIDEBUG_POSTBLOCK))
 
   #define CHECK_COUNTER_START 128
-#endif //DO_HEAP_CHECK
+#endif //MX_MEMORY_OBJECTS_HEAP_CHECK
 
 #define XISALIGNED(x)  ((((SIZE_T)(x)) & (sizeof(SIZE_T)-1)) == 0)
 
 //-----------------------------------------------------------
 
-#ifdef DO_HEAP_CHECK
+#ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
 #ifdef HEAP_CHECK_CAPTURE_STACK
 static int __cdecl InitializeMemory();
 #endif //HEAP_CHECK_CAPTURE_STACK
@@ -118,7 +118,7 @@ static VOID CheckBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk);
 static VOID LinkBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk);
 static VOID UnlinkBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk);
 static VOID AssertNotTag(_In_ MINIDEBUG_PREBLOCK *pPreBlk);
-static VOID DumpLeaks();
+static VOID DumpAllLeaks();
 
 #ifdef HEAP_CHECK_CAPTURE_STACK
 static HINSTANCE hDbgHelpDLL = NULL;
@@ -129,11 +129,11 @@ static lpfnSymFromAddrW fnSymFromAddrW = NULL;
 static lpfnImagehlpApiVersion fnImagehlpApiVersion = NULL;
 #endif //HEAP_CHECK_CAPTURE_STACK
 
-#endif //DO_HEAP_CHECK
+#endif //MX_MEMORY_OBJECTS_HEAP_CHECK
 
 //-----------------------------------------------------------
 
-#ifdef DO_HEAP_CHECK
+#ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
 #ifdef HEAP_CHECK_CAPTURE_STACK
 typedef int (*_PIFV)(void);
 #endif //HEAP_CHECK_CAPTURE_STACK
@@ -147,12 +147,12 @@ extern "C" __declspec(allocate(".CRT$XIAZ")) const _PIFV ___mx_memory_init = &In
 
 MX_LINKER_FORCE_INCLUDE(___mx_memory_finalize);
 #pragma section(".CRT$XTY", long, read)  // NOLINT
-extern "C" __declspec(allocate(".CRT$XTY")) const _PVFV ___mx_memory_finalize = &DumpLeaks;
-#endif //DO_HEAP_CHECK
+extern "C" __declspec(allocate(".CRT$XTY")) const _PVFV ___mx_memory_finalize = &DumpAllLeaks;
+#endif //MX_MEMORY_OBJECTS_HEAP_CHECK
 
 //-----------------------------------------------------------
 
-#ifdef DO_HEAP_CHECK
+#ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
 static struct {
   LONG volatile nMutex;
   LONG volatile nCount;
@@ -160,7 +160,7 @@ static struct {
   MINIDEBUG_PREBLOCK *lpHead;
   MINIDEBUG_PREBLOCK *lpTail;
 } sAllocatedBlocks = { 0, 0, /*CHECK_COUNTER_START, */NULL, NULL };
-#endif //DO_HEAP_CHECK
+#endif //MX_MEMORY_OBJECTS_HEAP_CHECK
 
 //-----------------------------------------------------------
 
@@ -180,17 +180,17 @@ void* MxMemAlloc(_In_ size_t nSize)
 
 #else //USE_CRT_ALLOC
 
-#ifdef DO_HEAP_CHECK
+#ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
   LPBYTE p;
   MINIDEBUG_PREBLOCK *pPreBlk;
   LPVOID lpRetAddress;
 
   lpRetAddress = _ReturnAddress();
-#endif //DO_HEAP_CHECK
+#endif //MX_MEMORY_OBJECTS_HEAP_CHECK
 
   if (nSize == 0)
     nSize = 1;
-#ifdef DO_HEAP_CHECK
+#ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
   //CheckBlocks();
   p = (LPBYTE)::MxRtlAllocateHeap(::MxGetProcessHeap(), 0, nSize + EXTRA_ALLOC);
   if (p != NULL)
@@ -201,9 +201,9 @@ void* MxMemAlloc(_In_ size_t nSize)
     p += sizeof(MINIDEBUG_PREBLOCK);
   }
   return p;
-#else //DO_HEAP_CHECK
+#else //MX_MEMORY_OBJECTS_HEAP_CHECK
   return ::MxRtlAllocateHeap(::MxGetProcessHeap(), 0, nSize);
-#endif //DO_HEAP_CHECK
+#endif //MX_MEMORY_OBJECTS_HEAP_CHECK
 
 #endif //USE_CRT_ALLOC
 }
@@ -220,17 +220,17 @@ void* MxMemAllocD(_In_ size_t nSize, _In_opt_z_ const char *szFilenameA, _In_ in
 
 #else //USE_CRT_ALLOC
 
-#ifdef DO_HEAP_CHECK
+#ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
   LPBYTE p;
   MINIDEBUG_PREBLOCK *pPreBlk;
   LPVOID lpRetAddress;
 
   lpRetAddress = _ReturnAddress();
-#endif //DO_HEAP_CHECK
+#endif //MX_MEMORY_OBJECTS_HEAP_CHECK
 
   if (nSize == 0)
     nSize = 1;
-#ifdef DO_HEAP_CHECK
+#ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
   //CheckBlocks();
   p = (LPBYTE)::MxRtlAllocateHeap(::MxGetProcessHeap(), 0, nSize+EXTRA_ALLOC);
   if (p != NULL)
@@ -241,9 +241,9 @@ void* MxMemAllocD(_In_ size_t nSize, _In_opt_z_ const char *szFilenameA, _In_ in
     p += sizeof(MINIDEBUG_PREBLOCK);
   }
   return p;
-#else //DO_HEAP_CHECK
+#else //MX_MEMORY_OBJECTS_HEAP_CHECK
   return ::MxRtlAllocateHeap(::MxGetProcessHeap(), 0, nSize);
-#endif //DO_HEAP_CHECK
+#endif //MX_MEMORY_OBJECTS_HEAP_CHECK
 
 #endif //USE_CRT_ALLOC
 }
@@ -260,11 +260,11 @@ void* MxMemRealloc(_In_opt_ void *lpPtr, _In_ size_t nSize)
 
 #else //USE_CRT_ALLOC
 
-#ifdef DO_HEAP_CHECK
+#ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
   MINIDEBUG_PREBLOCK *pPreBlk;
   LPBYTE p;
   LPVOID lpRetAddress;
-#endif //DO_HEAP_CHECK
+#endif //MX_MEMORY_OBJECTS_HEAP_CHECK
 
   if (nSize == 0)
   {
@@ -274,7 +274,7 @@ void* MxMemRealloc(_In_opt_ void *lpPtr, _In_ size_t nSize)
   if (lpPtr == NULL)
     return ::MxMemAllocD(nSize, NULL, 0);
 
-#ifdef DO_HEAP_CHECK
+#ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
   lpRetAddress = _ReturnAddress();
 
   //CheckBlocks();
@@ -295,9 +295,9 @@ void* MxMemRealloc(_In_opt_ void *lpPtr, _In_ size_t nSize)
   }
   LinkBlock(pPreBlk);
   return p;
-#else //DO_HEAP_CHECK
+#else //MX_MEMORY_OBJECTS_HEAP_CHECK
   return ::MxRtlReAllocateHeap(::MxGetProcessHeap(), 0, lpPtr, nSize);
-#endif //DO_HEAP_CHECK
+#endif //MX_MEMORY_OBJECTS_HEAP_CHECK
 
 #endif //USE_CRT_ALLOC
 }
@@ -314,11 +314,11 @@ void* MxMemReallocD(_In_opt_ void *lpPtr, _In_ size_t nSize, _In_opt_z_ const ch
 
 #else //USE_CRT_ALLOC
 
-#ifdef DO_HEAP_CHECK
+#ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
   MINIDEBUG_PREBLOCK *pPreBlk;
   LPBYTE p;
   LPVOID lpRetAddress;
-#endif //DO_HEAP_CHECK
+#endif //MX_MEMORY_OBJECTS_HEAP_CHECK
 
   if (nSize == 0)
   {
@@ -328,7 +328,7 @@ void* MxMemReallocD(_In_opt_ void *lpPtr, _In_ size_t nSize, _In_opt_z_ const ch
   if (lpPtr == NULL)
     return ::MxMemAllocD(nSize, szFilenameA, nLineNumber);
 
-#ifdef DO_HEAP_CHECK
+#ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
   lpRetAddress = _ReturnAddress();
 
   //CheckBlocks();
@@ -349,9 +349,9 @@ void* MxMemReallocD(_In_opt_ void *lpPtr, _In_ size_t nSize, _In_opt_z_ const ch
   }
   LinkBlock(pPreBlk);
   return p;
-#else //DO_HEAP_CHECK
+#else //MX_MEMORY_OBJECTS_HEAP_CHECK
   return ::MxRtlReAllocateHeap(::MxGetProcessHeap(), 0, lpPtr, nSize);
-#endif //DO_HEAP_CHECK
+#endif //MX_MEMORY_OBJECTS_HEAP_CHECK
 
 #endif //USE_CRT_ALLOC
 }
@@ -370,7 +370,7 @@ void MxMemFree(_In_opt_ void *lpPtr)
 
   if (lpPtr != NULL)
   {
-#ifdef DO_HEAP_CHECK
+#ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
     MINIDEBUG_PREBLOCK *pPreBlk;
 
     //CheckBlocks();
@@ -379,7 +379,7 @@ void MxMemFree(_In_opt_ void *lpPtr)
     UnlinkBlock(pPreBlk);
     SetBlockTags(pPreBlk, TRUE);
     lpPtr = pPreBlk;
-#endif //DO_HEAP_CHECK
+#endif //MX_MEMORY_OBJECTS_HEAP_CHECK
     ::MxRtlFreeHeap(::MxGetProcessHeap(), 0, lpPtr);
   }
 
@@ -401,7 +401,7 @@ size_t MxMemSize(_In_opt_ void *lpPtr)
 
   if (lpPtr != NULL)
   {
-#ifdef DO_HEAP_CHECK
+#ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
     MINIDEBUG_PREBLOCK *pPreBlk;
     SIZE_T nSize;
 
@@ -410,9 +410,9 @@ size_t MxMemSize(_In_opt_ void *lpPtr)
     CheckBlock(pPreBlk);
     nSize = ::MxRtlSizeHeap(::MxGetProcessHeap(), 0, pPreBlk);
     return (nSize > EXTRA_ALLOC) ? (nSize - EXTRA_ALLOC) : 0;
-#else //DO_HEAP_CHECK
+#else //MX_MEMORY_OBJECTS_HEAP_CHECK
     return ::MxRtlSizeHeap(::MxGetProcessHeap(), 0, lpPtr);
-#endif //DO_HEAP_CHECK
+#endif //MX_MEMORY_OBJECTS_HEAP_CHECK
   }
   return 0;
 
@@ -574,7 +574,7 @@ int MxMemCompare(_In_ const void *lpSrc1, _In_ const void *lpSrc2, _In_ size_t n
 
 //-----------------------------------------------------------
 
-#ifdef DO_HEAP_CHECK
+#ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
 
 #ifdef HEAP_CHECK_CAPTURE_STACK
 static int __cdecl InitializeMemory()
@@ -784,7 +784,17 @@ static VOID AssertNotTag(_In_ MINIDEBUG_PREBLOCK *pPreBlk)
   return;
 }
 
-static VOID DumpLeaks()
+static VOID DumpAllLeaks()
+{
+  MxDumpLeaks(NULL);
+  return;
+}
+
+#ifdef __cplusplus
+extern "C" {
+#endif //__cplusplus
+
+VOID MxDumpLeaks(_In_opt_z_ LPCSTR szFilenameA)
 {
   MX::CFastLock cLock(&(sAllocatedBlocks.nMutex));
   CHAR szBufferA[512];
@@ -798,12 +808,25 @@ static VOID DumpLeaks()
   DWORD64 qwDisp;
 #endif //HEAP_CHECK_CAPTURE_STACK
 
-  for (lpBlock=sAllocatedBlocks.lpHead; lpBlock!=NULL; lpBlock=lpBlock->lpNext)
+#ifdef HEAP_CHECK_CAPTURE_STACK
+  if (sAllocatedBlocks.lpHead != NULL && fnSymRefreshModuleList != NULL)
+  {
+    fnSymRefreshModuleList(::GetCurrentProcess());
+  }
+#endif //HEAP_CHECK_CAPTURE_STACK
+
+  for (lpBlock = sAllocatedBlocks.lpHead; lpBlock != NULL; lpBlock = lpBlock->lpNext)
   {
     LPBYTE p = (LPBYTE)(lpBlock+1);
 
     if (lpBlock->szFilenameA != NULL && lpBlock->szFilenameA[0] != 0)
     {
+      if (szFilenameA != NULL)
+      {
+        if (MX::StrCompareA(szFilenameA, lpBlock->szFilenameA, TRUE) != 0)
+          continue;
+      }
+
       MX::DebugPrint("MXLIB: Leak 0x%p (%Iu bytes): [%02X %02X %02X %02X %02X %02X %02X %02X] / RA:0x%p / %s[%lu]\n",
                      p, (SIZE_T)((LPBYTE)(lpBlock->lpPost) - p),
                      p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], lpBlock->lpRetAddress,
@@ -811,6 +834,8 @@ static VOID DumpLeaks()
     }
     else
     {
+      if (szFilenameA != NULL)
+        continue;
       MX::DebugPrint("MXLIB: Leak 0x%p (%Iu bytes): [%02X %02X %02X %02X %02X %02X %02X %02X] / RA:0x%p\n",
                      p, (SIZE_T)((LPBYTE)(lpBlock->lpPost) - p),
                      p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], lpBlock->lpRetAddress);
@@ -819,11 +844,6 @@ static VOID DumpLeaks()
 #ifdef HEAP_CHECK_CAPTURE_STACK
     if (fnSymFromAddrW != NULL)
     {
-      if (fnSymRefreshModuleList != NULL)
-      {
-        fnSymRefreshModuleList(::GetCurrentProcess());
-      }
-
       for (nIdx = 0; nIdx < HEAP_CHECK_STACK_ENTRIES; nIdx++)
       {
         if (lpBlock->nStackValues[nIdx] == 0)
@@ -868,4 +888,9 @@ static VOID DumpLeaks()
   }
   return;
 }
-#endif //DO_HEAP_CHECK
+
+#ifdef __cplusplus
+} //extern "C"
+#endif //__cplusplus
+
+#endif //MX_MEMORY_OBJECTS_HEAP_CHECK

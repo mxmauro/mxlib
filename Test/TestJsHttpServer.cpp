@@ -147,12 +147,12 @@ public:
 
 public:
   MX::CIoCompletionPortThreadPool cDispatcherPool;
-  MX::CTaskQueue cTaskQueue;
   MX::CSockets cSckMgr;
-  MX::CJsHttpServer cJsHttpServer;
   MX::TAutoRefCounted<MX::CSslCertificate> cSslCert;
   MX::TAutoRefCounted<MX::CEncryptionKey> cSslPrivateKey;
   MX::TAutoRefCounted<MX::CDhParam> cSslDhParam;
+  MX::CJsHttpServer cJsHttpServer; //NOTE: At the end else certificates can be destroyed before
+  MX::CTaskQueue cTaskQueue;
 };
 
 //-----------------------------------------------------------

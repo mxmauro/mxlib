@@ -23,7 +23,6 @@
 #include "..\Defines.h"
 #include "..\Callbacks.h"
 #include "..\Comm\Sockets.h"
-#include "..\Comm\IpcSslLayer.h"
 #include "HttpCommon.h"
 #include "HttpCookie.h"
 #include "HttpBodyParserDefault.h"

@@ -22,6 +22,12 @@
 
 #include "MallocMacros.h"
 
+#ifdef _DEBUG
+  #define MX_MEMORY_OBJECTS_HEAP_CHECK
+#else //_DEBUG
+ //#define MX_MEMORY_OBJECTS_HEAP_CHECK
+#endif //_DEBUG
+
 //-----------------------------------------------------------
 
 #ifdef __cplusplus
@@ -158,6 +164,22 @@ protected:
 } //namespace MX
 
 #endif //__cplusplus
+
+//-----------------------------------------------------------
+
+#ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
+
+#ifdef __cplusplus
+extern "C" {
+#endif //__cplusplus
+
+VOID MxDumpLeaks(_In_opt_z_ LPCSTR szFilenameA);
+
+#ifdef __cplusplus
+} //extern "C"
+#endif //__cplusplus
+
+#endif //MX_MEMORY_OBJECTS_HEAP_CHECK
 
 //-----------------------------------------------------------
 

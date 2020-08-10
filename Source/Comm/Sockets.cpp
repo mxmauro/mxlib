@@ -668,7 +668,8 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket,
       RESOLVEADDRESS_PACKET_DATA *lpData = (RESOLVEADDRESS_PACKET_DATA*)(lpPacket->GetBuffer());
 
       //copy address
-      MxMemCopy(&(lpConn->sAddr), &(lpData->sAddr), sizeof(lpData->sAddr));
+      ::MxMemCopy(&(lpConn->sAddr), &(lpData->sAddr), sizeof(lpData->sAddr));
+
       //connect/listen
       switch (lpConn->nClass)
       {
@@ -685,6 +686,9 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket,
         default:
           MX_ASSERT(FALSE);
       }
+
+      //free packet
+      FreePacket(lpPacket);
       }
       break;
 
@@ -720,7 +724,7 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket,
                  &lpLocalAddr, &nLocalAddrLen, &lpPeerAddr, &nPeerAddrLen);
         if (lpPeerAddr != NULL && nPeerAddrLen >= (INT)SockAddrSizeFromWinSockFamily(lpConn->sAddr.si_family))
         {
-          MxMemCopy(&(lpIncomingConn->sAddr.Ipv4), (PSOCKADDR_IN)lpPeerAddr, sizeof(SOCKADDR_IN));
+          ::MxMemCopy(&(lpIncomingConn->sAddr.Ipv4), (PSOCKADDR_IN)lpPeerAddr, sizeof(SOCKADDR_IN));
         }
         else
         {
@@ -731,15 +735,15 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket,
           {
             if (sPeerAddr.si_family == AF_INET && len >= sizeof(SOCKADDR_IN))
             {
-              MxMemCopy(&(lpIncomingConn->sAddr.Ipv4), (PSOCKADDR_IN)&sPeerAddr, sizeof(SOCKADDR_IN));
+              ::MxMemCopy(&(lpIncomingConn->sAddr.Ipv4), (PSOCKADDR_IN)&sPeerAddr, sizeof(SOCKADDR_IN));
             }
             else if (sPeerAddr.si_family == AF_INET6 && len >= sizeof(SOCKADDR_IN6))
             {
-              MxMemCopy(&(lpIncomingConn->sAddr.Ipv6), (PSOCKADDR_IN6)&sPeerAddr, sizeof(SOCKADDR_IN6));
+              ::MxMemCopy(&(lpIncomingConn->sAddr.Ipv6), (PSOCKADDR_IN6)&sPeerAddr, sizeof(SOCKADDR_IN6));
             }
             else
             {
-              MxMemCopy(&(lpIncomingConn->sAddr), (sockaddr*)&sPeerAddr, sizeof((lpIncomingConn->sAddr)));
+              ::MxMemCopy(&(lpIncomingConn->sAddr), (sockaddr*)&sPeerAddr, sizeof((lpIncomingConn->sAddr)));
               hRes = E_FAIL;
             }
           }
@@ -757,10 +761,11 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket,
         hRes = lpIncomingConn->HandleConnected();
       if (FAILED(hRes))
         lpIncomingConn->Close(hRes);
-      //free packet
       lpIncomingConn->Release();
-      lpConn->cRwList.Remove(lpPacket);
+
+      //free packet
       FreePacket(lpPacket);
+
       //done
       hRes = S_OK;
       }
@@ -779,8 +784,8 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket,
       }
       if (SUCCEEDED(hRes))
         hRes = lpConn->HandleConnected();
+
       //free packet
-      lpConn->cRwList.Remove(lpPacket);
       FreePacket(lpPacket);
       break;
   }
@@ -1093,15 +1098,19 @@ HRESULT CSockets::CConnection::SetupClient()
   HRESULT hRes;
 
   fnConnectEx = GetConnectEx(sck);
-  //----
-  MxMemSet(&sBindAddr, 0, sizeof(sBindAddr));
+
+  ::MxMemSet(&sBindAddr, 0, sizeof(sBindAddr));
   sBindAddr.si_family = sAddr.si_family;
   if (::bind(sck, (sockaddr*)&sBindAddr, SockAddrSizeFromWinSockFamily(sAddr.si_family)) == SOCKET_ERROR)
     return MX_HRESULT_FROM_LASTSOCKETERROR();
   lpPacket = GetPacket(((fnConnectEx != NULL) ? (TypeConnectEx) : (TypeConnect)), 0, FALSE);
   if (lpPacket == NULL)
     return E_OUTOFMEMORY;
-  cRwList.QueueLast(lpPacket);
+  {
+    CFastLock cListLock(&(sInUsePackets.nMutex));
+
+    sInUsePackets.cList.QueueLast(lpPacket);
+  }
   hRes = S_OK;
   if (lpIpc->ShouldLog(2) != FALSE)
   {
@@ -1110,6 +1119,7 @@ HRESULT CSockets::CConnection::SetupClient()
                lpPacket->GetOverlapped(), lpPacket->GetType());
     cLogTimer.ResetToLastMark();
   }
+
   if (fnConnectEx != NULL)
   {
     DWORD dw;
@@ -1167,9 +1177,15 @@ HRESULT CSockets::CConnection::SetupClient()
   }
   if (FAILED(hRes))
   {
-    cRwList.Remove(lpPacket);
+    {
+      CFastLock cListLock(&(sInUsePackets.nMutex));
+
+      sInUsePackets.cList.Remove(lpPacket);
+    }
     FreePacket(lpPacket);
   }
+
+  //done
   return hRes;
 }
 
@@ -1184,7 +1200,11 @@ HRESULT CSockets::CConnection::SetupAcceptEx(_In_ CConnection *lpIncomingConn)
   lpPacket = GetPacket(TypeAcceptEx, nReq * 2, FALSE);
   if (lpPacket == NULL)
     return E_OUTOFMEMORY;
-  cRwList.QueueLast(lpPacket);
+  {
+    CFastLock cListLock(&(sInUsePackets.nMutex));
+
+    sInUsePackets.cList.QueueLast(lpPacket);
+  }
   lpPacket->SetUserData(lpIncomingConn);
   lpPacket->SetBytesInUse((DWORD)nReq);
   AddRef();
@@ -1230,15 +1250,22 @@ HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _I
   if (szAddressA == NULL || *szAddressA == 0)
     szAddressA = (nFamily != FamilyIPv6) ? "0.0.0.0" : "::";
   nAddrLen = MX::StrLenA(szAddressA);
+
   //create packet
   sHostResolver.lpPacket = GetPacket(TypeResolvingAddress, sizeof(RESOLVEADDRESS_PACKET_DATA), TRUE);
   if (sHostResolver.lpPacket == NULL)
     return E_OUTOFMEMORY;
   lpData = (RESOLVEADDRESS_PACKET_DATA*)(sHostResolver.lpPacket->GetBuffer());
-  MxMemSet(lpData, 0, sizeof(RESOLVEADDRESS_PACKET_DATA));
+  ::MxMemSet(lpData, 0, sizeof(RESOLVEADDRESS_PACKET_DATA));
   lpData->wPort = (WORD)nPort;
+
   //queue
-  cRwList.QueueLast(sHostResolver.lpPacket);
+  {
+    CFastLock cListLock(&(sInUsePackets.nMutex));
+
+    sInUsePackets.cList.QueueLast(sHostResolver.lpPacket);
+  }
+
   //try to resolve the address
   if (lpIpc->ShouldLog(2) != FALSE)
   {
@@ -1247,6 +1274,7 @@ HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _I
                this, sHostResolver.lpPacket->GetOverlapped(), sHostResolver.lpPacket->GetType());
     cLogTimer.ResetToLastMark();
   }
+
   //start address resolving with a timeout
   AddRef();
   hRes = HostResolver::Resolve(szAddressA, FamilyToWinSockFamily(nFamily), &(lpData->sAddr),
@@ -1271,7 +1299,11 @@ HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _I
   {
 err_cannot_resolve:
     Release();
-    cRwList.Remove(sHostResolver.lpPacket);
+    {
+      CFastLock cListLock(&(sInUsePackets.nMutex));
+
+      sInUsePackets.cList.Remove(sHostResolver.lpPacket);
+    }
     FreePacket(sHostResolver.lpPacket);
     sHostResolver.lpPacket = NULL;
   }
@@ -1342,7 +1374,7 @@ HRESULT CSockets::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket, _Out_
   }
   bAdjustSndBuf = FALSE;
   dwBuffersCount = 0;
-  for (lpCurrPacket = lpPacket; lpCurrPacket != NULL; lpCurrPacket = lpCurrPacket->GetChainedPacket())
+  for (lpCurrPacket = lpPacket; lpCurrPacket != NULL; lpCurrPacket = lpCurrPacket->GetLinkedPacket())
   {
     aWsaBuf[dwBuffersCount].buf = (char*)(lpCurrPacket->GetBuffer());
     aWsaBuf[dwBuffersCount].len = (ULONG)(lpCurrPacket->GetBytesInUse());
@@ -1427,6 +1459,7 @@ VOID CSockets::CConnection::HostResolveCallback(_In_ LONG nResolverId, _In_ PSOC
                      sHostResolver.lpPacket->GetType());
           cLogTimer.ResetToLastMark();
         }
+
         //set port
         switch (lpData->sAddr.si_family)
         {
@@ -1437,6 +1470,7 @@ VOID CSockets::CConnection::HostResolveCallback(_In_ LONG nResolverId, _In_ PSOC
             lpData->sAddr.Ipv6.sin6_port = htons(lpData->wPort);
             break;
         }
+
         //dispatch
         AddRef();
         hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, sHostResolver.lpPacket->GetOverlapped());
@@ -1452,12 +1486,18 @@ VOID CSockets::CConnection::HostResolveCallback(_In_ LONG nResolverId, _In_ PSOC
     {
       hRes = MX_E_Cancelled;
     }
+
     if (FAILED(hRes))
     {
-      cRwList.Remove(sHostResolver.lpPacket);
+      {
+        CFastLock cListLock(&(sInUsePackets.nMutex));
+
+        sInUsePackets.cList.Remove(sHostResolver.lpPacket);
+      }
       FreePacket(sHostResolver.lpPacket);
-      sHostResolver.lpPacket = NULL;
     }
+
+    sHostResolver.lpPacket = NULL;
   }
   //----
   if (FAILED(hRes))
@@ -1566,14 +1606,20 @@ VOID CSockets::CConnection::CConnectWaiter::ThreadProc()
   }
   if (FAILED(hRes))
   {
-    lpConn->cRwList.Remove(lpPacket);
+    {
+      CFastLock cListLock(&(lpConn->sInUsePackets.nMutex));
+
+      lpConn->sInUsePackets.cList.Remove(lpPacket);
+    }
     lpConn->FreePacket(lpPacket);
   }
   lpWorkerThread = NULL;
   lpPacket = NULL;
+
   //----
   if (FAILED(hRes))
     lpConn->Close(hRes);
+
   //release myself
   lpConn->Release();
   return;

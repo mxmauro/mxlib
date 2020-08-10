@@ -35,6 +35,11 @@
 #include "..\Loggable.h"
 #include "..\Timer.h"
 #include "..\RedBlackTree.h"
+#include "..\Crypto\DhParam.h"
+#include "SslCertificates.h"
+typedef struct ssl_st SSL;
+typedef struct ssl_ctx_st SSL_CTX;
+typedef struct bio_st BIO;
 
 #define MX_IPC_DEBUG_PRINT(level, output) if (MX::CIpc::nDebugLevel >= level) {  \
                                             MX::DebugPrint output;               \
@@ -48,14 +53,13 @@ class MX_NOVTABLE CIpc : public virtual CBaseMemObj, public CLoggable
 {
 protected:
   class CConnectionBase;
-public:
   class CPacketBase;
-  class CLayer;
 
 #ifdef MX_IPC_DEBUG_OUTPUT
   static LONG nDebugLevel;
 #endif //MX_IPC_DEBUG_OUTPUT
 
+public:
   typedef enum {
     ConnectionClassError=-1,
     ConnectionClassUnknown=0,
@@ -66,6 +70,7 @@ public:
 
   //--------
 
+public:
   class MX_NOVTABLE CUserData : public virtual TRefCounted<CBaseMemObj>
   {
   protected:
@@ -83,50 +88,7 @@ public:
 
   //--------
 
-  class MX_NOVTABLE CLayer : public virtual CBaseMemObj
-  {
-  protected:
-    CLayer() : CBaseMemObj()
-      {
-      lpConn = NULL;
-      return;
-      };
-
-  public:
-    virtual ~CLayer()
-      { };
-
-  protected:
-    friend class CIpc;
-
-    HANDLE GetConn();
-
-    VOID IncrementOutgoingWrites();
-    VOID DecrementOutgoingWrites();
-
-    VOID FreePacket(_In_ CPacketBase *lpPacket);
-
-    HRESULT ReadStream(_In_ CPacketBase *lpStreamPacket, _Out_ CPacketBase **lplpPacket);
-
-    HRESULT SendReadDataToNextLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize);
-    HRESULT SendWriteDataToNextLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize);
-    //NOTE: The next layer will be responsible for freeing the packet on success or failure
-    HRESULT SendAfterWritePacketToNextLayer(_In_ CPacketBase *lpPacket);
-
-    virtual HRESULT OnConnect() = 0;
-    virtual HRESULT OnDisconnect() = 0;
-    virtual HRESULT OnReceivedData(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize) = 0;
-    //NOTE: The OnSendPacket is responsible for freeing the packet on success or failure
-    virtual HRESULT OnSendPacket(_In_ CPacketBase *lpPacket) = 0;
-    virtual VOID OnShutdown() = 0;
-
-  private:
-    LPVOID lpConn;
-    CLnkLstNode cListNode;
-  };
-
-  //--------
-
+public:
   typedef Callback<VOID (_In_ CIpc *lpIpc, _In_ HRESULT hrErrorCode)> OnEngineErrorCallback;
 
   typedef Callback<HRESULT (_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CUserData *lpUserData)> OnConnectCallback;
@@ -171,12 +133,13 @@ public:
 
   //--------
 
+public:
   class CMultiSendLock : public virtual CBaseMemObj, public CNonCopyableObj
   {
   private:
     friend class CIpc;
 
-    CMultiSendLock();
+    CMultiSendLock(_In_ CConnectionBase *lpConn);
   public:
     ~CMultiSendLock();
 
@@ -186,6 +149,7 @@ public:
 
   //--------
 
+public:
   class CAutoMultiSendLock : public virtual CBaseMemObj, public CNonCopyableObj
   {
   public:
@@ -229,6 +193,15 @@ public:
 
   HRESULT Close(_In_opt_ HANDLE h, _In_opt_ HRESULT hrErrorCode = S_OK);
 
+  HRESULT InitializeSSL(_In_ HANDLE h, _In_opt_ LPCSTR szHostNameA = NULL,
+                        _In_opt_ CSslCertificateArray *lpCheckCertificates = NULL,
+                        _In_opt_ CSslCertificate *lpSelfCert = NULL, _In_opt_ CEncryptionKey *lpPrivKey = NULL,
+                        _In_opt_ CDhParam *lpDhParam = NULL);
+
+  /*
+  BOOL IsPeerSslCertificateValid(_In_ HANDLE h) const;
+  */
+
   HRESULT IsConnected(_In_ HANDLE h);
   HRESULT IsClosed(_In_ HANDLE h, _Out_opt_ HRESULT *lphErrorCode = NULL);
 
@@ -242,9 +215,6 @@ public:
   HRESULT PauseOutputProcessing(_In_ HANDLE h);
   HRESULT ResumeOutputProcessing(_In_ HANDLE h);
 
-  //NOTE: On success, the connection will own the layer
-  HRESULT AddLayer(_In_ HANDLE h, _In_ CLayer *lpLayer, _In_opt_ BOOL bFront = TRUE);
-
   //NOTE: On success, the connection will own the user data if changed
   HRESULT SetCallbacks(_In_ HANDLE h, _In_ CHANGE_CALLBACKS_DATA &cCallbacks);
 
@@ -254,8 +224,9 @@ public:
 
   BOOL IsShuttingDown();
 
-public:
+protected:
   class CPacketList;
+  class CSslChannel;
 
   class MX_NOVTABLE CPacketBase : public virtual CBaseMemObj, public CNonCopyableObj
   {
@@ -284,7 +255,7 @@ public:
       cAfterWriteSignalCallback = NullCallback();
       uUserData.lpPtr = NULL;
       dwInUseSize = 0;
-      lpChainedPacket = NULL;
+      lpLinkedPacket = NULL;
       return;
       };
 
@@ -320,7 +291,7 @@ public:
       MX_RELEASE(lpStream);
       cAfterWriteSignalCallback = NullCallback();
       uUserData.lpPtr = NULL;
-      lpChainedPacket = NULL;
+      lpLinkedPacket = NULL;
       return;
       };
 
@@ -430,15 +401,15 @@ public:
       return (cAfterWriteSignalCallback != false) ? TRUE : FALSE;
       };
 
-    __inline VOID ChainPacket(_In_opt_ CPacketBase *lpPacket)
+    __inline VOID LinkPacket(_In_opt_ CPacketBase *lpPacket)
       {
-      lpChainedPacket = lpPacket;
+      lpLinkedPacket = lpPacket;
       return;
       };
 
-    __inline CPacketBase* GetChainedPacket() const
+    __inline CPacketBase* GetLinkedPacket() const
       {
-      return lpChainedPacket;
+      return lpLinkedPacket;
       };
 
   private:
@@ -458,7 +429,7 @@ public:
       DWORD dwCookie;
     };
     CIpc::OnAfterWriteSignalCallback cAfterWriteSignalCallback;
-    CPacketBase *lpChainedPacket;
+    CPacketBase *lpLinkedPacket;
   };
 
 protected:
@@ -487,13 +458,12 @@ protected:
 
   //----
 
-public:
+protected:
   class CPacketList : public virtual CBaseMemObj, public CNonCopyableObj
   {
   public:
     CPacketList() : CBaseMemObj(), CNonCopyableObj()
       {
-      FastLock_Initialize(&nMutex);
       return;
       };
 
@@ -516,8 +486,6 @@ public:
       {
       if (lpPacket != NULL)
       {
-        CFastLock cLock(&nMutex);
-
         cList.PushHead(&(lpPacket->cListNode));
       }
       return;
@@ -527,8 +495,6 @@ public:
       {
       if (lpPacket != NULL)
       {
-        CFastLock cLock(&nMutex);
-
         cList.PushTail(&(lpPacket->cListNode));
       }
       return;
@@ -536,7 +502,6 @@ public:
 
     CPacketBase* DequeueFirst()
       {
-      CFastLock cLock(&nMutex);
       CLnkLstNode *lpNode;
 
       lpNode = cList.PopHead();
@@ -547,7 +512,6 @@ public:
 
     VOID QueueSorted(_In_ CPacketBase *lpPacket)
       {
-      CFastLock cLock(&nMutex);
       CLnkLst::IteratorRev it;
       CLnkLstNode *lpNode;
 
@@ -567,7 +531,6 @@ public:
 
     CPacketBase* Dequeue(_In_ ULONG nOrder)
       {
-      CFastLock cLock(&nMutex);
       CLnkLstNode *lpNode;
 
       lpNode = cList.GetHead();
@@ -586,8 +549,6 @@ public:
 
     VOID Remove(_In_ CPacketBase *lpPacket)
       {
-      CFastLock cLock(&nMutex);
-
       MX_ASSERT(lpPacket->cListNode.GetList() == &cList);
       lpPacket->cListNode.Remove();
       return;
@@ -595,21 +556,14 @@ public:
 
     SIZE_T GetCount() const
       {
-      CFastLock cLock(const_cast<LONG volatile *>(&nMutex));
-
       return cList.GetCount();
       };
 
   private:
-    LONG volatile nMutex;
     CLnkLst cList;
   };
 
-  //----
-
 protected:
-  friend class CLayer;
-
   class MX_NOVTABLE CConnectionBase : public virtual TRefCounted<CBaseMemObj>
   {
   protected:
@@ -619,7 +573,7 @@ protected:
 
     virtual VOID ShutdownLink(_In_ BOOL bAbortive);
 
-    HRESULT SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize, _In_opt_ CLayer *lpToLayer);
+    HRESULT SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
     HRESULT SendStream(_In_ CStream *lpStream);
     HRESULT AfterWriteSignal(_In_ OnAfterWriteSignalCallback cCallback, _In_opt_ LPVOID lpCookie);
     HRESULT AfterWriteSignal(_In_ CPacketBase *lpPacket);
@@ -639,6 +593,8 @@ protected:
 
   protected:
     HRESULT HandleConnected();
+    HRESULT HandleIncomingPackets();
+    HRESULT HandleOutgoingPackets();
 
     VOID IncrementOutgoingWrites();
     VOID DecrementOutgoingWrites();
@@ -647,9 +603,7 @@ protected:
     HRESULT DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacketBase *lpReusePacket,
                    _Inout_ CPacketList &cQueuedPacketsList);
 
-    HRESULT SendPackets(_Inout_ CPacketBase **lplpFirstPacket, _Inout_ CPacketBase **lplpLastPacket,
-                        _Inout_ SIZE_T *lpnChainLength, _In_ BOOL bFlushAll,
-                        _Inout_ CPacketList &cQueuedPacketsList);
+    HRESULT DoWrite(_In_ CPacketBase *lpPacket);
 
     CPacketBase* GetPacket(_In_ CPacketBase::eType nType, _In_ SIZE_T nDesiredSize, _In_ BOOL bRealSize);
     VOID FreePacket(_In_ CPacketBase *lpPacket);
@@ -663,9 +617,18 @@ protected:
     virtual HRESULT SendWritePacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwWritten) = 0;
     virtual SIZE_T GetMultiWriteMaxCount() const = 0;
 
-    HRESULT SendReadDataToNextLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize, _In_ CLayer *lpCurrLayer);
-    HRESULT SendWriteDataToNextLayer(_In_ LPCVOID lpMsg, _In_ SIZE_T nMsgSize, _In_ CLayer *lpCurrLayer);
-    HRESULT SendAfterWritePacketToNextLayer(_In_ CPacketBase *lpPacket, _In_ CLayer *lpCurrLayer);
+    HRESULT SetupSsl(_In_opt_ LPCSTR szHostNameA, _In_opt_ CSslCertificateArray *lpCheckCertificates,
+                     _In_opt_ CSslCertificate *lpSelfCert, _In_opt_ CEncryptionKey *lpPrivKey,
+                     _In_opt_ CDhParam *lpDhParam);
+
+    HRESULT HandleSslStartup();
+    VOID HandleSslShutdown();
+    HRESULT HandleSslInput(_In_ CPacketBase *lpPacket);
+    HRESULT HandleSslOutput(_In_ CPacketBase *lpPacket);
+    HRESULT ProcessSsl(_In_ BOOL bCanWrite);
+    HRESULT ProcessSslIncomingData();
+    HRESULT ProcessSslEncryptedOutput();
+    HRESULT HandleSslEndOfHandshake();
 
   protected:
     static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ CRedBlackTreeNode *lpNode1,
@@ -694,7 +657,9 @@ protected:
 
   protected:
     friend class CIpc;
+    friend class CMultiSendLock;
 
+  protected:
     class CReadWriteStats : public CBaseMemObj
     {
     public:
@@ -714,29 +679,40 @@ protected:
     };
 
   protected:
-    LONG volatile nReadMutex;
+    LONG volatile nMutex;
     CRedBlackTreeNode cTreeNode;
     CIpc *lpIpc;
     CIpc::eConnectionClass nClass;
     LONG volatile hrErrorCode;
     LONG volatile nFlags;
-    CPacketList cReadedList;
     LONG volatile nNextReadOrder;
     LONG volatile nNextReadOrderToProcess;
-    CPacketList cWritePendingList;
     LONG volatile nNextWriteOrder;
     LONG volatile nNextWriteOrderToProcess;
     LONG volatile nIncomingReads, nOutgoingWrites, nOutgoingBytes;
-    CPacketList cRwList;
+    struct {
+      LONG volatile nMutex;
+      CPacketList cList;
+    } sReadPackets, sInUsePackets;
+    struct {
+      LONG volatile nMutex;
+      CPacketList cList;
+      BOOL bHasRequeuedPacket;
+      CPacketBase *lpRequeuedPacket;
+    } sPendingWritePackets;
     struct {
       LONG volatile nMutex;
       CCircularBuffer cBuffer;
     } sReceivedData;
-    struct {
-      RWLOCK sRwMutex;
-      CLnkLst cList;
-    } sLayers;
     TAutoRefCounted<CUserData> cUserData;
+    struct {
+      LONG volatile nMutex;
+      SSL_CTX *lpCtx;
+      SSL *lpSession;
+      BIO *lpInBio;
+      BIO *lpOutBio;
+      TAutoRefCounted<MX::CSslCertificateArray> cCertArray;
+    } sSsl;
     OnCreateCallback cCreateCallback;
     OnDestroyCallback cDestroyCallback;
     OnConnectCallback cConnectCallback;
@@ -744,6 +720,10 @@ protected:
     OnDataReceivedCallback cDataReceivedCallback;
     CReadWriteStats cReadStats, cWriteStats;
     CCriticalSection cOnDataReceivedCS;
+    struct {
+      LONG volatile nMutex;
+      CPacketList cList;
+    } sFreePackets32768, sFreePackets4096;
     CTimer cLogTimer;
   };
 
@@ -787,10 +767,12 @@ protected:
   struct {
     RWLOCK sRwMutex;
     CRedBlackTree cTree;
+    LONG volatile nCount;
   } sConnections;
-  CPacketList cFreePacketsList32768;
-  CPacketList cFreePacketsList4096;
-  CPacketList cFreePacketsList512;
+  struct {
+    LONG volatile nMutex;
+    CPacketList cList;
+  } sFreePackets32768, sFreePackets4096;
 };
 
 } //namespace MX

@@ -24,7 +24,6 @@
 #include "..\Callbacks.h"
 #include "..\TimedEvent.h"
 #include "..\Comm\Sockets.h"
-#include "..\Comm\IpcSslLayer.h"
 #include "HttpCommon.h"
 #include "HttpCookie.h"
 #include "HttpBodyParserBase.h"
