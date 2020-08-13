@@ -40,6 +40,8 @@ static FORCEINLINE int InterlockedExchangeAdd(_Inout_ _Interlocked_operand_ int 
 #define CHECKTAG1                               0x6F7E283CUL
 #define CHECKTAG2                               0x3A9B4D8EUL
 
+#define MAXIMUM_FREE_PACKETS_IN_LIST                    4096
+
 #define FLAG_Connected                                0x0001
 #define FLAG_Closed                                   0x0002
 #define FLAG_ShutdownProcessed                        0x0004
@@ -53,6 +55,8 @@ static FORCEINLINE int InterlockedExchangeAdd(_Inout_ _Interlocked_operand_ int 
 #define FLAG_HasSSL                                   0x0400
 #define FLAG_SslHandshakeCompleted                    0x0800
 #define FLAG_SslWantRead                              0x1000
+#define FLAG_SslCheckCertificate                      0x2000
+#define FLAG_SslAcceptSelfSigned                      0x4000
 
 //-----------------------------------------------------------
 

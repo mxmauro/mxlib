@@ -2446,7 +2446,6 @@ VOID CHttpClient::OnRedirectOrRetryAuth(_In_ LONG nTimerId, _In_ LPVOID lpUserDa
 
   UNREFERENCED_PARAMETER(lpbCancel);
 
-
   if (_InterlockedCompareExchange(&(sRedirectOrRetryAuth.nTimerId), 0, nTimerId) == nTimerId)
   {
     CCriticalSection::CAutoLock cLock(cMutex);

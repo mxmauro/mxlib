@@ -190,6 +190,7 @@ CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDi
       _InterlockedExchangePointer((LPVOID volatile*)&fnSetFileCompletionNotificationModes,
                                   _fnSetFileCompletionNotificationModes);
     }
+    /*
     if (__InterlockedReadPointer(&fnCancelIoEx) == NULL)
     {
       LPVOID _fnCancelIoEx;
@@ -211,6 +212,7 @@ CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDi
       }
       _InterlockedExchangePointer((LPVOID volatile*)&fnCancelIoEx, _fnCancelIoEx);
     }
+    */
   }
 
   if (__InterlockedReadPointer(&fnSetFileCompletionNotificationModes) != NULL)
@@ -992,7 +994,10 @@ use_default_close_method:
       }
 
       //cancel pending IO
-      fnCancelIoEx((HANDLE)sck, NULL);
+      if (fnCancelIoEx != NULL)
+      {
+        fnCancelIoEx((HANDLE)sck, NULL);
+      }
 
       lpPacket = GetPacket(TypeDisconnectEx, sizeof(eFamily), TRUE);
       if (lpPacket == NULL)

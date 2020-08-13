@@ -602,17 +602,28 @@ HRESULT CIpc::CConnectionBase::HandleOutgoingPackets()
     }
     else if (lpPacket->HasStream() != FALSE) //process a stream?
     {
-      while (SUCCEEDED(hRes) && (DWORD)__InterlockedRead(&nOutgoingBytes) < lpIpc->dwMaxOutgoingBytes)
+      CPacketBase *lpNewPacket = lpPacket->GetLinkedPacket();
+
+      if (lpNewPacket != NULL)
       {
-        CPacketBase *lpNewPacket;
+        lpPacket->LinkPacket(NULL); //break link
+      }
 
-        hRes = ReadStream(lpPacket, &lpNewPacket);
+      hRes = S_OK;
+      while ((DWORD)__InterlockedRead(&nOutgoingBytes) < lpIpc->dwMaxOutgoingBytes)
+      {
+        //check if the stream has a linked packet (which is a packet that couldn't be sent in a previous round)
+        hRes = (lpNewPacket == NULL) ? ReadStream(lpPacket, &lpNewPacket) : S_OK;
 
-        //end of stream reached?
-        if (hRes == MX_E_EndOfFileReached)
+        //error or end of stream reached?
+        if (FAILED(hRes))
         {
+          if (hRes != MX_E_EndOfFileReached)
+            break;
+
           //reached the end of the stream so free "stream" packet
           FreePacket(lpPacket);
+          lpPacket = lpNewPacket = NULL;
 
           //decrement the outstanding writes incremented by the send
           DecrementOutgoingWrites();
@@ -631,11 +642,8 @@ HRESULT CIpc::CConnectionBase::HandleOutgoingPackets()
             sPendingWritePackets.bHasRequeuedPacket = FALSE;
           }
 
+          //we are done
           hRes = S_OK;
-          break;
-        }
-        else if (FAILED(hRes))
-        {
           break;
         }
 
@@ -648,25 +656,61 @@ HRESULT CIpc::CConnectionBase::HandleOutgoingPackets()
         {
           hRes = DoWrite(lpNewPacket); //NOTE: Currently never returns S_FALSE
         }
+        if (FAILED(hRes))
+        {
+          //on error, readed packet was discarded by DoWrite/HandleSslOutput
+          lpNewPacket = NULL;
+          break;
+        }
 
         if (hRes == S_FALSE)
         {
-          //requeue this packet as pending because couldn't be sent
+          //if we couldn't send the packet due to bandwidth, stop
+          hRes = S_OK;
+          break;
+        }
+
+        //packet is not controlled by us anymore (also clean for loop)
+        lpNewPacket = NULL;
+      }
+
+      if (SUCCEEDED(hRes))
+      {
+        //at this point we may (or not) have the stream packet
+        //if we don't, just do nothing because the stream has
+        //reached to it's end and was handled in the loop
+
+        if (lpPacket != NULL)
+        {
+          //requeue the stream packet
           CFastLock cListLock(&(sPendingWritePackets.nMutex));
 
+          //if we have a data packet, means it couldn't be sent (due to bandwidth) do link it
+          if (lpNewPacket != NULL)
+          {
+            lpPacket->LinkPacket(lpNewPacket);
+          }
+
+          //requeue the stream
           if (bFromRequeue != FALSE)
           {
             MX_ASSERT(sPendingWritePackets.bHasRequeuedPacket != FALSE);
             MX_ASSERT(sPendingWritePackets.lpRequeuedPacket == NULL);
-            sPendingWritePackets.lpRequeuedPacket = lpNewPacket;
+            sPendingWritePackets.lpRequeuedPacket = lpPacket;
           }
           else
           {
-            sPendingWritePackets.cList.QueueFirst(lpNewPacket);
+            sPendingWritePackets.cList.QueueFirst(lpPacket);
           }
-          hRes = S_OK;
-          break;
         }
+      }
+      else
+      {
+        //we hit an error so no problem to free the stream packet and the readed data (if any)
+        if (lpPacket != NULL)
+          FreePacket(lpPacket);
+        if (lpNewPacket != NULL)
+          FreePacket(lpNewPacket);
       }
     }
     else
@@ -843,38 +887,72 @@ CIpc::CPacketBase *CIpc::CConnectionBase::GetPacket(_In_ CPacketBase::eType nTyp
 
 VOID CIpc::CConnectionBase::FreePacket(_In_ CPacketBase *lpPacket)
 {
-  if (lpPacket->GetClassSize() <= 4096)
-  {
-    MX::CFastLock cLock(&(sFreePackets4096.nMutex));
+  CPacketBase *lpLinkedPacket;
 
-    if (sFreePackets4096.cList.GetCount() < 8)
+  while (lpPacket != NULL)
+  {
+    //DebugPrint("FreePacket: Ovr=0x%p\n", lpPacket->GetOverlapped());
+
+    lpLinkedPacket = lpPacket->GetLinkedPacket();
+
+    if (lpPacket->GetClassSize() <= 4096)
     {
-      //We don't care if count becomes greater than 'nMaxItemsInList' because several threads
-      //are freeing packets and list grows beyond the limit
-      lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
-      sFreePackets4096.cList.QueueLast(lpPacket);
+      MX::CFastLock cLock(&(sFreePackets4096.nMutex));
 
-      lpPacket = NULL;
+      if (sFreePackets4096.cList.GetCount() < MAXIMUM_FREE_PACKETS_IN_LIST)
+      {
+        //We don't care if count becomes greater than 'nMaxItemsInList' because several threads
+        //are freeing packets and list grows beyond the limit
+        lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
+        sFreePackets4096.cList.QueueLast(lpPacket);
+
+        //free linked packets if they belong to the same class
+        while (lpLinkedPacket != NULL && lpLinkedPacket->GetClassSize() <= 4096 &&
+               sFreePackets4096.cList.GetCount() < MAXIMUM_FREE_PACKETS_IN_LIST)
+        {
+          lpPacket = lpLinkedPacket;
+          lpLinkedPacket = lpLinkedPacket->GetLinkedPacket();
+
+          lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
+          sFreePackets4096.cList.QueueLast(lpPacket);
+        }
+
+        lpPacket = NULL;
+      }
     }
-  }
-  else
-  {
-    MX::CFastLock cLock(&(sFreePackets32768.nMutex));
-
-    if (sFreePackets32768.cList.GetCount() < 4)
+    else
     {
-      //We don't care if count becomes greater than 'nMaxItemsInList' because several threads
-      //are freeing packets and list grows beyond the limit
-      lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
-      sFreePackets32768.cList.QueueLast(lpPacket);
+      MX::CFastLock cLock(&(sFreePackets32768.nMutex));
 
-      lpPacket = NULL;
+      if (sFreePackets32768.cList.GetCount() < MAXIMUM_FREE_PACKETS_IN_LIST)
+      {
+        //We don't care if count becomes greater than 'nMaxItemsInList' because several threads
+        //are freeing packets and list grows beyond the limit
+        lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
+        sFreePackets32768.cList.QueueLast(lpPacket);
+
+        //free linked packets if they belong to the same class
+        while (lpLinkedPacket != NULL && lpLinkedPacket->GetClassSize() > 4096 &&
+               sFreePackets32768.cList.GetCount() < MAXIMUM_FREE_PACKETS_IN_LIST)
+        {
+          lpPacket = lpLinkedPacket;
+          lpLinkedPacket = lpLinkedPacket->GetLinkedPacket();
+
+          lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
+          sFreePackets32768.cList.QueueLast(lpPacket);
+        }
+
+        lpPacket = NULL;
+      }
     }
-  }
 
-  if (lpPacket != NULL)
-  {
-    lpIpc->FreePacket(lpPacket);
+    //if 'lpPacket' is not NULL, delete it because list is full
+    if (lpPacket != NULL)
+    {
+      delete lpPacket;
+    }
+
+    lpPacket = lpLinkedPacket;
   }
 
   //done
@@ -1195,7 +1273,7 @@ HRESULT CIpc::CConnectionBase::ReadStream(_In_ CPacketBase *lpStreamPacket, _Out
 
 HRESULT CIpc::CConnectionBase::SetupSsl(_In_opt_ LPCSTR szHostNameA, _In_opt_ CSslCertificateArray *lpCheckCertificates,
                                         _In_opt_ CSslCertificate *lpSelfCert, _In_opt_ CEncryptionKey *lpPrivKey,
-                                        _In_opt_ CDhParam *lpDhParam)
+                                        _In_opt_ CDhParam *lpDhParam, _In_ int nSslOptions)
 {
   HRESULT hRes = MX_E_AlreadyExists;
 
@@ -1232,11 +1310,20 @@ HRESULT CIpc::CConnectionBase::SetupSsl(_In_opt_ LPCSTR szHostNameA, _In_opt_ CS
         return E_OUTOFMEMORY;
 
       //init some stuff
-      SSL_set_verify(lpSession, SSL_VERIFY_NONE, NULL);
+      if ((nSslOptions & (int)CIpc::SslOptionCheckCertificate) != 0)
+      {
+        _InterlockedOr(&nFlags, FLAG_SslCheckCertificate);
+      }
+      if ((nSslOptions & (int)CIpc::SslOptionAcceptSelfSigned) != 0)
+      {
+        _InterlockedOr(&nFlags, FLAG_SslAcceptSelfSigned);
+      }
+      SSL_set_verify(lpSession, (((nSslOptions & (int)CIpc::SslOptionCheckCertificate) != 0)
+                                 ? (SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE) : SSL_VERIFY_NONE), NULL);
       SSL_set_verify_depth(lpSession, 4);
-      SSL_set_options(lpSession, SSL_OP_NO_COMPRESSION | SSL_OP_LEGACY_SERVER_CONNECT/* | SSL_OP_NO_RENEGOTIATION*/ |
+      SSL_set_options(lpSession, SSL_OP_NO_COMPRESSION | SSL_OP_LEGACY_SERVER_CONNECT | SSL_OP_NO_RENEGOTIATION |
                                  SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
-      SSL_set_mode(lpSession, SSL_MODE_RELEASE_BUFFERS | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER /*| SSL_MODE_NO_AUTO_CHAIN*/);
+      SSL_set_mode(lpSession, SSL_MODE_RELEASE_BUFFERS | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER | SSL_MODE_NO_AUTO_CHAIN);
       if (nClass == CIpc::ConnectionClassServer)
       {
         SSL_set_accept_state(lpSession);
@@ -1517,6 +1604,43 @@ HRESULT CIpc::CConnectionBase::ProcessSslEncryptedOutput()
 
 HRESULT CIpc::CConnectionBase::HandleSslEndOfHandshake()
 {
+  LONG _nFlags = __InterlockedRead(&nFlags);
+
+  if ((_nFlags & FLAG_SslCheckCertificate) == 0)
+    return S_OK;
+  ERR_clear_error();
+  switch (SSL_get_verify_result(sSsl.lpSession))
+  {
+    case X509_V_OK:
+      return S_OK;
+
+    case X509_V_ERR_OUT_OF_MEM:
+      return E_OUTOFMEMORY;
+
+    case X509_V_ERR_CERT_HAS_EXPIRED:
+      return SEC_E_CERT_EXPIRED;
+
+    case X509_V_ERR_CERT_REVOKED:
+      return CRYPT_E_REVOKED;
+
+    case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
+      return CRYPT_E_ISSUER_SERIALNUMBER;
+
+    case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
+    case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
+      return ((_nFlags & FLAG_SslAcceptSelfSigned) != 0) ? S_OK : CRYPT_E_SELF_SIGNED;
+
+    case X509_V_ERR_INVALID_PURPOSE:
+      return CERT_E_PURPOSE;
+
+    case X509_V_ERR_INVALID_CA:
+      return SEC_E_ISSUING_CA_UNTRUSTED;
+
+    case X509_V_ERR_CERT_UNTRUSTED:
+      return CERT_E_CHAINING;
+  }
+  return CRYPT_E_NO_TRUSTED_SIGNER;
+  /*
   unsigned char *lpTempBuf[2];
   int r, nLen;
   X509 *lpPeer;
@@ -1524,8 +1648,8 @@ HRESULT CIpc::CConnectionBase::HandleSslEndOfHandshake()
   TAutoRefCounted<CSslCertificate> cPeerCert;
   HRESULT hRes;
 
-  ERR_clear_error();
-  r = SSL_get_verify_result(sSsl.lpSession);
+
+  hRes = MX_E_NotReady;
   bPeerCertIsValid = (r == X509_V_OK) ? TRUE : FALSE;
   lpPeer = SSL_get_peer_certificate(sSsl.lpSession);
   if (lpPeer != NULL)
@@ -1557,11 +1681,9 @@ HRESULT CIpc::CConnectionBase::HandleSslEndOfHandshake()
       return hRes;
   }
 
-  //call callback with certificate
-  //cPeerCert bPeerCertIsValid
-
   //done
   return S_OK;
+  */
 }
 
 //-----------------------------------------------------------

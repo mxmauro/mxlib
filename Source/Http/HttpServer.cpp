@@ -31,80 +31,71 @@
 
 static const LPCSTR szServerInfoA = "MX-Library";
 
-static const LPCSTR szServerErrorMessages100[] ={
-  /*100*/ "*Continue",
-  /*101*/ "*Switching Protocols",
-  /*102*/ "*Processing"
-};
-
-static const LPCSTR szServerErrorMessages200[] ={
-  /*200*/ "OK",
-  /*201*/ "Created",
-  /*202*/ "Accepted",
-  /*203*/ "Non-Authoritative Information",
-  /*204*/ "*No Content",
-  /*205*/ "Reset Content",
-  /*206*/ "Partial Content",
-  /*207*/ "Multi-Status",
-  /*208*/ "Already Reported"
-};
-
-static const LPCSTR szServerErrorMessages301[] = {
-  /*301*/ "Moved Permanently",
-  /*302*/ "Found",
-  /*303*/ "See Other",
-  /*304*/ "*Not Modified",
-  /*305*/ "Use Proxy",
-  /*306*/ "Switch Proxy",
-  /*307*/ "Temporary Redirect"
-};
-
-static const LPCSTR szServerErrorMessages400[] = {
-  /*400*/ "Bad Request",
-  /*401*/ "Authorization Required",
-  /*402*/ "Payment Required",
-  /*403*/ "Forbidden",
-  /*404*/ "Not Found",
-  /*405*/ "Not Allowed",
-  /*406*/ "Not Acceptable",
-  /*407*/ "Proxy Authentication Required",
-  /*408*/ "Request Time-out",
-  /*409*/ "Conflict",
-  /*410*/ "Gone",
-  /*411*/ "Length Required",
-  /*412*/ "Precondition Failed",
-  /*413*/ "Request Entity Too Large",
-  /*414*/ "Request-URI Too Large",
-  /*415*/ "Unsupported Media Type",
-  /*416*/ "Requested Range Not Satisfiable"
-};
-
-static const LPCSTR szServerErrorMessages431[] = {
-  /*431*/ "Request Header Fields Too Large"
-};
-
-static const LPCSTR szServerErrorMessages500[] = {
-  /*500*/ "Internal Server Error",
-  /*501*/ "Not Implemented",
-  /*502*/ "Bad Gateway",
-  /*503*/ "Service Temporarily Unavailable",
-  /*504*/ "Gateway Time-out",
-  /*505*/ "HTTP Version Not Supported",
-  /*506*/ "Variant Also Negotiates",
-  /*507*/ "Insufficient Storage"
-};
-
 static const struct {
-  LONG nBaseStatusCode;
-  int nMessagesCount;
-  LPCSTR *lpszMessagesA;
-} lpServerErrorMessages[] = {
-  { 100, (int)MX_ARRAYLEN(szServerErrorMessages100), (LPCSTR*)szServerErrorMessages100 },
-  { 200, (int)MX_ARRAYLEN(szServerErrorMessages200), (LPCSTR*)szServerErrorMessages200 },
-  { 301, (int)MX_ARRAYLEN(szServerErrorMessages301), (LPCSTR*)szServerErrorMessages301 },
-  { 400, (int)MX_ARRAYLEN(szServerErrorMessages400), (LPCSTR*)szServerErrorMessages400 },
-  { 431, (int)MX_ARRAYLEN(szServerErrorMessages431), (LPCSTR*)szServerErrorMessages431 },
-  { 500, (int)MX_ARRAYLEN(szServerErrorMessages500), (LPCSTR*)szServerErrorMessages500 }
+  LONG nStatusCode;
+  LPCSTR szMessageA;
+} aServerErrorMessages[] = {
+  { 100, "*Continue" },
+  { 101, "*Switching Protocols" },
+  { 102, "*Processing" },
+  { 103, "*Early Hints" },
+  { 200, "OK" },
+  { 201, "Created" },
+  { 202, "Accepted" },
+  { 203, "Non-Authoritative Information" },
+  { 204, "*No Content" },
+  { 205, "Reset Content" },
+  { 206, "Partial Content" },
+  { 207, "Multi-Status" },
+  { 208, "Already Reported" },
+  { 301, "Moved Permanently" },
+  { 302, "Found" },
+  { 303, "See Other" },
+  { 304, "*Not Modified" },
+  { 305, "Use Proxy" },
+  { 306, "Switch Proxy" },
+  { 307, "Temporary Redirect" },
+  { 308, "Permanent Redirect" },
+  { 400, "Bad Request" },
+  { 401, "Authorization Required" },
+  { 402, "Payment Required" },
+  { 403, "Forbidden" },
+  { 404, "Not Found" },
+  { 405, "Not Allowed" },
+  { 406, "Not Acceptable" },
+  { 407, "Proxy Authentication Required" },
+  { 408, "Request Time-out" },
+  { 409, "Conflict" },
+  { 410, "Gone" },
+  { 411, "Length Required" },
+  { 412, "Precondition Failed" },
+  { 413, "Request Entity Too Large" },
+  { 414, "Request-URI Too Large" },
+  { 415, "Unsupported Media Type" },
+  { 416, "Requested Range Not Satisfiable" },
+  { 417, "Expectation Failed" },
+  { 418, "I'm a teapot" },
+  { 421, "Misdirected Request" },
+  { 422, "Unprocessable Entity" },
+  { 423, "Locked" },
+  { 424, "Failed Dependency" },
+  { 425, "Too Early" },
+  { 426, "Upgrade Required" },
+  { 428, "Precondition Required" },
+  { 429, "Too Many Requests" },
+  { 431, "Request Header Fields Too Large" },
+  { 451, "Unavailable For Legal Reasons" },
+  { 500, "Internal Server Error" },
+  { 501, "Not Implemented" },
+  { 502, "Bad Gateway" },
+  { 503, "Service Temporarily Unavailable" },
+  { 504, "Gateway Time-out" },
+  { 505, "HTTP Version Not Supported" },
+  { 506, "Variant Also Negotiates" },
+  { 507, "Insufficient Storage" },
+  { 508, "Loop Detected" },
+  { 510, "Not Extended" },
+  { 511, "Network Authentication Required" }
 };
 
 //-----------------------------------------------------------
@@ -1704,7 +1695,7 @@ HRESULT CHttpServer::FillResponseWithError(_In_ CClientRequest *lpRequest, _In_ 
 
   szStatusMessageA = GetStatusCodeMessage(nStatusCode);
   if (szStatusMessageA == NULL)
-    return E_INVALIDARG;
+    szStatusMessageA = "Undefined Reason";
   bHasBody = TRUE;
   if (*szStatusMessageA == '*')
   {
@@ -1932,15 +1923,23 @@ HRESULT CHttpServer::FillResponseWithError(_In_ CClientRequest *lpRequest, _In_ 
 
 LPCSTR CHttpServer::GetStatusCodeMessage(_In_ LONG nStatusCode)
 {
-  SIZE_T i;
+  SIZE_T n, nBase;
 
-  for (i = 0; i < MX_ARRAYLEN(lpServerErrorMessages); i++)
+  nBase = 0;
+  n = MX_ARRAYLEN(aServerErrorMessages);
+  while (n > 0)
   {
-    if (nStatusCode >= lpServerErrorMessages[i].nBaseStatusCode &&
-        nStatusCode < lpServerErrorMessages[i].nBaseStatusCode + lpServerErrorMessages[i].nMessagesCount)
+    SIZE_T nMid = nBase + (n >> 1);
+
+    if (nStatusCode == aServerErrorMessages[nMid].nStatusCode)
+      return aServerErrorMessages[nMid].szMessageA;
+
+    if (nStatusCode > aServerErrorMessages[nMid].nStatusCode)
     {
-      return lpServerErrorMessages[i].lpszMessagesA[nStatusCode - lpServerErrorMessages[i].nBaseStatusCode];
+      nBase = nMid + 1;
+      n--;
     }
+    n >>= 1;
   }
   return NULL;
 }

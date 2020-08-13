@@ -68,6 +68,11 @@ public:
     ConnectionClassMAX=ConnectionClassListener
   } eConnectionClass;
 
+  typedef enum {
+    SslOptionCheckCertificate = 1,
+    SslOptionAcceptSelfSigned = 2
+  } eSslOptions;
+
   //--------
 
 public:
@@ -196,11 +201,7 @@ public:
   HRESULT InitializeSSL(_In_ HANDLE h, _In_opt_ LPCSTR szHostNameA = NULL,
                         _In_opt_ CSslCertificateArray *lpCheckCertificates = NULL,
                         _In_opt_ CSslCertificate *lpSelfCert = NULL, _In_opt_ CEncryptionKey *lpPrivKey = NULL,
-                        _In_opt_ CDhParam *lpDhParam = NULL);
-
-  /*
-  BOOL IsPeerSslCertificateValid(_In_ HANDLE h) const;
-  */
+                        _In_opt_ CDhParam *lpDhParam = NULL, _In_opt_ int nSslOptions = 0);
 
   HRESULT IsConnected(_In_ HANDLE h);
   HRESULT IsClosed(_In_ HANDLE h, _Out_opt_ HRESULT *lphErrorCode = NULL);
@@ -619,7 +620,7 @@ protected:
 
     HRESULT SetupSsl(_In_opt_ LPCSTR szHostNameA, _In_opt_ CSslCertificateArray *lpCheckCertificates,
                      _In_opt_ CSslCertificate *lpSelfCert, _In_opt_ CEncryptionKey *lpPrivKey,
-                     _In_opt_ CDhParam *lpDhParam);
+                     _In_opt_ CDhParam *lpDhParam, _In_ int nSslOptions);
 
     HRESULT HandleSslStartup();
     VOID HandleSslShutdown();

@@ -330,7 +330,7 @@ HRESULT CIpc::Close(_In_opt_ HANDLE h, _In_opt_ HRESULT hrErrorCode)
 HRESULT CIpc::InitializeSSL(_In_ HANDLE h, _In_opt_ LPCSTR szHostNameA,
                             _In_opt_ CSslCertificateArray *lpCheckCertificates,
                             _In_opt_ CSslCertificate *lpSelfCert, _In_opt_ CEncryptionKey *lpPrivKey,
-                            _In_opt_ CDhParam *lpDhParam)
+                            _In_opt_ CDhParam *lpDhParam, _In_opt_ int nSslOptions)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoRefCounted<CConnectionBase> cConn;
@@ -344,7 +344,7 @@ HRESULT CIpc::InitializeSSL(_In_ HANDLE h, _In_opt_ LPCSTR szHostNameA,
   if (!cConn)
     return E_INVALIDARG;
 
-  hRes = cConn->SetupSsl(szHostNameA, lpCheckCertificates, lpSelfCert, lpPrivKey, lpDhParam);
+  hRes = cConn->SetupSsl(szHostNameA, lpCheckCertificates, lpSelfCert, lpPrivKey, lpDhParam, nSslOptions);
   if (FAILED(hRes))
     return hRes;
 
@@ -361,33 +361,6 @@ HRESULT CIpc::InitializeSSL(_In_ HANDLE h, _In_opt_ LPCSTR szHostNameA,
   //done
   return S_OK;
 }
-
-/*
-BOOL CIpc::IsPeerSslCertificateValid(_In_ HANDLE h) const
-{
-  CAutoRundownProtection cRundownLock(&nRundownProt);
-  TAutoRefCounted<CConnectionBase> cConn;
-  BOOL bValid;
-
-  if (cRundownLock.IsAcquired() == FALSE)
-    return FALSE;
-
-  //lookup connection
-  cConn.Attach(CheckAndGetConnection(h));
-  if (!cConn)
-    return FALSE;
-
-  //get certificate validity
-  {
-    MX::CAutoSlimRWLShared cSslLock(&(cConn->sSsl.RwMutex));
-
-    bValid = (cConn->lpSsl != NULL) ? cConn->lpSsl->IsPeerCertificateValid() : FALSE;
-  }
-
-  //done
-  return bValid; 
-}
-*/
 
 HRESULT CIpc::IsConnected(_In_ HANDLE h)
 {
@@ -846,39 +819,72 @@ CIpc::CPacketBase* CIpc::GetPacket(_In_ CConnectionBase *lpConn, _In_ CPacketBas
 
 VOID CIpc::FreePacket(_In_ CPacketBase *lpPacket)
 {
-  //DebugPrint("FreePacket: Ovr=0x%p\n", lpPacket->GetOverlapped());
-  if (lpPacket->GetClassSize() <= 4096)
-  {
-    MX::CFastLock cLock(&(sFreePackets4096.nMutex));
+  CPacketBase *lpLinkedPacket;
 
-    if (sFreePackets4096.cList.GetCount() < 4096)
+  while (lpPacket != NULL)
+  {
+    //DebugPrint("FreePacket: Ovr=0x%p\n", lpPacket->GetOverlapped());
+
+    lpLinkedPacket = lpPacket->GetLinkedPacket();
+
+    if (lpPacket->GetClassSize() <= 4096)
     {
-      //We don't care if count becomes greater than 'nMaxItemsInList' because several threads
-      //are freeing packets and list grows beyond the limit
-      lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
-      sFreePackets4096.cList.QueueLast(lpPacket);
+      MX::CFastLock cLock(&(sFreePackets4096.nMutex));
 
-      lpPacket = NULL;
+      if (sFreePackets4096.cList.GetCount() < MAXIMUM_FREE_PACKETS_IN_LIST)
+      {
+        //We don't care if count becomes greater than 'nMaxItemsInList' because several threads
+        //are freeing packets and list grows beyond the limit
+        lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
+        sFreePackets4096.cList.QueueLast(lpPacket);
+
+        //free linked packets if they belong to the same class
+        while (lpLinkedPacket != NULL && lpLinkedPacket->GetClassSize() <= 4096 &&
+               sFreePackets4096.cList.GetCount() < MAXIMUM_FREE_PACKETS_IN_LIST)
+        {
+          lpPacket = lpLinkedPacket;
+          lpLinkedPacket = lpLinkedPacket->GetLinkedPacket();
+
+          lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
+          sFreePackets4096.cList.QueueLast(lpPacket);
+        }
+
+        lpPacket = NULL;
+      }
     }
-  }
-  else
-  {
-    MX::CFastLock cLock(&(sFreePackets32768.nMutex));
-
-    if (sFreePackets32768.cList.GetCount() < 4096)
+    else
     {
-      //We don't care if count becomes greater than 'nMaxItemsInList' because several threads
-      //are freeing packets and list grows beyond the limit
-      lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
-      sFreePackets32768.cList.QueueLast(lpPacket);
+      MX::CFastLock cLock(&(sFreePackets32768.nMutex));
 
-      lpPacket = NULL;
+      if (sFreePackets32768.cList.GetCount() < MAXIMUM_FREE_PACKETS_IN_LIST)
+      {
+        //We don't care if count becomes greater than 'nMaxItemsInList' because several threads
+        //are freeing packets and list grows beyond the limit
+        lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
+        sFreePackets32768.cList.QueueLast(lpPacket);
+
+        //free linked packets if they belong to the same class
+        while (lpLinkedPacket != NULL && lpLinkedPacket->GetClassSize() > 4096 &&
+               sFreePackets32768.cList.GetCount() < MAXIMUM_FREE_PACKETS_IN_LIST)
+        {
+          lpPacket = lpLinkedPacket;
+          lpLinkedPacket = lpLinkedPacket->GetLinkedPacket();
+
+          lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
+          sFreePackets32768.cList.QueueLast(lpPacket);
+        }
+
+        lpPacket = NULL;
+      }
     }
-  }
 
-  if (lpPacket != NULL)
-  {
-    delete lpPacket;
+    //if 'lpPacket' is not NULL, delete it because list is full
+    if (lpPacket != NULL)
+    {
+      delete lpPacket;
+    }
+
+    lpPacket = lpLinkedPacket;
   }
 
   //done
@@ -1004,6 +1010,8 @@ start:
             //get next sequenced block
             hRes = lpConn->HandleIncomingPackets();
             if (SUCCEEDED(hRes))
+              hRes = lpConn->HandleOutgoingPackets();
+            if (SUCCEEDED(hRes))
             {
               //setup a new read-ahead
               if (lpConn->IsClosedOrGracefulShutdown() == FALSE)
@@ -1128,6 +1136,8 @@ start:
         {
           //check pending read packets
           hRes = lpConn->HandleIncomingPackets();
+          if (SUCCEEDED(hRes))
+            hRes = lpConn->HandleOutgoingPackets();
         }
         else
         {
