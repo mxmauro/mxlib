@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 #include "IpcDefs.h"
+#include "..\..\Include\MemoryBarrier.h"
 
 #define __EPSILON                                   0.00001f
 
@@ -171,7 +172,7 @@ HRESULT CIpc::CConnectionBase::SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSiz
       sInUsePackets.cList.QueueLast(lpPacket);
     }
     AddRef();
-    _InterlockedIncrement(&nOutgoingWrites);
+    _InterlockedIncrement(&nOutgoingWrites); //NOTE: this generates a full fence
     hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
     if (FAILED(hRes))
     {
@@ -217,7 +218,7 @@ HRESULT CIpc::CConnectionBase::SendStream(_In_ CStream *lpStream)
     sInUsePackets.cList.QueueLast(lpPacket);
   }
   AddRef();
-  _InterlockedIncrement(&nOutgoingWrites);
+  _InterlockedIncrement(&nOutgoingWrites); //NOTE: this generates a full fence
   if (lpIpc->ShouldLog(1) != FALSE)
   {
     cLogTimer.Mark();
@@ -273,7 +274,7 @@ HRESULT CIpc::CConnectionBase::AfterWriteSignal(_In_ CPacketBase *lpPacket)
     sInUsePackets.cList.QueueLast(lpPacket);
   }
   AddRef();
-  _InterlockedIncrement(&nOutgoingWrites);
+  _InterlockedIncrement(&nOutgoingWrites); //NOTE: this generates a full fence
   if (lpIpc->ShouldLog(1) != FALSE)
   {
     cLogTimer.Mark();
@@ -315,7 +316,7 @@ HRESULT CIpc::CConnectionBase::SendResumeIoProcessingPacket(_In_ BOOL bInput)
 
     sInUsePackets.cList.QueueLast(lpPacket);
   }
-  AddRef();
+  AddRef(); //NOTE: this generates a full fence
   if (lpIpc->ShouldLog(1) != FALSE)
   {
     cLogTimer.Mark();
@@ -449,7 +450,7 @@ HRESULT CIpc::CConnectionBase::HandleConnected()
 
     sInUsePackets.cList.QueueLast(lpPacket);
   }
-  AddRef();
+  AddRef(); //NOTE: this generates a full fence
   if (lpIpc->ShouldLog(1) != FALSE)
   {
     cLogTimer.Mark();
@@ -1081,7 +1082,7 @@ HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacke
         CFastLock cReadLock(&nMutex);
 
         lpPacket->SetOrder(_InterlockedIncrement(&nNextReadOrder));
-        hRes = SendReadPacket(lpPacket, &dwRead);
+        hRes = SendReadPacket(lpPacket, &dwRead); //NOTE: Entering the fastlock generates a full fence
       }
     }
     switch (hRes)
@@ -1156,7 +1157,7 @@ HRESULT CIpc::CConnectionBase::DoWrite(_In_ CPacketBase *lpPacket)
   lpPacket->SetUserDataDW(dwTotalBytes);
   _InterlockedIncrement(&nOutgoingWrites);
   _InterlockedExchangeAdd(&nOutgoingBytes, (LONG)dwTotalBytes);
-  AddRef();
+  AddRef(); //NOTE: this generates a full fence
   hRes = SendWritePacket(lpPacket, &dwWritten);
   switch (hRes)
   {

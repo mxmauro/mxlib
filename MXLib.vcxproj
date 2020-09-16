@@ -187,6 +187,7 @@
     <ClInclude Include="Include\FileStream.h" />
     <ClInclude Include="Include\Finalizer.h" />
     <ClInclude Include="Include\FnvHash.h" />
+    <ClInclude Include="Include\MemoryBarrier.h" />
     <ClInclude Include="Include\TaskQueue.h" />
     <ClInclude Include="Include\Timer.h" />
     <ClInclude Include="Include\IOCompletionPort.h" />

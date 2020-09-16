@@ -1298,6 +1298,12 @@ VOID CJavascriptVM::ThrowWindowsError(_In_ DukTape::duk_context *lpCtx, _In_ HRE
   return;
 }
 
+VOID CJavascriptVM::ThrowWindowsError(_In_ HRESULT hr, _In_opt_z_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line)
+{
+  ThrowWindowsError(lpCtx, hr, filename, line);
+  return;
+}
+
 HRESULT CJavascriptVM::AddBigIntegerSupport(_In_ DukTape::duk_context *lpCtx)
 {
   return RunNativeProtectedAndGetError(lpCtx, 0, 0, [](_In_ DukTape::duk_context *lpCtx) -> VOID

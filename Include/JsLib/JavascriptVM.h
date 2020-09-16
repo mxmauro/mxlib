@@ -479,6 +479,7 @@ public:
 
   static VOID ThrowWindowsError(_In_ DukTape::duk_context *lpCtx, _In_ HRESULT hr, _In_opt_z_ LPCSTR filename = NULL,
                                 _In_opt_ DukTape::duk_int_t line = 0);
+  VOID ThrowWindowsError(_In_ HRESULT hr, _In_opt_z_ LPCSTR filename = NULL, _In_opt_ DukTape::duk_int_t line = 0);
 
   static HRESULT AddBigIntegerSupport(_In_ DukTape::duk_context *lpCtx);
   HRESULT AddBigIntegerSupport();

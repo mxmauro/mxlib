@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 #include "IpcDefs.h"
+#include "..\..\Include\MemoryBarrier.h"
 
 //-----------------------------------------------------------
 
@@ -921,7 +922,10 @@ VOID CIpc::OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWO
   CPacketBase::eType nOrigOverlappedType;
 
   lpPacket = CPacketBase::FromOverlapped(lpOvr);
+
+  MX::LFence();
   lpConn = lpPacket->GetConn();
+
   {
     CFastLock cListLock(&(lpConn->sInUsePackets.nMutex));
 

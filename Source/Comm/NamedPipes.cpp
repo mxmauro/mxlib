@@ -20,6 +20,7 @@
 #include "..\..\Include\Comm\NamedPipes.h"
 #include "..\..\Include\FnvHash.h"
 #include "..\..\Include\AutoHandle.h"
+#include "..\..\Include\MemoryBarrier.h"
 #include <Sddl.h>
 #include <VersionHelpers.h>
 
@@ -626,7 +627,7 @@ HRESULT CNamedPipes::CConnection::CreateServer()
 
     sInUsePackets.cList.QueueLast(lpPacket);
   }
-  AddRef();
+  AddRef(); //NOTE: this generates a full fence
   hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, lpPacket->GetOverlapped());
   if (FAILED(hRes))
   {

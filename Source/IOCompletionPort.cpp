@@ -111,6 +111,7 @@ HRESULT CIoCompletionPort::Post(_In_ ULONG_PTR nKey, _In_ DWORD dwBytes, _In_ OV
 {
   MX_ASSERT(hIOCP != NULL);
   MX_ASSERT(lpOvr != NULL);
+
   //DebugPrint("PostIoCompletionPort: Ovr=0x%p -> %lu bytes\n", lpOvr, dwBytes);
   if (::PostQueuedCompletionStatus(hIOCP, dwBytes, nKey, lpOvr) == FALSE)
     return MX_HRESULT_FROM_LASTERROR();

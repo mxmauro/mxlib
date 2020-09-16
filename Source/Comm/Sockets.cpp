@@ -20,6 +20,7 @@
 #include "..\..\Include\Comm\Sockets.h"
 #include "..\..\Include\Finalizer.h"
 #include "..\..\Include\Http\punycode.h"
+#include "..\..\Include\MemoryBarrier.h"
 #include <MSTcpIP.h>
 #include <VersionHelpers.h>
 
@@ -1019,6 +1020,7 @@ use_default_close_method:
         }
       }
 
+      //NOTE: The above lock generates a full fence
       if (fnDisconnectEx(sck, lpPacket->GetOverlapped(), TF_REUSE_SOCKET, 0) != FALSE)
       {
         //NOTE: Should we post ever if sync is not available on success?
@@ -1130,7 +1132,7 @@ HRESULT CSockets::CConnection::SetupClient()
     DWORD dw;
 
     //do connect
-    AddRef();
+    AddRef(); //NOTE: this generates a full fence
     if (fnConnectEx(sck, (sockaddr*)&sAddr, SockAddrSizeFromWinSockFamily(sAddr.si_family), NULL, 0, &dw,
                     lpPacket->GetOverlapped()) != FALSE)
     {
@@ -1154,7 +1156,7 @@ HRESULT CSockets::CConnection::SetupClient()
     if (::connect(sck, (sockaddr*)&sAddr, SockAddrSizeFromWinSockFamily(sAddr.si_family)) != SOCKET_ERROR)
     {
       *((HRESULT MX_UNALIGNED*)(lpPacket->GetBuffer())) = hRes;
-      AddRef();
+      AddRef(); //NOTE: this generates a full fence
       hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, lpPacket->GetOverlapped());
       if (FAILED(hRes))
         Release();
@@ -1213,7 +1215,7 @@ HRESULT CSockets::CConnection::SetupAcceptEx(_In_ CConnection *lpIncomingConn)
   lpPacket->SetUserData(lpIncomingConn);
   lpPacket->SetBytesInUse((DWORD)nReq);
   AddRef();
-  lpIncomingConn->AddRef();
+  lpIncomingConn->AddRef(); //NOTE: this generates a full fence
   if (((lpfnAcceptEx)(cListener->fnAcceptEx))(sck, lpIncomingConn->sck, lpPacket->GetBuffer(), 0,
                       lpPacket->GetBytesInUse(), lpPacket->GetBytesInUse(), &dw, lpPacket->GetOverlapped()) != FALSE)
   {
@@ -1296,6 +1298,7 @@ HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _I
         lpData->sAddr.Ipv6.sin6_port = htons(lpData->wPort);
         break;
     }
+    MX::SFence();
     hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, sHostResolver.lpPacket->GetOverlapped());
     if (FAILED(hRes))
       goto err_cannot_resolve;
@@ -1477,7 +1480,7 @@ VOID CSockets::CConnection::HostResolveCallback(_In_ LONG nResolverId, _In_ PSOC
         }
 
         //dispatch
-        AddRef();
+        AddRef(); //NOTE: this generates a full fence
         hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, sHostResolver.lpPacket->GetOverlapped());
         if (FAILED(hRes))
           Release();
@@ -1599,7 +1602,7 @@ VOID CSockets::CConnection::CConnectWaiter::ThreadProc()
     if (lpConn->IsClosed() == FALSE)
     {
       *((HRESULT MX_UNALIGNED*)(lpPacket->GetBuffer())) = hRes;
-      lpConn->AddRef();
+      lpConn->AddRef(); //NOTE: this generates a full fence
       hRes = lpConn->GetDispatcherPool().Post(lpConn->GetDispatcherPoolPacketCallback(), 0, lpPacket->GetOverlapped());
       if (FAILED(hRes))
         lpConn->Release();
@@ -1689,10 +1692,10 @@ HRESULT CSockets::CConnection::CListener::Start()
   fnGetAcceptExSockaddrs = GetAcceptExSockaddrs(lpConn->sck);
   if (fnAcceptEx == NULL || fnGetAcceptExSockaddrs == NULL)
     return MX_E_Unsupported;
-  hAcceptSelect = ::CreateEventW(NULL, TRUE, FALSE, NULL);
+  hAcceptSelect = ::CreateEventW(NULL, FALSE, FALSE, NULL);
   if (hAcceptSelect == NULL)
     return E_OUTOFMEMORY;
-  hAcceptCompleted = ::CreateEventW(NULL, TRUE, FALSE, NULL);
+  hAcceptCompleted = ::CreateEventW(NULL, FALSE, FALSE, NULL);
   if (hAcceptCompleted == NULL)
     return E_OUTOFMEMORY;
   //associate accept event with socket
@@ -1789,9 +1792,7 @@ VOID CSockets::CConnection::CListener::ThreadProc()
   dwTimeoutMs = INFINITE;
   while (lpSocketMgr->IsShuttingDown() == FALSE && lpConn->IsClosed() == FALSE)
   {
-    ::ResetEvent(hAcceptSelect);
-    ::ResetEvent(hAcceptCompleted);
-
+   
     /*
     DWORD dwErrorsCount = 0;
     while (dwErrorsCount < MAX_ACCEPT_ERRORS_PER_CYCLE &&
@@ -1864,8 +1865,8 @@ VOID CSockets::CConnection::CListener::ThreadProc()
         }
         else
         {
-          if ((dwTimeoutMs <<= 1) > 1000)
-            dwTimeoutMs = 1000;
+          if ((dwTimeoutMs <<= 1) > 100)
+            dwTimeoutMs = 100;
         }
       }
     }
