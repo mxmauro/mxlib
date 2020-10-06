@@ -817,7 +817,9 @@ CSockets::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass
 
 CSockets::CConnection::~CConnection()
 {
-  MX_ASSERT(fnCancelIoEx != NULL || sck == NULL);
+  //NOTE: The socket can be still open if some write requests were queued while a graceful shutdown was in progress
+  MX_ASSERT(fnCancelIoEx != NULL || sck == NULL ||
+            __InterlockedRead(&nOutgoingWrites) == sPendingWritePackets.cList.GetCount());
   if (sck != NULL)
     ::closesocket(sck);
 
