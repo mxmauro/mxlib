@@ -407,13 +407,9 @@ BOOL CMySqlConnector::IsConnected() const
 {
   if (lpInternalData != NULL)
   {
-    int err;
-
     if (fn_mysql_ping(mysql_data->lpDB) == 0)
       return TRUE;
-
-    err = fn_mysql_errno(mysql_data->lpDB);
-    const_cast<CMySqlConnector*>(this)->Disconnect();
+    int err = fn_mysql_errno(mysql_data->lpDB);
   }
   return FALSE;
 }
