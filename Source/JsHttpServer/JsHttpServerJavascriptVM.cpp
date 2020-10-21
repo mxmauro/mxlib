@@ -58,7 +58,6 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
   SIZE_T i, nCount;
   HRESULT hRes;
 
-  bIsNew = FALSE;
   {
     CFastLock cLock(&nMutex);
     CLnkLstNode *lpNode;
@@ -66,20 +65,20 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
     lpNode = cJvmList.PopHead();
     if (lpNode != NULL)
       cJVM.Attach(CONTAINING_RECORD(lpNode, CJsHttpServer::CJvm, cListNode));
-    if (cJVM)
-    {
-      if (FAILED(cJVM->Reset()))
-      {
-        cJVM.Reset();
-      }
-    }
+  }
+
+  bIsNew = FALSE;
+  if (cJVM && FAILED(cJVM->Reset()))
+  {
+    cJVM.Reset();
+  }
+
+  if (!cJVM)
+  {
+    cJVM.Attach(MX_DEBUG_NEW CJvm());
     if (!cJVM)
-    {
-      cJVM.Attach(MX_DEBUG_NEW CJvm());
-      if (!cJVM)
-        return E_OUTOFMEMORY;
-      bIsNew = TRUE;
-    }
+      return E_OUTOFMEMORY;
+    bIsNew = TRUE;
   }
 
   //set require module callback

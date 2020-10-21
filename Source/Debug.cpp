@@ -80,6 +80,7 @@ VOID DebugPrintV(_In_z_ LPCSTR szFormatA, va_list ap)
   if (fnOutputDebugStringA == NULL)
   {
     PVOID DllBase = ::MxGetDllHandle(L"kernel32.dll");
+
     fnOutputDebugStringA = (lpfnOutputDebugStringA)::MxGetProcedureAddress(DllBase, "OutputDebugStringA");
     if (fnOutputDebugStringA == NULL)
       fnOutputDebugStringA = (lpfnOutputDebugStringA)1;
@@ -87,6 +88,7 @@ VOID DebugPrintV(_In_z_ LPCSTR szFormatA, va_list ap)
   if (fnDbgPrint == NULL)
   {
     PVOID DllBase = ::MxGetDllHandle(L"ntdll.dll");
+
     fnDbgPrint = (lpfnDbgPrint)::MxGetProcedureAddress(DllBase, "DbgPrint");
     if (fnDbgPrint == NULL)
       fnDbgPrint = (lpfnDbgPrint)1;
@@ -98,7 +100,7 @@ VOID DebugPrintV(_In_z_ LPCSTR szFormatA, va_list ap)
   }
   else
   {
-    MX::CFastLock cAccessLock(&nAccessMtx);
+    CFastLock cAccessLock(&nAccessMtx);
 
     fnOutputDebugStringA(szBufA);
   }

@@ -852,7 +852,7 @@ VOID CIpc::CConnectionBase::DecrementOutgoingWrites()
   return;
 }
 
-CIpc::CPacketBase *CIpc::CConnectionBase::GetPacket(_In_ CPacketBase::eType nType, _In_ SIZE_T nDesiredSize,
+CIpc::CPacketBase* CIpc::CConnectionBase::GetPacket(_In_ CPacketBase::eType nType, _In_ SIZE_T nDesiredSize,
                                                     _In_ BOOL bRealSize)
 {
   CPacketBase *lpPacket;
@@ -862,13 +862,13 @@ CIpc::CPacketBase *CIpc::CConnectionBase::GetPacket(_In_ CPacketBase::eType nTyp
 
   if (nDesiredSize <= 4096)
   {
-    MX::CFastLock cLock(&(sFreePackets4096.nMutex));
+    CFastLock cLock(&(sFreePackets4096.nMutex));
 
     lpPacket = sFreePackets4096.cList.DequeueFirst();
   }
   else
   {
-    MX::CFastLock cLock(&(sFreePackets32768.nMutex));
+    CFastLock cLock(&(sFreePackets32768.nMutex));
 
     MX_ASSERT(nDesiredSize <= 32768);
     lpPacket = sFreePackets32768.cList.DequeueFirst();
@@ -898,7 +898,7 @@ VOID CIpc::CConnectionBase::FreePacket(_In_ CPacketBase *lpPacket)
 
     if (lpPacket->GetClassSize() <= 4096)
     {
-      MX::CFastLock cLock(&(sFreePackets4096.nMutex));
+      CFastLock cLock(&(sFreePackets4096.nMutex));
 
       if (sFreePackets4096.cList.GetCount() < MAXIMUM_FREE_PACKETS_IN_LIST)
       {
@@ -923,7 +923,7 @@ VOID CIpc::CConnectionBase::FreePacket(_In_ CPacketBase *lpPacket)
     }
     else
     {
-      MX::CFastLock cLock(&(sFreePackets32768.nMutex));
+      CFastLock cLock(&(sFreePackets32768.nMutex));
 
       if (sFreePackets32768.cList.GetCount() < MAXIMUM_FREE_PACKETS_IN_LIST)
       {
