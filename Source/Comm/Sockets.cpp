@@ -45,8 +45,7 @@ static __inline HRESULT MX_HRESULT_FROM_LASTSOCKETERROR()
 #define TypeResolvingAddress  (CPacketBase::eType)((int)CPacketBase::TypeMAX + 1)
 #define TypeConnect           (CPacketBase::eType)((int)CPacketBase::TypeMAX + 2)
 #define TypeConnectEx         (CPacketBase::eType)((int)CPacketBase::TypeMAX + 3)
-#define TypeDisconnectEx      (CPacketBase::eType)((int)CPacketBase::TypeMAX + 4)
-#define TypeAcceptEx          (CPacketBase::eType)((int)CPacketBase::TypeMAX + 5)
+#define TypeAcceptEx          (CPacketBase::eType)((int)CPacketBase::TypeMAX + 4)
 
 #define SO_UPDATE_ACCEPT_CONTEXT       0x700B
 #define SO_UPDATE_CONNECT_CONTEXT      0x7010
@@ -92,10 +91,8 @@ typedef VOID (WINAPI *lpfnGetAcceptExSockaddrs)(_In_ PVOID lpOutputBuffer, _In_ 
                                                 _Out_ LPINT LocalSockaddrLength,
                                                 _Deref_out_ struct sockaddr **RemoteSockaddr,
                                                 _Out_ LPINT RemoteSockaddrLength);
-typedef BOOL (WINAPI *lpfnDisconnectEx)(_In_ SOCKET hSocket, _In_ LPOVERLAPPED lpOverlapped, _In_ DWORD dwFlags,
-                                        _In_ DWORD reserved);
 
-typedef BOOL (WINAPI *lpfnCancelIoEx)(_In_ HANDLE hFile, _In_opt_ LPOVERLAPPED lpOverlapped);
+//-----------------------------------------------------------
 
 typedef struct {
   WORD wPort;
@@ -107,7 +104,6 @@ typedef struct {
 static LONG volatile nSocketInitCount = 0;
 static LONG volatile nOSVersion = -1;
 static lpfnSetFileCompletionNotificationModes volatile fnSetFileCompletionNotificationModes = NULL;
-static lpfnCancelIoEx volatile fnCancelIoEx = NULL;
 
 //-----------------------------------------------------------
 
@@ -118,9 +114,6 @@ static int SockAddrSizeFromWinSockFamily(_In_ int nFamily);
 static lpfnAcceptEx GetAcceptEx(_In_ SOCKET sck);
 static lpfnGetAcceptExSockaddrs GetAcceptExSockaddrs(_In_ SOCKET sck);
 static lpfnConnectEx GetConnectEx(_In_ SOCKET sck);
-static lpfnDisconnectEx GetDisconnectEx(_In_ SOCKET sck);
-static int SocketInsertFunc(_In_ LPVOID lpContext, _In_ SOCKET *lpElem1, _In_ SOCKET *lpElem2);
-static int SocketSearchFunc(_In_ LPVOID lpContext, _In_ SOCKET sck, _In_ SOCKET *lpElem);
 
 static inline BOOL __InterlockedIncrementIfLessThan(_In_ LONG volatile *lpnValue, _In_ LONG nMaximumValue)
 {
@@ -144,14 +137,7 @@ namespace MX {
 
 CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDispatcherPool), CNonCopyableObj()
 {
-  SIZE_T i;
-
   dwAddressResolverTimeoutMs = 20000;
-  for (i = 0; i < MX_ARRAYLEN(sDisconnectingSockets); i++)
-    FastLock_Initialize(&(sDisconnectingSockets[i].nMutex));
-  for (i = 0; i < MX_ARRAYLEN(sReusableSockets); i++)
-    FastLock_Initialize(&(sReusableSockets[i].nMutex));
-
   nFlags = 0;
 
   //detect OS version
@@ -191,29 +177,6 @@ CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDi
       _InterlockedExchangePointer((LPVOID volatile*)&fnSetFileCompletionNotificationModes,
                                   _fnSetFileCompletionNotificationModes);
     }
-    /*
-    if (__InterlockedReadPointer(&fnCancelIoEx) == NULL)
-    {
-      LPVOID _fnCancelIoEx;
-      HINSTANCE hDll;
-
-      _fnCancelIoEx = NULL;
-      hDll = ::GetModuleHandleW(L"kernelbase.dll");
-      if (hDll != NULL)
-      {
-        _fnCancelIoEx = ::GetProcAddress(hDll, "CancelIoEx");
-      }
-      if (_fnCancelIoEx == NULL)
-      {
-        hDll = ::GetModuleHandleW(L"kernel32.dll");
-        if (hDll != NULL)
-        {
-          _fnCancelIoEx = ::GetProcAddress(hDll, "CancelIoEx");
-        }
-      }
-      _InterlockedExchangePointer((LPVOID volatile*)&fnCancelIoEx, _fnCancelIoEx);
-    }
-    */
   }
 
   if (__InterlockedReadPointer(&fnSetFileCompletionNotificationModes) != NULL)
@@ -543,41 +506,6 @@ HRESULT CSockets::OnInternalInitialize()
 
 VOID CSockets::OnInternalFinalize()
 {
-  SIZE_T i;
-
-  for (i = 0; i < MX_ARRAYLEN(sDisconnectingSockets); i++)
-  {
-    CFastLock cLock(&(sDisconnectingSockets[i].nMutex));
-    SIZE_T nCount;
-    SOCKET *lpSck;
-
-    nCount = sDisconnectingSockets[i].aList.GetCount();
-    lpSck = sDisconnectingSockets[i].aList.GetBuffer();
-    while (nCount > 0)
-    {
-      fnCancelIoEx((HANDLE)(*lpSck), NULL);
-
-      lpSck++;
-      nCount--;
-    }
-  }
-
-  for (i = 0; i < MX_ARRAYLEN(sReusableSockets); i++)
-  {
-    CFastLock cLock(&(sReusableSockets[i].nMutex));
-    SIZE_T nCount;
-    SOCKET *lpSck;
-
-    nCount = sReusableSockets[i].aList.GetCount();
-    lpSck = sReusableSockets[i].aList.GetBuffer();
-    while (nCount > 0)
-    {
-      ::closesocket(*lpSck);
-      lpSck++;
-      nCount--;
-    }
-  }
-
   nFlags &= ~MGRFLAGS_TcpHasIfsHandles;
   return;
 }
@@ -609,54 +537,6 @@ HRESULT CSockets::CreateServerConnection(_In_ CConnection *lpListenConn)
   if (FAILED(hRes))
     cIncomingConn->Close(hRes);
   return hRes;
-}
-
-BOOL CSockets::OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket, _In_ HRESULT hRes)
-{
-  if (lpPacket->GetType() == TypeDisconnectEx)
-  {
-    SIZE_T nArrIdx;
-    eFamily nFamily;
-    SOCKET sck;
-
-    MxMemCopy(&nFamily, lpPacket->GetBuffer(), sizeof(eFamily));
-    sck = (SOCKET)(lpPacket->GetUserData());
-    nArrIdx = (nFamily == FamilyIPv4) ? 0 : 1;
-
-    FreePacket(lpPacket);
-
-    if (SUCCEEDED(hRes))
-    {
-      {
-        CFastLock cLock(&(sDisconnectingSockets[nArrIdx].nMutex));
-        SIZE_T nIndex;
-
-        nIndex = sDisconnectingSockets[nArrIdx].aList.BinarySearch(sck, &SocketSearchFunc);
-        if (nIndex != (SIZE_T)-1)
-          sDisconnectingSockets[nArrIdx].aList.RemoveElementAt(nIndex);
-      }
-
-      if (IsShuttingDown() == FALSE)
-      {
-        CFastLock cLock(&(sReusableSockets[nArrIdx].nMutex));
-
-        if (sReusableSockets[nArrIdx].aList.AddElement(sck) == FALSE)
-          hRes = E_OUTOFMEMORY;
-      }
-      else
-      {
-        hRes = MX_E_Cancelled;
-      }
-    }
-    if (FAILED(hRes))
-    {
-      ::closesocket(sck);
-    }
-
-    //done
-    return TRUE;
-  }
-  return FALSE;
 }
 
 HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket, _In_ HRESULT hRes)
@@ -818,8 +698,11 @@ CSockets::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass
 CSockets::CConnection::~CConnection()
 {
   //NOTE: The socket can be still open if some write requests were queued while a graceful shutdown was in progress
-  MX_ASSERT(fnCancelIoEx != NULL || sck == NULL ||
-            __InterlockedRead(&nOutgoingWrites) == sPendingWritePackets.cList.GetCount());
+  //MX_ASSERT(sck == NULL ||
+  //          __InterlockedRead(&nOutgoingWrites) == sPendingWritePackets.cList.GetCount());
+  MX_ASSERT(__InterlockedRead(&nOutgoingWrites) == sPendingWritePackets.cList.GetCount());
+  MX_ASSERT(sck == NULL);
+
   if (sck != NULL)
     ::closesocket(sck);
 
@@ -838,35 +721,11 @@ HRESULT CSockets::CConnection::CreateSocket()
   HRESULT hRes;
 
   //create socket
-  if (nClass == ConnectionClassServer)
+  sck = ::WSASocketW(FamilyToWinSockFamily(nFamily), SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
+  if (sck == NULL || sck == INVALID_SOCKET)
   {
-    SIZE_T nIndex = (nFamily == eFamily::FamilyIPv4) ? 0 : 1;
-    struct tagReusableSockets *lpReusableSockets = &(reinterpret_cast<CSockets*>(lpIpc)->sReusableSockets[nIndex]);
-
-    {
-      CFastLock cLock(&(lpReusableSockets->nMutex));
-      SIZE_T nCount;
-
-      nCount = lpReusableSockets->aList.GetCount();
-      if (nCount > 0)
-      {
-        nCount--;
-        sck = lpReusableSockets->aList.GetElementAt(nCount);
-        lpReusableSockets->aList.RemoveElementAt(nCount);
-
-        //done
-        return S_OK;
-      }
-    }
-  }
-  if (sck == NULL)
-  {
-    sck = ::WSASocketW(FamilyToWinSockFamily(nFamily), SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
-    if (sck == NULL || sck == INVALID_SOCKET)
-    {
-      sck = NULL;
-      return MX_HRESULT_FROM_LASTSOCKETERROR();
-    }
+    sck = NULL;
+    return MX_HRESULT_FROM_LASTSOCKETERROR();
   }
   ::SetHandleInformation((HANDLE)sck, HANDLE_FLAG_INHERIT, 0);
   //non-blocking
@@ -946,125 +805,54 @@ HRESULT CSockets::CConnection::CreateSocket()
 VOID CSockets::CConnection::ShutdownLink(_In_ BOOL bAbortive)
 {
   SOCKET sckToClose = NULL;
+  LINGER sLinger;
 
   {
     CAutoSlimRWLExclusive cHandleInUseLock(&sRwHandleInUse);
 
     if (sck != NULL)
     {
-      lpfnDisconnectEx fnDisconnectEx = NULL;
-      CIpc::CPacketBase *lpPacket;
-      CSockets *lpSckMgr;
-      SIZE_T nArrIdx;
-      LINGER sLinger;
-
-      //get extension function addresses
-      /*
-      if (nClass == ConnectionClassServer && lpIpc->IsShuttingDown() == FALSE && IsConnected() != FALSE &&
-          fnCancelIoEx != NULL)
-      {
-        fnDisconnectEx = GetDisconnectEx(sck);
-      }
-      */
-      if (bAbortive != FALSE)
-      {
-        //abortive close on error
-        sLinger.l_onoff = 1;
-        sLinger.l_linger = 0;
-        ::setsockopt(sck, SOL_SOCKET, SO_LINGER, (char*)&sLinger, (int)sizeof(sLinger));
-      }
-      else
-      {
-        //if (fnDisconnectEx == NULL)
-          ::shutdown(sck, SD_SEND);
-        sLinger.l_onoff = 0;
-        sLinger.l_linger = 0;
-        ::setsockopt(sck, SOL_SOCKET, SO_LINGER, (char*)&sLinger, (int)sizeof(sLinger));
-      }
-      if (fnDisconnectEx == NULL)
-      {
-use_default_close_method:
-        if (fnCancelIoEx != NULL)
-        {
-          fnCancelIoEx((HANDLE)sck, NULL);
-        }
-        else
-        {
-          sckToClose = sck;
-          sck = NULL;
-        }
-        goto after_close;
-      }
-
-      //cancel pending IO
-      if (fnCancelIoEx != NULL)
-      {
-        fnCancelIoEx((HANDLE)sck, NULL);
-      }
-
-      lpPacket = GetPacket(TypeDisconnectEx, sizeof(eFamily), TRUE);
-      if (lpPacket == NULL)
-        goto use_default_close_method;
-
-      lpSckMgr = reinterpret_cast<CSockets*>(lpIpc);
-      nArrIdx = (nFamily == FamilyIPv4) ? 0 : 1;
-
-      ::MxMemCopy(lpPacket->GetBuffer(), &nFamily, sizeof(eFamily));
-      lpPacket->SetUserData((LPVOID)sck);
-
-      {
-        CFastLock cLock(&(lpSckMgr->sDisconnectingSockets[nArrIdx].nMutex));
-
-        if (lpSckMgr->sDisconnectingSockets[nArrIdx].aList.SortedInsert(sck, &SocketInsertFunc, NULL, TRUE) == FALSE)
-        {
-          FreePacket(lpPacket);
-          goto use_default_close_method;
-        }
-      }
-
-      //NOTE: The above lock generates a full fence
-      if (fnDisconnectEx(sck, lpPacket->GetOverlapped(), TF_REUSE_SOCKET, 0) != FALSE)
-      {
-        //NOTE: Should we post ever if sync is not available on success?
-        if (IS_COMPLETE_SYNC_AVAILABLE())
-        {
-          reinterpret_cast<CSockets*>(lpIpc)->OnDispatcherPacket(&(GetDispatcherPool()), 0, lpPacket->GetOverlapped(),
-                                                                 S_OK);
-        }
-      }
-      else
-      {
-        HRESULT hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
-        if (FAILED(hRes) && hRes != MX_E_IoPending)
-        {
-          CFastLock cLock(&(lpSckMgr->sDisconnectingSockets[nArrIdx].nMutex));
-          SIZE_T nIndex;
-
-          nIndex = lpSckMgr->sDisconnectingSockets[nArrIdx].aList.BinarySearch(sck, &SocketSearchFunc);
-          if (nIndex != (SIZE_T)-1)
-            lpSckMgr->sDisconnectingSockets[nArrIdx].aList.RemoveElementAt(nIndex);
-          goto use_default_close_method;
-        }
-      }
+      sckToClose = sck;
       sck = NULL;
-
-after_close:
-      if (cListener)
-      {
-        cListener->Stop();
-      }
     }
   }
+
+  if (cListener)
+  {
+    cListener->Stop();
+  }
+
+  if (sckToClose != NULL)
+  {
+    if (bAbortive != FALSE)
+    {
+      //abortive close on error
+      sLinger.l_onoff = 1;
+      sLinger.l_linger = 0;
+      ::setsockopt(sckToClose, SOL_SOCKET, SO_LINGER, (char*)&sLinger, (int)sizeof(sLinger));
+    }
+    else
+    {
+      ::shutdown(sckToClose, SD_SEND);
+      sLinger.l_onoff = 0;
+      sLinger.l_linger = 0;
+      ::setsockopt(sckToClose, SOL_SOCKET, SO_LINGER, (char*)&sLinger, (int)sizeof(sLinger));
+    }
+  }
+
   //cancel connect worker thread
   if (cConnectWaiter)
   {
     cConnectWaiter->Stop();
   }
+
   //cancel host resolver
   HostResolver::Cancel(&(sHostResolver.nResolverId));
+
   //close socket
   if (sckToClose != NULL)
     ::closesocket(sckToClose);
+
   //call base
   CConnectionBase::ShutdownLink(bAbortive);
   return;
@@ -2014,39 +1802,4 @@ static lpfnConnectEx GetConnectEx(_In_ SOCKET sck)
     return NULL;
   }
   return fnConnectEx;
-}
-
-static lpfnDisconnectEx GetDisconnectEx(_In_ SOCKET sck)
-{
-  static const GUID sGuid_DisconnectEx = {
-    0x7FDA2E11, 0x8630, 0x436F, { 0xA0, 0x31, 0xF5, 0x36, 0xA6, 0xEE, 0xC1, 0x57 }
-  };
-  DWORD dw = 0;
-  lpfnDisconnectEx fnDisconnectEx = NULL;
-
-  if (::WSAIoctl(sck, SIO_GET_EXTENSION_FUNCTION_POINTER, (LPVOID)&sGuid_DisconnectEx,
-                 (DWORD)sizeof(sGuid_DisconnectEx), &fnDisconnectEx, (DWORD)sizeof(fnDisconnectEx), &dw, NULL,
-                 NULL) == SOCKET_ERROR)
-  {
-    return NULL;
-  }
-  return fnDisconnectEx;
-}
-
-static int SocketInsertFunc(_In_ LPVOID lpContext, _In_ SOCKET *lpElem1, _In_ SOCKET *lpElem2)
-{
-  if ((SIZE_T)(*lpElem1) < (SIZE_T)(*lpElem2))
-    return -1;
-  if ((SIZE_T)(*lpElem1) > (SIZE_T)(*lpElem2))
-    return 1;
-  return 0;
-}
-
-static int SocketSearchFunc(_In_ LPVOID lpContext, _In_ SOCKET sck, _In_ SOCKET *lpElem)
-{
-  if ((SIZE_T)sck < (SIZE_T)(*lpElem))
-    return -1;
-  if ((SIZE_T)sck > (SIZE_T)(*lpElem))
-    return 1;
-  return 0;
 }

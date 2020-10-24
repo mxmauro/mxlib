@@ -995,24 +995,27 @@ HRESULT CIpc::CConnectionBase::DoZeroRead(_In_ SIZE_T nPacketsCount, _Inout_ CPa
     {
       case S_FALSE:
         {
-          BOOL bLog;
+        BOOL bLog;
 
-          MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);
-          bLog = ((_InterlockedOr(&nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) ? TRUE : FALSE;
-          if (bLog != FALSE && lpIpc->ShouldLog(1) != FALSE)
-          {
-            cLogTimer.Mark();
-            lpIpc->Log(L"CIpc::GracefulShutdown E) Clock=%lums / This=0x%p", cLogTimer.GetElapsedTimeMs(), this);
-            cLogTimer.ResetToLastMark();
-          }
-          //free packet
-          {
-            CFastLock cListLock(&(sInUsePackets.nMutex));
+        MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);
+        bLog = ((_InterlockedOr(&nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) ? TRUE : FALSE;
+        if (bLog != FALSE && lpIpc->ShouldLog(1) != FALSE)
+        {
+          cLogTimer.Mark();
+          lpIpc->Log(L"CIpc::GracefulShutdown E) Clock=%lums / This=0x%p", cLogTimer.GetElapsedTimeMs(), this);
+          cLogTimer.ResetToLastMark();
+        }
 
-            sInUsePackets.cList.Remove(lpPacket);
-          }
-          FreePacket(lpPacket);
-          Release();
+        //free packet
+        {
+          CFastLock cListLock(&(sInUsePackets.nMutex));
+
+          sInUsePackets.cList.Remove(lpPacket);
+        }
+        FreePacket(lpPacket);
+
+        //release connection
+        Release();
         }
         return S_OK;
 
@@ -1031,6 +1034,16 @@ HRESULT CIpc::CConnectionBase::DoZeroRead(_In_ SIZE_T nPacketsCount, _Inout_ CPa
 
       default:
         MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);
+
+        //free packet
+        {
+          CFastLock cListLock(&(sInUsePackets.nMutex));
+
+          sInUsePackets.cList.Remove(lpPacket);
+        }
+        FreePacket(lpPacket);
+
+        //release connection
         Release();
         return hRes;
     }
@@ -1104,6 +1117,8 @@ HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacke
           sInUsePackets.cList.Remove(lpPacket);
         }
         FreePacket(lpPacket);
+
+        //release connection
         Release();
         return S_OK;
 
@@ -1122,6 +1137,16 @@ HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacke
 
       default: //error
         MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);
+
+        //free packet
+        {
+          CFastLock cListLock(&(sInUsePackets.nMutex));
+
+          sInUsePackets.cList.Remove(lpPacket);
+        }
+        FreePacket(lpPacket);
+
+        //release connection
         Release();
         return hRes;
     }

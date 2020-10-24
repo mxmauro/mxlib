@@ -192,7 +192,6 @@ private:
 
   HRESULT CreateServerConnection(_In_ CConnection *lpListenConn);
 
-  BOOL OnPreprocessPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket, _In_ HRESULT hRes);
   HRESULT OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket, _In_ HRESULT hRes);
 
   BOOL ZeroReadsSupported() const
@@ -202,14 +201,6 @@ private:
 
 private:
   DWORD dwAddressResolverTimeoutMs;
-  struct tagReusableSockets {
-    LONG volatile nMutex;
-    TArrayList<SOCKET> aList;
-  } sReusableSockets[2];
-  struct tagDisconnectingSockets {
-    LONG volatile nMutex;
-    TArrayList<SOCKET> aList;
-  } sDisconnectingSockets[2];
   ULONG nFlags;
 };
 

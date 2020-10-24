@@ -68,10 +68,10 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
   }
 
   bIsNew = FALSE;
-  if (cJVM && FAILED(cJVM->Reset()))
-  {
+  //if (cJVM && FAILED(cJVM->Reset()))
+  //{
     cJVM.Reset();
-  }
+  //}
 
   if (!cJVM)
   {

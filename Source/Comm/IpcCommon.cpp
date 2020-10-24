@@ -1173,8 +1173,7 @@ start:
     {
       BOOL bDataAvailable;
 
-      if (lpConn->IsClosed() == FALSE)
-        lpConn->Close(S_OK);
+      lpConn->Close(S_OK);
 
       //wait until another message is processed
       lpConn->cOnDataReceivedCS.Lock();

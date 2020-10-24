@@ -39,7 +39,6 @@
 //-----------------------------------------------------------
 
 typedef BOOL (WINAPI *lpfnSetFileCompletionNotificationModes)(_In_ HANDLE FileHandle, _In_ UCHAR Flags);
-typedef BOOL (WINAPI *lpfnCancelIoEx)(_In_ HANDLE hFile, _In_opt_ LPOVERLAPPED lpOverlapped);
 
 //-----------------------------------------------------------
 
@@ -61,7 +60,6 @@ static const BYTE aSecDescriptorVistaOrLater[] = {
 
 static LONG volatile nOSVersion = -1;
 static lpfnSetFileCompletionNotificationModes volatile fnSetFileCompletionNotificationModes = NULL;
-static lpfnCancelIoEx volatile fnCancelIoEx = NULL;
 
 //-----------------------------------------------------------
 
@@ -111,28 +109,6 @@ CNamedPipes::CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CI
       }
       _InterlockedExchangePointer((LPVOID volatile*)&fnSetFileCompletionNotificationModes,
                                   _fnSetFileCompletionNotificationModes);
-    }
-
-    if (__InterlockedReadPointer(&fnCancelIoEx) == NULL)
-    {
-      LPVOID _fnCancelIoEx;
-      HINSTANCE hDll;
-
-      _fnCancelIoEx = NULL;
-      hDll = ::GetModuleHandleW(L"kernelbase.dll");
-      if (hDll != NULL)
-      {
-        _fnCancelIoEx = ::GetProcAddress(hDll, "CancelIoEx");
-      }
-      if (_fnCancelIoEx == NULL)
-      {
-        hDll = ::GetModuleHandleW(L"kernel32.dll");
-        if (hDll != NULL)
-        {
-          _fnCancelIoEx = ::GetProcAddress(hDll, "CancelIoEx");
-        }
-      }
-      _InterlockedExchangePointer((LPVOID volatile*)&fnCancelIoEx, _fnCancelIoEx);
     }
   }
   return;
@@ -478,7 +454,16 @@ HRESULT CNamedPipes::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPack
           hRes = MX_HRESULT_FROM_LASTERROR();
           if (hRes == HRESULT_FROM_WIN32(ERROR_PIPE_CONNECTED))
           {
+            //valid connection, the client connected between CreateNamedPipe and ConnectNamedPipe calls
+            {
+              CFastLock cListLock(&(lpConn->sInUsePackets.nMutex));
+
+              lpConn->sInUsePackets.cList.Remove(lpPacket);
+            }
+
+            //release extra reference added above
             lpConn->Release();
+
             hRes = S_OK;
             goto pipe_connected;
           }
@@ -489,6 +474,7 @@ HRESULT CNamedPipes::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPack
           }
           else
           {
+            //free packet
             CFastLock cListLock(&(lpConn->sInUsePackets.nMutex));
 
             lpConn->sInUsePackets.cList.Remove(lpPacket);
@@ -578,8 +564,11 @@ CNamedPipes::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionCl
 CNamedPipes::CConnection::~CConnection()
 {
   //NOTE: The pipe can be still open if some write requests were queued while a graceful shutdown was in progress
-  MX_ASSERT(fnCancelIoEx != NULL || hPipe == NULL ||
-            __InterlockedRead(&nOutgoingWrites) == sPendingWritePackets.cList.GetCount());
+  //MX_ASSERT(hPipe == NULL ||
+  //          __InterlockedRead(&nOutgoingWrites) == sPendingWritePackets.cList.GetCount());
+  MX_ASSERT(__InterlockedRead(&nOutgoingWrites) == sPendingWritePackets.cList.GetCount());
+  MX_ASSERT(hPipe == NULL);
+
   if (hPipe != NULL)
     ::CloseHandle(hPipe);
   return;
@@ -595,8 +584,8 @@ HRESULT CNamedPipes::CConnection::CreateServer()
   sSecAttrib.nLength = (DWORD)sizeof(sSecAttrib);
   sSecAttrib.bInheritHandle = FALSE;
   sSecAttrib.lpSecurityDescriptor = cServerInfo->lpSecDescr;
-  hPipe = ::CreateNamedPipeW((LPWSTR)(cServerInfo->cStrNameW), PIPE_ACCESS_DUPLEX|FILE_FLAG_WRITE_THROUGH|
-                             FILE_FLAG_OVERLAPPED, PIPE_READMODE_BYTE|PIPE_TYPE_BYTE|PIPE_WAIT,
+  hPipe = ::CreateNamedPipeW((LPWSTR)(cServerInfo->cStrNameW), PIPE_ACCESS_DUPLEX | FILE_FLAG_WRITE_THROUGH |
+                             FILE_FLAG_OVERLAPPED, PIPE_READMODE_BYTE | PIPE_TYPE_BYTE | PIPE_WAIT,
                              PIPE_UNLIMITED_INSTANCES, 4096, 4096, 10000, &sSecAttrib);
   if (hPipe == NULL || hPipe == INVALID_HANDLE_VALUE)
   {
@@ -633,12 +622,15 @@ HRESULT CNamedPipes::CConnection::CreateServer()
   hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, lpPacket->GetOverlapped());
   if (FAILED(hRes))
   {
+    //free packet
     {
       CFastLock cListLock(&(sInUsePackets.nMutex));
 
       sInUsePackets.cList.Remove(lpPacket);
     }
     FreePacket(lpPacket);
+
+    //release connection
     Release();
   }
 
@@ -678,6 +670,7 @@ HRESULT CNamedPipes::CConnection::CreateClient(_In_z_ LPCWSTR szServerNameW, _In
       dwMaxWriteTimeoutMs = 0;
     }
   }
+
   //IOCP options
   if (fnSetFileCompletionNotificationModes != NULL)
   {
@@ -687,10 +680,12 @@ HRESULT CNamedPipes::CConnection::CreateClient(_In_z_ LPCWSTR szServerNameW, _In
       return MX_HRESULT_FROM_LASTERROR();
     }
   }
+
   //attach to completion port
   hRes = GetDispatcherPool().Attach(hPipe, GetDispatcherPoolPacketCallback());
   if (FAILED(hRes))
     return hRes;
+
   //change wait mode
   dwMode = PIPE_WAIT;
   if (::SetNamedPipeHandleState(hPipe, &dwMode, NULL, NULL) == FALSE)
@@ -701,23 +696,25 @@ HRESULT CNamedPipes::CConnection::CreateClient(_In_z_ LPCWSTR szServerNameW, _In
 
 VOID CNamedPipes::CConnection::ShutdownLink(_In_ BOOL bAbortive)
 {
+  HANDLE hPipeToClose = NULL;
+
   {
     CAutoSlimRWLExclusive cHandleInUseLock(&sRwHandleInUse);
 
     if (hPipe != NULL)
     {
-      ::DisconnectNamedPipe(hPipe);
-      if (fnCancelIoEx != NULL)
-      {
-        fnCancelIoEx(hPipe, NULL);
-      }
-      else
-      {
-        ::CloseHandle(hPipe);
-        hPipe = NULL;
-      }
+      hPipeToClose = hPipe;
+      hPipe = NULL;
     }
   }
+
+  if (hPipeToClose != NULL)
+  {
+    ::DisconnectNamedPipe(hPipeToClose);
+
+    ::CloseHandle(hPipeToClose);
+  }
+
   //call base
   CConnectionBase::ShutdownLink(bAbortive);
   return;
