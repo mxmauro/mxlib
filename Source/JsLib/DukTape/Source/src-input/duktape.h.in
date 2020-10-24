@@ -674,8 +674,9 @@ DUK_EXTERNAL_DECL duk_bool_t duk_check_type_mask(duk_context *ctx, duk_idx_t idx
 
 DUK_EXTERNAL_DECL duk_bool_t duk_is_undefined(duk_context *ctx, duk_idx_t idx);
 DUK_EXTERNAL_DECL duk_bool_t duk_is_null(duk_context *ctx, duk_idx_t idx);
-#define duk_is_null_or_undefined(ctx, idx) \
+#define duk_is_nullish(ctx, idx) \
 	((duk_get_type_mask((ctx), (idx)) & (DUK_TYPE_MASK_NULL | DUK_TYPE_MASK_UNDEFINED)) ? 1 : 0)
+#define duk_is_null_or_undefined(ctx, idx) duk_is_nullish((ctx), (idx))
 
 DUK_EXTERNAL_DECL duk_bool_t duk_is_boolean(duk_context *ctx, duk_idx_t idx);
 DUK_EXTERNAL_DECL duk_bool_t duk_is_number(duk_context *ctx, duk_idx_t idx);
@@ -1294,6 +1295,13 @@ DUK_EXTERNAL_DECL duk_double_t duk_components_to_time(duk_context *ctx, duk_time
  */
 #if defined(DUK_USE_ROM_OBJECTS) && defined(DUK_USE_HEAPPTR16)
 DUK_EXTERNAL_DECL const void * const duk_rom_compressed_pointers[];
+#endif
+
+/*
+ *  Fuzzilli fuzzing integration
+ */
+#if defined(DUK_USE_FUZZILLI)
+DUK_EXTERNAL_DECL void duk_assert_wrapper(duk_int_t x);
 #endif
 
 /*

@@ -172,3 +172,10 @@ DUK_INTERNAL void duk_err_setup_ljstate1(duk_hthread *thr, duk_small_uint_t lj_t
 
 	DUK_ASSERT_LJSTATE_SET(heap);
 }
+
+#if defined(DUK_USE_FUZZILLI)
+/* Wrapper for easy usage in duk-fizzilli. */
+DUK_EXTERNAL_DECL void duk_assert_wrapper(duk_int_t x) {
+	DUK_ASSERT(x);
+}
+#endif /* DUK_USE_FUZZILLI */

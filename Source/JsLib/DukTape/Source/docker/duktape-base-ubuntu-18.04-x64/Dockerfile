@@ -18,7 +18,7 @@ RUN echo "=== Timezone setup ===" && \
 # Duktape, the duktape.org website, run tests, etc.
 RUN echo "=== Node.js and package install ===" && \
 	apt-get update && apt-get install -qqy curl && \
-	curl -sL https://deb.nodesource.com/setup_10.x | bash - && \
+	curl -sL https://deb.nodesource.com/setup_14.x | bash - && \
 	dpkg --add-architecture i386 && \
 	apt-get update && \
 	apt-get install -qqy \
@@ -80,9 +80,9 @@ RUN echo "=== Prepare duktape-prep repo ===" && \
 	cp -r repo-snapshots/duktape duktape-prep && \
 	cp -r repo-snapshots/duktape-releases duktape-prep/duktape-releases && \
 	cd duktape-prep && \
-	make runtestsdeps linenoise UglifyJS2 && \
-	make duktape-releases lz-string jquery-1.11.2.js && \
-	make luajs underscore lodash bluebird.js closure-compiler && \
+	make runtestsdeps deps/linenoise deps/UglifyJS && \
+	make deps/duktape-releases deps/lz-string deps/jquery-1.11.2.js && \
+	make deps/luajs deps/underscore deps/lodash deps/bluebird.js deps/closure-compiler && \
 	make clean
 
 # Initialize Emscripten cached bytecode files.
