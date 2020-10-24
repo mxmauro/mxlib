@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2019 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2020 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright (c) 2002, Oracle and/or its affiliates. All rights reserved
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
@@ -844,9 +844,11 @@ MSG_PROCESS_RETURN tls_process_finished(SSL *s, PACKET *pkt)
                 return MSG_PROCESS_ERROR;
             }
         } else {
+            /* TLS 1.3 gets the secret size from the handshake md */
+            size_t dummy;
             if (!s->method->ssl3_enc->generate_master_secret(s,
                     s->master_secret, s->handshake_secret, 0,
-                    &s->session->master_key_length)) {
+                    &dummy)) {
                 /* SSLfatal() already called */
                 return MSG_PROCESS_ERROR;
             }
@@ -1339,6 +1341,7 @@ int tls_get_message_body(SSL *s, size_t *len)
 static const X509ERR2ALERT x509table[] = {
     {X509_V_ERR_APPLICATION_VERIFICATION, SSL_AD_HANDSHAKE_FAILURE},
     {X509_V_ERR_CA_KEY_TOO_SMALL, SSL_AD_BAD_CERTIFICATE},
+    {X509_V_ERR_EC_KEY_EXPLICIT_PARAMS, SSL_AD_BAD_CERTIFICATE},
     {X509_V_ERR_CA_MD_TOO_WEAK, SSL_AD_BAD_CERTIFICATE},
     {X509_V_ERR_CERT_CHAIN_TOO_LONG, SSL_AD_UNKNOWN_CA},
     {X509_V_ERR_CERT_HAS_EXPIRED, SSL_AD_CERTIFICATE_EXPIRED},
@@ -1654,10 +1657,21 @@ int ssl_check_version_downgrade(SSL *s)
  */
 int ssl_set_version_bound(int method_version, int version, int *bound)
 {
+    int valid_tls;
+    int valid_dtls;
+
     if (version == 0) {
         *bound = version;
         return 1;
     }
+
+    valid_tls = version >= SSL3_VERSION && version <= TLS_MAX_VERSION;
+    valid_dtls =
+        DTLS_VERSION_LE(version, DTLS_MAX_VERSION) &&
+        DTLS_VERSION_GE(version, DTLS1_BAD_VER);
+
+    if (!valid_tls && !valid_dtls)
+        return 0;
 
     /*-
      * Restrict TLS methods to TLS protocol versions.
@@ -1669,31 +1683,24 @@ int ssl_set_version_bound(int method_version, int version, int *bound)
      * configurations.  If the MIN (supported) version ever rises, the user's
      * "floor" remains valid even if no longer available.  We don't expect the
      * MAX ceiling to ever get lower, so making that variable makes sense.
+     *
+     * We ignore attempts to set bounds on version-inflexible methods,
+     * returning success.
      */
     switch (method_version) {
     default:
-        /*
-         * XXX For fixed version methods, should we always fail and not set any
-         * bounds, always succeed and not set any bounds, or set the bounds and
-         * arrange to fail later if they are not met?  At present fixed-version
-         * methods are not subject to controls that disable individual protocol
-         * versions.
-         */
-        return 0;
+        break;
 
     case TLS_ANY_VERSION:
-        if (version < SSL3_VERSION || version > TLS_MAX_VERSION)
-            return 0;
+        if (valid_tls)
+            *bound = version;
         break;
 
     case DTLS_ANY_VERSION:
-        if (DTLS_VERSION_GT(version, DTLS_MAX_VERSION) ||
-            DTLS_VERSION_LT(version, DTLS1_BAD_VER))
-            return 0;
+        if (valid_dtls)
+            *bound = version;
         break;
     }
-
-    *bound = version;
     return 1;
 }
 
