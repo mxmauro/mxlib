@@ -47,6 +47,10 @@
 #if defined(DUK_CMDLINE_PTHREAD_STACK_CHECK)
 #define _GNU_SOURCE
 #include <pthread.h>
+#include <unistd.h>
+#if defined(__linux)
+#include <sys/syscall.h>
+#endif
 #endif
 
 #include <stdio.h>
@@ -101,12 +105,25 @@
 #include "duk_trans_socket.h"
 #endif
 
+#if defined(DUK_USE_FUZZILLI)
+/* REPRL Pipe file descriptors for quicker fuzzing. */
+#define REPRL_CRFD 100
+#define REPRL_CWFD 101
+#define REPRL_DRFD 102
+#define REPRL_DWFD 103
+/* Required includes for coverage tracking. */
+#include <fcntl.h>
+#include <errno.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
+
 #define  MEM_LIMIT_NORMAL   (128*1024*1024)   /* 128 MB */
 #define  MEM_LIMIT_HIGH     (2047*1024*1024)  /* ~2 GB */
-#define  LINEBUF_SIZE       65536
 
 static int main_argc = 0;
-static char **main_argv = NULL;
+static const char **main_argv = NULL;
 static int interactive_mode = 0;
 static int allow_bytecode = 0;
 #if defined(DUK_CMDLINE_DEBUGGER_SUPPORT)
@@ -545,6 +562,9 @@ static int handle_fh(duk_context *ctx, FILE *f, const char *filename, const char
 			fprintf(stderr, "resizing read buffer: %ld -> %ld\n", (long) bufsz, (long) (bufsz * 2));
 #endif
 			newsz = bufsz + (bufsz >> 2) + 1024;  /* +25% and some extra */
+			if (newsz < bufsz) {
+				goto error;
+			}
 			buf_new = (char *) realloc(buf, newsz);
 			if (!buf_new) {
 				goto error;
@@ -682,11 +702,16 @@ static int handle_file(duk_context *ctx, const char *filename, const char *bytec
 	return -1;
 }
 
-static int handle_eval(duk_context *ctx, char *code) {
+static int handle_eval(duk_context *ctx, const char *code) {
 	int rc;
 	int retval = -1;
+	union {
+		void *ptr;
+		const void *constptr;
+	} u;
 
-	duk_push_pointer(ctx, (void *) code);
+	u.constptr = code;  /* Lose 'const' without warning. */
+	duk_push_pointer(ctx, u.ptr);
 	duk_push_uint(ctx, (duk_uint_t) strlen(code));
 	duk_push_string(ctx, "eval");
 
@@ -789,18 +814,11 @@ static int handle_interactive(duk_context *ctx) {
 #else  /* DUK_CMDLINE_LINENOISE */
 static int handle_interactive(duk_context *ctx) {
 	const char *prompt = "duk> ";
+	size_t bufsize = 0;
 	char *buffer = NULL;
 	int retval = 0;
 	int rc;
 	int got_eof = 0;
-
-	buffer = (char *) malloc(LINEBUF_SIZE);
-	if (!buffer) {
-		fprintf(stderr, "failed to allocated a line buffer\n");
-		fflush(stderr);
-		retval = -1;
-		goto done;
-	}
 
 	while (!got_eof) {
 		size_t idx = 0;
@@ -809,17 +827,29 @@ static int handle_interactive(duk_context *ctx) {
 		fflush(stdout);
 
 		for (;;) {
-			int c = fgetc(stdin);
+			int c;
+
+			if (idx >= bufsize) {
+				size_t newsize = bufsize + (bufsize >> 2) + 1024;  /* +25% and some extra */
+				char *newptr;
+
+				if (newsize < bufsize) {
+					goto fail_realloc;
+				}
+				newptr = (char *) realloc(buffer, newsize);
+				if (!newptr) {
+					goto fail_realloc;
+				}
+				buffer = newptr;
+				bufsize = newsize;
+			}
+
+			c = fgetc(stdin);
 			if (c == EOF) {
 				got_eof = 1;
 				break;
 			} else if (c == '\n') {
 				break;
-			} else if (idx >= LINEBUF_SIZE) {
-				fprintf(stderr, "line too long\n");
-				fflush(stderr);
-				retval = -1;
-				goto done;
 			} else {
 				buffer[idx++] = (char) c;
 			}
@@ -853,6 +883,12 @@ static int handle_interactive(duk_context *ctx) {
 	}
 
 	return retval;
+
+ fail_realloc:
+	fprintf(stderr, "failed to extend line buffer\n");
+	fflush(stderr);
+	retval = -1;
+	goto done;
 }
 #endif  /* DUK_CMDLINE_LINENOISE */
 
@@ -952,7 +988,55 @@ static duk_ret_t fileio_write_file(duk_context *ctx) {
 
 	return 0;
 }
-#endif  /* DUK_CMDLINE_FILEIO */
+
+static duk_ret_t sys_execute(duk_context *ctx) {
+	const char *command = duk_require_string(ctx, 0);
+	int rc;
+
+	rc = system(command);
+	if (rc != 0) {
+		duk_push_error_object(ctx, DUK_ERR_TYPE_ERROR, "system() failed with code %d", rc);
+		duk_push_int(ctx, rc);
+		duk_put_prop_string(ctx, -2, "exitCode");
+		return duk_throw(ctx);
+	}
+
+	return 0;
+}
+#endif
+
+#if defined(DUK_USE_FUZZILLI)
+/* Custom builtin for Fuzzilli, used to ensure the fuzzer is properly catching
+ * crashes and assert failures.
+ */
+static duk_ret_t fuzzilli(duk_context *ctx) {
+	const char *first_arg = duk_require_string(ctx, 0);
+
+	if (strcmp(first_arg, "FUZZILLI_CRASH") == 0) {
+		duk_int_t second_arg = duk_get_int(ctx, 1);
+		switch (second_arg) {
+		case 0:
+			*((duk_int_t *)0x41414141) = 0x1337; /* intentionally segfault */
+			break;
+		default:
+			duk_assert_wrapper(0); /* Intentionally fail assertion */
+			break;
+		}
+	} else if (strcmp(first_arg, "FUZZILLI_PRINT") == 0) {
+		const char *string = duk_require_string(ctx, 1);
+
+		FILE *fzliout = fdopen(REPRL_DWFD, "w");
+		if (!fzliout) {
+			fprintf(stderr, "Fuzzer output channel not available, printing to stdout instead\n");
+			fzliout = stdout;
+		}
+		fprintf(fzliout, "%s\n", string);
+		fflush(fzliout);
+	}
+
+	return 0;
+}
+#endif /* DUK_USE_FUZZILLI */
 
 /*
  *  String.fromBufferRaw()
@@ -1038,6 +1122,9 @@ static void debugger_detached(duk_context *ctx, void *udata) {
 
 static duk_context *create_duktape_heap(int alloc_provider, int debugger, int lowmem_log) {
 	duk_context *ctx;
+#if defined(DUK_CMDLINE_FILEIO)
+	int i;
+#endif
 
 	(void) lowmem_log;  /* suppress warning */
 
@@ -1157,12 +1244,20 @@ static duk_context *create_duktape_heap(int alloc_provider, int debugger, int lo
 	duk_module_duktape_init(ctx);
 #endif
 
-	/* Trivial readFile/writeFile bindings for testing. */
+	/* Trivial file I/O bindings, sysExecute(), and sysArgv for testing. */
 #if defined(DUK_CMDLINE_FILEIO)
 	duk_push_c_function(ctx, fileio_read_file, 1 /*nargs*/);
 	duk_put_global_string(ctx, "readFile");
 	duk_push_c_function(ctx, fileio_write_file, 2 /*nargs*/);
 	duk_put_global_string(ctx, "writeFile");
+	duk_push_c_function(ctx, sys_execute, 1 /*nargs*/);
+	duk_put_global_string(ctx, "sysExecute");
+	duk_push_array(ctx);
+	for (i = 0; i < main_argc; i++) {
+		duk_push_string(ctx, main_argv[i]);
+		duk_put_prop_index(ctx, -2, (duk_uarridx_t) i);
+	}
+	duk_put_global_string(ctx, "sysArgv");  /* raw argv */
 #endif
 
 	/* Stash a formatting function for evaluation results. */
@@ -1214,6 +1309,13 @@ static duk_context *create_duktape_heap(int alloc_provider, int debugger, int lo
 	}
 #endif
 
+#if defined(DUK_USE_FUZZILLI)
+	/* Add the custom function for Fuzzilli integration. */
+
+	duk_push_c_function(ctx, fuzzilli, 2 /*nargs*/);
+	duk_put_global_string(ctx, "fuzzilli");
+#endif /* DUK_USE_FUZZILLI */
+
 	return ctx;
 }
 
@@ -1245,11 +1347,97 @@ static void destroy_duktape_heap(duk_context *ctx, int alloc_provider) {
 #endif
 }
 
+#if defined(DUK_USE_FUZZILLI)
+/* Enables coverage tracking for fuzzing. */
+
+void __sanitizer_cov_reset_edgeguards(void);
+
+#define SHM_SIZE 0x100000
+#define MAX_EDGES ((SHM_SIZE - 4) * 8)
+
+#define CHECK(cond) if (!(cond)) { fprintf(stderr, "\"" #cond "\" failed\n"); _exit(-1); }
+
+struct shmem_data {
+	duk_uint32_t num_edges;
+	unsigned char edges[];
+};
+
+struct shmem_data *__shmem;
+duk_uint32_t *__edges_start, *__edges_stop;
+
+void __sanitizer_cov_reset_edgeguards(void) {
+	duk_uint64_t N = 0;
+	duk_uint32_t *x;
+	for (x = __edges_start; x < __edges_stop && N < MAX_EDGES; x++) {
+		*x = ++N;
+	}
+}
+
+
+void __sanitizer_cov_trace_pc_guard_init(duk_uint32_t *start, duk_uint32_t *stop) {
+	/* Avoid duplicate initialization. */
+	if (start == stop || *start) {
+		return;
+	}
+
+	if (__edges_start != NULL || __edges_stop != NULL) {
+		fprintf(stderr, "Coverage instrumentation is only supported for a single module\n");
+		_exit(-1);
+	}
+
+	__edges_start = start;
+	__edges_stop = stop;
+
+	/* Map the shared memory region. */
+	const char *shm_key = getenv("SHM_ID");
+	if (!shm_key) {
+		puts("[COV] no shared memory bitmap available, skipping");
+		__shmem = (struct shmem_data *) malloc(SHM_SIZE);
+	} else {
+		int fd = shm_open(shm_key, O_RDWR, S_IREAD | S_IWRITE);
+		if (fd <= -1) {
+			fprintf(stderr, "Failed to open shared memory region: %s\n", strerror(errno));
+			_exit(-1);
+		}
+
+		__shmem = (struct shmem_data *) mmap(0, SHM_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+		if (__shmem == MAP_FAILED) {
+			fprintf(stderr, "Failed to mmap shared memory region\n");
+			_exit(-1);
+		}
+	}
+
+	__sanitizer_cov_reset_edgeguards();
+
+	__shmem->num_edges = stop - start;
+	printf("[COV] edge counters initialized. Shared memory: %s with %u edges\n", shm_key, __shmem->num_edges);
+}
+
+void __sanitizer_cov_trace_pc_guard(duk_uint32_t *guard) {
+	/* There's a small race condition here: if this function executes in two threads for the same
+	 * edge at the same time, the first thread might disable the edge (by setting the guard to zero)
+	 * before the second thread fetches the guard value (and thus the index).  However, our
+	 * instrumentation ignores the first edge (see libcoverage.c) and so the race is unproblematic.
+	 */
+	duk_uint32_t index = *guard;
+
+	/* If this function is called before coverage instrumentation is properly initialized we want
+	 * to return early.
+	 */
+	if (!index) {
+		return;
+	}
+
+	__shmem->edges[index / 8] |= 1 << (index % 8);
+	*guard = 0;
+}
+#endif /* DUK_USE_FUZZILLI */
+
 /*
  *  Main
  */
 
-int main(int argc, char *argv[]) {
+int main(int argc, const char *argv[]) {
 	duk_context *ctx = NULL;
 	int retval = 0;
 	int have_files = 0;
@@ -1265,9 +1453,12 @@ int main(int argc, char *argv[]) {
 	int run_stdin = 0;
 	const char *compile_filename = NULL;
 	int i;
+#if defined(DUK_USE_FUZZILLI)
+	int reprl_mode = 0;
+#endif /* DUK_USE_FUZZILLI */
 
 	main_argc = argc;
-	main_argv = (char **) argv;
+	main_argv = (const char **) argv;
 
 #if defined(EMSCRIPTEN)
 	/* Try to use NODEFS to provide access to local files.  Mount the
@@ -1337,11 +1528,13 @@ int main(int argc, char *argv[]) {
 	 */
 
 	for (i = 1; i < argc; i++) {
-		char *arg = argv[i];
+		const char *arg = argv[i];
 		if (!arg) {
 			goto usage;
-		}
-		if (strcmp(arg, "--restrict-memory") == 0) {
+		} else if (strcmp(arg, "--") == 0) {
+			/* Ignore anything after '--'. */
+			break;
+		} else if (strcmp(arg, "--restrict-memory") == 0) {
 			memlimit_high = 0;
 		} else if (strcmp(arg, "-i") == 0) {
 			interactive = 1;
@@ -1376,6 +1569,10 @@ int main(int argc, char *argv[]) {
 #if defined(DUK_CMDLINE_DEBUGGER_SUPPORT)
 		} else if (strcmp(arg, "--reattach") == 0) {
 			debugger_reattach = 1;
+#endif
+#if defined(DUK_USE_FUZZILLI)
+		} else if (strcmp(arg, "--reprl") == 0) {
+			reprl_mode = 1;
 #endif
 		} else if (strcmp(arg, "--recreate-heap") == 0) {
 			recreate_heap = 1;
@@ -1423,9 +1620,12 @@ int main(int argc, char *argv[]) {
 	 */
 
 	for (i = 1; i < argc; i++) {
-		char *arg = argv[i];
+		const char *arg = argv[i];
 		if (!arg) {
 			continue;
+		} else if (strcmp(arg, "--") == 0) {
+			/* Ignore anything after '--'. */
+			break;
 		} else if (strlen(arg) == 2 && strcmp(arg, "-e") == 0) {
 			/* Here we know the eval arg exists but check anyway */
 			if (i == argc - 1) {
@@ -1465,6 +1665,75 @@ int main(int argc, char *argv[]) {
 			ctx = create_duktape_heap(alloc_provider, debugger, lowmem_log);
 		}
 	}
+
+#if defined(DUK_USE_FUZZILLI)
+	/* Run the fuzzilli run-eval-print-repeat loop, and exit at the end. */
+	if (reprl_mode) {
+		/* REPRL: let parent know we are ready */
+		char helo[4] = "HELO";
+		if (write(REPRL_CWFD, helo, 4) != 4 ||
+		    read(REPRL_CRFD, helo, 4) != 4) {
+			reprl_mode = 0;
+		}
+
+		if (memcmp(helo, "HELO", 4) != 0) {
+			fprintf(stderr, "Invalid response from parent\n");
+			_exit(-1);
+		}
+
+		while (reprl_mode) {
+			unsigned int action = 0;
+			duk_size_t script_size;
+			char static_buff[4096];
+			char *buffer;
+			char *ptr;
+			duk_size_t remaining;
+			duk_int_t rc;
+
+			duk_int64_t nread = read(REPRL_CRFD, &action, 4);
+			if (nread != 4 || action != 'cexe') {
+				fprintf(stderr, "Unknown action: %u\n", action);
+				duk_assert_wrapper(0);
+				_exit(-1);
+			}
+
+			duk_assert_wrapper(read(REPRL_CRFD, &script_size, 8) == 8);
+			/* In practice, we're never going to get to 4k long input scripts (21 core days got to ~80 bytes). */
+			if (script_size > 4095) {
+				buffer = (char *) malloc((sizeof(char) * (script_size + 1)));
+			} else {
+				buffer = static_buff;
+			}
+
+			ptr = buffer;
+			remaining = script_size;
+			while (remaining > 0) {
+				duk_int64_t rv = read(REPRL_DRFD, ptr, remaining);
+				duk_assert_wrapper(rv >= 0);
+				remaining -= rv;
+				ptr += rv;
+			}
+			buffer[script_size] = 0;
+
+			/* Actually execute. */
+			duk_push_string(ctx, buffer);
+			rc = duk_peval(ctx);
+
+			/* Return result to parent. */
+			rc <<= 8;
+			duk_assert_wrapper(write(REPRL_CWFD, &rc, 4) == 4);
+
+			/* Clean up this round. */
+			if (script_size > 4095) {
+				free(buffer);
+			}
+			duk_destroy_heap(ctx);
+			ctx = create_duktape_heap(alloc_provider, debugger, lowmem_log);
+			__sanitizer_cov_reset_edgeguards();
+		}
+		return 0;
+	}  /* reprl_mode */
+#endif
 
 	if (run_stdin) {
 		/* Running stdin like a full file (reading all lines before
@@ -1573,19 +1842,59 @@ int main(int argc, char *argv[]) {
 /* Example of how a native stack check can be implemented in a platform
  * specific manner for DUK_USE_NATIVE_STACK_CHECK().  This example is for
  * (Linux) pthreads, and rejects further native recursion if less than
- * 16kB stack is left (conservative).
+ * 16kB stack is left (conservative).  A production version should have
+ * an inlined fast path check for the common case.
  */
 #if defined(DUK_CMDLINE_PTHREAD_STACK_CHECK)
-int duk_cmdline_stack_check(void) {
+
+/* Cache stack address/size based on tid because the pthread calls are
+ * quite slow.
+ */
+#if defined(__linux)
+static pid_t duk__pthread_cached_tid = (pid_t) -1;
+static void *duk__pthread_cached_stack_addr = NULL;
+static size_t duk__pthread_cached_stack_size = 0;
+#endif
+
+static void duk__get_stack_addr_size(void **out_stack_addr, size_t *out_stack_size) {
+#if defined(__linux)
+	pid_t my_tid;
+#endif
 	pthread_attr_t attr;
-	void *stackaddr;
-	size_t stacksize;
+
+#if defined(__linux)
+	/* Fast path case: thread not changed. */
+	my_tid = syscall(SYS_gettid);
+	if (my_tid == duk__pthread_cached_tid) {
+		*out_stack_addr = duk__pthread_cached_stack_addr;
+		*out_stack_size = duk__pthread_cached_stack_size;
+		return;
+	}
+#endif
+
+	(void) pthread_getattr_np(pthread_self(), &attr);
+	(void) pthread_attr_getstack(&attr, out_stack_addr, out_stack_size);
+
+#if defined(__linux)
+#if 0
+	fprintf(stderr, "STACK CHECK: uncached, cache results\n");
+	fflush(stderr);
+#endif
+	duk__pthread_cached_tid = my_tid;
+	duk__pthread_cached_stack_addr = *out_stack_addr;
+	duk__pthread_cached_stack_size = *out_stack_size;
+#endif
+}
+
+int duk_cmdline_stack_check(void) {
 	char *ptr;
 	char *ptr_base;
 	ptrdiff_t remain;
+	void *stackaddr;
+	size_t stacksize;
 
-	(void) pthread_getattr_np(pthread_self(), &attr);
-	(void) pthread_attr_getstack(&attr, &stackaddr, &stacksize);
+	duk__get_stack_addr_size(&stackaddr, &stacksize);
+
 	ptr = (char *) &stacksize;  /* Rough estimate of current stack pointer. */
 	ptr_base = (char *) stackaddr;
 	remain = ptr - ptr_base;

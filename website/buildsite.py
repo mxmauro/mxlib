@@ -871,7 +871,7 @@ def generateDownloadPage(releases_filename):
 
     if fancy_releaselog:
         # fancy releaselog
-        rel_data = rst2Html(os.path.abspath(os.path.join('..', 'RELEASES.rst')))
+        rel_data = rst2Html(os.path.abspath(releases_filename))
         rel_soup = BeautifulSoup(rel_data, 'lxml')
         released = rel_soup.select('#released')[0]
         # massage the rst2html generated HTML to be more suitable
@@ -910,7 +910,7 @@ def generateDownloadPage(releases_filename):
             continue
         href = tmp[0].select('a')[0]['href']
         hash_elem = tr.select('.hash')[0]
-        hash_elem.string = getFileMd5(os.path.abspath(os.path.join('..', 'duktape-releases', href))) or '???'
+        hash_elem.string = getFileMd5(os.path.abspath(os.path.join('..', 'deps', 'duktape-releases', href))) or '???'
 
     tmp_soup = templ_soup.select('#site-middle')[0]
     tmp_soup.clear()
@@ -1113,7 +1113,7 @@ def main():
     guideincdirs = [ './guide', '../examples/guide' ]
     apiincdirs = [ './api', '../examples/api' ]
     out_charset = 'utf-8'
-    releases_filename = '../RELEASES.rst'
+    releases_filename = '../build/RELEASES.rst'
 
     duk_verstr, duk_verint = scrapeDuktapeVersion()
     print 'Scraped version number: ' + duk_verstr
@@ -1160,20 +1160,21 @@ def main():
         shutil.copyfile(os.path.join('./', i), os.path.join(outdir, os.path.basename(i)))
 
     print 'Copying release binaries'
-    for i in os.listdir(os.path.join('..', 'duktape-releases')):
+    for i in os.listdir(os.path.join('..', 'deps', 'duktape-releases')):
         if re.match(r'^duktape-.*?.tar.xz$', i) is None:
             continue
-        shutil.copyfile(os.path.join('..', 'duktape-releases', i), os.path.join(outdir, i))
+        shutil.copyfile(os.path.join('..', 'deps', 'duktape-releases', i), os.path.join(outdir, i))
 
     print 'Copying dukweb.js files'
-    for i in [ '../dukweb.js',
-               '../jquery-1.11.2.js',
+    for i in [ '../build/dukweb.js',
+               '../build/dukweb.wasm',
+               '../deps/jquery-1.11.2.js',
                '../dukweb/dukweb.css',
                '../dukweb/dukweb.html' ]:
         shutil.copyfile(os.path.join('./', i), os.path.join(outdir, os.path.basename(i)))
 
     print 'Copying benchmarks.html dependencies'
-    shutil.copyfile(os.path.join('../lz-string/libs/lz-string.js'), os.path.join(outdir, 'lz-string.js'))
+    shutil.copyfile(os.path.join('../deps/lz-string/libs/lz-string.js'), os.path.join(outdir, 'lz-string.js'))
 
 if __name__ == '__main__':
     main()
