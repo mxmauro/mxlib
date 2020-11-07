@@ -29,6 +29,7 @@
 #include "..\..\Include\WaitableObjects.h"
 #include "HttpAuthCache.h"
 #include "..\..\Include\Comm\IpcCommon.h"
+#include "..\..\Include\TimedEvent.h"
 
 //-----------------------------------------------------------
 
@@ -70,6 +71,7 @@ CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr,
   SetLogParent(lpLogParent);
   sResponse.cParser.SetLogParent(this);
   //----
+  dwTimeoutMs = 0;
   dwMaxRedirCount = DEFAULT_MAX_REDIRECTIONS_COUNT;
   dwMaxFieldSize = 256000;
   ullMaxFileSize = 2097152ui64;
@@ -99,6 +101,7 @@ CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr,
   MxMemSet(sRequest.szBoundaryA, 0, sizeof(sRequest.szBoundaryA));
   sRequest.bUsingMultiPartFormData = FALSE;
   sRequest.bUsingProxy = FALSE;
+  _InterlockedExchange(&(sRequest.nTimeoutTimerId), 0);
   sResponse.aMsgBuf.Attach((LPBYTE)MX_MALLOC(MSG_BUFFER_SIZE));
   //---
   SlimRWL_Initialize(&(sConnection.sRwMutex));
@@ -111,6 +114,7 @@ CHttpClient::~CHttpClient()
   CLnkLstNode *lpNode;
 
   //clear timeouts
+  MX::TimedEvent::Clear(&(sRequest.nTimeoutTimerId));
   MX::TimedEvent::Clear(&(sRedirectOrRetryAuth.nTimerId));
 
   //close and release current connection
@@ -129,6 +133,17 @@ CHttpClient::~CHttpClient()
     CPostDataItem *lpPostDataItem = CONTAINING_RECORD(lpNode, CPostDataItem, cListNode);
 
     delete lpPostDataItem;
+  }
+  return;
+}
+
+VOID CHttpClient::SetOption_Timeout(_In_ DWORD _dwTimeoutMs)
+{
+  CCriticalSection::CAutoLock cLock(cMutex);
+
+  if (nState == StateClosed)
+  {
+    dwTimeoutMs = _dwTimeoutMs;
   }
   return;
 }
@@ -1125,6 +1140,7 @@ VOID CHttpClient::Close(_In_opt_ BOOL bReuseConn)
 
   //clear timeouts
   MX::TimedEvent::Clear(&(sRedirectOrRetryAuth.nTimerId));
+  MX::TimedEvent::Clear(&(sRequest.nTimeoutTimerId));
 
   bLocked = LockThreadCall(TRUE);
   cHeadersReceivedCallback = NullCallback();
@@ -1433,7 +1449,7 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOpt
     cReqSecWebSocketKey.Attach(MX_DEBUG_NEW CHttpHeaderReqSecWebSocketKey());
     if (!cReqSecWebSocketKey)
       return E_OUTOFMEMORY;
-    hRes = cReqSecWebSocketKey->GenerateKey(32);
+    hRes = cReqSecWebSocketKey->GenerateKey(16);
     if (SUCCEEDED(hRes))
     {
       hRes = sRequest.cHeaders.AddElement(cReqSecWebSocketKey.Get());
@@ -1508,6 +1524,7 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOpt
   nState = StateNoOp;
   cMutex.Unlock();
   MX::TimedEvent::Clear(&(sRedirectOrRetryAuth.nTimerId));
+  MX::TimedEvent::Clear(&(sRequest.nTimeoutTimerId));
   cMutex.Lock();
   nState = nOrigState;
 
@@ -1545,6 +1562,7 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOpt
   {
     cConnection.Attach(GetConnection());
   }
+
   //setup new state
   nState = ((cUrl.GetSchemeCode() == CUrl::SchemeHttps || cUrl.GetSchemeCode() == CUrl::SchemeSecureWebSocket) &&
             sRequest.bUsingProxy != FALSE) ? StateEstablishingProxyTunnelConnection : StateSendingRequestHeaders;
@@ -1595,6 +1613,14 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOpt
 
     hRes = OnConnectionEstablished(cConnection.Get());
   }
+
+  //setup timeout timer
+  if (SUCCEEDED(hRes) && dwTimeoutMs > 0)
+  {
+    hRes = MX::TimedEvent::SetTimeout(&(sRequest.nTimeoutTimerId), dwTimeoutMs,
+                                      MX_BIND_MEMBER_CALLBACK(&CHttpClient::OnRequestTimeout, this), NULL);
+  }
+
   if (FAILED(hRes))
   {
     nState = StateClosed;
@@ -1690,6 +1716,10 @@ VOID CHttpClient::OnConnectionClosed(_In_ CConnection *lpConn, _In_ HRESULT hrEr
   //call callbacks
   if (bRaiseDocCompletedCallback != FALSE)
   {
+    //clear timeouts
+    MX::TimedEvent::Clear(&(sRedirectOrRetryAuth.nTimerId));
+    MX::TimedEvent::Clear(&(sRequest.nTimeoutTimerId));
+
     LockThreadCall(FALSE);
     if (cDocumentCompletedCallback)
     {
@@ -2401,6 +2431,8 @@ on_websocket_negotiated:
   }
   else if (bFireDocumentCompleted != FALSE)
   {
+    MX::TimedEvent::Clear(&(sRequest.nTimeoutTimerId));
+
     LockThreadCall(FALSE);
     if (cDocumentCompletedCallback)
     {
@@ -2535,16 +2567,24 @@ VOID CHttpClient::OnAfterSendRequestHeaders(_In_ CConnection *lpConn)
 
 VOID CHttpClient::SetErrorOnRequestAndClose(_In_ HRESULT hrErrorCode)
 {
-  CAutoSlimRWLShared cLock(&(sConnection.sRwMutex));
+  HANDLE hConnToClose = NULL;
 
-  nState = StateClosed;
-  if (SUCCEEDED(hLastErrorCode)) //preserve first error
-    hLastErrorCode = hrErrorCode;
-
-  if (sConnection.cLink)
   {
-    cSocketMgr.Close(sConnection.cLink->GetConn(), hLastErrorCode);
+    CAutoSlimRWLShared cLock(&(sConnection.sRwMutex));
+
+    nState = StateClosed;
+    if (SUCCEEDED(hLastErrorCode)) //preserve first error
+      hLastErrorCode = hrErrorCode;
+
+    if (sConnection.cLink)
+    { 
+      hConnToClose = sConnection.cLink->GetConn();
+    }
   }
+
+  //do close
+  if (hConnToClose != NULL)
+    cSocketMgr.Close(hConnToClose, hLastErrorCode);
   return;
 }
 
@@ -3542,6 +3582,24 @@ BOOL CHttpClient::LockThreadCall(_In_ BOOL bAllowRecursive)
     ::MxSleep((bAllowRecursive != FALSE) ? 50 : 5);
   }
   return TRUE;
+}
+
+VOID CHttpClient::OnRequestTimeout(_In_ LONG nTimerId, _In_ LPVOID lpUserData, _In_opt_ LPBOOL lpbCancel)
+{
+  UNREFERENCED_PARAMETER(lpbCancel);
+
+  if (_InterlockedCompareExchange(&(sRequest.nTimeoutTimerId), 0, nTimerId) == nTimerId)
+  {
+    CCriticalSection::CAutoLock cLock(cMutex);
+
+    if (nState != StateClosed && nState != StateDocumentCompleted)
+    {
+      SetErrorOnRequestAndClose(MX_E_Timeout);
+    }
+  }
+
+  //done
+  return;
 }
 
 //-----------------------------------------------------------

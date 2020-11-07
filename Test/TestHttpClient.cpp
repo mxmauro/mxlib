@@ -236,10 +236,13 @@ static HRESULT SimpleTest1(_In_ MX::CSockets &cSocketkMgr, _In_ MX::CSslCertific
   //cHttpClient->SetOptionFlags(0);
   //cHttpClient->SetOptionFlags(MX::CHttpClient::OptionKeepConnectionOpen);
 
+  cHttpClient->SetOption_Timeout(10000);
   cHttpClient->SetDocumentCompletedCallback(MX_BIND_CALLBACK(&OnDocumentCompleted));
   cHttpClient->SetQueryCertificatesCallback(MX_BIND_CALLBACK(&OnQueryCertificates));
   cHttpClient->SetLogLevel(dwLogLevel);
   cHttpClient->SetLogCallback(MX_BIND_CALLBACK(&OnLog));
+  cHttpClient->SetOption_MaxBodySizeInMemory(1 * 1048576);
+  cHttpClient->SetOption_MaxBodySize(2048 * 1048576);
 
   wprintf_s(L"[HttpClient/SimpleTest1] Downloading...\n");
   dwStartTime = dwEndTime = ::GetTickCount();
@@ -247,6 +250,8 @@ static HRESULT SimpleTest1(_In_ MX::CSockets &cSocketkMgr, _In_ MX::CSslCertific
   //cHttpClient->SetHeadersReceivedCallback(MX_BIND_CALLBACK(&OnResponseHeadersReceived));
   cHttpClient->SetHeadersReceivedCallback(MX_BIND_CALLBACK(&OnResponseHeadersReceived_BigDownload));
 
+  hRes = cHttpClient->Open("http://ipv4.download.thinkbroadband.com/1GB.zip");
+  /*
   hRes = cHttpClient->Open("http://www.sitepoint.com/forums/showthread.php?"
                            "390414-Reading-from-socket-connection-SLOW");
   /*
@@ -293,6 +298,10 @@ static HRESULT SimpleTest1(_In_ MX::CSockets &cSocketkMgr, _In_ MX::CSslCertific
       case S_OK:
         wprintf_s(L"[HttpClient/SimpleTest1] Successful download in %lums / Status:%ld\n", dwEndTime - dwStartTime,
                   cHttpClient->GetResponseStatus());
+        break;
+
+      case MX_E_Timeout:
+        wprintf_s(L"[HttpClient/SimpleTest1] Timed out\n");
         break;
 
       default:

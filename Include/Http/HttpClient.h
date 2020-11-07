@@ -88,6 +88,7 @@ public:
   CHttpClient(_In_ CSockets &cSocketMgr, _In_opt_ CLoggable *lpLogParent = NULL);
   ~CHttpClient();
 
+  VOID SetOption_Timeout(_In_ DWORD dwTimeoutMs);
   VOID SetOption_MaxRedirectionsCount(_In_ DWORD dwCount);
   VOID SetOption_MaxHeaderSize(_In_ DWORD dwSize);
   VOID SetOption_MaxFieldSize(_In_ DWORD dwSize);
@@ -285,6 +286,8 @@ private:
 
   BOOL LockThreadCall(_In_ BOOL bAllowRecursive);
 
+  VOID OnRequestTimeout(_In_ LONG nTimerId, _In_ LPVOID lpUserData, _In_opt_ LPBOOL lpbCancel);
+
 private:
   class CPostDataItem : public virtual CBaseMemObj, public CNonCopyableObj
   {
@@ -314,6 +317,7 @@ private:
   CProxy cProxy;
   CSecureStringW cStrAuthUserNameW, cStrAuthUserPasswordW;
   HRESULT hLastErrorCode;
+  DWORD dwTimeoutMs;
   DWORD dwMaxRedirCount;
   DWORD dwMaxFieldSize;
   ULONGLONG ullMaxFileSize;
@@ -347,6 +351,7 @@ private:
     BOOL bUsingProxy;
     TAutoRefCounted<CWebSocket> cWebSocket;
     TAutoRefCounted<CHttpHeaderGeneric> cLocalIpHeader;
+    LONG volatile nTimeoutTimerId;
   } sRequest;
 
   struct {
