@@ -241,8 +241,8 @@ static HRESULT SimpleTest1(_In_ MX::CSockets &cSocketkMgr, _In_ MX::CSslCertific
   cHttpClient->SetQueryCertificatesCallback(MX_BIND_CALLBACK(&OnQueryCertificates));
   cHttpClient->SetLogLevel(dwLogLevel);
   cHttpClient->SetLogCallback(MX_BIND_CALLBACK(&OnLog));
-  cHttpClient->SetOption_MaxBodySizeInMemory(1 * 1048576);
-  cHttpClient->SetOption_MaxBodySize(2048 * 1048576);
+  cHttpClient->SetOption_MaxBodySizeInMemory(1UL * 1048576UL);
+  cHttpClient->SetOption_MaxBodySize(2048UL * 1048576UL);
 
   wprintf_s(L"[HttpClient/SimpleTest1] Downloading...\n");
   dwStartTime = dwEndTime = ::GetTickCount();

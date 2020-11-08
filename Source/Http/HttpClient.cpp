@@ -95,6 +95,8 @@ CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr,
   cDocumentCompletedCallback = NullCallback();
   cWebSocketHandshakeCompletedCallback = NullCallback();
   cQueryCertificatesCallback = NullCallback();
+  cConnectionCreatedCallback = NullCallback();
+  cConnectionDestroyedCallback = NullCallback();
   //----
   sRequest.sPostData.bHasRaw = FALSE;
   sRequest.sPostData.nDynamicFlags = 0;
@@ -308,6 +310,18 @@ VOID CHttpClient::SetDymanicRequestBodyStartCallback(_In_ OnDymanicRequestBodySt
 VOID CHttpClient::SetQueryCertificatesCallback(_In_ OnQueryCertificatesCallback _cQueryCertificatesCallback)
 {
   cQueryCertificatesCallback = _cQueryCertificatesCallback;
+  return;
+}
+
+VOID CHttpClient::SetConnectionCreatedCallback(_In_ OnConnectionCreatedCallback _cConnectionCreatedCallback)
+{
+  cConnectionCreatedCallback = _cConnectionCreatedCallback;
+  return;
+}
+
+VOID CHttpClient::SetConnectionDestroyedCallback(_In_ OnConnectionDestroyedCallback _cConnectionDestroyedCallback)
+{
+  cConnectionDestroyedCallback = _cConnectionDestroyedCallback;
   return;
 }
 
@@ -1665,6 +1679,11 @@ VOID CHttpClient::OnConnectionClosed(_In_ CConnection *lpConn, _In_ HRESULT hrEr
 {
   TAutoRefCounted<CConnection> cConnToClose;
   BOOL bRaiseDocCompletedCallback = FALSE;
+
+  if (cConnectionDestroyedCallback)
+  {
+    cConnectionDestroyedCallback(lpConn->lpIpc, lpConn->GetConn(), hrErrorCode);
+  }
 
   {
     CCriticalSection::CAutoLock cLock(cMutex);
@@ -3814,6 +3833,15 @@ HRESULT CHttpClient::CConnection::OnSocketCreate(_In_ CIpc *_lpIpc, _In_ HANDLE 
   sData.cConnectCallback = MX_BIND_MEMBER_CALLBACK(&CHttpClient::CConnection::OnSocketConnect, this);
   sData.cDataReceivedCallback = MX_BIND_MEMBER_CALLBACK(&CHttpClient::CConnection::OnSocketDataReceived, this);
   sData.cDestroyCallback = MX_BIND_MEMBER_CALLBACK(&CHttpClient::CConnection::OnSocketDestroy, this);
+
+  if (cHttpClient->cConnectionCreatedCallback)
+  {
+    HRESULT hRes;
+
+    hRes = cHttpClient->cConnectionCreatedCallback(lpIpc, h);
+    if (FAILED(hRes))
+      return hRes;
+  }
 
   //done
   return S_OK;

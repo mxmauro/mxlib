@@ -82,6 +82,9 @@ public:
                             _Outptr_result_maybenull_ CSslCertificate **lplpSelfCert,
                             _Outptr_result_maybenull_ CEncryptionKey **lplpPrivKey)> OnQueryCertificatesCallback;
 
+  typedef Callback<HRESULT (_In_ CIpc *lpIpc, _In_ HANDLE h)> OnConnectionCreatedCallback;
+  typedef Callback<HRESULT (_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ HRESULT hrErrorCode)> OnConnectionDestroyedCallback;
+
   //--------
 
 public:
@@ -107,6 +110,8 @@ public:
                                               cWebSocketHandshakeCompletedCallback);
   VOID SetDymanicRequestBodyStartCallback(_In_ OnDymanicRequestBodyStartCallback cDymanicRequestBodyStartCallback);
   VOID SetQueryCertificatesCallback(_In_ OnQueryCertificatesCallback cQueryCertificatesCallback);
+  VOID SetConnectionCreatedCallback(_In_ OnConnectionCreatedCallback cConnectionCreatedCallback);
+  VOID SetConnectionDestroyedCallback(_In_ OnConnectionDestroyedCallback cConnectionDestroyedCallback);
 
   HRESULT SetRequestMethodAuto();
   HRESULT SetRequestMethod(_In_z_ LPCSTR szMethodA);
@@ -335,6 +340,8 @@ private:
   OnDocumentCompletedCallback cDocumentCompletedCallback;
   OnWebSocketHandshakeCompletedCallback cWebSocketHandshakeCompletedCallback;
   OnQueryCertificatesCallback cQueryCertificatesCallback;
+  OnConnectionCreatedCallback cConnectionCreatedCallback;
+  OnConnectionDestroyedCallback cConnectionDestroyedCallback;
 
   struct {
     CUrl cUrl;
