@@ -4,10 +4,18 @@
     <Filter Include="Build Files">
       <UniqueIdentifier>{2728a88a-cfb2-4bb5-9220-f09b4b0c6fb6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Extras">
+      <UniqueIdentifier>{282b8abf-ccbe-44a0-898a-1e388dd02485}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="Source\RapidJSON\build.vbs">
       <Filter>Build Files</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Include\RapidJSON\rapidjson-all.h">
+      <Filter>Extras</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -105,8 +105,7 @@ BOOL CThread::Start(_In_opt_ BOOL bSuspended)
   }
   if (FAILED(cKillEvent.Create(TRUE, FALSE)))
     return FALSE;
-  hThread = (HANDLE)_beginthreadex(NULL, dwStackSize, &CThread::CommonThreadProc, this,
-                                   (bSuspended != FALSE) ? CREATE_SUSPENDED : 0, &tid);
+  hThread = (HANDLE)_beginthreadex(NULL, dwStackSize, &CThread::CommonThreadProc, this, CREATE_SUSPENDED, &tid);
   if (hThread == NULL)
   {
     cKillEvent.Close();
@@ -114,6 +113,8 @@ BOOL CThread::Start(_In_opt_ BOOL bSuspended)
   }
   dwThreadId = (DWORD)tid;
   ::SetThreadPriority(hThread, nPriority);
+  if (bSuspended == FALSE)
+    ::ResumeThread(hThread);
   return TRUE;
 }
 
@@ -374,6 +375,7 @@ unsigned int __stdcall CThread::CommonThreadProc(_In_ LPVOID lpParameter)
   BOOL bAutoDelete = lpThis->bAutoDelete;
 
   lpThis->ThreadProc();
+  //lpThis->cKillEvent.Set();
   if (bAutoDelete != FALSE)
     delete lpThis;
   return 0;

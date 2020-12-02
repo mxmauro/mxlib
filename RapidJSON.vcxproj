@@ -95,6 +95,9 @@
   <ItemGroup>
     <None Include="Source\RapidJSON\build.vbs" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Include\RapidJSON\rapidjson-all.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

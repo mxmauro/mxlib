@@ -1582,54 +1582,6 @@ VOID CSockets::CConnection::CListener::ThreadProc()
   dwTimeoutMs = INFINITE;
   while (lpSocketMgr->IsShuttingDown() == FALSE && lpConn->IsClosed() == FALSE)
   {
-   
-    /*
-    DWORD dwErrorsCount = 0;
-    while (dwErrorsCount < MAX_ACCEPT_ERRORS_PER_CYCLE &&
-           ::WaitForSingleObject(hEvents[0], 0) != WAIT_OBJECT_0 &&
-           __InterlockedIncrementIfLessThan(&(lpListener->nAcceptsInProgress),
-                                            (LONG)(lpListener->dwMaxAcceptsToPost)) != FALSE)
-    {
-      HRESULT hRes;
-
-      hRes = ((CSockets*)lpIpc)->CreateServerConnection(this);
-      if (SUCCEEDED(hRes))
-      {
-        if (hRes == S_OK)
-          _InterlockedDecrement(&(lpListener->nAcceptsInProgress));
-        dwErrorsCount = 0;
-      }
-      else
-      {
-        _InterlockedDecrement(&(lpListener->nAcceptsInProgress));
-        if (hRes != MX_HRESULT_FROM_WIN32(ERROR_NETNAME_DELETED) &&
-            hRes != MX_HRESULT_FROM_WIN32(WSAECONNRESET) && hRes != MX_HRESULT_FROM_WIN32(WSAECONNABORTED) &&
-            hRes != HRESULT_FROM_NT(STATUS_LOCAL_DISCONNECT) && hRes != HRESULT_FROM_NT(STATUS_REMOTE_DISCONNECT))
-        {
-          ((CSockets*)lpIpc)->FireOnEngineError(hRes);
-        }
-        dwErrorsCount++;
-      }
-    }
-
-    if (dwErrorsCount == MAX_ACCEPT_ERRORS_PER_CYCLE)
-    {
-      if (dwTimeoutMs == INFINITE)
-      {
-        dwTimeoutMs = 5;
-      }
-      else
-      {
-        if ((dwTimeoutMs *= 2) > 1000)
-          dwTimeoutMs = 1000;
-      }
-    }
-    else
-    {
-      dwTimeoutMs = INFINITE;
-    }
-    */
-
     if (__InterlockedIncrementIfLessThan(&nAcceptsInProgress, (LONG)(cOptions.dwMaxAcceptsToPost)) != FALSE)
     {
       HRESULT hRes;
