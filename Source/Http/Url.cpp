@@ -1067,11 +1067,13 @@ HRESULT CUrl::ParseFromString(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nSrcLen)
   //clean
   Reset();
   nSchemeType = CUrl::SchemeUnknown;
+
   //check parameters
   if (nSrcLen == (SIZE_T)-1)
     nSrcLen = StrLenA(szUrlA);
   if (szUrlA == NULL && nSrcLen > 0)
     return E_POINTER;
+
   //skip 'url:' prefix
   while (nSrcLen >= 4 && StrNCompareA(szUrlA, "URL:", TRUE, 4) == 0)
   {
@@ -1081,6 +1083,7 @@ HRESULT CUrl::ParseFromString(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nSrcLen)
   //nothing to parse?
   if (nSrcLen == 0)
     return S_OK;
+
   //is scheme specified?
   nPos = FindChar(szUrlA, nSrcLen, ":", "@?#/\\");
   if (nPos == 0)
@@ -1094,6 +1097,7 @@ err_fail:
   {
     //no scheme detected, may be a file or a relative path
     nSchemeType = CUrl::SchemeNone;
+
     //count the number of slashes
     for (i = nSrcLen, sA = szUrlA; i > 0 && IsSlash(*sA) != FALSE; sA++, i--);
     i = nSrcLen - i; //'i' has the number of slashes
@@ -1114,6 +1118,7 @@ err_fail:
       szUrlA += (i - 2);
       nSrcLen -= (i - 2);
     }
+
     //copy the rest to the path
     goto copy_path;
   }
@@ -1145,12 +1150,14 @@ err_nomem:
   szUrlA += nPos + 1; //skip scheme
   nSrcLen -= nPos + 1;
   nSchemeType = Scheme2Enum((LPCWSTR)cStrSchemeW);
+
   if (nSchemeType == CUrl::SchemeMailTo || nSchemeType == CUrl::SchemeNews)
   {
     //get mail/domain from szUrlW
     nPos = FindChar(szUrlA, nSrcLen, "?#", NULL);
     if (nPos == (SIZE_T)-1)
       nPos = nSrcLen;
+
     //copy mail/domain to path
     hRes = Decode(cStrTempA, szUrlA, nPos);
     if (SUCCEEDED(hRes))
@@ -1159,6 +1166,7 @@ err_nomem:
       goto done;
     szUrlA += nPos;
     nSrcLen -= nPos;
+
     //do check validity
     if (IsValidEMailAddress((LPCWSTR)cStrPathW, cStrPathW.GetLength()) == FALSE)
     {
@@ -1196,9 +1204,11 @@ err_nomem:
         nSrcLen -= nPos;
       }
       cStrTempHostA.Empty();
+
       //count the number of slashes
       for (i = nSrcLen, sA = szUrlA; i > 0 && IsSlash(*sA) != FALSE; sA++, i--);
       i = nSrcLen - i; //'i' has the number of slashes
+
       //if there are more than two slashes in the front, leave only two
       if (i > 2)
       {
@@ -1233,6 +1243,7 @@ copy_path:
     //check if first slash if present
     sA = (LPCSTR)cStrTempA;
     for (i = 0; sA[i] == '/'; i++);
+
     //check 4 drive letter specification
     if (IsAlpha(sA[i]) != FALSE && (sA[i + 1] == ':' || sA[i + 1] == '|'))
     {
@@ -1248,8 +1259,11 @@ copy_path:
 
   //add the rest
   hRes = SetPath((LPCSTR)cStrTempA, cStrTempA.GetLength());
+  if (SUCCEEDED(hRes))
+    hRes = ShrinkPath();
   if (FAILED(hRes))
     goto done;
+
   //split host
   if (cStrTempHostA.IsEmpty() == FALSE)
   {
@@ -1325,6 +1339,7 @@ parse_params:
         }
         break; //fragment separator found
       }
+
       //find the = sign
       i = FindChar(szUrlA, nPos, "=", NULL);
       if (i != (SIZE_T)-1)
@@ -1346,6 +1361,7 @@ parse_params:
     if (FAILED(hRes))
       goto done;
   }
+
   if (nSchemeType != CUrl::SchemeMailTo && nSchemeType != CUrl::SchemeNews)
   {
     hRes = NormalizePath(cStrPathW, (LPCWSTR)cStrSchemeW);
@@ -1372,6 +1388,7 @@ HRESULT CUrl::ParseFromString(_In_z_ LPCWSTR szUrlW, _In_opt_ SIZE_T nSrcLen)
 
   //clean
   Reset();
+  nSchemeType = CUrl::SchemeUnknown;
 
   //check parameters
   if (nSrcLen == (SIZE_T)-1)
@@ -1389,6 +1406,7 @@ HRESULT CUrl::ParseFromString(_In_z_ LPCWSTR szUrlW, _In_opt_ SIZE_T nSrcLen)
   //nothing to parse?
   if (nSrcLen == 0)
     return S_OK;
+
   //is scheme specified?
   nPos = FindChar(szUrlW, nSrcLen, L":", L"@?#/\\");
   if (nPos == 0)
@@ -1401,6 +1419,8 @@ err_fail:
   if (nPos == (SIZE_T)-1)
   {
     //no scheme detected, may be a file or a relative path
+    nSchemeType = CUrl::SchemeNone;
+
     //count the number of slashes
     for (i = nSrcLen, sW = szUrlW; i > 0 && IsSlash(*sW) != FALSE; sW++, i--);
     i = nSrcLen - i; //'i' has the number of slashes
@@ -1420,6 +1440,7 @@ err_fail:
       szUrlW += (i - 2);
       nSrcLen -= (i - 2);
     }
+
     //copy the rest to the path
     goto copy_path;
   }
@@ -1450,17 +1471,20 @@ err_nomem:
   szUrlW += nPos + 1; //skip scheme
   nSrcLen -= nPos + 1;
   nSchemeType = Scheme2Enum((LPCWSTR)cStrSchemeW);
+
   if (nSchemeType == CUrl::SchemeMailTo || nSchemeType == CUrl::SchemeNews)
   {
     //get mail/domain from szUrlW
     nPos = FindChar(szUrlW, nSrcLen, L"?#", NULL);
     if (nPos == (SIZE_T)-1)
       nPos = nSrcLen;
+
     //copy mail/domain to path
     if (cStrPathW.CopyN(szUrlW, nPos) == FALSE)
       goto err_nomem;
     szUrlW += nPos;
     nSrcLen -= nPos;
+
     //do check validity
     if (IsValidEMailAddress((LPCWSTR)cStrPathW, cStrPathW.GetLength()) == FALSE)
     {
@@ -1498,9 +1522,11 @@ err_nomem:
         nSrcLen -= nPos;
       }
       cStrTempHostW.Empty();
+
       //count the number of slashes
       for (i = nSrcLen, sW = szUrlW; i > 0 && IsSlash(*sW) != FALSE; sW++, i--);
       i = nSrcLen - i; //'i' has the number of slashes
+
       //if there are more than two slashes in the front, leave only two
       if (i > 2)
       {
@@ -1525,7 +1551,7 @@ copy_path:
     goto err_nomem;
   szUrlW += nPos;
   nSrcLen -= nPos;
-  for (sW=(LPCWSTR)cStrTempW; *sW!=0; sW++)
+  for (sW = (LPCWSTR)cStrTempW; *sW != 0; sW++)
   {
     if (*sW == L'\\')
       *((LPWSTR)sW) = L'/';
@@ -1535,6 +1561,7 @@ copy_path:
     //check if first slash if present
     sW = (LPCWSTR)cStrTempW;
     for (i = 0; sW[i] == L'/'; i++);
+
     //check 4 drive letter specification
     if (IsAlpha(sW[i]) != FALSE && (sW[i + 1] == L':' || sW[i + 1] == L'|'))
     {
@@ -1656,6 +1683,7 @@ parse_params:
     if (FAILED(hRes))
       goto done;
   }
+
   if (nSchemeType != CUrl::SchemeMailTo && nSchemeType != CUrl::SchemeNews)
   {
     hRes = NormalizePath(cStrPathW, (LPCWSTR)cStrSchemeW);
