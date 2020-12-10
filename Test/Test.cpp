@@ -17,6 +17,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+//#define USE_JEMALLOC
+
 #include "Test.h"
 #include <conio.h>
 #include "TestHttpServer.h"
@@ -27,6 +29,10 @@
 #include "Comm\SslCertificates.h"
 #include "Comm\HostResolver.h"
 
+#ifdef USE_JEMALLOC
+  #include <JeMalloc.h>
+#endif //USE_JEMALLOC
+
 #pragma comment(lib, "MxLib.lib")
 #pragma comment(lib, "CommLib.lib")
 #pragma comment(lib, "ZLib.lib")
@@ -34,6 +40,13 @@
 #pragma comment(lib, "DatabaseLib.lib")
 #pragma comment(lib, "JsLib.lib")
 #pragma comment(lib, "JsHttpServer.lib")
+#ifdef USE_JEMALLOC
+  #pragma comment(lib, "JeMallocLib.lib")
+#endif //USE_JEMALLOC
+
+#ifdef USE_JEMALLOC
+MX_DEFINE_MALLOC_OVERRIDE(je_malloc, je_realloc, je_free, je_malloc_usable_size)
+#endif //USE_JEMALLOC
 
 #ifdef _DEBUG
   #define USE_PATH_TO_SOURCE
