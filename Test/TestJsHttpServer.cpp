@@ -330,11 +330,13 @@ static VOID OnRequestCompleted(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpS
 
   if (MX::StrCompareW(szExtensionW, L".css", TRUE) == 0 || MX::StrCompareW(szExtensionW, L".js", TRUE) == 0 ||
       MX::StrCompareW(szExtensionW, L".jpg", TRUE) == 0 || MX::StrCompareW(szExtensionW, L".png", TRUE) == 0 ||
-      MX::StrCompareW(szExtensionW, L".gif", TRUE) == 0 || MX::StrCompareW(szExtensionW, L".dat", TRUE) == 0)
+      MX::StrCompareW(szExtensionW, L".gif", TRUE) == 0 || MX::StrCompareW(szExtensionW, L".dat", TRUE) == 0 ||
+      MX::StrCompareW(szExtensionW, L".htm", TRUE) == 0 || MX::StrCompareW(szExtensionW, L".html", TRUE) == 0 ||
+      MX::StrCompareW(szExtensionW, L".txt", TRUE) == 0)
   {
     hRes = lpRequest->SendFile((LPCWSTR)(lpRequest->cStrFileNameW));
     if (SUCCEEDED(hRes))
-      hRes = lpRequest->SetFileName((LPCWSTR)(lpRequest->cStrFileNameW));
+      hRes = lpRequest->SetMimeTypeFromFileName((LPCWSTR)(lpRequest->cStrFileNameW));
     if (hRes == MX_E_FileNotFound || hRes == MX_E_PathNotFound)
     {
       hRes = lpRequest->SendErrorPage(404, MX_E_FileNotFound);
@@ -439,6 +441,7 @@ static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHtt
   hRes = BuildWebFileName(cStrFileNameW, szExtensionW, lpReqContext->GetId());
   if (FAILED(hRes))
     return hRes;
+
   //check extension
   if (MX::StrCompareW(szExtensionW, L".jss", TRUE) == 0)
   {
@@ -450,6 +453,7 @@ static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHtt
     }
     return hRes;
   }
+
   if (MX::StrCompareW(szExtensionW, L".js", TRUE) == 0)
   {
     hRes = LoadTxtFile(cStrCodeA, (LPCWSTR)cStrFileNameW);

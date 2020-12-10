@@ -212,8 +212,11 @@ static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServe
   hRes = BuildWebFileName(cStrFileNameW, szExtensionW, lpRequest->GetUrl()->GetPath());
   if (SUCCEEDED(hRes))
   {
-    if (MX::StrCompareW(szExtensionW, L".html", TRUE) == 0 ||
-        MX::StrCompareW(szExtensionW, L".dat", TRUE) == 0)
+    if (MX::StrCompareW(szExtensionW, L".htm", TRUE) == 0 || MX::StrCompareW(szExtensionW, L".html", TRUE) == 0 ||
+        MX::StrCompareW(szExtensionW, L".txt", TRUE) == 0 || MX::StrCompareW(szExtensionW, L".dat", TRUE) == 0 ||
+        MX::StrCompareW(szExtensionW, L".js", TRUE) == 0 || MX::StrCompareW(szExtensionW, L".css", TRUE) == 0 ||
+        MX::StrCompareW(szExtensionW, L".jpg", TRUE) == 0 || MX::StrCompareW(szExtensionW, L".png", TRUE) == 0 ||
+        MX::StrCompareW(szExtensionW, L".gif", TRUE) == 0)
     {
       hRes = lpRequest->SendFile((LPCWSTR)cStrFileNameW);
       if (SUCCEEDED(hRes))
