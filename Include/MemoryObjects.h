@@ -20,8 +20,6 @@
 #ifndef _MX_MEMORY_OBJECTS_H
 #define _MX_MEMORY_OBJECTS_H
 
-#include "MallocMacros.h"
-
 #ifdef _DEBUG
   #define MX_MEMORY_OBJECTS_HEAP_CHECK
 #else //_DEBUG
@@ -44,6 +42,34 @@ size_t MxMemSize(void *lpPtr);
 #ifdef __cplusplus
 } //extern "C"
 #endif //__cplusplus
+
+//-----------------------------------------------------------
+
+typedef struct tagMX_MALLOC_OVERRIDE {
+  void* (*alloc)(size_t nSize);
+  void* (*realloc)(void *lpPtr, size_t nSize);
+  void (*free)(void *lpPtr);
+  size_t (*memsize)(void *lpPtr);
+} MX_MALLOC_OVERRIDE, *LPMX_MALLOC_OVERRIDE;
+
+#define MX_DEFINE_MALLOC_OVERRIDE(alloc, realloc, free, memsize)                        \
+    static MX_MALLOC_OVERRIDE sMxAllocatorOverride = { alloc, realloc, free, memsize }; \
+    extern "C" LPMX_MALLOC_OVERRIDE lpMxAllocatorOverride = &sMxAllocatorOverride;
+
+//-----------------------------------------------------------
+
+#if defined(_DEBUG)
+#define MX_MALLOC(nSize)                       MxMemAllocD((size_t)(nSize), __FILE__, __LINE__)
+#define MX_REALLOC(lpPtr, nNewSize)            MxMemReallocD((void*)(lpPtr), (size_t)(nNewSize), __FILE__, __LINE__)
+#define MX_MALLOC_D(nSize, _f, _l)             MxMemAllocD((size_t)(nSize), _f, _l)
+#define MX_REALLOC_D(lpPtr, nNewSize, _f, _l)  MxMemReallocD((void*)(lpPtr), (size_t)(nNewSize), _f, _l)
+#else //_DEBUG
+#define MX_MALLOC(nSize)              MxMemAlloc((size_t)(nSize))
+#define MX_REALLOC(lpPtr, nNewSize)   MxMemRealloc((void*)(lpPtr), (size_t)(nNewSize))
+#endif //_DEBUG
+
+#define MX_FREE(lpPtr)                if (lpPtr != NULL) { MxMemFree((void*)(lpPtr));  lpPtr = NULL; }
+#define MX__MSIZE(lpPtr)              MxMemSize((void*)(lpPtr))
 
 //-----------------------------------------------------------
 

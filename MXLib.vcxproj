@@ -193,7 +193,6 @@
     <ClInclude Include="Include\IOCompletionPort.h" />
     <ClInclude Include="Include\LinkedList.h" />
     <ClInclude Include="Include\Loggable.h" />
-    <ClInclude Include="Include\MallocMacros.h" />
     <ClInclude Include="Include\MemoryObjects.h" />
     <ClInclude Include="Include\MemoryStream.h" />
     <ClInclude Include="Include\NtDefs.h" />

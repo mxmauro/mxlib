@@ -71,9 +71,6 @@
     <ClInclude Include="Include\LinkedList.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Include\MallocMacros.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Include\MemoryObjects.h">
       <Filter>Header Files</Filter>
     </ClInclude>

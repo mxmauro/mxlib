@@ -28,7 +28,6 @@
 #pragma intrinsic (_InterlockedIncrement)
 #pragma intrinsic(_ReturnAddress)
 
-//#define USE_CRT_ALLOC
 #ifdef _DEBUG
   #define HEAP_CHECK_CAPTURE_STACK
 #else //_DEBUG
@@ -131,6 +130,25 @@ static lpfnImagehlpApiVersion fnImagehlpApiVersion = NULL;
 
 #endif //MX_MEMORY_OBJECTS_HEAP_CHECK
 
+static void *DefaultMalloc(_In_ size_t nSize);
+static void *DefaultRealloc(_In_opt_ void *lpPtr, _In_ size_t nSize);
+static void DefaultFree(_In_opt_ void *lpPtr);
+static size_t DefaultMemSize(_In_opt_ void *lpPtr);
+
+//-----------------------------------------------------------
+
+static MX_MALLOC_OVERRIDE MxDefaultAllocatorOverride = { DefaultMalloc, DefaultRealloc, DefaultFree, DefaultMemSize };
+extern "C" LPMX_MALLOC_OVERRIDE lpMxDefaultAllocatorOverride = &MxDefaultAllocatorOverride;
+extern "C" LPMX_MALLOC_OVERRIDE lpMxAllocatorOverride;
+
+#if defined(_M_IX86)
+  #pragma comment(linker, "/alternatename:_lpMxAllocatorOverride=_lpMxDefaultAllocatorOverride")
+#elif defined (_M_X64)
+  #pragma comment(linker, "/alternatename:lpMxAllocatorOverride=lpMxDefaultAllocatorOverride")
+#else
+  #error Unsupported platform
+#endif
+
 //-----------------------------------------------------------
 
 #ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
@@ -170,16 +188,6 @@ extern "C" {
 
 void* MxMemAlloc(_In_ size_t nSize)
 {
-#ifdef USE_CRT_ALLOC
-
-#ifdef _CRTDBG_MAP_ALLOC
-  return _malloc_dbg(nSize, _NORMAL_BLOCK, NULL, 0);
-#else //_CRTDBG_MAP_ALLOC
-  return malloc(nSize);
-#endif //_CRTDBG_MAP_ALLOC
-
-#else //USE_CRT_ALLOC
-
 #ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
   LPBYTE p;
   MINIDEBUG_PREBLOCK *pPreBlk;
@@ -192,7 +200,7 @@ void* MxMemAlloc(_In_ size_t nSize)
     nSize = 1;
 #ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
   //CheckBlocks();
-  p = (LPBYTE)::MxRtlAllocateHeap(::MxGetProcessHeap(), 0, nSize + EXTRA_ALLOC);
+  p = (LPBYTE)(lpMxAllocatorOverride->alloc(nSize + EXTRA_ALLOC));
   if (p != NULL)
   {
     pPreBlk = (MINIDEBUG_PREBLOCK*)p;
@@ -202,24 +210,12 @@ void* MxMemAlloc(_In_ size_t nSize)
   }
   return p;
 #else //MX_MEMORY_OBJECTS_HEAP_CHECK
-  return ::MxRtlAllocateHeap(::MxGetProcessHeap(), 0, nSize);
+  return lpMxAllocatorOverride->alloc(nSize);
 #endif //MX_MEMORY_OBJECTS_HEAP_CHECK
-
-#endif //USE_CRT_ALLOC
 }
 
 void* MxMemAllocD(_In_ size_t nSize, _In_opt_z_ const char *szFilenameA, _In_ int nLineNumber)
 {
-#ifdef USE_CRT_ALLOC
-
-#ifdef _CRTDBG_MAP_ALLOC
-  return _malloc_dbg(nSize, _NORMAL_BLOCK, szFilenameA, nLineNumber);
-#else //_CRTDBG_MAP_ALLOC
-  return malloc(nSize);
-#endif //_CRTDBG_MAP_ALLOC
-
-#else //USE_CRT_ALLOC
-
 #ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
   LPBYTE p;
   MINIDEBUG_PREBLOCK *pPreBlk;
@@ -232,7 +228,7 @@ void* MxMemAllocD(_In_ size_t nSize, _In_opt_z_ const char *szFilenameA, _In_ in
     nSize = 1;
 #ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
   //CheckBlocks();
-  p = (LPBYTE)::MxRtlAllocateHeap(::MxGetProcessHeap(), 0, nSize+EXTRA_ALLOC);
+  p = (LPBYTE)(lpMxAllocatorOverride->alloc(nSize + EXTRA_ALLOC));
   if (p != NULL)
   {
     pPreBlk = (MINIDEBUG_PREBLOCK*)p;
@@ -242,24 +238,12 @@ void* MxMemAllocD(_In_ size_t nSize, _In_opt_z_ const char *szFilenameA, _In_ in
   }
   return p;
 #else //MX_MEMORY_OBJECTS_HEAP_CHECK
-  return ::MxRtlAllocateHeap(::MxGetProcessHeap(), 0, nSize);
+  return lpMxAllocatorOverride->alloc(nSize);
 #endif //MX_MEMORY_OBJECTS_HEAP_CHECK
-
-#endif //USE_CRT_ALLOC
 }
 
 void* MxMemRealloc(_In_opt_ void *lpPtr, _In_ size_t nSize)
 {
-#ifdef USE_CRT_ALLOC
-
-#ifdef _CRTDBG_MAP_ALLOC
-  return _realloc_dbg(lpPtr, nSize, _NORMAL_BLOCK, szFilenameA, nLineNumber);
-#else //_CRTDBG_MAP_ALLOC
-  return realloc(lpPtr, nSize);
-#endif //_CRTDBG_MAP_ALLOC
-
-#else //USE_CRT_ALLOC
-
 #ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
   MINIDEBUG_PREBLOCK *pPreBlk;
   LPBYTE p;
@@ -272,7 +256,9 @@ void* MxMemRealloc(_In_opt_ void *lpPtr, _In_ size_t nSize)
     return NULL;
   }
   if (lpPtr == NULL)
-    return ::MxMemAllocD(nSize, NULL, 0);
+  {
+    return ::MxMemAlloc(nSize);
+  }
 
 #ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
   lpRetAddress = _ReturnAddress();
@@ -282,7 +268,7 @@ void* MxMemRealloc(_In_opt_ void *lpPtr, _In_ size_t nSize)
   CheckBlock(pPreBlk);
   UnlinkBlock(pPreBlk);
   SetBlockTags(pPreBlk, TRUE);
-  p = (LPBYTE)::MxRtlReAllocateHeap(::MxGetProcessHeap(), 0, pPreBlk, nSize + EXTRA_ALLOC);
+  p = (LPBYTE)(lpMxAllocatorOverride->realloc(pPreBlk, nSize + EXTRA_ALLOC));
   if (p != NULL)
   {
     pPreBlk = (MINIDEBUG_PREBLOCK*)p;
@@ -296,24 +282,12 @@ void* MxMemRealloc(_In_opt_ void *lpPtr, _In_ size_t nSize)
   LinkBlock(pPreBlk);
   return p;
 #else //MX_MEMORY_OBJECTS_HEAP_CHECK
-  return ::MxRtlReAllocateHeap(::MxGetProcessHeap(), 0, lpPtr, nSize);
+  return lpMxAllocatorOverride->realloc(lpPtr, nSize);
 #endif //MX_MEMORY_OBJECTS_HEAP_CHECK
-
-#endif //USE_CRT_ALLOC
 }
 
 void* MxMemReallocD(_In_opt_ void *lpPtr, _In_ size_t nSize, _In_opt_z_ const char *szFilenameA, _In_ int nLineNumber)
 {
-#ifdef USE_CRT_ALLOC
-
-#ifdef _CRTDBG_MAP_ALLOC
-  return _realloc_dbg(lpPtr, nSize, _NORMAL_BLOCK, szFilenameA, nLineNumber);
-#else //_CRTDBG_MAP_ALLOC
-  return realloc(lpPtr, nSize);
-#endif //_CRTDBG_MAP_ALLOC
-
-#else //USE_CRT_ALLOC
-
 #ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
   MINIDEBUG_PREBLOCK *pPreBlk;
   LPBYTE p;
@@ -336,7 +310,7 @@ void* MxMemReallocD(_In_opt_ void *lpPtr, _In_ size_t nSize, _In_opt_z_ const ch
   CheckBlock(pPreBlk);
   UnlinkBlock(pPreBlk);
   SetBlockTags(pPreBlk, TRUE);
-  p = (LPBYTE)::MxRtlReAllocateHeap(::MxGetProcessHeap(), 0, pPreBlk, nSize+EXTRA_ALLOC);
+  p = (LPBYTE)(lpMxAllocatorOverride->realloc(pPreBlk, nSize + EXTRA_ALLOC));
   if (p != NULL)
   {
     pPreBlk = (MINIDEBUG_PREBLOCK*)p;
@@ -350,24 +324,12 @@ void* MxMemReallocD(_In_opt_ void *lpPtr, _In_ size_t nSize, _In_opt_z_ const ch
   LinkBlock(pPreBlk);
   return p;
 #else //MX_MEMORY_OBJECTS_HEAP_CHECK
-  return ::MxRtlReAllocateHeap(::MxGetProcessHeap(), 0, lpPtr, nSize);
+  return lpMxAllocatorOverride->realloc(lpPtr, nSize);
 #endif //MX_MEMORY_OBJECTS_HEAP_CHECK
-
-#endif //USE_CRT_ALLOC
 }
 
 void MxMemFree(_In_opt_ void *lpPtr)
 {
-#ifdef USE_CRT_ALLOC
-
-#ifdef _CRTDBG_MAP_ALLOC
-  _free_dbg(lpPtr, _NORMAL_BLOCK);
-#else //_CRTDBG_MAP_ALLOC
-  free(lpPtr);
-#endif //_CRTDBG_MAP_ALLOC
-
-#else //USE_CRT_ALLOC
-
   if (lpPtr != NULL)
   {
 #ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
@@ -380,25 +342,14 @@ void MxMemFree(_In_opt_ void *lpPtr)
     SetBlockTags(pPreBlk, TRUE);
     lpPtr = pPreBlk;
 #endif //MX_MEMORY_OBJECTS_HEAP_CHECK
-    ::MxRtlFreeHeap(::MxGetProcessHeap(), 0, lpPtr);
-  }
 
-#endif //USE_CRT_ALLOC
+    lpMxAllocatorOverride->free(lpPtr);
+  }
   return;
 }
 
 size_t MxMemSize(_In_opt_ void *lpPtr)
 {
-#ifdef USE_CRT_ALLOC
-
-#ifdef _CRTDBG_MAP_ALLOC
-  return _msize_dbg(lpPtr, _NORMAL_BLOCK);
-#else //_CRTDBG_MAP_ALLOC
-  return _msize(lpPtr);
-#endif //_CRTDBG_MAP_ALLOC
-
-#else //USE_CRT_ALLOC
-
   if (lpPtr != NULL)
   {
 #ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
@@ -408,15 +359,14 @@ size_t MxMemSize(_In_opt_ void *lpPtr)
     //CheckBlocks();
     pPreBlk = (MINIDEBUG_PREBLOCK*)((LPBYTE)lpPtr - sizeof(MINIDEBUG_PREBLOCK));
     CheckBlock(pPreBlk);
-    nSize = ::MxRtlSizeHeap(::MxGetProcessHeap(), 0, pPreBlk);
+
+    nSize = lpMxAllocatorOverride->memsize(pPreBlk);
     return (nSize > EXTRA_ALLOC) ? (nSize - EXTRA_ALLOC) : 0;
 #else //MX_MEMORY_OBJECTS_HEAP_CHECK
-    return ::MxRtlSizeHeap(::MxGetProcessHeap(), 0, lpPtr);
+    return lpMxAllocatorOverride->memsize(lpPtr);
 #endif //MX_MEMORY_OBJECTS_HEAP_CHECK
   }
   return 0;
-
-#endif //USE_CRT_ALLOC
 }
 
 #ifdef __cplusplus
@@ -894,3 +844,24 @@ VOID MxDumpLeaks(_In_opt_z_ LPCSTR szFilenameA)
 #endif //__cplusplus
 
 #endif //MX_MEMORY_OBJECTS_HEAP_CHECK
+
+static void* DefaultMalloc(_In_ size_t nSize)
+{
+  return ::MxRtlAllocateHeap(::MxGetProcessHeap(), 0, nSize);
+}
+
+static void* DefaultRealloc(_In_opt_ void *lpPtr, _In_ size_t nSize)
+{
+  return ::MxRtlReAllocateHeap(::MxGetProcessHeap(), 0, lpPtr, nSize);
+}
+
+static void DefaultFree(_In_opt_ void *lpPtr)
+{
+  ::MxRtlFreeHeap(::MxGetProcessHeap(), 0, lpPtr);
+  return;
+}
+
+static size_t DefaultMemSize(_In_opt_ void *lpPtr)
+{
+  return ::MxRtlSizeHeap(::MxGetProcessHeap(), 0, lpPtr);
+}
