@@ -21,7 +21,6 @@
 #define _MX_HTTPHEADERRESPONSEWWWPROXYAUTHENTICATE_H
 
 #include "HttpHeaderBase.h"
-#include "HttpAuth.h"
 
 //-----------------------------------------------------------
 
@@ -38,10 +37,24 @@ public:
 
   HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  CHttpAuthBase* GetHttpAuth();
+  HRESULT SetScheme(_In_z_ LPCSTR szSchemeA, _In_opt_ SIZE_T nSchemeLen = (SIZE_T)-1);
+  LPCSTR GetScheme() const;
+
+  HRESULT AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);
+
+  SIZE_T GetParamsCount() const;
+  LPCSTR GetParamName(_In_ SIZE_T nIndex) const;
+  LPCWSTR GetParamValue(_In_ SIZE_T nIndex) const;
+  LPCWSTR GetParamValue(_In_z_ LPCSTR szNameA) const;
 
 private:
-  TAutoRefCounted<CHttpAuthBase> cHttpAuth;
+  typedef struct {
+    LPWSTR szValueW;
+    CHAR szNameA[1];
+  } PARAMETER, *LPPARAMETER;
+
+  CStringA cStrSchemeA;
+  TArrayListWithFree<LPPARAMETER> aParamsList;
 };
 
 //--------

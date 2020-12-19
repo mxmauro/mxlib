@@ -175,6 +175,7 @@ HRESULT CHttpHeaderReqAccept::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBro
     }
     if (cStrDestA.Concat(lpType->GetType()) == FALSE)
       return E_OUTOFMEMORY;
+
     //q
     if (lpType->GetQ() < 1.0 - 0.00000001)
     {
@@ -182,6 +183,7 @@ HRESULT CHttpHeaderReqAccept::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBro
         return E_OUTOFMEMORY;
       RemoveTrailingZeroDecimals(cStrDestA);
     }
+
     //parameters
     nParamsCount = lpType->GetParamsCount();
     for (nParamIdx = 0; nParamIdx < nParamsCount; nParamIdx++)
@@ -195,6 +197,7 @@ HRESULT CHttpHeaderReqAccept::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBro
         return E_OUTOFMEMORY;
     }
   }
+
   //done
   return S_OK;
 }

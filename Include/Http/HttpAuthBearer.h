@@ -17,33 +17,63 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef _MX_HTTPAUTHCACHE_H
-#define _MX_HTTPAUTHCACHE_H
+#ifndef _MX_HTTPAUTHBEARER_H
+#define _MX_HTTPAUTHBEARER_H
 
-#include "..\..\Include\Defines.h"
-#include "..\..\Include\Http\HttpAuth.h"
-#include "..\..\Include\RefCounted.h"
+#include "HttpAuthBase.h"
 
 //-----------------------------------------------------------
 
 namespace MX {
 
-namespace HttpAuthCache {
+class CHttpAuthBearer : public CHttpAuthBase, public CNonCopyableObj
+{
+public:
+  CHttpAuthBearer();
+  ~CHttpAuthBearer();
 
-HRESULT Add(_In_ CUrl &cUrl, _In_ CHttpAuthBase *lpHttpAuth);
-HRESULT Add(_In_ CUrl::eScheme nScheme, _In_z_ LPCWSTR szHostW, _In_ int nPort, _In_z_ LPCWSTR szPathW,
-            _In_ CHttpAuthBase *lpHttpAuth);
+  LPCSTR GetScheme() const
+    {
+    return "Bearer";
+    };
 
-VOID Remove(_In_ CHttpAuthBase *lpHttpAuth);
-VOID RemoveAll();
+  HRESULT Parse(_In_ CHttpHeaderRespWwwProxyAuthenticateCommon *lpHeader);
 
-CHttpAuthBase* Lookup(_In_ CUrl &cUrl);
-CHttpAuthBase* Lookup(_In_ CUrl::eScheme nScheme, _In_z_ LPCWSTR szHostW, _In_ int nPort, _In_z_ LPCWSTR szPathW);
+  HRESULT GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCSTR szAccessTokenA);
 
-} //namespace HttpAuthCache
+  LPCWSTR GetRealm() const
+    {
+    return (LPCWSTR)cStrRealmW;
+    };
+
+  SIZE_T GetScopesCount() const
+    {
+    return aScopesList.GetCount();
+    };
+
+  LPCWSTR GetScope(_In_ SIZE_T nIndex) const
+    {
+    return (nIndex < aScopesList.GetCount()) ? aScopesList.GetElementAt(nIndex) : NULL;
+    };
+
+  LPCWSTR GetError() const
+    {
+    return (LPCWSTR)cStrErrorW;
+    };
+
+  LPCWSTR GetErrorDescription() const
+    {
+    return (LPCWSTR)cStrErrorDescriptionW;
+    };
+
+private:
+  CStringW cStrRealmW;
+  TArrayListWithFree<LPCWSTR> aScopesList;
+  CStringW cStrErrorW, cStrErrorDescriptionW;
+};
 
 } //namespace MX
 
 //-----------------------------------------------------------
 
-#endif //_MX_HTTPAUTHCACHE_H
+#endif //_MX_HTTPAUTHBEARER_H

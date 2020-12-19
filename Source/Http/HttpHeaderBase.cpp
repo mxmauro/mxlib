@@ -19,6 +19,7 @@
  */
 #include "..\..\Include\Http\HttpHeaderBase.h"
 #include "..\..\Include\AutoPtr.h"
+#include "..\..\Include\Strings\Utf8.h"
 
 //-----------------------------------------------------------
 

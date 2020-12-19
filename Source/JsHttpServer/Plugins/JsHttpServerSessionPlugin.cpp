@@ -20,6 +20,7 @@
 #include "..\..\..\Include\JsHttpServer\Plugins\JsHttpServerSessionPlugin.h"
 #include "..\..\..\Include\Crypto\MessageDigest.h"
 #include "..\..\..\Include\Http\punycode.h"
+#include "..\..\..\Include\Strings\Utf8.h"
 
 //-----------------------------------------------------------
 

@@ -1739,8 +1739,6 @@ HRESULT CUrl::Merge(_In_ const CUrl& cOtherUrl)
     }
     else if (i > 0)
     {
-      if (lpParts->nType == CUrl::SchemeNone)
-        lpParts->nType = CUrl::SchemeFile;
       lpParts->bPathIsAbsolute = TRUE;
     }
     else if (lpParts->nType == CUrl::SchemeNews ||

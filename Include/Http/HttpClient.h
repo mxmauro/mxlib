@@ -48,7 +48,6 @@ public:
     StateReceivingResponseBody,
     StateDocumentCompleted,
     StateWaitingForRedirection,
-    StateRetryingAuthentication,
     StateEstablishingProxyTunnelConnection,
     StateWaitingProxyTunnelConnectionResponse,
     StateNoOp
@@ -168,8 +167,6 @@ public:
 
   HRESULT SetProxy(_In_ CProxy &cProxy);
 
-  HRESULT SetAuthCredentials(_In_opt_z_ LPCWSTR szUserNameW, _In_opt_z_ LPCWSTR szPasswordW);
-
   HRESULT Open(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOptions = NULL);
   HRESULT Open(_In_z_ LPCSTR szUrlA, _In_opt_ LPOPEN_OPTIONS lpOptions = NULL);
   HRESULT Open(_In_z_ LPCWSTR szUrlW, _In_opt_ LPOPEN_OPTIONS lpOptions = NULL);
@@ -256,7 +253,7 @@ private:
 private:
   friend class CConnection;
 
-  HRESULT InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOptions, _In_ BOOL bRedirectionAuth,
+  HRESULT InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOptions, _In_ BOOL bIsRedirecting,
                        _Outptr_ _Maybenull_ CConnection **lplpConnectionToRelease);
 
   VOID OnConnectionClosed(_In_ CConnection *lpConn, _In_ HRESULT hrErrorCode);
@@ -264,7 +261,7 @@ private:
   HRESULT OnDataReceived(_In_ CConnection *lpConn);
   HRESULT OnAddSslLayer(_In_ CIpc *lpIpc, _In_ HANDLE h);
 
-  VOID OnRedirectOrRetryAuth(_In_ LONG nTimerId, _In_ LPVOID lpUserData, _In_opt_ LPBOOL lpbCancel);
+  VOID OnRedirection(_In_ LONG nTimerId, _In_ LPVOID lpUserData, _In_opt_ LPBOOL lpbCancel);
   VOID OnAfterSendRequestHeaders(_In_ CConnection *lpConn);
 
   VOID SetErrorOnRequestAndClose(_In_ HRESULT hrErrorCode);
@@ -320,7 +317,6 @@ private:
     TAutoRefCounted<CConnection> cLink;
   } sConnection;
   CProxy cProxy;
-  CSecureStringW cStrAuthUserNameW, cStrAuthUserPasswordW;
   HRESULT hLastErrorCode;
   DWORD dwTimeoutMs;
   DWORD dwMaxRedirCount;
@@ -369,14 +365,9 @@ private:
 
   struct {
     CUrl cUrl;
-    DWORD dwRedirectCounter;
+    DWORD dwCounter;
     LONG volatile nTimerId;
-  } sRedirectOrRetryAuth;
-
-  struct {
-    BOOL bSeen401, bSeen407;
-    int nSeen401Or407Counter;
-  } sAuthorization;
+  } sRedirection;
 };
 
 } //namespace MX

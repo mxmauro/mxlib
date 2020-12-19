@@ -64,8 +64,10 @@ HRESULT CHttpHeaderEntContentDisposition::Parse(_In_z_ LPCSTR szValueA, _In_opt_
   hRes = SetType(szStartA, (SIZE_T)(szValueA - szStartA));
   if (FAILED(hRes))
     return hRes;
+
   //skip spaces
   szValueA = SkipSpaces(szValueA, szValueEndA);
+
   //parameters
   nHasItem = 0;
   if (szValueA < szValueEndA && *szValueA == ';')
@@ -93,6 +95,7 @@ HRESULT CHttpHeaderEntContentDisposition::Parse(_In_z_ LPCSTR szValueA, _In_opt_
           if ((nHasItem & 0x0001) != 0)
             return MX_E_InvalidData;
           nHasItem |= 0x0001;
+
           //extended filename set?
           if ((nHasItem & 0x0010) == 0)
           {
@@ -114,6 +117,7 @@ HRESULT CHttpHeaderEntContentDisposition::Parse(_In_z_ LPCSTR szValueA, _In_opt_
           if ((nHasItem & 0x0010) != 0)
             return MX_E_InvalidData;
           nHasItem |= 0x0010;
+
           //set name
           hRes = SetName((LPCWSTR)cStrValueW);
         }
@@ -125,6 +129,7 @@ HRESULT CHttpHeaderEntContentDisposition::Parse(_In_z_ LPCSTR szValueA, _In_opt_
           if ((nHasItem & 0x0002) != 0)
             return MX_E_InvalidData;
           nHasItem |= 0x0002;
+
           //extended filename set?
           if ((nHasItem & 0x0020) == 0)
           {
@@ -133,6 +138,7 @@ HRESULT CHttpHeaderEntContentDisposition::Parse(_In_z_ LPCSTR szValueA, _In_opt_
             //the returned value is ISO-8859-1, convert to UTF-8
             if (RawISO_8859_1_to_UTF8(cStrFileNameW, (LPCWSTR)cStrValueW, cStrValueW.GetLength()) == FALSE)
               return E_OUTOFMEMORY;
+
             //set filename
             hRes = SetFileName((LPCWSTR)cStrFileNameW);
           }
@@ -146,6 +152,7 @@ HRESULT CHttpHeaderEntContentDisposition::Parse(_In_z_ LPCSTR szValueA, _In_opt_
           if ((nHasItem & 0x0020) != 0)
             return MX_E_InvalidData;
           nHasItem |= 0x0020;
+
           //set filename
           hRes = SetFileName((LPCWSTR)cStrValueW);
         }
@@ -155,6 +162,7 @@ HRESULT CHttpHeaderEntContentDisposition::Parse(_In_z_ LPCSTR szValueA, _In_opt_
         if ((nHasItem & 0x0004) != 0)
           return MX_E_InvalidData;
         nHasItem |= 0x0004;
+
         //set creation date
         hRes = Http::ParseDate(cDt, (LPCWSTR)cStrValueW);
         if (SUCCEEDED(hRes))
@@ -165,6 +173,7 @@ HRESULT CHttpHeaderEntContentDisposition::Parse(_In_z_ LPCSTR szValueA, _In_opt_
         if ((nHasItem & 0x0008) != 0)
           return MX_E_InvalidData;
         nHasItem |= 0x0008;
+
         //set creation date
         hRes = Http::ParseDate(cDt, (LPCWSTR)cStrValueW);
         if (SUCCEEDED(hRes))
@@ -175,6 +184,7 @@ HRESULT CHttpHeaderEntContentDisposition::Parse(_In_z_ LPCSTR szValueA, _In_opt_
         if ((nHasItem & 0x0040) != 0)
           return MX_E_InvalidData;
         nHasItem |= 0x0040;
+
         //set creation date
         hRes = Http::ParseDate(cDt, (LPCWSTR)cStrValueW);
         if (SUCCEEDED(hRes))
@@ -188,11 +198,13 @@ HRESULT CHttpHeaderEntContentDisposition::Parse(_In_z_ LPCSTR szValueA, _In_opt_
         if ((nHasItem & 0x0080) != 0)
           return MX_E_InvalidData;
         nHasItem |= 0x0080;
+
         //parse value
         if (*sW < L'0' || *sW > L'9')
           return MX_E_InvalidData;
         while (*sW == L'0')
           sW++;
+
         nSize = 0ui64;
         while (*sW >= L'0' && *sW <= L'9')
         {
@@ -225,9 +237,11 @@ HRESULT CHttpHeaderEntContentDisposition::Parse(_In_z_ LPCSTR szValueA, _In_opt_
     }
     while (szValueA < szValueEndA);
   }
+
   //check for separator or end
   if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
     return MX_E_InvalidData;
+
   //done
   return S_OK;
 }
@@ -243,7 +257,7 @@ HRESULT CHttpHeaderEntContentDisposition::Build(_Inout_ CStringA &cStrDestA, _In
     cStrDestA.Empty();
     return S_OK;
   }
-  if (cStrDestA.Copy((LPCSTR)cStrTypeA) == FALSE)
+  if (cStrDestA.CopyN((LPCSTR)cStrTypeA, cStrTypeA.GetLength()) == FALSE)
     return E_OUTOFMEMORY;
 
   //name
@@ -255,6 +269,7 @@ HRESULT CHttpHeaderEntContentDisposition::Build(_Inout_ CStringA &cStrDestA, _In
     {
       if (Http::BuildExtendedValueString(cStrTempA, (LPCWSTR)cStrNameW, cStrFileNameW.GetLength()) == FALSE)
         return E_OUTOFMEMORY;
+
       //remove UTF-8'' prefix
       if (cStrDestA.AppendFormat("; name=\"%s\"", (LPCSTR)cStrTempA + 7) == FALSE)
         return E_OUTOFMEMORY;
@@ -281,6 +296,7 @@ HRESULT CHttpHeaderEntContentDisposition::Build(_Inout_ CStringA &cStrDestA, _In
     {
       if (Http::BuildExtendedValueString(cStrTempA, (LPCWSTR)cStrFileNameW, cStrFileNameW.GetLength()) == FALSE)
         return E_OUTOFMEMORY;
+
       //remove UTF-8'' prefix
       if (cStrDestA.AppendFormat("; filename=\"%s\"", (LPCSTR)cStrTempA + 7) == FALSE)
         return E_OUTOFMEMORY;
@@ -305,6 +321,7 @@ HRESULT CHttpHeaderEntContentDisposition::Build(_Inout_ CStringA &cStrDestA, _In
     if (cStrDestA.AppendFormat("; creation-date=\"%s\"", (LPSTR)cStrTempA) == FALSE)
       return E_OUTOFMEMORY;
   }
+
   //modification date
   if (cModificationDt.GetTicks() != 0)
   {

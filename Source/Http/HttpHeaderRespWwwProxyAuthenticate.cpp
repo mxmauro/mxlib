@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 #include "..\..\Include\Http\HttpHeaderRespWwwProxyAuthenticate.h"
+#include "..\..\Include\AutoPtr.h"
 
 //-----------------------------------------------------------
 
@@ -30,12 +31,15 @@ CHttpHeaderRespWwwProxyAuthenticateCommon::CHttpHeaderRespWwwProxyAuthenticateCo
 
 CHttpHeaderRespWwwProxyAuthenticateCommon::~CHttpHeaderRespWwwProxyAuthenticateCommon()
 {
+  aParamsList.RemoveAllElements();
   return;
 }
 
 HRESULT CHttpHeaderRespWwwProxyAuthenticateCommon::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szValueEndA;
+  LPCSTR szValueEndA, szStartA;
+  CStringA cStrTokenA;
+  CStringW cStrValueW;
   HRESULT hRes;
 
   if (szValueA == NULL)
@@ -48,50 +52,188 @@ HRESULT CHttpHeaderRespWwwProxyAuthenticateCommon::Parse(_In_z_ LPCSTR szValueA,
   //skip spaces
   szValueA = SkipSpaces(szValueA, szValueEndA);
 
-  //check type
-  if ((SIZE_T)(szValueEndA - szValueA) >= 5 && StrNCompareA(szValueA, "basic", 5, TRUE) == 0)
+  //scheme
+  szValueA = SkipUntil(szStartA = szValueA, szValueEndA, ";, \t");
+  if (szValueA == szStartA)
+    return MX_E_InvalidData;
+
+  hRes = SetScheme(szStartA, (SIZE_T)(szValueA - szStartA));
+  if (FAILED(hRes))
+    return hRes;
+  //skip spaces
+  szValueA = SkipSpaces(szValueA, szValueEndA);
+  //parameters
+  if (szValueA < szValueEndA && *szValueA == ';')
   {
-    szValueA += 5;
-    cHttpAuth.Attach(MX_DEBUG_NEW CHttpAuthBasic());
-    if (!cHttpAuth)
-      return E_OUTOFMEMORY;
-  }
-  else if ((SIZE_T)(szValueEndA - szValueA) >= 6 && StrNCompareA(szValueA, "digest", 6, TRUE) == 0)
-  {
-    szValueA += 6;
-    cHttpAuth.Attach(MX_DEBUG_NEW CHttpAuthDigest());
-    if (!cHttpAuth)
-      return E_OUTOFMEMORY;
-  }
-  else
-  {
-    return MX_E_Unsupported;
-  }
-  if (szValueA < szValueEndA && *szValueA != ' ' && *szValueA != '\t')
-  {
-    return ((*szValueA >= 'A' && *szValueA <= 'Z') ||
-            (*szValueA >= 'a' && *szValueA <= 'z') ||
-            (*szValueA >= '0' && *szValueA <= '9')) ? MX_E_Unsupported : MX_E_InvalidData;
+    szValueA++;
+    do
+    {
+      BOOL bExtendedParam;
+
+      //skip spaces
+      szValueA = SkipSpaces(szValueA, szValueEndA);
+      if (szValueA >= szValueEndA)
+        break;
+
+      //get parameter
+      hRes = GetParamNameAndValue(TRUE, cStrTokenA, cStrValueW, szValueA, szValueEndA, &bExtendedParam);
+      if (FAILED(hRes))
+        return (hRes == MX_E_NoData) ? MX_E_InvalidData : hRes;
+
+      //add parameter
+      hRes = AddParam((LPCSTR)cStrTokenA, (LPCWSTR)cStrValueW);
+      if (FAILED(hRes))
+        return hRes;
+
+      //check for separator or end
+      if (szValueA < szValueEndA)
+      {
+        if (*szValueA == ';')
+          szValueA++;
+        else
+          return MX_E_InvalidData;
+      }
+    }
+    while (szValueA < szValueEndA);
   }
 
-  //parse header
-  hRes = cHttpAuth->Parse(szValueA, (SIZE_T)(szValueEndA - szValueA));
+  //check for separator or end
+  if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
+    return MX_E_InvalidData;
 
   //done
-  if (FAILED(hRes))
-    cHttpAuth.Release();
-  return hRes;
+  return S_OK;
+
 }
 
 HRESULT CHttpHeaderRespWwwProxyAuthenticateCommon::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
-  cStrDestA.Empty();
-  return MX_E_Unsupported;
+  SIZE_T i, nCount;
+  CStringA cStrTempA;
+
+  if (cStrSchemeA.IsEmpty() != FALSE)
+  {
+    cStrDestA.Empty();
+    return S_OK;
+  }
+  if (cStrDestA.Copy((LPCSTR)cStrSchemeA) == FALSE)
+    return E_OUTOFMEMORY;
+
+  //parameters
+  nCount = aParamsList.GetCount();
+  for (i = 0; i < nCount; i++)
+  {
+    if (Http::BuildQuotedString(cStrTempA, aParamsList[i]->szValueW, StrLenW(aParamsList[i]->szValueW), TRUE) == FALSE)
+      return E_OUTOFMEMORY;
+    if (cStrDestA.AppendFormat(" %s=%s", aParamsList[i]->szNameA, (LPCSTR)cStrTempA) == FALSE)
+      return E_OUTOFMEMORY;
+  }
+
+  //done
+  return S_OK;
 }
 
-CHttpAuthBase* CHttpHeaderRespWwwProxyAuthenticateCommon::GetHttpAuth()
+HRESULT CHttpHeaderRespWwwProxyAuthenticateCommon::SetScheme(_In_z_ LPCSTR szSchemeA, _In_ SIZE_T nSchemeLen)
 {
-  return cHttpAuth.Get();
+  LPCSTR szStartA, szSchemeEndA;
+
+  if (nSchemeLen == (SIZE_T)-1)
+    nSchemeLen = StrLenA(szSchemeA);
+  if (nSchemeLen == 0)
+    return MX_E_InvalidData;
+  if (szSchemeA == NULL)
+    return E_POINTER;
+  szSchemeEndA = szSchemeA + nSchemeLen;
+
+  //get mime type
+  szStartA = szSchemeA;
+  szSchemeA = GetToken(szSchemeA, szSchemeEndA);
+
+  //check for end
+  if (szSchemeA != szSchemeEndA)
+    return MX_E_InvalidData;
+
+  //set new value
+  if (cStrSchemeA.CopyN(szStartA, nSchemeLen) == FALSE)
+    return E_OUTOFMEMORY;
+
+  //done
+  return S_OK;
+}
+
+LPCSTR CHttpHeaderRespWwwProxyAuthenticateCommon::GetScheme() const
+{
+  return (LPCSTR)cStrSchemeA;
+}
+
+HRESULT CHttpHeaderRespWwwProxyAuthenticateCommon::AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW)
+{
+  TAutoFreePtr<PARAMETER> cNewParam;
+  LPCSTR szStartA;
+  SIZE_T nNameLen, nValueLen;
+
+  if (szNameA == NULL)
+    return E_POINTER;
+  if (szValueW == NULL)
+    szValueW = L"";
+
+  nNameLen = StrLenA(szNameA);
+
+  //get token
+  szNameA = GetToken(szStartA = szNameA, szNameA + nNameLen);
+  if (szStartA == szNameA || szNameA != szStartA + nNameLen)
+    return MX_E_InvalidData;
+
+  //get value length
+  nValueLen = (StrLenW(szValueW) + 1) * sizeof(WCHAR);
+
+  //create new item
+  cNewParam.Attach((LPPARAMETER)MX_MALLOC(sizeof(PARAMETER) + nNameLen + nValueLen));
+  if (!cNewParam)
+    return E_OUTOFMEMORY;
+  MxMemCopy(cNewParam->szNameA, szStartA, nNameLen);
+  cNewParam->szNameA[nNameLen] = 0;
+  cNewParam->szValueW = (LPWSTR)((LPBYTE)(cNewParam->szNameA) + (nNameLen + 1));
+  MxMemCopy(cNewParam->szValueW, szValueW, nValueLen);
+
+  //add to list
+  if (aParamsList.AddElement(cNewParam.Get()) == FALSE)
+    return E_OUTOFMEMORY;
+  cNewParam.Detach();
+
+  //done
+  return S_OK;
+}
+
+SIZE_T CHttpHeaderRespWwwProxyAuthenticateCommon::GetParamsCount() const
+{
+  return aParamsList.GetCount();
+}
+
+LPCSTR CHttpHeaderRespWwwProxyAuthenticateCommon::GetParamName(_In_ SIZE_T nIndex) const
+{
+  return (nIndex < aParamsList.GetCount()) ? aParamsList[nIndex]->szNameA : NULL;
+}
+
+LPCWSTR CHttpHeaderRespWwwProxyAuthenticateCommon::GetParamValue(_In_ SIZE_T nIndex) const
+{
+  return (nIndex < aParamsList.GetCount()) ? aParamsList[nIndex]->szValueW : NULL;
+}
+
+LPCWSTR CHttpHeaderRespWwwProxyAuthenticateCommon::GetParamValue(_In_z_ LPCSTR szNameA) const
+{
+  SIZE_T i, nCount;
+
+  if (szNameA != NULL && *szNameA != 0)
+  {
+    nCount = aParamsList.GetCount();
+    for (i = 0; i < nCount; i++)
+    {
+      if (StrCompareA(aParamsList[i]->szNameA, szNameA, TRUE) == 0)
+        return aParamsList[i]->szValueW;
+    }
+  }
+  return NULL;
 }
 
 //--------

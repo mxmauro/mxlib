@@ -116,16 +116,16 @@ HRESULT CHttpHeaderEntContentType::Build(_Inout_ CStringA &cStrDestA, _In_ Http:
     cStrDestA.Empty();
     return S_OK;
   }
-  if (cStrDestA.Copy((LPCSTR)cStrTypeA) == FALSE)
+  if (cStrDestA.CopyN((LPCSTR)cStrTypeA, cStrTypeA.GetLength()) == FALSE)
     return E_OUTOFMEMORY;
+
   //parameters
   nCount = aParamsList.GetCount();
   for (i = 0; i < nCount; i++)
   {
     if (Http::BuildQuotedString(cStrTempA, aParamsList[i]->szValueW, StrLenW(aParamsList[i]->szValueW), FALSE) == FALSE)
-    {
       return E_OUTOFMEMORY;
-    }
+
     if (cStrDestA.AppendFormat("; %s=%s", aParamsList[i]->szNameA, (LPCSTR)cStrTempA) == FALSE)
       return E_OUTOFMEMORY;
   }

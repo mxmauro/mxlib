@@ -57,6 +57,12 @@
     <Filter Include="Header Files\Http\Header Parser\Response">
       <UniqueIdentifier>{65b47fc6-9e0f-47d6-bddf-ab5d320e31c7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\Http\Authentication">
+      <UniqueIdentifier>{cc5e0148-1058-40bd-84fe-bfff21c45407}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Http\Authentication">
+      <UniqueIdentifier>{32645a8b-bdb5-48e7-87a0-19faed8d7c01}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\Http\punycode.h">
@@ -221,12 +227,6 @@
     <ClInclude Include="Include\Http\HttpHeaderRespWwwProxyAuthenticate.h">
       <Filter>Header Files\Http\Header Parser\Response</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Http\HttpAuth.h">
-      <Filter>Header Files\Http</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Http\HttpAuthCache.h">
-      <Filter>Source Files\Http</Filter>
-    </ClInclude>
     <ClInclude Include="Include\Http\HttpHeaderReqSecWebSocketKey.h">
       <Filter>Header Files\Http\Header Parser\Request</Filter>
     </ClInclude>
@@ -259,6 +259,18 @@
     </ClInclude>
     <ClInclude Include="Source\Comm\IpcDefs.h">
       <Filter>Source Files\Comm</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpAuthBasic.h">
+      <Filter>Header Files\Http\Authentication</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpAuthBearer.h">
+      <Filter>Header Files\Http\Authentication</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpAuthDigest.h">
+      <Filter>Header Files\Http\Authentication</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\Http\HttpAuthBase.h">
+      <Filter>Header Files\Http\Authentication</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -424,12 +436,6 @@
     <ClCompile Include="Source\Http\HttpHeaderRespWwwProxyAuthenticate.cpp">
       <Filter>Source Files\Http\Header Parser\Response</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Http\HttpAuth.cpp">
-      <Filter>Source Files\Http</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Http\HttpAuthCache.cpp">
-      <Filter>Source Files\Http</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Http\HttpHeaderReqSecWebSocketKey.cpp">
       <Filter>Source Files\Http\Header Parser\Request</Filter>
     </ClCompile>
@@ -468,6 +474,15 @@
     </ClCompile>
     <ClCompile Include="Source\Comm\IpcMultiSend.cpp">
       <Filter>Source Files\Comm</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpAuthBasic.cpp">
+      <Filter>Source Files\Http\Authentication</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpAuthBearer.cpp">
+      <Filter>Source Files\Http\Authentication</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Http\HttpAuthDigest.cpp">
+      <Filter>Source Files\Http\Authentication</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

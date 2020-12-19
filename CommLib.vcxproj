@@ -185,7 +185,10 @@
     <ClInclude Include="Include\Comm\SslCertificates.h" />
     <ClInclude Include="Include\Http\EMail.h" />
     <ClInclude Include="Include\Http\HtmlEntities.h" />
-    <ClInclude Include="Include\Http\HttpAuth.h" />
+    <ClInclude Include="Include\Http\HttpAuthBase.h" />
+    <ClInclude Include="Include\Http\HttpAuthBasic.h" />
+    <ClInclude Include="Include\Http\HttpAuthBearer.h" />
+    <ClInclude Include="Include\Http\HttpAuthDigest.h" />
     <ClInclude Include="Include\Http\HttpBodyParserJSON.h" />
     <ClInclude Include="Include\Http\HttpHeaderBase.h" />
     <ClInclude Include="Include\Http\HttpBodyParserBase.h" />
@@ -242,7 +245,6 @@
     <ClInclude Include="Include\Http\punycode.h" />
     <ClInclude Include="Include\Http\Url.h" />
     <ClInclude Include="Source\Comm\IpcDefs.h" />
-    <ClInclude Include="Source\Http\HttpAuthCache.h" />
     <ClInclude Include="Source\Http\HttpServerCommon.h" />
   </ItemGroup>
   <ItemGroup>
@@ -255,8 +257,9 @@
     <ClCompile Include="Source\Comm\SslCertificates.cpp" />
     <ClCompile Include="Source\Comm\SslCertificatesArray.cpp" />
     <ClCompile Include="Source\Http\EMail.cpp" />
-    <ClCompile Include="Source\Http\HttpAuth.cpp" />
-    <ClCompile Include="Source\Http\HttpAuthCache.cpp" />
+    <ClCompile Include="Source\Http\HttpAuthBasic.cpp" />
+    <ClCompile Include="Source\Http\HttpAuthBearer.cpp" />
+    <ClCompile Include="Source\Http\HttpAuthDigest.cpp" />
     <ClCompile Include="Source\Http\HttpBodyParserJSON.cpp" />
     <ClCompile Include="Source\Http\HttpUtils.cpp" />
     <ClCompile Include="Source\Http\HttpHeaderBase.cpp" />
