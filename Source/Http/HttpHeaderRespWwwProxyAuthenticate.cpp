@@ -60,10 +60,12 @@ HRESULT CHttpHeaderRespWwwProxyAuthenticateCommon::Parse(_In_z_ LPCSTR szValueA,
   hRes = SetScheme(szStartA, (SIZE_T)(szValueA - szStartA));
   if (FAILED(hRes))
     return hRes;
+
   //skip spaces
   szValueA = SkipSpaces(szValueA, szValueEndA);
+
   //parameters
-  if (szValueA < szValueEndA && *szValueA == ';')
+  if (szValueA < szValueEndA)
   {
     szValueA++;
     do
@@ -88,7 +90,7 @@ HRESULT CHttpHeaderRespWwwProxyAuthenticateCommon::Parse(_In_z_ LPCSTR szValueA,
       //check for separator or end
       if (szValueA < szValueEndA)
       {
-        if (*szValueA == ';')
+        if (*szValueA == ';' || *szValueA == ',')
           szValueA++;
         else
           return MX_E_InvalidData;
@@ -103,7 +105,6 @@ HRESULT CHttpHeaderRespWwwProxyAuthenticateCommon::Parse(_In_z_ LPCSTR szValueA,
 
   //done
   return S_OK;
-
 }
 
 HRESULT CHttpHeaderRespWwwProxyAuthenticateCommon::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
