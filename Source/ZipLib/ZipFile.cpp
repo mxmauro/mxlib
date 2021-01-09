@@ -109,19 +109,21 @@ HRESULT CZipFile::AddFile(_In_z_ LPCWSTR szFileNameInZipW, _In_z_ LPCWSTR szSrcF
     FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_SHARE_READ | FILE_SHARE_DELETE,
     FILE_SHARE_READ | FILE_SHARE_WRITE, FILE_SHARE_READ
   };
-  MX::CFileStream cStream;
+  TAutoRefCounted<CFileStream> cStream;
   HRESULT hRes;
 
+  cStream.Attach(MX_DEBUG_NEW CFileStream());
+  if (!cStream)
+    return E_OUTOFMEMORY;
   for (SIZE_T i = 0; i < 4; i++)
   {
-    hRes = cStream.Create(szSrcFileNameW, GENERIC_READ, (DWORD)aSharingAccess[i]);
+    hRes = cStream->Create(szSrcFileNameW, GENERIC_READ, (DWORD)aSharingAccess[i]);
     if (hRes != HRESULT_FROM_WIN32(ERROR_SHARING_VIOLATION) && hRes != HRESULT_FROM_WIN32(ERROR_LOCK_VIOLATION))
       break;
   }
   if (SUCCEEDED(hRes))
   {
-    hRes = AddStream(szFileNameInZipW, &cStream, szPasswordW);
-    cStream.Close();
+    hRes = AddStream(szFileNameInZipW, cStream, szPasswordW);
   }
   return hRes;
 }
