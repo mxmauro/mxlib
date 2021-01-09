@@ -567,7 +567,6 @@ CNamedPipes::CConnection::~CConnection()
   //MX_ASSERT(hPipe == NULL ||
   //          __InterlockedRead(&nOutgoingWrites) == sPendingWritePackets.cList.GetCount());
   MX_ASSERT(__InterlockedRead(&nOutgoingWrites) == sPendingWritePackets.cList.GetCount());
-  MX_ASSERT(hPipe == NULL);
 
   if (hPipe != NULL)
     ::CloseHandle(hPipe);

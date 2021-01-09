@@ -701,7 +701,6 @@ CSockets::CConnection::~CConnection()
   //MX_ASSERT(sck == NULL ||
   //          __InterlockedRead(&nOutgoingWrites) == sPendingWritePackets.cList.GetCount());
   MX_ASSERT(__InterlockedRead(&nOutgoingWrites) == sPendingWritePackets.cList.GetCount());
-  MX_ASSERT(sck == NULL);
 
   if (sck != NULL)
     ::closesocket(sck);
