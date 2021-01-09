@@ -268,7 +268,7 @@ protected:
 
     static CPacketBase* FromOverlapped(_In_ LPOVERLAPPED lpOvr)
       {
-      return (CPacketBase*)((char*)lpOvr - (char*)&(((CPacketBase*)0)->sOvr));
+      return CONTAINING_RECORD(lpOvr, CPacketBase, sOvr);
       };
 
     virtual LPBYTE GetBuffer() const = 0;
@@ -559,6 +559,23 @@ protected:
       {
       return cList.GetCount();
       };
+
+#ifdef _DEBUG
+    SIZE_T GetCountOfType(_In_ CPacketBase::eType nType) const
+      {
+      CPacketBase *lpPacket;
+      CLnkLst::Iterator it;
+      SIZE_T nCount = 0;
+
+      for (CLnkLstNode *lpNode = it.Begin(cList); lpNode != NULL; lpNode = it.Next())
+      {
+        lpPacket = CONTAINING_RECORD(lpNode, CPacketBase, cListNode);
+        if (lpPacket->nType == nType)
+          nCount++;
+      }
+      return nCount;
+      };
+#endif //_DEBUG
 
   private:
     CLnkLst cList;

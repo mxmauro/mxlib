@@ -564,9 +564,9 @@ CNamedPipes::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionCl
 CNamedPipes::CConnection::~CConnection()
 {
   //NOTE: The pipe can be still open if some write requests were queued while a graceful shutdown was in progress
-  //MX_ASSERT(hPipe == NULL ||
-  //          __InterlockedRead(&nOutgoingWrites) == sPendingWritePackets.cList.GetCount());
-  MX_ASSERT(__InterlockedRead(&nOutgoingWrites) == sPendingWritePackets.cList.GetCount());
+  MX_ASSERT((SIZE_T)(ULONG)__InterlockedRead(&nOutgoingWrites) ==
+            sPendingWritePackets.cList.GetCount() +
+            sInUsePackets.cList.GetCountOfType(CIpc::CPacketBase::TypeWriteRequest));
 
   if (hPipe != NULL)
     ::CloseHandle(hPipe);

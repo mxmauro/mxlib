@@ -707,7 +707,10 @@ HRESULT CIpc::CConnectionBase::HandleOutgoingPackets()
       }
       else
       {
-        //we hit an error so no problem to free the stream packet and the readed data (if any)
+        //decrement the outstanding writes incremented by the send
+        DecrementOutgoingWrites();
+
+        //we hit an error so no problem to free the stream packet and the read data (if any)
         if (lpPacket != NULL)
           FreePacket(lpPacket);
         if (lpNewPacket != NULL)
