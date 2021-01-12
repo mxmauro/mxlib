@@ -531,7 +531,8 @@ HRESULT CHttpServer::CClientRequest::AddResponseCookie(_In_ CHttpCookieArray &cS
 HRESULT CHttpServer::CClientRequest::AddResponseCookie(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA,
                                                        _In_opt_z_ LPCSTR szDomainA, _In_opt_z_ LPCSTR szPathA,
                                                        _In_opt_ const CDateTime *lpDate, _In_opt_ BOOL bIsSecure,
-                                                       _In_opt_ BOOL bIsHttpOnly)
+                                                       _In_opt_ BOOL bIsHttpOnly,
+                                                       _In_opt_ CHttpCookie::eSameSite nSameSite)
 {
   TAutoRefCounted<CHttpCookie> cCookie;
   HRESULT hRes;
@@ -553,6 +554,7 @@ HRESULT CHttpServer::CClientRequest::AddResponseCookie(_In_z_ LPCSTR szNameA, _I
         cCookie->SetExpireDate(lpDate);
       cCookie->SetSecureFlag(bIsSecure);
       cCookie->SetHttpOnlyFlag(bIsHttpOnly);
+      cCookie->SetSameSite(nSameSite);
 
       hRes = AddResponseCookie(cCookie.Get());
     }
@@ -564,7 +566,8 @@ HRESULT CHttpServer::CClientRequest::AddResponseCookie(_In_z_ LPCSTR szNameA, _I
 HRESULT CHttpServer::CClientRequest::AddResponseCookie(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW,
                                                        _In_opt_z_ LPCWSTR szDomainW, _In_opt_z_ LPCWSTR szPathW,
                                                        _In_opt_ const CDateTime *lpDate, _In_opt_ BOOL bIsSecure,
-                                                       _In_opt_ BOOL bIsHttpOnly)
+                                                       _In_opt_ BOOL bIsHttpOnly,
+                                                       _In_opt_ CHttpCookie::eSameSite nSameSite)
 {
   TAutoRefCounted<CHttpCookie> cCookie;
   HRESULT hRes;
@@ -586,6 +589,7 @@ HRESULT CHttpServer::CClientRequest::AddResponseCookie(_In_z_ LPCWSTR szNameW, _
         cCookie->SetExpireDate(lpDate);
       cCookie->SetSecureFlag(bIsSecure);
       cCookie->SetHttpOnlyFlag(bIsHttpOnly);
+      cCookie->SetSameSite(nSameSite);
 
       hRes = AddResponseCookie(cCookie.Get());
     }

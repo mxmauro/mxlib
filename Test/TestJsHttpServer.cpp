@@ -63,7 +63,8 @@ static HRESULT OnWebSocketRequestReceived(_In_ MX::CJsHttpServer *lpHttp,
                                           _Out_ int &nSelectedProtocol, _In_ MX::TArrayList<int> &aSupportedVersions,
                                           _Out_ _Maybenull_ MX::CWebSocket **lplpWebSocket);
 static VOID DeleteSessionFiles();
-static HRESULT OnSessionLoadSave(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin, _In_ BOOL bLoading);
+static HRESULT OnSessionPersistance(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin,
+                                    _In_ MX::CJsHttpServerSessionPlugin::ePersistanceOption nPersistanceOption);
 static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR szFileNameW);
 static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ LPCWSTR &szExtensionW,
                                 _In_z_ LPCWSTR szPathW);
@@ -93,7 +94,7 @@ public:
     cSessionJsObj.Attach(MX_DEBUG_NEW MX::CJsHttpServerSessionPlugin());
     if (!cSessionJsObj)
       return E_OUTOFMEMORY;
-    hRes = cSessionJsObj->Setup(this, MX_BIND_CALLBACK(&OnSessionLoadSave), NULL, NULL, L"/", 2 * 60 * 60, FALSE,
+    hRes = cSessionJsObj->Setup(this, MX_BIND_CALLBACK(&OnSessionPersistance), NULL, NULL, L"/", 2 * 60 * 60, FALSE,
                                 TRUE);
     if (FAILED(hRes))
       return hRes;
@@ -523,7 +524,8 @@ static VOID DeleteSessionFiles()
 }
 
 #define delete_and_exit(_cmd) { _cmd; bDelete = TRUE; goto done; }
-static HRESULT OnSessionLoadSave(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin, _In_ BOOL bLoading)
+static HRESULT OnSessionPersistance(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin,
+                                    _In_ MX::CJsHttpServerSessionPlugin::ePersistanceOption nPersistanceOption)
 {
   MX::CWindowsHandle cFileH;
   MX::CStringA cStrNameA, cStrValueA;
@@ -547,17 +549,24 @@ static HRESULT OnSessionLoadSave(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin, 
   if (cStrFileNameW.Concat(L"session") == FALSE)
     return E_OUTOFMEMORY;
   ::CreateDirectoryW((LPCWSTR)cStrFileNameW, NULL);
-  if (cStrFileNameW.Concat(L"\\") == FALSE ||
-      cStrFileNameW.Concat(lpPlugin->GetSessionId()) == FALSE)
+  if (cStrFileNameW.Concat(L"\\") == FALSE || cStrFileNameW.Concat(lpPlugin->GetSessionId()) == FALSE)
     return E_OUTOFMEMORY;
+
+  if (nPersistanceOption == MX::CJsHttpServerSessionPlugin::PersistanceOptionDelete)
+  {
+    ::DeleteFileW((LPCWSTR)cStrFileNameW);
+    return S_OK;
+  }
+
   //get current time
   hRes = cDtNow.SetFromNow(FALSE);
   if (FAILED(hRes))
     return hRes;
+
   //open file
-  for (dwPass=10; dwPass>0; dwPass--)
+  for (dwPass = 10; dwPass > 0; dwPass--)
   {
-    if (bLoading != FALSE)
+    if (nPersistanceOption == MX::CJsHttpServerSessionPlugin::PersistanceOptionLoad)
     {
       cFileH.Attach(::CreateFileW((LPCWSTR)cStrFileNameW, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
                                   FILE_ATTRIBUTE_NORMAL, NULL));
@@ -577,12 +586,11 @@ static HRESULT OnSessionLoadSave(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin, 
       break;
   }
   if (!cFileH)
-  {
     return MX_HRESULT_FROM_WIN32(dwOsErr);
-  }
+
   //read/write
   bDelete = FALSE;
-  if (bLoading != FALSE)
+  if (nPersistanceOption == MX::CJsHttpServerSessionPlugin::PersistanceOptionLoad)
   {
     //read date
     if (::ReadFile(cFileH, szBufA, 10+1+8, &dwReaded, NULL) == FALSE)
@@ -590,6 +598,7 @@ static HRESULT OnSessionLoadSave(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin, 
     if (dwReaded != 10+1+8)
       delete_and_exit( hRes = MX_E_ReadFault; );
     szBufA[10+1+8] = 0;
+
     //parse
     hRes = cDt.SetFromString(szBufA, "%Y/%m/%d %H:%M:%S");
     if (FAILED(hRes))
@@ -620,9 +629,11 @@ static HRESULT OnSessionLoadSave(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin, 
         delete_and_exit( hRes = MX_HRESULT_FROM_LASTERROR(); );
       if (dwReaded != 4)
         delete_and_exit( hRes = MX_E_ReadFault; );
+
       //check length
       if (dw > 512)
         delete_and_exit( hRes = MX_E_InvalidData; );
+
       //read name
       if (cStrNameA.EnsureBuffer((SIZE_T)(dw+1)) == FALSE)
         delete_and_exit( hRes = E_OUTOFMEMORY; );
@@ -661,9 +672,11 @@ static HRESULT OnSessionLoadSave(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin, 
             delete_and_exit( hRes = MX_HRESULT_FROM_LASTERROR(); );
           if (dwReaded != 4)
             delete_and_exit( hRes = MX_E_ReadFault; );
+
           //check length
           if (dw > 0x7FFFFFFFUL)
             delete_and_exit( hRes = MX_E_InvalidData; );
+
           //read value
           if (cStrValueA.EnsureBuffer((SIZE_T)(dw+1)) == FALSE)
             delete_and_exit( hRes = E_OUTOFMEMORY; );
@@ -738,6 +751,7 @@ static HRESULT OnSessionLoadSave(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin, 
           hRes = lpPlugin->GetBag()->GetDouble(nIndex, nDbl);
           if (FAILED(hRes))
             delete_and_exit( ; );
+
           //write value
           if (::WriteFile(cFileH, &nDbl, (DWORD)sizeof(nDbl), &dwWritten, NULL) == FALSE)
             delete_and_exit( hRes = MX_HRESULT_FROM_LASTERROR(); );
@@ -767,6 +781,7 @@ static HRESULT OnSessionLoadSave(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin, 
           break;
       }
     }
+
     //write end of file mark
     if (::WriteFile(cFileH, "*", 1, &dwWritten, NULL) == FALSE)
       delete_and_exit( hRes = MX_HRESULT_FROM_LASTERROR(); );

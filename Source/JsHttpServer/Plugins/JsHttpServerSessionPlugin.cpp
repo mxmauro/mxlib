@@ -21,6 +21,7 @@
 #include "..\..\..\Include\Crypto\MessageDigest.h"
 #include "..\..\..\Include\Http\punycode.h"
 #include "..\..\..\Include\Strings\Utf8.h"
+#include "..\..\..\Include\Crypto\SecureRandom.h"
 
 //-----------------------------------------------------------
 
@@ -32,10 +33,12 @@ namespace MX {
 
 CJsHttpServerSessionPlugin::CJsHttpServerSessionPlugin() : CJsObjectBase(), CNonCopyableObj()
 {
-  *szCurrentIdA = 0;
+  ::MxMemSet(szCurrentIdA, 0, sizeof(szCurrentIdA));
   nExpireTimeInSeconds = 0;
   bIsSecure = bIsHttpOnly = FALSE;
+  nSameSite = CHttpCookie::SameSiteNone;
   szSessionVarNameA = SESSION_ID_COOKIE_NAME;
+  cPersistanceCallback = NullCallback();
   bDirty = FALSE;
   return;
 }
@@ -48,116 +51,146 @@ CJsHttpServerSessionPlugin::~CJsHttpServerSessionPlugin()
 
 HRESULT CJsHttpServerSessionPlugin::Save()
 {
-  HRESULT hRes = S_OK;
+  HRESULT hRes;
 
-  if (*szCurrentIdA != 0 && bDirty != FALSE)
-  {
-    hRes = cLoadSaveCallback(this, FALSE);
-    if (SUCCEEDED(hRes))
-      bDirty = FALSE;
-  }
+  if ((!cPersistanceCallback) || bDirty == FALSE)
+    return S_OK;
+
+  hRes = cPersistanceCallback(this, PersistanceOptionSave);
+  if (SUCCEEDED(hRes))
+    bDirty = FALSE;
   return hRes;
 }
 
+VOID CJsHttpServerSessionPlugin::Destroy()
+{
+  HRESULT hRes = S_OK;
+
+  if (cPersistanceCallback)
+  {
+    cPersistanceCallback(this, PersistanceOptionDelete);
+  }
+  cBag.Reset();
+  bDirty = FALSE;
+  return;
+}
+
 HRESULT CJsHttpServerSessionPlugin::Setup(_In_ CJsHttpServer::CClientRequest *_lpRequest,
-                                          _In_ OnLoadSaveCallback _cLoadSaveCallback,
+                                          _In_ OnPersistanceCallback _cPersistanceCallback,
                                           _In_opt_z_ LPCWSTR szSessionVarNameW, _In_opt_z_ LPCWSTR szDomainW,
                                           _In_opt_z_ LPCWSTR szPathW, _In_opt_ int _nExpireTimeInSeconds,
-                                          _In_opt_ BOOL _bIsSecure, _In_opt_ BOOL _bIsHttpOnly)
+                                          _In_opt_ BOOL _bIsSecure, _In_opt_ BOOL _bIsHttpOnly,
+                                          _In_opt_ CHttpCookie::eSameSite _nSameSite)
 {
-  TAutoRefCounted<CHttpCookie> cSessionIdCookie;
-  MX::CDateTime cExpireDt;
   SIZE_T i;
   HRESULT hRes;
 
-  if (_lpRequest == NULL || (!_cLoadSaveCallback))
-    return E_POINTER;
+  if (_lpRequest == NULL || (!_cPersistanceCallback))
+  {
+    hRes = E_POINTER;
+
+on_error:
+    ::MxMemSet(szCurrentIdA, 0, sizeof(szCurrentIdA));
+    nExpireTimeInSeconds = 0;
+    bIsSecure = bIsHttpOnly = FALSE;
+    nSameSite = CHttpCookie::SameSiteNone;
+    szSessionVarNameA = SESSION_ID_COOKIE_NAME;
+    cPersistanceCallback = NullCallback();
+    bDirty = FALSE;
+
+    return hRes;
+  }
+
   if (szSessionVarNameW != NULL && *szSessionVarNameW != 0)
   {
     for (i = 0; szSessionVarNameW[i] != 0; i++)
     {
       if (i > 64)
-        return E_INVALIDARG;
+      {
+        hRes = E_INVALIDARG;
+        goto on_error;
+      }
       if ((szSessionVarNameW[i] < L'A' || szSessionVarNameW[i] > L'Z') &&
           (szSessionVarNameW[i] < L'a' || szSessionVarNameW[i] > L'z') &&
           (szSessionVarNameW[i] < L'0' || szSessionVarNameW[i] > L'9') &&
           szSessionVarNameW[i] != L'-' && szSessionVarNameW[i] != L'_')
       {
-        return E_INVALIDARG;
+        hRes = E_INVALIDARG;
+        goto on_error;
       }
     }
     if (cStrSessionVarNameA.Copy(szSessionVarNameW) == FALSE)
-      return E_OUTOFMEMORY;
+    {
+      hRes = E_OUTOFMEMORY;
+      goto on_error;
+    }
     szSessionVarNameA = (LPCSTR)cStrSessionVarNameA;
   }
   else
   {
     szSessionVarNameA = SESSION_ID_COOKIE_NAME;
   }
+
   lpHttpServer = (CJsHttpServer*)(_lpRequest->GetHttpServer());
   lpRequest = _lpRequest;
-  cLoadSaveCallback = _cLoadSaveCallback;
+
+  cPersistanceCallback = _cPersistanceCallback;
+
   if (szDomainW != NULL && *szDomainW != 0)
   {
     hRes = Punycode_Encode(cStrDomainA, szDomainW);
     if (FAILED(hRes))
-      return hRes;
+      goto on_error;
   }
   if (szPathW != NULL && *szPathW != 0)
   {
     hRes = Utf8_Encode(cStrPathA, szPathW);
     if (FAILED(hRes))
-      return hRes;
+      goto on_error;
   }
+
   nExpireTimeInSeconds = _nExpireTimeInSeconds;
   if (nExpireTimeInSeconds < -1)
     nExpireTimeInSeconds = -1;
+
   bIsSecure = _bIsSecure;
   bIsHttpOnly = _bIsHttpOnly;
+  nSameSite = _nSameSite;
 
   //initialize session data
   for (i = 0; ; i++)
   {
-    cSessionIdCookie.Attach(lpRequest->GetRequestCookie(i));
-    if (!cSessionIdCookie)
+    CHttpCookie *lpCookie = lpRequest->GetRequestCookie(i);
+    if (lpCookie == NULL)
       break;
-    if (StrCompareA(cSessionIdCookie->GetName(), szSessionVarNameA) == 0)
+    if (StrCompareA(lpCookie->GetName(), szSessionVarNameA) == 0)
+    {
+      LPCSTR szValueA = lpCookie->GetValue();
+
+      if (IsValidSessionId(szValueA) != FALSE)
+      {
+        ::MxMemCopy(szCurrentIdA, szValueA, StrLenA(szValueA) + 1);
+        hRes = cPersistanceCallback(this, PersistanceOptionLoad);
+        if (SUCCEEDED(hRes))
+          return S_OK;
+        if (hRes == E_OUTOFMEMORY)
+          goto on_error;
+        //else fall into session regeneration
+      }
+
       break;
-    cSessionIdCookie.Release();
-  }
-  if (cSessionIdCookie)
-  {
-    LPCSTR szValueA = cSessionIdCookie->GetValue();
-
-    if (IsValidSessionId(szValueA) == FALSE)
-      goto regenerate_session_id;
-
-    ::MxMemCopy(szCurrentIdA, szValueA, StrLenA(szValueA) + 1);
-    hRes = cLoadSaveCallback(this, TRUE);
-    if (FAILED(hRes) && hRes != E_OUTOFMEMORY)
-      goto regenerate_session_id;
-  }
-  else
-  {
-regenerate_session_id:
-    cBag.Reset();
-    hRes = RegenerateSessionId();
-    if (SUCCEEDED(hRes) && nExpireTimeInSeconds >= 0)
-    {
-      hRes = cExpireDt.SetFromNow(FALSE);
-      if (SUCCEEDED(hRes))
-        hRes = cExpireDt.Add(nExpireTimeInSeconds, MX::CDateTime::UnitsSeconds);
-    }
-    if (SUCCEEDED(hRes))
-    {
-      lpRequest->RemoveResponseCookie(szSessionVarNameA);
-      hRes = lpRequest->AddResponseCookie(szSessionVarNameA, szCurrentIdA, (LPCSTR)cStrDomainA,
-                                          (LPCSTR)cStrPathA, (nExpireTimeInSeconds >= 0) ? &cExpireDt : NULL,
-                                          bIsSecure, bIsHttpOnly);
     }
   }
+
+  //if we reach here, create a new session id
+  cBag.Reset();
+  GenerateSessionId();
+  hRes = CreateRequestCookie();
+  if (FAILED(hRes))
+    goto on_error;
+
   //done
-  return hRes;
+  return S_OK;
 }
 
 CPropertyBag* CJsHttpServerSessionPlugin::GetBag() const
@@ -167,83 +200,124 @@ CPropertyBag* CJsHttpServerSessionPlugin::GetBag() const
 
 BOOL CJsHttpServerSessionPlugin::IsValidSessionId(_In_z_ LPCSTR szSessionIdA)
 {
-  SIZE_T i;
-
-  for (i=0; i<40; i++)
+  for (SIZE_T i = 0; i < 64; i++)
   {
     if ((szSessionIdA[i] < '0' || szSessionIdA[i] > '9') && (szSessionIdA[i] < 'A' || szSessionIdA[i] > 'F'))
       return FALSE;
   }
-  return (szSessionIdA[40] == 0) ? TRUE : FALSE;
+  return (szSessionIdA[64] == 0) ? TRUE : FALSE;
 }
 
-HRESULT CJsHttpServerSessionPlugin::RegenerateSessionId()
+VOID CJsHttpServerSessionPlugin::GenerateSessionId()
 {
+  static LPCSTR szHexaA = "0123456789ABCDEF";
   CMessageDigest cDigest;
-  ULARGE_INTEGER liSysTime;
-  CSockets *lpSckMgr;
-  HANDLE hConn;
-  SOCKADDR_INET sAddr;
+  BYTE aBuf[64], *lpResult;
   DWORD dw;
   HRESULT hRes;
 
-  *szCurrentIdA = 0;
-  //----
-  hConn = lpRequest->GetUnderlyingSocketHandle();
-  lpSckMgr = lpRequest->GetUnderlyingSocketManager();
-  if (hConn == NULL || lpSckMgr == NULL)
-    return E_UNEXPECTED;
   //calculate hash
-  hRes = lpSckMgr->GetPeerAddress(hConn, &sAddr);
-  if (SUCCEEDED(hRes))
-    hRes = cDigest.BeginDigest(CMessageDigest::AlgorithmSHA1);
+  hRes = cDigest.BeginDigest(CMessageDigest::AlgorithmSHA256);
   if (SUCCEEDED(hRes))
   {
-    switch (sAddr.si_family)
+    CSockets *lpSckMgr;
+    HANDLE hConn;
+    SOCKADDR_INET sAddr;
+
+    hConn = lpRequest->GetUnderlyingSocketHandle();
+    lpSckMgr = lpRequest->GetUnderlyingSocketManager();
+    if (hConn != NULL && lpSckMgr != NULL && SUCCEEDED(lpSckMgr->GetPeerAddress(hConn, &sAddr)))
     {
-      case AF_INET:
-        hRes = cDigest.DigestStream(&(sAddr.Ipv4.sin_addr), sizeof(sAddr.Ipv4.sin_addr));
-        break;
-      case AF_INET6:
-        hRes = cDigest.DigestStream(&(sAddr.Ipv6.sin6_addr), sizeof(sAddr.Ipv6.sin6_addr));
-        break;
-      default:
-        hRes = E_NOTIMPL;
-        break;
+      switch (sAddr.si_family)
+      {
+        case AF_INET:
+          hRes = cDigest.DigestStream(&(sAddr.Ipv4.sin_addr), sizeof(sAddr.Ipv4.sin_addr));
+          break;
+
+        case AF_INET6:
+          hRes = cDigest.DigestStream(&(sAddr.Ipv6.sin6_addr), sizeof(sAddr.Ipv6.sin6_addr));
+          break;
+      }
+    }
+    if (SUCCEEDED(hRes))
+    {
+      ULARGE_INTEGER liSysTime;
+
+      ::MxNtQuerySystemTime(&liSysTime);
+      hRes = cDigest.DigestStream(&liSysTime, sizeof(liSysTime));
+    }
+    if (SUCCEEDED(hRes))
+    {
+      dw = ::MxGetCurrentProcessId();
+      hRes = cDigest.DigestStream(&dw, sizeof(dw));
+      if (SUCCEEDED(hRes))
+      {
+        dw = ::MxGetCurrentThreadId();
+        hRes = cDigest.DigestStream(&dw, sizeof(dw));
+        if (SUCCEEDED(hRes))
+        {
+          hRes = cDigest.DigestStream(&lpRequest, sizeof(lpRequest));
+
+          if (SUCCEEDED(hRes))
+          {
+            BYTE aBuf[64];
+
+            MX::SecureRandom::Generate(aBuf, sizeof(aBuf));
+            hRes = cDigest.DigestStream(aBuf, sizeof(aBuf));
+
+            if (SUCCEEDED(hRes))
+              hRes = cDigest.EndDigest();
+          }
+        }
+      }
     }
   }
+
+  //get result
   if (SUCCEEDED(hRes))
   {
-    MxNtQuerySystemTime(&liSysTime);
-    hRes = cDigest.DigestStream(&liSysTime, sizeof(liSysTime));
+    lpResult = cDigest.GetResult();
   }
-  if (SUCCEEDED(hRes))
+  else
   {
-    dw = MxGetCurrentProcessId();
-    hRes = cDigest.DigestStream(&dw, sizeof(dw));
+    MX::SecureRandom::Generate(aBuf, 32);
+    lpResult = aBuf;
   }
-  if (SUCCEEDED(hRes))
+
+  for (dw = 0; dw < 32; dw++)
   {
-    dw = MxGetCurrentThreadId();
-    hRes = cDigest.DigestStream(&dw, sizeof(dw));
+    szCurrentIdA[ dw << 1     ] = szHexaA[(lpResult[dw] >> 4) & 0x0F];
+    szCurrentIdA[(dw << 1) + 1] = szHexaA[ lpResult[dw]       & 0x0F];
   }
-  if (SUCCEEDED(hRes))
-    hRes = cDigest.DigestStream(&lpRequest, sizeof(lpRequest));
-  if (SUCCEEDED(hRes))
-    hRes = cDigest.EndDigest();
-  if (SUCCEEDED(hRes))
-  {
-    static LPCSTR szHexaA = "0123456789ABCDEF";
-    LPBYTE lpResult = cDigest.GetResult();
-    for (dw=0; dw<20; dw++)
-    {
-      szCurrentIdA[ dw<<1   ] = szHexaA[(lpResult[dw] >> 4) & 0x0F];
-      szCurrentIdA[(dw<<1)+1] = szHexaA[ lpResult[dw]       & 0x0F];
-    }
-    szCurrentIdA[40] = 0;
-  }
+  szCurrentIdA[64] = 0;
+
   //done
-  return S_OK;
+  return;
+}
+
+HRESULT CJsHttpServerSessionPlugin::CreateRequestCookie()
+{
+  MX::CDateTime cExpireDt;
+  HRESULT hRes;
+
+  if (nExpireTimeInSeconds >= 0)
+  {
+    hRes = cExpireDt.SetFromNow(FALSE);
+    if (FAILED(hRes))
+      return hRes;
+
+    hRes = cExpireDt.Add(nExpireTimeInSeconds, MX::CDateTime::UnitsSeconds);
+    if (FAILED(hRes))
+      return hRes;
+  }
+
+  lpRequest->RemoveResponseCookie(szSessionVarNameA);
+  hRes = lpRequest->AddResponseCookie(szSessionVarNameA, szCurrentIdA, (LPCSTR)cStrDomainA,
+                                      (LPCSTR)cStrPathA, ((nExpireTimeInSeconds >= 0) ? &cExpireDt : NULL),
+                                      bIsSecure, bIsHttpOnly, nSameSite);
+
+  //done
+  return hRes;
 }
 
 DukTape::duk_ret_t CJsHttpServerSessionPlugin::_Save(_In_ DukTape::duk_context *lpCtx)
@@ -256,29 +330,26 @@ DukTape::duk_ret_t CJsHttpServerSessionPlugin::_Save(_In_ DukTape::duk_context *
   return 0;
 }
 
+DukTape::duk_ret_t CJsHttpServerSessionPlugin::_Destroy(_In_ DukTape::duk_context *lpCtx)
+{
+  Destroy();
+  return 0;
+}
+
 DukTape::duk_ret_t CJsHttpServerSessionPlugin::RegenerateId(_In_ DukTape::duk_context *lpCtx)
 {
-  MX::CDateTime cExpireDt;
   HRESULT hRes;
 
-  hRes = RegenerateSessionId();
-  if (SUCCEEDED(hRes) && nExpireTimeInSeconds >= 0)
-  {
-    hRes = cExpireDt.SetFromNow(FALSE);
-    if (SUCCEEDED(hRes))
-      hRes = cExpireDt.Add(nExpireTimeInSeconds, MX::CDateTime::UnitsSeconds);
-  }
-  if (SUCCEEDED(hRes))
-  {
-    lpRequest->RemoveResponseCookie(szSessionVarNameA);
-    hRes = lpRequest->AddResponseCookie(szSessionVarNameA, szCurrentIdA, (LPCSTR)cStrDomainA,
-                                        (LPCSTR)cStrPathA, (nExpireTimeInSeconds >= 0) ? &cExpireDt : NULL,
-                                        bIsSecure, bIsHttpOnly);
-  }
+  if (!cPersistanceCallback)
+    MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_NotReady);
+
+  cPersistanceCallback(this, PersistanceOptionDelete);
+  GenerateSessionId();
+  hRes = CreateRequestCookie();
   if (FAILED(hRes))
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+
   //on success
-  cBag.Reset();
   bDirty = TRUE;
   return 0;
 }
