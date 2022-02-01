@@ -219,8 +219,6 @@ CHttpServer::~CHttpServer()
           {
             lpRequest = _lpRequest;
             lpRequest->AddRef();
-
-            TerminateRequest(lpRequest, MX_E_Cancelled);
             break;
           }
         }
@@ -228,6 +226,7 @@ CHttpServer::~CHttpServer()
 
       if (lpRequest != NULL)
       {
+        TerminateRequest(lpRequest, MX_E_Cancelled);
         lpRequest->Release();
       }
     }
