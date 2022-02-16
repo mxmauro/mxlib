@@ -343,20 +343,20 @@ HRESULT CIpc::CConnectionBase::SendResumeIoProcessingPacket(_In_ BOOL bInput)
 
 VOID CIpc::CConnectionBase::Close(_In_ HRESULT hRes)
 {
-  LONG nInitVal, nOrigVal, nNewVal;
+  LONG nInitFlags, nOrigFlags, nNewFlags;
 
   //mark as closed
-  nOrigVal = __InterlockedRead(&nFlags);
+  nOrigFlags = __InterlockedRead(&nFlags);
   do
   {
-    nInitVal = nOrigVal;
-    nNewVal = nInitVal | FLAG_Closed;
-    if (SUCCEEDED(hRes) && (nInitVal & FLAG_Closed) == 0)
-      nNewVal |= FLAG_GracefulShutdown;
-    nOrigVal = _InterlockedCompareExchange(&nFlags, nNewVal, nInitVal);
+    nInitFlags = nOrigFlags;
+    nNewFlags = nInitFlags | FLAG_Closed;
+    if (SUCCEEDED(hRes) && (nInitFlags & FLAG_Closed) == 0)
+      nNewFlags |= FLAG_GracefulShutdown;
+    nOrigFlags = _InterlockedCompareExchange(&nFlags, nNewFlags, nInitFlags);
   }
-  while (nOrigVal != nInitVal);
-  if ((nInitVal & FLAG_Closed) == 0)
+  while (nOrigFlags != nInitFlags);
+  if ((nInitFlags & FLAG_Closed) == 0)
   {
     _InterlockedCompareExchange(&hrErrorCode, hRes, S_OK);
   }
@@ -373,18 +373,27 @@ VOID CIpc::CConnectionBase::Close(_In_ HRESULT hRes)
       DebugPrint("Close stack #%i: 0x%IX\n", i + 1, nStack[i]);
     }
   }
-  if (hRes != S_OK || __InterlockedRead(&nOutgoingWrites) == 0)
+  if ((hRes != S_OK && (nNewFlags & FLAG_GracefulShutdown) == 0) ||
+      __InterlockedRead(&nOutgoingWrites) == 0)
   {
+    if (lpIpc->ShouldLog(3) != FALSE)
+    {
+      cLogTimer.Mark();
+      lpIpc->Log(L"CIpc::Close-A) Clock=%lums / This=0x%p / Hr=0x%08X/0x%08X / Writes=%lu",
+                 cLogTimer.GetElapsedTimeMs(), this, hrErrorCode, hRes, __InterlockedRead(&nOutgoingWrites));
+      cLogTimer.ResetToLastMark();
+    }
+
     ShutdownLink(FAILED(__InterlockedRead(&hrErrorCode)));
   }
 
   //when closing call the "final" release to remove from list
-  if ((nInitVal & FLAG_Closed) == 0)
+  if ((nInitFlags & FLAG_Closed) == 0)
   {
     if (lpIpc->ShouldLog(1) != FALSE)
     {
       cLogTimer.Mark();
-      lpIpc->Log(L"CIpc::Close) Clock=%lums / This=0x%p / Res=0x%08X", cLogTimer.GetElapsedTimeMs(), this, hRes);
+      lpIpc->Log(L"CIpc::Close-B) Clock=%lums / This=0x%p / Res=0x%08X", cLogTimer.GetElapsedTimeMs(), this, hRes);
       cLogTimer.ResetToLastMark();
     }
     Release();
@@ -454,8 +463,8 @@ HRESULT CIpc::CConnectionBase::HandleConnected()
   if (lpIpc->ShouldLog(1) != FALSE)
   {
     cLogTimer.Mark();
-    lpIpc->Log(L"CIpc::HandleConnected) Clock=%lums / Ovr=0x%p / Type=%lu", cLogTimer.GetElapsedTimeMs(),
-               lpPacket->GetOverlapped(), lpPacket->GetType());
+    lpIpc->Log(L"CIpc::HandleConnected) Clock=%lums / This=0x%p / Ovr=0x%p / Type=%lu", cLogTimer.GetElapsedTimeMs(),
+               this, lpPacket->GetOverlapped(), lpPacket->GetType());
     cLogTimer.ResetToLastMark();
   }
   hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
@@ -659,7 +668,7 @@ HRESULT CIpc::CConnectionBase::HandleOutgoingPackets()
         }
         if (FAILED(hRes))
         {
-          //on error, readed packet was discarded by DoWrite/HandleSslOutput
+          //on error, read packet was discarded by DoWrite/HandleSslOutput
           lpNewPacket = NULL;
           break;
         }
@@ -850,6 +859,14 @@ VOID CIpc::CConnectionBase::DecrementOutgoingWrites()
   MX_ASSERT_ALWAYS(__InterlockedRead(&nOutgoingWrites) >= 1);
   if (_InterlockedDecrement(&nOutgoingWrites) == 0 && IsClosed() != FALSE)
   {
+    if (lpIpc->ShouldLog(3) != FALSE)
+    {
+      cLogTimer.Mark();
+      lpIpc->Log(L"CIpc::CConnectionBase::DecrementOutgoingWrites) Clock=%lums / This=0x%p / Hr=0x%08X",
+                 cLogTimer.GetElapsedTimeMs(), this, hrErrorCode);
+      cLogTimer.ResetToLastMark();
+    }
+
     ShutdownLink(FAILED(__InterlockedRead(&hrErrorCode)));
   }
   return;

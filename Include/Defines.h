@@ -35,6 +35,7 @@
 #ifndef WIN32_LEAN_AND_MEAN
   #define WIN32_LEAN_AND_MEAN
 #endif //!WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <windows.h>
 #include "NtDefs.h"
 #include "MemoryObjects.h"
