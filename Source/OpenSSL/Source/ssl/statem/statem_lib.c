@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2020 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2021 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright (c) 2002, Oracle and/or its affiliates. All rights reserved
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
@@ -1504,8 +1504,8 @@ static int ssl_method_error(const SSL *s, const SSL_METHOD *method)
 
 /*
  * Only called by servers. Returns 1 if the server has a TLSv1.3 capable
- * certificate type, or has PSK or a certificate callback configured. Otherwise
- * returns 0.
+ * certificate type, or has PSK or a certificate callback configured, or has
+ * a servername callback configured. Otherwise returns 0.
  */
 static int is_tls13_capable(const SSL *s)
 {
@@ -1514,6 +1514,17 @@ static int is_tls13_capable(const SSL *s)
     int curve;
     EC_KEY *eckey;
 #endif
+
+    if (!ossl_assert(s->ctx != NULL) || !ossl_assert(s->session_ctx != NULL))
+        return 0;
+
+    /*
+     * A servername callback can change the available certs, so if a servername
+     * cb is set then we just assume TLSv1.3 will be ok
+     */
+    if (s->ctx->ext.servername_cb != NULL
+            || s->session_ctx->ext.servername_cb != NULL)
+        return 1;
 
 #ifndef OPENSSL_NO_PSK
     if (s->psk_server_callback != NULL)
@@ -2399,6 +2410,8 @@ int tls13_save_handshake_digest_for_pha(SSL *s)
             SSLfatal(s, SSL_AD_INTERNAL_ERROR,
                      SSL_F_TLS13_SAVE_HANDSHAKE_DIGEST_FOR_PHA,
                      ERR_R_INTERNAL_ERROR);
+            EVP_MD_CTX_free(s->pha_dgst);
+            s->pha_dgst = NULL;
             return 0;
         }
     }
