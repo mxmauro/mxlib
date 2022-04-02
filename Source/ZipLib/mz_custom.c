@@ -35,6 +35,7 @@
 #endif //!FSCTL_GET_REPARSE_POINT
 
 #define HAVE_ZLIB
+#define ZLIB_COMPAT
 
 #include "MiniZipSource\mz_crypt.c"
 #include "MiniZipSource\mz_crypt_win32.c"

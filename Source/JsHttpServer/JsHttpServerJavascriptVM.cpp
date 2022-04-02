@@ -18,6 +18,7 @@
  * limitations under the License.
  */
 #include "JsHttpServerCommon.h"
+#undef GetObject
 
 //-----------------------------------------------------------
 
@@ -522,7 +523,7 @@ VOID CJsHttpServer::CJvmManager::ParseJsonBody(_In_ DukTape::duk_context *lpCtx,
 
     case rapidjson::kObjectType:
       {
-      rapidjson::Value::ConstObject o = v->GetObjectW();
+      rapidjson::Value::ConstObject o = v->GetObject();
 
       DukTape::duk_push_object(lpCtx);
 

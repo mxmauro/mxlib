@@ -4,4 +4,3 @@ git subtree pull --prefix Source/OpenSSL/Source        https://github.com/openss
 git subtree pull --prefix Source/JsLib/DukTape/Source  https://github.com/svaarala/duktape          v2.6-maintenance      --squash
 git subtree pull --prefix Source/JsLib/BigInteger      https://github.com/peterolson/BigInteger.js  master                --squash
 git subtree pull --prefix Source/RapidJSON/Source      https://github.com/Tencent/rapidjson         master                --squash
-git subtree pull --prefix Source/JEMalloc/Source       https://github.com/jemalloc/jemalloc         master                --squash
