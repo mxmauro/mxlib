@@ -1,11 +1,10 @@
 /* zip_fuzzer.c - Zip fuzzer for libFuzzer
-   Version 2.9.1, November 15, 2019
-   part of the MiniZip project
+   part of the minizip-ng project
 
    Copyright (C) 2018 The Chromium Authors
    Copyright (C) 2018 Anand K. Mistry
-   Copyright (C) 2018-2019 Nathan Moinvaziri
-     https://github.com/nmoinvaz/minizip
+   Copyright (C) 2018-2020 Nathan Moinvaziri
+     https://github.com/zlib-ng/minizip-ng
 
    This program is distributed under the terms of the same license as zlib.
    See the accompanying LICENSE file for the full text of the license.
@@ -42,7 +41,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     uint8_t *fuzz_buf = NULL;
 
     mz_stream_mem_create(&fuzz_stream);
-    mz_stream_mem_set_buffer(fuzz_stream, (void *)data, size);
+    mz_stream_mem_set_buffer(fuzz_stream, (void *)data, (int32_t)size);
 
     memset(&file_info, 0, sizeof(file_info));
 

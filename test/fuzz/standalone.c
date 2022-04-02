@@ -1,11 +1,10 @@
 /* standalone.c - Standalone fuzzer tester
-   Version 2.9.1, November 15, 2019
-   part of the MiniZip project
+   part of the minizip-ng project
 
    Copyright (C) 2018 sebpop
      https://github.com/sebpop
-   Copyright (C) 2018-2019 Nathan Moinvaziri
-     https://github.com/nmoinvaz/minizip
+   Copyright (C) 2018-2020 Nathan Moinvaziri
+     https://github.com/zlib-ng/minizip-ng
 
    This program is distributed under the terms of the same license as zlib.
    See the accompanying LICENSE file for the full text of the license.
