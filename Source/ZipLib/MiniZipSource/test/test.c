@@ -1,15 +1,17 @@
 /* test.c - Test bed area
-   Version 2.9.1, November 15, 2019
-   part of the MiniZip project
+   part of the minizip-ng project
 
-   Copyright (C) 2018-2019 Nathan Moinvaziri
-     https://github.com/nmoinvaz/minizip
+   Copyright (C) 2018-2020 Nathan Moinvaziri
+     https://github.com/zlib-ng/minizip-ng
 
    This program is distributed under the terms of the same license as zlib.
    See the accompanying LICENSE file for the full text of the license.
 */
 
 #include "mz.h"
+#ifdef HAVE_COMPAT
+#include "mz_compat.h"
+#endif
 #include "mz_crypt.h"
 #include "mz_os.h"
 #include "mz_strm.h"
@@ -83,7 +85,7 @@ int32_t test_utf8(void)
     uint8_t *utf8_string = mz_os_utf8_string_create(test_string, MZ_ENCODING_CODEPAGE_950);
     if (utf8_string == NULL)
         return MZ_BUF_ERROR;
-#if defined(_WINDOWS)
+#if defined(_WIN32)
     wchar_t *unicode_string = mz_os_unicode_string_create((const char *)utf8_string, MZ_ENCODING_UTF8);
     if (unicode_string == NULL)
         return MZ_BUF_ERROR;
@@ -613,15 +615,21 @@ int32_t convert_buffer_to_hex_string(uint8_t *buf, int32_t buf_size, char *hex_s
     return MZ_OK;
 }
 
-#ifndef MZ_ZIP_NO_ENCRYPTION
+#ifndef MZ_ZIP_NO_CRYPTO
 int32_t test_crypt_sha(void)
 {
     void *sha1 = NULL;
+    void *sha224 = NULL;
     void *sha256 = NULL;
+    void *sha384 = NULL;
+    void *sha512 = NULL;
     char *test = "the quick and lazy fox did his thang";
     char computed_hash[320];
     uint8_t hash[MZ_HASH_SHA1_SIZE];
+    uint8_t hash224[MZ_HASH_SHA224_SIZE];
     uint8_t hash256[MZ_HASH_SHA256_SIZE];
+    uint8_t hash384[MZ_HASH_SHA384_SIZE];
+    uint8_t hash512[MZ_HASH_SHA512_SIZE];
 
     printf("Sha hash input - %s\n", test);
 
@@ -642,6 +650,23 @@ int32_t test_crypt_sha(void)
     if (strcmp(computed_hash, "3efb8392b6cd8e14bd76bd08081521dc73df418c") != 0)
         return MZ_HASH_ERROR;
 
+    memset(hash224, 0, sizeof(hash224));
+
+    mz_crypt_sha_create(&sha224);
+    mz_crypt_sha_set_algorithm(sha224, MZ_HASH_SHA224);
+    mz_crypt_sha_begin(sha224);
+    mz_crypt_sha_update(sha224, test, (int32_t)strlen(test));
+    mz_crypt_sha_end(sha224, hash224, sizeof(hash224));
+    mz_crypt_sha_delete(&sha224);
+
+    convert_buffer_to_hex_string(hash224, sizeof(hash224), computed_hash, sizeof(computed_hash));
+
+    printf("Sha224 hash computed - %s\n", computed_hash);
+    printf("Sha224 hash expected - 9e444f5f0b6582a923bd48696155f4a2f0d914e044cb64b8729a6600\n");
+
+    if (strcmp(computed_hash, "9e444f5f0b6582a923bd48696155f4a2f0d914e044cb64b8729a6600") != 0)
+        return MZ_HASH_ERROR;
+
     memset(hash256, 0, sizeof(hash256));
 
     mz_crypt_sha_create(&sha256);
@@ -657,6 +682,40 @@ int32_t test_crypt_sha(void)
     printf("Sha256 hash expected - 7a31ea0848525f7ebfeec9ee532bcc5d6d26772427e097b86cf440a56546541c\n");
 
     if (strcmp(computed_hash, "7a31ea0848525f7ebfeec9ee532bcc5d6d26772427e097b86cf440a56546541c") != 0)
+        return MZ_HASH_ERROR;
+
+    memset(hash384, 0, sizeof(hash384));
+
+    mz_crypt_sha_create(&sha384);
+    mz_crypt_sha_set_algorithm(sha384, MZ_HASH_SHA384);
+    mz_crypt_sha_begin(sha384);
+    mz_crypt_sha_update(sha384, test, (int32_t)strlen(test));
+    mz_crypt_sha_end(sha384, hash384, sizeof(hash384));
+    mz_crypt_sha_delete(&sha384);
+
+    convert_buffer_to_hex_string(hash384, sizeof(hash384), computed_hash, sizeof(computed_hash));
+
+    printf("Sha384 hash computed - %s\n", computed_hash);
+    printf("Sha384 hash expected - e1e42e5977965bb3621231a5df3a1e83c471fa91fde33b6a30c8c4fa0d8be29ba7171c7c9487db91e9ee7e85049f7b41\n");
+
+    if (strcmp(computed_hash, "e1e42e5977965bb3621231a5df3a1e83c471fa91fde33b6a30c8c4fa0d8be29ba7171c7c9487db91e9ee7e85049f7b41") != 0)
+        return MZ_HASH_ERROR;
+
+    memset(hash512, 0, sizeof(hash512));
+
+    mz_crypt_sha_create(&sha512);
+    mz_crypt_sha_set_algorithm(sha512, MZ_HASH_SHA512);
+    mz_crypt_sha_begin(sha512);
+    mz_crypt_sha_update(sha512, test, (int32_t)strlen(test));
+    mz_crypt_sha_end(sha512, hash512, sizeof(hash512));
+    mz_crypt_sha_delete(&sha512);
+
+    convert_buffer_to_hex_string(hash512, sizeof(hash512), computed_hash, sizeof(computed_hash));
+
+    printf("Sha384 hash computed - %s\n", computed_hash);
+    printf("Sha384 hash expected - 6627e7643ee7ce633e03f52d22329c3a32597364247c5275d4369985e1518626da46f595ad327667346479d246359b8b381af791ce2ac8c53a4788050eea11fe\n");
+
+    if (strcmp(computed_hash, "6627e7643ee7ce633e03f52d22329c3a32597364247c5275d4369985e1518626da46f595ad327667346479d246359b8b381af791ce2ac8c53a4788050eea11fe") != 0)
         return MZ_HASH_ERROR;
 
     printf("Sha.. OK\n");
@@ -774,6 +833,429 @@ int32_t test_crypt_hmac(void)
 }
 #endif
 
+#if defined(HAVE_COMPAT) && defined(HAVE_ZLIB)
+int32_t test_zip_compat_int(zipFile zip, char *filename)
+{
+    int32_t err = ZIP_OK;
+    zip_fileinfo file_info;
+    char *buffer = "test data";
+
+    memset(&file_info, 0, sizeof(file_info));
+    file_info.dosDate = mz_zip_time_t_to_dos_date(1588561637);
+
+    err = zipOpenNewFileInZip(zip, filename, &file_info, NULL, 0, NULL, 0, "test local comment",
+        Z_DEFLATED, 1);
+    if (err != ZIP_OK)
+    {
+        printf("Failed to create new file in zip (%" PRId32 ")\n", err);
+        return err;
+    }
+    err = zipWriteInFileInZip(zip, buffer, (uint32_t)strlen(buffer));
+    if (err != ZIP_OK)
+    {
+        printf("Failed to write file in zip (%" PRId32 ")\n", err);
+        return err;
+    }
+    err = zipCloseFileInZip(zip);
+    if (err != ZIP_OK)
+    {
+        printf("Failed to close file in zip (%" PRId32 ")\n", err);
+        return err;
+    }
+
+    return ZIP_OK;
+}
+
+int32_t test_zip_compat(void)
+{
+    int32_t err = ZIP_OK;
+    zipFile zip;
+
+
+    zip = zipOpen64("compat.zip", APPEND_STATUS_CREATE);
+
+    if (zip == NULL)
+    {
+        printf("Failed to create test zip file\n");
+        return ZIP_PARAMERROR;
+    }
+    err = test_zip_compat_int(zip, "test.txt");
+    if (err != ZIP_OK)
+        return err;
+    err = test_zip_compat_int(zip, "test2.txt");
+    if (err != ZIP_OK)
+        return err;
+
+    zipClose(zip, "test global comment");
+
+    if (err != ZIP_OK)
+        return err;
+
+    printf("Compat zip.. OK\n");
+
+    return ZIP_OK;
+}
+
+static int32_t test_unzip_compat_int(unzFile unzip)
+{
+    unz_global_info64 global_info64;
+    unz_global_info global_info;
+    unz_file_info64 file_info64;
+    unz_file_info file_info;
+    unz_file_pos file_pos;
+    int32_t err = UNZ_OK;
+    int32_t bytes_read = 0;
+    char comment[120];
+    char filename[120];
+    char buffer[120];
+    char *test_data = "test data";
+
+    memset(&file_info, 0, sizeof(file_info));
+    memset(&file_info64, 0, sizeof(file_info64));
+    memset(&global_info, 0, sizeof(global_info));
+    memset(&global_info64, 0, sizeof(global_info64));
+
+    comment[0] = 0;
+    err = unzGetGlobalComment(unzip, comment, sizeof(comment));
+    if (err != UNZ_OK)
+    {
+        printf("Failed to get global comment (%" PRId32 ")\n", err);
+        return err;
+    }
+    if (strcmp(comment, "test global comment") != 0)
+    {
+        printf("Unexpected global comment value (%s)\n", comment);
+        return err;
+    }
+    err = unzGetGlobalInfo(unzip, &global_info);
+    if (err != UNZ_OK)
+    {
+        printf("Failed to get global info  (%" PRId32 ")\n", err);
+        return err;
+    }
+    err = unzGetGlobalInfo64(unzip, &global_info64);
+    if (err != UNZ_OK)
+    {
+        printf("Failed to get global info 64-bit (%" PRId32 ")\n", err);
+        return err;
+    }
+    if (global_info.number_entry != 2 || global_info64.number_entry != 2)
+    {
+        printf("Invalid number of entries in zip (%" PRId32 ")\n", global_info.number_entry);
+        return err;
+    }
+    if (global_info.number_disk_with_CD != 0 || global_info64.number_disk_with_CD != 0)
+    {
+        printf("Invalid disk with cd (%" PRIu32 ")\n", global_info.number_disk_with_CD);
+        return err;
+    }
+
+    err = unzLocateFile(unzip, "test.txt", (void *)1);
+    if (err != UNZ_OK)
+    {
+        printf("Failed to locate test file (%" PRId32 ")\n", err);
+        return err;
+    }
+
+    err = unzGoToFirstFile(unzip);
+    if (err == UNZ_OK)
+    {
+        filename[0] = 0;
+        err = unzGetCurrentFileInfo64(unzip, &file_info64, filename, sizeof(filename), NULL, 0, NULL, 0);
+        if (err != UNZ_OK)
+        {
+            printf("Failed to get current file info 64-bit (%" PRId32 ")\n", err);
+            return err;
+        }
+
+        err = unzOpenCurrentFile(unzip);
+        if (err != UNZ_OK)
+        {
+            printf("Failed to open current file (%" PRId32 ")\n", err);
+            return err;
+        }
+        bytes_read = unzReadCurrentFile(unzip, buffer, sizeof(buffer));
+        if (bytes_read != (int32_t)strlen(test_data))
+        {
+            printf("Failed to read zip entry data (%" PRId32 ")\n", err);
+            unzCloseCurrentFile(unzip);
+            return err;
+        }
+        if (unzEndOfFile(unzip) != 1)
+        {
+            printf("End of unzip not reported correctly\n");
+            return UNZ_INTERNALERROR;
+        }
+        err = unzCloseCurrentFile(unzip);
+        if (err != UNZ_OK)
+        {
+            printf("Failed to close current file (%" PRId32 ")\n", err);
+            return err;
+        }
+
+        if (unztell(unzip) != bytes_read)
+        {
+            printf("Unzip position not reported correctly\n");
+            return UNZ_INTERNALERROR;
+        }
+
+        err = unzGoToNextFile(unzip);
+        if (err != UNZ_OK)
+        {
+            printf("Failed to get next file info (%" PRId32 ")\n", err);
+            return err;
+        }
+
+        comment[0] = 0;
+        err = unzGetCurrentFileInfo(unzip, &file_info, filename, sizeof(filename), NULL, 0, comment, sizeof(comment));
+        if (err != UNZ_OK)
+        {
+            printf("Failed to get current file info (%" PRId32 ")\n", err);
+            return err;
+        }
+        if (strcmp(comment, "test local comment") != 0)
+        {
+            printf("Unexpected local comment value (%s)\n", comment);
+            return err;
+        }
+
+        err = unzGetFilePos(unzip, &file_pos);
+        if (err != UNZ_OK)
+        {
+            printf("Failed to get file position (%" PRId32 ")\n", err);
+            return err;
+        }
+        if (file_pos.num_of_file != 1)
+        {
+            printf("Unzip file position not reported correctly\n");
+            return UNZ_INTERNALERROR;
+        }
+
+        err = unzGetOffset(unzip);
+        if (err <= 0)
+        {
+            printf("Unzip invalid offset reported\n");
+            return UNZ_INTERNALERROR;
+        }
+
+        err = unzGoToNextFile(unzip);
+
+        if (err != UNZ_END_OF_LIST_OF_FILE)
+        {
+            printf("Failed to reach end of zip entries (%" PRId32 ")\n", err);
+            unzCloseCurrentFile(unzip);
+            return err;
+        }
+        err = unzSeek64(unzip, 0, SEEK_SET);
+    }
+
+    return UNZ_OK;
+}
+
+#ifndef MZ_FILE32_API
+#  ifndef NO_FSEEKO
+#    define ftello64 ftello
+#    define fseeko64 fseeko
+#  elif defined(_MSC_VER) && (_MSC_VER >= 1400)
+#    define ftello64 _ftelli64
+#    define fseeko64 _fseeki64
+#  endif
+#endif
+#ifndef ftello64
+#  define ftello64 ftell
+#endif
+#ifndef fseeko64
+#  define fseeko64 fseek
+#endif
+
+static void *ZCALLBACK fopen_file_func(void *opaque, const char *filename, int mode)
+{
+    FILE* file = NULL;
+    const char* mode_fopen = NULL;
+
+    if ((mode & ZLIB_FILEFUNC_MODE_READWRITEFILTER)==ZLIB_FILEFUNC_MODE_READ)
+        mode_fopen = "rb";
+    else if (mode & ZLIB_FILEFUNC_MODE_EXISTING)
+        mode_fopen = "r+b";
+    else if (mode & ZLIB_FILEFUNC_MODE_CREATE)
+        mode_fopen = "wb";
+
+    if ((filename != NULL) && (mode_fopen != NULL))
+        file = fopen(filename, mode_fopen);
+
+    return file;
+}
+
+static unsigned long ZCALLBACK fread_file_func(void *opaque, void *stream, void *buf, unsigned long size)
+{
+    return (unsigned long)fread(buf, 1, (size_t)size, (FILE *)stream);
+}
+
+static unsigned long ZCALLBACK fwrite_file_func(void *opaque, void *stream, const void *buf, unsigned long size)
+{
+    return (unsigned long)fwrite(buf, 1, (size_t)size, (FILE *)stream);
+}
+
+static long ZCALLBACK ftell_file_func(void *opaque, void *stream)
+{
+    return ftell((FILE *)stream);
+}
+
+static ZPOS64_T ZCALLBACK ftell64_file_func(void *opaque, void *stream)
+{
+    return ftello64((FILE *)stream);
+}
+
+static long ZCALLBACK fseek_file_func(void *opaque, void *stream, unsigned long offset, int origin)
+{
+    int fseek_origin = 0;
+    long ret = 0;
+    switch (origin)
+    {
+    case ZLIB_FILEFUNC_SEEK_CUR:
+        fseek_origin = SEEK_CUR;
+        break;
+    case ZLIB_FILEFUNC_SEEK_END:
+        fseek_origin = SEEK_END;
+        break;
+    case ZLIB_FILEFUNC_SEEK_SET:
+        fseek_origin = SEEK_SET;
+        break;
+    default:
+        return -1;
+    }
+    if (fseek((FILE *)stream, offset, fseek_origin) != 0)
+        ret = -1;
+    return ret;
+}
+
+static long ZCALLBACK fseek64_file_func(void *opaque, void *stream, ZPOS64_T offset, int origin)
+{
+    int fseek_origin = 0;
+    long ret = 0;
+    switch (origin)
+    {
+    case ZLIB_FILEFUNC_SEEK_CUR:
+        fseek_origin = SEEK_CUR;
+        break;
+    case ZLIB_FILEFUNC_SEEK_END:
+        fseek_origin = SEEK_END;
+        break;
+    case ZLIB_FILEFUNC_SEEK_SET:
+        fseek_origin = SEEK_SET;
+        break;
+    default:
+        return -1;
+    }
+    if (fseeko64((FILE *)stream, offset, fseek_origin) != 0)
+        ret = -1;
+    return ret;
+}
+
+static int ZCALLBACK fclose_file_func(void *opaque, void *stream)
+{
+    return fclose((FILE *)stream);
+}
+
+static int ZCALLBACK ferror_file_func(void *opaque, void *stream)
+{
+    return ferror((FILE *)stream);
+}
+
+void fill_ioapi32_filefunc(zlib_filefunc_def *pzlib_filefunc_def)
+{
+    pzlib_filefunc_def->zopen_file = fopen_file_func;
+    pzlib_filefunc_def->zread_file = fread_file_func;
+    pzlib_filefunc_def->zwrite_file = fwrite_file_func;
+    pzlib_filefunc_def->ztell_file = ftell_file_func;
+    pzlib_filefunc_def->zseek_file = fseek_file_func;
+    pzlib_filefunc_def->zclose_file = fclose_file_func;
+    pzlib_filefunc_def->zerror_file = ferror_file_func;
+    pzlib_filefunc_def->opaque = NULL;
+}
+
+void fill_ioapi64_filefunc(zlib_filefunc64_def *pzlib_filefunc_def)
+{
+    pzlib_filefunc_def->zopen64_file = (open64_file_func)fopen_file_func;
+    pzlib_filefunc_def->zread_file = fread_file_func;
+    pzlib_filefunc_def->zwrite_file = fwrite_file_func;
+    pzlib_filefunc_def->ztell64_file = ftell64_file_func;
+    pzlib_filefunc_def->zseek64_file = fseek64_file_func;
+    pzlib_filefunc_def->zclose_file = fclose_file_func;
+    pzlib_filefunc_def->zerror_file = ferror_file_func;
+    pzlib_filefunc_def->opaque = NULL;
+}
+
+int32_t test_unzip_compat(void)
+{
+    unzFile unzip;
+    int32_t err = UNZ_OK;
+
+    unzip = unzOpen("compat.zip");
+    if (unzip == NULL)
+    {
+        printf("Failed to open test zip file\n");
+        return UNZ_PARAMERROR;
+    }
+    err = test_unzip_compat_int(unzip);
+    unzClose(unzip);
+
+    if (err != UNZ_OK)
+        return err;
+
+    printf("Compat unzip.. OK\n");
+
+    return UNZ_OK;
+}
+
+int32_t test_unzip_compat32(void)
+{
+    unzFile unzip;
+    int32_t err = UNZ_OK;
+    zlib_filefunc_def zlib_filefunc_def;
+
+    fill_ioapi32_filefunc(&zlib_filefunc_def);
+    unzip = unzOpen2("compat.zip", &zlib_filefunc_def);
+    if (unzip == NULL)
+    {
+        printf("Failed to open test zip file\n");
+        return UNZ_PARAMERROR;
+    }
+    err = test_unzip_compat_int(unzip);
+    unzClose(unzip);
+
+    if (err != UNZ_OK)
+        return err;
+
+    printf("Compat unzip with 32-bit ioapi.. OK\n");
+
+    return UNZ_OK;
+}
+
+int32_t test_unzip_compat64(void)
+{
+    unzFile unzip;
+    int32_t err = UNZ_OK;
+    zlib_filefunc64_def zlib_filefunc_def;
+
+    fill_ioapi64_filefunc(&zlib_filefunc_def);
+    unzip = unzOpen2_64("compat.zip", &zlib_filefunc_def);
+    if (unzip == NULL)
+    {
+        printf("Failed to open test zip file\n");
+        return UNZ_PARAMERROR;
+    }
+    err = test_unzip_compat_int(unzip);
+    unzClose(unzip);
+
+    if (err != UNZ_OK)
+        return err;
+
+    printf("Compat unzip with 64-bit ioapi.. OK\n");
+
+    return UNZ_OK;
+}
+#endif
 
 /***************************************************************************/
 
@@ -788,6 +1270,7 @@ int main(int argc, const char *argv[])
     err |= test_utf8();
     err |= test_stream_find();
     err |= test_stream_find_reverse();
+
 #if !defined(MZ_ZIP_NO_COMPRESSION) && !defined(MZ_ZIP_NO_DECOMPRESSION)
 #ifdef HAVE_BZIP2
     err |= test_stream_bzip();
@@ -795,12 +1278,19 @@ int main(int argc, const char *argv[])
 #ifdef HAVE_ZLIB
     err |= test_stream_zlib();
     err |= test_stream_zlib_mem();
+#ifdef HAVE_COMPAT
+    err |= test_zip_compat();
+    err |= test_unzip_compat();
+    err |= test_unzip_compat32();
+    err |= test_unzip_compat64();
 #endif
 #endif
-#if !defined(MZ_ZIP_NO_ENCRYPTION)
+#endif
+
 #ifdef HAVE_PKCRYPT
     err |= test_stream_pkcrypt();
 #endif
+#if !defined(MZ_ZIP_NO_CRYPTO)
 #ifdef HAVE_WZAES
     err |= test_stream_wzaes();
 #endif
@@ -808,6 +1298,7 @@ int main(int argc, const char *argv[])
     err |= test_crypt_aes();
     err |= test_crypt_hmac();
 #endif
+
     return err;
 }
 
