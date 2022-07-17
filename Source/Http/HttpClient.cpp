@@ -2647,13 +2647,13 @@ HRESULT CHttpClient::BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA)
         {
           if (sLocalAddr.Ipv6.sin6_addr.u.Word[nIdx] == 0)
             break;
-          if (cStrTempA.AppendFormat("%04X", sLocalAddr.Ipv6.sin6_addr.u.Word[nIdx]) == FALSE)
-            return E_OUTOFMEMORY;
-          if (nIdx < 8)
+          if (nIdx > 0)
           {
             if (cStrTempA.ConcatN(":", 1) == FALSE)
               return E_OUTOFMEMORY;
           }
+          if (cStrTempA.AppendFormat("%04X", sLocalAddr.Ipv6.sin6_addr.u.Word[nIdx]) == FALSE)
+            return E_OUTOFMEMORY;
         }
         if (nIdx < 8)
         {
