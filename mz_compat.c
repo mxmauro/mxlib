@@ -10,7 +10,6 @@
    See the accompanying LICENSE file for the full text of the license.
 */
 
-
 #include "mz.h"
 #include "mz_os.h"
 #include "mz_strm.h"
@@ -163,8 +162,6 @@ static int64_t mz_stream_ioapi_tell(void *stream) {
 
 static int32_t mz_stream_ioapi_seek(void *stream, int64_t offset, int32_t origin) {
     mz_stream_ioapi *ioapi = (mz_stream_ioapi *)stream;
-    int32_t written = 0;
-    void *opaque = NULL;
 
     if (mz_stream_ioapi_is_open(stream) != MZ_OK)
         return MZ_OPEN_ERROR;
@@ -876,6 +873,11 @@ int unzOpenCurrentFile3(unzFile file, int *method, int *level, int raw, const ch
         *method = 0;
     if (level != NULL)
         *level = 0;
+
+    if (mz_zip_entry_is_open(compat->handle) == MZ_OK) {
+        /* zlib minizip does not error out here if close returns errors */
+        unzCloseCurrentFile(file);
+    }
 
     compat->total_out = 0;
     err = mz_zip_entry_read_open(compat->handle, (uint8_t)raw, password);
