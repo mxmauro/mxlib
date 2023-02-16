@@ -110,10 +110,11 @@ int TestJavascript()
   try
   {
     cJvm.Run("zarasa('hola');");
+    wprintf_s(L"We shouldn't reach here\n");
   }
   catch (MX::CJsError &e)
   {
-    wprintf_s(L"Error: %S in %S(%lu)\n", e.GetDescription(), e.GetFileName(), e.GetLineNumber());
+    wprintf_s(L"Expected error: %S in %S(%lu)\n", e.GetDescription(), e.GetFileName(), e.GetLineNumber());
     wprintf_s(L"%S\n", e.GetStackTrace());
   }
 

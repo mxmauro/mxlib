@@ -98,6 +98,8 @@ public:
     return (szStrA != NULL && *szStrA != 0) ? FALSE : TRUE;
     };
 
+  BOOL SetUtf8Mode(_In_ BOOL bEnable);
+
   virtual BOOL Copy(_In_opt_z_ LPCSTR szSrcA);
   virtual BOOL CopyN(_In_reads_or_z_opt_(nSrcLen) LPCSTR szSrcA, _In_ SIZE_T nSrcLen);
   virtual BOOL Concat(_In_opt_z_ LPCSTR szSrcA);
@@ -156,6 +158,7 @@ public:
 protected:
   LPSTR szStrA;
   SIZE_T nSize, nLen;
+  BOOL bUtf8;
 };
 
 //--------
@@ -200,6 +203,8 @@ public:
     {
     return (szStrW != NULL && *szStrW != 0) ? FALSE : TRUE;
     };
+
+  BOOL SetUtf8Mode(_In_ BOOL bEnable);
 
   virtual BOOL Copy(_In_opt_z_ LPCSTR szSrcA);
   virtual BOOL CopyN(_In_reads_or_z_opt_(nSrcLen) LPCSTR szSrcA, _In_ SIZE_T nSrcLen);
@@ -254,11 +259,13 @@ public:
   WCHAR& operator[](_In_ SIZE_T nIndex);
 
   LPSTR ToAnsi();
+  LPSTR ToUTF8();
   static LPSTR Wide2Ansi(_In_z_ LPCWSTR szStrW, _In_ SIZE_T nSrcLen);
 
 protected:
   LPWSTR szStrW;
   SIZE_T nSize, nLen;
+  BOOL bUtf8;
 };
 
 //--------

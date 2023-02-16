@@ -18,11 +18,13 @@
  * limitations under the License.
  */
 #include "..\..\Include\Strings\Strings.h"
+#include "..\..\Include\Strings\Utf8.h"
 #include "..\..\Include\WaitableObjects.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include "..\Internals\MsVcrt.h"
+#include <locale.h>
 
 //-----------------------------------------------------------
 
@@ -31,36 +33,14 @@
 
 //-----------------------------------------------------------
 
-typedef int (*_PIFV)(void);
-
-typedef int (__cdecl *lpfn__stdio_common_vsnprintf_s)(_In_ unsigned __int64 _Options,
-                                                      _Out_writes_z_(_BufferCount) char* _Buffer,
-                                                      _In_ size_t _BufferCount, _In_ size_t _MaxCount,
-                                                      _In_z_ _Printf_format_string_params_(2) char const* _Format,
-                                                      _In_opt_ _locale_t _Locale, va_list _ArgList);
-typedef int (__cdecl *lpfn__stdio_common_vsnwprintf_s)(_In_ unsigned __int64 _Options,
-                                                       _Out_writes_z_(_BufferCount) wchar_t* _Buffer,
-                                                       _In_ size_t _BufferCount, _In_ size_t _MaxCount,
-                                                       _In_z_ _Printf_format_string_params_(2) wchar_t const* _Format,
-                                                       _In_opt_ _locale_t _Locale, va_list _ArgList);
-
-//-----------------------------------------------------------
-
 static __declspec(thread) int strtodbl_error = 0;
-static CHAR volatile aToLowerChar[256] = { 0 };
 static WCHAR volatile aToUnicodeChar[256] = { 0 };
-
-extern const lpfn__stdio_common_vsnprintf_s mx__stdio_common_vsnprintf_s_default = NULL;
-extern const lpfn__stdio_common_vsnwprintf_s mx__stdio_common_vsnwprintf_s_default = NULL;
-
-#pragma comment(linker, "/alternatename:" MX_LINKER_SYMBOL_PREFIX "__stdio_common_vsnprintf_s=" \
-                        MX_LINKER_SYMBOL_PREFIX "mx__stdio_common_vsnprintf_s_default")
-#pragma comment(linker, "/alternatename:" MX_LINKER_SYMBOL_PREFIX "__stdio_common_vsnwprintf_s=" \
-                        MX_LINKER_SYMBOL_PREFIX "mx__stdio_common_vsnwprintf_s_default")
+static _locale_t lpUtf8Locale = NULL;
 
 //-----------------------------------------------------------
 
 static int __cdecl InitializeTables();
+static BOOL InitializeUtf8Locale();
 static void dblconv_invalid_parameter(const wchar_t * expression, const wchar_t * function, const wchar_t * file,
                                       unsigned int line, uintptr_t pReserved);
 
@@ -158,70 +138,31 @@ int StrCompareAW(_In_z_ LPCSTR szSrcA1, _In_z_ LPCWSTR szSrcW2, _In_opt_ BOOL bC
 
 int StrNCompareA(_In_z_ LPCSTR szSrcA1, _In_z_ LPCSTR szSrcA2, _In_ SIZE_T nLen, _In_opt_ BOOL bCaseInsensitive)
 {
-  MX_ANSI_STRING asStr[2];
-  LONG res;
-
   if (nLen == 0 || (szSrcA1 == NULL && szSrcA2 == NULL))
     return 0;
   if (szSrcA1 == NULL)
     return -1;
   if (szSrcA2 == NULL)
     return 1;
-  asStr[0].Buffer = (PSTR)szSrcA1;
-  asStr[1].Buffer = (PSTR)szSrcA2;
-  res = 0;
-  while (res == 0 && nLen > 0)
-  {
-    asStr[0].Length = asStr[0].MaximumLength =
-      asStr[1].Length = asStr[1].MaximumLength = (nLen > 16384) ? 16384 : (USHORT)nLen;
-    res = ::MxRtlCompareString(&asStr[0], &asStr[1], bCaseInsensitive);
-    if (res == 0)
-    {
-      nLen -= (SIZE_T)(asStr[0].Length);
-      asStr[0].Buffer += (SIZE_T)(asStr[0].Length);
-      asStr[1].Buffer += (SIZE_T)(asStr[0].Length);
-    }
-  }
-  return res;
+  return (bCaseInsensitive != FALSE) ? _strnicmp(szSrcA1, szSrcA2, nLen) : strncmp(szSrcA1, szSrcA2, nLen);
 }
 
 int StrNCompareW(_In_z_ LPCWSTR szSrcW1, _In_z_ LPCWSTR szSrcW2, _In_ SIZE_T nLen, _In_opt_ BOOL bCaseInsensitive)
 {
-  MX_UNICODE_STRING usStr[2];
-
-  LONG res;
-
   if (nLen == 0 || (szSrcW1 == NULL && szSrcW2 == NULL))
     return 0;
   if (szSrcW1 == NULL)
     return -1;
   if (szSrcW2 == NULL)
     return 1;
-  usStr[0].Buffer = (PWSTR)szSrcW1;
-  usStr[1].Buffer = (PWSTR)szSrcW2;
-  res = 0;
-  while (res == 0 && nLen > 0)
-  {
-    usStr[0].Length = usStr[0].MaximumLength =
-      usStr[1].Length = usStr[1].MaximumLength = (nLen > 16384) ? 32768 : (USHORT)(nLen * 2);
-    res = ::MxRtlCompareUnicodeString(&usStr[0], &usStr[1], bCaseInsensitive);
-    if (res == 0)
-    {
-      usStr[0].Length >>= 1;
-      nLen -= (SIZE_T)(usStr[0].Length);
-      usStr[0].Buffer += (SIZE_T)(usStr[0].Length);
-      usStr[1].Buffer += (SIZE_T)(usStr[0].Length);
-    }
-  }
-  return res;
+  return (bCaseInsensitive != FALSE) ? _wcsnicmp(szSrcW1, szSrcW2, nLen) : wcsncmp(szSrcW1, szSrcW2, nLen);
 }
 
 int StrNCompareAW(_In_z_ LPCSTR szSrcA1, _In_z_ LPCWSTR szSrcW2, _In_ SIZE_T nLen,
                   _In_opt_ BOOL bCaseInsensitive)
 {
-  MX_UNICODE_STRING usStr[2];
-  WCHAR szTempBufW[32];
-  USHORT i;
+  WCHAR szTempBufW[256];
+  SIZE_T nThisLen;
   LONG res;
 
   if (nLen == 0 || (szSrcA1 == NULL && szSrcW2 == NULL))
@@ -230,26 +171,20 @@ int StrNCompareAW(_In_z_ LPCSTR szSrcA1, _In_z_ LPCWSTR szSrcW2, _In_ SIZE_T nLe
     return -1;
   if (szSrcW2 == NULL)
     return 1;
-  usStr[0].Buffer = (PWSTR)szTempBufW;
-  usStr[1].Buffer = (PWSTR)szSrcW2;
-  res = 0;
-  while (res == 0 && nLen > 0)
+  while (nLen > 0)
   {
-    usStr[0].Length = (USHORT)((nLen > MX_ARRAYLEN(szTempBufW)) ? MX_ARRAYLEN(szTempBufW) : nLen);
-    for (i=0; i<usStr[0].Length; i++)
+    nThisLen = (nLen > MX_ARRAYLEN(szTempBufW)) ? MX_ARRAYLEN(szTempBufW) : nLen;
+    for (SIZE_T i = 0; i < nThisLen; i++)
       szTempBufW[i] = aToUnicodeChar[((UCHAR*)szSrcA1)[i]];
-    usStr[0].Length <<= 1;
-    usStr[1].Length = usStr[1].MaximumLength =  usStr[0].MaximumLength = usStr[0].Length;
-    res = ::MxRtlCompareUnicodeString(&usStr[0], &usStr[1], bCaseInsensitive);
-    if (res == 0)
-    {
-      usStr[0].Length >>= 1;
-      nLen -= (SIZE_T)(usStr[0].Length);
-      szSrcA1 += (SIZE_T)(usStr[0].Length);
-      usStr[1].Buffer += (SIZE_T)(usStr[0].Length);
-    }
+    res = (bCaseInsensitive != FALSE) ? _wcsnicmp(szTempBufW, szSrcW2, nThisLen)
+                                      : wcsncmp(szTempBufW, szSrcW2, nThisLen);
+    if (res != 0)
+      return res;
+    nLen -= nThisLen;
+    szSrcA1 += nThisLen;
+    szSrcW2 += nThisLen;
   }
-  return res;
+  return 0;
 }
 
 LPCSTR StrChrA(_In_z_ LPCSTR szSrcA, _In_ CHAR chA, _In_opt_ BOOL bReverse)
@@ -355,22 +290,22 @@ LPCWSTR StrNFindW(_In_z_ LPCWSTR szSrcW, _In_z_ LPCWSTR szToFindW, _In_ SIZE_T n
 
 CHAR CharToLowerA(_In_ CHAR chA)
 {
-  return aToLowerChar[chA];
+  return (CHAR)tolower(chA);
 }
 
 CHAR CharToUpperA(_In_ CHAR chA)
 {
-  return ::MxRtlUpperChar(chA);
+  return (CHAR)toupper(chA);
 }
 
 WCHAR CharToLowerW(_In_ WCHAR chW)
 {
-  return ::MxRtlDowncaseUnicodeChar(chW);
+  return (WCHAR)towlower(chW);
 }
 
 WCHAR CharToUpperW(_In_ WCHAR chW)
 {
-  return ::MxRtlUpcaseUnicodeChar(chW);
+  return (WCHAR)towupper(chW);
 }
 
 VOID StrToLowerA(_Inout_z_ LPSTR szSrcA)
@@ -385,7 +320,7 @@ VOID StrNToLowerA(_Inout_updates_(nLen) LPSTR szSrcA, _In_ SIZE_T nLen)
   {
     while (nLen > 0)
     {
-      *szSrcA = aToLowerChar[*szSrcA];
+      *szSrcA = CharToLowerA(*szSrcA);
       szSrcA++;
       nLen--;
     }
@@ -405,7 +340,7 @@ VOID StrNToLowerW(_Inout_updates_(nLen) LPWSTR szSrcW, _In_ SIZE_T nLen)
   {
     while (nLen > 0)
     {
-      *szSrcW = ::MxRtlDowncaseUnicodeChar(*szSrcW);
+      *szSrcW = CharToLowerW(*szSrcW);
       szSrcW++;
       nLen--;
     }
@@ -425,7 +360,7 @@ VOID StrNToUpperA(_Inout_updates_(nLen) LPSTR szSrcA, _In_ SIZE_T nLen)
   {
     while (nLen > 0)
     {
-      *szSrcA = ::MxRtlUpperChar(*szSrcA);
+      *szSrcA = CharToUpperA(*szSrcA);
       szSrcA++;
       nLen--;
     }
@@ -445,7 +380,7 @@ VOID StrNToUpperW(_Inout_updates_(nLen) LPWSTR szSrcW, _In_ SIZE_T nLen)
   {
     while (nLen > 0)
     {
-      *szSrcW = ::MxRtlUpcaseUnicodeChar(*szSrcW);
+      *szSrcW = CharToUpperW(*szSrcW);
       szSrcW++;
       nLen--;
     }
@@ -528,6 +463,7 @@ CStringA::CStringA() : CBaseMemObj(), CNonCopyableObj()
 {
   szStrA = NULL;
   nSize = nLen = 0;
+  bUtf8 = FALSE;
   return;
 }
 
@@ -565,6 +501,17 @@ SIZE_T CStringA::GetLength() const
   return nLen;
 }
 
+BOOL CStringA::SetUtf8Mode(_In_ BOOL bEnable)
+{
+  if (bEnable != FALSE)
+  {
+    if (InitializeUtf8Locale() == FALSE)
+      return FALSE;
+  }
+  bUtf8 = bEnable;
+  return TRUE;
+}
+
 BOOL CStringA::Copy(_In_opt_z_ LPCSTR szSrcA)
 {
   Empty();
@@ -600,7 +547,7 @@ BOOL CStringA::ConcatN(_In_reads_or_z_opt_(nSrcLen) LPCSTR szSrcA, _In_ SIZE_T n
     return FALSE; //overflow
   if (EnsureBuffer(nLen + nSrcLen + 1) == FALSE)
     return FALSE;
-  MxMemCopy(szStrA + nLen, szSrcA, nSrcLen);
+  ::MxMemCopy(szStrA + nLen, szSrcA, nSrcLen);
   nLen += nSrcLen;
   szStrA[nLen] = 0;
   return TRUE;
@@ -633,42 +580,51 @@ BOOL CStringA::Concat(_In_opt_z_ LPCWSTR szSrcW)
 
 BOOL CStringA::ConcatN(_In_reads_or_z_opt_(nSrcLen) LPCWSTR szSrcW, _In_ SIZE_T nSrcLen)
 {
-  MX_ANSI_STRING asTemp;
-  MX_UNICODE_STRING usStr;
-  SIZE_T k, nAnsiLen, nThisRoundLen;
+  UINT nCodepage = (bUtf8 == FALSE) ? CP_ACP : CP_UTF8;
+  SIZE_T nOrigLen, nThisLen;
+  int nDestLen;
 
   if (nSrcLen == 0)
     return TRUE;
   if (szSrcW == NULL)
     return FALSE;
-  nAnsiLen = 0;
-  usStr.Buffer = (PWSTR)szSrcW;
-  for (k = nSrcLen; k > 0; k -= nThisRoundLen)
+  nOrigLen = nLen;
+  while (nSrcLen > 0)
   {
-    nThisRoundLen = (k > 16384) ? 16384 : k;
-    if (nThisRoundLen > 1 && usStr.Buffer[nThisRoundLen-1] >= 0xD800 && usStr.Buffer[nThisRoundLen-1] <= 0xDBFF)
-      nThisRoundLen--; //don't split surrogate pairs
-    usStr.Length = usStr.MaximumLength = (USHORT)nThisRoundLen * sizeof(WCHAR);
-    nAnsiLen += (SIZE_T)::MxRtlUnicodeStringToAnsiSize(&usStr) - 1; //remove NUL char terminator
-    usStr.Buffer += nThisRoundLen;
+    nThisLen = (nSrcLen > 16384) ? 16384 : nSrcLen;
+
+    if (nThisLen > 1 && szSrcW[nThisLen - 1] >= 0xD800 && szSrcW[nThisLen - 1] <= 0xDBFF)
+      nThisLen -= 1; //don't split surrogate pairs
+
+    nDestLen = ::WideCharToMultiByte(nCodepage, 0, szSrcW, (int)nThisLen, NULL, 0, NULL, NULL);
+    if (nDestLen <= 0)
+    {
+      nLen = nOrigLen;
+      szStrA[nLen] = 0;
+      return FALSE;
+    }
+
+    if (nLen + nDestLen + 1 < nLen || //overflow
+        EnsureBuffer(nLen + nDestLen + 1) == FALSE)
+    {
+      nLen = nOrigLen;
+      szStrA[nLen] = 0;
+      return FALSE;
+    }
+
+    nDestLen = ::WideCharToMultiByte(nCodepage, 0, szSrcW, (int)nThisLen, szStrA + nLen, nDestLen + 1, NULL, NULL);
+    if (nDestLen <= 0)
+    {
+      nLen = nOrigLen;
+      szStrA[nLen] = 0;
+      return FALSE;
+    }
+
+    nLen += (SIZE_T)nDestLen;
+    szSrcW += nThisLen;
+    nSrcLen -= nThisLen;
   }
-  if (nLen + nAnsiLen + 1 < nLen)
-    return FALSE; //overflow
-  if (EnsureBuffer(nLen + nAnsiLen + 1) == FALSE)
-    return FALSE;
-  usStr.Buffer = (PWSTR)szSrcW;
-  for (k = nSrcLen; k > 0; k -= nThisRoundLen)
-  {
-    nThisRoundLen = (k > 16384) ? 16384 : k;
-    if (nThisRoundLen > 1 && usStr.Buffer[nThisRoundLen-1] >= 0xD800 && usStr.Buffer[nThisRoundLen-1] <= 0xDBFF)
-      nThisRoundLen--; //don't split surrogate pairs
-    usStr.Length = (USHORT)(nThisRoundLen * sizeof(WCHAR));
-    asTemp.Buffer = (PSTR)(szStrA + nLen);
-    asTemp.MaximumLength = 32768;
-    ::MxRtlUnicodeStringToAnsiString(&asTemp, &usStr, FALSE);
-    usStr.Buffer += nThisRoundLen;
-    nLen += (SIZE_T)(asTemp.Length);
-  }
+
   szStrA[nLen] = 0;
   return TRUE;
 }
@@ -718,7 +674,7 @@ BOOL CStringA::Concat(_In_ LONGLONG nSrc)
 {
   CHAR szTempA[128];
 
-  mx_sprintf_s(szTempA, MX_ARRAYLEN(szTempA), "%I64d", nSrc);
+  _snprintf_s(szTempA, MX_ARRAYLEN(szTempA), _TRUNCATE, "%I64d", nSrc);
   return Concat(szTempA);
 }
 
@@ -732,7 +688,7 @@ BOOL CStringA::Concat(_In_ ULONGLONG nSrc)
 {
   CHAR szTempA[128];
 
-  mx_sprintf_s(szTempA, MX_ARRAYLEN(szTempA), "%I64u", nSrc);
+  _snprintf_s(szTempA, MX_ARRAYLEN(szTempA), _TRUNCATE, "%I64u", nSrc);
   return Concat(szTempA);
 }
 
@@ -804,60 +760,57 @@ BOOL CStringA::AppendFormat(_In_z_ _Printf_format_string_ LPCWSTR szFormatW, ...
 
 BOOL CStringA::AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCSTR szFormatA, _In_ va_list argptr)
 {
+  _locale_t lpLocale = (bUtf8 == FALSE) ? NULL : lpUtf8Locale;
   int nChars;
-  SIZE_T nBufSize;
 
   if (szFormatA == NULL)
     return FALSE;
-  nBufSize = 512;
-  while (1)
+  nChars = _vscprintf_l(szFormatA, lpLocale, argptr);
+  if (nChars < 0)
+    return FALSE;
+  if (nChars > 0)
   {
-    if (EnsureBuffer(nLen + nBufSize+1) == FALSE)
+    if (nLen + (SIZE_T)nChars + 1 < nLen)
+      return FALSE; //overflow
+    if (EnsureBuffer(nLen + (SIZE_T)nChars + 1) == FALSE)
       return FALSE;
-    nChars = mx_vsnprintf(szStrA + nLen, (size_t)nBufSize, szFormatA, argptr);
-    if ((SIZE_T)nChars < nBufSize - 2)
-      break;
-    nBufSize += 4096;
+    nChars = _vsnprintf_s_l(szStrA + nLen, (size_t)nChars + 1, _TRUNCATE, szFormatA, lpLocale, argptr);
+    if (nChars < 0)
+      return FALSE;
+    nLen += (SIZE_T)nChars;
+    szStrA[nLen] = 0;
   }
-  nLen += (SIZE_T)nChars;
-  szStrA[nLen] = 0;
   return TRUE;
 }
 
 BOOL CStringA::AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCWSTR szFormatW, _In_ va_list argptr)
 {
-  WCHAR szTempBufW[512], *szTempW;
-  int nChars, nBufSize;
-  BOOL bRet;
+  _locale_t lpLocale = (bUtf8 == FALSE) ? NULL : lpUtf8Locale;
+  LPWSTR szTempW;
+  int nChars;
 
-  if (szFormatW == NULL)
+  nChars = _vscwprintf_l(szFormatW, lpLocale, argptr);
+  if (nChars < 0)
     return FALSE;
-  nChars = mx_vsnwprintf(szTempBufW, 512, szFormatW, argptr);
+  if (nChars < 0)
+    return FALSE;
   if (nChars > 0)
   {
-    if (nChars < 510)
-    {
-      bRet = ConcatN(szTempBufW, (size_t)nChars);
-    }
-    else
-    {
-      nBufSize = nChars * 2;
-      while (1)
-      {
-        szTempW = (LPWSTR)MX_MALLOC((SIZE_T)(nBufSize + 1) * sizeof(WCHAR));
-        if (szTempW == NULL)
-          return FALSE;
-        nChars = mx_vsnwprintf(szTempW, (SIZE_T)nBufSize, szFormatW, argptr);
-        if (nChars < nBufSize - 2)
-          break;
-        nBufSize += 4096;
-        MX_FREE(szTempW);
-      }
-      bRet = ConcatN(szTempW, (SIZE_T)nChars);
-      MX_FREE(szTempW);
-    }
-    if (bRet == FALSE)
+    szTempW = (LPWSTR)MX_MALLOC(((SIZE_T)nChars + 1) * sizeof(WCHAR));
+    if (szTempW == NULL)
       return FALSE;
+    nChars = _vsnwprintf_s_l(szTempW, (size_t)nChars + 1, _TRUNCATE, szFormatW, lpLocale, argptr);
+    if (nChars < 0)
+    {
+      MX_FREE(szTempW);
+      return FALSE;
+    }
+    if (ConcatN(szTempW, (SIZE_T)nChars) == FALSE)
+    {
+      MX_FREE(szTempW);
+      return FALSE;
+    }
+    MX_FREE(szTempW);
   }
   return TRUE;
 }
@@ -890,8 +843,8 @@ BOOL CStringA::InsertN(_In_reads_or_z_opt_(nSrcLen) LPCSTR szSrcA, _In_ SIZE_T n
   if (nInsertPosition > nLen)
     nInsertPosition = nLen;
   sA = szStrA + nInsertPosition;
-  MxMemMove(sA+nSrcLen, sA, (nLen - nInsertPosition));
-  MxMemCopy(sA, szSrcA, nSrcLen);
+  ::MxMemMove(sA+nSrcLen, sA, (nLen - nInsertPosition));
+  ::MxMemCopy(sA, szSrcA, nSrcLen);
   nLen += nSrcLen;
   szStrA[nLen] = 0;
   return TRUE;
@@ -911,7 +864,7 @@ VOID CStringA::Delete(_In_ SIZE_T nStartChar, _In_ SIZE_T nChars)
     k = nLen - nChars - nStartChar;
     sA = szStrA + nStartChar;
     nLen -= nChars;
-    MxMemMove(sA, sA + nChars, k);
+    ::MxMemMove(sA, sA + nChars, k);
     szStrA[nLen] = 0;
   }
   return;
@@ -982,7 +935,7 @@ BOOL CStringA::EnsureBuffer(_In_ SIZE_T nChars)
     szNewStrA = (LPSTR)MX_MALLOC(nChars);
     if (szNewStrA == NULL)
       return FALSE;
-    MxMemCopy(szNewStrA, szStrA, nLen);
+    ::MxMemCopy(szNewStrA, szStrA, nLen);
     Empty(); //<<--- to secure delete on derived classes
     szStrA = szNewStrA;
     nSize = nChars;
@@ -1036,7 +989,7 @@ BOOL CSecureStringA::Concat(_In_ LONGLONG nSrc)
   CHAR szTempA[128];
   BOOL bRet;
 
-  mx_sprintf_s(szTempA, MX_ARRAYLEN(szTempA), "%I64d", nSrc);
+  _snprintf_s(szTempA, MX_ARRAYLEN(szTempA), _TRUNCATE, "%I64d", nSrc);
   bRet = CStringA::Concat(szTempA);
   ::MxMemSet(szTempA, 0, sizeof(szTempA));
   return bRet;
@@ -1047,7 +1000,7 @@ BOOL CSecureStringA::Concat(_In_ ULONGLONG nSrc)
   CHAR szTempA[128];
   BOOL bRet;
 
-  mx_sprintf_s(szTempA, MX_ARRAYLEN(szTempA), "%I64u", nSrc);
+  _snprintf_s(szTempA, MX_ARRAYLEN(szTempA), _TRUNCATE, "%I64u", nSrc);
   bRet = CStringA::Concat(szTempA);
   ::MxMemSet(szTempA, 0, sizeof(szTempA));
   return bRet;
@@ -1055,43 +1008,35 @@ BOOL CSecureStringA::Concat(_In_ ULONGLONG nSrc)
 
 BOOL CSecureStringA::AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCWSTR szFormatW, _In_ va_list argptr)
 {
-  WCHAR szTempBufW[512], *szTempW;
-  int nChars, nBufSize;
-  BOOL bRet;
+  _locale_t lpLocale = (bUtf8 == FALSE) ? NULL : lpUtf8Locale;
+  LPWSTR szTempW;
+  int nChars, nChars2;
 
-  if (szFormatW == NULL)
+  nChars = _vscwprintf_l(szFormatW, lpLocale, argptr);
+  if (nChars < 0)
     return FALSE;
-  nChars = mx_vsnwprintf(szTempBufW, 512, szFormatW, argptr);
+  if (nChars < 0)
+    return FALSE;
   if (nChars > 0)
   {
-    if (nChars < 510)
-    {
-      bRet = ConcatN(szTempBufW, (size_t)nChars);
-      ::MxMemSet(szTempBufW, 0, sizeof(szTempBufW));
-    }
-    else
-    {
-      ::MxMemSet(szTempBufW, 0, sizeof(szTempBufW));
-      nBufSize = nChars * 2;
-      while (1)
-      {
-        szTempW = (LPWSTR)MX_MALLOC((SIZE_T)(nBufSize + 1) * sizeof(WCHAR));
-        if (szTempW == NULL)
-          return FALSE;
-        nChars = mx_vsnwprintf(szTempW, (SIZE_T)nBufSize, szFormatW, argptr);
-        if (nChars < nBufSize - 2)
-          break;
-        ::MxMemSet(szTempW, 0, (SIZE_T)(nBufSize + 1) * sizeof(WCHAR));
-        nBufSize += 4096;
-        MX_FREE(szTempW);
-      }
-      bRet = ConcatN(szTempW, (SIZE_T)nChars);
-      ::MxMemSet(szTempW, 0, (SIZE_T)(nBufSize + 1) * sizeof(WCHAR));
-      MX_FREE(szTempW);
-    }
-    ::MxMemSet(szTempBufW, 0, sizeof(szTempBufW));
-    if (bRet == FALSE)
+    szTempW = (LPWSTR)MX_MALLOC(((SIZE_T)nChars + 1) * sizeof(WCHAR));
+    if (szTempW == NULL)
       return FALSE;
+    nChars2 = _vsnwprintf_s_l(szTempW, (size_t)nChars + 1, _TRUNCATE, szFormatW, lpLocale, argptr);
+    if (nChars2 < 0)
+    {
+      ::MxMemSet(szTempW, 0, ((SIZE_T)nChars + 1) * sizeof(WCHAR));
+      MX_FREE(szTempW);
+      return FALSE;
+    }
+    if (ConcatN(szTempW, (SIZE_T)nChars2) == FALSE)
+    {
+      ::MxMemSet(szTempW, 0, ((SIZE_T)nChars + 1) * sizeof(WCHAR));
+      MX_FREE(szTempW);
+      return FALSE;
+    }
+    ::MxMemSet(szTempW, 0, ((SIZE_T)nChars + 1) * sizeof(WCHAR));
+    MX_FREE(szTempW);
   }
   return TRUE;
 }
@@ -1102,6 +1047,7 @@ CStringW::CStringW() : CBaseMemObj(), CNonCopyableObj()
 {
   szStrW = NULL;
   nSize = nLen = 0;
+  bUtf8 = FALSE;
   return;
 }
 
@@ -1139,6 +1085,17 @@ SIZE_T CStringW::GetLength() const
   return nLen;
 }
 
+BOOL CStringW::SetUtf8Mode(_In_ BOOL bEnable)
+{
+  if (bEnable != FALSE)
+  {
+    if (InitializeUtf8Locale() == FALSE)
+      return FALSE;
+  }
+  bUtf8 = bEnable;
+  return TRUE;
+}
+
 BOOL CStringW::Copy(_In_opt_z_ LPCSTR szSrcA)
 {
   Empty();
@@ -1166,36 +1123,48 @@ BOOL CStringW::Concat(_In_opt_z_ LPCSTR szSrcA)
 
 BOOL CStringW::ConcatN(_In_reads_or_z_opt_(nSrcLen) LPCSTR szSrcA, _In_ SIZE_T nSrcLen)
 {
-  MX_ANSI_STRING asStr;
-  MX_UNICODE_STRING usTemp;
-  SIZE_T k, nWideLen;
+  UINT nCodepage = (bUtf8 == FALSE) ? CP_ACP : CP_UTF8;
+  SIZE_T nOrigLen, nThisLen;
+  int nDestLen;
 
   if (nSrcLen == 0)
     return TRUE;
   if (szSrcA == NULL)
     return FALSE;
-  nWideLen = 0;
-  asStr.Buffer = (PSTR)szSrcA;
-  for (k = nSrcLen; k > 0; k -= (SIZE_T)(asStr.Length))
+  nOrigLen = nLen;
+  while (nSrcLen > 0)
   {
-    asStr.Length = asStr.MaximumLength = (USHORT)((k > 16384) ? 16384 : k);
-    nWideLen += ((SIZE_T)::MxRtlAnsiStringToUnicodeSize(&asStr) / sizeof(WCHAR)) - 1; //remove NUL char terminator
-    asStr.Buffer += (SIZE_T)(asStr.Length);
+    nThisLen = (nSrcLen > 16384) ? 16384 : nSrcLen;
+
+    nDestLen = ::MultiByteToWideChar(nCodepage, 0, szSrcA, (int)nThisLen, NULL, 0);
+    if (nDestLen <= 0)
+    {
+      nLen = nOrigLen;
+      szStrW[nLen] = 0;
+      return FALSE;
+    }
+
+    if (nLen + nDestLen + 1 < nLen || //overflow
+        EnsureBuffer(nLen + nDestLen + 1) == FALSE)
+    {
+      nLen = nOrigLen;
+      szStrW[nLen] = 0;
+      return FALSE;
+    }
+
+    nDestLen = ::MultiByteToWideChar(nCodepage, 0, szSrcA, (int)nThisLen, szStrW + nLen, nDestLen + 1);
+    if (nDestLen <= 0)
+    {
+      nLen = nOrigLen;
+      szStrW[nLen] = 0;
+      return FALSE;
+    }
+
+    nLen += (SIZE_T)nDestLen;
+    szSrcA += nThisLen;
+    nSrcLen -= nThisLen;
   }
-  if (nLen + nWideLen + 1 < nLen)
-    return FALSE; //overflow
-  if (EnsureBuffer(nLen + nWideLen + 1) == FALSE)
-    return FALSE;
-  asStr.Buffer = (PSTR)szSrcA;
-  for (k = nSrcLen; k > 0; k -= (SIZE_T)(asStr.Length))
-  {
-    asStr.Length = (USHORT)((k > 16384) ? 16384 : k); 
-    usTemp.Buffer = (PWSTR)(szStrW + nLen);
-    usTemp.MaximumLength = 32768;
-    ::MxRtlAnsiStringToUnicodeString(&usTemp, &asStr, FALSE);
-    asStr.Buffer += (SIZE_T)(asStr.Length);
-    nLen += (SIZE_T)(usTemp.Length) / sizeof(WCHAR);
-  }
+
   szStrW[nLen] = 0;
   return TRUE;
 }
@@ -1235,7 +1204,7 @@ BOOL CStringW::ConcatN(_In_reads_or_z_opt_(nSrcLen) LPCWSTR szSrcW, _In_ SIZE_T 
     return FALSE; //overflow
   if (EnsureBuffer(nLen + nSrcLen + 1) == FALSE)
     return FALSE;
-  MxMemCopy(szStrW + nLen, szSrcW, nSrcLen * sizeof(WCHAR));
+  ::MxMemCopy(szStrW + nLen, szSrcW, nSrcLen * sizeof(WCHAR));
   nLen += nSrcLen;
   szStrW[nLen] = 0;
   return TRUE;
@@ -1286,7 +1255,7 @@ BOOL CStringW::Concat(_In_ LONGLONG nSrc)
 {
   WCHAR szTempW[128];
 
-  mx_swprintf_s(szTempW, MX_ARRAYLEN(szTempW), L"%I64d", nSrc);
+  _snwprintf_s(szTempW, MX_ARRAYLEN(szTempW), _TRUNCATE, L"%I64d", nSrc);
   return Concat(szTempW);
 }
 
@@ -1300,7 +1269,7 @@ BOOL CStringW::Concat(_In_ ULONGLONG nSrc)
 {
   WCHAR szTempW[128];
 
-  mx_swprintf_s(szTempW, MX_ARRAYLEN(szTempW), L"%I64u", nSrc);
+  _snwprintf_s(szTempW, MX_ARRAYLEN(szTempW), _TRUNCATE, L"%I64u", nSrc);
   return Concat(szTempW);
 }
 
@@ -1372,61 +1341,58 @@ BOOL CStringW::AppendFormat(_In_z_ _Printf_format_string_ LPCWSTR szFormatW, ...
 
 BOOL CStringW::AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCSTR szFormatA, _In_ va_list argptr)
 {
-  CHAR szTempBufA[512], *szTempA;
-  int nChars, nBufSize;
-  BOOL bRet;
+  _locale_t lpLocale = (bUtf8 == FALSE) ? NULL : lpUtf8Locale;
+  LPSTR szTempA;
+  int nChars;
 
-  if (szFormatA == NULL)
+  nChars = _vscprintf_l(szFormatA, lpLocale, argptr);
+  if (nChars < 0)
     return FALSE;
-  nChars = mx_vsnprintf(szTempBufA, 512, szFormatA, argptr);
+  if (nChars < 0)
+    return FALSE;
   if (nChars > 0)
   {
-    if (nChars < 510)
-    {
-      bRet = ConcatN(szTempBufA, (size_t)nChars);
-    }
-    else
-    {
-      nBufSize = nChars * 2;
-      while (1)
-      {
-        szTempA = (LPSTR)MX_MALLOC((SIZE_T)(nBufSize + 1) * sizeof(CHAR));
-        if (szTempA == NULL)
-          return FALSE;
-        nChars = mx_vsnprintf(szTempA, (size_t)nBufSize, szFormatA, argptr);
-        if (nChars < nBufSize - 2)
-          break;
-        nBufSize += 4096;
-        MX_FREE(szTempA);
-      }
-      bRet = ConcatN(szTempA, (size_t)nChars);
-      MX_FREE(szTempA);
-    }
-    if (bRet == FALSE)
+    szTempA = (LPSTR)MX_MALLOC(((SIZE_T)nChars + 1) * sizeof(CHAR));
+    if (szTempA == NULL)
       return FALSE;
+    nChars = _vsnprintf_s_l(szTempA, (size_t)nChars + 1, _TRUNCATE, szFormatA, lpLocale, argptr);
+    if (nChars < 0)
+    {
+      MX_FREE(szTempA);
+      return FALSE;
+    }
+    if (ConcatN(szTempA, (SIZE_T)nChars) == FALSE)
+    {
+      MX_FREE(szTempA);
+      return FALSE;
+    }
+    MX_FREE(szTempA);
   }
   return TRUE;
 }
 
 BOOL CStringW::AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCWSTR szFormatW, _In_ va_list argptr)
 {
+  _locale_t lpLocale = (bUtf8 == FALSE) ? NULL : lpUtf8Locale;
   int nChars;
-  SIZE_T nBufSize;
 
   if (szFormatW == NULL)
     return FALSE;
-  nBufSize = 512;
-  while (1)
+  nChars = _vscwprintf_l(szFormatW, lpLocale, argptr);
+  if (nChars < 0)
+    return FALSE;
+  if (nChars > 0)
   {
-    if (EnsureBuffer(nLen + nBufSize + 1) == FALSE)
+    if (nLen + (SIZE_T)nChars + 1 < nLen)
+      return FALSE; //overflow
+    if (EnsureBuffer(nLen + (SIZE_T)nChars + 1) == FALSE)
       return FALSE;
-    nChars = mx_vsnwprintf(szStrW + nLen, (SIZE_T)nBufSize, szFormatW, argptr);
-    if ((SIZE_T)nChars < nBufSize - 2)
-      break;
-    nBufSize += 4096;
+    nChars = _vsnwprintf_s_l(szStrW + nLen, (size_t)nChars + 1, _TRUNCATE, szFormatW, lpLocale, argptr);
+    if (nChars < 0)
+      return FALSE;
+    nLen += (SIZE_T)nChars;
+    szStrW[nLen] = 0;
   }
-  nLen += (SIZE_T)nChars;
-  szStrW[nLen] = 0;
   return TRUE;
 }
 
@@ -1458,8 +1424,8 @@ BOOL CStringW::InsertN(_In_reads_or_z_opt_(nSrcLen) LPCWSTR szSrcW, _In_ SIZE_T 
   if (nInsertPosition > nLen)
     nInsertPosition = nLen;
   sW = szStrW + nInsertPosition;
-  MxMemMove(sW+nSrcLen, sW, (nLen - nInsertPosition) * sizeof(WCHAR));
-  MxMemCopy(sW, szSrcW, nSrcLen * sizeof(WCHAR));
+  ::MxMemMove(sW+nSrcLen, sW, (nLen - nInsertPosition) * sizeof(WCHAR));
+  ::MxMemCopy(sW, szSrcW, nSrcLen * sizeof(WCHAR));
   nLen += nSrcLen;
   szStrW[nLen] = 0;
   return TRUE;
@@ -1479,7 +1445,7 @@ VOID CStringW::Delete(_In_ SIZE_T nStartChar, _In_ SIZE_T nChars)
     k = nLen - nChars - nStartChar;
     sW = szStrW + nStartChar;
     nLen -= nChars;
-    MxMemMove(sW, sW + nChars, k * sizeof(WCHAR));
+    ::MxMemMove(sW, sW + nChars, k * sizeof(WCHAR));
     szStrW[nLen] = 0;
   }
   return;
@@ -1550,7 +1516,7 @@ BOOL CStringW::EnsureBuffer(_In_ SIZE_T nChars)
     szNewStrW = (LPWSTR)MX_MALLOC(nChars*sizeof(WCHAR));
     if (szNewStrW == NULL)
       return FALSE;
-    MxMemCopy(szNewStrW, szStrW, nLen*sizeof(WCHAR));
+    ::MxMemCopy(szNewStrW, szStrW, nLen*sizeof(WCHAR));
     Empty(); //<<--- to secure delete on derived classes
     szStrW = szNewStrW;
     nSize = nChars;
@@ -1567,6 +1533,15 @@ WCHAR& CStringW::operator[](_In_ SIZE_T nIndex)
 LPSTR CStringW::ToAnsi()
 {
   return Wide2Ansi(szStrW, nLen);
+}
+
+LPSTR CStringW::ToUTF8()
+{
+  CStringA cStrTempA;
+
+  if (FAILED(Utf8_Encode(cStrTempA, szStrW, nLen)))
+    return NULL;
+  return cStrTempA.Detach();
 }
 
 LPSTR CStringW::Wide2Ansi(_In_z_ LPCWSTR szStrW, _In_ SIZE_T nSrcLen)
@@ -1604,7 +1579,7 @@ BOOL CSecureStringW::Concat(_In_ LONGLONG nSrc)
   WCHAR szTempW[128];
   BOOL bRet;
 
-  mx_swprintf_s(szTempW, MX_ARRAYLEN(szTempW), L"%I64d", nSrc);
+  _snwprintf_s(szTempW, MX_ARRAYLEN(szTempW), _TRUNCATE, L"%I64d", nSrc);
   bRet = CStringW::Concat(szTempW);
   ::MxMemSet(szTempW, 0, sizeof(szTempW));
   return bRet;
@@ -1615,7 +1590,7 @@ BOOL CSecureStringW::Concat(_In_ ULONGLONG nSrc)
   WCHAR szTempW[128];
   BOOL bRet;
 
-  mx_swprintf_s(szTempW, MX_ARRAYLEN(szTempW), L"%I64u", nSrc);
+  _snwprintf_s(szTempW, MX_ARRAYLEN(szTempW), _TRUNCATE, L"%I64u", nSrc);
   bRet = CStringW::Concat(szTempW);
   ::MxMemSet(szTempW, 0, sizeof(szTempW));
   return bRet;
@@ -1623,42 +1598,35 @@ BOOL CSecureStringW::Concat(_In_ ULONGLONG nSrc)
 
 BOOL CSecureStringW::AppendFormatV(_In_z_ _Printf_format_string_params_(1) LPCSTR szFormatA, _In_ va_list argptr)
 {
-  CHAR szTempBufA[512], *szTempA;
-  int nChars, nBufSize;
-  BOOL bRet;
+  _locale_t lpLocale = (bUtf8 == FALSE) ? NULL : lpUtf8Locale;
+  LPSTR szTempA;
+  int nChars, nChars2;
 
-  if (szFormatA == NULL)
+  nChars = _vscprintf_l(szFormatA, lpLocale, argptr);
+  if (nChars < 0)
     return FALSE;
-  nChars = mx_vsnprintf(szTempBufA, 512, szFormatA, argptr);
+  if (nChars < 0)
+    return FALSE;
   if (nChars > 0)
   {
-    if (nChars < 510)
-    {
-      bRet = ConcatN(szTempBufA, (size_t)nChars);
-      ::MxMemSet(szTempBufA, 0, sizeof(szTempBufA));
-    }
-    else
-    {
-      ::MxMemSet(szTempBufA, 0, sizeof(szTempBufA));
-      nBufSize = nChars * 2;
-      while (1)
-      {
-        szTempA = (LPSTR)MX_MALLOC((SIZE_T)(nBufSize + 1) * sizeof(CHAR));
-        if (szTempA == NULL)
-          return FALSE;
-        nChars = mx_vsnprintf(szTempA, (size_t)nBufSize, szFormatA, argptr);
-        if (nChars < nBufSize - 2)
-          break;
-        ::MxMemSet(szTempA, 0, (SIZE_T)(nBufSize + 1) * sizeof(CHAR));
-        nBufSize += 4096;
-        MX_FREE(szTempA);
-      }
-      bRet = ConcatN(szTempA, (size_t)nChars);
-      ::MxMemSet(szTempA, 0, (SIZE_T)(nBufSize + 1) * sizeof(CHAR));
-      MX_FREE(szTempA);
-    }
-    if (bRet == FALSE)
+    szTempA = (LPSTR)MX_MALLOC(((SIZE_T)nChars + 1) * sizeof(CHAR));
+    if (szTempA == NULL)
       return FALSE;
+    nChars2 = _vsnprintf_s_l(szTempA, (size_t)nChars + 1, _TRUNCATE, szFormatA, lpLocale, argptr);
+    if (nChars2 < 0)
+    {
+      ::MxMemSet(szTempA, 0, ((SIZE_T)nChars + 1) * sizeof(CHAR));
+      MX_FREE(szTempA);
+      return FALSE;
+    }
+    if (ConcatN(szTempA, (SIZE_T)nChars2) == FALSE)
+    {
+      ::MxMemSet(szTempA, 0, ((SIZE_T)nChars + 1) * sizeof(CHAR));
+      MX_FREE(szTempA);
+      return FALSE;
+    }
+    ::MxMemSet(szTempA, 0, ((SIZE_T)nChars + 1) * sizeof(CHAR));
+    MX_FREE(szTempA);
   }
   return TRUE;
 }
@@ -1684,17 +1652,28 @@ static int __cdecl InitializeTables()
     sUnicodeStr.MaximumLength = (USHORT)sizeof(chW);
     ::MxRtlAnsiStringToUnicodeString(&sUnicodeStr, &sAnsiStr, FALSE);
     aToUnicodeChar[i] = (sUnicodeStr.Length == 2) ? chW[0] : (WCHAR)i;
-
-    for (SIZE_T j = 0; j < (SIZE_T)(sUnicodeStr.Length) / sizeof(WCHAR); j++)
-      chW[j] = ::MxRtlDowncaseUnicodeChar(chW[j]);
-    sAnsiStr.Length = 0;
-    sAnsiStr.MaximumLength = (USHORT)sizeof(chA);
-    ::MxRtlUnicodeStringToAnsiString(&sAnsiStr, &sUnicodeStr, FALSE);
-    aToLowerChar[i] = (sAnsiStr.Length == 1) ? chA[0] : (CHAR)i;
   }
 
   //done
   return 0;
+}
+
+static BOOL InitializeUtf8Locale()
+{
+  static LONG volatile nMutex = 0;
+
+  if (lpUtf8Locale == NULL)
+  {
+    MX::CFastLock cLock(&nMutex);
+
+    if (lpUtf8Locale == NULL)
+    {
+      lpUtf8Locale = _wcreate_locale(LC_ALL, L".UTF8");
+      if (lpUtf8Locale == NULL)
+        lpUtf8Locale = (_locale_t)1;
+    }
+  }
+  return (lpUtf8Locale != NULL && lpUtf8Locale != (_locale_t)1);
 }
 
 static void dblconv_invalid_parameter(const wchar_t * expression, const wchar_t * function, const wchar_t * file,

@@ -21,6 +21,7 @@
 #include "..\..\Include\Crypto\MessageDigest.h"
 #include "..\..\Include\FnvHash.h"
 #include "..\..\Include\Strings\Utf8.h"
+#include <stdio.h>
  /*
 #include "..\..\Include\Http\HttpCommon.h"
 #include "..\..\Include\Crypto\Base64.h"
@@ -244,13 +245,12 @@ HRESULT CHttpAuthDigest::GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCW
     nCNonce = fnv_64a_buf(&lp, sizeof(lp), nCNonce);
     dw = ::GetTickCount();
     nCNonce = fnv_64a_buf(&dw, sizeof(dw), nCNonce);
-
-    mx_sprintf_s(szCNonceA, MX_ARRAYLEN(szCNonceA), "%16Ix", nCNonce);
+    sprintf_s(szCNonceA, MX_ARRAYLEN(szCNonceA), "%16I64x", nCNonce);
   }
 
   //nonce count
   _nNonceCount = _InterlockedIncrement(&nNonceCount);
-  mx_sprintf_s(szNonceCountA, MX_ARRAYLEN(szNonceCountA), ":%08lx:", (ULONG)_nNonceCount);
+  sprintf_s(szNonceCountA, MX_ARRAYLEN(szNonceCountA), ":%08lx:", (ULONG)_nNonceCount);
 
   hRes = Encode(cStrNonceA, (LPCWSTR)cStrNonceW, FALSE, bCharsetIsUtf8);
   if (SUCCEEDED(hRes))
