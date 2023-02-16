@@ -3,6 +3,9 @@ name: Cross Compile for 1.1.1
 
 on: [pull_request, push]
 
+permissions:
+  contents: read
+
 jobs:
   cross-compilation:
     strategy:
@@ -114,7 +117,7 @@ jobs:
             tests: none
           }
         ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
     - name: install packages
       run: |
@@ -122,7 +125,7 @@ jobs:
         sudo apt-get -yq --force-yes install \
             gcc-${{ matrix.platform.arch }} \
             ${{ matrix.platform.libs }}
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: config
       run: |

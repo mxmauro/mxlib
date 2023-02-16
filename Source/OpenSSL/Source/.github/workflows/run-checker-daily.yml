@@ -4,7 +4,10 @@ name: Run-checker daily for 1.1.1
 
 on:
   schedule:
-  - cron: '42 6 * * *'
+    - cron: '42 6 * * *'
+permissions:
+  contents: read
+
 jobs:
   run-checker:
     strategy:
@@ -114,7 +117,7 @@ jobs:
         ]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: config
       run: CC=clang ./config --strict-warnings ${{ matrix.opt }}
     - name: config dump
