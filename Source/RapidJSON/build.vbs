@@ -1,8 +1,3 @@
-'
-' Copyright (C) 2014-2020 Mauro H. Leggieri, Buenos Aires, Argentina.
-' All rights reserved.
-'
-
 Option Explicit
 Dim oFso
 Dim szScriptPath
