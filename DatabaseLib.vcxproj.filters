@@ -29,7 +29,7 @@
     <ClInclude Include="Include\Database\MySqlConnector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Database\Internals\SQLite3\config.h">
+    <ClInclude Include="Source\Database\Internals\SQLite3\sqlite_cfg.h">
       <Filter>Source Files\Internals\SQLite3</Filter>
     </ClInclude>
     <ClInclude Include="Source\Database\Internals\SQLite3\sqlite3.h">

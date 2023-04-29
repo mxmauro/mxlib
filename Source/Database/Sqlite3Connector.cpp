@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 #include "..\..\Include\Database\SQLite3Connector.h"
-#include "Internals\SQLite3\config.h"
+#include "Internals\SQLite3\sqlite_cfg.h"
 #include "Internals\SQLite3\sqlite3.h"
 #include "..\..\Include\Finalizer.h"
 #include "..\..\Include\WaitableObjects.h"

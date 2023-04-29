@@ -38,7 +38,7 @@
     <ClInclude Include="Source\Database\Internals\MySQL\mysql\client_plugin.h" />
     <ClInclude Include="Source\Database\Internals\MySQL\mysql\plugin_auth.h" />
     <ClInclude Include="Source\Database\Internals\MySQL\mysql\plugin_auth_common.h" />
-    <ClInclude Include="Source\Database\Internals\SQLite3\config.h" />
+    <ClInclude Include="Source\Database\Internals\SQLite3\sqlite_cfg.h" />
     <ClInclude Include="Source\Database\Internals\SQLite3\sqlite3.h" />
     <ClInclude Include="Source\Database\Internals\SQLite3\sqlite3ext.h" />
   </ItemGroup>
