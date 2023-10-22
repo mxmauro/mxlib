@@ -1,7 +1,7 @@
 /* test_stream.cc - Test basic streaming functionality
    part of the minizip-ng project
 
-   Copyright (C) 2018-2022 Nathan Moinvaziri
+   Copyright (C) Nathan Moinvaziri
      https://github.com/zlib-ng/minizip-ng
 
    This program is distributed under the terms of the same license as zlib.
@@ -32,7 +32,8 @@ static void test_stream_find_begin(const char *name, int32_t count, const uint8_
     ASSERT_NE(find_cb, nullptr);
 
     for (i = 0; i < count; i++) {
-        mz_stream_mem_create(&mem_stream);
+        mem_stream = mz_stream_mem_create();
+        ASSERT_NE(mem_stream, nullptr);
         mz_stream_mem_open(mem_stream, NULL, MZ_OPEN_MODE_CREATE);
 
         /* Find when the needle is at the beginning of the stream */
@@ -78,7 +79,8 @@ static void test_stream_find_end(const char *name, int32_t count, const uint8_t 
     ASSERT_NE(find_cb, nullptr);
 
     for (i = 0; i < count; i++) {
-        mz_stream_mem_create(&mem_stream);
+        mem_stream = mz_stream_mem_create();
+        ASSERT_NE(mem_stream, nullptr);
         mz_stream_mem_open(mem_stream, NULL, MZ_OPEN_MODE_CREATE);
 
         /* Find when the needle is at the end of the stream */
@@ -123,7 +125,8 @@ static void test_stream_find_middle(const char *name, int32_t count, const uint8
     ASSERT_NE(find_cb, nullptr);
 
     for (i = 0; i < count; i++) {
-        mz_stream_mem_create(&mem_stream);
+        mem_stream = mz_stream_mem_create();
+        ASSERT_NE(mem_stream, nullptr);
         mz_stream_mem_open(mem_stream, NULL, MZ_OPEN_MODE_CREATE);
 
         /* Find when the neddle is in the middle of the stream */
@@ -168,7 +171,8 @@ static void test_stream_find_middle_odd(const char *name, int32_t count, const u
     ASSERT_NE(find_cb, nullptr);
 
     for (i = 0; i < count; i++) {
-        mz_stream_mem_create(&mem_stream);
+        mem_stream = mz_stream_mem_create();
+        ASSERT_NE(mem_stream, nullptr);
         mz_stream_mem_open(mem_stream, NULL, MZ_OPEN_MODE_CREATE);
 
         /* Find when the needle is in the middle of the stream */
