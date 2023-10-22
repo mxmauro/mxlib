@@ -1,7 +1,7 @@
 /* mz_strm_zlib.c -- Stream for zlib inflate/deflate
    part of the minizip-ng project
 
-   Copyright (C) 2010-2021 Nathan Moinvaziri
+   Copyright (C) Nathan Moinvaziri
       https://github.com/zlib-ng/minizip-ng
 
    This program is distributed under the terms of the same license as zlib.
@@ -143,8 +143,7 @@ int32_t mz_stream_zlib_read(void *stream, void *buf, int32_t size) {
     int32_t read = 0;
     int32_t err = Z_OK;
 
-
-    zlib->zstream.next_out = (Bytef*)buf;
+    zlib->zstream.next_out = (Bytef *)buf;
     zlib->zstream.avail_out = (uInt)size;
 
     do {
@@ -167,7 +166,7 @@ int32_t mz_stream_zlib_read(void *stream, void *buf, int32_t size) {
         total_out_before = zlib->zstream.total_out;
 
         err = ZLIB_PREFIX(inflate)(&zlib->zstream, Z_SYNC_FLUSH);
-        if ((err >= Z_OK) && (zlib->zstream.msg != NULL)) {
+        if ((err >= Z_OK) && (zlib->zstream.msg)) {
             zlib->error = Z_DATA_ERROR;
             break;
         }
@@ -191,6 +190,8 @@ int32_t mz_stream_zlib_read(void *stream, void *buf, int32_t size) {
             break;
         }
     } while (zlib->zstream.avail_out > 0);
+
+    MZ_UNUSED(total_in);
 
     if (zlib->error != 0) {
         /* Zlib errors are compatible with MZ */
@@ -259,7 +260,7 @@ int32_t mz_stream_zlib_write(void *stream, const void *buf, int32_t size) {
     mz_stream_zlib *zlib = (mz_stream_zlib *)stream;
     int32_t err = MZ_OK;
 
-    zlib->zstream.next_in = (Bytef*)(intptr_t)buf;
+    zlib->zstream.next_in = (Bytef *)(intptr_t)buf;
     zlib->zstream.avail_in = (uInt)size;
 
     err = mz_stream_zlib_deflate(stream, Z_NO_FLUSH);
@@ -360,29 +361,23 @@ int32_t mz_stream_zlib_set_prop_int64(void *stream, int32_t prop, int64_t value)
     return MZ_OK;
 }
 
-void *mz_stream_zlib_create(void **stream) {
-    mz_stream_zlib *zlib = NULL;
-
-    zlib = (mz_stream_zlib *)MZ_ALLOC(sizeof(mz_stream_zlib));
-    if (zlib != NULL) {
-        memset(zlib, 0, sizeof(mz_stream_zlib));
+void *mz_stream_zlib_create(void) {
+    mz_stream_zlib *zlib = zlib = (mz_stream_zlib *)calloc(1, sizeof(mz_stream_zlib));
+    if (zlib) {
         zlib->stream.vtbl = &mz_stream_zlib_vtbl;
         zlib->level = Z_DEFAULT_COMPRESSION;
         zlib->window_bits = -MAX_WBITS;
     }
-    if (stream != NULL)
-        *stream = zlib;
-
     return zlib;
 }
 
 void mz_stream_zlib_delete(void **stream) {
     mz_stream_zlib *zlib = NULL;
-    if (stream == NULL)
+    if (!stream)
         return;
     zlib = (mz_stream_zlib *)*stream;
-    if (zlib != NULL)
-        MZ_FREE(zlib);
+    if (zlib)
+        free(zlib);
     *stream = NULL;
 }
 
