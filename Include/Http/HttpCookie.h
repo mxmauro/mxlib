@@ -41,9 +41,10 @@ namespace MX {
 class CHttpCookie : public virtual TRefCounted<CBaseMemObj>
 {
 public:
-  typedef enum {
-    SameSiteNone, SameSiteLax, SameSiteStrict
-  } eSameSite;
+  enum class eSameSite
+  {
+    None, Lax, Strict
+  };
 
 public:
   CHttpCookie();

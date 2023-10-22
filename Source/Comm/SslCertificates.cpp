@@ -158,7 +158,7 @@ HRESULT CSslCertificate::IsDateValid(_Out_opt_ PULONG lpnRemainingSecs)
     return S_FALSE;
   if (lpnRemainingSecs != NULL)
   {
-    LONGLONG llSecs = cDtNow.GetDiff(cDt, CDateTime::UnitsSeconds);
+    LONGLONG llSecs = cDtNow.GetDiff(cDt, CDateTime::eUnits::Seconds);
     if (llSecs >= 0)
     {
       *lpnRemainingSecs = (llSecs <= 0xFFFFFFFFi64) ? (ULONG)llSecs : 0xFFFFFFFF;
@@ -179,13 +179,11 @@ BOOL CSslCertificate::IsCaCert() const
 
 CSslCertificateCrl::CSslCertificateCrl() : TRefCounted<CBaseMemObj>()
 {
-  lpX509Crl = NULL;
   return;
 }
 
 CSslCertificateCrl::CSslCertificateCrl(_In_ const CSslCertificateCrl &cSrc) throw(...) : TRefCounted<CBaseMemObj>()
 {
-  lpX509Crl = NULL;
   operator=(cSrc);
   return;
 }
@@ -197,7 +195,7 @@ CSslCertificateCrl::~CSslCertificateCrl()
   return;
 }
 
-CSslCertificateCrl& CSslCertificateCrl::operator=(const CSslCertificateCrl &cSrc) throw(...)
+CSslCertificateCrl& CSslCertificateCrl::operator=(_In_ const CSslCertificateCrl &cSrc) throw(...)
 {
   if (this != &cSrc)
   {
@@ -355,22 +353,22 @@ static HRESULT GetName(_In_ X509_NAME *lpName, _In_ MX::CSslCertificate::eInform
   obj = NULL;
   switch (nInfo)
   {
-    case MX::CSslCertificate::InfoOrganization:
+    case MX::CSslCertificate::eInformation::Organization:
       obj = OBJ_nid2obj(NID_organizationName);
       break;
-    case MX::CSslCertificate::InfoUnit:
+    case MX::CSslCertificate::eInformation::Unit:
       obj = OBJ_nid2obj(NID_organizationalUnitName);
       break;
-    case MX::CSslCertificate::InfoCommonName:
+    case MX::CSslCertificate::eInformation::CommonName:
       obj = OBJ_nid2obj(NID_commonName);
       break;
-    case MX::CSslCertificate::InfoCountry:
+    case MX::CSslCertificate::eInformation::Country:
       obj = OBJ_nid2obj(NID_countryName);
       break;
-    case MX::CSslCertificate::InfoStateProvince:
+    case MX::CSslCertificate::eInformation::StateProvince:
       obj = OBJ_nid2obj(NID_stateOrProvinceName);
       break;
-    case MX::CSslCertificate::InfoTown:
+    case MX::CSslCertificate::eInformation::Town:
       obj = OBJ_nid2obj(NID_localityName);
       break;
   }

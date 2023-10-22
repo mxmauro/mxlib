@@ -166,7 +166,7 @@ HRESULT CMessageDigest::BeginDigest(_In_ MX::CMessageDigest::eAlgorithm nAlgorit
     return E_POINTER;
   if (nKeyLen > 0x7FFFFFFFF)
     return E_INVALIDARG;
-  if (nKeyLen > 0 && nAlgorithm == MX::CMessageDigest::AlgorithmCRC32)
+  if (nKeyLen > 0 && nAlgorithm == MX::CMessageDigest::eAlgorithm::CRC32)
     return MX_E_Unsupported;
   hRes = Internals::OpenSSL::Init();
   if (FAILED(hRes))
@@ -189,67 +189,67 @@ HRESULT CMessageDigest::BeginDigest(_In_ MX::CMessageDigest::eAlgorithm nAlgorit
   //get digest manager
   switch (nAlgorithm)
   {
-    case MX::CMessageDigest::AlgorithmCRC32:
+    case MX::CMessageDigest::eAlgorithm::CRC32:
       md_data->lpMd = &EVP_MD_Crc32;
       break;
 
-    case MX::CMessageDigest::AlgorithmMD5:
+    case MX::CMessageDigest::eAlgorithm::MD5:
       md_data->lpMd = EVP_md5();
       break;
 
-    case MX::CMessageDigest::AlgorithmMD4:
+    case MX::CMessageDigest::eAlgorithm::MD4:
       md_data->lpMd = EVP_md4();
       break;
 
-    case MX::CMessageDigest::AlgorithmSHA1:
+    case MX::CMessageDigest::eAlgorithm::SHA1:
       md_data->lpMd = EVP_sha1();
       break;
 
-    case MX::CMessageDigest::AlgorithmSHA224:
+    case MX::CMessageDigest::eAlgorithm::SHA224:
       md_data->lpMd = EVP_sha224();
       break;
 
-    case MX::CMessageDigest::AlgorithmSHA256:
+    case MX::CMessageDigest::eAlgorithm::SHA256:
       md_data->lpMd = EVP_sha256();
       break;
 
-    case MX::CMessageDigest::AlgorithmSHA384:
+    case MX::CMessageDigest::eAlgorithm::SHA384:
       md_data->lpMd = EVP_sha384();
       break;
 
-    case MX::CMessageDigest::AlgorithmSHA512:
+    case MX::CMessageDigest::eAlgorithm::SHA512:
       md_data->lpMd = EVP_sha512();
       break;
 
-    case MX::CMessageDigest::AlgorithmSHA512_224:
+    case MX::CMessageDigest::eAlgorithm::SHA512_224:
       md_data->lpMd = EVP_sha512_224();
       break;
 
-    case MX::CMessageDigest::AlgorithmSHA512_256:
+    case MX::CMessageDigest::eAlgorithm::SHA512_256:
       md_data->lpMd = EVP_sha512_256();
       break;
 
-    case MX::CMessageDigest::AlgorithmSHA3_224:
+    case MX::CMessageDigest::eAlgorithm::SHA3_224:
       md_data->lpMd = EVP_sha3_224();
       break;
 
-    case MX::CMessageDigest::AlgorithmSHA3_256:
+    case MX::CMessageDigest::eAlgorithm::SHA3_256:
       md_data->lpMd = EVP_sha3_256();
       break;
 
-    case MX::CMessageDigest::AlgorithmSHA3_384:
+    case MX::CMessageDigest::eAlgorithm::SHA3_384:
       md_data->lpMd = EVP_sha3_384();
       break;
 
-    case MX::CMessageDigest::AlgorithmSHA3_512:
+    case MX::CMessageDigest::eAlgorithm::SHA3_512:
       md_data->lpMd = EVP_sha3_512();
       break;
 
-    case MX::CMessageDigest::AlgorithmBlake2s_256:
+    case MX::CMessageDigest::eAlgorithm::Blake2s_256:
       md_data->lpMd = EVP_blake2s256();
       break;
 
-    case MX::CMessageDigest::AlgorithmBlake2b_512:
+    case MX::CMessageDigest::eAlgorithm::Blake2b_512:
       md_data->lpMd = EVP_blake2b512();
       break;
 
@@ -426,16 +426,16 @@ MX::CMessageDigest::eAlgorithm CMessageDigest::GetAlgorithm(_In_z_ LPCSTR szAlgo
 
   if (StrCompareA(szAlgorithmA, "crc32", TRUE) == 0)
   {
-    return MX::CMessageDigest::AlgorithmCRC32;
+    return MX::CMessageDigest::eAlgorithm::CRC32;
   }
   else if (StrNCompareA(szAlgorithmA, "md", 2, TRUE) == 0)
   {
     szAlgorithmA += 2;
 
     if (StrCompareA(szAlgorithmA, "5") == 0)
-      return MX::CMessageDigest::AlgorithmMD5;
+      return MX::CMessageDigest::eAlgorithm::MD5;
     if (StrCompareA(szAlgorithmA, "4") == 0)
-      return MX::CMessageDigest::AlgorithmMD4;
+      return MX::CMessageDigest::eAlgorithm::MD4;
   }
   else if (StrNCompareA(szAlgorithmA, "sha", 3, TRUE) == 0)
   {
@@ -444,38 +444,38 @@ MX::CMessageDigest::eAlgorithm CMessageDigest::GetAlgorithm(_In_z_ LPCSTR szAlgo
       szAlgorithmA++;
 
     if (StrCompareA(szAlgorithmA, "1") == 0)
-      return MX::CMessageDigest::AlgorithmSHA1;
+      return MX::CMessageDigest::eAlgorithm::SHA1;
     if (StrCompareA(szAlgorithmA, "2") == 0 || StrCompareA(szAlgorithmA, "256") == 0)
-      return MX::CMessageDigest::AlgorithmSHA256;
+      return MX::CMessageDigest::eAlgorithm::SHA256;
     if (StrCompareA(szAlgorithmA, "224") == 0)
-      return MX::CMessageDigest::AlgorithmSHA224;
+      return MX::CMessageDigest::eAlgorithm::SHA224;
     if (StrCompareA(szAlgorithmA, "384") == 0)
-      return MX::CMessageDigest::AlgorithmSHA384;
+      return MX::CMessageDigest::eAlgorithm::SHA384;
     if (StrCompareA(szAlgorithmA, "512") == 0)
-      return MX::CMessageDigest::AlgorithmSHA512;
+      return MX::CMessageDigest::eAlgorithm::SHA512;
     if (StrCompareA(szAlgorithmA, "512-256") == 0)
-      return MX::CMessageDigest::AlgorithmSHA512_256;
+      return MX::CMessageDigest::eAlgorithm::SHA512_256;
     if (StrCompareA(szAlgorithmA, "512-224") == 0)
-      return MX::CMessageDigest::AlgorithmSHA512_224;
+      return MX::CMessageDigest::eAlgorithm::SHA512_224;
     if (StrCompareA(szAlgorithmA, "3") == 0 || StrCompareA(szAlgorithmA, "3-256") == 0)
-      return MX::CMessageDigest::AlgorithmSHA3_256;
+      return MX::CMessageDigest::eAlgorithm::SHA3_256;
     if (StrCompareA(szAlgorithmA, "3-224") == 0)
-      return MX::CMessageDigest::AlgorithmSHA3_224;
+      return MX::CMessageDigest::eAlgorithm::SHA3_224;
     if (StrCompareA(szAlgorithmA, "3-384") == 0)
-      return MX::CMessageDigest::AlgorithmSHA3_384;
+      return MX::CMessageDigest::eAlgorithm::SHA3_384;
     if (StrCompareA(szAlgorithmA, "3-512") == 0)
-      return MX::CMessageDigest::AlgorithmSHA3_512;
+      return MX::CMessageDigest::eAlgorithm::SHA3_512;
   }
   else if (StrNCompareA(szAlgorithmA, "blake2", 6, TRUE) == 0)
   {
     szAlgorithmA += 6;
 
     if (StrCompareA(szAlgorithmA, "s-256") == 0)
-      return MX::CMessageDigest::AlgorithmBlake2s_256;
+      return MX::CMessageDigest::eAlgorithm::Blake2s_256;
     if (StrCompareA(szAlgorithmA, "b-512") == 0)
-      return MX::CMessageDigest::AlgorithmBlake2b_512;
+      return MX::CMessageDigest::eAlgorithm::Blake2b_512;
   }
-  return (MX::CMessageDigest::eAlgorithm) - 1;
+  return MX::CMessageDigest::eAlgorithm::Invalid;
 }
 
 VOID CMessageDigest::CleanUp(_In_ BOOL bZeroData)

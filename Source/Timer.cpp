@@ -28,6 +28,7 @@ CTimer::CTimer() : CBaseMemObj()
   if (!NT_SUCCESS(::MxNtQueryPerformanceCounter((PLARGE_INTEGER)&uliStart, (PLARGE_INTEGER)&uliFrequency)))
   {
     uliStart.HighPart = 0;
+#pragma warning(suppress : 28159)
     uliStart.LowPart = ::GetTickCount();
     uliFrequency.QuadPart = 0ui64;
   }
@@ -68,6 +69,7 @@ VOID CTimer::Mark()
   }
   else
   {
+#pragma warning(suppress : 28159)
     uliMark.LowPart = ::GetTickCount();
   }
   return;

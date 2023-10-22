@@ -171,16 +171,16 @@ public:
   };
 
 private:
-  HRESULT OnQuerySslCertificates(_In_ CHttpServer *lpHttp, _Outptr_result_maybenull_ CSslCertificate **lplpSslCert,
-                                 _Outptr_result_maybenull_ CEncryptionKey **lplpSslPrivKey,
-                                 _Outptr_result_maybenull_ CDhParam **lplpDhParam);
+  HRESULT OnQuerySslCertificates(_In_ CHttpServer *lpHttp, _Outptr_opt_result_maybenull_ CSslCertificate **lplpSslCert,
+                                 _Outptr_opt_result_maybenull_ CEncryptionKey **lplpSslPrivKey,
+                                 _Outptr_opt_result_maybenull_ CDhParam **lplpDhParam);
   HRESULT OnRequestHeadersReceived(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest,
-                                   _Outptr_ _Maybenull_ CHttpBodyParserBase **lplpBodyParser);
+                                   _Outptr_result_maybenull_ CHttpBodyParserBase **lplpBodyParser);
   VOID OnRequestCompleted(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest);
   HRESULT OnWebSocketRequestReceived(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest,
                                      _In_ int nVersion, _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount,
                                      _Out_ int &nSelectedProtocol, _In_ TArrayList<int> &aSupportedVersions,
-                                     _Out_ _Maybenull_ CWebSocket **lplpWebSocket);
+                                     _Outptr_result_maybenull_ CWebSocket **lplpWebSocket);
   HRESULT OnCustomErrorPage(_In_ CHttpServer *lpHttp, _Inout_ CSecureStringA &cStrBodyA, _In_ LONG nStatusCode,
                             _In_ LPCSTR szStatusMessageA, _In_z_ LPCSTR szAdditionalExplanationA);
   VOID OnRequestDestroyed(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest);

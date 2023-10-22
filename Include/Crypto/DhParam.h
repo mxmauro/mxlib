@@ -32,16 +32,17 @@ namespace MX {
 class CDhParam : public virtual TRefCounted<CBaseMemObj>
 {
 public:
-  typedef enum {
-    AlgorithmRSA = 0, AlgorithmED25519, AlgorithmED448
-  } eAlgorithm;
+  enum class eAlgorithm
+  {
+    RSA = 0, ED25519, ED448
+  };
 
 public:
   CDhParam();
   CDhParam(_In_ const CDhParam &cSrc) throw(...);
   ~CDhParam();
 
-  CDhParam &operator=(CDhParam const &cSrc) throw(...);
+  CDhParam &operator=(_In_ CDhParam const &cSrc) throw(...);
 
   HRESULT Generate(_In_ SIZE_T nBitsCount, _In_opt_ BOOL bUseDSA = FALSE);
   SIZE_T GetBitsCount() const;
@@ -56,7 +57,7 @@ public:
     };
 
 private:
-  DH *lpDH;
+  DH *lpDH{ NULL };
 };
 
 } //namespace MX

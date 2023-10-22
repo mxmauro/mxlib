@@ -30,9 +30,10 @@ namespace MX {
 
 namespace Http {
 
-typedef enum {
-  BrowserOther, BrowserIE, BrowserIE6, BrowserOpera, BrowserGecko, BrowserChrome, BrowserSafari, BrowserKonqueror
-} eBrowser;
+enum class eBrowser
+{
+  Other, IE, IE6, Opera, Gecko, Chrome, Safari, Konqueror
+};
 
 } //namespace Http
 

@@ -21,6 +21,7 @@
 #define _MX_HTTPAUTHDIGEST_H
 
 #include "HttpAuthBase.h"
+#include "..\Crypto\MessageDigest.h"
 
 //-----------------------------------------------------------
 
@@ -77,7 +78,7 @@ public:
     return bUserHash;
     };
 
-  int GetAlgorithm() const
+  MX::CMessageDigest::eAlgorithm GetAlgorithm() const
     {
     return nAlgorithm;
     };
@@ -94,10 +95,11 @@ public:
 
 private:
   CStringW cStrRealmW, cStrDomainW, cStrNonceW, cStrOpaqueW;
-  BOOL bStale, bAlgorithmSession, bUserHash;
-  int nAlgorithm, nQop;
-  BOOL bCharsetIsUtf8;
-  LONG volatile nNonceCount;
+  BOOL bStale{ FALSE }, bAlgorithmSession{ FALSE }, bUserHash{ FALSE };
+  MX::CMessageDigest::eAlgorithm nAlgorithm{ MX::CMessageDigest::eAlgorithm::MD5 };
+  int nQop{ 0 };
+  BOOL bCharsetIsUtf8{ FALSE };
+  LONG volatile nNonceCount{ 0 };
 };
 
 } //namespace MX

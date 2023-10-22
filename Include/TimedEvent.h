@@ -33,11 +33,11 @@ typedef Callback <VOID (_In_ LONG nTimerId, _In_ LPVOID lpUserData, _In_opt_ LPB
 
 //-----------------------------------------------------------
 
-HRESULT SetTimeout(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In_ OnTimeoutCallback cCallback,
-                   _In_opt_ LPVOID lpUserData);
-HRESULT SetInterval(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In_ OnTimeoutCallback cCallback,
-                    _In_opt_ LPVOID lpUserData);
-VOID Clear(_Inout_ LONG volatile *lpnTimerId);
+HRESULT SetTimeout(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs,
+                   _In_ OnTimeoutCallback cCallback, _In_opt_ LPVOID lpUserData);
+HRESULT SetInterval(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs,
+                    _In_ OnTimeoutCallback cCallback, _In_opt_ LPVOID lpUserData);
+VOID Clear(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId);
 
 } //namespace TimedEvent
 

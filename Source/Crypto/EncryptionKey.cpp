@@ -27,13 +27,11 @@ namespace MX {
 
 CEncryptionKey::CEncryptionKey() : TRefCounted<CBaseMemObj>()
 {
-  lpKey = NULL;
   return;
 }
 
 CEncryptionKey::CEncryptionKey(_In_ const CEncryptionKey &cSrc) throw(...) : TRefCounted<CBaseMemObj>()
 {
-  lpKey = NULL;
   operator=(cSrc);
   return;
 }

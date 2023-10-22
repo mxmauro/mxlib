@@ -25,7 +25,7 @@ namespace MX {
 
 CHttpHeaderGenTransferEncoding::CHttpHeaderGenTransferEncoding() : CHttpHeaderBase()
 {
-  nEncoding = EncodingUnsupported;
+  nEncoding = eEncoding::Unsupported;
   return;
 }
 
@@ -36,7 +36,7 @@ CHttpHeaderGenTransferEncoding::~CHttpHeaderGenTransferEncoding()
 
 HRESULT CHttpHeaderGenTransferEncoding::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  eEncoding _nEncoding = EncodingUnsupported;
+  eEncoding _nEncoding = eEncoding::Unsupported;
   LPCSTR szValueEndA, szStartA;
   BOOL bGotItem;
 
@@ -70,14 +70,14 @@ HRESULT CHttpHeaderGenTransferEncoding::Parse(_In_z_ LPCSTR szValueA, _In_opt_ S
     {
       case 7:
         if (StrNCompareA(szStartA, "chunked", 7, TRUE) == 0)
-          _nEncoding = EncodingChunked;
+          _nEncoding = eEncoding::Chunked;
         else
           return MX_E_Unsupported;
         break;
 
       case 8:
         if (StrNCompareA(szStartA, "identity", 8, TRUE) == 0)
-          _nEncoding = EncodingIdentity;
+          _nEncoding = eEncoding::Identity;
         else
           return MX_E_Unsupported;
         break;
@@ -114,12 +114,12 @@ HRESULT CHttpHeaderGenTransferEncoding::Build(_Inout_ CStringA &cStrDestA, _In_ 
 {
   switch (nEncoding)
   {
-    case EncodingIdentity:
+    case eEncoding::Identity:
       if (cStrDestA.Copy("identity") == FALSE)
         return E_OUTOFMEMORY;
       return S_OK;
 
-    case EncodingChunked:
+    case eEncoding::Chunked:
       if (cStrDestA.Copy("chunked") == FALSE)
         return E_OUTOFMEMORY;
       return S_OK;
@@ -131,7 +131,7 @@ HRESULT CHttpHeaderGenTransferEncoding::Build(_Inout_ CStringA &cStrDestA, _In_ 
 
 HRESULT CHttpHeaderGenTransferEncoding::SetEncoding(_In_ eEncoding _nEncoding)
 {
-  if (_nEncoding != EncodingChunked && _nEncoding != EncodingIdentity && _nEncoding != EncodingUnsupported)
+  if (_nEncoding != eEncoding::Chunked && _nEncoding != eEncoding::Identity && _nEncoding != eEncoding::Unsupported)
     return E_INVALIDARG;
   nEncoding = _nEncoding;
   return S_OK;

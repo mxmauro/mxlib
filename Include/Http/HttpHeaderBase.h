@@ -39,9 +39,10 @@ namespace MX {
 class MX_NOVTABLE CHttpHeaderBase : public virtual TRefCounted<CBaseMemObj>
 {
 public:
-  typedef enum {
-    DuplicateBehaviorError, DuplicateBehaviorReplace, DuplicateBehaviorAdd, DuplicateBehaviorMerge
-  } eDuplicateBehavior;
+  enum class eDuplicateBehavior
+  {
+    Error, Replace, Add, Merge
+  };
 
 protected:
   CHttpHeaderBase();
@@ -66,7 +67,7 @@ public:
 
   virtual eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return DuplicateBehaviorError;
+    return eDuplicateBehavior::Error;
     };
 
   virtual HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);

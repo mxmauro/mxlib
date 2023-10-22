@@ -138,7 +138,7 @@ public:
     return;
     };
 
-  VOID SetKey(_In_ EVP_PKEY *lpNewKey)
+  VOID SetKey(_In_opt_ EVP_PKEY *lpNewKey)
     {
     if (lpKey != NULL)
       EVP_PKEY_free(lpKey);
@@ -153,7 +153,7 @@ public:
     };
 
 public:
-  EVP_PKEY *lpKey;
+  EVP_PKEY *lpKey{ NULL };
   CAsymmetricCipherEncoderDecoder cEncryptor;
   CAsymmetricCipherEncoderDecoder cDecryptor;
   CAsymmetricCipherSignerVerifier cSigner;

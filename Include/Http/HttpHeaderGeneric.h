@@ -47,7 +47,7 @@ public:
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return DuplicateBehaviorAdd;
+    return eDuplicateBehavior::Add;
     };
 
   HRESULT SetValue(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);

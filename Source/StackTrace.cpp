@@ -49,7 +49,7 @@ typedef struct tagMX_UNWIND_HISTORY_TABLE {
 
 //-----------------------------------------------------------
 
-static VOID GetStackLimits(_In_ HANDLE hThread, _Out_ SIZE_T &nLow, _Out_ SIZE_T &nHigh);
+static VOID GetStackLimits(_In_opt_ HANDLE hThread, _Out_ SIZE_T &nLow, _Out_ SIZE_T &nHigh);
 
 //-----------------------------------------------------------
 
@@ -57,7 +57,7 @@ namespace MX {
 
 namespace StackTrace {
 
-HRESULT Get(_Out_ SIZE_T *lpnOutput, _In_ SIZE_T nCount, _In_opt_ DWORD dwThreadId)
+HRESULT Get(_Out_writes_(nCount) SIZE_T *lpnOutput, _In_ SIZE_T nCount, _In_opt_ DWORD dwThreadId)
 {
   CONTEXT sCtx;
   SIZE_T nStackLimitLow, nStackLimitHigh;
@@ -200,8 +200,10 @@ HRESULT Get(_Out_ SIZE_T *lpnOutput, _In_ SIZE_T nCount, _In_opt_ DWORD dwThread
   { }
 
   //done
-  if (nCount > 0)
-    lpnOutput[nRetrieved++] = 0;
+  if (nRetrieved < nCount)
+    lpnOutput[nRetrieved] = 0;
+  else
+    lpnOutput[nCount - 1] = 0;
   return S_OK;
 }
 
@@ -211,7 +213,7 @@ HRESULT Get(_Out_ SIZE_T *lpnOutput, _In_ SIZE_T nCount, _In_opt_ DWORD dwThread
 
 //-----------------------------------------------------------
 
-static VOID GetStackLimits(_In_ HANDLE hThread, _Out_ SIZE_T &nLow, _Out_ SIZE_T &nHigh)
+static VOID GetStackLimits(_In_opt_ HANDLE hThread, _Out_ SIZE_T &nLow, _Out_ SIZE_T &nHigh)
 {
   MX_THREAD_BASIC_INFORMATION sBi;
   NT_TIB *lpTIB;
@@ -232,8 +234,11 @@ static VOID GetStackLimits(_In_ HANDLE hThread, _Out_ SIZE_T &nLow, _Out_ SIZE_T
     //using documented(?) slow way
     lpTIB = NULL;
     //get TEB address
-    if (::MxNtQueryInformationThread(hThread, MxThreadBasicInformation, &sBi, sizeof(sBi), NULL) >= 0)
+    if (::MxNtQueryInformationThread(hThread, MxThreadBasicInformation,
+        &sBi, sizeof(sBi), NULL) >= 0)
+    {
       lpTIB = (NT_TIB*)(sBi.TebBaseAddress);
+    }
   }
   if (lpTIB != NULL)
   {

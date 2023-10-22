@@ -65,7 +65,7 @@ public:
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return DuplicateBehaviorMerge;
+    return eDuplicateBehavior::Merge;
     };
 
   HRESULT AddEncoding(_In_z_ LPCSTR szEncodingA, _In_opt_ SIZE_T nEncodingLen = (SIZE_T)-1,

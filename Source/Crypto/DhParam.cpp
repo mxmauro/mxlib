@@ -27,13 +27,11 @@ namespace MX {
 
 CDhParam::CDhParam() : TRefCounted<CBaseMemObj>()
 {
-  lpDH = NULL;
   return;
 }
 
 CDhParam::CDhParam(_In_ const CDhParam &cSrc) throw(...) : TRefCounted<CBaseMemObj>()
 {
-  lpDH = NULL;
   operator=(cSrc);
   return;
 }

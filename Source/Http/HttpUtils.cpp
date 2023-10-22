@@ -19,6 +19,7 @@
  */
 #include "..\..\Include\Http\HttpUtils.h"
 #include "..\..\Include\Strings\Utf8.h"
+#include <stdlib.h>
 
 //-----------------------------------------------------------
 
@@ -57,7 +58,7 @@ eBrowser GetBrowserFromUserAgent(_In_ LPCSTR szUserAgentA, _In_opt_ SIZE_T nUser
   if (nUserAgentLen == (SIZE_T)-1)
     nUserAgentLen = StrLenA(szUserAgentA);
   if (szUserAgentA == NULL || nUserAgentLen == 0)
-    return BrowserOther;
+    return eBrowser::Other;
 
   sA = StrNFindA(szUserAgentA, "MSIE ", nUserAgentLen);
   if (sA != NULL)
@@ -70,44 +71,44 @@ eBrowser GetBrowserFromUserAgent(_In_ LPCSTR szUserAgentA, _In_opt_ SIZE_T nUser
       {
         case '4':
         case '5':
-          return BrowserIE6;
+          return eBrowser::IE6;
 
         case '6':
           if (nOffset + 8 < nUserAgentLen &&
               StrNCompareA(sA + 8, "SV1", nUserAgentLen - (nOffset + 8)) != NULL)
           {
-            return BrowserIE6;
+            return eBrowser::IE6;
           }
           break;
       }
     }
-    return BrowserIE;
+    return eBrowser::IE;
   }
 
   sA = StrNFindA(szUserAgentA, "Opera ", nUserAgentLen);
   if (sA != NULL)
-    return BrowserOpera;
-
-  sA = StrNFindA(szUserAgentA, "Gecko/", nUserAgentLen);
-  if (sA != NULL)
-    return BrowserGecko;
+    return eBrowser::Opera;
 
   sA = StrNFindA(szUserAgentA, "Chrome/", nUserAgentLen);
   if (sA != NULL)
-    return BrowserChrome;
+    return eBrowser::Chrome;
 
   sA = StrNFindA(szUserAgentA, "Safari/", nUserAgentLen);
   if (sA != NULL)
-    return BrowserSafari;
+    return eBrowser::Safari;
   sA = StrNFindA(szUserAgentA, "Mac OS X", nUserAgentLen);
   if (sA != NULL)
-    return BrowserSafari;
+    return eBrowser::Safari;
 
   sA = StrNFindA(szUserAgentA, "Konqueror", nUserAgentLen);
   if (sA != NULL)
-    return BrowserKonqueror;
+    return eBrowser::Konqueror;
 
-  return BrowserOther;
+  sA = StrNFindA(szUserAgentA, "Gecko/", nUserAgentLen);
+  if (sA != NULL)
+    return eBrowser::Gecko;
+
+  return eBrowser::Other;
 }
 
 LPCSTR IsValidVerb(_In_ LPCSTR szStrA, _In_ SIZE_T nStrLen)
@@ -484,7 +485,7 @@ static LPCSTR GetMimeTypeFromExtensionA(_In_z_ LPCSTR szExtA)
   CHAR szExtLcA[8];
   SIZE_T i;
 
-  for (i = 0; i < MX_ARRAYLEN(szExtA) && szExtA[i] != 0; i++)
+  for (i = 0; i < MX_ARRAYLEN(szExtLcA) && szExtA[i] != 0; i++)
   {
     szExtLcA[i] = MX::CharToLowerA(szExtA[i]);
   }

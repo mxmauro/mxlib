@@ -63,8 +63,8 @@ public:
   HRESULT SelectDatabase(_In_ LPCSTR szDatabaseNameA);
   HRESULT SelectDatabase(_In_ LPCWSTR szDatabaseNameW);
 
-  HRESULT QueryExecute(_In_ LPCSTR szQueryA, _In_ SIZE_T nQueryLen = (SIZE_T)-1,
-                       _In_ CFieldList *lpInputFieldsList = NULL);
+  HRESULT QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQueryLen = (SIZE_T)-1,
+                       _In_opt_ CFieldList *lpInputFieldsList = NULL);
   using CBaseConnector::QueryExecute;
 
   HRESULT FetchRow();

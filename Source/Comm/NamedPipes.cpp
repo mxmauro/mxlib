@@ -26,8 +26,8 @@
 
 //-----------------------------------------------------------
 
-#define TypeListenRequest (CPacketBase::eType)((int)CPacketBase::TypeMAX + 1)
-#define TypeListen        (CPacketBase::eType)((int)CPacketBase::TypeMAX + 2)
+#define TypeListenRequest (CPacketBase::eType)((int)CPacketBase::eType::MAX + 1)
+#define TypeListen        (CPacketBase::eType)((int)CPacketBase::eType::MAX + 2)
 
 #ifndef FILE_SKIP_COMPLETION_PORT_ON_SUCCESS
   #define FILE_SKIP_COMPLETION_PORT_ON_SUCCESS    0x1
@@ -58,8 +58,8 @@ static const BYTE aSecDescriptorVistaOrLater[] = {
   0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00
 };
 
-static LONG volatile nOSVersion = -1;
-static lpfnSetFileCompletionNotificationModes volatile fnSetFileCompletionNotificationModes = NULL;
+static LONG volatile nInitMutex = 0;
+static lpfnSetFileCompletionNotificationModes fnSetFileCompletionNotificationModes = NULL;
 
 //-----------------------------------------------------------
 
@@ -71,24 +71,13 @@ namespace MX {
 
 CNamedPipes::CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDispatcherPool), CNonCopyableObj()
 {
-  _InterlockedExchange(&nRemoteConnCounter, 0);
-  dwConnectTimeoutMs = 1000;
   lpSecDescr = (PSECURITY_DESCRIPTOR)((::IsWindowsVistaOrGreater() != FALSE) ? aSecDescriptorVistaOrLater :
                                                                                aSecDescriptorXP);
-  //detect OS version
-  if (__InterlockedRead(&nOSVersion) < 0)
-  {
-    LONG _nOSVersion = 0;
 
-    if (::IsWindowsVistaOrGreater() != FALSE)
-      _nOSVersion = 0x0600;
-#pragma warning(default : 4996)
-    _InterlockedExchange(&nOSVersion, _nOSVersion);
-  }
-
-  if (__InterlockedRead(&nOSVersion) >= 0x0600)
   {
-    if (__InterlockedReadPointer(&fnSetFileCompletionNotificationModes) == NULL)
+    MX::CFastLock cLock(&nInitMutex);
+
+    if (fnSetFileCompletionNotificationModes == NULL)
     {
       LPVOID _fnSetFileCompletionNotificationModes;
       HINSTANCE hDll;
@@ -107,8 +96,11 @@ CNamedPipes::CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CI
           _fnSetFileCompletionNotificationModes = ::GetProcAddress(hDll, "SetFileCompletionNotificationModes");
         }
       }
-      _InterlockedExchangePointer((LPVOID volatile*)&fnSetFileCompletionNotificationModes,
-                                  _fnSetFileCompletionNotificationModes);
+
+      if (_fnSetFileCompletionNotificationModes != NULL)
+        fnSetFileCompletionNotificationModes = (lpfnSetFileCompletionNotificationModes)_fnSetFileCompletionNotificationModes;
+      else
+        fnSetFileCompletionNotificationModes = (lpfnSetFileCompletionNotificationModes)1;
     }
   }
   return;
@@ -229,7 +221,7 @@ HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreate
   if (cStrTempW.Format(L"\\\\.\\pipe\\%s", szServerNameW) == FALSE)
     return E_OUTOFMEMORY;
   //create connection
-  cNewConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassClient));
+  cNewConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::eConnectionClass::Client));
   if (!cNewConn)
     return E_OUTOFMEMORY;
   //setup connection
@@ -316,7 +308,8 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
     }
   }
   //IOCP options
-  if (fnSetFileCompletionNotificationModes != NULL)
+  if (fnSetFileCompletionNotificationModes != NULL &&
+      fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1)
   {
     if (fnSetFileCompletionNotificationModes(cLocalPipe, FILE_SKIP_SET_EVENT_ON_HANDLE |
                                                          FILE_SKIP_COMPLETION_PORT_ON_SUCCESS) == FALSE)
@@ -335,7 +328,7 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
     return MX_HRESULT_FROM_LASTERROR();
   }
   //associate the local pipe with a connection and the given (optional) custom data
-  cNewConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassServer));
+  cNewConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::eConnectionClass::Server));
   if (!cNewConn)
   {
     if (hRemotePipe != NULL)
@@ -408,7 +401,7 @@ HRESULT CNamedPipes::CreateServerConnection(_In_ CServerInfo *lpServerInfo, _In_
   HRESULT hRes;
 
   //create connection
-  cNewConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassServer));
+  cNewConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::eConnectionClass::Server));
   if (!cNewConn)
     return E_OUTOFMEMORY;
   //setup connection
@@ -486,7 +479,7 @@ HRESULT CNamedPipes::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPack
         FreePacket(lpPacket);
 
         //process connection
-        if (lpConn->nClass == CIpc::ConnectionClassServer && lpConn->IsClosed() == FALSE && IsShuttingDown() == FALSE)
+        if (lpConn->nClass == CIpc::eConnectionClass::Server && lpConn->IsClosed() == FALSE && IsShuttingDown() == FALSE)
         {
           //on server mode, create a new listener
           HRESULT hRes2 = CreateServerConnection(lpConn->cServerInfo, lpConn->cCreateCallback);
@@ -506,7 +499,7 @@ pipe_connected:
       FreePacket(lpPacket);
 
       //process connection
-      if (lpConn->nClass == CIpc::ConnectionClassServer && lpConn->IsClosed() == FALSE && IsShuttingDown() == FALSE)
+      if (lpConn->nClass == CIpc::eConnectionClass::Server && lpConn->IsClosed() == FALSE && IsShuttingDown() == FALSE)
       {
         //on server mode, create a new listener
         HRESULT hRes2 = CreateServerConnection(lpConn->cServerInfo, lpConn->cCreateCallback);
@@ -566,7 +559,7 @@ CNamedPipes::CConnection::~CConnection()
   //NOTE: The pipe can be still open if some write requests were queued while a graceful shutdown was in progress
   MX_ASSERT((SIZE_T)(ULONG)__InterlockedRead(&nOutgoingWrites) ==
             sPendingWritePackets.cList.GetCount() +
-            sInUsePackets.cList.GetCountOfType(CIpc::CPacketBase::TypeWriteRequest));
+            sInUsePackets.cList.GetCountOfType(CIpc::CPacketBase::eType::WriteRequest));
 
   if (hPipe != NULL)
     ::CloseHandle(hPipe);
@@ -594,7 +587,8 @@ HRESULT CNamedPipes::CConnection::CreateServer()
   ::SetHandleInformation(hPipe, HANDLE_FLAG_INHERIT, 0);
 
   //IOCP options
-  if (fnSetFileCompletionNotificationModes != NULL)
+  if (fnSetFileCompletionNotificationModes != NULL &&
+      fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1)
   {
     if (fnSetFileCompletionNotificationModes(hPipe, FILE_SKIP_SET_EVENT_ON_HANDLE |
                                              FILE_SKIP_COMPLETION_PORT_ON_SUCCESS) == FALSE)
@@ -671,7 +665,8 @@ HRESULT CNamedPipes::CConnection::CreateClient(_In_z_ LPCWSTR szServerNameW, _In
   }
 
   //IOCP options
-  if (fnSetFileCompletionNotificationModes != NULL)
+  if (fnSetFileCompletionNotificationModes != NULL &&
+      fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1)
   {
     if (fnSetFileCompletionNotificationModes(hPipe, FILE_SKIP_SET_EVENT_ON_HANDLE |
                                              FILE_SKIP_COMPLETION_PORT_ON_SUCCESS) == FALSE)
@@ -733,7 +728,8 @@ HRESULT CNamedPipes::CConnection::SendReadPacket(_In_ CPacketBase *lpPacket, _Ou
   dwRead = 0;
   if (::ReadFile(hPipe, lpPacket->GetBuffer(), lpPacket->GetBytesInUse(), &dwRead, lpPacket->GetOverlapped()) != FALSE)
   {
-    hRes = (fnSetFileCompletionNotificationModes != NULL) ? S_OK : MX_E_IoPending;
+    hRes = (fnSetFileCompletionNotificationModes != NULL &&
+            fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1) ? S_OK : MX_E_IoPending;
   }
   else
   {
@@ -771,7 +767,8 @@ HRESULT CNamedPipes::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket, _O
   if (::WriteFile(hPipe, lpPacket->GetBuffer(), lpPacket->GetBytesInUse(), &dwWritten,
                   lpPacket->GetOverlapped()) != FALSE)
   {
-    hRes = (fnSetFileCompletionNotificationModes != NULL) ? S_OK : MX_E_IoPending;
+    hRes = (fnSetFileCompletionNotificationModes != NULL &&
+            fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1) ? S_OK : MX_E_IoPending;
   }
   else
   {

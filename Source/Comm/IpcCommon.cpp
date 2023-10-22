@@ -27,18 +27,8 @@ namespace MX {
 CIpc::CIpc(_In_ CIoCompletionPortThreadPool &_cDispatcherPool) : CBaseMemObj(), CLoggable(),
                                                                  cDispatcherPool(_cDispatcherPool)
 {
-  dwReadAhead = 4;
-  bDoZeroReads = TRUE;
-  dwMaxOutgoingBytes = 2 * 32768;
-  //----
   cDispatcherPoolPacketCallback = MX_BIND_MEMBER_CALLBACK(&CIpc::OnDispatcherPacket, this);
-  FastLock_Initialize(&nInitShutdownMutex);
-  RundownProt_Initialize(&nRundownProt);
   cEngineErrorCallback = NullCallback();
-  SlimRWL_Initialize(&(sConnections.sRwMutex));
-  _InterlockedExchange(&(sConnections.nCount), 0);
-  FastLock_Initialize(&(sFreePackets32768.nMutex));
-  FastLock_Initialize(&(sFreePackets4096.nMutex));
   return;
 }
 
@@ -331,7 +321,7 @@ HRESULT CIpc::Close(_In_opt_ HANDLE h, _In_opt_ HRESULT hrErrorCode)
 HRESULT CIpc::InitializeSSL(_In_ HANDLE h, _In_opt_ LPCSTR szHostNameA,
                             _In_opt_ CSslCertificateArray *lpCheckCertificates,
                             _In_opt_ CSslCertificate *lpSelfCert, _In_opt_ CEncryptionKey *lpPrivKey,
-                            _In_opt_ CDhParam *lpDhParam, _In_opt_ int nSslOptions)
+                            _In_opt_ CDhParam *lpDhParam, _In_opt_ eSslOption nSslOptions)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoRefCounted<CConnectionBase> cConn;
@@ -634,24 +624,24 @@ CIpc::eConnectionClass CIpc::GetClass(_In_ HANDLE h)
   TAutoRefCounted<CConnectionBase> cConn;
 
   if (cRundownLock.IsAcquired() == FALSE)
-    return CIpc::ConnectionClassError;
+    return CIpc::eConnectionClass::Error;
 
   //lookup connection
   cConn.Attach(CheckAndGetConnection(h));
   if (!cConn)
-    return CIpc::ConnectionClassError;
+    return CIpc::eConnectionClass::Error;
 
   //check class
   switch (cConn->nClass)
   {
-    case CIpc::ConnectionClassClient:
-    case CIpc::ConnectionClassServer:
-    case CIpc::ConnectionClassListener:
+    case CIpc::eConnectionClass::Client:
+    case CIpc::eConnectionClass::Server:
+    case CIpc::eConnectionClass::Listener:
       return cConn->nClass;
   }
 
   //done
-  return CIpc::ConnectionClassUnknown;
+  return CIpc::eConnectionClass::Unknown;
 }
 
 BOOL CIpc::IsShuttingDown()
@@ -836,7 +826,7 @@ VOID CIpc::FreePacket(_In_ CPacketBase *lpPacket)
       {
         //We don't care if count becomes greater than 'nMaxItemsInList' because several threads
         //are freeing packets and list grows beyond the limit
-        lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
+        lpPacket->Reset(CPacketBase::eType::Discard, NULL);
         sFreePackets4096.cList.QueueLast(lpPacket);
 
         //free linked packets if they belong to the same class
@@ -846,7 +836,7 @@ VOID CIpc::FreePacket(_In_ CPacketBase *lpPacket)
           lpPacket = lpLinkedPacket;
           lpLinkedPacket = lpLinkedPacket->GetLinkedPacket();
 
-          lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
+          lpPacket->Reset(CPacketBase::eType::Discard, NULL);
           sFreePackets4096.cList.QueueLast(lpPacket);
         }
 
@@ -861,7 +851,7 @@ VOID CIpc::FreePacket(_In_ CPacketBase *lpPacket)
       {
         //We don't care if count becomes greater than 'nMaxItemsInList' because several threads
         //are freeing packets and list grows beyond the limit
-        lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
+        lpPacket->Reset(CPacketBase::eType::Discard, NULL);
         sFreePackets32768.cList.QueueLast(lpPacket);
 
         //free linked packets if they belong to the same class
@@ -871,7 +861,7 @@ VOID CIpc::FreePacket(_In_ CPacketBase *lpPacket)
           lpPacket = lpLinkedPacket;
           lpLinkedPacket = lpLinkedPacket->GetLinkedPacket();
 
-          lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
+          lpPacket->Reset(CPacketBase::eType::Discard, NULL);
           sFreePackets32768.cList.QueueLast(lpPacket);
         }
 
@@ -952,7 +942,7 @@ start:
 
   switch (lpPacket->GetType())
   {
-    case CPacketBase::TypeInitialSetup:
+    case CPacketBase::eType::InitialSetup:
       //free packet
       FreePacket(lpPacket);
 
@@ -979,7 +969,7 @@ start:
       }
       break;
 
-    case CPacketBase::TypeZeroRead:
+    case CPacketBase::eType::ZeroRead:
       if (SUCCEEDED(hRes) || hRes == MX_E_MoreData)
       {
         //NOTE: if packet is not reused, DoRead will free it
@@ -993,7 +983,7 @@ start:
       MX_ASSERT_ALWAYS(_InterlockedDecrement(&(lpConn->nIncomingReads)) >= 0);
       break;
 
-    case CPacketBase::TypeRead:
+    case CPacketBase::eType::Read:
       if (SUCCEEDED(hRes))
       {
         lpPacket->SetBytesInUse(dwBytes);
@@ -1054,7 +1044,7 @@ start:
       MX_ASSERT_ALWAYS(_InterlockedDecrement(&(lpConn->nIncomingReads)) >= 0);
       break;
 
-    case CPacketBase::TypeWriteRequest:
+    case CPacketBase::eType::WriteRequest:
       if (SUCCEEDED(hRes))
       {
         {
@@ -1075,7 +1065,7 @@ start:
       }
       break;
 
-    case CPacketBase::TypeWrite:
+    case CPacketBase::eType::Write:
       if (SUCCEEDED(hRes))
       {
         MX_ASSERT(dwBytes != 0);
@@ -1104,12 +1094,12 @@ start:
       lpConn->DecrementOutgoingWrites();
       break;
 
-    case CPacketBase::TypeDiscard:
+    case CPacketBase::eType::Discard:
       //ignore
       MX_ASSERT(FALSE);
       break;
 
-    case CPacketBase::TypeResumeIoProcessing:
+    case CPacketBase::eType::ResumeIoProcessing:
       {
       BOOL bIsRead = (lpPacket->GetOrder() == 1) ? TRUE : FALSE;
 

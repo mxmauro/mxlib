@@ -66,14 +66,9 @@ namespace MX {
 
 namespace Database {
 
+#pragma warning(suppress : 26495) // Suppress analyzer bug when initializing unions
 CField::CField() : TRefCounted<CBaseMemObj>(), CNonCopyableObj()
 {
-  nFieldType = FieldTypeNull;
-  szStrA = NULL;
-  nLength = 0;
-  lpDt = NULL;
-  lpBuffer = NULL;
-  nBufferSize = 0;
   return;
 }
 
@@ -86,7 +81,7 @@ CField::~CField()
 
 VOID CField::SetNull()
 {
-  nFieldType = FieldTypeNull;
+  nFieldType = eFieldType::Null;
   szStrA = NULL;
   nLength = 0;
   return;
@@ -102,7 +97,7 @@ HRESULT CField::SetString(_In_ LPCSTR _szStrA, _In_ SIZE_T _nLength)
   ::MxMemCopy(lpBuffer, _szStrA, _nLength);
   lpBuffer[_nLength] = 0;
 
-  nFieldType = FieldTypeString;
+  nFieldType = eFieldType::String;
   szStrA = (LPCSTR)lpBuffer;
   nLength = _nLength;
 
@@ -123,7 +118,7 @@ HRESULT CField::SetString(_In_ LPCWSTR _szStrW, _In_ SIZE_T _nLength)
     return E_OUTOFMEMORY;
   ::MxMemCopy(lpBuffer, (LPCSTR)cStrTempA, cStrTempA.GetLength() + 1);
 
-  nFieldType = FieldTypeString;
+  nFieldType = eFieldType::String;
   szStrA = (LPCSTR)lpBuffer;
   nLength = cStrTempA.GetLength();
 
@@ -173,7 +168,7 @@ HRESULT CField::SetFormattedStringV(_In_ LPCWSTR szFormatW, _In_ va_list argptr)
 
 VOID CField::SetBoolean(_In_ BOOL bValue)
 {
-  nFieldType = FieldTypeBoolean;
+  nFieldType = eFieldType::Boolean;
   b = bValue;
 
   //done
@@ -182,7 +177,7 @@ VOID CField::SetBoolean(_In_ BOOL bValue)
 
 VOID CField::SetUInt32(_In_ ULONG nValue)
 {
-  nFieldType = FieldTypeUInt32;
+  nFieldType = eFieldType::UInt32;
   ul = nValue;
 
   //done
@@ -191,7 +186,7 @@ VOID CField::SetUInt32(_In_ ULONG nValue)
 
 VOID CField::SetInt32(_In_ LONG nValue)
 {
-  nFieldType = FieldTypeInt32;
+  nFieldType = eFieldType::Int32;
   l = nValue;
 
   //done
@@ -200,7 +195,7 @@ VOID CField::SetInt32(_In_ LONG nValue)
 
 VOID CField::SetUInt64(_In_ ULONGLONG nValue)
 {
-  nFieldType = FieldTypeUInt64;
+  nFieldType = eFieldType::UInt64;
   ull = nValue;
 
   //done
@@ -209,7 +204,7 @@ VOID CField::SetUInt64(_In_ ULONGLONG nValue)
 
 VOID CField::SetInt64(_In_ LONGLONG nValue)
 {
-  nFieldType = FieldTypeInt64;
+  nFieldType = eFieldType::Int64;
   ll = nValue;
 
   //done
@@ -218,7 +213,7 @@ VOID CField::SetInt64(_In_ LONGLONG nValue)
 
 VOID CField::SetDouble(_In_ double nValue)
 {
-  nFieldType = FieldTypeDouble;
+  nFieldType = eFieldType::Double;
   dbl = nValue;
 
   //done
@@ -234,7 +229,7 @@ HRESULT CField::SetDateTime(_In_ CDateTime &cDt)
       return E_OUTOFMEMORY;
   }
 
-  nFieldType = FieldTypeDateTime;
+  nFieldType = eFieldType::DateTime;
   *lpDt = cDt;
 
   //done
@@ -250,7 +245,7 @@ HRESULT CField::SetBlob(_In_ LPVOID lpData, _In_ SIZE_T _nLength)
     ::MxMemCopy(lpBuffer, lpData, _nLength);
   }
 
-  nFieldType = FieldTypeBlob;
+  nFieldType = eFieldType::Blob;
   lpBlob = (_nLength > 0) ? lpBuffer : NULL;
   nLength = _nLength;
 
@@ -270,81 +265,81 @@ SIZE_T CField::GetLength() const
 
 BOOL CField::GetBoolean() const
 {
-  return (nFieldType == FieldTypeBoolean) ? b : NULL;
+  return (nFieldType == eFieldType::Boolean) ? b : NULL;
 }
 
 LPCSTR CField::GetString() const
 {
-  return (nFieldType == FieldTypeString) ? szStrA : NULL;
+  return (nFieldType == eFieldType::String) ? szStrA : NULL;
 }
 
 HRESULT CField::GetString(_Out_ CStringW &cStrW)
 {
-  if (nFieldType != FieldTypeString)
+  if (nFieldType != eFieldType::String)
     return E_FAIL;
   return Utf8_Decode(cStrW, szStrA, nLength);
 }
 
 ULONG CField::GetUInt32() const
 {
-  return (nFieldType == FieldTypeUInt32) ? ul : 0;
+  return (nFieldType == eFieldType::UInt32) ? ul : 0;
 }
 
 LONG CField::GetInt32() const
 {
-  return (nFieldType == FieldTypeInt32) ? l : 0;
+  return (nFieldType == eFieldType::Int32) ? l : 0;
 }
 
 ULONGLONG CField::GetUInt64() const
 {
-  return (nFieldType == FieldTypeUInt64) ? ull : 0ui64;
+  return (nFieldType == eFieldType::UInt64) ? ull : 0ui64;
 }
 
 LONGLONG CField::GetInt64() const
 {
-  return (nFieldType == FieldTypeInt64) ? ll : 0i64;
+  return (nFieldType == eFieldType::Int64) ? ll : 0i64;
 }
 
 double CField::GetDouble() const
 {
-  return (nFieldType == FieldTypeDouble) ? dbl : 0.0;
+  return (nFieldType == eFieldType::Double) ? dbl : 0.0;
 }
 
 CDateTime* CField::GetDateTime() const
 {
-  return (nFieldType == FieldTypeDateTime) ? lpDt : NULL;
+  return (nFieldType == eFieldType::DateTime) ? lpDt : NULL;
 }
 
 LPBYTE CField::GetBlob() const
 {
-  return (nFieldType == FieldTypeBlob) ? (LPBYTE)lpBlob : NULL;
+  return (nFieldType == eFieldType::Blob) ? (LPBYTE)lpBlob : NULL;
 }
 
 BOOL CField::GetAsBoolean(_Out_ PBOOL lpbValue)
 {
   switch (nFieldType)
   {
-    case FieldTypeBoolean:
+    case eFieldType::Boolean:
       *lpbValue = b;
       return TRUE;
 
-    case FieldTypeUInt32:
+    case eFieldType::UInt32:
       *lpbValue = (ul != 0) ? TRUE : FALSE;
       return TRUE;
 
-    case FieldTypeInt32:
+    case eFieldType::Int32:
       *lpbValue = (l != 0) ? TRUE : FALSE;
       return TRUE;
 
-    case FieldTypeUInt64:
+    case eFieldType::UInt64:
       *lpbValue = (ull != 0) ? TRUE : FALSE;
       return TRUE;
 
-    case FieldTypeInt64:
+    case eFieldType::Int64:
       *lpbValue = (ll != 0) ? TRUE : FALSE;
       return TRUE;
 
-    case FieldTypeDouble:
+    case eFieldType::Double:
       *lpbValue = (dbl < -__DBL_EPSILON || dbl > __DBL_EPSILON) ? TRUE : FALSE;
       return TRUE;
   }
@@ -356,15 +351,15 @@ BOOL CField::GetAsUInt32(_Out_ PULONG lpnValue)
 {
   switch (nFieldType)
   {
-    case FieldTypeBoolean:
+    case eFieldType::Boolean:
       *lpnValue = (b != FALSE) ? 1 : 0;
       return TRUE;
 
-    case FieldTypeUInt32:
+    case eFieldType::UInt32:
       *lpnValue = ul;
       return TRUE;
 
-    case FieldTypeInt32:
+    case eFieldType::Int32:
       if (l >= 0)
       {
         *lpnValue = (ULONG)l;
@@ -372,7 +367,7 @@ BOOL CField::GetAsUInt32(_Out_ PULONG lpnValue)
       }
       break;
 
-    case FieldTypeUInt64:
+    case eFieldType::UInt64:
       if (ull <= 0xFFFFFFFFui64)
       {
         *lpnValue = (ULONG)ull;
@@ -380,7 +375,7 @@ BOOL CField::GetAsUInt32(_Out_ PULONG lpnValue)
       }
       break;
 
-    case FieldTypeInt64:
+    case eFieldType::Int64:
       if (ll >= 0i64 && ll <= 0xFFFFFFFFi64)
       {
         *lpnValue = (ULONG)(ULONGLONG)ll;
@@ -388,7 +383,7 @@ BOOL CField::GetAsUInt32(_Out_ PULONG lpnValue)
       }
       break;
 
-    case FieldTypeDouble:
+    case eFieldType::Double:
       if (convertNumber<double, ULONG>(dbl, lpnValue))
         return TRUE;
       break;
@@ -401,11 +396,11 @@ BOOL CField::GetAsInt32(_Out_ PLONG lpnValue) const
 {
   switch (nFieldType)
   {
-    case FieldTypeBoolean:
+    case eFieldType::Boolean:
       *lpnValue = (b != FALSE) ? 1 : 0;
       return TRUE;
 
-    case FieldTypeUInt32:
+    case eFieldType::UInt32:
       if (ul <= 0x7FFFFFFF)
       {
         *lpnValue = (LONG)ul;
@@ -413,11 +408,11 @@ BOOL CField::GetAsInt32(_Out_ PLONG lpnValue) const
       }
       break;
 
-    case FieldTypeInt32:
+    case eFieldType::Int32:
       *lpnValue = l;
       return TRUE;
 
-    case FieldTypeUInt64:
+    case eFieldType::UInt64:
       if (ull <= 0x7FFFFFFFui64)
       {
         *lpnValue = (LONG)(ULONG)ull;
@@ -425,7 +420,7 @@ BOOL CField::GetAsInt32(_Out_ PLONG lpnValue) const
       }
       break;
 
-    case FieldTypeInt64:
+    case eFieldType::Int64:
       if (ll >= -2147483648i64 && ll <= 2147483647i64)
       {
         *lpnValue = (LONG)ll;
@@ -433,7 +428,7 @@ BOOL CField::GetAsInt32(_Out_ PLONG lpnValue) const
       }
       break;
 
-    case FieldTypeDouble:
+    case eFieldType::Double:
       if (convertNumber<double, LONG>(dbl, lpnValue))
         return TRUE;
       break;
@@ -446,15 +441,15 @@ BOOL CField::GetAsUInt64(_Out_ PULONGLONG lpnValue) const
 {
   switch (nFieldType)
   {
-    case FieldTypeBoolean:
+    case eFieldType::Boolean:
       *lpnValue = (b != FALSE) ? 1ui64 : 0ui64;
       return TRUE;
 
-    case FieldTypeUInt32:
+    case eFieldType::UInt32:
       *lpnValue = (ULONGLONG)ul;
       return TRUE;
 
-    case FieldTypeInt32:
+    case eFieldType::Int32:
       if (l >= 0)
       {
         *lpnValue = (ULONGLONG)(ULONG)l;
@@ -462,11 +457,11 @@ BOOL CField::GetAsUInt64(_Out_ PULONGLONG lpnValue) const
       }
       break;
 
-    case FieldTypeUInt64:
+    case eFieldType::UInt64:
       *lpnValue = (ULONG)ull;
       return TRUE;
 
-    case FieldTypeInt64:
+    case eFieldType::Int64:
       if (ll >= 0i64)
       {
         *lpnValue = (ULONGLONG)ll;
@@ -474,7 +469,7 @@ BOOL CField::GetAsUInt64(_Out_ PULONGLONG lpnValue) const
       }
       break;
 
-    case FieldTypeDouble:
+    case eFieldType::Double:
       if (convertNumber<double, ULONGLONG>(dbl, lpnValue))
         return TRUE;
       break;
@@ -487,19 +482,19 @@ BOOL CField::GetAsInt64(_Out_ PLONGLONG lpnValue) const
 {
   switch (nFieldType)
   {
-    case FieldTypeBoolean:
+    case eFieldType::Boolean:
       *lpnValue = (b != FALSE) ? 1 : 0;
       return TRUE;
 
-    case FieldTypeUInt32:
+    case eFieldType::UInt32:
       *lpnValue = (LONGLONG)(ULONGLONG)ul;
       return TRUE;
 
-    case FieldTypeInt32:
+    case eFieldType::Int32:
       *lpnValue = (LONGLONG)l;
       return TRUE;
 
-    case FieldTypeUInt64:
+    case eFieldType::UInt64:
       if (ull <= 0x7FFFFFFFFFFFFFFFui64)
       {
         *lpnValue = (LONGLONG)ull;
@@ -507,11 +502,11 @@ BOOL CField::GetAsInt64(_Out_ PLONGLONG lpnValue) const
       }
       break;
 
-    case FieldTypeInt64:
+    case eFieldType::Int64:
       *lpnValue = (LONGLONG)ll;
       return TRUE;
 
-    case FieldTypeDouble:
+    case eFieldType::Double:
       if (convertNumber<double, LONGLONG>(dbl, lpnValue))
         return TRUE;
       break;
@@ -524,31 +519,31 @@ BOOL CField::GetAsDouble(_Out_ double *lpnValue) const
 {
   switch (nFieldType)
   {
-    case FieldTypeBoolean:
+    case eFieldType::Boolean:
       *lpnValue = (b != FALSE) ? 1 : 0;
       return TRUE;
 
-    case FieldTypeUInt32:
+    case eFieldType::UInt32:
       if (convertNumber<ULONG, double>(ul, lpnValue))
         return TRUE;
       break;
 
-    case FieldTypeInt32:
+    case eFieldType::Int32:
       if (convertNumber<LONG, double>(l, lpnValue))
         return TRUE;
       break;
 
-    case FieldTypeUInt64:
+    case eFieldType::UInt64:
       if (convertNumber<ULONGLONG, double>(ull, lpnValue))
         return TRUE;
       break;
 
-    case FieldTypeInt64:
+    case eFieldType::Int64:
       if (convertNumber<LONGLONG, double>(ll, lpnValue))
         return TRUE;
       break;
 
-    case FieldTypeDouble:
+    case eFieldType::Double:
       *lpnValue = dbl;
       return TRUE;
   }

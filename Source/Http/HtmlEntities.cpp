@@ -445,6 +445,7 @@ HRESULT ConvertTo(_Out_ CStringW &cStrW, _In_ LPCWSTR szStrW, _In_ SIZE_T nStrLe
 
       //add entity
       if (cStrW.ConcatN("&", 1) == FALSE ||
+#pragma warning(suppress : 6054)
           cStrW.ConcatN(szTempBufW, i) == FALSE ||
           cStrW.ConcatN(";", 1) == FALSE)
       {

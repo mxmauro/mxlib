@@ -29,14 +29,15 @@ namespace MX {
 class CMessageDigest : public virtual CBaseMemObj, public CNonCopyableObj
 {
 public:
-  typedef enum {
-    AlgorithmCRC32 = 0,
-    AlgorithmMD5, AlgorithmMD4,
-    AlgorithmSHA1, AlgorithmSHA224, AlgorithmSHA256, AlgorithmSHA384,
-    AlgorithmSHA512, AlgorithmSHA512_224, AlgorithmSHA512_256,
-    AlgorithmSHA3_224, AlgorithmSHA3_256, AlgorithmSHA3_384, AlgorithmSHA3_512,
-    AlgorithmBlake2s_256, AlgorithmBlake2b_512
-  } eAlgorithm;
+  enum class eAlgorithm
+  {
+    Invalid = 1,
+    CRC32 = 0,
+    MD5, MD4,
+    SHA1, SHA224, SHA256, SHA384, SHA512, SHA512_224, SHA512_256,
+    SHA3_224, SHA3_256, SHA3_384, SHA3_512,
+    Blake2s_256, Blake2b_512
+  };
 
 public:
   CMessageDigest();

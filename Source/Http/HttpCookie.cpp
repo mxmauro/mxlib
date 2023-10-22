@@ -47,14 +47,14 @@ namespace MX {
 CHttpCookie::CHttpCookie() : TRefCounted<CBaseMemObj>()
 {
   nFlags = 0;
-  nSameSite = SameSiteNone;
+  nSameSite = eSameSite::None;
   return;
 }
 
 CHttpCookie::CHttpCookie(_In_ const CHttpCookie& cSrc) throw(...) : TRefCounted<CBaseMemObj>()
 {
   nFlags = 0;
-  nSameSite = SameSiteNone;
+  nSameSite = eSameSite::None;
   operator=(cSrc);
   return;
 }
@@ -98,7 +98,7 @@ VOID CHttpCookie::Clear()
   cStrPathA.Empty();
   cExpiresDt.Clear();
   nFlags = 0;
-  nSameSite = SameSiteNone;
+  nSameSite = eSameSite::None;
   return;
 }
 
@@ -332,7 +332,7 @@ BOOL CHttpCookie::GetHttpOnlyFlag() const
 
 HRESULT CHttpCookie::SetSameSite(_In_ eSameSite _nSameSite)
 {
-  if (_nSameSite != SameSiteNone && _nSameSite != SameSiteLax && _nSameSite != SameSiteStrict)
+  if (_nSameSite != eSameSite::None && _nSameSite != eSameSite::Lax && _nSameSite != eSameSite::Strict)
     return E_INVALIDARG;
   nSameSite = _nSameSite;
   return S_OK;
@@ -365,7 +365,7 @@ HRESULT CHttpCookie::ToString(_Inout_ CStringA& cStrDestA, _In_ BOOL bAddAttribu
     if (cStrDestA.Concat("dummy") == FALSE)
       return E_OUTOFMEMORY;
     hRes = cTempDt.SetFromNow(FALSE);
-    hRes = cTempDt.Add(-1, CDateTime::UnitsHours);
+    hRes = cTempDt.Add(-1, CDateTime::eUnits::Hours);
     lpDt = &cTempDt;
   }
   if (bAddAttributes != FALSE)
@@ -411,12 +411,12 @@ HRESULT CHttpCookie::ToString(_Inout_ CStringA& cStrDestA, _In_ BOOL bAddAttribu
     }
     switch (nSameSite)
     {
-      case SameSiteLax:
-        if (cStrDestA.Concat("; SameSite=Lax") == FALSE)
+      case eSameSite::Lax:
+        if (cStrDestA.Concat("; eSameSite::=Lax") == FALSE)
           return E_OUTOFMEMORY;
         break;
-      case SameSiteStrict:
-        if (cStrDestA.Concat("; SameSite=Strict") == FALSE)
+      case eSameSite::Strict:
+        if (cStrDestA.Concat("; eSameSite::=Strict") == FALSE)
           return E_OUTOFMEMORY;
         break;
     }
@@ -578,7 +578,7 @@ HRESULT CHttpCookie::ParseFromResponseHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE
         return E_FAIL;
       hRes = cExpireDt.SetFromNow(FALSE);
       if (SUCCEEDED(hRes))
-        hRes = cExpireDt.Add((LONGLONG)nMaxAge, MX::CDateTime::UnitsSeconds);
+        hRes = cExpireDt.Add((LONGLONG)nMaxAge, MX::CDateTime::eUnits::Seconds);
       if (FAILED(hRes))
         return hRes;
       SetExpireDate(&cExpireDt);
@@ -608,15 +608,15 @@ HRESULT CHttpCookie::ParseFromResponseHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE
     {
       if (cStrTempValueA.IsEmpty() != FALSE || StrCompareA((LPCSTR)cStrTempValueA, "none", TRUE) == 0)
       {
-        nSameSite = SameSiteNone;
+        nSameSite = eSameSite::None;
       }
       else if (StrCompareA((LPCSTR)cStrTempValueA, "lax", TRUE) == 0)
       {
-        nSameSite = SameSiteLax;
+        nSameSite = eSameSite::Lax;
       }
       else if (StrCompareA((LPCSTR)cStrTempValueA, "strict", TRUE) == 0)
       {
-        nSameSite = SameSiteStrict;
+        nSameSite = eSameSite::Strict;
       }
       else
       {
@@ -651,7 +651,7 @@ CHttpCookieArray& CHttpCookieArray::operator=(_In_ const CHttpCookieArray& cSrc)
     {
       CHttpCookie *lpCookie = cSrc.GetElementAt(i);
 
-      if (AddElement(lpCookie) == FALSE)
+      if (aNewList.AddElement(lpCookie) == FALSE)
         throw (LONG)E_OUTOFMEMORY;
       lpCookie->AddRef();
     }
@@ -685,9 +685,9 @@ HRESULT CHttpCookieArray::ParseFromRequestHeader(_In_z_ LPCSTR szSrcA, _In_opt_ 
     cCookie.Attach(MX_DEBUG_NEW CHttpCookie());
     if (!cCookie)
       return E_OUTOFMEMORY;
-    hRes = cCookie->SetName((LPSTR)cStrNameA);
+    hRes = cCookie->SetName((LPCSTR)cStrNameA);
     if (SUCCEEDED(hRes))
-      hRes = cCookie->SetValue((LPSTR)cStrValueA);
+      hRes = cCookie->SetValue((LPCSTR)cStrValueA);
     if (SUCCEEDED(hRes))
     {
       if (AddElement(cCookie) != FALSE)

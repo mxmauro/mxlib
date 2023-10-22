@@ -33,6 +33,8 @@
 #define HAVE_ZLIB
 #define ZLIB_COMPAT
 
+#pragma warning(disable : 6262)
+
 #include "MiniZipSource\mz_crypt.c"
 #include "MiniZipSource\mz_crypt_win32.c"
 #include "MiniZipSource\mz_os.c"

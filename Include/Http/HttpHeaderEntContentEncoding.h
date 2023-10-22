@@ -29,12 +29,10 @@ namespace MX {
 class CHttpHeaderEntContentEncoding : public CHttpHeaderBase
 {
 public:
-  typedef enum {
-    EncodingUnsupported = -1,
-    EncodingIdentity = 0,
-    EncodingGZip,
-    EncodingDeflate
-  } eEncoding;
+  enum class eEncoding
+  {
+    Unsupported = -1, Identity = 0, GZip, Deflate
+  };
 
   CHttpHeaderEntContentEncoding();
   ~CHttpHeaderEntContentEncoding();

@@ -41,7 +41,7 @@ public:
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return DuplicateBehaviorMerge;
+    return eDuplicateBehavior::Merge;
     };
 
   HRESULT AddVerb(_In_z_ LPCSTR szVerbA, _In_ SIZE_T nVerbLen = (SIZE_T)-1);

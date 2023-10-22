@@ -61,7 +61,7 @@ static HRESULT OnWebSocketRequestReceived(_In_ MX::CJsHttpServer *lpHttp,
                                           _In_ MX::CJsHttpServer::CClientRequest *lpRequest, _In_ int nVersion,
                                           _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount,
                                           _Out_ int &nSelectedProtocol, _In_ MX::TArrayList<int> &aSupportedVersions,
-                                          _Out_ _Maybenull_ MX::CWebSocket **lplpWebSocket);
+                                          _Outptr_result_maybenull_ MX::CWebSocket **lplpWebSocket);
 static VOID DeleteSessionFiles();
 static HRESULT OnSessionPersistance(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin,
                                     _In_ MX::CJsHttpServerSessionPlugin::ePersistanceOption nPersistanceOption);
@@ -272,7 +272,7 @@ int TestJsHttpServer()
     cOptions.dwMaxAcceptsToPost = 16;
     //cOptions.dwMaxRequestsPerSecond = 0;
     //cOptions.dwBurstSize = 0;
-    hRes = cTest.cJsHttpServer.StartListening(MX::CSockets::FamilyIPv4, (int)dwPort, &cOptions);
+    hRes = cTest.cJsHttpServer.StartListening(MX::CSockets::eFamily::IPv4, (int)dwPort, &cOptions);
   }
   //----
   if (SUCCEEDED(hRes))
@@ -389,8 +389,8 @@ static VOID OnProcessJsRequest(_In_ MX::CTaskQueue *lpQueue, _In_ MX::CTaskQueue
 
         _snprintf_s(szBufA, MX_ARRAYLEN(szBufA), _TRUNCATE, "0x%p", lpRequest);
         hRes = lpJVM->AddStringProperty("requestAddress", szBufA,
-                                        MX::CJavascriptVM::PropertyFlagEnumerable |
-                                        MX::CJavascriptVM::PropertyFlagConfigurable);
+                                        MX::CJavascriptVM::ePropertyFlags::Enumerable |
+                                        MX::CJavascriptVM::ePropertyFlags::Configurable);
       }
 
       if (SUCCEEDED(hRes))
@@ -479,7 +479,7 @@ static HRESULT OnWebSocketRequestReceived(_In_ MX::CJsHttpServer *lpHttp,
                                           _In_ MX::CJsHttpServer::CClientRequest *lpRequest, _In_ int nVersion,
                                           _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount,
                                           _Out_ int &nSelectedProtocol, _In_ MX::TArrayList<int> &aSupportedVersions,
-                                          _Out_ _Maybenull_ MX::CWebSocket **lplpWebSocket)
+                                          _Outptr_result_maybenull_ MX::CWebSocket **lplpWebSocket)
 {
   nSelectedProtocol = 0;
   *lplpWebSocket = MX_DEBUG_NEW CTestJsHttpServerWebSocket();
@@ -552,7 +552,7 @@ static HRESULT OnSessionPersistance(_In_ MX::CJsHttpServerSessionPlugin *lpPlugi
   if (cStrFileNameW.Concat(L"\\") == FALSE || cStrFileNameW.Concat(lpPlugin->GetSessionId()) == FALSE)
     return E_OUTOFMEMORY;
 
-  if (nPersistanceOption == MX::CJsHttpServerSessionPlugin::PersistanceOptionDelete)
+  if (nPersistanceOption == MX::CJsHttpServerSessionPlugin::ePersistanceOption::Delete)
   {
     ::DeleteFileW((LPCWSTR)cStrFileNameW);
     return S_OK;
@@ -566,7 +566,7 @@ static HRESULT OnSessionPersistance(_In_ MX::CJsHttpServerSessionPlugin *lpPlugi
   //open file
   for (dwPass = 10; dwPass > 0; dwPass--)
   {
-    if (nPersistanceOption == MX::CJsHttpServerSessionPlugin::PersistanceOptionLoad)
+    if (nPersistanceOption == MX::CJsHttpServerSessionPlugin::ePersistanceOption::Load)
     {
       cFileH.Attach(::CreateFileW((LPCWSTR)cStrFileNameW, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
                                   FILE_ATTRIBUTE_NORMAL, NULL));
@@ -590,7 +590,7 @@ static HRESULT OnSessionPersistance(_In_ MX::CJsHttpServerSessionPlugin *lpPlugi
 
   //read/write
   bDelete = FALSE;
-  if (nPersistanceOption == MX::CJsHttpServerSessionPlugin::PersistanceOptionLoad)
+  if (nPersistanceOption == MX::CJsHttpServerSessionPlugin::ePersistanceOption::Load)
   {
     //read date
     if (::ReadFile(cFileH, szBufA, 10+1+8, &dwReaded, NULL) == FALSE)
@@ -607,7 +607,7 @@ static HRESULT OnSessionPersistance(_In_ MX::CJsHttpServerSessionPlugin *lpPlugi
     //compare with current time
     if (cDtNow < cDt)
       delete_and_exit( hRes = S_OK; );
-    if (cDtNow.GetDiff(cDt, MX::CDateTime::UnitsHours) >= 1)
+    if (cDtNow.GetDiff(cDt, MX::CDateTime::eUnits::Hours) >= 1)
       delete_and_exit( hRes = S_OK; );
 
     //read fields
@@ -715,11 +715,11 @@ static HRESULT OnSessionPersistance(_In_ MX::CJsHttpServerSessionPlugin *lpPlugi
 
       //get property type
       nPropType = lpPlugin->GetBag()->GetType(nIndex);
-      if (nPropType == MX::CPropertyBag::PropertyTypeNull)
+      if (nPropType == MX::CPropertyBag::eType::Null)
         szBufA[0] = 'N';
-      else if (nPropType == MX::CPropertyBag::PropertyTypeDouble)
+      else if (nPropType == MX::CPropertyBag::eType::Double)
         szBufA[0] = 'D';
-      else if (nPropType == MX::CPropertyBag::PropertyTypeAnsiString)
+      else if (nPropType == MX::CPropertyBag::eType::AnsiString)
         szBufA[0] = 'S';
       else
         continue;
@@ -746,7 +746,7 @@ static HRESULT OnSessionPersistance(_In_ MX::CJsHttpServerSessionPlugin *lpPlugi
       //write data
       switch (nPropType)
       {
-        case MX::CPropertyBag::PropertyTypeDouble:
+        case MX::CPropertyBag::eType::Double:
           //get value
           hRes = lpPlugin->GetBag()->GetDouble(nIndex, nDbl);
           if (FAILED(hRes))
@@ -759,7 +759,7 @@ static HRESULT OnSessionPersistance(_In_ MX::CJsHttpServerSessionPlugin *lpPlugi
             delete_and_exit( hRes = MX_E_WriteFault; );
           break;
 
-        case MX::CPropertyBag::PropertyTypeAnsiString:
+        case MX::CPropertyBag::eType::AnsiString:
           //get value
           hRes = lpPlugin->GetBag()->GetString(nIndex, szValueA);
           if (FAILED(hRes))

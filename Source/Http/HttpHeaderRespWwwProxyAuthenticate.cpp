@@ -134,7 +134,7 @@ HRESULT CHttpHeaderRespWwwProxyAuthenticateCommon::Build(_Inout_ CStringA &cStrD
   return S_OK;
 }
 
-HRESULT CHttpHeaderRespWwwProxyAuthenticateCommon::SetScheme(_In_z_ LPCSTR szSchemeA, _In_ SIZE_T nSchemeLen)
+HRESULT CHttpHeaderRespWwwProxyAuthenticateCommon::SetScheme(_In_z_ LPCSTR szSchemeA, _In_opt_ SIZE_T nSchemeLen)
 {
   LPCSTR szStartA, szSchemeEndA;
 

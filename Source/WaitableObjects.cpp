@@ -47,7 +47,7 @@ typedef int (*_PIFV)(void);
 
 //-----------------------------------------------------------
 
-typedef NTSTATUS (NTAPI *lpfnRtlGetNativeSystemInformation)(_In_ MX_SYSTEM_INFORMATION_CLASS SystemInformationClass,
+typedef NTSTATUS (NTAPI *lpfnRtlGetNativeSystemInformation)(_In_ ULONG SystemInformationClass,
                                                _Inout_ PVOID SystemInformation, _In_ ULONG SystemInformationLength,
                                                _Out_opt_ PULONG ReturnLength);
 
@@ -116,9 +116,15 @@ BOOL IsMultiProcessor()
     }
     ::MxMemSet(&sBasicInfo, 0, sizeof(sBasicInfo));
     if (fnRtlGetNativeSystemInformation != NULL)
-      nNtStatus = fnRtlGetNativeSystemInformation(MxSystemBasicInformation, &sBasicInfo, sizeof(sBasicInfo), NULL);
+    {
+      nNtStatus = fnRtlGetNativeSystemInformation(MxSystemBasicInformation, &sBasicInfo,
+                                                  sizeof(sBasicInfo), NULL);
+    }
     else
-      nNtStatus = ::MxNtQuerySystemInformation(MxSystemProcessorInformation, &sBasicInfo, sizeof(sBasicInfo), NULL);
+    {
+      nNtStatus = ::MxNtQuerySystemInformation(MxSystemProcessorInformation, &sBasicInfo,
+                                               sizeof(sBasicInfo), NULL);
+    }
     _InterlockedExchange(&nProcessorsCount, (NT_SUCCESS(nNtStatus) && sBasicInfo.NumberOfProcessors > 1)
                                             ? (LONG)(sBasicInfo.NumberOfProcessors) : 1);
   }
@@ -189,7 +195,8 @@ HRESULT CWindowsEvent::Create(_In_ BOOL bManualReset, _In_ BOOL bInitialState, _
     }
     //create event
     nNtStatus = ::MxNtCreateEvent(&_h, EVENT_ALL_ACCESS, &sObjAttr,
-                                  (bManualReset == FALSE) ? MxSynchronizationEvent : MxNotificationEvent,
+                                  (bManualReset == FALSE) ? MxSynchronizationEvent
+                                                          : MxNotificationEvent,
                                   bInitialState);
     if (!NT_SUCCESS(nNtStatus))
       return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
@@ -367,14 +374,14 @@ HRESULT CWindowsMutex::Open(_In_opt_z_ LPCWSTR szNameW, _In_ BOOL bQueryOnly, _I
 
 //-----------------------------------------------------------
 
-VOID FastLock_Initialize(_Out_ LONG volatile *lpnLock)
+VOID FastLock_Initialize(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock)
 {
   _InterlockedExchange(lpnLock, 0);
   IsMultiProcessor();
   return;
 }
 
-VOID FastLock_Enter(_Inout_ LONG volatile *lpnLock)
+VOID FastLock_Enter(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock)
 {
   LONG nTid = (LONG)::MxGetCurrentThreadId();
   LONG nCpuCount = __InterlockedRead(&nProcessorsCount);
@@ -405,25 +412,25 @@ VOID FastLock_Enter(_Inout_ LONG volatile *lpnLock)
   return;
 }
 
-BOOL FastLock_TryEnter(_Inout_ LONG volatile *lpnLock)
+BOOL FastLock_TryEnter(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock)
 {
   LONG nTid = (LONG)::MxGetCurrentThreadId();
 
   return (_InterlockedCompareExchange(lpnLock, nTid, 0) == 0) ? TRUE : FALSE;
 }
 
-VOID FastLock_Exit(_Inout_ LONG volatile *lpnLock)
+VOID FastLock_Exit(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock)
 {
   _InterlockedExchange(lpnLock, 0);
   return;
 }
 
-DWORD FastLock_IsActive(_Inout_ LONG volatile *lpnLock)
+DWORD FastLock_IsActive(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock)
 {
   return (DWORD)__InterlockedRead(lpnLock);
 }
 
-VOID FastLock_Bitmask_Enter(_Inout_ LONG volatile *lpnLock, _In_ int nBitIndex)
+VOID FastLock_Bitmask_Enter(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock, _In_ int nBitIndex)
 {
   LONG nMask = 1L << nBitIndex;
   LONG nCpuCount = __InterlockedRead(&nProcessorsCount);
@@ -454,14 +461,14 @@ VOID FastLock_Bitmask_Enter(_Inout_ LONG volatile *lpnLock, _In_ int nBitIndex)
   return;
 }
 
-BOOL FastLock_Bitmask_TryEnter(_Inout_ LONG volatile *lpnLock, _In_ int nBitIndex)
+BOOL FastLock_Bitmask_TryEnter(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock, _In_ int nBitIndex)
 {
   LONG nMask = 1L << nBitIndex;
 
   return ((_InterlockedOr(lpnLock, nMask) & nMask) == 0) ? TRUE : FALSE;
 }
 
-VOID FastLock_Bitmask_Exit(_Inout_ LONG volatile *lpnLock, _In_ int nBitIndex)
+VOID FastLock_Bitmask_Exit(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock, _In_ int nBitIndex)
 {
   LONG nMask = 1L << nBitIndex;
 
@@ -469,7 +476,7 @@ VOID FastLock_Bitmask_Exit(_Inout_ LONG volatile *lpnLock, _In_ int nBitIndex)
   return;
 }
 
-BOOL FastLock_Bitmask_IsActive(_Inout_ LONG volatile *lpnLock, _In_ int nBitIndex)
+BOOL FastLock_Bitmask_IsActive(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock, _In_ int nBitIndex)
 {
   LONG nMask = 1L << nBitIndex;
 
@@ -619,13 +626,13 @@ VOID SlimRWL_ReleaseExclusive(_In_ LPRWLOCK lpLock)
 
 //-----------------------------------------------------------
 
-VOID RundownProt_Initialize(_In_ LONG volatile *lpnValue)
+VOID RundownProt_Initialize(_Inout_ _Interlocked_operand_ LONG volatile *lpnValue)
 {
   _InterlockedExchange(lpnValue, 0);
   return;
 }
 
-BOOL RundownProt_Acquire(_In_ LONG volatile *lpnValue)
+BOOL RundownProt_Acquire(_Inout_ _Interlocked_operand_ LONG volatile *lpnValue)
 {
   LONG initVal, newVal;
 
@@ -641,7 +648,7 @@ BOOL RundownProt_Acquire(_In_ LONG volatile *lpnValue)
   return TRUE;
 }
 
-VOID RundownProt_Release(_In_ LONG volatile *lpnValue)
+VOID RundownProt_Release(_Inout_ _Interlocked_operand_ LONG volatile *lpnValue)
 {
   LONG initVal, newVal;
 
@@ -657,7 +664,7 @@ VOID RundownProt_Release(_In_ LONG volatile *lpnValue)
   return;
 }
 
-VOID RundownProt_WaitForRelease(_In_ LONG volatile *lpnValue)
+VOID RundownProt_WaitForRelease(_Inout_ _Interlocked_operand_ LONG volatile *lpnValue)
 {
   //mark rundown protection as shutting down
   _InterlockedOr(lpnValue, 0x80000000L);
@@ -790,7 +797,8 @@ static NTSTATUS GetRootDirHandle(_Out_ PHANDLE lphRootDir)
   nNtStatus = ::MxNtOpenThreadToken(MX_CURRENTTHREAD, TOKEN_IMPERSONATE, FALSE, &hThreadToken);
   if (NT_SUCCESS(nNtStatus))
   {
-    nNtStatus = ::MxNtSetInformationThread(MX_CURRENTTHREAD, MxThreadImpersonationToken, &_h, (ULONG)sizeof(HANDLE));
+    nNtStatus = ::MxNtSetInformationThread(MX_CURRENTTHREAD, MxThreadImpersonationToken,
+                                           &_h, (ULONG)sizeof(HANDLE));
     if (!NT_SUCCESS(nNtStatus))
       goto done;
   }

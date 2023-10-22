@@ -44,16 +44,6 @@ CHttpBodyParserMultipartFormData::CHttpBodyParserMultipartFormData(
     dwMaxFieldSize = 32768;
   ullMaxFileSize = _ullMaxFileSize;
   dwMaxFilesCount = _dwMaxFilesCount;
-  sParser.nState = StateBoundary;
-  sParser.dwHeadersLen = 0;
-  sParser.nBoundaryPos = 0;
-  sParser.sCurrentBlock.sContentDisposition.cStrNameW.Empty();
-  sParser.sCurrentBlock.sContentDisposition.bHasFileName = FALSE;
-  sParser.sCurrentBlock.sContentDisposition.cStrFileNameW.Empty();
-  sParser.sCurrentBlock.cStrContentTypeA.Empty();
-  sParser.sCurrentBlock.bContentTransferEncoding = FALSE;
-  sParser.nUsedTempBuf = sParser.nFileUploadCounter = 0;
-  sParser.nFileUploadSize = 0ui64;
   return;
 }
 
@@ -90,20 +80,20 @@ HRESULT CHttpBodyParserMultipartFormData::Parse(_In_opt_ LPCVOID lpData, _In_opt
 
   if (lpData == NULL && nDataSize > 0)
     return E_POINTER;
-  if (sParser.nState == StateDone)
+  if (sParser.nState == eState::Done)
     return S_OK;
-  if (sParser.nState == StateError)
+  if (sParser.nState == eState::Error)
     return MX_E_InvalidData;
 
   //end of parsing?
   if (lpData == NULL)
   {
-    if (sParser.nState != StateDone)
+    if (sParser.nState != eState::Done)
     {
-      sParser.nState = StateError;
+      sParser.nState = eState::Error;
       return MX_E_InvalidData;
     }
-    sParser.nState = StateDone;
+    sParser.nState = eState::Done;
     return S_OK;
   }
 
@@ -114,7 +104,7 @@ HRESULT CHttpBodyParserMultipartFormData::Parse(_In_opt_ LPCVOID lpData, _In_opt
   {
     switch (sParser.nState)
     {
-      case StateBoundary:
+      case eState::Boundary:
         if (*szDataA == '\r' || *szDataA == '\n')
           break;
 
@@ -134,36 +124,36 @@ err_invalid_data:
             goto err_invalid_data;
           if (sA[sParser.nBoundaryPos - 1] == 0)
           {
-            sParser.nState = StateBoundaryAfter;
+            sParser.nState = eState::BoundaryAfter;
             break;
           }
         }
         sParser.nBoundaryPos++;
         break;
 
-      case StateBoundaryAfter:
+      case eState::BoundaryAfter:
         if (*szDataA == '-')
         {
-          sParser.nState = StateBoundaryEndCheck;
+          sParser.nState = eState::BoundaryEndCheck;
           break;
         }
-        sParser.nState = StateBoundaryAfter2;
+        sParser.nState = eState::BoundaryAfter2;
         //fall into 'StateBoundaryAfter2'
 
-      case StateBoundaryAfter2:
+      case eState::BoundaryAfter2:
         if (*szDataA == ' ' || *szDataA == '\t')
           break;
         if (*szDataA != '\r')
           goto err_invalid_data;
-        sParser.nState = StateBoundaryAfterEnd;
+        sParser.nState = eState::BoundaryAfterEnd;
         break;
 
-      case StateBoundaryAfterEnd:
+      case eState::BoundaryAfterEnd:
         if (*szDataA != '\n')
           goto err_invalid_data;
 
         //start of a header block
-        sParser.nState = StateHeaderStart;
+        sParser.nState = eState::HeaderStart;
         sParser.dwHeadersLen = 0;
         sParser.sCurrentBlock.sContentDisposition.cStrNameW.Empty();
         sParser.sCurrentBlock.sContentDisposition.bHasFileName = FALSE;
@@ -175,28 +165,28 @@ err_invalid_data:
         sParser.nFileUploadSize = 0ui64;
         break;
 
-      case StateBoundaryEndCheck:
+      case eState::BoundaryEndCheck:
         //check second dash
         if (*szDataA != '-')
           goto err_invalid_data;
-        sParser.nState = StateBoundaryEndCheckAfterDashes;
+        sParser.nState = eState::BoundaryEndCheckAfterDashes;
         break;
 
-      case StateBoundaryEndCheckAfterDashes:
+      case eState::BoundaryEndCheckAfterDashes:
         if (*szDataA == ' ' || *szDataA == '\t')
           break;
         if (*szDataA != '\r')
           goto err_invalid_data;
-        sParser.nState = StateBoundaryEndCheckAfterDashes2;
+        sParser.nState = eState::BoundaryEndCheckAfterDashes2;
         break;
 
-      case StateBoundaryEndCheckAfterDashes2:
+      case eState::BoundaryEndCheckAfterDashes2:
         if (*szDataA != '\n')
           goto err_invalid_data;
-        sParser.nState = StateDone;
+        sParser.nState = eState::Done;
         break;
 
-      case StateHeaderStart:
+      case eState::HeaderStart:
         if (*szDataA == '\r')
         {
           //no more headers
@@ -207,7 +197,7 @@ err_invalid_data:
               goto done;
             sParser.cStrCurrLineA.Empty();
           }
-          sParser.nState = StateHeadersEnding;
+          sParser.nState = eState::HeadersEnding;
           break;
         }
 
@@ -216,7 +206,7 @@ err_invalid_data:
         {
           if (sParser.cStrCurrLineA.IsEmpty() != FALSE)
             goto err_invalid_data;
-          sParser.nState = StateHeaderValue;
+          sParser.nState = eState::HeaderValue;
           BACKWARD_CHAR();
           break;
         }
@@ -229,10 +219,10 @@ err_invalid_data:
             goto done;
           sParser.cStrCurrLineA.Empty();
         }
-        sParser.nState = StateHeaderName;
-        //fall into 'StateHeaderName'
+        sParser.nState = eState::HeaderName;
+        //fall into 'eState::HeaderName'
 
-      case StateHeaderName:
+      case eState::HeaderName:
         //check headers length
         if (sParser.dwHeadersLen >= MAX_HEADER_LENGTH)
         {
@@ -254,7 +244,7 @@ err_line_too_long:
 err_nomem:  hRes = E_OUTOFMEMORY;
             goto done;
           }
-          sParser.nState = StateHeaderValue;
+          sParser.nState = eState::HeaderValue;
           break;
         }
 
@@ -269,7 +259,7 @@ err_nomem:  hRes = E_OUTOFMEMORY;
           goto err_nomem;
         break;
 
-      case StateHeaderValue:
+      case eState::HeaderValue:
         //check headers length
         if (sParser.dwHeadersLen >= MAX_HEADER_LENGTH)
           goto err_line_too_long;
@@ -277,7 +267,7 @@ err_nomem:  hRes = E_OUTOFMEMORY;
 
         if (*szDataA == '\r')
         {
-          sParser.nState = StateHeaderValueEnding;
+          sParser.nState = eState::HeaderValueEnding;
           break;
         }
 
@@ -292,14 +282,14 @@ err_nomem:  hRes = E_OUTOFMEMORY;
           goto err_nomem;
         break;
 
-      case StateHeaderValueEnding:
+      case eState::HeaderValueEnding:
         if (*szDataA != '\n')
           goto err_invalid_data;
 
-        sParser.nState = StateHeaderStart;
+        sParser.nState = eState::HeaderStart;
         break;
 
-      case StateHeadersEnding:
+      case eState::HeadersEnding:
         if (*szDataA != '\n')
           goto err_invalid_data;
 
@@ -333,19 +323,19 @@ err_nomem:  hRes = E_OUTOFMEMORY;
         }
 
         //process data
-        sParser.nState = StateData;
+        sParser.nState = eState::Data;
         break;
 
-      case StateData:
+      case eState::Data:
         if (*szDataA == '\r')
         {
-          sParser.nState = StateMayBeDataEnd;
+          sParser.nState = eState::MayBeDataEnd;
           sParser.nBoundaryPos = 0;
           break;
         }
         if (*szDataA == '\n')
         {
-          sParser.nState = StateMayBeDataEndAlt;
+          sParser.nState = eState::MayBeDataEndAlt;
           sParser.nBoundaryPos = 1;
           break;
         }
@@ -356,14 +346,14 @@ err_nomem:  hRes = E_OUTOFMEMORY;
           goto done;
         break;
 
-      case StateMayBeDataEnd:
-      case StateMayBeDataEndAlt:
+      case eState::MayBeDataEnd:
+      case eState::MayBeDataEndAlt:
         if (sParser.nBoundaryPos == 0)
         {
           if (*szDataA != '\n')
           {
 not_boundary_end:
-            if (sParser.nState == StateMayBeDataEnd)
+            if (sParser.nState == eState::MayBeDataEnd)
             {
               hRes = AccumulateData('\r');
               if (FAILED(hRes))
@@ -391,7 +381,7 @@ not_boundary_end:
               }
             }
             //'*szData' points to the current char but it can be the beginning of a boundary end
-            sParser.nState = StateData;
+            sParser.nState = eState::Data;
             BACKWARD_CHAR();
             break;
           }
@@ -440,30 +430,30 @@ not_boundary_end:
               sParser.cFileH.Detach();
             }
             sParser.cStrCurrLineA.Empty();
-            sParser.nState = StateDataEnd;
+            sParser.nState = eState::DataEnd;
             break;
           }
         }
         (sParser.nBoundaryPos)++;
         break;
 
-      case StateDataEnd:
+      case eState::DataEnd:
         if (*szDataA == '-')
         {
-          sParser.nState = StateBoundaryEndCheck;
+          sParser.nState = eState::BoundaryEndCheck;
         }
         else if (*szDataA == '\r')
         {
-          sParser.nState = StateBoundaryAfterEnd;
+          sParser.nState = eState::BoundaryAfterEnd;
         }
         else
         {
           BACKWARD_CHAR();
-          sParser.nState = StateBoundaryAfter;
+          sParser.nState = eState::BoundaryAfter;
         }
         break;
 
-      case StateDone:
+      case eState::Done:
         break; //ignore
 
       default:
@@ -474,7 +464,7 @@ not_boundary_end:
 
 done:
   if (FAILED(hRes))
-    sParser.nState = StateError;
+    sParser.nState = eState::Error;
   return hRes;
 }
 #undef BACKWARD_CHAR
@@ -583,7 +573,7 @@ HRESULT CHttpBodyParserMultipartFormData::ParseHeader(_Inout_ CStringA &cStrLine
         if (FAILED(hRes))
           return hRes;
 
-        if (cHeader->GetEncoding() != CHttpHeaderEntContentTransferEncoding::EncodingIdentity)
+        if (cHeader->GetEncoding() != CHttpHeaderEntContentTransferEncoding::eEncoding::Identity)
           return MX_E_InvalidData; //header already specified
         sParser.sCurrentBlock.bContentTransferEncoding = TRUE;
 

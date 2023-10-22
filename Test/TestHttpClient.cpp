@@ -85,12 +85,12 @@ static BOOL _GetTempPath(_Out_ MX::CStringW &cStrPathW);
 
 //-----------------------------------------------------------
 
-typedef struct {
-  int nIndex;
-  MX::CSockets *lpSocketMgr;
+typedef struct tagTHREAD_DATA {
+  int nIndex{ 0 };
+  MX::CSockets *lpSocketMgr{ NULL };
   MX::TAutoRefCounted<MX::CSslCertificateArray> cCertificates;
   MX::CWorkerThread cWorkerThreads;
-  DWORD dwLogLevel;
+  DWORD dwLogLevel{ 0 };
 } THREAD_DATA;
 
 //-----------------------------------------------------------
@@ -210,9 +210,16 @@ static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *_lpHttp,
 {
   CMyHttpClient *lpHttp = static_cast<CMyHttpClient*>(_lpHttp);
 
-  *lplpCertificates = lpHttp->cCertificates.Get();
-  if ((*lplpCertificates) != NULL)
-    (*lplpCertificates)->AddRef();
+  if (lplpCertificates != NULL)
+  {
+    *lplpCertificates = lpHttp->cCertificates.Get();
+    if ((*lplpCertificates) != NULL)
+      (*lplpCertificates)->AddRef();
+  }
+  if (lplpSelfCert != NULL)
+    *lplpSelfCert = NULL;
+  if (lplpPrivKey != NULL)
+    *lplpPrivKey = NULL;
   return S_OK;
 }
 
@@ -245,6 +252,7 @@ static HRESULT SimpleTest1(_In_ MX::CSockets &cSocketkMgr, _In_ MX::CSslCertific
   cHttpClient->SetOption_MaxBodySize(2048UL * 1048576UL);
 
   wprintf_s(L"[HttpClient/SimpleTest1] Downloading...\n");
+#pragma warning(suppress : 28159)
   dwStartTime = dwEndTime = ::GetTickCount();
 
   //cHttpClient->SetHeadersReceivedCallback(MX_BIND_CALLBACK(&OnResponseHeadersReceived));

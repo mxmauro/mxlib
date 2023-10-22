@@ -55,22 +55,24 @@
 
 #undef DUK_STRCMP
 #define DUK_STRCMP       DukTapeStrCmp
-static __forceinline int DukTapeStrCmp(_In_z_ const char * _Str1, _In_z_ const char * _Str2)
+static int DukTapeStrCmp(_In_z_ const char *str1, _In_z_ const char *str2)
 {
-  return MX::StrCompareA(_Str1, _Str2, FALSE);
+  return MX::StrCompareA(str1, str2, FALSE);
 }
 
 #undef DUK_STRNCMP
 #define DUK_STRNCMP      DukTapeStrNCmp
-static __forceinline int DukTapeStrNCmp(_In_reads_or_z_(_MaxCount) const char * _Str1,
-                                        _In_reads_or_z_(_MaxCount) const char * _Str2, _In_ size_t _MaxCount)
+static int DukTapeStrNCmp(_In_reads_or_z_(count) const char *str1,
+                          _In_reads_or_z_(count) const char *str2,
+                          _In_ size_t const count)
 {
-  return MX::StrNCompareA(_Str1, _Str2, _MaxCount, FALSE);
+  return MX::StrNCompareA(str1, str2, count, FALSE);
 }
 
 #undef DUK_SPRINTF
 #define DUK_SPRINTF     DukTapeSprintf
-static __forceinline int DukTapeSprintf(char *buffer, const char *format, ...)
+static int DukTapeSprintf(_Pre_notnull_ _Always_(_Post_z_) char *const *buffer,
+                                 _In_z_ _Printf_format_string_ const char *format, ...)
 {
   va_list argptr;
   int ret;
@@ -81,9 +83,29 @@ static __forceinline int DukTapeSprintf(char *buffer, const char *format, ...)
   return ret;
 }
 #undef DUK_SNPRINTF
-#define DUK_SNPRINTF     sprintf_s
+#define DUK_SNPRINTF     DukTapeSnprintf
+static int DukTapeSnprintf(_Out_writes_opt_(bufferSize) _Always_(_Post_z_) char *const buffer,
+                           _In_ size_t const bufferSize,
+                           _In_z_ _Printf_format_string_ const char *format, ...)
+{
+  va_list argptr;
+  int res;
+
+  va_start(args, format);
+  res = vsnprintf_s(buffer, bufferSize, _TRUNCATE, format, argptr);
+  va_end(args);
+  return res;
+}
+
 #undef DUK_VSNPRINTF
-#define DUK_VSNPRINTF    vsprintf_s
+#define DUK_VSNPRINTF    DukTapeVsnprintf
+static int DukTapeVsnprintf(_Out_writes_opt_(bufferSize) _Always_(_Post_z_) char *const buffer,
+                            _In_ size_t const bufferSize,
+                            _In_z_ _Printf_format_string_ const char *format,
+                            _In_ va_list argptr)
+{
+  return vsnprintf_s(buffer, bufferSize, _TRUNCATE, format, argptr);
+}
 
 //--------------------------------
 

@@ -42,10 +42,10 @@ static __inline HRESULT MX_HRESULT_FROM_LASTSOCKETERROR()
   return (hRes != MX_HRESULT_FROM_WIN32(WSAEWOULDBLOCK)) ? hRes : MX_E_IoPending;
 }
 
-#define TypeResolvingAddress  (CPacketBase::eType)((int)CPacketBase::TypeMAX + 1)
-#define TypeConnect           (CPacketBase::eType)((int)CPacketBase::TypeMAX + 2)
-#define TypeConnectEx         (CPacketBase::eType)((int)CPacketBase::TypeMAX + 3)
-#define TypeAcceptEx          (CPacketBase::eType)((int)CPacketBase::TypeMAX + 4)
+#define TypeResolvingAddress  (CPacketBase::eType)((int)CPacketBase::eType::MAX + 1)
+#define TypeConnect           (CPacketBase::eType)((int)CPacketBase::eType::MAX + 2)
+#define TypeConnectEx         (CPacketBase::eType)((int)CPacketBase::eType::MAX + 3)
+#define TypeAcceptEx          (CPacketBase::eType)((int)CPacketBase::eType::MAX + 4)
 
 #define SO_UPDATE_ACCEPT_CONTEXT       0x700B
 #define SO_UPDATE_CONNECT_CONTEXT      0x7010
@@ -102,7 +102,7 @@ typedef struct {
 //-----------------------------------------------------------
 
 static LONG volatile nSocketInitCount = 0;
-static LONG volatile nOSVersion = -1;
+static LONG volatile nInitMutex = 0;
 static lpfnSetFileCompletionNotificationModes volatile fnSetFileCompletionNotificationModes = NULL;
 
 //-----------------------------------------------------------
@@ -137,25 +137,10 @@ namespace MX {
 
 CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDispatcherPool), CNonCopyableObj()
 {
-  dwAddressResolverTimeoutMs = 20000;
-  nFlags = 0;
-
-  //detect OS version
-  if (__InterlockedRead(&nOSVersion) < 0)
   {
-    LONG _nOSVersion = 0;
+    MX::CFastLock cLock(&nInitMutex);
 
-    if (::IsWindows8OrGreater() != FALSE)
-      _nOSVersion = 0x0602;
-    else if (::IsWindowsVistaOrGreater() != FALSE)
-      _nOSVersion = 0x0600;
-#pragma warning(default : 4996)
-    _InterlockedExchange(&nOSVersion, _nOSVersion);
-  }
-
-  if (__InterlockedRead(&nOSVersion) >= 0x0600)
-  {
-    if (__InterlockedReadPointer(&fnSetFileCompletionNotificationModes) == NULL)
+    if (fnSetFileCompletionNotificationModes == NULL)
     {
       LPVOID _fnSetFileCompletionNotificationModes;
       HINSTANCE hDll;
@@ -174,12 +159,15 @@ CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDi
           _fnSetFileCompletionNotificationModes = ::GetProcAddress(hDll, "SetFileCompletionNotificationModes");
         }
       }
-      _InterlockedExchangePointer((LPVOID volatile*)&fnSetFileCompletionNotificationModes,
-                                  _fnSetFileCompletionNotificationModes);
+
+      if (_fnSetFileCompletionNotificationModes != NULL)
+        fnSetFileCompletionNotificationModes = (lpfnSetFileCompletionNotificationModes)_fnSetFileCompletionNotificationModes;
+      else
+        fnSetFileCompletionNotificationModes = (lpfnSetFileCompletionNotificationModes)1;
     }
   }
 
-  if (__InterlockedReadPointer(&fnSetFileCompletionNotificationModes) != NULL)
+  if (fnSetFileCompletionNotificationModes != NULL && fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1)
   {
     nFlags |= MGRFLAGS_CanCompleteSync;
   }
@@ -219,10 +207,10 @@ HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCr
     *h = NULL;
   if (cRundownLock.IsAcquired() == FALSE)
     return MX_E_Cancelled;
-  if ((nFamily != FamilyIPv4 && nFamily != FamilyIPv6) || nPort < 1 || nPort > 65535 || (!cCreateCallback))
+  if ((nFamily != eFamily::IPv4 && nFamily != eFamily::IPv6) || nPort < 1 || nPort > 65535 || (!cCreateCallback))
     return E_INVALIDARG;
   //create connection
-  cNewConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassListener, nFamily));
+  cNewConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::eConnectionClass::Listener, nFamily));
   if (!(cNewConn && cNewConn->cListener))
     return E_OUTOFMEMORY;
   cNewConn->cListener->SetOptions(lpOptions);
@@ -285,12 +273,12 @@ HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA
     return MX_E_Cancelled;
   if (szAddressA == NULL)
     return E_POINTER;
-  if ((nFamily != FamilyIPv4 && nFamily != FamilyIPv6) || *szAddressA == 0 || nPort < 1 || nPort > 65535)
+  if ((nFamily != eFamily::IPv4 && nFamily != eFamily::IPv6) || *szAddressA == 0 || nPort < 1 || nPort > 65535)
     return E_INVALIDARG;
   if (!cCreateCallback)
     return E_POINTER;
   //create connection
-  cNewConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassClient, nFamily));
+  cNewConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::eConnectionClass::Client, nFamily));
   if (!cNewConn)
     return E_OUTOFMEMORY;
   cNewConn->cCreateCallback = cCreateCallback;
@@ -516,7 +504,7 @@ HRESULT CSockets::CreateServerConnection(_In_ CConnection *lpListenConn)
   HRESULT hRes;
 
   //create connection
-  cIncomingConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::ConnectionClassServer, lpListenConn->nFamily));
+  cIncomingConn.Attach(MX_DEBUG_NEW CConnection(this, CIpc::eConnectionClass::Server, lpListenConn->nFamily));
   if (!cIncomingConn)
     return E_OUTOFMEMORY;
   cIncomingConn->cCreateCallback = lpListenConn->cCreateCallback;
@@ -556,13 +544,13 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket,
       //connect/listen
       switch (lpConn->nClass)
       {
-        case CIpc::ConnectionClassListener:
+        case CIpc::eConnectionClass::Listener:
           hRes = lpConn->SetupListener();
           if (FAILED(hRes))
             FireOnEngineError(hRes);
           break;
 
-        case CIpc::ConnectionClassClient:
+        case CIpc::eConnectionClass::Client:
           hRes = lpConn->SetupClient();
           break;
 
@@ -626,7 +614,7 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket,
             }
             else
             {
-              ::MxMemCopy(&(lpIncomingConn->sAddr), (sockaddr*)&sPeerAddr, sizeof((lpIncomingConn->sAddr)));
+              ::MxMemSet(&(lpIncomingConn->sAddr), 0, sizeof((lpIncomingConn->sAddr)));
               hRes = E_FAIL;
             }
           }
@@ -679,19 +667,14 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket,
 //-----------------------------------------------------------
 
 CSockets::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass,
-                                   _In_ eFamily _nFamily) : CConnectionBase(lpIpc, nClass), CNonCopyableObj()
+                                   _In_ eFamily _nFamily) : CConnectionBase(lpIpc, nClass), CNonCopyableObj(),
+                                   nFamily(_nFamily)
 {
-  SlimRWL_Initialize(&sRwHandleInUse);
-  MxMemSet(&sAddr, 0, sizeof(sAddr));
-  sck = NULL;
-  ::MxMemSet(&sHostResolver, 0, sizeof(sHostResolver));
-  _InterlockedExchange(&nReadThrottle, 1024);
-  nFamily = _nFamily;
-  if (nClass == CIpc::ConnectionClassListener)
+  ;
+  if (nClass == CIpc::eConnectionClass::Listener)
   {
     cListener.Attach(MX_DEBUG_NEW CListener(this));
   }
-  ::MxMemSet(&sAutoAdjustSndBuf, 0, sizeof(sAutoAdjustSndBuf));
   return;
 }
 
@@ -700,7 +683,7 @@ CSockets::CConnection::~CConnection()
   //NOTE: The socket can be still open if some write requests were queued while a graceful shutdown was in progress
   MX_ASSERT((SIZE_T)(ULONG)__InterlockedRead(&nOutgoingWrites) ==
             sPendingWritePackets.cList.GetCount() +
-            sInUsePackets.cList.GetCountOfType(CIpc::CPacketBase::TypeWriteRequest));
+            sInUsePackets.cList.GetCountOfType(CIpc::CPacketBase::eType::WriteRequest));
 
   if (sck != NULL)
     ::closesocket(sck);
@@ -737,7 +720,7 @@ HRESULT CSockets::CConnection::CreateSocket()
     return MX_HRESULT_FROM_LASTSOCKETERROR();
 
   //packet size on pre-vista
-  if (__InterlockedRead(&nOSVersion) < 0x0600)
+  if (::IsWindowsVistaOrGreater() == FALSE)
   {
     //Vista and later uses an auto tune algorithm better than a static one
     unsigned int nBufSize;
@@ -750,7 +733,7 @@ HRESULT CSockets::CConnection::CreateSocket()
       return MX_HRESULT_FROM_LASTSOCKETERROR();
   }
   //IOCP options
-  if (fnSetFileCompletionNotificationModes != NULL)
+  if (fnSetFileCompletionNotificationModes != NULL && fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1)
   {
     UCHAR flags = FILE_SKIP_SET_EVENT_ON_HANDLE;
 
@@ -761,8 +744,8 @@ HRESULT CSockets::CConnection::CreateSocket()
   }
   switch (nClass)
   {
-    case CIpc::ConnectionClassClient:
-    case CIpc::ConnectionClassServer:
+    case CIpc::eConnectionClass::Client:
+    case CIpc::eConnectionClass::Server:
       //keep alive
       sKeepAliveData.onoff = 1;
       sKeepAliveData.keepalivetime = TCP_KEEPALIVE_MS;
@@ -779,9 +762,9 @@ HRESULT CSockets::CConnection::CreateSocket()
         return hRes;
       break;
 
-    case CIpc::ConnectionClassListener:
+    case CIpc::eConnectionClass::Listener:
       //use loopback fast path on Win8+
-      if (__InterlockedRead(&nOSVersion) >= 0x0602)
+      if (::IsWindows8OrGreater() != FALSE)
       {
         nYes = 1;
         if (::WSAIoctl(sck, SIO_LOOPBACK_FAST_PATH, &nYes, sizeof(nYes), NULL, 0, &dw, NULL, NULL) == SOCKET_ERROR)
@@ -1044,7 +1027,7 @@ HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _I
   HRESULT hRes;
 
   if (szAddressA == NULL || *szAddressA == 0)
-    szAddressA = (nFamily != FamilyIPv6) ? "0.0.0.0" : "::";
+    szAddressA = (nFamily != eFamily::IPv6) ? "0.0.0.0" : "::";
   nAddrLen = MX::StrLenA(szAddressA);
 
   //create packet
@@ -1201,7 +1184,7 @@ HRESULT CSockets::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket, _Out_
   }
   *lpdwWritten = dwWritten;
 
-  if (SUCCEEDED(hRes) && bAdjustSndBuf != FALSE && __InterlockedRead(&nOSVersion) >= 0x0600)
+  if (SUCCEEDED(hRes) && bAdjustSndBuf != FALSE && ::IsWindowsVistaOrGreater() != FALSE)
   {
     DWORD dwStartTickMs;
 
@@ -1306,11 +1289,8 @@ VOID CSockets::CConnection::HostResolveCallback(_In_ LONG nResolverId, _In_ PSOC
 
 //-----------------------------------------------------------
 
-CSockets::CConnection::CConnectWaiter::CConnectWaiter(_In_ CConnection *_lpConn) : CBaseMemObj()
+CSockets::CConnection::CConnectWaiter::CConnectWaiter(_In_ CConnection *_lpConn) : CBaseMemObj(), lpConn(_lpConn)
 {
-  lpConn = _lpConn;
-  lpWorkerThread = NULL;
-  lpPacket = NULL;
   return;
 }
 
@@ -1424,16 +1404,8 @@ VOID CSockets::CConnection::CConnectWaiter::ThreadProc()
 
 //-----------------------------------------------------------
 
-CSockets::CConnection::CListener::CListener(_In_ CConnection *_lpConn) : CBaseMemObj()
+CSockets::CConnection::CListener::CListener(_In_ CConnection *_lpConn) : CBaseMemObj(), lpConn(_lpConn)
 {
-  lpConn = _lpConn;
-  lpWorkerThread = NULL;
-  hAcceptSelect = hAcceptCompleted = NULL;
-  _InterlockedExchange(&nAcceptsInProgress, 0);
-  fnAcceptEx = fnGetAcceptExSockaddrs = NULL;
-  FastLock_Initialize(&(sLimiter.nMutex));
-  sLimiter.cTimer.Reset();
-  sLimiter.dwRequestCounter = 0;
   return;
 }
 
@@ -1685,9 +1657,9 @@ static int FamilyToWinSockFamily(_In_ MX::CSockets::eFamily nFamily)
 {
   switch (nFamily)
   {
-    case MX::CSockets::FamilyIPv4:
+    case MX::CSockets::eFamily::IPv4:
       return AF_INET;
-    case MX::CSockets::FamilyIPv6:
+    case MX::CSockets::eFamily::IPv6:
       return AF_INET6;
   }
   return AF_UNSPEC;

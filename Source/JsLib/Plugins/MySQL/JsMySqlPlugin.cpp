@@ -126,7 +126,7 @@ DukTape::duk_ret_t CJsMySqlPlugin::Connect(_In_ DukTape::duk_context *lpCtx)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
 
   szServerHostA = DukTape::duk_require_string(lpCtx, 0);
-  szUserNameA = NULL;
+  szUserNameA = "";
   if (nParamsCount > 1 && DukTape::duk_is_undefined(lpCtx, 1) == 0)
     szUserNameA = DukTape::duk_require_string(lpCtx, 1);
   szPasswordA = NULL;
@@ -462,43 +462,43 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow(_In_ DukTape::duk_context *lpCtx)
     cField.Attach(cConnector->GetField(i));
     switch (cField->GetType())
     {
-      case Database::FieldTypeNull:
+      case Database::eFieldType::Null:
         DukTape::duk_push_null(lpCtx);
         break;
 
-      case Database::FieldTypeString:
+      case Database::eFieldType::String:
         DukTape::duk_push_lstring(lpCtx, cField->GetString(), cField->GetLength());
         break;
 
-      case Database::FieldTypeBoolean:
+      case Database::eFieldType::Boolean:
         DukTape::duk_push_boolean(lpCtx, (cField->GetBoolean() != FALSE) ? 1 : 0);
         break;
 
-      case Database::FieldTypeUInt32:
+      case Database::eFieldType::UInt32:
         DukTape::duk_push_uint(lpCtx, cField->GetUInt32());
         break;
 
-      case Database::FieldTypeInt32:
+      case Database::eFieldType::Int32:
         DukTape::duk_push_int(lpCtx, cField->GetInt32());
         break;
 
-      case Database::FieldTypeUInt64:
+      case Database::eFieldType::UInt64:
         DukTape::duk_push_number(lpCtx, (double)(cField->GetUInt64()));
         break;
 
-      case Database::FieldTypeInt64:
+      case Database::eFieldType::Int64:
         DukTape::duk_push_number(lpCtx, (double)(cField->GetInt64()));
         break;
 
-      case Database::FieldTypeDouble:
+      case Database::eFieldType::Double:
         DukTape::duk_push_number(lpCtx, cField->GetDouble());
         break;
 
-      case Database::FieldTypeDateTime:
+      case Database::eFieldType::DateTime:
         CJavascriptVM::PushDate(lpCtx, *(cField->GetDateTime()), TRUE);
         break;
 
-      case Database::FieldTypeBlob:
+      case Database::eFieldType::Blob:
         p = (LPBYTE)(DukTape::duk_push_fixed_buffer(lpCtx, cField->GetLength()));
         ::MxMemCopy(p, cField->GetBlob(), cField->GetLength());
         DukTape::duk_push_buffer_object(lpCtx, -1, 0, cField->GetLength(), DUK_BUFOBJ_UINT8ARRAY);

@@ -247,7 +247,7 @@ public:
       };
 
   private:
-    CLnkLstNode *lpCursor, *lpNextCursor;
+    CLnkLstNode *lpCursor{ NULL }, *lpNextCursor{ NULL };
   };
 
   //---------------------------------------------------------
@@ -277,12 +277,12 @@ public:
       };
 
   private:
-    CLnkLstNode *lpCursor, *lpNextCursor;
+    CLnkLstNode *lpCursor{ NULL }, *lpNextCursor{ NULL };
   };
 
 private:
-  CLnkLstNode *lpHead, *lpTail;
-  SIZE_T nCount;
+  CLnkLstNode *lpHead{ NULL }, *lpTail{ NULL };
+  SIZE_T nCount{ 0 };
 };
 
 _inline VOID CLnkLstNode::Remove()

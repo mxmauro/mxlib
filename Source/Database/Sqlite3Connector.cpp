@@ -337,7 +337,7 @@ LPCSTR CSQLite3Connector::GetErrorDescription() const
   return (lpInternalData != NULL) ? (LPCSTR)(sqlite3_data->cStrLastDbErrorDescriptionA) : "";
 }
 
-HRESULT CSQLite3Connector::QueryExecute(_In_ LPCSTR szQueryA, _In_ SIZE_T nQueryLen, _In_ CFieldList *lpInputFieldsList)
+HRESULT CSQLite3Connector::QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQueryLen, _In_opt_ CFieldList *lpInputFieldsList)
 {
   Internals::CAutoLockSQLite3DB cDbLock(sqlite3_data);
   int err, inputParams;
@@ -402,36 +402,36 @@ err_invalidarg:
       lpField = lpInputFieldsList->GetElementAt(nParamIdx);
       switch (lpField->GetType())
       {
-        case FieldTypeNull:
+        case eFieldType::Null:
           err = sqlite3_bind_null(sqlite3_data->lpStmt, (int)nParamIdx + 1);
           break;
 
-        case FieldTypeBoolean:
+        case eFieldType::Boolean:
           err = sqlite3_bind_int(sqlite3_data->lpStmt, (int)nParamIdx + 1, (lpField->GetBoolean() != FALSE) ? 1 : 0);
           break;
 
-        case FieldTypeUInt32:
+        case eFieldType::UInt32:
           err = sqlite3_bind_int64(sqlite3_data->lpStmt, (int)nParamIdx + 1,
                                    (sqlite3_int64)(ULONGLONG)(lpField->GetUInt32()));
           break;
 
-        case FieldTypeInt32:
+        case eFieldType::Int32:
           err = sqlite3_bind_int64(sqlite3_data->lpStmt, (int)nParamIdx + 1, (sqlite3_int64)(lpField->GetInt32()));
           break;
 
-        case FieldTypeUInt64:
+        case eFieldType::UInt64:
           err = sqlite3_bind_int64(sqlite3_data->lpStmt, (int)nParamIdx + 1, (sqlite3_int64)(lpField->GetUInt64()));
           break;
 
-        case FieldTypeInt64:
+        case eFieldType::Int64:
           err = sqlite3_bind_int64(sqlite3_data->lpStmt, (int)nParamIdx + 1, (sqlite3_int64)(lpField->GetInt64()));
           break;
 
-        case FieldTypeDouble:
+        case eFieldType::Double:
           err = sqlite3_bind_double(sqlite3_data->lpStmt, (int)nParamIdx + 1, lpField->GetDouble());
           break;
 
-        case FieldTypeString:
+        case eFieldType::String:
           //we don't copy the data so we need to keep a reference to the source field
           if (sqlite3_data->aInputFieldsList.AddElement(lpField) == FALSE)
           {
@@ -446,7 +446,7 @@ err_nomem:
                                   (int)(lpField->GetLength()), SQLITE_TRANSIENT);
           break;
 
-        case FieldTypeBlob:
+        case eFieldType::Blob:
           //we don't copy the data so we need to keep a reference to the source field
           if (sqlite3_data->aInputFieldsList.AddElement(lpField) == FALSE)
             goto err_nomem;
@@ -456,7 +456,7 @@ err_nomem:
                                   (int)(lpField->GetLength()), SQLITE_STATIC);
           break;
 
-        case FieldTypeDateTime:
+        case eFieldType::DateTime:
           {
           CHAR szBufA[32];
           int nYear, nMonth, nDay, nHours, nMinutes, nSeconds, nMilliSeconds;
@@ -857,20 +857,20 @@ VOID CSQLite3Connector::QueryClose()
 
 HRESULT CSQLite3Connector::TransactionStart()
 {
-  return TransactionStart(TxTypeStandard);
+  return TransactionStart(eTxType::Standard);
 }
 
 HRESULT CSQLite3Connector::TransactionStart(_In_ eTxType nType)
 {
   switch (nType)
   {
-    case TxTypeStandard:
+    case eTxType::Standard:
       return QueryExecute("BEGIN TRANSACTION;", 18);
 
-    case TxTypeExclusive:
+    case eTxType::Exclusive:
       return QueryExecute("BEGIN EXCLUSIVE TRANSACTION;", 28);
 
-    case TxTypeImmediate:
+    case eTxType::Immediate:
       return QueryExecute("BEGIN IMMEDIATE TRANSACTION;", 28);
   }
   return E_INVALIDARG;

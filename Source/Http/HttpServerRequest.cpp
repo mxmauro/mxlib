@@ -36,30 +36,12 @@ namespace MX {
 
 CHttpServer::CClientRequest::CClientRequest() : CIpc::CUserData()
 {
-  lpHttpServer = NULL;
-  lpSocketMgr = NULL;
-  hConn = NULL;
-  ::MxMemSet(&sPeerAddr, 0, sizeof(sPeerAddr));
-  nState = StateInactive;
-  RundownProt_Initialize(&nTimerCallbackRundownLock);
-  _InterlockedExchange(&nFlags, 0);
-  hrErrorCode = S_OK;
-  _InterlockedExchange(&nHeadersTimeoutTimerId, 0);
-  _InterlockedExchange(&nThroughputTimerId, 0);
-  dwLowThroughputCounter = 0;
-  _InterlockedExchange(&nGracefulTerminationTimerId, 0);
-  _InterlockedExchange(&nKeepAliveTimeoutTimerId, 0);
-  sResponse.nStatus = 0;
-  sResponse.bLastStreamIsData = FALSE;
-  sResponse.szMimeTypeHintA = NULL;
-  sResponse.bIsInline = FALSE;
-  sResponse.bDirect = sResponse.bPreserveWebSocketHeaders = FALSE;
   return;
 }
 
 CHttpServer::CClientRequest::~CClientRequest()
 {
-  MX_ASSERT(nState == StateInactive || nState == StateWebSocket || nState == StateTerminated);
+  MX_ASSERT(nState == eState::Inactive || nState == eState::WebSocket || nState == eState::Terminated);
   MX_ASSERT(__InterlockedRead(&nHeadersTimeoutTimerId) == 0);
   MX_ASSERT(__InterlockedRead(&nThroughputTimerId) == 0);
   MX_ASSERT(__InterlockedRead(&nGracefulTerminationTimerId) == 0);
@@ -80,8 +62,8 @@ BOOL CHttpServer::CClientRequest::IsAlive() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection &>(cMutex));
 
-  if (nState == StateAfterHeaders || nState == StateBuildingResponse || nState == StateSendingResponse ||
-      nState == StateNegotiatingWebSocket)
+  if (nState == eState::AfterHeaders || nState == eState::BuildingResponse || nState == eState::SendingResponse ||
+      nState == eState::NegotiatingWebSocket)
   {
     if (lpHttpServer != NULL)
     {
@@ -107,10 +89,10 @@ HRESULT CHttpServer::CClientRequest::EnableDirectResponse()
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
   HRESULT hRes;
 
-  if (nState != StateBuildingResponse && nState != StateAfterHeaders)
+  if (nState != eState::BuildingResponse && nState != eState::AfterHeaders)
     return MX_E_InvalidState;
 
-  hRes = SetState(StateSendingResponse);
+  hRes = SetState(eState::SendingResponse);
   if (SUCCEEDED(hRes))
     sResponse.bDirect = TRUE;
   return hRes;
@@ -120,7 +102,7 @@ LPCSTR CHttpServer::CClientRequest::GetMethod() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return "";
   return cRequestParser.GetRequestMethod();
 }
@@ -129,7 +111,7 @@ CUrl* CHttpServer::CClientRequest::GetUrl() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return &cZeroUrl;
   return cRequestParser.GetRequestUri();
 }
@@ -138,7 +120,7 @@ CHttpBodyParserBase* CHttpServer::CClientRequest::GetRequestBodyParser() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
-  if (nState != StateBuildingResponse)
+  if (nState != eState::BuildingResponse)
     return NULL;
   return cRequestParser.GetBodyParser();
 }
@@ -147,7 +129,7 @@ SIZE_T CHttpServer::CClientRequest::GetRequestHeadersCount() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return 0;
   return cRequestParser.Headers().GetCount();
 }
@@ -158,7 +140,7 @@ CHttpHeaderBase* CHttpServer::CClientRequest::GetRequestHeader(_In_ SIZE_T nInde
   CHttpHeaderArray *lpHeadersArray;
   CHttpHeaderBase *lpHeader;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return NULL;
   lpHeadersArray = &(cRequestParser.Headers());
   if (nIndex >= lpHeadersArray->GetCount())
@@ -175,7 +157,7 @@ CHttpHeaderBase* CHttpServer::CClientRequest::GetRequestHeaderByName(_In_z_ LPCS
   CHttpHeaderBase *lpHeader;
   SIZE_T nIndex;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return NULL;
   lpHeadersArray = &(cRequestParser.Headers());
   nIndex = lpHeadersArray->Find(szNameA);
@@ -190,7 +172,7 @@ SIZE_T CHttpServer::CClientRequest::GetRequestCookiesCount() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return 0;
   return cRequestParser.Cookies().GetCount();
 }
@@ -201,7 +183,7 @@ CHttpCookie* CHttpServer::CClientRequest::GetRequestCookie(_In_ SIZE_T nIndex) c
   CHttpCookieArray *lpCookieArray;
   CHttpCookie *lpCookie;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return NULL;
   lpCookieArray = &(cRequestParser.Cookies());
   if (nIndex >= lpCookieArray->GetCount())
@@ -218,7 +200,7 @@ CHttpCookie* CHttpServer::CClientRequest::GetRequestCookieByName(_In_z_ LPCSTR s
   CHttpCookie *lpCookie;
   SIZE_T nIndex;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return NULL;
   lpCookieArray = &(cRequestParser.Cookies());
   nIndex = lpCookieArray->Find(szNameA);
@@ -236,7 +218,7 @@ CHttpCookie* CHttpServer::CClientRequest::GetRequestCookieByName(_In_z_ LPCWSTR 
   CHttpCookie *lpCookie;
   SIZE_T nIndex;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return NULL;
   lpCookieArray = &(cRequestParser.Cookies());
   nIndex = lpCookieArray->Find(szNameW);
@@ -251,7 +233,7 @@ HRESULT CHttpServer::CClientRequest::ResetResponse()
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return MX_E_InvalidState;
   if (HasHeadersBeenSent() != FALSE)
     return MX_E_InvalidState;
@@ -264,7 +246,7 @@ HRESULT CHttpServer::CClientRequest::SetResponseStatus(_In_ LONG nStatusCode, _I
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return MX_E_InvalidState;
   if (HasHeadersBeenSent() != FALSE)
     return MX_E_InvalidState;
@@ -289,9 +271,8 @@ HRESULT CHttpServer::CClientRequest::SetResponseStatus(_In_ LONG nStatusCode, _I
 HRESULT CHttpServer::CClientRequest::AddResponseHeader(_In_ CHttpHeaderBase *lpHeader)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
-  HRESULT hRes;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return MX_E_InvalidState;
   if (HasHeadersBeenSent() != FALSE)
     return MX_E_InvalidState;
@@ -299,16 +280,15 @@ HRESULT CHttpServer::CClientRequest::AddResponseHeader(_In_ CHttpHeaderBase *lpH
     return E_POINTER;
 
   //add to list
-  hRes = sResponse.cHeaders.AddElement(lpHeader);
-  if (FAILED(hRes))
-    return hRes;
+  if (sResponse.cHeaders.AddElement(lpHeader) == FALSE)
+    return E_OUTOFMEMORY;
   lpHeader->AddRef();
 
   //done
   return S_OK;
 }
 
-HRESULT CHttpServer::CClientRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _Out_opt_ CHttpHeaderBase **lplpHeader,
+HRESULT CHttpServer::CClientRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _Deref_opt_out_ CHttpHeaderBase **lplpHeader,
                                                        _In_opt_ BOOL bReplaceExisting)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
@@ -317,17 +297,17 @@ HRESULT CHttpServer::CClientRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _O
 
   if (lplpHeader != NULL)
     *lplpHeader = NULL;
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return MX_E_InvalidState;
   if (HasHeadersBeenSent() != FALSE)
     return MX_E_InvalidState;
 
   //create and add to list
   hRes = CHttpHeaderBase::Create(szNameA, FALSE, &cNewHeader);
-  if (SUCCEEDED(hRes))
-    hRes = sResponse.cHeaders.AddElement(cNewHeader.Get());
   if (FAILED(hRes))
     return hRes;
+  if (sResponse.cHeaders.AddElement(cNewHeader.Get()) == FALSE)
+    return E_OUTOFMEMORY;
   cNewHeader->AddRef();
 
   //done
@@ -347,7 +327,7 @@ HRESULT CHttpServer::CClientRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _I
 
   if (lplpHeader != NULL)
     *lplpHeader = NULL;
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return MX_E_InvalidState;
   if (HasHeadersBeenSent() != FALSE)
     return MX_E_InvalidState;
@@ -371,9 +351,8 @@ HRESULT CHttpServer::CClientRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _I
     }
   }
 
-  hRes = sResponse.cHeaders.AddElement(cNewHeader.Get());
-  if (FAILED(hRes))
-    return hRes;
+  if (sResponse.cHeaders.AddElement(cNewHeader.Get()) == FALSE)
+    return E_OUTOFMEMORY;
   cNewHeader->AddRef();
 
   //done
@@ -393,7 +372,7 @@ HRESULT CHttpServer::CClientRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _I
 
   if (lplpHeader != NULL)
     *lplpHeader = NULL;
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return MX_E_InvalidState;
   if (HasHeadersBeenSent() != FALSE)
     return MX_E_InvalidState;
@@ -417,9 +396,8 @@ HRESULT CHttpServer::CClientRequest::AddResponseHeader(_In_z_ LPCSTR szNameA, _I
     }
   }
 
-  hRes = sResponse.cHeaders.AddElement(cNewHeader.Get());
-  if (FAILED(hRes))
-    return hRes;
+  if (sResponse.cHeaders.AddElement(cNewHeader.Get()) == FALSE)
+    return E_OUTOFMEMORY;
   cNewHeader->AddRef();
 
   //done
@@ -434,7 +412,7 @@ HRESULT CHttpServer::CClientRequest::RemoveResponseHeader(_In_z_ LPCSTR szNameA)
   SIZE_T nIndex;
   HRESULT hRes = MX_E_NotFound;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return MX_E_InvalidState;
   if (HasHeadersBeenSent() != FALSE)
     return MX_E_InvalidState;
@@ -451,7 +429,7 @@ HRESULT CHttpServer::CClientRequest::RemoveAllResponseHeaders()
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return MX_E_InvalidState;
   if (HasHeadersBeenSent() != FALSE)
     return MX_E_InvalidState;
@@ -464,7 +442,7 @@ SIZE_T CHttpServer::CClientRequest::GetResponseHeadersCount() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return 0;
   return sResponse.cHeaders.GetCount();
 }
@@ -474,7 +452,7 @@ CHttpHeaderBase* CHttpServer::CClientRequest::GetResponseHeader(_In_ SIZE_T nInd
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
   CHttpHeaderBase *lpHeader;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return NULL;
   if (nIndex >= sResponse.cHeaders.GetCount())
     return NULL;
@@ -489,7 +467,7 @@ CHttpHeaderBase* CHttpServer::CClientRequest::GetResponseHeaderByName(_In_z_ LPC
   CHttpHeaderBase *lpHeader;
   SIZE_T nIndex;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return NULL;
   nIndex = sResponse.cHeaders.Find(szNameA);
   if (nIndex == (SIZE_T)-1)
@@ -503,7 +481,7 @@ HRESULT CHttpServer::CClientRequest::AddResponseCookie(_In_ CHttpCookie *lpCooki
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return MX_E_InvalidState;
   if (HasHeadersBeenSent() != FALSE)
     return MX_E_InvalidState;
@@ -520,7 +498,7 @@ HRESULT CHttpServer::CClientRequest::AddResponseCookie(_In_ CHttpCookieArray &cS
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return MX_E_InvalidState;
   if (HasHeadersBeenSent() != FALSE)
     return MX_E_InvalidState;
@@ -603,7 +581,7 @@ HRESULT CHttpServer::CClientRequest::RemoveResponseCookie(_In_z_ LPCSTR szNameA)
   SIZE_T nIndex;
   HRESULT hRes = MX_E_NotFound;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return MX_E_InvalidState;
   if (HasHeadersBeenSent() != FALSE)
     return MX_E_InvalidState;
@@ -622,7 +600,7 @@ HRESULT CHttpServer::CClientRequest::RemoveResponseCookie(_In_z_ LPCWSTR szNameW
   SIZE_T nIndex;
   HRESULT hRes = MX_E_NotFound;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return MX_E_InvalidState;
   if (HasHeadersBeenSent() != FALSE)
     return MX_E_InvalidState;
@@ -639,7 +617,7 @@ HRESULT CHttpServer::CClientRequest::RemoveAllResponseCookies()
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return MX_E_InvalidState;
   if (HasHeadersBeenSent() != FALSE)
     return MX_E_InvalidState;
@@ -651,7 +629,7 @@ SIZE_T CHttpServer::CClientRequest::GetResponseCookiesCount() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection &>(cMutex));
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return 0;
   return sResponse.cCookies.GetCount();
 }
@@ -661,7 +639,7 @@ CHttpCookie* CHttpServer::CClientRequest::GetResponseCookie(_In_ SIZE_T nIndex) 
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection &>(cMutex));
   CHttpCookie *lpCookie;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return NULL;
   if (nIndex >= sResponse.cCookies.GetCount())
     return NULL;
@@ -676,7 +654,7 @@ CHttpCookie* CHttpServer::CClientRequest::GetResponseCookieByName(_In_z_ LPCSTR 
   SIZE_T nIndex;
   CHttpCookie *lpCookie;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return NULL;
   nIndex = sResponse.cCookies.Find(szNameA);
   if (nIndex == (SIZE_T)-1)
@@ -692,7 +670,7 @@ CHttpCookie* CHttpServer::CClientRequest::GetResponseCookieByName(_In_z_ LPCWSTR
   SIZE_T nIndex;
   CHttpCookie *lpCookie;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return NULL;
   nIndex = sResponse.cCookies.Find(szNameW);
   if (nIndex == (SIZE_T)-1)
@@ -708,8 +686,8 @@ HRESULT CHttpServer::CClientRequest::SendResponse(_In_ LPCVOID lpData, _In_ SIZE
   SIZE_T nWritten;
   HRESULT hRes;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateSendingResponse &&
-      nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::SendingResponse &&
+      nState != eState::NegotiatingWebSocket)
   {
     return MX_E_InvalidState;
   }
@@ -720,7 +698,7 @@ HRESULT CHttpServer::CClientRequest::SendResponse(_In_ LPCVOID lpData, _In_ SIZE
   //send a direct response?
   if (sResponse.bDirect != FALSE)
   {
-    if (nState != StateSendingResponse)
+    if (nState != eState::SendingResponse)
       return MX_E_InvalidState;
 
     hRes = SendHeaders(); //send headers if we didn't before
@@ -728,7 +706,7 @@ HRESULT CHttpServer::CClientRequest::SendResponse(_In_ LPCVOID lpData, _In_ SIZE
       hRes = lpHttpServer->cSocketMgr.SendMsg(hConn, lpData, nDataLen);
     return hRes;
   }
-  if (nState == StateSendingResponse)
+  if (nState == eState::SendingResponse)
     return MX_E_InvalidState;
 
   if (sResponse.aStreamsList.GetCount() > 0 && sResponse.bLastStreamIsData != FALSE)
@@ -791,8 +769,8 @@ HRESULT CHttpServer::CClientRequest::SendStream(_In_ CStream *lpStream)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateSendingResponse &&
-      nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::SendingResponse &&
+      nState != eState::NegotiatingWebSocket)
   {
     return MX_E_InvalidState;
   }
@@ -804,7 +782,7 @@ HRESULT CHttpServer::CClientRequest::SendStream(_In_ CStream *lpStream)
   {
     HRESULT hRes;
 
-    if (nState != StateSendingResponse)
+    if (nState != eState::SendingResponse)
       return MX_E_InvalidState;
 
     hRes = SendHeaders(); //send headers if we didn't before
@@ -813,7 +791,7 @@ HRESULT CHttpServer::CClientRequest::SendStream(_In_ CStream *lpStream)
     return hRes;
   }
 
-  if (nState == StateSendingResponse)
+  if (nState == eState::SendingResponse)
     return MX_E_InvalidState;
 
   //add to list
@@ -830,7 +808,7 @@ HRESULT CHttpServer::CClientRequest::SetMimeTypeFromFileName(_In_opt_z_ LPCWSTR 
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return MX_E_InvalidState;
 
   //sending a direct response?
@@ -849,7 +827,7 @@ HRESULT CHttpServer::CClientRequest::SetFileName(_In_opt_z_ LPCWSTR szFileNameW,
   CCriticalSection::CAutoLock cLock(cMutex);
   CStringW cStrTempFileNameW;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return MX_E_InvalidState;
 
   //sending a direct response?
@@ -871,7 +849,7 @@ HRESULT CHttpServer::CClientRequest::SetFileName(_In_opt_z_ LPCWSTR szFileNameW,
   }
 
   //set response info
-  if (cStrTempFileNameW.IsEmpty() == FALSE)
+  if (cStrTempFileNameW.IsEmpty() == FALSE && szFileNameW != NULL && *szFileNameW != 0)
   {
     sResponse.szMimeTypeHintA = Http::GetMimeType(szFileNameW);
     sResponse.cStrFileNameW.Attach(cStrTempFileNameW.Detach());
@@ -894,7 +872,7 @@ HRESULT CHttpServer::CClientRequest::SendErrorPage(_In_ LONG nStatusCode, _In_ H
   CCriticalSection::CAutoLock cLock(cMutex);
   HRESULT hRes;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return MX_E_InvalidState;
   if (HasHeadersBeenSent() != FALSE)
     return MX_E_InvalidState;
@@ -910,7 +888,7 @@ HRESULT CHttpServer::CClientRequest::DisableClientCache()
   CCriticalSection::CAutoLock cLock(cMutex);
   HRESULT hRes;
 
-  if (nState != StateAfterHeaders && nState != StateBuildingResponse && nState != StateNegotiatingWebSocket)
+  if (nState != eState::AfterHeaders && nState != eState::BuildingResponse && nState != eState::NegotiatingWebSocket)
     return MX_E_InvalidState;
   if (HasHeadersBeenSent() != FALSE)
     return MX_E_InvalidState;
@@ -960,7 +938,7 @@ HRESULT CHttpServer::CClientRequest::Initialize(_In_ CHttpServer *_lpHttpServer,
   hConn = _hConn;
   if (_lpHttpServer->ShouldLog(1) != FALSE)
   {
-    _lpHttpServer->Log(L"HttpServer(State/Req:0x%p/Conn:0x%p/Parser:0x%p): State=Inactive", this, hConn,
+    _lpHttpServer->Log(L"HttpServer(State/Req:0x%p/Conn:0x%p/Parser:0x%p): eState::=Inactive", this, hConn,
                        &cRequestParser);
   }
   cRequestParser.SetOption_MaxHeaderSize(dwMaxHeaderSize);
@@ -972,7 +950,7 @@ HRESULT CHttpServer::CClientRequest::ResetForNewRequest()
 {
   HRESULT hRes;
 
-  hRes = SetState(StateKeepingAlive);
+  hRes = SetState(eState::KeepingAlive);
   if (FAILED(hRes))
     return hRes;
 
@@ -988,66 +966,66 @@ HRESULT CHttpServer::CClientRequest::SetState(_In_ eState nNewState)
 {
   HRESULT hRes;
 
-  MX_ASSERT(nNewState == StateTerminated || nNewState != nState);
-  MX_ASSERT(nNewState == StateTerminated || hConn != NULL);
+  MX_ASSERT(nNewState == eState::Terminated || nNewState != nState);
+  MX_ASSERT(nNewState == eState::Terminated || hConn != NULL);
   if (lpHttpServer->ShouldLog(1) != FALSE)
   {
     BOOL b = FALSE;
 
     switch (nState)
     {
-      case StateInactive:
-      case StateKeepingAlive:
-        if (nNewState != StateReceivingRequestHeaders && nNewState != StateTerminated)
+      case eState::Inactive:
+      case eState::KeepingAlive:
+        if (nNewState != eState::ReceivingRequestHeaders && nNewState != eState::Terminated)
           b = TRUE;
         break;
 
-      case StateReceivingRequestHeaders:
-        if (nNewState != StateNegotiatingWebSocket && nNewState != StateAfterHeaders &&
-            nNewState != StateBuildingResponse)
+      case eState::ReceivingRequestHeaders:
+        if (nNewState != eState::NegotiatingWebSocket && nNewState != eState::AfterHeaders &&
+            nNewState != eState::BuildingResponse)
         {
           b = TRUE;
         }
         break;
 
-      case StateAfterHeaders:
-        if (nNewState != StateReceivingRequestBody && nNewState != StateBuildingResponse)
+      case eState::AfterHeaders:
+        if (nNewState != eState::ReceivingRequestBody && nNewState != eState::BuildingResponse)
           b = TRUE;
         break;
 
-      case StateReceivingRequestBody:
-        if (nNewState != StateBuildingResponse)
+      case eState::ReceivingRequestBody:
+        if (nNewState != eState::BuildingResponse)
           b = TRUE;
         break;
 
-      case StateBuildingResponse:
-        if (nNewState != StateSendingResponse)
+      case eState::BuildingResponse:
+        if (nNewState != eState::SendingResponse)
           b = TRUE;
         break;
 
-      case StateSendingResponse:
-        if (nNewState != StateKeepingAlive && nNewState != StateTerminated && nNewState != StateLingerClose)
+      case eState::SendingResponse:
+        if (nNewState != eState::KeepingAlive && nNewState != eState::Terminated && nNewState != eState::LingerClose)
           b = TRUE;
         break;
 
-      case StateNegotiatingWebSocket:
-        if (nNewState != StateWebSocket)
+      case eState::NegotiatingWebSocket:
+        if (nNewState != eState::WebSocket)
           b = TRUE;
         break;
     }
     if (b != FALSE)
     {
-      lpHttpServer->Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): Unexpected NewState=%s from State=%s", this, hConn,
+      lpHttpServer->Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): Unexpected NewState=%s from eState::=%s", this, hConn,
                         GetNamedState(nNewState), GetNamedState(nState));
     }
   }
 
   switch (nState)
   {
-    case StateBuildingResponse:
-    case StateAfterHeaders:
-    case StateNegotiatingWebSocket:
-      if (nNewState != nState && nNewState != StateTerminated)
+    case eState::BuildingResponse:
+    case eState::AfterHeaders:
+    case eState::NegotiatingWebSocket:
+      if (nNewState != nState && nNewState != eState::Terminated)
       {
         hRes = lpHttpServer->cSocketMgr.ResumeInputProcessing(hConn);
         if (FAILED(hRes))
@@ -1057,9 +1035,9 @@ HRESULT CHttpServer::CClientRequest::SetState(_In_ eState nNewState)
   }
   switch (nNewState)
   {
-    case StateBuildingResponse:
-    case StateAfterHeaders:
-    case StateNegotiatingWebSocket:
+    case eState::BuildingResponse:
+    case eState::AfterHeaders:
+    case eState::NegotiatingWebSocket:
       if (nState != nNewState)
       {
         hRes = lpHttpServer->cSocketMgr.PauseInputProcessing(hConn);
@@ -1072,7 +1050,7 @@ HRESULT CHttpServer::CClientRequest::SetState(_In_ eState nNewState)
 
   if (lpHttpServer->ShouldLog(1) != FALSE)
   {
-    lpHttpServer->Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): State=%s", this, hConn, GetNamedState(nState));
+    lpHttpServer->Log(L"HttpServer(State/Req:0x%p/Conn:0x%p): eState::=%s", this, hConn, GetNamedState(nState));
   }
 
   //done
@@ -1356,7 +1334,7 @@ HRESULT CHttpServer::CClientRequest::SendHeaders()
 
     lpHeaderGenTransferEncoding = sResponse.cHeaders.Find<CHttpHeaderGenTransferEncoding>();
     if (lpHeaderGenTransferEncoding == NULL ||
-        lpHeaderGenTransferEncoding->GetEncoding() != CHttpHeaderGenTransferEncoding::EncodingChunked)
+        lpHeaderGenTransferEncoding->GetEncoding() != CHttpHeaderGenTransferEncoding::eEncoding::Chunked)
     {
       lpHeaderEntContentLength = sResponse.cHeaders.Find<CHttpHeaderEntContentLength>();
       if (lpHeaderEntContentLength == NULL)
@@ -1564,11 +1542,11 @@ VOID CHttpServer::CClientRequest::ResetResponseForNewRequest(_In_ BOOL bPreserve
   return;
 }
 
-HRESULT CHttpServer::CClientRequest::StartTimeoutTimers(_In_ int nTimers)
+HRESULT CHttpServer::CClientRequest::StartTimeoutTimers(_In_ eTimeoutTimer nTimers)
 {
   HRESULT hRes;
 
-  if ((nTimers & TimeoutTimerHeaders) != 0)
+  if ((nTimers & eTimeoutTimer::Headers) != (eTimeoutTimer)0)
   {
     MX::TimedEvent::Clear(&nHeadersTimeoutTimerId);
     hRes = MX::TimedEvent::SetTimeout(&nHeadersTimeoutTimerId, lpHttpServer->dwRequestHeaderTimeoutMs,
@@ -1578,7 +1556,7 @@ HRESULT CHttpServer::CClientRequest::StartTimeoutTimers(_In_ int nTimers)
     if (FAILED(hRes))
       goto done;
   }
-  if ((nTimers & TimeoutTimerThroughput) != 0)
+  if ((nTimers & eTimeoutTimer::Throughput) != (eTimeoutTimer)0)
   {
     MX::TimedEvent::Clear(&nThroughputTimerId);
     hRes = MX::TimedEvent::SetInterval(&nThroughputTimerId, 1000,
@@ -1587,7 +1565,7 @@ HRESULT CHttpServer::CClientRequest::StartTimeoutTimers(_In_ int nTimers)
     if (FAILED(hRes))
       goto done;
   }
-  if ((nTimers & TimeoutTimerGracefulTermination) != 0)
+  if ((nTimers & eTimeoutTimer::GracefulTermination) != (eTimeoutTimer)0)
   {
     MX::TimedEvent::Clear(&nGracefulTerminationTimerId);
     hRes = MX::TimedEvent::SetTimeout(&nGracefulTerminationTimerId, lpHttpServer->dwGracefulTerminationTimeoutMs,
@@ -1597,7 +1575,7 @@ HRESULT CHttpServer::CClientRequest::StartTimeoutTimers(_In_ int nTimers)
     if (FAILED(hRes))
       goto done;
   }
-  if ((nTimers & TimeoutTimerKeepAlive) != 0)
+  if ((nTimers & eTimeoutTimer::KeepAlive) != (eTimeoutTimer)0)
   {
     MX::TimedEvent::Clear(&nKeepAliveTimeoutTimerId);
     hRes = MX::TimedEvent::SetInterval(&nKeepAliveTimeoutTimerId, lpHttpServer->dwKeepAliveTimeoutMs,
@@ -1614,21 +1592,21 @@ done:
   return hRes;
 }
 
-VOID CHttpServer::CClientRequest::StopTimeoutTimers(_In_ int nTimers)
+VOID CHttpServer::CClientRequest::StopTimeoutTimers(_In_ CClientRequest::eTimeoutTimer nTimers)
 {
-  if ((nTimers & TimeoutTimerHeaders) != 0)
+  if ((nTimers & eTimeoutTimer::Headers) != (eTimeoutTimer)0)
   {
     MX::TimedEvent::Clear(&nHeadersTimeoutTimerId);
   }
-  if ((nTimers & TimeoutTimerThroughput) != 0)
+  if ((nTimers & eTimeoutTimer::Throughput) != (eTimeoutTimer)0)
   {
     MX::TimedEvent::Clear(&nThroughputTimerId);
   }
-  if ((nTimers & TimeoutTimerGracefulTermination) != 0)
+  if ((nTimers & eTimeoutTimer::GracefulTermination) != (eTimeoutTimer)0)
   {
     MX::TimedEvent::Clear(&nGracefulTerminationTimerId);
   }
-  if ((nTimers & TimeoutTimerKeepAlive) != 0)
+  if ((nTimers & eTimeoutTimer::KeepAlive) != (eTimeoutTimer)0)
   {
     MX::TimedEvent::Clear(&nKeepAliveTimeoutTimerId);
   }
@@ -1639,40 +1617,40 @@ LPCWSTR CHttpServer::CClientRequest::GetNamedState(_In_ eState nState)
 {
   switch (nState)
   {
-    case StateInactive:
+    case eState::Inactive:
       return L"Inactive";
 
-    case StateReceivingRequestHeaders:
+    case eState::ReceivingRequestHeaders:
       return L"Receiving headers";
 
-    case StateAfterHeaders:
+    case eState::AfterHeaders:
       return L"Received headers";
 
-    case StateReceivingRequestBody:
+    case eState::ReceivingRequestBody:
       return L"Receiving body";
 
-    case StateBuildingResponse:
+    case eState::BuildingResponse:
       return L"Building response";
 
-    case StateSendingResponse:
+    case eState::SendingResponse:
       return L"Sending response";
 
-    case StateNegotiatingWebSocket:
+    case eState::NegotiatingWebSocket:
       return L"Negotiating WebSocket";
 
-    case StateWebSocket:
+    case eState::WebSocket:
       return L"WebSocket";
 
-    case StateGracefulTermination:
+    case eState::GracefulTermination:
       return L"Graceful Termination";
 
-    case StateTerminated:
+    case eState::Terminated:
       return L"Terminated";
 
-    case StateKeepingAlive:
+    case eState::KeepingAlive:
       return L"Keeping Alive";
 
-    case StateLingerClose:
+    case eState::LingerClose:
       return L"Linger Close";
   }
   return L"Closed";

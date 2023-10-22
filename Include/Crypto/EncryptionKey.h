@@ -41,7 +41,7 @@ public:
   CEncryptionKey(_In_ const CEncryptionKey &cSrc) throw(...);
   ~CEncryptionKey();
 
-  CEncryptionKey &operator=(CEncryptionKey const &cSrc) throw(...);
+  CEncryptionKey &operator=(_In_ CEncryptionKey const &cSrc) throw(...);
 
   HRESULT Generate(_In_ MX::CEncryptionKey::eAlgorithm nAlgorithm, _In_opt_ SIZE_T nBitsCount = 0);
   SIZE_T GetBitsCount() const;
@@ -64,7 +64,7 @@ public:
     };
 
 private:
-  EVP_PKEY *lpKey;
+  EVP_PKEY *lpKey{ NULL };
 };
 
 } //namespace MX

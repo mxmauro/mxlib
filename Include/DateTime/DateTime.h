@@ -137,16 +137,10 @@ private:
 class CDateTime : public virtual CBaseMemObj
 {
 public:
-  typedef enum {
-    UnitsYear=1,
-    UnitsMonth,
-    UnitsDay,
-    UnitsHours,
-    UnitsMinutes,
-    UnitsSeconds,
-    UnitsMilliseconds,
-    UnitsTicks,
-  } eUnits;
+  enum class eUnits
+  {
+    Year=1, Month, Day, Hours, Minutes, Seconds, Milliseconds, Ticks
+  };
 
   typedef struct {
     LPCSTR szShortDayNamesA[7];
@@ -243,7 +237,7 @@ public:
   HRESULT Sub(_In_ int nCount, _In_ eUnits nUnits);
   HRESULT Sub(_In_ LONGLONG nCount, _In_ eUnits nUnits);
 
-  LONGLONG GetDiff(_In_ const CDateTime& cFromDt, _In_ eUnits nUnits=UnitsSeconds);
+  LONGLONG GetDiff(_In_ const CDateTime& cFromDt, _In_ eUnits nUnits=eUnits::Seconds);
 
   HRESULT Format(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szFormatA, _In_opt_ LPCUSTOMSETTINGSA lpCustomA=NULL);
   HRESULT Format(_Inout_ CStringW &cStrDestW, _In_z_ LPCWSTR szFormatW, _In_opt_ LPCUSTOMSETTINGSW lpCustomW=NULL);

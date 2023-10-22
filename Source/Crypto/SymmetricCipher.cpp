@@ -448,81 +448,81 @@ static const EVP_CIPHER* GetCipher(_In_ MX::CSymmetricCipher::eAlgorithm nAlgori
 {
   switch (nAlgorithm)
   {
-    case MX::CSymmetricCipher::AlgorithmDES_ECB:
+    case MX::CSymmetricCipher::eAlgorithm::DES_ECB:
       return EVP_des_ecb();
-    case MX::CSymmetricCipher::AlgorithmDES_CBC:
+    case MX::CSymmetricCipher::eAlgorithm::DES_CBC:
       return EVP_des_cbc();
-    case MX::CSymmetricCipher::AlgorithmDES_OFB:
+    case MX::CSymmetricCipher::eAlgorithm::DES_OFB:
       return EVP_des_ofb();
-    case MX::CSymmetricCipher::AlgorithmDES_CFB1:
+    case MX::CSymmetricCipher::eAlgorithm::DES_CFB1:
       return EVP_des_cfb1();
-    case MX::CSymmetricCipher::AlgorithmDES_CFB8:
+    case MX::CSymmetricCipher::eAlgorithm::DES_CFB8:
       return EVP_des_cfb8();
-    case MX::CSymmetricCipher::AlgorithmDES_CFB64:
+    case MX::CSymmetricCipher::eAlgorithm::DES_CFB64:
       return EVP_des_cfb64();
 
-    case MX::CSymmetricCipher::Algorithm3DES_ECB:
+    case MX::CSymmetricCipher::eAlgorithm::TripleDES_ECB:
       return EVP_des_ede3_ecb();
-    case MX::CSymmetricCipher::Algorithm3DES_CBC:
+    case MX::CSymmetricCipher::eAlgorithm::TripleDES_CBC:
       return EVP_des_ede3_cbc();
-    case MX::CSymmetricCipher::Algorithm3DES_OFB:
+    case MX::CSymmetricCipher::eAlgorithm::TripleDES_OFB:
       return EVP_des_ede3_ofb();
-    case MX::CSymmetricCipher::Algorithm3DES_CFB1:
+    case MX::CSymmetricCipher::eAlgorithm::TripleDES_CFB1:
       return EVP_des_ede3_cfb1();
-    case MX::CSymmetricCipher::Algorithm3DES_CFB8:
+    case MX::CSymmetricCipher::eAlgorithm::TripleDES_CFB8:
       return EVP_des_ede3_cfb8();
-    case MX::CSymmetricCipher::Algorithm3DES_CFB64:
+    case MX::CSymmetricCipher::eAlgorithm::TripleDES_CFB64:
       return EVP_des_ede3_cfb64();
 
-    case MX::CSymmetricCipher::AlgorithmAES_128_ECB:
+    case MX::CSymmetricCipher::eAlgorithm::AES_128_ECB:
       return EVP_aes_128_ecb();
-    case MX::CSymmetricCipher::AlgorithmAES_128_CBC:
+    case MX::CSymmetricCipher::eAlgorithm::AES_128_CBC:
       return EVP_aes_128_cbc();
-    case MX::CSymmetricCipher::AlgorithmAES_128_CTR:
+    case MX::CSymmetricCipher::eAlgorithm::AES_128_CTR:
       return EVP_aes_128_ctr();
-    case MX::CSymmetricCipher::AlgorithmAES_128_GCM:
+    case MX::CSymmetricCipher::eAlgorithm::AES_128_GCM:
       return EVP_aes_128_gcm();
-    case MX::CSymmetricCipher::AlgorithmAES_128_OFB:
+    case MX::CSymmetricCipher::eAlgorithm::AES_128_OFB:
       return EVP_aes_128_ofb();
-    case MX::CSymmetricCipher::AlgorithmAES_128_CFB1:
+    case MX::CSymmetricCipher::eAlgorithm::AES_128_CFB1:
       return EVP_aes_128_cfb1();
-    case MX::CSymmetricCipher::AlgorithmAES_128_CFB8:
+    case MX::CSymmetricCipher::eAlgorithm::AES_128_CFB8:
       return EVP_aes_128_cfb8();
-    case MX::CSymmetricCipher::AlgorithmAES_128_CFB128:
+    case MX::CSymmetricCipher::eAlgorithm::AES_128_CFB128:
       return EVP_aes_128_cfb128();
 
-    case MX::CSymmetricCipher::AlgorithmAES_192_ECB:
+    case MX::CSymmetricCipher::eAlgorithm::AES_192_ECB:
       return EVP_aes_192_ecb();
-    case MX::CSymmetricCipher::AlgorithmAES_192_CBC:
+    case MX::CSymmetricCipher::eAlgorithm::AES_192_CBC:
       return EVP_aes_192_cbc();
-    case MX::CSymmetricCipher::AlgorithmAES_192_CTR:
+    case MX::CSymmetricCipher::eAlgorithm::AES_192_CTR:
       return EVP_aes_192_ctr();
-    case MX::CSymmetricCipher::AlgorithmAES_192_GCM:
+    case MX::CSymmetricCipher::eAlgorithm::AES_192_GCM:
       return EVP_aes_192_gcm();
-    case MX::CSymmetricCipher::AlgorithmAES_192_OFB:
+    case MX::CSymmetricCipher::eAlgorithm::AES_192_OFB:
       return EVP_aes_192_ofb();
-    case MX::CSymmetricCipher::AlgorithmAES_192_CFB1:
+    case MX::CSymmetricCipher::eAlgorithm::AES_192_CFB1:
       return EVP_aes_192_cfb1();
-    case MX::CSymmetricCipher::AlgorithmAES_192_CFB8:
+    case MX::CSymmetricCipher::eAlgorithm::AES_192_CFB8:
       return EVP_aes_192_cfb8();
-    case MX::CSymmetricCipher::AlgorithmAES_192_CFB128:
+    case MX::CSymmetricCipher::eAlgorithm::AES_192_CFB128:
       return EVP_aes_192_cfb128();
 
-    case MX::CSymmetricCipher::AlgorithmAES_256_ECB:
+    case MX::CSymmetricCipher::eAlgorithm::AES_256_ECB:
       return EVP_aes_256_ecb();
-    case MX::CSymmetricCipher::AlgorithmAES_256_CBC:
+    case MX::CSymmetricCipher::eAlgorithm::AES_256_CBC:
       return EVP_aes_256_cbc();
-    case MX::CSymmetricCipher::AlgorithmAES_256_CTR:
+    case MX::CSymmetricCipher::eAlgorithm::AES_256_CTR:
       return EVP_aes_256_ctr();
-    case MX::CSymmetricCipher::AlgorithmAES_256_GCM:
+    case MX::CSymmetricCipher::eAlgorithm::AES_256_GCM:
       return EVP_aes_256_gcm();
-    case MX::CSymmetricCipher::AlgorithmAES_256_OFB:
+    case MX::CSymmetricCipher::eAlgorithm::AES_256_OFB:
       return EVP_aes_256_ofb();
-    case MX::CSymmetricCipher::AlgorithmAES_256_CFB1:
+    case MX::CSymmetricCipher::eAlgorithm::AES_256_CFB1:
       return EVP_aes_256_cfb1();
-    case MX::CSymmetricCipher::AlgorithmAES_256_CFB8:
+    case MX::CSymmetricCipher::eAlgorithm::AES_256_CFB8:
       return EVP_aes_256_cfb8();
-    case MX::CSymmetricCipher::AlgorithmAES_256_CFB128:
+    case MX::CSymmetricCipher::eAlgorithm::AES_256_CFB128:
       return EVP_aes_256_cfb128();
   }
   return NULL;

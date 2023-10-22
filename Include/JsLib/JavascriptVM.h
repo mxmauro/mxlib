@@ -172,11 +172,16 @@ class CJsObjectBase;
 class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
 {
 public:
-  typedef enum {
-    PropertyFlagWritable     = 0x01,
-    PropertyFlagEnumerable   = 0x02,
-    PropertyFlagConfigurable = 0x04
-  } ePropertyFlags;
+  enum class ePropertyFlags
+  {
+    Writable     = 0x01,
+    Enumerable   = 0x02,
+    Configurable = 0x04
+  };
+
+  friend inline ePropertyFlags operator|(ePropertyFlags lhs, ePropertyFlags rhs);
+  friend inline ePropertyFlags operator&(ePropertyFlags lhs, ePropertyFlags rhs);
+  friend inline ePropertyFlags operator~(ePropertyFlags v);
 
   //----
 
@@ -303,20 +308,20 @@ public:
                               _In_ int nArgsCount);
 
     HRESULT AddProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ BOOL bInitialValueOnStack = FALSE,
-                        _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                        _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
     HRESULT AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ LPCSTR szValueA,
-                              _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                              _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
     HRESULT AddBooleanProperty(_In_z_ LPCSTR szPropertyNameA, _In_ BOOL bValue,
-                               _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                               _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
     HRESULT AddNumericProperty(_In_z_ LPCSTR szPropertyNameA, _In_ double nValue,
-                               _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                               _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
     HRESULT AddNullProperty(_In_z_ LPCSTR szPropertyNameA,
-                            _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                            _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
     HRESULT AddJsObjectProperty(_In_z_ LPCSTR szPropertyNameA, _In_ CJsObjectBase *lpObject,
-                                _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                                _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
     HRESULT AddPropertyWithCallback(_In_z_ LPCSTR szPropertyNameA, _In_ OnGetPropertyCallback cGetValueCallback,
                                 _In_opt_ OnSetPropertyCallback cSetValueCallback = NullCallback(),
-                                _In_opt_ int nFlags = PropertyFlagEnumerable);
+                                _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Enumerable);
 
     HRESULT ReplaceModuleExports();
     HRESULT ReplaceModuleExportsWithObject(_In_ CJsObjectBase *lpObject);
@@ -375,24 +380,24 @@ public:
                             _In_ int nArgsCount);
 
   HRESULT AddProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ BOOL bInitialValueOnStack = FALSE,
-                      _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                      _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
   HRESULT AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ LPCSTR szValueA,
-                            _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                            _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
   HRESULT AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ LPCWSTR szValueW,
-                            _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                            _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
   HRESULT AddBooleanProperty(_In_z_ LPCSTR szPropertyNameA, _In_ BOOL bValue,
-                             _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                             _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
   HRESULT AddIntegerProperty(_In_z_ LPCSTR szPropertyNameA, _In_ int nValue,
-                             _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                             _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
   HRESULT AddNumericProperty(_In_z_ LPCSTR szPropertyNameA, _In_ double nValue,
-                             _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                             _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
   HRESULT AddNullProperty(_In_z_ LPCSTR szPropertyNameA,
-                          _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                          _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
   HRESULT AddJsObjectProperty(_In_z_ LPCSTR szPropertyNameA, _In_ CJsObjectBase *lpObject,
-                              _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                              _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
   HRESULT AddPropertyWithCallback(_In_z_ LPCSTR szPropertyNameA, _In_ OnGetPropertyCallback cGetValueCallback,
                                   _In_opt_ OnSetPropertyCallback cSetValueCallback = NullCallback(),
-                                  _In_opt_ int nFlags = PropertyFlagEnumerable);
+                                  _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Enumerable);
 
   HRESULT RemoveProperty(_In_z_ LPCSTR szPropertyNameA);
 
@@ -407,26 +412,26 @@ public:
 
   HRESULT AddObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
                             _In_opt_ BOOL bInitialValueOnStack = FALSE,
-                            _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                            _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
   HRESULT AddObjectStringProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_z_ LPCSTR szValueA,
-                                  _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                                  _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
   HRESULT AddObjectStringProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_z_ LPCWSTR szValueW,
-                                  _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                                  _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
   HRESULT AddObjectBooleanProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_ BOOL bValue,
-                                   _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                                   _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
   HRESULT AddObjectIntegerProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_ int nValue,
-                                   _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                                   _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
   HRESULT AddObjectNumericProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_ double nValue,
-                                   _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                                   _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
   HRESULT AddObjectNullProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                                _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
   HRESULT AddObjectJsObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
                                     _In_ CJsObjectBase *lpObject,
-                                    _In_opt_ int nFlags = PropertyFlagWritable|PropertyFlagEnumerable);
+                                    _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
   HRESULT AddObjectPropertyWithCallback(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
                                         _In_ OnGetPropertyCallback cGetValueCallback,
                                         _In_opt_ OnSetPropertyCallback cSetValueCallback = NullCallback(),
-                                        _In_opt_ int nFlags = PropertyFlagEnumerable);
+                                        _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Enumerable);
 
   HRESULT RemoveObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA);
 
@@ -670,6 +675,21 @@ private:
 private:
   HRESULT hRes;
 };
+
+inline CJavascriptVM::ePropertyFlags operator|(CJavascriptVM::ePropertyFlags lhs, CJavascriptVM::ePropertyFlags rhs)
+{
+  return static_cast<CJavascriptVM::ePropertyFlags>(static_cast<int>(lhs) | static_cast<int>(rhs));
+}
+
+inline CJavascriptVM::ePropertyFlags operator&(CJavascriptVM::ePropertyFlags lhs, CJavascriptVM::ePropertyFlags rhs)
+{
+  return static_cast<CJavascriptVM::ePropertyFlags>(static_cast<int>(lhs) & static_cast<int>(rhs));
+}
+
+inline CJavascriptVM::ePropertyFlags operator~(CJavascriptVM::ePropertyFlags v)
+{
+  return static_cast<CJavascriptVM::ePropertyFlags>(~static_cast<int>(v));
+}
 
 } //namespace MX
 

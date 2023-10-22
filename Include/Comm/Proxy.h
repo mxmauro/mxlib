@@ -31,11 +31,12 @@ namespace MX {
 class CProxy : public CBaseMemObj
 {
 public:
-  typedef enum {
-    TypeNone = 0,
-    TypeUseIE,
-    TypeManual
-  } eType;
+  enum class eType
+  {
+    None = 0,
+    UseIE,
+    Manual
+  };
 
 public:
   CProxy();

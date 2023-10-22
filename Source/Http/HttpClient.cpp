@@ -60,30 +60,13 @@ static BOOL _GetTempPath(_Out_ MX::CStringW &cStrPathW);
 
 namespace MX {
 
-CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr,
-                         _In_opt_ CLoggable *lpLogParent) : TRefCounted<CBaseMemObj>(), CLoggable(), CNonCopyableObj(),
-                                                            cSocketMgr(_cSocketMgr)
+CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr, _In_opt_ CLoggable *lpLogParent) :
+                         TRefCounted<CBaseMemObj>(), CLoggable(), CNonCopyableObj(),
+                         cSocketMgr(_cSocketMgr), dwMaxRedirCount(DEFAULT_MAX_REDIRECTIONS_COUNT)
 {
   SetLogParent(lpLogParent);
   sResponse.cParser.SetLogParent(this);
   //----
-  dwTimeoutMs = 0;
-  dwMaxRedirCount = DEFAULT_MAX_REDIRECTIONS_COUNT;
-  dwMaxFieldSize = 256000;
-  ullMaxFileSize = 2097152ui64;
-  dwMaxFilesCount = 4;
-  dwMaxBodySizeInMemory = 32768;
-  ullMaxBodySize = 10485760ui64;
-  dwMaxRawRequestBodySizeInMemory = 131072;
-  //----
-  nState = StateClosed;
-  bKeepConnectionOpen = TRUE;
-  bAcceptCompressedContent = TRUE;
-  hLastErrorCode = S_OK;
-  sRedirection.dwCounter = 0;
-  _InterlockedExchange(&(sRedirection.nTimerId), 0);
-  //----
-  _InterlockedExchange(&nCallInProgressThread, 0);
   cHeadersReceivedCallback = NullCallback();
   cDymanicRequestBodyStartCallback = NullCallback();
   cDocumentCompletedCallback = NullCallback();
@@ -92,15 +75,7 @@ CHttpClient::CHttpClient(_In_ CSockets &_cSocketMgr,
   cConnectionCreatedCallback = NullCallback();
   cConnectionDestroyedCallback = NullCallback();
   //----
-  sRequest.sPostData.bHasRaw = FALSE;
-  sRequest.sPostData.nDynamicFlags = 0;
-  MxMemSet(sRequest.szBoundaryA, 0, sizeof(sRequest.szBoundaryA));
-  sRequest.bUsingMultiPartFormData = FALSE;
-  sRequest.bUsingProxy = FALSE;
-  _InterlockedExchange(&(sRequest.nTimeoutTimerId), 0);
   sResponse.aMsgBuf.Attach((LPBYTE)MX_MALLOC(MSG_BUFFER_SIZE));
-  //---
-  SlimRWL_Initialize(&(sConnection.sRwMutex));
   return;
 }
 
@@ -137,7 +112,7 @@ VOID CHttpClient::SetOption_Timeout(_In_ DWORD _dwTimeoutMs)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState == StateClosed)
+  if (nState == eState::Closed)
   {
     dwTimeoutMs = _dwTimeoutMs;
   }
@@ -148,7 +123,7 @@ VOID CHttpClient::SetOption_MaxRedirectionsCount(_In_ DWORD dwCount)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState == StateClosed)
+  if (nState == eState::Closed)
   {
     dwMaxRedirCount = dwCount;
     if (dwMaxRedirCount > 1000)
@@ -161,7 +136,7 @@ VOID CHttpClient::SetOption_MaxHeaderSize(_In_ DWORD dwSize)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState == StateClosed)
+  if (nState == eState::Closed)
   {
     sResponse.cParser.SetOption_MaxHeaderSize(dwSize);
   }
@@ -172,7 +147,7 @@ VOID CHttpClient::SetOption_MaxFieldSize(_In_ DWORD dwSize)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState == StateClosed)
+  if (nState == eState::Closed)
   {
     dwMaxFieldSize = dwSize;
   }
@@ -183,7 +158,7 @@ VOID CHttpClient::SetOption_MaxFileSize(_In_ ULONGLONG ullSize)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState == StateClosed)
+  if (nState == eState::Closed)
   {
     ullMaxFileSize = ullSize;
   }
@@ -194,7 +169,7 @@ VOID CHttpClient::SetOption_MaxFilesCount(_In_ DWORD dwCount)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState == StateClosed)
+  if (nState == eState::Closed)
   {
     dwMaxFilesCount = dwCount;
   }
@@ -205,7 +180,7 @@ BOOL CHttpClient::SetOption_TemporaryFolder(_In_opt_z_ LPCWSTR szFolderW)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState == StateClosed)
+  if (nState == eState::Closed)
   {
     if (szFolderW != NULL && *szFolderW != NULL)
     {
@@ -224,7 +199,7 @@ VOID CHttpClient::SetOption_MaxBodySizeInMemory(_In_ DWORD dwSize)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState == StateClosed)
+  if (nState == eState::Closed)
   {
     dwMaxBodySizeInMemory = dwSize;
   }
@@ -235,7 +210,7 @@ VOID CHttpClient::SetOption_MaxBodySize(_In_ ULONGLONG ullSize)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState == StateClosed)
+  if (nState == eState::Closed)
   {
     ullMaxBodySize = ullSize;
   }
@@ -246,7 +221,7 @@ VOID CHttpClient::SetOption_MaxRawRequestBodySizeInMemory(_In_ DWORD dwSize)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState == StateClosed)
+  if (nState == eState::Closed)
   {
     dwMaxRawRequestBodySizeInMemory = dwSize;
   }
@@ -257,7 +232,7 @@ VOID CHttpClient::SetOption_KeepConnectionOpen(_In_ BOOL bKeep)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState == StateClosed)
+  if (nState == eState::Closed)
   {
     bKeepConnectionOpen = bKeep;
   }
@@ -268,7 +243,7 @@ VOID CHttpClient::SetOption_AcceptCompressedContent(_In_ BOOL bAccept)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState == StateClosed)
+  if (nState == eState::Closed)
   {
     bAcceptCompressedContent = bAccept;
   }
@@ -323,7 +298,7 @@ HRESULT CHttpClient::SetRequestMethodAuto()
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState != StateClosed)
+  if (nState != eState::Closed)
     return MX_E_NotReady;
   sRequest.cStrMethodA.Empty();
   return S_OK;
@@ -333,7 +308,7 @@ HRESULT CHttpClient::SetRequestMethod(_In_z_ LPCSTR szMethodA)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState != StateClosed)
+  if (nState != eState::Closed)
     return MX_E_NotReady;
   if (szMethodA == NULL || *szMethodA == 0)
     return SetRequestMethodAuto();
@@ -356,15 +331,13 @@ HRESULT CHttpClient::SetRequestMethod(_In_z_ LPCWSTR szMethodW)
 HRESULT CHttpClient::AddRequestHeader(_In_ CHttpHeaderBase *lpHeader)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
-  HRESULT hRes;
 
   if (lpHeader == NULL)
     return E_POINTER;
 
   //add to list
-  hRes = sRequest.cHeaders.AddElement(lpHeader);
-  if (FAILED(hRes))
-    return hRes;
+  if (sRequest.cHeaders.AddElement(lpHeader) == FALSE)
+    return E_OUTOFMEMORY;
   lpHeader->AddRef();
 
   //done
@@ -380,15 +353,15 @@ HRESULT CHttpClient::AddRequestHeader(_In_z_ LPCSTR szNameA, _Out_opt_ CHttpHead
 
   if (lplpHeader != NULL)
     *lplpHeader = NULL;
-  if (nState != StateClosed && nState != StateDocumentCompleted)
+  if (nState != eState::Closed && nState != eState::DocumentCompleted)
     return MX_E_NotReady;
 
   //create and add to list
   hRes = CHttpHeaderBase::Create(szNameA, TRUE, &cNewHeader);
-  if (SUCCEEDED(hRes))
-    hRes = sRequest.cHeaders.AddElement(cNewHeader.Get());
   if (FAILED(hRes))
     return hRes;
+  if (sRequest.cHeaders.AddElement(cNewHeader.Get()) == FALSE)
+    return E_OUTOFMEMORY;
   cNewHeader->AddRef();
 
   //done
@@ -406,17 +379,17 @@ HRESULT CHttpClient::AddRequestHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szVal
 
   if (lplpHeader != NULL)
     *lplpHeader = NULL;
-  if (nState != StateClosed && nState != StateDocumentCompleted)
+  if (nState != eState::Closed && nState != eState::DocumentCompleted)
     return MX_E_NotReady;
 
   //create and add to list
   hRes = CHttpHeaderBase::Create(szNameA, TRUE, &cNewHeader);
   if (SUCCEEDED(hRes))
     hRes = cNewHeader->Parse(szValueA, nValueLen);
-  if (SUCCEEDED(hRes))
-    hRes = sRequest.cHeaders.AddElement(cNewHeader.Get());
   if (FAILED(hRes))
     return hRes;
+  if (sRequest.cHeaders.AddElement(cNewHeader.Get()) == FALSE)
+    return E_OUTOFMEMORY;
   cNewHeader->AddRef();
 
   //done
@@ -434,17 +407,17 @@ HRESULT CHttpClient::AddRequestHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szVa
 
   if (lplpHeader != NULL)
     *lplpHeader = NULL;
-  if (nState != StateClosed && nState != StateDocumentCompleted)
+  if (nState != eState::Closed && nState != eState::DocumentCompleted)
     return MX_E_NotReady;
   
   //create and add to list
   hRes = CHttpHeaderBase::Create(szNameA, TRUE, &cNewHeader);
   if (SUCCEEDED(hRes))
     hRes = cNewHeader->Parse(szValueW, nValueLen);
-  if (SUCCEEDED(hRes))
-    hRes = sRequest.cHeaders.AddElement(cNewHeader.Get());
   if (FAILED(hRes))
     return hRes;
+  if (sRequest.cHeaders.AddElement(cNewHeader.Get()) == FALSE)
+    return E_OUTOFMEMORY;
   cNewHeader->AddRef();
 
   //done
@@ -459,7 +432,7 @@ HRESULT CHttpClient::RemoveRequestHeader(_In_z_ LPCSTR szNameA)
   SIZE_T nIndex;
   HRESULT hRes = MX_E_NotFound;
 
-  if (nState != StateClosed && nState != StateDocumentCompleted)
+  if (nState != eState::Closed && nState != eState::DocumentCompleted)
     return MX_E_NotReady;
 
   while ((nIndex = sRequest.cHeaders.Find(szNameA)) != (SIZE_T)-1)
@@ -474,7 +447,7 @@ HRESULT CHttpClient::RemoveAllRequestHeaders()
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState != StateClosed && nState != StateDocumentCompleted)
+  if (nState != eState::Closed && nState != eState::DocumentCompleted)
     return MX_E_NotReady;
 
   sRequest.cHeaders.RemoveAllElements();
@@ -485,7 +458,7 @@ SIZE_T CHttpClient::GetRequestHeadersCount() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection &>(cMutex));
 
-  if (nState != StateClosed && nState != StateDocumentCompleted)
+  if (nState != eState::Closed && nState != eState::DocumentCompleted)
     return MX_E_NotReady;
   return sRequest.cHeaders.GetCount();
 }
@@ -495,7 +468,7 @@ CHttpHeaderBase* CHttpClient::GetRequestHeader(_In_ SIZE_T nIndex) const
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection &>(cMutex));
   CHttpHeaderBase *lpHeader;
 
-  if (nState != StateClosed && nState != StateDocumentCompleted)
+  if (nState != eState::Closed && nState != eState::DocumentCompleted)
     return NULL;
   if (nIndex >= sRequest.cHeaders.GetCount())
     return NULL;
@@ -510,7 +483,7 @@ CHttpHeaderBase* CHttpClient::GetRequestHeaderByName(_In_z_ LPCSTR szNameA) cons
   CHttpHeaderBase *lpHeader;
   SIZE_T nIndex;
 
-  if (nState != StateClosed && nState != StateDocumentCompleted)
+  if (nState != eState::Closed && nState != eState::DocumentCompleted)
     return NULL;
   nIndex = sRequest.cHeaders.Find(szNameA);
   if (nIndex == (SIZE_T)-1)
@@ -524,7 +497,7 @@ HRESULT CHttpClient::AddRequestCookie(_In_ CHttpCookie *lpCookie)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState != StateClosed)
+  if (nState != eState::Closed)
     return MX_E_NotReady;
   if (lpCookie == NULL)
     return E_POINTER;
@@ -539,7 +512,7 @@ HRESULT CHttpClient::AddRequestCookie(_In_ CHttpCookieArray &cSrc, _In_opt_ BOOL
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState != StateClosed)
+  if (nState != eState::Closed)
     return MX_E_NotReady;
   return sRequest.cCookies.Merge(cSrc, bReplaceExisting);
 }
@@ -588,7 +561,7 @@ HRESULT CHttpClient::RemoveRequestCookie(_In_z_ LPCSTR szNameA)
   SIZE_T nIndex;
   HRESULT hRes = MX_E_NotFound;
 
-  if (nState != StateClosed)
+  if (nState != eState::Closed)
     return MX_E_NotReady;
 
   while ((nIndex = sRequest.cCookies.Find(szNameA)) != (SIZE_T)-1)
@@ -605,7 +578,7 @@ HRESULT CHttpClient::RemoveRequestCookie(_In_z_ LPCWSTR szNameW)
   SIZE_T nIndex;
   HRESULT hRes = MX_E_NotFound;
 
-  if (nState != StateClosed)
+  if (nState != eState::Closed)
     return MX_E_NotReady;
 
   while ((nIndex = sRequest.cCookies.Find(szNameW)) != (SIZE_T)-1)
@@ -620,7 +593,7 @@ HRESULT CHttpClient::RemoveAllRequestCookies()
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState != StateClosed)
+  if (nState != eState::Closed)
     return MX_E_NotReady;
   sRequest.cCookies.RemoveAllElements();
   return S_OK;
@@ -630,7 +603,7 @@ SIZE_T CHttpClient::GetRequestCookiesCount() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection &>(cMutex));
 
-  if (nState != StateClosed)
+  if (nState != eState::Closed)
     return 0;
   return sRequest.cCookies.GetCount();
 }
@@ -640,7 +613,7 @@ CHttpCookie* CHttpClient::GetRequestCookie(_In_ SIZE_T nIndex) const
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection &>(cMutex));
   CHttpCookie *lpCookie;
 
-  if (nState != StateClosed)
+  if (nState != eState::Closed)
     return NULL;
   if (nIndex >= sRequest.cCookies.GetCount())
     return NULL;
@@ -655,7 +628,7 @@ CHttpCookie *CHttpClient::GetRequestCookieByName(_In_z_ LPCSTR szNameA) const
   SIZE_T nIndex;
   CHttpCookie *lpCookie;
 
-  if (nState != StateClosed)
+  if (nState != eState::Closed)
     return NULL;
   nIndex = sRequest.cCookies.Find(szNameA);
   if (nIndex == (SIZE_T)-1)
@@ -671,7 +644,7 @@ CHttpCookie* CHttpClient::GetRequestCookieByName(_In_z_ LPCWSTR szNameW) const
   SIZE_T nIndex;
   CHttpCookie *lpCookie;
 
-  if (nState != StateClosed)
+  if (nState != eState::Closed)
     return NULL;
   nIndex = sRequest.cCookies.Find(szNameW);
   if (nIndex == (SIZE_T)-1)
@@ -687,7 +660,7 @@ HRESULT CHttpClient::AddRequestPostData(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szV
   CPostDataItem *lpNewItem;
   LPCSTR sA;
 
-  if (nState != StateClosed)
+  if (nState != eState::Closed)
     return MX_E_NotReady;
   if (szNameA == NULL)
     return E_POINTER;
@@ -738,7 +711,7 @@ HRESULT CHttpClient::AddRequestPostDataFile(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR
   CPostDataItem *lpNewItem;
   LPCSTR sA;
 
-  if (nState != StateClosed)
+  if (nState != eState::Closed)
     return MX_E_NotReady;
   if (szNameA == NULL || szFileNameA == NULL || lpStream == NULL)
     return E_POINTER;
@@ -798,8 +771,8 @@ HRESULT CHttpClient::AddRequestRawPostData(_In_ LPCVOID lpData, _In_ SIZE_T nLen
   CCriticalSection::CAutoLock cLock(cMutex);
   HRESULT hRes;
 
-  if (nState != StateClosed && nState != StateSendingDynamicRequestBody && nState != StateWaitingForRedirection &&
-      nState != StateEstablishingProxyTunnelConnection && nState != StateWaitingProxyTunnelConnectionResponse)
+  if (nState != eState::Closed && nState != eState::SendingDynamicRequestBody && nState != eState::WaitingForRedirection &&
+      nState != eState::EstablishingProxyTunnelConnection && nState != eState::WaitingProxyTunnelConnectionResponse)
   {
     return MX_E_NotReady;
   }
@@ -808,7 +781,7 @@ HRESULT CHttpClient::AddRequestRawPostData(_In_ LPCVOID lpData, _In_ SIZE_T nLen
   if (lpData == NULL)
     return E_POINTER;
 
-  if (nState != StateSendingDynamicRequestBody)
+  if (nState != eState::SendingDynamicRequestBody)
   {
     TAutoRefCounted<CMemoryStream> cStream;
     SIZE_T nWritten;
@@ -883,11 +856,11 @@ HRESULT CHttpClient::AddRequestRawPostData(_In_ CStream *lpStream)
   TAutoRefCounted<CConnection> cConnection;
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState != StateClosed && nState != StateSendingDynamicRequestBody)
+  if (nState != eState::Closed && nState != eState::SendingDynamicRequestBody)
     return MX_E_NotReady;
   if (lpStream == NULL)
     return E_POINTER;
-  if (nState == StateClosed)
+  if (nState == eState::Closed)
   {
     CPostDataItem *lpNewItem;
 
@@ -923,7 +896,7 @@ HRESULT CHttpClient::RemoveRequestPostData(_In_opt_z_ LPCSTR szNameA)
   CLnkLstNode *lpNode;
   BOOL bGotOne;
 
-  if (nState != StateClosed)
+  if (nState != eState::Closed)
     return MX_E_NotReady;
   bGotOne = FALSE;
   if (szNameA != NULL && *szNameA != 0)
@@ -977,7 +950,7 @@ HRESULT CHttpClient::RemoveAllRequestPostData()
   CCriticalSection::CAutoLock cLock(cMutex);
   CLnkLstNode *lpNode;
 
-  if (nState != StateClosed)
+  if (nState != eState::Closed)
     return MX_E_NotReady;
   while ((lpNode = sRequest.sPostData.cList.PopHead()) != NULL)
   {
@@ -992,7 +965,7 @@ HRESULT CHttpClient::EnableDynamicPostData()
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState != StateClosed)
+  if (nState != eState::Closed)
     return MX_E_NotReady;
   if (sRequest.sPostData.nDynamicFlags != 0)
     return MX_E_InvalidState;
@@ -1006,15 +979,15 @@ HRESULT CHttpClient::SignalEndOfPostData()
   CCriticalSection::CAutoLock cLock(cMutex);
   HRESULT hRes;
 
-  if (nState != StateClosed && nState != StateSendingDynamicRequestBody && nState != StateWaitingForRedirection &&
-      nState != StateEstablishingProxyTunnelConnection && nState != StateWaitingProxyTunnelConnectionResponse)
+  if (nState != eState::Closed && nState != eState::SendingDynamicRequestBody && nState != eState::WaitingForRedirection &&
+      nState != eState::EstablishingProxyTunnelConnection && nState != eState::WaitingProxyTunnelConnectionResponse)
   {
     return MX_E_NotReady;
   }
   if (sRequest.sPostData.nDynamicFlags != _DYNAMIC_FLAG_IsActive)
     return MX_E_InvalidState;
 
-  if (nState == StateSendingDynamicRequestBody)
+  if (nState == eState::SendingDynamicRequestBody)
   {
     cConnection.Attach(GetConnection());
     if (!cConnection)
@@ -1028,7 +1001,7 @@ HRESULT CHttpClient::SignalEndOfPostData()
       return hRes;
     }
 
-    nState = StateReceivingResponseHeaders;
+    nState = eState::ReceivingResponseHeaders;
   }
 
   sRequest.sPostData.nDynamicFlags |= _DYNAMIC_FLAG_EndMark;
@@ -1041,7 +1014,7 @@ HRESULT CHttpClient::SetProxy(_In_ CProxy &_cProxy)
 {
   CCriticalSection::CAutoLock cLock(cMutex);
 
-  if (nState != StateClosed)
+  if (nState != eState::Closed)
     return MX_E_NotReady;
   try
   {
@@ -1110,7 +1083,7 @@ VOID CHttpClient::Close(_In_opt_ BOOL bReuseConn)
   {
     CCriticalSection::CAutoLock cLock(cMutex);
 
-    if (nState != StateDocumentCompleted || bReuseConn == FALSE)
+    if (nState != eState::DocumentCompleted || bReuseConn == FALSE)
     {
       CAutoSlimRWLExclusive cLock(&(sConnection.sRwMutex));
 
@@ -1119,7 +1092,7 @@ VOID CHttpClient::Close(_In_opt_ BOOL bReuseConn)
 
     ResetRequestForNewRequest();
     ResetResponseForNewRequest();
-    nState = StateClosed;
+    nState = eState::Closed;
   }
 
   //clear timeouts
@@ -1161,28 +1134,28 @@ HRESULT CHttpClient::IsResponseHeaderComplete() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection &>(cMutex));
 
-  return (nState == StateReceivingResponseBody || nState == StateDocumentCompleted) ? TRUE : FALSE;
+  return (nState == eState::ReceivingResponseBody || nState == eState::DocumentCompleted) ? TRUE : FALSE;
 }
 
 BOOL CHttpClient::IsDocumentComplete() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection &>(cMutex));
 
-  return (nState == StateDocumentCompleted) ? TRUE : FALSE;
+  return (nState == eState::DocumentCompleted) ? TRUE : FALSE;
 }
 
 BOOL CHttpClient::IsClosed() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection &>(cMutex));
 
-  return (nState == StateClosed) ? TRUE : FALSE;
+  return (nState == eState::Closed) ? TRUE : FALSE;
 }
 
 LONG CHttpClient::GetResponseStatus() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection &>(cMutex));
 
-  if (nState != StateAfterHeaders && nState != StateReceivingResponseBody && nState != StateDocumentCompleted)
+  if (nState != eState::AfterHeaders && nState != eState::ReceivingResponseBody && nState != eState::DocumentCompleted)
     return 0;
   return sResponse.cParser.GetResponseStatus();
 }
@@ -1192,7 +1165,7 @@ HRESULT CHttpClient::GetResponseReason(_Inout_ CStringA &cStrDestA) const
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection &>(cMutex));
 
   cStrDestA.Empty();
-  if (nState != StateAfterHeaders && nState != StateReceivingResponseBody && nState != StateDocumentCompleted)
+  if (nState != eState::AfterHeaders && nState != eState::ReceivingResponseBody && nState != eState::DocumentCompleted)
     return MX_E_NotReady;
   return (cStrDestA.Copy(sResponse.cParser.GetResponseReasonA()) != FALSE) ? S_OK : E_OUTOFMEMORY;
 }
@@ -1201,7 +1174,7 @@ CHttpBodyParserBase* CHttpClient::GetResponseBodyParser() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection &>(cMutex));
 
-  if (nState != StateReceivingResponseBody && nState != StateDocumentCompleted)
+  if (nState != eState::ReceivingResponseBody && nState != eState::DocumentCompleted)
     return NULL;
   return sResponse.cParser.GetBodyParser();
 }
@@ -1210,7 +1183,7 @@ SIZE_T CHttpClient::GetResponseHeadersCount() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
-  if (nState != StateAfterHeaders && nState != StateReceivingResponseBody && nState != StateDocumentCompleted)
+  if (nState != eState::AfterHeaders && nState != eState::ReceivingResponseBody && nState != eState::DocumentCompleted)
     return 0;
   return sResponse.cParser.Headers().GetCount();
 }
@@ -1221,7 +1194,7 @@ CHttpHeaderBase* CHttpClient::GetResponseHeader(_In_ SIZE_T nIndex) const
   CHttpHeaderArray *lpHeadersArray;
   CHttpHeaderBase *lpHeader;
 
-  if (nState != StateAfterHeaders && nState != StateReceivingResponseBody && nState != StateDocumentCompleted)
+  if (nState != eState::AfterHeaders && nState != eState::ReceivingResponseBody && nState != eState::DocumentCompleted)
     return NULL;
   lpHeadersArray = &(sResponse.cParser.Headers());
   if (nIndex >= lpHeadersArray->GetCount())
@@ -1238,7 +1211,7 @@ CHttpHeaderBase* CHttpClient::GetResponseHeaderByName(_In_z_ LPCSTR szNameA) con
   CHttpHeaderBase *lpHeader;
   SIZE_T nIndex;
 
-  if (nState != StateAfterHeaders && nState != StateReceivingResponseBody && nState != StateDocumentCompleted)
+  if (nState != eState::AfterHeaders && nState != eState::ReceivingResponseBody && nState != eState::DocumentCompleted)
     return NULL;
   lpHeadersArray = &(sResponse.cParser.Headers());
   nIndex = lpHeadersArray->Find(szNameA);
@@ -1253,7 +1226,7 @@ SIZE_T CHttpClient::GetResponseCookiesCount() const
 {
   CCriticalSection::CAutoLock cLock(const_cast<CCriticalSection&>(cMutex));
 
-  if (nState != StateAfterHeaders && nState != StateReceivingResponseBody && nState != StateDocumentCompleted)
+  if (nState != eState::AfterHeaders && nState != eState::ReceivingResponseBody && nState != eState::DocumentCompleted)
     return 0;
   return sResponse.cParser.Cookies().GetCount();
 }
@@ -1264,7 +1237,7 @@ CHttpCookie* CHttpClient::GetResponseCookie(_In_ SIZE_T nIndex) const
   CHttpCookieArray *lpCookieArray;
   CHttpCookie *lpCookie;
 
-  if (nState != StateAfterHeaders && nState != StateReceivingResponseBody && nState != StateDocumentCompleted)
+  if (nState != eState::AfterHeaders && nState != eState::ReceivingResponseBody && nState != eState::DocumentCompleted)
     return NULL;
   lpCookieArray = &(sResponse.cParser.Cookies());
   if (nIndex >= lpCookieArray->GetCount())
@@ -1281,7 +1254,7 @@ CHttpCookie* CHttpClient::GetResponseCookieByName(_In_z_ LPCSTR szNameA) const
   CHttpCookie *lpCookie;
   SIZE_T nIndex;
 
-  if (nState != StateAfterHeaders && nState != StateReceivingResponseBody && nState != StateDocumentCompleted)
+  if (nState != eState::AfterHeaders && nState != eState::ReceivingResponseBody && nState != eState::DocumentCompleted)
     return NULL;
   lpCookieArray = &(sResponse.cParser.Cookies());
   nIndex = lpCookieArray->Find(szNameA);
@@ -1299,7 +1272,7 @@ CHttpCookie* CHttpClient::GetResponseCookieByName(_In_z_ LPCWSTR szNameW) const
   CHttpCookie *lpCookie;
   SIZE_T nIndex;
 
-  if (nState != StateAfterHeaders && nState != StateReceivingResponseBody && nState != StateDocumentCompleted)
+  if (nState != eState::AfterHeaders && nState != eState::ReceivingResponseBody && nState != eState::DocumentCompleted)
     return NULL;
   lpCookieArray = &(sResponse.cParser.Cookies());
   nIndex = lpCookieArray->Find(szNameW);
@@ -1334,7 +1307,7 @@ LPCSTR CHttpClient::GetRequestBoundary() const
 }
 
 HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOptions, _In_ BOOL bIsRedirecting,
-                                  _Outptr_ _Maybenull_ CConnection **lplpConnectionToRelease)
+                                  _Deref_out_opt_ CConnection **lplpConnectionToRelease)
 {
   TAutoRefCounted<CConnection> cConnection;
   CStringA cStrHostA;
@@ -1349,8 +1322,8 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOpt
   if (!(sResponse.aMsgBuf))
     return E_OUTOFMEMORY;
 
-  if (cUrl.GetSchemeCode() != CUrl::SchemeHttp && cUrl.GetSchemeCode() != CUrl::SchemeHttps &&
-      cUrl.GetSchemeCode() != CUrl::SchemeWebSocket && cUrl.GetSchemeCode() != CUrl::SchemeSecureWebSocket)
+  if (cUrl.GetSchemeCode() != CUrl::eScheme::Http && cUrl.GetSchemeCode() != CUrl::eScheme::Https &&
+      cUrl.GetSchemeCode() != CUrl::eScheme::WebSocket && cUrl.GetSchemeCode() != CUrl::eScheme::SecureWebSocket)
   {
     return E_INVALIDARG;
   }
@@ -1366,7 +1339,7 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOpt
 
   //check WebSocket options
   if (bIsRedirecting == FALSE &&
-      (cUrl.GetSchemeCode() == CUrl::SchemeWebSocket || cUrl.GetSchemeCode() == CUrl::SchemeSecureWebSocket))
+      (cUrl.GetSchemeCode() == CUrl::eScheme::WebSocket || cUrl.GetSchemeCode() == CUrl::eScheme::SecureWebSocket))
   {
     TAutoRefCounted<CHttpHeaderReqSecWebSocketVersion> cReqSecWebSocketVersion;
     TAutoRefCounted<CHttpHeaderReqSecWebSocketKey> cReqSecWebSocketKey;
@@ -1398,14 +1371,11 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOpt
     if (!cReqSecWebSocketVersion)
       return E_OUTOFMEMORY;
     hRes = cReqSecWebSocketVersion->SetVersion(lpOptions->sWebSocket.nVersion);
-    if (SUCCEEDED(hRes))
-    {
-      hRes = sRequest.cHeaders.AddElement(cReqSecWebSocketVersion.Get());
-      if (SUCCEEDED(hRes))
-        cReqSecWebSocketVersion.Detach();
-    }
     if (FAILED(hRes))
       return hRes;
+    if (sRequest.cHeaders.AddElement(cReqSecWebSocketVersion.Get()) == FALSE)
+      return E_OUTOFMEMORY;
+    cReqSecWebSocketVersion.Detach();
 
     //protocols
     if (lpOptions->sWebSocket.lpszProtocolsA != NULL)
@@ -1421,9 +1391,8 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOpt
         if (FAILED(hRes))
           return hRes;
       }
-      hRes = sRequest.cHeaders.AddElement(cReqSecWebSocketProtocol.Get());
-      if (FAILED(hRes))
-        return hRes;
+      if (sRequest.cHeaders.AddElement(cReqSecWebSocketProtocol.Get()) == FALSE)
+        return E_OUTOFMEMORY;
       cReqSecWebSocketProtocol.Detach();
     }
 
@@ -1432,42 +1401,33 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOpt
     if (!cReqSecWebSocketKey)
       return E_OUTOFMEMORY;
     hRes = cReqSecWebSocketKey->GenerateKey(16);
-    if (SUCCEEDED(hRes))
-    {
-      hRes = sRequest.cHeaders.AddElement(cReqSecWebSocketKey.Get());
-      if (SUCCEEDED(hRes))
-        cReqSecWebSocketKey.Detach();
-    }
     if (FAILED(hRes))
       return hRes;
+    if (sRequest.cHeaders.AddElement(cReqSecWebSocketKey.Get()) == FALSE)
+      return E_OUTOFMEMORY;
+    cReqSecWebSocketKey.Detach();
 
     //upgrade
     cGenUpgrade.Attach(MX_DEBUG_NEW CHttpHeaderGenUpgrade());
     if (!cGenUpgrade)
       return E_OUTOFMEMORY;
     hRes = cGenUpgrade->AddProduct("websocket");
-    if (SUCCEEDED(hRes))
-    {
-      hRes = sRequest.cHeaders.AddElement(cGenUpgrade.Get());
-      if (SUCCEEDED(hRes))
-        cGenUpgrade.Detach();
-    }
     if (FAILED(hRes))
       return hRes;
+    if (sRequest.cHeaders.AddElement(cGenUpgrade.Get()) == FALSE)
+      return E_OUTOFMEMORY;
+    cGenUpgrade.Detach();
 
     //connection
     cGenConnection.Attach(MX_DEBUG_NEW CHttpHeaderGenConnection());
     if (!cGenConnection)
       return E_OUTOFMEMORY;
     hRes = cGenConnection->AddConnection("Upgrade");
-    if (SUCCEEDED(hRes))
-    {
-      hRes = sRequest.cHeaders.AddElement(cGenConnection.Get());
-      if (SUCCEEDED(hRes))
-        cGenConnection.Detach();
-    }
     if (FAILED(hRes))
       return hRes;
+    if (sRequest.cHeaders.AddElement(cGenConnection.Get()) == FALSE)
+      return E_OUTOFMEMORY;
+    cGenConnection.Detach();
   }
 
   if (lpOptions != NULL && lpOptions->sSendLocalIP.szHeaderNameA != NULL &&
@@ -1489,12 +1449,12 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOpt
   //get port
   if (cUrl.GetPort() >= 0)
     nUrlPort = cUrl.GetPort();
-  else if (cUrl.GetSchemeCode() == CUrl::SchemeHttps || cUrl.GetSchemeCode() == CUrl::SchemeSecureWebSocket)
+  else if (cUrl.GetSchemeCode() == CUrl::eScheme::Https || cUrl.GetSchemeCode() == CUrl::eScheme::SecureWebSocket)
     nUrlPort = 443;
   else
     nUrlPort = 80;
 
-  if (cProxy.GetType() != CProxy::TypeNone)
+  if (cProxy.GetType() != CProxy::eType::None)
   {
     hRes = cProxy.Resolve(cUrl);
     if (hRes == E_OUTOFMEMORY)
@@ -1503,7 +1463,7 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOpt
 
   //clear timeouts
   nOrigState = nState;
-  nState = StateNoOp;
+  nState = eState::NoOp;
   cMutex.Unlock();
   MX::TimedEvent::Clear(&(sRedirection.nTimerId));
   MX::TimedEvent::Clear(&(sRequest.nTimeoutTimerId));
@@ -1515,7 +1475,7 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOpt
   //check where we should connect
   szConnectHostW = NULL;
   nConnectPort = 0;
-  if (cProxy.GetType() != CProxy::TypeNone)
+  if (cProxy.GetType() != CProxy::eType::None)
   {
     szConnectHostW = cProxy.GetAddress();
     nConnectPort = cProxy.GetPort();
@@ -1531,7 +1491,7 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOpt
     sRequest.bUsingProxy = TRUE;
   }
   //can reuse connection?
-  if (sResponse.cParser.GetState() != Internals::CHttpParser::StateDone ||
+  if (sResponse.cParser.GetState() != Internals::CHttpParser::eState::Done ||
       StrCompareW(sRequest.cUrl.GetScheme(), cUrl.GetScheme()) != 0 ||
       StrCompareW(sRequest.cUrl.GetHost(), szConnectHostW) != 0 ||
       nUrlPort != nConnectPort)
@@ -1546,8 +1506,8 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOpt
   }
 
   //setup new state
-  nState = ((cUrl.GetSchemeCode() == CUrl::SchemeHttps || cUrl.GetSchemeCode() == CUrl::SchemeSecureWebSocket) &&
-            sRequest.bUsingProxy != FALSE) ? StateEstablishingProxyTunnelConnection : StateSendingRequestHeaders;
+  nState = ((cUrl.GetSchemeCode() == CUrl::eScheme::Https || cUrl.GetSchemeCode() == CUrl::eScheme::SecureWebSocket) &&
+            sRequest.bUsingProxy != FALSE) ? eState::EstablishingProxyTunnelConnection : eState::SendingRequestHeaders;
   //create a new connection if needed
   hRes = S_OK;
   if (!cConnection)
@@ -1572,9 +1532,9 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOpt
       }
       if (cConnection)
       {
-        hRes = cConnection->Connect(CSockets::FamilyIPv4, szConnectHostW, nConnectPort,
-                                    ((sRequest.cUrl.GetSchemeCode() == CUrl::SchemeHttps ||
-                                      sRequest.cUrl.GetSchemeCode() == CUrl::SchemeSecureWebSocket) &&
+        hRes = cConnection->Connect(CSockets::eFamily::IPv4, szConnectHostW, nConnectPort,
+                                    ((sRequest.cUrl.GetSchemeCode() == CUrl::eScheme::Https ||
+                                      sRequest.cUrl.GetSchemeCode() == CUrl::eScheme::SecureWebSocket) &&
                                      sRequest.bUsingProxy == FALSE) ? TRUE : FALSE);
         if (FAILED(hRes))
         {
@@ -1605,7 +1565,7 @@ HRESULT CHttpClient::InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOpt
 
   if (FAILED(hRes))
   {
-    nState = StateClosed;
+    nState = eState::Closed;
     return hRes;
   }
   //done
@@ -1627,11 +1587,11 @@ HRESULT CHttpClient::OnConnectionEstablished(_In_ CConnection *lpConn)
 
     switch (nState)
     {
-      case StateEstablishingProxyTunnelConnection:
+      case eState::EstablishingProxyTunnelConnection:
         hRes = SendTunnelConnect(cConnection);
         break;
 
-      case StateSendingRequestHeaders:
+      case eState::SendingRequestHeaders:
         hRes = SendRequestHeaders(cConnection);
         break;
     }
@@ -1669,30 +1629,30 @@ VOID CHttpClient::OnConnectionClosed(_In_ CConnection *lpConn, _In_ HRESULT hrEr
     {
       switch (nState)
       {
-        case StateDocumentCompleted:
+        case eState::DocumentCompleted:
           break;
 
-        case StateAfterHeaders:
+        case eState::AfterHeaders:
           //if we are in this state but parsing is complete, then completion is about to be called
-          if (sResponse.cParser.GetState() == Internals::CHttpParser::StateDone)
+          if (sResponse.cParser.GetState() == Internals::CHttpParser::eState::Done)
             break;
           //fall into the rest
 
-        case StateWaitingForRedirection:
-        case StateEstablishingProxyTunnelConnection:
-        case StateWaitingProxyTunnelConnectionResponse:
-        case StateSendingRequestHeaders:
-        case StateSendingDynamicRequestBody:
-        case StateReceivingResponseHeaders:
-        case StateReceivingResponseBody:
-          nState = StateClosed;
+        case eState::WaitingForRedirection:
+        case eState::EstablishingProxyTunnelConnection:
+        case eState::WaitingProxyTunnelConnectionResponse:
+        case eState::SendingRequestHeaders:
+        case eState::SendingDynamicRequestBody:
+        case eState::ReceivingResponseHeaders:
+        case eState::ReceivingResponseBody:
+          nState = eState::Closed;
           if (SUCCEEDED(hLastErrorCode)) //preserve first error
             hLastErrorCode = SUCCEEDED(hrErrorCode) ? MX_E_Cancelled : hrErrorCode;
           bRaiseDocCompletedCallback = TRUE;
           break;
 
         default:
-          nState = StateClosed;
+          nState = eState::Closed;
           bRaiseDocCompletedCallback = TRUE;
           break;
       }
@@ -1727,9 +1687,9 @@ HRESULT CHttpClient::OnDataReceived(_In_ CConnection *lpConn)
   int nRedirectionTimerAction;
   struct {
     CStringW cStrFileNameW;
-    ULONGLONG nContentLength, *lpnContentLength;
+    ULONGLONG nContentLength{ 0 }, *lpnContentLength{ NULL };
     CStringA cStrTypeA;
-    BOOL bTreatAsAttachment;
+    BOOL bTreatAsAttachment{ FALSE };
     CStringW cStrDownloadFileNameW;
   } sHeadersCallbackData;
   struct {
@@ -1801,7 +1761,7 @@ on_request_error:
       //take action depending on current state
       switch (nState)
       {
-        case StateWaitingProxyTunnelConnectionResponse:
+        case eState::WaitingProxyTunnelConnectionResponse:
           //process http being received
           hRes = sResponse.cParser.Parse(sResponse.aMsgBuf.Get(), nMsgSize, nMsgUsed);
           if (FAILED(hRes))
@@ -1819,8 +1779,8 @@ on_request_error:
           //check for end
           switch (nParserState)
           {
-            case Internals::CHttpParser::StateBodyStart:
-            case Internals::CHttpParser::StateDone:
+            case Internals::CHttpParser::eState::BodyStart:
+            case Internals::CHttpParser::eState::Done:
               nRespStatus = sResponse.cParser.GetResponseStatus();
 
               //reset parser
@@ -1832,7 +1792,7 @@ on_request_error:
                 hRes = OnAddSslLayer(&cSocketMgr, cConnection->GetConn());
                 if (SUCCEEDED(hRes))
                 {
-                  nState = StateSendingRequestHeaders;
+                  nState = eState::SendingRequestHeaders;
                   hRes = SendRequestHeaders(cConnection.Get());
                 }
               }
@@ -1846,8 +1806,8 @@ on_request_error:
           }
           break;
 
-        case StateReceivingResponseHeaders:
-        case StateReceivingResponseBody:
+        case eState::ReceivingResponseHeaders:
+        case eState::ReceivingResponseBody:
           //process http being received
           hRes = sResponse.cParser.Parse(sResponse.aMsgBuf.Get(), nMsgSize, nMsgUsed);
           if (FAILED(hRes))
@@ -1863,7 +1823,7 @@ on_request_error:
           nParserState = sResponse.cParser.GetState();
           switch (nParserState)
           {
-            case Internals::CHttpParser::StateBodyStart:
+            case Internals::CHttpParser::eState::BodyStart:
               nRespStatus = sResponse.cParser.GetResponseStatus();
 
               //we don't accept invalid status codes in response if we are dealing with a websocket
@@ -1889,10 +1849,10 @@ on_request_error:
               }
 
               bFireResponseHeadersReceivedCallback = TRUE;
-              nState = StateAfterHeaders;
+              nState = eState::AfterHeaders;
               break;
 
-            case Internals::CHttpParser::StateDone:
+            case Internals::CHttpParser::eState::Done:
               nRespStatus = sResponse.cParser.GetResponseStatus();
 
               //we don't accept invalid status codes in response if we are dealing with a websocket
@@ -1965,7 +1925,7 @@ on_request_error:
                   goto on_request_error;
 
                 //start redirector/waiter thread
-                nState = StateWaitingForRedirection;
+                nState = eState::WaitingForRedirection;
                 nRedirectionTimerAction = (nWaitTimeSecs > 0) ? ((int)nWaitTimeSecs * 1000) : 1;
                 goto restart;
               }
@@ -2017,7 +1977,7 @@ on_websocket_negotiated:
                   goto on_request_error;
 
                 bFireWebSocketHandshakeCompletedCallback = TRUE;
-                nState = StateDocumentCompleted;
+                nState = eState::DocumentCompleted;
                 break;
               }
 
@@ -2027,14 +1987,14 @@ on_websocket_negotiated:
               {
                 Log(L"HttpClient(DocumentCompleted/0x%p)", this);
               }
-              if (nState == StateReceivingResponseHeaders)
+              if (nState == eState::ReceivingResponseHeaders)
               {
                 bFireResponseHeadersReceivedCallback = TRUE;
-                nState = StateAfterHeaders;
+                nState = eState::AfterHeaders;
               }
               else
               {
-                nState = StateDocumentCompleted;
+                nState = eState::DocumentCompleted;
               }
 
               //on completion, keep the file
@@ -2055,7 +2015,7 @@ on_websocket_negotiated:
           }
           break;
 
-        case StateClosed:
+        case eState::Closed:
           hRes = cConnection->ConsumeBufferedMessage(nMsgSize);
           if (FAILED(hRes))
             goto on_request_error;
@@ -2234,7 +2194,7 @@ on_websocket_negotiated:
     {
       CCriticalSection::CAutoLock cLock(cMutex);
 
-      if (lpConn == cConnection.Get() && cConnection->IsClosed() == FALSE && nState == StateAfterHeaders)
+      if (lpConn == cConnection.Get() && cConnection->IsClosed() == FALSE && nState == eState::AfterHeaders)
       {
         if (SUCCEEDED(hRes))
         {
@@ -2268,12 +2228,12 @@ on_websocket_negotiated:
             }
             if (SUCCEEDED(hRes))
             {
-              nState = StateReceivingResponseBody;
+              nState = eState::ReceivingResponseBody;
             }
           }
           else
           {
-            nState = StateDocumentCompleted;
+            nState = eState::DocumentCompleted;
           }
         }
 
@@ -2359,7 +2319,7 @@ VOID CHttpClient::OnRedirection(_In_ LONG nTimerId, _In_ LPVOID lpUserData, _In_
 
     switch (nState)
     {
-      case StateWaitingForRedirection:
+      case eState::WaitingForRedirection:
         hRes = InternalOpen(sRedirection.cUrl, NULL, TRUE, &cConnToClose);
         break;
 
@@ -2389,7 +2349,7 @@ VOID CHttpClient::OnAfterSendRequestHeaders(_In_ CConnection *lpConn)
   {
     CCriticalSection::CAutoLock cLock(cMutex);
 
-    if (lpConn == cConnection.Get() && nState == StateSendingRequestHeaders)
+    if (lpConn == cConnection.Get() && nState == eState::SendingRequestHeaders)
     {
       if (StrCompareA((LPCSTR)(sRequest.cStrMethodA), "HEAD") != 0)
       {
@@ -2403,12 +2363,12 @@ VOID CHttpClient::OnAfterSendRequestHeaders(_In_ CConnection *lpConn)
               sRequest.sPostData.nDynamicFlags == (_DYNAMIC_FLAG_IsActive | _DYNAMIC_FLAG_EndMark))
           {
             //no body to send, directly switch to receiving response headers
-            nState = StateReceivingResponseHeaders;
+            nState = eState::ReceivingResponseHeaders;
           }
           else
           {
             //sending dynamic body
-            nState = StateSendingDynamicRequestBody;
+            nState = eState::SendingDynamicRequestBody;
 
             bFireDymanicRequestBodyStartCallback = TRUE;
           }
@@ -2416,7 +2376,7 @@ VOID CHttpClient::OnAfterSendRequestHeaders(_In_ CConnection *lpConn)
       }
       else
       {
-        nState = StateReceivingResponseHeaders;
+        nState = eState::ReceivingResponseHeaders;
       }
     }
     if (FAILED(hRes))
@@ -2443,7 +2403,7 @@ VOID CHttpClient::SetErrorOnRequestAndClose(_In_ HRESULT hrErrorCode)
   {
     CAutoSlimRWLShared cLock(&(sConnection.sRwMutex));
 
-    nState = StateClosed;
+    nState = eState::Closed;
     if (SUCCEEDED(hLastErrorCode)) //preserve first error
       hLastErrorCode = hrErrorCode;
 
@@ -2467,7 +2427,7 @@ HRESULT CHttpClient::BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA)
   CHttpCookie *lpCookie;
   SIZE_T nHdrIndex_Accept, nHdrIndex_AcceptLanguage, nHdrIndex_Referer, nHdrIndex_UserAgent;
   SIZE_T nIndex, nCount;
-  Http::eBrowser nBrowser = Http::BrowserOther;
+  Http::eBrowser nBrowser = Http::eBrowser::Other;
   HRESULT hRes;
 
   cConnection.Attach(GetConnection());
@@ -2534,14 +2494,14 @@ HRESULT CHttpClient::BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA)
       return E_OUTOFMEMORY;
     }
   }
-  if (sRequest.bUsingProxy != FALSE && sRequest.cUrl.GetSchemeCode() != CUrl::SchemeHttps &&
-      sRequest.cUrl.GetSchemeCode() != CUrl::SchemeSecureWebSocket)
+  if (sRequest.bUsingProxy != FALSE && sRequest.cUrl.GetSchemeCode() != CUrl::eScheme::Https &&
+      sRequest.cUrl.GetSchemeCode() != CUrl::eScheme::SecureWebSocket)
   {
-    hRes = sRequest.cUrl.ToString(cStrTempA, CUrl::ToStringAddAll);
+    hRes = sRequest.cUrl.ToString(cStrTempA, CUrl::eToStringFlags::AddAll);
   }
   else
   {
-    hRes = sRequest.cUrl.ToString(cStrTempA, CUrl::ToStringAddPath | CUrl::ToStringAddQueryStrings);
+    hRes = sRequest.cUrl.ToString(cStrTempA, CUrl::eToStringFlags::AddPath | CUrl::eToStringFlags::AddQueryStrings);
   }
   if (FAILED(hRes))
     return hRes;
@@ -2574,7 +2534,7 @@ HRESULT CHttpClient::BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA)
   }
 
   //5) Host: www.mydomain.com
-  hRes = sRequest.cUrl.ToString(cStrTempA, CUrl::ToStringAddHostPort);
+  hRes = sRequest.cUrl.ToString(cStrTempA, CUrl::eToStringFlags::AddHostPort);
   if (SUCCEEDED(hRes))
     hRes = BuildRequestHeaderAdd(cStrReqHdrsA, "Host", (LPCSTR)cStrTempA, nBrowser);
   if (FAILED(hRes))
@@ -2603,8 +2563,8 @@ HRESULT CHttpClient::BuildRequestHeaders(_Inout_ CStringA &cStrReqHdrsA)
     return hRes;
 
   //9) Proxy-Connection (if using a proxy)
-  if (sRequest.bUsingProxy != FALSE && sRequest.cUrl.GetSchemeCode() != CUrl::SchemeHttps &&
-      sRequest.cUrl.GetSchemeCode() != CUrl::SchemeHttps)
+  if (sRequest.bUsingProxy != FALSE && sRequest.cUrl.GetSchemeCode() != CUrl::eScheme::Http &&
+      sRequest.cUrl.GetSchemeCode() != CUrl::eScheme::Https)
   {
     hRes = BuildRequestHeaderAdd(cStrReqHdrsA, "Proxy-Connection",
                                  ((bKeepConnectionOpen != FALSE) ? "Keep-Alive" : "Close"), nBrowser);
@@ -2941,7 +2901,7 @@ HRESULT CHttpClient::SendTunnelConnect(_In_ CConnection *lpConnection)
   SIZE_T nIndex, nCount;
   HRESULT hRes;
 
-  hRes = sRequest.cUrl.ToString(cStrTempA, CUrl::ToStringAddHostPort);
+  hRes = sRequest.cUrl.ToString(cStrTempA, CUrl::eToStringFlags::AddHostPort);
   if (FAILED(hRes))
     return hRes;
   if (cStrReqHdrsA.Format("CONNECT %s HTTP/1.1\r\nContent-Length: 0\r\nPragma: no-cache\r\nHost: ",
@@ -2962,7 +2922,7 @@ HRESULT CHttpClient::SendTunnelConnect(_In_ CConnection *lpConnection)
     lpHeader = sRequest.cHeaders.GetElementAt(nIndex);
     if (StrCompareA(lpHeader->GetHeaderName(), "User-Agent", TRUE) == 0)
     {
-      hRes = lpHeader->Build(cStrTempA, Http::BrowserOther);
+      hRes = lpHeader->Build(cStrTempA, Http::eBrowser::Other);
       if (FAILED(hRes))
         return hRes;
 
@@ -2976,14 +2936,14 @@ HRESULT CHttpClient::SendTunnelConnect(_In_ CConnection *lpConnection)
   }
   if (nIndex >= nCount)
   {
-    hRes = BuildRequestHeaderAdd(cStrReqHdrsA, "User-Agent", szDefaultUserAgentA, Http::BrowserOther);
+    hRes = BuildRequestHeaderAdd(cStrReqHdrsA, "User-Agent", szDefaultUserAgentA, Http::eBrowser::Other);
     if (FAILED(hRes))
       return hRes;
   }
 
   //proxy connection
   hRes = BuildRequestHeaderAdd(cStrReqHdrsA, "Proxy-Connection",
-                               ((bKeepConnectionOpen != FALSE) ? "Keep-Alive" : "Close"), Http::BrowserOther);
+                               ((bKeepConnectionOpen != FALSE) ? "Keep-Alive" : "Close"), Http::eBrowser::Other);
   if (FAILED(hRes))
     return hRes;
 
@@ -2995,7 +2955,7 @@ HRESULT CHttpClient::SendTunnelConnect(_In_ CConnection *lpConnection)
     return hRes;
 
   //done
-  nState = StateWaitingProxyTunnelConnectionResponse;
+  nState = eState::WaitingProxyTunnelConnectionResponse;
   return S_OK;
 }
 
@@ -3337,7 +3297,7 @@ VOID CHttpClient::OnRequestTimeout(_In_ LONG nTimerId, _In_ LPVOID lpUserData, _
   {
     CCriticalSection::CAutoLock cLock(cMutex);
 
-    if (nState != StateClosed && nState != StateDocumentCompleted)
+    if (nState != eState::Closed && nState != eState::DocumentCompleted)
     {
       SetErrorOnRequestAndClose(MX_E_Timeout);
     }
@@ -3355,7 +3315,6 @@ CHttpClient::CPostDataItem::CPostDataItem(_In_z_ LPCSTR _szNameA, _In_z_ LPCSTR 
 {
   SIZE_T nNameLen, nValueLen;
 
-  szNameA = szValueA = NULL;
   nNameLen = StrLenA(_szNameA);
   nValueLen = StrLenA(_szValueA);
   if (nNameLen + nValueLen > nNameLen && nNameLen + nValueLen + 2 > nNameLen + nValueLen)
@@ -3378,7 +3337,6 @@ CHttpClient::CPostDataItem::CPostDataItem(_In_z_ LPCSTR _szNameA, _In_z_ LPCSTR 
 {
   SIZE_T nNameLen, nValueLen;
 
-  szNameA = szValueA = NULL;
   nNameLen = StrLenA(_szNameA);
   nValueLen = StrLenA(_szFileNameA);
   if (nNameLen + nValueLen > nNameLen && nNameLen + nValueLen + 2 > nNameLen + nValueLen)

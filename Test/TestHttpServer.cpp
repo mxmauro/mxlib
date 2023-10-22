@@ -180,7 +180,7 @@ int TestHttpServer()
     cOptions.dwMaxAcceptsToPost = 16;
     //cOptions.dwMaxRequestsPerSecond = 0;
     //cOptions.dwBurstSize = 0;
-    hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv4, (int)dwPort, &cOptions);
+    hRes = cHttpServer.StartListening(MX::CSockets::eFamily::IPv4, (int)dwPort, &cOptions);
   }
   //----
   if (SUCCEEDED(hRes))

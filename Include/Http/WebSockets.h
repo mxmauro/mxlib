@@ -89,7 +89,7 @@ private:
                        _In_ HRESULT hrErrorCode);
   HRESULT OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData);
 
-  SIZE_T BuildFrame(_In_ LPFRAME_HEADER lpFrame, _In_ LPBYTE lpPayload, _In_ ULONG nPayloadSize, _In_ BYTE nOpcode,
+  SIZE_T BuildFrame(_Out_ LPFRAME_HEADER lpFrame, _In_ LPBYTE lpPayload, _In_ ULONG nPayloadSize, _In_ BYTE nOpcode,
                     _In_ BOOL bFinal);
 
   HRESULT InternalSendFrame(_In_ BOOL bFinalFrame);
@@ -103,45 +103,45 @@ private:
   VOID FireConnectedAndInitialRead();
 
 private:
-  CIpc *lpIpc;
-  HANDLE hConn;
-  BOOL bServerSide;
+  CIpc *lpIpc{ NULL };
+  HANDLE hConn{ NULL };
+  BOOL bServerSide{ FALSE };
   //----
   struct {
-    LONG nState;
-    FRAME_HEADER sFrameHeader;
-    ULONGLONG nPayloadLen;
+    LONG nState{ 0 };
+    FRAME_HEADER sFrameHeader{};
+    ULONGLONG nPayloadLen{ 0 };
     union {
       BYTE nKey[4];
       DWORD dwKey;
-    } uMasking;
+    } uMasking{};
     struct {
-      BYTE nOpcode;
+      BYTE nOpcode{ 0 };
       TArrayListWithFree<LPBYTE> aReceivedDataList;
-      LPBYTE lpData;
-      SIZE_T nFilledFrame;
-      SIZE_T nTotalDataLength;
+      LPBYTE lpData{ NULL };
+      SIZE_T nFilledFrame{ 0 };
+      SIZE_T nTotalDataLength{ 0 };
     } sCurrentMessage;
     struct {
-      BYTE aBuffer[128];
-      SIZE_T nFilledFrame;
+      BYTE aBuffer[128]{};
+      SIZE_T nFilledFrame{ 0 };
     } sCurrentControlFrame;
   } sReceive;
 
   struct {
-    LONG volatile nSendInProgressMutex;
-    FRAME_HEADER sFrameHeader;
+    LONG volatile nSendInProgressMutex{ MX_FASTLOCK_INIT };
+    FRAME_HEADER sFrameHeader{};
     TAutoFreePtr<BYTE> cFrameBuffer;
-    LPBYTE lpFrameData;
-    ULONG nFilledFrame;
+    LPBYTE lpFrameData{ NULL };
+    ULONG nFilledFrame{ 0 };
   } sSend;
 
   struct {
-    LPBYTE lpBuffer[4];
-    SIZE_T nNextBufferIndex;
+    LPBYTE lpBuffer[4]{};
+    SIZE_T nNextBufferIndex{ 0 };
   } sReceiveCache;
 
-  LONG volatile hrCloseError;
+  LONG volatile hrCloseError{ S_FALSE };
 };
 
 } //namespace MX

@@ -136,14 +136,14 @@ public:
       };
 
   public:
-    LONG nId;
+    LONG nId{ 0 };
     CRedBlackTreeNode cTreeNode;
-    DWORD dwTimeoutMs;
-    ULONGLONG nDueTime;
+    DWORD dwTimeoutMs{ 0 };
+    ULONGLONG nDueTime{ 0 };
     MX::TimedEvent::OnTimeoutCallback cCallback;
-    LPVOID lpUserData;
-    LONG volatile nFlags;
-    CTimer *lpNextInFreeList;
+    LPVOID lpUserData{ NULL };
+    LONG volatile nFlags{ 0 };
+    CTimer *lpNextInFreeList{ NULL };
   };
 
 public:
@@ -155,9 +155,10 @@ public:
 
   BOOL Initialize();
 
-  HRESULT AddTimer(_Out_ LONG volatile *lpnTimerId, _In_ MX::TimedEvent::OnTimeoutCallback cCallback,
+  HRESULT AddTimer(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId,
+                   _In_ MX::TimedEvent::OnTimeoutCallback cCallback,
                    _In_ DWORD dwTimeoutMs, _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot);
-  VOID RemoveTimer(_Inout_ LONG volatile *lpnTimerId);
+  VOID RemoveTimer(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId);
 
 private:
   VOID ThreadProc();
@@ -172,19 +173,19 @@ private:
   static int SearchByIdCompareFunc(_In_ LPVOID lpContext, _In_ PLONG lpKey, _In_ CTimer **lplpElem);
 
 private:
-  LONG volatile nRundownLock;
-  LONG volatile nNextTimerId;
-  LONG volatile nThreadMutex;
+  LONG volatile nRundownLock{ MX_RUNDOWNPROT_INIT };
+  LONG volatile nNextTimerId{ 0 };
+  LONG volatile nThreadMutex{ MX_FASTLOCK_INIT };
   struct {
-    LONG volatile nMutex;
+    LONG volatile nMutex{ MX_FASTLOCK_INIT };
     CWindowsEvent cChangedEvent;
     TArrayList<CTimer*> cSortedByIdList;
     CRedBlackTree cTree;
   } sQueue;
   struct {
-    LONG volatile nMutex;
-    CTimer *lpFirst;
-    int nListCount;
+    LONG volatile nMutex{ MX_FASTLOCK_INIT };
+    CTimer *lpFirst{ NULL };
+    int nListCount{ 0 };
   } sFreeTimers;
 };
 
@@ -203,7 +204,7 @@ namespace MX {
 
 namespace TimedEvent {
 
-HRESULT SetTimeout(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In_ OnTimeoutCallback cCallback,
+HRESULT SetTimeout(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In_ OnTimeoutCallback cCallback,
                    _In_opt_ LPVOID lpUserData)
 {
   TAutoRefCounted<Internals::CTimerHandler> cHandler;
@@ -218,7 +219,7 @@ HRESULT SetTimeout(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In_
   return cHandler->AddTimer(lpnTimerId, cCallback, dwTimeoutMs, lpUserData, TRUE);
 }
 
-HRESULT SetInterval(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In_ OnTimeoutCallback cCallback,
+HRESULT SetInterval(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In_ OnTimeoutCallback cCallback,
                     _In_opt_ LPVOID lpUserData)
 {
   TAutoRefCounted<Internals::CTimerHandler> cHandler;
@@ -233,7 +234,7 @@ HRESULT SetInterval(_Out_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In
   return cHandler->AddTimer(lpnTimerId, cCallback, dwTimeoutMs, lpUserData, FALSE);
 }
 
-VOID Clear(_Inout_ LONG volatile *lpnTimerId)
+VOID Clear(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId)
 {
   TAutoRefCounted<Internals::CTimerHandler> cHandler;
 
@@ -261,11 +262,6 @@ namespace Internals {
 
 CTimerHandler::CTimerHandler() : TRefCounted<CThread>(), CNonCopyableObj()
 {
-  RundownProt_Initialize(&nRundownLock);
-  _InterlockedExchange(&nNextTimerId, 0);
-  _InterlockedExchange(&nThreadMutex, 0);
-  _InterlockedExchange(&(sQueue.nMutex), 0);
-  MxMemSet(&sFreeTimers, 0, sizeof(sFreeTimers));
   return;
 }
 
@@ -352,8 +348,9 @@ BOOL CTimerHandler::Initialize()
   return TRUE;
 }
 
-HRESULT CTimerHandler::AddTimer(_Out_ LONG volatile *lpnTimerId, _In_ MX::TimedEvent::OnTimeoutCallback cCallback,
-                                _In_ DWORD dwTimeoutMs, _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot)
+HRESULT CTimerHandler::AddTimer(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId,
+                                _In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_ DWORD dwTimeoutMs,
+                                _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot)
 {
   CAutoRundownProtection cAutoRundownProt(&nRundownLock);
   TAutoDeletePtr<CTimer> cNewTimer;
@@ -410,7 +407,7 @@ HRESULT CTimerHandler::AddTimer(_Out_ LONG volatile *lpnTimerId, _In_ MX::TimedE
   return S_OK;
 }
 
-VOID CTimerHandler::RemoveTimer(_Inout_ LONG volatile *lpnTimerId)
+VOID CTimerHandler::RemoveTimer(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId)
 {
   if (lpnTimerId != NULL)
   {

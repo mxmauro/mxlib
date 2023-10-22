@@ -69,11 +69,6 @@ namespace MX {
 
 CThread::CThread() : CBaseMemObj()
 {
-  nPriority = THREAD_PRIORITY_NORMAL;
-  hThread = NULL;
-  dwThreadId = 0;
-  dwStackSize = 0;
-  bAutoDelete = FALSE;
   return;
 }
 
@@ -277,7 +272,7 @@ VOID CThread::SetThreadName(_In_ DWORD dwThreadId, _In_opt_z_ LPCSTR szNameA)
 {
   THREADNAME_INFO sInfo;
 
-  if (fnSetThreadDescription != NULL)
+  if (fnSetThreadDescription != NULL && szNameA != NULL)
   {
     HANDLE hThread = ::OpenThread(THREAD_SET_LIMITED_INFORMATION, FALSE, dwThreadId);
     if (hThread != NULL)
@@ -413,14 +408,9 @@ VOID CWorkerThread::ThreadProc()
 //-----------------------------------------------------------
 //-----------------------------------------------------------
 
-CThreadPool::CThreadPool()
+CThreadPool::CThreadPool() : CBaseMemObj()
 {
-  hIOCP = NULL;
-  nMinWorkerThreads = nWorkerThreadsCreateAhead = nThreadShutdownThresholdMs = 0;
-  MxMemSet(&sActiveThreads, 0, sizeof(sActiveThreads));
-  MxMemSet(&sWorkItems, 0, sizeof(sWorkItems));
   sWorkItems.sList.lpNext = sWorkItems.sList.lpPrev = &(sWorkItems.sList);
-  _InterlockedExchange(&nInUse, 0);
   return;
 }
 
@@ -431,7 +421,7 @@ CThreadPool::~CThreadPool()
 }
 
 BOOL CThreadPool::Initialize(_In_ ULONG _nMinWorkerThreads, _In_ ULONG _nWorkerThreadsCreateAhead,
-                                _In_ ULONG _nThreadShutdownThresholdMs)
+                             _In_ ULONG _nThreadShutdownThresholdMs)
 {
   CCriticalSection::CAutoLock cLock(cMtx);
   DWORD dwOsErr;
@@ -481,7 +471,7 @@ VOID CThreadPool::Finalize()
     }
     while (b != FALSE);
   }
-  //cancel pending workitems
+  //cancel pending work items
   do
   {
     {

@@ -151,7 +151,7 @@ public:
       {
       return AddResponseHeader(T::GetHeaderNameStatic(), reinterpret_cast<CHttpHeaderBase**>(lplpHeader));
       };
-    HRESULT AddResponseHeader(_In_z_ LPCSTR szNameA, _Out_ CHttpHeaderBase **lplpHeader,
+    HRESULT AddResponseHeader(_In_z_ LPCSTR szNameA, _Deref_opt_out_ CHttpHeaderBase **lplpHeader,
                              _In_opt_ BOOL bReplaceExisting = TRUE);
     HRESULT AddResponseHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1,
                               _Out_opt_ CHttpHeaderBase **lplpHeader = NULL, _In_opt_ BOOL bReplaceExisting = TRUE);
@@ -174,11 +174,11 @@ public:
     HRESULT AddResponseCookie(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _In_opt_z_ LPCSTR szDomainA = NULL,
                               _In_opt_z_ LPCSTR szPathA = NULL, _In_opt_ const CDateTime *lpDate = NULL,
                               _In_opt_ BOOL bIsSecure = FALSE, _In_opt_ BOOL bIsHttpOnly = FALSE,
-                              _In_opt_ CHttpCookie::eSameSite nSameSite = CHttpCookie::SameSiteNone);
+                              _In_opt_ CHttpCookie::eSameSite nSameSite = CHttpCookie::eSameSite::None);
     HRESULT AddResponseCookie(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW, _In_opt_z_ LPCWSTR szDomainW = NULL,
                               _In_opt_z_ LPCWSTR szPathW = NULL, _In_opt_ const CDateTime *lpDate = NULL,
                               _In_opt_ BOOL bIsSecure = FALSE, _In_opt_ BOOL bIsHttpOnly = FALSE,
-                              _In_opt_ CHttpCookie::eSameSite nSameSite = CHttpCookie::SameSiteNone);
+                              _In_opt_ CHttpCookie::eSameSite nSameSite = CHttpCookie::eSameSite::None);
     HRESULT RemoveResponseCookie(_In_z_ LPCSTR szNameA);
     HRESULT RemoveResponseCookie(_In_z_ LPCWSTR szNameW);
     HRESULT RemoveAllResponseCookies();
@@ -222,21 +222,22 @@ public:
       };
 
   protected:
-    typedef enum {
-      StateClosed = 0,
-      StateInactive,
-      StateReceivingRequestHeaders,
-      StateAfterHeaders,
-      StateReceivingRequestBody,
-      StateBuildingResponse,
-      StateSendingResponse,
-      StateNegotiatingWebSocket,
-      StateWebSocket,
-      StateGracefulTermination,
-      StateTerminated,
-      StateKeepingAlive,
-      StateLingerClose
-    } eState;
+    enum class eState
+    {
+      Closed = 0,
+      Inactive,
+      ReceivingRequestHeaders,
+      AfterHeaders,
+      ReceivingRequestBody,
+      BuildingResponse,
+      SendingResponse,
+      NegotiatingWebSocket,
+      WebSocket,
+      GracefulTermination,
+      Terminated,
+      KeepingAlive,
+      LingerClose
+    };
 
   protected:
     eState GetState() const
@@ -247,15 +248,19 @@ public:
   private:
     friend class CHttpServer;
 
-    typedef enum {
-      TimeoutTimerHeaders = 0x01,
-      TimeoutTimerThroughput = 0x02,
-      TimeoutTimerGracefulTermination = 0x04,
-      TimeoutTimerKeepAlive = 0x08,
+    enum class eTimeoutTimer
+    {
+      Headers = 0x01,
+      Throughput = 0x02,
+      GracefulTermination = 0x04,
+      KeepAlive = 0x08,
 
-      TimeoutTimerAll = TimeoutTimerHeaders | TimeoutTimerThroughput | TimeoutTimerGracefulTermination |
-                        TimeoutTimerKeepAlive
-    } eTimeoutTimer;
+      All = Headers | Throughput | GracefulTermination | KeepAlive
+    };
+
+    friend inline eTimeoutTimer operator|(eTimeoutTimer lhs, eTimeoutTimer rhs);
+    friend inline eTimeoutTimer operator&(eTimeoutTimer lhs, eTimeoutTimer rhs);
+    friend inline eTimeoutTimer operator~(eTimeoutTimer v);
 
   private:
     HRESULT Initialize(_In_ CHttpServer *lpHttpServer, _In_ CSockets *lpSocketMgr, _In_ HANDLE hConn,
@@ -277,47 +282,47 @@ public:
 
     VOID ResetResponseForNewRequest(_In_ BOOL bPreserveWebSocket);
 
-    HRESULT StartTimeoutTimers(_In_ int nTimers);
-    VOID StopTimeoutTimers(_In_ int nTimers);
+    HRESULT StartTimeoutTimers(_In_ eTimeoutTimer nTimers);
+    VOID StopTimeoutTimers(_In_ eTimeoutTimer nTimers);
 
     static LPCWSTR GetNamedState(_In_ eState nState);
 
   private:
     CLnkLstNode cListNode;
-    LONG volatile nTimerCallbackRundownLock;
+    LONG volatile nTimerCallbackRundownLock{ MX_RUNDOWNPROT_INIT };
     CCriticalSection cMutex;
-    CHttpServer *lpHttpServer;
-    CSockets *lpSocketMgr;
-    HANDLE hConn;
-    SOCKADDR_INET sPeerAddr;
-    eState nState;
-    LONG volatile nFlags;
-    HRESULT hrErrorCode;
-    LONG volatile nHeadersTimeoutTimerId;
-    LONG volatile nThroughputTimerId;
-    DWORD dwLowThroughputCounter;
-    LONG volatile nGracefulTerminationTimerId;
-    LONG volatile nKeepAliveTimeoutTimerId;
+    CHttpServer *lpHttpServer{ NULL };
+    CSockets *lpSocketMgr{ NULL };
+    HANDLE hConn{ NULL };
+    SOCKADDR_INET sPeerAddr{ 0 };
+    eState nState{ eState::Inactive };
+    LONG volatile nFlags{ 0 };
+    HRESULT hrErrorCode = { S_OK };
+    LONG volatile nHeadersTimeoutTimerId{ 0 };
+    LONG volatile nThroughputTimerId{ 0 };
+    DWORD dwLowThroughputCounter{ 0 };
+    LONG volatile nGracefulTerminationTimerId{ 0 };
+    LONG volatile nKeepAliveTimeoutTimerId{ 0 };
     Internals::CHttpParser cRequestParser{ TRUE, NULL };
     struct {
-      LONG nStatus;
+      LONG nStatus{ 0 };
       CStringA cStrReasonA;
       CHttpHeaderArray cHeaders;
       CHttpCookieArray cCookies;
       TArrayListWithRelease<CStream*> aStreamsList;
-      BOOL bLastStreamIsData;
-      LPCSTR szMimeTypeHintA;
+      BOOL bLastStreamIsData{ FALSE };
+      LPCSTR szMimeTypeHintA{ NULL };
       CStringW cStrFileNameW;
-      BOOL bIsInline;
-      BOOL bDirect, bPreserveWebSocketHeaders;
+      BOOL bIsInline{ FALSE };
+      BOOL bDirect{ FALSE }, bPreserveWebSocketHeaders{ FALSE };
     } sResponse;
   };
 
 private:
   friend class CClientRequest;
 
-  typedef struct {
-    int nVersion;
+  typedef struct _WEBSOCKET_REQUEST_DATA {
+    int nVersion{ 0 };
     TArrayListWithFree<LPCSTR> aProtocols;
     TAutoRefCounted<CHttpHeaderRespSecWebSocketAccept> cHeaderRespSecWebSocketAccept;
   } WEBSOCKET_REQUEST_DATA;
@@ -340,7 +345,8 @@ private:
   BOOL CheckRateLimit();
 
   VOID TerminateRequest(_In_ CClientRequest *lpRequest, _In_ HRESULT hrErrorCode);
-  VOID OnRequestError(_In_ CClientRequest *lpRequest, _In_ HRESULT hrErrorCode, _Inout_ int &nTimersToStart);
+  VOID OnRequestError(_In_ CClientRequest *lpRequest, _In_ HRESULT hrErrorCode,
+                      _Inout_ CClientRequest::eTimeoutTimer &nTimersToStart);
 
   HRESULT FillResponseWithError(_In_ CClientRequest *lpRequest, _In_ LONG nStatusCode, _In_ HRESULT hrErrorCode,
                                 _In_opt_z_ LPCSTR szAdditionalExplanationA);
@@ -365,8 +371,6 @@ private:
   public:
     CRequestLimiter(_In_ PSOCKADDR_INET lpAddr) : CBaseMemObj()
       {
-      MxMemCopy(&sAddr, lpAddr, sizeof(SOCKADDR_INET));
-      _InterlockedExchange(&nCount, 1);
       return;
       };
 
@@ -388,41 +392,41 @@ private:
   private:
     friend class CHttpServer;
 
-    SOCKADDR_INET sAddr;
-    LONG volatile nCount;
+    SOCKADDR_INET sAddr{};
+    LONG volatile nCount{ 1 };
     CRedBlackTreeNode cTreeNode;
   };
 
 private:
   CCriticalSection cs;
   CSockets &cSocketMgr;
-  DWORD dwMaxConnectionsPerIp;
-  DWORD dwRequestHeaderTimeoutMs, dwGracefulTerminationTimeoutMs, dwKeepAliveTimeoutMs;
-  float nRequestBodyMinimumThroughputInKbps, nResponseMinimumThroughputInKbps;
-  DWORD dwRequestBodySecondsOfLowThroughput, dwResponseSecondsOfLowThroughput;
-  DWORD dwMaxHeaderSize;
-  DWORD dwMaxFieldSize;
-  ULONGLONG ullMaxFileSize;
-  DWORD dwMaxFilesCount;
+  DWORD dwMaxConnectionsPerIp{ 0xFFFFFFFFUL };
+  DWORD dwRequestHeaderTimeoutMs{ 30000 }, dwGracefulTerminationTimeoutMs{ 30000 }, dwKeepAliveTimeoutMs{ 60000 };
+  float nRequestBodyMinimumThroughputInKbps{ 0.25f }, nResponseMinimumThroughputInKbps{ 0.25f };
+  DWORD dwRequestBodySecondsOfLowThroughput{ 10 }, dwResponseSecondsOfLowThroughput{ 10 };
+  DWORD dwMaxHeaderSize{ 16384 };
+  DWORD dwMaxFieldSize{ 256000 };
+  ULONGLONG ullMaxFileSize{ 2097152ui64 };
+  DWORD dwMaxFilesCount{ 4 };
   CStringW cStrTemporaryFolderW;
-  DWORD dwMaxBodySizeInMemory;
-  ULONGLONG ullMaxBodySize;
-  DWORD dwMaxIncomingBytesWhileSending;
-  DWORD dwMaxRequestsPerSecond;
-  DWORD dwMaxRequestsBurstSize;
+  DWORD dwMaxBodySizeInMemory{ 32768 };
+  ULONGLONG ullMaxBodySize{ 10485760ui64 };
+  DWORD dwMaxIncomingBytesWhileSending{ 52428800 };
+  DWORD dwMaxRequestsPerSecond{ 0 };
+  DWORD dwMaxRequestsBurstSize{ 0 };
   struct {
-    LONG volatile nMutex;
+    LONG volatile nMutex{ MX_RUNDOWNPROT_INIT };
     CTimer cTimer;
     union {
-      DWORD dwRequestCounter;
+      DWORD dwRequestCounter{ 0 };
       DWORD dwCurrentExcess;
     };
   } sLimiter;
 
-  LONG volatile nDownloadNameGeneratorCounter;
-  LONG volatile nRundownLock;
-  HANDLE hAcceptConn;
-  LONG volatile nActiveRequestsCount;
+  LONG volatile nDownloadNameGeneratorCounter{ 0 };
+  LONG volatile nRundownLock{ MX_RUNDOWNPROT_INIT };
+  HANDLE hAcceptConn{ NULL };
+  LONG volatile nActiveRequestsCount{ 0 };
 
   OnQuerySslCertificatesCallback cQuerySslCertificatesCallback;
   OnNewRequestObjectCallback cNewRequestObjectCallback;
@@ -431,15 +435,31 @@ private:
   OnWebSocketRequestReceivedCallback cWebSocketRequestReceivedCallback;
   OnRequestDestroyedCallback cRequestDestroyedCallback;
   OnCustomErrorPageCallback cCustomErrorPageCallback;
-  RWLOCK sRequestsListRwMutex;
+  RWLOCK sRequestsListRwMutex{};
   CLnkLst cRequestsList;
   CWindowsEvent cShutdownEv;
 
   struct {
-    RWLOCK sRwMutex;
+    RWLOCK sRwMutex{};
     CRedBlackTree cTree;
   } sRequestLimiter;
 };
+
+
+inline CHttpServer::CClientRequest::eTimeoutTimer operator|(CHttpServer::CClientRequest::eTimeoutTimer lhs, CHttpServer::CClientRequest::eTimeoutTimer rhs)
+{
+  return static_cast<CHttpServer::CClientRequest::eTimeoutTimer>(static_cast<int>(lhs) | static_cast<int>(rhs));
+}
+
+inline CHttpServer::CClientRequest::eTimeoutTimer operator&(CHttpServer::CClientRequest::eTimeoutTimer lhs, CHttpServer::CClientRequest::eTimeoutTimer rhs)
+{
+  return static_cast<CHttpServer::CClientRequest::eTimeoutTimer>(static_cast<int>(lhs) & static_cast<int>(rhs));
+}
+
+inline CHttpServer::CClientRequest::eTimeoutTimer operator~(CHttpServer::CClientRequest::eTimeoutTimer v)
+{
+  return static_cast<CHttpServer::CClientRequest::eTimeoutTimer>(~static_cast<int>(v));
+}
 
 } //namespace MX
 

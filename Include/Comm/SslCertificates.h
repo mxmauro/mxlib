@@ -42,9 +42,10 @@ namespace MX {
 class CSslCertificate : public virtual TRefCounted<CBaseMemObj>
 {
 public:
-  typedef enum {
-    InfoOrganization = 1, InfoUnit, InfoCommonName, InfoCountry, InfoStateProvince, InfoTown
-  } eInformation;
+  enum class eInformation
+  {
+    Organization = 1, Unit, CommonName, Country, StateProvince, Town
+  };
 
   CSslCertificate();
   CSslCertificate(_In_ const CSslCertificate& cSrc) throw(...);
@@ -118,7 +119,7 @@ public:
     };
 
 private:
-  X509_CRL *lpX509Crl;
+  X509_CRL *lpX509Crl{ NULL };
 };
 
 //-----------------------------------------------------------

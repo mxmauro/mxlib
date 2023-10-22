@@ -55,11 +55,10 @@ protected:
   HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
 
 private:
-  typedef enum {
-    StateData,
-    StateDone,
-    StateError
-  } eState;
+  enum class eState
+  {
+    Data, Done, Error
+  };
 
 private:
   eState nState;

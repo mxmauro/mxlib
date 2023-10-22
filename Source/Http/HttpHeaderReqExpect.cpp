@@ -25,7 +25,7 @@ namespace MX {
 
 CHttpHeaderReqExpect::CHttpHeaderReqExpect() : CHttpHeaderBase()
 {
-  nExpectation = ExpectationUnsupported;
+  nExpectation = eExpectation::Unsupported;
   return;
 }
 
@@ -37,7 +37,7 @@ CHttpHeaderReqExpect::~CHttpHeaderReqExpect()
 HRESULT CHttpHeaderReqExpect::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
   LPCSTR szValueEndA;
-  eExpectation _nExpectation = ExpectationUnsupported;
+  eExpectation _nExpectation = eExpectation::Unsupported;
 
   if (szValueA == NULL)
     return E_POINTER;
@@ -46,14 +46,14 @@ HRESULT CHttpHeaderReqExpect::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nVal
     nValueLen = StrLenA(szValueA);
   szValueEndA = szValueA + nValueLen;
 
-  nExpectation = ExpectationUnsupported;
+  nExpectation = eExpectation::Unsupported;
   //skip spaces
   szValueA = SkipSpaces(szValueA, szValueEndA);
 
   //check expectation
   if ((SIZE_T)(szValueEndA - szValueA) >= 12 && StrNCompareA(szValueA, "100-continue", 12, TRUE) == 0)
   {
-    _nExpectation = Expectation100Continue;
+    _nExpectation = eExpectation::Status100Continue;
     szValueA += 12;
   }
   else
@@ -74,7 +74,7 @@ HRESULT CHttpHeaderReqExpect::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBro
 {
   switch (nExpectation)
   {
-    case Expectation100Continue:
+    case eExpectation::Status100Continue:
       if (cStrDestA.Copy("100-continue") == FALSE)
         return E_OUTOFMEMORY;
       return S_OK;
@@ -85,7 +85,7 @@ HRESULT CHttpHeaderReqExpect::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBro
 
 HRESULT CHttpHeaderReqExpect::SetExpectation(_In_ eExpectation _nExpectation)
 {
-  if (_nExpectation != Expectation100Continue && _nExpectation != ExpectationUnsupported)
+  if (_nExpectation != eExpectation::Status100Continue && _nExpectation != eExpectation::Unsupported)
     return E_INVALIDARG;
   nExpectation = _nExpectation;
   return S_OK;

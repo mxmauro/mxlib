@@ -30,10 +30,11 @@ namespace MX {
 class CHttpHeaderReqExpect : public CHttpHeaderBase
 {
 public:
-  typedef enum {
-    ExpectationUnsupported = -1,
-    Expectation100Continue = 0
-  } eExpectation;
+  enum class eExpectation
+  {
+    Unsupported = -1,
+    Status100Continue = 0
+  };
 
   CHttpHeaderReqExpect();
   ~CHttpHeaderReqExpect();

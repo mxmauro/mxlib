@@ -51,57 +51,58 @@ protected:
   HRESULT AccumulateData(_In_ CHAR chA);
 
 private:
-  typedef enum {
-    StateBoundary,
-    StateBoundaryAfter,
-    StateBoundaryAfter2,
-    StateBoundaryAfterEnd,
-    StateBoundaryEndCheck,
-    StateBoundaryEndCheckAfterDashes,
-    StateBoundaryEndCheckAfterDashes2,
+  enum class eState
+  {
+    Boundary,
+    BoundaryAfter,
+    BoundaryAfter2,
+    BoundaryAfterEnd,
+    BoundaryEndCheck,
+    BoundaryEndCheckAfterDashes,
+    BoundaryEndCheckAfterDashes2,
 
-    StateHeaderStart,
-    StateHeaderName,
-    StateHeaderValue,
-    StateHeaderValueEnding,
-    StateHeadersEnding,
+    HeaderStart,
+    HeaderName,
+    HeaderValue,
+    HeaderValueEnding,
+    HeadersEnding,
 
-    StateData,
-    StateDataEnd,
+    Data,
+    DataEnd,
 
-    StateMayBeDataEnd,
-    StateMayBeDataEndAlt,
+    MayBeDataEnd,
+    MayBeDataEndAlt,
 
-    StateDone,
-    StateError
-  } eState;
+    Done,
+    Error
+  } ;
 
   OnDownloadStartedCallback cDownloadStartedCallback;
-  LPVOID lpUserData;
-  DWORD dwMaxFieldSize;
-  ULONGLONG ullMaxFileSize;
-  DWORD dwMaxFilesCount;
+  LPVOID lpUserData{ NULL };
+  DWORD dwMaxFieldSize{ 0 };
+  ULONGLONG ullMaxFileSize{ 0 };
+  DWORD dwMaxFilesCount{ 0 };
 
   CStringA cStrBoundaryA;
 
   struct {
-    eState nState;
-    SIZE_T nBoundaryPos;
+    eState nState{ eState::Boundary };
+    SIZE_T nBoundaryPos{ 0 };
     CStringA cStrCurrLineA;
-    DWORD dwHeadersLen;
+    DWORD dwHeadersLen{ 0 };
     struct {
       struct {
         CStringW cStrNameW;
         CStringW cStrFileNameW;
-        BOOL bHasFileName;
+        BOOL bHasFileName{ FALSE };
       } sContentDisposition;
       CStringA cStrContentTypeA;
-      BOOL bContentTransferEncoding;
+      BOOL bContentTransferEncoding{ FALSE };
     } sCurrentBlock;
     CStringW cStrCurrFieldNameW;
-    BYTE aTempBuf[16384];
-    SIZE_T nUsedTempBuf, nFileUploadCounter;
-    ULONGLONG nFileUploadSize;
+    BYTE aTempBuf[16384]{};
+    SIZE_T nUsedTempBuf{ 0 }, nFileUploadCounter{ 0 };
+    ULONGLONG nFileUploadSize{ 0 };
     CWindowsHandle cFileH;
   } sParser;
 };

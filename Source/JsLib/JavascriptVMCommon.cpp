@@ -131,7 +131,7 @@ HRESULT AddNativeFunctionCommon(_In_ DukTape::duk_context *lpCtx, _In_opt_z_ LPC
 
 HRESULT AddPropertyCommon(_In_ DukTape::duk_context *lpCtx, _In_opt_z_ LPCSTR szObjectNameA,
                           _In_ DukTape::duk_idx_t nObjectIndex, _In_z_ LPCSTR szPropertyNameA,
-                          _In_ BOOL bInitialValueOnStack, _In_ int nFlags,
+                          _In_ BOOL bInitialValueOnStack, _In_ CJavascriptVM::ePropertyFlags nFlags,
                           _In_ MX::CJavascriptVM::OnGetPropertyCallback cGetValueCallback,
                           _In_ MX::CJavascriptVM::OnSetPropertyCallback cSetValueCallback)
 {
@@ -182,12 +182,12 @@ HRESULT AddPropertyCommon(_In_ DukTape::duk_context *lpCtx, _In_opt_z_ LPCSTR sz
     if ((!cGetValueCallback) && (!cSetValueCallback))
     {
       nDukFlags |= DUK_DEFPROP_HAVE_WRITABLE;
-      if ((nFlags & MX::CJavascriptVM::PropertyFlagWritable) != 0)
+      if ((nFlags & MX::CJavascriptVM::ePropertyFlags::Writable) != (MX::CJavascriptVM::ePropertyFlags)0)
         nDukFlags |= DUK_DEFPROP_WRITABLE;
     }
-    if ((nFlags & MX::CJavascriptVM::PropertyFlagEnumerable) != 0)
+    if ((nFlags & MX::CJavascriptVM::ePropertyFlags::Enumerable) != (MX::CJavascriptVM::ePropertyFlags)0)
       nDukFlags |= DUK_DEFPROP_ENUMERABLE;
-    if ((nFlags & MX::CJavascriptVM::PropertyFlagConfigurable) != 0)
+    if ((nFlags & MX::CJavascriptVM::ePropertyFlags::Configurable) != (MX::CJavascriptVM::ePropertyFlags)0)
       nDukFlags |= DUK_DEFPROP_CONFIGURABLE;
     //create lambda for property getter
     if (cGetValueCallback)

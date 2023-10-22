@@ -205,7 +205,7 @@ static DukTape::duk_ret_t OnSetCookie(_In_ DukTape::duk_context *lpCtx, _In_z_ L
     hRes = cExpireDt.SetFromNow(FALSE);
     if (SUCCEEDED(hRes))
     {
-      hRes = cExpireDt.Add((int)nExpire, MX::CDateTime::UnitsSeconds);
+      hRes = cExpireDt.Add((int)nExpire, MX::CDateTime::eUnits::Seconds);
       if (SUCCEEDED(hRes))
         cCookie->SetExpireDate(&cExpireDt);
     }

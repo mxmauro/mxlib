@@ -181,6 +181,7 @@ SSL_CTX* GetSslContext(_In_ BOOL bServerSide)
         nId = fnv_64a_buf(&lp, sizeof(lp), FNV1A_64_INIT);
         lp = (LPVOID)&nSslContextMutex;
         nId = fnv_64a_buf(&lp, sizeof(lp), nId);
+#pragma warning(suppress : 28159)
         dw = ::GetTickCount();
         nId = fnv_64a_buf(&dw, sizeof(dw), nId);
         SSL_CTX_set_session_id_context(lpSslCtx, (unsigned char*)&nId, (unsigned int)sizeof(nId));

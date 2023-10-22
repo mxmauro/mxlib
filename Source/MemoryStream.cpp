@@ -151,12 +151,12 @@ HRESULT CMemoryStream::Seek(_In_ ULONGLONG nPosition, _In_opt_ CStream::eSeekMet
 {
   switch (nMethod)
   {
-    case SeekStart:
+    case eSeekMethod::Start:
       if (nPosition > (ULONGLONG)nSize)
         nPosition = (ULONGLONG)nSize;
       break;
 
-    case SeekCurrent:
+    case eSeekMethod::Current:
       if ((LONGLONG)nPosition >= 0)
       {
         if (nPosition > (ULONGLONG)(nSize - nCurrPos))
@@ -172,7 +172,7 @@ HRESULT CMemoryStream::Seek(_In_ ULONGLONG nPosition, _In_opt_ CStream::eSeekMet
       }
       break;
 
-    case SeekEnd:
+    case eSeekMethod::End:
       if (nPosition > (ULONGLONG)nSize)
         nPosition = (ULONGLONG)nSize;
       nPosition = (ULONGLONG)nSize - nPosition;

@@ -31,15 +31,15 @@ namespace MX {
 class CPropertyBag : public virtual CBaseMemObj, public CNonCopyableObj
 {
 public:
-  typedef enum {
-    PropertyTypeUndefined,
-    PropertyTypeNull,
-    PropertyTypeDWord,
-    PropertyTypeQWord,
-    PropertyTypeAnsiString,
-    PropertyTypeWideString,
-    PropertyTypeDouble
-  } eType;
+  enum class eType {
+    Undefined,
+    Null,
+    DWord,
+    QWord,
+    AnsiString,
+    WideString,
+    Double
+  };
 
   CPropertyBag();
   ~CPropertyBag();

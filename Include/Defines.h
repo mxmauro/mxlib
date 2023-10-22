@@ -60,7 +60,16 @@
   #define MX_UNALIGNED
 #endif
 
-#define MX_ARRAYLEN(arr)      (sizeof(arr) / sizeof(arr[0]))
+#ifdef __cplusplus
+  extern "C++" {
+    template <typename _CountofType, size_t _SizeOfArray>
+    char(*__countof_helper(MX_UNALIGNED _CountofType(&_Array)[_SizeOfArray]))[_SizeOfArray];
+
+    #define MX_ARRAYLEN(_Array) (sizeof(*__countof_helper(_Array)) + 0)
+  }
+#else //__cplusplus
+  #define MX_ARRAYLEN(arr)      (sizeof(arr) / sizeof(arr[0]))
+#endif //__cplusplus
 
 //-----------------------------------------------------------
 

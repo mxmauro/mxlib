@@ -33,27 +33,24 @@ class CHostResolver;
 class CSockets : public CIpc, public CNonCopyableObj
 {
 public:
-  typedef enum {
-    FamilyIPv4=1, FamilyIPv6
-  } eFamily;
+  enum class eFamily
+  {
+    IPv4=1, IPv6
+  };
 
   class CListenerOptions : public virtual CBaseMemObj
   {
   public:
-    CListenerOptions()
+    CListenerOptions() : CBaseMemObj()
       {
-      dwBackLogSize = 0;
-      dwMaxAcceptsToPost = 4;
-      dwMaxRequestsPerSecond = 0;
-      dwMaxRequestsBurstSize = 0;
       return;
       };
 
   public:
-    DWORD dwBackLogSize;
-    DWORD dwMaxAcceptsToPost;
-    DWORD dwMaxRequestsPerSecond;
-    DWORD dwMaxRequestsBurstSize;
+    DWORD dwBackLogSize{ 0 };
+    DWORD dwMaxAcceptsToPost{ 0 };
+    DWORD dwMaxRequestsPerSecond{ 0 };
+    DWORD dwMaxRequestsBurstSize{ 0 };
   };
 
 public:
@@ -128,9 +125,9 @@ private:
       VOID ThreadProc();
 
     private:
-      CConnection *lpConn;
-      TClassWorkerThread<CConnectWaiter> *lpWorkerThread;
-      CPacketBase *lpPacket;
+      CConnection *lpConn{ NULL };
+      TClassWorkerThread<CConnectWaiter> *lpWorkerThread{ NULL };
+      CPacketBase *lpPacket{ NULL };
     };
 
   protected:
@@ -151,38 +148,38 @@ private:
       VOID ThreadProc();
 
     public:
-      CConnection *lpConn;
+      CConnection *lpConn{ NULL };
       CListenerOptions cOptions;
-      TClassWorkerThread<CListener> *lpWorkerThread;
-      HANDLE hAcceptSelect, hAcceptCompleted;
-      LPVOID fnAcceptEx, fnGetAcceptExSockaddrs;
-      LONG volatile nAcceptsInProgress;
+      TClassWorkerThread<CListener> *lpWorkerThread{ NULL };
+      HANDLE hAcceptSelect{ NULL }, hAcceptCompleted{ NULL };
+      LPVOID fnAcceptEx{ NULL }, fnGetAcceptExSockaddrs{ NULL };
+      LONG volatile nAcceptsInProgress{ 0 };
       struct {
-        LONG volatile nMutex;
+        LONG volatile nMutex{ MX_FASTLOCK_INIT };
         CTimer cTimer;
         union {
-          DWORD dwRequestCounter;
+          DWORD dwRequestCounter{ 0 };
           DWORD dwCurrentExcess;
         };
       } sLimiter;
     };
 
   protected:
-    RWLOCK sRwHandleInUse;
-    SOCKADDR_INET sAddr;
-    SOCKET sck;
+    RWLOCK sRwHandleInUse{};
+    SOCKADDR_INET sAddr{};
+    SOCKET sck{ NULL };
     eFamily nFamily;
     struct {
-      LONG volatile nMutex;
-      LONG volatile nResolverId;
-      CPacketBase *lpPacket;
+      LONG volatile nMutex{ MX_FASTLOCK_INIT };
+      LONG volatile nResolverId{ 0 };
+      CPacketBase *lpPacket{ NULL };
     } sHostResolver;
     TAutoDeletePtr<CConnectWaiter> cConnectWaiter;
     TAutoDeletePtr<CListener> cListener;
-    LONG volatile nReadThrottle;
+    LONG volatile nReadThrottle{ 1024 };
     struct {
-      DWORD dwCurrentSize;
-      DWORD dwLastTickMs;
+      DWORD dwCurrentSize{ 0 };
+      DWORD dwLastTickMs{ 0 };
     } sAutoAdjustSndBuf;
   };
 
@@ -200,8 +197,8 @@ private:
     };
 
 private:
-  DWORD dwAddressResolverTimeoutMs;
-  ULONG nFlags;
+  DWORD dwAddressResolverTimeoutMs{ 20000 };
+  ULONG nFlags{ 0 };
 };
 
 } //namespace MX

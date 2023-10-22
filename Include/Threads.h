@@ -77,11 +77,11 @@ private:
   static unsigned int __stdcall CommonThreadProc(_In_ LPVOID _lpParameter);
 
 protected:
-  int nPriority;
-  HANDLE hThread;
-  DWORD dwThreadId, dwStackSize;
+  int nPriority{ THREAD_PRIORITY_NORMAL };
+  HANDLE hThread{ NULL };
+  DWORD dwThreadId{ 0 }, dwStackSize{ 0 };
   CWindowsEvent cKillEvent;
-  BOOL bAutoDelete;
+  BOOL bAutoDelete{ FALSE };
 };
 
 //-----------------------------------------------------------
@@ -100,8 +100,8 @@ private:
   VOID ThreadProc();
 
 private:
-  lpfnWorkerThread lpStartRoutine;
-  LPVOID lpParam;
+  lpfnWorkerThread lpStartRoutine{ NULL };
+  LPVOID lpParam{ NULL };
 };
 
 //-----------------------------------------------------------
@@ -112,9 +112,6 @@ class TClassWorkerThread : public CThread, public CNonCopyableObj
 public:
   TClassWorkerThread() : CThread(), CNonCopyableObj()
     {
-    lpObject = NULL;
-    lpStartRoutine = NULL;
-    lpStartRoutineWithParam = NULL;
     return;
     };
 
@@ -156,10 +153,10 @@ private:
     }
 
 private:
-  TClass *lpObject;
-  VOID (TClass::* lpStartRoutine)();
-  VOID (TClass::* lpStartRoutineWithParam)(SIZE_T);
-  SIZE_T nParam;
+  TClass *lpObject{ NULL };
+  VOID (TClass::*lpStartRoutine)(){ NULL };
+  VOID (TClass::*lpStartRoutineWithParam)(SIZE_T){ NULL };
+  SIZE_T nParam{ 0 };
 };
 
 //-----------------------------------------------------------
@@ -190,7 +187,7 @@ private:
   typedef TClassWorkerThread<CThreadPool> CWorkerThread;
 
   typedef struct tagDLLIST_ITEM {
-    struct tagDLLIST_ITEM *lpNext, *lpPrev;
+    struct tagDLLIST_ITEM *lpNext{ NULL }, *lpPrev{ NULL };
   } DLLIST_ITEM;
 
   typedef struct tagWORKITEM {
@@ -209,20 +206,20 @@ private:
 
 private:
   CCriticalSection cMtx;
-  HANDLE hIOCP;
-  ULONG nMinWorkerThreads;
-  ULONG nWorkerThreadsCreateAhead;
-  ULONG nThreadShutdownThresholdMs;
+  HANDLE hIOCP{ NULL };
+  ULONG nMinWorkerThreads{ 0 };
+  ULONG nWorkerThreadsCreateAhead{ 0 };
+  ULONG nThreadShutdownThresholdMs{ 0 };
   struct {
-    LONG volatile nMtx;
+    LONG volatile nMtx{ 0 };
     DLLIST_ITEM sList;
   } sWorkItems;
   struct {
-    LONG volatile nMtx;
-    CWorkerThread **lplpWorkerThreadsList;
-    SIZE_T nCount, nSize;
+    LONG volatile nMtx{ 0 };
+    CWorkerThread **lplpWorkerThreadsList{ NULL };
+    SIZE_T nCount{ 0 }, nSize{ 0 };
   } sActiveThreads;
-  LONG volatile nInUse;
+  LONG volatile nInUse{ 0 };
 };
 
 } //namespace MX

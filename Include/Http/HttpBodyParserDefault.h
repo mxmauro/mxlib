@@ -67,11 +67,9 @@ protected:
   HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
 
 private:
-  typedef enum {
-    StateReading,
-    StateDone,
-    StateError
-  } eState;
+  enum class eState {
+    Reading, Done, Error
+  };
 
   OnDownloadStartedCallback cDownloadStartedCallback;
   LPVOID lpUserParam;

@@ -24,9 +24,10 @@ public:
   };
 
 public:
-  typedef enum {
-    TxTypeStandard, TxTypeImmediate, TxTypeExclusive
-  } eTxType;
+  enum class eTxType
+  {
+    Standard, Immediate, Exclusive
+  };
 
 public:
   CSQLite3Connector();
@@ -41,8 +42,8 @@ public:
   int GetErrorCode() const;
   LPCSTR GetErrorDescription() const;
 
-  HRESULT QueryExecute(_In_ LPCSTR szQueryA, _In_ SIZE_T nQueryLen = (SIZE_T)-1,
-                       _In_ CFieldList *lpInputFieldsList = NULL);
+  HRESULT QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQueryLen = (SIZE_T)-1,
+                       _In_opt_ CFieldList *lpInputFieldsList = NULL);
   using CBaseConnector::QueryExecute;
 
   HRESULT FetchRow();
@@ -65,7 +66,7 @@ private:
   public:
     CSQLite3Column() : CColumn()
       {
-      nType = nRealType = nCurrType, nFlags = 0;
+      nType = nRealType = nCurrType = nFlags = 0;
       return;
       };
 

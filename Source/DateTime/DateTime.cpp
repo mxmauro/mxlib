@@ -730,7 +730,7 @@ HRESULT CDateTime::SetFromOleAutDate(_In_ double nValue)
     // integer part is the number of days (negative)
     hRes = GetRoundedMillisecondsForOA(nDays, &nTicks);
     if (SUCCEEDED(hRes))
-      hRes = cDt.Add(nTicks, UnitsTicks);
+      hRes = cDt.Add(nTicks, eUnits::Ticks);
     // but decimals are the number of hours (in days fractions) and positive
     if (SUCCEEDED(hRes))
     {
@@ -738,14 +738,14 @@ HRESULT CDateTime::SetFromOleAutDate(_In_ double nValue)
       hRes = GetRoundedMillisecondsForOA(nHours, &nTicks);
     }
     if (SUCCEEDED(hRes))
-      hRes = cDt.Add(nTicks, UnitsTicks);
+      hRes = cDt.Add(nTicks, eUnits::Ticks);
   }
   else
   {
     nDays = floor(nValue);
     hRes = GetRoundedMillisecondsForOA(nDays, &nTicks);
     if (SUCCEEDED(hRes))
-      hRes = cDt.Add(nTicks, UnitsTicks);
+      hRes = cDt.Add(nTicks, eUnits::Ticks);
   }
   if (SUCCEEDED(hRes))
     cTicks = cDt.cTicks;
@@ -760,7 +760,7 @@ HRESULT CDateTime::SetGmtOffset(_In_ int _nGmtOffset, _In_ BOOL bAdjustTime)
     return E_INVALIDARG;
   if (bAdjustTime != FALSE)
   {
-    hRes = Add((LONGLONG)_nGmtOffset - (LONGLONG)nGmtOffset, CDateTime::UnitsMinutes);
+    hRes = Add((LONGLONG)_nGmtOffset - (LONGLONG)nGmtOffset, CDateTime::eUnits::Minutes);
     if (FAILED(hRes))
       return hRes;
   }
@@ -1016,7 +1016,7 @@ bool CDateTime::operator>=(_In_ const CDateTime& cDt) const
 
 HRESULT CDateTime::Add(_In_ CTimeSpan &cTs)
 {
-  return Add(cTs.GetTicks(), UnitsTicks);
+  return Add(cTs.GetTicks(), eUnits::Ticks);
 }
 
 HRESULT CDateTime::Add(_In_ int nCount, _In_ CDateTime::eUnits nUnits)
@@ -1033,21 +1033,21 @@ HRESULT CDateTime::Add(_In_ LONGLONG nCount, _In_ CDateTime::eUnits nUnits)
 
   switch (nUnits)
   {
-    case UnitsYear:
-    case UnitsMonth:
+    case eUnits::Year:
+    case eUnits::Month:
       GetDate(&nYear, &nMonth, &nDay);
-      if (nUnits == UnitsMonth && nCount != 0)
+      if (nUnits == eUnits::Month && nCount != 0)
       {
         nMonth64 = (LONGLONG)nMonth + (nCount - 1);
         if (nMonth64 < 0)
         {
-          nUnits = UnitsYear;
+          nUnits = eUnits::Year;
           nCount = ((nMonth64+1) / 12) - 1;
           nMonth = (int)(nMonth64 - nCount*12);
         }
         else if (nMonth64 > 11)
         {
-          nUnits = UnitsYear;
+          nUnits = eUnits::Year;
           nCount = nMonth64 / 12;
           nMonth = (int)(nMonth64 % 12) + 1;
         }
@@ -1057,7 +1057,7 @@ HRESULT CDateTime::Add(_In_ LONGLONG nCount, _In_ CDateTime::eUnits nUnits)
           nMonth = (int)nMonth64 + 1;
         }
       }
-      if (nUnits == UnitsYear && nCount != 0)
+      if (nUnits == eUnits::Year && nCount != 0)
       {
         nYear64 = (LONGLONG)nYear + nCount;
         if (nYear64<1 || nYear64>9999)
@@ -1071,22 +1071,22 @@ HRESULT CDateTime::Add(_In_ LONGLONG nCount, _In_ CDateTime::eUnits nUnits)
         nDay = k;
       return SetDate(nYear, nMonth, nDay);
 
-    case UnitsDay:
+    case eUnits::Day:
       hRes = cTs.SetFromDays((double)nCount);
       break;
-    case UnitsHours:
+    case eUnits::Hours:
       hRes = cTs.SetFromHours((double)nCount);
       break;
-    case UnitsMinutes:
+    case eUnits::Minutes:
       hRes = cTs.SetFromMinutes((double)nCount);
       break;
-    case UnitsSeconds:
+    case eUnits::Seconds:
       hRes = cTs.SetFromSeconds((double)nCount);
       break;
-    case UnitsMilliseconds:
+    case eUnits::Milliseconds:
       hRes = cTs.SetFromMilliSeconds((double)nCount);
       break;
-    case UnitsTicks:
+    case eUnits::Ticks:
       hRes = cTs.SetFromTicks(nCount);
       break;
   }
@@ -1105,7 +1105,7 @@ HRESULT CDateTime::Add(_In_ LONGLONG nCount, _In_ CDateTime::eUnits nUnits)
 
 HRESULT CDateTime::Sub(_In_ CTimeSpan &cTs)
 {
-  return Sub(cTs.GetTicks(), UnitsTicks);
+  return Sub(cTs.GetTicks(), eUnits::Ticks);
 }
 
 HRESULT CDateTime::Sub(_In_ int nCount, _In_ eUnits nUnits)
@@ -1129,12 +1129,12 @@ LONGLONG CDateTime::GetDiff(_In_ const CDateTime& cFromDt, _In_ eUnits nUnits)
 
   switch (nUnits)
   {
-    case UnitsDay:
-    case UnitsHours:
-    case UnitsMinutes:
-    case UnitsSeconds:
-    case UnitsMilliseconds:
-    case UnitsTicks:
+    case eUnits::Day:
+    case eUnits::Hours:
+    case eUnits::Minutes:
+    case eUnits::Seconds:
+    case eUnits::Milliseconds:
+    case eUnits::Ticks:
       nTicks = cFromDt.GetTicks();
       if (nTicks == LONGLONG_MIN)
       {
@@ -1148,19 +1148,19 @@ LONGLONG CDateTime::GetDiff(_In_ const CDateTime& cFromDt, _In_ eUnits nUnits)
         return 0;
       switch (nUnits)
       {
-        case UnitsDay:
+        case eUnits::Day:
           nDiff = (LONGLONG)cTs.GetTotalDays();
           break;
-        case UnitsHours:
+        case eUnits::Hours:
           nDiff = (LONGLONG)cTs.GetTotalHours();
           break;
-        case UnitsMinutes:
+        case eUnits::Minutes:
           nDiff = (LONGLONG)cTs.GetTotalMinutes();
           break;
-        case UnitsSeconds:
+        case eUnits::Seconds:
           nDiff = (LONGLONG)cTs.GetTotalSeconds();
           break;
-        case UnitsMilliseconds:
+        case eUnits::Milliseconds:
           nDiff = (LONGLONG)cTs.GetTotalMilliSeconds();
           break;
         default:
@@ -1169,8 +1169,8 @@ LONGLONG CDateTime::GetDiff(_In_ const CDateTime& cFromDt, _In_ eUnits nUnits)
       }
       break;
 
-    case UnitsMonth:
-    case UnitsYear:
+    case eUnits::Month:
+    case eUnits::Year:
       GetDate(&nYear[0], &nMonth[0], &nDay[0]);
       const_cast<CDateTime&>(cFromDt).GetDate(&nYear[1], &nMonth[1], &nDay[1]);
       for (i=0; i<2; i++) {
@@ -1180,7 +1180,7 @@ LONGLONG CDateTime::GetDiff(_In_ const CDateTime& cFromDt, _In_ eUnits nUnits)
         nDblTemp[i] = (double)(nYear[i] * 12 + nMonth[i]) + (double)(nDay[i] - 1) / (double)nTemp[i];
       }
       nDiff = (LONGLONG)(nDblTemp[0] - nDblTemp[1]);
-      if (nUnits == UnitsYear)
+      if (nUnits == eUnits::Year)
         nDiff /= 12;
       break;
 

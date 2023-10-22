@@ -29,18 +29,19 @@ namespace MX {
 class CSymmetricCipher : public virtual CBaseMemObj, public CNonCopyableObj
 {
 public:
-  typedef enum {
-    AlgorithmDES_ECB = 0, AlgorithmDES_CBC, AlgorithmDES_OFB,
-    AlgorithmDES_CFB1, AlgorithmDES_CFB8, AlgorithmDES_CFB64,
-    Algorithm3DES_ECB, Algorithm3DES_CBC, Algorithm3DES_OFB,
-    Algorithm3DES_CFB1, Algorithm3DES_CFB8, Algorithm3DES_CFB64,
-    AlgorithmAES_128_ECB, AlgorithmAES_128_CBC, AlgorithmAES_128_CTR, AlgorithmAES_128_GCM,
-    AlgorithmAES_128_OFB, AlgorithmAES_128_CFB1, AlgorithmAES_128_CFB8, AlgorithmAES_128_CFB128,
-    AlgorithmAES_192_ECB, AlgorithmAES_192_CBC, AlgorithmAES_192_CTR, AlgorithmAES_192_GCM,
-    AlgorithmAES_192_OFB, AlgorithmAES_192_CFB1, AlgorithmAES_192_CFB8, AlgorithmAES_192_CFB128,
-    AlgorithmAES_256_ECB, AlgorithmAES_256_CBC, AlgorithmAES_256_CTR, AlgorithmAES_256_GCM,
-    AlgorithmAES_256_OFB, AlgorithmAES_256_CFB1, AlgorithmAES_256_CFB8, AlgorithmAES_256_CFB128
-  } eAlgorithm;
+  enum class eAlgorithm
+  {
+    DES_ECB = 0, DES_CBC, DES_OFB,
+    DES_CFB1, DES_CFB8, DES_CFB64,
+    TripleDES_ECB, TripleDES_CBC, TripleDES_OFB,
+    TripleDES_CFB1, TripleDES_CFB8, TripleDES_CFB64,
+    AES_128_ECB, AES_128_CBC, AES_128_CTR, AES_128_GCM,
+    AES_128_OFB, AES_128_CFB1, AES_128_CFB8, AES_128_CFB128,
+    AES_192_ECB, AES_192_CBC, AES_192_CTR, AES_192_GCM,
+    AES_192_OFB, AES_192_CFB1, AES_192_CFB8, AES_192_CFB128,
+    AES_256_ECB, AES_256_CBC, AES_256_CTR, AES_256_GCM,
+    AES_256_OFB, AES_256_CFB1, AES_256_CFB8, AES_256_CFB128
+  };
 
 public:
   CSymmetricCipher();
