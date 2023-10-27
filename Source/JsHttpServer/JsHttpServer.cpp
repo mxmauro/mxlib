@@ -140,7 +140,7 @@ HRESULT CJsHttpServer::OnNewRequestObject(_In_ CHttpServer *lpHttp, _Out_ CHttpS
 HRESULT CJsHttpServer::OnQuerySslCertificates(_In_ CHttpServer *lpHttp,
                                               _Outptr_opt_result_maybenull_ CSslCertificate **lplpSslCert,
                                               _Outptr_opt_result_maybenull_ CEncryptionKey **lplpSslPrivKey,
-                                              _Outptr_opt_result_maybenull_ CDhParam **lplpDhParam)
+                                              _Outptr_opt_result_maybenull_ CEncryptionKey **lplpDhParam)
 {
   if (lplpSslCert != NULL)
     *lplpSslCert = NULL;

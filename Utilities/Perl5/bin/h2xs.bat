@@ -1,33 +1,22 @@
 @rem = '--*-Perl-*--
-@echo off
-if "%OS%" == "Windows_NT" goto WinNT
-IF EXIST "%~dp0perl.exe" (
-"%~dp0perl.exe" -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-) ELSE IF EXIST "%~dp0..\..\bin\perl.exe" (
-"%~dp0..\..\bin\perl.exe" -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-) ELSE (
-perl -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-)
-
-goto endofperl
+@set "ErrorLevel="
+@if "%OS%" == "Windows_NT" @goto WinNT
+@perl -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
+@set ErrorLevel=%ErrorLevel%
+@goto endofperl
 :WinNT
-IF EXIST "%~dp0perl.exe" (
-"%~dp0perl.exe" -x -S %0 %*
-) ELSE IF EXIST "%~dp0..\..\bin\perl.exe" (
-"%~dp0..\..\bin\perl.exe" -x -S %0 %*
-) ELSE (
-perl -x -S %0 %*
-)
-
-if NOT "%COMSPEC%" == "%SystemRoot%\system32\cmd.exe" goto endofperl
-if %errorlevel% == 9009 echo You do not have Perl in your PATH.
-if errorlevel 1 goto script_failed_so_exit_with_non_zero_val 2>nul
-goto endofperl
+@perl -x -S %0 %*
+@set ErrorLevel=%ErrorLevel%
+@if NOT "%COMSPEC%" == "%SystemRoot%\system32\cmd.exe" @goto endofperl
+@if %ErrorLevel% == 9009 @echo You do not have Perl in your PATH.
+@goto endofperl
 @rem ';
 #!perl
-#line 29
+#line 30
     eval 'exec C:\strawberry\perl\bin\perl.exe -S $0 ${1+"$@"}'
-	if $running_under_some_shell;
+	if 0; # ^ Run only under a shell
+
+BEGIN { pop @INC if $INC[-1] eq '.' }
 
 use warnings;
 
@@ -275,7 +264,7 @@ Note that some types of arguments/return-values for functions may
 result in XSUB-declarations/typemap-entries which need
 hand-editing. Such may be objects which cannot be converted from/to a
 pointer (like C<long long>), pointers to functions, or arrays.  See
-also the section on L<LIMITATIONS of B<-x>>.
+also the section on L</LIMITATIONS of B<-x>>.
 
 =back
 
@@ -834,7 +823,7 @@ if( @path_h ){
       # Scan the header file (we should deal with nested header files)
       # Record the names of simple #define constants into const_names
             # Function prototypes are processed below.
-      open(CH, "<$rel_path_h") || die "Can't open $rel_path_h: $!\n";
+      open(CH, "<", "$rel_path_h") || die "Can't open $rel_path_h: $!\n";
     defines:
       while (<CH>) {
 	if ($pre_sub_tri_graphs) {
@@ -967,7 +956,7 @@ if( ! $opt_X ){  # use XS, unless it was disabled
     Devel::PPPort::WriteFile('ppport.h')
         || die "Can't create $ext$modpname/ppport.h: $!\n";
   }
-  open(XS, ">$modfname.xs") || die "Can't create $ext$modpname/$modfname.xs: $!\n";
+  open(XS, ">", "$modfname.xs") || die "Can't create $ext$modpname/$modfname.xs: $!\n";
   if ($opt_x) {
     warn "Scanning typemaps...\n";
     get_typemap();
@@ -1026,7 +1015,7 @@ if( ! $opt_X ){  # use XS, unless it was disabled
       }
     }
     { local $" = '|';
-      $typedef_rex = qr(\b(?<!struct )(?:@good_td)\b) if @good_td;
+      $typedef_rex = qr(\b(?<!struct )(?<!enum )(?:@good_td)\b) if @good_td;
     }
     %known_fnames = map @$_[1,3], @$fdecls_parsed; # [1,3] is NAME, FULLTEXT
     if ($fmask) {
@@ -1085,7 +1074,7 @@ for (sort(keys(%const_names))) {
 }
 
 -d $modpmdir || mkpath([$modpmdir], 0, 0775);
-open(PM, ">$modpmname") || die "Can't create $ext$modpname/$modpmname: $!\n";
+open(PM, ">", "$modpmname") || die "Can't create $ext$modpname/$modpmname: $!\n";
 
 $" = "\n\t";
 warn "Writing $ext$modpname/$modpmname\n";
@@ -1771,7 +1760,7 @@ sub get_typemap {
     warn " Scanning $typemap\n";
     warn("Warning: ignoring non-text typemap file '$typemap'\n"), next
       unless -T $typemap ;
-    open(TYPEMAP, $typemap)
+    open(TYPEMAP, "<", $typemap)
       or warn ("Warning: could not open typemap file '$typemap': $!\n"), next;
     my $mode = 'Typemap';
     while (<TYPEMAP>) {
@@ -1864,7 +1853,7 @@ close XS;
 if (%types_seen) {
   my $type;
   warn "Writing $ext$modpname/typemap\n";
-  open TM, ">typemap" or die "Cannot open typemap file for write: $!";
+  open TM, ">", "typemap" or die "Cannot open typemap file for write: $!";
 
   for $type (sort keys %types_seen) {
     my $entry = assign_typemap_entry $type;
@@ -1898,7 +1887,7 @@ EOP
 } # if( ! $opt_X )
 
 warn "Writing $ext$modpname/Makefile.PL\n";
-open(PL, ">Makefile.PL") || die "Can't create $ext$modpname/Makefile.PL: $!\n";
+open(PL, ">", "Makefile.PL") || die "Can't create $ext$modpname/Makefile.PL: $!\n";
 
 my $prereq_pm = '';
 
@@ -1929,7 +1918,7 @@ WriteMakefile(
     AUTHOR            => '$author <$email>',
     #LICENSE           => 'perl',
     #Value must be from legacy list of licenses here
-    #http://search.cpan.org/perldoc?Module%3A%3ABuild%3A%3AAPI
+    #https://metacpan.org/pod/Module::Build::API
 END
 if (!$opt_X) { # print C stuff, unless XS is disabled
   $opt_F = '' unless defined $opt_F;
@@ -1991,7 +1980,7 @@ $generate_code
 __END__
 gave unexpected error $@
 Please report the circumstances of this bug in h2xs version $H2XS_VERSION
-using the perlbug script.
+using the issue tracker at https://github.com/Perl/perl5/issues.
 EOM
   } else {
     my $fail;
@@ -2012,7 +2001,7 @@ the files $ext$modpname/$constscfname and $ext$modpname/$constsxsfname
 correctly.
 
 Please report the circumstances of this bug in h2xs version $H2XS_VERSION
-using the perlbug script.
+using the issue tracker at https://github.com/Perl/perl5/issues.
 EOM
     } else {
       unlink $constscfname, $constsxsfname;
@@ -2024,7 +2013,7 @@ close(PL) || die "Can't close $ext$modpname/Makefile.PL: $!\n";
 # Create a simple README since this is a CPAN requirement
 # and it doesn't hurt to have one
 warn "Writing $ext$modpname/README\n";
-open(RM, ">README") || die "Can't create $ext$modpname/README:$!\n";
+open(RM, ">", "README") || die "Can't create $ext$modpname/README:$!\n";
 my $thisyear = (gmtime)[5] + 1900;
 my $rmhead = "$modpname version $TEMPLATE_VERSION";
 my $rmheadeq = "=" x length($rmhead);
@@ -2091,7 +2080,7 @@ unless (-d "$testdir") {
 warn "Writing $ext$modpname/$testfile\n";
 my $tests = @const_names ? 2 : 1;
 
-open EX, ">$testfile" or die "Can't create $ext$modpname/$testfile: $!\n";
+open EX, ">", "$testfile" or die "Can't create $ext$modpname/$testfile: $!\n";
 
 print EX <<_END_;
 # Before 'make install' is performed this script should be runnable with
@@ -2197,7 +2186,7 @@ close(EX) || die "Can't close $ext$modpname/$testfile: $!\n";
 unless ($opt_C) {
   warn "Writing $ext$modpname/Changes\n";
   $" = ' ';
-  open(EX, ">Changes") || die "Can't create $ext$modpname/Changes: $!\n";
+  open(EX, ">", "Changes") || die "Can't create $ext$modpname/Changes: $!\n";
   @ARGS = map {/[\s\"\'\`\$*?^|&<>\[\]\{\}\(\)]/ ? "'$_'" : $_} @ARGS;
   print EX <<EOP;
 Revision history for Perl extension $module.
@@ -2211,7 +2200,7 @@ EOP
 }
 
 warn "Writing $ext$modpname/MANIFEST\n";
-open(MANI,'>MANIFEST') or die "Can't create MANIFEST: $!";
+open(MANI, '>', 'MANIFEST') or die "Can't create MANIFEST: $!";
 my @files = grep { -f } (<*>, <t/*>, <$fallbackdirname/*>, <$modpmdir/*>);
 if (!@files) {
   eval {opendir(D,'.');};
@@ -2230,6 +2219,6 @@ if ($^O eq 'VMS') {
 }
 print MANI join("\n",@files), "\n";
 close MANI;
-
 __END__
 :endofperl
+@set "ErrorLevel=" & @goto _undefined_label_ 2>NUL || @"%COMSPEC%" /d/c @exit %ErrorLevel%

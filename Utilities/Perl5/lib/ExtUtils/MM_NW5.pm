@@ -10,7 +10,7 @@ ExtUtils::MM_NW5 - methods to override UN*X behaviour in ExtUtils::MakeMaker
 
 =head1 DESCRIPTION
 
-See ExtUtils::MM_Unix for a documentation of the methods provided
+See L<ExtUtils::MM_Unix> for a documentation of the methods provided
 there. This package overrides the implementation of these methods, not
 the semantics.
 
@@ -19,11 +19,12 @@ the semantics.
 =cut
 
 use strict;
+use warnings;
 use ExtUtils::MakeMaker::Config;
 use File::Basename;
 
-our $VERSION = '7.16';
-$VERSION = eval $VERSION;
+our $VERSION = '7.70';
+$VERSION =~ tr/_//d;
 
 require ExtUtils::MM_Win32;
 our @ISA = qw(ExtUtils::MM_Win32);
@@ -137,6 +138,14 @@ sub static_lib_pure_cmd {
                                   : '-type library -o $@ ' . $src));
 }
 
+=item xs_static_lib_is_xs
+
+=cut
+
+sub xs_static_lib_is_xs {
+    return 1;
+}
+
 =item dynamic_lib
 
 Override of utility methods for OS-specific work.
@@ -184,7 +193,7 @@ MAKE_FRAG
     }
     # Reconstruct the X.Y.Z version.
     my $version = join '.', map { sprintf "%d", $_ }
-                              $] =~ /(\d)\.(\d{3})(\d{2})/;
+                              "$]" =~ /(\d)\.(\d{3})(\d{2})/;
     push @m, sprintf <<'EOF', $from, $version, $to, $exportlist;
 	$(LD) $(LDFLAGS) %s -desc "Perl %s Extension ($(BASEEXT))  XS_VERSION: $(XS_VERSION)" -nlmversion $(NLM_VERSION) -o %s $(MYEXTLIB) $(PERL_INC)\Main.lib -commandfile %s
 	$(CHMOD) 755 $@

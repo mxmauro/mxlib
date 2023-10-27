@@ -227,7 +227,7 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <EnablePREfast>false</EnablePREfast>
       <DisableSpecificWarnings>6385</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source\ZipLib\Source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\ZipLib\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <SupportJustMyCode>false</SupportJustMyCode>
@@ -247,7 +247,7 @@
       <ExceptionHandling>Async</ExceptionHandling>
       <EnablePREfast>false</EnablePREfast>
       <DisableSpecificWarnings>6385</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source\ZipLib\Source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\ZipLib\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <SupportJustMyCode>false</SupportJustMyCode>
@@ -269,7 +269,7 @@
       <ExceptionHandling>Async</ExceptionHandling>
       <EnablePREfast>false</EnablePREfast>
       <DisableSpecificWarnings>6385</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source\ZipLib\Source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\ZipLib\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>
@@ -292,7 +292,7 @@
       <ExceptionHandling>Async</ExceptionHandling>
       <EnablePREfast>false</EnablePREfast>
       <DisableSpecificWarnings>6385</DisableSpecificWarnings>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source\ZipLib\Source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\ZipLib\Source;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
     </ClCompile>

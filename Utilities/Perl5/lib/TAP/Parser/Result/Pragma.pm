@@ -11,11 +11,11 @@ TAP::Parser::Result::Pragma - TAP pragma token.
 
 =head1 VERSION
 
-Version 3.36
+Version 3.44
 
 =cut
 
-our $VERSION = '3.36';
+our $VERSION = '3.44';
 
 =head1 DESCRIPTION
 

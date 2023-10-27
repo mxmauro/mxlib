@@ -39,6 +39,8 @@ HRESULT GetLastErrorCode(_In_ HRESULT hResDefault);
 
 SSL_CTX* GetSslContext(_In_ BOOL bServerSide);
 
+BOOL IsPEM(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
+
 } //namespace OpenSSL
 
 } //namespace Internals

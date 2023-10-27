@@ -321,7 +321,7 @@ HRESULT CIpc::Close(_In_opt_ HANDLE h, _In_opt_ HRESULT hrErrorCode)
 HRESULT CIpc::InitializeSSL(_In_ HANDLE h, _In_opt_ LPCSTR szHostNameA,
                             _In_opt_ CSslCertificateArray *lpCheckCertificates,
                             _In_opt_ CSslCertificate *lpSelfCert, _In_opt_ CEncryptionKey *lpPrivKey,
-                            _In_opt_ CDhParam *lpDhParam, _In_opt_ eSslOption nSslOptions)
+                            _In_opt_ CEncryptionKey *lpDhParam, _In_opt_ eSslOption nSslOptions)
 {
   CAutoRundownProtection cRundownLock(&nRundownProt);
   TAutoRefCounted<CConnectionBase> cConn;

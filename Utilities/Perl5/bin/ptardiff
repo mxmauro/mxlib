@@ -1,6 +1,8 @@
 #!perl
 
+BEGIN { pop @INC if $INC[-1] eq '.' }
 use strict;
+use warnings;
 use Archive::Tar;
 use Getopt::Std;
 

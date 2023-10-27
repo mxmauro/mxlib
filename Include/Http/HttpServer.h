@@ -41,7 +41,7 @@ public:
 public:
   typedef Callback<HRESULT(_In_ CHttpServer *lpHttp, _Outptr_result_maybenull_ CSslCertificate **lplpSslCert,
                            _Outptr_result_maybenull_ CEncryptionKey **lplpSslPrivKey,
-                           _Outptr_result_maybenull_ CDhParam **lplpDhParam)> OnQuerySslCertificatesCallback;
+                           _Outptr_result_maybenull_ CEncryptionKey **lplpDhParam)> OnQuerySslCertificatesCallback;
 
   typedef Callback<HRESULT (_In_ CHttpServer *lpHttp, _Out_ CClientRequest **lplpRequest)> OnNewRequestObjectCallback;
 

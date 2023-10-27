@@ -44,21 +44,25 @@ C<fromformat> can be one of:
 
 =item storable-file - a Storable file (Storable has two incompatible formats)
 
-=item bencode - use Convert::Bencode, if available (used by torrent files, among others)
+=item bencode - uses one of Net::BitTorrent::Protocol::BEP03::Bencode, Bencode or the broken Convert::Bencode, if available (used by torrent files, among others)
 
 =item clzf - Compress::LZF format (requires that module to be installed)
 
 =item eval - evaluate the given code as (non-utf-8) Perl, basically the reverse of "-t dump"
 
-=item yaml - YAML (requires the YAML module)
+=item yaml - loose YAML (requires YAML)
 
-=item yaml-xs - YAML (requires the YAML::XS module)
+=item yaml-tiny - loose YAML (requires YAML::Tiny or CPAN::Meta::YAML)
 
-=item yaml-syck - YAML (requires the YAML::Syck module)
+=item yaml-xs - strict YAML 1.2 (requires YAML::XS)
+
+=item yaml-syck - YAML (requires YAML::Syck)
 
 =item cbor - CBOR (via CBOR::XS)
 
 =item string - do not attempt to decode the file data
+
+=item sereal - Sereal (via Sereal::Decoder)
 
 =item none - nothing is read, creates an C<undef> scalar - mainly useful with C<-e>
 
@@ -91,21 +95,25 @@ C<toformat> can be one of:
 
 =item storable-file - a Storable file in network format (Storable has two incompatible formats)
 
-=item bencode - use Convert::Bencode, if available (used by torrent files, among others)
+=item bencode - uses one of Net::BitTorrent::Protocol::BEP03::Bencode, Bencode or the broken Convert::Bencode, if available (used by torrent files, among others)
 
 =item clzf - Compress::LZF format
 
-=item yaml - YAML
+=item yaml - loose YAML (requires YAML)
 
-=item yaml-xs - YAML::XS
+=item yaml-tiny - loose YAML (requires YAML::Tiny or CPAN::Meta::YAML)
 
-=item yaml-syck - YAML::Syck
+=item yaml-xs - strict YAML 1.2 (requires YAML::XS)
+
+=item yaml-syck - YAML (requires YAML::Syck)
 
 =item dump - Data::Dump
 
 =item dumper - Data::Dumper
 
 =item string - writes the data out as if it were a string
+
+=item sereal - Sereal (via Sereal::Encoder)
 
 =item none - nothing gets written, mainly useful together with C<-e>
 
@@ -155,9 +163,18 @@ Print the tracker list inside a torrent file.
 
 Fetch the cpan-testers result summary C<Cpanel::JSON::XS> and pretty-print it.
 
+    cpanel_json_xs -f yaml-xs -t yaml-tiny <META.yml   >MYMETA.yml
+    cpanel_json_xs -f yaml-tiny -t yaml-xs <MYMETA.yml >XSMETA.yml
+    cpanel_json_xs -f yaml -t yaml <XSMETA.yml #BOOM!
+    Error: YAML_LOAD_ERR_BAD_MAP_ELEMENT
+
+Compare YAML en- and decoders, and see that YAML::XS generates unparsable YAML
+L<https://github.com/ingydotnet/yaml-libyaml-pm/issues/9>
+
 =head1 AUTHOR
 
 Copyright (C) 2008 Marc Lehmann <json@schmorp.de>
+Copyright (C) 2016 Cpanel Inc
 
 =cut
 
@@ -212,12 +229,22 @@ my %F = (
    },
    "storable"      => sub { Storable::thaw $_ },
    "storable-file" => sub { open my $fh, "<", \$_; Storable::fd_retrieve $fh },
-   "bencode"       => sub { require Convert::Bencode; Convert::Bencode::bdecode ($_) },
+   "bencode"       => sub {
+      if (eval {require Net::BitTorrent::Protocol::BEP03::Bencode }) {
+        return Net::BitTorrent::Protocol::BEP03::Bencode::bdecode ($_);
+      }
+      if (eval {require Bencode}) {
+        return Bencode::bdecode ($_);
+      }
+      require Convert::Bencode; return Convert::Bencode::bdecode ($_);
+   },
    "clzf"          => sub { require Compress::LZF; Compress::LZF::sthaw ($_) },
    "yaml"          => sub { require YAML; YAML::Load ($_) },
+   "yaml-tiny"     => sub { require CPAN::Meta::YAML; CPAN::Meta::YAML::Load ($_) },
    "yaml-xs"       => sub { require YAML::XS; YAML::XS::Load ($_) },
    "yaml-syck"     => sub { require YAML::Syck; YAML::Syck::Load ($_) },
    "cbor"          => sub { require CBOR::XS; CBOR::XS::decode_cbor ($_) },
+   "sereal"        => sub { require Sereal::Decoder; Sereal::Decoder::decode_sereal ($_) },
    "eval"          => sub { my $v = eval "no strict; no warnings; no utf8;\n#line 1 \"input\"\n$_"; die "$@" if $@; $v },
 );
 
@@ -240,9 +267,18 @@ my %T = (
    "storable"      => sub { Storable::nfreeze $_ },
    "storable-file" => sub { open my $fh, ">", \my $buf; Storable::nstore_fd $_, $fh; $buf },
 
-   "bencode"       => sub { require Convert::Bencode; Convert::Bencode::bencode ($_) },
+   "bencode"       => sub {
+      if (eval {require Net::BitTorrent::Protocol::BEP03::Bencode }) {
+        return Net::BitTorrent::Protocol::BEP03::Bencode::bencode ($_);
+      }
+      if (eval {require Bencode}) {
+        return Bencode::bencode ($_);
+      }
+      require Convert::Bencode; return Convert::Bencode::bencode ($_);
+   },
    "clzf"          => sub { require Compress::LZF; Compress::LZF::sfreeze_cr ($_) },
    "yaml"          => sub { require YAML; YAML::Dump ($_) },
+   "yaml-tiny"     => sub { require CPAN::Meta::YAML; CPAN::Meta::YAML::Dump ($_) },
    "yaml-xs"       => sub { require YAML::XS; YAML::XS::Dump ($_) },
    "yaml-syck"     => sub { require YAML::Syck; YAML::Syck::Dump ($_) },
    "dumper"        => sub {
@@ -260,6 +296,7 @@ my %T = (
       local $Data::Dump::TRY_BASE64 = 0;
       Data::Dump::dump ($_) . "\n"
    },
+   "sereal"        => sub { require Sereal::Encoder; Sereal::Encoder::encode_sereal ($_) },
 );
 
 $F{$opt_from}

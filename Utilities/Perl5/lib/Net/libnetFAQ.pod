@@ -9,22 +9,25 @@ libnetFAQ - libnet Frequently Asked Questions
 This document is distributed with the libnet distribution, and is also
 available on the libnet web page at
 
-    http://search.cpan.org/dist/libnet/
+L<https://metacpan.org/release/libnet>
 
 =head2 How to contribute to this document
 
 You may report corrections, additions, and suggestions on the
 CPAN Request Tracker at
 
-    http://rt.cpan.org/Public/Bug/Report.html?Queue=libnet
+L<https://rt.cpan.org/Public/Bug/Report.html?Queue=libnet>
 
 =head1 Author and Copyright Information
 
-Copyright (c) 1997-1998 Graham Barr. All rights reserved.
-This document is free; you can redistribute it and/or modify it
-under the terms of the Artistic License.
+Copyright (C) 1997-1998 Graham Barr.  All rights reserved.
+This document is free; you can redistribute it and/or modify it under
+the same terms as Perl itself, i.e. under the terms of either the GNU
+General Public License or the Artistic License, as specified in the
+F<LICENCE> file.
 
-Currently maintained by Steve Hay <shay@cpan.org>.
+Steve Hay E<lt>L<shay@cpan.org|mailto:shay@cpan.org>E<gt> is now maintaining
+libnet as of version 1.22_02.
 
 =head2 Disclaimer
 
@@ -56,7 +59,7 @@ Authen::SASL is required for AUTH support.
 
 IO::Socket::SSL version 2.007 or higher is required for SSL support.
 
-IO::Socket::IP version 0.20 or IO::Socket::INET6 version 2.62 is
+IO::Socket::IP version 0.25 or IO::Socket::INET6 version 2.62 is
 required for IPv6 support.
 
 =head2 What machines support libnet ?
@@ -69,7 +72,7 @@ on any machine that perl runs on.
 The latest libnet release is always on CPAN, you will find it
 in 
 
- http://search.cpan.org/dist/libnet/
+L<https://metacpan.org/release/libnet>
 
 =head1 Using Net::FTP
 
@@ -297,6 +300,4 @@ being sent or response being received.
 
 =head1 AUTHOR AND COPYRIGHT
 
-Copyright (c) 1997 Graham Barr.
-All rights reserved.
-
+Copyright (C) 1997-1998 Graham Barr.  All rights reserved.

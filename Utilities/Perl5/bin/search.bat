@@ -1,31 +1,18 @@
 @rem = '--*-Perl-*--
-@echo off
-if "%OS%" == "Windows_NT" goto WinNT
-IF EXIST "%~dp0perl.exe" (
-"%~dp0perl.exe" -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-) ELSE IF EXIST "%~dp0..\..\bin\perl.exe" (
-"%~dp0..\..\bin\perl.exe" -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-) ELSE (
-perl -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-)
-
-goto endofperl
+@set "ErrorLevel="
+@if "%OS%" == "Windows_NT" @goto WinNT
+@perl -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
+@set ErrorLevel=%ErrorLevel%
+@goto endofperl
 :WinNT
-IF EXIST "%~dp0perl.exe" (
-"%~dp0perl.exe" -x -S %0 %*
-) ELSE IF EXIST "%~dp0..\..\bin\perl.exe" (
-"%~dp0..\..\bin\perl.exe" -x -S %0 %*
-) ELSE (
-perl -x -S %0 %*
-)
-
-if NOT "%COMSPEC%" == "%SystemRoot%\system32\cmd.exe" goto endofperl
-if %errorlevel% == 9009 echo You do not have Perl in your PATH.
-if errorlevel 1 goto script_failed_so_exit_with_non_zero_val 2>nul
-goto endofperl
+@perl -x -S %0 %*
+@set ErrorLevel=%ErrorLevel%
+@if NOT "%COMSPEC%" == "%SystemRoot%\system32\cmd.exe" @goto endofperl
+@if %ErrorLevel% == 9009 @echo You do not have Perl in your PATH.
+@goto endofperl
 @rem ';
 #!/usr/local/bin/perl -w
-#line 29
+#line 30
 'di';
 'ig00';
 ##############################################################################
@@ -653,7 +640,7 @@ sub read_rc
 
     { package magic; $^W= 0; } ## turn off warnings for when we run EXPR's
 
-    unless (open(RC, "$file")) {
+    unless (open(RC, '<', $file)) {
 	$use_default=1;
 	$file = "<internal default startup file>";
 	## no RC file -- use this default.
@@ -977,7 +964,7 @@ sub dodir
     }
 
     if ($DO_MAGIC_TESTS) {
-	if (!open(FILE_IN, $file)) {
+	if (!open(FILE_IN, '<', $file)) {
 	    &clear_message if $VERBOSE && $STDERR_SCREWS_STDOUT;
 	    warn qq/$0: can't open: $file\n/;
 	    next;
@@ -1017,7 +1004,7 @@ sub dodir
 	next;
     } else {
 	## if we weren't doing magic tests, file won't be open yet...
-	if (!$DO_MAGIC_TESTS && !open(FILE_IN, $file)) {
+	if (!$DO_MAGIC_TESTS && !open(FILE_IN, '<', $file)) {
 	    &clear_message if $VERBOSE && $STDERR_SCREWS_STDOUT;
 	    warn qq/$0: can't open: $file\n/;
 	    next;
@@ -1196,7 +1183,7 @@ Note that in the case of these examples, the
 (list whole-words only) option would be useful.
 .PP
 Normally, various kinds of files are automatically removed from consideration.
-If it has has a certain ending (such as ".tar", ".Z", ".o", .etc), or if
+If it has a certain ending (such as ".tar", ".Z", ".o", .etc), or if
 the beginning of the file looks like a binary, it'll be excluded.
 You can control exactly how this works -- see below. One quick way to
 override this is to use the
@@ -1221,7 +1208,7 @@ add
 .fi
 (among others) to exclude those kinds of files (which you probably want to
 skip when searching for text, as is normal).
-Files that look to be be binary will also be excluded.
+Files that look to be binary will also be excluded.
 
 Files ending with "#" and "~" will also be excluded unless the
 .B -x~
@@ -1891,6 +1878,6 @@ http://www.wg.omron.co.jp/cgi-bin/j-e/jfriedl.html
 
 .SH "LATEST SOURCE"
 See http://www.wg.omron.co.jp/~jfriedl/perl/index.html
-
 __END__
 :endofperl
+@set "ErrorLevel=" & @goto _undefined_label_ 2>NUL || @"%COMSPEC%" /d/c @exit %ErrorLevel%

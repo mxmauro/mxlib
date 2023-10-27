@@ -1,3 +1,12 @@
+/* ..\mg_data.h:
+ * THIS FILE IS AUTO-GENERATED DURING THE BUILD by: ..\generate_uudmap.exe
+ *
+ * These values will populate PL_magic_data[]: this is an array of
+ * per-magic U8 values containing an index into PL_magic_vtables[]
+ * plus two flags:
+ *    PERL_MAGIC_READONLY_ACCEPTABLE
+ *    PERL_MAGIC_VALUE_MAGIC
+*/
 {
     /* sv '\0' Special scalar variable */
     want_vtbl_sv | PERL_MAGIC_READONLY_ACCEPTABLE,
@@ -98,22 +107,26 @@
     0,
     0,
     /* sig 'S' %SIG hash */
-    magic_vtable_max,
+    want_vtbl_sig,
     0,
     /* uvar 'U' Available for use by extensions */
     want_vtbl_uvar,
     /* vstring 'V' SV was vstring literal */
     magic_vtable_max | PERL_MAGIC_VALUE_MAGIC,
     0,
-    0,
-    0,
-    0,
+    /* destruct 'X' destruct callback */
+    want_vtbl_destruct | PERL_MAGIC_VALUE_MAGIC,
+    /* nonelem 'Y' Array element that does not exist */
+    want_vtbl_nonelem | PERL_MAGIC_VALUE_MAGIC,
+    /* hook 'Z' %{^HOOK} hash */
+    want_vtbl_hook,
     0,
     /* lvref '\' Lvalue reference constructor */
     want_vtbl_lvref,
     /* checkcall ']' Inlining/mutation of call to this CV */
     want_vtbl_checkcall | PERL_MAGIC_VALUE_MAGIC,
-    0,
+    /* extvalue '^' Value magic available for use by extensions */
+    magic_vtable_max | PERL_MAGIC_READONLY_ACCEPTABLE | PERL_MAGIC_VALUE_MAGIC,
     0,
     0,
     0,
@@ -160,11 +173,12 @@
     want_vtbl_substr | PERL_MAGIC_VALUE_MAGIC,
     /* defelem 'y' Shadow "foreach" iterator variable / smart parameter vivification */
     want_vtbl_defelem | PERL_MAGIC_VALUE_MAGIC,
+    /* hookelem 'z' %{^HOOK} hash element */
+    want_vtbl_hookelem,
     0,
     0,
     0,
-    0,
-    /* ext '~' Available for use by extensions */
+    /* ext '~' Variable magic available for use by extensions */
     magic_vtable_max | PERL_MAGIC_READONLY_ACCEPTABLE,
     0,
     0,

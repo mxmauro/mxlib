@@ -2,11 +2,10 @@ package Module::CoreList::Utils;
 
 use strict;
 use warnings;
-use vars qw[$VERSION %utilities];
 use Module::CoreList;
-use Module::CoreList::TieHashDelta;
 
-$VERSION = '5.20160507';
+our $VERSION = '5.20230520';
+our %utilities;
 
 sub utilities {
     my $perl = shift;
@@ -1157,15 +1156,755 @@ my %delta = (
         removed => {
         }
     },
+    5.025001 => {
+        delta_from => 5.025000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025002 => {
+        delta_from => 5.025001,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025003 => {
+        delta_from => 5.025002,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025004 => {
+        delta_from => 5.025003,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025005 => {
+        delta_from => 5.025004,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025006 => {
+        delta_from => 5.025005,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025007 => {
+        delta_from => 5.025006,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025008 => {
+        delta_from => 5.025007,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.022003 => {
+        delta_from => 5.022002,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.024001 => {
+        delta_from => 5.024000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025009 => {
+        delta_from => 5.025008,
+        changed => {
+        },
+        removed => {
+            'c2ph'                  => 1,
+            'pstruct'               => 1,
+        }
+    },
+    5.025010 => {
+        delta_from => 5.025009,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025011 => {
+        delta_from => 5.025010,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.025012 => {
+        delta_from => 5.025011,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.026000 => {
+        delta_from => 5.025012,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.027000 => {
+        delta_from => 5.026000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.027001 => {
+        delta_from => 5.027000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.022004 => {
+        delta_from => 5.022003,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.024002 => {
+        delta_from => 5.024001,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.027002 => {
+        delta_from => 5.027001,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.027003 => {
+        delta_from => 5.027002,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.027004 => {
+        delta_from => 5.027003,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.024003 => {
+        delta_from => 5.024002,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.026001 => {
+        delta_from => 5.026000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.027005 => {
+        delta_from => 5.027004,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.027006 => {
+        delta_from => 5.027005,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.027007 => {
+        delta_from => 5.027006,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.027008 => {
+        delta_from => 5.027007,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.027009 => {
+        delta_from => 5.027008,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.027010 => {
+        delta_from => 5.027009,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.024004 => {
+        delta_from => 5.024003,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.026002 => {
+        delta_from => 5.026001,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.027011 => {
+        delta_from => 5.027010,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.028000 => {
+        delta_from => 5.027011,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.029000 => {
+        delta_from => 5.028,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.029001 => {
+        delta_from => 5.029000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.029002 => {
+        delta_from => 5.029001,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.029003 => {
+        delta_from => 5.029002,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.029004 => {
+        delta_from => 5.029003,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.029005 => {
+        delta_from => 5.029004,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.026003 => {
+        delta_from => 5.026002,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.028001 => {
+        delta_from => 5.028000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.029006 => {
+        delta_from => 5.029005,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.029007 => {
+        delta_from => 5.029006,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.029008 => {
+        delta_from => 5.029007,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.029009 => {
+        delta_from => 5.029008,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.028002 => {
+        delta_from => 5.028001,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.029010 => {
+        delta_from => 5.029009,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.030000 => {
+        delta_from => 5.029010,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.031000 => {
+        delta_from => 5.03,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.031001 => {
+        delta_from => 5.031,
+        changed => {
+        },
+        removed => {
+            'podselect'             => 1,
+        }
+    },
+    5.031002 => {
+        delta_from => 5.031001,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.031003 => {
+        delta_from => 5.031002,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.031004 => {
+        delta_from => 5.031003,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.031005 => {
+        delta_from => 5.031004,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.030001 => {
+        delta_from => 5.03,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.031006 => {
+        delta_from => 5.031005,
+        changed => {
+            'streamzip'             => '1',
+        },
+        removed => {
+        }
+    },
+    5.031007 => {
+        delta_from => 5.031006,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.031008 => {
+        delta_from => 5.031007,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.031009 => {
+        delta_from => 5.031008,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.030002 => {
+        delta_from => 5.030001,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.031010 => {
+        delta_from => 5.031009,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.031011 => {
+        delta_from => 5.031010,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.028003 => {
+        delta_from => 5.028002,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.030003 => {
+        delta_from => 5.030002,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.032000 => {
+        delta_from => 5.031011,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.033000 => {
+        delta_from => 5.032,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.033001 => {
+        delta_from => 5.033000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.033002 => {
+        delta_from => 5.033001,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.033003 => {
+        delta_from => 5.033002,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.033004 => {
+        delta_from => 5.033003,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.033005 => {
+        delta_from => 5.033004,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.033006 => {
+        delta_from => 5.033005,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.032001 => {
+        delta_from => 5.032000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.033007 => {
+        delta_from => 5.033006,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.033008 => {
+        delta_from => 5.033007,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.033009 => {
+        delta_from => 5.033008,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.034000 => {
+        delta_from => 5.033009,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.035000 => {
+        delta_from => 5.034000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.035001 => {
+        delta_from => 5.035,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.035002 => {
+        delta_from => 5.035001,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.035003 => {
+        delta_from => 5.035002,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.035004 => {
+        delta_from => 5.035003,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.035005 => {
+        delta_from => 5.035004,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.035006 => {
+        delta_from => 5.035005,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.035007 => {
+        delta_from => 5.035006,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.035008 => {
+        delta_from => 5.035007,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.035009 => {
+        delta_from => 5.035008,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.034001 => {
+        delta_from => 5.034000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.035010 => {
+        delta_from => 5.035009,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.035011 => {
+        delta_from => 5.035010,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.036000 => {
+        delta_from => 5.035011,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.037000 => {
+        delta_from => 5.036000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.037001 => {
+        delta_from => 5.037,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.037002 => {
+        delta_from => 5.037001,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.037003 => {
+        delta_from => 5.037002,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.037004 => {
+        delta_from => 5.037003,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.037005 => {
+        delta_from => 5.037004,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.037006 => {
+        delta_from => 5.037005,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.037007 => {
+        delta_from => 5.037006,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.037008 => {
+        delta_from => 5.037007,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.037009 => {
+        delta_from => 5.037008,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.037010 => {
+        delta_from => 5.037009,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.037011 => {
+        delta_from => 5.03701,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.036001 => {
+        delta_from => 5.036000,
+        changed => {
+        },
+        removed => {
+        }
+    },
+    5.038000 => {
+        delta_from => 5.037011,
+        changed => {
+        },
+        removed => {
+        }
+    },
 );
 
-for my $version (sort { $a <=> $b } keys %delta) {
-    my $data = $delta{$version};
-
-    tie %{$utilities{$version}}, 'Module::CoreList::TieHashDelta',
-        $data->{changed}, $data->{removed},
-        $data->{delta_from} ? $utilities{$data->{delta_from}} : undef;
-}
+%utilities = Module::CoreList::_undelta(\%delta);
 
 # Create aliases with trailing zeros for $] use
 

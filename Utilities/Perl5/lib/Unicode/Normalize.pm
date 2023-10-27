@@ -1,14 +1,5 @@
 package Unicode::Normalize;
 
-BEGIN {
-    unless ('A' eq pack('U', 0x41)) {
-	die "Unicode::Normalize cannot stringify a Unicode code point\n";
-    }
-    unless (0x41 == unpack('U', 'A')) {
-	die "Unicode::Normalize cannot get Unicode code point\n";
-    }
-}
-
 use 5.006;
 use strict;
 use warnings;
@@ -16,7 +7,7 @@ use Carp;
 
 no warnings 'utf8';
 
-our $VERSION = '1.25';
+our $VERSION = '1.32';
 our $PACKAGE = __PACKAGE__;
 
 our @EXPORT = qw( NFC NFD NFKC NFKD );
@@ -40,25 +31,67 @@ our %EXPORT_TAGS = (
 ## utilities for tests
 ##
 
-sub pack_U {
-    return pack('U*', @_);
+                             # No EBCDIC support on early perls
+*to_native = ($::IS_ASCII || $] < 5.008)
+             ? sub { return shift }
+             : sub { utf8::unicode_to_native(shift) };
+
+*from_native = ($::IS_ASCII || $] < 5.008)
+             ? sub { return shift }
+             : sub { utf8::native_to_unicode(shift) };
+
+# The .t files are all in terms of Unicode, so xlate to/from native
+sub dot_t_pack_U {
+    return pack('U*', map { to_native($_) } @_);
 }
 
-sub unpack_U {
+sub dot_t_unpack_U {
 
     # The empty pack returns an empty UTF-8 string, so the effect is to force
     # the shifted parameter into being UTF-8.  This allows this to work on
     # Perl 5.6, where there is no utf8::upgrade().
-    return unpack('U*', shift(@_).pack('U*'));
+    return map { from_native($_) } unpack('U*', shift(@_).pack('U*'));
+}
+
+sub get_printable_string ($) {
+    use bytes;
+    my $s = shift;
+
+    # DeMorgan's laws cause this to mean ascii printables
+    return $s if $s =~ /[^[:^ascii:][:^print:]]/;
+
+    return join " ", map { sprintf "\\x%02x", ord $_ } split "", $s;
+}
+
+sub ok ($$;$) {
+    my $count_ref = shift;  # Test number in caller
+    my $p = my $r = shift;
+    my $x;
+    if (@_) {
+        $x = shift;
+        $p = !defined $x ? !defined $r : !defined $r ? 0 : $r eq $x;
+    }
+
+    print $p ? "ok" : "not ok", ' ', ++$$count_ref, "\n";
+
+    return if $p;
+
+    my (undef, $file, $line) = caller(1);
+    print STDERR "# Failed test $$count_ref at $file line $line\n";
+
+    return unless defined $x;
+
+    print STDERR "#      got ", get_printable_string($r), "\n";
+    print STDERR "# expected ", get_printable_string($x), "\n";
 }
 
 require Exporter;
 
 ##### The above part is common to XS and PP #####
 
-our @ISA = qw(Exporter DynaLoader);
-require DynaLoader;
-bootstrap Unicode::Normalize $VERSION;
+our @ISA = qw(Exporter);
+use XSLoader ();
+XSLoader::load( 'Unicode::Normalize', $VERSION );
 
 ##### The below part is common to XS and PP #####
 
@@ -161,7 +194,7 @@ Unicode::Normalize - Unicode Normalization Forms
 
 Parameters:
 
-C<$string> is used as a string under character semantics (see F<perlunicode>).
+C<$string> is used as a string under character semantics (see L<perlunicode>).
 
 C<$code_point> should be an unsigned integer representing a Unicode code point.
 
@@ -238,8 +271,8 @@ the decomposition is compatibility decomposition.
 
 The string returned is not always in NFD/NFKD. Reordering may be required.
 
-    $NFD_string  = reorder(decompose($string));       # eq. to NFD()
-    $NFKD_string = reorder(decompose($string, TRUE)); # eq. to NFKD()
+ $NFD_string  = reorder(decompose($string));       # eq. to NFD()
+ $NFKD_string = reorder(decompose($string, TRUE)); # eq. to NFKD()
 
 =item C<$reordered_string = reorder($string)>
 
@@ -277,12 +310,12 @@ should be equal to the entire C<$normalized>.
 When you have a C<$normalized> string and an C<$unnormalized> string
 following it, a simple concatenation is wrong:
 
-    $concat = $normalized . normalize($form, $unnormalized); # wrong!
+ $concat = $normalized . normalize($form, $unnormalized); # wrong!
 
 Instead of it, do like this:
 
-    ($processed, $unprocessed) = splitOnLastStarter($normalized);
-     $concat = $processed . normalize($form, $unprocessed.$unnormalized);
+ ($processed, $unprocessed) = splitOnLastStarter($normalized);
+ $concat = $processed . normalize($form,$unprocessed.$unnormalized);
 
 C<splitOnLastStarter()> should be called with a pre-normalized parameter
 C<$normalized>, that is in the same form as C<$form> you want.
@@ -343,7 +376,7 @@ Note that C<$unprocessed> will be modified as a side-effect.
 
 =head2 Quick Check
 
-(see Annex 8, UAX #15; and F<DerivedNormalizationProps.txt>)
+(see Annex 8, UAX #15; and F<lib/unicore/DerivedNormalizationProps.txt>)
 
 The following functions check whether the string is in that normalization form.
 
@@ -548,7 +581,7 @@ compiled into your perl.  The following table lists the default Unicode
 version that comes with various perl versions.  (It is possible to change
 the Unicode version in any perl version to be any earlier Unicode version,
 so one could cause Unicode 3.2 to be used in any perl version starting with
-5.8.0.  See C<$Config{privlib}>/F<unicore/README.perl>.
+5.8.0.  Read F<C<$Config{privlib}>/unicore/README.perl> for details.
 
     perl's version     implemented Unicode version
        5.6.1              3.0.1
@@ -571,8 +604,10 @@ so one could cause Unicode 3.2 to be used in any perl version starting with
 
 In older Unicode versions, a small number of characters (all of which are
 CJK compatibility ideographs as far as they have been found) may have
-an erroneous decomposition mapping (see F<NormalizationCorrections.txt>).
-Anyhow, this module will neither refer to F<NormalizationCorrections.txt>
+an erroneous decomposition mapping (see
+F<lib/unicore/NormalizationCorrections.txt>).
+Anyhow, this module will neither refer to
+F<lib/unicore/NormalizationCorrections.txt>
 nor provide any specific version of normalization. Therefore this module
 running on an older perl with an older Unicode database may use
 the erroneous decomposition mapping blindly conforming to the Unicode database.
@@ -606,27 +641,27 @@ and/or modify it under the same terms as Perl itself.
 
 =over 4
 
-=item http://www.unicode.org/reports/tr15/
+=item L<http://www.unicode.org/reports/tr15/>
 
 Unicode Normalization Forms - UAX #15
 
-=item http://www.unicode.org/Public/UNIDATA/CompositionExclusions.txt
+=item L<http://www.unicode.org/Public/UNIDATA/CompositionExclusions.txt>
 
 Composition Exclusion Table
 
-=item http://www.unicode.org/Public/UNIDATA/DerivedNormalizationProps.txt
+=item L<http://www.unicode.org/Public/UNIDATA/DerivedNormalizationProps.txt>
 
 Derived Normalization Properties
 
-=item http://www.unicode.org/Public/UNIDATA/NormalizationCorrections.txt
+=item L<http://www.unicode.org/Public/UNIDATA/NormalizationCorrections.txt>
 
 Normalization Corrections
 
-=item http://www.unicode.org/review/pr-29.html
+=item L<http://www.unicode.org/review/pr-29.html>
 
 Public Review Issue #29: Normalization Issue
 
-=item http://www.unicode.org/notes/tn5/
+=item L<http://www.unicode.org/notes/tn5/>
 
 Canonical Equivalence in Applications - UTN #5
 

@@ -133,7 +133,7 @@ public:
   HRESULT OnQuerySslCertificates(_In_ MX::CJsHttpServer *lpHttp,
                                  _Outptr_result_maybenull_ MX::CSslCertificate **lplpSslCert,
                                  _Outptr_result_maybenull_ MX::CEncryptionKey **lplpSslPrivKey,
-                                 _Outptr_result_maybenull_ MX::CDhParam **lplpDhParam)
+                                 _Outptr_result_maybenull_ MX::CEncryptionKey **lplpDhParam)
     {
     UNREFERENCED_PARAMETER(lpHttp);
 
@@ -151,7 +151,7 @@ public:
   MX::CSockets cSckMgr;
   MX::TAutoRefCounted<MX::CSslCertificate> cSslCert;
   MX::TAutoRefCounted<MX::CEncryptionKey> cSslPrivateKey;
-  MX::TAutoRefCounted<MX::CDhParam> cSslDhParam;
+  MX::TAutoRefCounted<MX::CEncryptionKey> cSslDhParam;
   MX::CJsHttpServer cJsHttpServer; //NOTE: At the end else certificates can be destroyed before
   MX::CTaskQueue cTaskQueue;
 };
@@ -216,7 +216,7 @@ int TestJsHttpServer()
     {
       cTest.cSslCert.Attach(MX_DEBUG_NEW MX::CSslCertificate());
       if (cTest.cSslCert)
-        hRes = cTest.cSslCert->InitializeFromPEM((LPCSTR)cStrTempA);
+        hRes = cTest.cSslCert->Set((LPCSTR)cStrTempA, cStrTempA.GetLength());
       else
         hRes = E_OUTOFMEMORY;
     }
@@ -231,7 +231,7 @@ int TestJsHttpServer()
     {
       cTest.cSslPrivateKey.Attach(MX_DEBUG_NEW MX::CEncryptionKey());
       if (cTest.cSslPrivateKey)
-        hRes = cTest.cSslPrivateKey->SetPrivateKeyFromPEM((LPCSTR)cStrTempA);
+        hRes = cTest.cSslPrivateKey->Set((LPCSTR)cStrTempA, cStrTempA.GetLength());
       else
         hRes = E_OUTOFMEMORY;
     }
@@ -244,9 +244,9 @@ int TestJsHttpServer()
       hRes = LoadTxtFile(cStrTempA, (LPCWSTR)cStrTempW);
     if (SUCCEEDED(hRes))
     {
-      cTest.cSslDhParam.Attach(MX_DEBUG_NEW MX::CDhParam());
+      cTest.cSslDhParam.Attach(MX_DEBUG_NEW MX::CEncryptionKey());
       if (cTest.cSslDhParam)
-        hRes = cTest.cSslDhParam->SetFromPEM((LPCSTR)cStrTempA);
+        hRes = cTest.cSslDhParam->Set((LPCSTR)cStrTempA, cStrTempA.GetLength());
       else
         hRes = E_OUTOFMEMORY;
     }

@@ -1,8 +1,9 @@
 package ExtUtils::MM_Any;
 
 use strict;
-our $VERSION = '7.16';
-$VERSION = eval $VERSION;
+use warnings;
+our $VERSION = '7.70';
+$VERSION =~ tr/_//d;
 
 use Carp;
 use File::Spec;
@@ -46,7 +47,7 @@ ExtUtils::MM_Any is a superclass for the ExtUtils::MM_* set of
 modules.  It contains methods which are either inherently
 cross-platform or are written in a cross-platform manner.
 
-Subclass off of ExtUtils::MM_Any I<and> ExtUtils::MM_Unix.  This is a
+Subclass off of ExtUtils::MM_Any I<and> L<ExtUtils::MM_Unix>.  This is a
 temporary solution.
 
 B<THIS MAY BE TEMPORARY!>
@@ -195,7 +196,7 @@ sub can_redirect_error {
 
     my $is_dmake = $self->is_make_type('dmake');
 
-Returns true if C<<$self->make>> is the given type; possibilities are:
+Returns true if C<< $self->make >> is the given type; possibilities are:
 
   gmake    GNU make
   dmake
@@ -910,6 +911,17 @@ MAKE_FRAG
 }
 
 
+=head3 xs_dlsyms_arg
+
+Returns command-line arg(s) to linker for file listing dlsyms to export.
+Defaults to returning empty string, can be overridden by e.g. AIX.
+
+=cut
+
+sub xs_dlsyms_arg {
+    return '';
+}
+
 =head3 xs_dlsyms_ext
 
 Returns file-extension for C<xs_make_dlsyms> method's output file,
@@ -1077,9 +1089,9 @@ manifypods : pure_all config $dependencies
 END
 
     my @man_cmds;
-    foreach my $section (qw(1 3)) {
-        my $pods = $self->{"MAN${section}PODS"};
-        my $p2m = sprintf <<'CMD', $section, $] > 5.008 ? " -u" : "";
+    foreach my $num (qw(1 3)) {
+        my $pods = $self->{"MAN${num}PODS"};
+        my $p2m = sprintf <<'CMD', "\$(MAN${num}SECTION)", "$]" > 5.008 ? " -u" : "";
 	$(NOECHO) $(POD2MAN) --section=%s --perm_rw=$(PERM_RW)%s
 CMD
         push @man_cmds, $self->split_command($p2m, map {($_,$pods->{$_})} sort keys %$pods);
@@ -1156,7 +1168,7 @@ MAKE_FRAG
 
     $mm->_fix_metadata_before_conversion( \%metadata );
 
-Fixes errors in the metadata before it's handed off to CPAN::Meta for
+Fixes errors in the metadata before it's handed off to L<CPAN::Meta> for
 conversion. This hopefully results in something that can be used further
 on, no guarantee is made though.
 
@@ -1318,8 +1330,10 @@ sub metafile_data {
     # needs to be based on the original version
     my $v1_add = _metaspec_version($meta_add) !~ /^2/;
 
+    my ($add_v, $merge_v) = map _metaspec_version($_), $meta_add, $meta_merge;
     for my $frag ($meta_add, $meta_merge) {
-        $frag = CPAN::Meta::Converter->new($frag, default_version => "1.4")->upgrade_fragment;
+        my $def_v = $frag == $meta_add ? $merge_v : $add_v;
+        $frag = CPAN::Meta::Converter->new($frag, default_version => $def_v)->upgrade_fragment;
     }
 
     # if we upgraded a 1.x _ADD fragment, we gave it a prereqs key that
@@ -1657,7 +1671,7 @@ sub _mymeta_from_meta {
     # rolled their own tarball rather than using "make dist".
     if ($meta->{generated_by} &&
         $meta->{generated_by} =~ /ExtUtils::MakeMaker version ([\d\._]+)/) {
-        my $eummv = do { local $^W = 0; $1+0; };
+        my $eummv = do { no warnings; $1+0; };
         if ($eummv < 6.2501) {
             return;
         }
@@ -2201,7 +2215,9 @@ sub init_INSTALL_from_INSTALL_BASE {
             my $key = "INSTALL".$dir.$uc_thing;
 
             $install{$key} ||=
-              $self->catdir('$(INSTALL_BASE)', @{$map{$thing}});
+                ($thing =~ /^man.dir$/ and not $Config{lc $key})
+                ? 'none'
+                : $self->catdir('$(INSTALL_BASE)', @{$map{$thing}});
         }
     }
 
@@ -2403,7 +2419,7 @@ Initializes the macro definitions having to do with compiling and
 linking used by tools_other() and places them in the $MM object.
 
 If there is no description, its the same as the parameter to
-WriteMakefile() documented in ExtUtils::MakeMaker.
+WriteMakefile() documented in L<ExtUtils::MakeMaker>.
 
 =cut
 
@@ -2754,7 +2770,7 @@ END
 
 =head2 File::Spec wrappers
 
-ExtUtils::MM_Any is a subclass of File::Spec.  The methods noted here
+ExtUtils::MM_Any is a subclass of L<File::Spec>.  The methods noted here
 override File::Spec.
 
 
@@ -2886,13 +2902,19 @@ Takes a path to a file or dir and returns an empty string if we don't
 want to include this file in the library.  Otherwise it returns the
 the $path unchanged.
 
-Mainly used to exclude version control administrative directories from
-installation.
+Mainly used to exclude version control administrative directories
+and base-level F<README.pod> from installation.
 
 =cut
 
 sub libscan {
     my($self,$path) = @_;
+
+    if ($path =~ m<^README\.pod$>i) {
+        warn "WARNING: Older versions of ExtUtils::MakeMaker may errantly install $path as part of this distribution. It is recommended to avoid using this path in CPAN modules.\n";
+        return '';
+    }
+
     my($dirs,$file) = ($self->splitpath($path))[1,2];
     return '' if grep /^(?:RCS|CVS|SCCS|\.svn|_darcs)$/,
                      $self->splitdir($dirs), $file;

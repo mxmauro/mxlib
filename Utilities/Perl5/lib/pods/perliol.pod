@@ -21,7 +21,7 @@ maintain (source) compatibility.
 
 The aim of the implementation is to provide the PerlIO API in a flexible
 and platform neutral manner. It is also a trial of an "Object Oriented
-C, with vtables" approach which may be applied to Perl 6.
+C, with vtables" approach which may be applied to Raku.
 
 =head2 Basic Structure
 
@@ -374,6 +374,22 @@ it is pushed above a layer which does not support the interface.
 (Perl's C<sv_gets()> does not expect the streams fast C<gets> behaviour
 to change during one "get".)
 
+=for apidoc Amnh||PERLIO_F_APPEND
+=for apidoc_item || PERLIO_F_CANREAD
+=for apidoc_item ||PERLIO_F_CANWRITE
+=for apidoc_item ||PERLIO_F_CRLF
+=for apidoc_item ||PERLIO_F_EOF
+=for apidoc_item ||PERLIO_F_ERROR
+=for apidoc_item ||PERLIO_F_FASTGETS
+=for apidoc_item ||PERLIO_F_LINEBUF
+=for apidoc_item ||PERLIO_F_OPEN
+=for apidoc_item ||PERLIO_F_RDBUF
+=for apidoc_item ||PERLIO_F_TEMP
+=for apidoc_item ||PERLIO_F_TRUNCATE
+=for apidoc_item ||PERLIO_F_UNBUF
+=for apidoc_item ||PERLIO_F_UTF8
+=for apidoc_item ||PERLIO_F_WRBUF
+
 =back
 
 =head2 Methods in Detail
@@ -445,6 +461,12 @@ Used when the layer's open() accepts more arguments than usual. The
 extra arguments should come not before the C<MODE> argument. When this
 flag is used it's up to the layer to validate the args.
 
+=for apidoc  Amnh|| PERLIO_K_BUFFERED
+=for apidoc_item || PERLIO_K_CANCRLF
+=for apidoc_item || PERLIO_K_FASTGETS
+=for apidoc_item || PERLIO_K_MULTIARG
+=for apidoc_item || PERLIO_K_RAW
+
 =back
 
 =item Pushed
@@ -505,6 +527,16 @@ arguments passed to them, I<n> is the index into that array of the
 layer being called. The macro C<PerlIOArg> will return a (possibly
 C<NULL>) SV * for the argument passed to the layer.
 
+Where a layer opens or takes ownership of a file descriptor, that layer is
+responsible for getting the file descriptor's close-on-exec flag into the
+correct state.  The flag should be clear for a file descriptor numbered
+less than or equal to C<PL_maxsysfd>, and set for any file descriptor
+numbered higher.  For thread safety, when a layer opens a new file
+descriptor it should if possible open it with the close-on-exec flag
+initially set.
+
+=for apidoc Amnh||PL_maxsysfd
+
 The I<mode> string is an "C<fopen()>-like" string which would match
 the regular expression C</^[I#]?[rwa]\+?[bt]?$/>.
 
@@ -525,6 +557,9 @@ If I<fd> not negative then it is the numeric file descriptor I<fd>,
 which will be open in a manner compatible with the supplied mode
 string, the call is thus equivalent to C<PerlIO_fdopen>. In this case
 I<nargs> will be zero.
+The file descriptor may have the close-on-exec flag either set or clear;
+it is the responsibility of the layer that takes ownership of it to get
+the flag into the correct state.
 
 If I<nargs> is greater than zero then it gives the number of arguments
 passed to C<open>, otherwise it will be 1 if for example

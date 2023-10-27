@@ -35,7 +35,6 @@
 #include "..\Loggable.h"
 #include "..\Timer.h"
 #include "..\RedBlackTree.h"
-#include "..\Crypto\DhParam.h"
 #include "SslCertificates.h"
 typedef struct ssl_st SSL;
 typedef struct ssl_ctx_st SSL_CTX;
@@ -203,7 +202,7 @@ public:
   HRESULT InitializeSSL(_In_ HANDLE h, _In_opt_ LPCSTR szHostNameA = NULL,
                         _In_opt_ CSslCertificateArray *lpCheckCertificates = NULL,
                         _In_opt_ CSslCertificate *lpSelfCert = NULL, _In_opt_ CEncryptionKey *lpPrivKey = NULL,
-                        _In_opt_ CDhParam *lpDhParam = NULL, _In_opt_ eSslOption nSslOptions = (eSslOption)0);
+                        _In_opt_ CEncryptionKey *lpDhParam = NULL, _In_opt_ eSslOption nSslOptions = (eSslOption)0);
 
   HRESULT IsConnected(_In_ HANDLE h);
   HRESULT IsClosed(_In_ HANDLE h, _Out_opt_ HRESULT *lphErrorCode = NULL);
@@ -637,7 +636,7 @@ protected:
 
     HRESULT SetupSsl(_In_opt_ LPCSTR szHostNameA, _In_opt_ CSslCertificateArray *lpCheckCertificates,
                      _In_opt_ CSslCertificate *lpSelfCert, _In_opt_ CEncryptionKey *lpPrivKey,
-                     _In_opt_ CDhParam *lpDhParam, _In_ eSslOption nSslOptions);
+                     _In_opt_ CEncryptionKey *lpDhParam, _In_ eSslOption nSslOptions);
 
     HRESULT HandleSslStartup();
     VOID HandleSslShutdown();

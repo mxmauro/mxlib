@@ -29,6 +29,7 @@
 static HRESULT Asn1TimeToDateTime(_In_ const ASN1_TIME *lpTime, _Out_ MX::CDateTime &cDt);
 static HRESULT GetName(_In_ X509_NAME *lpName, _In_ MX::CSslCertificate::eInformation nInfo,
                        _Inout_ MX::CStringW &cStrW);
+static int PemPasswordCallback(char *buf, int size, int rwflag, void *userdata);
 
 //-----------------------------------------------------------
 
@@ -63,7 +64,7 @@ CSslCertificate& CSslCertificate::operator=(_In_ const CSslCertificate &cSrc) th
     hRes = Internals::OpenSSL::Init();
     if (FAILED(hRes))
       throw (LONG)hRes;
-    //deref old
+    //dereference old
     if (lpX509 != NULL)
       X509_free(lpX509);
     //increment reference on new
@@ -72,6 +73,55 @@ CSslCertificate& CSslCertificate::operator=(_In_ const CSslCertificate &cSrc) th
     lpX509 = cSrc.lpX509;
   }
   return *this;
+}
+
+HRESULT CSslCertificate::Set(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA)
+{
+  X509 *lpNewX509;
+  BIO *lpBio;
+  HRESULT hRes;
+
+  if (lpData == NULL)
+    return E_POINTER;
+  if (nDataLen == 0 || nDataLen > 0x7FFFFFFF)
+    return E_INVALIDARG;
+
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
+
+  lpBio = BIO_new_mem_buf(lpData, (int)nDataLen);
+  if (lpBio == NULL)
+    return E_OUTOFMEMORY;
+
+  ERR_clear_error();
+  if (MX::Internals::OpenSSL::IsPEM(lpData, nDataLen) != FALSE)
+    lpNewX509 = PEM_read_bio_X509(lpBio, NULL, &PemPasswordCallback, (LPSTR)szPasswordA);
+  else
+    lpNewX509 = d2i_X509_bio(lpBio, NULL);
+  if (lpNewX509 == NULL)
+  {
+    hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
+    BIO_free(lpBio);
+    return hRes;
+  }
+  BIO_free(lpBio);
+
+  //done
+  if (lpX509 != NULL)
+    X509_free(lpX509);
+  lpX509 = lpNewX509;
+  return S_OK;
+}
+
+VOID CSslCertificate::Set(_In_ X509 *_lpX509)
+{
+  if (lpX509 != NULL)
+    X509_free(lpX509);
+  lpX509 = _lpX509;
+  if (lpX509 != NULL)
+    X509_up_ref(lpX509);
+  return;
 }
 
 LONG CSslCertificate::GetVersion() const
@@ -215,6 +265,55 @@ CSslCertificateCrl& CSslCertificateCrl::operator=(_In_ const CSslCertificateCrl 
   return *this;
 }
 
+HRESULT CSslCertificateCrl::Set(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA)
+{
+  X509_CRL *lpNewX509Crl;
+  BIO *lpBio;
+  HRESULT hRes;
+
+  if (lpData == NULL)
+    return E_POINTER;
+  if (nDataLen == 0 || nDataLen > 0x7FFFFFFF)
+    return E_INVALIDARG;
+
+  hRes = Internals::OpenSSL::Init();
+  if (FAILED(hRes))
+    return hRes;
+
+  lpBio = BIO_new_mem_buf(lpData, (int)nDataLen);
+  if (lpBio == NULL)
+    return E_OUTOFMEMORY;
+
+  ERR_clear_error();
+  if (MX::Internals::OpenSSL::IsPEM(lpData, nDataLen) != FALSE)
+    lpNewX509Crl = PEM_read_bio_X509_CRL(lpBio, NULL, &PemPasswordCallback, (LPSTR)szPasswordA);
+  else
+    lpNewX509Crl = d2i_X509_CRL_bio(lpBio, NULL);
+  if (lpNewX509Crl == NULL)
+  {
+    hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
+    BIO_free(lpBio);
+    return hRes;
+  }
+  BIO_free(lpBio);
+
+  //done
+  if (lpX509Crl != NULL)
+    X509_CRL_free(lpX509Crl);
+  lpX509Crl = lpNewX509Crl;
+  return S_OK;
+}
+
+VOID CSslCertificateCrl::Set(_In_ X509_CRL *_lpX509Crl)
+{
+  if (lpX509Crl != NULL)
+    X509_CRL_free(lpX509Crl);
+  lpX509Crl = _lpX509Crl;
+  if (lpX509Crl != NULL)
+    X509_CRL_up_ref(lpX509Crl);
+  return;
+}
+
 LONG CSslCertificateCrl::GetVersion() const
 {
   return (lpX509Crl != NULL) ? (LONG)X509_CRL_get_version(lpX509Crl) : 0;
@@ -234,7 +333,7 @@ HRESULT CSslCertificateCrl::GetUpdate(_Inout_ CDateTime &cDt)
   cDt.SetGmtOffset(0);
   if (lpX509Crl == NULL)
     return MX_E_NotReady;
-  return Asn1TimeToDateTime(X509_CRL_get_lastUpdate(lpX509Crl), cDt);
+  return Asn1TimeToDateTime(X509_CRL_get0_lastUpdate(lpX509Crl), cDt);
 }
 
 HRESULT CSslCertificateCrl::GetNextUpdate(_Inout_ CDateTime &cDt)
@@ -243,7 +342,7 @@ HRESULT CSslCertificateCrl::GetNextUpdate(_Inout_ CDateTime &cDt)
   cDt.SetGmtOffset(0);
   if (lpX509Crl == NULL)
     return MX_E_NotReady;
-  return Asn1TimeToDateTime(X509_CRL_get_nextUpdate(lpX509Crl), cDt);
+  return Asn1TimeToDateTime(X509_CRL_get0_nextUpdate(lpX509Crl), cDt);
 }
 
 SIZE_T CSslCertificateCrl::GetRevokedEntriesCount() const
@@ -387,4 +486,17 @@ static HRESULT GetName(_In_ X509_NAME *lpName, _In_ MX::CSslCertificate::eInform
   hRes = MX::Utf8_Decode(cStrW, (LPCSTR)utf8_data, (SIZE_T)(unsigned int)utf8_data_len);
   OPENSSL_free(utf8_data);
   return hRes;
+}
+
+static int PemPasswordCallback(char *buf, int size, int rwflag, void *userdata)
+{
+  SIZE_T nPassLen;
+
+  nPassLen = MX::StrLenA((LPCSTR)userdata);
+  if (size < 0)
+    size = 0;
+  if (nPassLen > (SIZE_T)size)
+    nPassLen = (SIZE_T)size;
+  ::MxMemCopy(buf, userdata, nPassLen);
+  return (int)nPassLen;
 }

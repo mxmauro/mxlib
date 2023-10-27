@@ -1,7 +1,7 @@
 package ExtUtils::MakeMaker::FAQ;
 
-our $VERSION = '7.16';
-$VERSION = eval $VERSION;
+our $VERSION = '7.70';
+$VERSION =~ tr/_//d;
 
 1;
 __END__
@@ -12,7 +12,7 @@ ExtUtils::MakeMaker::FAQ - Frequently Asked Questions About MakeMaker
 
 =head1 DESCRIPTION
 
-FAQs, tricks and tips for C<ExtUtils::MakeMaker>.
+FAQs, tricks and tips for L<ExtUtils::MakeMaker>.
 
 
 =head2 Module Installation
@@ -84,7 +84,8 @@ installation.
 =item How do I keep from installing man pages?
 
 Recent versions of MakeMaker will only install man pages on Unix-like
-operating systems.
+operating systems by default. To generate manpages on non-Unix operating
+systems, make the "manifypods" target.
 
 For an individual module:
 
@@ -119,6 +120,29 @@ And then set PERL5LIB to F<~/tmp/lib/perl5>.  This works well when you
 have multiple modules to work with.  It also ensures that the module
 goes through its full installation process which may modify it.
 Again, L<local::lib> may assist you here.
+
+=item How can I organize tests into subdirectories and have them run?
+
+Let's take the following test directory structure:
+
+    t/foo/sometest.t
+    t/bar/othertest.t
+    t/bar/baz/anothertest.t
+
+Now, inside of the C<WriteMakefile()> function in your F<Makefile.PL>, specify
+where your tests are located with the C<test> directive:
+
+    test => {TESTS => 't/*.t t/*/*.t t/*/*/*.t'}
+
+The first entry in the string will run all tests in the top-level F<t/> 
+directory. The second will run all test files located in any subdirectory under
+F<t/>. The third, runs all test files within any subdirectory within any other
+subdirectory located under F<t/>.
+
+Note that you do not have to use wildcards. You can specify explicitly which
+subdirectories to run tests in:
+
+    test => {TESTS => 't/*.t t/foo/*.t t/bar/baz/*.t'}
 
 =item PREFIX vs INSTALL_BASE from Module::Build::Cookbook
 
@@ -367,7 +391,9 @@ We recommend InfoZIP: L<http://www.info-zip.org/Zip.html>
 
 =head2 XS
 
-=head3 How do I prevent "object version X.XX does not match bootstrap parameter Y.YY" errors?
+=over 4
+
+=item How do I prevent "object version X.XX does not match bootstrap parameter Y.YY" errors?
 
 XS code is very sensitive to the module version number and will
 complain if the version number in your Perl module doesn't match.  If
@@ -382,13 +408,15 @@ WriteMakefile() arguments.
     depend => { '$(FIRST_MAKEFILE)' => '$(VERSION_FROM)' }
 
 
-=head3 How do I make two or more XS files coexist in the same directory?
+=item How do I make two or more XS files coexist in the same directory?
 
 Sometimes you need to have two and more XS files in the same package.
 There are three ways: C<XSMULTI>, separate directories, and bootstrapping
 one XS from another.
 
-=head4 XSMULTI
+=over 8
+
+=item XSMULTI
 
 Structure your modules so they are all located under F<lib>, such that
 C<Foo::Bar> is in F<lib/Foo/Bar.pm> and F<lib/Foo/Bar.xs>, etc. Have your
@@ -396,14 +424,14 @@ top-level C<WriteMakefile> set the variable C<XSMULTI> to a true value.
 
 Er, that's it.
 
-=head4 Separate directories
+=item Separate directories
 
 Put each XS files into separate directories, each with their own
 F<Makefile.PL>. Make sure each of those F<Makefile.PL>s has the correct
 C<CFLAGS>, C<INC>, C<LIBS> etc. You will need to make sure the top-level
 F<Makefile.PL> refers to each of these using C<DIR>.
 
-=head4 Bootstrapping
+=item Bootstrapping
 
 Let's assume that we have a package C<Cool::Foo>, which includes
 C<Cool::Foo> and C<Cool::Bar> modules each having a separate XS
@@ -508,8 +536,7 @@ And of course a very basic test:
 
   t/cool.t:
   --------
-  use Test;
-  BEGIN { plan tests => 1 };
+  use Test::More tests => 1;
   use Cool::Foo;
   use Cool::Bar;
   Cool::Foo::perl_rules();
@@ -520,6 +547,8 @@ This tip has been brought to you by Nick Ing-Simmons and Stas Bekman.
 
 An alternative way to achieve this can be seen in L<Gtk2::CodeGen>
 and L<Glib::CodeGen>.
+
+=back
 
 =back
 
@@ -539,7 +568,7 @@ What most people need to know (superclasses on top.)
                 |
                MY
 
-The object actually used is of the class MY which allows you to
+The object actually used is of the class L<MY|ExtUtils::MY> which allows you to
 override bits of MakeMaker inside your Makefile.PL by declaring
 MY::foo() methods.
 
@@ -570,24 +599,24 @@ NOTE: Yes, this is a mess.  See
 L<http://archive.develooper.com/makemaker@perl.org/msg00134.html>
 for some history.
 
-NOTE: When ExtUtils::MM is loaded it chooses a superclass for MM from
+NOTE: When L<ExtUtils::MM> is loaded it chooses a superclass for MM from
 amongst the ExtUtils::MM_* modules based on the current operating
 system.
 
 NOTE: ExtUtils::MM_{Current OS} represents one of the ExtUtils::MM_*
-modules except ExtUtils::MM_Any chosen based on your operating system.
+modules except L<ExtUtils::MM_Any> chosen based on your operating system.
 
 NOTE: The main object used by MakeMaker is a PACK### object, *not*
-ExtUtils::MakeMaker.  It is, effectively, a subclass of MY,
-ExtUtils::Makemaker, ExtUtils::Liblist and ExtUtils::MM_{Current OS}
+L<ExtUtils::MakeMaker>.  It is, effectively, a subclass of L<MY|ExtUtils::MY>,
+L<ExtUtils::MakeMaker>, L<ExtUtils::Liblist> and ExtUtils::MM_{Current OS}
 
-NOTE: The methods in MY are simply copied into PACK### rather than
-MY being a superclass of PACK###.  I don't remember the rationale.
+NOTE: The methods in L<MY|ExtUtils::MY> are simply copied into PACK### rather
+than MY being a superclass of PACK###.  I don't remember the rationale.
 
-NOTE: ExtUtils::Liblist should be removed from the inheritence hiearchy
+NOTE: L<ExtUtils::Liblist> should be removed from the inheritance hiearchy
 and simply be called as functions.
 
-NOTE: Modules like File::Spec and Exporter have been omitted for clarity.
+NOTE: Modules like L<File::Spec> and L<Exporter> have been omitted for clarity.
 
 
 =head2 The MM_* hierarchy
@@ -602,12 +631,13 @@ NOTE: Modules like File::Spec and Exporter have been omitted for clarity.
                               |    |
                               MM_Any
 
-NOTE: Each direct MM_Unix subclass is also an MM_Any subclass.  This
+NOTE: Each direct L<MM_Unix|ExtUtils::MM_Unix> subclass is also an
+L<MM_Any|ExtUtils::MM_Any> subclass.  This
 is a temporary hack because MM_Unix overrides some MM_Any methods with
 Unix specific code.  It allows the non-Unix modules to see the
 original MM_Any implementations.
 
-NOTE: Modules like File::Spec and Exporter have been omitted for clarity.
+NOTE: Modules like L<File::Spec> and L<Exporter> have been omitted for clarity.
 
 =head1 PATCHING
 

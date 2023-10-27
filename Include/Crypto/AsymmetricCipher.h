@@ -32,7 +32,7 @@ class CAsymmetricCipher : public virtual CBaseMemObj, public CNonCopyableObj
 {
 public:
   typedef enum {
-    PaddingNone=0, PaddingPKCS1, PaddingOAEP, PaddingSSLV23
+    None=0, PKCS1, OAEP
   } ePadding;
 
 public:
@@ -41,21 +41,19 @@ public:
 
   HRESULT SetKey(_In_ CEncryptionKey *lpKey);
 
-  HRESULT BeginEncrypt(_In_opt_ MX::CAsymmetricCipher::ePadding nPadding = MX::CAsymmetricCipher::PaddingPKCS1,
-                       _In_opt_ BOOL bUsePublicKey = TRUE);
+  HRESULT BeginEncrypt(_In_opt_ MX::CAsymmetricCipher::ePadding nPadding = MX::CAsymmetricCipher::PKCS1);
   HRESULT EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
   HRESULT EndEncrypt();
 
-  SIZE_T GetAvailableEncryptedData() const;
-  SIZE_T GetEncryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize);
+  LPBYTE GetEncryptedData() const;
+  SIZE_T GetEncryptedDataSize() const;
 
-  HRESULT BeginDecrypt(_In_opt_ MX::CAsymmetricCipher::ePadding nPadding = MX::CAsymmetricCipher::PaddingPKCS1,
-                       _In_opt_ BOOL bUsePrivateKey = TRUE);
+  HRESULT BeginDecrypt(_In_opt_ MX::CAsymmetricCipher::ePadding nPadding = MX::CAsymmetricCipher::PKCS1);
   HRESULT DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
   HRESULT EndDecrypt();
 
-  SIZE_T GetAvailableDecryptedData() const;
-  SIZE_T GetDecryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize);
+  LPBYTE GetDecryptedData() const;
+  SIZE_T GetDecryptedDataSize() const;
 
   HRESULT BeginSign(_In_ MX::CMessageDigest::eAlgorithm nAlgorithm);
   HRESULT SignStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
@@ -69,7 +67,7 @@ public:
   HRESULT EndVerify(_In_ LPCVOID lpSignature, _In_ SIZE_T nSignatureLen);
 
 private:
-  HRESULT InternalInitialize();
+  HRESULT InternalInitialize(_In_ int nZone);
 
 private:
   LPVOID lpInternalData;

@@ -956,7 +956,7 @@ HRESULT CHttpServer::OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc:
   {
     TAutoRefCounted<CSslCertificate> cCert;
     TAutoRefCounted<CEncryptionKey> cPrivKey;
-    TAutoRefCounted<CDhParam> cDhParam;
+    TAutoRefCounted<CEncryptionKey> cDhParam;
 
     hRes = cQuerySslCertificatesCallback(this, &cCert, &cPrivKey, &cDhParam);
     if (FAILED(hRes))

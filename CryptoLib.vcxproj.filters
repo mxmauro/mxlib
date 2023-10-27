@@ -35,8 +35,11 @@
     <ClInclude Include="Include\Crypto\SecureRandom.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Include\Crypto\DhParam.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="Source\Crypto\CRC32_Provider.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Crypto\SecureBuffer_BIO.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -64,7 +67,10 @@
     <ClCompile Include="Source\Crypto\SecureRandom.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Crypto\DhParam.cpp">
+    <ClCompile Include="Source\Crypto\CRC32_Provider.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Crypto\SecureBuffer_BIO.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

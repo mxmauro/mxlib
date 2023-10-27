@@ -1,23 +1,16 @@
 #!perl
+use Mojo::Base -strict;
 
-use strict;
-use warnings;
+use Mojo::Server::Hypnotoad;
+use Mojo::Util qw(extract_usage getopt);
 
-use Getopt::Long qw(GetOptions :config no_auto_abbrev no_ignore_case);
-
-GetOptions
+getopt
   'f|foreground' => \$ENV{HYPNOTOAD_FOREGROUND},
   'h|help'       => \my $help,
   's|stop'       => \$ENV{HYPNOTOAD_STOP},
   't|test'       => \$ENV{HYPNOTOAD_TEST};
 
-my $app = shift || $ENV{HYPNOTOAD_APP};
-if ($help || !$app) {
-  require Mojolicious::Command;
-  die Mojolicious::Command->new->extract_usage;
-}
-
-require Mojo::Server::Hypnotoad;
+die extract_usage if $help || !(my $app = shift || $ENV{HYPNOTOAD_APP});
 Mojo::Server::Hypnotoad->new->run($app);
 
 =encoding utf8
@@ -42,11 +35,10 @@ hypnotoad - Hypnotoad HTTP and WebSocket server
 
 =head1 DESCRIPTION
 
-Start L<Mojolicious> and L<Mojolicious::Lite> applications with the
-L<Mojo::Server::Hypnotoad> web server.
+Start L<Mojolicious> and L<Mojolicious::Lite> applications with the L<Hypnotoad|Mojo::Server::Hypnotoad> web server.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<https://mojolicious.org>.
 
 =cut

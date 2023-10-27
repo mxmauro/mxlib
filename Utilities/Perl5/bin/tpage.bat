@@ -1,31 +1,18 @@
 @rem = '--*-Perl-*--
-@echo off
-if "%OS%" == "Windows_NT" goto WinNT
-IF EXIST "%~dp0perl.exe" (
-"%~dp0perl.exe" -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-) ELSE IF EXIST "%~dp0..\..\bin\perl.exe" (
-"%~dp0..\..\bin\perl.exe" -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-) ELSE (
-perl -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-)
-
-goto endofperl
+@set "ErrorLevel="
+@if "%OS%" == "Windows_NT" @goto WinNT
+@perl -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
+@set ErrorLevel=%ErrorLevel%
+@goto endofperl
 :WinNT
-IF EXIST "%~dp0perl.exe" (
-"%~dp0perl.exe" -x -S %0 %*
-) ELSE IF EXIST "%~dp0..\..\bin\perl.exe" (
-"%~dp0..\..\bin\perl.exe" -x -S %0 %*
-) ELSE (
-perl -x -S %0 %*
-)
-
-if NOT "%COMSPEC%" == "%SystemRoot%\system32\cmd.exe" goto endofperl
-if %errorlevel% == 9009 echo You do not have Perl in your PATH.
-if errorlevel 1 goto script_failed_so_exit_with_non_zero_val 2>nul
-goto endofperl
+@perl -x -S %0 %*
+@set ErrorLevel=%ErrorLevel%
+@if NOT "%COMSPEC%" == "%SystemRoot%\system32\cmd.exe" @goto endofperl
+@if %ErrorLevel% == 9009 @echo You do not have Perl in your PATH.
+@goto endofperl
 @rem ';
 #!/usr/bin/perl -w
-#line 29
+#line 30
 #========================================================================
 #
 # tpage
@@ -73,6 +60,7 @@ my %ttdirectiveopts = $config->varlist('^template_directive_', 1);
 # get all template_* (except template_directive_*) options from the config and fold keys to UPPER CASE
 my %ttopts   = $config->varlist('^template_(?!directive_)', 1);
 my $ttmodule = delete($ttopts{ module });
+my $ttenvvars = delete($ttopts{ envvars });
 my $ucttopts = {
     map { my $v = $ttopts{ $_ }; defined $v ? (uc $_, $v) : () }
     keys %ttopts,
@@ -106,10 +94,15 @@ push(@ARGV, '-') unless @ARGV;
 my $template = $ttmodule->new($ucttopts)
     || die $ttmodule->error();
 
+my %ttvars = ();
+if ($ttenvvars) {
+    $ttvars{'env'} = \%ENV;
+}
+
 # process each input file 
 foreach my $file (@ARGV) {
     $file = \*STDIN if $file eq '-';
-    $template->process($file)
+    $template->process($file,\%ttvars)
 	|| die $template->error();
 }
 
@@ -150,6 +143,7 @@ sub read_config {
         'template_compile_dir|compile_dir=s',
         'template_plugin_base|plugin_base|pluginbase=s@',
         'perl5lib|perllib=s@',
+        'template_envvars|envvars',
         'template_directive_debug',
         'template_directive_pretty',
         'template_directive_while_max|while_max=i'
@@ -209,6 +203,7 @@ Options:
    --perl5lib=DIR           Specify additional Perl library directories
    --template_module=MODULE Specify alternate Template module
    --while_max=INTEGER      Change '\$Template::Directive::WHILE_MAX' default
+   --envvars                Set the 'env' variable to the environment (%ENV)
 
 See 'perldoc tpage' for further information.  
 
@@ -306,6 +301,6 @@ L<ttree|Template::Tools::ttree>
 # End:
 #
 # vim: expandtab shiftwidth=4:
-
 __END__
 :endofperl
+@set "ErrorLevel=" & @goto _undefined_label_ 2>NUL || @"%COMSPEC%" /d/c @exit %ErrorLevel%

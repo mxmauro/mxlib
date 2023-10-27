@@ -35,11 +35,11 @@ static int DebugPrintSslError(const char *str, size_t len, void *u);
 
 static BIO_METHOD* BIO_circular_buffer_mem();
 
-static int _X509_STORE_get1_issuer(X509 **issuer, X509_STORE_CTX *ctx, X509 *x);
-static STACK_OF(X509)* _X509_STORE_get1_certs(X509_STORE_CTX *ctx, X509_NAME *nm);
-static STACK_OF(X509_CRL)* _X509_STORE_get1_crls(X509_STORE_CTX *ctx, X509_NAME *nm);
-static X509* _lookup_cert_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ X509_NAME *name);
-static X509_CRL* _lookup_crl_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ X509_NAME *name);
+static int _X509_STORE_get1_issuer(_Out_ X509 **issuer, _In_ X509_STORE_CTX *ctx, _In_ X509 *x);
+static STACK_OF(X509)* _X509_STORE_get1_certs(_In_ X509_STORE_CTX *ctx, _In_ const X509_NAME *nm);
+static STACK_OF(X509_CRL)* _X509_STORE_get1_crls(_In_ const X509_STORE_CTX *ctx, _In_ const X509_NAME *nm);
+static X509* _lookup_cert_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ const X509_NAME *name);
+static X509_CRL* _lookup_crl_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ const X509_NAME *name);
 
 //-----------------------------------------------------------
 
@@ -1296,7 +1296,7 @@ HRESULT CIpc::CConnectionBase::ReadStream(_In_ CPacketBase *lpStreamPacket, _Out
 
 HRESULT CIpc::CConnectionBase::SetupSsl(_In_opt_ LPCSTR szHostNameA, _In_opt_ CSslCertificateArray *lpCheckCertificates,
                                         _In_opt_ CSslCertificate *lpSelfCert, _In_opt_ CEncryptionKey *lpPrivKey,
-                                        _In_opt_ CDhParam *lpDhParam, _In_ eSslOption nSslOptions)
+                                        _In_opt_ CEncryptionKey *lpDhParam, _In_ eSslOption nSslOptions)
 {
   HRESULT hRes = MX_E_AlreadyExists;
 
@@ -1315,7 +1315,6 @@ HRESULT CIpc::CConnectionBase::SetupSsl(_In_opt_ LPCSTR szHostNameA, _In_opt_ CS
       X509_STORE *lpStore;
       X509 *lpX509;
       EVP_PKEY *lpKey;
-      DH *lpDH;
 
       hRes = Internals::OpenSSL::Init();
       if (FAILED(hRes))
@@ -1443,19 +1442,31 @@ on_error:
 
       if (lpDhParam != NULL)
       {
-        lpDH = lpDhParam->GetDH();
-        if (lpDH == NULL)
+        EVP_PKEY *lpKey;
+        int nKeyBaseId;
+
+        lpKey = lpDhParam->GetPKey();
+        if (lpKey == NULL)
         {
-          hRes = MX_E_NotReady;
+          hRes = MX_E_InvalidData;
+          goto on_error;
+        }
+        nKeyBaseId = EVP_PKEY_get_base_id(lpKey);
+        if (nKeyBaseId != EVP_PKEY_DH && nKeyBaseId != EVP_PKEY_DHX)
+        {
+          hRes = MX_E_InvalidData;
           goto on_error;
         }
 
+        //SSL_set0_tmp_dh_pkey takes ownership of the parameter so can duplicate it but
+        //they are just referenced so increasing the counter is enough
         ERR_clear_error();
-        if (SSL_set_tmp_dh(lpSession, lpDH) == 0)
+        if (SSL_set0_tmp_dh_pkey(lpSession, lpKey) <= 0)
         {
           hRes = Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
           goto on_error;
         }
+        EVP_PKEY_up_ref(lpKey);
       }
 
       sSsl.cCertArray = lpCheckCertificates;
@@ -2000,7 +2011,7 @@ static BIO_METHOD *BIO_circular_buffer_mem()
 
 //-----------------------------------------------------------
 
-static int _X509_STORE_get1_issuer(X509 **issuer, X509_STORE_CTX *ctx, X509 *x)
+static int _X509_STORE_get1_issuer(_Out_ X509 **issuer, _In_ X509_STORE_CTX *ctx, _In_ X509 *x)
 {
   MX::CSslCertificateArray *lpCertArray;
   X509 *cert;
@@ -2021,7 +2032,7 @@ static int _X509_STORE_get1_issuer(X509 **issuer, X509_STORE_CTX *ctx, X509 *x)
   return 0;
 }
 
-static STACK_OF(X509)* _X509_STORE_get1_certs(X509_STORE_CTX *ctx, X509_NAME *nm)
+static STACK_OF(X509)* _X509_STORE_get1_certs(_In_ X509_STORE_CTX *ctx, _In_ const X509_NAME *nm)
 {
   MX::CSslCertificateArray *lpCertArray;
   X509 *cert;
@@ -2044,7 +2055,7 @@ static STACK_OF(X509)* _X509_STORE_get1_certs(X509_STORE_CTX *ctx, X509_NAME *nm
   return NULL;
 }
 
-static STACK_OF(X509_CRL)* _X509_STORE_get1_crls(X509_STORE_CTX *ctx, X509_NAME *nm)
+static STACK_OF(X509_CRL)* _X509_STORE_get1_crls(_In_ const X509_STORE_CTX *ctx, _In_ const X509_NAME *nm)
 {
   MX::CSslCertificateArray *lpCertArray;
   X509_CRL *cert;
@@ -2067,7 +2078,7 @@ static STACK_OF(X509_CRL)* _X509_STORE_get1_crls(X509_STORE_CTX *ctx, X509_NAME 
   return NULL;
 }
 
-static X509* _lookup_cert_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ X509_NAME *name)
+static X509* _lookup_cert_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ const X509_NAME *name)
 {
   if (lpCertArray != NULL && name != NULL)
   {
@@ -2090,7 +2101,7 @@ static X509* _lookup_cert_by_subject(_In_ MX::CSslCertificateArray *lpCertArray,
   return NULL;
 }
 
-static X509_CRL* _lookup_crl_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ X509_NAME *name)
+static X509_CRL* _lookup_crl_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ const X509_NAME *name)
 {
   if (lpCertArray != NULL && name != NULL)
   {

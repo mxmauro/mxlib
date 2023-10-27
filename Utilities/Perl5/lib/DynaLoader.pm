@@ -1,6 +1,8 @@
 
 # Generated from DynaLoader_pm.PL, this file is unique for every OS
 
+use strict;
+
 package DynaLoader;
 
 #   And Gandalf said: 'Many folk like to know beforehand what is to
@@ -16,8 +18,16 @@ package DynaLoader;
 # Tim.Bunce@ig.co.uk, August 1994
 
 BEGIN {
-    $VERSION = '1.38';
+    our $VERSION = '1.54';
 }
+
+# Note: in almost any other piece of code "our" would have been a better
+# option than "use vars", but DynaLoader's bootstrap files need the
+# side effect of the variable being declared in any scope whose current
+# package is DynaLoader, not just the current lexical one.
+use vars qw(@dl_library_path @dl_resolve_using @dl_require_symbols
+            $dl_debug @dl_librefs @dl_modules @dl_shared_objects
+            $dl_dlext $dl_so $dlsrc @args $module @dirs $file $bscode);
 
 use Config;
 
@@ -40,8 +50,11 @@ sub dl_load_flags { 0x00 }
 
 ($dl_dlext, $dl_so, $dlsrc) = @Config::Config{qw(dlext so dlsrc)};
 
-
-$do_expand = 0;
+# Some systems need special handling to expand file specifications
+# (VMS support by Charles Bailey <bailey@HMIVAX.HUMGEN.UPENN.EDU>)
+# See dl_expandspec() for more details. Should be harmless but
+# inefficient to define on systems that don't need it.
+my $do_expand = 0;
 
 @dl_require_symbols = ();       # names of symbols we need
 @dl_library_path    = ();       # path to look for files
@@ -96,6 +109,8 @@ sub croak   { require Carp; Carp::croak(@_)   }
 
 sub bootstrap_inherit {
     my $module = $_[0];
+
+    no strict qw/refs vars/;
     local *isa = *{"$module\::ISA"};
     local @isa = (@isa, 'DynaLoader');
     # Cannot goto due to delocalization.  Will report errors on a wrong line?
@@ -130,8 +145,6 @@ sub bootstrap {
     # mod2fname returns appropriate file base name (typically truncated)
     # It may also edit @modparts if required.
     $modfname = &mod2fname(\@modparts) if defined &mod2fname;
-
-    
 
     my $modpname = join('/',@modparts);
 
@@ -173,7 +186,7 @@ sub bootstrap {
     $bs =~ s/(\.\w+)?(;\d*)?$/\.bs/; # look for .bs 'beside' the library
     if (-s $bs) { # only read file if it's not empty
         print STDERR "BS: $bs ($^O, $dlsrc)\n" if $dl_debug;
-        eval { do $bs; };
+        eval { local @INC = ('.'); do $bs; };
         warn "$bs: $@\n" if $@;
     }
 
@@ -235,7 +248,7 @@ sub dl_findfile {
 
         # Deal with directories first:
         #  Using a -L prefix is the preferred option (faster and more robust)
-        if (m:^-L:) { s/^-L//; push(@dirs, $_); next; }
+        if ( s{^-L}{} ) { push(@dirs, $_); next; }
 
         #  Otherwise we try to try to spot directories by a heuristic
         #  (this is a more complicated issue than it first appears)
@@ -245,10 +258,8 @@ sub dl_findfile {
 
         #  Only files should get this far...
         my(@names, $name);    # what filenames to look for
-        if (m:-l: ) {          # convert -lname to appropriate library name
-            s/-l//;
-            push(@names,"lib$_.$dl_so");
-            push(@names,"lib$_.a");
+        if ( s{^-l}{} ) {          # convert -lname to appropriate library name
+            push(@names, "lib$_.$dl_so", "lib$_.a");
         } else {                # Umm, a bare name. Try various alternatives:
             # these should be ordered with the most likely first
             push(@names,"$_.$dl_dlext")    unless m/\.$dl_dlext$/o;
@@ -258,19 +269,21 @@ sub dl_findfile {
             push(@names, $_);
         }
 	my $dirsep = '/';
-	
         foreach $dir (@dirs, @dl_library_path) {
             next unless -d $dir;
 	    
             foreach $name (@names) {
 		my($file) = "$dir$dirsep$name";
                 print STDERR " checking in $dir for $name\n" if $dl_debug;
-		$file = ($do_expand) ? dl_expandspec($file) : (-f $file && $file);
-		#$file = _check_file($file);
-		if ($file) {
+		if ($do_expand && ($file = dl_expandspec($file))) {
+                    push @found, $file;
+                    next arg; # no need to look any further
+		}
+		elsif (-f $file) {
                     push(@found, $file);
                     next arg; # no need to look any further
                 }
+		
             }
         }
     }
@@ -329,7 +342,7 @@ DynaLoader - Dynamically load C libraries into Perl code
     package YourPackage;
     require DynaLoader;
     @ISA = qw(... DynaLoader ...);
-    bootstrap YourPackage;
+    __PACKAGE__->bootstrap;
 
     # optional method for 'global' loading
     sub dl_load_flags { 0x01 }     

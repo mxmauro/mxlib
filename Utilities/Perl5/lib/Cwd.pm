@@ -1,16 +1,16 @@
 package Cwd;
 use strict;
 use Exporter;
-use vars qw(@ISA @EXPORT @EXPORT_OK $VERSION);
 
-$VERSION = '3.63';
+
+our $VERSION = '3.89';
 my $xs_version = $VERSION;
 $VERSION =~ tr/_//d;
 
-@ISA = qw/ Exporter /;
-@EXPORT = qw(cwd getcwd fastcwd fastgetcwd);
+our @ISA = qw/ Exporter /;
+our @EXPORT = qw(cwd getcwd fastcwd fastgetcwd);
 push @EXPORT, qw(getdcwd) if $^O eq 'MSWin32';
-@EXPORT_OK = qw(chdir abs_path fast_abs_path realpath fast_realpath);
+our @EXPORT_OK = qw(chdir abs_path fast_abs_path realpath fast_realpath);
 
 # sys_cwd may keep the builtin command
 
@@ -40,7 +40,10 @@ if ($^O eq 'os2') {
 my $use_vms_feature;
 BEGIN {
     if ($^O eq 'VMS') {
-        if (eval { local $SIG{__DIE__}; require VMS::Feature; }) {
+        if (eval { local $SIG{__DIE__};
+                   local @INC = @INC;
+                   pop @INC if $INC[-1] eq '.';
+                   require VMS::Feature; }) {
             $use_vms_feature = 1;
         }
     }
@@ -74,19 +77,9 @@ sub _vms_efs {
 
 
 # If loading the XS stuff doesn't work, we can fall back to pure perl
-if(! defined &getcwd && defined &DynaLoader::boot_DynaLoader) {
-  eval {#eval is questionable since we are handling potential errors like
-        #"Cwd object version 3.48 does not match bootstrap parameter 3.50
-        #at lib/DynaLoader.pm line 216." by having this eval
-    if ( $] >= 5.006 ) {
-      require XSLoader;
-      XSLoader::load( __PACKAGE__, $xs_version);
-    } else {
-      require DynaLoader;
-      push @ISA, 'DynaLoader';
-      __PACKAGE__->bootstrap( $xs_version );
-    }
-  };
+if(! defined &getcwd && defined &DynaLoader::boot_DynaLoader) { # skipped on miniperl
+    require XSLoader;
+    XSLoader::load( __PACKAGE__, $xs_version);
 }
 
 # Big nasty table of function aliases
@@ -142,23 +135,6 @@ my %METHOD_MAP =
     realpath		=> 'fast_abs_path',
    },
 
-   epoc =>
-   {
-    cwd			=> '_epoc_cwd',
-    getcwd	        => '_epoc_cwd',
-    fastgetcwd		=> '_epoc_cwd',
-    fastcwd		=> '_epoc_cwd',
-    abs_path		=> 'fast_abs_path',
-   },
-
-   MacOS =>
-   {
-    getcwd		=> 'cwd',
-    fastgetcwd		=> 'cwd',
-    fastcwd		=> 'cwd',
-    abs_path		=> 'fast_abs_path',
-   },
-
    amigaos =>
    {
     getcwd              => '_backtick_pwd',
@@ -195,7 +171,7 @@ if($^O ne 'MSWin32') {
 if ($^O =~ /android/) {
     # If targetsh is executable, then we're either a full
     # perl, or a miniperl for a native build.
-    if (-x $Config::Config{targetsh}) {
+    if ( exists($Config::Config{targetsh}) && -x $Config::Config{targetsh}) {
         $pwd_cmd = "$Config::Config{targetsh} -c pwd"
     }
     else {
@@ -205,12 +181,6 @@ if ($^O =~ /android/) {
 }
 
 my $found_pwd_cmd = defined($pwd_cmd);
-unless ($pwd_cmd) {
-    # Isn't this wrong?  _backtick_pwd() will fail if someone has
-    # pwd in their path but it is not /bin/pwd or /usr/bin/pwd?
-    # See [perl #16774]. --jhi
-    $pwd_cmd = 'pwd';
-}
 
 # Lazy-load Carp
 sub _carp  { require Carp; Carp::carp(@_)  }
@@ -222,8 +192,14 @@ sub _backtick_pwd {
     # Localize %ENV entries in a way that won't create new hash keys.
     # Under AmigaOS we don't want to localize as it stops perl from
     # finding 'sh' in the PATH.
-    my @localize = grep exists $ENV{$_}, qw(PATH IFS CDPATH ENV BASH_ENV) if $^O ne "amigaos";
+    my @localize = grep exists $ENV{$_}, qw(IFS CDPATH ENV BASH_ENV) if $^O ne "amigaos";
     local @ENV{@localize} if @localize;
+    # empty PATH is the same as "." on *nix, so localize it to /something/
+    # we won't *use* the path as code above turns $pwd_cmd into a specific
+    # executable, but it will blow up anyway under taint. We could set it to
+    # anything absolute. Perhaps "/" would be better.
+    local $ENV{PATH}= "/usr/bin"
+        if $^O ne "amigaos";
     
     my $cwd = `$pwd_cmd`;
     # Belt-and-suspenders in case someone said "undef $/".
@@ -237,27 +213,13 @@ sub _backtick_pwd {
 # we take care not to override an existing definition for cwd().
 
 unless ($METHOD_MAP{$^O}{cwd} or defined &cwd) {
-    # The pwd command is not available in some chroot(2)'ed environments
-    my $sep = $Config::Config{path_sep} || ':';
-    my $os = $^O;  # Protect $^O from tainting
-
-
-    # Try again to find a pwd, this time searching the whole PATH.
-    if (defined $ENV{PATH} and $os ne 'MSWin32') {  # no pwd on Windows
-	my @candidates = split($sep, $ENV{PATH});
-	while (!$found_pwd_cmd and @candidates) {
-	    my $candidate = shift @candidates;
-	    $found_pwd_cmd = 1 if -x "$candidate/pwd";
-	}
-    }
-
-    # MacOS has some special magic to make `pwd` work.
-    if( $os eq 'MacOS' || $found_pwd_cmd )
+    if( $found_pwd_cmd )
     {
 	*cwd = \&_backtick_pwd;
     }
     else {
-	*cwd = \&getcwd;
+        # getcwd() might have an empty prototype
+	*cwd = sub { getcwd(); };
     }
 }
 
@@ -300,7 +262,7 @@ sub fastcwd_ {
 	($odev, $oino) = ($cdev, $cino);
 	CORE::chdir('..') || return undef;
 	($cdev, $cino) = stat('.');
-	last if $odev == $cdev && $oino == $cino;
+	last if $odev == $cdev && $oino eq $cino;
 	opendir(DIR, '.') || return undef;
 	for (;;) {
 	    $direntry = readdir(DIR);
@@ -309,7 +271,7 @@ sub fastcwd_ {
 	    next if $direntry eq '..';
 
 	    ($tdev, $tino) = lstat($direntry);
-	    last unless $tdev != $odev || $tino != $oino;
+	    last unless $tdev != $odev || $tino ne $oino;
 	}
 	closedir(DIR);
 	return undef unless defined $direntry; # should never happen
@@ -323,7 +285,7 @@ sub fastcwd_ {
 	&& CORE::chdir($1) or return undef;
     ($cdev, $cino) = stat('.');
     die "Unstable directory path, current directory changed unexpectedly"
-	if $cdev != $orig_cdev || $cino != $orig_cino;
+	if $cdev != $orig_cdev || $cino ne $orig_cino;
     $path;
 }
 if (not defined &fastcwd) { *fastcwd = \&fastcwd_ }
@@ -340,7 +302,7 @@ sub chdir_init {
     if ($ENV{'PWD'} and $^O ne 'os2' and $^O ne 'dos' and $^O ne 'MSWin32') {
 	my($dd,$di) = stat('.');
 	my($pd,$pi) = stat($ENV{'PWD'});
-	if (!defined $dd or !defined $pd or $di != $pi or $dd != $pd) {
+	if (!defined $dd or !defined $pd or $di ne $pi or $dd != $pd) {
 	    $ENV{'PWD'} = cwd();
 	}
     }
@@ -353,7 +315,7 @@ sub chdir_init {
     if ($^O ne 'MSWin32' and $ENV{'PWD'} =~ m|(/[^/]+(/[^/]+/[^/]+))(.*)|s) {
 	my($pd,$pi) = stat($2);
 	my($dd,$di) = stat($1);
-	if (defined $pd and defined $dd and $di == $pi and $dd == $pd) {
+	if (defined $pd and defined $dd and $di ne $pi and $dd == $pd) {
 	    $ENV{'PWD'}="$2$3";
 	}
     }
@@ -380,9 +342,6 @@ sub chdir {
 
     if ($^O eq 'VMS') {
 	return $ENV{'PWD'} = $ENV{'DEFAULT'}
-    }
-    elsif ($^O eq 'MacOS') {
-	return $ENV{'PWD'} = cwd();
     }
     elsif ($^O eq 'MSWin32') {
 	$ENV{'PWD'} = $newpwd;
@@ -415,8 +374,7 @@ sub _perl_abs_path
 
     unless (@cst = stat( $start ))
     {
-	_carp("stat($start): $!");
-	return '';
+	return undef;
     }
 
     unless (-d _) {
@@ -450,17 +408,16 @@ sub _perl_abs_path
 	local *PARENT;
 	unless (opendir(PARENT, $dotdots))
 	{
-	    # probably a permissions issue.  Try the native command.
-	    require File::Spec;
-	    return File::Spec->rel2abs( $start, _backtick_pwd() );
+	    return undef;
 	}
 	unless (@cst = stat($dotdots))
 	{
-	    _carp("stat($dotdots): $!");
+	    my $e = $!;
 	    closedir(PARENT);
-	    return '';
+	    $! = $e;
+	    return undef;
 	}
-	if ($pst[0] == $cst[0] && $pst[1] == $cst[1])
+	if ($pst[0] == $cst[0] && $pst[1] eq $cst[1])
 	{
 	    $dir = undef;
 	}
@@ -470,14 +427,15 @@ sub _perl_abs_path
 	    {
 		unless (defined ($dir = readdir(PARENT)))
 	        {
-		    _carp("readdir($dotdots): $!");
 		    closedir(PARENT);
-		    return '';
+		    require Errno;
+		    $! = Errno::ENOENT();
+		    return undef;
 		}
 		$tst[0] = $pst[0]+1 unless (@tst = lstat("$dotdots/$dir"))
 	    }
 	    while ($dir eq '.' || $dir eq '..' || $tst[0] != $pst[0] ||
-		   $tst[1] != $pst[1]);
+		   $tst[1] ne $pst[1]);
 	}
 	$cwd = (defined $dir ? "$dir" : "" ) . "/$cwd" ;
 	closedir(PARENT);
@@ -491,6 +449,7 @@ my $Curdir;
 sub fast_abs_path {
     local $ENV{PWD} = $ENV{PWD} || ''; # Guard against clobberage
     my $cwd = getcwd();
+    defined $cwd or return undef;
     require File::Spec;
     my $path = @_ ? shift : ($Curdir ||= File::Spec->curdir);
 
@@ -500,7 +459,9 @@ sub fast_abs_path {
     ($cwd)  = $cwd  =~ /(.*)/s;
 
     unless (-e $path) {
- 	_croak("$path: No such file or directory");
+	require Errno;
+	$! = Errno::ENOENT();
+	return undef;
     }
 
     unless (-d _) {
@@ -511,7 +472,7 @@ sub fast_abs_path {
 
 	if (-l $path) {
 	    my $link_target = readlink($path);
-	    die "Can't resolve link $path: $!" unless defined $link_target;
+	    defined $link_target or return undef;
 	    
 	    $link_target = File::Spec->catpath($vol, $dir, $link_target)
                 unless File::Spec->file_name_is_absolute($link_target);
@@ -525,7 +486,7 @@ sub fast_abs_path {
     }
 
     if (!CORE::chdir($path)) {
- 	_croak("Cannot chdir to $path: $!");
+	return undef;
     }
     my $realpath = getcwd();
     if (! ((-d $cwd) && (CORE::chdir($cwd)))) {
@@ -673,11 +634,6 @@ sub _qnx_abs_path {
     return $realpath;
 }
 
-sub _epoc_cwd {
-    return $ENV{'PWD'} = EPOC::getcwd();
-}
-
-
 # Now that all the base-level functions are set up, alias the
 # user-level functions to the right places
 
@@ -689,6 +645,10 @@ if (exists $METHOD_MAP{$^O}) {
     *{$name} = \&{$map->{$name}};
   }
 }
+
+# built-in from 5.30
+*getcwd = \&Internals::getcwd
+  if !defined &getcwd && defined &Internals::getcwd;
 
 # In case the XS version doesn't load.
 *abs_path = \&_perl_abs_path unless defined &abs_path;
@@ -734,7 +694,8 @@ absolute path of the current working directory.
 
     my $cwd = getcwd();
 
-Returns the current working directory.
+Returns the current working directory.  On error returns C<undef>,
+with C<$!> set to indicate the error.
 
 Exposes the POSIX function getcwd(3) or re-implements it if it's not
 available.
@@ -797,7 +758,8 @@ given they'll use the current working directory.
 
 Uses the same algorithm as getcwd().  Symbolic links and relative-path
 components ("." and "..") are resolved to return the canonical
-pathname, just like realpath(3).
+pathname, just like realpath(3).  On error returns C<undef>, with C<$!>
+set to indicate the error.
 
 =item realpath
 
@@ -845,9 +807,7 @@ C<fast_abs_path()>.
 
 =head1 AUTHOR
 
-Originally by the perl5-porters.
-
-Maintained by Ken Williams <KWILLIAMS@cpan.org>
+Maintained by perl5-porters <F<perl5-porters@perl.org>>.
 
 =head1 COPYRIGHT
 
