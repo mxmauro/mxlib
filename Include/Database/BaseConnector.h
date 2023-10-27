@@ -31,11 +31,12 @@ namespace MX {
 
 namespace Database {
 
-typedef enum {
-  FieldTypeNull = 0, FieldTypeString, FieldTypeBoolean,
-  FieldTypeUInt32, FieldTypeInt32, FieldTypeUInt64, FieldTypeInt64,
-  FieldTypeDouble, FieldTypeDateTime, FieldTypeBlob
-} eFieldType;
+enum class eFieldType
+{
+  Null = 0, String, Boolean,
+  UInt32, Int32, UInt64, Int64,
+  Double, DateTime, Blob
+};
 
 //-----------------------------------------------------------
 
@@ -87,9 +88,9 @@ private:
   BOOL EnsureSize(_In_ SIZE_T nNewSize);
 
 private:
-  eFieldType nFieldType;
+  eFieldType nFieldType{ eFieldType::Null };
   union {
-    LPCSTR szStrA;
+    LPCSTR szStrA{ NULL };
     BOOL b;
     ULONG ul;
     LONG l;
@@ -98,10 +99,10 @@ private:
     double dbl;
     LPVOID lpBlob;
   };
-  CDateTime *lpDt;
-  SIZE_T nLength;
-  LPBYTE lpBuffer;
-  SIZE_T nBufferSize;
+  CDateTime *lpDt{ NULL };
+  SIZE_T nLength{ 0 };
+  LPBYTE lpBuffer{ NULL };
+  SIZE_T nBufferSize{ 0 };
 };
 
 //-----------------------------------------------------------

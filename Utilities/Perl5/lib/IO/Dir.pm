@@ -6,22 +6,21 @@
 
 package IO::Dir;
 
-use 5.006;
+use 5.008_001;
 
 use strict;
 use Carp;
 use Symbol;
 use Exporter;
 use IO::File;
-our(@ISA, $VERSION, @EXPORT_OK);
 use Tie::Hash;
 use File::stat;
 use File::Spec;
 
-@ISA = qw(Tie::Hash Exporter);
-$VERSION = "1.10";
-$VERSION = eval $VERSION;
-@EXPORT_OK = qw(DIR_UNLINK);
+our @ISA = qw(Tie::Hash Exporter);
+our $VERSION = "1.52";
+
+our @EXPORT_OK = qw(DIR_UNLINK);
 
 sub DIR_UNLINK () { 1 }
 
@@ -154,7 +153,7 @@ IO::Dir - supply object methods for directory handles
 =head1 SYNOPSIS
 
     use IO::Dir;
-    $d = IO::Dir->new(".");
+    my $d = IO::Dir->new(".");
     if (defined $d) {
         while (defined($_ = $d->read)) { something($_); }
         $d->rewind;
@@ -162,7 +161,7 @@ IO::Dir - supply object methods for directory handles
         undef $d;
     }
 
-    tie %dir, 'IO::Dir', ".";
+    tie my %dir, 'IO::Dir', ".";
     foreach (keys %dir) {
 	print $_, " " , $dir{$_}->size,"\n";
     }
@@ -237,7 +236,7 @@ L<File::stat>
 =head1 AUTHOR
 
 Graham Barr. Currently maintained by the Perl Porters.  Please report all
-bugs to <perlbug@perl.org>.
+bugs at L<https://github.com/Perl/perl5/issues>.
 
 =head1 COPYRIGHT
 

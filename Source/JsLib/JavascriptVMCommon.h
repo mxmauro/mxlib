@@ -38,13 +38,13 @@
 namespace DukTape {
 
 #pragma check_stack(off)
-#pragma warning(disable : 4101 4703 4244 4267 6262 6385 6011 6387)
+#pragma warning(disable : 4101 4703 4244 4267 6262 6385 6011 6387 26450 28182)
 #include "DukTape\Source\dist\duktape.c"
 #define snprintf mx_sprintf_s
 //#include "DukTape\Source\extras\module-duktape\duk_module_duktape.c"
 #include "DukTape\Source\extras\module-node\duk_module_node.c"
 #undef snprintf
-#pragma warning(default : 4101 4703 4244 4267 6262 6385 6011 6387)
+#pragma warning(default : 4101 4703 4244 4267 6262 6385 6011 6387 26450 28182)
 #pragma check_stack()
 
 } //namespace DukTape
@@ -68,7 +68,7 @@ HRESULT AddNativeFunctionCommon(_In_ DukTape::duk_context *lpCtx, _In_opt_z_ LPC
 
 HRESULT AddPropertyCommon(_In_ DukTape::duk_context *lpCtx, _In_opt_z_ LPCSTR szObjectNameA,
                           _In_ DukTape::duk_idx_t nObjectIndex, _In_z_ LPCSTR szPropertyNameA,
-                          _In_ BOOL bInitialValueOnStack, _In_ int nFlags,
+                          _In_ BOOL bInitialValueOnStack, _In_ MX::CJavascriptVM::ePropertyFlags nFlags,
                           _In_ MX::CJavascriptVM::OnGetPropertyCallback cGetValueCallback,
                           _In_ MX::CJavascriptVM::OnSetPropertyCallback cSetValueCallback);
 

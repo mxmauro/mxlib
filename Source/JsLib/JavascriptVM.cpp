@@ -24,9 +24,9 @@
 
 //-----------------------------------------------------------
 
-typedef struct {
-  MX::CJavascriptVM::lpfnProtectedFunction fnFunc;
-  DukTape::duk_idx_t nRetValuesCount;
+typedef struct tagRUN_NATIVE_PROTECTED_DATA {
+  MX::CJavascriptVM::lpfnProtectedFunction fnFunc{ NULL };
+  DukTape::duk_idx_t nRetValuesCount{ 0 };
 } RUN_NATIVE_PROTECTED_DATA;
 
 //-----------------------------------------------------------
@@ -408,13 +408,13 @@ HRESULT CJavascriptVM::AddNativeFunction(_In_z_ LPCSTR szFuncNameA, _In_ OnNativ
 }
 
 HRESULT CJavascriptVM::AddProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ BOOL bInitialValueOnStack,
-                                   _In_opt_ int nFlags)
+                                   _In_opt_ ePropertyFlags nFlags)
 {
   return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, bInitialValueOnStack, nFlags,
                                              NullCallback(), NullCallback());
 }
 
-HRESULT CJavascriptVM::AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ LPCSTR szValueA, _In_opt_ int nFlags)
+HRESULT CJavascriptVM::AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ LPCSTR szValueA, _In_opt_ ePropertyFlags nFlags)
 {
   HRESULT hRes;
 
@@ -435,7 +435,7 @@ HRESULT CJavascriptVM::AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ L
 }
 
 HRESULT CJavascriptVM::AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ LPCWSTR szValueW,
-                                         _In_opt_ int nFlags)
+                                         _In_opt_ ePropertyFlags nFlags)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -451,7 +451,7 @@ HRESULT CJavascriptVM::AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ L
   return hRes;
 }
 
-HRESULT CJavascriptVM::AddBooleanProperty(_In_z_ LPCSTR szPropertyNameA, _In_ BOOL bValue, _In_opt_ int nFlags)
+HRESULT CJavascriptVM::AddBooleanProperty(_In_z_ LPCSTR szPropertyNameA, _In_ BOOL bValue, _In_opt_ ePropertyFlags nFlags)
 {
   HRESULT hRes;
 
@@ -468,7 +468,7 @@ HRESULT CJavascriptVM::AddBooleanProperty(_In_z_ LPCSTR szPropertyNameA, _In_ BO
                                              NullCallback());
 }
 
-HRESULT CJavascriptVM::AddIntegerProperty(_In_z_ LPCSTR szPropertyNameA, _In_ int nValue, _In_opt_ int nFlags)
+HRESULT CJavascriptVM::AddIntegerProperty(_In_z_ LPCSTR szPropertyNameA, _In_ int nValue, _In_opt_ ePropertyFlags nFlags)
 {
   HRESULT hRes;
 
@@ -485,7 +485,7 @@ HRESULT CJavascriptVM::AddIntegerProperty(_In_z_ LPCSTR szPropertyNameA, _In_ in
                                              NullCallback());
 }
 
-HRESULT CJavascriptVM::AddNumericProperty(_In_z_ LPCSTR szPropertyNameA, _In_ double nValue, _In_opt_ int nFlags)
+HRESULT CJavascriptVM::AddNumericProperty(_In_z_ LPCSTR szPropertyNameA, _In_ double nValue, _In_opt_ ePropertyFlags nFlags)
 {
   HRESULT hRes;
 
@@ -502,7 +502,7 @@ HRESULT CJavascriptVM::AddNumericProperty(_In_z_ LPCSTR szPropertyNameA, _In_ do
                                              NullCallback());
 }
 
-HRESULT CJavascriptVM::AddNullProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ int nFlags)
+HRESULT CJavascriptVM::AddNullProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ ePropertyFlags nFlags)
 {
   HRESULT hRes;
 
@@ -520,7 +520,7 @@ HRESULT CJavascriptVM::AddNullProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ i
 }
 
 HRESULT CJavascriptVM::AddJsObjectProperty(_In_z_ LPCSTR szPropertyNameA, _In_ CJsObjectBase *lpObject,
-                                           _In_opt_ int nFlags)
+                                           _In_opt_ ePropertyFlags nFlags)
 {
   HRESULT hRes;
 
@@ -538,13 +538,13 @@ HRESULT CJavascriptVM::AddJsObjectProperty(_In_z_ LPCSTR szPropertyNameA, _In_ C
 
 HRESULT CJavascriptVM::AddPropertyWithCallback(_In_z_ LPCSTR szPropertyNameA,
                                                _In_ OnGetPropertyCallback cGetValueCallback,
-                                               _In_opt_ OnSetPropertyCallback cSetValueCallback, _In_opt_ int nFlags)
+                                               _In_opt_ OnSetPropertyCallback cSetValueCallback, _In_opt_ ePropertyFlags nFlags)
 {
   if (!cGetValueCallback)
     return E_POINTER;
   if (lpCtx == NULL)
     return E_FAIL;
-  nFlags &= ~PropertyFlagWritable;
+  nFlags = nFlags & (~ePropertyFlags::Writable);
   return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, FALSE, nFlags, cGetValueCallback,
                                              cSetValueCallback);
 }
@@ -661,7 +661,7 @@ HRESULT CJavascriptVM::AddObjectNativeFunction(_In_z_ LPCSTR szObjectNameA, _In_
 }
 
 HRESULT CJavascriptVM::AddObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                         _In_opt_ BOOL bInitialValueOnStack, _In_opt_ int nFlags)
+                                         _In_opt_ BOOL bInitialValueOnStack, _In_opt_ ePropertyFlags nFlags)
 {
   if (szObjectNameA == NULL)
     return E_POINTER;
@@ -670,7 +670,7 @@ HRESULT CJavascriptVM::AddObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPC
 }
 
 HRESULT CJavascriptVM::AddObjectStringProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                               _In_z_ LPCSTR szValueA, _In_opt_ int nFlags)
+                                               _In_z_ LPCSTR szValueA, _In_opt_ ePropertyFlags nFlags)
 {
   HRESULT hRes;
 
@@ -693,7 +693,7 @@ HRESULT CJavascriptVM::AddObjectStringProperty(_In_z_ LPCSTR szObjectNameA, _In_
 }
 
 HRESULT CJavascriptVM::AddObjectStringProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                               _In_z_ LPCWSTR szValueW, _In_opt_ int nFlags)
+                                               _In_z_ LPCWSTR szValueW, _In_opt_ ePropertyFlags nFlags)
 {
   CStringA cStrTempA;
   HRESULT hRes;
@@ -710,7 +710,7 @@ HRESULT CJavascriptVM::AddObjectStringProperty(_In_z_ LPCSTR szObjectNameA, _In_
 }
 
 HRESULT CJavascriptVM::AddObjectBooleanProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                                _In_ BOOL bValue, _In_opt_ int nFlags)
+                                                _In_ BOOL bValue, _In_opt_ ePropertyFlags nFlags)
 {
   HRESULT hRes;
 
@@ -730,7 +730,7 @@ HRESULT CJavascriptVM::AddObjectBooleanProperty(_In_z_ LPCSTR szObjectNameA, _In
 }
 
 HRESULT CJavascriptVM::AddObjectIntegerProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                                _In_ int nValue, _In_opt_ int nFlags)
+                                                _In_ int nValue, _In_opt_ ePropertyFlags nFlags)
 {
   HRESULT hRes;
 
@@ -750,7 +750,7 @@ HRESULT CJavascriptVM::AddObjectIntegerProperty(_In_z_ LPCSTR szObjectNameA, _In
 }
 
 HRESULT CJavascriptVM::AddObjectNumericProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                                _In_ double nValue, _In_opt_ int nFlags)
+                                                _In_ double nValue, _In_opt_ ePropertyFlags nFlags)
 {
   HRESULT hRes;
 
@@ -770,7 +770,7 @@ HRESULT CJavascriptVM::AddObjectNumericProperty(_In_z_ LPCSTR szObjectNameA, _In
 }
 
 HRESULT CJavascriptVM::AddObjectNullProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                             _In_opt_ int nFlags)
+                                             _In_opt_ ePropertyFlags nFlags)
 {
   HRESULT hRes;
 
@@ -790,7 +790,7 @@ HRESULT CJavascriptVM::AddObjectNullProperty(_In_z_ LPCSTR szObjectNameA, _In_z_
 }
 
 HRESULT CJavascriptVM::AddObjectJsObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                                 _In_ CJsObjectBase *lpObject, _In_opt_ int nFlags)
+                                                 _In_ CJsObjectBase *lpObject, _In_opt_ ePropertyFlags nFlags)
 {
   HRESULT hRes;
 
@@ -811,7 +811,7 @@ HRESULT CJavascriptVM::AddObjectJsObjectProperty(_In_z_ LPCSTR szObjectNameA, _I
 HRESULT CJavascriptVM::AddObjectPropertyWithCallback(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
                                                      _In_ OnGetPropertyCallback cGetValueCallback,
                                                      _In_opt_ OnSetPropertyCallback cSetValueCallback,
-                                                     _In_opt_ int nFlags)
+                                                     _In_opt_ ePropertyFlags nFlags)
 {
   if (szObjectNameA == NULL)
     return E_POINTER;
@@ -819,7 +819,7 @@ HRESULT CJavascriptVM::AddObjectPropertyWithCallback(_In_z_ LPCSTR szObjectNameA
     return E_POINTER;
   if (lpCtx == NULL)
     return E_FAIL;
-  nFlags &= ~PropertyFlagWritable;
+  nFlags = nFlags & (~ePropertyFlags::Writable);
   return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, FALSE, nFlags,
                                              cGetValueCallback, cSetValueCallback);
 }
@@ -1275,7 +1275,7 @@ HRESULT CJavascriptVM::AddSafeString(_Inout_ CStringA &cStrCodeA, _In_z_ LPCWSTR
   return hRes;
 }
 
-VOID CJavascriptVM::ThrowWindowsError(_In_ DukTape::duk_context *lpCtx, _In_ HRESULT hr, _In_opt_ LPCSTR filename,
+VOID CJavascriptVM::ThrowWindowsError(_In_ DukTape::duk_context *lpCtx, _In_ HRESULT hr, _In_opt_z_ LPCSTR filename,
                                       _In_opt_ DukTape::duk_int_t line)
 {
   DukTape::duk_get_global_string(lpCtx, "WindowsError");

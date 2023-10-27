@@ -1,16 +1,14 @@
 package File::Spec;
 
 use strict;
-use vars qw(@ISA $VERSION);
 
-$VERSION = '3.63';
+our $VERSION = '3.88';
 $VERSION =~ tr/_//d;
 
-my %module = (MacOS   => 'Mac',
+my %module = (
 	      MSWin32 => 'Win32',
 	      os2     => 'OS2',
 	      VMS     => 'VMS',
-	      epoc    => 'Epoc',
 	      NetWare => 'Win32', # Yes, File::Spec::Win32 works on NetWare.
 	      symbian => 'Win32', # Yes, File::Spec::Win32 works on symbian.
 	      dos     => 'OS2',   # Yes, File::Spec::OS2 works on DJGPP.
@@ -21,7 +19,7 @@ my %module = (MacOS   => 'Mac',
 my $module = $module{$^O} || 'Unix';
 
 require "File/Spec/$module.pm";
-@ISA = ("File::Spec::$module");
+our @ISA = ("File::Spec::$module");
 
 1;
 
@@ -35,13 +33,13 @@ File::Spec - portably perform operations on file names
 
 	use File::Spec;
 
-	$x=File::Spec->catfile('a', 'b', 'c');
+	my $x = File::Spec->catfile('a', 'b', 'c');
 
 which returns 'a/b/c' under Unix. Or:
 
 	use File::Spec::Functions;
 
-	$x = catfile('a', 'b', 'c');
+	my $x = catfile('a', 'b', 'c');
 
 =head1 DESCRIPTION
 
@@ -158,10 +156,13 @@ Returns a string representation of the parent directory.
 
 =item no_upwards
 
-Given a list of file names, strip out those that refer to a parent
-directory. (Does not strip symlinks, only '.', '..', and equivalents.)
+Given a list of files in a directory (such as from C<readdir()>),
+strip out C<'.'> and C<'..'>.
 
-    @paths = File::Spec->no_upwards( @paths );
+B<SECURITY NOTE:> This does NOT filter paths containing C<'..'>, like
+C<'../../../../etc/passwd'>, only literal matches to C<'.'> and C<'..'>.
+
+    @paths = File::Spec->no_upwards( readdir $dirhandle );
 
 =item case_tolerant
 
@@ -315,7 +316,7 @@ L<ExtUtils::MakeMaker>
 
 =head1 AUTHOR
 
-Currently maintained by Ken Williams C<< <KWILLIAMS@cpan.org> >>.
+Maintained by perl5-porters <F<perl5-porters@perl.org>>.
 
 The vast majority of the code was written by
 Kenneth Albanowski C<< <kjahds@kjahds.com> >>,

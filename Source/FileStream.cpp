@@ -159,11 +159,11 @@ HRESULT CFileStream::Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod
     return MX_E_NotReady;
   switch (nMethod)
   {
-    case SeekStart:
+    case eSeekMethod::Start:
       sFilePosInfo.CurrentByteOffset.QuadPart = (LONGLONG)nPosition;
       break;
 
-    case SeekCurrent:
+    case eSeekMethod::Current:
       nNtStatus = ::MxNtQueryInformationFile(cFileH, &sIoStatus, &sFilePosInfo, (ULONG)sizeof(sFilePosInfo),
                                              MxFilePositionInformation);
       if (!NT_SUCCESS(nNtStatus))
@@ -173,7 +173,7 @@ HRESULT CFileStream::Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod
         return E_FAIL;
       break;
 
-    case SeekEnd:
+    case eSeekMethod::End:
       nNtStatus = ::MxNtQueryInformationFile(cFileH, &sIoStatus, &sFileStdInfo, (ULONG)sizeof(sFileStdInfo),
                                              MxFileStandardInformation);
       if (!NT_SUCCESS(nNtStatus))
@@ -187,7 +187,7 @@ HRESULT CFileStream::Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod
       return E_INVALIDARG;
   }
   nNtStatus = ::MxNtSetInformationFile(cFileH, &sIoStatus, &sFilePosInfo, (ULONG)sizeof(sFilePosInfo),
-                                        MxFilePositionInformation);
+                                       MxFilePositionInformation);
   if (!NT_SUCCESS(nNtStatus))
     return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
   //done

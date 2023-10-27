@@ -1,7 +1,7 @@
 package CPAN::Index;
 use strict;
 use vars qw($LAST_TIME $DATE_OF_02 $DATE_OF_03 $HAVE_REANIMATED $VERSION);
-$VERSION = "1.9601";
+$VERSION = "2.29";
 @CPAN::Index::ISA = qw(CPAN::Debug);
 $LAST_TIME ||= 0;
 $DATE_OF_03 ||= 0;
@@ -137,7 +137,7 @@ sub reanimate_build_dir {
                     ));
       DISTRO: for $i (0..$#candidates) {
             my $dirent = $candidates[$i];
-            my $y = eval {CPAN->_yaml_loadfile(File::Spec->catfile($d,$dirent))};
+            my $y = eval {CPAN->_yaml_loadfile(File::Spec->catfile($d,$dirent), {loadblessed => 1})};
             if ($@) {
                 warn "Error while parsing file '$dirent'; error: '$@'";
                 next DISTRO;
@@ -528,7 +528,7 @@ sub rd_modlist {
     my $until = keys(%$ret);
     my $painted = 0;
     CPAN->debug(sprintf "until[%d]", $until) if $CPAN::DEBUG;
-    for (keys %$ret) {
+    for (sort keys %$ret) {
         my $obj = $CPAN::META->instance("CPAN::Module",$_);
         delete $ret->{$_}{modid}; # not needed here, maybe elsewhere
         $obj->set(%{$ret->{$_}});

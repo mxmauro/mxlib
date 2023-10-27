@@ -138,18 +138,26 @@ HRESULT CJsHttpServer::OnNewRequestObject(_In_ CHttpServer *lpHttp, _Out_ CHttpS
 }
 
 HRESULT CJsHttpServer::OnQuerySslCertificates(_In_ CHttpServer *lpHttp,
-                                              _Outptr_result_maybenull_ CSslCertificate **lplpSslCert,
-                                              _Outptr_result_maybenull_ CEncryptionKey **lplpSslPrivKey,
-                                              _Outptr_result_maybenull_ CDhParam **lplpDhParam)
+                                              _Outptr_opt_result_maybenull_ CSslCertificate **lplpSslCert,
+                                              _Outptr_opt_result_maybenull_ CEncryptionKey **lplpSslPrivKey,
+                                              _Outptr_opt_result_maybenull_ CEncryptionKey **lplpDhParam)
 {
+  if (lplpSslCert != NULL)
+    *lplpSslCert = NULL;
+  if (lplpSslPrivKey != NULL)
+    *lplpSslPrivKey = NULL;
+  if (lplpDhParam != NULL)
+    *lplpDhParam = NULL;
   if (cQuerySslCertificatesCallback)
     return cQuerySslCertificatesCallback(this, lplpSslCert, lplpSslPrivKey, lplpDhParam);
   return S_FALSE;
 }
 
 HRESULT CJsHttpServer::OnRequestHeadersReceived(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *_lpRequest,
-                                                _Outptr_ _Maybenull_ CHttpBodyParserBase **lplpBodyParser)
+                                                _Outptr_result_maybenull_ CHttpBodyParserBase **lplpBodyParser)
 {
+  if (lplpBodyParser != NULL)
+    *lplpBodyParser = NULL;
   if (cRequestHeadersReceivedCallback)
   {
     CClientRequest *lpRequest = static_cast<CClientRequest*>(_lpRequest);
@@ -191,8 +199,10 @@ HRESULT CJsHttpServer::OnWebSocketRequestReceived(_In_ CHttpServer *lpHttp, _In_
                                                   _In_ int nVersion, _In_opt_ LPCSTR *szProtocolsA,
                                                   _In_ SIZE_T nProtocolsCount, _Out_ int &nSelectedProtocol,
                                                   _In_ TArrayList<int> &aSupportedVersions,
-                                                  _Out_ _Maybenull_ CWebSocket **lplpWebSocket)
+                                                  _Outptr_result_maybenull_ CWebSocket **lplpWebSocket)
 {
+  if (lplpWebSocket != NULL)
+    *lplpWebSocket = NULL;
   if (cWebSocketRequestReceivedCallback)
   {
     CClientRequest *lpRequest = static_cast<CClientRequest*>(_lpReq);

@@ -27,7 +27,7 @@ static const LPCSTR szGuidA = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 //-----------------------------------------------------------
 
-static HRESULT CalculateHash(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen, _Out_ BYTE aSHA1[20]);
+static HRESULT CalculateHash(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen, _Out_writes_bytes_all_(20) BYTE aSHA1[20]);
 
 //-----------------------------------------------------------
 
@@ -140,12 +140,13 @@ HRESULT CHttpHeaderRespSecWebSocketAccept::VerifyKey(_In_ LPVOID lpKey, _In_ SIZ
 
 //-----------------------------------------------------------
 
-static HRESULT CalculateHash(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen, _Out_ BYTE aSHA1[20])
+static HRESULT CalculateHash(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen, _Out_writes_bytes_all_(20) BYTE aSHA1[20])
 {
   MX::CBase64Encoder cEncoder;
   MX::CMessageDigest cDigest;
   HRESULT hRes;
 
+  ::MxMemSet(aSHA1, 0, 20);
   if (lpKey == NULL && nKeyLen > 0)
     return E_POINTER;
 
@@ -161,7 +162,7 @@ static HRESULT CalculateHash(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen, _Out_ BYTE 
     return hRes;
 
   //hash the base64 output plus the guid
-  hRes = cDigest.BeginDigest(MX::CMessageDigest::AlgorithmSHA1);
+  hRes = cDigest.BeginDigest(MX::CMessageDigest::eAlgorithm::SHA1);
   if (SUCCEEDED(hRes))
   {
     hRes = cDigest.DigestStream(cEncoder.GetBuffer(), cEncoder.GetOutputLength());

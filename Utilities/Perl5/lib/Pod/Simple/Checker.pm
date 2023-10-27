@@ -2,22 +2,20 @@
 # A quite dimwitted pod2plaintext that need only know how to format whatever
 # text comes out of Pod::BlackBox's _gen_errata
 
-require 5;
 package Pod::Simple::Checker;
 use strict;
+use warnings;
 use Carp ();
 use Pod::Simple::Methody ();
 use Pod::Simple ();
-use vars qw( @ISA $VERSION );
-$VERSION = '3.32';
-@ISA = ('Pod::Simple::Methody');
+our $VERSION = '3.45';
+our @ISA = ('Pod::Simple::Methody');
 BEGIN { *DEBUG = defined(&Pod::Simple::DEBUG)
           ? \&Pod::Simple::DEBUG
           : sub() {0}
       }
 
 use Text::Wrap 98.112902 (); # was 2001.0131, but I don't think we need that
-$Text::Wrap::wrap = 'overflow';
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 sub any_errata_seen {  # read-only accessor
@@ -88,17 +86,20 @@ sub end_item_text   { $_[0]->emit_par(-2) }
 sub emit_par {
   return unless $_[0]{'Errata_seen'};
   my($self, $tweak_indent) = splice(@_,0,2);
-  my $indent = ' ' x ( 2 * $self->{'Indent'} + ($tweak_indent||0) );
+  my $length = 2 * $self->{'Indent'} + ($tweak_indent||0);
+  my $indent = ' ' x ($length > 0 ? $length : 0);
    # Yes, 'STRING' x NEGATIVE gives '', same as 'STRING' x 0
+   # 'Negative repeat count does nothing' since 5.22
 
   $self->{'Thispara'} =~ s/$Pod::Simple::shy//g;
+  local $Text::Wrap::wrap = 'overflow';
   my $out = Text::Wrap::wrap($indent, $indent, $self->{'Thispara'} .= "\n");
   $out =~ s/$Pod::Simple::nbsp/ /g;
   print {$self->{'output_fh'}} $out,
     #"\n"
   ;
   $self->{'Thispara'} = '';
-  
+
   return;
 }
 
@@ -111,10 +112,10 @@ sub end_Verbatim  {
   $self->{'Thispara'} =~ s/$Pod::Simple::shy//g;
 
   my $i = ' ' x ( 2 * $self->{'Indent'} + 4);
-  
+
   $self->{'Thispara'} =~ s/^/$i/mg;
-  
-  print { $self->{'output_fh'} }   '', 
+
+  print { $self->{'output_fh'} }   '',
     $self->{'Thispara'},
     "\n\n"
   ;
@@ -158,7 +159,7 @@ pod-people-subscribe@perl.org to subscribe.
 
 This module is managed in an open GitHub repository,
 L<https://github.com/perl-pod/pod-simple/>. Feel free to fork and contribute, or
-to clone L<git://github.com/perl-pod/pod-simple.git> and send patches!
+to clone L<https://github.com/perl-pod/pod-simple.git> and send patches!
 
 Patches against Pod::Simple are welcome. Please send bug reports to
 <bug-pod-simple@rt.cpan.org>.

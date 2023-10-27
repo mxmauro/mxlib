@@ -2,8 +2,14 @@ package Net::hostent;
 use strict;
 
 use 5.006_001;
-our $VERSION = '1.01';
-our(@EXPORT, @EXPORT_OK, %EXPORT_TAGS);
+our $VERSION = '1.03';
+our (@EXPORT, @EXPORT_OK, %EXPORT_TAGS);
+our (
+      $h_name, @h_aliases,
+      $h_addrtype, $h_length,
+      @h_addr_list, $h_addr
+);
+ 
 BEGIN { 
     use Exporter   ();
     @EXPORT      = qw(gethostbyname gethostbyaddr gethost);
@@ -14,7 +20,6 @@ BEGIN {
 		   );
     %EXPORT_TAGS = ( FIELDS => [ @EXPORT_OK, @EXPORT ] );
 }
-use vars      @EXPORT_OK;
 
 # Class::Struct forbids use of @ISA
 sub import { goto &Exporter::import }
@@ -53,13 +58,14 @@ sub gethostbyaddr ($;$) {
 } 
 
 sub gethost($) {
-    if ($_[0] =~ /^\d+(?:\.\d+(?:\.\d+(?:\.\d+)?)?)?$/) {
-	require Socket;
-	&gethostbyaddr(Socket::inet_aton(shift));
+    my $addr = shift;
+    if ($addr =~ /^\d+(?:\.\d+(?:\.\d+(?:\.\d+)?)?)?$/) {
+       require Socket;
+       &gethostbyaddr(Socket::inet_aton($addr));
     } else {
-	&gethostbyname;
-    } 
-} 
+       &gethostbyname($addr);
+    }
+}
 
 1;
 __END__

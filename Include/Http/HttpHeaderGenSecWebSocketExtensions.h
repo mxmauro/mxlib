@@ -75,7 +75,7 @@ public:
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return DuplicateBehaviorMerge;
+    return eDuplicateBehavior::Merge;
     };
 
   HRESULT AddExtension(_In_z_ LPCSTR szExtensionA, _In_opt_ SIZE_T nExtension = (SIZE_T)-1,

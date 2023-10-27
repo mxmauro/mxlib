@@ -130,188 +130,176 @@ typedef __success(return >= 0) LONG NTSTATUS;
 typedef LONG MX_KPRIORITY;
 typedef LONG MX_KWAIT_REASON;
 
-typedef enum {
-  MxSystemBasicInformation = 0,
-  MxSystemProcessorInformation = 1,
-  MxSystemProcessInformation = 5,
-  MxSystemSessionProcessesInformation = 53,
-  MxSystemExtendedProcessInformation = 57
-} MX_SYSTEM_INFORMATION_CLASS;
+#ifdef __cplusplus
+  #define MX_ENUMCLASS enum class
+#else //__cplusplus
+  #define MX_ENUMCLASS typedef enum
+#endif //__cplusplus
 
-typedef enum {
-  MxProcessBasicInformation = 0,
-  MxProcessQuotaLimits,                //1
-  MxProcessIoCounters,                 //2
-  MxProcessVmCounters,                 //3
-  MxProcessTimes,                      //4
-  MxProcessBasePriority,               //5
-  MxProcessRaisePriority,              //6
-  MxProcessDebugPort,                  //7
-  MxProcessExceptionPort,              //8
-  MxProcessAccessToken,                //9
-  MxProcessLdtInformation,             //10
-  MxProcessLdtSize,                    //11
-  MxProcessDefaultHardErrorMode,       //12
-  MxProcessIoPortHandlers,             //13
-  MxProcessPooledUsageAndLimits,       //14
-  MxProcessWorkingSetWatch,            //15
-  MxProcessUserModeIOPL,               //16
-  MxProcessEnableAlignmentFaultFixup,  //17
-  MxProcessPriorityClass,              //18
-  MxProcessWx86Information,            //19
-  MxProcessHandleCount,                //20
-  MxProcessAffinityMask,               //21
-  MxProcessPriorityBoost,              //22
-  MxProcessDeviceMap,                  //23
-  MxProcessSessionInformation,         //24
-  MxProcessForegroundInformation,      //25
-  MxProcessWow64Information,           //26
-  MxProcessImageFileName,              //27
-  MxProcessLUIDDeviceMapsEnabled,      //28
-  MxProcessBreakOnTermination,         //29
-  MxProcessDebugObjectHandle,          //30
-  MxProcessDebugFlags,                 //31
-  MxProcessHandleTracing,              //32
-  MxProcessIoPriority,                 //33
-  MxProcessExecuteFlags,               //34
-  MxProcessTlsInformation,             //35
-  MxProcessCookie,                     //36
-  MxProcessImageInformation,           //37
-  MxProcessCycleTime,                  //38
-  MxProcessPagePriority,               //39
-  MxProcessInstrumentationCallback,    //40
-  MxProcessThreadStackAllocation,      //41
-  MxProcessWorkingSetWatchEx,          //42
-  MxProcessImageFileNameWin32,         //43
-  MxProcessImageFileMapping,           //44
-  MxProcessAffinityUpdateMode,         //45
-  MxProcessMemoryAllocationMode,       //46
-  MxProcessGroupInformation,           //47
-  MxProcessTokenVirtualizationEnabled, //48
-  MxProcessConsoleHostMxProcess,       //49
-  MxProcessWindowInformation           //50
-} MX_PROCESS_INFORMATION_CLASS;
+#define MxSystemBasicInformation             0
+#define MxSystemProcessorInformation         1
+#define MxSystemProcessInformation           5
+#define MxSystemSessionProcessesInformation 53
+#define MxSystemExtendedProcessInformation  57
 
-typedef enum {
-  MxThreadBasicInformation = 0,
-  MxThreadTimes,                     //1
-  MxThreadPriority,                  //2
-  MxThreadBasePriority,              //3
-  MxThreadAffinityMask,              //4
-  MxThreadImpersonationToken,        //5
-  MxThreadDescriptorTableEntry,      //6
-  MxThreadEnableAlignmentFaultFixup, //7
-  MxThreadEventPair_Reusable,        //8
-  MxThreadQuerySetWin32StartAddress, //9
-  MxThreadZeroTlsCell,               //10
-  MxThreadPerformanceCount,          //11
-  MxThreadAmILastThread,             //12
-  MxThreadIdealProcessor,            //13
-  MxThreadPriorityBoost,             //14
-  MxThreadSetTlsArrayAddress,        //15
-  MxThreadIsIoPending,               //16
-  MxThreadHideFromDebugger,          //17
-  MxThreadBreakOnTermination,        //18
-  MxThreadSwitchLegacyState,         //19
-  MxThreadIsTerminated,              //20
-  MxThreadLastSystemCall,            //21
-  MxThreadIoPriority,                //22
-  MxThreadCycleTime,                 //23
-  MxThreadPagePriority,              //24
-  MxThreadActualBasePriority,        //25
-  MxThreadTebInformation,            //26
-  MxThreadCSwitchMon,                //27
-  MxThreadCSwitchPmu,                //28
-  MxThreadWow64Context,              //29
-  MxThreadGroupInformation,          //30
-  MxThreadUmsInformation,            //31
-  MxThreadCounterProfiling,          //32
-  MxThreadIdealProcessorEx           //33
-} MX_THREAD_INFORMATION_CLASS;
+#define MxProcessBasicInformation            0
+#define MxProcessQuotaLimits                 1
+#define MxProcessIoCounters                  2
+#define MxProcessVmCounters                  3
+#define MxProcessTimes                       4
+#define MxProcessBasePriority                5
+#define MxProcessRaisePriority               6
+#define MxProcessDebugPort                   7
+#define MxProcessExceptionPort               8
+#define MxProcessAccessToken                 9
+#define MxProcessLdtInformation             10
+#define MxProcessLdtSize                    11
+#define MxProcessDefaultHardErrorMode       12
+#define MxProcessIoPortHandlers             13
+#define MxProcessPooledUsageAndLimits       14
+#define MxProcessWorkingSetWatch            15
+#define MxProcessUserModeIOPL               16
+#define MxProcessEnableAlignmentFaultFixup  17
+#define MxProcessPriorityClass              18
+#define MxProcessWx86Information            19
+#define MxProcessHandleCount                20
+#define MxProcessAffinityMask               21
+#define MxProcessPriorityBoost              22
+#define MxProcessDeviceMap                  23
+#define MxProcessSessionInformation         24
+#define MxProcessForegroundInformation      25
+#define MxProcessWow64Information           26
+#define MxProcessImageFileName              27
+#define MxProcessLUIDDeviceMapsEnabled      28
+#define MxProcessBreakOnTermination         29
+#define MxProcessDebugObjectHandle          30
+#define MxProcessDebugFlags                 31
+#define MxProcessHandleTracing              32
+#define MxProcessIoPriority                 33
+#define MxProcessExecuteFlags               34
+#define MxProcessTlsInformation             35
+#define MxProcessCookie                     36
+#define MxProcessImageInformation           37
+#define MxProcessCycleTime                  38
+#define MxProcessPagePriority               39
+#define MxProcessInstrumentationCallback    40
+#define MxProcessThreadStackAllocation      41
+#define MxProcessWorkingSetWatchEx          42
+#define MxProcessImageFileNameWin32         43
+#define MxProcessImageFileMapping           44
+#define MxProcessAffinityUpdateMode         45
+#define MxProcessMemoryAllocationMode       46
+#define MxProcessGroupInformation           47
+#define MxProcessTokenVirtualizationEnabled 48
+#define MxProcessConsoleHostMxProcess       49
+#define MxProcessWindowInformation          50
 
-typedef enum {
-  MxMemoryBasicInformation = 0,
-  MxMemoryWorkingSetList,      //1
-  MxMemorySectionName,         //2
-  MxMemoryBasicVlmInformation, //3
-  MxMemoryWorkingSetExList     //4
-} MX_MEMORY_INFORMATION_CLASS;
+#define MxThreadBasicInformation             0
+#define MxThreadTimes                        1
+#define MxThreadPriority                     2
+#define MxThreadBasePriority                 3
+#define MxThreadAffinityMask                 4
+#define MxThreadImpersonationToken           5
+#define MxThreadDescriptorTableEntry         6
+#define MxThreadEnableAlignmentFaultFixup    7
+#define MxThreadEventPair_Reusable           8
+#define MxThreadQuerySetWin32StartAddress    9
+#define MxThreadZeroTlsCell                 10
+#define MxThreadPerformanceCount            11
+#define MxThreadAmILastThread               12
+#define MxThreadIdealProcessor              13
+#define MxThreadPriorityBoost               14
+#define MxThreadSetTlsArrayAddress          15
+#define MxThreadIsIoPending                 16
+#define MxThreadHideFromDebugger            17
+#define MxThreadBreakOnTermination          18
+#define MxThreadSwitchLegacyState           19
+#define MxThreadIsTerminated                20
+#define MxThreadLastSystemCall              21
+#define MxThreadIoPriority                  22
+#define MxThreadCycleTime                   23
+#define MxThreadPagePriority                24
+#define MxThreadActualBasePriority          25
+#define MxThreadTebInformation              26
+#define MxThreadCSwitchMon                  27
+#define MxThreadCSwitchPmu                  28
+#define MxThreadWow64Context                29
+#define MxThreadGroupInformation            30
+#define MxThreadUmsInformation              31
+#define MxThreadCounterProfiling            32
+#define MxThreadIdealProcessorEx            33
 
-typedef enum {
-  MxSectionBasicInformation = 0,
-  MxSectionImageInformation, //1
-} MX_SECTION_INFORMATION_CLASS;
+#define MxMemoryBasicInformation             0
+#define MxMemoryWorkingSetList               1
+#define MxMemorySectionName                  2
+#define MxMemoryBasicVlmInformation          3
+#define MxMemoryWorkingSetExList             4
 
-typedef enum {
-  MxKeyBasicInformation = 0,
-  MxKeyNodeInformation,           //1
-  MxKeyFullInformation,           //2
-  MxKeyNameInformation,           //3
-  MxKeyCachedInformation,         //4
-  MxKeyFlagsInformation,          //5
-  MxKeyVirtualizationInformation, //6
-  MxKeyHandleTagsInformation      //7
-} MX_KEY_INFORMATION_CLASS;
+#define MxSectionBasicInformation            0
+#define MxSectionImageInformation            1
 
-typedef enum {
-  MxKeyValueBasicInformation = 0,
-  MxKeyValueFullInformation,          //1
-  MxKeyValuePartialInformation,       //2
-  MxKeyValueFullInformationAlign64,   //3
-  MxKeyValuePartialInformationAlign64 //4
-} MX_KEY_VALUE_INFORMATION_CLASS;
+#define MxKeyBasicInformation                0
+#define MxKeyNodeInformation                 1
+#define MxKeyFullInformation                 2
+#define MxKeyNameInformation                 3
+#define MxKeyCachedInformation               4
+#define MxKeyFlagsInformation                5
+#define MxKeyVirtualizationInformation       6
+#define MxKeyHandleTagsInformation           7
 
-typedef enum {
-  MxFileDirectoryInformation = 1,
-  MxFileFullDirectoryInformation,
-  MxFileBothDirectoryInformation,
-  MxFileBasicInformation,
-  MxFileStandardInformation,
-  MxFileInternalInformation,
-  MxFileEaInformation,
-  MxFileAccessInformation,
-  MxFileNameInformation,
-  MxFileRenameInformation,
-  MxFileLinkInformation,
-  MxFileNamesInformation,
-  MxFileDispositionInformation,
-  MxFilePositionInformation,
-  MxFileFullEaInformation,
-  MxFileModeInformation,
-  MxFileAlignmentInformation,
-  MxFileAllInformation,
-  MxFileAllocationInformation,
-  MxFileEndOfFileInformation,
-  MxFileAlternateNameInformation,
-  MxFileStreamInformation,
-  MxFilePipeInformation,
-  MxFilePipeLocalInformation,
-  MxFilePipeRemoteInformation,
-  MxFileMailslotQueryInformation,
-  MxFileMailslotSetInformation,
-  MxFileCompressionInformation,
-  MxFileObjectIdInformation,
-  MxFileCompletionInformation,
-  MxFileMoveClusterInformation,
-  MxFileQuotaInformation,
-  MxFileReparsePointInformation,
-  MxFileNetworkOpenInformation,
-  MxFileAttributeTagInformation,
-  MxFileTrackingInformation,
-  MxFileIdBothDirectoryInformation,
-  MxFileIdFullDirectoryInformation,
-  MxFileValidDataLengthInformation,
-  MxFileShortNameInformation
-} MX_FILE_INFORMATION_CLASS;
+#define MxKeyValueBasicInformation           0
+#define MxKeyValueFullInformation            1
+#define MxKeyValuePartialInformation         2
+#define MxKeyValueFullInformationAlign64     3
+#define MxKeyValuePartialInformationAlign64  4
 
-typedef enum {
-  MxObjectNameInformation = 1
-} MX_OBJECT_INFORMATION_CLASS;
+#define MxFileDirectoryInformation           1
+#define MxFileFullDirectoryInformation       2
+#define MxFileBothDirectoryInformation       3
+#define MxFileBasicInformation               4
+#define MxFileStandardInformation            5
+#define MxFileInternalInformation            6
+#define MxFileEaInformation                  7
+#define MxFileAccessInformation              8
+#define MxFileNameInformation                9
+#define MxFileRenameInformation             10
+#define MxFileLinkInformation               11
+#define MxFileNamesInformation              12
+#define MxFileDispositionInformation        13
+#define MxFilePositionInformation           14
+#define MxFileFullEaInformation             15
+#define MxFileModeInformation               16
+#define MxFileAlignmentInformation          17
+#define MxFileAllInformation                18
+#define MxFileAllocationInformation         19
+#define MxFileEndOfFileInformation          20
+#define MxFileAlternateNameInformation      21
+#define MxFileStreamInformation             22
+#define MxFilePipeInformation               23
+#define MxFilePipeLocalInformation          24
+#define MxFilePipeRemoteInformation         25
+#define MxFileMailslotQueryInformation      26
+#define MxFileMailslotSetInformation        27
+#define MxFileCompressionInformation        28
+#define MxFileObjectIdInformation           29
+#define MxFileCompletionInformation         30
+#define MxFileMoveClusterInformation        31
+#define MxFileQuotaInformation              32
+#define MxFileReparsePointInformation       33
+#define MxFileNetworkOpenInformation        34
+#define MxFileAttributeTagInformation       35
+#define MxFileTrackingInformation           36
+#define MxFileIdBothDirectoryInformation    37
+#define MxFileIdFullDirectoryInformation    38
+#define MxFileValidDataLengthInformation    39
+#define MxFileShortNameInformation          40
 
-typedef enum {
-  MxNotificationEvent = 0,
-  MxSynchronizationEvent
-} MX_EVENT_TYPE;
+#define MxObjectBasicInformation             0
+#define MxObjectNameInformation              1
+#define MxObjectTypeInformation              2
+
+#define MxNotificationEvent                  0
+#define MxSynchronizationEvent               1
 
 //-----------------------------------------------------------
 
@@ -891,7 +879,7 @@ __DECLARE(NTSTATUS, RtlCreateUserThread)(_In_ HANDLE ProcessHandle, _In_opt_ PSE
 //--------
 
 __DECLARE(NTSTATUS, NtCreateEvent)(_Out_ PHANDLE EventHandle, _In_ ACCESS_MASK DesiredAccess,
-                                   _In_opt_ PMX_OBJECT_ATTRIBUTES ObjectAttributes, _In_ MX_EVENT_TYPE EventType,
+                                   _In_opt_ PMX_OBJECT_ATTRIBUTES ObjectAttributes, _In_ ULONG EventType,
                                    _In_ BOOLEAN InitialState);
 __DECLARE(NTSTATUS, NtOpenEvent)(_Out_ PHANDLE EventHandle, _In_ ACCESS_MASK DesiredAccess,
                                  _In_ PMX_OBJECT_ATTRIBUTES ObjectAttributes);
@@ -932,10 +920,10 @@ __DECLARE(NTSTATUS, NtWriteFile)(_In_ HANDLE FileHandle, _In_opt_ HANDLE Event, 
 __DECLARE(NTSTATUS, NtCancelIoFile)(_In_ HANDLE FileHandle, _Out_ PMX_IO_STATUS_BLOCK IoStatusBlock);
 __DECLARE(NTSTATUS, NtQueryInformationFile)(_In_ HANDLE hFile, _Out_ PMX_IO_STATUS_BLOCK IoStatusBlock,
                                             _Out_ PVOID FileInformationBuffer, _In_ ULONG FileInformationBufferLength,
-                                            _In_ MX_FILE_INFORMATION_CLASS FileInfoClass);
+                                            _In_ ULONG FileInfoClass);
 __DECLARE(NTSTATUS, NtSetInformationFile)(_In_ HANDLE hFile, _Out_ PMX_IO_STATUS_BLOCK IoStatusBlock,
                                           _In_ PVOID FileInformationBuffer, _In_ ULONG FileInformationBufferLength,
-                                          _In_ MX_FILE_INFORMATION_CLASS FileInfoClass);
+                                          _In_ ULONG FileInfoClass);
 
 //--------
 
@@ -945,15 +933,14 @@ __DECLARE(NTSTATUS, NtCreateKey)(_Out_ PHANDLE KeyHandle, _In_ ACCESS_MASK Desir
                                  _Out_opt_ PULONG Disposition);
 __DECLARE(NTSTATUS, NtOpenKey)(_Out_ PHANDLE KeyHandle, _In_ ACCESS_MASK DesiredAccess,
                                _In_ PMX_OBJECT_ATTRIBUTES ObjectAttributes);
-__DECLARE(NTSTATUS, NtEnumerateKey)(_In_ HANDLE KeyHandle, _In_ ULONG Index, _In_ MX_KEY_INFORMATION_CLASS KeyInfoClass,
+__DECLARE(NTSTATUS, NtEnumerateKey)(_In_ HANDLE KeyHandle, _In_ ULONG Index, _In_ ULONG KeyInfoClass,
                                     _Out_ PVOID KeyInformation, _In_ ULONG Length, _Out_ PULONG ResultLength);
 __DECLARE(NTSTATUS, NtEnumerateValueKey)(_In_ HANDLE KeyHandle, _In_ ULONG Index,
-                                         _In_ MX_KEY_VALUE_INFORMATION_CLASS KeyValueInfoClass,
+                                         _In_ ULONG KeyValueInfoClass,
                                          _Out_ PVOID KeyValueInformation, _In_ ULONG Length, _Out_ PULONG ResultLength);
-__DECLARE(NTSTATUS, NtQueryKey)(_In_ HANDLE KeyHandle, _In_ MX_KEY_INFORMATION_CLASS KeyInfoClass,
+__DECLARE(NTSTATUS, NtQueryKey)(_In_ HANDLE KeyHandle, _In_ ULONG KeyInfoClass,
                                 _Out_ PVOID KeyInformation, _In_ ULONG Length, _Out_ PULONG ResultLength);
-__DECLARE(NTSTATUS, NtQueryValueKey)(_In_ HANDLE KeyHandle, _In_ PMX_UNICODE_STRING ValueName,
-                                     _In_ MX_KEY_VALUE_INFORMATION_CLASS KeyValueInfoClass,
+__DECLARE(NTSTATUS, NtQueryValueKey)(_In_ HANDLE KeyHandle, _In_ PMX_UNICODE_STRING ValueName, _In_ ULONG KeyValueInfoClass,
                                      _Out_ PVOID KeyValueInformation, _In_ ULONG Length, _Out_ PULONG ResultLength);
 __DECLARE(NTSTATUS, NtSetValueKey)(_In_ HANDLE KeyHandle, _In_ PMX_UNICODE_STRING ValueName, _In_ ULONG TitleIndex,
                                    _In_ ULONG Type, _In_ PVOID Data, _In_ ULONG DataSize);
@@ -979,29 +966,23 @@ __DECLARE(BOOLEAN, RtlTryEnterCriticalSection)(_In_ RTL_CRITICAL_SECTION* crit);
 
 //--------
 
-__DECLARE(NTSTATUS, RtlGetNativeSystemInformation)(_In_ MX_SYSTEM_INFORMATION_CLASS SystemInformationClass,
-                                                   _Inout_ PVOID SystemInformation, _In_ ULONG SystemInformationLength,
-                                                   _Out_opt_ PULONG ReturnLength);
-__DECLARE(NTSTATUS, NtQuerySystemInformation)(_In_ MX_SYSTEM_INFORMATION_CLASS SystemInformationClass,
-                                              _Inout_ PVOID SystemInformation, _In_ ULONG SystemInformationLength,
-                                              _Out_opt_ PULONG ReturnLength);
+__DECLARE(NTSTATUS, RtlGetNativeSystemInformation)(_In_ ULONG SystemInformationClass, _Inout_ PVOID SystemInformation,
+                                                   _In_ ULONG SystemInformationLength, _Out_opt_ PULONG ReturnLength);
+__DECLARE(NTSTATUS, NtQuerySystemInformation)(_In_ ULONG SystemInformationClass, _Inout_ PVOID SystemInformation,
+                                              _In_ ULONG SystemInformationLength, _Out_opt_ PULONG ReturnLength);
 
-__DECLARE(NTSTATUS, NtQueryInformationProcess)(_In_ HANDLE ProcessHandle,
-                                               _In_ MX_PROCESS_INFORMATION_CLASS ProcessInfoClass,
+__DECLARE(NTSTATUS, NtQueryInformationProcess)(_In_ HANDLE ProcessHandle, _In_ ULONG ProcessInfoClass,
                                                _Out_opt_ PVOID ProcessInfo, _In_ ULONG ProcessInfoLength,
                                                _Out_opt_ PULONG ReturnLength);
-__DECLARE(NTSTATUS, NtSetInformationProcess)(_In_ HANDLE ProcessHandle,
-                                             _In_ MX_PROCESS_INFORMATION_CLASS ProcessInfoClass,
+__DECLARE(NTSTATUS, NtSetInformationProcess)(_In_ HANDLE ProcessHandle, _In_ ULONG ProcessInfoClass,
                                              _In_ PVOID ProcessInformation, _In_ ULONG ProcessInformationLength);
-__DECLARE(NTSTATUS, NtQueryInformationThread)(_In_ HANDLE ThreadHandle,
-                                              _In_ MX_THREAD_INFORMATION_CLASS ThreadInfoClass,
+__DECLARE(NTSTATUS, NtQueryInformationThread)(_In_ HANDLE ThreadHandle, _In_ ULONG ThreadInfoClass,
                                               _Out_opt_ PVOID ThreadInfo, _In_ ULONG ThreadInfoLength,
                                               _Out_opt_ PULONG ReturnLength);
-__DECLARE(NTSTATUS, NtSetInformationThread)(_In_ HANDLE ThreadHandle,
-                                            _In_ MX_THREAD_INFORMATION_CLASS ThreadInformationClass,
+__DECLARE(NTSTATUS, NtSetInformationThread)(_In_ HANDLE ThreadHandle, _In_ ULONG ThreadInformationClass,
                                             _In_ PVOID ThreadInformation, _In_ ULONG ThreadInformationLength);
 
-__DECLARE(NTSTATUS, NtQueryObject)(_In_opt_ HANDLE Handle, _In_ MX_OBJECT_INFORMATION_CLASS ObjectInformationClass,
+__DECLARE(NTSTATUS, NtQueryObject)(_In_opt_ HANDLE Handle, _In_ ULONG ObjectInformationClass,
                                    _Out_opt_ PVOID ObjectInformation, _In_ ULONG ObjectInformationLength,
                                    _Out_opt_ PULONG ReturnLength);
 
@@ -1038,7 +1019,7 @@ __DECLARE(NTSTATUS, NtCreateSection)(_Out_ PHANDLE SectionHandle, _In_ ACCESS_MA
                                      _In_opt_ PMX_OBJECT_ATTRIBUTES ObjectAttributes,
                                      _In_opt_ PLARGE_INTEGER MaximumSize, _In_ ULONG SectionPageProtection,
                                      _In_ ULONG AllocationAttributes, _In_opt_ HANDLE FileHandle);
-__DECLARE(NTSTATUS, NtQuerySection)(_In_ HANDLE SectionHandle, _In_ MX_SECTION_INFORMATION_CLASS InformationClass,
+__DECLARE(NTSTATUS, NtQuerySection)(_In_ HANDLE SectionHandle, _In_ ULONG InformationClass,
                                     _Out_ PVOID InformationBuffer, _In_ ULONG InformationBufferSize,
                                     _Out_opt_ PULONG ResultLength);
 __DECLARE(NTSTATUS, NtMapViewOfSection)(_In_ HANDLE SectionHandle, _In_ HANDLE ProcessHandle,
@@ -1072,7 +1053,7 @@ __DECLARE(NTSTATUS, NtFlushInstructionCache)(_In_ HANDLE ProcessHandle, _In_ PVO
 
 __DECLARE(PVOID, RtlAllocateHeap)(_In_ PVOID HeapHandle, _In_opt_ ULONG Flags, _In_ SIZE_T Size);
 __DECLARE(PVOID, RtlReAllocateHeap)(_In_ PVOID HeapHandle, _In_opt_ ULONG Flags, _In_ PVOID Ptr, _In_ SIZE_T Size);
-__DECLARE(BOOLEAN, RtlFreeHeap)(_In_ PVOID HeapHandle, _In_opt_ ULONG Flags, _In_ PVOID HeapBase);
+__DECLARE(BOOLEAN, RtlFreeHeap)(_In_ PVOID HeapHandle, _In_opt_ ULONG Flags, _Frees_ptr_opt_ PVOID HeapBase);
 __DECLARE(PVOID, RtlCreateHeap)(_In_ ULONG Flags, _In_opt_ PVOID HeapBase, _In_opt_ SIZE_T ReserveSize,
                                 _In_opt_ SIZE_T CommitSize, _In_opt_ PVOID Lock, _In_opt_ PVOID Parameters);
 __DECLARE(PVOID, RtlDestroyHeap)(_In_ PVOID HeapHandle);
@@ -1186,9 +1167,9 @@ LONG MxGetProcessorArchitecture();
 HANDLE MxOpenProcess(_In_ DWORD dwDesiredAccess, _In_ BOOL bInheritHandle, _In_ DWORD dwProcessId);
 HANDLE MxOpenThread(_In_ DWORD dwDesiredAccess, _In_ BOOL bInheritHandle, _In_ DWORD dwThreadId);
 
-NTSTATUS MxCreateFile(_Out_ HANDLE *lphFile, _In_ LPCWSTR szFileNameW, _In_ DWORD dwDesiredAccess,
+NTSTATUS MxCreateFile(_Out_ HANDLE *lphFile, _In_z_ LPCWSTR szFileNameW, _In_ DWORD dwDesiredAccess,
                       _In_ DWORD dwShareMode, _In_ DWORD dwCreationDisposition, _In_ DWORD dwFlagsAndAttributes,
-                      _In_ LPSECURITY_ATTRIBUTES lpSecurityAttributes);
+                      _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes);
 
 //1 or 0 on success, STATUS_NOT_SUPPORTED if o.s. bitness is < 64 or STATUS_### on error
 NTSTATUS MxIsWow64(_In_ HANDLE hProcess);

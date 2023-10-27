@@ -27,6 +27,10 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <windows.h>
 
+#ifdef SQLITEINT_H
+  #pragma warning(disable : 6201 6385 6011 6387 28182 26454)
+#endif //SQLITEINT_H
+
 //-----------------------------------------------------------
 
 #define SQLITE_THREADSAFE                 1
@@ -49,10 +53,6 @@
 #ifdef _DEBUG
   #define SQLITE_DEBUG                    1
 #endif //_DEBUG
-
-#if defined(_M_IX86)
-  #define SQLITE_4_BYTE_ALIGNED_MALLOC    1
-#endif //_M_IX86
 
 //-----------------------------------------------------------
 

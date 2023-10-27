@@ -61,7 +61,7 @@ public:
     };
 
 private:
-  HANDLE hIOCP;
+  HANDLE hIOCP{ NULL };
 };
 
 //-----------------------------------------------------------
@@ -121,12 +121,11 @@ private:
   public:
     CThread() : CBaseMemObj(), TClassWorkerThread<CIoCompletionPortThreadPool>()
       {
-      nFlags = 0;
       return;
       };
 
   public:
-    LONG nFlags;
+    LONG nFlags{ 0 };
     CLnkLstNode cListNode;
   };
 
@@ -139,17 +138,17 @@ private:
   OnThreadStartCallback cThreadStartCallback;
   OnThreadEndCallback cThreadEndCallback;
   OnThreadStartErrorCallback cThreadStartErrorCallback;
-  DWORD dwMinThreadsCount, dwMaxThreadsCount;
-  DWORD dwWorkerThreadIdleTimeoutMs, dwShutdownThreadThreshold;
-  DWORD dwThreadStackSize;
-  int nThreadPriority;
-  LPCSTR szPoolNameA;
+  DWORD dwMinThreadsCount{ 0 }, dwMaxThreadsCount{ 0 };
+  DWORD dwWorkerThreadIdleTimeoutMs{ 2000 }, dwShutdownThreadThreshold{ 2 };
+  DWORD dwThreadStackSize{ 0 };
+  int nThreadPriority{ THREAD_PRIORITY_NORMAL };
+  LPCSTR szPoolNameA{ NULL };
   CIoCompletionPort cIOCP;
   struct {
-    LONG volatile nMutex;
-    LONG volatile nShuttingDown;
-    LONG volatile nBusyCount;
-    LONG volatile nActiveCount;
+    LONG volatile nMutex{ MX_FASTLOCK_INIT };
+    LONG volatile nShuttingDown{ 0 };
+    LONG volatile nBusyCount{ 0 };
+    LONG volatile nActiveCount{ 0 };
     CLnkLst cList;
   } sThreads;
 };

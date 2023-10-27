@@ -7,22 +7,23 @@
 
 package File::Copy;
 
-use 5.006;
+use 5.035007;
 use strict;
 use warnings; no warnings 'newline';
+no warnings 'experimental::builtin';
+use builtin 'blessed';
+use overload;
 use File::Spec;
 use Config;
-# During perl build, we need File::Copy but Scalar::Util might not be built yet
-# And then we need these games to avoid loading overload, as that will
-# confuse miniperl during the bootstrap of perl.
-my $Scalar_Util_loaded = eval q{ require Scalar::Util; require overload; 1 };
+# We want HiRes stat and utime if available
+BEGIN { eval q{ use Time::HiRes qw( stat utime ) } };
 our(@ISA, @EXPORT, @EXPORT_OK, $VERSION, $Too_Big, $Syscopy_is_copy);
 sub copy;
 sub syscopy;
 sub cp;
 sub mv;
 
-$VERSION = '2.31';
+$VERSION = '2.41';
 
 require Exporter;
 @ISA = qw(Exporter);
@@ -44,8 +45,8 @@ sub carp {
 sub _catname {
     my($from, $to) = @_;
     if (not defined &basename) {
-	require File::Basename;
-	import  File::Basename 'basename';
+        require File::Basename;
+        File::Basename->import( 'basename' );
     }
 
     return File::Spec->catfile($to, basename($from));
@@ -54,8 +55,7 @@ sub _catname {
 # _eq($from, $to) tells whether $from and $to are identical
 sub _eq {
     my ($from, $to) = map {
-        $Scalar_Util_loaded && Scalar::Util::blessed($_)
-	    && overload::Method($_, q{""})
+        blessed($_) && overload::Method($_, q{""})
             ? "$_"
             : $_
     } (@_);
@@ -98,11 +98,11 @@ sub copy {
     }
 
     if ((($Config{d_symlink} && $Config{d_readlink}) || $Config{d_link}) &&
-	!($^O eq 'MSWin32' || $^O eq 'os2')) {
+	!($^O eq 'os2')) {
 	my @fs = stat($from);
 	if (@fs) {
 	    my @ts = stat($to);
-	    if (@ts && $fs[0] == $ts[0] && $fs[1] == $ts[1] && !-p $from) {
+	    if (@ts && $fs[0] == $ts[0] && $fs[1] eq $ts[1] && !-p $from) {
 		carp("'$from' and '$to' are identical (not copied)");
                 return 0;
 	    }
@@ -117,7 +117,6 @@ sub copy {
 	&& !$to_a_handle
 	&& !($from_a_handle && $^O eq 'os2' )	# OS/2 cannot handle handles
 	&& !($from_a_handle && $^O eq 'MSWin32')
-	&& !($from_a_handle && $^O eq 'NetWare')
        )
     {
         if ($^O eq 'VMS' && -e $from
@@ -340,14 +339,14 @@ File::Copy - Copy files or filehandles
 
 	use File::Copy;
 
-	copy("sourcefile","destinationfile") or die "Copy failed: $!";
-	copy("Copy.pm",\*STDOUT);
-	move("/dev1/sourcefile","/dev2/destinationfile");
+	copy("sourcefile", "destinationfile") or die "Copy failed: $!";
+	copy("Copy.pm", \*STDOUT);
+	move("/dev1/sourcefile", "/dev2/destinationfile");
 
 	use File::Copy "cp";
 
-	$n = FileHandle->new("/a/file","r");
-	cp($n,"x");
+	my $n = FileHandle->new("/a/file", "r");
+	cp($n, "x");
 
 =head1 DESCRIPTION
 
@@ -396,9 +395,12 @@ You may use the syntax C<use File::Copy "cp"> to get at the C<cp>
 alias for this function. The syntax is I<exactly> the same.  The
 behavior is nearly the same as well: as of version 2.15, C<cp> will
 preserve the source file's permission bits like the shell utility
-C<cp(1)> would do, while C<copy> uses the default permissions for the
-target file (which may depend on the process' C<umask>, file
-ownership, inherited ACLs, etc.).  If an error occurs in setting
+C<cp(1)> would do with default options, while C<copy> uses the default
+permissions for the target file (which may depend on the process'
+C<umask>, file ownership, inherited ACLs, etc.).  That is, if the
+destination file already exists, C<cp> will leave its permissions
+unchanged; otherwise the permissions are taken from the source file
+and modified by the C<umask>.  If an error occurs in setting
 permissions, C<cp> will return 0, regardless of whether the file was
 successfully copied.
 
@@ -479,6 +481,11 @@ from the input filespec, then all timestamps other than the
 revision date are propagated.  If this parameter is not supplied,
 it defaults to 0.
 
+C<rmscopy> is VMS specific and cannot be exported; it must be
+referenced by its full name, e.g.:
+
+  File::Copy::rmscopy($from, $to) or die $!;
+
 Like C<copy>, C<rmscopy> returns 1 on success.  If an error occurs,
 it sets C<$!>, deletes the output file, and returns 0.
 
@@ -494,7 +501,7 @@ $! will be set if an error was encountered.
 Before calling copy() or move() on a filehandle, the caller should
 close or flush() the file to avoid writes being lost. Note that this
 is the case even for move(), because it may actually copy the file,
-depending on the OS-specific inplementation, and the underlying
+depending on the OS-specific implementation, and the underlying
 filesystem(s).
 
 =head1 AUTHOR

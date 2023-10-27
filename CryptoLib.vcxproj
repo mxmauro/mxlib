@@ -21,20 +21,22 @@
   <ItemGroup>
     <ClInclude Include="Include\Crypto\AsymmetricCipher.h" />
     <ClInclude Include="Include\Crypto\Base64.h" />
-    <ClInclude Include="Include\Crypto\DhParam.h" />
     <ClInclude Include="Include\Crypto\EncryptionKey.h" />
     <ClInclude Include="Include\Crypto\SecureBuffer.h" />
     <ClInclude Include="Include\Crypto\SecureRandom.h" />
     <ClInclude Include="Include\Crypto\SymmetricCipher.h" />
     <ClInclude Include="Include\Crypto\MessageDigest.h" />
+    <ClInclude Include="Source\Crypto\CRC32_Provider.h" />
     <ClInclude Include="Source\Crypto\InitOpenSSL.h" />
+    <ClInclude Include="Source\Crypto\SecureBuffer_BIO.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Crypto\AsymmetricCipher.cpp" />
     <ClCompile Include="Source\Crypto\Base64.cpp" />
-    <ClCompile Include="Source\Crypto\DhParam.cpp" />
+    <ClCompile Include="Source\Crypto\CRC32_Provider.cpp" />
     <ClCompile Include="Source\Crypto\EncryptionKey.cpp" />
     <ClCompile Include="Source\Crypto\SecureBuffer.cpp" />
+    <ClCompile Include="Source\Crypto\SecureBuffer_BIO.cpp" />
     <ClCompile Include="Source\Crypto\SecureRandom.cpp" />
     <ClCompile Include="Source\Crypto\SymmetricCipher.cpp" />
     <ClCompile Include="Source\Crypto\MessageDigest.cpp" />
@@ -52,12 +54,14 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <SpectreMitigation>Spectre</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <SpectreMitigation>Spectre</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
@@ -65,6 +69,7 @@
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <SpectreMitigation>Spectre</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
@@ -72,6 +77,7 @@
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <SpectreMitigation>Spectre</SpectreMitigation>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -125,11 +131,12 @@
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <ExceptionHandling>Async</ExceptionHandling>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source\OpenSSL\Source\Include;$(ProjectDir)Source\OpenSSL\Generated</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\OpenSSL\Generated\include\$(Platform)\$(Configuration);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <EnablePREfast>false</EnablePREfast>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,10 +151,11 @@
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <ExceptionHandling>Async</ExceptionHandling>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source\OpenSSL\Source\Include;$(ProjectDir)Source\OpenSSL\Generated</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\OpenSSL\Generated\include\$(Platform)\$(Configuration);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnablePREfast>false</EnablePREfast>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -164,7 +172,7 @@
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <ExceptionHandling>Async</ExceptionHandling>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source\OpenSSL\Source\Include;$(ProjectDir)Source\OpenSSL\Generated</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\OpenSSL\Generated\include\$(Platform)\$(Configuration);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnablePREfast>false</EnablePREfast>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
@@ -186,7 +194,7 @@
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <ExceptionHandling>Async</ExceptionHandling>
-      <AdditionalIncludeDirectories>$(ProjectDir)Source\OpenSSL\Source\Include;$(ProjectDir)Source\OpenSSL\Generated</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)Source\OpenSSL\Generated\include\$(Platform)\$(Configuration);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <EnablePREfast>false</EnablePREfast>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>

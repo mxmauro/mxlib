@@ -27,9 +27,11 @@
 #include <OpenSSL\conf.h>
 #include <OpenSSL\pkcs12err.h>
 #include <corecrt_share.h>
+#include "CRC32_Provider.h"
+#include "SecureBuffer_BIO.h"
 
-#pragma comment(lib, "libssl.lib")
-#pragma comment(lib, "libcrypto.lib")
+#pragma comment(lib, "openssl_libssl.lib")
+#pragma comment(lib, "openssl_libcrypto.lib")
 
 //-----------------------------------------------------------
 
@@ -123,29 +125,39 @@ HRESULT GetLastErrorCode(_In_ HRESULT hResDefault)
 {
   unsigned long err;
   BOOL bHasError = FALSE;
-  HRESULT hRes = hResDefault;
 
   while ((err = ERR_get_error()) != 0)
   {
-    if (ERR_GET_REASON(err) == ERR_R_MALLOC_FAILURE)
-    {
-      hRes = E_OUTOFMEMORY;
-      break;
-    }
-    if (ERR_GET_LIB(err) == ERR_LIB_PKCS12 && ERR_GET_REASON(err) == PKCS12_R_MAC_VERIFY_FAILURE)
-    {
-      hRes = HRESULT_FROM_WIN32(ERROR_INVALID_PASSWORD);
-      break;
-    }
     bHasError = TRUE;
+    switch (ERR_GET_REASON(err))
+    {
+      case EVP_R_UNSUPPORTED_ALGORITHM:
+      case ERR_R_UNSUPPORTED:
+        return E_NOTIMPL;
+
+      case ERR_R_MALLOC_FAILURE:
+        return E_OUTOFMEMORY;
+
+      case CRYPTO_R_TOO_SMALL_BUFFER:
+        return MX_E_BufferOverflow;
+
+      case PKCS12_R_MAC_VERIFY_FAILURE:
+        switch (ERR_GET_LIB(err))
+        {
+          case ERR_LIB_PKCS12:
+            return HRESULT_FROM_WIN32(ERROR_INVALID_PASSWORD);
+        }
+        break;
+
+      case CRYPTO_R_ZERO_LENGTH_NUMBER:
+        break;
+    }
   }
   if (bHasError != FALSE)
   {
     ERR_clear_error();
-    if (hRes == S_OK)
-      hRes = hResDefault;
   }
-  return hRes;
+  return hResDefault;
 }
 
 SSL_CTX* GetSslContext(_In_ BOOL bServerSide)
@@ -181,6 +193,7 @@ SSL_CTX* GetSslContext(_In_ BOOL bServerSide)
         nId = fnv_64a_buf(&lp, sizeof(lp), FNV1A_64_INIT);
         lp = (LPVOID)&nSslContextMutex;
         nId = fnv_64a_buf(&lp, sizeof(lp), nId);
+#pragma warning(suppress : 28159)
         dw = ::GetTickCount();
         nId = fnv_64a_buf(&dw, sizeof(dw), nId);
         SSL_CTX_set_session_id_context(lpSslCtx, (unsigned char*)&nId, (unsigned int)sizeof(nId));
@@ -213,6 +226,29 @@ SSL_CTX* GetSslContext(_In_ BOOL bServerSide)
   }
   //done
   return lpSslContexts[(bServerSide != FALSE) ? 1 : 0];
+}
+
+BOOL IsPEM(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize)
+{
+  LPCSTR sA = (LPCSTR)lpData;
+
+  //detect PEM or DER
+  for (SIZE_T i = 0; i < nDataSize; i += 1)
+  {
+    if (sA[i] == '-')
+    {
+      if (nDataSize - i >= 11 &&
+          MX::StrNCompareA(sA + i, "-----BEGIN ", 11) == 0)
+      {
+        return TRUE;
+      }
+    }
+    else if (sA[i] != ' ' && sA[i] != '\t' && sA[i] != '\r' && sA[i] != '\n')
+    {
+      break;
+    }
+  }
+  return FALSE;
 }
 
 } //namespace OpenSSL
@@ -253,14 +289,10 @@ static HRESULT _OpenSSL_Init()
       CRYPTO_set_mem_functions(&my_malloc_withinfo, &my_realloc_withinfo, &my_free);
 #endif //__HEAPS_COUNT && __HEAPS_COUNT > 0
 
-#ifdef _DEBUG
-      CRYPTO_set_mem_debug(1);
-      CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
-#endif //_DEBUG
-
       //init lib
-      if (OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS | OPENSSL_INIT_LOAD_CRYPTO_STRINGS |
-                           OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS, NULL) == 0)
+      if (OPENSSL_init_ssl(OPENSSL_INIT_ENGINE_ALL_BUILTIN | OPENSSL_INIT_LOAD_SSL_STRINGS |
+                           OPENSSL_INIT_LOAD_CRYPTO_STRINGS | OPENSSL_INIT_ADD_ALL_CIPHERS |
+                           OPENSSL_INIT_ADD_ALL_DIGESTS | OPENSSL_INIT_NO_ATEXIT, NULL) == 0)
       {
 #if defined(__HEAPS_COUNT) && __HEAPS_COUNT > 0
         for (SIZE_T i = 0; i < __HEAPS_COUNT; i++)
@@ -272,6 +304,22 @@ static HRESULT _OpenSSL_Init()
         return E_OUTOFMEMORY;
       }
       ERR_clear_error();
+
+      //register our custom crc32 provider
+      hRes = MX::Internals::OpenSSL::InitializeCRC32Provider();
+      if (FAILED(hRes))
+      {
+        OpenSSL_Shutdown();
+        return hRes;
+      }
+
+      //create secure buffer BIO
+      hRes = MX::Internals::OpenSSL::InitializeSecureBufferBIO();
+      if (FAILED(hRes))
+      {
+        OpenSSL_Shutdown();
+        return hRes;
+      }
 
       //register shutdown callback
       hRes = MX::RegisterFinalizer(&OpenSSL_Shutdown, OPENSSL_FINALIZER_PRIORITY);
@@ -294,6 +342,8 @@ static HRESULT _OpenSSL_Init()
 
 static VOID OpenSSL_Shutdown()
 {
+  MX::Internals::OpenSSL::FinalizeSecureBufferBIO();
+  MX::Internals::OpenSSL::FinalizeCRC32Provider();
   for (SIZE_T i = 0; i < MX_ARRAYLEN(lpSslContexts); i++)
   {
     if (lpSslContexts[i] != NULL)
@@ -302,14 +352,6 @@ static VOID OpenSSL_Shutdown()
       lpSslContexts[i] = NULL;
     }
   }
-
-  FIPS_mode_set(0);
-  CONF_modules_unload(1);
-  EVP_cleanup();
-  CRYPTO_cleanup_all_ex_data();
-  ERR_free_strings();
-
-  OPENSSL_thread_stop();
   OPENSSL_cleanup();
 
 #if defined(__HEAPS_COUNT) && __HEAPS_COUNT > 0

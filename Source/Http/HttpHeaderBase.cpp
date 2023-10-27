@@ -372,6 +372,7 @@ BOOL CHttpHeaderBase::RawISO_8859_1_to_UTF8(_Out_ CStringW &cStrDestW, _In_ LPCW
       szInputA[nInputLen++] = (CHAR)(UCHAR)(*szSrcW++);
     }
 
+#pragma warning(suppress : 6001 6054)
     len = Utf8_DecodeChar(szDestW, szInputA, nInputLen);
     if (len > 0)
     {
@@ -478,12 +479,12 @@ HRESULT CHttpHeaderArray::Merge(_In_ CHttpHeaderBase *lpSrc, _In_ BOOL bForceRep
   if (lpSrc == NULL)
     return E_POINTER;
 
-  nDuplicateBehavior = CHttpHeaderBase::DuplicateBehaviorReplace;
+  nDuplicateBehavior = CHttpHeaderBase::eDuplicateBehavior::Replace;
   if (bForceReplaceExisting == FALSE)
   {
     SIZE_T i, nCount;
 
-    nDuplicateBehavior = CHttpHeaderBase::DuplicateBehaviorAdd;
+    nDuplicateBehavior = CHttpHeaderBase::eDuplicateBehavior::Add;
     nCount = GetCount();
     for (i = 0; i < nCount; i++)
     {
@@ -491,7 +492,7 @@ HRESULT CHttpHeaderArray::Merge(_In_ CHttpHeaderBase *lpSrc, _In_ BOOL bForceRep
       if (StrCompareA(lpHeader->GetHeaderName(), lpSrc->GetHeaderName(), TRUE) == 0)
       {
         nDuplicateBehavior = lpHeader->GetDuplicateBehavior();
-        if (nDuplicateBehavior == CHttpHeaderBase::DuplicateBehaviorError)
+        if (nDuplicateBehavior == CHttpHeaderBase::eDuplicateBehavior::Error)
           return MX_E_AlreadyExists;
         nHeaderIndex = i;
         break;
@@ -500,7 +501,7 @@ HRESULT CHttpHeaderArray::Merge(_In_ CHttpHeaderBase *lpSrc, _In_ BOOL bForceRep
   }
   switch (nDuplicateBehavior)
   {
-    case CHttpHeaderBase::DuplicateBehaviorReplace:
+    case CHttpHeaderBase::eDuplicateBehavior::Replace:
       if (AddElement(lpSrc) == FALSE)
         return E_OUTOFMEMORY;
       lpSrc->AddRef();
@@ -509,7 +510,7 @@ HRESULT CHttpHeaderArray::Merge(_In_ CHttpHeaderBase *lpSrc, _In_ BOOL bForceRep
         RemoveElementAt(nHeaderIndex);
       break;
 
-    case CHttpHeaderBase::DuplicateBehaviorMerge:
+    case CHttpHeaderBase::eDuplicateBehavior::Merge:
       hRes = lpHeader->Merge(lpSrc);
       if (FAILED(hRes))
         return hRes;

@@ -33,7 +33,8 @@ class CEncryptionKey : public virtual TRefCounted<CBaseMemObj>
 {
 public:
   typedef enum {
-    AlgorithmRSA = 0, AlgorithmED25519, AlgorithmED448
+    Unknown = -1,
+    RSA = 0, ED25519, ED448, Poly1305, DSA, DH, DHX
   } eAlgorithm;
 
 public:
@@ -41,30 +42,31 @@ public:
   CEncryptionKey(_In_ const CEncryptionKey &cSrc) throw(...);
   ~CEncryptionKey();
 
-  CEncryptionKey &operator=(CEncryptionKey const &cSrc) throw(...);
+  CEncryptionKey &operator=(_In_ CEncryptionKey const &cSrc) throw(...);
 
   HRESULT Generate(_In_ MX::CEncryptionKey::eAlgorithm nAlgorithm, _In_opt_ SIZE_T nBitsCount = 0);
   SIZE_T GetBitsCount() const;
 
   BOOL HasPrivateKey() const;
 
-  HRESULT SetPublicKeyFromDER(_In_ LPCVOID lpKey, _In_ SIZE_T nKeySize);
-  HRESULT SetPublicKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA = NULL,
-                              _In_opt_ SIZE_T nPemLen = (SIZE_T)-1);
-  HRESULT GetPublicKey(_Out_ CSecureBuffer **lplpBuffer);
+  // This method auto detects PEM and DER formats
+  HRESULT Set(_In_ LPCVOID lpKey, _In_ SIZE_T nKeySize, _In_opt_z_ LPCSTR szPasswordA = NULL);
+  VOID Set(_In_ EVP_PKEY *lpKey);
 
-  HRESULT SetPrivateKeyFromDER(_In_ LPCVOID lpKey, _In_ SIZE_T nKeySize);
-  HRESULT SetPrivateKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA = NULL,
-                               _In_opt_ SIZE_T nPemLen = (SIZE_T)-1);
+  HRESULT GetPublicKey(_Out_ CSecureBuffer **lplpBuffer);
   HRESULT GetPrivateKey(_Out_ CSecureBuffer **lplpBuffer);
+  HRESULT GetKeyParams(_Out_ CSecureBuffer **lplpBuffer);
 
   EVP_PKEY* GetPKey() const
     {
     return lpKey;
     };
 
+  int GetBaseId() const;
+  eAlgorithm GetAlgorithm() const;
+
 private:
-  EVP_PKEY *lpKey;
+  EVP_PKEY *lpKey{ NULL };
 };
 
 } //namespace MX

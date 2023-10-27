@@ -34,18 +34,18 @@ static struct tagValidSchemes {
   MX::CUrl::eScheme nCode;
   int nDefaultPort;
 } aValidSchemes[] = {
-  { L"mailto",      MX::CUrl::SchemeMailTo,           -1 },
-  { L"news",        MX::CUrl::SchemeNews,             -1 },
-  { L"http",        MX::CUrl::SchemeHttp,             80 },
-  { L"https",       MX::CUrl::SchemeHttps,           443 },
-  { L"ftp",         MX::CUrl::SchemeFtp,              21 },
-  { L"file",        MX::CUrl::SchemeFile,             -1 },
-  { L"resource",    MX::CUrl::SchemeResource,         -1 },
-  { L"nntp",        MX::CUrl::SchemeNntp,             -1 },
-  { L"gopher",      MX::CUrl::SchemeGopher,           -1 },
-  { L"ws",          MX::CUrl::SchemeWebSocket,        80 },
-  { L"wss",         MX::CUrl::SchemeSecureWebSocket, 443 },
-  { NULL,           MX::CUrl::SchemeUnknown,          -1 }
+  { L"mailto",      MX::CUrl::eScheme::MailTo,           -1 },
+  { L"news",        MX::CUrl::eScheme::News,             -1 },
+  { L"http",        MX::CUrl::eScheme::Http,             80 },
+  { L"https",       MX::CUrl::eScheme::Https,           443 },
+  { L"ftp",         MX::CUrl::eScheme::Ftp,              21 },
+  { L"file",        MX::CUrl::eScheme::File,             -1 },
+  { L"resource",    MX::CUrl::eScheme::Resource,         -1 },
+  { L"nntp",        MX::CUrl::eScheme::Nntp,             -1 },
+  { L"gopher",      MX::CUrl::eScheme::Gopher,           -1 },
+  { L"ws",          MX::CUrl::eScheme::WebSocket,        80 },
+  { L"wss",         MX::CUrl::eScheme::SecureWebSocket, 443 },
+  { NULL,           MX::CUrl::eScheme::Unknown,          -1 }
 };
 
 //-----------------------------------------------------------
@@ -136,6 +136,8 @@ namespace MX {
 CUrl::CUrl() : CBaseMemObj()
 {
   nPort = -1;
+  bIdnaAllowUnassigned = FALSE;
+  bIdnaUseStd3AsciiRules = FALSE;
   return;
 }
 
@@ -669,7 +671,7 @@ LPCWSTR CUrl::GetUserInfo() const
   return (LPCWSTR)cStrUserInfoW;
 }
 
-HRESULT CUrl::ToString(_Inout_ CStringA &cStrDestA, _In_ int nFlags)
+HRESULT CUrl::ToString(_Inout_ CStringA &cStrDestA, _In_ eToStringFlags nFlags)
 {
   eScheme nSchemeType;
   CStringA cStrTempA;
@@ -684,7 +686,7 @@ HRESULT CUrl::ToString(_Inout_ CStringA &cStrDestA, _In_ int nFlags)
   nSchemeType = Scheme2Enum((LPCWSTR)cStrSchemeW);
   switch (nSchemeType)
   {
-    case CUrl::SchemeNone:
+    case CUrl::eScheme::None:
 #if defined(ENABLE_FILE_SCHEME_AUTODETECTION)
       //no scheme, check if path is relative else assume file
       sW = (LPCWSTR)cStrPathW;
@@ -712,7 +714,7 @@ HRESULT CUrl::ToString(_Inout_ CStringA &cStrDestA, _In_ int nFlags)
       }
 #endif //ENABLE_FILE_SCHEME_AUTODETECTION
 
-      if ((nFlags & ToStringAddPath) != 0)
+      if ((nFlags & eToStringFlags::AddPath) != (eToStringFlags)0)
       {
         if (cStrPathW.IsEmpty() != FALSE)
         {
@@ -726,7 +728,7 @@ err_nomem:  hRes = E_OUTOFMEMORY;
         {
           if (cStrTempW.Copy((LPCWSTR)cStrPathW) == FALSE)
             goto err_nomem;
-          if ((nFlags & ToStringShrinkPath) == 0)
+          if ((nFlags & eToStringFlags::ShrinkPath) == (eToStringFlags)0)
             hRes = NormalizePath(cStrTempW, (LPCWSTR)cStrSchemeW);
           else
             hRes = ReducePath(cStrTempW, (LPCWSTR)cStrSchemeW);
@@ -738,14 +740,14 @@ err_nomem:  hRes = E_OUTOFMEMORY;
       }
       break;
 
-    case CUrl::SchemeMailTo:
-    case CUrl::SchemeNews:
-      if ((nFlags & ToStringAddScheme) != 0)
+    case CUrl::eScheme::MailTo:
+    case CUrl::eScheme::News:
+      if ((nFlags & eToStringFlags::AddScheme) != (eToStringFlags)0)
       {
-        if (cStrDestA.Concat((nSchemeType == CUrl::SchemeMailTo) ? "mailto:" : "news:") == FALSE)
+        if (cStrDestA.Concat((nSchemeType == CUrl::eScheme::MailTo) ? "mailto:" : "news:") == FALSE)
           goto err_nomem;
       }
-      if ((nFlags & ToStringAddPath) != 0)
+      if ((nFlags & eToStringFlags::AddPath) != (eToStringFlags)0)
       {
         hRes = ToStringEncode(cStrDestA, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), "/@:");
         if (FAILED(hRes))
@@ -754,7 +756,7 @@ err_nomem:  hRes = E_OUTOFMEMORY;
       break;
 
     default:
-      if ((nFlags & ToStringAddScheme) != 0)
+      if ((nFlags & eToStringFlags::AddScheme) != (eToStringFlags)0)
       {
         if (cStrDestA.Concat((LPCWSTR)cStrSchemeW) == FALSE ||
             cStrDestA.Concat("://") == FALSE)
@@ -764,10 +766,10 @@ err_nomem:  hRes = E_OUTOFMEMORY;
       }
 
       //add host
-      if ((nFlags & ToStringAddHostPort) != 0 && cStrHostW.IsEmpty() == FALSE &&
-          nSchemeType != CUrl::SchemeFile)
+      if ((nFlags & eToStringFlags::AddHostPort) != (eToStringFlags)0 && cStrHostW.IsEmpty() == FALSE &&
+          nSchemeType != CUrl::eScheme::File)
       {
-        if ((nFlags & ToStringAddUserInfo) != 0 && cStrUserInfoW.IsEmpty() == FALSE)
+        if ((nFlags & eToStringFlags::AddUserInfo) != (eToStringFlags)0 && cStrUserInfoW.IsEmpty() == FALSE)
         {
           hRes = ToStringEncode(cStrDestA, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), "!$&'()*+,;=:");
           if (FAILED(hRes))
@@ -791,7 +793,7 @@ err_nomem:  hRes = E_OUTOFMEMORY;
             if (aValidSchemes[i].nCode == nSchemeType)
               break;
           }
-          if ((nFlags & ToStringDontAddHostPortIfDefault) == 0 || aValidSchemes[i].szNameW == NULL ||
+          if ((nFlags & eToStringFlags::DontAddHostPortIfDefault) == (eToStringFlags)0 || aValidSchemes[i].szNameW == NULL ||
               aValidSchemes[i].nDefaultPort != nPort)
           {
             if (cStrDestA.AppendFormat(":%ld", nPort) == FALSE)
@@ -801,7 +803,7 @@ err_nomem:  hRes = E_OUTOFMEMORY;
       }
 
       //add path
-      if ((nFlags & ToStringAddPath) != 0)
+      if ((nFlags & eToStringFlags::AddPath) != (eToStringFlags)0)
       {
         if (cStrPathW.IsEmpty() != FALSE)
         {
@@ -812,7 +814,7 @@ err_nomem:  hRes = E_OUTOFMEMORY;
         {
           if (cStrTempW.Copy((LPCWSTR)cStrPathW) == FALSE)
             goto err_nomem;
-          if ((nFlags & ToStringShrinkPath) == 0)
+          if ((nFlags & eToStringFlags::ShrinkPath) == (eToStringFlags)0)
             hRes = NormalizePath(cStrTempW, (LPCWSTR)cStrSchemeW);
           else
             hRes = ReducePath(cStrTempW, (LPCWSTR)cStrSchemeW);
@@ -826,7 +828,7 @@ err_nomem:  hRes = E_OUTOFMEMORY;
   }
 
   //query strings
-  if ((nFlags & ToStringAddQueryStrings) != 0)
+  if ((nFlags & eToStringFlags::AddQueryStrings) != (eToStringFlags)0)
   {
     nCount = cQueryStringsList.GetCount();
     for (i = 0; i < nCount; i++)
@@ -848,11 +850,11 @@ err_nomem:  hRes = E_OUTOFMEMORY;
   }
 
   //fragment
-  if ((nFlags & ToStringAddFragment) != 0 && cStrFragmentW.IsEmpty() == FALSE)
+  if ((nFlags & eToStringFlags::AddFragment) != (eToStringFlags)0 && cStrFragmentW.IsEmpty() == FALSE)
   {
     if (cStrDestA.Concat("#") == FALSE)
       goto err_nomem;
-    hRes = ToStringEncode(cStrDestA, cQueryStringsList[i]->szValueW, StrLenW(cQueryStringsList[i]->szValueW), NULL);
+    hRes = ToStringEncode(cStrDestA, (LPCWSTR)cStrFragmentW, cStrFragmentW.GetLength(), NULL);
     if (FAILED(hRes))
       goto done;
   }
@@ -865,7 +867,7 @@ done:
   return hRes;
 }
 
-HRESULT CUrl::ToString(_Inout_ CStringW &cStrDestW, _In_ int nFlags)
+HRESULT CUrl::ToString(_Inout_ CStringW &cStrDestW, _In_ eToStringFlags nFlags)
 {
   eScheme nSchemeType;
   CStringA cStrTempA;
@@ -880,7 +882,7 @@ HRESULT CUrl::ToString(_Inout_ CStringW &cStrDestW, _In_ int nFlags)
   nSchemeType = Scheme2Enum((LPCWSTR)cStrSchemeW);
   switch (nSchemeType)
   {
-    case CUrl::SchemeNone:
+    case CUrl::eScheme::None:
 #if defined(ENABLE_FILE_SCHEME_AUTODETECTION)
       //no scheme, check if path is relative else assume file
       sW = (LPCWSTR)cStrPathW;
@@ -908,7 +910,7 @@ HRESULT CUrl::ToString(_Inout_ CStringW &cStrDestW, _In_ int nFlags)
       }
 #endif //ENABLE_FILE_SCHEME_AUTODETECTION
 
-      if ((nFlags & ToStringAddPath) != 0)
+      if ((nFlags & eToStringFlags::AddPath) != (eToStringFlags)0)
       {
         if (cStrPathW.IsEmpty() != FALSE)
         {
@@ -922,7 +924,7 @@ err_nomem:  hRes = E_OUTOFMEMORY;
         {
           if (cStrTempW.Copy((LPCWSTR)cStrPathW) == FALSE)
             goto err_nomem;
-          if ((nFlags & ToStringShrinkPath) == 0)
+          if ((nFlags & eToStringFlags::ShrinkPath) == (eToStringFlags)0)
             hRes = NormalizePath(cStrTempW, (LPCWSTR)cStrSchemeW);
           else
             hRes = ReducePath(cStrTempW, (LPCWSTR)cStrSchemeW);
@@ -934,14 +936,14 @@ err_nomem:  hRes = E_OUTOFMEMORY;
       }
       break;
 
-    case CUrl::SchemeMailTo:
-    case CUrl::SchemeNews:
-      if ((nFlags & ToStringAddScheme) != 0)
+    case CUrl::eScheme::MailTo:
+    case CUrl::eScheme::News:
+      if ((nFlags & eToStringFlags::AddScheme) != (eToStringFlags)0)
       {
-        if (cStrDestW.Concat((nSchemeType == CUrl::SchemeMailTo) ? L"mailto:" : L"news:") == FALSE)
+        if (cStrDestW.Concat((nSchemeType == CUrl::eScheme::MailTo) ? L"mailto:" : L"news:") == FALSE)
           goto err_nomem;
       }
-      if ((nFlags & ToStringAddPath) != 0)
+      if ((nFlags & eToStringFlags::AddPath) != (eToStringFlags)0)
       {
         hRes = ToStringEncode(cStrDestW, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), L"/@:");
         if (FAILED(hRes))
@@ -950,7 +952,7 @@ err_nomem:  hRes = E_OUTOFMEMORY;
       break;
 
     default:
-      if ((nFlags & ToStringAddScheme) != 0)
+      if ((nFlags & eToStringFlags::AddScheme) != (eToStringFlags)0)
       {
         if (cStrDestW.Concat((LPCWSTR)cStrSchemeW) == FALSE ||
             cStrDestW.Concat(L"://") == FALSE)
@@ -960,10 +962,10 @@ err_nomem:  hRes = E_OUTOFMEMORY;
       }
 
       //add host
-      if ((nFlags & ToStringAddHostPort) != 0 && cStrHostW.IsEmpty() == FALSE &&
-          nSchemeType != CUrl::SchemeFile)
+      if ((nFlags & eToStringFlags::AddHostPort) != (eToStringFlags)0 && cStrHostW.IsEmpty() == FALSE &&
+          nSchemeType != CUrl::eScheme::File)
       {
-        if ((nFlags & ToStringAddUserInfo) != 0 && cStrUserInfoW.IsEmpty() == FALSE)
+        if ((nFlags & eToStringFlags::AddUserInfo) != (eToStringFlags)0 && cStrUserInfoW.IsEmpty() == FALSE)
         {
           hRes = ToStringEncode(cStrDestW, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), L"!$&'()*+,;=:");
           if (FAILED(hRes))
@@ -992,7 +994,7 @@ err_nomem:  hRes = E_OUTOFMEMORY;
       }
 
       //add path
-      if ((nFlags & ToStringAddPath) != 0)
+      if ((nFlags & eToStringFlags::AddPath) != (eToStringFlags)0)
       {
         if (cStrPathW.IsEmpty() != FALSE)
         {
@@ -1003,7 +1005,7 @@ err_nomem:  hRes = E_OUTOFMEMORY;
         {
           if (cStrTempW.Copy((LPCWSTR)cStrPathW) == FALSE)
             goto err_nomem;
-          if ((nFlags & ToStringShrinkPath) == 0)
+          if ((nFlags & eToStringFlags::ShrinkPath) == (eToStringFlags)0)
             hRes = NormalizePath(cStrTempW, (LPCWSTR)cStrSchemeW);
           else
             hRes = ReducePath(cStrTempW, (LPCWSTR)cStrSchemeW);
@@ -1017,7 +1019,7 @@ err_nomem:  hRes = E_OUTOFMEMORY;
   }
 
   //query strings
-  if ((nFlags & ToStringAddQueryStrings) != 0)
+  if ((nFlags & eToStringFlags::AddQueryStrings) != (eToStringFlags)0)
   {
     nCount = cQueryStringsList.GetCount();
     for (i = 0; i<nCount; i++)
@@ -1039,11 +1041,11 @@ err_nomem:  hRes = E_OUTOFMEMORY;
   }
 
   //fragment
-  if ((nFlags & ToStringAddFragment) != 0 && cStrFragmentW.IsEmpty() == FALSE)
+  if ((nFlags & eToStringFlags::AddFragment) != (eToStringFlags)0 && cStrFragmentW.IsEmpty() == FALSE)
   {
     if (cStrDestW.Concat(L"#") == FALSE)
       goto err_nomem;
-    hRes = ToStringEncode(cStrDestW, cQueryStringsList[i]->szValueW, StrLenW(cQueryStringsList[i]->szValueW), NULL);
+    hRes = ToStringEncode(cStrDestW, (LPCWSTR)cStrFragmentW, cStrFragmentW.GetLength(), NULL);
     if (FAILED(hRes))
       goto done;
   }
@@ -1066,7 +1068,7 @@ HRESULT CUrl::ParseFromString(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nSrcLen)
 
   //clean
   Reset();
-  nSchemeType = CUrl::SchemeUnknown;
+  nSchemeType = CUrl::eScheme::Unknown;
 
   //check parameters
   if (nSrcLen == (SIZE_T)-1)
@@ -1096,7 +1098,7 @@ err_fail:
   if (nPos == (SIZE_T)-1)
   {
     //no scheme detected, may be a file or a relative path
-    nSchemeType = CUrl::SchemeNone;
+    nSchemeType = CUrl::eScheme::None;
 
     //count the number of slashes
     for (i = nSrcLen, sA = szUrlA; i > 0 && IsSlash(*sA) != FALSE; sA++, i--);
@@ -1108,7 +1110,7 @@ err_fail:
       //if at least one slash, assume a file so set scheme
       if (cStrSchemeW.Copy(L"file") == FALSE)
         goto goto err_nomem;
-      nSchemeType = CUrl::SchemeFile;
+      nSchemeType = CUrl::eScheme::File;
     }
 #endif //ENABLE_FILE_SCHEME_AUTODETECTION
 
@@ -1132,7 +1134,7 @@ err_fail:
       goto err_fail;
     if (cStrSchemeW.Copy(L"file") == FALSE)
       goto err_nomem;
-    nSchemeType = CUrl::SchemeFile;
+    nSchemeType = CUrl::eScheme::File;
     goto copy_path;
   }
 #endif //ENABLE_FILE_SCHEME_AUTODETECTION
@@ -1151,7 +1153,7 @@ err_nomem:
   nSrcLen -= nPos + 1;
   nSchemeType = Scheme2Enum((LPCWSTR)cStrSchemeW);
 
-  if (nSchemeType == CUrl::SchemeMailTo || nSchemeType == CUrl::SchemeNews)
+  if (nSchemeType == CUrl::eScheme::MailTo || nSchemeType == CUrl::eScheme::News)
   {
     //get mail/domain from szUrlW
     nPos = FindChar(szUrlA, nSrcLen, "?#", NULL);
@@ -1170,7 +1172,7 @@ err_nomem:
     //do check validity
     if (IsValidEMailAddress((LPCWSTR)cStrPathW, cStrPathW.GetLength()) == FALSE)
     {
-      if (nSchemeType != CUrl::SchemeNews)
+      if (nSchemeType != CUrl::eScheme::News)
         goto err_fail;
       hRes = ValidateHostAddress(cStrPathW);
       if (FAILED(hRes))
@@ -1196,7 +1198,7 @@ err_nomem:
   //check special case for file uri'sW where host name, if exists, is "localhost"
   switch (nSchemeType)
   {
-    case CUrl::SchemeFile:
+    case CUrl::eScheme::File:
       if (cStrTempHostA.IsEmpty() == FALSE && IsLocalHost((LPCSTR)cStrTempHostA) != FALSE)
       {
         //strip
@@ -1362,7 +1364,7 @@ parse_params:
       goto done;
   }
 
-  if (nSchemeType != CUrl::SchemeMailTo && nSchemeType != CUrl::SchemeNews)
+  if (nSchemeType != CUrl::eScheme::MailTo && nSchemeType != CUrl::eScheme::News)
   {
     hRes = NormalizePath(cStrPathW, (LPCWSTR)cStrSchemeW);
     if (FAILED(hRes))
@@ -1388,7 +1390,7 @@ HRESULT CUrl::ParseFromString(_In_z_ LPCWSTR szUrlW, _In_opt_ SIZE_T nSrcLen)
 
   //clean
   Reset();
-  nSchemeType = CUrl::SchemeUnknown;
+  nSchemeType = CUrl::eScheme::Unknown;
 
   //check parameters
   if (nSrcLen == (SIZE_T)-1)
@@ -1419,7 +1421,7 @@ err_fail:
   if (nPos == (SIZE_T)-1)
   {
     //no scheme detected, may be a file or a relative path
-    nSchemeType = CUrl::SchemeNone;
+    nSchemeType = CUrl::eScheme::None;
 
     //count the number of slashes
     for (i = nSrcLen, sW = szUrlW; i > 0 && IsSlash(*sW) != FALSE; sW++, i--);
@@ -1472,7 +1474,7 @@ err_nomem:
   nSrcLen -= nPos + 1;
   nSchemeType = Scheme2Enum((LPCWSTR)cStrSchemeW);
 
-  if (nSchemeType == CUrl::SchemeMailTo || nSchemeType == CUrl::SchemeNews)
+  if (nSchemeType == CUrl::eScheme::MailTo || nSchemeType == CUrl::eScheme::News)
   {
     //get mail/domain from szUrlW
     nPos = FindChar(szUrlW, nSrcLen, L"?#", NULL);
@@ -1488,7 +1490,7 @@ err_nomem:
     //do check validity
     if (IsValidEMailAddress((LPCWSTR)cStrPathW, cStrPathW.GetLength()) == FALSE)
     {
-      if (nSchemeType != CUrl::SchemeNews)
+      if (nSchemeType != CUrl::eScheme::News)
         goto err_fail;
       hRes = ValidateHostAddress(cStrPathW);
       if (FAILED(hRes))
@@ -1514,7 +1516,7 @@ err_nomem:
   //check special case for file uri'sW where host name, if exists, is "localhost"
   switch (nSchemeType)
   {
-    case CUrl::SchemeFile:
+    case CUrl::eScheme::File:
       if (cStrTempHostW.IsEmpty() == FALSE && IsLocalHost((LPCWSTR)cStrTempHostW) != FALSE)
       {
         //strip
@@ -1684,7 +1686,7 @@ parse_params:
       goto done;
   }
 
-  if (nSchemeType != CUrl::SchemeMailTo && nSchemeType != CUrl::SchemeNews)
+  if (nSchemeType != CUrl::eScheme::MailTo && nSchemeType != CUrl::eScheme::News)
   {
     hRes = NormalizePath(cStrPathW, (LPCWSTR)cStrSchemeW);
     if (FAILED(hRes))
@@ -1733,24 +1735,24 @@ HRESULT CUrl::Merge(_In_ const CUrl& cOtherUrl)
     if (IsAlpha(sW[i]) != FALSE && (sW[i + 1] == L':' || sW[i + 1] == L'|'))
     {
       //drive letter?
-      if (lpParts->nType == CUrl::SchemeNone)
-        lpParts->nType = CUrl::SchemeFile;
+      if (lpParts->nType == CUrl::eScheme::None)
+        lpParts->nType = CUrl::eScheme::File;
       lpParts->bPathIsAbsolute = TRUE;
     }
     else if (i > 0)
     {
       lpParts->bPathIsAbsolute = TRUE;
     }
-    else if (lpParts->nType == CUrl::SchemeNews ||
-             lpParts->nType == CUrl::SchemeMailTo ||
-             lpParts->nType == CUrl::SchemeUnknown)
+    else if (lpParts->nType == CUrl::eScheme::News ||
+             lpParts->nType == CUrl::eScheme::MailTo ||
+             lpParts->nType == CUrl::eScheme::Unknown)
     {
       lpParts->bPathIsAbsolute = TRUE;
     }
     else if (lpParts->szHostW[0] != 0)
     {
-      if (lpParts->nType == CUrl::SchemeNone)
-        lpParts->nType = CUrl::SchemeHttp;
+      if (lpParts->nType == CUrl::eScheme::None)
+        lpParts->nType = CUrl::eScheme::Http;
       lpParts->bPathIsAbsolute = TRUE;
     }
     else
@@ -1765,9 +1767,9 @@ HRESULT CUrl::Merge(_In_ const CUrl& cOtherUrl)
   //RFC 2396 - Section 5.2 - Step 3 Paragraph II
   if (sOther.nType == sBase.nType)
   {
-    sOther.nType = CUrl::SchemeNone;
+    sOther.nType = CUrl::eScheme::None;
   }
-  else if (sOther.nType != CUrl::SchemeNone)
+  else if (sOther.nType != CUrl::eScheme::None)
   {
     //if scheme changed... 'sOther' is absolute
     if (cStrSchemeW.Copy((LPCWSTR)(cOtherUrl.cStrSchemeW)) == FALSE ||
@@ -1783,13 +1785,13 @@ HRESULT CUrl::Merge(_In_ const CUrl& cOtherUrl)
   }
 
   //RFC 2396 - Section 5.2 - Step 2
-  if (sOther.nType == CUrl::SchemeNone && *sOther.szHostW == 0 && sOther.nPathLength == 0)
+  if (sOther.nType == CUrl::eScheme::None && *sOther.szHostW == 0 && sOther.nPathLength == 0)
     goto merge_copyqueryandfrag;
 
   //RFC 2396 - Section 5.2 - Step 4 (check if host is different)
   if (sOther.szHostW[0] != 0)
   {
-    if (sOther.nType != CUrl::SchemeNone)
+    if (sOther.nType != CUrl::eScheme::None)
     {
       if (cStrSchemeW.Copy((LPCWSTR)(cOtherUrl.cStrSchemeW)) == FALSE)
         return E_OUTOFMEMORY;
@@ -2130,13 +2132,13 @@ static MX::CUrl::eScheme Scheme2Enum(_In_z_ LPCWSTR szSchemeW)
   SIZE_T i;
 
   if (szSchemeW == NULL || *szSchemeW == 0)
-    return MX::CUrl::SchemeNone;
+    return MX::CUrl::eScheme::None;
   for (i = 0; aValidSchemes[i].szNameW != NULL; i++)
   {
     if (MX::StrCompareW(szSchemeW, aValidSchemes[i].szNameW, TRUE) == 0)
       return aValidSchemes[i].nCode;
   }
-  return MX::CUrl::SchemeUnknown;
+  return MX::CUrl::eScheme::Unknown;
 }
 
 static HRESULT ValidateHostAddress(_Inout_ MX::CStringW &cStrHostW)
@@ -2252,7 +2254,7 @@ static HRESULT NormalizePath(_Inout_ MX::CStringW &cStrPathW, _In_z_ LPCWSTR szS
   //get scheme and gather for filename
   sW = (LPWSTR)cStrPathW;
   nSchemeType = Scheme2Enum(szSchemeW);
-  bCanBeFilename = (nSchemeType == MX::CUrl::SchemeNone || nSchemeType == MX::CUrl::SchemeFile) ? TRUE : FALSE;
+  bCanBeFilename = (nSchemeType == MX::CUrl::eScheme::None || nSchemeType == MX::CUrl::eScheme::File) ? TRUE : FALSE;
   //count slashes at beginning
   for (k=0; sW[k]==L'/'; k++);
   //check if it is a filename
@@ -2342,7 +2344,7 @@ static HRESULT ReducePath(_Inout_ MX::CStringW &cStrPathW, _In_z_ LPCWSTR szSche
   if (FAILED(hRes))
     return hRes;
   nSchemeType = Scheme2Enum(szSchemeW);
-  bCanBeFilename = (nSchemeType == MX::CUrl::SchemeNone || nSchemeType == MX::CUrl::SchemeFile) ? TRUE : FALSE;
+  bCanBeFilename = (nSchemeType == MX::CUrl::eScheme::None || nSchemeType == MX::CUrl::eScheme::File) ? TRUE : FALSE;
   sW = (LPWSTR)cStrPathW;
   nStartOfs = 0;
   if (bCanBeFilename != FALSE)

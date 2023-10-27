@@ -1,31 +1,18 @@
 @rem = '--*-Perl-*--
-@echo off
-if "%OS%" == "Windows_NT" goto WinNT
-IF EXIST "%~dp0perl.exe" (
-"%~dp0perl.exe" -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-) ELSE IF EXIST "%~dp0..\..\bin\perl.exe" (
-"%~dp0..\..\bin\perl.exe" -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-) ELSE (
-perl -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-)
-
-goto endofperl
+@set "ErrorLevel="
+@if "%OS%" == "Windows_NT" @goto WinNT
+@perl -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
+@set ErrorLevel=%ErrorLevel%
+@goto endofperl
 :WinNT
-IF EXIST "%~dp0perl.exe" (
-"%~dp0perl.exe" -x -S %0 %*
-) ELSE IF EXIST "%~dp0..\..\bin\perl.exe" (
-"%~dp0..\..\bin\perl.exe" -x -S %0 %*
-) ELSE (
-perl -x -S %0 %*
-)
-
-if NOT "%COMSPEC%" == "%SystemRoot%\system32\cmd.exe" goto endofperl
-if %errorlevel% == 9009 echo You do not have Perl in your PATH.
-if errorlevel 1 goto script_failed_so_exit_with_non_zero_val 2>nul
-goto endofperl
+@perl -x -S %0 %*
+@set ErrorLevel=%ErrorLevel%
+@if NOT "%COMSPEC%" == "%SystemRoot%\system32\cmd.exe" @goto endofperl
+@if %ErrorLevel% == 9009 @echo You do not have Perl in your PATH.
+@goto endofperl
 @rem ';
 #!perl
-#line 29
+#line 30
     eval 'exec perl -S $0 "$@"'
         if 0;
 
@@ -114,7 +101,9 @@ This option assumes that the formatter (see above) understands the option
 =item I<file>
 
 The pathname of a file containing pod documentation to be output in
-usage message format (defaults to standard input).
+usage message format. If omitted, standard input is read - but the
+output is then formatted with L<Pod::Text> only - unless a specific
+formatter has been specified with B<-formatter>.
 
 =back
 
@@ -129,7 +118,8 @@ module. Please see L<Pod::Usage/pod2usage()>.
 
 =head1 SEE ALSO
 
-L<Pod::Usage>, L<pod2text(1)>
+L<Pod::Usage>, L<pod2text>, L<Pod::Text>, L<Pod::Text::Termcap>,
+L<perldoc>
 
 =head1 AUTHOR
 
@@ -168,14 +158,13 @@ pod2usage(VERBOSE => 2)  if ($options{man});
 ## Dont default to STDIN if connected to a terminal
 pod2usage(2) if ((@ARGV == 0) && (-t STDIN));
 
-@ARGV = ('-')  unless (@ARGV);
 if (@ARGV > 1) {
     print STDERR "pod2usage: Too many filenames given\n\n";
     pod2usage(2);
 }
 
 my %usage = ();
-$usage{-input}    = shift(@ARGV);
+$usage{-input}    = shift(@ARGV) || \*STDIN;
 $usage{-exitval}  = $options{'exit'}      if (defined $options{'exit'});
 $usage{-output}   = $options{'output'}    if (defined $options{'output'});
 $usage{-verbose}  = $options{'verbose'}   if (defined $options{'verbose'});
@@ -185,6 +174,6 @@ $usage{-utf8}     = $options{'utf8'}      if (defined $options{'utf8'});
 pod2usage(\%usage);
 
 
-
 __END__
 :endofperl
+@set "ErrorLevel=" & @goto _undefined_label_ 2>NUL || @"%COMSPEC%" /d/c @exit %ErrorLevel%

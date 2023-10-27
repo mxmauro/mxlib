@@ -40,7 +40,7 @@ public:
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return DuplicateBehaviorMerge;
+    return eDuplicateBehavior::Merge;
     };
 
   HRESULT AddVersion(_In_ int nVersion);

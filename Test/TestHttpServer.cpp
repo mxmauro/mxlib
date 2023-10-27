@@ -49,7 +49,7 @@ public:
   HRESULT OnQuerySslCertificates(_In_ MX::CHttpServer *lpHttp,
                                  _Outptr_result_maybenull_ MX::CSslCertificate **lplpSslCert,
                                  _Outptr_result_maybenull_ MX::CEncryptionKey **lplpSslPrivKey,
-                                 _Outptr_result_maybenull_ MX::CDhParam **lplpDhParam)
+                                 _Outptr_result_maybenull_ MX::CEncryptionKey **lplpDhParam)
     {
     UNREFERENCED_PARAMETER(lpHttp);
 
@@ -65,7 +65,7 @@ public:
 public:
   MX::TAutoRefCounted<MX::CSslCertificate> cSslCert;
   MX::TAutoRefCounted<MX::CEncryptionKey> cSslPrivateKey;
-  MX::TAutoRefCounted<MX::CDhParam> cSslDhParam;
+  MX::TAutoRefCounted<MX::CEncryptionKey> cSslDhParam;
 };
 
 //-----------------------------------------------------------
@@ -126,7 +126,7 @@ int TestHttpServer()
     {
       cHttpServer.cSslCert.Attach(MX_DEBUG_NEW MX::CSslCertificate());
       if (cHttpServer.cSslCert)
-        hRes = cHttpServer.cSslCert->InitializeFromPEM((LPCSTR)cStrTempA);
+        hRes = cHttpServer.cSslCert->Set((LPCSTR)cStrTempA, cStrTempA.GetLength());
       else
         hRes = E_OUTOFMEMORY;
     }
@@ -141,7 +141,7 @@ int TestHttpServer()
     {
       cHttpServer.cSslPrivateKey.Attach(MX_DEBUG_NEW MX::CEncryptionKey());
       if (cHttpServer.cSslPrivateKey)
-        hRes = cHttpServer.cSslPrivateKey->SetPrivateKeyFromPEM((LPCSTR)cStrTempA);
+        hRes = cHttpServer.cSslPrivateKey->Set((LPCSTR)cStrTempA, cStrTempA.GetLength());
       else
         hRes = E_OUTOFMEMORY;
     }
@@ -154,9 +154,9 @@ int TestHttpServer()
       hRes = LoadTxtFile(cStrTempA, (LPCWSTR)cStrTempW);
     if (SUCCEEDED(hRes))
     {
-      cHttpServer.cSslDhParam.Attach(MX_DEBUG_NEW MX::CDhParam());
+      cHttpServer.cSslDhParam.Attach(MX_DEBUG_NEW MX::CEncryptionKey());
       if (cHttpServer.cSslDhParam)
-        hRes = cHttpServer.cSslDhParam->SetFromPEM((LPCSTR)cStrTempA);
+        hRes = cHttpServer.cSslDhParam->Set((LPCSTR)cStrTempA, cStrTempA.GetLength());
       else
         hRes = E_OUTOFMEMORY;
     }
@@ -180,7 +180,7 @@ int TestHttpServer()
     cOptions.dwMaxAcceptsToPost = 16;
     //cOptions.dwMaxRequestsPerSecond = 0;
     //cOptions.dwBurstSize = 0;
-    hRes = cHttpServer.StartListening(MX::CSockets::FamilyIPv4, (int)dwPort, &cOptions);
+    hRes = cHttpServer.StartListening(MX::CSockets::eFamily::IPv4, (int)dwPort, &cOptions);
   }
   //----
   if (SUCCEEDED(hRes))

@@ -94,7 +94,7 @@ static HRESULT GetProxyConfiguration(_In_opt_z_ LPCWSTR szTargetUrlW, _Out_ MX::
                                      _Out_ int *lpnPort);
 static HRESULT GetProxyForAutoSettings(_In_ HINTERNET hSession, _In_z_ LPCWSTR szUrlW,
                                        _In_opt_z_ LPCWSTR szAutoConfigUrlW, _Out_ LPWSTR *lpwszProxyW);
-static BOOL IsValidProxyValue(_In_ MX::CStringW &cStrProxyW, _Out_ int *lpnPort, _In_opt_z_ LPCWSTR szTargetUrlW);
+static BOOL IsValidProxyValue(_Inout_ MX::CStringW &cStrProxyW, _Out_ int *lpnPort, _In_opt_z_ LPCWSTR szTargetUrlW);
 
 //-----------------------------------------------------------
 
@@ -102,14 +102,14 @@ namespace MX {
 
 CProxy::CProxy() : CBaseMemObj()
 {
-  nType = TypeNone;
+  nType = eType::None;
   nPort = 0;
   return;
 }
 
 CProxy::CProxy(_In_ const CProxy& cSrc) throw(...) : CBaseMemObj()
 {
-  nType = TypeNone;
+  nType = eType::None;
   nPort = 0;
   operator=(cSrc);
   return;
@@ -145,7 +145,7 @@ CProxy& CProxy::operator=(_In_ const CProxy& cSrc) throw(...)
 
 VOID CProxy::SetDirect()
 {
-  nType = TypeNone;
+  nType = eType::None;
   cStrAddressW.Empty();
   nPort = 0;
   return;
@@ -164,7 +164,7 @@ HRESULT CProxy::SetManual(_In_z_ LPCWSTR szProxyServerW)
     return E_OUTOFMEMORY;
   if (IsValidProxyValue(cStrTempAddressW, &nTempPort, NULL) == FALSE)
     return E_INVALIDARG;
-  nType = TypeManual;
+  nType = eType::Manual;
   cStrAddressW.Attach(cStrTempAddressW.Detach());
   nPort = nTempPort;
   return S_OK;
@@ -172,7 +172,7 @@ HRESULT CProxy::SetManual(_In_z_ LPCWSTR szProxyServerW)
 
 VOID CProxy::SetUseIE()
 {
-  nType = TypeUseIE;
+  nType = eType::UseIE;
   cStrAddressW.Empty();
   nPort = 0;
   return;
@@ -198,7 +198,7 @@ HRESULT CProxy::SetCredentials(_In_opt_z_ LPCWSTR szUserNameW, _In_opt_z_ LPCWST
 
 HRESULT CProxy::Resolve(_In_opt_z_ LPCWSTR szTargetUrlW)
 {
-  if (nType == TypeUseIE)
+  if (nType == eType::UseIE)
   {
     MX::CStringW cStrTempAddressW;
     int nTempPort;
@@ -231,7 +231,7 @@ HRESULT CProxy::Resolve(_In_ CUrl &cUrl)
   MX::CStringW cStrTempW;
   HRESULT hRes;
 
-  hRes = cUrl.ToString(cStrTempW, CUrl::ToStringAddScheme | CUrl::ToStringAddHostPort);
+  hRes = cUrl.ToString(cStrTempW, CUrl::eToStringFlags::AddScheme | CUrl::eToStringFlags::AddHostPort);
   if (SUCCEEDED(hRes))
     hRes = Resolve((LPCWSTR)cStrTempW);
   return hRes;

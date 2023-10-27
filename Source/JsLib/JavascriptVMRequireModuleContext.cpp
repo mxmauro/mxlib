@@ -81,14 +81,14 @@ HRESULT CJavascriptVM::CRequireModuleContext::AddNativeFunction(_In_z_ LPCSTR sz
 
 HRESULT CJavascriptVM::CRequireModuleContext::AddProperty(_In_z_ LPCSTR szPropertyNameA,
                                                           _In_opt_ BOOL bInitialValueOnStack,
-                                                          _In_opt_ int nFlags)
+                                                          _In_opt_ ePropertyFlags nFlags)
 {
   return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, nExportsObjectIndex, szPropertyNameA, bInitialValueOnStack,
                                              nFlags, NullCallback(), NullCallback());
 }
 
 HRESULT CJavascriptVM::CRequireModuleContext::AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ LPCSTR szValueA,
-                                                                _In_opt_ int nFlags)
+                                                                _In_opt_ ePropertyFlags nFlags)
 {
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   HRESULT hRes;
@@ -110,7 +110,7 @@ HRESULT CJavascriptVM::CRequireModuleContext::AddStringProperty(_In_z_ LPCSTR sz
 }
 
 HRESULT CJavascriptVM::CRequireModuleContext::AddBooleanProperty(_In_z_ LPCSTR szPropertyNameA, _In_ BOOL bValue,
-                                                                 _In_opt_ int nFlags)
+                                                                 _In_opt_ ePropertyFlags nFlags)
 {
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   HRESULT hRes;
@@ -130,7 +130,7 @@ HRESULT CJavascriptVM::CRequireModuleContext::AddBooleanProperty(_In_z_ LPCSTR s
 }
 
 HRESULT CJavascriptVM::CRequireModuleContext::AddNumericProperty(_In_z_ LPCSTR szPropertyNameA, _In_ double nValue,
-                                                                 _In_opt_ int nFlags)
+                                                                 _In_opt_ ePropertyFlags nFlags)
 {
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   HRESULT hRes;
@@ -148,7 +148,8 @@ HRESULT CJavascriptVM::CRequireModuleContext::AddNumericProperty(_In_z_ LPCSTR s
                                              NullCallback(), NullCallback());
 }
 
-HRESULT CJavascriptVM::CRequireModuleContext::AddNullProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ int nFlags)
+HRESULT CJavascriptVM::CRequireModuleContext::AddNullProperty(_In_z_ LPCSTR szPropertyNameA,
+                                                              _In_opt_ ePropertyFlags nFlags)
 {
   CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
   HRESULT hRes;
@@ -167,7 +168,8 @@ HRESULT CJavascriptVM::CRequireModuleContext::AddNullProperty(_In_z_ LPCSTR szPr
 }
 
 HRESULT CJavascriptVM::CRequireModuleContext::AddJsObjectProperty(_In_z_ LPCSTR szPropertyNameA,
-                                                                  _In_ CJsObjectBase *lpObject, _In_opt_ int nFlags)
+                                                                  _In_ CJsObjectBase *lpObject,
+                                                                  _In_opt_ ePropertyFlags nFlags)
 {
   HRESULT hRes;
 
@@ -185,11 +187,11 @@ HRESULT CJavascriptVM::CRequireModuleContext::AddJsObjectProperty(_In_z_ LPCSTR 
 HRESULT CJavascriptVM::CRequireModuleContext::AddPropertyWithCallback(_In_z_ LPCSTR szPropertyNameA,
                                                                       _In_ OnGetPropertyCallback cGetValueCallback,
                                                                       _In_opt_ OnSetPropertyCallback cSetValueCallback,
-                                                                      _In_opt_ int nFlags)
+                                                                      _In_opt_ ePropertyFlags nFlags)
 {
   if (!cGetValueCallback)
     return E_POINTER;
-  nFlags &= ~PropertyFlagWritable;
+  nFlags = nFlags & (~ePropertyFlags::Writable);
   return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, nExportsObjectIndex, szPropertyNameA, FALSE, nFlags,
                                              cGetValueCallback, cSetValueCallback);
 }

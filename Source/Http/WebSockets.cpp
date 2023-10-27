@@ -42,25 +42,8 @@ namespace MX {
 
 CWebSocket::CWebSocket() : CIpc::CUserData()
 {
-  lpIpc = NULL;
-  hConn = NULL;
-  bServerSide = FALSE;
-  //----
-  sReceive.nState = 0;
-  sReceive.uMasking.dwKey = 0;
   sReceive.sCurrentMessage.nOpcode = _OPCODE_NONE;
-  sReceive.sCurrentMessage.lpData = NULL;
-  sReceive.sCurrentMessage.nFilledFrame = sReceive.sCurrentMessage.nTotalDataLength = 0;
-  ::MxMemSet(&(sReceive.sCurrentControlFrame), 0, sizeof(sReceive.sCurrentControlFrame));
-  _InterlockedExchange(&hrCloseError, S_FALSE);
-  //----
-  FastLock_Initialize(&(sSend.nSendInProgressMutex));
-  ::MxMemSet(&(sSend.sFrameHeader), 0, sizeof(sSend.sFrameHeader));
   sSend.sFrameHeader.nOpcode = _OPCODE_NONE;
-  sSend.lpFrameData = NULL;
-  sSend.nFilledFrame = 0;
-  //----
-  ::MxMemSet(&sReceiveCache, 0, sizeof(sReceiveCache));
   return;
 }
 
@@ -180,6 +163,7 @@ HRESULT CWebSocket::SendBinaryMessage(_In_ LPVOID lpData, _In_ SIZE_T nDataLen)
       nToWrite = (ULONG)nDataLen;
 
     //copy data
+#pragma warning(suppress : 6387) //lpFrameData won't be null at this point
     ::MxMemCopy(sSend.lpFrameData, lpData, nToWrite);
 
     //advance pointer
@@ -233,6 +217,7 @@ HRESULT CWebSocket::SendClose(_In_ USHORT wCode, _In_opt_z_ LPCSTR szReasonA)
   nReasonLen = StrLenA(szReasonA);
   if (nReasonLen > 123)
     nReasonLen = 123;
+#pragma warning(suppress : 6387) //nReasonLen has the correct length if szReasonA is null
   ::MxMemCopy(aPayload + 2, szReasonA, nReasonLen);
   //NOTE: InternalSendControlFrame modifies the payload if mask is active
   return InternalSendControlFrame(_OPCODE_ConnectionClose, aPayload, 2 + (ULONG)nReasonLen);
@@ -294,9 +279,7 @@ VOID CWebSocket::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUs
 {
   if (_InterlockedCompareExchange(&hrCloseError, hrErrorCode, S_FALSE) == S_FALSE)
   {
-    HRESULT hRes = __InterlockedRead(&hrErrorCode);
-
-    OnCloseFrame((SUCCEEDED(hRes) ? 1000 : 1006), hRes);
+    OnCloseFrame((SUCCEEDED(hrErrorCode) ? 1000 : 1006), hrErrorCode);
   }
   hConn = NULL;
   return;
@@ -706,7 +689,7 @@ consume_used_and_loop:
   goto consume_used_and_loop;
 }
 
-SIZE_T CWebSocket::BuildFrame(_In_ LPFRAME_HEADER lpFrame, _In_ LPBYTE lpPayload, _In_ ULONG nPayloadSize,
+SIZE_T CWebSocket::BuildFrame(_Out_ LPFRAME_HEADER lpFrame, _In_ LPBYTE lpPayload, _In_ ULONG nPayloadSize,
                               _In_ BYTE nOpcode, _In_ BOOL bFinal)
 {
   SIZE_T nFrameLength, nExtendedLength;
@@ -752,6 +735,7 @@ SIZE_T CWebSocket::BuildFrame(_In_ LPFRAME_HEADER lpFrame, _In_ LPBYTE lpPayload
 
     lpFrame->nMask = 1;
 
+#pragma warning(suppress : 28159)
     uMasking.dw = ::GetTickCount();
     uMasking.dw = fnv_32a_buf(&(uMasking.dw), 4, FNV1A_32_INIT);
     nThis = (SIZE_T)this;

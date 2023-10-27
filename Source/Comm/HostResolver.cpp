@@ -85,17 +85,10 @@ public:
   class CAsyncItem : public virtual CBaseMemObj, public CNonCopyableObj
   {
   public:
-    CAsyncItem(_In_ CHostResolver *_lpResolver, _In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily,
-               _In_ DWORD dwTimeoutMs, _In_ PSOCKADDR_INET lpSockAddr, _In_ HostResolver::OnResultCallback cCallback,
-               _In_ LPVOID lpUserData, _In_ lpfnFreeAddrInfoExW _fnFreeAddrInfoExW) :
-               CBaseMemObj(), CNonCopyableObj()
+    CAsyncItem(_In_ CHostResolver *_lpResolver, _In_ lpfnFreeAddrInfoExW _fnFreeAddrInfoExW) :
+               CBaseMemObj(), CNonCopyableObj(),
+               lpResolver(_lpResolver), fnFreeAddrInfoExW(_fnFreeAddrInfoExW)
       {
-      lpResolver = _lpResolver;
-      fnFreeAddrInfoExW = _fnFreeAddrInfoExW;
-      hCancel = NULL;
-      lpAddrInfoExW = NULL;
-      ::MxMemSet(&(sOvr), 0, sizeof(sOvr));
-      Setup(szHostNameW, nDesiredFamily, dwTimeoutMs, lpSockAddr, cCallback, lpUserData);
       return;
       };
 
@@ -105,12 +98,13 @@ public:
       return;
       };
 
-    VOID Setup(_In_z_ LPCWSTR szHostNameW, _In_ int _nDesiredFamily, _In_ DWORD _dwTimeoutMs,
-               _In_ PSOCKADDR_INET _lpSockAddr, _In_ HostResolver::OnResultCallback _cCallback, _In_ LPVOID _lpUserData)
+    BOOL Setup(_In_z_ LPCWSTR szHostNameW, _In_ int _nDesiredFamily, _In_ DWORD _dwTimeoutMs,
+               _In_ PSOCKADDR_INET _lpSockAddr, _In_ HostResolver::OnResultCallback _cCallback,
+               _In_opt_ LPVOID _lpUserData)
       {
-      nId = 0;
-      cStrHostNameW.Empty();
-      cStrHostNameW.Copy(szHostNameW);
+      if (cStrHostNameW.Copy(szHostNameW) == FALSE)
+        return FALSE;
+      _InterlockedExchange(&nId, 0);
       nDesiredFamily = _nDesiredFamily;
       dwTimeoutMs = _dwTimeoutMs;
       cCallback = _cCallback;
@@ -118,8 +112,7 @@ public:
       _InterlockedExchange(&nFlags, 0);
       lpSockAddr = _lpSockAddr;
       hr = S_FALSE;
-      lpNextInFreeList = NULL;
-      return;
+      return TRUE;
       };
 
     __inline VOID WaitUntilCompleted()
@@ -143,7 +136,7 @@ public:
         lpAddrInfoExW = NULL;
       }
       hCancel = NULL;
-      MxMemSet(&(sOvr), 0, sizeof(sOvr));
+      ::MxMemSet(&(sOvr), 0, sizeof(sOvr));
       return;
       };
 
@@ -152,10 +145,12 @@ public:
       {
       CAsyncItem *lpAsyncItem1 = CONTAINING_RECORD(lpNode1, CAsyncItem, cTreeNode);
       CAsyncItem *lpAsyncItem2 = CONTAINING_RECORD(lpNode2, CAsyncItem, cTreeNode);
+      ULONG nId1 = __InterlockedRead(&(lpAsyncItem1->nId));
+      ULONG nId2 = __InterlockedRead(&(lpAsyncItem2->nId));
 
-      if ((ULONG)(lpAsyncItem1->nId) < (ULONG)(lpAsyncItem2->nId))
+      if (nId1 < nId2)
         return -1;
-      if ((ULONG)(lpAsyncItem1->nId) > (ULONG)(lpAsyncItem2->nId))
+      if (nId1 > nId2)
         return 1;
       return 0;
       };
@@ -173,21 +168,21 @@ public:
 
   public:
     CRedBlackTreeNode cTreeNode;
-    CHostResolver *lpResolver;
-    lpfnFreeAddrInfoExW fnFreeAddrInfoExW;
-    LONG nId;
+    CHostResolver *lpResolver{ NULL };
+    lpfnFreeAddrInfoExW fnFreeAddrInfoExW{ NULL };
+    LONG volatile nId{ 0 };
     CStringW cStrHostNameW;
-    int nDesiredFamily;
-    DWORD dwTimeoutMs;
+    int nDesiredFamily{ 0 };
+    DWORD dwTimeoutMs{ 0 };
     HostResolver::OnResultCallback cCallback;
-    LPVOID lpUserData;
-    LONG volatile nFlags;
+    LPVOID lpUserData{ NULL };
+    LONG volatile nFlags{ 0 };
     PSOCKADDR_INET lpSockAddr;
-    HRESULT hr;
-    OVERLAPPED sOvr;
-    HANDLE hCancel;
-    PADDRINFOEXW lpAddrInfoExW;
-    CAsyncItem *lpNextInFreeList;
+    HRESULT hr{ S_FALSE };
+    OVERLAPPED sOvr{};
+    HANDLE hCancel{ NULL };
+    PADDRINFOEXW lpAddrInfoExW{ NULL };
+    CAsyncItem *lpNextInFreeList{ NULL };
   };
 
 public:
@@ -199,16 +194,18 @@ public:
 
   HRESULT AddResolver(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _Out_ PSOCKADDR_INET lpSockAddr,
                       _In_ DWORD dwTimeoutMs, _In_opt_ HostResolver::OnResultCallback cCallback,
-                      _In_opt_ LPVOID lpUserData, _Out_opt_ LONG volatile *lpnResolverId);
+                      _In_opt_ LPVOID lpUserData, _Inout_opt_ _Interlocked_operand_ LONG volatile *lpnResolverId);
   HRESULT AddResolver(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _Out_ PSOCKADDR_INET lpSockAddr,
                       _In_ DWORD dwTimeoutMs, _In_opt_ HostResolver::OnResultCallback cCallback,
-                      _In_opt_ LPVOID lpUserData, _Out_opt_ LONG volatile *lpnResolverId);
-  HRESULT AddResolverCommon(_Out_ LONG volatile *lpnResolverId, _In_ CAsyncItem *lpNewAsyncItem);
-  VOID RemoveResolver(_Out_ LONG volatile *lpnResolverId);
+                      _In_opt_ LPVOID lpUserData, _Inout_opt_ _Interlocked_operand_ LONG volatile *lpnResolverId);
+  VOID RemoveResolver(_Inout_opt_ _Interlocked_operand_ LONG volatile *lpnResolverId);
 
 private:
+  HRESULT AddResolverCommon(_Inout_opt_ _Interlocked_operand_ LONG volatile *lpnResolverId,
+                            _In_ CAsyncItem *lpNewAsyncItem);
+
   CAsyncItem* AllocAsyncItem(_In_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _In_ DWORD dwTimeoutMs,
-                             _Out_ PSOCKADDR_INET lpSockAddr, _In_ HostResolver::OnResultCallback cCallback,
+                             _In_ PSOCKADDR_INET lpSockAddr, _In_ HostResolver::OnResultCallback cCallback,
                              _In_opt_ LPVOID lpUserData);
   VOID FreeAsyncItem(_In_ CAsyncItem *lpAsyncItem);
 
@@ -219,22 +216,22 @@ private:
   HRESULT ProcessResultsExW(_In_ PSOCKADDR_INET lpSockAddr, _In_ PADDRINFOEXW lpAddrInfoExW, _In_ int nFamily);
 
 private:
-  LONG volatile nRundownLock;
-  LONG volatile nNextResolverId;
-  DWORD dwOsVersion;
-  HINSTANCE hWs2_32Dll;
-  lpfnGetAddrInfoExW fnGetAddrInfoExW;
-  lpfnFreeAddrInfoExW fnFreeAddrInfoExW;
-  lpfnGetAddrInfoExCancel fnGetAddrInfoExCancel;
-  lpfnGetAddrInfoExOverlappedResult fnGetAddrInfoExOverlappedResult;
+  LONG volatile nRundownLock{ MX_RUNDOWNPROT_INIT };
+  LONG volatile nNextResolverId{ 0 };
+  DWORD dwOsVersion{ 0 };
+  HINSTANCE hWs2_32Dll{ NULL };
+  lpfnGetAddrInfoExW fnGetAddrInfoExW{ NULL };
+  lpfnFreeAddrInfoExW fnFreeAddrInfoExW{ NULL };
+  lpfnGetAddrInfoExCancel fnGetAddrInfoExCancel{ NULL };
+  lpfnGetAddrInfoExOverlappedResult fnGetAddrInfoExOverlappedResult{ NULL };
   struct {
-    LONG volatile nMutex;
+    LONG volatile nMutex{ MX_FASTLOCK_INIT };
     CRedBlackTree cTree;
   } sAsyncTasks;
   struct {
-    LONG volatile nMutex;
-    CAsyncItem *lpFirst;
-    int nListCount;
+    LONG volatile nMutex{ MX_FASTLOCK_INIT };
+    CAsyncItem *lpFirst{ NULL };
+    int nListCount{ 0 };
   } sFreeAsyncItems;
 };
 
@@ -272,7 +269,7 @@ namespace HostResolver {
 
 HRESULT Resolve(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _Out_ PSOCKADDR_INET lpSockAddr,
                 _In_ DWORD dwTimeoutMs, _In_opt_ OnResultCallback cCallback, _In_opt_ LPVOID lpUserData,
-                _Out_opt_ LONG volatile *lpnResolverId)
+                _Inout_z_ _Interlocked_operand_ LONG volatile *lpnResolverId)
 {
   TAutoRefCounted<Internals::CHostResolver> cHandler;
 
@@ -290,7 +287,7 @@ HRESULT Resolve(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _Out_ PSOCKA
 
 HRESULT Resolve(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _Out_ PSOCKADDR_INET lpSockAddr,
                 _In_ DWORD dwTimeoutMs, _In_opt_ OnResultCallback cCallback, _In_opt_ LPVOID lpUserData,
-                _Out_opt_ LONG volatile *lpnResolverId)
+                _Inout_z_ _Interlocked_operand_ LONG volatile *lpnResolverId)
 {
   TAutoRefCounted<Internals::CHostResolver> cHandler;
 
@@ -306,7 +303,7 @@ HRESULT Resolve(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _Out_ PSOCK
                                lpnResolverId);
 }
 
-VOID Cancel(_Inout_ LONG volatile *lpnResolverId)
+VOID Cancel(_Inout_z_ _Interlocked_operand_ LONG volatile *lpnResolverId)
 {
   TAutoRefCounted<Internals::CHostResolver> cHandler;
 
@@ -847,24 +844,12 @@ namespace Internals {
 
 CHostResolver::CHostResolver() : TRefCounted<CBaseMemObj>(), CNonCopyableObj()
 {
-  RundownProt_Initialize(&nRundownLock);
-  _InterlockedExchange(&nNextResolverId, 0);
-
-  FastLock_Initialize(&(sAsyncTasks.nMutex));
-  MxMemSet(&sFreeAsyncItems, 0, sizeof(sFreeAsyncItems));
-
   if (::IsWindows8OrGreater() != FALSE)
     dwOsVersion = 0x0800;
   else if (::IsWindows7OrGreater() != FALSE)
     dwOsVersion = 0x0700;
   else
     dwOsVersion = 0x0600;
-
-  hWs2_32Dll = NULL;
-  fnGetAddrInfoExW = NULL;
-  fnFreeAddrInfoExW = NULL;
-  fnGetAddrInfoExCancel = NULL;
-  fnGetAddrInfoExOverlappedResult = NULL;
 
   //load library
   if (SUCCEEDED(Internals::LoadSystemDll(L"ws2_32.dll", &hWs2_32Dll)))
@@ -908,8 +893,7 @@ CHostResolver::~CHostResolver()
   {
     lpAsyncItem = CONTAINING_RECORD(lpNode, CAsyncItem, cTreeNode);
 
-    LONG volatile nId = lpAsyncItem->nId;
-    RemoveResolver(&nId);
+    RemoveResolver(&(lpAsyncItem->nId));
   }
 
   //free list of items
@@ -963,7 +947,7 @@ VOID CHostResolver::Shutdown()
 
 HRESULT CHostResolver::AddResolver(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _Out_ PSOCKADDR_INET lpSockAddr,
                                    _In_ DWORD dwTimeoutMs, _In_opt_ HostResolver::OnResultCallback cCallback,
-                                   _In_opt_ LPVOID lpUserData, _Out_opt_ LONG volatile *lpnResolverId)
+                                   _In_opt_ LPVOID lpUserData, _Inout_opt_ _Interlocked_operand_ LONG volatile *lpnResolverId)
 {
   TAutoDeletePtr<CAsyncItem> cNewAsyncItem;
   HRESULT hRes;
@@ -1069,7 +1053,7 @@ HRESULT CHostResolver::AddResolver(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredF
 
 HRESULT CHostResolver::AddResolver(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _Out_ PSOCKADDR_INET lpSockAddr,
                                    _In_ DWORD dwTimeoutMs, _In_opt_ HostResolver::OnResultCallback cCallback,
-                                   _In_opt_ LPVOID lpUserData, _Out_opt_ LONG volatile *lpnResolverId)
+                                   _In_opt_ LPVOID lpUserData, _Inout_opt_ _Interlocked_operand_ LONG volatile *lpnResolverId)
 {
   TAutoDeletePtr<CAsyncItem> cNewAsyncItem;
   HRESULT hRes;
@@ -1169,49 +1153,7 @@ HRESULT CHostResolver::AddResolver(_In_z_ LPCWSTR szHostNameW, _In_ int nDesired
   }
 }
 
-HRESULT CHostResolver::AddResolverCommon(_Out_ LONG volatile *lpnResolverId, _In_ CAsyncItem *lpNewAsyncItem)
-{
-  //assign resolver id
-  do
-  {
-    lpNewAsyncItem->nId = _InterlockedIncrement(&nNextResolverId);
-  }
-  while (lpNewAsyncItem->nId == 0);
-
-  //insert into tree
-  {
-    CFastLock cQueueLock(&(sAsyncTasks.nMutex));
-    ADDRINFOEXW sHintAddrInfoExW;
-    timeval tv;
-    INT res;
-
-    _InterlockedExchange(lpnResolverId, lpNewAsyncItem->nId);
-
-    sAsyncTasks.cTree.Insert(&(lpNewAsyncItem->cTreeNode), &CAsyncItem::InsertCompareFunc, TRUE);
-
-    tv.tv_sec = (long)(lpNewAsyncItem->dwTimeoutMs / 1000);
-    tv.tv_usec = (long)(lpNewAsyncItem->dwTimeoutMs % 1000);
-
-    MxMemSet(&sHintAddrInfoExW, 0, sizeof(sHintAddrInfoExW));
-    sHintAddrInfoExW.ai_family = lpNewAsyncItem->nDesiredFamily;
-    //NOTE: If we are here, we are using Windows 8+
-    res = fnGetAddrInfoExW((LPCWSTR)(lpNewAsyncItem->cStrHostNameW), NULL, NS_DNS, NULL, &sHintAddrInfoExW,
-                           &(lpNewAsyncItem->lpAddrInfoExW), ((lpNewAsyncItem->dwTimeoutMs != INFINITE) ? &tv : NULL),
-                           &(lpNewAsyncItem->sOvr), &CHostResolver::AsyncQueryCompleteCallback,
-                           &(lpNewAsyncItem->hCancel));
-    if (res != WSA_IO_PENDING) // WSA_IO_PENDING == ERROR_IO_PENDING
-    {
-      sAsyncTasks.cTree.Remove(&(lpNewAsyncItem->cTreeNode));
-      FreeAsyncItem(lpNewAsyncItem);
-      return MX_HRESULT_FROM_WIN32((DWORD)res);
-    }
-  }
-
-  //done
-  return MX_E_IoPending;
-}
-
-VOID CHostResolver::RemoveResolver(_Out_ LONG volatile *lpnResolverId)
+VOID CHostResolver::RemoveResolver(_Inout_opt_ _Interlocked_operand_ LONG volatile *lpnResolverId)
 {
   if (lpnResolverId != NULL)
   {
@@ -1246,8 +1188,51 @@ VOID CHostResolver::RemoveResolver(_Out_ LONG volatile *lpnResolverId)
   return;
 }
 
+HRESULT CHostResolver::AddResolverCommon(_Inout_opt_ _Interlocked_operand_ LONG volatile *lpnResolverId, _In_ CAsyncItem *lpNewAsyncItem)
+{
+  //assign resolver id
+  do
+  {
+    lpNewAsyncItem->nId = _InterlockedIncrement(&nNextResolverId);
+  }
+  while (lpNewAsyncItem->nId == 0);
+
+  //insert into tree
+  {
+    CFastLock cQueueLock(&(sAsyncTasks.nMutex));
+    ADDRINFOEXW sHintAddrInfoExW;
+    timeval tv;
+    INT res;
+
+    if (lpnResolverId != NULL)
+      _InterlockedExchange(lpnResolverId, lpNewAsyncItem->nId);
+
+    sAsyncTasks.cTree.Insert(&(lpNewAsyncItem->cTreeNode), &CAsyncItem::InsertCompareFunc, TRUE);
+
+    tv.tv_sec = (long)(lpNewAsyncItem->dwTimeoutMs / 1000);
+    tv.tv_usec = (long)(lpNewAsyncItem->dwTimeoutMs % 1000);
+
+    MxMemSet(&sHintAddrInfoExW, 0, sizeof(sHintAddrInfoExW));
+    sHintAddrInfoExW.ai_family = lpNewAsyncItem->nDesiredFamily;
+    //NOTE: If we are here, we are using Windows 8+
+    res = fnGetAddrInfoExW((LPCWSTR)(lpNewAsyncItem->cStrHostNameW), NULL, NS_DNS, NULL, &sHintAddrInfoExW,
+                           &(lpNewAsyncItem->lpAddrInfoExW), ((lpNewAsyncItem->dwTimeoutMs != INFINITE) ? &tv : NULL),
+                           &(lpNewAsyncItem->sOvr), &CHostResolver::AsyncQueryCompleteCallback,
+                           &(lpNewAsyncItem->hCancel));
+    if (res != WSA_IO_PENDING) // WSA_IO_PENDING == ERROR_IO_PENDING
+    {
+      sAsyncTasks.cTree.Remove(&(lpNewAsyncItem->cTreeNode));
+      FreeAsyncItem(lpNewAsyncItem);
+      return MX_HRESULT_FROM_WIN32((DWORD)res);
+    }
+  }
+
+  //done
+  return MX_E_IoPending;
+}
+
 CHostResolver::CAsyncItem* CHostResolver::AllocAsyncItem(_In_ LPCWSTR szHostNameW, _In_ int nDesiredFamily,
-                                                         _In_ DWORD dwTimeoutMs, _Out_ PSOCKADDR_INET lpSockAddr,
+                                                         _In_ DWORD dwTimeoutMs, _In_ PSOCKADDR_INET lpSockAddr,
                                                          _In_ HostResolver::OnResultCallback cCallback,
                                                          _In_opt_ LPVOID lpUserData)
 {
@@ -1261,18 +1246,18 @@ CHostResolver::CAsyncItem* CHostResolver::AllocAsyncItem(_In_ LPCWSTR szHostName
 
     lpAsyncItem = sFreeAsyncItems.lpFirst;
     sFreeAsyncItems.lpFirst = lpAsyncItem->lpNextInFreeList;
-
-    lpAsyncItem->Setup(szHostNameW, nDesiredFamily, dwTimeoutMs, lpSockAddr, cCallback, lpUserData);
+    lpAsyncItem->lpNextInFreeList = NULL;
   }
   else
   {
-    lpAsyncItem = MX_DEBUG_NEW CAsyncItem(this, szHostNameW, nDesiredFamily, dwTimeoutMs, lpSockAddr, cCallback,
-                                          lpUserData, fnFreeAddrInfoExW);
+    lpAsyncItem = MX_DEBUG_NEW CAsyncItem(this, fnFreeAddrInfoExW);
+    if (lpAsyncItem == NULL)
+      return NULL;
   }
-  if (lpAsyncItem->cStrHostNameW.IsEmpty() != FALSE)
+  if (lpAsyncItem->Setup(szHostNameW, nDesiredFamily, dwTimeoutMs, lpSockAddr, cCallback, lpUserData) == FALSE)
   {
     delete lpAsyncItem;
-    lpAsyncItem = NULL;
+    return NULL;
   }
   return lpAsyncItem;
 }

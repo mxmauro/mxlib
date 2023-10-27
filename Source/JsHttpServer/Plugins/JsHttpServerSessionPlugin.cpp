@@ -36,7 +36,7 @@ CJsHttpServerSessionPlugin::CJsHttpServerSessionPlugin() : CJsObjectBase(), CNon
   ::MxMemSet(szCurrentIdA, 0, sizeof(szCurrentIdA));
   nExpireTimeInSeconds = 0;
   bIsSecure = bIsHttpOnly = FALSE;
-  nSameSite = CHttpCookie::SameSiteNone;
+  nSameSite = CHttpCookie::eSameSite::None;
   szSessionVarNameA = SESSION_ID_COOKIE_NAME;
   cPersistanceCallback = NullCallback();
   bDirty = FALSE;
@@ -56,7 +56,7 @@ HRESULT CJsHttpServerSessionPlugin::Save()
   if ((!cPersistanceCallback) || bDirty == FALSE)
     return S_OK;
 
-  hRes = cPersistanceCallback(this, PersistanceOptionSave);
+  hRes = cPersistanceCallback(this, ePersistanceOption::Save);
   if (SUCCEEDED(hRes))
     bDirty = FALSE;
   return hRes;
@@ -68,7 +68,7 @@ VOID CJsHttpServerSessionPlugin::Destroy()
 
   if (cPersistanceCallback)
   {
-    cPersistanceCallback(this, PersistanceOptionDelete);
+    cPersistanceCallback(this, ePersistanceOption::Delete);
   }
   cBag.Reset();
   bDirty = FALSE;
@@ -93,7 +93,7 @@ on_error:
     ::MxMemSet(szCurrentIdA, 0, sizeof(szCurrentIdA));
     nExpireTimeInSeconds = 0;
     bIsSecure = bIsHttpOnly = FALSE;
-    nSameSite = CHttpCookie::SameSiteNone;
+    nSameSite = CHttpCookie::eSameSite::None;
     szSessionVarNameA = SESSION_ID_COOKIE_NAME;
     cPersistanceCallback = NullCallback();
     bDirty = FALSE;
@@ -160,17 +160,20 @@ on_error:
   //initialize session data
   for (i = 0; ; i++)
   {
-    CHttpCookie *lpCookie = lpRequest->GetRequestCookie(i);
-    if (lpCookie == NULL)
+    MX::TAutoRefCounted<CHttpCookie> cCookie;
+
+    cCookie.Attach(lpRequest->GetRequestCookie(i));
+    if (!cCookie)
       break;
-    if (StrCompareA(lpCookie->GetName(), szSessionVarNameA) == 0)
+
+    if (StrCompareA(cCookie->GetName(), szSessionVarNameA) == 0)
     {
-      LPCSTR szValueA = lpCookie->GetValue();
+      LPCSTR szValueA = cCookie->GetValue();
 
       if (IsValidSessionId(szValueA) != FALSE)
       {
         ::MxMemCopy(szCurrentIdA, szValueA, StrLenA(szValueA) + 1);
-        hRes = cPersistanceCallback(this, PersistanceOptionLoad);
+        hRes = cPersistanceCallback(this, ePersistanceOption::Load);
         if (SUCCEEDED(hRes))
           return S_OK;
         if (hRes == E_OUTOFMEMORY)
@@ -217,7 +220,7 @@ VOID CJsHttpServerSessionPlugin::GenerateSessionId()
   HRESULT hRes;
 
   //calculate hash
-  hRes = cDigest.BeginDigest(CMessageDigest::AlgorithmSHA256);
+  hRes = cDigest.BeginDigest(CMessageDigest::eAlgorithm::SHA256);
   if (SUCCEEDED(hRes))
   {
     CSockets *lpSckMgr;
@@ -306,7 +309,7 @@ HRESULT CJsHttpServerSessionPlugin::CreateRequestCookie()
     if (FAILED(hRes))
       return hRes;
 
-    hRes = cExpireDt.Add(nExpireTimeInSeconds, MX::CDateTime::UnitsSeconds);
+    hRes = cExpireDt.Add(nExpireTimeInSeconds, MX::CDateTime::eUnits::Seconds);
     if (FAILED(hRes))
       return hRes;
   }
@@ -343,7 +346,7 @@ DukTape::duk_ret_t CJsHttpServerSessionPlugin::RegenerateId(_In_ DukTape::duk_co
   if (!cPersistanceCallback)
     MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_NotReady);
 
-  cPersistanceCallback(this, PersistanceOptionDelete);
+  cPersistanceCallback(this, ePersistanceOption::Delete);
   GenerateSessionId();
   hRes = CreateRequestCookie();
   if (FAILED(hRes))
@@ -360,9 +363,9 @@ int CJsHttpServerSessionPlugin::OnProxyHasNamedProperty(_In_ DukTape::duk_contex
     return 1;
   switch (cBag.GetType(szPropNameA))
   {
-    case CPropertyBag::PropertyTypeNull:
-    case CPropertyBag::PropertyTypeDouble:
-    case CPropertyBag::PropertyTypeAnsiString:
+    case CPropertyBag::eType::Null:
+    case CPropertyBag::eType::Double:
+    case CPropertyBag::eType::AnsiString:
       return 1;
   }
   return 0;
@@ -385,17 +388,17 @@ int CJsHttpServerSessionPlugin::OnProxyGetNamedProperty(_In_ DukTape::duk_contex
   }
   switch (cBag.GetType(szPropNameA))
   {
-    case CPropertyBag::PropertyTypeNull:
+    case CPropertyBag::eType::Null:
       DukTape::duk_push_null(lpCtx);
       return 1;
 
-    case CPropertyBag::PropertyTypeDouble:
+    case CPropertyBag::eType::Double:
       if (FAILED(cBag.GetDouble(szPropNameA, nDblValue)))
         break;
       DukTape::duk_push_number(lpCtx, nDblValue);
       return 1;
 
-    case CPropertyBag::PropertyTypeAnsiString:
+    case CPropertyBag::eType::AnsiString:
       if (FAILED(cBag.GetString(szPropNameA, szValueA)))
         break;
       DukTape::duk_push_string(lpCtx, szValueA);

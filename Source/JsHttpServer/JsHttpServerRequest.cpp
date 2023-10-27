@@ -41,7 +41,7 @@ CJsHttpServer::CClientRequest::CClientRequest() : CHttpServer::CClientRequest()
 
 CJsHttpServer::CClientRequest::~CClientRequest()
 {
-  MX_ASSERT(GetState() == StateInactive || GetState() == StateWebSocket || GetState() == StateTerminated);
+  MX_ASSERT(GetState() == eState::Inactive || GetState() == eState::WebSocket || GetState() == eState::Terminated);
   MX_DELETE(lpJVM);
   return;
 }
@@ -352,9 +352,10 @@ HRESULT CJsHttpServer::CClientRequest::OnRequireJsModule(_In_ DukTape::duk_conte
 
 static HRESULT TransformJavascriptCode(_Inout_ MX::CStringA &cStrCodeA)
 {
-  typedef enum {
-    CodeModeNone=0, CodeModeInCode, CodeModeInCodePrint
-  } eCodeMode;
+  enum class eCodeMode
+  {
+    None=0, InCode, InCodePrint
+  } ;
   LPSTR sA;
   CHAR chQuoteA;
   SIZE_T k, nCurrPos, nNonCodeBlockStart;
@@ -371,7 +372,7 @@ static HRESULT TransformJavascriptCode(_Inout_ MX::CStringA &cStrCodeA)
   //locate for '<%... %>' blocks outside of quotes
   nNonCodeBlockStart = 0;
   chQuoteA = 0;
-  nCodeMode = CodeModeNone;
+  nCodeMode = eCodeMode::None;
   sA = (LPSTR)cStrCodeA;
   while (*sA != 0)
   {
@@ -381,12 +382,12 @@ static HRESULT TransformJavascriptCode(_Inout_ MX::CStringA &cStrCodeA)
       {
         sA += 2;
       }
-      else if (nCodeMode != CodeModeNone && (*sA == '"' || *sA == '\''))
+      else if (nCodeMode != eCodeMode::None && (*sA == '"' || *sA == '\''))
       {
         //only process strings inside JS code
         chQuoteA = *sA++;
       }
-      else if (nCodeMode != CodeModeNone && *sA == '/' && sA[1] != '/' && sA[1] != '*')
+      else if (nCodeMode != eCodeMode::None && *sA == '/' && sA[1] != '/' && sA[1] != '*')
       {
         //check for a possible regular expression and avoid dying in the intent
         LPSTR szCurrA = sA;
@@ -418,9 +419,9 @@ static HRESULT TransformJavascriptCode(_Inout_ MX::CStringA &cStrCodeA)
           sA++;
         }
       }
-      else if (nCodeMode == CodeModeNone && *sA == '<' && sA[1] == '%')
+      else if (nCodeMode == eCodeMode::None && *sA == '<' && sA[1] == '%')
       {
-        nCodeMode = (sA[2] != '=') ? CodeModeInCode : CodeModeInCodePrint;
+        nCodeMode = (sA[2] != '=') ? eCodeMode::InCode : eCodeMode::InCodePrint;
         nCurrPos = (SIZE_T)(sA - (LPSTR)cStrCodeA);
 
         //convert code from 'nNonCodeBlockStart' to 'nCurrPos' to a print function
@@ -428,10 +429,10 @@ static HRESULT TransformJavascriptCode(_Inout_ MX::CStringA &cStrCodeA)
           return E_OUTOFMEMORY;
         //reset code pointer and convert the tag to spaces
         sA = (LPSTR)cStrCodeA + nCurrPos;
-        for (k = (nCodeMode == CodeModeInCode) ? 2 : 3; k>0; k--,nCurrPos++)
+        for (k = (nCodeMode == eCodeMode::InCode) ? 2 : 3; k>0; k--,nCurrPos++)
           *sA++ = ' ';
         //insert "echo("
-        if (nCodeMode == CodeModeInCodePrint)
+        if (nCodeMode == eCodeMode::InCodePrint)
         {
           if (cStrCodeA.InsertN("echo(htmlentities(", nCurrPos, 18) == FALSE)
             return E_OUTOFMEMORY;
@@ -440,13 +441,13 @@ static HRESULT TransformJavascriptCode(_Inout_ MX::CStringA &cStrCodeA)
         //reset code pointer
         sA = (LPSTR)cStrCodeA + nCurrPos;
       }
-      else if (nCodeMode != CodeModeNone && *sA == '%' && sA[1] == '>')
+      else if (nCodeMode != eCodeMode::None && *sA == '%' && sA[1] == '>')
       {
         nOrigCodeMode = nCodeMode;
-        nCodeMode = CodeModeNone;
+        nCodeMode = eCodeMode::None;
         nNonCodeBlockStart = (SIZE_T)(sA - (LPCSTR)cStrCodeA);
         //close echo if print mode
-        if (nOrigCodeMode == CodeModeInCodePrint)
+        if (nOrigCodeMode == eCodeMode::InCodePrint)
         {
           if (cStrCodeA.InsertN("));", nNonCodeBlockStart, 3) == FALSE)
             return E_OUTOFMEMORY;
@@ -470,7 +471,7 @@ static HRESULT TransformJavascriptCode(_Inout_ MX::CStringA &cStrCodeA)
         //reset code pointer
         sA = (LPSTR)cStrCodeA + nNonCodeBlockStart;
       }
-      else if (nCodeMode == CodeModeInCode && *sA == '/' && sA[1] == '/')
+      else if (nCodeMode == eCodeMode::InCode && *sA == '/' && sA[1] == '/')
       {
         sA += 2;
         //skip line comment
@@ -479,7 +480,7 @@ static HRESULT TransformJavascriptCode(_Inout_ MX::CStringA &cStrCodeA)
         while (*sA == '\r' || *sA == '\n')
           sA++;
       }
-      else if (nCodeMode == CodeModeInCode && *sA == '/' && sA[1] == '*')
+      else if (nCodeMode == eCodeMode::InCode && *sA == '/' && sA[1] == '*')
       {
         sA += 2;
         //skip multi-line comment
@@ -508,7 +509,7 @@ static HRESULT TransformJavascriptCode(_Inout_ MX::CStringA &cStrCodeA)
     }
   }
   //must end in non-code mode
-  if (nCodeMode != CodeModeNone)
+  if (nCodeMode != eCodeMode::None)
     return E_UNEXPECTED;
 
   //convert final block

@@ -6,15 +6,14 @@
 
 package IO::Pipe;
 
-use 5.006_001;
+use 5.008_001;
 
 use IO::Handle;
 use strict;
-our($VERSION);
 use Carp;
 use Symbol;
 
-$VERSION = "1.15";
+our $VERSION = "1.52";
 
 sub new {
     my $type = shift;
@@ -204,7 +203,7 @@ processes.
 =item new ( [READER, WRITER] )
 
 Creates an C<IO::Pipe>, which is a reference to a newly created symbol
-(see the C<Symbol> package). C<IO::Pipe::new> optionally takes two
+(see the L<Symbol> package). C<IO::Pipe::new> optionally takes two
 arguments, which should be objects blessed into C<IO::Handle>, or a
 subclass thereof. These two objects will be used for the system call
 to C<pipe>. If no arguments are given then method C<handles> is called
@@ -246,7 +245,7 @@ L<IO::Handle>
 =head1 AUTHOR
 
 Graham Barr. Currently maintained by the Perl Porters.  Please report all
-bugs to <perlbug@perl.org>.
+bugs at L<https://github.com/Perl/perl5/issues>.
 
 =head1 COPYRIGHT
 

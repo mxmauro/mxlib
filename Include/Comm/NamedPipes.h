@@ -106,9 +106,9 @@ private:
     };
 
 private:
-  LONG volatile nRemoteConnCounter;
-  DWORD dwConnectTimeoutMs;
-  PSECURITY_DESCRIPTOR lpSecDescr;
+  LONG volatile nRemoteConnCounter{ 0 };
+  DWORD dwConnectTimeoutMs{ 1000 };
+  PSECURITY_DESCRIPTOR lpSecDescr{ NULL };
 };
 
 } //namespace MX

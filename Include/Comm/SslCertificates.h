@@ -42,9 +42,10 @@ namespace MX {
 class CSslCertificate : public virtual TRefCounted<CBaseMemObj>
 {
 public:
-  typedef enum {
-    InfoOrganization = 1, InfoUnit, InfoCommonName, InfoCountry, InfoStateProvince, InfoTown
-  } eInformation;
+  enum class eInformation
+  {
+    Organization = 1, Unit, CommonName, Country, StateProvince, Town
+  };
 
   CSslCertificate();
   CSslCertificate(_In_ const CSslCertificate& cSrc) throw(...);
@@ -52,9 +53,9 @@ public:
 
   CSslCertificate& operator=(_In_ const CSslCertificate& cSrc) throw(...);
 
-  HRESULT InitializeFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen);
-  HRESULT InitializeFromPEM(_In_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA = NULL,
-                            _In_opt_ SIZE_T nPemLen = (SIZE_T)-1);
+  // This method auto detects PEM and DER formats
+  HRESULT Set(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA = NULL);
+  VOID Set(_In_ X509 *lpX509);
 
   LONG GetVersion() const;
 
@@ -85,7 +86,7 @@ class CSslCertificateCrl : public virtual TRefCounted<CBaseMemObj>
 {
 public:
   typedef enum {
-    InfoOrganization = 1, InfoUnit, InfoCommonName, InfoCountry, InfoStateProvince, InfoTown
+    Organization = 1, Unit, CommonName, Country, StateProvince, Town
   } eInformation;
 
 public:
@@ -95,9 +96,9 @@ public:
 
   CSslCertificateCrl& operator=(_In_ const CSslCertificateCrl &cSrc) throw(...);
 
-  HRESULT InitializeFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen);
-  HRESULT InitializeFromPEM(_In_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA = NULL,
-                            _In_opt_ SIZE_T nPemLen = (SIZE_T)-1);
+  // This method auto detects PEM and DER formats
+  HRESULT Set(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA = NULL);
+  VOID Set(_In_ X509_CRL *lpX509Crl);
 
   LONG GetVersion() const;
 
@@ -118,7 +119,7 @@ public:
     };
 
 private:
-  X509_CRL *lpX509Crl;
+  X509_CRL *lpX509Crl{ NULL };
 };
 
 //-----------------------------------------------------------
@@ -131,24 +132,9 @@ public:
 
   VOID Reset();
 
-  HRESULT AddFromMemory(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA = NULL);
+  // This method auto detects PEM and DER formats. Also supports PKCS#12 encoded files
+  HRESULT Add(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA = NULL);
   HRESULT AddFromFile(_In_z_ LPCWSTR szFileNameW, _In_opt_z_ LPCSTR szPasswordA = NULL);
-
-  HRESULT AddPublicKeyFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen);
-  HRESULT AddPublicKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA = NULL,
-                              _In_opt_ SIZE_T nPemLen = (SIZE_T)-1);
-
-  HRESULT AddPrivateKeyFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen);
-  HRESULT AddPrivateKeyFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA = NULL,
-                               _In_opt_ SIZE_T nPemLen = (SIZE_T)-1);
-
-  HRESULT AddCertificateFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA = NULL);
-  HRESULT AddCertificateFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA = NULL,
-                                _In_opt_ SIZE_T nPemLen = (SIZE_T)-1);
-
-  HRESULT AddCrlFromDER(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen);
-  HRESULT AddCrlFromPEM(_In_z_ LPCSTR szPemA, _In_opt_z_ LPCSTR szPasswordA = NULL,
-                        _In_opt_ SIZE_T nPemLen = (SIZE_T)-1);
 
   HRESULT ImportFromWindowsStore();
 

@@ -266,8 +266,8 @@ public:
   virtual VOID Attach(_In_ TType *lpNewList, _In_ SIZE_T _nCount)
     {
     RemoveAllElements();
-    if ((lpItems = lpNewList) != NULL)
-      nCount = nSize = _nCount;
+    lpItems = lpNewList;
+    nCount = nSize = (lpNewList != NULL) ? _nCount : 0;
     return;
     };
 

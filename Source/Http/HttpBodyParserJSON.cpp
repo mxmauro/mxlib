@@ -26,7 +26,7 @@ namespace MX {
 
 CHttpBodyParserJSON::CHttpBodyParserJSON() : CHttpBodyParserBase()
 {
-  nState = StateData;
+  nState = eState::Data;
   return;
 }
 
@@ -43,6 +43,8 @@ HRESULT CHttpBodyParserJSON::Initialize(_In_ MX::Internals::CHttpParser &cHttpPa
 
 HRESULT CHttpBodyParserJSON::Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize)
 {
+  HRESULT hRes;
+
   if (lpData == NULL && nDataSize > 0)
     return E_POINTER;
 
@@ -51,39 +53,37 @@ HRESULT CHttpBodyParserJSON::Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDat
   {
     if (cStrTempA.ConcatN((LPCSTR)lpData, nDataSize) != FALSE)
       return S_OK;
-    nState = StateError;
+    nState = eState::Error;
     return E_OUTOFMEMORY;
   }
 
-  if (nState == StateDone)
+  if (nState == eState::Done)
   {
-    nState = StateError;
+    nState = eState::Error;
     return MX_E_InvalidData;
   }
 
-  try
+  RAPIDJSON_TRY
   {
     if (d.ParseInsitu<rapidjson::kParseValidateEncodingFlag | rapidjson::kParseNanAndInfFlag |
                       rapidjson::kParseFullPrecisionFlag | rapidjson::kParseTrailingCommasFlag |
                       rapidjson::kParseEscapedApostropheFlag>((LPSTR)cStrTempA).HasParseError() != false)
     {
-      nState = StateError;
+      nState = eState::Error;
       return MX_E_InvalidData;
     }
+    hRes = S_OK;
   }
-  catch (std::bad_alloc &)
+  RAPIDJSON_CATCH(hRes)
+
+  if (FAILED(hRes))
   {
-    nState = StateError;
-    return E_OUTOFMEMORY;
-  }
-  catch (...)
-  {
-    nState = StateError;
-    return MX_E_InvalidData;
+    nState = eState::Error;
+    return hRes;
   }
 
   //success
-  nState = StateDone;
+  nState = eState::Done;
   return S_OK;
 }
 

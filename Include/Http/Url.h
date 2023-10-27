@@ -31,19 +31,24 @@ namespace MX {
 class CUrl : public virtual CBaseMemObj
 {
 public:
-  typedef enum {
-    SchemeUnknown=-1, SchemeNone=0,
-    SchemeMailTo, SchemeNews, SchemeHttp, SchemeHttps, SchemeFtp,
-    SchemeFile, SchemeResource, SchemeNntp, SchemeGopher, SchemeWebSocket, SchemeSecureWebSocket
-  } eScheme;
+  enum class eScheme
+  {
+    Unknown=-1, None=0,
+    MailTo, News, Http, Https, Ftp,
+    File, Resource, Nntp, Gopher, WebSocket, SecureWebSocket
+  };
 
-  typedef enum {
-    ToStringAddScheme=0x01, ToStringAddUserInfo=0x02, ToStringAddHostPort=0x04,
-    ToStringAddPath=0x08, ToStringAddQueryStrings=0x10, ToStringAddFragment=0x20,
-    ToStringShrinkPath=0x40,
-    ToStringAddAll=0x7F,
-    ToStringDontAddHostPortIfDefault=0x10000000
-  } eToStringFlags;
+  enum class eToStringFlags : int
+  {
+    AddScheme=0x01, AddUserInfo=0x02, AddHostPort=0x04,
+    AddPath=0x08, AddQueryStrings=0x10, AddFragment=0x20,
+    ShrinkPath=0x40,
+    AddAll=0x7F,
+    DontAddHostPortIfDefault=0x10000000
+  };
+
+
+
 
 public:
   CUrl();
@@ -95,8 +100,8 @@ public:
   HRESULT SetUserInfo(_In_z_ LPCWSTR szUserInfoW, _In_opt_ SIZE_T nUserInfoLen=(SIZE_T)-1);
   LPCWSTR GetUserInfo() const;
 
-  HRESULT ToString(_Inout_ CStringA &cStrDestA, _In_ int nFlags=ToStringAddAll);
-  HRESULT ToString(_Inout_ CStringW &cStrDestW, _In_ int nFlags=ToStringAddAll);
+  HRESULT ToString(_Inout_ CStringA &cStrDestA, _In_ eToStringFlags nFlags=eToStringFlags::AddAll);
+  HRESULT ToString(_Inout_ CStringW &cStrDestW, _In_ eToStringFlags nFlags=eToStringFlags::AddAll);
 
   HRESULT ParseFromString(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nSrcLen=(SIZE_T)-1);
   HRESULT ParseFromString(_In_z_ LPCWSTR szUrlW, _In_opt_ SIZE_T nSrcLen=(SIZE_T)-1);
@@ -129,6 +134,16 @@ private:
   CStringW cStrFragmentW;
   BOOL bIdnaAllowUnassigned, bIdnaUseStd3AsciiRules;
 };
+
+inline CUrl::eToStringFlags operator|(CUrl::eToStringFlags lhs, CUrl::eToStringFlags rhs)
+{
+  return static_cast<CUrl::eToStringFlags>(static_cast<int>(lhs) | static_cast<int>(rhs));
+}
+
+inline CUrl::eToStringFlags operator&(CUrl::eToStringFlags lhs, CUrl::eToStringFlags rhs)
+{
+  return static_cast<CUrl::eToStringFlags>(static_cast<int>(lhs) & static_cast<int>(rhs));
+}
 
 } //namespace MX
 

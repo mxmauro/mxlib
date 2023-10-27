@@ -28,7 +28,7 @@ namespace MX {
 
 namespace SecureRandom {
 
-VOID Generate(_Out_ LPBYTE lpOut, _In_ SIZE_T nSize);
+VOID Generate(_Out_writes_bytes_(nSize) LPBYTE lpOut, _In_ SIZE_T nSize);
 
 } //namespace SecureRandom
 

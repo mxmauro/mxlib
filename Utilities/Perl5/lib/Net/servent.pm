@@ -2,15 +2,15 @@ package Net::servent;
 use strict;
 
 use 5.006_001;
-our $VERSION = '1.01';
+our $VERSION = '1.03';
 our(@EXPORT, @EXPORT_OK, %EXPORT_TAGS);
+our ( $s_name, @s_aliases, $s_port, $s_proto );
 BEGIN {
     use Exporter   ();
     @EXPORT      = qw(getservbyname getservbyport getservent getserv);
     @EXPORT_OK   = qw( $s_name @s_aliases $s_port $s_proto );
     %EXPORT_TAGS = ( FIELDS => [ @EXPORT_OK, @EXPORT ] );
 }
-use vars      @EXPORT_OK;
 
 # Class::Struct forbids use of @ISA
 sub import { goto &Exporter::import }
@@ -53,7 +53,7 @@ Net::servent - by-name interface to Perl's built-in getserv*() functions
 =head1 SYNOPSIS
 
  use Net::servent;
- $s = getservbyname(shift || 'ftp') || die "no service";
+ my $s = getservbyname(shift || 'ftp') || die "no service";
  printf "port for %s is %s, aliases are %s\n",
     $s->name, $s->port, "@{$s->aliases}";
 

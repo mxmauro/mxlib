@@ -30,11 +30,10 @@ namespace MX {
 class CHttpHeaderGenTransferEncoding : public CHttpHeaderBase
 {
 public:
-  typedef enum {
-    EncodingUnsupported = -1,
-    EncodingIdentity = 0,
-    EncodingChunked
-  } eEncoding;
+  enum class eEncoding
+  {
+    Unsupported = -1, Identity = 0, Chunked
+  };
 
   CHttpHeaderGenTransferEncoding();
   ~CHttpHeaderGenTransferEncoding();

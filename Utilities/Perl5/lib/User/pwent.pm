@@ -1,7 +1,7 @@
 package User::pwent;
 
 use 5.006;
-our $VERSION = '1.00';
+our $VERSION = '1.02';
 
 use strict;
 use warnings;
@@ -10,6 +10,12 @@ use Config;
 use Carp;
 
 our(@EXPORT, @EXPORT_OK, %EXPORT_TAGS);
+our ( $pw_name,    $pw_passwd,  $pw_uid,  $pw_gid,
+    $pw_gecos,   $pw_dir,     $pw_shell,
+    $pw_expire,  $pw_change,  $pw_class,
+    $pw_age,
+    $pw_quota,   $pw_comment,
+    );
 BEGIN {
     use Exporter   ();
     @EXPORT      = qw(getpwent getpwuid getpwnam getpw);
@@ -21,15 +27,12 @@ BEGIN {
                         $pw_expire  $pw_change  $pw_class
                         $pw_age
                         $pw_quota   $pw_comment
-                        $pw_expire
-
                    );
     %EXPORT_TAGS = (
         FIELDS => [ grep(/^\$pw_/, @EXPORT_OK), @EXPORT ],
         ALL    => [ @EXPORT, @EXPORT_OK ],
     );
 }
-use vars grep /^\$pw_/, @EXPORT_OK;
 
 #
 # XXX: these mean somebody hacked this module's source
@@ -186,14 +189,14 @@ User::pwent - by-name interface to Perl's built-in getpw*() functions
 =head1 SYNOPSIS
 
  use User::pwent;
- $pw = getpwnam('daemon')       || die "No daemon user";
+ my $pw = getpwnam('daemon')       || die "No daemon user";
  if ( $pw->uid == 1 && $pw->dir =~ m#^/(bin|tmp)?\z#s ) {
      print "gid 1 on root dir";
  }
 
- $real_shell = $pw->shell || '/bin/sh';
+ my $real_shell = $pw->shell || '/bin/sh';
 
- for (($fullname, $office, $workphone, $homephone) =
+ for (my ($fullname, $office, $workphone, $homephone) =
         split /\s*,\s*/, $pw->gecos)
  {
     s/&/ucfirst(lc($pw->name))/ge;
@@ -205,7 +208,7 @@ User::pwent - by-name interface to Perl's built-in getpw*() functions
      print "gid 1 on root dir";
  }
 
- $pw = getpw($whoever);
+ my $pw = getpw($whoever);
 
  use User::pwent qw/:DEFAULT pw_has/;
  if (pw_has(qw[gecos expire quota])) { .... }

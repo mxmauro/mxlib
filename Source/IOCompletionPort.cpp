@@ -33,7 +33,7 @@ typedef BOOL (WINAPI *lpfnGetQueuedCompletionStatusEx)(_In_ HANDLE CompletionPor
 
 //-----------------------------------------------------------
 
-static lpfnGetQueuedCompletionStatusEx volatile fnGetQueuedCompletionStatusEx = NULL;
+static lpfnGetQueuedCompletionStatusEx fnGetQueuedCompletionStatusEx = NULL;
 
 //-----------------------------------------------------------
 
@@ -41,7 +41,7 @@ namespace MX {
 
 CIoCompletionPort::CIoCompletionPort() : CBaseMemObj(), CNonCopyableObj()
 {
-  if (__InterlockedReadPointer(&fnGetQueuedCompletionStatusEx) == NULL)
+  if (fnGetQueuedCompletionStatusEx == NULL)
   {
     LPVOID _fnGetQueuedCompletionStatusEx;
     HINSTANCE hDll;
@@ -60,9 +60,11 @@ CIoCompletionPort::CIoCompletionPort() : CBaseMemObj(), CNonCopyableObj()
         _fnGetQueuedCompletionStatusEx = ::GetProcAddress(hDll, "GetQueuedCompletionStatusEx");
       }
     }
-    _InterlockedExchangePointer((LPVOID volatile*)&fnGetQueuedCompletionStatusEx, _fnGetQueuedCompletionStatusEx);
+    if (_fnGetQueuedCompletionStatusEx != NULL)
+      fnGetQueuedCompletionStatusEx = (lpfnGetQueuedCompletionStatusEx)_fnGetQueuedCompletionStatusEx;
+    else
+      fnGetQueuedCompletionStatusEx = (lpfnGetQueuedCompletionStatusEx)1;
   }
-  hIOCP = NULL;
   return;
 }
 
@@ -130,7 +132,7 @@ HRESULT CIoCompletionPort::Get(_Out_ LPOVERLAPPED_ENTRY lpEntries, _Inout_ ULONG
 
   MX_ASSERT(nEntriesCount > 0);
   MX_ASSERT(hIOCP != NULL);
-  if (fnGetQueuedCompletionStatusEx != NULL)
+  if (fnGetQueuedCompletionStatusEx != NULL && fnGetQueuedCompletionStatusEx != (lpfnGetQueuedCompletionStatusEx)1)
   {
     nRemoved = 0;
     if (fnGetQueuedCompletionStatusEx(hIOCP, lpEntries, nEntriesCount, &nRemoved, dwTimeoutMs, FALSE) == FALSE)
@@ -140,7 +142,7 @@ HRESULT CIoCompletionPort::Get(_Out_ LPOVERLAPPED_ENTRY lpEntries, _Inout_ ULONG
     }
     for (i = 0; i < nRemoved; i++)
     {
-#pragma warning(suppress : 6386)
+#pragma warning(suppress : 6385 6386)
       lpEntries[i].Internal = lpEntries[i].lpOverlapped->Internal =
           ::MxRtlNtStatusToDosError((NTSTATUS)(ULONG)(lpEntries[i].lpOverlapped->Internal));
     }
@@ -175,15 +177,6 @@ CIoCompletionPortThreadPool::CIoCompletionPortThreadPool() : CBaseMemObj(), CNon
   cThreadEndCallback = NullCallback();
   cThreadStartErrorCallback = NullCallback();
   dwMinThreadsCount = dwMaxThreadsCount = GetNumberOfProcessors() * 2;
-  dwWorkerThreadIdleTimeoutMs = 2000;
-  dwShutdownThreadThreshold = 2;
-  dwThreadStackSize = 0;
-  nThreadPriority = THREAD_PRIORITY_NORMAL;
-  szPoolNameA = NULL;
-  FastLock_Initialize(&(sThreads.nMutex));
-  _InterlockedExchange(&(sThreads.nActiveCount), 0);
-  _InterlockedExchange(&(sThreads.nBusyCount), 0);
-  _InterlockedExchange(&(sThreads.nShuttingDown), 0);
   return;
 }
 

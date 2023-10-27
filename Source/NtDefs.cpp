@@ -60,7 +60,7 @@ typedef struct {
 
 //-----------------------------------------------------------
 
-typedef NTSTATUS (NTAPI *lpfnRtlGetNativeSystemInformation)(_In_ MX_SYSTEM_INFORMATION_CLASS SystemInformationClass,
+typedef NTSTATUS (NTAPI *lpfnRtlGetNativeSystemInformation)(_In_ ULONG SystemInformationClass,
                                                _Inout_ PVOID SystemInformation, _In_ ULONG SystemInformationLength,
                                                _Out_opt_ PULONG ReturnLength);
 
@@ -129,8 +129,8 @@ LPBYTE MxGetRemotePeb(_In_ HANDLE hProcess)
       {
       __PROCESS_BASIC_INFORMATION32 sPbi32;
 
-      if (NT_SUCCESS(::MxNtQueryInformationProcess(hProcess, MxProcessBasicInformation, &sPbi32,
-                                                   (ULONG)sizeof(sPbi32), &k)))
+      if (NT_SUCCESS(::MxNtQueryInformationProcess(hProcess, MxProcessBasicInformation,
+                                                   &sPbi32, (ULONG)sizeof(sPbi32), &k)))
         return (LPBYTE)(sPbi32.PebBaseAddress);
       }
 #endif //_M_IX86
@@ -145,12 +145,12 @@ LPBYTE MxGetRemotePeb(_In_ HANDLE hProcess)
       __PROCESS_BASIC_INFORMATION64 sPbi64;
 #endif //_M_X64
 
-      if (NT_SUCCESS(::MxNtQueryInformationProcess(hProcess, MxProcessWow64Information, &nWow64, sizeof(nWow64),
-                                                   NULL)) && nWow64 != 0)
+      if (NT_SUCCESS(::MxNtQueryInformationProcess(hProcess, MxProcessWow64Information,
+                                                   &nWow64, sizeof(nWow64), NULL)) && nWow64 != 0)
         return (LPBYTE)nWow64;
 #if defined (_M_X64)
-      if (NT_SUCCESS(::MxNtQueryInformationProcess(hProcess, MxProcessBasicInformation, &sPbi64,
-                                                   (ULONG)sizeof(sPbi64), &k)))
+      if (NT_SUCCESS(::MxNtQueryInformationProcess(hProcess, MxProcessBasicInformation,
+                                                   &sPbi64, (ULONG)sizeof(sPbi64), &k)))
         return (LPBYTE)(sPbi64.PebBaseAddress);
 #endif //_M_X64
       }
@@ -313,9 +313,15 @@ LONG MxGetProcessorArchitecture()
     }
     ::MxMemSet(&sProcInfo, 0, sizeof(sProcInfo));
     if (fnRtlGetNativeSystemInformation != NULL)
-      nNtStatus = fnRtlGetNativeSystemInformation(MxSystemProcessorInformation, &sProcInfo, sizeof(sProcInfo), NULL);
+    {
+      nNtStatus = fnRtlGetNativeSystemInformation(MxSystemProcessorInformation, &sProcInfo,
+                                                  sizeof(sProcInfo), NULL);
+    }
     else
-      nNtStatus = ::MxNtQuerySystemInformation(MxSystemProcessorInformation, &sProcInfo, sizeof(sProcInfo), NULL);
+    {
+      nNtStatus = ::MxNtQuerySystemInformation(MxSystemProcessorInformation, &sProcInfo,
+                                               sizeof(sProcInfo), NULL);
+    }
     if (NT_SUCCESS(nNtStatus))
       _InterlockedExchange(&nProcessorArchitecture, (LONG)(sProcInfo.ProcessorArchitecture));
   }
@@ -354,9 +360,9 @@ HANDLE MxOpenThread(_In_ DWORD dwDesiredAccess, _In_ BOOL bInheritHandle, _In_ D
   return (NT_SUCCESS(nNtStatus)) ? hThread : NULL;
 }
 
-NTSTATUS MxCreateFile(_Out_ HANDLE *lphFile, _In_ LPCWSTR szFileNameW, _In_opt_ DWORD dwDesiredAccess,
-                      _In_opt_ DWORD dwShareMode, _In_opt_ DWORD dwCreationDisposition,
-                      _In_opt_ DWORD dwFlagsAndAttributes, _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes)
+NTSTATUS MxCreateFile(_Out_ HANDLE *lphFile, _In_z_ LPCWSTR szFileNameW, _In_ DWORD dwDesiredAccess,
+                      _In_ DWORD dwShareMode, _In_ DWORD dwCreationDisposition,
+                      _In_ DWORD dwFlagsAndAttributes, _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes)
 {
   MX_OBJECT_ATTRIBUTES sObjAttr;
   MX_IO_STATUS_BLOCK sIoStatus;
@@ -494,7 +500,8 @@ NTSTATUS MxIsWow64(_In_ HANDLE hProcess)
       //check on 64-bit platforms
       ULONG_PTR nWow64;
 
-      nNtStatus = ::MxNtQueryInformationProcess(hProcess, MxProcessWow64Information, &nWow64, sizeof(nWow64), NULL);
+      nNtStatus = ::MxNtQueryInformationProcess(hProcess, MxProcessWow64Information,
+                                                &nWow64, sizeof(nWow64), NULL);
       if (NT_SUCCESS(nNtStatus))
         nNtStatus = (nWow64 != 0) ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
       }
@@ -540,7 +547,8 @@ NTSTATUS MxGetThreadPriority(_In_ HANDLE hThread, _Out_ int *lpnPriority)
   MX_THREAD_BASIC_INFORMATION sTbi;
   NTSTATUS nNtStatus;
 
-  nNtStatus = ::MxNtQueryInformationThread(hThread, MxThreadBasicInformation, &sTbi, sizeof(sTbi), NULL);
+  nNtStatus = ::MxNtQueryInformationThread(hThread, MxThreadBasicInformation,
+                                           &sTbi, sizeof(sTbi), NULL);
   if (NT_SUCCESS(nNtStatus))
   {
     if (sTbi.BasePriority == THREAD_BASE_PRIORITY_LOWRT+1)
@@ -766,9 +774,11 @@ PVOID MxGetRemoteDllHandle(_In_ HANDLE hProcess, _In_z_ PCWSTR szModuleNameW)
   usTemp.Length = usTemp.MaximumLength = (USHORT)nModuleNameLen;
   while (1)
   {
-    if (!NT_SUCCESS(MxNtQueryVirtualMemory(hProcess, lpCurrAddr, MxMemoryBasicInformation, &sMbi,
-                                           sizeof(sMbi), &k)))
+    if (!NT_SUCCESS(MxNtQueryVirtualMemory(hProcess, lpCurrAddr, MxMemoryBasicInformation,
+                                           &sMbi, sizeof(sMbi), &k)))
+    {
       break;
+    }
     if (sMbi.Type != MEM_MAPPED && sMbi.Type != MEM_IMAGE)
     {
       //skip block
@@ -781,8 +791,8 @@ PVOID MxGetRemoteDllHandle(_In_ HANDLE hProcess, _In_z_ PCWSTR szModuleNameW)
     do
     {
       lpCurrAddr += sMbi.RegionSize;
-      nNtStatus = MxNtQueryVirtualMemory(hProcess, lpCurrAddr, MxMemoryBasicInformation, &sMbi,
-                                          sizeof(sMbi), &k);
+      nNtStatus = MxNtQueryVirtualMemory(hProcess, lpCurrAddr, MxMemoryBasicInformation,
+                                         &sMbi, sizeof(sMbi), &k);
     }
     while (NT_SUCCESS(nNtStatus) && lpBaseAddr == (LPBYTE)(sMbi.AllocationBase));
     if (!NT_SUCCESS(nNtStatus))
@@ -817,8 +827,8 @@ PVOID MxGetRemoteDllHandle(_In_ HANDLE hProcess, _In_z_ PCWSTR szModuleNameW)
         continue;
     }
     //retrieve mapped section name
-    nNtStatus = MxNtQueryVirtualMemory(hProcess, (PVOID)lpBaseAddr, MxMemorySectionName, &usDllName, sizeof(usDllName),
-                                       &k);
+    nNtStatus = MxNtQueryVirtualMemory(hProcess, (PVOID)lpBaseAddr, MxMemorySectionName,
+                                       &usDllName, sizeof(usDllName), &k);
     if (!NT_SUCCESS(nNtStatus))
       continue;
     //compare base name

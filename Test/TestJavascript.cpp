@@ -74,7 +74,8 @@ public:
 
   int OnProxySetNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA,
                               _In_ DukTape::duk_idx_t nValueIndex);
-  int OnProxySetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex, _In_ DukTape::duk_idx_t nValueIndex);
+  int OnProxySetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex,
+                                _In_ DukTape::duk_idx_t nValueIndex);
 
   int OnProxyDeleteNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA);
   int OnProxyDeleteIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex);

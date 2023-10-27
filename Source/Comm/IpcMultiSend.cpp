@@ -23,13 +23,12 @@
 
 namespace MX {
 
-CIpc::CMultiSendLock::CMultiSendLock(_In_ CConnectionBase *_lpConn) : CBaseMemObj(), CNonCopyableObj()
+CIpc::CMultiSendLock::CMultiSendLock(_In_ CConnectionBase *_lpConn) : CBaseMemObj(), CNonCopyableObj(), lpConn(_lpConn)
 {
-  lpConn = _lpConn;
   lpConn->AddRef();
 
   //apply lock
-  while ((_InterlockedOr(&(_lpConn->nFlags), FLAG_InSendTransaction) & FLAG_InSendTransaction) != 0)
+  while ((_InterlockedOr(&(lpConn->nFlags), FLAG_InSendTransaction) & FLAG_InSendTransaction) != 0)
     _YieldProcessor();
   return;
 }
@@ -43,9 +42,8 @@ CIpc::CMultiSendLock::~CMultiSendLock()
 
 //-----------------------------------------------------------
 
-CIpc::CAutoMultiSendLock::CAutoMultiSendLock(_In_ CMultiSendLock *_lpLock) : CBaseMemObj(), CNonCopyableObj()
+CIpc::CAutoMultiSendLock::CAutoMultiSendLock(_In_ CMultiSendLock *_lpLock) : CBaseMemObj(), CNonCopyableObj(), lpLock(_lpLock)
 {
-  lpLock = _lpLock;
   return;
 }
 

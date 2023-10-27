@@ -25,7 +25,7 @@ namespace MX {
 
 CHttpHeaderEntContentEncoding::CHttpHeaderEntContentEncoding() : CHttpHeaderBase()
 {
-  nEncoding = EncodingUnsupported;
+  nEncoding = eEncoding::Unsupported;
   return;
 }
 
@@ -36,7 +36,7 @@ CHttpHeaderEntContentEncoding::~CHttpHeaderEntContentEncoding()
 
 HRESULT CHttpHeaderEntContentEncoding::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  eEncoding _nEncoding = EncodingUnsupported;
+  eEncoding _nEncoding = eEncoding::Unsupported;
   LPCSTR szValueEndA, szStartA;
   BOOL bGotItem;
 
@@ -70,21 +70,21 @@ HRESULT CHttpHeaderEntContentEncoding::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SI
     {
       case 4:
         if (StrNCompareA(szStartA, "gzip", 4, TRUE) == 0)
-          _nEncoding = EncodingGZip;
+          _nEncoding = eEncoding::GZip;
         else if (StrNCompareA(szStartA, "7bit", 4, TRUE) != 0 && StrNCompareA(szStartA, "8bit", 4, TRUE) != 0)
           return MX_E_Unsupported;
         break;
 
       case 6:
         if (StrNCompareA(szStartA, "x-gzip", 6, TRUE) == 0)
-          _nEncoding = EncodingGZip;
+          _nEncoding = eEncoding::GZip;
         else if (StrNCompareA(szStartA, "binary", 6, TRUE) != 0)
           return MX_E_Unsupported;
         break;
 
       case 7:
         if (StrNCompareA(szStartA, "deflate", 7, TRUE) == 0)
-          _nEncoding = EncodingDeflate;
+          _nEncoding = eEncoding::Deflate;
         else
           return MX_E_Unsupported;
         break;
@@ -126,17 +126,17 @@ HRESULT CHttpHeaderEntContentEncoding::Build(_Inout_ CStringA &cStrDestA, _In_ H
 {
   switch (nEncoding)
   {
-    case EncodingIdentity:
+    case eEncoding::Identity:
       if (cStrDestA.Copy("identity") == FALSE)
         return E_OUTOFMEMORY;
       return S_OK;
 
-    case EncodingGZip:
+    case eEncoding::GZip:
       if (cStrDestA.Copy("gzip") == FALSE)
         return E_OUTOFMEMORY;
       return S_OK;
 
-    case EncodingDeflate:
+    case eEncoding::Deflate:
       if (cStrDestA.Copy("deflate") == FALSE)
         return E_OUTOFMEMORY;
       return S_OK;
@@ -148,8 +148,8 @@ HRESULT CHttpHeaderEntContentEncoding::Build(_Inout_ CStringA &cStrDestA, _In_ H
 
 HRESULT CHttpHeaderEntContentEncoding::SetEncoding(_In_ eEncoding _nEncoding)
 {
-  if (_nEncoding != EncodingIdentity && _nEncoding != EncodingGZip &&
-      _nEncoding != EncodingDeflate && _nEncoding != EncodingUnsupported)
+  if (_nEncoding != eEncoding::Identity && _nEncoding != eEncoding::GZip &&
+      _nEncoding != eEncoding::Deflate && _nEncoding != eEncoding::Unsupported)
   {
     return E_INVALIDARG;
   }

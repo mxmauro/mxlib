@@ -41,7 +41,7 @@ public:
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return DuplicateBehaviorMerge;
+    return eDuplicateBehavior::Merge;
     };
 
   HRESULT SetPublic(_In_ BOOL bPublic);

@@ -1,50 +1,30 @@
 @rem = '--*-Perl-*--
-@echo off
-if "%OS%" == "Windows_NT" goto WinNT
-IF EXIST "%~dp0perl.exe" (
-"%~dp0perl.exe" -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-) ELSE IF EXIST "%~dp0..\..\bin\perl.exe" (
-"%~dp0..\..\bin\perl.exe" -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-) ELSE (
-perl -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-)
-
-goto endofperl
+@set "ErrorLevel="
+@if "%OS%" == "Windows_NT" @goto WinNT
+@perl -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
+@set ErrorLevel=%ErrorLevel%
+@goto endofperl
 :WinNT
-IF EXIST "%~dp0perl.exe" (
-"%~dp0perl.exe" -x -S %0 %*
-) ELSE IF EXIST "%~dp0..\..\bin\perl.exe" (
-"%~dp0..\..\bin\perl.exe" -x -S %0 %*
-) ELSE (
-perl -x -S %0 %*
-)
-
-if NOT "%COMSPEC%" == "%SystemRoot%\system32\cmd.exe" goto endofperl
-if %errorlevel% == 9009 echo You do not have Perl in your PATH.
-if errorlevel 1 goto script_failed_so_exit_with_non_zero_val 2>nul
-goto endofperl
+@perl -x -S %0 %*
+@set ErrorLevel=%ErrorLevel%
+@if NOT "%COMSPEC%" == "%SystemRoot%\system32\cmd.exe" @goto endofperl
+@if %ErrorLevel% == 9009 @echo You do not have Perl in your PATH.
+@goto endofperl
 @rem ';
 #!perl
-#line 29
+#line 30
+use Mojo::Base -strict;
 
-use strict;
-use warnings;
+use Mojo::Server::Hypnotoad;
+use Mojo::Util qw(extract_usage getopt);
 
-use Getopt::Long qw(GetOptions :config no_auto_abbrev no_ignore_case);
-
-GetOptions
+getopt
   'f|foreground' => \$ENV{HYPNOTOAD_FOREGROUND},
   'h|help'       => \my $help,
   's|stop'       => \$ENV{HYPNOTOAD_STOP},
   't|test'       => \$ENV{HYPNOTOAD_TEST};
 
-my $app = shift || $ENV{HYPNOTOAD_APP};
-if ($help || !$app) {
-  require Mojolicious::Command;
-  die Mojolicious::Command->new->extract_usage;
-}
-
-require Mojo::Server::Hypnotoad;
+die extract_usage if $help || !(my $app = shift || $ENV{HYPNOTOAD_APP});
 Mojo::Server::Hypnotoad->new->run($app);
 
 =encoding utf8
@@ -69,14 +49,13 @@ hypnotoad - Hypnotoad HTTP and WebSocket server
 
 =head1 DESCRIPTION
 
-Start L<Mojolicious> and L<Mojolicious::Lite> applications with the
-L<Mojo::Server::Hypnotoad> web server.
+Start L<Mojolicious> and L<Mojolicious::Lite> applications with the L<Hypnotoad|Mojo::Server::Hypnotoad> web server.
 
 =head1 SEE ALSO
 
-L<Mojolicious>, L<Mojolicious::Guides>, L<http://mojolicious.org>.
+L<Mojolicious>, L<Mojolicious::Guides>, L<https://mojolicious.org>.
 
 =cut
-
 __END__
 :endofperl
+@set "ErrorLevel=" & @goto _undefined_label_ 2>NUL || @"%COMSPEC%" /d/c @exit %ErrorLevel%

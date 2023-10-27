@@ -158,7 +158,7 @@ HRESULT CZipFile::AddStream(_In_z_ LPCWSTR szFileNameInZipW, _In_ MX::CStream *l
       return hRes;
   }
 
-  hRes = lpStream->Seek(0, MX::CStream::SeekStart);
+  hRes = lpStream->Seek(0, MX::CStream::eSeekMethod::Start);
   if (FAILED(hRes))
     return hRes;
 
@@ -178,8 +178,8 @@ HRESULT CZipFile::AddStream(_In_z_ LPCWSTR szFileNameInZipW, _In_ MX::CStream *l
 
     ::MxMemSet(&sIoStatus, 0, sizeof(sIoStatus));
     ::MxMemSet(&sBasicInfo, 0, sizeof(sBasicInfo));
-    nNtStatus = ::MxNtQueryInformationFile(lpStream->GetHandle(), &sIoStatus, &sBasicInfo, (ULONG)sizeof(sBasicInfo),
-      MxFileBasicInformation);
+    nNtStatus = ::MxNtQueryInformationFile(lpStream->GetHandle(), &sIoStatus, &sBasicInfo,
+                                           (ULONG)sizeof(sBasicInfo), MxFileBasicInformation);
     if (!NT_SUCCESS(nNtStatus))
       return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
 
@@ -490,7 +490,7 @@ HRESULT CZipFile::CreateOrOpenArchive(_In_z_ LPCWSTR szFileNameW, _In_ int mode)
   if (FAILED(hRes))
     return hRes;
 
-  zc_data->zip_stream = mz_stream_os_create(NULL);
+  zc_data->zip_stream = mz_stream_os_create();
   if (mz_stream_os_open(zc_data->zip_stream, (LPCSTR)cStrUtf8FileNameA, (int32_t)mode) != MZ_OK)
   {
     hRes = MX_HRESULT_FROM_WIN32(mz_stream_os_error(zc_data->zip_stream));
@@ -498,7 +498,7 @@ HRESULT CZipFile::CreateOrOpenArchive(_In_z_ LPCWSTR szFileNameW, _In_ int mode)
     return hRes;
   }
 
-  zc_data->zip_handle = mz_zip_create(NULL);
+  zc_data->zip_handle = mz_zip_create();
   if (zc_data->zip_handle == NULL)
   {
     CloseArchive();

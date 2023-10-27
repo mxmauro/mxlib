@@ -65,7 +65,7 @@ years, it will become a standard practice.
 
 
 However, C<package NAME VERSION> requires a new, 'strict' version
-number format. See L<"Version number formats"> for details.
+number format. See L</"Version number formats"> for details.
 
 
 =head2 The C<...> operator
@@ -430,7 +430,7 @@ to bless them into C<IO::Handle>.
 =item *
 
 The semantics of C<use feature :5.10*> have changed slightly.
-See L<"Modules and Pragmata"> for more information.
+See L</"Modules and Pragmata"> for more information.
 
 =item *
 
@@ -573,7 +573,7 @@ could create names that are, for example, made up entirely of punctuation
 symbols. It is now deprecated to make names that don't begin with an
 alphabetic character, and aren't alphanumeric or contain other than
 a very few other characters, namely spaces, dashes, parentheses
-and colons. Because of the added meaning of C<\N> (See L</C<\N>
+and colons. Because of the added meaning of C<\N> (See C<L</\N>
 experimental regex escape>), names that look like curly brace -enclosed
 quantifiers won't work. For example, C<\N{3,4}> now means to match 3 to
 4 non-newlines; before a custom name C<3,4> could have been created.
@@ -1707,7 +1707,7 @@ Two flag bits are currently supported.
 =item *
 
 C<SVf_UTF8> will call C<SvUTF8_on()> for you. (Note that this does
-not convert an sequence of ISO 8859-1 characters to UTF-8). A wrapper,
+not convert a sequence of ISO 8859-1 characters to UTF-8). A wrapper,
 C<newSVpvn_utf8()> is available for this.
 
 =item *

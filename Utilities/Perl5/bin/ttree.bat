@@ -1,31 +1,18 @@
 @rem = '--*-Perl-*--
-@echo off
-if "%OS%" == "Windows_NT" goto WinNT
-IF EXIST "%~dp0perl.exe" (
-"%~dp0perl.exe" -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-) ELSE IF EXIST "%~dp0..\..\bin\perl.exe" (
-"%~dp0..\..\bin\perl.exe" -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-) ELSE (
-perl -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-)
-
-goto endofperl
+@set "ErrorLevel="
+@if "%OS%" == "Windows_NT" @goto WinNT
+@perl -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
+@set ErrorLevel=%ErrorLevel%
+@goto endofperl
 :WinNT
-IF EXIST "%~dp0perl.exe" (
-"%~dp0perl.exe" -x -S %0 %*
-) ELSE IF EXIST "%~dp0..\..\bin\perl.exe" (
-"%~dp0..\..\bin\perl.exe" -x -S %0 %*
-) ELSE (
-perl -x -S %0 %*
-)
-
-if NOT "%COMSPEC%" == "%SystemRoot%\system32\cmd.exe" goto endofperl
-if %errorlevel% == 9009 echo You do not have Perl in your PATH.
-if errorlevel 1 goto script_failed_so_exit_with_non_zero_val 2>nul
-goto endofperl
+@perl -x -S %0 %*
+@set ErrorLevel=%ErrorLevel%
+@if NOT "%COMSPEC%" == "%SystemRoot%\system32\cmd.exe" @goto endofperl
+@if %ErrorLevel% == 9009 @echo You do not have Perl in your PATH.
+@goto endofperl
 @rem ';
 #!/usr/bin/perl -w
-#line 29
+#line 30
 #========================================================================
 #
 # ttree
@@ -102,6 +89,7 @@ my $suffix   = $config->suffix;
 my $binmode  = $config->binmode;
 my $depends  = $config->depend;
 my $depsfile = $config->depend_file;
+my $copy_dir = $config->copy_dir;
 my ($n_proc, $n_unmod, $n_skip, $n_copy, $n_link, $n_mkdir) = (0) x 6;
 
 my $srcdir   = $config->src
@@ -218,6 +206,7 @@ if ($verbose) {
           "      Ignore: [ @$ignore ]\n",
           "        Copy: [ @$copy ]\n",
           "        Link: [ @$link ]\n",
+          "    Copy_Dir: [ @$copy_dir ]\n",
           "      Accept: [ @$accept ]\n",
           "      Suffix: [ $sfx ]\n");
     print("      Module: $ttmodule ", $ttmodule->module_version(), "\n")
@@ -319,16 +308,6 @@ sub process_tree {
             }
         }
 
-        # check against acceptance list
-        if (@$accept) {
-            unless ((-d $abspath && $recurse) || grep { $path =~ /$_/ } @$accept) {
-                printf yellow("  - %-32s (not accepted)\n"), $path
-                    if $verbose > 1;
-                $n_skip++;
-                next FILE;
-            }
-        }
-
         if (-d $abspath) {
             if ($recurse) {
                 my ($uid, $gid, $mode);
@@ -397,14 +376,26 @@ sub process_file {
     $dest = $destdir ? "$destdir/$destfile" : $destfile;
                    
 #    print "proc $file => $dest\n";
-    
-    # check against link list
-    foreach my $link_pattern (@$link) {
-        if ($filename =~ /$link_pattern/) {
-            $link_file = $copy_file = 1;
-            $check = $link_pattern;
-            last;
-        }
+
+    unless ($link_file) {
+	# check against link list
+	foreach my $link_pattern (@$link) {
+	    if ($filename =~ /$link_pattern/) {
+		$link_file = $copy_file = 1;
+		$check = "/$link_pattern/";
+		last;
+	    }
+	}
+    }
+
+    unless ($link_file) {
+	foreach my $prefix (@$copy_dir) {
+	    if ( index($file, "$prefix/") == 0 ) {
+		$copy_file = 1;
+		$check = "copy_dir: $prefix";
+		last;
+	    }
+	}
     }
 
     unless ($copy_file) {
@@ -412,9 +403,19 @@ sub process_file {
         foreach my $copy_pattern (@$copy) {
             if ($filename =~ /$copy_pattern/) {
                 $copy_file = 1;
-                $check = $copy_pattern;
+                $check = "/$copy_pattern/";
                 last;
             }
+        }
+    }
+
+    # check against acceptance list
+    if (not $copy_file and @$accept) {
+        unless (grep { $filename =~ /$_/ } @$accept) {
+            printf yellow("  - %-32s (not accepted)\n"), $file
+                if $verbose > 1;
+            $n_skip++;
+            return;
         }
     }
 
@@ -456,7 +457,7 @@ sub process_file {
 
         unless ($copy_file) {
             $n_link++;
-            printf green("  > %-32s (linked, matches /$check/)\n"), $file
+            printf green("  > %-32s (linked, matches $check)\n"), $file
                 if $verbose;
             return;
         }
@@ -474,7 +475,7 @@ sub process_file {
             }
         }
 
-        printf green("  > %-32s (copied, matches /$check/)\n"), $file
+        printf green("  > %-32s (copied, matches $check)\n"), $file
             if $verbose;
 
         return;
@@ -641,6 +642,7 @@ sub read_config {
         'depend=s%',
         'depend_debug|depdbg',
         'depend_file|depfile=s' => { EXPAND => EXPAND_ALL },
+        'copy_dir=s@',
         'template_module|module=s',
         'template_anycase|anycase',
         'template_encoding|encoding=s',
@@ -659,6 +661,7 @@ sub read_config {
         'template_default|default=s',
         'template_error|error=s',
         'template_debug|debug=s',
+        'template_strict|strict',
         'template_start_tag|start_tag|starttag=s',
         'template_end_tag|end_tag|endtag=s',
         'template_tag_style|tag_style|tagstyle=s',
@@ -720,7 +723,7 @@ sub _white(@)  { @_ }                   # nullop
 sub write_config {
     my $file = shift;
 
-    open(CONFIG, ">$file") || die "failed to create $file: $!\n";
+    open(CONFIG, ">", $file) || die "failed to create $file: $!\n";
     print(CONFIG <<END_OF_CONFIG);
 #------------------------------------------------------------------------
 # sample .ttreerc file created automatically by $NAME version $VERSION
@@ -836,6 +839,7 @@ File search specifications (all may appear multiple times):
    --ignore=REGEX           Ignore files matching REGEX
    --copy=REGEX             Copy files matching REGEX
    --link=REGEX             Link files matching REGEX
+   --copy_dir=DIR           Copy files in dir DIR (recursive)
    --accept=REGEX           Process only files matching REGEX 
 
 File Dependencies Options:
@@ -1077,7 +1081,8 @@ The C<ignore>, C<copy>, C<link> and C<accept> options are used to
 specify Perl regexen to filter file names. Files that match any of the
 C<ignore> options will not be processed. Remaining files that match
 any of the C<copy> or C<link> regexen will be copied or linked to the
-destination directory. Remaining files that then match any of the
+destination directory. Files that reside in any of the C<copy_dir>
+ directories are also copied. Remaining files that then match any of the
 C<accept> criteria are then processed via the Template Toolkit. If no
 C<accept> parameter is specified then all files will be accepted for
 processing if not already copied or ignored.
@@ -1222,6 +1227,6 @@ modify it under the same terms as Perl itself.
 
 L<tpage|Template::Tools::tpage>
 
-
 __END__
 :endofperl
+@set "ErrorLevel=" & @goto _undefined_label_ 2>NUL || @"%COMSPEC%" /d/c @exit %ErrorLevel%

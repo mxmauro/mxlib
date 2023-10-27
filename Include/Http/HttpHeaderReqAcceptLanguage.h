@@ -65,7 +65,7 @@ public:
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return DuplicateBehaviorMerge;
+    return eDuplicateBehavior::Merge;
     };
 
   HRESULT AddLanguage(_In_z_ LPCSTR szLanguageA, _In_opt_ SIZE_T nLanguageLen = (SIZE_T)-1,

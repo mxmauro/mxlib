@@ -31,8 +31,6 @@ CHttpBodyParserUrlEncodedForm::CHttpBodyParserUrlEncodedForm(_In_ DWORD _dwMaxFi
   dwMaxFieldSize = _dwMaxFieldSize;
   if (dwMaxFieldSize < 32768)
     dwMaxFieldSize = 32768;
-  sParser.nState = StateNameStart;
-  nCurrContentSize = 0;
   return;
 }
 
@@ -56,9 +54,9 @@ HRESULT CHttpBodyParserUrlEncodedForm::Parse(_In_opt_ LPCVOID lpData, _In_opt_ S
 
   if (lpData == NULL && nDataSize > 0)
     return E_POINTER;
-  if (sParser.nState == StateDone)
+  if (sParser.nState == eState::Done)
     return S_OK;
-  if (sParser.nState == StateError)
+  if (sParser.nState == eState::Error)
     return MX_E_InvalidData;
 
   //end of parsing?
@@ -66,10 +64,10 @@ HRESULT CHttpBodyParserUrlEncodedForm::Parse(_In_opt_ LPCVOID lpData, _In_opt_ S
   {
     switch (sParser.nState)
     {
-      case StateNameStart:
+      case eState::NameStart:
         break;
 
-      case StateName:
+      case eState::Name:
         hRes = CUrl::Decode(cStrTempA, (LPCSTR)(sParser.cStrCurrA), sParser.cStrCurrA.GetLength());
         if (SUCCEEDED(hRes))
           hRes = Utf8_Decode(sParser.cStrCurrFieldNameW, (LPCSTR)cStrTempA, cStrTempA.GetLength());
@@ -77,7 +75,7 @@ HRESULT CHttpBodyParserUrlEncodedForm::Parse(_In_opt_ LPCVOID lpData, _In_opt_ S
           goto done;
         break;
 
-      case StateValue:
+      case eState::Value:
         hRes = CUrl::Decode(cStrTempA, (LPCSTR)(sParser.cStrCurrA), sParser.cStrCurrA.GetLength());
         if (SUCCEEDED(hRes))
           hRes = Utf8_Decode(cStrTempW, (LPCSTR)cStrTempA, cStrTempA.GetLength());
@@ -87,7 +85,7 @@ HRESULT CHttpBodyParserUrlEncodedForm::Parse(_In_opt_ LPCVOID lpData, _In_opt_ S
           goto done;
         break;
     }
-    sParser.nState = StateDone;
+    sParser.nState = eState::Done;
     return S_OK;
   }
 
@@ -101,7 +99,7 @@ HRESULT CHttpBodyParserUrlEncodedForm::Parse(_In_opt_ LPCVOID lpData, _In_opt_ S
   {
     switch (sParser.nState)
     {
-      case StateNameStart:
+      case eState::NameStart:
         if (*szDataA == '&')
           break; //ignore multiple '&' separators
         if (*szDataA == '=')
@@ -110,10 +108,10 @@ err_invalid_data:
           hRes = MX_E_InvalidData;
           goto done;
         }
-        sParser.nState = StateName;
+        sParser.nState = eState::Name;
         //fall into 'StateName'
 
-      case StateName:
+      case eState::Name:
         if (*szDataA == '=' || *szDataA == '&')
         {
           hRes = CUrl::Decode(cStrTempA, (LPCSTR)(sParser.cStrCurrA), sParser.cStrCurrA.GetLength());
@@ -126,7 +124,7 @@ err_invalid_data:
           {
             BACKWARD_CHAR();
           }
-          sParser.nState = StateValue;
+          sParser.nState = eState::Value;
           break;
         }
         if (*((unsigned char*)szDataA) < 32 || (*szDataA & 0x80) != 0)
@@ -139,7 +137,7 @@ err_invalid_data:
         }
         break;
 
-      case StateValue:
+      case eState::Value:
         if (*szDataA == '&')
         {
           hRes = CUrl::Decode(cStrTempA, (LPCSTR)(sParser.cStrCurrA), sParser.cStrCurrA.GetLength());
@@ -149,7 +147,7 @@ err_invalid_data:
             hRes = AddField((LPCWSTR)(sParser.cStrCurrFieldNameW), (LPCWSTR)cStrTempW);
           if (FAILED(hRes))
             goto done;
-          sParser.nState = StateNameStart;
+          sParser.nState = eState::NameStart;
           sParser.cStrCurrFieldNameW.Empty();
           sParser.cStrCurrA.Empty();
           break;
@@ -172,7 +170,7 @@ err_invalid_data:
 
 done:
   if (FAILED(hRes))
-    sParser.nState = StateError;
+    sParser.nState = eState::Error;
   return hRes;
 }
 #undef BACKWARD_CHAR

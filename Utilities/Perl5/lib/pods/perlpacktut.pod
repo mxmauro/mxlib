@@ -407,7 +407,7 @@ and that's why the low order byte is stored at the lower address. To
 unpack such a (unsigned) short we'll have to use code C<v>. A repeat
 count unpacks all 12 shorts:
 
-   my( $ip, $cs, $flags, $ax, $bx, $cd, $dx, $si, $di, $bp, $ds, $es ) =
+   my( $ip, $cs, $flags, $ax, $bx, $cx, $dx, $si, $di, $bp, $ds, $es ) =
      unpack( 'v12', $frame );
 
 Alternatively, we could have used C<C> to unpack the individually
@@ -459,7 +459,7 @@ or even:
 
 and pass C<$buf> to your send routine. Some protocols demand that the
 count should include the length of the count itself: then just add 4
-to the data length. (But make sure to read L<"Lengths and Widths"> before
+to the data length. (But make sure to read L</"Lengths and Widths"> before
 you really code this!)
 
 
@@ -487,7 +487,7 @@ obviously works for C<E<lt>>, where the "little end" touches the code.
 
 You will probably find these modifiers even more useful if you have
 to deal with big- or little-endian C structures. Be sure to read
-L<"Packing and Unpacking C Structures"> for more on that.
+L</"Packing and Unpacking C Structures"> for more on that.
 
 
 =head2 Floating point Numbers
@@ -632,7 +632,7 @@ characters that are used in several European languages is in the next
 range, up to 255. After some more Latin extensions we find the character
 sets from languages using non-Roman alphabets, interspersed with a
 variety of symbol sets such as currency symbols, Zapf Dingbats or Braille.
-(You might want to visit L<http://www.unicode.org/> for a look at some of
+(You might want to visit L<https://www.unicode.org/> for a look at some of
 them - my personal favourites are Telugu and Kannada.)
 
 The Unicode character sets associates characters with integers. Encoding
@@ -668,16 +668,18 @@ Usually you'll want to pack or unpack UTF-8 strings:
    my @hebrew = unpack( 'U*', $utf );
 
 Please note: in the general case, you're better off using
-Encode::decode_utf8 to decode a UTF-8 encoded byte string to a Perl
-Unicode string, and Encode::encode_utf8 to encode a Perl Unicode string
-to UTF-8 bytes. These functions provide means of handling invalid byte
+L<C<Encode::decode('UTF-8', $utf)>|Encode/decode> to decode a UTF-8
+encoded byte string to a Perl Unicode string, and
+L<C<Encode::encode('UTF-8', $str)>|Encode/encode> to encode a Perl Unicode
+string to UTF-8 bytes. These functions provide means of handling invalid byte
 sequences and generally have a friendlier interface.
 
 =head2 Another Portable Binary Encoding
 
 The pack code C<w> has been added to support a portable binary data
 encoding scheme that goes way beyond simple integers. (Details can
-be found at L<http://Casbah.org/>, the Scarab project.)  A BER (Binary Encoded
+be found at L<https://github.com/mworks-project/mw_scarab/blob/master/Scarab-0.1.00d19/doc/binary-serialization.txt>,
+the Scarab project.)  A BER (Binary Encoded
 Representation) compressed unsigned integer stores base 128
 digits, most significant digit first, with as few digits as possible.
 Bit eight (the high bit) is set on each byte except the last. There
@@ -798,7 +800,7 @@ C<A4> or C<Z*>:
    my $txt = unpack( 'A4/A*', $buf );
 
 C</> is not implemented in Perls before 5.6, so if your code is required to
-work on older Perls you'll need to C<unpack( 'Z* Z* C')> to get the length,
+work on ancient Perls you'll need to C<unpack( 'Z* Z* C')> to get the length,
 then use it to make a new unpack string. For example
 
    # pack a message: ASCIIZ, ASCIIZ, length, string, byte
@@ -867,8 +869,8 @@ a repeat count for a C<()>-group.
 
 Intel HEX is a file format for representing binary data, mostly for
 programming various chips, as a text file. (See
-L<http://en.wikipedia.org/wiki/.hex> for a detailed description, and
-L<http://en.wikipedia.org/wiki/SREC_(file_format)> for the Motorola
+L<https://en.wikipedia.org/wiki/.hex> for a detailed description, and
+L<https://en.wikipedia.org/wiki/SREC_(file_format)> for the Motorola
 S-record format, which can be unravelled using the same technique.)
 Each line begins with a colon (':') and is followed by a sequence of
 hexadecimal characters, specifying a byte count I<n> (8 bit),
@@ -1031,7 +1033,7 @@ C standardese).
 Neither using offsets nor adding C<x>'s to bridge the gaps is satisfactory.
 (Just imagine what happens if the structure changes.) What we really need
 is a way of saying "skip as many bytes as required to the next multiple of N".
-In fluent Templatese, you say this with C<x!N> where N is replaced by the
+In fluent templates, you say this with C<x!N> where N is replaced by the
 appropriate value. Here's the next version of our struct packaging:
 
   my $gappy = pack( 'c x!2 s c x!4 l!', $c1, $s, $c2, $l );

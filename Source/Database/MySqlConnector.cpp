@@ -148,7 +148,7 @@ static MX::Database::CMySqlConnector::CConnectOptions cDefaultConnectOptions;
 
 static HRESULT InitializeInternals();
 static VOID LIBMYSQL_Shutdown();
-static VOID GetAnsiAppPath(_Out_ LPSTR szPathA, _In_ SIZE_T nMaxPathLen);
+static VOID GetAnsiAppPath(_Out_writes_(nMaxPathLen) LPSTR szPathA, _In_ SIZE_T nMaxPathLen);
 static HRESULT HResultFromMySqlErr(_In_ int err);
 
 //-----------------------------------------------------------
@@ -474,7 +474,7 @@ LPCSTR CMySqlConnector::GetSqlState() const
   return (lpInternalData != NULL) ? mysql_data->szLastDbSqlStateA : "00000";
 }
 
-HRESULT CMySqlConnector::QueryExecute(_In_ LPCSTR szQueryA, _In_ SIZE_T nQueryLen, _In_ CFieldList *lpInputFieldsList)
+HRESULT CMySqlConnector::QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQueryLen, _In_opt_ CFieldList *lpInputFieldsList)
 {
   SIZE_T nParamsCount, nRetryCount;
 
@@ -585,33 +585,33 @@ on_error:
         lpField = lpInputFieldsList->GetElementAt(nParamIdx);
         switch (lpField->GetType())
         {
-          case FieldTypeNull:
+          case eFieldType::Null:
             nSize += sizeof(my_bool);
             break;
 
-          case FieldTypeBoolean:
+          case eFieldType::Boolean:
             nSize += sizeof(LONG);
             break;
 
-          case FieldTypeUInt32:
-          case FieldTypeInt32:
+          case eFieldType::UInt32:
+          case eFieldType::Int32:
             nSize += sizeof(ULONG);
             break;
 
-          case FieldTypeUInt64:
-          case FieldTypeInt64:
+          case eFieldType::UInt64:
+          case eFieldType::Int64:
             nSize += sizeof(ULONGLONG);
             break;
 
-          case FieldTypeDouble:
+          case eFieldType::Double:
             nSize += sizeof(double);
             break;
 
-          case FieldTypeString:
-          case FieldTypeBlob:
+          case eFieldType::String:
+          case eFieldType::Blob:
             break;
 
-          case FieldTypeDateTime:
+          case eFieldType::DateTime:
             nSize += sizeof(MYSQL_TIME);
             break;
 
@@ -635,7 +635,7 @@ on_error:
         lpBind->buffer = lpPtr;
         switch (lpField->GetType())
         {
-          case FieldTypeNull:
+          case eFieldType::Null:
             lpBind->buffer_type = MYSQL_TYPE_NULL;
             lpBind->is_null = (my_bool *)lpPtr;
             *(lpBind->is_null) = 1;
@@ -643,7 +643,7 @@ on_error:
             lpPtr += sizeof(my_bool);
             break;
 
-          case FieldTypeBoolean:
+          case eFieldType::Boolean:
             lpBind->buffer_type = MYSQL_TYPE_LONG;
             lpBind->buffer_length = (ULONG)sizeof(LONG);
             *((LONG*)(lpBind->buffer)) = (lpField->GetBoolean() != FALSE) ? 1 : 0;
@@ -651,11 +651,11 @@ on_error:
             lpPtr += sizeof(LONG);
             break;
 
-          case FieldTypeUInt32:
-          case FieldTypeInt32:
+          case eFieldType::UInt32:
+          case eFieldType::Int32:
             lpBind->buffer_type = MYSQL_TYPE_LONG;
             lpBind->buffer_length = (ULONG)sizeof(LONG);
-            if (lpField->GetType() == FieldTypeUInt32)
+            if (lpField->GetType() == eFieldType::UInt32)
             {
               lpBind->is_unsigned = 1;
               *((ULONG*)(lpBind->buffer)) = lpField->GetUInt32();
@@ -668,11 +668,11 @@ on_error:
             lpPtr += sizeof(LONG);
             break;
 
-          case FieldTypeUInt64:
-          case FieldTypeInt64:
+          case eFieldType::UInt64:
+          case eFieldType::Int64:
             lpBind->buffer_type = MYSQL_TYPE_LONGLONG;
             lpBind->buffer_length = (ULONG)sizeof(ULONGLONG);
-            if (lpField->GetType() == FieldTypeUInt64)
+            if (lpField->GetType() == eFieldType::UInt64)
             {
               lpBind->is_unsigned = 1;
               *((ULONGLONG*)(lpBind->buffer)) = lpField->GetUInt64();
@@ -685,7 +685,7 @@ on_error:
             lpPtr += sizeof(LONGLONG);
             break;
 
-          case FieldTypeDouble:
+          case eFieldType::Double:
             lpBind->buffer_type = MYSQL_TYPE_DOUBLE;
             lpBind->buffer_length = (ULONG)sizeof(double);
             *((double*)(lpBind->buffer)) = lpField->GetDouble();
@@ -693,8 +693,8 @@ on_error:
             lpPtr += sizeof(double);
             break;
 
-          case FieldTypeString:
-          case FieldTypeBlob:
+          case eFieldType::String:
+          case eFieldType::Blob:
             //we don't copy the data so we need to keep a reference to the source field
             if (mysql_data->aInputFieldsList.AddElement(lpField) == FALSE)
             {
@@ -704,7 +704,7 @@ on_error:
             }
             lpField->AddRef();
 
-            if (lpField->GetType() == FieldTypeString)
+            if (lpField->GetType() == eFieldType::String)
             {
               lpBind->buffer_type = MYSQL_TYPE_VAR_STRING;
               lpBind->buffer = (LPVOID)(lpField->GetString());
@@ -717,7 +717,7 @@ on_error:
             lpBind->buffer_length = (ULONG)(lpField->GetLength());
             break;
 
-          case FieldTypeDateTime:
+          case eFieldType::DateTime:
             {
             int nYear, nMonth, nDay, nHours, nMinutes, nSeconds, nMilliSeconds;
 
@@ -1987,11 +1987,14 @@ static VOID LIBMYSQL_Shutdown()
 #undef LOAD_API
 #undef CLEAR_API
 
-static VOID GetAnsiAppPath(_Out_ LPSTR szPathA, _In_ SIZE_T nMaxPathLen)
+static VOID GetAnsiAppPath(_Out_writes_(nMaxPathLen) LPSTR szPathA, _In_ SIZE_T nMaxPathLen)
 {
   WCHAR szPathW[4096], *sW;
   DWORD dwLen;
   int nLen;
+
+  if (nMaxPathLen == 0)
+    return;
 
   //get application path
   dwLen = ::GetModuleFileNameW(NULL, szPathW, MX_ARRAYLEN(szPathW) - 2);
@@ -2008,13 +2011,13 @@ static VOID GetAnsiAppPath(_Out_ LPSTR szPathA, _In_ SIZE_T nMaxPathLen)
     return;
   }
   sW[1] = 0;
-  nLen = ::WideCharToMultiByte(CP_ACP, 0, szPathW, (int)MX::StrLenW(szPathW), szPathA, 4096, NULL, NULL);
+  nLen = ::WideCharToMultiByte(CP_ACP, 0, szPathW, (int)MX::StrLenW(szPathW), szPathA, (int)nMaxPathLen, NULL, NULL);
   if (nLen <= 0)
   {
     strcpy_s(szPathA, nMaxPathLen, ".\\");
     return;
   }
-  szPathA[nLen] = 0;
+  szPathA[nMaxPathLen - 1] = 0;
   return;
 }
 

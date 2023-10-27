@@ -9,9 +9,8 @@
 package Pod::Checker;
 use strict;
 use warnings;
-use Data::Dumper
 
-our $VERSION = '1.71';  ## Current version of this package
+our $VERSION = '1.75';  ## Current version of this package
 
 =head1 NAME
 
@@ -47,7 +46,7 @@ trigger additional warnings. See L<"Warnings">.
 
 =item B<-quiet> =E<gt> I<val>
 
-If C<num> is true, do not print any errors/warnings.
+If C<val> is true, do not print any errors/warnings.
 
 =back
 
@@ -198,10 +197,6 @@ The I<STRING> found cannot be interpreted as a character entity.
 
 There needs to be content inside E, L, and X formatting codes.
 
-=item * A non-empty ZE<lt>E<gt>
-
-The C<ZE<lt>E<gt>> sequence is supposed to be empty.
-
 =item * Spurious text after =pod / =cut
 
 The commands C<=pod> and C<=cut> do not take any arguments.
@@ -300,6 +295,12 @@ description of what the thing is good for.
 For example if there is a C<=head2> in the POD file prior to a
 C<=head1>.
 
+=item * A non-empty ZE<lt>E<gt>
+
+The C<ZE<lt>E<gt>> sequence is supposed to be empty. Caveat: this issue is
+detected in L<Pod::Simple> and will be flagged as an I<ERROR> by any client
+code; any contents of C<ZE<lt>...E<gt>> will be disregarded, anyway.
+
 =back
 
 =head2 Hyperlinks
@@ -362,10 +363,121 @@ B<podchecker> (the script). This allows users of B<Pod::Checker> to
 control completely the output behavior. Users of B<podchecker> (the script)
 get the well-known behavior.
 
-v1.45 inherits from Pod::Simple as opposed to all previous versions
+v1.45 inherits from L<Pod::Simple> as opposed to all previous versions
 inheriting from Pod::Parser. Do B<not> use Pod::Simple's interface when
 using Pod::Checker unless it is documented somewhere on this page. I
 repeat, DO B<NOT> USE POD::SIMPLE'S INTERFACE.
+
+The following list documents the overrides to Pod::Simple, primarily to
+make L<Pod::Coverage> happy:
+
+=over 4
+
+=item end_B
+
+=item end_C
+
+=item end_Document
+
+=item end_F
+
+=item end_I
+
+=item end_L
+
+=item end_Para
+
+=item end_S
+
+=item end_X
+
+=item end_fcode
+
+=item end_for
+
+=item end_head
+
+=item end_head1
+
+=item end_head2
+
+=item end_head3
+
+=item end_head4
+
+=item end_item
+
+=item end_item_bullet
+
+=item end_item_number
+
+=item end_item_text
+
+=item handle_pod_and_cut
+
+=item handle_text
+
+=item handle_whiteline
+
+=item hyperlink
+
+=item scream
+
+=item start_B
+
+=item start_C
+
+=item start_Data
+
+=item start_F
+
+=item start_I
+
+=item start_L
+
+=item start_Para
+
+=item start_S
+
+=item start_Verbatim
+
+=item start_X
+
+=item start_fcode
+
+=item start_for
+
+=item start_head
+
+=item start_head1
+
+=item start_head2
+
+=item start_head3
+
+=item start_head4
+
+=item start_item_bullet
+
+=item start_item_number
+
+=item start_item_text
+
+=item start_over
+
+=item start_over_block
+
+=item start_over_bullet
+
+=item start_over_empty
+
+=item start_over_number
+
+=item start_over_text
+
+=item whine
+
+=back
 
 =cut
 
@@ -452,6 +564,7 @@ sub new {
     $new->{'_fcode_stack'} = [];    # stack for nested formatting codes
     $new->{'_fcode_pos'} = [];      # stack for position in paragraph of fcodes
     $new->{'_begin_stack'} = [];    # stack for =begins: [line #, target]
+    $new->{'_links'} = [];          # stack for hyperlinks to external entities
     $new->{'_internal_links'} = []; # set of linked-to internal sections
     $new->{'_index'} = [];          # stack for text in X<>s
 
@@ -501,8 +614,11 @@ sub poderror {
     ## Retrieve options
     chomp( my $msg  = ($opts{'-msg'} || '')."@_" );
     my $line = (exists $opts{'-line'}) ? " at line $opts{'-line'}" : '';
-    my $file = ' in file ' . ((exists $opts{'-file'}) ?
-                             $opts{'-file'} : $self->source_filename);
+    my $file = ' in file ' . ((exists $opts{'-file'})
+                              ? $opts{'-file'}
+                              : ((defined $self->source_filename)
+                                 ? $self->source_filename
+                                 : "???"));
     unless (exists $opts{'-severity'}) {
        ## See if can find severity in message prefix
        $opts{'-severity'} = $1  if ( $msg =~ s/^\**\s*([A-Z]{3,}):\s+// );
@@ -593,8 +709,6 @@ Add (if argument specified) and retrieve the index entries (as defined by
 C<XE<lt>E<gt>>) of the current POD. They consist of plain text, each piece
 of whitespace is collapsed to a single blank.
 
-=back
-
 =cut
 
 # set/return index entries of current POD
@@ -610,6 +724,29 @@ sub idx {
         return $text;
     }
     @{$self->{'_index'}};
+}
+
+##################################
+
+# add a hyperlink to the list of those of the current POD; returns current
+# list after the addition has been done
+sub hyperlink {
+    my $self = shift;
+    push(@{$self->{'_links'}}, $_[0]);
+    return $_[0];
+}
+
+=item C<$checker-E<gt>hyperlinks()>
+
+Retrieve an array containing the hyperlinks to things outside
+the current POD (as defined by C<LE<lt>E<gt>>).
+
+Each is an instance of a class with the following methods:
+
+=cut
+
+sub hyperlinks {
+    @{shift->{'_links'}};
 }
 
 ##################################
@@ -638,6 +775,9 @@ sub whine {
           $complaint =~ /^You can't have =items \(as at line .+?\) unless the first thing after the =over is an =item$/ ||
           $complaint =~ /^You have '=item .+?' instead of the expected '=item .+?'$/;
     }
+
+    # rt.cpan.org #98326 - errors about Z<> ("non-empty")
+    $severity = 'WARNING' if $complaint =~ /\bZ\<\>/;
 
     $self->poderror({ -line => $line,
                       -severity => $severity,
@@ -672,6 +812,10 @@ sub _check_fcode {
     # Check for an fcode inside another of the same fcode
     # XXX line number is the line of the start of the paragraph that the warning
     # is in, not the line that the warning is on. Fix this
+
+    # Later versions of Pod::Simple forbid nested L<>'s
+    return if $inner eq 'L' && $Pod::Simple::VERSION ge '3.33';
+
     if (grep { $_ eq $inner } @$outers) {
         $self->poderror({ -line => $self->{'_line'},
                           -severity => 'WARNING',
@@ -800,7 +944,13 @@ sub end_item_text   { shift->end_item('definition') }
 sub end_item {
     my $self = shift;
     my $type = shift;
-    if ($self->{'_thispara'} eq '') {
+    # If there is verbatim text in this item, it will show up as part of
+    # 'paras', and not part of '_thispara'.  If the first para after this is a
+    # verbatim one, it actually will be (part of) the contents for this item.
+    if (   $self->{'_thispara'} eq ''
+        && (  ! @{$self->{'paras'}}
+            ||    $self->{'paras'}[0][0] !~ /Verbatim/i))
+    {
         $self->poderror({ -line => $self->{'_line'},
                           -severity => 'WARNING',
                           -msg => '=item has no contents' });
@@ -851,8 +1001,6 @@ sub end_Document {
     # know what it means...
 
     for my $link (@{ $self->{'_internal_links'} }) {
-        # XXX What if there is a link to the page by the name
-        # e.g. in Tk::Pod : L<Tk::Pod/"DESCRIPTION">
         my ($name, $line) = @$link;
         unless ( $nodes{$name} ) {
             $self->poderror({ -line => $line,
@@ -904,36 +1052,19 @@ sub start_L {
     my ($self, $flags) = @_;
     $self->start_fcode('L');
 
-    # We use Pod::Hyperlink to parse the raw L<> contents into the -alttext,
-    # -page, and -node, but we then use Pod::Simple's parsing to override -page
-    # and -node as Pod::Simple handles them better. An example of this is the
-    # handling of leading/trailing whitespace: Pod::Simple correctly interprets
-    # leading/trailing whitespace to mean the contents are a section, whereas
-    # Pod::Hyperlink removes the whitespace and treats the contents as a page.
-    # Note that we also use Pod::Hyperlink to issue some L<> error checks.
-
-}
-
-sub _treat_Ls {
-    my ($self, @stack) = @_;
-
-    my $start_line = $stack[0][1]{'start_line'};
-
-    $self->SUPER::_treat_Ls(@stack);
-
-    while(my $treelet = shift @stack) {
-        for(my $i = 2; $i < @$treelet; ++$i) {
-            # iterate over children of current tree node
-            next unless ref $treelet->[$i];  # text nodes are uninteresting
-            unless($treelet->[$i][0] eq 'L') {
-                unshift @stack, $treelet->[$i]; # recurse
-                next;
-            }
-
-            my $arg = $treelet->[$i][1];
-            if ($arg->{type} eq 'pod' && ! $arg->{to} && $arg->{section}) {
-                push @{ $self->{'_internal_links'} }, [ "$arg->{section}", $start_line ];
-            }
+    my $link = Pod::Checker::Hyperlink->new($flags, $self);
+    if ($link) {
+        if (   $link->type eq 'pod'
+            && $link->node
+                # It's an internal-to-this-page link if no page is given, or
+                # if the given one is to our NAME.
+            && (! $link->page || (   $self->{'_pod_name'}
+                                  && $link->page eq $self->{'_pod_name'})))
+        {
+            push @{ $self->{'_internal_links'} }, [ $link->{'-raw_node'}, $link->line ];
+        }
+        else {
+            $self->hyperlink($link);
         }
     }
 }
@@ -956,7 +1087,7 @@ sub end_X {
     my $start = pop @{$self->{'_fcode_pos'}}; # start at the beginning of X<>
     my $end = length($self->{'_thispara'}) - $start; # end at end of X<>
     my $x = substr($self->{'_thispara'}, $start, $end, '');
-    unless ($x) {
+    if ($x eq "") {
         $self->poderror({ -line => $self->{'_line'},
                           -severity => 'ERROR',
                           -msg => "An empty X<>" });
@@ -965,10 +1096,100 @@ sub end_X {
     $self->end_fcode();
 }
 
+package Pod::Checker::Hyperlink;
 
-1;
+# This class is used to represent L<> link structures, so that the individual
+# elements are easily accessible.  It is based on code in Pod::Hyperlink
 
-__END__
+sub new {
+    my ($class,
+        $simple_link,   # The link structure returned by Pod::Simple
+        $caller         # The caller class
+    ) = @_;
+
+    my $self = +{};
+    bless $self, $class;
+
+    $self->{'-line'} ||= $caller->{'_line'};
+    $self->{'-type'} ||= $simple_link->{'type'};
+    # preserve raw link text for additional checks
+    $self->{'-raw-link-text'} = (exists $simple_link->{'raw'})
+                                ? "$simple_link->{'raw'}"
+                                : "";
+    # Force stringification of page and node.  (This expands any E<>.)
+    $self->{'-page'} = exists $simple_link->{'to'} ? "$simple_link->{'to'}" : "";
+    $self->{'-node'} = exists $simple_link->{'section'} ? "$simple_link->{'section'}" : "";
+
+    # Save the unmodified node text, as the .t files are expecting the message
+    # for internal link failures to include it (hence this preserves backward
+    # compatibility).
+    $self->{'-raw_node'} = $self->{'-node'};
+
+    # Remove leading/trailing white space.  Pod::Simple already warns about
+    # these, so if the only error is this, and the link is otherwise correct,
+    # only the Pod::Simple warning will be output, avoiding unnecessary
+    # confusion.
+    $self->{'-page'} =~ s/ ^ \s+ //x;
+    $self->{'-page'} =~ s/ \s+ $ //x;
+
+    $self->{'-node'} =~ s/ ^ \s+ //x;
+    $self->{'-node'} =~ s/ \s+ $ //x;
+
+    # Pod::Simple warns about L<> and L< >, but not L</>
+    if ($self->{'-page'} eq "" && $self->{'-node'} eq "") {
+        $caller->poderror({ -line => $caller->{'_line'},
+                          -severity => 'WARNING',
+                          -msg => 'empty link'});
+        return;
+    }
+
+    return $self;
+}
+
+=item line()
+
+Returns the approximate line number in which the link was encountered
+
+=cut
+
+sub line {
+    return $_[0]->{-line};
+}
+
+=item type()
+
+Returns the type of the link; one of:
+C<"url"> for things like
+C<http://www.foo>, C<"man"> for man pages, or C<"pod">.
+
+=cut
+
+sub type {
+    return  $_[0]->{-type};
+}
+
+=item page()
+
+Returns the linked-to page or url.
+
+=cut
+
+sub page {
+    return $_[0]->{-page};
+}
+
+=item node()
+
+Returns the anchor or node within the linked-to page, or an empty string
+(C<"">) if none appears in the link.
+
+=back
+
+=cut
+
+sub node {
+    return $_[0]->{-node};
+}
 
 =head1 AUTHOR
 
@@ -977,8 +1198,12 @@ Please report bugs using L<http://rt.cpan.org>.
 Brad Appleton E<lt>bradapp@enteract.comE<gt> (initial version),
 Marek Rouchal E<lt>marekr@cpan.orgE<gt>,
 Marc Green E<lt>marcgreen@cpan.orgE<gt> (port to Pod::Simple)
+Ricardo Signes E<lt>rjbs@cpan.orgE<gt> (more porting to Pod::Simple)
+Karl Williamson E<lt>khw@cpan.orgE<gt> (more porting to Pod::Simple)
 
 Based on code for B<Pod::Text::pod2text()> written by
 Tom Christiansen E<lt>tchrist@mox.perl.comE<gt>
 
 =cut
+
+1

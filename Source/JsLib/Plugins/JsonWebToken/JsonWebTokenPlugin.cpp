@@ -143,13 +143,13 @@ DukTape::duk_ret_t CJsonWebTokenPlugin::Create(_In_ DukTape::duk_context *lpCtx)
   //add algorithm
   switch (nHsAlgorithm)
   {
-    case CMessageDigest::AlgorithmSHA256:
+    case CMessageDigest::eAlgorithm::SHA256:
       DukTape::duk_push_sprintf(lpCtx, "HS256");
       break;
-    case CMessageDigest::AlgorithmSHA384:
+    case CMessageDigest::eAlgorithm::SHA384:
       DukTape::duk_push_sprintf(lpCtx, "HS384");
       break;
-    case CMessageDigest::AlgorithmSHA512:
+    case CMessageDigest::eAlgorithm::SHA512:
       DukTape::duk_push_sprintf(lpCtx, "HS512");
       break;
   }
@@ -430,15 +430,15 @@ DukTape::duk_ret_t CJsonWebTokenPlugin::Verify(_In_ DukTape::duk_context *lpCtx)
   sA = DukTape::duk_require_string(lpCtx, -1);
   switch (nHsAlgorithm)
   {
-    case CMessageDigest::AlgorithmSHA256:
+    case CMessageDigest::eAlgorithm::SHA256:
       if (StrCompareA(sA, "HS256", FALSE) != 0)
         MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
       break;
-    case CMessageDigest::AlgorithmSHA384:
+    case CMessageDigest::eAlgorithm::SHA384:
       if (StrCompareA(sA, "HS384", FALSE) != 0)
         MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
       break;
-    case CMessageDigest::AlgorithmSHA512:
+    case CMessageDigest::eAlgorithm::SHA512:
       if (StrCompareA(sA, "HS512", FALSE) != 0)
         MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
       break;
@@ -566,7 +566,7 @@ static VOID GetOptionalTimestamp(_In_ DukTape::duk_context *lpCtx, _In_ DukTape:
       {
         ULONG nOffset = 0;
         BOOL bNegative = FALSE;
-        MX::CDateTime::eUnits nUnits = MX::CDateTime::UnitsMilliseconds;
+        MX::CDateTime::eUnits nUnits = MX::CDateTime::eUnits::Milliseconds;
 
         //get sign
         if (*sA == '-')
@@ -596,11 +596,11 @@ static VOID GetOptionalTimestamp(_In_ DukTape::duk_context *lpCtx, _In_ DukTape:
             {
               case 'y':
               case 'Y':
-                nUnits = MX::CDateTime::UnitsYear;
+                nUnits = MX::CDateTime::eUnits::Year;
                 break;
               case 'w':
               case 'W':
-                nUnits = MX::CDateTime::UnitsDay;
+                nUnits = MX::CDateTime::eUnits::Day;
                 if ((ULONG)nOffset * 7 < (ULONG)nOffset)
                   MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_ArithmeticOverflow);
                 nOffset *= 7;
@@ -609,19 +609,19 @@ static VOID GetOptionalTimestamp(_In_ DukTape::duk_context *lpCtx, _In_ DukTape:
                 break;
               case 'd':
               case 'D':
-                nUnits = MX::CDateTime::UnitsDay;
+                nUnits = MX::CDateTime::eUnits::Day;
                 break;
               case 'h':
               case 'H':
-                nUnits = MX::CDateTime::UnitsHours;
+                nUnits = MX::CDateTime::eUnits::Hours;
                 break;
               case 'm':
               case 'M':
-                nUnits = MX::CDateTime::UnitsMinutes;
+                nUnits = MX::CDateTime::eUnits::Minutes;
                 break;
               case 's':
               case 'S':
-                nUnits = MX::CDateTime::UnitsSeconds;
+                nUnits = MX::CDateTime::eUnits::Seconds;
                 break;
               default:
                 MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
@@ -632,17 +632,17 @@ static VOID GetOptionalTimestamp(_In_ DukTape::duk_context *lpCtx, _In_ DukTape:
             if (MX::StrNCompareA(sA, "yr", 2, TRUE) == 0 &&
                 (sA[2] == 0 || ((sA[2] == 's' || sA[2] == 'S') && sA[3] == 0)))
             {
-              nUnits = MX::CDateTime::UnitsYear;
+              nUnits = MX::CDateTime::eUnits::Year;
             }
             else if (MX::StrNCompareA(sA, "year", 4, TRUE) == 0 &&
                      (sA[4] == 0 || ((sA[4] == 's' || sA[4] == 'S') && sA[5] == 0)))
             {
-              nUnits = MX::CDateTime::UnitsYear;
+              nUnits = MX::CDateTime::eUnits::Year;
             }
             else if (MX::StrNCompareA(sA, "week", 4, TRUE) == 0 &&
                      (sA[4] == 0 || ((sA[4] == 's' || sA[4] == 'S') && sA[5] == 0)))
             {
-              nUnits = MX::CDateTime::UnitsDay;
+              nUnits = MX::CDateTime::eUnits::Day;
               if ((ULONG)nOffset * 7 < (ULONG)nOffset)
                 MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_ArithmeticOverflow);
               nOffset *= 7;
@@ -652,51 +652,51 @@ static VOID GetOptionalTimestamp(_In_ DukTape::duk_context *lpCtx, _In_ DukTape:
             else if (MX::StrNCompareA(sA, "day", 3, TRUE) == 0 &&
                      (sA[3] == 0 || ((sA[3] == 's' || sA[3] == 'S') && sA[4] == 0)))
             {
-              nUnits = MX::CDateTime::UnitsDay;
+              nUnits = MX::CDateTime::eUnits::Day;
             }
             else if (MX::StrNCompareA(sA, "hr", 2, TRUE) == 0 &&
                      (sA[2] == 0 || ((sA[2] == 's' || sA[2] == 'S') && sA[3] == 0)))
             {
-              nUnits = MX::CDateTime::UnitsHours;
+              nUnits = MX::CDateTime::eUnits::Hours;
             }
             else if (MX::StrNCompareA(sA, "hour", 4, TRUE) == 0 &&
                      (sA[4] == 0 || ((sA[4] == 's' || sA[4] == 'S') && sA[5] == 0)))
             {
-              nUnits = MX::CDateTime::UnitsHours;
+              nUnits = MX::CDateTime::eUnits::Hours;
             }
             else if (MX::StrNCompareA(sA, "min", 3, TRUE) == 0 &&
                      (sA[3] == 0 || ((sA[3] == 's' || sA[3] == 'S') && sA[4] == 0)))
             {
-              nUnits = MX::CDateTime::UnitsMinutes;
+              nUnits = MX::CDateTime::eUnits::Minutes;
             }
             else if (MX::StrNCompareA(sA, "minute", 6, TRUE) == 0 &&
                      (sA[6] == 0 || ((sA[6] == 's' || sA[6] == 'S') && sA[7] == 0)))
             {
-              nUnits = MX::CDateTime::UnitsMinutes;
+              nUnits = MX::CDateTime::eUnits::Minutes;
             }
             else if (MX::StrNCompareA(sA, "sec", 3, TRUE) == 0 &&
                      (sA[3] == 0 || ((sA[3] == 's' || sA[3] == 'S') && sA[4] == 0)))
             {
-              nUnits = MX::CDateTime::UnitsSeconds;
+              nUnits = MX::CDateTime::eUnits::Seconds;
             }
             else if (MX::StrNCompareA(sA, "second", 6, TRUE) == 0 &&
                      (sA[6] == 0 || ((sA[6] == 's' || sA[6] == 'S') && sA[7] == 0)))
             {
-              nUnits = MX::CDateTime::UnitsSeconds;
+              nUnits = MX::CDateTime::eUnits::Seconds;
             }
             else if (MX::StrNCompareA(sA, "msec", 4, TRUE) == 0 &&
                      (sA[4] == 0 || ((sA[4] == 's' || sA[4] == 'S') && sA[5] == 0)))
             {
-              nUnits = MX::CDateTime::UnitsMilliseconds;
+              nUnits = MX::CDateTime::eUnits::Milliseconds;
             }
             else if (MX::StrNCompareA(sA, "millisecond", 11, TRUE) == 0 &&
                      (sA[11] == 0 || ((sA[11] == 's' || sA[11] == 'S') && sA[12] == 0)))
             {
-              nUnits = MX::CDateTime::UnitsMilliseconds;
+              nUnits = MX::CDateTime::eUnits::Milliseconds;
             }
             else if (MX::StrCompareA(sA, "ms", TRUE) == 0)
             {
-              nUnits = MX::CDateTime::UnitsMilliseconds;
+              nUnits = MX::CDateTime::eUnits::Milliseconds;
             }
             else
             {
@@ -737,7 +737,7 @@ static VOID GetOptionalTimestamp(_In_ DukTape::duk_context *lpCtx, _In_ DukTape:
         if (FAILED(hRes))
           MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
       }
-      hRes = cDt.Add((LONGLONG)nOffset, MX::CDateTime::UnitsSeconds);
+      hRes = cDt.Add((LONGLONG)nOffset, MX::CDateTime::eUnits::Seconds);
       if (FAILED(hRes))
         MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
     }
@@ -839,10 +839,10 @@ static HRESULT DecodeBase64Buffer(_In_ MX::CBase64Decoder &cBase64Dec, _In_ LPCS
 static MX::CMessageDigest::eAlgorithm GetHsAlgorithm(_In_z_ LPCSTR szAlgorithmA)
 {
   if (MX::StrCompareA(szAlgorithmA, "HS256", TRUE) == 0)
-    return MX::CMessageDigest::AlgorithmSHA256;
+    return MX::CMessageDigest::eAlgorithm::SHA256;
   if (MX::StrCompareA(szAlgorithmA, "HS384", TRUE) == 0)
-    return MX::CMessageDigest::AlgorithmSHA384;
+    return MX::CMessageDigest::eAlgorithm::SHA384;
   if (MX::StrCompareA(szAlgorithmA, "HS512", TRUE) == 0)
-    return MX::CMessageDigest::AlgorithmSHA512;
+    return MX::CMessageDigest::eAlgorithm::SHA512;
   return (MX::CMessageDigest::eAlgorithm)-1;
 }

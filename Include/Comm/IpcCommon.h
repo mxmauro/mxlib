@@ -35,7 +35,6 @@
 #include "..\Loggable.h"
 #include "..\Timer.h"
 #include "..\RedBlackTree.h"
-#include "..\Crypto\DhParam.h"
 #include "SslCertificates.h"
 typedef struct ssl_st SSL;
 typedef struct ssl_ctx_st SSL_CTX;
@@ -60,18 +59,20 @@ protected:
 #endif //MX_IPC_DEBUG_OUTPUT
 
 public:
-  typedef enum {
-    ConnectionClassError=-1,
-    ConnectionClassUnknown=0,
-    ConnectionClassServer, ConnectionClassClient,
-    ConnectionClassListener,
-    ConnectionClassMAX=ConnectionClassListener
-  } eConnectionClass;
+  enum class eConnectionClass
+  {
+    Error=-1,
+    Unknown=0,
+    Server, Client,
+    Listener,
+    MAX=Listener
+  };
 
-  typedef enum {
-    SslOptionCheckCertificate = 1,
-    SslOptionAcceptSelfSigned = 2
-  } eSslOptions;
+  enum class eSslOption
+  {
+    CheckCertificate = 1,
+    AcceptSelfSigned = 2
+  };
 
   //--------
 
@@ -201,7 +202,7 @@ public:
   HRESULT InitializeSSL(_In_ HANDLE h, _In_opt_ LPCSTR szHostNameA = NULL,
                         _In_opt_ CSslCertificateArray *lpCheckCertificates = NULL,
                         _In_opt_ CSslCertificate *lpSelfCert = NULL, _In_opt_ CEncryptionKey *lpPrivKey = NULL,
-                        _In_opt_ CDhParam *lpDhParam = NULL, _In_opt_ int nSslOptions = 0);
+                        _In_opt_ CEncryptionKey *lpDhParam = NULL, _In_opt_ eSslOption nSslOptions = (eSslOption)0);
 
   HRESULT IsConnected(_In_ HANDLE h);
   HRESULT IsClosed(_In_ HANDLE h, _Out_opt_ HRESULT *lphErrorCode = NULL);
@@ -235,28 +236,20 @@ protected:
     friend class CPacketList;
 
   public:
-    typedef enum {
-      TypeDiscard = 0,
-      TypeInitialSetup,
-      TypeZeroRead, TypeRead,
-      TypeWriteRequest, TypeWrite,
-      TypeResumeIoProcessing,
-      TypeMAX=TypeResumeIoProcessing
-    } eType;
+    enum class eType
+    {
+      Discard = 0,
+      InitialSetup,
+      ZeroRead, Read,
+      WriteRequest, Write,
+      ResumeIoProcessing,
+      MAX=ResumeIoProcessing
+    } ;
 
   public:
     CPacketBase() : CBaseMemObj(), CNonCopyableObj()
       {
-      MxMemSet(&sOvr, 0, sizeof(sOvr));
-      nType = CPacketBase::TypeDiscard;
-      nOrder = 0;
-      lpConn = NULL;
-      lpStream = NULL;
-      nStreamReadOffset = 0ui64;
       cAfterWriteSignalCallback = NullCallback();
-      uUserData.lpPtr = NULL;
-      dwInUseSize = 0;
-      lpLinkedPacket = NULL;
       return;
       };
 
@@ -414,23 +407,23 @@ protected:
       };
 
   private:
-    __declspec(align(8)) OVERLAPPED sOvr;
-    eType volatile nType;
+    __declspec(align(8)) OVERLAPPED sOvr{};
+    eType volatile nType{ eType::Discard };
     CLnkLstNode cListNode;
-    ULONG nOrder;
-    CConnectionBase *lpConn;
-    CStream *lpStream;
-    ULONGLONG nStreamReadOffset;
+    ULONG nOrder{ 0 };
+    CConnectionBase *lpConn{ NULL };
+    CStream *lpStream{ NULL };
+    ULONGLONG nStreamReadOffset{ 0 };
     union {
       LPVOID lpPtr;
       DWORD dwValue;
-    } uUserData;
+    } uUserData{};
     union {
-      DWORD dwInUseSize;
+      DWORD dwInUseSize{ 0 };
       DWORD dwCookie;
     };
     CIpc::OnAfterWriteSignalCallback cAfterWriteSignalCallback;
-    CPacketBase *lpLinkedPacket;
+    CPacketBase *lpLinkedPacket{ NULL };
   };
 
 protected:
@@ -438,6 +431,12 @@ protected:
   class TPacket : public CPacketBase
   {
   public:
+    TPacket() : CPacketBase()
+      {
+      aBuffer[0] = 0;
+      return;
+      };
+
     virtual LPBYTE GetBuffer() const
       {
       return const_cast<LPBYTE>(aBuffer);
@@ -637,7 +636,7 @@ protected:
 
     HRESULT SetupSsl(_In_opt_ LPCSTR szHostNameA, _In_opt_ CSslCertificateArray *lpCheckCertificates,
                      _In_opt_ CSslCertificate *lpSelfCert, _In_opt_ CEncryptionKey *lpPrivKey,
-                     _In_opt_ CDhParam *lpDhParam, _In_ int nSslOptions);
+                     _In_opt_ CEncryptionKey *lpDhParam, _In_ eSslOption nSslOptions);
 
     HRESULT HandleSslStartup();
     VOID HandleSslShutdown();
@@ -690,45 +689,45 @@ protected:
                _Out_opt_ LPDWORD lpdwTimeMarkMs = NULL);
 
     private:
-      RWLOCK sRwMutex;
-      ULONGLONG ullBytesTransferred, ullPrevBytesTransferred;
+      RWLOCK sRwMutex{};
+      ULONGLONG ullBytesTransferred{ 0 }, ullPrevBytesTransferred{ 0 };
       CTimer cTimer;
-      float nAvgRate, nTransferRateHistory[4];
+      float nAvgRate{ 0.0 }, nTransferRateHistory[4]{};
     };
 
   protected:
-    LONG volatile nMutex;
+    LONG volatile nMutex{ MX_FASTLOCK_INIT };
     CRedBlackTreeNode cTreeNode;
-    CIpc *lpIpc;
+    CIpc *lpIpc{ NULL };
     CIpc::eConnectionClass nClass;
-    LONG volatile hrErrorCode;
-    LONG volatile nFlags;
-    LONG volatile nNextReadOrder;
-    LONG volatile nNextReadOrderToProcess;
-    LONG volatile nNextWriteOrder;
-    LONG volatile nNextWriteOrderToProcess;
-    LONG volatile nIncomingReads, nOutgoingWrites, nOutgoingBytes;
+    LONG volatile hrErrorCode{ S_OK };
+    LONG volatile nFlags{ 0 };
+    LONG volatile nNextReadOrder{ 0 };
+    LONG volatile nNextReadOrderToProcess{ 1 };
+    LONG volatile nNextWriteOrder{ 0 };
+    LONG volatile nNextWriteOrderToProcess{ 1 };
+    LONG volatile nIncomingReads{ 0 }, nOutgoingWrites{ 0 }, nOutgoingBytes{ 0 };
     struct {
-      LONG volatile nMutex;
+      LONG volatile nMutex{ MX_FASTLOCK_INIT };
       CPacketList cList;
     } sReadPackets, sInUsePackets;
     struct {
-      LONG volatile nMutex;
+      LONG volatile nMutex{ MX_FASTLOCK_INIT };
       CPacketList cList;
-      BOOL bHasRequeuedPacket;
-      CPacketBase *lpRequeuedPacket;
+      BOOL bHasRequeuedPacket{ FALSE };
+      CPacketBase *lpRequeuedPacket{ NULL };
     } sPendingWritePackets;
     struct {
-      LONG volatile nMutex;
+      LONG volatile nMutex{ MX_FASTLOCK_INIT };
       CCircularBuffer cBuffer;
     } sReceivedData;
     TAutoRefCounted<CUserData> cUserData;
     struct {
-      LONG volatile nMutex;
-      SSL_CTX *lpCtx;
-      SSL *lpSession;
-      BIO *lpInBio;
-      BIO *lpOutBio;
+      LONG volatile nMutex{ MX_FASTLOCK_INIT };
+      SSL_CTX *lpCtx{ NULL };
+      SSL *lpSession{ NULL };
+      BIO *lpInBio{ NULL };
+      BIO *lpOutBio{ NULL };
       TAutoRefCounted<MX::CSslCertificateArray> cCertArray;
     } sSsl;
     OnCreateCallback cCreateCallback;
@@ -739,7 +738,7 @@ protected:
     CReadWriteStats cReadStats, cWriteStats;
     CCriticalSection cOnDataReceivedCS;
     struct {
-      LONG volatile nMutex;
+      LONG volatile nMutex{ MX_FASTLOCK_INIT };
       CPacketList cList;
     } sFreePackets32768, sFreePackets4096;
     CTimer cLogTimer;
@@ -774,24 +773,34 @@ protected:
   virtual BOOL ZeroReadsSupported() const = 0;
 
 protected:
-  LONG volatile nInitShutdownMutex;
-  LONG volatile nRundownProt;
+  LONG volatile nInitShutdownMutex{ MX_FASTLOCK_INIT };
+  LONG volatile nRundownProt{ MX_RUNDOWNPROT_INIT };
   CIoCompletionPortThreadPool &cDispatcherPool;
   CIoCompletionPortThreadPool::OnPacketCallback cDispatcherPoolPacketCallback;
-  DWORD dwReadAhead, dwMaxOutgoingBytes;
-  BOOL bDoZeroReads;
+  DWORD dwReadAhead{ 4 }, dwMaxOutgoingBytes{ 2 * 32768 };
+  BOOL bDoZeroReads{ TRUE };
   CWindowsEvent cShuttingDownEv;
   OnEngineErrorCallback cEngineErrorCallback;
   struct {
-    RWLOCK sRwMutex;
+    RWLOCK sRwMutex{};
     CRedBlackTree cTree;
-    LONG volatile nCount;
+    LONG volatile nCount{ 0 };
   } sConnections;
   struct {
-    LONG volatile nMutex;
+    LONG volatile nMutex{ MX_FASTLOCK_INIT };
     CPacketList cList;
   } sFreePackets32768, sFreePackets4096;
 };
+
+inline CIpc::eSslOption operator|(CIpc::eSslOption lhs, CIpc::eSslOption rhs)
+{
+  return static_cast<CIpc::eSslOption>(static_cast<int>(lhs) | static_cast<int>(rhs));
+}
+
+inline CIpc::eSslOption operator&(CIpc::eSslOption lhs, CIpc::eSslOption rhs)
+{
+  return static_cast<CIpc::eSslOption>(static_cast<int>(lhs) & static_cast<int>(rhs));
+}
 
 } //namespace MX
 

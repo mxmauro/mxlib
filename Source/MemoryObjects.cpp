@@ -132,7 +132,7 @@ static lpfnImagehlpApiVersion fnImagehlpApiVersion = NULL;
 
 static void *DefaultMalloc(_In_ size_t nSize);
 static void *DefaultRealloc(_In_opt_ void *lpPtr, _In_ size_t nSize);
-static void DefaultFree(_In_opt_ void *lpPtr);
+static void DefaultFree(_Frees_ptr_opt_ void *lpPtr);
 static size_t DefaultMemSize(_In_opt_ void *lpPtr);
 
 //-----------------------------------------------------------
@@ -411,7 +411,7 @@ void MxMemSet(_Out_writes_bytes_all_(nCount) void *lpDest, _In_ int nVal, _In_ s
   return;
 }
 
-void MxMemCopy(_Out_writes_bytes_all_(nCount) void *lpDest, _In_ const void *lpSrc, _In_ size_t nCount)
+void MxMemCopy(_Out_writes_bytes_all_(nCount) void *lpDest, _In_reads_bytes_(nCount) const void *lpSrc, _In_ size_t nCount)
 {
   if (XISALIGNED(lpSrc) && XISALIGNED(lpDest))
   {
@@ -852,10 +852,12 @@ static void* DefaultMalloc(_In_ size_t nSize)
 
 static void* DefaultRealloc(_In_opt_ void *lpPtr, _In_ size_t nSize)
 {
+  if (lpPtr == NULL)
+    return ::MxRtlAllocateHeap(::MxGetProcessHeap(), 0, nSize);
   return ::MxRtlReAllocateHeap(::MxGetProcessHeap(), 0, lpPtr, nSize);
 }
 
-static void DefaultFree(_In_opt_ void *lpPtr)
+static void DefaultFree(_Frees_ptr_opt_ void *lpPtr)
 {
   ::MxRtlFreeHeap(::MxGetProcessHeap(), 0, lpPtr);
   return;
@@ -863,5 +865,7 @@ static void DefaultFree(_In_opt_ void *lpPtr)
 
 static size_t DefaultMemSize(_In_opt_ void *lpPtr)
 {
+  if (lpPtr == NULL)
+    return 0;
   return ::MxRtlSizeHeap(::MxGetProcessHeap(), 0, lpPtr);
 }

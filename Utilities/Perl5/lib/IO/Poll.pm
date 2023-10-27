@@ -10,25 +10,24 @@ package IO::Poll;
 use strict;
 use IO::Handle;
 use Exporter ();
-our(@ISA, @EXPORT_OK, @EXPORT, $VERSION);
 
-@ISA = qw(Exporter);
-$VERSION = "0.10";
+our @ISA = qw(Exporter);
+our $VERSION = "1.52";
 
-@EXPORT = qw( POLLIN
+our @EXPORT = qw( POLLIN
 	      POLLOUT
 	      POLLERR
 	      POLLHUP
 	      POLLNVAL
 	    );
 
-@EXPORT_OK = qw(
- POLLPRI   
+our @EXPORT_OK = qw(
+ POLLPRI
  POLLRDNORM
  POLLWRNORM
  POLLRDBAND
  POLLWRBAND
- POLLNORM  
+ POLLNORM
 	       );
 
 # [0] maps fd's to requested masks
@@ -198,7 +197,7 @@ L<poll(2)>, L<IO::Handle>, L<IO::Select>
 =head1 AUTHOR
 
 Graham Barr. Currently maintained by the Perl Porters.  Please report all
-bugs to <perlbug@perl.org>.
+bugs at L<https://github.com/Perl/perl5/issues>.
 
 =head1 COPYRIGHT
 

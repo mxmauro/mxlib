@@ -6,10 +6,10 @@ use Carp;
 use warnings;
 no warnings 'uninitialized';
 use warnings::register;
-use Scalar::Util qw(reftype);
+no warnings 'experimental::builtin';
+use builtin qw(reftype);
 
 require Exporter;
-our @ISA        = qw(Exporter);
 our @EXPORT_OK  = qw(
                      fieldhash fieldhashes
 
@@ -34,10 +34,18 @@ our @EXPORT_OK  = qw(
                      lock_hashref_recurse unlock_hashref_recurse
 
                      hash_traversal_mask
+
+                     bucket_ratio
+                     used_buckets
+                     num_buckets
                     );
-our $VERSION = '0.19';
-require XSLoader;
-XSLoader::load();
+BEGIN {
+    # make sure all our XS routines are available early so their prototypes
+    # are correctly applied in the following code.
+    our $VERSION = '0.30';
+    require XSLoader;
+    XSLoader::load();
+}
 
 sub import {
     my $class = shift;
@@ -84,7 +92,7 @@ Hash::Util - A selection of general-utility hash subroutines
                      hash_traversal_mask
                    );
 
-  %hash = (foo => 42, bar => 23);
+  my %hash = (foo => 42, bar => 23);
   # Ways to restrict a hash
   lock_keys(%hash);
   lock_keys(%hash, @keyset);
@@ -107,7 +115,7 @@ Hash::Util - A selection of general-utility hash subroutines
   lock_hash  (%hash);
   unlock_hash(%hash);
 
-  my $hashes_are_randomised = hash_seed() != 0;
+  my $hashes_are_randomised = hash_seed() !~ /^\0+$/;
 
   my $int_hash_value = hash_value( 'string' );
 
@@ -168,7 +176,7 @@ Both routines return a reference to the hash operated on.
 sub lock_ref_keys {
     my($hash, @keys) = @_;
 
-    Internals::hv_clear_placeholders %$hash;
+    _clear_placeholders(%$hash);
     if( @keys ) {
         my %keys = map { ($_ => 1) } @keys;
         my %original_keys = map { ($_ => 1) } keys %$hash;
@@ -203,6 +211,19 @@ sub unlock_ref_keys {
 sub   lock_keys (\%;@) {   lock_ref_keys(@_) }
 sub unlock_keys (\%)   { unlock_ref_keys(@_) }
 
+#=item B<_clear_placeholders>
+#
+# This function removes any placeholder keys from a hash. See Perl_hv_clear_placeholders()
+# in hv.c for what it does exactly. It is currently exposed as XS by universal.c and
+# injected into the Hash::Util namespace.
+#
+# It is not intended for use outside of this module, and may be changed
+# or removed without notice or deprecation cycle.
+#
+#=cut
+#
+# sub _clear_placeholders {} # just in case someone searches...
+
 =item B<lock_keys_plus>
 
   lock_keys_plus(%hash,@additional_keys)
@@ -221,7 +242,7 @@ Returns a reference to %hash
 sub lock_ref_keys_plus {
     my ($hash,@keys) = @_;
     my @delete;
-    Internals::hv_clear_placeholders(%$hash);
+    _clear_placeholders(%$hash);
     foreach my $key (@keys) {
         unless (exists($hash->{$key})) {
             $hash->{$key}=undef;
@@ -489,13 +510,22 @@ Perl has been built with. Possible sizes may be but are not limited to
 =item B<hash_value>
 
     my $hash_value = hash_value($string);
+    my $hash_value = hash_value($string, $seed);
 
-hash_value() returns the current perl's internal hash value for a given
-string.
+C<hash_value($string)>
+returns
+the current perl's internal hash value for a given string.
+C<hash_value($string, $seed)>
+returns the hash value as if computed with a different seed.
+If the custom seed is too short, the function errors out.
+The minimum length of the seed is implementation-dependent.
 
-Returns a 32 bit integer representing the hash value of the string passed
-in. This value is only reliable for the lifetime of the process. It may
-be different depending on invocation, environment variables,  perl version,
+Returns a 32-bit integer
+representing the hash value of the string passed in.
+The 1-parameter value is only reliable
+for the lifetime of the process.
+It may be different
+depending on invocation, environment variables, perl version,
 architectures, and build options.
 
 B<Note that the hash value of a given string is sensitive information>:
@@ -727,6 +757,29 @@ order. B<Note> that this does B<not> guarantee that B<two> hashes will produce
 the same key order for the same hash seed and traversal mask, items that
 collide into one bucket may have different orders regardless of this setting.
 
+=item B<bucket_ratio>
+
+This function behaves the same way that scalar(%hash) behaved prior to
+Perl 5.25. Specifically if the hash is tied, then it calls the SCALAR tied
+hash method, if untied then if the hash is empty it return 0, otherwise it
+returns a string containing the number of used buckets in the hash,
+followed by a slash, followed by the total number of buckets in the hash.
+
+    my %hash=("foo"=>1);
+    print Hash::Util::bucket_ratio(%hash); # prints "1/8"
+
+=item B<used_buckets>
+
+This function returns the count of used buckets in the hash. It is expensive
+to calculate and the value is NOT cached, so avoid use of this function
+in production code.
+
+=item B<num_buckets>
+
+This function returns the total number of buckets the hash holds, or would
+hold if the array were created. (When a hash is freshly created the array
+may not be allocated even though this value will be non-zero.)
+
 =back
 
 =head2 Operating on references to hashes.
@@ -788,6 +841,9 @@ Ing-Simmons and Jeffrey Friedl.
 hv_store() is from Array::RefElem, Copyright 2000 Gisle Aas.
 
 Additional code by Yves Orton.
+
+Description of C<hash_value($string, $seed)>
+by Christopher Yeleighton <ne01026@shark.2a.pl>
 
 =head1 SEE ALSO
 

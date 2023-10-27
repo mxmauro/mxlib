@@ -1,12 +1,13 @@
 package ExtUtils::MM_OS2;
 
 use strict;
+use warnings;
 
 use ExtUtils::MakeMaker qw(neatvalue);
 use File::Spec;
 
-our $VERSION = '7.16';
-$VERSION = eval $VERSION;
+our $VERSION = '7.70';
+$VERSION =~ tr/_//d;
 
 require ExtUtils::MM_Any;
 require ExtUtils::MM_Unix;
@@ -24,7 +25,7 @@ ExtUtils::MM_OS2 - methods to override UN*X behaviour in ExtUtils::MakeMaker
 
 =head1 DESCRIPTION
 
-See ExtUtils::MM_Unix for a documentation of the methods provided
+See L<ExtUtils::MM_Unix> for a documentation of the methods provided
 there. This package overrides the implementation of these methods, not
 the semantics.
 
@@ -129,6 +130,14 @@ OS/2 is OS/2
 
 sub os_flavor {
     return('OS/2');
+}
+
+=item xs_static_lib_is_xs
+
+=cut
+
+sub xs_static_lib_is_xs {
+    return 1;
 }
 
 =back

@@ -72,7 +72,7 @@ trace.
 
 =head2 The I<splain> Program
 
-While apparently a whole nuther program, I<splain> is actually nothing
+Another program, I<splain> is actually nothing
 more than a link to the (executable) F<diagnostics.pm> module, as well as
 a link to the F<diagnostics.pod> documentation.  The B<-v> flag is like
 the C<use diagnostics -verbose> directive.
@@ -186,7 +186,7 @@ use 5.009001;
 use Carp;
 $Carp::Internal{__PACKAGE__.""}++;
 
-our $VERSION = '1.34';
+our $VERSION = '1.39';
 our $DEBUG;
 our $VERBOSE;
 our $PRETTY;
@@ -231,7 +231,7 @@ CONFIG: {
 	$PRETTY = $opt_p;
     }
 
-    if (open(POD_DIAG, $PODFILE)) {
+    if (open(POD_DIAG, '<', $PODFILE)) {
 	warn "Happy happy podfile from real $PODFILE\n" if $DEBUG;
 	last CONFIG;
     } 
@@ -240,7 +240,7 @@ CONFIG: {
 	INCPATH: {
 	    for my $file ( (map { "$_/".__PACKAGE__.".pm" } @INC), $0) {
 		warn "Checking $file\n" if $DEBUG;
-		if (open(POD_DIAG, $file)) {
+		if (open(POD_DIAG, '<', $file)) {
 		    while (<POD_DIAG>) {
 			next unless
 			    /^__END__\s*# wish diag dbase were more accessible/;
@@ -265,6 +265,8 @@ if (eof(POD_DIAG)) {
     'lt'	=>	'<',	#   left chevron, less-than
     'gt'	=>	'>',	#   right chevron, greater-than
     'quot'	=>	'"',	#   double quote
+    'sol'	=>	'/',	#   forward slash / solidus
+    'verbar'    =>	'|',	#   vertical bar
 
     "Aacute"	=>	"A\\*'",	#   capital A, acute accent
     # etc
@@ -276,8 +278,11 @@ if (eof(POD_DIAG)) {
     'lt'	=>	'<',	#   left chevron, less-than
     'gt'	=>	'>',	#   right chevron, greater-than
     'quot'	=>	'"',	#   double quote
+    'sol'	=>	'/',	#   Forward slash / solidus
+    'verbar'    =>	'|',	#   vertical bar
 
-    "Aacute"	=>	"\xC1"	#   capital A, acute accent
+    #                           #   capital A, acute accent
+    "Aacute"	=>	chr utf8::unicode_to_native(0xC1)
 
     # etc
 );
@@ -287,6 +292,8 @@ if (eof(POD_DIAG)) {
     'lt'	=>	'<',	#   left chevron, less-than
     'gt'	=>	'>',	#   right chevron, greater-than
     'quot'	=>	'"',	#   double quote
+    'sol'	=>	'/',	#   Forward slash / solidus
+    'verbar'    =>	'|',	#   vertical bar
 
     "Aacute"	=>	"A"	#   capital A, acute accent
     # etc
@@ -310,6 +317,7 @@ sub transmo {
 EOFUNC
 
 my %msg;
+my $over_level = 0;     # We look only at =item lines at the first =over level
 {
     print STDERR "FINISHING COMPILATION for $_\n" if $DEBUG;
     local $/ = '';
@@ -386,7 +394,7 @@ my %msg;
 	    push @headers, $header if defined $header;
 	}
 
-	unless ( s/=item (.*?)\s*\z//s) {
+	if ( ! s/=item (.*?)\s*\z//s || $over_level != 1) {
 
 	    if ( s/=head1\sDESCRIPTION//) {
 		$msg{$header = 'DESCRIPTION'} = '';
@@ -395,11 +403,17 @@ my %msg;
 	    elsif( s/^=for\s+diagnostics\s*\n(.*?)\s*\z// ) {
 		$for_item = $1;
 	    }
-	    elsif( /^=back/ ) { # Stop processing body here
-		undef $header;
-		undef $for_item;
-		$seen_body = 0;
-		next;
+	    elsif( /^=over\b/ ) {
+                $over_level++;
+            }
+	    elsif( /^=back\b/ ) { # Stop processing body here
+                $over_level--;
+                if ($over_level == 0) {
+                    undef $header;
+                    undef $for_item;
+                    $seen_body = 0;
+                    next;
+                }
 	    }
 	    next;
 	}

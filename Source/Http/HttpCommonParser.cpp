@@ -54,14 +54,9 @@ namespace MX {
 namespace Internals {
 
 CHttpParser::CHttpParser(_In_ BOOL _bActAsServer, _In_opt_ CLoggable *lpLogHandler) : CBaseMemObj(), CLoggable(),
-                                                                                      CNonCopyableObj()
+                                                                                      CNonCopyableObj(), bActAsServer(_bActAsServer)
 {
-  bActAsServer = _bActAsServer;
-  dwMaxHeaderSize = 16384;
-  //----
   SetLogParent(lpLogHandler);
-  //----
-  Reset();
   return;
 }
 
@@ -78,7 +73,7 @@ VOID CHttpParser::SetOption_MaxHeaderSize(_In_ DWORD dwSize)
 
 VOID CHttpParser::Reset()
 {
-  nState = StateStart;
+  nState = eState::Start;
   cStrCurrLineA.Empty();
   dwHeadersLen = 0;
   nHeaderFlags = 0;
@@ -88,7 +83,7 @@ VOID CHttpParser::Reset()
   sRequest.nHttpProtocol = 0;
   sRequest.szMethodA = NULL;
   sRequest.cUrl.Reset();
-  sRequest.nBrowser = Http::BrowserOther;
+  sRequest.nBrowser = Http::eBrowser::Other;
   //----
   sResponse.nStatusCode = 0;
   sResponse.cStrReasonA.Empty();
@@ -111,9 +106,9 @@ HRESULT CHttpParser::Parse(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize, _Out_ SIZ
   nDataUsed = 0;
   if (lpData == NULL && nDataSize > 0)
     return E_POINTER;
-  if (nState == StateDone)
+  if (nState == eState::Done)
     return S_OK;
-  if (nState == StateError)
+  if (nState == eState::Error)
     return MX_E_InvalidData;
 
   hRes = S_OK;
@@ -121,17 +116,17 @@ HRESULT CHttpParser::Parse(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize, _Out_ SIZ
   {
     switch (nState)
     {
-      case StateStart:
+      case eState::Start:
         if (*szDataA == '\r' || *szDataA == '\n')
           break;
-        nState = StateRequestOrStatusLine;
+        nState = eState::RequestOrStatusLine;
         BACKWARD_CHAR();
         break;
 
-      case StateRequestOrStatusLine:
+      case eState::RequestOrStatusLine:
         if (*szDataA == '\r')
         {
-          nState = StateRequestOrStatusLineEnding;
+          nState = eState::RequestOrStatusLineEnding;
           break;
         }
         if (*((LPBYTE)szDataA) < 32 && *szDataA != '\t')
@@ -158,7 +153,7 @@ err_nomem:
         }
         break;
 
-      case StateRequestOrStatusLineEnding:
+      case eState::RequestOrStatusLineEnding:
         if (*szDataA != '\n')
           goto err_invalid_data;
 
@@ -169,10 +164,10 @@ err_nomem:
 
         //end of request/status line
         cStrCurrLineA.Empty();
-        nState = StateHeaderStart;
+        nState = eState::HeaderStart;
         break;
 
-      case StateHeaderStart:
+      case eState::HeaderStart:
         if (*szDataA == '\r')
         {
           //no more headers
@@ -184,7 +179,7 @@ err_nomem:
             cStrCurrLineA.Empty();
           }
 
-          nState = StateHeadersEnding;
+          nState = eState::HeadersEnding;
           break;
         }
 
@@ -193,7 +188,7 @@ err_nomem:
         {
           if (cStrCurrLineA.IsEmpty() != FALSE)
             goto err_invalid_data;
-          nState = StateHeaderValue;
+          nState = eState::HeaderValue;
           BACKWARD_CHAR();
           break;
         }
@@ -206,10 +201,10 @@ err_nomem:
             goto done;
           cStrCurrLineA.Empty();
         }
-        nState = StateHeaderName;
+        nState = eState::HeaderName;
         //fall into 'StateHeaderName'
 
-      case StateHeaderName:
+      case eState::HeaderName:
         //check headers length
         if (dwHeadersLen >= dwMaxHeaderSize)
           goto err_line_too_long;
@@ -223,7 +218,7 @@ err_nomem:
 
           if (cStrCurrLineA.ConcatN(":", 1) == FALSE)
             goto err_nomem;
-          nState = StateHeaderValue;
+          nState = eState::HeaderValue;
           break;
         }
 
@@ -238,7 +233,7 @@ err_nomem:
           goto err_nomem;
         break;
 
-      case StateHeaderValue:
+      case eState::HeaderValue:
         //check headers length
         if (dwHeadersLen >= dwMaxHeaderSize)
           goto err_line_too_long;
@@ -246,7 +241,7 @@ err_nomem:
 
         if (*szDataA == '\r')
         {
-          nState = StateHeaderValueEnding;
+          nState = eState::HeaderValueEnding;
           break;
         }
 
@@ -261,14 +256,14 @@ err_nomem:
           goto err_nomem;
         break;
 
-      case StateHeaderValueEnding:
+      case eState::HeaderValueEnding:
         if (*szDataA != '\n')
           goto err_invalid_data;
 
-        nState = StateHeaderStart;
+        nState = eState::HeaderStart;
         break;
 
-      case StateHeadersEnding:
+      case eState::HeadersEnding:
         if (*szDataA != '\n')
           goto err_invalid_data;
         szDataA++;
@@ -282,13 +277,13 @@ err_nomem:
             if ((sBody.nContentLength != 0 && sBody.nContentLength != ULONGLONG_MAX) ||
                 (nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0)
             {
-              nState = StateBodyStart;
+              nState = eState::BodyStart;
               hRes = MX_HRESULT_FROM_WIN32(ERROR_DATA_NOT_ACCEPTED);
             }
             else
             {
               //no content... we are done
-              nState = StateDone;
+              nState = eState::Done;
             }
             goto done;
           }
@@ -313,7 +308,7 @@ err_nomem:
             else
             {
               //no content... we are done
-              nState = StateDone;
+              nState = eState::Done;
               goto done;
             }
           }
@@ -326,24 +321,24 @@ err_nomem:
         //if no content we are done
         if (sBody.nContentLength == 0)
         {
-          nState = StateDone;
+          nState = eState::Done;
           goto done;
         }
 
-        nState = StateBodyStart;
+        nState = eState::BodyStart;
         if (ShouldLog(1) != FALSE)
         {
           Log(L"HttpCommon(HeadersComplete/0x%p): BodyStart", this);
         }
         goto done;
 
-      case StateBodyStart:
-        nState = ((nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0) ? StateChunkPreStart
-                                                                             : StateIdentityBodyStart;
+      case eState::BodyStart:
+        nState = ((nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0) ? eState::ChunkPreStart
+                                                                             : eState::IdentityBodyStart;
         BACKWARD_CHAR();
         break;
 
-      case StateIdentityBodyStart:
+      case eState::IdentityBodyStart:
         {
         SIZE_T nToRead;
 
@@ -375,7 +370,7 @@ err_nomem:
         sBody.nIdentityReadedContentLength += (ULONGLONG)nToRead;
         if (sBody.nIdentityReadedContentLength == sBody.nContentLength)
         {
-          nState = StateDone;
+          nState = eState::Done;
           hRes = FlushContent();
           goto done;
         }
@@ -383,17 +378,17 @@ err_nomem:
         }
         break;
 
-      case StateChunkPreStart:
+      case eState::ChunkPreStart:
         if ((*szDataA < '0' || *szDataA          > '9') &&
             (((*szDataA) & 0xDF) < 'A' || ((*szDataA) & 0xDF) > 'F'))
         {
           goto err_invalid_data;
         }
-        nState = StateChunkStart;
+        nState = eState::ChunkStart;
         sBody.sChunk.nSize = sBody.sChunk.nReaded = 0;
         //fall into 'stChunkStart'
 
-      case StateChunkStart:
+      case eState::ChunkStart:
         if ((*szDataA >= '0' && *szDataA <= '9') ||
             (((*szDataA) & 0xDF) >= 'A' && ((*szDataA) & 0xDF) <= 'F'))
         {
@@ -413,17 +408,17 @@ err_nomem:
         //end of chunk size
         if (*szDataA == ' ' || *szDataA == '\t' || *szDataA == ';')
         {
-          nState = StateChunkStartIgnoreExtension;
+          nState = eState::ChunkStartIgnoreExtension;
           break;
         }
 
         if (*szDataA != '\r')
           goto err_invalid_data;
 
-        nState = StateChunkStartEnding;
+        nState = eState::ChunkStartEnding;
         break;
 
-      case StateChunkStartEnding:
+      case eState::ChunkStartEnding:
         if (*szDataA != '\n')
           goto err_invalid_data;
         if (ShouldLog(1) != FALSE)
@@ -431,25 +426,25 @@ err_nomem:
           Log(L"HttpCommon(Chunk/0x%p): %I64u", this, sBody.sChunk.nSize);
         }
 
-        nState = StateChunkData;
+        nState = eState::ChunkData;
         if (sBody.sChunk.nSize == 0)
         {
           //the trailing CR/LF will be consumed by a new parse
-          nState = StateDone;
+          nState = eState::Done;
           hRes = FlushContent();
           goto done;
         }
         break;
 
-      case StateChunkStartIgnoreExtension:
+      case eState::ChunkStartIgnoreExtension:
         if (*szDataA == '\r')
         {
-          nState = StateChunkStartEnding;
+          nState = eState::ChunkStartEnding;
           break;
         }
         break;
 
-      case StateChunkData:
+      case eState::ChunkData:
         {
         SIZE_T nToRead;
 
@@ -464,23 +459,23 @@ err_nomem:
         sBody.sChunk.nReaded += (ULONGLONG)nToRead;
         sBody.nIdentityReadedContentLength += (ULONGLONG)nToRead;
         if (sBody.sChunk.nReaded == sBody.sChunk.nSize)
-          nState = StateChunkAfterData;
+          nState = eState::ChunkAfterData;
         }
         break;
 
-      case StateChunkAfterData:
+      case eState::ChunkAfterData:
         if (*szDataA == '\r')
-          nState = StateNearEndOfChunkAfterData;
+          nState = eState::NearEndOfChunkAfterData;
         else if (*szDataA == '\n')
-          nState = StateChunkPreStart;
+          nState = eState::ChunkPreStart;
         else
           goto err_invalid_data;
         break;
 
-      case StateNearEndOfChunkAfterData:
+      case eState::NearEndOfChunkAfterData:
         if (*szDataA != '\n')
           goto err_invalid_data;
-        nState = StateChunkPreStart;
+        nState = eState::ChunkPreStart;
         break;
 
       default:
@@ -492,7 +487,7 @@ err_nomem:
 done:
   if (FAILED(hRes))
   {
-    nState = StateError;
+    nState = eState::Error;
   }
   nDataUsed = (SIZE_T)szDataA - (SIZE_T)lpData;
   return hRes;
@@ -748,10 +743,10 @@ HRESULT CHttpParser::ParseHeader(_In_ CStringA &cStrLineA)
 
       switch (lpHdr->GetEncoding())
       {
-        case CHttpHeaderGenTransferEncoding::EncodingIdentity:
+        case CHttpHeaderGenTransferEncoding::eEncoding::Identity:
           break;
 
-        case CHttpHeaderGenTransferEncoding::EncodingChunked:
+        case CHttpHeaderGenTransferEncoding::eEncoding::Chunked:
           nHeaderFlags |= HEADER_FLAG_TransferEncodingChunked;
           break;
 
@@ -771,13 +766,13 @@ HRESULT CHttpParser::ParseHeader(_In_ CStringA &cStrLineA)
 
       switch (lpHdr->GetEncoding())
       {
-        case CHttpHeaderEntContentEncoding::EncodingIdentity:
+        case CHttpHeaderEntContentEncoding::eEncoding::Identity:
           break;
 
-        case CHttpHeaderEntContentEncoding::EncodingGZip:
+        case CHttpHeaderEntContentEncoding::eEncoding::GZip:
           nHeaderFlags |= HEADER_FLAG_ContentEncodingGZip;
           break;
-        case CHttpHeaderEntContentEncoding::EncodingDeflate:
+        case CHttpHeaderEntContentEncoding::eEncoding::Deflate:
           nHeaderFlags |= HEADER_FLAG_ContentEncodingDeflate;
           break;
 

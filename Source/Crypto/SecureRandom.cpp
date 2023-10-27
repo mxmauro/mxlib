@@ -44,7 +44,7 @@ namespace MX {
 
 namespace SecureRandom {
 
-VOID Generate(_Out_ LPBYTE lpOut, _In_ SIZE_T nSize)
+VOID Generate(_Out_writes_bytes_(nSize) LPBYTE lpOut, _In_ SIZE_T nSize)
 {
   if (lpOut != NULL && nSize > 0)
   {
@@ -52,11 +52,11 @@ VOID Generate(_Out_ LPBYTE lpOut, _In_ SIZE_T nSize)
     {
       while (nSize > 0)
       {
-        SIZE_T nThisRoundSize = (nSize > 32768) ? 32768 : nSize;
-        if (fnRtlGenRandom(lpOut, (ULONG)nThisRoundSize) == FALSE)
+        ULONG nThisRoundSize = (nSize > 32768) ? 32768 : (ULONG)nSize;
+        if (fnRtlGenRandom(lpOut, nThisRoundSize) == FALSE)
           break;
-        lpOut += nThisRoundSize;
-        nSize -= nThisRoundSize;
+        lpOut += (SIZE_T)nThisRoundSize;
+        nSize -= (SIZE_T)nThisRoundSize;
       }
     }
     while (nSize > 0)

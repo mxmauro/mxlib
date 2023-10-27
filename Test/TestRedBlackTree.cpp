@@ -79,6 +79,7 @@ int TestRedBlackTree()
 {
   HRESULT hRes;
 
+#pragma warning(suppress : 28159)
   srand(::GetTickCount());
 
   wprintf_s(L"Running Deletion test... ");

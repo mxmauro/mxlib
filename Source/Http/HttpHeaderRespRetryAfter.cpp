@@ -109,7 +109,7 @@ HRESULT CHttpHeaderRespRetryAfter::SetDate(_In_ CDateTime &cDt)
   nSeconds = 0;
   if (SUCCEEDED(cDtNow.SetFromNow(FALSE)))
   {
-    LONGLONG nDiffSecs = cDt.GetDiff(cDtNow, CDateTime::UnitsSeconds);
+    LONGLONG nDiffSecs = cDt.GetDiff(cDtNow, CDateTime::eUnits::Seconds);
     if (nDiffSecs >= 0i64)
       nSeconds = (ULONGLONG)nDiffSecs;
   }

@@ -75,7 +75,7 @@ HRESULT CPropertyBag::SetNull(_In_z_ LPCSTR szNameA)
     return E_OUTOFMEMORY;
   lpNewProp->szNameA = (LPSTR)(lpNewProp + 1);
   MxMemCopy(lpNewProp->szNameA, szNameA, nNameLen);
-  lpNewProp->nType = PropertyTypeNull;
+  lpNewProp->nType = eType::Null;
   if (Insert(lpNewProp) == FALSE)
   {
     MX_FREE(lpNewProp);
@@ -101,7 +101,7 @@ HRESULT CPropertyBag::SetDWord(_In_z_ LPCSTR szNameA, _In_ DWORD dwValue)
     return E_OUTOFMEMORY;
   lpNewProp->szNameA = (LPSTR)(lpNewProp + 1);
   MxMemCopy(lpNewProp->szNameA, szNameA, nNameLen);
-  lpNewProp->nType = PropertyTypeDWord;
+  lpNewProp->nType = eType::DWord;
   lpNewProp->u.dwValue = dwValue;
   if (Insert(lpNewProp) == FALSE)
   {
@@ -128,7 +128,7 @@ HRESULT CPropertyBag::SetQWord(_In_z_ LPCSTR szNameA, _In_ ULONGLONG ullValue)
     return E_OUTOFMEMORY;
   lpNewProp->szNameA = (LPSTR)(lpNewProp + 1);
   MxMemCopy(lpNewProp->szNameA, szNameA, nNameLen);
-  lpNewProp->nType = PropertyTypeQWord;
+  lpNewProp->nType = eType::QWord;
   lpNewProp->u.ullValue = ullValue;
   if (Insert(lpNewProp) == FALSE)
   {
@@ -155,7 +155,7 @@ HRESULT CPropertyBag::SetDouble(_In_z_ LPCSTR szNameA, _In_ double nValue)
     return E_OUTOFMEMORY;
   lpNewProp->szNameA = (LPSTR)(lpNewProp + 1);
   MxMemCopy(lpNewProp->szNameA, szNameA, nNameLen);
-  lpNewProp->nType = PropertyTypeDouble;
+  lpNewProp->nType = eType::Double;
   lpNewProp->u.dblValue = nValue;
   if (Insert(lpNewProp) == FALSE)
   {
@@ -183,7 +183,7 @@ HRESULT CPropertyBag::SetString(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA)
     return E_OUTOFMEMORY;
   lpNewProp->szNameA = (LPSTR)(lpNewProp + 1);
   MxMemCopy(lpNewProp->szNameA, szNameA, nNameLen);
-  lpNewProp->nType = PropertyTypeAnsiString;
+  lpNewProp->nType = eType::AnsiString;
   lpNewProp->u.szValueA = (LPSTR)((LPBYTE)(lpNewProp+1) + nNameLen);
   MxMemCopy(lpNewProp->u.szValueA, szValueA, nValueLen);
   if (Insert(lpNewProp) == FALSE)
@@ -212,7 +212,7 @@ HRESULT CPropertyBag::SetString(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW)
     return E_OUTOFMEMORY;
   lpNewProp->szNameA = (LPSTR)(lpNewProp + 1);
   MxMemCopy(lpNewProp->szNameA, szNameA, nNameLen);
-  lpNewProp->nType = PropertyTypeWideString;
+  lpNewProp->nType = eType::WideString;
   lpNewProp->u.szValueW = (LPWSTR)((LPBYTE)(lpNewProp+1) + nNameLen);
   MxMemCopy(lpNewProp->u.szValueW, szValueW, nValueLen);
   if (Insert(lpNewProp) == FALSE)
@@ -235,7 +235,7 @@ LPCSTR CPropertyBag::GetAt(_In_ SIZE_T nIndex) const
 CPropertyBag::eType CPropertyBag::GetType(_In_ SIZE_T nIndex) const
 {
   if (nIndex >= cPropertiesList.GetCount())
-    return PropertyTypeUndefined;
+    return eType::Undefined;
   //done
   return cPropertiesList[nIndex]->nType;
 }
@@ -245,10 +245,10 @@ CPropertyBag::eType CPropertyBag::GetType(_In_z_ LPCSTR szNameA) const
   SIZE_T nIndex;
 
   if (szNameA == NULL || *szNameA == 0)
-    return PropertyTypeUndefined;
+    return eType::Undefined;
   nIndex = const_cast<CPropertyBag*>(this)->Find(szNameA);
   if (nIndex == (SIZE_T)-1)
-    return PropertyTypeUndefined;
+    return eType::Undefined;
   //done
   return cPropertiesList[nIndex]->nType;
 }
@@ -258,7 +258,7 @@ HRESULT CPropertyBag::GetDWord(_In_ SIZE_T nIndex, _Out_ DWORD &dwValue, _In_opt
   dwValue = dwDefValue;
   if (nIndex >= cPropertiesList.GetCount())
     return E_INVALIDARG;
-  if (cPropertiesList[nIndex]->nType != PropertyTypeDWord)
+  if (cPropertiesList[nIndex]->nType != eType::DWord)
     return E_FAIL;
   dwValue = cPropertiesList[nIndex]->u.dwValue;
   //done
@@ -270,7 +270,7 @@ HRESULT CPropertyBag::GetQWord(_In_ SIZE_T nIndex, _Out_ ULONGLONG &ullValue, _I
   ullValue = ullDefValue;
   if (nIndex >= cPropertiesList.GetCount())
     return E_INVALIDARG;
-  if (cPropertiesList[nIndex]->nType != PropertyTypeQWord)
+  if (cPropertiesList[nIndex]->nType != eType::QWord)
     return E_FAIL;
   ullValue = cPropertiesList[nIndex]->u.ullValue;
   //done
@@ -282,7 +282,7 @@ HRESULT CPropertyBag::GetDouble(_In_ SIZE_T nIndex, _Out_ double &nValue, _In_op
   nValue = nDefValue;
   if (nIndex >= cPropertiesList.GetCount())
     return E_INVALIDARG;
-  if (cPropertiesList[nIndex]->nType != PropertyTypeDouble)
+  if (cPropertiesList[nIndex]->nType != eType::Double)
     return E_FAIL;
   nValue = cPropertiesList[nIndex]->u.dblValue;
   //done
@@ -294,7 +294,7 @@ HRESULT CPropertyBag::GetString(_In_ SIZE_T nIndex, _Out_ LPCSTR &szValueA, _In_
   szValueA = szDefValueA;
   if (nIndex >= cPropertiesList.GetCount())
     return E_INVALIDARG;
-  if (cPropertiesList[nIndex]->nType != PropertyTypeAnsiString)
+  if (cPropertiesList[nIndex]->nType != eType::AnsiString)
     return E_FAIL;
   szValueA = cPropertiesList[nIndex]->u.szValueA;
   //done
@@ -306,7 +306,7 @@ HRESULT CPropertyBag::GetString(_In_ SIZE_T nIndex, _Out_ LPCWSTR &szValueW, _In
   szValueW = szDefValueW;
   if (nIndex >= cPropertiesList.GetCount())
     return E_INVALIDARG;
-  if (cPropertiesList[nIndex]->nType != PropertyTypeWideString)
+  if (cPropertiesList[nIndex]->nType != eType::WideString)
     return E_FAIL;
   szValueW = cPropertiesList[nIndex]->u.szValueW;
   //done
@@ -325,7 +325,7 @@ HRESULT CPropertyBag::GetDWord(_In_z_ LPCSTR szNameA, _Out_ DWORD &dwValue, _In_
   nIndex = Find(szNameA);
   if (nIndex == (SIZE_T)-1)
     return MX_E_NotFound;
-  if (cPropertiesList[nIndex]->nType != PropertyTypeDWord)
+  if (cPropertiesList[nIndex]->nType != eType::DWord)
     return E_FAIL;
   dwValue = cPropertiesList[nIndex]->u.dwValue;
   //done
@@ -344,7 +344,7 @@ HRESULT CPropertyBag::GetQWord(_In_z_ LPCSTR szNameA, _Out_ ULONGLONG &ullValue,
   nIndex = Find(szNameA);
   if (nIndex == (SIZE_T)-1)
     return MX_E_NotFound;
-  if (cPropertiesList[nIndex]->nType != PropertyTypeQWord)
+  if (cPropertiesList[nIndex]->nType != eType::QWord)
     return E_FAIL;
   ullValue = cPropertiesList[nIndex]->u.ullValue;
   //done
@@ -363,7 +363,7 @@ HRESULT CPropertyBag::GetDouble(_In_z_ LPCSTR szNameA, _Out_ double &nValue, _In
   nIndex = Find(szNameA);
   if (nIndex == (SIZE_T)-1)
     return MX_E_NotFound;
-  if (cPropertiesList[nIndex]->nType != PropertyTypeDouble)
+  if (cPropertiesList[nIndex]->nType != eType::Double)
     return E_FAIL;
   nValue = cPropertiesList[nIndex]->u.dblValue;
   //done
@@ -382,7 +382,7 @@ HRESULT CPropertyBag::GetString(_In_z_ LPCSTR szNameA, _Out_ LPCSTR &szValueA, _
   nIndex = Find(szNameA);
   if (nIndex == (SIZE_T)-1)
     return MX_E_NotFound;
-  if (cPropertiesList[nIndex]->nType != PropertyTypeAnsiString)
+  if (cPropertiesList[nIndex]->nType != eType::AnsiString)
     return E_FAIL;
   szValueA = cPropertiesList[nIndex]->u.szValueA;
   //done
@@ -401,7 +401,7 @@ HRESULT CPropertyBag::GetString(_In_z_ LPCSTR szNameA, _Out_ LPCWSTR &szValueW, 
   nIndex = Find(szNameA);
   if (nIndex == (SIZE_T)-1)
     return MX_E_NotFound;
-  if (cPropertiesList[nIndex]->nType != PropertyTypeWideString)
+  if (cPropertiesList[nIndex]->nType != eType::WideString)
     return E_FAIL;
   szValueW = cPropertiesList[nIndex]->u.szValueW;
   //done

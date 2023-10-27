@@ -47,45 +47,48 @@ class CHttpParser : public virtual CBaseMemObj, public CLoggable, public CNonCop
 public:
   class CContentDecoder;
 
-  typedef enum {
-    StateStart,
+  enum class eState
+  {
+    Start,
 
-    StateRequestOrStatusLine,
-    StateRequestOrStatusLineEnding,
+    RequestOrStatusLine,
+    RequestOrStatusLineEnding,
 
-    StateHeaderStart,
-    StateHeaderName,
-    StateHeaderValue,
-    StateHeaderValueEnding,
-    StateHeadersEnding,
+    HeaderStart,
+    HeaderName,
+    HeaderValue,
+    HeaderValueEnding,
+    HeadersEnding,
 
-    StateBodyStart,
+    BodyStart,
 
-    StateReceivingBodyMarkStart,
-    StateIdentityBodyStart = StateReceivingBodyMarkStart,
+    ReceivingBodyMarkStart,
+    IdentityBodyStart = ReceivingBodyMarkStart,
 
-    StateChunkPreStart,
-    StateChunkStart,
-    StateChunkStartEnding,
-    StateChunkStartIgnoreExtension,
+    ChunkPreStart,
+    ChunkStart,
+    ChunkStartEnding,
+    ChunkStartIgnoreExtension,
 
-    StateChunkData,
-    StateChunkAfterData,
-    StateNearEndOfChunkAfterData,
+    ChunkData,
+    ChunkAfterData,
+    NearEndOfChunkAfterData,
 
-    StateReceivingBodyMarkEnd = StateNearEndOfChunkAfterData,
+    ReceivingBodyMarkEnd = NearEndOfChunkAfterData,
 
-    StateDone,
-    StateError
-  } eState;
+    Done,
+    Error
+  };
 
-  typedef enum {
-    TransferEncodingMethodNone, TransferEncodingMethodChunked
-  } eTransferEncodingMethod;
+  enum class eTransferEncodingMethod
+  {
+    None, Chunked
+  };
 
-  typedef enum {
-    ContentEncodingMethodIdentity, ContentEncodingMethodGZip, ContentEncodingMethodDeflate
-  } eContentEncodingMethod;
+  enum class eContentEncodingMethod
+  {
+    Identity, GZip, Deflate
+  };
 
 public:
   CHttpParser(_In_ BOOL bActAsServer, _In_opt_ CLoggable *lpLogHandler);
@@ -142,31 +145,31 @@ private:
 
 private:
   BOOL bActAsServer;
-  DWORD dwMaxHeaderSize;
+  DWORD dwMaxHeaderSize{ 16384 };
 
-  eState nState;
+  eState nState{ eState::Start };
   CStringA cStrCurrLineA;
-  DWORD dwHeadersLen;
+  DWORD dwHeadersLen{ 0 };
 
   struct {
-    ULONG nHttpProtocol;
-    LPCSTR szMethodA;
+    ULONG nHttpProtocol{ 0 };
+    LPCSTR szMethodA{ NULL };
     CUrl cUrl;
-    MX::Http::eBrowser nBrowser;
+    MX::Http::eBrowser nBrowser{ Http::eBrowser::Other };
   } sRequest;
   struct {
-    LONG nStatusCode;
+    LONG nStatusCode{ 0 };
     CStringA cStrReasonA;
   } sResponse;
-  LONG nHeaderFlags;
+  LONG nHeaderFlags{ 0 };
   CHttpCookieArray cCookies;
   CHttpHeaderArray cHeaders;
   struct {
-    ULONGLONG nContentLength;
-    ULONGLONG nIdentityReadedContentLength;
+    ULONGLONG nContentLength{ ULONGLONG_MAX };
+    ULONGLONG nIdentityReadedContentLength{ 0 };
     struct {
-      ULONGLONG nSize;
-      ULONGLONG nReaded;
+      ULONGLONG nSize{ 0 };
+      ULONGLONG nReaded{ 0 };
     } sChunk;
     TAutoDeletePtr<CZipLib> cDecoder;
     TAutoRefCounted<CHttpBodyParserBase> cParser;

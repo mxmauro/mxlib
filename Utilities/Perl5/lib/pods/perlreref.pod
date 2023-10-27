@@ -60,7 +60,7 @@ with two additions:
 'e' may be specified multiple times. 'replacement' is interpreted
 as a double quoted string unless a single-quote (C<'>) is the delimiter.
 
-C<?pattern?> is like C<m/pattern/> but matches only once. No alternate
+C<m?pattern?> is like C<m/pattern/> but matches only once. No alternate
 delimiters can be used.  Must be reset with reset().
 
 =head2 SYNTAX
@@ -135,7 +135,7 @@ and L<perlunicode> for details.
    \W      A non-word character
    \s      A whitespace character
    \S      A non-whitespace character
-   \h      An horizontal whitespace
+   \h      A horizontal whitespace
    \H      A non horizontal whitespace
    \N      A non newline (when not followed by '{NAME}';;
            not valid in a character class; equivalent to [^\n]; it's
@@ -217,6 +217,7 @@ Quantifiers are greedy by default and match the B<longest> leftmost.
    {n,m}   {n,m}?  {n,m}+     Must occur at least n times
                               but no more than m times
    {n,}    {n,}?   {n,}+      Must occur at least n times
+   {,n}    {,n}?   {,n}+      Must occur at most n times
    {n}     {n}?    {n}+       Must occur exactly n times
    *       *?      *+         0 or more times (same as {0,})
    +       +?      ++         1 or more times (same as {1,})
@@ -226,18 +227,25 @@ The possessive forms (new in Perl 5.10) prevent backtracking: what gets
 matched by a pattern with a possessive quantifier will not be backtracked
 into, even if that causes the whole match to fail.
 
-There is no quantifier C<{,n}>. That's interpreted as a literal string.
-
 =head2 EXTENDED CONSTRUCTS
 
    (?#text)          A comment
    (?:...)           Groups subexpressions without capturing (cluster)
    (?pimsx-imsx:...) Enable/disable option (as per m// modifiers)
    (?=...)           Zero-width positive lookahead assertion
+   (*pla:...)        Same, starting in 5.32; experimentally in 5.28
+   (*positive_lookahead:...) Same, same versions as *pla
    (?!...)           Zero-width negative lookahead assertion
+   (*nla:...)        Same, starting in 5.32; experimentally in 5.28
+   (*negative_lookahead:...) Same, same versions as *nla
    (?<=...)          Zero-width positive lookbehind assertion
+   (*plb:...)        Same, starting in 5.32; experimentally in 5.28
+   (*positive_lookbehind:...) Same, same versions as *plb
    (?<!...)          Zero-width negative lookbehind assertion
+   (*nlb:...)        Same, starting in 5.32; experimentally in 5.28
+   (*negative_lookbehind:...) Same, same versions as *plb
    (?>...)           Grab what we can, prohibit backtracking
+   (*atomic:...)     Same, starting in 5.32; experimentally in 5.28
    (?|...)           Branch reset
    (?<name>...)      Named capture
    (?'name'...)      Named capture
@@ -251,11 +259,15 @@ There is no quantifier C<{,n}>. That's interpreted as a literal string.
    (?&name)          Recurse into a named subpattern
    (?P>name)         Recurse into a named subpattern (python syntax)
    (?(cond)yes|no)
-   (?(cond)yes)      Conditional expression, where "cond" can be:
-                     (?=pat)   lookahead
-                     (?!pat)   negative lookahead
-                     (?<=pat)  lookbehind
-                     (?<!pat)  negative lookbehind
+   (?(cond)yes)      Conditional expression, where "(cond)" can be:
+                     (?=pat)   lookahead; also (*pla:pat)
+                               (*positive_lookahead:pat)
+                     (?!pat)   negative lookahead; also (*nla:pat)
+                               (*negative_lookahead:pat)
+                     (?<=pat)  lookbehind; also (*plb:pat)
+                               (*lookbehind:pat)
+                     (?<!pat)  negative lookbehind; also (*nlb:pat)
+                               (*negative_lookbehind:pat)
                      (N)       subpattern N has matched something
                      (<name>)  named subpattern has matched something
                      ('name')  named subpattern has matched something
@@ -308,7 +320,7 @@ Captured groups are numbered according to their I<opening> paren.
 
    pos         Return or set current match position
    quotemeta   Quote metacharacters
-   reset       Reset ?pattern? status
+   reset       Reset m?pattern? status
    study       Analyze string for optimizing matching
 
    split       Use a regex to split a string into parts
@@ -393,7 +405,7 @@ for details on regexes and internationalisation.
 =item *
 
 I<Mastering Regular Expressions> by Jeffrey Friedl
-(F<http://oreilly.com/catalog/9780596528126/>) for a thorough grounding and
+(L<http://oreilly.com/catalog/9780596528126/>) for a thorough grounding and
 reference on the topic.
 
 =back

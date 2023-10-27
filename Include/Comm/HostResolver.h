@@ -40,11 +40,11 @@ typedef Callback <VOID (_In_ LONG nResolverId, _In_ PSOCKADDR_INET lpSockAddr, _
 
 HRESULT Resolve(_In_z_ LPCSTR szHostNameA, _In_ int nDesiredFamily, _Out_ PSOCKADDR_INET lpSockAddr,
                 _In_ DWORD dwTimeoutMs, _In_opt_ OnResultCallback cCallback = NullCallback(),
-                _In_opt_ LPVOID lpUserData = NULL, _Out_opt_ LONG volatile *lpnResolverId = NULL);
+                _In_opt_ LPVOID lpUserData = NULL, _Inout_z_ _Interlocked_operand_ LONG volatile *lpnResolverId = NULL);
 HRESULT Resolve(_In_z_ LPCWSTR szHostNameW, _In_ int nDesiredFamily, _Out_ PSOCKADDR_INET lpSockAddr,
                 _In_ DWORD dwTimeoutMs, _In_opt_ OnResultCallback cCallback = NullCallback(),
-                _In_opt_ LPVOID lpUserData = NULL, _Out_opt_ LONG volatile *lpnResolverId = NULL);
-VOID Cancel(_Inout_ LONG volatile *lpnResolverId);
+                _In_opt_ LPVOID lpUserData = NULL, _Inout_z_ _Interlocked_operand_ LONG volatile *lpnResolverId = NULL);
+VOID Cancel(_Inout_z_ _Interlocked_operand_ LONG volatile *lpnResolverId);
 
 BOOL IsValidIPV4(_In_z_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen = (SIZE_T)-1,
                  _Out_opt_ PSOCKADDR_INET lpAddress = NULL);

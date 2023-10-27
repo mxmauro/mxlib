@@ -59,7 +59,7 @@ numbers.  (But realize that what we are discussing the rules for just the
 I<storage> of these numbers.  The fact that you can store such "large" numbers
 does not mean that the I<operations> over these numbers will use all
 of the significant digits.
-See L<"Numeric operators and numeric conversions"> for details.)
+See L</"Numeric operators and numeric conversions"> for details.)
 
 In fact numbers stored in the native integer format may be stored either
 in the signed native form, or in the unsigned native form.  Thus the limits
@@ -128,11 +128,11 @@ used may lead to breakage of some of the above rules.
 
 =head1 Flavors of Perl numeric operations
 
-Perl operations which take a numeric argument treat that argument in one
-of four different ways: they may force it to one of the integer/floating/
-string formats, or they may behave differently depending on the format of
-the operand.  Forcing a numeric value to a particular format does not
-change the number stored in the value.
+Perl operations which take a numeric argument treat that argument in one of
+four different ways: they may force it to one of the integer, floating, or
+string formats; or they may behave differently depending on the format of the
+operand.  Forcing a numeric value to a particular format does not change the
+number stored in the value.
 
 All the operators which need an argument in the integer format treat the
 argument as in modular arithmetic, e.g., C<mod 2**32> on a 32-bit

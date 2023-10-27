@@ -110,6 +110,8 @@
     </Text>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="Source\JsLib\BigInteger\BigInteger.min.js" />
+    <CustomBuild Include="Source\JsLib\BigInteger\BigInteger.min.js">
+      <Filter>Source Files\BigInteger</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

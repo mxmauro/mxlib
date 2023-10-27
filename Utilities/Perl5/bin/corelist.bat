@@ -1,31 +1,21 @@
 @rem = '--*-Perl-*--
-@echo off
-if "%OS%" == "Windows_NT" goto WinNT
-IF EXIST "%~dp0perl.exe" (
-"%~dp0perl.exe" -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-) ELSE IF EXIST "%~dp0..\..\bin\perl.exe" (
-"%~dp0..\..\bin\perl.exe" -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-) ELSE (
-perl -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
-)
-
-goto endofperl
+@set "ErrorLevel="
+@if "%OS%" == "Windows_NT" @goto WinNT
+@perl -x -S "%0" %1 %2 %3 %4 %5 %6 %7 %8 %9
+@set ErrorLevel=%ErrorLevel%
+@goto endofperl
 :WinNT
-IF EXIST "%~dp0perl.exe" (
-"%~dp0perl.exe" -x -S %0 %*
-) ELSE IF EXIST "%~dp0..\..\bin\perl.exe" (
-"%~dp0..\..\bin\perl.exe" -x -S %0 %*
-) ELSE (
-perl -x -S %0 %*
-)
-
-if NOT "%COMSPEC%" == "%SystemRoot%\system32\cmd.exe" goto endofperl
-if %errorlevel% == 9009 echo You do not have Perl in your PATH.
-if errorlevel 1 goto script_failed_so_exit_with_non_zero_val 2>nul
-goto endofperl
+@perl -x -S %0 %*
+@set ErrorLevel=%ErrorLevel%
+@if NOT "%COMSPEC%" == "%SystemRoot%\system32\cmd.exe" @goto endofperl
+@if %ErrorLevel% == 9009 @echo You do not have Perl in your PATH.
+@goto endofperl
 @rem ';
+#!perl
+#line 30
+    eval 'exec C:\strawberry\perl\bin\perl.exe -S $0 ${1+"$@"}'
+	if 0; # ^ Run only under a shell
 #!/usr/bin/perl
-#line 29
 
 =head1 NAME
 
@@ -41,6 +31,8 @@ See L<Module::CoreList> for one.
    corelist [-a|-d] <ModuleName> | /<ModuleRegex>/ [<ModuleVersion>] ...
    corelist [-v <PerlVersion>] [ <ModuleName> | /<ModuleRegex>/ ] ...
    corelist [-r <PerlVersion>] ...
+   corelist --utils [-d] <UtilityName> [<UtilityName>] ...
+   corelist --utils -v <PerlVersion>
    corelist --feature <FeatureName> [<FeatureName>] ...
    corelist --diff PerlVersion PerlVersion
    corelist --upstream <ModuleName>
@@ -140,6 +132,15 @@ lists all of the perl releases and when they were released
 
 If you pass a perl version you get the release date for that version only.
 
+=item --utils
+
+lists the first version of perl each named utility program was released with
+
+May be used with -d to modify the first release criteria.
+
+If used with -v <version> then all utilities released with that version of perl
+are listed, and any utility programs named on the command line are ignored.
+
 =item --feature, -f
 
 lists the first version bundle of each named feature given
@@ -157,6 +158,7 @@ requested perl versions.
 
 =cut
 
+BEGIN { pop @INC if $INC[-1] eq '.' }
 use Module::CoreList;
 use Getopt::Long qw(:config no_ignore_case);
 use Pod::Usage;
@@ -168,7 +170,7 @@ my %Opts;
 
 GetOptions(
     \%Opts,
-    qw[ help|?! man! r|release:s v|version:s a! d diff|D feature|f u|upstream ]
+    qw[ help|?! man! r|release:s v|version:s a! d diff|D utils feature|f u|upstream ]
 );
 
 pod2usage(1) if $Opts{help};
@@ -207,6 +209,12 @@ if(exists $Opts{v} ){
     }
 
     my $num_v = numify_version( $Opts{v} );
+
+    if ($Opts{utils}) {
+        utilities_in_version($num_v);
+        exit 0;
+    }
+
     my $version_hash = Module::CoreList->find_version($num_v);
 
     if( !$version_hash ) {
@@ -233,7 +241,15 @@ if ($Opts{diff}) {
     my ($old_ver, $new_ver) = @ARGV;
 
     my $old = numify_version($old_ver);
+    if ( !Module::CoreList->find_version($old) ) {
+        print "\nModule::CoreList has no info on perl $old_ver\n\n";
+        exit 1;
+    }
     my $new = numify_version($new_ver);
+    if ( !Module::CoreList->find_version($new) ) {
+        print "\nModule::CoreList has no info on perl $new_ver\n\n";
+        exit 1;
+    }
 
     my %diff = Module::CoreList::changes_between($old, $new);
 
@@ -250,6 +266,25 @@ if ($Opts{diff}) {
 
         printf "%-35s %10s %10s\n", $lib, $was, $now;
     }
+    exit(0);
+}
+
+if ($Opts{utils}) {
+    die "\n--utils only available with perl v5.19.1 or greater\n"
+        if $] < 5.019001;
+
+    die "\nprovide at least one utility name to --utils\n"
+        unless @ARGV;
+
+    warn "\n-a has no effect when --utils is used\n"                 if $Opts{a};
+    warn "\n--diff has no effect when --utils is used\n"             if $Opts{diff};
+    warn "\n--upstream, or -u, has no effect when --utils is used\n" if $Opts{u};
+
+    my $when = maxstr(values %Module::CoreList::released);
+    print "\n","Data for $when\n";
+
+    utility_version($_) for @ARGV;
+
     exit(0);
 }
 
@@ -375,10 +410,10 @@ sub module_version {
     print $msg,"\n";
 
     if( defined $ret and exists $Opts{u} ) {
-        my $upsream = $Module::CoreList::upstream{$mod};
-        $upsream = 'undef' unless $upsream;
-        print "upstream: $upsream\n";
-        if ( $upsream ne 'blead' ) {
+        my $upstream = $Module::CoreList::upstream{$mod};
+        $upstream = 'undef' unless $upstream;
+        print "upstream: $upstream\n";
+        if ( $upstream ne 'blead' ) {
             my $bugtracker = $Module::CoreList::bug_tracker{$mod};
             $bugtracker = 'unknown' unless $bugtracker;
             print "bug tracker: $bugtracker\n";
@@ -388,6 +423,47 @@ sub module_version {
     if(defined $ret and exists $Opts{a} and $Opts{a}){
         display_a($mod);
     }
+}
+
+sub utility_version {
+    my ($utility) = @_;
+
+    require Module::CoreList::Utils;
+
+    my $released = $Opts{d}
+        ? Module::CoreList::Utils->first_release_by_date($utility)
+        : Module::CoreList::Utils->first_release($utility);
+
+    my $removed = $Opts{d}
+        ? Module::CoreList::Utils->removed_from_by_date($utility)
+        : Module::CoreList::Utils->removed_from($utility);
+
+    if ($released) {
+        print "$utility was first released with perl ", format_perl_version($released);
+        print " and later removed in ", format_perl_version($removed)
+            if $removed;
+        print "\n";
+    } else {
+        print "$utility was not in CORE (or so I think)\n";
+    }
+}
+
+sub utilities_in_version {
+    my ($version) = @_;
+
+    require Module::CoreList::Utils;
+
+    my @utilities = Module::CoreList::Utils->utilities($version);
+
+    if (not @utilities) {
+        print "\nModule::CoreList::Utils has no info on perl $version\n\n";
+        exit 1;
+    }
+
+    print "\nThe following utilities were in perl ",
+        format_perl_version($version), " CORE\n";
+    print "$_\n" for sort { lc($a) cmp lc($b) } @utilities;
+    print "\n";
 }
 
 
@@ -513,6 +589,6 @@ This program is distributed under the same terms as perl itself.
 See http://perl.org/ or http://cpan.org/ for more info on that.
 
 =cut
-
 __END__
 :endofperl
+@set "ErrorLevel=" & @goto _undefined_label_ 2>NUL || @"%COMSPEC%" /d/c @exit %ErrorLevel%

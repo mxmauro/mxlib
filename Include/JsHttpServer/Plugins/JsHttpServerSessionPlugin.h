@@ -29,9 +29,10 @@ namespace MX {
 class CJsHttpServerSessionPlugin : public CJsObjectBase, public CNonCopyableObj
 {
 public:
-  typedef enum {
-    PersistanceOptionLoad, PersistanceOptionSave, PersistanceOptionDelete
-  } ePersistanceOption;
+  enum class ePersistanceOption
+  {
+    Load, Save, Delete
+  };
 
   //can be called simultaneously from different threads servicing different requests
   typedef Callback<HRESULT (_In_ CJsHttpServerSessionPlugin *lpPlugin,
@@ -45,7 +46,7 @@ public:
                 _In_opt_z_ LPCWSTR szSessionVarNameW = NULL, _In_opt_z_ LPCWSTR szDomainW = NULL,
                 _In_opt_z_ LPCWSTR szPathW = NULL, _In_opt_ int nExpireTimeInSeconds = -1,
                 _In_opt_ BOOL bIsSecure = FALSE, _In_opt_ BOOL bIsHttpOnly = FALSE,
-                _In_opt_ CHttpCookie::eSameSite nSameSite = CHttpCookie::SameSiteNone);
+                _In_opt_ CHttpCookie::eSameSite nSameSite = CHttpCookie::eSameSite::None);
   HRESULT Save();
   VOID Destroy();
 

@@ -35,50 +35,27 @@ static int DebugPrintSslError(const char *str, size_t len, void *u);
 
 static BIO_METHOD* BIO_circular_buffer_mem();
 
-static int _X509_STORE_get1_issuer(X509 **issuer, X509_STORE_CTX *ctx, X509 *x);
-static STACK_OF(X509)* _X509_STORE_get1_certs(X509_STORE_CTX *ctx, X509_NAME *nm);
-static STACK_OF(X509_CRL)* _X509_STORE_get1_crls(X509_STORE_CTX *ctx, X509_NAME *nm);
-static X509* _lookup_cert_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ X509_NAME *name);
-static X509_CRL* _lookup_crl_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ X509_NAME *name);
+static int _X509_STORE_get1_issuer(_Out_ X509 **issuer, _In_ X509_STORE_CTX *ctx, _In_ X509 *x);
+static STACK_OF(X509)* _X509_STORE_get1_certs(_In_ X509_STORE_CTX *ctx, _In_ const X509_NAME *nm);
+static STACK_OF(X509_CRL)* _X509_STORE_get1_crls(_In_ const X509_STORE_CTX *ctx, _In_ const X509_NAME *nm);
+static X509* _lookup_cert_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ const X509_NAME *name);
+static X509_CRL* _lookup_crl_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ const X509_NAME *name);
 
 //-----------------------------------------------------------
 
 namespace MX {
 
 CIpc::CConnectionBase::CConnectionBase(_In_ CIpc *_lpIpc, _In_ CIpc::eConnectionClass _nClass) :
-                       TRefCounted<CBaseMemObj>()
+                       TRefCounted<CBaseMemObj>(), lpIpc(_lpIpc), nClass(_nClass)
+
 {
   _InterlockedIncrement(&(_lpIpc->sConnections.nCount));
 
-  lpIpc = _lpIpc;
-  nClass = _nClass;
-  _InterlockedExchange(&hrErrorCode, S_OK);
-  _InterlockedExchange(&nFlags, 0);
-  _InterlockedExchange(&nNextReadOrder, 0);
-  _InterlockedExchange(&nNextReadOrderToProcess, 1);
-  _InterlockedExchange(&nNextWriteOrder, 0);
-  _InterlockedExchange(&nNextWriteOrderToProcess, 1);
-  _InterlockedExchange(&nIncomingReads, 0);
-  _InterlockedExchange(&nOutgoingWrites, 0);
-  _InterlockedExchange(&nOutgoingBytes, 0);
   cCreateCallback = NullCallback();
   cDestroyCallback = NullCallback();
   cConnectCallback = NullCallback();
   cDisconnectCallback = NullCallback();
   cDataReceivedCallback = NullCallback();
-  FastLock_Initialize(&nMutex);
-  FastLock_Initialize(&(sSsl.nMutex));
-  sSsl.lpCtx = NULL;
-  sSsl.lpSession = NULL;
-  sSsl.lpInBio = sSsl.lpOutBio = NULL;
-  FastLock_Initialize(&(sReceivedData.nMutex));
-  FastLock_Initialize(&(sFreePackets32768.nMutex));
-  FastLock_Initialize(&(sFreePackets4096.nMutex));
-  FastLock_Initialize(&(sReadPackets.nMutex));
-  FastLock_Initialize(&(sInUsePackets.nMutex));
-  FastLock_Initialize(&(sPendingWritePackets.nMutex));
-  sPendingWritePackets.bHasRequeuedPacket = FALSE;
-  sPendingWritePackets.lpRequeuedPacket = NULL;
   return;
 }
 
@@ -146,7 +123,7 @@ HRESULT CIpc::CConnectionBase::SendMsg(_In_ LPCVOID lpData, _In_ SIZE_T nDataSiz
   while (nDataSize > 0)
   {
     //get a free buffer
-    lpPacket = GetPacket(CIpc::CPacketBase::TypeWriteRequest, ((nDataSize > 8192) ? 32768 : 4096), FALSE);
+    lpPacket = GetPacket(CIpc::CPacketBase::eType::WriteRequest, ((nDataSize > 8192) ? 32768 : 4096), FALSE);
     if (lpPacket == NULL)
       return E_OUTOFMEMORY;
 
@@ -205,7 +182,7 @@ HRESULT CIpc::CConnectionBase::SendStream(_In_ CStream *lpStream)
   MX_ASSERT(lpStream != NULL);
 
   //get a free buffer
-  lpPacket = GetPacket(CIpc::CPacketBase::TypeWriteRequest, 0, FALSE);
+  lpPacket = GetPacket(CIpc::CPacketBase::eType::WriteRequest, 0, FALSE);
   if (lpPacket == NULL)
     return E_OUTOFMEMORY;
   lpPacket->SetStream(lpStream);
@@ -251,7 +228,7 @@ HRESULT CIpc::CConnectionBase::AfterWriteSignal(_In_ OnAfterWriteSignalCallback 
   MX_ASSERT(cCallback != false);
 
   //get a free buffer
-  lpPacket = GetPacket(CIpc::CPacketBase::TypeWriteRequest, 0, FALSE);
+  lpPacket = GetPacket(CIpc::CPacketBase::eType::WriteRequest, 0, FALSE);
   if (lpPacket == NULL)
     return E_OUTOFMEMORY;
   lpPacket->SetAfterWriteSignalCallback(cCallback);
@@ -305,7 +282,7 @@ HRESULT CIpc::CConnectionBase::SendResumeIoProcessingPacket(_In_ BOOL bInput)
   HRESULT hRes;
 
   //get a free buffer
-  lpPacket = GetPacket(CIpc::CPacketBase::TypeResumeIoProcessing, 0, FALSE);
+  lpPacket = GetPacket(CIpc::CPacketBase::eType::ResumeIoProcessing, 0, FALSE);
   if (lpPacket == NULL)
     return E_OUTOFMEMORY;
 
@@ -451,7 +428,7 @@ HRESULT CIpc::CConnectionBase::HandleConnected()
   cWriteStats.HandleConnected();
 
   //send initial setup packet
-  lpPacket = GetPacket(CPacketBase::TypeInitialSetup, 0, FALSE);
+  lpPacket = GetPacket(CPacketBase::eType::InitialSetup, 0, FALSE);
   if (lpPacket == NULL)
     return E_OUTOFMEMORY;
   {
@@ -924,7 +901,7 @@ VOID CIpc::CConnectionBase::FreePacket(_In_ CPacketBase *lpPacket)
       {
         //We don't care if count becomes greater than 'nMaxItemsInList' because several threads
         //are freeing packets and list grows beyond the limit
-        lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
+        lpPacket->Reset(CPacketBase::eType::Discard, NULL);
         sFreePackets4096.cList.QueueLast(lpPacket);
 
         //free linked packets if they belong to the same class
@@ -934,7 +911,7 @@ VOID CIpc::CConnectionBase::FreePacket(_In_ CPacketBase *lpPacket)
           lpPacket = lpLinkedPacket;
           lpLinkedPacket = lpLinkedPacket->GetLinkedPacket();
 
-          lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
+          lpPacket->Reset(CPacketBase::eType::Discard, NULL);
           sFreePackets4096.cList.QueueLast(lpPacket);
         }
 
@@ -949,7 +926,7 @@ VOID CIpc::CConnectionBase::FreePacket(_In_ CPacketBase *lpPacket)
       {
         //We don't care if count becomes greater than 'nMaxItemsInList' because several threads
         //are freeing packets and list grows beyond the limit
-        lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
+        lpPacket->Reset(CPacketBase::eType::Discard, NULL);
         sFreePackets32768.cList.QueueLast(lpPacket);
 
         //free linked packets if they belong to the same class
@@ -959,7 +936,7 @@ VOID CIpc::CConnectionBase::FreePacket(_In_ CPacketBase *lpPacket)
           lpPacket = lpLinkedPacket;
           lpLinkedPacket = lpLinkedPacket->GetLinkedPacket();
 
-          lpPacket->Reset(CPacketBase::TypeDiscard, NULL);
+          lpPacket->Reset(CPacketBase::eType::Discard, NULL);
           sFreePackets32768.cList.QueueLast(lpPacket);
         }
 
@@ -1000,7 +977,7 @@ HRESULT CIpc::CConnectionBase::DoZeroRead(_In_ SIZE_T nPacketsCount, _Inout_ CPa
   {
     if (IsClosed() != FALSE)
       return MX_E_Cancelled;
-    lpPacket = GetPacket(CPacketBase::TypeZeroRead, 4096, FALSE);
+    lpPacket = GetPacket(CPacketBase::eType::ZeroRead, 4096, FALSE);
     if (lpPacket == NULL)
       return E_OUTOFMEMORY;
     {
@@ -1092,13 +1069,13 @@ HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacke
 
     if (lpReusePacket != NULL)
     {
-      lpReusePacket->Reset(CPacketBase::TypeRead, this);
+      lpReusePacket->Reset(CPacketBase::eType::Read, this);
       lpPacket = lpReusePacket;
       lpReusePacket = NULL;
     }
     else
     {
-      lpPacket = GetPacket(CPacketBase::TypeRead, 4096, FALSE);
+      lpPacket = GetPacket(CPacketBase::eType::Read, 4096, FALSE);
       if (lpPacket == NULL)
         return E_OUTOFMEMORY;
     }
@@ -1198,7 +1175,7 @@ HRESULT CIpc::CConnectionBase::DoWrite(_In_ CPacketBase *lpPacket)
 
     sInUsePackets.cList.QueueLast(lpPacket);
   }
-  lpPacket->SetType(CPacketBase::TypeWrite);
+  lpPacket->SetType(CPacketBase::eType::Write);
   lpPacket->SetUserDataDW(dwTotalBytes);
   _InterlockedIncrement(&nOutgoingWrites);
   _InterlockedExchangeAdd(&nOutgoingBytes, (LONG)dwTotalBytes);
@@ -1281,7 +1258,7 @@ HRESULT CIpc::CConnectionBase::ReadStream(_In_ CPacketBase *lpStreamPacket, _Out
   SIZE_T nRead;
   HRESULT hRes;
 
-  *lplpPacket = GetPacket(CPacketBase::TypeWrite, 32768, FALSE);
+  *lplpPacket = GetPacket(CPacketBase::eType::Write, 32768, FALSE);
   if ((*lplpPacket) == NULL)
     return E_OUTOFMEMORY;
 
@@ -1319,11 +1296,11 @@ HRESULT CIpc::CConnectionBase::ReadStream(_In_ CPacketBase *lpStreamPacket, _Out
 
 HRESULT CIpc::CConnectionBase::SetupSsl(_In_opt_ LPCSTR szHostNameA, _In_opt_ CSslCertificateArray *lpCheckCertificates,
                                         _In_opt_ CSslCertificate *lpSelfCert, _In_opt_ CEncryptionKey *lpPrivKey,
-                                        _In_opt_ CDhParam *lpDhParam, _In_ int nSslOptions)
+                                        _In_opt_ CEncryptionKey *lpDhParam, _In_ eSslOption nSslOptions)
 {
   HRESULT hRes = MX_E_AlreadyExists;
 
-  if (nClass == CIpc::ConnectionClassServer && lpSelfCert == NULL)
+  if (nClass == CIpc::eConnectionClass::Server && lpSelfCert == NULL)
     return E_POINTER;
 
   if ((__InterlockedRead(&nFlags) & FLAG_HasSSL) == 0)
@@ -1338,7 +1315,6 @@ HRESULT CIpc::CConnectionBase::SetupSsl(_In_opt_ LPCSTR szHostNameA, _In_opt_ CS
       X509_STORE *lpStore;
       X509 *lpX509;
       EVP_PKEY *lpKey;
-      DH *lpDH;
 
       hRes = Internals::OpenSSL::Init();
       if (FAILED(hRes))
@@ -1346,7 +1322,7 @@ HRESULT CIpc::CConnectionBase::SetupSsl(_In_opt_ LPCSTR szHostNameA, _In_opt_ CS
 
       //create SSL context
       ERR_clear_error();
-      lpCtx = Internals::OpenSSL::GetSslContext((nClass == CIpc::ConnectionClassServer) ? TRUE : FALSE);
+      lpCtx = Internals::OpenSSL::GetSslContext((nClass == CIpc::eConnectionClass::Server) ? TRUE : FALSE);
       if (lpCtx == NULL)
         return E_OUTOFMEMORY;
 
@@ -1356,21 +1332,21 @@ HRESULT CIpc::CConnectionBase::SetupSsl(_In_opt_ LPCSTR szHostNameA, _In_opt_ CS
         return E_OUTOFMEMORY;
 
       //init some stuff
-      if ((nSslOptions & (int)CIpc::SslOptionCheckCertificate) != 0)
+      if ((nSslOptions & eSslOption::CheckCertificate) != (eSslOption)0)
       {
         _InterlockedOr(&nFlags, FLAG_SslCheckCertificate);
       }
-      if ((nSslOptions & (int)CIpc::SslOptionAcceptSelfSigned) != 0)
+      if ((nSslOptions & eSslOption::AcceptSelfSigned) != (eSslOption)0)
       {
         _InterlockedOr(&nFlags, FLAG_SslAcceptSelfSigned);
       }
-      SSL_set_verify(lpSession, (((nSslOptions & (int)CIpc::SslOptionCheckCertificate) != 0)
+      SSL_set_verify(lpSession, (((nSslOptions & eSslOption::CheckCertificate) != (eSslOption)0)
                                  ? (SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE) : SSL_VERIFY_NONE), NULL);
       SSL_set_verify_depth(lpSession, 4);
       SSL_set_options(lpSession, SSL_OP_NO_COMPRESSION | SSL_OP_LEGACY_SERVER_CONNECT | SSL_OP_NO_RENEGOTIATION |
                                  SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
       SSL_set_mode(lpSession, SSL_MODE_RELEASE_BUFFERS | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER | SSL_MODE_NO_AUTO_CHAIN);
-      if (nClass == CIpc::ConnectionClassServer)
+      if (nClass == CIpc::eConnectionClass::Server)
       {
         SSL_set_accept_state(lpSession);
       }
@@ -1466,19 +1442,31 @@ on_error:
 
       if (lpDhParam != NULL)
       {
-        lpDH = lpDhParam->GetDH();
-        if (lpDH == NULL)
+        EVP_PKEY *lpKey;
+        int nKeyBaseId;
+
+        lpKey = lpDhParam->GetPKey();
+        if (lpKey == NULL)
         {
-          hRes = MX_E_NotReady;
+          hRes = MX_E_InvalidData;
+          goto on_error;
+        }
+        nKeyBaseId = EVP_PKEY_get_base_id(lpKey);
+        if (nKeyBaseId != EVP_PKEY_DH && nKeyBaseId != EVP_PKEY_DHX)
+        {
+          hRes = MX_E_InvalidData;
           goto on_error;
         }
 
+        //SSL_set0_tmp_dh_pkey takes ownership of the parameter so can duplicate it but
+        //they are just referenced so increasing the counter is enough
         ERR_clear_error();
-        if (SSL_set_tmp_dh(lpSession, lpDH) == 0)
+        if (SSL_set0_tmp_dh_pkey(lpSession, lpKey) <= 0)
         {
           hRes = Internals::OpenSSL::GetLastErrorCode(MX_E_InvalidData);
           goto on_error;
         }
+        EVP_PKEY_up_ref(lpKey);
       }
 
       sSsl.cCertArray = lpCheckCertificates;
@@ -1626,7 +1614,7 @@ HRESULT CIpc::CConnectionBase::ProcessSslEncryptedOutput()
   //send processed output from ssl engine
   while ((nAvailable = BIO_ctrl_pending(sSsl.lpOutBio)) > 0)
   {
-    lpPacket = GetPacket(CIpc::CPacketBase::TypeWriteRequest, ((nAvailable > 8192) ? 32768 : 4096), FALSE);
+    lpPacket = GetPacket(CIpc::CPacketBase::eType::WriteRequest, ((nAvailable > 8192) ? 32768 : 4096), FALSE);
     if (lpPacket == NULL)
       return E_OUTOFMEMORY;
 
@@ -1736,10 +1724,6 @@ HRESULT CIpc::CConnectionBase::HandleSslEndOfHandshake()
 
 CIpc::CConnectionBase::CReadWriteStats::CReadWriteStats() : CBaseMemObj()
 {
-  SlimRWL_Initialize(&sRwMutex);
-  ullBytesTransferred = ullPrevBytesTransferred = 0;
-  nAvgRate = 0.0;
-  ::MxMemSet(nTransferRateHistory, 0, sizeof(nTransferRateHistory));
   return;
 }
 
@@ -2027,7 +2011,7 @@ static BIO_METHOD *BIO_circular_buffer_mem()
 
 //-----------------------------------------------------------
 
-static int _X509_STORE_get1_issuer(X509 **issuer, X509_STORE_CTX *ctx, X509 *x)
+static int _X509_STORE_get1_issuer(_Out_ X509 **issuer, _In_ X509_STORE_CTX *ctx, _In_ X509 *x)
 {
   MX::CSslCertificateArray *lpCertArray;
   X509 *cert;
@@ -2048,7 +2032,7 @@ static int _X509_STORE_get1_issuer(X509 **issuer, X509_STORE_CTX *ctx, X509 *x)
   return 0;
 }
 
-static STACK_OF(X509)* _X509_STORE_get1_certs(X509_STORE_CTX *ctx, X509_NAME *nm)
+static STACK_OF(X509)* _X509_STORE_get1_certs(_In_ X509_STORE_CTX *ctx, _In_ const X509_NAME *nm)
 {
   MX::CSslCertificateArray *lpCertArray;
   X509 *cert;
@@ -2071,7 +2055,7 @@ static STACK_OF(X509)* _X509_STORE_get1_certs(X509_STORE_CTX *ctx, X509_NAME *nm
   return NULL;
 }
 
-static STACK_OF(X509_CRL)* _X509_STORE_get1_crls(X509_STORE_CTX *ctx, X509_NAME *nm)
+static STACK_OF(X509_CRL)* _X509_STORE_get1_crls(_In_ const X509_STORE_CTX *ctx, _In_ const X509_NAME *nm)
 {
   MX::CSslCertificateArray *lpCertArray;
   X509_CRL *cert;
@@ -2094,7 +2078,7 @@ static STACK_OF(X509_CRL)* _X509_STORE_get1_crls(X509_STORE_CTX *ctx, X509_NAME 
   return NULL;
 }
 
-static X509* _lookup_cert_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ X509_NAME *name)
+static X509* _lookup_cert_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ const X509_NAME *name)
 {
   if (lpCertArray != NULL && name != NULL)
   {
@@ -2117,7 +2101,7 @@ static X509* _lookup_cert_by_subject(_In_ MX::CSslCertificateArray *lpCertArray,
   return NULL;
 }
 
-static X509_CRL* _lookup_crl_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ X509_NAME *name)
+static X509_CRL* _lookup_crl_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ const X509_NAME *name)
 {
   if (lpCertArray != NULL && name != NULL)
   {

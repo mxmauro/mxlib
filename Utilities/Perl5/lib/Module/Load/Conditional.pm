@@ -19,14 +19,15 @@ use constant QUOTE    => do { ON_WIN32 ? q["] : q['] };
 
 BEGIN {
     use vars        qw[ $VERSION @ISA $VERBOSE $CACHE @EXPORT_OK $DEPRECATED
-                        $FIND_VERSION $ERROR $CHECK_INC_HASH];
+                        $FIND_VERSION $ERROR $CHECK_INC_HASH $FORCE_SAFE_INC ];
     use Exporter;
     @ISA            = qw[Exporter];
-    $VERSION        = '0.64';
+    $VERSION        = '0.74';
     $VERBOSE        = 0;
     $DEPRECATED     = 0;
     $FIND_VERSION   = 1;
     $CHECK_INC_HASH = 0;
+    $FORCE_SAFE_INC = 0;
     @EXPORT_OK      = qw[check_install can_load requires];
 }
 
@@ -201,6 +202,8 @@ sub check_install {
     ### so scan the dirs
     unless( $filename ) {
 
+        local @INC = @INC[0..$#INC-1] if $FORCE_SAFE_INC && $INC[-1] eq '.';
+
         DIR: for my $dir ( @INC ) {
 
             my $fh;
@@ -235,7 +238,7 @@ sub check_install {
                 $filename = File::Spec->catfile($dir, $file);
                 next unless -e $filename;
 
-                $fh = new FileHandle;
+                $fh = FileHandle->new();
                 if (!$fh->open($filename)) {
                     warn loc(q[Cannot open file '%1': %2], $file, $!)
                             if $args->{verbose};
@@ -256,13 +259,19 @@ sub check_install {
             last DIR unless $FIND_VERSION;
 
             ### otherwise, the user wants us to find the version from files
-            my $mod_info = Module::Metadata->new_from_handle( $fh, $filename );
-            my $ver      = $mod_info->version( $args->{module} );
 
-            if( defined $ver ) {
-                $href->{version} = $ver;
+            {
+              local $SIG{__WARN__} = sub {};
+              my $ver = eval {
+                my $mod_info = Module::Metadata->new_from_handle( $fh, $filename );
+                $mod_info->version( $args->{module} );
+              };
 
-                last DIR;
+              if( defined $ver ) {
+                  $href->{version} = $ver;
+
+                  last DIR;
+              }
             }
         }
     }
@@ -307,9 +316,11 @@ sub check_install {
     }
 
     if ( $DEPRECATED and "$]" >= 5.011 ) {
+        local @INC = @INC[0..$#INC-1] if $FORCE_SAFE_INC && $INC[-1] eq '.';
         require Module::CoreList;
         require Config;
 
+        no warnings 'once';
         $href->{uptodate} = 0 if
            exists $Module::CoreList::version{ 0+$] }{ $args->{module} } and
            Module::CoreList::is_deprecated( $args->{module} ) and
@@ -444,6 +455,8 @@ sub can_load {
 
             if ( $CACHE->{$mod}->{uptodate} ) {
 
+                local @INC = @INC[0..$#INC-1] if $FORCE_SAFE_INC && $INC[-1] eq '.';
+
                 if ( $args->{autoload} ) {
                     my $who = (caller())[0];
                     eval { autoload_remote $who, $mod };
@@ -509,6 +522,8 @@ sub requires {
         return undef;
     }
 
+    local @INC = @INC[0..$#INC-1] if $FORCE_SAFE_INC && $INC[-1] eq '.';
+
     my $lib = join " ", map { qq["-I$_"] } @INC;
     my $oneliner = 'print(join(qq[\n],map{qq[BONG=$_]}keys(%INC)),qq[\n])';
     my $cmd = join '', qq["$^X" $lib -M$who -e], QUOTE, $oneliner, QUOTE;
@@ -561,6 +576,12 @@ to C<true> will trust any entries in C<%INC> and return them for
 you.
 
 The default is 0;
+
+=head2 $Module::Load::Conditional::FORCE_SAFE_INC
+
+This controls whether C<Module::Load::Conditional> sanitises C<@INC>
+by removing "C<.>". The current default setting is C<0>, but this
+may change in a future release.
 
 =head2 $Module::Load::Conditional::CACHE
 

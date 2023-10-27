@@ -37,7 +37,7 @@ CHttpBodyParserDefault::CHttpBodyParserDefault(_In_ OnDownloadStartedCallback _c
   ullMaxBodySize = _ullMaxBodySize;
   nSize = 0ui64;
   nMemBufferSize = 0;
-  sParser.nState = StateReading;
+  sParser.nState = eState::Reading;
   return;
 }
 
@@ -160,9 +160,9 @@ HRESULT CHttpBodyParserDefault::Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T n
 
   if (lpData == NULL && nDataSize > 0)
     return E_POINTER;
-  if (sParser.nState == StateDone)
+  if (sParser.nState == eState::Done)
     return S_OK;
-  if (sParser.nState == StateError)
+  if (sParser.nState == eState::Error)
     return MX_E_InvalidData;
 
   //end of parsing?
@@ -185,7 +185,7 @@ HRESULT CHttpBodyParserDefault::Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T n
       if (FAILED(hRes))
         goto done;
     }
-    sParser.nState = StateDone;
+    sParser.nState = eState::Done;
     return S_OK;
   }
 
@@ -286,7 +286,7 @@ err_nomem:
 
 done:
   if (FAILED(hRes))
-    sParser.nState = StateError;
+    sParser.nState = eState::Error;
   return hRes;
 }
 

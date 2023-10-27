@@ -43,22 +43,19 @@ protected:
   HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
 
 private:
-  typedef enum {
-    StateNameStart,
-    StateName,
-    StateValue,
-    StateDone,
-    StateError
-  } eState;
+  enum class eState
+  {
+    NameStart, Name, Value, Done, Error
+  };
 
   DWORD dwMaxFieldSize;
 
   struct {
-    eState nState;
+    eState nState{ eState::NameStart };
     CStringA cStrCurrA;
     CStringW cStrCurrFieldNameW;
   } sParser;
-  SIZE_T nCurrContentSize;
+  SIZE_T nCurrContentSize{ 0 };
 };
 
 } //namespace MX

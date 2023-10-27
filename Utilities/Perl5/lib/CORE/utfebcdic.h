@@ -8,15 +8,18 @@
  *
  * Macros to implement UTF-EBCDIC as perl's internal encoding
  * Adapted from version 7.1 of Unicode Technical Report #16:
- *  http://www.unicode.org/unicode/reports/tr16
+ *  http://www.unicode.org/reports/tr16
  *
  * To summarize, the way it works is:
  * To convert an EBCDIC code point to UTF-EBCDIC:
- *  1)	convert to Unicode.  No conversion is necesary for code points above
+ *  1)	convert to Unicode.  No conversion is necessary for code points above
  *      255, as Unicode and EBCDIC are identical in this range.  For smaller
  *      code points, the conversion is done by lookup in the PL_e2a table (with
  *      inverse PL_a2e) in the generated file 'ebcdic_tables.h'.  The 'a'
- *      stands for ASCII platform, meaning 0-255 Unicode.
+ *      stands for ASCII platform, meaning 0-255 Unicode.  Use
+ *      NATIVE_TO_LATIN1() and LATIN1_TO_NATIVE(), respectively to perform this
+ *      lookup.  NATIVE_TO_UNI() and UNI_TO_NATIVE() are similarly used for any
+ *      input, and know to avoid the lookup for inputs above 255.
  *  2)	convert that to a utf8-like string called I8 ('I' stands for
  *	intermediate) with variant characters occupying multiple bytes.  This
  *	step is similar to the utf8-creating step from Unicode, but the details
@@ -45,7 +48,8 @@
  *	so that lexically comparing two UTF-EBCDIC-variant characters yields
  *	the Unicode code point order.  (To get native code point order, one has
  *	to convert the latin1-range characters to their native code point
- *	value.)
+ *	value.)  The macros NATIVE_UTF8_TO_I8() and I8_TO_NATIVE_UTF8() do the
+ *	table lookups.
  *
  *  For example, the ordinal value of 'A' is 193 in EBCDIC, and also is 193 in
  *  UTF-EBCDIC.  Step 1) converts it to 65, Step 2 leaves it at 65, and Step 3
@@ -65,10 +69,11 @@
  *
  * The purpose of Step 3 is to make the encoding be invariant for the chosen
  * characters.  This messes up the convenient patterns found in step 2, so
- * generally, one has to undo step 3 into a temporary to use them.  However,
- * one "shadow", or parallel table, PL_utf8skip, has been constructed that
- * doesn't require undoing things.  It is such that for each byte, it says
- * how long the sequence is if that (UTF-EBCDIC) byte were to begin it
+ * generally, one has to undo step 3 into a temporary to use them, using the
+ * macro NATIVE_TO_I8().  However, one "shadow", or parallel table,
+ * PL_utf8skip, has been constructed that doesn't require undoing things.  It
+ * is such that for each byte, it says how long the sequence is if that
+ * (UTF-EBCDIC) byte were to begin it.
  *
  * There are actually 3 slightly different UTF-EBCDIC encodings in
  * ebcdic_tables.h, one for each of the code pages recognized by Perl.  That
@@ -121,21 +126,7 @@
 
 START_EXTERN_C
 
-#ifdef DOINIT
-
 #include "ebcdic_tables.h"
-
-#else
-EXTCONST U8 PL_utf8skip[];
-EXTCONST U8 PL_e2utf[];
-EXTCONST U8 PL_utf2e[];
-EXTCONST U8 PL_e2a[];
-EXTCONST U8 PL_a2e[];
-EXTCONST U8 PL_fold[];
-EXTCONST U8 PL_fold_latin1[];
-EXTCONST U8 PL_latin1_lc[];
-EXTCONST U8 PL_mod_latin1_uc[];
-#endif
 
 END_EXTERN_C
 
@@ -150,20 +141,10 @@ END_EXTERN_C
 #define I8_TO_NATIVE_UTF8(b)           (__ASSERT_(FITS_IN_8_BITS(b)) PL_utf2e[(U8)(b)])
 
 /* Transforms in wide UV chars */
-#define NATIVE_TO_UNI(ch)    (FITS_IN_8_BITS(ch) ? NATIVE_TO_LATIN1(ch) : (UV) (ch))
-#define UNI_TO_NATIVE(ch)    (FITS_IN_8_BITS(ch) ? LATIN1_TO_NATIVE(ch) : (UV) (ch))
-
-/* How wide can a single UTF-8 encoded character become in bytes. */
-/* NOTE: Strictly speaking Perl's UTF-8 should not be called UTF-8 since UTF-8
- * is an encoding of Unicode, and Unicode's upper limit, 0x10FFFF, can be
- * expressed with 5 bytes.  However, Perl thinks of UTF-8 as a way to encode
- * non-negative integers in a binary format, even those above Unicode.  14 is
- * the smallest number that covers 2**64
- *
- * WARNING: This number must be in sync with the value in
- * regen/charset_translations.pl. */
-#define UTF8_MAXBYTES 14
-
+#define NATIVE_TO_UNI(ch)                                                   \
+                 (FITS_IN_8_BITS(ch) ? NATIVE_TO_LATIN1(ch) : (UV) (ch))
+#define UNI_TO_NATIVE(ch)                                                   \
+                 (FITS_IN_8_BITS(ch) ? LATIN1_TO_NATIVE(ch) : (UV) (ch))
 /*
   The following table is adapted from tr16, it shows the I8 encoding of Unicode code points.
 
@@ -185,59 +166,41 @@ U+40000000..U+FFFFFFFF ttuuuuuvvvvvwwwwwzzzzzyyyyyxxxxx 11111111 10100000 101000
 For 32-bit words, the 2nd through 7th bytes effectively function as leading
 zeros.  Above 32 bits, these fill up, with each byte yielding 5 bits of
 information, so that with 13 continuation bytes, we can handle 65 bits, just
-above what a 64 bit word can hold */
+above what a 64 bit word can hold
 
+ The following table gives the I8:
 
-/* This is a fundamental property of UTF-EBCDIC */
-#define OFFUNI_IS_INVARIANT(c) (((UV)(c)) <  0xA0)
+   I8 Code Points      1st Byte  2nd Byte  3rd     4th     5th     6th     7th       8th  9th-14th
 
-/* It turns out that on EBCDIC platforms, the invariants are the characters
- * that have ASCII equivalents, plus the C1 controls.  Since the C0 controls
- * and DELETE are ASCII, this is the same as: (isASCII(uv) || isCNTRL_L1(uv))
- * */
-#define UVCHR_IS_INVARIANT(uv) cBOOL(FITS_IN_8_BITS(uv)                        \
-   && (PL_charclass[(U8) (uv)] & (_CC_mask(_CC_ASCII) | _CC_mask(_CC_CNTRL))))
+   0x0000..0x009F       00..9F
+   0x00A0..0x00FF     * C5..C7    A0..BF
+   U+0100..U+03FF       C8..DF    A0..BF
+   U+0400..U+3FFF     * E1..EF    A0..BF  A0..BF
+   U+4000..U+7FFF       F0      * B0..BF  A0..BF  A0..BF
+   U+8000..U+D7FF       F1        A0..B5  A0..BF  A0..BF
+   U+D800..U+DFFF       F1        B6..B7  A0..BF  A0..BF (surrogates)
+   U+E000..U+FFFF       F1        B8..BF  A0..BF  A0..BF
+  U+10000..U+3FFFF	F2..F7    A0..BF  A0..BF  A0..BF
+  U+40000..U+FFFFF	F8      * A8..BF  A0..BF  A0..BF  A0..BF
+ U+100000..U+10FFFF	F9        A0..A1  A0..BF  A0..BF  A0..BF
+    Below are above-Unicode code points
+ U+110000..U+1FFFFF	F9        A2..BF  A0..BF  A0..BF  A0..BF
+ U+200000..U+3FFFFF	FA..FB    A0..BF  A0..BF  A0..BF  A0..BF
+ U+400000..U+1FFFFFF	FC      * A4..BF  A0..BF  A0..BF  A0..BF  A0..BF
+U+2000000..U+3FFFFFF	FD        A0..BF  A0..BF  A0..BF  A0..BF  A0..BF
+U+4000000..U+3FFFFFFF   FE      * A2..BF  A0..BF  A0..BF  A0..BF  A0..BF  A0..BF
+U+40000000..            FF        A0..BF  A0..BF  A0..BF  A0..BF  A0..BF  A0..BF  * A1..BF  A0..BF
 
-/* UTF-EBCDIC semantic macros - We used to transform back into I8 and then
- * compare, but now only have to do a single lookup by using a bit in
- * l1_char_class_tab.h.
- * Comments as to the meaning of each are given at their corresponding utf8.h
- * definitions. */
+Note the gaps before several of the byte entries above marked by '*'.  These are
+caused by legal UTF-8 avoiding non-shortest encodings: it is technically
+possible to UTF-8-encode a single code point in different ways, but that is
+explicitly forbidden, and the shortest possible encoding should always be used
+(and that is what Perl does). */
 
-#define UTF8_IS_START(c)		_generic_isCC(c, _CC_UTF8_IS_START)
+#define UTF_CONTINUATION_BYTE_INFO_BITS  UTF_EBCDIC_CONTINUATION_BYTE_INFO_BITS
 
-#define UTF_IS_CONTINUATION_MASK    0xE0
-
-#define UTF8_IS_CONTINUATION(c)		_generic_isCC(c, _CC_UTF8_IS_CONTINUATION)
-
-/* The above instead could be written as this:
-#define UTF8_IS_CONTINUATION(c)                                                 \
-            (((NATIVE_UTF8_TO_I8(c) & UTF_IS_CONTINUATION_MASK)                 \
-                                                == UTF_CONTINUATION_MARK)
- */
-
-/* Equivalent to ! UVCHR_IS_INVARIANT(c) */
-#define UTF8_IS_CONTINUED(c) 		cBOOL(FITS_IN_8_BITS(c)                 \
-   && ! (PL_charclass[(U8) (c)] & (_CC_mask(_CC_ASCII) | _CC_mask(_CC_CNTRL))))
-
-#define UTF8_IS_DOWNGRADEABLE_START(c)   _generic_isCC(c,                       \
-                                              _CC_UTF8_IS_DOWNGRADEABLE_START)
-
-/* Equivalent to (UTF8_IS_START(c) && ! UTF8_IS_DOWNGRADEABLE_START(c))
- * Makes sure that the START bit is set and the DOWNGRADEABLE bit isn't */
-#define UTF8_IS_ABOVE_LATIN1(c) cBOOL(FITS_IN_8_BITS(c)                         \
-  && ((PL_charclass[(U8) (c)] & ( _CC_mask(_CC_UTF8_IS_START)                   \
-                                 |_CC_mask(_CC_UTF8_IS_DOWNGRADEABLE_START)))   \
-                        == _CC_mask(_CC_UTF8_IS_START)))
-
-#define isUTF8_POSSIBLY_PROBLEMATIC(c)                                          \
-                _generic_isCC(c, _CC_UTF8_START_BYTE_IS_FOR_AT_LEAST_SURROGATE)
-
-#define UTF_CONTINUATION_MARK		0xA0
-#define UTF_ACCUMULATION_SHIFT		5
-
-/* ^? is defined to be APC on EBCDIC systems.  See the definition of toCTRL()
- * for more */
+/* ^? is defined to be APC on EBCDIC systems, as specified in Unicode Technical
+ * Report #16.  See the definition of toCTRL() for more */
 #define QUESTION_MARK_CTRL   LATIN1_TO_NATIVE(0x9F)
 
 /*

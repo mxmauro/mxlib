@@ -18,15 +18,9 @@
  * limitations under the License.
  */
 #include "..\..\Include\Http\HttpAuthDigest.h"
-#include "..\..\Include\Crypto\MessageDigest.h"
 #include "..\..\Include\FnvHash.h"
 #include "..\..\Include\Strings\Utf8.h"
 #include <stdio.h>
- /*
-#include "..\..\Include\Http\HttpCommon.h"
-#include "..\..\Include\Crypto\Base64.h"
-#include "..\..\Include\AutoPtr.h"
-*/
 
 //-----------------------------------------------------------
 
@@ -40,11 +34,6 @@ namespace MX {
 
 CHttpAuthDigest::CHttpAuthDigest() : CHttpAuthBase(), CNonCopyableObj()
 {
-  bStale = bUserHash = FALSE;
-  nAlgorithm = (int)MX::CMessageDigest::AlgorithmMD5;
-  nQop = 0;
-  bCharsetIsUtf8 = FALSE;
-  _InterlockedExchange(&nNonceCount, 0);
   return;
 }
 
@@ -191,8 +180,8 @@ HRESULT CHttpAuthDigest::Parse(_In_ CHttpHeaderRespWwwProxyAuthenticateCommon *l
 
       if (cStrTempA.CopyN(szValueW, nAlgLen) == FALSE)
         return E_OUTOFMEMORY;
-      nAlgorithm = (int)MX::CMessageDigest::GetAlgorithm((LPCSTR)cStrTempA);
-      if (nAlgorithm == -1)
+      nAlgorithm = MX::CMessageDigest::GetAlgorithm((LPCSTR)cStrTempA);
+      if (nAlgorithm == MX::CMessageDigest::eAlgorithm::Invalid)
         return MX_E_Unsupported;
     }
   }
@@ -243,6 +232,7 @@ HRESULT CHttpAuthDigest::GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCW
     nCNonce = fnv_64a_buf(&nQop, sizeof(nQop), nCNonce);
     lp = this;
     nCNonce = fnv_64a_buf(&lp, sizeof(lp), nCNonce);
+#pragma warning(suppress : 28159)
     dw = ::GetTickCount();
     nCNonce = fnv_64a_buf(&dw, sizeof(dw), nCNonce);
     sprintf_s(szCNonceA, MX_ARRAYLEN(szCNonceA), "%16I64x", nCNonce);

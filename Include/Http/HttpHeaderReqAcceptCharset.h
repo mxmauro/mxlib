@@ -65,7 +65,7 @@ public:
 
   eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return DuplicateBehaviorMerge;
+    return eDuplicateBehavior::Merge;
     };
 
   HRESULT AddCharset(_In_z_ LPCSTR szCharsetA, _In_opt_ SIZE_T nCharsetLen = (SIZE_T)-1,

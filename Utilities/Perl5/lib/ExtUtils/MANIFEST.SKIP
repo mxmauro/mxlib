@@ -5,9 +5,12 @@
 ,v$
 \B\.svn\b
 \B\.git\b
+^\.github\b
 \B\.gitignore\b
 \b_darcs\b
 \B\.cvsignore$
+\B\.bzr\b
+\B\.bzrignore$
 
 # Avoid VMS specific MakeMaker generated files
 \bDescrip.MMS$
@@ -45,12 +48,15 @@
 \.#
 \.rej$
 \..*\.sw.?$
+\.~\d+~$
 
 # Avoid OS-specific files/dirs
 # Mac OSX metadata
 \B\.DS_Store
 # Mac OSX SMB mount metadata files
 \B\._
+# Placeholder files created when iCloud will "optimize Mac storage"
+\.i[cC]loud$
 
 # Avoid Devel::Cover and Devel::CoverX::Covered files.
 \bcover_db\b
@@ -61,3 +67,12 @@
 
 # Avoid MYMETA files
 ^MYMETA\.
+
+# Temp files for new META
+^META_new\.(?:json|yml)
+
+# Avoid travis-ci.org file
+^\.travis\.yml
+
+# Avoid AppVeyor file
+^\.?appveyor.yml

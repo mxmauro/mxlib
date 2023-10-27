@@ -2,8 +2,8 @@ Option Explicit
 Dim oFso, oFile
 Dim szPlatform, szPlatformPath, szConfiguration, szConfigurationTarget, szConfigDebug
 Dim szScriptPath, szFileName, szDefineNoErr, szIsDebug
-Dim szPerlPath, szNasmPath, szObjDir, szLibDir
-Dim I, nErr, S, dtBuildDate, aTargetFiles, bRebuild
+Dim szPerlPath, szNasmPath, aLibFiles
+Dim I, nErr, S, dtBuildDate, bRebuild
 
 
 Set oFso = CreateObject("Scripting.FileSystemObject")
@@ -105,25 +105,21 @@ End If
 
 'Setup directories
 szScriptPath = Left(WScript.ScriptFullName, Len(WScript.ScriptFullName) - Len(WScript.ScriptName))
-szObjDir = szScriptPath & "..\..\obj\" & szPlatformPath & "\" & szConfiguration & "\OpenSSL"
-szLibDir = szScriptPath & "..\..\Libs\" & szPlatformPath & "\" & szConfiguration
 szPerlPath = szScriptPath & "..\..\Utilities\Perl5\bin"
 szNasmPath = szScriptPath & "..\..\Utilities\Nasm"
+aLibFiles = Array( "openssl_libcrypto.lib", "openssl_libssl.lib", "openssl_libcommon.lib", "openssl_libdefault.lib", "openssl_liblegacy.lib", "openssl_static.pdb" )
 
-
-'Check if we have to rebuild the libraries
-aTargetFiles = Array("libssl.lib", "libcrypto.lib", "ossl_static.pdb")
 If bRebuild = False Then
 	WScript.Echo "Checking if source files were modified..."
-	For I = 0 To 2
-		szFileName = szLibDir & "\" & aTargetFiles(I)
+	For I = LBound(aLibFiles) To UBound(aLibFiles)
+		szFileName = szScriptPath & "..\..\Libs\" & szPlatformPath & "\" & szConfiguration & "\" & aLibFiles(I)
 		If oFso.FileExists(szFileName) = False Then
-			WScript.Echo "Library " & Chr(34) & aTargetFiles(I) & Chr(34) & " was not found... rebuilding"
+			WScript.Echo "Library " & Chr(34) & aLibFiles(I) & Chr(34) & " was not found... rebuilding"
 			bRebuild = True
 			Exit For
 		End If
 		Set oFile = oFso.getFile(szFileName)
-		If I = 0 Then
+		If I = LBound(aLibFiles) Then
 			dtBuildDate = oFile.DateLastModified
 		Else
 			If oFile.DateLastModified < dtBuildDate Then dtBuildDate = oFile.DateLastModified
@@ -145,48 +141,50 @@ If bRebuild = False Then
 	WScript.Quit 0
 End If
 
-
 'Start rebuilding
 RunApp "MD " & Chr(34) & szScriptPath & "Temp" & Chr(34), "", "", True
 
 WScript.Echo "Creating configuration settings..."
 nErr = CreateConfiguration()
-If nErr = 0 Then
-	WScript.Echo "Configuring..."
-	S = "perl.exe -d:Confess Configure " & szConfigDebug & szConfigurationTarget & " " & szDefineNoErr & _
-	             " no-asm no-sock no-rc2 no-idea no-cast no-md2 no-mdc2 no-camellia no-shared "
-	S = S & "-DOPENSSL_NO_DGRAM -DOPENSSL_NO_CAPIENG -DUNICODE -D_UNICODE "
-	If Len(szIsDebug) = 0 Then S = S & "-DOPENSSL_NO_FILENAMES "
-	S = S & Chr(34) & "--config=" & szScriptPath & "Temp\compiler_config.conf" & Chr(34)
-	nErr = RunApp(S, szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
-End If
-If nErr = 0 Then
-	nErr = Patch_Makefile()
-End If
-If nErr = 0 Then
-	nErr = Patch_RAND_WIN_C()
-End If
 If nErr <> 0 Then
-	WScript.Echo "Errors detected while preparing files."
+	WScript.Echo "Errors found!"
 	WScript.Quit nErr
 End If
 
+WScript.Echo "Creating makefile..."
+S = "perl.exe Configure " & szConfigDebug & szConfigurationTarget & " " & szDefineNoErr
+S = S & " no-asm no-sock no-rc2 no-idea no-cast no-md2 no-mdc2 no-camellia no-shared no-srp no-engine no-module"
+S = S & " -DOPENSSL_NO_DGRAM -DOPENSSL_NO_CAPIENG" ' -DOPENSSL_NO_DEPRECATED -DOPENSSL_API_COMPAT=30000"
+S = S & " -DUNICODE -D_UNICODE"
+If Len(szIsDebug) = 0 Then S = S & " -DOPENSSL_NO_FILENAMES"
+S = S & " " & Chr(34) & "--config=" & szScriptPath & "Temp\compiler_config.conf" & Chr(34) & " "
+nErr = RunApp(S, szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
+If nErr <> 0 Then
+	WScript.Echo "Errors found!"
+	WScript.Quit nErr
+End If
+
+WScript.Echo "Patching makefile..."
+nErr = Patch_Makefile()
+If nErr <> 0 Then
+	WScript.Echo "Errors found!"
+	WScript.Quit nErr
+End If
+
+WScript.Echo "Patching rand_win.c..."
+nErr = Patch_RAND_WIN_C()
+If nErr <> 0 Then
+	WScript.Echo "Errors found!"
+	WScript.Quit nErr
+End If
 
 'Compile
 RunApp "NMAKE clean", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, True
 
 WScript.Echo "Compiling..."
-nErr = RunApp("NMAKE /S build_generated", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
-If nErr = 0 Then
-	nErr = RunApp("NMAKE /S build_libs_nodep", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
-End If
-If nErr = 0 Then
-	nErr = RunApp("NMAKE /S build_engines_nodep", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
-	'nErr = RunApp("NMAKE /S build_modules_nodep", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
-End If
-
+nErr = RunApp("NMAKE /S build_libs", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, False)
 If nErr <> 0 Then
-	WScript.Echo "Errors detected while compiling project."
+	WScript.Echo "Errors found!"
 	WScript.Quit nErr
 End If
 
@@ -194,22 +192,31 @@ End If
 WScript.Sleep(5000)
 
 'Move needed files
-RunApp "MD " & Chr(34) & szObjDir & Chr(34), "", "", True
-RunApp "MD " & Chr(34) & szLibDir & Chr(34), "", "", True
+'RunApp "MD " & Chr(34) & szObjDir & Chr(34), "", "", True
 
-For I = 0 To 2
-	RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\" & aTargetFiles(I) & Chr(34) & " " & _
-											Chr(34) & szLibDir & Chr(34), "", "", False
+'Copy include files
+RunApp "RD /S /Q " & Chr(34) & szScriptPath & "Generated\include\" & szPlatformPath & "\" & szConfiguration & Chr(34), "", "", True
+RunApp "MD " & Chr(34) & szScriptPath & "Generated" & Chr(34), "", "", True
+RunApp "MD " & Chr(34) & szScriptPath & "Generated\include" & Chr(34), "", "", True
+RunApp "MD " & Chr(34) & szScriptPath & "Generated\include\" & szPlatformPath & Chr(34), "", "", True
+RunApp "MD " & Chr(34) & szScriptPath & "Generated\include\" & szPlatformPath & "\" & szConfiguration & Chr(34), "", "", True
+RunApp "XCOPY " & Chr(34) & szScriptPath & "Source\include\*" & Chr(34) & " " & _
+                  Chr(34) & szScriptPath & "Generated\include\" & szPlatformPath & "\" & szConfiguration & Chr(34) & _
+                  " /E /Q /-Y", "", "", True
+
+'Move library files
+RunApp "RD /S /Q " & Chr(34) & szScriptPath & "..\..\Libs\" & szPlatformPath & "\" & szConfiguration & "\OpenSSL" & Chr(34), "", "", True
+RunApp "MD " & Chr(34) & szScriptPath & "..\..\Libs" & Chr(34), "", "", True
+RunApp "MD " & Chr(34) & szScriptPath & "..\..\Libs\" & szPlatformPath & Chr(34), "", "", True
+RunApp "MD " & Chr(34) & szScriptPath & "..\..\Libs\" & szPlatformPath & "\" & szConfiguration & Chr(34), "", "", True
+RunApp "MD " & Chr(34) & szScriptPath & "..\..\Libs\" & szPlatformPath & "\" & szConfiguration & "\OpenSSL" & Chr(34), "", "", True
+For I = LBound(aLibFiles) To UBound(aLibFiles)
+	RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\" & aLibFiles(I) & Chr(34) & " " & _
+	                    Chr(34) & szScriptPath & "..\..\Libs\" & szPlatformPath & "\" & szConfiguration & "\" & aLibFiles(I) & Chr(34) & "  >NUL 2>NUL", "", "", False
 Next
 
-RunApp "MD " & Chr(34) & szScriptPath & "Generated" & Chr(34), "", "", True
-RunApp "MD " & Chr(34) & szScriptPath & "Generated\OpenSSL" & Chr(34), "", "", True
-
-RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\include\openssl\opensslconf.h" & Chr(34) & " " & _
-										Chr(34) & szScriptPath & "Generated\OpenSSL" & Chr(34), "", "", False
-
 'Clean after compile
-RunApp "NMAKE clean", szScriptPath & "Source", "", True
+RunApp "NMAKE clean", szScriptPath & "Source", szPerlPath & ";" & szNasmPath, True
 
 WScript.Echo "Done!"
 WScript.Quit 0
@@ -222,9 +229,8 @@ Dim oShell
 
 	Set oShell = CreateObject("WScript.Shell")
 	If oShell.ExpandEnvironmentStrings("%VCINSTALLDIR%") <> "%VCINSTALLDIR%" Or _
-	    oShell.ExpandEnvironmentStrings("%VisualStudioVersion%") <> "%VisualStudioVersion%" Or _
-	    oShell.ExpandEnvironmentStrings("%MSBuildLoadMicrosoftTargetsReadOnly%") <> _
-	                                    "%MSBuildLoadMicrosoftTargetsReadOnly%" Then
+			oShell.ExpandEnvironmentStrings("%VisualStudioVersion%") <> "%VisualStudioVersion%" Or _
+			oShell.ExpandEnvironmentStrings("%MSBuildLoadMicrosoftTargetsReadOnly%") <> "%MSBuildLoadMicrosoftTargetsReadOnly%" Then
 		CheckVisualStudioCommandPrompt = True
 	Else
 		CheckVisualStudioCommandPrompt = False
@@ -238,9 +244,21 @@ Dim oFile
 	CheckForNewerFile = False
 	Set oFile = oFso.getFile(szFile)
 	If oFile.DateLastModified > dtBuildDate Then
-		WScript.Echo "File: " & Chr(34) & szFile & Chr(34) & " is newer... rebuilding"
 		CheckForNewerFile = True
 	End If
+	Set oFile = Nothing
+End Function
+
+Function CheckIfInFileExists(szFile)
+Dim oFile
+
+	CheckIfInFileExists = False
+	On Error Resume Next
+	Set oFile = oFso.getFile(szFile & ".in")
+	If Err.Number = 0 Then
+		CheckIfInFileExists = True
+	End If
+	On Error Goto 0
 	Set oFile = Nothing
 End Function
 
@@ -258,17 +276,12 @@ Dim S, lS
 	Next
 	For Each f in oFolder.Files
 		S = LCase(f.name)
-		If Right(S, 4) = ".cpp" Or Right(S, 2) = ".c" Or Right(S, 2) = ".h" Then
+		If Right(S, 4) = ".cpp" Or Right(S, 2) = ".c" Or Right(S, 2) = ".h" Or Right(S, 2) = ".in" Then
 			S = szFolder & "\" & f.name
-			lS = LCase(S)
-			If Right(lS, 33) <> "crypto\include\internal\bn_conf.h" And _
-			        Right(lS, 34) <> "crypto\include\internal\dso_conf.h" And _
-			        Right(lS, 17) <> "crypto\buildinf.h" And _
-			        Right(lS, 29) <> "include\openssl\opensslconf.h" Then
-				If CheckForNewerFile(S, dtBuildDate) <> False Then
-					CheckForNewerFiles = True
-					Exit Function
-				End If
+			If CheckForNewerFile(S, dtBuildDate) <> False And CheckIfInFileExists(S) = False Then
+				WScript.Echo "File: " & Chr(34) & S & Chr(34) & " is newer... rebuilding"
+				CheckForNewerFiles = True
+				Exit Function
 			End If
 		End If
 	Next
@@ -490,6 +503,7 @@ Dim I, S, nArea
 	                    "        lflags           => add(" & Chr(34) & "/ignore:4221 LIBCMTD.lib" & Chr(34) & ")" & vbCrLf & _
 	                    "    }" & vbCrLf & _
 	                    ");"
+
 	I = Err.Number
 	If I <> 0 Then
 		CreateConfiguration = I
@@ -518,7 +532,7 @@ Dim I, S
 	objRE2.Global = False
 
 	On Error Resume Next
-	Set objInputFile = oFso.OpenTextFile(szScriptPath & "Source\crypto\rand\rand_win.c", 1)
+	Set objInputFile = oFso.OpenTextFile(szScriptPath & "Source\providers\implementations\rands\seeding\rand_win.c", 1)
 	I = Err.Number
 	If I <> 0 Then
 		Patch_RAND_WIN_C = I
@@ -543,8 +557,8 @@ Dim I, S
 
 		If objRE1.Test(S) <> False Then
 			S = ""
-		ElseIf objRE2.Test(S) <> False Then
-			S = "#include " & Chr(34) & "..\Source\crypto\rand\rand_local.h" & Chr(34)
+		' ElseIf objRE2.Test(S) <> False Then
+		' 	S = "#include " & Chr(34) & "..\Source\crypto\rand\rand_local.h" & Chr(34)
 		End If
 
 		objOutputFile.Write S & vbCrLf
@@ -563,7 +577,7 @@ End Function
 
 Function Patch_Makefile()
 Dim objRE, objInputFile, objOutputFile
-Dim I, S, Pos
+Dim I, S, A, Elem, szRandWinPath, Pos
 
 	On Error Resume Next
 	Set objInputFile = oFso.OpenTextFile(szScriptPath & "Source\makefile", 1)
@@ -580,6 +594,9 @@ Dim I, S, Pos
 		On Error Goto 0
 		Exit Function
 	End If
+
+	szRandWinPath = "providers\implementations\rands\seeding"
+
 	Do Until objInputFile.AtEndOfStream
 		S = objInputFile.ReadLine
 		I = Err.Number
@@ -589,9 +606,31 @@ Dim I, S, Pos
 			Exit Function
 		End If
 
-		Pos = InStr(1, S, "crypto\rand\rand_win.c", 1)
+		'Replace target libraries locations & names
+		S = Replace(S, "libcrypto.lib", "openssl_libcrypto.lib")
+		S = Replace(S, "libssl.lib", "openssl_libssl.lib")
+		S = Replace(S, "providers\libcommon.lib", "openssl_libcommon.lib")
+		S = Replace(S, "providers\libdefault.lib", "openssl_libdefault.lib")
+		S = Replace(S, "providers\liblegacy.lib", "openssl_liblegacy.lib")
+
+		'Replace target PDB
+		S = Replace(S, "/Fdossl_static.pdb", "/Fdopenssl_static.pdb")
+
+		'Remove app and test libraries from compilation
+		If Left(S, 5) = "LIBS=" Then
+			A = Split(Mid(S, 6))
+			S = "LIBS="
+			For Each Elem In A
+				If Len(Elem) > 0 And Left(Elem, 5) <> "apps\" And Left(Elem, 5) <> "test\" Then
+					S = S & " " & Elem
+				End If
+			Next
+		End If
+
+		'Patch location of rand_win.c
+		Pos = InStr(1, S, szRandWinPath & "\rand_win.c", 1)
 		If Pos > 0 Then
-			S = Left(S, Pos - 1) & "..\Temp" & Mid(S, Pos + 11)
+			S = Left(S, Pos - 1) & "..\Temp" & Mid(S, Pos + Len(szRandWinPath))
 		End If
 
 		objOutputFile.Write S & vbCrLf
@@ -606,7 +645,7 @@ Dim I, S, Pos
 	objInputFile.Close
 	On Error Goto 0
 
-	RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Temp\makefile" & Chr(34) & " " & Chr(34) & szScriptPath & _
-			"Source\makefile" & Chr(34), "", "", False
+	RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Temp\makefile" & Chr(34) & " " & _
+	                    Chr(34) & szScriptPath & "Source\makefile" & Chr(34), "", "", False
 	Patch_Makefile = 0
 End Function

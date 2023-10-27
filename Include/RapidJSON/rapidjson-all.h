@@ -38,10 +38,12 @@ public:
 
 //------------------------------------------------------------------------------
 
+#pragma warning(disable : 26495)
 #include "document.h"
 #include "prettywriter.h"
 #include "stringbuffer.h"
 #include "memorybuffer.h"
+#pragma warning(default : 26495)
 
 //------------------------------------------------------------------------------
 
@@ -54,6 +56,42 @@ __inline const Value* LookupMember(_In_ const Value &parent, _In_z_ LPCSTR szMem
 }
 
 } //namespace rapidjson
+
+//------------------------------------------------------------------------------
+
+#define RAPIDJSON_TRY try
+
+#define RAPIDJSON_CATCH(hr)           \
+    catch (std::bad_alloc &e)         \
+    {                                 \
+      UNREFERENCED_PARAMETER(e);      \
+      hr = E_OUTOFMEMORY;             \
+    }                                 \
+    catch (std::runtime_error &e)     \
+    {                                 \
+      UNREFERENCED_PARAMETER(e);      \
+      hr = MX_E_InvalidData;          \
+    }                                 \
+    catch (...)                       \
+    {                                 \
+      hr = MX_E_UnhandledException;   \
+    }
+
+#define RAPIDJSON_CATCH_RETURN        \
+    catch (std::bad_alloc &e)         \
+    {                                 \
+      UNREFERENCED_PARAMETER(e);      \
+      return E_OUTOFMEMORY;           \
+    }                                 \
+    catch (std::runtime_error &e)     \
+    {                                 \
+      UNREFERENCED_PARAMETER(e);      \
+      return MX_E_InvalidData;        \
+    }                                 \
+    catch (...)                       \
+    {                                 \
+      return MX_E_UnhandledException; \
+    }
 
 //------------------------------------------------------------------------------
 

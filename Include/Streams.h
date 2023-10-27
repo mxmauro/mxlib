@@ -31,11 +31,10 @@ namespace MX {
 class MX_NOVTABLE CStream : public virtual TRefCounted<CBaseMemObj>
 {
 public:
-  typedef enum {
-    SeekStart=0,
-    SeekCurrent,
-    SeekEnd,
-  } eSeekMethod;
+  enum class eSeekMethod
+  {
+    Start=0, Current, End,
+  };
 
 protected:
   CStream() : TRefCounted<CBaseMemObj>()
@@ -63,7 +62,7 @@ public:
 
   virtual ULONGLONG GetLength() const = 0;
 
-  virtual HRESULT Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod=SeekStart);
+  virtual HRESULT Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod=eSeekMethod::Start);
 
   HRESULT CopyTo(_In_ CStream *lpTarget, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
                  _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX);

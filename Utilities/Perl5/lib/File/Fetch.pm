@@ -22,13 +22,13 @@ use vars    qw[ $VERBOSE $PREFER_BIN $FROM_EMAIL $USER_AGENT
                 $FTP_PASSIVE $TIMEOUT $DEBUG $WARN $FORCEIPV4
             ];
 
-$VERSION        = '0.48';
+$VERSION        = '1.04';
 $VERSION        = eval $VERSION;    # avoid warnings with development releases
 $PREFER_BIN     = 0;                # XXX TODO implement
 $FROM_EMAIL     = 'File-Fetch@example.com';
 $USER_AGENT     = "File::Fetch/$VERSION";
 $BLACKLIST      = [qw|ftp|];
-push @$BLACKLIST, qw|lftp| if $^O eq 'dragonfly';
+push @$BLACKLIST, qw|lftp| if $^O eq 'dragonfly' || $^O eq 'hpux';
 $METHOD_FAIL    = { };
 $FTP_PASSIVE    = 1;
 $TIMEOUT        = 0;
@@ -39,6 +39,7 @@ $FORCEIPV4      = 0;
 ### methods available to fetch the file depending on the scheme
 $METHODS = {
     http    => [ qw|lwp httptiny wget curl lftp fetch httplite lynx iosock| ],
+    https   => [ qw|lwp wget curl| ],
     ftp     => [ qw|lwp netftp wget curl lftp fetch ncftp ftp| ],
     file    => [ qw|lwp lftp file| ],
     rsync   => [ qw|rsync| ],
@@ -164,6 +165,7 @@ http://www.abc.net.au/ the contents retrieved may be from a remote file called
         path            => { default => '/' },
         file            => { required => 1 },
         uri             => { required => 1 },
+        userinfo        => { default => '' },
         vol             => { default => '' }, # windows for file:// uris
         share           => { default => '' }, # windows for file:// uris
         file_default    => { default => 'file_default' },
@@ -357,7 +359,7 @@ sub _parse_uri {
     $href->{scheme} = $1;
 
     ### See rfc 1738 section 3.10
-    ### http://www.faqs.org/rfcs/rfc1738.html
+    ### https://datatracker.ietf.org/doc/html/rfc1738#section-3.10
     ### And wikipedia for more on windows file:// urls
     ### http://en.wikipedia.org/wiki/File://
     if( $href->{scheme} eq 'file' ) {
@@ -401,7 +403,7 @@ sub _parse_uri {
     } else {
         ### using anything but qw() in hash slices may produce warnings
         ### in older perls :-(
-        @{$href}{ qw(host path) } = $uri =~ m|([^/]*)(/.*)$|s;
+        @{$href}{ qw(userinfo host path) } = $uri =~ m|(?:([^\@:]*:[^\:\@]*)@)?([^/]*)(/.*)$|s;
     }
 
     ### split the path into file + dir ###
@@ -567,6 +569,12 @@ sub _lwp_fetch {
 
     };
 
+    if ($self->scheme eq 'https') {
+        $use_list->{'LWP::Protocol::https'} = '0';
+    }
+
+    ### Fix CVE-2016-1238 ###
+    local $Module::Load::Conditional::FORCE_SAFE_INC = 1;
     unless( can_load( modules => $use_list ) ) {
         $METHOD_FAIL->{'lwp'} = 1;
         return;
@@ -580,7 +588,12 @@ sub _lwp_fetch {
     ### special rules apply for file:// uris ###
     $uri->scheme( $self->scheme );
     $uri->host( $self->scheme eq 'file' ? '' : $self->host );
-    $uri->userinfo("anonymous:$FROM_EMAIL") if $self->scheme ne 'file';
+
+    if ($self->userinfo) {
+        $uri->userinfo($self->userinfo);
+    } elsif ($self->scheme ne 'file') {
+        $uri->userinfo("anonymous:$FROM_EMAIL");
+    }
 
     ### set up the useragent object
     my $ua = LWP::UserAgent->new();
@@ -619,6 +632,8 @@ sub _httptiny_fetch {
 
     };
 
+    ### Fix CVE-2016-1238 ###
+    local $Module::Load::Conditional::FORCE_SAFE_INC = 1;
     unless( can_load(modules => $use_list) ) {
         $METHOD_FAIL->{'httptiny'} = 1;
         return;
@@ -655,9 +670,11 @@ sub _httplite_fetch {
     ### modules required to download with lwp ###
     my $use_list = {
         'HTTP::Lite'    => '2.2',
-
+        'MIME::Base64'  => '0',
     };
 
+    ### Fix CVE-2016-1238 ###
+    local $Module::Load::Conditional::FORCE_SAFE_INC = 1;
     unless( can_load(modules => $use_list) ) {
         $METHOD_FAIL->{'httplite'} = 1;
         return;
@@ -672,6 +689,11 @@ sub _httplite_fetch {
       # Naughty naughty but there isn't any accessor/setter
       $http->{timeout} = $TIMEOUT if $TIMEOUT;
       $http->http11_mode(1);
+
+      if ($self->userinfo) {
+          my $encoded = MIME::Base64::encode($self->userinfo, '');
+          $http->add_req_header("Authorization", "Basic $encoded");
+      }
 
       my $fh = FileHandle->new;
 
@@ -733,6 +755,8 @@ sub _iosock_fetch {
         'IO::Select'       => '0.0',
     };
 
+    ### Fix CVE-2016-1238 ###
+    local $Module::Load::Conditional::FORCE_SAFE_INC = 1;
     unless( can_load(modules => $use_list) ) {
         $METHOD_FAIL->{'iosock'} = 1;
         return;
@@ -816,6 +840,8 @@ sub _netftp_fetch {
     ### required modules ###
     my $use_list = { 'Net::FTP' => 0 };
 
+    ### Fix CVE-2016-1238 ###
+    local $Module::Load::Conditional::FORCE_SAFE_INC = 1;
     unless( can_load( modules => $use_list ) ) {
         $METHOD_FAIL->{'netftp'} = 1;
         return;
@@ -880,7 +906,7 @@ sub _wget_fetch {
     push(@$cmd, '--timeout=' . $TIMEOUT) if $TIMEOUT;
 
     ### run passive if specified ###
-    push @$cmd, '--passive-ftp' if $FTP_PASSIVE;
+    push @$cmd, '--passive-ftp' if $self->scheme eq 'ftp' && $FTP_PASSIVE;
 
     ### set the output document, add the uri ###
     push @$cmd, '--output-document', $to, $self->uri;
@@ -1289,7 +1315,7 @@ sub _fetch_fetch {
 
 ### use File::Copy for fetching file:// urls ###
 ###
-### See section 3.10 of RFC 1738 (http://www.faqs.org/rfcs/rfc1738.html)
+### See section 3.10 of RFC 1738 (https://datatracker.ietf.org/doc/html/rfc1738#section-3.10)
 ### Also see wikipedia on file:// (http://en.wikipedia.org/wiki/File://)
 ###
 
@@ -1502,7 +1528,7 @@ Below is a mapping of what utilities will be used in what order
 for what schemes, if available:
 
     file    => LWP, lftp, file
-    http    => LWP, HTTP::Lite, wget, curl, lftp, fetch, lynx, iosock
+    http    => LWP, HTTP::Tiny, wget, curl, lftp, fetch, HTTP::Lite, lynx, iosock
     ftp     => LWP, Net::FTP, wget, curl, lftp, fetch, ncftp, ftp
     rsync   => rsync
     git     => git
@@ -1672,7 +1698,7 @@ the C<URI::Escape> module from CPAN, and pre-encode your URI before
 passing it to C<File::Fetch>. You can read about the details of URIs
 and URI encoding here:
 
-  http://www.faqs.org/rfcs/rfc2396.html
+L<https://datatracker.ietf.org/doc/html/rfc2396>
 
 =head1 TODO
 
