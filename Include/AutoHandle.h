@@ -74,7 +74,7 @@ public:
     return (h != NULL && h != INVALID_HANDLE_VALUE) ? true : false;
     };
 
-  VOID Attach(_In_ HANDLE _h)
+  VOID Attach(_In_opt_ HANDLE _h)
     {
     Close();
     if (_h != NULL && _h != INVALID_HANDLE_VALUE)
