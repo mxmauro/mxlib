@@ -1,9 +1,9 @@
 Option Explicit
-Dim oFso, oFile
+Dim oFso
 Dim szPlatform, szPlatformPath, szConfiguration, szConfigurationTarget, szConfigDebug
 Dim szScriptPath, szFileName, szDefineNoErr, szIsDebug
-Dim szPerlPath, szNasmPath, aLibFiles
-Dim I, nErr, S, dtBuildDate, bRebuild
+Dim szPerlPath, szNasmPath
+Dim I, nErr, S, dtBuildDate, bRebuild, aFiles
 
 
 Set oFso = CreateObject("Scripting.FileSystemObject")
@@ -107,29 +107,20 @@ End If
 szScriptPath = Left(WScript.ScriptFullName, Len(WScript.ScriptFullName) - Len(WScript.ScriptName))
 szPerlPath = szScriptPath & "..\..\Utilities\Perl5\bin"
 szNasmPath = szScriptPath & "..\..\Utilities\Nasm"
-aLibFiles = Array( "openssl_libcrypto.lib", "openssl_libssl.lib", "openssl_libcommon.lib", "openssl_libdefault.lib", "openssl_liblegacy.lib", "openssl_static.pdb" )
 
 If bRebuild = False Then
 	WScript.Echo "Checking if source files were modified..."
-	For I = LBound(aLibFiles) To UBound(aLibFiles)
-		szFileName = szScriptPath & "..\..\Libs\" & szPlatformPath & "\" & szConfiguration & "\" & aLibFiles(I)
-		If oFso.FileExists(szFileName) = False Then
-			WScript.Echo "Library " & Chr(34) & aLibFiles(I) & Chr(34) & " was not found... rebuilding"
-			bRebuild = True
-			Exit For
-		End If
-		Set oFile = oFso.getFile(szFileName)
-		If I = LBound(aLibFiles) Then
-			dtBuildDate = oFile.DateLastModified
-		Else
-			If oFile.DateLastModified < dtBuildDate Then dtBuildDate = oFile.DateLastModified
-		End If
-		Set oFile = Nothing
-	Next
-End If
-
-If bRebuild = False Then
-	If CheckForNewerFiles(szScriptPath & "Source", dtBuildDate) <> False Or _
+	S = szScriptPath & "..\..\Libs\" & szPlatformPath & "\" & szConfiguration & "\"
+	dtBuildDate = GetLowestFileTimestamp(Array( _
+		S & "openssl_libcrypto.lib", _
+		S & "openssl_libssl.lib", _
+		S & "openssl_libcommon.lib", _
+		S & "openssl_libdefault.lib", _
+		S & "openssl_liblegacy.lib", _
+		S & "openssl_static.pdb" _
+	))
+	If IsNull(dtBuildDate) Or _
+			CheckForNewerFiles(szScriptPath & "Source", dtBuildDate) <> False Or _
 			CheckForNewerFile(szScriptPath & "build.vbs", dtBuildDate) <> False Then
 		bRebuild = True
 	End If
@@ -210,9 +201,11 @@ RunApp "MD " & Chr(34) & szScriptPath & "..\..\Libs" & Chr(34), "", "", True
 RunApp "MD " & Chr(34) & szScriptPath & "..\..\Libs\" & szPlatformPath & Chr(34), "", "", True
 RunApp "MD " & Chr(34) & szScriptPath & "..\..\Libs\" & szPlatformPath & "\" & szConfiguration & Chr(34), "", "", True
 RunApp "MD " & Chr(34) & szScriptPath & "..\..\Libs\" & szPlatformPath & "\" & szConfiguration & "\OpenSSL" & Chr(34), "", "", True
-For I = LBound(aLibFiles) To UBound(aLibFiles)
-	RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\" & aLibFiles(I) & Chr(34) & " " & _
-	                    Chr(34) & szScriptPath & "..\..\Libs\" & szPlatformPath & "\" & szConfiguration & "\" & aLibFiles(I) & Chr(34) & "  >NUL 2>NUL", "", "", False
+
+aFiles = Array( "openssl_libcrypto.lib", "openssl_libssl.lib", "openssl_libcommon.lib", "openssl_libdefault.lib", "openssl_liblegacy.lib", "openssl_static.pdb" )
+For I = LBound(aFiles) To UBound(aFiles)
+	RunApp "MOVE /Y " & Chr(34) & szScriptPath & "Source\" & aFiles(I) & Chr(34) & " " & _
+	                    Chr(34) & szScriptPath & "..\..\Libs\" & szPlatformPath & "\" & szConfiguration & "\" & aFiles(I) & Chr(34) & "  >NUL 2>NUL", "", "", False
 Next
 
 'Clean after compile
@@ -249,19 +242,6 @@ Dim oFile
 	Set oFile = Nothing
 End Function
 
-Function CheckIfInFileExists(szFile)
-Dim oFile
-
-	CheckIfInFileExists = False
-	On Error Resume Next
-	Set oFile = oFso.getFile(szFile & ".in")
-	If Err.Number = 0 Then
-		CheckIfInFileExists = True
-	End If
-	On Error Goto 0
-	Set oFile = Nothing
-End Function
-
 Function CheckForNewerFiles(szFolder, dtBuildDate)
 Dim f, oFolder
 Dim S, lS
@@ -278,13 +258,33 @@ Dim S, lS
 		S = LCase(f.name)
 		If Right(S, 4) = ".cpp" Or Right(S, 2) = ".c" Or Right(S, 2) = ".h" Or Right(S, 2) = ".in" Then
 			S = szFolder & "\" & f.name
-			If CheckForNewerFile(S, dtBuildDate) <> False And CheckIfInFileExists(S) = False Then
+			If CheckForNewerFile(S, dtBuildDate) <> False And oFso.FileExists(S & ".in") = False Then
 				WScript.Echo "File: " & Chr(34) & S & Chr(34) & " is newer... rebuilding"
 				CheckForNewerFiles = True
 				Exit Function
 			End If
 		End If
 	Next
+End Function
+
+Function GetLowestFileTimestamp(aFiles)
+Dim oFile
+Dim I, dtBuildDate
+
+	For I = LBound(aFiles) To UBound(aFiles)
+		If oFso.FileExists(aFiles(I)) = False Then
+			GetLowestFileTimestamp = Null
+			Exit Function
+		End If
+		Set oFile = oFso.getFile(aFiles(I))
+		If I = LBound(aFiles) Then
+			dtBuildDate = oFile.DateLastModified
+		Else
+			If oFile.DateLastModified < dtBuildDate Then dtBuildDate = oFile.DateLastModified
+		End If
+		Set oFile = Nothing
+	Next
+	GetLowestFileTimestamp = dtBuildDate
 End Function
 
 Function RunApp(szCmdLine, szCurFolder, szEnvPath, bHide)

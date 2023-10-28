@@ -14,6 +14,7 @@
 /obj/
 /extras/
 /Include/JsLib/DukTape/
+/Include/RapidJSON/
 /Source/JsLib/DukTape/setenv.bat
 /Source/OpenSSL/Generated/
 /Source/OpenSSL/Temp/

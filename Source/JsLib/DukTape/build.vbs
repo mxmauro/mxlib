@@ -1,7 +1,7 @@
 Option Explicit
-Dim oFso, oFile
-Dim szScriptPath, szFileName, szPythonPath, szOrigFolder
-Dim I, nErr, S, dtBuildDate, aTargetFiles, bRebuild
+Dim oFso
+Dim szScriptPath, szPythonPath
+Dim I, nErr, S, dtBuildDate, bRebuild
 
 
 Set oFso = CreateObject("Scripting.FileSystemObject")
@@ -43,32 +43,21 @@ szPythonPath = szScriptPath & "..\..\..\Utilities\Python27"
 
 
 'Check if we have to rebuild the libraries
-aTargetFiles = Array("Source\dist\duktape.c", "Source\dist\duktape.h", "Source\dist\duk_config.h", _
-                     "Source\dist\duk_source_meta.json")
 If bRebuild = False Then
 	WScript.Echo "Checking if source files were modified..."
-	For I = 0 To 3
-		szFileName = szScriptPath & "\" & aTargetFiles(I)
-		If oFso.FileExists(szFileName) = False Then
-			WScript.Echo "Library " & Chr(34) & aTargetFiles(I) & Chr(34) & " was not found... rebuilding"
-			bRebuild = True
-			Exit For
-		End If
-		Set oFile = oFso.getFile(szFileName)
-		If I = 0 Then
-			dtBuildDate = oFile.DateLastModified
-		Else
-			If oFile.DateLastModified < dtBuildDate Then dtBuildDate = oFile.DateLastModified
-		End If
-		Set oFile = Nothing
-	Next
-End If
-
-If bRebuild = False Then
-	If CheckForNewerFile(szScriptPath & "duk_custom.h", dtBuildDate) <> False Or _
-	        CheckForNewerFile(szScriptPath & "build.vbs", dtBuildDate) <> False Or _
-	        CheckForNewerFiles(szScriptPath & "Source\config", dtBuildDate) <> False Or _
-	        CheckForNewerFiles(szScriptPath & "Source\src-input", dtBuildDate) <> False Then
+	dtBuildDate = GetLowestFileTimestamp(Array( _
+		szScriptPath & "..\..\..\Include\JsLib\DukTape\duk_config.h", _
+		szScriptPath & "..\..\..\Include\JsLib\DukTape\duktape.h", _
+		szScriptPath & "Source\dist\duktape.c", _
+		szScriptPath & "Source\dist\duktape.h", _
+		szScriptPath & "Source\dist\duk_config.h", _
+		szScriptPath & "Source\dist\duk_source_meta.json" _
+	))
+	If IsNull(dtBuildDate) Or _
+			CheckForNewerFile(szScriptPath & "duk_custom.h", dtBuildDate) <> False Or _
+			CheckForNewerFile(szScriptPath & "build.vbs", dtBuildDate) <> False Or _
+			CheckForNewerFiles(szScriptPath & "Source\config", dtBuildDate) <> False Or _
+			CheckForNewerFiles(szScriptPath & "Source\src-input", dtBuildDate) <> False Then
 		bRebuild = True
 	End If
 End If
@@ -161,6 +150,26 @@ Dim f, oFolder
 			Exit Function
 		End If
 	Next
+End Function
+
+Function GetLowestFileTimestamp(aFiles)
+Dim oFile
+Dim I, dtBuildDate
+
+	For I = LBound(aFiles) To UBound(aFiles)
+		If oFso.FileExists(aFiles(I)) = False Then
+			GetLowestFileTimestamp = Null
+			Exit Function
+		End If
+		Set oFile = oFso.getFile(aFiles(I))
+		If I = LBound(aFiles) Then
+			dtBuildDate = oFile.DateLastModified
+		Else
+			If oFile.DateLastModified < dtBuildDate Then dtBuildDate = oFile.DateLastModified
+		End If
+		Set oFile = Nothing
+	Next
+	GetLowestFileTimestamp = dtBuildDate
 End Function
 
 Function RunApp(szCmdLine, szCurFolder, szEnvPath, bHide)

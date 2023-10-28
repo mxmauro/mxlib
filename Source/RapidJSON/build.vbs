@@ -18,6 +18,7 @@ szScriptPath = Left(WScript.ScriptFullName, Len(WScript.ScriptFullName) - Len(WS
 
 
 'Copy files
+RunApp "MD " & Chr(34) & szScriptPath & "..\..\Include\RapidJSON" & Chr(34), "", "", True
 nErr = CopyFiles("Source\include\rapidjson", "..\..\Include\RapidJSON", "*")
 If nErr <> 0 Then
 	WScript.Echo "Errors detected while copying files. [" & CStr(nErr) & "]"
@@ -26,7 +27,7 @@ End If
 
 
 'Create the "include-all" file
-nErr = CreateIncludeAll(szScriptPath & "..\..\Include\RapidJSON\rapidjson-all.h")
+nErr = CreateIncludeAll()
 If nErr <> 0 Then
 	WScript.Echo "Errors detected while creating the include-all file. [" & CStr(nErr) & "]"
 	WScript.Quit nErr
@@ -55,6 +56,71 @@ Dim oShell
 	Set oShell = Nothing
 End Function
 
+Function CheckForNewerFile(szFile, dtBuildDate)
+Dim oFile
+
+	CheckForNewerFile = False
+	Set oFile = oFso.getFile(szFile)
+	If oFile.DateLastModified > dtBuildDate Then
+		CheckForNewerFile = True
+	End If
+End Function
+
+Function CheckForNewerFiles(szFolder, dtBuildDate)
+Dim f, oFolder
+
+	CheckForNewerFiles = False
+	Set oFolder = oFso.GetFolder(szFolder)
+	For Each f in oFolder.SubFolders
+		If CheckForNewerFiles(szFolder & "\" & f.name, dtBuildDate) <> False Then
+			CheckForNewerFiles = True
+			Exit Function
+		End If
+	Next
+	For Each f in oFolder.Files
+		If CheckForNewerFile(szFolder & "\" & f.name, dtBuildDate) <> False Then
+			WScript.Echo "File: " & Chr(34) & S & Chr(34) & " is newer... rebuilding"
+			CheckForNewerFiles = True
+			Exit Function
+		End If
+	Next
+End Function
+
+Function RunApp(szCmdLine, szCurFolder, szEnvPath, bHide)
+Dim oFile, oExec, oShell, oShellEnv
+Dim I, nRet, szOutputFile
+
+	WScript.Echo "Running: " & szCmdLine
+	Set oShell = CreateObject("WScript.Shell")
+	On Error Resume Next
+	If szCurFolder <> "" Then oShell.CurrentDirectory = szCurFolder
+	If szEnvPath <> "" Then
+		Set oShellEnv = oShell.Environment("PROCESS")
+		oShellEnv("PATH") = szEnvPath & ";" & oShellEnv("PATH")
+	End If
+	If bHide = False Then
+		szOutputFile = oFso.GetSpecialFolder(2)
+		If Right(szOutputFile, 1) <> "\" Then szOutputFile = szOutputFile & "\"
+		szOutputFile = szOutputFile & oFso.GetTempName
+		szCmdLine = "CMD.EXE /S /C " & Chr(34) & szCmdLine & " > " & Chr(34) & szOutputFile & Chr(34) & " 2>&1" & Chr(34)
+	End If
+	nRet = oShell.Run(szCmdLine, 0, True)
+	I = Err.Number
+	If I <> 0 Then nRet = I
+	On Error Goto 0
+	If bHide = False Then
+		If oFso.FileExists(szOutputFile) <> False Then
+			Set oFile = oFso.OpenTextFile(szOutputFile, 1)
+			If Not oFile.AtEndOfStream Then WScript.Echo oFile.ReadAll
+			oFile.Close
+			On Error Resume Next
+			oFso.DeleteFile szOutputFile
+			On Error Goto 0
+		End If
+	End If
+	RunApp = nRet
+End Function
+
 Function CopyFiles(szSrcFolder, szDestFolder, szFileMask)
 Dim nErr, S
 
@@ -67,32 +133,32 @@ Dim nErr, S
 	CopyFiles = nErr
 End Function
 
-Function CreateIncludeAll(szFileName)
+Function CreateIncludeAll()
 Dim oFolder, oFile
-Dim nErr, S
-Dim dtBuildDate
+Dim nErr, S, szFileName
+Dim dtBuildDate, bRebuild
 
-	nErr = 1
+	bRebuild = False
+	szFileName = szScriptPath & "..\..\Include\RapidJSON\rapidjson-all.h"
 	If oFso.FileExists(szFileName) <> False Then
-		nErr = 0
-
 		Set oFile = oFso.getFile(szFileName)
 		dtBuildDate = oFile.DateLastModified
-
-		Set oFolder = oFso.GetFolder(szScriptPath & "..\..\Include\RapidJSON")
-		For Each oFile in oFolder.Files
-			If oFile.DateLastModified > dtBuildDate Then
-				nErr = 1
-				Exit For
-			End If
-		Next
-		Set oFolder = Nothing
+	
+		If CheckForNewerFiles(szScriptPath & "Source\include\rapidjson", dtBuildDate) <> False Or _
+				CheckForNewerFile(szScriptPath & "build.vbs", dtBuildDate) <> False Then
+			bRebuild = True
+		End If
+	Else
+		bRebuild = True
 	End If
-	If nErr = 0 Then
+
+	If bRebuild = False Then
 		'File is up-to-date
-		CreateIncludeAll = nErr
+		CreateIncludeAll = 0
 		Exit Function
 	End If
+
+	WScript.Echo "Rebuilding rapidjson-all.h..."
 
 	On Error Resume Next
 	Set oFile = oFso.CreateTextFile(szFileName, True)
@@ -142,10 +208,12 @@ Dim dtBuildDate
 	oFile.WriteLine ""
 	oFile.WriteLine "//------------------------------------------------------------------------------"
 	oFile.WriteLine ""
+	oFile.WriteLine "#pragma warning(disable : 26495)"
 	oFile.WriteLine "#include " & Chr(34) & "document.h" & Chr(34)
 	oFile.WriteLine "#include " & Chr(34) & "prettywriter.h" & Chr(34)
 	oFile.WriteLine "#include " & Chr(34) & "stringbuffer.h" & Chr(34)
 	oFile.WriteLine "#include " & Chr(34) & "memorybuffer.h" & Chr(34)
+	oFile.WriteLine "#pragma warning(default : 26495)"
 	oFile.WriteLine ""
 	oFile.WriteLine "//------------------------------------------------------------------------------"
 	oFile.WriteLine ""
@@ -161,6 +229,42 @@ Dim dtBuildDate
 	oFile.WriteLine ""
 	oFile.WriteLine "//------------------------------------------------------------------------------"
 	oFile.WriteLine ""
+	oFile.WriteLine "#define RAPIDJSON_TRY try"
+	oFile.WriteLine ""
+	oFile.WriteLine "#define RAPIDJSON_CATCH(hr)           \"
+	oFile.WriteLine "    catch (std::bad_alloc &e)         \"
+	oFile.WriteLine "    {                                 \"
+	oFile.WriteLine "      UNREFERENCED_PARAMETER(e);      \"
+	oFile.WriteLine "      hr = E_OUTOFMEMORY;             \"
+	oFile.WriteLine "    }                                 \"
+	oFile.WriteLine "    catch (std::runtime_error &e)     \"
+	oFile.WriteLine "    {                                 \"
+	oFile.WriteLine "      UNREFERENCED_PARAMETER(e);      \"
+	oFile.WriteLine "      hr = MX_E_InvalidData;          \"
+	oFile.WriteLine "    }                                 \"
+	oFile.WriteLine "    catch (...)                       \"
+	oFile.WriteLine "    {                                 \"
+	oFile.WriteLine "      hr = MX_E_UnhandledException;   \"
+	oFile.WriteLine "    }"
+	oFile.WriteLine ""
+	oFile.WriteLine "#define RAPIDJSON_CATCH_RETURN        \"
+	oFile.WriteLine "    catch (std::bad_alloc &e)         \"
+	oFile.WriteLine "    {                                 \"
+	oFile.WriteLine "      UNREFERENCED_PARAMETER(e);      \"
+	oFile.WriteLine "      return E_OUTOFMEMORY;           \"
+	oFile.WriteLine "    }                                 \"
+	oFile.WriteLine "    catch (std::runtime_error &e)     \"
+	oFile.WriteLine "    {                                 \"
+	oFile.WriteLine "      UNREFERENCED_PARAMETER(e);      \"
+	oFile.WriteLine "      return MX_E_InvalidData;        \"
+	oFile.WriteLine "    }                                 \"
+	oFile.WriteLine "    catch (...)                       \"
+	oFile.WriteLine "    {                                 \"
+	oFile.WriteLine "      return MX_E_UnhandledException; \"
+	oFile.WriteLine "    }"
+	oFile.WriteLine ""
+	oFile.WriteLine "//------------------------------------------------------------------------------"
+	oFile.WriteLine ""
 	oFile.WriteLine "#endif //_RAPIDJSON_INCLUDEALL_H"
 
 	oFile.Close
@@ -170,48 +274,3 @@ Dim dtBuildDate
 	CreateIncludeAll = 0
 End Function
 
-Function RunApp(szCmdLine, szCurFolder, szEnvPath, bHide)
-Dim oFile, oExec, oShell, oShellEnv
-Dim I, nRet, szOutputFile
-
-	WScript.Echo "Running: " & szCmdLine
-	Set oShell = CreateObject("WScript.Shell")
-	On Error Resume Next
-	If szCurFolder <> "" Then oShell.CurrentDirectory = szCurFolder
-	If szEnvPath <> "" Then
-		Set oShellEnv = oShell.Environment("PROCESS")
-		oShellEnv("PATH") = szEnvPath & ";" & oShellEnv("PATH")
-	End If
-	If bHide = False Then
-		szOutputFile = oFso.GetSpecialFolder(2)
-		If Right(szOutputFile, 1) <> "\" Then szOutputFile = szOutputFile & "\"
-		szOutputFile = szOutputFile & oFso.GetTempName
-		szCmdLine = "CMD.EXE /S /C " & Chr(34) & szCmdLine & " > " & Chr(34) & szOutputFile & Chr(34) & " 2>&1" & Chr(34)
-	End If
-	nRet = oShell.Run(szCmdLine, 0, True)
-	I = Err.Number
-	If I <> 0 Then nRet = I
-	On Error Goto 0
-	If bHide = False Then
-		If oFso.FileExists(szOutputFile) <> False Then
-			Set oFile = oFso.OpenTextFile(szOutputFile, 1)
-			If Not oFile.AtEndOfStream Then WScript.Echo oFile.ReadAll
-			oFile.Close
-			On Error Resume Next
-			oFso.DeleteFile szOutputFile
-			On Error Goto 0
-		End If
-	End If
-	RunApp = nRet
-End Function
-
-Function CheckForNewerFile(szFile, dtBuildDate)
-Dim oFile
-
-	CheckForNewerFile = False
-	Set oFile = oFso.getFile(szFile)
-	If oFile.DateLastModified > dtBuildDate Then
-		WScript.Echo "File: " & Chr(34) & szFile & Chr(34) & " is newer... rebuilding"
-		CheckForNewerFile = True
-	End If
-End Function
