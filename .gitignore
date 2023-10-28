@@ -1,5 +1,4 @@
 .vs
-.svn/
 *.~*
 *.suo
 *.ncb
@@ -16,7 +15,6 @@
 /extras/
 /Include/JsLib/DukTape/
 /Source/JsLib/DukTape/setenv.bat
-/Source/OpenSSL/setenv.bat
 /Source/OpenSSL/Generated/
 /Source/OpenSSL/Temp/
 /Test/Data/*.sqlite

@@ -71,8 +71,8 @@ static int DukTapeStrNCmp(_In_reads_or_z_(count) const char *str1,
 
 #undef DUK_SPRINTF
 #define DUK_SPRINTF     DukTapeSprintf
-static int DukTapeSprintf(_Pre_notnull_ _Always_(_Post_z_) char *const *buffer,
-                                 _In_z_ _Printf_format_string_ const char *format, ...)
+static int DukTapeSprintf(_Pre_notnull_ _Always_(_Post_z_) char *const buffer,
+                          _In_z_ _Printf_format_string_ const char *format, ...)
 {
   va_list argptr;
   int ret;
@@ -91,9 +91,9 @@ static int DukTapeSnprintf(_Out_writes_opt_(bufferSize) _Always_(_Post_z_) char 
   va_list argptr;
   int res;
 
-  va_start(args, format);
+  va_start(argptr, format);
   res = vsnprintf_s(buffer, bufferSize, _TRUNCATE, format, argptr);
-  va_end(args);
+  va_end(argptr);
   return res;
 }
 

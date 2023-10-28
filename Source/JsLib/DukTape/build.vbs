@@ -1,8 +1,3 @@
-'
-' Copyright (C) 2014-2016 Mauro H. Leggieri, Buenos Aires, Argentina.
-' All rights reserved.
-'
-
 Option Explicit
 Dim oFso, oFile
 Dim szScriptPath, szFileName, szPythonPath, szOrigFolder
@@ -101,6 +96,17 @@ End If
 'Pause 5 seconds because Python's processes may still creating the lib WTF?????
 WScript.Sleep(5000)
 
+'Fix line endings
+WScript.Echo "Fixing line endings..."
+nErr = FixEOL(szScriptPath & "Source\dist\duk_config.h")
+If nErr = 0 Then
+	nErr = FixEOL(szScriptPath & "Source\dist\duktape.h")
+End If
+If nErr <> 0 Then
+	WScript.Echo "Errors found."
+	WScript.Quit nErr
+End If
+
 'Copy needed files
 RunApp "MD " & Chr(34) & szScriptPath & "..\..\..\Include\JsLib\DukTape" & Chr(34), szScriptPath & "Source", "", True
 RunApp "COPY /Y " & Chr(34) & szScriptPath & "Source\dist\duk_config.h" & Chr(34) & " " & Chr(34) & szScriptPath & "..\..\..\Include\JsLib\DukTape" & Chr(34), szScriptPath & "Source", "", False
@@ -133,7 +139,6 @@ Dim oFile
 	CheckForNewerFile = False
 	Set oFile = oFso.getFile(szFile)
 	If oFile.DateLastModified > dtBuildDate Then
-		WScript.Echo "File: " & Chr(34) & szFile & Chr(34) & " is newer... rebuilding"
 		CheckForNewerFile = True
 	End If
 End Function
@@ -151,6 +156,7 @@ Dim f, oFolder
 	Next
 	For Each f in oFolder.Files
 		If CheckForNewerFile(szFolder & "\" & f.name, dtBuildDate) <> False Then
+			WScript.Echo "File: " & Chr(34) & S & Chr(34) & " is newer... rebuilding"
 			CheckForNewerFiles = True
 			Exit Function
 		End If
@@ -192,4 +198,52 @@ Dim I, nRet, szOutputFile
 		End If
 	End If
 	RunApp = nRet
+End Function
+
+Function FixEOL(szFileName)
+Dim objFile
+Dim I, S
+
+	On Error Resume Next
+	Set objFile = oFso.OpenTextFile(szFileName, 1)
+	I = Err.Number
+	If I <> 0 Then
+		FixEOL = I
+		On Error Goto 0
+		Exit Function
+	End If
+	S = objFile.ReadAll
+	I = Err.Number
+	If I <> 0 Then
+		FixEOL = I
+		On Error Goto 0
+		Exit Function
+	End If
+	objFile.Close
+
+	'Fix line endings
+	S = Replace(S, Chr(13) & Chr(10), Chr(10)) 'CRLF -> LF
+	S = Replace(S, Chr(13), Chr(10))           'CR -> LF
+	S = Replace(S, Chr(10), Chr(13) & Chr(10)) 'LF -> CRLF
+	If Right(S, 2) <> Chr(13) & Chr(10) Then
+		S = S & Chr(13) & Chr(10)
+	End If
+
+	Set objFile = oFso.CreateTextFile(szFileName, True)
+	I = Err.Number
+	If I <> 0 Then
+		FixEOL = I
+		On Error Goto 0
+		Exit Function
+	End If
+	objFile.Write S
+	I = Err.Number
+	If I <> 0 Then
+		FixEOL = I
+		On Error Goto 0
+		Exit Function
+	End If
+	objFile.Close
+	On Error Goto 0
+	FixEOL = 0
 End Function
