@@ -990,7 +990,7 @@ __DECLARE(NTSTATUS, NtQueryObject)(_In_opt_ HANDLE Handle, _In_ ULONG ObjectInfo
 
 __DECLARE(NTSTATUS, NtWaitForSingleObject)(_In_ HANDLE Handle, _In_ BOOLEAN Alertable, _In_opt_ PLARGE_INTEGER Timeout);
 __DECLARE(NTSTATUS, NtWaitForMultipleObjects)(_In_ ULONG Count, _In_ HANDLE Object[], _In_ LONG WaitType,
-                                              _In_ BOOLEAN Alertable, _In_ PLARGE_INTEGER Time);
+                                              _In_ BOOLEAN Alertable, _In_opt_ PLARGE_INTEGER Time);
 
 //--------
 
