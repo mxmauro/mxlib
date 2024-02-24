@@ -8,7 +8,7 @@
 cmake_minimum_required(VERSION 3.13)
 
 # Library version
-set(VERSION "4.0.1")
+set(VERSION "4.0.4")
 # API version
 set(SOVERSION "4")
 
@@ -128,6 +128,7 @@ set(MINIZIP_HDR
     mz_zip_rw.h)
 
 set(PC_PRIVATE_LIBS)
+set(PC_PRIVATE_DEPS)
 
 # Check for system includes
 check_include_file(stdint.h   HAVE_STDINT_H)
@@ -184,7 +185,7 @@ if(MZ_ZLIB)
         list(APPEND MINIZIP_LIB ${ZLIBNG_LIBRARIES})
         list(APPEND MINIZIP_LBD ${ZLIBNG_LIBRARY_DIRS})
 
-        set(PC_PRIVATE_LIBS " -lz-ng")
+        set(PC_PRIVATE_DEPS "zlib-ng")
         set(ZLIB_COMPAT OFF)
     elseif(ZLIB_FOUND AND NOT MZ_FORCE_FETCH_LIBS)
         message(STATUS "Using ZLIB ${ZLIB_VERSION}")
@@ -193,7 +194,7 @@ if(MZ_ZLIB)
         list(APPEND MINIZIP_LIB ${ZLIB_LIBRARIES})
         list(APPEND MINIZIP_LBD ${ZLIB_LIBRARY_DIRS})
 
-        set(PC_PRIVATE_LIBS " -lz")
+        set(PC_PRIVATE_DEPS "zlib")
         set(ZLIB_COMPAT ON)
     elseif(MZ_FETCH_LIBS)
         clone_repo(zlib https://github.com/madler/zlib)
@@ -460,7 +461,7 @@ if(WIN32)
     set(MZ_LIBBSD OFF)
     set(MZ_ICONV OFF)
 else()
-    list(APPEND STDLIB_DEF -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE)
+    list(APPEND STDLIB_DEF -D_POSIX_C_SOURCE=200809L -D_BSD_SOURCE -D_DEFAULT_SOURCE)
     list(APPEND MINIZIP_SRC mz_os_posix.c mz_strm_os_posix.c)
 
     if(MZ_PKCRYPT OR MZ_WZAES)
@@ -614,6 +615,10 @@ endif()
 if(MZ_COMPAT)
     set(SOVERSION "1")
 
+    set(FILE_H "ioapi.h")
+    set(MZ_COMPAT_FILE "MZ_COMPAT_IOAPI")
+    configure_file(mz_compat_shim.h.in ioapi.h)
+
     set(FILE_H "zip.h")
     set(MZ_COMPAT_FILE "MZ_COMPAT_ZIP")
     configure_file(mz_compat_shim.h.in zip.h)
@@ -625,8 +630,12 @@ if(MZ_COMPAT)
     if(MZ_COMPAT_VERSION)
         list(APPEND MINIZIP_DEF -DMZ_COMPAT_VERSION=${MZ_COMPAT_VERSION})
     endif()
+
     list(APPEND MINIZIP_SRC mz_compat.c)
-    list(APPEND MINIZIP_HDR mz_compat.h ${CMAKE_CURRENT_BINARY_DIR}/zip.h ${CMAKE_CURRENT_BINARY_DIR}/unzip.h)
+    list(APPEND MINIZIP_HDR mz_compat.h
+        ${CMAKE_CURRENT_BINARY_DIR}/ioapi.h
+        ${CMAKE_CURRENT_BINARY_DIR}/zip.h
+        ${CMAKE_CURRENT_BINARY_DIR}/unzip.h)
 endif()
 
 # Detect available sanitizers
