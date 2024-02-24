@@ -30,10 +30,12 @@
 
 #define SOCKETS_FINALIZER_PRIORITY 11000
 
+#define DEFAULT_TOTAL_ACCEPTS_TO_POST                 0x0080
 #define MAX_TOTAL_ACCEPTS_TO_POST                     0x1000
 
 #define MAX_ACCEPT_ERRORS_PER_CYCLE                       16
 
+#define DEFAULT_ACCEPTS_PER_SECOND                      8192
 #define MAX_ACCEPTS_PER_SECOND                         65536
 
 static __inline HRESULT MX_HRESULT_FROM_LASTSOCKETERROR()
@@ -1443,6 +1445,13 @@ VOID CSockets::CConnection::CListener::SetOptions(_In_opt_ CListenerOptions *lpO
                                         ? MAX_ACCEPTS_PER_SECOND : (lpOptions->dwMaxRequestsBurstSize);
       cOptions.dwMaxRequestsBurstSize *= 1000;
     }
+  }
+  else
+  {
+    cOptions.dwBackLogSize = 0x7FFFFFFFUL;
+    cOptions.dwMaxAcceptsToPost = DEFAULT_TOTAL_ACCEPTS_TO_POST;
+    cOptions.dwMaxRequestsPerSecond = DEFAULT_ACCEPTS_PER_SECOND;
+    cOptions.dwMaxRequestsBurstSize = 0;
   }
   return;
 }
