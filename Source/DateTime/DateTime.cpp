@@ -206,6 +206,7 @@ HRESULT CDateTime::SetFromString(_In_z_ LPCWSTR szDateW, _In_z_ LPCWSTR szFormat
   int nHourFlag, nYDay, nWeekDay, nWeekNumber, nSign;
   CUSTOMSETTINGSW sCustomW;
   SIZE_T i, nTemp, nTemp2, nMaxDigits;
+  LPCWSTR szOrigDateW;
   LPWSTR szOldFormatW;
   CStringW cStrTempFormatW;
   BOOL bAlternateFlag, bAlternateFlag2;
@@ -228,6 +229,7 @@ HRESULT CDateTime::SetFromString(_In_z_ LPCWSTR szDateW, _In_z_ LPCWSTR szFormat
   nWeekDay = nWeekNumber = -1;
   nHourFlag = nYDay = 0;
   sTimeZone.bOffsetSpecified = FALSE;
+  szOrigDateW = szDateW;
 
 sfs_restart:
   szOldFormatW = NULL;
@@ -343,6 +345,17 @@ pfs_skip_phrase:
               break;
           }
 
+          if (*szFormatW == L'f')
+          {
+            //allow the dot separator not being specified in the format
+            if (*szDateW == L'.')
+            {
+              if (szDateW == szOrigDateW || *(szDateW-1) == L'.')
+                return E_FAIL;
+              szDateW++;
+            }
+          }
+
           if (*szDateW < L'0' || *szDateW > L'9')
             return E_FAIL;
           nTemp = 0;
@@ -403,6 +416,12 @@ pfs_skip_phrase:
               if (nTemp > 999)
                 return MX_E_ArithmeticOverflow;
               nMilliSeconds = (int)nTemp;
+
+              // allow more digits but skip them
+              while (*szDateW >= L'0' && *szDateW <= L'9')
+              {
+                szDateW++;
+              }
               break;
 
             case L'w': // week day in decimal (0-6)
@@ -494,7 +513,7 @@ pfs_skip_phrase:
             return E_NOTIMPL;
           if ((*szDateW >= L'A' && *szDateW <= L'Z') || (*szDateW >= L'a' && *szDateW <= L'z'))
           {
-            //only GMT and UT strings are supported
+            //only GMT, UT and Z strings are supported
             if (StrNCompareW(szDateW, L"GMT", 3, TRUE) == 0)
             {
               szDateW += 3;
@@ -502,6 +521,12 @@ pfs_skip_phrase:
             else if (StrNCompareW(szDateW, L"UT", 2, TRUE) == 0)
             {
               szDateW += 2;
+            }
+            else if (StrNCompareW(szDateW, L"Z", 1, TRUE) == 0)
+            {
+              szDateW += 1;
+              if (*szDateW == L'+' || *szDateW == L'-')
+                goto numric_tz; //jump to numeric form
             }
             else
             {
@@ -513,7 +538,7 @@ pfs_skip_phrase:
           }
           else if (*szDateW == L'+' || *szDateW == L'-')
           {
-            //use numeric form
+numric_tz:  //use numeric form
             nSign = (*szDateW++ == L'+') ? 1 : -1;
 
             //get hours
