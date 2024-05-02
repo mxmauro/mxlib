@@ -79,7 +79,7 @@ Dim f, oFolder
 	Next
 	For Each f in oFolder.Files
 		If CheckForNewerFile(szFolder & "\" & f.name, dtBuildDate) <> False Then
-			WScript.Echo "File: " & Chr(34) & S & Chr(34) & " is newer... rebuilding"
+			WScript.Echo "File: " & Chr(34) & f.name & Chr(34) & " is newer... rebuilding"
 			CheckForNewerFiles = True
 			Exit Function
 		End If
@@ -135,7 +135,7 @@ End Function
 
 Function CreateIncludeAll()
 Dim oFolder, oFile
-Dim nErr, S, szFileName
+Dim nErr, szFileName
 Dim dtBuildDate, bRebuild
 
 	bRebuild = False
