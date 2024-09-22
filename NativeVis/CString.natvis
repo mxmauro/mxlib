@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+	<Type Name="MX::CStringA">
+		<DisplayString>{szStrA,s8}</DisplayString>
+		<StringView>szStrA,s8</StringView>
+	</Type>
+	<Type Name="MX::CStringW">
+		<DisplayString>{szStrW,su}</DisplayString>
+		<StringView>szStrW,su</StringView>
+	</Type>
+</AutoVisualizer>

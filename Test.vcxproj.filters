@@ -1,0 +1,123 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{9908463b-a2db-4eaf-8d22-eabeeadb30b2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data\Web">
+      <UniqueIdentifier>{be130a2d-ebc2-4c49-b0da-cc6b1e55706f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data\Web\images">
+      <UniqueIdentifier>{69479032-ea07-4e64-bf02-0b645ebc46d2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Test\Test.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Test\TestHttpClient.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Test\Console.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Test\TestHttpServer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Test\TestJavascript.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Test\TestJsHttpServer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Test\Logger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Test\TestRedBlackTree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Test\Test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Test\TestHttpClient.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Test\Console.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Test\TestHttpServer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Test\TestJavascript.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Test\TestJsHttpServer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Test\Logger.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Test\TestRedBlackTree.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Test\Data\Web\bottom.jss">
+      <Filter>Data\Web</Filter>
+    </None>
+    <None Include="Test\Data\Web\form_upload.jss">
+      <Filter>Data\Web</Filter>
+    </None>
+    <None Include="Test\Data\Web\increment_cookie_val.jss">
+      <Filter>Data\Web</Filter>
+    </None>
+    <None Include="Test\Data\Web\index.css">
+      <Filter>Data\Web</Filter>
+    </None>
+    <None Include="Test\Data\Web\index.jss">
+      <Filter>Data\Web</Filter>
+    </None>
+    <None Include="Test\Data\Web\moment.min.js">
+      <Filter>Data\Web</Filter>
+    </None>
+    <None Include="Test\Data\Web\mysql_test.jss">
+      <Filter>Data\Web</Filter>
+    </None>
+    <None Include="Test\Data\Web\top.jss">
+      <Filter>Data\Web</Filter>
+    </None>
+    <None Include="Test\Data\Web\sqlite_test.jss">
+      <Filter>Data\Web</Filter>
+    </None>
+    <None Include="Test\Data\Web\static_sample.html">
+      <Filter>Data\Web</Filter>
+    </None>
+    <None Include="Test\Data\Web\websocket_test.jss">
+      <Filter>Data\Web</Filter>
+    </None>
+    <None Include="Test\Data\Web\json_xhr.jss">
+      <Filter>Data\Web</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Test\Data\Web\images\header_background.png">
+      <Filter>Data\Web\images</Filter>
+    </Image>
+    <Image Include="Test\Data\Web\images\header_shadow.png">
+      <Filter>Data\Web\images</Filter>
+    </Image>
+    <Image Include="Test\Data\Web\images\header_text.png">
+      <Filter>Data\Web\images</Filter>
+    </Image>
+  </ItemGroup>
+</Project>

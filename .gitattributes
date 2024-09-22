@@ -1,7 +1,10 @@
 * text eol=crlf
 *.* text eol=crlf
 
-/Utilities/ binary
+/SupportFiles/**/* binary
+/SupportFiles/**/*.* binary
+/Utilities/**/* binary
+/Utilities/**/*.* binary
 
 # (binary is a macro for -text -diff)
 *.png binary

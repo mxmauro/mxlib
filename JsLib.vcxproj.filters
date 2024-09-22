@@ -1,0 +1,117 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Source Files\DukTape">
+      <UniqueIdentifier>{8f2df32f-a6ef-49a2-8d48-1ef72156f0a0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Plugins">
+      <UniqueIdentifier>{aedf6258-5dce-4792-9f38-d355f52a7f9f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Plugins">
+      <UniqueIdentifier>{98c49818-e9ed-4c06-a1c4-64ce85e70077}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\DukTape\Extras">
+      <UniqueIdentifier>{618e6ed2-588d-4914-b918-77f8eda4e078}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Plugins\MySQL">
+      <UniqueIdentifier>{13306ea7-b371-433e-a694-95615add417a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Plugins\SQLite">
+      <UniqueIdentifier>{3c63aeca-3b6e-487f-b33e-d0592d48a80c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Plugins\JsonWebToken">
+      <UniqueIdentifier>{44dfb734-d3fb-4532-85cf-771f9044b551}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\BigInteger">
+      <UniqueIdentifier>{a5c42574-85ba-4c87-86fd-6afe52c486d9}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\JsLib\JavascriptVM.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\JavascriptVMJsObjectBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\JavascriptVMProxyCallbacks.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\JavascriptVMRequireModuleContext.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\JavascriptVMCommon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\DukTape\Source\dist\duktape.c">
+      <Filter>Source Files\DukTape</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\JavascriptVMException.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPlugin.cpp">
+      <Filter>Source Files\Plugins\MySQL</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\MySQL\JsMySqlPluginException.cpp">
+      <Filter>Source Files\Plugins\MySQL</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePlugin.cpp">
+      <Filter>Source Files\Plugins\SQLite</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\SQLite\JsSQLitePluginException.cpp">
+      <Filter>Source Files\Plugins\SQLite</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\DukTape\Source\extras\module-node\duk_module_node.c">
+      <Filter>Source Files\DukTape\Extras</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\JsLib\Plugins\JsonWebToken\JsonWebTokenPlugin.cpp">
+      <Filter>Source Files\Plugins\JsonWebToken</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Include\JsLib\JavascriptVM.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\JsLib\JavascriptVMCommon.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\JsLib\Plugins\JsMySqlPlugin.h">
+      <Filter>Header Files\Plugins</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\JsLib\DukTape\Source\dist\duk_config.h">
+      <Filter>Source Files\DukTape</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\JsLib\DukTape\Source\dist\duktape.h">
+      <Filter>Source Files\DukTape</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\JsLib\DukTape\duk_custom.h">
+      <Filter>Source Files\DukTape</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\JsLib\Plugins\JsSQLitePlugin.h">
+      <Filter>Header Files\Plugins</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\JsLib\DukTape\Source\extras\module-node\duk_module_node.h">
+      <Filter>Source Files\DukTape\Extras</Filter>
+    </ClInclude>
+    <ClInclude Include="Include\JsLib\Plugins\JsonWebTokenPlugin.h">
+      <Filter>Header Files\Plugins</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Source\JsLib\DukTape\Source\LICENSE.txt">
+      <Filter>Source Files\DukTape</Filter>
+    </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="Source\JsLib\BigInteger\BigInteger.min.js">
+      <Filter>Source Files\BigInteger</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>
