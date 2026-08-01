@@ -1,5 +1,5 @@
 #! /usr/bin/env perl
-# Copyright 2016-2024 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2016-2026 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the Apache License 2.0 (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -8,10 +8,10 @@
 
 #
 # ====================================================================
-# Written by Andy Polyakov <appro@openssl.org> for the OpenSSL
+# Written by Andy Polyakov, @dot-asm, initially for use in the OpenSSL
 # project. The module is, however, dual licensed under OpenSSL and
 # CRYPTOGAMS licenses depending on where you obtain it. For further
-# details see http://www.openssl.org/~appro/cryptogams/.
+# details see https://github.com/dot-asm/cryptogams/.
 # ====================================================================
 #
 # October 2015
@@ -501,7 +501,7 @@ my ($xv8,$xv9,$xv10,$xv11,$xv12,$xv13,$xv14,$xv15,$xv16,$xv17) = map("v$_",(8..1
 my ($xv18,$xv19,$xv20,$xv21) = map("v$_",(18..21));
 my ($xv22,$xv23,$xv24,$xv25,$xv26) = map("v$_",(22..26));
 
-my $FRAME=$LOCALS+64+9*16;	# 8*16 is for v24-v31 offload
+my $FRAME=$LOCALS+64+9*16+13*8+4*16;	# 8*16 for v24-v31 offload, 13*8 for f14-f26, 4*16 for v20-v23
 
 sub VSX_lane_ROUND_8x {
 my ($a0,$b0,$c0,$d0,$a4,$b4,$c4,$d4)=@_;
@@ -665,7 +665,28 @@ $code.=<<___;
 	addi	r11,r11,32
 	stvx	v30,r10,$sp
 	stvx	v31,r11,$sp
-	stw	r12,`$FRAME-4`($sp)		# save vrsave
+	stfd	f14,`$LOCALS+64+9*16+0*8`($sp)	# save FPR14-FPR26 (callee-saved per ELFv2 ABI)
+	stfd	f15,`$LOCALS+64+9*16+1*8`($sp)
+	stfd	f16,`$LOCALS+64+9*16+2*8`($sp)
+	stfd	f17,`$LOCALS+64+9*16+3*8`($sp)
+	stfd	f18,`$LOCALS+64+9*16+4*8`($sp)
+	stfd	f19,`$LOCALS+64+9*16+5*8`($sp)
+	stfd	f20,`$LOCALS+64+9*16+6*8`($sp)
+	stfd	f21,`$LOCALS+64+9*16+7*8`($sp)
+	stfd	f22,`$LOCALS+64+9*16+8*8`($sp)
+	stfd	f23,`$LOCALS+64+9*16+9*8`($sp)
+	stfd	f24,`$LOCALS+64+9*16+10*8`($sp)
+	stfd	f25,`$LOCALS+64+9*16+11*8`($sp)
+	be?stfd	f26,`$LOCALS+64+9*16+12*8`($sp)	# BE only
+	li	r10,`$LOCALS+64+9*16+13*8+15`
+	li	r11,`$LOCALS+64+9*16+13*8+31`
+	stvx	v20,r10,$sp			# save VMX v20-v23 (callee-saved per ELFv2 ABI)
+	addi	r10,r10,32
+	stvx	v21,r11,$sp
+	addi	r11,r11,32
+	stvx	v22,r10,$sp
+	stvx	v23,r11,$sp
+	stw	r12,`$LOCALS+64+9*16-4`($sp)		# save vrsave
 	li	r12,-4096+63
 	$PUSH	r0, `$FRAME+$LRSAVE`($sp)
 	mtspr	256,r12				# preserve 29 AltiVec registers
@@ -787,7 +808,7 @@ $code.=<<___;
 
 	vxxlor	        $xv6  ,$xb6,$xb6                # save vr23, so we get 8 regs
 	vxxlor	        $xv7  ,$xb7,$xb7                # save vr23, so we get 8 regs
-	be?vxxlorc      $beperm,$xv26,$xv26             # copy back the the beperm.
+	be?vxxlorc      $beperm,$xv26,$xv26             # copy back the beperm.
 
 	vxxlorc	   @K[0],$xv0,$xv0                #27
 	vxxlorc	   @K[1],$xv1,$xv1 		  #24
@@ -1032,10 +1053,10 @@ $code.=<<___;
 	vadduwm	$xcn0,$xcn4,@K[2]
 	vadduwm	$xdn0,$xdn4,@K[3]
 
-	be?vperm $xan0,$xa4,$xa4,$beperm
-	be?vperm $xbn0,$xb4,$xb4,$beperm
-	be?vperm $xcn0,$xcn4,$xcn4,$beperm
-	be?vperm $xdn0,$xdn4,$xdn4,$beperm
+	be?vperm $xan0,$xan0,$xan0,$beperm
+	be?vperm $xbn0,$xbn0,$xbn0,$beperm
+	be?vperm $xcn0,$xcn0,$xcn0,$beperm
+	be?vperm $xdn0,$xdn0,$xdn0,$beperm
 
 	${UCMP}i $len,0x40
 	blt	Ltail_vsx_8x_1
@@ -1159,7 +1180,28 @@ $code.=<<___;
 	bne	Loop_outer_vsx_8x
 
 Ldone_vsx_8x:
-	lwz	r12,`$FRAME-4`($sp)		# pull vrsave
+	lwz	r12,`$LOCALS+64+9*16-4`($sp)		# pull vrsave
+	lfd	f14,`$LOCALS+64+9*16+0*8`($sp)	# restore FPR14-FPR26 (callee-saved per ELFv2 ABI)
+	lfd	f15,`$LOCALS+64+9*16+1*8`($sp)
+	lfd	f16,`$LOCALS+64+9*16+2*8`($sp)
+	lfd	f17,`$LOCALS+64+9*16+3*8`($sp)
+	lfd	f18,`$LOCALS+64+9*16+4*8`($sp)
+	lfd	f19,`$LOCALS+64+9*16+5*8`($sp)
+	lfd	f20,`$LOCALS+64+9*16+6*8`($sp)
+	lfd	f21,`$LOCALS+64+9*16+7*8`($sp)
+	lfd	f22,`$LOCALS+64+9*16+8*8`($sp)
+	lfd	f23,`$LOCALS+64+9*16+9*8`($sp)
+	lfd	f24,`$LOCALS+64+9*16+10*8`($sp)
+	lfd	f25,`$LOCALS+64+9*16+11*8`($sp)
+	be?lfd	f26,`$LOCALS+64+9*16+12*8`($sp)	# BE only
+	li	r10,`$LOCALS+64+9*16+13*8+15`
+	li	r11,`$LOCALS+64+9*16+13*8+31`
+	lvx	v20,r10,$sp			# restore VMX v20-v23 (callee-saved per ELFv2 ABI)
+	addi	r10,r10,32
+	lvx	v21,r11,$sp
+	addi	r11,r11,32
+	lvx	v22,r10,$sp
+	lvx	v23,r11,$sp
 	li	r10,`15+$LOCALS+64`
 	li	r11,`31+$LOCALS+64`
 	$POP	r0, `$FRAME+$LRSAVE`($sp)
@@ -1261,7 +1303,7 @@ $code.=<<___;
 	.long	0x6b206574,0x6b206574,0x6b206574,0x6b206574
 	.long	0,1,2,3
         .long   0x03020100,0x07060504,0x0b0a0908,0x0f0e0d0c
-.asciz  "ChaCha20 for PowerPC/AltiVec, CRYPTOGAMS by <appro\@openssl.org>"
+.asciz  "ChaCha20 for PowerPC/AltiVec, CRYPTOGAMS by <https://github.com/dot-asm>"
 .align	2
 ___
 

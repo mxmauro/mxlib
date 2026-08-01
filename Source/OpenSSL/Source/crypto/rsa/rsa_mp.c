@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2021 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2017-2024 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright 2017 BaishanCloud. All rights reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
@@ -46,7 +46,7 @@ RSA_PRIME_INFO *ossl_rsa_multip_info_new(void)
 
     return pinfo;
 
- err:
+err:
     BN_free(pinfo->r);
     BN_free(pinfo->d);
     BN_free(pinfo->t);
@@ -90,14 +90,14 @@ int ossl_rsa_multip_calc_product(RSA *rsa)
     }
 
     rv = 1;
- err:
+err:
     BN_CTX_free(ctx);
     return rv;
 }
 
 int ossl_rsa_multip_cap(int bits)
 {
-    int cap = 5;
+    int cap = RSA_MAX_PRIME_NUM;
 
     if (bits < 1024)
         cap = 2;

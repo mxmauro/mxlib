@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2022 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2016-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,6 +48,8 @@ enum {
     CMD_LOOKUP
 };
 
+#define MAX_CMDS 5000
+
 static int get_cid(PACKET *pkt, QUIC_CONN_ID *cid)
 {
     unsigned int cidl;
@@ -72,6 +74,7 @@ int FuzzerTestOneInput(const uint8_t *buf, size_t len)
     OSSL_QUIC_FRAME_NEW_CONN_ID ncid_frame;
     int did_retire;
     void *opaque_out;
+    size_t limit = 0;
 
     if (!PACKET_buf_init(&pkt, buf, len))
         goto err;
@@ -91,6 +94,9 @@ int FuzzerTestOneInput(const uint8_t *buf, size_t len)
         if (!PACKET_get_1(&pkt, &cmd))
             goto err;
 
+        if (++limit > MAX_CMDS)
+            goto err;
+
         switch (cmd) {
         case CMD_ENROL_ODCID:
             if (!PACKET_get_net_8(&pkt, &arg_opaque)
@@ -100,7 +106,7 @@ int FuzzerTestOneInput(const uint8_t *buf, size_t len)
             }
 
             ossl_quic_lcidm_enrol_odcid(lcidm, (void *)(uintptr_t)arg_opaque,
-                                        &arg_cid);
+                &arg_cid);
             break;
 
         case CMD_RETIRE_ODCID:
@@ -119,7 +125,7 @@ int FuzzerTestOneInput(const uint8_t *buf, size_t len)
             }
 
             ossl_quic_lcidm_generate_initial(lcidm, (void *)(uintptr_t)arg_opaque,
-                                             &cid_out);
+                &cid_out);
             break;
 
         case CMD_GENERATE:
@@ -129,7 +135,7 @@ int FuzzerTestOneInput(const uint8_t *buf, size_t len)
             }
 
             ossl_quic_lcidm_generate(lcidm, (void *)(uintptr_t)arg_opaque,
-                                     &ncid_frame);
+                &ncid_frame);
             break;
 
         case CMD_RETIRE:
@@ -140,9 +146,9 @@ int FuzzerTestOneInput(const uint8_t *buf, size_t len)
             }
 
             ossl_quic_lcidm_retire(lcidm, (void *)(uintptr_t)arg_opaque,
-                                   arg_retire_prior_to,
-                                   NULL, &cid_out,
-                                   &seq_num_out, &did_retire);
+                arg_retire_prior_to,
+                NULL, &cid_out,
+                &seq_num_out, &did_retire);
             break;
 
         case CMD_CULL:

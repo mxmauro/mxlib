@@ -1,13 +1,11 @@
 /*
- * Copyright 2000-2024 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2000-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
  */
-
-#define _XOPEN_SOURCE_EXTENDED   /* To get a definition of strdup() */
 
 #include "internal/e_os.h"
 #include <stdio.h>
@@ -46,7 +44,7 @@ int CONF_set_default_method(CONF_METHOD *meth)
 }
 
 LHASH_OF(CONF_VALUE) *CONF_load(LHASH_OF(CONF_VALUE) *conf, const char *file,
-                                long *eline)
+    long *eline)
 {
     LHASH_OF(CONF_VALUE) *ltmp;
     BIO *in = NULL;
@@ -69,7 +67,7 @@ LHASH_OF(CONF_VALUE) *CONF_load(LHASH_OF(CONF_VALUE) *conf, const char *file,
 
 #ifndef OPENSSL_NO_STDIO
 LHASH_OF(CONF_VALUE) *CONF_load_fp(LHASH_OF(CONF_VALUE) *conf, FILE *fp,
-                                   long *eline)
+    long *eline)
 {
     BIO *btmp;
     LHASH_OF(CONF_VALUE) *ltmp;
@@ -84,7 +82,7 @@ LHASH_OF(CONF_VALUE) *CONF_load_fp(LHASH_OF(CONF_VALUE) *conf, FILE *fp,
 #endif
 
 LHASH_OF(CONF_VALUE) *CONF_load_bio(LHASH_OF(CONF_VALUE) *conf, BIO *bp,
-                                    long *eline)
+    long *eline)
 {
     CONF ctmp;
     int ret;
@@ -98,7 +96,7 @@ LHASH_OF(CONF_VALUE) *CONF_load_bio(LHASH_OF(CONF_VALUE) *conf, BIO *bp,
 }
 
 STACK_OF(CONF_VALUE) *CONF_get_section(LHASH_OF(CONF_VALUE) *conf,
-                                       const char *section)
+    const char *section)
 {
     if (conf == NULL) {
         return NULL;
@@ -111,7 +109,7 @@ STACK_OF(CONF_VALUE) *CONF_get_section(LHASH_OF(CONF_VALUE) *conf,
 }
 
 char *CONF_get_string(LHASH_OF(CONF_VALUE) *conf, const char *group,
-                      const char *name)
+    const char *name)
 {
     if (conf == NULL) {
         return NCONF_get_string(NULL, group, name);
@@ -124,7 +122,7 @@ char *CONF_get_string(LHASH_OF(CONF_VALUE) *conf, const char *group,
 }
 
 long CONF_get_number(LHASH_OF(CONF_VALUE) *conf, const char *group,
-                     const char *name)
+    const char *name)
 {
     int status;
     long result = 0;
@@ -230,7 +228,8 @@ static void collect_section_name(const CONF_VALUE *v, SECTION_NAMES *names)
 {
     /* A section is a CONF_VALUE with name == NULL */
     if (v->name == NULL)
-        sk_OPENSSL_CSTRING_push(names, v->section);
+        /* A failure to push cannot be handled so we ignore the result. */
+        (void)sk_OPENSSL_CSTRING_push(names, v->section);
 }
 
 static int section_name_cmp(OPENSSL_CSTRING const *a, OPENSSL_CSTRING const *b)
@@ -315,7 +314,7 @@ char *NCONF_get_string(const CONF *conf, const char *group, const char *name)
         return NULL;
     }
     ERR_raise_data(ERR_LIB_CONF, CONF_R_NO_VALUE,
-                   "group=%s name=%s", group, name);
+        "group=%s name=%s", group != NULL ? group : "", name);
     return NULL;
 }
 
@@ -330,7 +329,7 @@ static int default_to_int(const CONF *conf, char c)
 }
 
 int NCONF_get_number_e(const CONF *conf, const char *group, const char *name,
-                       long *result)
+    long *result)
 {
     char *str;
     long res;
@@ -368,7 +367,7 @@ int NCONF_get_number_e(const CONF *conf, const char *group, const char *name,
 }
 
 long _CONF_get_number(const CONF *conf, const char *section,
-                      const char *name)
+    const char *name)
 {
     int status;
     long result = 0;
@@ -421,7 +420,6 @@ OPENSSL_INIT_SETTINGS *OPENSSL_INIT_new(void)
     return ret;
 }
 
-
 #ifndef OPENSSL_NO_STDIO
 /*
  * If CRYPTO_set_mem_functions is called after this, then
@@ -430,7 +428,7 @@ OPENSSL_INIT_SETTINGS *OPENSSL_INIT_new(void)
  * strdup & free instead of OPENSSL_strdup & OPENSSL_free.
  */
 int OPENSSL_INIT_set_config_filename(OPENSSL_INIT_SETTINGS *settings,
-                                     const char *filename)
+    const char *filename)
 {
     char *newfilename = NULL;
 
@@ -447,7 +445,7 @@ int OPENSSL_INIT_set_config_filename(OPENSSL_INIT_SETTINGS *settings,
 }
 
 void OPENSSL_INIT_set_config_file_flags(OPENSSL_INIT_SETTINGS *settings,
-                                        unsigned long flags)
+    unsigned long flags)
 {
     settings->flags = flags;
 }
@@ -459,7 +457,7 @@ void OPENSSL_INIT_set_config_file_flags(OPENSSL_INIT_SETTINGS *settings,
  * strdup & free instead of OPENSSL_strdup & OPENSSL_free.
  */
 int OPENSSL_INIT_set_config_appname(OPENSSL_INIT_SETTINGS *settings,
-                                    const char *appname)
+    const char *appname)
 {
     char *newappname = NULL;
 
@@ -478,6 +476,9 @@ int OPENSSL_INIT_set_config_appname(OPENSSL_INIT_SETTINGS *settings,
 
 void OPENSSL_INIT_free(OPENSSL_INIT_SETTINGS *settings)
 {
+    if (settings == NULL)
+        return;
+
     free(settings->filename);
     free(settings->appname);
     free(settings);

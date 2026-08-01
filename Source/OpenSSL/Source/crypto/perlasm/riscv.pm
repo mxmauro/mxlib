@@ -2,7 +2,7 @@
 # This file is dual-licensed, meaning that you can use it under your
 # choice of either of the following two licenses:
 #
-# Copyright 2023 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2023-2025 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the Apache License 2.0 (the "License"). You can obtain
 # a copy in the file LICENSE in the source distribution or at
@@ -13,6 +13,7 @@
 # Copyright (c) 2023, Christoph Müllner <christoph.muellner@vrull.eu>
 # Copyright (c) 2023, Jerry Shih <jerry.shih@sifive.com>
 # Copyright (c) 2023, Phoebe Chen <phoebe.chen@sifive.com>
+# Copyright (c) 2025, Julian Zhu <julian.oerv@isrc.iscas.ac.cn>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -276,6 +277,27 @@ ___
     return $seq;
 }
 
+sub roriw_rv64i {
+    my (
+        $rd, $rs, $tmp1, $tmp2, $imm,
+    ) = @_;
+    my $code=<<___;
+    srliw $tmp1, $rs, $imm
+    slliw $tmp2, $rs, (32-$imm)
+    or $rd, $tmp1, $tmp2
+___
+    return $code;
+}
+
+sub orn_rv64i {
+    my ($rd, $rs1, $rs2) = @_;
+    my $code=<<___;
+    not $rd, $rs2
+    or $rd, $rd, $rs1
+___
+    return $code;
+}
+
 # Scalar crypto instructions
 
 sub aes64ds {
@@ -375,6 +397,16 @@ sub clmulh {
     return ".word ".($template | ($rs2 << 20) | ($rs1 << 15) | ($rd << 7));
 }
 
+sub orn {
+    # Encoding for orn rd, rs1, rs2
+    #               0100000 _ rs2 _ rs1 _110_ rd  _0110011
+    my $template = 0b0100000_00000_00000_110_00000_0110011;
+    my $rd = read_reg shift;
+    my $rs1 = read_reg shift;
+    my $rs2 = read_reg shift;
+    return ".word ".($template | ($rs2 << 20) | ($rs1 << 15) | ($rd << 7));
+}
+
 sub rev8 {
     # Encoding for rev8 rd, rs instruction on RV64
     #               XXXXXXXXXXXXX_ rs  _XXX_ rd  _XXXXXXX
@@ -382,6 +414,46 @@ sub rev8 {
     my $rd = read_reg shift;
     my $rs = read_reg shift;
     return ".word ".($template | ($rs << 15) | ($rd << 7));
+}
+
+sub rori {
+    # Encoding for rori rd, rs1, shamt instruction on RV64
+    #               XXXXXXX_ shamt _ rs1 _XXX_ rd  _XXXXXXX
+    my $template = 0b0110000_00000_00000_101_00000_0010011;
+    my $rd = read_reg shift;
+    my $rs1 = read_reg shift;
+    my $shamt = shift;
+    return ".word ".($template | ($shamt << 20) | ($rs1 << 15) | ($rd << 7));
+}
+
+sub roriw {
+    # Encoding for roriw rd, rs1, shamt instruction on RV64
+    #               XXXXXXX_ shamt _ rs1 _XXX_ rd  _XXXXXXX
+    my $template = 0b0110000_00000_00000_101_00000_0011011;
+    my $rd = read_reg shift;
+    my $rs1 = read_reg shift;
+    my $shamt = shift;
+    return ".word ".($template | ($shamt << 20) | ($rs1 << 15) | ($rd << 7));
+}
+
+sub maxu {
+    # Encoding for maxu rd, rs1, rs2 instruction on RV64
+    #               XXXXXXX_ rs2 _ rs1 _XXX_ rd  _XXXXXXX
+    my $template = 0b0000101_00000_00000_111_00000_0110011;
+    my $rd = read_reg shift;
+    my $rs1 = read_reg shift;
+    my $rs2 = read_reg shift;
+    return ".word ".($template | ($rs2 << 20) | ($rs1 << 15) | ($rd << 7));
+}
+
+sub minu {
+    # Encoding for minu rd, rs1, rs2 instruction on RV64
+    #               XXXXXXX_ rs2 _ rs1 _XXX_ rd  _XXXXXXX
+    my $template = 0b0000101_00000_00000_101_00000_0110011;
+    my $rd = read_reg shift;
+    my $rs1 = read_reg shift;
+    my $rs2 = read_reg shift;
+    return ".word ".($template | ($rs2 << 20) | ($rs1 << 15) | ($rd << 7));
 }
 
 # Vector instructions
@@ -568,6 +640,15 @@ sub vmv_v_v {
     return ".word ".($template | ($vs1 << 15) | ($vd << 7));
 }
 
+sub vor_vv {
+    # vor.vv vd, vs2, vs1
+    my $template = 0b0010101_00000_00000_000_00000_1010111;
+    my $vd = read_vreg shift;
+    my $vs2 = read_vreg shift;
+    my $vs1 = read_vreg shift;
+    return ".word ".($template | ($vs2 << 20) | ($vs1 << 15) | ($vd << 7));
+}
+
 sub vor_vv_v0t {
     # vor.vv vd, vs2, vs1, v0.t
     my $template = 0b0010100_00000_00000_000_00000_1010111;
@@ -711,6 +792,15 @@ sub vslideup_vi {
 sub vsll_vi {
     # vsll.vi vd, vs2, uimm, vm
     my $template = 0b1001011_00000_00000_011_00000_1010111;
+    my $vd = read_vreg shift;
+    my $vs2 = read_vreg shift;
+    my $uimm = shift;
+    return ".word ".($template | ($vs2 << 20) | ($uimm << 15) | ($vd << 7));
+}
+
+sub vsrl_vi {
+    # vsrl.vi vd, vs2, uimm, vm
+    my $template = 0b1010001_00000_00000_011_00000_1010111;
     my $vd = read_vreg shift;
     my $vs2 = read_vreg shift;
     my $uimm = shift;

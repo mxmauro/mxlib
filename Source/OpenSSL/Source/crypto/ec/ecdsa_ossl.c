@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2024 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2002-2025 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -31,13 +31,13 @@
 #define MAX_ECDSA_SIGN_RETRIES 8
 
 static int ecdsa_sign_setup(EC_KEY *eckey, BN_CTX *ctx_in,
-                            BIGNUM **kinvp, BIGNUM **rp,
-                            const unsigned char *dgst, int dlen,
-                            unsigned int nonce_type, const char *digestname,
-                            OSSL_LIB_CTX *libctx, const char *propq);
+    BIGNUM **kinvp, BIGNUM **rp,
+    const unsigned char *dgst, int dlen,
+    unsigned int nonce_type, const char *digestname,
+    OSSL_LIB_CTX *libctx, const char *propq);
 
 int ossl_ecdsa_sign_setup(EC_KEY *eckey, BN_CTX *ctx_in, BIGNUM **kinvp,
-                          BIGNUM **rp)
+    BIGNUM **rp)
 {
     if (eckey->group->meth->ecdsa_sign_setup == NULL) {
         ERR_raise(ERR_LIB_EC, EC_R_CURVE_DOES_NOT_SUPPORT_ECDSA);
@@ -48,8 +48,8 @@ int ossl_ecdsa_sign_setup(EC_KEY *eckey, BN_CTX *ctx_in, BIGNUM **kinvp,
 }
 
 ECDSA_SIG *ossl_ecdsa_sign_sig(const unsigned char *dgst, int dgst_len,
-                               const BIGNUM *in_kinv, const BIGNUM *in_r,
-                               EC_KEY *eckey)
+    const BIGNUM *in_kinv, const BIGNUM *in_r,
+    EC_KEY *eckey)
 {
     if (eckey->group->meth->ecdsa_sign_sig == NULL) {
         ERR_raise(ERR_LIB_EC, EC_R_CURVE_DOES_NOT_SUPPORT_ECDSA);
@@ -57,11 +57,11 @@ ECDSA_SIG *ossl_ecdsa_sign_sig(const unsigned char *dgst, int dgst_len,
     }
 
     return eckey->group->meth->ecdsa_sign_sig(dgst, dgst_len,
-                                              in_kinv, in_r, eckey);
+        in_kinv, in_r, eckey);
 }
 
 int ossl_ecdsa_verify_sig(const unsigned char *dgst, int dgst_len,
-                          const ECDSA_SIG *sig, EC_KEY *eckey)
+    const ECDSA_SIG *sig, EC_KEY *eckey)
 {
     if (eckey->group->meth->ecdsa_verify_sig == NULL) {
         ERR_raise(ERR_LIB_EC, EC_R_CURVE_DOES_NOT_SUPPORT_ECDSA);
@@ -72,8 +72,8 @@ int ossl_ecdsa_verify_sig(const unsigned char *dgst, int dgst_len,
 }
 
 int ossl_ecdsa_sign(int type, const unsigned char *dgst, int dlen,
-                    unsigned char *sig, unsigned int *siglen,
-                    const BIGNUM *kinv, const BIGNUM *r, EC_KEY *eckey)
+    unsigned char *sig, unsigned int *siglen,
+    const BIGNUM *kinv, const BIGNUM *r, EC_KEY *eckey)
 {
     ECDSA_SIG *s;
 
@@ -93,10 +93,10 @@ int ossl_ecdsa_sign(int type, const unsigned char *dgst, int dlen,
 }
 
 int ossl_ecdsa_deterministic_sign(const unsigned char *dgst, int dlen,
-                                  unsigned char *sig, unsigned int *siglen,
-                                  EC_KEY *eckey, unsigned int nonce_type,
-                                  const char *digestname,
-                                  OSSL_LIB_CTX *libctx, const char *propq)
+    unsigned char *sig, unsigned int *siglen,
+    EC_KEY *eckey, unsigned int nonce_type,
+    const char *digestname,
+    OSSL_LIB_CTX *libctx, const char *propq)
 {
     ECDSA_SIG *s;
     BIGNUM *kinv = NULL, *r = NULL;
@@ -106,10 +106,14 @@ int ossl_ecdsa_deterministic_sign(const unsigned char *dgst, int dlen,
         ERR_raise(ERR_LIB_EC, ERR_R_PASSED_NULL_PARAMETER);
         return 0;
     }
+    if (digestname == NULL) {
+        ERR_raise(ERR_LIB_EC, EC_R_INVALID_DIGEST);
+        return 0;
+    }
 
     *siglen = 0;
     if (!ecdsa_sign_setup(eckey, NULL, &kinv, &r, dgst, dlen,
-                          nonce_type, digestname, libctx, propq))
+            nonce_type, digestname, libctx, propq))
         return 0;
 
     s = ECDSA_do_sign_ex(dgst, dlen, kinv, r, eckey);
@@ -126,10 +130,10 @@ end:
 }
 
 static int ecdsa_sign_setup(EC_KEY *eckey, BN_CTX *ctx_in,
-                            BIGNUM **kinvp, BIGNUM **rp,
-                            const unsigned char *dgst, int dlen,
-                            unsigned int nonce_type, const char *digestname,
-                            OSSL_LIB_CTX *libctx, const char *propq)
+    BIGNUM **kinvp, BIGNUM **rp,
+    const unsigned char *dgst, int dlen,
+    unsigned int nonce_type, const char *digestname,
+    OSSL_LIB_CTX *libctx, const char *propq)
 {
     BN_CTX *ctx = NULL;
     BIGNUM *k = NULL, *r = NULL, *X = NULL;
@@ -161,8 +165,8 @@ static int ecdsa_sign_setup(EC_KEY *eckey, BN_CTX *ctx_in,
         }
     }
 
-    k = BN_secure_new();        /* this value is later returned in *kinvp */
-    r = BN_new();               /* this value is later returned in *rp */
+    k = BN_secure_new(); /* this value is later returned in *kinvp */
+    r = BN_new(); /* this value is later returned in *rp */
     X = BN_new();
     if (k == NULL || r == NULL || X == NULL) {
         ERR_raise(ERR_LIB_EC, ERR_R_BN_LIB);
@@ -172,7 +176,11 @@ static int ecdsa_sign_setup(EC_KEY *eckey, BN_CTX *ctx_in,
         ERR_raise(ERR_LIB_EC, ERR_R_EC_LIB);
         goto err;
     }
-    order = EC_GROUP_get0_order(group);
+
+    if ((order = EC_GROUP_get0_order(group)) == NULL) {
+        ERR_raise(ERR_LIB_EC, ERR_R_EC_LIB);
+        goto err;
+    }
 
     /* Preallocate space */
     order_bits = BN_num_bits(order);
@@ -190,25 +198,23 @@ static int ecdsa_sign_setup(EC_KEY *eckey, BN_CTX *ctx_in,
 
             if (dgst != NULL) {
                 if (nonce_type == 1) {
-#ifndef FIPS_MODULE
                     res = ossl_gen_deterministic_nonce_rfc6979(k, order,
-                                                               priv_key,
-                                                               dgst, dlen,
-                                                               digestname,
-                                                               libctx, propq);
-#endif
+                        priv_key,
+                        dgst, dlen,
+                        digestname,
+                        libctx, propq);
                 } else {
-                    res = BN_generate_dsa_nonce(k, order, priv_key, dgst, dlen,
-                                                ctx);
+                    res = ossl_bn_gen_dsa_nonce_fixed_top(k, order, priv_key,
+                        dgst, dlen, ctx);
                 }
             } else {
-                res = BN_priv_rand_range_ex(k, order, 0, ctx);
+                res = ossl_bn_priv_rand_range_fixed_top(k, order, 0, ctx);
             }
             if (!res) {
                 ERR_raise(ERR_LIB_EC, EC_R_RANDOM_NUMBER_GENERATION_FAILED);
                 goto err;
             }
-        } while (BN_is_zero(k));
+        } while (ossl_bn_is_word_fixed_top(k, 0));
 
         /* compute r the x-coordinate of generator * k */
         if (!EC_POINT_mul(group, tmp_point, k, NULL, NULL, ctx)) {
@@ -240,7 +246,7 @@ static int ecdsa_sign_setup(EC_KEY *eckey, BN_CTX *ctx_in,
     *rp = r;
     *kinvp = k;
     ret = 1;
- err:
+err:
     if (!ret) {
         BN_clear_free(k);
         BN_clear_free(r);
@@ -253,15 +259,15 @@ static int ecdsa_sign_setup(EC_KEY *eckey, BN_CTX *ctx_in,
 }
 
 int ossl_ecdsa_simple_sign_setup(EC_KEY *eckey, BN_CTX *ctx_in, BIGNUM **kinvp,
-                                 BIGNUM **rp)
+    BIGNUM **rp)
 {
     return ecdsa_sign_setup(eckey, ctx_in, kinvp, rp, NULL, 0,
-                            0, NULL, NULL, NULL);
+        0, NULL, NULL, NULL);
 }
 
 ECDSA_SIG *ossl_ecdsa_simple_sign_sig(const unsigned char *dgst, int dgst_len,
-                                      const BIGNUM *in_kinv, const BIGNUM *in_r,
-                                      EC_KEY *eckey)
+    const BIGNUM *in_kinv, const BIGNUM *in_r,
+    EC_KEY *eckey)
 {
     int ok = 0, i;
     int retries = 0;
@@ -308,7 +314,11 @@ ECDSA_SIG *ossl_ecdsa_simple_sign_sig(const unsigned char *dgst, int dgst_len,
         goto err;
     }
 
-    order = EC_GROUP_get0_order(group);
+    if ((order = EC_GROUP_get0_order(group)) == NULL) {
+        ERR_raise(ERR_LIB_EC, ERR_R_EC_LIB);
+        goto err;
+    }
+
     i = BN_num_bits(order);
     /*
      * Need to truncate digest if it is too long: first truncate whole bytes.
@@ -327,7 +337,7 @@ ECDSA_SIG *ossl_ecdsa_simple_sign_sig(const unsigned char *dgst, int dgst_len,
     do {
         if (in_kinv == NULL || in_r == NULL) {
             if (!ecdsa_sign_setup(eckey, ctx, &kinv, &ret->r, dgst, dgst_len,
-                                  0, NULL, NULL, NULL)) {
+                    0, NULL, NULL, NULL)) {
                 ERR_raise(ERR_LIB_EC, ERR_R_ECDSA_LIB);
                 goto err;
             }
@@ -387,7 +397,7 @@ ECDSA_SIG *ossl_ecdsa_simple_sign_sig(const unsigned char *dgst, int dgst_len,
     } while (1);
 
     ok = 1;
- err:
+err:
     if (!ok) {
         ECDSA_SIG_free(ret);
         ret = NULL;
@@ -405,7 +415,7 @@ ECDSA_SIG *ossl_ecdsa_simple_sign_sig(const unsigned char *dgst, int dgst_len,
  *     -1: error
  */
 int ossl_ecdsa_verify(int type, const unsigned char *dgst, int dgst_len,
-                      const unsigned char *sigbuf, int sig_len, EC_KEY *eckey)
+    const unsigned char *sigbuf, int sig_len, EC_KEY *eckey)
 {
     ECDSA_SIG *s;
     const unsigned char *p = sigbuf;
@@ -423,14 +433,14 @@ int ossl_ecdsa_verify(int type, const unsigned char *dgst, int dgst_len,
     if (derlen != sig_len || memcmp(sigbuf, der, derlen) != 0)
         goto err;
     ret = ECDSA_do_verify(dgst, dgst_len, s, eckey);
- err:
+err:
     OPENSSL_free(der);
     ECDSA_SIG_free(s);
     return ret;
 }
 
 int ossl_ecdsa_simple_verify_sig(const unsigned char *dgst, int dgst_len,
-                                 const ECDSA_SIG *sig, EC_KEY *eckey)
+    const ECDSA_SIG *sig, EC_KEY *eckey)
 {
     int ret = -1, i;
     BN_CTX *ctx;
@@ -441,8 +451,7 @@ int ossl_ecdsa_simple_verify_sig(const unsigned char *dgst, int dgst_len,
     const EC_POINT *pub_key;
 
     /* check input values */
-    if (eckey == NULL || (group = EC_KEY_get0_group(eckey)) == NULL ||
-        (pub_key = EC_KEY_get0_public_key(eckey)) == NULL || sig == NULL) {
+    if (eckey == NULL || (group = EC_KEY_get0_group(eckey)) == NULL || (pub_key = EC_KEY_get0_public_key(eckey)) == NULL || sig == NULL) {
         ERR_raise(ERR_LIB_EC, EC_R_MISSING_PARAMETERS);
         return -1;
     }
@@ -473,11 +482,9 @@ int ossl_ecdsa_simple_verify_sig(const unsigned char *dgst, int dgst_len,
         goto err;
     }
 
-    if (BN_is_zero(sig->r) || BN_is_negative(sig->r) ||
-        BN_ucmp(sig->r, order) >= 0 || BN_is_zero(sig->s) ||
-        BN_is_negative(sig->s) || BN_ucmp(sig->s, order) >= 0) {
+    if (BN_is_zero(sig->r) || BN_is_negative(sig->r) || BN_ucmp(sig->r, order) >= 0 || BN_is_zero(sig->s) || BN_is_negative(sig->s) || BN_ucmp(sig->s, order) >= 0) {
         ERR_raise(ERR_LIB_EC, EC_R_BAD_SIGNATURE);
-        ret = 0;                /* signature is invalid */
+        ret = 0; /* signature is invalid */
         goto err;
     }
     /* calculate tmp1 = inv(S) mod order */
@@ -532,7 +539,7 @@ int ossl_ecdsa_simple_verify_sig(const unsigned char *dgst, int dgst_len,
     }
     /*  if the signature is correct u1 is equal to sig->r */
     ret = (BN_ucmp(u1, sig->r) == 0);
- err:
+err:
     BN_CTX_end(ctx);
     BN_CTX_free(ctx);
     EC_POINT_free(point);

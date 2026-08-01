@@ -1,5 +1,5 @@
 /*
- * Copyright 2001-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2001-2024 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright (c) 2002, Oracle and/or its affiliates. All rights reserved
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
@@ -78,8 +78,8 @@ static int engine_list_add(ENGINE *e)
      * Having the engine in the list assumes a structural reference.
      */
     if (!CRYPTO_UP_REF(&e->struct_ref, &ref)) {
-            ERR_raise(ERR_LIB_ENGINE, ENGINE_R_INTERNAL_LIST_ERROR);
-            return 0;
+        ERR_raise(ERR_LIB_ENGINE, ENGINE_R_INTERNAL_LIST_ERROR);
+        return 0;
     }
     ENGINE_REF_PRINT(e, 0, 1);
     if (engine_list_head == NULL) {
@@ -148,7 +148,7 @@ static int engine_list_remove(ENGINE *e)
 
 /* Add engine to dynamic engine list. */
 int engine_add_dynamic_id(ENGINE *e, ENGINE_DYNAMIC_ID dynamic_id,
-                          int not_locked)
+    int not_locked)
 {
     int result = 0;
     ENGINE *iterator = NULL;
@@ -193,7 +193,7 @@ int engine_add_dynamic_id(ENGINE *e, ENGINE_DYNAMIC_ID dynamic_id,
     e->next_dyn = NULL;
     result = 1;
 
- err:
+err:
     if (not_locked)
         CRYPTO_THREAD_unlock(global_engine_lock);
     return result;
@@ -243,6 +243,7 @@ ENGINE *ENGINE_get_first(void)
         int ref;
 
         if (!CRYPTO_UP_REF(&ret->struct_ref, &ref)) {
+            CRYPTO_THREAD_unlock(global_engine_lock);
             ERR_raise(ERR_LIB_ENGINE, ERR_R_CRYPTO_LIB);
             return NULL;
         }
@@ -269,6 +270,7 @@ ENGINE *ENGINE_get_last(void)
         int ref;
 
         if (!CRYPTO_UP_REF(&ret->struct_ref, &ref)) {
+            CRYPTO_THREAD_unlock(global_engine_lock);
             ERR_raise(ERR_LIB_ENGINE, ERR_R_CRYPTO_LIB);
             return NULL;
         }
@@ -294,6 +296,7 @@ ENGINE *ENGINE_get_next(ENGINE *e)
 
         /* Return a valid structural reference to the next ENGINE */
         if (!CRYPTO_UP_REF(&ret->struct_ref, &ref)) {
+            CRYPTO_THREAD_unlock(global_engine_lock);
             ERR_raise(ERR_LIB_ENGINE, ERR_R_CRYPTO_LIB);
             return NULL;
         }
@@ -320,6 +323,7 @@ ENGINE *ENGINE_get_prev(ENGINE *e)
 
         /* Return a valid structural reference to the next ENGINE */
         if (!CRYPTO_UP_REF(&ret->struct_ref, &ref)) {
+            CRYPTO_THREAD_unlock(global_engine_lock);
             ERR_raise(ERR_LIB_ENGINE, ERR_R_CRYPTO_LIB);
             return NULL;
         }
@@ -404,7 +408,7 @@ static void engine_cpy(ENGINE *dest, const ENGINE *src)
 ENGINE *ENGINE_by_id(const char *id)
 {
     ENGINE *iterator;
-    char *load_dir = NULL;
+    const char *load_dir = NULL;
     if (id == NULL) {
         ERR_raise(ERR_LIB_ENGINE, ERR_R_PASSED_NULL_PARAMETER);
         return NULL;
@@ -455,18 +459,13 @@ ENGINE *ENGINE_by_id(const char *id)
      */
     if (strcmp(id, "dynamic")) {
         if ((load_dir = ossl_safe_getenv("OPENSSL_ENGINES")) == NULL)
-            load_dir = ENGINESDIR;
+            load_dir = ossl_get_enginesdir();
         iterator = ENGINE_by_id("dynamic");
-        if (!iterator || !ENGINE_ctrl_cmd_string(iterator, "ID", id, 0) ||
-            !ENGINE_ctrl_cmd_string(iterator, "DIR_LOAD", "2", 0) ||
-            !ENGINE_ctrl_cmd_string(iterator, "DIR_ADD",
-                                    load_dir, 0) ||
-            !ENGINE_ctrl_cmd_string(iterator, "LIST_ADD", "1", 0) ||
-            !ENGINE_ctrl_cmd_string(iterator, "LOAD", NULL, 0))
+        if (!iterator || !ENGINE_ctrl_cmd_string(iterator, "ID", id, 0) || !ENGINE_ctrl_cmd_string(iterator, "DIR_LOAD", "2", 0) || !ENGINE_ctrl_cmd_string(iterator, "DIR_ADD", load_dir, 0) || !ENGINE_ctrl_cmd_string(iterator, "LIST_ADD", "1", 0) || !ENGINE_ctrl_cmd_string(iterator, "LOAD", NULL, 0))
             goto notfound;
         return iterator;
     }
- notfound:
+notfound:
     ENGINE_free(iterator);
     ERR_raise_data(ERR_LIB_ENGINE, ENGINE_R_NO_SUCH_ENGINE, "id=%s", id);
     return NULL;

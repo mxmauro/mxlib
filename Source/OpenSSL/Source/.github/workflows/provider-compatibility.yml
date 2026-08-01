@@ -1,4 +1,4 @@
-# Copyright 2023-2024 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2023-2026 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the Apache License 2.0 (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -10,12 +10,15 @@
 
 name: Provider compatibility across versions
 
-# NOTE: if this is being run on pull_request, it will **not** use the pull
-#       request's branch.  It is hardcoded to use the master branch.
-#
-on: #[pull_request]
+# Please note there is no point in running this job on PR as the tests
+# will always run against the tips of the branches in the main repository
+# and not the branch from the PR.
+# Use the `extended tests` label to run provider compatibility checks
+# on PRs.
+on:
   schedule:
-    - cron: '0 15 * * *'
+    - cron: '10 02 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -31,7 +34,7 @@ jobs:
           # Formally released versions should be added here.
           #     `dir' it the directory inside the tarball.
           #     `tgz' is the name of the tarball.
-          #     `utl' is the download URL.
+          #     `url' is the download URL.
           {
             dir: openssl-3.0.0,
             tgz: openssl-3.0.0.tar.gz,
@@ -93,7 +96,7 @@ jobs:
                                                  -providers
         working-directory: ${{ matrix.release.dir }}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.release.tgz }}
           path: ${{ matrix.release.tgz }}
@@ -108,24 +111,43 @@ jobs:
           #     `dir' directory that will be used to build and test in.
           #     `tgz' is the name of the tarball use to keep the artifacts of
           #         the build.
+          #     `extra_config` adds extra config build option for the branch.
           {
             name: openssl-3.0,
             dir: branch-3.0,
             tgz: branch-3.0.tar.gz,
+            extra_config: "",
           }, {
-            name: openssl-3.1,
-            dir: branch-3.1,
-            tgz: branch-3.1.tar.gz,
+            name: openssl-3.3,
+            dir: branch-3.3,
+            tgz: branch-3.3.tar.gz,
+            extra_config: "",
+          }, {
+            name: openssl-3.4,
+            dir: branch-3.4,
+            tgz: branch-3.4.tar.gz,
+            extra_config: "",
+          }, {
+            name: openssl-3.5,
+            dir: branch-3.5,
+            tgz: branch-3.5.tar.gz,
+            extra_config: "",
+          }, {
+            name: openssl-3.6,
+            dir: branch-3.6,
+            tgz: branch-3.6.tar.gz,
+            extra_config: "enable-lms",
           }, {
             name: master,
             dir: branch-master,
             tgz: branch-master.tar.gz,
+            extra_config: "enable-lms",
           },
         ]
 
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           path: ${{ matrix.branch.dir }}
           repository: openssl/openssl
@@ -135,7 +157,7 @@ jobs:
 
       - name: config branch
         run: |
-          ./config --banner=Configured enable-shared enable-fips ${{ env.opts }}
+          ./config --banner=Configured enable-shared enable-fips ${{ env.opts }} ${{ matrix.branch.extra_config }}
         working-directory: ${{ matrix.branch.dir }}
       - name: config dump current
         run: ./configdata.pm --dump
@@ -169,7 +191,7 @@ jobs:
         run: make test HARNESS_JOBS=${HARNESS_JOBS:-4}
         working-directory: ${{ matrix.branch.dir }}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.branch.tgz }}
           path: ${{ matrix.branch.tgz }}
@@ -187,45 +209,47 @@ jobs:
         # Note that releases are not used as a test environment for
         # later providers.  Problems in these situations ought to be
         # caught by cross branch testing before the release.
-        tree_a: [ branch-master, branch-3.1, branch-3.0,
+        tree_a: [ branch-master, branch-3.6, branch-3.5, branch-3.4, branch-3.3,
+                  branch-3.0,
                   openssl-3.0.0, openssl-3.0.8, openssl-3.0.9, openssl-3.1.2 ]
-        tree_b: [ branch-master, branch-3.1, branch-3.0  ]
+        tree_b: [ branch-master, branch-3.6, branch-3.5, branch-3.4, branch-3.3,
+                  branch-3.0  ]
     steps:
       - name: early exit checks
         id: early_exit
         run: |
-          if [ "${{ matrix.tree_a }}" = "${{ matrix.tree_b }}" ];           \
-          then                                                              \
-            echo "Skipping because both are the same version";              \
-            exit 1;                                                         \
+          if [ "${{ matrix.tree_a }}" = "${{ matrix.tree_b }}" ]; then
+            echo "Skipping because both are the same version"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
-        continue-on-error: true
 
-      - uses: actions/download-artifact@v4
-        if: steps.early_exit.outcome == 'success'
+      - uses: actions/download-artifact@v6.0.0
+        if: steps.early_exit.outputs.skip != 'true'
         with:
           name: ${{ matrix.tree_a }}.tar.gz
       - name: unpack first build
-        if: steps.early_exit.outcome == 'success'
+        if: steps.early_exit.outputs.skip != 'true'
         run: tar xzf "${{ matrix.tree_a }}.tar.gz"
 
-      - uses: actions/download-artifact@v4
-        if: steps.early_exit.outcome == 'success'
+      - uses: actions/download-artifact@v6.0.0
+        if: steps.early_exit.outputs.skip != 'true'
         with:
           name: ${{ matrix.tree_b }}.tar.gz
       - name: unpack second build
-        if: steps.early_exit.outcome == 'success'
+        if: steps.early_exit.outputs.skip != 'true'
         run: tar xzf "${{ matrix.tree_b }}.tar.gz"
 
       - name: set up cross validation of FIPS from A with tree from B
-        if: steps.early_exit.outcome == 'success'
+        if: steps.early_exit.outputs.skip != 'true'
         run: |
           cp providers/fips.so ../${{ matrix.tree_b }}/providers/
           cp providers/fipsmodule.cnf ../${{ matrix.tree_b }}/providers/
         working-directory: ${{ matrix.tree_a }}
 
       - name: show module versions from cross validation
-        if: steps.early_exit.outcome == 'success'
+        if: steps.early_exit.outputs.skip != 'true'
         run: |
           ./util/wrap.pl -fips apps/openssl list -provider-path providers   \
                                                  -provider base             \
@@ -236,14 +260,14 @@ jobs:
         working-directory: ${{ matrix.tree_b }}
 
       - name: get cpu info
-        if: steps.early_exit.outcome == 'success'
+        if: steps.early_exit.outputs.skip != 'true'
         run: |
           cat /proc/cpuinfo
           ./util/opensslwrap.sh version -c
         working-directory: ${{ matrix.tree_b }}
 
       - name: run cross validation tests of FIPS from A with tree from B
-        if: steps.early_exit.outcome == 'success'
+        if: steps.early_exit.outputs.skip != 'true'
         run: |
           make test HARNESS_JOBS=${HARNESS_JOBS:-4}
         working-directory: ${{ matrix.tree_b }}

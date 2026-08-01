@@ -125,6 +125,12 @@ The OpenSSL default provider supports these operations and algorithms:
 
 =item HKDF, see L<EVP_KDF-HKDF(7)>
 
+=item HKDF-SHA256, see L<EVP_KDF-HKDF(7)>
+
+=item HKDF-SHA384, see L<EVP_KDF-HKDF(7)>
+
+=item HKDF-SHA512, see L<EVP_KDF-HKDF(7)>
+
 =item TLS13-KDF, see L<EVP_KDF-TLS13_KDF(7)>
 
 =item SSKDF, see L<EVP_KDF-SS(7)>
@@ -167,6 +173,12 @@ The OpenSSL default provider supports these operations and algorithms:
 
 =item X448, see L<EVP_KEYEXCH-X448(7)>
 
+=item ML-KEM-512, see L<EVP_KEM-ML-KEM-512(7)>
+
+=item ML-KEM-768, see L<EVP_KEM-ML-KEM-768(7)>
+
+=item ML-KEM-1024, see L<EVP_KEM-ML-KEM-1024(7)>
+
 =item TLS1-PRF
 
 =item HKDF
@@ -191,6 +203,14 @@ The OpenSSL default provider supports these operations and algorithms:
 
 =item SM2
 
+=item LMS, see L<EVP_SIGNATURE-LMS(7)>
+
+=item ML-DSA-44, see L<EVP_SIGNATURE-ML-DSA(7)>
+
+=item ML-DSA-65, see L<EVP_SIGNATURE-ML-DSA(7)>
+
+=item ML-DSA-87, see L<EVP_SIGNATURE-ML-DSA(7)>
+
 =item HMAC, see L<EVP_SIGNATURE-HMAC(7)>
 
 =item SIPHASH, see L<EVP_SIGNATURE-Siphash(7)>
@@ -198,6 +218,30 @@ The OpenSSL default provider supports these operations and algorithms:
 =item POLY1305, see L<EVP_SIGNATURE-Poly1305(7)>
 
 =item CMAC, see L<EVP_SIGNATURE-CMAC(7)>
+
+=item SLH-DSA-SHA2-128s, see L<EVP_SIGNATURE-SLH-DSA(7)>
+
+=item SLH-DSA-SHA2-128f, see L<EVP_SIGNATURE-SLH-DSA(7)>
+
+=item SLH-DSA-SHA2-192s, see L<EVP_SIGNATURE-SLH-DSA(7)>
+
+=item SLH-DSA-SHA2-192f, see L<EVP_SIGNATURE-SLH-DSA(7)>
+
+=item SLH-DSA-SHA2-256s, see L<EVP_SIGNATURE-SLH-DSA(7)>
+
+=item SLH-DSA-SHA2-256f, see L<EVP_SIGNATURE-SLH-DSA(7)>
+
+=item SLH-DSA-SHAKE-128s, see L<EVP_SIGNATURE-SLH-DSA(7)>
+
+=item SLH-DSA-SHAKE-128f, see L<EVP_SIGNATURE-SLH-DSA(7)>
+
+=item SLH-DSA-SHAKE-192s, see L<EVP_SIGNATURE-SLH-DSA(7)>
+
+=item SLH-DSA-SHAKE-192f, see L<EVP_SIGNATURE-SLH-DSA(7)>
+
+=item SLH-DSA-SHAKE-256s, see L<EVP_SIGNATURE-SLH-DSA(7)>
+
+=item SLH-DSA-SHAKE-256f, see L<EVP_SIGNATURE-SLH-DSA(7)>
 
 =back
 
@@ -223,15 +267,17 @@ The OpenSSL default provider supports these operations and algorithms:
 
 =item EC, see L<EVP_KEM-EC(7)>
 
+=item ML-KEM-512, see L<EVP_KEM-ML-KEM-512(7)>
+
+=item ML-KEM-768, see L<EVP_KEM-ML-KEM-768(7)>
+
+=item ML-KEM-1024, see L<EVP_KEM-ML-KEM-1024(7)>
+
 =back
 
 =head2 Asymmetric Key Management
 
 =over 4
-
-=item DH, see L<EVP_KEYMGMT-DH(7)>
-
-=item DHX, see L<EVP_KEYMGMT-DHX(7)>
 
 =item DSA, see L<EVP_KEYMGMT-DSA(7)>
 
@@ -241,13 +287,55 @@ The OpenSSL default provider supports these operations and algorithms:
 
 =item EC, see L<EVP_KEYMGMT-EC(7)>
 
+=item ED25519, see L<EVP_KEYMGMT-ED25519(7)>
+
+=item ED448, see L<EVP_KEYMGMT-ED448(7)>
+
+=item SM2, see L<EVP_KEYMGMT-SM2(7)>
+
+=item DH, see L<EVP_KEYMGMT-DH(7)>
+
+=item DHX, see L<EVP_KEYMGMT-DHX(7)>
+
 =item X25519, see L<EVP_KEYMGMT-X25519(7)>
 
 =item X448, see L<EVP_KEYMGMT-X448(7)>
 
-=item ED25519, see L<EVP_KEYMGMT-ED25519(7)>
+=item ML-DSA-44, see L<EVP_KEYMGMT-ML-DSA(7)>
 
-=item ED448, see L<EVP_KEYMGMT-ED448(7)>
+=item ML-DSA-65, see L<EVP_KEYMGMT-ML-DSA(7)>
+
+=item ML-DSA-87, see L<EVP_KEYMGMT-ML-DSA(7)>
+
+=item MK-KEM-512, see L<EVP_KEYMGMT-ML-KEM-512(7)>
+
+=item MK-KEM-768, see L<EVP_KEYMGMT-ML-KEM-768(7)>
+
+=item MK-KEM-1024, see L<EVP_KEYMGMT-ML-KEM-1024(7)>
+
+=item SLH-DSA-SHA2-128s, see L<EVP_KEYMGMT-SLH-DSA(7)>
+
+=item SLH-DSA-SHA2-128f, see L<EVP_KEYMGMT-SLH-DSA(7)>
+
+=item SLH-DSA-SHA2-192s, see L<EVP_KEYMGMT-SLH-DSA(7)>
+
+=item SLH-DSA-SHA2-192f, see L<EVP_KEYMGMT-SLH-DSA(7)>
+
+=item SLH-DSA-SHA2-256s, see L<EVP_KEYMGMT-SLH-DSA(7)>
+
+=item SLH-DSA-SHA2-256f, see L<EVP_KEYMGMT-SLH-DSA(7)>
+
+=item SLH-DSA-SHAKE-128s, see L<EVP_KEYMGMT-SLH-DSA(7)>
+
+=item SLH-DSA-SHAKE-128f, see L<EVP_KEYMGMT-SLH-DSA(7)>
+
+=item SLH-DSA-SHAKE-192s, see L<EVP_KEYMGMT-SLH-DSA(7)>
+
+=item SLH-DSA-SHAKE-192f, see L<EVP_KEYMGMT-SLH-DSA(7)>
+
+=item SLH-DSA-SHAKE-256s, see L<EVP_KEYMGMT-SLH-DSA(7)>
+
+=item SLH-DSA-SHAKE-256f, see L<EVP_KEYMGMT-SLH-DSA(7)>
 
 =item TLS1-PRF
 
@@ -263,8 +351,6 @@ The OpenSSL default provider supports these operations and algorithms:
 
 =item CMAC, see L<EVP_KEYMGMT-CMAC(7)>
 
-=item SM2, see L<EVP_KEYMGMT-SM2(7)>
-
 =back
 
 =head2 Random Number Generation
@@ -279,12 +365,14 @@ The OpenSSL default provider supports these operations and algorithms:
 
 =item SEED-SRC,  see L<EVP_RAND-SEED-SRC(7)>
 
+=item JITTER,  see L<EVP_RAND-JITTER(7)>
+
 =item TEST-RAND, see L<EVP_RAND-TEST-RAND(7)>
 
 =back
 
-In addition to this provider, the "SEED-SRC" algorithm is also available in the
-base provider.
+In addition to this provider, the "SEED-SRC" and "JITTER" algorithms
+are also available in the base provider.
 
 =head2 Asymmetric Key Encoder
 
@@ -311,6 +399,42 @@ base provider.
 =item X448
 
 =item SM2
+
+=item ML-DSA-44
+
+=item ML-DSA-65
+
+=item ML-DSA-87
+
+=item ML-KEM-512
+
+=item ML-KEM-768
+
+=item ML-KEM-1024
+
+=item SLH-DSA-SHA2-128s
+
+=item SLH-DSA-SHA2-128f
+
+=item SLH-DSA-SHA2-192s
+
+=item SLH-DSA-SHA2-192f
+
+=item SLH-DSA-SHA2-256s
+
+=item SLH-DSA-SHA2-256f
+
+=item SLH-DSA-SHAKE-128s
+
+=item SLH-DSA-SHAKE-128f
+
+=item SLH-DSA-SHAKE-192s
+
+=item SLH-DSA-SHAKE-192f
+
+=item SLH-DSA-SHAKE-256s
+
+=item SLH-DSA-SHAKE-256f
 
 =back
 
@@ -344,7 +468,41 @@ combination with the FIPS provider.
 
 =item SM2
 
-=item DER
+=item ML-DSA-44
+
+=item ML-DSA-65
+
+=item ML-DSA-87
+
+=item ML-KEM-512
+
+=item ML-KEM-768
+
+=item ML-KEM-1024
+
+=item SLH-DSA-SHA2-128s
+
+=item SLH-DSA-SHA2-128f
+
+=item SLH-DSA-SHA2-192s
+
+=item SLH-DSA-SHA2-192f
+
+=item SLH-DSA-SHA2-256s
+
+=item SLH-DSA-SHA2-256f
+
+=item SLH-DSA-SHAKE-128s
+
+=item SLH-DSA-SHAKE-128f
+
+=item SLH-DSA-SHAKE-192s
+
+=item SLH-DSA-SHAKE-192f
+
+=item SLH-DSA-SHAKE-256s
+
+=item SLH-DSA-SHAKE-256f
 
 =back
 
@@ -358,7 +516,7 @@ combination with the FIPS provider.
 
 =item file
 
-=item org.openssl.winstore
+=item org.openssl.winstore, see L<OSSL_STORE-winstore(7)>
 
 =back
 
@@ -374,11 +532,13 @@ L<OSSL_PROVIDER-base(7)>
 
 The RIPEMD160 digest was added to the default provider in OpenSSL 3.0.7.
 
+The HKDF-SHA256, HKDF-SHA384 and HKDF-SHA512 algorithms were added in OpenSSL 3.6.
+
 All other functionality was added in OpenSSL 3.0.
 
 =head1 COPYRIGHT
 
-Copyright 2020-2023 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2020-2025 The OpenSSL Project Authors. All Rights Reserved.
 
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

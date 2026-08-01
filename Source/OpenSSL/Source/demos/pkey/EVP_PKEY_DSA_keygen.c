@@ -1,5 +1,5 @@
 /*-
- * Copyright 2022-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2022-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -21,7 +21,7 @@
  * See the EVP_PKEY_DSA_paramgen demo if you need to
  * use non default parameters.
  */
-EVP_PKEY *dsa_genparams(OSSL_LIB_CTX *libctx, const char *propq)
+static EVP_PKEY *dsa_genparams(OSSL_LIB_CTX *libctx, const char *propq)
 {
     EVP_PKEY *dsaparamkey = NULL;
     EVP_PKEY_CTX *ctx = NULL;
@@ -34,7 +34,7 @@ EVP_PKEY *dsa_genparams(OSSL_LIB_CTX *libctx, const char *propq)
     }
 
     if (EVP_PKEY_paramgen_init(ctx) <= 0
-            || EVP_PKEY_paramgen(ctx, &dsaparamkey) <= 0) {
+        || EVP_PKEY_paramgen(ctx, &dsaparamkey) <= 0) {
         fprintf(stderr, "DSA paramgen failed\n");
         goto cleanup;
     }
@@ -66,7 +66,7 @@ int main(int argc, char **argv)
 
     /* Generate a key using the dsa params */
     if (EVP_PKEY_keygen_init(ctx) <= 0
-            || EVP_PKEY_keygen(ctx, &dsakey) <= 0) {
+        || EVP_PKEY_keygen(ctx, &dsakey) <= 0) {
         fprintf(stderr, "DSA keygen failed\n");
         goto cleanup;
     }

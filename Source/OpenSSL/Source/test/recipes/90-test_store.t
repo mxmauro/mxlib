@@ -1,5 +1,5 @@
 #! /usr/bin/env perl
-# Copyright 2016-2023 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2016-2025 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the Apache License 2.0 (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -15,6 +15,8 @@ use OpenSSL::Test::Utils;
 
 my $test_name = "test_store";
 setup($test_name);
+
+require(srctop_file("test", "recipes", "tconversion.pl")); # for test_file_contains()
 
 my $use_md5 = !disabled("md5");
 my $use_des = !(disabled("des") || disabled("legacy")); # also affects 3des and pkcs12 app
@@ -106,7 +108,7 @@ push @methods, [ @prov_method ];
 push @methods, [qw(-engine loader_attic)]
     unless disabled('loadereng');
 
-my $n = 2 + scalar @methods
+my $n = 4 + scalar @methods
     * ( (3 * scalar @noexist_files)
         + (6 * scalar @src_files)
         + (2 * scalar @data_files)
@@ -172,6 +174,11 @@ indir "store_$$" => sub {
 
         my $rehash = init_rehash();
 
+        ok(run(app(["openssl", "storeutl", "-out", "cacert.pem", "cacert.pem"])),
+            "identical infile and outfile");
+        test_file_contains("storeutl output on same input",
+                           "cacert.pem", "Total found: 1");
+
         foreach my $method (@methods) {
             my @storeutl = ( qw(openssl storeutl), @$method );
 
@@ -226,8 +233,9 @@ indir "store_$$" => sub {
 
                     ok(run(app([@storeutl, "-noout", "-passin",
                                 "pass:password", to_abs_file_uri($_)])));
-                    ok(!run(app([@storeutl, "-noout", "-passin",
-                                 "pass:password", to_file_uri($_)])));
+                    # Check relaxed 'file' scheme implementation
+                    ok(run(app([@storeutl, "-noout", "-passin",
+                                "pass:password", to_file_uri($_)])));
                 }
             }
             foreach (values %generated_file_files) {

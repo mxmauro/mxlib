@@ -1,4 +1,4 @@
-# Copyright 2021-2023 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2021-2024 The OpenSSL Project Authors. All Rights Reserved.
 # Copyright (c) 2021, Intel Corporation. All Rights Reserved.
 #
 # Licensed under the Apache License 2.0 (the "License").  You may not use
@@ -39,13 +39,15 @@ $0 =~ m/(.*[\/\\])[^\/\\]+$/; $dir=$1;
 die "can't locate x86_64-xlate.pl";
 
 if (`$ENV{CC} -Wa,-v -c -o /dev/null -x assembler /dev/null 2>&1`
-        =~ /GNU assembler version ([2-9]\.[0-9]+)/) {
-    $avx512ifma = ($1>=2.26);
+        =~ /GNU assembler version ([0-9]+)\.([0-9]+)/) {
+    my $ver = $1 + $2/100.0; # 3.1->3.01, 3.10->3.10
+    $avx512ifma = ($ver >= 2.26);
 }
 
 if (!$avx512ifma && $win64 && ($flavour =~ /nasm/ || $ENV{ASM} =~ /nasm/) &&
-       `nasm -v 2>&1` =~ /NASM version ([2-9]\.[0-9]+)(?:\.([0-9]+))?/) {
-    $avx512ifma = ($1==2.11 && $2>=8) + ($1>=2.12);
+       `nasm -v 2>&1` =~ /NASM version ([0-9]+)\.([0-9]+)(?:\.([0-9]+))?/) {
+    my $ver = $1 + $2/100.0 + $3/10000.0; # 3.1.0->3.01, 3.10.1->3.1001
+    $avx512ifma = ($ver >= 2.1108);
 }
 
 if (!$avx512ifma && `$ENV{CC} -v 2>&1`
@@ -526,7 +528,7 @@ $code.=<<___;
 ___
 
 $code.=<<___;
-.data
+.section .rodata align=32
 .align 32
 .Lmask52x4:
     .quad   0xfffffffffffff
@@ -786,7 +788,7 @@ $code.=<<___;
 .size   ossl_extract_multiplier_2x40_win5, .-ossl_extract_multiplier_2x40_win5
 ___
 $code.=<<___;
-.data
+.section .rodata align=32
 .align 32
 .Lones:
     .quad   1,1,1,1

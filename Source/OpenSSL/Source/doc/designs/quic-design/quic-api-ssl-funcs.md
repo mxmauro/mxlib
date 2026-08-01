@@ -860,7 +860,7 @@ SECLEVEL; no changes are needed to facilitate this.
 
 Options we explicitly want to support:
 
-- `SSL_OP_CIPHER_SERVER_PREFERENCE`
+- `SSL_OP_SERVER_PREFERENCE`
 - `SSL_OP_DISABLE_TLSEXT_CA_NAMES`
 - `SSL_OP_NO_TX_CERTIFICATE_COMPRESSION`
 - `SSL_OP_NO_RX_CERTIFICATE_COMPRESSION`
@@ -929,7 +929,7 @@ TODO: new_session_ticket doesn't need modifying as such, but ticket machinery
 
 ### What should `SSL_pending` and `SSL_has_pending` do?
 
-`SSL_pending` traditionally yields the number of bytes buffered inside a SSL
+`SSL_pending` traditionally yields the number of bytes buffered inside an SSL
 object available for immediate reading. For QUIC, we can just make this report
 the current size of the receive stream buffer.
 

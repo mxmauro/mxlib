@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2022-2025 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -28,7 +28,7 @@ static int test_thread_reported_flags(void)
         return 0;
 #else
     if (!TEST_int_eq(flags & OSSL_THREAD_SUPPORT_FLAG_THREAD_POOL,
-                     OSSL_THREAD_SUPPORT_FLAG_THREAD_POOL))
+            OSSL_THREAD_SUPPORT_FLAG_THREAD_POOL))
         return 0;
 #endif
 
@@ -37,7 +37,7 @@ static int test_thread_reported_flags(void)
         return 0;
 #else
     if (!TEST_int_eq(flags & OSSL_THREAD_SUPPORT_FLAG_DEFAULT_SPAWN,
-                     OSSL_THREAD_SUPPORT_FLAG_DEFAULT_SPAWN))
+            OSSL_THREAD_SUPPORT_FLAG_DEFAULT_SPAWN))
         return 0;
 #endif
 
@@ -46,10 +46,10 @@ static int test_thread_reported_flags(void)
 
 #ifndef OPENSSL_NO_THREAD_POOL
 
-# define TEST_THREAD_NATIVE_FN_SET_VALUE 1
+#define TEST_THREAD_NATIVE_FN_SET_VALUE 1
 static uint32_t test_thread_native_fn(void *data)
 {
-    uint32_t *ldata = (uint32_t*) data;
+    uint32_t *ldata = (uint32_t *)data;
     *ldata = *ldata + 1;
     return *ldata - 1;
 }
@@ -92,14 +92,15 @@ static int test_thread_native(void)
     return 1;
 }
 
-# if !defined(OPENSSL_NO_DEFAULT_THREAD_POOL)
+#if !defined(OPENSSL_NO_DEFAULT_THREAD_POOL)
 static int test_thread_internal(void)
 {
     uint32_t retval[3];
     uint32_t local[3] = { 0 };
     uint32_t threads_supported;
-    size_t i;
+    uint32_t i;
     void *t[3];
+    int status = 0;
     OSSL_LIB_CTX *cust_ctx = OSSL_LIB_CTX_new();
 
     threads_supported = OSSL_get_thread_support_flags();
@@ -107,65 +108,66 @@ static int test_thread_internal(void)
 
     if (threads_supported == 0) {
         if (!TEST_uint64_t_eq(OSSL_get_max_threads(NULL), 0))
-            return 0;
+            goto cleanup;
         if (!TEST_uint64_t_eq(OSSL_get_max_threads(cust_ctx), 0))
-            return 0;
+            goto cleanup;
 
         if (!TEST_int_eq(OSSL_set_max_threads(NULL, 1), 0))
-            return 0;
+            goto cleanup;
         if (!TEST_int_eq(OSSL_set_max_threads(cust_ctx, 1), 0))
-            return 0;
+            goto cleanup;
 
         if (!TEST_uint64_t_eq(OSSL_get_max_threads(NULL), 0))
-            return 0;
+            goto cleanup;
         if (!TEST_uint64_t_eq(OSSL_get_max_threads(cust_ctx), 0))
-            return 0;
+            goto cleanup;
 
         t[0] = ossl_crypto_thread_start(NULL, test_thread_native_fn, &local[0]);
         if (!TEST_ptr_null(t[0]))
-            return 0;
+            goto cleanup;
 
-        return 1;
+        status = 1;
+        goto cleanup;
     }
 
     /* fail when not allowed to use threads */
 
     if (!TEST_uint64_t_eq(OSSL_get_max_threads(NULL), 0))
-        return 0;
+        goto cleanup;
     t[0] = ossl_crypto_thread_start(NULL, test_thread_native_fn, &local[0]);
     if (!TEST_ptr_null(t[0]))
-        return 0;
+        goto cleanup;
 
     /* fail when enabled on a different context */
     if (!TEST_uint64_t_eq(OSSL_get_max_threads(cust_ctx), 0))
-        return 0;
+        goto cleanup;
     if (!TEST_int_eq(OSSL_set_max_threads(cust_ctx, 1), 1))
-        return 0;
+        goto cleanup;
     if (!TEST_uint64_t_eq(OSSL_get_max_threads(NULL), 0))
-        return 0;
+        goto cleanup;
     if (!TEST_uint64_t_eq(OSSL_get_max_threads(cust_ctx), 1))
-        return 0;
+        goto cleanup;
     t[0] = ossl_crypto_thread_start(NULL, test_thread_native_fn, &local[0]);
     if (!TEST_ptr_null(t[0]))
-        return 0;
+        goto cleanup;
     if (!TEST_int_eq(OSSL_set_max_threads(cust_ctx, 0), 1))
-        return 0;
+        goto cleanup;
 
     /* sequential startup */
 
     if (!TEST_int_eq(OSSL_set_max_threads(NULL, 1), 1))
-        return 0;
+        goto cleanup;
     if (!TEST_uint64_t_eq(OSSL_get_max_threads(NULL), 1))
-        return 0;
+        goto cleanup;
     if (!TEST_uint64_t_eq(OSSL_get_max_threads(cust_ctx), 0))
-        return 0;
+        goto cleanup;
 
     for (i = 0; i < OSSL_NELEM(t); ++i) {
         local[0] = i + 1;
 
         t[i] = ossl_crypto_thread_start(NULL, test_thread_native_fn, &local[0]);
         if (!TEST_ptr(t[i]))
-            return 0;
+            goto cleanup;
 
         /*
          * pthread_join results in undefined behaviour if called on a joined
@@ -174,72 +176,74 @@ static int test_thread_internal(void)
          * if we do).
          */
         if (!TEST_int_eq(ossl_crypto_thread_join(t[i], &retval[0]), 1))
-            return 0;
+            goto cleanup;
         if (!TEST_int_eq(ossl_crypto_thread_join(t[i], &retval[0]), 1))
-            return 0;
+            goto cleanup;
 
-        if (!TEST_int_eq(retval[0], i + 1) || !TEST_int_eq(local[0], i + 2))
-            return 0;
+        if (!TEST_uint_eq(retval[0], i + 1) || !TEST_uint_eq(local[0], i + 2))
+            goto cleanup;
 
         if (!TEST_int_eq(ossl_crypto_thread_clean(t[i]), 1))
-            return 0;
+            goto cleanup;
         t[i] = NULL;
 
         if (!TEST_int_eq(ossl_crypto_thread_clean(t[i]), 0))
-            return 0;
+            goto cleanup;
     }
 
     /* parallel startup */
 
     if (!TEST_int_eq(OSSL_set_max_threads(NULL, OSSL_NELEM(t)), 1))
-        return 0;
+        goto cleanup;
 
     for (i = 0; i < OSSL_NELEM(t); ++i) {
         local[i] = i + 1;
         t[i] = ossl_crypto_thread_start(NULL, test_thread_native_fn, &local[i]);
         if (!TEST_ptr(t[i]))
-            return 0;
+            goto cleanup;
     }
     for (i = 0; i < OSSL_NELEM(t); ++i) {
         if (!TEST_int_eq(ossl_crypto_thread_join(t[i], &retval[i]), 1))
-            return 0;
+            goto cleanup;
     }
     for (i = 0; i < OSSL_NELEM(t); ++i) {
-        if (!TEST_int_eq(retval[i], i + 1) || !TEST_int_eq(local[i], i + 2))
-            return 0;
+        if (!TEST_uint_eq(retval[i], i + 1) || !TEST_uint_eq(local[i], i + 2))
+            goto cleanup;
         if (!TEST_int_eq(ossl_crypto_thread_clean(t[i]), 1))
-            return 0;
+            goto cleanup;
     }
 
     /* parallel startup, bottleneck */
 
     if (!TEST_int_eq(OSSL_set_max_threads(NULL, OSSL_NELEM(t) - 1), 1))
-        return 0;
+        goto cleanup;
 
     for (i = 0; i < OSSL_NELEM(t); ++i) {
         local[i] = i + 1;
         t[i] = ossl_crypto_thread_start(NULL, test_thread_native_fn, &local[i]);
         if (!TEST_ptr(t[i]))
-            return 0;
+            goto cleanup;
     }
     for (i = 0; i < OSSL_NELEM(t); ++i) {
         if (!TEST_int_eq(ossl_crypto_thread_join(t[i], &retval[i]), 1))
-            return 0;
+            goto cleanup;
     }
     for (i = 0; i < OSSL_NELEM(t); ++i) {
-        if (!TEST_int_eq(retval[i], i + 1) || !TEST_int_eq(local[i], i + 2))
-            return 0;
+        if (!TEST_uint_eq(retval[i], i + 1) || !TEST_uint_eq(local[i], i + 2))
+            goto cleanup;
         if (!TEST_int_eq(ossl_crypto_thread_clean(t[i]), 1))
-            return 0;
+            goto cleanup;
     }
 
     if (!TEST_int_eq(OSSL_set_max_threads(NULL, 0), 1))
-        return 0;
+        goto cleanup;
 
+    status = 1;
+cleanup:
     OSSL_LIB_CTX_free(cust_ctx);
-    return 1;
+    return status;
 }
-# endif
+#endif
 
 static uint32_t test_thread_native_multiple_joins_fn1(void *data)
 {
@@ -294,9 +298,9 @@ int setup_tests(void)
 #if !defined(OPENSSL_NO_THREAD_POOL)
     ADD_TEST(test_thread_native);
     ADD_TEST(test_thread_native_multiple_joins);
-# if !defined(OPENSSL_NO_DEFAULT_THREAD_POOL)
+#if !defined(OPENSSL_NO_DEFAULT_THREAD_POOL)
     ADD_TEST(test_thread_internal);
-# endif
+#endif
 #endif
 
     return 1;
