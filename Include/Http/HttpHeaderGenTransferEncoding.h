@@ -25,33 +25,36 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderGenTransferEncoding : public CHttpHeaderBase
 {
-public:
-  enum class eEncoding
-  {
-    Unsupported = -1, Identity = 0, Chunked
-  };
+  public:
+    enum class eEncoding
+    {
+        Unsupported = -1,
+        Identity = 0,
+        Chunked
+    };
 
-  CHttpHeaderGenTransferEncoding();
-  ~CHttpHeaderGenTransferEncoding();
+    CHttpHeaderGenTransferEncoding();
+    ~CHttpHeaderGenTransferEncoding();
 
-  MX_DECLARE_HTTPHEADER_NAME(Transfer-Encoding)
+    MX_DECLARE_HTTPHEADER_NAME(Transfer - Encoding)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT SetEncoding(_In_ eEncoding nEncoding);
-  eEncoding GetEncoding() const;
+    HRESULT SetEncoding(_In_ eEncoding nEncoding);
+    eEncoding GetEncoding() const;
 
-private:
-  eEncoding nEncoding;
+  private:
+    eEncoding nEncoding;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

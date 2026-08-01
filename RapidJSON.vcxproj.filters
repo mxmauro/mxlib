@@ -9,7 +9,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Source\RapidJSON\build.vbs">
+    <None Include="Source\RapidJSON\build.ps1">
+      <Filter>Build Files</Filter>
+    </None>
+    <None Include="Source\RapidJSON\build_all.bat">
       <Filter>Build Files</Filter>
     </None>
   </ItemGroup>

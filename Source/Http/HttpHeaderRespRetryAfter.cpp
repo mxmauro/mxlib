@@ -21,104 +21,123 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CHttpHeaderRespRetryAfter::CHttpHeaderRespRetryAfter() : CHttpHeaderBase()
 {
-  nSeconds = 0;
-  return;
+    nSeconds = 0;
+    return;
 }
 
 CHttpHeaderRespRetryAfter::~CHttpHeaderRespRetryAfter()
 {
-  return;
+    return;
 }
 
 HRESULT CHttpHeaderRespRetryAfter::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  CDateTime cDt;
-  ULONGLONG _nSeconds, nTemp;
-  LPCSTR szValueEndA;
-  HRESULT hRes;
+    CDateTime cDt;
+    ULONGLONG _nSeconds, nTemp;
+    LPCSTR szValueEndA;
+    HRESULT hRes;
 
-  if (szValueA == NULL)
-    return E_POINTER;
-
-  if (nValueLen == (SIZE_T)-1)
-    nValueLen = StrLenA(szValueA);
-  szValueEndA = szValueA + nValueLen;
-
-  //skip spaces
-  szValueA = SkipSpaces(szValueA, szValueEndA);
-
-  //check if only digits
-  if (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
-  {
-    LPCSTR sA = szValueA;
-
-    while (sA < szValueEndA && *sA >= '0' && *sA <= '9')
-      sA++;
-    if (SkipSpaces(sA, szValueEndA) == szValueEndA)
+    if (szValueA == NULL)
     {
-      while (*szValueA == '0')
-        szValueA++;
-
-      _nSeconds = 0;
-      while (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
-      {
-        nTemp = _nSeconds * 10ui64;
-        if (nTemp < _nSeconds)
-          return MX_E_ArithmeticOverflow;
-        _nSeconds = nTemp + (ULONGLONG)(*szValueA) - (ULONGLONG)'0';
-        if (_nSeconds < nTemp)
-          return MX_E_ArithmeticOverflow;
-        szValueA++;
-      }
-      hRes = SetSeconds(_nSeconds);
-      goto done;
+        return E_POINTER;
     }
-  }
 
-  //else assume a date
-  hRes = Http::ParseDate(cDt, szValueA, (SIZE_T)(szValueEndA - szValueA));
-  if (SUCCEEDED(hRes))
-    hRes = SetDate(cDt);
+    if (nValueLen == (SIZE_T)-1)
+    {
+        nValueLen = StrLenA(szValueA);
+    }
+    szValueEndA = szValueA + nValueLen;
 
-  //done
+    // skip spaces
+    szValueA = SkipSpaces(szValueA, szValueEndA);
+
+    // check if only digits
+    if (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
+    {
+        LPCSTR sA = szValueA;
+
+        while (sA < szValueEndA && *sA >= '0' && *sA <= '9')
+        {
+            sA++;
+        }
+        if (SkipSpaces(sA, szValueEndA) == szValueEndA)
+        {
+            while (*szValueA == '0')
+            {
+                szValueA++;
+            }
+
+            _nSeconds = 0;
+            while (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
+            {
+                nTemp = _nSeconds * 10ui64;
+                if (nTemp < _nSeconds)
+                {
+                    return MX_E_ArithmeticOverflow;
+                }
+                _nSeconds = nTemp + (ULONGLONG)(*szValueA) - (ULONGLONG)'0';
+                if (_nSeconds < nTemp)
+                {
+                    return MX_E_ArithmeticOverflow;
+                }
+                szValueA++;
+            }
+            hRes = SetSeconds(_nSeconds);
+            goto done;
+        }
+    }
+
+    // else assume a date
+    hRes = Http::ParseDate(cDt, szValueA, (SIZE_T)(szValueEndA - szValueA));
+    if (SUCCEEDED(hRes))
+    {
+        hRes = SetDate(cDt);
+    }
+
+    // done
 done:
-  if (FAILED(hRes))
-    nSeconds = 0;
-  return hRes;
+    if (FAILED(hRes))
+    {
+        nSeconds = 0;
+    }
+    return hRes;
 }
 
 HRESULT CHttpHeaderRespRetryAfter::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
-  return (cStrDestA.Format(cStrDestA, "%I64u", nSeconds) != FALSE) ? S_OK : E_OUTOFMEMORY;
+    return (cStrDestA.Format(cStrDestA, "%I64u", nSeconds) != FALSE) ? S_OK : E_OUTOFMEMORY;
 }
 
 HRESULT CHttpHeaderRespRetryAfter::SetSeconds(_In_ ULONGLONG _nSeconds)
 {
-  nSeconds = _nSeconds;
-  return S_OK;
+    nSeconds = _nSeconds;
+    return S_OK;
 }
 
 HRESULT CHttpHeaderRespRetryAfter::SetDate(_In_ CDateTime &cDt)
 {
-  CDateTime cDtNow;
+    CDateTime cDtNow;
 
-  nSeconds = 0;
-  if (SUCCEEDED(cDtNow.SetFromNow(FALSE)))
-  {
-    LONGLONG nDiffSecs = cDt.GetDiff(cDtNow, CDateTime::eUnits::Seconds);
-    if (nDiffSecs >= 0i64)
-      nSeconds = (ULONGLONG)nDiffSecs;
-  }
-  return S_OK;
+    nSeconds = 0;
+    if (SUCCEEDED(cDtNow.SetFromNow(FALSE)))
+    {
+        LONGLONG nDiffSecs = cDt.GetDiff(cDtNow, CDateTime::eUnits::Seconds);
+        if (nDiffSecs >= 0i64)
+        {
+            nSeconds = (ULONGLONG)nDiffSecs;
+        }
+    }
+    return S_OK;
 }
 
 ULONGLONG CHttpHeaderRespRetryAfter::GetSeconds() const
 {
-  return nSeconds;
+    return nSeconds;
 }
 
-} //namespace MX
+} // namespace MX

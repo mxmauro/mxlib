@@ -26,39 +26,40 @@
 #pragma intrinsic(_mm_lfence)
 #pragma intrinsic(_mm_mfence)
 #if defined(_M_X64) || defined(_M_AMD64)
-  #pragma intrinsic(__faststorefence)
+#pragma intrinsic(__faststorefence)
 #else //_M_X64 || _M_AMD64
-  #include <mmintrin.h>
-  #pragma intrinsic(_mm_sfence)
+#include <mmintrin.h>
+#pragma intrinsic(_mm_sfence)
 #endif //_M_X64 || _M_AMD64
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 __forceinline VOID LFence()
 {
-  _mm_lfence(); //we assume the app will run on Pentium IV+, when SSE2 was introduced
-  return;
+    _mm_lfence(); // we assume the app will run on Pentium IV+, when SSE2 was introduced
+    return;
 }
 
 __forceinline VOID SFence()
 {
 #if defined(_M_X64) || defined(_M_AMD64)
-  __faststorefence();
-#else //_M_X64 || _M_AMD64
-  _mm_sfence(); //we assume the app will run on Pentium IV+, when SSE2 was introduced
+    __faststorefence();
+#else  //_M_X64 || _M_AMD64
+    _mm_sfence(); // we assume the app will run on Pentium IV+, when SSE2 was introduced
 #endif //_M_X64 || _M_AMD64
-  return;
+    return;
 }
 
 __forceinline VOID MFence()
 {
-  _mm_mfence(); //we assume the app will run on Pentium IV+, when SSE2 was introduced
-  return;
+    _mm_mfence(); // we assume the app will run on Pentium IV+, when SSE2 was introduced
+    return;
 }
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

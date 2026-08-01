@@ -21,61 +21,68 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CHttpHeaderEntExpires::CHttpHeaderEntExpires() : CHttpHeaderBase()
 {
-  return;
+    return;
 }
 
 CHttpHeaderEntExpires::~CHttpHeaderEntExpires()
 {
-  return;
+    return;
 }
 
 HRESULT CHttpHeaderEntExpires::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szValueEndA;
-  HRESULT hRes;
+    LPCSTR szValueEndA;
+    HRESULT hRes;
 
-  if (szValueA == NULL)
-    return E_POINTER;
+    if (szValueA == NULL)
+    {
+        return E_POINTER;
+    }
 
-  if (nValueLen == (SIZE_T)-1)
-    nValueLen = StrLenA(szValueA);
-  szValueEndA = szValueA + nValueLen;
+    if (nValueLen == (SIZE_T)-1)
+    {
+        nValueLen = StrLenA(szValueA);
+    }
+    szValueEndA = szValueA + nValueLen;
 
-  //skip spaces
-  szValueA = SkipSpaces(szValueA, szValueEndA);
-  //parse date
-  hRes = Http::ParseDate(cDt, szValueA, (SIZE_T)(szValueEndA - szValueA));
-  if (FAILED(hRes))
-  {
-    if (hRes == E_OUTOFMEMORY)
-      return hRes;
+    // skip spaces
+    szValueA = SkipSpaces(szValueA, szValueEndA);
+    // parse date
+    hRes = Http::ParseDate(cDt, szValueA, (SIZE_T)(szValueEndA - szValueA));
+    if (FAILED(hRes))
+    {
+        if (hRes == E_OUTOFMEMORY)
+        {
+            return hRes;
+        }
 
-    //an invalid "expires" is interpreted as "now"
-    cDt.SetFromNow(FALSE);
-  }
+        // an invalid "expires" is interpreted as "now"
+        cDt.SetFromNow(FALSE);
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CHttpHeaderEntExpires::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
-  return cDt.Format(cStrDestA, "%a, %d %b %Y %H:%m:%S %z");
+    return cDt.Format(cStrDestA, "%a, %d %b %Y %H:%m:%S %z");
 }
 
 HRESULT CHttpHeaderEntExpires::SetDate(_In_ CDateTime &_cDt)
 {
-  cDt = _cDt;
-  return S_OK;
+    cDt = _cDt;
+    return S_OK;
 }
 
 CDateTime CHttpHeaderEntExpires::GetDate() const
 {
-  return cDt;
+    return cDt;
 }
 
-} //namespace MX
+} // namespace MX

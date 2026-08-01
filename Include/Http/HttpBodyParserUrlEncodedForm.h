@@ -25,40 +25,46 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpBodyParserUrlEncodedForm : public CHttpBodyParserFormBase, public CNonCopyableObj
 {
-public:
-  CHttpBodyParserUrlEncodedForm(_In_ DWORD dwMaxFieldSize = 256000);
-  ~CHttpBodyParserUrlEncodedForm();
+  public:
+    CHttpBodyParserUrlEncodedForm(_In_ DWORD dwMaxFieldSize = 256000);
+    ~CHttpBodyParserUrlEncodedForm();
 
-  LPCSTR GetType() const
+    LPCSTR GetType() const
     {
-    return "application/x-www-form-urlencoded";
+        return "application/x-www-form-urlencoded";
     };
 
-protected:
-  HRESULT Initialize(_In_ Internals::CHttpParser &cHttpParser);
-  HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
+  protected:
+    HRESULT Initialize(_In_ Internals::CHttpParser &cHttpParser);
+    HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
 
-private:
-  enum class eState
-  {
-    NameStart, Name, Value, Done, Error
-  };
+  private:
+    enum class eState
+    {
+        NameStart,
+        Name,
+        Value,
+        Done,
+        Error
+    };
 
-  DWORD dwMaxFieldSize;
+    DWORD dwMaxFieldSize;
 
-  struct {
-    eState nState{ eState::NameStart };
-    CStringA cStrCurrA;
-    CStringW cStrCurrFieldNameW;
-  } sParser;
-  SIZE_T nCurrContentSize{ 0 };
+    struct
+    {
+        eState nState{eState::NameStart};
+        CStringA cStrCurrA;
+        CStringW cStrCurrFieldNameW;
+    } sParser;
+    SIZE_T nCurrContentSize{0};
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

@@ -24,31 +24,32 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderRespSecWebSocketAccept : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderRespSecWebSocketAccept();
-  ~CHttpHeaderRespSecWebSocketAccept();
+  public:
+    CHttpHeaderRespSecWebSocketAccept();
+    ~CHttpHeaderRespSecWebSocketAccept();
 
-  MX_DECLARE_HTTPHEADER_NAME(Sec-WebSocket-Accept)
+    MX_DECLARE_HTTPHEADER_NAME(Sec - WebSocket - Accept)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT SetKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen);
+    HRESULT SetKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen);
 
-  LPBYTE GetSHA1() const;
+    LPBYTE GetSHA1() const;
 
-  HRESULT VerifyKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen);
+    HRESULT VerifyKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen);
 
-private:
-  BYTE aSHA1[20];
+  private:
+    BYTE aSHA1[20];
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

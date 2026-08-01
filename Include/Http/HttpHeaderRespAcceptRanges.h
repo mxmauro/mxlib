@@ -25,34 +25,36 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderRespAcceptRanges : public CHttpHeaderBase
 {
-public:
-  typedef enum {
-    RangeUnsupported = -1,
-    RangeNone = 0,
-    RangeBytes
-  } eRange;
+  public:
+    typedef enum
+    {
+        RangeUnsupported = -1,
+        RangeNone = 0,
+        RangeBytes
+    } eRange;
 
-  CHttpHeaderRespAcceptRanges();
-  ~CHttpHeaderRespAcceptRanges();
+    CHttpHeaderRespAcceptRanges();
+    ~CHttpHeaderRespAcceptRanges();
 
-  MX_DECLARE_HTTPHEADER_NAME(Accept-Ranges)
+    MX_DECLARE_HTTPHEADER_NAME(Accept - Ranges)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT SetRange(_In_ eRange nRange);
-  eRange GetRange() const;
+    HRESULT SetRange(_In_ eRange nRange);
+    eRange GetRange() const;
 
-private:
-  eRange nRange;
+  private:
+    eRange nRange;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

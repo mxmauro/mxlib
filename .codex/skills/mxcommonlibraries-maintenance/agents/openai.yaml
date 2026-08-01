@@ -1,0 +1,4 @@
+interface:
+  display_name: "MXCommonLibraries Maintenance"
+  short_description: "Safely maintain MXCommonLibraries."
+  default_prompt: "Use $mxcommonlibraries-maintenance to make a safe change in this repository."

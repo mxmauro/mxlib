@@ -27,61 +27,62 @@
 
 //-----------------------------------------------------------
 
-#define NTLIGHTWEIGHTIPC_PACKET_SIZE                    4096
-#define NTLIGHTWEIGHTIPC_MESSAGE_SIZE                0x1FFFF
+#define NTLIGHTWEIGHTIPC_PACKET_SIZE 4096
+#define NTLIGHTWEIGHTIPC_MESSAGE_SIZE 0x1FFFF
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CNtLightWeightIPC : private virtual CBaseMemObj
 {
-public:
-  class CMessage : public virtual CBaseMemObj
-  {
   public:
-    CMessage();
-    ~CMessage();
+    class CMessage : public virtual CBaseMemObj
+    {
+      public:
+        CMessage();
+        ~CMessage();
 
-    VOID Reset();
-    BOOL EnsureSize(__in SIZE_T nSize);
-    BOOL Add(__in LPCVOID lpData, __in SIZE_T nDataSize);
+        VOID Reset();
+        BOOL EnsureSize(__in SIZE_T nSize);
+        BOOL Add(__in LPCVOID lpData, __in SIZE_T nDataSize);
 
-    operator LPBYTE() const
-      {
-      return GetData();
-      };
-    LPBYTE GetData() const
-      {
-      return lpData;
-      };
-    SIZE_T GetLength() const
-      {
-      return nDataLen;
-      };
+        operator LPBYTE() const
+        {
+            return GetData();
+        };
+        LPBYTE GetData() const
+        {
+            return lpData;
+        };
+        SIZE_T GetLength() const
+        {
+            return nDataLen;
+        };
+
+      private:
+        LPBYTE lpData;
+        SIZE_T nDataLen, nDataSize;
+    };
+
+  public:
+    CNtLightWeightIPC();
+    ~CNtLightWeightIPC();
+
+    NTSTATUS ConnectToServer(__in_z LPCWSTR szServerNameW);
+    VOID Disconnect();
+
+    NTSTATUS SendMsg(__in LPCVOID lpMsg, __in SIZE_T nMsgSize, __in_opt CMessage *lpReplyMsg = NULL,
+                     __in_opt ULONG nTimeout = INFINITE);
 
   private:
-    LPBYTE lpData;
-    SIZE_T nDataLen, nDataSize;
-  };
-
-public:
-  CNtLightWeightIPC();
-  ~CNtLightWeightIPC();
-
-  NTSTATUS ConnectToServer(__in_z LPCWSTR szServerNameW);
-  VOID Disconnect();
-
-  NTSTATUS SendMsg(__in LPCVOID lpMsg, __in SIZE_T nMsgSize, __in_opt CMessage *lpReplyMsg=NULL,
-                   __in_opt ULONG nTimeout=INFINITE);
-
-private:
-  CWindowsHandle cPipe;
-  CWindowsEvent cEvent;
-  LONG volatile nNextSendId;
+    CWindowsHandle cPipe;
+    CWindowsEvent cEvent;
+    LONG volatile nNextSendId;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

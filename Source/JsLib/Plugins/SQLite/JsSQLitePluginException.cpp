@@ -21,45 +21,46 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
-
-CJsSQLiteError::CJsSQLiteError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex) :
-                CJsWindowsError(lpCtx, nStackIndex)
+namespace MX
 {
-  LPCSTR sA;
 
-  nDbError = 0;
+CJsSQLiteError::CJsSQLiteError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex)
+    : CJsWindowsError(lpCtx, nStackIndex)
+{
+    LPCSTR sA;
 
-  DukTape::duk_get_prop_string(lpCtx, nStackIndex, "dbError");
-  nDbError = (int)DukTape::duk_get_int(lpCtx, -1);
-  DukTape::duk_pop(lpCtx);
+    nDbError = 0;
 
-  DukTape::duk_get_prop_string(lpCtx, nStackIndex, "dbErrorMsg");
-  sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "";
-  cStrDbErrorMessageA.Copy(sA);
-  DukTape::duk_pop(lpCtx);
-  return;
+    DukTape::duk_get_prop_string(lpCtx, nStackIndex, "dbError");
+    nDbError = (int)DukTape::duk_get_int(lpCtx, -1);
+    DukTape::duk_pop(lpCtx);
+
+    DukTape::duk_get_prop_string(lpCtx, nStackIndex, "dbErrorMsg");
+    sA = (DukTape::duk_is_undefined(lpCtx, -1) == false) ? DukTape::duk_safe_to_string(lpCtx, -1) : "";
+    cStrDbErrorMessageA.Copy(sA);
+    DukTape::duk_pop(lpCtx);
+    return;
 }
 
 CJsSQLiteError::CJsSQLiteError(_In_ const CJsSQLiteError &obj) : CJsWindowsError(obj.GetHResult())
 {
-  *this = obj;
-  return;
+    *this = obj;
+    return;
 }
 
 CJsSQLiteError::~CJsSQLiteError()
 {
-  return;
+    return;
 }
 
-CJsSQLiteError& CJsSQLiteError::operator=(_In_ const CJsSQLiteError &obj)
+CJsSQLiteError &CJsSQLiteError::operator=(_In_ const CJsSQLiteError &obj)
 {
-  CJsWindowsError::operator=(obj);
+    CJsWindowsError::operator=(obj);
 
-  nDbError = obj.nDbError;
-  cStrDbErrorMessageA.CopyN((LPCSTR)(obj.cStrDbErrorMessageA), obj.cStrDbErrorMessageA.GetLength());
+    nDbError = obj.nDbError;
+    cStrDbErrorMessageA.CopyN((LPCSTR)(obj.cStrDbErrorMessageA), obj.cStrDbErrorMessageA.GetLength());
 
-  return *this;
+    return *this;
 }
 
-} //namespace MX
+} // namespace MX

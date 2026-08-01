@@ -21,90 +21,119 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 BOOL IsValidEMailAddress(_In_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen)
 {
-  BOOL bLastWasDot, bAtFound;
-  LPCSTR szAtPosA;
+    BOOL bLastWasDot, bAtFound;
+    LPCSTR szAtPosA;
 
-  if (nAddressLen == (SIZE_T)-1)
-    nAddressLen = StrLenA(szAddressA);
-  if (szAddressA == NULL || nAddressLen == 0)
-    return FALSE;
-  if (*szAddressA == '@')
-    return FALSE;
-  bLastWasDot = bAtFound = FALSE;
-  szAtPosA = NULL;
-  for (; nAddressLen>0; szAddressA++, nAddressLen--)
-  {
-    if (*((LPBYTE)szAddressA) <= ' ')
-      return FALSE;
-    switch (*szAddressA)
+    if (nAddressLen == (SIZE_T)-1)
     {
-      case '.':
-        if (bLastWasDot != FALSE || szAtPosA == szAddressA-1)
-          return FALSE;
-        bLastWasDot = TRUE;
-        break;
-
-      case '@':
-        if (bLastWasDot != FALSE || szAtPosA != NULL)
-          return FALSE;
-        szAtPosA = szAddressA;
-        bLastWasDot = FALSE;
-        break;
-
-      default:
-        if (StrChrA("()<>,;:\\/\"[]", *szAddressA) != NULL)
-          return FALSE;
-        bLastWasDot = FALSE;
-        break;
+        nAddressLen = StrLenA(szAddressA);
     }
-  }
-  return (bLastWasDot != FALSE || szAtPosA == NULL || szAtPosA == szAddressA-1) ? FALSE : TRUE;
+    if (szAddressA == NULL || nAddressLen == 0)
+    {
+        return FALSE;
+    }
+    if (*szAddressA == '@')
+    {
+        return FALSE;
+    }
+    bLastWasDot = bAtFound = FALSE;
+    szAtPosA = NULL;
+    for (; nAddressLen > 0; szAddressA++, nAddressLen--)
+    {
+        if (*((LPBYTE)szAddressA) <= ' ')
+        {
+            return FALSE;
+        }
+        switch (*szAddressA)
+        {
+        case '.':
+            if (bLastWasDot != FALSE || szAtPosA == szAddressA - 1)
+            {
+                return FALSE;
+            }
+            bLastWasDot = TRUE;
+            break;
+
+        case '@':
+            if (bLastWasDot != FALSE || szAtPosA != NULL)
+            {
+                return FALSE;
+            }
+            szAtPosA = szAddressA;
+            bLastWasDot = FALSE;
+            break;
+
+        default:
+            if (StrChrA("()<>,;:\\/\"[]", *szAddressA) != NULL)
+            {
+                return FALSE;
+            }
+            bLastWasDot = FALSE;
+            break;
+        }
+    }
+    return (bLastWasDot != FALSE || szAtPosA == NULL || szAtPosA == szAddressA - 1) ? FALSE : TRUE;
 }
 
 BOOL IsValidEMailAddress(_In_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen)
 {
-  BOOL bLastWasDot, bAtFound;
-  LPCWSTR szAtPosW;
+    BOOL bLastWasDot, bAtFound;
+    LPCWSTR szAtPosW;
 
-  if (nAddressLen == (SIZE_T)-1)
-    nAddressLen = StrLenW(szAddressW);
-  if (szAddressW == NULL || nAddressLen == 0)
-    return FALSE;
-  if (*szAddressW == L'@')
-    return FALSE;
-  bLastWasDot = bAtFound = FALSE;
-  szAtPosW = NULL;
-  for (; nAddressLen>0; szAddressW++, nAddressLen--)
-  {
-    if (*szAddressW <= L' ')
-      return FALSE;
-    switch (*szAddressW)
+    if (nAddressLen == (SIZE_T)-1)
     {
-      case L'.':
-        if (bLastWasDot != FALSE || szAtPosW == szAddressW-1)
-          return FALSE;
-        bLastWasDot = TRUE;
-        break;
-
-      case L'@':
-        if (bLastWasDot != FALSE || szAtPosW != NULL)
-          return FALSE;
-        szAtPosW = szAddressW;
-        bLastWasDot = FALSE;
-        break;
-
-      default:
-        if (StrChrW(L"()<>,;:\\/\"[]", *szAddressW) != NULL)
-          return FALSE;
-        bLastWasDot = FALSE;
-        break;
+        nAddressLen = StrLenW(szAddressW);
     }
-  }
-  return (bLastWasDot != FALSE || szAtPosW == NULL || szAtPosW == szAddressW-1) ? FALSE : TRUE;
+    if (szAddressW == NULL || nAddressLen == 0)
+    {
+        return FALSE;
+    }
+    if (*szAddressW == L'@')
+    {
+        return FALSE;
+    }
+    bLastWasDot = bAtFound = FALSE;
+    szAtPosW = NULL;
+    for (; nAddressLen > 0; szAddressW++, nAddressLen--)
+    {
+        if (*szAddressW <= L' ')
+        {
+            return FALSE;
+        }
+        switch (*szAddressW)
+        {
+        case L'.':
+            if (bLastWasDot != FALSE || szAtPosW == szAddressW - 1)
+            {
+                return FALSE;
+            }
+            bLastWasDot = TRUE;
+            break;
+
+        case L'@':
+            if (bLastWasDot != FALSE || szAtPosW != NULL)
+            {
+                return FALSE;
+            }
+            szAtPosW = szAddressW;
+            bLastWasDot = FALSE;
+            break;
+
+        default:
+            if (StrChrW(L"()<>,;:\\/\"[]", *szAddressW) != NULL)
+            {
+                return FALSE;
+            }
+            bLastWasDot = FALSE;
+            break;
+        }
+    }
+    return (bLastWasDot != FALSE || szAtPosW == NULL || szAtPosW == szAddressW - 1) ? FALSE : TRUE;
 }
 
-} //namespace MX
+} // namespace MX

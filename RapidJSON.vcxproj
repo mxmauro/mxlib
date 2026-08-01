@@ -27,22 +27,30 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Makefile</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <SpectreMitigation>Spectre</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Makefile</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <SpectreMitigation>Spectre</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Makefile</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <SpectreMitigation>Spectre</SpectreMitigation>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Makefile</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <SpectreMitigation>Spectre</SpectreMitigation>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -63,29 +71,29 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <NMakeBuildCommandLine>CSCRIPT.EXE "$(ProjectDir)Source\RapidJSON\build.vbs"</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>CSCRIPT.EXE "$(ProjectDir)Source\RapidJSON\build.vbs"</NMakeReBuildCommandLine>
+    <NMakeBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\RapidJSON\build.ps1"</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\RapidJSON\build.ps1"</NMakeReBuildCommandLine>
     <NMakePreprocessorDefinitions>WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <OutDir>.\Libs\$(PlatformName)\$(Configuration)\</OutDir>
     <IntDir>.\obj\$(PlatformName)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <NMakeBuildCommandLine>CSCRIPT.EXE "$(ProjectDir)Source\RapidJSON\build.vbs"</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>CSCRIPT.EXE "$(ProjectDir)Source\RapidJSON\build.vbs"</NMakeReBuildCommandLine>
+    <NMakeBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\RapidJSON\build.ps1"</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\RapidJSON\build.ps1"</NMakeReBuildCommandLine>
     <NMakePreprocessorDefinitions>WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <OutDir>.\Libs\$(PlatformName)\$(Configuration)\</OutDir>
     <IntDir>.\obj\$(PlatformName)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <NMakeBuildCommandLine>CSCRIPT.EXE "$(ProjectDir)Source\RapidJSON\build.vbs"</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>CSCRIPT.EXE "$(ProjectDir)Source\RapidJSON\build.vbs"</NMakeReBuildCommandLine>
+    <NMakeBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\RapidJSON\build.ps1"</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\RapidJSON\build.ps1"</NMakeReBuildCommandLine>
     <NMakePreprocessorDefinitions>WIN32;NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <OutDir>.\Libs\$(PlatformName)\$(Configuration)\</OutDir>
     <IntDir>.\obj\$(PlatformName)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <NMakeBuildCommandLine>CSCRIPT.EXE "$(ProjectDir)Source\RapidJSON\build.vbs"</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>CSCRIPT.EXE "$(ProjectDir)Source\RapidJSON\build.vbs"</NMakeReBuildCommandLine>
+    <NMakeBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\RapidJSON\build.ps1"</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\RapidJSON\build.ps1"</NMakeReBuildCommandLine>
     <NMakePreprocessorDefinitions>WIN32;NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <OutDir>.\Libs\$(PlatformName)\$(Configuration)\</OutDir>
     <IntDir>.\obj\$(PlatformName)\$(Configuration)\$(ProjectName)\</IntDir>
@@ -93,7 +101,18 @@
   <ItemDefinitionGroup>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="Source\RapidJSON\build.vbs" />
+    <None Include="Source\RapidJSON\build.ps1">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </None>
+    <None Include="Source\RapidJSON\build_all.bat">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Include\RapidJSON\rapidjson-all.h" />

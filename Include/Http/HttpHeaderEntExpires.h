@@ -25,28 +25,29 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderEntExpires : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderEntExpires();
-  ~CHttpHeaderEntExpires();
+  public:
+    CHttpHeaderEntExpires();
+    ~CHttpHeaderEntExpires();
 
-  MX_DECLARE_HTTPHEADER_NAME(Expires)
+    MX_DECLARE_HTTPHEADER_NAME(Expires)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT SetDate(_In_ CDateTime &cDt);
-  CDateTime GetDate() const;
+    HRESULT SetDate(_In_ CDateTime &cDt);
+    CDateTime GetDate() const;
 
-private:
-  CDateTime cDt;
+  private:
+    CDateTime cDt;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

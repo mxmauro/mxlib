@@ -24,21 +24,22 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 VOID DebugPrint(_In_z_ LPCSTR szFormatA, ...);
 VOID DebugPrintV(_In_z_ LPCSTR szFormatA, va_list ap);
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 
 #if (defined(_DEBUG) || defined(MX_RELEASE_DEBUG_MACROS))
-  #define MX_DEBUGPRINT(expr)     MX::DebugPrint expr
-  #define MX_DEBUGBREAK()         __debugbreak()
+#define MX_DEBUGPRINT(expr) MX::DebugPrint expr
+#define MX_DEBUGBREAK() __debugbreak()
 #else //_DEBUG || MX_RELEASE_DEBUG_MACROS
-  #define MX_DEBUGPRINT(expr)     ((void)0)
-  #define MX_DEBUGBREAK()         ((void)0)
+#define MX_DEBUGPRINT(expr) ((void)0)
+#define MX_DEBUGBREAK() ((void)0)
 #endif //_DEBUG || MX_RELEASE_DEBUG_MACROS
 
 #endif //_MX_DEBUG_H

@@ -21,120 +21,151 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CHttpHeaderReqHost::CHttpHeaderReqHost() : CHttpHeaderBase()
 {
-  return;
+    return;
 }
 
 CHttpHeaderReqHost::~CHttpHeaderReqHost()
 {
-  return;
+    return;
 }
 
 HRESULT CHttpHeaderReqHost::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szValueEndA, szHostStartA, szHostEndA;
-  int nPort;
-  HRESULT hRes;
+    LPCSTR szValueEndA, szHostStartA, szHostEndA;
+    int nPort;
+    HRESULT hRes;
 
-  if (szValueA == NULL)
-    return E_POINTER;
-
-  if (nValueLen == (SIZE_T)-1)
-    nValueLen = StrLenA(szValueA);
-  szValueEndA = szValueA + nValueLen;
-
-  //skip spaces
-  szValueA = SkipSpaces(szValueA, szValueEndA);
-
-  //get host
-  szValueA = SkipUntil(szHostStartA = szValueA, szValueEndA, ": \t");
-  if (szValueA == szHostStartA)
-    return MX_E_InvalidData;
-  szHostEndA = szValueA;
-
-  //parse port if any
-  nPort = -1;
-  if (szValueA < szValueEndA && *szValueA == ':')
-  {
-    szValueA++;
-    while (szValueA < szValueEndA && *szValueA == '0')
-      szValueA++;
-    nPort = 0;
-    while (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
+    if (szValueA == NULL)
     {
-      nPort = nPort * 10 + (int)(*szValueA++ - '0');
-      if (nPort > 65535)
+        return E_POINTER;
+    }
+
+    if (nValueLen == (SIZE_T)-1)
+    {
+        nValueLen = StrLenA(szValueA);
+    }
+    szValueEndA = szValueA + nValueLen;
+
+    // skip spaces
+    szValueA = SkipSpaces(szValueA, szValueEndA);
+
+    // get host
+    szValueA = SkipUntil(szHostStartA = szValueA, szValueEndA, ": \t");
+    if (szValueA == szHostStartA)
+    {
         return MX_E_InvalidData;
     }
-    if (nPort == 0)
-      return MX_E_InvalidData;
-  }
+    szHostEndA = szValueA;
 
-  //skip spaces and check for end
-  if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
-    return MX_E_InvalidData;
+    // parse port if any
+    nPort = -1;
+    if (szValueA < szValueEndA && *szValueA == ':')
+    {
+        szValueA++;
+        while (szValueA < szValueEndA && *szValueA == '0')
+        {
+            szValueA++;
+        }
+        nPort = 0;
+        while (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
+        {
+            nPort = nPort * 10 + (int)(*szValueA++ - '0');
+            if (nPort > 65535)
+            {
+                return MX_E_InvalidData;
+            }
+        }
+        if (nPort == 0)
+        {
+            return MX_E_InvalidData;
+        }
+    }
 
-  //set new value
-  hRes = cUrl.SetHost(szHostStartA, (SIZE_T)(szHostEndA - szHostStartA));
-  if (SUCCEEDED(hRes) && nPort > 0)
-    hRes = cUrl.SetPort(nPort);
-  if (FAILED(hRes))
-    return (hRes == E_INVALIDARG) ? MX_E_InvalidData : hRes;
+    // skip spaces and check for end
+    if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
+    {
+        return MX_E_InvalidData;
+    }
 
-  //done
-  return S_OK;
+    // set new value
+    hRes = cUrl.SetHost(szHostStartA, (SIZE_T)(szHostEndA - szHostStartA));
+    if (SUCCEEDED(hRes) && nPort > 0)
+    {
+        hRes = cUrl.SetPort(nPort);
+    }
+    if (FAILED(hRes))
+    {
+        return (hRes == E_INVALIDARG) ? MX_E_InvalidData : hRes;
+    }
+
+    // done
+    return S_OK;
 }
 
 HRESULT CHttpHeaderReqHost::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
-  if (cStrDestA.Copy(cUrl.GetHost()) == FALSE)
-    return E_OUTOFMEMORY;
+    if (cStrDestA.Copy(cUrl.GetHost()) == FALSE)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  if (cStrDestA.IsEmpty() == FALSE && cUrl.GetPort() > 0)
-  {
-    if (cStrDestA.AppendFormat(":%d", cUrl.GetPort()) == FALSE)
-      return E_OUTOFMEMORY;
-  }
-  //done
-  return S_OK;
+    if (cStrDestA.IsEmpty() == FALSE && cUrl.GetPort() > 0)
+    {
+        if (cStrDestA.AppendFormat(":%d", cUrl.GetPort()) == FALSE)
+        {
+            return E_OUTOFMEMORY;
+        }
+    }
+    // done
+    return S_OK;
 }
 
 HRESULT CHttpHeaderReqHost::SetHost(_In_z_ LPCWSTR szHostW, _In_opt_ SIZE_T nHostLen)
 {
-  HRESULT hRes;
+    HRESULT hRes;
 
-  if (nHostLen == (SIZE_T)-1)
-    nHostLen = StrLenW(szHostW);
-  if (nHostLen == 0)
-    return MX_E_InvalidData;
-  if (szHostW == NULL)
-    return E_POINTER;
+    if (nHostLen == (SIZE_T)-1)
+    {
+        nHostLen = StrLenW(szHostW);
+    }
+    if (nHostLen == 0)
+    {
+        return MX_E_InvalidData;
+    }
+    if (szHostW == NULL)
+    {
+        return E_POINTER;
+    }
 
-  //some checks
-  hRes = cUrl.SetHost(szHostW);
-  if (FAILED(hRes))
-    return (hRes == E_INVALIDARG) ? MX_E_InvalidData : hRes;
+    // some checks
+    hRes = cUrl.SetHost(szHostW);
+    if (FAILED(hRes))
+    {
+        return (hRes == E_INVALIDARG) ? MX_E_InvalidData : hRes;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 LPCWSTR CHttpHeaderReqHost::GetHost() const
 {
-  return cUrl.GetHost();
+    return cUrl.GetHost();
 }
 
 HRESULT CHttpHeaderReqHost::SetPort(_In_ int nPort)
 {
-  return cUrl.SetPort(nPort);
+    return cUrl.SetPort(nPort);
 }
 
 int CHttpHeaderReqHost::GetPort() const
 {
-  return cUrl.GetPort();
+    return cUrl.GetPort();
 }
 
-} //namespace MX
+} // namespace MX

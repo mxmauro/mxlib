@@ -25,40 +25,41 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-//This generic class can be used for the following generic headers:
+// This generic class can be used for the following generic headers:
 //
-//    "User-Agent", "Proxy-Authorization", "From", "Max-Forwards", "Content-Location", "Content-MD5",
-//    "Pragma", "Trailer", "Via", "Warning", "Server", "Vary", "WWW-Authenticate"
-//    or any other unparsed header
+//     "User-Agent", "Proxy-Authorization", "From", "Max-Forwards", "Content-Location", "Content-MD5",
+//     "Pragma", "Trailer", "Via", "Warning", "Server", "Vary", "WWW-Authenticate"
+//     or any other unparsed header
 class CHttpHeaderGeneric : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderGeneric();
-  ~CHttpHeaderGeneric();
+  public:
+    CHttpHeaderGeneric();
+    ~CHttpHeaderGeneric();
 
-  HRESULT SetHeaderName(_In_z_ LPCSTR szNameA, _In_opt_ SIZE_T nNameLen = (SIZE_T)-1);
-  LPCSTR GetHeaderName() const;
+    HRESULT SetHeaderName(_In_z_ LPCSTR szNameA, _In_opt_ SIZE_T nNameLen = (SIZE_T)-1);
+    LPCSTR GetHeaderName() const;
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  eDuplicateBehavior GetDuplicateBehavior() const
+    eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return eDuplicateBehavior::Add;
+        return eDuplicateBehavior::Add;
     };
 
-  HRESULT SetValue(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
-  LPCSTR GetValue() const;
+    HRESULT SetValue(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    LPCSTR GetValue() const;
 
-private:
-  CStringA cStrHeaderNameA;
-  CStringA cStrValueA;
+  private:
+    CStringA cStrHeaderNameA;
+    CStringA cStrValueA;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

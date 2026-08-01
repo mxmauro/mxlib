@@ -25,36 +25,38 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderReqRange : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderReqRange();
-  ~CHttpHeaderReqRange();
+  public:
+    CHttpHeaderReqRange();
+    ~CHttpHeaderReqRange();
 
-  MX_DECLARE_HTTPHEADER_NAME(Range)
+    MX_DECLARE_HTTPHEADER_NAME(Range)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT AddRangeSet(_In_ ULONGLONG nByteStart, _In_ ULONGLONG nByteEnd);
+    HRESULT AddRangeSet(_In_ ULONGLONG nByteStart, _In_ ULONGLONG nByteEnd);
 
-  SIZE_T GetRangeSetsCount() const;
-  ULONGLONG GetRangeSetStart(_In_ SIZE_T nIndex) const;
-  ULONGLONG GetRangeSetEnd(_In_ SIZE_T nIndex) const;
+    SIZE_T GetRangeSetsCount() const;
+    ULONGLONG GetRangeSetStart(_In_ SIZE_T nIndex) const;
+    ULONGLONG GetRangeSetEnd(_In_ SIZE_T nIndex) const;
 
-private:
-  typedef struct {
-    ULONGLONG nByteStart;
-    ULONGLONG nByteEnd;
-  } RANGESET;
+  private:
+    typedef struct
+    {
+        ULONGLONG nByteStart;
+        ULONGLONG nByteEnd;
+    } RANGESET;
 
-  TArrayList4Structs<RANGESET> cRangeSetsList;
+    TArrayList4Structs<RANGESET> cRangeSetsList;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

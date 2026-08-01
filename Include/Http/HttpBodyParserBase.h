@@ -28,25 +28,27 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class MX_NOVTABLE CHttpBodyParserBase : public virtual TRefCounted<CBaseMemObj>
 {
-protected:
-  CHttpBodyParserBase();
-public:
-  ~CHttpBodyParserBase();
+  protected:
+    CHttpBodyParserBase();
 
-  virtual LPCSTR GetType() const = 0;
+  public:
+    ~CHttpBodyParserBase();
 
-protected:
-  friend class Internals::CHttpParser;
+    virtual LPCSTR GetType() const = 0;
 
-  virtual HRESULT Initialize(_In_ Internals::CHttpParser &cHttpParser) = 0;
-  virtual HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize) = 0;
+  protected:
+    friend class Internals::CHttpParser;
+
+    virtual HRESULT Initialize(_In_ Internals::CHttpParser &cHttpParser) = 0;
+    virtual HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize) = 0;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

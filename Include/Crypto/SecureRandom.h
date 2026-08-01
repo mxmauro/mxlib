@@ -24,15 +24,17 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-namespace SecureRandom {
+namespace SecureRandom
+{
 
 VOID Generate(_Out_writes_bytes_(nSize) LPBYTE lpOut, _In_ SIZE_T nSize);
 
-} //namespace SecureRandom
+} // namespace SecureRandom
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

@@ -25,18 +25,19 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CJsMySqlPlugin : public CJsObjectBase, public CNonCopyableObj
 {
-public:
-  CJsMySqlPlugin();
-  ~CJsMySqlPlugin();
+  public:
+    CJsMySqlPlugin();
+    ~CJsMySqlPlugin();
 
-  MX_JS_DECLARE_CREATABLE(CJsMySqlPlugin, "MySQL")
+    MX_JS_DECLARE_CREATABLE(CJsMySqlPlugin, "MySQL")
 
-  MX_JS_BEGIN_MAP(CJsMySqlPlugin)
-    MX_JS_MAP_METHOD("connect", &CJsMySqlPlugin::Connect, MX_JS_VARARGS) //host,user[,pass[,dbname[,port]]]
+    MX_JS_BEGIN_MAP(CJsMySqlPlugin)
+    MX_JS_MAP_METHOD("connect", &CJsMySqlPlugin::Connect, MX_JS_VARARGS) // host,user[,pass[,dbname[,port]]]
     MX_JS_MAP_METHOD("disconnect", &CJsMySqlPlugin::Disconnect, 0)
     MX_JS_MAP_METHOD("selectDatabase", &CJsMySqlPlugin::SelectDatabase, 1)
     MX_JS_MAP_METHOD("query", &CJsMySqlPlugin::Query, MX_JS_VARARGS)
@@ -50,78 +51,78 @@ public:
     MX_JS_MAP_PROPERTY("isConnected", &CJsMySqlPlugin::isConnected, NULL, FALSE)
     MX_JS_MAP_PROPERTY("affectedRows", &CJsMySqlPlugin::getAffectedRows, NULL, FALSE)
     MX_JS_MAP_PROPERTY("insertId", &CJsMySqlPlugin::getInsertId, NULL, FALSE)
-  MX_JS_END_MAP()
+    MX_JS_END_MAP()
 
-public:
-  VOID SetConnector(_In_ Database::CMySqlConnector *lpConnector);
-  Database::CMySqlConnector* DetachConnector();
-  Database::CMySqlConnector* GetConnector();
+  public:
+    VOID SetConnector(_In_ Database::CMySqlConnector *lpConnector);
+    Database::CMySqlConnector *DetachConnector();
+    Database::CMySqlConnector *GetConnector();
 
-protected:
-  static VOID OnRegister(_In_ DukTape::duk_context *lpCtx);
-  static VOID OnUnregister(_In_ DukTape::duk_context *lpCtx);
+  protected:
+    static VOID OnRegister(_In_ DukTape::duk_context *lpCtx);
+    static VOID OnUnregister(_In_ DukTape::duk_context *lpCtx);
 
-private:
-  DukTape::duk_ret_t Connect(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t Disconnect(_In_opt_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t SelectDatabase(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t Query(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t QueryAndFetchRow(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t QueryClose(_In_opt_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t EscapeString(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t Utf8Truncate(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t FetchRow(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t BeginTransaction(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t CommitTransaction(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t RollbackTransaction(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t isConnected(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t getAffectedRows(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t getInsertId(_In_ DukTape::duk_context *lpCtx);
+  private:
+    DukTape::duk_ret_t Connect(_In_ DukTape::duk_context *lpCtx);
+    DukTape::duk_ret_t Disconnect(_In_opt_ DukTape::duk_context *lpCtx);
+    DukTape::duk_ret_t SelectDatabase(_In_ DukTape::duk_context *lpCtx);
+    DukTape::duk_ret_t Query(_In_ DukTape::duk_context *lpCtx);
+    DukTape::duk_ret_t QueryAndFetchRow(_In_ DukTape::duk_context *lpCtx);
+    DukTape::duk_ret_t QueryClose(_In_opt_ DukTape::duk_context *lpCtx);
+    DukTape::duk_ret_t EscapeString(_In_ DukTape::duk_context *lpCtx);
+    DukTape::duk_ret_t Utf8Truncate(_In_ DukTape::duk_context *lpCtx);
+    DukTape::duk_ret_t FetchRow(_In_ DukTape::duk_context *lpCtx);
+    DukTape::duk_ret_t BeginTransaction(_In_ DukTape::duk_context *lpCtx);
+    DukTape::duk_ret_t CommitTransaction(_In_ DukTape::duk_context *lpCtx);
+    DukTape::duk_ret_t RollbackTransaction(_In_ DukTape::duk_context *lpCtx);
+    DukTape::duk_ret_t isConnected(_In_ DukTape::duk_context *lpCtx);
+    DukTape::duk_ret_t getAffectedRows(_In_ DukTape::duk_context *lpCtx);
+    DukTape::duk_ret_t getInsertId(_In_ DukTape::duk_context *lpCtx);
 
-  VOID ThrowDbError(_In_ DukTape::duk_context *lpCtx, _In_ HRESULT hRes, _In_opt_ LPCSTR filename,
-                    _In_opt_ DukTape::duk_int_t line);
+    VOID ThrowDbError(_In_ DukTape::duk_context *lpCtx, _In_ HRESULT hRes, _In_opt_ LPCSTR filename,
+                      _In_opt_ DukTape::duk_int_t line);
 
-private:
-  TAutoRefCounted<Database::CMySqlConnector> cConnector;
+  private:
+    TAutoRefCounted<Database::CMySqlConnector> cConnector;
 };
 
 //-----------------------------------------------------------
 
 class CJsMySqlError : public CJsWindowsError
 {
-protected:
-  CJsMySqlError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex);
+  protected:
+    CJsMySqlError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex);
 
-public:
-  CJsMySqlError(_In_ const CJsMySqlError &obj);
-  CJsMySqlError& operator=(_In_ const CJsMySqlError &obj);
+  public:
+    CJsMySqlError(_In_ const CJsMySqlError &obj);
+    CJsMySqlError &operator=(_In_ const CJsMySqlError &obj);
 
-  ~CJsMySqlError();
+    ~CJsMySqlError();
 
-  __inline int GetDbError() const
+    __inline int GetDbError() const
     {
-    return nDbError;
+        return nDbError;
     };
 
-  __inline LPCSTR GetDbErrorMessage() const
+    __inline LPCSTR GetDbErrorMessage() const
     {
-    return (LPCSTR)cStrDbErrorMessageA;
+        return (LPCSTR)cStrDbErrorMessageA;
     };
 
-  __inline LPCSTR GetSqlState() const
+    __inline LPCSTR GetSqlState() const
     {
-    return szSqlStateA;
+        return szSqlStateA;
     };
 
-private:
-  friend class CJsMySqlPlugin;
+  private:
+    friend class CJsMySqlPlugin;
 
-  int nDbError;
-  CStringA cStrDbErrorMessageA;
-  CHAR szSqlStateA[8];
+    int nDbError;
+    CStringA cStrDbErrorMessageA;
+    CHAR szSqlStateA[8];
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

@@ -21,80 +21,97 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CHttpHeaderRespAge::CHttpHeaderRespAge() : CHttpHeaderBase()
 {
-  nAge = 0ui64;
-  return;
+    nAge = 0ui64;
+    return;
 }
 
 CHttpHeaderRespAge::~CHttpHeaderRespAge()
 {
-  return;
+    return;
 }
 
 HRESULT CHttpHeaderRespAge::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szValueEndA;
-  ULONGLONG _nAge, nTemp;
+    LPCSTR szValueEndA;
+    ULONGLONG _nAge, nTemp;
 
-  if (szValueA == NULL)
-    return E_POINTER;
+    if (szValueA == NULL)
+    {
+        return E_POINTER;
+    }
 
-  if (nValueLen == (SIZE_T)-1)
-    nValueLen = StrLenA(szValueA);
-  szValueEndA = szValueA + nValueLen;
+    if (nValueLen == (SIZE_T)-1)
+    {
+        nValueLen = StrLenA(szValueA);
+    }
+    szValueEndA = szValueA + nValueLen;
 
-  _nAge = 0ui64;
+    _nAge = 0ui64;
 
-  //skip spaces
-  szValueA = SkipSpaces(szValueA, szValueEndA);
+    // skip spaces
+    szValueA = SkipSpaces(szValueA, szValueEndA);
 
-  //get first byte
-  if (szValueA >= szValueEndA || *szValueA < '0' || *szValueA > '9')
-    return MX_E_InvalidData;
-  while (szValueA < szValueEndA && *szValueA == '0')
-    szValueA++;
-  while (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
-  {
-    nTemp = _nAge * 10ui64;
-    if (nTemp < _nAge)
-      return MX_E_ArithmeticOverflow;
-    _nAge = nTemp + (ULONGLONG)(*szValueA) - (ULONGLONG)'0';
-    if (_nAge < nTemp)
-      return MX_E_ArithmeticOverflow;
-    szValueA++;
-  }
+    // get first byte
+    if (szValueA >= szValueEndA || *szValueA < '0' || *szValueA > '9')
+    {
+        return MX_E_InvalidData;
+    }
+    while (szValueA < szValueEndA && *szValueA == '0')
+    {
+        szValueA++;
+    }
+    while (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
+    {
+        nTemp = _nAge * 10ui64;
+        if (nTemp < _nAge)
+        {
+            return MX_E_ArithmeticOverflow;
+        }
+        _nAge = nTemp + (ULONGLONG)(*szValueA) - (ULONGLONG)'0';
+        if (_nAge < nTemp)
+        {
+            return MX_E_ArithmeticOverflow;
+        }
+        szValueA++;
+    }
 
-  //skip spaces and check for end
-  if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
-    return MX_E_InvalidData;
+    // skip spaces and check for end
+    if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
+    {
+        return MX_E_InvalidData;
+    }
 
-  //set new value
-  nAge = _nAge;
+    // set new value
+    nAge = _nAge;
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CHttpHeaderRespAge::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
-  if (cStrDestA.Format("%I64u", nAge) == FALSE)
-    return E_OUTOFMEMORY;
-  //done
-  return S_OK;
+    if (cStrDestA.Format("%I64u", nAge) == FALSE)
+    {
+        return E_OUTOFMEMORY;
+    }
+    // done
+    return S_OK;
 }
 
 HRESULT CHttpHeaderRespAge::SetAge(_In_ ULONGLONG _nAge)
 {
-  nAge = _nAge;
-  return S_OK;
+    nAge = _nAge;
+    return S_OK;
 }
 
 ULONGLONG CHttpHeaderRespAge::GetAge() const
 {
-  return nAge;
+    return nAge;
 }
 
-} //namespace MX
+} // namespace MX

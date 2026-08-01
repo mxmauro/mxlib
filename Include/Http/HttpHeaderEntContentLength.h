@@ -24,28 +24,29 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderEntContentLength : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderEntContentLength();
-  ~CHttpHeaderEntContentLength();
+  public:
+    CHttpHeaderEntContentLength();
+    ~CHttpHeaderEntContentLength();
 
-  MX_DECLARE_HTTPHEADER_NAME(Content-Length)
+    MX_DECLARE_HTTPHEADER_NAME(Content - Length)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT SetLength(_In_ ULONGLONG nLength);
-  ULONGLONG GetLength() const;
+    HRESULT SetLength(_In_ ULONGLONG nLength);
+    ULONGLONG GetLength() const;
 
-private:
-  ULONGLONG nLength;
+  private:
+    ULONGLONG nLength;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

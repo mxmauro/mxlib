@@ -24,48 +24,49 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CCircularBuffer : public virtual CBaseMemObj, public CNonCopyableObj
 {
-public:
-  CCircularBuffer();
-  ~CCircularBuffer();
+  public:
+    CCircularBuffer();
+    ~CCircularBuffer();
 
-  SIZE_T Find(_In_ BYTE nToScan, _In_ SIZE_T nStartPos=0); //returns -1 if not found
+    SIZE_T Find(_In_ BYTE nToScan, _In_ SIZE_T nStartPos = 0); // returns -1 if not found
 
-  VOID GetReadPtr(_Out_opt_ LPBYTE *lplpPtr1, _Out_opt_ SIZE_T *lpnSize1, _Out_opt_ LPBYTE *lplpPtr2,
-                  _Out_opt_ SIZE_T *lpnSize2);
-  HRESULT AdvanceReadPtr(_In_ SIZE_T nCount);
+    VOID GetReadPtr(_Out_opt_ LPBYTE *lplpPtr1, _Out_opt_ SIZE_T *lpnSize1, _Out_opt_ LPBYTE *lplpPtr2,
+                    _Out_opt_ SIZE_T *lpnSize2);
+    HRESULT AdvanceReadPtr(_In_ SIZE_T nCount);
 
-  VOID GetWritePtr(_Out_opt_ LPBYTE *lplpPtr1, _Out_opt_ SIZE_T *lpnSize1, _Out_opt_ LPBYTE *lplpPtr2,
-                   _Out_opt_ SIZE_T *lpnSize2);
-  HRESULT AdvanceWritePtr(_In_ SIZE_T nCount);
+    VOID GetWritePtr(_Out_opt_ LPBYTE *lplpPtr1, _Out_opt_ SIZE_T *lpnSize1, _Out_opt_ LPBYTE *lplpPtr2,
+                     _Out_opt_ SIZE_T *lpnSize2);
+    HRESULT AdvanceWritePtr(_In_ SIZE_T nCount);
 
-  SIZE_T GetAvailableForRead() const;
-  SIZE_T Peek(_Out_writes_(nToRead) LPVOID lpDest, _In_ SIZE_T nToRead);
-  SIZE_T Read(_Out_writes_(nToRead) LPVOID lpDest, _In_ SIZE_T nToRead);
-  HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLength, _In_ BOOL bExpandIfNeeded=TRUE);
+    SIZE_T GetAvailableForRead() const;
+    SIZE_T Peek(_Out_writes_(nToRead) LPVOID lpDest, _In_ SIZE_T nToRead);
+    SIZE_T Read(_Out_writes_(nToRead) LPVOID lpDest, _In_ SIZE_T nToRead);
+    HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLength, _In_ BOOL bExpandIfNeeded = TRUE);
 
-  HRESULT EnsureWritableSize(_In_ SIZE_T nSize);
-  HRESULT SetBufferSize(_In_ SIZE_T nSize);
-  SIZE_T GetBufferSize() const
+    HRESULT EnsureWritableSize(_In_ SIZE_T nSize);
+    HRESULT SetBufferSize(_In_ SIZE_T nSize);
+    SIZE_T GetBufferSize() const
     {
-    return nSize;
+        return nSize;
     };
-  SIZE_T GetWrittenBufferLength() const
+    SIZE_T GetWrittenBufferLength() const
     {
-    return nLen;
+        return nLen;
     };
 
-  VOID ReArrangeBuffer();
+    VOID ReArrangeBuffer();
 
-private:
-  LPBYTE lpData;
-  SIZE_T nSize, nStart, nLen;
+  private:
+    LPBYTE lpData;
+    SIZE_T nSize, nStart, nLen;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

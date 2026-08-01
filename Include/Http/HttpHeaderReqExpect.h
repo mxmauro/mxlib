@@ -25,34 +25,35 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderReqExpect : public CHttpHeaderBase
 {
-public:
-  enum class eExpectation
-  {
-    Unsupported = -1,
-    Status100Continue = 0
-  };
+  public:
+    enum class eExpectation
+    {
+        Unsupported = -1,
+        Status100Continue = 0
+    };
 
-  CHttpHeaderReqExpect();
-  ~CHttpHeaderReqExpect();
+    CHttpHeaderReqExpect();
+    ~CHttpHeaderReqExpect();
 
-  MX_DECLARE_HTTPHEADER_NAME(Expect)
+    MX_DECLARE_HTTPHEADER_NAME(Expect)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT SetExpectation(_In_ eExpectation nExpectation);
-  eExpectation GetExpectation() const;
+    HRESULT SetExpectation(_In_ eExpectation nExpectation);
+    eExpectation GetExpectation() const;
 
-private:
-  eExpectation nExpectation;
+  private:
+    eExpectation nExpectation;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

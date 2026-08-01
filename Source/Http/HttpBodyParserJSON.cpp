@@ -22,69 +22,75 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CHttpBodyParserJSON::CHttpBodyParserJSON() : CHttpBodyParserBase()
 {
-  nState = eState::Data;
-  return;
+    nState = eState::Data;
+    return;
 }
 
 CHttpBodyParserJSON::~CHttpBodyParserJSON()
 {
-  return;
+    return;
 }
 
 HRESULT CHttpBodyParserJSON::Initialize(_In_ MX::Internals::CHttpParser &cHttpParser)
 {
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CHttpBodyParserJSON::Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize)
 {
-  HRESULT hRes;
+    HRESULT hRes;
 
-  if (lpData == NULL && nDataSize > 0)
-    return E_POINTER;
-
-  //end of parsing?
-  if (lpData != NULL)
-  {
-    if (cStrTempA.ConcatN((LPCSTR)lpData, nDataSize) != FALSE)
-      return S_OK;
-    nState = eState::Error;
-    return E_OUTOFMEMORY;
-  }
-
-  if (nState == eState::Done)
-  {
-    nState = eState::Error;
-    return MX_E_InvalidData;
-  }
-
-  RAPIDJSON_TRY
-  {
-    if (d.ParseInsitu<rapidjson::kParseValidateEncodingFlag | rapidjson::kParseNanAndInfFlag |
-                      rapidjson::kParseFullPrecisionFlag | rapidjson::kParseTrailingCommasFlag |
-                      rapidjson::kParseEscapedApostropheFlag>((LPSTR)cStrTempA).HasParseError() != false)
+    if (lpData == NULL && nDataSize > 0)
     {
-      nState = eState::Error;
-      return MX_E_InvalidData;
+        return E_POINTER;
     }
-    hRes = S_OK;
-  }
-  RAPIDJSON_CATCH(hRes)
 
-  if (FAILED(hRes))
-  {
-    nState = eState::Error;
-    return hRes;
-  }
+    // end of parsing?
+    if (lpData != NULL)
+    {
+        if (cStrTempA.ConcatN((LPCSTR)lpData, nDataSize) != FALSE)
+        {
+            return S_OK;
+        }
+        nState = eState::Error;
+        return E_OUTOFMEMORY;
+    }
 
-  //success
-  nState = eState::Done;
-  return S_OK;
+    if (nState == eState::Done)
+    {
+        nState = eState::Error;
+        return MX_E_InvalidData;
+    }
+
+    RAPIDJSON_TRY
+    {
+        if (d.ParseInsitu<rapidjson::kParseValidateEncodingFlag | rapidjson::kParseNanAndInfFlag |
+                          rapidjson::kParseFullPrecisionFlag | rapidjson::kParseTrailingCommasFlag |
+                          rapidjson::kParseEscapedApostropheFlag>((LPSTR)cStrTempA)
+                .HasParseError() != false)
+        {
+            nState = eState::Error;
+            return MX_E_InvalidData;
+        }
+        hRes = S_OK;
+    }
+    RAPIDJSON_CATCH(hRes)
+
+    if (FAILED(hRes))
+    {
+        nState = eState::Error;
+        return hRes;
+    }
+
+    // success
+    nState = eState::Done;
+    return S_OK;
 }
 
-} //namespace MX
+} // namespace MX

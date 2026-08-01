@@ -27,33 +27,34 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class MX_NOVTABLE CHttpAuthBase : public TRefCounted<CBaseMemObj>
 {
-protected:
-  CHttpAuthBase() : TRefCounted<CBaseMemObj>()
+  protected:
+    CHttpAuthBase() : TRefCounted<CBaseMemObj>()
     {
-    return;
+        return;
     };
 
-public:
-  ~CHttpAuthBase()
+  public:
+    ~CHttpAuthBase()
     {
-    return;
+        return;
     };
 
-  SIZE_T GetId()
+    SIZE_T GetId()
     {
-    return (SIZE_T)this;
+        return (SIZE_T)this;
     };
 
-  virtual LPCSTR GetScheme() const = 0;
+    virtual LPCSTR GetScheme() const = 0;
 
-  virtual HRESULT Parse(_In_ CHttpHeaderRespWwwProxyAuthenticateCommon *lpHeader) = 0;
+    virtual HRESULT Parse(_In_ CHttpHeaderRespWwwProxyAuthenticateCommon *lpHeader) = 0;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

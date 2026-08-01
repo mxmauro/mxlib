@@ -24,37 +24,38 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderRespSecWebSocketVersion : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderRespSecWebSocketVersion();
-  ~CHttpHeaderRespSecWebSocketVersion();
+  public:
+    CHttpHeaderRespSecWebSocketVersion();
+    ~CHttpHeaderRespSecWebSocketVersion();
 
-  MX_DECLARE_HTTPHEADER_NAME(Sec-WebSocket-Version)
+    MX_DECLARE_HTTPHEADER_NAME(Sec - WebSocket - Version)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  eDuplicateBehavior GetDuplicateBehavior() const
+    eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return eDuplicateBehavior::Merge;
+        return eDuplicateBehavior::Merge;
     };
 
-  HRESULT AddVersion(_In_ int nVersion);
+    HRESULT AddVersion(_In_ int nVersion);
 
-  SIZE_T GetVersionsCount() const;
-  int GetVersion(_In_ SIZE_T nIndex) const;
+    SIZE_T GetVersionsCount() const;
+    int GetVersion(_In_ SIZE_T nIndex) const;
 
-  HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
+    HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
 
-private:
-  TArrayList<int> cVersionsList;
+  private:
+    TArrayList<int> cVersionsList;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

@@ -24,25 +24,26 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpBodyParserIgnore : public CHttpBodyParserBase
 {
-public:
-  CHttpBodyParserIgnore();
-  ~CHttpBodyParserIgnore();
+  public:
+    CHttpBodyParserIgnore();
+    ~CHttpBodyParserIgnore();
 
-  virtual LPCSTR GetType() const
+    virtual LPCSTR GetType() const
     {
-    return "ignore";
+        return "ignore";
     };
 
-protected:
-  HRESULT Initialize(_In_ Internals::CHttpParser &cHttpParser);
-  HRESULT Parse(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
+  protected:
+    HRESULT Initialize(_In_ Internals::CHttpParser &cHttpParser);
+    HRESULT Parse(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

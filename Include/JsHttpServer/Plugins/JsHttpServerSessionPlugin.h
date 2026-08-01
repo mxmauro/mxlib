@@ -24,99 +24,103 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CJsHttpServerSessionPlugin : public CJsObjectBase, public CNonCopyableObj
 {
-public:
-  enum class ePersistanceOption
-  {
-    Load, Save, Delete
-  };
-
-  //can be called simultaneously from different threads servicing different requests
-  typedef Callback<HRESULT (_In_ CJsHttpServerSessionPlugin *lpPlugin,
-                            _In_ ePersistanceOption nPersistanceOption)> OnPersistanceCallback;
-
-public:
-  CJsHttpServerSessionPlugin();
-  ~CJsHttpServerSessionPlugin();
-
-  HRESULT Setup(_In_ CJsHttpServer::CClientRequest *lpRequest, _In_ OnPersistanceCallback cPersistanceCallback,
-                _In_opt_z_ LPCWSTR szSessionVarNameW = NULL, _In_opt_z_ LPCWSTR szDomainW = NULL,
-                _In_opt_z_ LPCWSTR szPathW = NULL, _In_opt_ int nExpireTimeInSeconds = -1,
-                _In_opt_ BOOL bIsSecure = FALSE, _In_opt_ BOOL bIsHttpOnly = FALSE,
-                _In_opt_ CHttpCookie::eSameSite nSameSite = CHttpCookie::eSameSite::None);
-  HRESULT Save();
-  VOID Destroy();
-
-  LPCSTR GetSessionId() const
+  public:
+    enum class ePersistanceOption
     {
-    return szCurrentIdA;
+        Load,
+        Save,
+        Delete
     };
 
-  CJsHttpServer* GetServer() const
+    // can be called simultaneously from different threads servicing different requests
+    typedef Callback<HRESULT(_In_ CJsHttpServerSessionPlugin *lpPlugin, _In_ ePersistanceOption nPersistanceOption)>
+        OnPersistanceCallback;
+
+  public:
+    CJsHttpServerSessionPlugin();
+    ~CJsHttpServerSessionPlugin();
+
+    HRESULT Setup(_In_ CJsHttpServer::CClientRequest *lpRequest, _In_ OnPersistanceCallback cPersistanceCallback,
+                  _In_opt_z_ LPCWSTR szSessionVarNameW = NULL, _In_opt_z_ LPCWSTR szDomainW = NULL,
+                  _In_opt_z_ LPCWSTR szPathW = NULL, _In_opt_ int nExpireTimeInSeconds = -1,
+                  _In_opt_ BOOL bIsSecure = FALSE, _In_opt_ BOOL bIsHttpOnly = FALSE,
+                  _In_opt_ CHttpCookie::eSameSite nSameSite = CHttpCookie::eSameSite::None);
+    HRESULT Save();
+    VOID Destroy();
+
+    LPCSTR GetSessionId() const
     {
-    return lpHttpServer;
+        return szCurrentIdA;
     };
 
-  CJsHttpServer::CClientRequest* GetRequest() const
+    CJsHttpServer *GetServer() const
     {
-    return lpRequest;
+        return lpHttpServer;
     };
 
-  CPropertyBag* GetBag() const;
+    CJsHttpServer::CClientRequest *GetRequest() const
+    {
+        return lpRequest;
+    };
 
-  MX_JS_DECLARE_WITH_PROXY(CJsHttpServerSessionPlugin, "Session")
+    CPropertyBag *GetBag() const;
 
-  MX_JS_BEGIN_MAP(CJsHttpServerSessionPlugin)
+    MX_JS_DECLARE_WITH_PROXY(CJsHttpServerSessionPlugin, "Session")
+
+    MX_JS_BEGIN_MAP(CJsHttpServerSessionPlugin)
     MX_JS_MAP_METHOD("save", &CJsHttpServerSessionPlugin::_Save, 0)
     MX_JS_MAP_METHOD("destroy", &CJsHttpServerSessionPlugin::_Destroy, 0)
     MX_JS_MAP_METHOD("regenerateId", &CJsHttpServerSessionPlugin::RegenerateId, 0)
-  MX_JS_END_MAP()
+    MX_JS_END_MAP()
 
-private:
-  typedef CHAR SESSION_ID[68];
+  private:
+    typedef CHAR SESSION_ID[68];
 
-  static BOOL IsValidSessionId(_In_z_ LPCSTR szSessionIdA);
+    static BOOL IsValidSessionId(_In_z_ LPCSTR szSessionIdA);
 
-  VOID GenerateSessionId();
+    VOID GenerateSessionId();
 
-  HRESULT CreateRequestCookie();
+    HRESULT CreateRequestCookie();
 
-  DukTape::duk_ret_t _Save(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t _Destroy(_In_ DukTape::duk_context *lpCtx);
-  DukTape::duk_ret_t RegenerateId(_In_ DukTape::duk_context *lpCtx);
+    DukTape::duk_ret_t _Save(_In_ DukTape::duk_context *lpCtx);
+    DukTape::duk_ret_t _Destroy(_In_ DukTape::duk_context *lpCtx);
+    DukTape::duk_ret_t RegenerateId(_In_ DukTape::duk_context *lpCtx);
 
-  int OnProxyHasNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA);
-  int OnProxyHasIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex);
+    int OnProxyHasNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA);
+    int OnProxyHasIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex);
 
-  int OnProxyGetNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA);
-  int OnProxyGetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex);
+    int OnProxyGetNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA);
+    int OnProxyGetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex);
 
-  int OnProxySetNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA,
-                              _In_ DukTape::duk_idx_t nValueIndex);
-  int OnProxySetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex, _In_ DukTape::duk_idx_t nValueIndex);
+    int OnProxySetNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA,
+                                _In_ DukTape::duk_idx_t nValueIndex);
+    int OnProxySetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex,
+                                  _In_ DukTape::duk_idx_t nValueIndex);
 
-  int OnProxyDeleteNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA);
-  int OnProxyDeleteIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex);
+    int OnProxyDeleteNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA);
+    int OnProxyDeleteIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex);
 
-private:
-  CPropertyBag cBag;
-  SESSION_ID szCurrentIdA;
+  private:
+    CPropertyBag cBag;
+    SESSION_ID szCurrentIdA;
 
-  CJsHttpServer *lpHttpServer;
-  CJsHttpServer::CClientRequest *lpRequest;
-  OnPersistanceCallback cPersistanceCallback;
-  MX::CStringA cStrSessionVarNameA, cStrDomainA, cStrPathA;
-  LPCSTR szSessionVarNameA;
-  int nExpireTimeInSeconds;
-  BOOL bIsSecure, bIsHttpOnly;
-  CHttpCookie::eSameSite nSameSite;
-  BOOL bDirty;
+    CJsHttpServer *lpHttpServer;
+    CJsHttpServer::CClientRequest *lpRequest;
+    OnPersistanceCallback cPersistanceCallback;
+    MX::CStringA cStrSessionVarNameA, cStrDomainA, cStrPathA;
+    LPCSTR szSessionVarNameA;
+    int nExpireTimeInSeconds;
+    BOOL bIsSecure, bIsHttpOnly;
+    CHttpCookie::eSameSite nSameSite;
+    BOOL bDirty;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

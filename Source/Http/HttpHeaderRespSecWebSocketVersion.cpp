@@ -25,154 +25,185 @@ static int VersionCompareFunc(_In_ LPVOID lpContext, _In_ int *lpElem1, _In_ int
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CHttpHeaderRespSecWebSocketVersion::CHttpHeaderRespSecWebSocketVersion() : CHttpHeaderBase()
 {
-  return;
+    return;
 }
 
 CHttpHeaderRespSecWebSocketVersion::~CHttpHeaderRespSecWebSocketVersion()
 {
-  return;
+    return;
 }
 
 HRESULT CHttpHeaderRespSecWebSocketVersion::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szValueEndA;
-  BOOL bGotItem;
-  int nVersion;
-  HRESULT hRes;
+    LPCSTR szValueEndA;
+    BOOL bGotItem;
+    int nVersion;
+    HRESULT hRes;
 
-  if (szValueA == NULL)
-    return E_POINTER;
-
-  if (nValueLen == (SIZE_T)-1)
-    nValueLen = StrLenA(szValueA);
-  szValueEndA = szValueA + nValueLen;
-
-  //parse
-  bGotItem = FALSE;
-  do
-  {
-    //skip spaces
-    szValueA = SkipSpaces(szValueA, szValueEndA);
-    if (szValueA >= szValueEndA)
-      break;
-    if (*szValueA == ',')
-      goto skip_null_listitem;
-
-    bGotItem = TRUE;
-
-    //get value
-    nVersion = 0;
-    while (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
+    if (szValueA == NULL)
     {
-      nVersion = nVersion * 10 + (int)((*szValueA) - '0');
-      if (nVersion > 255)
-        return MX_E_InvalidData;
-      szValueA++;
+        return E_POINTER;
     }
-    hRes = AddVersion(nVersion);
-    if (FAILED(hRes))
-      return hRes;
 
-    //skip spaces
-    szValueA = SkipSpaces(szValueA, szValueEndA);
-
-skip_null_listitem:
-    //check for separator or end
-    if (szValueA < szValueEndA)
+    if (nValueLen == (SIZE_T)-1)
     {
-      if (*szValueA == ',')
-        szValueA++;
-      else
+        nValueLen = StrLenA(szValueA);
+    }
+    szValueEndA = szValueA + nValueLen;
+
+    // parse
+    bGotItem = FALSE;
+    do
+    {
+        // skip spaces
+        szValueA = SkipSpaces(szValueA, szValueEndA);
+        if (szValueA >= szValueEndA)
+        {
+            break;
+        }
+        if (*szValueA == ',')
+        {
+            goto skip_null_listitem;
+        }
+
+        bGotItem = TRUE;
+
+        // get value
+        nVersion = 0;
+        while (szValueA < szValueEndA && *szValueA >= '0' && *szValueA <= '9')
+        {
+            nVersion = nVersion * 10 + (int)((*szValueA) - '0');
+            if (nVersion > 255)
+            {
+                return MX_E_InvalidData;
+            }
+            szValueA++;
+        }
+        hRes = AddVersion(nVersion);
+        if (FAILED(hRes))
+        {
+            return hRes;
+        }
+
+        // skip spaces
+        szValueA = SkipSpaces(szValueA, szValueEndA);
+
+    skip_null_listitem:
+        // check for separator or end
+        if (szValueA < szValueEndA)
+        {
+            if (*szValueA == ',')
+            {
+                szValueA++;
+            }
+            else
+            {
+                return MX_E_InvalidData;
+            }
+        }
+    } while (szValueA < szValueEndA);
+
+    // do we got one?
+    if (bGotItem == FALSE)
+    {
         return MX_E_InvalidData;
     }
-  }
-  while (szValueA < szValueEndA);
 
-  //do we got one?
-  if (bGotItem == FALSE)
-    return MX_E_InvalidData;
-
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CHttpHeaderRespSecWebSocketVersion::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
-  SIZE_T i, nCount;
+    SIZE_T i, nCount;
 
-  cStrDestA.Empty();
+    cStrDestA.Empty();
 
-  nCount = cVersionsList.GetCount();
-  for (i = 0; i < nCount; i++)
-  {
-    if (cStrDestA.IsEmpty() == FALSE)
+    nCount = cVersionsList.GetCount();
+    for (i = 0; i < nCount; i++)
     {
-      if (cStrDestA.ConcatN(",", 1) == FALSE)
-        return E_OUTOFMEMORY;
+        if (cStrDestA.IsEmpty() == FALSE)
+        {
+            if (cStrDestA.ConcatN(",", 1) == FALSE)
+            {
+                return E_OUTOFMEMORY;
+            }
+        }
+        if (cStrDestA.AppendFormat("%ld", cVersionsList.GetElementAt(i)) == FALSE)
+        {
+            return E_OUTOFMEMORY;
+        }
     }
-    if (cStrDestA.AppendFormat("%ld", cVersionsList.GetElementAt(i)) == FALSE)
-      return E_OUTOFMEMORY;
-  }
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CHttpHeaderRespSecWebSocketVersion::AddVersion(_In_ int nVersion)
 {
-  if (nVersion < 13 || nVersion > 255)
-    return E_INVALIDARG;
+    if (nVersion < 13 || nVersion > 255)
+    {
+        return E_INVALIDARG;
+    }
 
-  //add version to list
-  if (cVersionsList.SortedInsert(nVersion, &VersionCompareFunc, NULL, TRUE) == FALSE)
-    return E_OUTOFMEMORY;
+    // add version to list
+    if (cVersionsList.SortedInsert(nVersion, &VersionCompareFunc, NULL, TRUE) == FALSE)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 SIZE_T CHttpHeaderRespSecWebSocketVersion::GetVersionsCount() const
 {
-  return cVersionsList.GetCount();
+    return cVersionsList.GetCount();
 }
 
 int CHttpHeaderRespSecWebSocketVersion::GetVersion(_In_ SIZE_T nIndex) const
 {
-  return (nIndex < cVersionsList.GetCount()) ? cVersionsList.GetElementAt(nIndex) : -1;
+    return (nIndex < cVersionsList.GetCount()) ? cVersionsList.GetElementAt(nIndex) : -1;
 }
-
 
 HRESULT CHttpHeaderRespSecWebSocketVersion::Merge(_In_ CHttpHeaderBase *_lpHeader)
 {
-  CHttpHeaderRespSecWebSocketVersion *lpHeader = reinterpret_cast<CHttpHeaderRespSecWebSocketVersion*>(_lpHeader);
-  SIZE_T i, nCount;
-  HRESULT hRes;
+    CHttpHeaderRespSecWebSocketVersion *lpHeader = reinterpret_cast<CHttpHeaderRespSecWebSocketVersion *>(_lpHeader);
+    SIZE_T i, nCount;
+    HRESULT hRes;
 
-  nCount = lpHeader->GetVersionsCount();
-  for (i = 0; i < nCount; i++)
-  {
-    hRes = AddVersion(lpHeader->GetVersion(i));
-    if (FAILED(hRes))
-      return hRes;
-  }
+    nCount = lpHeader->GetVersionsCount();
+    for (i = 0; i < nCount; i++)
+    {
+        hRes = AddVersion(lpHeader->GetVersion(i));
+        if (FAILED(hRes))
+        {
+            return hRes;
+        }
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 
 static int VersionCompareFunc(_In_ LPVOID lpContext, _In_ int *lpElem1, _In_ int *lpElem2)
 {
-  //DESC order
-  if ((*lpElem1) > (*lpElem2))
-    return -1;
-  if ((*lpElem1) < (*lpElem2))
-    return 1;
-  return 0;
+    // DESC order
+    if ((*lpElem1) > (*lpElem2))
+    {
+        return -1;
+    }
+    if ((*lpElem1) < (*lpElem2))
+    {
+        return 1;
+    }
+    return 0;
 }

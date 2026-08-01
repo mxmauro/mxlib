@@ -26,67 +26,69 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderEntContentDisposition : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderEntContentDisposition();
-  ~CHttpHeaderEntContentDisposition();
+  public:
+    CHttpHeaderEntContentDisposition();
+    ~CHttpHeaderEntContentDisposition();
 
-  MX_DECLARE_HTTPHEADER_NAME(Content-Disposition)
+    MX_DECLARE_HTTPHEADER_NAME(Content - Disposition)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT SetType(_In_z_ LPCSTR szTypeA, _In_ SIZE_T nTypeLen = (SIZE_T)-1);
-  LPCSTR GetType() const;
+    HRESULT SetType(_In_z_ LPCSTR szTypeA, _In_ SIZE_T nTypeLen = (SIZE_T)-1);
+    LPCSTR GetType() const;
 
-  HRESULT SetName(_In_opt_z_ LPCWSTR szNameW, _In_ SIZE_T nNameLen = (SIZE_T)-1);
-  LPCWSTR GetName() const;
+    HRESULT SetName(_In_opt_z_ LPCWSTR szNameW, _In_ SIZE_T nNameLen = (SIZE_T)-1);
+    LPCWSTR GetName() const;
 
-  HRESULT SetFileName(_In_opt_z_ LPCWSTR szFileNameW, _In_ SIZE_T nFileNameLen = (SIZE_T)-1);
-  LPCWSTR GetFileName() const;
-  BOOL HasFileName() const;
+    HRESULT SetFileName(_In_opt_z_ LPCWSTR szFileNameW, _In_ SIZE_T nFileNameLen = (SIZE_T)-1);
+    LPCWSTR GetFileName() const;
+    BOOL HasFileName() const;
 
-  HRESULT SetCreationDate(_In_ CDateTime &cDt);
-  CDateTime GetCreationDate() const; //ticks=0 if no creation date parameter
+    HRESULT SetCreationDate(_In_ CDateTime &cDt);
+    CDateTime GetCreationDate() const; // ticks=0 if no creation date parameter
 
-  HRESULT SetModificationDate(_In_ CDateTime &cDt);
-  CDateTime GetModificationDate() const; //ticks=0 if no modification date parameter
+    HRESULT SetModificationDate(_In_ CDateTime &cDt);
+    CDateTime GetModificationDate() const; // ticks=0 if no modification date parameter
 
-  HRESULT SetReadDate(_In_ CDateTime &cDt);
-  CDateTime GetReadDate() const; //ticks=0 if no read date parameter
+    HRESULT SetReadDate(_In_ CDateTime &cDt);
+    CDateTime GetReadDate() const; // ticks=0 if no read date parameter
 
-  HRESULT SetSize(_In_ ULONGLONG nSize);
-  ULONGLONG GetSize() const; //ULONGLONG_MAX if size parameter
+    HRESULT SetSize(_In_ ULONGLONG nSize);
+    ULONGLONG GetSize() const; // ULONGLONG_MAX if size parameter
 
-  HRESULT AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);
+    HRESULT AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);
 
-  SIZE_T GetParamsCount() const;
-  LPCSTR GetParamName(_In_ SIZE_T nIndex) const;
-  LPCWSTR GetParamValue(_In_ SIZE_T nIndex) const;
-  LPCWSTR GetParamValue(_In_z_ LPCSTR szNameA) const;
+    SIZE_T GetParamsCount() const;
+    LPCSTR GetParamName(_In_ SIZE_T nIndex) const;
+    LPCWSTR GetParamValue(_In_ SIZE_T nIndex) const;
+    LPCWSTR GetParamValue(_In_z_ LPCSTR szNameA) const;
 
-private:
-  typedef struct {
-    LPWSTR szValueW;
-    CHAR szNameA[1];
-  } PARAMETER, *LPPARAMETER;
+  private:
+    typedef struct
+    {
+        LPWSTR szValueW;
+        CHAR szNameA[1];
+    } PARAMETER, *LPPARAMETER;
 
-  CStringA cStrTypeA;
-  CStringW cStrNameW;
-  CStringW cStrFileNameW;
-  BOOL bHasFileName;
-  CDateTime cCreationDt;
-  CDateTime cModificationDt;
-  CDateTime cReadDt;
-  ULONGLONG nSize;
-  TArrayListWithFree<LPPARAMETER> aParamsList;
+    CStringA cStrTypeA;
+    CStringW cStrNameW;
+    CStringW cStrFileNameW;
+    BOOL bHasFileName;
+    CDateTime cCreationDt;
+    CDateTime cModificationDt;
+    CDateTime cReadDt;
+    ULONGLONG nSize;
+    TArrayListWithFree<LPPARAMETER> aParamsList;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

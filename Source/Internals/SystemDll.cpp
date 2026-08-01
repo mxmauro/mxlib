@@ -23,9 +23,9 @@
 
 //-----------------------------------------------------------
 
-typedef BOOL (WINAPI *lpfnQueryFullProcessImageNameW)(_In_ HANDLE hProcess, _In_ DWORD dwFlags,
-                                                      _Out_writes_to_(*lpdwSize, *lpdwSize) LPWSTR lpExeName,
-                                                      _Inout_ PDWORD lpdwSize);
+typedef BOOL(WINAPI *lpfnQueryFullProcessImageNameW)(_In_ HANDLE hProcess, _In_ DWORD dwFlags,
+                                                     _Out_writes_to_(*lpdwSize, *lpdwSize) LPWSTR lpExeName,
+                                                     _Inout_ PDWORD lpdwSize);
 
 //-----------------------------------------------------------
 
@@ -33,117 +33,133 @@ static lpfnQueryFullProcessImageNameW fnQueryFullProcessImageNameW = NULL;
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-namespace Internals {
+namespace Internals
+{
 
 HRESULT LoadSystemDll(_In_z_ LPCWSTR szDllNameW, _Out_ HINSTANCE *lphInstance)
 {
-  WCHAR szFullDllNameW[4096];
-  SIZE_T nDllNameLen;
-  DWORD dwLen;
-  HRESULT hRes;
+    WCHAR szFullDllNameW[4096];
+    SIZE_T nDllNameLen;
+    DWORD dwLen;
+    HRESULT hRes;
 
-  if (lphInstance != NULL)
-    *lphInstance = NULL;
-  if (szDllNameW == NULL)
-    return E_POINTER;
+    if (lphInstance != NULL)
+    {
+        *lphInstance = NULL;
+    }
+    if (szDllNameW == NULL)
+    {
+        return E_POINTER;
+    }
 
-  nDllNameLen = StrLenW(szDllNameW);
-  dwLen = ::GetSystemDirectoryW(szFullDllNameW, MX_ARRAYLEN(szFullDllNameW) - (DWORD)nDllNameLen - 2);
-  if (dwLen == 0)
-  {
-    hRes = MX_HRESULT_FROM_LASTERROR();
-    return (FAILED(hRes)) ? hRes : E_FAIL;
-  }
-  if (szFullDllNameW[dwLen - 1] != L'\\')
-    szFullDllNameW[dwLen++] = L'\\';
-  ::MxMemCopy(szFullDllNameW + dwLen, szDllNameW, (nDllNameLen + 1) * sizeof(WCHAR));
+    nDllNameLen = StrLenW(szDllNameW);
+    dwLen = ::GetSystemDirectoryW(szFullDllNameW, MX_ARRAYLEN(szFullDllNameW) - (DWORD)nDllNameLen - 2);
+    if (dwLen == 0)
+    {
+        hRes = MX_HRESULT_FROM_LASTERROR();
+        return (FAILED(hRes)) ? hRes : E_FAIL;
+    }
+    if (szFullDllNameW[dwLen - 1] != L'\\')
+    {
+        szFullDllNameW[dwLen++] = L'\\';
+    }
+    ::MxMemCopy(szFullDllNameW + dwLen, szDllNameW, (nDllNameLen + 1) * sizeof(WCHAR));
 
-  *lphInstance = ::LoadLibraryW(szFullDllNameW);
-  if ((*lphInstance) == NULL)
-  {
-    hRes = MX_HRESULT_FROM_LASTERROR();
-    return (FAILED(hRes)) ? hRes : E_FAIL;
-  }
+    *lphInstance = ::LoadLibraryW(szFullDllNameW);
+    if ((*lphInstance) == NULL)
+    {
+        hRes = MX_HRESULT_FROM_LASTERROR();
+        return (FAILED(hRes)) ? hRes : E_FAIL;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT LoadAppDll(_In_z_ LPCWSTR szDllNameW, _Out_ HINSTANCE *lphInstance)
 {
-  static LONG volatile nMutex = 0;
-  WCHAR szFullDllNameW[4096];
-  SIZE_T nDllNameLen;
-  DWORD dwLen;
-  HRESULT hRes;
+    static LONG volatile nMutex = 0;
+    WCHAR szFullDllNameW[4096];
+    SIZE_T nDllNameLen;
+    DWORD dwLen;
+    HRESULT hRes;
 
-  if (lphInstance != NULL)
-    *lphInstance = NULL;
-  if (szDllNameW == NULL)
-    return E_POINTER;
+    if (lphInstance != NULL)
+    {
+        *lphInstance = NULL;
+    }
+    if (szDllNameW == NULL)
+    {
+        return E_POINTER;
+    }
 
-  nDllNameLen = StrLenW(szDllNameW);
-
-  if (fnQueryFullProcessImageNameW == NULL)
-  {
-    CFastLock cLock(&nMutex);
+    nDllNameLen = StrLenW(szDllNameW);
 
     if (fnQueryFullProcessImageNameW == NULL)
     {
-      HINSTANCE hDll;
-      LPVOID fn = NULL;
+        CFastLock cLock(&nMutex);
 
-      hDll = ::GetModuleHandleW(L"kernelbase.dll");
-      if (hDll != NULL)
-      {
-        fn = ::GetProcAddress(hDll, "QueryFullProcessImageNameW");
-      }
-      if (fn == NULL)
-      {
-        hDll = ::GetModuleHandleW(L"kernel32.dll");
-        if (hDll != NULL)
+        if (fnQueryFullProcessImageNameW == NULL)
         {
-          fn = ::GetProcAddress(hDll, "QueryFullProcessImageNameW");
+            HINSTANCE hDll;
+            LPVOID fn = NULL;
+
+            hDll = ::GetModuleHandleW(L"kernelbase.dll");
+            if (hDll != NULL)
+            {
+                fn = ::GetProcAddress(hDll, "QueryFullProcessImageNameW");
+            }
+            if (fn == NULL)
+            {
+                hDll = ::GetModuleHandleW(L"kernel32.dll");
+                if (hDll != NULL)
+                {
+                    fn = ::GetProcAddress(hDll, "QueryFullProcessImageNameW");
+                }
+            }
+
+            fnQueryFullProcessImageNameW = (lpfnQueryFullProcessImageNameW)((fn != NULL) ? fn : (LPVOID)1);
         }
-      }
-
-      fnQueryFullProcessImageNameW = (lpfnQueryFullProcessImageNameW)((fn != NULL) ? fn : (LPVOID)1);
     }
-  }
 
-  if (fnQueryFullProcessImageNameW != (lpfnQueryFullProcessImageNameW)1)
-  {
-    dwLen = MX_ARRAYLEN(szFullDllNameW) - (DWORD)nDllNameLen - 2;
-    if (fnQueryFullProcessImageNameW(::GetCurrentProcess(), 0, szFullDllNameW, &dwLen) == FALSE)
-      goto try_get_module_filename;
-  }
-  else
-  {
-try_get_module_filename:
-    dwLen = ::GetModuleFileNameW(NULL, szFullDllNameW, MX_ARRAYLEN(szFullDllNameW) - (DWORD)nDllNameLen - 2);
-    if (dwLen == 0)
+    if (fnQueryFullProcessImageNameW != (lpfnQueryFullProcessImageNameW)1)
     {
-      hRes = MX_HRESULT_FROM_LASTERROR();
-      return (FAILED(hRes)) ? hRes : E_FAIL;
+        dwLen = MX_ARRAYLEN(szFullDllNameW) - (DWORD)nDllNameLen - 2;
+        if (fnQueryFullProcessImageNameW(::GetCurrentProcess(), 0, szFullDllNameW, &dwLen) == FALSE)
+        {
+            goto try_get_module_filename;
+        }
     }
-  }
-  while (dwLen > 0 && szFullDllNameW[dwLen - 1] != L'\\')
-    dwLen--;
-  ::MxMemCopy(szFullDllNameW + dwLen, szDllNameW, (nDllNameLen + 1) * sizeof(WCHAR));
+    else
+    {
+    try_get_module_filename:
+        dwLen = ::GetModuleFileNameW(NULL, szFullDllNameW, MX_ARRAYLEN(szFullDllNameW) - (DWORD)nDllNameLen - 2);
+        if (dwLen == 0)
+        {
+            hRes = MX_HRESULT_FROM_LASTERROR();
+            return (FAILED(hRes)) ? hRes : E_FAIL;
+        }
+    }
+    while (dwLen > 0 && szFullDllNameW[dwLen - 1] != L'\\')
+    {
+        dwLen--;
+    }
+    ::MxMemCopy(szFullDllNameW + dwLen, szDllNameW, (nDllNameLen + 1) * sizeof(WCHAR));
 
-  *lphInstance = ::LoadLibraryW(szFullDllNameW);
-  if ((*lphInstance) == NULL)
-  {
-    hRes = MX_HRESULT_FROM_LASTERROR();
-    return (FAILED(hRes)) ? hRes : E_FAIL;
-  }
+    *lphInstance = ::LoadLibraryW(szFullDllNameW);
+    if ((*lphInstance) == NULL)
+    {
+        hRes = MX_HRESULT_FROM_LASTERROR();
+        return (FAILED(hRes)) ? hRes : E_FAIL;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
-} //namespace Internals
+} // namespace Internals
 
-} //namespace MX
+} // namespace MX

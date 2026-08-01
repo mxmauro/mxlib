@@ -7,7 +7,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Source\OpenSSL\build.vbs">
+    <None Include="Source\OpenSSL\build.ps1">
+      <Filter>Builder Files</Filter>
+    </None>
+    <None Include="Source\OpenSSL\build_all.bat">
       <Filter>Builder Files</Filter>
     </None>
   </ItemGroup>

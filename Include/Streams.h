@@ -26,64 +26,69 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class MX_NOVTABLE CStream : public virtual TRefCounted<CBaseMemObj>
 {
-public:
-  enum class eSeekMethod
-  {
-    Start=0, Current, End,
-  };
-
-protected:
-  CStream() : TRefCounted<CBaseMemObj>()
+  public:
+    enum class eSeekMethod
     {
-    lpNextStream = NULL;
-    return;
+        Start = 0,
+        Current,
+        End,
     };
 
-public:
-  virtual ~CStream()
+  protected:
+    CStream() : TRefCounted<CBaseMemObj>()
     {
-    if (lpNextStream != NULL)
-      lpNextStream->Release();
-    return;
+        lpNextStream = NULL;
+        return;
     };
 
-  virtual HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesRead,
-                       _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX) = 0;
-  virtual HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
-                        _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX) = 0;
-  HRESULT WriteString(_In_ LPCSTR szFormatA, ...);
-  HRESULT WriteStringV(_In_ LPCSTR szFormatA, _In_ va_list argptr);
-  HRESULT WriteString(_In_ LPCWSTR szFormatA, ...);
-  HRESULT WriteStringV(_In_ LPCWSTR szFormatA, _In_ va_list argptr);
-
-  virtual ULONGLONG GetLength() const = 0;
-
-  virtual HRESULT Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod=eSeekMethod::Start);
-
-  HRESULT CopyTo(_In_ CStream *lpTarget, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
-                 _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX);
-
-  VOID SetChainedStream(_In_opt_ CStream *lpStream);
-  CStream* GetChainedStream() const;
-
-  operator HANDLE() const
+  public:
+    virtual ~CStream()
     {
-    return GetHandle();
-    };
-  virtual HANDLE GetHandle() const
-    {
-    return NULL;
+        if (lpNextStream != NULL)
+        {
+            lpNextStream->Release();
+        }
+        return;
     };
 
-private:
-  CStream *lpNextStream;
+    virtual HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesRead,
+                         _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX) = 0;
+    virtual HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
+                          _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX) = 0;
+    HRESULT WriteString(_In_ LPCSTR szFormatA, ...);
+    HRESULT WriteStringV(_In_ LPCSTR szFormatA, _In_ va_list argptr);
+    HRESULT WriteString(_In_ LPCWSTR szFormatA, ...);
+    HRESULT WriteStringV(_In_ LPCWSTR szFormatA, _In_ va_list argptr);
+
+    virtual ULONGLONG GetLength() const = 0;
+
+    virtual HRESULT Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod = eSeekMethod::Start);
+
+    HRESULT CopyTo(_In_ CStream *lpTarget, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
+                   _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX);
+
+    VOID SetChainedStream(_In_opt_ CStream *lpStream);
+    CStream *GetChainedStream() const;
+
+    operator HANDLE() const
+    {
+        return GetHandle();
+    };
+    virtual HANDLE GetHandle() const
+    {
+        return NULL;
+    };
+
+  private:
+    CStream *lpNextStream;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

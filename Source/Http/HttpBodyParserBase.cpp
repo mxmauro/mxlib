@@ -22,23 +22,24 @@
 //-----------------------------------------------------------
 
 #ifdef _DEBUG
-  #define _SHARING_MODE FILE_SHARE_READ
+#define _SHARING_MODE FILE_SHARE_READ
 #else //_DEBUG
-  #define _SHARING_MODE 0
+#define _SHARING_MODE 0
 #endif //_DEBUG
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CHttpBodyParserBase::CHttpBodyParserBase() : TRefCounted<CBaseMemObj>()
 {
-  return;
+    return;
 }
 
 CHttpBodyParserBase::~CHttpBodyParserBase()
 {
-  return;
+    return;
 }
 
-} //namespace MX
+} // namespace MX

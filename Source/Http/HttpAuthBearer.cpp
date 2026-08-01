@@ -39,128 +39,169 @@ scope a space separated list of scope items, items chars must be inside this set
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CHttpAuthBearer::CHttpAuthBearer() : CHttpAuthBase(), CNonCopyableObj()
 {
-  return;
+    return;
 }
 
 CHttpAuthBearer::~CHttpAuthBearer()
 {
-  return;
+    return;
 }
 
 HRESULT CHttpAuthBearer::Parse(_In_ CHttpHeaderRespWwwProxyAuthenticateCommon *lpHeader)
 {
-  DWORD dwFields = 0;
-  SIZE_T i, nCount;
-  MX::CStringW cStrTempW;
+    DWORD dwFields = 0;
+    SIZE_T i, nCount;
+    MX::CStringW cStrTempW;
 
-  if (lpHeader == NULL)
-    return E_POINTER;
-  if (StrCompareA(lpHeader->GetScheme(), GetScheme(), TRUE) != 0)
-    return MX_E_InvalidData;
-
-  //parse parameters
-  nCount = lpHeader->GetParamsCount();
-  for (i = 0; i < nCount; i++)
-  {
-    LPCSTR szNameA = lpHeader->GetParamName(i);
-    LPCWSTR szValueW = lpHeader->GetParamValue(i);
-
-    //process pair
-    if (StrCompareA(szNameA, "scope") == 0)
+    if (lpHeader == NULL)
     {
-      LPCWSTR szScopeStartW;
-
-      if ((dwFields & 1) != 0)
-        return MX_E_InvalidData;
-      dwFields |= 1;
-
-      //parse scope
-      for (;;)
-      {
-        while (*szValueW == L' ' || *szValueW == L'\t')
-          szValueW++;
-        if (*szValueW == 0)
-          break;
-
-        szScopeStartW = szValueW;
-        while (*szValueW >= 0x21 && *szValueW <= 0x7F && *szValueW != L'"' && *szValueW != L'\\')
-          szValueW++;
-
-        if (*szValueW != 0 && *szValueW != L' ' && *szValueW != '\t')
-          return MX_E_InvalidData;
-
-        if (cStrTempW.CopyN(szScopeStartW, (SIZE_T)(szValueW - szScopeStartW)) == FALSE)
-          return E_OUTOFMEMORY;
-
-        if (aScopesList.AddElement((LPCWSTR)cStrTempW) == FALSE)
-          return E_OUTOFMEMORY;
-        cStrTempW.Detach();
-      }
+        return E_POINTER;
     }
-    else if (StrCompareA(szNameA, "realm") == 0)
+    if (StrCompareA(lpHeader->GetScheme(), GetScheme(), TRUE) != 0)
     {
-      if ((dwFields & 2) != 0)
         return MX_E_InvalidData;
-      dwFields |= 2;
-
-      //copy value
-      if (cStrRealmW.Copy(szValueW) == FALSE)
-        return E_OUTOFMEMORY;
     }
-    else if (StrCompareA(szNameA, "error") == 0)
+
+    // parse parameters
+    nCount = lpHeader->GetParamsCount();
+    for (i = 0; i < nCount; i++)
     {
-      if ((dwFields & 4) != 0)
-        return MX_E_InvalidData;
-      dwFields |= 4;
+        LPCSTR szNameA = lpHeader->GetParamName(i);
+        LPCWSTR szValueW = lpHeader->GetParamValue(i);
 
-      //copy value
-      if (cStrErrorW.Copy(szValueW) == FALSE)
-        return E_OUTOFMEMORY;
+        // process pair
+        if (StrCompareA(szNameA, "scope") == 0)
+        {
+            LPCWSTR szScopeStartW;
+
+            if ((dwFields & 1) != 0)
+            {
+                return MX_E_InvalidData;
+            }
+            dwFields |= 1;
+
+            // parse scope
+            for (;;)
+            {
+                while (*szValueW == L' ' || *szValueW == L'\t')
+                {
+                    szValueW++;
+                }
+                if (*szValueW == 0)
+                {
+                    break;
+                }
+
+                szScopeStartW = szValueW;
+                while (*szValueW >= 0x21 && *szValueW <= 0x7F && *szValueW != L'"' && *szValueW != L'\\')
+                {
+                    szValueW++;
+                }
+
+                if (*szValueW != 0 && *szValueW != L' ' && *szValueW != '\t')
+                {
+                    return MX_E_InvalidData;
+                }
+
+                if (cStrTempW.CopyN(szScopeStartW, (SIZE_T)(szValueW - szScopeStartW)) == FALSE)
+                {
+                    return E_OUTOFMEMORY;
+                }
+
+                if (aScopesList.AddElement((LPCWSTR)cStrTempW) == FALSE)
+                {
+                    return E_OUTOFMEMORY;
+                }
+                cStrTempW.Detach();
+            }
+        }
+        else if (StrCompareA(szNameA, "realm") == 0)
+        {
+            if ((dwFields & 2) != 0)
+            {
+                return MX_E_InvalidData;
+            }
+            dwFields |= 2;
+
+            // copy value
+            if (cStrRealmW.Copy(szValueW) == FALSE)
+            {
+                return E_OUTOFMEMORY;
+            }
+        }
+        else if (StrCompareA(szNameA, "error") == 0)
+        {
+            if ((dwFields & 4) != 0)
+            {
+                return MX_E_InvalidData;
+            }
+            dwFields |= 4;
+
+            // copy value
+            if (cStrErrorW.Copy(szValueW) == FALSE)
+            {
+                return E_OUTOFMEMORY;
+            }
+        }
+        else if (StrCompareA(szNameA, "error_description") == 0)
+        {
+            if ((dwFields & 8) != 0)
+            {
+                return MX_E_InvalidData;
+            }
+            dwFields |= 8;
+
+            // copy value
+            if (cStrErrorDescriptionW.Copy(szValueW) == FALSE)
+            {
+                return E_OUTOFMEMORY;
+            }
+        }
     }
-    else if (StrCompareA(szNameA, "error_description") == 0)
+
+    // some checks
+    if (cStrRealmW.IsEmpty() != FALSE)
     {
-      if ((dwFields & 8) != 0)
         return MX_E_InvalidData;
-      dwFields |= 8;
-
-      //copy value
-      if (cStrErrorDescriptionW.Copy(szValueW) == FALSE)
-        return E_OUTOFMEMORY;
     }
-  }
 
-  //some checks
-  if (cStrRealmW.IsEmpty() != FALSE)
-    return MX_E_InvalidData;
-
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CHttpAuthBearer::GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCSTR szAccessTokenA)
 {
-  HRESULT hRes;
+    HRESULT hRes;
 
-  cStrDestA.Empty();
-  if (szAccessTokenA == NULL)
-    return E_POINTER;
-  if (*szAccessTokenA == 0)
-    return E_INVALIDARG;
-
-  hRes = S_OK;
-
-  //build response
-  if (cStrDestA.Format("Bearer %s", szAccessTokenA) == FALSE)
-    hRes = E_OUTOFMEMORY;
-
-  //done
-  if (FAILED(hRes))
     cStrDestA.Empty();
-  return hRes;
+    if (szAccessTokenA == NULL)
+    {
+        return E_POINTER;
+    }
+    if (*szAccessTokenA == 0)
+    {
+        return E_INVALIDARG;
+    }
+
+    hRes = S_OK;
+
+    // build response
+    if (cStrDestA.Format("Bearer %s", szAccessTokenA) == FALSE)
+    {
+        hRes = E_OUTOFMEMORY;
+    }
+
+    // done
+    if (FAILED(hRes))
+    {
+        cStrDestA.Empty();
+    }
+    return hRes;
 }
 
-} //namespace MX
+} // namespace MX

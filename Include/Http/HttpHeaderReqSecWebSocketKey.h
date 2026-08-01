@@ -24,43 +24,44 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderReqSecWebSocketKey : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderReqSecWebSocketKey();
-  ~CHttpHeaderReqSecWebSocketKey();
+  public:
+    CHttpHeaderReqSecWebSocketKey();
+    ~CHttpHeaderReqSecWebSocketKey();
 
-  MX_DECLARE_HTTPHEADER_NAME(Sec-WebSocket-Key)
+    MX_DECLARE_HTTPHEADER_NAME(Sec - WebSocket - Key)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT GenerateKey(_In_ SIZE_T nKeyLen);
+    HRESULT GenerateKey(_In_ SIZE_T nKeyLen);
 
-  HRESULT SetKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen);
+    HRESULT SetKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen);
 
-  LPBYTE GetKey() const
+    LPBYTE GetKey() const
     {
-    return lpKey;
+        return lpKey;
     };
-  SIZE_T GetKeyLength() const
+    SIZE_T GetKeyLength() const
     {
-    return nKeyLength;
+        return nKeyLength;
     };
 
-private:
-  HRESULT InternalSetKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen);
-  VOID SecureFreeKey();
+  private:
+    HRESULT InternalSetKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen);
+    VOID SecureFreeKey();
 
-private:
-  LPBYTE lpKey;
-  SIZE_T nKeyLength;
+  private:
+    LPBYTE lpKey;
+    SIZE_T nKeyLength;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

@@ -25,9 +25,11 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-namespace HtmlEntities {
+namespace HtmlEntities
+{
 
 LPCSTR Get(_In_ WCHAR chW);
 
@@ -39,9 +41,9 @@ HRESULT ConvertFrom(_Out_ CStringW &cStrW, _In_ LPCWSTR szStrW, _In_ SIZE_T nStr
 WCHAR Decode(_In_ LPCSTR szStrA, _In_ SIZE_T nStrLen = (SIZE_T)-1, _Out_opt_ LPCSTR *lpszAfterEntityA = NULL);
 WCHAR Decode(_In_ LPCWSTR szStrW, _In_ SIZE_T nStrLen = (SIZE_T)-1, _Out_opt_ LPCWSTR *lpszAfterEntityW = NULL);
 
-} //namespace HtmlEntities
+} // namespace HtmlEntities
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

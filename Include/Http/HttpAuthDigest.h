@@ -25,84 +25,85 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpAuthDigest : public CHttpAuthBase, public CNonCopyableObj
 {
-public:
-  CHttpAuthDigest();
-  ~CHttpAuthDigest();
+  public:
+    CHttpAuthDigest();
+    ~CHttpAuthDigest();
 
-  LPCSTR GetScheme() const
+    LPCSTR GetScheme() const
     {
-    return "Digest";
+        return "Digest";
     };
 
-  HRESULT Parse(_In_ CHttpHeaderRespWwwProxyAuthenticateCommon *lpHeader);
+    HRESULT Parse(_In_ CHttpHeaderRespWwwProxyAuthenticateCommon *lpHeader);
 
-  HRESULT GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCWSTR szUserNameW, _In_z_ LPCWSTR szPasswordW,
-                           _In_z_ LPCSTR szMethodA, _In_z_ LPCSTR szUriPathA);
+    HRESULT GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCWSTR szUserNameW, _In_z_ LPCWSTR szPasswordW,
+                             _In_z_ LPCSTR szMethodA, _In_z_ LPCSTR szUriPathA);
 
-  LPCWSTR GetRealm() const
+    LPCWSTR GetRealm() const
     {
-    return (LPCWSTR)cStrRealmW;
+        return (LPCWSTR)cStrRealmW;
     };
 
-  LPCWSTR GetDomain() const
+    LPCWSTR GetDomain() const
     {
-    return (LPCWSTR)cStrDomainW;
+        return (LPCWSTR)cStrDomainW;
     };
 
-  LPCWSTR GetNonce() const
+    LPCWSTR GetNonce() const
     {
-    return (LPCWSTR)cStrNonceW;
+        return (LPCWSTR)cStrNonceW;
     };
 
-  LPCWSTR GetOpaque() const
+    LPCWSTR GetOpaque() const
     {
-    return (LPCWSTR)cStrOpaqueW;
+        return (LPCWSTR)cStrOpaqueW;
     };
 
-  BOOL IsStale() const
+    BOOL IsStale() const
     {
-    return bStale;
+        return bStale;
     };
 
-  BOOL IsAlgorithmSession() const
+    BOOL IsAlgorithmSession() const
     {
-    return bAlgorithmSession;
+        return bAlgorithmSession;
     };
 
-  BOOL IsUserHash() const
+    BOOL IsUserHash() const
     {
-    return bUserHash;
+        return bUserHash;
     };
 
-  MX::CMessageDigest::eAlgorithm GetAlgorithm() const
+    MX::CMessageDigest::eAlgorithm GetAlgorithm() const
     {
-    return nAlgorithm;
+        return nAlgorithm;
     };
 
-  int GetQ() const
+    int GetQ() const
     {
-    return nQop;
+        return nQop;
     };
 
-  BOOL IsCharsetUTF8() const
+    BOOL IsCharsetUTF8() const
     {
-    return bCharsetIsUtf8;
+        return bCharsetIsUtf8;
     };
 
-private:
-  CStringW cStrRealmW, cStrDomainW, cStrNonceW, cStrOpaqueW;
-  BOOL bStale{ FALSE }, bAlgorithmSession{ FALSE }, bUserHash{ FALSE };
-  MX::CMessageDigest::eAlgorithm nAlgorithm{ MX::CMessageDigest::eAlgorithm::MD5 };
-  int nQop{ 0 };
-  BOOL bCharsetIsUtf8{ FALSE };
-  LONG volatile nNonceCount{ 0 };
+  private:
+    CStringW cStrRealmW, cStrDomainW, cStrNonceW, cStrOpaqueW;
+    BOOL bStale{FALSE}, bAlgorithmSession{FALSE}, bUserHash{FALSE};
+    MX::CMessageDigest::eAlgorithm nAlgorithm{MX::CMessageDigest::eAlgorithm::MD5};
+    int nQop{0};
+    BOOL bCharsetIsUtf8{FALSE};
+    LONG volatile nNonceCount{0};
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

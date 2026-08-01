@@ -25,41 +25,42 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CZipLib : public virtual CBaseMemObj, public CNonCopyableObj
 {
-public:
-  CZipLib(_In_ BOOL bUseZipLibHeader = TRUE);
-  virtual ~CZipLib();
+  public:
+    CZipLib(_In_ BOOL bUseZipLibHeader = TRUE);
+    virtual ~CZipLib();
 
-  HRESULT BeginCompress(_In_ int nCompressionLevel);
-  HRESULT BeginDecompress();
-  HRESULT CompressStream(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLen);
-  HRESULT DecompressStream(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLen, _Out_opt_ SIZE_T *lpnUnusedBytes=NULL);
-  HRESULT End();
+    HRESULT BeginCompress(_In_ int nCompressionLevel);
+    HRESULT BeginDecompress();
+    HRESULT CompressStream(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLen);
+    HRESULT DecompressStream(_In_ LPCVOID lpSrc, _In_ SIZE_T nSrcLen, _Out_opt_ SIZE_T *lpnUnusedBytes = NULL);
+    HRESULT End();
 
-  SIZE_T GetAvailableData() const;
-  SIZE_T GetData(_Out_ LPVOID lpDest, _In_ SIZE_T nDestSize);
+    SIZE_T GetAvailableData() const;
+    SIZE_T GetData(_Out_ LPVOID lpDest, _In_ SIZE_T nDestSize);
 
-  BOOL HasDecompressEndOfStreamBeenReached();
+    BOOL HasDecompressEndOfStreamBeenReached();
 
-protected:
-  VOID Cleanup();
-  BOOL CheckAndSkipGZipHeader(_Inout_ LPBYTE &s, _Inout_ SIZE_T &nSrcLen, _Inout_opt_ SIZE_T *lpnUnusedBytes);
+  protected:
+    VOID Cleanup();
+    BOOL CheckAndSkipGZipHeader(_Inout_ LPBYTE &s, _Inout_ SIZE_T &nSrcLen, _Inout_opt_ SIZE_T *lpnUnusedBytes);
 
-protected:
-  BOOL bUseZipLibHeader;
-  int nInUse, nLevel, nGZipHdrState;
-  LPVOID lpStream;
-  BYTE aTempBuf[4096];
-  BYTE aWindow[65536];
-  BOOL bEndReached;
-  WORD wTemp16;
-  CCircularBuffer cProcessed;
+  protected:
+    BOOL bUseZipLibHeader;
+    int nInUse, nLevel, nGZipHdrState;
+    LPVOID lpStream;
+    BYTE aTempBuf[4096];
+    BYTE aWindow[65536];
+    BOOL bEndReached;
+    WORD wTemp16;
+    CCircularBuffer cProcessed;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

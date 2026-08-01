@@ -24,219 +24,233 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CWindowsHandle : public virtual CBaseMemObj, public CNonCopyableObj
 {
-public:
-  CWindowsHandle() : CBaseMemObj(), CNonCopyableObj()
+  public:
+    CWindowsHandle() : CBaseMemObj(), CNonCopyableObj()
     {
-    h = NULL;
-    return;
+        h = NULL;
+        return;
     };
 
-  ~CWindowsHandle()
+    ~CWindowsHandle()
     {
-    Close();
-    return;
+        Close();
+        return;
     };
 
-  VOID Close()
+    VOID Close()
     {
-    CloseHandleSEH(h);
-    h = NULL;
-    return;
+        CloseHandleSEH(h);
+        h = NULL;
+        return;
     };
 
-  HANDLE* operator&()
+    HANDLE *operator&()
     {
-    MX_ASSERT(h == NULL || h == INVALID_HANDLE_VALUE);
-    return &h;
+        MX_ASSERT(h == NULL || h == INVALID_HANDLE_VALUE);
+        return &h;
     };
 
-  operator HANDLE() const
+    operator HANDLE() const
     {
-    return Get();
+        return Get();
     };
 
-  HANDLE Get() const
+    HANDLE Get() const
     {
-    return (h != NULL && h != INVALID_HANDLE_VALUE) ? h : NULL;
+        return (h != NULL && h != INVALID_HANDLE_VALUE) ? h : NULL;
     };
 
-  bool operator!() const
+    bool operator!() const
     {
-    return (h == NULL || h == INVALID_HANDLE_VALUE) ? true : false;
+        return (h == NULL || h == INVALID_HANDLE_VALUE) ? true : false;
     };
 
-  operator bool() const
+    operator bool() const
     {
-    return (h != NULL && h != INVALID_HANDLE_VALUE) ? true : false;
+        return (h != NULL && h != INVALID_HANDLE_VALUE) ? true : false;
     };
 
-  VOID Attach(_In_opt_ HANDLE _h)
+    VOID Attach(_In_opt_ HANDLE _h)
     {
-    Close();
-    if (_h != NULL && _h != INVALID_HANDLE_VALUE)
-      h = _h;
-    return;
+        Close();
+        if (_h != NULL && _h != INVALID_HANDLE_VALUE)
+        {
+            h = _h;
+        }
+        return;
     };
 
-  HANDLE Detach()
+    HANDLE Detach()
     {
-    HANDLE hTemp;
+        HANDLE hTemp;
 
-    hTemp = (h != INVALID_HANDLE_VALUE) ? h : NULL;
-    h = NULL;
-    return hTemp;
+        hTemp = (h != INVALID_HANDLE_VALUE) ? h : NULL;
+        h = NULL;
+        return hTemp;
     };
 
-  static VOID CloseHandleSEH(_In_ HANDLE h)
+    static VOID CloseHandleSEH(_In_ HANDLE h)
     {
-    if (h != NULL && h != INVALID_HANDLE_VALUE)
-    {
+        if (h != NULL && h != INVALID_HANDLE_VALUE)
+        {
 #if defined(_M_IX86)
-      ::MxCallStdCallWithSEH1(&::MxNtClose, NULL, (SIZE_T)h);
+            ::MxCallStdCallWithSEH1(&::MxNtClose, NULL, (SIZE_T)h);
 #elif defined(_M_X64)
-      ::MxCallWithSEH(&::MxNtClose, NULL, (SIZE_T)h, 0, 0);
+            ::MxCallWithSEH(&::MxNtClose, NULL, (SIZE_T)h, 0, 0);
 #endif
-    }
-    return;
+        }
+        return;
     };
 
-protected:
-  HANDLE h;
+  protected:
+    HANDLE h;
 };
 
 //-----------------------------------------------------------
 
 class CWindowsRemoteHandle : public virtual CBaseMemObj, public CNonCopyableObj
 {
-public:
-  CWindowsRemoteHandle() : CBaseMemObj(), CNonCopyableObj()
+  public:
+    CWindowsRemoteHandle() : CBaseMemObj(), CNonCopyableObj()
     {
-    hProc = h = NULL;
-    return;
+        hProc = h = NULL;
+        return;
     };
 
-  ~CWindowsRemoteHandle()
+    ~CWindowsRemoteHandle()
     {
-    Close();
-    return;
+        Close();
+        return;
     };
 
-  VOID Close()
+    VOID Close()
     {
-    CloseRemoteHandleSEH(hProc, h);
-    CWindowsHandle::CloseHandleSEH(hProc);
-    hProc = h = NULL;
-    return;
+        CloseRemoteHandleSEH(hProc, h);
+        CWindowsHandle::CloseHandleSEH(hProc);
+        hProc = h = NULL;
+        return;
     };
 
-  HRESULT Init(_In_ DWORD dwPid, _In_ HANDLE _h)
+    HRESULT Init(_In_ DWORD dwPid, _In_ HANDLE _h)
     {
-    NTSTATUS nNtStatus;
+        NTSTATUS nNtStatus;
 
-    if (dwPid == 0 || _h == NULL || _h == INVALID_HANDLE_VALUE)
-      return E_INVALIDARG;
-    Close();
-    hProc = MxOpenProcess(SYNCHRONIZE|PROCESS_DUP_HANDLE, FALSE, dwPid);
-    if (hProc == NULL)
-      return E_ACCESSDENIED;
-    nNtStatus = MxNtDuplicateObject(MX_CURRENTPROCESS, _h, hProc, &h, 0, 0, DUPLICATE_SAME_ACCESS);
-    if (!NT_SUCCESS(nNtStatus))
-    {
-      Close();
-      return HRESULT_FROM_NT(nNtStatus);
-    }
-    return S_OK;
+        if (dwPid == 0 || _h == NULL || _h == INVALID_HANDLE_VALUE)
+        {
+            return E_INVALIDARG;
+        }
+        Close();
+        hProc = MxOpenProcess(SYNCHRONIZE | PROCESS_DUP_HANDLE, FALSE, dwPid);
+        if (hProc == NULL)
+        {
+            return E_ACCESSDENIED;
+        }
+        nNtStatus = MxNtDuplicateObject(MX_CURRENTPROCESS, _h, hProc, &h, 0, 0, DUPLICATE_SAME_ACCESS);
+        if (!NT_SUCCESS(nNtStatus))
+        {
+            Close();
+            return HRESULT_FROM_NT(nNtStatus);
+        }
+        return S_OK;
     };
 
-  HRESULT Init(_In_ HANDLE _hProc, _In_ HANDLE _h)
+    HRESULT Init(_In_ HANDLE _hProc, _In_ HANDLE _h)
     {
-    NTSTATUS nNtStatus;
+        NTSTATUS nNtStatus;
 
-    if (_hProc == NULL || _hProc == INVALID_HANDLE_VALUE ||
-        _h == NULL || _h == INVALID_HANDLE_VALUE)
-      return E_INVALIDARG;
-    
-    nNtStatus = MxNtDuplicateObject(MX_CURRENTPROCESS, _hProc, MX_CURRENTPROCESS, &hProc, 0, 0, DUPLICATE_SAME_ACCESS);
-    if (NT_SUCCESS(nNtStatus))
-      nNtStatus = MxNtDuplicateObject(MX_CURRENTPROCESS, _h, hProc, &h, 0, 0, DUPLICATE_SAME_ACCESS);
-    if (!NT_SUCCESS(nNtStatus))
-    {
-      Close();
-      return HRESULT_FROM_NT(nNtStatus);
-    }
-    return S_OK;
+        if (_hProc == NULL || _hProc == INVALID_HANDLE_VALUE || _h == NULL || _h == INVALID_HANDLE_VALUE)
+        {
+            return E_INVALIDARG;
+        }
+
+        nNtStatus =
+            MxNtDuplicateObject(MX_CURRENTPROCESS, _hProc, MX_CURRENTPROCESS, &hProc, 0, 0, DUPLICATE_SAME_ACCESS);
+        if (NT_SUCCESS(nNtStatus))
+        {
+            nNtStatus = MxNtDuplicateObject(MX_CURRENTPROCESS, _h, hProc, &h, 0, 0, DUPLICATE_SAME_ACCESS);
+        }
+        if (!NT_SUCCESS(nNtStatus))
+        {
+            Close();
+            return HRESULT_FROM_NT(nNtStatus);
+        }
+        return S_OK;
     };
 
-  operator HANDLE() const
+    operator HANDLE() const
     {
-    return Get();
+        return Get();
     };
 
-  HANDLE Get() const
+    HANDLE Get() const
     {
-    return (h != NULL && h != INVALID_HANDLE_VALUE) ? h : NULL;
+        return (h != NULL && h != INVALID_HANDLE_VALUE) ? h : NULL;
     };
 
-  bool operator!() const
+    bool operator!() const
     {
-    return (h == NULL || h == INVALID_HANDLE_VALUE) ? true : false;
+        return (h == NULL || h == INVALID_HANDLE_VALUE) ? true : false;
     };
 
-  operator bool() const
+    operator bool() const
     {
-    return (h != NULL && h != INVALID_HANDLE_VALUE) ? true : false;
+        return (h != NULL && h != INVALID_HANDLE_VALUE) ? true : false;
     };
 
-  VOID Attach(_In_ HANDLE _hProc, _In_ HANDLE _h)
+    VOID Attach(_In_ HANDLE _hProc, _In_ HANDLE _h)
     {
-    Close();
-    if (_hProc != NULL && _hProc != INVALID_HANDLE_VALUE)
-      hProc = _hProc;
-    if (_h != NULL && _h != INVALID_HANDLE_VALUE)
-      h = _h;
-    return;
+        Close();
+        if (_hProc != NULL && _hProc != INVALID_HANDLE_VALUE)
+        {
+            hProc = _hProc;
+        }
+        if (_h != NULL && _h != INVALID_HANDLE_VALUE)
+        {
+            h = _h;
+        }
+        return;
     };
 
-  HANDLE Detach()
+    HANDLE Detach()
     {
-    HANDLE hTemp;
+        HANDLE hTemp;
 
-    hTemp = h;
-    h = NULL;
-    Close();
-    return hTemp;
+        hTemp = h;
+        h = NULL;
+        Close();
+        return hTemp;
     };
 
-  static VOID CloseRemoteHandleSEH(_In_ HANDLE hProc, _In_ HANDLE h)
+    static VOID CloseRemoteHandleSEH(_In_ HANDLE hProc, _In_ HANDLE h)
     {
-    if (h != NULL && h != INVALID_HANDLE_VALUE &&
-        hProc != NULL && hProc != INVALID_HANDLE_VALUE)
-    {
+        if (h != NULL && h != INVALID_HANDLE_VALUE && hProc != NULL && hProc != INVALID_HANDLE_VALUE)
+        {
 #if defined(_M_IX86)
-      ::MxCallStdCallWithSEH2(&CWindowsRemoteHandle::InternalCloseRH, NULL, (SIZE_T)hProc, (SIZE_T)h);
+            ::MxCallStdCallWithSEH2(&CWindowsRemoteHandle::InternalCloseRH, NULL, (SIZE_T)hProc, (SIZE_T)h);
 #elif defined(_M_X64)
-      ::MxCallWithSEH(&CWindowsRemoteHandle::InternalCloseRH, NULL, (SIZE_T)hProc, (SIZE_T)h, 0);
+            ::MxCallWithSEH(&CWindowsRemoteHandle::InternalCloseRH, NULL, (SIZE_T)hProc, (SIZE_T)h, 0);
 #endif
-    }
-    return;
+        }
+        return;
     };
 
-protected:
-  HANDLE hProc, h;
+  protected:
+    HANDLE hProc, h;
 
-private:
-  static VOID InternalCloseRH(_In_ HANDLE hProc, _In_ HANDLE h)
+  private:
+    static VOID InternalCloseRH(_In_ HANDLE hProc, _In_ HANDLE h)
     {
-    MxNtDuplicateObject(hProc, h, hProc, NULL, 0, FALSE, DUPLICATE_CLOSE_SOURCE);
-    return;
+        MxNtDuplicateObject(hProc, h, hProc, NULL, 0, FALSE, DUPLICATE_CLOSE_SOURCE);
+        return;
     };
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

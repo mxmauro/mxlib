@@ -24,30 +24,31 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CTimer : public virtual CBaseMemObj
 {
-public:
-  CTimer();
-  CTimer(_In_ CTimer const&);
+  public:
+    CTimer();
+    CTimer(_In_ CTimer const &);
 
-  CTimer& operator=(_In_ CTimer const&);
+    CTimer &operator=(_In_ CTimer const &);
 
-  VOID Reset();
+    VOID Reset();
 
-  VOID Mark();
-  VOID ResetToLastMark();
+    VOID Mark();
+    VOID ResetToLastMark();
 
-  DWORD GetElapsedTimeMs() const;
-  DWORD GetStartTimeMs() const;
-  DWORD GetMarkTimeMs() const;
+    DWORD GetElapsedTimeMs() const;
+    DWORD GetStartTimeMs() const;
+    DWORD GetMarkTimeMs() const;
 
-private:
-  ULARGE_INTEGER uliStart, uliMark, uliFrequency;
+  private:
+    ULARGE_INTEGER uliStart, uliMark, uliFrequency;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

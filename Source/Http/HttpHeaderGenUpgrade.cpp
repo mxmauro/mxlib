@@ -21,162 +21,200 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CHttpHeaderGenUpgrade::CHttpHeaderGenUpgrade() : CHttpHeaderBase()
 {
-  return;
+    return;
 }
 
 CHttpHeaderGenUpgrade::~CHttpHeaderGenUpgrade()
 {
-  cProductsList.RemoveAllElements();
-  return;
+    cProductsList.RemoveAllElements();
+    return;
 }
 
 HRESULT CHttpHeaderGenUpgrade::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szValueEndA, szStartA;
-  BOOL bGotItem;
-  HRESULT hRes;
+    LPCSTR szValueEndA, szStartA;
+    BOOL bGotItem;
+    HRESULT hRes;
 
-  if (szValueA == NULL)
-    return E_POINTER;
-
-  if (nValueLen == (SIZE_T)-1)
-    nValueLen = StrLenA(szValueA);
-  szValueEndA = szValueA + nValueLen;
-
-  //parse
-  bGotItem = FALSE;
-  do
-  {
-    //skip spaces
-    szValueA = SkipSpaces(szValueA, szValueEndA);
-    if (szValueA >= szValueEndA)
-      break;
-
-    //get product
-    szValueA = SkipUntil(szStartA = szValueA, szValueEndA, ";, \t");
-    if (szStartA == szValueA)
-      goto skip_null_listitem;
-
-    bGotItem = TRUE;
-
-    //add product
-    hRes = AddProduct(szStartA, (SIZE_T)(szValueA - szStartA));
-    if (FAILED(hRes))
-      return hRes;
-
-skip_null_listitem:
-    //skip spaces
-    szValueA = SkipSpaces(szValueA, szValueEndA);
-
-    //check for separator or end
-    if (szValueA < szValueEndA)
+    if (szValueA == NULL)
     {
-      if (*szValueA == ',')
-        szValueA++;
-      else
+        return E_POINTER;
+    }
+
+    if (nValueLen == (SIZE_T)-1)
+    {
+        nValueLen = StrLenA(szValueA);
+    }
+    szValueEndA = szValueA + nValueLen;
+
+    // parse
+    bGotItem = FALSE;
+    do
+    {
+        // skip spaces
+        szValueA = SkipSpaces(szValueA, szValueEndA);
+        if (szValueA >= szValueEndA)
+        {
+            break;
+        }
+
+        // get product
+        szValueA = SkipUntil(szStartA = szValueA, szValueEndA, ";, \t");
+        if (szStartA == szValueA)
+        {
+            goto skip_null_listitem;
+        }
+
+        bGotItem = TRUE;
+
+        // add product
+        hRes = AddProduct(szStartA, (SIZE_T)(szValueA - szStartA));
+        if (FAILED(hRes))
+        {
+            return hRes;
+        }
+
+    skip_null_listitem:
+        // skip spaces
+        szValueA = SkipSpaces(szValueA, szValueEndA);
+
+        // check for separator or end
+        if (szValueA < szValueEndA)
+        {
+            if (*szValueA == ',')
+            {
+                szValueA++;
+            }
+            else
+            {
+                return MX_E_InvalidData;
+            }
+        }
+    } while (szValueA < szValueEndA);
+
+    // do we got one?
+    if (bGotItem == FALSE)
+    {
         return MX_E_InvalidData;
     }
-  }
-  while (szValueA < szValueEndA);
 
-  //do we got one?
-  if (bGotItem == FALSE)
-    return MX_E_InvalidData;
-
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CHttpHeaderGenUpgrade::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
-  SIZE_T i, nCount;
+    SIZE_T i, nCount;
 
-  cStrDestA.Empty();
-  //fill products
-  nCount = cProductsList.GetCount();
-  for (i = 0; i < nCount; i++)
-  {
-    if (cStrDestA.IsEmpty() == FALSE)
+    cStrDestA.Empty();
+    // fill products
+    nCount = cProductsList.GetCount();
+    for (i = 0; i < nCount; i++)
     {
-      if (cStrDestA.ConcatN(",", 1) == FALSE)
-        return E_OUTOFMEMORY;
+        if (cStrDestA.IsEmpty() == FALSE)
+        {
+            if (cStrDestA.ConcatN(",", 1) == FALSE)
+            {
+                return E_OUTOFMEMORY;
+            }
+        }
+        if (cStrDestA.Concat(cProductsList.GetElementAt(i)) == FALSE)
+        {
+            return E_OUTOFMEMORY;
+        }
     }
-    if (cStrDestA.Concat(cProductsList.GetElementAt(i)) == FALSE)
-      return E_OUTOFMEMORY;
-  }
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CHttpHeaderGenUpgrade::AddProduct(_In_z_ LPCSTR szProductA, _In_ SIZE_T nProductLen)
 {
-  LPCSTR szStartA, szProductEndA;
-  CStringA cStrTempA;
+    LPCSTR szStartA, szProductEndA;
+    CStringA cStrTempA;
 
-  if (nProductLen == (SIZE_T)-1)
-    nProductLen = StrLenA(szProductA);
-  if (nProductLen == 0)
-    return MX_E_InvalidData;
-  if (szProductA == NULL)
-    return E_POINTER;
-  szProductEndA = szProductA + nProductLen;
+    if (nProductLen == (SIZE_T)-1)
+    {
+        nProductLen = StrLenA(szProductA);
+    }
+    if (nProductLen == 0)
+    {
+        return MX_E_InvalidData;
+    }
+    if (szProductA == NULL)
+    {
+        return E_POINTER;
+    }
+    szProductEndA = szProductA + nProductLen;
 
-  //validate
-  szProductA = GetToken(szStartA = szProductA, szProductEndA);
-  if (szProductA == szStartA)
-    return MX_E_InvalidData;
+    // validate
+    szProductA = GetToken(szStartA = szProductA, szProductEndA);
+    if (szProductA == szStartA)
+    {
+        return MX_E_InvalidData;
+    }
 
-  //check slash separator
-  if (szProductA < szProductEndA && *szProductA == '/')
-  {
-    szProductA++;
-    szProductA = GetToken(szProductA, szProductEndA);
-    if (*(szProductA-1) == '/' || (szProductA < szProductEndA && *szProductA == '/')) //no subtype?
-      return MX_E_InvalidData;
-  }
-  //check for end
-  if (szProductA != szProductEndA)
-    return MX_E_InvalidData;
+    // check slash separator
+    if (szProductA < szProductEndA && *szProductA == '/')
+    {
+        szProductA++;
+        szProductA = GetToken(szProductA, szProductEndA);
+        if (*(szProductA - 1) == '/' || (szProductA < szProductEndA && *szProductA == '/'))
+        { // no subtype?
+            return MX_E_InvalidData;
+        }
+    }
+    // check for end
+    if (szProductA != szProductEndA)
+    {
+        return MX_E_InvalidData;
+    }
 
-  //set new value
-  if (cStrTempA.CopyN(szStartA, nProductLen) == FALSE)
-    return E_OUTOFMEMORY;
-  if (cProductsList.AddElement((LPSTR)cStrTempA) == FALSE)
-    return E_OUTOFMEMORY;
-  cStrTempA.Detach();
+    // set new value
+    if (cStrTempA.CopyN(szStartA, nProductLen) == FALSE)
+    {
+        return E_OUTOFMEMORY;
+    }
+    if (cProductsList.AddElement((LPSTR)cStrTempA) == FALSE)
+    {
+        return E_OUTOFMEMORY;
+    }
+    cStrTempA.Detach();
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 SIZE_T CHttpHeaderGenUpgrade::GetProductsCount() const
 {
-  return cProductsList.GetCount();
+    return cProductsList.GetCount();
 }
 
 LPCSTR CHttpHeaderGenUpgrade::GetProduct(_In_ SIZE_T nIndex) const
 {
-  return (nIndex < cProductsList.GetCount()) ? cProductsList.GetElementAt(nIndex) : NULL;
+    return (nIndex < cProductsList.GetCount()) ? cProductsList.GetElementAt(nIndex) : NULL;
 }
 
 BOOL CHttpHeaderGenUpgrade::HasProduct(_In_z_ LPCSTR szProductA) const
 {
-  SIZE_T i, nCount;
+    SIZE_T i, nCount;
 
-  if (szProductA != NULL && szProductA[0] != 0)
-  {
-    nCount = cProductsList.GetCount();
-    for (i=0; i<nCount; i++)
+    if (szProductA != NULL && szProductA[0] != 0)
     {
-      if (StrCompareA(cProductsList.GetElementAt(i), szProductA, TRUE) == 0)
-        return TRUE;
+        nCount = cProductsList.GetCount();
+        for (i = 0; i < nCount; i++)
+        {
+            if (StrCompareA(cProductsList.GetElementAt(i), szProductA, TRUE) == 0)
+            {
+                return TRUE;
+            }
+        }
     }
-  }
-  return FALSE;
+    return FALSE;
 }
 
-} //namespace MX
+} // namespace MX

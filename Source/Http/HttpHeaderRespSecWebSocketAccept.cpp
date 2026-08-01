@@ -31,154 +31,188 @@ static HRESULT CalculateHash(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen, _Out_writes
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CHttpHeaderRespSecWebSocketAccept::CHttpHeaderRespSecWebSocketAccept() : CHttpHeaderBase()
 {
-  ::MxMemSet(aSHA1, 0, sizeof(aSHA1));
-  return;
+    ::MxMemSet(aSHA1, 0, sizeof(aSHA1));
+    return;
 }
 
 CHttpHeaderRespSecWebSocketAccept::~CHttpHeaderRespSecWebSocketAccept()
 {
-  ::MxMemSet(aSHA1, 0, sizeof(aSHA1));
-  return;
+    ::MxMemSet(aSHA1, 0, sizeof(aSHA1));
+    return;
 }
 
 HRESULT CHttpHeaderRespSecWebSocketAccept::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  CBase64Decoder cDecoder;
-  LPCSTR szValueEndA, szStartA;
-  HRESULT hRes;
+    CBase64Decoder cDecoder;
+    LPCSTR szValueEndA, szStartA;
+    HRESULT hRes;
 
-  if (szValueA == NULL)
-    return E_POINTER;
+    if (szValueA == NULL)
+    {
+        return E_POINTER;
+    }
 
-  if (nValueLen == (SIZE_T)-1)
-    nValueLen = StrLenA(szValueA);
-  szValueEndA = szValueA + nValueLen;
+    if (nValueLen == (SIZE_T)-1)
+    {
+        nValueLen = StrLenA(szValueA);
+    }
+    szValueEndA = szValueA + nValueLen;
 
-  //skip spaces
-  szStartA = SkipSpaces(szValueA, szValueEndA);
+    // skip spaces
+    szStartA = SkipSpaces(szValueA, szValueEndA);
 
-  //reach the end
-  for (szValueA = szStartA; szValueA < szValueEndA && *szValueA > ' '; szValueA++);
-  if (szValueA == szStartA)
-    return MX_E_InvalidData;
+    // reach the end
+    for (szValueA = szStartA; szValueA < szValueEndA && *szValueA > ' '; szValueA++)
+    {
+        ;
+    }
+    if (szValueA == szStartA)
+    {
+        return MX_E_InvalidData;
+    }
 
-  //start decoding
-  hRes = cDecoder.Begin(cDecoder.GetRequiredSpace((SIZE_T)(szValueA - szStartA)));
-  if (SUCCEEDED(hRes))
-  {
-    hRes = cDecoder.Process(szStartA, (SIZE_T)(szValueA - szStartA));
+    // start decoding
+    hRes = cDecoder.Begin(cDecoder.GetRequiredSpace((SIZE_T)(szValueA - szStartA)));
     if (SUCCEEDED(hRes))
-      hRes = cDecoder.End();
-  }
-  //and set key
-  if (SUCCEEDED(hRes))
-  {
-    if (cDecoder.GetOutputLength() == 20)
-      ::MxMemCopy(aSHA1, cDecoder.GetBuffer(), 20);
-    else
-      hRes = MX_E_InvalidData;
-  }
-  if (FAILED(hRes))
-    return hRes;
+    {
+        hRes = cDecoder.Process(szStartA, (SIZE_T)(szValueA - szStartA));
+        if (SUCCEEDED(hRes))
+        {
+            hRes = cDecoder.End();
+        }
+    }
+    // and set key
+    if (SUCCEEDED(hRes))
+    {
+        if (cDecoder.GetOutputLength() == 20)
+        {
+            ::MxMemCopy(aSHA1, cDecoder.GetBuffer(), 20);
+        }
+        else
+        {
+            hRes = MX_E_InvalidData;
+        }
+    }
+    if (FAILED(hRes))
+    {
+        return hRes;
+    }
 
-  //check after data
-  if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
-    return MX_E_InvalidData;
+    // check after data
+    if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
+    {
+        return MX_E_InvalidData;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CHttpHeaderRespSecWebSocketAccept::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
-  CBase64Encoder cEncoder;
-  HRESULT hRes;
+    CBase64Encoder cEncoder;
+    HRESULT hRes;
 
-  //start encoding
-  hRes = cEncoder.Begin(cEncoder.GetRequiredSpace(sizeof(aSHA1)));
-  if (SUCCEEDED(hRes))
-  {
-    hRes = cEncoder.Process(aSHA1, sizeof(aSHA1));
+    // start encoding
+    hRes = cEncoder.Begin(cEncoder.GetRequiredSpace(sizeof(aSHA1)));
     if (SUCCEEDED(hRes))
-      hRes = cEncoder.End();
-  }
-  if (FAILED(hRes))
-    return hRes;
+    {
+        hRes = cEncoder.Process(aSHA1, sizeof(aSHA1));
+        if (SUCCEEDED(hRes))
+        {
+            hRes = cEncoder.End();
+        }
+    }
+    if (FAILED(hRes))
+    {
+        return hRes;
+    }
 
-  //build output
-  return (cStrDestA.CopyN(cEncoder.GetBuffer(), cEncoder.GetOutputLength()) != FALSE) ? S_OK : E_OUTOFMEMORY;
+    // build output
+    return (cStrDestA.CopyN(cEncoder.GetBuffer(), cEncoder.GetOutputLength()) != FALSE) ? S_OK : E_OUTOFMEMORY;
 }
 
 HRESULT CHttpHeaderRespSecWebSocketAccept::SetKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen)
 {
-  return CalculateHash(lpKey, nKeyLen, aSHA1);
+    return CalculateHash(lpKey, nKeyLen, aSHA1);
 }
 
 LPBYTE CHttpHeaderRespSecWebSocketAccept::GetSHA1() const
 {
-  return const_cast<LPBYTE>(aSHA1);
+    return const_cast<LPBYTE>(aSHA1);
 }
 
 HRESULT CHttpHeaderRespSecWebSocketAccept::VerifyKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen)
 {
-  BYTE aVerifierSHA1[20];
-  HRESULT hRes;
+    BYTE aVerifierSHA1[20];
+    HRESULT hRes;
 
-  hRes = CalculateHash(lpKey, nKeyLen, aVerifierSHA1);
-  if (SUCCEEDED(hRes))
-  {
-    hRes = (::MxMemCompare(aSHA1, aVerifierSHA1, sizeof(aSHA1)) == 0) ? S_OK : S_FALSE;
-  }
-  return hRes;
+    hRes = CalculateHash(lpKey, nKeyLen, aVerifierSHA1);
+    if (SUCCEEDED(hRes))
+    {
+        hRes = (::MxMemCompare(aSHA1, aVerifierSHA1, sizeof(aSHA1)) == 0) ? S_OK : S_FALSE;
+    }
+    return hRes;
 }
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 
 static HRESULT CalculateHash(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen, _Out_writes_bytes_all_(20) BYTE aSHA1[20])
 {
-  MX::CBase64Encoder cEncoder;
-  MX::CMessageDigest cDigest;
-  HRESULT hRes;
+    MX::CBase64Encoder cEncoder;
+    MX::CMessageDigest cDigest;
+    HRESULT hRes;
 
-  ::MxMemSet(aSHA1, 0, 20);
-  if (lpKey == NULL && nKeyLen > 0)
-    return E_POINTER;
+    ::MxMemSet(aSHA1, 0, 20);
+    if (lpKey == NULL && nKeyLen > 0)
+    {
+        return E_POINTER;
+    }
 
-  //convert key to base64
-  hRes = cEncoder.Begin(cEncoder.GetRequiredSpace(nKeyLen));
-  if (SUCCEEDED(hRes))
-  {
-    hRes = cEncoder.Process(lpKey, nKeyLen);
-    if (SUCCEEDED(hRes))
-      hRes = cEncoder.End();
-  }
-  if (FAILED(hRes))
-    return hRes;
-
-  //hash the base64 output plus the guid
-  hRes = cDigest.BeginDigest(MX::CMessageDigest::eAlgorithm::SHA1);
-  if (SUCCEEDED(hRes))
-  {
-    hRes = cDigest.DigestStream(cEncoder.GetBuffer(), cEncoder.GetOutputLength());
+    // convert key to base64
+    hRes = cEncoder.Begin(cEncoder.GetRequiredSpace(nKeyLen));
     if (SUCCEEDED(hRes))
     {
-      hRes = cDigest.DigestStream(szGuidA, MX::StrLenA(szGuidA));
-      if (SUCCEEDED(hRes))
-        hRes = cDigest.EndDigest();
+        hRes = cEncoder.Process(lpKey, nKeyLen);
+        if (SUCCEEDED(hRes))
+        {
+            hRes = cEncoder.End();
+        }
     }
-  }
-  if (FAILED(hRes))
-    return hRes;
+    if (FAILED(hRes))
+    {
+        return hRes;
+    }
 
-  //store the hash
-  ::MxMemCopy(aSHA1, cDigest.GetResult(), 20);
+    // hash the base64 output plus the guid
+    hRes = cDigest.BeginDigest(MX::CMessageDigest::eAlgorithm::SHA1);
+    if (SUCCEEDED(hRes))
+    {
+        hRes = cDigest.DigestStream(cEncoder.GetBuffer(), cEncoder.GetOutputLength());
+        if (SUCCEEDED(hRes))
+        {
+            hRes = cDigest.DigestStream(szGuidA, MX::StrLenA(szGuidA));
+            if (SUCCEEDED(hRes))
+            {
+                hRes = cDigest.EndDigest();
+            }
+        }
+    }
+    if (FAILED(hRes))
+    {
+        return hRes;
+    }
 
-  //done
-  return S_OK;
+    // store the hash
+    ::MxMemCopy(aSHA1, cDigest.GetResult(), 20);
+
+    // done
+    return S_OK;
 }

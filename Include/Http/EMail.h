@@ -25,12 +25,13 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-BOOL IsValidEMailAddress(_In_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen=(SIZE_T)-1);
-BOOL IsValidEMailAddress(_In_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen=(SIZE_T)-1);
+BOOL IsValidEMailAddress(_In_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen = (SIZE_T)-1);
+BOOL IsValidEMailAddress(_In_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen = (SIZE_T)-1);
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

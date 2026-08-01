@@ -27,84 +27,93 @@
 
 //-----------------------------------------------------------
 
-typedef ULONG (__cdecl *lpfnDbgPrint)(_In_z_ PCSTR Format, ...);
-typedef VOID (WINAPI *lpfnOutputDebugStringA)(_In_opt_ LPCSTR lpOutputString);
+typedef ULONG(__cdecl *lpfnDbgPrint)(_In_z_ PCSTR Format, ...);
+typedef VOID(WINAPI *lpfnOutputDebugStringA)(_In_opt_ LPCSTR lpOutputString);
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 VOID DebugPrint(_In_z_ LPCSTR szFormatA, ...)
 {
-  va_list ap;
+    va_list ap;
 
-  va_start(ap, szFormatA);
-  DebugPrintV(szFormatA, ap);
-  va_end(ap);
-  return;
+    va_start(ap, szFormatA);
+    DebugPrintV(szFormatA, ap);
+    va_end(ap);
+    return;
 }
 
 VOID DebugPrintV(_In_z_ LPCSTR szFormatA, va_list ap)
 {
-  static LONG volatile nAccessMtx = 0;
-  static lpfnOutputDebugStringA fnOutputDebugStringA = NULL;
-  static lpfnDbgPrint fnDbgPrint = NULL;
+    static LONG volatile nAccessMtx = 0;
+    static lpfnOutputDebugStringA fnOutputDebugStringA = NULL;
+    static lpfnDbgPrint fnDbgPrint = NULL;
 #ifndef MX_FORCE_OUTPUTDEBUG_ON_XP
-  static LONG volatile nOsVersion = 0;
-#endif //MX_FORCE_OUTPUTDEBUG_ON_XP
-  CHAR szBufA[2048];
-  int i;
+    static LONG volatile nOsVersion = 0;
+#endif // MX_FORCE_OUTPUTDEBUG_ON_XP
+    CHAR szBufA[2048];
+    int i;
 
 #ifndef MX_FORCE_OUTPUTDEBUG_ON_XP
-  if (nOsVersion == 0)
-  {
-    RTL_OSVERSIONINFOW sOviW;
+    if (nOsVersion == 0)
+    {
+        RTL_OSVERSIONINFOW sOviW;
 
-    MxMemSet(&sOviW, 0, sizeof(sOviW));
-    sOviW.dwOSVersionInfoSize = (DWORD) sizeof(sOviW);
-    if (!NT_SUCCESS(::RtlGetVersion(&sOviW)))
-      return;
-    _InterlockedExchange(&nOsVersion, (LONG)(sOviW.dwMajorVersion));
-  }
-  if (__InterlockedRead(&nOsVersion) < 6)
-    return;
-#endif //MX_FORCE_OUTPUTDEBUG_ON_XP
-  //----
-  i = mx_vsnprintf(szBufA, MX_ARRAYLEN(szBufA), szFormatA, ap);
-  if (i < 0)
-    i = 0;
-  else if (i > MX_ARRAYLEN(szBufA)-1)
-    i = MX_ARRAYLEN(szBufA)-1;
-  szBufA[i] = 0;
-  //----
-  if (fnOutputDebugStringA == NULL)
-  {
-    PVOID DllBase = ::MxGetDllHandle(L"kernel32.dll");
-
-    fnOutputDebugStringA = (lpfnOutputDebugStringA)::MxGetProcedureAddress(DllBase, "OutputDebugStringA");
+        MxMemSet(&sOviW, 0, sizeof(sOviW));
+        sOviW.dwOSVersionInfoSize = (DWORD)sizeof(sOviW);
+        if (!NT_SUCCESS(::RtlGetVersion(&sOviW)))
+            return;
+        _InterlockedExchange(&nOsVersion, (LONG)(sOviW.dwMajorVersion));
+    }
+    if (__InterlockedRead(&nOsVersion) < 6)
+        return;
+#endif // MX_FORCE_OUTPUTDEBUG_ON_XP
+    //----
+    i = mx_vsnprintf(szBufA, MX_ARRAYLEN(szBufA), szFormatA, ap);
+    if (i < 0)
+    {
+        i = 0;
+    }
+    else if (i > MX_ARRAYLEN(szBufA) - 1)
+    {
+        i = MX_ARRAYLEN(szBufA) - 1;
+    }
+    szBufA[i] = 0;
+    //----
     if (fnOutputDebugStringA == NULL)
-      fnOutputDebugStringA = (lpfnOutputDebugStringA)1;
-  }
-  if (fnDbgPrint == NULL)
-  {
-    PVOID DllBase = ::MxGetDllHandle(L"ntdll.dll");
+    {
+        PVOID DllBase = ::MxGetDllHandle(L"kernel32.dll");
 
-    fnDbgPrint = (lpfnDbgPrint)::MxGetProcedureAddress(DllBase, "DbgPrint");
+        fnOutputDebugStringA = (lpfnOutputDebugStringA)::MxGetProcedureAddress(DllBase, "OutputDebugStringA");
+        if (fnOutputDebugStringA == NULL)
+        {
+            fnOutputDebugStringA = (lpfnOutputDebugStringA)1;
+        }
+    }
     if (fnDbgPrint == NULL)
-      fnDbgPrint = (lpfnDbgPrint)1;
-  }
-  //----
-  if (fnOutputDebugStringA == NULL || fnOutputDebugStringA == (PVOID)1)
-  {
-    fnDbgPrint("%s", szBufA);
-  }
-  else
-  {
-    CFastLock cAccessLock(&nAccessMtx);
+    {
+        PVOID DllBase = ::MxGetDllHandle(L"ntdll.dll");
 
-    fnOutputDebugStringA(szBufA);
-  }
-  return;
+        fnDbgPrint = (lpfnDbgPrint)::MxGetProcedureAddress(DllBase, "DbgPrint");
+        if (fnDbgPrint == NULL)
+        {
+            fnDbgPrint = (lpfnDbgPrint)1;
+        }
+    }
+    //----
+    if (fnOutputDebugStringA == NULL || fnOutputDebugStringA == (PVOID)1)
+    {
+        fnDbgPrint("%s", szBufA);
+    }
+    else
+    {
+        CFastLock cAccessLock(&nAccessMtx);
+
+        fnOutputDebugStringA(szBufA);
+    }
+    return;
 }
 
-} //namespace MX
+} // namespace MX

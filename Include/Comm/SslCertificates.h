@@ -37,114 +37,126 @@ class CSslCertificateArray;
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CSslCertificate : public virtual TRefCounted<CBaseMemObj>
 {
-public:
-  enum class eInformation
-  {
-    Organization = 1, Unit, CommonName, Country, StateProvince, Town
-  };
-
-  CSslCertificate();
-  CSslCertificate(_In_ const CSslCertificate& cSrc) throw(...);
-  ~CSslCertificate();
-
-  CSslCertificate& operator=(_In_ const CSslCertificate& cSrc) throw(...);
-
-  // This method auto detects PEM and DER formats
-  HRESULT Set(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA = NULL);
-  VOID Set(_In_ X509 *lpX509);
-
-  LONG GetVersion() const;
-
-  LPBYTE GetSerial() const;
-  SIZE_T GetSerialLength() const;
-
-  HRESULT GetSubject(_In_ MX::CSslCertificate::eInformation nInfo, _Inout_ CStringW &cStrW);
-  HRESULT GetIssuer(_In_ MX::CSslCertificate::eInformation nInfo, _Inout_ CStringW &cStrW);
-
-  HRESULT GetValidFrom(_Inout_ CDateTime &cDt);
-  HRESULT GetValidUntil(_Inout_ CDateTime &cDt);
-
-  HRESULT IsDateValid(_Out_opt_ PULONG lpnRemainingSecs = NULL); //returns S_OK if valid, S_FALSE if not, or an error
-  BOOL IsCaCert() const;
-
-  X509* GetX509() const
+  public:
+    enum class eInformation
     {
-    return lpX509;
+        Organization = 1,
+        Unit,
+        CommonName,
+        Country,
+        StateProvince,
+        Town
     };
 
-private:
-  X509 *lpX509;
+    CSslCertificate();
+    CSslCertificate(_In_ const CSslCertificate &cSrc) throw(...);
+    ~CSslCertificate();
+
+    CSslCertificate &operator=(_In_ const CSslCertificate &cSrc) throw(...);
+
+    // This method auto detects PEM and DER formats
+    HRESULT Set(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA = NULL);
+    VOID Set(_In_ X509 *lpX509);
+
+    LONG GetVersion() const;
+
+    LPBYTE GetSerial() const;
+    SIZE_T GetSerialLength() const;
+
+    HRESULT GetSubject(_In_ MX::CSslCertificate::eInformation nInfo, _Inout_ CStringW &cStrW);
+    HRESULT GetIssuer(_In_ MX::CSslCertificate::eInformation nInfo, _Inout_ CStringW &cStrW);
+
+    HRESULT GetValidFrom(_Inout_ CDateTime &cDt);
+    HRESULT GetValidUntil(_Inout_ CDateTime &cDt);
+
+    HRESULT IsDateValid(_Out_opt_ PULONG lpnRemainingSecs = NULL); // returns S_OK if valid, S_FALSE if not, or an error
+    BOOL IsCaCert() const;
+
+    X509 *GetX509() const
+    {
+        return lpX509;
+    };
+
+  private:
+    X509 *lpX509;
 };
 
 //-----------------------------------------------------------
 
 class CSslCertificateCrl : public virtual TRefCounted<CBaseMemObj>
 {
-public:
-  typedef enum {
-    Organization = 1, Unit, CommonName, Country, StateProvince, Town
-  } eInformation;
-
-public:
-  CSslCertificateCrl();
-  CSslCertificateCrl(_In_ const CSslCertificateCrl &cSrc) throw(...);
-  ~CSslCertificateCrl();
-
-  CSslCertificateCrl& operator=(_In_ const CSslCertificateCrl &cSrc) throw(...);
-
-  // This method auto detects PEM and DER formats
-  HRESULT Set(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA = NULL);
-  VOID Set(_In_ X509_CRL *lpX509Crl);
-
-  LONG GetVersion() const;
-
-  HRESULT GetIssuer(_In_ eInformation nInfo, _Inout_ CStringW &cStrW);
-
-  HRESULT GetUpdate(_Inout_ CDateTime &cDt);
-  HRESULT GetNextUpdate(_Inout_ CDateTime &cDt);
-
-  SIZE_T GetRevokedEntriesCount() const;
-
-  LPBYTE GetRevokedEntrySerial(_In_ SIZE_T nEntryIndex) const;
-  SIZE_T GetRevokedEntrySerialLength(_In_ SIZE_T nEntryIndex) const;
-  HRESULT GetRevokedEntryDate(_In_ SIZE_T nEntryIndex, _Inout_ CDateTime &cDt);
-
-  X509_CRL* GetX509Crl() const
+  public:
+    typedef enum
     {
-    return lpX509Crl;
+        Organization = 1,
+        Unit,
+        CommonName,
+        Country,
+        StateProvince,
+        Town
+    } eInformation;
+
+  public:
+    CSslCertificateCrl();
+    CSslCertificateCrl(_In_ const CSslCertificateCrl &cSrc) throw(...);
+    ~CSslCertificateCrl();
+
+    CSslCertificateCrl &operator=(_In_ const CSslCertificateCrl &cSrc) throw(...);
+
+    // This method auto detects PEM and DER formats
+    HRESULT Set(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA = NULL);
+    VOID Set(_In_ X509_CRL *lpX509Crl);
+
+    LONG GetVersion() const;
+
+    HRESULT GetIssuer(_In_ eInformation nInfo, _Inout_ CStringW &cStrW);
+
+    HRESULT GetUpdate(_Inout_ CDateTime &cDt);
+    HRESULT GetNextUpdate(_Inout_ CDateTime &cDt);
+
+    SIZE_T GetRevokedEntriesCount() const;
+
+    LPBYTE GetRevokedEntrySerial(_In_ SIZE_T nEntryIndex) const;
+    SIZE_T GetRevokedEntrySerialLength(_In_ SIZE_T nEntryIndex) const;
+    HRESULT GetRevokedEntryDate(_In_ SIZE_T nEntryIndex, _Inout_ CDateTime &cDt);
+
+    X509_CRL *GetX509Crl() const
+    {
+        return lpX509Crl;
     };
 
-private:
-  X509_CRL *lpX509Crl{ NULL };
+  private:
+    X509_CRL *lpX509Crl{NULL};
 };
 
 //-----------------------------------------------------------
 
 class CSslCertificateArray : public virtual TRefCounted<CBaseMemObj>, public CNonCopyableObj
 {
-public:
-  CSslCertificateArray();
-  ~CSslCertificateArray();
+  public:
+    CSslCertificateArray();
+    ~CSslCertificateArray();
 
-  VOID Reset();
+    VOID Reset();
 
-  // This method auto detects PEM and DER formats. Also supports PKCS#12 encoded files
-  HRESULT Add(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA = NULL);
-  HRESULT AddFromFile(_In_z_ LPCWSTR szFileNameW, _In_opt_z_ LPCSTR szPasswordA = NULL);
+    // This method auto detects PEM and DER formats. Also supports PKCS#12 encoded files
+    HRESULT Add(_In_ LPCVOID lpData, _In_ SIZE_T nDataLen, _In_opt_z_ LPCSTR szPasswordA = NULL);
+    HRESULT AddFromFile(_In_z_ LPCWSTR szFileNameW, _In_opt_z_ LPCSTR szPasswordA = NULL);
 
-  HRESULT ImportFromWindowsStore();
+    HRESULT ImportFromWindowsStore();
 
-public:
-  TArrayListWithRelease<CSslCertificate*> cCertsList;
-  TArrayListWithRelease<CSslCertificateCrl*> cCertCrlsList;
-  TArrayListWithRelease<CEncryptionKey*> cKeysList;
+  public:
+    TArrayListWithRelease<CSslCertificate *> cCertsList;
+    TArrayListWithRelease<CSslCertificateCrl *> cCertCrlsList;
+    TArrayListWithRelease<CEncryptionKey *> cKeysList;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

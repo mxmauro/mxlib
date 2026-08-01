@@ -25,40 +25,41 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CZipFile : public virtual CBaseMemObj, public CNonCopyableObj
 {
-public:
-  CZipFile();
-  ~CZipFile();
+  public:
+    CZipFile();
+    ~CZipFile();
 
-  HRESULT CreateArchive(_In_z_ LPCWSTR szFileNameW);
-  HRESULT OpenArchive(_In_z_ LPCWSTR szFileNameW);
-  VOID CloseArchive();
+    HRESULT CreateArchive(_In_z_ LPCWSTR szFileNameW);
+    HRESULT OpenArchive(_In_z_ LPCWSTR szFileNameW);
+    VOID CloseArchive();
 
-  HRESULT AddFile(_In_z_ LPCWSTR szFileNameInZipW, _In_z_ LPCWSTR szSrcFileNameW,
-                  _In_opt_z_ LPCWSTR szPasswordW = NULL);
-  HRESULT AddStream(_In_z_ LPCWSTR szFileNameInZipW, _In_ CStream *lpStream, _In_opt_z_ LPCWSTR szPasswordW = NULL);
+    HRESULT AddFile(_In_z_ LPCWSTR szFileNameInZipW, _In_z_ LPCWSTR szSrcFileNameW,
+                    _In_opt_z_ LPCWSTR szPasswordW = NULL);
+    HRESULT AddStream(_In_z_ LPCWSTR szFileNameInZipW, _In_ CStream *lpStream, _In_opt_z_ LPCWSTR szPasswordW = NULL);
 
-  HRESULT OpenFile(_In_z_ LPCWSTR szFileNameInZipW, _In_opt_z_ LPCWSTR szPasswordW = NULL);
-  VOID CloseFile();
+    HRESULT OpenFile(_In_z_ LPCWSTR szFileNameInZipW, _In_opt_z_ LPCWSTR szPasswordW = NULL);
+    VOID CloseFile();
 
-  HRESULT GetFileInfo(_Out_opt_ PULONGLONG lpnFileSize, _Out_opt_ LPDWORD lpdwFileAttributes,
-                      _Out_opt_ LPSYSTEMTIME lpFileTime);
+    HRESULT GetFileInfo(_Out_opt_ PULONGLONG lpnFileSize, _Out_opt_ LPDWORD lpdwFileAttributes,
+                        _Out_opt_ LPSYSTEMTIME lpFileTime);
 
-  HRESULT Read(_Out_writes_bytes_to_opt_(nToRead, *lpnRead) LPVOID lpDest, _In_ SIZE_T nToRead,
-               _Out_opt_ SIZE_T *lpnRead = NULL);
-  HRESULT Read(_In_ CStream *lpStream, _In_ SIZE_T nToRead, _Out_opt_ SIZE_T *lpnRead = NULL);
+    HRESULT Read(_Out_writes_bytes_to_opt_(nToRead, *lpnRead) LPVOID lpDest, _In_ SIZE_T nToRead,
+                 _Out_opt_ SIZE_T *lpnRead = NULL);
+    HRESULT Read(_In_ CStream *lpStream, _In_ SIZE_T nToRead, _Out_opt_ SIZE_T *lpnRead = NULL);
 
-private:
-  HRESULT CreateOrOpenArchive(_In_z_ LPCWSTR szFileNameW, _In_ int mode);
+  private:
+    HRESULT CreateOrOpenArchive(_In_z_ LPCWSTR szFileNameW, _In_ int mode);
 
-private:
-  LPVOID lpData;
+  private:
+    LPVOID lpData;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

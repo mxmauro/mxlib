@@ -26,84 +26,88 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CPropertyBag : public virtual CBaseMemObj, public CNonCopyableObj
 {
-public:
-  enum class eType {
-    Undefined,
-    Null,
-    DWord,
-    QWord,
-    AnsiString,
-    WideString,
-    Double
-  };
-
-  CPropertyBag();
-  ~CPropertyBag();
-
-  VOID Reset();
-
-  HRESULT Clear(_In_z_ LPCSTR szNameA);
-
-  HRESULT SetNull(_In_z_ LPCSTR szNameA);
-  HRESULT SetDWord(_In_z_ LPCSTR szNameA, _In_ DWORD dwValue);
-  HRESULT SetQWord(_In_z_ LPCSTR szNameA, _In_ ULONGLONG ullValue);
-  HRESULT SetDouble(_In_z_ LPCSTR szNameA, _In_ double nValue);
-  HRESULT SetString(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA);
-  HRESULT SetString(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);
-
-  LPCSTR GetAt(_In_ SIZE_T nIndex) const;
-
-  eType GetType(_In_ SIZE_T nIndex) const;
-  eType GetType(_In_z_ LPCSTR szNameA) const;
-
-  HRESULT GetDWord(_In_ SIZE_T nIndex, _Out_ DWORD &dwValue, _In_opt_ DWORD dwDefValue=0);
-  HRESULT GetQWord(_In_ SIZE_T nIndex, _Out_ ULONGLONG &ullValue, _In_opt_ ULONGLONG ullDefValue=0);
-  HRESULT GetDouble(_In_ SIZE_T nIndex, _Out_ double &nValue, _In_opt_ double nDefValue=0.0);
-  HRESULT GetString(_In_ SIZE_T nIndex, _Out_ LPCSTR &szValueA, _In_opt_z_ LPCSTR szDefValueA=NULL);
-  HRESULT GetString(_In_ SIZE_T nIndex, _Out_ LPCWSTR &szValueW, _In_opt_z_ LPCWSTR szDefValueW=NULL);
-
-  HRESULT GetDWord(_In_z_ LPCSTR szNameA, _Out_ DWORD &dwValue, _In_opt_ DWORD dwDefValue=0);
-  HRESULT GetQWord(_In_z_ LPCSTR szNameA, _Out_ ULONGLONG &ullValue, _In_opt_ ULONGLONG ullDefValue=0);
-  HRESULT GetDouble(_In_z_ LPCSTR szNameA, _Out_ double &nValue, _In_opt_ double nDefValue=0.0);
-  HRESULT GetString(_In_z_ LPCSTR szNameA, _Out_ LPCSTR &szValueA, _In_opt_z_ LPCSTR szDefValueA=NULL);
-  HRESULT GetString(_In_z_ LPCSTR szNameA, _Out_ LPCWSTR &szValueW, _In_opt_z_ LPCWSTR szDefValueW=NULL);
-
-private:
-  typedef struct {
-    eType nType;
-    LPSTR szNameA;
-    union {
-      DWORD dwValue;
-      ULONGLONG ullValue;
-      double dblValue;
-      LPSTR szValueA;
-      LPWSTR szValueW;
-    } u;
-  } PROPERTY;
-
-private:
-  BOOL Insert(_In_ PROPERTY *lpNewProp);
-  SIZE_T Find(_In_z_ LPCSTR szNameA);
-
-  static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ PROPERTY **lpItem1, _In_ PROPERTY **lpItem2)
+  public:
+    enum class eType
     {
-    return StrCompareA((*lpItem1)->szNameA, (*lpItem2)->szNameA, TRUE);
+        Undefined,
+        Null,
+        DWord,
+        QWord,
+        AnsiString,
+        WideString,
+        Double
     };
 
-  static int SearchCompareFunc(_In_ LPVOID lpContext, _In_ LPCVOID lpKey, _In_ PROPERTY **lpItem)
+    CPropertyBag();
+    ~CPropertyBag();
+
+    VOID Reset();
+
+    HRESULT Clear(_In_z_ LPCSTR szNameA);
+
+    HRESULT SetNull(_In_z_ LPCSTR szNameA);
+    HRESULT SetDWord(_In_z_ LPCSTR szNameA, _In_ DWORD dwValue);
+    HRESULT SetQWord(_In_z_ LPCSTR szNameA, _In_ ULONGLONG ullValue);
+    HRESULT SetDouble(_In_z_ LPCSTR szNameA, _In_ double nValue);
+    HRESULT SetString(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA);
+    HRESULT SetString(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);
+
+    LPCSTR GetAt(_In_ SIZE_T nIndex) const;
+
+    eType GetType(_In_ SIZE_T nIndex) const;
+    eType GetType(_In_z_ LPCSTR szNameA) const;
+
+    HRESULT GetDWord(_In_ SIZE_T nIndex, _Out_ DWORD &dwValue, _In_opt_ DWORD dwDefValue = 0);
+    HRESULT GetQWord(_In_ SIZE_T nIndex, _Out_ ULONGLONG &ullValue, _In_opt_ ULONGLONG ullDefValue = 0);
+    HRESULT GetDouble(_In_ SIZE_T nIndex, _Out_ double &nValue, _In_opt_ double nDefValue = 0.0);
+    HRESULT GetString(_In_ SIZE_T nIndex, _Out_ LPCSTR &szValueA, _In_opt_z_ LPCSTR szDefValueA = NULL);
+    HRESULT GetString(_In_ SIZE_T nIndex, _Out_ LPCWSTR &szValueW, _In_opt_z_ LPCWSTR szDefValueW = NULL);
+
+    HRESULT GetDWord(_In_z_ LPCSTR szNameA, _Out_ DWORD &dwValue, _In_opt_ DWORD dwDefValue = 0);
+    HRESULT GetQWord(_In_z_ LPCSTR szNameA, _Out_ ULONGLONG &ullValue, _In_opt_ ULONGLONG ullDefValue = 0);
+    HRESULT GetDouble(_In_z_ LPCSTR szNameA, _Out_ double &nValue, _In_opt_ double nDefValue = 0.0);
+    HRESULT GetString(_In_z_ LPCSTR szNameA, _Out_ LPCSTR &szValueA, _In_opt_z_ LPCSTR szDefValueA = NULL);
+    HRESULT GetString(_In_z_ LPCSTR szNameA, _Out_ LPCWSTR &szValueW, _In_opt_z_ LPCWSTR szDefValueW = NULL);
+
+  private:
+    typedef struct
     {
-    return StrCompareA((LPCSTR)lpKey, (*lpItem)->szNameA, TRUE);
+        eType nType;
+        LPSTR szNameA;
+        union
+        {
+            DWORD dwValue;
+            ULONGLONG ullValue;
+            double dblValue;
+            LPSTR szValueA;
+            LPWSTR szValueW;
+        } u;
+    } PROPERTY;
+
+  private:
+    BOOL Insert(_In_ PROPERTY *lpNewProp);
+    SIZE_T Find(_In_z_ LPCSTR szNameA);
+
+    static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ PROPERTY **lpItem1, _In_ PROPERTY **lpItem2)
+    {
+        return StrCompareA((*lpItem1)->szNameA, (*lpItem2)->szNameA, TRUE);
     };
 
-private:
-  TArrayListWithFree<PROPERTY*> cPropertiesList;
+    static int SearchCompareFunc(_In_ LPVOID lpContext, _In_ LPCVOID lpKey, _In_ PROPERTY **lpItem)
+    {
+        return StrCompareA((LPCSTR)lpKey, (*lpItem)->szNameA, TRUE);
+    };
+
+  private:
+    TArrayListWithFree<PROPERTY *> cPropertiesList;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

@@ -26,98 +26,106 @@
 
 //-----------------------------------------------------------
 
-#define MX_DECLARE_HTTPHEADER_NAME(__name)          \
-            static LPCSTR GetHeaderNameStatic()     \
-              { return #__name; };                  \
-            virtual LPCSTR GetHeaderName() const    \
-              { return GetHeaderNameStatic(); };
+#define MX_DECLARE_HTTPHEADER_NAME(__name)                                                                             \
+    static LPCSTR GetHeaderNameStatic()                                                                                \
+    {                                                                                                                  \
+        return #__name;                                                                                                \
+    };                                                                                                                 \
+    virtual LPCSTR GetHeaderName() const                                                                               \
+    {                                                                                                                  \
+        return GetHeaderNameStatic();                                                                                  \
+    };
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class MX_NOVTABLE CHttpHeaderBase : public virtual TRefCounted<CBaseMemObj>
 {
-public:
-  enum class eDuplicateBehavior
-  {
-    Error, Replace, Add, Merge
-  };
-
-protected:
-  CHttpHeaderBase();
-public:
-  ~CHttpHeaderBase();
-
-  static HRESULT Create(_In_ LPCSTR szHeaderNameA, _In_ BOOL bIsRequest, _Out_ CHttpHeaderBase **lplpHeader,
-                        _In_opt_ SIZE_T nHeaderNameLen = (SIZE_T)-1);
-  template<class T>
-  static HRESULT Create(_In_ BOOL bIsRequest, _Out_ T **lplpHeader)
+  public:
+    enum class eDuplicateBehavior
     {
-    return Create(T::GetHeaderNameStatic(), bIsRequest, reinterpret_cast<CHttpHeaderBase**>(lplpHeader));
+        Error,
+        Replace,
+        Add,
+        Merge
     };
 
-  virtual LPCSTR GetHeaderName() const = 0;
+  protected:
+    CHttpHeaderBase();
 
-  virtual HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1) = 0;
-  //NOTE: Unicode values will be UTF-8 & URL encoded
-  HRESULT Parse(_In_z_ LPCWSTR szValueW, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+  public:
+    ~CHttpHeaderBase();
 
-  virtual HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser) = 0;
-
-  virtual eDuplicateBehavior GetDuplicateBehavior() const
+    static HRESULT Create(_In_ LPCSTR szHeaderNameA, _In_ BOOL bIsRequest, _Out_ CHttpHeaderBase **lplpHeader,
+                          _In_opt_ SIZE_T nHeaderNameLen = (SIZE_T)-1);
+    template <class T> static HRESULT Create(_In_ BOOL bIsRequest, _Out_ T **lplpHeader)
     {
-    return eDuplicateBehavior::Error;
+        return Create(T::GetHeaderNameStatic(), bIsRequest, reinterpret_cast<CHttpHeaderBase **>(lplpHeader));
     };
 
-  virtual HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
+    virtual LPCSTR GetHeaderName() const = 0;
 
-protected:
-  //helpers
-  static LPCSTR SkipSpaces(_In_ LPCSTR sA, _In_ LPCSTR szEndA);
-  static LPCSTR SkipUntil(_In_ LPCSTR sA, _In_ LPCSTR szEndA, _In_opt_z_ LPCSTR szStopCharsA = NULL);
+    virtual HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1) = 0;
+    // NOTE: Unicode values will be UTF-8 & URL encoded
+    HRESULT Parse(_In_z_ LPCWSTR szValueW, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  static LPCSTR GetToken(_In_ LPCSTR sA, _In_ LPCSTR szEndA);
-  static HRESULT GetQuotedString(_Out_ CStringA &cStrA, _Inout_ LPCSTR &sA, _In_ LPCSTR szEndA);
+    virtual HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser) = 0;
 
-  static HRESULT GetParamNameAndValue(_In_ BOOL bUseUtf8AsDefaultCharset, _Out_ CStringA &cStrTokenA,
-                                      _Out_ CStringW &cStrValueW, _Inout_ LPCSTR &sA, _In_ LPCSTR szEndA,
-                                      _Out_opt_ LPBOOL lpbExtendedParam = NULL);
+    virtual eDuplicateBehavior GetDuplicateBehavior() const
+    {
+        return eDuplicateBehavior::Error;
+    };
 
-  static BOOL RawISO_8859_1_to_UTF8(_Out_ CStringW &cStrDestW, _In_ LPCWSTR szSrcW, _In_ SIZE_T nSrcLen);
+    virtual HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
+
+  protected:
+    // helpers
+    static LPCSTR SkipSpaces(_In_ LPCSTR sA, _In_ LPCSTR szEndA);
+    static LPCSTR SkipUntil(_In_ LPCSTR sA, _In_ LPCSTR szEndA, _In_opt_z_ LPCSTR szStopCharsA = NULL);
+
+    static LPCSTR GetToken(_In_ LPCSTR sA, _In_ LPCSTR szEndA);
+    static HRESULT GetQuotedString(_Out_ CStringA &cStrA, _Inout_ LPCSTR &sA, _In_ LPCSTR szEndA);
+
+    static HRESULT GetParamNameAndValue(_In_ BOOL bUseUtf8AsDefaultCharset, _Out_ CStringA &cStrTokenA,
+                                        _Out_ CStringW &cStrValueW, _Inout_ LPCSTR &sA, _In_ LPCSTR szEndA,
+                                        _Out_opt_ LPBOOL lpbExtendedParam = NULL);
+
+    static BOOL RawISO_8859_1_to_UTF8(_Out_ CStringW &cStrDestW, _In_ LPCWSTR szSrcW, _In_ SIZE_T nSrcLen);
 };
 
 //-----------------------------------------------------------
 
-class CHttpHeaderArray : public TArrayListWithRelease<CHttpHeaderBase*>
+class CHttpHeaderArray : public TArrayListWithRelease<CHttpHeaderBase *>
 {
-private:
-public:
-  CHttpHeaderArray() : TArrayListWithRelease<CHttpHeaderBase*>()
-    { };
-  CHttpHeaderArray(_In_ const CHttpHeaderArray& cSrc) throw(...);
+  private:
+  public:
+    CHttpHeaderArray() : TArrayListWithRelease<CHttpHeaderBase *>() {};
+    CHttpHeaderArray(_In_ const CHttpHeaderArray &cSrc) throw(...);
 
-  CHttpHeaderArray& operator=(_In_ const CHttpHeaderArray& cSrc) throw(...);
+    CHttpHeaderArray &operator=(_In_ const CHttpHeaderArray &cSrc) throw(...);
 
-  //NOTE: Returns -1 if not found
-  SIZE_T Find(_In_z_ LPCSTR szNameA) const;
-  //NOTE: Returns -1 if not found
-  SIZE_T Find(_In_z_ LPCWSTR szNameW) const;
+    // NOTE: Returns -1 if not found
+    SIZE_T Find(_In_z_ LPCSTR szNameA) const;
+    // NOTE: Returns -1 if not found
+    SIZE_T Find(_In_z_ LPCWSTR szNameW) const;
 
-  template<class T>
-  T* Find() const
+    template <class T> T *Find() const
     {
-    SIZE_T nIndex = Find(T::GetHeaderNameStatic());
-    if (nIndex == (SIZE_T)-1)
-      return NULL;
-    return reinterpret_cast<T*>(GetElementAt(nIndex));
+        SIZE_T nIndex = Find(T::GetHeaderNameStatic());
+        if (nIndex == (SIZE_T)-1)
+        {
+            return NULL;
+        }
+        return reinterpret_cast<T *>(GetElementAt(nIndex));
     };
 
-  HRESULT Merge(_In_ const CHttpHeaderArray& cSrc, _In_ BOOL bForceReplaceExisting);
-  HRESULT Merge(_In_ CHttpHeaderBase *lpSrc, _In_ BOOL bForceReplaceExisting);
+    HRESULT Merge(_In_ const CHttpHeaderArray &cSrc, _In_ BOOL bForceReplaceExisting);
+    HRESULT Merge(_In_ CHttpHeaderBase *lpSrc, _In_ BOOL bForceReplaceExisting);
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

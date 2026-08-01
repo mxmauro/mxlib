@@ -21,91 +21,92 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CTimer::CTimer() : CBaseMemObj()
 {
-  if (!NT_SUCCESS(::MxNtQueryPerformanceCounter((PLARGE_INTEGER)&uliStart, (PLARGE_INTEGER)&uliFrequency)))
-  {
-    uliStart.HighPart = 0;
+    if (!NT_SUCCESS(::MxNtQueryPerformanceCounter((PLARGE_INTEGER)&uliStart, (PLARGE_INTEGER)&uliFrequency)))
+    {
+        uliStart.HighPart = 0;
 #pragma warning(suppress : 28159)
-    uliStart.LowPart = ::GetTickCount();
-    uliFrequency.QuadPart = 0ui64;
-  }
-  uliMark.QuadPart = uliStart.QuadPart;
-  return;
+        uliStart.LowPart = ::GetTickCount();
+        uliFrequency.QuadPart = 0ui64;
+    }
+    uliMark.QuadPart = uliStart.QuadPart;
+    return;
 }
 
 CTimer::CTimer(_In_ CTimer const &cSrc)
 {
-  uliStart.QuadPart = cSrc.uliStart.QuadPart;
-  uliMark.QuadPart = cSrc.uliMark.QuadPart;
-  uliFrequency.QuadPart = cSrc.uliFrequency.QuadPart;
-  return;
+    uliStart.QuadPart = cSrc.uliStart.QuadPart;
+    uliMark.QuadPart = cSrc.uliMark.QuadPart;
+    uliFrequency.QuadPart = cSrc.uliFrequency.QuadPart;
+    return;
 }
 
-CTimer& CTimer::operator=(_In_ CTimer const &cSrc)
+CTimer &CTimer::operator=(_In_ CTimer const &cSrc)
 {
-  uliStart.QuadPart = cSrc.uliStart.QuadPart;
-  uliMark.QuadPart = cSrc.uliMark.QuadPart;
-  uliFrequency.QuadPart = cSrc.uliFrequency.QuadPart;
-  return *this;
+    uliStart.QuadPart = cSrc.uliStart.QuadPart;
+    uliMark.QuadPart = cSrc.uliMark.QuadPart;
+    uliFrequency.QuadPart = cSrc.uliFrequency.QuadPart;
+    return *this;
 }
 
 VOID CTimer::Reset()
 {
-  Mark();
-  ResetToLastMark();
-  return;
+    Mark();
+    ResetToLastMark();
+    return;
 }
 
 VOID CTimer::Mark()
 {
-  if (uliFrequency.QuadPart != 0ui64)
-  {
-    ULARGE_INTEGER _liFrequency;
+    if (uliFrequency.QuadPart != 0ui64)
+    {
+        ULARGE_INTEGER _liFrequency;
 
-    ::MxNtQueryPerformanceCounter((PLARGE_INTEGER)&uliMark, (PLARGE_INTEGER)&_liFrequency);
-  }
-  else
-  {
+        ::MxNtQueryPerformanceCounter((PLARGE_INTEGER)&uliMark, (PLARGE_INTEGER)&_liFrequency);
+    }
+    else
+    {
 #pragma warning(suppress : 28159)
-    uliMark.LowPart = ::GetTickCount();
-  }
-  return;
+        uliMark.LowPart = ::GetTickCount();
+    }
+    return;
 }
 
 VOID CTimer::ResetToLastMark()
 {
-  uliStart.QuadPart = uliMark.QuadPart;
-  return;
+    uliStart.QuadPart = uliMark.QuadPart;
+    return;
 }
 
 DWORD CTimer::GetElapsedTimeMs() const
 {
-  if (uliFrequency.QuadPart != 0ui64)
-  {
-    return (DWORD)(((uliMark.QuadPart - uliStart.QuadPart) * 1000ui64) / uliFrequency.QuadPart);
-  }
-  return uliMark.LowPart - uliStart.LowPart;
+    if (uliFrequency.QuadPart != 0ui64)
+    {
+        return (DWORD)(((uliMark.QuadPart - uliStart.QuadPart) * 1000ui64) / uliFrequency.QuadPart);
+    }
+    return uliMark.LowPart - uliStart.LowPart;
 }
 
 DWORD CTimer::GetStartTimeMs() const
 {
-  if (uliFrequency.QuadPart != 0ui64)
-  {
-    return (DWORD)((uliStart.QuadPart * 1000ui64) / uliFrequency.QuadPart);
-  }
-  return uliStart.LowPart;
+    if (uliFrequency.QuadPart != 0ui64)
+    {
+        return (DWORD)((uliStart.QuadPart * 1000ui64) / uliFrequency.QuadPart);
+    }
+    return uliStart.LowPart;
 }
 
 DWORD CTimer::GetMarkTimeMs() const
 {
-  if (uliFrequency.QuadPart != 0ui64)
-  {
-    return (DWORD)((uliMark.QuadPart * 1000ui64) / uliFrequency.QuadPart);
-  }
-  return uliMark.LowPart;
+    if (uliFrequency.QuadPart != 0ui64)
+    {
+        return (DWORD)((uliMark.QuadPart * 1000ui64) / uliFrequency.QuadPart);
+    }
+    return uliMark.LowPart;
 }
 
-} //namespace MX
+} // namespace MX

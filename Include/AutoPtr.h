@@ -25,260 +25,260 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
-
-template <class T>
-class MX_NOVTABLE TAutoPtrBase : public virtual CBaseMemObj
+namespace MX
 {
-public:
-  TAutoPtrBase() : CBaseMemObj()
+
+template <class T> class MX_NOVTABLE TAutoPtrBase : public virtual CBaseMemObj
+{
+  public:
+    TAutoPtrBase() : CBaseMemObj()
     {
-    lpPtr = NULL;
-    return;
+        lpPtr = NULL;
+        return;
     };
 
-  TAutoPtrBase(_In_ T* _lpPtr)
+    TAutoPtrBase(_In_ T *_lpPtr)
     {
-    lpPtr = _lpPtr;
-    return;
+        lpPtr = _lpPtr;
+        return;
     };
 
-  virtual ~TAutoPtrBase()
+    virtual ~TAutoPtrBase()
     {
-    return;
+        return;
     };
 
-  T* Get()
+    T *Get()
     {
-    return lpPtr;
+        return lpPtr;
     };
 
-  VOID Reset()
+    VOID Reset()
     {
-    if (lpPtr != NULL)
-    {
-      OnDeleteItem(lpPtr);
-      lpPtr = NULL;
-    }
-    return;
+        if (lpPtr != NULL)
+        {
+            OnDeleteItem(lpPtr);
+            lpPtr = NULL;
+        }
+        return;
     };
 
-  operator T*() const
+    operator T *() const
     {
-    return lpPtr;
+        return lpPtr;
     };
 
-  T& operator*() const
+    T &operator*() const
     {
-    MX_ASSERT(lpPtr != NULL);
-    return *lpPtr;
+        MX_ASSERT(lpPtr != NULL);
+        return *lpPtr;
     };
 
-  //The assert on operator& usually indicates a bug.  If this is really
-  //what is needed, however, take the address of the lpPtr member explicitly.
-  T** operator&()
+    // The assert on operator& usually indicates a bug.  If this is really
+    // what is needed, however, take the address of the lpPtr member explicitly.
+    T **operator&()
     {
-    MX_ASSERT(lpPtr == NULL);
-    return &lpPtr;
+        MX_ASSERT(lpPtr == NULL);
+        return &lpPtr;
     };
 
-  T* operator->() const
+    T *operator->() const
     {
-    MX_ASSERT(lpPtr != NULL);
-    return lpPtr;
+        MX_ASSERT(lpPtr != NULL);
+        return lpPtr;
     };
 
-  T* operator=(_In_ T* _lpPtr)
+    T *operator=(_In_ T *_lpPtr)
     {
-    if (_lpPtr != lpPtr)
-      Attach(_lpPtr);
-    return _lpPtr;
+        if (_lpPtr != lpPtr)
+            Attach(_lpPtr);
+        return _lpPtr;
     };
 
-  bool operator!() const
+    bool operator!() const
     {
-    return (lpPtr == NULL) ? true : false;
+        return (lpPtr == NULL) ? true : false;
     };
 
-  operator bool() const
+    operator bool() const
     {
-    return (lpPtr != NULL) ? true : false;
+        return (lpPtr != NULL) ? true : false;
     };
 
-  bool operator==(_In_ T* _lpPtr) const
+    bool operator==(_In_ T *_lpPtr) const
     {
-    return (lpPtr == _lpPtr) ? true : false;
+        return (lpPtr == _lpPtr) ? true : false;
     };
 
-  VOID Attach(_In_ T* _lpPtr)
+    VOID Attach(_In_ T *_lpPtr)
     {
-    if (lpPtr != NULL)
-      OnDeleteItem(lpPtr);
-    lpPtr = _lpPtr;
-    return;
-  };
-
-  T* Detach()
-    {
-    T* _lpPtr = lpPtr;
-    lpPtr = NULL;
-    return _lpPtr;
+        if (lpPtr != NULL)
+        {
+            OnDeleteItem(lpPtr);
+        }
+        lpPtr = _lpPtr;
+        return;
     };
 
-protected:
-  virtual VOID OnDeleteItem(_Inout_ T *lpObj) = 0;
+    T *Detach()
+    {
+        T *_lpPtr = lpPtr;
+        lpPtr = NULL;
+        return _lpPtr;
+    };
 
-protected:
-  T *lpPtr;
+  protected:
+    virtual VOID OnDeleteItem(_Inout_ T *lpObj) = 0;
+
+  protected:
+    T *lpPtr;
 };
 
 //-----------------------------------------------------------
 
-template <class T>
-class TAutoFreePtr : public TAutoPtrBase<T>
+template <class T> class TAutoFreePtr : public TAutoPtrBase<T>
 {
-public:
-  virtual ~TAutoFreePtr()
+  public:
+    virtual ~TAutoFreePtr()
     {
-    if (TAutoPtrBase<T>::lpPtr != NULL)
-    {
-      OnDeleteItem(TAutoPtrBase<T>::lpPtr);
-      TAutoPtrBase<T>::lpPtr = NULL;
-    }
-    return;
+        if (TAutoPtrBase<T>::lpPtr != NULL)
+        {
+            OnDeleteItem(TAutoPtrBase<T>::lpPtr);
+            TAutoPtrBase<T>::lpPtr = NULL;
+        }
+        return;
     };
 
-protected:
-  virtual VOID OnDeleteItem(_Inout_ T *lpObj)
+  protected:
+    virtual VOID OnDeleteItem(_Inout_ T *lpObj)
     {
-    MX_FREE(lpObj);
-    return;
-    };
-};
-
-//-----------------------------------------------------------
-
-template <class T>
-class TAutoDeletePtr : public TAutoPtrBase<T>
-{
-public:
-  virtual ~TAutoDeletePtr()
-    {
-    if (TAutoPtrBase<T>::lpPtr != NULL)
-    {
-      OnDeleteItem(TAutoPtrBase<T>::lpPtr);
-      TAutoPtrBase<T>::lpPtr = NULL;
-    }
-    return;
-    };
-
-protected:
-  virtual VOID OnDeleteItem(_Inout_ T *lpObj)
-    {
-    if (lpObj != NULL)
-      delete lpObj;
-    return;
+        MX_FREE(lpObj);
+        return;
     };
 };
 
 //-----------------------------------------------------------
 
-template <class T>
-class TAutoDeleteArrayPtr : public TAutoPtrBase<T>
+template <class T> class TAutoDeletePtr : public TAutoPtrBase<T>
 {
-public:
-  virtual ~TAutoDeleteArrayPtr()
+  public:
+    virtual ~TAutoDeletePtr()
     {
-    if (TAutoPtrBase<T>::lpPtr != NULL)
-    {
-      OnDeleteItem(TAutoPtrBase<T>::lpPtr);
-      TAutoPtrBase<T>::lpPtr = NULL;
-    }
-    return;
+        if (TAutoPtrBase<T>::lpPtr != NULL)
+        {
+            OnDeleteItem(TAutoPtrBase<T>::lpPtr);
+            TAutoPtrBase<T>::lpPtr = NULL;
+        }
+        return;
     };
 
-protected:
-  virtual VOID OnDeleteItem(_Inout_ T *lpObj)
+  protected:
+    virtual VOID OnDeleteItem(_Inout_ T *lpObj)
     {
-    delete [] lpObj;
-    return;
+        if (lpObj != NULL)
+        {
+            delete lpObj;
+        }
+        return;
+    };
+};
+
+//-----------------------------------------------------------
+
+template <class T> class TAutoDeleteArrayPtr : public TAutoPtrBase<T>
+{
+  public:
+    virtual ~TAutoDeleteArrayPtr()
+    {
+        if (TAutoPtrBase<T>::lpPtr != NULL)
+        {
+            OnDeleteItem(TAutoPtrBase<T>::lpPtr);
+            TAutoPtrBase<T>::lpPtr = NULL;
+        }
+        return;
+    };
+
+  protected:
+    virtual VOID OnDeleteItem(_Inout_ T *lpObj)
+    {
+        delete[] lpObj;
+        return;
     }
 };
 
 //-----------------------------------------------------------
 
-template <class T>
-class TAtomicPtr : public virtual CBaseMemObj
+template <class T> class TAtomicPtr : public virtual CBaseMemObj
 {
-public:
-  TAtomicPtr() : CBaseMemObj()
+  public:
+    TAtomicPtr() : CBaseMemObj()
     {
-    _InterlockedExchangePointer((LPVOID volatile*)&lpPtr, NULL);
-    return;
+        _InterlockedExchangePointer((LPVOID volatile *)&lpPtr, NULL);
+        return;
     };
 
-  TAtomicPtr(_In_ T* _lpPtr)
+    TAtomicPtr(_In_ T *_lpPtr)
     {
-    _InterlockedExchangePointer((LPVOID volatile*)&lpPtr, _lpPtr);
-    return;
+        _InterlockedExchangePointer((LPVOID volatile *)&lpPtr, _lpPtr);
+        return;
     };
 
-  T* Get()
+    T *Get()
     {
-    return (T*)__InterlockedReadPointer((LPVOID volatile*)&lpPtr);
+        return (T *)__InterlockedReadPointer((LPVOID volatile *)&lpPtr);
     };
 
-  operator T*() const
+    operator T *() const
     {
-    return Get();
+        return Get();
     };
 
-  T* operator->() const
+    T *operator->() const
     {
-    MX_ASSERT(const_cast<TAtomicPtr<T>*>(this)->Get() != NULL);
-    return const_cast<TAtomicPtr<T>*>(this)->Get();
+        MX_ASSERT(const_cast<TAtomicPtr<T> *>(this)->Get() != NULL);
+        return const_cast<TAtomicPtr<T> *>(this)->Get();
     };
 
-  T* operator=(_In_ T* _lpPtr)
+    T *operator=(_In_ T *_lpPtr)
     {
-    _InterlockedExchangePointer((PVOID volatile*)&lpPtr, _lpPtr);
-    return _lpPtr;
+        _InterlockedExchangePointer((PVOID volatile *)&lpPtr, _lpPtr);
+        return _lpPtr;
     };
 
-  T* operator=(_In_ const TAtomicPtr<T>& cPtr)
+    T *operator=(_In_ const TAtomicPtr<T> &cPtr)
     {
-    if (this != &cPtr)
-      _InterlockedExchangePointer((PVOID volatile*)&lpPtr, cPtr.Get());
-    return Get();
+        if (this != &cPtr)
+            _InterlockedExchangePointer((PVOID volatile *)&lpPtr, cPtr.Get());
+        return Get();
     };
 
-  bool operator!() const
+    bool operator!() const
     {
-    return (const_cast<TAtomicPtr<T>*>(this)->Get() == NULL) ? true : false;
+        return (const_cast<TAtomicPtr<T> *>(this)->Get() == NULL) ? true : false;
     };
 
-  operator bool() const
+    operator bool() const
     {
-    return (const_cast<TAtomicPtr<T>*>(this)->Get() != NULL) ? true : false;
+        return (const_cast<TAtomicPtr<T> *>(this)->Get() != NULL) ? true : false;
     };
 
-  bool operator==(_In_ T* _lpPtr) const
+    bool operator==(_In_ T *_lpPtr) const
     {
-    return (const_cast<TAtomicPtr<T>*>(this)->Get() == _lpPtr) ? true : false;
+        return (const_cast<TAtomicPtr<T> *>(this)->Get() == _lpPtr) ? true : false;
     };
 
-  T* Detach()
+    T *Detach()
     {
-    T* _lpPtr = Get();
-    __InterlockedExchangePointer((PVOID volatile*)&lpPtr, NULL);
-    return _lpPtr;
+        T *_lpPtr = Get();
+        __InterlockedExchangePointer((PVOID volatile *)&lpPtr, NULL);
+        return _lpPtr;
     };
 
-protected:
-  T volatile *lpPtr;
+  protected:
+    T volatile *lpPtr;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

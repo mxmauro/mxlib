@@ -23,7 +23,8 @@
 
 //-----------------------------------------------------------
 
-namespace Console {
+namespace Console
+{
 
 BOOL Initialize();
 
@@ -36,9 +37,9 @@ VOID PrintTimestamp();
 
 class CPrintLock
 {
-public:
-  CPrintLock();
-  ~CPrintLock();
+  public:
+    CPrintLock();
+    ~CPrintLock();
 };
 
-}; //namespace Console
+}; // namespace Console

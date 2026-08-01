@@ -24,28 +24,29 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderReqReferer : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderReqReferer();
-  ~CHttpHeaderReqReferer();
+  public:
+    CHttpHeaderReqReferer();
+    ~CHttpHeaderReqReferer();
 
-  MX_DECLARE_HTTPHEADER_NAME(Referer)
+    MX_DECLARE_HTTPHEADER_NAME(Referer)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT SetReferer(_In_z_ LPCSTR szRefererA, _In_opt_ SIZE_T nRefererLen = (SIZE_T)-1);
-  LPCSTR GetReferer() const;
+    HRESULT SetReferer(_In_z_ LPCSTR szRefererA, _In_opt_ SIZE_T nRefererLen = (SIZE_T)-1);
+    LPCSTR GetReferer() const;
 
-private:
-  CStringA cStrRefererA;
+  private:
+    CStringA cStrRefererA;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

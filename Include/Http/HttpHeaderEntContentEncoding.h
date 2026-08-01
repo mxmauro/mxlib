@@ -24,41 +24,45 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderEntContentEncoding : public CHttpHeaderBase
 {
-public:
-  enum class eEncoding
-  {
-    Unsupported = -1, Identity = 0, GZip, Deflate
-  };
+  public:
+    enum class eEncoding
+    {
+        Unsupported = -1,
+        Identity = 0,
+        GZip,
+        Deflate
+    };
 
-  CHttpHeaderEntContentEncoding();
-  ~CHttpHeaderEntContentEncoding();
+    CHttpHeaderEntContentEncoding();
+    ~CHttpHeaderEntContentEncoding();
 
-  MX_DECLARE_HTTPHEADER_NAME(Content-Encoding)
+    MX_DECLARE_HTTPHEADER_NAME(Content - Encoding)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT SetEncoding(_In_ eEncoding nEncoding);
-  eEncoding GetEncoding() const;
+    HRESULT SetEncoding(_In_ eEncoding nEncoding);
+    eEncoding GetEncoding() const;
 
-private:
-  eEncoding nEncoding;
+  private:
+    eEncoding nEncoding;
 };
 
 //-----------------------------------------------------------
 
 class CHttpHeaderEntContentTransferEncoding : public CHttpHeaderEntContentEncoding
 {
-public:
-  MX_DECLARE_HTTPHEADER_NAME(Content-Transfer-Encoding)
+  public:
+    MX_DECLARE_HTTPHEADER_NAME(Content - Transfer - Encoding)
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

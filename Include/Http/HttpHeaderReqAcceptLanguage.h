@@ -25,63 +25,64 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderReqAcceptLanguage : public CHttpHeaderBase
 {
-public:
-  class CLanguage : public virtual CBaseMemObj
-  {
   public:
-    CLanguage();
-    ~CLanguage();
-
-    CLanguage& operator=(_In_ const CLanguage &cSrc) throw(...);
-
-    HRESULT SetLanguage(_In_z_ LPCSTR szLanguageA, _In_opt_ SIZE_T nLanguageLen = (SIZE_T)-1);
-    LPCSTR GetLanguage() const;
-
-    HRESULT SetQ(_In_ double q);
-    double GetQ() const;
-
-  private:
-    friend class CHttpHeaderReqAcceptLanguage;
-
-    CStringA cStrLanguageA;
-    double q;
-  };
-
-  //----
-
-public:
-  CHttpHeaderReqAcceptLanguage();
-  ~CHttpHeaderReqAcceptLanguage();
-
-  MX_DECLARE_HTTPHEADER_NAME(Accept-Language)
-
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
-
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
-
-  eDuplicateBehavior GetDuplicateBehavior() const
+    class CLanguage : public virtual CBaseMemObj
     {
-    return eDuplicateBehavior::Merge;
+      public:
+        CLanguage();
+        ~CLanguage();
+
+        CLanguage &operator=(_In_ const CLanguage &cSrc) throw(...);
+
+        HRESULT SetLanguage(_In_z_ LPCSTR szLanguageA, _In_opt_ SIZE_T nLanguageLen = (SIZE_T)-1);
+        LPCSTR GetLanguage() const;
+
+        HRESULT SetQ(_In_ double q);
+        double GetQ() const;
+
+      private:
+        friend class CHttpHeaderReqAcceptLanguage;
+
+        CStringA cStrLanguageA;
+        double q;
     };
 
-  HRESULT AddLanguage(_In_z_ LPCSTR szLanguageA, _In_opt_ SIZE_T nLanguageLen = (SIZE_T)-1,
-                      _Out_opt_ CLanguage **lplpLanguage=NULL);
+    //----
 
-  SIZE_T GetLanguagesCount() const;
-  CLanguage* GetLanguage(_In_ SIZE_T nIndex) const;
-  CLanguage* GetLanguage(_In_z_ LPCSTR szLanguageA) const;
+  public:
+    CHttpHeaderReqAcceptLanguage();
+    ~CHttpHeaderReqAcceptLanguage();
 
-  HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
+    MX_DECLARE_HTTPHEADER_NAME(Accept - Language)
 
-private:
-  TArrayListWithDelete<CLanguage*> aLanguagesList;
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+
+    eDuplicateBehavior GetDuplicateBehavior() const
+    {
+        return eDuplicateBehavior::Merge;
+    };
+
+    HRESULT AddLanguage(_In_z_ LPCSTR szLanguageA, _In_opt_ SIZE_T nLanguageLen = (SIZE_T)-1,
+                        _Out_opt_ CLanguage **lplpLanguage = NULL);
+
+    SIZE_T GetLanguagesCount() const;
+    CLanguage *GetLanguage(_In_ SIZE_T nIndex) const;
+    CLanguage *GetLanguage(_In_z_ LPCSTR szLanguageA) const;
+
+    HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
+
+  private:
+    TArrayListWithDelete<CLanguage *> aLanguagesList;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

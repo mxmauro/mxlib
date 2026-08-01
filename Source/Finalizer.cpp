@@ -25,9 +25,10 @@
 
 typedef void (*_PVFV)(void);
 
-typedef struct tagFINALIZER_ITEM {
-  MX::lpfnFinalizer fnFinalizer;
-  SIZE_T nPriority;
+typedef struct tagFINALIZER_ITEM
+{
+    MX::lpfnFinalizer fnFinalizer;
+    SIZE_T nPriority;
 } FINALIZER_ITEM, *LPFINALIZER_ITEM;
 
 //-----------------------------------------------------------
@@ -37,7 +38,7 @@ static VOID RunFinalizers();
 //-----------------------------------------------------------
 
 MX_LINKER_FORCE_INCLUDE(___mx_finalizer);
-#pragma section(".CRT$XTS", long, read)  // NOLINT
+#pragma section(".CRT$XTS", long, read) // NOLINT
 extern "C" __declspec(allocate(".CRT$XTS")) const _PVFV ___mx_finalizer = &RunFinalizers;
 
 static LONG volatile nMutex = MX_FASTLOCK_INIT;
@@ -47,74 +48,79 @@ static SIZE_T nListCount = 0;
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 HRESULT RegisterFinalizer(_In_ lpfnFinalizer fnFinalizer, _In_ SIZE_T nPriority)
 {
-  CFastLock cLock(&nMutex);
-  SIZE_T i;
+    CFastLock cLock(&nMutex);
+    SIZE_T i;
 
-  if (fnFinalizer == NULL)
-    return E_POINTER;
-
-  //ensure enough space is available
-  if (nListCount >= nListSize)
-  {
-    LPFINALIZER_ITEM lpNewList = NULL;
-    SIZE_T nSize = (nListSize + 32) * sizeof(FINALIZER_ITEM);
-
-    if (!NT_SUCCESS(::MxNtAllocateVirtualMemory(MX_CURRENTPROCESS, (PVOID*)&lpNewList, 0, &nSize, MEM_COMMIT,
-                                                PAGE_READWRITE)))
+    if (fnFinalizer == NULL)
     {
-      return E_OUTOFMEMORY;
+        return E_POINTER;
     }
-    if (lpList != NULL)
+
+    // ensure enough space is available
+    if (nListCount >= nListSize)
     {
-      ::MxMemCopy(lpNewList, lpList, nListCount * sizeof(FINALIZER_ITEM));
-      nSize = 0;
-      ::MxNtFreeVirtualMemory(MX_CURRENTPROCESS, (PVOID*)&lpList, &nSize, MEM_RELEASE);
+        LPFINALIZER_ITEM lpNewList = NULL;
+        SIZE_T nSize = (nListSize + 32) * sizeof(FINALIZER_ITEM);
+
+        if (!NT_SUCCESS(::MxNtAllocateVirtualMemory(MX_CURRENTPROCESS, (PVOID *)&lpNewList, 0, &nSize, MEM_COMMIT,
+                                                    PAGE_READWRITE)))
+        {
+            return E_OUTOFMEMORY;
+        }
+        if (lpList != NULL)
+        {
+            ::MxMemCopy(lpNewList, lpList, nListCount * sizeof(FINALIZER_ITEM));
+            nSize = 0;
+            ::MxNtFreeVirtualMemory(MX_CURRENTPROCESS, (PVOID *)&lpList, &nSize, MEM_RELEASE);
+        }
+        lpList = lpNewList;
+        nListSize += 32;
     }
-    lpList = lpNewList;
-    nListSize += 32;
-  }
 
-  //find insertion point
-  for (i = 0; i < nListCount; i++)
-  {
-    if (nPriority < lpList[i].nPriority)
-      break;
-  }
+    // find insertion point
+    for (i = 0; i < nListCount; i++)
+    {
+        if (nPriority < lpList[i].nPriority)
+        {
+            break;
+        }
+    }
 
-  //insert new item at position 'i'
-  ::MxMemMove(lpList + (i+1), lpList + i, (nListCount - i) * sizeof(FINALIZER_ITEM));
-  lpList[i].fnFinalizer = fnFinalizer;
-  lpList[i].nPriority = nPriority;
-  nListCount++;
+    // insert new item at position 'i'
+    ::MxMemMove(lpList + (i + 1), lpList + i, (nListCount - i) * sizeof(FINALIZER_ITEM));
+    lpList[i].fnFinalizer = fnFinalizer;
+    lpList[i].nPriority = nPriority;
+    nListCount++;
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 
 static VOID RunFinalizers()
 {
-  MX::CFastLock cLock(&nMutex);
-  SIZE_T i;
+    MX::CFastLock cLock(&nMutex);
+    SIZE_T i;
 
-  for (i = 0; i < nListCount; i++)
-  {
-    lpList[i].fnFinalizer();
-  }
-  //free list
-  if (lpList != NULL)
-  {
-    i = 0;
-    ::MxNtFreeVirtualMemory(MX_CURRENTPROCESS, (PVOID*)&lpList, &i, MEM_RELEASE);
-    lpList = NULL;
-    nListCount = nListSize = 0;
-  }
-  return;
+    for (i = 0; i < nListCount; i++)
+    {
+        lpList[i].fnFinalizer();
+    }
+    // free list
+    if (lpList != NULL)
+    {
+        i = 0;
+        ::MxNtFreeVirtualMemory(MX_CURRENTPROCESS, (PVOID *)&lpList, &i, MEM_RELEASE);
+        lpList = NULL;
+        nListCount = nListSize = 0;
+    }
+    return;
 }

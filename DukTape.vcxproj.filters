@@ -11,7 +11,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Source\JsLib\DukTape\build.vbs">
+    <None Include="Source\JsLib\DukTape\build.ps1">
+      <Filter>Builder Files</Filter>
+    </None>
+    <None Include="Source\JsLib\DukTape\build_all.bat">
       <Filter>Builder Files</Filter>
     </None>
   </ItemGroup>

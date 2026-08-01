@@ -24,44 +24,45 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CLoggable : public virtual CBaseMemObj
 {
-public:
-  typedef Callback <HRESULT (_In_z_ LPCWSTR szInfoW)> OnLogCallback;
+  public:
+    typedef Callback<HRESULT(_In_z_ LPCWSTR szInfoW)> OnLogCallback;
 
-public:
-  CLoggable();
-  CLoggable(_In_ OnLogCallback cCallback);
+  public:
+    CLoggable();
+    CLoggable(_In_ OnLogCallback cCallback);
 
-  CLoggable& operator=(_In_ const CLoggable &cSrc);
+    CLoggable &operator=(_In_ const CLoggable &cSrc);
 
-  VOID SetLogParent(_In_opt_ CLoggable *lpParentLog);
-  VOID SetLogLevel(_In_ DWORD dwLevel);
-  VOID SetLogCallback(_In_ OnLogCallback cCallback);
+    VOID SetLogParent(_In_opt_ CLoggable *lpParentLog);
+    VOID SetLogLevel(_In_ DWORD dwLevel);
+    VOID SetLogCallback(_In_ OnLogCallback cCallback);
 
-  __inline BOOL ShouldLog(_In_ DWORD dwRequiredLevel) const
+    __inline BOOL ShouldLog(_In_ DWORD dwRequiredLevel) const
     {
-    return (GetRoot()->dwLevel >= dwRequiredLevel) ? TRUE : FALSE;
+        return (GetRoot()->dwLevel >= dwRequiredLevel) ? TRUE : FALSE;
     };
 
-  HRESULT Log(_Printf_format_string_ LPCWSTR szFormatW, ...);
-  HRESULT LogIfError(_In_ HRESULT hResError, _Printf_format_string_ LPCWSTR szFormatW, ...);
-  HRESULT LogAlways(_In_ HRESULT hResError, _Printf_format_string_ LPCWSTR szFormatW, ...);
+    HRESULT Log(_Printf_format_string_ LPCWSTR szFormatW, ...);
+    HRESULT LogIfError(_In_ HRESULT hResError, _Printf_format_string_ LPCWSTR szFormatW, ...);
+    HRESULT LogAlways(_In_ HRESULT hResError, _Printf_format_string_ LPCWSTR szFormatW, ...);
 
-private:
-  CLoggable* GetRoot() const;
+  private:
+    CLoggable *GetRoot() const;
 
-  HRESULT WriteLogCommon(_In_ BOOL bAddError, _In_ HRESULT hResError, _In_z_ LPCWSTR szFormatW, _In_ va_list argptr);
+    HRESULT WriteLogCommon(_In_ BOOL bAddError, _In_ HRESULT hResError, _In_z_ LPCWSTR szFormatW, _In_ va_list argptr);
 
-private:
-  CLoggable *lpParentLog;
-  DWORD dwLevel;
-  OnLogCallback cCallback;
+  private:
+    CLoggable *lpParentLog;
+    DWORD dwLevel;
+    OnLogCallback cCallback;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

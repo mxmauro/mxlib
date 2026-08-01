@@ -25,11 +25,13 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-namespace TimedEvent {
+namespace TimedEvent
+{
 
-typedef Callback <VOID (_In_ LONG nTimerId, _In_ LPVOID lpUserData, _In_opt_ LPBOOL lpbCancel)> OnTimeoutCallback;
+typedef Callback<VOID(_In_ LONG nTimerId, _In_ LPVOID lpUserData, _In_opt_ LPBOOL lpbCancel)> OnTimeoutCallback;
 
 //-----------------------------------------------------------
 
@@ -39,9 +41,9 @@ HRESULT SetInterval(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId, _In
                     _In_ OnTimeoutCallback cCallback, _In_opt_ LPVOID lpUserData);
 VOID Clear(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId);
 
-} //namespace TimedEvent
+} // namespace TimedEvent
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

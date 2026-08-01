@@ -21,120 +21,125 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
-
-CJsHttpServer::CJsHttpServer(_In_ CSockets &cSocketMgr,
-                             _In_opt_ CLoggable *lpLogParent) : CBaseMemObj(), CHttpServer(cSocketMgr, lpLogParent)
+namespace MX
 {
-  cQuerySslCertificatesCallback = NullCallback();
-  cNewRequestObjectCallback = NullCallback();
-  cRequestHeadersReceivedCallback = NullCallback();
-  cRequestCompletedCallback = NullCallback();
-  cRequireJsModuleCallback = NullCallback();
-  cWebSocketRequestReceivedCallback = NullCallback();
-  cRequestDestroyedCallback = NullCallback();
-  cCustomErrorPageCallback = NullCallback();
-  //----
-  cJvmManager.Attach(MX_DEBUG_NEW CJvmManager());
-  //----
-  CHttpServer::SetQuerySslCertificatesCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnQuerySslCertificates, this));
-  CHttpServer::SetNewRequestObjectCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnNewRequestObject, this));
-  CHttpServer::SetRequestHeadersReceivedCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequestHeadersReceived,
-                                                                         this));
-  CHttpServer::SetRequestCompletedCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequestCompleted, this));
-  CHttpServer::SetWebSocketRequestReceivedCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnWebSocketRequestReceived,
-                                                                           this));
-  CHttpServer::SetRequestDestroyedCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequestDestroyed, this));
-  CHttpServer::SetCustomErrorPageCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnCustomErrorPage, this));
-  return;
+
+CJsHttpServer::CJsHttpServer(_In_ CSockets &cSocketMgr, _In_opt_ CLoggable *lpLogParent)
+    : CBaseMemObj(), CHttpServer(cSocketMgr, lpLogParent)
+{
+    cQuerySslCertificatesCallback = NullCallback();
+    cNewRequestObjectCallback = NullCallback();
+    cRequestHeadersReceivedCallback = NullCallback();
+    cRequestCompletedCallback = NullCallback();
+    cRequireJsModuleCallback = NullCallback();
+    cWebSocketRequestReceivedCallback = NullCallback();
+    cRequestDestroyedCallback = NullCallback();
+    cCustomErrorPageCallback = NullCallback();
+    //----
+    cJvmManager.Attach(MX_DEBUG_NEW CJvmManager());
+    //----
+    CHttpServer::SetQuerySslCertificatesCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnQuerySslCertificates, this));
+    CHttpServer::SetNewRequestObjectCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnNewRequestObject, this));
+    CHttpServer::SetRequestHeadersReceivedCallback(
+        MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequestHeadersReceived, this));
+    CHttpServer::SetRequestCompletedCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequestCompleted, this));
+    CHttpServer::SetWebSocketRequestReceivedCallback(
+        MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnWebSocketRequestReceived, this));
+    CHttpServer::SetRequestDestroyedCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequestDestroyed, this));
+    CHttpServer::SetCustomErrorPageCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnCustomErrorPage, this));
+    return;
 }
 
 CJsHttpServer::~CJsHttpServer()
 {
-  StopListening();
-  return;
+    StopListening();
+    return;
 }
 
 VOID CJsHttpServer::SetQuerySslCertificatesCallback(_In_ OnQuerySslCertificatesCallback _cQuerySslCertificatesCallback)
 {
-  cQuerySslCertificatesCallback = _cQuerySslCertificatesCallback;
-  return;
+    cQuerySslCertificatesCallback = _cQuerySslCertificatesCallback;
+    return;
 }
 
 VOID CJsHttpServer::SetNewRequestObjectCallback(_In_ OnNewRequestObjectCallback _cNewRequestObjectCallback)
 {
-  cNewRequestObjectCallback = _cNewRequestObjectCallback;
-  return;
+    cNewRequestObjectCallback = _cNewRequestObjectCallback;
+    return;
 }
 
-VOID CJsHttpServer::SetRequestHeadersReceivedCallback(_In_ OnRequestHeadersReceivedCallback
-                                                      _cRequestHeadersReceivedCallback)
+VOID CJsHttpServer::SetRequestHeadersReceivedCallback(
+    _In_ OnRequestHeadersReceivedCallback _cRequestHeadersReceivedCallback)
 {
-  cRequestHeadersReceivedCallback = _cRequestHeadersReceivedCallback;
-  return;
+    cRequestHeadersReceivedCallback = _cRequestHeadersReceivedCallback;
+    return;
 }
 
 VOID CJsHttpServer::SetRequestCompletedCallback(_In_ OnRequestCompletedCallback _cRequestCompletedCallback)
 {
-  cRequestCompletedCallback = _cRequestCompletedCallback;
-  return;
+    cRequestCompletedCallback = _cRequestCompletedCallback;
+    return;
 }
 
 VOID CJsHttpServer::SetRequireJsModuleCallback(_In_ OnRequireJsModuleCallback _cRequireJsModuleCallback)
 {
-  cRequireJsModuleCallback = _cRequireJsModuleCallback;
-  return;
+    cRequireJsModuleCallback = _cRequireJsModuleCallback;
+    return;
 }
 
-VOID CJsHttpServer::SetWebSocketRequestReceivedCallback(_In_ OnWebSocketRequestReceivedCallback
-                                                        _cWebSocketRequestReceivedCallback)
+VOID CJsHttpServer::SetWebSocketRequestReceivedCallback(
+    _In_ OnWebSocketRequestReceivedCallback _cWebSocketRequestReceivedCallback)
 {
-  cWebSocketRequestReceivedCallback = _cWebSocketRequestReceivedCallback;
-  return;
+    cWebSocketRequestReceivedCallback = _cWebSocketRequestReceivedCallback;
+    return;
 }
 
 VOID CJsHttpServer::SetRequestDestroyedCallback(_In_ OnRequestDestroyedCallback _cRequestDestroyedCallback)
 {
-  cRequestDestroyedCallback = _cRequestDestroyedCallback;
-  return;
+    cRequestDestroyedCallback = _cRequestDestroyedCallback;
+    return;
 }
 
 VOID CJsHttpServer::SetCustomErrorPageCallback(_In_ OnCustomErrorPageCallback _cCustomErrorPageCallback)
 {
-  cCustomErrorPageCallback = _cCustomErrorPageCallback;
-  return;
+    cCustomErrorPageCallback = _cCustomErrorPageCallback;
+    return;
 }
 
 HRESULT CJsHttpServer::OnNewRequestObject(_In_ CHttpServer *lpHttp, _Out_ CHttpServer::CClientRequest **lplpRequest)
 {
-  CClientRequest *lpJsRequest;
-  HRESULT hRes;
+    CClientRequest *lpJsRequest;
+    HRESULT hRes;
 
-  if (lplpRequest == NULL)
-    return E_POINTER;
-  *lplpRequest = NULL;
+    if (lplpRequest == NULL)
+    {
+        return E_POINTER;
+    }
+    *lplpRequest = NULL;
 
-  if (!cJvmManager)
-    return E_OUTOFMEMORY;
+    if (!cJvmManager)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  if (cNewRequestObjectCallback)
-  {
-    lpJsRequest = NULL;
-    hRes = cNewRequestObjectCallback(this, &lpJsRequest);
-  }
-  else
-  {
-    lpJsRequest = MX_DEBUG_NEW CClientRequest();
-    hRes = (lpJsRequest != NULL) ? S_OK : E_OUTOFMEMORY;
-  }
-  if (SUCCEEDED(hRes) && lpJsRequest != NULL)
-  {
-    lpJsRequest->lpJsHttpServer = this;
-    lpJsRequest->cJvmManager = cJvmManager;
-    lpJsRequest->cRequireJsModuleCallback = cRequireJsModuleCallback;
-    *lplpRequest = lpJsRequest;
-  }
-  return hRes;
+    if (cNewRequestObjectCallback)
+    {
+        lpJsRequest = NULL;
+        hRes = cNewRequestObjectCallback(this, &lpJsRequest);
+    }
+    else
+    {
+        lpJsRequest = MX_DEBUG_NEW CClientRequest();
+        hRes = (lpJsRequest != NULL) ? S_OK : E_OUTOFMEMORY;
+    }
+    if (SUCCEEDED(hRes) && lpJsRequest != NULL)
+    {
+        lpJsRequest->lpJsHttpServer = this;
+        lpJsRequest->cJvmManager = cJvmManager;
+        lpJsRequest->cRequireJsModuleCallback = cRequireJsModuleCallback;
+        *lplpRequest = lpJsRequest;
+    }
+    return hRes;
 }
 
 HRESULT CJsHttpServer::OnQuerySslCertificates(_In_ CHttpServer *lpHttp,
@@ -142,57 +147,65 @@ HRESULT CJsHttpServer::OnQuerySslCertificates(_In_ CHttpServer *lpHttp,
                                               _Outptr_opt_result_maybenull_ CEncryptionKey **lplpSslPrivKey,
                                               _Outptr_opt_result_maybenull_ CEncryptionKey **lplpDhParam)
 {
-  if (lplpSslCert != NULL)
-    *lplpSslCert = NULL;
-  if (lplpSslPrivKey != NULL)
-    *lplpSslPrivKey = NULL;
-  if (lplpDhParam != NULL)
-    *lplpDhParam = NULL;
-  if (cQuerySslCertificatesCallback)
-    return cQuerySslCertificatesCallback(this, lplpSslCert, lplpSslPrivKey, lplpDhParam);
-  return S_FALSE;
+    if (lplpSslCert != NULL)
+    {
+        *lplpSslCert = NULL;
+    }
+    if (lplpSslPrivKey != NULL)
+    {
+        *lplpSslPrivKey = NULL;
+    }
+    if (lplpDhParam != NULL)
+    {
+        *lplpDhParam = NULL;
+    }
+    if (cQuerySslCertificatesCallback)
+        return cQuerySslCertificatesCallback(this, lplpSslCert, lplpSslPrivKey, lplpDhParam);
+    return S_FALSE;
 }
 
 HRESULT CJsHttpServer::OnRequestHeadersReceived(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *_lpRequest,
                                                 _Outptr_result_maybenull_ CHttpBodyParserBase **lplpBodyParser)
 {
-  if (lplpBodyParser != NULL)
-    *lplpBodyParser = NULL;
-  if (cRequestHeadersReceivedCallback)
-  {
-    CClientRequest *lpRequest = static_cast<CClientRequest*>(_lpRequest);
+    if (lplpBodyParser != NULL)
+    {
+        *lplpBodyParser = NULL;
+    }
+    if (cRequestHeadersReceivedCallback)
+    {
+        CClientRequest *lpRequest = static_cast<CClientRequest *>(_lpRequest);
 
-    return cRequestHeadersReceivedCallback(this, lpRequest, lplpBodyParser);
-  }
-  return S_OK;
+        return cRequestHeadersReceivedCallback(this, lpRequest, lplpBodyParser);
+    }
+    return S_OK;
 }
 
 VOID CJsHttpServer::OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *_lpRequest)
 {
-  CClientRequest *lpRequest = static_cast<CClientRequest*>(_lpRequest);
-  HRESULT hRes = S_OK;
+    CClientRequest *lpRequest = static_cast<CClientRequest *>(_lpRequest);
+    HRESULT hRes = S_OK;
 
-  if (cRequestCompletedCallback)
-  {
-    CUrl *lpUrl;
-
-    //build path and only accept absolute ones
-    lpUrl = lpRequest->GetUrl();
-    if ((lpUrl->GetPath())[0] == L'/')
+    if (cRequestCompletedCallback)
     {
-      cRequestCompletedCallback(this, lpRequest);
-    }
-    else
-    {
-      hRes = MX_E_Unsupported;
-    }
-  }
+        CUrl *lpUrl;
 
-  if (FAILED(hRes))
-  {
-    lpRequest->SendErrorPage(500, hRes);
-  }
-  return;
+        // build path and only accept absolute ones
+        lpUrl = lpRequest->GetUrl();
+        if ((lpUrl->GetPath())[0] == L'/')
+        {
+            cRequestCompletedCallback(this, lpRequest);
+        }
+        else
+        {
+            hRes = MX_E_Unsupported;
+        }
+    }
+
+    if (FAILED(hRes))
+    {
+        lpRequest->SendErrorPage(500, hRes);
+    }
+    return;
 }
 
 HRESULT CJsHttpServer::OnWebSocketRequestReceived(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *_lpReq,
@@ -201,38 +214,40 @@ HRESULT CJsHttpServer::OnWebSocketRequestReceived(_In_ CHttpServer *lpHttp, _In_
                                                   _In_ TArrayList<int> &aSupportedVersions,
                                                   _Outptr_result_maybenull_ CWebSocket **lplpWebSocket)
 {
-  if (lplpWebSocket != NULL)
-    *lplpWebSocket = NULL;
-  if (cWebSocketRequestReceivedCallback)
-  {
-    CClientRequest *lpRequest = static_cast<CClientRequest*>(_lpReq);
+    if (lplpWebSocket != NULL)
+    {
+        *lplpWebSocket = NULL;
+    }
+    if (cWebSocketRequestReceivedCallback)
+    {
+        CClientRequest *lpRequest = static_cast<CClientRequest *>(_lpReq);
 
-    return cWebSocketRequestReceivedCallback(this, lpRequest, nVersion, szProtocolsA, nProtocolsCount,
-                                             nSelectedProtocol, aSupportedVersions, lplpWebSocket);
-  }
-  return MX_E_Unsupported;
+        return cWebSocketRequestReceivedCallback(this, lpRequest, nVersion, szProtocolsA, nProtocolsCount,
+                                                 nSelectedProtocol, aSupportedVersions, lplpWebSocket);
+    }
+    return MX_E_Unsupported;
 }
 
 HRESULT CJsHttpServer::OnCustomErrorPage(_In_ CHttpServer *lpHttp, _Inout_ CSecureStringA &cStrBodyA,
                                          _In_ LONG nStatusCode, _In_ LPCSTR szStatusMessageA,
                                          _In_z_ LPCSTR szAdditionalExplanationA)
 {
-  if (cCustomErrorPageCallback)
-  {
-    return cCustomErrorPageCallback(this, cStrBodyA, nStatusCode, szStatusMessageA, szAdditionalExplanationA);
-  }
-  return S_OK;
+    if (cCustomErrorPageCallback)
+    {
+        return cCustomErrorPageCallback(this, cStrBodyA, nStatusCode, szStatusMessageA, szAdditionalExplanationA);
+    }
+    return S_OK;
 }
 
 VOID CJsHttpServer::OnRequestDestroyed(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *_lpRequest)
 {
-  if (cRequestDestroyedCallback)
-  {
-    CClientRequest *lpRequest = static_cast<CClientRequest*>(_lpRequest);
+    if (cRequestDestroyedCallback)
+    {
+        CClientRequest *lpRequest = static_cast<CClientRequest *>(_lpRequest);
 
-    cRequestDestroyedCallback(this, lpRequest);
-  }
-  return;
+        cRequestDestroyedCallback(this, lpRequest);
+    }
+    return;
 }
 
-} //namespace MX
+} // namespace MX

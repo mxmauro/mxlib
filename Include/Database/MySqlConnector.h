@@ -24,86 +24,88 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-namespace Database {
+namespace Database
+{
 
 class CMySqlConnector : public CBaseConnector
 {
-public:
-  class CConnectOptions : public virtual CBaseMemObj
-  {
   public:
-    CConnectOptions();
-  
+    class CConnectOptions : public virtual CBaseMemObj
+    {
+      public:
+        CConnectOptions();
+
+      public:
+        DWORD dwConnectTimeoutMs;
+        DWORD dwReadTimeoutMs;
+        DWORD dwWriteTimeoutMs;
+    };
+
   public:
-    DWORD dwConnectTimeoutMs;
-    DWORD dwReadTimeoutMs;
-    DWORD dwWriteTimeoutMs;
-  };
+    CMySqlConnector();
+    ~CMySqlConnector();
 
-public:
-  CMySqlConnector();
-  ~CMySqlConnector();
+    HRESULT Connect(_In_z_ LPCSTR szServerHostA, _In_z_ LPCSTR szUserNameA, _In_opt_z_ LPCSTR szUserPasswordA,
+                    _In_opt_z_ LPCSTR szDatabaseNameA, _In_opt_ USHORT wServerPort = 3306,
+                    _In_opt_ CConnectOptions *lpOptions = NULL);
+    HRESULT Connect(_In_z_ LPCWSTR szServerHostW, _In_z_ LPCWSTR szUserNameW, _In_opt_z_ LPCWSTR szUserPasswordW,
+                    _In_opt_z_ LPCWSTR szDatabaseNameW, _In_opt_ USHORT wServerPort = 3306,
+                    _In_opt_ CConnectOptions *lpOptions = NULL);
+    VOID Disconnect();
 
-  HRESULT Connect(_In_z_ LPCSTR szServerHostA, _In_z_ LPCSTR szUserNameA, _In_opt_z_ LPCSTR szUserPasswordA,
-                  _In_opt_z_ LPCSTR szDatabaseNameA, _In_opt_ USHORT wServerPort = 3306,
-                  _In_opt_ CConnectOptions *lpOptions = NULL);
-  HRESULT Connect(_In_z_ LPCWSTR szServerHostW, _In_z_ LPCWSTR szUserNameW, _In_opt_z_ LPCWSTR szUserPasswordW,
-                  _In_opt_z_ LPCWSTR szDatabaseNameW, _In_opt_ USHORT wServerPort = 3306,
-                  _In_opt_ CConnectOptions *lpOptions = NULL);
-  VOID Disconnect();
+    BOOL IsConnected() const;
 
-  BOOL IsConnected() const;
+    int GetErrorCode() const;
+    LPCSTR GetErrorDescription() const;
+    LPCSTR GetSqlState() const;
 
-  int GetErrorCode() const;
-  LPCSTR GetErrorDescription() const;
-  LPCSTR GetSqlState() const;
+    HRESULT SelectDatabase(_In_ LPCSTR szDatabaseNameA);
+    HRESULT SelectDatabase(_In_ LPCWSTR szDatabaseNameW);
 
-  HRESULT SelectDatabase(_In_ LPCSTR szDatabaseNameA);
-  HRESULT SelectDatabase(_In_ LPCWSTR szDatabaseNameW);
+    HRESULT QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQueryLen = (SIZE_T)-1,
+                         _In_opt_ CFieldList *lpInputFieldsList = NULL);
+    using CBaseConnector::QueryExecute;
 
-  HRESULT QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQueryLen = (SIZE_T)-1,
-                       _In_opt_ CFieldList *lpInputFieldsList = NULL);
-  using CBaseConnector::QueryExecute;
+    HRESULT FetchRow();
 
-  HRESULT FetchRow();
+    VOID QueryClose();
 
-  VOID QueryClose();
+    HRESULT TransactionStart();
+    HRESULT TransactionStart(_In_ BOOL bReadOnly);
+    HRESULT TransactionCommit();
+    HRESULT TransactionRollback();
 
-  HRESULT TransactionStart();
-  HRESULT TransactionStart(_In_ BOOL bReadOnly);
-  HRESULT TransactionCommit();
-  HRESULT TransactionRollback();
-
-  HRESULT EscapeString(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1,
-                       _In_opt_ BOOL bIsLike = FALSE);
-  HRESULT EscapeString(_Out_ CStringW &cStrW, _In_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1,
-                       _In_opt_ BOOL bIsLike = FALSE);
-
-private:
-  class CMySqlColumn : public CColumn
-  {
-  public:
-    CMySqlColumn() : CColumn()
-      {
-      nType = nFlags = 0;
-      return;
-      };
+    HRESULT EscapeString(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1,
+                         _In_opt_ BOOL bIsLike = FALSE);
+    HRESULT EscapeString(_Out_ CStringW &cStrW, _In_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1,
+                         _In_opt_ BOOL bIsLike = FALSE);
 
   private:
-    friend class CMySqlConnector;
+    class CMySqlColumn : public CColumn
+    {
+      public:
+        CMySqlColumn() : CColumn()
+        {
+            nType = nFlags = 0;
+            return;
+        };
 
-    ULONG nType, nFlags;
-  };
+      private:
+        friend class CMySqlConnector;
 
-private:
-  LPVOID lpInternalData;
+        ULONG nType, nFlags;
+    };
+
+  private:
+    LPVOID lpInternalData;
 };
 
-} //namespace Database
+} // namespace Database
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

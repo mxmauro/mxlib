@@ -25,62 +25,63 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CTaskQueue : public virtual CBaseMemObj, private MX::CIoCompletionPortThreadPool
 {
-public:
-  class CTask;
-
-  typedef MX::Callback<VOID (_In_ CTaskQueue *lpQueue, _In_ CTask *lpTask)> OnRunTaskCallback;
-
-public:
-  class CTask : public virtual TRefCounted<CBaseMemObj>
-  {
   public:
-    CTask();
-    ~CTask();
+    class CTask;
+
+    typedef MX::Callback<VOID(_In_ CTaskQueue *lpQueue, _In_ CTask *lpTask)> OnRunTaskCallback;
+
+  public:
+    class CTask : public virtual TRefCounted<CBaseMemObj>
+    {
+      public:
+        CTask();
+        ~CTask();
+
+      private:
+        friend class CTaskQueue;
+
+        OVERLAPPED sOvr;
+        OnRunTaskCallback cCallback;
+    };
+
+  public:
+    CTaskQueue();
+    ~CTaskQueue();
+
+    using CIoCompletionPortThreadPool::SetOption_MaxThreadsCount;
+    using CIoCompletionPortThreadPool::SetOption_MinThreadsCount;
+    using CIoCompletionPortThreadPool::SetOption_Name;
+    using CIoCompletionPortThreadPool::SetOption_ShutdownThreadThreshold;
+    using CIoCompletionPortThreadPool::SetOption_ThreadPriority;
+    using CIoCompletionPortThreadPool::SetOption_ThreadStackSize;
+    using CIoCompletionPortThreadPool::SetOption_WorkerThreadIdleTime;
+
+    HRESULT Initialize();
+    VOID Finalize();
+
+    VOID SetOption_SetCpuThrottling(_In_ DWORD dwMaxCpuUsage);
+
+    BOOL HasPending() const;
+
+    HRESULT QueueTask(_In_ CTask *lpTask, _In_ OnRunTaskCallback cCallback);
 
   private:
-    friend class CTaskQueue;
+    VOID OnQueuedTask(_In_ MX::CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
+                      _In_ HRESULT hRes);
 
-    OVERLAPPED sOvr;
-    OnRunTaskCallback cCallback;
-  };
-
-public:
-  CTaskQueue();
-  ~CTaskQueue();
-
-  using CIoCompletionPortThreadPool::SetOption_MinThreadsCount;
-  using CIoCompletionPortThreadPool::SetOption_MaxThreadsCount;
-  using CIoCompletionPortThreadPool::SetOption_WorkerThreadIdleTime;
-  using CIoCompletionPortThreadPool::SetOption_ShutdownThreadThreshold;
-  using CIoCompletionPortThreadPool::SetOption_ThreadStackSize;
-  using CIoCompletionPortThreadPool::SetOption_ThreadPriority;
-  using CIoCompletionPortThreadPool::SetOption_Name;
-
-  HRESULT Initialize();
-  VOID Finalize();
-
-  VOID SetOption_SetCpuThrottling(_In_ DWORD dwMaxCpuUsage);
-
-  BOOL HasPending() const;
-
-  HRESULT QueueTask(_In_ CTask *lpTask, _In_ OnRunTaskCallback cCallback);
-
-private:
-  VOID OnQueuedTask(_In_ MX::CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
-                    _In_ HRESULT hRes);
-
-private:
-  LONG volatile nRundownLock;
-  MX::CIoCompletionPortThreadPool::OnPacketCallback cQueuedTaskCallbackWP;
-  LONG volatile nQueuedTasksCount;
-  DWORD dwMaxCpuUsage;
+  private:
+    LONG volatile nRundownLock;
+    MX::CIoCompletionPortThreadPool::OnPacketCallback cQueuedTaskCallbackWP;
+    LONG volatile nQueuedTasksCount;
+    DWORD dwMaxCpuUsage;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

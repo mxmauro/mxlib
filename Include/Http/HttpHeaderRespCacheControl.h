@@ -25,94 +25,96 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderRespCacheControl : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderRespCacheControl();
-  ~CHttpHeaderRespCacheControl();
+  public:
+    CHttpHeaderRespCacheControl();
+    ~CHttpHeaderRespCacheControl();
 
-  MX_DECLARE_HTTPHEADER_NAME(Cache-Control)
+    MX_DECLARE_HTTPHEADER_NAME(Cache - Control)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  eDuplicateBehavior GetDuplicateBehavior() const
+    eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return eDuplicateBehavior::Merge;
+        return eDuplicateBehavior::Merge;
     };
 
-  HRESULT SetPublic(_In_ BOOL bPublic);
-  BOOL GetPublic() const;
+    HRESULT SetPublic(_In_ BOOL bPublic);
+    BOOL GetPublic() const;
 
-  HRESULT SetPrivate(_In_ BOOL bPrivate);
-  BOOL GetPrivate() const;
+    HRESULT SetPrivate(_In_ BOOL bPrivate);
+    BOOL GetPrivate() const;
 
-  HRESULT AddPrivateField(_In_z_ LPCSTR szFieldA, _In_ SIZE_T nFieldLen = (SIZE_T)-1);
+    HRESULT AddPrivateField(_In_z_ LPCSTR szFieldA, _In_ SIZE_T nFieldLen = (SIZE_T)-1);
 
-  SIZE_T GetPrivateFieldsCount() const;
-  LPCSTR GetPrivateField(_In_ SIZE_T nIndex) const;
-  BOOL HasPrivateField(_In_z_ LPCSTR szFieldA) const;
+    SIZE_T GetPrivateFieldsCount() const;
+    LPCSTR GetPrivateField(_In_ SIZE_T nIndex) const;
+    BOOL HasPrivateField(_In_z_ LPCSTR szFieldA) const;
 
-  HRESULT SetNoCache(_In_ BOOL bNoCache);
-  BOOL GetNoCache() const;
+    HRESULT SetNoCache(_In_ BOOL bNoCache);
+    BOOL GetNoCache() const;
 
-  HRESULT AddNoCacheField(_In_z_ LPCSTR szFieldA, _In_ SIZE_T nFieldLen = (SIZE_T)-1);
+    HRESULT AddNoCacheField(_In_z_ LPCSTR szFieldA, _In_ SIZE_T nFieldLen = (SIZE_T)-1);
 
-  SIZE_T GetNoCacheFieldsCount() const;
-  LPCSTR GetNoCacheField(_In_ SIZE_T nIndex) const;
-  BOOL HasNoCacheField(_In_z_ LPCSTR szFieldA) const;
+    SIZE_T GetNoCacheFieldsCount() const;
+    LPCSTR GetNoCacheField(_In_ SIZE_T nIndex) const;
+    BOOL HasNoCacheField(_In_z_ LPCSTR szFieldA) const;
 
-  HRESULT SetNoStore(_In_ BOOL bNoStore);
-  BOOL GetNoStore() const;
+    HRESULT SetNoStore(_In_ BOOL bNoStore);
+    BOOL GetNoStore() const;
 
-  HRESULT SetNoTransform(_In_ BOOL bNoTransform);
-  BOOL GetNoTransform() const;
+    HRESULT SetNoTransform(_In_ BOOL bNoTransform);
+    BOOL GetNoTransform() const;
 
-  HRESULT SetMustRevalidate(_In_ BOOL bMustRevalidate);
-  BOOL GetMustRevalidate() const;
+    HRESULT SetMustRevalidate(_In_ BOOL bMustRevalidate);
+    BOOL GetMustRevalidate() const;
 
-  HRESULT SetProxyRevalidate(_In_ BOOL bProxyRevalidate);
-  BOOL GetProxyRevalidate() const;
+    HRESULT SetProxyRevalidate(_In_ BOOL bProxyRevalidate);
+    BOOL GetProxyRevalidate() const;
 
-  HRESULT SetMaxAge(_In_ ULONGLONG nMaxAge);
-  ULONGLONG GetMaxAge() const;
+    HRESULT SetMaxAge(_In_ ULONGLONG nMaxAge);
+    ULONGLONG GetMaxAge() const;
 
-  HRESULT SetSharedMaxAge(_In_ ULONGLONG nSharedMaxAge);
-  ULONGLONG GetSharedMaxAge() const;
+    HRESULT SetSharedMaxAge(_In_ ULONGLONG nSharedMaxAge);
+    ULONGLONG GetSharedMaxAge() const;
 
-  HRESULT AddExtension(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);
+    HRESULT AddExtension(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);
 
-  SIZE_T GetExtensionsCount() const;
-  LPCSTR GetExtensionName(_In_ SIZE_T nIndex) const;
-  LPCWSTR GetExtensionValue(_In_ SIZE_T nIndex) const;
-  LPCWSTR GetExtensionValue(_In_z_ LPCSTR szNameA) const;
+    SIZE_T GetExtensionsCount() const;
+    LPCSTR GetExtensionName(_In_ SIZE_T nIndex) const;
+    LPCWSTR GetExtensionValue(_In_ SIZE_T nIndex) const;
+    LPCWSTR GetExtensionValue(_In_z_ LPCSTR szNameA) const;
 
-  HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
+    HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
 
-private:
-  typedef struct {
-    LPWSTR szValueW;
-    CHAR szNameA[1];
-  } EXTENSION, *LPEXTENSION;
+  private:
+    typedef struct
+    {
+        LPWSTR szValueW;
+        CHAR szNameA[1];
+    } EXTENSION, *LPEXTENSION;
 
-  BOOL bPublic;
-  BOOL bPrivate;
-  TArrayListWithFree<LPCSTR> cPrivateFieldsList;
-  BOOL bNoCache;
-  TArrayListWithFree<LPCSTR> cNoCacheFieldsList;
-  BOOL bNoStore;
-  BOOL bNoTransform;
-  BOOL bMustRevalidate;
-  BOOL bProxyRevalidate;
-  ULONGLONG nMaxAge;
-  ULONGLONG nSMaxAge;
-  TArrayListWithFree<LPEXTENSION> aExtensionsList;
+    BOOL bPublic;
+    BOOL bPrivate;
+    TArrayListWithFree<LPCSTR> cPrivateFieldsList;
+    BOOL bNoCache;
+    TArrayListWithFree<LPCSTR> cNoCacheFieldsList;
+    BOOL bNoStore;
+    BOOL bNoTransform;
+    BOOL bMustRevalidate;
+    BOOL bProxyRevalidate;
+    ULONGLONG nMaxAge;
+    ULONGLONG nSMaxAge;
+    TArrayListWithFree<LPEXTENSION> aExtensionsList;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

@@ -21,89 +21,112 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CHttpHeaderRespSecWebSocketProtocol::CHttpHeaderRespSecWebSocketProtocol() : CHttpHeaderBase()
 {
-  return;
+    return;
 }
 
 CHttpHeaderRespSecWebSocketProtocol::~CHttpHeaderRespSecWebSocketProtocol()
 {
-  return;
+    return;
 }
 
 HRESULT CHttpHeaderRespSecWebSocketProtocol::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szValueEndA, szStartA;
-  HRESULT hRes;
+    LPCSTR szValueEndA, szStartA;
+    HRESULT hRes;
 
-  if (szValueA == NULL)
-    return E_POINTER;
+    if (szValueA == NULL)
+    {
+        return E_POINTER;
+    }
 
-  if (nValueLen == (SIZE_T)-1)
-    nValueLen = StrLenA(szValueA);
-  szValueEndA = szValueA + nValueLen;
+    if (nValueLen == (SIZE_T)-1)
+    {
+        nValueLen = StrLenA(szValueA);
+    }
+    szValueEndA = szValueA + nValueLen;
 
-  //skip spaces
-  szValueA = SkipSpaces(szValueA, szValueEndA);
-  if (szValueA >= szValueEndA)
-    return MX_E_InvalidData;
+    // skip spaces
+    szValueA = SkipSpaces(szValueA, szValueEndA);
+    if (szValueA >= szValueEndA)
+    {
+        return MX_E_InvalidData;
+    }
 
-  //protocol
-  szValueA = SkipUntil(szStartA = szValueA, szValueEndA, ";, \t");
-  if (szValueA == szStartA)
-    return MX_E_InvalidData;
+    // protocol
+    szValueA = SkipUntil(szStartA = szValueA, szValueEndA, ";, \t");
+    if (szValueA == szStartA)
+    {
+        return MX_E_InvalidData;
+    }
 
-  hRes = SetProtocol(szStartA, (SIZE_T)(szValueA - szStartA));
-  if (FAILED(hRes))
-    return hRes;
+    hRes = SetProtocol(szStartA, (SIZE_T)(szValueA - szStartA));
+    if (FAILED(hRes))
+    {
+        return hRes;
+    }
 
-  //check for end
-  if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
-    return MX_E_InvalidData;
+    // check for end
+    if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
+    {
+        return MX_E_InvalidData;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CHttpHeaderRespSecWebSocketProtocol::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
-  if (cStrProtocolA.IsEmpty() != FALSE)
-  {
-    cStrDestA.Empty();
-    return MX_E_NotReady;
-  }
-  //done
-  return (cStrDestA.CopyN((LPCSTR)cStrProtocolA, cStrProtocolA.GetLength()) != FALSE) ? S_OK : E_OUTOFMEMORY;
+    if (cStrProtocolA.IsEmpty() != FALSE)
+    {
+        cStrDestA.Empty();
+        return MX_E_NotReady;
+    }
+    // done
+    return (cStrDestA.CopyN((LPCSTR)cStrProtocolA, cStrProtocolA.GetLength()) != FALSE) ? S_OK : E_OUTOFMEMORY;
 }
 
 HRESULT CHttpHeaderRespSecWebSocketProtocol::SetProtocol(_In_z_ LPCSTR szProtocolA, _In_opt_ SIZE_T nProtocolLen)
 {
-  LPCSTR szStartA;
+    LPCSTR szStartA;
 
-  if (nProtocolLen == (SIZE_T)-1)
-    nProtocolLen = StrLenA(szProtocolA);
-  if (nProtocolLen == 0)
-    return MX_E_InvalidData;
-  if (szProtocolA == NULL)
-    return E_POINTER;
+    if (nProtocolLen == (SIZE_T)-1)
+    {
+        nProtocolLen = StrLenA(szProtocolA);
+    }
+    if (nProtocolLen == 0)
+    {
+        return MX_E_InvalidData;
+    }
+    if (szProtocolA == NULL)
+    {
+        return E_POINTER;
+    }
 
-  szProtocolA = GetToken(szStartA = szProtocolA, szProtocolA + nProtocolLen);
-  if (szProtocolA != szStartA + nProtocolLen)
-    return MX_E_InvalidData;
+    szProtocolA = GetToken(szStartA = szProtocolA, szProtocolA + nProtocolLen);
+    if (szProtocolA != szStartA + nProtocolLen)
+    {
+        return MX_E_InvalidData;
+    }
 
-  //set protocol
-  if (cStrProtocolA.CopyN(szStartA, nProtocolLen) == FALSE)
-    return E_OUTOFMEMORY;
+    // set protocol
+    if (cStrProtocolA.CopyN(szStartA, nProtocolLen) == FALSE)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 LPCSTR CHttpHeaderRespSecWebSocketProtocol::GetProtocol() const
 {
-  return (LPCSTR)cStrProtocolA;
+    return (LPCSTR)cStrProtocolA;
 }
 
-} //namespace MX
+} // namespace MX

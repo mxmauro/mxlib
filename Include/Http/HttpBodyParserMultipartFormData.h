@@ -24,90 +24,94 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpBodyParserMultipartFormData : public CHttpBodyParserFormBase, public CNonCopyableObj
 {
-public:
-  typedef Callback<HRESULT(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW,
-                           _In_opt_ LPVOID lpUserParam)> OnDownloadStartedCallback;
+  public:
+    typedef Callback<HRESULT(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW, _In_opt_ LPVOID lpUserParam)>
+        OnDownloadStartedCallback;
 
-public:
-  CHttpBodyParserMultipartFormData(_In_ OnDownloadStartedCallback cDownloadStartedCallback, _In_opt_ LPVOID lpUserData,
-                                   _In_ DWORD dwMaxFieldSize = 256000, _In_ ULONGLONG ullMaxFileSize = 2097152ui64,
-                                   _In_ DWORD dwMaxFilesCount = 4);
-  ~CHttpBodyParserMultipartFormData();
+  public:
+    CHttpBodyParserMultipartFormData(_In_ OnDownloadStartedCallback cDownloadStartedCallback,
+                                     _In_opt_ LPVOID lpUserData, _In_ DWORD dwMaxFieldSize = 256000,
+                                     _In_ ULONGLONG ullMaxFileSize = 2097152ui64, _In_ DWORD dwMaxFilesCount = 4);
+    ~CHttpBodyParserMultipartFormData();
 
-  LPCSTR GetType() const
+    LPCSTR GetType() const
     {
-    return "multipart/form-data";
+        return "multipart/form-data";
     };
 
-protected:
-  HRESULT Initialize(_In_ Internals::CHttpParser &cHttpParser);
-  HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
+  protected:
+    HRESULT Initialize(_In_ Internals::CHttpParser &cHttpParser);
+    HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
 
-  HRESULT ParseHeader(_Inout_ CStringA &cStrLineA);
-  HRESULT AccumulateData(_In_ CHAR chA);
+    HRESULT ParseHeader(_Inout_ CStringA &cStrLineA);
+    HRESULT AccumulateData(_In_ CHAR chA);
 
-private:
-  enum class eState
-  {
-    Boundary,
-    BoundaryAfter,
-    BoundaryAfter2,
-    BoundaryAfterEnd,
-    BoundaryEndCheck,
-    BoundaryEndCheckAfterDashes,
-    BoundaryEndCheckAfterDashes2,
+  private:
+    enum class eState
+    {
+        Boundary,
+        BoundaryAfter,
+        BoundaryAfter2,
+        BoundaryAfterEnd,
+        BoundaryEndCheck,
+        BoundaryEndCheckAfterDashes,
+        BoundaryEndCheckAfterDashes2,
 
-    HeaderStart,
-    HeaderName,
-    HeaderValue,
-    HeaderValueEnding,
-    HeadersEnding,
+        HeaderStart,
+        HeaderName,
+        HeaderValue,
+        HeaderValueEnding,
+        HeadersEnding,
 
-    Data,
-    DataEnd,
+        Data,
+        DataEnd,
 
-    MayBeDataEnd,
-    MayBeDataEndAlt,
+        MayBeDataEnd,
+        MayBeDataEndAlt,
 
-    Done,
-    Error
-  } ;
+        Done,
+        Error
+    };
 
-  OnDownloadStartedCallback cDownloadStartedCallback;
-  LPVOID lpUserData{ NULL };
-  DWORD dwMaxFieldSize{ 0 };
-  ULONGLONG ullMaxFileSize{ 0 };
-  DWORD dwMaxFilesCount{ 0 };
+    OnDownloadStartedCallback cDownloadStartedCallback;
+    LPVOID lpUserData{NULL};
+    DWORD dwMaxFieldSize{0};
+    ULONGLONG ullMaxFileSize{0};
+    DWORD dwMaxFilesCount{0};
 
-  CStringA cStrBoundaryA;
+    CStringA cStrBoundaryA;
 
-  struct {
-    eState nState{ eState::Boundary };
-    SIZE_T nBoundaryPos{ 0 };
-    CStringA cStrCurrLineA;
-    DWORD dwHeadersLen{ 0 };
-    struct {
-      struct {
-        CStringW cStrNameW;
-        CStringW cStrFileNameW;
-        BOOL bHasFileName{ FALSE };
-      } sContentDisposition;
-      CStringA cStrContentTypeA;
-      BOOL bContentTransferEncoding{ FALSE };
-    } sCurrentBlock;
-    CStringW cStrCurrFieldNameW;
-    BYTE aTempBuf[16384]{};
-    SIZE_T nUsedTempBuf{ 0 }, nFileUploadCounter{ 0 };
-    ULONGLONG nFileUploadSize{ 0 };
-    CWindowsHandle cFileH;
-  } sParser;
+    struct
+    {
+        eState nState{eState::Boundary};
+        SIZE_T nBoundaryPos{0};
+        CStringA cStrCurrLineA;
+        DWORD dwHeadersLen{0};
+        struct
+        {
+            struct
+            {
+                CStringW cStrNameW;
+                CStringW cStrFileNameW;
+                BOOL bHasFileName{FALSE};
+            } sContentDisposition;
+            CStringA cStrContentTypeA;
+            BOOL bContentTransferEncoding{FALSE};
+        } sCurrentBlock;
+        CStringW cStrCurrFieldNameW;
+        BYTE aTempBuf[16384]{};
+        SIZE_T nUsedTempBuf{0}, nFileUploadCounter{0};
+        ULONGLONG nFileUploadSize{0};
+        CWindowsHandle cFileH;
+    } sParser;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

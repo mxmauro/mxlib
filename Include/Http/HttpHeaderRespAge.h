@@ -24,28 +24,29 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderRespAge : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderRespAge();
-  ~CHttpHeaderRespAge();
+  public:
+    CHttpHeaderRespAge();
+    ~CHttpHeaderRespAge();
 
-  MX_DECLARE_HTTPHEADER_NAME(Age)
+    MX_DECLARE_HTTPHEADER_NAME(Age)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT SetAge(_In_ ULONGLONG nAge);
-  ULONGLONG GetAge() const;
+    HRESULT SetAge(_In_ ULONGLONG nAge);
+    ULONGLONG GetAge() const;
 
-private:
-  ULONGLONG nAge;
+  private:
+    ULONGLONG nAge;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

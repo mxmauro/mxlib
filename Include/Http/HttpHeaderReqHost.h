@@ -25,31 +25,32 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderReqHost : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderReqHost();
-  ~CHttpHeaderReqHost();
+  public:
+    CHttpHeaderReqHost();
+    ~CHttpHeaderReqHost();
 
-  MX_DECLARE_HTTPHEADER_NAME(Host)
+    MX_DECLARE_HTTPHEADER_NAME(Host)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT SetHost(_In_z_ LPCWSTR szHostW, _In_opt_ SIZE_T nHostLen = (SIZE_T)-1);
-  LPCWSTR GetHost() const;
+    HRESULT SetHost(_In_z_ LPCWSTR szHostW, _In_opt_ SIZE_T nHostLen = (SIZE_T)-1);
+    LPCWSTR GetHost() const;
 
-  HRESULT SetPort(_In_ int nPort);
-  int GetPort() const; //-1 == undefined
+    HRESULT SetPort(_In_ int nPort);
+    int GetPort() const; //-1 == undefined
 
-private:
-  CUrl cUrl;
+  private:
+    CUrl cUrl;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

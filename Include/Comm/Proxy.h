@@ -26,66 +26,67 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CProxy : public CBaseMemObj
 {
-public:
-  enum class eType
-  {
-    None = 0,
-    UseIE,
-    Manual
-  };
-
-public:
-  CProxy();
-  CProxy(_In_ const CProxy& cSrc) throw(...);
-  ~CProxy();
-
-  CProxy& operator=(_In_ const CProxy& cSrc) throw(...);
-
-  VOID SetDirect();
-  HRESULT SetManual(_In_z_ LPCWSTR szProxyServerW);
-  VOID SetUseIE();
-
-  HRESULT SetCredentials(_In_opt_z_ LPCWSTR szUserNameW, _In_opt_z_ LPCWSTR szPasswordW);
-
-  HRESULT Resolve(_In_opt_z_ LPCWSTR szTargetUrlW);
-  HRESULT Resolve(_In_ CUrl &cUrl);
-
-  eType GetType() const
+  public:
+    enum class eType
     {
-    return nType;
+        None = 0,
+        UseIE,
+        Manual
     };
 
-  LPCWSTR GetAddress() const
+  public:
+    CProxy();
+    CProxy(_In_ const CProxy &cSrc) throw(...);
+    ~CProxy();
+
+    CProxy &operator=(_In_ const CProxy &cSrc) throw(...);
+
+    VOID SetDirect();
+    HRESULT SetManual(_In_z_ LPCWSTR szProxyServerW);
+    VOID SetUseIE();
+
+    HRESULT SetCredentials(_In_opt_z_ LPCWSTR szUserNameW, _In_opt_z_ LPCWSTR szPasswordW);
+
+    HRESULT Resolve(_In_opt_z_ LPCWSTR szTargetUrlW);
+    HRESULT Resolve(_In_ CUrl &cUrl);
+
+    eType GetType() const
     {
-    return (LPCWSTR)cStrAddressW;
-    };
-  int GetPort() const
-    {
-    return nPort;
+        return nType;
     };
 
-  LPCWSTR _GetUserName() const
+    LPCWSTR GetAddress() const
     {
-    return (LPCWSTR)cStrUserNameW;
+        return (LPCWSTR)cStrAddressW;
+    };
+    int GetPort() const
+    {
+        return nPort;
     };
 
-  LPCWSTR GetUserPassword() const
+    LPCWSTR _GetUserName() const
     {
-    return (LPCWSTR)cStrUserPasswordW;
+        return (LPCWSTR)cStrUserNameW;
     };
 
-private:
-  eType nType;
-  MX::CStringW cStrAddressW;
-  MX::CSecureStringW cStrUserNameW, cStrUserPasswordW;
-  int nPort;
+    LPCWSTR GetUserPassword() const
+    {
+        return (LPCWSTR)cStrUserPasswordW;
+    };
+
+  private:
+    eType nType;
+    MX::CStringW cStrAddressW;
+    MX::CSecureStringW cStrUserNameW, cStrUserPasswordW;
+    int nPort;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

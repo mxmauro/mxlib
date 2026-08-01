@@ -24,62 +24,65 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class MX_NOVTABLE CHttpHeaderRespWwwProxyAuthenticateCommon : public CHttpHeaderBase
 {
-protected:
-  CHttpHeaderRespWwwProxyAuthenticateCommon();
-public:
-  ~CHttpHeaderRespWwwProxyAuthenticateCommon();
+  protected:
+    CHttpHeaderRespWwwProxyAuthenticateCommon();
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+  public:
+    ~CHttpHeaderRespWwwProxyAuthenticateCommon();
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT SetScheme(_In_z_ LPCSTR szSchemeA, _In_opt_ SIZE_T nSchemeLen = (SIZE_T)-1);
-  LPCSTR GetScheme() const;
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);
+    HRESULT SetScheme(_In_z_ LPCSTR szSchemeA, _In_opt_ SIZE_T nSchemeLen = (SIZE_T)-1);
+    LPCSTR GetScheme() const;
 
-  SIZE_T GetParamsCount() const;
-  LPCSTR GetParamName(_In_ SIZE_T nIndex) const;
-  LPCWSTR GetParamValue(_In_ SIZE_T nIndex) const;
-  LPCWSTR GetParamValue(_In_z_ LPCSTR szNameA) const;
+    HRESULT AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);
 
-private:
-  typedef struct {
-    LPWSTR szValueW;
-    CHAR szNameA[1];
-  } PARAMETER, *LPPARAMETER;
+    SIZE_T GetParamsCount() const;
+    LPCSTR GetParamName(_In_ SIZE_T nIndex) const;
+    LPCWSTR GetParamValue(_In_ SIZE_T nIndex) const;
+    LPCWSTR GetParamValue(_In_z_ LPCSTR szNameA) const;
 
-  CStringA cStrSchemeA;
-  TArrayListWithFree<LPPARAMETER> aParamsList;
+  private:
+    typedef struct
+    {
+        LPWSTR szValueW;
+        CHAR szNameA[1];
+    } PARAMETER, *LPPARAMETER;
+
+    CStringA cStrSchemeA;
+    TArrayListWithFree<LPPARAMETER> aParamsList;
 };
 
 //--------
 
 class CHttpHeaderRespWwwAuthenticate : public CHttpHeaderRespWwwProxyAuthenticateCommon
 {
-public:
-  CHttpHeaderRespWwwAuthenticate();
-  ~CHttpHeaderRespWwwAuthenticate();
+  public:
+    CHttpHeaderRespWwwAuthenticate();
+    ~CHttpHeaderRespWwwAuthenticate();
 
-  MX_DECLARE_HTTPHEADER_NAME(WWW-Authenticate)
+    MX_DECLARE_HTTPHEADER_NAME(WWW - Authenticate)
 };
 
 //--------
 
 class CHttpHeaderRespProxyAuthenticate : public CHttpHeaderRespWwwProxyAuthenticateCommon
 {
-public:
-  CHttpHeaderRespProxyAuthenticate();
-  ~CHttpHeaderRespProxyAuthenticate();
+  public:
+    CHttpHeaderRespProxyAuthenticate();
+    ~CHttpHeaderRespProxyAuthenticate();
 
-  MX_DECLARE_HTTPHEADER_NAME(Proxy-Authenticate)
+    MX_DECLARE_HTTPHEADER_NAME(Proxy - Authenticate)
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

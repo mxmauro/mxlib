@@ -21,79 +21,90 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CHttpHeaderReqExpect::CHttpHeaderReqExpect() : CHttpHeaderBase()
 {
-  nExpectation = eExpectation::Unsupported;
-  return;
+    nExpectation = eExpectation::Unsupported;
+    return;
 }
 
 CHttpHeaderReqExpect::~CHttpHeaderReqExpect()
 {
-  return;
+    return;
 }
 
 HRESULT CHttpHeaderReqExpect::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szValueEndA;
-  eExpectation _nExpectation = eExpectation::Unsupported;
+    LPCSTR szValueEndA;
+    eExpectation _nExpectation = eExpectation::Unsupported;
 
-  if (szValueA == NULL)
-    return E_POINTER;
+    if (szValueA == NULL)
+    {
+        return E_POINTER;
+    }
 
-  if (nValueLen == (SIZE_T)-1)
-    nValueLen = StrLenA(szValueA);
-  szValueEndA = szValueA + nValueLen;
+    if (nValueLen == (SIZE_T)-1)
+    {
+        nValueLen = StrLenA(szValueA);
+    }
+    szValueEndA = szValueA + nValueLen;
 
-  nExpectation = eExpectation::Unsupported;
-  //skip spaces
-  szValueA = SkipSpaces(szValueA, szValueEndA);
+    nExpectation = eExpectation::Unsupported;
+    // skip spaces
+    szValueA = SkipSpaces(szValueA, szValueEndA);
 
-  //check expectation
-  if ((SIZE_T)(szValueEndA - szValueA) >= 12 && StrNCompareA(szValueA, "100-continue", 12, TRUE) == 0)
-  {
-    _nExpectation = eExpectation::Status100Continue;
-    szValueA += 12;
-  }
-  else
-  {
-    return MX_E_Unsupported;
-  }
+    // check expectation
+    if ((SIZE_T)(szValueEndA - szValueA) >= 12 && StrNCompareA(szValueA, "100-continue", 12, TRUE) == 0)
+    {
+        _nExpectation = eExpectation::Status100Continue;
+        szValueA += 12;
+    }
+    else
+    {
+        return MX_E_Unsupported;
+    }
 
-  //skip spaces and check for end
-  if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
-    return MX_E_InvalidData;
+    // skip spaces and check for end
+    if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
+    {
+        return MX_E_InvalidData;
+    }
 
-  //done
-  nExpectation = _nExpectation;
-  return S_OK;
+    // done
+    nExpectation = _nExpectation;
+    return S_OK;
 }
 
 HRESULT CHttpHeaderReqExpect::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
-  switch (nExpectation)
-  {
+    switch (nExpectation)
+    {
     case eExpectation::Status100Continue:
-      if (cStrDestA.Copy("100-continue") == FALSE)
-        return E_OUTOFMEMORY;
-      return S_OK;
-  }
-  cStrDestA.Empty();
-  return MX_E_Unsupported;
+        if (cStrDestA.Copy("100-continue") == FALSE)
+        {
+            return E_OUTOFMEMORY;
+        }
+        return S_OK;
+    }
+    cStrDestA.Empty();
+    return MX_E_Unsupported;
 }
 
 HRESULT CHttpHeaderReqExpect::SetExpectation(_In_ eExpectation _nExpectation)
 {
-  if (_nExpectation != eExpectation::Status100Continue && _nExpectation != eExpectation::Unsupported)
-    return E_INVALIDARG;
-  nExpectation = _nExpectation;
-  return S_OK;
+    if (_nExpectation != eExpectation::Status100Continue && _nExpectation != eExpectation::Unsupported)
+    {
+        return E_INVALIDARG;
+    }
+    nExpectation = _nExpectation;
+    return S_OK;
 }
 
 CHttpHeaderReqExpect::eExpectation CHttpHeaderReqExpect::GetExpectation() const
 {
-  return nExpectation;
+    return nExpectation;
 }
 
-} //namespace MX
+} // namespace MX

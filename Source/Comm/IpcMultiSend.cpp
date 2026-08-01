@@ -21,37 +21,43 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CIpc::CMultiSendLock::CMultiSendLock(_In_ CConnectionBase *_lpConn) : CBaseMemObj(), CNonCopyableObj(), lpConn(_lpConn)
 {
-  lpConn->AddRef();
+    lpConn->AddRef();
 
-  //apply lock
-  while ((_InterlockedOr(&(lpConn->nFlags), FLAG_InSendTransaction) & FLAG_InSendTransaction) != 0)
-    _YieldProcessor();
-  return;
+    // apply lock
+    while ((_InterlockedOr(&(lpConn->nFlags), FLAG_InSendTransaction) & FLAG_InSendTransaction) != 0)
+    {
+        _YieldProcessor();
+    }
+    return;
 }
 
 CIpc::CMultiSendLock::~CMultiSendLock()
 {
-  _InterlockedAnd(&(lpConn->nFlags), ~FLAG_InSendTransaction);
-  lpConn->Release();
-  return;
+    _InterlockedAnd(&(lpConn->nFlags), ~FLAG_InSendTransaction);
+    lpConn->Release();
+    return;
 }
 
 //-----------------------------------------------------------
 
-CIpc::CAutoMultiSendLock::CAutoMultiSendLock(_In_ CMultiSendLock *_lpLock) : CBaseMemObj(), CNonCopyableObj(), lpLock(_lpLock)
+CIpc::CAutoMultiSendLock::CAutoMultiSendLock(_In_ CMultiSendLock *_lpLock)
+    : CBaseMemObj(), CNonCopyableObj(), lpLock(_lpLock)
 {
-  return;
+    return;
 }
 
 CIpc::CAutoMultiSendLock::~CAutoMultiSendLock()
 {
-  if (lpLock != NULL)
-    delete lpLock;
-  return;
+    if (lpLock != NULL)
+    {
+        delete lpLock;
+    }
+    return;
 }
 
-} //namespace MX
+} // namespace MX

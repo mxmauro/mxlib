@@ -26,24 +26,35 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-namespace Http {
+namespace Http
+{
 
 enum class eBrowser
 {
-  Other, IE, IE6, Opera, Gecko, Chrome, Safari, Konqueror
+    Other,
+    IE,
+    IE6,
+    Opera,
+    Gecko,
+    Chrome,
+    Safari,
+    Konqueror
 };
 
-} //namespace Http
+} // namespace Http
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-namespace Http {
+namespace Http
+{
 
 eBrowser GetBrowserFromUserAgent(_In_ LPCSTR szUserAgentA, _In_opt_ SIZE_T nUserAgentLen = (SIZE_T)-1);
 
@@ -64,9 +75,9 @@ LPCSTR GetMimeType(_In_z_ LPCWSTR szFileNameW);
 HRESULT ParseDate(_Out_ CDateTime &cDt, _In_z_ LPCSTR szDateTimeA, _In_opt_ SIZE_T nDateTimeLen = (SIZE_T)-1);
 HRESULT ParseDate(_Out_ CDateTime &cDt, _In_z_ LPCWSTR szDateTimeW, _In_opt_ SIZE_T nDateTimeLen = (SIZE_T)-1);
 
-} //namespace Http
+} // namespace Http
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

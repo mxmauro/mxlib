@@ -30,33 +30,33 @@
 #pragma intrinsic(_InterlockedExchangeAdd)
 static FORCEINLINE int InterlockedExchangeAdd(_Inout_ _Interlocked_operand_ int volatile *Addend, _In_ int Value)
 {
-  return (int)_InterlockedExchangeAdd((LONG volatile *)Addend, (LONG)Value);
+    return (int)_InterlockedExchangeAdd((LONG volatile *)Addend, (LONG)Value);
 }
 #include "..\OpenSSL\Source\include\internal\bio.h"
 #include "..\OpenSSL\Source\crypto\x509\x509_local.h"
 
 //-----------------------------------------------------------
 
-#define CHECKTAG1                               0x6F7E283CUL
-#define CHECKTAG2                               0x3A9B4D8EUL
+#define CHECKTAG1 0x6F7E283CUL
+#define CHECKTAG2 0x3A9B4D8EUL
 
-#define MAXIMUM_FREE_PACKETS_IN_LIST                    4096
+#define MAXIMUM_FREE_PACKETS_IN_LIST 4096
 
-#define FLAG_Connected                                0x0001
-#define FLAG_Closed                                   0x0002
-#define FLAG_ShutdownProcessed                        0x0004
-#define FLAG_NewReceivedDataAvailable                 0x0008
-#define FLAG_GracefulShutdown                         0x0010
-#define FLAG_InSendTransaction                        0x0020
-#define FLAG_ClosingOnShutdown                        0x0040
-#define FLAG_InitialSetupExecuted                     0x0080
-#define FLAG_InputProcessingPaused                    0x0100
-#define FLAG_OutputProcessingPaused                   0x0200
-#define FLAG_HasSSL                                   0x0400
-#define FLAG_SslHandshakeCompleted                    0x0800
-#define FLAG_SslWantRead                              0x1000
-#define FLAG_SslCheckCertificate                      0x2000
-#define FLAG_SslAcceptSelfSigned                      0x4000
+#define FLAG_Connected 0x0001
+#define FLAG_Closed 0x0002
+#define FLAG_ShutdownProcessed 0x0004
+#define FLAG_NewReceivedDataAvailable 0x0008
+#define FLAG_GracefulShutdown 0x0010
+#define FLAG_InSendTransaction 0x0020
+#define FLAG_ClosingOnShutdown 0x0040
+#define FLAG_InitialSetupExecuted 0x0080
+#define FLAG_InputProcessingPaused 0x0100
+#define FLAG_OutputProcessingPaused 0x0200
+#define FLAG_HasSSL 0x0400
+#define FLAG_SslHandshakeCompleted 0x0800
+#define FLAG_SslWantRead 0x1000
+#define FLAG_SslCheckCertificate 0x2000
+#define FLAG_SslAcceptSelfSigned 0x4000
 
 //-----------------------------------------------------------
 

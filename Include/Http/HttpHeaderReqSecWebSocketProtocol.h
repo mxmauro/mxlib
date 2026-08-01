@@ -25,32 +25,33 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderReqSecWebSocketProtocol : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderReqSecWebSocketProtocol();
-  ~CHttpHeaderReqSecWebSocketProtocol();
+  public:
+    CHttpHeaderReqSecWebSocketProtocol();
+    ~CHttpHeaderReqSecWebSocketProtocol();
 
-  MX_DECLARE_HTTPHEADER_NAME(Sec-WebSocket-Protocol)
+    MX_DECLARE_HTTPHEADER_NAME(Sec - WebSocket - Protocol)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT AddProtocol(_In_z_ LPCSTR szProtocolA, _In_ SIZE_T nProtocolLen);
+    HRESULT AddProtocol(_In_z_ LPCSTR szProtocolA, _In_ SIZE_T nProtocolLen);
 
-  SIZE_T GetProtocolsCount() const;
-  LPCSTR GetProtocol(_In_ SIZE_T nIndex) const;
+    SIZE_T GetProtocolsCount() const;
+    LPCSTR GetProtocol(_In_ SIZE_T nIndex) const;
 
-  BOOL HasProtocol(_In_z_ LPCSTR szProtocolA, _In_ SIZE_T nProtocolLen = (SIZE_T)-1) const;
+    BOOL HasProtocol(_In_z_ LPCSTR szProtocolA, _In_ SIZE_T nProtocolLen = (SIZE_T)-1) const;
 
-private:
-  TArrayListWithFree<LPSTR> aProtocolsList;
+  private:
+    TArrayListWithFree<LPSTR> aProtocolsList;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

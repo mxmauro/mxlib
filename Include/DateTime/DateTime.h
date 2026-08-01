@@ -25,13 +25,13 @@
 
 //-----------------------------------------------------------
 
-#define MX_DATETIME_TICKS_PER_DAY            864000000000i64
-#define MX_DATETIME_TICKS_PER_HOUR            36000000000i64
-#define MX_DATETIME_TICKS_PER_MILLISECOND           10000i64
-#define MX_DATETIME_TICKS_PER_MINUTE            600000000i64
-#define MX_DATETIME_TICKS_PER_SECOND             10000000i64
+#define MX_DATETIME_TICKS_PER_DAY 864000000000i64
+#define MX_DATETIME_TICKS_PER_HOUR 36000000000i64
+#define MX_DATETIME_TICKS_PER_MILLISECOND 10000i64
+#define MX_DATETIME_TICKS_PER_MINUTE 600000000i64
+#define MX_DATETIME_TICKS_PER_SECOND 10000000i64
 
-#define MX_DATETIME_EPOCH_TICKS        621355968000000000i64
+#define MX_DATETIME_EPOCH_TICKS 621355968000000000i64
 
 //-----------------------------------------------------------
 
@@ -60,7 +60,7 @@
 //    [+/-]#### format is used.
 //%%: Percent sign.
 //
-//The # flag may prefix any formatting code:
+// The # flag may prefix any formatting code:
 //
 //%#c: Long date and time representation, appropriate for current locale. I.e.: "Tuesday, March 14, 1995, 12:41:29".
 //%#x: Long date representation, appropriate to current locale. I.e.: "Tuesday, March 14, 1995".
@@ -69,201 +69,213 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CTimeSpan : public virtual CBaseMemObj
 {
-public:
-  CTimeSpan(_In_ const CTimeSpan& cSrc);
-  CTimeSpan(_In_opt_ LONGLONG nValue=0);
-  CTimeSpan(_In_ int nDays, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds, _In_opt_ int nMilliSeconds=0);
-  CTimeSpan(_In_ int nHours, _In_ int nMinutes, _In_ int nSeconds);
+  public:
+    CTimeSpan(_In_ const CTimeSpan &cSrc);
+    CTimeSpan(_In_opt_ LONGLONG nValue = 0);
+    CTimeSpan(_In_ int nDays, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds, _In_opt_ int nMilliSeconds = 0);
+    CTimeSpan(_In_ int nHours, _In_ int nMinutes, _In_ int nSeconds);
 
-  int GetDays() const;
-  int GetHours() const;
-  int GetMinutes() const;
-  int GetSeconds() const;
-  int GetMilliSeconds() const;
-  LONGLONG GetTicks() const
+    int GetDays() const;
+    int GetHours() const;
+    int GetMinutes() const;
+    int GetSeconds() const;
+    int GetMilliSeconds() const;
+    LONGLONG GetTicks() const
     {
-    return nTicks;
+        return nTicks;
     };
-  LONGLONG GetDuration() const;
+    LONGLONG GetDuration() const;
 
-  double GetTotalDays() const;
-  double GetTotalHours() const;
-  double GetTotalMinutes() const;
-  double GetTotalSeconds() const;
-  double GetTotalMilliSeconds() const;
+    double GetTotalDays() const;
+    double GetTotalHours() const;
+    double GetTotalMinutes() const;
+    double GetTotalSeconds() const;
+    double GetTotalMilliSeconds() const;
 
-  HRESULT Add(_In_ LONGLONG nValue);
-  HRESULT Add(_In_ CTimeSpan &cTs);
-  HRESULT Sub(_In_ LONGLONG nValue);
-  HRESULT Sub(_In_ CTimeSpan &cTs);
+    HRESULT Add(_In_ LONGLONG nValue);
+    HRESULT Add(_In_ CTimeSpan &cTs);
+    HRESULT Sub(_In_ LONGLONG nValue);
+    HRESULT Sub(_In_ CTimeSpan &cTs);
 
-  HRESULT SetFrom(_In_ double nValue, _In_ LONGLONG nTickMultiplicator);
-  HRESULT SetFromDays(_In_ double nValue);
-  HRESULT SetFromHours(_In_ double nValue);
-  HRESULT SetFromMinutes(_In_ double nValue);
-  HRESULT SetFromSeconds(_In_ double nValue);
-  HRESULT SetFromMilliSeconds(_In_ double nValue);
-  HRESULT SetFromTicks(_In_ LONGLONG nValue);
-  HRESULT SetFrom(_In_ int nDays, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds, _In_opt_ int nMilliSeconds=0);
-  HRESULT SetFrom(_In_ int nHours, _In_ int nMinutes, _In_ int nSeconds);
+    HRESULT SetFrom(_In_ double nValue, _In_ LONGLONG nTickMultiplicator);
+    HRESULT SetFromDays(_In_ double nValue);
+    HRESULT SetFromHours(_In_ double nValue);
+    HRESULT SetFromMinutes(_In_ double nValue);
+    HRESULT SetFromSeconds(_In_ double nValue);
+    HRESULT SetFromMilliSeconds(_In_ double nValue);
+    HRESULT SetFromTicks(_In_ LONGLONG nValue);
+    HRESULT SetFrom(_In_ int nDays, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds,
+                    _In_opt_ int nMilliSeconds = 0);
+    HRESULT SetFrom(_In_ int nHours, _In_ int nMinutes, _In_ int nSeconds);
 
-  HRESULT Negate();
+    HRESULT Negate();
 
-  HRESULT Parse(_In_z_ LPCSTR szSrcA, _In_ SIZE_T nLength=(SIZE_T)-1, _Out_opt_ LPSTR *lpszEndStringA=NULL);
-  HRESULT Parse(_In_z_ LPCWSTR szSrcW, _In_ SIZE_T nLength=(SIZE_T)-1, _Out_opt_ LPWSTR *lpszEndStringW=NULL);
+    HRESULT Parse(_In_z_ LPCSTR szSrcA, _In_ SIZE_T nLength = (SIZE_T)-1, _Out_opt_ LPSTR *lpszEndStringA = NULL);
+    HRESULT Parse(_In_z_ LPCWSTR szSrcW, _In_ SIZE_T nLength = (SIZE_T)-1, _Out_opt_ LPWSTR *lpszEndStringW = NULL);
 
-  HRESULT Format(_Inout_ CStringW& cStrDestW);
-  HRESULT AppendFormat(_Inout_ CStringW& cStrDestW);
+    HRESULT Format(_Inout_ CStringW &cStrDestW);
+    HRESULT AppendFormat(_Inout_ CStringW &cStrDestW);
 
-  CTimeSpan& operator=(_In_ const CTimeSpan& cSrc);
+    CTimeSpan &operator=(_In_ const CTimeSpan &cSrc);
 
-  bool operator==(_In_ const CTimeSpan& cTs) const;
-  bool operator!=(_In_ const CTimeSpan& cTs) const;
-  bool operator<(_In_ const CTimeSpan& cTs) const;
-  bool operator>(_In_ const CTimeSpan& cTs) const;
-  bool operator<=(_In_ const CTimeSpan& cTs) const;
-  bool operator>=(_In_ const CTimeSpan& cTs) const;
+    bool operator==(_In_ const CTimeSpan &cTs) const;
+    bool operator!=(_In_ const CTimeSpan &cTs) const;
+    bool operator<(_In_ const CTimeSpan &cTs) const;
+    bool operator>(_In_ const CTimeSpan &cTs) const;
+    bool operator<=(_In_ const CTimeSpan &cTs) const;
+    bool operator>=(_In_ const CTimeSpan &cTs) const;
 
-private:
-  LONGLONG nTicks;
+  private:
+    LONGLONG nTicks;
 };
 
 //-----------------------------------------------------------
 
 class CDateTime : public virtual CBaseMemObj
 {
-public:
-  enum class eUnits
-  {
-    Year=1, Month, Day, Hours, Minutes, Seconds, Milliseconds, Ticks
-  };
+  public:
+    enum class eUnits
+    {
+        Year = 1,
+        Month,
+        Day,
+        Hours,
+        Minutes,
+        Seconds,
+        Milliseconds,
+        Ticks
+    };
 
-  typedef struct {
-    LPCSTR szShortDayNamesA[7];
-    LPCSTR szLongDayNamesA[7];
-    LPCSTR szShortMonthNamesA[12];
-    LPCSTR szLongMonthNamesA[12];
-    LPCSTR szTimeAmPmA[2];
-    LPCSTR szDateSeparatorA;
-    LPCSTR szTimeSeparatorA;
-    LPCSTR szShortDateFormatA;
-    LPCSTR szLongDateFormatA;
-    LPCSTR szTimeFormatA;
-  } CUSTOMSETTINGSA, *LPCUSTOMSETTINGSA;
+    typedef struct
+    {
+        LPCSTR szShortDayNamesA[7];
+        LPCSTR szLongDayNamesA[7];
+        LPCSTR szShortMonthNamesA[12];
+        LPCSTR szLongMonthNamesA[12];
+        LPCSTR szTimeAmPmA[2];
+        LPCSTR szDateSeparatorA;
+        LPCSTR szTimeSeparatorA;
+        LPCSTR szShortDateFormatA;
+        LPCSTR szLongDateFormatA;
+        LPCSTR szTimeFormatA;
+    } CUSTOMSETTINGSA, *LPCUSTOMSETTINGSA;
 
-  typedef struct {
-    LPCWSTR szShortDayNamesW[7];
-    LPCWSTR szLongDayNamesW[7];
-    LPCWSTR szShortMonthNamesW[12];
-    LPCWSTR szLongMonthNamesW[12];
-    LPCWSTR szTimeAmPmW[2];
-    LPCWSTR szDateSeparatorW;
-    LPCWSTR szTimeSeparatorW;
-    LPCWSTR szShortDateFormatW;
-    LPCWSTR szLongDateFormatW;
-    LPCWSTR szTimeFormatW;
-  } CUSTOMSETTINGSW, *LPCUSTOMSETTINGSW;
+    typedef struct
+    {
+        LPCWSTR szShortDayNamesW[7];
+        LPCWSTR szLongDayNamesW[7];
+        LPCWSTR szShortMonthNamesW[12];
+        LPCWSTR szLongMonthNamesW[12];
+        LPCWSTR szTimeAmPmW[2];
+        LPCWSTR szDateSeparatorW;
+        LPCWSTR szTimeSeparatorW;
+        LPCWSTR szShortDateFormatW;
+        LPCWSTR szLongDateFormatW;
+        LPCWSTR szTimeFormatW;
+    } CUSTOMSETTINGSW, *LPCUSTOMSETTINGSW;
 
-public:
-  CDateTime(_In_ const CDateTime& cSrc);
-  CDateTime(_In_opt_ LONGLONG nTicks = 0, _In_opt_ int nGmtOffset = 0);
-  CDateTime(_In_ CTimeSpan &cTs, _In_opt_ int nGmtOffset = 0);
-  CDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_opt_ int nGmtOffset = 0);
-  CDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds,
-            _In_opt_ int nMilliSeconds=0, _In_opt_ int nGmtOffset=0);
-  ~CDateTime();
+  public:
+    CDateTime(_In_ const CDateTime &cSrc);
+    CDateTime(_In_opt_ LONGLONG nTicks = 0, _In_opt_ int nGmtOffset = 0);
+    CDateTime(_In_ CTimeSpan &cTs, _In_opt_ int nGmtOffset = 0);
+    CDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_opt_ int nGmtOffset = 0);
+    CDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds,
+              _In_opt_ int nMilliSeconds = 0, _In_opt_ int nGmtOffset = 0);
+    ~CDateTime();
 
-  VOID Clear();
+    VOID Clear();
 
-  HRESULT SetDate(_In_ int nYear, _In_ int nMonth, _In_ int nDay);
-  HRESULT SetTime(_In_ int nHours, _In_ int nMinutes, _In_ int nSeconds, _In_opt_ int nMilliSeconds=0);
-  HRESULT SetDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_ int nHours, _In_ int nMinutes,
-                      _In_ int nSeconds, _In_opt_ int nMilliSeconds=0);
-  HRESULT SetFromTicks(_In_ LONGLONG nTicks);
-  HRESULT SetFromSystemTime(_In_ const SYSTEMTIME& sSrcSysTime);
-  HRESULT SetFromFileTime(_In_ const FILETIME& sSrcFileTime);
-  HRESULT SetFromString(_In_z_ LPCSTR szDateA, _In_z_ LPCSTR szFormatA, _In_opt_ LPCUSTOMSETTINGSA lpCustomA = NULL,
-                        _In_opt_ int nTwoDigitsYearRule = 0); //0=use OS
-  HRESULT SetFromString(_In_z_ LPCWSTR szDateW, _In_z_ LPCWSTR szFormatW, _In_opt_ LPCUSTOMSETTINGSW lpCustomW = NULL,
-                        _In_opt_ int nTwoDigitsYearRule = 0); //0=use OS
-  HRESULT SetFromNow(_In_ BOOL bLocal);
-  HRESULT SetFromUnixTime(_In_ int nTime);
-  HRESULT SetFromUnixTime(_In_ LONGLONG nTime);
-  HRESULT SetFromOleAutDate(_In_ double nValue);
-  HRESULT SetGmtOffset(_In_ int nGmtOffset, _In_ BOOL bAdjustTime=FALSE);
+    HRESULT SetDate(_In_ int nYear, _In_ int nMonth, _In_ int nDay);
+    HRESULT SetTime(_In_ int nHours, _In_ int nMinutes, _In_ int nSeconds, _In_opt_ int nMilliSeconds = 0);
+    HRESULT SetDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_ int nHours, _In_ int nMinutes,
+                        _In_ int nSeconds, _In_opt_ int nMilliSeconds = 0);
+    HRESULT SetFromTicks(_In_ LONGLONG nTicks);
+    HRESULT SetFromSystemTime(_In_ const SYSTEMTIME &sSrcSysTime);
+    HRESULT SetFromFileTime(_In_ const FILETIME &sSrcFileTime);
+    HRESULT SetFromString(_In_z_ LPCSTR szDateA, _In_z_ LPCSTR szFormatA, _In_opt_ LPCUSTOMSETTINGSA lpCustomA = NULL,
+                          _In_opt_ int nTwoDigitsYearRule = 0); // 0=use OS
+    HRESULT SetFromString(_In_z_ LPCWSTR szDateW, _In_z_ LPCWSTR szFormatW, _In_opt_ LPCUSTOMSETTINGSW lpCustomW = NULL,
+                          _In_opt_ int nTwoDigitsYearRule = 0); // 0=use OS
+    HRESULT SetFromNow(_In_ BOOL bLocal);
+    HRESULT SetFromUnixTime(_In_ int nTime);
+    HRESULT SetFromUnixTime(_In_ LONGLONG nTime);
+    HRESULT SetFromOleAutDate(_In_ double nValue);
+    HRESULT SetGmtOffset(_In_ int nGmtOffset, _In_ BOOL bAdjustTime = FALSE);
 
-  VOID GetDate(_Out_ int *lpnYear, _Out_ int *lpnMonth, _Out_ int *lpnDay);
-  VOID GetTime(_Out_ int *lpnHours, _Out_ int *lpnMinutes, _Out_ int *lpnSeconds, _Out_opt_ int *lpnMilliSeconds=NULL);
-  VOID GetDateTime(_Out_ int *lpnYear, _Out_ int *lpnMonth, _Out_ int *lpnDay, _Out_ int *lpnHours,
-                   _Out_ int *lpnMinutes, _Out_ int *lpnSeconds, _Out_opt_ int *lpnMilliSeconds=NULL);
-  VOID GetSystemTime(_Out_ SYSTEMTIME &sSysTime);
-  HRESULT GetFileTime(_Out_ FILETIME &sFileTime);
-  HRESULT GetUnixTime(_Out_ int *lpnTime);
-  HRESULT GetUnixTime(_Out_ LONGLONG *lpnTime);
-  HRESULT GetOleAutDate(_Out_ double *lpnValue);
+    VOID GetDate(_Out_ int *lpnYear, _Out_ int *lpnMonth, _Out_ int *lpnDay);
+    VOID GetTime(_Out_ int *lpnHours, _Out_ int *lpnMinutes, _Out_ int *lpnSeconds,
+                 _Out_opt_ int *lpnMilliSeconds = NULL);
+    VOID GetDateTime(_Out_ int *lpnYear, _Out_ int *lpnMonth, _Out_ int *lpnDay, _Out_ int *lpnHours,
+                     _Out_ int *lpnMinutes, _Out_ int *lpnSeconds, _Out_opt_ int *lpnMilliSeconds = NULL);
+    VOID GetSystemTime(_Out_ SYSTEMTIME &sSysTime);
+    HRESULT GetFileTime(_Out_ FILETIME &sFileTime);
+    HRESULT GetUnixTime(_Out_ int *lpnTime);
+    HRESULT GetUnixTime(_Out_ LONGLONG *lpnTime);
+    HRESULT GetOleAutDate(_Out_ double *lpnValue);
 
-  LONGLONG GetTicks() const;
-  int GetYear() const;
-  int GetMonth() const;
-  int GetDay() const;
-  int GetHours() const;
-  int GetMinutes() const;
-  int GetSeconds() const;
-  int GetMilliSeconds() const;
-  int GetDayOfWeek() const;
-  int GetDayOfYear() const;
-  VOID GetTimeOfDay(_Out_ CTimeSpan &cDestTs);
-  int GetGmtOffset() const;
+    LONGLONG GetTicks() const;
+    int GetYear() const;
+    int GetMonth() const;
+    int GetDay() const;
+    int GetHours() const;
+    int GetMinutes() const;
+    int GetSeconds() const;
+    int GetMilliSeconds() const;
+    int GetDayOfWeek() const;
+    int GetDayOfYear() const;
+    VOID GetTimeOfDay(_Out_ CTimeSpan &cDestTs);
+    int GetGmtOffset() const;
 
-  BOOL IsLeapYear() const;
+    BOOL IsLeapYear() const;
 
-  CDateTime& operator=(_In_ const CDateTime& cSrc);
+    CDateTime &operator=(_In_ const CDateTime &cSrc);
 
-  bool operator==(_In_ const CDateTime& cDt) const;
-  bool operator!=(_In_ const CDateTime& cDt) const;
-  bool operator<(_In_ const CDateTime& cDt) const;
-  bool operator>(_In_ const CDateTime& cDt) const;
-  bool operator<=(_In_ const CDateTime& cDt) const;
-  bool operator>=(_In_ const CDateTime& cDt) const;
+    bool operator==(_In_ const CDateTime &cDt) const;
+    bool operator!=(_In_ const CDateTime &cDt) const;
+    bool operator<(_In_ const CDateTime &cDt) const;
+    bool operator>(_In_ const CDateTime &cDt) const;
+    bool operator<=(_In_ const CDateTime &cDt) const;
+    bool operator>=(_In_ const CDateTime &cDt) const;
 
-  HRESULT Add(_In_ CTimeSpan &cTs);
-  HRESULT Add(_In_ int nCount, _In_ eUnits nUnits);
-  HRESULT Add(_In_ LONGLONG nCount, _In_ eUnits nUnits);
-  HRESULT Sub(_In_ CTimeSpan &cTs);
-  HRESULT Sub(_In_ int nCount, _In_ eUnits nUnits);
-  HRESULT Sub(_In_ LONGLONG nCount, _In_ eUnits nUnits);
+    HRESULT Add(_In_ CTimeSpan &cTs);
+    HRESULT Add(_In_ int nCount, _In_ eUnits nUnits);
+    HRESULT Add(_In_ LONGLONG nCount, _In_ eUnits nUnits);
+    HRESULT Sub(_In_ CTimeSpan &cTs);
+    HRESULT Sub(_In_ int nCount, _In_ eUnits nUnits);
+    HRESULT Sub(_In_ LONGLONG nCount, _In_ eUnits nUnits);
 
-  LONGLONG GetDiff(_In_ const CDateTime& cFromDt, _In_ eUnits nUnits=eUnits::Seconds);
+    LONGLONG GetDiff(_In_ const CDateTime &cFromDt, _In_ eUnits nUnits = eUnits::Seconds);
 
-  HRESULT Format(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szFormatA, _In_opt_ LPCUSTOMSETTINGSA lpCustomA=NULL);
-  HRESULT Format(_Inout_ CStringW &cStrDestW, _In_z_ LPCWSTR szFormatW, _In_opt_ LPCUSTOMSETTINGSW lpCustomW=NULL);
-  HRESULT AppendFormat(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szFormatA,
-                       _In_opt_ LPCUSTOMSETTINGSA lpCustomA=NULL);
-  HRESULT AppendFormat(_Inout_ CStringW &cStrDestW, _In_z_ LPCWSTR szFormatW,
-                       _In_opt_ LPCUSTOMSETTINGSW lpCustomW=NULL);
+    HRESULT Format(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szFormatA, _In_opt_ LPCUSTOMSETTINGSA lpCustomA = NULL);
+    HRESULT Format(_Inout_ CStringW &cStrDestW, _In_z_ LPCWSTR szFormatW, _In_opt_ LPCUSTOMSETTINGSW lpCustomW = NULL);
+    HRESULT AppendFormat(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szFormatA,
+                         _In_opt_ LPCUSTOMSETTINGSA lpCustomA = NULL);
+    HRESULT AppendFormat(_Inout_ CStringW &cStrDestW, _In_z_ LPCWSTR szFormatW,
+                         _In_opt_ LPCUSTOMSETTINGSW lpCustomW = NULL);
 
-  static BOOL IsDateValid(_In_ int nYear, _In_ int nMonth, _In_ int nDay);
-  static BOOL IsTimeValid(_In_ int nHours, _In_ int nMinutes, _In_ int nSeconds);
-  static BOOL IsLeapYear(_In_ int nYear);
+    static BOOL IsDateValid(_In_ int nYear, _In_ int nMonth, _In_ int nDay);
+    static BOOL IsTimeValid(_In_ int nHours, _In_ int nMinutes, _In_ int nSeconds);
+    static BOOL IsLeapYear(_In_ int nYear);
 
-  static int GetDaysInMonth(_In_ int nMonth, _In_ int nYear);
-  static int GetDayOfWeek(_In_ int nYear, _In_ int nMonth, _In_ int nDay);
-  static int GetDayOfYear(_In_ int nYear, _In_ int nMonth, _In_ int nDay);
-  static int GetAbsoluteDay(_In_ int nYear, _In_ int nMonth, _In_ int nDay);
-  static HRESULT CalculateDayMonth(_In_ int nDayOfYear, _In_ int nYear, _Out_ int *lpnMonth, _Out_ int *lpnDay);
-  static HRESULT CalculateEasterInYear(_In_ int nYear, _Out_ int *lpnMonth, _Out_ int *lpnDay,
-                                       _In_ BOOL bOrthodoxChurchesMethod);
+    static int GetDaysInMonth(_In_ int nMonth, _In_ int nYear);
+    static int GetDayOfWeek(_In_ int nYear, _In_ int nMonth, _In_ int nDay);
+    static int GetDayOfYear(_In_ int nYear, _In_ int nMonth, _In_ int nDay);
+    static int GetAbsoluteDay(_In_ int nYear, _In_ int nMonth, _In_ int nDay);
+    static HRESULT CalculateDayMonth(_In_ int nDayOfYear, _In_ int nYear, _Out_ int *lpnMonth, _Out_ int *lpnDay);
+    static HRESULT CalculateEasterInYear(_In_ int nYear, _Out_ int *lpnMonth, _Out_ int *lpnDay,
+                                         _In_ BOOL bOrthodoxChurchesMethod);
 
-private:
-  CTimeSpan cTicks;
-  int nGmtOffset; //in minutes
+  private:
+    CTimeSpan cTicks;
+    int nGmtOffset; // in minutes
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

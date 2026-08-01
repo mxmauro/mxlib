@@ -23,120 +23,131 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CTaskQueue::CTaskQueue() : CBaseMemObj(), CIoCompletionPortThreadPool()
 {
-  RundownProt_Initialize(&nRundownLock);
-  cQueuedTaskCallbackWP = MX_BIND_MEMBER_CALLBACK(&CTaskQueue::OnQueuedTask, this);
-  _InterlockedExchange(&nQueuedTasksCount, 0);
-  dwMaxCpuUsage = 100;
-  return;
+    RundownProt_Initialize(&nRundownLock);
+    cQueuedTaskCallbackWP = MX_BIND_MEMBER_CALLBACK(&CTaskQueue::OnQueuedTask, this);
+    _InterlockedExchange(&nQueuedTasksCount, 0);
+    dwMaxCpuUsage = 100;
+    return;
 }
 
 CTaskQueue::~CTaskQueue()
 {
-  Finalize();
-  return;
+    Finalize();
+    return;
 }
 
 HRESULT CTaskQueue::Initialize()
 {
-  RundownProt_Initialize(&nRundownLock);
-  return CIoCompletionPortThreadPool::Initialize();
+    RundownProt_Initialize(&nRundownLock);
+    return CIoCompletionPortThreadPool::Initialize();
 }
 
 VOID CTaskQueue::Finalize()
 {
-  RundownProt_WaitForRelease(&nRundownLock);
+    RundownProt_WaitForRelease(&nRundownLock);
 
-  while (HasPending() != FALSE)
-  {
-    ::MxSleep(50);
-  }
-  CIoCompletionPortThreadPool::Finalize();
-  return;
+    while (HasPending() != FALSE)
+    {
+        ::MxSleep(50);
+    }
+    CIoCompletionPortThreadPool::Finalize();
+    return;
 }
 
 VOID CTaskQueue::SetOption_SetCpuThrottling(_In_ DWORD _dwMaxCpuUsage)
 {
-  if (_dwMaxCpuUsage < 10)
-    dwMaxCpuUsage = 10;
-  else if (_dwMaxCpuUsage > 100)
-    dwMaxCpuUsage = 100;
-  else
-    dwMaxCpuUsage = _dwMaxCpuUsage;
-  return;
+    if (_dwMaxCpuUsage < 10)
+    {
+        dwMaxCpuUsage = 10;
+    }
+    else if (_dwMaxCpuUsage > 100)
+    {
+        dwMaxCpuUsage = 100;
+    }
+    else
+    {
+        dwMaxCpuUsage = _dwMaxCpuUsage;
+    }
+    return;
 }
 
 BOOL CTaskQueue::HasPending() const
 {
-  return (__InterlockedRead(const_cast<LONG volatile*>(&nQueuedTasksCount)) > 0) ? TRUE : FALSE;
+    return (__InterlockedRead(const_cast<LONG volatile *>(&nQueuedTasksCount)) > 0) ? TRUE : FALSE;
 }
 
 HRESULT CTaskQueue::QueueTask(_In_ CTask *lpTask, _In_ OnRunTaskCallback cCallback)
 {
-  CAutoRundownProtection cAutoRundownProt(&nRundownLock);
-  HRESULT hRes;
+    CAutoRundownProtection cAutoRundownProt(&nRundownLock);
+    HRESULT hRes;
 
-  if (lpTask == NULL || (!cCallback))
-    return E_POINTER;
-  if (cAutoRundownProt.IsAcquired() == FALSE)
-    return MX_E_Cancelled;
+    if (lpTask == NULL || (!cCallback))
+    {
+        return E_POINTER;
+    }
+    if (cAutoRundownProt.IsAcquired() == FALSE)
+    {
+        return MX_E_Cancelled;
+    }
 
-  ::MxMemSet(&(lpTask->sOvr), 0, sizeof(lpTask->sOvr));
-  lpTask->cCallback = cCallback;
+    ::MxMemSet(&(lpTask->sOvr), 0, sizeof(lpTask->sOvr));
+    lpTask->cCallback = cCallback;
 
-  _InterlockedIncrement(&nQueuedTasksCount);
-  lpTask->AddRef();
-  hRes = Post(cQueuedTaskCallbackWP, 0, &(lpTask->sOvr));
-  if (FAILED(hRes))
-  {
-    lpTask->Release();
-    _InterlockedDecrement(&nQueuedTasksCount);
-  }
-  return hRes;
+    _InterlockedIncrement(&nQueuedTasksCount);
+    lpTask->AddRef();
+    hRes = Post(cQueuedTaskCallbackWP, 0, &(lpTask->sOvr));
+    if (FAILED(hRes))
+    {
+        lpTask->Release();
+        _InterlockedDecrement(&nQueuedTasksCount);
+    }
+    return hRes;
 }
 
 VOID CTaskQueue::OnQueuedTask(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
                               _In_ HRESULT hRes)
 {
-  CTask *lpTask = CONTAINING_RECORD(lpOvr, CTask, sOvr);
-  CTimer cTimer;
+    CTask *lpTask = CONTAINING_RECORD(lpOvr, CTask, sOvr);
+    CTimer cTimer;
 
-  cTimer.GetMarkTimeMs();
-  lpTask->cCallback(this, lpTask);
-  cTimer.Mark();
+    cTimer.GetMarkTimeMs();
+    lpTask->cCallback(this, lpTask);
+    cTimer.Mark();
 
-  if (dwMaxCpuUsage < 100)
-  {
-    CAutoRundownProtection cAutoRundownProt(&nRundownLock);
-
-    if (cAutoRundownProt.IsAcquired() != FALSE)
+    if (dwMaxCpuUsage < 100)
     {
-      DWORD dwElapsedMs = cTimer.GetElapsedTimeMs();
+        CAutoRundownProtection cAutoRundownProt(&nRundownLock);
 
-      ::MxSleep(dwElapsedMs / dwMaxCpuUsage);
+        if (cAutoRundownProt.IsAcquired() != FALSE)
+        {
+            DWORD dwElapsedMs = cTimer.GetElapsedTimeMs();
+
+            ::MxSleep(dwElapsedMs / dwMaxCpuUsage);
+        }
     }
-  }
 
-  lpTask->Release();
-  _InterlockedDecrement(&nQueuedTasksCount);
-  return;
+    lpTask->Release();
+    _InterlockedDecrement(&nQueuedTasksCount);
+    return;
 }
 
 //-----------------------------------------------------------
 
 CTaskQueue::CTask::CTask() : TRefCounted<CBaseMemObj>()
 {
-  ::MxMemSet(&sOvr, 0, sizeof(sOvr));
-  cCallback = NullCallback();
-  return;
+    ::MxMemSet(&sOvr, 0, sizeof(sOvr));
+    cCallback = NullCallback();
+    return;
 }
 
 CTaskQueue::CTask::~CTask()
 {
-  return;
+    return;
 }
 
-} //namespace MX
+} // namespace MX

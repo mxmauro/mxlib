@@ -23,18 +23,21 @@
 #include "..\Defines.h"
 #include "..\Callbacks.h"
 #if (!defined(_WS2DEF_)) && (!defined(_WINSOCKAPI_))
-  #include <WS2tcpip.h>
+#include <WS2tcpip.h>
 #endif //!_WS2DEF_ && !_WINSOCKAPI_
 #include "..\Strings\Strings.h"
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-namespace HostResolver {
+namespace HostResolver
+{
 
-typedef Callback <VOID (_In_ LONG nResolverId, _In_ PSOCKADDR_INET lpSockAddr, _In_ HRESULT hrErrorCode,
-                        _In_ LPVOID lpUserData)> OnResultCallback;
+typedef Callback<VOID(_In_ LONG nResolverId, _In_ PSOCKADDR_INET lpSockAddr, _In_ HRESULT hrErrorCode,
+                      _In_ LPVOID lpUserData)>
+    OnResultCallback;
 
 //-----------------------------------------------------------
 
@@ -58,9 +61,9 @@ BOOL IsValidIPV6(_In_z_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen = (SIZE_
 HRESULT FormatAddress(_In_ PSOCKADDR_INET lpAddress, _Out_ CStringA &cStrDestA);
 HRESULT FormatAddress(_In_ PSOCKADDR_INET lpAddress, _Out_ CStringW &cStrDestW);
 
-} //namespace HostResolver
+} // namespace HostResolver
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

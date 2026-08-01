@@ -26,51 +26,52 @@ typedef struct bio_st BIO;
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CSecureBuffer : public virtual TRefCounted<CBaseMemObj>, public CNonCopyableObj
 {
-public:
-  CSecureBuffer();
-  ~CSecureBuffer();
+  public:
+    CSecureBuffer();
+    ~CSecureBuffer();
 
-  VOID Reset();
+    VOID Reset();
 
-  LPBYTE GetBuffer() const
+    LPBYTE GetBuffer() const
     {
-    return lpBuffer;
+        return lpBuffer;
     };
-  SIZE_T GetLength() const
+    SIZE_T GetLength() const
     {
-    return nLength;
+        return nLength;
     };
 
-  SIZE_T Read(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize);
-  SIZE_T Peek(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize);
-  VOID Skip(_In_ SIZE_T nSize);
+    SIZE_T Read(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize);
+    SIZE_T Peek(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize);
+    VOID Skip(_In_ SIZE_T nSize);
 
-  HRESULT WriteStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
-  HRESULT WriteWordLE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount);
-  HRESULT WriteWordBE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount);
-  HRESULT WriteDWordLE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount);
-  HRESULT WriteDWordBE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount);
-  HRESULT WriteQWordLE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCount);
-  HRESULT WriteQWordBE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCount);
+    HRESULT WriteStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
+    HRESULT WriteWordLE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount);
+    HRESULT WriteWordBE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount);
+    HRESULT WriteDWordLE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount);
+    HRESULT WriteDWordBE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount);
+    HRESULT WriteQWordLE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCount);
+    HRESULT WriteQWordBE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCount);
 
-  LPBYTE WriteReserve(_In_ SIZE_T nDataLength);
-  VOID EndWriteReserve(_In_ SIZE_T nDataLength);
+    LPBYTE WriteReserve(_In_ SIZE_T nDataLength);
+    VOID EndWriteReserve(_In_ SIZE_T nDataLength);
 
-  BIO* CreateBIO();
+    BIO *CreateBIO();
 
-private:
-  BOOL EnsureWritableSpace(_In_ SIZE_T nBytes);
+  private:
+    BOOL EnsureWritableSpace(_In_ SIZE_T nBytes);
 
-private:
-  LPBYTE lpBuffer;
-  SIZE_T nLength, nSize;
+  private:
+    LPBYTE lpBuffer;
+    SIZE_T nLength, nSize;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

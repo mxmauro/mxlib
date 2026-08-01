@@ -25,31 +25,32 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderGenConnection : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderGenConnection();
-  ~CHttpHeaderGenConnection();
+  public:
+    CHttpHeaderGenConnection();
+    ~CHttpHeaderGenConnection();
 
-  MX_DECLARE_HTTPHEADER_NAME(Connection)
+    MX_DECLARE_HTTPHEADER_NAME(Connection)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT AddConnection(_In_z_ LPCSTR szConnectionA, _In_ SIZE_T nConnectionLen = (SIZE_T)-1);
+    HRESULT AddConnection(_In_z_ LPCSTR szConnectionA, _In_ SIZE_T nConnectionLen = (SIZE_T)-1);
 
-  SIZE_T GetConnectionsCount() const;
-  LPCSTR GetConnection(_In_ SIZE_T nIndex) const;
-  BOOL HasConnection(_In_z_ LPCSTR szConnectionA) const;
+    SIZE_T GetConnectionsCount() const;
+    LPCSTR GetConnection(_In_ SIZE_T nIndex) const;
+    BOOL HasConnection(_In_z_ LPCSTR szConnectionA) const;
 
-private:
-  TArrayListWithFree<LPSTR> cConnectionsList;
+  private:
+    TArrayListWithFree<LPSTR> cConnectionsList;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

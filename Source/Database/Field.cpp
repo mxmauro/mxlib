@@ -21,924 +21,990 @@
 #include "..\..\Include\Strings\Utf8.h"
 #include <float.h>
 
-#define __DBL_EPSILON  0.00001
+#define __DBL_EPSILON 0.00001
 
 //-----------------------------------------------------------
 
-template<typename T>
-static bool isNan(_In_ T value)
+template <typename T> static bool isNan(_In_ T value)
 {
-  return false;
+    return false;
 }
 
-template<>
-inline bool isNan(_In_ double value)
+template <> inline bool isNan(_In_ double value)
 {
-  return _isnan(value);
+    return _isnan(value);
 }
 
-template<typename T>
-static T getSign(_In_ T value)
+template <typename T> static T getSign(_In_ T value)
 {
-  if (value == T(0) || isNan<T>(value))
-    return value;
-  return value > T(0) ? 1 : -1;
+    if (value == T(0) || isNan<T>(value))
+    {
+        return value;
+    }
+    return value > T(0) ? 1 : -1;
 }
 
-template <typename fromType, typename toType>
-static bool convertNumber(_In_ fromType n, _Out_ toType *lpRes)
+template <typename fromType, typename toType> static bool convertNumber(_In_ fromType n, _Out_ toType *lpRes)
 {
-  toType convertedN = static_cast<toType>(n);
+    toType convertedN = static_cast<toType>(n);
 
-  if (convertedN == n && getSign<fromType>(n) == getSign<toType>(convertedN))
-  {
-    *lpRes = convertedN;
-    return TRUE;
-  }
+    if (convertedN == n && getSign<fromType>(n) == getSign<toType>(convertedN))
+    {
+        *lpRes = convertedN;
+        return TRUE;
+    }
 
-  *lpRes = toType(0);
-  return FALSE;
+    *lpRes = toType(0);
+    return FALSE;
 }
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-namespace Database {
+namespace Database
+{
 
 #pragma warning(suppress : 26495) // Suppress analyzer bug when initializing unions
 CField::CField() : TRefCounted<CBaseMemObj>(), CNonCopyableObj()
 {
-  return;
+    return;
 }
 
 CField::~CField()
 {
-  MX_DELETE(lpDt);
-  MX_FREE(lpBuffer);
-  return;
+    MX_DELETE(lpDt);
+    MX_FREE(lpBuffer);
+    return;
 }
 
 VOID CField::SetNull()
 {
-  nFieldType = eFieldType::Null;
-  szStrA = NULL;
-  nLength = 0;
-  return;
+    nFieldType = eFieldType::Null;
+    szStrA = NULL;
+    nLength = 0;
+    return;
 }
 
 HRESULT CField::SetString(_In_ LPCSTR _szStrA, _In_ SIZE_T _nLength)
 {
-  if (_nLength == (SIZE_T)-1)
-    _nLength = StrLenA(_szStrA);
+    if (_nLength == (SIZE_T)-1)
+    {
+        _nLength = StrLenA(_szStrA);
+    }
 
-  if (EnsureSize(_nLength + 1) == FALSE)
-    return E_OUTOFMEMORY;
-  ::MxMemCopy(lpBuffer, _szStrA, _nLength);
-  lpBuffer[_nLength] = 0;
+    if (EnsureSize(_nLength + 1) == FALSE)
+    {
+        return E_OUTOFMEMORY;
+    }
+    ::MxMemCopy(lpBuffer, _szStrA, _nLength);
+    lpBuffer[_nLength] = 0;
 
-  nFieldType = eFieldType::String;
-  szStrA = (LPCSTR)lpBuffer;
-  nLength = _nLength;
+    nFieldType = eFieldType::String;
+    szStrA = (LPCSTR)lpBuffer;
+    nLength = _nLength;
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CField::SetString(_In_ LPCWSTR _szStrW, _In_ SIZE_T _nLength)
 {
-  CStringA cStrTempA;
-  HRESULT hRes;
+    CStringA cStrTempA;
+    HRESULT hRes;
 
-  hRes = Utf8_Encode(cStrTempA, _szStrW, _nLength);
-  if (FAILED(hRes))
-    return hRes;
+    hRes = Utf8_Encode(cStrTempA, _szStrW, _nLength);
+    if (FAILED(hRes))
+    {
+        return hRes;
+    }
 
-  if (EnsureSize(cStrTempA.GetLength() + 1) == FALSE)
-    return E_OUTOFMEMORY;
-  ::MxMemCopy(lpBuffer, (LPCSTR)cStrTempA, cStrTempA.GetLength() + 1);
+    if (EnsureSize(cStrTempA.GetLength() + 1) == FALSE)
+    {
+        return E_OUTOFMEMORY;
+    }
+    ::MxMemCopy(lpBuffer, (LPCSTR)cStrTempA, cStrTempA.GetLength() + 1);
 
-  nFieldType = eFieldType::String;
-  szStrA = (LPCSTR)lpBuffer;
-  nLength = cStrTempA.GetLength();
+    nFieldType = eFieldType::String;
+    szStrA = (LPCSTR)lpBuffer;
+    nLength = cStrTempA.GetLength();
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CField::SetFormattedString(_In_ LPCSTR szFormatA, ...)
 {
-  va_list argptr;
-  HRESULT hRes;
+    va_list argptr;
+    HRESULT hRes;
 
-  va_start(argptr, szFormatA);
-  hRes = SetFormattedStringV(szFormatA, argptr);
-  va_end(argptr);
-  return hRes;
+    va_start(argptr, szFormatA);
+    hRes = SetFormattedStringV(szFormatA, argptr);
+    va_end(argptr);
+    return hRes;
 }
 
 HRESULT CField::SetFormattedString(_In_ LPCWSTR szFormatW, ...)
 {
-  va_list argptr;
-  HRESULT hRes;
+    va_list argptr;
+    HRESULT hRes;
 
-  va_start(argptr, szFormatW);
-  hRes = SetFormattedStringV(szFormatW, argptr);
-  va_end(argptr);
-  return hRes;
+    va_start(argptr, szFormatW);
+    hRes = SetFormattedStringV(szFormatW, argptr);
+    va_end(argptr);
+    return hRes;
 }
 
 HRESULT CField::SetFormattedStringV(_In_ LPCSTR szFormatA, _In_ va_list argptr)
 {
-  CStringA cStrTempA;
+    CStringA cStrTempA;
 
-  if (cStrTempA.FormatV(szFormatA, argptr) == FALSE)
-    return E_OUTOFMEMORY;
-  return SetString((LPCSTR)cStrTempA, cStrTempA.GetLength());
+    if (cStrTempA.FormatV(szFormatA, argptr) == FALSE)
+    {
+        return E_OUTOFMEMORY;
+    }
+    return SetString((LPCSTR)cStrTempA, cStrTempA.GetLength());
 }
 
 HRESULT CField::SetFormattedStringV(_In_ LPCWSTR szFormatW, _In_ va_list argptr)
 {
-  CStringW cStrTempW;
+    CStringW cStrTempW;
 
-  if (cStrTempW.FormatV(szFormatW, argptr) == FALSE)
-    return E_OUTOFMEMORY;
-  return SetString((LPCWSTR)cStrTempW, cStrTempW.GetLength());
+    if (cStrTempW.FormatV(szFormatW, argptr) == FALSE)
+    {
+        return E_OUTOFMEMORY;
+    }
+    return SetString((LPCWSTR)cStrTempW, cStrTempW.GetLength());
 }
 
 VOID CField::SetBoolean(_In_ BOOL bValue)
 {
-  nFieldType = eFieldType::Boolean;
-  b = bValue;
+    nFieldType = eFieldType::Boolean;
+    b = bValue;
 
-  //done
-  return;
+    // done
+    return;
 }
 
 VOID CField::SetUInt32(_In_ ULONG nValue)
 {
-  nFieldType = eFieldType::UInt32;
-  ul = nValue;
+    nFieldType = eFieldType::UInt32;
+    ul = nValue;
 
-  //done
-  return;
+    // done
+    return;
 }
 
 VOID CField::SetInt32(_In_ LONG nValue)
 {
-  nFieldType = eFieldType::Int32;
-  l = nValue;
+    nFieldType = eFieldType::Int32;
+    l = nValue;
 
-  //done
-  return;
+    // done
+    return;
 }
 
 VOID CField::SetUInt64(_In_ ULONGLONG nValue)
 {
-  nFieldType = eFieldType::UInt64;
-  ull = nValue;
+    nFieldType = eFieldType::UInt64;
+    ull = nValue;
 
-  //done
-  return;
+    // done
+    return;
 }
 
 VOID CField::SetInt64(_In_ LONGLONG nValue)
 {
-  nFieldType = eFieldType::Int64;
-  ll = nValue;
+    nFieldType = eFieldType::Int64;
+    ll = nValue;
 
-  //done
-  return;
+    // done
+    return;
 }
 
 VOID CField::SetDouble(_In_ double nValue)
 {
-  nFieldType = eFieldType::Double;
-  dbl = nValue;
+    nFieldType = eFieldType::Double;
+    dbl = nValue;
 
-  //done
-  return;
+    // done
+    return;
 }
 
 HRESULT CField::SetDateTime(_In_ CDateTime &cDt)
 {
-  if (lpDt == NULL)
-  {
-    lpDt = MX_DEBUG_NEW CDateTime();
     if (lpDt == NULL)
-      return E_OUTOFMEMORY;
-  }
+    {
+        lpDt = MX_DEBUG_NEW CDateTime();
+        if (lpDt == NULL)
+        {
+            return E_OUTOFMEMORY;
+        }
+    }
 
-  nFieldType = eFieldType::DateTime;
-  *lpDt = cDt;
+    nFieldType = eFieldType::DateTime;
+    *lpDt = cDt;
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CField::SetBlob(_In_ LPVOID lpData, _In_ SIZE_T _nLength)
 {
-  if (_nLength > 0)
-  {
-    if (EnsureSize(_nLength + 1) == FALSE)
-      return E_OUTOFMEMORY;
-    ::MxMemCopy(lpBuffer, lpData, _nLength);
-  }
+    if (_nLength > 0)
+    {
+        if (EnsureSize(_nLength + 1) == FALSE)
+        {
+            return E_OUTOFMEMORY;
+        }
+        ::MxMemCopy(lpBuffer, lpData, _nLength);
+    }
 
-  nFieldType = eFieldType::Blob;
-  lpBlob = (_nLength > 0) ? lpBuffer : NULL;
-  nLength = _nLength;
+    nFieldType = eFieldType::Blob;
+    lpBlob = (_nLength > 0) ? lpBuffer : NULL;
+    nLength = _nLength;
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 eFieldType CField::GetType() const
 {
-  return nFieldType;
+    return nFieldType;
 }
 
 SIZE_T CField::GetLength() const
 {
-  return nLength;
+    return nLength;
 }
 
 BOOL CField::GetBoolean() const
 {
-  return (nFieldType == eFieldType::Boolean) ? b : NULL;
+    return (nFieldType == eFieldType::Boolean) ? b : NULL;
 }
 
 LPCSTR CField::GetString() const
 {
-  return (nFieldType == eFieldType::String) ? szStrA : NULL;
+    return (nFieldType == eFieldType::String) ? szStrA : NULL;
 }
 
 HRESULT CField::GetString(_Out_ CStringW &cStrW)
 {
-  if (nFieldType != eFieldType::String)
-    return E_FAIL;
-  return Utf8_Decode(cStrW, szStrA, nLength);
+    if (nFieldType != eFieldType::String)
+    {
+        return E_FAIL;
+    }
+    return Utf8_Decode(cStrW, szStrA, nLength);
 }
 
 ULONG CField::GetUInt32() const
 {
-  return (nFieldType == eFieldType::UInt32) ? ul : 0;
+    return (nFieldType == eFieldType::UInt32) ? ul : 0;
 }
 
 LONG CField::GetInt32() const
 {
-  return (nFieldType == eFieldType::Int32) ? l : 0;
+    return (nFieldType == eFieldType::Int32) ? l : 0;
 }
 
 ULONGLONG CField::GetUInt64() const
 {
-  return (nFieldType == eFieldType::UInt64) ? ull : 0ui64;
+    return (nFieldType == eFieldType::UInt64) ? ull : 0ui64;
 }
 
 LONGLONG CField::GetInt64() const
 {
-  return (nFieldType == eFieldType::Int64) ? ll : 0i64;
+    return (nFieldType == eFieldType::Int64) ? ll : 0i64;
 }
 
 double CField::GetDouble() const
 {
-  return (nFieldType == eFieldType::Double) ? dbl : 0.0;
+    return (nFieldType == eFieldType::Double) ? dbl : 0.0;
 }
 
-CDateTime* CField::GetDateTime() const
+CDateTime *CField::GetDateTime() const
 {
-  return (nFieldType == eFieldType::DateTime) ? lpDt : NULL;
+    return (nFieldType == eFieldType::DateTime) ? lpDt : NULL;
 }
 
 LPBYTE CField::GetBlob() const
 {
-  return (nFieldType == eFieldType::Blob) ? (LPBYTE)lpBlob : NULL;
+    return (nFieldType == eFieldType::Blob) ? (LPBYTE)lpBlob : NULL;
 }
 
 BOOL CField::GetAsBoolean(_Out_ PBOOL lpbValue)
 {
-  switch (nFieldType)
-  {
+    switch (nFieldType)
+    {
     case eFieldType::Boolean:
-      *lpbValue = b;
-      return TRUE;
+        *lpbValue = b;
+        return TRUE;
 
     case eFieldType::UInt32:
-      *lpbValue = (ul != 0) ? TRUE : FALSE;
-      return TRUE;
+        *lpbValue = (ul != 0) ? TRUE : FALSE;
+        return TRUE;
 
     case eFieldType::Int32:
-      *lpbValue = (l != 0) ? TRUE : FALSE;
-      return TRUE;
+        *lpbValue = (l != 0) ? TRUE : FALSE;
+        return TRUE;
 
     case eFieldType::UInt64:
-      *lpbValue = (ull != 0) ? TRUE : FALSE;
-      return TRUE;
+        *lpbValue = (ull != 0) ? TRUE : FALSE;
+        return TRUE;
 
     case eFieldType::Int64:
-      *lpbValue = (ll != 0) ? TRUE : FALSE;
-      return TRUE;
+        *lpbValue = (ll != 0) ? TRUE : FALSE;
+        return TRUE;
 
     case eFieldType::Double:
-      *lpbValue = (dbl < -__DBL_EPSILON || dbl > __DBL_EPSILON) ? TRUE : FALSE;
-      return TRUE;
-  }
-  *lpbValue = FALSE;
-  return FALSE;
+        *lpbValue = (dbl < -__DBL_EPSILON || dbl > __DBL_EPSILON) ? TRUE : FALSE;
+        return TRUE;
+    }
+    *lpbValue = FALSE;
+    return FALSE;
 }
 
 BOOL CField::GetAsUInt32(_Out_ PULONG lpnValue)
 {
-  switch (nFieldType)
-  {
+    switch (nFieldType)
+    {
     case eFieldType::Boolean:
-      *lpnValue = (b != FALSE) ? 1 : 0;
-      return TRUE;
+        *lpnValue = (b != FALSE) ? 1 : 0;
+        return TRUE;
 
     case eFieldType::UInt32:
-      *lpnValue = ul;
-      return TRUE;
+        *lpnValue = ul;
+        return TRUE;
 
     case eFieldType::Int32:
-      if (l >= 0)
-      {
-        *lpnValue = (ULONG)l;
-        return TRUE;
-      }
-      break;
+        if (l >= 0)
+        {
+            *lpnValue = (ULONG)l;
+            return TRUE;
+        }
+        break;
 
     case eFieldType::UInt64:
-      if (ull <= 0xFFFFFFFFui64)
-      {
-        *lpnValue = (ULONG)ull;
-        return TRUE;
-      }
-      break;
+        if (ull <= 0xFFFFFFFFui64)
+        {
+            *lpnValue = (ULONG)ull;
+            return TRUE;
+        }
+        break;
 
     case eFieldType::Int64:
-      if (ll >= 0i64 && ll <= 0xFFFFFFFFi64)
-      {
-        *lpnValue = (ULONG)(ULONGLONG)ll;
-        return TRUE;
-      }
-      break;
+        if (ll >= 0i64 && ll <= 0xFFFFFFFFi64)
+        {
+            *lpnValue = (ULONG)(ULONGLONG)ll;
+            return TRUE;
+        }
+        break;
 
     case eFieldType::Double:
-      if (convertNumber<double, ULONG>(dbl, lpnValue))
-        return TRUE;
-      break;
-  }
-  *lpnValue = 0;
-  return FALSE;
+        if (convertNumber<double, ULONG>(dbl, lpnValue))
+        {
+            return TRUE;
+        }
+        break;
+    }
+    *lpnValue = 0;
+    return FALSE;
 }
 
 BOOL CField::GetAsInt32(_Out_ PLONG lpnValue) const
 {
-  switch (nFieldType)
-  {
+    switch (nFieldType)
+    {
     case eFieldType::Boolean:
-      *lpnValue = (b != FALSE) ? 1 : 0;
-      return TRUE;
+        *lpnValue = (b != FALSE) ? 1 : 0;
+        return TRUE;
 
     case eFieldType::UInt32:
-      if (ul <= 0x7FFFFFFF)
-      {
-        *lpnValue = (LONG)ul;
-        return TRUE;
-      }
-      break;
+        if (ul <= 0x7FFFFFFF)
+        {
+            *lpnValue = (LONG)ul;
+            return TRUE;
+        }
+        break;
 
     case eFieldType::Int32:
-      *lpnValue = l;
-      return TRUE;
+        *lpnValue = l;
+        return TRUE;
 
     case eFieldType::UInt64:
-      if (ull <= 0x7FFFFFFFui64)
-      {
-        *lpnValue = (LONG)(ULONG)ull;
-        return TRUE;
-      }
-      break;
+        if (ull <= 0x7FFFFFFFui64)
+        {
+            *lpnValue = (LONG)(ULONG)ull;
+            return TRUE;
+        }
+        break;
 
     case eFieldType::Int64:
-      if (ll >= -2147483648i64 && ll <= 2147483647i64)
-      {
-        *lpnValue = (LONG)ll;
-        return TRUE;
-      }
-      break;
+        if (ll >= -2147483648i64 && ll <= 2147483647i64)
+        {
+            *lpnValue = (LONG)ll;
+            return TRUE;
+        }
+        break;
 
     case eFieldType::Double:
-      if (convertNumber<double, LONG>(dbl, lpnValue))
-        return TRUE;
-      break;
-  }
-  *lpnValue = 0;
-  return FALSE;
+        if (convertNumber<double, LONG>(dbl, lpnValue))
+        {
+            return TRUE;
+        }
+        break;
+    }
+    *lpnValue = 0;
+    return FALSE;
 }
 
 BOOL CField::GetAsUInt64(_Out_ PULONGLONG lpnValue) const
 {
-  switch (nFieldType)
-  {
+    switch (nFieldType)
+    {
     case eFieldType::Boolean:
-      *lpnValue = (b != FALSE) ? 1ui64 : 0ui64;
-      return TRUE;
+        *lpnValue = (b != FALSE) ? 1ui64 : 0ui64;
+        return TRUE;
 
     case eFieldType::UInt32:
-      *lpnValue = (ULONGLONG)ul;
-      return TRUE;
+        *lpnValue = (ULONGLONG)ul;
+        return TRUE;
 
     case eFieldType::Int32:
-      if (l >= 0)
-      {
-        *lpnValue = (ULONGLONG)(ULONG)l;
-        return TRUE;
-      }
-      break;
+        if (l >= 0)
+        {
+            *lpnValue = (ULONGLONG)(ULONG)l;
+            return TRUE;
+        }
+        break;
 
     case eFieldType::UInt64:
-      *lpnValue = (ULONG)ull;
-      return TRUE;
+        *lpnValue = (ULONG)ull;
+        return TRUE;
 
     case eFieldType::Int64:
-      if (ll >= 0i64)
-      {
-        *lpnValue = (ULONGLONG)ll;
-        return TRUE;
-      }
-      break;
+        if (ll >= 0i64)
+        {
+            *lpnValue = (ULONGLONG)ll;
+            return TRUE;
+        }
+        break;
 
     case eFieldType::Double:
-      if (convertNumber<double, ULONGLONG>(dbl, lpnValue))
-        return TRUE;
-      break;
-  }
-  *lpnValue = 0;
-  return FALSE;
+        if (convertNumber<double, ULONGLONG>(dbl, lpnValue))
+        {
+            return TRUE;
+        }
+        break;
+    }
+    *lpnValue = 0;
+    return FALSE;
 }
 
 BOOL CField::GetAsInt64(_Out_ PLONGLONG lpnValue) const
 {
-  switch (nFieldType)
-  {
+    switch (nFieldType)
+    {
     case eFieldType::Boolean:
-      *lpnValue = (b != FALSE) ? 1 : 0;
-      return TRUE;
+        *lpnValue = (b != FALSE) ? 1 : 0;
+        return TRUE;
 
     case eFieldType::UInt32:
-      *lpnValue = (LONGLONG)(ULONGLONG)ul;
-      return TRUE;
+        *lpnValue = (LONGLONG)(ULONGLONG)ul;
+        return TRUE;
 
     case eFieldType::Int32:
-      *lpnValue = (LONGLONG)l;
-      return TRUE;
+        *lpnValue = (LONGLONG)l;
+        return TRUE;
 
     case eFieldType::UInt64:
-      if (ull <= 0x7FFFFFFFFFFFFFFFui64)
-      {
-        *lpnValue = (LONGLONG)ull;
-        return TRUE;
-      }
-      break;
+        if (ull <= 0x7FFFFFFFFFFFFFFFui64)
+        {
+            *lpnValue = (LONGLONG)ull;
+            return TRUE;
+        }
+        break;
 
     case eFieldType::Int64:
-      *lpnValue = (LONGLONG)ll;
-      return TRUE;
+        *lpnValue = (LONGLONG)ll;
+        return TRUE;
 
     case eFieldType::Double:
-      if (convertNumber<double, LONGLONG>(dbl, lpnValue))
-        return TRUE;
-      break;
-  }
-  *lpnValue = 0;
-  return FALSE;
+        if (convertNumber<double, LONGLONG>(dbl, lpnValue))
+        {
+            return TRUE;
+        }
+        break;
+    }
+    *lpnValue = 0;
+    return FALSE;
 }
 
 BOOL CField::GetAsDouble(_Out_ double *lpnValue) const
 {
-  switch (nFieldType)
-  {
+    switch (nFieldType)
+    {
     case eFieldType::Boolean:
-      *lpnValue = (b != FALSE) ? 1 : 0;
-      return TRUE;
+        *lpnValue = (b != FALSE) ? 1 : 0;
+        return TRUE;
 
     case eFieldType::UInt32:
-      if (convertNumber<ULONG, double>(ul, lpnValue))
-        return TRUE;
-      break;
+        if (convertNumber<ULONG, double>(ul, lpnValue))
+        {
+            return TRUE;
+        }
+        break;
 
     case eFieldType::Int32:
-      if (convertNumber<LONG, double>(l, lpnValue))
-        return TRUE;
-      break;
+        if (convertNumber<LONG, double>(l, lpnValue))
+        {
+            return TRUE;
+        }
+        break;
 
     case eFieldType::UInt64:
-      if (convertNumber<ULONGLONG, double>(ull, lpnValue))
-        return TRUE;
-      break;
+        if (convertNumber<ULONGLONG, double>(ull, lpnValue))
+        {
+            return TRUE;
+        }
+        break;
 
     case eFieldType::Int64:
-      if (convertNumber<LONGLONG, double>(ll, lpnValue))
-        return TRUE;
-      break;
+        if (convertNumber<LONGLONG, double>(ll, lpnValue))
+        {
+            return TRUE;
+        }
+        break;
 
     case eFieldType::Double:
-      *lpnValue = dbl;
-      return TRUE;
-  }
-  *lpnValue = 0;
-  return FALSE;
+        *lpnValue = dbl;
+        return TRUE;
+    }
+    *lpnValue = 0;
+    return FALSE;
 }
 
 BOOL CField::EnsureSize(_In_ SIZE_T nNewSize)
 {
-  if (nNewSize > nBufferSize)
-  {
-    LPBYTE lpNewBuffer;
+    if (nNewSize > nBufferSize)
+    {
+        LPBYTE lpNewBuffer;
 
-    lpNewBuffer = (LPBYTE)MX_MALLOC(nNewSize);
-    if (lpNewBuffer == NULL)
-      return FALSE;
-    MX_FREE(lpBuffer);
-    lpBuffer = lpNewBuffer;
-    nBufferSize = nNewSize;
-  }
-  return TRUE;
+        lpNewBuffer = (LPBYTE)MX_MALLOC(nNewSize);
+        if (lpNewBuffer == NULL)
+        {
+            return FALSE;
+        }
+        MX_FREE(lpBuffer);
+        lpBuffer = lpNewBuffer;
+        nBufferSize = nNewSize;
+    }
+    return TRUE;
 }
 
 //-----------------------------------------------------------
 
 CFieldList::CFieldList() : TArrayListWithRelease<CField *>()
 {
-  return;
+    return;
 }
 
 HRESULT CFieldList::AddNull()
 {
-  CField *lpNewField;
+    CField *lpNewField;
 
-  //create new field
-  lpNewField = MX_DEBUG_NEW CField();
-  if (lpNewField == NULL)
-    return E_OUTOFMEMORY;
+    // create new field
+    lpNewField = MX_DEBUG_NEW CField();
+    if (lpNewField == NULL)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //set value
-  lpNewField->SetNull();
+    // set value
+    lpNewField->SetNull();
 
-  //add to list
-  if (AddElement(lpNewField) == FALSE)
-  {
-    lpNewField->Release();
-    return E_OUTOFMEMORY;
-  }
+    // add to list
+    if (AddElement(lpNewField) == FALSE)
+    {
+        lpNewField->Release();
+        return E_OUTOFMEMORY;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CFieldList::AddString(_In_ LPCSTR szStrA, _In_ SIZE_T nLength)
 {
-  CField *lpNewField;
-  HRESULT hRes;
+    CField *lpNewField;
+    HRESULT hRes;
 
-  //create new field
-  lpNewField = MX_DEBUG_NEW CField();
-  if (lpNewField == NULL)
-    return E_OUTOFMEMORY;
+    // create new field
+    lpNewField = MX_DEBUG_NEW CField();
+    if (lpNewField == NULL)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //set value
-  hRes = lpNewField->SetString(szStrA, nLength);
-  if (FAILED(hRes))
-  {
-    lpNewField->Release();
-    return hRes;
-  }
+    // set value
+    hRes = lpNewField->SetString(szStrA, nLength);
+    if (FAILED(hRes))
+    {
+        lpNewField->Release();
+        return hRes;
+    }
 
-  //add to list
-  if (AddElement(lpNewField) == FALSE)
-  {
-    lpNewField->Release();
-    return E_OUTOFMEMORY;
-  }
+    // add to list
+    if (AddElement(lpNewField) == FALSE)
+    {
+        lpNewField->Release();
+        return E_OUTOFMEMORY;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CFieldList::AddString(_In_ LPCWSTR szStrW, _In_ SIZE_T nLength)
 {
-  CField *lpNewField;
-  HRESULT hRes;
+    CField *lpNewField;
+    HRESULT hRes;
 
-  //create new field
-  lpNewField = MX_DEBUG_NEW CField();
-  if (lpNewField == NULL)
-    return E_OUTOFMEMORY;
+    // create new field
+    lpNewField = MX_DEBUG_NEW CField();
+    if (lpNewField == NULL)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //set value
-  hRes = lpNewField->SetString(szStrW, nLength);
-  if (FAILED(hRes))
-  {
-    lpNewField->Release();
-    return hRes;
-  }
+    // set value
+    hRes = lpNewField->SetString(szStrW, nLength);
+    if (FAILED(hRes))
+    {
+        lpNewField->Release();
+        return hRes;
+    }
 
-  //add to list
-  if (AddElement(lpNewField) == FALSE)
-  {
-    lpNewField->Release();
-    return E_OUTOFMEMORY;
-  }
+    // add to list
+    if (AddElement(lpNewField) == FALSE)
+    {
+        lpNewField->Release();
+        return E_OUTOFMEMORY;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CFieldList::AddFormattedString(_In_ LPCSTR szFormatA, ...)
 {
-  va_list argptr;
-  HRESULT hRes;
+    va_list argptr;
+    HRESULT hRes;
 
-  va_start(argptr, szFormatA);
-  hRes = AddFormattedStringV(szFormatA, argptr);
-  va_end(argptr);
-  return hRes;
+    va_start(argptr, szFormatA);
+    hRes = AddFormattedStringV(szFormatA, argptr);
+    va_end(argptr);
+    return hRes;
 }
 
 HRESULT CFieldList::AddFormattedString(_In_ LPCWSTR szFormatW, ...)
 {
-  va_list argptr;
-  HRESULT hRes;
+    va_list argptr;
+    HRESULT hRes;
 
-  va_start(argptr, szFormatW);
-  hRes = AddFormattedStringV(szFormatW, argptr);
-  va_end(argptr);
-  return hRes;
+    va_start(argptr, szFormatW);
+    hRes = AddFormattedStringV(szFormatW, argptr);
+    va_end(argptr);
+    return hRes;
 }
 
 HRESULT CFieldList::AddFormattedStringV(_In_ LPCSTR szFormatA, _In_ va_list argptr)
 {
-  CStringA cStrTempA;
-  CField *lpNewField;
-  HRESULT hRes;
+    CStringA cStrTempA;
+    CField *lpNewField;
+    HRESULT hRes;
 
-  if (cStrTempA.FormatV(szFormatA, argptr) == FALSE)
-    return E_OUTOFMEMORY;
+    if (cStrTempA.FormatV(szFormatA, argptr) == FALSE)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //create new field
-  lpNewField = MX_DEBUG_NEW CField();
-  if (lpNewField == NULL)
-    return E_OUTOFMEMORY;
+    // create new field
+    lpNewField = MX_DEBUG_NEW CField();
+    if (lpNewField == NULL)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //set value
-  hRes = lpNewField->SetString((LPCSTR)cStrTempA, cStrTempA.GetLength());
-  if (FAILED(hRes))
-  {
-    lpNewField->Release();
-    return hRes;
-  }
+    // set value
+    hRes = lpNewField->SetString((LPCSTR)cStrTempA, cStrTempA.GetLength());
+    if (FAILED(hRes))
+    {
+        lpNewField->Release();
+        return hRes;
+    }
 
-  //add to list
-  if (AddElement(lpNewField) == FALSE)
-  {
-    lpNewField->Release();
-    return E_OUTOFMEMORY;
-  }
+    // add to list
+    if (AddElement(lpNewField) == FALSE)
+    {
+        lpNewField->Release();
+        return E_OUTOFMEMORY;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CFieldList::AddFormattedStringV(_In_ LPCWSTR szFormatW, _In_ va_list argptr)
 {
-  CStringW cStrTempW;
-  CField *lpNewField;
-  HRESULT hRes;
+    CStringW cStrTempW;
+    CField *lpNewField;
+    HRESULT hRes;
 
-  if (cStrTempW.FormatV(szFormatW, argptr) == FALSE)
-    return E_OUTOFMEMORY;
+    if (cStrTempW.FormatV(szFormatW, argptr) == FALSE)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //create new field
-  lpNewField = MX_DEBUG_NEW CField();
-  if (lpNewField == NULL)
-    return E_OUTOFMEMORY;
+    // create new field
+    lpNewField = MX_DEBUG_NEW CField();
+    if (lpNewField == NULL)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //set value
-  hRes = lpNewField->SetString((LPCWSTR)cStrTempW, cStrTempW.GetLength());
-  if (FAILED(hRes))
-  {
-    lpNewField->Release();
-    return hRes;
-  }
+    // set value
+    hRes = lpNewField->SetString((LPCWSTR)cStrTempW, cStrTempW.GetLength());
+    if (FAILED(hRes))
+    {
+        lpNewField->Release();
+        return hRes;
+    }
 
-  //add to list
-  if (AddElement(lpNewField) == FALSE)
-  {
-    lpNewField->Release();
-    return E_OUTOFMEMORY;
-  }
+    // add to list
+    if (AddElement(lpNewField) == FALSE)
+    {
+        lpNewField->Release();
+        return E_OUTOFMEMORY;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CFieldList::AddBoolean(_In_ BOOL bValue)
 {
-  CField *lpNewField;
+    CField *lpNewField;
 
-  //create new field
-  lpNewField = MX_DEBUG_NEW CField();
-  if (lpNewField == NULL)
-    return E_OUTOFMEMORY;
+    // create new field
+    lpNewField = MX_DEBUG_NEW CField();
+    if (lpNewField == NULL)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //set value
-  lpNewField->SetBoolean(bValue);
+    // set value
+    lpNewField->SetBoolean(bValue);
 
-  //add to list
-  if (AddElement(lpNewField) == FALSE)
-  {
-    lpNewField->Release();
-    return E_OUTOFMEMORY;
-  }
+    // add to list
+    if (AddElement(lpNewField) == FALSE)
+    {
+        lpNewField->Release();
+        return E_OUTOFMEMORY;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CFieldList::AddUInt32(_In_ ULONG nValue)
 {
-  CField *lpNewField;
+    CField *lpNewField;
 
-  //create new field
-  lpNewField = MX_DEBUG_NEW CField();
-  if (lpNewField == NULL)
-    return E_OUTOFMEMORY;
+    // create new field
+    lpNewField = MX_DEBUG_NEW CField();
+    if (lpNewField == NULL)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //set value
-  lpNewField->SetUInt32(nValue);
+    // set value
+    lpNewField->SetUInt32(nValue);
 
-  //add to list
-  if (AddElement(lpNewField) == FALSE)
-  {
-    lpNewField->Release();
-    return E_OUTOFMEMORY;
-  }
+    // add to list
+    if (AddElement(lpNewField) == FALSE)
+    {
+        lpNewField->Release();
+        return E_OUTOFMEMORY;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CFieldList::AddInt32(_In_ LONG nValue)
 {
-  CField *lpNewField;
+    CField *lpNewField;
 
-  //create new field
-  lpNewField = MX_DEBUG_NEW CField();
-  if (lpNewField == NULL)
-    return E_OUTOFMEMORY;
+    // create new field
+    lpNewField = MX_DEBUG_NEW CField();
+    if (lpNewField == NULL)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //set value
-  lpNewField->SetInt32(nValue);
+    // set value
+    lpNewField->SetInt32(nValue);
 
-  //add to list
-  if (AddElement(lpNewField) == FALSE)
-  {
-    lpNewField->Release();
-    return E_OUTOFMEMORY;
-  }
+    // add to list
+    if (AddElement(lpNewField) == FALSE)
+    {
+        lpNewField->Release();
+        return E_OUTOFMEMORY;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CFieldList::AddUInt64(_In_ ULONGLONG nValue)
 {
-  CField *lpNewField;
+    CField *lpNewField;
 
-  //create new field
-  lpNewField = MX_DEBUG_NEW CField();
-  if (lpNewField == NULL)
-    return E_OUTOFMEMORY;
+    // create new field
+    lpNewField = MX_DEBUG_NEW CField();
+    if (lpNewField == NULL)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //set value
-  lpNewField->SetUInt64(nValue);
+    // set value
+    lpNewField->SetUInt64(nValue);
 
-  //add to list
-  if (AddElement(lpNewField) == FALSE)
-  {
-    lpNewField->Release();
-    return E_OUTOFMEMORY;
-  }
+    // add to list
+    if (AddElement(lpNewField) == FALSE)
+    {
+        lpNewField->Release();
+        return E_OUTOFMEMORY;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CFieldList::AddInt64(_In_ LONGLONG nValue)
 {
-  CField *lpNewField;
+    CField *lpNewField;
 
-  //create new field
-  lpNewField = MX_DEBUG_NEW CField();
-  if (lpNewField == NULL)
-    return E_OUTOFMEMORY;
+    // create new field
+    lpNewField = MX_DEBUG_NEW CField();
+    if (lpNewField == NULL)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //set value
-  lpNewField->SetInt64(nValue);
+    // set value
+    lpNewField->SetInt64(nValue);
 
-  //add to list
-  if (AddElement(lpNewField) == FALSE)
-  {
-    lpNewField->Release();
-    return E_OUTOFMEMORY;
-  }
+    // add to list
+    if (AddElement(lpNewField) == FALSE)
+    {
+        lpNewField->Release();
+        return E_OUTOFMEMORY;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CFieldList::AddDouble(_In_ double nValue)
 {
-  CField *lpNewField;
+    CField *lpNewField;
 
-  //create new field
-  lpNewField = MX_DEBUG_NEW CField();
-  if (lpNewField == NULL)
-    return E_OUTOFMEMORY;
+    // create new field
+    lpNewField = MX_DEBUG_NEW CField();
+    if (lpNewField == NULL)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //set value
-  lpNewField->SetDouble(nValue);
+    // set value
+    lpNewField->SetDouble(nValue);
 
-  //add to list
-  if (AddElement(lpNewField) == FALSE)
-  {
-    lpNewField->Release();
-    return E_OUTOFMEMORY;
-  }
+    // add to list
+    if (AddElement(lpNewField) == FALSE)
+    {
+        lpNewField->Release();
+        return E_OUTOFMEMORY;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CFieldList::AddDateTime(_In_ CDateTime &cDt)
 {
-  CField *lpNewField;
-  HRESULT hRes;
+    CField *lpNewField;
+    HRESULT hRes;
 
-  //create new field
-  lpNewField = MX_DEBUG_NEW CField();
-  if (lpNewField == NULL)
-    return E_OUTOFMEMORY;
+    // create new field
+    lpNewField = MX_DEBUG_NEW CField();
+    if (lpNewField == NULL)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //set value
-  hRes = lpNewField->SetDateTime(cDt);
-  if (FAILED(hRes))
-  {
-    lpNewField->Release();
-    return hRes;
-  }
+    // set value
+    hRes = lpNewField->SetDateTime(cDt);
+    if (FAILED(hRes))
+    {
+        lpNewField->Release();
+        return hRes;
+    }
 
-  //add to list
-  if (AddElement(lpNewField) == FALSE)
-  {
-    lpNewField->Release();
-    return E_OUTOFMEMORY;
-  }
+    // add to list
+    if (AddElement(lpNewField) == FALSE)
+    {
+        lpNewField->Release();
+        return E_OUTOFMEMORY;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CFieldList::AddBlob(_In_ LPVOID lpData, _In_ SIZE_T nLength)
 {
-  CField *lpNewField;
-  HRESULT hRes;
+    CField *lpNewField;
+    HRESULT hRes;
 
-  //create new field
-  lpNewField = MX_DEBUG_NEW CField();
-  if (lpNewField == NULL)
-    return E_OUTOFMEMORY;
+    // create new field
+    lpNewField = MX_DEBUG_NEW CField();
+    if (lpNewField == NULL)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //set value
-  hRes = lpNewField->SetBlob(lpData, nLength);
-  if (FAILED(hRes))
-  {
-    lpNewField->Release();
-    return hRes;
-  }
+    // set value
+    hRes = lpNewField->SetBlob(lpData, nLength);
+    if (FAILED(hRes))
+    {
+        lpNewField->Release();
+        return hRes;
+    }
 
-  //add to list
-  if (AddElement(lpNewField) == FALSE)
-  {
-    lpNewField->Release();
-    return E_OUTOFMEMORY;
-  }
+    // add to list
+    if (AddElement(lpNewField) == FALSE)
+    {
+        lpNewField->Release();
+        return E_OUTOFMEMORY;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
-} //namespace Database
+} // namespace Database
 
-} //namespace MX
+} // namespace MX

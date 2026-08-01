@@ -25,72 +25,74 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderReqCacheControl : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderReqCacheControl();
-  ~CHttpHeaderReqCacheControl();
+  public:
+    CHttpHeaderReqCacheControl();
+    ~CHttpHeaderReqCacheControl();
 
-  MX_DECLARE_HTTPHEADER_NAME(Cache-Control)
+    MX_DECLARE_HTTPHEADER_NAME(Cache - Control)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  eDuplicateBehavior GetDuplicateBehavior() const
+    eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return eDuplicateBehavior::Merge;
+        return eDuplicateBehavior::Merge;
     };
 
-  HRESULT SetNoCache(_In_ BOOL bNoCache);
-  BOOL GetNoCache() const;
+    HRESULT SetNoCache(_In_ BOOL bNoCache);
+    BOOL GetNoCache() const;
 
-  HRESULT SetNoStore(_In_ BOOL bNoStore);
-  BOOL GetNoStore() const;
+    HRESULT SetNoStore(_In_ BOOL bNoStore);
+    BOOL GetNoStore() const;
 
-  HRESULT SetMaxAge(_In_ ULONGLONG nMaxAge);
-  ULONGLONG GetMaxAge() const;
+    HRESULT SetMaxAge(_In_ ULONGLONG nMaxAge);
+    ULONGLONG GetMaxAge() const;
 
-  HRESULT SetMaxStale(_In_ ULONGLONG nMaxStale);
-  ULONGLONG GetMaxStale() const;
+    HRESULT SetMaxStale(_In_ ULONGLONG nMaxStale);
+    ULONGLONG GetMaxStale() const;
 
-  HRESULT SetMinFresh(_In_ ULONGLONG nMinFresh);
-  ULONGLONG GetMinFresh() const;
+    HRESULT SetMinFresh(_In_ ULONGLONG nMinFresh);
+    ULONGLONG GetMinFresh() const;
 
-  HRESULT SetNoTransform(_In_ BOOL bNoTransform);
-  BOOL GetNoTransform() const;
+    HRESULT SetNoTransform(_In_ BOOL bNoTransform);
+    BOOL GetNoTransform() const;
 
-  HRESULT SetOnlyIfCached(_In_ BOOL bOnlyIfCached);
-  BOOL GetOnlyIfCached() const;
+    HRESULT SetOnlyIfCached(_In_ BOOL bOnlyIfCached);
+    BOOL GetOnlyIfCached() const;
 
-  HRESULT AddExtension(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);
+    HRESULT AddExtension(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);
 
-  SIZE_T GetExtensionsCount() const;
-  LPCSTR GetExtensionName(_In_ SIZE_T nIndex) const;
-  LPCWSTR GetExtensionValue(_In_ SIZE_T nIndex) const;
-  LPCWSTR GetExtensionValue(_In_z_ LPCSTR szNameA) const;
+    SIZE_T GetExtensionsCount() const;
+    LPCSTR GetExtensionName(_In_ SIZE_T nIndex) const;
+    LPCWSTR GetExtensionValue(_In_ SIZE_T nIndex) const;
+    LPCWSTR GetExtensionValue(_In_z_ LPCSTR szNameA) const;
 
-  HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
+    HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
 
-private:
-  typedef struct {
-    LPWSTR szValueW;
-    CHAR szNameA[1];
-  } EXTENSION, *LPEXTENSION;
+  private:
+    typedef struct
+    {
+        LPWSTR szValueW;
+        CHAR szNameA[1];
+    } EXTENSION, *LPEXTENSION;
 
-  BOOL bNoCache;
-  BOOL bNoStore;
-  ULONGLONG nMaxAge;
-  ULONGLONG nMaxStale;
-  ULONGLONG nMinFresh;
-  BOOL bNoTransform;
-  BOOL bOnlyIfCached;
-  TArrayListWithFree<LPEXTENSION> aExtensionsList;
+    BOOL bNoCache;
+    BOOL bNoStore;
+    ULONGLONG nMaxAge;
+    ULONGLONG nMaxStale;
+    ULONGLONG nMinFresh;
+    BOOL bNoTransform;
+    BOOL bOnlyIfCached;
+    TArrayListWithFree<LPEXTENSION> aExtensionsList;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

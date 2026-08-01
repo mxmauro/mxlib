@@ -23,128 +23,138 @@
 #include "..\Comm\IpcCommon.h"
 #include "..\AutoPtr.h"
 #include "..\ArrayList.h"
-namespace MX {
+namespace MX
+{
 class CHttpServer;
 class CHttpClient;
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CWebSocket : public CIpc::CUserData
 {
-protected:
-  CWebSocket();
-public:
-  ~CWebSocket();
+  protected:
+    CWebSocket();
 
-  HRESULT BeginTextMessage();
-  HRESULT BeginBinaryMessage();
+  public:
+    ~CWebSocket();
 
-  HRESULT SendTextMessage(_In_ LPCSTR szMsgA, _In_ SIZE_T nMsgLen = (SIZE_T)-1);
-  HRESULT SendTextMessage(_In_ LPCWSTR szMsgW, _In_ SIZE_T nMsgLen = (SIZE_T)-1);
+    HRESULT BeginTextMessage();
+    HRESULT BeginBinaryMessage();
 
-  HRESULT SendBinaryMessage(_In_ LPVOID lpData, _In_ SIZE_T nDataLen);
+    HRESULT SendTextMessage(_In_ LPCSTR szMsgA, _In_ SIZE_T nMsgLen = (SIZE_T)-1);
+    HRESULT SendTextMessage(_In_ LPCWSTR szMsgW, _In_ SIZE_T nMsgLen = (SIZE_T)-1);
 
-  HRESULT EndMessage();
+    HRESULT SendBinaryMessage(_In_ LPVOID lpData, _In_ SIZE_T nDataLen);
 
-  HRESULT SendClose(_In_ USHORT wCode, _In_opt_z_ LPCSTR szReasonA = NULL);
-  HRESULT SendPing();
+    HRESULT EndMessage();
 
-  BOOL IsClosed() const;
+    HRESULT SendClose(_In_ USHORT wCode, _In_opt_z_ LPCSTR szReasonA = NULL);
+    HRESULT SendPing();
 
-  VOID Close(_In_opt_ HRESULT hrErrorCode = S_OK);
+    BOOL IsClosed() const;
 
-  virtual HRESULT OnConnected();
-  virtual HRESULT OnTextMessage(_In_ LPCSTR szMsgA, _In_ SIZE_T nMsgLength);
-  virtual HRESULT OnBinaryMessage(_In_ LPVOID lpData, _In_ SIZE_T nDataSize);
-  virtual VOID OnPongFrame();
-  virtual VOID OnCloseFrame(_In_ USHORT wCode, _In_  HRESULT hrErrorCode);
+    VOID Close(_In_opt_ HRESULT hrErrorCode = S_OK);
 
-  virtual SIZE_T GetMaxMessageSize() const;
+    virtual HRESULT OnConnected();
+    virtual HRESULT OnTextMessage(_In_ LPCSTR szMsgA, _In_ SIZE_T nMsgLength);
+    virtual HRESULT OnBinaryMessage(_In_ LPVOID lpData, _In_ SIZE_T nDataSize);
+    virtual VOID OnPongFrame();
+    virtual VOID OnCloseFrame(_In_ USHORT wCode, _In_ HRESULT hrErrorCode);
 
-private:
-  friend class CHttpServer;
-  friend class CHttpClient;
+    virtual SIZE_T GetMaxMessageSize() const;
+
+  private:
+    friend class CHttpServer;
+    friend class CHttpClient;
 
 #pragma pack(1)
-  typedef struct tagFRAME_HEADER {
-    BYTE nOpcode : 4;
-    BYTE nRsv : 3;
-    BYTE nFin : 1;
-    BYTE nPayloadLen : 7;
-    BYTE nMask : 1;
-    BYTE aExtended[8 + 4];
-  } FRAME_HEADER, *LPFRAME_HEADER;
+    typedef struct tagFRAME_HEADER
+    {
+        BYTE nOpcode : 4;
+        BYTE nRsv : 3;
+        BYTE nFin : 1;
+        BYTE nPayloadLen : 7;
+        BYTE nMask : 1;
+        BYTE aExtended[8 + 4];
+    } FRAME_HEADER, *LPFRAME_HEADER;
 
-  typedef struct tagRECEIVED_DATA {
-    ULONG nSize;
-    BYTE aData[1];
-  } RECEIVED_DATA, *LPRECEIVED_DATA;
+    typedef struct tagRECEIVED_DATA
+    {
+        ULONG nSize;
+        BYTE aData[1];
+    } RECEIVED_DATA, *LPRECEIVED_DATA;
 #pragma pack()
 
-private:
-  VOID OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
-                       _In_ HRESULT hrErrorCode);
-  HRESULT OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData);
+  private:
+    VOID OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData, _In_ HRESULT hrErrorCode);
+    HRESULT OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData);
 
-  SIZE_T BuildFrame(_Out_ LPFRAME_HEADER lpFrame, _In_ LPBYTE lpPayload, _In_ ULONG nPayloadSize, _In_ BYTE nOpcode,
-                    _In_ BOOL bFinal);
+    SIZE_T BuildFrame(_Out_ LPFRAME_HEADER lpFrame, _In_ LPBYTE lpPayload, _In_ ULONG nPayloadSize, _In_ BYTE nOpcode,
+                      _In_ BOOL bFinal);
 
-  HRESULT InternalSendFrame(_In_ BOOL bFinalFrame);
-  HRESULT InternalSendControlFrame(_In_ BYTE nOpcode, _In_ LPVOID lpPayload, _In_ ULONG nPayloadSize);
+    HRESULT InternalSendFrame(_In_ BOOL bFinalFrame);
+    HRESULT InternalSendControlFrame(_In_ BYTE nOpcode, _In_ LPVOID lpPayload, _In_ ULONG nPayloadSize);
 
-  LPBYTE GetReceiveBufferFromCache();
-  VOID PutReceiveBufferOnCache(_In_ LPBYTE lpBuffer);
-  VOID PutAllReceiveBuffersOnCache();
+    LPBYTE GetReceiveBufferFromCache();
+    VOID PutReceiveBufferOnCache(_In_ LPBYTE lpBuffer);
+    VOID PutAllReceiveBuffersOnCache();
 
-  HRESULT SetupIpc(_In_ CIpc *lpIpc, _In_ HANDLE hComm, _In_ BOOL bServerSide);
-  VOID FireConnectedAndInitialRead();
+    HRESULT SetupIpc(_In_ CIpc *lpIpc, _In_ HANDLE hComm, _In_ BOOL bServerSide);
+    VOID FireConnectedAndInitialRead();
 
-private:
-  CIpc *lpIpc{ NULL };
-  HANDLE hConn{ NULL };
-  BOOL bServerSide{ FALSE };
-  //----
-  struct {
-    LONG nState{ 0 };
-    FRAME_HEADER sFrameHeader{};
-    ULONGLONG nPayloadLen{ 0 };
-    union {
-      BYTE nKey[4];
-      DWORD dwKey;
-    } uMasking{};
-    struct {
-      BYTE nOpcode{ 0 };
-      TArrayListWithFree<LPBYTE> aReceivedDataList;
-      LPBYTE lpData{ NULL };
-      SIZE_T nFilledFrame{ 0 };
-      SIZE_T nTotalDataLength{ 0 };
-    } sCurrentMessage;
-    struct {
-      BYTE aBuffer[128]{};
-      SIZE_T nFilledFrame{ 0 };
-    } sCurrentControlFrame;
-  } sReceive;
+  private:
+    CIpc *lpIpc{NULL};
+    HANDLE hConn{NULL};
+    BOOL bServerSide{FALSE};
+    //----
+    struct
+    {
+        LONG nState{0};
+        FRAME_HEADER sFrameHeader{};
+        ULONGLONG nPayloadLen{0};
+        union
+        {
+            BYTE nKey[4];
+            DWORD dwKey;
+        } uMasking{};
+        struct
+        {
+            BYTE nOpcode{0};
+            TArrayListWithFree<LPBYTE> aReceivedDataList;
+            LPBYTE lpData{NULL};
+            SIZE_T nFilledFrame{0};
+            SIZE_T nTotalDataLength{0};
+        } sCurrentMessage;
+        struct
+        {
+            BYTE aBuffer[128]{};
+            SIZE_T nFilledFrame{0};
+        } sCurrentControlFrame;
+    } sReceive;
 
-  struct {
-    LONG volatile nSendInProgressMutex{ MX_FASTLOCK_INIT };
-    FRAME_HEADER sFrameHeader{};
-    TAutoFreePtr<BYTE> cFrameBuffer;
-    LPBYTE lpFrameData{ NULL };
-    ULONG nFilledFrame{ 0 };
-  } sSend;
+    struct
+    {
+        LONG volatile nSendInProgressMutex{MX_FASTLOCK_INIT};
+        FRAME_HEADER sFrameHeader{};
+        TAutoFreePtr<BYTE> cFrameBuffer;
+        LPBYTE lpFrameData{NULL};
+        ULONG nFilledFrame{0};
+    } sSend;
 
-  struct {
-    LPBYTE lpBuffer[4]{};
-    SIZE_T nNextBufferIndex{ 0 };
-  } sReceiveCache;
+    struct
+    {
+        LPBYTE lpBuffer[4]{};
+        SIZE_T nNextBufferIndex{0};
+    } sReceiveCache;
 
-  LONG volatile hrCloseError{ S_FALSE };
+    LONG volatile hrCloseError{S_FALSE};
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

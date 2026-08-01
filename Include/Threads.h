@@ -25,204 +25,214 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class MX_NOVTABLE CThread : public virtual CBaseMemObj
 {
-protected:
-  CThread();
-public:
-  virtual ~CThread();
+  protected:
+    CThread();
 
-  virtual BOOL Start(_In_opt_ BOOL bSuspended = FALSE);
-  virtual BOOL Stop(_In_opt_ DWORD dwTimeout = INFINITE);
-  virtual BOOL StopAsync();
-  virtual BOOL Pause();
-  virtual BOOL Resume();
-  virtual BOOL IsRunning();
-  virtual BOOL CheckForAbort(_In_opt_ DWORD dwTimeout = 0, _In_opt_ DWORD dwEventCount = 0,
-                             _In_opt_ LPHANDLE lphEventList = NULL, _Out_opt_ LPDWORD lpdwHitEvent = NULL);
+  public:
+    virtual ~CThread();
 
-  static VOID SetThreadName(_In_ DWORD dwThreadId, _In_opt_z_ LPCSTR szNameA);
-  virtual VOID SetThreadName(_In_opt_z_ LPCSTR szNameA);
+    virtual BOOL Start(_In_opt_ BOOL bSuspended = FALSE);
+    virtual BOOL Stop(_In_opt_ DWORD dwTimeout = INFINITE);
+    virtual BOOL StopAsync();
+    virtual BOOL Pause();
+    virtual BOOL Resume();
+    virtual BOOL IsRunning();
+    virtual BOOL CheckForAbort(_In_opt_ DWORD dwTimeout = 0, _In_opt_ DWORD dwEventCount = 0,
+                               _In_opt_ LPHANDLE lphEventList = NULL, _Out_opt_ LPDWORD lpdwHitEvent = NULL);
 
-  virtual BOOL SetPriority(_In_ int nPriority);
-  virtual int GetPriority() const;
+    static VOID SetThreadName(_In_ DWORD dwThreadId, _In_opt_z_ LPCSTR szNameA);
+    virtual VOID SetThreadName(_In_opt_z_ LPCSTR szNameA);
 
-  virtual BOOL SetStackSize(_In_opt_ DWORD dwStackSize = 0);
-  virtual DWORD GetStackSize() const;
+    virtual BOOL SetPriority(_In_ int nPriority);
+    virtual int GetPriority() const;
 
-  virtual HANDLE GetKillEvent()
+    virtual BOOL SetStackSize(_In_opt_ DWORD dwStackSize = 0);
+    virtual DWORD GetStackSize() const;
+
+    virtual HANDLE GetKillEvent()
     {
-    return cKillEvent.Get();
+        return cKillEvent.Get();
     };
 
-  virtual HANDLE GetThreadHandle()
+    virtual HANDLE GetThreadHandle()
     {
-    return hThread;
+        return hThread;
     };
-  virtual DWORD GetThreadId()
+    virtual DWORD GetThreadId()
     {
-    return dwThreadId;
+        return dwThreadId;
     };
 
-  HRESULT SetAutoDelete(_In_ BOOL bAutoDelete);
+    HRESULT SetAutoDelete(_In_ BOOL bAutoDelete);
 
-  virtual BOOL Wait(_In_opt_ DWORD dwTimeout = 0, _In_opt_ DWORD dwEventCount = 0,
-                    _In_opt_ LPHANDLE lphEventList = NULL, _Out_opt_ LPDWORD lpdwHitEvent = NULL);
+    virtual BOOL Wait(_In_opt_ DWORD dwTimeout = 0, _In_opt_ DWORD dwEventCount = 0,
+                      _In_opt_ LPHANDLE lphEventList = NULL, _Out_opt_ LPDWORD lpdwHitEvent = NULL);
 
-  virtual VOID ThreadProc() = 0;
+    virtual VOID ThreadProc() = 0;
 
-private:
-  static unsigned int __stdcall CommonThreadProc(_In_ LPVOID _lpParameter);
+  private:
+    static unsigned int __stdcall CommonThreadProc(_In_ LPVOID _lpParameter);
 
-protected:
-  int nPriority{ THREAD_PRIORITY_NORMAL };
-  HANDLE hThread{ NULL };
-  DWORD dwThreadId{ 0 }, dwStackSize{ 0 };
-  CWindowsEvent cKillEvent;
-  BOOL bAutoDelete{ FALSE };
+  protected:
+    int nPriority{THREAD_PRIORITY_NORMAL};
+    HANDLE hThread{NULL};
+    DWORD dwThreadId{0}, dwStackSize{0};
+    CWindowsEvent cKillEvent;
+    BOOL bAutoDelete{FALSE};
 };
 
 //-----------------------------------------------------------
 
 class CWorkerThread : public CThread, public CNonCopyableObj
 {
-public:
-  typedef VOID (__cdecl *lpfnWorkerThread)(_In_ CWorkerThread *lpWrkThread, _In_opt_ LPVOID lpParam);
+  public:
+    typedef VOID(__cdecl *lpfnWorkerThread)(_In_ CWorkerThread *lpWrkThread, _In_opt_ LPVOID lpParam);
 
-  CWorkerThread(_In_opt_ lpfnWorkerThread lpStartRoutine=NULL, _In_opt_ LPVOID lpParam=NULL);
-  virtual ~CWorkerThread();
+    CWorkerThread(_In_opt_ lpfnWorkerThread lpStartRoutine = NULL, _In_opt_ LPVOID lpParam = NULL);
+    virtual ~CWorkerThread();
 
-  virtual BOOL SetRoutine(_In_ lpfnWorkerThread lpStartRoutine, _In_opt_ LPVOID lpParam=NULL);
+    virtual BOOL SetRoutine(_In_ lpfnWorkerThread lpStartRoutine, _In_opt_ LPVOID lpParam = NULL);
 
-private:
-  VOID ThreadProc();
+  private:
+    VOID ThreadProc();
 
-private:
-  lpfnWorkerThread lpStartRoutine{ NULL };
-  LPVOID lpParam{ NULL };
+  private:
+    lpfnWorkerThread lpStartRoutine{NULL};
+    LPVOID lpParam{NULL};
 };
 
 //-----------------------------------------------------------
 
-template <class TClass>
-class TClassWorkerThread : public CThread, public CNonCopyableObj
+template <class TClass> class TClassWorkerThread : public CThread, public CNonCopyableObj
 {
-public:
-  TClassWorkerThread() : CThread(), CNonCopyableObj()
+  public:
+    TClassWorkerThread() : CThread(), CNonCopyableObj()
     {
-    return;
+        return;
     };
 
-  virtual BOOL Start(_In_opt_ BOOL bSuspended=FALSE)
+    virtual BOOL Start(_In_opt_ BOOL bSuspended = FALSE)
     {
-    if (lpObject == NULL || (lpStartRoutine == NULL && lpStartRoutineWithParam == NULL))
-      return FALSE;
-    return CThread::Start(bSuspended);
+        if (lpObject == NULL || (lpStartRoutine == NULL && lpStartRoutineWithParam == NULL))
+        {
+            return FALSE;
+        }
+        return CThread::Start(bSuspended);
     };
-  
-  virtual BOOL Start(_In_ TClass *_lpObject, _In_ VOID (TClass::* _lpStartRoutine)(),
-                     _In_ BOOL bSuspended = FALSE)
+
+    virtual BOOL Start(_In_ TClass *_lpObject, _In_ VOID (TClass::*_lpStartRoutine)(), _In_ BOOL bSuspended = FALSE)
     {
-    lpObject = _lpObject;
-    lpStartRoutine = _lpStartRoutine;
-    lpStartRoutineWithParam = NULL;
-    nParam = 0;
-    return Start(bSuspended);
+        lpObject = _lpObject;
+        lpStartRoutine = _lpStartRoutine;
+        lpStartRoutineWithParam = NULL;
+        nParam = 0;
+        return Start(bSuspended);
     }
 
-  virtual BOOL Start(_In_ TClass *_lpObject, _In_ VOID (TClass::* _lpStartRoutine)(SIZE_T),
-                     _In_ SIZE_T _nParam, _In_ BOOL bSuspended = FALSE)
+    virtual BOOL Start(_In_ TClass *_lpObject, _In_ VOID (TClass::*_lpStartRoutine)(SIZE_T), _In_ SIZE_T _nParam,
+                       _In_ BOOL bSuspended = FALSE)
     {
-    lpObject = _lpObject;
-    lpStartRoutine = NULL;
-    lpStartRoutineWithParam = _lpStartRoutine;
-    nParam = _nParam;
-    return Start(bSuspended);
+        lpObject = _lpObject;
+        lpStartRoutine = NULL;
+        lpStartRoutineWithParam = _lpStartRoutine;
+        nParam = _nParam;
+        return Start(bSuspended);
     }
 
-private:
-  virtual VOID ThreadProc()
+  private:
+    virtual VOID ThreadProc()
     {
-    if (lpStartRoutine != NULL)
-      (*lpObject.*lpStartRoutine)();
-    else
-      (*lpObject.*lpStartRoutineWithParam)(nParam);
-    return;
+        if (lpStartRoutine != NULL)
+        {
+            (*lpObject.*lpStartRoutine)();
+        }
+        else
+        {
+            (*lpObject.*lpStartRoutineWithParam)(nParam);
+        }
+        return;
     }
 
-private:
-  TClass *lpObject{ NULL };
-  VOID (TClass::*lpStartRoutine)(){ NULL };
-  VOID (TClass::*lpStartRoutineWithParam)(SIZE_T){ NULL };
-  SIZE_T nParam{ 0 };
+  private:
+    TClass *lpObject{NULL};
+    VOID (TClass::*lpStartRoutine)(){NULL};
+    VOID (TClass::*lpStartRoutineWithParam)(SIZE_T){NULL};
+    SIZE_T nParam{0};
 };
 
 //-----------------------------------------------------------
 
 class CThreadPool : public virtual CBaseMemObj
 {
-public:
-  CThreadPool();
-  virtual ~CThreadPool();
+  public:
+    CThreadPool();
+    virtual ~CThreadPool();
 
-  BOOL Initialize(_In_ ULONG nMinWorkerThreads, _In_ ULONG nWorkerThreadsCreateAhead,
-                  _In_ ULONG nThreadShutdownThresholdMs);
-  VOID Finalize();
+    BOOL Initialize(_In_ ULONG nMinWorkerThreads, _In_ ULONG nWorkerThreadsCreateAhead,
+                    _In_ ULONG nThreadShutdownThresholdMs);
+    VOID Finalize();
 
-  BOOL IsInitialized();
+    BOOL IsInitialized();
 
-  BOOL QueueTask(_In_ LPTHREAD_START_ROUTINE lpRoutine, _In_ LPVOID lpContext);
+    BOOL QueueTask(_In_ LPTHREAD_START_ROUTINE lpRoutine, _In_ LPVOID lpContext);
 
-  virtual LPVOID OnThreadStarted();
-  virtual VOID OnThreadTerminated(_In_ LPVOID lpContext);
+    virtual LPVOID OnThreadStarted();
+    virtual VOID OnThreadTerminated(_In_ LPVOID lpContext);
 
-  virtual VOID OnTaskTerminated(_In_ LPVOID lpContext, _In_ HRESULT hReturnValue) = 0;
-  virtual VOID OnTaskCancelled(_In_ LPVOID lpContext) = 0;
-  virtual VOID OnTaskExceptionError(_In_ LPVOID lpContext, _In_ DWORD dwException,
-                                    _In_ struct _EXCEPTION_POINTERS *excPtr) = 0;
+    virtual VOID OnTaskTerminated(_In_ LPVOID lpContext, _In_ HRESULT hReturnValue) = 0;
+    virtual VOID OnTaskCancelled(_In_ LPVOID lpContext) = 0;
+    virtual VOID OnTaskExceptionError(_In_ LPVOID lpContext, _In_ DWORD dwException,
+                                      _In_ struct _EXCEPTION_POINTERS *excPtr) = 0;
 
-private:
-  typedef TClassWorkerThread<CThreadPool> CWorkerThread;
+  private:
+    typedef TClassWorkerThread<CThreadPool> CWorkerThread;
 
-  typedef struct tagDLLIST_ITEM {
-    struct tagDLLIST_ITEM *lpNext{ NULL }, *lpPrev{ NULL };
-  } DLLIST_ITEM;
+    typedef struct tagDLLIST_ITEM
+    {
+        struct tagDLLIST_ITEM *lpNext{NULL}, *lpPrev{NULL};
+    } DLLIST_ITEM;
 
-  typedef struct tagWORKITEM {
-    DLLIST_ITEM sLink;
-    LPTHREAD_START_ROUTINE lpRoutine;
-    LPVOID lpContext;
-  } WORKITEM;
+    typedef struct tagWORKITEM
+    {
+        DLLIST_ITEM sLink;
+        LPTHREAD_START_ROUTINE lpRoutine;
+        LPVOID lpContext;
+    } WORKITEM;
 
-private:
-  DWORD InitializeWorker();
-  VOID RemoveWorker(_In_ CWorkerThread *lpWorker);
-  VOID RemoveTask(_In_ WORKITEM *lpWorkItem);
-  VOID ExecuteTask(_In_ WORKITEM *lpWorkItem);
-  VOID CancelTask(_In_ WORKITEM *lpWorkItem);
-  VOID WorkerThreadProc(_In_ SIZE_T nParam);
+  private:
+    DWORD InitializeWorker();
+    VOID RemoveWorker(_In_ CWorkerThread *lpWorker);
+    VOID RemoveTask(_In_ WORKITEM *lpWorkItem);
+    VOID ExecuteTask(_In_ WORKITEM *lpWorkItem);
+    VOID CancelTask(_In_ WORKITEM *lpWorkItem);
+    VOID WorkerThreadProc(_In_ SIZE_T nParam);
 
-private:
-  CCriticalSection cMtx;
-  HANDLE hIOCP{ NULL };
-  ULONG nMinWorkerThreads{ 0 };
-  ULONG nWorkerThreadsCreateAhead{ 0 };
-  ULONG nThreadShutdownThresholdMs{ 0 };
-  struct {
-    LONG volatile nMtx{ 0 };
-    DLLIST_ITEM sList;
-  } sWorkItems;
-  struct {
-    LONG volatile nMtx{ 0 };
-    CWorkerThread **lplpWorkerThreadsList{ NULL };
-    SIZE_T nCount{ 0 }, nSize{ 0 };
-  } sActiveThreads;
-  LONG volatile nInUse{ 0 };
+  private:
+    CCriticalSection cMtx;
+    HANDLE hIOCP{NULL};
+    ULONG nMinWorkerThreads{0};
+    ULONG nWorkerThreadsCreateAhead{0};
+    ULONG nThreadShutdownThresholdMs{0};
+    struct
+    {
+        LONG volatile nMtx{0};
+        DLLIST_ITEM sList;
+    } sWorkItems;
+    struct
+    {
+        LONG volatile nMtx{0};
+        CWorkerThread **lplpWorkerThreadsList{NULL};
+        SIZE_T nCount{0}, nSize{0};
+    } sActiveThreads;
+    LONG volatile nInUse{0};
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

@@ -26,7 +26,8 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 BOOL IsMultiProcessor();
 VOID _YieldProcessor();
@@ -35,109 +36,113 @@ VOID _YieldProcessor();
 
 class CCriticalSection : public virtual CBaseMemObj, public CNonCopyableObj
 {
-public:
-  CCriticalSection(_In_ ULONG nSpinCount = 4000) : CBaseMemObj(), CNonCopyableObj()
-    {
-    if (::MxRtlInitializeCriticalSectionAndSpinCount(&cs, nSpinCount) == STATUS_NOT_IMPLEMENTED)
-      ::MxRtlInitializeCriticalSection(&cs);
-    return;
-    };
-
-  virtual ~CCriticalSection()
-    {
-    ::MxRtlDeleteCriticalSection(&cs);
-    return;
-    };
-
-  _inline VOID Lock()
-    {
-    ::MxRtlEnterCriticalSection(&cs);
-    return;
-    };
-
-  _inline BOOL TryLock()
-    {
-    return ::MxRtlTryEnterCriticalSection(&cs);
-    };
-
-  _inline VOID Unlock()
-    {
-    ::MxRtlLeaveCriticalSection(&cs);
-    return;
-    };
-
-public:
-  class CAutoLock : public virtual CBaseMemObj, public CNonCopyableObj
-  {
   public:
-    CAutoLock(_In_ CCriticalSection &_cCS) : CBaseMemObj(), CNonCopyableObj(), cCS(_cCS)
-      {
-      cCS.Lock();
-      return;
-      };
+    CCriticalSection(_In_ ULONG nSpinCount = 4000) : CBaseMemObj(), CNonCopyableObj()
+    {
+        if (::MxRtlInitializeCriticalSectionAndSpinCount(&cs, nSpinCount) == STATUS_NOT_IMPLEMENTED)
+        {
+            ::MxRtlInitializeCriticalSection(&cs);
+        }
+        return;
+    };
 
-    ~CAutoLock()
-      {
-      cCS.Unlock();
-      return;
-      };
+    virtual ~CCriticalSection()
+    {
+        ::MxRtlDeleteCriticalSection(&cs);
+        return;
+    };
+
+    _inline VOID Lock()
+    {
+        ::MxRtlEnterCriticalSection(&cs);
+        return;
+    };
+
+    _inline BOOL TryLock()
+    {
+        return ::MxRtlTryEnterCriticalSection(&cs);
+    };
+
+    _inline VOID Unlock()
+    {
+        ::MxRtlLeaveCriticalSection(&cs);
+        return;
+    };
+
+  public:
+    class CAutoLock : public virtual CBaseMemObj, public CNonCopyableObj
+    {
+      public:
+        CAutoLock(_In_ CCriticalSection &_cCS) : CBaseMemObj(), CNonCopyableObj(), cCS(_cCS)
+        {
+            cCS.Lock();
+            return;
+        };
+
+        ~CAutoLock()
+        {
+            cCS.Unlock();
+            return;
+        };
+
+      private:
+        CCriticalSection &cCS;
+    };
+
+  public:
+    class CTryAutoLock : public virtual CBaseMemObj, public CNonCopyableObj
+    {
+      public:
+        CTryAutoLock(_In_ CCriticalSection &cCS) : CBaseMemObj(), CNonCopyableObj()
+        {
+            lpCS = (cCS.TryLock() != FALSE) ? &cCS : NULL;
+            return;
+        };
+
+        ~CTryAutoLock()
+        {
+            if (lpCS != NULL)
+            {
+                lpCS->Unlock();
+            }
+            return;
+        };
+
+        BOOL IsLocked() const
+        {
+            return (lpCS != NULL) ? TRUE : FALSE;
+        };
+
+      private:
+        CCriticalSection *lpCS;
+    };
 
   private:
-    CCriticalSection &cCS;
-  };
-
-public:
-  class CTryAutoLock : public virtual CBaseMemObj, public CNonCopyableObj
-  {
-  public:
-    CTryAutoLock(_In_ CCriticalSection &cCS) : CBaseMemObj(), CNonCopyableObj()
-      {
-      lpCS = (cCS.TryLock() != FALSE) ? &cCS : NULL;
-      return;
-      };
-
-    ~CTryAutoLock()
-      {
-      if (lpCS != NULL)
-        lpCS->Unlock();
-      return;
-      };
-
-    BOOL IsLocked() const
-      {
-      return (lpCS != NULL) ? TRUE : FALSE;
-      };
-
-  private:
-    CCriticalSection *lpCS;
-  };
-
-private:
-  RTL_CRITICAL_SECTION cs;
+    RTL_CRITICAL_SECTION cs;
 };
 
 //-----------------------------------------------------------
 
 class CWindowsEvent : public CWindowsHandle
 {
-public:
-  CWindowsEvent();
+  public:
+    CWindowsEvent();
 
-  HRESULT Create(_In_ BOOL bManualReset, _In_ BOOL bInitialState, _In_opt_z_ LPCWSTR szNameW = NULL,
-                 _In_opt_ LPSECURITY_ATTRIBUTES lpSecAttr = NULL, _Out_opt_ LPBOOL lpbAlreadyExists = NULL);
+    HRESULT Create(_In_ BOOL bManualReset, _In_ BOOL bInitialState, _In_opt_z_ LPCWSTR szNameW = NULL,
+                   _In_opt_ LPSECURITY_ATTRIBUTES lpSecAttr = NULL, _Out_opt_ LPBOOL lpbAlreadyExists = NULL);
 
-  HRESULT Open(_In_z_ LPCWSTR szNameW, _In_opt_ BOOL bInherit=FALSE);
+    HRESULT Open(_In_z_ LPCWSTR szNameW, _In_opt_ BOOL bInherit = FALSE);
 
-  BOOL Wait(_In_ DWORD dwTimeoutMs);
+    BOOL Wait(_In_ DWORD dwTimeoutMs);
 
-  BOOL Reset()
+    BOOL Reset()
     {
-    return (h != NULL && NT_SUCCESS(::MxNtResetEvent(h, NULL))) ? TRUE : FALSE;
+        return (h != NULL && NT_SUCCESS(::MxNtResetEvent(h, NULL))) ? TRUE : FALSE;
     };
 
-  BOOL Set()
+    BOOL Set()
     {
-    return (h != NULL && NT_SUCCESS(::MxNtSetEvent(h, NULL))) ? TRUE : FALSE;
+        return (h != NULL && NT_SUCCESS(::MxNtSetEvent(h, NULL))) ? TRUE : FALSE;
     };
 };
 
@@ -145,32 +150,34 @@ public:
 
 class CWindowsMutex : public CWindowsHandle
 {
-public:
-  CWindowsMutex();
+  public:
+    CWindowsMutex();
 
-  HRESULT Create(_In_opt_z_ LPCWSTR szNameW = NULL, _In_ BOOL bInitialOwner = TRUE,
-                 _In_opt_ LPSECURITY_ATTRIBUTES lpSecAttr = NULL, _Out_opt_ LPBOOL lpbAlreadyExists = NULL);
+    HRESULT Create(_In_opt_z_ LPCWSTR szNameW = NULL, _In_ BOOL bInitialOwner = TRUE,
+                   _In_opt_ LPSECURITY_ATTRIBUTES lpSecAttr = NULL, _Out_opt_ LPBOOL lpbAlreadyExists = NULL);
 
-  HRESULT Open(_In_opt_z_ LPCWSTR szNameW = NULL, _In_ BOOL bQueryOnly = FALSE, _In_opt_ BOOL bInherit = FALSE);
+    HRESULT Open(_In_opt_z_ LPCWSTR szNameW = NULL, _In_ BOOL bQueryOnly = FALSE, _In_opt_ BOOL bInherit = FALSE);
 
-  BOOL Lock(_In_ DWORD dwTimeout = INFINITE)
+    BOOL Lock(_In_ DWORD dwTimeout = INFINITE)
     {
-    LARGE_INTEGER liTimeout, *lpliTimeout;
+        LARGE_INTEGER liTimeout, *lpliTimeout;
 
-    if (h == NULL)
-      return FALSE;
-    lpliTimeout = NULL;
-    if (dwTimeout != INFINITE)
-    {
-      liTimeout.QuadPart = -(LONGLONG)MX_MILLISECONDS_TO_100NS(dwTimeout);
-      lpliTimeout = &liTimeout;
-    }
-    return (::MxNtWaitForSingleObject(h, FALSE, lpliTimeout) == WAIT_OBJECT_0) ? TRUE : FALSE;
+        if (h == NULL)
+        {
+            return FALSE;
+        }
+        lpliTimeout = NULL;
+        if (dwTimeout != INFINITE)
+        {
+            liTimeout.QuadPart = -(LONGLONG)MX_MILLISECONDS_TO_100NS(dwTimeout);
+            lpliTimeout = &liTimeout;
+        }
+        return (::MxNtWaitForSingleObject(h, FALSE, lpliTimeout) == WAIT_OBJECT_0) ? TRUE : FALSE;
     };
 
-  BOOL Unlock()
+    BOOL Unlock()
     {
-    return (h != NULL && NT_SUCCESS(::MxNtReleaseMutant(h, NULL))) ? TRUE : FALSE;
+        return (h != NULL && NT_SUCCESS(::MxNtReleaseMutant(h, NULL))) ? TRUE : FALSE;
     };
 };
 
@@ -182,7 +189,8 @@ VOID FastLock_Initialize(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock);
 VOID FastLock_Enter(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock);
 BOOL FastLock_TryEnter(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock);
 VOID FastLock_Exit(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock);
-DWORD FastLock_IsActive(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock); //NOTE: returns thread id holding the lock if active or 0
+DWORD FastLock_IsActive(
+    _Inout_ _Interlocked_operand_ LONG volatile *lpnLock); // NOTE: returns thread id holding the lock if active or 0
 VOID FastLock_Bitmask_Enter(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock, _In_ int nBitIndex);
 BOOL FastLock_Bitmask_TryEnter(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock, _In_ int nBitIndex);
 VOID FastLock_Bitmask_Exit(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock, _In_ int nBitIndex);
@@ -190,51 +198,52 @@ BOOL FastLock_Bitmask_IsActive(_Inout_ _Interlocked_operand_ LONG volatile *lpnL
 
 class CFastLock : public virtual CBaseMemObj, public CNonCopyableObj
 {
-public:
-  CFastLock(_Inout_ LONG volatile *_lpnLock) : CBaseMemObj(), CNonCopyableObj(), lpnLock(_lpnLock)
+  public:
+    CFastLock(_Inout_ LONG volatile *_lpnLock) : CBaseMemObj(), CNonCopyableObj(), lpnLock(_lpnLock)
     {
-    FastLock_Enter(lpnLock);
-    return;
+        FastLock_Enter(lpnLock);
+        return;
     };
 
-  ~CFastLock()
+    ~CFastLock()
     {
-    FastLock_Exit(lpnLock);
-    return;
+        FastLock_Exit(lpnLock);
+        return;
     };
 
-private:
-  LONG volatile *lpnLock;
+  private:
+    LONG volatile *lpnLock;
 };
 
 class CFastBitMaskLock : public virtual CBaseMemObj, public CNonCopyableObj
 {
-public:
-  CFastBitMaskLock(_Inout_ LONG volatile *_lpnLock, _In_ int _nBitIndex) : CBaseMemObj(), CNonCopyableObj(),
-                                                                           lpnLock(_lpnLock), nBitIndex(_nBitIndex)
+  public:
+    CFastBitMaskLock(_Inout_ LONG volatile *_lpnLock, _In_ int _nBitIndex)
+        : CBaseMemObj(), CNonCopyableObj(), lpnLock(_lpnLock), nBitIndex(_nBitIndex)
     {
-    FastLock_Bitmask_Enter(lpnLock, nBitIndex);
-    return;
+        FastLock_Bitmask_Enter(lpnLock, nBitIndex);
+        return;
     };
 
-  ~CFastBitMaskLock()
+    ~CFastBitMaskLock()
     {
-    FastLock_Bitmask_Exit(lpnLock, nBitIndex);
-    return;
+        FastLock_Bitmask_Exit(lpnLock, nBitIndex);
+        return;
     };
 
-private:
-  LONG volatile *lpnLock;
-  int nBitIndex;
+  private:
+    LONG volatile *lpnLock;
+    int nBitIndex;
 };
 
 //-----------------------------------------------------------
 
-#define MX_RWLOCK_INIT { 0 }
+#define MX_RWLOCK_INIT {0}
 
-typedef union {
-  LONG volatile nValue;
-  SRWLOCK sOsLock;
+typedef union
+{
+    LONG volatile nValue;
+    SRWLOCK sOsLock;
 } RWLOCK, *LPRWLOCK;
 
 VOID SlimRWL_Initialize(_In_ LPRWLOCK lpLock);
@@ -247,66 +256,70 @@ VOID SlimRWL_ReleaseExclusive(_In_ LPRWLOCK lpLock);
 
 class CAutoSlimRWLBase : public virtual CBaseMemObj
 {
-protected:
-  CAutoSlimRWLBase(_In_ LPRWLOCK _lpLock, _In_ BOOL b) : CBaseMemObj(), lpLock(_lpLock), bShared(b)
+  protected:
+    CAutoSlimRWLBase(_In_ LPRWLOCK _lpLock, _In_ BOOL b) : CBaseMemObj(), lpLock(_lpLock), bShared(b)
     {
-    return;
+        return;
     };
 
-public:
-  ~CAutoSlimRWLBase()
+  public:
+    ~CAutoSlimRWLBase()
     {
-    if (bShared == FALSE)
-      SlimRWL_ReleaseExclusive(lpLock);
-    else
-      SlimRWL_ReleaseShared(lpLock);
-    return;
+        if (bShared == FALSE)
+        {
+            SlimRWL_ReleaseExclusive(lpLock);
+        }
+        else
+        {
+            SlimRWL_ReleaseShared(lpLock);
+        }
+        return;
     };
 
-  VOID UpgradeToExclusive()
+    VOID UpgradeToExclusive()
     {
-    if (bShared != FALSE)
-    {
-      SlimRWL_ReleaseShared(lpLock);
-      bShared = FALSE;
-      SlimRWL_AcquireExclusive(lpLock);
-    }
-    return;
+        if (bShared != FALSE)
+        {
+            SlimRWL_ReleaseShared(lpLock);
+            bShared = FALSE;
+            SlimRWL_AcquireExclusive(lpLock);
+        }
+        return;
     };
 
-  VOID DowngradeToShared()
+    VOID DowngradeToShared()
     {
-    if (bShared == FALSE)
-    {
-      SlimRWL_ReleaseExclusive(lpLock);
-      bShared = TRUE;
-      SlimRWL_AcquireShared(lpLock);
-    }
-    return;
+        if (bShared == FALSE)
+        {
+            SlimRWL_ReleaseExclusive(lpLock);
+            bShared = TRUE;
+            SlimRWL_AcquireShared(lpLock);
+        }
+        return;
     };
 
-private:
-  LPRWLOCK lpLock;
-  BOOL bShared;
+  private:
+    LPRWLOCK lpLock;
+    BOOL bShared;
 };
 
 class CAutoSlimRWLShared : public CAutoSlimRWLBase, public CNonCopyableObj
 {
-public:
-  CAutoSlimRWLShared(_In_ LPRWLOCK lpLock) : CAutoSlimRWLBase(lpLock, TRUE), CNonCopyableObj()
+  public:
+    CAutoSlimRWLShared(_In_ LPRWLOCK lpLock) : CAutoSlimRWLBase(lpLock, TRUE), CNonCopyableObj()
     {
-    SlimRWL_AcquireShared(lpLock);
-    return;
+        SlimRWL_AcquireShared(lpLock);
+        return;
     };
 };
 
 class CAutoSlimRWLExclusive : public CAutoSlimRWLBase, public CNonCopyableObj
 {
-public:
-  CAutoSlimRWLExclusive(_In_ LPRWLOCK lpLock) : CAutoSlimRWLBase(lpLock, FALSE), CNonCopyableObj()
+  public:
+    CAutoSlimRWLExclusive(_In_ LPRWLOCK lpLock) : CAutoSlimRWLBase(lpLock, FALSE), CNonCopyableObj()
     {
-    SlimRWL_AcquireExclusive(lpLock);
-    return;
+        SlimRWL_AcquireExclusive(lpLock);
+        return;
     };
 };
 
@@ -321,57 +334,57 @@ VOID RundownProt_WaitForRelease(_Inout_ _Interlocked_operand_ LONG volatile *lpn
 
 class CAutoRundownProtection : public virtual CBaseMemObj, public CNonCopyableObj
 {
-public:
-  CAutoRundownProtection(_Inout_ _Interlocked_operand_ LONG volatile *_lpnValue) : CBaseMemObj(), CNonCopyableObj()
+  public:
+    CAutoRundownProtection(_Inout_ _Interlocked_operand_ LONG volatile *_lpnValue) : CBaseMemObj(), CNonCopyableObj()
     {
-    Acquire(_lpnValue);
-    return;
+        Acquire(_lpnValue);
+        return;
     };
 
-  ~CAutoRundownProtection()
+    ~CAutoRundownProtection()
     {
-    Release();
-    return;
+        Release();
+        return;
     };
 
-  bool operator!() const
+    bool operator!() const
     {
-    return (lpnValue == NULL) ? true : false;
+        return (lpnValue == NULL) ? true : false;
     };
 
-  operator bool() const
+    operator bool() const
     {
-    return (lpnValue != NULL) ? true : false;
+        return (lpnValue != NULL) ? true : false;
     };
 
-  BOOL IsAcquired() const
+    BOOL IsAcquired() const
     {
-    return (lpnValue != NULL) ? TRUE : FALSE;
+        return (lpnValue != NULL) ? TRUE : FALSE;
     };
 
-  BOOL Acquire(_Inout_ _Interlocked_operand_ LONG volatile *_lpnValue)
+    BOOL Acquire(_Inout_ _Interlocked_operand_ LONG volatile *_lpnValue)
     {
-    lpnValue = (RundownProt_Acquire(_lpnValue) != FALSE) ? _lpnValue : NULL;
-    return (lpnValue != NULL) ? TRUE : FALSE;
+        lpnValue = (RundownProt_Acquire(_lpnValue) != FALSE) ? _lpnValue : NULL;
+        return (lpnValue != NULL) ? TRUE : FALSE;
     };
 
-  VOID Release()
+    VOID Release()
     {
-    if (lpnValue != NULL)
-    {
-      LONG volatile *lpnValueOrig = lpnValue;
+        if (lpnValue != NULL)
+        {
+            LONG volatile *lpnValueOrig = lpnValue;
 
-      lpnValue = NULL;
-      RundownProt_Release(lpnValueOrig);
-    }
-    return;
+            lpnValue = NULL;
+            RundownProt_Release(lpnValueOrig);
+        }
+        return;
     };
 
-private:
-  LONG volatile *lpnValue;
+  private:
+    LONG volatile *lpnValue;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

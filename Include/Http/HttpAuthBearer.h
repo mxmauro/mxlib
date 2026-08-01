@@ -24,55 +24,56 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpAuthBearer : public CHttpAuthBase, public CNonCopyableObj
 {
-public:
-  CHttpAuthBearer();
-  ~CHttpAuthBearer();
+  public:
+    CHttpAuthBearer();
+    ~CHttpAuthBearer();
 
-  LPCSTR GetScheme() const
+    LPCSTR GetScheme() const
     {
-    return "Bearer";
+        return "Bearer";
     };
 
-  HRESULT Parse(_In_ CHttpHeaderRespWwwProxyAuthenticateCommon *lpHeader);
+    HRESULT Parse(_In_ CHttpHeaderRespWwwProxyAuthenticateCommon *lpHeader);
 
-  HRESULT GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCSTR szAccessTokenA);
+    HRESULT GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCSTR szAccessTokenA);
 
-  LPCWSTR GetRealm() const
+    LPCWSTR GetRealm() const
     {
-    return (LPCWSTR)cStrRealmW;
+        return (LPCWSTR)cStrRealmW;
     };
 
-  SIZE_T GetScopesCount() const
+    SIZE_T GetScopesCount() const
     {
-    return aScopesList.GetCount();
+        return aScopesList.GetCount();
     };
 
-  LPCWSTR GetScope(_In_ SIZE_T nIndex) const
+    LPCWSTR GetScope(_In_ SIZE_T nIndex) const
     {
-    return (nIndex < aScopesList.GetCount()) ? aScopesList.GetElementAt(nIndex) : NULL;
+        return (nIndex < aScopesList.GetCount()) ? aScopesList.GetElementAt(nIndex) : NULL;
     };
 
-  LPCWSTR GetError() const
+    LPCWSTR GetError() const
     {
-    return (LPCWSTR)cStrErrorW;
+        return (LPCWSTR)cStrErrorW;
     };
 
-  LPCWSTR GetErrorDescription() const
+    LPCWSTR GetErrorDescription() const
     {
-    return (LPCWSTR)cStrErrorDescriptionW;
+        return (LPCWSTR)cStrErrorDescriptionW;
     };
 
-private:
-  CStringW cStrRealmW;
-  TArrayListWithFree<LPCWSTR> aScopesList;
-  CStringW cStrErrorW, cStrErrorDescriptionW;
+  private:
+    CStringW cStrRealmW;
+    TArrayListWithFree<LPCWSTR> aScopesList;
+    CStringW cStrErrorW, cStrErrorDescriptionW;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

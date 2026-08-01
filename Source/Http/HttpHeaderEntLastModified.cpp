@@ -21,56 +21,63 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CHttpHeaderEntLastModified::CHttpHeaderEntLastModified() : CHttpHeaderBase()
 {
-  return;
+    return;
 }
 
 CHttpHeaderEntLastModified::~CHttpHeaderEntLastModified()
 {
-  return;
+    return;
 }
 
 HRESULT CHttpHeaderEntLastModified::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szValueEndA;
-  HRESULT hRes;
+    LPCSTR szValueEndA;
+    HRESULT hRes;
 
-  if (szValueA == NULL)
-    return E_POINTER;
+    if (szValueA == NULL)
+    {
+        return E_POINTER;
+    }
 
-  if (nValueLen == (SIZE_T)-1)
-    nValueLen = StrLenA(szValueA);
-  szValueEndA = szValueA + nValueLen;
+    if (nValueLen == (SIZE_T)-1)
+    {
+        nValueLen = StrLenA(szValueA);
+    }
+    szValueEndA = szValueA + nValueLen;
 
-  //skip spaces
-  szValueA = SkipSpaces(szValueA, szValueEndA);
+    // skip spaces
+    szValueA = SkipSpaces(szValueA, szValueEndA);
 
-  //parse date
-  hRes = Http::ParseDate(cDt, szValueA, (SIZE_T)(szValueEndA - szValueA));
-  if (FAILED(hRes))
-    return (hRes == E_OUTOFMEMORY) ? hRes : MX_E_InvalidData;
+    // parse date
+    hRes = Http::ParseDate(cDt, szValueA, (SIZE_T)(szValueEndA - szValueA));
+    if (FAILED(hRes))
+    {
+        return (hRes == E_OUTOFMEMORY) ? hRes : MX_E_InvalidData;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CHttpHeaderEntLastModified::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
-  return cDt.Format(cStrDestA, "%a, %d %b %Y %H:%m:%S %z");
+    return cDt.Format(cStrDestA, "%a, %d %b %Y %H:%m:%S %z");
 }
 
 HRESULT CHttpHeaderEntLastModified::SetDate(_In_ CDateTime &_cDt)
 {
-  cDt = _cDt;
-  return S_OK;
+    cDt = _cDt;
+    return S_OK;
 }
 
 CDateTime CHttpHeaderEntLastModified::GetDate() const
 {
-  return cDt;
+    return cDt;
 }
 
-} //namespace MX
+} // namespace MX

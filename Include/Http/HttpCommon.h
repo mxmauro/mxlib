@@ -35,150 +35,159 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpBodyParserBase;
 class CHttpHeaderBase;
 
-namespace Internals {
+namespace Internals
+{
 
 class CHttpParser : public virtual CBaseMemObj, public CLoggable, public CNonCopyableObj
 {
-public:
-  class CContentDecoder;
+  public:
+    class CContentDecoder;
 
-  enum class eState
-  {
-    Start,
-
-    RequestOrStatusLine,
-    RequestOrStatusLineEnding,
-
-    HeaderStart,
-    HeaderName,
-    HeaderValue,
-    HeaderValueEnding,
-    HeadersEnding,
-
-    BodyStart,
-
-    ReceivingBodyMarkStart,
-    IdentityBodyStart = ReceivingBodyMarkStart,
-
-    ChunkPreStart,
-    ChunkStart,
-    ChunkStartEnding,
-    ChunkStartIgnoreExtension,
-
-    ChunkData,
-    ChunkAfterData,
-    NearEndOfChunkAfterData,
-
-    ReceivingBodyMarkEnd = NearEndOfChunkAfterData,
-
-    Done,
-    Error
-  };
-
-  enum class eTransferEncodingMethod
-  {
-    None, Chunked
-  };
-
-  enum class eContentEncodingMethod
-  {
-    Identity, GZip, Deflate
-  };
-
-public:
-  CHttpParser(_In_ BOOL bActAsServer, _In_opt_ CLoggable *lpLogHandler);
-
-  VOID SetOption_MaxHeaderSize(_In_ DWORD dwSize);
-
-  VOID Reset();
-
-  //NOTE: After a successful parsing, check for parser state...
-  //... if 'stBodyStart', the headers has been parsed
-  //... if 'stDone', the document has been completed
-  HRESULT Parse(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize, _Out_ SIZE_T &nDataUsed);
-
-  eState GetState() const
+    enum class eState
     {
-    return nState;
+        Start,
+
+        RequestOrStatusLine,
+        RequestOrStatusLineEnding,
+
+        HeaderStart,
+        HeaderName,
+        HeaderValue,
+        HeaderValueEnding,
+        HeadersEnding,
+
+        BodyStart,
+
+        ReceivingBodyMarkStart,
+        IdentityBodyStart = ReceivingBodyMarkStart,
+
+        ChunkPreStart,
+        ChunkStart,
+        ChunkStartEnding,
+        ChunkStartIgnoreExtension,
+
+        ChunkData,
+        ChunkAfterData,
+        NearEndOfChunkAfterData,
+
+        ReceivingBodyMarkEnd = NearEndOfChunkAfterData,
+
+        Done,
+        Error
     };
 
-  HRESULT SetBodyParser(_In_ CHttpBodyParserBase *lpParser);
-  CHttpBodyParserBase* GetBodyParser() const;
-
-  BOOL IsActingAsServer() const
+    enum class eTransferEncodingMethod
     {
-    return bActAsServer;
+        None,
+        Chunked
     };
 
-  int GetRequestVersionMajor() const;
-  int GetRequestVersionMinor() const;
-  LPCSTR GetRequestMethod() const;
-  CUrl* GetRequestUri() const;
-  MX::Http::eBrowser GetRequestBrowser() const;
-
-  BOOL IsKeepAliveRequest() const;
-
-  LONG GetResponseStatus() const;
-  LPCSTR GetResponseReasonA() const;
-
-  CHttpCookieArray& Cookies() const
+    enum class eContentEncodingMethod
     {
-    return const_cast<CHttpParser*>(this)->cCookies;
-    };
-  CHttpHeaderArray& Headers() const
-    {
-    return const_cast<CHttpParser*>(this)->cHeaders;
+        Identity,
+        GZip,
+        Deflate
     };
 
-private:
-  HRESULT ParseRequestLine(_In_z_ LPCSTR szLineA);
-  HRESULT ParseStatusLine(_In_z_ LPCSTR szLineA);
-  HRESULT ParseHeader(_In_ CStringA &cStrLineA);
+  public:
+    CHttpParser(_In_ BOOL bActAsServer, _In_opt_ CLoggable *lpLogHandler);
 
-  HRESULT ProcessContent(_In_ LPCVOID lpContent, _In_ SIZE_T nContentSize);
-  HRESULT FlushContent();
+    VOID SetOption_MaxHeaderSize(_In_ DWORD dwSize);
 
-private:
-  BOOL bActAsServer;
-  DWORD dwMaxHeaderSize{ 16384 };
+    VOID Reset();
 
-  eState nState{ eState::Start };
-  CStringA cStrCurrLineA;
-  DWORD dwHeadersLen{ 0 };
+    // NOTE: After a successful parsing, check for parser state...
+    //... if 'stBodyStart', the headers has been parsed
+    //... if 'stDone', the document has been completed
+    HRESULT Parse(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize, _Out_ SIZE_T &nDataUsed);
 
-  struct {
-    ULONG nHttpProtocol{ 0 };
-    LPCSTR szMethodA{ NULL };
-    CUrl cUrl;
-    MX::Http::eBrowser nBrowser{ Http::eBrowser::Other };
-  } sRequest;
-  struct {
-    LONG nStatusCode{ 0 };
-    CStringA cStrReasonA;
-  } sResponse;
-  LONG nHeaderFlags{ 0 };
-  CHttpCookieArray cCookies;
-  CHttpHeaderArray cHeaders;
-  struct {
-    ULONGLONG nContentLength{ ULONGLONG_MAX };
-    ULONGLONG nIdentityReadedContentLength{ 0 };
-    struct {
-      ULONGLONG nSize{ 0 };
-      ULONGLONG nReaded{ 0 };
-    } sChunk;
-    TAutoDeletePtr<CZipLib> cDecoder;
-    TAutoRefCounted<CHttpBodyParserBase> cParser;
-  } sBody;
+    eState GetState() const
+    {
+        return nState;
+    };
+
+    HRESULT SetBodyParser(_In_ CHttpBodyParserBase *lpParser);
+    CHttpBodyParserBase *GetBodyParser() const;
+
+    BOOL IsActingAsServer() const
+    {
+        return bActAsServer;
+    };
+
+    int GetRequestVersionMajor() const;
+    int GetRequestVersionMinor() const;
+    LPCSTR GetRequestMethod() const;
+    CUrl *GetRequestUri() const;
+    MX::Http::eBrowser GetRequestBrowser() const;
+
+    BOOL IsKeepAliveRequest() const;
+
+    LONG GetResponseStatus() const;
+    LPCSTR GetResponseReasonA() const;
+
+    CHttpCookieArray &Cookies() const
+    {
+        return const_cast<CHttpParser *>(this)->cCookies;
+    };
+    CHttpHeaderArray &Headers() const
+    {
+        return const_cast<CHttpParser *>(this)->cHeaders;
+    };
+
+  private:
+    HRESULT ParseRequestLine(_In_z_ LPCSTR szLineA);
+    HRESULT ParseStatusLine(_In_z_ LPCSTR szLineA);
+    HRESULT ParseHeader(_In_ CStringA &cStrLineA);
+
+    HRESULT ProcessContent(_In_ LPCVOID lpContent, _In_ SIZE_T nContentSize);
+    HRESULT FlushContent();
+
+  private:
+    BOOL bActAsServer;
+    DWORD dwMaxHeaderSize{16384};
+
+    eState nState{eState::Start};
+    CStringA cStrCurrLineA;
+    DWORD dwHeadersLen{0};
+
+    struct
+    {
+        ULONG nHttpProtocol{0};
+        LPCSTR szMethodA{NULL};
+        CUrl cUrl;
+        MX::Http::eBrowser nBrowser{Http::eBrowser::Other};
+    } sRequest;
+    struct
+    {
+        LONG nStatusCode{0};
+        CStringA cStrReasonA;
+    } sResponse;
+    LONG nHeaderFlags{0};
+    CHttpCookieArray cCookies;
+    CHttpHeaderArray cHeaders;
+    struct
+    {
+        ULONGLONG nContentLength{ULONGLONG_MAX};
+        ULONGLONG nIdentityReadedContentLength{0};
+        struct
+        {
+            ULONGLONG nSize{0};
+            ULONGLONG nReaded{0};
+        } sChunk;
+        TAutoDeletePtr<CZipLib> cDecoder;
+        TAutoRefCounted<CHttpBodyParserBase> cParser;
+    } sBody;
 };
 
-} //namespace Internals
+} // namespace Internals
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

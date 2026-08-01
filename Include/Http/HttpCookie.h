@@ -29,117 +29,119 @@
 
 //-----------------------------------------------------------
 
-//NOTE: CHttpCookie only accepts ASCII characters. If you
-//      need to use another charset like Unicode, you must
-//      encode the string prior assignation any member of
-//      CHttpCookie and decode it when retrieving values.
+// NOTE: CHttpCookie only accepts ASCII characters. If you
+//       need to use another charset like Unicode, you must
+//       encode the string prior assignation any member of
+//       CHttpCookie and decode it when retrieving values.
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpCookie : public virtual TRefCounted<CBaseMemObj>
 {
-public:
-  enum class eSameSite
-  {
-    None, Lax, Strict
-  };
+  public:
+    enum class eSameSite
+    {
+        None,
+        Lax,
+        Strict
+    };
 
-public:
-  CHttpCookie();
-  CHttpCookie(_In_ const CHttpCookie& cSrc) throw(...);
-  ~CHttpCookie();
+  public:
+    CHttpCookie();
+    CHttpCookie(_In_ const CHttpCookie &cSrc) throw(...);
+    ~CHttpCookie();
 
-  CHttpCookie& operator=(_In_ const CHttpCookie& cSrc) throw(...);
+    CHttpCookie &operator=(_In_ const CHttpCookie &cSrc) throw(...);
 
-  VOID Clear();
+    VOID Clear();
 
-  HRESULT SetName(_In_z_ LPCSTR szNameA);
-  //NOTE: Name will be UTF-8 encoded
-  HRESULT SetName(_In_z_ LPCWSTR szNameW);
-  LPCSTR GetName() const;
-  //NOTE: Name will be UTF-8 decoded
-  HRESULT GetName(_Inout_ CStringW &cStrDestW);
+    HRESULT SetName(_In_z_ LPCSTR szNameA);
+    // NOTE: Name will be UTF-8 encoded
+    HRESULT SetName(_In_z_ LPCWSTR szNameW);
+    LPCSTR GetName() const;
+    // NOTE: Name will be UTF-8 decoded
+    HRESULT GetName(_Inout_ CStringW &cStrDestW);
 
-  HRESULT SetValue(_In_z_ LPCSTR szValueA);
-  //NOTE: Value will be UTF-8 encoded
-  HRESULT SetValue(_In_z_ LPCWSTR szValueW);
-  LPCSTR GetValue() const;
-  //NOTE: Value will be UTF-8 decoded
-  HRESULT GetValue(_Inout_ CStringW &cStrDestW);
+    HRESULT SetValue(_In_z_ LPCSTR szValueA);
+    // NOTE: Value will be UTF-8 encoded
+    HRESULT SetValue(_In_z_ LPCWSTR szValueW);
+    LPCSTR GetValue() const;
+    // NOTE: Value will be UTF-8 decoded
+    HRESULT GetValue(_Inout_ CStringW &cStrDestW);
 
-  HRESULT SetDomain(_In_z_ LPCSTR szDomainA);
-  //NOTE: Domain will be PUNY encoded
-  HRESULT SetDomain(_In_z_ LPCWSTR szDomainW);
-  LPCSTR GetDomain() const;
-  //NOTE: Domain will be PUNY decoded
-  HRESULT GetDomain(_Inout_ CStringW &cStrDestW);
+    HRESULT SetDomain(_In_z_ LPCSTR szDomainA);
+    // NOTE: Domain will be PUNY encoded
+    HRESULT SetDomain(_In_z_ LPCWSTR szDomainW);
+    LPCSTR GetDomain() const;
+    // NOTE: Domain will be PUNY decoded
+    HRESULT GetDomain(_Inout_ CStringW &cStrDestW);
 
-  HRESULT SetPath(_In_z_ LPCSTR szPathA);
-  //NOTE: Path will be UTF-8 encoded
-  HRESULT SetPath(_In_z_ LPCWSTR szPathW);
-  LPCSTR GetPath() const;
-  //NOTE: Path will be UTF-8 decoded
-  HRESULT GetPath(_Inout_ CStringW &cStrDestW);
+    HRESULT SetPath(_In_z_ LPCSTR szPathA);
+    // NOTE: Path will be UTF-8 encoded
+    HRESULT SetPath(_In_z_ LPCWSTR szPathW);
+    LPCSTR GetPath() const;
+    // NOTE: Path will be UTF-8 decoded
+    HRESULT GetPath(_Inout_ CStringW &cStrDestW);
 
-  VOID SetExpireDate(_In_opt_ const CDateTime *lpDate = NULL);
-  CDateTime* GetExpireDate() const;
+    VOID SetExpireDate(_In_opt_ const CDateTime *lpDate = NULL);
+    CDateTime *GetExpireDate() const;
 
-  VOID SetSecureFlag(_In_ BOOL bIsSecure);
-  BOOL GetSecureFlag() const;
+    VOID SetSecureFlag(_In_ BOOL bIsSecure);
+    BOOL GetSecureFlag() const;
 
-  VOID SetHttpOnlyFlag(_In_ BOOL bIsHttpOnly);
-  BOOL GetHttpOnlyFlag() const;
+    VOID SetHttpOnlyFlag(_In_ BOOL bIsHttpOnly);
+    BOOL GetHttpOnlyFlag() const;
 
-  HRESULT SetSameSite(_In_ eSameSite nSameSite);
-  eSameSite GetSameSite() const;
+    HRESULT SetSameSite(_In_ eSameSite nSameSite);
+    eSameSite GetSameSite() const;
 
-  HRESULT ToString(_Inout_ CStringA& cStrDestA, _In_ BOOL bAddAttributes = TRUE);
+    HRESULT ToString(_Inout_ CStringA &cStrDestA, _In_ BOOL bAddAttributes = TRUE);
 
-  HRESULT DoesDomainMatch(_In_z_ LPCSTR szDomainToMatchA);
-  //NOTE: Domain will be PUNY encoded
-  HRESULT DoesDomainMatch(_In_z_ LPCWSTR szDomainToMatchW);
-  HRESULT HasExpired(_In_opt_ const CDateTime *lpDate = NULL);
+    HRESULT DoesDomainMatch(_In_z_ LPCSTR szDomainToMatchA);
+    // NOTE: Domain will be PUNY encoded
+    HRESULT DoesDomainMatch(_In_z_ LPCWSTR szDomainToMatchW);
+    HRESULT HasExpired(_In_opt_ const CDateTime *lpDate = NULL);
 
-  HRESULT ParseFromResponseHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen = (SIZE_T)-1);
+    HRESULT ParseFromResponseHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen = (SIZE_T)-1);
 
-private:
-  ULONG nFlags;
-  CStringA cStrNameA;
-  CStringA cStrValueA;
-  CStringA cStrDomainA;
-  CStringA cStrPathA;
-  CDateTime cExpiresDt;
-  eSameSite nSameSite;
+  private:
+    ULONG nFlags;
+    CStringA cStrNameA;
+    CStringA cStrValueA;
+    CStringA cStrDomainA;
+    CStringA cStrPathA;
+    CDateTime cExpiresDt;
+    eSameSite nSameSite;
 };
 
 //-----------------------------------------------------------
 
-class CHttpCookieArray : public TArrayListWithRelease<CHttpCookie*>
+class CHttpCookieArray : public TArrayListWithRelease<CHttpCookie *>
 {
-private:
-public:
-  CHttpCookieArray() : TArrayListWithRelease<CHttpCookie*>()
-    { };
-  CHttpCookieArray(_In_ const CHttpCookieArray& cSrc) throw(...);
+  private:
+  public:
+    CHttpCookieArray() : TArrayListWithRelease<CHttpCookie *>() {};
+    CHttpCookieArray(_In_ const CHttpCookieArray &cSrc) throw(...);
 
-  CHttpCookieArray& operator=(_In_ const CHttpCookieArray& cSrc) throw(...);
+    CHttpCookieArray &operator=(_In_ const CHttpCookieArray &cSrc) throw(...);
 
-  HRESULT ParseFromRequestHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen = (SIZE_T)-1);
+    HRESULT ParseFromRequestHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen = (SIZE_T)-1);
 
-  //NOTE: Returns -1 if not found
-  SIZE_T Find(_In_z_ LPCSTR szNameA) const;
-  //NOTE: Returns -1 if not found
-  SIZE_T Find(_In_z_ LPCWSTR szNameW) const;
+    // NOTE: Returns -1 if not found
+    SIZE_T Find(_In_z_ LPCSTR szNameA) const;
+    // NOTE: Returns -1 if not found
+    SIZE_T Find(_In_z_ LPCWSTR szNameW) const;
 
-  HRESULT Merge(_In_ const CHttpCookieArray& cSrc, _In_ BOOL bReplaceExisting);
-  HRESULT Merge(_In_ CHttpCookie *lpSrc, _In_ BOOL bReplaceExisting);
+    HRESULT Merge(_In_ const CHttpCookieArray &cSrc, _In_ BOOL bReplaceExisting);
+    HRESULT Merge(_In_ CHttpCookie *lpSrc, _In_ BOOL bReplaceExisting);
 
-  HRESULT RemoveExpiredAndInvalid(_In_opt_ const CDateTime *lpDate = NULL);
+    HRESULT RemoveExpiredAndInvalid(_In_opt_ const CDateTime *lpDate = NULL);
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

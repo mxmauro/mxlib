@@ -21,19 +21,22 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-namespace Internals {
+namespace Internals
+{
 
-namespace OpenSSL {
+namespace OpenSSL
+{
 
 HRESULT InitializeSecureBufferBIO();
 VOID FinalizeSecureBufferBIO();
 
-BIO_METHOD* BIO_secure_buffer_mem();
+BIO_METHOD *BIO_secure_buffer_mem();
 
-} //namespace OpenSSL
+} // namespace OpenSSL
 
-} //namespace Internals
+} // namespace Internals
 
-} //namespace MX
+} // namespace MX

@@ -27,27 +27,28 @@
 #include "..\..\Include\Debug.h"
 #include "..\..\Include\FnvHash.h"
 
-//include the following files OUTSIDE the namespace
-//#include <exception>
+// include the following files OUTSIDE the namespace
+// #include <exception>
 
 #ifdef _MX_JAVASCRIPT_VM_CPP
 
 #define DUK_COMPILING_DUKTAPE
 #include "..\..\Include\JsLib\JavascriptVM.h"
 
-namespace DukTape {
+namespace DukTape
+{
 
 #pragma check_stack(off)
 #pragma warning(disable : 4101 4703 4244 4267 6262 6385 6011 6387 26450 28182)
 #include "DukTape\Source\dist\duktape.c"
 #define snprintf mx_sprintf_s
-//#include "DukTape\Source\extras\module-duktape\duk_module_duktape.c"
+// #include "DukTape\Source\extras\module-duktape\duk_module_duktape.c"
 #include "DukTape\Source\extras\module-node\duk_module_node.c"
 #undef snprintf
 #pragma warning(default : 4101 4703 4244 4267 6262 6385 6011 6387 26450 28182)
 #pragma check_stack()
 
-} //namespace DukTape
+} // namespace DukTape
 
 #endif //_MX_JAVASCRIPT_VM_CPP
 
@@ -55,11 +56,14 @@ namespace DukTape {
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-namespace Internals {
+namespace Internals
+{
 
-namespace JsLib {
+namespace JsLib
+{
 
 HRESULT AddNativeFunctionCommon(_In_ DukTape::duk_context *lpCtx, _In_opt_z_ LPCSTR szObjectNameA,
                                 _In_ DukTape::duk_idx_t nObjectIndex, _In_z_ LPCSTR szFunctionNameA,
@@ -84,11 +88,11 @@ VOID PushPropertyCommon(_In_ DukTape::duk_context *lpCtx, _In_opt_z_ LPCSTR szOb
 HRESULT FindObject(_In_ DukTape::duk_context *lpCtx, _In_opt_z_ LPCSTR szObjectNameA, _In_ BOOL bCreateIfNotExists,
                    _In_ BOOL bResolveProxyOnLast);
 
-} //namespace JsLib
+} // namespace JsLib
 
-} //namespace Internals
+} // namespace Internals
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

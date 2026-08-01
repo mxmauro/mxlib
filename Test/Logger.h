@@ -23,8 +23,9 @@
 
 //-----------------------------------------------------------
 
-namespace Logger {
+namespace Logger
+{
 
 VOID Log(_In_z_ LPCWSTR szFormatW, ...);
 
-}; //namespace Logger
+}; // namespace Logger

@@ -24,28 +24,29 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderReqSecWebSocketVersion : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderReqSecWebSocketVersion();
-  ~CHttpHeaderReqSecWebSocketVersion();
+  public:
+    CHttpHeaderReqSecWebSocketVersion();
+    ~CHttpHeaderReqSecWebSocketVersion();
 
-  MX_DECLARE_HTTPHEADER_NAME(Sec-WebSocket-Version)
+    MX_DECLARE_HTTPHEADER_NAME(Sec - WebSocket - Version)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT SetVersion(_In_ int nVersion);
-  int GetVersion() const;
+    HRESULT SetVersion(_In_ int nVersion);
+    int GetVersion() const;
 
-private:
-  int nVersion;
+  private:
+    int nVersion;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

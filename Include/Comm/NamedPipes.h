@@ -24,94 +24,95 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CNamedPipes : public CIpc, public CNonCopyableObj
 {
-public:
-  CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool);
-  ~CNamedPipes();
-
-  VOID SetOption_ConnectTimeout(_In_ DWORD dwTimeoutMs);
-
-  HRESULT CreateListener(_In_z_ LPCSTR szServerNameA, _In_ OnCreateCallback cCreateCallback,
-                         _In_opt_z_ LPCWSTR szSecutityDescriptorA=NULL);
-  HRESULT CreateListener(_In_z_ LPCWSTR szServerNameW, _In_ OnCreateCallback cCreateCallback,
-                         _In_opt_z_ LPCWSTR szSecutityDescriptorW=NULL);
-  HRESULT ConnectToServer(_In_z_ LPCSTR szServerNameA, _In_ OnCreateCallback cCreateCallback,
-                          _In_opt_ CUserData *lpUserData=NULL, _Out_opt_ HANDLE *h=NULL);
-  HRESULT ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreateCallback cCreateCallback,
-                          _In_opt_ CUserData *lpUserData=NULL, _Out_opt_ HANDLE *h=NULL);
-  HRESULT CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDLE &h, _Out_ HANDLE &hRemotePipe,
-                                       _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData=NULL);
-
-  HRESULT ImpersonateConnectionClient(_In_ HANDLE h);
-
-private:
-  class CServerInfo : public virtual TRefCounted<CBaseMemObj>, public CNonCopyableObj
-  {
   public:
-    CServerInfo();
-    ~CServerInfo();
+    CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool);
+    ~CNamedPipes();
 
-    HRESULT Init(_In_z_ LPCWSTR szServerNameW, _In_ PSECURITY_DESCRIPTOR lpSecDescr);
+    VOID SetOption_ConnectTimeout(_In_ DWORD dwTimeoutMs);
 
-  public:
-    CStringW cStrNameW;
-    PSECURITY_DESCRIPTOR lpSecDescr;
-  };
+    HRESULT CreateListener(_In_z_ LPCSTR szServerNameA, _In_ OnCreateCallback cCreateCallback,
+                           _In_opt_z_ LPCWSTR szSecutityDescriptorA = NULL);
+    HRESULT CreateListener(_In_z_ LPCWSTR szServerNameW, _In_ OnCreateCallback cCreateCallback,
+                           _In_opt_z_ LPCWSTR szSecutityDescriptorW = NULL);
+    HRESULT ConnectToServer(_In_z_ LPCSTR szServerNameA, _In_ OnCreateCallback cCreateCallback,
+                            _In_opt_ CUserData *lpUserData = NULL, _Out_opt_ HANDLE *h = NULL);
+    HRESULT ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreateCallback cCreateCallback,
+                            _In_opt_ CUserData *lpUserData = NULL, _Out_opt_ HANDLE *h = NULL);
+    HRESULT CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDLE &h, _Out_ HANDLE &hRemotePipe,
+                                         _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData = NULL);
 
-  //----
+    HRESULT ImpersonateConnectionClient(_In_ HANDLE h);
 
-private:
-  class CConnection : public CConnectionBase, public CNonCopyableObj
-  {
-  public:
-    CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass);
-    ~CConnection();
-
-    HRESULT CreateServer();
-    HRESULT CreateClient(_In_z_ LPCWSTR szServerNameW, _In_ DWORD dwMaxWriteTimeoutMs,
-                         _In_ PSECURITY_DESCRIPTOR lpSecDescr);
-    VOID ShutdownLink(_In_ BOOL bAbortive);
-
-    HRESULT SendReadPacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwRead);
-    HRESULT SendWritePacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwWritten);
-    SIZE_T GetMultiWriteMaxCount() const
-      {
-      return 1;
-      };
-
-  protected:
-    friend class CNamedPipes;
-
-    RWLOCK sRwHandleInUse;
-    HANDLE hPipe;
-    TAutoRefCounted<CServerInfo> cServerInfo;
-  };
-
-  //----
-
-private:
-  HRESULT OnInternalInitialize();
-  VOID OnInternalFinalize();
-
-  HRESULT CreateServerConnection(_In_ CServerInfo *lpServerInfo, _In_ OnCreateCallback cCreateCallback);
-
-  HRESULT OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket, _In_ HRESULT hRes);
-
-  BOOL ZeroReadsSupported() const
+  private:
+    class CServerInfo : public virtual TRefCounted<CBaseMemObj>, public CNonCopyableObj
     {
-    return FALSE;
+      public:
+        CServerInfo();
+        ~CServerInfo();
+
+        HRESULT Init(_In_z_ LPCWSTR szServerNameW, _In_ PSECURITY_DESCRIPTOR lpSecDescr);
+
+      public:
+        CStringW cStrNameW;
+        PSECURITY_DESCRIPTOR lpSecDescr;
     };
 
-private:
-  LONG volatile nRemoteConnCounter{ 0 };
-  DWORD dwConnectTimeoutMs{ 1000 };
-  PSECURITY_DESCRIPTOR lpSecDescr{ NULL };
+    //----
+
+  private:
+    class CConnection : public CConnectionBase, public CNonCopyableObj
+    {
+      public:
+        CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass);
+        ~CConnection();
+
+        HRESULT CreateServer();
+        HRESULT CreateClient(_In_z_ LPCWSTR szServerNameW, _In_ DWORD dwMaxWriteTimeoutMs,
+                             _In_ PSECURITY_DESCRIPTOR lpSecDescr);
+        VOID ShutdownLink(_In_ BOOL bAbortive);
+
+        HRESULT SendReadPacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwRead);
+        HRESULT SendWritePacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwWritten);
+        SIZE_T GetMultiWriteMaxCount() const
+        {
+            return 1;
+        };
+
+      protected:
+        friend class CNamedPipes;
+
+        RWLOCK sRwHandleInUse;
+        HANDLE hPipe;
+        TAutoRefCounted<CServerInfo> cServerInfo;
+    };
+
+    //----
+
+  private:
+    HRESULT OnInternalInitialize();
+    VOID OnInternalFinalize();
+
+    HRESULT CreateServerConnection(_In_ CServerInfo *lpServerInfo, _In_ OnCreateCallback cCreateCallback);
+
+    HRESULT OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket, _In_ HRESULT hRes);
+
+    BOOL ZeroReadsSupported() const
+    {
+        return FALSE;
+    };
+
+  private:
+    LONG volatile nRemoteConnCounter{0};
+    DWORD dwConnectTimeoutMs{1000};
+    PSECURITY_DESCRIPTOR lpSecDescr{NULL};
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

@@ -24,31 +24,32 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderGenUpgrade : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderGenUpgrade();
-  ~CHttpHeaderGenUpgrade();
+  public:
+    CHttpHeaderGenUpgrade();
+    ~CHttpHeaderGenUpgrade();
 
-  MX_DECLARE_HTTPHEADER_NAME(Upgrade)
+    MX_DECLARE_HTTPHEADER_NAME(Upgrade)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT AddProduct(_In_z_ LPCSTR szProductA, _In_ SIZE_T nProductLen = (SIZE_T)-1);
+    HRESULT AddProduct(_In_z_ LPCSTR szProductA, _In_ SIZE_T nProductLen = (SIZE_T)-1);
 
-  SIZE_T GetProductsCount() const;
-  LPCSTR GetProduct(_In_ SIZE_T nIndex) const;
-  BOOL HasProduct(_In_z_ LPCSTR szProductA) const;
+    SIZE_T GetProductsCount() const;
+    LPCSTR GetProduct(_In_ SIZE_T nIndex) const;
+    BOOL HasProduct(_In_z_ LPCSTR szProductA) const;
 
-private:
-  TArrayListWithFree<LPSTR> cProductsList;
+  private:
+    TArrayListWithFree<LPSTR> cProductsList;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

@@ -25,16 +25,14 @@
 //-----------------------------------------------------------
 
 #if defined(_M_IX86)
-  #define MX_LINKER_SYMBOL_PREFIX "_"
+#define MX_LINKER_SYMBOL_PREFIX "_"
 #elif defined(_M_X64) || defined(_M_ARM) || defined(_M_ARM64)
-  #define MX_LINKER_SYMBOL_PREFIX ""
+#define MX_LINKER_SYMBOL_PREFIX ""
 #else
-  #error Unsupported platform
+#error Unsupported platform
 #endif
 
-#define MX_LINKER_FORCE_INCLUDE(name)                       \
-    __pragma(comment(linker, "/include:"                    \
-                             MX_LINKER_SYMBOL_PREFIX #name))
+#define MX_LINKER_FORCE_INCLUDE(name) __pragma(comment(linker, "/include:" MX_LINKER_SYMBOL_PREFIX #name))
 
 typedef int (*_PIFV)(void);
 

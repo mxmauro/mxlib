@@ -25,39 +25,40 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderEntAllow : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderEntAllow();
-  ~CHttpHeaderEntAllow();
+  public:
+    CHttpHeaderEntAllow();
+    ~CHttpHeaderEntAllow();
 
-  MX_DECLARE_HTTPHEADER_NAME(Allow)
+    MX_DECLARE_HTTPHEADER_NAME(Allow)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  eDuplicateBehavior GetDuplicateBehavior() const
+    eDuplicateBehavior GetDuplicateBehavior() const
     {
-    return eDuplicateBehavior::Merge;
+        return eDuplicateBehavior::Merge;
     };
 
-  HRESULT AddVerb(_In_z_ LPCSTR szVerbA, _In_ SIZE_T nVerbLen = (SIZE_T)-1);
+    HRESULT AddVerb(_In_z_ LPCSTR szVerbA, _In_ SIZE_T nVerbLen = (SIZE_T)-1);
 
-  SIZE_T GetVerbsCount() const;
-  LPCSTR GetVerb(_In_ SIZE_T nIndex) const;
+    SIZE_T GetVerbsCount() const;
+    LPCSTR GetVerb(_In_ SIZE_T nIndex) const;
 
-  BOOL HasVerb(_In_z_ LPCSTR szVerbA, _In_ SIZE_T nVerbLen = (SIZE_T)-1) const;
+    BOOL HasVerb(_In_z_ LPCSTR szVerbA, _In_ SIZE_T nVerbLen = (SIZE_T)-1) const;
 
-  HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
+    HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
 
-private:
-  TArrayListWithFree<LPCSTR> aVerbsList;
+  private:
+    TArrayListWithFree<LPCSTR> aVerbsList;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

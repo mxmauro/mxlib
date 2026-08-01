@@ -24,39 +24,40 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpAuthBasic : public CHttpAuthBase, public CNonCopyableObj
 {
-public:
-  CHttpAuthBasic();
-  ~CHttpAuthBasic();
+  public:
+    CHttpAuthBasic();
+    ~CHttpAuthBasic();
 
-  LPCSTR GetScheme() const
+    LPCSTR GetScheme() const
     {
-    return "Basic";
+        return "Basic";
     };
 
-  HRESULT Parse(_In_ CHttpHeaderRespWwwProxyAuthenticateCommon *lpHeader);
+    HRESULT Parse(_In_ CHttpHeaderRespWwwProxyAuthenticateCommon *lpHeader);
 
-  HRESULT GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCWSTR szUserNameW, _In_z_ LPCWSTR szPasswordW);
+    HRESULT GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCWSTR szUserNameW, _In_z_ LPCWSTR szPasswordW);
 
-  LPCWSTR GetRealm() const
+    LPCWSTR GetRealm() const
     {
-    return (LPCWSTR)cStrRealmW;
+        return (LPCWSTR)cStrRealmW;
     };
 
-  BOOL IsCharsetUTF8() const
+    BOOL IsCharsetUTF8() const
     {
-    return bCharsetIsUtf8;
+        return bCharsetIsUtf8;
     };
 
-private:
-  CStringW cStrRealmW;
-  BOOL bCharsetIsUtf8;
+  private:
+    CStringW cStrRealmW;
+    BOOL bCharsetIsUtf8;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

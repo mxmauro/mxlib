@@ -23,26 +23,27 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CHttpBodyParserIgnore::CHttpBodyParserIgnore() : CHttpBodyParserBase()
 {
-  return;
+    return;
 }
 
 CHttpBodyParserIgnore::~CHttpBodyParserIgnore()
 {
-  return;
+    return;
 }
 
 HRESULT CHttpBodyParserIgnore::Initialize(_In_ Internals::CHttpParser &cHttpParser)
 {
-  return S_OK;
+    return S_OK;
 }
 
 HRESULT CHttpBodyParserIgnore::Parse(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize)
 {
-  return (lpData == NULL && nDataSize > 0) ? E_POINTER : S_OK;
+    return (lpData == NULL && nDataSize > 0) ? E_POINTER : S_OK;
 }
 
-} //namespace MX
+} // namespace MX

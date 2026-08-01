@@ -25,28 +25,29 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderRespSecWebSocketProtocol : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderRespSecWebSocketProtocol();
-  ~CHttpHeaderRespSecWebSocketProtocol();
+  public:
+    CHttpHeaderRespSecWebSocketProtocol();
+    ~CHttpHeaderRespSecWebSocketProtocol();
 
-  MX_DECLARE_HTTPHEADER_NAME(Sec-WebSocket-Protocol)
+    MX_DECLARE_HTTPHEADER_NAME(Sec - WebSocket - Protocol)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT SetProtocol(_In_z_ LPCSTR szProtocolA, _In_opt_ SIZE_T nProtocolLen = (SIZE_T)-1);
-  LPCSTR GetProtocol() const;
+    HRESULT SetProtocol(_In_z_ LPCSTR szProtocolA, _In_opt_ SIZE_T nProtocolLen = (SIZE_T)-1);
+    LPCSTR GetProtocol() const;
 
-private:
-  CStringA cStrProtocolA;
+  private:
+    CStringA cStrProtocolA;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

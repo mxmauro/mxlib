@@ -25,41 +25,43 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderEntContentType : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderEntContentType();
-  ~CHttpHeaderEntContentType();
+  public:
+    CHttpHeaderEntContentType();
+    ~CHttpHeaderEntContentType();
 
-  MX_DECLARE_HTTPHEADER_NAME(Content-Type)
+    MX_DECLARE_HTTPHEADER_NAME(Content - Type)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT SetType(_In_z_ LPCSTR szTypeA, _In_ SIZE_T nTypeLen = (SIZE_T)-1);
-  LPCSTR GetType() const;
+    HRESULT SetType(_In_z_ LPCSTR szTypeA, _In_ SIZE_T nTypeLen = (SIZE_T)-1);
+    LPCSTR GetType() const;
 
-  HRESULT AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);
+    HRESULT AddParam(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW);
 
-  SIZE_T GetParamsCount() const;
-  LPCSTR GetParamName(_In_ SIZE_T nIndex) const;
-  LPCWSTR GetParamValue(_In_ SIZE_T nIndex) const;
-  LPCWSTR GetParamValue(_In_z_ LPCSTR szNameA) const;
+    SIZE_T GetParamsCount() const;
+    LPCSTR GetParamName(_In_ SIZE_T nIndex) const;
+    LPCWSTR GetParamValue(_In_ SIZE_T nIndex) const;
+    LPCWSTR GetParamValue(_In_z_ LPCSTR szNameA) const;
 
-private:
-  typedef struct {
-    LPWSTR szValueW;
-    CHAR szNameA[1];
-  } PARAMETER, *LPPARAMETER;
+  private:
+    typedef struct
+    {
+        LPWSTR szValueW;
+        CHAR szNameA[1];
+    } PARAMETER, *LPPARAMETER;
 
-  CStringA cStrTypeA;
-  TArrayListWithFree<LPPARAMETER> aParamsList;
+    CStringA cStrTypeA;
+    TArrayListWithFree<LPPARAMETER> aParamsList;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

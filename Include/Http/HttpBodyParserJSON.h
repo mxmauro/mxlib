@@ -27,46 +27,49 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpBodyParserJSON : public MX::CHttpBodyParserBase
 {
-public:
-  CHttpBodyParserJSON();
-  ~CHttpBodyParserJSON();
+  public:
+    CHttpBodyParserJSON();
+    ~CHttpBodyParserJSON();
 
-  LPCSTR GetType() const
+    LPCSTR GetType() const
     {
-    return "application/json";
+        return "application/json";
     };
 
-  rapidjson::Document& GetDocument() const
+    rapidjson::Document &GetDocument() const
     {
-    return const_cast<rapidjson::Document&>(d);
+        return const_cast<rapidjson::Document &>(d);
     };
 
-  operator rapidjson::Document&()
+    operator rapidjson::Document &()
     {
-    return d;
+        return d;
     };
 
-protected:
-  HRESULT Initialize(_In_ MX::Internals::CHttpParser &cHttpParser);
-  HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
+  protected:
+    HRESULT Initialize(_In_ MX::Internals::CHttpParser &cHttpParser);
+    HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
 
-private:
-  enum class eState
-  {
-    Data, Done, Error
-  };
+  private:
+    enum class eState
+    {
+        Data,
+        Done,
+        Error
+    };
 
-private:
-  eState nState;
-  CSecureStringA cStrTempA;
-  rapidjson::Document d;
+  private:
+    eState nState;
+    CSecureStringA cStrTempA;
+    rapidjson::Document d;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

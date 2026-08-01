@@ -21,112 +21,139 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CHttpHeaderEntContentLanguage::CHttpHeaderEntContentLanguage() : CHttpHeaderBase()
 {
-  return;
+    return;
 }
 
 CHttpHeaderEntContentLanguage::~CHttpHeaderEntContentLanguage()
 {
-  return;
+    return;
 }
 
 HRESULT CHttpHeaderEntContentLanguage::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szValueEndA, szStartA;
-  HRESULT hRes;
+    LPCSTR szValueEndA, szStartA;
+    HRESULT hRes;
 
-  if (szValueA == NULL)
-    return E_POINTER;
+    if (szValueA == NULL)
+    {
+        return E_POINTER;
+    }
 
-  if (nValueLen == (SIZE_T)-1)
-    nValueLen = StrLenA(szValueA);
-  szValueEndA = szValueA + nValueLen;
+    if (nValueLen == (SIZE_T)-1)
+    {
+        nValueLen = StrLenA(szValueA);
+    }
+    szValueEndA = szValueA + nValueLen;
 
-  //skip spaces
-  szValueA = SkipSpaces(szValueA, szValueEndA);
+    // skip spaces
+    szValueA = SkipSpaces(szValueA, szValueEndA);
 
-  //mark start
-  szStartA = szValueA;
+    // mark start
+    szStartA = szValueA;
 
-  //get language
-  while (szValueA < szValueEndA && *szValueA >= 0x21 && *szValueA <= 0x7E)
-    szValueA++;
+    // get language
+    while (szValueA < szValueEndA && *szValueA >= 0x21 && *szValueA <= 0x7E)
+    {
+        szValueA++;
+    }
 
-  //set language
-  hRes = SetLanguage(szStartA, (SIZE_T)(szValueA - szStartA));
-  if (FAILED(hRes))
-    return hRes;
+    // set language
+    hRes = SetLanguage(szStartA, (SIZE_T)(szValueA - szStartA));
+    if (FAILED(hRes))
+    {
+        return hRes;
+    }
 
-  //skip spaces and check for end
-  if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
-    return MX_E_InvalidData;
+    // skip spaces and check for end
+    if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
+    {
+        return MX_E_InvalidData;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CHttpHeaderEntContentLanguage::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
-  if (cStrDestA.CopyN((LPCSTR)cStrLanguageA, cStrLanguageA.GetLength()) == FALSE)
-    return E_OUTOFMEMORY;
+    if (cStrDestA.CopyN((LPCSTR)cStrLanguageA, cStrLanguageA.GetLength()) == FALSE)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CHttpHeaderEntContentLanguage::SetLanguage(_In_z_ LPCSTR szLanguageA, _In_ SIZE_T nLanguageLen)
 {
-  LPCSTR szLanguageEndA, szStartA[2];
+    LPCSTR szLanguageEndA, szStartA[2];
 
-  if (nLanguageLen == (SIZE_T)-1)
-    nLanguageLen = StrLenA(szLanguageA);
-  if (nLanguageLen == 0)
-    return MX_E_InvalidData;
-  if (szLanguageA == NULL)
-    return E_POINTER;
-  szLanguageEndA = szLanguageA + nLanguageLen;
-
-  //get language
-  szStartA[0] = szLanguageA;
-  while (szLanguageA < szLanguageEndA &&
-         ((*szLanguageA >= 'A' && *szLanguageA <= 'Z') || (*szLanguageA >= 'a' && *szLanguageA <= 'z')))
-  {
-    szLanguageA++;
-  }
-  if (szLanguageA == szStartA[0] || szLanguageA > szStartA[0] + 8)
-    return MX_E_InvalidData;
-
-  while (szLanguageA < szLanguageEndA && *szLanguageA == '-')
-  {
-    szStartA[1] = ++szLanguageA;
-    while (szLanguageA < szLanguageEndA &&
-           ((*szLanguageA >= 'A' && *szLanguageA <= 'Z') || (*szLanguageA >= 'a' && *szLanguageA <= 'z') ||
-            (*szLanguageA >= '0' && *szLanguageA <= '9')))
+    if (nLanguageLen == (SIZE_T)-1)
     {
-      szLanguageA++;
+        nLanguageLen = StrLenA(szLanguageA);
     }
-    if (szLanguageA == szStartA[1] || szLanguageA > szStartA[1] + 8)
-      return MX_E_InvalidData;
-  }
+    if (nLanguageLen == 0)
+    {
+        return MX_E_InvalidData;
+    }
+    if (szLanguageA == NULL)
+    {
+        return E_POINTER;
+    }
+    szLanguageEndA = szLanguageA + nLanguageLen;
 
-  //check for end
-  if (szLanguageA != szLanguageEndA)
-    return MX_E_InvalidData;
+    // get language
+    szStartA[0] = szLanguageA;
+    while (szLanguageA < szLanguageEndA &&
+           ((*szLanguageA >= 'A' && *szLanguageA <= 'Z') || (*szLanguageA >= 'a' && *szLanguageA <= 'z')))
+    {
+        szLanguageA++;
+    }
+    if (szLanguageA == szStartA[0] || szLanguageA > szStartA[0] + 8)
+    {
+        return MX_E_InvalidData;
+    }
 
-  //set new value
-  if (cStrLanguageA.CopyN(szStartA[0], (SIZE_T)(szLanguageEndA - szStartA[0])) == FALSE)
-    return E_OUTOFMEMORY;
+    while (szLanguageA < szLanguageEndA && *szLanguageA == '-')
+    {
+        szStartA[1] = ++szLanguageA;
+        while (szLanguageA < szLanguageEndA &&
+               ((*szLanguageA >= 'A' && *szLanguageA <= 'Z') || (*szLanguageA >= 'a' && *szLanguageA <= 'z') ||
+                (*szLanguageA >= '0' && *szLanguageA <= '9')))
+        {
+            szLanguageA++;
+        }
+        if (szLanguageA == szStartA[1] || szLanguageA > szStartA[1] + 8)
+        {
+            return MX_E_InvalidData;
+        }
+    }
 
-  //done
-  return S_OK;
+    // check for end
+    if (szLanguageA != szLanguageEndA)
+    {
+        return MX_E_InvalidData;
+    }
+
+    // set new value
+    if (cStrLanguageA.CopyN(szStartA[0], (SIZE_T)(szLanguageEndA - szStartA[0])) == FALSE)
+    {
+        return E_OUTOFMEMORY;
+    }
+
+    // done
+    return S_OK;
 }
 
 LPCSTR CHttpHeaderEntContentLanguage::GetLanguage() const
 {
-  return (LPCSTR)cStrLanguageA;
+    return (LPCSTR)cStrLanguageA;
 }
 
-} //namespace MX
+} // namespace MX

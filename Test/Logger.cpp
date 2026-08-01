@@ -33,47 +33,60 @@ static VOID ShutdownLogger();
 
 //-----------------------------------------------------------
 
-namespace Logger {
+namespace Logger
+{
 
 VOID Log(_In_z_ LPCWSTR szFormatW, ...)
 {
-  MX::CFastLock cLock(&nLogLock);
-  va_list args;
+    MX::CFastLock cLock(&nLogLock);
+    va_list args;
 
-  if (fp == NULL)
-  {
-    MX::CStringW cStrFileNameW;
-
-    if (bShutdownRegistered == FALSE)
-    {
-      if (FAILED(MX::RegisterFinalizer(&ShutdownLogger, 10)))
-        return;
-      bShutdownRegistered = TRUE;
-    }
-
-    if (FAILED(GetAppPath(cStrFileNameW)))
-      return;
-    if (cStrFileNameW.ConcatN(L"Logs", 4) == FALSE)
-      return;
-    ::CreateDirectoryW((LPCWSTR)cStrFileNameW, NULL);
-    if (cStrFileNameW.ConcatN(L"\\output.log", 11) == FALSE)
-      return;
-    fp = _wfsopen((LPCWSTR)cStrFileNameW, L"a+", _SH_DENYWR);
     if (fp == NULL)
-      return;
-  }
-  va_start(args, szFormatW);
-  vfwprintf_s(fp, szFormatW, args);
-  va_end(args);
+    {
+        MX::CStringW cStrFileNameW;
+
+        if (bShutdownRegistered == FALSE)
+        {
+            if (FAILED(MX::RegisterFinalizer(&ShutdownLogger, 10)))
+            {
+                return;
+            }
+            bShutdownRegistered = TRUE;
+        }
+
+        if (FAILED(GetAppPath(cStrFileNameW)))
+        {
+            return;
+        }
+        if (cStrFileNameW.ConcatN(L"Logs", 4) == FALSE)
+        {
+            return;
+        }
+        ::CreateDirectoryW((LPCWSTR)cStrFileNameW, NULL);
+        if (cStrFileNameW.ConcatN(L"\\output.log", 11) == FALSE)
+        {
+            return;
+        }
+        fp = _wfsopen((LPCWSTR)cStrFileNameW, L"a+", _SH_DENYWR);
+        if (fp == NULL)
+        {
+            return;
+        }
+    }
+    va_start(args, szFormatW);
+    vfwprintf_s(fp, szFormatW, args);
+    va_end(args);
 }
 
-}; //namespace Logger
+}; // namespace Logger
 
 //-----------------------------------------------------------
 
 static VOID ShutdownLogger()
 {
-  if (fp != NULL)
-    fclose(fp);
-  return;
+    if (fp != NULL)
+    {
+        fclose(fp);
+    }
+    return;
 }

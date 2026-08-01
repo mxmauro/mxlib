@@ -25,15 +25,16 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-//Convert Unicode to Punycode. Returns the number of Unicode characters that were converted.
-HRESULT Punycode_Encode(_Inout_ CStringA &cStrDestA, _In_z_ LPCWSTR szSrcW, _In_opt_ SIZE_T nSrcLen=(SIZE_T)-1);
+// Convert Unicode to Punycode. Returns the number of Unicode characters that were converted.
+HRESULT Punycode_Encode(_Inout_ CStringA &cStrDestA, _In_z_ LPCWSTR szSrcW, _In_opt_ SIZE_T nSrcLen = (SIZE_T)-1);
 
-//Convert Punycode to Unicode. Returns the number of bytes that were converted.
-HRESULT Punycode_Decode(_Inout_ CStringW &cStrDestW, _In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T =(SIZE_T)-1);
+// Convert Punycode to Unicode. Returns the number of bytes that were converted.
+HRESULT Punycode_Decode(_Inout_ CStringW &cStrDestW, _In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T = (SIZE_T)-1);
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

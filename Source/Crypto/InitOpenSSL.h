@@ -27,25 +27,28 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-namespace Internals {
+namespace Internals
+{
 
-namespace OpenSSL {
+namespace OpenSSL
+{
 
 HRESULT Init();
 
 HRESULT GetLastErrorCode(_In_ HRESULT hResDefault);
 
-SSL_CTX* GetSslContext(_In_ BOOL bServerSide);
+SSL_CTX *GetSslContext(_In_ BOOL bServerSide);
 
 BOOL IsPEM(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
 
-} //namespace OpenSSL
+} // namespace OpenSSL
 
-} //namespace Internals
+} // namespace Internals
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

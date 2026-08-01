@@ -27,49 +27,57 @@ typedef struct evp_pkey_st EVP_PKEY;
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CEncryptionKey : public virtual TRefCounted<CBaseMemObj>
 {
-public:
-  typedef enum {
-    Unknown = -1,
-    RSA = 0, ED25519, ED448, Poly1305, DSA, DH, DHX
-  } eAlgorithm;
-
-public:
-  CEncryptionKey();
-  CEncryptionKey(_In_ const CEncryptionKey &cSrc) throw(...);
-  ~CEncryptionKey();
-
-  CEncryptionKey &operator=(_In_ CEncryptionKey const &cSrc) throw(...);
-
-  HRESULT Generate(_In_ MX::CEncryptionKey::eAlgorithm nAlgorithm, _In_opt_ SIZE_T nBitsCount = 0);
-  SIZE_T GetBitsCount() const;
-
-  BOOL HasPrivateKey() const;
-
-  // This method auto detects PEM and DER formats
-  HRESULT Set(_In_ LPCVOID lpKey, _In_ SIZE_T nKeySize, _In_opt_z_ LPCSTR szPasswordA = NULL);
-  VOID Set(_In_ EVP_PKEY *lpKey);
-
-  HRESULT GetPublicKey(_Out_ CSecureBuffer **lplpBuffer);
-  HRESULT GetPrivateKey(_Out_ CSecureBuffer **lplpBuffer);
-  HRESULT GetKeyParams(_Out_ CSecureBuffer **lplpBuffer);
-
-  EVP_PKEY* GetPKey() const
+  public:
+    typedef enum
     {
-    return lpKey;
+        Unknown = -1,
+        RSA = 0,
+        ED25519,
+        ED448,
+        Poly1305,
+        DSA,
+        DH,
+        DHX
+    } eAlgorithm;
+
+  public:
+    CEncryptionKey();
+    CEncryptionKey(_In_ const CEncryptionKey &cSrc) throw(...);
+    ~CEncryptionKey();
+
+    CEncryptionKey &operator=(_In_ CEncryptionKey const &cSrc) throw(...);
+
+    HRESULT Generate(_In_ MX::CEncryptionKey::eAlgorithm nAlgorithm, _In_opt_ SIZE_T nBitsCount = 0);
+    SIZE_T GetBitsCount() const;
+
+    BOOL HasPrivateKey() const;
+
+    // This method auto detects PEM and DER formats
+    HRESULT Set(_In_ LPCVOID lpKey, _In_ SIZE_T nKeySize, _In_opt_z_ LPCSTR szPasswordA = NULL);
+    VOID Set(_In_ EVP_PKEY *lpKey);
+
+    HRESULT GetPublicKey(_Out_ CSecureBuffer **lplpBuffer);
+    HRESULT GetPrivateKey(_Out_ CSecureBuffer **lplpBuffer);
+    HRESULT GetKeyParams(_Out_ CSecureBuffer **lplpBuffer);
+
+    EVP_PKEY *GetPKey() const
+    {
+        return lpKey;
     };
 
-  int GetBaseId() const;
-  eAlgorithm GetAlgorithm() const;
+    int GetBaseId() const;
+    eAlgorithm GetAlgorithm() const;
 
-private:
-  EVP_PKEY *lpKey{ NULL };
+  private:
+    EVP_PKEY *lpKey{NULL};
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

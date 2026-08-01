@@ -27,8 +27,8 @@
 
 //-----------------------------------------------------------
 
-typedef BOOLEAN (__stdcall *lpfnRtlGenRandom)(_Out_writes_bytes_(RandomBufferLength) PVOID RandomBuffer,
-                                              _In_ ULONG RandomBufferLength);
+typedef BOOLEAN(__stdcall *lpfnRtlGenRandom)(_Out_writes_bytes_(RandomBufferLength) PVOID RandomBuffer,
+                                             _In_ ULONG RandomBufferLength);
 
 //-----------------------------------------------------------
 
@@ -40,69 +40,73 @@ static BOOL InitializeSecureRandom();
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-namespace SecureRandom {
+namespace SecureRandom
+{
 
 VOID Generate(_Out_writes_bytes_(nSize) LPBYTE lpOut, _In_ SIZE_T nSize)
 {
-  if (lpOut != NULL && nSize > 0)
-  {
-    if (InitializeSecureRandom() != FALSE)
+    if (lpOut != NULL && nSize > 0)
     {
-      while (nSize > 0)
-      {
-        ULONG nThisRoundSize = (nSize > 32768) ? 32768 : (ULONG)nSize;
-        if (fnRtlGenRandom(lpOut, nThisRoundSize) == FALSE)
-          break;
-        lpOut += (SIZE_T)nThisRoundSize;
-        nSize -= (SIZE_T)nThisRoundSize;
-      }
-    }
-    while (nSize > 0)
-    {
-      unsigned int v;
+        if (InitializeSecureRandom() != FALSE)
+        {
+            while (nSize > 0)
+            {
+                ULONG nThisRoundSize = (nSize > 32768) ? 32768 : (ULONG)nSize;
+                if (fnRtlGenRandom(lpOut, nThisRoundSize) == FALSE)
+                {
+                    break;
+                }
+                lpOut += (SIZE_T)nThisRoundSize;
+                nSize -= (SIZE_T)nThisRoundSize;
+            }
+        }
+        while (nSize > 0)
+        {
+            unsigned int v;
 
-      rand_s(&v);
-      *lpOut++ = (BYTE)v;
-      nSize--;
+            rand_s(&v);
+            *lpOut++ = (BYTE)v;
+            nSize--;
+        }
     }
-  }
-  return;
+    return;
 }
 
-} //namespace SecureRandom
+} // namespace SecureRandom
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 
 static BOOL InitializeSecureRandom()
 {
-  static LONG volatile nMutex = 0;
-
-  if (fnRtlGenRandom == NULL)
-  {
-    MX::CFastLock cLock(&nMutex);
+    static LONG volatile nMutex = 0;
 
     if (fnRtlGenRandom == NULL)
     {
-      lpfnRtlGenRandom _fnRtlGenRandom = (lpfnRtlGenRandom)1;
-      HINSTANCE hAdvApi32Dll;
+        MX::CFastLock cLock(&nMutex);
 
-      //load library
-      if (SUCCEEDED(MX::Internals::LoadSystemDll(L"advapi32.dll", &hAdvApi32Dll)))
-      {
-        _fnRtlGenRandom = (lpfnRtlGenRandom)::GetProcAddress(hAdvApi32Dll, "SystemFunction036");
-        if (_fnRtlGenRandom == NULL)
+        if (fnRtlGenRandom == NULL)
         {
-          _fnRtlGenRandom = (lpfnRtlGenRandom)1;
-          ::FreeLibrary(hAdvApi32Dll);
+            lpfnRtlGenRandom _fnRtlGenRandom = (lpfnRtlGenRandom)1;
+            HINSTANCE hAdvApi32Dll;
+
+            // load library
+            if (SUCCEEDED(MX::Internals::LoadSystemDll(L"advapi32.dll", &hAdvApi32Dll)))
+            {
+                _fnRtlGenRandom = (lpfnRtlGenRandom)::GetProcAddress(hAdvApi32Dll, "SystemFunction036");
+                if (_fnRtlGenRandom == NULL)
+                {
+                    _fnRtlGenRandom = (lpfnRtlGenRandom)1;
+                    ::FreeLibrary(hAdvApi32Dll);
+                }
+            }
+
+            fnRtlGenRandom = _fnRtlGenRandom;
         }
-      }
-    
-      fnRtlGenRandom = _fnRtlGenRandom;
     }
-  }
-  return (fnRtlGenRandom != (lpfnRtlGenRandom)1) ? TRUE : FALSE;
+    return (fnRtlGenRandom != (lpfnRtlGenRandom)1) ? TRUE : FALSE;
 }

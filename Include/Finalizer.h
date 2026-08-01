@@ -24,13 +24,14 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-typedef VOID (__cdecl *lpfnFinalizer)();
+typedef VOID(__cdecl *lpfnFinalizer)();
 
 HRESULT RegisterFinalizer(_In_ lpfnFinalizer fnFinalizer, _In_ SIZE_T nPriority);
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

@@ -20,8 +20,8 @@
 #ifndef __FNV_H__
 #define __FNV_H__
 
-//NOTE: This is a stripped down version. Refer to original
-//      webpage for full version
+// NOTE: This is a stripped down version. Refer to original
+//       webpage for full version
 
 //-----------------------------------------------------------
 
@@ -30,7 +30,7 @@
 
 #define FNV_VERSION "5.0.2"
 
-typedef ULONG     Fnv32_t;
+typedef ULONG Fnv32_t;
 typedef ULONGLONG Fnv64_t;
 
 #define FNV1A_32_INIT ((Fnv32_t)0x811C9DC5)

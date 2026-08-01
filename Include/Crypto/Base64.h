@@ -25,63 +25,64 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CBase64Encoder : public MX::CBaseMemObj
 {
-public:
-  CBase64Encoder();
-  ~CBase64Encoder();
+  public:
+    CBase64Encoder();
+    ~CBase64Encoder();
 
-  HRESULT Begin(_In_opt_ SIZE_T nPreallocateOutputLen=0);
-  HRESULT Process(_In_ LPVOID lpData, _In_ SIZE_T nDataLen);
-  HRESULT End();
+    HRESULT Begin(_In_opt_ SIZE_T nPreallocateOutputLen = 0);
+    HRESULT Process(_In_ LPVOID lpData, _In_ SIZE_T nDataLen);
+    HRESULT End();
 
-  LPCSTR GetBuffer() const;
-  SIZE_T GetOutputLength() const;
-  VOID ConsumeOutput(_In_ SIZE_T nChars);
+    LPCSTR GetBuffer() const;
+    SIZE_T GetOutputLength() const;
+    VOID ConsumeOutput(_In_ SIZE_T nChars);
 
-  static SIZE_T GetRequiredSpace(_In_ SIZE_T nDataLen);
+    static SIZE_T GetRequiredSpace(_In_ SIZE_T nDataLen);
 
-private:
-  __inline BOOL AddToBuffer(_In_ CHAR szDataA[4]);
+  private:
+    __inline BOOL AddToBuffer(_In_ CHAR szDataA[4]);
 
-private:
-  LPSTR szBufferA;
-  SIZE_T nSize, nLength;
-  BYTE aInput[3];
-  SIZE_T nInputLength;
+  private:
+    LPSTR szBufferA;
+    SIZE_T nSize, nLength;
+    BYTE aInput[3];
+    SIZE_T nInputLength;
 };
 
 //-----------------------------------------------------------
 
 class CBase64Decoder : public MX::CBaseMemObj
 {
-public:
-  CBase64Decoder();
-  ~CBase64Decoder();
+  public:
+    CBase64Decoder();
+    ~CBase64Decoder();
 
-  HRESULT Begin(_In_opt_ SIZE_T nPreallocateOutputLen=0);
-  HRESULT Process(_In_ LPCSTR szDataA, _In_opt_ SIZE_T nDataLen=-1);
-  HRESULT End();
+    HRESULT Begin(_In_opt_ SIZE_T nPreallocateOutputLen = 0);
+    HRESULT Process(_In_ LPCSTR szDataA, _In_opt_ SIZE_T nDataLen = -1);
+    HRESULT End();
 
-  LPBYTE GetBuffer() const;
-  SIZE_T GetOutputLength() const;
-  VOID ConsumeOutput(_In_ SIZE_T nBytes);
+    LPBYTE GetBuffer() const;
+    SIZE_T GetOutputLength() const;
+    VOID ConsumeOutput(_In_ SIZE_T nBytes);
 
-  static SIZE_T GetRequiredSpace(_In_ SIZE_T nDataLen);
+    static SIZE_T GetRequiredSpace(_In_ SIZE_T nDataLen);
 
-private:
-  __inline BOOL AddToBuffer(_In_ LPBYTE aData, _In_ SIZE_T nLen);
+  private:
+    __inline BOOL AddToBuffer(_In_ LPBYTE aData, _In_ SIZE_T nLen);
 
-private:
-  LPBYTE lpBuffer;
-  SIZE_T nSize, nLength;
-  BYTE aInput[4];
-  SIZE_T nInputLength, nEqualCounter;
+  private:
+    LPBYTE lpBuffer;
+    SIZE_T nSize, nLength;
+    BYTE aInput[4];
+    SIZE_T nInputLength, nEqualCounter;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

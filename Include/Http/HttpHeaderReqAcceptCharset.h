@@ -25,63 +25,64 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderReqAcceptCharset : public CHttpHeaderBase
 {
-public:
-  class CCharset : public virtual CBaseMemObj
-  {
   public:
-    CCharset();
-    ~CCharset();
-
-    CCharset& operator=(_In_ const CCharset &cSrc) throw(...);
-
-    HRESULT SetCharset(_In_z_ LPCSTR szCharsetA, _In_opt_ SIZE_T nCharsetLen = (SIZE_T)-1);
-    LPCSTR GetCharset() const;
-
-    HRESULT SetQ(_In_ double q);
-    double GetQ() const;
-
-  private:
-    friend class CHttpHeaderReqAcceptCharset;
-
-    CStringA cStrCharsetA;
-    double q;
-  };
-
-  //----
-
-public:
-  CHttpHeaderReqAcceptCharset();
-  ~CHttpHeaderReqAcceptCharset();
-
-  MX_DECLARE_HTTPHEADER_NAME(Accept-Charset)
-
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
-
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
-
-  eDuplicateBehavior GetDuplicateBehavior() const
+    class CCharset : public virtual CBaseMemObj
     {
-    return eDuplicateBehavior::Merge;
+      public:
+        CCharset();
+        ~CCharset();
+
+        CCharset &operator=(_In_ const CCharset &cSrc) throw(...);
+
+        HRESULT SetCharset(_In_z_ LPCSTR szCharsetA, _In_opt_ SIZE_T nCharsetLen = (SIZE_T)-1);
+        LPCSTR GetCharset() const;
+
+        HRESULT SetQ(_In_ double q);
+        double GetQ() const;
+
+      private:
+        friend class CHttpHeaderReqAcceptCharset;
+
+        CStringA cStrCharsetA;
+        double q;
     };
 
-  HRESULT AddCharset(_In_z_ LPCSTR szCharsetA, _In_opt_ SIZE_T nCharsetLen = (SIZE_T)-1,
-                     _Out_opt_ CCharset **lplpCharset = NULL);
+    //----
 
-  SIZE_T GetCharsetsCount() const;
-  CCharset* GetCharset(_In_ SIZE_T nIndex) const;
-  CCharset* GetCharset(_In_z_ LPCSTR szCharsetA) const;
+  public:
+    CHttpHeaderReqAcceptCharset();
+    ~CHttpHeaderReqAcceptCharset();
 
-  HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
+    MX_DECLARE_HTTPHEADER_NAME(Accept - Charset)
 
-private:
-  TArrayListWithDelete<CCharset*> aCharsetsList;
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+
+    eDuplicateBehavior GetDuplicateBehavior() const
+    {
+        return eDuplicateBehavior::Merge;
+    };
+
+    HRESULT AddCharset(_In_z_ LPCSTR szCharsetA, _In_opt_ SIZE_T nCharsetLen = (SIZE_T)-1,
+                       _Out_opt_ CCharset **lplpCharset = NULL);
+
+    SIZE_T GetCharsetsCount() const;
+    CCharset *GetCharset(_In_ SIZE_T nIndex) const;
+    CCharset *GetCharset(_In_z_ LPCSTR szCharsetA) const;
+
+    HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
+
+  private:
+    TArrayListWithDelete<CCharset *> aCharsetsList;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

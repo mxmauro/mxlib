@@ -24,227 +24,216 @@
 
 //-----------------------------------------------------------
 
-#define MX_BIND_CALLBACK(lpFunction)                       \
-     (MX::GetCallbackFactory(lpFunction).Bind<lpFunction>())
+#define MX_BIND_CALLBACK(lpFunction) (MX::GetCallbackFactory(lpFunction).Bind<lpFunction>())
 
-#define MX_BIND_MEMBER_CALLBACK(lpMemberFunction, lpInstance) \
-     (MX::GetCallbackFactory(lpMemberFunction).Bind<lpMemberFunction>(lpInstance))
+#define MX_BIND_MEMBER_CALLBACK(lpMemberFunction, lpInstance)                                                          \
+    (MX::GetCallbackFactory(lpMemberFunction).Bind<lpMemberFunction>(lpInstance))
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-template<typename FuncSignature>
-class Callback;
+template <typename FuncSignature> class Callback;
 
-class NullCallback {};
+class NullCallback
+{
+};
 
-#define CB_TEMPL_GEN_JOIN_PCOUNT(a, b)   a##b
+#define CB_TEMPL_GEN_JOIN_PCOUNT(a, b) a##b
 
-#define CALLBACK_TEMPLATE_GEN(params_count)                                                         \
-template<typename R CBTEMPLGEN_PARAMS_TYPENAME>                                                     \
-class Callback<R (CBTEMPLGEN_PARAMS)>                                                               \
-{                                                                                                   \
-public:                                                                                             \
-  static const int Arity = params_count;                                                            \
-  typedef R ReturnType;                                                                             \
-  CBTEMPLGEN_PARAMS_TYPEDEF                                                                         \
-                                                                                                    \
-  Callback()                                                                                        \
-    {                                                                                               \
-    lpObj = NULL;                                                                                   \
-    lpFunc = NULL;                                                                                  \
-    return;                                                                                         \
-    };                                                                                              \
-                                                                                                    \
-  Callback(_In_ NullCallback)                                                                       \
-    {                                                                                               \
-    lpObj = NULL;                                                                                   \
-    lpFunc = NULL;                                                                                  \
-    return;                                                                                         \
-    };                                                                                              \
-                                                                                                    \
-  Callback(_In_ const Callback& rhs)                                                                \
-    {                                                                                               \
-    lpObj = rhs.lpObj;                                                                              \
-    lpFunc = rhs.lpFunc;                                                                            \
-    return;                                                                                         \
-    };                                                                                              \
-                                                                                                    \
-  Callback& operator=(_In_ const Callback& rhs)                                                     \
-    {                                                                                               \
-    lpObj = rhs.lpObj;                                                                              \
-    lpFunc = rhs.lpFunc;                                                                            \
-    return *this;                                                                                   \
-    };                                                                                              \
-                                                                                                    \
-  Callback& operator=(_In_ NullCallback)                                                            \
-    {                                                                                               \
-    lpObj = NULL;                                                                                   \
-    lpFunc = NULL;                                                                                  \
-    return *this;                                                                                   \
-    };                                                                                              \
-                                                                                                    \
-  ~Callback()                                                                                       \
-    { }                                                                                             \
-                                                                                                    \
-  inline R operator()(CBTEMPLGEN_PARAMS_DEF) const                                                  \
-    {                                                                                               \
-    return (*lpFunc)(lpObj CBTEMPLGEN_PARAMS_DEF_USE_WITH_COMMA);                                   \
-    };                                                                                              \
-                                                                                                    \
-  inline bool operator!() const                                                                     \
-    {                                                                                               \
-    return (lpObj == NULL && lpFunc == NULL);                                                       \
-    };                                                                                              \
-                                                                                                    \
-  inline bool operator==(_In_ const Callback& rhs)                                                  \
-    {                                                                                               \
-    return (lpObj == rhs.lpObj || lpFunc == rhs.lpFunc);                                            \
-    };                                                                                              \
-                                                                                                    \
-  inline bool operator==(_In_ NullCallback)                                                         \
-    {                                                                                               \
-    return (lpObj == NULL && lpFunc == NULL);                                                       \
-    };                                                                                              \
-                                                                                                    \
-  inline operator bool() const                                                                      \
-    {                                                                                               \
-    return (lpObj != NULL || lpFunc != NULL);                                                       \
-    };                                                                                              \
-                                                                                                    \
-  void serialize(_In_ void *p)                                                                      \
-    {                                                                                               \
-    *((void**)p) = const_cast<void*>(lpObj);                                                        \
-    *((FuncType*)((char*)p+sizeof(void*))) = lpFunc;                                                \
-    return;                                                                                         \
-    };                                                                                              \
-                                                                                                    \
-  void deserialize(_In_ void *p)                                                                    \
-    {                                                                                               \
-    lpObj = *((void**)p);                                                                           \
-    lpFunc = *((FuncType*)((char*)p+sizeof(void*)));                                                \
-    return;                                                                                         \
-    };                                                                                              \
-                                                                                                    \
-  static size_t serialization_buffer_size()                                                         \
-    {                                                                                               \
-    return 2 * sizeof(void*);                                                                       \
-    };                                                                                              \
-                                                                                                    \
-private:                                                                                            \
-  typedef R (*FuncType)(const void* CBTEMPLGEN_PARAMS_WITH_COMMA);                                  \
-  Callback(_In_opt_ const void* _lpObj, _In_ FuncType _lpFunc)                                      \
-    {                                                                                               \
-    lpFunc = _lpFunc;                                                                               \
-    lpObj = _lpObj;                                                                                 \
-    return;                                                                                         \
-    };                                                                                              \
-                                                                                                    \
-private:                                                                                            \
-  const void* lpObj;                                                                                \
-  FuncType lpFunc;                                                                                  \
-                                                                                                    \
-  template<typename FR CBTEMPLGEN_PARAMS_TYPENAME_FRIEND>                                           \
-  friend class CB_TEMPL_GEN_JOIN_PCOUNT(FreeCallbackFactory, params_count);                         \
-  template<typename FR, class FT CBTEMPLGEN_PARAMS_TYPENAME_FRIEND>                                 \
-  friend class CB_TEMPL_GEN_JOIN_PCOUNT(MemberCallbackFactory, params_count);                       \
-  template<typename FR, class FT CBTEMPLGEN_PARAMS_TYPENAME_FRIEND>                                 \
-  friend class CB_TEMPL_GEN_JOIN_PCOUNT(ConstMemberCallbackFactory, params_count);                  \
-};                                                                                                  \
-                                                                                                    \
-template<typename R CBTEMPLGEN_PARAMS_TYPENAME>                                                     \
-void operator==(const Callback<R (CBTEMPLGEN_PARAMS)>&, const Callback<R (CBTEMPLGEN_PARAMS)>&);    \
-template<typename R CBTEMPLGEN_PARAMS_TYPENAME>                                                     \
-void operator!=(const Callback<R (CBTEMPLGEN_PARAMS)>&, const Callback<R (CBTEMPLGEN_PARAMS)>&);    \
-                                                                                                    \
-template<typename R CBTEMPLGEN_PARAMS_TYPENAME>                                                     \
-class CB_TEMPL_GEN_JOIN_PCOUNT(FreeCallbackFactory, params_count)                                   \
-{                                                                                                   \
-private:                                                                                            \
-  template<R (*Func)(CBTEMPLGEN_PARAMS)>                                                            \
-  static R Wrapper(const void* CBTEMPLGEN_PARAMS_DEF_WITH_COMMA)                                    \
-    {                                                                                               \
-    return (*Func)(CBTEMPLGEN_PARAMS_DEF_USE);                                                      \
-    };                                                                                              \
-                                                                                                    \
-public:                                                                                             \
-  template<R (*Func)(CBTEMPLGEN_PARAMS)>                                                            \
-  inline static Callback<R (CBTEMPLGEN_PARAMS)> Bind()                                              \
-    {                                                                                               \
-    return Callback<R (CBTEMPLGEN_PARAMS)>                                                          \
-                   (NULL, &CB_TEMPL_GEN_JOIN_PCOUNT(FreeCallbackFactory, params_count)::            \
-                   Wrapper<Func>);                                                                  \
-    };                                                                                              \
-};                                                                                                  \
-                                                                                                    \
-template<typename R CBTEMPLGEN_PARAMS_TYPENAME>                                                     \
-inline CB_TEMPL_GEN_JOIN_PCOUNT(FreeCallbackFactory, params_count)<R CBTEMPLGEN_PARAMS_WITH_COMMA>  \
-GetCallbackFactory(R (*)(CBTEMPLGEN_PARAMS))                                                        \
-{                                                                                                   \
-  return CB_TEMPL_GEN_JOIN_PCOUNT(FreeCallbackFactory, params_count)                                \
-                                 <R CBTEMPLGEN_PARAMS_WITH_COMMA>();                                \
-}                                                                                                   \
-                                                                                                    \
-template<typename R, class T CBTEMPLGEN_PARAMS_TYPENAME>                                            \
-class CB_TEMPL_GEN_JOIN_PCOUNT(MemberCallbackFactory, params_count)                                 \
-{                                                                                                   \
-private:                                                                                            \
-  template<R (T::*Func)(CBTEMPLGEN_PARAMS)>                                                         \
-  static R Wrapper(const void* o CBTEMPLGEN_PARAMS_DEF_WITH_COMMA)                                  \
-    {                                                                                               \
-    T* lpObj = const_cast<T*>(static_cast<const T*>(o));                                            \
-    return (lpObj->*Func)(CBTEMPLGEN_PARAMS_DEF_USE);                                               \
-    };                                                                                              \
-                                                                                                    \
-public:                                                                                             \
-  template<R (T::*Func)(CBTEMPLGEN_PARAMS)>                                                         \
-  inline static Callback<R (CBTEMPLGEN_PARAMS)> Bind(T* o)                                          \
-    {                                                                                               \
-    return Callback<R (CBTEMPLGEN_PARAMS)>(static_cast<const void*>(o),                             \
-                    &CB_TEMPL_GEN_JOIN_PCOUNT(MemberCallbackFactory, params_count)::                \
-                    Wrapper<Func>);                                                                 \
-    };                                                                                              \
-};                                                                                                  \
-                                                                                                    \
-template<typename R, class T CBTEMPLGEN_PARAMS_TYPENAME>                                            \
-inline CB_TEMPL_GEN_JOIN_PCOUNT(MemberCallbackFactory, params_count)                                \
-       <R, T CBTEMPLGEN_PARAMS_WITH_COMMA>                                                          \
-GetCallbackFactory(R (T::*)(CBTEMPLGEN_PARAMS))                                                     \
-{                                                                                                   \
-  return CB_TEMPL_GEN_JOIN_PCOUNT(MemberCallbackFactory, params_count)                              \
-                                 <R, T CBTEMPLGEN_PARAMS_WITH_COMMA>();                             \
-}                                                                                                   \
-                                                                                                    \
-template<typename R, class T CBTEMPLGEN_PARAMS_TYPENAME>                                            \
-class CB_TEMPL_GEN_JOIN_PCOUNT(ConstMemberCallbackFactory, params_count)                            \
-{                                                                                                   \
-private:                                                                                            \
-  template<R (T::*Func)() const>                                                                    \
-  static R Wrapper(const void* o CBTEMPLGEN_PARAMS_DEF_WITH_COMMA)                                  \
-    {                                                                                               \
-    const T* lpObj = static_cast<const T*>(o);                                                      \
-    return (lpObj->*Func)(CBTEMPLGEN_PARAMS_DEF_USE);                                               \
-    };                                                                                              \
-                                                                                                    \
-public:                                                                                             \
-  template<R (T::*Func)(CBTEMPLGEN_PARAMS) const>                                                   \
-  inline static Callback<R (CBTEMPLGEN_PARAMS)> Bind(const T* o)                                    \
-    {                                                                                               \
-    return Callback<R (CBTEMPLGEN_PARAMS)>(static_cast<const void*>(o),                             \
-                    &CB_TEMPL_GEN_JOIN_PCOUNT(ConstMemberCallbackFactory, params_count)::           \
-                    Wrapper<Func>);                                                                 \
-    };                                                                                              \
-};                                                                                                  \
-                                                                                                    \
-template<typename R, class T CBTEMPLGEN_PARAMS_TYPENAME>                                            \
-inline CB_TEMPL_GEN_JOIN_PCOUNT(ConstMemberCallbackFactory, params_count)                           \
-       <R, T CBTEMPLGEN_PARAMS_WITH_COMMA>                                                          \
-GetCallbackFactory(R (T::*)(CBTEMPLGEN_PARAMS) const)                                               \
-{                                                                                                   \
-  return CB_TEMPL_GEN_JOIN_PCOUNT(ConstMemberCallbackFactory, params_count)                         \
-                                 <R, T CBTEMPLGEN_PARAMS_WITH_COMMA>();                             \
-}
+#define CALLBACK_TEMPLATE_GEN(params_count)                                                                            \
+    template <typename R CBTEMPLGEN_PARAMS_TYPENAME> class Callback<R(CBTEMPLGEN_PARAMS)>                              \
+    {                                                                                                                  \
+      public:                                                                                                          \
+        static const int Arity = params_count;                                                                         \
+        typedef R ReturnType;                                                                                          \
+        CBTEMPLGEN_PARAMS_TYPEDEF                                                                                      \
+                                                                                                                       \
+        Callback()                                                                                                     \
+        {                                                                                                              \
+            lpObj = NULL;                                                                                              \
+            lpFunc = NULL;                                                                                             \
+            return;                                                                                                    \
+        };                                                                                                             \
+                                                                                                                       \
+        Callback(_In_ NullCallback)                                                                                    \
+        {                                                                                                              \
+            lpObj = NULL;                                                                                              \
+            lpFunc = NULL;                                                                                             \
+            return;                                                                                                    \
+        };                                                                                                             \
+                                                                                                                       \
+        Callback(_In_ const Callback &rhs)                                                                             \
+        {                                                                                                              \
+            lpObj = rhs.lpObj;                                                                                         \
+            lpFunc = rhs.lpFunc;                                                                                       \
+            return;                                                                                                    \
+        };                                                                                                             \
+                                                                                                                       \
+        Callback &operator=(_In_ const Callback &rhs)                                                                  \
+        {                                                                                                              \
+            lpObj = rhs.lpObj;                                                                                         \
+            lpFunc = rhs.lpFunc;                                                                                       \
+            return *this;                                                                                              \
+        };                                                                                                             \
+                                                                                                                       \
+        Callback &operator=(_In_ NullCallback)                                                                         \
+        {                                                                                                              \
+            lpObj = NULL;                                                                                              \
+            lpFunc = NULL;                                                                                             \
+            return *this;                                                                                              \
+        };                                                                                                             \
+                                                                                                                       \
+        ~Callback()                                                                                                    \
+        {                                                                                                              \
+        }                                                                                                              \
+                                                                                                                       \
+        inline R operator()(CBTEMPLGEN_PARAMS_DEF) const                                                               \
+        {                                                                                                              \
+            return (*lpFunc)(lpObj CBTEMPLGEN_PARAMS_DEF_USE_WITH_COMMA);                                              \
+        };                                                                                                             \
+                                                                                                                       \
+        inline bool operator!() const                                                                                  \
+        {                                                                                                              \
+            return (lpObj == NULL && lpFunc == NULL);                                                                  \
+        };                                                                                                             \
+                                                                                                                       \
+        inline bool operator==(_In_ const Callback &rhs)                                                               \
+        {                                                                                                              \
+            return (lpObj == rhs.lpObj || lpFunc == rhs.lpFunc);                                                       \
+        };                                                                                                             \
+                                                                                                                       \
+        inline bool operator==(_In_ NullCallback)                                                                      \
+        {                                                                                                              \
+            return (lpObj == NULL && lpFunc == NULL);                                                                  \
+        };                                                                                                             \
+                                                                                                                       \
+        inline operator bool() const                                                                                   \
+        {                                                                                                              \
+            return (lpObj != NULL || lpFunc != NULL);                                                                  \
+        };                                                                                                             \
+                                                                                                                       \
+        void serialize(_In_ void *p)                                                                                   \
+        {                                                                                                              \
+            *((void **)p) = const_cast<void *>(lpObj);                                                                 \
+            *((FuncType *)((char *)p + sizeof(void *))) = lpFunc;                                                      \
+            return;                                                                                                    \
+        };                                                                                                             \
+                                                                                                                       \
+        void deserialize(_In_ void *p)                                                                                 \
+        {                                                                                                              \
+            lpObj = *((void **)p);                                                                                     \
+            lpFunc = *((FuncType *)((char *)p + sizeof(void *)));                                                      \
+            return;                                                                                                    \
+        };                                                                                                             \
+                                                                                                                       \
+        static size_t serialization_buffer_size()                                                                      \
+        {                                                                                                              \
+            return 2 * sizeof(void *);                                                                                 \
+        };                                                                                                             \
+                                                                                                                       \
+      private:                                                                                                         \
+        typedef R (*FuncType)(const void *CBTEMPLGEN_PARAMS_WITH_COMMA);                                               \
+        Callback(_In_opt_ const void *_lpObj, _In_ FuncType _lpFunc)                                                   \
+        {                                                                                                              \
+            lpFunc = _lpFunc;                                                                                          \
+            lpObj = _lpObj;                                                                                            \
+            return;                                                                                                    \
+        };                                                                                                             \
+                                                                                                                       \
+      private:                                                                                                         \
+        const void *lpObj;                                                                                             \
+        FuncType lpFunc;                                                                                               \
+                                                                                                                       \
+        template <typename FR CBTEMPLGEN_PARAMS_TYPENAME_FRIEND>                                                       \
+        friend class CB_TEMPL_GEN_JOIN_PCOUNT(FreeCallbackFactory, params_count);                                      \
+        template <typename FR, class FT CBTEMPLGEN_PARAMS_TYPENAME_FRIEND>                                             \
+        friend class CB_TEMPL_GEN_JOIN_PCOUNT(MemberCallbackFactory, params_count);                                    \
+        template <typename FR, class FT CBTEMPLGEN_PARAMS_TYPENAME_FRIEND>                                             \
+        friend class CB_TEMPL_GEN_JOIN_PCOUNT(ConstMemberCallbackFactory, params_count);                               \
+    };                                                                                                                 \
+                                                                                                                       \
+    template <typename R CBTEMPLGEN_PARAMS_TYPENAME>                                                                   \
+    void operator==(const Callback<R(CBTEMPLGEN_PARAMS)> &, const Callback<R(CBTEMPLGEN_PARAMS)> &);                   \
+    template <typename R CBTEMPLGEN_PARAMS_TYPENAME>                                                                   \
+    void operator!=(const Callback<R(CBTEMPLGEN_PARAMS)> &, const Callback<R(CBTEMPLGEN_PARAMS)> &);                   \
+                                                                                                                       \
+    template <typename R CBTEMPLGEN_PARAMS_TYPENAME> class CB_TEMPL_GEN_JOIN_PCOUNT(FreeCallbackFactory, params_count) \
+    {                                                                                                                  \
+      private:                                                                                                         \
+        template <R (*Func)(CBTEMPLGEN_PARAMS)> static R Wrapper(const void *CBTEMPLGEN_PARAMS_DEF_WITH_COMMA)         \
+        {                                                                                                              \
+            return (*Func)(CBTEMPLGEN_PARAMS_DEF_USE);                                                                 \
+        };                                                                                                             \
+                                                                                                                       \
+      public:                                                                                                          \
+        template <R (*Func)(CBTEMPLGEN_PARAMS)> inline static Callback<R(CBTEMPLGEN_PARAMS)> Bind()                    \
+        {                                                                                                              \
+            return Callback<R(CBTEMPLGEN_PARAMS)>(                                                                     \
+                NULL, &CB_TEMPL_GEN_JOIN_PCOUNT(FreeCallbackFactory, params_count)::Wrapper<Func>);                    \
+        };                                                                                                             \
+    };                                                                                                                 \
+                                                                                                                       \
+    template <typename R CBTEMPLGEN_PARAMS_TYPENAME>                                                                   \
+    inline CB_TEMPL_GEN_JOIN_PCOUNT(FreeCallbackFactory, params_count)<R CBTEMPLGEN_PARAMS_WITH_COMMA>                 \
+    GetCallbackFactory(R (*)(CBTEMPLGEN_PARAMS))                                                                       \
+    {                                                                                                                  \
+        return CB_TEMPL_GEN_JOIN_PCOUNT(FreeCallbackFactory, params_count)<R CBTEMPLGEN_PARAMS_WITH_COMMA>();          \
+    }                                                                                                                  \
+                                                                                                                       \
+    template <typename R, class T CBTEMPLGEN_PARAMS_TYPENAME>                                                          \
+    class CB_TEMPL_GEN_JOIN_PCOUNT(MemberCallbackFactory, params_count)                                                \
+    {                                                                                                                  \
+      private:                                                                                                         \
+        template <R (T::*Func)(CBTEMPLGEN_PARAMS)> static R Wrapper(const void *o CBTEMPLGEN_PARAMS_DEF_WITH_COMMA)    \
+        {                                                                                                              \
+            T *lpObj = const_cast<T *>(static_cast<const T *>(o));                                                     \
+            return (lpObj->*Func)(CBTEMPLGEN_PARAMS_DEF_USE);                                                          \
+        };                                                                                                             \
+                                                                                                                       \
+      public:                                                                                                          \
+        template <R (T::*Func)(CBTEMPLGEN_PARAMS)> inline static Callback<R(CBTEMPLGEN_PARAMS)> Bind(T *o)             \
+        {                                                                                                              \
+            return Callback<R(CBTEMPLGEN_PARAMS)>(                                                                     \
+                static_cast<const void *>(o),                                                                          \
+                &CB_TEMPL_GEN_JOIN_PCOUNT(MemberCallbackFactory, params_count)::Wrapper<Func>);                        \
+        };                                                                                                             \
+    };                                                                                                                 \
+                                                                                                                       \
+    template <typename R, class T CBTEMPLGEN_PARAMS_TYPENAME>                                                          \
+    inline CB_TEMPL_GEN_JOIN_PCOUNT(MemberCallbackFactory, params_count)<R, T CBTEMPLGEN_PARAMS_WITH_COMMA>            \
+    GetCallbackFactory(R (T::*)(CBTEMPLGEN_PARAMS))                                                                    \
+    {                                                                                                                  \
+        return CB_TEMPL_GEN_JOIN_PCOUNT(MemberCallbackFactory, params_count)<R, T CBTEMPLGEN_PARAMS_WITH_COMMA>();     \
+    }                                                                                                                  \
+                                                                                                                       \
+    template <typename R, class T CBTEMPLGEN_PARAMS_TYPENAME>                                                          \
+    class CB_TEMPL_GEN_JOIN_PCOUNT(ConstMemberCallbackFactory, params_count)                                           \
+    {                                                                                                                  \
+      private:                                                                                                         \
+        template <R (T::*Func)() const> static R Wrapper(const void *o CBTEMPLGEN_PARAMS_DEF_WITH_COMMA)               \
+        {                                                                                                              \
+            const T *lpObj = static_cast<const T *>(o);                                                                \
+            return (lpObj->*Func)(CBTEMPLGEN_PARAMS_DEF_USE);                                                          \
+        };                                                                                                             \
+                                                                                                                       \
+      public:                                                                                                          \
+        template <R (T::*Func)(CBTEMPLGEN_PARAMS) const> inline static Callback<R(CBTEMPLGEN_PARAMS)> Bind(const T *o) \
+        {                                                                                                              \
+            return Callback<R(CBTEMPLGEN_PARAMS)>(                                                                     \
+                static_cast<const void *>(o),                                                                          \
+                &CB_TEMPL_GEN_JOIN_PCOUNT(ConstMemberCallbackFactory, params_count)::Wrapper<Func>);                   \
+        };                                                                                                             \
+    };                                                                                                                 \
+                                                                                                                       \
+    template <typename R, class T CBTEMPLGEN_PARAMS_TYPENAME>                                                          \
+    inline CB_TEMPL_GEN_JOIN_PCOUNT(ConstMemberCallbackFactory, params_count)<R, T CBTEMPLGEN_PARAMS_WITH_COMMA>       \
+    GetCallbackFactory(R (T::*)(CBTEMPLGEN_PARAMS) const)                                                              \
+    {                                                                                                                  \
+        return CB_TEMPL_GEN_JOIN_PCOUNT(ConstMemberCallbackFactory,                                                    \
+                                        params_count)<R, T CBTEMPLGEN_PARAMS_WITH_COMMA>();                            \
+    }
 
 //------------------------
 
@@ -270,15 +259,15 @@ CALLBACK_TEMPLATE_GEN(0)
 
 //--------
 
-#define CBTEMPLGEN_PARAMS_TYPENAME           , typename P1
-#define CBTEMPLGEN_PARAMS_TYPENAME_FRIEND    , typename FP1
-#define CBTEMPLGEN_PARAMS                    P1
-#define CBTEMPLGEN_PARAMS_WITH_COMMA         , P1
-#define CBTEMPLGEN_PARAMS_DEF                P1 a1
-#define CBTEMPLGEN_PARAMS_DEF_WITH_COMMA     , P1 a1
-#define CBTEMPLGEN_PARAMS_DEF_USE            a1
+#define CBTEMPLGEN_PARAMS_TYPENAME , typename P1
+#define CBTEMPLGEN_PARAMS_TYPENAME_FRIEND , typename FP1
+#define CBTEMPLGEN_PARAMS P1
+#define CBTEMPLGEN_PARAMS_WITH_COMMA , P1
+#define CBTEMPLGEN_PARAMS_DEF P1 a1
+#define CBTEMPLGEN_PARAMS_DEF_WITH_COMMA , P1 a1
+#define CBTEMPLGEN_PARAMS_DEF_USE a1
 #define CBTEMPLGEN_PARAMS_DEF_USE_WITH_COMMA , a1
-#define CBTEMPLGEN_PARAMS_TYPEDEF            typedef P1 Param1Type;
+#define CBTEMPLGEN_PARAMS_TYPEDEF typedef P1 Param1Type;
 CALLBACK_TEMPLATE_GEN(1)
 #undef CBTEMPLGEN_PARAMS_TYPEDEF
 #undef CBTEMPLGEN_PARAMS_DEF_USE_WITH_COMMA
@@ -292,15 +281,17 @@ CALLBACK_TEMPLATE_GEN(1)
 
 //--------
 
-#define CBTEMPLGEN_PARAMS_TYPENAME           , typename P1, typename P2
-#define CBTEMPLGEN_PARAMS_TYPENAME_FRIEND    , typename FP1, typename FP2
-#define CBTEMPLGEN_PARAMS                    P1, P2
-#define CBTEMPLGEN_PARAMS_WITH_COMMA         , P1, P2
-#define CBTEMPLGEN_PARAMS_DEF                P1 a1, P2 a2
-#define CBTEMPLGEN_PARAMS_DEF_WITH_COMMA     , P1 a1, P2 a2
-#define CBTEMPLGEN_PARAMS_DEF_USE            a1, a2
+#define CBTEMPLGEN_PARAMS_TYPENAME , typename P1, typename P2
+#define CBTEMPLGEN_PARAMS_TYPENAME_FRIEND , typename FP1, typename FP2
+#define CBTEMPLGEN_PARAMS P1, P2
+#define CBTEMPLGEN_PARAMS_WITH_COMMA , P1, P2
+#define CBTEMPLGEN_PARAMS_DEF P1 a1, P2 a2
+#define CBTEMPLGEN_PARAMS_DEF_WITH_COMMA , P1 a1, P2 a2
+#define CBTEMPLGEN_PARAMS_DEF_USE a1, a2
 #define CBTEMPLGEN_PARAMS_DEF_USE_WITH_COMMA , a1, a2
-#define CBTEMPLGEN_PARAMS_TYPEDEF            typedef P1 Param1Type; typedef P2 Param2Type;
+#define CBTEMPLGEN_PARAMS_TYPEDEF                                                                                      \
+    typedef P1 Param1Type;                                                                                             \
+    typedef P2 Param2Type;
 CALLBACK_TEMPLATE_GEN(2)
 #undef CBTEMPLGEN_PARAMS_TYPEDEF
 #undef CBTEMPLGEN_PARAMS_DEF_USE_WITH_COMMA
@@ -314,15 +305,18 @@ CALLBACK_TEMPLATE_GEN(2)
 
 //--------
 
-#define CBTEMPLGEN_PARAMS_TYPENAME           , typename P1, typename P2, typename P3
-#define CBTEMPLGEN_PARAMS_TYPENAME_FRIEND    , typename FP1, typename FP2, typename FP3
-#define CBTEMPLGEN_PARAMS                    P1, P2, P3
-#define CBTEMPLGEN_PARAMS_WITH_COMMA         , P1, P2, P3
-#define CBTEMPLGEN_PARAMS_DEF                P1 a1, P2 a2, P3 a3
-#define CBTEMPLGEN_PARAMS_DEF_WITH_COMMA     , P1 a1, P2 a2, P3 a3
-#define CBTEMPLGEN_PARAMS_DEF_USE            a1, a2, a3
+#define CBTEMPLGEN_PARAMS_TYPENAME , typename P1, typename P2, typename P3
+#define CBTEMPLGEN_PARAMS_TYPENAME_FRIEND , typename FP1, typename FP2, typename FP3
+#define CBTEMPLGEN_PARAMS P1, P2, P3
+#define CBTEMPLGEN_PARAMS_WITH_COMMA , P1, P2, P3
+#define CBTEMPLGEN_PARAMS_DEF P1 a1, P2 a2, P3 a3
+#define CBTEMPLGEN_PARAMS_DEF_WITH_COMMA , P1 a1, P2 a2, P3 a3
+#define CBTEMPLGEN_PARAMS_DEF_USE a1, a2, a3
 #define CBTEMPLGEN_PARAMS_DEF_USE_WITH_COMMA , a1, a2, a3
-#define CBTEMPLGEN_PARAMS_TYPEDEF            typedef P1 Param1Type; typedef P2 Param2Type; typedef P3 Param3Type;
+#define CBTEMPLGEN_PARAMS_TYPEDEF                                                                                      \
+    typedef P1 Param1Type;                                                                                             \
+    typedef P2 Param2Type;                                                                                             \
+    typedef P3 Param3Type;
 CALLBACK_TEMPLATE_GEN(3)
 #undef CBTEMPLGEN_PARAMS_TYPEDEF
 #undef CBTEMPLGEN_PARAMS_DEF_USE_WITH_COMMA
@@ -336,16 +330,19 @@ CALLBACK_TEMPLATE_GEN(3)
 
 //--------
 
-#define CBTEMPLGEN_PARAMS_TYPENAME           , typename P1, typename P2, typename P3, typename P4
-#define CBTEMPLGEN_PARAMS_TYPENAME_FRIEND    , typename FP1, typename FP2, typename FP3, typename FP4
-#define CBTEMPLGEN_PARAMS                    P1, P2, P3, P4
-#define CBTEMPLGEN_PARAMS_WITH_COMMA         , P1, P2, P3, P4
-#define CBTEMPLGEN_PARAMS_DEF                P1 a1, P2 a2, P3 a3, P4 a4
-#define CBTEMPLGEN_PARAMS_DEF_WITH_COMMA     , P1 a1, P2 a2, P3 a3, P4 a4
-#define CBTEMPLGEN_PARAMS_DEF_USE            a1, a2, a3, a4
+#define CBTEMPLGEN_PARAMS_TYPENAME , typename P1, typename P2, typename P3, typename P4
+#define CBTEMPLGEN_PARAMS_TYPENAME_FRIEND , typename FP1, typename FP2, typename FP3, typename FP4
+#define CBTEMPLGEN_PARAMS P1, P2, P3, P4
+#define CBTEMPLGEN_PARAMS_WITH_COMMA , P1, P2, P3, P4
+#define CBTEMPLGEN_PARAMS_DEF P1 a1, P2 a2, P3 a3, P4 a4
+#define CBTEMPLGEN_PARAMS_DEF_WITH_COMMA , P1 a1, P2 a2, P3 a3, P4 a4
+#define CBTEMPLGEN_PARAMS_DEF_USE a1, a2, a3, a4
 #define CBTEMPLGEN_PARAMS_DEF_USE_WITH_COMMA , a1, a2, a3, a4
-#define CBTEMPLGEN_PARAMS_TYPEDEF            typedef P1 Param1Type; typedef P2 Param2Type; typedef P3 Param3Type; \
-                                             typedef P4 Param4Type;
+#define CBTEMPLGEN_PARAMS_TYPEDEF                                                                                      \
+    typedef P1 Param1Type;                                                                                             \
+    typedef P2 Param2Type;                                                                                             \
+    typedef P3 Param3Type;                                                                                             \
+    typedef P4 Param4Type;
 CALLBACK_TEMPLATE_GEN(4)
 #undef CBTEMPLGEN_PARAMS_TYPEDEF
 #undef CBTEMPLGEN_PARAMS_DEF_USE_WITH_COMMA
@@ -359,16 +356,20 @@ CALLBACK_TEMPLATE_GEN(4)
 
 //--------
 
-#define CBTEMPLGEN_PARAMS_TYPENAME           , typename P1, typename P2, typename P3, typename P4, typename P5
-#define CBTEMPLGEN_PARAMS_TYPENAME_FRIEND    , typename FP1, typename FP2, typename FP3, typename FP4, typename FP5
-#define CBTEMPLGEN_PARAMS                    P1, P2, P3, P4, P5
-#define CBTEMPLGEN_PARAMS_WITH_COMMA         , P1, P2, P3, P4, P5
-#define CBTEMPLGEN_PARAMS_DEF                P1 a1, P2 a2, P3 a3, P4 a4, P5 a5
-#define CBTEMPLGEN_PARAMS_DEF_WITH_COMMA     , P1 a1, P2 a2, P3 a3, P4 a4, P5 a5
-#define CBTEMPLGEN_PARAMS_DEF_USE            a1, a2, a3, a4, a5
+#define CBTEMPLGEN_PARAMS_TYPENAME , typename P1, typename P2, typename P3, typename P4, typename P5
+#define CBTEMPLGEN_PARAMS_TYPENAME_FRIEND , typename FP1, typename FP2, typename FP3, typename FP4, typename FP5
+#define CBTEMPLGEN_PARAMS P1, P2, P3, P4, P5
+#define CBTEMPLGEN_PARAMS_WITH_COMMA , P1, P2, P3, P4, P5
+#define CBTEMPLGEN_PARAMS_DEF P1 a1, P2 a2, P3 a3, P4 a4, P5 a5
+#define CBTEMPLGEN_PARAMS_DEF_WITH_COMMA , P1 a1, P2 a2, P3 a3, P4 a4, P5 a5
+#define CBTEMPLGEN_PARAMS_DEF_USE a1, a2, a3, a4, a5
 #define CBTEMPLGEN_PARAMS_DEF_USE_WITH_COMMA , a1, a2, a3, a4, a5
-#define CBTEMPLGEN_PARAMS_TYPEDEF            typedef P1 Param1Type; typedef P2 Param2Type; typedef P3 Param3Type; \
-                                             typedef P4 Param4Type; typedef P5 Param5Type;
+#define CBTEMPLGEN_PARAMS_TYPEDEF                                                                                      \
+    typedef P1 Param1Type;                                                                                             \
+    typedef P2 Param2Type;                                                                                             \
+    typedef P3 Param3Type;                                                                                             \
+    typedef P4 Param4Type;                                                                                             \
+    typedef P5 Param5Type;
 CALLBACK_TEMPLATE_GEN(5)
 #undef CBTEMPLGEN_PARAMS_TYPEDEF
 #undef CBTEMPLGEN_PARAMS_DEF_USE_WITH_COMMA
@@ -382,18 +383,22 @@ CALLBACK_TEMPLATE_GEN(5)
 
 //--------
 
-#define CBTEMPLGEN_PARAMS_TYPENAME           , typename P1, typename P2, typename P3, typename P4, typename P5 \
-                                             , typename P6
-#define CBTEMPLGEN_PARAMS_TYPENAME_FRIEND    , typename FP1, typename FP2, typename FP3, typename FP4, typename FP5 \
-                                             , typename FP6
-#define CBTEMPLGEN_PARAMS                    P1, P2, P3, P4, P5, P6
-#define CBTEMPLGEN_PARAMS_WITH_COMMA         , P1, P2, P3, P4, P5, P6
-#define CBTEMPLGEN_PARAMS_DEF                P1 a1, P2 a2, P3 a3, P4 a4, P5 a5, P6 a6
-#define CBTEMPLGEN_PARAMS_DEF_WITH_COMMA     , P1 a1, P2 a2, P3 a3, P4 a4, P5 a5, P6 a6
-#define CBTEMPLGEN_PARAMS_DEF_USE            a1, a2, a3, a4, a5, a6
+#define CBTEMPLGEN_PARAMS_TYPENAME , typename P1, typename P2, typename P3, typename P4, typename P5, typename P6
+#define CBTEMPLGEN_PARAMS_TYPENAME_FRIEND                                                                              \
+    , typename FP1, typename FP2, typename FP3, typename FP4, typename FP5, typename FP6
+#define CBTEMPLGEN_PARAMS P1, P2, P3, P4, P5, P6
+#define CBTEMPLGEN_PARAMS_WITH_COMMA , P1, P2, P3, P4, P5, P6
+#define CBTEMPLGEN_PARAMS_DEF P1 a1, P2 a2, P3 a3, P4 a4, P5 a5, P6 a6
+#define CBTEMPLGEN_PARAMS_DEF_WITH_COMMA , P1 a1, P2 a2, P3 a3, P4 a4, P5 a5, P6 a6
+#define CBTEMPLGEN_PARAMS_DEF_USE a1, a2, a3, a4, a5, a6
 #define CBTEMPLGEN_PARAMS_DEF_USE_WITH_COMMA , a1, a2, a3, a4, a5, a6
-#define CBTEMPLGEN_PARAMS_TYPEDEF            typedef P1 Param1Type; typedef P2 Param2Type; typedef P3 Param3Type; \
-                                             typedef P4 Param4Type; typedef P5 Param5Type; typedef P6 Param6Type;
+#define CBTEMPLGEN_PARAMS_TYPEDEF                                                                                      \
+    typedef P1 Param1Type;                                                                                             \
+    typedef P2 Param2Type;                                                                                             \
+    typedef P3 Param3Type;                                                                                             \
+    typedef P4 Param4Type;                                                                                             \
+    typedef P5 Param5Type;                                                                                             \
+    typedef P6 Param6Type;
 CALLBACK_TEMPLATE_GEN(6)
 #undef CBTEMPLGEN_PARAMS_TYPEDEF
 #undef CBTEMPLGEN_PARAMS_DEF_USE_WITH_COMMA
@@ -407,19 +412,24 @@ CALLBACK_TEMPLATE_GEN(6)
 
 //--------
 
-#define CBTEMPLGEN_PARAMS_TYPENAME           , typename P1, typename P2, typename P3, typename P4, typename P5 \
-                                             , typename P6, typename P7
-#define CBTEMPLGEN_PARAMS_TYPENAME_FRIEND    , typename FP1, typename FP2, typename FP3, typename FP4, typename FP5 \
-                                             , typename FP6, typename FP7
-#define CBTEMPLGEN_PARAMS                    P1, P2, P3, P4, P5, P6, P7
-#define CBTEMPLGEN_PARAMS_WITH_COMMA         , P1, P2, P3, P4, P5, P6, P7
-#define CBTEMPLGEN_PARAMS_DEF                P1 a1, P2 a2, P3 a3, P4 a4, P5 a5, P6 a6, P7 a7
-#define CBTEMPLGEN_PARAMS_DEF_WITH_COMMA     , P1 a1, P2 a2, P3 a3, P4 a4, P5 a5, P6 a6, P7 a7
-#define CBTEMPLGEN_PARAMS_DEF_USE            a1, a2, a3, a4, a5, a6, a7
+#define CBTEMPLGEN_PARAMS_TYPENAME                                                                                     \
+    , typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7
+#define CBTEMPLGEN_PARAMS_TYPENAME_FRIEND                                                                              \
+    , typename FP1, typename FP2, typename FP3, typename FP4, typename FP5, typename FP6, typename FP7
+#define CBTEMPLGEN_PARAMS P1, P2, P3, P4, P5, P6, P7
+#define CBTEMPLGEN_PARAMS_WITH_COMMA , P1, P2, P3, P4, P5, P6, P7
+#define CBTEMPLGEN_PARAMS_DEF P1 a1, P2 a2, P3 a3, P4 a4, P5 a5, P6 a6, P7 a7
+#define CBTEMPLGEN_PARAMS_DEF_WITH_COMMA , P1 a1, P2 a2, P3 a3, P4 a4, P5 a5, P6 a6, P7 a7
+#define CBTEMPLGEN_PARAMS_DEF_USE a1, a2, a3, a4, a5, a6, a7
 #define CBTEMPLGEN_PARAMS_DEF_USE_WITH_COMMA , a1, a2, a3, a4, a5, a6, a7
-#define CBTEMPLGEN_PARAMS_TYPEDEF            typedef P1 Param1Type; typedef P2 Param2Type; typedef P3 Param3Type; \
-                                             typedef P4 Param4Type; typedef P5 Param5Type; typedef P6 Param6Type; \
-                                             typedef P7 Param7Type;
+#define CBTEMPLGEN_PARAMS_TYPEDEF                                                                                      \
+    typedef P1 Param1Type;                                                                                             \
+    typedef P2 Param2Type;                                                                                             \
+    typedef P3 Param3Type;                                                                                             \
+    typedef P4 Param4Type;                                                                                             \
+    typedef P5 Param5Type;                                                                                             \
+    typedef P6 Param6Type;                                                                                             \
+    typedef P7 Param7Type;
 CALLBACK_TEMPLATE_GEN(7)
 #undef CBTEMPLGEN_PARAMS_TYPEDEF
 #undef CBTEMPLGEN_PARAMS_DEF_USE_WITH_COMMA
@@ -433,19 +443,25 @@ CALLBACK_TEMPLATE_GEN(7)
 
 //--------
 
-#define CBTEMPLGEN_PARAMS_TYPENAME           , typename P1, typename P2, typename P3, typename P4, typename P5 \
-                                             , typename P6, typename P7, typename P8
-#define CBTEMPLGEN_PARAMS_TYPENAME_FRIEND    , typename FP1, typename FP2, typename FP3, typename FP4, typename FP5 \
-                                             , typename FP6, typename FP7, typename FP8
-#define CBTEMPLGEN_PARAMS                    P1, P2, P3, P4, P5, P6, P7, P8
-#define CBTEMPLGEN_PARAMS_WITH_COMMA         , P1, P2, P3, P4, P5, P6, P7, P8
-#define CBTEMPLGEN_PARAMS_DEF                P1 a1, P2 a2, P3 a3, P4 a4, P5 a5, P6 a6, P7 a7, P8 a8
-#define CBTEMPLGEN_PARAMS_DEF_WITH_COMMA     , P1 a1, P2 a2, P3 a3, P4 a4, P5 a5, P6 a6, P7 a7, P8 a8
-#define CBTEMPLGEN_PARAMS_DEF_USE            a1, a2, a3, a4, a5, a6, a7, a8
+#define CBTEMPLGEN_PARAMS_TYPENAME                                                                                     \
+    , typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8
+#define CBTEMPLGEN_PARAMS_TYPENAME_FRIEND                                                                              \
+    , typename FP1, typename FP2, typename FP3, typename FP4, typename FP5, typename FP6, typename FP7, typename FP8
+#define CBTEMPLGEN_PARAMS P1, P2, P3, P4, P5, P6, P7, P8
+#define CBTEMPLGEN_PARAMS_WITH_COMMA , P1, P2, P3, P4, P5, P6, P7, P8
+#define CBTEMPLGEN_PARAMS_DEF P1 a1, P2 a2, P3 a3, P4 a4, P5 a5, P6 a6, P7 a7, P8 a8
+#define CBTEMPLGEN_PARAMS_DEF_WITH_COMMA , P1 a1, P2 a2, P3 a3, P4 a4, P5 a5, P6 a6, P7 a7, P8 a8
+#define CBTEMPLGEN_PARAMS_DEF_USE a1, a2, a3, a4, a5, a6, a7, a8
 #define CBTEMPLGEN_PARAMS_DEF_USE_WITH_COMMA , a1, a2, a3, a4, a5, a6, a7, a8
-#define CBTEMPLGEN_PARAMS_TYPEDEF            typedef P1 Param1Type; typedef P2 Param2Type; typedef P3 Param3Type; \
-                                             typedef P4 Param4Type; typedef P5 Param5Type; typedef P6 Param6Type; \
-                                             typedef P7 Param7Type; typedef P8 Param8Type;
+#define CBTEMPLGEN_PARAMS_TYPEDEF                                                                                      \
+    typedef P1 Param1Type;                                                                                             \
+    typedef P2 Param2Type;                                                                                             \
+    typedef P3 Param3Type;                                                                                             \
+    typedef P4 Param4Type;                                                                                             \
+    typedef P5 Param5Type;                                                                                             \
+    typedef P6 Param6Type;                                                                                             \
+    typedef P7 Param7Type;                                                                                             \
+    typedef P8 Param8Type;
 CALLBACK_TEMPLATE_GEN(8)
 #undef CBTEMPLGEN_PARAMS_TYPEDEF
 #undef CBTEMPLGEN_PARAMS_DEF_USE_WITH_COMMA
@@ -462,7 +478,7 @@ CALLBACK_TEMPLATE_GEN(8)
 #undef CALLBACK_TEMPLATE_GEN
 #undef CB_TEMPL_GEN_JOIN_PCOUNT
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

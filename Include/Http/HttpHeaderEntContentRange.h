@@ -24,31 +24,32 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class CHttpHeaderEntContentRange : public CHttpHeaderBase
 {
-public:
-  CHttpHeaderEntContentRange();
-  ~CHttpHeaderEntContentRange();
+  public:
+    CHttpHeaderEntContentRange();
+    ~CHttpHeaderEntContentRange();
 
-  MX_DECLARE_HTTPHEADER_NAME(Content-Range)
+    MX_DECLARE_HTTPHEADER_NAME(Content - Range)
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-  HRESULT SetRange(_In_ ULONGLONG nByteStart, _In_ ULONGLONG nByteEnd, _In_ ULONGLONG nTotalBytes);
-  ULONGLONG GetRangeStart() const;
-  ULONGLONG GetRangeEnd() const;
-  ULONGLONG GetRangeTotal() const;
+    HRESULT SetRange(_In_ ULONGLONG nByteStart, _In_ ULONGLONG nByteEnd, _In_ ULONGLONG nTotalBytes);
+    ULONGLONG GetRangeStart() const;
+    ULONGLONG GetRangeEnd() const;
+    ULONGLONG GetRangeTotal() const;
 
-private:
-  ULONGLONG nByteStart, nByteEnd;
-  ULONGLONG nTotalBytes;
+  private:
+    ULONGLONG nByteStart, nByteEnd;
+    ULONGLONG nTotalBytes;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

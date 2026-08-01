@@ -26,131 +26,135 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class MX_NOVTABLE CHttpBodyParserFormBase : public CHttpBodyParserBase
 {
-protected:
-  CHttpBodyParserFormBase();
-public:
-  ~CHttpBodyParserFormBase();
+  protected:
+    CHttpBodyParserFormBase();
 
-  class CField;
-  class CFileField;
-
-  SIZE_T GetFieldsCount() const;
-  CField* GetField(_In_ SIZE_T nIndex) const;
-
-  SIZE_T GetFileFieldsCount() const;
-  CFileField* GetFileField(_In_ SIZE_T nIndex) const;
-
-public:
-  class CField : public virtual CBaseMemObj
-  {
   public:
-    CField();
+    ~CHttpBodyParserFormBase();
 
-    __inline LPCWSTR GetName() const
-      {
-      return (LPCWSTR)cStrNameW;
-      };
+    class CField;
+    class CFileField;
 
-    __inline LPCWSTR GetValue() const
-      {
-      return (LPCWSTR)cStrValueW;
-      };
+    SIZE_T GetFieldsCount() const;
+    CField *GetField(_In_ SIZE_T nIndex) const;
 
-    __inline SIZE_T GetSubIndexesCount() const
-      {
-      return aSubIndexesItems.GetCount();
-      };
+    SIZE_T GetFileFieldsCount() const;
+    CFileField *GetFileField(_In_ SIZE_T nIndex) const;
 
-    __inline CField* GetSubIndexAt(_In_ SIZE_T nPos) const
-      {
-      return (nPos < aSubIndexesItems.GetCount()) ? aSubIndexesItems[nPos] : NULL;
-      };
-
-  private:
-    friend class CHttpBodyParserFormBase;
-
-    VOID ClearValue();
-
-  private:
-    MX::CStringW cStrNameW, cStrValueW;
-    TArrayListWithDelete<CField*> aSubIndexesItems;
-  };
-
-  //----
-
-  class CFileField : public virtual CBaseMemObj
-  {
   public:
-    CFileField();
-    ~CFileField();
+    class CField : public virtual CBaseMemObj
+    {
+      public:
+        CField();
 
-    __inline LPCWSTR GetName() const
-      {
-      return (LPCWSTR)cStrNameW;
-      };
+        __inline LPCWSTR GetName() const
+        {
+            return (LPCWSTR)cStrNameW;
+        };
 
-    __inline LPCSTR GetType() const
-      {
-      if (cStrTypeA.IsEmpty() == FALSE)
-        return (LPCSTR)cStrTypeA;
-      return (cStrFileNameW.IsEmpty() == FALSE) ? "text/plain" : "";
-      };
+        __inline LPCWSTR GetValue() const
+        {
+            return (LPCWSTR)cStrValueW;
+        };
 
-    __inline LPCWSTR GetFileName() const
-      {
-      return (LPCWSTR)cStrFileNameW;
-      };
+        __inline SIZE_T GetSubIndexesCount() const
+        {
+            return aSubIndexesItems.GetCount();
+        };
 
-    __inline SIZE_T GetSubIndexesCount() const
-      {
-      return aSubIndexesItems.GetCount();
-      };
+        __inline CField *GetSubIndexAt(_In_ SIZE_T nPos) const
+        {
+            return (nPos < aSubIndexesItems.GetCount()) ? aSubIndexesItems[nPos] : NULL;
+        };
 
-    __inline CFileField* GetSubIndexAt(_In_ SIZE_T nPos) const
-      {
-      return (nPos < aSubIndexesItems.GetCount()) ? aSubIndexesItems[nPos] : NULL;
-      };
+      private:
+        friend class CHttpBodyParserFormBase;
 
-    ULONGLONG GetSize() const
-      {
-      return nSize;
-      };
+        VOID ClearValue();
 
-    HRESULT Read(_Out_writes_to_(nToRead, *lpnReaded) LPVOID lpDest, _In_ ULONGLONG nOffset, _In_ SIZE_T nToRead,
-                 _Out_opt_ SIZE_T *lpnReaded=NULL);
+      private:
+        MX::CStringW cStrNameW, cStrValueW;
+        TArrayListWithDelete<CField *> aSubIndexesItems;
+    };
 
-    operator HANDLE() const
-      {
-      return hFile;
-      };
+    //----
 
-  private:
-    friend class CHttpBodyParserFormBase;
+    class CFileField : public virtual CBaseMemObj
+    {
+      public:
+        CFileField();
+        ~CFileField();
 
-    VOID ClearValue();
+        __inline LPCWSTR GetName() const
+        {
+            return (LPCWSTR)cStrNameW;
+        };
 
-  private:
-    MX::CStringW cStrNameW, cStrFileNameW;
-    MX::CStringA cStrTypeA;
-    HANDLE hFile;
-    ULONGLONG nSize;
-    TArrayListWithDelete<CFileField*> aSubIndexesItems;
-  };
+        __inline LPCSTR GetType() const
+        {
+            if (cStrTypeA.IsEmpty() == FALSE)
+            {
+                return (LPCSTR)cStrTypeA;
+            }
+            return (cStrFileNameW.IsEmpty() == FALSE) ? "text/plain" : "";
+        };
 
-protected:
-  HRESULT AddField(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW);
-  HRESULT AddFileField(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szFileNameW, _In_z_ LPCSTR szTypeA, _In_ HANDLE hFile);
+        __inline LPCWSTR GetFileName() const
+        {
+            return (LPCWSTR)cStrFileNameW;
+        };
 
-protected:
-  TArrayListWithDelete<CField*> cFieldsList;
-  TArrayListWithDelete<CFileField*> cFileFieldsList;
+        __inline SIZE_T GetSubIndexesCount() const
+        {
+            return aSubIndexesItems.GetCount();
+        };
+
+        __inline CFileField *GetSubIndexAt(_In_ SIZE_T nPos) const
+        {
+            return (nPos < aSubIndexesItems.GetCount()) ? aSubIndexesItems[nPos] : NULL;
+        };
+
+        ULONGLONG GetSize() const
+        {
+            return nSize;
+        };
+
+        HRESULT Read(_Out_writes_to_(nToRead, *lpnReaded) LPVOID lpDest, _In_ ULONGLONG nOffset, _In_ SIZE_T nToRead,
+                     _Out_opt_ SIZE_T *lpnReaded = NULL);
+
+        operator HANDLE() const
+        {
+            return hFile;
+        };
+
+      private:
+        friend class CHttpBodyParserFormBase;
+
+        VOID ClearValue();
+
+      private:
+        MX::CStringW cStrNameW, cStrFileNameW;
+        MX::CStringA cStrTypeA;
+        HANDLE hFile;
+        ULONGLONG nSize;
+        TArrayListWithDelete<CFileField *> aSubIndexesItems;
+    };
+
+  protected:
+    HRESULT AddField(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW);
+    HRESULT AddFileField(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szFileNameW, _In_z_ LPCSTR szTypeA, _In_ HANDLE hFile);
+
+  protected:
+    TArrayListWithDelete<CField *> cFieldsList;
+    TArrayListWithDelete<CFileField *> cFileFieldsList;
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

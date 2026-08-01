@@ -21,84 +21,105 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CHttpHeaderRespLocation::CHttpHeaderRespLocation() : CHttpHeaderBase()
 {
-  return;
+    return;
 }
 
 CHttpHeaderRespLocation::~CHttpHeaderRespLocation()
 {
-  return;
+    return;
 }
 
 HRESULT CHttpHeaderRespLocation::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  LPCSTR szValueEndA, szStartA;
-  HRESULT hRes;
+    LPCSTR szValueEndA, szStartA;
+    HRESULT hRes;
 
-  if (szValueA == NULL)
-    return E_POINTER;
+    if (szValueA == NULL)
+    {
+        return E_POINTER;
+    }
 
-  if (nValueLen == (SIZE_T)-1)
-    nValueLen = StrLenA(szValueA);
-  szValueEndA = szValueA + nValueLen;
+    if (nValueLen == (SIZE_T)-1)
+    {
+        nValueLen = StrLenA(szValueA);
+    }
+    szValueEndA = szValueA + nValueLen;
 
-  //skip spaces
-  szValueA = SkipSpaces(szValueA, szValueEndA);
+    // skip spaces
+    szValueA = SkipSpaces(szValueA, szValueEndA);
 
-  //get location
-  szValueA = SkipUntil(szStartA = szValueA, szValueEndA, " \t");
-  if (szValueA == szStartA)
-    return MX_E_InvalidData;
+    // get location
+    szValueA = SkipUntil(szStartA = szValueA, szValueEndA, " \t");
+    if (szValueA == szStartA)
+    {
+        return MX_E_InvalidData;
+    }
 
-  //set location
-  hRes = SetLocation(szStartA, (SIZE_T)(szValueA - szStartA));
-  if (FAILED(hRes))
-    return hRes;
+    // set location
+    hRes = SetLocation(szStartA, (SIZE_T)(szValueA - szStartA));
+    if (FAILED(hRes))
+    {
+        return hRes;
+    }
 
-  //skip spaces and check for end
-  if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
-    return MX_E_InvalidData;
+    // skip spaces and check for end
+    if (SkipSpaces(szValueA, szValueEndA) != szValueEndA)
+    {
+        return MX_E_InvalidData;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 HRESULT CHttpHeaderRespLocation::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
-  return (cStrDestA.Copy((LPCSTR)cStrLocationA) != FALSE) ? S_OK : E_OUTOFMEMORY;
+    return (cStrDestA.Copy((LPCSTR)cStrLocationA) != FALSE) ? S_OK : E_OUTOFMEMORY;
 }
 
 HRESULT CHttpHeaderRespLocation::SetLocation(_In_z_ LPCSTR szLocationA, _In_ SIZE_T nLocationLen)
 {
-  CUrl cUrl;
-  HRESULT hRes;
+    CUrl cUrl;
+    HRESULT hRes;
 
-  if (nLocationLen == (SIZE_T)-1)
-    nLocationLen = StrLenA(szLocationA);
-  if (nLocationLen == 0)
-    return MX_E_InvalidData;
-  if (szLocationA == NULL)
-    return E_POINTER;
+    if (nLocationLen == (SIZE_T)-1)
+    {
+        nLocationLen = StrLenA(szLocationA);
+    }
+    if (nLocationLen == 0)
+    {
+        return MX_E_InvalidData;
+    }
+    if (szLocationA == NULL)
+    {
+        return E_POINTER;
+    }
 
-  //some checks
-  hRes = cUrl.ParseFromString(szLocationA, nLocationLen);
-  if (FAILED(hRes))
-    return hRes;
+    // some checks
+    hRes = cUrl.ParseFromString(szLocationA, nLocationLen);
+    if (FAILED(hRes))
+    {
+        return hRes;
+    }
 
-  //set new value
-  if (cStrLocationA.CopyN(szLocationA, nLocationLen) == FALSE)
-    return E_OUTOFMEMORY;
+    // set new value
+    if (cStrLocationA.CopyN(szLocationA, nLocationLen) == FALSE)
+    {
+        return E_OUTOFMEMORY;
+    }
 
-  //done
-  return S_OK;
+    // done
+    return S_OK;
 }
 
 LPCSTR CHttpHeaderRespLocation::GetLocation() const
 {
-  return (LPCSTR)cStrLocationA;
+    return (LPCSTR)cStrLocationA;
 }
 
-} //namespace MX
+} // namespace MX

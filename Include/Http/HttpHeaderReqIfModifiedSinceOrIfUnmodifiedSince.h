@@ -25,50 +25,50 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 class MX_NOVTABLE CHttpHeaderReqIfXXXSinceBase : public CHttpHeaderBase
 {
-protected:
-  CHttpHeaderReqIfXXXSinceBase(_In_ BOOL bIfModified);
-public:
-  ~CHttpHeaderReqIfXXXSinceBase();
+  protected:
+    CHttpHeaderReqIfXXXSinceBase(_In_ BOOL bIfModified);
 
-  HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+  public:
+    ~CHttpHeaderReqIfXXXSinceBase();
 
-  HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
+    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
-  HRESULT SetDate(_In_ CDateTime &cDt);
-  CDateTime GetDate() const;
+    HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-private:
-  BOOL bIfModified;
-  CDateTime cDt;
+    HRESULT SetDate(_In_ CDateTime &cDt);
+    CDateTime GetDate() const;
+
+  private:
+    BOOL bIfModified;
+    CDateTime cDt;
 };
 
 //-----------------------------------------------------------
 
 class CHttpHeaderReqIfModifiedSince : public CHttpHeaderReqIfXXXSinceBase
 {
-public:
-  CHttpHeaderReqIfModifiedSince() : CHttpHeaderReqIfXXXSinceBase(TRUE)
-    { };
+  public:
+    CHttpHeaderReqIfModifiedSince() : CHttpHeaderReqIfXXXSinceBase(TRUE) {};
 
-  MX_DECLARE_HTTPHEADER_NAME(If-Modified-Since)
+    MX_DECLARE_HTTPHEADER_NAME(If - Modified - Since)
 };
 
 //-----------------------------------------------------------
 
 class CHttpHeaderReqIfUnmodifiedSince : public CHttpHeaderReqIfXXXSinceBase
 {
-public:
-  CHttpHeaderReqIfUnmodifiedSince() : CHttpHeaderReqIfXXXSinceBase(FALSE)
-    { };
+  public:
+    CHttpHeaderReqIfUnmodifiedSince() : CHttpHeaderReqIfXXXSinceBase(FALSE) {};
 
-  MX_DECLARE_HTTPHEADER_NAME(If-Unmodified-Since)
+    MX_DECLARE_HTTPHEADER_NAME(If - Unmodified - Since)
 };
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 

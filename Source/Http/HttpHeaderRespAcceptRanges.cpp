@@ -21,126 +21,156 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
 CHttpHeaderRespAcceptRanges::CHttpHeaderRespAcceptRanges() : CHttpHeaderBase()
 {
-  nRange = RangeUnsupported;
-  return;
+    nRange = RangeUnsupported;
+    return;
 }
 
 CHttpHeaderRespAcceptRanges::~CHttpHeaderRespAcceptRanges()
 {
-  return;
+    return;
 }
 
 HRESULT CHttpHeaderRespAcceptRanges::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen)
 {
-  eRange _nRange = RangeUnsupported;
-  LPCSTR szValueEndA, szStartA;
-  BOOL bGotItem = FALSE;
+    eRange _nRange = RangeUnsupported;
+    LPCSTR szValueEndA, szStartA;
+    BOOL bGotItem = FALSE;
 
-  if (szValueA == NULL)
-    return E_POINTER;
-
-  if (nValueLen == (SIZE_T)-1)
-    nValueLen = StrLenA(szValueA);
-  szValueEndA = szValueA + nValueLen;
-
-  //parse range type
-  bGotItem = FALSE;
-  do
-  {
-    //skip spaces
-    szValueA = SkipSpaces(szValueA, szValueEndA);
-    if (szValueA >= szValueEndA)
-      break;
-
-    //get range type
-    szValueA = GetToken(szStartA = szValueA, szValueEndA);
-    if (szValueA == szStartA)
-      goto skip_null_listitem;
-
-    if (bGotItem != FALSE)
-      return MX_E_Unsupported; //only one range type is supported
-    bGotItem = TRUE;
-
-    //check range type
-    switch ((SIZE_T)(szValueA - szStartA))
+    if (szValueA == NULL)
     {
-      case 4:
-        if (StrNCompareA(szStartA, "none", 4, TRUE) == 0)
-          _nRange = RangeNone;
-        else
-          return MX_E_Unsupported;
-        break;
-
-      case 5:
-        if (StrNCompareA(szStartA, "bytes", 5, TRUE) == 0)
-          _nRange = RangeBytes;
-        else
-          return MX_E_Unsupported;
-        break;
-
-      default:
-        return MX_E_Unsupported;
+        return E_POINTER;
     }
 
-skip_null_listitem:
-    //skip spaces
-    szValueA = SkipSpaces(szValueA, szValueEndA);
-
-    //check for separator or end
-    if (szValueA < szValueEndA)
+    if (nValueLen == (SIZE_T)-1)
     {
-      if (*szValueA == ',')
-        szValueA++;
-      else
+        nValueLen = StrLenA(szValueA);
+    }
+    szValueEndA = szValueA + nValueLen;
+
+    // parse range type
+    bGotItem = FALSE;
+    do
+    {
+        // skip spaces
+        szValueA = SkipSpaces(szValueA, szValueEndA);
+        if (szValueA >= szValueEndA)
+        {
+            break;
+        }
+
+        // get range type
+        szValueA = GetToken(szStartA = szValueA, szValueEndA);
+        if (szValueA == szStartA)
+        {
+            goto skip_null_listitem;
+        }
+
+        if (bGotItem != FALSE)
+        {
+            return MX_E_Unsupported; // only one range type is supported
+        }
+        bGotItem = TRUE;
+
+        // check range type
+        switch ((SIZE_T)(szValueA - szStartA))
+        {
+        case 4:
+            if (StrNCompareA(szStartA, "none", 4, TRUE) == 0)
+            {
+                _nRange = RangeNone;
+            }
+            else
+            {
+                return MX_E_Unsupported;
+            }
+            break;
+
+        case 5:
+            if (StrNCompareA(szStartA, "bytes", 5, TRUE) == 0)
+            {
+                _nRange = RangeBytes;
+            }
+            else
+            {
+                return MX_E_Unsupported;
+            }
+            break;
+
+        default:
+            return MX_E_Unsupported;
+        }
+
+    skip_null_listitem:
+        // skip spaces
+        szValueA = SkipSpaces(szValueA, szValueEndA);
+
+        // check for separator or end
+        if (szValueA < szValueEndA)
+        {
+            if (*szValueA == ',')
+            {
+                szValueA++;
+            }
+            else
+            {
+                return MX_E_InvalidData;
+            }
+        }
+    } while (szValueA < szValueEndA);
+
+    // do we got one?
+    if (bGotItem == FALSE)
+    {
         return MX_E_InvalidData;
     }
-  }
-  while (szValueA < szValueEndA);
 
-  //do we got one?
-  if (bGotItem == FALSE)
-    return MX_E_InvalidData;
-
-  //done
-  nRange = _nRange;
-  return S_OK;
+    // done
+    nRange = _nRange;
+    return S_OK;
 }
 
 HRESULT CHttpHeaderRespAcceptRanges::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser)
 {
-  switch (nRange)
-  {
+    switch (nRange)
+    {
     case RangeNone:
-      if (cStrDestA.Copy("none") == FALSE)
-        return E_OUTOFMEMORY;
-      return S_OK;
+        if (cStrDestA.Copy("none") == FALSE)
+        {
+            return E_OUTOFMEMORY;
+        }
+        return S_OK;
 
     case RangeBytes:
-      if (cStrDestA.Copy("bytes") == FALSE)
-        return E_OUTOFMEMORY;
-      return S_OK;
-  }
-  cStrDestA.Empty();
-  return MX_E_Unsupported;
+        if (cStrDestA.Copy("bytes") == FALSE)
+        {
+            return E_OUTOFMEMORY;
+        }
+        return S_OK;
+    }
+    cStrDestA.Empty();
+    return MX_E_Unsupported;
 }
 
 HRESULT CHttpHeaderRespAcceptRanges::SetRange(_In_ eRange _nRange)
 {
-  if (_nRange != RangeNone && _nRange != RangeBytes && _nRange != RangeUnsupported)
-    return E_INVALIDARG;
+    if (_nRange != RangeNone && _nRange != RangeBytes && _nRange != RangeUnsupported)
+    {
+        return E_INVALIDARG;
+    }
 
-  //done
-  nRange = _nRange;
-  return S_OK;
+    // done
+    nRange = _nRange;
+    return S_OK;
 }
 
 CHttpHeaderRespAcceptRanges::eRange CHttpHeaderRespAcceptRanges::GetRange() const
 {
-  return nRange;
+    return nRange;
 }
 
-} //namespace MX
+} // namespace MX

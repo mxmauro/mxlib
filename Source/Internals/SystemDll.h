@@ -24,16 +24,18 @@
 
 //-----------------------------------------------------------
 
-namespace MX {
+namespace MX
+{
 
-namespace Internals {
+namespace Internals
+{
 
 HRESULT LoadSystemDll(_In_z_ LPCWSTR szDllNameW, _Out_ HINSTANCE *lphInstance);
 HRESULT LoadAppDll(_In_z_ LPCWSTR szDllNameW, _Out_ HINSTANCE *lphInstance);
 
-} //namespace Internals
+} // namespace Internals
 
-} //namespace MX
+} // namespace MX
 
 //-----------------------------------------------------------
 
