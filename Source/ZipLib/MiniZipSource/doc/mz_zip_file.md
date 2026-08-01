@@ -2,7 +2,7 @@
 
 Zip entry information structure. The _mz_zip_file_ structure is populated when reading zip entry information and can be used to populate zip entry information when writing zip entries.
 
-|Type|Name|Description|[PKWARE zip app note](zip/appnote.txt) section|
+|Type|Name|Description|[PKWARE zip app note](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT) section|
 |-|-|-|-|
 |uint16_t|version_madeby|Version made by field|4.4.2|
 |uint16_t|version_needed|Version needed to extract|4.4.3|
@@ -20,13 +20,13 @@ Zip entry information structure. The _mz_zip_file_ structure is populated when r
 |uint32_t|disk_number|Starting disk number|4.4.13|
 |int64_t|disk_offset|Starting disk offset|4.4.16|
 |uint16_t|internal_fa|Internal file attributes|4.4.14|
-|uint16_t|external_fa|External file attributes|4.4.15|
+|uint32_t|external_fa|External file attributes|4.4.15|
 |const char *|filename|Filename UTF-8 null-terminated string|4.4.17|
 |const uint8_t *|extrafield|Extrafield buffer array|4.4.28|
 |const char *|comment|Comment UTF-8 null-terminated string|4.4.18|
 |uint16_t|zip64|Zip64 extension mode|[MZ_ZIP64](mz_zip64.md)|
-|uint16_t|aes_version|WinZip AES version|[WinZip AES App Note](zip/winzip_aes.md)|
-|uint8_t|aes_strength|WinZip AES encryption strength|[WinZip AES App Note](zip/winzip_aes.md)|
+|uint16_t|aes_version|WinZip AES version|[WinZip AES App Note](https://www.winzip.com/aes_info.htm)|
+|uint8_t|aes_strength|WinZip AES encryption strength|[WinZip AES App Note](https://www.winzip.com/aes_info.htm)|
 
 For more information about each field please consult the referenced app note section.
 

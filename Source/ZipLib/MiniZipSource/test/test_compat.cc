@@ -9,13 +9,22 @@
 */
 
 #include "mz.h"
+#include "mz_config.h"
 #include "mz_os.h"
 #include "mz_zip.h"
-#include "mz_compat.h"
+
+#include "unzip.h"
+#include "zip.h"
+#include "crypt.h"
 
 #include <gtest/gtest.h>
 
-#ifdef HAVE_ZLIB
+#include <string>
+#include <vector>
+
+#if defined(HAVE_ZLIB) || defined(HAVE_LIBCOMP)
+
+#ifndef MZ_ZIP_NO_COMPRESSION
 static void test_zip_compat(zipFile zip, const char *filename, int32_t level) {
     int32_t err = ZIP_OK;
     zip_fileinfo file_info;
@@ -24,8 +33,9 @@ static void test_zip_compat(zipFile zip, const char *filename, int32_t level) {
     memset(&file_info, 0, sizeof(file_info));
     file_info.dosDate = mz_zip_time_t_to_dos_date(1588561637);
 
-    EXPECT_EQ(err = zipOpenNewFileInZip(zip, filename, &file_info, NULL, 0, NULL, 0, "test local comment",
-        Z_DEFLATED, level), ZIP_OK)
+    EXPECT_EQ(
+        err = zipOpenNewFileInZip(zip, filename, &file_info, NULL, 0, NULL, 0, "test local comment", Z_DEFLATED, level),
+        ZIP_OK)
         << "failed to open new file in zip (err: " << err << ")";
     if (err != ZIP_OK)
         return;
@@ -33,11 +43,29 @@ static void test_zip_compat(zipFile zip, const char *filename, int32_t level) {
     EXPECT_EQ(err = zipWriteInFileInZip(zip, buffer, (uint32_t)strlen(buffer)), ZIP_OK)
         << "failed to write to file in zip (err: " << err << ")";
 
-    EXPECT_EQ(err = zipCloseFileInZip(zip), ZIP_OK)
-        << "failed to close file in zip (err: " << err << ")";
+    EXPECT_EQ(err = zipCloseFileInZip(zip), ZIP_OK) << "failed to close file in zip (err: " << err << ")";
 }
+#endif
 
-TEST(compat, zip) {
+class compat_test : public ::testing::Test {
+protected:
+    static std::vector<std::string> temp_files;
+
+    static void SetUpTestSuite() {
+        temp_files.push_back("compat.zip");
+    }
+
+    static void TearDownTestSuite() {
+        for (const auto &f : temp_files) {
+            remove(f.c_str());
+        }
+    }
+};
+
+std::vector<std::string> compat_test::temp_files;
+
+#ifndef MZ_ZIP_NO_COMPRESSION
+TEST_F(compat_test, zip) {
     zipFile zip;
 
     zip = zipOpen64("compat.zip", APPEND_STATUS_CREATE);
@@ -48,7 +76,9 @@ TEST(compat, zip) {
 
     zipClose(zip, "test global comment");
 }
+#endif
 
+#if !defined(MZ_ZIP_NO_COMPRESSION) && !defined(MZ_ZIP_NO_DECOMPRESSION)
 static void test_unzip_compat(unzFile unzip) {
     unz_global_info64 global_info64;
     unz_global_info global_info;
@@ -75,23 +105,17 @@ static void test_unzip_compat(unzFile unzip) {
 
     EXPECT_STREQ(comment, "test global comment");
 
-    EXPECT_EQ(err = unzGetGlobalInfo(unzip, &global_info), UNZ_OK)
-        << "global info (err: " << err << ")";
+    EXPECT_EQ(err = unzGetGlobalInfo(unzip, &global_info), UNZ_OK) << "global info (err: " << err << ")";
     EXPECT_EQ(err = unzGetGlobalInfo64(unzip, &global_info64), UNZ_OK)
         << "global info l info 64-bit (err: " << err << ")";
 
-    EXPECT_EQ(global_info.number_entry, 2)
-        << "invalid number of entries";
-    EXPECT_EQ(global_info64.number_entry, 2)
-        << "invalid number of entries 64-bit";
+    EXPECT_EQ(global_info.number_entry, 2) << "invalid number of entries";
+    EXPECT_EQ(global_info64.number_entry, 2) << "invalid number of entries 64-bit";
 
-    EXPECT_EQ(global_info.number_disk_with_CD, 0)
-        << "invalid disk with cd";
-    EXPECT_EQ(global_info64.number_disk_with_CD, 0)
-        << "invalid disk with cd 64-bit";
+    EXPECT_EQ(global_info.number_disk_with_CD, 0) << "invalid disk with cd";
+    EXPECT_EQ(global_info64.number_disk_with_CD, 0) << "invalid disk with cd 64-bit";
 
-    EXPECT_EQ(err = unzLocateFile(unzip, "test.txt", 1), UNZ_OK)
-        << "cannot locate test file (err: " << err << ")";
+    EXPECT_EQ(err = unzLocateFile(unzip, "test.txt", 1), UNZ_OK) << "cannot locate test file (err: " << err << ")";
 
     EXPECT_EQ(err = unzGoToFirstFile(unzip), UNZ_OK);
     if (err != UNZ_OK)
@@ -99,73 +123,66 @@ static void test_unzip_compat(unzFile unzip) {
 
     EXPECT_EQ(err = unzGetCurrentFileInfo64(unzip, &file_info64, filename, sizeof(filename), NULL, 0, NULL, 0), UNZ_OK)
         << "failed to get current file info 64-bit (err: " << err << ")";
-    EXPECT_EQ(err = unzOpenCurrentFile(unzip), UNZ_OK)
-        << "failed to open current file (err: " << err << ")";
+    EXPECT_EQ(err = unzOpenCurrentFile(unzip), UNZ_OK) << "failed to open current file (err: " << err << ")";
 
     EXPECT_EQ(bytes_read = unzReadCurrentFile(unzip, buffer, sizeof(buffer)), (int32_t)strlen(test_data))
         << "failed to read zip entry data (err: " << err << ")";
 
-    EXPECT_EQ(unzEndOfFile(unzip), 1)
-        << "end of zip not reported correctly";
+    EXPECT_EQ(unzEndOfFile(unzip), 1) << "end of zip not reported correctly";
 
-    EXPECT_EQ(err = unzCloseCurrentFile(unzip), UNZ_OK)
-        << "failed to close current file (err: " << err << ")";
+    EXPECT_EQ(err = unzCloseCurrentFile(unzip), UNZ_OK) << "failed to close current file (err: " << err << ")";
 
-    EXPECT_EQ(unztell(unzip), bytes_read)
-        << "unzip position not reported correctly";
+    EXPECT_EQ(unztell(unzip), bytes_read) << "unzip position not reported correctly";
 
     EXPECT_EQ(err = unzGoToNextFile(unzip), UNZ_OK);
     if (err != UNZ_OK)
         return;
 
     comment[0] = 0;
-    EXPECT_EQ(err = unzGetCurrentFileInfo(unzip, &file_info, filename, sizeof(filename), NULL, 0, comment, sizeof(comment)), UNZ_OK)
+    EXPECT_EQ(
+        err = unzGetCurrentFileInfo(unzip, &file_info, filename, sizeof(filename), NULL, 0, comment, sizeof(comment)),
+        UNZ_OK)
         << "failed to get current file info (err: " << err << ")";
 
     EXPECT_STREQ(comment, "test local comment");
 
-    EXPECT_EQ(err = unzGetFilePos(unzip, &file_pos), UNZ_OK)
-        << "unexpected file position (err: " << err << ")";
+    EXPECT_EQ(err = unzGetFilePos(unzip, &file_pos), UNZ_OK) << "unexpected file position (err: " << err << ")";
 
-    EXPECT_EQ(file_pos.num_of_file, 1)
-        << "invalid file position";
+    EXPECT_EQ(file_pos.num_of_file, 1) << "invalid file position";
 
-    EXPECT_GT(unzGetOffset(unzip), 0)
-        << "invalid offset";
+    EXPECT_GT(unzGetOffset(unzip), 0) << "invalid offset";
 
-    EXPECT_EQ(err = unzSeek64(unzip, 0, SEEK_SET), UNZ_OK)
-        << "cannot seek to beginning (err: " << err << ")";
+    EXPECT_EQ(err = unzSeek64(unzip, 0, SEEK_SET), UNZ_OK) << "cannot seek to beginning (err: " << err << ")";
 
     EXPECT_EQ(err = unzGoToNextFile(unzip), UNZ_END_OF_LIST_OF_FILE)
         << "failed to reach end of list of files (err: " << err << ")";
 
-    EXPECT_EQ(err = unzSeek64(unzip, 0, SEEK_SET), UNZ_PARAMERROR)
-        << "cannot seek to beginning (err: " << err << ")";
+    EXPECT_EQ(err = unzSeek64(unzip, 0, SEEK_SET), UNZ_PARAMERROR) << "cannot seek to beginning (err: " << err << ")";
 
     unzCloseCurrentFile(unzip);
 }
 
-#ifndef MZ_FILE32_API
-#  ifndef NO_FSEEKO
-#    define ftello64 ftello
-#    define fseeko64 fseeko
-#  elif defined(_MSC_VER) && (_MSC_VER >= 1400)
-#    define ftello64 _ftelli64
-#    define fseeko64 _fseeki64
+#  ifndef MZ_FILE32_API
+#    if HAVE_FSEEKO
+#      define ftello64 ftello
+#      define fseeko64 fseeko
+#    elif defined(_MSC_VER) && (_MSC_VER >= 1400)
+#      define ftello64 _ftelli64
+#      define fseeko64 _fseeki64
+#    endif
 #  endif
-#endif
-#ifndef ftello64
-#  define ftello64 ftell
-#endif
-#ifndef fseeko64
-#  define fseeko64 fseek
-#endif
+#  ifndef ftello64
+#    define ftello64 ftell
+#  endif
+#  ifndef fseeko64
+#    define fseeko64 fseek
+#  endif
 
 static void *ZCALLBACK fopen_file_func(void *opaque, const char *filename, int mode) {
-    FILE* file = NULL;
-    const char* mode_fopen = NULL;
+    FILE *file = NULL;
+    const char *mode_fopen = NULL;
 
-    if ((mode & ZLIB_FILEFUNC_MODE_READWRITEFILTER)==ZLIB_FILEFUNC_MODE_READ)
+    if ((mode & ZLIB_FILEFUNC_MODE_READWRITEFILTER) == ZLIB_FILEFUNC_MODE_READ)
         mode_fopen = "rb";
     else if (mode & ZLIB_FILEFUNC_MODE_EXISTING)
         mode_fopen = "r+b";
@@ -197,8 +214,7 @@ static ZPOS64_T ZCALLBACK ftell64_file_func(void *opaque, void *stream) {
 static long ZCALLBACK fseek_file_func(void *opaque, void *stream, unsigned long offset, int origin) {
     int fseek_origin = 0;
     long ret = 0;
-    switch (origin)
-    {
+    switch (origin) {
     case ZLIB_FILEFUNC_SEEK_CUR:
         fseek_origin = SEEK_CUR;
         break;
@@ -219,8 +235,7 @@ static long ZCALLBACK fseek_file_func(void *opaque, void *stream, unsigned long 
 static long ZCALLBACK fseek64_file_func(void *opaque, void *stream, ZPOS64_T offset, int origin) {
     int fseek_origin = 0;
     long ret = 0;
-    switch (origin)
-    {
+    switch (origin) {
     case ZLIB_FILEFUNC_SEEK_CUR:
         fseek_origin = SEEK_CUR;
         break;
@@ -268,7 +283,7 @@ void fill_ioapi64_filefunc(zlib_filefunc64_def *pzlib_filefunc_def) {
     pzlib_filefunc_def->opaque = NULL;
 }
 
-TEST(compat, unzip) {
+TEST_F(compat_test, unzip) {
     unzFile unzip;
 
     unzip = unzOpen("compat.zip");
@@ -278,7 +293,7 @@ TEST(compat, unzip) {
     unzClose(unzip);
 }
 
-TEST(compat, unzip32) {
+TEST_F(compat_test, unzip32) {
     unzFile unzip;
     zlib_filefunc_def zlib_filefunc_def;
 
@@ -290,7 +305,7 @@ TEST(compat, unzip32) {
     unzClose(unzip);
 }
 
-TEST(compat, unzip64) {
+TEST_F(compat_test, unzip64) {
     unzFile unzip;
     zlib_filefunc64_def zlib_filefunc_def;
 
@@ -301,4 +316,5 @@ TEST(compat, unzip64) {
     test_unzip_compat(unzip);
     unzClose(unzip);
 }
+#endif
 #endif
