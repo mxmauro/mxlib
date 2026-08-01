@@ -14,17 +14,21 @@
 */
 
 #include "mz.h"
+#include "mz_config.h"
 #include "mz_strm.h"
 #include "mz_strm_os.h"
 
-#include <stdio.h> /* fopen, fread.. */
+#include <stdio.h> /* fopen, fread, ... */
 #include <errno.h>
+#include <sys/stat.h> /* S_IRUSR, S_IWUSR, ... */
+#include <unistd.h>   /* open, close, ... */
+#include <fcntl.h>    /* O_NOFOLLOW, ... */
 
 /***************************************************************************/
 
 #define fopen64 fopen
 #ifndef MZ_FILE32_API
-#  ifndef NO_FSEEKO
+#  if HAVE_FSEEKO
 #    define ftello64 ftello
 #    define fseeko64 fseeko
 #  elif defined(_MSC_VER) && (_MSC_VER >= 1400)
@@ -41,27 +45,25 @@
 
 /***************************************************************************/
 
-static mz_stream_vtbl mz_stream_os_vtbl = {
-    mz_stream_os_open,
-    mz_stream_os_is_open,
-    mz_stream_os_read,
-    mz_stream_os_write,
-    mz_stream_os_tell,
-    mz_stream_os_seek,
-    mz_stream_os_close,
-    mz_stream_os_error,
-    mz_stream_os_create,
-    mz_stream_os_delete,
-    NULL,
-    NULL
-};
+static mz_stream_vtbl mz_stream_os_vtbl = {mz_stream_os_open,
+                                           mz_stream_os_is_open,
+                                           mz_stream_os_read,
+                                           mz_stream_os_write,
+                                           mz_stream_os_tell,
+                                           mz_stream_os_seek,
+                                           mz_stream_os_close,
+                                           mz_stream_os_error,
+                                           mz_stream_os_create,
+                                           mz_stream_os_delete,
+                                           NULL,
+                                           NULL};
 
 /***************************************************************************/
 
 typedef struct mz_stream_posix_s {
-    mz_stream   stream;
-    int32_t     error;
-    FILE        *handle;
+    mz_stream stream;
+    int32_t error;
+    FILE *handle;
 } mz_stream_posix;
 
 /***************************************************************************/
@@ -69,20 +71,33 @@ typedef struct mz_stream_posix_s {
 int32_t mz_stream_os_open(void *stream, const char *path, int32_t mode) {
     mz_stream_posix *posix = (mz_stream_posix *)stream;
     const char *mode_fopen = NULL;
+    int mode_open = 0;
+    int fd;
 
     if (!path)
         return MZ_PARAM_ERROR;
 
-    if ((mode & MZ_OPEN_MODE_READWRITE) == MZ_OPEN_MODE_READ)
-        mode_fopen = "rb";
-    else if (mode & MZ_OPEN_MODE_APPEND)
-        mode_fopen = "r+b";
-    else if (mode & MZ_OPEN_MODE_CREATE)
-        mode_fopen = "wb";
-    else
+    if ((mode & MZ_OPEN_MODE_READWRITE) == MZ_OPEN_MODE_READ) {
+        mode_fopen = "r";
+        mode_open = O_RDONLY;
+    } else if (mode & MZ_OPEN_MODE_APPEND) {
+        mode_fopen = "r+";
+        mode_open = O_RDWR;
+    } else if (mode & MZ_OPEN_MODE_CREATE) {
+        mode_fopen = "w";
+        mode_open = O_WRONLY | O_CREAT | O_TRUNC;
+    } else
         return MZ_OPEN_ERROR;
 
-    posix->handle = fopen64(path, mode_fopen);
+    if (mode & MZ_OPEN_MODE_NOFOLLOW)
+        mode_open |= O_NOFOLLOW;
+
+    fd = open(path, mode_open, S_IRUSR | S_IWUSR | S_IRGRP);
+    if (fd != -1) {
+        posix->handle = fdopen(fd, mode_fopen);
+        if (!posix->handle)
+            close(fd);
+    }
     if (!posix->handle) {
         posix->error = errno;
         return MZ_OPEN_ERROR;
@@ -188,8 +203,7 @@ void mz_stream_os_delete(void **stream) {
     if (!stream)
         return;
     posix = (mz_stream_posix *)*stream;
-    if (posix)
-        free(posix);
+    free(posix);
     *stream = NULL;
 }
 

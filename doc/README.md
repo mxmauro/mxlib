@@ -140,7 +140,7 @@ At a minimum HAVE_ZLIB and HAVE_PKCRYPT will be necessary to be defined for drop
 
 When compressing an archive with WinZIP AES enabled, by default it uses 256 bit encryption. During decompression whatever bit encryption was specified when the entry was added to the archive will be used.
 
-WinZip AES encryption uses CTR on top of ECB which prevents identical ciphertext blocks that might occur when using ECB by itself. More details about the WinZIP AES format can be found in the [winzip documentation](zip/winzip_aes.md).
+WinZip AES encryption uses CTR on top of ECB which prevents identical ciphertext blocks that might occur when using ECB by itself. More details about the WinZIP AES format can be found in the [winzip documentation](https://www.winzip.com/aes_info.htm).
 
 ### How to Create a Secure Zip <!-- omit in toc -->
 
@@ -203,7 +203,7 @@ mz_zip_delete(&zip_handle);
 mz_stream_mem_delete(&mem_stream);
 ```
 
-For a complete example, see test_stream_mem() in [test.c](https://github.com/nmoinvaz/minizip/blob/master/test/test.c).
+For examples of memory stream usage, see [test/test_stream.cc](https://github.com/zlib-ng/minizip-ng/blob/develop/test/test_stream.cc).
 
 ### Buffered Stream
 
@@ -216,11 +216,9 @@ void *zip_handle = NULL;
 
 stream = mz_stream_os_create()
 
-/* TODO: open os stream.. */
-
 buf_stream = mz_stream_buffered_create();
-mz_stream_buffered_open(buf_stream, NULL, MZ_OPEN_MODE_READ);
-mz_stream_buffered_set_base(buf_stream, stream);
+mz_stream_set_base(buf_stream, stream);
+mz_stream_buffered_open(buf_stream, NULL, MZ_OPEN_MODE_READ); // This will also call mz_stream_os_open
 
 zip_handle = mz_zip_create();
 err = mz_zip_open(zip_handle, buf_stream, MZ_OPEN_MODE_READ);

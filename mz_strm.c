@@ -35,7 +35,7 @@ int32_t mz_stream_read(void *stream, void *buf, int32_t size) {
     mz_stream *strm = (mz_stream *)stream;
     if (!strm || !strm->vtbl || !strm->vtbl->read)
         return MZ_PARAM_ERROR;
-    if (mz_stream_is_open(stream) != MZ_OK)
+    if (mz_stream_is_open(strm) != MZ_OK)
         return MZ_STREAM_ERROR;
     return strm->vtbl->read(strm, buf, size);
 }
@@ -104,15 +104,18 @@ int32_t mz_stream_write(void *stream, const void *buf, int32_t size) {
         return size;
     if (!strm || !strm->vtbl || !strm->vtbl->write)
         return MZ_PARAM_ERROR;
-    if (mz_stream_is_open(stream) != MZ_OK)
+    if (mz_stream_is_open(strm) != MZ_OK)
         return MZ_STREAM_ERROR;
     return strm->vtbl->write(strm, buf, size);
 }
 
 static int32_t mz_stream_write_value(void *stream, uint64_t value, int32_t len) {
+    mz_stream *strm = (mz_stream *)stream;
     uint8_t buf[8];
     int32_t n = 0;
 
+    if (!strm)
+        return MZ_PARAM_ERROR;
     for (n = 0; n < len; n += 1) {
         buf[n] = (uint8_t)(value & 0xff);
         value >>= 8;
@@ -124,7 +127,7 @@ static int32_t mz_stream_write_value(void *stream, uint64_t value, int32_t len) 
             buf[n] = 0xff;
     }
 
-    if (mz_stream_write(stream, buf, len) != len)
+    if (mz_stream_write(strm, buf, len) != len)
         return MZ_STREAM_ERROR;
 
     return MZ_OK;
@@ -158,8 +161,8 @@ int32_t mz_stream_copy_to_end(void *target, void *source) {
     return mz_stream_copy_stream_to_end(target, NULL, source, NULL);
 }
 
-int32_t mz_stream_copy_stream(void *target, mz_stream_write_cb write_cb, void *source,
-    mz_stream_read_cb read_cb, int32_t len) {
+int32_t mz_stream_copy_stream(void *target, mz_stream_write_cb write_cb, void *source, mz_stream_read_cb read_cb,
+                              int32_t len) {
     uint8_t buf[16384];
     int32_t bytes_to_copy = 0;
     int32_t read = 0;
@@ -187,7 +190,7 @@ int32_t mz_stream_copy_stream(void *target, mz_stream_write_cb write_cb, void *s
 }
 
 int32_t mz_stream_copy_stream_to_end(void *target, mz_stream_write_cb write_cb, void *source,
-    mz_stream_read_cb read_cb) {
+                                     mz_stream_read_cb read_cb) {
     uint8_t buf[16384];
     int32_t read = 0;
     int32_t written = 0;
@@ -215,7 +218,7 @@ int64_t mz_stream_tell(void *stream) {
     mz_stream *strm = (mz_stream *)stream;
     if (!strm || !strm->vtbl || !strm->vtbl->tell)
         return MZ_PARAM_ERROR;
-    if (mz_stream_is_open(stream) != MZ_OK)
+    if (mz_stream_is_open(strm) != MZ_OK)
         return MZ_STREAM_ERROR;
     return strm->vtbl->tell(strm);
 }
@@ -224,7 +227,7 @@ int32_t mz_stream_seek(void *stream, int64_t offset, int32_t origin) {
     mz_stream *strm = (mz_stream *)stream;
     if (!strm || !strm->vtbl || !strm->vtbl->seek)
         return MZ_PARAM_ERROR;
-    if (mz_stream_is_open(stream) != MZ_OK)
+    if (mz_stream_is_open(strm) != MZ_OK)
         return MZ_STREAM_ERROR;
     if (origin == MZ_SEEK_SET && offset < 0)
         return MZ_SEEK_ERROR;
@@ -253,8 +256,10 @@ int32_t mz_stream_find(void *stream, const void *find, int32_t find_size, int64_
     start_pos = mz_stream_tell(stream);
 
     while (read_pos < max_seek) {
-        if (read_size > (int32_t)(max_seek - read_pos - buf_pos) && (max_seek - read_pos - buf_pos) < (int64_t)sizeof(buf))
+        if (read_size > (int32_t)(max_seek - read_pos - buf_pos) &&
+            (max_seek - read_pos - buf_pos) < (int64_t)sizeof(buf)) {
             read_size = (int32_t)(max_seek - read_pos - buf_pos);
+        }
 
         read = mz_stream_read(stream, buf + buf_pos, read_size);
         if ((read <= 0) || (read + buf_pos < find_size))
@@ -376,7 +381,7 @@ int32_t mz_stream_set_base(void *stream, void *base) {
     return MZ_OK;
 }
 
-void* mz_stream_get_interface(void *stream) {
+void *mz_stream_get_interface(void *stream) {
     mz_stream *strm = (mz_stream *)stream;
     if (!strm || !strm->vtbl)
         return NULL;
@@ -387,14 +392,14 @@ int32_t mz_stream_get_prop_int64(void *stream, int32_t prop, int64_t *value) {
     mz_stream *strm = (mz_stream *)stream;
     if (!strm || !strm->vtbl || !strm->vtbl->get_prop_int64)
         return MZ_PARAM_ERROR;
-    return strm->vtbl->get_prop_int64(stream, prop, value);
+    return strm->vtbl->get_prop_int64(strm, prop, value);
 }
 
 int32_t mz_stream_set_prop_int64(void *stream, int32_t prop, int64_t value) {
     mz_stream *strm = (mz_stream *)stream;
     if (!strm || !strm->vtbl || !strm->vtbl->set_prop_int64)
         return MZ_PARAM_ERROR;
-    return strm->vtbl->set_prop_int64(stream, prop, value);
+    return strm->vtbl->set_prop_int64(strm, prop, value);
 }
 
 void *mz_stream_create(mz_stream_vtbl *vtbl) {
@@ -416,10 +421,10 @@ void mz_stream_delete(void **stream) {
 /***************************************************************************/
 
 typedef struct mz_stream_raw_s {
-    mz_stream   stream;
-    int64_t     total_in;
-    int64_t     total_out;
-    int64_t     max_total_in;
+    mz_stream stream;
+    int64_t total_in;
+    int64_t total_out;
+    int64_t max_total_in;
 } mz_stream_raw;
 
 /***************************************************************************/
@@ -517,19 +522,9 @@ int32_t mz_stream_raw_set_prop_int64(void *stream, int32_t prop, int64_t value) 
 /***************************************************************************/
 
 static mz_stream_vtbl mz_stream_raw_vtbl = {
-    mz_stream_raw_open,
-    mz_stream_raw_is_open,
-    mz_stream_raw_read,
-    mz_stream_raw_write,
-    mz_stream_raw_tell,
-    mz_stream_raw_seek,
-    mz_stream_raw_close,
-    mz_stream_raw_error,
-    mz_stream_raw_create,
-    mz_stream_raw_delete,
-    mz_stream_raw_get_prop_int64,
-    mz_stream_raw_set_prop_int64
-};
+    mz_stream_raw_open,   mz_stream_raw_is_open, mz_stream_raw_read,           mz_stream_raw_write,
+    mz_stream_raw_tell,   mz_stream_raw_seek,    mz_stream_raw_close,          mz_stream_raw_error,
+    mz_stream_raw_create, mz_stream_raw_delete,  mz_stream_raw_get_prop_int64, mz_stream_raw_set_prop_int64};
 
 /***************************************************************************/
 
@@ -545,7 +540,6 @@ void mz_stream_raw_delete(void **stream) {
     if (!stream)
         return;
     raw = (mz_stream_raw *)*stream;
-    if (raw)
-        free(raw);
+    free(raw);
     *stream = NULL;
 }

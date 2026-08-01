@@ -15,6 +15,7 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 
 #include <stdio.h> /* printf, snprintf */
 
@@ -68,9 +69,9 @@ TEST(crypt, sha1) {
 }
 
 TEST(crypt, sha224) {
-#if GTEST_OS_WINDOWS
+#  if GTEST_OS_WINDOWS
     GTEST_SKIP() << "SHA224 not supported on Windows";
-#else
+#  else
     void *sha224 = nullptr;
     uint8_t hash224[MZ_HASH_SHA224_SIZE];
     char computed_hash[256];
@@ -88,13 +89,13 @@ TEST(crypt, sha224) {
     convert_buffer_to_hex_string(hash224, sizeof(hash224), computed_hash, sizeof(computed_hash));
 
     EXPECT_STREQ(computed_hash, "9e444f5f0b6582a923bd48696155f4a2f0d914e044cb64b8729a6600");
-#endif
+#  endif
 }
 
 TEST(crypt, sha256) {
-#if GTEST_OS_WINDOWS && _WIN32_WINNT <= _WIN32_WINNT_XP
+#  if GTEST_OS_WINDOWS && _WIN32_WINNT <= _WIN32_WINNT_XP
     GTEST_SKIP() << "SHA256 not supported on Windows XP";
-#else
+#  else
     void *sha256 = nullptr;
     uint8_t hash256[MZ_HASH_SHA256_SIZE];
     char computed_hash[256];
@@ -112,13 +113,13 @@ TEST(crypt, sha256) {
     convert_buffer_to_hex_string(hash256, sizeof(hash256), computed_hash, sizeof(computed_hash));
 
     EXPECT_STREQ(computed_hash, "7a31ea0848525f7ebfeec9ee532bcc5d6d26772427e097b86cf440a56546541c");
-#endif
+#  endif
 }
 
 TEST(crypt, sha384) {
-#if GTEST_OS_WINDOWS && _WIN32_WINNT <= _WIN32_WINNT_XP
+#  if GTEST_OS_WINDOWS && _WIN32_WINNT <= _WIN32_WINNT_XP
     GTEST_SKIP() << "SHA384 not supported on Windows XP";
-#else
+#  else
     void *sha384 = nullptr;
     uint8_t hash384[MZ_HASH_SHA384_SIZE];
     char computed_hash[256];
@@ -135,14 +136,15 @@ TEST(crypt, sha384) {
 
     convert_buffer_to_hex_string(hash384, sizeof(hash384), computed_hash, sizeof(computed_hash));
 
-    EXPECT_STREQ(computed_hash, "e1e42e5977965bb3621231a5df3a1e83c471fa91fde33b6a30c8c4fa0d8be29ba7171c7c9487db91e9ee7e85049f7b41");
-#endif
+    EXPECT_STREQ(computed_hash,
+                 "e1e42e5977965bb3621231a5df3a1e83c471fa91fde33b6a30c8c4fa0d8be29ba7171c7c9487db91e9ee7e85049f7b41");
+#  endif
 }
 
 TEST(crypt, sha512) {
-#if GTEST_OS_WINDOWS && _WIN32_WINNT <= _WIN32_WINNT_XP
+#  if GTEST_OS_WINDOWS && _WIN32_WINNT <= _WIN32_WINNT_XP
     GTEST_SKIP() << "SHA512 not supported on Windows XP";
-#else
+#  else
     void *sha512 = nullptr;
     uint8_t hash512[MZ_HASH_SHA512_SIZE];
     char computed_hash[256];
@@ -159,14 +161,19 @@ TEST(crypt, sha512) {
 
     convert_buffer_to_hex_string(hash512, sizeof(hash512), computed_hash, sizeof(computed_hash));
 
-    EXPECT_STREQ(computed_hash, "6627e7643ee7ce633e03f52d22329c3a32597364247c5275d4369985e1518626da46f595ad327667346479d246359b8b381af791ce2ac8c53a4788050eea11fe");
-#endif
+    EXPECT_STREQ(computed_hash,
+                 "6627e7643ee7ce633e03f52d22329c3a32597364247c5275d4369985e1518626da46f595ad327667346479d246359b8b381af"
+                 "791ce2ac8c53a4788050eea11fe");
+#  endif
 }
 
 TEST(crypt, aes128) {
     void *aes = nullptr;
     const char *key = "awesomekeythisis";
     const char *test = "youknowitsogrowi";
+    const uint8_t cipher[] = {
+        0x53, 0x45, 0xa5, 0xdc, 0xc4, 0x02, 0x96, 0xcb, 0xbb, 0x4a, 0xde, 0x25, 0x62, 0xd3, 0x80, 0x38,
+    };
     int32_t key_length = 0;
     int32_t test_length = 0;
     uint8_t buf[120];
@@ -182,7 +189,7 @@ TEST(crypt, aes128) {
     EXPECT_EQ(mz_crypt_aes_encrypt(aes, nullptr, 0, buf, test_length), test_length);
     mz_crypt_aes_delete(&aes);
 
-    EXPECT_STRNE((char *)buf, test);
+    EXPECT_THAT(cipher, ::testing::ElementsAreArray(buf, test_length));
 
     aes = mz_crypt_aes_create();
     ASSERT_NE(aes, nullptr);
@@ -198,6 +205,9 @@ TEST(crypt, aes128_cbc) {
     const char *key = "awesomekeythisis";
     const char *test = "youknowitsogrowi";
     const char *iv = "0123456789123456";
+    const uint8_t cipher[] = {
+        0x59, 0x44, 0xbd, 0xf8, 0x54, 0x8c, 0xf9, 0x0a, 0xfa, 0x34, 0x1e, 0xab, 0x42, 0x3d, 0xe1, 0x70,
+    };
     int32_t key_length = 0;
     int32_t test_length = 0;
     int32_t iv_length = 0;
@@ -216,7 +226,7 @@ TEST(crypt, aes128_cbc) {
     EXPECT_EQ(mz_crypt_aes_encrypt(aes, nullptr, 0, buf, test_length), test_length);
     mz_crypt_aes_delete(&aes);
 
-    EXPECT_STRNE((char *)buf, test);
+    EXPECT_THAT(cipher, ::testing::ElementsAreArray(buf, test_length));
 
     aes = mz_crypt_aes_create();
     ASSERT_NE(aes, nullptr);
@@ -228,58 +238,77 @@ TEST(crypt, aes128_cbc) {
     EXPECT_STREQ((char *)buf, test);
 }
 
-
 TEST(crypt, aes128_gcm) {
-#if GTEST_OS_WINDOWS && _WIN32_WINNT <= _WIN32_WINNT_XP
+#  if GTEST_OS_WINDOWS && _WIN32_WINNT <= _WIN32_WINNT_XP
     GTEST_SKIP() << "SHA256 not supported on Windows XP";
-#else
-    void* aes = nullptr;
-    const char* key = "awesomekeythisis";
-    const char* test = "youknowitsogrowi";
-    const char* iv = "0123456789123456";
+#  else
+    void *aes = nullptr;
+    const char *key = "awesomekeythisis";
+    const char *test = "youknowitsogrowi";
+    const char *iv = "0123456789123456";
     const char *aad = "additional authentication data";
+
+#    if GTEST_OS_WINDOWS
+    // BCryptEncrypt hard-restricts the IV length to exactly 96 bits for AES-GCM.
+    // The actual IV is "012345678912".
+    const uint8_t cipher[] = {
+        0xe1, 0xf1, 0x6a, 0xfc, 0xa8, 0x19, 0xba, 0x64, 0x8b, 0xd5, 0xb4, 0xf5, 0x9a, 0xce, 0xd0, 0x60,
+    };
+    const uint8_t tag[] = {
+        0x9a, 0xa9, 0xc2, 0x30, 0xa5, 0x2f, 0x9c, 0xb6, 0x61, 0xf1, 0x67, 0xcb, 0xf5, 0x6d, 0x97, 0x31,
+    };
+#    else
+    const uint8_t cipher[] = {
+        0x89, 0x2e, 0xfc, 0x80, 0x7e, 0x5b, 0xb1, 0x62, 0x29, 0xb1, 0x1e, 0x5d, 0x37, 0x51, 0x43, 0x34,
+    };
+    const uint8_t tag[] = {
+        0x52, 0x82, 0x9d, 0x91, 0x56, 0x76, 0xc8, 0x8e, 0x1d, 0xd0, 0x89, 0xb6, 0x8e, 0x45, 0x56, 0x27,
+    };
+#    endif
     int32_t key_length = 0;
     int32_t test_length = 0;
     int32_t iv_length = 0;
     int32_t aad_length = 0;
-    uint8_t buf[120];
-    uint8_t tag[MZ_AES_BLOCK_SIZE] = {0};
+    uint8_t buf[120] = {0};
+    uint8_t computed_tag[MZ_AES_BLOCK_SIZE] = {0};
 
     key_length = (int32_t)strlen(key);
     test_length = (int32_t)strlen(test);
     iv_length = (int32_t)strlen(iv);
     aad_length = (int32_t)strlen(aad);
 
-    strncpy((char*)buf, test, sizeof(buf));
-    strncpy((char*)buf + test_length, test, sizeof(buf) - test_length);
+    strncpy((char *)buf, test, sizeof(buf));
 
     aes = mz_crypt_aes_create();
     ASSERT_NE(aes, nullptr);
     mz_crypt_aes_set_mode(aes, MZ_AES_MODE_GCM);
     EXPECT_EQ(mz_crypt_aes_set_encrypt_key(aes, key, key_length, iv, iv_length), MZ_OK);
     EXPECT_EQ(mz_crypt_aes_encrypt(aes, aad, aad_length, buf, test_length), test_length);
-    EXPECT_EQ(mz_crypt_aes_encrypt_final(aes, buf + test_length, test_length - 1, tag, sizeof(tag)), test_length - 1);
+    EXPECT_EQ(mz_crypt_aes_encrypt_final(aes, nullptr, 0, computed_tag, sizeof(computed_tag)), 0);
     mz_crypt_aes_delete(&aes);
 
-    EXPECT_STRNE((char*)buf, test);
+    EXPECT_THAT(cipher, ::testing::ElementsAreArray(buf, test_length));
+    EXPECT_THAT(computed_tag, ::testing::ElementsAreArray(tag));
 
     aes = mz_crypt_aes_create();
     ASSERT_NE(aes, nullptr);
     mz_crypt_aes_set_mode(aes, MZ_AES_MODE_GCM);
     EXPECT_EQ(mz_crypt_aes_set_decrypt_key(aes, key, key_length, iv, iv_length), MZ_OK);
     EXPECT_EQ(mz_crypt_aes_decrypt(aes, aad, aad_length, buf, test_length), test_length);
-    EXPECT_EQ(mz_crypt_aes_decrypt_final(aes, buf + test_length, test_length - 1, tag, sizeof(tag)), test_length - 1);
+    EXPECT_EQ(mz_crypt_aes_decrypt_final(aes, nullptr, 0, tag, sizeof(tag)), 0);
     mz_crypt_aes_delete(&aes);
 
-    EXPECT_EQ(memcmp(buf, test, test_length), 0);
-    EXPECT_EQ(memcmp(buf + test_length, test, test_length - 1), 0);
-#endif
+    EXPECT_STREQ((char *)buf, test);
+#  endif
 }
 
-TEST(crypt, aes194) {
+TEST(crypt, aes192) {
     void *aes = nullptr;
     const char *key = "awesomekeythisisbeefyone";
     const char *test = "youknowitsogrowi";
+    const uint8_t cipher[] = {
+        0x44, 0x49, 0x9e, 0x1b, 0x87, 0x97, 0xa1, 0xd1, 0x5d, 0x89, 0xd9, 0x71, 0xd0, 0xca, 0x08, 0xbc,
+    };
     int32_t key_length = 0;
     int32_t test_length = 0;
     uint8_t buf[120];
@@ -295,7 +324,7 @@ TEST(crypt, aes194) {
     EXPECT_EQ(mz_crypt_aes_encrypt(aes, nullptr, 0, buf, test_length), test_length);
     mz_crypt_aes_delete(&aes);
 
-    EXPECT_STRNE((char *)buf, test);
+    EXPECT_THAT(cipher, ::testing::ElementsAreArray(buf, test_length));
 
     aes = mz_crypt_aes_create();
     ASSERT_NE(aes, nullptr);
@@ -310,6 +339,9 @@ TEST(crypt, aes256) {
     void *aes = nullptr;
     const char *key = "awesomekeythisisevenmoresolidone";
     const char *test = "youknowitsogrowi";
+    const uint8_t cipher[] = {
+        0x1a, 0xf0, 0xe4, 0xf3, 0xdf, 0xe3, 0xc2, 0x64, 0x9d, 0x23, 0x52, 0x68, 0x0f, 0x10, 0xc2, 0x7e,
+    };
     int32_t key_length = 0;
     int32_t test_length = 0;
     uint8_t buf[120];
@@ -325,7 +357,7 @@ TEST(crypt, aes256) {
     EXPECT_EQ(mz_crypt_aes_encrypt(aes, nullptr, 0, buf, test_length), test_length);
     mz_crypt_aes_delete(&aes);
 
-    EXPECT_STRNE((char *)buf, test);
+    EXPECT_THAT(cipher, ::testing::ElementsAreArray(buf, test_length));
 
     aes = mz_crypt_aes_create();
     ASSERT_NE(aes, nullptr);
@@ -381,9 +413,9 @@ TEST(crypt, hmac_sha1_short_password) {
 }
 
 TEST(crypt, hmac_sha256) {
-#if GTEST_OS_WINDOWS && _WIN32_WINNT <= _WIN32_WINNT_XP
+#  if GTEST_OS_WINDOWS && _WIN32_WINNT <= _WIN32_WINNT_XP
     GTEST_SKIP() << "SHA256 not supported on Windows XP";
-#else
+#  else
     void *hmac;
     const char *key = "hm123";
     const char *test = "12345678";
@@ -401,10 +433,10 @@ TEST(crypt, hmac_sha256) {
     convert_buffer_to_hex_string(hash256, sizeof(hash256), computed_hash, sizeof(computed_hash));
 
     EXPECT_STREQ(computed_hash, "fb22a9c715a47a06bad4f6cee9badc31c921562f5d6b24adf2be009f73181f7a");
-#endif
+#  endif
 }
 
-#ifdef HAVE_WZAES
+#  ifdef HAVE_WZAES
 TEST(crypt, pbkdf2) {
     uint16_t iteration_count = 1000;
     uint8_t key[MZ_HASH_SHA1_SIZE];
@@ -412,8 +444,9 @@ TEST(crypt, pbkdf2) {
     const char *password = "passwordpasswordpasswordpassword";
     const char *salt = "8F3472E4EA57F56E36F30246DC22C173";
 
-    EXPECT_EQ(mz_crypt_pbkdf2((uint8_t *)password, (int32_t)strlen(password),
-        (uint8_t *)salt, (int32_t)strlen(salt), iteration_count, key, (uint16_t)sizeof(key)), MZ_OK);
+    EXPECT_EQ(mz_crypt_pbkdf2((uint8_t *)password, (int32_t)strlen(password), (uint8_t *)salt, (int32_t)strlen(salt),
+                              iteration_count, key, (uint16_t)sizeof(key)),
+              MZ_OK);
 
     convert_buffer_to_hex_string(key, sizeof(key), key_hex, sizeof(key_hex));
 
@@ -428,8 +461,9 @@ TEST(crypt, pbkdf2_long_odd_password) {
     const char *password = "passwordpasswordpasswordpasswordpasswordpasswordpasswordpasswordp";
     const char *salt = "8F3472E4EA57F56E36F30246DC22C173";
 
-    EXPECT_EQ(mz_crypt_pbkdf2((uint8_t *)password, (int32_t)strlen(password),
-        (uint8_t *)salt, (int32_t)strlen(salt), iteration_count, key, (uint16_t)sizeof(key)), MZ_OK);
+    EXPECT_EQ(mz_crypt_pbkdf2((uint8_t *)password, (int32_t)strlen(password), (uint8_t *)salt, (int32_t)strlen(salt),
+                              iteration_count, key, (uint16_t)sizeof(key)),
+              MZ_OK);
 
     convert_buffer_to_hex_string(key, sizeof(key), key_hex, sizeof(key_hex));
 
@@ -444,8 +478,9 @@ TEST(crypt, pbkdf2_short_password) {
     const char *password = "p";
     const char *salt = "8F3472E4EA57F56E36F30246DC22C173";
 
-    EXPECT_EQ(mz_crypt_pbkdf2((uint8_t *)password, (int32_t)strlen(password),
-        (uint8_t *)salt, (int32_t)strlen(salt), iteration_count, key, (uint16_t)sizeof(key)), MZ_OK);
+    EXPECT_EQ(mz_crypt_pbkdf2((uint8_t *)password, (int32_t)strlen(password), (uint8_t *)salt, (int32_t)strlen(salt),
+                              iteration_count, key, (uint16_t)sizeof(key)),
+              MZ_OK);
 
     convert_buffer_to_hex_string(key, sizeof(key), key_hex, sizeof(key_hex));
 
@@ -460,8 +495,9 @@ TEST(crypt, pbkdf2_rfc6070_v1) {
     const char *password = "password";
     const char *salt = "salt";
 
-    EXPECT_EQ(mz_crypt_pbkdf2((uint8_t *)password, (int32_t)strlen(password),
-        (uint8_t *)salt, (int32_t)strlen(salt), iteration_count, key, (uint16_t)sizeof(key)), MZ_OK);
+    EXPECT_EQ(mz_crypt_pbkdf2((uint8_t *)password, (int32_t)strlen(password), (uint8_t *)salt, (int32_t)strlen(salt),
+                              iteration_count, key, (uint16_t)sizeof(key)),
+              MZ_OK);
 
     convert_buffer_to_hex_string(key, sizeof(key), key_hex, sizeof(key_hex));
 
@@ -476,8 +512,9 @@ TEST(crypt, pbkdf2_rfc6070_v2) {
     const char *password = "password";
     const char *salt = "salt";
 
-    EXPECT_EQ(mz_crypt_pbkdf2((uint8_t *)password, (int32_t)strlen(password),
-        (uint8_t *)salt, (int32_t)strlen(salt), iteration_count, key, (uint16_t)sizeof(key)), MZ_OK);
+    EXPECT_EQ(mz_crypt_pbkdf2((uint8_t *)password, (int32_t)strlen(password), (uint8_t *)salt, (int32_t)strlen(salt),
+                              iteration_count, key, (uint16_t)sizeof(key)),
+              MZ_OK);
 
     convert_buffer_to_hex_string(key, sizeof(key), key_hex, sizeof(key_hex));
 
@@ -492,8 +529,9 @@ TEST(crypt, pbkdf2_rfc6070_v3) {
     const char *password = "password";
     const char *salt = "salt";
 
-    EXPECT_EQ(mz_crypt_pbkdf2((uint8_t *)password, (int32_t)strlen(password),
-        (uint8_t *)salt, (int32_t)strlen(salt), iteration_count, key, (uint16_t)sizeof(key)), MZ_OK);
+    EXPECT_EQ(mz_crypt_pbkdf2((uint8_t *)password, (int32_t)strlen(password), (uint8_t *)salt, (int32_t)strlen(salt),
+                              iteration_count, key, (uint16_t)sizeof(key)),
+              MZ_OK);
 
     convert_buffer_to_hex_string(key, sizeof(key), key_hex, sizeof(key_hex));
 
@@ -508,8 +546,9 @@ TEST(crypt, pbkdf2_rfc6070_v4) {
     const char *password = "passwordPASSWORDpassword";
     const char *salt = "saltSALTsaltSALTsaltSALTsaltSALTsalt";
 
-    EXPECT_EQ(mz_crypt_pbkdf2((uint8_t *)password, (int32_t)strlen(password),
-        (uint8_t *)salt, (int32_t)strlen(salt), iteration_count, key, (uint16_t)sizeof(key)), MZ_OK);
+    EXPECT_EQ(mz_crypt_pbkdf2((uint8_t *)password, (int32_t)strlen(password), (uint8_t *)salt, (int32_t)strlen(salt),
+                              iteration_count, key, (uint16_t)sizeof(key)),
+              MZ_OK);
 
     convert_buffer_to_hex_string(key, sizeof(key), key_hex, sizeof(key_hex));
 
@@ -524,12 +563,12 @@ TEST(crypt, pbkdf2_rfc6070_v5) {
     const char *password = "pass\0word";
     const char *salt = "sa\0lt";
 
-    EXPECT_EQ(mz_crypt_pbkdf2((uint8_t *)password, 9,
-        (uint8_t *)salt, 5, iteration_count, key, (uint16_t)sizeof(key)), MZ_OK);
+    EXPECT_EQ(mz_crypt_pbkdf2((uint8_t *)password, 9, (uint8_t *)salt, 5, iteration_count, key, (uint16_t)sizeof(key)),
+              MZ_OK);
 
     convert_buffer_to_hex_string(key, sizeof(key), key_hex, sizeof(key_hex));
 
     EXPECT_STREQ(key_hex, "56fa6aa75548099dcc37d7f03425e0c3");
 }
-#endif
+#  endif
 #endif

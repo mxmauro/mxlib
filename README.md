@@ -14,8 +14,8 @@ Developed and maintained by Nathan Moinvaziri.
 
 | Name                                                          | Description                                                                                                                                                             |
 |:--------------------------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [master](https://github.com/zlib-ng/minizip-ng/tree/master)   | Most recent release.                                                                                                                                                    |
 | [develop](https://github.com/zlib-ng/minizip-ng/tree/develop) | Latest development code.                                                                                                                                                |
+| [master](https://github.com/zlib-ng/minizip-ng/tree/master)   | Most recent stable release.                                                                                                                                             |
 | [1.2](https://github.com/zlib-ng/minizip-ng/tree/1.2)         | Old changes to original minizip that includes WinZip AES encryption, disk splitting, I/O buffering and some additional fixes. Not ABI compatible with original minizip. |
 | [1.1](https://github.com/zlib-ng/minizip-ng/tree/1.1)         | Original minizip as of zlib 1.2.11.                                                                                                                                     |
 
@@ -33,7 +33,7 @@ not been maintained for a long period of time. The code has been largely refacto
 + Read and write raw zip entry data.
 + Reading and writing zip archives from memory.
 + Support for large files with ZIP64 extension.
-+ Zlib, BZIP2, LZMA, XZ, and ZSTD compression methods.
++ Zlib, BZIP2, LZMA, PPMD, XZ and ZSTD compression methods.
 + Password protection through Traditional PKWARE and [WinZIP AES](https://www.winzip.com/aes_info.htm) encryption.
 + Buffered streaming for improved I/O performance.
 + NTFS timestamp support for UTC last modified, last accessed, and creation dates.
@@ -69,8 +69,10 @@ cmake --build build
 |:--------------------|:---------------------------------------------------------------|:-------------:|
 | MZ_COMPAT           | Enables compatibility layer                                    |      ON       |
 | MZ_ZLIB             | Enables ZLIB compression                                       |      ON       |
+| MZ_ZLIB_FLAVOR      | Select ZLIB implementation (auto, zlib-ng, zlib)               |      auto     |
 | MZ_BZIP2            | Enables BZIP2 compression                                      |      ON       |
 | MZ_LZMA             | Enables LZMA & XZ compression                                  |      ON       |
+| MZ_PPMD             | Enables PPMD compression                                       |      ON       |
 | MZ_ZSTD             | Enables ZSTD compression                                       |      ON       |
 | MZ_LIBCOMP          | Enables Apple compression                                      |     APPLE     |
 | MZ_FETCH_LIBS       | Enables fetching third-party libraries if not found            |     WIN32     |
@@ -87,7 +89,7 @@ cmake --build build
 | MZ_BUILD_UNIT_TESTS | Builds minizip unit test project                               |      OFF      |
 | MZ_BUILD_FUZZ_TESTS | Builds minizip fuzz executables                                |      OFF      |
 | MZ_CODE_COVERAGE    | Build with code coverage flags                                 |      OFF      |
-| MZ_SANITIZER        | Build with code sanitizer (Memory, Thread, Address, Undefined) |               |
+| MZ_SANITIZER        | Build with code sanitizer (Memory, Thread, Address, Undefined) |      OFF      |
 | MZ_LIB_SUFFIX       | Library name suffix for packaging                              |               |
 
 ## Third-Party Libraries
@@ -99,6 +101,7 @@ installed then it will be used, otherwise CMake will retrieve the source code fo
 |-|-|-|-|
 [bzip2](https://www.sourceware.org/bzip2/)|[license](https://github.com/zlib-ng/minizip-ng/blob/develop/lib/bzip2/LICENSE)|`MZ_BZIP2`|Written by Julian Seward.|
 |[liblzma](https://tukaani.org/xz/)|Public domain|`MZ_LZMA`|Written by Igor Pavlov and Lasse Collin.|
+|[ppmd](https://7-zip.org/)|Public domain|`MZ_PPMD`|Written by Igor Pavlov.|
 |[zlib](https://zlib.net/)|zlib|`MZ_ZLIB`|Written by Mark Adler and Jean-loup Gailly. Or alternatively, [zlib-ng](https://github.com/zlib-ng/zlib-ng) by Hans Kristian Rosbach.|
 |[zstd](https://github.com/facebook/zstd)|[BSD](https://github.com/facebook/zstd/blob/dev/LICENSE)|`MZ_ZSTD`|Written by Facebook.|
 
@@ -110,4 +113,4 @@ Thanks go out to all the people who have taken the time to contribute code revie
 
 Thanks to [Gilles Vollant](https://www.winimage.com/zLibDll/minizip.html) on which this work is originally based on.
 
-The [ZIP format](https://github.com/zlib-ng/minizip-ng/blob/master/doc/zip/appnote.txt) was defined by Phil Katz of PKWARE.
+The [ZIP format](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT) was defined by Phil Katz of PKWARE.
