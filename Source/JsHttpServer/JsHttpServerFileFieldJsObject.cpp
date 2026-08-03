@@ -19,13 +19,11 @@
  */
 #include "JsHttpServerCommon.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Internals
-{
+namespace Internals {
 
 CFileFieldJsObject::CFileFieldJsObject() : CJsObjectBase(), CNonCopyableObj()
 {

@@ -20,10 +20,9 @@
 #include "..\..\Include\Http\HttpHeaderGenConnection.h"
 #include <intsafe.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderGenConnection::CHttpHeaderGenConnection() : CHttpHeaderBase()
 {
@@ -80,7 +79,7 @@ HRESULT CHttpHeaderGenConnection::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T 
             return hRes;
         }
 
-    skip_null_listitem:
+skip_null_listitem:
         // skip spaces
         szValueA = SkipSpaces(szValueA, szValueEndA);
 
@@ -96,7 +95,8 @@ HRESULT CHttpHeaderGenConnection::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T 
                 return MX_E_InvalidData;
             }
         }
-    } while (szValueA < szValueEndA);
+    }
+    while (szValueA < szValueEndA);
 
     // do we got one?
     if (bGotItem == FALSE)

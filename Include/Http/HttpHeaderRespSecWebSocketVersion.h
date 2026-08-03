@@ -22,20 +22,19 @@
 
 #include "HttpHeaderBase.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderRespSecWebSocketVersion : public CHttpHeaderBase
 {
-  public:
+public:
     CHttpHeaderRespSecWebSocketVersion();
     ~CHttpHeaderRespSecWebSocketVersion();
 
-    MX_DECLARE_HTTPHEADER_NAME(Sec - WebSocket - Version)
+    MX_DECLARE_HTTPHEADER_NAME("Sec-WebSocket-Version")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
@@ -51,7 +50,7 @@ class CHttpHeaderRespSecWebSocketVersion : public CHttpHeaderBase
 
     HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
 
-  private:
+private:
     TArrayList<int> cVersionsList;
 };
 

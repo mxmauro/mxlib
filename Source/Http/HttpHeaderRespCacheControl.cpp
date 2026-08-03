@@ -22,14 +22,13 @@
 #include <intsafe.h>
 #include "..\..\Include\AutoPtr.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 static HRESULT GetUInt64(_In_z_ LPCWSTR szValueW, _Out_ ULONGLONG &nValue);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderRespCacheControl::CHttpHeaderRespCacheControl() : CHttpHeaderBase()
 {
@@ -322,7 +321,7 @@ HRESULT CHttpHeaderRespCacheControl::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE
         // skip spaces
         szValueA = SkipSpaces(szValueA, szValueEndA);
 
-    skip_null_listitem:
+skip_null_listitem:
         // check for separator or end
         if (szValueA < szValueEndA)
         {
@@ -335,7 +334,8 @@ HRESULT CHttpHeaderRespCacheControl::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE
                 return MX_E_InvalidData;
             }
         }
-    } while (szValueA < szValueEndA);
+    }
+    while (szValueA < szValueEndA);
 
     // do we got one?
     if (nHasItem == 0)
@@ -466,8 +466,7 @@ HRESULT CHttpHeaderRespCacheControl::Build(_Inout_ CStringA &cStrDestA, _In_ Htt
     nCount = aExtensionsList.GetCount();
     for (i = 0; i < nCount; i++)
     {
-        if (Http::BuildQuotedString(cStrTempA, aExtensionsList[i]->szValueW, StrLenW(aExtensionsList[i]->szValueW),
-                                    FALSE) == FALSE)
+        if (Http::BuildQuotedString(cStrTempA, aExtensionsList[i]->szValueW, StrLenW(aExtensionsList[i]->szValueW), FALSE) == FALSE)
         {
             return E_OUTOFMEMORY;
         }

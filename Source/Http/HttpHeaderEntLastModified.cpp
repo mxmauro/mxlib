@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderEntLastModified.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderEntLastModified::CHttpHeaderEntLastModified() : CHttpHeaderBase()
 {

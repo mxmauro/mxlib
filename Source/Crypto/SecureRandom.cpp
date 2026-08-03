@@ -25,10 +25,9 @@
 #define _CRT_RAND_S
 #include <stdlib.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-typedef BOOLEAN(__stdcall *lpfnRtlGenRandom)(_Out_writes_bytes_(RandomBufferLength) PVOID RandomBuffer,
-                                             _In_ ULONG RandomBufferLength);
+typedef BOOLEAN(__stdcall *lpfnRtlGenRandom)(_Out_writes_bytes_(RandomBufferLength) PVOID RandomBuffer, _In_ ULONG RandomBufferLength);
 
 //-----------------------------------------------------------
 
@@ -40,11 +39,9 @@ static BOOL InitializeSecureRandom();
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace SecureRandom
-{
+namespace SecureRandom {
 
 VOID Generate(_Out_writes_bytes_(nSize) LPBYTE lpOut, _In_ SIZE_T nSize)
 {

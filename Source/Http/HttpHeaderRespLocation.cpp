@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderRespLocation.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderRespLocation::CHttpHeaderRespLocation() : CHttpHeaderBase()
 {

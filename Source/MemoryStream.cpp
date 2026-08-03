@@ -19,10 +19,9 @@
  */
 #include "..\Include\MemoryStream.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CMemoryStream::CMemoryStream(_In_opt_ SIZE_T nAllocationGranularity) : CStream(), CNonCopyableObj()
 {
@@ -78,8 +77,7 @@ VOID CMemoryStream::Close()
     return;
 }
 
-HRESULT CMemoryStream::Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesRead,
-                            _In_opt_ ULONGLONG nStartOffset)
+HRESULT CMemoryStream::Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesRead, _In_opt_ ULONGLONG nStartOffset)
 {
     SIZE_T nReadPos;
 
@@ -118,8 +116,7 @@ HRESULT CMemoryStream::Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_
     return S_OK;
 }
 
-HRESULT CMemoryStream::Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
-                             _In_opt_ ULONGLONG nStartOffset)
+HRESULT CMemoryStream::Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten, _In_opt_ ULONGLONG nStartOffset)
 {
     SIZE_T nWritePos;
 
@@ -176,43 +173,43 @@ HRESULT CMemoryStream::Seek(_In_ ULONGLONG nPosition, _In_opt_ CStream::eSeekMet
 {
     switch (nMethod)
     {
-    case eSeekMethod::Start:
-        if (nPosition > (ULONGLONG)nSize)
-        {
-            nPosition = (ULONGLONG)nSize;
-        }
-        break;
-
-    case eSeekMethod::Current:
-        if ((LONGLONG)nPosition >= 0)
-        {
-            if (nPosition > (ULONGLONG)(nSize - nCurrPos))
+        case eSeekMethod::Start:
+            if (nPosition > (ULONGLONG)nSize)
             {
-                nPosition = (ULONGLONG)(nSize - nCurrPos);
+                nPosition = (ULONGLONG)nSize;
             }
-            nPosition += (ULONGLONG)nCurrPos;
-        }
-        else
-        {
-            nPosition = (~nPosition) + 1;
-            if (nPosition > (ULONGLONG)nCurrPos)
+            break;
+
+        case eSeekMethod::Current:
+            if ((LONGLONG)nPosition >= 0)
             {
-                return E_FAIL;
+                if (nPosition > (ULONGLONG)(nSize - nCurrPos))
+                {
+                    nPosition = (ULONGLONG)(nSize - nCurrPos);
+                }
+                nPosition += (ULONGLONG)nCurrPos;
             }
-            nPosition = (ULONGLONG)nCurrPos - nPosition;
-        }
-        break;
+            else
+            {
+                nPosition = (~nPosition) + 1;
+                if (nPosition > (ULONGLONG)nCurrPos)
+                {
+                    return E_FAIL;
+                }
+                nPosition = (ULONGLONG)nCurrPos - nPosition;
+            }
+            break;
 
-    case eSeekMethod::End:
-        if (nPosition > (ULONGLONG)nSize)
-        {
-            nPosition = (ULONGLONG)nSize;
-        }
-        nPosition = (ULONGLONG)nSize - nPosition;
-        break;
+        case eSeekMethod::End:
+            if (nPosition > (ULONGLONG)nSize)
+            {
+                nPosition = (ULONGLONG)nSize;
+            }
+            nPosition = (ULONGLONG)nSize - nPosition;
+            break;
 
-    default:
-        return E_INVALIDARG;
+        default:
+            return E_INVALIDARG;
     }
     nCurrPos = (SIZE_T)nPosition;
     // done

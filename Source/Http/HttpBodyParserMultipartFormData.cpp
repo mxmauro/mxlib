@@ -22,15 +22,14 @@
 #include "..\..\Include\Http\Url.h"
 #include "..\..\Include\Strings\Utf8.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define MAX_HEADER_LINE 4096
 #define MAX_HEADER_LENGTH 65536
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpBodyParserMultipartFormData::CHttpBodyParserMultipartFormData(
     _In_ OnDownloadStartedCallback _cDownloadStartedCallback, _In_opt_ LPVOID _lpUserData, _In_ DWORD _dwMaxFieldSize,
@@ -118,110 +117,136 @@ HRESULT CHttpBodyParserMultipartFormData::Parse(_In_opt_ LPCVOID lpData, _In_opt
     {
         switch (sParser.nState)
         {
-        case eState::Boundary:
-            if (*szDataA == '\r' || *szDataA == '\n')
-            {
-                break;
-            }
-
-            if (sParser.nBoundaryPos < 2)
-            {
-                if (*szDataA != '-')
+            case eState::Boundary:
+                if (*szDataA == '\r' || *szDataA == '\n')
                 {
-                err_invalid_data:
-                    hRes = MX_E_InvalidData;
-                    goto done;
+                    break;
                 }
-            }
-            else
-            {
-                LPCSTR sA = (LPCSTR)cStrBoundaryA;
-                if (*szDataA != sA[sParser.nBoundaryPos - 2])
+
+                if (sParser.nBoundaryPos < 2)
+                {
+                    if (*szDataA != '-')
+                    {
+err_invalid_data:
+                        hRes = MX_E_InvalidData;
+                        goto done;
+                    }
+                }
+                else
+                {
+                    LPCSTR sA = (LPCSTR)cStrBoundaryA;
+                    if (*szDataA != sA[sParser.nBoundaryPos - 2])
+                    {
+                        goto err_invalid_data;
+                    }
+                    if (sA[sParser.nBoundaryPos - 1] == 0)
+                    {
+                        sParser.nState = eState::BoundaryAfter;
+                        break;
+                    }
+                }
+                sParser.nBoundaryPos++;
+                break;
+
+            case eState::BoundaryAfter:
+                if (*szDataA == '-')
+                {
+                    sParser.nState = eState::BoundaryEndCheck;
+                    break;
+                }
+                sParser.nState = eState::BoundaryAfter2;
+                // fall into 'StateBoundaryAfter2'
+
+            case eState::BoundaryAfter2:
+                if (*szDataA == ' ' || *szDataA == '\t')
+                {
+                    break;
+                }
+                if (*szDataA != '\r')
                 {
                     goto err_invalid_data;
                 }
-                if (sA[sParser.nBoundaryPos - 1] == 0)
+                sParser.nState = eState::BoundaryAfterEnd;
+                break;
+
+            case eState::BoundaryAfterEnd:
+                if (*szDataA != '\n')
                 {
-                    sParser.nState = eState::BoundaryAfter;
+                    goto err_invalid_data;
+                }
+
+                // start of a header block
+                sParser.nState = eState::HeaderStart;
+                sParser.dwHeadersLen = 0;
+                sParser.sCurrentBlock.sContentDisposition.cStrNameW.Empty();
+                sParser.sCurrentBlock.sContentDisposition.bHasFileName = FALSE;
+                sParser.sCurrentBlock.sContentDisposition.cStrFileNameW.Empty();
+                sParser.sCurrentBlock.cStrContentTypeA.Empty();
+                sParser.sCurrentBlock.bContentTransferEncoding = FALSE;
+                sParser.cFileH.Close();
+                sParser.nUsedTempBuf = 0;
+                sParser.nFileUploadSize = 0ui64;
+                break;
+
+            case eState::BoundaryEndCheck:
+                // check second dash
+                if (*szDataA != '-')
+                {
+                    goto err_invalid_data;
+                }
+                sParser.nState = eState::BoundaryEndCheckAfterDashes;
+                break;
+
+            case eState::BoundaryEndCheckAfterDashes:
+                if (*szDataA == ' ' || *szDataA == '\t')
+                {
                     break;
                 }
-            }
-            sParser.nBoundaryPos++;
-            break;
-
-        case eState::BoundaryAfter:
-            if (*szDataA == '-')
-            {
-                sParser.nState = eState::BoundaryEndCheck;
+                if (*szDataA != '\r')
+                {
+                    goto err_invalid_data;
+                }
+                sParser.nState = eState::BoundaryEndCheckAfterDashes2;
                 break;
-            }
-            sParser.nState = eState::BoundaryAfter2;
-            // fall into 'StateBoundaryAfter2'
 
-        case eState::BoundaryAfter2:
-            if (*szDataA == ' ' || *szDataA == '\t')
-            {
+            case eState::BoundaryEndCheckAfterDashes2:
+                if (*szDataA != '\n')
+                {
+                    goto err_invalid_data;
+                }
+                sParser.nState = eState::Done;
                 break;
-            }
-            if (*szDataA != '\r')
-            {
-                goto err_invalid_data;
-            }
-            sParser.nState = eState::BoundaryAfterEnd;
-            break;
 
-        case eState::BoundaryAfterEnd:
-            if (*szDataA != '\n')
-            {
-                goto err_invalid_data;
-            }
+            case eState::HeaderStart:
+                if (*szDataA == '\r')
+                {
+                    // no more headers
+                    if (sParser.cStrCurrLineA.IsEmpty() == FALSE)
+                    {
+                        hRes = ParseHeader(sParser.cStrCurrLineA);
+                        if (FAILED(hRes))
+                        {
+                            goto done;
+                        }
+                        sParser.cStrCurrLineA.Empty();
+                    }
+                    sParser.nState = eState::HeadersEnding;
+                    break;
+                }
 
-            // start of a header block
-            sParser.nState = eState::HeaderStart;
-            sParser.dwHeadersLen = 0;
-            sParser.sCurrentBlock.sContentDisposition.cStrNameW.Empty();
-            sParser.sCurrentBlock.sContentDisposition.bHasFileName = FALSE;
-            sParser.sCurrentBlock.sContentDisposition.cStrFileNameW.Empty();
-            sParser.sCurrentBlock.cStrContentTypeA.Empty();
-            sParser.sCurrentBlock.bContentTransferEncoding = FALSE;
-            sParser.cFileH.Close();
-            sParser.nUsedTempBuf = 0;
-            sParser.nFileUploadSize = 0ui64;
-            break;
+                // are we continuing the last header?
+                if (*szDataA == ' ' || *szDataA == '\t')
+                {
+                    if (sParser.cStrCurrLineA.IsEmpty() != FALSE)
+                    {
+                        goto err_invalid_data;
+                    }
+                    sParser.nState = eState::HeaderValue;
+                    BACKWARD_CHAR();
+                    break;
+                }
 
-        case eState::BoundaryEndCheck:
-            // check second dash
-            if (*szDataA != '-')
-            {
-                goto err_invalid_data;
-            }
-            sParser.nState = eState::BoundaryEndCheckAfterDashes;
-            break;
-
-        case eState::BoundaryEndCheckAfterDashes:
-            if (*szDataA == ' ' || *szDataA == '\t')
-            {
-                break;
-            }
-            if (*szDataA != '\r')
-            {
-                goto err_invalid_data;
-            }
-            sParser.nState = eState::BoundaryEndCheckAfterDashes2;
-            break;
-
-        case eState::BoundaryEndCheckAfterDashes2:
-            if (*szDataA != '\n')
-            {
-                goto err_invalid_data;
-            }
-            sParser.nState = eState::Done;
-            break;
-
-        case eState::HeaderStart:
-            if (*szDataA == '\r')
-            {
-                // no more headers
+                // new header arrives, first check if we have a previous defined
                 if (sParser.cStrCurrLineA.IsEmpty() == FALSE)
                 {
                     hRes = ParseHeader(sParser.cStrCurrLineA);
@@ -231,327 +256,299 @@ HRESULT CHttpBodyParserMultipartFormData::Parse(_In_opt_ LPCVOID lpData, _In_opt
                     }
                     sParser.cStrCurrLineA.Empty();
                 }
-                sParser.nState = eState::HeadersEnding;
-                break;
-            }
+                sParser.nState = eState::HeaderName;
+                // fall into 'eState::HeaderName'
 
-            // are we continuing the last header?
-            if (*szDataA == ' ' || *szDataA == '\t')
-            {
-                if (sParser.cStrCurrLineA.IsEmpty() != FALSE)
+            case eState::HeaderName:
+                // check headers length
+                if (sParser.dwHeadersLen >= MAX_HEADER_LENGTH)
+                {
+err_line_too_long:
+                    hRes = MX_E_BadLength; // header line too long
+                    goto done;
+                }
+                (sParser.dwHeadersLen)++;
+
+                // end of header name?
+                if (*szDataA == ':')
+                {
+                    // no need to insert pending space
+                    if (sParser.cStrCurrLineA.IsEmpty() != FALSE)
+                    {
+                        goto err_invalid_data;
+                    }
+
+                    if (sParser.cStrCurrLineA.ConcatN(":", 1) == FALSE)
+                    {
+err_nomem:
+                        hRes = E_OUTOFMEMORY;
+                        goto done;
+                    }
+                    sParser.nState = eState::HeaderValue;
+                    break;
+                }
+
+                // check for valid token char
+                if (Http::IsValidNameChar(*szDataA) == FALSE)
                 {
                     goto err_invalid_data;
                 }
-                sParser.nState = eState::HeaderValue;
-                BACKWARD_CHAR();
-                break;
-            }
+                if (sParser.cStrCurrLineA.GetLength() > MAX_HEADER_LINE)
+                {
+                    goto err_line_too_long;
+                }
 
-            // new header arrives, first check if we have a previous defined
-            if (sParser.cStrCurrLineA.IsEmpty() == FALSE)
-            {
-                hRes = ParseHeader(sParser.cStrCurrLineA);
+                // add character to line
+                if (sParser.cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
+                {
+                    goto err_nomem;
+                }
+                break;
+
+            case eState::HeaderValue:
+                // check headers length
+                if (sParser.dwHeadersLen >= MAX_HEADER_LENGTH)
+                {
+                    goto err_line_too_long;
+                }
+                (sParser.dwHeadersLen)++;
+
+                if (*szDataA == '\r')
+                {
+                    sParser.nState = eState::HeaderValueEnding;
+                    break;
+                }
+
+                // check valid value char
+                if (*szDataA == 0)
+                {
+                    goto err_invalid_data;
+                }
+
+                // and append
+                if (sParser.cStrCurrLineA.GetLength() > MAX_HEADER_LINE)
+                {
+                    goto err_line_too_long;
+                }
+                if (sParser.cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
+                {
+                    goto err_nomem;
+                }
+                break;
+
+            case eState::HeaderValueEnding:
+                if (*szDataA != '\n')
+                {
+                    goto err_invalid_data;
+                }
+
+                sParser.nState = eState::HeaderStart;
+                break;
+
+            case eState::HeadersEnding:
+                if (*szDataA != '\n')
+                {
+                    goto err_invalid_data;
+                }
+
+                // verify if required headers are set
+                if (sParser.sCurrentBlock.sContentDisposition.cStrNameW.IsEmpty() != FALSE)
+                {
+                    goto err_invalid_data; // requires header not set
+                }
+
+                // if dealing with a file...
+                if (sParser.sCurrentBlock.sContentDisposition.bHasFileName != FALSE)
+                {
+                    if ((sParser.nFileUploadCounter++) >= (SIZE_T)dwMaxFilesCount)
+                    {
+                        hRes = MX_E_BadLength;
+                        goto done;
+                    }
+
+                    // switch to file container
+                    if (cDownloadStartedCallback)
+                    {
+                        LPCWSTR sW = (LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrFileNameW);
+                        hRes = cDownloadStartedCallback(&(sParser.cFileH), sW, lpUserData);
+                        if (SUCCEEDED(hRes) && (!(sParser.cFileH)))
+                        {
+                            hRes = MX_HRESULT_FROM_WIN32(ERROR_FILE_TOO_LARGE);
+                        }
+                        if (FAILED(hRes))
+                        {
+                            goto done;
+                        }
+                    }
+                }
+                else
+                {
+                    sParser.cStrCurrLineA.Empty();
+                }
+
+                // process data
+                sParser.nState = eState::Data;
+                break;
+
+            case eState::Data:
+                if (*szDataA == '\r')
+                {
+                    sParser.nState = eState::MayBeDataEnd;
+                    sParser.nBoundaryPos = 0;
+                    break;
+                }
+                if (*szDataA == '\n')
+                {
+                    sParser.nState = eState::MayBeDataEndAlt;
+                    sParser.nBoundaryPos = 1;
+                    break;
+                }
+
+                // normal data
+                hRes = AccumulateData(*szDataA);
                 if (FAILED(hRes))
                 {
                     goto done;
                 }
-                sParser.cStrCurrLineA.Empty();
-            }
-            sParser.nState = eState::HeaderName;
-            // fall into 'eState::HeaderName'
-
-        case eState::HeaderName:
-            // check headers length
-            if (sParser.dwHeadersLen >= MAX_HEADER_LENGTH)
-            {
-            err_line_too_long:
-                hRes = MX_E_BadLength; // header line too long
-                goto done;
-            }
-            (sParser.dwHeadersLen)++;
-
-            // end of header name?
-            if (*szDataA == ':')
-            {
-                // no need to insert pending space
-                if (sParser.cStrCurrLineA.IsEmpty() != FALSE)
-                {
-                    goto err_invalid_data;
-                }
-
-                if (sParser.cStrCurrLineA.ConcatN(":", 1) == FALSE)
-                {
-                err_nomem:
-                    hRes = E_OUTOFMEMORY;
-                    goto done;
-                }
-                sParser.nState = eState::HeaderValue;
                 break;
-            }
 
-            // check for valid token char
-            if (Http::IsValidNameChar(*szDataA) == FALSE)
-            {
-                goto err_invalid_data;
-            }
-            if (sParser.cStrCurrLineA.GetLength() > MAX_HEADER_LINE)
-            {
-                goto err_line_too_long;
-            }
-
-            // add character to line
-            if (sParser.cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
-            {
-                goto err_nomem;
-            }
-            break;
-
-        case eState::HeaderValue:
-            // check headers length
-            if (sParser.dwHeadersLen >= MAX_HEADER_LENGTH)
-            {
-                goto err_line_too_long;
-            }
-            (sParser.dwHeadersLen)++;
-
-            if (*szDataA == '\r')
-            {
-                sParser.nState = eState::HeaderValueEnding;
-                break;
-            }
-
-            // check valid value char
-            if (*szDataA == 0)
-            {
-                goto err_invalid_data;
-            }
-
-            // and append
-            if (sParser.cStrCurrLineA.GetLength() > MAX_HEADER_LINE)
-            {
-                goto err_line_too_long;
-            }
-            if (sParser.cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
-            {
-                goto err_nomem;
-            }
-            break;
-
-        case eState::HeaderValueEnding:
-            if (*szDataA != '\n')
-            {
-                goto err_invalid_data;
-            }
-
-            sParser.nState = eState::HeaderStart;
-            break;
-
-        case eState::HeadersEnding:
-            if (*szDataA != '\n')
-            {
-                goto err_invalid_data;
-            }
-
-            // verify if required headers are set
-            if (sParser.sCurrentBlock.sContentDisposition.cStrNameW.IsEmpty() != FALSE)
-            {
-                goto err_invalid_data; // requires header not set
-            }
-
-            // if dealing with a file...
-            if (sParser.sCurrentBlock.sContentDisposition.bHasFileName != FALSE)
-            {
-                if ((sParser.nFileUploadCounter++) >= (SIZE_T)dwMaxFilesCount)
+            case eState::MayBeDataEnd:
+            case eState::MayBeDataEndAlt:
+                if (sParser.nBoundaryPos == 0)
                 {
-                    hRes = MX_E_BadLength;
-                    goto done;
-                }
-
-                // switch to file container
-                if (cDownloadStartedCallback)
-                {
-                    LPCWSTR sW = (LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrFileNameW);
-                    hRes = cDownloadStartedCallback(&(sParser.cFileH), sW, lpUserData);
-                    if (SUCCEEDED(hRes) && (!(sParser.cFileH)))
+                    if (*szDataA != '\n')
                     {
-                        hRes = MX_HRESULT_FROM_WIN32(ERROR_FILE_TOO_LARGE);
-                    }
-                    if (FAILED(hRes))
-                    {
-                        goto done;
-                    }
-                }
-            }
-            else
-            {
-                sParser.cStrCurrLineA.Empty();
-            }
-
-            // process data
-            sParser.nState = eState::Data;
-            break;
-
-        case eState::Data:
-            if (*szDataA == '\r')
-            {
-                sParser.nState = eState::MayBeDataEnd;
-                sParser.nBoundaryPos = 0;
-                break;
-            }
-            if (*szDataA == '\n')
-            {
-                sParser.nState = eState::MayBeDataEndAlt;
-                sParser.nBoundaryPos = 1;
-                break;
-            }
-
-            // normal data
-            hRes = AccumulateData(*szDataA);
-            if (FAILED(hRes))
-            {
-                goto done;
-            }
-            break;
-
-        case eState::MayBeDataEnd:
-        case eState::MayBeDataEndAlt:
-            if (sParser.nBoundaryPos == 0)
-            {
-                if (*szDataA != '\n')
-                {
-                not_boundary_end:
-                    if (sParser.nState == eState::MayBeDataEnd)
-                    {
-                        hRes = AccumulateData('\r');
-                        if (FAILED(hRes))
+not_boundary_end:
+                        if (sParser.nState == eState::MayBeDataEnd)
                         {
-                            goto done;
-                        }
-                    }
-                    if (sParser.nBoundaryPos > 0)
-                    {
-                        hRes = AccumulateData('\n');
-                        if (SUCCEEDED(hRes) && sParser.nBoundaryPos > 1)
-                        {
-                            hRes = AccumulateData('-');
-                        }
-                        if (SUCCEEDED(hRes) && sParser.nBoundaryPos > 2)
-                        {
-                            hRes = AccumulateData('-');
-                        }
-                        if (FAILED(hRes))
-                        {
-                            goto done;
-                        }
-                    }
-                    if (sParser.nBoundaryPos > 3)
-                    {
-                        LPCSTR sA = (LPCSTR)cStrBoundaryA;
-
-                        for (k = 3; k < sParser.nBoundaryPos; k++)
-                        {
-                            hRes = AccumulateData(sA[k - 3]);
+                            hRes = AccumulateData('\r');
                             if (FAILED(hRes))
                             {
                                 goto done;
                             }
                         }
+                        if (sParser.nBoundaryPos > 0)
+                        {
+                            hRes = AccumulateData('\n');
+                            if (SUCCEEDED(hRes) && sParser.nBoundaryPos > 1)
+                            {
+                                hRes = AccumulateData('-');
+                            }
+                            if (SUCCEEDED(hRes) && sParser.nBoundaryPos > 2)
+                            {
+                                hRes = AccumulateData('-');
+                            }
+                            if (FAILED(hRes))
+                            {
+                                goto done;
+                            }
+                        }
+                        if (sParser.nBoundaryPos > 3)
+                        {
+                            LPCSTR sA = (LPCSTR)cStrBoundaryA;
+
+                            for (k = 3; k < sParser.nBoundaryPos; k++)
+                            {
+                                hRes = AccumulateData(sA[k - 3]);
+                                if (FAILED(hRes))
+                                {
+                                    goto done;
+                                }
+                            }
+                        }
+                        //'*szData' points to the current char but it can be the beginning of a boundary end
+                        sParser.nState = eState::Data;
+                        BACKWARD_CHAR();
+                        break;
                     }
-                    //'*szData' points to the current char but it can be the beginning of a boundary end
-                    sParser.nState = eState::Data;
+                }
+                else if (sParser.nBoundaryPos <= 2)
+                {
+                    if (*szDataA != '-')
+                    {
+                        goto not_boundary_end;
+                    }
+                }
+                else
+                {
+                    LPCSTR sA = (LPCSTR)cStrBoundaryA;
+
+                    if (*szDataA != sA[sParser.nBoundaryPos - 3])
+                    {
+                        goto not_boundary_end;
+                    }
+                    if (sA[sParser.nBoundaryPos - 2] == 0)
+                    {
+                        // boundary detected, add accumulated value
+                        if (!(sParser.cFileH))
+                        {
+                            hRes = Utf8_Decode(cStrTempW, (LPCSTR)(sParser.cStrCurrLineA));
+                            if (SUCCEEDED(hRes))
+                            {
+                                hRes = AddField((LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrNameW), (LPCWSTR)cStrTempW);
+                            }
+                            if (FAILED(hRes))
+                            {
+                                goto done;
+                            }
+                        }
+                        else
+                        {
+                            // flush buffers
+                            hRes = S_OK;
+                            if (sParser.nUsedTempBuf >= 0)
+                            {
+                                if (::WriteFile(sParser.cFileH, sParser.aTempBuf, (DWORD)(sParser.nUsedTempBuf), &dw, NULL) == FALSE)
+                                {
+                                    hRes = MX_HRESULT_FROM_LASTERROR();
+                                }
+                                else if ((SIZE_T)dw != sParser.nUsedTempBuf)
+                                {
+                                    hRes = MX_E_WriteFault;
+                                }
+                            }
+                            if (SUCCEEDED(hRes))
+                            {
+                                hRes = AddFileField((LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrNameW),
+                                                    (LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrFileNameW),
+                                                    (LPCSTR)(sParser.sCurrentBlock.cStrContentTypeA), sParser.cFileH.Get());
+                            }
+                            if (FAILED(hRes))
+                            {
+                                goto done;
+                            }
+                            sParser.cFileH.Detach();
+                        }
+                        sParser.cStrCurrLineA.Empty();
+                        sParser.nState = eState::DataEnd;
+                        break;
+                    }
+                }
+                (sParser.nBoundaryPos)++;
+                break;
+
+            case eState::DataEnd:
+                if (*szDataA == '-')
+                {
+                    sParser.nState = eState::BoundaryEndCheck;
+                }
+                else if (*szDataA == '\r')
+                {
+                    sParser.nState = eState::BoundaryAfterEnd;
+                }
+                else
+                {
                     BACKWARD_CHAR();
-                    break;
+                    sParser.nState = eState::BoundaryAfter;
                 }
-            }
-            else if (sParser.nBoundaryPos <= 2)
-            {
-                if (*szDataA != '-')
-                {
-                    goto not_boundary_end;
-                }
-            }
-            else
-            {
-                LPCSTR sA = (LPCSTR)cStrBoundaryA;
+                break;
 
-                if (*szDataA != sA[sParser.nBoundaryPos - 3])
-                {
-                    goto not_boundary_end;
-                }
-                if (sA[sParser.nBoundaryPos - 2] == 0)
-                {
-                    // boundary detected, add accumulated value
-                    if (!(sParser.cFileH))
-                    {
-                        hRes = Utf8_Decode(cStrTempW, (LPCSTR)(sParser.cStrCurrLineA));
-                        if (SUCCEEDED(hRes))
-                        {
-                            hRes = AddField((LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrNameW),
-                                            (LPCWSTR)cStrTempW);
-                        }
-                        if (FAILED(hRes))
-                        {
-                            goto done;
-                        }
-                    }
-                    else
-                    {
-                        // flush buffers
-                        hRes = S_OK;
-                        if (sParser.nUsedTempBuf >= 0)
-                        {
-                            if (::WriteFile(sParser.cFileH, sParser.aTempBuf, (DWORD)(sParser.nUsedTempBuf), &dw,
-                                            NULL) == FALSE)
-                            {
-                                hRes = MX_HRESULT_FROM_LASTERROR();
-                            }
-                            else if ((SIZE_T)dw != sParser.nUsedTempBuf)
-                            {
-                                hRes = MX_E_WriteFault;
-                            }
-                        }
-                        if (SUCCEEDED(hRes))
-                        {
-                            hRes = AddFileField((LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrNameW),
-                                                (LPCWSTR)(sParser.sCurrentBlock.sContentDisposition.cStrFileNameW),
-                                                (LPCSTR)(sParser.sCurrentBlock.cStrContentTypeA), sParser.cFileH.Get());
-                        }
-                        if (FAILED(hRes))
-                        {
-                            goto done;
-                        }
-                        sParser.cFileH.Detach();
-                    }
-                    sParser.cStrCurrLineA.Empty();
-                    sParser.nState = eState::DataEnd;
-                    break;
-                }
-            }
-            (sParser.nBoundaryPos)++;
-            break;
+            case eState::Done:
+                break; // ignore
 
-        case eState::DataEnd:
-            if (*szDataA == '-')
-            {
-                sParser.nState = eState::BoundaryEndCheck;
-            }
-            else if (*szDataA == '\r')
-            {
-                sParser.nState = eState::BoundaryAfterEnd;
-            }
-            else
-            {
-                BACKWARD_CHAR();
-                sParser.nState = eState::BoundaryAfter;
-            }
-            break;
-
-        case eState::Done:
-            break; // ignore
-
-        default:
-            MX_ASSERT(FALSE);
-            break;
+            default:
+                MX_ASSERT(FALSE);
+                break;
         }
     }
 
@@ -604,120 +601,120 @@ HRESULT CHttpBodyParserMultipartFormData::ParseHeader(_Inout_ CStringA &cStrLine
     // parse header
     switch ((SIZE_T)(szNameEndA - szNameStartA))
     {
-    case 19:
-        if (StrNCompareA(szNameStartA, "Content-Disposition", 19, TRUE) == 0)
-        {
-            TAutoRefCounted<CHttpHeaderEntContentDisposition> cHeader;
-            LPCWSTR sW;
+        case 19:
+            if (StrNCompareA(szNameStartA, "Content-Disposition", 19, TRUE) == 0)
+            {
+                TAutoRefCounted<CHttpHeaderEntContentDisposition> cHeader;
+                LPCWSTR sW;
 
-            if (sParser.sCurrentBlock.sContentDisposition.cStrNameW.IsEmpty() == FALSE)
-            {
-                return MX_E_InvalidData; // header already specified
-            }
+                if (sParser.sCurrentBlock.sContentDisposition.cStrNameW.IsEmpty() == FALSE)
+                {
+                    return MX_E_InvalidData; // header already specified
+                }
 
-            // parse value
-            hRes = CHttpHeaderBase::Create<CHttpHeaderEntContentDisposition>(TRUE, &cHeader);
-            if (SUCCEEDED(hRes))
-            {
-                hRes = cHeader->Parse(szValueStartA, (SIZE_T)(szValueEndA - szValueStartA));
-            }
-            if (FAILED(hRes))
-            {
-                return hRes;
-            }
-            if (StrCompareA(cHeader->GetType(), "form-data", TRUE) != 0)
-            {
-                return MX_E_InvalidData;
-            }
+                // parse value
+                hRes = CHttpHeaderBase::Create<CHttpHeaderEntContentDisposition>(TRUE, &cHeader);
+                if (SUCCEEDED(hRes))
+                {
+                    hRes = cHeader->Parse(szValueStartA, (SIZE_T)(szValueEndA - szValueStartA));
+                }
+                if (FAILED(hRes))
+                {
+                    return hRes;
+                }
+                if (StrCompareA(cHeader->GetType(), "form-data", TRUE) != 0)
+                {
+                    return MX_E_InvalidData;
+                }
 
-            // name parameter
-            sW = cHeader->GetName();
-            if (*sW == 0)
-            {
-                return MX_E_InvalidData;
-            }
-            if (sParser.sCurrentBlock.sContentDisposition.cStrNameW.Copy(sW) == FALSE)
-            {
-                return E_OUTOFMEMORY;
-            }
-
-            // filename parameter
-            sParser.sCurrentBlock.sContentDisposition.bHasFileName = cHeader->HasFileName();
-            if (sParser.sCurrentBlock.sContentDisposition.bHasFileName != FALSE)
-            {
-                if (sParser.sCurrentBlock.sContentDisposition.cStrFileNameW.Copy(cHeader->GetFileName()) == FALSE)
+                // name parameter
+                sW = cHeader->GetName();
+                if (*sW == 0)
+                {
+                    return MX_E_InvalidData;
+                }
+                if (sParser.sCurrentBlock.sContentDisposition.cStrNameW.Copy(sW) == FALSE)
                 {
                     return E_OUTOFMEMORY;
                 }
+
+                // filename parameter
+                sParser.sCurrentBlock.sContentDisposition.bHasFileName = cHeader->HasFileName();
+                if (sParser.sCurrentBlock.sContentDisposition.bHasFileName != FALSE)
+                {
+                    if (sParser.sCurrentBlock.sContentDisposition.cStrFileNameW.Copy(cHeader->GetFileName()) == FALSE)
+                    {
+                        return E_OUTOFMEMORY;
+                    }
+                }
+
+                // done
+                return S_OK;
             }
+            break;
 
-            // done
-            return S_OK;
-        }
-        break;
-
-    case 12:
-        if (StrNCompareA(szNameStartA, "Content-Type", 12, TRUE) == 0)
-        {
-            TAutoRefCounted<CHttpHeaderEntContentType> cHeader;
-
-            if (sParser.sCurrentBlock.cStrContentTypeA.IsEmpty() == FALSE)
+        case 12:
+            if (StrNCompareA(szNameStartA, "Content-Type", 12, TRUE) == 0)
             {
-                return MX_E_InvalidData; // header already specified
-            }
+                TAutoRefCounted<CHttpHeaderEntContentType> cHeader;
 
-            // parse value
-            hRes = CHttpHeaderBase::Create<CHttpHeaderEntContentType>(TRUE, &cHeader);
-            if (SUCCEEDED(hRes))
+                if (sParser.sCurrentBlock.cStrContentTypeA.IsEmpty() == FALSE)
+                {
+                    return MX_E_InvalidData; // header already specified
+                }
+
+                // parse value
+                hRes = CHttpHeaderBase::Create<CHttpHeaderEntContentType>(TRUE, &cHeader);
+                if (SUCCEEDED(hRes))
+                {
+                    hRes = cHeader->Parse(szValueStartA, (SIZE_T)(szValueEndA - szValueStartA));
+                }
+                if (FAILED(hRes))
+                {
+                    return hRes;
+                }
+
+                if (sParser.sCurrentBlock.cStrContentTypeA.Copy(cHeader->GetType()) == FALSE)
+                {
+                    return E_OUTOFMEMORY;
+                }
+
+                // done
+                return S_OK;
+            }
+            break;
+
+        case 25:
+            if (StrNCompareA(szNameStartA, "Content-Transfer-Encoding", 25, TRUE) == 0)
             {
-                hRes = cHeader->Parse(szValueStartA, (SIZE_T)(szValueEndA - szValueStartA));
-            }
-            if (FAILED(hRes))
-            {
-                return hRes;
-            }
+                TAutoRefCounted<CHttpHeaderEntContentTransferEncoding> cHeader;
 
-            if (sParser.sCurrentBlock.cStrContentTypeA.Copy(cHeader->GetType()) == FALSE)
-            {
-                return E_OUTOFMEMORY;
+                if (sParser.sCurrentBlock.cStrContentTypeA.IsEmpty() == FALSE)
+                {
+                    return MX_E_InvalidData; // header already specified
+                }
+
+                // parse value
+                hRes = CHttpHeaderBase::Create<CHttpHeaderEntContentTransferEncoding>(TRUE, &cHeader);
+                if (SUCCEEDED(hRes))
+                {
+                    hRes = cHeader->Parse(szValueStartA, (SIZE_T)(szValueEndA - szValueStartA));
+                }
+                if (FAILED(hRes))
+                {
+                    return hRes;
+                }
+
+                if (cHeader->GetEncoding() != CHttpHeaderEntContentTransferEncoding::eEncoding::Identity)
+                {
+                    return MX_E_InvalidData; // header already specified
+                }
+                sParser.sCurrentBlock.bContentTransferEncoding = TRUE;
+
+                // done
+                return S_OK;
             }
-
-            // done
-            return S_OK;
-        }
-        break;
-
-    case 25:
-        if (StrNCompareA(szNameStartA, "Content-Transfer-Encoding", 25, TRUE) == 0)
-        {
-            TAutoRefCounted<CHttpHeaderEntContentTransferEncoding> cHeader;
-
-            if (sParser.sCurrentBlock.cStrContentTypeA.IsEmpty() == FALSE)
-            {
-                return MX_E_InvalidData; // header already specified
-            }
-
-            // parse value
-            hRes = CHttpHeaderBase::Create<CHttpHeaderEntContentTransferEncoding>(TRUE, &cHeader);
-            if (SUCCEEDED(hRes))
-            {
-                hRes = cHeader->Parse(szValueStartA, (SIZE_T)(szValueEndA - szValueStartA));
-            }
-            if (FAILED(hRes))
-            {
-                return hRes;
-            }
-
-            if (cHeader->GetEncoding() != CHttpHeaderEntContentTransferEncoding::eEncoding::Identity)
-            {
-                return MX_E_InvalidData; // header already specified
-            }
-            sParser.sCurrentBlock.bContentTransferEncoding = TRUE;
-
-            // done
-            return S_OK;
-        }
-        break;
+            break;
     }
     // ignore header
     return S_OK;

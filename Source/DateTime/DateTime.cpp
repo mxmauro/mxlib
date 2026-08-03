@@ -21,26 +21,24 @@
 #include <math.h>
 #include <intsafe.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-// NOTE: In PPC is compiled with /Gy to prevent LNK1166
+ // NOTE: In PPC is compiled with /Gy to prevent LNK1166
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define X_MAX_VALUE_TICKS 3155378975999999999i64
 
 //-----------------------------------------------------------
 
-static const int aDateTimeMonthDays[13] = {0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365};
+static const int aDateTimeMonthDays[13] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365 };
 
 //-----------------------------------------------------------
 
 static HRESULT Format_AddNumber(_Inout_ MX::CStringW &cStrDestW, _In_ SIZE_T nNumber, _In_ SIZE_T nMinDigits);
 static HRESULT DoTwoDigitsYearAdjustment(_Inout_ int &nYear, _In_ int nTwoDigitsYearRule);
-static VOID TicksToYearAndDayOfYear(_In_ const MX::CTimeSpan &cTicks, _Out_opt_ int *lpnYear,
-                                    _Out_opt_ int *lpnDayOfYear);
-static BOOL ConvertCustomSettingsA2W(_Out_ MX::CDateTime::LPCUSTOMSETTINGSW lpCustomW,
-                                     _In_ MX::CDateTime::LPCUSTOMSETTINGSA lpCustomA);
+static VOID TicksToYearAndDayOfYear(_In_ const MX::CTimeSpan &cTicks, _Out_opt_ int *lpnYear, _Out_opt_ int *lpnDayOfYear);
+static BOOL ConvertCustomSettingsA2W(_Out_ MX::CDateTime::LPCUSTOMSETTINGSW lpCustomW, _In_ MX::CDateTime::LPCUSTOMSETTINGSA lpCustomA);
 static VOID FreeCustomSettings(_In_ MX::CDateTime::LPCUSTOMSETTINGSW lpCustomW);
 static VOID FixCustomSettings(_Out_ MX::CDateTime::LPCUSTOMSETTINGSW lpOut, _In_ MX::CDateTime::LPCUSTOMSETTINGSW lpIn);
 static HRESULT GetRoundedMillisecondsForOA(_In_ double nMs, _Out_ LONGLONG *lpnRes);
@@ -50,8 +48,7 @@ static int FixGmtOffset(_In_ int nGmtOffset);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CDateTime::CDateTime(_In_ const CDateTime &cSrc) : CBaseMemObj()
 {
@@ -90,8 +87,8 @@ CDateTime::CDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_opt_ in
     return;
 }
 
-CDateTime::CDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_ int nHours, _In_ int nMinutes,
-                     _In_ int nSeconds, _In_opt_ int nMilliSeconds, _In_opt_ int _nGmtOffset)
+CDateTime::CDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds,
+                     _In_opt_ int nMilliSeconds, _In_opt_ int _nGmtOffset)
     : CBaseMemObj()
 {
     int nAbsDay;
@@ -141,8 +138,8 @@ HRESULT CDateTime::SetTime(_In_ int nHours, _In_ int nMinutes, _In_ int nSeconds
     return cTicks.SetFrom((int)cTicks.GetDays(), nHours, nMinutes, nSeconds, nMilliSeconds);
 }
 
-HRESULT CDateTime::SetDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_ int nHours, _In_ int nMinutes,
-                               _In_ int nSeconds, _In_opt_ int nMilliSeconds)
+HRESULT CDateTime::SetDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds,
+                               _In_opt_ int nMilliSeconds)
 {
     CTimeSpan cOldTicks;
     HRESULT hRes;
@@ -216,8 +213,7 @@ HRESULT CDateTime::SetFromString(_In_z_ LPCSTR szDateA, _In_z_ LPCSTR szFormatA,
             return E_OUTOFMEMORY;
         }
     }
-    hRes = SetFromString((LPWSTR)cStrTempDateW, (LPWSTR)cStrTempFormatW, (lpCustomA != NULL) ? &sCustomW : NULL,
-                         nTwoDigitsYearRule);
+    hRes = SetFromString((LPWSTR)cStrTempDateW, (LPWSTR)cStrTempFormatW, (lpCustomA != NULL) ? &sCustomW : NULL, nTwoDigitsYearRule);
     if (lpCustomA != NULL)
     {
         FreeCustomSettings(&sCustomW);
@@ -290,424 +286,464 @@ sfs_restart:
 
             switch (*szFormatW)
             {
-            case L'a': // abbreviated weekday name
-            case L'A': // full weekday name
-                // try full first
-                for (i = 0; i < 7; i++)
-                {
-                    nTemp = CompareStrW(szDateW, sCustomW.szLongDayNamesW[i]);
-                    if (nTemp != 0)
-                    {
-                        break;
-                    }
-                }
-                if (i >= 7)
-                {
-                    // no match... try short
+                case L'a':
+                    // abbreviated weekday name
+                case L'A':
+                    // full weekday name
+                    // try full first
                     for (i = 0; i < 7; i++)
                     {
-                        nTemp = CompareStrW(szDateW, sCustomW.szShortDayNamesW[i]);
+                        nTemp = CompareStrW(szDateW, sCustomW.szLongDayNamesW[i]);
                         if (nTemp != 0)
                         {
                             break;
                         }
                     }
-                }
-                if (i < 7)
-                {
-                    szDateW += nTemp;
-                    nWeekDay = (int)i;
+                    if (i >= 7)
+                    {
+                        // no match... try short
+                        for (i = 0; i < 7; i++)
+                        {
+                            nTemp = CompareStrW(szDateW, sCustomW.szShortDayNamesW[i]);
+                            if (nTemp != 0)
+                            {
+                                break;
+                            }
+                        }
+                    }
+                    if (i < 7)
+                    {
+                        szDateW += nTemp;
+                        nWeekDay = (int)i;
+                        break;
+                    }
+                    // else skip phrase
+pfs_skip_phrase:
+                    while (*szDateW != 0)
+                    {
+                        if (((*szDateW < L'A' || *szDateW > L'Z') && (*szDateW < L'a' || *szDateW > L'z')) &&
+                            (*szDateW < L'0' || *szDateW > '9') && *szDateW < 128)
+                        {
+                            break;
+                        }
+                        if (*szDateW == *szFormatW)
+                        {
+                            break;
+                        }
+                        szDateW++;
+                    }
                     break;
-                }
-                // else skip phrase
-            pfs_skip_phrase:
-                while (*szDateW != 0)
-                {
-                    if (((*szDateW < L'A' || *szDateW > L'Z') && (*szDateW < L'a' || *szDateW > L'z')) &&
-                        (*szDateW < L'0' || *szDateW > '9') && *szDateW < 128)
-                    {
-                        break;
-                    }
-                    if (*szDateW == *szFormatW)
-                    {
-                        break;
-                    }
-                    szDateW++;
-                }
-                break;
 
-            case L'b': // abbreviated month name
-            case L'B': // full month name
-                // try full first
-                for (i = 0; i < 12; i++)
-                {
-                    nTemp = CompareStrW(szDateW, sCustomW.szLongMonthNamesW[i]);
-                    if (nTemp != 0)
-                    {
-                        break;
-                    }
-                }
-                if (i >= 12)
-                {
-                    // no match... try short
+                case L'b':
+                    // abbreviated month name
+                case L'B':
+                    // full month name
+                    // try full first
                     for (i = 0; i < 12; i++)
                     {
-                        nTemp = CompareStrW(szDateW, sCustomW.szShortMonthNamesW[i]);
+                        nTemp = CompareStrW(szDateW, sCustomW.szLongMonthNamesW[i]);
                         if (nTemp != 0)
                         {
                             break;
                         }
                     }
-                }
-                if (i >= 12)
-                {
-                    goto pfs_skip_phrase;
-                }
-                szDateW += nTemp;
-                nMonth = (int)(i + 1);
-                break;
-
-            case L'd': // mday in decimal (01-31)
-            case L'H': // 24-hour decimal (00-23)
-            case L'I': // 12-hour decimal (01-12)
-            case L'j': // yday in decimal (001-366)
-            case L'm': // month in decimal (01-12)
-            case L'M': // minute in decimal (00-59)
-            case L'S': // secs in decimal (00-59)
-            case L'f': // milliseconds in decimal (0-999)
-            case L'w': // week day in decimal (0-6)
-            case L'U': // sunday week number (00-53)
-            case L'W': // monday week number (00-53)
-            case L'y': // year w/o century (00-99)
-            case L'Y': // year w/ century
-                nMaxDigits = 2;
-                switch (*szFormatW)
-                {
-                case L'j': // yday in decimal (001-366)
-                case L'f': // milliseconds in decimal (0-999)
-                    nMaxDigits = 3;
-                    break;
-                case L'w': // week day in decimal (0-6)
-                    nMaxDigits = 1;
-                    break;
-                case L'Y': // year w/ century
-                    nMaxDigits = 4;
-                    break;
-                }
-
-                if (*szFormatW == L'f')
-                {
-                    // allow the dot separator not being specified in the format
-                    if (*szDateW == L'.')
+                    if (i >= 12)
                     {
-                        if (szDateW == szOrigDateW || *(szDateW - 1) == L'.')
+                        // no match... try short
+                        for (i = 0; i < 12; i++)
                         {
-                            return E_FAIL;
+                            nTemp = CompareStrW(szDateW, sCustomW.szShortMonthNamesW[i]);
+                            if (nTemp != 0)
+                            {
+                                break;
+                            }
                         }
+                    }
+                    if (i >= 12)
+                    {
+                        goto pfs_skip_phrase;
+                    }
+                    szDateW += nTemp;
+                    nMonth = (int)(i + 1);
+                    break;
+
+                case L'd':
+                    // mday in decimal (01-31)
+                case L'H':
+                    // 24-hour decimal (00-23)
+                case L'I':
+                    // 12-hour decimal (01-12)
+                case L'j':
+                    // yday in decimal (001-366)
+                case L'm':
+                    // month in decimal (01-12)
+                case L'M':
+                    // minute in decimal (00-59)
+                case L'S':
+                    // secs in decimal (00-59)
+                case L'f':
+                    // milliseconds in decimal (0-999)
+                case L'w':
+                    // week day in decimal (0-6)
+                case L'U':
+                    // sunday week number (00-53)
+                case L'W':
+                    // monday week number (00-53)
+                case L'y':
+                    // year w/o century (00-99)
+                case L'Y':
+                    // year w/ century
+                    nMaxDigits = 2;
+                    switch (*szFormatW)
+                    {
+                        case L'j':
+                            // yday in decimal (001-366)
+                        case L'f':
+                            // milliseconds in decimal (0-999)
+                            nMaxDigits = 3;
+                            break;
+                        case L'w':
+                            // week day in decimal (0-6)
+                            nMaxDigits = 1;
+                            break;
+                        case L'Y':
+                            // year w/ century
+                            nMaxDigits = 4;
+                            break;
+                    }
+
+                    if (*szFormatW == L'f')
+                    {
+                        // allow the dot separator not being specified in the format
+                        if (*szDateW == L'.')
+                        {
+                            if (szDateW == szOrigDateW || *(szDateW - 1) == L'.')
+                            {
+                                return E_FAIL;
+                            }
+                            szDateW++;
+                        }
+                    }
+
+                    if (*szDateW < L'0' || *szDateW > L'9')
+                    {
+                        return E_FAIL;
+                    }
+                    nTemp = 0;
+                    while (*szDateW >= L'0' && *szDateW <= L'9' && nMaxDigits > 0)
+                    {
+                        nTemp = (nTemp * 10) + (SIZE_T)(*szDateW - L'0');
                         szDateW++;
+                        nMaxDigits--;
                     }
-                }
 
-                if (*szDateW < L'0' || *szDateW > L'9')
-                {
-                    return E_FAIL;
-                }
-                nTemp = 0;
-                while (*szDateW >= L'0' && *szDateW <= L'9' && nMaxDigits > 0)
-                {
-                    nTemp = (nTemp * 10) + (SIZE_T)(*szDateW - L'0');
-                    szDateW++;
-                    nMaxDigits--;
-                }
-
-                switch (*szFormatW)
-                {
-                case L'd': // mday in decimal (01-31)
-                    if (nTemp < 1 || nTemp > 31)
+                    switch (*szFormatW)
                     {
-                        return MX_E_ArithmeticOverflow;
+                        case L'd':
+                            // mday in decimal (01-31)
+                            if (nTemp < 1 || nTemp > 31)
+                            {
+                                return MX_E_ArithmeticOverflow;
+                            }
+                            nDay = (int)nTemp;
+                            break;
+
+                        case L'H':
+                            // 24-hour decimal (00-23)
+                            if (nTemp > 23)
+                            {
+                                return MX_E_ArithmeticOverflow;
+                            }
+                            nHours = (int)nTemp;
+                            nHourFlag = 0;
+                            break;
+
+                        case L'I':
+                            // 12-hour decimal (01-12)
+                            if (nTemp < 1 || nTemp > 12)
+                            {
+                                return MX_E_ArithmeticOverflow;
+                            }
+                            nHours = (int)nTemp - 1;
+                            nHourFlag = -1;
+                            break;
+
+                        case L'j':
+                            // yday in decimal (001-366)
+                            if (nTemp < 1 || nTemp > 366)
+                            {
+                                return MX_E_ArithmeticOverflow;
+                            }
+                            nYDay = (int)nTemp;
+                            break;
+
+                        case L'm':
+                            // month in decimal (01-12)
+                            if (nTemp < 1 || nTemp > 12)
+                            {
+                                return MX_E_ArithmeticOverflow;
+                            }
+                            nMonth = (int)nTemp;
+                            break;
+
+                        case L'M':
+                            // minute in decimal (00-59)
+                            if (nTemp > 59)
+                            {
+                                return MX_E_ArithmeticOverflow;
+                            }
+                            nMinutes = (int)nTemp;
+                            break;
+
+                        case L'S':
+                            // secs in decimal (00-59)
+                            if (nTemp > 59)
+                            {
+                                return MX_E_ArithmeticOverflow;
+                            }
+                            nSeconds = (int)nTemp;
+                            break;
+
+                        case L'f':
+                            // milliseconds in decimal (0-999)
+                            if (nTemp > 999)
+                            {
+                                return MX_E_ArithmeticOverflow;
+                            }
+                            nMilliSeconds = (int)nTemp;
+
+                            // allow more digits but skip them
+                            while (*szDateW >= L'0' && *szDateW <= L'9')
+                            {
+                                szDateW++;
+                            }
+                            break;
+
+                        case L'w':
+                            // week day in decimal (0-6)
+                            if (nTemp > 6)
+                            {
+                                return MX_E_ArithmeticOverflow;
+                            }
+                            nWeekDay = (int)nTemp;
+                            break;
+
+                        case L'U':
+                            // sunday week number (00-53)
+                        case L'W':
+                            // monday week number (00-53)
+                            if (nTemp > 53)
+                            {
+                                return MX_E_ArithmeticOverflow;
+                            }
+                            nWeekNumber = (int)((*szFormatW == L'U') ? nTemp : (nTemp + 100));
+                            break;
+
+                        case L'y':
+                            // year w/o century (00-99)
+                        case L'Y':
+                            // year w/ century
+                            nYear = (int)nTemp;
+                            if (nYear <= 99)
+                            {
+                                // do two digits year adjustment
+                                hRes = DoTwoDigitsYearAdjustment(nYear, nTwoDigitsYearRule);
+                                if (FAILED(hRes))
+                                {
+                                    return hRes;
+                                }
+                            }
+                            if (nYear < 1 || nYear > 99999999)
+                            {
+                                return MX_E_ArithmeticOverflow;
+                            }
+                            break;
                     }
-                    nDay = (int)nTemp;
                     break;
 
-                case L'H': // 24-hour decimal (00-23)
-                    if (nTemp > 23)
+                case L'p':
+                    // AM/PM designation
+                    for (i = 0; i < 2; i++)
                     {
-                        return MX_E_ArithmeticOverflow;
-                    }
-                    nHours = (int)nTemp;
-                    nHourFlag = 0;
-                    break;
-
-                case L'I': // 12-hour decimal (01-12)
-                    if (nTemp < 1 || nTemp > 12)
-                    {
-                        return MX_E_ArithmeticOverflow;
-                    }
-                    nHours = (int)nTemp - 1;
-                    nHourFlag = -1;
-                    break;
-
-                case L'j': // yday in decimal (001-366)
-                    if (nTemp < 1 || nTemp > 366)
-                    {
-                        return MX_E_ArithmeticOverflow;
-                    }
-                    nYDay = (int)nTemp;
-                    break;
-
-                case L'm': // month in decimal (01-12)
-                    if (nTemp < 1 || nTemp > 12)
-                    {
-                        return MX_E_ArithmeticOverflow;
-                    }
-                    nMonth = (int)nTemp;
-                    break;
-
-                case L'M': // minute in decimal (00-59)
-                    if (nTemp > 59)
-                    {
-                        return MX_E_ArithmeticOverflow;
-                    }
-                    nMinutes = (int)nTemp;
-                    break;
-
-                case L'S': // secs in decimal (00-59)
-                    if (nTemp > 59)
-                    {
-                        return MX_E_ArithmeticOverflow;
-                    }
-                    nSeconds = (int)nTemp;
-                    break;
-
-                case L'f': // milliseconds in decimal (0-999)
-                    if (nTemp > 999)
-                    {
-                        return MX_E_ArithmeticOverflow;
-                    }
-                    nMilliSeconds = (int)nTemp;
-
-                    // allow more digits but skip them
-                    while (*szDateW >= L'0' && *szDateW <= L'9')
-                    {
-                        szDateW++;
-                    }
-                    break;
-
-                case L'w': // week day in decimal (0-6)
-                    if (nTemp > 6)
-                    {
-                        return MX_E_ArithmeticOverflow;
-                    }
-                    nWeekDay = (int)nTemp;
-                    break;
-
-                case L'U': // sunday week number (00-53)
-                case L'W': // monday week number (00-53)
-                    if (nTemp > 53)
-                    {
-                        return MX_E_ArithmeticOverflow;
-                    }
-                    nWeekNumber = (int)((*szFormatW == L'U') ? nTemp : (nTemp + 100));
-                    break;
-
-                case L'y': // year w/o century (00-99)
-                case L'Y': // year w/ century
-                    nYear = (int)nTemp;
-                    if (nYear <= 99)
-                    {
-                        // do two digits year adjustment
-                        hRes = DoTwoDigitsYearAdjustment(nYear, nTwoDigitsYearRule);
-                        if (FAILED(hRes))
+                        nTemp = CompareStrW(szDateW, sCustomW.szTimeAmPmW[i]);
+                        if (nTemp != 0)
                         {
-                            return hRes;
+                            break;
                         }
                     }
-                    if (nYear < 1 || nYear > 99999999)
+                    if (i >= 2)
                     {
-                        return MX_E_ArithmeticOverflow;
+                        goto pfs_skip_phrase;
                     }
+                    szDateW += nTemp;
+                    nHourFlag = (int)(i + 1);
                     break;
-                }
-                break;
 
-            case L'p': // AM/PM designation
-                for (i = 0; i < 2; i++)
-                {
-                    nTemp = CompareStrW(szDateW, sCustomW.szTimeAmPmW[i]);
-                    if (nTemp != 0)
+                case L'x':
+                    // date display
+                    if (szOldFormatW != NULL)
                     {
-                        break;
+                        return E_INVALIDARG;
                     }
-                }
-                if (i >= 2)
-                {
-                    goto pfs_skip_phrase;
-                }
-                szDateW += nTemp;
-                nHourFlag = (int)(i + 1);
-                break;
-
-            case L'x': // date display
-                if (szOldFormatW != NULL)
-                {
-                    return E_INVALIDARG;
-                }
-                if ((cStrTempFormatW.Copy((bAlternateFlag == FALSE) ? sCustomW.szLongDateFormatW
-                                                                    : sCustomW.szShortDateFormatW)) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                szOldFormatW = (LPWSTR)szFormatW + 1;
-                szFormatW = (LPWSTR)cStrTempFormatW;
-                szFormatW--; // fixed below at switch end
-                break;
-
-            case L'X': // time display
-                if (szOldFormatW != NULL)
-                {
-                    return E_INVALIDARG;
-                }
-                if (cStrTempFormatW.Copy(sCustomW.szTimeFormatW) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                szOldFormatW = (LPWSTR)szFormatW + 1;
-                szFormatW = (LPWSTR)cStrTempFormatW;
-                szFormatW--; // fixed below at switch end
-                break;
-
-            case L'c': // date and time display
-                if (szOldFormatW != NULL)
-                {
-                    return E_INVALIDARG;
-                }
-                if (cStrTempFormatW.Copy((bAlternateFlag == FALSE) ? sCustomW.szLongDateFormatW
-                                                                   : sCustomW.szShortDateFormatW) == FALSE ||
-                    cStrTempFormatW.Concat(L" ") == FALSE || cStrTempFormatW.Concat(sCustomW.szTimeFormatW) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                szOldFormatW = (LPWSTR)szFormatW + 1;
-                szFormatW = (LPWSTR)cStrTempFormatW;
-                szFormatW--; // fixed below at switch end
-                break;
-
-            case L'z': // time zone name, if any
-                // assume it may be [AAA][+|-]nn[:nn[:nn]]
-                sTimeZone.nOffset = 0;
-                sTimeZone.bOffsetSpecified = FALSE;
-                // get name
-                if (*szDateW == L'<')
-                {
-                    return E_NOTIMPL;
-                }
-                if ((*szDateW >= L'A' && *szDateW <= L'Z') || (*szDateW >= L'a' && *szDateW <= L'z'))
-                {
-                    // only GMT, UT and Z strings are supported
-                    if (StrNCompareW(szDateW, L"GMT", 3, TRUE) == 0)
+                    if ((cStrTempFormatW.Copy((bAlternateFlag == FALSE) ? sCustomW.szLongDateFormatW
+                                              : sCustomW.szShortDateFormatW)) == FALSE)
                     {
-                        szDateW += 3;
+                        return E_OUTOFMEMORY;
                     }
-                    else if (StrNCompareW(szDateW, L"UT", 2, TRUE) == 0)
+                    szOldFormatW = (LPWSTR)szFormatW + 1;
+                    szFormatW = (LPWSTR)cStrTempFormatW;
+                    szFormatW--; // fixed below at switch end
+                    break;
+
+                case L'X':
+                    // time display
+                    if (szOldFormatW != NULL)
                     {
-                        szDateW += 2;
+                        return E_INVALIDARG;
                     }
-                    else if (StrNCompareW(szDateW, L"Z", 1, TRUE) == 0)
+                    if (cStrTempFormatW.Copy(sCustomW.szTimeFormatW) == FALSE)
                     {
-                        szDateW += 1;
-                        if (*szDateW == L'+' || *szDateW == L'-')
-                        {
-                            goto numric_tz; // jump to numeric form
-                        }
+                        return E_OUTOFMEMORY;
                     }
-                    else
+                    szOldFormatW = (LPWSTR)szFormatW + 1;
+                    szFormatW = (LPWSTR)cStrTempFormatW;
+                    szFormatW--; // fixed below at switch end
+                    break;
+
+                case L'c':
+                    // date and time display
+                    if (szOldFormatW != NULL)
                     {
-                        return MX_E_Unsupported;
+                        return E_INVALIDARG;
+                    }
+                    if (cStrTempFormatW.Copy((bAlternateFlag == FALSE) ? sCustomW.szLongDateFormatW
+                                             : sCustomW.szShortDateFormatW) == FALSE ||
+                        cStrTempFormatW.Concat(L" ") == FALSE || cStrTempFormatW.Concat(sCustomW.szTimeFormatW) == FALSE)
+                    {
+                        return E_OUTOFMEMORY;
+                    }
+                    szOldFormatW = (LPWSTR)szFormatW + 1;
+                    szFormatW = (LPWSTR)cStrTempFormatW;
+                    szFormatW--; // fixed below at switch end
+                    break;
+
+                case L'z':
+                    // time zone name, if any
+                    // assume it may be [AAA][+|-]nn[:nn[:nn]]
+                    sTimeZone.nOffset = 0;
+                    sTimeZone.bOffsetSpecified = FALSE;
+                    // get name
+                    if (*szDateW == L'<')
+                    {
+                        return E_NOTIMPL;
                     }
                     if ((*szDateW >= L'A' && *szDateW <= L'Z') || (*szDateW >= L'a' && *szDateW <= L'z'))
                     {
-                        return E_FAIL;
-                    }
-                    sTimeZone.bOffsetSpecified = TRUE;
-                }
-                else if (*szDateW == L'+' || *szDateW == L'-')
-                {
-                numric_tz: // use numeric form
-                    nSign = (*szDateW++ == L'+') ? 1 : -1;
-
-                    // get hours
-                    if (szDateW[0] < L'0' || szDateW[0] > L'9' || szDateW[1] < L'0' || szDateW[1] > L'9')
-                    {
-                        return E_FAIL;
-                    }
-                    nTemp = (SIZE_T)(szDateW[0] - L'0') * 10 + (SIZE_T)(szDateW[1] - L'0');
-                    if (nTemp > 14)
-                    {
-                        return MX_E_ArithmeticOverflow;
-                    }
-                    nTemp *= 60;
-                    szDateW += 2;
-
-                    // time separator?
-                    if (*szDateW == L':')
-                    {
-                        szDateW++;
-                    }
-
-                    // get minutes
-                    if (*szDateW >= L'0' && *szDateW <= L'9')
-                    {
-                        if (szDateW[1] < L'0' || szDateW[1] > L'9')
+                        // only GMT, UT and Z strings are supported
+                        if (StrNCompareW(szDateW, L"GMT", 3, TRUE) == 0)
+                        {
+                            szDateW += 3;
+                        }
+                        else if (StrNCompareW(szDateW, L"UT", 2, TRUE) == 0)
+                        {
+                            szDateW += 2;
+                        }
+                        else if (StrNCompareW(szDateW, L"Z", 1, TRUE) == 0)
+                        {
+                            szDateW += 1;
+                            if (*szDateW == L'+' || *szDateW == L'-')
+                            {
+                                goto numric_tz; // jump to numeric form
+                            }
+                        }
+                        else
+                        {
+                            return MX_E_Unsupported;
+                        }
+                        if ((*szDateW >= L'A' && *szDateW <= L'Z') || (*szDateW >= L'a' && *szDateW <= L'z'))
                         {
                             return E_FAIL;
                         }
-                        nTemp2 = (SIZE_T)(szDateW[0] - L'0') * 10 + (SIZE_T)(szDateW[1] - L'0');
-                        if (nTemp2 >= 60)
+                        sTimeZone.bOffsetSpecified = TRUE;
+                    }
+                    else if (*szDateW == L'+' || *szDateW == L'-')
+                    {
+numric_tz: // use numeric form
+                        nSign = (*szDateW++ == L'+') ? 1 : -1;
+
+                        // get hours
+                        if (szDateW[0] < L'0' || szDateW[0] > L'9' || szDateW[1] < L'0' || szDateW[1] > L'9')
+                        {
+                            return E_FAIL;
+                        }
+                        nTemp = (SIZE_T)(szDateW[0] - L'0') * 10 + (SIZE_T)(szDateW[1] - L'0');
+                        if (nTemp > 14)
                         {
                             return MX_E_ArithmeticOverflow;
                         }
-                        nTemp += nTemp2;
+                        nTemp *= 60;
                         szDateW += 2;
+
                         // time separator?
                         if (*szDateW == L':')
                         {
                             szDateW++;
                         }
-                    }
 
-                    // get seconds (not added to final gmt offset)
-                    if (*szDateW >= L'0' && *szDateW <= L'9')
-                    {
-                        if (szDateW[1] < L'0' || szDateW[1] > L'9')
+                        // get minutes
+                        if (*szDateW >= L'0' && *szDateW <= L'9')
                         {
-                            return E_FAIL;
+                            if (szDateW[1] < L'0' || szDateW[1] > L'9')
+                            {
+                                return E_FAIL;
+                            }
+                            nTemp2 = (SIZE_T)(szDateW[0] - L'0') * 10 + (SIZE_T)(szDateW[1] - L'0');
+                            if (nTemp2 >= 60)
+                            {
+                                return MX_E_ArithmeticOverflow;
+                            }
+                            nTemp += nTemp2;
+                            szDateW += 2;
+                            // time separator?
+                            if (*szDateW == L':')
+                            {
+                                szDateW++;
+                            }
                         }
-                        nTemp2 = (SIZE_T)(szDateW[0] - L'0') * 10 + (SIZE_T)(szDateW[1] - L'0');
-                        if (nTemp2 >= 60)
+
+                        // get seconds (not added to final gmt offset)
+                        if (*szDateW >= L'0' && *szDateW <= L'9')
+                        {
+                            if (szDateW[1] < L'0' || szDateW[1] > L'9')
+                            {
+                                return E_FAIL;
+                            }
+                            nTemp2 = (SIZE_T)(szDateW[0] - L'0') * 10 + (SIZE_T)(szDateW[1] - L'0');
+                            if (nTemp2 >= 60)
+                            {
+                                return MX_E_ArithmeticOverflow;
+                            }
+                            szDateW += 2;
+                        }
+
+                        // set time offset
+                        sTimeZone.nOffset = (int)nTemp * nSign;
+                        if (sTimeZone.nOffset < -12 * 60 || sTimeZone.nOffset > 14 * 60)
                         {
                             return MX_E_ArithmeticOverflow;
                         }
-                        szDateW += 2;
+                        sTimeZone.bOffsetSpecified = TRUE;
                     }
+                    break;
 
-                    // set time offset
-                    sTimeZone.nOffset = (int)nTemp * nSign;
-                    if (sTimeZone.nOffset < -12 * 60 || sTimeZone.nOffset > 14 * 60)
+                case L'%':
+                    // percent sign
+                    if (*szDateW != L'%')
                     {
-                        return MX_E_ArithmeticOverflow;
+                        return E_FAIL;
                     }
-                    sTimeZone.bOffsetSpecified = TRUE;
-                }
-                break;
-
-            case L'%': // percent sign
-                if (*szDateW != L'%')
-                {
-                    return E_FAIL;
-                }
-                szDateW++;
-                break;
+                    szDateW++;
+                    break;
             }
             szFormatW++;
         }
@@ -801,7 +837,7 @@ sfs_restart:
             for (nMonth = 1; nMonth <= 12; nMonth++)
             {
                 nTemp = (SIZE_T)aDateTimeMonthDays[nMonth] - (SIZE_T)aDateTimeMonthDays[nMonth - 1] +
-                        ((bAlternateFlag != FALSE && i == 2) ? 1 : 0);
+                    ((bAlternateFlag != FALSE && i == 2) ? 1 : 0);
                 if (nTemp >= (SIZE_T)nDay)
                 {
                     break;
@@ -976,8 +1012,7 @@ VOID CDateTime::GetDate(_Out_ int *lpnYear, _Out_ int *lpnMonth, _Out_ int *lpnD
     return;
 }
 
-VOID CDateTime::GetTime(_Out_ int *lpnHour, _Out_ int *lpnMinutes, _Out_ int *lpnSeconds,
-                        _Out_opt_ int *lpnMilliSeconds)
+VOID CDateTime::GetTime(_Out_ int *lpnHour, _Out_ int *lpnMinutes, _Out_ int *lpnSeconds, _Out_opt_ int *lpnMilliSeconds)
 {
     if (lpnHour != NULL)
     {
@@ -998,8 +1033,8 @@ VOID CDateTime::GetTime(_Out_ int *lpnHour, _Out_ int *lpnMinutes, _Out_ int *lp
     return;
 }
 
-VOID CDateTime::GetDateTime(_Out_ int *lpnYear, _Out_ int *lpnMonth, _Out_ int *lpnDay, _Out_ int *lpnHours,
-                            _Out_ int *lpnMinutes, _Out_ int *lpnSeconds, _Out_opt_ int *lpnMilliSeconds)
+VOID CDateTime::GetDateTime(_Out_ int *lpnYear, _Out_ int *lpnMonth, _Out_ int *lpnDay, _Out_ int *lpnHours, _Out_ int *lpnMinutes,
+                            _Out_ int *lpnSeconds, _Out_opt_ int *lpnMilliSeconds)
 {
     GetDate(lpnYear, lpnMonth, lpnDay);
     GetTime(lpnHours, lpnMinutes, lpnSeconds, lpnMilliSeconds);
@@ -1252,68 +1287,68 @@ HRESULT CDateTime::Add(_In_ LONGLONG nCount, _In_ CDateTime::eUnits nUnits)
 
     switch (nUnits)
     {
-    case eUnits::Year:
-    case eUnits::Month:
-        GetDate(&nYear, &nMonth, &nDay);
-        if (nUnits == eUnits::Month && nCount != 0)
-        {
-            nMonth64 = (LONGLONG)nMonth + (nCount - 1);
-            if (nMonth64 < 0)
+        case eUnits::Year:
+        case eUnits::Month:
+            GetDate(&nYear, &nMonth, &nDay);
+            if (nUnits == eUnits::Month && nCount != 0)
             {
-                nUnits = eUnits::Year;
-                nCount = ((nMonth64 + 1) / 12) - 1;
-                nMonth = (int)(nMonth64 - nCount * 12);
+                nMonth64 = (LONGLONG)nMonth + (nCount - 1);
+                if (nMonth64 < 0)
+                {
+                    nUnits = eUnits::Year;
+                    nCount = ((nMonth64 + 1) / 12) - 1;
+                    nMonth = (int)(nMonth64 - nCount * 12);
+                }
+                else if (nMonth64 > 11)
+                {
+                    nUnits = eUnits::Year;
+                    nCount = nMonth64 / 12;
+                    nMonth = (int)(nMonth64 % 12) + 1;
+                }
+                else
+                {
+                    nCount = 0;
+                    nMonth = (int)nMonth64 + 1;
+                }
             }
-            else if (nMonth64 > 11)
+            if (nUnits == eUnits::Year && nCount != 0)
             {
-                nUnits = eUnits::Year;
-                nCount = nMonth64 / 12;
-                nMonth = (int)(nMonth64 % 12) + 1;
+                nYear64 = (LONGLONG)nYear + nCount;
+                if (nYear64 < 1 || nYear64 > 9999)
+                {
+                    return MX_E_ArithmeticOverflow;
+                }
+                nYear = (int)nYear64;
             }
-            else
-            {
-                nCount = 0;
-                nMonth = (int)nMonth64 + 1;
-            }
-        }
-        if (nUnits == eUnits::Year && nCount != 0)
-        {
-            nYear64 = (LONGLONG)nYear + nCount;
-            if (nYear64 < 1 || nYear64 > 9999)
+            k = GetDaysInMonth(nMonth, nYear);
+            if (k < 1)
             {
                 return MX_E_ArithmeticOverflow;
             }
-            nYear = (int)nYear64;
-        }
-        k = GetDaysInMonth(nMonth, nYear);
-        if (k < 1)
-        {
-            return MX_E_ArithmeticOverflow;
-        }
-        if (nDay > k)
-        {
-            nDay = k;
-        }
-        return SetDate(nYear, nMonth, nDay);
+            if (nDay > k)
+            {
+                nDay = k;
+            }
+            return SetDate(nYear, nMonth, nDay);
 
-    case eUnits::Day:
-        hRes = cTs.SetFromDays((double)nCount);
-        break;
-    case eUnits::Hours:
-        hRes = cTs.SetFromHours((double)nCount);
-        break;
-    case eUnits::Minutes:
-        hRes = cTs.SetFromMinutes((double)nCount);
-        break;
-    case eUnits::Seconds:
-        hRes = cTs.SetFromSeconds((double)nCount);
-        break;
-    case eUnits::Milliseconds:
-        hRes = cTs.SetFromMilliSeconds((double)nCount);
-        break;
-    case eUnits::Ticks:
-        hRes = cTs.SetFromTicks(nCount);
-        break;
+        case eUnits::Day:
+            hRes = cTs.SetFromDays((double)nCount);
+            break;
+        case eUnits::Hours:
+            hRes = cTs.SetFromHours((double)nCount);
+            break;
+        case eUnits::Minutes:
+            hRes = cTs.SetFromMinutes((double)nCount);
+            break;
+        case eUnits::Seconds:
+            hRes = cTs.SetFromSeconds((double)nCount);
+            break;
+        case eUnits::Milliseconds:
+            hRes = cTs.SetFromMilliSeconds((double)nCount);
+            break;
+        case eUnits::Ticks:
+            hRes = cTs.SetFromTicks(nCount);
+            break;
     }
     if (SUCCEEDED(hRes))
     {
@@ -1359,70 +1394,70 @@ LONGLONG CDateTime::GetDiff(_In_ const CDateTime &cFromDt, _In_ eUnits nUnits)
 
     switch (nUnits)
     {
-    case eUnits::Day:
-    case eUnits::Hours:
-    case eUnits::Minutes:
-    case eUnits::Seconds:
-    case eUnits::Milliseconds:
-    case eUnits::Ticks:
-        nTicks = cFromDt.GetTicks();
-        if (nTicks == LONGLONG_MIN)
-        {
-            // this should not happen because datetime has no
-            // negative ticks
-            MX_ASSERT(FALSE);
-            return MX_E_ArithmeticOverflow;
-        }
-        cTs = cTicks;
-        if (FAILED(cTs.Add(-nTicks)))
-        {
-            return 0;
-        }
-        switch (nUnits)
-        {
         case eUnits::Day:
-            nDiff = (LONGLONG)cTs.GetTotalDays();
-            break;
         case eUnits::Hours:
-            nDiff = (LONGLONG)cTs.GetTotalHours();
-            break;
         case eUnits::Minutes:
-            nDiff = (LONGLONG)cTs.GetTotalMinutes();
-            break;
         case eUnits::Seconds:
-            nDiff = (LONGLONG)cTs.GetTotalSeconds();
-            break;
         case eUnits::Milliseconds:
-            nDiff = (LONGLONG)cTs.GetTotalMilliSeconds();
-            break;
-        default:
-            nDiff = cTs.GetTicks();
-            break;
-        }
-        break;
-
-    case eUnits::Month:
-    case eUnits::Year:
-        GetDate(&nYear[0], &nMonth[0], &nDay[0]);
-        const_cast<CDateTime &>(cFromDt).GetDate(&nYear[1], &nMonth[1], &nDay[1]);
-        for (i = 0; i < 2; i++)
-        {
-            nTemp[i] = (aDateTimeMonthDays[nMonth[i]] - aDateTimeMonthDays[nMonth[i] - 1]);
-            if (IsLeapYear(nYear[i]) != FALSE)
+        case eUnits::Ticks:
+            nTicks = cFromDt.GetTicks();
+            if (nTicks == LONGLONG_MIN)
             {
-                nTemp[i]++;
+                // this should not happen because datetime has no
+                // negative ticks
+                MX_ASSERT(FALSE);
+                return MX_E_ArithmeticOverflow;
             }
-            nDblTemp[i] = (double)(nYear[i] * 12 + nMonth[i]) + (double)(nDay[i] - 1) / (double)nTemp[i];
-        }
-        nDiff = (LONGLONG)(nDblTemp[0] - nDblTemp[1]);
-        if (nUnits == eUnits::Year)
-        {
-            nDiff /= 12;
-        }
-        break;
+            cTs = cTicks;
+            if (FAILED(cTs.Add(-nTicks)))
+            {
+                return 0;
+            }
+            switch (nUnits)
+            {
+                case eUnits::Day:
+                    nDiff = (LONGLONG)cTs.GetTotalDays();
+                    break;
+                case eUnits::Hours:
+                    nDiff = (LONGLONG)cTs.GetTotalHours();
+                    break;
+                case eUnits::Minutes:
+                    nDiff = (LONGLONG)cTs.GetTotalMinutes();
+                    break;
+                case eUnits::Seconds:
+                    nDiff = (LONGLONG)cTs.GetTotalSeconds();
+                    break;
+                case eUnits::Milliseconds:
+                    nDiff = (LONGLONG)cTs.GetTotalMilliSeconds();
+                    break;
+                default:
+                    nDiff = cTs.GetTicks();
+                    break;
+            }
+            break;
 
-    default:
-        return 0;
+        case eUnits::Month:
+        case eUnits::Year:
+            GetDate(&nYear[0], &nMonth[0], &nDay[0]);
+            const_cast<CDateTime &>(cFromDt).GetDate(&nYear[1], &nMonth[1], &nDay[1]);
+            for (i = 0; i < 2; i++)
+            {
+                nTemp[i] = (aDateTimeMonthDays[nMonth[i]] - aDateTimeMonthDays[nMonth[i] - 1]);
+                if (IsLeapYear(nYear[i]) != FALSE)
+                {
+                    nTemp[i]++;
+                }
+                nDblTemp[i] = (double)(nYear[i] * 12 + nMonth[i]) + (double)(nDay[i] - 1) / (double)nTemp[i];
+            }
+            nDiff = (LONGLONG)(nDblTemp[0] - nDblTemp[1]);
+            if (nUnits == eUnits::Year)
+            {
+                nDiff /= 12;
+            }
+            break;
+
+        default:
+            return 0;
     }
     return nDiff;
 }
@@ -1439,8 +1474,7 @@ HRESULT CDateTime::Format(_Inout_ CStringW &cStrDestW, _In_z_ LPCWSTR szFormatW,
     return AppendFormat(cStrDestW, szFormatW, lpCustomW);
 }
 
-HRESULT CDateTime::AppendFormat(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szFormatA,
-                                _In_opt_ LPCUSTOMSETTINGSA lpCustomA)
+HRESULT CDateTime::AppendFormat(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szFormatA, _In_opt_ LPCUSTOMSETTINGSA lpCustomA)
 {
     CStringW cStrFormatW, cStrTempW;
     CUSTOMSETTINGSW sCustomW;
@@ -1480,8 +1514,7 @@ HRESULT CDateTime::AppendFormat(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szFor
     return hRes;
 }
 
-HRESULT CDateTime::AppendFormat(_Inout_ CStringW &cStrDestW, _In_z_ LPCWSTR szFormatW,
-                                _In_opt_ LPCUSTOMSETTINGSW lpCustomW)
+HRESULT CDateTime::AppendFormat(_Inout_ CStringW &cStrDestW, _In_z_ LPCWSTR szFormatW, _In_opt_ LPCUSTOMSETTINGSW lpCustomW)
 {
     CUSTOMSETTINGSW sCustomW;
     int nYear, nMonth, nDay, nHours, nMinutes, nSeconds, nMilliSeconds;
@@ -1523,269 +1556,290 @@ fmt_restart:
             }
             switch (*szFormatW)
             {
-            case L'a': // abbreviated weekday name
-            case L'A': // full weekday name
-                if (nWeekDay < 0)
-                {
-                    nWeekDay = GetDayOfWeek();
-                }
+                case L'a':
+                    // abbreviated weekday name
+                case L'A':
+                    // full weekday name
+                    if (nWeekDay < 0)
+                    {
+                        nWeekDay = GetDayOfWeek();
+                    }
 #pragma warning(suppress : 6385)
-                if (cStrDestW.Concat((*szFormatW == L'a') ? sCustomW.szShortDayNamesW[nWeekDay]
-                                                          : sCustomW.szLongDayNamesW[nWeekDay]) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                break;
-
-            case L'b': // abbreviated month name
-            case L'B': // full month name
-                if (cStrDestW.Concat((*szFormatW == L'b') ? sCustomW.szShortMonthNamesW[nMonth - 1]
-                                                          : sCustomW.szLongMonthNamesW[nMonth - 1]) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                break;
-
-            case L'c': // date and time display
-                if (szOldFormatW != NULL)
-                {
-                    return E_INVALIDARG;
-                }
-                if (cStrTempFormatW.Copy((bAlternateFlag == FALSE) ? sCustomW.szLongDateFormatW
-                                                                   : sCustomW.szShortDateFormatW) == FALSE ||
-                    cStrTempFormatW.Concat(L" ") == FALSE || cStrTempFormatW.Concat(sCustomW.szTimeFormatW) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                szOldFormatW = (LPWSTR)szFormatW + 1;
-                szFormatW = (LPWSTR)cStrTempFormatW;
-                szFormatW--; // fixed below at switch end
-                break;
-
-            case L'd': // day in decimal (01-31)
-                hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nDay, (bAlternateFlag == FALSE) ? 2 : 1);
-                if (FAILED(hRes))
-                {
-                    return hRes;
-                }
-                break;
-
-            case L'H': // 24-hour decimal (00-23)
-                hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nHours, (bAlternateFlag == FALSE) ? 2 : 1);
-                if (FAILED(hRes))
-                {
-                    return hRes;
-                }
-                break;
-
-            case L'I': // 12-hour decimal (01-12)
-                if ((nTemp = nHours % 12) == 0)
-                {
-                    nTemp = 12;
-                }
-                hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nTemp, (bAlternateFlag == FALSE) ? 2 : 1);
-                if (FAILED(hRes))
-                {
-                    return hRes;
-                }
-                break;
-
-            case L'j': // day of year in decimal (001-366)
-                if (nDayOfYear < 0)
-                {
-                    nDayOfYear = GetDayOfYear();
-                }
-                hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nDayOfYear + 1, 3);
-                if (FAILED(hRes))
-                {
-                    return hRes;
-                }
-                break;
-
-            case L'm': // month in decimal (01-12)
-                hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nMonth, (bAlternateFlag == FALSE) ? 2 : 1);
-                if (FAILED(hRes))
-                {
-                    return hRes;
-                }
-                break;
-
-            case L'M': // minute in decimal (00-59)
-                hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nMinutes, (bAlternateFlag == FALSE) ? 2 : 1);
-                if (FAILED(hRes))
-                {
-                    return hRes;
-                }
-                break;
-
-            case L'p': // AM/PM designation
-            {
-                SIZE_T nLen = cStrDestW.GetLength();
-
-                if (cStrDestW.Concat(sCustomW.szTimeAmPmW[(nHours < 12) ? 0 : 1]) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                if (bAlternateFlag == FALSE)
-                {
-                    StrToUpperW((LPWSTR)cStrDestW + nLen);
-                }
-                else
-                {
-                    StrToLowerW((LPWSTR)cStrDestW + nLen);
-                }
-            }
-            break;
-
-            case L'S': // secs in decimal (00-59)
-                hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nSeconds, (bAlternateFlag == FALSE) ? 2 : 1);
-                if (FAILED(hRes))
-                {
-                    return hRes;
-                }
-                break;
-
-            case L'f': // milliseconds in decimal (0-999)
-                hRes =
-                    Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nMilliSeconds, (bAlternateFlag == FALSE) ? 3 : 1);
-                if (FAILED(hRes))
-                {
-                    return hRes;
-                }
-                break;
-
-            case L'w': // week day in decimal (0-6)
-                if (nWeekDay < 0)
-                {
-                    nWeekDay = GetDayOfWeek();
-                }
-                hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nWeekDay, (bAlternateFlag == FALSE) ? 2 : 1);
-                if (FAILED(hRes))
-                {
-                    return hRes;
-                }
-                break;
-
-            case L'U': // sunday week number (00-53)
-            case L'W': // monday week number (00-53)
-                if (nWeekDay < 0)
-                {
-                    nWeekDay = GetDayOfWeek();
-                }
-                if (*szFormatW == L'U')
-                {
-                    nTemp = nWeekDay;
-                }
-                else
-                {
-                    nTemp = (nWeekDay == 0) ? 6 : (nWeekDay - 1);
-                }
-                if (nDayOfYear < 0)
-                {
-                    nDayOfYear = GetDayOfYear();
-                }
-                if (nDayOfYear < nTemp)
-                {
-                    nTemp2 = 0;
-                }
-                else
-                {
-                    nTemp2 = nDayOfYear / 7;
-                    if ((nDayOfYear % 7) >= nTemp)
-                    {
-                        nTemp2++;
-                    }
-                }
-                hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nTemp2, (bAlternateFlag == FALSE) ? 2 : 1);
-                if (FAILED(hRes))
-                {
-                    return hRes;
-                }
-                break;
-
-            case L'x': // date display
-                if (szOldFormatW != NULL)
-                {
-                    return E_INVALIDARG;
-                }
-                if (cStrTempFormatW.Copy((bAlternateFlag == FALSE) ? sCustomW.szLongDateFormatW
-                                                                   : sCustomW.szShortDateFormatW) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                szOldFormatW = (LPWSTR)szFormatW + 1;
-                szFormatW = (LPWSTR)cStrTempFormatW;
-                szFormatW--; // fixed below at switch end
-                break;
-
-            case L'X': // time display
-                if (szOldFormatW != NULL)
-                {
-                    return E_INVALIDARG;
-                }
-                if (cStrTempFormatW.Copy(sCustomW.szTimeFormatW) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                szOldFormatW = (LPWSTR)szFormatW + 1;
-                szFormatW = (LPWSTR)cStrTempFormatW;
-                szFormatW--; // fixed below at switch end
-                break;
-
-            case L'y': // year w/o century (00-99)
-                hRes =
-                    Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nYear % 100, (bAlternateFlag == FALSE) ? 2 : 1);
-                if (FAILED(hRes))
-                {
-                    return hRes;
-                }
-                break;
-
-            case L'Y': // year w/ century
-                hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nYear, (bAlternateFlag == FALSE) ? 2 : 1);
-                if (FAILED(hRes))
-                {
-                    return hRes;
-                }
-                break;
-
-            case L'z': // time zone
-                if (nGmtOffset == 0)
-                {
-                    if (cStrDestW.Concat((bAlternateFlag == FALSE) ? L"GMT" : L"+0000") == FALSE)
+                    if (cStrDestW.Concat((*szFormatW == L'a') ? sCustomW.szShortDayNamesW[nWeekDay]
+                                         : sCustomW.szLongDayNamesW[nWeekDay]) == FALSE)
                     {
                         return E_OUTOFMEMORY;
                     }
-                }
-                else
-                {
-                    if (cStrDestW.Concat((nGmtOffset >= 0) ? L"+" : L"-") == FALSE)
+                    break;
+
+                case L'b':
+                    // abbreviated month name
+                case L'B':
+                    // full month name
+                    if (cStrDestW.Concat((*szFormatW == L'b') ? sCustomW.szShortMonthNamesW[nMonth - 1]
+                                         : sCustomW.szLongMonthNamesW[nMonth - 1]) == FALSE)
                     {
                         return E_OUTOFMEMORY;
                     }
-                    nTemp = nGmtOffset;
-                    if (nTemp < 0)
+                    break;
+
+                case L'c':
+                    // date and time display
+                    if (szOldFormatW != NULL)
                     {
-                        nTemp = -nTemp;
+                        return E_INVALIDARG;
                     }
-                    hRes = Format_AddNumber(cStrDestW, (SIZE_T)(nTemp / 60), 2);
-                    if (SUCCEEDED(hRes))
+                    if (cStrTempFormatW.Copy((bAlternateFlag == FALSE) ? sCustomW.szLongDateFormatW
+                                             : sCustomW.szShortDateFormatW) == FALSE ||
+                        cStrTempFormatW.Concat(L" ") == FALSE || cStrTempFormatW.Concat(sCustomW.szTimeFormatW) == FALSE)
                     {
-                        hRes = Format_AddNumber(cStrDestW, (SIZE_T)(nTemp % 60), 2);
+                        return E_OUTOFMEMORY;
                     }
+                    szOldFormatW = (LPWSTR)szFormatW + 1;
+                    szFormatW = (LPWSTR)cStrTempFormatW;
+                    szFormatW--; // fixed below at switch end
+                    break;
+
+                case L'd':
+                    // day in decimal (01-31)
+                    hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nDay, (bAlternateFlag == FALSE) ? 2 : 1);
                     if (FAILED(hRes))
                     {
                         return hRes;
                     }
-                }
-                break;
+                    break;
 
-            case L'%': // percent sign
-                if (cStrDestW.Concat(L"%") == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                break;
+                case L'H':
+                    // 24-hour decimal (00-23)
+                    hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nHours, (bAlternateFlag == FALSE) ? 2 : 1);
+                    if (FAILED(hRes))
+                    {
+                        return hRes;
+                    }
+                    break;
+
+                case L'I':
+                    // 12-hour decimal (01-12)
+                    if ((nTemp = nHours % 12) == 0)
+                    {
+                        nTemp = 12;
+                    }
+                    hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nTemp, (bAlternateFlag == FALSE) ? 2 : 1);
+                    if (FAILED(hRes))
+                    {
+                        return hRes;
+                    }
+                    break;
+
+                case L'j':
+                    // day of year in decimal (001-366)
+                    if (nDayOfYear < 0)
+                    {
+                        nDayOfYear = GetDayOfYear();
+                    }
+                    hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nDayOfYear + 1, 3);
+                    if (FAILED(hRes))
+                    {
+                        return hRes;
+                    }
+                    break;
+
+                case L'm':
+                    // month in decimal (01-12)
+                    hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nMonth, (bAlternateFlag == FALSE) ? 2 : 1);
+                    if (FAILED(hRes))
+                    {
+                        return hRes;
+                    }
+                    break;
+
+                case L'M':
+                    // minute in decimal (00-59)
+                    hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nMinutes, (bAlternateFlag == FALSE) ? 2 : 1);
+                    if (FAILED(hRes))
+                    {
+                        return hRes;
+                    }
+                    break;
+
+                case L'p':
+                    // AM/PM designation
+                    {
+                        SIZE_T nLen = cStrDestW.GetLength();
+
+                        if (cStrDestW.Concat(sCustomW.szTimeAmPmW[(nHours < 12) ? 0 : 1]) == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
+                        if (bAlternateFlag == FALSE)
+                        {
+                            StrToUpperW((LPWSTR)cStrDestW + nLen);
+                        }
+                        else
+                        {
+                            StrToLowerW((LPWSTR)cStrDestW + nLen);
+                        }
+                    }
+                    break;
+
+                case L'S':
+                    // secs in decimal (00-59)
+                    hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nSeconds, (bAlternateFlag == FALSE) ? 2 : 1);
+                    if (FAILED(hRes))
+                    {
+                        return hRes;
+                    }
+                    break;
+
+                case L'f':
+                    // milliseconds in decimal (0-999)
+                    hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nMilliSeconds, (bAlternateFlag == FALSE) ? 3 : 1);
+                    if (FAILED(hRes))
+                    {
+                        return hRes;
+                    }
+                    break;
+
+                case L'w':
+                    // week day in decimal (0-6)
+                    if (nWeekDay < 0)
+                    {
+                        nWeekDay = GetDayOfWeek();
+                    }
+                    hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nWeekDay, (bAlternateFlag == FALSE) ? 2 : 1);
+                    if (FAILED(hRes))
+                    {
+                        return hRes;
+                    }
+                    break;
+
+                case L'U':
+                    // sunday week number (00-53)
+                case L'W':
+                    // monday week number (00-53)
+                    if (nWeekDay < 0)
+                    {
+                        nWeekDay = GetDayOfWeek();
+                    }
+                    if (*szFormatW == L'U')
+                    {
+                        nTemp = nWeekDay;
+                    }
+                    else
+                    {
+                        nTemp = (nWeekDay == 0) ? 6 : (nWeekDay - 1);
+                    }
+                    if (nDayOfYear < 0)
+                    {
+                        nDayOfYear = GetDayOfYear();
+                    }
+                    if (nDayOfYear < nTemp)
+                    {
+                        nTemp2 = 0;
+                    }
+                    else
+                    {
+                        nTemp2 = nDayOfYear / 7;
+                        if ((nDayOfYear % 7) >= nTemp)
+                        {
+                            nTemp2++;
+                        }
+                    }
+                    hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nTemp2, (bAlternateFlag == FALSE) ? 2 : 1);
+                    if (FAILED(hRes))
+                    {
+                        return hRes;
+                    }
+                    break;
+
+                case L'x':
+                    // date display
+                    if (szOldFormatW != NULL)
+                    {
+                        return E_INVALIDARG;
+                    }
+                    if (cStrTempFormatW.Copy((bAlternateFlag == FALSE) ? sCustomW.szLongDateFormatW
+                                             : sCustomW.szShortDateFormatW) == FALSE)
+                    {
+                        return E_OUTOFMEMORY;
+                    }
+                    szOldFormatW = (LPWSTR)szFormatW + 1;
+                    szFormatW = (LPWSTR)cStrTempFormatW;
+                    szFormatW--; // fixed below at switch end
+                    break;
+
+                case L'X':
+                    // time display
+                    if (szOldFormatW != NULL)
+                    {
+                        return E_INVALIDARG;
+                    }
+                    if (cStrTempFormatW.Copy(sCustomW.szTimeFormatW) == FALSE)
+                    {
+                        return E_OUTOFMEMORY;
+                    }
+                    szOldFormatW = (LPWSTR)szFormatW + 1;
+                    szFormatW = (LPWSTR)cStrTempFormatW;
+                    szFormatW--; // fixed below at switch end
+                    break;
+
+                case L'y':
+                    // year w/o century (00-99)
+                    hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nYear % 100, (bAlternateFlag == FALSE) ? 2 : 1);
+                    if (FAILED(hRes))
+                    {
+                        return hRes;
+                    }
+                    break;
+
+                case L'Y':
+                    // year w/ century
+                    hRes = Format_AddNumber(cStrDestW, (SIZE_T)(unsigned int)nYear, (bAlternateFlag == FALSE) ? 2 : 1);
+                    if (FAILED(hRes))
+                    {
+                        return hRes;
+                    }
+                    break;
+
+                case L'z':
+                    // time zone
+                    if (nGmtOffset == 0)
+                    {
+                        if (cStrDestW.Concat((bAlternateFlag == FALSE) ? L"GMT" : L"+0000") == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
+                    }
+                    else
+                    {
+                        if (cStrDestW.Concat((nGmtOffset >= 0) ? L"+" : L"-") == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
+                        nTemp = nGmtOffset;
+                        if (nTemp < 0)
+                        {
+                            nTemp = -nTemp;
+                        }
+                        hRes = Format_AddNumber(cStrDestW, (SIZE_T)(nTemp / 60), 2);
+                        if (SUCCEEDED(hRes))
+                        {
+                            hRes = Format_AddNumber(cStrDestW, (SIZE_T)(nTemp % 60), 2);
+                        }
+                        if (FAILED(hRes))
+                        {
+                            return hRes;
+                        }
+                    }
+                    break;
+
+                case L'%':
+                    // percent sign
+                    if (cStrDestW.Concat(L"%") == FALSE)
+                    {
+                        return E_OUTOFMEMORY;
+                    }
+                    break;
             }
             szFormatW++;
         }
@@ -1865,8 +1919,7 @@ int CDateTime::GetDaysInMonth(_In_ int nMonth, _In_ int nYear)
     {
         return 0;
     }
-    return aDateTimeMonthDays[nMonth] - aDateTimeMonthDays[nMonth - 1] +
-           ((IsLeapYear(nYear) != FALSE && nMonth == 2) ? 1 : 0);
+    return aDateTimeMonthDays[nMonth] - aDateTimeMonthDays[nMonth - 1] + ((IsLeapYear(nYear) != FALSE && nMonth == 2) ? 1 : 0);
 }
 
 int CDateTime::GetDayOfWeek(_In_ int nYear, _In_ int nMonth, _In_ int nDay)
@@ -1956,8 +2009,7 @@ HRESULT CDateTime::CalculateDayMonth(_In_ int nDayOfYear, _In_ int nYear, _Out_ 
     return S_OK;
 }
 
-HRESULT CDateTime::CalculateEasterInYear(_In_ int nYear, _Out_ int *lpnMonth, _Out_ int *lpnDay,
-                                         _In_ BOOL bOrthodoxChurchesMethod)
+HRESULT CDateTime::CalculateEasterInYear(_In_ int nYear, _Out_ int *lpnMonth, _Out_ int *lpnDay, _In_ BOOL bOrthodoxChurchesMethod)
 {
     int nFirstDig, nRemain19, nTemp, tA, tB, tC, tD, tE;
 
@@ -2007,27 +2059,27 @@ HRESULT CDateTime::CalculateEasterInYear(_In_ int nYear, _Out_ int *lpnMonth, _O
         nTemp = ((nFirstDig - 15) / 2) + 202 - 11 * nRemain19;
         switch (nFirstDig)
         {
-        case 21:
-        case 24:
-        case 25:
-        case 27:
-        case 28:
-        case 29:
-        case 30:
-        case 31:
-        case 32:
-        case 34:
-        case 35:
-        case 38:
-            nTemp--;
-            break;
-        case 33:
-        case 36:
-        case 37:
-        case 39:
-        case 40:
-            nTemp -= 2;
-            break;
+            case 21:
+            case 24:
+            case 25:
+            case 27:
+            case 28:
+            case 29:
+            case 30:
+            case 31:
+            case 32:
+            case 34:
+            case 35:
+            case 38:
+                nTemp--;
+                break;
+            case 33:
+            case 36:
+            case 37:
+            case 39:
+            case 40:
+                nTemp -= 2;
+                break;
         }
         nTemp %= 30;
         tA = nTemp + 21;
@@ -2126,9 +2178,8 @@ static HRESULT DoTwoDigitsYearAdjustment(_Inout_ int &nYear, _In_ int nTwoDigits
     {
         DWORD dw;
 
-        if (::GetCalendarInfoW(LOCALE_USER_DEFAULT, CAL_GREGORIAN,
-                               CAL_NOUSEROVERRIDE | CAL_ITWODIGITYEARMAX | CAL_RETURN_NUMBER, NULL, 0, &dw) != 0 &&
-            dw >= 101)
+        if (::GetCalendarInfoW(LOCALE_USER_DEFAULT, CAL_GREGORIAN, CAL_NOUSEROVERRIDE | CAL_ITWODIGITYEARMAX | CAL_RETURN_NUMBER, NULL, 0,
+                               &dw) != 0 && dw >= 101)
         {
             nTwoDigitsYearRule = (int)dw;
         }
@@ -2157,8 +2208,7 @@ static HRESULT DoTwoDigitsYearAdjustment(_Inout_ int &nYear, _In_ int nTwoDigits
     return S_OK;
 }
 
-static VOID TicksToYearAndDayOfYear(_In_ const MX::CTimeSpan &cTicks, _Out_opt_ int *lpnYear,
-                                    _Out_opt_ int *lpnDayOfYear)
+static VOID TicksToYearAndDayOfYear(_In_ const MX::CTimeSpan &cTicks, _Out_opt_ int *lpnYear, _Out_opt_ int *lpnDayOfYear)
 {
     int nTotalDays, nYears400, nDays400, nYears100, nDays100, nYears4, nDays4, nYears1;
 
@@ -2195,8 +2245,7 @@ static VOID TicksToYearAndDayOfYear(_In_ const MX::CTimeSpan &cTicks, _Out_opt_ 
     return;
 }
 
-static BOOL ConvertCustomSettingsA2W(_Out_ MX::CDateTime::LPCUSTOMSETTINGSW lpCustomW,
-                                     _In_ MX::CDateTime::LPCUSTOMSETTINGSA lpCustomA)
+static BOOL ConvertCustomSettingsA2W(_Out_ MX::CDateTime::LPCUSTOMSETTINGSW lpCustomW, _In_ MX::CDateTime::LPCUSTOMSETTINGSA lpCustomA)
 {
     int i;
 
@@ -2208,7 +2257,7 @@ static BOOL ConvertCustomSettingsA2W(_Out_ MX::CDateTime::LPCUSTOMSETTINGSW lpCu
             lpCustomW->szShortDayNamesW[i] = Ansi2Wide(lpCustomA->szShortDayNamesA[i]);
             if (lpCustomW->szShortDayNamesW[i] == NULL)
             {
-            onerr:
+onerr:
                 FreeCustomSettings(lpCustomW);
                 return FALSE;
             }
@@ -2323,15 +2372,13 @@ static VOID FreeCustomSettings(_In_ MX::CDateTime::LPCUSTOMSETTINGSW lpCustomW)
 
 static VOID FixCustomSettings(_Out_ MX::CDateTime::LPCUSTOMSETTINGSW lpOut, _In_ MX::CDateTime::LPCUSTOMSETTINGSW lpIn)
 {
-    static LPCWSTR szShortDayNamesW[7] = {L"Sun", L"Mon", L"Tue", L"Wed", L"Thu", L"Fri", L"Sat"};
-    static LPCWSTR szLongDayNamesW[7] = {L"Sunday",   L"Monday", L"Tuesday", L"Wednesday",
-                                         L"Thursday", L"Friday", L"Saturday"};
-    static LPCWSTR szShortMonthNamesW[12] = {L"Jan", L"Feb", L"Mar", L"Apr", L"May", L"Jun",
-                                             L"Jul", L"Aug", L"Sep", L"Oct", L"Nov", L"Dec"};
-    static LPCWSTR szLongMonthNamesW[12] = {L"January",   L"February", L"March",    L"April",
-                                            L"May",       L"June",     L"July",     L"August",
-                                            L"September", L"October",  L"November", L"December"};
-    static LPCWSTR szTimeAmPmW[2] = {L"AM", L"PM"};
+    static LPCWSTR szShortDayNamesW[7] = { L"Sun", L"Mon", L"Tue", L"Wed", L"Thu", L"Fri", L"Sat" };
+    static LPCWSTR szLongDayNamesW[7] = { L"Sunday",   L"Monday", L"Tuesday", L"Wednesday", L"Thursday", L"Friday", L"Saturday" };
+    static LPCWSTR szShortMonthNamesW[12] = { L"Jan", L"Feb", L"Mar", L"Apr", L"May", L"Jun", L"Jul", L"Aug", L"Sep", L"Oct", L"Nov",
+                                              L"Dec" };
+    static LPCWSTR szLongMonthNamesW[12] = { L"January",   L"February", L"March",    L"April", L"May", L"June", L"July", L"August",
+                                             L"September", L"October",  L"November", L"December" };
+    static LPCWSTR szTimeAmPmW[2] = { L"AM", L"PM" };
     int i;
 
     if (lpIn != NULL)

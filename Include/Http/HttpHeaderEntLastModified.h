@@ -23,27 +23,26 @@
 #include "HttpHeaderBase.h"
 #include "..\DateTime\DateTime.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderEntLastModified : public CHttpHeaderBase
 {
-  public:
+public:
     CHttpHeaderEntLastModified();
     ~CHttpHeaderEntLastModified();
 
-    MX_DECLARE_HTTPHEADER_NAME(Last - Modified)
+    MX_DECLARE_HTTPHEADER_NAME("Last-Modified")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
     HRESULT SetDate(_In_ CDateTime &cDt);
     CDateTime GetDate() const;
 
-  private:
+private:
     CDateTime cDt;
 };
 

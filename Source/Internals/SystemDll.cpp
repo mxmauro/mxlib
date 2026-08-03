@@ -21,11 +21,10 @@
 #include "..\..\Include\Strings\Strings.h"
 #include "..\..\Include\WaitableObjects.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 typedef BOOL(WINAPI *lpfnQueryFullProcessImageNameW)(_In_ HANDLE hProcess, _In_ DWORD dwFlags,
-                                                     _Out_writes_to_(*lpdwSize, *lpdwSize) LPWSTR lpExeName,
-                                                     _Inout_ PDWORD lpdwSize);
+                                                     _Out_writes_to_(*lpdwSize, *lpdwSize) LPWSTR lpExeName, _Inout_ PDWORD lpdwSize);
 
 //-----------------------------------------------------------
 
@@ -33,11 +32,9 @@ static lpfnQueryFullProcessImageNameW fnQueryFullProcessImageNameW = NULL;
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Internals
-{
+namespace Internals {
 
 HRESULT LoadSystemDll(_In_z_ LPCWSTR szDllNameW, _Out_ HINSTANCE *lphInstance)
 {
@@ -135,7 +132,7 @@ HRESULT LoadAppDll(_In_z_ LPCWSTR szDllNameW, _Out_ HINSTANCE *lphInstance)
     }
     else
     {
-    try_get_module_filename:
+try_get_module_filename:
         dwLen = ::GetModuleFileNameW(NULL, szFullDllNameW, MX_ARRAYLEN(szFullDllNameW) - (DWORD)nDllNameLen - 2);
         if (dwLen == 0)
         {

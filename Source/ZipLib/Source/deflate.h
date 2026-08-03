@@ -3,12 +3,12 @@
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-/* WARNING: this file should *not* be used by applications. It is
-   part of the implementation of the compression library and is
-   subject to change. Applications should only use zlib.h.
- */
+ /* WARNING: this file should *not* be used by applications. It is
+    part of the implementation of the compression library and is
+    subject to change. Applications should only use zlib.h.
+  */
 
-/* @(#) $Id$ */
+  /* @(#) $Id$ */
 
 #ifndef DEFLATE_H
 #define DEFLATE_H
@@ -23,16 +23,16 @@
 #  define GZIP
 #endif
 
-/* define LIT_MEM to slightly increase the speed of deflate (order 1% to 2%) at
-   the cost of a larger memory footprint */
-/* #define LIT_MEM */
+   /* define LIT_MEM to slightly increase the speed of deflate (order 1% to 2%) at
+      the cost of a larger memory footprint */
+      /* #define LIT_MEM */
 
-/* ===========================================================================
- * Internal compression state.
- */
+      /* ===========================================================================
+       * Internal compression state.
+       */
 
 #define LENGTH_CODES 29
-/* number of length codes, not counting the special END_BLOCK code */
+       /* number of length codes, not counting the special END_BLOCK code */
 
 #define LITERALS  256
 /* number of literal bytes 0..255 */
@@ -69,12 +69,15 @@
 
 
 /* Data structure describing a single value and its code string. */
-typedef struct ct_data_s {
-    union {
+typedef struct ct_data_s
+{
+    union
+    {
         ush  freq;       /* frequency count */
         ush  code;       /* bit string */
     } fc;
-    union {
+    union
+    {
         ush  dad;        /* father node in Huffman tree */
         ush  len;        /* length of bit string */
     } dl;
@@ -87,7 +90,8 @@ typedef struct ct_data_s {
 
 typedef struct static_tree_desc_s  static_tree_desc;
 
-typedef struct tree_desc_s {
+typedef struct tree_desc_s
+{
     ct_data *dyn_tree;           /* the dynamic tree */
     int     max_code;            /* largest code with non zero frequency */
     const static_tree_desc *stat_desc;  /* the corresponding static tree */
@@ -101,7 +105,8 @@ typedef unsigned IPos;
  * save space in the various tables. IPos is used only for parameter passing.
  */
 
-typedef struct internal_state {
+typedef struct internal_state
+{
     z_streamp strm;      /* pointer back to this zlib stream */
     int   status;        /* as the name implies */
     Bytef *pending_buf;  /* output still pending */
@@ -114,7 +119,7 @@ typedef struct internal_state {
     Byte  method;        /* can only be DEFLATED */
     int   last_flush;    /* value of flush param for previous deflate call */
 
-                /* used by deflate.c: */
+    /* used by deflate.c: */
 
     uInt  w_size;        /* LZ77 window size (32K by default) */
     uInt  w_bits;        /* log2(w_size)  (8..16) */
@@ -184,10 +189,10 @@ typedef struct internal_state {
      * levels >= 4.
      */
 #   define max_insert_length  max_lazy_match
-    /* Insert new strings in the hash table only if the match length is not
-     * greater than this length. This saves time but degrades compression.
-     * max_insert_length is used only for compression levels <= 3.
-     */
+     /* Insert new strings in the hash table only if the match length is not
+      * greater than this length. This saves time but degrades compression.
+      * max_insert_length is used only for compression levels <= 3.
+      */
 
     int level;    /* compression level (1..9) */
     int strategy; /* favor or force Huffman coding*/
@@ -197,27 +202,27 @@ typedef struct internal_state {
 
     int nice_match; /* Stop searching when current match exceeds this */
 
-                /* used by trees.c: */
-    /* Didn't use ct_data typedef below to suppress compiler warning */
+    /* used by trees.c: */
+/* Didn't use ct_data typedef below to suppress compiler warning */
     struct ct_data_s dyn_ltree[HEAP_SIZE];   /* literal and length tree */
-    struct ct_data_s dyn_dtree[2*D_CODES+1]; /* distance tree */
-    struct ct_data_s bl_tree[2*BL_CODES+1];  /* Huffman tree for bit lengths */
+    struct ct_data_s dyn_dtree[2 * D_CODES + 1]; /* distance tree */
+    struct ct_data_s bl_tree[2 * BL_CODES + 1];  /* Huffman tree for bit lengths */
 
     struct tree_desc_s l_desc;               /* desc. for literal tree */
     struct tree_desc_s d_desc;               /* desc. for distance tree */
     struct tree_desc_s bl_desc;              /* desc. for bit length tree */
 
-    ush bl_count[MAX_BITS+1];
+    ush bl_count[MAX_BITS + 1];
     /* number of codes at each bit length for an optimal tree */
 
-    int heap[2*L_CODES+1];      /* heap used to build the Huffman trees */
+    int heap[2 * L_CODES + 1];      /* heap used to build the Huffman trees */
     int heap_len;               /* number of elements in the heap */
     int heap_max;               /* element of largest frequency */
     /* The sons of heap[n] are heap[2*n] and heap[2*n+1]. heap[0] is not used.
      * The same heap array is used to build all trees.
      */
 
-    uch depth[2*L_CODES+1];
+    uch depth[2 * L_CODES + 1];
     /* Depth of each subtree used as tie breaker for trees of equal frequency
      */
 
@@ -294,20 +299,20 @@ typedef struct internal_state {
 
 
 #define MIN_LOOKAHEAD (MAX_MATCH+MIN_MATCH+1)
-/* Minimum amount of lookahead, except at the end of the input file.
- * See deflate.c for comments about the MIN_MATCH+1.
- */
+ /* Minimum amount of lookahead, except at the end of the input file.
+  * See deflate.c for comments about the MIN_MATCH+1.
+  */
 
 #define MAX_DIST(s)  ((s)->w_size-MIN_LOOKAHEAD)
-/* In order to simplify the code, particularly on 16 bit machines, match
- * distances are limited to MAX_DIST instead of WSIZE.
- */
+  /* In order to simplify the code, particularly on 16 bit machines, match
+   * distances are limited to MAX_DIST instead of WSIZE.
+   */
 
 #define WIN_INIT MAX_MATCH
-/* Number of bytes after end of data in window to initialize in order to avoid
-   memory checker errors from longest match routines */
+   /* Number of bytes after end of data in window to initialize in order to avoid
+      memory checker errors from longest match routines */
 
-        /* in trees.c */
+      /* in trees.c */
 void ZLIB_INTERNAL _tr_init(deflate_state *s);
 int ZLIB_INTERNAL _tr_tally(deflate_state *s, unsigned dist, unsigned lc);
 void ZLIB_INTERNAL _tr_flush_block(deflate_state *s, charf *buf,
@@ -325,14 +330,14 @@ void ZLIB_INTERNAL _tr_stored_block(deflate_state *s, charf *buf,
  */
 
 #ifndef ZLIB_DEBUG
-/* Inline versions of _tr_tally for speed: */
+ /* Inline versions of _tr_tally for speed: */
 
 #if defined(GEN_TREES_H) || !defined(STDC)
-  extern uch ZLIB_INTERNAL _length_code[];
-  extern uch ZLIB_INTERNAL _dist_code[];
+extern uch ZLIB_INTERNAL _length_code[];
+extern uch ZLIB_INTERNAL _dist_code[];
 #else
-  extern const uch ZLIB_INTERNAL _length_code[];
-  extern const uch ZLIB_INTERNAL _dist_code[];
+extern const uch ZLIB_INTERNAL _length_code[];
+extern const uch ZLIB_INTERNAL _dist_code[];
 #endif
 
 #ifdef LIT_MEM

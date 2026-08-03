@@ -19,10 +19,9 @@
  */
 #include "JavascriptVMCommon.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 void CJavascriptVM::CProxyCallbacks::serialize(_In_ void *p)
 {
@@ -70,15 +69,11 @@ void CJavascriptVM::CProxyCallbacks::deserialize(_In_ void *p)
 
 size_t CJavascriptVM::CProxyCallbacks::serialization_buffer_size()
 {
-    return OnProxyHasNamedPropertyCallback::serialization_buffer_size() +
-           OnProxyHasIndexedPropertyCallback::serialization_buffer_size() +
-           OnProxyGetNamedPropertyCallback::serialization_buffer_size() +
-           OnProxyGetIndexedPropertyCallback::serialization_buffer_size() +
-           OnProxySetNamedPropertyCallback::serialization_buffer_size() +
-           OnProxySetIndexedPropertyCallback::serialization_buffer_size() +
-           OnProxyDeleteNamedPropertyCallback::serialization_buffer_size() +
-           OnProxyDeleteIndexedPropertyCallback::serialization_buffer_size() +
-           OnProxyGetPropertyNameCallback::serialization_buffer_size();
+    return OnProxyHasNamedPropertyCallback::serialization_buffer_size() + OnProxyHasIndexedPropertyCallback::serialization_buffer_size() +
+        OnProxyGetNamedPropertyCallback::serialization_buffer_size() + OnProxyGetIndexedPropertyCallback::serialization_buffer_size() +
+        OnProxySetNamedPropertyCallback::serialization_buffer_size() + OnProxySetIndexedPropertyCallback::serialization_buffer_size() +
+        OnProxyDeleteNamedPropertyCallback::serialization_buffer_size() +
+        OnProxyDeleteIndexedPropertyCallback::serialization_buffer_size() + OnProxyGetPropertyNameCallback::serialization_buffer_size();
 }
 
 } // namespace MX

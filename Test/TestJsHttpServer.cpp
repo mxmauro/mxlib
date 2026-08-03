@@ -25,7 +25,7 @@
 #include <JsLib\Plugins\JsonWebTokenPlugin.h>
 #include <TaskQueue.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 static LONG volatile nLogMutex = 0;
 
@@ -33,7 +33,7 @@ static LONG volatile nLogMutex = 0;
 
 class CTestJsHttpServerWebSocket : public MX::CWebSocket
 {
-  public:
+public:
     CTestJsHttpServerWebSocket();
     ~CTestJsHttpServerWebSocket();
 
@@ -49,44 +49,37 @@ class CTestJsHttpServerWebSocket : public MX::CWebSocket
 //-----------------------------------------------------------
 
 static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hrErrorCode);
-static HRESULT OnNewRequestObject(_In_ MX::CJsHttpServer *lpHttp,
-                                  _Out_ MX::CJsHttpServer::CClientRequest **lplpRequest);
+static HRESULT OnNewRequestObject(_In_ MX::CJsHttpServer *lpHttp, _Out_ MX::CJsHttpServer::CClientRequest **lplpRequest);
 static VOID OnRequestCompleted(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest);
 static VOID OnProcessJsRequest(_In_ MX::CTaskQueue *lpQueue, _In_ MX::CTaskQueue::CTask *lpTask);
 static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
-                                 _Inout_ MX::CJavascriptVM &cJvm,
-                                 _Inout_ MX::CJavascriptVM::CRequireModuleContext *lpReqContext,
+                                 _Inout_ MX::CJavascriptVM &cJvm, _Inout_ MX::CJavascriptVM::CRequireModuleContext *lpReqContext,
                                  _Inout_ MX::CStringA &cStrCodeA);
-static HRESULT OnWebSocketRequestReceived(_In_ MX::CJsHttpServer *lpHttp,
-                                          _In_ MX::CJsHttpServer::CClientRequest *lpRequest, _In_ int nVersion,
-                                          _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount,
+static HRESULT OnWebSocketRequestReceived(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
+                                          _In_ int nVersion, _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount,
                                           _Out_ int &nSelectedProtocol, _In_ MX::TArrayList<int> &aSupportedVersions,
                                           _Outptr_result_maybenull_ MX::CWebSocket **lplpWebSocket);
 static VOID DeleteSessionFiles();
 static HRESULT OnSessionPersistance(_In_ MX::CJsHttpServerSessionPlugin *lpPlugin,
                                     _In_ MX::CJsHttpServerSessionPlugin::ePersistanceOption nPersistanceOption);
 static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR szFileNameW);
-static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ LPCWSTR &szExtensionW,
-                                _In_z_ LPCWSTR szPathW);
-static DukTape::duk_ret_t OnGetExecutablePath(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                              _In_z_ LPCSTR szFunctionNameA);
-static DukTape::duk_ret_t OnGetUniqueId(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                        _In_z_ LPCSTR szFunctionNameA);
+static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ LPCWSTR &szExtensionW, _In_z_ LPCWSTR szPathW);
+static DukTape::duk_ret_t OnGetExecutablePath(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnGetUniqueId(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA);
 static HRESULT OnLog(_In_z_ LPCWSTR szInfoW);
 
 //-----------------------------------------------------------
 
 class CTestJsRequest : public MX::CJsHttpServer::CClientRequest, public MX::CTaskQueue::CTask
 {
-  public:
+public:
     CTestJsRequest() : MX::CJsHttpServer::CClientRequest()
     {
         ::MxMemSet(&sOvr, 0, sizeof(sOvr));
         return;
     };
 
-    HRESULT InitializeSession(_Inout_ MX::CJavascriptVM &cJvm,
-                              _Inout_ MX::CJavascriptVM::CRequireModuleContext *lpReqContext)
+    HRESULT InitializeSession(_Inout_ MX::CJavascriptVM &cJvm, _Inout_ MX::CJavascriptVM::CRequireModuleContext *lpReqContext)
     {
         HRESULT hRes;
 
@@ -96,8 +89,7 @@ class CTestJsRequest : public MX::CJsHttpServer::CClientRequest, public MX::CTas
         {
             return E_OUTOFMEMORY;
         }
-        hRes = cSessionJsObj->Setup(this, MX_BIND_CALLBACK(&OnSessionPersistance), NULL, NULL, L"/", 2 * 60 * 60, FALSE,
-                                    TRUE);
+        hRes = cSessionJsObj->Setup(this, MX_BIND_CALLBACK(&OnSessionPersistance), NULL, NULL, L"/", 2 * 60 * 60, FALSE, TRUE);
         if (FAILED(hRes))
         {
             return hRes;
@@ -105,11 +97,11 @@ class CTestJsRequest : public MX::CJsHttpServer::CClientRequest, public MX::CTas
         return lpReqContext->ReplaceModuleExportsWithObject(cSessionJsObj);
     };
 
-  public:
+public:
     OVERLAPPED sOvr;
     MX::CStringW cStrFileNameW;
 
-  private:
+private:
     BOOL OnCleanup()
     {
         if (cSessionJsObj)
@@ -120,7 +112,7 @@ class CTestJsRequest : public MX::CJsHttpServer::CClientRequest, public MX::CTas
         return MX::CJsHttpServer::CClientRequest::OnCleanup();
     };
 
-  private:
+private:
     MX::TAutoRefCounted<MX::CJsHttpServerSessionPlugin> cSessionJsObj;
 };
 
@@ -128,14 +120,13 @@ class CTestJsRequest : public MX::CJsHttpServer::CClientRequest, public MX::CTas
 
 class CJsTest : public virtual MX::CBaseMemObj
 {
-  public:
+public:
     CJsTest() : MX::CBaseMemObj(), cSckMgr(cDispatcherPool), cJsHttpServer(cSckMgr)
     {
         return;
     };
 
-    HRESULT OnQuerySslCertificates(_In_ MX::CJsHttpServer *lpHttp,
-                                   _Outptr_result_maybenull_ MX::CSslCertificate **lplpSslCert,
+    HRESULT OnQuerySslCertificates(_In_ MX::CJsHttpServer *lpHttp, _Outptr_result_maybenull_ MX::CSslCertificate **lplpSslCert,
                                    _Outptr_result_maybenull_ MX::CEncryptionKey **lplpSslPrivKey,
                                    _Outptr_result_maybenull_ MX::CEncryptionKey **lplpDhParam)
     {
@@ -150,7 +141,7 @@ class CJsTest : public virtual MX::CBaseMemObj
         return S_OK;
     };
 
-  public:
+public:
     MX::CIoCompletionPortThreadPool cDispatcherPool;
     MX::CSockets cSckMgr;
     MX::TAutoRefCounted<MX::CSslCertificate> cSslCert;
@@ -168,6 +159,15 @@ int TestJsHttpServer()
     DWORD dwPort;
     BOOL bUseSSL;
     HRESULT hRes;
+
+    if (DoesCmdLineParamExist(L"?") || DoesCmdLineParamExist(L"help"))
+    {
+        wprintf_s(L"Use: Test.exe JsHttpServer [/ssl] [/port #]\n\n");
+        wprintf_s(L"Available 'options':\n");
+        wprintf_s(L"    /ssl: Enable SSL.\n");
+        wprintf_s(L"    /port #: Set server port. Defaults to 80 or 443.\n");
+        return 1;
+    }
 
     DeleteSessionFiles();
 
@@ -288,8 +288,7 @@ int TestJsHttpServer()
 
         if (bUseSSL != FALSE)
         {
-            cTest.cJsHttpServer.SetQuerySslCertificatesCallback(
-                MX_BIND_MEMBER_CALLBACK(&CJsTest::OnQuerySslCertificates, &cTest));
+            cTest.cJsHttpServer.SetQuerySslCertificatesCallback(MX_BIND_MEMBER_CALLBACK(&CJsTest::OnQuerySslCertificates, &cTest));
         }
 
         // cOptions.dwBackLogSize = 0;
@@ -400,11 +399,17 @@ static VOID OnProcessJsRequest(_In_ MX::CTaskQueue *lpQueue, _In_ MX::CTaskQueue
             {
                 hRes = MX::CJsHttpServerSessionPlugin::Register(*lpJVM);
                 if (SUCCEEDED(hRes))
+                {
                     hRes = MX::CJsMySqlPlugin::Register(*lpJVM);
+                }
                 if (SUCCEEDED(hRes))
+                {
                     hRes = MX::CJsSQLitePlugin::Register(*lpJVM);
+                }
                 if (SUCCEEDED(hRes))
+                {
                     hRes = MX::CJsonWebTokenPlugin::Register(*lpJVM);
+                }
                 if (SUCCEEDED(hRes))
                 {
                     hRes = lpJVM->AddNativeFunction("getExecutablePath", MX_BIND_CALLBACK(&OnGetExecutablePath), 0);
@@ -420,8 +425,7 @@ static VOID OnProcessJsRequest(_In_ MX::CTaskQueue *lpQueue, _In_ MX::CTaskQueue
                 CHAR szBufA[64];
 
                 _snprintf_s(szBufA, MX_ARRAYLEN(szBufA), _TRUNCATE, "0x%p", lpRequest);
-                hRes = lpJVM->AddStringProperty("requestAddress", szBufA,
-                                                MX::CJavascriptVM::ePropertyFlags::Enumerable |
+                hRes = lpJVM->AddStringProperty("requestAddress", szBufA, MX::CJavascriptVM::ePropertyFlags::Enumerable |
                                                     MX::CJavascriptVM::ePropertyFlags::Configurable);
             }
 
@@ -457,8 +461,7 @@ static VOID OnProcessJsRequest(_In_ MX::CTaskQueue *lpQueue, _In_ MX::CTaskQueue
 }
 
 static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *_lpRequest,
-                                 _Inout_ MX::CJavascriptVM &cJvm,
-                                 _Inout_ MX::CJavascriptVM::CRequireModuleContext *lpReqContext,
+                                 _Inout_ MX::CJavascriptVM &cJvm, _Inout_ MX::CJavascriptVM::CRequireModuleContext *lpReqContext,
                                  _Inout_ MX::CStringA &cStrCodeA)
 {
     CTestJsRequest *lpRequest = static_cast<CTestJsRequest *>(_lpRequest);
@@ -509,9 +512,8 @@ static HRESULT OnRequireJsModule(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHtt
     return MX_E_NotFound;
 }
 
-static HRESULT OnWebSocketRequestReceived(_In_ MX::CJsHttpServer *lpHttp,
-                                          _In_ MX::CJsHttpServer::CClientRequest *lpRequest, _In_ int nVersion,
-                                          _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount,
+static HRESULT OnWebSocketRequestReceived(_In_ MX::CJsHttpServer *lpHttp, _In_ MX::CJsHttpServer::CClientRequest *lpRequest,
+                                          _In_ int nVersion, _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount,
                                           _Out_ int &nSelectedProtocol, _In_ MX::TArrayList<int> &aSupportedVersions,
                                           _Outptr_result_maybenull_ MX::CWebSocket **lplpWebSocket)
 {
@@ -552,7 +554,8 @@ static VOID DeleteSessionFiles()
                     }
                 }
             }
-        } while (::FindNextFileW(hFindFile, &sFdW) != FALSE);
+        }
+        while (::FindNextFileW(hFindFile, &sFdW) != FALSE);
         ::FindClose(hFindFile);
     }
     return;
@@ -617,13 +620,12 @@ static HRESULT OnSessionPersistance(_In_ MX::CJsHttpServerSessionPlugin *lpPlugi
     {
         if (nPersistanceOption == MX::CJsHttpServerSessionPlugin::ePersistanceOption::Load)
         {
-            cFileH.Attach(::CreateFileW((LPCWSTR)cStrFileNameW, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING,
-                                        FILE_ATTRIBUTE_NORMAL, NULL));
+            cFileH.Attach(::CreateFileW((LPCWSTR)cStrFileNameW, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
+                                        NULL));
         }
         else
         {
-            cFileH.Attach(::CreateFileW((LPCWSTR)cStrFileNameW, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS,
-                                        FILE_ATTRIBUTE_NORMAL, NULL));
+            cFileH.Attach(::CreateFileW((LPCWSTR)cStrFileNameW, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL));
         }
         if (cFileH)
         {
@@ -704,59 +706,62 @@ static HRESULT OnSessionPersistance(_In_ MX::CJsHttpServerSessionPlugin *lpPlugi
             // process value
             switch (szBufA[0])
             {
-            case 'N': // a null value
-                // add property
-                hRes = lpPlugin->GetBag()->SetNull((LPCSTR)cStrNameA);
-                if (FAILED(hRes))
-                    delete_and_exit(;);
-                break;
+                case 'N':
+                    // a null value
+                    // add property
+                    hRes = lpPlugin->GetBag()->SetNull((LPCSTR)cStrNameA);
+                    if (FAILED(hRes))
+                        delete_and_exit(;);
+                    break;
 
-            case 'D': // a double value
-                if (::ReadFile(cFileH, &nDbl, (DWORD)sizeof(double), &dwReaded, NULL) == FALSE)
-                    delete_and_exit(hRes = MX_HRESULT_FROM_LASTERROR());
-                if (dwReaded != (DWORD)sizeof(double))
-                    delete_and_exit(hRes = MX_E_ReadFault;);
+                case 'D':
+                    // a double value
+                    if (::ReadFile(cFileH, &nDbl, (DWORD)sizeof(double), &dwReaded, NULL) == FALSE)
+                        delete_and_exit(hRes = MX_HRESULT_FROM_LASTERROR());
+                    if (dwReaded != (DWORD)sizeof(double))
+                        delete_and_exit(hRes = MX_E_ReadFault;);
 
-                // add property
-                hRes = lpPlugin->GetBag()->SetDouble((LPCSTR)cStrNameA, nDbl);
-                if (FAILED(hRes))
-                    delete_and_exit(;);
-                break;
+                    // add property
+                    hRes = lpPlugin->GetBag()->SetDouble((LPCSTR)cStrNameA, nDbl);
+                    if (FAILED(hRes))
+                        delete_and_exit(;);
+                    break;
 
-            case 'S': // a string value
-                // read value length
-                if (::ReadFile(cFileH, &dw, 4, &dwReaded, NULL) == FALSE)
-                    delete_and_exit(hRes = MX_HRESULT_FROM_LASTERROR(););
-                if (dwReaded != 4)
-                    delete_and_exit(hRes = MX_E_ReadFault;);
+                case 'S':
+                    // a string value
+                    // read value length
+                    if (::ReadFile(cFileH, &dw, 4, &dwReaded, NULL) == FALSE)
+                        delete_and_exit(hRes = MX_HRESULT_FROM_LASTERROR(););
+                    if (dwReaded != 4)
+                        delete_and_exit(hRes = MX_E_ReadFault;);
 
-                // check length
-                if (dw > 0x7FFFFFFFUL)
-                    delete_and_exit(hRes = MX_E_InvalidData;);
+                    // check length
+                    if (dw > 0x7FFFFFFFUL)
+                        delete_and_exit(hRes = MX_E_InvalidData;);
 
-                // read value
-                if (cStrValueA.EnsureBuffer((SIZE_T)(dw + 1)) == FALSE)
-                    delete_and_exit(hRes = E_OUTOFMEMORY;);
-                if (::ReadFile(cFileH, (LPSTR)cStrValueA, dw, &dwReaded, NULL) == FALSE)
-                    delete_and_exit(hRes = MX_HRESULT_FROM_LASTERROR());
-                if (dwReaded != dw)
-                    delete_and_exit(hRes = MX_E_ReadFault;);
-                ((LPSTR)cStrValueA)[dw] = 0;
-                cStrValueA.Refresh();
+                    // read value
+                    if (cStrValueA.EnsureBuffer((SIZE_T)(dw + 1)) == FALSE)
+                        delete_and_exit(hRes = E_OUTOFMEMORY;);
+                    if (::ReadFile(cFileH, (LPSTR)cStrValueA, dw, &dwReaded, NULL) == FALSE)
+                        delete_and_exit(hRes = MX_HRESULT_FROM_LASTERROR());
+                    if (dwReaded != dw)
+                        delete_and_exit(hRes = MX_E_ReadFault;);
+                    ((LPSTR)cStrValueA)[dw] = 0;
+                    cStrValueA.Refresh();
 
-                // add property
-                hRes = lpPlugin->GetBag()->SetString((LPCSTR)cStrNameA, (LPCSTR)cStrValueA);
-                if (FAILED(hRes))
-                    delete_and_exit(;);
-                break;
+                    // add property
+                    hRes = lpPlugin->GetBag()->SetString((LPCSTR)cStrNameA, (LPCSTR)cStrValueA);
+                    if (FAILED(hRes))
+                        delete_and_exit(;);
+                    break;
             }
         }
     }
     else
     {
         // write date
-        _snprintf_s(szBufA, _countof(szBufA), _TRUNCATE, "%04lu/%02lu/%02lu %02lu:%02lu:%02lu", cDtNow.GetYear(),
-                    cDtNow.GetMonth(), cDtNow.GetDay(), cDtNow.GetHours(), cDtNow.GetMinutes(), cDtNow.GetSeconds());
+        _snprintf_s(szBufA, _countof(szBufA), _TRUNCATE, "%04lu/%02lu/%02lu %02lu:%02lu:%02lu", cDtNow.GetYear(), cDtNow.GetMonth(),
+                    cDtNow.GetDay(), cDtNow.GetHours(), cDtNow.GetMinutes(), cDtNow.GetSeconds());
         if (::WriteFile(cFileH, szBufA, 10 + 1 + 8, &dwWritten, NULL) == FALSE)
             delete_and_exit(hRes = MX_HRESULT_FROM_LASTERROR(););
         if (dwWritten != 10 + 1 + 8)
@@ -813,39 +818,39 @@ static HRESULT OnSessionPersistance(_In_ MX::CJsHttpServerSessionPlugin *lpPlugi
             // write data
             switch (nPropType)
             {
-            case MX::CPropertyBag::eType::Double:
-                // get value
-                hRes = lpPlugin->GetBag()->GetDouble(nIndex, nDbl);
-                if (FAILED(hRes))
-                    delete_and_exit(;);
+                case MX::CPropertyBag::eType::Double:
+                    // get value
+                    hRes = lpPlugin->GetBag()->GetDouble(nIndex, nDbl);
+                    if (FAILED(hRes))
+                        delete_and_exit(;);
 
-                // write value
-                if (::WriteFile(cFileH, &nDbl, (DWORD)sizeof(nDbl), &dwWritten, NULL) == FALSE)
-                    delete_and_exit(hRes = MX_HRESULT_FROM_LASTERROR(););
-                if (dwWritten != (DWORD)sizeof(nDbl))
-                    delete_and_exit(hRes = MX_E_WriteFault;);
-                break;
+                    // write value
+                    if (::WriteFile(cFileH, &nDbl, (DWORD)sizeof(nDbl), &dwWritten, NULL) == FALSE)
+                        delete_and_exit(hRes = MX_HRESULT_FROM_LASTERROR(););
+                    if (dwWritten != (DWORD)sizeof(nDbl))
+                        delete_and_exit(hRes = MX_E_WriteFault;);
+                    break;
 
-            case MX::CPropertyBag::eType::AnsiString:
-                // get value
-                hRes = lpPlugin->GetBag()->GetString(nIndex, szValueA);
-                if (FAILED(hRes))
-                    delete_and_exit(;);
+                case MX::CPropertyBag::eType::AnsiString:
+                    // get value
+                    hRes = lpPlugin->GetBag()->GetString(nIndex, szValueA);
+                    if (FAILED(hRes))
+                        delete_and_exit(;);
 
-                // write value length
-                nLen = MX::StrLenA(szValueA);
-                dw = (nLen < 0x7FFFFFFFUL) ? (DWORD)nLen : 0x7FFFFFFFUL; // truncate long values
-                if (::WriteFile(cFileH, &dw, 4, &dwWritten, NULL) == FALSE)
-                    delete_and_exit(hRes = MX_HRESULT_FROM_LASTERROR(););
-                if (dwWritten != 4)
-                    delete_and_exit(hRes = MX_E_WriteFault;);
+                    // write value length
+                    nLen = MX::StrLenA(szValueA);
+                    dw = (nLen < 0x7FFFFFFFUL) ? (DWORD)nLen : 0x7FFFFFFFUL; // truncate long values
+                    if (::WriteFile(cFileH, &dw, 4, &dwWritten, NULL) == FALSE)
+                        delete_and_exit(hRes = MX_HRESULT_FROM_LASTERROR(););
+                    if (dwWritten != 4)
+                        delete_and_exit(hRes = MX_E_WriteFault;);
 
-                // write value
-                if (::WriteFile(cFileH, szValueA, dw, &dwWritten, NULL) == FALSE)
-                    delete_and_exit(hRes = MX_HRESULT_FROM_LASTERROR(););
-                if (dwWritten != dw)
-                    delete_and_exit(hRes = MX_E_WriteFault;);
-                break;
+                    // write value
+                    if (::WriteFile(cFileH, szValueA, dw, &dwWritten, NULL) == FALSE)
+                        delete_and_exit(hRes = MX_HRESULT_FROM_LASTERROR(););
+                    if (dwWritten != dw)
+                        delete_and_exit(hRes = MX_E_WriteFault;);
+                    break;
             }
         }
 
@@ -877,8 +882,7 @@ static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR s
     {
         return E_POINTER;
     }
-    cFileH.Attach(
-        ::CreateFileW(szFileNameW, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
+    cFileH.Attach(::CreateFileW(szFileNameW, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
     if (!cFileH)
     {
         return MX_HRESULT_FROM_LASTERROR();
@@ -901,8 +905,7 @@ static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR s
     return S_OK;
 }
 
-static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ LPCWSTR &szExtensionW,
-                                _In_z_ LPCWSTR szPathW)
+static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ LPCWSTR &szExtensionW, _In_z_ LPCWSTR szPathW)
 {
     LPWSTR sW;
     HRESULT hRes;
@@ -949,8 +952,7 @@ static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ L
     return S_OK;
 }
 
-static DukTape::duk_ret_t OnGetExecutablePath(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                              _In_z_ LPCSTR szFunctionNameA)
+static DukTape::duk_ret_t OnGetExecutablePath(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA)
 {
     MX::CStringW cStrPathW;
     HRESULT hRes;
@@ -965,8 +967,7 @@ static DukTape::duk_ret_t OnGetExecutablePath(_In_ DukTape::duk_context *lpCtx, 
     return 1;
 }
 
-static DukTape::duk_ret_t OnGetUniqueId(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                        _In_z_ LPCSTR szFunctionNameA)
+static DukTape::duk_ret_t OnGetUniqueId(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA)
 {
     static LONG volatile nUniqueId = 0;
 

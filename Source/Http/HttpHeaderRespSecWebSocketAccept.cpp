@@ -21,7 +21,7 @@
 #include "..\..\Include\Crypto\Base64.h"
 #include "..\..\Include\Crypto\MessageDigest.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 static const LPCSTR szGuidA = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -31,8 +31,7 @@ static HRESULT CalculateHash(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen, _Out_writes
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderRespSecWebSocketAccept::CHttpHeaderRespSecWebSocketAccept() : CHttpHeaderBase()
 {

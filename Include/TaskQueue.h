@@ -23,33 +23,32 @@
 #include "IOCompletionPort.h"
 #include "RefCounted.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CTaskQueue : public virtual CBaseMemObj, private MX::CIoCompletionPortThreadPool
 {
-  public:
+public:
     class CTask;
 
     typedef MX::Callback<VOID(_In_ CTaskQueue *lpQueue, _In_ CTask *lpTask)> OnRunTaskCallback;
 
-  public:
+public:
     class CTask : public virtual TRefCounted<CBaseMemObj>
     {
-      public:
+    public:
         CTask();
         ~CTask();
 
-      private:
+    private:
         friend class CTaskQueue;
 
         OVERLAPPED sOvr;
         OnRunTaskCallback cCallback;
     };
 
-  public:
+public:
     CTaskQueue();
     ~CTaskQueue();
 
@@ -70,11 +69,10 @@ class CTaskQueue : public virtual CBaseMemObj, private MX::CIoCompletionPortThre
 
     HRESULT QueueTask(_In_ CTask *lpTask, _In_ OnRunTaskCallback cCallback);
 
-  private:
-    VOID OnQueuedTask(_In_ MX::CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
-                      _In_ HRESULT hRes);
+private:
+    VOID OnQueuedTask(_In_ MX::CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr, _In_ HRESULT hRes);
 
-  private:
+private:
     LONG volatile nRundownLock;
     MX::CIoCompletionPortThreadPool::OnPacketCallback cQueuedTaskCallbackWP;
     LONG volatile nQueuedTasksCount;

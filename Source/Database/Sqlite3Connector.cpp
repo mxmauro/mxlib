@@ -48,7 +48,7 @@
 
 #define SQLITE_FINALIZER_PRIORITY 10001
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 typedef struct
 {
@@ -60,15 +60,13 @@ typedef struct
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Internals
-{
+namespace Internals {
 
 class CSQLite3ConnectorData : public CBaseMemObj
 {
-  public:
+public:
     CSQLite3ConnectorData();
     ~CSQLite3ConnectorData();
 
@@ -76,24 +74,24 @@ class CSQLite3ConnectorData : public CBaseMemObj
     VOID SetErrno(_In_ int err, _In_opt_ HRESULT hRes = S_OK);
     VOID SetCustomErrno(_In_ int err, _In_z_ LPCSTR szDescriptionA);
 
-  private:
+private:
     HRESULT GetHResultFromErr(_In_ int err, _In_ BOOL bCheckDB);
 
-  public:
+public:
     class CBuffer : public virtual CBaseMemObj
     {
-      public:
+    public:
         CBuffer();
         ~CBuffer();
 
         BOOL EnsureSize(_In_ SIZE_T nNewSize);
 
-      public:
+    public:
         LPBYTE lpBuffer;
         SIZE_T nBufferSize;
     };
 
-  public:
+public:
     DWORD dwBusyTimeoutMs;
     sqlite3 *lpDB;
     int nLastDbErr;
@@ -108,7 +106,7 @@ class CSQLite3ConnectorData : public CBaseMemObj
 
 class CAutoLockSQLite3DB : public virtual CBaseMemObj
 {
-  public:
+public:
     CAutoLockSQLite3DB(_In_opt_ CSQLite3ConnectorData *lpData) : CBaseMemObj()
     {
         mtx = (lpData != NULL) ? sqlite3_db_mutex(lpData->lpDB) : NULL;
@@ -128,7 +126,7 @@ class CAutoLockSQLite3DB : public virtual CBaseMemObj
         return;
     };
 
-  private:
+private:
     sqlite3_mutex *mtx;
 };
 
@@ -171,17 +169,15 @@ static __inline BOOL IsSQLiteFatalError(int err)
     err &= 0xFF;
     return (err != SQLITE_OK && err != SQLITE_BUSY && err != SQLITE_LOCKED && err != SQLITE_CONSTRAINT &&
             err != SQLITE_MISMATCH && err != SQLITE_FULL && err != SQLITE_MISMATCH)
-               ? TRUE
-               : FALSE;
+        ? TRUE
+        : FALSE;
 }
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Database
-{
+namespace Database {
 
 CSQLite3Connector::CSQLite3Connector() : CBaseConnector()
 {
@@ -304,8 +300,7 @@ HRESULT CSQLite3Connector::Connect(_In_z_ LPCWSTR szFileNameW, _In_opt_ CConnect
     }
     if (err == SQLITE_OK)
     {
-        err =
-            sqlite3_create_function(sqlite3_data->lpDB, "CURRENT_TIMESTAMP", 0, SQLITE_UTF8, 0, myFuncNow, NULL, NULL);
+        err = sqlite3_create_function(sqlite3_data->lpDB, "CURRENT_TIMESTAMP", 0, SQLITE_UTF8, 0, myFuncNow, NULL, NULL);
     }
     // if (err == SQLITE_OK)
     //{
@@ -314,8 +309,7 @@ HRESULT CSQLite3Connector::Connect(_In_z_ LPCWSTR szFileNameW, _In_opt_ CConnect
 
     if (err == SQLITE_OK)
     {
-        err = sqlite3_create_function(sqlite3_data->lpDB, "CONCAT", -1, SQLITE_UTF8, 0, NULL, myFuncConcatStep,
-                                      myFuncConcatFinal);
+        err = sqlite3_create_function(sqlite3_data->lpDB, "CONCAT", -1, SQLITE_UTF8, 0, NULL, myFuncConcatStep, myFuncConcatFinal);
     }
     if (err != SQLITE_OK)
     {
@@ -368,8 +362,7 @@ LPCSTR CSQLite3Connector::GetErrorDescription() const
     return (lpInternalData != NULL) ? (LPCSTR)(sqlite3_data->cStrLastDbErrorDescriptionA) : "";
 }
 
-HRESULT CSQLite3Connector::QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQueryLen,
-                                        _In_opt_ CFieldList *lpInputFieldsList)
+HRESULT CSQLite3Connector::QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQueryLen, _In_opt_ CFieldList *lpInputFieldsList)
 {
     Internals::CAutoLockSQLite3DB cDbLock(sqlite3_data);
     int err, inputParams;
@@ -409,10 +402,11 @@ HRESULT CSQLite3Connector::QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQ
         const char *szLeftOverA;
 
         err = sqlite3_prepare_v2(sqlite3_data->lpDB, szQueryA, (int)nQueryLen, &(sqlite3_data->lpStmt), &szLeftOverA);
-    } while (MustRetry(err, sqlite3_data->dwBusyTimeoutMs, dwBusyTimeoutMs) != FALSE);
+    }
+    while (MustRetry(err, sqlite3_data->dwBusyTimeoutMs, dwBusyTimeoutMs) != FALSE);
     if (err != SQLITE_OK)
     {
-    on_error:
+on_error:
         sqlite3_data->SetErrno(err);
         QueryClose();
         if (IsSQLiteFatalError(err) != FALSE)
@@ -431,7 +425,7 @@ HRESULT CSQLite3Connector::QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQ
     }
     if ((SIZE_T)inputParams != nParamsCount)
     {
-    err_invalidarg:
+err_invalidarg:
         QueryClose();
         sqlite3_data->ClearErrno();
         return E_INVALIDARG;
@@ -447,83 +441,79 @@ HRESULT CSQLite3Connector::QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQ
             lpField = lpInputFieldsList->GetElementAt(nParamIdx);
             switch (lpField->GetType())
             {
-            case eFieldType::Null:
-                err = sqlite3_bind_null(sqlite3_data->lpStmt, (int)nParamIdx + 1);
-                break;
+                case eFieldType::Null:
+                    err = sqlite3_bind_null(sqlite3_data->lpStmt, (int)nParamIdx + 1);
+                    break;
 
-            case eFieldType::Boolean:
-                err = sqlite3_bind_int(sqlite3_data->lpStmt, (int)nParamIdx + 1,
-                                       (lpField->GetBoolean() != FALSE) ? 1 : 0);
-                break;
+                case eFieldType::Boolean:
+                    err = sqlite3_bind_int(sqlite3_data->lpStmt, (int)nParamIdx + 1, (lpField->GetBoolean() != FALSE) ? 1 : 0);
+                    break;
 
-            case eFieldType::UInt32:
-                err = sqlite3_bind_int64(sqlite3_data->lpStmt, (int)nParamIdx + 1,
-                                         (sqlite3_int64)(ULONGLONG)(lpField->GetUInt32()));
-                break;
+                case eFieldType::UInt32:
+                    err = sqlite3_bind_int64(sqlite3_data->lpStmt, (int)nParamIdx + 1, (sqlite3_int64)(ULONGLONG)(lpField->GetUInt32()));
+                    break;
 
-            case eFieldType::Int32:
-                err =
-                    sqlite3_bind_int64(sqlite3_data->lpStmt, (int)nParamIdx + 1, (sqlite3_int64)(lpField->GetInt32()));
-                break;
+                case eFieldType::Int32:
+                    err =
+                        sqlite3_bind_int64(sqlite3_data->lpStmt, (int)nParamIdx + 1, (sqlite3_int64)(lpField->GetInt32()));
+                    break;
 
-            case eFieldType::UInt64:
-                err =
-                    sqlite3_bind_int64(sqlite3_data->lpStmt, (int)nParamIdx + 1, (sqlite3_int64)(lpField->GetUInt64()));
-                break;
+                case eFieldType::UInt64:
+                    err =
+                        sqlite3_bind_int64(sqlite3_data->lpStmt, (int)nParamIdx + 1, (sqlite3_int64)(lpField->GetUInt64()));
+                    break;
 
-            case eFieldType::Int64:
-                err =
-                    sqlite3_bind_int64(sqlite3_data->lpStmt, (int)nParamIdx + 1, (sqlite3_int64)(lpField->GetInt64()));
-                break;
+                case eFieldType::Int64:
+                    err =
+                        sqlite3_bind_int64(sqlite3_data->lpStmt, (int)nParamIdx + 1, (sqlite3_int64)(lpField->GetInt64()));
+                    break;
 
-            case eFieldType::Double:
-                err = sqlite3_bind_double(sqlite3_data->lpStmt, (int)nParamIdx + 1, lpField->GetDouble());
-                break;
+                case eFieldType::Double:
+                    err = sqlite3_bind_double(sqlite3_data->lpStmt, (int)nParamIdx + 1, lpField->GetDouble());
+                    break;
 
-            case eFieldType::String:
-                // we don't copy the data so we need to keep a reference to the source field
-                if (sqlite3_data->aInputFieldsList.AddElement(lpField) == FALSE)
-                {
-                err_nomem:
-                    QueryClose();
-                    sqlite3_data->SetCustomErrno(SQLITE_NOMEM, "Out of memory");
-                    return E_OUTOFMEMORY;
-                }
-                lpField->AddRef();
+                case eFieldType::String:
+                    // we don't copy the data so we need to keep a reference to the source field
+                    if (sqlite3_data->aInputFieldsList.AddElement(lpField) == FALSE)
+                    {
+err_nomem:
+                        QueryClose();
+                        sqlite3_data->SetCustomErrno(SQLITE_NOMEM, "Out of memory");
+                        return E_OUTOFMEMORY;
+                    }
+                    lpField->AddRef();
 
-                err = sqlite3_bind_text(sqlite3_data->lpStmt, (int)nParamIdx + 1, lpField->GetString(),
-                                        (int)(lpField->GetLength()), SQLITE_TRANSIENT);
-                break;
+                    err = sqlite3_bind_text(sqlite3_data->lpStmt, (int)nParamIdx + 1, lpField->GetString(), (int)(lpField->GetLength()),
+                                            SQLITE_TRANSIENT);
+                    break;
 
-            case eFieldType::Blob:
-                // we don't copy the data so we need to keep a reference to the source field
-                if (sqlite3_data->aInputFieldsList.AddElement(lpField) == FALSE)
-                {
-                    goto err_nomem;
-                }
-                lpField->AddRef();
+                case eFieldType::Blob:
+                    // we don't copy the data so we need to keep a reference to the source field
+                    if (sqlite3_data->aInputFieldsList.AddElement(lpField) == FALSE)
+                    {
+                        goto err_nomem;
+                    }
+                    lpField->AddRef();
 
-                err = sqlite3_bind_blob(sqlite3_data->lpStmt, (int)nParamIdx + 1, lpField->GetBlob(),
-                                        (int)(lpField->GetLength()), SQLITE_STATIC);
-                break;
+                    err = sqlite3_bind_blob(sqlite3_data->lpStmt, (int)nParamIdx + 1, lpField->GetBlob(), (int)(lpField->GetLength()),
+                                            SQLITE_STATIC);
+                    break;
 
-            case eFieldType::DateTime:
-            {
-                CHAR szBufA[32];
-                int nYear, nMonth, nDay, nHours, nMinutes, nSeconds, nMilliSeconds;
+                case eFieldType::DateTime:
+                    {
+                        CHAR szBufA[32];
+                        int nYear, nMonth, nDay, nHours, nMinutes, nSeconds, nMilliSeconds;
 
-                lpField->GetDateTime()->GetDateTime(&nYear, &nMonth, &nDay, &nHours, &nMinutes, &nSeconds,
-                                                    &nMilliSeconds);
+                        lpField->GetDateTime()->GetDateTime(&nYear, &nMonth, &nDay, &nHours, &nMinutes, &nSeconds, &nMilliSeconds);
 
-                _snprintf_s(szBufA, MX_ARRAYLEN(szBufA), _TRUNCATE, "%04d-%02d-%02d %02d:%02d:%02d.%03d", nYear, nMonth,
-                            nDay, nHours, nMinutes, nSeconds, nMilliSeconds);
-                err = sqlite3_bind_text(sqlite3_data->lpStmt, (int)nParamIdx + 1, szBufA, (int)MX::StrLenA(szBufA),
-                                        SQLITE_TRANSIENT);
-            }
-            break;
+                        _snprintf_s(szBufA, MX_ARRAYLEN(szBufA), _TRUNCATE, "%04d-%02d-%02d %02d:%02d:%02d.%03d", nYear, nMonth, nDay, nHours,
+                                    nMinutes, nSeconds, nMilliSeconds);
+                        err = sqlite3_bind_text(sqlite3_data->lpStmt, (int)nParamIdx + 1, szBufA, (int)MX::StrLenA(szBufA), SQLITE_TRANSIENT);
+                    }
+                    break;
 
-            default:
-                goto err_invalidarg;
+                default:
+                    goto err_invalidarg;
             }
             if (err != 0)
             {
@@ -537,21 +527,22 @@ HRESULT CSQLite3Connector::QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQ
     do
     {
         err = sqlite3_step(sqlite3_data->lpStmt);
-    } while (MustRetry(err, sqlite3_data->dwBusyTimeoutMs, dwBusyTimeoutMs) != FALSE);
+    }
+    while (MustRetry(err, sqlite3_data->dwBusyTimeoutMs, dwBusyTimeoutMs) != FALSE);
 
     switch (err)
     {
-    case SQLITE_ROW:
-        sqlite3_data->dwFlags = QUERY_FLAGS_HAS_RESULTS | QUERY_FLAGS_ON_FIRST_ROW;
-        break;
+        case SQLITE_ROW:
+            sqlite3_data->dwFlags = QUERY_FLAGS_HAS_RESULTS | QUERY_FLAGS_ON_FIRST_ROW;
+            break;
 
-    case SQLITE_SCHEMA:
-    case SQLITE_DONE:
-    case SQLITE_OK:
-        break;
+        case SQLITE_SCHEMA:
+        case SQLITE_DONE:
+        case SQLITE_OK:
+            break;
 
-    default:
-        goto on_error;
+        default:
+            goto on_error;
     }
 
     // get some data
@@ -597,30 +588,30 @@ HRESULT CSQLite3Connector::QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQ
                 {
                     switch (sqlite3_column_type(sqlite3_data->lpStmt, (int)i))
                     {
-                    case SQLITE_INTEGER:
-                        cColumn->nType = _FIELD_TYPE_LongLong;
-                        cColumn->nRealType = SQLITE_INTEGER;
-                        break;
+                        case SQLITE_INTEGER:
+                            cColumn->nType = _FIELD_TYPE_LongLong;
+                            cColumn->nRealType = SQLITE_INTEGER;
+                            break;
 
-                    case SQLITE_FLOAT:
-                        cColumn->nType = _FIELD_TYPE_Double;
-                        cColumn->nRealType = SQLITE_FLOAT;
-                        break;
+                        case SQLITE_FLOAT:
+                            cColumn->nType = _FIELD_TYPE_Double;
+                            cColumn->nRealType = SQLITE_FLOAT;
+                            break;
 
-                    case SQLITE_BLOB:
-                        cColumn->nType = _FIELD_TYPE_Blob;
-                        cColumn->nRealType = SQLITE_BLOB;
-                        break;
+                        case SQLITE_BLOB:
+                            cColumn->nType = _FIELD_TYPE_Blob;
+                            cColumn->nRealType = SQLITE_BLOB;
+                            break;
 
-                    case SQLITE_TEXT:
-                        cColumn->nType = _FIELD_TYPE_Text;
-                        cColumn->nRealType = SQLITE_TEXT;
-                        break;
+                        case SQLITE_TEXT:
+                            cColumn->nType = _FIELD_TYPE_Text;
+                            cColumn->nRealType = SQLITE_TEXT;
+                            break;
 
-                    default:
-                        cColumn->nType = _FIELD_TYPE_Null;
-                        cColumn->nRealType = SQLITE_NULL;
-                        break;
+                        default:
+                            cColumn->nType = _FIELD_TYPE_Null;
+                            cColumn->nRealType = SQLITE_NULL;
+                            break;
                     }
                 }
 
@@ -684,35 +675,36 @@ HRESULT CSQLite3Connector::FetchRow()
         do
         {
             err = sqlite3_step(sqlite3_data->lpStmt);
-        } while (MustRetry(err, sqlite3_data->dwBusyTimeoutMs, dwBusyTimeoutMs) != FALSE);
+        }
+        while (MustRetry(err, sqlite3_data->dwBusyTimeoutMs, dwBusyTimeoutMs) != FALSE);
         switch (err)
         {
-        case SQLITE_ROW:
-            ullAffectedRows++;
-            // get retrieved field row type
-            for (i = 0; i < nColumnsCount; i++)
-            {
-                lpColumn = (CSQLite3Column *)(aColumnsList.GetElementAt(i));
-                if (lpColumn->nRealType != SQLITE_NULL)
+            case SQLITE_ROW:
+                ullAffectedRows++;
+                // get retrieved field row type
+                for (i = 0; i < nColumnsCount; i++)
                 {
-                    lpColumn->nCurrType = sqlite3_column_type(sqlite3_data->lpStmt, (int)i);
+                    lpColumn = (CSQLite3Column *)(aColumnsList.GetElementAt(i));
+                    if (lpColumn->nRealType != SQLITE_NULL)
+                    {
+                        lpColumn->nCurrType = sqlite3_column_type(sqlite3_data->lpStmt, (int)i);
+                    }
                 }
-            }
-            break;
+                break;
 
-        case SQLITE_DONE:
-        case SQLITE_OK:
-            sqlite3_data->dwFlags |= QUERY_FLAGS_EOF_REACHED;
-            break;
+            case SQLITE_DONE:
+            case SQLITE_OK:
+                sqlite3_data->dwFlags |= QUERY_FLAGS_EOF_REACHED;
+                break;
 
-        default:
-            sqlite3_data->SetErrno(err);
-            QueryClose();
-            if (IsSQLiteFatalError(err) != FALSE)
-            {
-                Disconnect();
-            }
-            return sqlite3_data->hLastDbRes;
+            default:
+                sqlite3_data->SetErrno(err);
+                QueryClose();
+                if (IsSQLiteFatalError(err) != FALSE)
+                {
+                    Disconnect();
+                }
+                return sqlite3_data->hLastDbRes;
         }
     }
 
@@ -741,170 +733,169 @@ HRESULT CSQLite3Connector::FetchRow()
 
             switch (lpColumn->nType)
             {
-            case _FIELD_TYPE_Blob:
-                val.p = (LPBYTE)sqlite3_column_blob(sqlite3_data->lpStmt, (int)i);
-                val_len = sqlite3_column_bytes(sqlite3_data->lpStmt, (int)i);
+                case _FIELD_TYPE_Blob:
+                    val.p = (LPBYTE)sqlite3_column_blob(sqlite3_data->lpStmt, (int)i);
+                    val_len = sqlite3_column_bytes(sqlite3_data->lpStmt, (int)i);
 
-                hRes = lpColumn->cField->SetBlob(val.p, (SIZE_T)val_len);
-                if (FAILED(hRes))
-                {
-                on_hres_error:
-                    sqlite3_data->ClearErrno();
-                    QueryClose();
-                    return hRes;
-                }
-                break;
-
-            case _FIELD_TYPE_Text:
-                val.sA = (char *)sqlite3_column_text(sqlite3_data->lpStmt, (int)i);
-                val_len = sqlite3_column_bytes(sqlite3_data->lpStmt, (int)i);
-
-                hRes = lpColumn->cField->SetString(val.sA, (SIZE_T)val_len);
-                if (FAILED(hRes))
-                {
-                    goto on_hres_error;
-                }
-                break;
-
-            case _FIELD_TYPE_DateTime:
-            {
-                CDateTime cDt, cDt2;
-                CHAR szTempA[32];
-                int flags;
-
-                val.sA = (char *)sqlite3_column_text(sqlite3_data->lpStmt, (int)i);
-                val_len = sqlite3_column_bytes(sqlite3_data->lpStmt, (int)i);
-                if (val_len >= MX_ARRAYLEN(szTempA))
-                {
-                    hRes = MX_E_InvalidData;
-                    goto on_hres_error;
-                }
-
-                for (int k = flags = 0; k < val_len; k++)
-                {
-                    switch (szTempA[k] = val.sA[k])
-                    {
-                    case '/':
-                        flags |= DATETIME_QUICK_FLAGS_Slash;
-                        break;
-                    case '-':
-                        flags |= DATETIME_QUICK_FLAGS_Dash;
-                        break;
-                    case '.':
-                        flags |= DATETIME_QUICK_FLAGS_Dot;
-                        break;
-                    case ':':
-                        flags |= DATETIME_QUICK_FLAGS_Colon;
-                        break;
-                    }
-                }
-                szTempA[val_len] = 0;
-
-                switch (flags)
-                {
-                case DATETIME_QUICK_FLAGS_Dash | DATETIME_QUICK_FLAGS_Colon | DATETIME_QUICK_FLAGS_Dot:
-                    hRes = cDt.SetFromString(szTempA, "%Y-%m-%d %H:%M:%S.%f");
-                    if (FAILED(hRes) && hRes != E_OUTOFMEMORY)
-                    {
-                        hRes = cDt.SetFromString(szTempA, "%Y-%m-%d %H:%M:%S.");
-                    }
-
-                fetchrow_set_datetime:
+                    hRes = lpColumn->cField->SetBlob(val.p, (SIZE_T)val_len);
                     if (FAILED(hRes))
                     {
-                        goto on_hres_error;
+on_hres_error:
+                        sqlite3_data->ClearErrno();
+                        QueryClose();
+                        return hRes;
                     }
+                    break;
 
-                    hRes = lpColumn->cField->SetDateTime(cDt);
+                case _FIELD_TYPE_Text:
+                    val.sA = (char *)sqlite3_column_text(sqlite3_data->lpStmt, (int)i);
+                    val_len = sqlite3_column_bytes(sqlite3_data->lpStmt, (int)i);
+
+                    hRes = lpColumn->cField->SetString(val.sA, (SIZE_T)val_len);
                     if (FAILED(hRes))
                     {
                         goto on_hres_error;
                     }
                     break;
 
-                case DATETIME_QUICK_FLAGS_Slash | DATETIME_QUICK_FLAGS_Colon | DATETIME_QUICK_FLAGS_Dot:
-                    hRes = cDt.SetFromString(szTempA, "%Y/%m/%d %H:%M:%S.%f");
-                    if (FAILED(hRes) && hRes != E_OUTOFMEMORY)
+                case _FIELD_TYPE_DateTime:
                     {
-                        hRes = cDt.SetFromString(szTempA, "%Y/%m/%d %H:%M:%S.");
+                        CDateTime cDt, cDt2;
+                        CHAR szTempA[32];
+                        int flags;
+
+                        val.sA = (char *)sqlite3_column_text(sqlite3_data->lpStmt, (int)i);
+                        val_len = sqlite3_column_bytes(sqlite3_data->lpStmt, (int)i);
+                        if (val_len >= MX_ARRAYLEN(szTempA))
+                        {
+                            hRes = MX_E_InvalidData;
+                            goto on_hres_error;
+                        }
+
+                        for (int k = flags = 0; k < val_len; k++)
+                        {
+                            switch (szTempA[k] = val.sA[k])
+                            {
+                                case '/':
+                                    flags |= DATETIME_QUICK_FLAGS_Slash;
+                                    break;
+                                case '-':
+                                    flags |= DATETIME_QUICK_FLAGS_Dash;
+                                    break;
+                                case '.':
+                                    flags |= DATETIME_QUICK_FLAGS_Dot;
+                                    break;
+                                case ':':
+                                    flags |= DATETIME_QUICK_FLAGS_Colon;
+                                    break;
+                            }
+                        }
+                        szTempA[val_len] = 0;
+
+                        switch (flags)
+                        {
+                            case DATETIME_QUICK_FLAGS_Dash | DATETIME_QUICK_FLAGS_Colon | DATETIME_QUICK_FLAGS_Dot:
+                                hRes = cDt.SetFromString(szTempA, "%Y-%m-%d %H:%M:%S.%f");
+                                if (FAILED(hRes) && hRes != E_OUTOFMEMORY)
+                                {
+                                    hRes = cDt.SetFromString(szTempA, "%Y-%m-%d %H:%M:%S.");
+                                }
+
+fetchrow_set_datetime:
+                                if (FAILED(hRes))
+                                {
+                                    goto on_hres_error;
+                                }
+
+                                hRes = lpColumn->cField->SetDateTime(cDt);
+                                if (FAILED(hRes))
+                                {
+                                    goto on_hres_error;
+                                }
+                                break;
+
+                            case DATETIME_QUICK_FLAGS_Slash | DATETIME_QUICK_FLAGS_Colon | DATETIME_QUICK_FLAGS_Dot:
+                                hRes = cDt.SetFromString(szTempA, "%Y/%m/%d %H:%M:%S.%f");
+                                if (FAILED(hRes) && hRes != E_OUTOFMEMORY)
+                                {
+                                    hRes = cDt.SetFromString(szTempA, "%Y/%m/%d %H:%M:%S.");
+                                }
+                                goto fetchrow_set_datetime;
+
+                            case DATETIME_QUICK_FLAGS_Dash | DATETIME_QUICK_FLAGS_Colon:
+                                hRes = cDt.SetFromString(szTempA, "%Y-%m-%d %H:%M:%S");
+                                goto fetchrow_set_datetime;
+
+                            case DATETIME_QUICK_FLAGS_Slash | DATETIME_QUICK_FLAGS_Colon:
+                                hRes = cDt.SetFromString(szTempA, "%Y/%m/%d %H:%M:%S");
+                                goto fetchrow_set_datetime;
+
+                            case DATETIME_QUICK_FLAGS_Dash:
+                                hRes = cDt.SetFromString(szTempA, "%Y-%m-%d");
+fetchrow_set_date:
+                                if (SUCCEEDED(hRes))
+                                {
+                                    hRes = cDt.SetTime(0, 0, 0, 0);
+                                }
+                                goto fetchrow_set_datetime;
+
+                            case DATETIME_QUICK_FLAGS_Slash:
+                                hRes = cDt.SetFromString(szTempA, "%Y/%m/%d");
+                                goto fetchrow_set_date;
+
+                            case DATETIME_QUICK_FLAGS_Colon | DATETIME_QUICK_FLAGS_Dot:
+                                hRes = cDt2.SetFromString(szTempA, "%H:%M:%S.%f");
+                                if (FAILED(hRes) && hRes != E_OUTOFMEMORY)
+                                {
+                                    hRes = cDt2.SetFromString(szTempA, "%H:%M:%S.");
+                                }
+fetchrow_set_time:
+                                if (FAILED(hRes))
+                                {
+                                    goto on_hres_error;
+                                }
+
+                                hRes = cDt.SetFromNow(FALSE);
+                                if (SUCCEEDED(hRes))
+                                {
+                                    hRes = cDt.SetTime(cDt2.GetHours(), cDt2.GetMinutes(), cDt2.GetSeconds(), cDt2.GetMilliSeconds());
+                                }
+                                goto fetchrow_set_datetime;
+
+                            case DATETIME_QUICK_FLAGS_Colon:
+                                hRes = cDt2.SetFromString(szTempA, "%H:%M:%S");
+                                goto fetchrow_set_time;
+
+                            default:
+                                hRes = MX_E_InvalidData;
+                                goto on_hres_error;
+                        }
                     }
-                    goto fetchrow_set_datetime;
+                    break;
 
-                case DATETIME_QUICK_FLAGS_Dash | DATETIME_QUICK_FLAGS_Colon:
-                    hRes = cDt.SetFromString(szTempA, "%Y-%m-%d %H:%M:%S");
-                    goto fetchrow_set_datetime;
+                case _FIELD_TYPE_Boolean:
+                    val.i64 = sqlite3_column_int64(sqlite3_data->lpStmt, (int)i);
+                    lpColumn->cField->SetBoolean((val.i64 != 0) ? TRUE : FALSE);
+                    break;
 
-                case DATETIME_QUICK_FLAGS_Slash | DATETIME_QUICK_FLAGS_Colon:
-                    hRes = cDt.SetFromString(szTempA, "%Y/%m/%d %H:%M:%S");
-                    goto fetchrow_set_datetime;
+                case _FIELD_TYPE_Long:
+                    val.i = sqlite3_column_int(sqlite3_data->lpStmt, (int)i);
+                    lpColumn->cField->SetInt32(val.i);
+                    break;
 
-                case DATETIME_QUICK_FLAGS_Dash:
-                    hRes = cDt.SetFromString(szTempA, "%Y-%m-%d");
-                fetchrow_set_date:
-                    if (SUCCEEDED(hRes))
-                    {
-                        hRes = cDt.SetTime(0, 0, 0, 0);
-                    }
-                    goto fetchrow_set_datetime;
+                case _FIELD_TYPE_LongLong:
+                    val.i64 = sqlite3_column_int64(sqlite3_data->lpStmt, (int)i);
+                    lpColumn->cField->SetInt64(val.i64);
+                    break;
 
-                case DATETIME_QUICK_FLAGS_Slash:
-                    hRes = cDt.SetFromString(szTempA, "%Y/%m/%d");
-                    goto fetchrow_set_date;
-
-                case DATETIME_QUICK_FLAGS_Colon | DATETIME_QUICK_FLAGS_Dot:
-                    hRes = cDt2.SetFromString(szTempA, "%H:%M:%S.%f");
-                    if (FAILED(hRes) && hRes != E_OUTOFMEMORY)
-                    {
-                        hRes = cDt2.SetFromString(szTempA, "%H:%M:%S.");
-                    }
-                fetchrow_set_time:
-                    if (FAILED(hRes))
-                    {
-                        goto on_hres_error;
-                    }
-
-                    hRes = cDt.SetFromNow(FALSE);
-                    if (SUCCEEDED(hRes))
-                    {
-                        hRes =
-                            cDt.SetTime(cDt2.GetHours(), cDt2.GetMinutes(), cDt2.GetSeconds(), cDt2.GetMilliSeconds());
-                    }
-                    goto fetchrow_set_datetime;
-
-                case DATETIME_QUICK_FLAGS_Colon:
-                    hRes = cDt2.SetFromString(szTempA, "%H:%M:%S");
-                    goto fetchrow_set_time;
+                case _FIELD_TYPE_Double:
+                    val.dbl = sqlite3_column_double(sqlite3_data->lpStmt, (int)i);
+                    lpColumn->cField->SetDouble(val.dbl);
+                    break;
 
                 default:
-                    hRes = MX_E_InvalidData;
-                    goto on_hres_error;
-                }
-            }
-            break;
-
-            case _FIELD_TYPE_Boolean:
-                val.i64 = sqlite3_column_int64(sqlite3_data->lpStmt, (int)i);
-                lpColumn->cField->SetBoolean((val.i64 != 0) ? TRUE : FALSE);
-                break;
-
-            case _FIELD_TYPE_Long:
-                val.i = sqlite3_column_int(sqlite3_data->lpStmt, (int)i);
-                lpColumn->cField->SetInt32(val.i);
-                break;
-
-            case _FIELD_TYPE_LongLong:
-                val.i64 = sqlite3_column_int64(sqlite3_data->lpStmt, (int)i);
-                lpColumn->cField->SetInt64(val.i64);
-                break;
-
-            case _FIELD_TYPE_Double:
-                val.dbl = sqlite3_column_double(sqlite3_data->lpStmt, (int)i);
-                lpColumn->cField->SetDouble(val.dbl);
-                break;
-
-            default:
-                lpColumn->cField->SetNull();
-                break;
+                    lpColumn->cField->SetNull();
+                    break;
             }
         }
         else
@@ -948,14 +939,14 @@ HRESULT CSQLite3Connector::TransactionStart(_In_ eTxType nType)
 {
     switch (nType)
     {
-    case eTxType::Standard:
-        return QueryExecute("BEGIN TRANSACTION;", 18);
+        case eTxType::Standard:
+            return QueryExecute("BEGIN TRANSACTION;", 18);
 
-    case eTxType::Exclusive:
-        return QueryExecute("BEGIN EXCLUSIVE TRANSACTION;", 28);
+        case eTxType::Exclusive:
+            return QueryExecute("BEGIN EXCLUSIVE TRANSACTION;", 28);
 
-    case eTxType::Immediate:
-        return QueryExecute("BEGIN IMMEDIATE TRANSACTION;", 28);
+        case eTxType::Immediate:
+            return QueryExecute("BEGIN IMMEDIATE TRANSACTION;", 28);
     }
     return E_INVALIDARG;
 }
@@ -970,8 +961,7 @@ HRESULT CSQLite3Connector::TransactionRollback()
     return QueryExecute("ROLLBACK TRANSACTION;", 21);
 }
 
-HRESULT CSQLite3Connector::EscapeString(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA, _In_opt_ SIZE_T nStrLen,
-                                        _In_opt_ BOOL bIsLike)
+HRESULT CSQLite3Connector::EscapeString(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA, _In_opt_ SIZE_T nStrLen, _In_opt_ BOOL bIsLike)
 {
     CStringA cStrTempA;
     LPCSTR szStrEndA;
@@ -1013,30 +1003,30 @@ HRESULT CSQLite3Connector::EscapeString(_Out_ CStringA &cStrA, _In_ LPCSTR szStr
         {
             switch (*szStrA)
             {
-            case '\'':
-                if (cStrTempA.ConcatN("''", 2) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                break;
+                case '\'':
+                    if (cStrTempA.ConcatN("''", 2) == FALSE)
+                    {
+                        return E_OUTOFMEMORY;
+                    }
+                    break;
 
-            case '\\':
-                if (bIsLike != FALSE && szStrA + 1 < szStrEndA && (szStrA[1] == '%' || szStrA[1] == '_'))
-                {
-                    szStrA++;
-                    if (cStrTempA.AppendFormat("\\%c", *szStrA) == FALSE)
+                case '\\':
+                    if (bIsLike != FALSE && szStrA + 1 < szStrEndA && (szStrA[1] == '%' || szStrA[1] == '_'))
                     {
-                        return E_OUTOFMEMORY;
+                        szStrA++;
+                        if (cStrTempA.AppendFormat("\\%c", *szStrA) == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
                     }
-                }
-                else
-                {
-                    if (cStrTempA.ConcatN("\\\\", 2) == FALSE)
+                    else
                     {
-                        return E_OUTOFMEMORY;
+                        if (cStrTempA.ConcatN("\\\\", 2) == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
                     }
-                }
-                break;
+                    break;
             }
             szStrA++;
         }
@@ -1047,8 +1037,7 @@ HRESULT CSQLite3Connector::EscapeString(_Out_ CStringA &cStrA, _In_ LPCSTR szStr
     return S_OK;
 }
 
-HRESULT CSQLite3Connector::EscapeString(_Out_ CStringW &cStrW, _In_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen,
-                                        _In_opt_ BOOL bIsLike)
+HRESULT CSQLite3Connector::EscapeString(_Out_ CStringW &cStrW, _In_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen, _In_opt_ BOOL bIsLike)
 {
     CStringW cStrTempW;
     LPCWSTR szStrEndW;
@@ -1087,30 +1076,30 @@ HRESULT CSQLite3Connector::EscapeString(_Out_ CStringW &cStrW, _In_ LPCWSTR szSt
         {
             switch (*szStrW)
             {
-            case L'\'':
-                if (cStrTempW.ConcatN(L"''", 2) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                break;
+                case L'\'':
+                    if (cStrTempW.ConcatN(L"''", 2) == FALSE)
+                    {
+                        return E_OUTOFMEMORY;
+                    }
+                    break;
 
-            case L'\\':
-                if (bIsLike != FALSE && szStrW + 1 < szStrEndW && (szStrW[1] == L'%' || szStrW[1] == L'_'))
-                {
-                    szStrW++;
-                    if (cStrTempW.AppendFormat(L"\\%c", *szStrW) == FALSE)
+                case L'\\':
+                    if (bIsLike != FALSE && szStrW + 1 < szStrEndW && (szStrW[1] == L'%' || szStrW[1] == L'_'))
                     {
-                        return E_OUTOFMEMORY;
+                        szStrW++;
+                        if (cStrTempW.AppendFormat(L"\\%c", *szStrW) == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
                     }
-                }
-                else
-                {
-                    if (cStrTempW.ConcatN(L"\\\\", 2) == FALSE)
+                    else
                     {
-                        return E_OUTOFMEMORY;
+                        if (cStrTempW.ConcatN(L"\\\\", 2) == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
                     }
-                }
-                break;
+                    break;
             }
             szStrW++;
         }
@@ -1137,11 +1126,9 @@ CSQLite3Connector::CConnectOptions::CConnectOptions() : CBaseMemObj()
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Internals
-{
+namespace Internals {
 
 CSQLite3ConnectorData::CSQLite3ConnectorData() : CBaseMemObj()
 {
@@ -1224,34 +1211,34 @@ HRESULT CSQLite3ConnectorData::GetHResultFromErr(_In_ int err, _In_ BOOL bCheckD
     }
     switch (err & 0xFF)
     {
-    case SQLITE_NOMEM:
-        return E_OUTOFMEMORY;
+        case SQLITE_NOMEM:
+            return E_OUTOFMEMORY;
 
-    case SQLITE_PERM:
-    case SQLITE_AUTH:
-        return E_ACCESSDENIED;
+        case SQLITE_PERM:
+        case SQLITE_AUTH:
+            return E_ACCESSDENIED;
 
-    case SQLITE_ABORT:
-        return MX_E_Cancelled;
+        case SQLITE_ABORT:
+            return MX_E_Cancelled;
 
-    case SQLITE_BUSY:
-    case SQLITE_LOCKED:
-        return MX_E_Busy;
+        case SQLITE_BUSY:
+        case SQLITE_LOCKED:
+            return MX_E_Busy;
 
-    case SQLITE_CANTOPEN:
-    case SQLITE_NOTFOUND:
-        return MX_E_NotFound;
+        case SQLITE_CANTOPEN:
+        case SQLITE_NOTFOUND:
+            return MX_E_NotFound;
 
-    case SQLITE_CONSTRAINT:
-        switch (err)
-        {
-        case SQLITE_CONSTRAINT_FOREIGNKEY:
-        case SQLITE_CONSTRAINT_PRIMARYKEY:
-        case SQLITE_CONSTRAINT_UNIQUE:
-        case SQLITE_CONSTRAINT_ROWID:
-            return MX_E_DuplicateKey;
-        }
-        return MX_E_ConstraintsCheckFailed;
+        case SQLITE_CONSTRAINT:
+            switch (err)
+            {
+                case SQLITE_CONSTRAINT_FOREIGNKEY:
+                case SQLITE_CONSTRAINT_PRIMARYKEY:
+                case SQLITE_CONSTRAINT_UNIQUE:
+                case SQLITE_CONSTRAINT_ROWID:
+                    return MX_E_DuplicateKey;
+            }
+            return MX_E_ConstraintsCheckFailed;
     }
     if (bCheckDB != FALSE && lpDB != NULL)
     {
@@ -1315,8 +1302,7 @@ static HRESULT InitializeInternals()
         if (bInitialized == FALSE)
         {
             static const sqlite3_mem_methods defaultMethods = {
-                my_mem_alloc,   my_mem_free, my_mem_realloc,  my_mem_memsize,
-                my_mem_roundup, my_mem_init, my_mem_shutdown, 0};
+                my_mem_alloc,   my_mem_free, my_mem_realloc,  my_mem_memsize, my_mem_roundup, my_mem_init, my_mem_shutdown, 0 };
             sqlite3_config(SQLITE_CONFIG_MALLOC, &defaultMethods);
 
             // register shutdown callback
@@ -1401,64 +1387,64 @@ static BOOL GetTypeFromName(_In_z_ LPCSTR szNameA, _Out_ PULONG lpnType, _Out_ P
         LPCSTR szName;
         int nType;
         int nRealType;
-    } aTypesList[] = {{"AUTOINCREMENT", _FIELD_TYPE_LongLong, SQLITE_INTEGER},
-                      {"BIGINT", _FIELD_TYPE_LongLong, SQLITE_INTEGER},
-                      {"BINARY", _FIELD_TYPE_Blob, SQLITE_BLOB},
-                      {"BIT", _FIELD_TYPE_LongLong, SQLITE_INTEGER},
-                      {"BLOB", _FIELD_TYPE_Blob, SQLITE_BLOB},
-                      {"BOOL", _FIELD_TYPE_Boolean, SQLITE_INTEGER},
-                      {"CHAR", _FIELD_TYPE_Text, SQLITE_TEXT},
-                      {"CHARACTER", _FIELD_TYPE_Text, SQLITE_TEXT},
-                      {"COUNTER", _FIELD_TYPE_LongLong, SQLITE_INTEGER},
-                      {"CURRENCY", _FIELD_TYPE_Double, SQLITE_FLOAT},
-                      {"DATE", _FIELD_TYPE_DateTime, SQLITE_TEXT},
-                      {"DATETIME", _FIELD_TYPE_DateTime, SQLITE_TEXT},
-                      {"DECIMAL", _FIELD_TYPE_Double, SQLITE_FLOAT},
-                      {"DOUBLE", _FIELD_TYPE_Double, SQLITE_FLOAT},
-                      {"FLOAT", _FIELD_TYPE_Double, SQLITE_FLOAT},
-                      {"FLOAT4", _FIELD_TYPE_Double, SQLITE_FLOAT},
-                      {"FLOAT8", _FIELD_TYPE_Double, SQLITE_FLOAT},
-                      {"GENERAL", _FIELD_TYPE_Blob, SQLITE_BLOB},
-                      {"GUID", _FIELD_TYPE_Text, SQLITE_TEXT},
-                      {"IDENTITY", _FIELD_TYPE_LongLong, SQLITE_INTEGER},
-                      {"IMAGE", _FIELD_TYPE_Blob, SQLITE_BLOB},
-                      {"INT", _FIELD_TYPE_Long, SQLITE_INTEGER},
-                      {"INT2", _FIELD_TYPE_Long, SQLITE_INTEGER},
-                      {"INT4", _FIELD_TYPE_Long, SQLITE_INTEGER},
-                      {"INT8", _FIELD_TYPE_LongLong, SQLITE_INTEGER},
-                      {"INTEGER", _FIELD_TYPE_LongLong, SQLITE_INTEGER},
-                      {"LOGICAL", _FIELD_TYPE_LongLong, SQLITE_INTEGER},
-                      {"LONG", _FIELD_TYPE_Long, SQLITE_INTEGER},
-                      {"LONGCHAR", _FIELD_TYPE_Text, SQLITE_TEXT},
-                      {"LONGTEXT", _FIELD_TYPE_Text, SQLITE_TEXT},
-                      {"LONGVARCHAR", _FIELD_TYPE_Text, SQLITE_TEXT},
-                      {"MEMO", _FIELD_TYPE_Text, SQLITE_TEXT},
-                      {"MONEY", _FIELD_TYPE_Double, SQLITE_FLOAT},
-                      {"NCHAR", _FIELD_TYPE_Text, SQLITE_TEXT},
-                      {"NOTE", _FIELD_TYPE_Text, SQLITE_TEXT},
-                      {"NTEXT", _FIELD_TYPE_Text, SQLITE_TEXT},
-                      {"NUMERIC", _FIELD_TYPE_Double, SQLITE_FLOAT},
-                      {"NVARCHAR", _FIELD_TYPE_Text, SQLITE_TEXT},
-                      {"OLEOBJECT", _FIELD_TYPE_Blob, SQLITE_BLOB},
-                      {"REAL", _FIELD_TYPE_Double, SQLITE_FLOAT},
-                      {"SERIAL", _FIELD_TYPE_Blob, SQLITE_BLOB},
-                      {"SERIAL4", _FIELD_TYPE_Blob, SQLITE_BLOB},
-                      {"SMALLINT", _FIELD_TYPE_Long, SQLITE_INTEGER},
-                      {"STRING", _FIELD_TYPE_Text, SQLITE_TEXT},
-                      {"TEXT", _FIELD_TYPE_Text, SQLITE_TEXT},
-                      {"TIME", _FIELD_TYPE_DateTime, SQLITE_TEXT},
-                      {"TIMESTAMP", _FIELD_TYPE_DateTime, SQLITE_TEXT},
-                      {"TIMESTAMPTZ", _FIELD_TYPE_DateTime, SQLITE_TEXT},
-                      {"TIMETZ", _FIELD_TYPE_DateTime, SQLITE_TEXT},
-                      {"TINYINT", _FIELD_TYPE_Long, SQLITE_INTEGER},
-                      {"UNIQUEIDENTIFIER", _FIELD_TYPE_Text, SQLITE_TEXT},
-                      {"VARBINARY", _FIELD_TYPE_Blob, SQLITE_BLOB},
-                      {"VARCHAR", _FIELD_TYPE_Text, SQLITE_TEXT},
-                      {"YESNO", _FIELD_TYPE_Boolean, SQLITE_INTEGER}};
+    } aTypesList[] = { {"AUTOINCREMENT", _FIELD_TYPE_LongLong, SQLITE_INTEGER},
+        {"BIGINT", _FIELD_TYPE_LongLong, SQLITE_INTEGER},
+        {"BINARY", _FIELD_TYPE_Blob, SQLITE_BLOB},
+        {"BIT", _FIELD_TYPE_LongLong, SQLITE_INTEGER},
+        {"BLOB", _FIELD_TYPE_Blob, SQLITE_BLOB},
+        {"BOOL", _FIELD_TYPE_Boolean, SQLITE_INTEGER},
+        {"CHAR", _FIELD_TYPE_Text, SQLITE_TEXT},
+        {"CHARACTER", _FIELD_TYPE_Text, SQLITE_TEXT},
+        {"COUNTER", _FIELD_TYPE_LongLong, SQLITE_INTEGER},
+        {"CURRENCY", _FIELD_TYPE_Double, SQLITE_FLOAT},
+        {"DATE", _FIELD_TYPE_DateTime, SQLITE_TEXT},
+        {"DATETIME", _FIELD_TYPE_DateTime, SQLITE_TEXT},
+        {"DECIMAL", _FIELD_TYPE_Double, SQLITE_FLOAT},
+        {"DOUBLE", _FIELD_TYPE_Double, SQLITE_FLOAT},
+        {"FLOAT", _FIELD_TYPE_Double, SQLITE_FLOAT},
+        {"FLOAT4", _FIELD_TYPE_Double, SQLITE_FLOAT},
+        {"FLOAT8", _FIELD_TYPE_Double, SQLITE_FLOAT},
+        {"GENERAL", _FIELD_TYPE_Blob, SQLITE_BLOB},
+        {"GUID", _FIELD_TYPE_Text, SQLITE_TEXT},
+        {"IDENTITY", _FIELD_TYPE_LongLong, SQLITE_INTEGER},
+        {"IMAGE", _FIELD_TYPE_Blob, SQLITE_BLOB},
+        {"INT", _FIELD_TYPE_Long, SQLITE_INTEGER},
+        {"INT2", _FIELD_TYPE_Long, SQLITE_INTEGER},
+        {"INT4", _FIELD_TYPE_Long, SQLITE_INTEGER},
+        {"INT8", _FIELD_TYPE_LongLong, SQLITE_INTEGER},
+        {"INTEGER", _FIELD_TYPE_LongLong, SQLITE_INTEGER},
+        {"LOGICAL", _FIELD_TYPE_LongLong, SQLITE_INTEGER},
+        {"LONG", _FIELD_TYPE_Long, SQLITE_INTEGER},
+        {"LONGCHAR", _FIELD_TYPE_Text, SQLITE_TEXT},
+        {"LONGTEXT", _FIELD_TYPE_Text, SQLITE_TEXT},
+        {"LONGVARCHAR", _FIELD_TYPE_Text, SQLITE_TEXT},
+        {"MEMO", _FIELD_TYPE_Text, SQLITE_TEXT},
+        {"MONEY", _FIELD_TYPE_Double, SQLITE_FLOAT},
+        {"NCHAR", _FIELD_TYPE_Text, SQLITE_TEXT},
+        {"NOTE", _FIELD_TYPE_Text, SQLITE_TEXT},
+        {"NTEXT", _FIELD_TYPE_Text, SQLITE_TEXT},
+        {"NUMERIC", _FIELD_TYPE_Double, SQLITE_FLOAT},
+        {"NVARCHAR", _FIELD_TYPE_Text, SQLITE_TEXT},
+        {"OLEOBJECT", _FIELD_TYPE_Blob, SQLITE_BLOB},
+        {"REAL", _FIELD_TYPE_Double, SQLITE_FLOAT},
+        {"SERIAL", _FIELD_TYPE_Blob, SQLITE_BLOB},
+        {"SERIAL4", _FIELD_TYPE_Blob, SQLITE_BLOB},
+        {"SMALLINT", _FIELD_TYPE_Long, SQLITE_INTEGER},
+        {"STRING", _FIELD_TYPE_Text, SQLITE_TEXT},
+        {"TEXT", _FIELD_TYPE_Text, SQLITE_TEXT},
+        {"TIME", _FIELD_TYPE_DateTime, SQLITE_TEXT},
+        {"TIMESTAMP", _FIELD_TYPE_DateTime, SQLITE_TEXT},
+        {"TIMESTAMPTZ", _FIELD_TYPE_DateTime, SQLITE_TEXT},
+        {"TIMETZ", _FIELD_TYPE_DateTime, SQLITE_TEXT},
+        {"TINYINT", _FIELD_TYPE_Long, SQLITE_INTEGER},
+        {"UNIQUEIDENTIFIER", _FIELD_TYPE_Text, SQLITE_TEXT},
+        {"VARBINARY", _FIELD_TYPE_Blob, SQLITE_BLOB},
+        {"VARCHAR", _FIELD_TYPE_Text, SQLITE_TEXT},
+        {"YESNO", _FIELD_TYPE_Boolean, SQLITE_INTEGER}
+    };
     SIZE_T nHalf, nMin, nMax, nNameLen;
 
-    for (nNameLen = 0; (szNameA[nNameLen] >= 'A' && szNameA[nNameLen] <= 'Z') ||
-                       (szNameA[nNameLen] >= 'a' && szNameA[nNameLen] <= 'z');
+    for (nNameLen = 0; (szNameA[nNameLen] >= 'A' && szNameA[nNameLen] <= 'Z') || (szNameA[nNameLen] >= 'a' && szNameA[nNameLen] <= 'z');
          nNameLen++)
     {
         ;
@@ -1515,8 +1501,8 @@ static void myFuncUtcNow(sqlite3_context *ctx, int argc, sqlite3_value **argv)
     CHAR szBufA[32];
 
     ::GetSystemTime(&sSt);
-    _snprintf_s(szBufA, MX_ARRAYLEN(szBufA), _TRUNCATE, "%04lu-%02lu-%02lu %02lu:%02lu:%02lu", (DWORD)(sSt.wYear),
-                (DWORD)(sSt.wMonth), (DWORD)(sSt.wDay), (DWORD)(sSt.wHour), (DWORD)(sSt.wMinute), (DWORD)(sSt.wSecond));
+    _snprintf_s(szBufA, MX_ARRAYLEN(szBufA), _TRUNCATE, "%04lu-%02lu-%02lu %02lu:%02lu:%02lu", (DWORD)(sSt.wYear), (DWORD)(sSt.wMonth),
+                (DWORD)(sSt.wDay), (DWORD)(sSt.wHour), (DWORD)(sSt.wMinute), (DWORD)(sSt.wSecond));
     sqlite3_result_text(ctx, szBufA, -1, SQLITE_TRANSIENT);
     return;
 }
@@ -1527,8 +1513,8 @@ static void myFuncNow(sqlite3_context *ctx, int argc, sqlite3_value **argv)
     CHAR szBufA[32];
 
     ::GetLocalTime(&sSt);
-    _snprintf_s(szBufA, MX_ARRAYLEN(szBufA), _TRUNCATE, "%04lu-%02lu-%02lu %02lu:%02lu:%02lu", (DWORD)(sSt.wYear),
-                (DWORD)(sSt.wMonth), (DWORD)(sSt.wDay), (DWORD)(sSt.wHour), (DWORD)(sSt.wMinute), (DWORD)(sSt.wSecond));
+    _snprintf_s(szBufA, MX_ARRAYLEN(szBufA), _TRUNCATE, "%04lu-%02lu-%02lu %02lu:%02lu:%02lu", (DWORD)(sSt.wYear), (DWORD)(sSt.wMonth),
+                (DWORD)(sSt.wDay), (DWORD)(sSt.wHour), (DWORD)(sSt.wMinute), (DWORD)(sSt.wSecond));
     sqlite3_result_text(ctx, szBufA, -1, SQLITE_TRANSIENT);
     return;
 }
@@ -1567,7 +1553,7 @@ static void myFuncConcatStep(sqlite3_context *ctx, int argc, sqlite3_value **arg
     p = (MYFUNC_CONCAT_CONTEXT *)sqlite3_aggregate_context(ctx, sizeof(MYFUNC_CONCAT_CONTEXT));
     if (p == NULL)
     {
-    err_nomem:
+err_nomem:
         if (p != NULL)
         {
             MX_FREE(p->data);

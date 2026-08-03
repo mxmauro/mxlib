@@ -24,7 +24,7 @@
 #include <Sddl.h>
 #include <VersionHelpers.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define TypeListenRequest (CPacketBase::eType)((int)CPacketBase::eType::MAX + 1)
 #define TypeListen (CPacketBase::eType)((int)CPacketBase::eType::MAX + 2)
@@ -43,17 +43,16 @@ typedef BOOL(WINAPI *lpfnSetFileCompletionNotificationModes)(_In_ HANDLE FileHan
 //-----------------------------------------------------------
 
 // D:(A;;0x12019F;;;WD)
-static const BYTE aSecDescriptorXP[] = {0x01, 0x00, 0x04, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                        0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x02, 0x00, 0x1C, 0x00,
-                                        0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x9F, 0x01, 0x12, 0x00,
-                                        0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
+static const BYTE aSecDescriptorXP[] = { 0x01,0x00,0x04,0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x14,0x00,0x00,0x00,0x02,0x00,0x1C,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x14,0x00,
+0x9F,0x01,0x12,0x00,0x01,0x01,0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00 };
 
 // D:(A;;0x12019F;;;WD)S:(ML;;NW;;;LW)
 static const BYTE aSecDescriptorVistaOrLater[] = {
-    0x01, 0x00, 0x14, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x00, 0x00, 0x30, 0x00, 0x00,
-    0x00, 0x02, 0x00, 0x1C, 0x00, 0x01, 0x00, 0x00, 0x00, 0x11, 0x00, 0x14, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x01,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x10, 0x00, 0x00, 0x02, 0x00, 0x1C, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x14, 0x00, 0x9F, 0x01, 0x12, 0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
+    0x01,0x00,0x14,0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x14,0x00,0x00,0x00,0x30,0x00,0x00,0x00,0x02,0x00,
+    0x1C,0x00,0x01,0x00,0x00,0x00,0x11,0x00,0x14,0x00,0x01,0x00,0x00,0x00,0x01,0x01,0x00,0x00,0x00,0x00,0x00,0x10,
+    0x00,0x10,0x00,0x00,0x02,0x00,0x1C,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x14,0x00,0x9F,0x01,0x12,0x00,0x01,0x01,
+    0x00,0x00,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x00 };
 
 static LONG volatile nInitMutex = 0;
 static lpfnSetFileCompletionNotificationModes fnSetFileCompletionNotificationModes = NULL;
@@ -64,13 +63,11 @@ static VOID GenerateUniquePipeName(_Out_ LPWSTR szNameW, _In_ SIZE_T nNameSize, 
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CNamedPipes::CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDispatcherPool), CNonCopyableObj()
 {
-    lpSecDescr =
-        (PSECURITY_DESCRIPTOR)((::IsWindowsVistaOrGreater() != FALSE) ? aSecDescriptorVistaOrLater : aSecDescriptorXP);
+    lpSecDescr = (PSECURITY_DESCRIPTOR)((::IsWindowsVistaOrGreater() != FALSE) ? aSecDescriptorVistaOrLater : aSecDescriptorXP);
 
     {
         MX::CFastLock cLock(&nInitMutex);
@@ -91,15 +88,13 @@ CNamedPipes::CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CI
                 hDll = ::GetModuleHandleW(L"kernel32.dll");
                 if (hDll != NULL)
                 {
-                    _fnSetFileCompletionNotificationModes =
-                        ::GetProcAddress(hDll, "SetFileCompletionNotificationModes");
+                    _fnSetFileCompletionNotificationModes = ::GetProcAddress(hDll, "SetFileCompletionNotificationModes");
                 }
             }
 
             if (_fnSetFileCompletionNotificationModes != NULL)
             {
-                fnSetFileCompletionNotificationModes =
-                    (lpfnSetFileCompletionNotificationModes)_fnSetFileCompletionNotificationModes;
+                fnSetFileCompletionNotificationModes = (lpfnSetFileCompletionNotificationModes)_fnSetFileCompletionNotificationModes;
             }
             else
             {
@@ -187,8 +182,8 @@ HRESULT CNamedPipes::CreateListener(_In_z_ LPCWSTR szServerNameW, _In_ OnCreateC
     {
         PSECURITY_DESCRIPTOR _lpSecDescr;
 
-        if (::ConvertStringSecurityDescriptorToSecurityDescriptorW(szSecutityDescriptorW, SECURITY_DESCRIPTOR_REVISION,
-                                                                   &_lpSecDescr, NULL) != FALSE)
+        if (::ConvertStringSecurityDescriptorToSecurityDescriptorW(szSecutityDescriptorW, SECURITY_DESCRIPTOR_REVISION, &_lpSecDescr,
+                                                                   NULL) != FALSE)
         {
             hRes = cServerInfo->Init(szServerNameW, _lpSecDescr);
             if (FAILED(hRes))
@@ -216,8 +211,8 @@ HRESULT CNamedPipes::CreateListener(_In_z_ LPCWSTR szServerNameW, _In_ OnCreateC
     return hRes;
 }
 
-HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCSTR szServerNameA, _In_ OnCreateCallback cCreateCallback,
-                                     _In_opt_ CUserData *lpUserData, _Out_opt_ HANDLE *h)
+HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCSTR szServerNameA, _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData,
+                                     _Out_opt_ HANDLE *h)
 {
     CStringW cStrTempW;
 
@@ -232,8 +227,8 @@ HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCSTR szServerNameA, _In_ OnCreateC
     return ConnectToServer((LPWSTR)cStrTempW, cCreateCallback, lpUserData, h);
 }
 
-HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreateCallback cCreateCallback,
-                                     _In_opt_ CUserData *lpUserData, _Out_opt_ HANDLE *h)
+HRESULT CNamedPipes::ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData,
+                                     _Out_opt_ HANDLE *h)
 {
     CAutoRundownProtection cRundownLock(&nRundownProt);
     TAutoRefCounted<CConnection> cNewConn;
@@ -327,11 +322,9 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
     sSecAttrib.nLength = sizeof(SECURITY_ATTRIBUTES);
     sSecAttrib.bInheritHandle = FALSE;
     sSecAttrib.lpSecurityDescriptor = lpSecDescr;
-    GenerateUniquePipeName(szBufW, MX_ARRAYLEN(szBufW), (DWORD)((ULONG_PTR)this),
-                           (DWORD)_InterlockedIncrement(&nRemoteConnCounter));
+    GenerateUniquePipeName(szBufW, MX_ARRAYLEN(szBufW), (DWORD)((ULONG_PTR)this), (DWORD)_InterlockedIncrement(&nRemoteConnCounter));
     cLocalPipe.Attach(::CreateNamedPipeW(szBufW, PIPE_ACCESS_DUPLEX | FILE_FLAG_WRITE_THROUGH | FILE_FLAG_OVERLAPPED,
-                                         PIPE_READMODE_BYTE | PIPE_TYPE_BYTE | PIPE_WAIT, 1, 4096, 4096, 10000,
-                                         &sSecAttrib));
+                                         PIPE_READMODE_BYTE | PIPE_TYPE_BYTE | PIPE_WAIT, 1, 4096, 4096, 10000, &sSecAttrib));
     if (cLocalPipe == NULL || cLocalPipe == INVALID_HANDLE_VALUE)
     {
         return MX_HRESULT_FROM_LASTERROR();
@@ -369,11 +362,10 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
         }
     }
     // IOCP options
-    if (fnSetFileCompletionNotificationModes != NULL &&
-        fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1)
+    if (fnSetFileCompletionNotificationModes != NULL && fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1)
     {
         if (fnSetFileCompletionNotificationModes(cLocalPipe, FILE_SKIP_SET_EVENT_ON_HANDLE |
-                                                                 FILE_SKIP_COMPLETION_PORT_ON_SUCCESS) == FALSE)
+                                                 FILE_SKIP_COMPLETION_PORT_ON_SUCCESS) == FALSE)
         {
             return MX_HRESULT_FROM_LASTERROR();
         }
@@ -385,8 +377,7 @@ HRESULT CNamedPipes::CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDL
         return MX_HRESULT_FROM_LASTERROR();
     }
     // duplicate handle on target process
-    if (::DuplicateHandle(::GetCurrentProcess(), cRemotePipe.Get(), hProc, &hRemotePipe, 0, FALSE,
-                          DUPLICATE_SAME_ACCESS) == FALSE)
+    if (::DuplicateHandle(::GetCurrentProcess(), cRemotePipe.Get(), hProc, &hRemotePipe, 0, FALSE, DUPLICATE_SAME_ACCESS) == FALSE)
     {
         return MX_HRESULT_FROM_LASTERROR();
     }
@@ -509,55 +500,78 @@ HRESULT CNamedPipes::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPack
     lpConn = (CConnection *)(lpPacket->GetConn());
     switch (lpPacket->GetType())
     {
-    case TypeListenRequest:
-        if (SUCCEEDED(hRes))
-        {
+        case TypeListenRequest:
+            if (SUCCEEDED(hRes))
             {
-                CFastLock cListLock(&(lpConn->sInUsePackets.nMutex));
-
-                lpConn->sInUsePackets.cList.QueueLast(lpPacket);
-            }
-            lpPacket->SetType(TypeListen);
-            lpConn->AddRef();
-            if (::ConnectNamedPipe(lpConn->hPipe, lpPacket->GetOverlapped()) == FALSE)
-            {
-                hRes = MX_HRESULT_FROM_LASTERROR();
-                if (hRes == HRESULT_FROM_WIN32(ERROR_PIPE_CONNECTED))
                 {
-                    // valid connection, the client connected between CreateNamedPipe and ConnectNamedPipe calls
+                    CFastLock cListLock(&(lpConn->sInUsePackets.nMutex));
+
+                    lpConn->sInUsePackets.cList.QueueLast(lpPacket);
+                }
+                lpPacket->SetType(TypeListen);
+                lpConn->AddRef();
+                if (::ConnectNamedPipe(lpConn->hPipe, lpPacket->GetOverlapped()) == FALSE)
+                {
+                    hRes = MX_HRESULT_FROM_LASTERROR();
+                    if (hRes == HRESULT_FROM_WIN32(ERROR_PIPE_CONNECTED))
                     {
+                        // valid connection, the client connected between CreateNamedPipe and ConnectNamedPipe calls
+                        {
+                            CFastLock cListLock(&(lpConn->sInUsePackets.nMutex));
+
+                            lpConn->sInUsePackets.cList.Remove(lpPacket);
+                        }
+
+                        // release extra reference added above
+                        lpConn->Release();
+
+                        hRes = S_OK;
+                        goto pipe_connected;
+                    }
+
+                    if (hRes == MX_E_IoPending)
+                    {
+                        hRes = S_OK;
+                    }
+                    else
+                    {
+                        // free packet
                         CFastLock cListLock(&(lpConn->sInUsePackets.nMutex));
 
                         lpConn->sInUsePackets.cList.Remove(lpPacket);
                     }
-
-                    // release extra reference added above
-                    lpConn->Release();
-
-                    hRes = S_OK;
-                    goto pipe_connected;
-                }
-
-                if (hRes == MX_E_IoPending)
-                {
-                    hRes = S_OK;
-                }
-                else
-                {
-                    // free packet
-                    CFastLock cListLock(&(lpConn->sInUsePackets.nMutex));
-
-                    lpConn->sInUsePackets.cList.Remove(lpPacket);
                 }
             }
-        }
-        if (FAILED(hRes))
-        {
+            if (FAILED(hRes))
+            {
+                FreePacket(lpPacket);
+
+                // process connection
+                if (lpConn->nClass == CIpc::eConnectionClass::Server && lpConn->IsClosed() == FALSE && IsShuttingDown() == FALSE)
+                {
+                    // on server mode, create a new listener
+                    HRESULT hRes2 = CreateServerConnection(lpConn->cServerInfo, lpConn->cCreateCallback);
+                    if (FAILED(hRes2))
+                    {
+                        FireOnEngineError(hRes2);
+                    }
+                }
+            }
+            break;
+
+        case TypeListen:
+pipe_connected:
+            hOrigRes = hRes;
+            if (SUCCEEDED(hRes))
+            {
+                hRes = lpConn->HandleConnected();
+            }
+
+            // free packet
             FreePacket(lpPacket);
 
             // process connection
-            if (lpConn->nClass == CIpc::eConnectionClass::Server && lpConn->IsClosed() == FALSE &&
-                IsShuttingDown() == FALSE)
+            if (lpConn->nClass == CIpc::eConnectionClass::Server && lpConn->IsClosed() == FALSE && IsShuttingDown() == FALSE)
             {
                 // on server mode, create a new listener
                 HRESULT hRes2 = CreateServerConnection(lpConn->cServerInfo, lpConn->cCreateCallback);
@@ -566,37 +580,12 @@ HRESULT CNamedPipes::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPack
                     FireOnEngineError(hRes2);
                 }
             }
-        }
-        break;
+            break;
 
-    case TypeListen:
-    pipe_connected:
-        hOrigRes = hRes;
-        if (SUCCEEDED(hRes))
-        {
-            hRes = lpConn->HandleConnected();
-        }
-
-        // free packet
-        FreePacket(lpPacket);
-
-        // process connection
-        if (lpConn->nClass == CIpc::eConnectionClass::Server && lpConn->IsClosed() == FALSE &&
-            IsShuttingDown() == FALSE)
-        {
-            // on server mode, create a new listener
-            HRESULT hRes2 = CreateServerConnection(lpConn->cServerInfo, lpConn->cCreateCallback);
-            if (FAILED(hRes2))
-            {
-                FireOnEngineError(hRes2);
-            }
-        }
-        break;
-
-    default:
-        MX_ASSERT(FALSE);
-        hRes = MX_E_InvalidData;
-        break;
+        default:
+            MX_ASSERT(FALSE);
+            hRes = MX_E_InvalidData;
+            break;
     }
 
     // done
@@ -644,8 +633,7 @@ CNamedPipes::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionCl
 CNamedPipes::CConnection::~CConnection()
 {
     // NOTE: The pipe can be still open if some write requests were queued while a graceful shutdown was in progress
-    MX_ASSERT((SIZE_T)(ULONG)__InterlockedRead(&nOutgoingWrites) ==
-              sPendingWritePackets.cList.GetCount() +
+    MX_ASSERT((SIZE_T)(ULONG)__InterlockedRead(&nOutgoingWrites) == sPendingWritePackets.cList.GetCount() +
                   sInUsePackets.cList.GetCountOfType(CIpc::CPacketBase::eType::WriteRequest));
 
     if (hPipe != NULL)
@@ -665,8 +653,7 @@ HRESULT CNamedPipes::CConnection::CreateServer()
     sSecAttrib.nLength = (DWORD)sizeof(sSecAttrib);
     sSecAttrib.bInheritHandle = FALSE;
     sSecAttrib.lpSecurityDescriptor = cServerInfo->lpSecDescr;
-    hPipe = ::CreateNamedPipeW(
-        (LPWSTR)(cServerInfo->cStrNameW), PIPE_ACCESS_DUPLEX | FILE_FLAG_WRITE_THROUGH | FILE_FLAG_OVERLAPPED,
+    hPipe = ::CreateNamedPipeW((LPWSTR)(cServerInfo->cStrNameW), PIPE_ACCESS_DUPLEX | FILE_FLAG_WRITE_THROUGH | FILE_FLAG_OVERLAPPED,
         PIPE_READMODE_BYTE | PIPE_TYPE_BYTE | PIPE_WAIT, PIPE_UNLIMITED_INSTANCES, 4096, 4096, 10000, &sSecAttrib);
     if (hPipe == NULL || hPipe == INVALID_HANDLE_VALUE)
     {
@@ -676,11 +663,10 @@ HRESULT CNamedPipes::CConnection::CreateServer()
     ::SetHandleInformation(hPipe, HANDLE_FLAG_INHERIT, 0);
 
     // IOCP options
-    if (fnSetFileCompletionNotificationModes != NULL &&
-        fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1)
+    if (fnSetFileCompletionNotificationModes != NULL && fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1)
     {
         if (fnSetFileCompletionNotificationModes(hPipe, FILE_SKIP_SET_EVENT_ON_HANDLE |
-                                                            FILE_SKIP_COMPLETION_PORT_ON_SUCCESS) == FALSE)
+                                                 FILE_SKIP_COMPLETION_PORT_ON_SUCCESS) == FALSE)
         {
             return MX_HRESULT_FROM_LASTERROR();
         }
@@ -762,11 +748,10 @@ HRESULT CNamedPipes::CConnection::CreateClient(_In_z_ LPCWSTR szServerNameW, _In
     }
 
     // IOCP options
-    if (fnSetFileCompletionNotificationModes != NULL &&
-        fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1)
+    if (fnSetFileCompletionNotificationModes != NULL && fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1)
     {
         if (fnSetFileCompletionNotificationModes(hPipe, FILE_SKIP_SET_EVENT_ON_HANDLE |
-                                                            FILE_SKIP_COMPLETION_PORT_ON_SUCCESS) == FALSE)
+                                                 FILE_SKIP_COMPLETION_PORT_ON_SUCCESS) == FALSE)
         {
             return MX_HRESULT_FROM_LASTERROR();
         }
@@ -827,13 +812,12 @@ HRESULT CNamedPipes::CConnection::SendReadPacket(_In_ CPacketBase *lpPacket, _Ou
         return S_FALSE;
     }
     dwRead = 0;
-    if (::ReadFile(hPipe, lpPacket->GetBuffer(), lpPacket->GetBytesInUse(), &dwRead, lpPacket->GetOverlapped()) !=
-        FALSE)
+    if (::ReadFile(hPipe, lpPacket->GetBuffer(), lpPacket->GetBytesInUse(), &dwRead, lpPacket->GetOverlapped()) != FALSE)
     {
         hRes = (fnSetFileCompletionNotificationModes != NULL &&
                 fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1)
-                   ? S_OK
-                   : MX_E_IoPending;
+            ? S_OK
+            : MX_E_IoPending;
     }
     else
     {
@@ -862,19 +846,17 @@ HRESULT CNamedPipes::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket, _O
     if (lpIpc->ShouldLog(2) != FALSE)
     {
         cLogTimer.Mark();
-        lpIpc->Log(L"CNamedPipes::SendWritePacket) Clock=%lums / Conn=0x%p / Ovr=0x%p / Type=%lu / Bytes=%lu",
-                   cLogTimer.GetElapsedTimeMs(), this, lpPacket->GetOverlapped(), lpPacket->GetType(),
-                   lpPacket->GetBytesInUse());
+        lpIpc->Log(L"CNamedPipes::SendWritePacket) Clock=%lums / Conn=0x%p / Ovr=0x%p / Type=%lu / Bytes=%lu", cLogTimer.GetElapsedTimeMs(),
+                   this, lpPacket->GetOverlapped(), lpPacket->GetType(), lpPacket->GetBytesInUse());
         cLogTimer.ResetToLastMark();
     }
     dwWritten = 0;
-    if (::WriteFile(hPipe, lpPacket->GetBuffer(), lpPacket->GetBytesInUse(), &dwWritten, lpPacket->GetOverlapped()) !=
-        FALSE)
+    if (::WriteFile(hPipe, lpPacket->GetBuffer(), lpPacket->GetBytesInUse(), &dwWritten, lpPacket->GetOverlapped()) != FALSE)
     {
         hRes = (fnSetFileCompletionNotificationModes != NULL &&
                 fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1)
-                   ? S_OK
-                   : MX_E_IoPending;
+            ? S_OK
+            : MX_E_IoPending;
     }
     else
     {
@@ -902,7 +884,6 @@ static VOID GenerateUniquePipeName(_Out_ LPWSTR szNameW, _In_ SIZE_T nNameSize, 
     dwVal[1] = ::GetCurrentProcessId();
     dwVal[2] = dwVal1;
     dwVal[3] = dwVal2;
-    mx_swprintf_s(szNameW, nNameSize, L"\\\\.\\pipe\\MxNamedPipe%016I64x",
-                  (ULONGLONG)fnv_64a_buf(dwVal, sizeof(dwVal), FNV1A_64_INIT));
+    mx_swprintf_s(szNameW, nNameSize, L"\\\\.\\pipe\\MxNamedPipe%016I64x", (ULONGLONG)fnv_64a_buf(dwVal, sizeof(dwVal), FNV1A_64_INIT));
     return;
 }

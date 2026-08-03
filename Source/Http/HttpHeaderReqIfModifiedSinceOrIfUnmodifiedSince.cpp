@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderReqIfModifiedSinceOrIfUnmodifiedSince.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderReqIfXXXSinceBase::CHttpHeaderReqIfXXXSinceBase(_In_ BOOL _bIfModified) : CHttpHeaderBase()
 {

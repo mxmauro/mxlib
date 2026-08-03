@@ -54,7 +54,7 @@ local const z_crc_t FAR crc_table[] = {
     0xbdbdf21c, 0xcabac28a, 0x53b39330, 0x24b4a3a6, 0xbad03605,
     0xcdd70693, 0x54de5729, 0x23d967bf, 0xb3667a2e, 0xc4614ab8,
     0x5d681b02, 0x2a6f2b94, 0xb40bbe37, 0xc30c8ea1, 0x5a05df1b,
-    0x2d02ef8d};
+    0x2d02ef8d };
 
 #ifdef W
 
@@ -146,7 +146,7 @@ local const z_word_t FAR crc_big_table[] = {
     0x2957de5400000000, 0xbf67d92300000000, 0x2e7a66b300000000,
     0xb84a61c400000000, 0x021b685d00000000, 0x942b6f2a00000000,
     0x37be0bb400000000, 0xa18e0cc300000000, 0x1bdf055a00000000,
-    0x8def022d00000000};
+    0x8def022d00000000 };
 
 #else /* W == 4 */
 
@@ -202,7 +202,7 @@ local const z_word_t FAR crc_big_table[] = {
     0x1cf2bdbd, 0x8ac2baca, 0x3093b353, 0xa6a3b424, 0x0536d0ba,
     0x9306d7cd, 0x2957de54, 0xbf67d923, 0x2e7a66b3, 0xb84a61c4,
     0x021b685d, 0x942b6f2a, 0x37be0bb4, 0xa18e0cc3, 0x1bdf055a,
-    0x8def022d};
+    0x8def022d };
 
 #endif
 
@@ -626,7 +626,7 @@ local const z_crc_t FAR crc_braid_table[][256] = {
     0xbdbdf21c, 0xcabac28a, 0x53b39330, 0x24b4a3a6, 0xbad03605,
     0xcdd70693, 0x54de5729, 0x23d967bf, 0xb3667a2e, 0xc4614ab8,
     0x5d681b02, 0x2a6f2b94, 0xb40bbe37, 0xc30c8ea1, 0x5a05df1b,
-    0x2d02ef8d}};
+    0x2d02ef8d} };
 
 local const z_word_t FAR crc_braid_big_table[][256] = {
    {0x0000000000000000, 0x9630077700000000, 0x2c610eee00000000,
@@ -1316,7 +1316,7 @@ local const z_word_t FAR crc_braid_big_table[][256] = {
     0xcd1d043900000000, 0x531daef500000000, 0xff0f8e2c00000000,
     0x610f24e000000000, 0x8208ab6e00000000, 0x1c0801a200000000,
     0x0501c4a800000000, 0x9b016e6400000000, 0x7806e1ea00000000,
-    0xe6064b2600000000}};
+    0xe6064b2600000000} };
 
 #else /* W == 4 */
 
@@ -1528,7 +1528,7 @@ local const z_crc_t FAR crc_braid_table[][256] = {
     0xbdbdf21c, 0xcabac28a, 0x53b39330, 0x24b4a3a6, 0xbad03605,
     0xcdd70693, 0x54de5729, 0x23d967bf, 0xb3667a2e, 0xc4614ab8,
     0x5d681b02, 0x2a6f2b94, 0xb40bbe37, 0xc30c8ea1, 0x5a05df1b,
-    0x2d02ef8d}};
+    0x2d02ef8d} };
 
 local const z_word_t FAR crc_braid_big_table[][256] = {
    {0x00000000, 0x96300777, 0x2c610eee, 0xba510999, 0x19c46d07,
@@ -1738,7 +1738,7 @@ local const z_word_t FAR crc_braid_big_table[][256] = {
     0xa7166686, 0xc271da3e, 0x2cde6f2c, 0x49b9d394, 0xf0810409,
     0x95e6b8b1, 0x7b490da3, 0x1e2eb11b, 0x483ed243, 0x2d596efb,
     0xc3f6dbe9, 0xa6916751, 0x1fa9b0cc, 0x7ace0c74, 0x9461b966,
-    0xf10605de}};
+    0xf10605de} };
 
 #endif
 
@@ -2164,7 +2164,7 @@ local const z_crc_t FAR crc_braid_table[][256] = {
     0x96f6c39a, 0x818dd7d9, 0xb800eb1c, 0xaf7bff5f, 0xcb1a9296,
     0xdc6186d5, 0xe5ecba10, 0xf297ae53, 0x2d2e6182, 0x3a5575c1,
     0x03d84904, 0x14a35d47, 0x70c2308e, 0x67b924cd, 0x5e341808,
-    0x494f0c4b}};
+    0x494f0c4b} };
 
 local const z_word_t FAR crc_braid_big_table[][256] = {
    {0x0000000000000000, 0x43147b1700000000, 0x8628f62e00000000,
@@ -2854,7 +2854,7 @@ local const z_word_t FAR crc_braid_big_table[][256] = {
     0x09370ad000000000, 0x98a6627e00000000, 0xa2c188f000000000,
     0x3350e05e00000000, 0xc1e4287700000000, 0x507540d900000000,
     0x258db92400000000, 0xb41cd18a00000000, 0x46a819a300000000,
-    0xd739710d00000000}};
+    0xd739710d00000000} };
 
 #else /* W == 4 */
 
@@ -3066,7 +3066,7 @@ local const z_crc_t FAR crc_braid_table[][256] = {
     0x4834505d, 0x755479ed, 0x32f4033d, 0x0f942a8d, 0xbdb4f69d,
     0x80d4df2d, 0xc774a5fd, 0xfa148c4d, 0x78441b9c, 0x4524322c,
     0x028448fc, 0x3fe4614c, 0x8dc4bd5c, 0xb0a494ec, 0xf704ee3c,
-    0xca64c78c}};
+    0xca64c78c} };
 
 local const z_word_t FAR crc_braid_big_table[][256] = {
    {0x00000000, 0xb029603d, 0x6053c07a, 0xd07aa047, 0xc0a680f5,
@@ -3276,7 +3276,7 @@ local const z_word_t FAR crc_braid_big_table[][256] = {
     0x4a146bff, 0xd414c133, 0x37134ebd, 0xa913e471, 0xb01a217b,
     0x2e1a8bb7, 0xcd1d0439, 0x531daef5, 0xff0f8e2c, 0x610f24e0,
     0x8208ab6e, 0x1c0801a2, 0x0501c4a8, 0x9b016e64, 0x7806e1ea,
-    0xe6064b26}};
+    0xe6064b26} };
 
 #endif
 
@@ -3702,7 +3702,7 @@ local const z_crc_t FAR crc_braid_table[][256] = {
     0xde38059b, 0x599eced8, 0x0a04955c, 0x8da25e1f, 0xad302254,
     0x2a96e917, 0x790cb293, 0xfeaa79d0, 0x38284a05, 0xbf8e8146,
     0xec14dac2, 0x6bb21181, 0x4b206dca, 0xcc86a689, 0x9f1cfd0d,
-    0x18ba364e}};
+    0x18ba364e} };
 
 local const z_word_t FAR crc_braid_big_table[][256] = {
    {0x0000000000000000, 0x43cba68700000000, 0xc7903cd400000000,
@@ -4392,7 +4392,7 @@ local const z_word_t FAR crc_braid_big_table[][256] = {
     0xc8dce55a00000000, 0xefb9c0db00000000, 0x26b2d53800000000,
     0x01d7f0b900000000, 0x297eeee100000000, 0x0e1bcb6000000000,
     0x792cd35100000000, 0x5e49f6d000000000, 0x76e0e88800000000,
-    0x5185cd0900000000}};
+    0x5185cd0900000000} };
 
 #else /* W == 4 */
 
@@ -4604,7 +4604,7 @@ local const z_crc_t FAR crc_braid_table[][256] = {
     0x96f6c39a, 0x818dd7d9, 0xb800eb1c, 0xaf7bff5f, 0xcb1a9296,
     0xdc6186d5, 0xe5ecba10, 0xf297ae53, 0x2d2e6182, 0x3a5575c1,
     0x03d84904, 0x14a35d47, 0x70c2308e, 0x67b924cd, 0x5e341808,
-    0x494f0c4b}};
+    0x494f0c4b} };
 
 local const z_word_t FAR crc_braid_big_table[][256] = {
    {0x00000000, 0x43147b17, 0x8628f62e, 0xc53c8d39, 0x0c51ec5d,
@@ -4814,7 +4814,7 @@ local const z_word_t FAR crc_braid_big_table[][256] = {
     0x14ee8d44, 0x7ba228df, 0x8b70b6a8, 0xe43c1333, 0x6bd58b47,
     0x04992edc, 0xf44bb0ab, 0x9b071530, 0xea988142, 0x85d424d9,
     0x7506baae, 0x1a4a1f35, 0x95a38741, 0xfaef22da, 0x0a3dbcad,
-    0x65711936}};
+    0x65711936} };
 
 #endif
 
@@ -5240,7 +5240,7 @@ local const z_crc_t FAR crc_braid_table[][256] = {
     0xfe3ec3f8, 0x5bb553f6, 0x6e58e5a5, 0xcbd375ab, 0x05838903,
     0xa008190d, 0x95e5af5e, 0x306e3f50, 0xd235504f, 0x77bec041,
     0x42537612, 0xe7d8e61c, 0x29881ab4, 0x8c038aba, 0xb9ee3ce9,
-    0x1c65ace7}};
+    0x1c65ace7} };
 
 local const z_word_t FAR crc_braid_big_table[][256] = {
    {0x0000000000000000, 0x0e908ba500000000, 0x5d26669000000000,
@@ -5930,7 +5930,7 @@ local const z_word_t FAR crc_braid_big_table[][256] = {
     0xe8680af100000000, 0x426dd00000000000, 0x834b515b00000000,
     0x294e8baa00000000, 0x9646946300000000, 0x3c434e9200000000,
     0xa951db2a00000000, 0x035401db00000000, 0xbc5c1e1200000000,
-    0x1659c4e300000000}};
+    0x1659c4e300000000} };
 
 #else /* W == 4 */
 
@@ -6142,7 +6142,7 @@ local const z_crc_t FAR crc_braid_table[][256] = {
     0x1a9e5993, 0xc7088016, 0x7ac2ecd8, 0xa754355d, 0xda273305,
     0x07b1ea80, 0xba7b864e, 0x67ed5fcb, 0x409d8afe, 0x9d0b537b,
     0x20c13fb5, 0xfd57e630, 0x8024e068, 0x5db239ed, 0xe0785523,
-    0x3dee8ca6}};
+    0x3dee8ca6} };
 
 local const z_word_t FAR crc_braid_big_table[][256] = {
    {0x00000000, 0x85d996dd, 0x4bb55c60, 0xce6ccabd, 0x966ab9c0,
@@ -6352,7 +6352,7 @@ local const z_word_t FAR crc_braid_big_table[][256] = {
     0xed5e9b83, 0x7ccff32d, 0x8e7b3b04, 0x1fea53aa, 0x6a12aa57,
     0xfb83c2f9, 0x09370ad0, 0x98a6627e, 0xa2c188f0, 0x3350e05e,
     0xc1e42877, 0x507540d9, 0x258db924, 0xb41cd18a, 0x46a819a3,
-    0xd739710d}};
+    0xd739710d} };
 
 #endif
 
@@ -6778,7 +6778,7 @@ local const z_crc_t FAR crc_braid_table[][256] = {
     0x180f0208, 0x2efd92fb, 0x75ea23ee, 0x4318b31d, 0xc3c541c4,
     0xf537d137, 0xae206022, 0x98d2f0d1, 0x74ea83d1, 0x42181322,
     0x190fa237, 0x2ffd32c4, 0xaf20c01d, 0x99d250ee, 0xc2c5e1fb,
-    0xf4377108}};
+    0xf4377108} };
 
 local const z_word_t FAR crc_braid_big_table[][256] = {
    {0x0000000000000000, 0xf390f23600000000, 0xe621e56d00000000,
@@ -7468,7 +7468,7 @@ local const z_word_t FAR crc_braid_big_table[][256] = {
     0xdd66a33c00000000, 0x9af4e79300000000, 0x3286a91300000000,
     0x7514edbc00000000, 0xfda4519600000000, 0xba36153900000000,
     0xedc528c300000000, 0xaa576c6c00000000, 0x22e7d04600000000,
-    0x657594e900000000}};
+    0x657594e900000000} };
 
 #else /* W == 4 */
 
@@ -7680,7 +7680,7 @@ local const z_crc_t FAR crc_braid_table[][256] = {
     0xde38059b, 0x599eced8, 0x0a04955c, 0x8da25e1f, 0xad302254,
     0x2a96e917, 0x790cb293, 0xfeaa79d0, 0x38284a05, 0xbf8e8146,
     0xec14dac2, 0x6bb21181, 0x4b206dca, 0xcc86a689, 0x9f1cfd0d,
-    0x18ba364e}};
+    0x18ba364e} };
 
 local const z_word_t FAR crc_braid_big_table[][256] = {
    {0x00000000, 0x43cba687, 0xc7903cd4, 0x845b9a53, 0xcf270873,
@@ -7890,7 +7890,7 @@ local const z_word_t FAR crc_braid_big_table[][256] = {
     0x141b33a4, 0x522054c1, 0x986dfd6e, 0xde569a0b, 0x4df0deea,
     0x0bcbb98f, 0xc1861020, 0x87bd7745, 0xa6cde839, 0xe0f68f5c,
     0x2abb26f3, 0x6c804196, 0xff260577, 0xb91d6212, 0x7350cbbd,
-    0x356bacd8}};
+    0x356bacd8} };
 
 #endif
 
@@ -8316,7 +8316,7 @@ local const z_crc_t FAR crc_braid_table[][256] = {
     0xe5bc640a, 0x0dabf4ab, 0xeee24309, 0x06f5d3a8, 0xf3002a0c,
     0x1b17baad, 0xf85e0d0f, 0x10499dae, 0xc8c4f806, 0x20d368a7,
     0xc39adf05, 0x2b8d4fa4, 0xde78b600, 0x366f26a1, 0xd5269103,
-    0x3d3101a2}};
+    0x3d3101a2} };
 
 local const z_word_t FAR crc_braid_big_table[][256] = {
    {0x0000000000000000, 0xa19017e800000000, 0x03275e0b00000000,
@@ -9006,7 +9006,7 @@ local const z_word_t FAR crc_braid_big_table[][256] = {
     0xd52c278e00000000, 0x09c096b300000000, 0xbc267d3500000000,
     0x60cacc0800000000, 0x04ff1e4e00000000, 0xd813af7300000000,
     0xcc95bac300000000, 0x10790bfe00000000, 0x744cd9b800000000,
-    0xa8a0688500000000}};
+    0xa8a0688500000000} };
 
 #else /* W == 4 */
 
@@ -9218,7 +9218,7 @@ local const z_crc_t FAR crc_braid_table[][256] = {
     0x1a7ee766, 0x85a464f8, 0xfebae61b, 0x61606585, 0x0887e3dd,
     0x975d6043, 0xec43e2a0, 0x7399613e, 0x3f8cee10, 0xa0566d8e,
     0xdb48ef6d, 0x44926cf3, 0x2d75eaab, 0xb2af6935, 0xc9b1ebd6,
-    0x566b6848}};
+    0x566b6848} };
 
 local const z_word_t FAR crc_braid_big_table[][256] = {
    {0x00000000, 0x9e83da9f, 0x7d01c4e4, 0xe3821e7b, 0xbb04f912,
@@ -9428,7 +9428,7 @@ local const z_word_t FAR crc_braid_big_table[][256] = {
     0x988ed8ea, 0xbfebfd6b, 0x9742e333, 0xb027c6b2, 0xc710de83,
     0xe075fb02, 0xc8dce55a, 0xefb9c0db, 0x26b2d538, 0x01d7f0b9,
     0x297eeee1, 0x0e1bcb60, 0x792cd351, 0x5e49f6d0, 0x76e0e888,
-    0x5185cd09}};
+    0x5185cd09} };
 
 #endif
 
@@ -9443,4 +9443,4 @@ local const z_crc_t FAR x2n_table[] = {
     0x09fe548f, 0x83852d0f, 0x30362f1a, 0x7b5a9cc3, 0x31fec169,
     0x9fec022a, 0x6c8dedc4, 0x15d6874d, 0x5fde7a4e, 0xbad90e37,
     0x2e4e5eef, 0x4eaba214, 0xa8a472c0, 0x429a969e, 0x148d302a,
-    0xc40ba6d0, 0xc4e22c3c};
+    0xc40ba6d0, 0xc4e22c3c };

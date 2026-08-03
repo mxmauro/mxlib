@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderGenTransferEncoding.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderGenTransferEncoding::CHttpHeaderGenTransferEncoding() : CHttpHeaderBase()
 {
@@ -79,33 +78,33 @@ HRESULT CHttpHeaderGenTransferEncoding::Parse(_In_z_ LPCSTR szValueA, _In_opt_ S
         // check encoding
         switch ((SIZE_T)(szValueA - szStartA))
         {
-        case 7:
-            if (StrNCompareA(szStartA, "chunked", 7, TRUE) == 0)
-            {
-                _nEncoding = eEncoding::Chunked;
-            }
-            else
-            {
-                return MX_E_Unsupported;
-            }
-            break;
+            case 7:
+                if (StrNCompareA(szStartA, "chunked", 7, TRUE) == 0)
+                {
+                    _nEncoding = eEncoding::Chunked;
+                }
+                else
+                {
+                    return MX_E_Unsupported;
+                }
+                break;
 
-        case 8:
-            if (StrNCompareA(szStartA, "identity", 8, TRUE) == 0)
-            {
-                _nEncoding = eEncoding::Identity;
-            }
-            else
-            {
-                return MX_E_Unsupported;
-            }
-            break;
+            case 8:
+                if (StrNCompareA(szStartA, "identity", 8, TRUE) == 0)
+                {
+                    _nEncoding = eEncoding::Identity;
+                }
+                else
+                {
+                    return MX_E_Unsupported;
+                }
+                break;
 
-        default:
-            return MX_E_Unsupported;
+            default:
+                return MX_E_Unsupported;
         }
 
-    skip_null_listitem:
+skip_null_listitem:
         // skip spaces
         szValueA = SkipSpaces(szValueA, szValueEndA);
 
@@ -121,7 +120,8 @@ HRESULT CHttpHeaderGenTransferEncoding::Parse(_In_z_ LPCSTR szValueA, _In_opt_ S
                 return MX_E_InvalidData;
             }
         }
-    } while (szValueA < szValueEndA);
+    }
+    while (szValueA < szValueEndA);
 
     // do we got one?
     if (bGotItem == FALSE)
@@ -138,19 +138,19 @@ HRESULT CHttpHeaderGenTransferEncoding::Build(_Inout_ CStringA &cStrDestA, _In_ 
 {
     switch (nEncoding)
     {
-    case eEncoding::Identity:
-        if (cStrDestA.Copy("identity") == FALSE)
-        {
-            return E_OUTOFMEMORY;
-        }
-        return S_OK;
+        case eEncoding::Identity:
+            if (cStrDestA.Copy("identity") == FALSE)
+            {
+                return E_OUTOFMEMORY;
+            }
+            return S_OK;
 
-    case eEncoding::Chunked:
-        if (cStrDestA.Copy("chunked") == FALSE)
-        {
-            return E_OUTOFMEMORY;
-        }
-        return S_OK;
+        case eEncoding::Chunked:
+            if (cStrDestA.Copy("chunked") == FALSE)
+            {
+                return E_OUTOFMEMORY;
+            }
+            return S_OK;
     }
 
     cStrDestA.Empty();

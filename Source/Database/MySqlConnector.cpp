@@ -34,16 +34,15 @@
 
 #define LIBMYSQL_FINALIZER_PRIORITY 10001
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 typedef int(__stdcall *lpfn_mysql_server_init)(int argc, char **argv, char **groups);
 typedef void(__stdcall *lpfn_mysql_server_end)(void);
 
 typedef MYSQL *(__stdcall *lpfn_mysql_init)(MYSQL *mysql);
 typedef int(__stdcall *lpfn_mysql_options)(MYSQL *mysql, enum mysql_option option, const void *arg);
-typedef MYSQL *(__stdcall *lpfn_mysql_real_connect)(MYSQL *mysql, const LPCSTR host, const LPCSTR user,
-                                                    const LPCSTR passwd, const LPCSTR db, UINT port,
-                                                    const LPCSTR unix_socket, ULONG clientflag);
+typedef MYSQL *(__stdcall *lpfn_mysql_real_connect)(MYSQL *mysql, const LPCSTR host, const LPCSTR user, const LPCSTR passwd,
+                                                    const LPCSTR db, UINT port, const LPCSTR unix_socket, ULONG clientflag);
 typedef int(__stdcall *lpfn_mysql_select_db)(MYSQL *mysql, const LPCSTR db);
 typedef void(__stdcall *lpfn_mysql_close)(MYSQL *mysql);
 typedef int(__stdcall *lpfn_mysql_ping)(MYSQL *mysql);
@@ -78,14 +77,12 @@ typedef int(__stdcall *lpfn_mysql_stmt_execute)(MYSQL_STMT *stmt);
 typedef ULONGLONG(__stdcall *lpfn_mysql_stmt_affected_rows)(MYSQL_STMT *stmt);
 typedef ULONGLONG(__stdcall *lpfn_mysql_stmt_insert_id)(MYSQL_STMT *stmt);
 typedef int(__stdcall *lpfn_mysql_stmt_fetch)(MYSQL_STMT *stmt);
-typedef int(__stdcall *lpfn_mysql_stmt_fetch_column)(MYSQL_STMT *stmt, MYSQL_BIND *bind_arg, unsigned int column,
-                                                     unsigned long offset);
+typedef int(__stdcall *lpfn_mysql_stmt_fetch_column)(MYSQL_STMT *stmt, MYSQL_BIND *bind_arg, unsigned int column, unsigned long offset);
 typedef int(__stdcall *lpfn_mysql_stmt_store_result)(MYSQL_STMT *stmt);
 typedef my_bool(__stdcall *lpfn_mysql_stmt_bind_result)(MYSQL_STMT *stmt, MYSQL_BIND *bind);
 typedef ULONG(__stdcall *lpfn_mysql_stmt_param_count)(MYSQL_STMT *stmt);
 typedef MYSQL_RES *(__stdcall *lpfn_mysql_stmt_result_metadata)(MYSQL_STMT *stmt);
-typedef my_bool(__stdcall *lpfn_mysql_stmt_attr_set)(MYSQL_STMT *stmt, enum enum_stmt_attr_type attr_type,
-                                                     const void *attr);
+typedef my_bool(__stdcall *lpfn_mysql_stmt_attr_set)(MYSQL_STMT *stmt, enum enum_stmt_attr_type attr_type, const void *attr);
 typedef unsigned long(__stdcall *lpfn_mysql_get_client_version)(void);
 
 //-----------------------------------------------------------
@@ -151,15 +148,13 @@ static HRESULT HResultFromMySqlErr(_In_ int err);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Internals
-{
+namespace Internals {
 
 class CMySqlConnectorData : public virtual CBaseMemObj
 {
-  public:
+public:
     CMySqlConnectorData();
 
     VOID ClearErrno();
@@ -171,21 +166,21 @@ class CMySqlConnectorData : public virtual CBaseMemObj
         return HResultFromMySqlErr(nLastDbErr);
     };
 
-  public:
+public:
     class CBuffer : public virtual CBaseMemObj
     {
-      public:
+    public:
         CBuffer();
         ~CBuffer();
 
         BOOL EnsureSize(_In_ SIZE_T nNewSize);
 
-      public:
+    public:
         LPBYTE lpBuffer;
         SIZE_T nBufferSize;
     };
 
-  public:
+public:
     MYSQL *lpDB;
     int nServerUsingNoBackslashEscapes;
     int nLastDbErr;
@@ -207,11 +202,9 @@ class CMySqlConnectorData : public virtual CBaseMemObj
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Database
-{
+namespace Database {
 
 CMySqlConnector::CMySqlConnector() : CBaseConnector()
 {
@@ -225,9 +218,9 @@ CMySqlConnector::~CMySqlConnector()
     return;
 }
 
-HRESULT CMySqlConnector::Connect(_In_z_ LPCSTR szServerHostA, _In_z_ LPCSTR szUserNameA,
-                                 _In_opt_z_ LPCSTR szUserPasswordA, _In_opt_z_ LPCSTR szDatabaseNameA,
-                                 _In_opt_ USHORT wServerPort, _In_opt_ CMySqlConnector::CConnectOptions *lpOptions)
+HRESULT CMySqlConnector::Connect(_In_z_ LPCSTR szServerHostA, _In_z_ LPCSTR szUserNameA, _In_opt_z_ LPCSTR szUserPasswordA,
+                                 _In_opt_z_ LPCSTR szDatabaseNameA, _In_opt_ USHORT wServerPort,
+                                 _In_opt_ CMySqlConnector::CConnectOptions *lpOptions)
 {
     long nTemp;
     CHAR d[4];
@@ -324,9 +317,9 @@ HRESULT CMySqlConnector::Connect(_In_z_ LPCSTR szServerHostA, _In_z_ LPCSTR szUs
     if (fn_mysql_real_connect(mysql_data->lpDB, szServerHostA, (szUserNameA != NULL) ? szUserNameA : "",
                               (szUserPasswordA != NULL) ? szUserPasswordA : "", NULL, (UINT)wServerPort, NULL,
                               CLIENT_LONG_FLAG | CLIENT_COMPRESS | CLIENT_LOCAL_FILES | CLIENT_PROTOCOL_41 |
-                                  CLIENT_TRANSACTIONS | CLIENT_FOUND_ROWS) == NULL)
+                              CLIENT_TRANSACTIONS | CLIENT_FOUND_ROWS) == NULL)
     {
-    on_error:
+on_error:
         mysql_data->SetErrno();
         hRes = mysql_data->GetHResult();
 
@@ -364,9 +357,8 @@ HRESULT CMySqlConnector::Connect(_In_z_ LPCSTR szServerHostA, _In_z_ LPCSTR szUs
     return S_OK;
 }
 
-HRESULT CMySqlConnector::Connect(_In_z_ LPCWSTR szServerHostW, _In_z_ LPCWSTR szUserNameW,
-                                 _In_opt_z_ LPCWSTR szUserPasswordW, _In_opt_z_ LPCWSTR szDatabaseNameW,
-                                 _In_opt_ USHORT wServerPort, _In_opt_ CConnectOptions *lpOptions)
+HRESULT CMySqlConnector::Connect(_In_z_ LPCWSTR szServerHostW, _In_z_ LPCWSTR szUserNameW, _In_opt_z_ LPCWSTR szUserPasswordW,
+                                 _In_opt_z_ LPCWSTR szDatabaseNameW, _In_opt_ USHORT wServerPort, _In_opt_ CConnectOptions *lpOptions)
 {
     CStringA cStrServerHostA, cStrUserNameA, cStrDatabaseNameA;
     CSecureStringA cStrUserPasswordA;
@@ -407,8 +399,8 @@ HRESULT CMySqlConnector::Connect(_In_z_ LPCWSTR szServerHostW, _In_z_ LPCWSTR sz
             return hRes;
         }
     }
-    return Connect((LPCSTR)cStrServerHostA, (LPCSTR)cStrUserNameA, (LPCSTR)cStrUserPasswordA, (LPCSTR)cStrDatabaseNameA,
-                   wServerPort, lpOptions);
+    return Connect((LPCSTR)cStrServerHostA, (LPCSTR)cStrUserNameA, (LPCSTR)cStrUserPasswordA, (LPCSTR)cStrDatabaseNameA, wServerPort,
+                   lpOptions);
 }
 
 VOID CMySqlConnector::Disconnect()
@@ -514,8 +506,7 @@ LPCSTR CMySqlConnector::GetSqlState() const
     return (lpInternalData != NULL) ? mysql_data->szLastDbSqlStateA : "00000";
 }
 
-HRESULT CMySqlConnector::QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQueryLen,
-                                      _In_opt_ CFieldList *lpInputFieldsList)
+HRESULT CMySqlConnector::QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQueryLen, _In_opt_ CFieldList *lpInputFieldsList)
 {
     SIZE_T nParamsCount, nRetryCount;
 
@@ -553,7 +544,7 @@ try_again:
     mysql_data->lpStmt = fn_mysql_stmt_init(mysql_data->lpDB);
     if (mysql_data->lpStmt == NULL)
     {
-    err_nomem:
+err_nomem:
         QueryClose();
         mysql_data->SetCustomErrno(ER_OUTOFMEMORY, "Out of memory", "HY001");
         return E_OUTOFMEMORY;
@@ -570,7 +561,7 @@ try_again:
             // but the standard query does not support input bindings
             if (nParamsCount > 0)
             {
-            err_invalidarg:
+err_invalidarg:
                 QueryClose();
                 mysql_data->ClearErrno();
                 return E_INVALIDARG;
@@ -595,7 +586,7 @@ try_again:
         }
         if (mysql_data->nLastDbErr != 0)
         {
-        on_error:
+on_error:
             if (nRetryCount > 1 && mysql_data->nLastDbErr == ER_CANT_LOCK)
             {
                 nRetryCount--;
@@ -638,40 +629,40 @@ try_again:
                 lpField = lpInputFieldsList->GetElementAt(nParamIdx);
                 switch (lpField->GetType())
                 {
-                case eFieldType::Null:
-                    nSize += sizeof(my_bool);
-                    break;
+                    case eFieldType::Null:
+                        nSize += sizeof(my_bool);
+                        break;
 
-                case eFieldType::Boolean:
-                    nSize += sizeof(LONG);
-                    break;
+                    case eFieldType::Boolean:
+                        nSize += sizeof(LONG);
+                        break;
 
-                case eFieldType::UInt32:
-                case eFieldType::Int32:
-                    nSize += sizeof(ULONG);
-                    break;
+                    case eFieldType::UInt32:
+                    case eFieldType::Int32:
+                        nSize += sizeof(ULONG);
+                        break;
 
-                case eFieldType::UInt64:
-                case eFieldType::Int64:
-                    nSize += sizeof(ULONGLONG);
-                    break;
+                    case eFieldType::UInt64:
+                    case eFieldType::Int64:
+                        nSize += sizeof(ULONGLONG);
+                        break;
 
-                case eFieldType::Double:
-                    nSize += sizeof(double);
-                    break;
+                    case eFieldType::Double:
+                        nSize += sizeof(double);
+                        break;
 
-                case eFieldType::String:
-                case eFieldType::Blob:
-                    break;
+                    case eFieldType::String:
+                    case eFieldType::Blob:
+                        break;
 
-                case eFieldType::DateTime:
-                    nSize += sizeof(MYSQL_TIME);
-                    break;
+                    case eFieldType::DateTime:
+                        nSize += sizeof(MYSQL_TIME);
+                        break;
 
-                default:
-                    QueryClose();
-                    mysql_data->ClearErrno();
-                    return E_INVALIDARG;
+                    default:
+                        QueryClose();
+                        mysql_data->ClearErrno();
+                        return E_INVALIDARG;
                 }
             }
 
@@ -690,111 +681,110 @@ try_again:
                 lpBind->buffer = lpPtr;
                 switch (lpField->GetType())
                 {
-                case eFieldType::Null:
-                    lpBind->buffer_type = MYSQL_TYPE_NULL;
-                    lpBind->is_null = (my_bool *)lpPtr;
-                    *(lpBind->is_null) = 1;
+                    case eFieldType::Null:
+                        lpBind->buffer_type = MYSQL_TYPE_NULL;
+                        lpBind->is_null = (my_bool *)lpPtr;
+                        *(lpBind->is_null) = 1;
 
-                    lpPtr += sizeof(my_bool);
-                    break;
+                        lpPtr += sizeof(my_bool);
+                        break;
 
-                case eFieldType::Boolean:
-                    lpBind->buffer_type = MYSQL_TYPE_LONG;
-                    lpBind->buffer_length = (ULONG)sizeof(LONG);
-                    *((LONG *)(lpBind->buffer)) = (lpField->GetBoolean() != FALSE) ? 1 : 0;
+                    case eFieldType::Boolean:
+                        lpBind->buffer_type = MYSQL_TYPE_LONG;
+                        lpBind->buffer_length = (ULONG)sizeof(LONG);
+                        *((LONG *)(lpBind->buffer)) = (lpField->GetBoolean() != FALSE) ? 1 : 0;
 
-                    lpPtr += sizeof(LONG);
-                    break;
+                        lpPtr += sizeof(LONG);
+                        break;
 
-                case eFieldType::UInt32:
-                case eFieldType::Int32:
-                    lpBind->buffer_type = MYSQL_TYPE_LONG;
-                    lpBind->buffer_length = (ULONG)sizeof(LONG);
-                    if (lpField->GetType() == eFieldType::UInt32)
-                    {
-                        lpBind->is_unsigned = 1;
-                        *((ULONG *)(lpBind->buffer)) = lpField->GetUInt32();
-                    }
-                    else
-                    {
-                        *((LONG *)(lpBind->buffer)) = lpField->GetInt32();
-                    }
+                    case eFieldType::UInt32:
+                    case eFieldType::Int32:
+                        lpBind->buffer_type = MYSQL_TYPE_LONG;
+                        lpBind->buffer_length = (ULONG)sizeof(LONG);
+                        if (lpField->GetType() == eFieldType::UInt32)
+                        {
+                            lpBind->is_unsigned = 1;
+                            *((ULONG *)(lpBind->buffer)) = lpField->GetUInt32();
+                        }
+                        else
+                        {
+                            *((LONG *)(lpBind->buffer)) = lpField->GetInt32();
+                        }
 
-                    lpPtr += sizeof(LONG);
-                    break;
+                        lpPtr += sizeof(LONG);
+                        break;
 
-                case eFieldType::UInt64:
-                case eFieldType::Int64:
-                    lpBind->buffer_type = MYSQL_TYPE_LONGLONG;
-                    lpBind->buffer_length = (ULONG)sizeof(ULONGLONG);
-                    if (lpField->GetType() == eFieldType::UInt64)
-                    {
-                        lpBind->is_unsigned = 1;
-                        *((ULONGLONG *)(lpBind->buffer)) = lpField->GetUInt64();
-                    }
-                    else
-                    {
-                        *((LONGLONG *)(lpBind->buffer)) = lpField->GetInt64();
-                    }
+                    case eFieldType::UInt64:
+                    case eFieldType::Int64:
+                        lpBind->buffer_type = MYSQL_TYPE_LONGLONG;
+                        lpBind->buffer_length = (ULONG)sizeof(ULONGLONG);
+                        if (lpField->GetType() == eFieldType::UInt64)
+                        {
+                            lpBind->is_unsigned = 1;
+                            *((ULONGLONG *)(lpBind->buffer)) = lpField->GetUInt64();
+                        }
+                        else
+                        {
+                            *((LONGLONG *)(lpBind->buffer)) = lpField->GetInt64();
+                        }
 
-                    lpPtr += sizeof(LONGLONG);
-                    break;
+                        lpPtr += sizeof(LONGLONG);
+                        break;
 
-                case eFieldType::Double:
-                    lpBind->buffer_type = MYSQL_TYPE_DOUBLE;
-                    lpBind->buffer_length = (ULONG)sizeof(double);
-                    *((double *)(lpBind->buffer)) = lpField->GetDouble();
+                    case eFieldType::Double:
+                        lpBind->buffer_type = MYSQL_TYPE_DOUBLE;
+                        lpBind->buffer_length = (ULONG)sizeof(double);
+                        *((double *)(lpBind->buffer)) = lpField->GetDouble();
 
-                    lpPtr += sizeof(double);
-                    break;
+                        lpPtr += sizeof(double);
+                        break;
 
-                case eFieldType::String:
-                case eFieldType::Blob:
-                    // we don't copy the data so we need to keep a reference to the source field
-                    if (mysql_data->aInputFieldsList.AddElement(lpField) == FALSE)
-                    {
-                        mysql_data->SetCustomErrno(ER_OUTOFMEMORY, "Out of memory", "HY001");
-                        QueryClose();
-                        return E_OUTOFMEMORY;
-                    }
-                    lpField->AddRef();
+                    case eFieldType::String:
+                    case eFieldType::Blob:
+                        // we don't copy the data so we need to keep a reference to the source field
+                        if (mysql_data->aInputFieldsList.AddElement(lpField) == FALSE)
+                        {
+                            mysql_data->SetCustomErrno(ER_OUTOFMEMORY, "Out of memory", "HY001");
+                            QueryClose();
+                            return E_OUTOFMEMORY;
+                        }
+                        lpField->AddRef();
 
-                    if (lpField->GetType() == eFieldType::String)
-                    {
-                        lpBind->buffer_type = MYSQL_TYPE_VAR_STRING;
-                        lpBind->buffer = (LPVOID)(lpField->GetString());
-                    }
-                    else
-                    {
-                        lpBind->buffer_type = MYSQL_TYPE_BLOB;
-                        lpBind->buffer = (LPVOID)(lpField->GetBlob());
-                    }
-                    lpBind->buffer_length = (ULONG)(lpField->GetLength());
-                    break;
+                        if (lpField->GetType() == eFieldType::String)
+                        {
+                            lpBind->buffer_type = MYSQL_TYPE_VAR_STRING;
+                            lpBind->buffer = (LPVOID)(lpField->GetString());
+                        }
+                        else
+                        {
+                            lpBind->buffer_type = MYSQL_TYPE_BLOB;
+                            lpBind->buffer = (LPVOID)(lpField->GetBlob());
+                        }
+                        lpBind->buffer_length = (ULONG)(lpField->GetLength());
+                        break;
 
-                case eFieldType::DateTime:
-                {
-                    int nYear, nMonth, nDay, nHours, nMinutes, nSeconds, nMilliSeconds;
+                    case eFieldType::DateTime:
+                        {
+                            int nYear, nMonth, nDay, nHours, nMinutes, nSeconds, nMilliSeconds;
 
-                    lpField->GetDateTime()->GetDateTime(&nYear, &nMonth, &nDay, &nHours, &nMinutes, &nSeconds,
-                                                        &nMilliSeconds);
+                            lpField->GetDateTime()->GetDateTime(&nYear, &nMonth, &nDay, &nHours, &nMinutes, &nSeconds, &nMilliSeconds);
 
-                    lpBind->buffer_type = MYSQL_TYPE_DATETIME;
-                    lpBind->buffer_length = (ULONG)sizeof(MYSQL_TIME);
+                            lpBind->buffer_type = MYSQL_TYPE_DATETIME;
+                            lpBind->buffer_length = (ULONG)sizeof(MYSQL_TIME);
 
-                    ((MYSQL_TIME *)lpPtr)->day = (UINT)nDay;
-                    ((MYSQL_TIME *)lpPtr)->month = (UINT)nMonth;
-                    ((MYSQL_TIME *)lpPtr)->year = (UINT)nYear;
-                    ((MYSQL_TIME *)lpPtr)->hour = (UINT)nHours;
-                    ((MYSQL_TIME *)lpPtr)->minute = (UINT)nMinutes;
-                    ((MYSQL_TIME *)lpPtr)->second = (UINT)nSeconds;
-                    ((MYSQL_TIME *)lpPtr)->second_part = (ULONG)nMilliSeconds;
-                    ((MYSQL_TIME *)lpPtr)->neg = 0;
-                    ((MYSQL_TIME *)lpPtr)->time_type = MYSQL_TIMESTAMP_DATETIME;
+                            ((MYSQL_TIME *)lpPtr)->day = (UINT)nDay;
+                            ((MYSQL_TIME *)lpPtr)->month = (UINT)nMonth;
+                            ((MYSQL_TIME *)lpPtr)->year = (UINT)nYear;
+                            ((MYSQL_TIME *)lpPtr)->hour = (UINT)nHours;
+                            ((MYSQL_TIME *)lpPtr)->minute = (UINT)nMinutes;
+                            ((MYSQL_TIME *)lpPtr)->second = (UINT)nSeconds;
+                            ((MYSQL_TIME *)lpPtr)->second_part = (ULONG)nMilliSeconds;
+                            ((MYSQL_TIME *)lpPtr)->neg = 0;
+                            ((MYSQL_TIME *)lpPtr)->time_type = MYSQL_TIMESTAMP_DATETIME;
 
-                    lpPtr += sizeof(MYSQL_TIME);
-                }
-                break;
+                            lpPtr += sizeof(MYSQL_TIME);
+                        }
+                        break;
                 }
             }
 
@@ -921,72 +911,72 @@ after_query:
                     {
                         switch (lpFields[i].type)
                         {
-                        case MYSQL_TYPE_TINY_BLOB:
-                        case MYSQL_TYPE_MEDIUM_BLOB:
-                        case MYSQL_TYPE_LONG_BLOB:
-                        case MYSQL_TYPE_BLOB:
-                            break;
+                            case MYSQL_TYPE_TINY_BLOB:
+                            case MYSQL_TYPE_MEDIUM_BLOB:
+                            case MYSQL_TYPE_LONG_BLOB:
+                            case MYSQL_TYPE_BLOB:
+                                break;
 
-                        case MYSQL_TYPE_TINY:
-                        case MYSQL_TYPE_SHORT:
-                        case MYSQL_TYPE_LONG:
-                        case MYSQL_TYPE_INT24:
-                        case MYSQL_TYPE_YEAR:
-                            lpBind[i].buffer_type = MYSQL_TYPE_LONG;
-                            lpBind[i].buffer_length = sizeof(LONG);
-                            break;
+                            case MYSQL_TYPE_TINY:
+                            case MYSQL_TYPE_SHORT:
+                            case MYSQL_TYPE_LONG:
+                            case MYSQL_TYPE_INT24:
+                            case MYSQL_TYPE_YEAR:
+                                lpBind[i].buffer_type = MYSQL_TYPE_LONG;
+                                lpBind[i].buffer_length = sizeof(LONG);
+                                break;
 
-                        case MYSQL_TYPE_LONGLONG:
-                            lpBind[i].buffer_length = sizeof(LONGLONG);
-                            break;
+                            case MYSQL_TYPE_LONGLONG:
+                                lpBind[i].buffer_length = sizeof(LONGLONG);
+                                break;
 
-                        case MYSQL_TYPE_BIT:
-                            lpBind[i].buffer_type = MYSQL_TYPE_LONGLONG;
-                            lpBind[i].buffer_length = sizeof(LONGLONG);
-                            break;
+                            case MYSQL_TYPE_BIT:
+                                lpBind[i].buffer_type = MYSQL_TYPE_LONGLONG;
+                                lpBind[i].buffer_length = sizeof(LONGLONG);
+                                break;
 
-                        case MYSQL_TYPE_FLOAT:
-                            lpBind[i].buffer_length = sizeof(float);
-                            break;
+                            case MYSQL_TYPE_FLOAT:
+                                lpBind[i].buffer_length = sizeof(float);
+                                break;
 
-                        case MYSQL_TYPE_DOUBLE:
-                        case MYSQL_TYPE_DECIMAL:
-                        case MYSQL_TYPE_NEWDECIMAL:
-                            lpBind[i].buffer_type = MYSQL_TYPE_DOUBLE;
-                            lpBind[i].buffer_length = sizeof(double);
-                            break;
+                            case MYSQL_TYPE_DOUBLE:
+                            case MYSQL_TYPE_DECIMAL:
+                            case MYSQL_TYPE_NEWDECIMAL:
+                                lpBind[i].buffer_type = MYSQL_TYPE_DOUBLE;
+                                lpBind[i].buffer_length = sizeof(double);
+                                break;
 
-                        case MYSQL_TYPE_TIMESTAMP:
-                        case MYSQL_TYPE_DATETIME:
-                            lpBind[i].buffer_type = MYSQL_TYPE_DATETIME;
-                            lpBind[i].buffer_length = sizeof(MYSQL_TIME);
-                            break;
+                            case MYSQL_TYPE_TIMESTAMP:
+                            case MYSQL_TYPE_DATETIME:
+                                lpBind[i].buffer_type = MYSQL_TYPE_DATETIME;
+                                lpBind[i].buffer_length = sizeof(MYSQL_TIME);
+                                break;
 
-                        case MYSQL_TYPE_DATE:
-                        case MYSQL_TYPE_TIME:
-                            lpBind[i].buffer_length = sizeof(MYSQL_TIME);
-                            break;
+                            case MYSQL_TYPE_DATE:
+                            case MYSQL_TYPE_TIME:
+                                lpBind[i].buffer_length = sizeof(MYSQL_TIME);
+                                break;
 
-                        case MYSQL_TYPE_NEWDATE:
-                            lpBind[i].buffer_type = MYSQL_TYPE_DATE;
-                            lpBind[i].buffer_length = sizeof(MYSQL_TIME);
-                            break;
+                            case MYSQL_TYPE_NEWDATE:
+                                lpBind[i].buffer_type = MYSQL_TYPE_DATE;
+                                lpBind[i].buffer_length = sizeof(MYSQL_TIME);
+                                break;
 
-                        case MYSQL_TYPE_ENUM:
-                        case MYSQL_TYPE_VARCHAR:
-                        case MYSQL_TYPE_VAR_STRING:
-                        case MYSQL_TYPE_STRING:
-                        case MYSQL_TYPE_SET:
-                        case MYSQL_TYPE_JSON:
-                            lpBind[i].buffer_type = MYSQL_TYPE_VAR_STRING;
-                            break;
+                            case MYSQL_TYPE_ENUM:
+                            case MYSQL_TYPE_VARCHAR:
+                            case MYSQL_TYPE_VAR_STRING:
+                            case MYSQL_TYPE_STRING:
+                            case MYSQL_TYPE_SET:
+                            case MYSQL_TYPE_JSON:
+                                lpBind[i].buffer_type = MYSQL_TYPE_VAR_STRING;
+                                break;
 
-                        case MYSQL_TYPE_NULL:
-                            break;
+                            case MYSQL_TYPE_NULL:
+                                break;
 
-                        default:
-                            lpBind[i].buffer_type = MYSQL_TYPE_NULL;
-                            break;
+                            default:
+                                lpBind[i].buffer_type = MYSQL_TYPE_NULL;
+                                break;
                         }
                     }
                 }
@@ -1110,7 +1100,7 @@ HRESULT CMySqlConnector::FetchRow()
         lpnRowLengths = fn_mysql_fetch_lengths(mysql_data->lpResultSet);
         if (lpnRowLengths == NULL)
         {
-        err_nomem:
+err_nomem:
             mysql_data->SetCustomErrno(ER_OUTOFMEMORY, "Out of memory", "HY001");
             QueryClose();
             return E_OUTOFMEMORY;
@@ -1125,254 +1115,250 @@ HRESULT CMySqlConnector::FetchRow()
                 sA = lpRow[i];
                 switch (lpColumn->nType)
                 {
-                case MYSQL_TYPE_BIT:
-                    u.ull = 0;
-                    if (lpnRowLengths[i] >= 1 && lpnRowLengths[i] <= 8)
-                    {
-                        ::MxMemSet(aTempBuf, 0, 8);
-                        ::MxMemCopy(aTempBuf, lpRow[i], lpnRowLengths[i]);
+                    case MYSQL_TYPE_BIT:
+                        u.ull = 0;
+                        if (lpnRowLengths[i] >= 1 && lpnRowLengths[i] <= 8)
+                        {
+                            ::MxMemSet(aTempBuf, 0, 8);
+                            ::MxMemCopy(aTempBuf, lpRow[i], lpnRowLengths[i]);
+                            if ((lpColumn->nFlags & UNSIGNED_FLAG) != 0)
+                            {
+                                u.ull = *((ULONGLONG *)aTempBuf); // SAFE because MySQL is little endian
+                            }
+                            else
+                            {
+                                if ((aTempBuf[lpnRowLengths[i] - 1] & 0x80) != 0)
+                                {
+                                    ::MxMemSet(aTempBuf + lpnRowLengths[i], 0xFF, 8 - lpnRowLengths[i]);
+                                }
+                                u.ll = *((LONGLONG *)aTempBuf); // SAFE because MySQL is little endian
+                            }
+                        }
                         if ((lpColumn->nFlags & UNSIGNED_FLAG) != 0)
                         {
-                            u.ull = *((ULONGLONG *)aTempBuf); // SAFE because MySQL is little endian
+                            lpColumn->cField->SetUInt64(u.ull);
                         }
                         else
                         {
-                            if ((aTempBuf[lpnRowLengths[i] - 1] & 0x80) != 0)
-                            {
-                                ::MxMemSet(aTempBuf + lpnRowLengths[i], 0xFF, 8 - lpnRowLengths[i]);
-                            }
-                            u.ll = *((LONGLONG *)aTempBuf); // SAFE because MySQL is little endian
+                            lpColumn->cField->SetInt64(u.ll);
                         }
-                    }
-                    if ((lpColumn->nFlags & UNSIGNED_FLAG) != 0)
-                    {
-                        lpColumn->cField->SetUInt64(u.ull);
-                    }
-                    else
-                    {
-                        lpColumn->cField->SetInt64(u.ll);
-                    }
-                    break;
+                        break;
 
-                case MYSQL_TYPE_TINY:
-                case MYSQL_TYPE_SHORT:
-                case MYSQL_TYPE_LONG:
-                case MYSQL_TYPE_INT24:
-                case MYSQL_TYPE_YEAR:
-                    if ((lpColumn->nFlags & UNSIGNED_FLAG) != 0)
-                    {
-                        u.ul = strtoul(sA, &szEndPosA, 10);
-                        lpColumn->cField->SetUInt32(u.ul);
-                    }
-                    else
-                    {
-                        u.l = strtol(sA, &szEndPosA, 10);
-                        lpColumn->cField->SetInt32(u.l);
-                    }
-                    break;
-
-                case MYSQL_TYPE_LONGLONG:
-                    if ((lpColumn->nFlags & UNSIGNED_FLAG) != 0)
-                    {
-                        u.ull = _strtoui64(sA, &szEndPosA, 10);
-                        lpColumn->cField->SetUInt64(u.ull);
-                    }
-                    else
-                    {
-                        u.ll = _strtoi64(sA, &szEndPosA, 10);
-                        lpColumn->cField->SetInt64(u.ll);
-                    }
-                    break;
-
-                case MYSQL_TYPE_FLOAT:
-                case MYSQL_TYPE_DECIMAL:
-                case MYSQL_TYPE_DOUBLE:
-                case MYSQL_TYPE_NEWDECIMAL:
-                    hRes = StrToDoubleA(sA, (SIZE_T)-1, &(u.dbl));
-                    if (FAILED(hRes))
-                    {
-                    on_error:
-                        if (hRes == E_OUTOFMEMORY)
+                    case MYSQL_TYPE_TINY:
+                    case MYSQL_TYPE_SHORT:
+                    case MYSQL_TYPE_LONG:
+                    case MYSQL_TYPE_INT24:
+                    case MYSQL_TYPE_YEAR:
+                        if ((lpColumn->nFlags & UNSIGNED_FLAG) != 0)
                         {
-                            goto err_nomem;
+                            u.ul = strtoul(sA, &szEndPosA, 10);
+                            lpColumn->cField->SetUInt32(u.ul);
                         }
-                        mysql_data->ClearErrno();
-                        QueryClose();
-                        return hRes;
-                    }
-                    lpColumn->cField->SetDouble(u.dbl);
-                    break;
+                        else
+                        {
+                            u.l = strtol(sA, &szEndPosA, 10);
+                            lpColumn->cField->SetInt32(u.l);
+                        }
+                        break;
 
-                case MYSQL_TYPE_NULL:
-                    lpColumn->cField->SetNull();
-                    break;
+                    case MYSQL_TYPE_LONGLONG:
+                        if ((lpColumn->nFlags & UNSIGNED_FLAG) != 0)
+                        {
+                            u.ull = _strtoui64(sA, &szEndPosA, 10);
+                            lpColumn->cField->SetUInt64(u.ull);
+                        }
+                        else
+                        {
+                            u.ll = _strtoi64(sA, &szEndPosA, 10);
+                            lpColumn->cField->SetInt64(u.ll);
+                        }
+                        break;
 
-                case MYSQL_TYPE_DATE:
-                case MYSQL_TYPE_NEWDATE:
-                    //"YYYY-MM-DD"
-                    if (lpnRowLengths[i] != 10)
-                    {
-                    err_invdata:
-                        mysql_data->ClearErrno();
-                        QueryClose();
-                        return MX_E_InvalidData;
-                    }
+                    case MYSQL_TYPE_FLOAT:
+                    case MYSQL_TYPE_DECIMAL:
+                    case MYSQL_TYPE_DOUBLE:
+                    case MYSQL_TYPE_NEWDECIMAL:
+                        hRes = StrToDoubleA(sA, (SIZE_T)-1, &(u.dbl));
+                        if (FAILED(hRes))
+                        {
+on_error:
+                            if (hRes == E_OUTOFMEMORY)
+                            {
+                                goto err_nomem;
+                            }
+                            mysql_data->ClearErrno();
+                            QueryClose();
+                            return hRes;
+                        }
+                        lpColumn->cField->SetDouble(u.dbl);
+                        break;
 
-                    if (MX::StrNCompareA(sA, "0000-00-00", 10) == 0)
-                    {
+                    case MYSQL_TYPE_NULL:
                         lpColumn->cField->SetNull();
                         break;
-                    }
 
-                    if (sA[0] < '0' || sA[0] > '9' || sA[1] < '0' || sA[1] > '9' || sA[2] < '0' || sA[2] > '9' ||
-                        sA[3] < '0' || sA[3] > '9' || sA[4] != '-' || sA[5] < '0' || sA[5] > '9' || sA[6] < '0' ||
-                        sA[6] > '9' || sA[7] != '-' || sA[8] < '0' || sA[8] > '9' || sA[9] < '0' || sA[9] > '9')
-                    {
-                        goto err_invdata;
-                    }
+                    case MYSQL_TYPE_DATE:
+                    case MYSQL_TYPE_NEWDATE:
+                        //"YYYY-MM-DD"
+                        if (lpnRowLengths[i] != 10)
+                        {
+err_invdata:
+                            mysql_data->ClearErrno();
+                            QueryClose();
+                            return MX_E_InvalidData;
+                        }
 
-                    hRes = cDt.SetDateTime((int)(sA[0] - '0') * 1000 + (int)(sA[1] - '0') * 100 +
-                                               (int)(sA[2] - '0') * 10 + (int)(sA[3] - '0'),
-                                           (int)(sA[5] - '0') * 10 + (int)(sA[6] - '0'),
-                                           (int)(sA[8] - '0') * 10 + (int)(sA[9] - '0'), 0, 0, 0, 0);
-                    if (SUCCEEDED(hRes))
-                    {
-                        hRes = lpColumn->cField->SetDateTime(cDt);
-                    }
-                    if (FAILED(hRes))
-                    {
-                        goto on_error;
-                    }
-                    break;
+                        if (MX::StrNCompareA(sA, "0000-00-00", 10) == 0)
+                        {
+                            lpColumn->cField->SetNull();
+                            break;
+                        }
 
-                case MYSQL_TYPE_TIME:
-                    //"HH:MM:SS[.ffff]"
-                    if (lpnRowLengths[i] < 8)
-                    {
-                        goto err_invdata;
-                    }
-
-                    if (sA[0] < '0' || sA[0] > '9' || sA[1] < '0' || sA[1] > '9' || sA[2] != ':' || sA[3] < '0' ||
-                        sA[3] > '9' || sA[4] < '0' || sA[4] > '9' || sA[5] != ':' || sA[6] < '0' || sA[6] > '9' ||
-                        sA[7] < '0' || sA[7] > '9')
-                    {
-                        goto err_invdata;
-                    }
-
-                    u.l = 0;
-                    if (lpnRowLengths[i] >= 9)
-                    {
-                        if (sA[8] != '.')
+                        if (sA[0] < '0' || sA[0] > '9' || sA[1] < '0' || sA[1] > '9' || sA[2] < '0' || sA[2] > '9' ||
+                            sA[3] < '0' || sA[3] > '9' || sA[4] != '-' || sA[5] < '0' || sA[5] > '9' || sA[6] < '0' ||
+                            sA[6] > '9' || sA[7] != '-' || sA[8] < '0' || sA[8] > '9' || sA[9] < '0' || sA[9] > '9')
                         {
                             goto err_invdata;
                         }
 
-                        for (SIZE_T k = 9; k < 12 && k < lpnRowLengths[i]; k++)
+                        hRes = cDt.SetDateTime((int)(sA[0] - '0') * 1000 + (int)(sA[1] - '0') * 100 +
+                                                   (int)(sA[2] - '0') * 10 + (int)(sA[3] - '0'), (int)(sA[5] - '0') * 10 + (int)(sA[6] - '0'),
+                                               (int)(sA[8] - '0') * 10 + (int)(sA[9] - '0'), 0, 0, 0, 0);
+                        if (SUCCEEDED(hRes))
                         {
-                            if (sA[k] < '0' || sA[k] > '9')
-                            {
-                                break;
-                            }
-                            u.l += (int)(sA[k] - '0') * ((k == 9) ? 100 : ((k == 10) ? 10 : 1));
+                            hRes = lpColumn->cField->SetDateTime(cDt);
                         }
-                    }
-
-                    hRes = cDt.SetFromNow(FALSE);
-                    if (SUCCEEDED(hRes))
-                    {
-                        hRes = cDt.SetTime((int)(sA[0] - '0') * 10 + (int)(sA[1] - '0'),
-                                           (int)(sA[3] - '0') * 10 + (int)(sA[4] - '0'),
-                                           (int)(sA[6] - '0') * 10 + (int)(sA[7] - '0'), (int)(u.l));
-                    }
-                    if (SUCCEEDED(hRes))
-                    {
-                        hRes = lpColumn->cField->SetDateTime(cDt);
-                    }
-                    if (FAILED(hRes))
-                    {
-                        goto on_error;
-                    }
-                    break;
-
-                case MYSQL_TYPE_TIMESTAMP:
-                case MYSQL_TYPE_DATETIME:
-                    //"YYYY-MM-DD HH:MM:SS[.ffff]"
-                    if (lpnRowLengths[i] < 19)
-                    {
-                        goto err_invdata;
-                    }
-
-                    if (sA[0] < '0' || sA[0] > '9' || sA[1] < '0' || sA[1] > '9' || sA[2] < '0' || sA[2] > '9' ||
-                        sA[3] < '0' || sA[3] > '9' || sA[4] != '-' || sA[5] < '0' || sA[5] > '9' || sA[6] < '0' ||
-                        sA[6] > '9' || sA[7] != '-' || sA[8] < '0' || sA[8] > '9' || sA[9] < '0' || sA[9] > '9' ||
-                        sA[10] != ' ' || sA[11] < '0' || sA[11] > '9' || sA[12] < '0' || sA[12] > '9' ||
-                        sA[13] != ':' || sA[14] < '0' || sA[14] > '9' || sA[15] < '0' || sA[15] > '9' ||
-                        sA[16] != ':' || sA[17] < '0' || sA[17] > '9' || sA[18] < '0' || sA[18] > '9')
-                    {
-                        goto err_invdata;
-                    }
-
-                    u.l = 0;
-                    if (lpnRowLengths[i] >= 20)
-                    {
-                        if (sA[19] == '.')
-                        {
-                            goto err_invdata;
-                        }
-                        for (SIZE_T k = 20; k < 23 && k < lpnRowLengths[i]; k++)
-                        {
-                            if (sA[k] < '0' || sA[k] > '9')
-                            {
-                                break;
-                            }
-                            u.l += (int)(sA[k] - '0') * ((k == 20) ? 100 : ((k == 21) ? 10 : 1));
-                        }
-                    }
-
-                    hRes = cDt.SetDateTime(
-                        (int)(sA[0] - '0') * 1000 + (int)(sA[1] - '0') * 100 + (int)(sA[2] - '0') * 10 +
-                            (int)(sA[3] - '0'),
-                        (int)(sA[5] - '0') * 10 + (int)(sA[6] - '0'), (int)(sA[8] - '0') * 10 + (int)(sA[9] - '0'),
-                        (int)(sA[11] - '0') * 10 + (int)(sA[12] - '0'), (int)(sA[14] - '0') * 10 + (int)(sA[15] - '0'),
-                        (int)(sA[17] - '0') * 10 + (int)(sA[18] - '0'), (int)(u.l));
-                    if (SUCCEEDED(hRes))
-                    {
-                        hRes = lpColumn->cField->SetDateTime(cDt);
-                    }
-                    if (FAILED(hRes))
-                    {
-                        goto on_error;
-                    }
-                    break;
-
-                case MYSQL_TYPE_TINY_BLOB:
-                case MYSQL_TYPE_MEDIUM_BLOB:
-                case MYSQL_TYPE_LONG_BLOB:
-                case MYSQL_TYPE_BLOB:
-                    if ((lpColumn->nFlags & BINARY_FLAG) != 0)
-                    {
-                        hRes = lpColumn->cField->SetBlob(lpRow[i], (SIZE_T)(lpnRowLengths[i]));
                         if (FAILED(hRes))
                         {
                             goto on_error;
                         }
                         break;
-                    }
-                    // fall into default string handling if not a binary blob (a.k.a. TEXT)
 
-                // case MYSQL_TYPE_ENUM:
-                // case MYSQL_TYPE_SET:
-                // case MYSQL_TYPE_VARCHAR:
-                // case MYSQL_TYPE_VAR_STRING:
-                // case MYSQL_TYPE_STRING:
-                // case MYSQL_TYPE_GEOMETRY:
-                default:
-                    hRes = lpColumn->cField->SetString((LPCSTR)lpRow[i], (SIZE_T)lpnRowLengths[i]);
-                    if (FAILED(hRes))
-                    {
-                        goto on_error;
-                    }
-                    break;
+                    case MYSQL_TYPE_TIME:
+                        //"HH:MM:SS[.ffff]"
+                        if (lpnRowLengths[i] < 8)
+                        {
+                            goto err_invdata;
+                        }
+
+                        if (sA[0] < '0' || sA[0] > '9' || sA[1] < '0' || sA[1] > '9' || sA[2] != ':' || sA[3] < '0' ||
+                            sA[3] > '9' || sA[4] < '0' || sA[4] > '9' || sA[5] != ':' || sA[6] < '0' || sA[6] > '9' ||
+                            sA[7] < '0' || sA[7] > '9')
+                        {
+                            goto err_invdata;
+                        }
+
+                        u.l = 0;
+                        if (lpnRowLengths[i] >= 9)
+                        {
+                            if (sA[8] != '.')
+                            {
+                                goto err_invdata;
+                            }
+
+                            for (SIZE_T k = 9; k < 12 && k < lpnRowLengths[i]; k++)
+                            {
+                                if (sA[k] < '0' || sA[k] > '9')
+                                {
+                                    break;
+                                }
+                                u.l += (int)(sA[k] - '0') * ((k == 9) ? 100 : ((k == 10) ? 10 : 1));
+                            }
+                        }
+
+                        hRes = cDt.SetFromNow(FALSE);
+                        if (SUCCEEDED(hRes))
+                        {
+                            hRes = cDt.SetTime((int)(sA[0] - '0') * 10 + (int)(sA[1] - '0'), (int)(sA[3] - '0') * 10 + (int)(sA[4] - '0'),
+                                               (int)(sA[6] - '0') * 10 + (int)(sA[7] - '0'), (int)(u.l));
+                        }
+                        if (SUCCEEDED(hRes))
+                        {
+                            hRes = lpColumn->cField->SetDateTime(cDt);
+                        }
+                        if (FAILED(hRes))
+                        {
+                            goto on_error;
+                        }
+                        break;
+
+                    case MYSQL_TYPE_TIMESTAMP:
+                    case MYSQL_TYPE_DATETIME:
+                        //"YYYY-MM-DD HH:MM:SS[.ffff]"
+                        if (lpnRowLengths[i] < 19)
+                        {
+                            goto err_invdata;
+                        }
+
+                        if (sA[0] < '0' || sA[0] > '9' || sA[1] < '0' || sA[1] > '9' || sA[2] < '0' || sA[2] > '9' ||
+                            sA[3] < '0' || sA[3] > '9' || sA[4] != '-' || sA[5] < '0' || sA[5] > '9' || sA[6] < '0' ||
+                            sA[6] > '9' || sA[7] != '-' || sA[8] < '0' || sA[8] > '9' || sA[9] < '0' || sA[9] > '9' ||
+                            sA[10] != ' ' || sA[11] < '0' || sA[11] > '9' || sA[12] < '0' || sA[12] > '9' ||
+                            sA[13] != ':' || sA[14] < '0' || sA[14] > '9' || sA[15] < '0' || sA[15] > '9' ||
+                            sA[16] != ':' || sA[17] < '0' || sA[17] > '9' || sA[18] < '0' || sA[18] > '9')
+                        {
+                            goto err_invdata;
+                        }
+
+                        u.l = 0;
+                        if (lpnRowLengths[i] >= 20)
+                        {
+                            if (sA[19] == '.')
+                            {
+                                goto err_invdata;
+                            }
+                            for (SIZE_T k = 20; k < 23 && k < lpnRowLengths[i]; k++)
+                            {
+                                if (sA[k] < '0' || sA[k] > '9')
+                                {
+                                    break;
+                                }
+                                u.l += (int)(sA[k] - '0') * ((k == 20) ? 100 : ((k == 21) ? 10 : 1));
+                            }
+                        }
+
+                        hRes = cDt.SetDateTime((int)(sA[0] - '0') * 1000 + (int)(sA[1] - '0') * 100 + (int)(sA[2] - '0') * 10 +
+                                (int)(sA[3] - '0'), (int)(sA[5] - '0') * 10 + (int)(sA[6] - '0'), (int)(sA[8] - '0') * 10 + (int)(sA[9] - '0'),
+                            (int)(sA[11] - '0') * 10 + (int)(sA[12] - '0'), (int)(sA[14] - '0') * 10 + (int)(sA[15] - '0'),
+                            (int)(sA[17] - '0') * 10 + (int)(sA[18] - '0'), (int)(u.l));
+                        if (SUCCEEDED(hRes))
+                        {
+                            hRes = lpColumn->cField->SetDateTime(cDt);
+                        }
+                        if (FAILED(hRes))
+                        {
+                            goto on_error;
+                        }
+                        break;
+
+                    case MYSQL_TYPE_TINY_BLOB:
+                    case MYSQL_TYPE_MEDIUM_BLOB:
+                    case MYSQL_TYPE_LONG_BLOB:
+                    case MYSQL_TYPE_BLOB:
+                        if ((lpColumn->nFlags & BINARY_FLAG) != 0)
+                        {
+                            hRes = lpColumn->cField->SetBlob(lpRow[i], (SIZE_T)(lpnRowLengths[i]));
+                            if (FAILED(hRes))
+                            {
+                                goto on_error;
+                            }
+                            break;
+                        }
+                        // fall into default string handling if not a binary blob (a.k.a. TEXT)
+
+                    // case MYSQL_TYPE_ENUM:
+                    // case MYSQL_TYPE_SET:
+                    // case MYSQL_TYPE_VARCHAR:
+                    // case MYSQL_TYPE_VAR_STRING:
+                    // case MYSQL_TYPE_STRING:
+                    // case MYSQL_TYPE_GEOMETRY:
+                    default:
+                        hRes = lpColumn->cField->SetString((LPCSTR)lpRow[i], (SIZE_T)lpnRowLengths[i]);
+                        if (FAILED(hRes))
+                        {
+                            goto on_error;
+                        }
+                        break;
                 }
             }
             else
@@ -1454,154 +1440,153 @@ HRESULT CMySqlConnector::FetchRow()
             {
                 switch (lpBind[i].buffer_type)
                 {
-                case MYSQL_TYPE_BIT:
-                    u.ull = 0;
-                    if (lpLengthPtr[i] >= 1 && lpLengthPtr[i] <= 8)
-                    {
-                        ::MxMemSet(aTempBuf, 0, 8);
-                        ::MxMemCopy(aTempBuf, lpBind[i].buffer, lpLengthPtr[i]);
+                    case MYSQL_TYPE_BIT:
+                        u.ull = 0;
+                        if (lpLengthPtr[i] >= 1 && lpLengthPtr[i] <= 8)
+                        {
+                            ::MxMemSet(aTempBuf, 0, 8);
+                            ::MxMemCopy(aTempBuf, lpBind[i].buffer, lpLengthPtr[i]);
+                            if ((lpColumn->nFlags & UNSIGNED_FLAG) != 0)
+                            {
+                                u.ull = *((ULONGLONG *)aTempBuf); // SAFE because MySQL is little endian
+                            }
+                            else
+                            {
+                                if ((aTempBuf[lpLengthPtr[i] - 1] & 0x80) != 0)
+                                {
+                                    ::MxMemSet(aTempBuf + lpLengthPtr[i], 0xFF, 8 - lpLengthPtr[i]);
+                                }
+                                u.ll = *((LONGLONG *)aTempBuf); // SAFE because MySQL is little endian
+                            }
+                        }
                         if ((lpColumn->nFlags & UNSIGNED_FLAG) != 0)
                         {
-                            u.ull = *((ULONGLONG *)aTempBuf); // SAFE because MySQL is little endian
+                            lpColumn->cField->SetUInt64(u.ull);
                         }
                         else
                         {
-                            if ((aTempBuf[lpLengthPtr[i] - 1] & 0x80) != 0)
+                            lpColumn->cField->SetInt64(u.ll);
+                        }
+                        break;
+
+                    case MYSQL_TYPE_TINY:
+                    case MYSQL_TYPE_SHORT:
+                    case MYSQL_TYPE_LONG:
+                    case MYSQL_TYPE_INT24:
+                    case MYSQL_TYPE_YEAR:
+                        if ((lpColumn->nFlags & UNSIGNED_FLAG) != 0)
+                        {
+                            lpColumn->cField->SetUInt32(*((ULONG *)(lpBind[i].buffer)));
+                        }
+                        else
+                        {
+                            lpColumn->cField->SetInt32(*((LONG *)(lpBind[i].buffer)));
+                        }
+                        break;
+
+                    case MYSQL_TYPE_LONGLONG:
+                        if ((lpColumn->nFlags & UNSIGNED_FLAG) != 0)
+                        {
+                            lpColumn->cField->SetUInt64(*((ULONGLONG *)(lpBind[i].buffer)));
+                        }
+                        else
+                        {
+                            lpColumn->cField->SetInt64(*((LONGLONG *)(lpBind[i].buffer)));
+                        }
+                        break;
+
+                    case MYSQL_TYPE_FLOAT:
+                        lpColumn->cField->SetDouble(*((float *)(lpBind[i].buffer)));
+                        break;
+
+                    case MYSQL_TYPE_DECIMAL:
+                    case MYSQL_TYPE_DOUBLE:
+                    case MYSQL_TYPE_NEWDECIMAL:
+                        lpColumn->cField->SetDouble(*((double *)(lpBind[i].buffer)));
+                        break;
+
+                    case MYSQL_TYPE_DATE:
+                    case MYSQL_TYPE_TIME:
+                    case MYSQL_TYPE_DATETIME:
+                        {
+                            MYSQL_TIME *lpMySqlTime = (MYSQL_TIME *)(lpBind[i].buffer);
+
+                            if (lpBind[i].buffer_type == MYSQL_TYPE_TIME)
                             {
-                                ::MxMemSet(aTempBuf + lpLengthPtr[i], 0xFF, 8 - lpLengthPtr[i]);
+                                hRes = cDt.SetFromNow(FALSE);
+                                if (SUCCEEDED(hRes))
+                                {
+                                    hRes = cDt.SetTime((int)(lpMySqlTime->hour), (int)(lpMySqlTime->minute), (int)(lpMySqlTime->second),
+                                                       (int)(lpMySqlTime->second_part));
+                                }
+                                if (SUCCEEDED(hRes))
+                                {
+                                    hRes = lpColumn->cField->SetDateTime(cDt);
+                                }
+                                if (FAILED(hRes))
+                                {
+                                    goto on_error;
+                                }
                             }
-                            u.ll = *((LONGLONG *)aTempBuf); // SAFE because MySQL is little endian
+                            else if (lpMySqlTime->month != 0 && lpMySqlTime->day != 0)
+                            {
+                                if (lpBind[i].buffer_type == MYSQL_TYPE_DATETIME)
+                                {
+                                    hRes = cDt.SetDateTime((int)(lpMySqlTime->year), (int)(lpMySqlTime->month), (int)(lpMySqlTime->day),
+                                                           (int)(lpMySqlTime->hour), (int)(lpMySqlTime->minute), (int)(lpMySqlTime->second),
+                                                           (int)(lpMySqlTime->second_part));
+                                }
+                                else
+                                {
+                                    hRes = cDt.SetDateTime((int)(lpMySqlTime->year), (int)(lpMySqlTime->month), (int)(lpMySqlTime->day), 0, 0, 0,
+                                                           0);
+                                }
+                                if (SUCCEEDED(hRes))
+                                {
+                                    hRes = lpColumn->cField->SetDateTime(cDt);
+                                }
+                                if (FAILED(hRes))
+                                {
+                                    goto on_error;
+                                }
+                            }
+                            else
+                            {
+                                lpColumn->cField->SetNull();
+                            }
                         }
-                    }
-                    if ((lpColumn->nFlags & UNSIGNED_FLAG) != 0)
-                    {
-                        lpColumn->cField->SetUInt64(u.ull);
-                    }
-                    else
-                    {
-                        lpColumn->cField->SetInt64(u.ll);
-                    }
-                    break;
+                        break;
 
-                case MYSQL_TYPE_TINY:
-                case MYSQL_TYPE_SHORT:
-                case MYSQL_TYPE_LONG:
-                case MYSQL_TYPE_INT24:
-                case MYSQL_TYPE_YEAR:
-                    if ((lpColumn->nFlags & UNSIGNED_FLAG) != 0)
-                    {
-                        lpColumn->cField->SetUInt32(*((ULONG *)(lpBind[i].buffer)));
-                    }
-                    else
-                    {
-                        lpColumn->cField->SetInt32(*((LONG *)(lpBind[i].buffer)));
-                    }
-                    break;
+                    case MYSQL_TYPE_NULL:
+                        lpColumn->cField->SetNull();
+                        break;
 
-                case MYSQL_TYPE_LONGLONG:
-                    if ((lpColumn->nFlags & UNSIGNED_FLAG) != 0)
-                    {
-                        lpColumn->cField->SetUInt64(*((ULONGLONG *)(lpBind[i].buffer)));
-                    }
-                    else
-                    {
-                        lpColumn->cField->SetInt64(*((LONGLONG *)(lpBind[i].buffer)));
-                    }
-                    break;
-
-                case MYSQL_TYPE_FLOAT:
-                    lpColumn->cField->SetDouble(*((float *)(lpBind[i].buffer)));
-                    break;
-
-                case MYSQL_TYPE_DECIMAL:
-                case MYSQL_TYPE_DOUBLE:
-                case MYSQL_TYPE_NEWDECIMAL:
-                    lpColumn->cField->SetDouble(*((double *)(lpBind[i].buffer)));
-                    break;
-
-                case MYSQL_TYPE_DATE:
-                case MYSQL_TYPE_TIME:
-                case MYSQL_TYPE_DATETIME:
-                {
-                    MYSQL_TIME *lpMySqlTime = (MYSQL_TIME *)(lpBind[i].buffer);
-
-                    if (lpBind[i].buffer_type == MYSQL_TYPE_TIME)
-                    {
-                        hRes = cDt.SetFromNow(FALSE);
-                        if (SUCCEEDED(hRes))
+                    case MYSQL_TYPE_TINY_BLOB:
+                    case MYSQL_TYPE_MEDIUM_BLOB:
+                    case MYSQL_TYPE_LONG_BLOB:
+                    case MYSQL_TYPE_BLOB:
+                    case MYSQL_TYPE_VAR_STRING:
+                        if ((lpColumn->nFlags & BINARY_FLAG) != 0)
                         {
-                            hRes = cDt.SetTime((int)(lpMySqlTime->hour), (int)(lpMySqlTime->minute),
-                                               (int)(lpMySqlTime->second), (int)(lpMySqlTime->second_part));
-                        }
-                        if (SUCCEEDED(hRes))
-                        {
-                            hRes = lpColumn->cField->SetDateTime(cDt);
-                        }
-                        if (FAILED(hRes))
-                        {
-                            goto on_error;
-                        }
-                    }
-                    else if (lpMySqlTime->month != 0 && lpMySqlTime->day != 0)
-                    {
-                        if (lpBind[i].buffer_type == MYSQL_TYPE_DATETIME)
-                        {
-                            hRes = cDt.SetDateTime((int)(lpMySqlTime->year), (int)(lpMySqlTime->month),
-                                                   (int)(lpMySqlTime->day), (int)(lpMySqlTime->hour),
-                                                   (int)(lpMySqlTime->minute), (int)(lpMySqlTime->second),
-                                                   (int)(lpMySqlTime->second_part));
+                            hRes = lpColumn->cField->SetBlob(lpBind[i].buffer, (SIZE_T)lpLengthPtr[i]);
+                            if (FAILED(hRes))
+                            {
+                                goto on_error;
+                            }
                         }
                         else
                         {
-                            hRes = cDt.SetDateTime((int)(lpMySqlTime->year), (int)(lpMySqlTime->month),
-                                                   (int)(lpMySqlTime->day), 0, 0, 0, 0);
+                            hRes = lpColumn->cField->SetString((LPCSTR)(lpBind[i].buffer), (SIZE_T)lpLengthPtr[i]);
+                            if (FAILED(hRes))
+                            {
+                                goto on_error;
+                            }
                         }
-                        if (SUCCEEDED(hRes))
-                        {
-                            hRes = lpColumn->cField->SetDateTime(cDt);
-                        }
-                        if (FAILED(hRes))
-                        {
-                            goto on_error;
-                        }
-                    }
-                    else
-                    {
+                        break;
+
+                    default:
                         lpColumn->cField->SetNull();
-                    }
-                }
-                break;
-
-                case MYSQL_TYPE_NULL:
-                    lpColumn->cField->SetNull();
-                    break;
-
-                case MYSQL_TYPE_TINY_BLOB:
-                case MYSQL_TYPE_MEDIUM_BLOB:
-                case MYSQL_TYPE_LONG_BLOB:
-                case MYSQL_TYPE_BLOB:
-                case MYSQL_TYPE_VAR_STRING:
-                    if ((lpColumn->nFlags & BINARY_FLAG) != 0)
-                    {
-                        hRes = lpColumn->cField->SetBlob(lpBind[i].buffer, (SIZE_T)lpLengthPtr[i]);
-                        if (FAILED(hRes))
-                        {
-                            goto on_error;
-                        }
-                    }
-                    else
-                    {
-                        hRes = lpColumn->cField->SetString((LPCSTR)(lpBind[i].buffer), (SIZE_T)lpLengthPtr[i]);
-                        if (FAILED(hRes))
-                        {
-                            goto on_error;
-                        }
-                    }
-                    break;
-
-                default:
-                    lpColumn->cField->SetNull();
-                    break;
+                        break;
                 }
             }
             else
@@ -1667,8 +1652,7 @@ HRESULT CMySqlConnector::TransactionRollback()
     return QueryExecute("ROLLBACK;", 9);
 }
 
-HRESULT CMySqlConnector::EscapeString(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA, _In_opt_ SIZE_T nStrLen,
-                                      _In_opt_ BOOL bIsLike)
+HRESULT CMySqlConnector::EscapeString(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA, _In_opt_ SIZE_T nStrLen, _In_opt_ BOOL bIsLike)
 {
     CStringA cStrTempA;
     LPCSTR szStrEndA;
@@ -1711,88 +1695,88 @@ HRESULT CMySqlConnector::EscapeString(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA,
         {
             switch (*szStrA)
             {
-            case '\'':
-                if (mysql_data->nServerUsingNoBackslashEscapes != 0)
-                {
-                    if (cStrTempA.ConcatN("''", 2) == FALSE)
+                case '\'':
+                    if (mysql_data->nServerUsingNoBackslashEscapes != 0)
                     {
-                        return E_OUTOFMEMORY;
+                        if (cStrTempA.ConcatN("''", 2) == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
+                        break;
                     }
-                    break;
-                }
-                // fall into next...
+                    // fall into next...
 
-            case '"':
-                if (cStrTempA.AppendFormat("\\%c", *szStrA) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                break;
-
-            case '\r':
-                if (mysql_data->nServerUsingNoBackslashEscapes != 0)
-                {
-                copy_char:
-                    if (cStrTempA.ConcatN(szStrA, 1) == FALSE)
-                    {
-                        return E_OUTOFMEMORY;
-                    }
-                }
-                else
-                {
-                    if (cStrTempA.ConcatN("\\r", 2) == FALSE)
-                    {
-                        return E_OUTOFMEMORY;
-                    }
-                }
-                break;
-
-            case '\n':
-                if (mysql_data->nServerUsingNoBackslashEscapes != 0)
-                {
-                    goto copy_char;
-                }
-                if (cStrTempA.ConcatN("\\n", 2) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                break;
-
-            case '\032':
-                if (mysql_data->nServerUsingNoBackslashEscapes != 0)
-                {
-                    goto copy_char;
-                }
-                if (cStrTempA.ConcatN("\\Z", 2) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                break;
-
-            case 0:
-                if (cStrTempA.ConcatN("\\0", 2) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                break;
-
-            case '\\':
-                if (bIsLike != FALSE && szStrA + 1 < szStrEndA && (szStrA[1] == '%' || szStrA[1] == '_'))
-                {
-                    szStrA++;
+                case '"':
                     if (cStrTempA.AppendFormat("\\%c", *szStrA) == FALSE)
                     {
                         return E_OUTOFMEMORY;
                     }
-                }
-                else
-                {
-                    if (cStrTempA.ConcatN("\\\\", 2) == FALSE)
+                    break;
+
+                case '\r':
+                    if (mysql_data->nServerUsingNoBackslashEscapes != 0)
+                    {
+copy_char:
+                        if (cStrTempA.ConcatN(szStrA, 1) == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
+                    }
+                    else
+                    {
+                        if (cStrTempA.ConcatN("\\r", 2) == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
+                    }
+                    break;
+
+                case '\n':
+                    if (mysql_data->nServerUsingNoBackslashEscapes != 0)
+                    {
+                        goto copy_char;
+                    }
+                    if (cStrTempA.ConcatN("\\n", 2) == FALSE)
                     {
                         return E_OUTOFMEMORY;
                     }
-                }
-                break;
+                    break;
+
+                case '\032':
+                    if (mysql_data->nServerUsingNoBackslashEscapes != 0)
+                    {
+                        goto copy_char;
+                    }
+                    if (cStrTempA.ConcatN("\\Z", 2) == FALSE)
+                    {
+                        return E_OUTOFMEMORY;
+                    }
+                    break;
+
+                case 0:
+                    if (cStrTempA.ConcatN("\\0", 2) == FALSE)
+                    {
+                        return E_OUTOFMEMORY;
+                    }
+                    break;
+
+                case '\\':
+                    if (bIsLike != FALSE && szStrA + 1 < szStrEndA && (szStrA[1] == '%' || szStrA[1] == '_'))
+                    {
+                        szStrA++;
+                        if (cStrTempA.AppendFormat("\\%c", *szStrA) == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
+                    }
+                    else
+                    {
+                        if (cStrTempA.ConcatN("\\\\", 2) == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
+                    }
+                    break;
             }
             szStrA++;
         }
@@ -1803,8 +1787,7 @@ HRESULT CMySqlConnector::EscapeString(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA,
     return S_OK;
 }
 
-HRESULT CMySqlConnector::EscapeString(_Out_ CStringW &cStrW, _In_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen,
-                                      _In_opt_ BOOL bIsLike)
+HRESULT CMySqlConnector::EscapeString(_Out_ CStringW &cStrW, _In_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen, _In_opt_ BOOL bIsLike)
 {
     CStringW cStrTempW;
     LPCWSTR szStrEndW;
@@ -1847,88 +1830,88 @@ HRESULT CMySqlConnector::EscapeString(_Out_ CStringW &cStrW, _In_ LPCWSTR szStrW
         {
             switch (*szStrW)
             {
-            case L'\'':
-                if (mysql_data->nServerUsingNoBackslashEscapes != 0)
-                {
-                    if (cStrTempW.ConcatN(L"''", 2) == FALSE)
+                case L'\'':
+                    if (mysql_data->nServerUsingNoBackslashEscapes != 0)
                     {
-                        return E_OUTOFMEMORY;
+                        if (cStrTempW.ConcatN(L"''", 2) == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
+                        break;
                     }
-                    break;
-                }
-                // fall into next...
+                    // fall into next...
 
-            case L'"':
-                if (cStrTempW.AppendFormat(L"\\%c", *szStrW) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                break;
-
-            case L'\r':
-                if (mysql_data->nServerUsingNoBackslashEscapes != 0)
-                {
-                copy_char:
-                    if (cStrTempW.ConcatN(szStrW, 1) == FALSE)
-                    {
-                        return E_OUTOFMEMORY;
-                    }
-                }
-                else
-                {
-                    if (cStrTempW.ConcatN(L"\\r", 2) == FALSE)
-                    {
-                        return E_OUTOFMEMORY;
-                    }
-                }
-                break;
-
-            case L'\n':
-                if (mysql_data->nServerUsingNoBackslashEscapes != 0)
-                {
-                    goto copy_char;
-                }
-                if (cStrTempW.ConcatN(L"\\n", 2) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                break;
-
-            case L'\032':
-                if (mysql_data->nServerUsingNoBackslashEscapes != 0)
-                {
-                    goto copy_char;
-                }
-                if (cStrTempW.ConcatN(L"\\Z", 2) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                break;
-
-            case 0:
-                if (cStrTempW.ConcatN(L"\\0", 2) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                break;
-
-            case L'\\':
-                if (bIsLike != FALSE && szStrW + 1 < szStrEndW && (szStrW[1] == L'%' || szStrW[1] == L'_'))
-                {
-                    szStrW++;
+                case L'"':
                     if (cStrTempW.AppendFormat(L"\\%c", *szStrW) == FALSE)
                     {
                         return E_OUTOFMEMORY;
                     }
-                }
-                else
-                {
-                    if (cStrTempW.ConcatN(L"\\\\", 2) == FALSE)
+                    break;
+
+                case L'\r':
+                    if (mysql_data->nServerUsingNoBackslashEscapes != 0)
+                    {
+copy_char:
+                        if (cStrTempW.ConcatN(szStrW, 1) == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
+                    }
+                    else
+                    {
+                        if (cStrTempW.ConcatN(L"\\r", 2) == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
+                    }
+                    break;
+
+                case L'\n':
+                    if (mysql_data->nServerUsingNoBackslashEscapes != 0)
+                    {
+                        goto copy_char;
+                    }
+                    if (cStrTempW.ConcatN(L"\\n", 2) == FALSE)
                     {
                         return E_OUTOFMEMORY;
                     }
-                }
-                break;
+                    break;
+
+                case L'\032':
+                    if (mysql_data->nServerUsingNoBackslashEscapes != 0)
+                    {
+                        goto copy_char;
+                    }
+                    if (cStrTempW.ConcatN(L"\\Z", 2) == FALSE)
+                    {
+                        return E_OUTOFMEMORY;
+                    }
+                    break;
+
+                case 0:
+                    if (cStrTempW.ConcatN(L"\\0", 2) == FALSE)
+                    {
+                        return E_OUTOFMEMORY;
+                    }
+                    break;
+
+                case L'\\':
+                    if (bIsLike != FALSE && szStrW + 1 < szStrEndW && (szStrW[1] == L'%' || szStrW[1] == L'_'))
+                    {
+                        szStrW++;
+                        if (cStrTempW.AppendFormat(L"\\%c", *szStrW) == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
+                    }
+                    else
+                    {
+                        if (cStrTempW.ConcatN(L"\\\\", 2) == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
+                    }
+                    break;
             }
             szStrW++;
         }
@@ -1986,10 +1969,10 @@ static HRESULT InitializeInternals()
             fn_mysql_init = (lpfn_mysql_init)::GetProcAddress(_hDll, "mysql_init");
             if (fn_mysql_init == NULL)
             {
-            on_loaderror:
+on_loaderror:
                 hRes = MX_E_ProcNotFound;
 
-            on_error:
+on_error:
                 ::FreeLibrary(_hDll);
 
                 CLEAR_API(mysql_init);
@@ -2215,54 +2198,54 @@ static HRESULT HResultFromMySqlErr(_In_ int err)
     }
     switch (err)
     {
-    case CR_TCP_CONNECTION:
-    case CR_SERVER_LOST:
-    case CR_SERVER_GONE_ERROR:
-    case CR_SERVER_LOST_EXTENDED:
-        return MX_E_BrokenPipe;
+        case CR_TCP_CONNECTION:
+        case CR_SERVER_LOST:
+        case CR_SERVER_GONE_ERROR:
+        case CR_SERVER_LOST_EXTENDED:
+            return MX_E_BrokenPipe;
 
-    case 2029: // CR_NULL_POINTER
-        return E_POINTER;
+        case 2029:
+            // CR_NULL_POINTER
+            return E_POINTER;
 
-    case CR_OUT_OF_MEMORY:
-    case ER_OUTOFMEMORY:
-    case ER_OUT_OF_SORTMEMORY:
-    case ER_OUT_OF_RESOURCES:
-        return E_OUTOFMEMORY;
+        case CR_OUT_OF_MEMORY:
+        case ER_OUTOFMEMORY:
+        case ER_OUT_OF_SORTMEMORY:
+        case ER_OUT_OF_RESOURCES:
+            return E_OUTOFMEMORY;
 
-    case CR_UNSUPPORTED_PARAM_TYPE:
-        return MX_E_Unsupported;
+        case CR_UNSUPPORTED_PARAM_TYPE:
+            return MX_E_Unsupported;
 
-    case 2050: // CR_FETCH_CANCELED
-        return MX_E_Cancelled;
+        case 2050:
+            // CR_FETCH_CANCELED
+            return MX_E_Cancelled;
 
-    case CR_NOT_IMPLEMENTED:
-        return E_NOTIMPL;
+        case CR_NOT_IMPLEMENTED:
+            return E_NOTIMPL;
 
-    case ER_DUP_ENTRY:
-    case ER_DUP_KEY:
-        return MX_E_DuplicateKey;
+        case ER_DUP_ENTRY:
+        case ER_DUP_KEY:
+            return MX_E_DuplicateKey;
 
-    case ER_NO_REFERENCED_ROW:
-    case ER_ROW_IS_REFERENCED:
-    case ER_ROW_IS_REFERENCED_2:
-    case ER_NO_REFERENCED_ROW_2:
-        return MX_E_ConstraintsCheckFailed;
+        case ER_NO_REFERENCED_ROW:
+        case ER_ROW_IS_REFERENCED:
+        case ER_ROW_IS_REFERENCED_2:
+        case ER_NO_REFERENCED_ROW_2:
+            return MX_E_ConstraintsCheckFailed;
 
-    case ER_LOCK_WAIT_TIMEOUT:
-    case ER_XA_RBTIMEOUT:
-        return MX_E_Timeout;
+        case ER_LOCK_WAIT_TIMEOUT:
+        case ER_XA_RBTIMEOUT:
+            return MX_E_Timeout;
     }
     return E_FAIL;
 }
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Internals
-{
+namespace Internals {
 
 CMySqlConnectorData::CMySqlConnectorData() : CBaseMemObj()
 {
@@ -2298,7 +2281,9 @@ VOID CMySqlConnectorData::SetErrno()
             nLastDbErr = (int)fn_mysql_errno(lpDB);
         }
         if (nLastDbErr == 0)
+        {
             nLastDbErr = ER_UNKNOWN_ERROR;
+        }
 
         if (lpStmt != NULL)
         {

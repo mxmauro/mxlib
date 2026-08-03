@@ -20,16 +20,15 @@
 #include "..\Include\IOCompletionPort.h"
 #include "..\Include\Debug.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define THREAD_FLAGS_CanExit 0x0001
 #define THREAD_FLAGS_IsCleanup 0x0002
 
 //-----------------------------------------------------------
 
-typedef BOOL(WINAPI *lpfnGetQueuedCompletionStatusEx)(_In_ HANDLE CompletionPort, _Out_ LPOVERLAPPED_ENTRY lpEntries,
-                                                      _In_ ULONG ulCount, _Out_ PULONG ulNumEntriesRemoved,
-                                                      _In_ DWORD dwMilliseconds, _In_ BOOL fAlertable);
+typedef BOOL(WINAPI *lpfnGetQueuedCompletionStatusEx)(_In_ HANDLE CompletionPort, _Out_ LPOVERLAPPED_ENTRY lpEntries, _In_ ULONG ulCount,
+                                                      _Out_ PULONG ulNumEntriesRemoved, _In_ DWORD dwMilliseconds, _In_ BOOL fAlertable);
 
 //-----------------------------------------------------------
 
@@ -37,8 +36,7 @@ static lpfnGetQueuedCompletionStatusEx fnGetQueuedCompletionStatusEx = NULL;
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CIoCompletionPort::CIoCompletionPort() : CBaseMemObj(), CNonCopyableObj()
 {
@@ -81,8 +79,7 @@ CIoCompletionPort::~CIoCompletionPort()
 
 HRESULT CIoCompletionPort::Initialize(_In_ DWORD dwMaxConcurrency)
 {
-    hIOCP = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL,
-                                     (dwMaxConcurrency < 0x7FFFFFFFUL) ? dwMaxConcurrency : 0x7FFFFFFFUL);
+    hIOCP = ::CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, (dwMaxConcurrency < 0x7FFFFFFFUL) ? dwMaxConcurrency : 0x7FFFFFFFUL);
     if (hIOCP == NULL || hIOCP == INVALID_HANDLE_VALUE)
     {
         hIOCP = NULL;
@@ -317,8 +314,7 @@ VOID CIoCompletionPortThreadPool::SetThreadEndCallback(_In_opt_ OnThreadEndCallb
     return;
 }
 
-VOID CIoCompletionPortThreadPool::SetThreadStartErrorCallback(
-    _In_opt_ OnThreadStartErrorCallback _cThreadStartErrorCallback)
+VOID CIoCompletionPortThreadPool::SetThreadStartErrorCallback(_In_opt_ OnThreadStartErrorCallback _cThreadStartErrorCallback)
 {
     if (!cIOCP)
     {
@@ -413,7 +409,8 @@ VOID CIoCompletionPortThreadPool::InternalFinalize()
         {
             ::MxSleep(5);
         }
-    } while (b != FALSE);
+    }
+    while (b != FALSE);
     cIOCP.Finalize();
     _InterlockedExchange(&(sThreads.nActiveCount), 0);
     _InterlockedExchange(&(sThreads.nBusyCount), 0);

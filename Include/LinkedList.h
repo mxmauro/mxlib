@@ -22,16 +22,15 @@
 
 #include "Defines.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CLnkLst;
 
 class CLnkLstNode
 {
-  public:
+public:
     CLnkLstNode()
     {
         lpNext = lpPrev = NULL;
@@ -56,7 +55,7 @@ class CLnkLstNode
 
     _inline VOID Remove();
 
-  private:
+private:
     friend class CLnkLst;
 
     CLnkLst *lpList;
@@ -67,7 +66,7 @@ class CLnkLstNode
 
 class CLnkLst : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     CLnkLst() : CBaseMemObj(), CNonCopyableObj()
     {
         lpHead = lpTail = NULL;
@@ -249,10 +248,10 @@ class CLnkLst : public virtual CBaseMemObj, public CNonCopyableObj
 
     //---------------------------------------------------------
 
-  public:
+public:
     class Iterator
     {
-      public:
+    public:
         CLnkLstNode *Begin(_In_ CLnkLst &cList)
         {
             lpNextCursor = cList.lpHead;
@@ -275,16 +274,16 @@ class CLnkLst : public virtual CBaseMemObj, public CNonCopyableObj
             return lpCursor;
         };
 
-      private:
-        CLnkLstNode *lpCursor{NULL}, *lpNextCursor{NULL};
+    private:
+        CLnkLstNode *lpCursor{ NULL }, *lpNextCursor{ NULL };
     };
 
     //---------------------------------------------------------
 
-  public:
+public:
     class IteratorRev
     {
-      public:
+    public:
         CLnkLstNode *Begin(_In_ CLnkLst &cList)
         {
             lpNextCursor = cList.lpTail;
@@ -307,13 +306,13 @@ class CLnkLst : public virtual CBaseMemObj, public CNonCopyableObj
             return lpCursor;
         };
 
-      private:
-        CLnkLstNode *lpCursor{NULL}, *lpNextCursor{NULL};
+    private:
+        CLnkLstNode *lpCursor{ NULL }, *lpNextCursor{ NULL };
     };
 
-  private:
-    CLnkLstNode *lpHead{NULL}, *lpTail{NULL};
-    SIZE_T nCount{0};
+private:
+    CLnkLstNode *lpHead{ NULL }, *lpTail{ NULL };
+    SIZE_T nCount{ 0 };
 };
 
 _inline VOID CLnkLstNode::Remove()

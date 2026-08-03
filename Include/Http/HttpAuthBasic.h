@@ -22,14 +22,13 @@
 
 #include "HttpAuthBase.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpAuthBasic : public CHttpAuthBase, public CNonCopyableObj
 {
-  public:
+public:
     CHttpAuthBasic();
     ~CHttpAuthBasic();
 
@@ -52,7 +51,7 @@ class CHttpAuthBasic : public CHttpAuthBase, public CNonCopyableObj
         return bCharsetIsUtf8;
     };
 
-  private:
+private:
     CStringW cStrRealmW;
     BOOL bCharsetIsUtf8;
 };

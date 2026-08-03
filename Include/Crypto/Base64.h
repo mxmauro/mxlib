@@ -23,14 +23,13 @@
 #include "..\Defines.h"
 #include "..\Strings\Strings.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CBase64Encoder : public MX::CBaseMemObj
 {
-  public:
+public:
     CBase64Encoder();
     ~CBase64Encoder();
 
@@ -44,10 +43,10 @@ class CBase64Encoder : public MX::CBaseMemObj
 
     static SIZE_T GetRequiredSpace(_In_ SIZE_T nDataLen);
 
-  private:
+private:
     __inline BOOL AddToBuffer(_In_ CHAR szDataA[4]);
 
-  private:
+private:
     LPSTR szBufferA;
     SIZE_T nSize, nLength;
     BYTE aInput[3];
@@ -58,7 +57,7 @@ class CBase64Encoder : public MX::CBaseMemObj
 
 class CBase64Decoder : public MX::CBaseMemObj
 {
-  public:
+public:
     CBase64Decoder();
     ~CBase64Decoder();
 
@@ -72,10 +71,10 @@ class CBase64Decoder : public MX::CBaseMemObj
 
     static SIZE_T GetRequiredSpace(_In_ SIZE_T nDataLen);
 
-  private:
+private:
     __inline BOOL AddToBuffer(_In_ LPBYTE aData, _In_ SIZE_T nLen);
 
-  private:
+private:
     LPBYTE lpBuffer;
     SIZE_T nSize, nLength;
     BYTE aInput[4];

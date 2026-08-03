@@ -24,10 +24,9 @@
 #include <intrin.h>
 #include "SecureBuffer_BIO.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CSecureBuffer::CSecureBuffer() : TRefCounted<CBaseMemObj>(), CNonCopyableObj()
 {
@@ -159,7 +158,7 @@ HRESULT CSecureBuffer::WriteDWordBE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount)
         for (i = 0; nCount > 0 && i < MX_ARRAYLEN(aTempValues); i++, nCount--, lpnValues++)
         {
             aTempValues[i] = (((*lpnValues) & 0xFF000000) >> 24) | (((*lpnValues) & 0x00FF0000) >> 8) |
-                             (((*lpnValues) & 0x0000FF00) << 8) | (((*lpnValues) & 0x000000FF) << 24);
+                (((*lpnValues) & 0x0000FF00) << 8) | (((*lpnValues) & 0x000000FF) << 24);
         }
         hRes = WriteStream(aTempValues, i * sizeof(DWORD));
     }
@@ -186,8 +185,7 @@ HRESULT CSecureBuffer::WriteQWordBE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCoun
     {
         for (i = 0; nCount > 0 && i < MX_ARRAYLEN(aTempValues); i++, nCount--, lpnValues++)
         {
-            aTempValues[i] =
-                (((*lpnValues) & 0xFF00000000000000ui64) >> 56) | (((*lpnValues) & 0x00FF000000000000ui64) >> 40) |
+            aTempValues[i] = (((*lpnValues) & 0xFF00000000000000ui64) >> 56) | (((*lpnValues) & 0x00FF000000000000ui64) >> 40) |
                 (((*lpnValues) & 0x0000FF0000000000ui64) >> 24) | (((*lpnValues) & 0x000000FF00000000ui64) >> 8) |
                 (((*lpnValues) & 0x00000000FF000000ui64) << 8) | (((*lpnValues) & 0x0000000000FF0000ui64) << 24) |
                 (((*lpnValues) & 0x000000000000FF00ui64) << 40) | (((*lpnValues) & 0x00000000000000FFui64) << 56);

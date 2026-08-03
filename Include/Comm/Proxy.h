@@ -24,14 +24,13 @@
 #include "..\Strings\Strings.h"
 #include "..\Http\Url.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CProxy : public CBaseMemObj
 {
-  public:
+public:
     enum class eType
     {
         None = 0,
@@ -39,7 +38,7 @@ class CProxy : public CBaseMemObj
         Manual
     };
 
-  public:
+public:
     CProxy();
     CProxy(_In_ const CProxy &cSrc) throw(...);
     ~CProxy();
@@ -79,7 +78,7 @@ class CProxy : public CBaseMemObj
         return (LPCWSTR)cStrUserPasswordW;
     };
 
-  private:
+private:
     eType nType;
     MX::CStringW cStrAddressW;
     MX::CSecureStringW cStrUserNameW, cStrUserPasswordW;

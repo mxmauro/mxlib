@@ -23,17 +23,16 @@
 #include "HttpHeaderBase.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderReqAccept : public CHttpHeaderBase
 {
-  public:
+public:
     class CType : public virtual CBaseMemObj
     {
-      public:
+    public:
         CType();
         ~CType();
 
@@ -52,7 +51,7 @@ class CHttpHeaderReqAccept : public CHttpHeaderBase
         LPCWSTR GetParamValue(_In_ SIZE_T nIndex) const;
         LPCWSTR GetParamValue(_In_z_ LPCSTR szNameA) const;
 
-      private:
+    private:
         friend class CHttpHeaderReqAccept;
 
         typedef struct
@@ -61,7 +60,7 @@ class CHttpHeaderReqAccept : public CHttpHeaderBase
             CHAR szNameA[1];
         } PARAMETER, *LPPARAMETER;
 
-      private:
+    private:
         CStringA cStrTypeA;
         double q;
         TArrayListWithFree<LPPARAMETER> aParamsList;
@@ -69,13 +68,13 @@ class CHttpHeaderReqAccept : public CHttpHeaderBase
 
     //----
 
-  public:
+public:
     CHttpHeaderReqAccept();
     ~CHttpHeaderReqAccept();
 
-    MX_DECLARE_HTTPHEADER_NAME(Accept)
+    MX_DECLARE_HTTPHEADER_NAME("Accept")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
@@ -92,7 +91,7 @@ class CHttpHeaderReqAccept : public CHttpHeaderBase
 
     HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
 
-  private:
+private:
     TArrayListWithDelete<CType *> aTypesList;
 };
 

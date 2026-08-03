@@ -22,14 +22,13 @@
 
 #include "..\JsHttpServer.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CJsHttpServerSessionPlugin : public CJsObjectBase, public CNonCopyableObj
 {
-  public:
+public:
     enum class ePersistanceOption
     {
         Load,
@@ -41,14 +40,13 @@ class CJsHttpServerSessionPlugin : public CJsObjectBase, public CNonCopyableObj
     typedef Callback<HRESULT(_In_ CJsHttpServerSessionPlugin *lpPlugin, _In_ ePersistanceOption nPersistanceOption)>
         OnPersistanceCallback;
 
-  public:
+public:
     CJsHttpServerSessionPlugin();
     ~CJsHttpServerSessionPlugin();
 
     HRESULT Setup(_In_ CJsHttpServer::CClientRequest *lpRequest, _In_ OnPersistanceCallback cPersistanceCallback,
-                  _In_opt_z_ LPCWSTR szSessionVarNameW = NULL, _In_opt_z_ LPCWSTR szDomainW = NULL,
-                  _In_opt_z_ LPCWSTR szPathW = NULL, _In_opt_ int nExpireTimeInSeconds = -1,
-                  _In_opt_ BOOL bIsSecure = FALSE, _In_opt_ BOOL bIsHttpOnly = FALSE,
+                  _In_opt_z_ LPCWSTR szSessionVarNameW = NULL, _In_opt_z_ LPCWSTR szDomainW = NULL, _In_opt_z_ LPCWSTR szPathW = NULL,
+                  _In_opt_ int nExpireTimeInSeconds = -1, _In_opt_ BOOL bIsSecure = FALSE, _In_opt_ BOOL bIsHttpOnly = FALSE,
                   _In_opt_ CHttpCookie::eSameSite nSameSite = CHttpCookie::eSameSite::None);
     HRESULT Save();
     VOID Destroy();
@@ -72,13 +70,13 @@ class CJsHttpServerSessionPlugin : public CJsObjectBase, public CNonCopyableObj
 
     MX_JS_DECLARE_WITH_PROXY(CJsHttpServerSessionPlugin, "Session")
 
-    MX_JS_BEGIN_MAP(CJsHttpServerSessionPlugin)
-    MX_JS_MAP_METHOD("save", &CJsHttpServerSessionPlugin::_Save, 0)
-    MX_JS_MAP_METHOD("destroy", &CJsHttpServerSessionPlugin::_Destroy, 0)
-    MX_JS_MAP_METHOD("regenerateId", &CJsHttpServerSessionPlugin::RegenerateId, 0)
-    MX_JS_END_MAP()
+        MX_JS_BEGIN_MAP(CJsHttpServerSessionPlugin)
+        MX_JS_MAP_METHOD("save", &CJsHttpServerSessionPlugin::_Save, 0)
+        MX_JS_MAP_METHOD("destroy", &CJsHttpServerSessionPlugin::_Destroy, 0)
+        MX_JS_MAP_METHOD("regenerateId", &CJsHttpServerSessionPlugin::RegenerateId, 0)
+        MX_JS_END_MAP()
 
-  private:
+private:
     typedef CHAR SESSION_ID[68];
 
     static BOOL IsValidSessionId(_In_z_ LPCSTR szSessionIdA);
@@ -97,15 +95,13 @@ class CJsHttpServerSessionPlugin : public CJsObjectBase, public CNonCopyableObj
     int OnProxyGetNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA);
     int OnProxyGetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex);
 
-    int OnProxySetNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA,
-                                _In_ DukTape::duk_idx_t nValueIndex);
-    int OnProxySetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex,
-                                  _In_ DukTape::duk_idx_t nValueIndex);
+    int OnProxySetNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA, _In_ DukTape::duk_idx_t nValueIndex);
+    int OnProxySetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex, _In_ DukTape::duk_idx_t nValueIndex);
 
     int OnProxyDeleteNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA);
     int OnProxyDeleteIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex);
 
-  private:
+private:
     CPropertyBag cBag;
     SESSION_ID szCurrentIdA;
 

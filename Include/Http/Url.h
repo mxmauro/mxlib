@@ -24,14 +24,13 @@
 #include "..\Strings\Strings.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CUrl : public virtual CBaseMemObj
 {
-  public:
+public:
     enum class eScheme
     {
         Unknown = -1,
@@ -48,7 +47,6 @@ class CUrl : public virtual CBaseMemObj
         WebSocket,
         SecureWebSocket
     };
-
     enum class eToStringFlags : int
     {
         AddScheme = 0x01,
@@ -62,7 +60,7 @@ class CUrl : public virtual CBaseMemObj
         DontAddHostPortIfDefault = 0x10000000
     };
 
-  public:
+public:
     CUrl();
     CUrl(_In_ const CUrl &cSrc) throw(...);
     ~CUrl();
@@ -122,8 +120,7 @@ class CUrl : public virtual CBaseMemObj
 
     static HRESULT Encode(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nUrlLen = (SIZE_T)-1,
                           _In_opt_z_ LPCSTR szAllowedCharsA = NULL, _In_opt_ BOOL bAppend = FALSE);
-    static SIZE_T GetEncodedLength(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nUrlLen = (SIZE_T)-1,
-                                   _In_opt_z_ LPCSTR szAllowedCharsA = NULL);
+    static SIZE_T GetEncodedLength(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nUrlLen = (SIZE_T)-1, _In_opt_z_ LPCSTR szAllowedCharsA = NULL);
     static HRESULT Decode(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nUrlLen = (SIZE_T)-1,
                           _In_opt_ BOOL bAppend = FALSE);
     static SIZE_T GetDecodedLength(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nUrlLen = (SIZE_T)-1);
@@ -131,7 +128,7 @@ class CUrl : public virtual CBaseMemObj
     static BOOL IsValidHostAddress(_In_z_ LPCSTR szHostA, _In_opt_ SIZE_T nHostLen = (SIZE_T)-1);
     static BOOL IsValidHostAddress(_In_z_ LPCWSTR szHostW, _In_opt_ SIZE_T nHostLen = (SIZE_T)-1);
 
-  private:
+private:
     typedef struct
     {
         LPWSTR szValueW;

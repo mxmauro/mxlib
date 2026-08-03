@@ -23,17 +23,16 @@
 #include "HttpHeaderBase.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderReqAcceptEncoding : public CHttpHeaderBase
 {
-  public:
+public:
     class CEncoding : public virtual CBaseMemObj
     {
-      public:
+    public:
         CEncoding();
         ~CEncoding();
 
@@ -45,7 +44,7 @@ class CHttpHeaderReqAcceptEncoding : public CHttpHeaderBase
         HRESULT SetQ(_In_ double q);
         double GetQ() const;
 
-      private:
+    private:
         friend class CHttpHeaderReqAcceptEncoding;
 
         CStringA cStrEncodingA;
@@ -54,13 +53,13 @@ class CHttpHeaderReqAcceptEncoding : public CHttpHeaderBase
 
     //----
 
-  public:
+public:
     CHttpHeaderReqAcceptEncoding();
     ~CHttpHeaderReqAcceptEncoding();
 
-    MX_DECLARE_HTTPHEADER_NAME(Accept - Encoding)
+    MX_DECLARE_HTTPHEADER_NAME("Accept-Encoding")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
@@ -69,8 +68,7 @@ class CHttpHeaderReqAcceptEncoding : public CHttpHeaderBase
         return eDuplicateBehavior::Merge;
     };
 
-    HRESULT AddEncoding(_In_z_ LPCSTR szEncodingA, _In_opt_ SIZE_T nEncodingLen = (SIZE_T)-1,
-                        _Out_opt_ CEncoding **lplpEncoding = NULL);
+    HRESULT AddEncoding(_In_z_ LPCSTR szEncodingA, _In_opt_ SIZE_T nEncodingLen = (SIZE_T)-1, _Out_opt_ CEncoding **lplpEncoding = NULL);
 
     SIZE_T GetEncodingsCount() const;
     CEncoding *GetEncoding(_In_ SIZE_T nIndex) const;
@@ -78,7 +76,7 @@ class CHttpHeaderReqAcceptEncoding : public CHttpHeaderBase
 
     HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
 
-  private:
+private:
     TArrayListWithDelete<CEncoding *> aEncodingsList;
 };
 

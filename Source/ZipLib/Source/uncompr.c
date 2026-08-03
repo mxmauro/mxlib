@@ -3,7 +3,7 @@
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-/* @(#) $Id$ */
+ /* @(#) $Id$ */
 
 #define ZLIB_INTERNAL
 #include "zlib.h"
@@ -27,7 +27,8 @@
      The _z versions of the functions take size_t length arguments.
 */
 int ZEXPORT uncompress2_z(Bytef *dest, z_size_t *destLen, const Bytef *source,
-                          z_size_t *sourceLen) {
+                          z_size_t *sourceLen)
+{
     z_stream stream;
     int err;
     const uInt max = (uInt)-1;
@@ -54,17 +55,21 @@ int ZEXPORT uncompress2_z(Bytef *dest, z_size_t *destLen, const Bytef *source,
     stream.next_out = dest;
     stream.avail_out = 0;
 
-    do {
-        if (stream.avail_out == 0) {
+    do
+    {
+        if (stream.avail_out == 0)
+        {
             stream.avail_out = left > (z_size_t)max ? max : (uInt)left;
             left -= stream.avail_out;
         }
-        if (stream.avail_in == 0) {
+        if (stream.avail_in == 0)
+        {
             stream.avail_in = len > (z_size_t)max ? max : (uInt)len;
             len -= stream.avail_in;
         }
         err = inflate(&stream, Z_NO_FLUSH);
-    } while (err == Z_OK);
+    }
+    while (err == Z_OK);
 
     /* Set len and left to the unused input data and unused output space. Set
        *sourceLen to the amount of input consumed. Set *destLen to the amount
@@ -76,12 +81,13 @@ int ZEXPORT uncompress2_z(Bytef *dest, z_size_t *destLen, const Bytef *source,
 
     inflateEnd(&stream);
     return err == Z_STREAM_END ? Z_OK :
-           err == Z_NEED_DICT ? Z_DATA_ERROR  :
-           err == Z_BUF_ERROR && len == 0 ? Z_DATA_ERROR :
-           err;
+        err == Z_NEED_DICT ? Z_DATA_ERROR :
+        err == Z_BUF_ERROR && len == 0 ? Z_DATA_ERROR :
+        err;
 }
 int ZEXPORT uncompress2(Bytef *dest, uLongf *destLen, const Bytef *source,
-                        uLong *sourceLen) {
+                        uLong *sourceLen)
+{
     int ret;
     z_size_t got = *destLen, used = *sourceLen;
     ret = uncompress2_z(dest, &got, source, &used);
@@ -90,12 +96,14 @@ int ZEXPORT uncompress2(Bytef *dest, uLongf *destLen, const Bytef *source,
     return ret;
 }
 int ZEXPORT uncompress_z(Bytef *dest, z_size_t *destLen, const Bytef *source,
-                         z_size_t sourceLen) {
+                         z_size_t sourceLen)
+{
     z_size_t used = sourceLen;
     return uncompress2_z(dest, destLen, source, &used);
 }
 int ZEXPORT uncompress(Bytef *dest, uLongf *destLen, const Bytef *source,
-                       uLong sourceLen) {
+                       uLong sourceLen)
+{
     uLong used = sourceLen;
     return uncompress2(dest, destLen, source, &used);
 }

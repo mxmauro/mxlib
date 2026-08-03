@@ -22,20 +22,19 @@
 
 #include "HttpHeaderBase.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderRespSecWebSocketAccept : public CHttpHeaderBase
 {
-  public:
+public:
     CHttpHeaderRespSecWebSocketAccept();
     ~CHttpHeaderRespSecWebSocketAccept();
 
-    MX_DECLARE_HTTPHEADER_NAME(Sec - WebSocket - Accept)
+    MX_DECLARE_HTTPHEADER_NAME("Sec-WebSocket-Accept")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
@@ -45,7 +44,7 @@ class CHttpHeaderRespSecWebSocketAccept : public CHttpHeaderBase
 
     HRESULT VerifyKey(_In_ LPVOID lpKey, _In_ SIZE_T nKeyLen);
 
-  private:
+private:
     BYTE aSHA1[20];
 };
 

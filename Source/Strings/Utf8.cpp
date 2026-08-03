@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Strings\Utf8.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 HRESULT Utf8_Encode(_Inout_ CStringA &cStrDestA, _In_z_ LPCWSTR szSrcW, _In_opt_ SIZE_T nSrcLen, _In_opt_ BOOL bAppend)
 {
@@ -107,7 +106,7 @@ HRESULT Utf8_Decode(_Inout_ CStringW &cStrDestW, _In_z_ LPCSTR szSrcA, _In_opt_ 
 
 int Utf8_EncodeChar(_Out_opt_ CHAR szDestA[], _In_ WCHAR chW, _In_opt_ WCHAR chSurrogatePairW)
 {
-    static const BYTE aFirstByteMark[4] = {0x00, 0xC0, 0xE0, 0xF0};
+    static const BYTE aFirstByteMark[4] = { 0x00, 0xC0, 0xE0, 0xF0 };
     SIZE_T nVal;
     int k;
     CHAR chA[4];
@@ -149,18 +148,18 @@ int Utf8_EncodeChar(_Out_opt_ CHAR szDestA[], _In_ WCHAR chW, _In_opt_ WCHAR chS
     }
     switch (k)
     {
-    case 4:
-        szDestA[3] = (CHAR)((nVal | 0x80) & 0xBF);
-        nVal >>= 6;
-    case 3:
-        szDestA[2] = (CHAR)((nVal | 0x80) & 0xBF);
-        nVal >>= 6;
-    case 2:
-        szDestA[1] = (CHAR)((nVal | 0x80) & 0xBF);
-        nVal >>= 6;
-    case 1:
-        szDestA[0] = (CHAR)(nVal | (SIZE_T)aFirstByteMark[k - 1]);
-        break;
+        case 4:
+            szDestA[3] = (CHAR)((nVal | 0x80) & 0xBF);
+            nVal >>= 6;
+        case 3:
+            szDestA[2] = (CHAR)((nVal | 0x80) & 0xBF);
+            nVal >>= 6;
+        case 2:
+            szDestA[1] = (CHAR)((nVal | 0x80) & 0xBF);
+            nVal >>= 6;
+        case 1:
+            szDestA[0] = (CHAR)(nVal | (SIZE_T)aFirstByteMark[k - 1]);
+            break;
     }
     return k;
 }

@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderGenUpgrade.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderGenUpgrade::CHttpHeaderGenUpgrade() : CHttpHeaderBase()
 {
@@ -79,7 +78,7 @@ HRESULT CHttpHeaderGenUpgrade::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nVa
             return hRes;
         }
 
-    skip_null_listitem:
+skip_null_listitem:
         // skip spaces
         szValueA = SkipSpaces(szValueA, szValueEndA);
 
@@ -95,7 +94,8 @@ HRESULT CHttpHeaderGenUpgrade::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nVa
                 return MX_E_InvalidData;
             }
         }
-    } while (szValueA < szValueEndA);
+    }
+    while (szValueA < szValueEndA);
 
     // do we got one?
     if (bGotItem == FALSE)

@@ -23,17 +23,16 @@
 #include "HttpHeaderBase.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderReqAcceptLanguage : public CHttpHeaderBase
 {
-  public:
+public:
     class CLanguage : public virtual CBaseMemObj
     {
-      public:
+    public:
         CLanguage();
         ~CLanguage();
 
@@ -45,7 +44,7 @@ class CHttpHeaderReqAcceptLanguage : public CHttpHeaderBase
         HRESULT SetQ(_In_ double q);
         double GetQ() const;
 
-      private:
+    private:
         friend class CHttpHeaderReqAcceptLanguage;
 
         CStringA cStrLanguageA;
@@ -54,13 +53,13 @@ class CHttpHeaderReqAcceptLanguage : public CHttpHeaderBase
 
     //----
 
-  public:
+public:
     CHttpHeaderReqAcceptLanguage();
     ~CHttpHeaderReqAcceptLanguage();
 
-    MX_DECLARE_HTTPHEADER_NAME(Accept - Language)
+    MX_DECLARE_HTTPHEADER_NAME("Accept-Language")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
@@ -69,8 +68,7 @@ class CHttpHeaderReqAcceptLanguage : public CHttpHeaderBase
         return eDuplicateBehavior::Merge;
     };
 
-    HRESULT AddLanguage(_In_z_ LPCSTR szLanguageA, _In_opt_ SIZE_T nLanguageLen = (SIZE_T)-1,
-                        _Out_opt_ CLanguage **lplpLanguage = NULL);
+    HRESULT AddLanguage(_In_z_ LPCSTR szLanguageA, _In_opt_ SIZE_T nLanguageLen = (SIZE_T)-1, _Out_opt_ CLanguage **lplpLanguage = NULL);
 
     SIZE_T GetLanguagesCount() const;
     CLanguage *GetLanguage(_In_ SIZE_T nIndex) const;
@@ -78,7 +76,7 @@ class CHttpHeaderReqAcceptLanguage : public CHttpHeaderBase
 
     HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
 
-  private:
+private:
     TArrayListWithDelete<CLanguage *> aLanguagesList;
 };
 

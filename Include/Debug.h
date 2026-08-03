@@ -22,10 +22,9 @@
 
 #include "Defines.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 VOID DebugPrint(_In_z_ LPCSTR szFormatA, ...);
 VOID DebugPrintV(_In_z_ LPCSTR szFormatA, va_list ap);

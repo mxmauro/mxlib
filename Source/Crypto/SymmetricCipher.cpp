@@ -22,21 +22,19 @@
 #include "InitOpenSSL.h"
 #include <OpenSSL\evp.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define BLOCK_SIZE 2048
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Internals
-{
+namespace Internals {
 
 class CSymmetricCipherEncoderDecoder : public virtual CBaseMemObj
 {
-  public:
+public:
     CSymmetricCipherEncoderDecoder() : CBaseMemObj()
     {
         lpCipherCtx = NULL;
@@ -70,14 +68,14 @@ class CSymmetricCipherEncoderDecoder : public virtual CBaseMemObj
         return;
     };
 
-  public:
+public:
     EVP_CIPHER_CTX *lpCipherCtx;
     TAutoRefCounted<CSecureBuffer> cOutputBuffer;
 };
 
 class CSymmetricCipherData : public virtual CBaseMemObj
 {
-  public:
+public:
     CSymmetricCipherData() : CBaseMemObj()
     {
         lpCipher = NULL;
@@ -89,7 +87,7 @@ class CSymmetricCipherData : public virtual CBaseMemObj
         return (cEncryptor.lpCipherCtx != NULL && cDecryptor.lpCipherCtx != NULL) ? TRUE : FALSE;
     };
 
-  public:
+public:
     EVP_CIPHER *lpCipher;
     CSymmetricCipherEncoderDecoder cEncryptor;
     CSymmetricCipherEncoderDecoder cDecryptor;
@@ -107,8 +105,7 @@ static const EVP_CIPHER *GetCipher(_In_ MX::CSymmetricCipher::eAlgorithm nAlgori
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CSymmetricCipher::CSymmetricCipher() : CBaseMemObj(), CNonCopyableObj()
 {
@@ -499,82 +496,82 @@ static const EVP_CIPHER *GetCipher(_In_ MX::CSymmetricCipher::eAlgorithm nAlgori
     ERR_clear_error();
     switch (nAlgorithm)
     {
-    case MX::CSymmetricCipher::eAlgorithm::DES_ECB:
-        return EVP_CIPHER_fetch(NULL, "DES-ECB", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::DES_CBC:
-        return EVP_CIPHER_fetch(NULL, "DES-CBC", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::DES_OFB:
-        return EVP_CIPHER_fetch(NULL, "DES-OFB", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::DES_CFB1:
-        return EVP_CIPHER_fetch(NULL, "DES-CFB1", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::DES_CFB8:
-        return EVP_CIPHER_fetch(NULL, "DES-CFB8", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::DES_CFB64:
-        return EVP_CIPHER_fetch(NULL, "DES-CFB", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::DES_ECB:
+            return EVP_CIPHER_fetch(NULL, "DES-ECB", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::DES_CBC:
+            return EVP_CIPHER_fetch(NULL, "DES-CBC", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::DES_OFB:
+            return EVP_CIPHER_fetch(NULL, "DES-OFB", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::DES_CFB1:
+            return EVP_CIPHER_fetch(NULL, "DES-CFB1", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::DES_CFB8:
+            return EVP_CIPHER_fetch(NULL, "DES-CFB8", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::DES_CFB64:
+            return EVP_CIPHER_fetch(NULL, "DES-CFB", NULL);
 
-    case MX::CSymmetricCipher::eAlgorithm::TripleDES_ECB:
-        return EVP_CIPHER_fetch(NULL, "DES-EDE3-ECB", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::TripleDES_CBC:
-        return EVP_CIPHER_fetch(NULL, "DES-EDE3-CBC", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::TripleDES_OFB:
-        return EVP_CIPHER_fetch(NULL, "DES-EDE3-OFB", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::TripleDES_CFB1:
-        return EVP_CIPHER_fetch(NULL, "DES-EDE3-CFB1", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::TripleDES_CFB8:
-        return EVP_CIPHER_fetch(NULL, "DES-EDE3-CFB8", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::TripleDES_CFB64:
-        return EVP_CIPHER_fetch(NULL, "DES-EDE3-CFB", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::TripleDES_ECB:
+            return EVP_CIPHER_fetch(NULL, "DES-EDE3-ECB", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::TripleDES_CBC:
+            return EVP_CIPHER_fetch(NULL, "DES-EDE3-CBC", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::TripleDES_OFB:
+            return EVP_CIPHER_fetch(NULL, "DES-EDE3-OFB", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::TripleDES_CFB1:
+            return EVP_CIPHER_fetch(NULL, "DES-EDE3-CFB1", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::TripleDES_CFB8:
+            return EVP_CIPHER_fetch(NULL, "DES-EDE3-CFB8", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::TripleDES_CFB64:
+            return EVP_CIPHER_fetch(NULL, "DES-EDE3-CFB", NULL);
 
-    case MX::CSymmetricCipher::eAlgorithm::AES_128_ECB:
-        return EVP_CIPHER_fetch(NULL, "AES-128-ECB", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_128_CBC:
-        return EVP_CIPHER_fetch(NULL, "AES-128-ECB", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_128_CTR:
-        return EVP_CIPHER_fetch(NULL, "AES-128-CTR", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_128_GCM:
-        return EVP_CIPHER_fetch(NULL, "AES-128-GCM", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_128_OFB:
-        return EVP_CIPHER_fetch(NULL, "AES-128-OFB", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_128_CFB1:
-        return EVP_CIPHER_fetch(NULL, "AES-128-CFB1", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_128_CFB8:
-        return EVP_CIPHER_fetch(NULL, "AES-128-CFB8", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_128_CFB128:
-        return EVP_CIPHER_fetch(NULL, "AES-128-CFB", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_128_ECB:
+            return EVP_CIPHER_fetch(NULL, "AES-128-ECB", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_128_CBC:
+            return EVP_CIPHER_fetch(NULL, "AES-128-ECB", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_128_CTR:
+            return EVP_CIPHER_fetch(NULL, "AES-128-CTR", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_128_GCM:
+            return EVP_CIPHER_fetch(NULL, "AES-128-GCM", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_128_OFB:
+            return EVP_CIPHER_fetch(NULL, "AES-128-OFB", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_128_CFB1:
+            return EVP_CIPHER_fetch(NULL, "AES-128-CFB1", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_128_CFB8:
+            return EVP_CIPHER_fetch(NULL, "AES-128-CFB8", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_128_CFB128:
+            return EVP_CIPHER_fetch(NULL, "AES-128-CFB", NULL);
 
-    case MX::CSymmetricCipher::eAlgorithm::AES_192_ECB:
-        return EVP_CIPHER_fetch(NULL, "AES-192-ECB", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_192_CBC:
-        return EVP_CIPHER_fetch(NULL, "AES-192-ECB", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_192_CTR:
-        return EVP_CIPHER_fetch(NULL, "AES-192-CTR", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_192_GCM:
-        return EVP_CIPHER_fetch(NULL, "AES-192-GCM", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_192_OFB:
-        return EVP_CIPHER_fetch(NULL, "AES-192-OFB", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_192_CFB1:
-        return EVP_CIPHER_fetch(NULL, "AES-192-CFB1", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_192_CFB8:
-        return EVP_CIPHER_fetch(NULL, "AES-192-CFB8", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_192_CFB128:
-        return EVP_CIPHER_fetch(NULL, "AES-192-CFB", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_192_ECB:
+            return EVP_CIPHER_fetch(NULL, "AES-192-ECB", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_192_CBC:
+            return EVP_CIPHER_fetch(NULL, "AES-192-ECB", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_192_CTR:
+            return EVP_CIPHER_fetch(NULL, "AES-192-CTR", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_192_GCM:
+            return EVP_CIPHER_fetch(NULL, "AES-192-GCM", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_192_OFB:
+            return EVP_CIPHER_fetch(NULL, "AES-192-OFB", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_192_CFB1:
+            return EVP_CIPHER_fetch(NULL, "AES-192-CFB1", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_192_CFB8:
+            return EVP_CIPHER_fetch(NULL, "AES-192-CFB8", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_192_CFB128:
+            return EVP_CIPHER_fetch(NULL, "AES-192-CFB", NULL);
 
-    case MX::CSymmetricCipher::eAlgorithm::AES_256_ECB:
-        return EVP_CIPHER_fetch(NULL, "AES-256-ECB", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_256_CBC:
-        return EVP_CIPHER_fetch(NULL, "AES-256-ECB", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_256_CTR:
-        return EVP_CIPHER_fetch(NULL, "AES-256-CTR", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_256_GCM:
-        return EVP_CIPHER_fetch(NULL, "AES-256-GCM", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_256_OFB:
-        return EVP_CIPHER_fetch(NULL, "AES-256-OFB", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_256_CFB1:
-        return EVP_CIPHER_fetch(NULL, "AES-256-CFB1", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_256_CFB8:
-        return EVP_CIPHER_fetch(NULL, "AES-256-CFB8", NULL);
-    case MX::CSymmetricCipher::eAlgorithm::AES_256_CFB128:
-        return EVP_CIPHER_fetch(NULL, "AES-256-CFB", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_256_ECB:
+            return EVP_CIPHER_fetch(NULL, "AES-256-ECB", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_256_CBC:
+            return EVP_CIPHER_fetch(NULL, "AES-256-ECB", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_256_CTR:
+            return EVP_CIPHER_fetch(NULL, "AES-256-CTR", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_256_GCM:
+            return EVP_CIPHER_fetch(NULL, "AES-256-GCM", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_256_OFB:
+            return EVP_CIPHER_fetch(NULL, "AES-256-OFB", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_256_CFB1:
+            return EVP_CIPHER_fetch(NULL, "AES-256-CFB1", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_256_CFB8:
+            return EVP_CIPHER_fetch(NULL, "AES-256-CFB8", NULL);
+        case MX::CSymmetricCipher::eAlgorithm::AES_256_CFB128:
+            return EVP_CIPHER_fetch(NULL, "AES-256-CFB", NULL);
     }
     return NULL;
 }

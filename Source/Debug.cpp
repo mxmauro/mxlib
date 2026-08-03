@@ -21,7 +21,7 @@
 #include "..\Include\WaitableObjects.h"
 #include <stdio.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define MX_FORCE_OUTPUTDEBUG_ON_XP
 
@@ -32,8 +32,7 @@ typedef VOID(WINAPI *lpfnOutputDebugStringA)(_In_opt_ LPCSTR lpOutputString);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 VOID DebugPrint(_In_z_ LPCSTR szFormatA, ...)
 {
@@ -64,11 +63,15 @@ VOID DebugPrintV(_In_z_ LPCSTR szFormatA, va_list ap)
         MxMemSet(&sOviW, 0, sizeof(sOviW));
         sOviW.dwOSVersionInfoSize = (DWORD)sizeof(sOviW);
         if (!NT_SUCCESS(::RtlGetVersion(&sOviW)))
+        {
             return;
+        }
         _InterlockedExchange(&nOsVersion, (LONG)(sOviW.dwMajorVersion));
     }
     if (__InterlockedRead(&nOsVersion) < 6)
+    {
         return;
+    }
 #endif // MX_FORCE_OUTPUTDEBUG_ON_XP
     //----
     i = mx_vsnprintf(szBufA, MX_ARRAYLEN(szBufA), szFormatA, ap);

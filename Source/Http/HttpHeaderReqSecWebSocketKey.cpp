@@ -21,10 +21,9 @@
 #include "..\..\Include\Crypto\Base64.h"
 #include "..\..\Include\Crypto\SecureRandom.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderReqSecWebSocketKey::CHttpHeaderReqSecWebSocketKey() : CHttpHeaderBase()
 {

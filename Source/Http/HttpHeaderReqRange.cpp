@@ -20,10 +20,9 @@
 #include "..\..\Include\Http\HttpHeaderReqRange.h"
 #include <intsafe.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderReqRange::CHttpHeaderReqRange() : CHttpHeaderBase()
 {
@@ -171,7 +170,8 @@ HRESULT CHttpHeaderReqRange::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValu
                 return MX_E_InvalidData;
             }
         }
-    } while (szValueA < szValueEndA);
+    }
+    while (szValueA < szValueEndA);
 
     // done
     return S_OK;

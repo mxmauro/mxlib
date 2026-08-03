@@ -22,7 +22,7 @@
 
 #include "Defines.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define MX_BIND_CALLBACK(lpFunction) (MX::GetCallbackFactory(lpFunction).Bind<lpFunction>())
 
@@ -31,10 +31,10 @@
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-template <typename FuncSignature> class Callback;
+template <typename FuncSignature>
+class Callback;
 
 class NullCallback
 {
@@ -647,7 +647,7 @@ CALLBACK_TEMPLATE_GEN(8)
  *   7. Indemnity. You agree to defend, indemnify and hold harmless the Author
  *      and the Publisher from and against any claims, suits, losses, damages,
  *      liabilities, costs, and expenses (including reasonable legal or
- *      attorneys� fees) resulting from or relating to any use of the Work by
+ *      attorneys? fees) resulting from or relating to any use of the Work by
  *      You.
  *
  *   8. Limitation on Liability. EXCEPT TO THE EXTENT REQUIRED BY APPLICABLE

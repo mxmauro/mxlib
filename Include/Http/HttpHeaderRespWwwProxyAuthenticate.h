@@ -22,17 +22,16 @@
 
 #include "HttpHeaderBase.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class MX_NOVTABLE CHttpHeaderRespWwwProxyAuthenticateCommon : public CHttpHeaderBase
 {
-  protected:
+protected:
     CHttpHeaderRespWwwProxyAuthenticateCommon();
 
-  public:
+public:
     ~CHttpHeaderRespWwwProxyAuthenticateCommon();
 
     HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
@@ -49,7 +48,7 @@ class MX_NOVTABLE CHttpHeaderRespWwwProxyAuthenticateCommon : public CHttpHeader
     LPCWSTR GetParamValue(_In_ SIZE_T nIndex) const;
     LPCWSTR GetParamValue(_In_z_ LPCSTR szNameA) const;
 
-  private:
+private:
     typedef struct
     {
         LPWSTR szValueW;
@@ -64,22 +63,22 @@ class MX_NOVTABLE CHttpHeaderRespWwwProxyAuthenticateCommon : public CHttpHeader
 
 class CHttpHeaderRespWwwAuthenticate : public CHttpHeaderRespWwwProxyAuthenticateCommon
 {
-  public:
+public:
     CHttpHeaderRespWwwAuthenticate();
     ~CHttpHeaderRespWwwAuthenticate();
 
-    MX_DECLARE_HTTPHEADER_NAME(WWW - Authenticate)
+    MX_DECLARE_HTTPHEADER_NAME("WWW-Authenticate")
 };
 
 //--------
 
 class CHttpHeaderRespProxyAuthenticate : public CHttpHeaderRespWwwProxyAuthenticateCommon
 {
-  public:
+public:
     CHttpHeaderRespProxyAuthenticate();
     ~CHttpHeaderRespProxyAuthenticate();
 
-    MX_DECLARE_HTTPHEADER_NAME(Proxy - Authenticate)
+    MX_DECLARE_HTTPHEADER_NAME("Proxy-Authenticate")
 };
 
 } // namespace MX

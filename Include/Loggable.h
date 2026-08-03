@@ -22,17 +22,16 @@
 
 #include "Callbacks.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CLoggable : public virtual CBaseMemObj
 {
-  public:
+public:
     typedef Callback<HRESULT(_In_z_ LPCWSTR szInfoW)> OnLogCallback;
 
-  public:
+public:
     CLoggable();
     CLoggable(_In_ OnLogCallback cCallback);
 
@@ -51,12 +50,12 @@ class CLoggable : public virtual CBaseMemObj
     HRESULT LogIfError(_In_ HRESULT hResError, _Printf_format_string_ LPCWSTR szFormatW, ...);
     HRESULT LogAlways(_In_ HRESULT hResError, _Printf_format_string_ LPCWSTR szFormatW, ...);
 
-  private:
+private:
     CLoggable *GetRoot() const;
 
     HRESULT WriteLogCommon(_In_ BOOL bAddError, _In_ HRESULT hResError, _In_z_ LPCWSTR szFormatW, _In_ va_list argptr);
 
-  private:
+private:
     CLoggable *lpParentLog;
     DWORD dwLevel;
     OnLogCallback cCallback;

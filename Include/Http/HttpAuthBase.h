@@ -25,20 +25,19 @@
 #include "..\RefCounted.h"
 #include "HttpHeaderRespWwwProxyAuthenticate.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class MX_NOVTABLE CHttpAuthBase : public TRefCounted<CBaseMemObj>
 {
-  protected:
+protected:
     CHttpAuthBase() : TRefCounted<CBaseMemObj>()
     {
         return;
     };
 
-  public:
+public:
     ~CHttpAuthBase()
     {
         return;

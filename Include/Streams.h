@@ -24,14 +24,13 @@
 #include "RefCounted.h"
 #include <intsafe.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class MX_NOVTABLE CStream : public virtual TRefCounted<CBaseMemObj>
 {
-  public:
+public:
     enum class eSeekMethod
     {
         Start = 0,
@@ -39,14 +38,14 @@ class MX_NOVTABLE CStream : public virtual TRefCounted<CBaseMemObj>
         End,
     };
 
-  protected:
+protected:
     CStream() : TRefCounted<CBaseMemObj>()
     {
         lpNextStream = NULL;
         return;
     };
 
-  public:
+public:
     virtual ~CStream()
     {
         if (lpNextStream != NULL)
@@ -84,7 +83,7 @@ class MX_NOVTABLE CStream : public virtual TRefCounted<CBaseMemObj>
         return NULL;
     };
 
-  private:
+private:
     CStream *lpNextStream;
 };
 

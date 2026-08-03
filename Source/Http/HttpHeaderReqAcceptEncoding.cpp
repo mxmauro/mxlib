@@ -21,14 +21,13 @@
 #include <stdlib.h>
 #include "..\..\Include\AutoPtr.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 static VOID RemoveTrailingZeroDecimals(_Inout_ MX::CStringA &cStrA);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderReqAcceptEncoding::CHttpHeaderReqAcceptEncoding() : CHttpHeaderBase()
 {
@@ -130,7 +129,7 @@ HRESULT CHttpHeaderReqAcceptEncoding::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZ
             }
         }
 
-    skip_null_listitem:
+skip_null_listitem:
         // skip spaces
         szValueA = SkipSpaces(szValueA, szValueEndA);
 
@@ -146,7 +145,8 @@ HRESULT CHttpHeaderReqAcceptEncoding::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZ
                 return MX_E_InvalidData;
             }
         }
-    } while (szValueA < szValueEndA);
+    }
+    while (szValueA < szValueEndA);
 
     // do we got one?
     if (bGotItem == FALSE)

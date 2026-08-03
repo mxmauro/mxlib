@@ -22,16 +22,15 @@
 
 #include "Defines.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CRedBlackTree;
 
 class CRedBlackTreeNode
 {
-  public:
+public:
     CRedBlackTreeNode()
     {
         bRed = FALSE;
@@ -117,7 +116,7 @@ class CRedBlackTreeNode
 
     _inline VOID Remove();
 
-  private:
+private:
     _inline VOID SetBlack()
     {
         if (this)
@@ -136,7 +135,7 @@ class CRedBlackTreeNode
         return;
     };
 
-  private:
+private:
     friend class CRedBlackTree;
 
     BOOL bRed;
@@ -148,7 +147,7 @@ class CRedBlackTreeNode
 
 class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     CRedBlackTree() : CBaseMemObj(), CNonCopyableObj()
     {
         lpRoot = NULL;
@@ -161,7 +160,8 @@ class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
         return (lpRoot == NULL) ? TRUE : FALSE;
     };
 
-    template <class _Comparator, class _KeyType>
+    template <class _Comparator,
+        class _KeyType>
     _inline CRedBlackTreeNode *Find(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
         CRedBlackTreeNode *lpNode = lpRoot;
@@ -211,9 +211,9 @@ class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
     };
 
     // Try to get entry with key greater or equal to the specified one. Else get nearest less.
-    template <class _Comparator, class _KeyType>
-    _inline CRedBlackTreeNode *GetCeiling(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc,
-                                          _In_opt_ LPVOID lpContext = NULL)
+    template <class _Comparator,
+        class _KeyType>
+    _inline CRedBlackTreeNode *GetCeiling(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
         CRedBlackTreeNode *lpNode = lpRoot, *lpParent;
         int comp;
@@ -222,11 +222,15 @@ class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
         {
             int comp = lpSearchFunc(lpContext, _key, lpNode);
             if (comp == 0)
+            {
                 return lpNode;
+            }
             if (comp < 0)
             {
                 if (lpNode->lpLeft == NULL)
+                {
                     return lpNode;
+                }
                 lpNode = lpNode->lpLeft;
             }
             else
@@ -251,9 +255,9 @@ class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
     };
 
     // Try to get entry with key less or equal to the specified one. Else get nearest greater.
-    template <class _Comparator, class _KeyType>
-    _inline CRedBlackTreeNode *GetFloor(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc,
-                                        _In_opt_ LPVOID lpContext = NULL)
+    template <class _Comparator,
+        class _KeyType>
+    _inline CRedBlackTreeNode *GetFloor(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
         CRedBlackTreeNode *lpNode = lpRoot, *lpParent;
 
@@ -261,11 +265,15 @@ class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
         {
             int comp = lpSearchFunc(lpContext, _key, lpNode);
             if (comp == 0)
+            {
                 return lpNode;
+            }
             if (comp > 0)
             {
                 if (lpNode->lpRight == NULL)
+                {
                     return lpNode;
+                }
                 lpNode = lpNode->lpRight;
             }
             else
@@ -290,9 +298,9 @@ class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
     };
 
     // Try to get entry with key greater or equal to the specified one. Else null
-    template <class _Comparator, class _KeyType>
-    _inline CRedBlackTreeNode *GetHigher(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc,
-                                         _In_opt_ LPVOID lpContext = NULL)
+    template <class _Comparator,
+        class _KeyType>
+    _inline CRedBlackTreeNode *GetHigher(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
         CRedBlackTreeNode *lpNode = lpRoot, *lpParent;
 
@@ -302,7 +310,9 @@ class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
             if (comp < 0)
             {
                 if (lpNode->lpLeft == NULL)
+                {
                     return lpNode;
+                }
                 lpNode = lpNode->lpLeft;
             }
             else
@@ -327,9 +337,9 @@ class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
     };
 
     // Try to get entry with key less or equal to the specified one. Else null
-    template <class _Comparator, class _KeyType>
-    _inline CRedBlackTreeNode *GetLower(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc,
-                                        _In_opt_ LPVOID lpContext = NULL)
+    template <class _Comparator,
+        class _KeyType>
+    _inline CRedBlackTreeNode *GetLower(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
         CRedBlackTreeNode *lpNode = lpRoot, *lpParent;
 
@@ -339,7 +349,9 @@ class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
             if (comp > 0)
             {
                 if (lpNode->lpRight == NULL)
+                {
                     return lpNode;
+                }
                 lpNode = lpNode->lpRight;
             }
             else
@@ -364,9 +376,8 @@ class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
     };
 
     template <class _Comparator>
-    BOOL Insert(_In_ CRedBlackTreeNode *lpNewNode, _In_ _Comparator lpCompareFunc,
-                _In_opt_ BOOL bAllowDuplicates = FALSE, _Out_opt_ CRedBlackTreeNode **lplpMatchingNode = NULL,
-                _In_opt_ LPVOID lpContext = NULL)
+    BOOL Insert(_In_ CRedBlackTreeNode *lpNewNode, _In_ _Comparator lpCompareFunc, _In_opt_ BOOL bAllowDuplicates = FALSE,
+                _Out_opt_ CRedBlackTreeNode **lplpMatchingNode = NULL, _In_opt_ LPVOID lpContext = NULL)
     {
         CRedBlackTreeNode *lpNode, *lpParent, *lpUncle;
         int comp;
@@ -408,7 +419,8 @@ class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
                 return FALSE;
             }
             lpNode = (comp < 0) ? lpNode->lpLeft : lpNode->lpRight;
-        } while (lpNode != NULL);
+        }
+        while (lpNode != NULL);
         lpNewNode->lpLeft = lpNewNode->lpRight = NULL;
         lpNewNode->lpParent = lpParent;
         if (comp < 0)
@@ -504,8 +516,7 @@ class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
 
         MX_ASSERT(lpDelNode != NULL);
         MX_ASSERT(lpDelNode->lpTree == this);
-        MX_ASSERT(lpDelNode == lpRoot || lpDelNode->lpLeft != NULL || lpDelNode->lpRight != NULL ||
-                  lpDelNode->lpParent != NULL);
+        MX_ASSERT(lpDelNode == lpRoot || lpDelNode->lpLeft != NULL || lpDelNode->lpRight != NULL || lpDelNode->lpParent != NULL);
 
         if (lpDelNode->lpLeft != NULL && lpDelNode->lpRight != NULL)
         {
@@ -728,11 +739,9 @@ class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
                 MX_ASSERT(lpNode->lpParent->bRed == FALSE);
             }
 
-            MX_ASSERT(lpNode->lpLeft == NULL ||
-                      (lpNode->lpLeft != lpNode->lpParent && lpNode->lpLeft->lpParent == lpNode));
-            MX_ASSERT(lpNode->lpRight == NULL ||
-                      (lpNode->lpRight != lpNode->lpParent && lpNode->lpRight->lpParent == lpNode &&
-                       lpNode->lpRight != lpNode->lpLeft));
+            MX_ASSERT(lpNode->lpLeft == NULL || (lpNode->lpLeft != lpNode->lpParent && lpNode->lpLeft->lpParent == lpNode));
+            MX_ASSERT(lpNode->lpRight == NULL || (lpNode->lpRight != lpNode->lpParent && lpNode->lpRight->lpParent == lpNode &&
+                                                  lpNode->lpRight != lpNode->lpLeft));
 
             CheckRecursive(lpNode->lpLeft);
             CheckRecursive(lpNode->lpRight);
@@ -745,7 +754,9 @@ class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
         if (lpNode != NULL)
         {
             if (lpNode->bRed == FALSE)
+            {
                 nCounter++;
+            }
             CheckBlacksRecursive(lpNode->lpLeft, nCounter, lpnBlackPathCounter);
             CheckBlacksRecursive(lpNode->lpRight, nCounter, lpnBlackPathCounter);
         }
@@ -764,7 +775,7 @@ class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
     };
 #endif //_DEBUG
 
-  private:
+private:
     friend class Iterator;
     friend class IteratorRev;
 
@@ -926,10 +937,10 @@ class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
 
     //---------------------------------------------------------
 
-  public:
+public:
     class Iterator
     {
-      public:
+    public:
         CRedBlackTreeNode *Begin(_In_ CRedBlackTree &cTree)
         {
             lpNextCursor = cTree.GetFirst();
@@ -952,16 +963,16 @@ class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
             return lpCursor;
         };
 
-      private:
+    private:
         CRedBlackTreeNode *lpNextCursor;
     };
 
     //---------------------------------------------------------
 
-  public:
+public:
     class IteratorRev
     {
-      public:
+    public:
         CRedBlackTreeNode *Begin(_In_ CRedBlackTree &cTree)
         {
             lpNextCursor = cTree.GetLast();
@@ -984,11 +995,11 @@ class CRedBlackTree : public virtual CBaseMemObj, public CNonCopyableObj
             return lpCursor;
         };
 
-      private:
+    private:
         CRedBlackTreeNode *lpNextCursor;
     };
 
-  private:
+private:
     CRedBlackTreeNode *lpRoot;
     SIZE_T nCount;
 };

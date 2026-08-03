@@ -17,7 +17,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// #define USE_JEMALLOC
+ // #define USE_JEMALLOC
 
 #include "Test.h"
 #include <conio.h>
@@ -62,7 +62,7 @@ static struct
 {
     int argc;
     LPWSTR *argv;
-} sCmdLineParams = {0, NULL};
+} sCmdLineParams = { 0, NULL };
 
 //-----------------------------------------------------------
 
@@ -83,10 +83,10 @@ int wmain(_In_ int argc, _In_ WCHAR *argv[])
     {
         wprintf_s(L"Use: Test.exe test-module [options]\n\n");
         wprintf_s(L"Where 'test-module' can be:\n");
-        wprintf_s(L"    HttpServer, HttpClient, Javascript or JsHttpServer\n\n");
+        wprintf_s(L"    HttpServer, JsHttpServer, HttpClient, Javascript or RedBlackTree\n\n");
         wprintf_s(L"And 'options' can be:\n");
-        wprintf_s(L"    /ssl: Enable SSL on HttpServer and JsHttpServer\n");
-        wprintf_s(L"    /v #: Set the verbosity level to #\n");
+        wprintf_s(L"    /?, /help: Show test-module options.\n");
+        wprintf_s(L"    /v #: Set the verbosity level to #.\n");
         return 1;
     }
 
@@ -130,20 +130,20 @@ int wmain(_In_ int argc, _In_ WCHAR *argv[])
 
     switch (nTest)
     {
-    case 1:
-        return TestHttpServer();
+        case 1:
+            return TestHttpServer();
 
-    case 2:
-        return TestHttpClient();
+        case 2:
+            return TestHttpClient();
 
-    case 3:
-        return TestJavascript();
+        case 3:
+            return TestJavascript();
 
-    case 4:
-        return TestJsHttpServer();
+        case 4:
+            return TestJsHttpServer();
 
-    case 5:
-        return TestRedBlackTree();
+        case 5:
+            return TestRedBlackTree();
     }
     return 0;
 }
@@ -177,11 +177,15 @@ HRESULT GetAppPath(_Out_ MX::CStringW &cStrPathW)
     LPCWSTR sW;
 
     if (cStrPathW.Copy(__WIDEN(__FILE__)) == FALSE)
+    {
         return E_OUTOFMEMORY;
+    }
     sW = (LPCWSTR)MX::StrChrW((LPCWSTR)cStrPathW, L'\\', TRUE) + 1;
     cStrPathW.Delete((SIZE_T)(sW - (LPCWSTR)cStrPathW), (SIZE_T)-1);
     if (cStrPathW.ConcatN(L"Data\\", 5) == FALSE)
+    {
         return E_OUTOFMEMORY;
+    }
 #undef __WIDEN_
 #undef __WIDEN
 #else  // USE_PATH_TO_SOURCE
@@ -219,7 +223,7 @@ BOOL DoesCmdLineParamExist(_In_z_ LPCWSTR szParamNameW)
     return FALSE;
 }
 
-HRESULT GetCmdLineParam(_In_z_ LPCWSTR szParamNameW, _Out_opt_ MX::CStringW &cStrParamValueW)
+HRESULT GetCmdLineParamString(_In_z_ LPCWSTR szParamNameW, _Out_opt_ MX::CStringW &cStrParamValueW)
 {
     cStrParamValueW.Empty();
 
@@ -229,8 +233,11 @@ HRESULT GetCmdLineParam(_In_z_ LPCWSTR szParamNameW, _Out_opt_ MX::CStringW &cSt
         {
             if (_wcsicmp(sCmdLineParams.argv[arg_idx] + 1, szParamNameW) == 0)
             {
-                if (arg_idx < sCmdLineParams.argc - 1)
-                    return MX_E_InvalidData;
+                if (arg_idx + 1 >= sCmdLineParams.argc)
+                {
+                    return E_INVALIDARG;
+                }
+
                 return (cStrParamValueW.Copy(sCmdLineParams.argv[arg_idx + 1]) != FALSE) ? S_OK : E_OUTOFMEMORY;
             }
         }
@@ -249,6 +256,11 @@ HRESULT GetCmdLineParamUInt(_In_z_ LPCWSTR szParamNameW, _Out_ LPDWORD lpdwValue
             if (_wcsicmp(sCmdLineParams.argv[arg_idx] + 1, szParamNameW) == 0)
             {
                 LPWSTR sW;
+
+                if (arg_idx + 1 >= sCmdLineParams.argc)
+                {
+                    return E_INVALIDARG;
+                }
 
                 *lpdwValue = wcstoul(sCmdLineParams.argv[arg_idx + 1], &sW, 10);
                 return S_OK;

@@ -19,10 +19,9 @@
  */
 #include "..\Include\FileStream.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CFileStream::CFileStream() : CStream(), CNonCopyableObj()
 {
@@ -49,8 +48,8 @@ HRESULT CFileStream::Create(_In_ LPCWSTR szFileNameW, _In_opt_ DWORD dwDesiredAc
     {
         dwDesiredAccess |= SYNCHRONIZE;
     }
-    nNtStatus = ::MxCreateFile(&h, szFileNameW, dwDesiredAccess, dwShareMode, dwCreationDisposition,
-                               dwFlagsAndAttributes, lpSecurityAttributes);
+    nNtStatus = ::MxCreateFile(&h, szFileNameW, dwDesiredAccess, dwShareMode, dwCreationDisposition, dwFlagsAndAttributes,
+                               lpSecurityAttributes);
     if (!NT_SUCCESS(nNtStatus))
     {
         return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
@@ -69,8 +68,7 @@ VOID CFileStream::Close()
     return;
 }
 
-HRESULT CFileStream::Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesRead,
-                          _In_opt_ ULONGLONG nStartOffset)
+HRESULT CFileStream::Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesRead, _In_opt_ ULONGLONG nStartOffset)
 {
     MX_IO_STATUS_BLOCK sIoStatus;
     ULARGE_INTEGER liOffset;
@@ -108,7 +106,9 @@ HRESULT CFileStream::Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T 
     nBytesRead = (SIZE_T)(sIoStatus.Information);
 #ifdef _DEBUG
     if (nStartOffset == ULONGLONG_MAX)
+    {
         nCurrentOffset += (ULONGLONG)(sIoStatus.Information);
+    }
 #endif //_DEBUG
     // done
     if (!NT_SUCCESS(nNtStatus))
@@ -118,8 +118,7 @@ HRESULT CFileStream::Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T 
     return S_OK;
 }
 
-HRESULT CFileStream::Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
-                           _In_opt_ ULONGLONG nStartOffset)
+HRESULT CFileStream::Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten, _In_opt_ ULONGLONG nStartOffset)
 {
     MX_IO_STATUS_BLOCK sIoStatus;
     ULARGE_INTEGER liOffset;
@@ -162,7 +161,9 @@ HRESULT CFileStream::Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T 
         }
 #ifdef _DEBUG
         if (nStartOffset == ULONGLONG_MAX)
+        {
             nCurrentOffset += (ULONGLONG)(sIoStatus.Information);
+        }
 #endif //_DEBUG
         if (!NT_SUCCESS(nNtStatus))
         {
@@ -192,43 +193,40 @@ HRESULT CFileStream::Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod
     }
     switch (nMethod)
     {
-    case eSeekMethod::Start:
-        sFilePosInfo.CurrentByteOffset.QuadPart = (LONGLONG)nPosition;
-        break;
+        case eSeekMethod::Start:
+            sFilePosInfo.CurrentByteOffset.QuadPart = (LONGLONG)nPosition;
+            break;
 
-    case eSeekMethod::Current:
-        nNtStatus = ::MxNtQueryInformationFile(cFileH, &sIoStatus, &sFilePosInfo, (ULONG)sizeof(sFilePosInfo),
-                                               MxFilePositionInformation);
-        if (!NT_SUCCESS(nNtStatus))
-        {
-            return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
-        }
-        sFilePosInfo.CurrentByteOffset.QuadPart += (LONGLONG)nPosition;
-        if (sFilePosInfo.CurrentByteOffset.QuadPart < 0i64)
-        {
-            return E_FAIL;
-        }
-        break;
+        case eSeekMethod::Current:
+            nNtStatus = ::MxNtQueryInformationFile(cFileH, &sIoStatus, &sFilePosInfo, (ULONG)sizeof(sFilePosInfo), MxFilePositionInformation);
+            if (!NT_SUCCESS(nNtStatus))
+            {
+                return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
+            }
+            sFilePosInfo.CurrentByteOffset.QuadPart += (LONGLONG)nPosition;
+            if (sFilePosInfo.CurrentByteOffset.QuadPart < 0i64)
+            {
+                return E_FAIL;
+            }
+            break;
 
-    case eSeekMethod::End:
-        nNtStatus = ::MxNtQueryInformationFile(cFileH, &sIoStatus, &sFileStdInfo, (ULONG)sizeof(sFileStdInfo),
-                                               MxFileStandardInformation);
-        if (!NT_SUCCESS(nNtStatus))
-        {
-            return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
-        }
-        if (nPosition > (ULONGLONG)sFileStdInfo.EndOfFile.QuadPart)
-        {
-            return E_FAIL;
-        }
-        sFilePosInfo.CurrentByteOffset.QuadPart = sFileStdInfo.EndOfFile.QuadPart - (LONGLONG)nPosition;
-        break;
+        case eSeekMethod::End:
+            nNtStatus = ::MxNtQueryInformationFile(cFileH, &sIoStatus, &sFileStdInfo, (ULONG)sizeof(sFileStdInfo), MxFileStandardInformation);
+            if (!NT_SUCCESS(nNtStatus))
+            {
+                return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
+            }
+            if (nPosition > (ULONGLONG)sFileStdInfo.EndOfFile.QuadPart)
+            {
+                return E_FAIL;
+            }
+            sFilePosInfo.CurrentByteOffset.QuadPart = sFileStdInfo.EndOfFile.QuadPart - (LONGLONG)nPosition;
+            break;
 
-    default:
-        return E_INVALIDARG;
+        default:
+            return E_INVALIDARG;
     }
-    nNtStatus = ::MxNtSetInformationFile(cFileH, &sIoStatus, &sFilePosInfo, (ULONG)sizeof(sFilePosInfo),
-                                         MxFilePositionInformation);
+    nNtStatus = ::MxNtSetInformationFile(cFileH, &sIoStatus, &sFilePosInfo, (ULONG)sizeof(sFilePosInfo), MxFilePositionInformation);
     if (!NT_SUCCESS(nNtStatus))
     {
         return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
@@ -250,8 +248,7 @@ ULONGLONG CFileStream::GetLength() const
     {
         return 0ui64;
     }
-    nNtStatus = ::MxNtQueryInformationFile(cFileH, &sIoStatus, &sFileStdInfo, (ULONG)sizeof(sFileStdInfo),
-                                           MxFileStandardInformation);
+    nNtStatus = ::MxNtQueryInformationFile(cFileH, &sIoStatus, &sFileStdInfo, (ULONG)sizeof(sFileStdInfo), MxFileStandardInformation);
     if (!NT_SUCCESS(nNtStatus))
     {
         return 0ui64;

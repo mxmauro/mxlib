@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderReqReferer.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderReqReferer::CHttpHeaderReqReferer() : CHttpHeaderBase()
 {

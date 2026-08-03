@@ -21,7 +21,7 @@
 #include "..\Include\WaitableObjects.h"
 #include "Internals\MsVcrt.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 typedef void (*_PVFV)(void);
 
@@ -48,8 +48,7 @@ static SIZE_T nListCount = 0;
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 HRESULT RegisterFinalizer(_In_ lpfnFinalizer fnFinalizer, _In_ SIZE_T nPriority)
 {
@@ -67,8 +66,7 @@ HRESULT RegisterFinalizer(_In_ lpfnFinalizer fnFinalizer, _In_ SIZE_T nPriority)
         LPFINALIZER_ITEM lpNewList = NULL;
         SIZE_T nSize = (nListSize + 32) * sizeof(FINALIZER_ITEM);
 
-        if (!NT_SUCCESS(::MxNtAllocateVirtualMemory(MX_CURRENTPROCESS, (PVOID *)&lpNewList, 0, &nSize, MEM_COMMIT,
-                                                    PAGE_READWRITE)))
+        if (!NT_SUCCESS(::MxNtAllocateVirtualMemory(MX_CURRENTPROCESS, (PVOID *)&lpNewList, 0, &nSize, MEM_COMMIT, PAGE_READWRITE)))
         {
             return E_OUTOFMEMORY;
         }

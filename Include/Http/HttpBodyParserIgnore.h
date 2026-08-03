@@ -22,14 +22,13 @@
 
 #include "HttpBodyParserBase.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpBodyParserIgnore : public CHttpBodyParserBase
 {
-  public:
+public:
     CHttpBodyParserIgnore();
     ~CHttpBodyParserIgnore();
 
@@ -38,7 +37,7 @@ class CHttpBodyParserIgnore : public CHttpBodyParserBase
         return "ignore";
     };
 
-  protected:
+protected:
     HRESULT Initialize(_In_ Internals::CHttpParser &cHttpParser);
     HRESULT Parse(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize);
 };

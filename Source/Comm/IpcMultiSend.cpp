@@ -19,10 +19,9 @@
  */
 #include "IpcDefs.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CIpc::CMultiSendLock::CMultiSendLock(_In_ CConnectionBase *_lpConn) : CBaseMemObj(), CNonCopyableObj(), lpConn(_lpConn)
 {

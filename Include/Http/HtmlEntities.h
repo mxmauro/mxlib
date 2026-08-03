@@ -23,13 +23,11 @@
 #include "..\Defines.h"
 #include "..\Strings\Strings.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace HtmlEntities
-{
+namespace HtmlEntities {
 
 LPCSTR Get(_In_ WCHAR chW);
 

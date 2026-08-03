@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderRespAcceptRanges.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderRespAcceptRanges::CHttpHeaderRespAcceptRanges() : CHttpHeaderBase()
 {
@@ -79,33 +78,33 @@ HRESULT CHttpHeaderRespAcceptRanges::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE
         // check range type
         switch ((SIZE_T)(szValueA - szStartA))
         {
-        case 4:
-            if (StrNCompareA(szStartA, "none", 4, TRUE) == 0)
-            {
-                _nRange = RangeNone;
-            }
-            else
-            {
-                return MX_E_Unsupported;
-            }
-            break;
+            case 4:
+                if (StrNCompareA(szStartA, "none", 4, TRUE) == 0)
+                {
+                    _nRange = RangeNone;
+                }
+                else
+                {
+                    return MX_E_Unsupported;
+                }
+                break;
 
-        case 5:
-            if (StrNCompareA(szStartA, "bytes", 5, TRUE) == 0)
-            {
-                _nRange = RangeBytes;
-            }
-            else
-            {
-                return MX_E_Unsupported;
-            }
-            break;
+            case 5:
+                if (StrNCompareA(szStartA, "bytes", 5, TRUE) == 0)
+                {
+                    _nRange = RangeBytes;
+                }
+                else
+                {
+                    return MX_E_Unsupported;
+                }
+                break;
 
-        default:
-            return MX_E_Unsupported;
+            default:
+                return MX_E_Unsupported;
         }
 
-    skip_null_listitem:
+skip_null_listitem:
         // skip spaces
         szValueA = SkipSpaces(szValueA, szValueEndA);
 
@@ -121,7 +120,8 @@ HRESULT CHttpHeaderRespAcceptRanges::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE
                 return MX_E_InvalidData;
             }
         }
-    } while (szValueA < szValueEndA);
+    }
+    while (szValueA < szValueEndA);
 
     // do we got one?
     if (bGotItem == FALSE)
@@ -138,19 +138,19 @@ HRESULT CHttpHeaderRespAcceptRanges::Build(_Inout_ CStringA &cStrDestA, _In_ Htt
 {
     switch (nRange)
     {
-    case RangeNone:
-        if (cStrDestA.Copy("none") == FALSE)
-        {
-            return E_OUTOFMEMORY;
-        }
-        return S_OK;
+        case RangeNone:
+            if (cStrDestA.Copy("none") == FALSE)
+            {
+                return E_OUTOFMEMORY;
+            }
+            return S_OK;
 
-    case RangeBytes:
-        if (cStrDestA.Copy("bytes") == FALSE)
-        {
-            return E_OUTOFMEMORY;
-        }
-        return S_OK;
+        case RangeBytes:
+            if (cStrDestA.Copy("bytes") == FALSE)
+            {
+                return E_OUTOFMEMORY;
+            }
+            return S_OK;
     }
     cStrDestA.Empty();
     return MX_E_Unsupported;

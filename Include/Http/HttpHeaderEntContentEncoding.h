@@ -22,14 +22,13 @@
 
 #include "HttpHeaderBase.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderEntContentEncoding : public CHttpHeaderBase
 {
-  public:
+public:
     enum class eEncoding
     {
         Unsupported = -1,
@@ -41,16 +40,16 @@ class CHttpHeaderEntContentEncoding : public CHttpHeaderBase
     CHttpHeaderEntContentEncoding();
     ~CHttpHeaderEntContentEncoding();
 
-    MX_DECLARE_HTTPHEADER_NAME(Content - Encoding)
+    MX_DECLARE_HTTPHEADER_NAME("Content-Encoding")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
     HRESULT SetEncoding(_In_ eEncoding nEncoding);
     eEncoding GetEncoding() const;
 
-  private:
+private:
     eEncoding nEncoding;
 };
 
@@ -58,8 +57,8 @@ class CHttpHeaderEntContentEncoding : public CHttpHeaderBase
 
 class CHttpHeaderEntContentTransferEncoding : public CHttpHeaderEntContentEncoding
 {
-  public:
-    MX_DECLARE_HTTPHEADER_NAME(Content - Transfer - Encoding)
+public:
+    MX_DECLARE_HTTPHEADER_NAME("Content-Transfer-Encoding")
 };
 
 } // namespace MX

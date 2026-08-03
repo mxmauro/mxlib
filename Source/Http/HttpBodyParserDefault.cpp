@@ -21,14 +21,12 @@
 #include "..\..\Include\FnvHash.h"
 #include <intsafe.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-CHttpBodyParserDefault::CHttpBodyParserDefault(_In_ OnDownloadStartedCallback _cDownloadStartedCallback,
-                                               _In_opt_ LPVOID _lpUserParam, _In_ DWORD _dwMaxBodySizeInMemory,
-                                               _In_ ULONGLONG _ullMaxBodySize)
+CHttpBodyParserDefault::CHttpBodyParserDefault(_In_ OnDownloadStartedCallback _cDownloadStartedCallback, _In_opt_ LPVOID _lpUserParam,
+                                               _In_ DWORD _dwMaxBodySizeInMemory, _In_ ULONGLONG _ullMaxBodySize)
     : CHttpBodyParserBase(), CNonCopyableObj()
 {
     FastLock_Initialize(&nMutex);
@@ -49,8 +47,8 @@ CHttpBodyParserDefault::~CHttpBodyParserDefault()
     return;
 }
 
-HRESULT CHttpBodyParserDefault::Read(_Out_writes_to_(nToRead, *lpnReaded) LPVOID lpDest, _In_ ULONGLONG nOffset,
-                                     _In_ SIZE_T nToRead, _Out_opt_ SIZE_T *lpnReaded)
+HRESULT CHttpBodyParserDefault::Read(_Out_writes_to_(nToRead, *lpnReaded) LPVOID lpDest, _In_ ULONGLONG nOffset, _In_ SIZE_T nToRead,
+                                     _Out_opt_ SIZE_T *lpnReaded)
 {
     CFastLock cLock(&nMutex);
 
@@ -158,8 +156,7 @@ VOID CHttpBodyParserDefault::KeepFile()
         UCHAR _DeleteFile;
 
         _DeleteFile = 0;
-        ::MxNtSetInformationFile(cFileH, &sIoStatusBlock, &_DeleteFile, (ULONG)sizeof(_DeleteFile),
-                                 MxFileDispositionInformation);
+        ::MxNtSetInformationFile(cFileH, &sIoStatusBlock, &_DeleteFile, (ULONG)sizeof(_DeleteFile), MxFileDispositionInformation);
     }
     return;
 }
@@ -302,7 +299,7 @@ HRESULT CHttpBodyParserDefault::Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T n
         // grow buffer?
         if ((ULONGLONG)nDataSize + nSize > SIZE_T_MAX)
         {
-        err_nomem:
+err_nomem:
             hRes = E_OUTOFMEMORY;
             goto done;
         }

@@ -23,21 +23,18 @@
 #include "..\..\..\..\Include\Crypto\Base64.h"
 #include "..\..\..\..\Include\Crypto\MessageDigest.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-static VOID GetOptionalString(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nIdx,
-                              _Out_ MX::CStringA &cStrDestA);
-static VOID GetOptionalTimestamp(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nIdx,
-                                 _Out_ MX::CDateTime &cDt, _In_opt_ MX::CDateTime *lpBaseDt);
-static HRESULT EncodeAndConcatBuffer(_Inout_ MX::CStringA &cStrEncodedDataA, _In_ LPVOID lpBuffer,
-                                     _In_ SIZE_T nBufferLen);
+static VOID GetOptionalString(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nIdx, _Out_ MX::CStringA &cStrDestA);
+static VOID GetOptionalTimestamp(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nIdx, _Out_ MX::CDateTime &cDt,
+                                 _In_opt_ MX::CDateTime *lpBaseDt);
+static HRESULT EncodeAndConcatBuffer(_Inout_ MX::CStringA &cStrEncodedDataA, _In_ LPVOID lpBuffer, _In_ SIZE_T nBufferLen);
 static HRESULT DecodeBase64Buffer(_In_ MX::CBase64Decoder &cBase64Dec, _In_ LPCSTR szEncodedA, _In_ SIZE_T nEncodedLen);
 static MX::CMessageDigest::eAlgorithm GetHsAlgorithm(_In_z_ LPCSTR szAlgorithmA);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CJsonWebTokenPlugin::CJsonWebTokenPlugin() : CJsObjectBase(), CNonCopyableObj()
 {
@@ -158,15 +155,15 @@ DukTape::duk_ret_t CJsonWebTokenPlugin::Create(_In_ DukTape::duk_context *lpCtx)
     // add algorithm
     switch (nHsAlgorithm)
     {
-    case CMessageDigest::eAlgorithm::SHA256:
-        DukTape::duk_push_sprintf(lpCtx, "HS256");
-        break;
-    case CMessageDigest::eAlgorithm::SHA384:
-        DukTape::duk_push_sprintf(lpCtx, "HS384");
-        break;
-    case CMessageDigest::eAlgorithm::SHA512:
-        DukTape::duk_push_sprintf(lpCtx, "HS512");
-        break;
+        case CMessageDigest::eAlgorithm::SHA256:
+            DukTape::duk_push_sprintf(lpCtx, "HS256");
+            break;
+        case CMessageDigest::eAlgorithm::SHA384:
+            DukTape::duk_push_sprintf(lpCtx, "HS384");
+            break;
+        case CMessageDigest::eAlgorithm::SHA512:
+            DukTape::duk_push_sprintf(lpCtx, "HS512");
+            break;
     }
     DukTape::duk_put_prop_string(lpCtx, -2, "alg");
 
@@ -509,24 +506,24 @@ DukTape::duk_ret_t CJsonWebTokenPlugin::Verify(_In_ DukTape::duk_context *lpCtx)
     sA = DukTape::duk_require_string(lpCtx, -1);
     switch (nHsAlgorithm)
     {
-    case CMessageDigest::eAlgorithm::SHA256:
-        if (StrCompareA(sA, "HS256", FALSE) != 0)
-        {
-            MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
-        }
-        break;
-    case CMessageDigest::eAlgorithm::SHA384:
-        if (StrCompareA(sA, "HS384", FALSE) != 0)
-        {
-            MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
-        }
-        break;
-    case CMessageDigest::eAlgorithm::SHA512:
-        if (StrCompareA(sA, "HS512", FALSE) != 0)
-        {
-            MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
-        }
-        break;
+        case CMessageDigest::eAlgorithm::SHA256:
+            if (StrCompareA(sA, "HS256", FALSE) != 0)
+            {
+                MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+            }
+            break;
+        case CMessageDigest::eAlgorithm::SHA384:
+            if (StrCompareA(sA, "HS384", FALSE) != 0)
+            {
+                MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+            }
+            break;
+        case CMessageDigest::eAlgorithm::SHA512:
+            if (StrCompareA(sA, "HS512", FALSE) != 0)
+            {
+                MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+            }
+            break;
     }
     DukTape::duk_pop_2(lpCtx);
 
@@ -627,8 +624,7 @@ DukTape::duk_ret_t CJsonWebTokenPlugin::Verify(_In_ DukTape::duk_context *lpCtx)
 
 //-----------------------------------------------------------
 
-static VOID GetOptionalString(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nIdx,
-                              _Out_ MX::CStringA &cStrDestA)
+static VOID GetOptionalString(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nIdx, _Out_ MX::CStringA &cStrDestA)
 {
     cStrDestA.Empty();
     if (DukTape::duk_is_undefined(lpCtx, nIdx) == 0 && DukTape::duk_is_null(lpCtx, nIdx) == 0)
@@ -645,8 +641,8 @@ static VOID GetOptionalString(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::du
     return;
 }
 
-static VOID GetOptionalTimestamp(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nIdx,
-                                 _Out_ MX::CDateTime &cDt, _In_opt_ MX::CDateTime *lpBaseDt)
+static VOID GetOptionalTimestamp(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nIdx, _Out_ MX::CDateTime &cDt,
+                                 _In_opt_ MX::CDateTime *lpBaseDt)
 {
     cDt.Clear();
     if (DukTape::duk_is_undefined(lpCtx, nIdx) == 0 && DukTape::duk_is_null(lpCtx, nIdx) == 0)
@@ -701,47 +697,46 @@ static VOID GetOptionalTimestamp(_In_ DukTape::duk_context *lpCtx, _In_ DukTape:
                     {
                         switch (sA[0])
                         {
-                        case 'y':
-                        case 'Y':
-                            nUnits = MX::CDateTime::eUnits::Year;
-                            break;
-                        case 'w':
-                        case 'W':
-                            nUnits = MX::CDateTime::eUnits::Day;
-                            if ((ULONG)nOffset * 7 < (ULONG)nOffset)
-                            {
-                                MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_ArithmeticOverflow);
-                            }
-                            nOffset *= 7;
-                            if (nOffset > 0x7FFFFFFFUL)
-                            {
-                                MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_ArithmeticOverflow);
-                            }
-                            break;
-                        case 'd':
-                        case 'D':
-                            nUnits = MX::CDateTime::eUnits::Day;
-                            break;
-                        case 'h':
-                        case 'H':
-                            nUnits = MX::CDateTime::eUnits::Hours;
-                            break;
-                        case 'm':
-                        case 'M':
-                            nUnits = MX::CDateTime::eUnits::Minutes;
-                            break;
-                        case 's':
-                        case 'S':
-                            nUnits = MX::CDateTime::eUnits::Seconds;
-                            break;
-                        default:
-                            MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+                            case 'y':
+                            case 'Y':
+                                nUnits = MX::CDateTime::eUnits::Year;
+                                break;
+                            case 'w':
+                            case 'W':
+                                nUnits = MX::CDateTime::eUnits::Day;
+                                if ((ULONG)nOffset * 7 < (ULONG)nOffset)
+                                {
+                                    MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_ArithmeticOverflow);
+                                }
+                                nOffset *= 7;
+                                if (nOffset > 0x7FFFFFFFUL)
+                                {
+                                    MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_ArithmeticOverflow);
+                                }
+                                break;
+                            case 'd':
+                            case 'D':
+                                nUnits = MX::CDateTime::eUnits::Day;
+                                break;
+                            case 'h':
+                            case 'H':
+                                nUnits = MX::CDateTime::eUnits::Hours;
+                                break;
+                            case 'm':
+                            case 'M':
+                                nUnits = MX::CDateTime::eUnits::Minutes;
+                                break;
+                            case 's':
+                            case 'S':
+                                nUnits = MX::CDateTime::eUnits::Seconds;
+                                break;
+                            default:
+                                MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
                         }
                     }
                     else
                     {
-                        if (MX::StrNCompareA(sA, "yr", 2, TRUE) == 0 &&
-                            (sA[2] == 0 || ((sA[2] == 's' || sA[2] == 'S') && sA[3] == 0)))
+                        if (MX::StrNCompareA(sA, "yr", 2, TRUE) == 0 && (sA[2] == 0 || ((sA[2] == 's' || sA[2] == 'S') && sA[3] == 0)))
                         {
                             nUnits = MX::CDateTime::eUnits::Year;
                         }
@@ -769,8 +764,7 @@ static VOID GetOptionalTimestamp(_In_ DukTape::duk_context *lpCtx, _In_ DukTape:
                         {
                             nUnits = MX::CDateTime::eUnits::Day;
                         }
-                        else if (MX::StrNCompareA(sA, "hr", 2, TRUE) == 0 &&
-                                 (sA[2] == 0 || ((sA[2] == 's' || sA[2] == 'S') && sA[3] == 0)))
+                        else if (MX::StrNCompareA(sA, "hr", 2, TRUE) == 0 && (sA[2] == 0 || ((sA[2] == 's' || sA[2] == 'S') && sA[3] == 0)))
                         {
                             nUnits = MX::CDateTime::eUnits::Hours;
                         }
@@ -832,8 +826,7 @@ static VOID GetOptionalTimestamp(_In_ DukTape::duk_context *lpCtx, _In_ DukTape:
                         MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
                     }
                 }
-                hRes =
-                    (bNegative == FALSE) ? cDt.Add((LONGLONG)nOffset, nUnits) : cDt.Sub(-((LONGLONG)nOffset), nUnits);
+                hRes = (bNegative == FALSE) ? cDt.Add((LONGLONG)nOffset, nUnits) : cDt.Sub(-((LONGLONG)nOffset), nUnits);
                 if (FAILED(hRes))
                 {
                     MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
@@ -872,8 +865,7 @@ static VOID GetOptionalTimestamp(_In_ DukTape::duk_context *lpCtx, _In_ DukTape:
     return;
 }
 
-static HRESULT EncodeAndConcatBuffer(_Inout_ MX::CStringA &cStrEncodedDataA, _In_ LPVOID lpBuffer,
-                                     _In_ SIZE_T nBufferLen)
+static HRESULT EncodeAndConcatBuffer(_Inout_ MX::CStringA &cStrEncodedDataA, _In_ LPVOID lpBuffer, _In_ SIZE_T nBufferLen)
 {
     MX::CBase64Encoder cBase64Enc;
     LPCSTR sA;
@@ -898,26 +890,26 @@ static HRESULT EncodeAndConcatBuffer(_Inout_ MX::CStringA &cStrEncodedDataA, _In
     {
         switch (*sA)
         {
-        case '+':
-            if (cStrEncodedDataA.ConcatN("-", 1) == FALSE)
-            {
-                return E_OUTOFMEMORY;
-            }
-            break;
-        case '/':
-            if (cStrEncodedDataA.ConcatN("_", 1) == FALSE)
-            {
-                return E_OUTOFMEMORY;
-            }
-            break;
-        case '=':
-            break;
-        default:
-            if (cStrEncodedDataA.ConcatN(sA, 1) == FALSE)
-            {
-                return E_OUTOFMEMORY;
-            }
-            break;
+            case '+':
+                if (cStrEncodedDataA.ConcatN("-", 1) == FALSE)
+                {
+                    return E_OUTOFMEMORY;
+                }
+                break;
+            case '/':
+                if (cStrEncodedDataA.ConcatN("_", 1) == FALSE)
+                {
+                    return E_OUTOFMEMORY;
+                }
+                break;
+            case '=':
+                break;
+            default:
+                if (cStrEncodedDataA.ConcatN(sA, 1) == FALSE)
+                {
+                    return E_OUTOFMEMORY;
+                }
+                break;
         }
     }
     // done

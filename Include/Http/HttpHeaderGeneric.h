@@ -23,10 +23,9 @@
 #include "HttpHeaderBase.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 // This generic class can be used for the following generic headers:
 //
@@ -35,7 +34,7 @@ namespace MX
 //     or any other unparsed header
 class CHttpHeaderGeneric : public CHttpHeaderBase
 {
-  public:
+public:
     CHttpHeaderGeneric();
     ~CHttpHeaderGeneric();
 
@@ -54,7 +53,7 @@ class CHttpHeaderGeneric : public CHttpHeaderBase
     HRESULT SetValue(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
     LPCSTR GetValue() const;
 
-  private:
+private:
     CStringA cStrHeaderNameA;
     CStringA cStrValueA;
 };

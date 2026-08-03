@@ -3,8 +3,7 @@
 [CmdletBinding()]
 param(
     [string]$Configuration = "",
-    [string]$Platform = "",
-    [switch]$Rebuild
+    [string]$Platform = ""
 )
 
 $ErrorActionPreference = 'Stop'
@@ -122,10 +121,14 @@ function Invoke-App([string]$CmdLine, [string]$CurFolder, [string]$EnvPath, [boo
 }
 
 function CheckForNewerFile([string]$File, [datetime]$BuildDate) {
-    if (-not (Test-Path -LiteralPath $File)) {
-        return $false
+    if (Test-Path -LiteralPath $File) {
+        if ((Get-Item -LiteralPath $File).LastWriteTime -gt $BuildDate) {
+            $fullPath = [System.IO.Path]::GetFullPath($File)
+            Write-Host "File: `"$($fullPath)`" is newer... rebuilding"
+            return $true
+        }
     }
-    return (Get-Item -LiteralPath $File).LastWriteTime -gt $BuildDate
+    return $false
 }
 
 function CheckForNewerFiles([string]$Folder, [datetime]$BuildDate) {
@@ -136,11 +139,11 @@ function CheckForNewerFiles([string]$Folder, [datetime]$BuildDate) {
     }
     foreach ($f in Get-ChildItem -LiteralPath $Folder -File -ErrorAction SilentlyContinue) {
         $ext = $f.Extension.ToLower()
-        if ($ext -in '.cpp', '.c', '.h', '.in') {
-            if ((CheckForNewerFile $f.FullName $BuildDate) -and
-                -not (Test-Path -LiteralPath ($f.FullName + '.in'))) {
-                Write-Host "File: `"$($f.FullName)`" is newer... rebuilding"
-                return $true
+        if ($ext -in '.cpp', '.c', '.h') {
+            if (-not (Test-Path -LiteralPath ($f.FullName + '.in'))) {
+                if (CheckForNewerFile $f.FullName $BuildDate) {
+                    return $true
+                }
             }
         }
     }
@@ -151,6 +154,8 @@ function GetLowestFileTimestamp([string[]]$Files) {
     $lowest = $null
     foreach ($f in $Files) {
         if (-not (Test-Path -LiteralPath $f)) {
+            $fullPath = [System.IO.Path]::GetFullPath($f)
+            Write-Host "File: `"$($fullPath)`" not found... rebuilding"
             return $null
         }
         $ts = (Get-Item -LiteralPath $f).LastWriteTime
@@ -392,8 +397,8 @@ function Patch_Makefile {
 # Argument validation
 # ---------------------------------------------------------------------------
 
-if (-not $Configuration -and -not $Platform -and -not $Rebuild.IsPresent) {
-    Write-Host "Use: .\build.ps1 -Configuration (Debug|Release) -Platform (x86|x64) [-Rebuild]"
+if (-not $Configuration -and -not $Platform) {
+    Write-Host "Use: .\build.ps1 -Configuration (Debug|Release) -Platform (x86|x64)"
     exit 1
 }
 
@@ -475,21 +480,24 @@ else {
 # Check if rebuild is needed
 # ---------------------------------------------------------------------------
 
-$doRebuild = [bool]$Rebuild
-if (-not $doRebuild) {
-    Write-Host "Checking if source files were modified..."
-    $libBase = $scriptPath + "..\..\Libs\$platformPath\$Configuration\"
-    $stamps  = @(
-        $libBase + 'openssl_libcrypto.lib', $libBase + 'openssl_libssl.lib',
-        $libBase + 'openssl_libcommon.lib', $libBase + 'openssl_libdefault.lib',
-        $libBase + 'openssl_liblegacy.lib', $libBase + 'openssl_static.pdb'
-    )
-    $buildDate = GetLowestFileTimestamp $stamps
-    if ($null -eq $buildDate -or
-        (CheckForNewerFiles ($scriptPath + 'Source') $buildDate) -or
+$doRebuild = $false
+Write-Host "Checking if source files were modified..."
+$libBase = $scriptPath + "..\..\Libs\$platformPath\$Configuration\"
+$stamps  = @(
+    ($libBase + 'openssl_libcrypto.lib'),
+    ($libBase + 'openssl_libssl.lib'),
+    ($libBase + 'openssl_libcommon.lib'),
+    ($libBase + 'openssl_libdefault.lib'),
+    ($libBase + 'openssl_liblegacy.lib'),
+    ($libBase + 'openssl_static.pdb')
+)
+$buildDate = GetLowestFileTimestamp $stamps
+if ($null -eq $buildDate) {
+    $doRebuild = $true
+}
+elseif ((CheckForNewerFiles ($scriptPath + 'Source') $buildDate) -or
         (CheckForNewerFile  ($scriptPath + 'build.ps1') $buildDate)) {
-        $doRebuild = $true
-    }
+    $doRebuild = $true
 }
 
 if (-not $doRebuild) {
@@ -507,7 +515,7 @@ Write-Host "Creating configuration settings..."
 
 $err = CreateConfiguration
 if ($err -ne 0) {
-    Write-Host "Errors found!"
+    Write-Host "Errors found! [$err]"
     exit $err
 }
 
@@ -522,14 +530,14 @@ if (-not $isDebug) {
 $cmd += " " + (EscapeParam "--config=${scriptPath}Temp\compiler_config.conf") + " "
 $err  = Invoke-App $cmd ($scriptPath + 'Source') ($perlPath + ';' + $nasmPath) $false
 if ($err -ne 0) {
-    Write-Host "Errors found!"
+    Write-Host "Errors found! [$err]"
     exit $err
 }
 
 Write-Host "Patching makefile..."
 $err = Patch_Makefile
 if ($err -ne 0) {
-    Write-Host "Errors found!"
+    Write-Host "Errors found! [$err]"
     exit $err
 }
 
@@ -540,7 +548,7 @@ if ($err -ne 0) {
 Write-Host "Patching rand_win.c..."
 $err = Patch_RAND_WIN_C
 if ($err -ne 0) {
-    Write-Host "Errors found!"
+    Write-Host "Errors found! [$err]"
     exit $err
 }
 
@@ -552,7 +560,7 @@ Write-Host "Compiling..."
 $err = Invoke-App ((EscapeParam $cmdExe) + ' /S /C "CALL ' + (EscapeParam $vcVars) + ' && nmake.exe /S build_libs"') `
     ($scriptPath + 'Source') ($perlPath + ';' + $nasmPath) $false
 if ($err -ne 0) {
-    Write-Host "Errors found!"
+    Write-Host "Errors found! [$err]"
     exit $err
 }
 

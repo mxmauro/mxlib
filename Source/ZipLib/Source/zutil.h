@@ -3,12 +3,12 @@
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-/* WARNING: this file should *not* be used by applications. It is
-   part of the implementation of the compression library and is
-   subject to change. Applications should only use zlib.h.
- */
+ /* WARNING: this file should *not* be used by applications. It is
+    part of the implementation of the compression library and is
+    subject to change. Applications should only use zlib.h.
+  */
 
-/* @(#) $Id$ */
+  /* @(#) $Id$ */
 
 #ifndef ZUTIL_H
 #define ZUTIL_H
@@ -59,7 +59,7 @@ typedef unsigned long  ulg;
 #  endif
 #endif
 
-extern z_const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
+extern z_const char *const z_errmsg[10]; /* indexed by 2-zlib_error */
 /* (size given to avoid silly warnings with Visual C++) */
 
 #define ERR_MSG(err) z_errmsg[(err) < -6 || (err) > 2 ? 9 : 2 - (err)]
@@ -103,8 +103,8 @@ extern z_const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
 #    if defined(__TURBOC__) || defined(__BORLANDC__)
 #      if (__STDC__ == 1) && (defined(__LARGE__) || defined(__COMPACT__))
          /* Allow compilation with ANSI keywords only enabled */
-         void _Cdecl farfree( void *block );
-         void *_Cdecl farmalloc( unsigned long nbytes );
+void _Cdecl farfree(void *block);
+void *_Cdecl farmalloc(unsigned long nbytes);
 #      else
 #        include <alloc.h>
 #      endif
@@ -170,19 +170,19 @@ extern z_const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
 #endif
 
 #if defined(__BORLANDC__) && !defined(MSDOS)
-  #pragma warn -8004
-  #pragma warn -8008
-  #pragma warn -8066
+#pragma warn -8004
+#pragma warn -8008
+#pragma warn -8066
 #endif
 
 /* provide prototypes for these when building zlib without LFS */
 #ifndef Z_LARGE64
-   ZEXTERN uLong ZEXPORT adler32_combine64(uLong, uLong, z_off64_t);
-   ZEXTERN uLong ZEXPORT crc32_combine64(uLong, uLong, z_off64_t);
-   ZEXTERN uLong ZEXPORT crc32_combine_gen64(z_off64_t);
+ZEXTERN uLong ZEXPORT adler32_combine64(uLong, uLong, z_off64_t);
+ZEXTERN uLong ZEXPORT crc32_combine64(uLong, uLong, z_off64_t);
+ZEXTERN uLong ZEXPORT crc32_combine_gen64(z_off64_t);
 #endif
 
-        /* common defaults */
+/* common defaults */
 
 #ifndef OS_CODE
 #  define OS_CODE  3     /* assume Unix */
@@ -218,16 +218,16 @@ extern z_const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
 #    define zmemzero(dest, len) memset(dest, 0, len)
 #  endif
 #else
-   void ZLIB_INTERNAL zmemcpy(void FAR *, const void FAR *, z_size_t);
-   int ZLIB_INTERNAL zmemcmp(const void FAR *, const void FAR *, z_size_t);
-   void ZLIB_INTERNAL zmemzero(void FAR *, z_size_t);
+void ZLIB_INTERNAL zmemcpy(void FAR *, const void FAR *, z_size_t);
+int ZLIB_INTERNAL zmemcmp(const void FAR *, const void FAR *, z_size_t);
+void ZLIB_INTERNAL zmemzero(void FAR *, z_size_t);
 #endif
 
 /* Diagnostic functions */
 #ifdef ZLIB_DEBUG
 #  include <stdio.h>
-   extern int ZLIB_INTERNAL z_verbose;
-   extern void ZLIB_INTERNAL z_error(char *m);
+extern int ZLIB_INTERNAL z_verbose;
+extern void ZLIB_INTERNAL z_error(char *m);
 #  define Assert(cond,msg) {if(!(cond)) z_error(msg);}
 #  define Trace(x) {if (z_verbose>=0) fprintf x ;}
 #  define Tracev(x) {if (z_verbose>0) fprintf x ;}
@@ -244,9 +244,9 @@ extern z_const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
 #endif
 
 #ifndef Z_SOLO
-   voidpf ZLIB_INTERNAL zcalloc(voidpf opaque, unsigned items,
-                                unsigned size);
-   void ZLIB_INTERNAL zcfree(voidpf opaque, voidpf ptr);
+voidpf ZLIB_INTERNAL zcalloc(voidpf opaque, unsigned items,
+                             unsigned size);
+void ZLIB_INTERNAL zcfree(voidpf opaque, voidpf ptr);
 #endif
 
 #define ZALLOC(strm, items, size) \
@@ -263,12 +263,13 @@ extern z_const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
   Create a local z_once() function depending on the availability of atomics.
  */
 
-/* Check for the availability of atomics. */
+ /* Check for the availability of atomics. */
 #if defined(__STDC__) && __STDC_VERSION__ >= 201112L && \
     !defined(__STDC_NO_ATOMICS__)
 
 #include <stdatomic.h>
-typedef struct {
+typedef struct
+{
     atomic_flag begun;
     atomic_int done;
 } z_once_t;
@@ -279,12 +280,15 @@ typedef struct {
   invoke once() at the same time. The state must be a once_t initialized with
   Z_ONCE_INIT.
  */
-local void z_once(z_once_t *state, void (*init)(void)) {
-    if (!atomic_load(&state->done)) {
+local void z_once(z_once_t *state, void (*init)(void))
+{
+    if (!atomic_load(&state->done))
+    {
         if (atomic_flag_test_and_set(&state->begun))
             while (!atomic_load(&state->done))
                 ;
-        else {
+        else
+        {
             init();
             atomic_store(&state->done, 1);
         }
@@ -295,7 +299,8 @@ local void z_once(z_once_t *state, void (*init)(void)) {
 
 #warning zlib not thread-safe
 
-typedef struct z_once_s {
+typedef struct z_once_s
+{
     volatile int begun;
     volatile int done;
 } z_once_t;
@@ -303,7 +308,8 @@ typedef struct z_once_s {
 
 /* Test and set. Alas, not atomic, but tries to limit the period of
    vulnerability. */
-local int test_and_set(int volatile *flag) {
+local int test_and_set(int volatile *flag)
+{
     int was;
 
     was = *flag;
@@ -312,12 +318,15 @@ local int test_and_set(int volatile *flag) {
 }
 
 /* Run the provided init() function once. This is not thread-safe. */
-local void z_once(z_once_t *state, void (*init)(void)) {
-    if (!state->done) {
+local void z_once(z_once_t *state, void (*init)(void))
+{
+    if (!state->done)
+    {
         if (test_and_set(&state->begun))
             while (!state->done)
                 ;
-        else {
+        else
+        {
             init();
             state->done = 1;
         }

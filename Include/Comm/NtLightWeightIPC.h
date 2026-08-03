@@ -37,10 +37,10 @@ namespace MX
 
 class CNtLightWeightIPC : private virtual CBaseMemObj
 {
-  public:
+public:
     class CMessage : public virtual CBaseMemObj
     {
-      public:
+    public:
         CMessage();
         ~CMessage();
 
@@ -61,22 +61,21 @@ class CNtLightWeightIPC : private virtual CBaseMemObj
             return nDataLen;
         };
 
-      private:
+    private:
         LPBYTE lpData;
         SIZE_T nDataLen, nDataSize;
     };
 
-  public:
+public:
     CNtLightWeightIPC();
     ~CNtLightWeightIPC();
 
     NTSTATUS ConnectToServer(__in_z LPCWSTR szServerNameW);
     VOID Disconnect();
 
-    NTSTATUS SendMsg(__in LPCVOID lpMsg, __in SIZE_T nMsgSize, __in_opt CMessage *lpReplyMsg = NULL,
-                     __in_opt ULONG nTimeout = INFINITE);
+    NTSTATUS SendMsg(__in LPCVOID lpMsg, __in SIZE_T nMsgSize, __in_opt CMessage *lpReplyMsg = NULL, __in_opt ULONG nTimeout = INFINITE);
 
-  private:
+private:
     CWindowsHandle cPipe;
     CWindowsEvent cEvent;
     LONG volatile nNextSendId;

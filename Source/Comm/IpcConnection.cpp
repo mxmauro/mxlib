@@ -22,7 +22,7 @@
 
 #define __EPSILON 0.00001f
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 typedef struct
 {
@@ -38,15 +38,14 @@ static int DebugPrintSslError(const char *str, size_t len, void *u);
 static BIO_METHOD *BIO_circular_buffer_mem();
 
 static int _X509_STORE_get1_issuer(_Out_ X509 **issuer, _In_ X509_STORE_CTX *ctx, _In_ X509 *x);
-static STACK_OF(X509) * _X509_STORE_get1_certs(_In_ X509_STORE_CTX *ctx, _In_ const X509_NAME *nm);
-static STACK_OF(X509_CRL) * _X509_STORE_get1_crls(_In_ const X509_STORE_CTX *ctx, _In_ const X509_NAME *nm);
+static STACK_OF(X509) *_X509_STORE_get1_certs(_In_ X509_STORE_CTX *ctx, _In_ const X509_NAME *nm);
+static STACK_OF(X509_CRL) *_X509_STORE_get1_crls(_In_ const X509_STORE_CTX *ctx, _In_ const X509_NAME *nm);
 static X509 *_lookup_cert_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ const X509_NAME *name);
 static X509_CRL *_lookup_crl_by_subject(_In_ MX::CSslCertificateArray *lpCertArray, _In_ const X509_NAME *name);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CIpc::CConnectionBase::CConnectionBase(_In_ CIpc *_lpIpc, _In_ CIpc::eConnectionClass _nClass)
     : TRefCounted<CBaseMemObj>(), lpIpc(_lpIpc), nClass(_nClass)
@@ -226,8 +225,8 @@ HRESULT CIpc::CConnectionBase::SendStream(_In_ CStream *lpStream)
     if (lpIpc->ShouldLog(1) != FALSE)
     {
         cLogTimer.Mark();
-        lpIpc->Log(L"CIpc::SendStream) Clock=%lums / Ovr=0x%p / Type=%lu", cLogTimer.GetElapsedTimeMs(),
-                   lpPacket->GetOverlapped(), lpPacket->GetType());
+        lpIpc->Log(L"CIpc::SendStream) Clock=%lums / Ovr=0x%p / Type=%lu", cLogTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(),
+                   lpPacket->GetType());
         cLogTimer.ResetToLastMark();
     }
     hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
@@ -284,8 +283,8 @@ HRESULT CIpc::CConnectionBase::AfterWriteSignal(_In_ CPacketBase *lpPacket)
     if (lpIpc->ShouldLog(1) != FALSE)
     {
         cLogTimer.Mark();
-        lpIpc->Log(L"CIpc::AfterWriteSignal) Clock=%lums / Conn=0x%p / Ovr=0x%p / Type=%lu",
-                   cLogTimer.GetElapsedTimeMs(), this, lpPacket->GetOverlapped(), lpPacket->GetType());
+        lpIpc->Log(L"CIpc::AfterWriteSignal) Clock=%lums / Conn=0x%p / Ovr=0x%p / Type=%lu", cLogTimer.GetElapsedTimeMs(), this,
+                   lpPacket->GetOverlapped(), lpPacket->GetType());
         cLogTimer.ResetToLastMark();
     }
     hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
@@ -328,9 +327,8 @@ HRESULT CIpc::CConnectionBase::SendResumeIoProcessingPacket(_In_ BOOL bInput)
     if (lpIpc->ShouldLog(1) != FALSE)
     {
         cLogTimer.Mark();
-        lpIpc->Log(L"CIpc::SendResumeIoProcessingPacket[%s]) Clock=%lums / Ovr=0x%p / Type=%lu",
-                   ((bInput != FALSE) ? L"Input" : L"Output"), cLogTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(),
-                   lpPacket->GetType());
+        lpIpc->Log(L"CIpc::SendResumeIoProcessingPacket[%s]) Clock=%lums / Ovr=0x%p / Type=%lu", ((bInput != FALSE) ? L"Input" : L"Output"),
+                   cLogTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(), lpPacket->GetType());
         cLogTimer.ResetToLastMark();
     }
     hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
@@ -364,7 +362,8 @@ VOID CIpc::CConnectionBase::Close(_In_ HRESULT hRes)
             nNewFlags |= FLAG_GracefulShutdown;
         }
         nOrigFlags = _InterlockedCompareExchange(&nFlags, nNewFlags, nInitFlags);
-    } while (nOrigFlags != nInitFlags);
+    }
+    while (nOrigFlags != nInitFlags);
     if ((nInitFlags & FLAG_Closed) == 0)
     {
         _InterlockedCompareExchange(&hrErrorCode, hRes, S_OK);
@@ -389,8 +388,8 @@ VOID CIpc::CConnectionBase::Close(_In_ HRESULT hRes)
         if (lpIpc->ShouldLog(3) != FALSE)
         {
             cLogTimer.Mark();
-            lpIpc->Log(L"CIpc::Close-A) Clock=%lums / This=0x%p / Hr=0x%08X/0x%08X / Writes=%lu",
-                       cLogTimer.GetElapsedTimeMs(), this, hrErrorCode, hRes, __InterlockedRead(&nOutgoingWrites));
+            lpIpc->Log(L"CIpc::Close-A) Clock=%lums / This=0x%p / Hr=0x%08X/0x%08X / Writes=%lu", cLogTimer.GetElapsedTimeMs(), this,
+                       hrErrorCode, hRes, __InterlockedRead(&nOutgoingWrites));
             cLogTimer.ResetToLastMark();
         }
 
@@ -403,8 +402,7 @@ VOID CIpc::CConnectionBase::Close(_In_ HRESULT hRes)
         if (lpIpc->ShouldLog(1) != FALSE)
         {
             cLogTimer.Mark();
-            lpIpc->Log(L"CIpc::Close-B) Clock=%lums / This=0x%p / Res=0x%08X", cLogTimer.GetElapsedTimeMs(), this,
-                       hRes);
+            lpIpc->Log(L"CIpc::Close-B) Clock=%lums / This=0x%p / Res=0x%08X", cLogTimer.GetElapsedTimeMs(), this, hRes);
             cLogTimer.ResetToLastMark();
         }
         Release();
@@ -414,29 +412,26 @@ VOID CIpc::CConnectionBase::Close(_In_ HRESULT hRes)
 
 BOOL CIpc::CConnectionBase::IsGracefulShutdown() const
 {
-    return ((__InterlockedRead(&(const_cast<CIpc::CConnectionBase *>(this)->nFlags)) & FLAG_GracefulShutdown) != 0)
-               ? TRUE
-               : FALSE;
+    return ((__InterlockedRead(&(const_cast<CIpc::CConnectionBase *>(this)->nFlags)) & FLAG_GracefulShutdown) != 0) ? TRUE : FALSE;
 }
 
 BOOL CIpc::CConnectionBase::IsClosed() const
 {
-    return ((__InterlockedRead(&(const_cast<CIpc::CConnectionBase *>(this)->nFlags)) & FLAG_Closed) != 0) ? TRUE
-                                                                                                          : FALSE;
+    return ((__InterlockedRead(&(const_cast<CIpc::CConnectionBase *>(this)->nFlags)) & FLAG_Closed) != 0) ? TRUE : FALSE;
 }
 
 BOOL CIpc::CConnectionBase::IsClosedOrGracefulShutdown() const
 {
     return ((__InterlockedRead(&(const_cast<CIpc::CConnectionBase *>(this)->nFlags)) &
              (FLAG_GracefulShutdown | FLAG_Closed)) != 0)
-               ? TRUE
-               : FALSE;
+        ? TRUE
+        : FALSE;
 }
 
 BOOL CIpc::CConnectionBase::IsConnected() const
 {
     return ((__InterlockedRead(&(const_cast<CIpc::CConnectionBase *>(this)->nFlags)) & FLAG_Connected) != 0) ? TRUE
-                                                                                                             : FALSE;
+        : FALSE;
 }
 
 CIpc *CIpc::CConnectionBase::GetIpc() const
@@ -480,8 +475,8 @@ HRESULT CIpc::CConnectionBase::HandleConnected()
     if (lpIpc->ShouldLog(1) != FALSE)
     {
         cLogTimer.Mark();
-        lpIpc->Log(L"CIpc::HandleConnected) Clock=%lums / This=0x%p / Ovr=0x%p / Type=%lu",
-                   cLogTimer.GetElapsedTimeMs(), this, lpPacket->GetOverlapped(), lpPacket->GetType());
+        lpIpc->Log(L"CIpc::HandleConnected) Clock=%lums / This=0x%p / Ovr=0x%p / Type=%lu", cLogTimer.GetElapsedTimeMs(), this,
+                   lpPacket->GetOverlapped(), lpPacket->GetType());
         cLogTimer.ResetToLastMark();
     }
     hRes = lpIpc->cDispatcherPool.Post(lpIpc->cDispatcherPoolPacketCallback, 0, lpPacket->GetOverlapped());
@@ -853,23 +848,23 @@ HRESULT CIpc::CConnectionBase::HandleSslOutput(_In_ CPacketBase *lpPacket)
     {
         switch (SSL_get_error(sSsl.lpSession, err))
         {
-        case SSL_ERROR_WANT_READ:
-            _InterlockedOr(&nFlags, FLAG_SslWantRead);
-            // fall into...
+            case SSL_ERROR_WANT_READ:
+                _InterlockedOr(&nFlags, FLAG_SslWantRead);
+                // fall into...
 
-        case SSL_ERROR_WANT_WRITE:
-        case SSL_ERROR_NONE:
-            break;
+            case SSL_ERROR_WANT_WRITE:
+            case SSL_ERROR_NONE:
+                break;
 
-        default:
-            FreePacket(lpPacket);
+            default:
+                FreePacket(lpPacket);
 
-            if (lpIpc->ShouldLog(1) != FALSE)
-            {
-                DEBUGPRINT_DATA sData = {lpIpc, L"HandleSslOutput"};
-                ERR_print_errors_cb(&DebugPrintSslError, &sData);
-            }
-            return MX_E_InvalidData;
+                if (lpIpc->ShouldLog(1) != FALSE)
+                {
+                    DEBUGPRINT_DATA sData = { lpIpc,L"HandleSslOutput" };
+                    ERR_print_errors_cb(&DebugPrintSslError, &sData);
+                }
+                return MX_E_InvalidData;
         }
 
         return S_FALSE;
@@ -895,8 +890,8 @@ VOID CIpc::CConnectionBase::DecrementOutgoingWrites()
         if (lpIpc->ShouldLog(3) != FALSE)
         {
             cLogTimer.Mark();
-            lpIpc->Log(L"CIpc::CConnectionBase::DecrementOutgoingWrites) Clock=%lums / This=0x%p / Hr=0x%08X",
-                       cLogTimer.GetElapsedTimeMs(), this, hrErrorCode);
+            lpIpc->Log(L"CIpc::CConnectionBase::DecrementOutgoingWrites) Clock=%lums / This=0x%p / Hr=0x%08X", cLogTimer.GetElapsedTimeMs(),
+                       this, hrErrorCode);
             cLogTimer.ResetToLastMark();
         }
 
@@ -905,8 +900,7 @@ VOID CIpc::CConnectionBase::DecrementOutgoingWrites()
     return;
 }
 
-CIpc::CPacketBase *CIpc::CConnectionBase::GetPacket(_In_ CPacketBase::eType nType, _In_ SIZE_T nDesiredSize,
-                                                    _In_ BOOL bRealSize)
+CIpc::CPacketBase *CIpc::CConnectionBase::GetPacket(_In_ CPacketBase::eType nType, _In_ SIZE_T nDesiredSize, _In_ BOOL bRealSize)
 {
     CPacketBase *lpPacket;
 
@@ -1052,59 +1046,59 @@ HRESULT CIpc::CConnectionBase::DoZeroRead(_In_ SIZE_T nPacketsCount, _Inout_ CPa
         hRes = SendReadPacket(lpPacket, &dwRead);
         switch (hRes)
         {
-        case S_FALSE:
-        {
-            BOOL bLog;
+            case S_FALSE:
+                {
+                    BOOL bLog;
 
-            MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);
-            bLog = ((_InterlockedOr(&nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) ? TRUE : FALSE;
-            if (bLog != FALSE && lpIpc->ShouldLog(1) != FALSE)
-            {
-                cLogTimer.Mark();
-                lpIpc->Log(L"CIpc::GracefulShutdown E) Clock=%lums / This=0x%p", cLogTimer.GetElapsedTimeMs(), this);
-                cLogTimer.ResetToLastMark();
-            }
+                    MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);
+                    bLog = ((_InterlockedOr(&nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) ? TRUE : FALSE;
+                    if (bLog != FALSE && lpIpc->ShouldLog(1) != FALSE)
+                    {
+                        cLogTimer.Mark();
+                        lpIpc->Log(L"CIpc::GracefulShutdown E) Clock=%lums / This=0x%p", cLogTimer.GetElapsedTimeMs(), this);
+                        cLogTimer.ResetToLastMark();
+                    }
 
-            // free packet
-            {
-                CFastLock cListLock(&(sInUsePackets.nMutex));
+                    // free packet
+                    {
+                        CFastLock cListLock(&(sInUsePackets.nMutex));
 
-                sInUsePackets.cList.Remove(lpPacket);
-            }
-            FreePacket(lpPacket);
+                        sInUsePackets.cList.Remove(lpPacket);
+                    }
+                    FreePacket(lpPacket);
 
-            // release connection
-            Release();
-        }
-            return S_OK;
+                    // release connection
+                    Release();
+                }
+                return S_OK;
 
-        case S_OK:
-            lpPacket->SetBytesInUse(dwRead);
-            {
-                CFastLock cListLock(&(sInUsePackets.nMutex));
+            case S_OK:
+                lpPacket->SetBytesInUse(dwRead);
+                {
+                    CFastLock cListLock(&(sInUsePackets.nMutex));
 
-                sInUsePackets.cList.Remove(lpPacket);
-            }
-            cQueuedPacketsList.QueueLast(lpPacket);
-            break;
+                    sInUsePackets.cList.Remove(lpPacket);
+                }
+                cQueuedPacketsList.QueueLast(lpPacket);
+                break;
 
-        case 0x80070000 | ERROR_IO_PENDING:
-            break;
+            case 0x80070000 | ERROR_IO_PENDING:
+                break;
 
-        default:
-            MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);
+            default:
+                MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);
 
-            // free packet
-            {
-                CFastLock cListLock(&(sInUsePackets.nMutex));
+                // free packet
+                {
+                    CFastLock cListLock(&(sInUsePackets.nMutex));
 
-                sInUsePackets.cList.Remove(lpPacket);
-            }
-            FreePacket(lpPacket);
+                    sInUsePackets.cList.Remove(lpPacket);
+                }
+                FreePacket(lpPacket);
 
-            // release connection
-            Release();
-            return hRes;
+                // release connection
+                Release();
+                return hRes;
         }
         nPacketsCount--;
     }
@@ -1163,55 +1157,55 @@ HRESULT CIpc::CConnectionBase::DoRead(_In_ SIZE_T nPacketsCount, _In_opt_ CPacke
         }
         switch (hRes)
         {
-        case S_FALSE:
-            MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);
-            if (((_InterlockedOr(&nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) &&
-                lpIpc->ShouldLog(1) != FALSE)
-            {
-                cLogTimer.Mark();
-                lpIpc->Log(L"CIpc::GracefulShutdown F) Clock=%lums / This=0x%p", cLogTimer.GetElapsedTimeMs(), this);
-                cLogTimer.ResetToLastMark();
-            }
+            case S_FALSE:
+                MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);
+                if (((_InterlockedOr(&nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) && lpIpc->ShouldLog(1) != FALSE)
+                {
+                    cLogTimer.Mark();
+                    lpIpc->Log(L"CIpc::GracefulShutdown F) Clock=%lums / This=0x%p", cLogTimer.GetElapsedTimeMs(), this);
+                    cLogTimer.ResetToLastMark();
+                }
 
-            // free packet
-            {
-                CFastLock cListLock(&(sInUsePackets.nMutex));
+                // free packet
+                {
+                    CFastLock cListLock(&(sInUsePackets.nMutex));
 
-                sInUsePackets.cList.Remove(lpPacket);
-            }
-            FreePacket(lpPacket);
+                    sInUsePackets.cList.Remove(lpPacket);
+                }
+                FreePacket(lpPacket);
 
-            // release connection
-            Release();
-            return S_OK;
+                // release connection
+                Release();
+                return S_OK;
 
-        case S_OK:
-            lpPacket->SetBytesInUse(dwRead);
-            {
-                CFastLock cListLock(&(sInUsePackets.nMutex));
+            case S_OK:
+                lpPacket->SetBytesInUse(dwRead);
+                {
+                    CFastLock cListLock(&(sInUsePackets.nMutex));
 
-                sInUsePackets.cList.Remove(lpPacket);
-            }
-            cQueuedPacketsList.QueueLast(lpPacket);
-            break;
+                    sInUsePackets.cList.Remove(lpPacket);
+                }
+                cQueuedPacketsList.QueueLast(lpPacket);
+                break;
 
-        case 0x80070000 | ERROR_IO_PENDING:
-            break;
+            case 0x80070000 | ERROR_IO_PENDING:
+                break;
 
-        default: // error
-            MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);
+            default:
+                // error
+                MX_ASSERT_ALWAYS(_InterlockedDecrement(&nIncomingReads) >= 0);
 
-            // free packet
-            {
-                CFastLock cListLock(&(sInUsePackets.nMutex));
+                // free packet
+                {
+                    CFastLock cListLock(&(sInUsePackets.nMutex));
 
-                sInUsePackets.cList.Remove(lpPacket);
-            }
-            FreePacket(lpPacket);
+                    sInUsePackets.cList.Remove(lpPacket);
+                }
+                FreePacket(lpPacket);
 
-            // release connection
-            Release();
-            return hRes;
+                // release connection
+                Release();
+                return hRes;
         }
         nPacketsCount--;
     }
@@ -1249,70 +1243,69 @@ HRESULT CIpc::CConnectionBase::DoWrite(_In_ CPacketBase *lpPacket)
     hRes = SendWritePacket(lpPacket, &dwWritten);
     switch (hRes)
     {
-    case S_FALSE:
-        _InterlockedExchangeAdd(&nOutgoingBytes, -((LONG)dwTotalBytes));
-        DecrementOutgoingWrites();
+        case S_FALSE:
+            _InterlockedExchangeAdd(&nOutgoingBytes, -((LONG)dwTotalBytes));
+            DecrementOutgoingWrites();
 
-        if ((_InterlockedOr(&nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0 &&
-            lpIpc->ShouldLog(1) != FALSE)
-        {
-            cLogTimer.Mark();
-            lpIpc->Log(L"CIpc::GracefulShutdown B) Clock=%lums / This=0x%p", cLogTimer.GetElapsedTimeMs(), this);
-            cLogTimer.ResetToLastMark();
-        }
+            if ((_InterlockedOr(&nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0 && lpIpc->ShouldLog(1) != FALSE)
+            {
+                cLogTimer.Mark();
+                lpIpc->Log(L"CIpc::GracefulShutdown B) Clock=%lums / This=0x%p", cLogTimer.GetElapsedTimeMs(), this);
+                cLogTimer.ResetToLastMark();
+            }
 
-        // free packet
-        {
-            CFastLock cListLock(&(sInUsePackets.nMutex));
+            // free packet
+            {
+                CFastLock cListLock(&(sInUsePackets.nMutex));
 
-            sInUsePackets.cList.Remove(lpPacket);
-        }
-        FreePacket(lpPacket);
+                sInUsePackets.cList.Remove(lpPacket);
+            }
+            FreePacket(lpPacket);
 
-        // release connection
-        Release();
-        hRes = S_OK;
-        break;
+            // release connection
+            Release();
+            hRes = S_OK;
+            break;
 
-    case S_OK:
-        _InterlockedExchangeAdd(&nOutgoingBytes, -((LONG)dwTotalBytes));
-        DecrementOutgoingWrites();
+        case S_OK:
+            _InterlockedExchangeAdd(&nOutgoingBytes, -((LONG)dwTotalBytes));
+            DecrementOutgoingWrites();
 
-        // free packet
-        {
-            CFastLock cListLock(&(sInUsePackets.nMutex));
+            // free packet
+            {
+                CFastLock cListLock(&(sInUsePackets.nMutex));
 
-            sInUsePackets.cList.Remove(lpPacket);
-        }
-        FreePacket(lpPacket);
+                sInUsePackets.cList.Remove(lpPacket);
+            }
+            FreePacket(lpPacket);
 
-        // release connection
-        Release();
+            // release connection
+            Release();
 
-        cWriteStats.Update(dwTotalBytes);
+            cWriteStats.Update(dwTotalBytes);
 
-        // HandleOutgoingPackets();
-        break;
+            // HandleOutgoingPackets();
+            break;
 
-    case 0x80070000 | ERROR_IO_PENDING:
-        hRes = S_OK;
-        break;
+        case 0x80070000 | ERROR_IO_PENDING:
+            hRes = S_OK;
+            break;
 
-    default:
-        _InterlockedExchangeAdd(&nOutgoingBytes, -((LONG)dwTotalBytes));
-        DecrementOutgoingWrites();
+        default:
+            _InterlockedExchangeAdd(&nOutgoingBytes, -((LONG)dwTotalBytes));
+            DecrementOutgoingWrites();
 
-        // free packet
-        {
-            CFastLock cListLock(&(sInUsePackets.nMutex));
+            // free packet
+            {
+                CFastLock cListLock(&(sInUsePackets.nMutex));
 
-            sInUsePackets.cList.Remove(lpPacket);
-        }
-        FreePacket(lpPacket);
+                sInUsePackets.cList.Remove(lpPacket);
+            }
+            FreePacket(lpPacket);
 
-        // release connection
-        Release();
-        break;
+            // release connection
+            Release();
+            break;
     }
 
     // done
@@ -1416,16 +1409,13 @@ HRESULT CIpc::CConnectionBase::SetupSsl(_In_opt_ LPCSTR szHostNameA, _In_opt_ CS
             {
                 _InterlockedOr(&nFlags, FLAG_SslAcceptSelfSigned);
             }
-            SSL_set_verify(lpSession,
-                           (((nSslOptions & eSslOption::CheckCertificate) != (eSslOption)0)
-                                ? (SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE)
-                                : SSL_VERIFY_NONE),
-                           NULL);
+            SSL_set_verify(lpSession, (((nSslOptions & eSslOption::CheckCertificate) != (eSslOption)0)
+                                       ? (SSL_VERIFY_PEER | SSL_VERIFY_CLIENT_ONCE)
+                                       : SSL_VERIFY_NONE), NULL);
             SSL_set_verify_depth(lpSession, 4);
             SSL_set_options(lpSession, SSL_OP_NO_COMPRESSION | SSL_OP_LEGACY_SERVER_CONNECT | SSL_OP_NO_RENEGOTIATION |
                                            SSL_OP_NO_SESSION_RESUMPTION_ON_RENEGOTIATION);
-            SSL_set_mode(lpSession,
-                         SSL_MODE_RELEASE_BUFFERS | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER | SSL_MODE_NO_AUTO_CHAIN);
+            SSL_set_mode(lpSession, SSL_MODE_RELEASE_BUFFERS | SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER | SSL_MODE_NO_AUTO_CHAIN);
             if (nClass == CIpc::eConnectionClass::Server)
             {
                 SSL_set_accept_state(lpSession);
@@ -1441,10 +1431,9 @@ HRESULT CIpc::CConnectionBase::SetupSsl(_In_opt_ LPCSTR szHostNameA, _In_opt_ CS
                         int err = ERR_get_error();
 
                         SSL_free(lpSession);
-                        return (err ==
-                                ((ERR_LIB_SSL << 24) | (SSL_F_SSL3_CTRL << 12) | SSL_R_SSL3_EXT_INVALID_SERVERNAME))
-                                   ? MX_E_InvalidData
-                                   : E_OUTOFMEMORY;
+                        return (err == ((ERR_LIB_SSL << 24) | (SSL_F_SSL3_CTRL << 12) | SSL_R_SSL3_EXT_INVALID_SERVERNAME))
+                            ? MX_E_InvalidData
+                            : E_OUTOFMEMORY;
                     }
                 }
             }
@@ -1453,9 +1442,9 @@ HRESULT CIpc::CConnectionBase::SetupSsl(_In_opt_ LPCSTR szHostNameA, _In_opt_ CS
             lpInBio = BIO_new(BIO_circular_buffer_mem());
             if (lpInBio == NULL)
             {
-            err_nomem:
+err_nomem:
                 hRes = E_OUTOFMEMORY;
-            on_error:
+on_error:
                 SSL_free(lpSession);
                 return hRes;
             }
@@ -1643,7 +1632,8 @@ HRESULT CIpc::CConnectionBase::ProcessSsl(_In_ BOOL bCanWrite)
                 bLoop = TRUE;
             }
         }
-    } while (bLoop != FALSE);
+    }
+    while (bLoop != FALSE);
 
     // done
     return S_OK;
@@ -1675,22 +1665,23 @@ HRESULT CIpc::CConnectionBase::ProcessSslIncomingData()
 
             bSomethingProcessed = TRUE;
         }
-    } while (r > 0);
+    }
+    while (r > 0);
     switch (SSL_get_error(sSsl.lpSession, r))
     {
-    case SSL_ERROR_WANT_READ:
-    case SSL_ERROR_WANT_WRITE:
-    case SSL_ERROR_NONE:
-    case SSL_ERROR_ZERO_RETURN:
-        break;
+        case SSL_ERROR_WANT_READ:
+        case SSL_ERROR_WANT_WRITE:
+        case SSL_ERROR_NONE:
+        case SSL_ERROR_ZERO_RETURN:
+            break;
 
-    default:
-        if (lpIpc->ShouldLog(1) != FALSE)
-        {
-            DEBUGPRINT_DATA sData = {lpIpc, L"ExecSslRead"};
-            ERR_print_errors_cb(&DebugPrintSslError, &sData);
-        }
-        return MX_E_InvalidData;
+        default:
+            if (lpIpc->ShouldLog(1) != FALSE)
+            {
+                DEBUGPRINT_DATA sData = { lpIpc,L"ExecSslRead" };
+                ERR_print_errors_cb(&DebugPrintSslError, &sData);
+            }
+            return MX_E_InvalidData;
     }
     // done
     return (bSomethingProcessed != FALSE) ? S_OK : S_FALSE;
@@ -1745,33 +1736,33 @@ HRESULT CIpc::CConnectionBase::HandleSslEndOfHandshake()
     ERR_clear_error();
     switch (SSL_get_verify_result(sSsl.lpSession))
     {
-    case X509_V_OK:
-        return S_OK;
+        case X509_V_OK:
+            return S_OK;
 
-    case X509_V_ERR_OUT_OF_MEM:
-        return E_OUTOFMEMORY;
+        case X509_V_ERR_OUT_OF_MEM:
+            return E_OUTOFMEMORY;
 
-    case X509_V_ERR_CERT_HAS_EXPIRED:
-        return SEC_E_CERT_EXPIRED;
+        case X509_V_ERR_CERT_HAS_EXPIRED:
+            return SEC_E_CERT_EXPIRED;
 
-    case X509_V_ERR_CERT_REVOKED:
-        return CRYPT_E_REVOKED;
+        case X509_V_ERR_CERT_REVOKED:
+            return CRYPT_E_REVOKED;
 
-    case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
-        return CRYPT_E_ISSUER_SERIALNUMBER;
+        case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
+            return CRYPT_E_ISSUER_SERIALNUMBER;
 
-    case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
-    case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
-        return ((_nFlags & FLAG_SslAcceptSelfSigned) != 0) ? S_OK : CRYPT_E_SELF_SIGNED;
+        case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
+        case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
+            return ((_nFlags & FLAG_SslAcceptSelfSigned) != 0) ? S_OK : CRYPT_E_SELF_SIGNED;
 
-    case X509_V_ERR_INVALID_PURPOSE:
-        return CERT_E_PURPOSE;
+        case X509_V_ERR_INVALID_PURPOSE:
+            return CERT_E_PURPOSE;
 
-    case X509_V_ERR_INVALID_CA:
-        return SEC_E_ISSUING_CA_UNTRUSTED;
+        case X509_V_ERR_INVALID_CA:
+            return SEC_E_ISSUING_CA_UNTRUSTED;
 
-    case X509_V_ERR_CERT_UNTRUSTED:
-        return CERT_E_CHAINING;
+        case X509_V_ERR_CERT_UNTRUSTED:
+            return CERT_E_CHAINING;
     }
     return CRYPT_E_NO_TRUSTED_SIGNER;
     /*
@@ -1812,7 +1803,9 @@ HRESULT CIpc::CConnectionBase::HandleSslEndOfHandshake()
       hRes = cPeerCert->InitializeFromDER(lpTempBuf[0], (SIZE_T)nLen);
       OPENSSL_free(lpTempBuf[0]);
       if (FAILED(hRes))
+      {
         return hRes;
+      }
     }
 
     // Done
@@ -1878,8 +1871,8 @@ VOID CIpc::CConnectionBase::CReadWriteStats::Update(_In_ DWORD dwBytesTransferre
     return;
 }
 
-VOID CIpc::CConnectionBase::CReadWriteStats::Get(_Out_opt_ PULONGLONG lpullBytesTransferred,
-                                                 _Out_opt_ float *lpnThroughputKbps, _Out_opt_ LPDWORD lpdwTimeMarkMs)
+VOID CIpc::CConnectionBase::CReadWriteStats::Get(_Out_opt_ PULONGLONG lpullBytesTransferred, _Out_opt_ float *lpnThroughputKbps,
+                                                 _Out_opt_ LPDWORD lpdwTimeMarkMs)
 {
     CAutoSlimRWLShared cLock(&sRwMutex);
 
@@ -1909,8 +1902,7 @@ static int DebugPrintSslError(const char *str, size_t len, void *u)
         len--;
     }
 
-    ((LPDEBUGPRINT_DATA)u)
-        ->lpLogger->Log(L"IpcSslLayer/%s: Error: %.*S\n", ((LPDEBUGPRINT_DATA)u)->szDescW, (unsigned int)len, str);
+    ((LPDEBUGPRINT_DATA)u)->lpLogger->Log(L"IpcSslLayer/%s: Error: %.*S\n", ((LPDEBUGPRINT_DATA)u)->szDescW, (unsigned int)len, str);
     return 1;
 }
 
@@ -2036,32 +2028,32 @@ static long circular_buffer_ctrl(BIO *bi, int cmd, long num, void *ptr)
     MX::CCircularBuffer *lpBuf = (MX::CCircularBuffer *)BIO_get_data(bi);
     switch (cmd)
     {
-    case BIO_CTRL_RESET:
-        lpBuf->SetBufferSize(0);
-        return 1;
+        case BIO_CTRL_RESET:
+            lpBuf->SetBufferSize(0);
+            return 1;
 
-    case BIO_CTRL_GET_CLOSE:
-        return (long)BIO_get_shutdown(bi);
+        case BIO_CTRL_GET_CLOSE:
+            return (long)BIO_get_shutdown(bi);
 
-    case BIO_CTRL_SET_CLOSE:
-        BIO_set_shutdown(bi, (int)num);
-        return 1;
+        case BIO_CTRL_SET_CLOSE:
+            BIO_set_shutdown(bi, (int)num);
+            return 1;
 
-    case BIO_CTRL_PENDING:
-    {
-        SIZE_T nAvail = lpBuf->GetAvailableForRead();
+        case BIO_CTRL_PENDING:
+            {
+                SIZE_T nAvail = lpBuf->GetAvailableForRead();
 
-        if (nAvail > (SIZE_T)LONG_MAX)
-        {
-            nAvail = (SIZE_T)LONG_MAX;
-        }
-        return (long)nAvail;
-    }
-    break;
+                if (nAvail > (SIZE_T)LONG_MAX)
+                {
+                    nAvail = (SIZE_T)LONG_MAX;
+                }
+                return (long)nAvail;
+            }
+            break;
 
-    case BIO_CTRL_DUP:
-    case BIO_CTRL_FLUSH:
-        return 1;
+        case BIO_CTRL_DUP:
+        case BIO_CTRL_FLUSH:
+            return 1;
     }
     return 0;
 }
@@ -2113,9 +2105,9 @@ static int circular_buffer_puts(BIO *bi, const char *str)
 static BIO_METHOD *BIO_circular_buffer_mem()
 {
     static const BIO_METHOD circular_buffer_mem = {
-        BIO_TYPE_MEM,          (char *)"circular memory buffer", &circular_buffer_write,   &circular_buffer_write_old,
-        &circular_buffer_read, &circular_buffer_read_old,        &circular_buffer_puts,    &circular_buffer_gets,
-        &circular_buffer_ctrl, &circular_buffer_create,          &circular_buffer_destroy, NULL};
+        BIO_TYPE_MEM,(char *)"circular memory buffer",&circular_buffer_write,&circular_buffer_write_old,
+        &circular_buffer_read,&circular_buffer_read_old,&circular_buffer_puts,&circular_buffer_gets,&circular_buffer_ctrl,
+        &circular_buffer_create,&circular_buffer_destroy,NULL };
     return (BIO_METHOD *)&circular_buffer_mem;
 }
 
@@ -2142,7 +2134,7 @@ static int _X509_STORE_get1_issuer(_Out_ X509 **issuer, _In_ X509_STORE_CTX *ctx
     return 0;
 }
 
-static STACK_OF(X509) * _X509_STORE_get1_certs(_In_ X509_STORE_CTX *ctx, _In_ const X509_NAME *nm)
+static STACK_OF(X509) *_X509_STORE_get1_certs(_In_ X509_STORE_CTX *ctx, _In_ const X509_NAME *nm)
 {
     MX::CSslCertificateArray *lpCertArray;
     X509 *cert;
@@ -2165,7 +2157,7 @@ static STACK_OF(X509) * _X509_STORE_get1_certs(_In_ X509_STORE_CTX *ctx, _In_ co
     return NULL;
 }
 
-static STACK_OF(X509_CRL) * _X509_STORE_get1_crls(_In_ const X509_STORE_CTX *ctx, _In_ const X509_NAME *nm)
+static STACK_OF(X509_CRL) *_X509_STORE_get1_crls(_In_ const X509_STORE_CTX *ctx, _In_ const X509_NAME *nm)
 {
     MX::CSslCertificateArray *lpCertArray;
     X509_CRL *cert;
@@ -2201,8 +2193,7 @@ static X509 *_lookup_cert_by_subject(_In_ MX::CSslCertificateArray *lpCertArray,
             X509 *lpX509 = lpCert->GetX509();
 
             if (lpX509 != NULL && X509_NAME_cmp(X509_get_subject_name(lpX509), name) == 0 &&
-                X509_cmp_time(X509_get_notBefore(lpX509), NULL) < 0 &&
-                X509_cmp_time(X509_get_notAfter(lpX509), NULL) > 0)
+                X509_cmp_time(X509_get_notBefore(lpX509), NULL) < 0 && X509_cmp_time(X509_get_notAfter(lpX509), NULL) > 0)
             {
                 return lpX509;
             }

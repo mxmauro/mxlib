@@ -27,21 +27,20 @@
 #include "..\DateTime\DateTime.h"
 #include "..\Strings\Strings.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-// NOTE: CHttpCookie only accepts ASCII characters. If you
-//       need to use another charset like Unicode, you must
-//       encode the string prior assignation any member of
-//       CHttpCookie and decode it when retrieving values.
+ // NOTE: CHttpCookie only accepts ASCII characters. If you
+ //       need to use another charset like Unicode, you must
+ //       encode the string prior assignation any member of
+ //       CHttpCookie and decode it when retrieving values.
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpCookie : public virtual TRefCounted<CBaseMemObj>
 {
-  public:
+public:
     enum class eSameSite
     {
         None,
@@ -49,7 +48,7 @@ class CHttpCookie : public virtual TRefCounted<CBaseMemObj>
         Strict
     };
 
-  public:
+public:
     CHttpCookie();
     CHttpCookie(_In_ const CHttpCookie &cSrc) throw(...);
     ~CHttpCookie();
@@ -107,7 +106,7 @@ class CHttpCookie : public virtual TRefCounted<CBaseMemObj>
 
     HRESULT ParseFromResponseHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen = (SIZE_T)-1);
 
-  private:
+private:
     ULONG nFlags;
     CStringA cStrNameA;
     CStringA cStrValueA;
@@ -121,9 +120,11 @@ class CHttpCookie : public virtual TRefCounted<CBaseMemObj>
 
 class CHttpCookieArray : public TArrayListWithRelease<CHttpCookie *>
 {
-  private:
-  public:
-    CHttpCookieArray() : TArrayListWithRelease<CHttpCookie *>() {};
+private:
+public:
+    CHttpCookieArray() : TArrayListWithRelease<CHttpCookie *>()
+    {
+    };
     CHttpCookieArray(_In_ const CHttpCookieArray &cSrc) throw(...);
 
     CHttpCookieArray &operator=(_In_ const CHttpCookieArray &cSrc) throw(...);

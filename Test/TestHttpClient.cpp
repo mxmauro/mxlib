@@ -21,17 +21,17 @@
 #include <Http\HttpClient.h>
 #include <RefCounted.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 class CMyHttpClient : public MX::CHttpClient
 {
-  public:
+public:
     CMyHttpClient(_In_ MX::CSockets &cSocketMgr) : MX::CHttpClient(cSocketMgr)
     {
         return;
     };
 
-  public:
+public:
     MX::TAutoRefCounted<MX::CSslCertificateArray> cCertificates;
 };
 
@@ -43,7 +43,7 @@ static LONG volatile nLogMutex = 0;
 
 class CTestHttpClientWebSocket : public MX::CWebSocket
 {
-  public:
+public:
     CTestHttpClientWebSocket();
     ~CTestHttpClientWebSocket();
 
@@ -59,18 +59,15 @@ class CTestHttpClientWebSocket : public MX::CWebSocket
 //-----------------------------------------------------------
 
 static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hrErrorCode);
-static HRESULT OnResponseHeadersReceived(_In_ MX::CHttpClient *lpHttp, _In_z_ LPCWSTR szFileNameW,
-                                         _In_opt_ PULONGLONG lpnContentSize, _In_z_ LPCSTR szTypeA,
-                                         _In_ BOOL bTreatAsAttachment, _Inout_ MX::CStringW &cStrFullFileNameW,
+static HRESULT OnResponseHeadersReceived(_In_ MX::CHttpClient *lpHttp, _In_z_ LPCWSTR szFileNameW, _In_opt_ PULONGLONG lpnContentSize,
+                                         _In_z_ LPCSTR szTypeA, _In_ BOOL bTreatAsAttachment, _Inout_ MX::CStringW &cStrFullFileNameW,
                                          _Inout_ MX::CHttpBodyParserBase **lplpBodyParser);
 static HRESULT OnResponseHeadersReceived_BigDownload(_In_ MX::CHttpClient *lpHttp, _In_z_ LPCWSTR szFileNameW,
                                                      _In_opt_ PULONGLONG lpnContentSize, _In_z_ LPCSTR szTypeA,
-                                                     _In_ BOOL bTreatAsAttachment,
-                                                     _Inout_ MX::CStringW &cStrFullFileNameW,
+                                                     _In_ BOOL bTreatAsAttachment, _Inout_ MX::CStringW &cStrFullFileNameW,
                                                      _Inout_ MX::CHttpBodyParserBase **lplpBodyParser);
 static VOID OnDocumentCompleted(_In_ MX::CHttpClient *lpHttp);
-static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *lpHttp,
-                                   _Outptr_opt_result_maybenull_ MX::CSslCertificateArray **lplpCertificates,
+static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *lpHttp, _Outptr_opt_result_maybenull_ MX::CSslCertificateArray **lplpCertificates,
                                    _Outptr_opt_result_maybenull_ MX::CSslCertificate **lplpSelfCert,
                                    _Outptr_opt_result_maybenull_ MX::CEncryptionKey **lplpPrivKey);
 
@@ -88,11 +85,11 @@ static BOOL _GetTempPath(_Out_ MX::CStringW &cStrPathW);
 
 typedef struct tagTHREAD_DATA
 {
-    int nIndex{0};
-    MX::CSockets *lpSocketMgr{NULL};
+    int nIndex{ 0 };
+    MX::CSockets *lpSocketMgr{ NULL };
     MX::TAutoRefCounted<MX::CSslCertificateArray> cCertificates;
     MX::CWorkerThread cWorkerThreads;
-    DWORD dwLogLevel{0};
+    DWORD dwLogLevel{ 0 };
 } THREAD_DATA;
 
 //-----------------------------------------------------------
@@ -103,6 +100,15 @@ int TestHttpClient()
     MX::CSockets cSocketMgr(cDispatcherPool);
     MX::TAutoRefCounted<MX::CSslCertificateArray> cCertificates;
     HRESULT hRes;
+
+    if (DoesCmdLineParamExist(L"?") || DoesCmdLineParamExist(L"help"))
+    {
+        wprintf_s(L"Use: Test.exe HttpClient [/simple1 | /websocket]\n\n");
+        wprintf_s(L"Available 'options':\n");
+        wprintf_s(L"    /simple1: Runs some simple tests.\n");
+        wprintf_s(L"    /websocket: Runs a websocket test.\n");
+        return 1;
+    }
 
     hRes = cDispatcherPool.Initialize();
     if (SUCCEEDED(hRes))
@@ -167,7 +173,8 @@ int TestHttpClient()
                             bActive = TRUE;
                         }
                     }
-                } while (bActive != FALSE && ShouldAbort() == FALSE);
+                }
+                while (bActive != FALSE && ShouldAbort() == FALSE);
             }
 
             for (i = 0; i < MX_ARRAYLEN(sThreadData); i++)
@@ -186,9 +193,8 @@ static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hrErrorCode)
     return;
 }
 
-static HRESULT OnResponseHeadersReceived(_In_ MX::CHttpClient *lpHttp, _In_z_ LPCWSTR szFileNameW,
-                                         _In_opt_ PULONGLONG lpnContentSize, _In_z_ LPCSTR szTypeA,
-                                         _In_ BOOL bTreatAsAttachment, _Inout_ MX::CStringW &cStrFullFileNameW,
+static HRESULT OnResponseHeadersReceived(_In_ MX::CHttpClient *lpHttp, _In_z_ LPCWSTR szFileNameW, _In_opt_ PULONGLONG lpnContentSize,
+                                         _In_z_ LPCSTR szTypeA, _In_ BOOL bTreatAsAttachment, _Inout_ MX::CStringW &cStrFullFileNameW,
                                          _Inout_ MX::CHttpBodyParserBase **lplpBodyParser)
 {
     cStrFullFileNameW.Empty();
@@ -197,8 +203,7 @@ static HRESULT OnResponseHeadersReceived(_In_ MX::CHttpClient *lpHttp, _In_z_ LP
 
 static HRESULT OnResponseHeadersReceived_BigDownload(_In_ MX::CHttpClient *lpHttp, _In_z_ LPCWSTR szFileNameW,
                                                      _In_opt_ PULONGLONG lpnContentSize, _In_z_ LPCSTR szTypeA,
-                                                     _In_ BOOL bTreatAsAttachment,
-                                                     _Inout_ MX::CStringW &cStrFullFileNameW,
+                                                     _In_ BOOL bTreatAsAttachment, _Inout_ MX::CStringW &cStrFullFileNameW,
                                                      _Inout_ MX::CHttpBodyParserBase **lplpBodyParser)
 {
     if (_GetTempPath(cStrFullFileNameW) == FALSE)
@@ -217,8 +222,7 @@ static VOID OnDocumentCompleted(_In_ MX::CHttpClient *lpHttp)
     return;
 }
 
-static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *_lpHttp,
-                                   _Outptr_opt_result_maybenull_ MX::CSslCertificateArray **lplpCertificates,
+static HRESULT OnQueryCertificates(_In_ MX::CHttpClient *_lpHttp, _Outptr_opt_result_maybenull_ MX::CSslCertificateArray **lplpCertificates,
                                    _Outptr_opt_result_maybenull_ MX::CSslCertificate **lplpSelfCert,
                                    _Outptr_opt_result_maybenull_ MX::CEncryptionKey **lplpPrivKey)
 {
@@ -258,18 +262,14 @@ static HRESULT SimpleTest1(_In_ MX::CSockets &cSocketkMgr, _In_ MX::CSslCertific
         return E_OUTOFMEMORY;
     }
     cProxy.SetUseIE();
-    // cProxy.SetManual(L"127.0.0.1:808");
-    // cProxy.SetCredentials(L"guest", L"invitado");
-    // cHttpClient->SetProxy(cProxy);
+    cHttpClient->SetProxy(cProxy);
     cHttpClient->cCertificates = lpCertificates;
-    // cHttpClient->SetOptionFlags(0);
-    // cHttpClient->SetOptionFlags(MX::CHttpClient::OptionKeepConnectionOpen);
-
-    cHttpClient->SetOption_Timeout(10000);
+    cHttpClient->SetOption_Timeout(30000);
     cHttpClient->SetDocumentCompletedCallback(MX_BIND_CALLBACK(&OnDocumentCompleted));
     cHttpClient->SetQueryCertificatesCallback(MX_BIND_CALLBACK(&OnQueryCertificates));
     cHttpClient->SetLogLevel(dwLogLevel);
     cHttpClient->SetLogCallback(MX_BIND_CALLBACK(&OnLog));
+    cHttpClient->SetOption_MaxHeaderSize(65536);
     cHttpClient->SetOption_MaxBodySizeInMemory(1UL * 1048576UL);
     cHttpClient->SetOption_MaxBodySize(2048UL * 1048576UL);
 
@@ -280,27 +280,7 @@ static HRESULT SimpleTest1(_In_ MX::CSockets &cSocketkMgr, _In_ MX::CSslCertific
     // cHttpClient->SetHeadersReceivedCallback(MX_BIND_CALLBACK(&OnResponseHeadersReceived));
     cHttpClient->SetHeadersReceivedCallback(MX_BIND_CALLBACK(&OnResponseHeadersReceived_BigDownload));
 
-    hRes = cHttpClient->Open("http://ipv4.download.thinkbroadband.com/1GB.zip");
-    /*
-    hRes = cHttpClient->Open("http://www.sitepoint.com/forums/showthread.php?"
-                             "390414-Reading-from-socket-connection-SLOW");
-    /*
-    //hRes = cHttpClient->SetAuthCredentials(L"guest", L"guest");
-    hRes = S_OK;
-    if (SUCCEEDED(hRes))
-    {
-      cHttpClient->SetOption_MaxBodySizeInMemory(0);
-
-      hRes = cHttpClient->AddRequestHeader("x-version", L"3");
-      if (SUCCEEDED(hRes))
-        hRes = cHttpClient->AddRequestHeader("license",
-    L"39F2E487ED3D3489C49756833E5F7C7D1CEF7482FE9EF46B2549A0968DE83C99"); if (SUCCEEDED(hRes)) hRes =
-    cHttpClient->Open("https://airgap.trapmine.com/ml_model_check");
-      //hRes = cHttpClient->Open("https://jigsaw.w3.org/HTTP/Basic/");
-      //hRes = cHttpClient->Open("https://jigsaw.w3.org/HTTP/Digest/");
-    }
-    */
-
+    hRes = cHttpClient->Open("https://sbg.proof.ovh.net/files/100Mb.dat");
     if (SUCCEEDED(hRes))
     {
         while (ShouldAbort() == FALSE && cHttpClient->IsDocumentComplete() == FALSE && cHttpClient->IsClosed() == FALSE)
@@ -311,7 +291,7 @@ static HRESULT SimpleTest1(_In_ MX::CSockets &cSocketkMgr, _In_ MX::CSslCertific
         dwEndTime = ::GetTickCount();
         if (ShouldAbort() == FALSE)
         {
-            hRes = CheckHttpClientResponse(cHttpClient.Get(), TRUE);
+            hRes = CheckHttpClientResponse(cHttpClient.Get(), FALSE);
         }
         else
         {
@@ -321,26 +301,26 @@ static HRESULT SimpleTest1(_In_ MX::CSockets &cSocketkMgr, _In_ MX::CSslCertific
         // print results
         switch (hRes)
         {
-        case 0x80070000 | ERROR_CANCELLED:
-            wprintf_s(L"[HttpClient/SimpleTest1] Cancelled by user.\n");
-            break;
+            case 0x80070000 | ERROR_CANCELLED:
+                wprintf_s(L"[HttpClient/SimpleTest1] Cancelled by user.\n");
+                break;
 
-        case S_FALSE:
-            wprintf_s(L"[HttpClient/SimpleTest1] Body is NOT complete. Download in %lums\n", dwEndTime - dwStartTime);
-            break;
+            case S_FALSE:
+                wprintf_s(L"[HttpClient/SimpleTest1] Body is NOT complete. Download in %lums\n", dwEndTime - dwStartTime);
+                break;
 
-        case S_OK:
-            wprintf_s(L"[HttpClient/SimpleTest1] Successful download in %lums / Status:%ld\n", dwEndTime - dwStartTime,
-                      cHttpClient->GetResponseStatus());
-            break;
+            case S_OK:
+                wprintf_s(L"[HttpClient/SimpleTest1] Successful download in %lums / Status:%ld\n", dwEndTime - dwStartTime,
+                          cHttpClient->GetResponseStatus());
+                break;
 
-        case MX_E_Timeout:
-            wprintf_s(L"[HttpClient/SimpleTest1] Timed out\n");
-            break;
+            case MX_E_Timeout:
+                wprintf_s(L"[HttpClient/SimpleTest1] Timed out\n");
+                break;
 
-        default:
-            wprintf_s(L"[HttpClient/SimpleTest1] Error 0x%08X / Status:%ld\n", hRes, cHttpClient->GetResponseStatus());
-            break;
+            default:
+                wprintf_s(L"[HttpClient/SimpleTest1] Error 0x%08X / Status:%ld\n", hRes, cHttpClient->GetResponseStatus());
+                break;
         }
     }
     return hRes;
@@ -379,7 +359,6 @@ static HRESULT WebSocketTest(_In_ MX::CSockets &cSocketMgr, _In_ MX::CSslCertifi
     sOptions.sWebSocket.lpszProtocolsA = NULL;
 
     hRes = cHttpClient->AddRequestHeader("Origin", "http://www.websocket.org");
-    // hRes = cHttpClient->Open("ws://demos.kaazing.com/echo", &sOptions);
     if (SUCCEEDED(hRes))
     {
         hRes = cHttpClient->Open("ws://echo.websocket.org/", &sOptions);
@@ -402,8 +381,7 @@ static HRESULT WebSocketTest(_In_ MX::CSockets &cSocketMgr, _In_ MX::CSslCertifi
             else
             {
                 hRes = cHttpClient->GetLastRequestError();
-                wprintf_s(L"[HttpClient/WebSocketTest] Error 0x%08X / Status:%ld\n", hRes,
-                          cHttpClient->GetResponseStatus());
+                wprintf_s(L"[HttpClient/WebSocketTest] Error 0x%08X / Status:%ld\n", hRes, cHttpClient->GetResponseStatus());
             }
         }
         else
@@ -435,10 +413,9 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
     cProxy.SetUseIE();
     cHttpClient->SetProxy(cProxy);
     cHttpClient->cCertificates = lpThreadData->cCertificates;
+    cHttpClient->SetOption_MaxHeaderSize(65536);
     cHttpClient->SetOption_MaxBodySize(1024 * 1048576);
     cHttpClient->SetOption_MaxBodySizeInMemory(1048576);
-    // cHttpClient->SetOptionFlags(0);
-    // cHttpClient->SetOptionFlags(MX::CHttpClient::OptionKeepConnectionOpen);
     cHttpClient->SetDocumentCompletedCallback(MX_BIND_CALLBACK(&OnDocumentCompleted));
     cHttpClient->SetQueryCertificatesCallback(MX_BIND_CALLBACK(&OnQueryCertificates));
     cHttpClient->SetLogCallback(MX_BIND_CALLBACK(&OnLog));
@@ -458,7 +435,7 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
     {
         bExpectHtml = FALSE;
         cHttpClient->SetHeadersReceivedCallback(MX_BIND_CALLBACK(&OnResponseHeadersReceived_BigDownload));
-        hRes = cHttpClient->Open("http://ipv4.download.thinkbroadband.com/512MB.zip");
+        hRes = cHttpClient->Open("https://sbg.proof.ovh.net/files/100Mb.dat");
     }
     else
     {
@@ -466,16 +443,16 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
         cHttpClient->SetHeadersReceivedCallback(MX_BIND_CALLBACK(&OnResponseHeadersReceived));
         switch (lpThreadData->nIndex % 3)
         {
-        case 0:
-            hRes = cHttpClient->Open("https://en.wikipedia.org/wiki/HTTPS");
-            break;
-        case 1:
-            hRes = cHttpClient->Open("https://www.google.com");
-            break;
-        case 2:
-            hRes = cHttpClient->Open("http://www.sitepoint.com/forums/showthread.php?"
-                                     "390414-Reading-from-socket-connection-SLOW");
-            break;
+            case 0:
+                hRes = cHttpClient->Open("https://en.wikipedia.org/wiki/HTTPS");
+                break;
+            case 1:
+                hRes = cHttpClient->Open("https://www.google.com");
+                break;
+            case 2:
+                hRes = cHttpClient->Open("http://www.sitepoint.com/forums/showthread.php?"
+                                         "390414-Reading-from-socket-connection-SLOW");
+                break;
         }
     }
 
@@ -514,20 +491,18 @@ static VOID HttpClientJob(_In_ MX::CWorkerThread *lpWrkThread, _In_ LPVOID lpPar
         Console::SetCursorPosition(0, nOrigPosY - 1);
         switch (hRes)
         {
-        case 0x80070000 | ERROR_CANCELLED:
-            wprintf_s(L"[HttpClient/%lu] Cancelled by user.\n", lpThreadData->nIndex);
-            break;
-        case S_FALSE:
-            wprintf_s(L"[HttpClient/%lu] Body is NOT complete.\n", lpThreadData->nIndex);
-            break;
-        case S_OK:
-            wprintf_s(L"[HttpClient/%lu] Successful download in %lums.\n", lpThreadData->nIndex,
-                      dwEndTime - dwStartTime);
-            break;
-        default:
-            wprintf_s(L"[HttpClient/%lu] Error 0x%08X / Status:%ld\n", lpThreadData->nIndex, hRes,
-                      cHttpClient->GetResponseStatus());
-            break;
+            case 0x80070000 | ERROR_CANCELLED:
+                wprintf_s(L"[HttpClient/%lu] Cancelled by user.\n", lpThreadData->nIndex);
+                break;
+            case S_FALSE:
+                wprintf_s(L"[HttpClient/%lu] Body is NOT complete.\n", lpThreadData->nIndex);
+                break;
+            case S_OK:
+                wprintf_s(L"[HttpClient/%lu] Successful download in %lums.\n", lpThreadData->nIndex, dwEndTime - dwStartTime);
+                break;
+            default:
+                wprintf_s(L"[HttpClient/%lu] Error 0x%08X / Status:%ld\n", lpThreadData->nIndex, hRes, cHttpClient->GetResponseStatus());
+                break;
         }
         Console::SetCursorPosition(nCurPosX, nCurPosY);
     }

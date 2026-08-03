@@ -24,10 +24,10 @@
 #include "..\..\Include\Http\HttpBodyParserUrlEncodedForm.h"
 #include "..\..\Include\Http\HttpBodyParserMultipartFormData.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define MAX_REQUEST_STATUS_LINE_LENGTH 4096
-#define MAX_HEADER_LINE 4096
+#define MAX_HEADERS_LENGTH 32 * 1048576
 
 #define HEADER_FLAG_TransferEncodingChunked 0x0001
 #define HEADER_FLAG_ContentEncodingGZip 0x0002
@@ -49,11 +49,9 @@ static BOOL IsContentTypeHeader(_In_z_ LPCSTR szHeaderA);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Internals
-{
+namespace Internals {
 
 CHttpParser::CHttpParser(_In_ BOOL _bActAsServer, _In_opt_ CLoggable *lpLogHandler)
     : CBaseMemObj(), CLoggable(), CNonCopyableObj(), bActAsServer(_bActAsServer)
@@ -68,9 +66,9 @@ VOID CHttpParser::SetOption_MaxHeaderSize(_In_ DWORD dwSize)
     {
         dwMaxHeaderSize = 2048;
     }
-    else if (dwSize > 327680)
+    else if (dwSize > MAX_HEADERS_LENGTH)
     {
-        dwMaxHeaderSize = 327680;
+        dwMaxHeaderSize = MAX_HEADERS_LENGTH;
     }
     else
     {
@@ -109,6 +107,7 @@ VOID CHttpParser::Reset()
 HRESULT CHttpParser::Parse(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize, _Out_ SIZE_T &nDataUsed)
 {
     LPCSTR szDataA;
+    SIZE_T nToRead;
     HRESULT hRes;
 
     nDataUsed = 0;
@@ -130,67 +129,104 @@ HRESULT CHttpParser::Parse(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize, _Out_ SIZ
     {
         switch (nState)
         {
-        case eState::Start:
-            if (*szDataA == '\r' || *szDataA == '\n')
-            {
+            case eState::Start:
+                if (*szDataA == '\r' || *szDataA == '\n')
+                {
+                    break;
+                }
+                nState = eState::RequestOrStatusLine;
+                BACKWARD_CHAR();
+
+                // prepare buffer
+                if (cStrCurrLineA.EnsureBuffer((dwMaxHeaderSize > MAX_REQUEST_STATUS_LINE_LENGTH)
+                                               ? dwMaxHeaderSize : MAX_REQUEST_STATUS_LINE_LENGTH) == FALSE)
+                {
+err_nomem:
+                    hRes = E_OUTOFMEMORY;
+                    goto done;
+                }
                 break;
-            }
-            nState = eState::RequestOrStatusLine;
-            BACKWARD_CHAR();
-            break;
 
-        case eState::RequestOrStatusLine:
-            if (*szDataA == '\r')
-            {
-                nState = eState::RequestOrStatusLineEnding;
+            case eState::RequestOrStatusLine:
+                if (*szDataA == '\r')
+                {
+                    nState = eState::RequestOrStatusLineEnding;
+                    break;
+                }
+                if (*((LPBYTE)szDataA) < 32 && *szDataA != '\t')
+                {
+err_invalid_data:
+                    hRes = MX_E_InvalidData;
+                    goto done;
+                }
+
+                // is status/request line too long?
+                if (cStrCurrLineA.GetLength() > MAX_REQUEST_STATUS_LINE_LENGTH)
+                {
+err_line_too_long:
+                    hRes = MX_E_BadLength; // header line too long
+                    goto done;
+                }
+
+                // add character to line
+                if (cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
+                {
+                    goto err_nomem;
+                }
                 break;
-            }
-            if (*((LPBYTE)szDataA) < 32 && *szDataA != '\t')
-            {
-            err_invalid_data:
-                hRes = MX_E_InvalidData;
-                goto done;
-            }
 
-            // is status/request line too long?
-            if (cStrCurrLineA.GetLength() > MAX_REQUEST_STATUS_LINE_LENGTH)
-            {
-            err_line_too_long:
-                hRes = MX_E_BadLength; // header line too long
-                goto done;
-            }
+            case eState::RequestOrStatusLineEnding:
+                if (*szDataA != '\n')
+                {
+                    goto err_invalid_data;
+                }
 
-            // add character to line
-            if (cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
-            {
-            err_nomem:
-                hRes = E_OUTOFMEMORY;
-                goto done;
-            }
-            break;
+                hRes = (bActAsServer != FALSE) ? ParseRequestLine((LPCSTR)cStrCurrLineA) : ParseStatusLine((LPCSTR)cStrCurrLineA);
+                if (FAILED(hRes))
+                {
+                    goto done; // if the request/status line fails to parse, it it a not recoverable error
+                }
 
-        case eState::RequestOrStatusLineEnding:
-            if (*szDataA != '\n')
-            {
-                goto err_invalid_data;
-            }
+                // end of request/status line (reuse buffer)
+                *((LPSTR)cStrCurrLineA) = 0;
+                cStrCurrLineA.Refresh();
 
-            hRes = (bActAsServer != FALSE) ? ParseRequestLine((LPCSTR)cStrCurrLineA)
-                                           : ParseStatusLine((LPCSTR)cStrCurrLineA);
-            if (FAILED(hRes))
-            {
-                goto done; // if the request/status line fails to parse, it it a not recoverable error
-            }
+                nState = eState::HeaderStart;
+                break;
 
-            // end of request/status line
-            cStrCurrLineA.Empty();
-            nState = eState::HeaderStart;
-            break;
+            case eState::HeaderStart:
+                if (*szDataA == '\r')
+                {
+                    // no more headers
+                    if (cStrCurrLineA.IsEmpty() == FALSE)
+                    {
+                        hRes = ParseHeader(cStrCurrLineA);
+                        if (FAILED(hRes))
+                        {
+                            goto done;
+                        }
 
-        case eState::HeaderStart:
-            if (*szDataA == '\r')
-            {
-                // no more headers
+                        *((LPSTR)cStrCurrLineA) = 0;
+                        cStrCurrLineA.Refresh();
+                    }
+
+                    nState = eState::HeadersEnding;
+                    break;
+                }
+
+                // are we continuing the last header?
+                if (*szDataA == ' ' || *szDataA == '\t')
+                {
+                    if (cStrCurrLineA.IsEmpty() != FALSE)
+                    {
+                        goto err_invalid_data;
+                    }
+                    nState = eState::HeaderValue;
+                    BACKWARD_CHAR();
+                    break;
+                }
+
+                // new header arrives, first check if we have a previous defined
                 if (cStrCurrLineA.IsEmpty() == FALSE)
                 {
                     hRes = ParseHeader(cStrCurrLineA);
@@ -198,367 +234,330 @@ HRESULT CHttpParser::Parse(_In_ LPCVOID lpData, _In_ SIZE_T nDataSize, _Out_ SIZ
                     {
                         goto done;
                     }
-                    cStrCurrLineA.Empty();
+
+                    *((LPSTR)cStrCurrLineA) = 0;
+                    cStrCurrLineA.Refresh();
                 }
+                nState = eState::HeaderName;
+                // fall into 'StateHeaderName'
 
-                nState = eState::HeadersEnding;
-                break;
-            }
-
-            // are we continuing the last header?
-            if (*szDataA == ' ' || *szDataA == '\t')
-            {
-                if (cStrCurrLineA.IsEmpty() != FALSE)
+            case eState::HeaderName:
+                // check headers length
+                if (dwHeadersLen >= dwMaxHeaderSize)
                 {
-                    goto err_invalid_data;
+                    goto err_line_too_long;
                 }
-                nState = eState::HeaderValue;
-                BACKWARD_CHAR();
-                break;
-            }
+                dwHeadersLen++;
 
-            // new header arrives, first check if we have a previous defined
-            if (cStrCurrLineA.IsEmpty() == FALSE)
-            {
-                hRes = ParseHeader(cStrCurrLineA);
-                if (FAILED(hRes))
+                // end of header name?
+                if (*szDataA == ':')
                 {
-                    goto done;
-                }
-                cStrCurrLineA.Empty();
-            }
-            nState = eState::HeaderName;
-            // fall into 'StateHeaderName'
-
-        case eState::HeaderName:
-            // check headers length
-            if (dwHeadersLen >= dwMaxHeaderSize)
-            {
-                goto err_line_too_long;
-            }
-            dwHeadersLen++;
-
-            // end of header name?
-            if (*szDataA == ':')
-            {
-                if (cStrCurrLineA.IsEmpty() != FALSE)
-                {
-                    goto err_invalid_data;
-                }
-
-                if (cStrCurrLineA.ConcatN(":", 1) == FALSE)
-                {
-                    goto err_nomem;
-                }
-                nState = eState::HeaderValue;
-                break;
-            }
-
-            // check for valid token char
-            if (Http::IsValidNameChar(*szDataA) == FALSE)
-            {
-                goto err_invalid_data;
-            }
-            if (cStrCurrLineA.GetLength() > MAX_HEADER_LINE)
-            {
-                goto err_line_too_long;
-            }
-
-            // add character to line
-            if (cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
-            {
-                goto err_nomem;
-            }
-            break;
-
-        case eState::HeaderValue:
-            // check headers length
-            if (dwHeadersLen >= dwMaxHeaderSize)
-            {
-                goto err_line_too_long;
-            }
-            dwHeadersLen++;
-
-            if (*szDataA == '\r')
-            {
-                nState = eState::HeaderValueEnding;
-                break;
-            }
-
-            // check valid value char
-            if (*szDataA == 0)
-            {
-                goto err_invalid_data;
-            }
-
-            // and append
-            if (cStrCurrLineA.GetLength() > MAX_HEADER_LINE)
-            {
-                goto err_line_too_long;
-            }
-            if (cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
-            {
-                goto err_nomem;
-            }
-            break;
-
-        case eState::HeaderValueEnding:
-            if (*szDataA != '\n')
-            {
-                goto err_invalid_data;
-            }
-
-            nState = eState::HeaderStart;
-            break;
-
-        case eState::HeadersEnding:
-            if (*szDataA != '\n')
-            {
-                goto err_invalid_data;
-            }
-            szDataA++;
-
-            // do some checks
-            if (bActAsServer != FALSE)
-            {
-                if (StrCompareA(GetRequestMethod(), "HEAD") == 0 || StrCompareA(GetRequestMethod(), "GET") == 0)
-                {
-                    // content or chunked transfer is not allowed
-                    if ((sBody.nContentLength != 0 && sBody.nContentLength != ULONGLONG_MAX) ||
-                        (nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0)
-                    {
-                        nState = eState::BodyStart;
-                        hRes = MX_HRESULT_FROM_WIN32(ERROR_DATA_NOT_ACCEPTED);
-                    }
-                    else
-                    {
-                        // no content... we are done
-                        nState = eState::Done;
-                    }
-                    goto done;
-                }
-                if (StrCompareA(GetRequestMethod(), "POST") == 0)
-                {
-                    // content-length must be specified
-                    if (sBody.nContentLength == ULONGLONG_MAX ||
-                        (nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0)
+                    if (cStrCurrLineA.IsEmpty() != FALSE)
                     {
                         goto err_invalid_data;
                     }
-                }
-            }
-            else
-            {
-                // 1xx, 204 and 304 responses must not contain a body
-                if (sResponse.nStatusCode < 200 || sResponse.nStatusCode == _HTTP_STATUS_NoContent ||
-                    sResponse.nStatusCode == _HTTP_STATUS_NotModified)
-                {
-                    // content or chunked transfer is not allowed
-                    if (sBody.nContentLength != ULONGLONG_MAX ||
-                        (nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0)
+
+                    if (cStrCurrLineA.ConcatN(":", 1) == FALSE)
                     {
-                        hRes = MX_HRESULT_FROM_WIN32(ERROR_DATA_NOT_ACCEPTED);
+                        goto err_nomem;
                     }
-                    else
+                    nState = eState::HeaderValue;
+                    break;
+                }
+
+                // check for valid token char
+                if (Http::IsValidNameChar(*szDataA) == FALSE)
+                {
+                    goto err_invalid_data;
+                }
+
+                // add character to line
+                if (cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
+                {
+                    goto err_nomem;
+                }
+                break;
+
+            case eState::HeaderValue:
+                // check headers length
+                if (dwHeadersLen >= dwMaxHeaderSize)
+                {
+                    goto err_line_too_long;
+                }
+                dwHeadersLen++;
+
+                if (*szDataA == '\r')
+                {
+                    nState = eState::HeaderValueEnding;
+                    break;
+                }
+
+                // check valid value char
+                if (*szDataA == 0)
+                {
+                    goto err_invalid_data;
+                }
+
+                // and append
+                if (cStrCurrLineA.ConcatN(szDataA, 1) == FALSE)
+                {
+                    goto err_nomem;
+                }
+                break;
+
+            case eState::HeaderValueEnding:
+                if (*szDataA != '\n')
+                {
+                    goto err_invalid_data;
+                }
+
+                nState = eState::HeaderStart;
+                break;
+
+            case eState::HeadersEnding:
+                if (*szDataA != '\n')
+                {
+                    goto err_invalid_data;
+                }
+                szDataA++;
+
+                cStrCurrLineA.Empty(); // free some memory
+
+                // do some checks
+                if (bActAsServer != FALSE)
+                {
+                    if (StrCompareA(GetRequestMethod(), "HEAD") == 0 || StrCompareA(GetRequestMethod(), "GET") == 0)
                     {
-                        // no content... we are done
-                        nState = eState::Done;
+                        // content or chunked transfer is not allowed
+                        if ((sBody.nContentLength != 0 && sBody.nContentLength != ULONGLONG_MAX) ||
+                            (nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0)
+                        {
+                            nState = eState::BodyStart;
+                            hRes = MX_HRESULT_FROM_WIN32(ERROR_DATA_NOT_ACCEPTED);
+                        }
+                        else
+                        {
+                            // no content... we are done
+                            nState = eState::Done;
+                        }
                         goto done;
                     }
-                }
-            }
-
-            // if transfer encoding is set, then ignore content-length
-            if ((nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0)
-            {
-                sBody.nContentLength = ULONGLONG_MAX;
-            }
-
-            // if no content we are done
-            if (sBody.nContentLength == 0)
-            {
-                nState = eState::Done;
-                goto done;
-            }
-
-            nState = eState::BodyStart;
-            if (ShouldLog(1) != FALSE)
-            {
-                Log(L"HttpCommon(HeadersComplete/0x%p): BodyStart", this);
-            }
-            goto done;
-
-        case eState::BodyStart:
-            nState = ((nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0) ? eState::ChunkPreStart
-                                                                                 : eState::IdentityBodyStart;
-            BACKWARD_CHAR();
-            break;
-
-        case eState::IdentityBodyStart:
-        {
-            SIZE_T nToRead;
-
-            nToRead = nDataSize - (szDataA - (LPCSTR)lpData);
-            if ((ULONGLONG)nToRead > sBody.nContentLength - sBody.nIdentityReadedContentLength)
-            {
-                nToRead = (SIZE_T)(sBody.nContentLength - sBody.nIdentityReadedContentLength);
-            }
-            if (ShouldLog(2) != FALSE && sBody.nContentLength > 0ui64)
-            {
-                double dbl;
-                int _pre_pct, _post_pct;
-
-                dbl = (double)(sBody.nIdentityReadedContentLength) / (double)(sBody.nContentLength);
-                _pre_pct = (int)(dbl * 10.0);
-                dbl += (double)nToRead / (double)(sBody.nContentLength);
-                _post_pct = (int)(dbl * 10.0);
-                if (_pre_pct != _post_pct && _post_pct < 10)
-                {
-                    Log(L"HttpCommon(Body/0x%p): %ld0%%", this, _post_pct);
-                }
-            }
-            hRes = ProcessContent(szDataA, nToRead);
-            if (FAILED(hRes))
-            {
-                sBody.cParser.Release();
-                sBody.cDecoder.Reset();
-                goto done;
-            }
-            szDataA += (SIZE_T)nToRead;
-            sBody.nIdentityReadedContentLength += (ULONGLONG)nToRead;
-            if (sBody.nIdentityReadedContentLength == sBody.nContentLength)
-            {
-                nState = eState::Done;
-                hRes = FlushContent();
-                goto done;
-            }
-            BACKWARD_CHAR();
-        }
-        break;
-
-        case eState::ChunkPreStart:
-            if ((*szDataA < '0' || *szDataA > '9') && (((*szDataA) & 0xDF) < 'A' || ((*szDataA) & 0xDF) > 'F'))
-            {
-                goto err_invalid_data;
-            }
-            nState = eState::ChunkStart;
-            sBody.sChunk.nSize = sBody.sChunk.nReaded = 0;
-            // fall into 'stChunkStart'
-
-        case eState::ChunkStart:
-            if ((*szDataA >= '0' && *szDataA <= '9') || (((*szDataA) & 0xDF) >= 'A' && ((*szDataA) & 0xDF) <= 'F'))
-            {
-                if ((sBody.sChunk.nSize & 0xF000000000000000ui64) != 0)
-                {
-                    hRes = MX_E_ArithmeticOverflow;
-                    goto done;
-                }
-                sBody.sChunk.nSize <<= 4;
-                if (*szDataA >= '0' && *szDataA <= '9')
-                {
-                    sBody.sChunk.nSize |= (ULONGLONG)(*szDataA) - (ULONGLONG)'0';
+                    if (StrCompareA(GetRequestMethod(), "POST") == 0)
+                    {
+                        // content-length must be specified
+                        if (sBody.nContentLength == ULONGLONG_MAX || (nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0)
+                        {
+                            goto err_invalid_data;
+                        }
+                    }
                 }
                 else
                 {
-                    sBody.sChunk.nSize |= (ULONGLONG)((*szDataA) & 0xDF) - (ULONGLONG)'A' + 10ui64;
+                    // 1xx, 204 and 304 responses must not contain a body
+                    if (sResponse.nStatusCode < 200 || sResponse.nStatusCode == _HTTP_STATUS_NoContent ||
+                        sResponse.nStatusCode == _HTTP_STATUS_NotModified)
+                    {
+                        // content or chunked transfer is not allowed
+                        if (sBody.nContentLength != ULONGLONG_MAX || (nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0)
+                        {
+                            hRes = MX_HRESULT_FROM_WIN32(ERROR_DATA_NOT_ACCEPTED);
+                        }
+                        else
+                        {
+                            // no content... we are done
+                            nState = eState::Done;
+                            goto done;
+                        }
+                    }
                 }
-                break;
-            }
 
-            // end of chunk size
-            if (*szDataA == ' ' || *szDataA == '\t' || *szDataA == ';')
-            {
-                nState = eState::ChunkStartIgnoreExtension;
-                break;
-            }
+                // if transfer encoding is set, then ignore content-length
+                if ((nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0)
+                {
+                    sBody.nContentLength = ULONGLONG_MAX;
+                }
 
-            if (*szDataA != '\r')
-            {
-                goto err_invalid_data;
-            }
+                // if no content we are done
+                if (sBody.nContentLength == 0)
+                {
+                    nState = eState::Done;
+                    goto done;
+                }
 
-            nState = eState::ChunkStartEnding;
-            break;
-
-        case eState::ChunkStartEnding:
-            if (*szDataA != '\n')
-            {
-                goto err_invalid_data;
-            }
-            if (ShouldLog(1) != FALSE)
-            {
-                Log(L"HttpCommon(Chunk/0x%p): %I64u", this, sBody.sChunk.nSize);
-            }
-
-            nState = eState::ChunkData;
-            if (sBody.sChunk.nSize == 0)
-            {
-                // the trailing CR/LF will be consumed by a new parse
-                nState = eState::Done;
-                hRes = FlushContent();
+                nState = eState::BodyStart;
+                if (ShouldLog(1) != FALSE)
+                {
+                    Log(L"HttpCommon(HeadersComplete/0x%p): BodyStart", this);
+                }
                 goto done;
-            }
-            break;
 
-        case eState::ChunkStartIgnoreExtension:
-            if (*szDataA == '\r')
-            {
+            case eState::BodyStart:
+                nState = ((nHeaderFlags & HEADER_FLAG_TransferEncodingChunked) != 0) ? eState::ChunkPreStart
+                    : eState::IdentityBodyStart;
+                BACKWARD_CHAR();
+                break;
+
+            case eState::IdentityBodyStart:
+                nToRead = nDataSize - (szDataA - (LPCSTR)lpData);
+                if ((ULONGLONG)nToRead > sBody.nContentLength - sBody.nIdentityReadedContentLength)
+                {
+                    nToRead = (SIZE_T)(sBody.nContentLength - sBody.nIdentityReadedContentLength);
+                }
+                if (ShouldLog(2) != FALSE && sBody.nContentLength > 0ui64)
+                {
+                    double dbl;
+                    int _pre_pct, _post_pct;
+
+                    dbl = (double)(sBody.nIdentityReadedContentLength) / (double)(sBody.nContentLength);
+                    _pre_pct = (int)(dbl * 10.0);
+                    dbl += (double)nToRead / (double)(sBody.nContentLength);
+                    _post_pct = (int)(dbl * 10.0);
+                    if (_pre_pct != _post_pct && _post_pct < 10)
+                    {
+                        Log(L"HttpCommon(Body/0x%p): %ld0%%", this, _post_pct);
+                    }
+                }
+                hRes = ProcessContent(szDataA, nToRead);
+                if (FAILED(hRes))
+                {
+                    sBody.cParser.Release();
+                    sBody.cDecoder.Reset();
+                    goto done;
+                }
+                szDataA += (SIZE_T)nToRead;
+                sBody.nIdentityReadedContentLength += (ULONGLONG)nToRead;
+                if (sBody.nIdentityReadedContentLength == sBody.nContentLength)
+                {
+                    nState = eState::Done;
+                    hRes = FlushContent();
+                    goto done;
+                }
+                BACKWARD_CHAR();
+                break;
+
+            case eState::ChunkPreStart:
+                if ((*szDataA < '0' || *szDataA > '9') && (((*szDataA) & 0xDF) < 'A' || ((*szDataA) & 0xDF) > 'F'))
+                {
+                    goto err_invalid_data;
+                }
+                nState = eState::ChunkStart;
+                sBody.sChunk.nSize = sBody.sChunk.nReaded = 0;
+                // fall into 'stChunkStart'
+
+            case eState::ChunkStart:
+                if ((*szDataA >= '0' && *szDataA <= '9') || (((*szDataA) & 0xDF) >= 'A' && ((*szDataA) & 0xDF) <= 'F'))
+                {
+                    if ((sBody.sChunk.nSize & 0xF000000000000000ui64) != 0)
+                    {
+                        hRes = MX_E_ArithmeticOverflow;
+                        goto done;
+                    }
+                    sBody.sChunk.nSize <<= 4;
+                    if (*szDataA >= '0' && *szDataA <= '9')
+                    {
+                        sBody.sChunk.nSize |= (ULONGLONG)(*szDataA) - (ULONGLONG)'0';
+                    }
+                    else
+                    {
+                        sBody.sChunk.nSize |= (ULONGLONG)((*szDataA) & 0xDF) - (ULONGLONG)'A' + 10ui64;
+                    }
+                    break;
+                }
+
+                // end of chunk size
+                if (*szDataA == ' ' || *szDataA == '\t' || *szDataA == ';')
+                {
+                    nState = eState::ChunkStartIgnoreExtension;
+                    break;
+                }
+
+                if (*szDataA != '\r')
+                {
+                    goto err_invalid_data;
+                }
+
                 nState = eState::ChunkStartEnding;
                 break;
-            }
-            break;
 
-        case eState::ChunkData:
-        {
-            SIZE_T nToRead;
+            case eState::ChunkStartEnding:
+                if (*szDataA != '\n')
+                {
+                    goto err_invalid_data;
+                }
+                if (ShouldLog(1) != FALSE)
+                {
+                    Log(L"HttpCommon(Chunk/0x%p): %I64u", this, sBody.sChunk.nSize);
+                }
 
-            nToRead = nDataSize - (szDataA - (LPCSTR)lpData);
-            if ((ULONGLONG)nToRead > sBody.sChunk.nSize - sBody.sChunk.nReaded)
-            {
-                nToRead = (SIZE_T)(sBody.sChunk.nSize - sBody.sChunk.nReaded);
-            }
-            hRes = ProcessContent(szDataA, nToRead);
-            if (FAILED(hRes))
-            {
-                goto done;
-            }
-            szDataA += (SIZE_T)nToRead;
-            BACKWARD_CHAR();
-            sBody.sChunk.nReaded += (ULONGLONG)nToRead;
-            sBody.nIdentityReadedContentLength += (ULONGLONG)nToRead;
-            if (sBody.sChunk.nReaded == sBody.sChunk.nSize)
-            {
-                nState = eState::ChunkAfterData;
-            }
-        }
-        break;
+                nState = eState::ChunkData;
+                if (sBody.sChunk.nSize == 0)
+                {
+                    // the trailing CR/LF will be consumed by a new parse
+                    nState = eState::Done;
+                    hRes = FlushContent();
+                    goto done;
+                }
+                break;
 
-        case eState::ChunkAfterData:
-            if (*szDataA == '\r')
-            {
-                nState = eState::NearEndOfChunkAfterData;
-            }
-            else if (*szDataA == '\n')
-            {
+            case eState::ChunkStartIgnoreExtension:
+                if (*szDataA == '\r')
+                {
+                    nState = eState::ChunkStartEnding;
+                    break;
+                }
+                break;
+
+            case eState::ChunkData:
+                {
+                    SIZE_T nToRead;
+
+                    nToRead = nDataSize - (szDataA - (LPCSTR)lpData);
+                    if ((ULONGLONG)nToRead > sBody.sChunk.nSize - sBody.sChunk.nReaded)
+                    {
+                        nToRead = (SIZE_T)(sBody.sChunk.nSize - sBody.sChunk.nReaded);
+                    }
+                    hRes = ProcessContent(szDataA, nToRead);
+                    if (FAILED(hRes))
+                    {
+                        goto done;
+                    }
+                    szDataA += (SIZE_T)nToRead;
+                    BACKWARD_CHAR();
+                    sBody.sChunk.nReaded += (ULONGLONG)nToRead;
+                    sBody.nIdentityReadedContentLength += (ULONGLONG)nToRead;
+                    if (sBody.sChunk.nReaded == sBody.sChunk.nSize)
+                    {
+                        nState = eState::ChunkAfterData;
+                    }
+                }
+                break;
+
+            case eState::ChunkAfterData:
+                if (*szDataA == '\r')
+                {
+                    nState = eState::NearEndOfChunkAfterData;
+                }
+                else if (*szDataA == '\n')
+                {
+                    nState = eState::ChunkPreStart;
+                }
+                else
+                {
+                    goto err_invalid_data;
+                }
+                break;
+
+            case eState::NearEndOfChunkAfterData:
+                if (*szDataA != '\n')
+                {
+                    goto err_invalid_data;
+                }
                 nState = eState::ChunkPreStart;
-            }
-            else
-            {
-                goto err_invalid_data;
-            }
-            break;
+                break;
 
-        case eState::NearEndOfChunkAfterData:
-            if (*szDataA != '\n')
-            {
-                goto err_invalid_data;
-            }
-            nState = eState::ChunkPreStart;
-            break;
-
-        default:
-            MX_ASSERT(FALSE);
-            break;
+            default:
+                MX_ASSERT(FALSE);
+                break;
         }
     }
 
@@ -812,9 +811,8 @@ HRESULT CHttpParser::ParseHeader(_In_ CStringA &cStrLineA)
     }
 
     // is a cookie?
-    if (bActAsServer != FALSE &&
-        (((SIZE_T)(szNameEndA - szNameStartA) == 6 && StrNCompareA(szNameStartA, "Cookie", 6, TRUE) == 0) ||
-         ((SIZE_T)(szNameEndA - szNameStartA) == 7 && StrNCompareA(szNameStartA, "Cookie2", 7, TRUE) == 0)))
+    if (bActAsServer != FALSE && (((SIZE_T)(szNameEndA - szNameStartA) == 6 && StrNCompareA(szNameStartA, "Cookie", 6, TRUE) == 0) ||
+                                  ((SIZE_T)(szNameEndA - szNameStartA) == 7 && StrNCompareA(szNameStartA, "Cookie2", 7, TRUE) == 0)))
     {
         CHttpCookieArray cCookieArray;
 
@@ -829,8 +827,8 @@ HRESULT CHttpParser::ParseHeader(_In_ CStringA &cStrLineA)
         }
     }
     else if (bActAsServer == FALSE &&
-             (((SIZE_T)(szNameEndA - szNameStartA) == 10 && StrNCompareA(szNameStartA, "Set-Cookie", 10, TRUE) == 0) ||
-              ((SIZE_T)(szNameEndA - szNameStartA) == 11 && StrNCompareA(szNameStartA, "Set-Cookie2", 11, TRUE) == 0)))
+          (((SIZE_T)(szNameEndA - szNameStartA) == 10 && StrNCompareA(szNameStartA, "Set-Cookie", 10, TRUE) == 0) ||
+           ((SIZE_T)(szNameEndA - szNameStartA) == 11 && StrNCompareA(szNameStartA, "Set-Cookie2", 11, TRUE) == 0)))
     {
         TAutoRefCounted<CHttpCookie> cCookie;
         HRESULT hRes;
@@ -876,15 +874,15 @@ HRESULT CHttpParser::ParseHeader(_In_ CStringA &cStrLineA)
 
             switch (lpHdr->GetEncoding())
             {
-            case CHttpHeaderGenTransferEncoding::eEncoding::Identity:
-                break;
+                case CHttpHeaderGenTransferEncoding::eEncoding::Identity:
+                    break;
 
-            case CHttpHeaderGenTransferEncoding::eEncoding::Chunked:
-                nHeaderFlags |= HEADER_FLAG_TransferEncodingChunked;
-                break;
+                case CHttpHeaderGenTransferEncoding::eEncoding::Chunked:
+                    nHeaderFlags |= HEADER_FLAG_TransferEncodingChunked;
+                    break;
 
-            default:
-                return MX_E_Unsupported;
+                default:
+                    return MX_E_Unsupported;
             }
         }
         else if (StrCompareA(cNewHeader->GetHeaderName(), "Content-Length", TRUE) == 0)
@@ -899,18 +897,18 @@ HRESULT CHttpParser::ParseHeader(_In_ CStringA &cStrLineA)
 
             switch (lpHdr->GetEncoding())
             {
-            case CHttpHeaderEntContentEncoding::eEncoding::Identity:
-                break;
+                case CHttpHeaderEntContentEncoding::eEncoding::Identity:
+                    break;
 
-            case CHttpHeaderEntContentEncoding::eEncoding::GZip:
-                nHeaderFlags |= HEADER_FLAG_ContentEncodingGZip;
-                break;
-            case CHttpHeaderEntContentEncoding::eEncoding::Deflate:
-                nHeaderFlags |= HEADER_FLAG_ContentEncodingDeflate;
-                break;
+                case CHttpHeaderEntContentEncoding::eEncoding::GZip:
+                    nHeaderFlags |= HEADER_FLAG_ContentEncodingGZip;
+                    break;
+                case CHttpHeaderEntContentEncoding::eEncoding::Deflate:
+                    nHeaderFlags |= HEADER_FLAG_ContentEncodingDeflate;
+                    break;
 
-            default:
-                return MX_E_Unsupported;
+                default:
+                    return MX_E_Unsupported;
             }
         }
         else if (StrCompareA(cNewHeader->GetHeaderName(), "Connection", TRUE) == 0)
@@ -974,55 +972,55 @@ HRESULT CHttpParser::ProcessContent(_In_ LPCVOID lpContent, _In_ SIZE_T nContent
     hRes = S_OK;
     switch (nHeaderFlags & HEADER_FLAG_MASK_ContentEncoding)
     {
-    case HEADER_FLAG_ContentEncodingGZip:
-    case HEADER_FLAG_ContentEncodingDeflate:
-        // create decompressor if not done yet
-        if (!(sBody.cDecoder))
-        {
-            sBody.cDecoder.Attach(MX_DEBUG_NEW CZipLib(FALSE));
+        case HEADER_FLAG_ContentEncodingGZip:
+        case HEADER_FLAG_ContentEncodingDeflate:
+            // create decompressor if not done yet
             if (!(sBody.cDecoder))
             {
-                return E_OUTOFMEMORY;
-            }
-            hRes = sBody.cDecoder->BeginDecompress();
-            if (FAILED(hRes))
-            {
-                return hRes;
-            }
-        }
-        // if data can be decompressed...
-        if (sBody.cDecoder->HasDecompressEndOfStreamBeenReached() == FALSE)
-        {
-            hRes = sBody.cDecoder->DecompressStream(lpContent, nContentSize, NULL);
-            // send available decompressed data to callback
-            while (SUCCEEDED(hRes) && sBody.cDecoder->GetAvailableData() > 0)
-            {
-                nSize = sBody.cDecoder->GetData(aTempBuf, sizeof(aTempBuf));
-
-#ifdef _DEBUG
-                if (ShouldLog(2) != FALSE)
+                sBody.cDecoder.Attach(MX_DEBUG_NEW CZipLib(FALSE));
+                if (!(sBody.cDecoder))
                 {
-                    Log(L"HttpCommon(BodyData/0x%p): %.*S", this, nSize, aTempBuf);
+                    return E_OUTOFMEMORY;
                 }
-#endif //_DEBUG
-
-                // parse body
-                hRes = sBody.cParser->Parse(aTempBuf, nSize);
+                hRes = sBody.cDecoder->BeginDecompress();
+                if (FAILED(hRes))
+                {
+                    return hRes;
+                }
             }
-        }
-        break;
+            // if data can be decompressed...
+            if (sBody.cDecoder->HasDecompressEndOfStreamBeenReached() == FALSE)
+            {
+                hRes = sBody.cDecoder->DecompressStream(lpContent, nContentSize, NULL);
+                // send available decompressed data to callback
+                while (SUCCEEDED(hRes) && sBody.cDecoder->GetAvailableData() > 0)
+                {
+                    nSize = sBody.cDecoder->GetData(aTempBuf, sizeof(aTempBuf));
 
-    default:
 #ifdef _DEBUG
-        if (ShouldLog(2) != FALSE)
-        {
-            Log(L"HttpCommon(BodyData/0x%p): %.*S", this, nContentSize, (char *)lpContent);
-        }
+                    if (ShouldLog(2) != FALSE)
+                    {
+                        Log(L"HttpCommon(BodyData/0x%p): %.*S", this, (int)(nSize & 0x7FFFFFFF), aTempBuf);
+                    }
 #endif //_DEBUG
 
-        // parse body
-        hRes = sBody.cParser->Parse(lpContent, nContentSize);
-        break;
+                    // parse body
+                    hRes = sBody.cParser->Parse(aTempBuf, nSize);
+                }
+            }
+            break;
+
+        default:
+#ifdef _DEBUG
+            if (ShouldLog(2) != FALSE)
+            {
+                Log(L"HttpCommon(BodyData/0x%p): %.*S", this, (int)(nContentSize & 0x7FFFFFFF), (char *)lpContent);
+            }
+#endif //_DEBUG
+
+            // parse body
+            hRes = sBody.cParser->Parse(lpContent, nContentSize);
+            break;
     }
     // done
     return hRes;

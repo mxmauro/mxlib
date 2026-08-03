@@ -20,10 +20,9 @@
 #include "..\..\Include\Http\HttpBodyParserJSON.h"
 #include "..\..\Include\AutoPtr.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpBodyParserJSON::CHttpBodyParserJSON() : CHttpBodyParserBase()
 {
@@ -72,21 +71,20 @@ HRESULT CHttpBodyParserJSON::Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDat
     {
         if (d.ParseInsitu<rapidjson::kParseValidateEncodingFlag | rapidjson::kParseNanAndInfFlag |
                           rapidjson::kParseFullPrecisionFlag | rapidjson::kParseTrailingCommasFlag |
-                          rapidjson::kParseEscapedApostropheFlag>((LPSTR)cStrTempA)
-                .HasParseError() != false)
+                          rapidjson::kParseEscapedApostropheFlag>((LPSTR)cStrTempA).HasParseError() != false)
         {
             nState = eState::Error;
             return MX_E_InvalidData;
         }
         hRes = S_OK;
     }
-    RAPIDJSON_CATCH(hRes)
+        RAPIDJSON_CATCH(hRes)
 
-    if (FAILED(hRes))
-    {
-        nState = eState::Error;
-        return hRes;
-    }
+        if (FAILED(hRes))
+        {
+            nState = eState::Error;
+            return hRes;
+        }
 
     // success
     nState = eState::Done;

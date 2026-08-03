@@ -22,10 +22,9 @@
 
 #define CR_UNKNOWN_ERROR 2000
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CJsMySqlPlugin::CJsMySqlPlugin() : CJsObjectBase(), CNonCopyableObj()
 {
@@ -65,28 +64,26 @@ VOID CJsMySqlPlugin::OnRegister(_In_ DukTape::duk_context *lpCtx)
     CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
     HRESULT hRes;
 
-    DukTape::duk_eval_raw(lpCtx,
-                          "function MySqlError(_hr, _dbError, _dbErrorMsg, _sqlState) {\r\n"
-                          "WindowsError.call(this, _hr);\r\n"
-                          "if (_dbErrorMsg.length > 0)\r\n"
-                          "    this.message = _dbErrorMsg;\r\n"
-                          "else\r\n"
-                          "    this.message = \"General failure\";\r\n"
-                          "this.name = \"MySqlError\";\r\n"
-                          "this.dbError = _dbError;\r\n"
-                          "this.sqlState = _sqlState;\r\n"
-                          "return this; }\r\n"
-                          "MySqlError.prototype = Object.create(WindowsError.prototype);\r\n"
-                          "MySqlError.prototype.constructor=MySqlError;\r\n",
-                          0, DUK_COMPILE_EVAL | DUK_COMPILE_NOSOURCE | DUK_COMPILE_STRLEN | DUK_COMPILE_NOFILENAME);
+    DukTape::duk_eval_raw(lpCtx, "function MySqlError(_hr, _dbError, _dbErrorMsg, _sqlState) {\r\n"
+                                 "WindowsError.call(this, _hr);\r\n"
+                                 "if (_dbErrorMsg.length > 0)\r\n"
+                                 "    this.message = _dbErrorMsg;\r\n"
+                                 "else\r\n"
+                                 "    this.message = \"General failure\";\r\n"
+                                 "this.name = \"MySqlError\";\r\n"
+                                 "this.dbError = _dbError;\r\n"
+                                 "this.sqlState = _sqlState;\r\n"
+                                 "return this; }\r\n"
+                                 "MySqlError.prototype = Object.create(WindowsError.prototype);\r\n"
+                                 "MySqlError.prototype.constructor=MySqlError;\r\n", 0,
+                          DUK_COMPILE_EVAL | DUK_COMPILE_NOSOURCE | DUK_COMPILE_STRLEN | DUK_COMPILE_NOFILENAME);
 
     hRes = lpJVM->RegisterException(
-        "MySqlError",
-        [](_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nExceptionObjectIndex) -> VOID
-        {
-            throw CJsMySqlError(lpCtx, nExceptionObjectIndex);
-            return;
-        });
+        "MySqlError", [](_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nExceptionObjectIndex) -> VOID
+    {
+        throw CJsMySqlError(lpCtx, nExceptionObjectIndex);
+        return;
+    });
     if (FAILED(hRes))
     {
         MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
@@ -316,70 +313,54 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query(_In_ DukTape::duk_context *lpCtx)
 
         switch (DukTape::duk_get_type(lpCtx, ndx))
         {
-        case DUK_TYPE_NONE:
-        case DUK_TYPE_UNDEFINED:
-        case DUK_TYPE_NULL:
-            cField->SetNull();
-            break;
+            case DUK_TYPE_NONE:
+            case DUK_TYPE_UNDEFINED:
+            case DUK_TYPE_NULL:
+                cField->SetNull();
+                break;
 
-        case DUK_TYPE_BOOLEAN:
-            cField->SetBoolean(DukTape::duk_get_boolean(lpCtx, ndx) ? TRUE : FALSE);
-            break;
+            case DUK_TYPE_BOOLEAN:
+                cField->SetBoolean(DukTape::duk_get_boolean(lpCtx, ndx) ? TRUE : FALSE);
+                break;
 
-        case DUK_TYPE_NUMBER:
-        {
-            double dbl;
-            LONGLONG ll;
-
-            dbl = (double)DukTape::duk_get_number(lpCtx, ndx);
-            ll = (LONGLONG)dbl;
-            if ((double)ll != dbl || dbl < (double)LONGLONG_MIN || dbl > (double)LONGLONG_MAX)
-            {
-                cField->SetDouble(dbl);
-            }
-            else if (ll < (LONGLONG)LONG_MIN || ll > (LONGLONG)LONG_MAX)
-            {
-                cField->SetInt64(ll);
-            }
-            else
-            {
-                cField->SetInt32((LONG)ll);
-            }
-        }
-        break;
-
-        case DUK_TYPE_STRING:
-        {
-            LPCSTR sA = DukTape::duk_get_lstring(lpCtx, ndx, &len);
-            hRes = cField->SetString(sA, len);
-            if (FAILED(hRes))
-            {
-                MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
-            }
-        }
-        break;
-
-        case DUK_TYPE_OBJECT:
-            if (DukTape::duk_is_buffer_data(lpCtx, ndx) != 0)
-            {
-                LPVOID p = DukTape::duk_get_buffer_data(lpCtx, ndx, &len);
-                hRes = cField->SetBlob(p, len);
-                if (FAILED(hRes))
+            case DUK_TYPE_NUMBER:
                 {
-                    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+                    double dbl;
+                    LONGLONG ll;
+
+                    dbl = (double)DukTape::duk_get_number(lpCtx, ndx);
+                    ll = (LONGLONG)dbl;
+                    if ((double)ll != dbl || dbl < (double)LONGLONG_MIN || dbl >(double)LONGLONG_MAX)
+                    {
+                        cField->SetDouble(dbl);
+                    }
+                    else if (ll < (LONGLONG)LONG_MIN || ll >(LONGLONG)LONG_MAX)
+                    {
+                        cField->SetInt64(ll);
+                    }
+                    else
+                    {
+                        cField->SetInt32((LONG)ll);
+                    }
                 }
-            }
-            else
-            {
-                CStringA cStrTypeA;
+                break;
 
-                CJavascriptVM::GetObjectType(lpCtx, ndx, cStrTypeA);
-                if (StrCompareA((LPCSTR)cStrTypeA, "Date") == 0)
+            case DUK_TYPE_STRING:
                 {
-                    CDateTime cDt;
+                    LPCSTR sA = DukTape::duk_get_lstring(lpCtx, ndx, &len);
+                    hRes = cField->SetString(sA, len);
+                    if (FAILED(hRes))
+                    {
+                        MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+                    }
+                }
+                break;
 
-                    CJavascriptVM::GetDate(lpCtx, ndx, cDt);
-                    hRes = cField->SetDateTime(cDt);
+            case DUK_TYPE_OBJECT:
+                if (DukTape::duk_is_buffer_data(lpCtx, ndx) != 0)
+                {
+                    LPVOID p = DukTape::duk_get_buffer_data(lpCtx, ndx, &len);
+                    hRes = cField->SetBlob(p, len);
                     if (FAILED(hRes))
                     {
                         MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
@@ -387,24 +368,40 @@ DukTape::duk_ret_t CJsMySqlPlugin::Query(_In_ DukTape::duk_context *lpCtx)
                 }
                 else
                 {
-                    MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+                    CStringA cStrTypeA;
+
+                    CJavascriptVM::GetObjectType(lpCtx, ndx, cStrTypeA);
+                    if (StrCompareA((LPCSTR)cStrTypeA, "Date") == 0)
+                    {
+                        CDateTime cDt;
+
+                        CJavascriptVM::GetDate(lpCtx, ndx, cDt);
+                        hRes = cField->SetDateTime(cDt);
+                        if (FAILED(hRes))
+                        {
+                            MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+                        }
+                    }
+                    else
+                    {
+                        MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+                    }
                 }
-            }
-            break;
+                break;
 
-        case DUK_TYPE_BUFFER:
-        {
-            LPVOID p = DukTape::duk_get_buffer_data(lpCtx, ndx, &len);
-            hRes = cField->SetBlob(p, len);
-            if (FAILED(hRes))
-            {
-                MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
-            }
-        }
-        break;
+            case DUK_TYPE_BUFFER:
+                {
+                    LPVOID p = DukTape::duk_get_buffer_data(lpCtx, ndx, &len);
+                    hRes = cField->SetBlob(p, len);
+                    if (FAILED(hRes))
+                    {
+                        MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+                    }
+                }
+                break;
 
-        default:
-            MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+            default:
+                MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
         }
         if (bParamsIsArray != FALSE)
         {
@@ -523,52 +520,52 @@ DukTape::duk_ret_t CJsMySqlPlugin::FetchRow(_In_ DukTape::duk_context *lpCtx)
         cField.Attach(cConnector->GetField(i));
         switch (cField->GetType())
         {
-        case Database::eFieldType::Null:
-            DukTape::duk_push_null(lpCtx);
-            break;
+            case Database::eFieldType::Null:
+                DukTape::duk_push_null(lpCtx);
+                break;
 
-        case Database::eFieldType::String:
-            DukTape::duk_push_lstring(lpCtx, cField->GetString(), cField->GetLength());
-            break;
+            case Database::eFieldType::String:
+                DukTape::duk_push_lstring(lpCtx, cField->GetString(), cField->GetLength());
+                break;
 
-        case Database::eFieldType::Boolean:
-            DukTape::duk_push_boolean(lpCtx, (cField->GetBoolean() != FALSE) ? 1 : 0);
-            break;
+            case Database::eFieldType::Boolean:
+                DukTape::duk_push_boolean(lpCtx, (cField->GetBoolean() != FALSE) ? 1 : 0);
+                break;
 
-        case Database::eFieldType::UInt32:
-            DukTape::duk_push_uint(lpCtx, cField->GetUInt32());
-            break;
+            case Database::eFieldType::UInt32:
+                DukTape::duk_push_uint(lpCtx, cField->GetUInt32());
+                break;
 
-        case Database::eFieldType::Int32:
-            DukTape::duk_push_int(lpCtx, cField->GetInt32());
-            break;
+            case Database::eFieldType::Int32:
+                DukTape::duk_push_int(lpCtx, cField->GetInt32());
+                break;
 
-        case Database::eFieldType::UInt64:
-            DukTape::duk_push_number(lpCtx, (double)(cField->GetUInt64()));
-            break;
+            case Database::eFieldType::UInt64:
+                DukTape::duk_push_number(lpCtx, (double)(cField->GetUInt64()));
+                break;
 
-        case Database::eFieldType::Int64:
-            DukTape::duk_push_number(lpCtx, (double)(cField->GetInt64()));
-            break;
+            case Database::eFieldType::Int64:
+                DukTape::duk_push_number(lpCtx, (double)(cField->GetInt64()));
+                break;
 
-        case Database::eFieldType::Double:
-            DukTape::duk_push_number(lpCtx, cField->GetDouble());
-            break;
+            case Database::eFieldType::Double:
+                DukTape::duk_push_number(lpCtx, cField->GetDouble());
+                break;
 
-        case Database::eFieldType::DateTime:
-            CJavascriptVM::PushDate(lpCtx, *(cField->GetDateTime()), TRUE);
-            break;
+            case Database::eFieldType::DateTime:
+                CJavascriptVM::PushDate(lpCtx, *(cField->GetDateTime()), TRUE);
+                break;
 
-        case Database::eFieldType::Blob:
-            p = (LPBYTE)(DukTape::duk_push_fixed_buffer(lpCtx, cField->GetLength()));
-            ::MxMemCopy(p, cField->GetBlob(), cField->GetLength());
-            DukTape::duk_push_buffer_object(lpCtx, -1, 0, cField->GetLength(), DUK_BUFOBJ_UINT8ARRAY);
-            DukTape::duk_remove(lpCtx, -2);
-            break;
+            case Database::eFieldType::Blob:
+                p = (LPBYTE)(DukTape::duk_push_fixed_buffer(lpCtx, cField->GetLength()));
+                ::MxMemCopy(p, cField->GetBlob(), cField->GetLength());
+                DukTape::duk_push_buffer_object(lpCtx, -1, 0, cField->GetLength(), DUK_BUFOBJ_UINT8ARRAY);
+                DukTape::duk_remove(lpCtx, -2);
+                break;
 
-        default:
-            DukTape::duk_push_undefined(lpCtx);
-            break;
+            default:
+                DukTape::duk_push_undefined(lpCtx);
+                break;
         }
 
         // add field data
@@ -601,40 +598,40 @@ DukTape::duk_ret_t CJsMySqlPlugin::BeginTransaction(_In_ DukTape::duk_context *l
 
     switch (DukTape::duk_get_top(lpCtx))
     {
-    case 0:
-        hRes = cConnector->TransactionStart();
-        if (FAILED(hRes))
-        {
-            ThrowDbError(lpCtx, hRes, __FILE__, __LINE__);
-        }
-        break;
+        case 0:
+            hRes = cConnector->TransactionStart();
+            if (FAILED(hRes))
+            {
+                ThrowDbError(lpCtx, hRes, __FILE__, __LINE__);
+            }
+            break;
 
-    case 1:
-    {
-        BOOL bIsReadOnly = FALSE;
+        case 1:
+            {
+                BOOL bIsReadOnly = FALSE;
 
-        if (DukTape::duk_is_object(lpCtx, 0) == 0)
-        {
+                if (DukTape::duk_is_object(lpCtx, 0) == 0)
+                {
+                    MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
+                }
+
+                DukTape::duk_get_prop_string(lpCtx, 0, "readOnly");
+                if (duk_is_null_or_undefined(lpCtx, -1) == 0)
+                {
+                    bIsReadOnly = (MX::CJavascriptVM::GetInt(lpCtx, -1) != 0) ? TRUE : FALSE;
+                }
+                DukTape::duk_pop(lpCtx);
+
+                hRes = cConnector->TransactionStart(bIsReadOnly);
+                if (FAILED(hRes))
+                {
+                    ThrowDbError(lpCtx, hRes, __FILE__, __LINE__);
+                }
+            }
+            break;
+
+        default:
             MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
-        }
-
-        DukTape::duk_get_prop_string(lpCtx, 0, "readOnly");
-        if (duk_is_null_or_undefined(lpCtx, -1) == 0)
-        {
-            bIsReadOnly = (MX::CJavascriptVM::GetInt(lpCtx, -1) != 0) ? TRUE : FALSE;
-        }
-        DukTape::duk_pop(lpCtx);
-
-        hRes = cConnector->TransactionStart(bIsReadOnly);
-        if (FAILED(hRes))
-        {
-            ThrowDbError(lpCtx, hRes, __FILE__, __LINE__);
-        }
-    }
-    break;
-
-    default:
-        MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_INVALIDARG);
     }
 
     // done

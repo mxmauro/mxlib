@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderEntExpires.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderEntExpires::CHttpHeaderEntExpires() : CHttpHeaderBase()
 {

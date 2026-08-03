@@ -22,7 +22,7 @@
 #include "..\..\Include\Strings\Utf8.h"
 #include <stdio.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 static HRESULT Encode(_Inout_ MX::CStringA &cStrA, _In_z_ LPCWSTR szValueW, _In_ BOOL bAppend, _In_ BOOL bIsUTF8);
 static BOOL ConvertToHex(_Out_ MX::CStringA &cStrA, _In_ LPCVOID lpData, _In_ SIZE_T nDataLen);
@@ -30,8 +30,7 @@ static int ParseQOP(_In_opt_z_ LPCWSTR szValueW);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpAuthDigest::CHttpAuthDigest() : CHttpAuthBase(), CNonCopyableObj()
 {
@@ -235,8 +234,8 @@ HRESULT CHttpAuthDigest::Parse(_In_ CHttpHeaderRespWwwProxyAuthenticateCommon *l
     return S_OK;
 }
 
-HRESULT CHttpAuthDigest::GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCWSTR szUserNameW,
-                                          _In_z_ LPCWSTR szPasswordW, _In_z_ LPCSTR szMethodA, _In_z_ LPCSTR szUriPathA)
+HRESULT CHttpAuthDigest::GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCWSTR szUserNameW, _In_z_ LPCWSTR szPasswordW,
+                                          _In_z_ LPCSTR szMethodA, _In_z_ LPCSTR szUriPathA)
 {
     CMessageDigest cDigest;
     CSecureStringA cStrTempA, cStrHashKeyA[2], cStrResponseA, cStrUserNameA, cStrNonceA, cStrOpaqueA;
@@ -330,8 +329,7 @@ HRESULT CHttpAuthDigest::GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCW
                             hRes = cDigestUserHash.EndDigest();
                             if (SUCCEEDED(hRes))
                             {
-                                if (ConvertToHex(cStrUserNameA, cDigestUserHash.GetResult(),
-                                                 cDigestUserHash.GetResultSize()) == FALSE)
+                                if (ConvertToHex(cStrUserNameA, cDigestUserHash.GetResult(), cDigestUserHash.GetResultSize()) == FALSE)
                                 {
                                     hRes = E_OUTOFMEMORY;
                                 }
@@ -351,8 +349,7 @@ HRESULT CHttpAuthDigest::GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCW
                         if (cStrUserNameA.GetLength() != cStrTempA.GetLength())
                         {
                             bExtendedUserName = TRUE;
-                            if (cStrUserNameA.Insert((bCharsetIsUtf8 != FALSE) ? "UTF-8''" : "ISO-8859-1''", 0) ==
-                                FALSE)
+                            if (cStrUserNameA.Insert((bCharsetIsUtf8 != FALSE) ? "UTF-8''" : "ISO-8859-1''", 0) == FALSE)
                             {
                                 hRes = E_OUTOFMEMORY;
                             }
@@ -444,8 +441,7 @@ HRESULT CHttpAuthDigest::GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCW
                         // convert result to hex
                         if (SUCCEEDED(hRes))
                         {
-                            if (ConvertToHex(cStrHashKeyA[0], cDigestSession.GetResult(),
-                                             cDigestSession.GetResultSize()) == FALSE)
+                            if (ConvertToHex(cStrHashKeyA[0], cDigestSession.GetResult(), cDigestSession.GetResultSize()) == FALSE)
                             {
                                 hRes = E_OUTOFMEMORY;
                             }
@@ -584,8 +580,7 @@ HRESULT CHttpAuthDigest::GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCW
             if (bExtendedUserName == FALSE)
             {
                 if (cStrDestA.ConcatN("username=\"", 10) == FALSE ||
-                    cStrDestA.ConcatN((LPCSTR)cStrUserNameA, cStrUserNameA.GetLength()) == FALSE ||
-                    cStrDestA.ConcatN("\"", 1) == FALSE)
+                    cStrDestA.ConcatN((LPCSTR)cStrUserNameA, cStrUserNameA.GetLength()) == FALSE || cStrDestA.ConcatN("\"", 1) == FALSE)
                 {
                     hRes = E_OUTOFMEMORY;
                 }
@@ -620,8 +615,7 @@ HRESULT CHttpAuthDigest::GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCW
         // nonce
         if (SUCCEEDED(hRes) && cStrNonceA.IsEmpty() == FALSE)
         {
-            if (cStrDestA.ConcatN(", nonce=\"", 9) == FALSE ||
-                cStrDestA.ConcatN((LPCSTR)cStrNonceA, cStrNonceA.GetLength()) == FALSE ||
+            if (cStrDestA.ConcatN(", nonce=\"", 9) == FALSE || cStrDestA.ConcatN((LPCSTR)cStrNonceA, cStrNonceA.GetLength()) == FALSE ||
                 cStrDestA.ConcatN("\"", 1) == FALSE)
             {
                 hRes = E_OUTOFMEMORY;
@@ -651,8 +645,7 @@ HRESULT CHttpAuthDigest::GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCW
         // cnonce
         if (SUCCEEDED(hRes) && *szCNonceA != 0)
         {
-            if (cStrDestA.ConcatN(", cnonce=\"", 10) == FALSE ||
-                cStrDestA.ConcatN(szCNonceA + 1, StrLenA(szCNonceA) - 2) == FALSE ||
+            if (cStrDestA.ConcatN(", cnonce=\"", 10) == FALSE || cStrDestA.ConcatN(szCNonceA + 1, StrLenA(szCNonceA) - 2) == FALSE ||
                 cStrDestA.ConcatN("\"", 1) == FALSE)
             {
                 hRes = E_OUTOFMEMORY;
@@ -663,8 +656,7 @@ HRESULT CHttpAuthDigest::GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCW
         if (SUCCEEDED(hRes))
         {
             if (cStrDestA.ConcatN(", response=\"", 12) == FALSE ||
-                cStrDestA.ConcatN((LPCSTR)cStrResponseA, cStrResponseA.GetLength()) == FALSE ||
-                cStrDestA.ConcatN("\"", 1) == FALSE)
+                cStrDestA.ConcatN((LPCSTR)cStrResponseA, cStrResponseA.GetLength()) == FALSE || cStrDestA.ConcatN("\"", 1) == FALSE)
             {
                 hRes = E_OUTOFMEMORY;
             }
@@ -673,8 +665,7 @@ HRESULT CHttpAuthDigest::GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCW
         // opaque
         if (SUCCEEDED(hRes) && cStrOpaqueA.IsEmpty() == FALSE)
         {
-            if (cStrDestA.ConcatN(", opaque=\"", 10) == FALSE ||
-                cStrDestA.ConcatN((LPCSTR)cStrOpaqueA, cStrOpaqueA.GetLength()) == FALSE ||
+            if (cStrDestA.ConcatN(", opaque=\"", 10) == FALSE || cStrDestA.ConcatN((LPCSTR)cStrOpaqueA, cStrOpaqueA.GetLength()) == FALSE ||
                 cStrDestA.ConcatN("\"", 1) == FALSE)
             {
                 hRes = E_OUTOFMEMORY;
@@ -749,8 +740,7 @@ static int ParseQOP(_In_opt_z_ LPCWSTR szValueW)
             szValueW++;
         }
 
-        if (MX::StrNCompareW(szValueW, L"auth-int", 8, TRUE) == 0 &&
-            (szValueW[8] == 0 || szValueW[8] == L',' || szValueW[8] == L' '))
+        if (MX::StrNCompareW(szValueW, L"auth-int", 8, TRUE) == 0 && (szValueW[8] == 0 || szValueW[8] == L',' || szValueW[8] == L' '))
         {
             szValueW += 8;
             while (*szValueW == L' ')
@@ -763,8 +753,7 @@ static int ParseQOP(_In_opt_z_ LPCWSTR szValueW)
             }
             res |= 2;
         }
-        else if (MX::StrNCompareW(szValueW, L"auth", 4, TRUE) == 0 &&
-                 (szValueW[4] == 0 || szValueW[4] == L',' || szValueW[4] == L' '))
+        else if (MX::StrNCompareW(szValueW, L"auth", 4, TRUE) == 0 && (szValueW[4] == 0 || szValueW[4] == L',' || szValueW[4] == L' '))
         {
             szValueW += 4;
             while (*szValueW == L' ')
@@ -817,8 +806,8 @@ static HRESULT Encode(_Inout_ MX::CStringA &cStrA, _In_z_ LPCWSTR szValueW, _In_
         {
             return E_OUTOFMEMORY;
         }
-        nDestChars = ::WideCharToMultiByte(28591, WC_COMPOSITECHECK, szValueW, (int)nValueLen,
-                                           (LPSTR)cStrA + cStrA.GetLength(), nBufSize, NULL, NULL);
+        nDestChars = ::WideCharToMultiByte(28591, WC_COMPOSITECHECK, szValueW, (int)nValueLen, (LPSTR)cStrA + cStrA.GetLength(), nBufSize,
+                                           NULL, NULL);
         if (nDestChars < 0)
         {
             nDestChars = 0;

@@ -21,10 +21,9 @@
 #include "..\Include\WaitableObjects.h"
 #include "..\Include\Strings\Strings.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CPropertyBag::CPropertyBag() : CBaseMemObj(), CNonCopyableObj()
 {

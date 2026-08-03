@@ -20,9 +20,9 @@
 #include "..\..\Include\Http\punycode.h"
 #include "..\..\Include\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-// punycode parameters, see http://tools.ietf.org/html/rfc3492#section-5
+ // punycode parameters, see http://tools.ietf.org/html/rfc3492#section-5
 #define BASE 36
 #define TMIN 1
 #define TMAX 26
@@ -49,8 +49,7 @@ static SIZE_T decode_digit(_In_ CHAR v);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 HRESULT Punycode_Encode(_Inout_ CStringA &cStrDestA, _In_z_ LPCWSTR szSrcW, _In_opt_ SIZE_T nSrcLen)
 {

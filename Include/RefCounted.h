@@ -23,21 +23,21 @@
 #include "WaitableObjects.h"
 #include "Debug.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-template <class T> class MX_NOVTABLE TRefCounted : public T
+template <class T>
+class MX_NOVTABLE TRefCounted : public T
 {
-  protected:
+protected:
     TRefCounted() : T()
     {
         _InterlockedExchange(&nRefCount, 1);
         return;
     };
 
-  public:
+public:
     virtual ~TRefCounted()
     {
         MX_ASSERT(nRefCount == 0);
@@ -66,7 +66,8 @@ template <class T> class MX_NOVTABLE TRefCounted : public T
                 return 0;
             }
             nNewVal = _InterlockedCompareExchange(&nRefCount, nInitVal + 1, nInitVal);
-        } while (nNewVal != nInitVal);
+        }
+        while (nNewVal != nInitVal);
         return (ULONG)(nInitVal + 1);
     };
 
@@ -80,7 +81,8 @@ template <class T> class MX_NOVTABLE TRefCounted : public T
             nInitVal = nOrigVal;
             nNewVal = (nInitVal != 0) ? (nInitVal - 1) : (-(2147483647L / 2L));
             nOrigVal = _InterlockedCompareExchange(&nRefCount, nNewVal, nInitVal);
-        } while (nOrigVal != nInitVal);
+        }
+        while (nOrigVal != nInitVal);
 #ifdef _DEBUG
         MX_ASSERT(!(nNewVal <= -(2147483647L / 2L) || (nNewVal & 0x80000000) || nNewVal > 0x01000000));
 #endif //_DEBUG
@@ -91,15 +93,16 @@ template <class T> class MX_NOVTABLE TRefCounted : public T
         return (ULONG)nNewVal;
     };
 
-  private:
+private:
     LONG volatile nRefCount;
 };
 
 //-----------------------------------------------------------
 
-template <class T, bool Safe = false> class TAutoRefCounted
+template <class T, bool Safe = false>
+class TAutoRefCounted
 {
-  public:
+public:
     TAutoRefCounted()
     {
         lpPtr = NULL;
@@ -254,7 +257,7 @@ template <class T, bool Safe = false> class TAutoRefCounted
         return _lpPtr;
     };
 
-  protected:
+protected:
     T *lpPtr;
 };
 

@@ -22,14 +22,13 @@
 
 #include "Defines.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CTimer : public virtual CBaseMemObj
 {
-  public:
+public:
     CTimer();
     CTimer(_In_ CTimer const &);
 
@@ -44,7 +43,7 @@ class CTimer : public virtual CBaseMemObj
     DWORD GetStartTimeMs() const;
     DWORD GetMarkTimeMs() const;
 
-  private:
+private:
     ULARGE_INTEGER uliStart, uliMark, uliFrequency;
 };
 

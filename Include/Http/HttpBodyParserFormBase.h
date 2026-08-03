@@ -24,17 +24,16 @@
 #include "..\WaitableObjects.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class MX_NOVTABLE CHttpBodyParserFormBase : public CHttpBodyParserBase
 {
-  protected:
+protected:
     CHttpBodyParserFormBase();
 
-  public:
+public:
     ~CHttpBodyParserFormBase();
 
     class CField;
@@ -46,10 +45,10 @@ class MX_NOVTABLE CHttpBodyParserFormBase : public CHttpBodyParserBase
     SIZE_T GetFileFieldsCount() const;
     CFileField *GetFileField(_In_ SIZE_T nIndex) const;
 
-  public:
+public:
     class CField : public virtual CBaseMemObj
     {
-      public:
+    public:
         CField();
 
         __inline LPCWSTR GetName() const
@@ -72,12 +71,12 @@ class MX_NOVTABLE CHttpBodyParserFormBase : public CHttpBodyParserBase
             return (nPos < aSubIndexesItems.GetCount()) ? aSubIndexesItems[nPos] : NULL;
         };
 
-      private:
+    private:
         friend class CHttpBodyParserFormBase;
 
         VOID ClearValue();
 
-      private:
+    private:
         MX::CStringW cStrNameW, cStrValueW;
         TArrayListWithDelete<CField *> aSubIndexesItems;
     };
@@ -86,7 +85,7 @@ class MX_NOVTABLE CHttpBodyParserFormBase : public CHttpBodyParserBase
 
     class CFileField : public virtual CBaseMemObj
     {
-      public:
+    public:
         CFileField();
         ~CFileField();
 
@@ -132,12 +131,12 @@ class MX_NOVTABLE CHttpBodyParserFormBase : public CHttpBodyParserBase
             return hFile;
         };
 
-      private:
+    private:
         friend class CHttpBodyParserFormBase;
 
         VOID ClearValue();
 
-      private:
+    private:
         MX::CStringW cStrNameW, cStrFileNameW;
         MX::CStringA cStrTypeA;
         HANDLE hFile;
@@ -145,11 +144,11 @@ class MX_NOVTABLE CHttpBodyParserFormBase : public CHttpBodyParserBase
         TArrayListWithDelete<CFileField *> aSubIndexesItems;
     };
 
-  protected:
+protected:
     HRESULT AddField(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW);
     HRESULT AddFileField(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szFileNameW, _In_z_ LPCSTR szTypeA, _In_ HANDLE hFile);
 
-  protected:
+protected:
     TArrayListWithDelete<CField *> cFieldsList;
     TArrayListWithDelete<CFileField *> cFileFieldsList;
 };

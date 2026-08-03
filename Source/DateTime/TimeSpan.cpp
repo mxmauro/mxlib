@@ -21,21 +21,20 @@
 #include <float.h>
 #include <limits.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-// NOTE: In PPC is compiled with /Gy to prevent LNK1166
+ // NOTE: In PPC is compiled with /Gy to prevent LNK1166
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-static LONGLONG CalculateTicks(_In_ int nDays, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds,
-                               _In_ int nMilliSeconds, _Out_opt_ LPBOOL lpbOverflow = NULL);
+static LONGLONG CalculateTicks(_In_ int nDays, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds, _In_ int nMilliSeconds,
+                               _Out_opt_ LPBOOL lpbOverflow = NULL);
 static BOOL myStrTol(_Out_ int &nValue, _Inout_ LPCSTR &sA, _Inout_ SIZE_T &nLen);
 static BOOL myWcsTol(_Out_ int &nValue, _Inout_ LPCWSTR &sW, _Inout_ SIZE_T &nLen);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CTimeSpan::CTimeSpan(_In_ const CTimeSpan &cSrc) : CBaseMemObj()
 {
@@ -204,8 +203,7 @@ HRESULT CTimeSpan::SetFromTicks(_In_ LONGLONG nValue)
     return S_OK;
 }
 
-HRESULT CTimeSpan::SetFrom(_In_ int nDays, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds,
-                           _In_opt_ int nMilliSeconds)
+HRESULT CTimeSpan::SetFrom(_In_ int nDays, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds, _In_opt_ int nMilliSeconds)
 {
     BOOL bOverflow;
     LONGLONG nValue;
@@ -591,8 +589,8 @@ bool CTimeSpan::operator>=(_In_ const CTimeSpan &cTs) const
 
 //-----------------------------------------------------------
 
-static LONGLONG CalculateTicks(_In_ int nDays, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds,
-                               _In_ int nMilliSeconds, _Out_opt_ LPBOOL lpbOverflow)
+static LONGLONG CalculateTicks(_In_ int nDays, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds, _In_ int nMilliSeconds,
+                               _Out_opt_ LPBOOL lpbOverflow)
 {
     LONGLONG t, nTicksDays, nTemp;
     BOOL bOverflow;

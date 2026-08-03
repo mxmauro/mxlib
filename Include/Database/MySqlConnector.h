@@ -22,38 +22,34 @@
 
 #include "BaseConnector.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Database
-{
+namespace Database {
 
 class CMySqlConnector : public CBaseConnector
 {
-  public:
+public:
     class CConnectOptions : public virtual CBaseMemObj
     {
-      public:
+    public:
         CConnectOptions();
 
-      public:
+    public:
         DWORD dwConnectTimeoutMs;
         DWORD dwReadTimeoutMs;
         DWORD dwWriteTimeoutMs;
     };
 
-  public:
+public:
     CMySqlConnector();
     ~CMySqlConnector();
 
     HRESULT Connect(_In_z_ LPCSTR szServerHostA, _In_z_ LPCSTR szUserNameA, _In_opt_z_ LPCSTR szUserPasswordA,
-                    _In_opt_z_ LPCSTR szDatabaseNameA, _In_opt_ USHORT wServerPort = 3306,
-                    _In_opt_ CConnectOptions *lpOptions = NULL);
+                    _In_opt_z_ LPCSTR szDatabaseNameA, _In_opt_ USHORT wServerPort = 3306, _In_opt_ CConnectOptions *lpOptions = NULL);
     HRESULT Connect(_In_z_ LPCWSTR szServerHostW, _In_z_ LPCWSTR szUserNameW, _In_opt_z_ LPCWSTR szUserPasswordW,
-                    _In_opt_z_ LPCWSTR szDatabaseNameW, _In_opt_ USHORT wServerPort = 3306,
-                    _In_opt_ CConnectOptions *lpOptions = NULL);
+                    _In_opt_z_ LPCWSTR szDatabaseNameW, _In_opt_ USHORT wServerPort = 3306, _In_opt_ CConnectOptions *lpOptions = NULL);
     VOID Disconnect();
 
     BOOL IsConnected() const;
@@ -65,8 +61,7 @@ class CMySqlConnector : public CBaseConnector
     HRESULT SelectDatabase(_In_ LPCSTR szDatabaseNameA);
     HRESULT SelectDatabase(_In_ LPCWSTR szDatabaseNameW);
 
-    HRESULT QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQueryLen = (SIZE_T)-1,
-                         _In_opt_ CFieldList *lpInputFieldsList = NULL);
+    HRESULT QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQueryLen = (SIZE_T)-1, _In_opt_ CFieldList *lpInputFieldsList = NULL);
     using CBaseConnector::QueryExecute;
 
     HRESULT FetchRow();
@@ -78,28 +73,26 @@ class CMySqlConnector : public CBaseConnector
     HRESULT TransactionCommit();
     HRESULT TransactionRollback();
 
-    HRESULT EscapeString(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1,
-                         _In_opt_ BOOL bIsLike = FALSE);
-    HRESULT EscapeString(_Out_ CStringW &cStrW, _In_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1,
-                         _In_opt_ BOOL bIsLike = FALSE);
+    HRESULT EscapeString(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1, _In_opt_ BOOL bIsLike = FALSE);
+    HRESULT EscapeString(_Out_ CStringW &cStrW, _In_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1, _In_opt_ BOOL bIsLike = FALSE);
 
-  private:
+private:
     class CMySqlColumn : public CColumn
     {
-      public:
+    public:
         CMySqlColumn() : CColumn()
         {
             nType = nFlags = 0;
             return;
         };
 
-      private:
+    private:
         friend class CMySqlConnector;
 
         ULONG nType, nFlags;
     };
 
-  private:
+private:
     LPVOID lpInternalData;
 };
 

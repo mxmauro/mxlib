@@ -20,10 +20,9 @@
 #include "..\..\Include\Http\HttpHeaderGenSecWebSocketExtensions.h"
 #include "..\..\Include\AutoPtr.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderGenSecWebSocketExtensions::CHttpHeaderGenSecWebSocketExtensions() : CHttpHeaderBase()
 {
@@ -118,7 +117,7 @@ HRESULT CHttpHeaderGenSecWebSocketExtensions::Parse(_In_z_ LPCSTR szValueA, _In_
                 // skip spaces
                 szValueA = SkipSpaces(szValueA, szValueEndA);
 
-            skip_null_listitem2:
+skip_null_listitem2:
                 // check for separator or end
                 if (szValueA < szValueEndA)
                 {
@@ -131,10 +130,11 @@ HRESULT CHttpHeaderGenSecWebSocketExtensions::Parse(_In_z_ LPCSTR szValueA, _In_
                         return MX_E_InvalidData;
                     }
                 }
-            } while (szValueA < szValueEndA && *szValueA != ',');
+            }
+            while (szValueA < szValueEndA && *szValueA != ',');
         }
 
-    skip_null_listitem:
+skip_null_listitem:
         // skip spaces
         szValueA = SkipSpaces(szValueA, szValueEndA);
 
@@ -150,7 +150,8 @@ HRESULT CHttpHeaderGenSecWebSocketExtensions::Parse(_In_z_ LPCSTR szValueA, _In_
                 return MX_E_InvalidData;
             }
         }
-    } while (szValueA < szValueEndA);
+    }
+    while (szValueA < szValueEndA);
 
     // do we got one?
     if (bGotItem == FALSE)
@@ -190,8 +191,8 @@ HRESULT CHttpHeaderGenSecWebSocketExtensions::Build(_Inout_ CStringA &cStrDestA,
         nParamsCount = lpExtension->GetParamsCount();
         for (nParamIdx = 0; nParamIdx < nParamsCount; nParamIdx++)
         {
-            if (Http::BuildQuotedString(cStrTempA, lpExtension->GetParamValue(nParamIdx),
-                                        StrLenW(lpExtension->GetParamValue(nParamIdx)), FALSE) == FALSE)
+            if (Http::BuildQuotedString(cStrTempA, lpExtension->GetParamValue(nParamIdx), StrLenW(lpExtension->GetParamValue(nParamIdx)),
+                                        FALSE) == FALSE)
             {
                 return E_OUTOFMEMORY;
             }
@@ -276,14 +277,12 @@ SIZE_T CHttpHeaderGenSecWebSocketExtensions::GetExtensionsCount() const
     return cExtensionsList.GetCount();
 }
 
-CHttpHeaderGenSecWebSocketExtensions::CExtension *CHttpHeaderGenSecWebSocketExtensions::GetExtension(
-    _In_ SIZE_T nIndex) const
+CHttpHeaderGenSecWebSocketExtensions::CExtension *CHttpHeaderGenSecWebSocketExtensions::GetExtension(_In_ SIZE_T nIndex) const
 {
     return (nIndex < cExtensionsList.GetCount()) ? cExtensionsList.GetElementAt(nIndex) : NULL;
 }
 
-CHttpHeaderGenSecWebSocketExtensions::CExtension *CHttpHeaderGenSecWebSocketExtensions::GetExtension(
-    _In_z_ LPCSTR szExtensionA) const
+CHttpHeaderGenSecWebSocketExtensions::CExtension *CHttpHeaderGenSecWebSocketExtensions::GetExtension(_In_z_ LPCSTR szExtensionA) const
 {
     SIZE_T i, nCount;
 
@@ -303,8 +302,7 @@ CHttpHeaderGenSecWebSocketExtensions::CExtension *CHttpHeaderGenSecWebSocketExte
 
 HRESULT CHttpHeaderGenSecWebSocketExtensions::Merge(_In_ CHttpHeaderBase *_lpHeader)
 {
-    CHttpHeaderGenSecWebSocketExtensions *lpHeader =
-        reinterpret_cast<CHttpHeaderGenSecWebSocketExtensions *>(_lpHeader);
+    CHttpHeaderGenSecWebSocketExtensions *lpHeader = reinterpret_cast<CHttpHeaderGenSecWebSocketExtensions *>(_lpHeader);
     SIZE_T i, nCount, nThisIndex, nThisCount;
 
     nCount = lpHeader->cExtensionsList.GetCount();
@@ -356,8 +354,7 @@ HRESULT CHttpHeaderGenSecWebSocketExtensions::Merge(_In_ CHttpHeaderBase *_lpHea
                 nValueLen = (StrLenW(lpParam->szValueW) + 1) * sizeof(WCHAR);
 
                 // create new item
-                cNewParam.Attach(
-                    (CExtension::LPPARAMETER)MX_MALLOC(sizeof(CExtension::PARAMETER) + nNameLen + nValueLen));
+                cNewParam.Attach((CExtension::LPPARAMETER)MX_MALLOC(sizeof(CExtension::PARAMETER) + nNameLen + nValueLen));
                 if (!cNewParam)
                 {
                     return E_OUTOFMEMORY;
@@ -464,8 +461,7 @@ CHttpHeaderGenSecWebSocketExtensions::CExtension &CHttpHeaderGenSecWebSocketExte
     return *this;
 }
 
-HRESULT CHttpHeaderGenSecWebSocketExtensions::CExtension::SetExtension(_In_z_ LPCSTR szExtensionA,
-                                                                       _In_ SIZE_T nExtensionLen)
+HRESULT CHttpHeaderGenSecWebSocketExtensions::CExtension::SetExtension(_In_z_ LPCSTR szExtensionA, _In_ SIZE_T nExtensionLen)
 {
     LPCSTR szStartA;
 

@@ -19,14 +19,13 @@
  */
 #include "..\..\Include\Http\HttpHeaderRespSecWebSocketVersion.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 static int VersionCompareFunc(_In_ LPVOID lpContext, _In_ int *lpElem1, _In_ int *lpElem2);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderRespSecWebSocketVersion::CHttpHeaderRespSecWebSocketVersion() : CHttpHeaderBase()
 {
@@ -93,7 +92,7 @@ HRESULT CHttpHeaderRespSecWebSocketVersion::Parse(_In_z_ LPCSTR szValueA, _In_op
         // skip spaces
         szValueA = SkipSpaces(szValueA, szValueEndA);
 
-    skip_null_listitem:
+skip_null_listitem:
         // check for separator or end
         if (szValueA < szValueEndA)
         {
@@ -106,7 +105,8 @@ HRESULT CHttpHeaderRespSecWebSocketVersion::Parse(_In_z_ LPCSTR szValueA, _In_op
                 return MX_E_InvalidData;
             }
         }
-    } while (szValueA < szValueEndA);
+    }
+    while (szValueA < szValueEndA);
 
     // do we got one?
     if (bGotItem == FALSE)

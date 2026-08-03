@@ -21,7 +21,7 @@
 #include "..\..\include\Http\HtmlEntities.h"
 #include "..\..\Include\AtomicOps.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 static HRESULT TransformJavascriptCode(_Inout_ MX::CStringA &cStrCodeA);
 static BOOL TransformJavascriptCode_ConvertToPrint(_Inout_ MX::CStringA &cStrCodeA, _Inout_ SIZE_T nNonCodeBlockStart,
@@ -29,8 +29,7 @@ static BOOL TransformJavascriptCode_ConvertToPrint(_Inout_ MX::CStringA &cStrCod
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CJsHttpServer::CClientRequest::CClientRequest() : CHttpServer::CClientRequest()
 {
@@ -119,8 +118,7 @@ CJavascriptVM *CJsHttpServer::CClientRequest::GetVM(_Out_opt_ LPBOOL lpbIsNew) c
 {
     if (lpbIsNew != NULL)
     {
-        *lpbIsNew =
-            ((__InterlockedRead(const_cast<LONG volatile *>(&nFlags)) & __REQUEST_FLAGS_IsNew) != 0) ? TRUE : FALSE;
+        *lpbIsNew = ((__InterlockedRead(const_cast<LONG volatile *>(&nFlags)) & __REQUEST_FLAGS_IsNew) != 0) ? TRUE : FALSE;
     }
     return lpJVM;
 }
@@ -184,8 +182,7 @@ HRESULT CJsHttpServer::CClientRequest::RunScript(_In_ LPCSTR szCodeA, _In_opt_z_
             BOOL bShowFileNameAndLine = ((__InterlockedRead(&nFlags) & __REQUEST_FLAGS_DebugShowFileNameAndLine) != 0);
             BOOL bShowStack = ((__InterlockedRead(&nFlags) & __REQUEST_FLAGS_DebugShowStack) != 0);
 
-            hRes = BuildErrorPage(E_UNEXPECTED, e.GetDescription(),
-                                  ((bShowFileNameAndLine != FALSE) ? e.GetFileName() : NULL),
+            hRes = BuildErrorPage(E_UNEXPECTED, e.GetDescription(), ((bShowFileNameAndLine != FALSE) ? e.GetFileName() : NULL),
                                   ((bShowFileNameAndLine != FALSE) ? e.GetLineNumber() : 0), NULL);
         }
     }
@@ -194,8 +191,7 @@ HRESULT CJsHttpServer::CClientRequest::RunScript(_In_ LPCSTR szCodeA, _In_opt_z_
         BOOL bShowFileNameAndLine = ((__InterlockedRead(&nFlags) & __REQUEST_FLAGS_DebugShowFileNameAndLine) != 0);
         BOOL bShowStack = ((__InterlockedRead(&nFlags) & __REQUEST_FLAGS_DebugShowStack) != 0);
 
-        hRes = BuildErrorPage(e.GetHResult(), e.GetDescription(),
-                              ((bShowFileNameAndLine != FALSE) ? e.GetFileName() : NULL),
+        hRes = BuildErrorPage(e.GetHResult(), e.GetDescription(), ((bShowFileNameAndLine != FALSE) ? e.GetFileName() : NULL),
                               ((bShowFileNameAndLine != FALSE) ? e.GetLineNumber() : 0),
                               ((bShowStack != FALSE) ? e.GetStackTrace() : NULL));
     }
@@ -241,9 +237,8 @@ VOID CJsHttpServer::CClientRequest::FreeJVM()
     return;
 }
 
-HRESULT CJsHttpServer::CClientRequest::BuildErrorPage(_In_ HRESULT hr, _In_opt_z_ LPCSTR szDescriptionA,
-                                                      _In_z_ LPCSTR szFileNameA, _In_ int nLine,
-                                                      _In_z_ LPCSTR szStackTraceA)
+HRESULT CJsHttpServer::CClientRequest::BuildErrorPage(_In_ HRESULT hr, _In_opt_z_ LPCSTR szDescriptionA, _In_z_ LPCSTR szFileNameA,
+                                                      _In_ int nLine, _In_z_ LPCSTR szStackTraceA)
 {
     CStringA cStrBodyA, cStrTempA;
     HRESULT hRes;
@@ -294,8 +289,7 @@ HRESULT CJsHttpServer::CClientRequest::BuildErrorPage(_In_ HRESULT hr, _In_opt_z
 
     // error code
     if (cStrBodyA.AppendFormat("<div class=\"row\"><div class=\"label\">Error:</div>"
-                               "<div class=\"text\">0x%08X</div></div>",
-                               hr) == FALSE)
+                               "<div class=\"text\">0x%08X</div></div>", hr) == FALSE)
     {
         return E_OUTOFMEMORY;
     }
@@ -310,8 +304,7 @@ HRESULT CJsHttpServer::CClientRequest::BuildErrorPage(_In_ HRESULT hr, _In_opt_z
         }
         // add to body
         if (cStrBodyA.AppendFormat("<div class=\"row\"><div class=\"label\">Description:</div>"
-                                   "<div class=\"text\">%s</div></div>",
-                                   (LPCSTR)cStrTempA) == FALSE)
+                                   "<div class=\"text\">%s</div></div>", (LPCSTR)cStrTempA) == FALSE)
         {
             return E_OUTOFMEMORY;
         }
@@ -334,8 +327,7 @@ HRESULT CJsHttpServer::CClientRequest::BuildErrorPage(_In_ HRESULT hr, _In_opt_z
         }
         // add to body
         if (cStrBodyA.AppendFormat("<div class=\"row\"><div class=\"label\">File:</div>"
-                                   "<div class=\"text\">%s</div></div>",
-                                   (LPCSTR)cStrTempA) == FALSE)
+                                   "<div class=\"text\">%s</div></div>", (LPCSTR)cStrTempA) == FALSE)
         {
             return E_OUTOFMEMORY;
         }
@@ -351,8 +343,7 @@ HRESULT CJsHttpServer::CClientRequest::BuildErrorPage(_In_ HRESULT hr, _In_opt_z
         }
         // add to body
         if (cStrBodyA.AppendFormat("<div class=\"row\"><div class=\"label\">Stack:</div>"
-                                   "<div class=\"text\"><pre class=\"stack\">%s</pre></div></div>",
-                                   (LPCSTR)cStrTempA) == FALSE)
+                                   "<div class=\"text\"><pre class=\"stack\">%s</pre></div></div>", (LPCSTR)cStrTempA) == FALSE)
         {
             return E_OUTOFMEMORY;
         }

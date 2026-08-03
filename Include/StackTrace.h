@@ -22,13 +22,11 @@
 
 #include "Defines.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace StackTrace
-{
+namespace StackTrace {
 
 HRESULT Get(_Out_writes_(nCount) SIZE_T *lpnOutput, _In_ SIZE_T nCount, _In_opt_ DWORD dwThreadId = 0);
 

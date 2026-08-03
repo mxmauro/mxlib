@@ -19,37 +19,25 @@
  */
 #include "JsHttpServerCommon.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-static DukTape::duk_ret_t OnResetOutput(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                        _In_z_ LPCSTR szFunctionNameA);
-static DukTape::duk_ret_t OnEcho(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                 _In_z_ LPCSTR szFunctionNameA);
-static DukTape::duk_ret_t OnSetStatus(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                      _In_z_ LPCSTR szFunctionNameA);
-static DukTape::duk_ret_t OnSetCookie(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                      _In_z_ LPCSTR szFunctionNameA);
-static DukTape::duk_ret_t OnSetHeader(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                      _In_z_ LPCSTR szFunctionNameA);
-static DukTape::duk_ret_t OnRemoveHeader(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                         _In_z_ LPCSTR szFunctionNameA);
-static DukTape::duk_ret_t OnObStart(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                    _In_z_ LPCSTR szFunctionNameA);
-static DukTape::duk_ret_t OnObEnd(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                  _In_z_ LPCSTR szFunctionNameA);
-static DukTape::duk_ret_t OnObGetContents(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                          _In_z_ LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnResetOutput(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnEcho(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnSetStatus(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnSetCookie(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnSetHeader(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnRemoveHeader(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnObStart(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnObEnd(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA);
+static DukTape::duk_ret_t OnObGetContents(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Internals
-{
+namespace Internals {
 
-namespace JsHttpServer
-{
+namespace JsHttpServer {
 
 HRESULT AddResponseMethods(_In_ CJavascriptVM &cJvm)
 {
@@ -85,8 +73,7 @@ HRESULT AddResponseMethods(_In_ CJavascriptVM &cJvm)
 
 //-----------------------------------------------------------
 
-static DukTape::duk_ret_t OnResetOutput(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                        _In_z_ LPCSTR szFunctionNameA)
+static DukTape::duk_ret_t OnResetOutput(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA)
 {
     MX::CJsHttpServer::CClientRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
 
@@ -94,8 +81,7 @@ static DukTape::duk_ret_t OnResetOutput(_In_ DukTape::duk_context *lpCtx, _In_z_
     return 0;
 }
 
-static DukTape::duk_ret_t OnEcho(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                 _In_z_ LPCSTR szFunctionNameA)
+static DukTape::duk_ret_t OnEcho(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA)
 {
     MX::CJsHttpServer::CClientRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
     LPCSTR szBufA;
@@ -124,8 +110,7 @@ static DukTape::duk_ret_t OnEcho(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR
     return 0;
 }
 
-static DukTape::duk_ret_t OnSetStatus(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                      _In_z_ LPCSTR szFunctionNameA)
+static DukTape::duk_ret_t OnSetStatus(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA)
 {
     MX::CJsHttpServer::CClientRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
     DukTape::duk_idx_t nParamsCount;
@@ -154,8 +139,7 @@ static DukTape::duk_ret_t OnSetStatus(_In_ DukTape::duk_context *lpCtx, _In_z_ L
     return 0;
 }
 
-static DukTape::duk_ret_t OnSetCookie(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                      _In_z_ LPCSTR szFunctionNameA)
+static DukTape::duk_ret_t OnSetCookie(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA)
 {
     MX::CJsHttpServer::CClientRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
     MX::TAutoRefCounted<MX::CHttpCookie> cCookie;
@@ -255,8 +239,7 @@ static DukTape::duk_ret_t OnSetCookie(_In_ DukTape::duk_context *lpCtx, _In_z_ L
     return 0;
 }
 
-static DukTape::duk_ret_t OnSetHeader(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                      _In_z_ LPCSTR szFunctionNameA)
+static DukTape::duk_ret_t OnSetHeader(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA)
 {
     MX::CJsHttpServer::CClientRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
     DukTape::duk_idx_t nParamsCount;
@@ -285,8 +268,7 @@ static DukTape::duk_ret_t OnSetHeader(_In_ DukTape::duk_context *lpCtx, _In_z_ L
     return 0;
 }
 
-static DukTape::duk_ret_t OnRemoveHeader(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                         _In_z_ LPCSTR szFunctionNameA)
+static DukTape::duk_ret_t OnRemoveHeader(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA)
 {
     MX::CJsHttpServer::CClientRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
     LPCSTR szNameA;
@@ -296,8 +278,7 @@ static DukTape::duk_ret_t OnRemoveHeader(_In_ DukTape::duk_context *lpCtx, _In_z
     return 0;
 }
 
-static DukTape::duk_ret_t OnObStart(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                    _In_z_ LPCSTR szFunctionNameA)
+static DukTape::duk_ret_t OnObStart(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA)
 {
     MX::CJsHttpServer::CClientRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
     MX::CStringA *lpStrA;
@@ -315,8 +296,7 @@ static DukTape::duk_ret_t OnObStart(_In_ DukTape::duk_context *lpCtx, _In_z_ LPC
     return 0;
 }
 
-static DukTape::duk_ret_t OnObEnd(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                  _In_z_ LPCSTR szFunctionNameA)
+static DukTape::duk_ret_t OnObEnd(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA)
 {
     MX::CJsHttpServer::CClientRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
     DukTape::duk_idx_t nParamsCount;
@@ -362,8 +342,7 @@ static DukTape::duk_ret_t OnObEnd(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCST
     return 0;
 }
 
-static DukTape::duk_ret_t OnObGetContents(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                          _In_z_ LPCSTR szFunctionNameA)
+static DukTape::duk_ret_t OnObGetContents(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA)
 {
     MX::CJsHttpServer::CClientRequest *lpRequest = MX::CJsHttpServer::GetServerRequestFromContext(lpCtx);
     MX::CStringA *lpStrA;

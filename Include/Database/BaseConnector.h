@@ -25,13 +25,11 @@
 #include "..\ArrayList.h"
 #include "..\RefCounted.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Database
-{
+namespace Database {
 
 enum class eFieldType
 {
@@ -51,7 +49,7 @@ enum class eFieldType
 
 class CField : public virtual TRefCounted<CBaseMemObj>, public CNonCopyableObj
 {
-  public:
+public:
     CField();
     ~CField();
 
@@ -93,14 +91,14 @@ class CField : public virtual TRefCounted<CBaseMemObj>, public CNonCopyableObj
     BOOL GetAsInt64(_Out_ PLONGLONG lpnValue) const;
     BOOL GetAsDouble(_Out_ double *lpnValue) const;
 
-  private:
+private:
     BOOL EnsureSize(_In_ SIZE_T nNewSize);
 
-  private:
-    eFieldType nFieldType{eFieldType::Null};
+private:
+    eFieldType nFieldType{ eFieldType::Null };
     union
     {
-        LPCSTR szStrA{NULL};
+        LPCSTR szStrA{ NULL };
         BOOL b;
         ULONG ul;
         LONG l;
@@ -109,17 +107,17 @@ class CField : public virtual TRefCounted<CBaseMemObj>, public CNonCopyableObj
         double dbl;
         LPVOID lpBlob;
     };
-    CDateTime *lpDt{NULL};
-    SIZE_T nLength{0};
-    LPBYTE lpBuffer{NULL};
-    SIZE_T nBufferSize{0};
+    CDateTime *lpDt{ NULL };
+    SIZE_T nLength{ 0 };
+    LPBYTE lpBuffer{ NULL };
+    SIZE_T nBufferSize{ 0 };
 };
 
 //-----------------------------------------------------------
 
 class CFieldList : public TArrayListWithRelease<CField *>
 {
-  public:
+public:
     CFieldList();
 
     HRESULT AddNull();
@@ -143,18 +141,16 @@ class CFieldList : public TArrayListWithRelease<CField *>
 
 class CBaseConnector : public virtual TRefCounted<CBaseMemObj>, public CNonCopyableObj
 {
-  protected:
+protected:
     CBaseConnector();
 
-  public:
+public:
     ~CBaseConnector();
 
     virtual BOOL IsConnected() const = 0;
 
-    virtual HRESULT QueryExecute(_In_ LPCSTR szQueryA, _In_ SIZE_T nQueryLen = (SIZE_T)-1,
-                                 _In_ CFieldList *lpInputFieldsList = NULL) = 0;
-    HRESULT QueryExecute(_In_ LPCWSTR szQueryW, _In_ SIZE_T nQueryLen = (SIZE_T)-1,
-                         _In_ CFieldList *lpInputFieldsList = NULL);
+    virtual HRESULT QueryExecute(_In_ LPCSTR szQueryA, _In_ SIZE_T nQueryLen = (SIZE_T)-1, _In_ CFieldList *lpInputFieldsList = NULL) = 0;
+    HRESULT QueryExecute(_In_ LPCWSTR szQueryW, _In_ SIZE_T nQueryLen = (SIZE_T)-1, _In_ CFieldList *lpInputFieldsList = NULL);
 
     ULONGLONG GetAffectedRows() const;
     ULONGLONG GetLastInsertId() const;
@@ -181,17 +177,17 @@ class CBaseConnector : public virtual TRefCounted<CBaseMemObj>, public CNonCopya
     virtual HRESULT EscapeString(_Out_ CStringW &cStrW, _In_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1,
                                  _In_opt_ BOOL bIsLike = FALSE) = 0;
 
-  protected:
+protected:
     class CColumn : public virtual CBaseMemObj, public CNonCopyableObj
     {
-      public:
+    public:
         CColumn() : CBaseMemObj(), CNonCopyableObj()
         {
             cField.Attach(MX_DEBUG_NEW CField());
             return;
         };
 
-      protected:
+    protected:
         friend class CBaseConnector;
 
         CStringA cStrNameA;
@@ -199,7 +195,7 @@ class CBaseConnector : public virtual TRefCounted<CBaseMemObj>, public CNonCopya
         TAutoRefCounted<CField> cField;
     };
 
-  protected:
+protected:
     TArrayListWithDelete<CColumn *> aColumnsList;
     ULONGLONG ullAffectedRows;
     ULONGLONG ullLastInsertId;

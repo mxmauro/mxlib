@@ -22,25 +22,24 @@
 
 #include "..\JavascriptVM.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CJsonWebTokenPlugin : public CJsObjectBase, public CNonCopyableObj
 {
-  public:
+public:
     CJsonWebTokenPlugin();
     ~CJsonWebTokenPlugin();
 
     MX_JS_DECLARE_CREATABLE(CJsonWebTokenPlugin, "JWT")
 
-    MX_JS_BEGIN_MAP(CJsonWebTokenPlugin)
-    MX_JS_MAP_STATIC_METHOD("create", &CJsonWebTokenPlugin::Create, 3) // object,secret,options
-    MX_JS_MAP_STATIC_METHOD("verify", &CJsonWebTokenPlugin::Verify, 3) // string,secret,options
-    MX_JS_END_MAP()
+        MX_JS_BEGIN_MAP(CJsonWebTokenPlugin)
+        MX_JS_MAP_STATIC_METHOD("create", &CJsonWebTokenPlugin::Create, 3) // object,secret,options
+        MX_JS_MAP_STATIC_METHOD("verify", &CJsonWebTokenPlugin::Verify, 3) // string,secret,options
+        MX_JS_END_MAP()
 
-  private:
+private:
     static DukTape::duk_ret_t Create(_In_ DukTape::duk_context *lpCtx);
     static DukTape::duk_ret_t Verify(_In_ DukTape::duk_context *lpCtx);
 };

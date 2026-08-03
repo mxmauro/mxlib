@@ -85,28 +85,28 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <NMakePreprocessorDefinitions>WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\OpenSSL\build.ps1" -Configuration $(Configuration) -Platform $(PlatformShortName)</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\OpenSSL\build.ps1" -Configuration $(Configuration) -Platform $(PlatformShortName) -Rebuild</NMakeReBuildCommandLine>
+    <NMakeReBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\OpenSSL\build.ps1" -Configuration $(Configuration) -Platform $(PlatformShortName)</NMakeReBuildCommandLine>
     <OutDir>.\Libs\$(PlatformName)\$(Configuration)\</OutDir>
     <IntDir>.\obj\$(PlatformName)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <NMakePreprocessorDefinitions>WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\OpenSSL\build.ps1" -Configuration $(Configuration) -Platform $(PlatformShortName)</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\OpenSSL\build.ps1" -Configuration $(Configuration) -Platform $(PlatformShortName) -Rebuild</NMakeReBuildCommandLine>
+    <NMakeReBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\OpenSSL\build.ps1" -Configuration $(Configuration) -Platform $(PlatformShortName)</NMakeReBuildCommandLine>
     <OutDir>.\Libs\$(PlatformName)\$(Configuration)\</OutDir>
     <IntDir>.\obj\$(PlatformName)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <NMakePreprocessorDefinitions>WIN32;NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\OpenSSL\build.ps1" -Configuration $(Configuration) -Platform $(PlatformShortName)</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\OpenSSL\build.ps1" -Configuration $(Configuration) -Platform $(PlatformShortName) -Rebuild</NMakeReBuildCommandLine>
+    <NMakeReBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\OpenSSL\build.ps1" -Configuration $(Configuration) -Platform $(PlatformShortName)</NMakeReBuildCommandLine>
     <OutDir>.\Libs\$(PlatformName)\$(Configuration)\</OutDir>
     <IntDir>.\obj\$(PlatformName)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <NMakePreprocessorDefinitions>WIN32;NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <NMakeBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\OpenSSL\build.ps1" -Configuration $(Configuration) -Platform $(PlatformShortName)</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\OpenSSL\build.ps1" -Configuration $(Configuration) -Platform $(PlatformShortName) -Rebuild</NMakeReBuildCommandLine>
+    <NMakeReBuildCommandLine>PWSH.EXE -NoProfile -ExecutionPolicy Bypass -File "$(ProjectDir)Source\OpenSSL\build.ps1" -Configuration $(Configuration) -Platform $(PlatformShortName)</NMakeReBuildCommandLine>
     <OutDir>.\Libs\$(PlatformName)\$(Configuration)\</OutDir>
     <IntDir>.\obj\$(PlatformName)\$(Configuration)\$(ProjectName)\</IntDir>
   </PropertyGroup>

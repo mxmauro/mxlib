@@ -22,14 +22,13 @@
 
 #include "..\Defines.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CSymmetricCipher : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     enum class eAlgorithm
     {
         DES_ECB = 0,
@@ -70,7 +69,7 @@ class CSymmetricCipher : public virtual CBaseMemObj, public CNonCopyableObj
         AES_256_CFB128
     };
 
-  public:
+public:
     CSymmetricCipher();
     ~CSymmetricCipher();
 
@@ -92,10 +91,10 @@ class CSymmetricCipher : public virtual CBaseMemObj, public CNonCopyableObj
     SIZE_T GetAvailableDecryptedData() const;
     SIZE_T GetDecryptedData(_Out_writes_(nDestSize) LPVOID lpDest, _In_ SIZE_T nDestSize);
 
-  private:
+private:
     HRESULT InternalInitialize();
 
-  private:
+private:
     LPVOID lpInternalData;
 };
 

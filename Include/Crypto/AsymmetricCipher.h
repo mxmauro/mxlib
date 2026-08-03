@@ -24,22 +24,19 @@
 #include "EncryptionKey.h"
 #include "MessageDigest.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CAsymmetricCipher : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     typedef enum
     {
-        None = 0,
-        PKCS1,
-        OAEP
+        None = 0, PKCS1, OAEP
     } ePadding;
 
-  public:
+public:
     CAsymmetricCipher();
     ~CAsymmetricCipher();
 
@@ -70,10 +67,10 @@ class CAsymmetricCipher : public virtual CBaseMemObj, public CNonCopyableObj
     HRESULT VerifyStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
     HRESULT EndVerify(_In_ LPCVOID lpSignature, _In_ SIZE_T nSignatureLen);
 
-  private:
+private:
     HRESULT InternalInitialize(_In_ int nZone);
 
-  private:
+private:
     LPVOID lpInternalData;
 };
 

@@ -23,20 +23,19 @@
 #include "HttpHeaderBase.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderReqRange : public CHttpHeaderBase
 {
-  public:
+public:
     CHttpHeaderReqRange();
     ~CHttpHeaderReqRange();
 
-    MX_DECLARE_HTTPHEADER_NAME(Range)
+    MX_DECLARE_HTTPHEADER_NAME("Range")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
@@ -46,7 +45,7 @@ class CHttpHeaderReqRange : public CHttpHeaderBase
     ULONGLONG GetRangeSetStart(_In_ SIZE_T nIndex) const;
     ULONGLONG GetRangeSetEnd(_In_ SIZE_T nIndex) const;
 
-  private:
+private:
     typedef struct
     {
         ULONGLONG nByteStart;

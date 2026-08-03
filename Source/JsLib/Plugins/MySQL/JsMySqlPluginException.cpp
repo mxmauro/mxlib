@@ -19,10 +19,9 @@
  */
 #include "..\..\..\..\Include\JsLib\Plugins\JsMySqlPlugin.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CJsMySqlError::CJsMySqlError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex)
     : CJsWindowsError(lpCtx, nStackIndex)

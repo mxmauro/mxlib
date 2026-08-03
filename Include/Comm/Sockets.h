@@ -24,16 +24,15 @@
 #include "HostResolver.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHostResolver;
 
 class CSockets : public CIpc, public CNonCopyableObj
 {
-  public:
+public:
     enum class eFamily
     {
         IPv4 = 1,
@@ -42,20 +41,20 @@ class CSockets : public CIpc, public CNonCopyableObj
 
     class CListenerOptions : public virtual CBaseMemObj
     {
-      public:
+    public:
         CListenerOptions() : CBaseMemObj()
         {
             return;
         };
 
-      public:
-        DWORD dwBackLogSize{0};
-        DWORD dwMaxAcceptsToPost{0};
-        DWORD dwMaxRequestsPerSecond{0};
-        DWORD dwMaxRequestsBurstSize{0};
+    public:
+        DWORD dwBackLogSize{ 0 };
+        DWORD dwMaxAcceptsToPost{ 0 };
+        DWORD dwMaxRequestsPerSecond{ 0 };
+        DWORD dwMaxRequestsBurstSize{ 0 };
     };
 
-  public:
+public:
     CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool);
     ~CSockets();
 
@@ -67,12 +66,10 @@ class CSockets : public CIpc, public CNonCopyableObj
     HRESULT CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
                            _In_opt_z_ LPCWSTR szBindAddressW = NULL, _In_opt_ CUserData *lpUserData = NULL,
                            _In_opt_ CListenerOptions *lpOptions = NULL, _Out_opt_ HANDLE *h = NULL);
-    HRESULT ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA, _In_ int nPort,
-                            _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData = NULL,
-                            _Out_opt_ HANDLE *h = NULL);
-    HRESULT ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCWSTR szAddressW, _In_ int nPort,
-                            _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData = NULL,
-                            _Out_opt_ HANDLE *h = NULL);
+    HRESULT ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
+                            _In_opt_ CUserData *lpUserData = NULL, _Out_opt_ HANDLE *h = NULL);
+    HRESULT ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCWSTR szAddressW, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
+                            _In_opt_ CUserData *lpUserData = NULL, _Out_opt_ HANDLE *h = NULL);
 
     HRESULT GetLocalAddress(_In_ HANDLE h, _Out_ PSOCKADDR_INET lpAddr);
     HRESULT GetPeerAddress(_In_ HANDLE h, _Out_ PSOCKADDR_INET lpAddr);
@@ -81,12 +78,12 @@ class CSockets : public CIpc, public CNonCopyableObj
 
     //--------
 
-  private:
+private:
     friend class CConnection;
 
     class CConnection : public CConnectionBase, public CNonCopyableObj
     {
-      public:
+    public:
         CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass, _In_ eFamily nFamily);
         ~CConnection();
 
@@ -109,33 +106,33 @@ class CSockets : public CIpc, public CNonCopyableObj
         VOID HostResolveCallback(_In_ LONG nResolverId, _In_ PSOCKADDR_INET lpSockAddr, _In_ HRESULT hrErrorCode,
                                  _In_opt_ LPVOID lpUserData);
 
-      protected:
+    protected:
         friend class CSockets;
         friend class CConnectWaiter;
         friend class CListener;
 
         class CConnectWaiter : public CBaseMemObj
         {
-          public:
+        public:
             CConnectWaiter(_In_ CConnection *lpConn);
             ~CConnectWaiter();
 
             HRESULT Start(_In_ CPacketBase *lpPacket);
             VOID Stop();
 
-          private:
+        private:
             VOID ThreadProc();
 
-          private:
-            CConnection *lpConn{NULL};
-            TClassWorkerThread<CConnectWaiter> *lpWorkerThread{NULL};
-            CPacketBase *lpPacket{NULL};
+        private:
+            CConnection *lpConn{ NULL };
+            TClassWorkerThread<CConnectWaiter> *lpWorkerThread{ NULL };
+            CPacketBase *lpPacket{ NULL };
         };
 
-      protected:
+    protected:
         class CListener : public CBaseMemObj
         {
-          public:
+        public:
             CListener(_In_ CConnection *lpConn);
             ~CListener();
 
@@ -146,50 +143,50 @@ class CSockets : public CIpc, public CNonCopyableObj
 
             BOOL CheckRateLimit();
 
-          private:
+        private:
             VOID ThreadProc();
 
-          public:
-            CConnection *lpConn{NULL};
+        public:
+            CConnection *lpConn{ NULL };
             CListenerOptions cOptions;
-            TClassWorkerThread<CListener> *lpWorkerThread{NULL};
-            HANDLE hAcceptSelect{NULL}, hAcceptCompleted{NULL};
-            LPVOID fnAcceptEx{NULL}, fnGetAcceptExSockaddrs{NULL};
-            LONG volatile nAcceptsInProgress{0};
+            TClassWorkerThread<CListener> *lpWorkerThread{ NULL };
+            HANDLE hAcceptSelect{ NULL }, hAcceptCompleted{ NULL };
+            LPVOID fnAcceptEx{ NULL }, fnGetAcceptExSockaddrs{ NULL };
+            LONG volatile nAcceptsInProgress{ 0 };
             struct
             {
-                LONG volatile nMutex{MX_FASTLOCK_INIT};
+                LONG volatile nMutex{ MX_FASTLOCK_INIT };
                 CTimer cTimer;
                 union
                 {
-                    DWORD dwRequestCounter{0};
+                    DWORD dwRequestCounter{ 0 };
                     DWORD dwCurrentExcess;
                 };
             } sLimiter;
         };
 
-      protected:
+    protected:
         RWLOCK sRwHandleInUse{};
         SOCKADDR_INET sAddr{};
-        SOCKET sck{NULL};
+        SOCKET sck{ NULL };
         eFamily nFamily;
         struct
         {
-            LONG volatile nMutex{MX_FASTLOCK_INIT};
-            LONG volatile nResolverId{0};
-            CPacketBase *lpPacket{NULL};
+            LONG volatile nMutex{ MX_FASTLOCK_INIT };
+            LONG volatile nResolverId{ 0 };
+            CPacketBase *lpPacket{ NULL };
         } sHostResolver;
         TAutoDeletePtr<CConnectWaiter> cConnectWaiter;
         TAutoDeletePtr<CListener> cListener;
-        LONG volatile nReadThrottle{1024};
+        LONG volatile nReadThrottle{ 1024 };
         struct
         {
-            DWORD dwCurrentSize{0};
-            DWORD dwLastTickMs{0};
+            DWORD dwCurrentSize{ 0 };
+            DWORD dwLastTickMs{ 0 };
         } sAutoAdjustSndBuf;
     };
 
-  private:
+private:
     HRESULT OnInternalInitialize();
     VOID OnInternalFinalize();
 
@@ -202,9 +199,9 @@ class CSockets : public CIpc, public CNonCopyableObj
         return TRUE;
     };
 
-  private:
-    DWORD dwAddressResolverTimeoutMs{20000};
-    ULONG nFlags{0};
+private:
+    DWORD dwAddressResolverTimeoutMs{ 20000 };
+    ULONG nFlags{ 0 };
 };
 
 } // namespace MX

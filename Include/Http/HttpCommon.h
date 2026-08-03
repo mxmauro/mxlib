@@ -33,22 +33,30 @@
 #include "Url.h"
 #include <intsafe.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpBodyParserBase;
 class CHttpHeaderBase;
 
-namespace Internals
-{
+namespace Internals {
 
 class CHttpParser : public virtual CBaseMemObj, public CLoggable, public CNonCopyableObj
 {
-  public:
+public:
     class CContentDecoder;
-
+    enum class eContentEncodingMethod
+    {
+        Identity,
+        GZip,
+        Deflate
+    };
+    enum class eTransferEncodingMethod
+    {
+        None,
+        Chunked
+    };
     enum class eState
     {
         Start,
@@ -82,20 +90,7 @@ class CHttpParser : public virtual CBaseMemObj, public CLoggable, public CNonCop
         Error
     };
 
-    enum class eTransferEncodingMethod
-    {
-        None,
-        Chunked
-    };
-
-    enum class eContentEncodingMethod
-    {
-        Identity,
-        GZip,
-        Deflate
-    };
-
-  public:
+public:
     CHttpParser(_In_ BOOL bActAsServer, _In_opt_ CLoggable *lpLogHandler);
 
     VOID SetOption_MaxHeaderSize(_In_ DWORD dwSize);
@@ -140,7 +135,7 @@ class CHttpParser : public virtual CBaseMemObj, public CLoggable, public CNonCop
         return const_cast<CHttpParser *>(this)->cHeaders;
     };
 
-  private:
+private:
     HRESULT ParseRequestLine(_In_z_ LPCSTR szLineA);
     HRESULT ParseStatusLine(_In_z_ LPCSTR szLineA);
     HRESULT ParseHeader(_In_ CStringA &cStrLineA);
@@ -148,37 +143,37 @@ class CHttpParser : public virtual CBaseMemObj, public CLoggable, public CNonCop
     HRESULT ProcessContent(_In_ LPCVOID lpContent, _In_ SIZE_T nContentSize);
     HRESULT FlushContent();
 
-  private:
+private:
     BOOL bActAsServer;
-    DWORD dwMaxHeaderSize{16384};
+    DWORD dwMaxHeaderSize{ 16384 };
 
-    eState nState{eState::Start};
+    eState nState{ eState::Start };
     CStringA cStrCurrLineA;
-    DWORD dwHeadersLen{0};
+    DWORD dwHeadersLen{ 0 };
 
     struct
     {
-        ULONG nHttpProtocol{0};
-        LPCSTR szMethodA{NULL};
+        ULONG nHttpProtocol{ 0 };
+        LPCSTR szMethodA{ NULL };
         CUrl cUrl;
-        MX::Http::eBrowser nBrowser{Http::eBrowser::Other};
+        MX::Http::eBrowser nBrowser{ Http::eBrowser::Other };
     } sRequest;
     struct
     {
-        LONG nStatusCode{0};
+        LONG nStatusCode{ 0 };
         CStringA cStrReasonA;
     } sResponse;
-    LONG nHeaderFlags{0};
+    LONG nHeaderFlags{ 0 };
     CHttpCookieArray cCookies;
     CHttpHeaderArray cHeaders;
     struct
     {
-        ULONGLONG nContentLength{ULONGLONG_MAX};
-        ULONGLONG nIdentityReadedContentLength{0};
+        ULONGLONG nContentLength{ ULONGLONG_MAX };
+        ULONGLONG nIdentityReadedContentLength{ 0 };
         struct
         {
-            ULONGLONG nSize{0};
-            ULONGLONG nReaded{0};
+            ULONGLONG nSize{ 0 };
+            ULONGLONG nReaded{ 0 };
         } sChunk;
         TAutoDeletePtr<CZipLib> cDecoder;
         TAutoRefCounted<CHttpBodyParserBase> cParser;

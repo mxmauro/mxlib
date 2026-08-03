@@ -23,46 +23,45 @@
 #include "..\JavascriptVM.h"
 #include "..\..\Database\MySqlConnector.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CJsMySqlPlugin : public CJsObjectBase, public CNonCopyableObj
 {
-  public:
+public:
     CJsMySqlPlugin();
     ~CJsMySqlPlugin();
 
     MX_JS_DECLARE_CREATABLE(CJsMySqlPlugin, "MySQL")
 
-    MX_JS_BEGIN_MAP(CJsMySqlPlugin)
-    MX_JS_MAP_METHOD("connect", &CJsMySqlPlugin::Connect, MX_JS_VARARGS) // host,user[,pass[,dbname[,port]]]
-    MX_JS_MAP_METHOD("disconnect", &CJsMySqlPlugin::Disconnect, 0)
-    MX_JS_MAP_METHOD("selectDatabase", &CJsMySqlPlugin::SelectDatabase, 1)
-    MX_JS_MAP_METHOD("query", &CJsMySqlPlugin::Query, MX_JS_VARARGS)
-    MX_JS_MAP_METHOD("queryAndFetchRow", &CJsMySqlPlugin::QueryAndFetchRow, MX_JS_VARARGS)
-    MX_JS_MAP_METHOD("queryClose", &CJsMySqlPlugin::QueryClose, 0)
-    MX_JS_MAP_METHOD("escapeString", &CJsMySqlPlugin::EscapeString, MX_JS_VARARGS)
-    MX_JS_MAP_METHOD("fetchRow", &CJsMySqlPlugin::FetchRow, 0)
-    MX_JS_MAP_METHOD("beginTransaction", &CJsMySqlPlugin::BeginTransaction, MX_JS_VARARGS)
-    MX_JS_MAP_METHOD("commit", &CJsMySqlPlugin::CommitTransaction, 0)
-    MX_JS_MAP_METHOD("rollback", &CJsMySqlPlugin::RollbackTransaction, 0)
-    MX_JS_MAP_PROPERTY("isConnected", &CJsMySqlPlugin::isConnected, NULL, FALSE)
-    MX_JS_MAP_PROPERTY("affectedRows", &CJsMySqlPlugin::getAffectedRows, NULL, FALSE)
-    MX_JS_MAP_PROPERTY("insertId", &CJsMySqlPlugin::getInsertId, NULL, FALSE)
-    MX_JS_END_MAP()
+        MX_JS_BEGIN_MAP(CJsMySqlPlugin)
+        MX_JS_MAP_METHOD("connect", &CJsMySqlPlugin::Connect, MX_JS_VARARGS) // host,user[,pass[,dbname[,port]]]
+        MX_JS_MAP_METHOD("disconnect", &CJsMySqlPlugin::Disconnect, 0)
+        MX_JS_MAP_METHOD("selectDatabase", &CJsMySqlPlugin::SelectDatabase, 1)
+        MX_JS_MAP_METHOD("query", &CJsMySqlPlugin::Query, MX_JS_VARARGS)
+        MX_JS_MAP_METHOD("queryAndFetchRow", &CJsMySqlPlugin::QueryAndFetchRow, MX_JS_VARARGS)
+        MX_JS_MAP_METHOD("queryClose", &CJsMySqlPlugin::QueryClose, 0)
+        MX_JS_MAP_METHOD("escapeString", &CJsMySqlPlugin::EscapeString, MX_JS_VARARGS)
+        MX_JS_MAP_METHOD("fetchRow", &CJsMySqlPlugin::FetchRow, 0)
+        MX_JS_MAP_METHOD("beginTransaction", &CJsMySqlPlugin::BeginTransaction, MX_JS_VARARGS)
+        MX_JS_MAP_METHOD("commit", &CJsMySqlPlugin::CommitTransaction, 0)
+        MX_JS_MAP_METHOD("rollback", &CJsMySqlPlugin::RollbackTransaction, 0)
+        MX_JS_MAP_PROPERTY("isConnected", &CJsMySqlPlugin::isConnected, NULL, FALSE)
+        MX_JS_MAP_PROPERTY("affectedRows", &CJsMySqlPlugin::getAffectedRows, NULL, FALSE)
+        MX_JS_MAP_PROPERTY("insertId", &CJsMySqlPlugin::getInsertId, NULL, FALSE)
+        MX_JS_END_MAP()
 
-  public:
+public:
     VOID SetConnector(_In_ Database::CMySqlConnector *lpConnector);
     Database::CMySqlConnector *DetachConnector();
     Database::CMySqlConnector *GetConnector();
 
-  protected:
+protected:
     static VOID OnRegister(_In_ DukTape::duk_context *lpCtx);
     static VOID OnUnregister(_In_ DukTape::duk_context *lpCtx);
 
-  private:
+private:
     DukTape::duk_ret_t Connect(_In_ DukTape::duk_context *lpCtx);
     DukTape::duk_ret_t Disconnect(_In_opt_ DukTape::duk_context *lpCtx);
     DukTape::duk_ret_t SelectDatabase(_In_ DukTape::duk_context *lpCtx);
@@ -79,10 +78,9 @@ class CJsMySqlPlugin : public CJsObjectBase, public CNonCopyableObj
     DukTape::duk_ret_t getAffectedRows(_In_ DukTape::duk_context *lpCtx);
     DukTape::duk_ret_t getInsertId(_In_ DukTape::duk_context *lpCtx);
 
-    VOID ThrowDbError(_In_ DukTape::duk_context *lpCtx, _In_ HRESULT hRes, _In_opt_ LPCSTR filename,
-                      _In_opt_ DukTape::duk_int_t line);
+    VOID ThrowDbError(_In_ DukTape::duk_context *lpCtx, _In_ HRESULT hRes, _In_opt_ LPCSTR filename, _In_opt_ DukTape::duk_int_t line);
 
-  private:
+private:
     TAutoRefCounted<Database::CMySqlConnector> cConnector;
 };
 
@@ -90,10 +88,10 @@ class CJsMySqlPlugin : public CJsObjectBase, public CNonCopyableObj
 
 class CJsMySqlError : public CJsWindowsError
 {
-  protected:
+protected:
     CJsMySqlError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex);
 
-  public:
+public:
     CJsMySqlError(_In_ const CJsMySqlError &obj);
     CJsMySqlError &operator=(_In_ const CJsMySqlError &obj);
 
@@ -114,7 +112,7 @@ class CJsMySqlError : public CJsWindowsError
         return szSqlStateA;
     };
 
-  private:
+private:
     friend class CJsMySqlPlugin;
 
     int nDbError;

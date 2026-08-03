@@ -22,20 +22,19 @@
 
 #include "HttpHeaderBase.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderEntContentRange : public CHttpHeaderBase
 {
-  public:
+public:
     CHttpHeaderEntContentRange();
     ~CHttpHeaderEntContentRange();
 
-    MX_DECLARE_HTTPHEADER_NAME(Content - Range)
+    MX_DECLARE_HTTPHEADER_NAME("Content-Range")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
@@ -44,7 +43,7 @@ class CHttpHeaderEntContentRange : public CHttpHeaderBase
     ULONGLONG GetRangeEnd() const;
     ULONGLONG GetRangeTotal() const;
 
-  private:
+private:
     ULONGLONG nByteStart, nByteEnd;
     ULONGLONG nTotalBytes;
 };

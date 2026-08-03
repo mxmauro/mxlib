@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderEntContentEncoding.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderEntContentEncoding::CHttpHeaderEntContentEncoding() : CHttpHeaderBase()
 {
@@ -79,51 +78,51 @@ HRESULT CHttpHeaderEntContentEncoding::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SI
         // check encoding
         switch ((SIZE_T)(szValueA - szStartA))
         {
-        case 4:
-            if (StrNCompareA(szStartA, "gzip", 4, TRUE) == 0)
-            {
-                _nEncoding = eEncoding::GZip;
-            }
-            else if (StrNCompareA(szStartA, "7bit", 4, TRUE) != 0 && StrNCompareA(szStartA, "8bit", 4, TRUE) != 0)
-            {
-                return MX_E_Unsupported;
-            }
-            break;
+            case 4:
+                if (StrNCompareA(szStartA, "gzip", 4, TRUE) == 0)
+                {
+                    _nEncoding = eEncoding::GZip;
+                }
+                else if (StrNCompareA(szStartA, "7bit", 4, TRUE) != 0 && StrNCompareA(szStartA, "8bit", 4, TRUE) != 0)
+                {
+                    return MX_E_Unsupported;
+                }
+                break;
 
-        case 6:
-            if (StrNCompareA(szStartA, "x-gzip", 6, TRUE) == 0)
-            {
-                _nEncoding = eEncoding::GZip;
-            }
-            else if (StrNCompareA(szStartA, "binary", 6, TRUE) != 0)
-            {
-                return MX_E_Unsupported;
-            }
-            break;
+            case 6:
+                if (StrNCompareA(szStartA, "x-gzip", 6, TRUE) == 0)
+                {
+                    _nEncoding = eEncoding::GZip;
+                }
+                else if (StrNCompareA(szStartA, "binary", 6, TRUE) != 0)
+                {
+                    return MX_E_Unsupported;
+                }
+                break;
 
-        case 7:
-            if (StrNCompareA(szStartA, "deflate", 7, TRUE) == 0)
-            {
-                _nEncoding = eEncoding::Deflate;
-            }
-            else
-            {
-                return MX_E_Unsupported;
-            }
-            break;
+            case 7:
+                if (StrNCompareA(szStartA, "deflate", 7, TRUE) == 0)
+                {
+                    _nEncoding = eEncoding::Deflate;
+                }
+                else
+                {
+                    return MX_E_Unsupported;
+                }
+                break;
 
-        case 8:
-            if (StrNCompareA(szStartA, "identity", 8, TRUE) != 0)
-            {
-                return MX_E_Unsupported;
-            }
-            break;
+            case 8:
+                if (StrNCompareA(szStartA, "identity", 8, TRUE) != 0)
+                {
+                    return MX_E_Unsupported;
+                }
+                break;
 
-        default:
-            return MX_E_Unsupported;
+            default:
+                return MX_E_Unsupported;
         }
 
-    skip_null_listitem:
+skip_null_listitem:
         // skip spaces
         szValueA = SkipSpaces(szValueA, szValueEndA);
 
@@ -139,7 +138,8 @@ HRESULT CHttpHeaderEntContentEncoding::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SI
                 return MX_E_InvalidData;
             }
         }
-    } while (szValueA < szValueEndA);
+    }
+    while (szValueA < szValueEndA);
 
     // do we got one?
     if (bGotItem == FALSE)
@@ -156,26 +156,26 @@ HRESULT CHttpHeaderEntContentEncoding::Build(_Inout_ CStringA &cStrDestA, _In_ H
 {
     switch (nEncoding)
     {
-    case eEncoding::Identity:
-        if (cStrDestA.Copy("identity") == FALSE)
-        {
-            return E_OUTOFMEMORY;
-        }
-        return S_OK;
+        case eEncoding::Identity:
+            if (cStrDestA.Copy("identity") == FALSE)
+            {
+                return E_OUTOFMEMORY;
+            }
+            return S_OK;
 
-    case eEncoding::GZip:
-        if (cStrDestA.Copy("gzip") == FALSE)
-        {
-            return E_OUTOFMEMORY;
-        }
-        return S_OK;
+        case eEncoding::GZip:
+            if (cStrDestA.Copy("gzip") == FALSE)
+            {
+                return E_OUTOFMEMORY;
+            }
+            return S_OK;
 
-    case eEncoding::Deflate:
-        if (cStrDestA.Copy("deflate") == FALSE)
-        {
-            return E_OUTOFMEMORY;
-        }
-        return S_OK;
+        case eEncoding::Deflate:
+            if (cStrDestA.Copy("deflate") == FALSE)
+            {
+                return E_OUTOFMEMORY;
+            }
+            return S_OK;
     }
 
     cStrDestA.Empty();

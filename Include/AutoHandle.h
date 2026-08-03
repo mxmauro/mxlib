@@ -22,14 +22,13 @@
 
 #include "Defines.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CWindowsHandle : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     CWindowsHandle() : CBaseMemObj(), CNonCopyableObj()
     {
         h = NULL;
@@ -107,7 +106,7 @@ class CWindowsHandle : public virtual CBaseMemObj, public CNonCopyableObj
         return;
     };
 
-  protected:
+protected:
     HANDLE h;
 };
 
@@ -115,7 +114,7 @@ class CWindowsHandle : public virtual CBaseMemObj, public CNonCopyableObj
 
 class CWindowsRemoteHandle : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     CWindowsRemoteHandle() : CBaseMemObj(), CNonCopyableObj()
     {
         hProc = h = NULL;
@@ -168,8 +167,7 @@ class CWindowsRemoteHandle : public virtual CBaseMemObj, public CNonCopyableObj
             return E_INVALIDARG;
         }
 
-        nNtStatus =
-            MxNtDuplicateObject(MX_CURRENTPROCESS, _hProc, MX_CURRENTPROCESS, &hProc, 0, 0, DUPLICATE_SAME_ACCESS);
+        nNtStatus = MxNtDuplicateObject(MX_CURRENTPROCESS, _hProc, MX_CURRENTPROCESS, &hProc, 0, 0, DUPLICATE_SAME_ACCESS);
         if (NT_SUCCESS(nNtStatus))
         {
             nNtStatus = MxNtDuplicateObject(MX_CURRENTPROCESS, _h, hProc, &h, 0, 0, DUPLICATE_SAME_ACCESS);
@@ -239,10 +237,10 @@ class CWindowsRemoteHandle : public virtual CBaseMemObj, public CNonCopyableObj
         return;
     };
 
-  protected:
+protected:
     HANDLE hProc, h;
 
-  private:
+private:
     static VOID InternalCloseRH(_In_ HANDLE hProc, _In_ HANDLE h)
     {
         MxNtDuplicateObject(hProc, h, hProc, NULL, 0, FALSE, DUPLICATE_CLOSE_SOURCE);

@@ -25,21 +25,19 @@
 #include "..\AutoPtr.h"
 #include "..\WaitableObjects.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpBodyParserDefault : public CHttpBodyParserBase, public CNonCopyableObj
 {
-  public:
+public:
     typedef Callback<HRESULT(_Out_ LPHANDLE lphFile, _In_z_ LPCWSTR szFileNameW, _In_opt_ LPVOID lpUserParam)>
         OnDownloadStartedCallback;
 
-  public:
+public:
     CHttpBodyParserDefault(_In_ OnDownloadStartedCallback cDownloadStartedCallback, _In_opt_ LPVOID lpUserParam,
-                           _In_ DWORD dwMaxBodySizeInMemory = 32768,
-                           _In_ ULONGLONG ullMaxBodySize = 10ui64 * 1048576ui64);
+                           _In_ DWORD dwMaxBodySizeInMemory = 32768, _In_ ULONGLONG ullMaxBodySize = 10ui64 * 1048576ui64);
     ~CHttpBodyParserDefault();
 
     LPCSTR GetType() const
@@ -64,11 +62,11 @@ class CHttpBodyParserDefault : public CHttpBodyParserBase, public CNonCopyableOb
 
     VOID KeepFile();
 
-  protected:
+protected:
     HRESULT Initialize(_In_ Internals::CHttpParser &cHttpParser);
     HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
 
-  private:
+private:
     enum class eState
     {
         Reading,

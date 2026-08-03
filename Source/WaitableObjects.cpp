@@ -21,7 +21,7 @@
 #include "..\Include\Debug.h"
 #include "Internals\MsVcrt.h"
 
-// #define SHOW_SLIMRWL_DEBUG_INFO
+ // #define SHOW_SLIMRWL_DEBUG_INFO
 
 #ifndef OBJ_CASE_INSENSITIVE
 #define OBJ_CASE_INSENSITIVE 0x00000040L
@@ -48,13 +48,11 @@ typedef int (*_PIFV)(void);
 
 //-----------------------------------------------------------
 
-typedef NTSTATUS(NTAPI *lpfnRtlGetNativeSystemInformation)(_In_ ULONG SystemInformationClass,
-                                                           _Inout_ PVOID SystemInformation,
-                                                           _In_ ULONG SystemInformationLength,
-                                                           _Out_opt_ PULONG ReturnLength);
+typedef NTSTATUS(NTAPI *lpfnRtlGetNativeSystemInformation)(_In_ ULONG SystemInformationClass, _Inout_ PVOID SystemInformation,
+                                                           _In_ ULONG SystemInformationLength, _Out_opt_ PULONG ReturnLength);
 
-typedef HANDLE(WINAPI *lpfnCreateEventW)(_In_opt_ LPSECURITY_ATTRIBUTES lpEventAttributes, _In_ BOOL bManualReset,
-                                         _In_ BOOL bInitialState, _In_opt_ LPCWSTR lpName);
+typedef HANDLE(WINAPI *lpfnCreateEventW)(_In_opt_ LPSECURITY_ATTRIBUTES lpEventAttributes, _In_ BOOL bManualReset, _In_ BOOL bInitialState,
+                                         _In_opt_ LPCWSTR lpName);
 typedef HANDLE(WINAPI *lpfnOpenEventW)(_In_ DWORD dwDesiredAccess, _In_ BOOL bInheritHandle, _In_ LPCWSTR lpName);
 typedef HANDLE(WINAPI *lpfnCreateMutexW)(_In_opt_ LPSECURITY_ATTRIBUTES lpMutexAttributes, _In_ BOOL bInitialOwner,
                                          _In_opt_ LPCWSTR lpName);
@@ -98,8 +96,7 @@ extern "C" __declspec(allocate(".CRT$XIBA")) const _PIFV ___mx_waitable_init = &
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 BOOL IsMultiProcessor()
 {
@@ -120,13 +117,11 @@ BOOL IsMultiProcessor()
         ::MxMemSet(&sBasicInfo, 0, sizeof(sBasicInfo));
         if (fnRtlGetNativeSystemInformation != NULL)
         {
-            nNtStatus =
-                fnRtlGetNativeSystemInformation(MxSystemBasicInformation, &sBasicInfo, sizeof(sBasicInfo), NULL);
+            nNtStatus = fnRtlGetNativeSystemInformation(MxSystemBasicInformation, &sBasicInfo, sizeof(sBasicInfo), NULL);
         }
         else
         {
-            nNtStatus =
-                ::MxNtQuerySystemInformation(MxSystemProcessorInformation, &sBasicInfo, sizeof(sBasicInfo), NULL);
+            nNtStatus = ::MxNtQuerySystemInformation(MxSystemProcessorInformation, &sBasicInfo, sizeof(sBasicInfo), NULL);
         }
         _InterlockedExchange(&nProcessorsCount, (NT_SUCCESS(nNtStatus) && sBasicInfo.NumberOfProcessors > 1)
                                                     ? (LONG)(sBasicInfo.NumberOfProcessors)
@@ -216,8 +211,8 @@ HRESULT CWindowsEvent::Create(_In_ BOOL bManualReset, _In_ BOOL bInitialState, _
         }
         // create event
         nNtStatus =
-            ::MxNtCreateEvent(&_h, EVENT_ALL_ACCESS, &sObjAttr,
-                              (bManualReset == FALSE) ? MxSynchronizationEvent : MxNotificationEvent, bInitialState);
+            ::MxNtCreateEvent(&_h, EVENT_ALL_ACCESS, &sObjAttr, (bManualReset == FALSE) ? MxSynchronizationEvent : MxNotificationEvent,
+                              bInitialState);
         if (!NT_SUCCESS(nNtStatus))
         {
             return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
@@ -308,8 +303,8 @@ CWindowsMutex::CWindowsMutex() : CWindowsHandle()
     return;
 }
 
-HRESULT CWindowsMutex::Create(_In_opt_z_ LPCWSTR szNameW, _In_ BOOL bInitialOwner,
-                              _In_opt_ LPSECURITY_ATTRIBUTES lpSecAttr, _Out_opt_ LPBOOL lpbAlreadyExists)
+HRESULT CWindowsMutex::Create(_In_opt_z_ LPCWSTR szNameW, _In_ BOOL bInitialOwner, _In_opt_ LPSECURITY_ATTRIBUTES lpSecAttr,
+                              _Out_opt_ LPBOOL lpbAlreadyExists)
 {
     HANDLE _h;
     HRESULT hRes;
@@ -426,8 +421,7 @@ HRESULT CWindowsMutex::Open(_In_opt_z_ LPCWSTR szNameW, _In_ BOOL bQueryOnly, _I
             sObjAttr.ObjectName = &usName;
         }
         // open mutant
-        nNtStatus = ::MxNtOpenMutant(
-            &_h, (bQueryOnly == FALSE) ? MUTANT_ALL_ACCESS : (STANDARD_RIGHTS_READ | SYNCHRONIZE), &sObjAttr);
+        nNtStatus = ::MxNtOpenMutant(&_h, (bQueryOnly == FALSE) ? MUTANT_ALL_ACCESS : (STANDARD_RIGHTS_READ | SYNCHRONIZE), &sObjAttr);
         if (!NT_SUCCESS(nNtStatus))
         {
             return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
@@ -594,7 +588,8 @@ BOOL SlimRWL_TryAcquireShared(_In_ LPRWLOCK lpLock)
             }
             MX_ASSERT(((ULONG)initVal & 0x7FFFFFFFUL) != 0x7FFFFFFFUL); // check overflows
             newVal = _InterlockedCompareExchange(&(lpLock->nValue), initVal + 1, initVal);
-        } while (newVal != initVal);
+        }
+        while (newVal != initVal);
     }
     return TRUE;
 }
@@ -635,7 +630,8 @@ VOID SlimRWL_ReleaseShared(_In_ LPRWLOCK lpLock)
             MX_ASSERT((initVal & 0x7FFFFFFFL) != 0);
             newVal = (initVal & 0x80000000L) | ((initVal & 0x7FFFFFFFL) - 1);
             newVal = _InterlockedCompareExchange(&(lpLock->nValue), newVal, initVal);
-        } while (newVal != initVal);
+        }
+        while (newVal != initVal);
     }
 #ifdef SHOW_SLIMRWL_DEBUG_INFO
     DebugPrint("SlimRWL_ReleaseShared: %lu\n", MxGetCurrentThreadId());
@@ -665,7 +661,8 @@ BOOL SlimRWL_TryAcquireExclusive(_In_ LPRWLOCK lpLock)
                 return FALSE; // another writer is active or waiting
             }
             newVal = _InterlockedCompareExchange(&(lpLock->nValue), initVal | 0x80000000L, initVal);
-        } while (newVal != initVal);
+        }
+        while (newVal != initVal);
 
         // wait until no readers
         while ((__InterlockedRead(&(lpLock->nValue)) & 0x7FFFFFFFL) != 0)
@@ -733,7 +730,8 @@ BOOL RundownProt_Acquire(_Inout_ _Interlocked_operand_ LONG volatile *lpnValue)
             return FALSE;
         }
         newVal = _InterlockedCompareExchange(lpnValue, initVal + 1, initVal);
-    } while (newVal != initVal);
+    }
+    while (newVal != initVal);
     return TRUE;
 }
 
@@ -748,7 +746,8 @@ VOID RundownProt_Release(_Inout_ _Interlocked_operand_ LONG volatile *lpnValue)
         MX_ASSERT((initVal & 0x7FFFFFFFL) != 0);
         newVal = (initVal & 0x80000000L) | ((initVal & 0x7FFFFFFFL) - 1);
         newVal = _InterlockedCompareExchange(lpnValue, newVal, initVal);
-    } while (newVal != initVal);
+    }
+    while (newVal != initVal);
     return;
 }
 
@@ -893,8 +892,7 @@ static NTSTATUS GetRootDirHandle(_Out_ PHANDLE lphRootDir)
     nNtStatus = ::MxNtOpenThreadToken(MX_CURRENTTHREAD, TOKEN_IMPERSONATE, FALSE, &hThreadToken);
     if (NT_SUCCESS(nNtStatus))
     {
-        nNtStatus =
-            ::MxNtSetInformationThread(MX_CURRENTTHREAD, MxThreadImpersonationToken, &_h, (ULONG)sizeof(HANDLE));
+        nNtStatus = ::MxNtSetInformationThread(MX_CURRENTTHREAD, MxThreadImpersonationToken, &_h, (ULONG)sizeof(HANDLE));
         if (!NT_SUCCESS(nNtStatus))
         {
             goto done;
@@ -910,16 +908,16 @@ static NTSTATUS GetRootDirHandle(_Out_ PHANDLE lphRootDir)
         {
             goto done;
         }
-        nNtStatus = ::MxNtQueryInformationToken(hProcessToken, TokenSessionId, &dwProcSessionId,
-                                                (ULONG)sizeof(dwProcSessionId), &dwRetLength);
+        nNtStatus = ::MxNtQueryInformationToken(hProcessToken, TokenSessionId, &dwProcSessionId, (ULONG)sizeof(dwProcSessionId),
+                                                &dwRetLength);
         if (!NT_SUCCESS(nNtStatus))
         {
             goto done;
         }
         if (sOviW.dwMajorVersion > 6 || sOviW.dwMinorVersion >= 2)
         {
-            nNtStatus = ::MxNtQueryInformationToken(hProcessToken, (TOKEN_INFORMATION_CLASS)29 /*TokenIsAppContainer*/,
-                                                    &dwIsAppContainer, (ULONG)sizeof(dwIsAppContainer), &dwRetLength);
+            nNtStatus = ::MxNtQueryInformationToken(hProcessToken, (TOKEN_INFORMATION_CLASS)29 /*TokenIsAppContainer*/, &dwIsAppContainer,
+                                                    (ULONG)sizeof(dwIsAppContainer), &dwRetLength);
             if (!NT_SUCCESS(nNtStatus))
             {
                 goto done;
@@ -953,9 +951,9 @@ static NTSTATUS GetRootDirHandle(_Out_ PHANDLE lphRootDir)
     nNtStatus = ::MxNtOpenDirectoryObject(&_h, 0x0F, &sObjAttr); // DIRECTORY_CREATE_OBJECT|DIRECTORY_TRAVERSE
     if (NT_SUCCESS(nNtStatus) && dwUsesPrivateNamespace != 0)
     {
-        typedef NTSTATUS(NTAPI * lpfnRtlConvertSidToUnicodeString)(
+        typedef NTSTATUS(NTAPI *lpfnRtlConvertSidToUnicodeString)(
             _Out_ PMX_UNICODE_STRING UnicodeString, _In_ PSID Sid, _In_ BOOLEAN AllocateDestinationString);
-        typedef VOID(NTAPI * lpfnRtlFreeUnicodeString)(_In_ PMX_UNICODE_STRING UnicodeString);
+        typedef VOID(NTAPI *lpfnRtlFreeUnicodeString)(_In_ PMX_UNICODE_STRING UnicodeString);
         PVOID nNtDll;
         lpfnRtlConvertSidToUnicodeString fnRtlConvertSidToUnicodeString = NULL;
         lpfnRtlFreeUnicodeString fnRtlFreeUnicodeString = NULL;
@@ -970,10 +968,9 @@ static NTSTATUS GetRootDirHandle(_Out_ PHANDLE lphRootDir)
         }
         if (fnRtlConvertSidToUnicodeString != NULL && fnRtlFreeUnicodeString != NULL)
         {
-            MX_UNICODE_STRING usName = {0};
+            MX_UNICODE_STRING usName = { 0 };
 
-            nNtStatus =
-                ::MxNtQueryInformationToken(hProcessToken, TokenUser, &aSid, SECURITY_MAX_SID_SIZE, &dwRetLength);
+            nNtStatus = ::MxNtQueryInformationToken(hProcessToken, TokenUser, &aSid, SECURITY_MAX_SID_SIZE, &dwRetLength);
             if (NT_SUCCESS(nNtStatus))
             {
                 nNtStatus = fnRtlConvertSidToUnicodeString(&usName, (PSID)aSid, TRUE);

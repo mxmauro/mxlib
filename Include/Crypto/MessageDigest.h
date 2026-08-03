@@ -22,14 +22,13 @@
 
 #include "..\Defines.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CMessageDigest : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     enum class eAlgorithm
     {
         Invalid = 1,
@@ -51,13 +50,12 @@ class CMessageDigest : public virtual CBaseMemObj, public CNonCopyableObj
         Blake2b_512
     };
 
-  public:
+public:
     CMessageDigest();
     ~CMessageDigest();
 
     HRESULT BeginDigest(_In_z_ LPCSTR szAlgorithmA, _In_opt_ LPCVOID lpKey = NULL, _In_opt_ SIZE_T nKeyLen = 0);
-    HRESULT BeginDigest(_In_ MX::CMessageDigest::eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey = NULL,
-                        _In_opt_ SIZE_T nKeyLen = 0);
+    HRESULT BeginDigest(_In_ MX::CMessageDigest::eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey = NULL, _In_opt_ SIZE_T nKeyLen = 0);
 
     HRESULT DigestStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataLength);
     HRESULT DigestWordLE(_In_ LPWORD lpnValues, _In_ SIZE_T nCount);
@@ -75,10 +73,10 @@ class CMessageDigest : public virtual CBaseMemObj, public CNonCopyableObj
     // NOTE: Returns -1 if unsupported
     static MX::CMessageDigest::eAlgorithm GetAlgorithm(_In_z_ LPCSTR szAlgorithmA);
 
-  private:
+private:
     VOID CleanUp(_In_ BOOL bZeroData);
 
-  private:
+private:
     LPVOID lpInternalData;
 };
 

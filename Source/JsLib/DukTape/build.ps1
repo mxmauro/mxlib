@@ -1,9 +1,7 @@
 #Requires -Version 7
 
 [CmdletBinding()]
-param(
-    [switch]$Rebuild
-)
+param()
 
 $ErrorActionPreference = 'Stop'
 $scriptPath = $PSScriptRoot + '\'
@@ -120,10 +118,14 @@ function Invoke-App([string]$CmdLine, [string]$CurFolder, [string]$EnvPath, [boo
 }
 
 function CheckForNewerFile([string]$File, [datetime]$BuildDate) {
-    if (-not (Test-Path -LiteralPath $File)) {
-        return $false
+    if (Test-Path -LiteralPath $File) {
+        if ((Get-Item -LiteralPath $File).LastWriteTime -gt $BuildDate) {
+            $fullPath = [System.IO.Path]::GetFullPath($File)
+            Write-Host "File: `"$($fullPath)`" is newer... rebuilding"
+            return $true
+        }
     }
-    return (Get-Item -LiteralPath $File).LastWriteTime -gt $BuildDate
+    return $false
 }
 
 function CheckForNewerFiles([string]$Folder, [datetime]$BuildDate) {
@@ -134,7 +136,6 @@ function CheckForNewerFiles([string]$Folder, [datetime]$BuildDate) {
     }
     foreach ($f in Get-ChildItem -LiteralPath $Folder -File -ErrorAction SilentlyContinue) {
         if (CheckForNewerFile $f.FullName $BuildDate) {
-            Write-Host "File: `"$($f.FullName)`" is newer... rebuilding"
             return $true
         }
     }
@@ -145,6 +146,8 @@ function GetLowestFileTimestamp([string[]]$Files) {
     $lowest = $null
     foreach ($f in $Files) {
         if (-not (Test-Path -LiteralPath $f)) {
+            $fullPath = [System.IO.Path]::GetFullPath($f)
+            Write-Host "File: `"$($fullPath)`" not found... rebuilding"
             return $null
         }
         $ts = (Get-Item -LiteralPath $f).LastWriteTime
@@ -228,25 +231,25 @@ $xcopyExe = FindXcopyExe
 # Check if rebuild is needed
 # ---------------------------------------------------------------------------
 
-$doRebuild = [bool]$Rebuild
-if (-not $doRebuild) {
-    Write-Host "Checking if source files were modified..."
-    $stamps = @(
-        $scriptPath + '..\..\..\Include\JsLib\DukTape\duk_config.h',
-        $scriptPath + '..\..\..\Include\JsLib\DukTape\duktape.h',
-        $scriptPath + 'Source\dist\duktape.c',
-        $scriptPath + 'Source\dist\duktape.h',
-        $scriptPath + 'Source\dist\duk_config.h',
-        $scriptPath + 'Source\dist\duk_source_meta.json'
-    )
-    $buildDate = GetLowestFileTimestamp $stamps
-    if ($null -eq $buildDate -or
-        (CheckForNewerFile  ($scriptPath + 'duk_custom.h') $buildDate) -or
+$doRebuild = $false
+Write-Host "Checking if source files were modified..."
+$stamps = @(
+    ($scriptPath + '..\..\..\Include\JsLib\DukTape\duk_config.h'),
+    ($scriptPath + '..\..\..\Include\JsLib\DukTape\duktape.h'),
+    ($scriptPath + 'Source\dist\duktape.c'),
+    ($scriptPath + 'Source\dist\duktape.h'),
+    ($scriptPath + 'Source\dist\duk_config.h'),
+    ($scriptPath + 'Source\dist\duk_source_meta.json')
+)
+$buildDate = GetLowestFileTimestamp $stamps
+if ($null -eq $buildDate) {
+    $doRebuild = $true
+}
+elseif ((CheckForNewerFile  ($scriptPath + 'duk_custom.h') $buildDate) -or
         (CheckForNewerFile  ($scriptPath + 'build.ps1')    $buildDate) -or
         (CheckForNewerFiles ($scriptPath + 'Source\config')     $buildDate) -or
         (CheckForNewerFiles ($scriptPath + 'Source\src-input')  $buildDate)) {
-        $doRebuild = $true
-    }
+    $doRebuild = $true
 }
 
 if (-not $doRebuild) {
@@ -269,7 +272,7 @@ $cmd += '--fixup-file '        + (EscapeParam ($scriptPath + 'duk_custom.h'))   
 $cmd += '--output-directory '  + (EscapeParam ($scriptPath + 'Source\dist'))
 $err  = Invoke-App $cmd ($scriptPath + 'Source') $pythonPath $false
 if ($err -ne 0) {
-    Write-Host "Errors detected while building distributable files."
+    Write-Host "Errors found! [$err]"
     exit $err
 }
 
@@ -281,7 +284,7 @@ if ($err -eq 0) {
     $err = FixEOL ($scriptPath + 'Source\dist\duktape.h')
 }
 if ($err -ne 0) {
-    Write-Host "Errors found."
+    Write-Host "Errors found! [$err]"
     exit $err
 }
 

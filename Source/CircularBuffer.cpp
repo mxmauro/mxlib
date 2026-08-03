@@ -19,10 +19,9 @@
  */
 #include "..\Include\CircularBuffer.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CCircularBuffer::CCircularBuffer() : CBaseMemObj(), CNonCopyableObj()
 {

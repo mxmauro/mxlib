@@ -33,7 +33,7 @@
 #pragma comment(lib, "openssl_libssl.lib")
 #pragma comment(lib, "openssl_libcrypto.lib")
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define OPENSSL_FINALIZER_PRIORITY 10000
 
@@ -61,16 +61,16 @@
 //-----------------------------------------------------------
 
 static LONG volatile nInitialized = 0;
-static SSL_CTX *volatile lpSslContexts[2] = {NULL, NULL};
+static SSL_CTX *volatile lpSslContexts[2] = { NULL, NULL };
 #if defined(__HEAPS_COUNT) && __HEAPS_COUNT > 0
-static HANDLE hHeaps[__HEAPS_COUNT] = {0};
+static HANDLE hHeaps[__HEAPS_COUNT] = { 0 };
 #endif //__HEAPS_COUNT && __HEAPS_COUNT > 0
 #ifdef __ENABLE_KEYLOG_CAPTURE
 static struct
 {
     LONG volatile nMutex;
     FILE *fp;
-} sKeyLogger = {0};
+} sKeyLogger = { 0 };
 #endif //__ENABLE_KEYLOG_CAPTURE
 
 //-----------------------------------------------------------
@@ -113,14 +113,11 @@ EXTERN_C const PIMAGE_TLS_CALLBACK OpenSslTlsCallback = &OnTlsCallback;
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Internals
-{
+namespace Internals {
 
-namespace OpenSSL
-{
+namespace OpenSSL {
 
 HRESULT Init()
 {
@@ -137,26 +134,26 @@ HRESULT GetLastErrorCode(_In_ HRESULT hResDefault)
         bHasError = TRUE;
         switch (ERR_GET_REASON(err))
         {
-        case EVP_R_UNSUPPORTED_ALGORITHM:
-        case ERR_R_UNSUPPORTED:
-            return E_NOTIMPL;
+            case EVP_R_UNSUPPORTED_ALGORITHM:
+            case ERR_R_UNSUPPORTED:
+                return E_NOTIMPL;
 
-        case ERR_R_MALLOC_FAILURE:
-            return E_OUTOFMEMORY;
+            case ERR_R_MALLOC_FAILURE:
+                return E_OUTOFMEMORY;
 
-        case CRYPTO_R_TOO_SMALL_BUFFER:
-            return MX_E_BufferOverflow;
+            case CRYPTO_R_TOO_SMALL_BUFFER:
+                return MX_E_BufferOverflow;
 
-        case PKCS12_R_MAC_VERIFY_FAILURE:
-            switch (ERR_GET_LIB(err))
-            {
-            case ERR_LIB_PKCS12:
-                return HRESULT_FROM_WIN32(ERROR_INVALID_PASSWORD);
-            }
-            break;
+            case PKCS12_R_MAC_VERIFY_FAILURE:
+                switch (ERR_GET_LIB(err))
+                {
+                    case ERR_LIB_PKCS12:
+                        return HRESULT_FROM_WIN32(ERROR_INVALID_PASSWORD);
+                }
+                break;
 
-        case CRYPTO_R_ZERO_LENGTH_NUMBER:
-            break;
+            case CRYPTO_R_ZERO_LENGTH_NUMBER:
+                break;
         }
     }
     if (bHasError != FALSE)
@@ -298,9 +295,8 @@ static HRESULT _OpenSSL_Init()
 
             // init lib
             if (OPENSSL_init_ssl(OPENSSL_INIT_ENGINE_ALL_BUILTIN | OPENSSL_INIT_LOAD_SSL_STRINGS |
-                                     OPENSSL_INIT_LOAD_CRYPTO_STRINGS | OPENSSL_INIT_ADD_ALL_CIPHERS |
-                                     OPENSSL_INIT_ADD_ALL_DIGESTS | OPENSSL_INIT_NO_ATEXIT,
-                                 NULL) == 0)
+                                 OPENSSL_INIT_LOAD_CRYPTO_STRINGS | OPENSSL_INIT_ADD_ALL_CIPHERS |
+                                 OPENSSL_INIT_ADD_ALL_DIGESTS | OPENSSL_INIT_NO_ATEXIT, NULL) == 0)
             {
 #if defined(__HEAPS_COUNT) && __HEAPS_COUNT > 0
                 for (SIZE_T i = 0; i < __HEAPS_COUNT; i++)
@@ -451,7 +447,9 @@ static VOID InitializeKeyLogger()
 
     dw = ::GetEnvironmentVariableW(L"SSLKEYLOGFILE", szFileNameW, MX_ARRAYLEN(szFileNameW) - 1);
     if (dw == 0)
+    {
         return;
+    }
     szFileNameW[dw] = 0;
 
     sKeyLogger.fp = _wfsopen(szFileNameW, L"a+t", _SH_DENYNO);

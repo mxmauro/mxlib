@@ -26,22 +26,22 @@
 #include "..\Internals\MsVcrt.h"
 #include <locale.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define X_ALIGN(x, _size) (((x) + ((_size) - 1)) & (~((_size) - 1)))
 
 //-----------------------------------------------------------
 
 static __declspec(thread) int strtodbl_error = 0;
-static WCHAR volatile aToUnicodeChar[256] = {0};
+static WCHAR volatile aToUnicodeChar[256] = { 0 };
 static _locale_t lpUtf8Locale = NULL;
 
 //-----------------------------------------------------------
 
 static int __cdecl InitializeTables();
 static BOOL InitializeUtf8Locale();
-static void dblconv_invalid_parameter(const wchar_t *expression, const wchar_t *function, const wchar_t *file,
-                                      unsigned int line, uintptr_t pReserved);
+static void dblconv_invalid_parameter(const wchar_t *expression, const wchar_t *function, const wchar_t *file, unsigned int line,
+                                      uintptr_t pReserved);
 
 //-----------------------------------------------------------
 
@@ -51,8 +51,7 @@ extern "C" __declspec(allocate(".CRT$XIBA")) const _PIFV ___mx_strings_init = &I
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 SIZE_T StrLenA(_In_opt_z_ LPCSTR szSrcA)
 {
@@ -214,7 +213,7 @@ int StrNCompareAW(_In_z_ LPCSTR szSrcA1, _In_z_ LPCWSTR szSrcW2, _In_ SIZE_T nLe
             szTempBufW[i] = aToUnicodeChar[((UCHAR *)szSrcA1)[i]];
         }
         res = (bCaseInsensitive != FALSE) ? _wcsnicmp(szTempBufW, szSrcW2, nThisLen)
-                                          : wcsncmp(szTempBufW, szSrcW2, nThisLen);
+            : wcsncmp(szTempBufW, szSrcW2, nThisLen);
         if (res != 0)
         {
             return res;
@@ -283,14 +282,12 @@ LPCSTR StrFindA(_In_z_ LPCSTR szSrcA, _In_z_ LPCSTR szToFindA, _In_opt_ BOOL bRe
     return StrNFindA(szSrcA, szToFindA, StrLenA(szSrcA), bReverse, bCaseInsensitive);
 }
 
-LPCWSTR StrFindW(_In_z_ LPCWSTR szSrcW, _In_z_ LPCWSTR szToFindW, _In_opt_ BOOL bReverse,
-                 _In_opt_ BOOL bCaseInsensitive)
+LPCWSTR StrFindW(_In_z_ LPCWSTR szSrcW, _In_z_ LPCWSTR szToFindW, _In_opt_ BOOL bReverse, _In_opt_ BOOL bCaseInsensitive)
 {
     return StrNFindW(szSrcW, szToFindW, StrLenW(szSrcW), bReverse, bCaseInsensitive);
 }
 
-LPCSTR StrNFindA(_In_z_ LPCSTR szSrcA, _In_z_ LPCSTR szToFindA, _In_ SIZE_T nLen, _In_opt_ BOOL bReverse,
-                 _In_opt_ BOOL bCaseInsensitive)
+LPCSTR StrNFindA(_In_z_ LPCSTR szSrcA, _In_z_ LPCSTR szToFindA, _In_ SIZE_T nLen, _In_opt_ BOOL bReverse, _In_opt_ BOOL bCaseInsensitive)
 {
     SSIZE_T nAdv;
     SIZE_T nToFindLen;
@@ -318,8 +315,7 @@ LPCSTR StrNFindA(_In_z_ LPCSTR szSrcA, _In_z_ LPCSTR szToFindA, _In_ SIZE_T nLen
     return NULL;
 }
 
-LPCWSTR StrNFindW(_In_z_ LPCWSTR szSrcW, _In_z_ LPCWSTR szToFindW, _In_ SIZE_T nLen, _In_opt_ BOOL bReverse,
-                  _In_opt_ BOOL bCaseInsensitive)
+LPCWSTR StrNFindW(_In_z_ LPCWSTR szSrcW, _In_z_ LPCWSTR szToFindW, _In_ SIZE_T nLen, _In_opt_ BOOL bReverse, _In_opt_ BOOL bCaseInsensitive)
 {
     SSIZE_T nAdv;
     SIZE_T nToFindLen;
@@ -484,22 +480,22 @@ HRESULT StrToDoubleA(_In_ LPCSTR szSrcA, _In_ SIZE_T nLen, double *lpnValue)
     hRes = S_OK;
     switch (_atodbl(&dblval, (char *)szSrcA))
     {
-    case _OVERFLOW:
-        hRes = MX_E_ArithmeticOverflow;
-        break;
-    case _UNDERFLOW:
-        hRes = MX_E_ArithmeticUnderflow;
-        break;
-    default:
-        if (strtodbl_error == 0)
-        {
-            *lpnValue = dblval.x;
-        }
-        else
-        {
-            hRes = E_INVALIDARG;
-        }
-        break;
+        case _OVERFLOW:
+            hRes = MX_E_ArithmeticOverflow;
+            break;
+        case _UNDERFLOW:
+            hRes = MX_E_ArithmeticUnderflow;
+            break;
+        default:
+            if (strtodbl_error == 0)
+            {
+                *lpnValue = dblval.x;
+            }
+            else
+            {
+                hRes = E_INVALIDARG;
+            }
+            break;
     }
 
     _set_thread_local_invalid_parameter_handler(lpOldHandler);
@@ -1937,8 +1933,8 @@ static BOOL InitializeUtf8Locale()
     return (lpUtf8Locale != NULL && lpUtf8Locale != (_locale_t)1);
 }
 
-static void dblconv_invalid_parameter(const wchar_t *expression, const wchar_t *function, const wchar_t *file,
-                                      unsigned int line, uintptr_t pReserved)
+static void dblconv_invalid_parameter(const wchar_t *expression, const wchar_t *function, const wchar_t *file, unsigned int line,
+                                      uintptr_t pReserved)
 {
     strtodbl_error = 1;
     return;

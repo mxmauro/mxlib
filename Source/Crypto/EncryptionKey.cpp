@@ -22,19 +22,17 @@
 #include "InitOpenSSL.h"
 #include <OpenSSL\decoder.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 typedef int (*lpfn_i2d_XXX_bio)(BIO *bp, const EVP_PKEY *pkey);
 
 //-----------------------------------------------------------
 
-static HRESULT GetCommon(_In_ EVP_PKEY *lpKey, _In_ lpfn_i2d_XXX_bio fn_i2d_XXX_bio,
-                         _Out_ MX::CSecureBuffer **lplpBuffer);
+static HRESULT GetCommon(_In_ EVP_PKEY *lpKey, _In_ lpfn_i2d_XXX_bio fn_i2d_XXX_bio, _Out_ MX::CSecureBuffer **lplpBuffer);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CEncryptionKey::CEncryptionKey() : TRefCounted<CBaseMemObj>()
 {
@@ -91,15 +89,15 @@ HRESULT CEncryptionKey::Generate(_In_ MX::CEncryptionKey::eAlgorithm nAlgorithm,
 
     switch (nAlgorithm)
     {
-    case MX::CEncryptionKey::RSA:
-    case MX::CEncryptionKey::DSA:
-    case MX::CEncryptionKey::DH:
-    case MX::CEncryptionKey::DHX:
-        if (nBitsCount < 512 || nBitsCount > 65536 || (nBitsCount && !(nBitsCount & (nBitsCount - 1))) == 0)
-        {
-            return E_INVALIDARG;
-        }
-        break;
+        case MX::CEncryptionKey::RSA:
+        case MX::CEncryptionKey::DSA:
+        case MX::CEncryptionKey::DH:
+        case MX::CEncryptionKey::DHX:
+            if (nBitsCount < 512 || nBitsCount > 65536 || (nBitsCount && !(nBitsCount & (nBitsCount - 1))) == 0)
+            {
+                return E_INVALIDARG;
+            }
+            break;
     }
 
     hRes = Internals::OpenSSL::Init();
@@ -110,36 +108,36 @@ HRESULT CEncryptionKey::Generate(_In_ MX::CEncryptionKey::eAlgorithm nAlgorithm,
 
     switch (nAlgorithm)
     {
-    case MX::CEncryptionKey::RSA:
-        lpKeyCtx = EVP_PKEY_CTX_new_from_name(NULL, "RSA", NULL);
-        break;
+        case MX::CEncryptionKey::RSA:
+            lpKeyCtx = EVP_PKEY_CTX_new_from_name(NULL, "RSA", NULL);
+            break;
 
-    case MX::CEncryptionKey::ED25519:
-        lpKeyCtx = EVP_PKEY_CTX_new_from_name(NULL, "ED25519", NULL);
-        break;
+        case MX::CEncryptionKey::ED25519:
+            lpKeyCtx = EVP_PKEY_CTX_new_from_name(NULL, "ED25519", NULL);
+            break;
 
-    case MX::CEncryptionKey::ED448:
-        lpKeyCtx = EVP_PKEY_CTX_new_from_name(NULL, "ED448", NULL);
-        break;
+        case MX::CEncryptionKey::ED448:
+            lpKeyCtx = EVP_PKEY_CTX_new_from_name(NULL, "ED448", NULL);
+            break;
 
-    case MX::CEncryptionKey::Poly1305:
-        lpKeyCtx = EVP_PKEY_CTX_new_from_name(NULL, "POLY1305", NULL);
-        break;
+        case MX::CEncryptionKey::Poly1305:
+            lpKeyCtx = EVP_PKEY_CTX_new_from_name(NULL, "POLY1305", NULL);
+            break;
 
-    case MX::CEncryptionKey::DSA:
-        lpKeyCtx = EVP_PKEY_CTX_new_from_name(NULL, "DSA", NULL);
-        break;
+        case MX::CEncryptionKey::DSA:
+            lpKeyCtx = EVP_PKEY_CTX_new_from_name(NULL, "DSA", NULL);
+            break;
 
-    case MX::CEncryptionKey::DH:
-        lpKeyCtx = EVP_PKEY_CTX_new_from_name(NULL, "DH", NULL);
-        break;
+        case MX::CEncryptionKey::DH:
+            lpKeyCtx = EVP_PKEY_CTX_new_from_name(NULL, "DH", NULL);
+            break;
 
-    case MX::CEncryptionKey::DHX:
-        lpKeyCtx = EVP_PKEY_CTX_new_from_name(NULL, "DHX", NULL);
-        break;
+        case MX::CEncryptionKey::DHX:
+            lpKeyCtx = EVP_PKEY_CTX_new_from_name(NULL, "DHX", NULL);
+            break;
 
-    default:
-        return E_INVALIDARG;
+        default:
+            return E_INVALIDARG;
     }
     if (lpKeyCtx == NULL)
     {
@@ -148,69 +146,69 @@ HRESULT CEncryptionKey::Generate(_In_ MX::CEncryptionKey::eAlgorithm nAlgorithm,
 
     switch (nAlgorithm)
     {
-    case MX::CEncryptionKey::RSA:
-    case MX::CEncryptionKey::ED25519:
-    case MX::CEncryptionKey::ED448:
-    case MX::CEncryptionKey::Poly1305:
-        if (EVP_PKEY_keygen_init(lpKeyCtx) <= 0)
-        {
-            hRes = MX::Internals::OpenSSL::GetLastErrorCode(E_OUTOFMEMORY);
-            EVP_PKEY_CTX_free(lpKeyCtx);
-            return hRes;
-        }
-        break;
+        case MX::CEncryptionKey::RSA:
+        case MX::CEncryptionKey::ED25519:
+        case MX::CEncryptionKey::ED448:
+        case MX::CEncryptionKey::Poly1305:
+            if (EVP_PKEY_keygen_init(lpKeyCtx) <= 0)
+            {
+                hRes = MX::Internals::OpenSSL::GetLastErrorCode(E_OUTOFMEMORY);
+                EVP_PKEY_CTX_free(lpKeyCtx);
+                return hRes;
+            }
+            break;
 
-    case MX::CEncryptionKey::DSA:
-    case MX::CEncryptionKey::DH:
-    case MX::CEncryptionKey::DHX:
-        if (EVP_PKEY_paramgen_init(lpKeyCtx) <= 0)
-        {
-            hRes = MX::Internals::OpenSSL::GetLastErrorCode(E_OUTOFMEMORY);
-            EVP_PKEY_CTX_free(lpKeyCtx);
-            return hRes;
-        }
-        break;
+        case MX::CEncryptionKey::DSA:
+        case MX::CEncryptionKey::DH:
+        case MX::CEncryptionKey::DHX:
+            if (EVP_PKEY_paramgen_init(lpKeyCtx) <= 0)
+            {
+                hRes = MX::Internals::OpenSSL::GetLastErrorCode(E_OUTOFMEMORY);
+                EVP_PKEY_CTX_free(lpKeyCtx);
+                return hRes;
+            }
+            break;
     }
 
     switch (nAlgorithm)
     {
-    case MX::CEncryptionKey::RSA:
-        if (EVP_PKEY_CTX_set_rsa_keygen_bits(lpKeyCtx, (int)nBitsCount) <= 0)
-        {
-            hRes = MX::Internals::OpenSSL::GetLastErrorCode(E_INVALIDARG);
-            EVP_PKEY_CTX_free(lpKeyCtx);
-            return hRes;
-        }
-        break;
+        case MX::CEncryptionKey::RSA:
+            if (EVP_PKEY_CTX_set_rsa_keygen_bits(lpKeyCtx, (int)nBitsCount) <= 0)
+            {
+                hRes = MX::Internals::OpenSSL::GetLastErrorCode(E_INVALIDARG);
+                EVP_PKEY_CTX_free(lpKeyCtx);
+                return hRes;
+            }
+            break;
 
-    case MX::CEncryptionKey::ED25519:
-        break;
+        case MX::CEncryptionKey::ED25519:
+            break;
 
-    case MX::CEncryptionKey::ED448:
-        break;
+        case MX::CEncryptionKey::ED448:
+            break;
 
-    case MX::CEncryptionKey::Poly1305:
-        break;
+        case MX::CEncryptionKey::Poly1305:
+            break;
 
-    case MX::CEncryptionKey::DSA:
-        if (EVP_PKEY_CTX_set_dsa_paramgen_bits(lpKeyCtx, (int)nBitsCount) <= 0)
-        {
-            hRes = MX::Internals::OpenSSL::GetLastErrorCode(E_INVALIDARG);
-            EVP_PKEY_CTX_free(lpKeyCtx);
-            return hRes;
-        }
-        break;
+        case MX::CEncryptionKey::DSA:
+            if (EVP_PKEY_CTX_set_dsa_paramgen_bits(lpKeyCtx, (int)nBitsCount) <= 0)
+            {
+                hRes = MX::Internals::OpenSSL::GetLastErrorCode(E_INVALIDARG);
+                EVP_PKEY_CTX_free(lpKeyCtx);
+                return hRes;
+            }
+            break;
 
-    case MX::CEncryptionKey::DH:
-    case MX::CEncryptionKey::DHX:
-        if (EVP_PKEY_CTX_set_dh_paramgen_prime_len(lpKeyCtx, (int)nBitsCount) <= 0 ||
+        case MX::CEncryptionKey::DH:
+        case MX::CEncryptionKey::DHX:
+            if (EVP_PKEY_CTX_set_dh_paramgen_prime_len(lpKeyCtx, (int)nBitsCount) <= 0 ||
             EVP_PKEY_CTX_set_dh_paramgen_generator(lpKeyCtx, 2) <= 0)
-        {
-            hRes = MX::Internals::OpenSSL::GetLastErrorCode(E_INVALIDARG);
-            EVP_PKEY_CTX_free(lpKeyCtx);
-            return hRes;
-        }
-        break;
+            {
+                hRes = MX::Internals::OpenSSL::GetLastErrorCode(E_INVALIDARG);
+                EVP_PKEY_CTX_free(lpKeyCtx);
+                return hRes;
+            }
+            break;
     }
 
     if (EVP_PKEY_generate(lpKeyCtx, &lpNewKey) <= 0)
@@ -269,8 +267,8 @@ HRESULT CEncryptionKey::Set(_In_ LPCVOID _lpKey, _In_ SIZE_T _nKeySize, _In_opt_
     // detect PEM or DER
     if (MX::Internals::OpenSSL::IsPEM(_lpKey, _nKeySize) != FALSE)
     {
-        static const int nSelections[3] = {OSSL_KEYMGMT_SELECT_PUBLIC_KEY, OSSL_KEYMGMT_SELECT_PRIVATE_KEY,
-                                           OSSL_KEYMGMT_SELECT_ALL_PARAMETERS};
+        static const int nSelections[3] = { OSSL_KEYMGMT_SELECT_PUBLIC_KEY, OSSL_KEYMGMT_SELECT_PRIVATE_KEY,
+                                           OSSL_KEYMGMT_SELECT_ALL_PARAMETERS };
 
         for (int pass = 1; pass <= MX_ARRAYLEN(nSelections); pass++)
         {
@@ -288,8 +286,7 @@ HRESULT CEncryptionKey::Set(_In_ LPCVOID _lpKey, _In_ SIZE_T _nKeySize, _In_opt_
             }
             if (szPasswordA != NULL && *szPasswordA != 0)
             {
-                if (OSSL_DECODER_CTX_set_passphrase(lpDecCtx, (unsigned char *)szPasswordA, MX::StrLenA(szPasswordA)) <=
-                    0)
+                if (OSSL_DECODER_CTX_set_passphrase(lpDecCtx, (unsigned char *)szPasswordA, MX::StrLenA(szPasswordA)) <= 0)
                 {
                     hRes = E_OUTOFMEMORY;
                     goto pem_try_next;
@@ -323,7 +320,7 @@ HRESULT CEncryptionKey::Set(_In_ LPCVOID _lpKey, _In_ SIZE_T _nKeySize, _In_opt_
             hRes = S_OK;
             break;
 
-        pem_try_next:
+pem_try_next:
             if (lpDecCtx != NULL)
             {
                 OSSL_DECODER_CTX_free(lpDecCtx);
@@ -341,8 +338,14 @@ HRESULT CEncryptionKey::Set(_In_ LPCVOID _lpKey, _In_ SIZE_T _nKeySize, _In_opt_
             LPCSTR szNameA;
             BOOL bIsParam;
         } KEYTYPE;
-        static const KEYTYPE aKeyTypes[] = {{"RSA", FALSE}, {"ED25519", FALSE}, {"ED448", FALSE}, {"POLY1305", FALSE},
-                                            {"DSA", TRUE},  {"DH", TRUE},       {"DHX", TRUE}};
+        static const KEYTYPE aKeyTypes[] = { {"RSA", FALSE},
+            {"ED25519", FALSE},
+            {"ED448", FALSE},
+            {"POLY1305", FALSE},
+            {"DSA", TRUE},
+            {"DH", TRUE},
+            {"DHX", TRUE}
+        };
 
         for (int pass = 1; pass <= MX_ARRAYLEN(aKeyTypes); pass++)
         {
@@ -366,8 +369,7 @@ HRESULT CEncryptionKey::Set(_In_ LPCVOID _lpKey, _In_ SIZE_T _nKeySize, _In_opt_
                 }
 
                 ERR_clear_error();
-                lpDecCtx = OSSL_DECODER_CTX_new_for_pkey(&lpDecKey, "DER", NULL, aKeyTypes[pass - 1].szNameA, selection,
-                                                         NULL, NULL);
+                lpDecCtx = OSSL_DECODER_CTX_new_for_pkey(&lpDecKey, "DER", NULL, aKeyTypes[pass - 1].szNameA, selection, NULL, NULL);
                 if (lpDecCtx == NULL)
                 {
                     hRes = MX::Internals::OpenSSL::GetLastErrorCode(E_NOTIMPL);
@@ -375,8 +377,7 @@ HRESULT CEncryptionKey::Set(_In_ LPCVOID _lpKey, _In_ SIZE_T _nKeySize, _In_opt_
                 }
                 if (szPasswordA != NULL && *szPasswordA != 0)
                 {
-                    if (OSSL_DECODER_CTX_set_passphrase(lpDecCtx, (unsigned char *)szPasswordA,
-                                                        MX::StrLenA(szPasswordA)) <= 0)
+                    if (OSSL_DECODER_CTX_set_passphrase(lpDecCtx, (unsigned char *)szPasswordA, MX::StrLenA(szPasswordA)) <= 0)
                     {
                         hRes = E_OUTOFMEMORY;
                         goto der_try_next;
@@ -410,7 +411,7 @@ HRESULT CEncryptionKey::Set(_In_ LPCVOID _lpKey, _In_ SIZE_T _nKeySize, _In_opt_
                 hRes = S_OK;
                 break;
 
-            der_try_next:
+der_try_next:
                 if (lpDecCtx != NULL)
                 {
                     OSSL_DECODER_CTX_free(lpDecCtx);
@@ -474,21 +475,21 @@ CEncryptionKey::eAlgorithm CEncryptionKey::GetAlgorithm() const
 {
     switch (GetBaseId())
     {
-    case EVP_PKEY_RSA:
-    case EVP_PKEY_RSA2:
-        return eAlgorithm::RSA;
-    case EVP_PKEY_ED25519:
-        return eAlgorithm::ED25519;
-    case EVP_PKEY_ED448:
-        return eAlgorithm::ED448;
-    case EVP_PKEY_POLY1305:
-        return eAlgorithm::Poly1305;
-    case EVP_PKEY_DSA:
-        return eAlgorithm::DSA;
-    case EVP_PKEY_DH:
-        return eAlgorithm::DH;
-    case EVP_PKEY_DHX:
-        return eAlgorithm::DHX;
+        case EVP_PKEY_RSA:
+        case EVP_PKEY_RSA2:
+            return eAlgorithm::RSA;
+        case EVP_PKEY_ED25519:
+            return eAlgorithm::ED25519;
+        case EVP_PKEY_ED448:
+            return eAlgorithm::ED448;
+        case EVP_PKEY_POLY1305:
+            return eAlgorithm::Poly1305;
+        case EVP_PKEY_DSA:
+            return eAlgorithm::DSA;
+        case EVP_PKEY_DH:
+            return eAlgorithm::DH;
+        case EVP_PKEY_DHX:
+            return eAlgorithm::DHX;
     }
     return eAlgorithm::Unknown;
 }
@@ -497,8 +498,7 @@ CEncryptionKey::eAlgorithm CEncryptionKey::GetAlgorithm() const
 
 //-----------------------------------------------------------
 
-static HRESULT GetCommon(_In_ EVP_PKEY *lpKey, _In_ lpfn_i2d_XXX_bio fn_i2d_XXX_bio,
-                         _Out_ MX::CSecureBuffer **lplpBuffer)
+static HRESULT GetCommon(_In_ EVP_PKEY *lpKey, _In_ lpfn_i2d_XXX_bio fn_i2d_XXX_bio, _Out_ MX::CSecureBuffer **lplpBuffer)
 {
     MX::TAutoRefCounted<MX::CSecureBuffer> cBuffer;
     BIO *bio;

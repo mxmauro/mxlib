@@ -23,14 +23,14 @@
 #include "Defines.h"
 #include "WaitableObjects.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-template <class T> class MX_NOVTABLE TAutoPtrBase : public virtual CBaseMemObj
+template <class T>
+class MX_NOVTABLE TAutoPtrBase : public virtual CBaseMemObj
 {
-  public:
+public:
     TAutoPtrBase() : CBaseMemObj()
     {
         lpPtr = NULL;
@@ -91,7 +91,9 @@ template <class T> class MX_NOVTABLE TAutoPtrBase : public virtual CBaseMemObj
     T *operator=(_In_ T *_lpPtr)
     {
         if (_lpPtr != lpPtr)
+        {
             Attach(_lpPtr);
+        }
         return _lpPtr;
     };
 
@@ -127,18 +129,19 @@ template <class T> class MX_NOVTABLE TAutoPtrBase : public virtual CBaseMemObj
         return _lpPtr;
     };
 
-  protected:
+protected:
     virtual VOID OnDeleteItem(_Inout_ T *lpObj) = 0;
 
-  protected:
+protected:
     T *lpPtr;
 };
 
 //-----------------------------------------------------------
 
-template <class T> class TAutoFreePtr : public TAutoPtrBase<T>
+template <class T>
+class TAutoFreePtr : public TAutoPtrBase<T>
 {
-  public:
+public:
     virtual ~TAutoFreePtr()
     {
         if (TAutoPtrBase<T>::lpPtr != NULL)
@@ -149,7 +152,7 @@ template <class T> class TAutoFreePtr : public TAutoPtrBase<T>
         return;
     };
 
-  protected:
+protected:
     virtual VOID OnDeleteItem(_Inout_ T *lpObj)
     {
         MX_FREE(lpObj);
@@ -159,9 +162,10 @@ template <class T> class TAutoFreePtr : public TAutoPtrBase<T>
 
 //-----------------------------------------------------------
 
-template <class T> class TAutoDeletePtr : public TAutoPtrBase<T>
+template <class T>
+class TAutoDeletePtr : public TAutoPtrBase<T>
 {
-  public:
+public:
     virtual ~TAutoDeletePtr()
     {
         if (TAutoPtrBase<T>::lpPtr != NULL)
@@ -172,7 +176,7 @@ template <class T> class TAutoDeletePtr : public TAutoPtrBase<T>
         return;
     };
 
-  protected:
+protected:
     virtual VOID OnDeleteItem(_Inout_ T *lpObj)
     {
         if (lpObj != NULL)
@@ -185,9 +189,10 @@ template <class T> class TAutoDeletePtr : public TAutoPtrBase<T>
 
 //-----------------------------------------------------------
 
-template <class T> class TAutoDeleteArrayPtr : public TAutoPtrBase<T>
+template <class T>
+class TAutoDeleteArrayPtr : public TAutoPtrBase<T>
 {
-  public:
+public:
     virtual ~TAutoDeleteArrayPtr()
     {
         if (TAutoPtrBase<T>::lpPtr != NULL)
@@ -198,7 +203,7 @@ template <class T> class TAutoDeleteArrayPtr : public TAutoPtrBase<T>
         return;
     };
 
-  protected:
+protected:
     virtual VOID OnDeleteItem(_Inout_ T *lpObj)
     {
         delete[] lpObj;
@@ -208,9 +213,10 @@ template <class T> class TAutoDeleteArrayPtr : public TAutoPtrBase<T>
 
 //-----------------------------------------------------------
 
-template <class T> class TAtomicPtr : public virtual CBaseMemObj
+template <class T>
+class TAtomicPtr : public virtual CBaseMemObj
 {
-  public:
+public:
     TAtomicPtr() : CBaseMemObj()
     {
         _InterlockedExchangePointer((LPVOID volatile *)&lpPtr, NULL);
@@ -248,7 +254,9 @@ template <class T> class TAtomicPtr : public virtual CBaseMemObj
     T *operator=(_In_ const TAtomicPtr<T> &cPtr)
     {
         if (this != &cPtr)
+        {
             _InterlockedExchangePointer((PVOID volatile *)&lpPtr, cPtr.Get());
+        }
         return Get();
     };
 
@@ -274,7 +282,7 @@ template <class T> class TAtomicPtr : public virtual CBaseMemObj
         return _lpPtr;
     };
 
-  protected:
+protected:
     T volatile *lpPtr;
 };
 

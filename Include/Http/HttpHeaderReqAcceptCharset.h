@@ -23,17 +23,16 @@
 #include "HttpHeaderBase.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderReqAcceptCharset : public CHttpHeaderBase
 {
-  public:
+public:
     class CCharset : public virtual CBaseMemObj
     {
-      public:
+    public:
         CCharset();
         ~CCharset();
 
@@ -45,7 +44,7 @@ class CHttpHeaderReqAcceptCharset : public CHttpHeaderBase
         HRESULT SetQ(_In_ double q);
         double GetQ() const;
 
-      private:
+    private:
         friend class CHttpHeaderReqAcceptCharset;
 
         CStringA cStrCharsetA;
@@ -54,13 +53,13 @@ class CHttpHeaderReqAcceptCharset : public CHttpHeaderBase
 
     //----
 
-  public:
+public:
     CHttpHeaderReqAcceptCharset();
     ~CHttpHeaderReqAcceptCharset();
 
-    MX_DECLARE_HTTPHEADER_NAME(Accept - Charset)
+    MX_DECLARE_HTTPHEADER_NAME("Accept-Charset")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
@@ -69,8 +68,7 @@ class CHttpHeaderReqAcceptCharset : public CHttpHeaderBase
         return eDuplicateBehavior::Merge;
     };
 
-    HRESULT AddCharset(_In_z_ LPCSTR szCharsetA, _In_opt_ SIZE_T nCharsetLen = (SIZE_T)-1,
-                       _Out_opt_ CCharset **lplpCharset = NULL);
+    HRESULT AddCharset(_In_z_ LPCSTR szCharsetA, _In_opt_ SIZE_T nCharsetLen = (SIZE_T)-1, _Out_opt_ CCharset **lplpCharset = NULL);
 
     SIZE_T GetCharsetsCount() const;
     CCharset *GetCharset(_In_ SIZE_T nIndex) const;
@@ -78,7 +76,7 @@ class CHttpHeaderReqAcceptCharset : public CHttpHeaderBase
 
     HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
 
-  private:
+private:
     TArrayListWithDelete<CCharset *> aCharsetsList;
 };
 

@@ -21,7 +21,7 @@
 #include "Logger.h"
 #include <Http\HttpServer.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 static VOID OnEngineError(_In_ MX::CIpc *lpIpc, _In_ HRESULT hrErrorCode);
 static HRESULT OnRequestHeadersReceived(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServer::CClientRequest *lpRequest,
@@ -30,8 +30,7 @@ static VOID OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ MX::CHttpServe
 
 static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR szFileNameW);
 
-static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ LPCWSTR &szExtensionW,
-                                _In_z_ LPCWSTR szPathW);
+static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ LPCWSTR &szExtensionW, _In_z_ LPCWSTR szPathW);
 
 static HRESULT OnLog(_In_z_ LPCWSTR szInfoW);
 
@@ -39,15 +38,14 @@ static HRESULT OnLog(_In_z_ LPCWSTR szInfoW);
 
 class CMyHttpServer : public MX::CHttpServer
 {
-  public:
+public:
     CMyHttpServer(_In_ MX::CSockets &cSocketMgr, _In_opt_ CLoggable *lpLogParent = NULL)
         : MX::CHttpServer(cSocketMgr, lpLogParent)
     {
         return;
     };
 
-    HRESULT OnQuerySslCertificates(_In_ MX::CHttpServer *lpHttp,
-                                   _Outptr_result_maybenull_ MX::CSslCertificate **lplpSslCert,
+    HRESULT OnQuerySslCertificates(_In_ MX::CHttpServer *lpHttp, _Outptr_result_maybenull_ MX::CSslCertificate **lplpSslCert,
                                    _Outptr_result_maybenull_ MX::CEncryptionKey **lplpSslPrivKey,
                                    _Outptr_result_maybenull_ MX::CEncryptionKey **lplpDhParam)
     {
@@ -62,7 +60,7 @@ class CMyHttpServer : public MX::CHttpServer
         return S_OK;
     };
 
-  public:
+public:
     MX::TAutoRefCounted<MX::CSslCertificate> cSslCert;
     MX::TAutoRefCounted<MX::CEncryptionKey> cSslPrivateKey;
     MX::TAutoRefCounted<MX::CEncryptionKey> cSslDhParam;
@@ -78,6 +76,15 @@ int TestHttpServer()
     DWORD dwPort;
     BOOL bUseSSL;
     HRESULT hRes;
+
+    if (DoesCmdLineParamExist(L"?") || DoesCmdLineParamExist(L"help"))
+    {
+        wprintf_s(L"Use: Test.exe HttpServer [/ssl] [/port #]\n\n");
+        wprintf_s(L"Available 'options':\n");
+        wprintf_s(L"    /ssl: Enable SSL.\n");
+        wprintf_s(L"    /port #: Set server port. Defaults to 80 or 443.\n");
+        return 1;
+    }
 
     bUseSSL = DoesCmdLineParamExist(L"ssl");
 
@@ -190,8 +197,7 @@ int TestHttpServer()
 
         if (bUseSSL != FALSE)
         {
-            cHttpServer.SetQuerySslCertificatesCallback(
-                MX_BIND_MEMBER_CALLBACK(&CMyHttpServer::OnQuerySslCertificates, &cHttpServer));
+            cHttpServer.SetQuerySslCertificatesCallback(MX_BIND_MEMBER_CALLBACK(&CMyHttpServer::OnQuerySslCertificates, &cHttpServer));
         }
 
         // cOptions.dwBackLogSize = 0;
@@ -306,8 +312,7 @@ static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR s
     {
         return E_POINTER;
     }
-    cFileH.Attach(
-        ::CreateFileW(szFileNameW, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
+    cFileH.Attach(::CreateFileW(szFileNameW, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
     if (!cFileH)
     {
         return MX_HRESULT_FROM_LASTERROR();
@@ -330,8 +335,7 @@ static HRESULT LoadTxtFile(_Inout_ MX::CStringA &cStrContentsA, _In_z_ LPCWSTR s
     return S_OK;
 }
 
-static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ LPCWSTR &szExtensionW,
-                                _In_z_ LPCWSTR szPathW)
+static HRESULT BuildWebFileName(_Inout_ MX::CStringW &cStrFullFileNameW, _Out_ LPCWSTR &szExtensionW, _In_z_ LPCWSTR szPathW)
 {
     LPWSTR sW;
     HRESULT hRes;

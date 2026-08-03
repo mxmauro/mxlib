@@ -23,14 +23,13 @@
 #include "HttpAuthBase.h"
 #include "..\Crypto\MessageDigest.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpAuthDigest : public CHttpAuthBase, public CNonCopyableObj
 {
-  public:
+public:
     CHttpAuthDigest();
     ~CHttpAuthDigest();
 
@@ -41,8 +40,8 @@ class CHttpAuthDigest : public CHttpAuthBase, public CNonCopyableObj
 
     HRESULT Parse(_In_ CHttpHeaderRespWwwProxyAuthenticateCommon *lpHeader);
 
-    HRESULT GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCWSTR szUserNameW, _In_z_ LPCWSTR szPasswordW,
-                             _In_z_ LPCSTR szMethodA, _In_z_ LPCSTR szUriPathA);
+    HRESULT GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCWSTR szUserNameW, _In_z_ LPCWSTR szPasswordW, _In_z_ LPCSTR szMethodA,
+                             _In_z_ LPCSTR szUriPathA);
 
     LPCWSTR GetRealm() const
     {
@@ -94,13 +93,13 @@ class CHttpAuthDigest : public CHttpAuthBase, public CNonCopyableObj
         return bCharsetIsUtf8;
     };
 
-  private:
+private:
     CStringW cStrRealmW, cStrDomainW, cStrNonceW, cStrOpaqueW;
-    BOOL bStale{FALSE}, bAlgorithmSession{FALSE}, bUserHash{FALSE};
-    MX::CMessageDigest::eAlgorithm nAlgorithm{MX::CMessageDigest::eAlgorithm::MD5};
-    int nQop{0};
-    BOOL bCharsetIsUtf8{FALSE};
-    LONG volatile nNonceCount{0};
+    BOOL bStale{ FALSE }, bAlgorithmSession{ FALSE }, bUserHash{ FALSE };
+    MX::CMessageDigest::eAlgorithm nAlgorithm{ MX::CMessageDigest::eAlgorithm::MD5 };
+    int nQop{ 0 };
+    BOOL bCharsetIsUtf8{ FALSE };
+    LONG volatile nNonceCount{ 0 };
 };
 
 } // namespace MX

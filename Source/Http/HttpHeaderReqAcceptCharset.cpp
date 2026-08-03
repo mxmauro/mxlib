@@ -21,14 +21,13 @@
 #include <stdlib.h>
 #include "..\..\Include\AutoPtr.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 static VOID RemoveTrailingZeroDecimals(_Inout_ MX::CStringA &cStrA);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderReqAcceptCharset::CHttpHeaderReqAcceptCharset() : CHttpHeaderBase()
 {
@@ -131,7 +130,7 @@ HRESULT CHttpHeaderReqAcceptCharset::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE
             }
         }
 
-    skip_null_listitem:
+skip_null_listitem:
         // skip spaces
         szValueA = SkipSpaces(szValueA, szValueEndA);
 
@@ -147,7 +146,8 @@ HRESULT CHttpHeaderReqAcceptCharset::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE
                 return MX_E_InvalidData;
             }
         }
-    } while (szValueA < szValueEndA);
+    }
+    while (szValueA < szValueEndA);
 
     // do we got one?
     if (bGotItem == FALSE)
@@ -195,8 +195,7 @@ HRESULT CHttpHeaderReqAcceptCharset::Build(_Inout_ CStringA &cStrDestA, _In_ Htt
     return S_OK;
 }
 
-HRESULT CHttpHeaderReqAcceptCharset::AddCharset(_In_z_ LPCSTR szCharsetA, _In_opt_ SIZE_T nCharsetLen,
-                                                _Out_opt_ CCharset **lplpCharset)
+HRESULT CHttpHeaderReqAcceptCharset::AddCharset(_In_z_ LPCSTR szCharsetA, _In_opt_ SIZE_T nCharsetLen, _Out_opt_ CCharset **lplpCharset)
 {
     TAutoDeletePtr<CCharset> cNewCharset;
     SIZE_T i, nCount;

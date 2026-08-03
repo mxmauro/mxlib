@@ -23,10 +23,9 @@
 #include "..\Defines.h"
 #include "..\Strings\Strings.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 // Convert Unicode to Punycode. Returns the number of Unicode characters that were converted.
 HRESULT Punycode_Encode(_Inout_ CStringA &cStrDestA, _In_z_ LPCWSTR szSrcW, _In_opt_ SIZE_T nSrcLen = (SIZE_T)-1);

@@ -32,10 +32,9 @@
 #pragma intrinsic(_InterlockedCompareExchange64)
 #endif //_M_X64
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 #define __InterlockedRead(lpnValue) _InterlockedExchangeAdd(lpnValue, 0L)
 #define __InterlockedRead64(lpnValue) _InterlockedExchangeAdd64(lpnValue, 0i64)
@@ -85,7 +84,8 @@ inline LONG __InterlockedClamp(_In_ LONG volatile *lpnValue, _In_ LONG nMinimumV
             break;
         }
         newVal = _InterlockedCompareExchange(lpnValue, newVal, initVal);
-    } while (newVal != initVal);
+    }
+    while (newVal != initVal);
     return newVal;
 }
 
@@ -110,7 +110,8 @@ inline DWORD __InterlockedClampU(_In_ LONG volatile *lpnValue, _In_ DWORD dwMini
             break;
         }
         newVal = _InterlockedCompareExchange(lpnValue, (LONG)newVal, (LONG)initVal);
-    } while (newVal != initVal);
+    }
+    while (newVal != initVal);
     return newVal;
 }
 
@@ -124,7 +125,8 @@ inline LONG __InterlockedAndOr(_In_ LONG volatile *lpnValue, _In_ LONG nToAdd, _
         initVal = newVal;
         newVal = (newVal & (~nToRemove)) | nToAdd;
         newVal = _InterlockedCompareExchange(lpnValue, newVal, initVal);
-    } while (newVal != initVal);
+    }
+    while (newVal != initVal);
     return newVal;
 }
 

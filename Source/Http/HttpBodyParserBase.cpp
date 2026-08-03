@@ -19,7 +19,7 @@
  */
 #include "..\..\Include\Http\HttpBodyParserBase.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #ifdef _DEBUG
 #define _SHARING_MODE FILE_SHARE_READ
@@ -29,8 +29,7 @@
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpBodyParserBase::CHttpBodyParserBase() : TRefCounted<CBaseMemObj>()
 {

@@ -27,25 +27,17 @@ typedef struct evp_pkey_st EVP_PKEY;
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CEncryptionKey : public virtual TRefCounted<CBaseMemObj>
 {
-  public:
+public:
     typedef enum
     {
-        Unknown = -1,
-        RSA = 0,
-        ED25519,
-        ED448,
-        Poly1305,
-        DSA,
-        DH,
-        DHX
+        Unknown = -1, RSA = 0, ED25519, ED448, Poly1305, DSA, DH, DHX
     } eAlgorithm;
 
-  public:
+public:
     CEncryptionKey();
     CEncryptionKey(_In_ const CEncryptionKey &cSrc) throw(...);
     ~CEncryptionKey();
@@ -73,8 +65,8 @@ class CEncryptionKey : public virtual TRefCounted<CBaseMemObj>
     int GetBaseId() const;
     eAlgorithm GetAlgorithm() const;
 
-  private:
-    EVP_PKEY *lpKey{NULL};
+private:
+    EVP_PKEY *lpKey{ NULL };
 };
 
 } // namespace MX

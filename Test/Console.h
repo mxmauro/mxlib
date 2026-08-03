@@ -21,10 +21,9 @@
 
 #include "Test.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace Console
-{
+namespace Console {
 
 BOOL Initialize();
 
@@ -37,7 +36,7 @@ VOID PrintTimestamp();
 
 class CPrintLock
 {
-  public:
+public:
     CPrintLock();
     ~CPrintLock();
 };

@@ -25,14 +25,13 @@
 #include "Threads.h"
 #include "Callbacks.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CIoCompletionPort : private virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     CIoCompletionPort();
     ~CIoCompletionPort();
 
@@ -61,23 +60,22 @@ class CIoCompletionPort : private virtual CBaseMemObj, public CNonCopyableObj
         return (hIOCP != NULL) ? true : false;
     };
 
-  private:
-    HANDLE hIOCP{NULL};
+private:
+    HANDLE hIOCP{ NULL };
 };
 
 //-----------------------------------------------------------
 
 class CIoCompletionPortThreadPool : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     typedef Callback<VOID(_In_ CIoCompletionPortThreadPool *lpPool, _Inout_ LPVOID &lpUserData)> OnThreadStartCallback;
     typedef Callback<VOID(_In_ CIoCompletionPortThreadPool *lpPool, _In_ LPVOID lpUserData)> OnThreadEndCallback;
     typedef Callback<VOID(_In_ CIoCompletionPortThreadPool *lpPool, _In_ HRESULT hRes)> OnThreadStartErrorCallback;
-    typedef Callback<VOID(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
-                          _In_ HRESULT hRes)>
+    typedef Callback<VOID(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr, _In_ HRESULT hRes)>
         OnPacketCallback;
 
-  public:
+public:
     CIoCompletionPortThreadPool();
     ~CIoCompletionPortThreadPool();
 
@@ -117,17 +115,17 @@ class CIoCompletionPortThreadPool : public virtual CBaseMemObj, public CNonCopya
 
     static DWORD GetNumberOfProcessors();
 
-  private:
+private:
     class CThread : public virtual CBaseMemObj, public TClassWorkerThread<CIoCompletionPortThreadPool>
     {
-      public:
+    public:
         CThread() : CBaseMemObj(), TClassWorkerThread<CIoCompletionPortThreadPool>()
         {
             return;
         };
 
-      public:
-        LONG nFlags{0};
+    public:
+        LONG nFlags{ 0 };
         CLnkLstNode cListNode;
     };
 
@@ -136,22 +134,22 @@ class CIoCompletionPortThreadPool : public virtual CBaseMemObj, public CNonCopya
     HRESULT StartThread(_In_ BOOL bInitial);
     VOID ThreadProc(_In_ SIZE_T nParam);
 
-  private:
+private:
     OnThreadStartCallback cThreadStartCallback;
     OnThreadEndCallback cThreadEndCallback;
     OnThreadStartErrorCallback cThreadStartErrorCallback;
-    DWORD dwMinThreadsCount{0}, dwMaxThreadsCount{0};
-    DWORD dwWorkerThreadIdleTimeoutMs{2000}, dwShutdownThreadThreshold{2};
-    DWORD dwThreadStackSize{0};
-    int nThreadPriority{THREAD_PRIORITY_NORMAL};
-    LPCSTR szPoolNameA{NULL};
+    DWORD dwMinThreadsCount{ 0 }, dwMaxThreadsCount{ 0 };
+    DWORD dwWorkerThreadIdleTimeoutMs{ 2000 }, dwShutdownThreadThreshold{ 2 };
+    DWORD dwThreadStackSize{ 0 };
+    int nThreadPriority{ THREAD_PRIORITY_NORMAL };
+    LPCSTR szPoolNameA{ NULL };
     CIoCompletionPort cIOCP;
     struct
     {
-        LONG volatile nMutex{MX_FASTLOCK_INIT};
-        LONG volatile nShuttingDown{0};
-        LONG volatile nBusyCount{0};
-        LONG volatile nActiveCount{0};
+        LONG volatile nMutex{ MX_FASTLOCK_INIT };
+        LONG volatile nShuttingDown{ 0 };
+        LONG volatile nBusyCount{ 0 };
+        LONG volatile nActiveCount{ 0 };
         CLnkLst cList;
     } sThreads;
 };

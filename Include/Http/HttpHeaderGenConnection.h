@@ -23,20 +23,19 @@
 #include "HttpHeaderBase.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderGenConnection : public CHttpHeaderBase
 {
-  public:
+public:
     CHttpHeaderGenConnection();
     ~CHttpHeaderGenConnection();
 
-    MX_DECLARE_HTTPHEADER_NAME(Connection)
+    MX_DECLARE_HTTPHEADER_NAME("Connection")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
@@ -46,7 +45,7 @@ class CHttpHeaderGenConnection : public CHttpHeaderBase
     LPCSTR GetConnection(_In_ SIZE_T nIndex) const;
     BOOL HasConnection(_In_z_ LPCSTR szConnectionA) const;
 
-  private:
+private:
     TArrayListWithFree<LPSTR> cConnectionsList;
 };
 

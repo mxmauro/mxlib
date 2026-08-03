@@ -24,14 +24,11 @@
 #include "..\Strings\Strings.h"
 #include "..\DateTime\DateTime.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Http
-{
-
+namespace Http {
 enum class eBrowser
 {
     Other,
@@ -50,11 +47,9 @@ enum class eBrowser
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Http
-{
+namespace Http {
 
 eBrowser GetBrowserFromUserAgent(_In_ LPCSTR szUserAgentA, _In_opt_ SIZE_T nUserAgentLen = (SIZE_T)-1);
 

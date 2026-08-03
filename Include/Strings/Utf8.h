@@ -23,15 +23,13 @@
 #include "..\Defines.h"
 #include "Strings.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 HRESULT Utf8_Encode(_Inout_ CStringA &cStrDestA, _In_z_ LPCWSTR szSrcW, _In_opt_ SIZE_T nSrcLen = (SIZE_T)-1,
                     _In_opt_ BOOL bAppend = FALSE);
-HRESULT Utf8_Decode(_Inout_ CStringW &cStrDestW, _In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen = (SIZE_T)-1,
-                    _In_opt_ BOOL bAppend = FALSE);
+HRESULT Utf8_Decode(_Inout_ CStringW &cStrDestW, _In_z_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen = (SIZE_T)-1, _In_opt_ BOOL bAppend = FALSE);
 
 int Utf8_EncodeChar(_Out_opt_ CHAR szDestA[], _In_ WCHAR chW, _In_opt_ WCHAR chSurrogatePairW = 0);
 int Utf8_DecodeChar(_Out_opt_ WCHAR szDestW[], _In_ LPCSTR szSrcA, _In_opt_ SIZE_T nSrcLen = (SIZE_T)-1);
@@ -40,10 +38,8 @@ SIZE_T Utf8_StrLen(_In_z_ LPCSTR szSrcA);
 
 int Utf8_StrCompareA(_In_z_ LPCSTR szSrcUtf8, _In_z_ LPCSTR szSrcA, _In_opt_ BOOL bCaseInsensitive = FALSE);
 int Utf8_StrCompareW(_In_z_ LPCSTR szSrcUtf8, _In_z_ LPCWSTR szSrcW, _In_opt_ BOOL bCaseInsensitive = FALSE);
-int Utf8_StrNCompareA(_In_z_ LPCSTR szSrcUtf8, _In_z_ LPCSTR szSrcA, _In_ SIZE_T nLen,
-                      _In_opt_ BOOL bCaseInsensitive = FALSE);
-int Utf8_StrNCompareW(_In_z_ LPCSTR szSrcUtf8, _In_z_ LPCWSTR szSrcW, _In_ SIZE_T nLen,
-                      _In_opt_ BOOL bCaseInsensitive = FALSE);
+int Utf8_StrNCompareA(_In_z_ LPCSTR szSrcUtf8, _In_z_ LPCSTR szSrcA, _In_ SIZE_T nLen, _In_opt_ BOOL bCaseInsensitive = FALSE);
+int Utf8_StrNCompareW(_In_z_ LPCSTR szSrcUtf8, _In_z_ LPCWSTR szSrcW, _In_ SIZE_T nLen, _In_opt_ BOOL bCaseInsensitive = FALSE);
 
 } // namespace MX
 

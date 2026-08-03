@@ -20,17 +20,17 @@
 #include "..\..\Include\ZipLib\ZipLib.h"
 #include "Source\zlib.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-// ZLIB Header
-//~~~~~~~~~~~~~
-// Byte CMF: bits 0 to 3  CM     Compression method (always 8=DEFLATE)
-//           bits 4 to 7  CINFO  Compression info (2^CINFO = window size)
-// Byte FLG: bits 0 to 4  FCHECK (check bits for CMF and FLG)
-//           bit  5       FDICT  (preset dictionary)
-//           bits 6 to 7  FLEVEL  (compression level)
+ // ZLIB Header
+ //~~~~~~~~~~~~~
+ // Byte CMF: bits 0 to 3  CM     Compression method (always 8=DEFLATE)
+ //           bits 4 to 7  CINFO  Compression info (2^CINFO = window size)
+ // Byte FLG: bits 0 to 4  FCHECK (check bits for CMF and FLG)
+ //           bit  5       FDICT  (preset dictionary)
+ //           bits 6 to 7  FLEVEL  (compression level)
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define INUSE_None 0
 #define INUSE_Compressing 1
@@ -40,8 +40,7 @@
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CZipLib::CZipLib(_In_ BOOL _bUseZipLibHeader) : CBaseMemObj(), CNonCopyableObj()
 {
@@ -80,8 +79,7 @@ HRESULT CZipLib::BeginCompress(_In_ int nCompressionLevel)
     // initialize compression
     __try
     {
-        nErr = deflateInit2(__stream, nCompressionLevel, Z_DEFLATED, (bUseZipLibHeader != FALSE) ? 15 : -15, 8,
-                            Z_DEFAULT_STRATEGY);
+        nErr = deflateInit2(__stream, nCompressionLevel, Z_DEFLATED, (bUseZipLibHeader != FALSE) ? 15 : -15, 8, Z_DEFAULT_STRATEGY);
     }
     __except (EXCEPTION_EXECUTE_HANDLER)
     {
@@ -348,52 +346,7 @@ HRESULT CZipLib::End()
 
     switch (nInUse)
     {
-    case INUSE_Compressing:
-        nErr = Z_OK;
-        nRetry = 24;
-        while (nErr == Z_OK)
-        {
-            __stream->next_in = aTempBuf;
-            __stream->avail_in = 0;
-            __stream->next_out = aTempBuf;
-            __stream->avail_out = (uInt)sizeof(aTempBuf);
-            __try
-            {
-                nErr = deflate(__stream, Z_FINISH);
-            }
-            __except (EXCEPTION_EXECUTE_HANDLER)
-            {
-                nErr = Z_DATA_ERROR;
-            }
-            if (nErr != Z_STREAM_END && nErr != Z_OK)
-            {
-                Cleanup();
-                return (nErr == Z_MEM_ERROR) ? E_OUTOFMEMORY : E_FAIL;
-            }
-            if (__stream->avail_out > 0)
-            {
-                hRes = cProcessed.Write(aTempBuf, (SIZE_T)(__stream->avail_out));
-                if (FAILED(hRes))
-                {
-                    Cleanup();
-                    return hRes;
-                }
-            }
-            else
-            {
-                if ((--nRetry) == 0)
-                {
-                    Cleanup();
-                    return E_FAIL;
-                }
-            }
-        }
-        Cleanup();
-        break;
-
-    case INUSE_Decompressing:
-        if (bEndReached == FALSE)
-        {
+        case INUSE_Compressing:
             nErr = Z_OK;
             nRetry = 24;
             while (nErr == Z_OK)
@@ -404,7 +357,7 @@ HRESULT CZipLib::End()
                 __stream->avail_out = (uInt)sizeof(aTempBuf);
                 __try
                 {
-                    nErr = inflate(__stream, Z_FINISH);
+                    nErr = deflate(__stream, Z_FINISH);
                 }
                 __except (EXCEPTION_EXECUTE_HANDLER)
                 {
@@ -413,7 +366,7 @@ HRESULT CZipLib::End()
                 if (nErr != Z_STREAM_END && nErr != Z_OK)
                 {
                     Cleanup();
-                    return (nErr == Z_MEM_ERROR) ? E_OUTOFMEMORY : MX_E_InvalidData;
+                    return (nErr == Z_MEM_ERROR) ? E_OUTOFMEMORY : E_FAIL;
                 }
                 if (__stream->avail_out > 0)
                 {
@@ -433,12 +386,57 @@ HRESULT CZipLib::End()
                     }
                 }
             }
-        }
-        Cleanup();
-        break;
+            Cleanup();
+            break;
 
-    default:
-        return E_FAIL;
+        case INUSE_Decompressing:
+            if (bEndReached == FALSE)
+            {
+                nErr = Z_OK;
+                nRetry = 24;
+                while (nErr == Z_OK)
+                {
+                    __stream->next_in = aTempBuf;
+                    __stream->avail_in = 0;
+                    __stream->next_out = aTempBuf;
+                    __stream->avail_out = (uInt)sizeof(aTempBuf);
+                    __try
+                    {
+                        nErr = inflate(__stream, Z_FINISH);
+                    }
+                    __except (EXCEPTION_EXECUTE_HANDLER)
+                    {
+                        nErr = Z_DATA_ERROR;
+                    }
+                    if (nErr != Z_STREAM_END && nErr != Z_OK)
+                    {
+                        Cleanup();
+                        return (nErr == Z_MEM_ERROR) ? E_OUTOFMEMORY : MX_E_InvalidData;
+                    }
+                    if (__stream->avail_out > 0)
+                    {
+                        hRes = cProcessed.Write(aTempBuf, (SIZE_T)(__stream->avail_out));
+                        if (FAILED(hRes))
+                        {
+                            Cleanup();
+                            return hRes;
+                        }
+                    }
+                    else
+                    {
+                        if ((--nRetry) == 0)
+                        {
+                            Cleanup();
+                            return E_FAIL;
+                        }
+                    }
+                }
+            }
+            Cleanup();
+            break;
+
+        default:
+            return E_FAIL;
     }
     return S_OK;
 }
@@ -466,25 +464,25 @@ VOID CZipLib::Cleanup()
 {
     switch (nInUse)
     {
-    case INUSE_Compressing:
-        __try
-        {
-            deflateEnd(__stream);
-        }
-        __except (EXCEPTION_EXECUTE_HANDLER)
-        {
-        }
-        break;
+        case INUSE_Compressing:
+            __try
+            {
+                deflateEnd(__stream);
+            }
+            __except (EXCEPTION_EXECUTE_HANDLER)
+            {
+            }
+            break;
 
-    case INUSE_Decompressing:
-        __try
-        {
-            inflateEnd(__stream);
-        }
-        __except (EXCEPTION_EXECUTE_HANDLER)
-        {
-        }
-        break;
+        case INUSE_Decompressing:
+            __try
+            {
+                inflateEnd(__stream);
+            }
+            __except (EXCEPTION_EXECUTE_HANDLER)
+            {
+            }
+            break;
     }
     nInUse = INUSE_None;
     nLevel = nGZipHdrState = 0;
@@ -503,99 +501,111 @@ BOOL CZipLib::CheckAndSkipGZipHeader(_Inout_ LPBYTE &s, _Inout_ SIZE_T &nSrcLen,
     {
         switch (nGZipHdrState)
         {
-        case 3: // method
-            if (*s != Z_DEFLATED)
-            {
-                return FALSE;
-            }
-            nGZipHdrState++;
-            break;
-        case 4: // flags
-            aTempBuf[8] = *s;
-            if ((aTempBuf[8] & 0xE0) != 0)
-            { // RESERVED
-                return FALSE;
-            }
-            nGZipHdrState++;
-            break;
-
-        case 5: // discard time, xflags and OS code
-        case 6:
-        case 7:
-        case 8:
-        case 9:
-        case 10:
-            nGZipHdrState++;
-            break;
-
-        case 11: // has EXTRA_FIELD?
-            if ((aTempBuf[8] & 0x04) == 0)
-            {
-                goto casgzh_cont21; // no... skip to next
-            }
-            wTemp16 = (WORD)(*s);
-            nGZipHdrState++;
-            break;
-        case 12:
-            wTemp16 |= ((WORD)(*s)) << 8;
-            if (wTemp16 == 0)
-            {
-                nGZipHdrState = 21;
-            }
-            else
-            {
+            case 3:
+                // method
+                if (*s != Z_DEFLATED)
+                {
+                    return FALSE;
+                }
                 nGZipHdrState++;
-            }
-            break;
-        case 14:
-            if ((--wTemp16) == 0)
-            {
-                nGZipHdrState = 21;
-            }
-            break;
+                break;
 
-        case 21: // has ORIG_NAME?
-        casgzh_cont21:
-            if ((aTempBuf[8] & 0x08) == 0)
-            {
-                goto casgzh_cont31; // no... skip to next
-            }
-            // fall thru
-        case 22:
-            if (*s == 0)
-            {
-                nGZipHdrState = 31;
-            }
-            break;
+            case 4:
+                // flags
+                aTempBuf[8] = *s;
+                if ((aTempBuf[8] & 0xE0) != 0)
+                {
+                    // RESERVED
+                    return FALSE;
+                }
+                nGZipHdrState++;
+                break;
 
-        case 31: // has COMMENT?
-        casgzh_cont31:
-            if ((aTempBuf[8] & 0x10) == 0)
-            {
-                goto casgzh_cont41; // no... skip to next
-            }
-            // fall thru
-        case 32:
-            if ((*s) == 0)
-            {
-                nGZipHdrState = 41;
-            }
-            break;
+            case 5:
+                // discard time, xflags and OS code
+            case 6:
+            case 7:
+            case 8:
+            case 9:
+            case 10:
+                nGZipHdrState++;
+                break;
 
-        case 41: // has HEAD_CRC?
-        casgzh_cont41:
-            if ((aTempBuf[8] & 0x02) == 0)
-            {
-                // no... mark end
+            case 11:
+                // has EXTRA_FIELD?
+                if ((aTempBuf[8] & 0x04) == 0)
+                {
+                    goto casgzh_cont21; // no... skip to next
+                }
+                wTemp16 = (WORD)(*s);
+                nGZipHdrState++;
+                break;
+
+            case 12:
+                wTemp16 |= ((WORD)(*s)) << 8;
+                if (wTemp16 == 0)
+                {
+                    nGZipHdrState = 21;
+                }
+                else
+                {
+                    nGZipHdrState++;
+                }
+                break;
+
+            case 14:
+                if ((--wTemp16) == 0)
+                {
+                    nGZipHdrState = 21;
+                }
+                break;
+
+            case 21:
+                // has ORIG_NAME?
+casgzh_cont21:
+                if ((aTempBuf[8] & 0x08) == 0)
+                {
+                    goto casgzh_cont31; // no... skip to next
+                }
+                // fall thru
+            case 22:
+                if (*s == 0)
+                {
+                    nGZipHdrState = 31;
+                }
+                break;
+
+            case 31:
+                // has COMMENT?
+casgzh_cont31:
+                if ((aTempBuf[8] & 0x10) == 0)
+                {
+                    goto casgzh_cont41; // no... skip to next
+                }
+                // fall thru
+            case 32:
+                if ((*s) == 0)
+                {
+                    nGZipHdrState = 41;
+                }
+                break;
+
+            case 41:
+                // has HEAD_CRC?
+casgzh_cont41:
+                if ((aTempBuf[8] & 0x02) == 0)
+                {
+                    // no... mark end
+                    nGZipHdrState = 0;
+                    return TRUE;
+                }
+                nGZipHdrState++;
+                break;
+
+            case 42:
+                // CRC has 2 bytes so mark end
                 nGZipHdrState = 0;
-                return TRUE;
-            }
-            nGZipHdrState++;
-            break;
-        case 42:
-            // CRC has 2 bytes so mark end
-            nGZipHdrState = 0;
-            break;
+                break;
         }
         s++;
         nSrcLen--;

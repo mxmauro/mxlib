@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderRespAge.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderRespAge::CHttpHeaderRespAge() : CHttpHeaderBase()
 {

@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\Email.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 BOOL IsValidEMailAddress(_In_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen)
 {
@@ -51,30 +50,30 @@ BOOL IsValidEMailAddress(_In_ LPCSTR szAddressA, _In_opt_ SIZE_T nAddressLen)
         }
         switch (*szAddressA)
         {
-        case '.':
-            if (bLastWasDot != FALSE || szAtPosA == szAddressA - 1)
-            {
-                return FALSE;
-            }
-            bLastWasDot = TRUE;
-            break;
+            case '.':
+                if (bLastWasDot != FALSE || szAtPosA == szAddressA - 1)
+                {
+                    return FALSE;
+                }
+                bLastWasDot = TRUE;
+                break;
 
-        case '@':
-            if (bLastWasDot != FALSE || szAtPosA != NULL)
-            {
-                return FALSE;
-            }
-            szAtPosA = szAddressA;
-            bLastWasDot = FALSE;
-            break;
+            case '@':
+                if (bLastWasDot != FALSE || szAtPosA != NULL)
+                {
+                    return FALSE;
+                }
+                szAtPosA = szAddressA;
+                bLastWasDot = FALSE;
+                break;
 
-        default:
-            if (StrChrA("()<>,;:\\/\"[]", *szAddressA) != NULL)
-            {
-                return FALSE;
-            }
-            bLastWasDot = FALSE;
-            break;
+            default:
+                if (StrChrA("()<>,;:\\/\"[]", *szAddressA) != NULL)
+                {
+                    return FALSE;
+                }
+                bLastWasDot = FALSE;
+                break;
         }
     }
     return (bLastWasDot != FALSE || szAtPosA == NULL || szAtPosA == szAddressA - 1) ? FALSE : TRUE;
@@ -107,30 +106,30 @@ BOOL IsValidEMailAddress(_In_ LPCWSTR szAddressW, _In_opt_ SIZE_T nAddressLen)
         }
         switch (*szAddressW)
         {
-        case L'.':
-            if (bLastWasDot != FALSE || szAtPosW == szAddressW - 1)
-            {
-                return FALSE;
-            }
-            bLastWasDot = TRUE;
-            break;
+            case L'.':
+                if (bLastWasDot != FALSE || szAtPosW == szAddressW - 1)
+                {
+                    return FALSE;
+                }
+                bLastWasDot = TRUE;
+                break;
 
-        case L'@':
-            if (bLastWasDot != FALSE || szAtPosW != NULL)
-            {
-                return FALSE;
-            }
-            szAtPosW = szAddressW;
-            bLastWasDot = FALSE;
-            break;
+            case L'@':
+                if (bLastWasDot != FALSE || szAtPosW != NULL)
+                {
+                    return FALSE;
+                }
+                szAtPosW = szAddressW;
+                bLastWasDot = FALSE;
+                break;
 
-        default:
-            if (StrChrW(L"()<>,;:\\/\"[]", *szAddressW) != NULL)
-            {
-                return FALSE;
-            }
-            bLastWasDot = FALSE;
-            break;
+            default:
+                if (StrChrW(L"()<>,;:\\/\"[]", *szAddressW) != NULL)
+                {
+                    return FALSE;
+                }
+                bLastWasDot = FALSE;
+                break;
         }
     }
     return (bLastWasDot != FALSE || szAtPosW == NULL || szAtPosW == szAddressW - 1) ? FALSE : TRUE;

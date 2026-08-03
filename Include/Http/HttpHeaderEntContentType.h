@@ -23,20 +23,19 @@
 #include "HttpHeaderBase.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderEntContentType : public CHttpHeaderBase
 {
-  public:
+public:
     CHttpHeaderEntContentType();
     ~CHttpHeaderEntContentType();
 
-    MX_DECLARE_HTTPHEADER_NAME(Content - Type)
+    MX_DECLARE_HTTPHEADER_NAME("Content-Type")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
@@ -50,7 +49,7 @@ class CHttpHeaderEntContentType : public CHttpHeaderBase
     LPCWSTR GetParamValue(_In_ SIZE_T nIndex) const;
     LPCWSTR GetParamValue(_In_z_ LPCSTR szNameA) const;
 
-  private:
+private:
     typedef struct
     {
         LPWSTR szValueW;

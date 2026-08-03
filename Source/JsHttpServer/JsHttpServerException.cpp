@@ -19,10 +19,9 @@
  */
 #include "JsHttpServerCommon.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CJsHttpServerSystemExit::CJsHttpServerSystemExit(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex)
     : CJsError(lpCtx, nStackIndex)

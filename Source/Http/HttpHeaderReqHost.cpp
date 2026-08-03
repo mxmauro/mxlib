@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderReqHost.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderReqHost::CHttpHeaderReqHost() : CHttpHeaderBase()
 {

@@ -23,17 +23,16 @@
 #include "HttpHeaderBase.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderGenSecWebSocketExtensions : public CHttpHeaderBase
 {
-  public:
+public:
     class CExtension : public virtual CBaseMemObj
     {
-      public:
+    public:
         CExtension();
         ~CExtension();
 
@@ -49,7 +48,7 @@ class CHttpHeaderGenSecWebSocketExtensions : public CHttpHeaderBase
         LPCWSTR GetParamValue(_In_ SIZE_T nIndex) const;
         LPCWSTR GetParamValue(_In_z_ LPCSTR szNameA) const;
 
-      private:
+    private:
         friend class CHttpHeaderGenSecWebSocketExtensions;
 
         typedef struct
@@ -58,20 +57,20 @@ class CHttpHeaderGenSecWebSocketExtensions : public CHttpHeaderBase
             CHAR szNameA[1];
         } PARAMETER, *LPPARAMETER;
 
-      private:
+    private:
         CStringA cStrExtensionA;
         TArrayListWithFree<LPPARAMETER> aParamsList;
     };
 
     //----
 
-  public:
+public:
     CHttpHeaderGenSecWebSocketExtensions();
     ~CHttpHeaderGenSecWebSocketExtensions();
 
-    MX_DECLARE_HTTPHEADER_NAME(Sec - WebSocket - Extensions)
+    MX_DECLARE_HTTPHEADER_NAME("Sec-WebSocket-Extensions")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
@@ -80,8 +79,7 @@ class CHttpHeaderGenSecWebSocketExtensions : public CHttpHeaderBase
         return eDuplicateBehavior::Merge;
     };
 
-    HRESULT AddExtension(_In_z_ LPCSTR szExtensionA, _In_opt_ SIZE_T nExtension = (SIZE_T)-1,
-                         _Out_opt_ CExtension **lplpExtension = NULL);
+    HRESULT AddExtension(_In_z_ LPCSTR szExtensionA, _In_opt_ SIZE_T nExtension = (SIZE_T)-1, _Out_opt_ CExtension **lplpExtension = NULL);
 
     SIZE_T GetExtensionsCount() const;
     CExtension *GetExtension(_In_ SIZE_T nIndex) const;
@@ -89,7 +87,7 @@ class CHttpHeaderGenSecWebSocketExtensions : public CHttpHeaderBase
 
     HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
 
-  private:
+private:
     friend class CExtension;
 
     TArrayListWithDelete<CExtension *> cExtensionsList;

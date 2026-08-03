@@ -22,25 +22,22 @@
 
 #include "Defines.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CCircularBuffer : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     CCircularBuffer();
     ~CCircularBuffer();
 
     SIZE_T Find(_In_ BYTE nToScan, _In_ SIZE_T nStartPos = 0); // returns -1 if not found
 
-    VOID GetReadPtr(_Out_opt_ LPBYTE *lplpPtr1, _Out_opt_ SIZE_T *lpnSize1, _Out_opt_ LPBYTE *lplpPtr2,
-                    _Out_opt_ SIZE_T *lpnSize2);
+    VOID GetReadPtr(_Out_opt_ LPBYTE *lplpPtr1, _Out_opt_ SIZE_T *lpnSize1, _Out_opt_ LPBYTE *lplpPtr2, _Out_opt_ SIZE_T *lpnSize2);
     HRESULT AdvanceReadPtr(_In_ SIZE_T nCount);
 
-    VOID GetWritePtr(_Out_opt_ LPBYTE *lplpPtr1, _Out_opt_ SIZE_T *lpnSize1, _Out_opt_ LPBYTE *lplpPtr2,
-                     _Out_opt_ SIZE_T *lpnSize2);
+    VOID GetWritePtr(_Out_opt_ LPBYTE *lplpPtr1, _Out_opt_ SIZE_T *lpnSize1, _Out_opt_ LPBYTE *lplpPtr2, _Out_opt_ SIZE_T *lpnSize2);
     HRESULT AdvanceWritePtr(_In_ SIZE_T nCount);
 
     SIZE_T GetAvailableForRead() const;
@@ -61,7 +58,7 @@ class CCircularBuffer : public virtual CBaseMemObj, public CNonCopyableObj
 
     VOID ReArrangeBuffer();
 
-  private:
+private:
     LPBYTE lpData;
     SIZE_T nSize, nStart, nLen;
 };

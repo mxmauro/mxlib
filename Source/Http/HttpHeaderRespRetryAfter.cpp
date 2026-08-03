@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderRespRetryAfter.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderRespRetryAfter::CHttpHeaderRespRetryAfter() : CHttpHeaderBase()
 {

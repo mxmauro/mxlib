@@ -23,7 +23,7 @@
 
 #define __DBL_EPSILON 0.00001
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 template <typename T> static bool isNan(_In_ T value)
 {
@@ -60,11 +60,9 @@ template <typename fromType, typename toType> static bool convertNumber(_In_ fro
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Database
-{
+namespace Database {
 
 #pragma warning(suppress : 26495) // Suppress analyzer bug when initializing unions
 CField::CField() : TRefCounted<CBaseMemObj>(), CNonCopyableObj()
@@ -337,29 +335,29 @@ BOOL CField::GetAsBoolean(_Out_ PBOOL lpbValue)
 {
     switch (nFieldType)
     {
-    case eFieldType::Boolean:
-        *lpbValue = b;
-        return TRUE;
+        case eFieldType::Boolean:
+            *lpbValue = b;
+            return TRUE;
 
-    case eFieldType::UInt32:
-        *lpbValue = (ul != 0) ? TRUE : FALSE;
-        return TRUE;
+        case eFieldType::UInt32:
+            *lpbValue = (ul != 0) ? TRUE : FALSE;
+            return TRUE;
 
-    case eFieldType::Int32:
-        *lpbValue = (l != 0) ? TRUE : FALSE;
-        return TRUE;
+        case eFieldType::Int32:
+            *lpbValue = (l != 0) ? TRUE : FALSE;
+            return TRUE;
 
-    case eFieldType::UInt64:
-        *lpbValue = (ull != 0) ? TRUE : FALSE;
-        return TRUE;
+        case eFieldType::UInt64:
+            *lpbValue = (ull != 0) ? TRUE : FALSE;
+            return TRUE;
 
-    case eFieldType::Int64:
-        *lpbValue = (ll != 0) ? TRUE : FALSE;
-        return TRUE;
+        case eFieldType::Int64:
+            *lpbValue = (ll != 0) ? TRUE : FALSE;
+            return TRUE;
 
-    case eFieldType::Double:
-        *lpbValue = (dbl < -__DBL_EPSILON || dbl > __DBL_EPSILON) ? TRUE : FALSE;
-        return TRUE;
+        case eFieldType::Double:
+            *lpbValue = (dbl < -__DBL_EPSILON || dbl > __DBL_EPSILON) ? TRUE : FALSE;
+            return TRUE;
     }
     *lpbValue = FALSE;
     return FALSE;
@@ -369,44 +367,44 @@ BOOL CField::GetAsUInt32(_Out_ PULONG lpnValue)
 {
     switch (nFieldType)
     {
-    case eFieldType::Boolean:
-        *lpnValue = (b != FALSE) ? 1 : 0;
-        return TRUE;
-
-    case eFieldType::UInt32:
-        *lpnValue = ul;
-        return TRUE;
-
-    case eFieldType::Int32:
-        if (l >= 0)
-        {
-            *lpnValue = (ULONG)l;
+        case eFieldType::Boolean:
+            *lpnValue = (b != FALSE) ? 1 : 0;
             return TRUE;
-        }
-        break;
 
-    case eFieldType::UInt64:
-        if (ull <= 0xFFFFFFFFui64)
-        {
-            *lpnValue = (ULONG)ull;
+        case eFieldType::UInt32:
+            *lpnValue = ul;
             return TRUE;
-        }
-        break;
 
-    case eFieldType::Int64:
-        if (ll >= 0i64 && ll <= 0xFFFFFFFFi64)
-        {
-            *lpnValue = (ULONG)(ULONGLONG)ll;
-            return TRUE;
-        }
-        break;
+        case eFieldType::Int32:
+            if (l >= 0)
+            {
+                *lpnValue = (ULONG)l;
+                return TRUE;
+            }
+            break;
 
-    case eFieldType::Double:
-        if (convertNumber<double, ULONG>(dbl, lpnValue))
-        {
-            return TRUE;
-        }
-        break;
+        case eFieldType::UInt64:
+            if (ull <= 0xFFFFFFFFui64)
+            {
+                *lpnValue = (ULONG)ull;
+                return TRUE;
+            }
+            break;
+
+        case eFieldType::Int64:
+            if (ll >= 0i64 && ll <= 0xFFFFFFFFi64)
+            {
+                *lpnValue = (ULONG)(ULONGLONG)ll;
+                return TRUE;
+            }
+            break;
+
+        case eFieldType::Double:
+            if (convertNumber<double, ULONG>(dbl, lpnValue))
+            {
+                return TRUE;
+            }
+            break;
     }
     *lpnValue = 0;
     return FALSE;
@@ -416,44 +414,44 @@ BOOL CField::GetAsInt32(_Out_ PLONG lpnValue) const
 {
     switch (nFieldType)
     {
-    case eFieldType::Boolean:
-        *lpnValue = (b != FALSE) ? 1 : 0;
-        return TRUE;
-
-    case eFieldType::UInt32:
-        if (ul <= 0x7FFFFFFF)
-        {
-            *lpnValue = (LONG)ul;
+        case eFieldType::Boolean:
+            *lpnValue = (b != FALSE) ? 1 : 0;
             return TRUE;
-        }
-        break;
 
-    case eFieldType::Int32:
-        *lpnValue = l;
-        return TRUE;
+        case eFieldType::UInt32:
+            if (ul <= 0x7FFFFFFF)
+            {
+                *lpnValue = (LONG)ul;
+                return TRUE;
+            }
+            break;
 
-    case eFieldType::UInt64:
-        if (ull <= 0x7FFFFFFFui64)
-        {
-            *lpnValue = (LONG)(ULONG)ull;
+        case eFieldType::Int32:
+            *lpnValue = l;
             return TRUE;
-        }
-        break;
 
-    case eFieldType::Int64:
-        if (ll >= -2147483648i64 && ll <= 2147483647i64)
-        {
-            *lpnValue = (LONG)ll;
-            return TRUE;
-        }
-        break;
+        case eFieldType::UInt64:
+            if (ull <= 0x7FFFFFFFui64)
+            {
+                *lpnValue = (LONG)(ULONG)ull;
+                return TRUE;
+            }
+            break;
 
-    case eFieldType::Double:
-        if (convertNumber<double, LONG>(dbl, lpnValue))
-        {
-            return TRUE;
-        }
-        break;
+        case eFieldType::Int64:
+            if (ll >= -2147483648i64 && ll <= 2147483647i64)
+            {
+                *lpnValue = (LONG)ll;
+                return TRUE;
+            }
+            break;
+
+        case eFieldType::Double:
+            if (convertNumber<double, LONG>(dbl, lpnValue))
+            {
+                return TRUE;
+            }
+            break;
     }
     *lpnValue = 0;
     return FALSE;
@@ -463,40 +461,40 @@ BOOL CField::GetAsUInt64(_Out_ PULONGLONG lpnValue) const
 {
     switch (nFieldType)
     {
-    case eFieldType::Boolean:
-        *lpnValue = (b != FALSE) ? 1ui64 : 0ui64;
-        return TRUE;
-
-    case eFieldType::UInt32:
-        *lpnValue = (ULONGLONG)ul;
-        return TRUE;
-
-    case eFieldType::Int32:
-        if (l >= 0)
-        {
-            *lpnValue = (ULONGLONG)(ULONG)l;
+        case eFieldType::Boolean:
+            *lpnValue = (b != FALSE) ? 1ui64 : 0ui64;
             return TRUE;
-        }
-        break;
 
-    case eFieldType::UInt64:
-        *lpnValue = (ULONG)ull;
-        return TRUE;
-
-    case eFieldType::Int64:
-        if (ll >= 0i64)
-        {
-            *lpnValue = (ULONGLONG)ll;
+        case eFieldType::UInt32:
+            *lpnValue = (ULONGLONG)ul;
             return TRUE;
-        }
-        break;
 
-    case eFieldType::Double:
-        if (convertNumber<double, ULONGLONG>(dbl, lpnValue))
-        {
+        case eFieldType::Int32:
+            if (l >= 0)
+            {
+                *lpnValue = (ULONGLONG)(ULONG)l;
+                return TRUE;
+            }
+            break;
+
+        case eFieldType::UInt64:
+            *lpnValue = (ULONG)ull;
             return TRUE;
-        }
-        break;
+
+        case eFieldType::Int64:
+            if (ll >= 0i64)
+            {
+                *lpnValue = (ULONGLONG)ll;
+                return TRUE;
+            }
+            break;
+
+        case eFieldType::Double:
+            if (convertNumber<double, ULONGLONG>(dbl, lpnValue))
+            {
+                return TRUE;
+            }
+            break;
     }
     *lpnValue = 0;
     return FALSE;
@@ -506,36 +504,36 @@ BOOL CField::GetAsInt64(_Out_ PLONGLONG lpnValue) const
 {
     switch (nFieldType)
     {
-    case eFieldType::Boolean:
-        *lpnValue = (b != FALSE) ? 1 : 0;
-        return TRUE;
-
-    case eFieldType::UInt32:
-        *lpnValue = (LONGLONG)(ULONGLONG)ul;
-        return TRUE;
-
-    case eFieldType::Int32:
-        *lpnValue = (LONGLONG)l;
-        return TRUE;
-
-    case eFieldType::UInt64:
-        if (ull <= 0x7FFFFFFFFFFFFFFFui64)
-        {
-            *lpnValue = (LONGLONG)ull;
+        case eFieldType::Boolean:
+            *lpnValue = (b != FALSE) ? 1 : 0;
             return TRUE;
-        }
-        break;
 
-    case eFieldType::Int64:
-        *lpnValue = (LONGLONG)ll;
-        return TRUE;
-
-    case eFieldType::Double:
-        if (convertNumber<double, LONGLONG>(dbl, lpnValue))
-        {
+        case eFieldType::UInt32:
+            *lpnValue = (LONGLONG)(ULONGLONG)ul;
             return TRUE;
-        }
-        break;
+
+        case eFieldType::Int32:
+            *lpnValue = (LONGLONG)l;
+            return TRUE;
+
+        case eFieldType::UInt64:
+            if (ull <= 0x7FFFFFFFFFFFFFFFui64)
+            {
+                *lpnValue = (LONGLONG)ull;
+                return TRUE;
+            }
+            break;
+
+        case eFieldType::Int64:
+            *lpnValue = (LONGLONG)ll;
+            return TRUE;
+
+        case eFieldType::Double:
+            if (convertNumber<double, LONGLONG>(dbl, lpnValue))
+            {
+                return TRUE;
+            }
+            break;
     }
     *lpnValue = 0;
     return FALSE;
@@ -545,41 +543,41 @@ BOOL CField::GetAsDouble(_Out_ double *lpnValue) const
 {
     switch (nFieldType)
     {
-    case eFieldType::Boolean:
-        *lpnValue = (b != FALSE) ? 1 : 0;
-        return TRUE;
-
-    case eFieldType::UInt32:
-        if (convertNumber<ULONG, double>(ul, lpnValue))
-        {
+        case eFieldType::Boolean:
+            *lpnValue = (b != FALSE) ? 1 : 0;
             return TRUE;
-        }
-        break;
 
-    case eFieldType::Int32:
-        if (convertNumber<LONG, double>(l, lpnValue))
-        {
+        case eFieldType::UInt32:
+            if (convertNumber<ULONG, double>(ul, lpnValue))
+            {
+                return TRUE;
+            }
+            break;
+
+        case eFieldType::Int32:
+            if (convertNumber<LONG, double>(l, lpnValue))
+            {
+                return TRUE;
+            }
+            break;
+
+        case eFieldType::UInt64:
+            if (convertNumber<ULONGLONG, double>(ull, lpnValue))
+            {
+                return TRUE;
+            }
+            break;
+
+        case eFieldType::Int64:
+            if (convertNumber<LONGLONG, double>(ll, lpnValue))
+            {
+                return TRUE;
+            }
+            break;
+
+        case eFieldType::Double:
+            *lpnValue = dbl;
             return TRUE;
-        }
-        break;
-
-    case eFieldType::UInt64:
-        if (convertNumber<ULONGLONG, double>(ull, lpnValue))
-        {
-            return TRUE;
-        }
-        break;
-
-    case eFieldType::Int64:
-        if (convertNumber<LONGLONG, double>(ll, lpnValue))
-        {
-            return TRUE;
-        }
-        break;
-
-    case eFieldType::Double:
-        *lpnValue = dbl;
-        return TRUE;
     }
     *lpnValue = 0;
     return FALSE;

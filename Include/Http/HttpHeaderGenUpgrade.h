@@ -22,20 +22,19 @@
 
 #include "HttpHeaderBase.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderGenUpgrade : public CHttpHeaderBase
 {
-  public:
+public:
     CHttpHeaderGenUpgrade();
     ~CHttpHeaderGenUpgrade();
 
-    MX_DECLARE_HTTPHEADER_NAME(Upgrade)
+    MX_DECLARE_HTTPHEADER_NAME("Upgrade")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
@@ -45,7 +44,7 @@ class CHttpHeaderGenUpgrade : public CHttpHeaderBase
     LPCSTR GetProduct(_In_ SIZE_T nIndex) const;
     BOOL HasProduct(_In_z_ LPCSTR szProductA) const;
 
-  private:
+private:
     TArrayListWithFree<LPSTR> cProductsList;
 };
 

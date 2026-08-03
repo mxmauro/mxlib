@@ -24,12 +24,12 @@
 #include "..\RefCounted.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define MX_DECLARE_HTTPHEADER_NAME(__name)                                                                             \
     static LPCSTR GetHeaderNameStatic()                                                                                \
     {                                                                                                                  \
-        return #__name;                                                                                                \
+        return __name;                                                                                                 \
     };                                                                                                                 \
     virtual LPCSTR GetHeaderName() const                                                                               \
     {                                                                                                                  \
@@ -38,12 +38,11 @@
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class MX_NOVTABLE CHttpHeaderBase : public virtual TRefCounted<CBaseMemObj>
 {
-  public:
+public:
     enum class eDuplicateBehavior
     {
         Error,
@@ -52,10 +51,10 @@ class MX_NOVTABLE CHttpHeaderBase : public virtual TRefCounted<CBaseMemObj>
         Merge
     };
 
-  protected:
+protected:
     CHttpHeaderBase();
 
-  public:
+public:
     ~CHttpHeaderBase();
 
     static HRESULT Create(_In_ LPCSTR szHeaderNameA, _In_ BOOL bIsRequest, _Out_ CHttpHeaderBase **lplpHeader,
@@ -80,7 +79,7 @@ class MX_NOVTABLE CHttpHeaderBase : public virtual TRefCounted<CBaseMemObj>
 
     virtual HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
 
-  protected:
+protected:
     // helpers
     static LPCSTR SkipSpaces(_In_ LPCSTR sA, _In_ LPCSTR szEndA);
     static LPCSTR SkipUntil(_In_ LPCSTR sA, _In_ LPCSTR szEndA, _In_opt_z_ LPCSTR szStopCharsA = NULL);
@@ -88,9 +87,8 @@ class MX_NOVTABLE CHttpHeaderBase : public virtual TRefCounted<CBaseMemObj>
     static LPCSTR GetToken(_In_ LPCSTR sA, _In_ LPCSTR szEndA);
     static HRESULT GetQuotedString(_Out_ CStringA &cStrA, _Inout_ LPCSTR &sA, _In_ LPCSTR szEndA);
 
-    static HRESULT GetParamNameAndValue(_In_ BOOL bUseUtf8AsDefaultCharset, _Out_ CStringA &cStrTokenA,
-                                        _Out_ CStringW &cStrValueW, _Inout_ LPCSTR &sA, _In_ LPCSTR szEndA,
-                                        _Out_opt_ LPBOOL lpbExtendedParam = NULL);
+    static HRESULT GetParamNameAndValue(_In_ BOOL bUseUtf8AsDefaultCharset, _Out_ CStringA &cStrTokenA, _Out_ CStringW &cStrValueW,
+                                        _Inout_ LPCSTR &sA, _In_ LPCSTR szEndA, _Out_opt_ LPBOOL lpbExtendedParam = NULL);
 
     static BOOL RawISO_8859_1_to_UTF8(_Out_ CStringW &cStrDestW, _In_ LPCWSTR szSrcW, _In_ SIZE_T nSrcLen);
 };
@@ -99,9 +97,11 @@ class MX_NOVTABLE CHttpHeaderBase : public virtual TRefCounted<CBaseMemObj>
 
 class CHttpHeaderArray : public TArrayListWithRelease<CHttpHeaderBase *>
 {
-  private:
-  public:
-    CHttpHeaderArray() : TArrayListWithRelease<CHttpHeaderBase *>() {};
+private:
+public:
+    CHttpHeaderArray() : TArrayListWithRelease<CHttpHeaderBase *>()
+    {
+    };
     CHttpHeaderArray(_In_ const CHttpHeaderArray &cSrc) throw(...);
 
     CHttpHeaderArray &operator=(_In_ const CHttpHeaderArray &cSrc) throw(...);

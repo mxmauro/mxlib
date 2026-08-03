@@ -21,18 +21,41 @@
 #include "..\..\Include\Strings\Utf8.h"
 #include <stdlib.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define MAX_VERB_LENGTH 24
 static struct
 {
     LPCSTR szNameA;
     SIZE_T nNameLen;
-} sVerbs[] = {{"CHECKOUT", 8}, {"CONNECT", 7},     {"COPY", 4},   {"DELETE", 6},      {"GET", 3},      {"HEAD", 4},
-              {"LOCK", 4},     {"MKCOL", 5},       {"MOVE", 4},   {"MKACTIVITY", 10}, {"MERGE", 5},    {"M-SEARCH", 7},
-              {"NOTIFY", 6},   {"OPTIONS", 7},     {"PATCH", 5},  {"POST", 4},        {"PROPFIND", 8}, {"PROPPATCH", 9},
-              {"PUT", 3},      {"PURGE", 5},       {"REPORT", 6}, {"SUBSCRIBE", 9},   {"SEARCH", 6},   {"TRACE", 5},
-              {"UNLOCK", 6},   {"UNSUBSCRIBE", 11}};
+} sVerbs[] = {
+    {"CHECKOUT",8},
+    {"CONNECT",7},
+    {"COPY",4},
+    {"DELETE",6},
+    {"GET",3},
+    {"HEAD",4},
+    {"LOCK",4},
+    {"MKCOL",5},
+    {"MOVE",4},
+    {"MKACTIVITY",10},
+    {"MERGE",5},
+    {"M-SEARCH",7},
+    {"NOTIFY",6},
+    {"OPTIONS",7},
+    {"PATCH",5},
+    {"POST",4},
+    {"PROPFIND",8},
+    {"PROPPATCH",9},
+    {"PUT",3},
+    {"PURGE",5},
+    {"REPORT",6},
+    {"SUBSCRIBE",9},
+    {"SEARCH",6},
+    {"TRACE",5},
+    {"UNLOCK",6},
+    {"UNSUBSCRIBE",11}
+};
 
 static const LPCSTR szDefaultMimeTypeA = "application/octet-stream";
 
@@ -44,11 +67,9 @@ static CHAR UTF16_to_ISO_8859_1(_In_ WCHAR chW);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Http
-{
+namespace Http {
 
 eBrowser GetBrowserFromUserAgent(_In_ LPCSTR szUserAgentA, _In_opt_ SIZE_T nUserAgentLen)
 {
@@ -72,16 +93,16 @@ eBrowser GetBrowserFromUserAgent(_In_ LPCSTR szUserAgentA, _In_opt_ SIZE_T nUser
         {
             switch (sA[5])
             {
-            case '4':
-            case '5':
-                return eBrowser::IE6;
-
-            case '6':
-                if (nOffset + 8 < nUserAgentLen && StrNCompareA(sA + 8, "SV1", nUserAgentLen - (nOffset + 8)) != NULL)
-                {
+                case '4':
+                case '5':
                     return eBrowser::IE6;
-                }
-                break;
+
+                case '6':
+                    if (nOffset + 8 < nUserAgentLen && StrNCompareA(sA + 8, "SV1", nUserAgentLen - (nOffset + 8)) != NULL)
+                    {
+                        return eBrowser::IE6;
+                    }
+                    break;
             }
         }
         return eBrowser::IE;
@@ -131,8 +152,7 @@ LPCSTR IsValidVerb(_In_ LPCSTR szStrA, _In_ SIZE_T nStrLen)
     {
         for (SIZE_T nMethod = 0; nMethod < MX_ARRAYLEN(sVerbs); nMethod++)
         {
-            if (nStrLen == sVerbs[nMethod].nNameLen &&
-                StrNCompareA(szStrA, sVerbs[nMethod].szNameA, nStrLen, FALSE) == 0)
+            if (nStrLen == sVerbs[nMethod].nNameLen && StrNCompareA(szStrA, sVerbs[nMethod].szNameA, nStrLen, FALSE) == 0)
             {
                 return sVerbs[nMethod].szNameA;
             }
@@ -191,7 +211,9 @@ BOOL EncodeQuotedString(_Inout_ CStringA &cStrA)
       nOffset = (SIZE_T)(sA - (LPSTR)cStrA);
       cStrA.Delete(nOffset, 1);
       if (cStrA.Insert(szToInsertA, nOffset) == FALSE)
+      {
         return FALSE;
+      }
       sA = (LPSTR)cStrA + nOffset + StrLenA(szToInsertA);
       szToInsertA = NULL;
     }
@@ -657,107 +679,107 @@ static CHAR UTF16_to_ISO_8859_1(_In_ WCHAR chW)
     }
     switch (chW)
     {
-    case 0x0180:
-        return 'b';
-    case 0x0189:
-        return 'D';
-    case 0x0191:
-        return 'F';
-    case 0x0192:
-        return 'f';
-    case 0x0197:
-        return 'I';
-    case 0x019A:
-        return 'l';
-    case 0x019F:
-    case 0x01A0:
-        return 'O';
-    case 0x01A1:
-        return 'o';
-    case 0x01AB:
-        return 't';
-    case 0x01AE:
-    case 0x2122:
-        return 'T';
-    case 0x01AF:
-        return 'U';
-    case 0x01B0:
-        return 'u';
-    case 0x01B6:
-        return 'z';
-    case 0x01DE:
-        return 'A';
-    case 0x01DF:
-        return 'a';
-    case 0x01F0:
-        return 'j';
-    case 0x0261:
-        return 'g';
+        case 0x0180:
+            return 'b';
+        case 0x0189:
+            return 'D';
+        case 0x0191:
+            return 'F';
+        case 0x0192:
+            return 'f';
+        case 0x0197:
+            return 'I';
+        case 0x019A:
+            return 'l';
+        case 0x019F:
+        case 0x01A0:
+            return 'O';
+        case 0x01A1:
+            return 'o';
+        case 0x01AB:
+            return 't';
+        case 0x01AE:
+        case 0x2122:
+            return 'T';
+        case 0x01AF:
+            return 'U';
+        case 0x01B0:
+            return 'u';
+        case 0x01B6:
+            return 'z';
+        case 0x01DE:
+            return 'A';
+        case 0x01DF:
+            return 'a';
+        case 0x01F0:
+            return 'j';
+        case 0x0261:
+            return 'g';
 
-    case 0x02B9:
-    case 0x030E:
-    case 0x201C:
-    case 0x201D:
-    case 0x201E:
-        return '"';
+        case 0x02B9:
+        case 0x030E:
+        case 0x201C:
+        case 0x201D:
+        case 0x201E:
+            return '"';
 
-    case 0x02BC:
-        return '\'';
+        case 0x02BC:
+            return '\'';
 
-    case 0x02C4:
-    case 0x02C6:
-    case 0x0302:
-        return '^';
+        case 0x02C4:
+        case 0x02C6:
+        case 0x0302:
+            return '^';
 
-    case 0x02C8:
-    case 0x2018:
-    case 0x2019:
-    case 0x2032:
-        return '\'';
+        case 0x02C8:
+        case 0x2018:
+        case 0x2019:
+        case 0x2032:
+            return '\'';
 
-    case 0x02CB:
-    case 0x0300:
-    case 0x2035:
-        return '`';
+        case 0x02CB:
+        case 0x0300:
+        case 0x2035:
+            return '`';
 
-    case 0x02CD:
-    case 0x0331:
-    case 0x0332:
-        return '_';
+        case 0x02CD:
+        case 0x0331:
+        case 0x0332:
+            return '_';
 
-    case 0x02DC:
-    case 0x0303:
-        return '~';
+        case 0x02DC:
+        case 0x0303:
+            return '~';
 
-    case 0x2000:
-    case 0x2001:
-    case 0x2002:
-    case 0x2003:
-    case 0x2004:
-    case 0x2005:
-    case 0x2006:
-        return ' ';
+        case 0x2000:
+        case 0x2001:
+        case 0x2002:
+        case 0x2003:
+        case 0x2004:
+        case 0x2005:
+        case 0x2006:
+            return ' ';
 
-    case 0x2010:
-    case 0x2011:
-    case 0x2013:
-    case 0x2014:
-        return '-';
-        return '-';
-    case 0x201A:
-        return ',';
-    case 0x2022:
-    case 0x2026:
-        return '.';
-    case 0x2039:
-        return '<';
-    case 0x203A:
-        return '>';
+        case 0x2010:
+        case 0x2011:
+        case 0x2013:
+        case 0x2014:
+            return '-';
+            return '-';
+        case 0x201A:
+            return ',';
+        case 0x2022:
+        case 0x2026:
+            return '.';
+        case 0x2039:
+            return '<';
+        case 0x203A:
+            return '>';
     }
     if (chW >= 0xFF01 && chW <= 0xFF5E)
     {
         return "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`"
-               "abcdefghijklmnopqrstuvwxyz{|}~"[chW - 0xFF01];
+            "abcdefghijklmnopqrstuvwxyz{|}~"[chW - 0xFF01];
     }
     return '?';
 }

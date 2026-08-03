@@ -26,42 +26,37 @@
 
 #define IEPROXYSETTINGSRETRIEVER_FINALIZER_PRIORITY 10020
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-typedef HINTERNET(WINAPI *lpfnWinHttpOpen)(_In_opt_z_ LPCWSTR pszAgentW, _In_ DWORD dwAccessType,
-                                           _In_opt_z_ LPCWSTR pszProxyW, _In_opt_z_ LPCWSTR pszProxyBypassW,
-                                           _In_ DWORD dwFlags);
+typedef HINTERNET(WINAPI *lpfnWinHttpOpen)(_In_opt_z_ LPCWSTR pszAgentW, _In_ DWORD dwAccessType, _In_opt_z_ LPCWSTR pszProxyW,
+                                           _In_opt_z_ LPCWSTR pszProxyBypassW, _In_ DWORD dwFlags);
 typedef BOOL(WINAPI *lpfnWinHttpCloseHandle)(_In_ HINTERNET hInternet);
-typedef BOOL(WINAPI *lpfnWinHttpGetIEProxyConfigForCurrentUser)(
-    _Inout_ WINHTTP_CURRENT_USER_IE_PROXY_CONFIG *pProxyConfig);
+typedef BOOL(WINAPI *lpfnWinHttpGetIEProxyConfigForCurrentUser)(_Inout_ WINHTTP_CURRENT_USER_IE_PROXY_CONFIG *pProxyConfig);
 typedef BOOL(WINAPI *lpfnWinHttpGetProxyForUrl)(_In_ HINTERNET hSession, _In_z_ LPCWSTR lpcwszUrl,
-                                                _In_ WINHTTP_AUTOPROXY_OPTIONS *pAutoProxyOptions,
-                                                _Out_ WINHTTP_PROXY_INFO *pProxyInfo);
+                                                _In_ WINHTTP_AUTOPROXY_OPTIONS *pAutoProxyOptions, _Out_ WINHTTP_PROXY_INFO *pProxyInfo);
 typedef BOOL(WINAPI *lpfnWinHttpGetDefaultProxyConfiguration)(_Inout_ WINHTTP_PROXY_INFO *pProxyInfo);
 typedef HGLOBAL(WINAPI *lpfnGlobalFree)(_Frees_ptr_opt_ HGLOBAL hMem);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Internals
-{
+namespace Internals {
 
 class CIEProxyResolver : public CThread
 {
-  public:
+public:
     CIEProxyResolver();
     ~CIEProxyResolver();
 
     HRESULT Initialize();
 
-  private:
+private:
     VOID ThreadProc();
 
     VOID RetrieveProxySettings();
 
-  private:
+private:
     HKEY hKey[3];
     HANDLE hEvent[3];
 };
@@ -93,16 +88,14 @@ static MX::Internals::CIEProxyResolver *lpIEProxyResolver = NULL;
 static HRESULT InitApis();
 static HRESULT InitIeProxySettingsRetriever();
 static VOID IEProxyResolve_Shutdown();
-static HRESULT GetProxyConfiguration(_In_opt_z_ LPCWSTR szTargetUrlW, _Out_ MX::CStringW &cStrProxyW,
-                                     _Out_ int *lpnPort);
-static HRESULT GetProxyForAutoSettings(_In_ HINTERNET hSession, _In_z_ LPCWSTR szUrlW,
-                                       _In_opt_z_ LPCWSTR szAutoConfigUrlW, _Out_ LPWSTR *lpwszProxyW);
+static HRESULT GetProxyConfiguration(_In_opt_z_ LPCWSTR szTargetUrlW, _Out_ MX::CStringW &cStrProxyW, _Out_ int *lpnPort);
+static HRESULT GetProxyForAutoSettings(_In_ HINTERNET hSession, _In_z_ LPCWSTR szUrlW, _In_opt_z_ LPCWSTR szAutoConfigUrlW,
+                                       _Out_ LPWSTR *lpwszProxyW);
 static BOOL IsValidProxyValue(_Inout_ MX::CStringW &cStrProxyW, _Out_ int *lpnPort, _In_opt_z_ LPCWSTR szTargetUrlW);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CProxy::CProxy() : CBaseMemObj()
 {
@@ -252,11 +245,9 @@ HRESULT CProxy::Resolve(_In_ CUrl &cUrl)
 
 } // namespace MX
 
-namespace MX
-{
+namespace MX {
 
-namespace Internals
-{
+namespace Internals {
 
 CIEProxyResolver::CIEProxyResolver() : CThread()
 {
@@ -289,23 +280,17 @@ HRESULT CIEProxyResolver::Initialize()
 {
     DWORD dwOsErr;
 
-    dwOsErr = (DWORD)::RegOpenKeyExW(HKEY_CURRENT_USER,
-                                     L"Software\\Microsoft\\Windows\\CurrentVersion"
-                                     L"\\Internet Settings",
-                                     0, KEY_NOTIFY, &hKey[0]);
+    dwOsErr = (DWORD)::RegOpenKeyExW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion"
+                                                         L"\\Internet Settings", 0, KEY_NOTIFY, &hKey[0]);
     if (dwOsErr == ERROR_SUCCESS)
     {
-        dwOsErr = (DWORD)::RegOpenKeyExW(HKEY_LOCAL_MACHINE,
-                                         L"Software\\Microsoft\\Windows\\CurrentVersion"
-                                         L"\\Internet Settings",
-                                         0, KEY_NOTIFY, &hKey[1]);
+        dwOsErr = (DWORD)::RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows\\CurrentVersion"
+                                                              L"\\Internet Settings", 0, KEY_NOTIFY, &hKey[1]);
     }
     if (dwOsErr == ERROR_SUCCESS)
     {
-        dwOsErr = (DWORD)::RegOpenKeyExW(HKEY_LOCAL_MACHINE,
-                                         L"Software\\Policies\\Microsoft\\Windows\\CurrentVersion"
-                                         L"\\Internet Settings",
-                                         0, KEY_NOTIFY, &hKey[2]);
+        dwOsErr = (DWORD)::RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\Policies\\Microsoft\\Windows\\CurrentVersion"
+                                                              L"\\Internet Settings", 0, KEY_NOTIFY, &hKey[2]);
     }
     for (SIZE_T i = 0; dwOsErr == ERROR_SUCCESS && i < MX_ARRAYLEN(hEvent); i++)
     {
@@ -334,10 +319,8 @@ VOID CIEProxyResolver::ThreadProc()
 
     for (SIZE_T i = 0; i < MX_ARRAYLEN(hEvent); i++)
     {
-        ::RegNotifyChangeKeyValue(hKey[i], TRUE,
-                                  REG_NOTIFY_CHANGE_NAME | REG_NOTIFY_CHANGE_ATTRIBUTES | REG_NOTIFY_CHANGE_LAST_SET |
-                                      REG_NOTIFY_CHANGE_SECURITY,
-                                  hEvent[i], TRUE);
+        ::RegNotifyChangeKeyValue(hKey[i], TRUE, REG_NOTIFY_CHANGE_NAME | REG_NOTIFY_CHANGE_ATTRIBUTES | REG_NOTIFY_CHANGE_LAST_SET |
+                                      REG_NOTIFY_CHANGE_SECURITY, hEvent[i], TRUE);
     }
 
     while (CheckForAbort(INFINITE, 3, hEvent, &dwHitEvent) == FALSE)
@@ -348,10 +331,8 @@ VOID CIEProxyResolver::ThreadProc()
 
             RetrieveProxySettings();
 
-            ::RegNotifyChangeKeyValue(hKey[dwHitEvent - 1], TRUE,
-                                      REG_NOTIFY_CHANGE_NAME | REG_NOTIFY_CHANGE_ATTRIBUTES |
-                                          REG_NOTIFY_CHANGE_LAST_SET | REG_NOTIFY_CHANGE_SECURITY,
-                                      hEvent[dwHitEvent - 1], TRUE);
+            ::RegNotifyChangeKeyValue(hKey[dwHitEvent - 1], TRUE, REG_NOTIFY_CHANGE_NAME | REG_NOTIFY_CHANGE_ATTRIBUTES |
+                                          REG_NOTIFY_CHANGE_LAST_SET | REG_NOTIFY_CHANGE_SECURITY, hEvent[dwHitEvent - 1], TRUE);
         }
     }
     // done
@@ -360,7 +341,7 @@ VOID CIEProxyResolver::ThreadProc()
 
 VOID CIEProxyResolver::RetrieveProxySettings()
 {
-    WINHTTP_CURRENT_USER_IE_PROXY_CONFIG sIeProxy = {0};
+    WINHTTP_CURRENT_USER_IE_PROXY_CONFIG sIeProxy = { 0 };
     MX::CStringW cStrNewProxyW, cStrNewAutoConfigUrlW;
 
     if (fnWinHttpGetIEProxyConfigForCurrentUser(&sIeProxy) != FALSE)
@@ -432,7 +413,7 @@ static HRESULT InitApis()
             hDll = ::GetModuleHandleW(L"kernel32.dll");
             if (hDll == NULL)
             {
-            err_procnotfound:
+err_procnotfound:
                 hWinHttpDll = (HINSTANCE)1;
                 return MX_E_ProcNotFound;
             }
@@ -460,11 +441,9 @@ static HRESULT InitApis()
 
             fnWinHttpOpen = (lpfnWinHttpOpen)_fnWinHttpOpen;
             fnWinHttpCloseHandle = (lpfnWinHttpCloseHandle)_fnWinHttpCloseHandle;
-            fnWinHttpGetIEProxyConfigForCurrentUser =
-                (lpfnWinHttpGetIEProxyConfigForCurrentUser)_fnWinHttpGetIEProxyConfigForCurrentUser;
+            fnWinHttpGetIEProxyConfigForCurrentUser = (lpfnWinHttpGetIEProxyConfigForCurrentUser)_fnWinHttpGetIEProxyConfigForCurrentUser;
             fnWinHttpGetProxyForUrl = (lpfnWinHttpGetProxyForUrl)_fnWinHttpGetProxyForUrl;
-            fnWinHttpGetDefaultProxyConfiguration =
-                (lpfnWinHttpGetDefaultProxyConfiguration)_fnWinHttpGetDefaultProxyConfiguration;
+            fnWinHttpGetDefaultProxyConfiguration = (lpfnWinHttpGetDefaultProxyConfiguration)_fnWinHttpGetDefaultProxyConfiguration;
             fnGlobalFree = (lpfnGlobalFree)_fnGlobalFree;
 
             hWinHttpDll = hDll;
@@ -516,8 +495,7 @@ static VOID IEProxyResolve_Shutdown()
     return;
 }
 
-static HRESULT GetProxyConfiguration(_In_opt_z_ LPCWSTR szTargetUrlW, _Out_ MX::CStringW &cStrProxyW,
-                                     _Out_ int *lpnPort)
+static HRESULT GetProxyConfiguration(_In_opt_z_ LPCWSTR szTargetUrlW, _Out_ MX::CStringW &cStrProxyW, _Out_ int *lpnPort)
 {
     HINTERNET hSession;
     MX::CStringW cStrUrlW;
@@ -560,8 +538,7 @@ static HRESULT GetProxyConfiguration(_In_opt_z_ LPCWSTR szTargetUrlW, _Out_ MX::
 
         if (sIeProxySettings.cStrProxyW.IsEmpty() == FALSE)
         {
-            if (cStrProxyW.CopyN((LPCWSTR)(sIeProxySettings.cStrProxyW), sIeProxySettings.cStrProxyW.GetLength()) ==
-                FALSE)
+            if (cStrProxyW.CopyN((LPCWSTR)(sIeProxySettings.cStrProxyW), sIeProxySettings.cStrProxyW.GetLength()) == FALSE)
             {
                 cStrProxyW.Empty();
                 *lpnPort = 0;
@@ -575,8 +552,8 @@ static HRESULT GetProxyConfiguration(_In_opt_z_ LPCWSTR szTargetUrlW, _Out_ MX::
         }
     }
 
-    hSession = fnWinHttpOpen(L"Mozilla/5.0 (compatible; MX-Lib 1.0)", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-                             WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+    hSession = fnWinHttpOpen(L"Mozilla/5.0 (compatible; MX-Lib 1.0)", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME,
+                             WINHTTP_NO_PROXY_BYPASS, 0);
     if (hSession != NULL)
     {
         LPWSTR szProxyW = NULL;
@@ -633,11 +610,11 @@ static HRESULT GetProxyConfiguration(_In_opt_z_ LPCWSTR szTargetUrlW, _Out_ MX::
     return hRes;
 }
 
-static HRESULT GetProxyForAutoSettings(_In_ HINTERNET hSession, _In_z_ LPCWSTR szUrlW,
-                                       _In_opt_z_ LPCWSTR szAutoConfigUrlW, _Out_ LPWSTR *lpwszProxyW)
+static HRESULT GetProxyForAutoSettings(_In_ HINTERNET hSession, _In_z_ LPCWSTR szUrlW, _In_opt_z_ LPCWSTR szAutoConfigUrlW,
+                                       _Out_ LPWSTR *lpwszProxyW)
 {
-    WINHTTP_AUTOPROXY_OPTIONS sProxyOpts = {0};
-    WINHTTP_PROXY_INFO sProxyInfo = {0};
+    WINHTTP_AUTOPROXY_OPTIONS sProxyOpts = { 0 };
+    WINHTTP_PROXY_INFO sProxyInfo = { 0 };
     HRESULT hRes;
 
     *lpwszProxyW = NULL;
@@ -744,21 +721,21 @@ static BOOL IsValidProxyValue(_Inout_ MX::CStringW &cStrProxyW, _Out_ int *lpnPo
             nSchemeLen = (SIZE_T)(sW - szTargetUrlW);
             switch (nSchemeLen)
             {
-            case 2:
-                if (MX::StrNCompareW(szTargetUrlW, L"ws", 2) == 0)
-                {
-                    szTargetUrlW = L"http";
-                    nSchemeLen = 4;
-                }
-                break;
+                case 2:
+                    if (MX::StrNCompareW(szTargetUrlW, L"ws", 2) == 0)
+                    {
+                        szTargetUrlW = L"http";
+                        nSchemeLen = 4;
+                    }
+                    break;
 
-            case 3:
-                if (MX::StrNCompareW(szTargetUrlW, L"wss", 3) == 0)
-                {
-                    szTargetUrlW = L"https";
-                    nSchemeLen = 5;
-                }
-                break;
+                case 3:
+                    if (MX::StrNCompareW(szTargetUrlW, L"wss", 3) == 0)
+                    {
+                        szTargetUrlW = L"https";
+                        nSchemeLen = 5;
+                    }
+                    break;
             }
         }
     }

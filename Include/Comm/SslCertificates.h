@@ -37,12 +37,11 @@ class CSslCertificateArray;
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CSslCertificate : public virtual TRefCounted<CBaseMemObj>
 {
-  public:
+public:
     enum class eInformation
     {
         Organization = 1,
@@ -82,7 +81,7 @@ class CSslCertificate : public virtual TRefCounted<CBaseMemObj>
         return lpX509;
     };
 
-  private:
+private:
     X509 *lpX509;
 };
 
@@ -90,18 +89,13 @@ class CSslCertificate : public virtual TRefCounted<CBaseMemObj>
 
 class CSslCertificateCrl : public virtual TRefCounted<CBaseMemObj>
 {
-  public:
+public:
     typedef enum
     {
-        Organization = 1,
-        Unit,
-        CommonName,
-        Country,
-        StateProvince,
-        Town
+        Organization = 1, Unit, CommonName, Country, StateProvince, Town
     } eInformation;
 
-  public:
+public:
     CSslCertificateCrl();
     CSslCertificateCrl(_In_ const CSslCertificateCrl &cSrc) throw(...);
     ~CSslCertificateCrl();
@@ -130,15 +124,15 @@ class CSslCertificateCrl : public virtual TRefCounted<CBaseMemObj>
         return lpX509Crl;
     };
 
-  private:
-    X509_CRL *lpX509Crl{NULL};
+private:
+    X509_CRL *lpX509Crl{ NULL };
 };
 
 //-----------------------------------------------------------
 
 class CSslCertificateArray : public virtual TRefCounted<CBaseMemObj>, public CNonCopyableObj
 {
-  public:
+public:
     CSslCertificateArray();
     ~CSslCertificateArray();
 
@@ -150,7 +144,7 @@ class CSslCertificateArray : public virtual TRefCounted<CBaseMemObj>, public CNo
 
     HRESULT ImportFromWindowsStore();
 
-  public:
+public:
     TArrayListWithRelease<CSslCertificate *> cCertsList;
     TArrayListWithRelease<CSslCertificateCrl *> cCertCrlsList;
     TArrayListWithRelease<CEncryptionKey *> cKeysList;

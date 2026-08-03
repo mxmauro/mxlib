@@ -21,14 +21,13 @@
 #include <stdlib.h>
 #include "..\..\Include\AutoPtr.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 static VOID RemoveTrailingZeroDecimals(_Inout_ MX::CStringA &cStrA);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderReqAccept::CHttpHeaderReqAccept() : CHttpHeaderBase()
 {
@@ -142,7 +141,7 @@ HRESULT CHttpHeaderReqAccept::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nVal
                 // skip spaces
                 szValueA = SkipSpaces(szValueA, szValueEndA);
 
-            skip_null_listitem2:
+skip_null_listitem2:
                 // check for separator or end
                 if (szValueA < szValueEndA)
                 {
@@ -155,10 +154,11 @@ HRESULT CHttpHeaderReqAccept::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nVal
                         return MX_E_InvalidData;
                     }
                 }
-            } while (szValueA < szValueEndA && *szValueA != ',');
+            }
+            while (szValueA < szValueEndA && *szValueA != ',');
         }
 
-    skip_null_listitem:
+skip_null_listitem:
         // skip spaces
         szValueA = SkipSpaces(szValueA, szValueEndA);
 
@@ -174,7 +174,8 @@ HRESULT CHttpHeaderReqAccept::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nVal
                 return MX_E_InvalidData;
             }
         }
-    } while (szValueA < szValueEndA);
+    }
+    while (szValueA < szValueEndA);
 
     // do we got one?
     if (bGotItem == FALSE)
@@ -223,8 +224,8 @@ HRESULT CHttpHeaderReqAccept::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBro
         nParamsCount = lpType->GetParamsCount();
         for (nParamIdx = 0; nParamIdx < nParamsCount; nParamIdx++)
         {
-            if (Http::BuildQuotedString(cStrTempA, lpType->GetParamValue(nParamIdx),
-                                        StrLenW(lpType->GetParamValue(nParamIdx)), FALSE) == FALSE)
+            if (Http::BuildQuotedString(cStrTempA, lpType->GetParamValue(nParamIdx), StrLenW(lpType->GetParamValue(nParamIdx)),
+                                        FALSE) == FALSE)
             {
                 return E_OUTOFMEMORY;
             }
@@ -453,8 +454,7 @@ CHttpHeaderReqAccept::CType::~CType()
     return;
 }
 
-CHttpHeaderReqAccept::CType &CHttpHeaderReqAccept::CType::operator=(_In_ const CHttpHeaderReqAccept::CType &cSrc) throw(
-    ...)
+CHttpHeaderReqAccept::CType &CHttpHeaderReqAccept::CType::operator=(_In_ const CHttpHeaderReqAccept::CType &cSrc) throw(...)
 {
     if (this != &cSrc)
     {

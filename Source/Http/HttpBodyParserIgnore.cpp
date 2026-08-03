@@ -21,10 +21,9 @@
 #include "..\..\Include\FnvHash.h"
 #include <intsafe.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpBodyParserIgnore::CHttpBodyParserIgnore() : CHttpBodyParserBase()
 {

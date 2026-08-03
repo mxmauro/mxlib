@@ -109,7 +109,9 @@ LPVOID CMemoryManager::Realloc(__in LPVOID lpOld, __in SIZE_T nNewSize)
     SIZE_T nOrigSize;
 
     if (lpOld == NULL)
+    {
         return Malloc(nNewSize);
+    }
     if (nNewSize == 0)
     {
         Free(lpOld);
@@ -188,14 +190,18 @@ LPVOID CMemoryManager::InternalAlloc(__in SIZE_T nSize)
 
     nBinIdx = IndexFromSize(nSize);
     if (nBinIdx < BINS_COUNT)
+    {
         return cBins[nBinIdx].Alloc((bExecutable != FALSE) ? 1 : 0);
+    }
     // allocate a superblock
     lpPtr = NULL;
     k = nSize + sizeof(HEADER);
     nNtStatus = NktNtAllocateVirtualMemory(NKTHOOKLIB_CurrentProcess, (PVOID *)&lpPtr, 0, &k, MEM_RESERVE | MEM_COMMIT,
                                            (bExecutable == FALSE) ? PAGE_READWRITE : PAGE_EXECUTE_READWRITE);
     if (!NT_SUCCESS(nNtStatus))
+    {
         return NULL;
+    }
     NKT_ASSERT(((SIZE_T)lpPtr & 0xFFFF) == 0); // ensure it is 64k aligned
     NktHookLibHelpers::MemSet(lpPtr, 0, sizeof(HEADER));
     lpPtr->nTag = TAG_MARK ^ (SIZE_T)lpPtr;
@@ -235,12 +241,18 @@ SIZE_T CMemoryManager::IndexFromSize(__in SIZE_T nSize)
     unsigned long _ndx;
 
     if (nSize >= 32768)
+    {
         return BINS_COUNT;
+    }
     if (nSize < 8)
+    {
         nSize = 8;
+    }
     _BitScanReverse(&_ndx, (unsigned long)nSize);
     if ((nSize & (nSize - 1)) != 0)
+    {
         _ndx++;
+    }
     return _ndx - 3;
 }
 
@@ -282,7 +294,9 @@ LPVOID CMemoryManager::CBin::Alloc(__in DWORD dwFlags)
             nNtStatus = NktNtAllocateVirtualMemory((HANDLE)-1, (PVOID *)&lpChunk, 0, &k, MEM_RESERVE | MEM_COMMIT,
                                                    ((dwFlags & 1) == 0) ? PAGE_READWRITE : PAGE_EXECUTE_READWRITE);
             if (!NT_SUCCESS(nNtStatus))
+            {
                 return NULL;
+            }
             NKT_ASSERT(((SIZE_T)lpChunk & 0xFFFF) == 0); // ensure it is 64k aligned
             NktHookLibHelpers::MemSet(&(lpChunk->sHeader), 0, sizeof(lpChunk->sHeader));
             lpChunk->sHeader.dwFreeCount = dwBlocksPerChunk;

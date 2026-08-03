@@ -21,7 +21,7 @@
 
 #define __SIZE_T_MAX ((SIZE_T) - 1)
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 static const LPCSTR szBase64CharsA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -29,8 +29,7 @@ static const BYTE aDecodeTable[] = "|$$$}rstuvwxyz{$$$=$$$>?@ABCDEFGHIJKLMNOPQRS
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CBase64Encoder::CBase64Encoder() : MX::CBaseMemObj()
 {

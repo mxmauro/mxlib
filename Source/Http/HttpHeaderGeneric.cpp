@@ -20,10 +20,9 @@
 #include "..\..\Include\Http\HttpHeaderGeneric.h"
 #include <stdlib.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderGeneric::CHttpHeaderGeneric() : CHttpHeaderBase()
 {

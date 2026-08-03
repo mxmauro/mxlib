@@ -24,20 +24,19 @@
 #include "..\ArrayList.h"
 #include "..\DateTime\DateTime.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderEntContentDisposition : public CHttpHeaderBase
 {
-  public:
+public:
     CHttpHeaderEntContentDisposition();
     ~CHttpHeaderEntContentDisposition();
 
-    MX_DECLARE_HTTPHEADER_NAME(Content - Disposition)
+    MX_DECLARE_HTTPHEADER_NAME("Content-Disposition")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
@@ -70,7 +69,7 @@ class CHttpHeaderEntContentDisposition : public CHttpHeaderBase
     LPCWSTR GetParamValue(_In_ SIZE_T nIndex) const;
     LPCWSTR GetParamValue(_In_z_ LPCSTR szNameA) const;
 
-  private:
+private:
     typedef struct
     {
         LPWSTR szValueW;

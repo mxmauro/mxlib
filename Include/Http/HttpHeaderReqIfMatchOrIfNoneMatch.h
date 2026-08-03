@@ -23,17 +23,16 @@
 #include "HttpHeaderBase.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class MX_NOVTABLE CHttpHeaderReqIfXXXMatchBase : public CHttpHeaderBase
 {
-  public:
+public:
     class CEntity : public virtual CBaseMemObj
     {
-      public:
+    public:
         CEntity();
         ~CEntity();
 
@@ -43,7 +42,7 @@ class MX_NOVTABLE CHttpHeaderReqIfXXXMatchBase : public CHttpHeaderBase
         HRESULT SetWeak(_In_ BOOL bIsWeak);
         BOOL GetWeak() const;
 
-      private:
+    private:
         friend class CHttpHeaderReqIfXXXMatchBase;
 
         CStringA cStrTagA;
@@ -52,24 +51,23 @@ class MX_NOVTABLE CHttpHeaderReqIfXXXMatchBase : public CHttpHeaderBase
 
     //----
 
-  protected:
+protected:
     CHttpHeaderReqIfXXXMatchBase(_In_opt_ BOOL bIsMatch = TRUE);
 
-  public:
+public:
     ~CHttpHeaderReqIfXXXMatchBase();
 
     HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
-    HRESULT AddEntity(_In_z_ LPCSTR szTagA, _In_opt_ SIZE_T nTagLen = (SIZE_T)-1,
-                      _Out_opt_ CEntity **lplpEntity = NULL);
+    HRESULT AddEntity(_In_z_ LPCSTR szTagA, _In_opt_ SIZE_T nTagLen = (SIZE_T)-1, _Out_opt_ CEntity **lplpEntity = NULL);
 
     SIZE_T GetEntitiesCount() const;
     CEntity *GetEntity(_In_ SIZE_T nIndex) const;
     CEntity *GetEntity(_In_z_ LPCSTR szTagA) const;
 
-  private:
+private:
     TArrayListWithDelete<CEntity *> cEntitiesList;
     BOOL bIsMatch;
 };
@@ -78,20 +76,24 @@ class MX_NOVTABLE CHttpHeaderReqIfXXXMatchBase : public CHttpHeaderBase
 
 class CHttpHeaderReqIfMatch : public CHttpHeaderReqIfXXXMatchBase
 {
-  public:
-    CHttpHeaderReqIfMatch() : CHttpHeaderReqIfXXXMatchBase(TRUE) {};
+public:
+    CHttpHeaderReqIfMatch() : CHttpHeaderReqIfXXXMatchBase(TRUE)
+    {
+    };
 
-    MX_DECLARE_HTTPHEADER_NAME(If - Match)
+    MX_DECLARE_HTTPHEADER_NAME("If-Match")
 };
 
 //-----------------------------------------------------------
 
 class CHttpHeaderReqIfNoneMatch : public CHttpHeaderReqIfXXXMatchBase
 {
-  public:
-    CHttpHeaderReqIfNoneMatch() : CHttpHeaderReqIfXXXMatchBase(FALSE) {};
+public:
+    CHttpHeaderReqIfNoneMatch() : CHttpHeaderReqIfXXXMatchBase(FALSE)
+    {
+    };
 
-    MX_DECLARE_HTTPHEADER_NAME(If - None - Match)
+    MX_DECLARE_HTTPHEADER_NAME("If-None-Match")
 };
 
 } // namespace MX

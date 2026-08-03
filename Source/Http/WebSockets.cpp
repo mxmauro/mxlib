@@ -36,10 +36,9 @@
 
 #define XOR_PING 0xA64F239A
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CWebSocket::CWebSocket() : CIpc::CUserData()
 {
@@ -293,8 +292,7 @@ SIZE_T CWebSocket::GetMaxMessageSize() const
     return 8192;
 }
 
-VOID CWebSocket::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
-                                 _In_ HRESULT hrErrorCode)
+VOID CWebSocket::OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData, _In_ HRESULT hrErrorCode)
 {
     if (_InterlockedCompareExchange(&hrCloseError, hrErrorCode, S_FALSE) == S_FALSE)
     {
@@ -347,87 +345,90 @@ loop:
 
             switch (++(sReceive.nState))
             {
-            case 1:
-                // RSV fields MUST be zero
-                if (sReceive.sFrameHeader.nRsv != 0)
-                {
-                    return MX_E_Unsupported;
-                }
-
-                /*
-                NOTE: This is not always respected
-
-                // Check masking: clients must mask and servers must not.
-                if (sReceive.sFrameHeader.nPayloadLen != 0)
-                {
-                  if (sReceive.sFrameHeader.nMask != ((bServerSide != FALSE) ? 1 : 0))
-                    return MX_E_InvalidData;
-                }
-                */
-
-                // validate opcode
-                switch (sReceive.sFrameHeader.nOpcode)
-                {
-                case _OPCODE_Continuation:
-                    if (sReceive.sCurrentMessage.nOpcode == _OPCODE_NONE)
+                case 1:
+                    // RSV fields MUST be zero
+                    if (sReceive.sFrameHeader.nRsv != 0)
                     {
+                        return MX_E_Unsupported;
+                    }
+
+                    /*
+                    NOTE:
+                        This is not always respected
+
+                    // Check masking: clients must mask and servers must not.
+                    if (sReceive.sFrameHeader.nPayloadLen != 0)
+                    {
+                      if (sReceive.sFrameHeader.nMask != ((bServerSide != FALSE) ? 1 : 0))
+                      {
                         return MX_E_InvalidData;
+                      }
+                    }
+                    */
+
+                    // validate opcode
+                    switch (sReceive.sFrameHeader.nOpcode)
+                    {
+                        case _OPCODE_Continuation:
+                            if (sReceive.sCurrentMessage.nOpcode == _OPCODE_NONE)
+                            {
+                                return MX_E_InvalidData;
+                            }
+                            break;
+
+                        case _OPCODE_Text:
+                        case _OPCODE_Binary:
+                            if (sReceive.sCurrentMessage.nOpcode == _OPCODE_NONE)
+                            {
+                                sReceive.sCurrentMessage.nOpcode = sReceive.sFrameHeader.nOpcode;
+                            }
+                            else if (sReceive.sCurrentMessage.nOpcode != sReceive.sFrameHeader.nOpcode)
+                            {
+                                return MX_E_InvalidData;
+                            }
+                            break;
+
+                        case _OPCODE_ConnectionClose:
+                        case _OPCODE_Ping:
+                        case _OPCODE_Pong:
+                            break;
+
+                        default:
+                            return MX_E_Unsupported;
                     }
                     break;
 
-                case _OPCODE_Text:
-                case _OPCODE_Binary:
-                    if (sReceive.sCurrentMessage.nOpcode == _OPCODE_NONE)
+                case 2:
+                    if (sReceive.sFrameHeader.nPayloadLen < 126)
                     {
-                        sReceive.sCurrentMessage.nOpcode = sReceive.sFrameHeader.nOpcode;
-                    }
-                    else if (sReceive.sCurrentMessage.nOpcode != sReceive.sFrameHeader.nOpcode)
-                    {
-                        return MX_E_InvalidData;
-                    }
-                    break;
+                        sReceive.nPayloadLen = (ULONGLONG)(sReceive.sFrameHeader.nPayloadLen);
 
-                case _OPCODE_ConnectionClose:
-                case _OPCODE_Ping:
-                case _OPCODE_Pong:
-                    break;
-
-                default:
-                    return MX_E_Unsupported;
-                }
-                break;
-
-            case 2:
-                if (sReceive.sFrameHeader.nPayloadLen < 126)
-                {
-                    sReceive.nPayloadLen = (ULONGLONG)(sReceive.sFrameHeader.nPayloadLen);
-
-                jump_to_maskkey_or_payloaddata:
-                    if (sReceive.sFrameHeader.nMask != 0)
-                    {
-                        sReceive.nState = 12; // jump to mask key
+jump_to_maskkey_or_payloaddata:
+                        if (sReceive.sFrameHeader.nMask != 0)
+                        {
+                            sReceive.nState = 12; // jump to mask key
+                        }
+                        else
+                        {
+                            sReceive.nState = 16; // jump to payload data
+                            goto validate_message_length;
+                        }
                     }
                     else
                     {
-                        sReceive.nState = 16; // jump to payload data
-                        goto validate_message_length;
-                    }
-                }
-                else
-                {
-                    // control frames cannot be large
-                    if ((sReceive.sFrameHeader.nOpcode & 0x08) != 0)
-                    {
-                        return MX_E_InvalidData;
-                    }
+                        // control frames cannot be large
+                        if ((sReceive.sFrameHeader.nOpcode & 0x08) != 0)
+                        {
+                            return MX_E_InvalidData;
+                        }
 
-                    // prepare for large payload
-                    sReceive.nPayloadLen = 0;
+                        // prepare for large payload
+                        sReceive.nPayloadLen = 0;
 
-                    // jump to 16-bit or 64-bit payload length
-                    sReceive.nState = (sReceive.sFrameHeader.nPayloadLen == 126) ? 2 : 4;
-                }
-                break;
+                        // jump to 16-bit or 64-bit payload length
+                        sReceive.nState = (sReceive.sFrameHeader.nPayloadLen == 126) ? 2 : 4;
+                    }
+                    break;
             }
         }
         // states 2 & 3
@@ -453,7 +454,7 @@ loop:
             {
                 sReceive.nState = 16; // jump to payload data
 
-            validate_message_length:
+validate_message_length:
                 if ((ULONGLONG)(sReceive.sCurrentMessage.nTotalDataLength) + sReceive.nPayloadLen <
                     sReceive.nPayloadLen)
                 {
@@ -481,7 +482,7 @@ loop:
     }
     if (sReceive.nState < 16)
     {
-    consume_used_and_loop:
+consume_used_and_loop:
         if (lpMsg > aMsgBuf)
         {
             hRes = lpIpc->ConsumeBufferedMessage(hConn, (SIZE_T)(lpMsg - aMsgBuf));
@@ -592,8 +593,7 @@ loop:
                 }
                 else
                 {
-                    ::MxMemCopy(sReceive.sCurrentControlFrame.aBuffer + sReceive.sCurrentControlFrame.nFilledFrame,
-                                lpMsg, nToRead);
+                    ::MxMemCopy(sReceive.sCurrentControlFrame.aBuffer + sReceive.sCurrentControlFrame.nFilledFrame, lpMsg, nToRead);
                     lpMsg += nToRead;
                 }
 
@@ -671,73 +671,72 @@ loop:
             // process control frame
             switch (sReceive.sFrameHeader.nOpcode)
             {
-            case _OPCODE_ConnectionClose:
-            {
-                USHORT wCode = 1000;
-                BOOL bChanged = FALSE;
-
-                if (sReceive.sCurrentControlFrame.nFilledFrame >= 2)
-                {
-                    wCode = ((USHORT)(sReceive.sCurrentControlFrame.aBuffer[1]) |
-                             ((USHORT)(sReceive.sCurrentControlFrame.aBuffer[0]) << 8));
-                }
-                switch (wCode)
-                {
-                case 1000:
-                    bChanged = (_InterlockedCompareExchange(&hrCloseError, S_OK, S_FALSE) == S_FALSE) ? TRUE : FALSE;
-                    break;
-
-                case 1001:
-                    bChanged = (_InterlockedCompareExchange(&hrCloseError, MX_HRESULT_FROM_WIN32(WSAECONNRESET),
-                                                            S_FALSE) == S_FALSE)
-                                   ? TRUE
-                                   : FALSE;
-                    break;
-
-                case 1002:
-                    bChanged = (_InterlockedCompareExchange(&hrCloseError, MX_E_Unsupported, S_FALSE) == S_FALSE)
-                                   ? TRUE
-                                   : FALSE;
-                    break;
-
-                case 1003:
-                    bChanged = (_InterlockedCompareExchange(&hrCloseError, MX_E_InvalidData, S_FALSE) == S_FALSE)
-                                   ? TRUE
-                                   : FALSE;
-                    break;
-
-                default:
-                    bChanged = (_InterlockedCompareExchange(&hrCloseError, E_FAIL, S_FALSE) == S_FALSE) ? TRUE : FALSE;
-                    break;
-                }
-
-                // closed state
-                if (bChanged != FALSE)
-                {
-                    OnCloseFrame(wCode, __InterlockedRead(&hrCloseError));
-
-                    if (wCode == 1000)
+                case _OPCODE_ConnectionClose:
                     {
-                        SendClose(wCode);
+                        USHORT wCode = 1000;
+                        BOOL bChanged = FALSE;
+
+                        if (sReceive.sCurrentControlFrame.nFilledFrame >= 2)
+                        {
+                            wCode = ((USHORT)(sReceive.sCurrentControlFrame.aBuffer[1]) |
+                                     ((USHORT)(sReceive.sCurrentControlFrame.aBuffer[0]) << 8));
+                        }
+                        switch (wCode)
+                        {
+                            case 1000:
+                                bChanged = (_InterlockedCompareExchange(&hrCloseError, S_OK, S_FALSE) == S_FALSE) ? TRUE : FALSE;
+                                break;
+
+                            case 1001:
+                                bChanged = (_InterlockedCompareExchange(&hrCloseError, MX_HRESULT_FROM_WIN32(WSAECONNRESET), S_FALSE) == S_FALSE)
+                                    ? TRUE
+                                    : FALSE;
+                                break;
+
+                            case 1002:
+                                bChanged = (_InterlockedCompareExchange(&hrCloseError, MX_E_Unsupported, S_FALSE) == S_FALSE)
+                                    ? TRUE
+                                    : FALSE;
+                                break;
+
+                            case 1003:
+                                bChanged = (_InterlockedCompareExchange(&hrCloseError, MX_E_InvalidData, S_FALSE) == S_FALSE)
+                                    ? TRUE
+                                    : FALSE;
+                                break;
+
+                            default:
+                                bChanged = (_InterlockedCompareExchange(&hrCloseError, E_FAIL, S_FALSE) == S_FALSE) ? TRUE : FALSE;
+                                break;
+                        }
+
+                        // closed state
+                        if (bChanged != FALSE)
+                        {
+                            OnCloseFrame(wCode, __InterlockedRead(&hrCloseError));
+
+                            if (wCode == 1000)
+                            {
+                                SendClose(wCode);
+                            }
+                            lpIpc->Close(hConn, S_OK);
+                        }
                     }
-                    lpIpc->Close(hConn, S_OK);
-                }
-            }
-                return S_OK;
+                    return S_OK;
 
-            case _OPCODE_Ping:
-                // NOTE: InternalSendControlFrame modifies the payload if mask is active
-                hRes = InternalSendControlFrame(_OPCODE_Pong, sReceive.sCurrentControlFrame.aBuffer,
-                                                (ULONG)(sReceive.sCurrentControlFrame.nFilledFrame));
-                if (FAILED(hRes))
-                {
-                    return hRes;
-                }
-                break;
+                case _OPCODE_Ping:
+                    // NOTE: InternalSendControlFrame modifies the payload if mask is active
+                    hRes = InternalSendControlFrame(_OPCODE_Pong, sReceive.sCurrentControlFrame.aBuffer,
+                                                    (ULONG)(sReceive.sCurrentControlFrame.nFilledFrame));
+                    if (FAILED(hRes))
+                    {
+                        return hRes;
+                    }
+                    break;
 
-            case _OPCODE_Pong:
-                OnPongFrame();
-                break;
+                case _OPCODE_Pong:
+                    OnPongFrame();
+                    break;
             }
 
             // reset control frame state
@@ -753,8 +752,8 @@ loop:
     goto consume_used_and_loop;
 }
 
-SIZE_T CWebSocket::BuildFrame(_Out_ LPFRAME_HEADER lpFrame, _In_ LPBYTE lpPayload, _In_ ULONG nPayloadSize,
-                              _In_ BYTE nOpcode, _In_ BOOL bFinal)
+SIZE_T CWebSocket::BuildFrame(_Out_ LPFRAME_HEADER lpFrame, _In_ LPBYTE lpPayload, _In_ ULONG nPayloadSize, _In_ BYTE nOpcode,
+                              _In_ BOOL bFinal)
 {
     SIZE_T nFrameLength, nExtendedLength;
 
@@ -835,8 +834,7 @@ HRESULT CWebSocket::InternalSendFrame(_In_ BOOL bFinalFrame)
     SIZE_T nFrameLength;
     HRESULT hRes;
 
-    nFrameLength = BuildFrame(&(sSend.sFrameHeader), sSend.cFrameBuffer.Get(), sSend.nFilledFrame,
-                              sSend.sFrameHeader.nOpcode, bFinalFrame);
+    nFrameLength = BuildFrame(&(sSend.sFrameHeader), sSend.cFrameBuffer.Get(), sSend.nFilledFrame, sSend.sFrameHeader.nOpcode, bFinalFrame);
 
     // send header and data
     hRes = lpIpc->SendMsg(hConn, &(sSend.sFrameHeader), nFrameLength);

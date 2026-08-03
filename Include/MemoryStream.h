@@ -22,24 +22,21 @@
 
 #include "Streams.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CMemoryStream : public CStream, public CNonCopyableObj
 {
-  public:
+public:
     CMemoryStream(_In_opt_ SIZE_T nAllocationGranularity = 65536);
     ~CMemoryStream();
 
     HRESULT Create(_In_opt_ SIZE_T nInitialSize = 0, _In_opt_ BOOL bGrowable = TRUE);
     VOID Close();
 
-    HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesRead,
-                 _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX);
-    HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
-                  _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX);
+    HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesRead, _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX);
+    HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten, _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX);
 
     HRESULT Seek(_In_ ULONGLONG nPosition, _In_opt_ CStream::eSeekMethod nMethod = CStream::eSeekMethod::Start);
 
@@ -51,10 +48,10 @@ class CMemoryStream : public CStream, public CNonCopyableObj
 
     CMemoryStream *Clone();
 
-  private:
+private:
     BOOL EnsureSize(_In_ SIZE_T nRequiredSize);
 
-  private:
+private:
     LPBYTE lpData;
     SIZE_T nCurrPos, nSize, nAllocated, nGranularity;
     BOOL bCanGrow;

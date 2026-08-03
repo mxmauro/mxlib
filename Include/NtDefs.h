@@ -22,7 +22,7 @@
 
 #include <windows.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #ifndef STATUS_SUCCESS
 #define STATUS_SUCCESS ((NTSTATUS)0x00000000L)
@@ -911,28 +911,25 @@ extern "C"
     __DECLARE(NTSTATUS, NtOpenThread)(_Out_ PHANDLE ThreadHandle, _In_ ACCESS_MASK DesiredAccess,
                                       _In_ PMX_OBJECT_ATTRIBUTES ObjectAttributes, _In_opt_ PVOID ClientId);
 
-    __DECLARE(NTSTATUS, NtOpenProcessToken)(_In_ HANDLE ProcessHandle, _In_ ACCESS_MASK DesiredAccess,
-                                            _Out_ PHANDLE TokenHandle);
-    __DECLARE(NTSTATUS, NtOpenThreadToken)(_In_ HANDLE ThreadHandle, _In_ ACCESS_MASK DesiredAccess,
-                                           _In_ BOOLEAN OpenAsSelf, _Out_ PHANDLE TokenHandle);
+    __DECLARE(NTSTATUS, NtOpenProcessToken)(_In_ HANDLE ProcessHandle, _In_ ACCESS_MASK DesiredAccess, _Out_ PHANDLE TokenHandle);
+    __DECLARE(NTSTATUS, NtOpenThreadToken)(_In_ HANDLE ThreadHandle, _In_ ACCESS_MASK DesiredAccess, _In_ BOOLEAN OpenAsSelf,
+                                           _Out_ PHANDLE TokenHandle);
 
     __DECLARE(NTSTATUS, NtDuplicateToken)(_In_ HANDLE ExistingTokenHandle, _In_ ACCESS_MASK DesiredAccess,
                                           _In_ PMX_OBJECT_ATTRIBUTES ObjectAttributes, _In_ BOOLEAN EffectiveOnly,
                                           _In_ TOKEN_TYPE TokenType, _Out_ PHANDLE NewTokenHandle);
 
     __DECLARE(NTSTATUS, NtQueryInformationToken)(_In_ HANDLE TokenHandle, _In_ TOKEN_INFORMATION_CLASS TokenInfoClass,
-                                                 _Out_ PVOID TokenInfo, _In_ ULONG TokenInfoLength,
-                                                 _Out_ PULONG ReturnLength);
-    __DECLARE(NTSTATUS, NtSetInformationToken)(_In_ HANDLE TokenHandle, _In_ TOKEN_INFORMATION_CLASS TokenInfoClass,
-                                               _In_ PVOID TokenInfo, _In_ ULONG TokenInfoLength);
+                                                 _Out_ PVOID TokenInfo, _In_ ULONG TokenInfoLength, _Out_ PULONG ReturnLength);
+    __DECLARE(NTSTATUS, NtSetInformationToken)(_In_ HANDLE TokenHandle, _In_ TOKEN_INFORMATION_CLASS TokenInfoClass, _In_ PVOID TokenInfo,
+                                               _In_ ULONG TokenInfoLength);
 
     //--------
 
     __DECLARE(NTSTATUS, NtGetContextThread)(_In_ HANDLE ThreadHandle, _Out_ PCONTEXT Context);
     __DECLARE(NTSTATUS, NtSetContextThread)(_In_ HANDLE ThreadHandle, _In_ PCONTEXT Context);
 
-    __DECLARE(NTSTATUS,
-              RtlCreateUserThread)(_In_ HANDLE ProcessHandle, _In_opt_ PSECURITY_DESCRIPTOR SecurityDescriptor,
+    __DECLARE(NTSTATUS, RtlCreateUserThread)(_In_ HANDLE ProcessHandle, _In_opt_ PSECURITY_DESCRIPTOR SecurityDescriptor,
                                    _In_ BOOLEAN CreateSuspended, _In_ ULONG StackZeroBits, _Inout_ PULONG StackReserved,
                                    _Inout_ PULONG StackCommit, _In_ PVOID StartAddress, _In_opt_ PVOID StartParameter,
                                    _Out_ PHANDLE ThreadHandle, _Out_ PVOID ClientID);
@@ -940,8 +937,7 @@ extern "C"
     //--------
 
     __DECLARE(NTSTATUS, NtCreateEvent)(_Out_ PHANDLE EventHandle, _In_ ACCESS_MASK DesiredAccess,
-                                       _In_opt_ PMX_OBJECT_ATTRIBUTES ObjectAttributes, _In_ ULONG EventType,
-                                       _In_ BOOLEAN InitialState);
+                                       _In_opt_ PMX_OBJECT_ATTRIBUTES ObjectAttributes, _In_ ULONG EventType, _In_ BOOLEAN InitialState);
     __DECLARE(NTSTATUS, NtOpenEvent)(_Out_ PHANDLE EventHandle, _In_ ACCESS_MASK DesiredAccess,
                                      _In_ PMX_OBJECT_ATTRIBUTES ObjectAttributes);
     __DECLARE(NTSTATUS, NtResetEvent)(_In_ HANDLE EventHandle, _Out_opt_ PLONG NumberOfWaitingThreads);
@@ -957,15 +953,12 @@ extern "C"
 
     //--------
 
-    __DECLARE(NTSTATUS, NtCreateFile)(_Out_ PHANDLE FileHandle, _In_ ACCESS_MASK DesiredAccess,
-                                      _In_ PMX_OBJECT_ATTRIBUTES ObjectAttributes,
+    __DECLARE(NTSTATUS, NtCreateFile)(_Out_ PHANDLE FileHandle, _In_ ACCESS_MASK DesiredAccess, _In_ PMX_OBJECT_ATTRIBUTES ObjectAttributes,
                                       _Out_ PMX_IO_STATUS_BLOCK IoStatusBlock, _In_opt_ PLARGE_INTEGER AllocationSize,
                                       _In_ ULONG FileAttributes, _In_ ULONG ShareAccess, _In_ ULONG CreateDisposition,
                                       _In_ ULONG CreateOptions, _In_opt_ PVOID EaBuffer, _In_ ULONG EaLength);
-    __DECLARE(NTSTATUS, NtOpenFile)(_Out_ PHANDLE FileHandle, _In_ ACCESS_MASK DesiredAccess,
-                                    _In_ PMX_OBJECT_ATTRIBUTES ObjectAttributes,
-                                    _Out_ PMX_IO_STATUS_BLOCK IoStatusBlock, _In_ ULONG ShareAccess,
-                                    _In_ ULONG OpenOptions);
+    __DECLARE(NTSTATUS, NtOpenFile)(_Out_ PHANDLE FileHandle, _In_ ACCESS_MASK DesiredAccess, _In_ PMX_OBJECT_ATTRIBUTES ObjectAttributes,
+                                    _Out_ PMX_IO_STATUS_BLOCK IoStatusBlock, _In_ ULONG ShareAccess, _In_ ULONG OpenOptions);
     __DECLARE(NTSTATUS, NtOpenDirectoryObject)(_Out_ PHANDLE FileHandle, _In_ ACCESS_MASK DesiredAccess,
                                                _In_ PMX_OBJECT_ATTRIBUTES ObjectAttributes);
     __DECLARE(NTSTATUS, NtOpenSymbolicLinkObject)(_Out_ PHANDLE SymbolicLinkHandle, _In_ ACCESS_MASK DesiredAccess,
@@ -973,42 +966,35 @@ extern "C"
     __DECLARE(NTSTATUS, NtQuerySymbolicLinkObject)(_In_ HANDLE SymLinkObjHandle, _Out_ PMX_UNICODE_STRING LinkTarget,
                                                    _Out_opt_ PULONG DataWritten);
     __DECLARE(NTSTATUS, NtClose)(_In_ HANDLE Handle);
-    __DECLARE(NTSTATUS, NtReadFile)(_In_ HANDLE FileHandle, _In_opt_ HANDLE Event, _In_opt_ PVOID ApcRoutine,
-                                    _In_opt_ PVOID ApcContext, _Out_ PMX_IO_STATUS_BLOCK IoStatusBlock,
-                                    _Out_ PVOID Buffer, _In_ ULONG Length, _In_opt_ PLARGE_INTEGER ByteOffset,
-                                    _In_opt_ PULONG Key);
-    __DECLARE(NTSTATUS, NtWriteFile)(_In_ HANDLE FileHandle, _In_opt_ HANDLE Event, _In_opt_ PVOID ApcRoutine,
-                                     _In_opt_ PVOID ApcContext, _Out_ PMX_IO_STATUS_BLOCK IoStatusBlock,
-                                     _Out_ PVOID Buffer, _In_ ULONG Length, _In_opt_ PLARGE_INTEGER ByteOffset,
-                                     _In_opt_ PULONG Key);
+    __DECLARE(NTSTATUS, NtReadFile)(_In_ HANDLE FileHandle, _In_opt_ HANDLE Event, _In_opt_ PVOID ApcRoutine, _In_opt_ PVOID ApcContext,
+                                    _Out_ PMX_IO_STATUS_BLOCK IoStatusBlock, _Out_ PVOID Buffer, _In_ ULONG Length,
+                                    _In_opt_ PLARGE_INTEGER ByteOffset, _In_opt_ PULONG Key);
+    __DECLARE(NTSTATUS, NtWriteFile)(_In_ HANDLE FileHandle, _In_opt_ HANDLE Event, _In_opt_ PVOID ApcRoutine, _In_opt_ PVOID ApcContext,
+                                     _Out_ PMX_IO_STATUS_BLOCK IoStatusBlock, _Out_ PVOID Buffer, _In_ ULONG Length,
+                                     _In_opt_ PLARGE_INTEGER ByteOffset, _In_opt_ PULONG Key);
     __DECLARE(NTSTATUS, NtCancelIoFile)(_In_ HANDLE FileHandle, _Out_ PMX_IO_STATUS_BLOCK IoStatusBlock);
     __DECLARE(NTSTATUS, NtQueryInformationFile)(_In_ HANDLE hFile, _Out_ PMX_IO_STATUS_BLOCK IoStatusBlock,
-                                                _Out_ PVOID FileInformationBuffer,
-                                                _In_ ULONG FileInformationBufferLength, _In_ ULONG FileInfoClass);
-    __DECLARE(NTSTATUS, NtSetInformationFile)(_In_ HANDLE hFile, _Out_ PMX_IO_STATUS_BLOCK IoStatusBlock,
-                                              _In_ PVOID FileInformationBuffer, _In_ ULONG FileInformationBufferLength,
-                                              _In_ ULONG FileInfoClass);
+                                                _Out_ PVOID FileInformationBuffer, _In_ ULONG FileInformationBufferLength,
+                                                _In_ ULONG FileInfoClass);
+    __DECLARE(NTSTATUS, NtSetInformationFile)(_In_ HANDLE hFile, _Out_ PMX_IO_STATUS_BLOCK IoStatusBlock, _In_ PVOID FileInformationBuffer,
+                                              _In_ ULONG FileInformationBufferLength, _In_ ULONG FileInfoClass);
 
     //--------
 
-    __DECLARE(NTSTATUS, NtCreateKey)(_Out_ PHANDLE KeyHandle, _In_ ACCESS_MASK DesiredAccess,
-                                     _In_ PMX_OBJECT_ATTRIBUTES ObjectAttributes, _In_ ULONG TitleIndex,
-                                     _In_opt_ PMX_UNICODE_STRING Class, _In_ ULONG CreateOptions,
+    __DECLARE(NTSTATUS, NtCreateKey)(_Out_ PHANDLE KeyHandle, _In_ ACCESS_MASK DesiredAccess, _In_ PMX_OBJECT_ATTRIBUTES ObjectAttributes,
+                                     _In_ ULONG TitleIndex, _In_opt_ PMX_UNICODE_STRING Class, _In_ ULONG CreateOptions,
                                      _Out_opt_ PULONG Disposition);
-    __DECLARE(NTSTATUS, NtOpenKey)(_Out_ PHANDLE KeyHandle, _In_ ACCESS_MASK DesiredAccess,
-                                   _In_ PMX_OBJECT_ATTRIBUTES ObjectAttributes);
-    __DECLARE(NTSTATUS, NtEnumerateKey)(_In_ HANDLE KeyHandle, _In_ ULONG Index, _In_ ULONG KeyInfoClass,
-                                        _Out_ PVOID KeyInformation, _In_ ULONG Length, _Out_ PULONG ResultLength);
+    __DECLARE(NTSTATUS, NtOpenKey)(_Out_ PHANDLE KeyHandle, _In_ ACCESS_MASK DesiredAccess, _In_ PMX_OBJECT_ATTRIBUTES ObjectAttributes);
+    __DECLARE(NTSTATUS, NtEnumerateKey)(_In_ HANDLE KeyHandle, _In_ ULONG Index, _In_ ULONG KeyInfoClass, _Out_ PVOID KeyInformation,
+                                        _In_ ULONG Length, _Out_ PULONG ResultLength);
     __DECLARE(NTSTATUS, NtEnumerateValueKey)(_In_ HANDLE KeyHandle, _In_ ULONG Index, _In_ ULONG KeyValueInfoClass,
-                                             _Out_ PVOID KeyValueInformation, _In_ ULONG Length,
-                                             _Out_ PULONG ResultLength);
-    __DECLARE(NTSTATUS, NtQueryKey)(_In_ HANDLE KeyHandle, _In_ ULONG KeyInfoClass, _Out_ PVOID KeyInformation,
-                                    _In_ ULONG Length, _Out_ PULONG ResultLength);
-    __DECLARE(NTSTATUS, NtQueryValueKey)(_In_ HANDLE KeyHandle, _In_ PMX_UNICODE_STRING ValueName,
-                                         _In_ ULONG KeyValueInfoClass, _Out_ PVOID KeyValueInformation,
-                                         _In_ ULONG Length, _Out_ PULONG ResultLength);
-    __DECLARE(NTSTATUS, NtSetValueKey)(_In_ HANDLE KeyHandle, _In_ PMX_UNICODE_STRING ValueName, _In_ ULONG TitleIndex,
-                                       _In_ ULONG Type, _In_ PVOID Data, _In_ ULONG DataSize);
+                                             _Out_ PVOID KeyValueInformation, _In_ ULONG Length, _Out_ PULONG ResultLength);
+    __DECLARE(NTSTATUS, NtQueryKey)(_In_ HANDLE KeyHandle, _In_ ULONG KeyInfoClass, _Out_ PVOID KeyInformation, _In_ ULONG Length,
+                                    _Out_ PULONG ResultLength);
+    __DECLARE(NTSTATUS, NtQueryValueKey)(_In_ HANDLE KeyHandle, _In_ PMX_UNICODE_STRING ValueName, _In_ ULONG KeyValueInfoClass,
+                                         _Out_ PVOID KeyValueInformation, _In_ ULONG Length, _Out_ PULONG ResultLength);
+    __DECLARE(NTSTATUS, NtSetValueKey)(_In_ HANDLE KeyHandle, _In_ PMX_UNICODE_STRING ValueName, _In_ ULONG TitleIndex, _In_ ULONG Type,
+                                       _In_ PVOID Data, _In_ ULONG DataSize);
     __DECLARE(NTSTATUS, NtDeleteKey)(_In_ HANDLE KeyHandle);
     __DECLARE(NTSTATUS, NtDeleteValueKey)(_In_ HANDLE KeyHandle, _In_ PMX_UNICODE_STRING ValueName);
     __DECLARE(NTSTATUS, NtFlushKey)(_In_ HANDLE KeyHandle);
@@ -1023,8 +1009,7 @@ extern "C"
     //--------
 
     __DECLARE(NTSTATUS, RtlInitializeCriticalSection)(_In_ RTL_CRITICAL_SECTION *crit);
-    __DECLARE(NTSTATUS, RtlInitializeCriticalSectionAndSpinCount)(_In_ RTL_CRITICAL_SECTION *crit,
-                                                                  _In_ ULONG spincount);
+    __DECLARE(NTSTATUS, RtlInitializeCriticalSectionAndSpinCount)(_In_ RTL_CRITICAL_SECTION *crit, _In_ ULONG spincount);
     __DECLARE(NTSTATUS, RtlDeleteCriticalSection)(_In_ RTL_CRITICAL_SECTION *crit);
     __DECLARE(NTSTATUS, RtlEnterCriticalSection)(_In_ RTL_CRITICAL_SECTION *crit);
     __DECLARE(NTSTATUS, RtlLeaveCriticalSection)(_In_ RTL_CRITICAL_SECTION *crit);
@@ -1032,68 +1017,57 @@ extern "C"
 
     //--------
 
-    __DECLARE(NTSTATUS,
-              RtlGetNativeSystemInformation)(_In_ ULONG SystemInformationClass, _Inout_ PVOID SystemInformation,
+    __DECLARE(NTSTATUS, RtlGetNativeSystemInformation)(_In_ ULONG SystemInformationClass, _Inout_ PVOID SystemInformation,
                                              _In_ ULONG SystemInformationLength, _Out_opt_ PULONG ReturnLength);
     __DECLARE(NTSTATUS, NtQuerySystemInformation)(_In_ ULONG SystemInformationClass, _Inout_ PVOID SystemInformation,
                                                   _In_ ULONG SystemInformationLength, _Out_opt_ PULONG ReturnLength);
 
-    __DECLARE(NTSTATUS, NtQueryInformationProcess)(_In_ HANDLE ProcessHandle, _In_ ULONG ProcessInfoClass,
-                                                   _Out_opt_ PVOID ProcessInfo, _In_ ULONG ProcessInfoLength,
-                                                   _Out_opt_ PULONG ReturnLength);
-    __DECLARE(NTSTATUS, NtSetInformationProcess)(_In_ HANDLE ProcessHandle, _In_ ULONG ProcessInfoClass,
-                                                 _In_ PVOID ProcessInformation, _In_ ULONG ProcessInformationLength);
-    __DECLARE(NTSTATUS, NtQueryInformationThread)(_In_ HANDLE ThreadHandle, _In_ ULONG ThreadInfoClass,
-                                                  _Out_opt_ PVOID ThreadInfo, _In_ ULONG ThreadInfoLength,
-                                                  _Out_opt_ PULONG ReturnLength);
-    __DECLARE(NTSTATUS, NtSetInformationThread)(_In_ HANDLE ThreadHandle, _In_ ULONG ThreadInformationClass,
-                                                _In_ PVOID ThreadInformation, _In_ ULONG ThreadInformationLength);
+    __DECLARE(NTSTATUS, NtQueryInformationProcess)(_In_ HANDLE ProcessHandle, _In_ ULONG ProcessInfoClass, _Out_opt_ PVOID ProcessInfo,
+                                                   _In_ ULONG ProcessInfoLength, _Out_opt_ PULONG ReturnLength);
+    __DECLARE(NTSTATUS, NtSetInformationProcess)(_In_ HANDLE ProcessHandle, _In_ ULONG ProcessInfoClass, _In_ PVOID ProcessInformation,
+                                                 _In_ ULONG ProcessInformationLength);
+    __DECLARE(NTSTATUS, NtQueryInformationThread)(_In_ HANDLE ThreadHandle, _In_ ULONG ThreadInfoClass, _Out_opt_ PVOID ThreadInfo,
+                                                  _In_ ULONG ThreadInfoLength, _Out_opt_ PULONG ReturnLength);
+    __DECLARE(NTSTATUS, NtSetInformationThread)(_In_ HANDLE ThreadHandle, _In_ ULONG ThreadInformationClass, _In_ PVOID ThreadInformation,
+                                                _In_ ULONG ThreadInformationLength);
 
-    __DECLARE(NTSTATUS, NtQueryObject)(_In_opt_ HANDLE Handle, _In_ ULONG ObjectInformationClass,
-                                       _Out_opt_ PVOID ObjectInformation, _In_ ULONG ObjectInformationLength,
-                                       _Out_opt_ PULONG ReturnLength);
+    __DECLARE(NTSTATUS, NtQueryObject)(_In_opt_ HANDLE Handle, _In_ ULONG ObjectInformationClass, _Out_opt_ PVOID ObjectInformation,
+                                       _In_ ULONG ObjectInformationLength, _Out_opt_ PULONG ReturnLength);
 
     //--------
 
-    __DECLARE(NTSTATUS, NtWaitForSingleObject)(_In_ HANDLE Handle, _In_ BOOLEAN Alertable,
-                                               _In_opt_ PLARGE_INTEGER Timeout);
-    __DECLARE(NTSTATUS, NtWaitForMultipleObjects)(_In_ ULONG Count, _In_ HANDLE Object[], _In_ LONG WaitType,
-                                                  _In_ BOOLEAN Alertable, _In_opt_ PLARGE_INTEGER Time);
+    __DECLARE(NTSTATUS, NtWaitForSingleObject)(_In_ HANDLE Handle, _In_ BOOLEAN Alertable, _In_opt_ PLARGE_INTEGER Timeout);
+    __DECLARE(NTSTATUS, NtWaitForMultipleObjects)(_In_ ULONG Count, _In_ HANDLE Object[], _In_ LONG WaitType, _In_ BOOLEAN Alertable,
+                                                  _In_opt_ PLARGE_INTEGER Time);
 
     //--------
 
-    __DECLARE(NTSTATUS, NtAllocateVirtualMemory)(_In_ HANDLE ProcessHandle, _Inout_ PVOID *BaseAddress,
-                                                 _In_ ULONG_PTR ZeroBits, _Inout_ PSIZE_T RegionSize,
-                                                 _In_ ULONG AllocationType, _In_ ULONG Protect);
-    __DECLARE(NTSTATUS, NtFreeVirtualMemory)(_In_ HANDLE ProcessHandle, _Inout_ PVOID *BaseAddress,
-                                             _Inout_ PSIZE_T RegionSize, _In_ ULONG FreeType);
-    __DECLARE(NTSTATUS, NtFlushVirtualMemory)(_In_ HANDLE ProcessHandle, _Inout_ PVOID *BaseAddress,
-                                              _Inout_ PSIZE_T RegionSize, _Out_ PMX_IO_STATUS_BLOCK IoStatus);
+    __DECLARE(NTSTATUS, NtAllocateVirtualMemory)(_In_ HANDLE ProcessHandle, _Inout_ PVOID *BaseAddress, _In_ ULONG_PTR ZeroBits,
+                                                 _Inout_ PSIZE_T RegionSize, _In_ ULONG AllocationType, _In_ ULONG Protect);
+    __DECLARE(NTSTATUS, NtFreeVirtualMemory)(_In_ HANDLE ProcessHandle, _Inout_ PVOID *BaseAddress, _Inout_ PSIZE_T RegionSize,
+                                             _In_ ULONG FreeType);
+    __DECLARE(NTSTATUS, NtFlushVirtualMemory)(_In_ HANDLE ProcessHandle, _Inout_ PVOID *BaseAddress, _Inout_ PSIZE_T RegionSize,
+                                              _Out_ PMX_IO_STATUS_BLOCK IoStatus);
     __DECLARE(NTSTATUS, NtReadVirtualMemory)(_In_ HANDLE ProcessHandle, _In_ PVOID BaseAddress, _Out_ PVOID Buffer,
                                              _In_ SIZE_T NumberOfBytesToRead, _Out_opt_ PSIZE_T NumberOfBytesReaded);
     __DECLARE(NTSTATUS, NtWriteVirtualMemory)(_In_ HANDLE ProcessHandle, _In_ PVOID BaseAddress, _Out_ PVOID Buffer,
                                               _In_ SIZE_T NumberOfBytesToWrite, _Out_opt_ PSIZE_T NumberOfBytesWritten);
-    __DECLARE(NTSTATUS, NtQueryVirtualMemory)(_In_ HANDLE ProcessHandle, _In_opt_ PVOID Address,
-                                              _In_ ULONG VirtualMemoryInformationClass,
-                                              _Out_ PVOID VirtualMemoryInformation, _In_ SIZE_T Length,
-                                              _Out_opt_ PSIZE_T ResultLength);
+    __DECLARE(NTSTATUS, NtQueryVirtualMemory)(_In_ HANDLE ProcessHandle, _In_opt_ PVOID Address, _In_ ULONG VirtualMemoryInformationClass,
+                                              _Out_ PVOID VirtualMemoryInformation, _In_ SIZE_T Length, _Out_opt_ PSIZE_T ResultLength);
     __DECLARE(NTSTATUS, NtProtectVirtualMemory)(_In_ HANDLE ProcessHandle, _Inout_ PVOID *UnsafeBaseAddress,
-                                                _Inout_ SIZE_T *UnsafeNumberOfBytesToProtect,
-                                                _In_ ULONG NewAccessProtection, _Out_ PULONG UnsafeOldAccessProtection);
+                                                _Inout_ SIZE_T *UnsafeNumberOfBytesToProtect, _In_ ULONG NewAccessProtection,
+                                                _Out_ PULONG UnsafeOldAccessProtection);
 
     //--------
 
     __DECLARE(NTSTATUS, NtCreateSection)(_Out_ PHANDLE SectionHandle, _In_ ACCESS_MASK DesiredAccess,
-                                         _In_opt_ PMX_OBJECT_ATTRIBUTES ObjectAttributes,
-                                         _In_opt_ PLARGE_INTEGER MaximumSize, _In_ ULONG SectionPageProtection,
-                                         _In_ ULONG AllocationAttributes, _In_opt_ HANDLE FileHandle);
-    __DECLARE(NTSTATUS, NtQuerySection)(_In_ HANDLE SectionHandle, _In_ ULONG InformationClass,
-                                        _Out_ PVOID InformationBuffer, _In_ ULONG InformationBufferSize,
-                                        _Out_opt_ PULONG ResultLength);
-    __DECLARE(NTSTATUS, NtMapViewOfSection)(_In_ HANDLE SectionHandle, _In_ HANDLE ProcessHandle,
-                                            _Inout_ PVOID *BaseAddress, _In_ ULONG_PTR ZeroBits, _In_ SIZE_T CommitSize,
-                                            _Inout_ PLARGE_INTEGER SectionOffset, _Inout_ PSIZE_T ViewSize,
-                                            _In_ ULONG InheritDisposition, _In_ ULONG AllocationType,
+                                         _In_opt_ PMX_OBJECT_ATTRIBUTES ObjectAttributes, _In_opt_ PLARGE_INTEGER MaximumSize,
+                                         _In_ ULONG SectionPageProtection, _In_ ULONG AllocationAttributes, _In_opt_ HANDLE FileHandle);
+    __DECLARE(NTSTATUS, NtQuerySection)(_In_ HANDLE SectionHandle, _In_ ULONG InformationClass, _Out_ PVOID InformationBuffer,
+                                        _In_ ULONG InformationBufferSize, _Out_opt_ PULONG ResultLength);
+    __DECLARE(NTSTATUS, NtMapViewOfSection)(_In_ HANDLE SectionHandle, _In_ HANDLE ProcessHandle, _Inout_ PVOID *BaseAddress,
+                                            _In_ ULONG_PTR ZeroBits, _In_ SIZE_T CommitSize, _Inout_ PLARGE_INTEGER SectionOffset,
+                                            _Inout_ PSIZE_T ViewSize, _In_ ULONG InheritDisposition, _In_ ULONG AllocationType,
                                             _In_ ULONG Win32Protect);
     __DECLARE(NTSTATUS, NtUnmapViewOfSection)(_In_ HANDLE ProcessHandle, _In_ PVOID BaseAddress);
 
@@ -1114,27 +1088,25 @@ extern "C"
 
     __DECLARE(ULONG, RtlNtStatusToDosError)(_In_ NTSTATUS Status);
 
-    __DECLARE(NTSTATUS, NtFlushInstructionCache)(_In_ HANDLE ProcessHandle, _In_ PVOID BaseAddress,
-                                                 _In_ ULONG NumberOfBytesToFlush);
+    __DECLARE(NTSTATUS, NtFlushInstructionCache)(_In_ HANDLE ProcessHandle, _In_ PVOID BaseAddress, _In_ ULONG NumberOfBytesToFlush);
 
     //--------
 
     __DECLARE(PVOID, RtlAllocateHeap)(_In_ PVOID HeapHandle, _In_opt_ ULONG Flags, _In_ SIZE_T Size);
     __DECLARE(PVOID, RtlReAllocateHeap)(_In_ PVOID HeapHandle, _In_opt_ ULONG Flags, _In_ PVOID Ptr, _In_ SIZE_T Size);
     __DECLARE(BOOLEAN, RtlFreeHeap)(_In_ PVOID HeapHandle, _In_opt_ ULONG Flags, _Frees_ptr_opt_ PVOID HeapBase);
-    __DECLARE(PVOID, RtlCreateHeap)(_In_ ULONG Flags, _In_opt_ PVOID HeapBase, _In_opt_ SIZE_T ReserveSize,
-                                    _In_opt_ SIZE_T CommitSize, _In_opt_ PVOID Lock, _In_opt_ PVOID Parameters);
+    __DECLARE(PVOID, RtlCreateHeap)(_In_ ULONG Flags, _In_opt_ PVOID HeapBase, _In_opt_ SIZE_T ReserveSize, _In_opt_ SIZE_T CommitSize,
+                                    _In_opt_ PVOID Lock, _In_opt_ PVOID Parameters);
     __DECLARE(PVOID, RtlDestroyHeap)(_In_ PVOID HeapHandle);
     __DECLARE(SIZE_T, RtlSizeHeap)(_In_ PVOID HeapHandle, _In_opt_ ULONG Flags, _In_ PVOID Ptr);
 
     //--------
 
-    __DECLARE(VOID, RtlUnwind)(_In_opt_ PVOID TargetFrame, _In_opt_ PVOID TargetIp,
-                               _In_opt_ PEXCEPTION_RECORD ExceptionRecord, _In_ PVOID ReturnValue);
+    __DECLARE(VOID, RtlUnwind)(_In_opt_ PVOID TargetFrame, _In_opt_ PVOID TargetIp, _In_opt_ PEXCEPTION_RECORD ExceptionRecord,
+                               _In_ PVOID ReturnValue);
 #if defined(_M_X64) || defined(_M_AMD64)
-    __DECLARE(VOID, RtlUnwindEx)(_In_ ULONGLONG TargetFrame, _In_ ULONGLONG TargetIp,
-                                 _In_opt_ PEXCEPTION_RECORD ExceptionRecord, _In_ PVOID ReturnValue,
-                                 _In_ PCONTEXT OriginalContext, _In_opt_ PVOID HistoryTable);
+    __DECLARE(VOID, RtlUnwindEx)(_In_ ULONGLONG TargetFrame, _In_ ULONGLONG TargetIp, _In_opt_ PEXCEPTION_RECORD ExceptionRecord,
+                                 _In_ PVOID ReturnValue, _In_ PCONTEXT OriginalContext, _In_opt_ PVOID HistoryTable);
 #endif //_M_X64 || _M_AMD64
 
     //--------
@@ -1142,9 +1114,9 @@ extern "C"
     __DECLARE(NTSTATUS, NtTerminateProcess)(_In_opt_ HANDLE ProcessHandle, _In_ NTSTATUS ExitStatus);
     __DECLARE(NTSTATUS, NtTerminateThread)(_In_ HANDLE ThreadHandle, _In_ NTSTATUS ExitStatus);
 
-    __DECLARE(NTSTATUS, NtDuplicateObject)(_In_ HANDLE SourceProcessHandle, _In_ HANDLE SourceHandle,
-                                           _In_opt_ HANDLE TargetProcessHandle, _Out_opt_ PHANDLE TargetHandle,
-                                           _In_ ACCESS_MASK DesiredAccess, _In_ ULONG HandleAttr, _In_ ULONG Options);
+    __DECLARE(NTSTATUS, NtDuplicateObject)(_In_ HANDLE SourceProcessHandle, _In_ HANDLE SourceHandle, _In_opt_ HANDLE TargetProcessHandle,
+                                           _Out_opt_ PHANDLE TargetHandle, _In_ ACCESS_MASK DesiredAccess, _In_ ULONG HandleAttr,
+                                           _In_ ULONG Options);
 
     //--------
 
@@ -1152,8 +1124,8 @@ extern "C"
 
     //--------
 
-    __DECLARE(NTSTATUS, LdrLoadDll)(_In_opt_ PWSTR SearchPath, _In_opt_ PULONG DllCharacteristics,
-                                    _In_ PMX_UNICODE_STRING DllName, _Out_ PVOID *BaseAddress);
+    __DECLARE(NTSTATUS, LdrLoadDll)(_In_opt_ PWSTR SearchPath, _In_opt_ PULONG DllCharacteristics, _In_ PMX_UNICODE_STRING DllName,
+                                    _Out_ PVOID *BaseAddress);
     __DECLARE(NTSTATUS, LdrUnloadDll)(_In_ PVOID BaseAddress);
 
     __DECLARE(NTSTATUS, LdrFindEntryForAddress)(_In_ PVOID Address, _Out_ PVOID *lplpEntry);
@@ -1168,34 +1140,31 @@ extern "C"
                                              _Inout_opt_ PUNWIND_HISTORY_TABLE HistoryTable);
 
     __DECLARE(PVOID, RtlVirtualUnwind)(_In_ DWORD HandlerType, _In_ DWORD64 ImageBase, _In_ DWORD64 ControlPc,
-                                       _In_ PRUNTIME_FUNCTION FunctionEntry, _Inout_ PCONTEXT ContextRecord,
-                                       _Out_ PVOID *HandlerData, _Out_ PDWORD64 EstablisherFrame,
-                                       _Inout_opt_ MX_KNONVOLATILE_CONTEXT_POINTERS *ContextPointers);
+                                       _In_ PRUNTIME_FUNCTION FunctionEntry, _Inout_ PCONTEXT ContextRecord, _Out_ PVOID *HandlerData,
+                                       _Out_ PDWORD64 EstablisherFrame, _Inout_opt_ MX_KNONVOLATILE_CONTEXT_POINTERS *ContextPointers);
 
     __DECLARE(BOOLEAN, RtlAddFunctionTable)(_In_ PVOID FunctionTable, _In_ DWORD EntryCount, _In_ DWORD64 BaseAddress);
     __DECLARE(BOOLEAN, RtlDeleteFunctionTable)(_In_ PVOID FunctionTable);
-    __DECLARE(BOOLEAN, RtlInstallFunctionTableCallback)(_In_ DWORD64 TableIdentifier, _In_ DWORD64 BaseAddress,
-                                                        _In_ DWORD Length, _In_ PGET_RUNTIME_FUNCTION_CALLBACK Callback,
-                                                        _In_ PVOID Context, _In_ PCWSTR OutOfProcessCallbackDll);
+    __DECLARE(BOOLEAN, RtlInstallFunctionTableCallback)(_In_ DWORD64 TableIdentifier, _In_ DWORD64 BaseAddress, _In_ DWORD Length,
+                                                        _In_ PGET_RUNTIME_FUNCTION_CALLBACK Callback, _In_ PVOID Context,
+                                                        _In_ PCWSTR OutOfProcessCallbackDll);
 #endif //_M_X64
 
     //--------
 
-    __DECLARE(NTSTATUS, RtlAnsiStringToUnicodeString)(_Inout_ PMX_UNICODE_STRING DestinationString,
-                                                      _In_ PCMX_ANSI_STRING SourceString, _In_ BOOLEAN AllocDestString);
+    __DECLARE(NTSTATUS, RtlAnsiStringToUnicodeString)(_Inout_ PMX_UNICODE_STRING DestinationString, _In_ PCMX_ANSI_STRING SourceString,
+                                                      _In_ BOOLEAN AllocDestString);
     __DECLARE(ULONG, RtlAnsiStringToUnicodeSize)(_In_ PMX_ANSI_STRING AnsiString);
     __DECLARE(VOID, RtlFreeUnicodeString)(_Inout_ PMX_UNICODE_STRING UnicodeString);
 
-    __DECLARE(NTSTATUS, RtlUnicodeStringToAnsiString)(_Inout_ PMX_ANSI_STRING DestinationString,
-                                                      _In_ PCMX_UNICODE_STRING SourceString,
+    __DECLARE(NTSTATUS, RtlUnicodeStringToAnsiString)(_Inout_ PMX_ANSI_STRING DestinationString, _In_ PCMX_UNICODE_STRING SourceString,
                                                       _In_ BOOLEAN AllocDestString);
     __DECLARE(ULONG, RtlUnicodeStringToAnsiSize)(_In_ PMX_UNICODE_STRING UnicodeString);
     __DECLARE(VOID, RtlFreeAnsiString)(_Inout_ PMX_ANSI_STRING AnsiString);
 
     __DECLARE(LONG, RtlCompareUnicodeString)(_In_ PCMX_UNICODE_STRING String1, _In_ PCMX_UNICODE_STRING String2,
                                              _In_ BOOLEAN CaseInsensitive);
-    __DECLARE(LONG, RtlCompareString)(_In_ PCMX_ANSI_STRING String1, _In_ PCMX_ANSI_STRING String2,
-                                      _In_ BOOLEAN CaseInsensitive);
+    __DECLARE(LONG, RtlCompareString)(_In_ PCMX_ANSI_STRING String1, _In_ PCMX_ANSI_STRING String2, _In_ BOOLEAN CaseInsensitive);
 
     __DECLARE(WCHAR, RtlUpcaseUnicodeChar)(_In_ WCHAR SourceCharacter);
     __DECLARE(WCHAR, RtlDowncaseUnicodeChar)(_In_ WCHAR SourceCharacter);
@@ -1203,8 +1172,7 @@ extern "C"
 
     //--------
 
-    __DECLARE(PVOID, RtlAddVectoredExceptionHandler)(_In_ ULONG FirstHandler,
-                                                     _In_ PVECTORED_EXCEPTION_HANDLER VectoredHandler);
+    __DECLARE(PVOID, RtlAddVectoredExceptionHandler)(_In_ ULONG FirstHandler, _In_ PVECTORED_EXCEPTION_HANDLER VectoredHandler);
     __DECLARE(ULONG, RtlRemoveVectoredExceptionHandler)(_In_ PVOID VectoredHandlerHandle);
 
     //--------
@@ -1236,15 +1204,14 @@ extern "C"
     HANDLE MxOpenProcess(_In_ DWORD dwDesiredAccess, _In_ BOOL bInheritHandle, _In_ DWORD dwProcessId);
     HANDLE MxOpenThread(_In_ DWORD dwDesiredAccess, _In_ BOOL bInheritHandle, _In_ DWORD dwThreadId);
 
-    NTSTATUS MxCreateFile(_Out_ HANDLE *lphFile, _In_z_ LPCWSTR szFileNameW, _In_ DWORD dwDesiredAccess,
-                          _In_ DWORD dwShareMode, _In_ DWORD dwCreationDisposition, _In_ DWORD dwFlagsAndAttributes,
+    NTSTATUS MxCreateFile(_Out_ HANDLE *lphFile, _In_z_ LPCWSTR szFileNameW, _In_ DWORD dwDesiredAccess, _In_ DWORD dwShareMode,
+                          _In_ DWORD dwCreationDisposition, _In_ DWORD dwFlagsAndAttributes,
                           _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes);
 
     // 1 or 0 on success, STATUS_NOT_SUPPORTED if o.s. bitness is < 64 or STATUS_### on error
     NTSTATUS MxIsWow64(_In_ HANDLE hProcess);
 
-    SIZE_T MxReadMem(_In_ HANDLE hProcess, _Out_writes_bytes_(nBytesCount) LPVOID lpDest, _In_ LPVOID lpSrc,
-                     _In_ SIZE_T nBytesCount);
+    SIZE_T MxReadMem(_In_ HANDLE hProcess, _Out_writes_bytes_(nBytesCount) LPVOID lpDest, _In_ LPVOID lpSrc, _In_ SIZE_T nBytesCount);
     BOOL MxWriteMem(_In_ HANDLE hProcess, _In_ LPVOID lpDest, _In_ LPVOID lpSrc, _In_ SIZE_T nBytesCount);
 
     NTSTATUS MxGetThreadPriority(_In_ HANDLE hThread, _Out_ int *lpnPriority);
@@ -1253,10 +1220,10 @@ extern "C"
     DWORD MxGetCurrentThreadId();
     DWORD MxGetCurrentProcessId();
 
-    int mx_sprintf_s(_Out_writes_z_(nMaxCount) char *lpDest, _In_ size_t nMaxCount,
-                     _In_z_ _Printf_format_string_ const char *szFormatA, ...);
-    int mx_vsnprintf(_Out_writes_z_(nMaxCount) char *lpDest, _In_ size_t nMaxCount,
-                     _In_z_ _Printf_format_string_ const char *szFormatA, _In_ va_list lpArgList);
+    int mx_sprintf_s(_Out_writes_z_(nMaxCount) char *lpDest, _In_ size_t nMaxCount, _In_z_ _Printf_format_string_ const char *szFormatA,
+                     ...);
+    int mx_vsnprintf(_Out_writes_z_(nMaxCount) char *lpDest, _In_ size_t nMaxCount, _In_z_ _Printf_format_string_ const char *szFormatA,
+                     _In_ va_list lpArgList);
     int mx_swprintf_s(_Out_writes_z_(nMaxCount) wchar_t *lpDest, _In_ size_t nMaxCount,
                       _In_z_ _Printf_format_string_ const wchar_t *szFormatW, ...);
     int mx_vsnwprintf(_Out_writes_z_(nMaxCount) wchar_t *lpDest, _In_ size_t nMaxCount,
@@ -1265,18 +1232,16 @@ extern "C"
 #if defined(_M_IX86)
     SIZE_T __stdcall MxCallWithSEH0(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised);
     SIZE_T __stdcall MxCallStdCallWithSEH1(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_ SIZE_T nParam1);
-    SIZE_T __stdcall MxCallStdCallWithSEH2(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_ SIZE_T nParam1,
-                                           _In_ SIZE_T nParam2);
-    SIZE_T __stdcall MxCallStdCallWithSEH3(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_ SIZE_T nParam1,
-                                           _In_ SIZE_T nParam2, _In_ SIZE_T nParam3);
+    SIZE_T __stdcall MxCallStdCallWithSEH2(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_ SIZE_T nParam1, _In_ SIZE_T nParam2);
+    SIZE_T __stdcall MxCallStdCallWithSEH3(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_ SIZE_T nParam1, _In_ SIZE_T nParam2,
+                                           _In_ SIZE_T nParam3);
     SIZE_T __stdcall MxCallCDeclWithSEH1(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_ SIZE_T nParam1);
-    SIZE_T __stdcall MxCallCDeclWithSEH2(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_ SIZE_T nParam1,
-                                         _In_ SIZE_T nParam2);
-    SIZE_T __stdcall MxCallCDeclWithSEH3(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_ SIZE_T nParam1,
-                                         _In_ SIZE_T nParam2, _In_ SIZE_T nParam3);
+    SIZE_T __stdcall MxCallCDeclWithSEH2(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_ SIZE_T nParam1, _In_ SIZE_T nParam2);
+    SIZE_T __stdcall MxCallCDeclWithSEH3(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_ SIZE_T nParam1, _In_ SIZE_T nParam2,
+                                         _In_ SIZE_T nParam3);
 #elif defined(_M_X64)
-SIZE_T __stdcall MxCallWithSEH(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_opt_ SIZE_T nParam1,
-                               _In_opt_ SIZE_T nParam2, _In_opt_ SIZE_T nParam3);
+    SIZE_T __stdcall MxCallWithSEH(_In_ LPVOID lpFunc, _Out_opt_ BOOL *lpExceptionRaised, _In_opt_ SIZE_T nParam1, _In_opt_ SIZE_T nParam2,
+                                   _In_opt_ SIZE_T nParam3);
 #endif
 
     VOID MxSleep(_In_ DWORD dwTimeMs);

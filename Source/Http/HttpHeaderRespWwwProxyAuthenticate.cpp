@@ -20,10 +20,9 @@
 #include "..\..\Include\Http\HttpHeaderRespWwwProxyAuthenticate.h"
 #include "..\..\Include\AutoPtr.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderRespWwwProxyAuthenticateCommon::CHttpHeaderRespWwwProxyAuthenticateCommon() : CHttpHeaderBase()
 {
@@ -114,7 +113,8 @@ HRESULT CHttpHeaderRespWwwProxyAuthenticateCommon::Parse(_In_z_ LPCSTR szValueA,
                     return MX_E_InvalidData;
                 }
             }
-        } while (szValueA < szValueEndA);
+        }
+        while (szValueA < szValueEndA);
     }
 
     // check for separator or end
@@ -146,8 +146,7 @@ HRESULT CHttpHeaderRespWwwProxyAuthenticateCommon::Build(_Inout_ CStringA &cStrD
     nCount = aParamsList.GetCount();
     for (i = 0; i < nCount; i++)
     {
-        if (Http::BuildQuotedString(cStrTempA, aParamsList[i]->szValueW, StrLenW(aParamsList[i]->szValueW), TRUE) ==
-            FALSE)
+        if (Http::BuildQuotedString(cStrTempA, aParamsList[i]->szValueW, StrLenW(aParamsList[i]->szValueW), TRUE) == FALSE)
         {
             return E_OUTOFMEMORY;
         }

@@ -23,20 +23,19 @@
 #include "HttpHeaderBase.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderRespCacheControl : public CHttpHeaderBase
 {
-  public:
+public:
     CHttpHeaderRespCacheControl();
     ~CHttpHeaderRespCacheControl();
 
-    MX_DECLARE_HTTPHEADER_NAME(Cache - Control)
+    MX_DECLARE_HTTPHEADER_NAME("Cache-Control")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
@@ -93,7 +92,7 @@ class CHttpHeaderRespCacheControl : public CHttpHeaderBase
 
     HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
 
-  private:
+private:
     typedef struct
     {
         LPWSTR szValueW;

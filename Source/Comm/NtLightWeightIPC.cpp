@@ -95,13 +95,16 @@ HRESULT CNtLightWeightIPC::ConnectToServer(__in_z LPCWSTR szServerNameW)
     NTSTATUS nNtStatus;
 
     if (szServerNameW == NULL || szServerNameW[0] == 0)
+    {
         return STATUS_INVALID_PARAMETER;
+    }
     nLen = StrLenW(szServerNameW);
     if (nLen > 10240)
+    {
         return STATUS_INVALID_PARAMETER;
+    }
     nLen *= sizeof(WCHAR);
-    usServerName =
-        (PMX_UNICODE_STRING)::MxRtlAllocateHeap(::MxGetProcessHeap(), 0, sizeof(MX_UNICODE_STRING) + 18 + nLen);
+    usServerName = (PMX_UNICODE_STRING)::MxRtlAllocateHeap(::MxGetProcessHeap(), 0, sizeof(MX_UNICODE_STRING) + 18 + nLen);
     if (usServerName != NULL)
     {
         usServerName->Length = usServerName->MaximumLength = 18 + (USHORT)nLen;
@@ -118,7 +121,9 @@ HRESULT CNtLightWeightIPC::ConnectToServer(__in_z LPCWSTR szServerNameW)
     if (NT_SUCCESS(nNtStatus))
     {
         if (cEvent.Create(TRUE, FALSE) == FALSE)
+        {
             nNtStatus = STATUS_INSUFFICIENT_RESOURCES;
+        }
     }
     // create pipe
     if (NT_SUCCESS(nNtStatus))
@@ -136,10 +141,12 @@ HRESULT CNtLightWeightIPC::ConnectToServer(__in_z LPCWSTR szServerNameW)
         {
             MX::MemSet(&sIosb, 0, sizeof(sIosb));
             nNtStatus =
-                ::MxNtCreateFile(&cPipe, GENERIC_READ | GENERIC_WRITE | SYNCHRONIZE | FILE_READ_ATTRIBUTES, &sObjAttr,
-                                 &sIosb, NULL, 0, 0, FILE_OPEN, FILE_NON_DIRECTORY_FILE | FILE_WRITE_THROUGH, NULL, 0);
+                ::MxNtCreateFile(&cPipe, GENERIC_READ | GENERIC_WRITE | SYNCHRONIZE | FILE_READ_ATTRIBUTES, &sObjAttr, &sIosb, NULL, 0, 0,
+                                 FILE_OPEN, FILE_NON_DIRECTORY_FILE | FILE_WRITE_THROUGH, NULL, 0);
             if (NT_SUCCESS(nNtStatus))
+            {
                 break;
+            }
             if ((--dwRetry) == 0 || (nNtStatus != STATUS_PIPE_NOT_AVAILABLE &&
                                      nNtStatus != STATUS_INSTANCE_NOT_AVAILABLE && nNtStatus != STATUS_PIPE_BUSY))
                 break;
@@ -149,9 +156,13 @@ HRESULT CNtLightWeightIPC::ConnectToServer(__in_z LPCWSTR szServerNameW)
     }
     // done
     if (usServerName != NULL)
+    {
         ::MxRtlFreeHeap(::MxGetProcessHeap(), 0, usServerName);
+    }
     if (!NT_SUCCESS(nNtStatus))
+    {
         Disconnect();
+    }
     return nNtStatus;
 }
 
@@ -163,8 +174,7 @@ VOID CNtLightWeightIPC::Disconnect()
     return;
 }
 
-NTSTATUS CNtLightWeightIPC::SendMsg(__in LPCVOID lpMsg, __in SIZE_T nMsgSize, __in_opt CMessage *lpReplyMsg,
-                                    __in_opt ULONG nTimeout)
+NTSTATUS CNtLightWeightIPC::SendMsg(__in LPCVOID lpMsg, __in SIZE_T nMsgSize, __in_opt CMessage *lpReplyMsg, __in_opt ULONG nTimeout)
 {
     MX_IO_STATUS_BLOCK sIosb;
     DATA sData;
@@ -175,11 +185,17 @@ NTSTATUS CNtLightWeightIPC::SendMsg(__in LPCVOID lpMsg, __in SIZE_T nMsgSize, __
     NTSTATUS nNtStatus, nNtStatus2;
 
     if (lpReplyMsg != NULL)
+    {
         lpReplyMsg->Reset();
+    }
     if (lpMsg == NULL || nMsgSize == 0 || nMsgSize > 0x7FFFFFFF)
+    {
         return STATUS_INVALID_PARAMETER;
+    }
     if (cPipe == NULL)
+    {
         return STATUS_PIPE_DISCONNECTED;
+    }
     s = (LPBYTE)lpMsg;
     do
     {
@@ -200,8 +216,7 @@ NTSTATUS CNtLightWeightIPC::SendMsg(__in LPCVOID lpMsg, __in SIZE_T nMsgSize, __
         sData.sHdr.nCheckSum = FNV1A_32(s, (SIZE_T)(sData.sHdr.nSize), sData.sHdr.nCheckSum);
         cEvent.Reset();
         MX::MemSet(&sIosb, 0, sizeof(sIosb));
-        nNtStatus = ::MxNtWriteFile(cPipe, cEvent, NULL, NULL, &sIosb, &sData,
-                                    (ULONG)sizeof(sData.sHdr) + sData.sHdr.nSize, NULL, NULL);
+        nNtStatus = ::MxNtWriteFile(cPipe, cEvent, NULL, NULL, &sIosb, &sData, (ULONG)sizeof(sData.sHdr) + sData.sHdr.nSize, NULL, NULL);
         if (nNtStatus == STATUS_PENDING)
         {
             // wait until completed
@@ -216,15 +231,21 @@ NTSTATUS CNtLightWeightIPC::SendMsg(__in LPCVOID lpMsg, __in SIZE_T nMsgSize, __
                 {
                     liTimeoutStep.QuadPart = liTimeout.QuadPart;
                     if (liTimeoutStep.QuadPart < MX_MILLISECONDS_TO_100NS(100))
+                    {
                         liTimeoutStep.QuadPart = MX_MILLISECONDS_TO_100NS(100);
+                    }
                     nNtStatus = ::MxNtWaitForSingleObject(cEvent, FALSE, &liTimeoutStep);
                     if (nNtStatus == STATUS_TIMEOUT)
+                    {
                         nNtStatus = STATUS_PENDING;
+                    }
                     liTimeout.QuadPart -= liTimeoutStep.QuadPart;
                 }
             }
             if (NT_SUCCESS(nNtStatus))
+            {
                 nNtStatus = sIosb.Status;
+            }
         }
         if (!NT_SUCCESS(nNtStatus))
         {
@@ -239,9 +260,13 @@ NTSTATUS CNtLightWeightIPC::SendMsg(__in LPCVOID lpMsg, __in SIZE_T nMsgSize, __
             cEvent.Reset();
             nNtStatus2 = ::MxNtWriteFile(cPipe, cEvent, NULL, NULL, &sIosb, &sData, (ULONG)sizeof(sData), NULL, NULL);
             if (nNtStatus2 == STATUS_PENDING)
+            {
                 nNtStatus2 = ::MxNtWaitForSingleObject(cEvent, FALSE, NULL);
+            }
             if (NT_SUCCESS(nNtStatus2))
+            {
                 nNtStatus2 = sIosb.Status;
+            }
             break;
         }
         // next block
@@ -272,15 +297,21 @@ NTSTATUS CNtLightWeightIPC::SendMsg(__in LPCVOID lpMsg, __in SIZE_T nMsgSize, __
                     {
                         liTimeoutStep.QuadPart = liTimeout.QuadPart;
                         if (liTimeoutStep.QuadPart < MX_MILLISECONDS_TO_100NS(100))
+                        {
                             liTimeoutStep.QuadPart = MX_MILLISECONDS_TO_100NS(100);
+                        }
                         nNtStatus = ::MxNtWaitForSingleObject(cEvent, FALSE, &liTimeoutStep);
                         if (nNtStatus == STATUS_TIMEOUT)
+                        {
                             nNtStatus = STATUS_PENDING;
+                        }
                         liTimeout.QuadPart -= liTimeoutStep.QuadPart;
                     }
                 }
                 if (NT_SUCCESS(nNtStatus))
+                {
                     nNtStatus = sIosb.Status;
+                }
             }
             // process packet
             if (NT_SUCCESS(nNtStatus))
@@ -305,7 +336,9 @@ NTSTATUS CNtLightWeightIPC::SendMsg(__in LPCVOID lpMsg, __in SIZE_T nMsgSize, __
                         {
                             nTotalMsgSize = (SIZE_T)(sData.sHdr.nTotalSize);
                             if (lpReplyMsg->EnsureSize(nTotalMsgSize) == FALSE)
+                            {
                                 nNtStatus = STATUS_INSUFFICIENT_RESOURCES;
+                            }
                         }
                         else
                         {
@@ -316,8 +349,7 @@ NTSTATUS CNtLightWeightIPC::SendMsg(__in LPCVOID lpMsg, __in SIZE_T nMsgSize, __
                     else
                     {
                         // a message exists, first validate packet
-                        if (sData.sHdr.nChainIndex != nChainIdx + 1 ||
-                            (SIZE_T)(sData.sHdr.nTotalSize) != nTotalMsgSize ||
+                        if (sData.sHdr.nChainIndex != nChainIdx + 1 || (SIZE_T)(sData.sHdr.nTotalSize) != nTotalMsgSize ||
                             nCurrMsgSize + (SIZE_T)(sData.sHdr.nSize) < nCurrMsgSize ||
                             nCurrMsgSize + (SIZE_T)(sData.sHdr.nSize) > nTotalMsgSize)
                         {
@@ -333,7 +365,9 @@ NTSTATUS CNtLightWeightIPC::SendMsg(__in LPCVOID lpMsg, __in SIZE_T nMsgSize, __
                             nCurrMsgSize += (SIZE_T)(sData.sHdr.nSize);
                             // end of message reached?
                             if (nCurrMsgSize == nTotalMsgSize)
+                            {
                                 break;
+                            }
                         }
                         else
                         {
@@ -350,7 +384,9 @@ NTSTATUS CNtLightWeightIPC::SendMsg(__in LPCVOID lpMsg, __in SIZE_T nMsgSize, __
     }
     // done
     if (!NT_SUCCESS(nNtStatus) && lpReplyMsg != NULL)
+    {
         lpReplyMsg->Reset();
+    }
     return nNtStatus;
 }
 
@@ -388,11 +424,15 @@ BOOL CNtLightWeightIPC::CMessage::EnsureSize(__in SIZE_T nSize)
     {
         nSize = (nSize + 4095) & (~4095);
         if (lpData == NULL)
+        {
             lpNewData = (LPBYTE)::MxRtlAllocateHeap(::MxGetProcessHeap(), 0, nSize);
+        }
         else
             lpNewData = (LPBYTE)::MxRtlReAllocateHeap(::MxGetProcessHeap(), 0, lpData, nSize);
         if (lpNewData == NULL)
+        {
             return FALSE;
+        }
         lpData = lpNewData;
         nDataSize = nSize;
     }
@@ -402,11 +442,17 @@ BOOL CNtLightWeightIPC::CMessage::EnsureSize(__in SIZE_T nSize)
 BOOL CNtLightWeightIPC::CMessage::Add(__in LPCVOID _lpData, __in SIZE_T _nDataSize)
 {
     if (_nDataSize == 0)
+    {
         return TRUE;
+    }
     if (_lpData == NULL)
+    {
         return FALSE;
+    }
     if (nDataLen + _nDataSize < nDataLen || EnsureSize(nDataLen + _nDataSize) == FALSE)
+    {
         return FALSE;
+    }
     MemCopy(lpData + nDataLen, _lpData, _nDataSize);
     nDataLen += _nDataSize;
     return TRUE;
@@ -421,11 +467,12 @@ static BOOL ValidatePacket(__in DWORD dwReadedBytes, __in DATA &sData)
     ULONG nHash;
 
     if (dwReadedBytes < sizeof(sData.sHdr))
+    {
         return FALSE;
+    }
     nHash = FNV1A_32(&(sData.sHdr), sizeof(sData.sHdr) - sizeof(DWORD), FNV1A_32_INIT);
     nHash = FNV1A_32(sData.aBuffer, (SIZE_T)dwReadedBytes - sizeof(sData.sHdr), nHash);
-    if (sData.sHdr.nCheckSum != nHash || sData.sHdr.nTotalSize == 0 ||
-        sData.sHdr.nTotalSize > NTLIGHTWEIGHTIPC_MESSAGE_SIZE ||
+    if (sData.sHdr.nCheckSum != nHash || sData.sHdr.nTotalSize == 0 || sData.sHdr.nTotalSize > NTLIGHTWEIGHTIPC_MESSAGE_SIZE ||
         dwReadedBytes != ((DWORD)sizeof(sData.sHdr) + sData.sHdr.nSize) || sData.sHdr.nSize > sData.sHdr.nTotalSize ||
         sData.sHdr.nSize > sizeof(sData.aBuffer))
         return FALSE;

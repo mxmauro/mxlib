@@ -24,7 +24,7 @@
 #include "..\..\Include\Http\HttpCommon.h"
 #include <stdlib.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define COOKIE_FLAG_EXPIRES_SET 0x01
 #define COOKIE_FLAG_ISSECURE 0x02
@@ -37,13 +37,12 @@ static const MX::CDateTime cZeroDt(1, 1, 1);
 //-----------------------------------------------------------
 
 static VOID SkipBlanks(_Inout_ LPCSTR &szSrcA, _Inout_ SIZE_T &nSrcLen);
-static HRESULT GetPairA(_Inout_ LPCSTR &szSrcA, _Inout_ SIZE_T &nSrcLen, _In_ BOOL bAdv,
-                        _Inout_ MX::CStringA &cStrNameA, _Inout_ MX::CStringA &cStrValueA);
+static HRESULT GetPairA(_Inout_ LPCSTR &szSrcA, _Inout_ SIZE_T &nSrcLen, _In_ BOOL bAdv, _Inout_ MX::CStringA &cStrNameA,
+                        _Inout_ MX::CStringA &cStrValueA);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpCookie::CHttpCookie() : TRefCounted<CBaseMemObj>()
 {
@@ -504,18 +503,18 @@ HRESULT CHttpCookie::ToString(_Inout_ CStringA &cStrDestA, _In_ BOOL bAddAttribu
         }
         switch (nSameSite)
         {
-        case eSameSite::Lax:
-            if (cStrDestA.Concat("; eSameSite::=Lax") == FALSE)
-            {
-                return E_OUTOFMEMORY;
-            }
-            break;
-        case eSameSite::Strict:
-            if (cStrDestA.Concat("; eSameSite::=Strict") == FALSE)
-            {
-                return E_OUTOFMEMORY;
-            }
-            break;
+            case eSameSite::Lax:
+                if (cStrDestA.Concat("; eSameSite::=Lax") == FALSE)
+                {
+                    return E_OUTOFMEMORY;
+                }
+                break;
+            case eSameSite::Strict:
+                if (cStrDestA.Concat("; eSameSite::=Strict") == FALSE)
+                {
+                    return E_OUTOFMEMORY;
+                }
+                break;
         }
     }
     return S_OK;
@@ -667,10 +666,8 @@ HRESULT CHttpCookie::ParseFromResponseHeader(_In_z_ LPCSTR szSrcA, _In_opt_ SIZE
             cStrTempNameA.Delete(0, 1);
         }
         if (cStrTempNameA.IsEmpty() != FALSE || StrCompareA((LPSTR)cStrTempNameA, "Discard", TRUE) == 0 ||
-            StrCompareA((LPSTR)cStrTempNameA, "Comment", TRUE) == 0 ||
-            StrCompareA((LPSTR)cStrTempNameA, "CommentURL", TRUE) == 0 ||
-            StrCompareA((LPSTR)cStrTempNameA, "Port", TRUE) == 0 ||
-            StrCompareA((LPSTR)cStrTempNameA, "Version", TRUE) == 0)
+            StrCompareA((LPSTR)cStrTempNameA, "Comment", TRUE) == 0 || StrCompareA((LPSTR)cStrTempNameA, "CommentURL", TRUE) == 0 ||
+            StrCompareA((LPSTR)cStrTempNameA, "Port", TRUE) == 0 || StrCompareA((LPSTR)cStrTempNameA, "Version", TRUE) == 0)
         {
             // ignore value
         }
@@ -1023,8 +1020,8 @@ static VOID SkipBlanks(_Inout_ LPCSTR &szSrcA, _Inout_ SIZE_T &nSrcLen)
     return;
 }
 
-static HRESULT GetPairA(_Inout_ LPCSTR &szSrcA, _Inout_ SIZE_T &nSrcLen, _In_ BOOL bAdv,
-                        _Inout_ MX::CStringA &cStrNameA, _Inout_ MX::CStringA &cStrValueA)
+static HRESULT GetPairA(_Inout_ LPCSTR &szSrcA, _Inout_ SIZE_T &nSrcLen, _In_ BOOL bAdv, _Inout_ MX::CStringA &cStrNameA,
+                        _Inout_ MX::CStringA &cStrValueA)
 {
     LPCSTR szStartA;
 

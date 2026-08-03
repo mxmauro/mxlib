@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderReqSecWebSocketVersion.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderReqSecWebSocketVersion::CHttpHeaderReqSecWebSocketVersion() : CHttpHeaderBase()
 {

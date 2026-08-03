@@ -22,7 +22,7 @@
 
 #define MAX_SUBINDEXES_COUNT 16
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 static HRESULT ParseNameAndIndexes(_In_z_ LPCWSTR szNameW, _Inout_ MX::CStringW &cStrNameW,
                                    _Inout_ MX::TArrayListWithFree<LPCWSTR> &aSubIndexesList);
@@ -31,8 +31,7 @@ static int NumericCompare(_In_z_ LPCWSTR szNumber1, _In_z_ LPCWSTR szNumber2);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpBodyParserFormBase::CHttpBodyParserFormBase() : CHttpBodyParserBase()
 {
@@ -218,8 +217,7 @@ HRESULT CHttpBodyParserFormBase::AddField(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR
     return S_OK;
 }
 
-HRESULT CHttpBodyParserFormBase::AddFileField(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szFileNameW, _In_z_ LPCSTR szTypeA,
-                                              _In_ HANDLE hFile)
+HRESULT CHttpBodyParserFormBase::AddFileField(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szFileNameW, _In_z_ LPCSTR szTypeA, _In_ HANDLE hFile)
 {
     CFileField *lpField, *lpChildField;
     CStringW cStrNameW, cStrIndexW;
@@ -417,9 +415,8 @@ CHttpBodyParserFormBase::CFileField::~CFileField()
     return;
 }
 
-HRESULT CHttpBodyParserFormBase::CFileField::Read(_Out_writes_to_(nToRead, *lpnReaded) LPVOID lpDest,
-                                                  _In_ ULONGLONG nOffset, _In_ SIZE_T nToRead,
-                                                  _Out_opt_ SIZE_T *lpnReaded)
+HRESULT CHttpBodyParserFormBase::CFileField::Read(_Out_writes_to_(nToRead, *lpnReaded) LPVOID lpDest, _In_ ULONGLONG nOffset,
+                                                  _In_ SIZE_T nToRead, _Out_opt_ SIZE_T *lpnReaded)
 {
     union
     {

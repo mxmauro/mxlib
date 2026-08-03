@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderRespSecWebSocketProtocol.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderRespSecWebSocketProtocol::CHttpHeaderRespSecWebSocketProtocol() : CHttpHeaderBase()
 {

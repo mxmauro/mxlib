@@ -20,10 +20,10 @@
 #ifndef __FNV_H__
 #define __FNV_H__
 
-// NOTE: This is a stripped down version. Refer to original
-//       webpage for full version
+ // NOTE: This is a stripped down version. Refer to original
+ //       webpage for full version
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #include <windows.h>
 #include <sys/types.h>

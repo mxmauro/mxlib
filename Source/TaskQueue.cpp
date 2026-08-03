@@ -21,10 +21,9 @@
 #include "..\Include\WaitableObjects.h"
 #include "..\Include\Timer.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CTaskQueue::CTaskQueue() : CBaseMemObj(), CIoCompletionPortThreadPool()
 {
@@ -109,8 +108,7 @@ HRESULT CTaskQueue::QueueTask(_In_ CTask *lpTask, _In_ OnRunTaskCallback cCallba
     return hRes;
 }
 
-VOID CTaskQueue::OnQueuedTask(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
-                              _In_ HRESULT hRes)
+VOID CTaskQueue::OnQueuedTask(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr, _In_ HRESULT hRes)
 {
     CTask *lpTask = CONTAINING_RECORD(lpOvr, CTask, sOvr);
     CTimer cTimer;

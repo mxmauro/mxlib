@@ -118,10 +118,14 @@ function Invoke-App([string]$CmdLine, [string]$CurFolder, [string]$EnvPath, [boo
 }
 
 function CheckForNewerFile([string]$File, [datetime]$BuildDate) {
-    if (-not (Test-Path -LiteralPath $File)) {
-        return $false
+    if (Test-Path -LiteralPath $File) {
+        if ((Get-Item -LiteralPath $File).LastWriteTime -gt $BuildDate) {
+            $fullPath = [System.IO.Path]::GetFullPath($File)
+            Write-Host "File: `"$($fullPath)`" is newer... rebuilding"
+            return $true
+        }
     }
-    return (Get-Item -LiteralPath $File).LastWriteTime -gt $BuildDate
+    return $false
 }
 
 function CheckForNewerFiles([string]$Folder, [datetime]$BuildDate) {
@@ -132,11 +136,26 @@ function CheckForNewerFiles([string]$Folder, [datetime]$BuildDate) {
     }
     foreach ($f in Get-ChildItem -LiteralPath $Folder -File -ErrorAction SilentlyContinue) {
         if (CheckForNewerFile $f.FullName $BuildDate) {
-            Write-Host "File: `"$($f.FullName)`" is newer... rebuilding"
             return $true
         }
     }
     return $false
+}
+
+function GetLowestFileTimestamp([string[]]$Files) {
+    $lowest = $null
+    foreach ($f in $Files) {
+        if (-not (Test-Path -LiteralPath $f)) {
+            $fullPath = [System.IO.Path]::GetFullPath($f)
+            Write-Host "File: `"$($fullPath)`" not found... rebuilding"
+            return $null
+        }
+        $ts = (Get-Item -LiteralPath $f).LastWriteTime
+        if ($null -eq $lowest -or $ts -lt $lowest) {
+            $lowest = $ts
+        }
+    }
+    return $lowest
 }
 
 function CopyFiles([string]$SrcFolder, [string]$DestFolder, [string]$FileMask) {
@@ -147,39 +166,28 @@ function CopyFiles([string]$SrcFolder, [string]$DestFolder, [string]$FileMask) {
     if ($FileMask) {
         $cmd += ' ' + $FileMask
     }
-    $cmd += ' /COPY:DAT /XO /NDL /NJH /NJS /NP /NS /NC /E'
+    $cmd += ' /COPY:DA /NDL /NJH /NJS /NP /NS /NC /E /PURGE /IM /IS /IT'
     $err = Invoke-App $cmd $script:scriptPath '' $true
     if ($err -lt 8) {
         $err = 0
+        $copyDate = Get-Date
+        foreach ($targetFile in Get-ChildItem -LiteralPath $DestFolder -Recurse -File) {
+            $targetFile.LastWriteTime = $copyDate
+        }
     }
     return $err
 }
 
 function CreateIncludeAll {
-    $fileName  = $script:scriptPath + '..\..\Include\RapidJSON\rapidjson-all.h'
-    $doRebuild = $false
-
-    if (Test-Path -LiteralPath $fileName) {
-        $buildDate = (Get-Item -LiteralPath $fileName).LastWriteTime
-        if ((CheckForNewerFiles ($script:scriptPath + 'Source\include\rapidjson') $buildDate) -or
-            (CheckForNewerFile  ($script:scriptPath + 'build.ps1') $buildDate)) {
-            $doRebuild = $true
-        }
-    }
-    else {
-        $doRebuild = $true
-    }
-
-    if (-not $doRebuild) {
-        return 0
-    }
-
     Write-Host "Rebuilding rapidjson-all.h..."
+
+    $fileName = [System.IO.Path]::GetFullPath($script:scriptPath + '..\..\Include\RapidJSON\rapidjson-all.h')
 
     try {
         $writer = [System.IO.StreamWriter]::new($fileName, $false, [System.Text.Encoding]::ASCII)
     }
     catch {
+        Write-Host "Error: $($_.Exception.Message)"
         return 1
     }
 
@@ -297,6 +305,7 @@ __inline const Value& LookupMemberRef(_In_ const Value &parent, _In_z_ LPCSTR sz
         return 0
     }
     catch {
+        Write-Host "Error: $($_.Exception.Message)"
         return 1
     }
     finally {
@@ -321,6 +330,40 @@ if (-not $vsPath) {
 $cmdExe = FindCmdExe
 
 # ---------------------------------------------------------------------------
+# Check if rebuild is needed
+# ---------------------------------------------------------------------------
+
+$doRebuild = $false
+Write-Host "Checking if source files were modified..."
+$sourceIncludeFolder = [System.IO.Path]::GetFullPath($script:scriptPath + 'Source\include\rapidjson')
+$targetIncludeFolder = [System.IO.Path]::GetFullPath($script:scriptPath + '..\..\Include\RapidJSON')
+$stamps = @(
+    ($targetIncludeFolder + '\rapidjson-all.h')
+)
+foreach ($sourceFile in Get-ChildItem -LiteralPath $sourceIncludeFolder -Recurse -File) {
+    $relativeName = $sourceFile.FullName.Substring($sourceIncludeFolder.Length).TrimStart('\')
+    $targetFile = Join-Path -Path $targetIncludeFolder -ChildPath $relativeName
+    if (-not (Test-Path -LiteralPath $targetFile)) {
+        Write-Host "File: `"$($targetFile)`" not found... rebuilding"
+        $doRebuild = $true
+        break
+    }
+    $stamps += $targetFile
+}
+if (-not $doRebuild) {
+    $buildDate = GetLowestFileTimestamp $stamps
+    if ($null -eq $buildDate -or
+        (CheckForNewerFiles $sourceIncludeFolder $buildDate) -or
+        (CheckForNewerFile  ($script:scriptPath + 'build.ps1') $buildDate)) {
+        $doRebuild = $true
+    }
+}
+if (-not $doRebuild) {
+    Write-Host "Libraries are up-to-date"
+    exit 0
+}
+
+# ---------------------------------------------------------------------------
 # Copy files
 # ---------------------------------------------------------------------------
 
@@ -338,9 +381,9 @@ if ($err -ne 0) {
 
 $err = CreateIncludeAll
 if ($err -ne 0) {
-    Write-Host "Errors detected while creating the include-all file. [$err]"
+    Write-Host "Errors found! [$err]"
     exit $err
 }
 
-Write-Host "RapidJSON files are up-to-date"
+Write-Host "Done!"
 exit 0

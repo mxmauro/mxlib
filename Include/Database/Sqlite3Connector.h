@@ -5,27 +5,25 @@
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Database
-{
+namespace Database {
 
 class CSQLite3Connector : public CBaseConnector
 {
-  public:
+public:
     class CConnectOptions : public virtual CBaseMemObj
     {
-      public:
+    public:
         CConnectOptions();
 
-      public:
+    public:
         BOOL bDontCreateIfNotExists;
         BOOL bReadOnly;
         DWORD dwBusyTimeoutMs;
     };
 
-  public:
+public:
     enum class eTxType
     {
         Standard,
@@ -33,7 +31,7 @@ class CSQLite3Connector : public CBaseConnector
         Exclusive
     };
 
-  public:
+public:
     CSQLite3Connector();
     ~CSQLite3Connector();
 
@@ -46,8 +44,7 @@ class CSQLite3Connector : public CBaseConnector
     int GetErrorCode() const;
     LPCSTR GetErrorDescription() const;
 
-    HRESULT QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQueryLen = (SIZE_T)-1,
-                         _In_opt_ CFieldList *lpInputFieldsList = NULL);
+    HRESULT QueryExecute(_In_ LPCSTR szQueryA, _In_opt_ SIZE_T nQueryLen = (SIZE_T)-1, _In_opt_ CFieldList *lpInputFieldsList = NULL);
     using CBaseConnector::QueryExecute;
 
     HRESULT FetchRow();
@@ -59,28 +56,26 @@ class CSQLite3Connector : public CBaseConnector
     HRESULT TransactionCommit();
     HRESULT TransactionRollback();
 
-    HRESULT EscapeString(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1,
-                         _In_opt_ BOOL bIsLike = FALSE);
-    HRESULT EscapeString(_Out_ CStringW &cStrW, _In_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1,
-                         _In_opt_ BOOL bIsLike = FALSE);
+    HRESULT EscapeString(_Out_ CStringA &cStrA, _In_ LPCSTR szStrA, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1, _In_opt_ BOOL bIsLike = FALSE);
+    HRESULT EscapeString(_Out_ CStringW &cStrW, _In_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1, _In_opt_ BOOL bIsLike = FALSE);
 
-  private:
+private:
     class CSQLite3Column : public CColumn
     {
-      public:
+    public:
         CSQLite3Column() : CColumn()
         {
             nType = nRealType = nCurrType = nFlags = 0;
             return;
         };
 
-      private:
+    private:
         friend class CSQLite3Connector;
 
         ULONG nType, nRealType, nCurrType, nFlags;
     };
 
-  private:
+private:
     LPVOID lpInternalData;
 };
 

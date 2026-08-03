@@ -21,10 +21,9 @@
 #include <intsafe.h>
 #include "..\..\Include\AutoPtr.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderEntContentDisposition::CHttpHeaderEntContentDisposition() : CHttpHeaderBase()
 {
@@ -287,7 +286,8 @@ HRESULT CHttpHeaderEntContentDisposition::Parse(_In_z_ LPCSTR szValueA, _In_opt_
                     return MX_E_InvalidData;
                 }
             }
-        } while (szValueA < szValueEndA);
+        }
+        while (szValueA < szValueEndA);
     }
 
     // check for separator or end
@@ -368,8 +368,7 @@ HRESULT CHttpHeaderEntContentDisposition::Build(_Inout_ CStringA &cStrDestA, _In
         else
         {
             if (Http::BuildQuotedString(cStrTempA, (LPCWSTR)cStrFileNameW, cStrFileNameW.GetLength(), FALSE) == FALSE ||
-                Http::BuildExtendedValueString(cStrTempA_2, (LPCWSTR)cStrFileNameW, cStrFileNameW.GetLength()) ==
-                    FALSE ||
+                Http::BuildExtendedValueString(cStrTempA_2, (LPCWSTR)cStrFileNameW, cStrFileNameW.GetLength()) == FALSE ||
                 cStrDestA.AppendFormat("; filename=%s; filename*=%s", (LPCSTR)cStrTempA, (LPCSTR)cStrTempA_2) == FALSE)
             {
                 return E_OUTOFMEMORY;
@@ -432,8 +431,7 @@ HRESULT CHttpHeaderEntContentDisposition::Build(_Inout_ CStringA &cStrDestA, _In
     nCount = aParamsList.GetCount();
     for (i = 0; i < nCount; i++)
     {
-        if (Http::BuildQuotedString(cStrTempA, aParamsList[i]->szValueW, StrLenW(aParamsList[i]->szValueW), FALSE) ==
-            FALSE)
+        if (Http::BuildQuotedString(cStrTempA, aParamsList[i]->szValueW, StrLenW(aParamsList[i]->szValueW), FALSE) == FALSE)
         {
             return E_OUTOFMEMORY;
         }

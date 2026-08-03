@@ -20,10 +20,9 @@
 #include "JsHttpServerCommon.h"
 #undef GetObject
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CJsHttpServer::CJvmManager::CJvmManager() : TRefCounted<CBaseMemObj>()
 {
@@ -46,8 +45,7 @@ CJsHttpServer::CJvmManager::~CJvmManager()
 }
 
 HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ BOOL &bIsNew,
-                                                   _In_ OnRequireJsModuleCallback cRequireJsModuleCallback,
-                                                   _In_ CClientRequest *lpRequest)
+                                                   _In_ OnRequireJsModuleCallback cRequireJsModuleCallback, _In_ CClientRequest *lpRequest)
 {
     TAutoDeletePtr<CJvm> cJVM;
     CStringA cStrTempA;
@@ -89,8 +87,7 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
 
     // set require module callback
     lpRequest->cRequireJsModuleCallback = cRequireJsModuleCallback;
-    cJVM->SetRequireModuleCallback(
-        MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::CClientRequest::OnRequireJsModule, lpRequest));
+    cJVM->SetRequireModuleCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::CClientRequest::OnRequireJsModule, lpRequest));
 
     // init JVM
     if (bIsNew != FALSE)
@@ -99,12 +96,11 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
         __EXIT_ON_ERROR(hRes);
 
         hRes = cJVM->RegisterException(
-            "SystemExit",
-            [](_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nExceptionObjectIndex) -> VOID
-            {
-                throw CJsHttpServerSystemExit(lpCtx, nExceptionObjectIndex);
-                return;
-            });
+            "SystemExit", [](_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nExceptionObjectIndex) -> VOID
+        {
+            throw CJsHttpServerSystemExit(lpCtx, nExceptionObjectIndex);
+            return;
+        });
         __EXIT_ON_ERROR(hRes);
 
         // register C++ objects
@@ -124,34 +120,30 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
     else
     {
         // delete a previously set request object
-        hRes = cJVM->RunNativeProtectedAndGetError(
-            0, 0,
-            [](_In_ DukTape::duk_context *lpCtx) -> VOID
-            {
-                DukTape::duk_push_global_object(lpCtx);
-                DukTape::duk_del_prop_string(lpCtx, -1, "request"); // does not raise error if does not exist
-                DukTape::duk_pop(lpCtx);
-            });
+        hRes = cJVM->RunNativeProtectedAndGetError(0, 0, [](_In_ DukTape::duk_context *lpCtx) -> VOID
+        {
+            DukTape::duk_push_global_object(lpCtx);
+            DukTape::duk_del_prop_string(lpCtx, -1, "request"); // does not raise error if does not exist
+            DukTape::duk_pop(lpCtx);
+        });
         __EXIT_ON_ERROR(hRes);
     }
 
     // store request pointer
-    hRes = cJVM->RunNativeProtectedAndGetError(0, 0,
-                                               [lpRequest](_In_ DukTape::duk_context *lpCtx) -> VOID
-                                               {
-                                                   DukTape::duk_push_global_object(lpCtx);
-                                                   DukTape::duk_push_pointer(lpCtx, lpRequest);
-                                                   DukTape::duk_put_prop_string(lpCtx, -2, INTERNAL_REQUEST_PROPERTY);
-                                                   DukTape::duk_pop(lpCtx);
-                                                   return;
-                                               });
+    hRes = cJVM->RunNativeProtectedAndGetError(0, 0, [lpRequest](_In_ DukTape::duk_context *lpCtx) -> VOID
+    {
+        DukTape::duk_push_global_object(lpCtx);
+        DukTape::duk_push_pointer(lpCtx, lpRequest);
+        DukTape::duk_put_prop_string(lpCtx, -2, INTERNAL_REQUEST_PROPERTY);
+        DukTape::duk_pop(lpCtx);
+        return;
+    });
     __EXIT_ON_ERROR(hRes);
 
     // create request object
     hRes = cJVM->CreateObject("request");
     __EXIT_ON_ERROR(hRes);
-    hRes = cJVM->AddObjectStringProperty("request", "method", lpRequest->GetMethod(),
-                                         CJavascriptVM::ePropertyFlags::Enumerable |
+    hRes = cJVM->AddObjectStringProperty("request", "method", lpRequest->GetMethod(), CJavascriptVM::ePropertyFlags::Enumerable |
                                              CJavascriptVM::ePropertyFlags::Configurable);
     __EXIT_ON_ERROR(hRes);
     lpUrl = lpRequest->GetUrl();
@@ -159,20 +151,17 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
     // host
     hRes = Utf8_Encode(cStrTempA, lpUrl->GetHost());
     __EXIT_ON_ERROR(hRes);
-    hRes = cJVM->AddObjectStringProperty("request", "host", (LPCSTR)cStrTempA,
-                                         CJavascriptVM::ePropertyFlags::Enumerable |
+    hRes = cJVM->AddObjectStringProperty("request", "host", (LPCSTR)cStrTempA, CJavascriptVM::ePropertyFlags::Enumerable |
                                              CJavascriptVM::ePropertyFlags::Configurable);
     __EXIT_ON_ERROR(hRes);
     // port
-    hRes = cJVM->AddObjectNumericProperty("request", "port", (double)(lpUrl->GetPort()),
-                                          CJavascriptVM::ePropertyFlags::Enumerable |
+    hRes = cJVM->AddObjectNumericProperty("request", "port", (double)(lpUrl->GetPort()), CJavascriptVM::ePropertyFlags::Enumerable |
                                               CJavascriptVM::ePropertyFlags::Configurable);
     __EXIT_ON_ERROR(hRes);
     // path
     hRes = Utf8_Encode(cStrTempA, lpUrl->GetPath());
     __EXIT_ON_ERROR(hRes);
-    hRes = cJVM->AddObjectStringProperty("request", "path", (LPCSTR)cStrTempA,
-                                         CJavascriptVM::ePropertyFlags::Enumerable |
+    hRes = cJVM->AddObjectStringProperty("request", "path", (LPCSTR)cStrTempA, CJavascriptVM::ePropertyFlags::Enumerable |
                                              CJavascriptVM::ePropertyFlags::Configurable);
     __EXIT_ON_ERROR(hRes);
 
@@ -211,43 +200,39 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
 
     switch (sSockAddr.si_family)
     {
-    case AF_INET:
-        hRes = HostResolver::FormatAddress(&sSockAddr, cStrTempW);
-        __EXIT_ON_ERROR(hRes);
-        hRes = cJVM->AddObjectStringProperty("request.remote", "family", "ipv4",
-                                             CJavascriptVM::ePropertyFlags::Enumerable |
-                                                 CJavascriptVM::ePropertyFlags::Configurable);
-        __EXIT_ON_ERROR(hRes);
-        hRes = cJVM->AddObjectStringProperty("request.remote", "address", (LPCWSTR)cStrTempW,
-                                             CJavascriptVM::ePropertyFlags::Enumerable |
-                                                 CJavascriptVM::ePropertyFlags::Configurable);
-        __EXIT_ON_ERROR(hRes);
-        hRes = cJVM->AddObjectNumericProperty("request.remote", "port", (double)htons(sSockAddr.Ipv4.sin_port),
-                                              CJavascriptVM::ePropertyFlags::Enumerable |
-                                                  CJavascriptVM::ePropertyFlags::Configurable);
-        __EXIT_ON_ERROR(hRes);
-        break;
+        case AF_INET:
+            hRes = HostResolver::FormatAddress(&sSockAddr, cStrTempW);
+            __EXIT_ON_ERROR(hRes);
+            hRes = cJVM->AddObjectStringProperty("request.remote", "family", "ipv4", CJavascriptVM::ePropertyFlags::Enumerable |
+                                                     CJavascriptVM::ePropertyFlags::Configurable);
+            __EXIT_ON_ERROR(hRes);
+            hRes = cJVM->AddObjectStringProperty("request.remote", "address", (LPCWSTR)cStrTempW, CJavascriptVM::ePropertyFlags::Enumerable |
+                                                     CJavascriptVM::ePropertyFlags::Configurable);
+            __EXIT_ON_ERROR(hRes);
+            hRes = cJVM->AddObjectNumericProperty("request.remote", "port", (double)htons(sSockAddr.Ipv4.sin_port),
+                                                  CJavascriptVM::ePropertyFlags::Enumerable |
+                                                      CJavascriptVM::ePropertyFlags::Configurable);
+            __EXIT_ON_ERROR(hRes);
+            break;
 
-    case AF_INET6:
-        hRes = HostResolver::FormatAddress(&sSockAddr, cStrTempW);
-        __EXIT_ON_ERROR(hRes);
-        hRes = cJVM->AddObjectStringProperty("request.family", "family", "ipv6",
-                                             CJavascriptVM::ePropertyFlags::Enumerable |
-                                                 CJavascriptVM::ePropertyFlags::Configurable);
-        __EXIT_ON_ERROR(hRes);
-        hRes = cJVM->AddObjectStringProperty("request.remote", "address", (LPCWSTR)cStrTempW,
-                                             CJavascriptVM::ePropertyFlags::Enumerable |
-                                                 CJavascriptVM::ePropertyFlags::Configurable);
-        __EXIT_ON_ERROR(hRes);
-        hRes = cJVM->AddObjectNumericProperty("request.remote", "port", (double)htons(sSockAddr.Ipv6.sin6_port),
-                                              CJavascriptVM::ePropertyFlags::Enumerable |
-                                                  CJavascriptVM::ePropertyFlags::Configurable);
-        __EXIT_ON_ERROR(hRes);
-        break;
+        case AF_INET6:
+            hRes = HostResolver::FormatAddress(&sSockAddr, cStrTempW);
+            __EXIT_ON_ERROR(hRes);
+            hRes = cJVM->AddObjectStringProperty("request.family", "family", "ipv6", CJavascriptVM::ePropertyFlags::Enumerable |
+                                                     CJavascriptVM::ePropertyFlags::Configurable);
+            __EXIT_ON_ERROR(hRes);
+            hRes = cJVM->AddObjectStringProperty("request.remote", "address", (LPCWSTR)cStrTempW, CJavascriptVM::ePropertyFlags::Enumerable |
+                                                     CJavascriptVM::ePropertyFlags::Configurable);
+            __EXIT_ON_ERROR(hRes);
+            hRes = cJVM->AddObjectNumericProperty("request.remote", "port", (double)htons(sSockAddr.Ipv6.sin6_port),
+                                                  CJavascriptVM::ePropertyFlags::Enumerable |
+                                                      CJavascriptVM::ePropertyFlags::Configurable);
+            __EXIT_ON_ERROR(hRes);
+            break;
 
-    default:
-        __EXIT_ON_ERROR(MX_E_Unsupported);
-        break;
+        default:
+            __EXIT_ON_ERROR(MX_E_Unsupported);
+            break;
     }
 
     // add request headers
@@ -328,8 +313,7 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
                 return E_OUTOFMEMORY;
             }
             lpJsObj->Initialize(lpParser);
-            hRes = cJVM->AddObjectJsObjectProperty("request", "rawbody", lpJsObj,
-                                                   CJavascriptVM::ePropertyFlags::Enumerable |
+            hRes = cJVM->AddObjectJsObjectProperty("request", "rawbody", lpJsObj, CJavascriptVM::ePropertyFlags::Enumerable |
                                                        CJavascriptVM::ePropertyFlags::Configurable);
             lpJsObj->Release();
             __EXIT_ON_ERROR(hRes);
@@ -363,18 +347,17 @@ HRESULT CJsHttpServer::CJvmManager::AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ B
             hRes = cJVM->CreateObject("request.json");
             __EXIT_ON_ERROR(hRes);
 
-            hRes = cJVM->RunNativeProtectedAndGetError(0, 0,
-                                                       [this, &d](_In_ DukTape::duk_context *lpCtx) -> VOID
-                                                       {
-                                                           const rapidjson::Value *v;
+            hRes = cJVM->RunNativeProtectedAndGetError(0, 0, [this, &d](_In_ DukTape::duk_context *lpCtx) -> VOID
+            {
+                const rapidjson::Value *v;
 
-                                                           DukTape::duk_push_global_object(lpCtx);
-                                                           DukTape::duk_get_prop_string(lpCtx, -1, "request");
-                                                           v = &d;
-                                                           ParseJsonBody(lpCtx, (LPVOID)v, "json", 0);
-                                                           DukTape::duk_pop_2(lpCtx);
-                                                           return;
-                                                       });
+                DukTape::duk_push_global_object(lpCtx);
+                DukTape::duk_get_prop_string(lpCtx, -1, "request");
+                v = &d;
+                ParseJsonBody(lpCtx, (LPVOID)v, "json", 0);
+                DukTape::duk_pop_2(lpCtx);
+                return;
+            });
             __EXIT_ON_ERROR(hRes);
         }
     }
@@ -392,8 +375,7 @@ VOID CJsHttpServer::CJvmManager::FreeVM(_In_ CJvm *lpJVM)
     return;
 }
 
-HRESULT CJsHttpServer::CJvmManager::InsertPostField(_In_ CJavascriptVM &cJvm,
-                                                    _In_ CHttpBodyParserFormBase::CField *lpField,
+HRESULT CJsHttpServer::CJvmManager::InsertPostField(_In_ CJavascriptVM &cJvm, _In_ CHttpBodyParserFormBase::CField *lpField,
                                                     _In_ LPCSTR szBaseObjectNameA)
 {
     CStringA cStrNameA;
@@ -433,8 +415,7 @@ HRESULT CJsHttpServer::CJvmManager::InsertPostField(_In_ CJavascriptVM &cJvm,
     return hRes;
 }
 
-HRESULT CJsHttpServer::CJvmManager::InsertPostFileField(_In_ CJavascriptVM &cJvm,
-                                                        _In_ CHttpBodyParserFormBase::CFileField *lpFileField,
+HRESULT CJsHttpServer::CJvmManager::InsertPostFileField(_In_ CJavascriptVM &cJvm, _In_ CHttpBodyParserFormBase::CFileField *lpFileField,
                                                         _In_ LPCSTR szBaseObjectNameA)
 {
     CStringA cStrNameA;
@@ -470,163 +451,161 @@ HRESULT CJsHttpServer::CJvmManager::InsertPostFileField(_In_ CJavascriptVM &cJvm
             return E_OUTOFMEMORY;
         }
         lpJsObj->Initialize(lpFileField);
-        hRes = cJvm.AddObjectJsObjectProperty(szBaseObjectNameA, (LPCSTR)cStrNameA, lpJsObj,
-                                              CJavascriptVM::ePropertyFlags::Enumerable |
+        hRes = cJvm.AddObjectJsObjectProperty(szBaseObjectNameA, (LPCSTR)cStrNameA, lpJsObj, CJavascriptVM::ePropertyFlags::Enumerable |
                                                   CJavascriptVM::ePropertyFlags::Configurable);
         lpJsObj->Release();
     }
     return hRes;
 }
 
-VOID CJsHttpServer::CJvmManager::ParseJsonBody(_In_ DukTape::duk_context *lpCtx, _In_ LPVOID _v,
-                                               _In_opt_z_ LPCSTR szPropNameA,
+VOID CJsHttpServer::CJvmManager::ParseJsonBody(_In_ DukTape::duk_context *lpCtx, _In_ LPVOID _v, _In_opt_z_ LPCSTR szPropNameA,
                                                _In_ DukTape::duk_uarridx_t nArrayIndex) throw()
 {
     const rapidjson::Value *v = (const rapidjson::Value *)_v;
 
     switch (v->GetType())
     {
-    case rapidjson::kNullType:
-        DukTape::duk_push_null(lpCtx);
+        case rapidjson::kNullType:
+            DukTape::duk_push_null(lpCtx);
 
-        if (szPropNameA != NULL)
-        {
-            DukTape::duk_put_prop_string(lpCtx, -2, szPropNameA);
-        }
-        else
-        {
-            DukTape::duk_put_prop_index(lpCtx, -2, nArrayIndex);
-        }
-        break;
-
-    case rapidjson::kFalseType:
-    case rapidjson::kTrueType:
-        DukTape::duk_push_boolean(lpCtx, ((v->GetType() == rapidjson::kFalseType) ? 0 : 1));
-
-        if (szPropNameA != NULL)
-        {
-            DukTape::duk_put_prop_string(lpCtx, -2, szPropNameA);
-        }
-        else
-        {
-            DukTape::duk_put_prop_index(lpCtx, -2, nArrayIndex);
-        }
-        break;
-
-    case rapidjson::kStringType:
-        DukTape::duk_push_string(lpCtx, v->GetString());
-
-        if (szPropNameA != NULL)
-        {
-            DukTape::duk_put_prop_string(lpCtx, -2, szPropNameA);
-        }
-        else
-        {
-            DukTape::duk_put_prop_index(lpCtx, -2, nArrayIndex);
-        }
-        break;
-
-    case rapidjson::kNumberType:
-        if (v->IsInt() != false)
-        {
-            DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)(v->GetInt()));
-        }
-        else if (v->IsLosslessDouble() != false)
-        {
-            DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)(v->GetDouble()));
-        }
-        else
-        {
-            HRESULT hRes;
-
-            hRes = CJavascriptVM::AddBigIntegerSupport(lpCtx);
-            if (FAILED(hRes))
+            if (szPropNameA != NULL)
             {
-                MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
-            }
-
-            // push big number constructor
-            DukTape::duk_push_global_object(lpCtx);
-            DukTape::duk_get_prop_string(lpCtx, -1, "BigInteger");
-            DukTape::duk_remove(lpCtx, -2);
-
-            // push argument
-            if (v->IsUint64())
-            {
-                DukTape::duk_push_sprintf(lpCtx, "%I64u", v->GetUint64());
-            }
-            else if (v->IsInt64())
-            {
-                DukTape::duk_push_sprintf(lpCtx, "%I64d", v->GetInt64());
+                DukTape::duk_put_prop_string(lpCtx, -2, szPropNameA);
             }
             else
             {
-                MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_Unsupported);
+                DukTape::duk_put_prop_index(lpCtx, -2, nArrayIndex);
+            }
+            break;
+
+        case rapidjson::kFalseType:
+        case rapidjson::kTrueType:
+            DukTape::duk_push_boolean(lpCtx, ((v->GetType() == rapidjson::kFalseType) ? 0 : 1));
+
+            if (szPropNameA != NULL)
+            {
+                DukTape::duk_put_prop_string(lpCtx, -2, szPropNameA);
+            }
+            else
+            {
+                DukTape::duk_put_prop_index(lpCtx, -2, nArrayIndex);
+            }
+            break;
+
+        case rapidjson::kStringType:
+            DukTape::duk_push_string(lpCtx, v->GetString());
+
+            if (szPropNameA != NULL)
+            {
+                DukTape::duk_put_prop_string(lpCtx, -2, szPropNameA);
+            }
+            else
+            {
+                DukTape::duk_put_prop_index(lpCtx, -2, nArrayIndex);
+            }
+            break;
+
+        case rapidjson::kNumberType:
+            if (v->IsInt() != false)
+            {
+                DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)(v->GetInt()));
+            }
+            else if (v->IsLosslessDouble() != false)
+            {
+                DukTape::duk_push_number(lpCtx, (DukTape::duk_double_t)(v->GetDouble()));
+            }
+            else
+            {
+                HRESULT hRes;
+
+                hRes = CJavascriptVM::AddBigIntegerSupport(lpCtx);
+                if (FAILED(hRes))
+                {
+                    MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+                }
+
+                // push big number constructor
+                DukTape::duk_push_global_object(lpCtx);
+                DukTape::duk_get_prop_string(lpCtx, -1, "BigInteger");
+                DukTape::duk_remove(lpCtx, -2);
+
+                // push argument
+                if (v->IsUint64())
+                {
+                    DukTape::duk_push_sprintf(lpCtx, "%I64u", v->GetUint64());
+                }
+                else if (v->IsInt64())
+                {
+                    DukTape::duk_push_sprintf(lpCtx, "%I64d", v->GetInt64());
+                }
+                else
+                {
+                    MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_Unsupported);
+                }
+
+                // create object
+                DukTape::duk_new(lpCtx, 1);
             }
 
-            // create object
-            DukTape::duk_new(lpCtx, 1);
-        }
+            if (szPropNameA != NULL)
+            {
+                DukTape::duk_put_prop_string(lpCtx, -2, szPropNameA);
+            }
+            else
+            {
+                DukTape::duk_put_prop_index(lpCtx, -2, nArrayIndex);
+            }
+            break;
 
-        if (szPropNameA != NULL)
-        {
-            DukTape::duk_put_prop_string(lpCtx, -2, szPropNameA);
-        }
-        else
-        {
-            DukTape::duk_put_prop_index(lpCtx, -2, nArrayIndex);
-        }
-        break;
+        case rapidjson::kObjectType:
+            {
+                rapidjson::Value::ConstObject o = v->GetObject();
 
-    case rapidjson::kObjectType:
-    {
-        rapidjson::Value::ConstObject o = v->GetObject();
+                DukTape::duk_push_object(lpCtx);
 
-        DukTape::duk_push_object(lpCtx);
+                for (rapidjson::Value::ConstMemberIterator it = o.MemberBegin(); it != o.MemberEnd(); ++it)
+                {
+                    const rapidjson::Value *v = &(it->value);
 
-        for (rapidjson::Value::ConstMemberIterator it = o.MemberBegin(); it != o.MemberEnd(); ++it)
-        {
-            const rapidjson::Value *v = &(it->value);
+                    ParseJsonBody(lpCtx, (LPVOID)v, it->name.GetString(), 0);
+                }
 
-            ParseJsonBody(lpCtx, (LPVOID)v, it->name.GetString(), 0);
-        }
+                if (szPropNameA != NULL)
+                {
+                    DukTape::duk_put_prop_string(lpCtx, -2, szPropNameA);
+                }
+                else
+                {
+                    DukTape::duk_put_prop_index(lpCtx, -2, nArrayIndex);
+                }
+            }
+            break;
 
-        if (szPropNameA != NULL)
-        {
-            DukTape::duk_put_prop_string(lpCtx, -2, szPropNameA);
-        }
-        else
-        {
-            DukTape::duk_put_prop_index(lpCtx, -2, nArrayIndex);
-        }
-    }
-    break;
+        case rapidjson::kArrayType:
+            {
+                rapidjson::Value::ConstArray a = v->GetArray();
+                DukTape::duk_uarridx_t nIdx;
 
-    case rapidjson::kArrayType:
-    {
-        rapidjson::Value::ConstArray a = v->GetArray();
-        DukTape::duk_uarridx_t nIdx;
+                DukTape::duk_push_array(lpCtx);
 
-        DukTape::duk_push_array(lpCtx);
+                nIdx = 0;
+                for (rapidjson::Value::ConstValueIterator it = a.Begin(); it != a.End(); ++it)
+                {
+                    const rapidjson::Value *__v = it;
 
-        nIdx = 0;
-        for (rapidjson::Value::ConstValueIterator it = a.Begin(); it != a.End(); ++it)
-        {
-            const rapidjson::Value *__v = it;
+                    ParseJsonBody(lpCtx, (LPVOID)__v, NULL, nIdx++);
+                }
 
-            ParseJsonBody(lpCtx, (LPVOID)__v, NULL, nIdx++);
-        }
-
-        if (szPropNameA != NULL)
-        {
-            DukTape::duk_put_prop_string(lpCtx, -2, szPropNameA);
-        }
-        else
-        {
-            DukTape::duk_put_prop_index(lpCtx, -2, nArrayIndex);
-        }
-    }
-    break;
+                if (szPropNameA != NULL)
+                {
+                    DukTape::duk_put_prop_string(lpCtx, -2, szPropNameA);
+                }
+                else
+                {
+                    DukTape::duk_put_prop_index(lpCtx, -2, nArrayIndex);
+                }
+            }
+            break;
     }
     return;
 }
@@ -639,19 +618,17 @@ CJsHttpServer::CClientRequest *CJsHttpServer::GetServerRequestFromContext(_In_ D
     CClientRequest *lpRequest = NULL;
     HRESULT hRes;
 
-    hRes = lpJVM->RunNativeProtectedAndGetError(0, 0,
-                                                [&lpRequest](_In_ DukTape::duk_context *lpCtx) -> VOID
-                                                {
-                                                    DukTape::duk_push_global_object(lpCtx);
-                                                    DukTape::duk_get_prop_string(lpCtx, -1, INTERNAL_REQUEST_PROPERTY);
-                                                    if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
-                                                    {
-                                                        lpRequest = reinterpret_cast<CClientRequest *>(
-                                                            DukTape::duk_to_pointer(lpCtx, -1));
-                                                    }
-                                                    DukTape::duk_pop_2(lpCtx);
-                                                    return;
-                                                });
+    hRes = lpJVM->RunNativeProtectedAndGetError(0, 0, [&lpRequest](_In_ DukTape::duk_context *lpCtx) -> VOID
+    {
+        DukTape::duk_push_global_object(lpCtx);
+        DukTape::duk_get_prop_string(lpCtx, -1, INTERNAL_REQUEST_PROPERTY);
+        if (DukTape::duk_is_undefined(lpCtx, -1) == 0)
+        {
+            lpRequest = reinterpret_cast<CClientRequest *>(DukTape::duk_to_pointer(lpCtx, -1));
+        }
+        DukTape::duk_pop_2(lpCtx);
+        return;
+    });
     return (SUCCEEDED(hRes)) ? lpRequest : NULL;
 }
 

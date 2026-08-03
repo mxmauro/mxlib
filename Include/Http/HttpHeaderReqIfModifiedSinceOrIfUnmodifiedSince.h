@@ -23,17 +23,16 @@
 #include "HttpHeaderBase.h"
 #include "..\DateTime\DateTime.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class MX_NOVTABLE CHttpHeaderReqIfXXXSinceBase : public CHttpHeaderBase
 {
-  protected:
+protected:
     CHttpHeaderReqIfXXXSinceBase(_In_ BOOL bIfModified);
 
-  public:
+public:
     ~CHttpHeaderReqIfXXXSinceBase();
 
     HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
@@ -43,7 +42,7 @@ class MX_NOVTABLE CHttpHeaderReqIfXXXSinceBase : public CHttpHeaderBase
     HRESULT SetDate(_In_ CDateTime &cDt);
     CDateTime GetDate() const;
 
-  private:
+private:
     BOOL bIfModified;
     CDateTime cDt;
 };
@@ -52,20 +51,24 @@ class MX_NOVTABLE CHttpHeaderReqIfXXXSinceBase : public CHttpHeaderBase
 
 class CHttpHeaderReqIfModifiedSince : public CHttpHeaderReqIfXXXSinceBase
 {
-  public:
-    CHttpHeaderReqIfModifiedSince() : CHttpHeaderReqIfXXXSinceBase(TRUE) {};
+public:
+    CHttpHeaderReqIfModifiedSince() : CHttpHeaderReqIfXXXSinceBase(TRUE)
+    {
+    };
 
-    MX_DECLARE_HTTPHEADER_NAME(If - Modified - Since)
+    MX_DECLARE_HTTPHEADER_NAME("If-Modified-Since")
 };
 
 //-----------------------------------------------------------
 
 class CHttpHeaderReqIfUnmodifiedSince : public CHttpHeaderReqIfXXXSinceBase
 {
-  public:
-    CHttpHeaderReqIfUnmodifiedSince() : CHttpHeaderReqIfXXXSinceBase(FALSE) {};
+public:
+    CHttpHeaderReqIfUnmodifiedSince() : CHttpHeaderReqIfXXXSinceBase(FALSE)
+    {
+    };
 
-    MX_DECLARE_HTTPHEADER_NAME(If - Unmodified - Since)
+    MX_DECLARE_HTTPHEADER_NAME("If-Unmodified-Since")
 };
 
 } // namespace MX

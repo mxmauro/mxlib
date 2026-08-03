@@ -20,10 +20,9 @@
 #include "..\..\Include\Http\HttpHeaderRespETag.h"
 #include <wtypes.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderRespETag::CHttpHeaderRespETag() : CHttpHeaderBase()
 {

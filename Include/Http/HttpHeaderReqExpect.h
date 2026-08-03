@@ -23,14 +23,13 @@
 #include "HttpHeaderBase.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderReqExpect : public CHttpHeaderBase
 {
-  public:
+public:
     enum class eExpectation
     {
         Unsupported = -1,
@@ -40,16 +39,16 @@ class CHttpHeaderReqExpect : public CHttpHeaderBase
     CHttpHeaderReqExpect();
     ~CHttpHeaderReqExpect();
 
-    MX_DECLARE_HTTPHEADER_NAME(Expect)
+    MX_DECLARE_HTTPHEADER_NAME("Expect")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
     HRESULT SetExpectation(_In_ eExpectation nExpectation);
     eExpectation GetExpectation() const;
 
-  private:
+private:
     eExpectation nExpectation;
 };
 

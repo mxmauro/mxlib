@@ -23,20 +23,19 @@
 #include "HttpHeaderBase.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderReqSecWebSocketProtocol : public CHttpHeaderBase
 {
-  public:
+public:
     CHttpHeaderReqSecWebSocketProtocol();
     ~CHttpHeaderReqSecWebSocketProtocol();
 
-    MX_DECLARE_HTTPHEADER_NAME(Sec - WebSocket - Protocol)
+    MX_DECLARE_HTTPHEADER_NAME("Sec-WebSocket-Protocol")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
@@ -47,7 +46,7 @@ class CHttpHeaderReqSecWebSocketProtocol : public CHttpHeaderBase
 
     BOOL HasProtocol(_In_z_ LPCSTR szProtocolA, _In_ SIZE_T nProtocolLen = (SIZE_T)-1) const;
 
-  private:
+private:
     TArrayListWithFree<LPSTR> aProtocolsList;
 };
 

@@ -30,8 +30,7 @@
 #include <exception>
 #include <stdexcept>
 #include <functional>
-namespace DukTape
-{
+namespace DukTape {
 #include "DukTape\duktape.h"
 } // namespace DukTape
 
@@ -181,14 +180,13 @@ namespace DukTape
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CJsObjectBase;
 
 class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     enum class ePropertyFlags
     {
         Writable = 0x01,
@@ -206,20 +204,17 @@ class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
 
     //--------
 
-  public:
-    typedef Callback<HRESULT(_In_ DukTape::duk_context *lpCtx, _In_ CRequireModuleContext *lpReqContext,
-                             _Inout_ CStringA &cStrCodeA)>
+public:
+    typedef Callback<HRESULT(_In_ DukTape::duk_context *lpCtx, _In_ CRequireModuleContext *lpReqContext, _Inout_ CStringA &cStrCodeA)>
         OnRequireModuleCallback;
 
-    typedef Callback<DukTape::duk_ret_t(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                        _In_z_ LPCSTR szFunctionNameA)>
+    typedef Callback<DukTape::duk_ret_t(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFunctionNameA)>
         OnNativeFunctionCallback;
 
-    typedef Callback<DukTape::duk_ret_t(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                        _In_z_ LPCSTR szPropertyNameA)>
+    typedef Callback<DukTape::duk_ret_t(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA)>
         OnGetPropertyCallback;
-    typedef Callback<DukTape::duk_ret_t(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA,
-                                        _In_z_ LPCSTR szPropertyNameA, _In_ DukTape::duk_idx_t nValueIndex)>
+    typedef Callback<DukTape::duk_ret_t(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
+                                        _In_ DukTape::duk_idx_t nValueIndex)>
         OnSetPropertyCallback;
 
     // return 1 if has, 0 if has not, -1 to pass to original object
@@ -256,7 +251,7 @@ class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
 
     class CProxyCallbacks : public virtual CBaseMemObj
     {
-      public:
+    public:
         CProxyCallbacks() : CBaseMemObj()
         {
             cProxyHasNamedPropertyCallback = NullCallback();
@@ -291,7 +286,7 @@ class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
             return *this;
         };
 
-      public:
+    public:
         OnProxyHasNamedPropertyCallback cProxyHasNamedPropertyCallback;
         OnProxyHasIndexedPropertyCallback cProxyHasIndexedPropertyCallback;
         OnProxyGetNamedPropertyCallback cProxyGetNamedPropertyCallback;
@@ -302,7 +297,7 @@ class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
         OnProxyDeleteIndexedPropertyCallback cProxyDeleteIndexedPropertyCallback;
         OnProxyGetPropertyNameCallback cProxyGetPropertyNameCallback;
 
-      private:
+    private:
         friend CJavascriptVM;
 
         void serialize(_In_ void *p);
@@ -314,11 +309,11 @@ class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
 
     class CRequireModuleContext : public virtual CBaseMemObj
     {
-      protected:
-        CRequireModuleContext(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCWSTR szIdW,
-                              _In_ DukTape::duk_idx_t nModuleObjectIndex, _In_ DukTape::duk_idx_t nExportsObjectIndex);
+    protected:
+        CRequireModuleContext(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCWSTR szIdW, _In_ DukTape::duk_idx_t nModuleObjectIndex,
+                              _In_ DukTape::duk_idx_t nExportsObjectIndex);
 
-      public:
+    public:
         LPCWSTR GetId() const
         {
             return szIdW;
@@ -326,8 +321,7 @@ class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
 
         HRESULT RequireModule(_In_z_ LPCWSTR szModuleIdW);
 
-        HRESULT AddNativeFunction(_In_z_ LPCSTR szFuncNameA, _In_ OnNativeFunctionCallback cNativeFunctionCallback,
-                                  _In_ int nArgsCount);
+        HRESULT AddNativeFunction(_In_z_ LPCSTR szFuncNameA, _In_ OnNativeFunctionCallback cNativeFunctionCallback, _In_ int nArgsCount);
 
         HRESULT AddProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ BOOL bInitialValueOnStack = FALSE,
                             _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
@@ -352,7 +346,7 @@ class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
         HRESULT ReplaceModuleExports();
         HRESULT ReplaceModuleExportsWithObject(_In_ CJsObjectBase *lpObject);
 
-      private:
+    private:
         friend CJavascriptVM;
 
         DukTape::duk_context *lpCtx;
@@ -364,10 +358,9 @@ class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
 
     typedef std::function<VOID(_In_ DukTape::duk_context *lpCtx)> lpfnProtectedFunction;
 
-    typedef VOID (*lpfnThrowExceptionCallback)(_In_ DukTape::duk_context *lpCtx,
-                                               _In_ DukTape::duk_idx_t nExceptionObjectIndex);
+    typedef VOID(*lpfnThrowExceptionCallback)(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nExceptionObjectIndex);
 
-  public:
+public:
     CJavascriptVM();
     ~CJavascriptVM();
 
@@ -389,12 +382,11 @@ class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
     static VOID RunNativeProtected(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nArgsCount,
                                    _In_ DukTape::duk_idx_t nRetValuesCount, _In_ lpfnProtectedFunction fnFunc,
                                    _In_opt_ BOOL bCatchUnhandled = FALSE);
-    VOID RunNativeProtected(_In_ DukTape::duk_idx_t nArgsCount, _In_ DukTape::duk_idx_t nRetValuesCount,
-                            _In_ lpfnProtectedFunction fnFunc, _In_opt_ BOOL bCatchUnhandled = FALSE);
+    VOID RunNativeProtected(_In_ DukTape::duk_idx_t nArgsCount, _In_ DukTape::duk_idx_t nRetValuesCount, _In_ lpfnProtectedFunction fnFunc,
+                            _In_opt_ BOOL bCatchUnhandled = FALSE);
 
     static HRESULT RunNativeProtectedAndGetError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nArgsCount,
-                                                 _In_ DukTape::duk_idx_t nRetValuesCount,
-                                                 _In_ lpfnProtectedFunction fnFunc,
+                                                 _In_ DukTape::duk_idx_t nRetValuesCount, _In_ lpfnProtectedFunction fnFunc,
                                                  _In_opt_ BOOL bCatchUnhandled = FALSE);
     HRESULT RunNativeProtectedAndGetError(_In_ DukTape::duk_idx_t nArgsCount, _In_ DukTape::duk_idx_t nRetValuesCount,
                                           _In_ lpfnProtectedFunction fnFunc, _In_opt_ BOOL bCatchUnhandled = FALSE);
@@ -402,8 +394,7 @@ class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
     HRESULT RegisterException(_In_z_ LPCSTR szExceptionNameA, _In_ lpfnThrowExceptionCallback fnThrowExceptionCallback);
     HRESULT UnregisterException(_In_z_ LPCSTR szExceptionNameA);
 
-    HRESULT AddNativeFunction(_In_z_ LPCSTR szFuncNameA, _In_ OnNativeFunctionCallback cNativeFunctionCallback,
-                              _In_ int nArgsCount);
+    HRESULT AddNativeFunction(_In_z_ LPCSTR szFuncNameA, _In_ OnNativeFunctionCallback cNativeFunctionCallback, _In_ int nArgsCount);
 
     HRESULT AddProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ BOOL bInitialValueOnStack = FALSE,
                         _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
@@ -436,8 +427,7 @@ class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
     HRESULT AddObjectNativeFunction(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szFuncNameA,
                                     _In_ OnNativeFunctionCallback cNativeFunctionCallback, _In_ int nArgsCount);
 
-    HRESULT AddObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                              _In_opt_ BOOL bInitialValueOnStack = FALSE,
+    HRESULT AddObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_opt_ BOOL bInitialValueOnStack = FALSE,
                               _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable | ePropertyFlags::Enumerable);
     HRESULT AddObjectStringProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_z_ LPCSTR szValueA,
                                     _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable |
@@ -457,8 +447,7 @@ class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
     HRESULT AddObjectNullProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
                                   _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable |
                                                                    ePropertyFlags::Enumerable);
-    HRESULT AddObjectJsObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                      _In_ CJsObjectBase *lpObject,
+    HRESULT AddObjectJsObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_ CJsObjectBase *lpObject,
                                       _In_opt_ ePropertyFlags nFlags = ePropertyFlags::Writable |
                                                                        ePropertyFlags::Enumerable);
     HRESULT AddObjectPropertyWithCallback(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
@@ -473,12 +462,11 @@ class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
     VOID PushObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA);
 
     // converts from/to utf-8
-    static VOID PushString(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCWSTR szStrW,
-                           _In_opt_ SIZE_T nStrLen = (SIZE_T)-1);
+    static VOID PushString(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1);
     VOID PushString(_In_z_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1);
 
-    static VOID GetString(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex,
-                          _Inout_ CStringW &cStrW, _In_opt_ BOOL bAppend = FALSE);
+    static VOID GetString(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex, _Inout_ CStringW &cStrW,
+                          _In_opt_ BOOL bAppend = FALSE);
     VOID GetString(_In_ DukTape::duk_idx_t nStackIndex, _Inout_ CStringW &cStrW, _In_opt_ BOOL bAppend = FALSE);
 
     // convert SYSTEMTIME from/to JS Date object
@@ -504,17 +492,14 @@ class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
     static DukTape::duk_double_t GetDouble(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nObjIdx);
     DukTape::duk_double_t GetDouble(_In_ DukTape::duk_idx_t nObjIdx);
 
-    static VOID GetObjectType(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nObjIdx,
-                              _Out_ MX::CStringA &cStrTypeA);
+    static VOID GetObjectType(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nObjIdx, _Out_ MX::CStringA &cStrTypeA);
     VOID GetObjectType(_In_ DukTape::duk_idx_t nObjIdx, _Out_ MX::CStringA &cStrTypeA);
 
     HRESULT Reset();
     HRESULT RunGC();
 
-    static HRESULT AddSafeString(_Inout_ CStringA &cStrCodeA, _In_z_ LPCSTR szStrA,
-                                 _In_opt_ SIZE_T nStrLen = (SIZE_T)-1);
-    static HRESULT AddSafeString(_Inout_ CStringA &cStrCodeA, _In_z_ LPCWSTR szStrW,
-                                 _In_opt_ SIZE_T nStrLen = (SIZE_T)-1);
+    static HRESULT AddSafeString(_Inout_ CStringA &cStrCodeA, _In_z_ LPCSTR szStrA, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1);
+    static HRESULT AddSafeString(_Inout_ CStringA &cStrCodeA, _In_z_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen = (SIZE_T)-1);
 
     static VOID ThrowWindowsError(_In_ DukTape::duk_context *lpCtx, _In_ HRESULT hr, _In_opt_z_ LPCSTR filename = NULL,
                                   _In_opt_ DukTape::duk_int_t line = 0);
@@ -523,7 +508,7 @@ class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
     static HRESULT AddBigIntegerSupport(_In_ DukTape::duk_context *lpCtx);
     HRESULT AddBigIntegerSupport();
 
-  private:
+private:
     // static DukTape::duk_ret_t OnModSearch(_In_ DukTape::duk_context *lpCtx);
     static DukTape::duk_ret_t OnNodeJsResolveModule(_In_ DukTape::duk_context *lpCtx);
     static DukTape::duk_ret_t OnNodeJsLoadModule(_In_ DukTape::duk_context *lpCtx);
@@ -534,10 +519,9 @@ class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
     static DukTape::duk_ret_t _ProxyOwnKeysHelper(_In_ DukTape::duk_context *lpCtx);
     static DukTape::duk_ret_t _RunNativeProtectedHelper(_In_ DukTape::duk_context *lpCtx, _In_ void *udata);
 
-    static BOOL HandleException(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex,
-                                _In_opt_ BOOL bCatchUnhandled);
+    static BOOL HandleException(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex, _In_opt_ BOOL bCatchUnhandled);
 
-  private:
+private:
     typedef struct
     {
         LPCSTR szExceptionNameA;
@@ -553,14 +537,16 @@ class CJavascriptVM : public virtual CBaseMemObj, public CNonCopyableObj
 
 class MX_NOVTABLE CJsObjectBase : public virtual TRefCounted<CBaseMemObj>
 {
-  protected:
+protected:
     CJsObjectBase() : TRefCounted<CBaseMemObj>()
     {
         return;
     };
 
-  public:
-    ~CJsObjectBase() {};
+public:
+    ~CJsObjectBase()
+    {
+    };
 
     virtual HRESULT PushThis(_In_ DukTape::duk_context *lpCtx) = 0;
 
@@ -575,10 +561,8 @@ class MX_NOVTABLE CJsObjectBase : public virtual TRefCounted<CBaseMemObj>
     virtual int OnProxyGetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex);
 
     // return 1 if a new value was pushed, 0 to set the original passed value, -1 to throw an error
-    virtual int OnProxySetNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA,
-                                        _In_ DukTape::duk_idx_t nValueIndex);
-    virtual int OnProxySetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex,
-                                          _In_ DukTape::duk_idx_t nValueIndex);
+    virtual int OnProxySetNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA, _In_ DukTape::duk_idx_t nValueIndex);
+    virtual int OnProxySetIndexedProperty(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex, _In_ DukTape::duk_idx_t nValueIndex);
 
     // return 1 if delete must proceed, 0 to silently ignore, -1 to throw an error
     virtual int OnProxyDeleteNamedProperty(_In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szPropNameA);
@@ -587,9 +571,9 @@ class MX_NOVTABLE CJsObjectBase : public virtual TRefCounted<CBaseMemObj>
     // return NULL/Empty String to end enumeration
     virtual LPCSTR OnProxyGetPropertyName(_In_ DukTape::duk_context *lpCtx, _In_ int nIndex);
 
-  protected:
-    typedef DukTape::duk_ret_t (CJsObjectBase::*lpfnCallFunc)(_In_ DukTape::duk_context *lpCtx);
-    typedef DukTape::duk_ret_t (*lpfnCallStaticFunc)(_In_ DukTape::duk_context *lpCtx);
+protected:
+    typedef DukTape::duk_ret_t(CJsObjectBase:: *lpfnCallFunc)(_In_ DukTape::duk_context *lpCtx);
+    typedef DukTape::duk_ret_t(*lpfnCallStaticFunc)(_In_ DukTape::duk_context *lpCtx);
 
     typedef struct
     {
@@ -600,12 +584,16 @@ class MX_NOVTABLE CJsObjectBase : public virtual TRefCounted<CBaseMemObj>
         ULONG nStatic : 1;
     } MAP_ENTRY;
 
-  protected:
+protected:
     typedef CJsObjectBase *(*lpfnCreateObject)();
-    typedef VOID (*lpfnRegisterUnregisterCallback)(_In_ DukTape::duk_context *lpCtx);
+    typedef VOID(*lpfnRegisterUnregisterCallback)(_In_ DukTape::duk_context *lpCtx);
 
-    static VOID OnRegister(_In_ DukTape::duk_context *lpCtx) {};
-    static VOID OnUnregister(_In_ DukTape::duk_context *lpCtx) {};
+    static VOID OnRegister(_In_ DukTape::duk_context *lpCtx)
+    {
+    };
+    static VOID OnUnregister(_In_ DukTape::duk_context *lpCtx)
+    {
+    };
 
     static HRESULT _RegisterHelper(_In_ DukTape::duk_context *lpCtx, _In_ MAP_ENTRY *lpEntries, _In_ BOOL bUseProxy,
                                    _In_z_ LPCSTR szObjectNameA, _In_opt_ lpfnCreateObject fnCreateObject,
@@ -631,18 +619,18 @@ class MX_NOVTABLE CJsObjectBase : public virtual TRefCounted<CBaseMemObj>
 
 class CJsError
 {
-  protected:
+protected:
     CJsError();
     CJsError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex);
     CJsError(_In_z_ LPCSTR szMessageA, _In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szFileNameA, _In_ ULONG nLine);
 
-  public:
+public:
     CJsError(_In_ const CJsError &obj);
     CJsError &operator=(_In_ const CJsError &obj);
 
     ~CJsError();
 
-  public:
+public:
     __inline LPCSTR GetDescription() const
     {
         return (lpStrMessageA != NULL) ? (LPCSTR)(*lpStrMessageA) : "";
@@ -663,17 +651,17 @@ class CJsError
         return (lpStrStackTraceA != NULL) ? (LPCSTR)(*lpStrStackTraceA) : "N/A";
     };
 
-  protected:
+protected:
     class CRefCountedStringA : public TRefCounted<CStringA>
     {
     };
 
-  private:
+private:
     friend class CJavascriptVM;
 
     VOID Cleanup();
 
-  protected:
+protected:
     CRefCountedStringA *lpStrMessageA;
     CRefCountedStringA *lpStrFileNameA;
     ULONG nLine;
@@ -684,13 +672,13 @@ class CJsError
 
 class CJsWindowsError : public CJsError
 {
-  protected:
+protected:
     CJsWindowsError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex);
     CJsWindowsError(_In_ HRESULT hRes, _In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex);
     CJsWindowsError(_In_ HRESULT hRes, _In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szFileNameA, _In_ ULONG nLine);
     CJsWindowsError(_In_ HRESULT hRes);
 
-  public:
+public:
     CJsWindowsError(_In_ const CJsWindowsError &obj);
     CJsWindowsError &operator=(_In_ const CJsWindowsError &obj);
 
@@ -699,13 +687,13 @@ class CJsWindowsError : public CJsError
         return hRes;
     };
 
-  private:
+private:
     friend class CJavascriptVM;
     friend class CJsError;
 
     VOID QueryMessageString();
 
-  private:
+private:
     HRESULT hRes;
 };
 

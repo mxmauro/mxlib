@@ -20,11 +20,11 @@
 #include "TestRedBlackTree.h"
 #include <RedBlackTree.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 class CNode : public virtual MX::CBaseMemObj
 {
-  public:
+public:
     CNode() : MX::CBaseMemObj()
     {
         nValue = 0;
@@ -37,7 +37,7 @@ class CNode : public virtual MX::CBaseMemObj
         return;
     };
 
-  public:
+public:
     MX::CRedBlackTreeNode cTreeNode;
     ULONG nValue;
 };
@@ -46,8 +46,8 @@ class CNode : public virtual MX::CBaseMemObj
 
 static BOOL CreateTree(_In_ MX::CRedBlackTree &cTree, _Out_ CNode **lplpNodes, ...);
 static CNode *SearchTree(_In_ MX::CRedBlackTree &cTree, _In_ ULONG nValue);
-static BOOL CheckTreeNode(_In_ MX::CRedBlackTree &cTree, _In_ CNode *lpNode, _In_opt_ CNode *lpParent,
-                          _In_opt_ CNode *lpLeft, _In_opt_ CNode *lpRight, _In_ BOOL bIsRed);
+static BOOL CheckTreeNode(_In_ MX::CRedBlackTree &cTree, _In_ CNode *lpNode, _In_opt_ CNode *lpParent, _In_opt_ CNode *lpLeft,
+                          _In_opt_ CNode *lpRight, _In_ BOOL bIsRed);
 
 static BOOL CreateTree_Example133CormenPage314(_In_ MX::CRedBlackTree &cTree, _Out_ CNode **lplpNodes);
 static BOOL CreateTree_Example133CormenPage317(_In_ MX::CRedBlackTree &cTree, _Out_ CNode **lplpNodes);
@@ -69,8 +69,7 @@ static HRESULT TestExample137CormenPage329CaseA();
 static HRESULT TestDuplicates(_In_ SIZE_T nCount);
 static HRESULT TestNonDuplicates(_In_ SIZE_T nCount);
 
-static int InsertNode(_In_opt_ LPVOID lpContext, _In_ MX::CRedBlackTreeNode *lpNode1,
-                      _In_ MX::CRedBlackTreeNode *lpNode2);
+static int InsertNode(_In_opt_ LPVOID lpContext, _In_ MX::CRedBlackTreeNode *lpNode1, _In_ MX::CRedBlackTreeNode *lpNode2);
 static int SearchNode(_In_opt_ LPVOID lpContext, _In_ PULONG lpnValue, _In_ MX::CRedBlackTreeNode *lpNode);
 
 //-----------------------------------------------------------
@@ -79,6 +78,12 @@ int TestRedBlackTree()
 {
     HRESULT hRes;
 
+    if (DoesCmdLineParamExist(L"?") || DoesCmdLineParamExist(L"help"))
+    {
+        wprintf_s(L"Use: Test.exe RedBlackTree\n");
+        return 1;
+    }
+
 #pragma warning(suppress : 28159)
     srand(::GetTickCount());
 
@@ -86,7 +91,7 @@ int TestRedBlackTree()
     hRes = TestDeletion();
     if (FAILED(hRes))
     {
-    on_error:
+on_error:
         if (hRes == E_OUTOFMEMORY)
         {
             wprintf_s(L"\nError: Not enough memory.\n");
@@ -277,7 +282,7 @@ static HRESULT TestDeletion()
     }
     if (SearchTree(cTree, 4)->cTreeNode.GetParent() != NULL)
     {
-    on_failure:
+on_failure:
         cTree.RemoveAll();
         delete[] lpNodes;
         return E_FAIL;
@@ -424,8 +429,7 @@ static HRESULT TestThreeNodesDeleteRight()
 
     cTree.Remove(&(node11->cTreeNode));
 
-    if (CheckTreeNode(cTree, node7, NULL, node4, NULL, FALSE) == FALSE ||
-        CheckTreeNode(cTree, node4, node7, NULL, NULL, TRUE) == FALSE)
+    if (CheckTreeNode(cTree, node7, NULL, node4, NULL, FALSE) == FALSE || CheckTreeNode(cTree, node4, node7, NULL, NULL, TRUE) == FALSE)
     {
         hRes = E_FAIL;
         goto done;
@@ -456,8 +460,7 @@ static HRESULT TestThreeNodesDeleteLeft()
 
     cTree.Remove(&(node4->cTreeNode));
 
-    if (CheckTreeNode(cTree, node7, NULL, NULL, node11, FALSE) == FALSE ||
-        CheckTreeNode(cTree, node11, node7, NULL, NULL, TRUE) == FALSE)
+    if (CheckTreeNode(cTree, node7, NULL, NULL, node11, FALSE) == FALSE || CheckTreeNode(cTree, node11, node7, NULL, NULL, TRUE) == FALSE)
     {
         hRes = E_FAIL;
         goto done;
@@ -488,8 +491,7 @@ static HRESULT TestThreeNodesDeleteRoot()
 
     cTree.Remove(&(node7->cTreeNode));
 
-    if (CheckTreeNode(cTree, node11, NULL, node4, NULL, FALSE) == FALSE ||
-        CheckTreeNode(cTree, node4, node11, NULL, NULL, TRUE) == FALSE)
+    if (CheckTreeNode(cTree, node11, NULL, node4, NULL, FALSE) == FALSE || CheckTreeNode(cTree, node4, node11, NULL, NULL, TRUE) == FALSE)
     {
         hRes = E_FAIL;
         goto done;
@@ -523,8 +525,7 @@ static HRESULT TestExample133CormenPage314Delete3()
     cTree.Remove(&(node3->cTreeNode));
 
     if (CheckTreeNode(cTree, node4, node7, node2, node6, FALSE) == FALSE ||
-        CheckTreeNode(cTree, node2, node4, NULL, NULL, FALSE) == FALSE ||
-        CheckTreeNode(cTree, node6, node4, NULL, NULL, FALSE) == FALSE)
+        CheckTreeNode(cTree, node2, node4, NULL, NULL, FALSE) == FALSE || CheckTreeNode(cTree, node6, node4, NULL, NULL, FALSE) == FALSE)
     {
         hRes = E_FAIL;
         goto done;
@@ -560,8 +561,7 @@ static HRESULT TestExample133CormenPage314Delete6()
 
     if (CheckTreeNode(cTree, node7, NULL, node3, node11, FALSE) == FALSE ||
         CheckTreeNode(cTree, node3, node7, node2, node4, FALSE) == FALSE ||
-        CheckTreeNode(cTree, node2, node3, NULL, NULL, FALSE) == FALSE ||
-        CheckTreeNode(cTree, node4, node3, NULL, NULL, FALSE) == FALSE)
+        CheckTreeNode(cTree, node2, node3, NULL, NULL, FALSE) == FALSE || CheckTreeNode(cTree, node4, node3, NULL, NULL, FALSE) == FALSE)
     {
         hRes = E_FAIL;
         goto done;
@@ -601,8 +601,7 @@ static HRESULT TestExample133CormenPage314Delete9()
     if (CheckTreeNode(cTree, node18, node7, node14, node20, FALSE) == FALSE ||
         CheckTreeNode(cTree, node14, node18, node11, node17, TRUE) == FALSE ||
         CheckTreeNode(cTree, node20, node18, node19, node22, FALSE) == FALSE ||
-        CheckTreeNode(cTree, node19, node20, NULL, NULL, TRUE) == FALSE ||
-        CheckTreeNode(cTree, node22, node20, NULL, NULL, TRUE) == FALSE)
+        CheckTreeNode(cTree, node19, node20, NULL, NULL, TRUE) == FALSE || CheckTreeNode(cTree, node22, node20, NULL, NULL, TRUE) == FALSE)
     {
         hRes = E_FAIL;
         goto done;
@@ -726,8 +725,7 @@ static HRESULT TestExample133CormenPage317CaseA()
     if (CheckTreeNode(cTree, node7, NULL, node2, node11, FALSE) == FALSE ||
         CheckTreeNode(cTree, node2, node7, node1, node5, TRUE) == FALSE ||
         CheckTreeNode(cTree, node11, node7, node8, node14, TRUE) == FALSE ||
-        CheckTreeNode(cTree, node5, node2, node4, NULL, FALSE) == FALSE ||
-        CheckTreeNode(cTree, node4, node5, NULL, NULL, TRUE) == FALSE)
+        CheckTreeNode(cTree, node5, node2, node4, NULL, FALSE) == FALSE || CheckTreeNode(cTree, node4, node5, NULL, NULL, TRUE) == FALSE)
     {
         hRes = E_FAIL;
         goto done;
@@ -971,8 +969,8 @@ static CNode *SearchTree(_In_ MX::CRedBlackTree &cTree, _In_ ULONG nValue)
     return (lpNode != NULL) ? CONTAINING_RECORD(lpNode, CNode, cTreeNode) : NULL;
 }
 
-static BOOL CheckTreeNode(_In_ MX::CRedBlackTree &cTree, _In_ CNode *lpNode, _In_opt_ CNode *lpParent,
-                          _In_opt_ CNode *lpLeft, _In_opt_ CNode *lpRight, _In_ BOOL bIsRed)
+static BOOL CheckTreeNode(_In_ MX::CRedBlackTree &cTree, _In_ CNode *lpNode, _In_opt_ CNode *lpParent, _In_opt_ CNode *lpLeft,
+                          _In_opt_ CNode *lpRight, _In_ BOOL bIsRed)
 {
     if (lpNode->cTreeNode.GetParent() != ((lpParent != NULL) ? &(lpParent->cTreeNode) : NULL))
     {
@@ -999,8 +997,7 @@ static BOOL CheckTreeNode(_In_ MX::CRedBlackTree &cTree, _In_ CNode *lpNode, _In
 
 //-----------------------------------------------------------
 
-static int InsertNode(_In_opt_ LPVOID lpContext, _In_ MX::CRedBlackTreeNode *lpNode1,
-                      _In_ MX::CRedBlackTreeNode *lpNode2)
+static int InsertNode(_In_opt_ LPVOID lpContext, _In_ MX::CRedBlackTreeNode *lpNode1, _In_ MX::CRedBlackTreeNode *lpNode2)
 {
     CNode *lpElem1 = CONTAINING_RECORD(lpNode1, CNode, cTreeNode);
     CNode *lpElem2 = CONTAINING_RECORD(lpNode2, CNode, cTreeNode);

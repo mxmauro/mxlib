@@ -23,20 +23,19 @@
 #include "HttpHeaderBase.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderEntAllow : public CHttpHeaderBase
 {
-  public:
+public:
     CHttpHeaderEntAllow();
     ~CHttpHeaderEntAllow();
 
-    MX_DECLARE_HTTPHEADER_NAME(Allow)
+    MX_DECLARE_HTTPHEADER_NAME("Allow")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
@@ -54,7 +53,7 @@ class CHttpHeaderEntAllow : public CHttpHeaderBase
 
     HRESULT Merge(_In_ CHttpHeaderBase *lpHeader);
 
-  private:
+private:
     TArrayListWithFree<LPCSTR> aVerbsList;
 };
 

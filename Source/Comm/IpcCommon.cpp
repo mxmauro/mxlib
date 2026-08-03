@@ -20,10 +20,9 @@
 #include "IpcDefs.h"
 #include "..\..\Include\MemoryBarrier.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CIpc::CIpc(_In_ CIoCompletionPortThreadPool &_cDispatcherPool)
     : CBaseMemObj(), CLoggable(), cDispatcherPool(_cDispatcherPool)
@@ -375,9 +374,8 @@ HRESULT CIpc::Close(_In_opt_ HANDLE h, _In_opt_ HRESULT hrErrorCode)
     return S_OK;
 }
 
-HRESULT CIpc::InitializeSSL(_In_ HANDLE h, _In_opt_ LPCSTR szHostNameA,
-                            _In_opt_ CSslCertificateArray *lpCheckCertificates, _In_opt_ CSslCertificate *lpSelfCert,
-                            _In_opt_ CEncryptionKey *lpPrivKey, _In_opt_ CEncryptionKey *lpDhParam,
+HRESULT CIpc::InitializeSSL(_In_ HANDLE h, _In_opt_ LPCSTR szHostNameA, _In_opt_ CSslCertificateArray *lpCheckCertificates,
+                            _In_opt_ CSslCertificate *lpSelfCert, _In_opt_ CEncryptionKey *lpPrivKey, _In_opt_ CEncryptionKey *lpDhParam,
                             _In_opt_ eSslOption nSslOptions)
 {
     CAutoRundownProtection cRundownLock(&nRundownProt);
@@ -462,8 +460,7 @@ HRESULT CIpc::IsClosed(_In_ HANDLE h, _Out_opt_ HRESULT *lphErrorCode)
     return (cConn->IsClosed() != FALSE) ? S_OK : S_FALSE;
 }
 
-HRESULT CIpc::GetReadStats(_In_ HANDLE h, _Out_opt_ PULONGLONG lpullBytesTransferred,
-                           _Out_opt_ float *lpnThroughputKbps)
+HRESULT CIpc::GetReadStats(_In_ HANDLE h, _Out_opt_ PULONGLONG lpullBytesTransferred, _Out_opt_ float *lpnThroughputKbps)
 {
     CAutoRundownProtection cRundownLock(&nRundownProt);
     TAutoRefCounted<CConnectionBase> cConn;
@@ -501,8 +498,7 @@ HRESULT CIpc::GetReadStats(_In_ HANDLE h, _Out_opt_ PULONGLONG lpullBytesTransfe
     return S_OK;
 }
 
-HRESULT CIpc::GetWriteStats(_In_ HANDLE h, _Out_opt_ PULONGLONG lpullBytesTransferred,
-                            _Out_opt_ float *lpnThroughputKbps)
+HRESULT CIpc::GetWriteStats(_In_ HANDLE h, _Out_opt_ PULONGLONG lpullBytesTransferred, _Out_opt_ float *lpnThroughputKbps)
 {
     CAutoRundownProtection cRundownLock(&nRundownProt);
     TAutoRefCounted<CConnectionBase> cConn;
@@ -757,10 +753,10 @@ CIpc::eConnectionClass CIpc::GetClass(_In_ HANDLE h)
     // check class
     switch (cConn->nClass)
     {
-    case CIpc::eConnectionClass::Client:
-    case CIpc::eConnectionClass::Server:
-    case CIpc::eConnectionClass::Listener:
-        return cConn->nClass;
+        case CIpc::eConnectionClass::Client:
+        case CIpc::eConnectionClass::Server:
+        case CIpc::eConnectionClass::Listener:
+            return cConn->nClass;
     }
 
     // done
@@ -810,7 +806,8 @@ VOID CIpc::InternalFinalize()
             lpConn->ShutdownLink(TRUE);
             lpConn->Release();
         }
-    } while (lpConn != NULL);
+    }
+    while (lpConn != NULL);
 
     // wait all connections to be destroyed
     while (__InterlockedRead(&(sConnections.nCount)) > 0)
@@ -847,9 +844,8 @@ HRESULT CIpc::FireOnCreate(_In_ CConnectionBase *lpConn)
 
     if (lpConn->cCreateCallback)
     {
-        CREATE_CALLBACK_DATA sCallbackData = {lpConn->cConnectCallback, lpConn->cDisconnectCallback,
-                                              lpConn->cDataReceivedCallback, lpConn->cDestroyCallback,
-                                              lpConn->cUserData};
+        CREATE_CALLBACK_DATA sCallbackData = { lpConn->cConnectCallback,lpConn->cDisconnectCallback,lpConn->cDataReceivedCallback,
+            lpConn->cDestroyCallback,lpConn->cUserData };
 
         hRes = lpConn->cCreateCallback(this, (HANDLE)lpConn, sCallbackData);
     }
@@ -904,8 +900,8 @@ HRESULT CIpc::FireOnDataReceived(_In_ CConnectionBase *lpConn)
     return lpConn->cDataReceivedCallback(this, lpConn, lpConn->cUserData);
 }
 
-CIpc::CPacketBase *CIpc::GetPacket(_In_ CConnectionBase *lpConn, _In_ CPacketBase::eType nType,
-                                   _In_ SIZE_T nDesiredSize, _In_ BOOL bRealSize)
+CIpc::CPacketBase *CIpc::GetPacket(_In_ CConnectionBase *lpConn, _In_ CPacketBase::eType nType, _In_ SIZE_T nDesiredSize,
+                                   _In_ BOOL bRealSize)
 {
     CPacketBase *lpPacket;
 
@@ -930,7 +926,7 @@ CIpc::CPacketBase *CIpc::GetPacket(_In_ CConnectionBase *lpConn, _In_ CPacketBas
     if (lpPacket == NULL)
     {
         lpPacket = (nDesiredSize <= 4096) ? (CPacketBase *)(MX_DEBUG_NEW TPacket<4096>())
-                                          : (CPacketBase *)(MX_DEBUG_NEW TPacket<32768>());
+            : (CPacketBase *)(MX_DEBUG_NEW TPacket<32768>());
     }
     if (lpPacket != NULL)
     {
@@ -1035,8 +1031,7 @@ CIpc::CConnectionBase *CIpc::CheckAndGetConnection(_In_opt_ HANDLE h)
     return NULL;
 }
 
-VOID CIpc::OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr,
-                              _In_ HRESULT hRes)
+VOID CIpc::OnDispatcherPacket(_In_ CIoCompletionPortThreadPool *lpPool, _In_ DWORD dwBytes, _In_ OVERLAPPED *lpOvr, _In_ HRESULT hRes)
 {
     CPacketList cQueuedPacketsList;
     CConnectionBase *lpConn;
@@ -1078,214 +1073,211 @@ start:
 
     switch (lpPacket->GetType())
     {
-    case CPacketBase::eType::InitialSetup:
-        // free packet
-        FreePacket(lpPacket);
-
-        _InterlockedOr(&(lpConn->nFlags), FLAG_InitialSetupExecuted);
-
-        // fire main connect
-        if (SUCCEEDED(hRes))
-        {
-            hRes = FireOnConnect(lpConn);
-
-            // execute ssl startup if enabled
-            if (SUCCEEDED(hRes))
-            {
-                hRes = lpConn->HandleSslStartup();
-            }
-
-            // send read a-head
-            if (SUCCEEDED(hRes))
-            {
-                hRes = (bDoZeroReads != FALSE && ZeroReadsSupported() != FALSE)
-                           ? lpConn->DoZeroRead((SIZE_T)dwReadAhead, cQueuedPacketsList)
-                           : lpConn->DoRead((SIZE_T)dwReadAhead, NULL, cQueuedPacketsList);
-            }
-        }
-        break;
-
-    case CPacketBase::eType::ZeroRead:
-        if (SUCCEEDED(hRes) || hRes == MX_E_MoreData)
-        {
-            // NOTE: if packet is not reused, DoRead will free it
-            hRes = lpConn->DoRead(1, lpPacket, cQueuedPacketsList);
-        }
-        else
-        {
+        case CPacketBase::eType::InitialSetup:
             // free packet
             FreePacket(lpPacket);
-        }
-        MX_ASSERT_ALWAYS(_InterlockedDecrement(&(lpConn->nIncomingReads)) >= 0);
-        break;
 
-    case CPacketBase::eType::Read:
-        if (SUCCEEDED(hRes))
-        {
-            lpPacket->SetBytesInUse(dwBytes);
-            if (dwBytes > 0)
+            _InterlockedOr(&(lpConn->nFlags), FLAG_InitialSetupExecuted);
+
+            // fire main connect
+            if (SUCCEEDED(hRes))
             {
-                lpConn->cReadStats.Update(dwBytes);
+                hRes = FireOnConnect(lpConn);
 
-                // move packet to read list
+                // execute ssl startup if enabled
+                if (SUCCEEDED(hRes))
                 {
-                    CFastLock cListLock(&(lpConn->sReadPackets.nMutex));
-
-                    lpConn->sReadPackets.cList.QueueSorted(lpPacket);
+                    hRes = lpConn->HandleSslStartup();
                 }
 
-                // process queued packets if input processing is not paused
-                if ((__InterlockedRead(&(lpConn->nFlags)) & FLAG_InputProcessingPaused) == 0)
+                // send read a-head
+                if (SUCCEEDED(hRes))
                 {
-                    // get next sequenced block
-                    hRes = lpConn->HandleIncomingPackets();
-                    if (SUCCEEDED(hRes))
+                    hRes = (bDoZeroReads != FALSE && ZeroReadsSupported() != FALSE)
+                        ? lpConn->DoZeroRead((SIZE_T)dwReadAhead, cQueuedPacketsList)
+                        : lpConn->DoRead((SIZE_T)dwReadAhead, NULL, cQueuedPacketsList);
+                }
+            }
+            break;
+
+        case CPacketBase::eType::ZeroRead:
+            if (SUCCEEDED(hRes) || hRes == MX_E_MoreData)
+            {
+                // NOTE: if packet is not reused, DoRead will free it
+                hRes = lpConn->DoRead(1, lpPacket, cQueuedPacketsList);
+            }
+            else
+            {
+                // free packet
+                FreePacket(lpPacket);
+            }
+            MX_ASSERT_ALWAYS(_InterlockedDecrement(&(lpConn->nIncomingReads)) >= 0);
+            break;
+
+        case CPacketBase::eType::Read:
+            if (SUCCEEDED(hRes))
+            {
+                lpPacket->SetBytesInUse(dwBytes);
+                if (dwBytes > 0)
+                {
+                    lpConn->cReadStats.Update(dwBytes);
+
+                    // move packet to read list
                     {
-                        hRes = lpConn->HandleOutgoingPackets();
+                        CFastLock cListLock(&(lpConn->sReadPackets.nMutex));
+
+                        lpConn->sReadPackets.cList.QueueSorted(lpPacket);
                     }
-                    if (SUCCEEDED(hRes))
+
+                    // process queued packets if input processing is not paused
+                    if ((__InterlockedRead(&(lpConn->nFlags)) & FLAG_InputProcessingPaused) == 0)
                     {
-                        // setup a new read-ahead
-                        if (lpConn->IsClosedOrGracefulShutdown() == FALSE)
+                        // get next sequenced block
+                        hRes = lpConn->HandleIncomingPackets();
+                        if (SUCCEEDED(hRes))
                         {
-                            hRes = (bDoZeroReads != FALSE && ZeroReadsSupported() != FALSE)
-                                       ? lpConn->DoZeroRead(1, cQueuedPacketsList)
-                                       : lpConn->DoRead(1, NULL, cQueuedPacketsList);
+                            hRes = lpConn->HandleOutgoingPackets();
+                        }
+                        if (SUCCEEDED(hRes))
+                        {
+                            // setup a new read-ahead
+                            if (lpConn->IsClosedOrGracefulShutdown() == FALSE)
+                            {
+                                hRes = (bDoZeroReads != FALSE && ZeroReadsSupported() != FALSE)
+                                    ? lpConn->DoZeroRead(1, cQueuedPacketsList)
+                                    : lpConn->DoRead(1, NULL, cQueuedPacketsList);
+                            }
                         }
                     }
+                }
+                else
+                {
+                    // free packet
+                    FreePacket(lpPacket);
+
+                    // empty packet?, discard
+                    if ((_InterlockedOr(&lpConn->nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0 && ShouldLog(1) != FALSE)
+                    {
+                        lpConn->cLogTimer.Mark();
+                        Log(L"CIpc::GracefulShutdown A) Clock=%lums / This=0x%p", lpConn->cLogTimer.GetElapsedTimeMs(), lpConn);
+                        lpConn->cLogTimer.ResetToLastMark();
+                    }
+
+                    // do a graceful shutdown if not initiated yet
+                    lpConn->Close(S_OK);
                 }
             }
             else
             {
                 // free packet
                 FreePacket(lpPacket);
+            }
 
-                // empty packet?, discard
-                if ((_InterlockedOr(&lpConn->nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0 &&
-                    ShouldLog(1) != FALSE)
+            // done
+            MX_ASSERT_ALWAYS(_InterlockedDecrement(&(lpConn->nIncomingReads)) >= 0);
+            break;
+
+        case CPacketBase::eType::WriteRequest:
+            if (SUCCEEDED(hRes))
+            {
                 {
-                    lpConn->cLogTimer.Mark();
-                    Log(L"CIpc::GracefulShutdown A) Clock=%lums / This=0x%p", lpConn->cLogTimer.GetElapsedTimeMs(),
-                        lpConn);
-                    lpConn->cLogTimer.ResetToLastMark();
+                    CFastLock cListLock(&(lpConn->sPendingWritePackets.nMutex));
+
+                    lpConn->sPendingWritePackets.cList.QueueSorted(lpPacket);
                 }
 
-                // do a graceful shutdown if not initiated yet
-                lpConn->Close(S_OK);
-            }
-        }
-        else
-        {
-            // free packet
-            FreePacket(lpPacket);
-        }
-
-        // done
-        MX_ASSERT_ALWAYS(_InterlockedDecrement(&(lpConn->nIncomingReads)) >= 0);
-        break;
-
-    case CPacketBase::eType::WriteRequest:
-        if (SUCCEEDED(hRes))
-        {
-            {
-                CFastLock cListLock(&(lpConn->sPendingWritePackets.nMutex));
-
-                lpConn->sPendingWritePackets.cList.QueueSorted(lpPacket);
-            }
-
-            // NOTE: we don't decrement outgoing writes because packet is pending
-            hRes = lpConn->HandleOutgoingPackets();
-        }
-        else
-        {
-            // free packet
-            FreePacket(lpPacket);
-
-            lpConn->DecrementOutgoingWrites();
-        }
-        break;
-
-    case CPacketBase::eType::Write:
-        if (SUCCEEDED(hRes))
-        {
-            MX_ASSERT(dwBytes != 0);
-            if (dwBytes == lpPacket->GetUserDataDW())
-            {
-                lpConn->cWriteStats.Update(dwBytes);
-            }
-            else
-            {
-                hRes = MX_E_WriteFault;
-            }
-        }
-
-        MX_ASSERT_ALWAYS((DWORD)__InterlockedRead(&(lpConn->nOutgoingBytes)) >= lpPacket->GetUserDataDW());
-        _InterlockedExchangeAdd(&(lpConn->nOutgoingBytes), -((LONG)(lpPacket->GetUserDataDW())));
-
-        // free packet
-        FreePacket(lpPacket);
-
-        // check for pending write packets
-        if (SUCCEEDED(hRes))
-        {
-            hRes = lpConn->HandleOutgoingPackets();
-        }
-
-        lpConn->DecrementOutgoingWrites();
-        break;
-
-    case CPacketBase::eType::Discard:
-        // ignore
-        MX_ASSERT(FALSE);
-        break;
-
-    case CPacketBase::eType::ResumeIoProcessing:
-    {
-        BOOL bIsRead = (lpPacket->GetOrder() == 1) ? TRUE : FALSE;
-
-        FreePacket(lpPacket);
-
-        hRes = S_OK;
-        while (SUCCEEDED(hRes) && (__InterlockedRead(&(lpConn->nFlags)) & FLAG_InputProcessingPaused) == 0 &&
-               lpConn->IsClosedOrGracefulShutdown() == FALSE &&
-               (ULONG)__InterlockedRead(&(lpConn->nIncomingReads)) < dwReadAhead)
-        {
-            hRes = (bDoZeroReads != FALSE && ZeroReadsSupported() != FALSE)
-                       ? lpConn->DoZeroRead((SIZE_T)dwReadAhead, cQueuedPacketsList)
-                       : lpConn->DoRead((SIZE_T)dwReadAhead, NULL, cQueuedPacketsList);
-        }
-        if (SUCCEEDED(hRes))
-        {
-            {
-                CFastLock cRecBufLock(&(lpConn->sReceivedData.nMutex));
-
-                if (lpConn->sReceivedData.cBuffer.GetAvailableForRead() > 0)
-                {
-                    _InterlockedOr(&(lpConn->nFlags), FLAG_NewReceivedDataAvailable);
-                }
-            }
-
-            if (bIsRead != FALSE)
-            {
-                // check pending read packets
-                hRes = lpConn->HandleIncomingPackets();
-                if (SUCCEEDED(hRes))
-                {
-                    hRes = lpConn->HandleOutgoingPackets();
-                }
-            }
-            else
-            {
-                // else check pending write packets
+                // NOTE: we don't decrement outgoing writes because packet is pending
                 hRes = lpConn->HandleOutgoingPackets();
             }
-        }
-    }
-    break;
+            else
+            {
+                // free packet
+                FreePacket(lpPacket);
 
-    default:
-        hRes = OnCustomPacket(dwBytes, lpPacket, hRes);
-        break;
+                lpConn->DecrementOutgoingWrites();
+            }
+            break;
+
+        case CPacketBase::eType::Write:
+            if (SUCCEEDED(hRes))
+            {
+                MX_ASSERT(dwBytes != 0);
+                if (dwBytes == lpPacket->GetUserDataDW())
+                {
+                    lpConn->cWriteStats.Update(dwBytes);
+                }
+                else
+                {
+                    hRes = MX_E_WriteFault;
+                }
+            }
+
+            MX_ASSERT_ALWAYS((DWORD)__InterlockedRead(&(lpConn->nOutgoingBytes)) >= lpPacket->GetUserDataDW());
+            _InterlockedExchangeAdd(&(lpConn->nOutgoingBytes), -((LONG)(lpPacket->GetUserDataDW())));
+
+            // free packet
+            FreePacket(lpPacket);
+
+            // check for pending write packets
+            if (SUCCEEDED(hRes))
+            {
+                hRes = lpConn->HandleOutgoingPackets();
+            }
+
+            lpConn->DecrementOutgoingWrites();
+            break;
+
+        case CPacketBase::eType::Discard:
+            // ignore
+            MX_ASSERT(FALSE);
+            break;
+
+        case CPacketBase::eType::ResumeIoProcessing:
+            {
+                BOOL bIsRead = (lpPacket->GetOrder() == 1) ? TRUE : FALSE;
+
+                FreePacket(lpPacket);
+
+                hRes = S_OK;
+                while (SUCCEEDED(hRes) && (__InterlockedRead(&(lpConn->nFlags)) & FLAG_InputProcessingPaused) == 0 &&
+                       lpConn->IsClosedOrGracefulShutdown() == FALSE && (ULONG)__InterlockedRead(&(lpConn->nIncomingReads)) < dwReadAhead)
+                {
+                    hRes = (bDoZeroReads != FALSE && ZeroReadsSupported() != FALSE)
+                        ? lpConn->DoZeroRead((SIZE_T)dwReadAhead, cQueuedPacketsList)
+                        : lpConn->DoRead((SIZE_T)dwReadAhead, NULL, cQueuedPacketsList);
+                }
+                if (SUCCEEDED(hRes))
+                {
+                    {
+                        CFastLock cRecBufLock(&(lpConn->sReceivedData.nMutex));
+
+                        if (lpConn->sReceivedData.cBuffer.GetAvailableForRead() > 0)
+                        {
+                            _InterlockedOr(&(lpConn->nFlags), FLAG_NewReceivedDataAvailable);
+                        }
+                    }
+
+                    if (bIsRead != FALSE)
+                    {
+                        // check pending read packets
+                        hRes = lpConn->HandleIncomingPackets();
+                        if (SUCCEEDED(hRes))
+                        {
+                            hRes = lpConn->HandleOutgoingPackets();
+                        }
+                    }
+                    else
+                    {
+                        // else check pending write packets
+                        hRes = lpConn->HandleOutgoingPackets();
+                    }
+                }
+            }
+            break;
+
+        default:
+            hRes = OnCustomPacket(dwBytes, lpPacket, hRes);
+            break;
     }
 
     // new message queued? graceful closing?
@@ -1346,13 +1338,11 @@ start:
         {
             BOOL bLog;
 
-            bLog =
-                ((_InterlockedOr(&lpConn->nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) ? TRUE : FALSE;
+            bLog = ((_InterlockedOr(&lpConn->nFlags, FLAG_GracefulShutdown) & FLAG_GracefulShutdown) == 0) ? TRUE : FALSE;
             if (bLog != FALSE && ShouldLog(1) != FALSE)
             {
                 lpConn->cLogTimer.Mark();
-                Log(L"CIpc::GracefulShutdown C) Clock=%lums / This=0x%p / Res=0x%08X",
-                    lpConn->cLogTimer.GetElapsedTimeMs(), this, hRes);
+                Log(L"CIpc::GracefulShutdown C) Clock=%lums / This=0x%p / Res=0x%08X", lpConn->cLogTimer.GetElapsedTimeMs(), this, hRes);
                 lpConn->cLogTimer.ResetToLastMark();
             }
             hRes = S_OK;

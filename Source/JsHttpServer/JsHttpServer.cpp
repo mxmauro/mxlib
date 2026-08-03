@@ -19,10 +19,9 @@
  */
 #include "JsHttpServerCommon.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CJsHttpServer::CJsHttpServer(_In_ CSockets &cSocketMgr, _In_opt_ CLoggable *lpLogParent)
     : CBaseMemObj(), CHttpServer(cSocketMgr, lpLogParent)
@@ -40,11 +39,9 @@ CJsHttpServer::CJsHttpServer(_In_ CSockets &cSocketMgr, _In_opt_ CLoggable *lpLo
     //----
     CHttpServer::SetQuerySslCertificatesCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnQuerySslCertificates, this));
     CHttpServer::SetNewRequestObjectCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnNewRequestObject, this));
-    CHttpServer::SetRequestHeadersReceivedCallback(
-        MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequestHeadersReceived, this));
+    CHttpServer::SetRequestHeadersReceivedCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequestHeadersReceived, this));
     CHttpServer::SetRequestCompletedCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequestCompleted, this));
-    CHttpServer::SetWebSocketRequestReceivedCallback(
-        MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnWebSocketRequestReceived, this));
+    CHttpServer::SetWebSocketRequestReceivedCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnWebSocketRequestReceived, this));
     CHttpServer::SetRequestDestroyedCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnRequestDestroyed, this));
     CHttpServer::SetCustomErrorPageCallback(MX_BIND_MEMBER_CALLBACK(&CJsHttpServer::OnCustomErrorPage, this));
     return;
@@ -68,8 +65,7 @@ VOID CJsHttpServer::SetNewRequestObjectCallback(_In_ OnNewRequestObjectCallback 
     return;
 }
 
-VOID CJsHttpServer::SetRequestHeadersReceivedCallback(
-    _In_ OnRequestHeadersReceivedCallback _cRequestHeadersReceivedCallback)
+VOID CJsHttpServer::SetRequestHeadersReceivedCallback(_In_ OnRequestHeadersReceivedCallback _cRequestHeadersReceivedCallback)
 {
     cRequestHeadersReceivedCallback = _cRequestHeadersReceivedCallback;
     return;
@@ -87,8 +83,7 @@ VOID CJsHttpServer::SetRequireJsModuleCallback(_In_ OnRequireJsModuleCallback _c
     return;
 }
 
-VOID CJsHttpServer::SetWebSocketRequestReceivedCallback(
-    _In_ OnWebSocketRequestReceivedCallback _cWebSocketRequestReceivedCallback)
+VOID CJsHttpServer::SetWebSocketRequestReceivedCallback(_In_ OnWebSocketRequestReceivedCallback _cWebSocketRequestReceivedCallback)
 {
     cWebSocketRequestReceivedCallback = _cWebSocketRequestReceivedCallback;
     return;
@@ -142,8 +137,7 @@ HRESULT CJsHttpServer::OnNewRequestObject(_In_ CHttpServer *lpHttp, _Out_ CHttpS
     return hRes;
 }
 
-HRESULT CJsHttpServer::OnQuerySslCertificates(_In_ CHttpServer *lpHttp,
-                                              _Outptr_opt_result_maybenull_ CSslCertificate **lplpSslCert,
+HRESULT CJsHttpServer::OnQuerySslCertificates(_In_ CHttpServer *lpHttp, _Outptr_opt_result_maybenull_ CSslCertificate **lplpSslCert,
                                               _Outptr_opt_result_maybenull_ CEncryptionKey **lplpSslPrivKey,
                                               _Outptr_opt_result_maybenull_ CEncryptionKey **lplpDhParam)
 {
@@ -160,7 +154,9 @@ HRESULT CJsHttpServer::OnQuerySslCertificates(_In_ CHttpServer *lpHttp,
         *lplpDhParam = NULL;
     }
     if (cQuerySslCertificatesCallback)
+    {
         return cQuerySslCertificatesCallback(this, lplpSslCert, lplpSslPrivKey, lplpDhParam);
+    }
     return S_FALSE;
 }
 
@@ -208,9 +204,8 @@ VOID CJsHttpServer::OnRequestCompleted(_In_ MX::CHttpServer *lpHttp, _In_ CHttpS
     return;
 }
 
-HRESULT CJsHttpServer::OnWebSocketRequestReceived(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *_lpReq,
-                                                  _In_ int nVersion, _In_opt_ LPCSTR *szProtocolsA,
-                                                  _In_ SIZE_T nProtocolsCount, _Out_ int &nSelectedProtocol,
+HRESULT CJsHttpServer::OnWebSocketRequestReceived(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *_lpReq, _In_ int nVersion,
+                                                  _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount, _Out_ int &nSelectedProtocol,
                                                   _In_ TArrayList<int> &aSupportedVersions,
                                                   _Outptr_result_maybenull_ CWebSocket **lplpWebSocket)
 {
@@ -222,15 +217,14 @@ HRESULT CJsHttpServer::OnWebSocketRequestReceived(_In_ CHttpServer *lpHttp, _In_
     {
         CClientRequest *lpRequest = static_cast<CClientRequest *>(_lpReq);
 
-        return cWebSocketRequestReceivedCallback(this, lpRequest, nVersion, szProtocolsA, nProtocolsCount,
-                                                 nSelectedProtocol, aSupportedVersions, lplpWebSocket);
+        return cWebSocketRequestReceivedCallback(this, lpRequest, nVersion, szProtocolsA, nProtocolsCount, nSelectedProtocol,
+                                                 aSupportedVersions, lplpWebSocket);
     }
     return MX_E_Unsupported;
 }
 
-HRESULT CJsHttpServer::OnCustomErrorPage(_In_ CHttpServer *lpHttp, _Inout_ CSecureStringA &cStrBodyA,
-                                         _In_ LONG nStatusCode, _In_ LPCSTR szStatusMessageA,
-                                         _In_z_ LPCSTR szAdditionalExplanationA)
+HRESULT CJsHttpServer::OnCustomErrorPage(_In_ CHttpServer *lpHttp, _Inout_ CSecureStringA &cStrBodyA, _In_ LONG nStatusCode,
+                                         _In_ LPCSTR szStatusMessageA, _In_z_ LPCSTR szAdditionalExplanationA)
 {
     if (cCustomErrorPageCallback)
     {

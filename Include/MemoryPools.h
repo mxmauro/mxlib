@@ -31,7 +31,7 @@
 
 class CMemoryManager
 {
-  public:
+public:
     CMemoryManager(__in BOOL bExecutable);
     ~CMemoryManager();
 
@@ -41,16 +41,16 @@ class CMemoryManager
 
     SIZE_T BlockSize(__in LPVOID lpPtr);
 
-  public:
+public:
     typedef struct tagDLLIST_ITEM
     {
         struct tagDLLIST_ITEM *lpNext, *lpPrev;
     } DLLIST_ITEM, *LPDLLIST_ITEM;
 
-  private:
+private:
     class CBin
     {
-      public:
+    public:
         CBin();
         ~CBin();
 
@@ -59,7 +59,7 @@ class CMemoryManager
 
         VOID Cleanup();
 
-      private:
+    private:
         friend class CMemoryManager;
 
         LONG volatile nMutex;
@@ -67,14 +67,14 @@ class CMemoryManager
         DWORD dwBlockSize, dwBlocksPerChunk;
     };
 
-  private:
+private:
     LPVOID InternalAlloc(__in SIZE_T nSize);
     static VOID DlListInsertHead(__inout LPDLLIST_ITEM lpList, __inout LPDLLIST_ITEM lpItem);
     static VOID DlListInsertTail(__inout LPDLLIST_ITEM lpList, __inout LPDLLIST_ITEM lpItem);
     static VOID DlListRemove(__inout LPDLLIST_ITEM lpItem);
     static SIZE_T IndexFromSize(__in SIZE_T nSize);
 
-  private:
+private:
     CBin cBins[12];
     BOOL bExecutable;
 };

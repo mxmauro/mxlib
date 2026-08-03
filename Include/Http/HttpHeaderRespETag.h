@@ -22,20 +22,19 @@
 
 #include "HttpHeaderBase.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderRespETag : public CHttpHeaderBase
 {
-  public:
+public:
     CHttpHeaderRespETag();
     ~CHttpHeaderRespETag();
 
-    MX_DECLARE_HTTPHEADER_NAME(ETag)
+    MX_DECLARE_HTTPHEADER_NAME("ETag")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
@@ -45,7 +44,7 @@ class CHttpHeaderRespETag : public CHttpHeaderBase
     HRESULT SetWeak(_In_ BOOL bIsWeak);
     BOOL GetWeak() const;
 
-  private:
+private:
     CStringA cStrTagA;
     BOOL bIsWeak;
 };

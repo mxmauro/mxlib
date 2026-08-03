@@ -24,10 +24,9 @@
 #include "AtomicOps.h"
 #include "AutoHandle.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 BOOL IsMultiProcessor();
 VOID _YieldProcessor();
@@ -36,7 +35,7 @@ VOID _YieldProcessor();
 
 class CCriticalSection : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     CCriticalSection(_In_ ULONG nSpinCount = 4000) : CBaseMemObj(), CNonCopyableObj()
     {
         if (::MxRtlInitializeCriticalSectionAndSpinCount(&cs, nSpinCount) == STATUS_NOT_IMPLEMENTED)
@@ -69,10 +68,10 @@ class CCriticalSection : public virtual CBaseMemObj, public CNonCopyableObj
         return;
     };
 
-  public:
+public:
     class CAutoLock : public virtual CBaseMemObj, public CNonCopyableObj
     {
-      public:
+    public:
         CAutoLock(_In_ CCriticalSection &_cCS) : CBaseMemObj(), CNonCopyableObj(), cCS(_cCS)
         {
             cCS.Lock();
@@ -85,14 +84,14 @@ class CCriticalSection : public virtual CBaseMemObj, public CNonCopyableObj
             return;
         };
 
-      private:
+    private:
         CCriticalSection &cCS;
     };
 
-  public:
+public:
     class CTryAutoLock : public virtual CBaseMemObj, public CNonCopyableObj
     {
-      public:
+    public:
         CTryAutoLock(_In_ CCriticalSection &cCS) : CBaseMemObj(), CNonCopyableObj()
         {
             lpCS = (cCS.TryLock() != FALSE) ? &cCS : NULL;
@@ -113,11 +112,11 @@ class CCriticalSection : public virtual CBaseMemObj, public CNonCopyableObj
             return (lpCS != NULL) ? TRUE : FALSE;
         };
 
-      private:
+    private:
         CCriticalSection *lpCS;
     };
 
-  private:
+private:
     RTL_CRITICAL_SECTION cs;
 };
 
@@ -125,7 +124,7 @@ class CCriticalSection : public virtual CBaseMemObj, public CNonCopyableObj
 
 class CWindowsEvent : public CWindowsHandle
 {
-  public:
+public:
     CWindowsEvent();
 
     HRESULT Create(_In_ BOOL bManualReset, _In_ BOOL bInitialState, _In_opt_z_ LPCWSTR szNameW = NULL,
@@ -150,11 +149,11 @@ class CWindowsEvent : public CWindowsHandle
 
 class CWindowsMutex : public CWindowsHandle
 {
-  public:
+public:
     CWindowsMutex();
 
-    HRESULT Create(_In_opt_z_ LPCWSTR szNameW = NULL, _In_ BOOL bInitialOwner = TRUE,
-                   _In_opt_ LPSECURITY_ATTRIBUTES lpSecAttr = NULL, _Out_opt_ LPBOOL lpbAlreadyExists = NULL);
+    HRESULT Create(_In_opt_z_ LPCWSTR szNameW = NULL, _In_ BOOL bInitialOwner = TRUE, _In_opt_ LPSECURITY_ATTRIBUTES lpSecAttr = NULL,
+                   _Out_opt_ LPBOOL lpbAlreadyExists = NULL);
 
     HRESULT Open(_In_opt_z_ LPCWSTR szNameW = NULL, _In_ BOOL bQueryOnly = FALSE, _In_opt_ BOOL bInherit = FALSE);
 
@@ -189,8 +188,7 @@ VOID FastLock_Initialize(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock);
 VOID FastLock_Enter(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock);
 BOOL FastLock_TryEnter(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock);
 VOID FastLock_Exit(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock);
-DWORD FastLock_IsActive(
-    _Inout_ _Interlocked_operand_ LONG volatile *lpnLock); // NOTE: returns thread id holding the lock if active or 0
+DWORD FastLock_IsActive(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock); // NOTE: returns thread id holding the lock if active or 0
 VOID FastLock_Bitmask_Enter(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock, _In_ int nBitIndex);
 BOOL FastLock_Bitmask_TryEnter(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock, _In_ int nBitIndex);
 VOID FastLock_Bitmask_Exit(_Inout_ _Interlocked_operand_ LONG volatile *lpnLock, _In_ int nBitIndex);
@@ -198,7 +196,7 @@ BOOL FastLock_Bitmask_IsActive(_Inout_ _Interlocked_operand_ LONG volatile *lpnL
 
 class CFastLock : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     CFastLock(_Inout_ LONG volatile *_lpnLock) : CBaseMemObj(), CNonCopyableObj(), lpnLock(_lpnLock)
     {
         FastLock_Enter(lpnLock);
@@ -211,13 +209,13 @@ class CFastLock : public virtual CBaseMemObj, public CNonCopyableObj
         return;
     };
 
-  private:
+private:
     LONG volatile *lpnLock;
 };
 
 class CFastBitMaskLock : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     CFastBitMaskLock(_Inout_ LONG volatile *_lpnLock, _In_ int _nBitIndex)
         : CBaseMemObj(), CNonCopyableObj(), lpnLock(_lpnLock), nBitIndex(_nBitIndex)
     {
@@ -231,7 +229,7 @@ class CFastBitMaskLock : public virtual CBaseMemObj, public CNonCopyableObj
         return;
     };
 
-  private:
+private:
     LONG volatile *lpnLock;
     int nBitIndex;
 };
@@ -256,13 +254,13 @@ VOID SlimRWL_ReleaseExclusive(_In_ LPRWLOCK lpLock);
 
 class CAutoSlimRWLBase : public virtual CBaseMemObj
 {
-  protected:
+protected:
     CAutoSlimRWLBase(_In_ LPRWLOCK _lpLock, _In_ BOOL b) : CBaseMemObj(), lpLock(_lpLock), bShared(b)
     {
         return;
     };
 
-  public:
+public:
     ~CAutoSlimRWLBase()
     {
         if (bShared == FALSE)
@@ -298,14 +296,14 @@ class CAutoSlimRWLBase : public virtual CBaseMemObj
         return;
     };
 
-  private:
+private:
     LPRWLOCK lpLock;
     BOOL bShared;
 };
 
 class CAutoSlimRWLShared : public CAutoSlimRWLBase, public CNonCopyableObj
 {
-  public:
+public:
     CAutoSlimRWLShared(_In_ LPRWLOCK lpLock) : CAutoSlimRWLBase(lpLock, TRUE), CNonCopyableObj()
     {
         SlimRWL_AcquireShared(lpLock);
@@ -315,7 +313,7 @@ class CAutoSlimRWLShared : public CAutoSlimRWLBase, public CNonCopyableObj
 
 class CAutoSlimRWLExclusive : public CAutoSlimRWLBase, public CNonCopyableObj
 {
-  public:
+public:
     CAutoSlimRWLExclusive(_In_ LPRWLOCK lpLock) : CAutoSlimRWLBase(lpLock, FALSE), CNonCopyableObj()
     {
         SlimRWL_AcquireExclusive(lpLock);
@@ -334,7 +332,7 @@ VOID RundownProt_WaitForRelease(_Inout_ _Interlocked_operand_ LONG volatile *lpn
 
 class CAutoRundownProtection : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     CAutoRundownProtection(_Inout_ _Interlocked_operand_ LONG volatile *_lpnValue) : CBaseMemObj(), CNonCopyableObj()
     {
         Acquire(_lpnValue);
@@ -380,7 +378,7 @@ class CAutoRundownProtection : public virtual CBaseMemObj, public CNonCopyableOb
         return;
     };
 
-  private:
+private:
     LONG volatile *lpnValue;
 };
 

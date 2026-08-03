@@ -26,22 +26,21 @@
 #include "..\PropertyBag.h"
 #include "HttpCommon.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class MX_NOVTABLE CHttpBodyParserBase : public virtual TRefCounted<CBaseMemObj>
 {
-  protected:
+protected:
     CHttpBodyParserBase();
 
-  public:
+public:
     ~CHttpBodyParserBase();
 
     virtual LPCSTR GetType() const = 0;
 
-  protected:
+protected:
     friend class Internals::CHttpParser;
 
     virtual HRESULT Initialize(_In_ Internals::CHttpParser &cHttpParser) = 0;

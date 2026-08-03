@@ -25,14 +25,13 @@
 #include "..\Strings\Strings.h"
 #include "..\RapidJSON\rapidjson-all.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpBodyParserJSON : public MX::CHttpBodyParserBase
 {
-  public:
+public:
     CHttpBodyParserJSON();
     ~CHttpBodyParserJSON();
 
@@ -51,11 +50,11 @@ class CHttpBodyParserJSON : public MX::CHttpBodyParserBase
         return d;
     };
 
-  protected:
+protected:
     HRESULT Initialize(_In_ MX::Internals::CHttpParser &cHttpParser);
     HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
 
-  private:
+private:
     enum class eState
     {
         Data,
@@ -63,7 +62,7 @@ class CHttpBodyParserJSON : public MX::CHttpBodyParserBase
         Error
     };
 
-  private:
+private:
     eState nState;
     CSecureStringA cStrTempA;
     rapidjson::Document d;

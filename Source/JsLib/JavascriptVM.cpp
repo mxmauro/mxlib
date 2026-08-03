@@ -22,18 +22,17 @@
 
 #define X_BYTE_ENC(_x, _y) (((UCHAR)(_x)) ^ ((UCHAR)(_y + 0x4A)))
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 typedef struct tagRUN_NATIVE_PROTECTED_DATA
 {
-    MX::CJavascriptVM::lpfnProtectedFunction fnFunc{NULL};
-    DukTape::duk_idx_t nRetValuesCount{0};
+    MX::CJavascriptVM::lpfnProtectedFunction fnFunc{ NULL };
+    DukTape::duk_idx_t nRetValuesCount{ 0 };
 } RUN_NATIVE_PROTECTED_DATA;
 
 //-----------------------------------------------------------
 
-namespace DukTape
-{
+namespace DukTape {
 #ifdef DUK_USE_DEBUG
 LONG nDebugLevel = 0;
 #endif // DUK_USE_DEBUG
@@ -57,8 +56,7 @@ static void my_duk_fatal_function(void *udata, const char *msg);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CJavascriptVM::CJavascriptVM() : CBaseMemObj()
 {
@@ -91,80 +89,75 @@ HRESULT CJavascriptVM::Initialize()
     {
         return E_OUTOFMEMORY;
     }
-    hRes = RunNativeProtectedAndGetError(
-        0, 0,
-        [this](_In_ DukTape::duk_context *lpCtx) -> VOID
-        {
-            DukTape::duk_push_global_stash(lpCtx);
-            // setup the global internal object
-            DukTape::duk_push_bare_object(lpCtx);
-            DukTape::duk_put_prop_string(lpCtx, -2, "mxjslib");
+    hRes = RunNativeProtectedAndGetError(0, 0, [this](_In_ DukTape::duk_context *lpCtx) -> VOID
+    {
+        DukTape::duk_push_global_stash(lpCtx);
+        // setup the global internal object
+        DukTape::duk_push_bare_object(lpCtx);
+        DukTape::duk_put_prop_string(lpCtx, -2, "mxjslib");
 
-            // get our internal global object
-            DukTape::duk_get_prop_string(lpCtx, -1, "mxjslib");
+        // get our internal global object
+        DukTape::duk_get_prop_string(lpCtx, -1, "mxjslib");
 
-            // setup "jsVM" accessible only from native for callbacks
-            DukTape::duk_push_pointer(lpCtx, this);
-            DukTape::duk_put_prop_string(lpCtx, -2,
-                                         "\xff"
-                                         "jsVM");
+        // setup "jsVM" accessible only from native for callbacks
+        DukTape::duk_push_pointer(lpCtx, this);
+        DukTape::duk_put_prop_string(lpCtx, -2, "\xff"
+                                                "jsVM");
 
-            // setup "unhandledExceptionHandler"
-            DukTape::duk_push_null(lpCtx);
-            DukTape::duk_put_prop_string(lpCtx, -2,
-                                         "\xff"
-                                         "unhandledExceptionHandler");
+        // setup "unhandledExceptionHandler"
+        DukTape::duk_push_null(lpCtx);
+        DukTape::duk_put_prop_string(lpCtx, -2, "\xff"
+                                                "unhandledExceptionHandler");
 
-            // done with internal objects
-            DukTape::duk_pop_2(lpCtx);
+        // done with internal objects
+        DukTape::duk_pop_2(lpCtx);
 
-            // setup global functions and methods
-            DukTape::duk_push_global_object(lpCtx);
+        // setup global functions and methods
+        DukTape::duk_push_global_object(lpCtx);
 
-            // add debug output
-            DukTape::duk_push_c_function(lpCtx, &OnDebugString, 1);
-            DukTape::duk_put_prop_string(lpCtx, -2, "DebugPrint");
+        // add debug output
+        DukTape::duk_push_c_function(lpCtx, &OnDebugString, 1);
+        DukTape::duk_put_prop_string(lpCtx, -2, "DebugPrint");
 
 #ifdef _DEBUG
-            // add IS_DEBUG_BUILD property
-            DukTape::duk_push_boolean(lpCtx, 1);
-            DukTape::duk_put_prop_string(lpCtx, -2, "IS_DEBUG_BUILD");
+        // add IS_DEBUG_BUILD property
+        DukTape::duk_push_boolean(lpCtx, 1);
+        DukTape::duk_put_prop_string(lpCtx, -2, "IS_DEBUG_BUILD");
 #endif //_DEBUG
 
-            // add unhandled exception handler
-            DukTape::duk_push_c_function(lpCtx, &OnSetUnhandledExceptionHandler, 1);
-            DukTape::duk_put_prop_string(lpCtx, -2, "SetUnhandledExceptionHandler");
+        // add unhandled exception handler
+        DukTape::duk_push_c_function(lpCtx, &OnSetUnhandledExceptionHandler, 1);
+        DukTape::duk_put_prop_string(lpCtx, -2, "SetUnhandledExceptionHandler");
 
-            // add windows error message retrieval
-            DukTape::duk_push_c_function(lpCtx, &OnFormatErrorMessage, 1);
-            DukTape::duk_put_prop_string(lpCtx, -2, "FormatErrorMessage");
+        // add windows error message retrieval
+        DukTape::duk_push_c_function(lpCtx, &OnFormatErrorMessage, 1);
+        DukTape::duk_put_prop_string(lpCtx, -2, "FormatErrorMessage");
 
-            // setup DukTape's Node.js-like module loading framework
-            DukTape::duk_push_object(lpCtx);
-            DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::OnNodeJsResolveModule, MX_JS_VARARGS);
-            DukTape::duk_put_prop_string(lpCtx, -2, "resolve");
-            DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::OnNodeJsLoadModule, MX_JS_VARARGS);
-            DukTape::duk_put_prop_string(lpCtx, -2, "load");
+        // setup DukTape's Node.js-like module loading framework
+        DukTape::duk_push_object(lpCtx);
+        DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::OnNodeJsResolveModule, MX_JS_VARARGS);
+        DukTape::duk_put_prop_string(lpCtx, -2, "resolve");
+        DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::OnNodeJsLoadModule, MX_JS_VARARGS);
+        DukTape::duk_put_prop_string(lpCtx, -2, "load");
 
-            DukTape::duk_module_node_init(lpCtx);
+        DukTape::duk_module_node_init(lpCtx);
 
-            // done with global object
-            DukTape::duk_pop(lpCtx);
+        // done with global object
+        DukTape::duk_pop(lpCtx);
 
-            // add WindowsError exception
-            DukTape::duk_eval_raw(
-                lpCtx,
-                "function WindowsError(_hr) {\r\n"
-                "this.hr = _hr;\r\n"
-                "Error.call(this, \"\");\r\n"
-                "this.message = FormatErrorMessage(_hr);\r\n"
-                "this.name = \"WindowsError\";\r\n"
-                "return this; }\r\n"
-                "WindowsError.prototype = Object.create(Error.prototype);\r\n"
-                "WindowsError.prototype.constructor=WindowsError;\r\n",
-                0, DUK_COMPILE_EVAL | DUK_COMPILE_NOSOURCE | DUK_COMPILE_STRLEN | DUK_COMPILE_NOFILENAME);
-            return;
-        });
+        // add WindowsError exception
+        DukTape::duk_eval_raw(lpCtx, "function WindowsError(_hr) {\r\n"
+                                     "\tthis.hr = _hr;\r\n"
+                                     "\tError.call(this, \"\");\r\n"
+                                     "\tthis.message = FormatErrorMessage(_hr);\r\n"
+                                     "\tthis.name = \"WindowsError\";\r\n"
+                                     "\treturn this;\r\n"
+                                     "}\r\n"
+                                     "WindowsError.prototype = Object.create(Error.prototype);\r\n"
+                                     "WindowsError.prototype.constructor=WindowsError;\r\n",
+                              0, DUK_COMPILE_EVAL | DUK_COMPILE_NOSOURCE | DUK_COMPILE_STRLEN | DUK_COMPILE_NOFILENAME);
+        return;
+    });
     if (FAILED(hRes))
     {
         DukTape::duk_destroy_heap(lpCtx);
@@ -198,9 +191,8 @@ CJavascriptVM *CJavascriptVM::FromContext(_In_ DukTape::duk_context *lpCtx)
     DukTape::duk_get_prop_string(lpCtx, -1, "mxjslib");
 
     // get property
-    DukTape::duk_get_prop_string(lpCtx, -1,
-                                 "\xff"
-                                 "jsVM");
+    DukTape::duk_get_prop_string(lpCtx, -1, "\xff"
+                                            "jsVM");
     lpVM = reinterpret_cast<MX::CJavascriptVM *>(DukTape::duk_to_pointer(lpCtx, -1));
 
     // done with our internal global object
@@ -234,32 +226,28 @@ VOID CJavascriptVM::Run(_In_z_ LPCSTR szCodeA, _In_opt_z_ LPCWSTR szFileNameW, _
         szFileNameW = L"main.jss";
     }
     // initialize last execution error
-    RunNativeProtected(
-        0, (bIgnoreResult != FALSE) ? 0 : 1,
-        [szFileNameW, szCodeA, this](_In_ DukTape::duk_context *lpCtx) -> VOID
-        {
-            CStringA cStrTempA;
-            HRESULT hRes;
+    RunNativeProtected(0, (bIgnoreResult != FALSE) ? 0 : 1, [szFileNameW, szCodeA, this](_In_ DukTape::duk_context *lpCtx) -> VOID
+    {
+        CStringA cStrTempFileNameA;
+        HRESULT hRes;
 
-            hRes = Utf8_Encode(cStrTempA, szFileNameW);
-            if (FAILED(hRes))
-            {
-                MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
-            }
-            // modify require.id to match our passed filename so we have a correct path resolution in 'modSearch'
-            DukTape::duk_push_global_object(lpCtx);
-            DukTape::duk_get_prop_string(lpCtx, -1, "require");
-            DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
-            DukTape::duk_put_prop_string(lpCtx, -2,
-                                         "\xff"
-                                         "moduleId");
-            DukTape::duk_pop_2(lpCtx);
-            // run code
-            DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempA, cStrTempA.GetLength());
-            DukTape::duk_eval_raw(lpCtx, szCodeA, MX::StrLenA(szCodeA), 1 | DUK_COMPILE_NOSOURCE | DUK_COMPILE_SHEBANG);
-            return;
-        },
-        TRUE);
+        hRes = Utf8_Encode(cStrTempFileNameA, szFileNameW);
+        if (FAILED(hRes))
+        {
+            MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+        }
+        // modify require.id to match our passed filename so we have a correct path resolution in 'modSearch'
+        DukTape::duk_push_global_object(lpCtx);
+        DukTape::duk_get_prop_string(lpCtx, -1, "require");
+        DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempFileNameA, cStrTempFileNameA.GetLength());
+        DukTape::duk_put_prop_string(lpCtx, -2, "\xff"
+                                                "moduleId");
+        DukTape::duk_pop_2(lpCtx);
+        // run code
+        DukTape::duk_push_lstring(lpCtx, (LPCSTR)cStrTempFileNameA, cStrTempFileNameA.GetLength());
+        DukTape::duk_eval_raw(lpCtx, szCodeA, MX::StrLenA(szCodeA), 1 | DUK_COMPILE_NOSOURCE | DUK_COMPILE_SHEBANG);
+        return;
+    }, TRUE);
     // done
     return;
 }
@@ -362,10 +350,9 @@ VOID CJavascriptVM::RunNativeProtected(_In_ DukTape::duk_idx_t nArgsCount, _In_ 
     return;
 }
 
-HRESULT CJavascriptVM::RunNativeProtectedAndGetError(_In_ DukTape::duk_context *lpCtx,
-                                                     _In_ DukTape::duk_idx_t nArgsCount,
-                                                     _In_ DukTape::duk_idx_t nRetValuesCount,
-                                                     _In_ lpfnProtectedFunction fnFunc, _In_opt_ BOOL bCatchUnhandled)
+HRESULT CJavascriptVM::RunNativeProtectedAndGetError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nArgsCount,
+                                                     _In_ DukTape::duk_idx_t nRetValuesCount, _In_ lpfnProtectedFunction fnFunc,
+                                                     _In_opt_ BOOL bCatchUnhandled)
 {
     try
     {
@@ -384,15 +371,13 @@ HRESULT CJavascriptVM::RunNativeProtectedAndGetError(_In_ DukTape::duk_context *
     return S_OK;
 }
 
-HRESULT CJavascriptVM::RunNativeProtectedAndGetError(_In_ DukTape::duk_idx_t nArgsCount,
-                                                     _In_ DukTape::duk_idx_t nRetValuesCount,
+HRESULT CJavascriptVM::RunNativeProtectedAndGetError(_In_ DukTape::duk_idx_t nArgsCount, _In_ DukTape::duk_idx_t nRetValuesCount,
                                                      _In_ lpfnProtectedFunction fnFunc, _In_opt_ BOOL bCatchUnhandled)
 {
     return RunNativeProtectedAndGetError(lpCtx, nArgsCount, nRetValuesCount, fnFunc, bCatchUnhandled);
 }
 
-HRESULT CJavascriptVM::RegisterException(_In_z_ LPCSTR szExceptionNameA,
-                                         _In_ lpfnThrowExceptionCallback fnThrowExceptionCallback)
+HRESULT CJavascriptVM::RegisterException(_In_z_ LPCSTR szExceptionNameA, _In_ lpfnThrowExceptionCallback fnThrowExceptionCallback)
 {
     EXCEPTION_ITEM sNewItem;
 
@@ -437,8 +422,7 @@ HRESULT CJavascriptVM::UnregisterException(_In_z_ LPCSTR szExceptionNameA)
     return MX_E_NotFound;
 }
 
-HRESULT CJavascriptVM::AddNativeFunction(_In_z_ LPCSTR szFuncNameA, _In_ OnNativeFunctionCallback cCallback,
-                                         _In_ int nArgsCount)
+HRESULT CJavascriptVM::AddNativeFunction(_In_z_ LPCSTR szFuncNameA, _In_ OnNativeFunctionCallback cCallback, _In_ int nArgsCount)
 {
     if (szFuncNameA == NULL || !cCallback)
     {
@@ -455,15 +439,13 @@ HRESULT CJavascriptVM::AddNativeFunction(_In_z_ LPCSTR szFuncNameA, _In_ OnNativ
     return Internals::JsLib::AddNativeFunctionCommon(lpCtx, NULL, -1, szFuncNameA, cCallback, nArgsCount);
 }
 
-HRESULT CJavascriptVM::AddProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ BOOL bInitialValueOnStack,
-                                   _In_opt_ ePropertyFlags nFlags)
+HRESULT CJavascriptVM::AddProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ BOOL bInitialValueOnStack, _In_opt_ ePropertyFlags nFlags)
 {
-    return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, bInitialValueOnStack, nFlags,
-                                               NullCallback(), NullCallback());
+    return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, bInitialValueOnStack, nFlags, NullCallback(),
+                                               NullCallback());
 }
 
-HRESULT CJavascriptVM::AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ LPCSTR szValueA,
-                                         _In_opt_ ePropertyFlags nFlags)
+HRESULT CJavascriptVM::AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ LPCSTR szValueA, _In_opt_ ePropertyFlags nFlags)
 {
     HRESULT hRes;
 
@@ -471,29 +453,26 @@ HRESULT CJavascriptVM::AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ L
     {
         return E_FAIL;
     }
-    hRes = RunNativeProtectedAndGetError(0, 1,
-                                         [szValueA](_In_ DukTape::duk_context *lpCtx) -> VOID
-                                         {
-                                             if (szValueA != NULL)
-                                             {
-                                                 DukTape::duk_push_string(lpCtx, szValueA);
-                                             }
-                                             else
-                                             {
-                                                 DukTape::duk_push_null(lpCtx);
-                                             }
-                                             return;
-                                         });
+    hRes = RunNativeProtectedAndGetError(0, 1, [szValueA](_In_ DukTape::duk_context *lpCtx) -> VOID
+    {
+        if (szValueA != NULL)
+        {
+            DukTape::duk_push_string(lpCtx, szValueA);
+        }
+        else
+        {
+            DukTape::duk_push_null(lpCtx);
+        }
+        return;
+    });
     if (FAILED(hRes))
     {
         return hRes;
     }
-    return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                               NullCallback());
+    return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(), NullCallback());
 }
 
-HRESULT CJavascriptVM::AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ LPCWSTR szValueW,
-                                         _In_opt_ ePropertyFlags nFlags)
+HRESULT CJavascriptVM::AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ LPCWSTR szValueW, _In_opt_ ePropertyFlags nFlags)
 {
     CStringA cStrTempA;
     HRESULT hRes;
@@ -515,8 +494,7 @@ HRESULT CJavascriptVM::AddStringProperty(_In_z_ LPCSTR szPropertyNameA, _In_z_ L
     return hRes;
 }
 
-HRESULT CJavascriptVM::AddBooleanProperty(_In_z_ LPCSTR szPropertyNameA, _In_ BOOL bValue,
-                                          _In_opt_ ePropertyFlags nFlags)
+HRESULT CJavascriptVM::AddBooleanProperty(_In_z_ LPCSTR szPropertyNameA, _In_ BOOL bValue, _In_opt_ ePropertyFlags nFlags)
 {
     HRESULT hRes;
 
@@ -524,22 +502,19 @@ HRESULT CJavascriptVM::AddBooleanProperty(_In_z_ LPCSTR szPropertyNameA, _In_ BO
     {
         return E_FAIL;
     }
-    hRes = RunNativeProtectedAndGetError(0, 1,
-                                         [bValue](_In_ DukTape::duk_context *lpCtx) -> VOID
-                                         {
-                                             DukTape::duk_push_boolean(lpCtx, (bValue != FALSE) ? true : false);
-                                             return;
-                                         });
+    hRes = RunNativeProtectedAndGetError(0, 1, [bValue](_In_ DukTape::duk_context *lpCtx) -> VOID
+    {
+        DukTape::duk_push_boolean(lpCtx, (bValue != FALSE) ? true : false);
+        return;
+    });
     if (FAILED(hRes))
     {
         return hRes;
     }
-    return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                               NullCallback());
+    return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(), NullCallback());
 }
 
-HRESULT CJavascriptVM::AddIntegerProperty(_In_z_ LPCSTR szPropertyNameA, _In_ int nValue,
-                                          _In_opt_ ePropertyFlags nFlags)
+HRESULT CJavascriptVM::AddIntegerProperty(_In_z_ LPCSTR szPropertyNameA, _In_ int nValue, _In_opt_ ePropertyFlags nFlags)
 {
     HRESULT hRes;
 
@@ -547,22 +522,19 @@ HRESULT CJavascriptVM::AddIntegerProperty(_In_z_ LPCSTR szPropertyNameA, _In_ in
     {
         return E_FAIL;
     }
-    hRes = RunNativeProtectedAndGetError(0, 1,
-                                         [nValue](_In_ DukTape::duk_context *lpCtx) -> VOID
-                                         {
-                                             DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)nValue);
-                                             return;
-                                         });
+    hRes = RunNativeProtectedAndGetError(0, 1, [nValue](_In_ DukTape::duk_context *lpCtx) -> VOID
+    {
+        DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)nValue);
+        return;
+    });
     if (FAILED(hRes))
     {
         return hRes;
     }
-    return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                               NullCallback());
+    return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(), NullCallback());
 }
 
-HRESULT CJavascriptVM::AddNumericProperty(_In_z_ LPCSTR szPropertyNameA, _In_ double nValue,
-                                          _In_opt_ ePropertyFlags nFlags)
+HRESULT CJavascriptVM::AddNumericProperty(_In_z_ LPCSTR szPropertyNameA, _In_ double nValue, _In_opt_ ePropertyFlags nFlags)
 {
     HRESULT hRes;
 
@@ -570,18 +542,16 @@ HRESULT CJavascriptVM::AddNumericProperty(_In_z_ LPCSTR szPropertyNameA, _In_ do
     {
         return E_FAIL;
     }
-    hRes = RunNativeProtectedAndGetError(0, 1,
-                                         [nValue](_In_ DukTape::duk_context *lpCtx) -> VOID
-                                         {
-                                             DukTape::duk_push_number(lpCtx, nValue);
-                                             return;
-                                         });
+    hRes = RunNativeProtectedAndGetError(0, 1, [nValue](_In_ DukTape::duk_context *lpCtx) -> VOID
+    {
+        DukTape::duk_push_number(lpCtx, nValue);
+        return;
+    });
     if (FAILED(hRes))
     {
         return hRes;
     }
-    return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                               NullCallback());
+    return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(), NullCallback());
 }
 
 HRESULT CJavascriptVM::AddNullProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ ePropertyFlags nFlags)
@@ -592,22 +562,19 @@ HRESULT CJavascriptVM::AddNullProperty(_In_z_ LPCSTR szPropertyNameA, _In_opt_ e
     {
         return E_FAIL;
     }
-    hRes = RunNativeProtectedAndGetError(0, 1,
-                                         [](_In_ DukTape::duk_context *lpCtx) -> VOID
-                                         {
-                                             DukTape::duk_push_null(lpCtx);
-                                             return;
-                                         });
+    hRes = RunNativeProtectedAndGetError(0, 1, [](_In_ DukTape::duk_context *lpCtx) -> VOID
+    {
+        DukTape::duk_push_null(lpCtx);
+        return;
+    });
     if (FAILED(hRes))
     {
         return hRes;
     }
-    return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                               NullCallback());
+    return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(), NullCallback());
 }
 
-HRESULT CJavascriptVM::AddJsObjectProperty(_In_z_ LPCSTR szPropertyNameA, _In_ CJsObjectBase *lpObject,
-                                           _In_opt_ ePropertyFlags nFlags)
+HRESULT CJavascriptVM::AddJsObjectProperty(_In_z_ LPCSTR szPropertyNameA, _In_ CJsObjectBase *lpObject, _In_opt_ ePropertyFlags nFlags)
 {
     HRESULT hRes;
 
@@ -618,17 +585,14 @@ HRESULT CJavascriptVM::AddJsObjectProperty(_In_z_ LPCSTR szPropertyNameA, _In_ C
     hRes = lpObject->PushThis(lpCtx);
     if (SUCCEEDED(hRes))
     {
-        hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                                   NullCallback());
+        hRes = Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, TRUE, nFlags, NullCallback(), NullCallback());
     }
     // done
     return hRes;
 }
 
-HRESULT CJavascriptVM::AddPropertyWithCallback(_In_z_ LPCSTR szPropertyNameA,
-                                               _In_ OnGetPropertyCallback cGetValueCallback,
-                                               _In_opt_ OnSetPropertyCallback cSetValueCallback,
-                                               _In_opt_ ePropertyFlags nFlags)
+HRESULT CJavascriptVM::AddPropertyWithCallback(_In_z_ LPCSTR szPropertyNameA, _In_ OnGetPropertyCallback cGetValueCallback,
+                                               _In_opt_ OnSetPropertyCallback cSetValueCallback, _In_opt_ ePropertyFlags nFlags)
 {
     if (!cGetValueCallback)
     {
@@ -639,8 +603,7 @@ HRESULT CJavascriptVM::AddPropertyWithCallback(_In_z_ LPCSTR szPropertyNameA,
         return E_FAIL;
     }
     nFlags = nFlags & (~ePropertyFlags::Writable);
-    return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, FALSE, nFlags, cGetValueCallback,
-                                               cSetValueCallback);
+    return Internals::JsLib::AddPropertyCommon(lpCtx, NULL, -1, szPropertyNameA, FALSE, nFlags, cGetValueCallback, cSetValueCallback);
 }
 
 HRESULT CJavascriptVM::RemoveProperty(_In_z_ LPCSTR szPropertyNameA)
@@ -683,91 +646,84 @@ HRESULT CJavascriptVM::CreateObject(_In_z_ LPCSTR szObjectNameA, _In_opt_ CProxy
     {
         return E_FAIL;
     }
-    hRes = RunNativeProtectedAndGetError(
-        0, 0,
-        [szObjectNameA, lpCallbacks](_In_ DukTape::duk_context *lpCtx) -> VOID
+    hRes = RunNativeProtectedAndGetError(0, 0, [szObjectNameA, lpCallbacks](_In_ DukTape::duk_context *lpCtx) -> VOID
+    {
+        LPCSTR sA, szObjectNameA_2;
+        HRESULT hRes;
+
+        hRes = Internals::JsLib::FindObject(lpCtx, szObjectNameA, TRUE, FALSE); // NOTE: Should the parent be the proxy???
+        if (FAILED(hRes))
         {
-            LPCSTR sA, szObjectNameA_2;
-            HRESULT hRes;
+            MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
+        }
+        // if FindObject returned OK, then the object we are trying to create, already exists
+        if (hRes == S_OK)
+        {
+            MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_AlreadyExists);
+        }
+        MX_ASSERT(hRes == S_FALSE);
+        // the stack contains the parent object, create new one
+        DukTape::duk_push_object(lpCtx);
+        // advance 'szObjectNameA' to point to the last portion of the name
+        sA = StrChrA(szObjectNameA_2 = szObjectNameA, '.', TRUE);
+        if (sA != NULL)
+        {
+            szObjectNameA_2 = sA + 1;
+        }
+        // store name in object's internal property
+        DukTape::duk_push_string(lpCtx, szObjectNameA_2);
+        DukTape::duk_put_prop_string(lpCtx, -2, "\xff"
+                                                "\xff"
+                                                "name");
+        // setup callbacks (if any) by creating and returning a Proxy object
+        if (lpCallbacks != NULL)
+        {
+            LPVOID p;
 
-            hRes = Internals::JsLib::FindObject(lpCtx, szObjectNameA, TRUE,
-                                                FALSE); // NOTE: Should the parent be the proxy???
-            if (FAILED(hRes))
-            {
-                MX_JS_THROW_WINDOWS_ERROR(lpCtx, hRes);
-            }
-            // if FindObject returned OK, then the object we are trying to create, already exists
-            if (hRes == S_OK)
-            {
-                MX_JS_THROW_WINDOWS_ERROR(lpCtx, MX_E_AlreadyExists);
-            }
-            MX_ASSERT(hRes == S_FALSE);
-            // the stack contains the parent object, create new one
+            // create handler object
             DukTape::duk_push_object(lpCtx);
-            // advance 'szObjectNameA' to point to the last portion of the name
-            sA = StrChrA(szObjectNameA_2 = szObjectNameA, '.', TRUE);
-            if (sA != NULL)
-            {
-                szObjectNameA_2 = sA + 1;
-            }
-            // store name in object's internal property
+            // create a buffer to store the serialized callback data
+            p = DukTape::duk_push_fixed_buffer(lpCtx, CProxyCallbacks::serialization_buffer_size());
+            lpCallbacks->serialize(p);
+            DukTape::duk_put_prop_string(lpCtx, -2, "\xff"
+                                                    "\xff"
+                                                    "callbacks");
+            // save object's name
             DukTape::duk_push_string(lpCtx, szObjectNameA_2);
-            DukTape::duk_put_prop_string(lpCtx, -2,
-                                         "\xff"
-                                         "\xff"
-                                         "name");
-            // setup callbacks (if any) by creating and returning a Proxy object
-            if (lpCallbacks != NULL)
-            {
-                LPVOID p;
-
-                // create handler object
-                DukTape::duk_push_object(lpCtx);
-                // create a buffer to store the serialized callback data
-                p = DukTape::duk_push_fixed_buffer(lpCtx, CProxyCallbacks::serialization_buffer_size());
-                lpCallbacks->serialize(p);
-                DukTape::duk_put_prop_string(lpCtx, -2,
-                                             "\xff"
-                                             "\xff"
-                                             "callbacks");
-                // save object's name
-                DukTape::duk_push_string(lpCtx, szObjectNameA_2);
-                DukTape::duk_put_prop_string(lpCtx, -2,
-                                             "\xff"
-                                             "\xff"
-                                             "name");
-                // add handler functions
-                DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::_ProxyHasPropHelper, 2);
-                DukTape::duk_put_prop_string(lpCtx, -2, "has");
-                DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::_ProxyGetPropHelper, 3);
-                DukTape::duk_put_prop_string(lpCtx, -2, "get");
-                DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::_ProxySetPropHelper, 4);
-                DukTape::duk_put_prop_string(lpCtx, -2, "set");
-                DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::_ProxyDeletePropHelper, 2);
-                DukTape::duk_put_prop_string(lpCtx, -2, "deleteProperty");
-                DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::_ProxyOwnKeysHelper, 1);
-                DukTape::duk_put_prop_string(lpCtx, -2, "ownKeys");
-                // duplicate target object reference for later use
-                DukTape::duk_dup(lpCtx, -2);
-                // push Proxy object's constructor
-                DukTape::duk_get_global_string(lpCtx, "Proxy");
-                // reorder stack [target...handler...target... Proxy] -> [target... Proxy...target...handler]
-                DukTape::duk_swap(lpCtx, -3, -1);
-                // create proxy object
-                DukTape::duk_new(lpCtx, 2);
-                // save target object in proxy using previous reference
-                DukTape::duk_swap(lpCtx, -2, -1);
-                DukTape::duk_put_prop_string(lpCtx, -2,
-                                             "\xff"
-                                             "\xff"
-                                             "proxyTarget");
-            }
-            // store object in its parent
-            DukTape::duk_put_prop_string(lpCtx, -2, szObjectNameA_2);
-            // pop parent object
-            DukTape::duk_pop(lpCtx);
-            return;
-        });
+            DukTape::duk_put_prop_string(lpCtx, -2, "\xff"
+                                                    "\xff"
+                                                    "name");
+            // add handler functions
+            DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::_ProxyHasPropHelper, 2);
+            DukTape::duk_put_prop_string(lpCtx, -2, "has");
+            DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::_ProxyGetPropHelper, 3);
+            DukTape::duk_put_prop_string(lpCtx, -2, "get");
+            DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::_ProxySetPropHelper, 4);
+            DukTape::duk_put_prop_string(lpCtx, -2, "set");
+            DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::_ProxyDeletePropHelper, 2);
+            DukTape::duk_put_prop_string(lpCtx, -2, "deleteProperty");
+            DukTape::duk_push_c_function(lpCtx, &CJavascriptVM::_ProxyOwnKeysHelper, 1);
+            DukTape::duk_put_prop_string(lpCtx, -2, "ownKeys");
+            // duplicate target object reference for later use
+            DukTape::duk_dup(lpCtx, -2);
+            // push Proxy object's constructor
+            DukTape::duk_get_global_string(lpCtx, "Proxy");
+            // reorder stack [target...handler...target... Proxy] -> [target... Proxy...target...handler]
+            DukTape::duk_swap(lpCtx, -3, -1);
+            // create proxy object
+            DukTape::duk_new(lpCtx, 2);
+            // save target object in proxy using previous reference
+            DukTape::duk_swap(lpCtx, -2, -1);
+            DukTape::duk_put_prop_string(lpCtx, -2, "\xff"
+                                                    "\xff"
+                                                    "proxyTarget");
+        }
+        // store object in its parent
+        DukTape::duk_put_prop_string(lpCtx, -2, szObjectNameA_2);
+        // pop parent object
+        DukTape::duk_pop(lpCtx);
+        return;
+    });
     // done
     return hRes;
 }
@@ -790,19 +746,19 @@ HRESULT CJavascriptVM::AddObjectNativeFunction(_In_z_ LPCSTR szObjectNameA, _In_
     return Internals::JsLib::AddNativeFunctionCommon(lpCtx, szObjectNameA, -1, szFuncNameA, cCallback, nArgsCount);
 }
 
-HRESULT CJavascriptVM::AddObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                         _In_opt_ BOOL bInitialValueOnStack, _In_opt_ ePropertyFlags nFlags)
+HRESULT CJavascriptVM::AddObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_opt_ BOOL bInitialValueOnStack,
+                                         _In_opt_ ePropertyFlags nFlags)
 {
     if (szObjectNameA == NULL)
     {
         return E_POINTER;
     }
-    return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, bInitialValueOnStack, nFlags,
-                                               NullCallback(), NullCallback());
+    return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, bInitialValueOnStack, nFlags, NullCallback(),
+                                               NullCallback());
 }
 
-HRESULT CJavascriptVM::AddObjectStringProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                               _In_z_ LPCSTR szValueA, _In_opt_ ePropertyFlags nFlags)
+HRESULT CJavascriptVM::AddObjectStringProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_z_ LPCSTR szValueA,
+                                               _In_opt_ ePropertyFlags nFlags)
 {
     HRESULT hRes;
 
@@ -814,29 +770,27 @@ HRESULT CJavascriptVM::AddObjectStringProperty(_In_z_ LPCSTR szObjectNameA, _In_
     {
         return E_FAIL;
     }
-    hRes = RunNativeProtectedAndGetError(0, 1,
-                                         [szValueA](_In_ DukTape::duk_context *lpCtx) -> VOID
-                                         {
-                                             if (szValueA != NULL)
-                                             {
-                                                 DukTape::duk_push_string(lpCtx, szValueA);
-                                             }
-                                             else
-                                             {
-                                                 DukTape::duk_push_null(lpCtx);
-                                             }
-                                             return;
-                                         });
+    hRes = RunNativeProtectedAndGetError(0, 1, [szValueA](_In_ DukTape::duk_context *lpCtx) -> VOID
+    {
+        if (szValueA != NULL)
+        {
+            DukTape::duk_push_string(lpCtx, szValueA);
+        }
+        else
+        {
+            DukTape::duk_push_null(lpCtx);
+        }
+        return;
+    });
     if (FAILED(hRes))
     {
         return hRes;
     }
-    return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                               NullCallback());
+    return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(), NullCallback());
 }
 
-HRESULT CJavascriptVM::AddObjectStringProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                               _In_z_ LPCWSTR szValueW, _In_opt_ ePropertyFlags nFlags)
+HRESULT CJavascriptVM::AddObjectStringProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_z_ LPCWSTR szValueW,
+                                               _In_opt_ ePropertyFlags nFlags)
 {
     CStringA cStrTempA;
     HRESULT hRes;
@@ -858,8 +812,8 @@ HRESULT CJavascriptVM::AddObjectStringProperty(_In_z_ LPCSTR szObjectNameA, _In_
     return hRes;
 }
 
-HRESULT CJavascriptVM::AddObjectBooleanProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                                _In_ BOOL bValue, _In_opt_ ePropertyFlags nFlags)
+HRESULT CJavascriptVM::AddObjectBooleanProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_ BOOL bValue,
+                                                _In_opt_ ePropertyFlags nFlags)
 {
     HRESULT hRes;
 
@@ -871,22 +825,20 @@ HRESULT CJavascriptVM::AddObjectBooleanProperty(_In_z_ LPCSTR szObjectNameA, _In
     {
         return E_FAIL;
     }
-    hRes = RunNativeProtectedAndGetError(0, 1,
-                                         [bValue](_In_ DukTape::duk_context *lpCtx) -> VOID
-                                         {
-                                             DukTape::duk_push_boolean(lpCtx, (bValue != FALSE) ? true : false);
-                                             return;
-                                         });
+    hRes = RunNativeProtectedAndGetError(0, 1, [bValue](_In_ DukTape::duk_context *lpCtx) -> VOID
+    {
+        DukTape::duk_push_boolean(lpCtx, (bValue != FALSE) ? true : false);
+        return;
+    });
     if (FAILED(hRes))
     {
         return hRes;
     }
-    return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                               NullCallback());
+    return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(), NullCallback());
 }
 
-HRESULT CJavascriptVM::AddObjectIntegerProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                                _In_ int nValue, _In_opt_ ePropertyFlags nFlags)
+HRESULT CJavascriptVM::AddObjectIntegerProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_ int nValue,
+                                                _In_opt_ ePropertyFlags nFlags)
 {
     HRESULT hRes;
 
@@ -898,22 +850,20 @@ HRESULT CJavascriptVM::AddObjectIntegerProperty(_In_z_ LPCSTR szObjectNameA, _In
     {
         return E_FAIL;
     }
-    hRes = RunNativeProtectedAndGetError(0, 1,
-                                         [nValue](_In_ DukTape::duk_context *lpCtx) -> VOID
-                                         {
-                                             DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)nValue);
-                                             return;
-                                         });
+    hRes = RunNativeProtectedAndGetError(0, 1, [nValue](_In_ DukTape::duk_context *lpCtx) -> VOID
+    {
+        DukTape::duk_push_int(lpCtx, (DukTape::duk_int_t)nValue);
+        return;
+    });
     if (FAILED(hRes))
     {
         return hRes;
     }
-    return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                               NullCallback());
+    return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(), NullCallback());
 }
 
-HRESULT CJavascriptVM::AddObjectNumericProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                                _In_ double nValue, _In_opt_ ePropertyFlags nFlags)
+HRESULT CJavascriptVM::AddObjectNumericProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_ double nValue,
+                                                _In_opt_ ePropertyFlags nFlags)
 {
     HRESULT hRes;
 
@@ -925,22 +875,19 @@ HRESULT CJavascriptVM::AddObjectNumericProperty(_In_z_ LPCSTR szObjectNameA, _In
     {
         return E_FAIL;
     }
-    hRes = RunNativeProtectedAndGetError(0, 1,
-                                         [nValue](_In_ DukTape::duk_context *lpCtx) -> VOID
-                                         {
-                                             DukTape::duk_push_number(lpCtx, nValue);
-                                             return;
-                                         });
+    hRes = RunNativeProtectedAndGetError(0, 1, [nValue](_In_ DukTape::duk_context *lpCtx) -> VOID
+    {
+        DukTape::duk_push_number(lpCtx, nValue);
+        return;
+    });
     if (FAILED(hRes))
     {
         return hRes;
     }
-    return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                               NullCallback());
+    return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(), NullCallback());
 }
 
-HRESULT CJavascriptVM::AddObjectNullProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                             _In_opt_ ePropertyFlags nFlags)
+HRESULT CJavascriptVM::AddObjectNullProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_opt_ ePropertyFlags nFlags)
 {
     HRESULT hRes;
 
@@ -952,22 +899,20 @@ HRESULT CJavascriptVM::AddObjectNullProperty(_In_z_ LPCSTR szObjectNameA, _In_z_
     {
         return E_FAIL;
     }
-    hRes = RunNativeProtectedAndGetError(0, 1,
-                                         [](_In_ DukTape::duk_context *lpCtx) -> VOID
-                                         {
-                                             DukTape::duk_push_null(lpCtx);
-                                             return;
-                                         });
+    hRes = RunNativeProtectedAndGetError(0, 1, [](_In_ DukTape::duk_context *lpCtx) -> VOID
+    {
+        DukTape::duk_push_null(lpCtx);
+        return;
+    });
     if (FAILED(hRes))
     {
         return hRes;
     }
-    return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
-                                               NullCallback());
+    return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(), NullCallback());
 }
 
-HRESULT CJavascriptVM::AddObjectJsObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
-                                                 _In_ CJsObjectBase *lpObject, _In_opt_ ePropertyFlags nFlags)
+HRESULT CJavascriptVM::AddObjectJsObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA, _In_ CJsObjectBase *lpObject,
+                                                 _In_opt_ ePropertyFlags nFlags)
 {
     HRESULT hRes;
 
@@ -982,8 +927,8 @@ HRESULT CJavascriptVM::AddObjectJsObjectProperty(_In_z_ LPCSTR szObjectNameA, _I
     hRes = lpObject->PushThis(lpCtx);
     if (SUCCEEDED(hRes))
     {
-        hRes = Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags,
-                                                   NullCallback(), NullCallback());
+        hRes = Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, TRUE, nFlags, NullCallback(),
+                                                   NullCallback());
     }
     // done
     return hRes;
@@ -991,8 +936,7 @@ HRESULT CJavascriptVM::AddObjectJsObjectProperty(_In_z_ LPCSTR szObjectNameA, _I
 
 HRESULT CJavascriptVM::AddObjectPropertyWithCallback(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA,
                                                      _In_ OnGetPropertyCallback cGetValueCallback,
-                                                     _In_opt_ OnSetPropertyCallback cSetValueCallback,
-                                                     _In_opt_ ePropertyFlags nFlags)
+                                                     _In_opt_ OnSetPropertyCallback cSetValueCallback, _In_opt_ ePropertyFlags nFlags)
 {
     if (szObjectNameA == NULL)
     {
@@ -1007,8 +951,8 @@ HRESULT CJavascriptVM::AddObjectPropertyWithCallback(_In_z_ LPCSTR szObjectNameA
         return E_FAIL;
     }
     nFlags = nFlags & (~ePropertyFlags::Writable);
-    return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, FALSE, nFlags,
-                                               cGetValueCallback, cSetValueCallback);
+    return Internals::JsLib::AddPropertyCommon(lpCtx, szObjectNameA, -1, szPropertyNameA, FALSE, nFlags, cGetValueCallback,
+                                               cSetValueCallback);
 }
 
 HRESULT CJavascriptVM::RemoveObjectProperty(_In_z_ LPCSTR szObjectNameA, _In_z_ LPCSTR szPropertyNameA)
@@ -1067,8 +1011,8 @@ VOID CJavascriptVM::PushString(_In_z_ LPCWSTR szStrW, _In_opt_ SIZE_T nStrLen)
     return;
 }
 
-VOID CJavascriptVM::GetString(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex,
-                              _Inout_ CStringW &cStrW, _In_opt_ BOOL bAppend)
+VOID CJavascriptVM::GetString(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex, _Inout_ CStringW &cStrW,
+                              _In_opt_ BOOL bAppend)
 {
     LPCSTR sA;
     HRESULT hRes;
@@ -1146,8 +1090,8 @@ VOID CJavascriptVM::PushDate(_In_ CDateTime &cDt, _In_opt_ BOOL bAsUtc)
 
 VOID CJavascriptVM::GetDate(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nObjIdx, _Out_ LPSYSTEMTIME lpSt)
 {
-    static WORD wDaysInMonths[12] = {31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-    static WORD wMonthOffsets[12] = {0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4};
+    static WORD wDaysInMonths[12] = { 31, 0, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    static WORD wMonthOffsets[12] = { 0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4 };
     WORD y, w;
 
     if (lpSt == NULL)
@@ -1228,8 +1172,7 @@ VOID CJavascriptVM::GetDate(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_
     // calculate day of week
     y = lpSt->wYear - ((lpSt->wMonth < 3) ? 1 : 0);
     lpSt->wDayOfWeek = (lpSt->wYear + lpSt->wYear / 4 - lpSt->wYear / 100 + lpSt->wYear / 400 +
-                        wMonthOffsets[lpSt->wMonth - 1] + lpSt->wDay) %
-                       7;
+                        wMonthOffsets[lpSt->wMonth - 1] + lpSt->wDay) % 7;
     return;
 }
 
@@ -1351,8 +1294,7 @@ DukTape::duk_double_t CJavascriptVM::GetDouble(_In_ DukTape::duk_idx_t nObjIdx)
     return GetDouble(lpCtx, nObjIdx);
 }
 
-VOID CJavascriptVM::GetObjectType(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nObjIdx,
-                                  _Out_ MX::CStringA &cStrTypeA)
+VOID CJavascriptVM::GetObjectType(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nObjIdx, _Out_ MX::CStringA &cStrTypeA)
 {
     LPCSTR sA;
     SIZE_T nLen;
@@ -1396,33 +1338,30 @@ HRESULT CJavascriptVM::Reset()
     {
         return E_FAIL;
     }
-    hRes = RunNativeProtectedAndGetError(0, 0,
-                                         [](_In_ DukTape::duk_context *lpCtx) -> VOID
-                                         {
-                                             DukTape::duk_push_global_stash(lpCtx);
-                                             DukTape::duk_push_bare_object(lpCtx);
-                                             DukTape::duk_put_prop_string(lpCtx, -2,
-                                                                          "\xff"
-                                                                          "requireCache");
-                                             DukTape::duk_pop(lpCtx);
+    hRes = RunNativeProtectedAndGetError(0, 0, [](_In_ DukTape::duk_context *lpCtx) -> VOID
+    {
+        DukTape::duk_push_global_stash(lpCtx);
+        DukTape::duk_push_bare_object(lpCtx);
+        DukTape::duk_put_prop_string(lpCtx, -2, "\xff"
+                                                "requireCache");
+        DukTape::duk_pop(lpCtx);
 
-                                             // reset unhandled exception handler
-                                             DukTape::duk_push_global_stash(lpCtx);
-                                             DukTape::duk_get_prop_string(lpCtx, -1, "mxjslib");
-                                             if (DukTape::duk_is_bare_object(lpCtx, -1) != 0)
-                                             {
-                                                 DukTape::duk_push_null(lpCtx);
-                                                 DukTape::duk_put_prop_string(lpCtx, -2,
-                                                                              "\xff"
-                                                                              "unhandledExceptionHandler");
-                                             }
-                                             DukTape::duk_pop_2(lpCtx);
+        // reset unhandled exception handler
+        DukTape::duk_push_global_stash(lpCtx);
+        DukTape::duk_get_prop_string(lpCtx, -1, "mxjslib");
+        if (DukTape::duk_is_bare_object(lpCtx, -1) != 0)
+        {
+            DukTape::duk_push_null(lpCtx);
+            DukTape::duk_put_prop_string(lpCtx, -2, "\xff"
+                                                    "unhandledExceptionHandler");
+        }
+        DukTape::duk_pop_2(lpCtx);
 
-                                             // called twice. see: https://duktape.org/api.html#duk_gc
-                                             DukTape::duk_gc(lpCtx, 0);
-                                             DukTape::duk_gc(lpCtx, 0);
-                                             return;
-                                         });
+        // called twice. see: https://duktape.org/api.html#duk_gc
+        DukTape::duk_gc(lpCtx, 0);
+        DukTape::duk_gc(lpCtx, 0);
+        return;
+    });
     return hRes;
 }
 
@@ -1434,14 +1373,13 @@ HRESULT CJavascriptVM::RunGC()
     {
         return E_FAIL;
     }
-    hRes = RunNativeProtectedAndGetError(0, 0,
-                                         [](_In_ DukTape::duk_context *lpCtx) -> VOID
-                                         {
-                                             // called twice. see: https://duktape.org/api.html#duk_gc
-                                             DukTape::duk_gc(lpCtx, 0);
-                                             DukTape::duk_gc(lpCtx, 0);
-                                             return;
-                                         });
+    hRes = RunNativeProtectedAndGetError(0, 0, [](_In_ DukTape::duk_context *lpCtx) -> VOID
+    {
+        // called twice. see: https://duktape.org/api.html#duk_gc
+        DukTape::duk_gc(lpCtx, 0);
+        DukTape::duk_gc(lpCtx, 0);
+        return;
+    });
     return hRes;
 }
 
@@ -1482,21 +1420,21 @@ HRESULT CJavascriptVM::AddSafeString(_Inout_ CStringA &cStrCodeA, _In_z_ LPCSTR 
             nStrLen--;
             switch (chA = *szStrA++)
             {
-            case '\n':
-                chA = 'n';
-                break;
-            case '\r':
-                chA = 'r';
-                break;
-            case '\t':
-                chA = 't';
-                break;
-            case '\b':
-                chA = 'b';
-                break;
-            case '\f':
-                chA = 'f';
-                break;
+                case '\n':
+                    chA = 'n';
+                    break;
+                case '\r':
+                    chA = 'r';
+                    break;
+                case '\t':
+                    chA = 't';
+                    break;
+                case '\b':
+                    chA = 'b';
+                    break;
+                case '\f':
+                    chA = 'f';
+                    break;
             }
             if (cStrCodeA.ConcatN("\\", 1) == FALSE || cStrCodeA.ConcatN(&chA, 1) == FALSE)
             {
@@ -1573,50 +1511,51 @@ VOID CJavascriptVM::ThrowWindowsError(_In_ HRESULT hr, _In_opt_z_ LPCSTR filenam
 
 HRESULT CJavascriptVM::AddBigIntegerSupport(_In_ DukTape::duk_context *lpCtx)
 {
-    return RunNativeProtectedAndGetError(lpCtx, 0, 0,
-                                         [](_In_ DukTape::duk_context *lpCtx) -> VOID
-                                         {
-                                             DukTape::duk_push_global_object(lpCtx);
-                                             DukTape::duk_get_prop_string(lpCtx, -1, "BigInteger");
-                                             if (DukTape::duk_is_undefined(lpCtx, -1) != 0)
-                                             {
-                                                 CSecureStringA cStrTempA;
-                                                 LPSTR sA;
-                                                 SIZE_T i;
+    return RunNativeProtectedAndGetError(lpCtx, 0, 0, [](_In_ DukTape::duk_context *lpCtx) -> VOID
+    {
+        DukTape::duk_push_global_object(lpCtx);
+        DukTape::duk_get_prop_string(lpCtx, -1, "BigInteger");
+        if (DukTape::duk_is_undefined(lpCtx, -1) != 0)
+        {
+            CSecureStringA cStrTempA;
+            LPSTR sA;
+            SIZE_T i;
 
-                                                 DukTape::duk_pop(lpCtx); // pop undefined
+            DukTape::duk_pop(lpCtx); // pop undefined
 
-                                                 // generate code
-                                                 if (cStrTempA.EnsureBuffer(sizeof(aBigIntegerJs) + 1) == FALSE)
-                                                 {
-                                                     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
-                                                 }
+            // generate code
+            if (cStrTempA.EnsureBuffer(sizeof(aBigIntegerJs) + 1) == FALSE)
+            {
+                MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+            }
 
-                                                 sA = (LPSTR)cStrTempA;
-                                                 for (i = 0; i < sizeof(aBigIntegerJs); i++)
-                                                     sA[i] = X_BYTE_ENC(aBigIntegerJs[i], i);
-                                                 sA[i] = 0;
-                                                 cStrTempA.Refresh();
-                                                 if (cStrTempA.InsertN("(function (undefined) {\r\n", 0, 25) == FALSE ||
-                                                     cStrTempA.ConcatN("return bigInt; })()\r\n", 20) == FALSE)
-                                                 {
-                                                     MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
-                                                 }
+            sA = (LPSTR)cStrTempA;
+            for (i = 0; i < sizeof(aBigIntegerJs); i++)
+            {
+                sA[i] = X_BYTE_ENC(aBigIntegerJs[i], i);
+            }
+            sA[i] = 0;
+            cStrTempA.Refresh();
+            if (cStrTempA.InsertN("(function (undefined) {\r\n", 0, 25) == FALSE ||
+                cStrTempA.ConcatN("return bigInt; })()\r\n", 20) == FALSE)
+            {
+                MX_JS_THROW_WINDOWS_ERROR(lpCtx, E_OUTOFMEMORY);
+            }
 
-                                                 // run code
-                                                 DukTape::duk_eval_raw(lpCtx, (LPCSTR)cStrTempA, 0,
-                                                                       DUK_COMPILE_EVAL | DUK_COMPILE_NOSOURCE |
-                                                                           DUK_COMPILE_STRLEN | DUK_COMPILE_NOFILENAME);
-                                                 DukTape::duk_put_prop_string(lpCtx, -2, "BigInteger");
+            // run code
+            DukTape::duk_eval_raw(lpCtx, (LPCSTR)cStrTempA, 0,
+                                  DUK_COMPILE_EVAL | DUK_COMPILE_NOSOURCE |
+                                      DUK_COMPILE_STRLEN | DUK_COMPILE_NOFILENAME);
+            DukTape::duk_put_prop_string(lpCtx, -2, "BigInteger");
 
-                                                 DukTape::duk_pop(lpCtx); // pop global object
-                                             }
-                                             else
-                                             {
-                                                 DukTape::duk_pop_2(lpCtx); // pop BigInteger and global object
-                                             }
-                                             return;
-                                         });
+            DukTape::duk_pop(lpCtx); // pop global object
+        }
+        else
+        {
+            DukTape::duk_pop_2(lpCtx); // pop BigInteger and global object
+        }
+        return;
+    });
 }
 
 HRESULT CJavascriptVM::AddBigIntegerSupport()
@@ -1763,7 +1702,7 @@ DukTape::duk_ret_t CJavascriptVM::OnNodeJsResolveModule(_In_ DukTape::duk_contex
             }
             // write on next loop
         }
-    eat_dup_slashes:
+eat_dup_slashes:
         while (*p == '/')
         {
             p++;
@@ -1828,18 +1767,16 @@ DukTape::duk_ret_t CJavascriptVM::_ProxyHasPropHelper(_In_ DukTape::duk_context 
 
     // get callbacks
     DukTape::duk_push_this(lpCtx);
-    DukTape::duk_get_prop_string(lpCtx, -1,
-                                 "\xff"
-                                 "\xff"
-                                 "callbacks");
+    DukTape::duk_get_prop_string(lpCtx, -1, "\xff"
+                                            "\xff"
+                                            "callbacks");
     p = DukTape::duk_require_buffer(lpCtx, -1, &nBufSize);
     cProxyCallbacks.deserialize(p);
     DukTape::duk_pop(lpCtx);
     // get object's name
-    DukTape::duk_get_prop_string(lpCtx, -1,
-                                 "\xff"
-                                 "\xff"
-                                 "name");
+    DukTape::duk_get_prop_string(lpCtx, -1, "\xff"
+                                            "\xff"
+                                            "name");
     szObjNameA = DukTape::duk_require_string(lpCtx, -1);
     // remove "this"
     DukTape::duk_remove(lpCtx, -2);
@@ -1893,18 +1830,16 @@ DukTape::duk_ret_t CJavascriptVM::_ProxyGetPropHelper(_In_ DukTape::duk_context 
 
     // get callbacks
     DukTape::duk_push_this(lpCtx);
-    DukTape::duk_get_prop_string(lpCtx, -1,
-                                 "\xff"
-                                 "\xff"
-                                 "callbacks");
+    DukTape::duk_get_prop_string(lpCtx, -1, "\xff"
+                                            "\xff"
+                                            "callbacks");
     p = DukTape::duk_require_buffer(lpCtx, -1, &nBufSize);
     cProxyCallbacks.deserialize(p);
     DukTape::duk_pop(lpCtx);
     // get object's name
-    DukTape::duk_get_prop_string(lpCtx, -1,
-                                 "\xff"
-                                 "\xff"
-                                 "name");
+    DukTape::duk_get_prop_string(lpCtx, -1, "\xff"
+                                            "\xff"
+                                            "name");
     szObjNameA = DukTape::duk_require_string(lpCtx, -1);
     // remove "this"
     DukTape::duk_remove(lpCtx, -2);
@@ -1964,18 +1899,16 @@ DukTape::duk_ret_t CJavascriptVM::_ProxySetPropHelper(_In_ DukTape::duk_context 
 
     // get callbacks
     DukTape::duk_push_this(lpCtx);
-    DukTape::duk_get_prop_string(lpCtx, -1,
-                                 "\xff"
-                                 "\xff"
-                                 "callbacks");
+    DukTape::duk_get_prop_string(lpCtx, -1, "\xff"
+                                            "\xff"
+                                            "callbacks");
     p = DukTape::duk_require_buffer(lpCtx, -1, &nBufSize);
     cProxyCallbacks.deserialize(p);
     DukTape::duk_pop(lpCtx);
     // get object's name
-    DukTape::duk_get_prop_string(lpCtx, -1,
-                                 "\xff"
-                                 "\xff"
-                                 "name");
+    DukTape::duk_get_prop_string(lpCtx, -1, "\xff"
+                                            "\xff"
+                                            "name");
     szObjNameA = DukTape::duk_require_string(lpCtx, -1);
     // remove "this"
     DukTape::duk_remove(lpCtx, -2);
@@ -2044,18 +1977,16 @@ DukTape::duk_ret_t CJavascriptVM::_ProxyDeletePropHelper(_In_ DukTape::duk_conte
 
     // get callbacks
     DukTape::duk_push_this(lpCtx);
-    DukTape::duk_get_prop_string(lpCtx, -1,
-                                 "\xff"
-                                 "\xff"
-                                 "callbacks");
+    DukTape::duk_get_prop_string(lpCtx, -1, "\xff"
+                                            "\xff"
+                                            "callbacks");
     p = DukTape::duk_require_buffer(lpCtx, -1, &nBufSize);
     cProxyCallbacks.deserialize(p);
     DukTape::duk_pop(lpCtx);
     // get object's name
-    DukTape::duk_get_prop_string(lpCtx, -1,
-                                 "\xff"
-                                 "\xff"
-                                 "name");
+    DukTape::duk_get_prop_string(lpCtx, -1, "\xff"
+                                            "\xff"
+                                            "name");
     szObjNameA = DukTape::duk_require_string(lpCtx, -1);
     // remove "this"
     DukTape::duk_remove(lpCtx, -2);
@@ -2115,18 +2046,16 @@ DukTape::duk_ret_t CJavascriptVM::_ProxyOwnKeysHelper(_In_ DukTape::duk_context 
 
     // get callbacks
     DukTape::duk_push_this(lpCtx);
-    DukTape::duk_get_prop_string(lpCtx, -1,
-                                 "\xff"
-                                 "\xff"
-                                 "callbacks");
+    DukTape::duk_get_prop_string(lpCtx, -1, "\xff"
+                                            "\xff"
+                                            "callbacks");
     p = DukTape::duk_require_buffer(lpCtx, -1, &nBufSize);
     cProxyCallbacks.deserialize(p);
     DukTape::duk_pop(lpCtx);
     // get object's name
-    DukTape::duk_get_prop_string(lpCtx, -1,
-                                 "\xff"
-                                 "\xff"
-                                 "name");
+    DukTape::duk_get_prop_string(lpCtx, -1, "\xff"
+                                            "\xff"
+                                            "name");
     szObjNameA = DukTape::duk_require_string(lpCtx, -1);
     // remove "this"
     DukTape::duk_remove(lpCtx, -2);
@@ -2164,8 +2093,7 @@ DukTape::duk_ret_t CJavascriptVM::_RunNativeProtectedHelper(_In_ DukTape::duk_co
     return (DukTape::duk_ret_t)(lpData->nRetValuesCount);
 }
 
-BOOL CJavascriptVM::HandleException(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex,
-                                    _In_opt_ BOOL bCatchUnhandled)
+BOOL CJavascriptVM::HandleException(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex, _In_opt_ BOOL bCatchUnhandled)
 {
     CJavascriptVM *lpJVM = CJavascriptVM::FromContext(lpCtx);
     static const struct
@@ -2181,6 +2109,7 @@ BOOL CJavascriptVM::HandleException(_In_ DukTape::duk_context *lpCtx, _In_ DukTa
         {DUK_ERR_ERROR, DUK_STR_ALLOC_FAILED, E_OUTOFMEMORY},
         {DUK_ERR_RANGE_ERROR, DUK_STR_RESULT_TOO_LONG, MX_E_ArithmeticOverflow},
         {DUK_ERR_RANGE_ERROR, DUK_STR_NUMBER_OUTSIDE_RANGE, MX_E_ArithmeticOverflow},
+
     };
 
     nStackIndex = DukTape::duk_normalize_index(lpCtx, nStackIndex);
@@ -2193,10 +2122,9 @@ BOOL CJavascriptVM::HandleException(_In_ DukTape::duk_context *lpCtx, _In_ DukTa
         // check if there is an unhandled exception handler
         if (bCatchUnhandled != FALSE && DukTape::duk_is_object(lpCtx, nStackIndex) != 0)
         {
-            DukTape::duk_get_prop_string(lpCtx, nStackIndex,
-                                         "\xff"
-                                         "\xff"
-                                         "nonCatcheable");
+            DukTape::duk_get_prop_string(lpCtx, nStackIndex, "\xff"
+                                                             "\xff"
+                                                             "nonCatcheable");
             if (DukTape::duk_get_boolean(lpCtx, -1) != 0)
             {
                 bCatchUnhandled = FALSE;
@@ -2212,9 +2140,8 @@ BOOL CJavascriptVM::HandleException(_In_ DukTape::duk_context *lpCtx, _In_ DukTa
             // get handler
             if (DukTape::duk_is_bare_object(lpCtx, -1) != 0)
             {
-                DukTape::duk_get_prop_string(lpCtx, -1,
-                                             "\xff"
-                                             "unhandledExceptionHandler");
+                DukTape::duk_get_prop_string(lpCtx, -1, "\xff"
+                                                        "unhandledExceptionHandler");
             }
             else
             {
@@ -2347,9 +2274,8 @@ static DukTape::duk_ret_t OnSetUnhandledExceptionHandler(_In_ DukTape::duk_conte
     }
 
     // set new handler
-    DukTape::duk_put_prop_string(lpCtx, -2,
-                                 "\xff"
-                                 "unhandledExceptionHandler");
+    DukTape::duk_put_prop_string(lpCtx, -2, "\xff"
+                                            "unhandledExceptionHandler");
 
     // done with internal global object
     DukTape::duk_pop_2(lpCtx);
@@ -2368,8 +2294,7 @@ static DukTape::duk_ret_t OnFormatErrorMessage(_In_ DukTape::duk_context *lpCtx)
     {
         dwErr &= 0x0000FFFF;
     }
-    if (::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwErr, 0, (LPWSTR)&szBufW,
-                         1024, NULL) > 0)
+    if (::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, dwErr, 0, (LPWSTR)&szBufW, 1024, NULL) > 0)
     {
         MX::CStringA cStrTempA;
 

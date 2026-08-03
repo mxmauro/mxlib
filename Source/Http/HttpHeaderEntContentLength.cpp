@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderEntContentLength.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderEntContentLength::CHttpHeaderEntContentLength() : CHttpHeaderBase()
 {

@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderReqExpect.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderReqExpect::CHttpHeaderReqExpect() : CHttpHeaderBase()
 {
@@ -81,12 +80,12 @@ HRESULT CHttpHeaderReqExpect::Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBro
 {
     switch (nExpectation)
     {
-    case eExpectation::Status100Continue:
-        if (cStrDestA.Copy("100-continue") == FALSE)
-        {
-            return E_OUTOFMEMORY;
-        }
-        return S_OK;
+        case eExpectation::Status100Continue:
+            if (cStrDestA.Copy("100-continue") == FALSE)
+            {
+                return E_OUTOFMEMORY;
+            }
+            return S_OK;
     }
     cStrDestA.Empty();
     return MX_E_Unsupported;

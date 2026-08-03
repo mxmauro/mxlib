@@ -21,10 +21,9 @@
 #include "..\..\Include\Http\Url.h"
 #include "..\..\Include\Strings\Utf8.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpBodyParserUrlEncodedForm::CHttpBodyParserUrlEncodedForm(_In_ DWORD _dwMaxFieldSize)
     : CHttpBodyParserFormBase(), CNonCopyableObj()
@@ -73,70 +72,10 @@ HRESULT CHttpBodyParserUrlEncodedForm::Parse(_In_opt_ LPCVOID lpData, _In_opt_ S
     {
         switch (sParser.nState)
         {
-        case eState::NameStart:
-            break;
+            case eState::NameStart:
+                break;
 
-        case eState::Name:
-            hRes = CUrl::Decode(cStrTempA, (LPCSTR)(sParser.cStrCurrA), sParser.cStrCurrA.GetLength());
-            if (SUCCEEDED(hRes))
-            {
-                hRes = Utf8_Decode(sParser.cStrCurrFieldNameW, (LPCSTR)cStrTempA, cStrTempA.GetLength());
-            }
-            if (FAILED(hRes))
-            {
-                goto done;
-            }
-            break;
-
-        case eState::Value:
-            hRes = CUrl::Decode(cStrTempA, (LPCSTR)(sParser.cStrCurrA), sParser.cStrCurrA.GetLength());
-            if (SUCCEEDED(hRes))
-            {
-                hRes = Utf8_Decode(cStrTempW, (LPCSTR)cStrTempA, cStrTempA.GetLength());
-            }
-            if (SUCCEEDED(hRes))
-            {
-                hRes = AddField((LPCWSTR)(sParser.cStrCurrFieldNameW), (LPCWSTR)cStrTempW);
-            }
-            if (FAILED(hRes))
-            {
-                goto done;
-            }
-            break;
-        }
-        sParser.nState = eState::Done;
-        return S_OK;
-    }
-
-    // check if size is greater than max size or overflow
-    if (nCurrContentSize + nDataSize < nCurrContentSize || nCurrContentSize + nDataSize > (SIZE_T)dwMaxFieldSize)
-    {
-        return MX_E_BadLength;
-    }
-
-    // process data
-    hRes = S_OK;
-    for (szDataA = (LPCSTR)lpData; szDataA != (LPCSTR)lpData + nDataSize; szDataA++)
-    {
-        switch (sParser.nState)
-        {
-        case eState::NameStart:
-            if (*szDataA == '&')
-            {
-                break; // ignore multiple '&' separators
-            }
-            if (*szDataA == '=')
-            {
-            err_invalid_data:
-                hRes = MX_E_InvalidData;
-                goto done;
-            }
-            sParser.nState = eState::Name;
-            // fall into 'StateName'
-
-        case eState::Name:
-            if (*szDataA == '=' || *szDataA == '&')
-            {
+            case eState::Name:
                 hRes = CUrl::Decode(cStrTempA, (LPCSTR)(sParser.cStrCurrA), sParser.cStrCurrA.GetLength());
                 if (SUCCEEDED(hRes))
                 {
@@ -146,29 +85,9 @@ HRESULT CHttpBodyParserUrlEncodedForm::Parse(_In_opt_ LPCVOID lpData, _In_opt_ S
                 {
                     goto done;
                 }
-                sParser.cStrCurrA.Empty();
-                if (*szDataA == '&')
-                {
-                    BACKWARD_CHAR();
-                }
-                sParser.nState = eState::Value;
                 break;
-            }
-            if (*((unsigned char *)szDataA) < 32 || (*szDataA & 0x80) != 0)
-            {
-                goto err_invalid_data;
-            }
-            // add character to name
-            if (sParser.cStrCurrA.ConcatN(szDataA, 1) == FALSE)
-            {
-                hRes = E_OUTOFMEMORY;
-                goto done;
-            }
-            break;
 
-        case eState::Value:
-            if (*szDataA == '&')
-            {
+            case eState::Value:
                 hRes = CUrl::Decode(cStrTempA, (LPCSTR)(sParser.cStrCurrA), sParser.cStrCurrA.GetLength());
                 if (SUCCEEDED(hRes))
                 {
@@ -182,26 +101,106 @@ HRESULT CHttpBodyParserUrlEncodedForm::Parse(_In_opt_ LPCVOID lpData, _In_opt_ S
                 {
                     goto done;
                 }
-                sParser.nState = eState::NameStart;
-                sParser.cStrCurrFieldNameW.Empty();
-                sParser.cStrCurrA.Empty();
                 break;
-            }
-            if (*((unsigned char *)szDataA) < 32 || (*szDataA & 0x80) != 0)
-            {
-                goto err_invalid_data;
-            }
-            // add character to value
-            if (sParser.cStrCurrA.ConcatN(szDataA, 1) == FALSE)
-            {
-                hRes = E_OUTOFMEMORY;
-                goto done;
-            }
-            break;
+        }
+        sParser.nState = eState::Done;
+        return S_OK;
+    }
 
-        default:
-            MX_ASSERT(FALSE);
-            break;
+    // check if size is greater than max size or overflow
+    if (nCurrContentSize + nDataSize < nCurrContentSize || nCurrContentSize + nDataSize >(SIZE_T)dwMaxFieldSize)
+    {
+        return MX_E_BadLength;
+    }
+
+    // process data
+    hRes = S_OK;
+    for (szDataA = (LPCSTR)lpData; szDataA != (LPCSTR)lpData + nDataSize; szDataA++)
+    {
+        switch (sParser.nState)
+        {
+            case eState::NameStart:
+                if (*szDataA == '&')
+                {
+                    break; // ignore multiple '&' separators
+                }
+                if (*szDataA == '=')
+                {
+err_invalid_data:
+                    hRes = MX_E_InvalidData;
+                    goto done;
+                }
+                sParser.nState = eState::Name;
+                // fall into 'StateName'
+
+            case eState::Name:
+                if (*szDataA == '=' || *szDataA == '&')
+                {
+                    hRes = CUrl::Decode(cStrTempA, (LPCSTR)(sParser.cStrCurrA), sParser.cStrCurrA.GetLength());
+                    if (SUCCEEDED(hRes))
+                    {
+                        hRes = Utf8_Decode(sParser.cStrCurrFieldNameW, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+                    }
+                    if (FAILED(hRes))
+                    {
+                        goto done;
+                    }
+                    sParser.cStrCurrA.Empty();
+                    if (*szDataA == '&')
+                    {
+                        BACKWARD_CHAR();
+                    }
+                    sParser.nState = eState::Value;
+                    break;
+                }
+                if (*((unsigned char *)szDataA) < 32 || (*szDataA & 0x80) != 0)
+                {
+                    goto err_invalid_data;
+                }
+                // add character to name
+                if (sParser.cStrCurrA.ConcatN(szDataA, 1) == FALSE)
+                {
+                    hRes = E_OUTOFMEMORY;
+                    goto done;
+                }
+                break;
+
+            case eState::Value:
+                if (*szDataA == '&')
+                {
+                    hRes = CUrl::Decode(cStrTempA, (LPCSTR)(sParser.cStrCurrA), sParser.cStrCurrA.GetLength());
+                    if (SUCCEEDED(hRes))
+                    {
+                        hRes = Utf8_Decode(cStrTempW, (LPCSTR)cStrTempA, cStrTempA.GetLength());
+                    }
+                    if (SUCCEEDED(hRes))
+                    {
+                        hRes = AddField((LPCWSTR)(sParser.cStrCurrFieldNameW), (LPCWSTR)cStrTempW);
+                    }
+                    if (FAILED(hRes))
+                    {
+                        goto done;
+                    }
+                    sParser.nState = eState::NameStart;
+                    sParser.cStrCurrFieldNameW.Empty();
+                    sParser.cStrCurrA.Empty();
+                    break;
+                }
+                if (*((unsigned char *)szDataA) < 32 || (*szDataA & 0x80) != 0)
+                {
+                    goto err_invalid_data;
+                }
+                // add character to value
+                if (sParser.cStrCurrA.ConcatN(szDataA, 1) == FALSE)
+                {
+                    hRes = E_OUTOFMEMORY;
+                    goto done;
+                }
+                break;
+
+            default:
+                MX_ASSERT(FALSE);
+                break;
         }
     }
 

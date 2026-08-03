@@ -21,14 +21,13 @@
 #include "..\..\Include\Crypto\Base64.h"
 #include "..\..\Include\Strings\Utf8.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 static HRESULT Encode(_Inout_ MX::CStringA &cStrA, _In_z_ LPCWSTR szValueW, _In_ BOOL bAppend, _In_ BOOL bIsUTF8);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpAuthBasic::CHttpAuthBasic() : CHttpAuthBase(), CNonCopyableObj()
 {
@@ -106,8 +105,7 @@ HRESULT CHttpAuthBasic::Parse(_In_ CHttpHeaderRespWwwProxyAuthenticateCommon *lp
     return S_OK;
 }
 
-HRESULT CHttpAuthBasic::GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCWSTR szUserNameW,
-                                         _In_z_ LPCWSTR szPasswordW)
+HRESULT CHttpAuthBasic::GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCWSTR szUserNameW, _In_z_ LPCWSTR szPasswordW)
 {
     CSecureStringA cStrTempA;
     HRESULT hRes;
@@ -153,8 +151,7 @@ HRESULT CHttpAuthBasic::GenerateResponse(_Out_ CStringA &cStrDestA, _In_z_ LPCWS
         // final string
         if (SUCCEEDED(hRes))
         {
-            if (cStrDestA.CopyN("Basic ", 6) == FALSE ||
-                cStrDestA.ConcatN(cBase64Enc.GetBuffer(), cBase64Enc.GetOutputLength()) == FALSE ||
+            if (cStrDestA.CopyN("Basic ", 6) == FALSE || cStrDestA.ConcatN(cBase64Enc.GetBuffer(), cBase64Enc.GetOutputLength()) == FALSE ||
                 cStrDestA.ConcatN("\r\n", 2) == FALSE)
             {
                 hRes = E_OUTOFMEMORY;
@@ -197,8 +194,8 @@ static HRESULT Encode(_Inout_ MX::CStringA &cStrA, _In_z_ LPCWSTR szValueW, _In_
         {
             return E_OUTOFMEMORY;
         }
-        nDestChars = ::WideCharToMultiByte(28591, WC_COMPOSITECHECK, szValueW, (int)nValueLen,
-                                           (LPSTR)cStrA + cStrA.GetLength(), nBufSize, NULL, NULL);
+        nDestChars = ::WideCharToMultiByte(28591, WC_COMPOSITECHECK, szValueW, (int)nValueLen, (LPSTR)cStrA + cStrA.GetLength(), nBufSize,
+                                           NULL, NULL);
         if (nDestChars < 0)
         {
             nDestChars = 0;

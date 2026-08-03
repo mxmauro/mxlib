@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderEntContentLanguage.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderEntContentLanguage::CHttpHeaderEntContentLanguage() : CHttpHeaderBase()
 {
@@ -110,8 +109,7 @@ HRESULT CHttpHeaderEntContentLanguage::SetLanguage(_In_z_ LPCSTR szLanguageA, _I
 
     // get language
     szStartA[0] = szLanguageA;
-    while (szLanguageA < szLanguageEndA &&
-           ((*szLanguageA >= 'A' && *szLanguageA <= 'Z') || (*szLanguageA >= 'a' && *szLanguageA <= 'z')))
+    while (szLanguageA < szLanguageEndA && ((*szLanguageA >= 'A' && *szLanguageA <= 'Z') || (*szLanguageA >= 'a' && *szLanguageA <= 'z')))
     {
         szLanguageA++;
     }

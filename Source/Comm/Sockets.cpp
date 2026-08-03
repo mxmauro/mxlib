@@ -26,7 +26,7 @@
 
 #pragma comment(lib, "ws2_32.lib")
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define SOCKETS_FINALIZER_PRIORITY 11000
 
@@ -81,17 +81,13 @@ static __inline HRESULT MX_HRESULT_FROM_LASTSOCKETERROR()
 typedef BOOL(WINAPI *lpfnSetFileCompletionNotificationModes)(_In_ HANDLE FileHandle, _In_ UCHAR Flags);
 
 typedef BOOL(WINAPI *lpfnAcceptEx)(_In_ SOCKET sListenSocket, _In_ SOCKET sAcceptSocket, _In_ PVOID lpOutputBuffer,
-                                   _In_ DWORD dwReceiveDataLength, _In_ DWORD dwLocalAddressLength,
-                                   _In_ DWORD dwRemoteAddressLength, _Out_ LPDWORD lpdwBytesReceived,
-                                   _Inout_ LPOVERLAPPED lpOverlapped);
-typedef BOOL(WINAPI *lpfnConnectEx)(_In_ SOCKET s, _In_ const struct sockaddr FAR *name, _In_ int namelen,
-                                    _In_opt_ PVOID lpSendBuffer, _In_ DWORD dwSendDataLength,
-                                    _Out_ LPDWORD lpdwBytesSent, _Inout_ LPOVERLAPPED lpOverlapped);
-typedef VOID(WINAPI *lpfnGetAcceptExSockaddrs)(_In_ PVOID lpOutputBuffer, _In_ DWORD dwReceiveDataLength,
-                                               _In_ DWORD dwLocalAddressLength, _In_ DWORD dwRemoteAddressLength,
-                                               _Deref_out_ struct sockaddr **LocalSockaddr,
-                                               _Out_ LPINT LocalSockaddrLength,
-                                               _Deref_out_ struct sockaddr **RemoteSockaddr,
+                                   _In_ DWORD dwReceiveDataLength, _In_ DWORD dwLocalAddressLength, _In_ DWORD dwRemoteAddressLength,
+                                   _Out_ LPDWORD lpdwBytesReceived, _Inout_ LPOVERLAPPED lpOverlapped);
+typedef BOOL(WINAPI *lpfnConnectEx)(_In_ SOCKET s, _In_ const struct sockaddr FAR *name, _In_ int namelen, _In_opt_ PVOID lpSendBuffer,
+                                    _In_ DWORD dwSendDataLength, _Out_ LPDWORD lpdwBytesSent, _Inout_ LPOVERLAPPED lpOverlapped);
+typedef VOID(WINAPI *lpfnGetAcceptExSockaddrs)(_In_ PVOID lpOutputBuffer, _In_ DWORD dwReceiveDataLength, _In_ DWORD dwLocalAddressLength,
+                                               _In_ DWORD dwRemoteAddressLength, _Deref_out_ struct sockaddr **LocalSockaddr,
+                                               _Out_ LPINT LocalSockaddrLength, _Deref_out_ struct sockaddr **RemoteSockaddr,
                                                _Out_ LPINT RemoteSockaddrLength);
 
 //-----------------------------------------------------------
@@ -131,14 +127,14 @@ static inline BOOL __InterlockedIncrementIfLessThan(_In_ LONG volatile *lpnValue
             return FALSE;
         }
         newVal = _InterlockedCompareExchange(lpnValue, initVal + 1, initVal);
-    } while (newVal != initVal);
+    }
+    while (newVal != initVal);
     return TRUE;
 }
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDispatcherPool), CNonCopyableObj()
 {
@@ -161,15 +157,13 @@ CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDi
                 hDll = ::GetModuleHandleW(L"kernel32.dll");
                 if (hDll != NULL)
                 {
-                    _fnSetFileCompletionNotificationModes =
-                        ::GetProcAddress(hDll, "SetFileCompletionNotificationModes");
+                    _fnSetFileCompletionNotificationModes = ::GetProcAddress(hDll, "SetFileCompletionNotificationModes");
                 }
             }
 
             if (_fnSetFileCompletionNotificationModes != NULL)
             {
-                fnSetFileCompletionNotificationModes =
-                    (lpfnSetFileCompletionNotificationModes)_fnSetFileCompletionNotificationModes;
+                fnSetFileCompletionNotificationModes = (lpfnSetFileCompletionNotificationModes)_fnSetFileCompletionNotificationModes;
             }
             else
             {
@@ -178,8 +172,7 @@ CSockets::CSockets(_In_ CIoCompletionPortThreadPool &cDispatcherPool) : CIpc(cDi
         }
     }
 
-    if (fnSetFileCompletionNotificationModes != NULL &&
-        fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1)
+    if (fnSetFileCompletionNotificationModes != NULL && fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1)
     {
         nFlags |= MGRFLAGS_CanCompleteSync;
     }
@@ -212,8 +205,8 @@ VOID CSockets::SetOption_AddressResolverTimeout(_In_ DWORD dwTimeoutMs)
 }
 
 HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
-                                 _In_opt_z_ LPCSTR szBindAddressA, _In_opt_ CUserData *lpUserData,
-                                 _In_opt_ CListenerOptions *lpOptions, _Out_opt_ HANDLE *h)
+                                 _In_opt_z_ LPCSTR szBindAddressA, _In_opt_ CUserData *lpUserData, _In_opt_ CListenerOptions *lpOptions,
+                                 _Out_opt_ HANDLE *h)
 {
     CAutoRundownProtection cRundownLock(&nRundownProt);
     TAutoRefCounted<CConnection> cNewConn;
@@ -272,8 +265,8 @@ HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCr
 }
 
 HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
-                                 _In_opt_z_ LPCWSTR szBindAddressW, _In_opt_ CUserData *lpUserData,
-                                 _In_opt_ CListenerOptions *lpOptions, _Out_opt_ HANDLE *h)
+                                 _In_opt_z_ LPCWSTR szBindAddressW, _In_opt_ CUserData *lpUserData, _In_opt_ CListenerOptions *lpOptions,
+                                 _Out_opt_ HANDLE *h)
 {
     CStringA cStrTempA;
     HRESULT hRes;
@@ -293,9 +286,8 @@ HRESULT CSockets::CreateListener(_In_ eFamily nFamily, _In_ int nPort, _In_ OnCr
     return CreateListener(nFamily, nPort, cCreateCallback, (LPSTR)cStrTempA, lpUserData, lpOptions, h);
 }
 
-HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA, _In_ int nPort,
-                                  _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData,
-                                  _Out_opt_ HANDLE *h)
+HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
+                                  _In_opt_ CUserData *lpUserData, _Out_opt_ HANDLE *h)
 {
     CAutoRundownProtection cRundownLock(&nRundownProt);
     TAutoRefCounted<CConnection> cNewConn;
@@ -359,9 +351,8 @@ HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCSTR szAddressA
     return hRes;
 }
 
-HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCWSTR szAddressW, _In_ int nPort,
-                                  _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData,
-                                  _Out_opt_ HANDLE *h)
+HRESULT CSockets::ConnectToServer(_In_ eFamily nFamily, _In_z_ LPCWSTR szAddressW, _In_ int nPort, _In_ OnCreateCallback cCreateCallback,
+                                  _In_opt_ CUserData *lpUserData, _Out_opt_ HANDLE *h)
 {
     CStringA cStrTempA;
     HRESULT hRes;
@@ -500,7 +491,7 @@ HRESULT CSockets::OnInternalInitialize()
     hRes = Winsock_Init();
     if (SUCCEEDED(hRes))
     {
-        INT aProtocols[2] = {IPPROTO_TCP, 0};
+        INT aProtocols[2] = { IPPROTO_TCP,0 };
         TAutoFreePtr<WSAPROTOCOL_INFOW> cProtInfoW;
         DWORD dw, dwCount, dwProfBufLen;
 
@@ -624,143 +615,143 @@ HRESULT CSockets::OnCustomPacket(_In_ DWORD dwBytes, _In_ CPacketBase *lpPacket,
     lpConn = (CConnection *)(lpPacket->GetConn());
     switch (lpPacket->GetType())
     {
-    case TypeResolvingAddress:
-    {
-        RESOLVEADDRESS_PACKET_DATA *lpData = (RESOLVEADDRESS_PACKET_DATA *)(lpPacket->GetBuffer());
-
-        // copy address
-        ::MxMemCopy(&(lpConn->sAddr), &(lpData->sAddr), sizeof(lpData->sAddr));
-
-        // connect/listen
-        switch (lpConn->nClass)
-        {
-        case CIpc::eConnectionClass::Listener:
-            hRes = lpConn->SetupListener();
-            if (FAILED(hRes))
+        case TypeResolvingAddress:
             {
-                FireOnEngineError(hRes);
-            }
-            break;
+                RESOLVEADDRESS_PACKET_DATA *lpData = (RESOLVEADDRESS_PACKET_DATA *)(lpPacket->GetBuffer());
 
-        case CIpc::eConnectionClass::Client:
-            hRes = lpConn->SetupClient();
-            break;
+                // copy address
+                ::MxMemCopy(&(lpConn->sAddr), &(lpData->sAddr), sizeof(lpData->sAddr));
 
-        default:
-            MX_ASSERT(FALSE);
-        }
-
-        // free packet
-        FreePacket(lpPacket);
-    }
-    break;
-
-    case TypeAcceptEx:
-    {
-        CConnection *lpIncomingConn = (CConnection *)(lpPacket->GetUserData());
-
-        _InterlockedDecrement(&(lpConn->cListener->nAcceptsInProgress));
-        ::SetEvent(lpConn->cListener->hAcceptCompleted);
-        if (SUCCEEDED(hRes))
-        {
-            if (IsShuttingDown() != FALSE || lpConn->cListener->CheckRateLimit() != FALSE)
-            {
-                hRes = MX_E_Cancelled;
-            }
-        }
-        if (SUCCEEDED(hRes))
-        {
-            if (::setsockopt(lpIncomingConn->sck, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char *)&(lpConn->sck),
-                             (int)sizeof(lpConn->sck)) == SOCKET_ERROR)
-            {
-                hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
-            }
-        }
-        if (SUCCEEDED(hRes))
-        {
-            sockaddr *lpLocalAddr, *lpPeerAddr;
-            INT nLocalAddrLen, nPeerAddrLen;
-
-            lpLocalAddr = lpPeerAddr = NULL;
-            nLocalAddrLen = nPeerAddrLen = 0;
-            // get extension function addresses and peer address
-            ((lpfnGetAcceptExSockaddrs)(lpConn->cListener->fnGetAcceptExSockaddrs))(
-                lpPacket->GetBuffer(), 0, lpPacket->GetBytesInUse(), lpPacket->GetBytesInUse(), &lpLocalAddr,
-                &nLocalAddrLen, &lpPeerAddr, &nPeerAddrLen);
-            if (lpPeerAddr != NULL && nPeerAddrLen >= (INT)SockAddrSizeFromWinSockFamily(lpConn->sAddr.si_family))
-            {
-                ::MxMemCopy(&(lpIncomingConn->sAddr.Ipv4), (PSOCKADDR_IN)lpPeerAddr, sizeof(SOCKADDR_IN));
-            }
-            else
-            {
-                SOCKADDR_INET sPeerAddr;
-
-                int len = SockAddrSizeFromWinSockFamily(lpIncomingConn->sAddr.si_family);
-                if (::getpeername(lpIncomingConn->sck, (sockaddr *)&sPeerAddr, &len) != SOCKET_ERROR)
+                // connect/listen
+                switch (lpConn->nClass)
                 {
-                    if (sPeerAddr.si_family == AF_INET && len >= sizeof(SOCKADDR_IN))
+                    case CIpc::eConnectionClass::Listener:
+                        hRes = lpConn->SetupListener();
+                        if (FAILED(hRes))
+                        {
+                            FireOnEngineError(hRes);
+                        }
+                        break;
+
+                    case CIpc::eConnectionClass::Client:
+                        hRes = lpConn->SetupClient();
+                        break;
+
+                    default:
+                        MX_ASSERT(FALSE);
+                }
+
+                // free packet
+                FreePacket(lpPacket);
+            }
+            break;
+
+        case TypeAcceptEx:
+            {
+                CConnection *lpIncomingConn = (CConnection *)(lpPacket->GetUserData());
+
+                _InterlockedDecrement(&(lpConn->cListener->nAcceptsInProgress));
+                ::SetEvent(lpConn->cListener->hAcceptCompleted);
+                if (SUCCEEDED(hRes))
+                {
+                    if (IsShuttingDown() != FALSE || lpConn->cListener->CheckRateLimit() != FALSE)
                     {
-                        ::MxMemCopy(&(lpIncomingConn->sAddr.Ipv4), (PSOCKADDR_IN)&sPeerAddr, sizeof(SOCKADDR_IN));
+                        hRes = MX_E_Cancelled;
                     }
-                    else if (sPeerAddr.si_family == AF_INET6 && len >= sizeof(SOCKADDR_IN6))
+                }
+                if (SUCCEEDED(hRes))
+                {
+                    if (::setsockopt(lpIncomingConn->sck, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char *)&(lpConn->sck),
+                                     (int)sizeof(lpConn->sck)) == SOCKET_ERROR)
                     {
-                        ::MxMemCopy(&(lpIncomingConn->sAddr.Ipv6), (PSOCKADDR_IN6)&sPeerAddr, sizeof(SOCKADDR_IN6));
+                        hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
+                    }
+                }
+                if (SUCCEEDED(hRes))
+                {
+                    sockaddr *lpLocalAddr, *lpPeerAddr;
+                    INT nLocalAddrLen, nPeerAddrLen;
+
+                    lpLocalAddr = lpPeerAddr = NULL;
+                    nLocalAddrLen = nPeerAddrLen = 0;
+                    // get extension function addresses and peer address
+                    ((lpfnGetAcceptExSockaddrs)(lpConn->cListener->fnGetAcceptExSockaddrs))(
+                        lpPacket->GetBuffer(), 0, lpPacket->GetBytesInUse(), lpPacket->GetBytesInUse(), &lpLocalAddr, &nLocalAddrLen, &lpPeerAddr,
+                        &nPeerAddrLen);
+                    if (lpPeerAddr != NULL && nPeerAddrLen >= (INT)SockAddrSizeFromWinSockFamily(lpConn->sAddr.si_family))
+                    {
+                        ::MxMemCopy(&(lpIncomingConn->sAddr.Ipv4), (PSOCKADDR_IN)lpPeerAddr, sizeof(SOCKADDR_IN));
                     }
                     else
                     {
-                        ::MxMemSet(&(lpIncomingConn->sAddr), 0, sizeof((lpIncomingConn->sAddr)));
-                        hRes = E_FAIL;
+                        SOCKADDR_INET sPeerAddr;
+
+                        int len = SockAddrSizeFromWinSockFamily(lpIncomingConn->sAddr.si_family);
+                        if (::getpeername(lpIncomingConn->sck, (sockaddr *)&sPeerAddr, &len) != SOCKET_ERROR)
+                        {
+                            if (sPeerAddr.si_family == AF_INET && len >= sizeof(SOCKADDR_IN))
+                            {
+                                ::MxMemCopy(&(lpIncomingConn->sAddr.Ipv4), (PSOCKADDR_IN)&sPeerAddr, sizeof(SOCKADDR_IN));
+                            }
+                            else if (sPeerAddr.si_family == AF_INET6 && len >= sizeof(SOCKADDR_IN6))
+                            {
+                                ::MxMemCopy(&(lpIncomingConn->sAddr.Ipv6), (PSOCKADDR_IN6)&sPeerAddr, sizeof(SOCKADDR_IN6));
+                            }
+                            else
+                            {
+                                ::MxMemSet(&(lpIncomingConn->sAddr), 0, sizeof((lpIncomingConn->sAddr)));
+                                hRes = E_FAIL;
+                            }
+                        }
+                        else
+                        {
+                            hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
+                        }
                     }
                 }
-                else
+
+                // if (SUCCEEDED(hRes) && (::GetTickCount() & 0x0F) == 0)
+                //   hRes = E_FAIL;
+
+                if (SUCCEEDED(hRes))
+                {
+                    hRes = lpIncomingConn->HandleConnected();
+                }
+                if (FAILED(hRes))
+                {
+                    lpIncomingConn->Close(hRes);
+                }
+                lpIncomingConn->Release();
+
+                // free packet
+                FreePacket(lpPacket);
+
+                // done
+                hRes = S_OK;
+            }
+            break;
+
+        case TypeConnect:
+            // get result from packet
+            hRes = *((HRESULT UNALIGNED *)(lpPacket->GetBuffer()));
+            // fall into connectex
+
+        case TypeConnectEx:
+            if (SUCCEEDED(hRes) && lpPacket->GetType() == TypeConnectEx)
+            {
+                if (::setsockopt(lpConn->sck, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0) == SOCKET_ERROR)
                 {
                     hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
                 }
             }
-        }
-
-        // if (SUCCEEDED(hRes) && (::GetTickCount() & 0x0F) == 0)
-        //   hRes = E_FAIL;
-
-        if (SUCCEEDED(hRes))
-        {
-            hRes = lpIncomingConn->HandleConnected();
-        }
-        if (FAILED(hRes))
-        {
-            lpIncomingConn->Close(hRes);
-        }
-        lpIncomingConn->Release();
-
-        // free packet
-        FreePacket(lpPacket);
-
-        // done
-        hRes = S_OK;
-    }
-    break;
-
-    case TypeConnect:
-        // get result from packet
-        hRes = *((HRESULT UNALIGNED *)(lpPacket->GetBuffer()));
-        // fall into connectex
-
-    case TypeConnectEx:
-        if (SUCCEEDED(hRes) && lpPacket->GetType() == TypeConnectEx)
-        {
-            if (::setsockopt(lpConn->sck, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, NULL, 0) == SOCKET_ERROR)
+            if (SUCCEEDED(hRes))
             {
-                hRes = MX_HRESULT_FROM_LASTSOCKETERROR();
+                hRes = lpConn->HandleConnected();
             }
-        }
-        if (SUCCEEDED(hRes))
-        {
-            hRes = lpConn->HandleConnected();
-        }
 
-        // free packet
-        FreePacket(lpPacket);
-        break;
+            // free packet
+            FreePacket(lpPacket);
+            break;
     }
     // done
     return hRes;
@@ -782,8 +773,7 @@ CSockets::CConnection::CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass
 CSockets::CConnection::~CConnection()
 {
     // NOTE: The socket can be still open if some write requests were queued while a graceful shutdown was in progress
-    MX_ASSERT((SIZE_T)(ULONG)__InterlockedRead(&nOutgoingWrites) ==
-              sPendingWritePackets.cList.GetCount() +
+    MX_ASSERT((SIZE_T)(ULONG)__InterlockedRead(&nOutgoingWrites) == sPendingWritePackets.cList.GetCount() +
                   sInUsePackets.cList.GetCountOfType(CIpc::CPacketBase::eType::WriteRequest));
 
     if (sck != NULL)
@@ -844,8 +834,7 @@ HRESULT CSockets::CConnection::CreateSocket()
         }
     }
     // IOCP options
-    if (fnSetFileCompletionNotificationModes != NULL &&
-        fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1)
+    if (fnSetFileCompletionNotificationModes != NULL && fnSetFileCompletionNotificationModes != (lpfnSetFileCompletionNotificationModes)1)
     {
         UCHAR flags = FILE_SKIP_SET_EVENT_ON_HANDLE;
 
@@ -860,49 +849,48 @@ HRESULT CSockets::CConnection::CreateSocket()
     }
     switch (nClass)
     {
-    case CIpc::eConnectionClass::Client:
-    case CIpc::eConnectionClass::Server:
-        // keep alive
-        sKeepAliveData.onoff = 1;
-        sKeepAliveData.keepalivetime = TCP_KEEPALIVE_MS;
-        sKeepAliveData.keepaliveinterval = TCP_KEEPALIVE_INTERVAL_MS;
-        dw = 0;
-        if (::WSAIoctl(sck, SIO_KEEPALIVE_VALS, &sKeepAliveData, sizeof(sKeepAliveData), NULL, 0, &dw, NULL, NULL) ==
-            SOCKET_ERROR)
-        {
-            return MX_HRESULT_FROM_LASTSOCKETERROR();
-        }
-        // attach to completion port
-        hRes = GetDispatcherPool().Attach((HANDLE)sck, GetDispatcherPoolPacketCallback());
-        if (FAILED(hRes))
-        {
-            return hRes;
-        }
-        break;
-
-    case CIpc::eConnectionClass::Listener:
-        // use loopback fast path on Win8+
-        if (::IsWindows8OrGreater() != FALSE)
-        {
-            nYes = 1;
-            if (::WSAIoctl(sck, SIO_LOOPBACK_FAST_PATH, &nYes, sizeof(nYes), NULL, 0, &dw, NULL, NULL) == SOCKET_ERROR)
+        case CIpc::eConnectionClass::Client:
+        case CIpc::eConnectionClass::Server:
+            // keep alive
+            sKeepAliveData.onoff = 1;
+            sKeepAliveData.keepalivetime = TCP_KEEPALIVE_MS;
+            sKeepAliveData.keepaliveinterval = TCP_KEEPALIVE_INTERVAL_MS;
+            dw = 0;
+            if (::WSAIoctl(sck, SIO_KEEPALIVE_VALS, &sKeepAliveData, sizeof(sKeepAliveData), NULL, 0, &dw, NULL, NULL) == SOCKET_ERROR)
             {
                 return MX_HRESULT_FROM_LASTSOCKETERROR();
             }
-        }
-        // reuse address
-        nYes = 1;
-        if (::setsockopt(sck, SOL_SOCKET, SO_REUSEADDR, (char *)&nYes, (int)sizeof(nYes)) == SOCKET_ERROR)
-        {
-            return MX_HRESULT_FROM_LASTSOCKETERROR();
-        }
-        // attach to completion port
-        hRes = GetDispatcherPool().Attach((HANDLE)sck, GetDispatcherPoolPacketCallback());
-        if (FAILED(hRes))
-        {
-            return hRes;
-        }
-        break;
+            // attach to completion port
+            hRes = GetDispatcherPool().Attach((HANDLE)sck, GetDispatcherPoolPacketCallback());
+            if (FAILED(hRes))
+            {
+                return hRes;
+            }
+            break;
+
+        case CIpc::eConnectionClass::Listener:
+            // use loopback fast path on Win8+
+            if (::IsWindows8OrGreater() != FALSE)
+            {
+                nYes = 1;
+                if (::WSAIoctl(sck, SIO_LOOPBACK_FAST_PATH, &nYes, sizeof(nYes), NULL, 0, &dw, NULL, NULL) == SOCKET_ERROR)
+                {
+                    return MX_HRESULT_FROM_LASTSOCKETERROR();
+                }
+            }
+            // reuse address
+            nYes = 1;
+            if (::setsockopt(sck, SOL_SOCKET, SO_REUSEADDR, (char *)&nYes, (int)sizeof(nYes)) == SOCKET_ERROR)
+            {
+                return MX_HRESULT_FROM_LASTSOCKETERROR();
+            }
+            // attach to completion port
+            hRes = GetDispatcherPool().Attach((HANDLE)sck, GetDispatcherPoolPacketCallback());
+            if (FAILED(hRes))
+            {
+                return hRes;
+            }
+            break;
     }
     // done
     return S_OK;
@@ -986,7 +974,7 @@ HRESULT CSockets::CConnection::SetupListener()
         return MX_HRESULT_FROM_LASTSOCKETERROR();
     }
     if (::listen(sck, ((cListener->cOptions.dwBackLogSize != 0) ? (int)(cListener->cOptions.dwBackLogSize)
-                                                                : SOMAXCONN)) == SOCKET_ERROR)
+                       : SOMAXCONN)) == SOCKET_ERROR)
     {
         return MX_HRESULT_FROM_LASTSOCKETERROR();
     }
@@ -1029,8 +1017,8 @@ HRESULT CSockets::CConnection::SetupClient()
     if (lpIpc->ShouldLog(2) != FALSE)
     {
         cLogTimer.Mark();
-        lpIpc->Log(L"CSockets::SetupClient) Clock=%lums / Ovr=0x%p / Type=%lu", cLogTimer.GetElapsedTimeMs(),
-                   lpPacket->GetOverlapped(), lpPacket->GetType());
+        lpIpc->Log(L"CSockets::SetupClient) Clock=%lums / Ovr=0x%p / Type=%lu", cLogTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(),
+                   lpPacket->GetType());
         cLogTimer.ResetToLastMark();
     }
 
@@ -1045,8 +1033,7 @@ HRESULT CSockets::CConnection::SetupClient()
         {
             if (IS_COMPLETE_SYNC_AVAILABLE())
             {
-                reinterpret_cast<CSockets *>(lpIpc)->OnDispatcherPacket(&(GetDispatcherPool()), 0,
-                                                                        lpPacket->GetOverlapped(), S_OK);
+                reinterpret_cast<CSockets *>(lpIpc)->OnDispatcherPacket(&(GetDispatcherPool()), 0, lpPacket->GetOverlapped(), S_OK);
             }
         }
         else
@@ -1133,14 +1120,12 @@ HRESULT CSockets::CConnection::SetupAcceptEx(_In_ CConnection *lpIncomingConn)
     lpPacket->SetBytesInUse((DWORD)nReq);
     AddRef();
     lpIncomingConn->AddRef(); // NOTE: this generates a full fence
-    if (((lpfnAcceptEx)(cListener->fnAcceptEx))(sck, lpIncomingConn->sck, lpPacket->GetBuffer(), 0,
-                                                lpPacket->GetBytesInUse(), lpPacket->GetBytesInUse(), &dw,
-                                                lpPacket->GetOverlapped()) != FALSE)
+    if (((lpfnAcceptEx)(cListener->fnAcceptEx))(sck, lpIncomingConn->sck, lpPacket->GetBuffer(), 0, lpPacket->GetBytesInUse(),
+                                                lpPacket->GetBytesInUse(), &dw, lpPacket->GetOverlapped()) != FALSE)
     {
         if (IS_COMPLETE_SYNC_AVAILABLE())
         {
-            reinterpret_cast<CSockets *>(lpIpc)->OnDispatcherPacket(&(GetDispatcherPool()), 0,
-                                                                    lpPacket->GetOverlapped(), S_OK);
+            reinterpret_cast<CSockets *>(lpIpc)->OnDispatcherPacket(&(GetDispatcherPool()), 0, lpPacket->GetOverlapped(), S_OK);
             hRes = S_OK;
         }
         else
@@ -1164,8 +1149,7 @@ HRESULT CSockets::CConnection::SetupAcceptEx(_In_ CConnection *lpIncomingConn)
     return hRes;
 }
 
-HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _In_opt_z_ LPCSTR szAddressA,
-                                              _In_opt_ int nPort)
+HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _In_opt_z_ LPCSTR szAddressA, _In_opt_ int nPort)
 {
     CFastLock cHostResolverLock(&(sHostResolver.nMutex));
     RESOLVEADDRESS_PACKET_DATA *lpData;
@@ -1199,27 +1183,25 @@ HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _I
     if (lpIpc->ShouldLog(2) != FALSE)
     {
         cLogTimer.Mark();
-        lpIpc->Log(L"CSockets::ResolveAddress) Clock=%lums / This=0x%p / Ovr=0x%p / Type=%lu",
-                   cLogTimer.GetElapsedTimeMs(), this, sHostResolver.lpPacket->GetOverlapped(),
-                   sHostResolver.lpPacket->GetType());
+        lpIpc->Log(L"CSockets::ResolveAddress) Clock=%lums / This=0x%p / Ovr=0x%p / Type=%lu", cLogTimer.GetElapsedTimeMs(), this,
+                   sHostResolver.lpPacket->GetOverlapped(), sHostResolver.lpPacket->GetType());
         cLogTimer.ResetToLastMark();
     }
 
     // start address resolving with a timeout
     AddRef();
     hRes = HostResolver::Resolve(szAddressA, FamilyToWinSockFamily(nFamily), &(lpData->sAddr), dwResolverTimeoutMs,
-                                 MX_BIND_MEMBER_CALLBACK(&CConnection::HostResolveCallback, this), NULL,
-                                 &(sHostResolver.nResolverId));
+                                 MX_BIND_MEMBER_CALLBACK(&CConnection::HostResolveCallback, this), NULL, &(sHostResolver.nResolverId));
     if (SUCCEEDED(hRes))
     {
         switch (lpData->sAddr.si_family)
         {
-        case AF_INET:
-            lpData->sAddr.Ipv4.sin_port = htons(lpData->wPort);
-            break;
-        case AF_INET6:
-            lpData->sAddr.Ipv6.sin6_port = htons(lpData->wPort);
-            break;
+            case AF_INET:
+                lpData->sAddr.Ipv4.sin_port = htons(lpData->wPort);
+                break;
+            case AF_INET6:
+                lpData->sAddr.Ipv6.sin6_port = htons(lpData->wPort);
+                break;
         }
         MX::SFence();
         hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, sHostResolver.lpPacket->GetOverlapped());
@@ -1230,7 +1212,7 @@ HRESULT CSockets::CConnection::ResolveAddress(_In_ DWORD dwResolverTimeoutMs, _I
     }
     else if (hRes != MX_E_IoPending)
     {
-    err_cannot_resolve:
+err_cannot_resolve:
         Release();
         {
             CFastLock cListLock(&(sInUsePackets.nMutex));
@@ -1273,9 +1255,8 @@ HRESULT CSockets::CConnection::SendReadPacket(_In_ CPacketBase *lpPacket, _Out_ 
     if (lpIpc->ShouldLog(2) != FALSE)
     {
         cLogTimer.Mark();
-        lpIpc->Log(L"CSockets::SendReadPacket) Clock=%lums / Ovr=0x%p / Type=%lu / Bytes=%lu",
-                   cLogTimer.GetElapsedTimeMs(), lpPacket->GetOverlapped(), lpPacket->GetType(),
-                   lpPacket->GetBytesInUse());
+        lpIpc->Log(L"CSockets::SendReadPacket) Clock=%lums / Ovr=0x%p / Type=%lu / Bytes=%lu", cLogTimer.GetElapsedTimeMs(),
+                   lpPacket->GetOverlapped(), lpPacket->GetType(), lpPacket->GetBytesInUse());
         cLogTimer.ResetToLastMark();
     }
     if (::WSARecv(sck, &sWsaBuf, 1, &dwRead, &dwFlags, lpPacket->GetOverlapped(), NULL) != SOCKET_ERROR)
@@ -1354,8 +1335,7 @@ HRESULT CSockets::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket, _Out_
             DWORD dw, dwBufferSize;
 
             dw = 0;
-            if (::WSAIoctl(sck, SIO_IDEAL_SEND_BACKLOG_QUERY, NULL, 0, &dwBufferSize, (DWORD)sizeof(dwBufferSize), &dw,
-                           NULL, NULL) == 0)
+            if (::WSAIoctl(sck, SIO_IDEAL_SEND_BACKLOG_QUERY, NULL, 0, &dwBufferSize, (DWORD)sizeof(dwBufferSize), &dw, NULL, NULL) == 0)
             {
 
                 if (dwBufferSize > sAutoAdjustSndBuf.dwCurrentSize)
@@ -1376,8 +1356,8 @@ HRESULT CSockets::CConnection::SendWritePacket(_In_ CPacketBase *lpPacket, _Out_
     return hRes;
 }
 
-VOID CSockets::CConnection::HostResolveCallback(_In_ LONG nResolverId, _In_ PSOCKADDR_INET lpSockAddr,
-                                                _In_ HRESULT hrErrorCode, _In_opt_ LPVOID lpUserData)
+VOID CSockets::CConnection::HostResolveCallback(_In_ LONG nResolverId, _In_ PSOCKADDR_INET lpSockAddr, _In_ HRESULT hrErrorCode,
+                                                _In_opt_ LPVOID lpUserData)
 {
     HRESULT hRes = S_OK;
 
@@ -1391,33 +1371,30 @@ VOID CSockets::CConnection::HostResolveCallback(_In_ LONG nResolverId, _In_ PSOC
             // process resolver result
             if (SUCCEEDED(hrErrorCode))
             {
-                RESOLVEADDRESS_PACKET_DATA *lpData =
-                    (RESOLVEADDRESS_PACKET_DATA *)(sHostResolver.lpPacket->GetBuffer());
+                RESOLVEADDRESS_PACKET_DATA *lpData = (RESOLVEADDRESS_PACKET_DATA *)(sHostResolver.lpPacket->GetBuffer());
 
                 if (lpIpc->ShouldLog(2) != FALSE)
                 {
                     cLogTimer.Mark();
-                    lpIpc->Log(L"CSockets::HostResolveCallback) Clock = %lums / Ovr = 0x%p / Type=%lu",
-                               cLogTimer.GetElapsedTimeMs(), sHostResolver.lpPacket->GetOverlapped(),
-                               sHostResolver.lpPacket->GetType());
+                    lpIpc->Log(L"CSockets::HostResolveCallback) Clock = %lums / Ovr = 0x%p / Type=%lu", cLogTimer.GetElapsedTimeMs(),
+                               sHostResolver.lpPacket->GetOverlapped(), sHostResolver.lpPacket->GetType());
                     cLogTimer.ResetToLastMark();
                 }
 
                 // set port
                 switch (lpData->sAddr.si_family)
                 {
-                case AF_INET:
-                    lpData->sAddr.Ipv4.sin_port = htons(lpData->wPort);
-                    break;
-                case AF_INET6:
-                    lpData->sAddr.Ipv6.sin6_port = htons(lpData->wPort);
-                    break;
+                    case AF_INET:
+                        lpData->sAddr.Ipv4.sin_port = htons(lpData->wPort);
+                        break;
+                    case AF_INET6:
+                        lpData->sAddr.Ipv6.sin6_port = htons(lpData->wPort);
+                        break;
                 }
 
                 // dispatch
                 AddRef(); // NOTE: this generates a full fence
-                hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0,
-                                                sHostResolver.lpPacket->GetOverlapped());
+                hRes = GetDispatcherPool().Post(GetDispatcherPoolPacketCallback(), 0, sHostResolver.lpPacket->GetOverlapped());
                 if (FAILED(hRes))
                 {
                     Release();
@@ -1542,8 +1519,7 @@ VOID CSockets::CConnection::CConnectWaiter::ThreadProc()
         {
             *((HRESULT MX_UNALIGNED *)(lpPacket->GetBuffer())) = hRes;
             lpConn->AddRef(); // NOTE: this generates a full fence
-            hRes = lpConn->GetDispatcherPool().Post(lpConn->GetDispatcherPoolPacketCallback(), 0,
-                                                    lpPacket->GetOverlapped());
+            hRes = lpConn->GetDispatcherPool().Post(lpConn->GetDispatcherPoolPacketCallback(), 0, lpPacket->GetOverlapped());
             if (FAILED(hRes))
             {
                 lpConn->Release();
@@ -1618,16 +1594,16 @@ VOID CSockets::CConnection::CListener::SetOptions(_In_opt_ CListenerOptions *lpO
         }
 
         cOptions.dwMaxRequestsPerSecond = (lpOptions->dwMaxRequestsPerSecond > MAX_ACCEPTS_PER_SECOND)
-                                              ? MAX_ACCEPTS_PER_SECOND
-                                              : (lpOptions->dwMaxRequestsPerSecond);
+            ? MAX_ACCEPTS_PER_SECOND
+            : (lpOptions->dwMaxRequestsPerSecond);
 
         if (lpOptions->dwMaxRequestsBurstSize > 0)
         {
             cOptions.dwMaxRequestsPerSecond *= 1000;
 
             cOptions.dwMaxRequestsBurstSize = (lpOptions->dwMaxRequestsBurstSize > MAX_ACCEPTS_PER_SECOND)
-                                                  ? MAX_ACCEPTS_PER_SECOND
-                                                  : (lpOptions->dwMaxRequestsBurstSize);
+                ? MAX_ACCEPTS_PER_SECOND
+                : (lpOptions->dwMaxRequestsBurstSize);
             cOptions.dwMaxRequestsBurstSize *= 1000;
         }
     }
@@ -1777,8 +1753,7 @@ VOID CSockets::CConnection::CListener::ThreadProc()
                 _InterlockedDecrement(&nAcceptsInProgress);
                 if (hRes != MX_HRESULT_FROM_WIN32(ERROR_NETNAME_DELETED) &&
                     hRes != MX_HRESULT_FROM_WIN32(WSAECONNRESET) && hRes != MX_HRESULT_FROM_WIN32(WSAECONNABORTED) &&
-                    hRes != HRESULT_FROM_NT(STATUS_LOCAL_DISCONNECT) &&
-                    hRes != HRESULT_FROM_NT(STATUS_REMOTE_DISCONNECT))
+                    hRes != HRESULT_FROM_NT(STATUS_LOCAL_DISCONNECT) && hRes != HRESULT_FROM_NT(STATUS_REMOTE_DISCONNECT))
                 {
                     lpSocketMgr->FireOnEngineError(hRes);
                 }
@@ -1874,10 +1849,10 @@ static int FamilyToWinSockFamily(_In_ MX::CSockets::eFamily nFamily)
 {
     switch (nFamily)
     {
-    case MX::CSockets::eFamily::IPv4:
-        return AF_INET;
-    case MX::CSockets::eFamily::IPv6:
-        return AF_INET6;
+        case MX::CSockets::eFamily::IPv4:
+            return AF_INET;
+        case MX::CSockets::eFamily::IPv6:
+            return AF_INET6;
     }
     return AF_UNSPEC;
 }
@@ -1886,22 +1861,22 @@ static int SockAddrSizeFromWinSockFamily(_In_ int nFamily)
 {
     switch (nFamily)
     {
-    case AF_INET:
-        return (int)sizeof(SOCKADDR_IN);
-    case AF_INET6:
-        return (int)sizeof(SOCKADDR_IN6);
+        case AF_INET:
+            return (int)sizeof(SOCKADDR_IN);
+        case AF_INET6:
+            return (int)sizeof(SOCKADDR_IN6);
     }
     return 0;
 }
 
 static lpfnAcceptEx GetAcceptEx(_In_ SOCKET sck)
 {
-    static const GUID sGuid_AcceptEx = {0xB5367DF1, 0xCBAC, 0x11CF, {0x95, 0xCA, 0x00, 0x80, 0x5F, 0x48, 0xA1, 0x92}};
+    static const GUID sGuid_AcceptEx = { 0xB5367DF1,0xCBAC,0x11CF,{0x95,0xCA,0x00,0x80,0x5F,0x48,0xA1,0x92} };
     DWORD dw = 0;
     lpfnAcceptEx fnAcceptEx = NULL;
 
-    if (::WSAIoctl(sck, SIO_GET_EXTENSION_FUNCTION_POINTER, (LPVOID)&sGuid_AcceptEx, (DWORD)sizeof(sGuid_AcceptEx),
-                   &fnAcceptEx, (DWORD)sizeof(fnAcceptEx), &dw, NULL, NULL) == SOCKET_ERROR)
+    if (::WSAIoctl(sck, SIO_GET_EXTENSION_FUNCTION_POINTER, (LPVOID)&sGuid_AcceptEx, (DWORD)sizeof(sGuid_AcceptEx), &fnAcceptEx,
+                   (DWORD)sizeof(fnAcceptEx), &dw, NULL, NULL) == SOCKET_ERROR)
     {
         return NULL;
     }
@@ -1911,13 +1886,12 @@ static lpfnAcceptEx GetAcceptEx(_In_ SOCKET sck)
 static lpfnGetAcceptExSockaddrs GetAcceptExSockaddrs(_In_ SOCKET sck)
 {
     static const GUID sGuid_GetAcceptExSockAddrs = {
-        0xB5367DF2, 0xCBAC, 0x11CF, {0x95, 0xCA, 0x00, 0x80, 0x5F, 0x48, 0xA1, 0x92}};
+        0xB5367DF2,0xCBAC,0x11CF,{0x95,0xCA,0x00,0x80,0x5F,0x48,0xA1,0x92} };
     DWORD dw = 0;
     lpfnGetAcceptExSockaddrs fnGetAcceptExSockaddrs = NULL;
 
-    if (::WSAIoctl(sck, SIO_GET_EXTENSION_FUNCTION_POINTER, (LPVOID)&sGuid_GetAcceptExSockAddrs,
-                   (DWORD)sizeof(sGuid_GetAcceptExSockAddrs), &fnGetAcceptExSockaddrs,
-                   (DWORD)sizeof(fnGetAcceptExSockaddrs), &dw, NULL, NULL) == SOCKET_ERROR)
+    if (::WSAIoctl(sck, SIO_GET_EXTENSION_FUNCTION_POINTER, (LPVOID)&sGuid_GetAcceptExSockAddrs, (DWORD)sizeof(sGuid_GetAcceptExSockAddrs),
+                   &fnGetAcceptExSockaddrs, (DWORD)sizeof(fnGetAcceptExSockaddrs), &dw, NULL, NULL) == SOCKET_ERROR)
     {
         return NULL;
     }
@@ -1926,12 +1900,12 @@ static lpfnGetAcceptExSockaddrs GetAcceptExSockaddrs(_In_ SOCKET sck)
 
 static lpfnConnectEx GetConnectEx(_In_ SOCKET sck)
 {
-    static const GUID sGuid_ConnectEx = {0x25A207B9, 0xDDF3, 0x4660, {0x8E, 0xE9, 0x76, 0xE5, 0x8C, 0x74, 0x06, 0x3E}};
+    static const GUID sGuid_ConnectEx = { 0x25A207B9,0xDDF3,0x4660,{0x8E,0xE9,0x76,0xE5,0x8C,0x74,0x06,0x3E} };
     DWORD dw = 0;
     lpfnConnectEx fnConnectEx = NULL;
 
-    if (::WSAIoctl(sck, SIO_GET_EXTENSION_FUNCTION_POINTER, (LPVOID)&sGuid_ConnectEx, (DWORD)sizeof(sGuid_ConnectEx),
-                   &fnConnectEx, (DWORD)sizeof(fnConnectEx), &dw, NULL, NULL) == SOCKET_ERROR)
+    if (::WSAIoctl(sck, SIO_GET_EXTENSION_FUNCTION_POINTER, (LPVOID)&sGuid_ConnectEx, (DWORD)sizeof(sGuid_ConnectEx), &fnConnectEx,
+                   (DWORD)sizeof(fnConnectEx), &dw, NULL, NULL) == SOCKET_ERROR)
     {
         return NULL;
     }

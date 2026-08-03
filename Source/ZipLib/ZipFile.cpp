@@ -53,8 +53,7 @@ static HRESULT mzError_2_HRESULT(_In_ int32_t err);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CZipFile::CZipFile() : CBaseMemObj(), CNonCopyableObj()
 {
@@ -105,12 +104,10 @@ VOID CZipFile::CloseArchive()
     return;
 }
 
-HRESULT CZipFile::AddFile(_In_z_ LPCWSTR szFileNameInZipW, _In_z_ LPCWSTR szSrcFileNameW,
-                          _In_opt_z_ LPCWSTR szPasswordW)
+HRESULT CZipFile::AddFile(_In_z_ LPCWSTR szFileNameInZipW, _In_z_ LPCWSTR szSrcFileNameW, _In_opt_z_ LPCWSTR szPasswordW)
 {
-    static const BYTE aSharingAccess[4] = {FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                                           FILE_SHARE_READ | FILE_SHARE_DELETE, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                           FILE_SHARE_READ};
+    static const BYTE aSharingAccess[4] = { FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_SHARE_READ | FILE_SHARE_DELETE,
+                                           FILE_SHARE_READ | FILE_SHARE_WRITE, FILE_SHARE_READ };
     TAutoRefCounted<CFileStream> cStream;
     HRESULT hRes;
 
@@ -198,8 +195,8 @@ HRESULT CZipFile::AddStream(_In_z_ LPCWSTR szFileNameInZipW, _In_ MX::CStream *l
 
         ::MxMemSet(&sIoStatus, 0, sizeof(sIoStatus));
         ::MxMemSet(&sBasicInfo, 0, sizeof(sBasicInfo));
-        nNtStatus = ::MxNtQueryInformationFile(lpStream->GetHandle(), &sIoStatus, &sBasicInfo,
-                                               (ULONG)sizeof(sBasicInfo), MxFileBasicInformation);
+        nNtStatus = ::MxNtQueryInformationFile(lpStream->GetHandle(), &sIoStatus, &sBasicInfo, (ULONG)sizeof(sBasicInfo),
+                                               MxFileBasicInformation);
         if (!NT_SUCCESS(nNtStatus))
         {
             return MX_HRESULT_FROM_WIN32(::MxRtlNtStatusToDosError(nNtStatus));
@@ -272,9 +269,8 @@ HRESULT CZipFile::AddStream(_In_z_ LPCWSTR szFileNameInZipW, _In_ MX::CStream *l
         }
     }
 
-    hRes = mzError_2_HRESULT(
-        mz_zip_entry_write_open(zc_data->zip_handle, &file_info, MZ_COMPRESS_LEVEL_BEST, 0,
-                                (cStrPasswordA_Utf8.IsEmpty() != FALSE) ? NULL : (LPCSTR)cStrPasswordA_Utf8));
+    hRes = mzError_2_HRESULT(mz_zip_entry_write_open(zc_data->zip_handle, &file_info, MZ_COMPRESS_LEVEL_BEST, 0,
+                                                     (cStrPasswordA_Utf8.IsEmpty() != FALSE) ? NULL : (LPCSTR)cStrPasswordA_Utf8));
     if (SUCCEEDED(hRes))
     {
         ULONGLONG ullToRead;
@@ -286,7 +282,7 @@ HRESULT CZipFile::AddStream(_In_z_ LPCWSTR szFileNameInZipW, _In_ MX::CStream *l
             int32_t written;
 
             nToRead = (ullToRead > (ULONGLONG)sizeof(zc_data->aTempBuffer)) ? sizeof(zc_data->aTempBuffer)
-                                                                            : (SIZE_T)ullToRead;
+                : (SIZE_T)ullToRead;
             hRes = lpStream->Read(zc_data->aTempBuffer, nToRead, nBytesRead);
             if (FAILED(hRes))
             {
@@ -389,8 +385,7 @@ VOID CZipFile::CloseFile()
     return;
 }
 
-HRESULT CZipFile::GetFileInfo(_Out_opt_ PULONGLONG lpnFileSize, _Out_opt_ LPDWORD lpdwFileAttributes,
-                              _Out_opt_ LPSYSTEMTIME lpFileTime)
+HRESULT CZipFile::GetFileInfo(_Out_opt_ PULONGLONG lpnFileSize, _Out_opt_ LPDWORD lpdwFileAttributes, _Out_opt_ LPSYSTEMTIME lpFileTime)
 {
     mz_zip_file *file_info;
     HRESULT hRes;
@@ -459,8 +454,7 @@ HRESULT CZipFile::GetFileInfo(_Out_opt_ PULONGLONG lpnFileSize, _Out_opt_ LPDWOR
     return S_OK;
 }
 
-HRESULT CZipFile::Read(_Out_writes_bytes_to_opt_(nToRead, *lpnRead) LPVOID lpDest, _In_ SIZE_T nToRead,
-                       _Out_opt_ SIZE_T *lpnRead)
+HRESULT CZipFile::Read(_Out_writes_bytes_to_opt_(nToRead, *lpnRead) LPVOID lpDest, _In_ SIZE_T nToRead, _Out_opt_ SIZE_T *lpnRead)
 {
     BOOL bFirstRead;
 
@@ -540,7 +534,7 @@ HRESULT CZipFile::Read(_In_ CStream *lpStream, _In_ SIZE_T nToRead, _Out_opt_ SI
         HRESULT hRes;
 
         nToReadThisRound = (nToRead > sizeof(zc_data->aTempBuffer)) ? (unsigned int)sizeof(zc_data->aTempBuffer)
-                                                                    : (unsigned int)nToRead;
+            : (unsigned int)nToRead;
 
         read = mz_zip_entry_read(zc_data->zip_handle, zc_data->aTempBuffer, nToReadThisRound);
         if (read < MZ_OK)
@@ -618,9 +612,8 @@ HRESULT CZipFile::CreateOrOpenArchive(_In_z_ LPCWSTR szFileNameW, _In_ int mode)
         return E_OUTOFMEMORY;
     }
 
-    hRes = mzError_2_HRESULT(
-        mz_zip_open(zc_data->zip_handle, zc_data->zip_stream,
-                    (int32_t)(mode & (MZ_OPEN_MODE_READ | MZ_OPEN_MODE_WRITE | MZ_OPEN_MODE_APPEND))));
+    hRes = mzError_2_HRESULT(mz_zip_open(zc_data->zip_handle, zc_data->zip_stream,
+                                         (int32_t)(mode & (MZ_OPEN_MODE_READ | MZ_OPEN_MODE_WRITE | MZ_OPEN_MODE_APPEND))));
     if (FAILED(hRes))
     {
         CloseArchive();
@@ -639,49 +632,49 @@ static HRESULT mzError_2_HRESULT(_In_ int32_t err)
 {
     switch (err)
     {
-    case MZ_OK:
-        return S_OK;
+        case MZ_OK:
+            return S_OK;
 
-    case MZ_STREAM_ERROR:
-    case MZ_DATA_ERROR:
-    case MZ_VERSION_ERROR:
-    case MZ_CRC_ERROR:
-        return MX_E_InvalidData;
+        case MZ_STREAM_ERROR:
+        case MZ_DATA_ERROR:
+        case MZ_VERSION_ERROR:
+        case MZ_CRC_ERROR:
+            return MX_E_InvalidData;
 
-    case MZ_MEM_ERROR:
-    case MZ_BUF_ERROR:
-        return E_OUTOFMEMORY;
+        case MZ_MEM_ERROR:
+        case MZ_BUF_ERROR:
+            return E_OUTOFMEMORY;
 
-    case MZ_END_OF_LIST:
-    case MZ_END_OF_STREAM:
-        return MX_E_EndOfFileReached;
+        case MZ_END_OF_LIST:
+        case MZ_END_OF_STREAM:
+            return MX_E_EndOfFileReached;
 
-    case MZ_PARAM_ERROR:
-        return E_INVALIDARG;
+        case MZ_PARAM_ERROR:
+            return E_INVALIDARG;
 
-    case MZ_EXIST_ERROR:
-        return MX_E_AlreadyExists;
+        case MZ_EXIST_ERROR:
+            return MX_E_AlreadyExists;
 
-        /*
-      case MZ_FORMAT_ERROR:
-      case MZ_CRYPT_ERROR:
-      case MZ_PASSWORD_ERROR:
-      case MZ_SUPPORT_ERROR:
-      case MZ_HASH_ERROR:
+            /*
+          case MZ_FORMAT_ERROR:
+          case MZ_CRYPT_ERROR:
+          case MZ_PASSWORD_ERROR:
+          case MZ_SUPPORT_ERROR:
+          case MZ_HASH_ERROR:
 
-      case MZ_OPEN_ERROR:
-      case MZ_CLOSE_ERROR:
+          case MZ_OPEN_ERROR:
+          case MZ_CLOSE_ERROR:
 
-      case MZ_SIGN_ERROR:
-      case MZ_SYMLINK_ERROR:
-        */
+          case MZ_SIGN_ERROR:
+          case MZ_SYMLINK_ERROR:
+            */
 
-    case MZ_SEEK_ERROR:
-    case MZ_TELL_ERROR:
-    case MZ_READ_ERROR:
-        return MX_E_ReadFault;
-    case MZ_WRITE_ERROR:
-        return MX_E_WriteFault;
+        case MZ_SEEK_ERROR:
+        case MZ_TELL_ERROR:
+        case MZ_READ_ERROR:
+            return MX_E_ReadFault;
+        case MZ_WRITE_ERROR:
+            return MX_E_WriteFault;
     }
     return E_FAIL;
 }

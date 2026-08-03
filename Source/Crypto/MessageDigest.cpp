@@ -24,9 +24,9 @@
 #include <OpenSSL\evp.h>
 #include <OpenSSL\core_names.h>
 
-// #include <crypto\evp.h>
+ // #include <crypto\evp.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 typedef struct tagMD_DATA
 {
@@ -41,8 +41,7 @@ typedef struct tagMD_DATA
 
 //-------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CMessageDigest::CMessageDigest() : CBaseMemObj(), CNonCopyableObj()
 {
@@ -77,8 +76,7 @@ HRESULT CMessageDigest::BeginDigest(_In_z_ LPCSTR szAlgorithmA, _In_opt_ LPCVOID
     return BeginDigest(nAlgorithm, lpKey, nKeyLen);
 }
 
-HRESULT CMessageDigest::BeginDigest(_In_ MX::CMessageDigest::eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey,
-                                    _In_opt_ SIZE_T nKeyLen)
+HRESULT CMessageDigest::BeginDigest(_In_ MX::CMessageDigest::eAlgorithm nAlgorithm, _In_opt_ LPCVOID lpKey, _In_opt_ SIZE_T nKeyLen)
 {
     int ret;
     HRESULT hRes;
@@ -124,73 +122,73 @@ HRESULT CMessageDigest::BeginDigest(_In_ MX::CMessageDigest::eAlgorithm nAlgorit
     ERR_clear_error();
     switch (nAlgorithm)
     {
-    case MX::CMessageDigest::eAlgorithm::CRC32:
-        md_data->lpMd = EVP_MD_fetch(NULL, "CRC32", "provider=mxlib");
-        break;
+        case MX::CMessageDigest::eAlgorithm::CRC32:
+            md_data->lpMd = EVP_MD_fetch(NULL, "CRC32", "provider=mxlib");
+            break;
 
-    case MX::CMessageDigest::eAlgorithm::MD5:
-        md_data->lpMd = EVP_MD_fetch(NULL, "MD5", NULL);
-        break;
+        case MX::CMessageDigest::eAlgorithm::MD5:
+            md_data->lpMd = EVP_MD_fetch(NULL, "MD5", NULL);
+            break;
 
-    case MX::CMessageDigest::eAlgorithm::MD4:
-        md_data->lpMd = EVP_MD_fetch(NULL, "MD4", NULL);
-        break;
+        case MX::CMessageDigest::eAlgorithm::MD4:
+            md_data->lpMd = EVP_MD_fetch(NULL, "MD4", NULL);
+            break;
 
-    case MX::CMessageDigest::eAlgorithm::SHA1:
-        md_data->lpMd = EVP_MD_fetch(NULL, "SHA1", NULL);
-        break;
+        case MX::CMessageDigest::eAlgorithm::SHA1:
+            md_data->lpMd = EVP_MD_fetch(NULL, "SHA1", NULL);
+            break;
 
-    case MX::CMessageDigest::eAlgorithm::SHA224:
-        md_data->lpMd = EVP_MD_fetch(NULL, "SHA224", NULL);
-        break;
+        case MX::CMessageDigest::eAlgorithm::SHA224:
+            md_data->lpMd = EVP_MD_fetch(NULL, "SHA224", NULL);
+            break;
 
-    case MX::CMessageDigest::eAlgorithm::SHA256:
-        md_data->lpMd = EVP_MD_fetch(NULL, "SHA256", NULL);
-        break;
+        case MX::CMessageDigest::eAlgorithm::SHA256:
+            md_data->lpMd = EVP_MD_fetch(NULL, "SHA256", NULL);
+            break;
 
-    case MX::CMessageDigest::eAlgorithm::SHA384:
-        md_data->lpMd = EVP_MD_fetch(NULL, "SHA384", NULL);
-        break;
+        case MX::CMessageDigest::eAlgorithm::SHA384:
+            md_data->lpMd = EVP_MD_fetch(NULL, "SHA384", NULL);
+            break;
 
-    case MX::CMessageDigest::eAlgorithm::SHA512:
-        md_data->lpMd = EVP_MD_fetch(NULL, "SHA512", NULL);
-        break;
+        case MX::CMessageDigest::eAlgorithm::SHA512:
+            md_data->lpMd = EVP_MD_fetch(NULL, "SHA512", NULL);
+            break;
 
-    case MX::CMessageDigest::eAlgorithm::SHA512_224:
-        md_data->lpMd = EVP_MD_fetch(NULL, "SHA512-224", NULL);
-        break;
+        case MX::CMessageDigest::eAlgorithm::SHA512_224:
+            md_data->lpMd = EVP_MD_fetch(NULL, "SHA512-224", NULL);
+            break;
 
-    case MX::CMessageDigest::eAlgorithm::SHA512_256:
-        md_data->lpMd = EVP_MD_fetch(NULL, "SHA512-256", NULL);
-        break;
+        case MX::CMessageDigest::eAlgorithm::SHA512_256:
+            md_data->lpMd = EVP_MD_fetch(NULL, "SHA512-256", NULL);
+            break;
 
-    case MX::CMessageDigest::eAlgorithm::SHA3_224:
-        md_data->lpMd = EVP_MD_fetch(NULL, "SHA3-224", NULL);
-        break;
+        case MX::CMessageDigest::eAlgorithm::SHA3_224:
+            md_data->lpMd = EVP_MD_fetch(NULL, "SHA3-224", NULL);
+            break;
 
-    case MX::CMessageDigest::eAlgorithm::SHA3_256:
-        md_data->lpMd = EVP_MD_fetch(NULL, "SHA3-256", NULL);
-        break;
+        case MX::CMessageDigest::eAlgorithm::SHA3_256:
+            md_data->lpMd = EVP_MD_fetch(NULL, "SHA3-256", NULL);
+            break;
 
-    case MX::CMessageDigest::eAlgorithm::SHA3_384:
-        md_data->lpMd = EVP_MD_fetch(NULL, "SHA3-384", NULL);
-        break;
+        case MX::CMessageDigest::eAlgorithm::SHA3_384:
+            md_data->lpMd = EVP_MD_fetch(NULL, "SHA3-384", NULL);
+            break;
 
-    case MX::CMessageDigest::eAlgorithm::SHA3_512:
-        md_data->lpMd = EVP_MD_fetch(NULL, "SHA3-512", NULL);
-        break;
+        case MX::CMessageDigest::eAlgorithm::SHA3_512:
+            md_data->lpMd = EVP_MD_fetch(NULL, "SHA3-512", NULL);
+            break;
 
-    case MX::CMessageDigest::eAlgorithm::Blake2s_256:
-        md_data->lpMd = EVP_MD_fetch(NULL, "BLAKE2s256", NULL);
-        break;
+        case MX::CMessageDigest::eAlgorithm::Blake2s_256:
+            md_data->lpMd = EVP_MD_fetch(NULL, "BLAKE2s256", NULL);
+            break;
 
-    case MX::CMessageDigest::eAlgorithm::Blake2b_512:
-        md_data->lpMd = EVP_MD_fetch(NULL, "BLAKE2b512", NULL);
-        break;
+        case MX::CMessageDigest::eAlgorithm::Blake2b_512:
+            md_data->lpMd = EVP_MD_fetch(NULL, "BLAKE2b512", NULL);
+            break;
 
-    default:
-        CleanUp(TRUE);
-        return E_INVALIDARG;
+        default:
+            CleanUp(TRUE);
+            return E_INVALIDARG;
     }
     if (md_data->lpMd == NULL)
     {
@@ -213,8 +211,8 @@ HRESULT CMessageDigest::BeginDigest(_In_ MX::CMessageDigest::eAlgorithm nAlgorit
     if (md_data->lpMd != (EVP_MD *)1)
     {
         ret = (md_data->lpKey == NULL)
-                  ? EVP_DigestInit_ex(md_data->lpMdCtx, md_data->lpMd, NULL)
-                  : EVP_DigestSignInit(md_data->lpMdCtx, NULL, md_data->lpMd, NULL, md_data->lpKey);
+            ? EVP_DigestInit_ex(md_data->lpMdCtx, md_data->lpMd, NULL)
+            : EVP_DigestSignInit(md_data->lpMdCtx, NULL, md_data->lpMd, NULL, md_data->lpKey);
         if (ret <= 0)
         {
             CleanUp(TRUE);
@@ -293,7 +291,7 @@ HRESULT CMessageDigest::DigestDWordBE(_In_ LPDWORD lpnValues, _In_ SIZE_T nCount
         for (i = 0; nCount > 0 && i < MX_ARRAYLEN(aTempValues); i++, nCount--, lpnValues++)
         {
             aTempValues[i] = (((*lpnValues) & 0xFF000000) >> 24) | (((*lpnValues) & 0x00FF0000) >> 8) |
-                             (((*lpnValues) & 0x0000FF00) << 8) | (((*lpnValues) & 0x000000FF) << 24);
+                (((*lpnValues) & 0x0000FF00) << 8) | (((*lpnValues) & 0x000000FF) << 24);
         }
         hRes = DigestStream(aTempValues, i * sizeof(DWORD));
     }
@@ -323,8 +321,7 @@ HRESULT CMessageDigest::DigestQWordBE(_In_ ULONGLONG *lpnValues, _In_ SIZE_T nCo
     {
         for (i = 0; nCount > 0 && i < MX_ARRAYLEN(aTempValues); i++, nCount--, lpnValues++)
         {
-            aTempValues[i] =
-                (((*lpnValues) & 0xFF00000000000000ui64) >> 56) | (((*lpnValues) & 0x00FF000000000000ui64) >> 40) |
+            aTempValues[i] = (((*lpnValues) & 0xFF00000000000000ui64) >> 56) | (((*lpnValues) & 0x00FF000000000000ui64) >> 40) |
                 (((*lpnValues) & 0x0000FF0000000000ui64) >> 24) | (((*lpnValues) & 0x000000FF00000000ui64) >> 8) |
                 (((*lpnValues) & 0x00000000FF000000ui64) << 8) | (((*lpnValues) & 0x0000000000FF0000ui64) << 24) |
                 (((*lpnValues) & 0x000000000000FF00ui64) << 40) | (((*lpnValues) & 0x00000000000000FFui64) << 56);
@@ -374,7 +371,7 @@ HRESULT CMessageDigest::EndDigest()
 
 LPBYTE CMessageDigest::GetResult() const
 {
-    static BYTE aZero[64] = {0};
+    static BYTE aZero[64] = { 0 };
 
     return (lpInternalData != NULL) ? md_data->aOutput : aZero;
 }

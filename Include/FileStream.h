@@ -22,27 +22,23 @@
 
 #include "Streams.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CFileStream : public CStream, public CNonCopyableObj
 {
-  public:
+public:
     CFileStream();
     ~CFileStream();
 
-    HRESULT Create(_In_ LPCWSTR szFileNameW, _In_opt_ DWORD dwDesiredAccess = GENERIC_READ,
-                   _In_opt_ DWORD dwShareMode = FILE_SHARE_READ, _In_opt_ DWORD dwCreationDisposition = OPEN_EXISTING,
-                   _In_opt_ DWORD dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL,
+    HRESULT Create(_In_ LPCWSTR szFileNameW, _In_opt_ DWORD dwDesiredAccess = GENERIC_READ, _In_opt_ DWORD dwShareMode = FILE_SHARE_READ,
+                   _In_opt_ DWORD dwCreationDisposition = OPEN_EXISTING, _In_opt_ DWORD dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL,
                    _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes = NULL);
     VOID Close();
 
-    HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesRead,
-                 _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX);
-    HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten,
-                  _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX);
+    HRESULT Read(_Out_ LPVOID lpDest, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesRead, _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX);
+    HRESULT Write(_In_ LPCVOID lpSrc, _In_ SIZE_T nBytes, _Out_ SIZE_T &nBytesWritten, _In_opt_ ULONGLONG nStartOffset = ULONGLONG_MAX);
 
     HRESULT Seek(_In_ ULONGLONG nPosition, _In_opt_ eSeekMethod nMethod = eSeekMethod::Start);
 
@@ -52,7 +48,7 @@ class CFileStream : public CStream, public CNonCopyableObj
 
     virtual HANDLE GetHandle() const;
 
-  private:
+private:
     CWindowsHandle cFileH;
 #ifdef _DEBUG
     ULONGLONG nCurrentOffset;

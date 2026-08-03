@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderGenDate.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderGenDate::CHttpHeaderGenDate() : CHttpHeaderBase()
 {

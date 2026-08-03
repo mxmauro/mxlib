@@ -22,14 +22,14 @@
 
 #include "Defines.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-template <typename TType, SIZE_T nGranularity = 32> class TArrayList : public virtual CBaseMemObj
+template <typename TType, SIZE_T nGranularity = 32>
+class TArrayList : public virtual CBaseMemObj
 {
-  public:
+public:
     typedef TArrayList<TType, nGranularity> _list;
 
     TArrayList() : CBaseMemObj()
@@ -117,14 +117,16 @@ template <typename TType, SIZE_T nGranularity = 32> class TArrayList : public vi
         return InsertElementAt(elem, nLow);
     };
 
-    template <class _Comparator, class _KeyType>
+    template <class _Comparator,
+        class _KeyType>
     TType *BinarySearchPtr(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
         SIZE_T nIndex = BinarySearch(_key, lpSearchFunc, lpContext);
         return (nIndex != (SIZE_T)-1) ? lpItems + nIndex : NULL;
     };
 
-    template <class _Comparator, class _KeyType>
+    template <class _Comparator,
+        class _KeyType>
     SIZE_T BinarySearch(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
         SIZE_T nBase, n;
@@ -388,29 +390,30 @@ template <typename TType, SIZE_T nGranularity = 32> class TArrayList : public vi
         return &lpItems[nCount];
     };
 
-  protected:
+protected:
     virtual VOID OnDeleteItem(_Inout_ TType &item)
     {
         return;
     };
 
-  private:
+private:
     TType *lpItems;
     SIZE_T nCount, nSize;
 };
 
 //-----------------------------------------------------------
 
-template <typename TType, SIZE_T nGranularity = 32> class TArrayListWithFree : public TArrayList<TType, nGranularity>
+template <typename TType, SIZE_T nGranularity = 32>
+class TArrayListWithFree : public TArrayList<TType, nGranularity>
 {
-  public:
+public:
     virtual ~TArrayListWithFree()
     {
         TArrayList<TType, nGranularity>::RemoveAllElements();
         return;
     };
 
-  protected:
+protected:
     VOID OnDeleteItem(_Inout_ TType &item)
     {
         MX_FREE(item);
@@ -420,16 +423,17 @@ template <typename TType, SIZE_T nGranularity = 32> class TArrayListWithFree : p
 
 //-----------------------------------------------------------
 
-template <typename TType, SIZE_T nGranularity = 32> class TArrayListWithRelease : public TArrayList<TType, nGranularity>
+template <typename TType, SIZE_T nGranularity = 32>
+class TArrayListWithRelease : public TArrayList<TType, nGranularity>
 {
-  public:
+public:
     virtual ~TArrayListWithRelease()
     {
         TArrayList<TType, nGranularity>::RemoveAllElements();
         return;
     };
 
-  protected:
+protected:
     VOID OnDeleteItem(_Inout_ TType &item)
     {
         if (item != NULL)
@@ -442,16 +446,17 @@ template <typename TType, SIZE_T nGranularity = 32> class TArrayListWithRelease 
 
 //-----------------------------------------------------------
 
-template <typename TType, SIZE_T nGranularity = 32> class TArrayListWithDelete : public TArrayList<TType, nGranularity>
+template <typename TType, SIZE_T nGranularity = 32>
+class TArrayListWithDelete : public TArrayList<TType, nGranularity>
 {
-  public:
+public:
     virtual ~TArrayListWithDelete()
     {
         TArrayList<TType, nGranularity>::RemoveAllElements();
         return;
     };
 
-  protected:
+protected:
     VOID OnDeleteItem(_Inout_ TType &item)
     {
         if (item != NULL)
@@ -464,9 +469,10 @@ template <typename TType, SIZE_T nGranularity = 32> class TArrayListWithDelete :
 
 //-----------------------------------------------------------
 
-template <typename TType, SIZE_T nGranularity = 32> class TArrayList4Structs : public virtual CBaseMemObj
+template <typename TType, SIZE_T nGranularity = 32>
+class TArrayList4Structs : public virtual CBaseMemObj
 {
-  public:
+public:
     TArrayList4Structs() : CBaseMemObj()
     {
         lpItems = NULL;
@@ -518,9 +524,13 @@ template <typename TType, SIZE_T nGranularity = 32> class TArrayList4Structs : p
         SIZE_T nLow, nHigh;
 
         if (lpbAlreadyOnList != NULL)
+        {
             *lpbAlreadyOnList = FALSE;
+        }
         if (lpElem == NULL && lpCompareFunc == NULL)
+        {
             return FALSE;
+        }
 
         nLow = 0;
         nHigh = nCount;
@@ -529,33 +539,41 @@ template <typename TType, SIZE_T nGranularity = 32> class TArrayList4Structs : p
             SIZE_T nMid = nLow + ((nHigh - nLow) >> 1);
             int comp = lpCompareFunc(lpContext, lpElem, &lpItems[nMid]);
             if (comp > 0)
+            {
                 nLow = nMid + 1;
+            }
             else
                 nHigh = nMid;
         }
         if (bDontInsertDuplicates != FALSE && nLow < nCount && lpCompareFunc(lpContext, lpElem, &lpItems[nLow]) == 0)
         {
             if (lpbAlreadyOnList != NULL)
+            {
                 *lpbAlreadyOnList = TRUE;
+            }
             return TRUE;
         }
         return InsertElementAt(lpElem, nLow);
     };
 
-    template <class _Comparator, class _KeyType>
+    template <class _Comparator,
+        class _KeyType>
     TType *BinarySearchPtr(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
         SIZE_T nIndex = BinarySearch(_key, lpSearchFunc, lpContext);
         return (nIndex != (SIZE_T)-1) ? lpItems + nIndex : NULL;
     };
 
-    template <class _Comparator, class _KeyType>
+    template <class _Comparator,
+        class _KeyType>
     SIZE_T BinarySearch(_In_ _KeyType _key, _In_ _Comparator lpSearchFunc, _In_opt_ LPVOID lpContext = NULL)
     {
         SIZE_T nBase, n;
 
         if (_key == NULL || lpSearchFunc == NULL)
+        {
             return (SIZE_T)-1;
+        }
         nBase = 0;
         n = nCount;
         while (n > 0)
@@ -564,7 +582,9 @@ template <typename TType, SIZE_T nGranularity = 32> class TArrayList4Structs : p
 
             int comp = lpSearchFunc(lpContext, _key, &lpItems[nMid]);
             if (comp == 0)
+            {
                 return nMid;
+            }
             if (comp > 0)
             {
                 nBase = nMid + 1;
@@ -759,13 +779,13 @@ template <typename TType, SIZE_T nGranularity = 32> class TArrayList4Structs : p
         return &lpItems[nCount];
     };
 
-  protected:
+protected:
     virtual VOID OnDeleteItem(_Inout_ TType &item)
     {
         return;
     };
 
-  private:
+private:
     TType *lpItems;
     SIZE_T nCount, nSize;
 };

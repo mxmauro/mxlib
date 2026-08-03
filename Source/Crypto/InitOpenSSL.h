@@ -25,16 +25,13 @@
 #include <OpenSSL\ssl.h>
 #include <OpenSSL\err.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Internals
-{
+namespace Internals {
 
-namespace OpenSSL
-{
+namespace OpenSSL {
 
 HRESULT Init();
 

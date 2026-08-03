@@ -19,7 +19,7 @@
  */
 #include "..\Include\StackTrace.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #if defined(_M_X64)
 #define ___UNW_FLAG_NHANDLER 0
@@ -55,11 +55,9 @@ static VOID GetStackLimits(_In_opt_ HANDLE hThread, _Out_ SIZE_T &nLow, _Out_ SI
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace StackTrace
-{
+namespace StackTrace {
 
 HRESULT Get(_Out_writes_(nCount) SIZE_T *lpnOutput, _In_ SIZE_T nCount, _In_opt_ DWORD dwThreadId)
 {
@@ -143,9 +141,13 @@ HRESULT Get(_Out_writes_(nCount) SIZE_T *lpnOutput, _In_ SIZE_T nCount, _In_opt_
         while (nCount > 0)
         {
             if (((SIZE_T)lpdwFrame & 0x03) != 0)
-                break; // unaligned
-            if ((SIZE_T)lpdwFrame < nStackLimitLow || (SIZE_T)lpdwFrame >= nStackLimitHigh)
+            {
                 break;
+            } // unaligned
+            if ((SIZE_T)lpdwFrame < nStackLimitLow || (SIZE_T)lpdwFrame >= nStackLimitHigh)
+            {
+                break;
+            }
             if (nSkipCount > 0)
             {
                 nSkipCount--;
@@ -155,7 +157,9 @@ HRESULT Get(_Out_writes_(nCount) SIZE_T *lpnOutput, _In_ SIZE_T nCount, _In_opt_
                 lpnOutput[nRetrieved] = (SIZE_T)lpdwFrame[1];
                 // try to read byte at lpnOutput[k], if that "eip" is invalid, an exception will raise and loop will end
                 if (lpnOutput[nRetrieved] == 0)
+                {
                     break;
+                }
                 temp8 = *((LPBYTE)lpnOutput[nRetrieved]);
                 nRetrieved++;
                 nCount--;
@@ -189,8 +193,8 @@ HRESULT Get(_Out_writes_(nCount) SIZE_T *lpnOutput, _In_ SIZE_T nCount, _In_opt_
             }
             else
             {
-                ::MxRtlVirtualUnwind(___UNW_FLAG_NHANDLER, nImageBase, sCapturedCtx.Rip, lpFunc, &sCapturedCtx,
-                                     &lpHandlerData, &nEstablisherFrame, NULL);
+                ::MxRtlVirtualUnwind(___UNW_FLAG_NHANDLER, nImageBase, sCapturedCtx.Rip, lpFunc, &sCapturedCtx, &lpHandlerData,
+                                     &nEstablisherFrame, NULL);
                 if ((SIZE_T)nEstablisherFrame < nStackLimitLow || (SIZE_T)nEstablisherFrame >= nStackLimitHigh)
                 {
                     break;

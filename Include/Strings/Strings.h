@@ -22,33 +22,27 @@
 
 #include "..\Defines.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 SIZE_T StrLenA(_In_opt_z_ LPCSTR szSrcA);
 SIZE_T StrLenW(_In_opt_z_ LPCWSTR szSrcW);
 
 int StrCompareA(_In_z_ LPCSTR szSrcA1, _In_z_ LPCSTR szSrcA2, _In_opt_ BOOL bCaseInsensitive = FALSE);
 int StrCompareW(_In_z_ LPCWSTR szSrcW1, _In_z_ LPCWSTR szSrcW2, _In_opt_ BOOL bCaseInsensitive = FALSE);
-int StrNCompareA(_In_z_ LPCSTR szSrcA1, _In_z_ LPCSTR szSrcA2, _In_ SIZE_T nLen,
-                 _In_opt_ BOOL bCaseInsensitive = FALSE);
-int StrNCompareW(_In_z_ LPCWSTR szSrcW1, _In_z_ LPCWSTR szSrcW2, _In_ SIZE_T nLen,
-                 _In_opt_ BOOL bCaseInsensitive = FALSE);
+int StrNCompareA(_In_z_ LPCSTR szSrcA1, _In_z_ LPCSTR szSrcA2, _In_ SIZE_T nLen, _In_opt_ BOOL bCaseInsensitive = FALSE);
+int StrNCompareW(_In_z_ LPCWSTR szSrcW1, _In_z_ LPCWSTR szSrcW2, _In_ SIZE_T nLen, _In_opt_ BOOL bCaseInsensitive = FALSE);
 int StrCompareAW(_In_z_ LPCSTR szSrcA1, _In_z_ LPCWSTR szSrcW2, _In_opt_ BOOL bCaseInsensitive = FALSE);
-int StrNCompareAW(_In_z_ LPCSTR szSrcA1, _In_z_ LPCWSTR szSrcW2, _In_ SIZE_T nLen,
-                  _In_opt_ BOOL bCaseInsensitive = FALSE);
+int StrNCompareAW(_In_z_ LPCSTR szSrcA1, _In_z_ LPCWSTR szSrcW2, _In_ SIZE_T nLen, _In_opt_ BOOL bCaseInsensitive = FALSE);
 
 LPCSTR StrChrA(_In_z_ LPCSTR szSrcA, _In_ CHAR chA, _In_opt_ BOOL bReverse = FALSE);
 LPCWSTR StrChrW(_In_z_ LPCWSTR szSrcW, _In_ WCHAR chW, _In_opt_ BOOL bReverse = FALSE);
 LPCSTR StrNChrA(_In_z_ LPCSTR szSrcA, _In_ CHAR chA, _In_ SIZE_T nLen, _In_opt_ BOOL bReverse = FALSE);
 LPCWSTR StrNChrW(_In_z_ LPCWSTR szSrcW, _In_ WCHAR chW, _In_ SIZE_T nLen, _In_opt_ BOOL bReverse = FALSE);
 
-LPCSTR StrFindA(_In_z_ LPCSTR szSrcA, _In_z_ LPCSTR szToFindA, _In_opt_ BOOL bReverse = FALSE,
-                _In_opt_ BOOL bCaseInsensitive = FALSE);
-LPCWSTR StrFindW(_In_z_ LPCWSTR szSrcW, _In_z_ LPCWSTR szToFindW, _In_opt_ BOOL bReverse = FALSE,
-                 _In_opt_ BOOL bCaseInsensitive = FALSE);
+LPCSTR StrFindA(_In_z_ LPCSTR szSrcA, _In_z_ LPCSTR szToFindA, _In_opt_ BOOL bReverse = FALSE, _In_opt_ BOOL bCaseInsensitive = FALSE);
+LPCWSTR StrFindW(_In_z_ LPCWSTR szSrcW, _In_z_ LPCWSTR szToFindW, _In_opt_ BOOL bReverse = FALSE, _In_opt_ BOOL bCaseInsensitive = FALSE);
 LPCSTR StrNFindA(_In_z_ LPCSTR szSrcA, _In_z_ LPCSTR szToFindA, _In_ SIZE_T nLen, _In_opt_ BOOL bReverse = FALSE,
                  _In_opt_ BOOL bCaseInsensitive = FALSE);
 LPCWSTR StrNFindW(_In_z_ LPCWSTR szSrcW, _In_z_ LPCWSTR szToFindW, _In_ SIZE_T nLen, _In_opt_ BOOL bReverse = FALSE,
@@ -75,7 +69,7 @@ HRESULT StrToDoubleW(_In_ LPCWSTR szSrcW, _In_ SIZE_T nLen, double *lpnValue);
 
 class CStringA : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     CStringA();
     ~CStringA();
 
@@ -156,7 +150,7 @@ class CStringA : public virtual CBaseMemObj, public CNonCopyableObj
     LPWSTR ToWide();
     static LPWSTR Ansi2Wide(_In_z_ LPCSTR szStrA, _In_ SIZE_T nSrcLen);
 
-  protected:
+protected:
     LPSTR szStrA;
     SIZE_T nSize, nLen;
     BOOL bUtf8;
@@ -166,7 +160,7 @@ class CStringA : public virtual CBaseMemObj, public CNonCopyableObj
 
 class CSecureStringA : public CStringA
 {
-  public:
+public:
     ~CSecureStringA();
 
     VOID Empty();
@@ -181,7 +175,7 @@ class CSecureStringA : public CStringA
 
 class CStringW : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     CStringW();
     ~CStringW();
 
@@ -263,7 +257,7 @@ class CStringW : public virtual CBaseMemObj, public CNonCopyableObj
     LPSTR ToUTF8();
     static LPSTR Wide2Ansi(_In_z_ LPCWSTR szStrW, _In_ SIZE_T nSrcLen);
 
-  protected:
+protected:
     LPWSTR szStrW;
     SIZE_T nSize, nLen;
     BOOL bUtf8;
@@ -273,7 +267,7 @@ class CStringW : public virtual CBaseMemObj, public CNonCopyableObj
 
 class CSecureStringW : public CStringW
 {
-  public:
+public:
     ~CSecureStringW();
 
     VOID Empty();

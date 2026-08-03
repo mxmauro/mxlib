@@ -21,7 +21,7 @@
 #include "Test.h"
 #include <Finalizer.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 static LONG volatile nLogLock = 0;
 static BOOL bShutdownRegistered = FALSE;
@@ -33,8 +33,7 @@ static VOID ShutdownLogger();
 
 //-----------------------------------------------------------
 
-namespace Logger
-{
+namespace Logger {
 
 VOID Log(_In_z_ LPCWSTR szFormatW, ...)
 {

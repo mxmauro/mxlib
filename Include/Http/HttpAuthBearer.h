@@ -22,14 +22,13 @@
 
 #include "HttpAuthBase.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpAuthBearer : public CHttpAuthBase, public CNonCopyableObj
 {
-  public:
+public:
     CHttpAuthBearer();
     ~CHttpAuthBearer();
 
@@ -67,7 +66,7 @@ class CHttpAuthBearer : public CHttpAuthBase, public CNonCopyableObj
         return (LPCWSTR)cStrErrorDescriptionW;
     };
 
-  private:
+private:
     CStringW cStrRealmW;
     TArrayListWithFree<LPCWSTR> aScopesList;
     CStringW cStrErrorW, cStrErrorDescriptionW;

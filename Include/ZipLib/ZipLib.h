@@ -23,14 +23,13 @@
 #include "..\Defines.h"
 #include "..\CircularBuffer.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CZipLib : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     CZipLib(_In_ BOOL bUseZipLibHeader = TRUE);
     virtual ~CZipLib();
 
@@ -45,11 +44,11 @@ class CZipLib : public virtual CBaseMemObj, public CNonCopyableObj
 
     BOOL HasDecompressEndOfStreamBeenReached();
 
-  protected:
+protected:
     VOID Cleanup();
     BOOL CheckAndSkipGZipHeader(_Inout_ LPBYTE &s, _Inout_ SIZE_T &nSrcLen, _Inout_opt_ SIZE_T *lpnUnusedBytes);
 
-  protected:
+protected:
     BOOL bUseZipLibHeader;
     int nInUse, nLevel, nGZipHdrState;
     LPVOID lpStream;

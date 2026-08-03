@@ -23,14 +23,13 @@
 #include "HttpBodyParserFormBase.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpBodyParserUrlEncodedForm : public CHttpBodyParserFormBase, public CNonCopyableObj
 {
-  public:
+public:
     CHttpBodyParserUrlEncodedForm(_In_ DWORD dwMaxFieldSize = 256000);
     ~CHttpBodyParserUrlEncodedForm();
 
@@ -39,11 +38,11 @@ class CHttpBodyParserUrlEncodedForm : public CHttpBodyParserFormBase, public CNo
         return "application/x-www-form-urlencoded";
     };
 
-  protected:
+protected:
     HRESULT Initialize(_In_ Internals::CHttpParser &cHttpParser);
     HRESULT Parse(_In_opt_ LPCVOID lpData, _In_opt_ SIZE_T nDataSize);
 
-  private:
+private:
     enum class eState
     {
         NameStart,
@@ -57,11 +56,11 @@ class CHttpBodyParserUrlEncodedForm : public CHttpBodyParserFormBase, public CNo
 
     struct
     {
-        eState nState{eState::NameStart};
+        eState nState{ eState::NameStart };
         CStringA cStrCurrA;
         CStringW cStrCurrFieldNameW;
     } sParser;
-    SIZE_T nCurrContentSize{0};
+    SIZE_T nCurrContentSize{ 0 };
 };
 
 } // namespace MX

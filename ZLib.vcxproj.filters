@@ -56,12 +56,6 @@
     <ClCompile Include="Source\ZipLib\Source\adler32.c">
       <Filter>Source Files\zlib</Filter>
     </ClCompile>
-    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_crypt.c">
-      <Filter>Source Files\minizip</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_crypt_win32.c">
-      <Filter>Source Files\minizip</Filter>
-    </ClCompile>
     <ClCompile Include="Source\ZipLib\MiniZipSource\mz_os_win32.c">
       <Filter>Source Files\minizip</Filter>
     </ClCompile>
@@ -96,6 +90,30 @@
       <Filter>Source Files\minizip</Filter>
     </ClCompile>
     <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_split.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_crypt_winvista.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_bzip.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_libcomp.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_lzma.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_pkcrypt.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_ppmd.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_wzaes.c">
+      <Filter>Source Files\minizip</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\ZipLib\MiniZipSource\mz_strm_zstd.c">
       <Filter>Source Files\minizip</Filter>
     </ClCompile>
   </ItemGroup>
@@ -172,6 +190,30 @@
       <Filter>Header Files\minizip</Filter>
     </ClInclude>
     <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_split.h">
+      <Filter>Header Files\minizip</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_zstd.h">
+      <Filter>Header Files\minizip</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_wzaes.h">
+      <Filter>Header Files\minizip</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_ppmd.h">
+      <Filter>Header Files\minizip</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_pkcrypt.h">
+      <Filter>Header Files\minizip</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_lzma.h">
+      <Filter>Header Files\minizip</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_libcomp.h">
+      <Filter>Header Files\minizip</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\MiniZipSource\mz_strm_bzip.h">
+      <Filter>Header Files\minizip</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\ZipLib\mz_config.h">
       <Filter>Header Files\minizip</Filter>
     </ClInclude>
   </ItemGroup>

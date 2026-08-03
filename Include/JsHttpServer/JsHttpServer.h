@@ -25,19 +25,18 @@
 #include "..\Http\HttpBodyParserFormBase.h"
 #include "..\JsLib\JavascriptVM.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CJsHttpServer : public virtual CBaseMemObj, public CHttpServer
 {
-  public:
+public:
     class CClientRequest;
     class CRequireModuleContext;
     class CJsRequestRequireModuleContext;
 
-  public:
+public:
     typedef Callback<HRESULT(_In_ CJsHttpServer *lpHttp, _Outptr_result_maybenull_ CSslCertificate **lplpSslCert,
                              _Outptr_result_maybenull_ CEncryptionKey **lplpSslPrivKey,
                              _Outptr_result_maybenull_ CEncryptionKey **lplpDhParam)>
@@ -56,9 +55,8 @@ class CJsHttpServer : public virtual CBaseMemObj, public CHttpServer
                              _Inout_ CJavascriptVM::CRequireModuleContext *lpReqContext, _Inout_ CStringA &cStrCodeA)>
         OnRequireJsModuleCallback;
 
-    typedef Callback<HRESULT(_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ int nVersion,
-                             _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount, _Out_ int &nSelectedProtocol,
-                             _In_ TArrayList<int> &aSupportedVersions,
+    typedef Callback<HRESULT(_In_ CJsHttpServer *lpHttp, _In_ CClientRequest *lpRequest, _In_ int nVersion, _In_opt_ LPCSTR *szProtocolsA,
+                             _In_ SIZE_T nProtocolsCount, _Out_ int &nSelectedProtocol, _In_ TArrayList<int> &aSupportedVersions,
                              _Outptr_result_maybenull_ CWebSocket **lplpWebSocket)>
         OnWebSocketRequestReceivedCallback;
 
@@ -70,7 +68,7 @@ class CJsHttpServer : public virtual CBaseMemObj, public CHttpServer
 
     //--------
 
-  public:
+public:
     CJsHttpServer(_In_ CSockets &cSocketMgr, _In_opt_ CLoggable *lpLogParent = NULL);
     ~CJsHttpServer();
 
@@ -86,59 +84,56 @@ class CJsHttpServer : public virtual CBaseMemObj, public CHttpServer
     static CClientRequest *GetServerRequestFromContext(_In_ DukTape::duk_context *lpCtx);
 
     // remove some inherited public methods
-    VOID SetQuerySslCertificatesCallback(
-        _In_ CHttpServer::OnQuerySslCertificatesCallback cQuerySslCertificatesCallback) = delete;
+    VOID SetQuerySslCertificatesCallback(_In_ CHttpServer::OnQuerySslCertificatesCallback cQuerySslCertificatesCallback) = delete;
     VOID SetNewRequestObjectCallback(_In_ CHttpServer::OnNewRequestObjectCallback cNewRequestObjectCallback) = delete;
-    VOID SetRequestHeadersReceivedCallback(
-        _In_ CHttpServer::OnRequestHeadersReceivedCallback cRequestHeadersReceivedCallback) = delete;
+    VOID SetRequestHeadersReceivedCallback(_In_ CHttpServer::OnRequestHeadersReceivedCallback cRequestHeadersReceivedCallback) = delete;
     VOID SetRequestCompletedCallback(_In_ CHttpServer::OnRequestCompletedCallback cRequestCompletedCallback) = delete;
     VOID SetWebSocketRequestReceivedCallback(
         _In_ CHttpServer::OnWebSocketRequestReceivedCallback cWebSocketRequestReceivedCallback) = delete;
     VOID SetRequestDestroyedCallback(_In_ CHttpServer::OnRequestDestroyedCallback cRequestDestroyedCallback) = delete;
     VOID SetCustomErrorPageCallback(_In_ CHttpServer::OnCustomErrorPageCallback cCustomErrorPageCallback) = delete;
 
-  protected:
+protected:
     virtual HRESULT OnNewRequestObject(_In_ CHttpServer *lpHttp, _Out_ CHttpServer::CClientRequest **lplpRequest);
 
-  private:
+private:
     class CJvm : public CJavascriptVM
     {
-      public:
+    public:
         CLnkLstNode cListNode;
     };
 
-  private:
+private:
     class CJvmManager : public virtual TRefCounted<CBaseMemObj>
     {
-      public:
+    public:
         CJvmManager();
         ~CJvmManager();
 
-        HRESULT AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ BOOL &bIsNew,
-                               _In_ OnRequireJsModuleCallback cRequireJsModuleCallback, _In_ CClientRequest *lpRequest);
+        HRESULT AllocAndInitVM(_Out_ CJvm **lplpJVM, _Out_ BOOL &bIsNew, _In_ OnRequireJsModuleCallback cRequireJsModuleCallback,
+                               _In_ CClientRequest *lpRequest);
         VOID FreeVM(_In_ CJvm *lpJVM);
 
-      private:
-        HRESULT InsertPostField(_In_ CJavascriptVM &cJvm, _In_ CHttpBodyParserFormBase::CField *lpField,
-                                _In_ LPCSTR szBaseObjectNameA);
+    private:
+        HRESULT InsertPostField(_In_ CJavascriptVM &cJvm, _In_ CHttpBodyParserFormBase::CField *lpField, _In_ LPCSTR szBaseObjectNameA);
         HRESULT InsertPostFileField(_In_ CJavascriptVM &cJvm, _In_ CHttpBodyParserFormBase::CFileField *lpFileField,
                                     _In_ LPCSTR szBaseObjectNameA);
 
         VOID ParseJsonBody(_In_ DukTape::duk_context *lpCtx, _In_ LPVOID v, _In_opt_z_ LPCSTR szPropNameA,
                            _In_ DukTape::duk_uarridx_t nArrayIndex) throw();
 
-      private:
+    private:
         LONG volatile nMutex;
         CLnkLst cJvmList;
     };
 
-  public:
+public:
     class CClientRequest : public CHttpServer::CClientRequest
     {
-      protected:
+    protected:
         CClientRequest();
 
-      public:
+    public:
         ~CClientRequest();
 
         HRESULT OnSetup();
@@ -153,19 +148,19 @@ class CJsHttpServer : public virtual CBaseMemObj, public CHttpServer
 
         HRESULT RunScript(_In_ LPCSTR szCodeA, _In_opt_z_ LPCWSTR szFileNameW = NULL);
 
-      public:
+    public:
         TArrayListWithDelete<CStringA *> cOutputBuffersList;
 
-      private:
+    private:
         VOID FreeJVM();
 
-        HRESULT BuildErrorPage(_In_ HRESULT hr, _In_opt_z_ LPCSTR szDescriptionA, _In_z_ LPCSTR szFileNameA,
-                               _In_ int nLine, _In_z_ LPCSTR szStackTraceA);
+        HRESULT BuildErrorPage(_In_ HRESULT hr, _In_opt_z_ LPCSTR szDescriptionA, _In_z_ LPCSTR szFileNameA, _In_ int nLine,
+                               _In_z_ LPCSTR szStackTraceA);
 
-        HRESULT OnRequireJsModule(_In_ DukTape::duk_context *lpCtx,
-                                  _In_ CJavascriptVM::CRequireModuleContext *lpReqContext, _Inout_ CStringA &cStrCodeA);
+        HRESULT OnRequireJsModule(_In_ DukTape::duk_context *lpCtx, _In_ CJavascriptVM::CRequireModuleContext *lpReqContext,
+                                  _Inout_ CStringA &cStrCodeA);
 
-      private:
+    private:
         friend class CJsHttpServer;
 
         CJsHttpServer *lpJsHttpServer;
@@ -175,23 +170,21 @@ class CJsHttpServer : public virtual CBaseMemObj, public CHttpServer
         LONG volatile nFlags;
     };
 
-  private:
-    HRESULT OnQuerySslCertificates(_In_ CHttpServer *lpHttp,
-                                   _Outptr_opt_result_maybenull_ CSslCertificate **lplpSslCert,
+private:
+    HRESULT OnQuerySslCertificates(_In_ CHttpServer *lpHttp, _Outptr_opt_result_maybenull_ CSslCertificate **lplpSslCert,
                                    _Outptr_opt_result_maybenull_ CEncryptionKey **lplpSslPrivKey,
                                    _Outptr_opt_result_maybenull_ CEncryptionKey **lplpDhParam);
     HRESULT OnRequestHeadersReceived(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest,
                                      _Outptr_result_maybenull_ CHttpBodyParserBase **lplpBodyParser);
     VOID OnRequestCompleted(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest);
-    HRESULT OnWebSocketRequestReceived(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest,
-                                       _In_ int nVersion, _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount,
-                                       _Out_ int &nSelectedProtocol, _In_ TArrayList<int> &aSupportedVersions,
-                                       _Outptr_result_maybenull_ CWebSocket **lplpWebSocket);
+    HRESULT OnWebSocketRequestReceived(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest, _In_ int nVersion,
+                                       _In_opt_ LPCSTR *szProtocolsA, _In_ SIZE_T nProtocolsCount, _Out_ int &nSelectedProtocol,
+                                       _In_ TArrayList<int> &aSupportedVersions, _Outptr_result_maybenull_ CWebSocket **lplpWebSocket);
     HRESULT OnCustomErrorPage(_In_ CHttpServer *lpHttp, _Inout_ CSecureStringA &cStrBodyA, _In_ LONG nStatusCode,
                               _In_ LPCSTR szStatusMessageA, _In_z_ LPCSTR szAdditionalExplanationA);
     VOID OnRequestDestroyed(_In_ CHttpServer *lpHttp, _In_ CHttpServer::CClientRequest *lpRequest);
 
-  private:
+private:
     OnQuerySslCertificatesCallback cQuerySslCertificatesCallback;
     OnNewRequestObjectCallback cNewRequestObjectCallback;
     OnRequestHeadersReceivedCallback cRequestHeadersReceivedCallback;
@@ -208,14 +201,14 @@ class CJsHttpServer : public virtual CBaseMemObj, public CHttpServer
 
 class CJsHttpServerSystemExit : public CJsError
 {
-  protected:
+protected:
     CJsHttpServerSystemExit(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex);
 
-  public:
+public:
     CJsHttpServerSystemExit(_In_ const CJsHttpServerSystemExit &obj);
     CJsHttpServerSystemExit &operator=(_In_ const CJsHttpServerSystemExit &obj);
 
-  private:
+private:
     friend class CJsHttpServer;
 };
 

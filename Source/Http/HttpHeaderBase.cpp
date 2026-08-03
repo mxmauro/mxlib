@@ -21,10 +21,9 @@
 #include "..\..\Include\AutoPtr.h"
 #include "..\..\Include\Strings\Utf8.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderBase::CHttpHeaderBase() : TRefCounted<CBaseMemObj>()
 {
@@ -207,8 +206,7 @@ HRESULT CHttpHeaderBase::GetQuotedString(_Out_ CStringA &cStrA, _Inout_ LPCSTR &
     while (sA < szEndA && *sA != '"')
     {
         szStartA = sA;
-        while (sA < szEndA && (*((UCHAR *)sA) >= 0x20 || *sA == '\t' || *sA == '\r' || *sA == '\n') && *sA != '\\' &&
-               *sA != '"')
+        while (sA < szEndA && (*((UCHAR *)sA) >= 0x20 || *sA == '\t' || *sA == '\r' || *sA == '\n') && *sA != '\\' && *sA != '"')
         {
             sA++;
         }
@@ -245,9 +243,8 @@ HRESULT CHttpHeaderBase::GetQuotedString(_Out_ CStringA &cStrA, _Inout_ LPCSTR &
     return S_OK;
 }
 
-HRESULT CHttpHeaderBase::GetParamNameAndValue(_In_ BOOL bUseUtf8AsDefaultCharset, _Out_ CStringA &cStrTokenA,
-                                              _Out_ CStringW &cStrValueW, _Inout_ LPCSTR &sA, _In_ LPCSTR szEndA,
-                                              _Out_opt_ LPBOOL lpbExtendedParam)
+HRESULT CHttpHeaderBase::GetParamNameAndValue(_In_ BOOL bUseUtf8AsDefaultCharset, _Out_ CStringA &cStrTokenA, _Out_ CStringW &cStrValueW,
+                                              _Inout_ LPCSTR &sA, _In_ LPCSTR szEndA, _Out_opt_ LPBOOL lpbExtendedParam)
 {
     CStringA cStrValueA;
     LPCSTR szStartA;
@@ -597,34 +594,34 @@ HRESULT CHttpHeaderArray::Merge(_In_ CHttpHeaderBase *lpSrc, _In_ BOOL bForceRep
     }
     switch (nDuplicateBehavior)
     {
-    case CHttpHeaderBase::eDuplicateBehavior::Replace:
-        if (AddElement(lpSrc) == FALSE)
-        {
-            return E_OUTOFMEMORY;
-        }
-        lpSrc->AddRef();
+        case CHttpHeaderBase::eDuplicateBehavior::Replace:
+            if (AddElement(lpSrc) == FALSE)
+            {
+                return E_OUTOFMEMORY;
+            }
+            lpSrc->AddRef();
 
-        if (nHeaderIndex != (SIZE_T)-1)
-        {
-            RemoveElementAt(nHeaderIndex);
-        }
-        break;
+            if (nHeaderIndex != (SIZE_T)-1)
+            {
+                RemoveElementAt(nHeaderIndex);
+            }
+            break;
 
-    case CHttpHeaderBase::eDuplicateBehavior::Merge:
-        hRes = lpHeader->Merge(lpSrc);
-        if (FAILED(hRes))
-        {
-            return hRes;
-        }
-        break;
+        case CHttpHeaderBase::eDuplicateBehavior::Merge:
+            hRes = lpHeader->Merge(lpSrc);
+            if (FAILED(hRes))
+            {
+                return hRes;
+            }
+            break;
 
-    default:
-        if (AddElement(lpSrc) == FALSE)
-        {
-            return E_OUTOFMEMORY;
-        }
-        lpSrc->AddRef();
-        break;
+        default:
+            if (AddElement(lpSrc) == FALSE)
+            {
+                return E_OUTOFMEMORY;
+            }
+            lpSrc->AddRef();
+            break;
     }
     // done
     return S_OK;

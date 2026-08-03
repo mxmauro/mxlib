@@ -19,14 +19,13 @@
  */
 #include "..\..\Include\Http\HttpHeaderReqSecWebSocketProtocol.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 static int ProtocolCompareFunc(_In_ LPVOID lpContext, _In_ LPSTR *lpElem1, _In_ LPSTR *lpElem2);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderReqSecWebSocketProtocol::CHttpHeaderReqSecWebSocketProtocol() : CHttpHeaderBase()
 {
@@ -83,7 +82,7 @@ HRESULT CHttpHeaderReqSecWebSocketProtocol::Parse(_In_z_ LPCSTR szValueA, _In_op
             return hRes;
         }
 
-    skip_null_listitem:
+skip_null_listitem:
         // skip spaces
         szValueA = SkipSpaces(szValueA, szValueEndA);
 
@@ -99,7 +98,8 @@ HRESULT CHttpHeaderReqSecWebSocketProtocol::Parse(_In_z_ LPCSTR szValueA, _In_op
                 return MX_E_InvalidData;
             }
         }
-    } while (szValueA < szValueEndA);
+    }
+    while (szValueA < szValueEndA);
 
     // do we got one?
     if (bGotItem == FALSE)
@@ -168,8 +168,7 @@ HRESULT CHttpHeaderReqSecWebSocketProtocol::AddProtocol(_In_z_ LPCSTR szProtocol
     }
 
     // add protocol to list
-    if (aProtocolsList.SortedInsert((LPSTR)cStrNewProtocolA, &ProtocolCompareFunc, NULL, TRUE, &bAlreadyOnList) ==
-        FALSE)
+    if (aProtocolsList.SortedInsert((LPSTR)cStrNewProtocolA, &ProtocolCompareFunc, NULL, TRUE, &bAlreadyOnList) == FALSE)
     {
         return E_OUTOFMEMORY;
     }

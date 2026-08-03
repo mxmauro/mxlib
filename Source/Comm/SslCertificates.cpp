@@ -24,17 +24,15 @@
 #include <OpenSSL\x509.h>
 #include <OpenSSL\x509v3.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 static HRESULT Asn1TimeToDateTime(_In_ const ASN1_TIME *lpTime, _Out_ MX::CDateTime &cDt);
-static HRESULT GetName(_In_ X509_NAME *lpName, _In_ MX::CSslCertificate::eInformation nInfo,
-                       _Inout_ MX::CStringW &cStrW);
+static HRESULT GetName(_In_ X509_NAME *lpName, _In_ MX::CSslCertificate::eInformation nInfo, _Inout_ MX::CStringW &cStrW);
 static int PemPasswordCallback(char *buf, int size, int rwflag, void *userdata);
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CSslCertificate::CSslCertificate() : TRefCounted<CBaseMemObj>()
 {
@@ -430,7 +428,7 @@ HRESULT CSslCertificateCrl::GetNextUpdate(_Inout_ CDateTime &cDt)
 
 SIZE_T CSslCertificateCrl::GetRevokedEntriesCount() const
 {
-    STACK_OF(X509_REVOKED) * rev;
+    STACK_OF(X509_REVOKED) *rev;
     int count;
 
     if (lpX509Crl == NULL)
@@ -444,7 +442,7 @@ SIZE_T CSslCertificateCrl::GetRevokedEntriesCount() const
 
 LPBYTE CSslCertificateCrl::GetRevokedEntrySerial(_In_ SIZE_T nEntryIndex) const
 {
-    STACK_OF(X509_REVOKED) * rev;
+    STACK_OF(X509_REVOKED) *rev;
     X509_REVOKED *r;
     const ASN1_INTEGER *lpSerial;
     int count;
@@ -466,7 +464,7 @@ LPBYTE CSslCertificateCrl::GetRevokedEntrySerial(_In_ SIZE_T nEntryIndex) const
 
 SIZE_T CSslCertificateCrl::GetRevokedEntrySerialLength(_In_ SIZE_T nEntryIndex) const
 {
-    STACK_OF(X509_REVOKED) * rev;
+    STACK_OF(X509_REVOKED) *rev;
     X509_REVOKED *r;
     const ASN1_INTEGER *lpSerial;
     int count;
@@ -488,7 +486,7 @@ SIZE_T CSslCertificateCrl::GetRevokedEntrySerialLength(_In_ SIZE_T nEntryIndex) 
 
 HRESULT CSslCertificateCrl::GetRevokedEntryDate(_In_ SIZE_T nEntryIndex, _Inout_ CDateTime &cDt)
 {
-    STACK_OF(X509_REVOKED) * rev;
+    STACK_OF(X509_REVOKED) *rev;
     X509_REVOKED *r;
     int count;
 
@@ -520,21 +518,22 @@ static HRESULT Asn1TimeToDateTime(_In_ const ASN1_TIME *lpTime, _Out_ MX::CDateT
     cDt.SetGmtOffset(0);
     switch (lpTime->type)
     {
-    case V_ASN1_UTCTIME: // two digit year
-        hRes = cDt.SetFromString((LPCSTR)(lpTime->data), "%y%m%d%H%M%S");
-        break;
-    case V_ASN1_GENERALIZEDTIME: // four digit year
-        hRes = cDt.SetFromString((LPCSTR)(lpTime->data), "%Y%m%d%H%M%S");
-        break;
-    default:
-        hRes = MX_E_InvalidData;
-        break;
+        case V_ASN1_UTCTIME:
+            // two digit year
+            hRes = cDt.SetFromString((LPCSTR)(lpTime->data), "%y%m%d%H%M%S");
+            break;
+        case V_ASN1_GENERALIZEDTIME:
+            // four digit year
+            hRes = cDt.SetFromString((LPCSTR)(lpTime->data), "%Y%m%d%H%M%S");
+            break;
+        default:
+            hRes = MX_E_InvalidData;
+            break;
     }
     return (hRes != E_FAIL) ? hRes : MX_E_InvalidData;
 }
 
-static HRESULT GetName(_In_ X509_NAME *lpName, _In_ MX::CSslCertificate::eInformation nInfo,
-                       _Inout_ MX::CStringW &cStrW)
+static HRESULT GetName(_In_ X509_NAME *lpName, _In_ MX::CSslCertificate::eInformation nInfo, _Inout_ MX::CStringW &cStrW)
 {
     MX::TAutoFreePtr<CHAR> aTempBuf;
     ASN1_OBJECT *obj;
@@ -551,24 +550,24 @@ static HRESULT GetName(_In_ X509_NAME *lpName, _In_ MX::CSslCertificate::eInform
     obj = NULL;
     switch (nInfo)
     {
-    case MX::CSslCertificate::eInformation::Organization:
-        obj = OBJ_nid2obj(NID_organizationName);
-        break;
-    case MX::CSslCertificate::eInformation::Unit:
-        obj = OBJ_nid2obj(NID_organizationalUnitName);
-        break;
-    case MX::CSslCertificate::eInformation::CommonName:
-        obj = OBJ_nid2obj(NID_commonName);
-        break;
-    case MX::CSslCertificate::eInformation::Country:
-        obj = OBJ_nid2obj(NID_countryName);
-        break;
-    case MX::CSslCertificate::eInformation::StateProvince:
-        obj = OBJ_nid2obj(NID_stateOrProvinceName);
-        break;
-    case MX::CSslCertificate::eInformation::Town:
-        obj = OBJ_nid2obj(NID_localityName);
-        break;
+        case MX::CSslCertificate::eInformation::Organization:
+            obj = OBJ_nid2obj(NID_organizationName);
+            break;
+        case MX::CSslCertificate::eInformation::Unit:
+            obj = OBJ_nid2obj(NID_organizationalUnitName);
+            break;
+        case MX::CSslCertificate::eInformation::CommonName:
+            obj = OBJ_nid2obj(NID_commonName);
+            break;
+        case MX::CSslCertificate::eInformation::Country:
+            obj = OBJ_nid2obj(NID_countryName);
+            break;
+        case MX::CSslCertificate::eInformation::StateProvince:
+            obj = OBJ_nid2obj(NID_stateOrProvinceName);
+            break;
+        case MX::CSslCertificate::eInformation::Town:
+            obj = OBJ_nid2obj(NID_localityName);
+            break;
     }
     if (obj == NULL)
     {

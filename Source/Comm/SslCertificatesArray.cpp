@@ -28,10 +28,9 @@
 #include <wincrypt.h>
 #include <OpenSSL\pkcs12.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CSslCertificateArray::CSslCertificateArray() : TRefCounted<CBaseMemObj>(), CNonCopyableObj()
 {
@@ -391,8 +390,7 @@ HRESULT CSslCertificateArray::AddFromFile(_In_z_ LPCWSTR szFileNameW, _In_opt_z_
         return E_INVALIDARG;
     }
     // open file
-    cFileH.Attach(
-        ::CreateFileW(szFileNameW, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
+    cFileH.Attach(::CreateFileW(szFileNameW, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
     if (!cFileH)
     {
         return MX_HRESULT_FROM_LASTERROR();
@@ -446,13 +444,10 @@ HRESULT CSslCertificateArray::AddFromFile(_In_z_ LPCWSTR szFileNameW, _In_opt_z_
 
 HRESULT CSslCertificateArray::ImportFromWindowsStore()
 {
-    typedef HCERTSTORE(WINAPI * lpfnCertOpenSystemStoreW)(_In_opt_ HCRYPTPROV_LEGACY hProv,
-                                                          _In_ LPCWSTR szSubsystemProtocol);
-    typedef PCCERT_CONTEXT(WINAPI * lpfnCertEnumCertificatesInStore)(_In_ HCERTSTORE hCertStore,
-                                                                     _In_opt_ PCCERT_CONTEXT pPrevCertContext);
-    typedef PCCRL_CONTEXT(WINAPI * lpfnCertEnumCRLsInStore)(_In_ HCERTSTORE hCertStore,
-                                                            _In_opt_ PCCRL_CONTEXT pPrevCrlContext);
-    typedef BOOL(WINAPI * lpfnCertCloseStore)(_In_opt_ HCERTSTORE hCertStore, _In_ DWORD dwFlags);
+    typedef HCERTSTORE(WINAPI *lpfnCertOpenSystemStoreW)(_In_opt_ HCRYPTPROV_LEGACY hProv, _In_ LPCWSTR szSubsystemProtocol);
+    typedef PCCERT_CONTEXT(WINAPI *lpfnCertEnumCertificatesInStore)(_In_ HCERTSTORE hCertStore, _In_opt_ PCCERT_CONTEXT pPrevCertContext);
+    typedef PCCRL_CONTEXT(WINAPI *lpfnCertEnumCRLsInStore)(_In_ HCERTSTORE hCertStore, _In_opt_ PCCRL_CONTEXT pPrevCrlContext);
+    typedef BOOL(WINAPI *lpfnCertCloseStore)(_In_opt_ HCERTSTORE hCertStore, _In_ DWORD dwFlags);
     HCERTSTORE hStore;
     PCCERT_CONTEXT lpCertCtx;
     PCCRL_CONTEXT lpCrlCtx;
@@ -469,8 +464,7 @@ HRESULT CSslCertificateArray::ImportFromWindowsStore()
         return hRes;
     }
     fnCertOpenSystemStoreW = (lpfnCertOpenSystemStoreW)::GetProcAddress(hCrypt32DLL, "CertOpenSystemStoreW");
-    fnCertEnumCertificatesInStore =
-        (lpfnCertEnumCertificatesInStore)::GetProcAddress(hCrypt32DLL, "CertEnumCertificatesInStore");
+    fnCertEnumCertificatesInStore = (lpfnCertEnumCertificatesInStore)::GetProcAddress(hCrypt32DLL, "CertEnumCertificatesInStore");
     fnCertEnumCRLsInStore = (lpfnCertEnumCRLsInStore)::GetProcAddress(hCrypt32DLL, "CertEnumCRLsInStore");
     fnCertCloseStore = (lpfnCertCloseStore)::GetProcAddress(hCrypt32DLL, "CertCloseStore");
     if (fnCertOpenSystemStoreW == NULL || fnCertEnumCertificatesInStore == NULL || fnCertEnumCRLsInStore == NULL ||

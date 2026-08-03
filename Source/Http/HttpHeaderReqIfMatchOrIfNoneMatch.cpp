@@ -20,10 +20,9 @@
 #include "..\..\Include\Http\HttpHeaderReqIfMatchOrIfNoneMatch.h"
 #include "..\..\Include\AutoPtr.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderReqIfXXXMatchBase::CHttpHeaderReqIfXXXMatchBase(_In_opt_ BOOL _bIsMatch) : CHttpHeaderBase()
 {
@@ -117,7 +116,7 @@ HRESULT CHttpHeaderReqIfXXXMatchBase::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZ
         // skip spaces
         szValueA = SkipSpaces(szValueA, szValueEndA);
 
-    skip_null_listitem:
+skip_null_listitem:
         // check for separator or end
         if (szValueA < szValueEndA)
         {
@@ -130,7 +129,8 @@ HRESULT CHttpHeaderReqIfXXXMatchBase::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZ
                 return MX_E_InvalidData;
             }
         }
-    } while (szValueA < szValueEndA);
+    }
+    while (szValueA < szValueEndA);
 
     // do we got one?
     if (bGotItem == FALSE)
@@ -172,8 +172,7 @@ HRESULT CHttpHeaderReqIfXXXMatchBase::Build(_Inout_ CStringA &cStrDestA, _In_ Ht
         }
 
         // entity
-        if (Http::BuildQuotedString(cStrTempA, (LPCSTR)(lpEntity->GetTag()), lpEntity->cStrTagA.GetLength(), FALSE) ==
-                FALSE ||
+        if (Http::BuildQuotedString(cStrTempA, (LPCSTR)(lpEntity->GetTag()), lpEntity->cStrTagA.GetLength(), FALSE) == FALSE ||
             cStrDestA.ConcatN((LPCSTR)cStrTempA, cStrTempA.GetLength()) == FALSE)
         {
             return E_OUTOFMEMORY;
@@ -183,8 +182,7 @@ HRESULT CHttpHeaderReqIfXXXMatchBase::Build(_Inout_ CStringA &cStrDestA, _In_ Ht
     return S_OK;
 }
 
-HRESULT CHttpHeaderReqIfXXXMatchBase::AddEntity(_In_z_ LPCSTR szTagA, _In_opt_ SIZE_T nTagLen,
-                                                _Out_opt_ CEntity **lplpEntity)
+HRESULT CHttpHeaderReqIfXXXMatchBase::AddEntity(_In_z_ LPCSTR szTagA, _In_opt_ SIZE_T nTagLen, _Out_opt_ CEntity **lplpEntity)
 {
     TAutoDeletePtr<CEntity> cNewEntity;
     SIZE_T i, nCount;
@@ -211,8 +209,7 @@ HRESULT CHttpHeaderReqIfXXXMatchBase::AddEntity(_In_z_ LPCSTR szTagA, _In_opt_ S
     nCount = cEntitiesList.GetCount();
     for (i = 0; i < nCount; i++)
     {
-        if (cEntitiesList[i]->cStrTagA.GetLength() == nTagLen &&
-            StrNCompareA(cEntitiesList[i]->GetTag(), szTagA, nTagLen, TRUE) == 0)
+        if (cEntitiesList[i]->cStrTagA.GetLength() == nTagLen && StrNCompareA(cEntitiesList[i]->GetTag(), szTagA, nTagLen, TRUE) == 0)
         {
             return MX_E_AlreadyExists;
         }

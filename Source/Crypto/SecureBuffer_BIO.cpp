@@ -22,7 +22,7 @@
 #include "..\..\Include\Strings\Strings.h"
 #include "..\..\Include\Crypto\SecureBuffer.h"
 
-//-------------------------------------------------------
+ //-------------------------------------------------------
 
 static int secure_buffer_create(BIO *bi)
 {
@@ -74,7 +74,9 @@ static int secure_buffer_read_ex(BIO *bio, char *data, size_t datal, size_t *rea
     int ret;
 
     if (datal > INT_MAX)
+    {
         datal = INT_MAX;
+    }
     ret = secure_buffer_read(bio, data, (int)datal);
     if (ret <= 0)
     {
@@ -122,7 +124,9 @@ static int secure_buffer_write_ex(BIO *bio, const char *data, size_t datal, size
     int ret;
 
     if (datal > INT_MAX)
+    {
         datal = INT_MAX;
+    }
     ret = secure_buffer_write(bio, data, (int)datal);
     if (ret <= 0)
     {
@@ -139,30 +143,32 @@ static long secure_buffer_ctrl(BIO *bi, int cmd, long num, void *ptr)
 
     switch (cmd)
     {
-    case BIO_CTRL_RESET:
-        lpBuf->Reset();
-        return 1;
+        case BIO_CTRL_RESET:
+            lpBuf->Reset();
+            return 1;
 
-    case BIO_CTRL_GET_CLOSE:
-        return (long)BIO_get_shutdown(bi);
+        case BIO_CTRL_GET_CLOSE:
+            return (long)BIO_get_shutdown(bi);
 
-    case BIO_CTRL_SET_CLOSE:
-        BIO_set_shutdown(bi, (int)num);
-        return 1;
+        case BIO_CTRL_SET_CLOSE:
+            BIO_set_shutdown(bi, (int)num);
+            return 1;
 
-    case BIO_CTRL_PENDING:
-    {
-        SIZE_T nAvail = lpBuf->GetLength();
+        case BIO_CTRL_PENDING:
+            {
+                SIZE_T nAvail = lpBuf->GetLength();
 
-        if (nAvail > (SIZE_T)LONG_MAX)
-            nAvail = (SIZE_T)LONG_MAX;
-        return (long)nAvail;
-    }
-    break;
+                if (nAvail > (SIZE_T)LONG_MAX)
+                {
+                    nAvail = (SIZE_T)LONG_MAX;
+                }
+                return (long)nAvail;
+            }
+            break;
 
-    case BIO_CTRL_DUP:
-    case BIO_CTRL_FLUSH:
-        return 1;
+        case BIO_CTRL_DUP:
+        case BIO_CTRL_FLUSH:
+            return 1;
     }
     return 0;
 }
@@ -217,14 +223,11 @@ static BIO_METHOD *lpSecureBufferMem = NULL;
 
 //-------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Internals
-{
+namespace Internals {
 
-namespace OpenSSL
-{
+namespace OpenSSL {
 
 HRESULT InitializeSecureBufferBIO()
 {

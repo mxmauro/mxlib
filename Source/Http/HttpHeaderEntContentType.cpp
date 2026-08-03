@@ -20,10 +20,9 @@
 #include "..\..\Include\Http\HttpHeaderEntContentType.h"
 #include "..\..\Include\AutoPtr.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderEntContentType::CHttpHeaderEntContentType() : CHttpHeaderBase()
 {
@@ -113,7 +112,8 @@ HRESULT CHttpHeaderEntContentType::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T
                     return MX_E_InvalidData;
                 }
             }
-        } while (szValueA < szValueEndA);
+        }
+        while (szValueA < szValueEndA);
     }
 
     // check for separator or end
@@ -145,8 +145,7 @@ HRESULT CHttpHeaderEntContentType::Build(_Inout_ CStringA &cStrDestA, _In_ Http:
     nCount = aParamsList.GetCount();
     for (i = 0; i < nCount; i++)
     {
-        if (Http::BuildQuotedString(cStrTempA, aParamsList[i]->szValueW, StrLenW(aParamsList[i]->szValueW), FALSE) ==
-            FALSE)
+        if (Http::BuildQuotedString(cStrTempA, aParamsList[i]->szValueW, StrLenW(aParamsList[i]->szValueW), FALSE) == FALSE)
         {
             return E_OUTOFMEMORY;
         }

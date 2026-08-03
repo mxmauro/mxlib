@@ -22,14 +22,13 @@
 
 #include "IpcCommon.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CNamedPipes : public CIpc, public CNonCopyableObj
 {
-  public:
+public:
     CNamedPipes(_In_ CIoCompletionPortThreadPool &cDispatcherPool);
     ~CNamedPipes();
 
@@ -39,41 +38,40 @@ class CNamedPipes : public CIpc, public CNonCopyableObj
                            _In_opt_z_ LPCWSTR szSecutityDescriptorA = NULL);
     HRESULT CreateListener(_In_z_ LPCWSTR szServerNameW, _In_ OnCreateCallback cCreateCallback,
                            _In_opt_z_ LPCWSTR szSecutityDescriptorW = NULL);
-    HRESULT ConnectToServer(_In_z_ LPCSTR szServerNameA, _In_ OnCreateCallback cCreateCallback,
-                            _In_opt_ CUserData *lpUserData = NULL, _Out_opt_ HANDLE *h = NULL);
-    HRESULT ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreateCallback cCreateCallback,
-                            _In_opt_ CUserData *lpUserData = NULL, _Out_opt_ HANDLE *h = NULL);
+    HRESULT ConnectToServer(_In_z_ LPCSTR szServerNameA, _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData = NULL,
+                            _Out_opt_ HANDLE *h = NULL);
+    HRESULT ConnectToServer(_In_z_ LPCWSTR szServerNameW, _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData = NULL,
+                            _Out_opt_ HANDLE *h = NULL);
     HRESULT CreateRemoteClientConnection(_In_ HANDLE hProc, _Out_ HANDLE &h, _Out_ HANDLE &hRemotePipe,
                                          _In_ OnCreateCallback cCreateCallback, _In_opt_ CUserData *lpUserData = NULL);
 
     HRESULT ImpersonateConnectionClient(_In_ HANDLE h);
 
-  private:
+private:
     class CServerInfo : public virtual TRefCounted<CBaseMemObj>, public CNonCopyableObj
     {
-      public:
+    public:
         CServerInfo();
         ~CServerInfo();
 
         HRESULT Init(_In_z_ LPCWSTR szServerNameW, _In_ PSECURITY_DESCRIPTOR lpSecDescr);
 
-      public:
+    public:
         CStringW cStrNameW;
         PSECURITY_DESCRIPTOR lpSecDescr;
     };
 
     //----
 
-  private:
+private:
     class CConnection : public CConnectionBase, public CNonCopyableObj
     {
-      public:
+    public:
         CConnection(_In_ CIpc *lpIpc, _In_ CIpc::eConnectionClass nClass);
         ~CConnection();
 
         HRESULT CreateServer();
-        HRESULT CreateClient(_In_z_ LPCWSTR szServerNameW, _In_ DWORD dwMaxWriteTimeoutMs,
-                             _In_ PSECURITY_DESCRIPTOR lpSecDescr);
+        HRESULT CreateClient(_In_z_ LPCWSTR szServerNameW, _In_ DWORD dwMaxWriteTimeoutMs, _In_ PSECURITY_DESCRIPTOR lpSecDescr);
         VOID ShutdownLink(_In_ BOOL bAbortive);
 
         HRESULT SendReadPacket(_In_ CPacketBase *lpPacket, _Out_ LPDWORD lpdwRead);
@@ -83,7 +81,7 @@ class CNamedPipes : public CIpc, public CNonCopyableObj
             return 1;
         };
 
-      protected:
+    protected:
         friend class CNamedPipes;
 
         RWLOCK sRwHandleInUse;
@@ -93,7 +91,7 @@ class CNamedPipes : public CIpc, public CNonCopyableObj
 
     //----
 
-  private:
+private:
     HRESULT OnInternalInitialize();
     VOID OnInternalFinalize();
 
@@ -106,10 +104,10 @@ class CNamedPipes : public CIpc, public CNonCopyableObj
         return FALSE;
     };
 
-  private:
-    LONG volatile nRemoteConnCounter{0};
-    DWORD dwConnectTimeoutMs{1000};
-    PSECURITY_DESCRIPTOR lpSecDescr{NULL};
+private:
+    LONG volatile nRemoteConnCounter{ 0 };
+    DWORD dwConnectTimeoutMs{ 1000 };
+    PSECURITY_DESCRIPTOR lpSecDescr{ NULL };
 };
 
 } // namespace MX

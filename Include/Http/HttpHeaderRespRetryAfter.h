@@ -23,20 +23,19 @@
 #include "HttpHeaderBase.h"
 #include "..\DateTime\DateTime.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderRespRetryAfter : public CHttpHeaderBase
 {
-  public:
+public:
     CHttpHeaderRespRetryAfter();
     ~CHttpHeaderRespRetryAfter();
 
-    MX_DECLARE_HTTPHEADER_NAME(Retry - After)
+    MX_DECLARE_HTTPHEADER_NAME("Retry-After")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
@@ -44,7 +43,7 @@ class CHttpHeaderRespRetryAfter : public CHttpHeaderBase
     HRESULT SetDate(_In_ CDateTime &cDt);
     ULONGLONG GetSeconds() const;
 
-  private:
+private:
     ULONGLONG nSeconds;
 };
 

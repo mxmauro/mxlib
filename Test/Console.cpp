@@ -20,7 +20,7 @@
 #include "Console.h"
 #include <WaitableObjects.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 static LONG volatile nPrintLock = 0;
 static LONG volatile nMustQuit = 0;
@@ -31,8 +31,7 @@ static BOOL WINAPI _ConsoleHandlerRoutine(_In_ DWORD dwCtrlType);
 
 //-----------------------------------------------------------
 
-namespace Console
-{
+namespace Console {
 
 BOOL Initialize()
 {
@@ -100,13 +99,13 @@ static BOOL WINAPI _ConsoleHandlerRoutine(_In_ DWORD dwCtrlType)
 {
     switch (dwCtrlType)
     {
-    case CTRL_C_EVENT:
-    case CTRL_BREAK_EVENT:
-    case CTRL_CLOSE_EVENT:
-    case CTRL_LOGOFF_EVENT:
-    case CTRL_SHUTDOWN_EVENT:
-        _InterlockedExchange(&nMustQuit, 1);
-        return TRUE;
+        case CTRL_C_EVENT:
+        case CTRL_BREAK_EVENT:
+        case CTRL_CLOSE_EVENT:
+        case CTRL_LOGOFF_EVENT:
+        case CTRL_SHUTDOWN_EVENT:
+            _InterlockedExchange(&nMustQuit, 1);
+            return TRUE;
     }
     return FALSE;
 }

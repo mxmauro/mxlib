@@ -62,29 +62,30 @@ static int DukTapeStrCmp(_In_z_ const char *str1, _In_z_ const char *str2)
 
 #undef DUK_STRNCMP
 #define DUK_STRNCMP DukTapeStrNCmp
-static int DukTapeStrNCmp(_In_reads_or_z_(count) const char *str1, _In_reads_or_z_(count) const char *str2,
-                          _In_ size_t const count)
+static int DukTapeStrNCmp(_In_reads_or_z_(count) const char *str1, _In_reads_or_z_(count) const char *str2, _In_ size_t const count)
 {
     return MX::StrNCompareA(str1, str2, count, FALSE);
 }
 
 #undef DUK_SPRINTF
 #define DUK_SPRINTF DukTapeSprintf
-static int DukTapeSprintf(_Pre_notnull_ _Always_(_Post_z_) char *const buffer,
-                          _In_z_ _Printf_format_string_ const char *format, ...)
+_Success_(return >= 0)
+static int DukTapeSprintf(_Pre_notnull_ _Always_(_Post_z_) char *const buffer, _In_z_ _Printf_format_string_ const char *format, ...)
 {
     va_list argptr;
     int ret;
 
     va_start(argptr, format);
-    ret = vsprintf_s(buffer, 1024, format, argptr);
+#pragma warning(suppress : 4996)
+    ret = vsprintf(buffer, format, argptr); // YES. Unsafe!
     va_end(argptr);
     return ret;
 }
 #undef DUK_SNPRINTF
 #define DUK_SNPRINTF DukTapeSnprintf
-static int DukTapeSnprintf(_Out_writes_opt_(bufferSize) _Always_(_Post_z_) char *const buffer,
-                           _In_ size_t const bufferSize, _In_z_ _Printf_format_string_ const char *format, ...)
+_Success_(return >= 0)
+static int DukTapeSnprintf(_Out_writes_opt_(bufferSize) _Always_(_Post_z_) char *const buffer, _In_ size_t const bufferSize,
+                           _In_z_ _Printf_format_string_ const char *format, ...)
 {
     va_list argptr;
     int res;
@@ -97,9 +98,9 @@ static int DukTapeSnprintf(_Out_writes_opt_(bufferSize) _Always_(_Post_z_) char 
 
 #undef DUK_VSNPRINTF
 #define DUK_VSNPRINTF DukTapeVsnprintf
-static int DukTapeVsnprintf(_Out_writes_opt_(bufferSize) _Always_(_Post_z_) char *const buffer,
-                            _In_ size_t const bufferSize, _In_z_ _Printf_format_string_ const char *format,
-                            _In_ va_list argptr)
+_Success_(return >= 0)
+static int DukTapeVsnprintf(_Out_writes_opt_(bufferSize) _Always_(_Post_z_) char *const buffer, _In_ size_t const bufferSize,
+                            _In_z_ _Printf_format_string_ const char *format, _In_ va_list argptr)
 {
     return vsnprintf_s(buffer, bufferSize, _TRUNCATE, format, argptr);
 }

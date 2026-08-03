@@ -29,7 +29,7 @@
 #include "..\..\Include\MemoryStream.h"
 #include "..\..\Include\FileStream.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define REQUEST_FLAG_DontKeepAlive 0x0001
 #define REQUEST_FLAG_ClosingOnShutdown 0x0002

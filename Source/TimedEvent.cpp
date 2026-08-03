@@ -37,30 +37,27 @@
 #define TIMERHANDLER_FINALIZER_PRIORITY 10000
 #define MAX_TIMERS_IN_FREE_LIST 128
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Internals
-{
+namespace Internals {
 
 class CTimerHandler : public TRefCounted<CThread>, public CNonCopyableObj
 {
-  public:
+public:
     class CTimer : public virtual CBaseMemObj, public CNonCopyableObj
     {
-      public:
-        CTimer(_In_ DWORD dwTimeoutMs, _In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_opt_ LPVOID lpUserData,
-               _In_ BOOL bOneShot)
+    public:
+        CTimer(_In_ DWORD dwTimeoutMs, _In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot)
             : CBaseMemObj(), CNonCopyableObj()
         {
             Setup(dwTimeoutMs, cCallback, lpUserData, bOneShot);
             return;
         };
 
-        VOID Setup(_In_ DWORD _dwTimeoutMs, _In_ MX::TimedEvent::OnTimeoutCallback _cCallback,
-                   _In_opt_ LPVOID _lpUserData, _In_ BOOL bOneShot)
+        VOID Setup(_In_ DWORD _dwTimeoutMs, _In_ MX::TimedEvent::OnTimeoutCallback _cCallback, _In_opt_ LPVOID _lpUserData,
+                   _In_ BOOL bOneShot)
         {
             nId = 0;
             dwTimeoutMs = _dwTimeoutMs;
@@ -115,7 +112,8 @@ class CTimerHandler : public TRefCounted<CThread>, public CNonCopyableObj
                     return FALSE; // timer was canceled
                 }
                 newVal = _InterlockedCompareExchange(&nFlags, initVal | _FLAG_Running, initVal);
-            } while (newVal != initVal);
+            }
+            while (newVal != initVal);
             return TRUE;
         };
 
@@ -123,13 +121,11 @@ class CTimerHandler : public TRefCounted<CThread>, public CNonCopyableObj
         {
             LONG initVal;
 
-            initVal = _InterlockedOr(
-                &nFlags, ((bInsideCallback == FALSE) ? _FLAG_Canceled : (_FLAG_Canceled | _FLAG_CanceledInCallback)));
+            initVal = _InterlockedOr(&nFlags, ((bInsideCallback == FALSE) ? _FLAG_Canceled : (_FLAG_Canceled | _FLAG_CanceledInCallback)));
             return ((initVal & _FLAG_Running) != 0) ? TRUE : FALSE;
         };
 
-        static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ CRedBlackTreeNode *lpNode1,
-                                     _In_ CRedBlackTreeNode *lpNode2)
+        static int InsertCompareFunc(_In_ LPVOID lpContext, _In_ CRedBlackTreeNode *lpNode1, _In_ CRedBlackTreeNode *lpNode2)
         {
             CTimer *lpTimer1 = CONTAINING_RECORD(lpNode1, CTimer, cTreeNode);
             CTimer *lpTimer2 = CONTAINING_RECORD(lpNode2, CTimer, cTreeNode);
@@ -145,18 +141,18 @@ class CTimerHandler : public TRefCounted<CThread>, public CNonCopyableObj
             return 0;
         };
 
-      public:
-        LONG nId{0};
+    public:
+        LONG nId{ 0 };
         CRedBlackTreeNode cTreeNode;
-        DWORD dwTimeoutMs{0};
-        ULONGLONG nDueTime{0};
+        DWORD dwTimeoutMs{ 0 };
+        ULONGLONG nDueTime{ 0 };
         MX::TimedEvent::OnTimeoutCallback cCallback;
-        LPVOID lpUserData{NULL};
-        LONG volatile nFlags{0};
-        CTimer *lpNextInFreeList{NULL};
+        LPVOID lpUserData{ NULL };
+        LONG volatile nFlags{ 0 };
+        CTimer *lpNextInFreeList{ NULL };
     };
 
-  public:
+public:
     CTimerHandler();
     ~CTimerHandler();
 
@@ -165,39 +161,38 @@ class CTimerHandler : public TRefCounted<CThread>, public CNonCopyableObj
 
     BOOL Initialize();
 
-    HRESULT AddTimer(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId,
-                     _In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_ DWORD dwTimeoutMs,
-                     _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot);
+    HRESULT AddTimer(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId, _In_ MX::TimedEvent::OnTimeoutCallback cCallback,
+                     _In_ DWORD dwTimeoutMs, _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot);
     VOID RemoveTimer(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId);
 
-  private:
+private:
     VOID ThreadProc();
 
     DWORD ProcessQueue();
 
-    CTimer *AllocTimer(_In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_ DWORD dwTimeoutMs,
-                       _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot);
+    CTimer *AllocTimer(_In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_ DWORD dwTimeoutMs, _In_opt_ LPVOID lpUserData,
+                       _In_ BOOL bOneShot);
     VOID FreeTimer(_In_ CTimer *lpTimer);
 
     static int InsertByIdCompareFunc(_In_ LPVOID lpContext, _In_ CTimer **lplpElem1, _In_ CTimer **lplpElem2);
     static int SearchByIdCompareFunc(_In_ LPVOID lpContext, _In_ PLONG lpKey, _In_ CTimer **lplpElem);
 
-  private:
-    LONG volatile nRundownLock{MX_RUNDOWNPROT_INIT};
-    LONG volatile nNextTimerId{0};
-    LONG volatile nThreadMutex{MX_FASTLOCK_INIT};
+private:
+    LONG volatile nRundownLock{ MX_RUNDOWNPROT_INIT };
+    LONG volatile nNextTimerId{ 0 };
+    LONG volatile nThreadMutex{ MX_FASTLOCK_INIT };
     struct
     {
-        LONG volatile nMutex{MX_FASTLOCK_INIT};
+        LONG volatile nMutex{ MX_FASTLOCK_INIT };
         CWindowsEvent cChangedEvent;
         TArrayList<CTimer *> cSortedByIdList;
         CRedBlackTree cTree;
     } sQueue;
     struct
     {
-        LONG volatile nMutex{MX_FASTLOCK_INIT};
-        CTimer *lpFirst{NULL};
-        int nListCount{0};
+        LONG volatile nMutex{ MX_FASTLOCK_INIT };
+        CTimer *lpFirst{ NULL };
+        int nListCount{ 0 };
     } sFreeTimers;
 };
 
@@ -212,14 +207,12 @@ static MX::Internals::CTimerHandler *lpTimerHandler = NULL;
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace TimedEvent
-{
+namespace TimedEvent {
 
-HRESULT SetTimeout(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs,
-                   _In_ OnTimeoutCallback cCallback, _In_opt_ LPVOID lpUserData)
+HRESULT SetTimeout(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In_ OnTimeoutCallback cCallback,
+                   _In_opt_ LPVOID lpUserData)
 {
     TAutoRefCounted<Internals::CTimerHandler> cHandler;
 
@@ -235,8 +228,8 @@ HRESULT SetTimeout(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId, _In_
     return cHandler->AddTimer(lpnTimerId, cCallback, dwTimeoutMs, lpUserData, TRUE);
 }
 
-HRESULT SetInterval(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs,
-                    _In_ OnTimeoutCallback cCallback, _In_opt_ LPVOID lpUserData)
+HRESULT SetInterval(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId, _In_ DWORD dwTimeoutMs, _In_ OnTimeoutCallback cCallback,
+                    _In_opt_ LPVOID lpUserData)
 {
     TAutoRefCounted<Internals::CTimerHandler> cHandler;
 
@@ -274,11 +267,9 @@ VOID Clear(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId)
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Internals
-{
+namespace Internals {
 
 CTimerHandler::CTimerHandler() : TRefCounted<CThread>(), CNonCopyableObj()
 {
@@ -372,9 +363,8 @@ BOOL CTimerHandler::Initialize()
     return TRUE;
 }
 
-HRESULT CTimerHandler::AddTimer(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId,
-                                _In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_ DWORD dwTimeoutMs,
-                                _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot)
+HRESULT CTimerHandler::AddTimer(_Inout_ _Interlocked_operand_ LONG volatile *lpnTimerId, _In_ MX::TimedEvent::OnTimeoutCallback cCallback,
+                                _In_ DWORD dwTimeoutMs, _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot)
 {
     CAutoRundownProtection cAutoRundownProt(&nRundownLock);
     TAutoDeletePtr<CTimer> cNewTimer;
@@ -406,7 +396,8 @@ HRESULT CTimerHandler::AddTimer(_Inout_ _Interlocked_operand_ LONG volatile *lpn
     do
     {
         cNewTimer->nId = _InterlockedIncrement(&nNextTimerId);
-    } while (cNewTimer->nId == 0);
+    }
+    while (cNewTimer->nId == 0);
 
     // calculate due time
     cNewTimer->CalculateDueTime(NULL);
@@ -415,8 +406,7 @@ HRESULT CTimerHandler::AddTimer(_Inout_ _Interlocked_operand_ LONG volatile *lpn
     {
         CFastLock cQueueLock(&(sQueue.nMutex));
 
-        if (sQueue.cSortedByIdList.SortedInsert(cNewTimer.Get(), &CTimerHandler::InsertByIdCompareFunc, NULL, TRUE) ==
-            FALSE)
+        if (sQueue.cSortedByIdList.SortedInsert(cNewTimer.Get(), &CTimerHandler::InsertByIdCompareFunc, NULL, TRUE) == FALSE)
         {
             _InterlockedExchange(lpnTimerId, 0);
             return E_OUTOFMEMORY;
@@ -515,7 +505,7 @@ DWORD CTimerHandler::ProcessQueue()
             CRedBlackTreeNode *lpNode;
 
             lpNode = sQueue.cTree.GetFirst();
-        check_timer:
+check_timer:
             lpTimer = (lpNode != NULL) ? CONTAINING_RECORD(lpNode, CTimer, cTreeNode) : NULL;
 
             if (lpTimer != NULL)
@@ -566,8 +556,7 @@ DWORD CTimerHandler::ProcessQueue()
                     {
                         SIZE_T nIndex;
 
-                        nIndex = sQueue.cSortedByIdList.BinarySearch(&(lpTimer->nId),
-                                                                     &CTimerHandler::SearchByIdCompareFunc, NULL);
+                        nIndex = sQueue.cSortedByIdList.BinarySearch(&(lpTimer->nId), &CTimerHandler::SearchByIdCompareFunc, NULL);
                         MX_ASSERT(nIndex != (SIZE_T)-1);
                         if (nIndex != (SIZE_T)-1)
                         {
@@ -586,14 +575,15 @@ DWORD CTimerHandler::ProcessQueue()
                 }
             }
         }
-    } while (lpTimer != NULL);
+    }
+    while (lpTimer != NULL);
 
     // done
     return dwTimeoutMs;
 }
 
-CTimerHandler::CTimer *CTimerHandler::AllocTimer(_In_ MX::TimedEvent::OnTimeoutCallback cCallback,
-                                                 _In_ DWORD dwTimeoutMs, _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot)
+CTimerHandler::CTimer *CTimerHandler::AllocTimer(_In_ MX::TimedEvent::OnTimeoutCallback cCallback, _In_ DWORD dwTimeoutMs,
+                                                 _In_opt_ LPVOID lpUserData, _In_ BOOL bOneShot)
 {
     CFastLock cLock(&(sFreeTimers.nMutex));
 

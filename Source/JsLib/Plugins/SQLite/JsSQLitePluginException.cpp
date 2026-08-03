@@ -19,10 +19,9 @@
  */
 #include "..\..\..\..\Include\JsLib\Plugins\JsSQLitePlugin.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CJsSQLiteError::CJsSQLiteError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex)
     : CJsWindowsError(lpCtx, nStackIndex)

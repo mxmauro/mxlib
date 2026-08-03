@@ -19,10 +19,9 @@
  */
 #include "JavascriptVMCommon.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CJsError::CJsError()
 {
@@ -130,8 +129,7 @@ CJsError::CJsError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nSt
     return;
 }
 
-CJsError::CJsError(_In_z_ LPCSTR szMessageA, _In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szFileNameA,
-                   _In_ ULONG _nLine)
+CJsError::CJsError(_In_z_ LPCSTR szMessageA, _In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szFileNameA, _In_ ULONG _nLine)
 {
     HRESULT hRes = S_OK;
 
@@ -295,16 +293,14 @@ CJsWindowsError::CJsWindowsError(_In_ DukTape::duk_context *lpCtx, _In_ DukTape:
     return;
 }
 
-CJsWindowsError::CJsWindowsError(_In_ HRESULT _hRes, _In_ DukTape::duk_context *lpCtx,
-                                 _In_ DukTape::duk_idx_t nStackIndex)
+CJsWindowsError::CJsWindowsError(_In_ HRESULT _hRes, _In_ DukTape::duk_context *lpCtx, _In_ DukTape::duk_idx_t nStackIndex)
     : CJsError(lpCtx, nStackIndex)
 {
     hRes = _hRes;
     return;
 }
 
-CJsWindowsError::CJsWindowsError(_In_ HRESULT _hRes, _In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szFileNameA,
-                                 _In_ ULONG nLine)
+CJsWindowsError::CJsWindowsError(_In_ HRESULT _hRes, _In_ DukTape::duk_context *lpCtx, _In_z_ LPCSTR szFileNameA, _In_ ULONG nLine)
     : CJsError("", lpCtx, szFileNameA, nLine)
 {
     hRes = _hRes;
@@ -345,8 +341,8 @@ VOID CJsWindowsError::QueryMessageString()
     {
         return;
     }
-    if (::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, (DWORD)hRes, 0,
-                         (LPWSTR)&szBufW, 1024, NULL) > 0)
+    if (::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, (DWORD)hRes, 0, (LPWSTR)&szBufW, 1024,
+                         NULL) > 0)
     {
         if (SUCCEEDED(Utf8_Encode(*lpStrA, szBufW)))
         {

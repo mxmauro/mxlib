@@ -24,14 +24,13 @@
 #include "ArrayList.h"
 #include "Strings\Strings.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CPropertyBag : public virtual CBaseMemObj, public CNonCopyableObj
 {
-  public:
+public:
     enum class eType
     {
         Undefined,
@@ -74,7 +73,7 @@ class CPropertyBag : public virtual CBaseMemObj, public CNonCopyableObj
     HRESULT GetString(_In_z_ LPCSTR szNameA, _Out_ LPCSTR &szValueA, _In_opt_z_ LPCSTR szDefValueA = NULL);
     HRESULT GetString(_In_z_ LPCSTR szNameA, _Out_ LPCWSTR &szValueW, _In_opt_z_ LPCWSTR szDefValueW = NULL);
 
-  private:
+private:
     typedef struct
     {
         eType nType;
@@ -89,7 +88,7 @@ class CPropertyBag : public virtual CBaseMemObj, public CNonCopyableObj
         } u;
     } PROPERTY;
 
-  private:
+private:
     BOOL Insert(_In_ PROPERTY *lpNewProp);
     SIZE_T Find(_In_z_ LPCSTR szNameA);
 
@@ -103,7 +102,7 @@ class CPropertyBag : public virtual CBaseMemObj, public CNonCopyableObj
         return StrCompareA((LPCSTR)lpKey, (*lpItem)->szNameA, TRUE);
     };
 
-  private:
+private:
     TArrayListWithFree<PROPERTY *> cPropertiesList;
 };
 

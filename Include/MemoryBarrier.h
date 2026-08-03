@@ -32,10 +32,9 @@
 #pragma intrinsic(_mm_sfence)
 #endif //_M_X64 || _M_AMD64
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 __forceinline VOID LFence()
 {

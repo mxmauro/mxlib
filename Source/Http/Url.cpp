@@ -25,27 +25,29 @@
 #include "..\..\Include\Strings\Utf8.h"
 #include <wchar.h>
 
-// #define ENABLE_FILE_SCHEME_AUTODETECTION
+ // #define ENABLE_FILE_SCHEME_AUTODETECTION
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 static struct tagValidSchemes
 {
     LPCWSTR szNameW;
     MX::CUrl::eScheme nCode;
     int nDefaultPort;
-} aValidSchemes[] = {{L"mailto", MX::CUrl::eScheme::MailTo, -1},
-                     {L"news", MX::CUrl::eScheme::News, -1},
-                     {L"http", MX::CUrl::eScheme::Http, 80},
-                     {L"https", MX::CUrl::eScheme::Https, 443},
-                     {L"ftp", MX::CUrl::eScheme::Ftp, 21},
-                     {L"file", MX::CUrl::eScheme::File, -1},
-                     {L"resource", MX::CUrl::eScheme::Resource, -1},
-                     {L"nntp", MX::CUrl::eScheme::Nntp, -1},
-                     {L"gopher", MX::CUrl::eScheme::Gopher, -1},
-                     {L"ws", MX::CUrl::eScheme::WebSocket, 80},
-                     {L"wss", MX::CUrl::eScheme::SecureWebSocket, 443},
-                     {NULL, MX::CUrl::eScheme::Unknown, -1}};
+} aValidSchemes[] = {
+    {L"mailto",MX::CUrl::eScheme::MailTo,-1},
+    {L"news",MX::CUrl::eScheme::News,-1},
+    {L"http",MX::CUrl::eScheme::Http,80},
+    {L"https",MX::CUrl::eScheme::Https,443},
+    {L"ftp",MX::CUrl::eScheme::Ftp,21},
+    {L"file",MX::CUrl::eScheme::File,-1},
+    {L"resource",MX::CUrl::eScheme::Resource,-1},
+    {L"nntp",MX::CUrl::eScheme::Nntp,-1},
+    {L"gopher",MX::CUrl::eScheme::Gopher,-1},
+    {L"ws",MX::CUrl::eScheme::WebSocket,80},
+    {L"wss",MX::CUrl::eScheme::SecureWebSocket,443},
+    {NULL,MX::CUrl::eScheme::Unknown,-1}
+};
 
 //-----------------------------------------------------------
 
@@ -62,14 +64,10 @@ static WCHAR DecodePctU(_In_z_ LPCSTR szStrA);
 static WCHAR DecodePctU(_In_z_ LPCWSTR szStrW);
 static HRESULT NormalizePath(_Inout_ MX::CStringW &cStrPathW, _In_z_ LPCWSTR szSchemeW);
 static HRESULT ReducePath(_Inout_ MX::CStringW &cStrPathW, _In_z_ LPCWSTR szSchemeW);
-static HRESULT ToStringEncode(_Inout_ MX::CStringA &cStrDestA, _In_z_ LPCWSTR szStrW, _In_ SIZE_T nLen,
-                              _In_opt_z_ LPCSTR szAllowedCharsA);
-static HRESULT ToStringEncode(_Inout_ MX::CStringW &cStrDestW, _In_z_ LPCWSTR szStrW, _In_ SIZE_T nLen,
-                              _In_opt_z_ LPCWSTR szAllowedCharsW);
-static SIZE_T FindChar(_In_z_ LPCSTR szStrA, _In_ SIZE_T nSrcLen, _In_z_ LPCSTR szToFindA,
-                       _In_opt_z_ LPCSTR szStopCharA = NULL);
-static SIZE_T FindChar(_In_z_ LPCWSTR szStrW, _In_ SIZE_T nSrcLen, _In_z_ LPCWSTR szToFindW,
-                       _In_opt_z_ LPCWSTR szStopCharW = NULL);
+static HRESULT ToStringEncode(_Inout_ MX::CStringA &cStrDestA, _In_z_ LPCWSTR szStrW, _In_ SIZE_T nLen, _In_opt_z_ LPCSTR szAllowedCharsA);
+static HRESULT ToStringEncode(_Inout_ MX::CStringW &cStrDestW, _In_z_ LPCWSTR szStrW, _In_ SIZE_T nLen, _In_opt_z_ LPCWSTR szAllowedCharsW);
+static SIZE_T FindChar(_In_z_ LPCSTR szStrA, _In_ SIZE_T nSrcLen, _In_z_ LPCSTR szToFindA, _In_opt_z_ LPCSTR szStopCharA = NULL);
+static SIZE_T FindChar(_In_z_ LPCWSTR szStrW, _In_ SIZE_T nSrcLen, _In_z_ LPCWSTR szToFindW, _In_opt_z_ LPCWSTR szStopCharW = NULL);
 static BOOL IsLocalHost(_In_z_ LPCSTR szHostA);
 static BOOL IsLocalHost(_In_z_ LPCWSTR szHostW);
 static BOOL HasDisallowedEscapedSequences(_In_z_ LPCSTR szSrcA, _In_ SIZE_T nSrcLen);
@@ -131,10 +129,9 @@ static __inline BOOL IsSlash(_In_ WCHAR chW)
 
 static __inline BOOL IsUnreservedChar(_In_ CHAR chA)
 {
-    return ((chA >= 'A' && chA <= 'Z') || (chA >= 'a' && chA <= 'z') || (chA >= '0' && chA <= '9') ||
-            MX::StrChrA("-_.~", chA) != NULL)
-               ? TRUE
-               : FALSE;
+    return ((chA >= 'A' && chA <= 'Z') || (chA >= 'a' && chA <= 'z') || (chA >= '0' && chA <= '9') || MX::StrChrA("-_.~", chA) != NULL)
+        ? TRUE
+        : FALSE;
 }
 
 static __inline BOOL IsUnreservedChar(_In_ WCHAR chW)
@@ -144,8 +141,7 @@ static __inline BOOL IsUnreservedChar(_In_ WCHAR chW)
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CUrl::CUrl() : CBaseMemObj()
 {
@@ -201,8 +197,7 @@ CUrl &CUrl::operator=(_In_ const CUrl &cSrc) throw(...)
         {
             nNameLen = StrLenW(cSrc.cQueryStringsList[i]->szNameW);
             nValueLen = StrLenW(cSrc.cQueryStringsList[i]->szValueW);
-            cNewItem.Attach(
-                (LPQUERYSTRINGITEM)MX_MALLOC(sizeof(QUERYSTRINGITEM) + (nNameLen + nValueLen + 1) * sizeof(WCHAR)));
+            cNewItem.Attach((LPQUERYSTRINGITEM)MX_MALLOC(sizeof(QUERYSTRINGITEM) + (nNameLen + nValueLen + 1) * sizeof(WCHAR)));
             if (!cNewItem)
             {
                 throw (LONG)E_OUTOFMEMORY;
@@ -345,10 +340,9 @@ HRESULT CUrl::SetHost(_In_z_ LPCSTR szHostA, _In_opt_ SIZE_T nHostLen)
         }
     }
     else if (nHostLen > 2 && szHostA[0] == '[' && szHostA[nHostLen - 1] == ']' &&
-             HostResolver::IsValidIPV6(szHostA + 1, nHostLen - 2) != FALSE)
+          HostResolver::IsValidIPV6(szHostA + 1, nHostLen - 2) != FALSE)
     {
-        if (cStrTempW.CopyN(L"[", 1) == FALSE || cStrTempW.ConcatN(szHostA, nHostLen) == FALSE ||
-            cStrTempW.ConcatN(L"]", 1) == FALSE)
+        if (cStrTempW.CopyN(L"[", 1) == FALSE || cStrTempW.ConcatN(szHostA, nHostLen) == FALSE || cStrTempW.ConcatN(L"]", 1) == FALSE)
         {
             return E_OUTOFMEMORY;
         }
@@ -542,8 +536,7 @@ VOID CUrl::ResetQueryStrings()
     return;
 }
 
-HRESULT CUrl::AddQueryString(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen,
-                             _In_opt_ SIZE_T nNameLen)
+HRESULT CUrl::AddQueryString(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen, _In_opt_ SIZE_T nNameLen)
 {
     CStringA cStrTempA;
     CStringW cStrTempNameW, cStrTempValueW;
@@ -582,15 +575,13 @@ HRESULT CUrl::AddQueryString(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _In_
     // add string
     if (SUCCEEDED(hRes))
     {
-        hRes = AddQueryString((LPCWSTR)cStrTempNameW, (LPCWSTR)cStrTempValueW, cStrTempValueW.GetLength(),
-                              cStrTempNameW.GetLength());
+        hRes = AddQueryString((LPCWSTR)cStrTempNameW, (LPCWSTR)cStrTempValueW, cStrTempValueW.GetLength(), cStrTempNameW.GetLength());
     }
     // done
     return hRes;
 }
 
-HRESULT CUrl::AddQueryString(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW, _In_opt_ SIZE_T nValueLen,
-                             _In_opt_ SIZE_T nNameLen)
+HRESULT CUrl::AddQueryString(_In_z_ LPCWSTR szNameW, _In_z_ LPCWSTR szValueW, _In_opt_ SIZE_T nValueLen, _In_opt_ SIZE_T nNameLen)
 {
     TAutoFreePtr<QUERYSTRINGITEM> cNewItem;
     SIZE_T nLen;
@@ -836,184 +827,190 @@ HRESULT CUrl::ToString(_Inout_ CStringA &cStrDestA, _In_ eToStringFlags nFlags)
     nSchemeType = Scheme2Enum((LPCWSTR)cStrSchemeW);
     switch (nSchemeType)
     {
-    case CUrl::eScheme::None:
+        case CUrl::eScheme::None:
 #if defined(ENABLE_FILE_SCHEME_AUTODETECTION)
-        // no scheme, check if path is relative else assume file
-        sW = (LPCWSTR)cStrPathW;
+            // no scheme, check if path is relative else assume file
+            sW = (LPCWSTR)cStrPathW;
 
-        // count the number of slashes
-        for (i = 0; sW[i] == '/'; i++)
-            ;
-
-        // check 4 drive letter specification
-        if (IsAlpha(sW[i]) != FALSE && (sW[i + 1] == L':' || sW[i + 1] == L'|'))
-        {
-            // drive letter?
-            if ((nFlags & ToStringAddScheme) != 0)
+            // count the number of slashes
+            for (i = 0; sW[i] == '/'; i++)
             {
-                if (cStrDestA.Concat("file://") == FALSE)
-                    goto err_nomem;
-            }
-        }
-        else if (i > 0)
-        {
-            if ((nFlags & ToStringAddScheme) != 0)
-            {
-                if (cStrDestA.Concat("file://") == FALSE)
-                    goto err_nomem;
-            }
-        }
-#endif // ENABLE_FILE_SCHEME_AUTODETECTION
-
-        if ((nFlags & eToStringFlags::AddPath) != (eToStringFlags)0)
-        {
-            if (cStrPathW.IsEmpty() != FALSE)
-            {
-                if (cStrDestA.Concat("/") == FALSE)
-                {
-                err_nomem:
-                    hRes = E_OUTOFMEMORY;
-                    goto done;
-                }
-            }
-            else
-            {
-                if (cStrTempW.Copy((LPCWSTR)cStrPathW) == FALSE)
-                {
-                    goto err_nomem;
-                }
-                if ((nFlags & eToStringFlags::ShrinkPath) == (eToStringFlags)0)
-                {
-                    hRes = NormalizePath(cStrTempW, (LPCWSTR)cStrSchemeW);
-                }
-                else
-                {
-                    hRes = ReducePath(cStrTempW, (LPCWSTR)cStrSchemeW);
-                }
-                if (SUCCEEDED(hRes))
-                {
-                    hRes = ToStringEncode(cStrDestA, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), "/@:");
-                }
-                if (FAILED(hRes))
-                {
-                    goto done;
-                }
-            }
-        }
-        break;
-
-    case CUrl::eScheme::MailTo:
-    case CUrl::eScheme::News:
-        if ((nFlags & eToStringFlags::AddScheme) != (eToStringFlags)0)
-        {
-            if (cStrDestA.Concat((nSchemeType == CUrl::eScheme::MailTo) ? "mailto:" : "news:") == FALSE)
-            {
-                goto err_nomem;
-            }
-        }
-        if ((nFlags & eToStringFlags::AddPath) != (eToStringFlags)0)
-        {
-            hRes = ToStringEncode(cStrDestA, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), "/@:");
-            if (FAILED(hRes))
-            {
-                goto done;
-            }
-        }
-        break;
-
-    default:
-        if ((nFlags & eToStringFlags::AddScheme) != (eToStringFlags)0)
-        {
-            if (cStrDestA.Concat((LPCWSTR)cStrSchemeW) == FALSE || cStrDestA.Concat("://") == FALSE)
-            {
-                goto err_nomem;
-            }
-        }
-
-        // add host
-        if ((nFlags & eToStringFlags::AddHostPort) != (eToStringFlags)0 && cStrHostW.IsEmpty() == FALSE &&
-            nSchemeType != CUrl::eScheme::File)
-        {
-            if ((nFlags & eToStringFlags::AddUserInfo) != (eToStringFlags)0 && cStrUserInfoW.IsEmpty() == FALSE)
-            {
-                hRes = ToStringEncode(cStrDestA, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), "!$&'()*+,;=:");
-                if (FAILED(hRes))
-                {
-                    goto done;
-                }
-                if (cStrDestA.Concat("@") == FALSE)
-                {
-                    goto err_nomem;
-                }
+                ;
             }
 
-            // use idna
-            hRes = Punycode_Encode(cStrTempA, (LPWSTR)cStrHostW, cStrHostW.GetLength());
-            if (FAILED(hRes))
+            // check 4 drive letter specification
+            if (IsAlpha(sW[i]) != FALSE && (sW[i + 1] == L':' || sW[i + 1] == L'|'))
             {
-                goto done;
-            }
-            if (cStrDestA.Concat((LPCSTR)cStrTempA) == FALSE)
-            {
-                goto err_nomem;
-            }
-
-            // add port
-            if (nPort >= 0)
-            {
-                for (i = 0; aValidSchemes[i].szNameW != NULL; i++)
+                // drive letter?
+                if ((nFlags & ToStringAddScheme) != 0)
                 {
-                    if (aValidSchemes[i].nCode == nSchemeType)
-                    {
-                        break;
-                    }
-                }
-                if ((nFlags & eToStringFlags::DontAddHostPortIfDefault) == (eToStringFlags)0 ||
-                    aValidSchemes[i].szNameW == NULL || aValidSchemes[i].nDefaultPort != nPort)
-                {
-                    if (cStrDestA.AppendFormat(":%ld", nPort) == FALSE)
+                    if (cStrDestA.Concat("file://") == FALSE)
                     {
                         goto err_nomem;
                     }
                 }
             }
-        }
-
-        // add path
-        if ((nFlags & eToStringFlags::AddPath) != (eToStringFlags)0)
-        {
-            if (cStrPathW.IsEmpty() != FALSE)
+            else if (i > 0)
             {
-                if (cStrDestA.Concat("/") == FALSE)
+                if ((nFlags & ToStringAddScheme) != 0)
+                {
+                    if (cStrDestA.Concat("file://") == FALSE)
+                    {
+                        goto err_nomem;
+                    }
+                }
+            }
+#endif // ENABLE_FILE_SCHEME_AUTODETECTION
+
+            if ((nFlags & eToStringFlags::AddPath) != (eToStringFlags)0)
+            {
+                if (cStrPathW.IsEmpty() != FALSE)
+                {
+                    if (cStrDestA.Concat("/") == FALSE)
+                    {
+err_nomem:
+                        hRes = E_OUTOFMEMORY;
+                        goto done;
+                    }
+                }
+                else
+                {
+                    if (cStrTempW.Copy((LPCWSTR)cStrPathW) == FALSE)
+                    {
+                        goto err_nomem;
+                    }
+                    if ((nFlags & eToStringFlags::ShrinkPath) == (eToStringFlags)0)
+                    {
+                        hRes = NormalizePath(cStrTempW, (LPCWSTR)cStrSchemeW);
+                    }
+                    else
+                    {
+                        hRes = ReducePath(cStrTempW, (LPCWSTR)cStrSchemeW);
+                    }
+                    if (SUCCEEDED(hRes))
+                    {
+                        hRes = ToStringEncode(cStrDestA, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), "/@:");
+                    }
+                    if (FAILED(hRes))
+                    {
+                        goto done;
+                    }
+                }
+            }
+            break;
+
+        case CUrl::eScheme::MailTo:
+        case CUrl::eScheme::News:
+            if ((nFlags & eToStringFlags::AddScheme) != (eToStringFlags)0)
+            {
+                if (cStrDestA.Concat((nSchemeType == CUrl::eScheme::MailTo) ? "mailto:" : "news:") == FALSE)
                 {
                     goto err_nomem;
                 }
             }
-            else
+            if ((nFlags & eToStringFlags::AddPath) != (eToStringFlags)0)
             {
-                if (cStrTempW.Copy((LPCWSTR)cStrPathW) == FALSE)
-                {
-                    goto err_nomem;
-                }
-                if ((nFlags & eToStringFlags::ShrinkPath) == (eToStringFlags)0)
-                {
-                    hRes = NormalizePath(cStrTempW, (LPCWSTR)cStrSchemeW);
-                }
-                else
-                {
-                    hRes = ReducePath(cStrTempW, (LPCWSTR)cStrSchemeW);
-                }
-                if (SUCCEEDED(hRes))
-                {
-                    hRes = ToStringEncode(cStrDestA, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), "/");
-                }
+                hRes = ToStringEncode(cStrDestA, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), "/@:");
                 if (FAILED(hRes))
                 {
                     goto done;
                 }
             }
-        }
-        break;
+            break;
+
+        default:
+            if ((nFlags & eToStringFlags::AddScheme) != (eToStringFlags)0)
+            {
+                if (cStrDestA.Concat((LPCWSTR)cStrSchemeW) == FALSE || cStrDestA.Concat("://") == FALSE)
+                {
+                    goto err_nomem;
+                }
+            }
+
+            // add host
+            if ((nFlags & eToStringFlags::AddHostPort) != (eToStringFlags)0 && cStrHostW.IsEmpty() == FALSE &&
+                nSchemeType != CUrl::eScheme::File)
+            {
+                if ((nFlags & eToStringFlags::AddUserInfo) != (eToStringFlags)0 && cStrUserInfoW.IsEmpty() == FALSE)
+                {
+                    hRes = ToStringEncode(cStrDestA, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), "!$&'()*+,;=:");
+                    if (FAILED(hRes))
+                    {
+                        goto done;
+                    }
+                    if (cStrDestA.Concat("@") == FALSE)
+                    {
+                        goto err_nomem;
+                    }
+                }
+
+                // use idna
+                hRes = Punycode_Encode(cStrTempA, (LPWSTR)cStrHostW, cStrHostW.GetLength());
+                if (FAILED(hRes))
+                {
+                    goto done;
+                }
+                if (cStrDestA.Concat((LPCSTR)cStrTempA) == FALSE)
+                {
+                    goto err_nomem;
+                }
+
+                // add port
+                if (nPort >= 0)
+                {
+                    for (i = 0; aValidSchemes[i].szNameW != NULL; i++)
+                    {
+                        if (aValidSchemes[i].nCode == nSchemeType)
+                        {
+                            break;
+                        }
+                    }
+                    if ((nFlags & eToStringFlags::DontAddHostPortIfDefault) == (eToStringFlags)0 ||
+                        aValidSchemes[i].szNameW == NULL || aValidSchemes[i].nDefaultPort != nPort)
+                    {
+                        if (cStrDestA.AppendFormat(":%ld", nPort) == FALSE)
+                        {
+                            goto err_nomem;
+                        }
+                    }
+                }
+            }
+
+            // add path
+            if ((nFlags & eToStringFlags::AddPath) != (eToStringFlags)0)
+            {
+                if (cStrPathW.IsEmpty() != FALSE)
+                {
+                    if (cStrDestA.Concat("/") == FALSE)
+                    {
+                        goto err_nomem;
+                    }
+                }
+                else
+                {
+                    if (cStrTempW.Copy((LPCWSTR)cStrPathW) == FALSE)
+                    {
+                        goto err_nomem;
+                    }
+                    if ((nFlags & eToStringFlags::ShrinkPath) == (eToStringFlags)0)
+                    {
+                        hRes = NormalizePath(cStrTempW, (LPCWSTR)cStrSchemeW);
+                    }
+                    else
+                    {
+                        hRes = ReducePath(cStrTempW, (LPCWSTR)cStrSchemeW);
+                    }
+                    if (SUCCEEDED(hRes))
+                    {
+                        hRes = ToStringEncode(cStrDestA, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), "/");
+                    }
+                    if (FAILED(hRes))
+                    {
+                        goto done;
+                    }
+                }
+            }
+            break;
     }
 
     // query strings
@@ -1026,8 +1023,7 @@ HRESULT CUrl::ToString(_Inout_ CStringA &cStrDestA, _In_ eToStringFlags nFlags)
             {
                 goto err_nomem;
             }
-            hRes =
-                ToStringEncode(cStrDestA, cQueryStringsList[i]->szNameW, StrLenW(cQueryStringsList[i]->szNameW), NULL);
+            hRes = ToStringEncode(cStrDestA, cQueryStringsList[i]->szNameW, StrLenW(cQueryStringsList[i]->szNameW), NULL);
             if (FAILED(hRes))
             {
                 goto done;
@@ -1038,8 +1034,7 @@ HRESULT CUrl::ToString(_Inout_ CStringA &cStrDestA, _In_ eToStringFlags nFlags)
                 {
                     goto err_nomem;
                 }
-                hRes = ToStringEncode(cStrDestA, cQueryStringsList[i]->szValueW,
-                                      StrLenW(cQueryStringsList[i]->szValueW), NULL);
+                hRes = ToStringEncode(cStrDestA, cQueryStringsList[i]->szValueW, StrLenW(cQueryStringsList[i]->szValueW), NULL);
                 if (FAILED(hRes))
                 {
                     goto done;
@@ -1087,177 +1082,183 @@ HRESULT CUrl::ToString(_Inout_ CStringW &cStrDestW, _In_ eToStringFlags nFlags)
     nSchemeType = Scheme2Enum((LPCWSTR)cStrSchemeW);
     switch (nSchemeType)
     {
-    case CUrl::eScheme::None:
+        case CUrl::eScheme::None:
 #if defined(ENABLE_FILE_SCHEME_AUTODETECTION)
-        // no scheme, check if path is relative else assume file
-        sW = (LPCWSTR)cStrPathW;
+            // no scheme, check if path is relative else assume file
+            sW = (LPCWSTR)cStrPathW;
 
-        // count the number of slashes
-        for (i = 0; sW[i] == '/'; i++)
-            ;
-
-        // check 4 drive letter specification
-        if (IsAlpha(sW[i]) != FALSE && (sW[i + 1] == L':' || sW[i + 1] == L'|'))
-        {
-            // drive letter?
-            if ((nFlags & ToStringAddScheme) != 0)
+            // count the number of slashes
+            for (i = 0; sW[i] == '/'; i++)
             {
-                if (cStrDestW.Concat(L"file://") == FALSE)
-                    goto err_nomem;
-            }
-        }
-        else if (i > 0)
-        {
-            if ((nFlags & ToStringAddScheme) != 0)
-            {
-                if (cStrDestW.Concat(L"file://") == FALSE)
-                    goto err_nomem;
-            }
-        }
-#endif // ENABLE_FILE_SCHEME_AUTODETECTION
-
-        if ((nFlags & eToStringFlags::AddPath) != (eToStringFlags)0)
-        {
-            if (cStrPathW.IsEmpty() != FALSE)
-            {
-                if (cStrDestW.Concat(L"/") == FALSE)
-                {
-                err_nomem:
-                    hRes = E_OUTOFMEMORY;
-                    goto done;
-                }
-            }
-            else
-            {
-                if (cStrTempW.Copy((LPCWSTR)cStrPathW) == FALSE)
-                {
-                    goto err_nomem;
-                }
-                if ((nFlags & eToStringFlags::ShrinkPath) == (eToStringFlags)0)
-                {
-                    hRes = NormalizePath(cStrTempW, (LPCWSTR)cStrSchemeW);
-                }
-                else
-                {
-                    hRes = ReducePath(cStrTempW, (LPCWSTR)cStrSchemeW);
-                }
-                if (SUCCEEDED(hRes))
-                {
-                    hRes = ToStringEncode(cStrDestW, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), L"/@:");
-                }
-                if (FAILED(hRes))
-                {
-                    goto done;
-                }
-            }
-        }
-        break;
-
-    case CUrl::eScheme::MailTo:
-    case CUrl::eScheme::News:
-        if ((nFlags & eToStringFlags::AddScheme) != (eToStringFlags)0)
-        {
-            if (cStrDestW.Concat((nSchemeType == CUrl::eScheme::MailTo) ? L"mailto:" : L"news:") == FALSE)
-            {
-                goto err_nomem;
-            }
-        }
-        if ((nFlags & eToStringFlags::AddPath) != (eToStringFlags)0)
-        {
-            hRes = ToStringEncode(cStrDestW, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), L"/@:");
-            if (FAILED(hRes))
-            {
-                goto done;
-            }
-        }
-        break;
-
-    default:
-        if ((nFlags & eToStringFlags::AddScheme) != (eToStringFlags)0)
-        {
-            if (cStrDestW.Concat((LPCWSTR)cStrSchemeW) == FALSE || cStrDestW.Concat(L"://") == FALSE)
-            {
-                goto err_nomem;
-            }
-        }
-
-        // add host
-        if ((nFlags & eToStringFlags::AddHostPort) != (eToStringFlags)0 && cStrHostW.IsEmpty() == FALSE &&
-            nSchemeType != CUrl::eScheme::File)
-        {
-            if ((nFlags & eToStringFlags::AddUserInfo) != (eToStringFlags)0 && cStrUserInfoW.IsEmpty() == FALSE)
-            {
-                hRes = ToStringEncode(cStrDestW, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), L"!$&'()*+,;=:");
-                if (FAILED(hRes))
-                {
-                    goto done;
-                }
-                if (cStrDestW.Concat(L"@") == FALSE)
-                {
-                    goto err_nomem;
-                }
-            }
-            // add host
-            if (cStrDestW.Concat((LPCWSTR)cStrHostW) == FALSE)
-            {
-                goto err_nomem;
+                ;
             }
 
-            // add port
-            if (nPort >= 0)
+            // check 4 drive letter specification
+            if (IsAlpha(sW[i]) != FALSE && (sW[i + 1] == L':' || sW[i + 1] == L'|'))
             {
-                for (i = 0; aValidSchemes[i].szNameW != NULL; i++)
+                // drive letter?
+                if ((nFlags & ToStringAddScheme) != 0)
                 {
-                    if (aValidSchemes[i].nCode == nSchemeType)
-                    {
-                        break;
-                    }
-                }
-                if (aValidSchemes[i].szNameW == NULL || aValidSchemes[i].nDefaultPort != nPort)
-                {
-                    if (cStrDestW.AppendFormat(L":%ld", nPort) == FALSE)
+                    if (cStrDestW.Concat(L"file://") == FALSE)
                     {
                         goto err_nomem;
                     }
                 }
             }
-        }
-
-        // add path
-        if ((nFlags & eToStringFlags::AddPath) != (eToStringFlags)0)
-        {
-            if (cStrPathW.IsEmpty() != FALSE)
+            else if (i > 0)
             {
-                if (cStrDestW.Concat(L"/") == FALSE)
+                if ((nFlags & ToStringAddScheme) != 0)
+                {
+                    if (cStrDestW.Concat(L"file://") == FALSE)
+                    {
+                        goto err_nomem;
+                    }
+                }
+            }
+#endif // ENABLE_FILE_SCHEME_AUTODETECTION
+
+            if ((nFlags & eToStringFlags::AddPath) != (eToStringFlags)0)
+            {
+                if (cStrPathW.IsEmpty() != FALSE)
+                {
+                    if (cStrDestW.Concat(L"/") == FALSE)
+                    {
+err_nomem:
+                        hRes = E_OUTOFMEMORY;
+                        goto done;
+                    }
+                }
+                else
+                {
+                    if (cStrTempW.Copy((LPCWSTR)cStrPathW) == FALSE)
+                    {
+                        goto err_nomem;
+                    }
+                    if ((nFlags & eToStringFlags::ShrinkPath) == (eToStringFlags)0)
+                    {
+                        hRes = NormalizePath(cStrTempW, (LPCWSTR)cStrSchemeW);
+                    }
+                    else
+                    {
+                        hRes = ReducePath(cStrTempW, (LPCWSTR)cStrSchemeW);
+                    }
+                    if (SUCCEEDED(hRes))
+                    {
+                        hRes = ToStringEncode(cStrDestW, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), L"/@:");
+                    }
+                    if (FAILED(hRes))
+                    {
+                        goto done;
+                    }
+                }
+            }
+            break;
+
+        case CUrl::eScheme::MailTo:
+        case CUrl::eScheme::News:
+            if ((nFlags & eToStringFlags::AddScheme) != (eToStringFlags)0)
+            {
+                if (cStrDestW.Concat((nSchemeType == CUrl::eScheme::MailTo) ? L"mailto:" : L"news:") == FALSE)
                 {
                     goto err_nomem;
                 }
             }
-            else
+            if ((nFlags & eToStringFlags::AddPath) != (eToStringFlags)0)
             {
-                if (cStrTempW.Copy((LPCWSTR)cStrPathW) == FALSE)
-                {
-                    goto err_nomem;
-                }
-                if ((nFlags & eToStringFlags::ShrinkPath) == (eToStringFlags)0)
-                {
-                    hRes = NormalizePath(cStrTempW, (LPCWSTR)cStrSchemeW);
-                }
-                else
-                {
-                    hRes = ReducePath(cStrTempW, (LPCWSTR)cStrSchemeW);
-                }
-                if (SUCCEEDED(hRes))
-                {
-                    hRes = ToStringEncode(cStrDestW, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), L"/");
-                }
+                hRes = ToStringEncode(cStrDestW, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), L"/@:");
                 if (FAILED(hRes))
                 {
                     goto done;
                 }
             }
-        }
-        break;
+            break;
+
+        default:
+            if ((nFlags & eToStringFlags::AddScheme) != (eToStringFlags)0)
+            {
+                if (cStrDestW.Concat((LPCWSTR)cStrSchemeW) == FALSE || cStrDestW.Concat(L"://") == FALSE)
+                {
+                    goto err_nomem;
+                }
+            }
+
+            // add host
+            if ((nFlags & eToStringFlags::AddHostPort) != (eToStringFlags)0 && cStrHostW.IsEmpty() == FALSE &&
+                nSchemeType != CUrl::eScheme::File)
+            {
+                if ((nFlags & eToStringFlags::AddUserInfo) != (eToStringFlags)0 && cStrUserInfoW.IsEmpty() == FALSE)
+                {
+                    hRes = ToStringEncode(cStrDestW, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), L"!$&'()*+,;=:");
+                    if (FAILED(hRes))
+                    {
+                        goto done;
+                    }
+                    if (cStrDestW.Concat(L"@") == FALSE)
+                    {
+                        goto err_nomem;
+                    }
+                }
+                // add host
+                if (cStrDestW.Concat((LPCWSTR)cStrHostW) == FALSE)
+                {
+                    goto err_nomem;
+                }
+
+                // add port
+                if (nPort >= 0)
+                {
+                    for (i = 0; aValidSchemes[i].szNameW != NULL; i++)
+                    {
+                        if (aValidSchemes[i].nCode == nSchemeType)
+                        {
+                            break;
+                        }
+                    }
+                    if (aValidSchemes[i].szNameW == NULL || aValidSchemes[i].nDefaultPort != nPort)
+                    {
+                        if (cStrDestW.AppendFormat(L":%ld", nPort) == FALSE)
+                        {
+                            goto err_nomem;
+                        }
+                    }
+                }
+            }
+
+            // add path
+            if ((nFlags & eToStringFlags::AddPath) != (eToStringFlags)0)
+            {
+                if (cStrPathW.IsEmpty() != FALSE)
+                {
+                    if (cStrDestW.Concat(L"/") == FALSE)
+                    {
+                        goto err_nomem;
+                    }
+                }
+                else
+                {
+                    if (cStrTempW.Copy((LPCWSTR)cStrPathW) == FALSE)
+                    {
+                        goto err_nomem;
+                    }
+                    if ((nFlags & eToStringFlags::ShrinkPath) == (eToStringFlags)0)
+                    {
+                        hRes = NormalizePath(cStrTempW, (LPCWSTR)cStrSchemeW);
+                    }
+                    else
+                    {
+                        hRes = ReducePath(cStrTempW, (LPCWSTR)cStrSchemeW);
+                    }
+                    if (SUCCEEDED(hRes))
+                    {
+                        hRes = ToStringEncode(cStrDestW, (LPCWSTR)cStrTempW, cStrTempW.GetLength(), L"/");
+                    }
+                    if (FAILED(hRes))
+                    {
+                        goto done;
+                    }
+                }
+            }
+            break;
     }
 
     // query strings
@@ -1270,8 +1271,7 @@ HRESULT CUrl::ToString(_Inout_ CStringW &cStrDestW, _In_ eToStringFlags nFlags)
             {
                 goto err_nomem;
             }
-            hRes =
-                ToStringEncode(cStrDestW, cQueryStringsList[i]->szNameW, StrLenW(cQueryStringsList[i]->szNameW), NULL);
+            hRes = ToStringEncode(cStrDestW, cQueryStringsList[i]->szNameW, StrLenW(cQueryStringsList[i]->szNameW), NULL);
             if (FAILED(hRes))
             {
                 goto done;
@@ -1282,8 +1282,7 @@ HRESULT CUrl::ToString(_Inout_ CStringW &cStrDestW, _In_ eToStringFlags nFlags)
                 {
                     goto err_nomem;
                 }
-                hRes = ToStringEncode(cStrDestW, cQueryStringsList[i]->szValueW,
-                                      StrLenW(cQueryStringsList[i]->szValueW), NULL);
+                hRes = ToStringEncode(cStrDestW, cQueryStringsList[i]->szValueW, StrLenW(cQueryStringsList[i]->szValueW), NULL);
                 if (FAILED(hRes))
                 {
                     goto done;
@@ -1354,7 +1353,7 @@ HRESULT CUrl::ParseFromString(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nSrcLen)
     nPos = FindChar(szUrlA, nSrcLen, ":", "@?#/\\");
     if (nPos == 0)
     {
-    err_fail:
+err_fail:
         hRes = E_FAIL;
         goto done;
     }
@@ -1376,7 +1375,9 @@ HRESULT CUrl::ParseFromString(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nSrcLen)
         {
             // if at least one slash, assume a file so set scheme
             if (cStrSchemeW.Copy(L"file") == FALSE)
+            {
                 goto goto err_nomem;
+            }
             nSchemeType = CUrl::eScheme::File;
         }
 #endif // ENABLE_FILE_SCHEME_AUTODETECTION
@@ -1398,9 +1399,13 @@ HRESULT CUrl::ParseFromString(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nSrcLen)
     {
         // there must be a letter and an absolute path
         if (IsAlpha(*szUrlA) == FALSE || IsSlash(szUrlA[2]) == FALSE)
+        {
             goto err_fail;
+        }
         if (cStrSchemeW.Copy(L"file") == FALSE)
+        {
             goto err_nomem;
+        }
         nSchemeType = CUrl::eScheme::File;
         goto copy_path;
     }
@@ -1409,7 +1414,7 @@ HRESULT CUrl::ParseFromString(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nSrcLen)
     // it is a valid (?) scheme
     if (cStrTempA.CopyN(szUrlA, nPos) == FALSE)
     {
-    err_nomem:
+err_nomem:
         hRes = E_OUTOFMEMORY;
         goto done;
     }
@@ -1481,35 +1486,35 @@ HRESULT CUrl::ParseFromString(_In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nSrcLen)
     // check special case for file uri'sW where host name, if exists, is "localhost"
     switch (nSchemeType)
     {
-    case CUrl::eScheme::File:
-        if (cStrTempHostA.IsEmpty() == FALSE && IsLocalHost((LPCSTR)cStrTempHostA) != FALSE)
-        {
-            // strip
+        case CUrl::eScheme::File:
+            if (cStrTempHostA.IsEmpty() == FALSE && IsLocalHost((LPCSTR)cStrTempHostA) != FALSE)
+            {
+                // strip
+                szUrlA += nPos;
+                nSrcLen -= nPos;
+            }
+            cStrTempHostA.Empty();
+
+            // count the number of slashes
+            for (i = nSrcLen, sA = szUrlA; i > 0 && IsSlash(*sA) != FALSE; sA++, i--)
+            {
+                ;
+            }
+            i = nSrcLen - i; //'i' has the number of slashes
+
+            // if there are more than two slashes in the front, leave only two
+            if (i > 2)
+            {
+                szUrlA += (i - 2);
+                nSrcLen -= (i - 2);
+            }
+            break;
+
+        default:
+            // host item is valid (?)
             szUrlA += nPos;
             nSrcLen -= nPos;
-        }
-        cStrTempHostA.Empty();
-
-        // count the number of slashes
-        for (i = nSrcLen, sA = szUrlA; i > 0 && IsSlash(*sA) != FALSE; sA++, i--)
-        {
-            ;
-        }
-        i = nSrcLen - i; //'i' has the number of slashes
-
-        // if there are more than two slashes in the front, leave only two
-        if (i > 2)
-        {
-            szUrlA += (i - 2);
-            nSrcLen -= (i - 2);
-        }
-        break;
-
-    default:
-        // host item is valid (?)
-        szUrlA += nPos;
-        nSrcLen -= nPos;
-        break;
+            break;
     }
 
     // well, at this point we are able to copy the path
@@ -1749,7 +1754,7 @@ HRESULT CUrl::ParseFromString(_In_z_ LPCWSTR szUrlW, _In_opt_ SIZE_T nSrcLen)
     nPos = FindChar(szUrlW, nSrcLen, L":", L"@?#/\\");
     if (nPos == 0)
     {
-    err_fail:
+err_fail:
         hRes = E_FAIL;
         goto done;
     }
@@ -1771,7 +1776,9 @@ HRESULT CUrl::ParseFromString(_In_z_ LPCWSTR szUrlW, _In_opt_ SIZE_T nSrcLen)
         {
             // if at least one slash, assume a file so set scheme
             if (cStrSchemeW.Copy(L"file") == FALSE)
+            {
                 goto err_nomem;
+            }
         }
 #endif // ENABLE_FILE_SCHEME_AUTODETECTION
 
@@ -1792,9 +1799,13 @@ HRESULT CUrl::ParseFromString(_In_z_ LPCWSTR szUrlW, _In_opt_ SIZE_T nSrcLen)
     {
         // there must be a letter and an absolute path
         if (IsAlpha(*szUrlW) == FALSE || IsSlash(szUrlW[2]) == FALSE)
+        {
             goto err_fail;
+        }
         if (cStrSchemeW.Copy(L"file") == FALSE)
+        {
             goto err_nomem;
+        }
         goto copy_path;
     }
 #endif // ENABLE_FILE_SCHEME_AUTODETECTION
@@ -1802,7 +1813,7 @@ HRESULT CUrl::ParseFromString(_In_z_ LPCWSTR szUrlW, _In_opt_ SIZE_T nSrcLen)
     // it is a valid (?) scheme
     if (cStrTempW.CopyN(szUrlW, nPos) == FALSE)
     {
-    err_nomem:
+err_nomem:
         hRes = E_OUTOFMEMORY;
         goto done;
     }
@@ -1869,35 +1880,35 @@ HRESULT CUrl::ParseFromString(_In_z_ LPCWSTR szUrlW, _In_opt_ SIZE_T nSrcLen)
     // check special case for file uri'sW where host name, if exists, is "localhost"
     switch (nSchemeType)
     {
-    case CUrl::eScheme::File:
-        if (cStrTempHostW.IsEmpty() == FALSE && IsLocalHost((LPCWSTR)cStrTempHostW) != FALSE)
-        {
-            // strip
+        case CUrl::eScheme::File:
+            if (cStrTempHostW.IsEmpty() == FALSE && IsLocalHost((LPCWSTR)cStrTempHostW) != FALSE)
+            {
+                // strip
+                szUrlW += nPos;
+                nSrcLen -= nPos;
+            }
+            cStrTempHostW.Empty();
+
+            // count the number of slashes
+            for (i = nSrcLen, sW = szUrlW; i > 0 && IsSlash(*sW) != FALSE; sW++, i--)
+            {
+                ;
+            }
+            i = nSrcLen - i; //'i' has the number of slashes
+
+            // if there are more than two slashes in the front, leave only two
+            if (i > 2)
+            {
+                szUrlW += (i - 2);
+                nSrcLen -= (i - 2);
+            }
+            break;
+
+        default:
+            // host item is valid (?)
             szUrlW += nPos;
             nSrcLen -= nPos;
-        }
-        cStrTempHostW.Empty();
-
-        // count the number of slashes
-        for (i = nSrcLen, sW = szUrlW; i > 0 && IsSlash(*sW) != FALSE; sW++, i--)
-        {
-            ;
-        }
-        i = nSrcLen - i; //'i' has the number of slashes
-
-        // if there are more than two slashes in the front, leave only two
-        if (i > 2)
-        {
-            szUrlW += (i - 2);
-            nSrcLen -= (i - 2);
-        }
-        break;
-
-    default:
-        // host item is valid (?)
-        szUrlW += nPos;
-        nSrcLen -= nPos;
-        break;
+            break;
     }
 
     // well, at this point we are able to copy the path
@@ -2148,7 +2159,7 @@ HRESULT CUrl::Merge(_In_ const CUrl &cOtherUrl)
             lpParts->bPathIsAbsolute = TRUE;
         }
         else if (lpParts->nType == CUrl::eScheme::News || lpParts->nType == CUrl::eScheme::MailTo ||
-                 lpParts->nType == CUrl::eScheme::Unknown)
+              lpParts->nType == CUrl::eScheme::Unknown)
         {
             lpParts->bPathIsAbsolute = TRUE;
         }
@@ -2177,8 +2188,7 @@ HRESULT CUrl::Merge(_In_ const CUrl &cOtherUrl)
     else if (sOther.nType != CUrl::eScheme::None)
     {
         // if scheme changed... 'sOther' is absolute
-        if (cStrSchemeW.Copy((LPCWSTR)(cOtherUrl.cStrSchemeW)) == FALSE ||
-            cStrHostW.Copy((LPCWSTR)(cOtherUrl.cStrHostW)) == FALSE ||
+        if (cStrSchemeW.Copy((LPCWSTR)(cOtherUrl.cStrSchemeW)) == FALSE || cStrHostW.Copy((LPCWSTR)(cOtherUrl.cStrHostW)) == FALSE ||
             cStrPathW.CopyN(sOther.szPathW, sOther.nPathLength) == FALSE)
         {
             return E_OUTOFMEMORY;
@@ -2207,8 +2217,7 @@ HRESULT CUrl::Merge(_In_ const CUrl &cOtherUrl)
                 return E_OUTOFMEMORY;
             }
         }
-        if (cStrHostW.Copy((LPCWSTR)(cOtherUrl.cStrHostW)) == FALSE ||
-            cStrPathW.CopyN(sOther.szPathW, sOther.nPathLength) == FALSE)
+        if (cStrHostW.Copy((LPCWSTR)(cOtherUrl.cStrHostW)) == FALSE || cStrPathW.CopyN(sOther.szPathW, sOther.nPathLength) == FALSE)
         {
             return E_OUTOFMEMORY;
         }
@@ -2262,8 +2271,7 @@ merge_copyqueryandfrag:
     {
         nNameLen = StrLenW(cOtherUrl.cQueryStringsList[i]->szNameW);
         nValueLen = StrLenW(cOtherUrl.cQueryStringsList[i]->szValueW);
-        cNewItem.Attach(
-            (LPQUERYSTRINGITEM)MX_MALLOC(sizeof(QUERYSTRINGITEM) + (nNameLen + nValueLen + 1) * sizeof(WCHAR)));
+        cNewItem.Attach((LPQUERYSTRINGITEM)MX_MALLOC(sizeof(QUERYSTRINGITEM) + (nNameLen + nValueLen + 1) * sizeof(WCHAR)));
         if (!cNewItem)
         {
             return E_OUTOFMEMORY;
@@ -2287,8 +2295,8 @@ merge_copyqueryandfrag:
     return S_OK;
 }
 
-HRESULT CUrl::Encode(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nUrlLen,
-                     _In_opt_z_ LPCSTR szAllowedCharsA, _In_opt_ BOOL bAppend)
+HRESULT CUrl::Encode(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szUrlA, _In_opt_ SIZE_T nUrlLen, _In_opt_z_ LPCSTR szAllowedCharsA,
+                     _In_opt_ BOOL bAppend)
 {
     CHAR chA[3];
     LPCSTR szStartA;
@@ -2412,52 +2420,52 @@ HRESULT CUrl::Decode(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szUrlA, _In_opt_
         {
             switch (*szUrlA)
             {
-            case '+':
-                if (cStrDestA.ConcatN(" ", 1) == FALSE)
-                {
-                    return E_OUTOFMEMORY;
-                }
-                szUrlA++;
-                nUrlLen--;
-                break;
-
-            case '%':
-                if (nUrlLen >= 3 && (chA = DecodePct(szUrlA)) != 0)
-                {
-                    if (cStrDestA.ConcatN(&chA, 1) == FALSE)
-                    {
-                        return E_OUTOFMEMORY;
-                    }
-                    szUrlA += 3;
-                    nUrlLen -= 3;
-                }
-                else if (nUrlLen >= 6 && (chW = DecodePctU(szUrlA)) != 0)
-                {
-                    hRes = Utf8_Encode(cStrTempA, &chW, 1);
-                    if (FAILED(hRes))
-                    {
-                        return hRes;
-                    }
-                    if (cStrDestA.Concat((LPSTR)cStrTempA) == FALSE)
-                    {
-                        return E_OUTOFMEMORY;
-                    }
-                    szUrlA += 6;
-                    nUrlLen -= 6;
-                }
-                else
-                {
-                    if (cStrDestA.ConcatN("%", 1) == FALSE)
+                case '+':
+                    if (cStrDestA.ConcatN(" ", 1) == FALSE)
                     {
                         return E_OUTOFMEMORY;
                     }
                     szUrlA++;
                     nUrlLen--;
-                }
-                break;
+                    break;
 
-            default:
-                return MX_E_InvalidData;
+                case '%':
+                    if (nUrlLen >= 3 && (chA = DecodePct(szUrlA)) != 0)
+                    {
+                        if (cStrDestA.ConcatN(&chA, 1) == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
+                        szUrlA += 3;
+                        nUrlLen -= 3;
+                    }
+                    else if (nUrlLen >= 6 && (chW = DecodePctU(szUrlA)) != 0)
+                    {
+                        hRes = Utf8_Encode(cStrTempA, &chW, 1);
+                        if (FAILED(hRes))
+                        {
+                            return hRes;
+                        }
+                        if (cStrDestA.Concat((LPSTR)cStrTempA) == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
+                        szUrlA += 6;
+                        nUrlLen -= 6;
+                    }
+                    else
+                    {
+                        if (cStrDestA.ConcatN("%", 1) == FALSE)
+                        {
+                            return E_OUTOFMEMORY;
+                        }
+                        szUrlA++;
+                        nUrlLen--;
+                    }
+                    break;
+
+                default:
+                    return MX_E_InvalidData;
             }
         }
     }
@@ -2553,8 +2561,7 @@ BOOL CUrl::IsValidHostAddress(_In_z_ LPCSTR szHostA, _In_opt_ SIZE_T nHostLen)
     {
         return TRUE;
     }
-    if (szHostA[0] == '[' && szHostA[nHostLen - 1] == ']' &&
-        HostResolver::IsValidIPV6(szHostA + 1, nHostLen - 2) != FALSE)
+    if (szHostA[0] == '[' && szHostA[nHostLen - 1] == ']' && HostResolver::IsValidIPV6(szHostA + 1, nHostLen - 2) != FALSE)
     {
         return TRUE;
     }
@@ -2599,8 +2606,7 @@ BOOL CUrl::IsValidHostAddress(_In_z_ LPCWSTR szHostW, _In_opt_ SIZE_T nHostLen)
     {
         return TRUE;
     }
-    if (szHostW[0] == L'[' && szHostW[nHostLen - 1] == L']' &&
-        HostResolver::IsValidIPV6(szHostW + 1, nHostLen - 2) != FALSE)
+    if (szHostW[0] == L'[' && szHostW[nHostLen - 1] == L']' && HostResolver::IsValidIPV6(szHostW + 1, nHostLen - 2) != FALSE)
     {
         return TRUE;
     }
@@ -2976,8 +2982,7 @@ static HRESULT ReducePath(_Inout_ MX::CStringW &cStrPathW, _In_z_ LPCWSTR szSche
     return (bValid != FALSE) ? S_OK : MX_E_InvalidData;
 }
 
-static HRESULT ToStringEncode(_Inout_ MX::CStringA &cStrDestA, _In_z_ LPCWSTR szStrW, _In_ SIZE_T nLen,
-                              _In_opt_z_ LPCSTR szAllowedCharsA)
+static HRESULT ToStringEncode(_Inout_ MX::CStringA &cStrDestA, _In_z_ LPCWSTR szStrW, _In_ SIZE_T nLen, _In_opt_z_ LPCSTR szAllowedCharsA)
 {
     CHAR chA[4], _chA[3];
     int i, nSize;
@@ -2987,8 +2992,7 @@ static HRESULT ToStringEncode(_Inout_ MX::CStringA &cStrDestA, _In_z_ LPCWSTR sz
         if (*szStrW < 127)
         {
             chA[0] = (CHAR)(UCHAR)(*szStrW);
-            if (IsUnreservedChar(chA[0]) != FALSE ||
-                (szAllowedCharsA != NULL && MX::StrChrA(szAllowedCharsA, chA[0]) != NULL))
+            if (IsUnreservedChar(chA[0]) != FALSE || (szAllowedCharsA != NULL && MX::StrChrA(szAllowedCharsA, chA[0]) != NULL))
             {
                 if (cStrDestA.ConcatN(chA, 1) == FALSE)
                 {
@@ -3031,8 +3035,7 @@ static HRESULT ToStringEncode(_Inout_ MX::CStringA &cStrDestA, _In_z_ LPCWSTR sz
     return S_OK;
 }
 
-static HRESULT ToStringEncode(_Inout_ MX::CStringW &cStrDestW, _In_z_ LPCWSTR szStrW, _In_ SIZE_T nLen,
-                              _In_opt_z_ LPCWSTR szAllowedCharsW)
+static HRESULT ToStringEncode(_Inout_ MX::CStringW &cStrDestW, _In_z_ LPCWSTR szStrW, _In_ SIZE_T nLen, _In_opt_z_ LPCWSTR szAllowedCharsW)
 {
     WCHAR chW[3];
     CHAR chA[4];
@@ -3040,8 +3043,7 @@ static HRESULT ToStringEncode(_Inout_ MX::CStringW &cStrDestW, _In_z_ LPCWSTR sz
 
     while (nLen > 0)
     {
-        if (IsUnreservedChar(*szStrW) != FALSE ||
-            (szAllowedCharsW != NULL && MX::StrChrW(szAllowedCharsW, *szStrW) != NULL))
+        if (IsUnreservedChar(*szStrW) != FALSE || (szAllowedCharsW != NULL && MX::StrChrW(szAllowedCharsW, *szStrW) != NULL))
         {
             if (cStrDestW.ConcatN(szStrW, 1) == FALSE)
             {
@@ -3083,8 +3085,7 @@ static HRESULT ToStringEncode(_Inout_ MX::CStringW &cStrDestW, _In_z_ LPCWSTR sz
     return S_OK;
 }
 
-static SIZE_T FindChar(_In_z_ LPCSTR szStrA, _In_ SIZE_T nSrcLen, _In_z_ LPCSTR szToFindA,
-                       _In_opt_z_ LPCSTR szStopCharA)
+static SIZE_T FindChar(_In_z_ LPCSTR szStrA, _In_ SIZE_T nSrcLen, _In_z_ LPCSTR szToFindA, _In_opt_z_ LPCSTR szStopCharA)
 {
     SIZE_T nCounter;
 
@@ -3107,8 +3108,7 @@ static SIZE_T FindChar(_In_z_ LPCSTR szStrA, _In_ SIZE_T nSrcLen, _In_z_ LPCSTR 
     return (SIZE_T)-1;
 }
 
-static SIZE_T FindChar(_In_z_ LPCWSTR szStrW, _In_ SIZE_T nSrcLen, _In_z_ LPCWSTR szToFindW,
-                       _In_opt_z_ LPCWSTR szStopCharW)
+static SIZE_T FindChar(_In_z_ LPCWSTR szStrW, _In_ SIZE_T nSrcLen, _In_z_ LPCWSTR szToFindW, _In_opt_z_ LPCWSTR szStopCharW)
 {
     SIZE_T nCounter;
 
@@ -3150,11 +3150,9 @@ static BOOL IsLocalHost(_In_z_ LPCSTR szHostA)
     if (MX::HostResolver::IsValidIPV6(szHostA, (SIZE_T)-1, &sAddr) != FALSE)
     {
         if (sAddr.Ipv6.sin6_addr.u.Word[0] == 0 && sAddr.Ipv6.sin6_addr.u.Word[1] == 0 &&
-            sAddr.Ipv6.sin6_addr.u.Word[2] == 0 && sAddr.Ipv6.sin6_addr.u.Word[3] == 0 &&
-            sAddr.Ipv6.sin6_addr.u.Word[4] == 0)
+            sAddr.Ipv6.sin6_addr.u.Word[2] == 0 && sAddr.Ipv6.sin6_addr.u.Word[3] == 0 && sAddr.Ipv6.sin6_addr.u.Word[4] == 0)
         {
-            if (sAddr.Ipv6.sin6_addr.u.Word[5] == 0 && sAddr.Ipv6.sin6_addr.u.Word[6] == 0 &&
-                sAddr.Ipv6.sin6_addr.u.Word[7] == 1)
+            if (sAddr.Ipv6.sin6_addr.u.Word[5] == 0 && sAddr.Ipv6.sin6_addr.u.Word[6] == 0 && sAddr.Ipv6.sin6_addr.u.Word[7] == 1)
             {
                 return TRUE;
             }
@@ -3187,11 +3185,9 @@ static BOOL IsLocalHost(_In_z_ LPCWSTR szHostW)
     if (MX::HostResolver::IsValidIPV6(szHostW, (SIZE_T)-1, &sAddr) != FALSE)
     {
         if (sAddr.Ipv6.sin6_addr.u.Word[0] == 0 && sAddr.Ipv6.sin6_addr.u.Word[1] == 0 &&
-            sAddr.Ipv6.sin6_addr.u.Word[2] == 0 && sAddr.Ipv6.sin6_addr.u.Word[3] == 0 &&
-            sAddr.Ipv6.sin6_addr.u.Word[4] == 0)
+            sAddr.Ipv6.sin6_addr.u.Word[2] == 0 && sAddr.Ipv6.sin6_addr.u.Word[3] == 0 && sAddr.Ipv6.sin6_addr.u.Word[4] == 0)
         {
-            if (sAddr.Ipv6.sin6_addr.u.Word[5] == 0 && sAddr.Ipv6.sin6_addr.u.Word[6] == 0 &&
-                sAddr.Ipv6.sin6_addr.u.Word[7] == 1)
+            if (sAddr.Ipv6.sin6_addr.u.Word[5] == 0 && sAddr.Ipv6.sin6_addr.u.Word[6] == 0 && sAddr.Ipv6.sin6_addr.u.Word[7] == 1)
             {
                 return TRUE;
             }
@@ -3210,8 +3206,8 @@ static BOOL HasDisallowedEscapedSequences(_In_z_ LPCSTR szSrcA, _In_ SIZE_T nSrc
     return (MX::StrNFindA(szSrcA, "%00", nSrcLen) != NULL || MX::StrNFindA(szSrcA, "%2F", nSrcLen) != NULL ||
             MX::StrNFindA(szSrcA, "%5C", nSrcLen) != NULL || MX::StrNFindA(szSrcA, "%u0000", nSrcLen) != NULL ||
             MX::StrNFindA(szSrcA, "%u002F", nSrcLen) != NULL || MX::StrNFindA(szSrcA, "%u005C", nSrcLen) != NULL)
-               ? TRUE
-               : FALSE;
+        ? TRUE
+        : FALSE;
 }
 
 static BOOL HasDisallowedEscapedSequences(_In_z_ LPCWSTR szSrcW, _In_ SIZE_T nSrcLen)
@@ -3219,6 +3215,6 @@ static BOOL HasDisallowedEscapedSequences(_In_z_ LPCWSTR szSrcW, _In_ SIZE_T nSr
     return (MX::StrNFindW(szSrcW, L"%00", nSrcLen) != NULL || MX::StrNFindW(szSrcW, L"%2F", nSrcLen) != NULL ||
             MX::StrNFindW(szSrcW, L"%5C", nSrcLen) != NULL || MX::StrNFindW(szSrcW, L"%u0000", nSrcLen) != NULL ||
             MX::StrNFindW(szSrcW, L"%u002F", nSrcLen) != NULL || MX::StrNFindW(szSrcW, L"%u005C", nSrcLen) != NULL)
-               ? TRUE
-               : FALSE;
+        ? TRUE
+        : FALSE;
 }

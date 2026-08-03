@@ -22,27 +22,26 @@
 
 #include "HttpHeaderBase.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderRespLocation : public CHttpHeaderBase
 {
-  public:
+public:
     CHttpHeaderRespLocation();
     ~CHttpHeaderRespLocation();
 
-    MX_DECLARE_HTTPHEADER_NAME(Location)
+    MX_DECLARE_HTTPHEADER_NAME("Location")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
     HRESULT SetLocation(_In_z_ LPCSTR szLocationA, _In_ SIZE_T nLocationLen = (SIZE_T)-1);
     LPCSTR GetLocation() const;
 
-  private:
+private:
     CStringA cStrLocationA;
 };
 

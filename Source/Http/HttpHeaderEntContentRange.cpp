@@ -20,10 +20,9 @@
 #include "..\..\Include\Http\HttpHeaderEntContentRange.h"
 #include <intsafe.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderEntContentRange::CHttpHeaderEntContentRange() : CHttpHeaderBase()
 {
@@ -59,8 +58,7 @@ HRESULT CHttpHeaderEntContentRange::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_
     szValueA = SkipSpaces(szValueA, szValueEndA);
 
     // check units
-    if ((SIZE_T)(szValueEndA - szValueA) < 6 || StrCompareA(szValueA, "bytes", TRUE) != 0 ||
-        (szValueA[5] != ' ' && szValueA[5] != '\t'))
+    if ((SIZE_T)(szValueEndA - szValueA) < 6 || StrCompareA(szValueA, "bytes", TRUE) != 0 || (szValueA[5] != ' ' && szValueA[5] != '\t'))
     {
         return MX_E_Unsupported;
     }
@@ -231,8 +229,7 @@ HRESULT CHttpHeaderEntContentRange::Build(_Inout_ CStringA &cStrDestA, _In_ Http
     return S_OK;
 }
 
-HRESULT CHttpHeaderEntContentRange::SetRange(_In_ ULONGLONG _nByteStart, _In_ ULONGLONG _nByteEnd,
-                                             _In_ ULONGLONG _nTotalBytes)
+HRESULT CHttpHeaderEntContentRange::SetRange(_In_ ULONGLONG _nByteStart, _In_ ULONGLONG _nByteEnd, _In_ ULONGLONG _nTotalBytes)
 {
     if (_nByteStart > _nByteEnd || _nByteEnd > _nTotalBytes)
     {

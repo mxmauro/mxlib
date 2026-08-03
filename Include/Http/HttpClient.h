@@ -32,14 +32,13 @@
 #include "WebSockets.h"
 #include "..\Comm\Proxy.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpClient : public virtual TRefCounted<CBaseMemObj>, public CLoggable, public CNonCopyableObj
 {
-  public:
+public:
     enum class eState
     {
         Closed = 0,
@@ -55,22 +54,22 @@ class CHttpClient : public virtual TRefCounted<CBaseMemObj>, public CLoggable, p
         NoOp
     };
 
-  public:
+public:
     typedef struct tagOPEN_OPTIONS
     {
         struct
         {
-            CWebSocket *lpSocket{NULL};
-            int nVersion{0};
-            LPCSTR *lpszProtocolsA{NULL};
+            CWebSocket *lpSocket{ NULL };
+            int nVersion{ 0 };
+            LPCSTR *lpszProtocolsA{ NULL };
         } sWebSocket;
         struct
         {
-            LPCSTR szHeaderNameA{NULL};
+            LPCSTR szHeaderNameA{ NULL };
         } sSendLocalIP;
     } OPEN_OPTIONS, *LPOPEN_OPTIONS;
 
-  public:
+public:
     // NOTE: Leave cStrFullFileNameW empty to download to temp location (with imposed limitations)
     typedef Callback<HRESULT(_In_ CHttpClient *lpHttp, _In_z_ LPCWSTR szFileNameW, _In_opt_ PULONGLONG lpnContentSize,
                              _In_z_ LPCSTR szTypeA, _In_ BOOL bTreatAsAttachment, _Inout_ CStringW &cStrFullFileNameW,
@@ -83,8 +82,7 @@ class CHttpClient : public virtual TRefCounted<CBaseMemObj>, public CLoggable, p
 
     typedef Callback<VOID(_In_ CHttpClient *lpHttp)> OnDymanicRequestBodyStartCallback;
 
-    typedef Callback<HRESULT(_In_ CHttpClient *lpHttp,
-                             _Outptr_opt_result_maybenull_ CSslCertificateArray **lplpCheckCerts,
+    typedef Callback<HRESULT(_In_ CHttpClient *lpHttp, _Outptr_opt_result_maybenull_ CSslCertificateArray **lplpCheckCerts,
                              _Outptr_opt_result_maybenull_ CSslCertificate **lplpSelfCert,
                              _Outptr_opt_result_maybenull_ CEncryptionKey **lplpPrivKey)>
         OnQueryCertificatesCallback;
@@ -94,7 +92,7 @@ class CHttpClient : public virtual TRefCounted<CBaseMemObj>, public CLoggable, p
 
     //--------
 
-  public:
+public:
     CHttpClient(_In_ CSockets &cSocketMgr, _In_opt_ CLoggable *lpLogParent = NULL);
     ~CHttpClient();
 
@@ -113,8 +111,7 @@ class CHttpClient : public virtual TRefCounted<CBaseMemObj>, public CLoggable, p
 
     VOID SetHeadersReceivedCallback(_In_ OnHeadersReceivedCallback cHeadersReceivedCallback);
     VOID SetDocumentCompletedCallback(_In_ OnDocumentCompletedCallback cDocumentCompletedCallback);
-    VOID SetWebSocketHandshakeCompletedCallback(
-        _In_ OnWebSocketHandshakeCompletedCallback cWebSocketHandshakeCompletedCallback);
+    VOID SetWebSocketHandshakeCompletedCallback(_In_ OnWebSocketHandshakeCompletedCallback cWebSocketHandshakeCompletedCallback);
     VOID SetDymanicRequestBodyStartCallback(_In_ OnDymanicRequestBodyStartCallback cDymanicRequestBodyStartCallback);
     VOID SetQueryCertificatesCallback(_In_ OnQueryCertificatesCallback cQueryCertificatesCallback);
     VOID SetConnectionCreatedCallback(_In_ OnConnectionCreatedCallback cConnectionCreatedCallback);
@@ -129,8 +126,7 @@ class CHttpClient : public virtual TRefCounted<CBaseMemObj>, public CLoggable, p
     {
         return AddRequestHeader(T::GetHeaderNameStatic(), reinterpret_cast<CHttpHeaderBase **>(lplpHeader));
     };
-    HRESULT AddRequestHeader(_In_z_ LPCSTR szNameA, _Out_opt_ CHttpHeaderBase **lplpHeader,
-                             _In_opt_ BOOL bReplaceExisting = TRUE);
+    HRESULT AddRequestHeader(_In_z_ LPCSTR szNameA, _Out_opt_ CHttpHeaderBase **lplpHeader, _In_opt_ BOOL bReplaceExisting = TRUE);
     HRESULT AddRequestHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1,
                              _Out_opt_ CHttpHeaderBase **lplpHeader = NULL, _In_opt_ BOOL bReplaceExisting = TRUE);
     HRESULT AddRequestHeader(_In_z_ LPCSTR szNameA, _In_z_ LPCWSTR szValueW, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1,
@@ -207,10 +203,10 @@ class CHttpClient : public virtual TRefCounted<CBaseMemObj>, public CLoggable, p
 
     LPCSTR GetRequestBoundary() const;
 
-  private:
+private:
     class CConnection : public CIpc::CUserData
     {
-      public:
+    public:
         CConnection(_In_ CHttpClient *lpHttpClient);
         ~CConnection();
 
@@ -233,21 +229,19 @@ class CHttpClient : public virtual TRefCounted<CBaseMemObj>, public CLoggable, p
         HRESULT GetBufferedMessage(_Out_ LPVOID lpMsg, _Inout_ SIZE_T *lpnMsgSize);
         HRESULT ConsumeBufferedMessage(_In_ SIZE_T nConsumedBytes);
 
-      private:
+    private:
         friend class CHttpClient;
 
         CHttpClient *GetHttpClient();
 
         HRESULT OnSocketCreate(_In_ CIpc *lpIpc, _In_ HANDLE h, _Inout_ CIpc::CREATE_CALLBACK_DATA &sData);
-        VOID OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData,
-                             _In_ HRESULT hrErrorCode);
+        VOID OnSocketDestroy(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData, _In_ HRESULT hrErrorCode);
         HRESULT OnSocketConnect(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_opt_ CIpc::CUserData *lpUserData);
         HRESULT OnSocketDataReceived(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ CIpc::CUserData *lpUserData);
 
-        VOID OnAfterSendRequestHeaders(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie,
-                                       _In_ CIpc::CUserData *lpUserData);
+        VOID OnAfterSendRequestHeaders(_In_ CIpc *lpIpc, _In_ HANDLE h, _In_ LPVOID lpCookie, _In_ CIpc::CUserData *lpUserData);
 
-      private:
+    private:
         CIpc *lpIpc;
         HANDLE hConn;
         BOOL bUseSSL;
@@ -255,7 +249,7 @@ class CHttpClient : public virtual TRefCounted<CBaseMemObj>, public CLoggable, p
         CHttpClient *lpHttpClient;
     };
 
-  private:
+private:
     friend class CConnection;
 
     HRESULT InternalOpen(_In_ CUrl &cUrl, _In_opt_ LPOPEN_OPTIONS lpOptions, _In_ BOOL bIsRedirecting,
@@ -295,48 +289,48 @@ class CHttpClient : public virtual TRefCounted<CBaseMemObj>, public CLoggable, p
 
     VOID OnRequestTimeout(_In_ LONG nTimerId, _In_ LPVOID lpUserData, _In_opt_ LPBOOL lpbCancel);
 
-  private:
+private:
     class CPostDataItem : public virtual CBaseMemObj, public CNonCopyableObj
     {
-      public:
+    public:
         CPostDataItem(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szValueA);
         CPostDataItem(_In_z_ LPCSTR szNameA, _In_z_ LPCSTR szFileNameA, _In_ CStream *lpStream);
         CPostDataItem(_In_ CStream *lpStream);
         ~CPostDataItem();
 
-      private:
+    private:
         friend class CHttpClient;
 
         CLnkLstNode cListNode;
-        LPSTR szNameA{NULL}, szValueA{NULL};
-        SIZE_T nValueLen{0};
+        LPSTR szNameA{ NULL }, szValueA{ NULL };
+        SIZE_T nValueLen{ 0 };
         TAutoRefCounted<CStream> cStream;
     };
 
-  private:
+private:
     CCriticalSection cMutex;
     CSockets &cSocketMgr;
-    eState nState{eState::Closed};
+    eState nState{ eState::Closed };
     struct
     {
         RWLOCK sRwMutex{};
         TAutoRefCounted<CConnection> cLink;
     } sConnection;
     CProxy cProxy;
-    HRESULT hLastErrorCode{S_OK};
-    DWORD dwTimeoutMs{0};
+    HRESULT hLastErrorCode{ S_OK };
+    DWORD dwTimeoutMs{ 0 };
     DWORD dwMaxRedirCount;
-    DWORD dwMaxFieldSize{256000};
-    ULONGLONG ullMaxFileSize{2097152ui64};
-    DWORD dwMaxFilesCount{4};
+    DWORD dwMaxFieldSize{ 256000 };
+    ULONGLONG ullMaxFileSize{ 2097152ui64 };
+    DWORD dwMaxFilesCount{ 4 };
     CStringW cStrTemporaryFolderW;
-    DWORD dwMaxBodySizeInMemory{32768};
-    ULONGLONG ullMaxBodySize{10485760ui64};
-    DWORD dwMaxRawRequestBodySizeInMemory{131072};
-    BOOL bKeepConnectionOpen{TRUE};
-    BOOL bAcceptCompressedContent{TRUE};
+    DWORD dwMaxBodySizeInMemory{ 32768 };
+    ULONGLONG ullMaxBodySize{ 10485760ui64 };
+    DWORD dwMaxRawRequestBodySizeInMemory{ 131072 };
+    BOOL bKeepConnectionOpen{ TRUE };
+    BOOL bAcceptCompressedContent{ TRUE };
 
-    LONG volatile nCallInProgressThread{0};
+    LONG volatile nCallInProgressThread{ 0 };
     OnHeadersReceivedCallback cHeadersReceivedCallback;
     OnDymanicRequestBodyStartCallback cDymanicRequestBodyStartCallback;
     OnDocumentCompletedCallback cDocumentCompletedCallback;
@@ -354,20 +348,20 @@ class CHttpClient : public virtual TRefCounted<CBaseMemObj>, public CLoggable, p
         struct
         {
             CLnkLst cList;
-            BOOL bHasRaw{FALSE};
-            LONG nDynamicFlags{0};
+            BOOL bHasRaw{ FALSE };
+            LONG nDynamicFlags{ 0 };
         } sPostData;
         CHAR szBoundaryA[32]{};
-        BOOL bUsingMultiPartFormData{FALSE};
-        BOOL bUsingProxy{FALSE};
+        BOOL bUsingMultiPartFormData{ FALSE };
+        BOOL bUsingProxy{ FALSE };
         TAutoRefCounted<CWebSocket> cWebSocket;
         TAutoRefCounted<CHttpHeaderGeneric> cLocalIpHeader;
-        LONG volatile nTimeoutTimerId{0};
+        LONG volatile nTimeoutTimerId{ 0 };
     } sRequest;
 
     struct
     {
-        Internals::CHttpParser cParser{FALSE, NULL};
+        Internals::CHttpParser cParser{ FALSE,NULL };
         CStringW cStrDownloadFileNameW;
         TAutoFreePtr<BYTE> aMsgBuf;
     } sResponse;
@@ -375,8 +369,8 @@ class CHttpClient : public virtual TRefCounted<CBaseMemObj>, public CLoggable, p
     struct
     {
         CUrl cUrl;
-        DWORD dwCounter{0};
-        LONG volatile nTimerId{0};
+        DWORD dwCounter{ 0 };
+        LONG volatile nTimerId{ 0 };
     } sRedirection;
 };
 

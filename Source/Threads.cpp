@@ -22,7 +22,7 @@
 #include <process.h>
 #include <ObjBase.h>
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define THREAD_INTERNAL_FLAG_BEINGRELEASED 0x00000001
 #ifndef DWORD_MAX
@@ -66,8 +66,7 @@ static int MyExceptionFilter(_Out_ EXCEPTION_POINTERS *lpDest, _In_ EXCEPTION_PO
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CThread::CThread() : CBaseMemObj()
 {
@@ -196,8 +195,7 @@ BOOL CThread::Resume()
     return TRUE;
 }
 
-BOOL CThread::Wait(_In_opt_ DWORD dwTimeout, _In_opt_ DWORD dwEventCount, _In_opt_ LPHANDLE lphEventList,
-                   _Out_opt_ LPDWORD lpdwHitEvent)
+BOOL CThread::Wait(_In_opt_ DWORD dwTimeout, _In_opt_ DWORD dwEventCount, _In_opt_ LPHANDLE lphEventList, _Out_opt_ LPDWORD lpdwHitEvent)
 {
     HANDLE hEvents[50];
     DWORD i, dwRetCode;
@@ -380,8 +378,7 @@ BOOL CThread::SetPriority(_In_ int _nPriority)
 {
     if (_nPriority != THREAD_PRIORITY_TIME_CRITICAL && _nPriority != THREAD_PRIORITY_HIGHEST &&
         _nPriority != THREAD_PRIORITY_ABOVE_NORMAL && _nPriority != THREAD_PRIORITY_NORMAL &&
-        _nPriority != THREAD_PRIORITY_BELOW_NORMAL && _nPriority != THREAD_PRIORITY_LOWEST &&
-        _nPriority != THREAD_PRIORITY_IDLE)
+        _nPriority != THREAD_PRIORITY_BELOW_NORMAL && _nPriority != THREAD_PRIORITY_LOWEST && _nPriority != THREAD_PRIORITY_IDLE)
     {
         return FALSE;
     }
@@ -484,8 +481,7 @@ CThreadPool::~CThreadPool()
     return;
 }
 
-BOOL CThreadPool::Initialize(_In_ ULONG _nMinWorkerThreads, _In_ ULONG _nWorkerThreadsCreateAhead,
-                             _In_ ULONG _nThreadShutdownThresholdMs)
+BOOL CThreadPool::Initialize(_In_ ULONG _nMinWorkerThreads, _In_ ULONG _nWorkerThreadsCreateAhead, _In_ ULONG _nThreadShutdownThresholdMs)
 {
     CCriticalSection::CAutoLock cLock(cMtx);
     DWORD dwOsErr;
@@ -536,7 +532,8 @@ VOID CThreadPool::Finalize()
                 ::PostQueuedCompletionStatus(hIOCP, 0, 0, NULL);
                 ::Sleep(10);
             }
-        } while (b != FALSE);
+        }
+        while (b != FALSE);
     }
     // cancel pending work items
     do
@@ -559,7 +556,8 @@ VOID CThreadPool::Finalize()
             CancelTask(lpWorkItem);
             MX_FREE(lpWorkItem);
         }
-    } while (lpWorkItem != NULL);
+    }
+    while (lpWorkItem != NULL);
     // close completion port
     if (hIOCP != NULL)
     {
@@ -771,8 +769,7 @@ VOID CThreadPool::WorkerThreadProc(_In_ SIZE_T nParam)
     nTimeout = INFINITE; // at least process one item
     while (1)
     {
-        if (::GetQueuedCompletionStatus(hIOCP, &dwNumberOfBytes, (PULONG_PTR)&lpWorkItem, &lpOvr, nTimeout) == FALSE ||
-            lpWorkItem == NULL)
+        if (::GetQueuedCompletionStatus(hIOCP, &dwNumberOfBytes, (PULONG_PTR)&lpWorkItem, &lpOvr, nTimeout) == FALSE || lpWorkItem == NULL)
         {
             break;
         }

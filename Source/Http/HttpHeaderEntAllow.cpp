@@ -19,10 +19,9 @@
  */
 #include "..\..\Include\Http\HttpHeaderEntAllow.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpHeaderEntAllow::CHttpHeaderEntAllow() : CHttpHeaderBase()
 {
@@ -79,7 +78,7 @@ HRESULT CHttpHeaderEntAllow::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValu
             return hRes;
         }
 
-    skip_null_listitem:
+skip_null_listitem:
         // skip spaces
         szValueA = SkipSpaces(szValueA, szValueEndA);
 
@@ -95,7 +94,8 @@ HRESULT CHttpHeaderEntAllow::Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValu
                 return MX_E_InvalidData;
             }
         }
-    } while (szValueA < szValueEndA);
+    }
+    while (szValueA < szValueEndA);
     // done
     return (bGotItem != FALSE) ? S_OK : MX_E_InvalidData;
 }

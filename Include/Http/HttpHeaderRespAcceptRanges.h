@@ -23,34 +23,31 @@
 #include "HttpHeaderBase.h"
 #include "..\ArrayList.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CHttpHeaderRespAcceptRanges : public CHttpHeaderBase
 {
-  public:
+public:
     typedef enum
     {
-        RangeUnsupported = -1,
-        RangeNone = 0,
-        RangeBytes
+        RangeUnsupported = -1, RangeNone = 0, RangeBytes
     } eRange;
 
     CHttpHeaderRespAcceptRanges();
     ~CHttpHeaderRespAcceptRanges();
 
-    MX_DECLARE_HTTPHEADER_NAME(Accept - Ranges)
+    MX_DECLARE_HTTPHEADER_NAME("Accept-Ranges")
 
-    HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
+        HRESULT Parse(_In_z_ LPCSTR szValueA, _In_opt_ SIZE_T nValueLen = (SIZE_T)-1);
 
     HRESULT Build(_Inout_ CStringA &cStrDestA, _In_ Http::eBrowser nBrowser);
 
     HRESULT SetRange(_In_ eRange nRange);
     eRange GetRange() const;
 
-  private:
+private:
     eRange nRange;
 };
 

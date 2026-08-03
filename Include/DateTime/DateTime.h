@@ -23,7 +23,7 @@
 #include "..\Defines.h"
 #include "..\Strings\Strings.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define MX_DATETIME_TICKS_PER_DAY 864000000000i64
 #define MX_DATETIME_TICKS_PER_HOUR 36000000000i64
@@ -69,12 +69,11 @@
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CTimeSpan : public virtual CBaseMemObj
 {
-  public:
+public:
     CTimeSpan(_In_ const CTimeSpan &cSrc);
     CTimeSpan(_In_opt_ LONGLONG nValue = 0);
     CTimeSpan(_In_ int nDays, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds, _In_opt_ int nMilliSeconds = 0);
@@ -109,8 +108,7 @@ class CTimeSpan : public virtual CBaseMemObj
     HRESULT SetFromSeconds(_In_ double nValue);
     HRESULT SetFromMilliSeconds(_In_ double nValue);
     HRESULT SetFromTicks(_In_ LONGLONG nValue);
-    HRESULT SetFrom(_In_ int nDays, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds,
-                    _In_opt_ int nMilliSeconds = 0);
+    HRESULT SetFrom(_In_ int nDays, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds, _In_opt_ int nMilliSeconds = 0);
     HRESULT SetFrom(_In_ int nHours, _In_ int nMinutes, _In_ int nSeconds);
 
     HRESULT Negate();
@@ -130,7 +128,7 @@ class CTimeSpan : public virtual CBaseMemObj
     bool operator<=(_In_ const CTimeSpan &cTs) const;
     bool operator>=(_In_ const CTimeSpan &cTs) const;
 
-  private:
+private:
     LONGLONG nTicks;
 };
 
@@ -138,7 +136,7 @@ class CTimeSpan : public virtual CBaseMemObj
 
 class CDateTime : public virtual CBaseMemObj
 {
-  public:
+public:
     enum class eUnits
     {
         Year = 1,
@@ -179,7 +177,7 @@ class CDateTime : public virtual CBaseMemObj
         LPCWSTR szTimeFormatW;
     } CUSTOMSETTINGSW, *LPCUSTOMSETTINGSW;
 
-  public:
+public:
     CDateTime(_In_ const CDateTime &cSrc);
     CDateTime(_In_opt_ LONGLONG nTicks = 0, _In_opt_ int nGmtOffset = 0);
     CDateTime(_In_ CTimeSpan &cTs, _In_opt_ int nGmtOffset = 0);
@@ -192,8 +190,8 @@ class CDateTime : public virtual CBaseMemObj
 
     HRESULT SetDate(_In_ int nYear, _In_ int nMonth, _In_ int nDay);
     HRESULT SetTime(_In_ int nHours, _In_ int nMinutes, _In_ int nSeconds, _In_opt_ int nMilliSeconds = 0);
-    HRESULT SetDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_ int nHours, _In_ int nMinutes,
-                        _In_ int nSeconds, _In_opt_ int nMilliSeconds = 0);
+    HRESULT SetDateTime(_In_ int nYear, _In_ int nMonth, _In_ int nDay, _In_ int nHours, _In_ int nMinutes, _In_ int nSeconds,
+                        _In_opt_ int nMilliSeconds = 0);
     HRESULT SetFromTicks(_In_ LONGLONG nTicks);
     HRESULT SetFromSystemTime(_In_ const SYSTEMTIME &sSrcSysTime);
     HRESULT SetFromFileTime(_In_ const FILETIME &sSrcFileTime);
@@ -208,10 +206,9 @@ class CDateTime : public virtual CBaseMemObj
     HRESULT SetGmtOffset(_In_ int nGmtOffset, _In_ BOOL bAdjustTime = FALSE);
 
     VOID GetDate(_Out_ int *lpnYear, _Out_ int *lpnMonth, _Out_ int *lpnDay);
-    VOID GetTime(_Out_ int *lpnHours, _Out_ int *lpnMinutes, _Out_ int *lpnSeconds,
-                 _Out_opt_ int *lpnMilliSeconds = NULL);
-    VOID GetDateTime(_Out_ int *lpnYear, _Out_ int *lpnMonth, _Out_ int *lpnDay, _Out_ int *lpnHours,
-                     _Out_ int *lpnMinutes, _Out_ int *lpnSeconds, _Out_opt_ int *lpnMilliSeconds = NULL);
+    VOID GetTime(_Out_ int *lpnHours, _Out_ int *lpnMinutes, _Out_ int *lpnSeconds, _Out_opt_ int *lpnMilliSeconds = NULL);
+    VOID GetDateTime(_Out_ int *lpnYear, _Out_ int *lpnMonth, _Out_ int *lpnDay, _Out_ int *lpnHours, _Out_ int *lpnMinutes,
+                     _Out_ int *lpnSeconds, _Out_opt_ int *lpnMilliSeconds = NULL);
     VOID GetSystemTime(_Out_ SYSTEMTIME &sSysTime);
     HRESULT GetFileTime(_Out_ FILETIME &sFileTime);
     HRESULT GetUnixTime(_Out_ int *lpnTime);
@@ -253,10 +250,8 @@ class CDateTime : public virtual CBaseMemObj
 
     HRESULT Format(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szFormatA, _In_opt_ LPCUSTOMSETTINGSA lpCustomA = NULL);
     HRESULT Format(_Inout_ CStringW &cStrDestW, _In_z_ LPCWSTR szFormatW, _In_opt_ LPCUSTOMSETTINGSW lpCustomW = NULL);
-    HRESULT AppendFormat(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szFormatA,
-                         _In_opt_ LPCUSTOMSETTINGSA lpCustomA = NULL);
-    HRESULT AppendFormat(_Inout_ CStringW &cStrDestW, _In_z_ LPCWSTR szFormatW,
-                         _In_opt_ LPCUSTOMSETTINGSW lpCustomW = NULL);
+    HRESULT AppendFormat(_Inout_ CStringA &cStrDestA, _In_z_ LPCSTR szFormatA, _In_opt_ LPCUSTOMSETTINGSA lpCustomA = NULL);
+    HRESULT AppendFormat(_Inout_ CStringW &cStrDestW, _In_z_ LPCWSTR szFormatW, _In_opt_ LPCUSTOMSETTINGSW lpCustomW = NULL);
 
     static BOOL IsDateValid(_In_ int nYear, _In_ int nMonth, _In_ int nDay);
     static BOOL IsTimeValid(_In_ int nHours, _In_ int nMinutes, _In_ int nSeconds);
@@ -267,10 +262,9 @@ class CDateTime : public virtual CBaseMemObj
     static int GetDayOfYear(_In_ int nYear, _In_ int nMonth, _In_ int nDay);
     static int GetAbsoluteDay(_In_ int nYear, _In_ int nMonth, _In_ int nDay);
     static HRESULT CalculateDayMonth(_In_ int nDayOfYear, _In_ int nYear, _Out_ int *lpnMonth, _Out_ int *lpnDay);
-    static HRESULT CalculateEasterInYear(_In_ int nYear, _Out_ int *lpnMonth, _Out_ int *lpnDay,
-                                         _In_ BOOL bOrthodoxChurchesMethod);
+    static HRESULT CalculateEasterInYear(_In_ int nYear, _Out_ int *lpnMonth, _Out_ int *lpnDay, _In_ BOOL bOrthodoxChurchesMethod);
 
-  private:
+private:
     CTimeSpan cTicks;
     int nGmtOffset; // in minutes
 };

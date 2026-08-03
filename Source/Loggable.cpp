@@ -21,9 +21,9 @@
 #include <stdio.h>
 
 #ifdef _DEBUG
-// #define DEBUGOUTPUT_LOG
+ // #define DEBUGOUTPUT_LOG
 #else  //_DEBUG
-// #define DEBUGOUTPUT_LOG
+ // #define DEBUGOUTPUT_LOG
 #endif //_DEBUG
 
 #ifdef DEBUGOUTPUT_LOG
@@ -32,8 +32,7 @@
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CLoggable::CLoggable() : CBaseMemObj()
 {
@@ -148,8 +147,7 @@ CLoggable *CLoggable::GetRoot() const
     return lpThis;
 }
 
-HRESULT CLoggable::WriteLogCommon(_In_ BOOL bAddError, _In_ HRESULT hResError, _In_z_ LPCWSTR szFormatW,
-                                  _In_ va_list argptr)
+HRESULT CLoggable::WriteLogCommon(_In_ BOOL bAddError, _In_ HRESULT hResError, _In_z_ LPCWSTR szFormatW, _In_ va_list argptr)
 {
     WCHAR szTempBufW[1024], *lpszBufW;
     int count[2];
@@ -167,8 +165,8 @@ HRESULT CLoggable::WriteLogCommon(_In_ BOOL bAddError, _In_ HRESULT hResError, _
     count[0] = 0;
     if (bAddError != FALSE)
     {
-        count[0] = _snwprintf_s(szTempBufW + (SIZE_T)count[0], MX_ARRAYLEN(szTempBufW) - (SIZE_T)count[0], _TRUNCATE,
-                                L"Error 0x%08X: ", hResError);
+        count[0] = _snwprintf_s(szTempBufW + (SIZE_T)count[0], MX_ARRAYLEN(szTempBufW) - (SIZE_T)count[0], _TRUNCATE, L"Error 0x%08X: ",
+                                hResError);
         if (count[0] < 0)
         {
             count[0] = 0;
@@ -178,8 +176,7 @@ HRESULT CLoggable::WriteLogCommon(_In_ BOOL bAddError, _In_ HRESULT hResError, _
     count[1] = _vscwprintf(szFormatW, argptr);
     if (count[0] + count[1] + 3 < MX_ARRAYLEN(szTempBufW))
     {
-        count[1] = _vsnwprintf_s(szTempBufW + count[0], MX_ARRAYLEN(szTempBufW) - (SIZE_T)count[0], _TRUNCATE,
-                                 szFormatW, argptr);
+        count[1] = _vsnwprintf_s(szTempBufW + count[0], MX_ARRAYLEN(szTempBufW) - (SIZE_T)count[0], _TRUNCATE, szFormatW, argptr);
     }
     else
     {
@@ -208,7 +205,9 @@ HRESULT CLoggable::WriteLogCommon(_In_ BOOL bAddError, _In_ HRESULT hResError, _
     DebugPrint("%S\n", lpszBufW);
 #endif // DEBUGOUTPUT_LOG
     if (lpszBufW != szTempBufW)
+    {
         MX_FREE(lpszBufW);
+    }
 
     // done
     return hRes;

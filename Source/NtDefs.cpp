@@ -26,7 +26,7 @@
 
 #pragma intrinsic(_InterlockedExchange)
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #ifndef OBJ_INHERIT
 #define OBJ_INHERIT 0x00000002L
@@ -62,20 +62,16 @@ typedef struct
 
 //-----------------------------------------------------------
 
-typedef NTSTATUS(NTAPI *lpfnRtlGetNativeSystemInformation)(_In_ ULONG SystemInformationClass,
-                                                           _Inout_ PVOID SystemInformation,
-                                                           _In_ ULONG SystemInformationLength,
-                                                           _Out_opt_ PULONG ReturnLength);
+typedef NTSTATUS(NTAPI *lpfnRtlGetNativeSystemInformation)(_In_ ULONG SystemInformationClass, _Inout_ PVOID SystemInformation,
+                                                           _In_ ULONG SystemInformationLength, _Out_opt_ PULONG ReturnLength);
 
 typedef int(__cdecl *lpfn_vsnprintf)(_Out_writes_z_(nMaxCount) char *lpDest, _In_ size_t nMaxCount,
                                      _In_z_ _Printf_format_string_ const char *szFormatA, _In_ va_list lpArgList);
 typedef int(__cdecl *lpfn_vsnwprintf)(_Out_writes_z_(nMaxCount) wchar_t *lpDest, _In_ size_t nMaxCount,
                                       _In_z_ _Printf_format_string_ const wchar_t *szFormatW, _In_ va_list lpArgList);
 
-typedef BOOLEAN(NTAPI *lpfnRtlDosPathNameToNtPathName_U)(_In_opt_z_ PCWSTR DosPathName,
-                                                         _Out_ PMX_UNICODE_STRING NtPathName,
-                                                         _Out_opt_ PCWSTR *NtFileNamePart,
-                                                         _Out_opt_ PVOID DirectoryInfo);
+typedef BOOLEAN(NTAPI *lpfnRtlDosPathNameToNtPathName_U)(_In_opt_z_ PCWSTR DosPathName, _Out_ PMX_UNICODE_STRING NtPathName,
+                                                         _Out_opt_ PCWSTR *NtFileNamePart, _Out_opt_ PVOID DirectoryInfo);
 
 //-----------------------------------------------------------
 
@@ -85,8 +81,7 @@ static lpfnRtlDosPathNameToNtPathName_U fnRtlDosPathNameToNtPathName_U = NULL;
 
 //-----------------------------------------------------------
 
-static BOOL RemoteCompareStringW(_In_ HANDLE hProcess, _In_z_ LPCWSTR szRemoteNameW, _In_z_ LPCWSTR szLocalNameW,
-                                 _In_ SIZE_T nNameLen);
+static BOOL RemoteCompareStringW(_In_ HANDLE hProcess, _In_z_ LPCWSTR szRemoteNameW, _In_z_ LPCWSTR szLocalNameW, _In_ SIZE_T nNameLen);
 
 //-----------------------------------------------------------
 
@@ -131,42 +126,39 @@ extern "C"
         }
         switch (MxGetProcessorArchitecture())
         {
-        case PROCESSOR_ARCHITECTURE_INTEL:
+            case PROCESSOR_ARCHITECTURE_INTEL:
 #if defined(_M_IX86)
-        {
-            __PROCESS_BASIC_INFORMATION32 sPbi32;
+                {
+                    __PROCESS_BASIC_INFORMATION32 sPbi32;
 
-            if (NT_SUCCESS(::MxNtQueryInformationProcess(hProcess, MxProcessBasicInformation, &sPbi32,
-                                                         (ULONG)sizeof(sPbi32), &k)))
-                return (LPBYTE)(sPbi32.PebBaseAddress);
-        }
+                    if (NT_SUCCESS(::MxNtQueryInformationProcess(hProcess, MxProcessBasicInformation, &sPbi32, (ULONG)sizeof(sPbi32), &k)))
+                        return (LPBYTE)(sPbi32.PebBaseAddress);
+                }
 #endif //_M_IX86
-        break;
+                                             break;
 
-        case PROCESSOR_ARCHITECTURE_AMD64:
-        case PROCESSOR_ARCHITECTURE_IA64:
-        case PROCESSOR_ARCHITECTURE_ALPHA64:
-        {
-            ULONG_PTR nWow64;
+            case PROCESSOR_ARCHITECTURE_AMD64:
+            case PROCESSOR_ARCHITECTURE_IA64:
+            case PROCESSOR_ARCHITECTURE_ALPHA64:
+                {
+                    ULONG_PTR nWow64;
 #if defined(_M_X64)
-            __PROCESS_BASIC_INFORMATION64 sPbi64;
+                    __PROCESS_BASIC_INFORMATION64 sPbi64;
 #endif //_M_X64
 
-            if (NT_SUCCESS(::MxNtQueryInformationProcess(hProcess, MxProcessWow64Information, &nWow64, sizeof(nWow64),
-                                                         NULL)) &&
-                nWow64 != 0)
-            {
-                return (LPBYTE)nWow64;
-            }
+                    if (NT_SUCCESS(::MxNtQueryInformationProcess(hProcess, MxProcessWow64Information, &nWow64, sizeof(nWow64), NULL)) &&
+                        nWow64 != 0)
+                    {
+                        return (LPBYTE)nWow64;
+                    }
 #if defined(_M_X64)
-            if (NT_SUCCESS(::MxNtQueryInformationProcess(hProcess, MxProcessBasicInformation, &sPbi64,
-                                                         (ULONG)sizeof(sPbi64), &k)))
-            {
-                return (LPBYTE)(sPbi64.PebBaseAddress);
-            }
+                    if (NT_SUCCESS(::MxNtQueryInformationProcess(hProcess, MxProcessBasicInformation, &sPbi64, (ULONG)sizeof(sPbi64), &k)))
+                    {
+                        return (LPBYTE)(sPbi64.PebBaseAddress);
+                    }
 #endif //_M_X64
-        }
-        break;
+                }
+                break;
         }
         return NULL;
     }
@@ -199,8 +191,8 @@ extern "C"
 #endif
     };
 
-    int mx_sprintf_s(_Out_writes_z_(nMaxCount) char *lpDest, _In_ size_t nMaxCount,
-                     _In_z_ _Printf_format_string_ const char *szFormatA, ...)
+    int mx_sprintf_s(_Out_writes_z_(nMaxCount) char *lpDest, _In_ size_t nMaxCount, _In_z_ _Printf_format_string_ const char *szFormatA,
+                     ...)
     {
         va_list argptr;
         int ret;
@@ -211,8 +203,8 @@ extern "C"
         return ret;
     }
 
-    int mx_vsnprintf(_Out_writes_z_(nMaxCount) char *lpDest, _In_ size_t nMaxCount,
-                     _In_z_ _Printf_format_string_ const char *szFormatA, _In_ va_list lpArgList)
+    int mx_vsnprintf(_Out_writes_z_(nMaxCount) char *lpDest, _In_ size_t nMaxCount, _In_z_ _Printf_format_string_ const char *szFormatA,
+                     _In_ va_list lpArgList)
     {
         if (*((PVOID *)&__stdio_common_vsnprintf_s) != NULL)
         {
@@ -221,8 +213,8 @@ extern "C"
             // We also use _CRT_INTERNAL_PRINTF_LEGACY_WIDE_SPECIFIERS in order to favor %s and %S narrow-wide
             // specifiers.
             int ret = __stdio_common_vsnprintf_s(_CRT_INTERNAL_PRINTF_LEGACY_WIDE_SPECIFIERS |
-                                                     _CRT_INTERNAL_PRINTF_STANDARD_SNPRINTF_BEHAVIOR,
-                                                 lpDest, nMaxCount, _TRUNCATE, szFormatA, NULL, lpArgList);
+                                                     _CRT_INTERNAL_PRINTF_STANDARD_SNPRINTF_BEHAVIOR, lpDest, nMaxCount, _TRUNCATE,
+                                                 szFormatA, NULL, lpArgList);
             return (ret >= 0) ? ret : (-1);
         }
         if (fn_vsnprintf == NULL)
@@ -267,8 +259,8 @@ extern "C"
             // We also use _CRT_INTERNAL_PRINTF_LEGACY_WIDE_SPECIFIERS in order to favor %s and %S narrow-wide
             // specifiers.
             int ret = __stdio_common_vsnwprintf_s(_CRT_INTERNAL_PRINTF_LEGACY_WIDE_SPECIFIERS |
-                                                      _CRT_INTERNAL_PRINTF_STANDARD_SNPRINTF_BEHAVIOR,
-                                                  lpDest, nMaxCount, _TRUNCATE, szFormatW, NULL, lpArgList);
+                                                      _CRT_INTERNAL_PRINTF_STANDARD_SNPRINTF_BEHAVIOR, lpDest, nMaxCount, _TRUNCATE,
+                                                  szFormatW, NULL, lpArgList);
             return (ret >= 0) ? ret : (-1);
         }
         if (fn_vsnwprintf == NULL)
@@ -336,13 +328,11 @@ extern "C"
             ::MxMemSet(&sProcInfo, 0, sizeof(sProcInfo));
             if (fnRtlGetNativeSystemInformation != NULL)
             {
-                nNtStatus =
-                    fnRtlGetNativeSystemInformation(MxSystemProcessorInformation, &sProcInfo, sizeof(sProcInfo), NULL);
+                nNtStatus = fnRtlGetNativeSystemInformation(MxSystemProcessorInformation, &sProcInfo, sizeof(sProcInfo), NULL);
             }
             else
             {
-                nNtStatus =
-                    ::MxNtQuerySystemInformation(MxSystemProcessorInformation, &sProcInfo, sizeof(sProcInfo), NULL);
+                nNtStatus = ::MxNtQuerySystemInformation(MxSystemProcessorInformation, &sProcInfo, sizeof(sProcInfo), NULL);
             }
             if (NT_SUCCESS(nNtStatus))
             {
@@ -384,8 +374,8 @@ extern "C"
         return (NT_SUCCESS(nNtStatus)) ? hThread : NULL;
     }
 
-    NTSTATUS MxCreateFile(_Out_ HANDLE *lphFile, _In_z_ LPCWSTR szFileNameW, _In_ DWORD dwDesiredAccess,
-                          _In_ DWORD dwShareMode, _In_ DWORD dwCreationDisposition, _In_ DWORD dwFlagsAndAttributes,
+    NTSTATUS MxCreateFile(_Out_ HANDLE *lphFile, _In_z_ LPCWSTR szFileNameW, _In_ DWORD dwDesiredAccess, _In_ DWORD dwShareMode,
+                          _In_ DWORD dwCreationDisposition, _In_ DWORD dwFlagsAndAttributes,
                           _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes)
     {
         MX_OBJECT_ATTRIBUTES sObjAttr;
@@ -421,23 +411,23 @@ extern "C"
         nFlags = 0;
         switch (dwCreationDisposition)
         {
-        case CREATE_NEW:
-            dwCreationDisposition = FILE_CREATE;
-            break;
-        case CREATE_ALWAYS:
-            dwCreationDisposition = FILE_OVERWRITE_IF;
-            break;
-        case OPEN_EXISTING:
-            dwCreationDisposition = FILE_OPEN;
-            break;
-        case OPEN_ALWAYS:
-            dwCreationDisposition = FILE_OPEN_IF;
-            break;
-        case TRUNCATE_EXISTING:
-            dwCreationDisposition = FILE_OVERWRITE;
-            break;
-        default:
-            return STATUS_INVALID_PARAMETER;
+            case CREATE_NEW:
+                dwCreationDisposition = FILE_CREATE;
+                break;
+            case CREATE_ALWAYS:
+                dwCreationDisposition = FILE_OVERWRITE_IF;
+                break;
+            case OPEN_EXISTING:
+                dwCreationDisposition = FILE_OPEN;
+                break;
+            case OPEN_ALWAYS:
+                dwCreationDisposition = FILE_OPEN_IF;
+                break;
+            case TRUNCATE_EXISTING:
+                dwCreationDisposition = FILE_OVERWRITE;
+                break;
+            default:
+                return STATUS_INVALID_PARAMETER;
         }
         nFlags = 0;
         if ((dwFlagsAndAttributes & FILE_FLAG_OVERLAPPED) == 0)
@@ -513,9 +503,8 @@ extern "C"
             sObjAttr.SecurityDescriptor = lpSecurityAttributes->lpSecurityDescriptor;
         }
         ::MxMemSet(&sIoStatus, 0, sizeof(sIoStatus));
-        nNtStatus =
-            ::MxNtCreateFile(&h, dwDesiredAccess, &sObjAttr, &sIoStatus, NULL, dwFlagsAndAttributes & 0x00007FA7,
-                             dwShareMode, dwCreationDisposition, nFlags, NULL, 0);
+        nNtStatus = ::MxNtCreateFile(&h, dwDesiredAccess, &sObjAttr, &sIoStatus, NULL, dwFlagsAndAttributes & 0x00007FA7, dwShareMode,
+                             dwCreationDisposition, nFlags, NULL, 0);
         if (NT_SUCCESS(nNtStatus))
         {
             if (dwCreationDisposition == FILE_OPEN_IF)
@@ -554,27 +543,25 @@ extern "C"
         }
         switch (MxGetProcessorArchitecture())
         {
-        case PROCESSOR_ARCHITECTURE_AMD64:
-        case PROCESSOR_ARCHITECTURE_IA64:
-        case PROCESSOR_ARCHITECTURE_ALPHA64:
-        {
-            // check on 64-bit platforms
-            ULONG_PTR nWow64;
+            case PROCESSOR_ARCHITECTURE_AMD64:
+            case PROCESSOR_ARCHITECTURE_IA64:
+            case PROCESSOR_ARCHITECTURE_ALPHA64:
+                {
+                    // check on 64-bit platforms
+                    ULONG_PTR nWow64;
 
-            nNtStatus =
-                ::MxNtQueryInformationProcess(hProcess, MxProcessWow64Information, &nWow64, sizeof(nWow64), NULL);
-            if (NT_SUCCESS(nNtStatus))
-            {
-                nNtStatus = (nWow64 != 0) ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
-            }
-        }
-        break;
+                    nNtStatus = ::MxNtQueryInformationProcess(hProcess, MxProcessWow64Information, &nWow64, sizeof(nWow64), NULL);
+                    if (NT_SUCCESS(nNtStatus))
+                    {
+                        nNtStatus = (nWow64 != 0) ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
+                    }
+                }
+                break;
         }
         return nNtStatus;
     }
 
-    SIZE_T MxReadMem(_In_ HANDLE hProcess, _Out_writes_bytes_(nBytesCount) LPVOID lpDest, _In_ LPVOID lpSrc,
-                     _In_ SIZE_T nBytesCount)
+    SIZE_T MxReadMem(_In_ HANDLE hProcess, _Out_writes_bytes_(nBytesCount) LPVOID lpDest, _In_ LPVOID lpSrc, _In_ SIZE_T nBytesCount)
     {
         NTSTATUS nStatus;
         SIZE_T nReaded;
@@ -720,8 +707,7 @@ extern "C"
         lpFirst = &(lpPebLdr->InLoadOrderModuleList);
         for (lpCurr = lpFirst->Flink; lpCurr != lpFirst; lpCurr = lpLdrEntry->InLoadOrderLinks.Flink)
         {
-            lpLdrEntry =
-                (MX_LDR_DATA_TABLE_ENTRY *)((LPBYTE)lpCurr - FIELD_OFFSET(MX_LDR_DATA_TABLE_ENTRY, InLoadOrderLinks));
+            lpLdrEntry = (MX_LDR_DATA_TABLE_ENTRY *)((LPBYTE)lpCurr - FIELD_OFFSET(MX_LDR_DATA_TABLE_ENTRY, InLoadOrderLinks));
             if (::MxRtlCompareUnicodeString(&(lpLdrEntry->BaseDllName), &usDllName, TRUE) == 0)
             {
                 pRet = lpLdrEntry->DllBase;
@@ -770,29 +756,29 @@ extern "C"
 #if defined(_M_IX86)
         switch (nNtStatus)
         {
-        case STATUS_SUCCESS:
-        case STATUS_NOT_SUPPORTED:
-            bTargetIsX64 = FALSE;
-            break;
-        case STATUS_UNSUCCESSFUL:
-            // cannot retrieve a 64-bit process module address
-            return NULL;
-        default:
-            // on error return NULL
-            return NULL;
+            case STATUS_SUCCESS:
+            case STATUS_NOT_SUPPORTED:
+                bTargetIsX64 = FALSE;
+                break;
+            case STATUS_UNSUCCESSFUL:
+                // cannot retrieve a 64-bit process module address
+                return NULL;
+            default:
+                // on error return NULL
+                return NULL;
         }
 #elif defined(_M_X64)
         switch (nNtStatus)
         {
-        case STATUS_UNSUCCESSFUL:
-            bTargetIsX64 = TRUE;
-            break;
-        case STATUS_SUCCESS:
-            bTargetIsX64 = FALSE;
-            break;
-        default:
-            // on error return NULL
-            return NULL;
+            case STATUS_UNSUCCESSFUL:
+                bTargetIsX64 = TRUE;
+                break;
+            case STATUS_SUCCESS:
+                bTargetIsX64 = FALSE;
+                break;
+            default:
+                // on error return NULL
+                return NULL;
         }
 #endif
         // get remote peb to start
@@ -810,8 +796,7 @@ extern "C"
             if (MxReadMem(hProcess, &dw, lpPeb + 0x0C, sizeof(dw)) == sizeof(dw) && dw != 0)
             {
                 // check if table is initialized
-                if (MxReadMem(hProcess, &nTemp8, (LPBYTE)ULongToPtr(dw) + 0x04, sizeof(nTemp8)) == sizeof(nTemp8) &&
-                    nTemp8 != 0)
+                if (MxReadMem(hProcess, &nTemp8, (LPBYTE)ULongToPtr(dw) + 0x04, sizeof(nTemp8)) == sizeof(nTemp8) && nTemp8 != 0)
                 {
                     lpFirstLink = (LPBYTE)ULongToPtr(dw) + 0x0C; // PEB_LDR_DATA32.InLoadOrderModuleList.Flink
                 }
@@ -839,15 +824,14 @@ extern "C"
                 lpCurrLink = (MxReadMem(hProcess, &dw, lpFirstLink, 4) == 4) ? (LPBYTE)ULongToPtr(dw) : lpFirstLink;
                 while (lpCurrLink != lpFirstLink)
                 {
-                    if (MxReadMem(hProcess, &sCurrEntry32,
-                                  lpCurrLink - FIELD_OFFSET(MX_LDR_DATA_TABLE_ENTRY32, InLoadOrderLinks),
+                    if (MxReadMem(hProcess, &sCurrEntry32, lpCurrLink - FIELD_OFFSET(MX_LDR_DATA_TABLE_ENTRY32, InLoadOrderLinks),
                                   sizeof(sCurrEntry32)) != sizeof(sCurrEntry32))
                     {
                         break;
                     }
                     if (sCurrEntry32.DllBase != 0 && (SIZE_T)(sCurrEntry32.BaseDllName.Length) == nModuleNameLen &&
-                        RemoteCompareStringW(hProcess, (LPWSTR)ULongToPtr(sCurrEntry32.BaseDllName.Buffer),
-                                             szModuleNameW, nModuleNameLen / sizeof(WCHAR)) != FALSE)
+                        RemoteCompareStringW(hProcess, (LPWSTR)ULongToPtr(sCurrEntry32.BaseDllName.Buffer), szModuleNameW,
+                                             nModuleNameLen / sizeof(WCHAR)) != FALSE)
                     {
                         return (LPBYTE)ULongToPtr(sCurrEntry32.DllBase);
                     }
@@ -859,8 +843,7 @@ extern "C"
                 lpCurrLink = (MxReadMem(hProcess, &ull, lpFirstLink, 8) == 8) ? (LPBYTE)ull : lpFirstLink;
                 while (lpCurrLink != lpFirstLink)
                 {
-                    if (MxReadMem(hProcess, &sCurrEntry64,
-                                  lpCurrLink - FIELD_OFFSET(MX_LDR_DATA_TABLE_ENTRY64, InLoadOrderLinks),
+                    if (MxReadMem(hProcess, &sCurrEntry64, lpCurrLink - FIELD_OFFSET(MX_LDR_DATA_TABLE_ENTRY64, InLoadOrderLinks),
                                   sizeof(sCurrEntry64)) != sizeof(sCurrEntry64))
                     {
                         break;
@@ -881,8 +864,7 @@ extern "C"
         usTemp.Length = usTemp.MaximumLength = (USHORT)nModuleNameLen;
         while (1)
         {
-            if (!NT_SUCCESS(
-                    MxNtQueryVirtualMemory(hProcess, lpCurrAddr, MxMemoryBasicInformation, &sMbi, sizeof(sMbi), &k)))
+            if (!NT_SUCCESS(MxNtQueryVirtualMemory(hProcess, lpCurrAddr, MxMemoryBasicInformation, &sMbi, sizeof(sMbi), &k)))
             {
                 break;
             }
@@ -898,9 +880,9 @@ extern "C"
             do
             {
                 lpCurrAddr += sMbi.RegionSize;
-                nNtStatus =
-                    MxNtQueryVirtualMemory(hProcess, lpCurrAddr, MxMemoryBasicInformation, &sMbi, sizeof(sMbi), &k);
-            } while (NT_SUCCESS(nNtStatus) && lpBaseAddr == (LPBYTE)(sMbi.AllocationBase));
+                nNtStatus = MxNtQueryVirtualMemory(hProcess, lpCurrAddr, MxMemoryBasicInformation, &sMbi, sizeof(sMbi), &k);
+            }
+            while (NT_SUCCESS(nNtStatus) && lpBaseAddr == (LPBYTE)(sMbi.AllocationBase));
             if (!NT_SUCCESS(nNtStatus))
             {
                 break;
@@ -917,21 +899,18 @@ extern "C"
                 continue;
             }
             // get header offset
-            if (MxReadMem(hProcess, &dw, lpBaseAddr + FIELD_OFFSET(IMAGE_DOS_HEADER, e_lfanew), sizeof(dw)) !=
-                sizeof(dw))
+            if (MxReadMem(hProcess, &dw, lpBaseAddr + FIELD_OFFSET(IMAGE_DOS_HEADER, e_lfanew), sizeof(dw)) != sizeof(dw))
             {
                 continue;
             }
             // check signature
             if (MxReadMem(hProcess, &dw2, lpBaseAddr + (SIZE_T)dw + (SIZE_T)FIELD_OFFSET(IMAGE_NT_HEADERS32, Signature),
-                          sizeof(dw2)) != sizeof(dw2) ||
-                dw2 != IMAGE_NT_SIGNATURE)
+                          sizeof(dw2)) != sizeof(dw2) || dw2 != IMAGE_NT_SIGNATURE)
             {
                 continue;
             }
             // check image type
-            if (MxReadMem(hProcess, &w,
-                          lpBaseAddr + (SIZE_T)dw + (SIZE_T)FIELD_OFFSET(IMAGE_NT_HEADERS32, FileHeader.Machine),
+            if (MxReadMem(hProcess, &w, lpBaseAddr + (SIZE_T)dw + (SIZE_T)FIELD_OFFSET(IMAGE_NT_HEADERS32, FileHeader.Machine),
                           sizeof(w)) != sizeof(w))
             {
                 continue;
@@ -951,8 +930,7 @@ extern "C"
                 }
             }
             // retrieve mapped section name
-            nNtStatus = MxNtQueryVirtualMemory(hProcess, (PVOID)lpBaseAddr, MxMemorySectionName, &usDllName,
-                                               sizeof(usDllName), &k);
+            nNtStatus = MxNtQueryVirtualMemory(hProcess, (PVOID)lpBaseAddr, MxMemorySectionName, &usDllName, sizeof(usDllName), &k);
             if (!NT_SUCCESS(nNtStatus))
             {
                 continue;
@@ -980,7 +958,9 @@ extern "C"
       PVOID pRet;
 
       if (DllBase == NULL || szApiNameA == NULL || szApiNameA[0] == 0)
+      {
         return NULL;
+      }
       if (IS_INTRESOURCE(szApiNameA))
       {
         nOrd = (ULONG)((SIZE_T)szApiNameA & 0xFFFF);
@@ -994,10 +974,14 @@ extern "C"
         {
           nOrd = nOrd * 10 + (ULONG)(szApiNameA[0] - '0');
           if (nOrd >= 65536)
+          {
             return NULL;
+          }
         }
         if (nOrd == 0 || szApiNameA[0] != 0)
+        {
           return NULL;
+        }
         lpApiName = NULL;
       }
       else
@@ -1009,7 +993,9 @@ extern "C"
         lpApiName = &asApiName;
       }
       if (!NT_SUCCESS(::MxLdrGetProcedureAddress(DllBase, lpApiName, nOrd, &pRet)))
+      {
         pRet = NULL;
+      }
       return pRet;
     }
     */
@@ -1027,8 +1013,7 @@ extern "C"
 
 //-----------------------------------------------------------
 
-static BOOL RemoteCompareStringW(_In_ HANDLE hProcess, _In_z_ LPCWSTR szRemoteNameW, _In_z_ LPCWSTR szLocalNameW,
-                                 _In_ SIZE_T nNameLen)
+static BOOL RemoteCompareStringW(_In_ HANDLE hProcess, _In_z_ LPCWSTR szRemoteNameW, _In_z_ LPCWSTR szLocalNameW, _In_ SIZE_T nNameLen)
 {
     WCHAR szTempW[256];
     SIZE_T nThisRound;

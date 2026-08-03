@@ -23,7 +23,7 @@
 #ifdef _DEBUG
 #define MX_MEMORY_OBJECTS_HEAP_CHECK
 #else  //_DEBUG
-// #define MX_MEMORY_OBJECTS_HEAP_CHECK
+ // #define MX_MEMORY_OBJECTS_HEAP_CHECK
 #endif //_DEBUG
 
 //-----------------------------------------------------------
@@ -36,8 +36,7 @@ extern "C"
     void *MxMemAlloc(_In_ size_t nSize);
     void *MxMemRealloc(_In_opt_ void *lpPtr, _In_ size_t nSize);
     void *MxMemAllocD(_In_ size_t nSize, _In_opt_z_ const char *szFilenameA, _In_ int nLineNumber);
-    void *MxMemReallocD(_In_opt_ void *lpPtr, _In_ size_t nSize, _In_opt_z_ const char *szFilenameA,
-                        _In_ int nLineNumber);
+    void *MxMemReallocD(_In_opt_ void *lpPtr, _In_ size_t nSize, _In_opt_z_ const char *szFilenameA, _In_ int nLineNumber);
     void MxMemFree(_In_opt_ void *lpPtr);
     size_t MxMemSize(_In_opt_ void *lpPtr);
 
@@ -52,7 +51,7 @@ typedef struct tagMX_MALLOC_OVERRIDE
     void *(*alloc)(size_t nSize);
     void *(*realloc)(void *lpPtr, size_t nSize);
     void (*free)(void *lpPtr);
-    size_t (*memsize)(void *lpPtr);
+    size_t(*memsize)(void *lpPtr);
 } MX_MALLOC_OVERRIDE, *LPMX_MALLOC_OVERRIDE;
 
 #define MX_DEFINE_MALLOC_OVERRIDE(alloc, realloc, free, memsize)                                                       \
@@ -87,8 +86,7 @@ extern "C"
 #endif //__cplusplus
 
     void MxMemSet(_Out_writes_bytes_all_(nCount) void *lpDest, _In_ int nVal, _In_ size_t nCount);
-    void MxMemCopy(_Out_writes_bytes_all_(nCount) void *lpDest, _In_reads_bytes_(nCount) const void *lpSrc,
-                   _In_ size_t nCount);
+    void MxMemCopy(_Out_writes_bytes_all_(nCount) void *lpDest, _In_reads_bytes_(nCount) const void *lpSrc, _In_ size_t nCount);
     void MxMemMove(_Out_writes_bytes_all_(nCount) void *lpDest, _In_ const void *lpSrc, _In_ size_t nCount);
     int MxMemCompare(_In_ const void *lpSrc1, _In_ const void *lpSrc2, _In_ size_t nCount);
     size_t __stdcall MxTryMemCopy(_Out_writes_bytes_all_(nCount) void *lpDest, const void *lpSrc, _In_ size_t nCount);
@@ -101,8 +99,7 @@ extern "C"
 
 #ifdef __cplusplus
 
-namespace MX
-{
+namespace MX {
 
 #if defined(_DEBUG) || defined(MX_TRACEALLOC)
 
@@ -120,7 +117,7 @@ namespace MX
 
 class CNonCopyableObj
 {
-  public:
+public:
     CNonCopyableObj()
     {
         return;
@@ -134,7 +131,7 @@ class CNonCopyableObj
 
 class MX_NOVTABLE CBaseMemObj
 {
-  public:
+public:
     void *__cdecl operator new(_In_ size_t nSize)
     {
         return MX_MALLOC(nSize);
@@ -187,7 +184,7 @@ class MX_NOVTABLE CBaseMemObj
     };
 #endif //_DEBUG || MX_TRACEALLOC
 
-  protected:
+protected:
     CBaseMemObj()
     {
         return;

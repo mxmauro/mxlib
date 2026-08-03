@@ -23,14 +23,13 @@
 #include "..\..\..\Include\Strings\Utf8.h"
 #include "..\..\..\Include\Crypto\SecureRandom.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define SESSION_ID_COOKIE_NAME "mxsessionid"
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CJsHttpServerSessionPlugin::CJsHttpServerSessionPlugin() : CJsObjectBase(), CNonCopyableObj()
 {
@@ -80,11 +79,9 @@ VOID CJsHttpServerSessionPlugin::Destroy()
     return;
 }
 
-HRESULT CJsHttpServerSessionPlugin::Setup(_In_ CJsHttpServer::CClientRequest *_lpRequest,
-                                          _In_ OnPersistanceCallback _cPersistanceCallback,
-                                          _In_opt_z_ LPCWSTR szSessionVarNameW, _In_opt_z_ LPCWSTR szDomainW,
-                                          _In_opt_z_ LPCWSTR szPathW, _In_opt_ int _nExpireTimeInSeconds,
-                                          _In_opt_ BOOL _bIsSecure, _In_opt_ BOOL _bIsHttpOnly,
+HRESULT CJsHttpServerSessionPlugin::Setup(_In_ CJsHttpServer::CClientRequest *_lpRequest, _In_ OnPersistanceCallback _cPersistanceCallback,
+                                          _In_opt_z_ LPCWSTR szSessionVarNameW, _In_opt_z_ LPCWSTR szDomainW, _In_opt_z_ LPCWSTR szPathW,
+                                          _In_opt_ int _nExpireTimeInSeconds, _In_opt_ BOOL _bIsSecure, _In_opt_ BOOL _bIsHttpOnly,
                                           _In_opt_ CHttpCookie::eSameSite _nSameSite)
 {
     SIZE_T i;
@@ -94,7 +91,7 @@ HRESULT CJsHttpServerSessionPlugin::Setup(_In_ CJsHttpServer::CClientRequest *_l
     {
         hRes = E_POINTER;
 
-    on_error:
+on_error:
         ::MxMemSet(szCurrentIdA, 0, sizeof(szCurrentIdA));
         nExpireTimeInSeconds = 0;
         bIsSecure = bIsHttpOnly = FALSE;
@@ -254,13 +251,13 @@ VOID CJsHttpServerSessionPlugin::GenerateSessionId()
         {
             switch (sAddr.si_family)
             {
-            case AF_INET:
-                hRes = cDigest.DigestStream(&(sAddr.Ipv4.sin_addr), sizeof(sAddr.Ipv4.sin_addr));
-                break;
+                case AF_INET:
+                    hRes = cDigest.DigestStream(&(sAddr.Ipv4.sin_addr), sizeof(sAddr.Ipv4.sin_addr));
+                    break;
 
-            case AF_INET6:
-                hRes = cDigest.DigestStream(&(sAddr.Ipv6.sin6_addr), sizeof(sAddr.Ipv6.sin6_addr));
-                break;
+                case AF_INET6:
+                    hRes = cDigest.DigestStream(&(sAddr.Ipv6.sin6_addr), sizeof(sAddr.Ipv6.sin6_addr));
+                    break;
             }
         }
         if (SUCCEEDED(hRes))
@@ -343,8 +340,7 @@ HRESULT CJsHttpServerSessionPlugin::CreateRequestCookie()
 
     lpRequest->RemoveResponseCookie(szSessionVarNameA);
     hRes = lpRequest->AddResponseCookie(szSessionVarNameA, szCurrentIdA, (LPCSTR)cStrDomainA, (LPCSTR)cStrPathA,
-                                        ((nExpireTimeInSeconds >= 0) ? &cExpireDt : NULL), bIsSecure, bIsHttpOnly,
-                                        nSameSite);
+                                        ((nExpireTimeInSeconds >= 0) ? &cExpireDt : NULL), bIsSecure, bIsHttpOnly, nSameSite);
 
     // done
     return hRes;
@@ -398,10 +394,10 @@ int CJsHttpServerSessionPlugin::OnProxyHasNamedProperty(_In_ DukTape::duk_contex
     }
     switch (cBag.GetType(szPropNameA))
     {
-    case CPropertyBag::eType::Null:
-    case CPropertyBag::eType::Double:
-    case CPropertyBag::eType::AnsiString:
-        return 1;
+        case CPropertyBag::eType::Null:
+        case CPropertyBag::eType::Double:
+        case CPropertyBag::eType::AnsiString:
+            return 1;
     }
     return 0;
 }
@@ -423,25 +419,25 @@ int CJsHttpServerSessionPlugin::OnProxyGetNamedProperty(_In_ DukTape::duk_contex
     }
     switch (cBag.GetType(szPropNameA))
     {
-    case CPropertyBag::eType::Null:
-        DukTape::duk_push_null(lpCtx);
-        return 1;
+        case CPropertyBag::eType::Null:
+            DukTape::duk_push_null(lpCtx);
+            return 1;
 
-    case CPropertyBag::eType::Double:
-        if (FAILED(cBag.GetDouble(szPropNameA, nDblValue)))
-        {
-            break;
-        }
-        DukTape::duk_push_number(lpCtx, nDblValue);
-        return 1;
+        case CPropertyBag::eType::Double:
+            if (FAILED(cBag.GetDouble(szPropNameA, nDblValue)))
+            {
+                break;
+            }
+            DukTape::duk_push_number(lpCtx, nDblValue);
+            return 1;
 
-    case CPropertyBag::eType::AnsiString:
-        if (FAILED(cBag.GetString(szPropNameA, szValueA)))
-        {
-            break;
-        }
-        DukTape::duk_push_string(lpCtx, szValueA);
-        return 1;
+        case CPropertyBag::eType::AnsiString:
+            if (FAILED(cBag.GetString(szPropNameA, szValueA)))
+            {
+                break;
+            }
+            DukTape::duk_push_string(lpCtx, szValueA);
+            return 1;
     }
     return 0; // pass original
 }

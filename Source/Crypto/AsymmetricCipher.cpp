@@ -25,7 +25,7 @@
 #include "openssl\encoder.h"
 #include "..\..\Include\AutoPtr.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #define BLOCK_SIZE 2048
 
@@ -36,15 +36,13 @@
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Internals
-{
+namespace Internals {
 
 class CAsymmetricCipherEncoderDecoder : public virtual CBaseMemObj
 {
-  public:
+public:
     CAsymmetricCipherEncoderDecoder() : CBaseMemObj()
     {
         cOutputBuffer.Attach(MX_DEBUG_NEW CSecureBuffer());
@@ -85,16 +83,16 @@ class CAsymmetricCipherEncoderDecoder : public virtual CBaseMemObj
         return;
     };
 
-  public:
+public:
     TAutoRefCounted<CSecureBuffer> cOutputBuffer;
     TAutoRefCounted<CSecureBuffer> cInputBuffer;
     int nPaddingSize = 0;
-    EVP_PKEY_CTX *lpKeyCtx{NULL};
+    EVP_PKEY_CTX *lpKeyCtx{ NULL };
 };
 
 class CAsymmetricCipherSignerVerifier : public virtual CBaseMemObj
 {
-  public:
+public:
     CAsymmetricCipherSignerVerifier() : CBaseMemObj()
     {
         cOutputBuffer.Attach(MX_DEBUG_NEW CSecureBuffer());
@@ -133,15 +131,15 @@ class CAsymmetricCipherSignerVerifier : public virtual CBaseMemObj
         return;
     };
 
-  public:
+public:
     TAutoRefCounted<CSecureBuffer> cOutputBuffer;
     CMessageDigest cDigest;
-    EVP_PKEY_CTX *lpKeyCtx{NULL};
+    EVP_PKEY_CTX *lpKeyCtx{ NULL };
 };
 
 class CAsymmetricCipherData : public virtual CBaseMemObj
 {
-  public:
+public:
     CAsymmetricCipherData()
     {
         lpKey = NULL;
@@ -165,23 +163,23 @@ class CAsymmetricCipherData : public virtual CBaseMemObj
     {
         switch (nZone)
         {
-        case 0:
-            return ((cEncryptor && cEncryptor->lpKeyCtx != NULL) || (cDecryptor && cDecryptor->lpKeyCtx != NULL) ||
-                    (cSigner && cSigner->lpKeyCtx != NULL) || (cVerifier && cVerifier->lpKeyCtx != NULL))
-                       ? TRUE
-                       : FALSE;
+            case 0:
+                return ((cEncryptor && cEncryptor->lpKeyCtx != NULL) || (cDecryptor && cDecryptor->lpKeyCtx != NULL) ||
+                        (cSigner && cSigner->lpKeyCtx != NULL) || (cVerifier && cVerifier->lpKeyCtx != NULL))
+                    ? TRUE
+                    : FALSE;
 
-        case ZONE_Encryptor:
-            return (cEncryptor && cEncryptor->lpKeyCtx != NULL) ? TRUE : FALSE;
+            case ZONE_Encryptor:
+                return (cEncryptor && cEncryptor->lpKeyCtx != NULL) ? TRUE : FALSE;
 
-        case ZONE_Decryptor:
-            return (cDecryptor && cDecryptor->lpKeyCtx != NULL) ? TRUE : FALSE;
+            case ZONE_Decryptor:
+                return (cDecryptor && cDecryptor->lpKeyCtx != NULL) ? TRUE : FALSE;
 
-        case ZONE_Signer:
-            return (cSigner && cSigner->lpKeyCtx != NULL) ? TRUE : FALSE;
+            case ZONE_Signer:
+                return (cSigner && cSigner->lpKeyCtx != NULL) ? TRUE : FALSE;
 
-        case ZONE_Verifier:
-            return (cVerifier && cVerifier->lpKeyCtx != NULL) ? TRUE : FALSE;
+            case ZONE_Verifier:
+                return (cVerifier && cVerifier->lpKeyCtx != NULL) ? TRUE : FALSE;
         }
         return FALSE;
     };
@@ -204,72 +202,72 @@ class CAsymmetricCipherData : public virtual CBaseMemObj
     {
         switch (nZone)
         {
-        case ZONE_Encryptor:
-            if (!cEncryptor)
-            {
-                cEncryptor.Attach(MX_DEBUG_NEW CAsymmetricCipherEncoderDecoder());
+            case ZONE_Encryptor:
                 if (!cEncryptor)
                 {
-                    return FALSE;
+                    cEncryptor.Attach(MX_DEBUG_NEW CAsymmetricCipherEncoderDecoder());
+                    if (!cEncryptor)
+                    {
+                        return FALSE;
+                    }
+                    if (cEncryptor->InitOK() == FALSE)
+                    {
+                        cEncryptor.Reset();
+                        return FALSE;
+                    }
                 }
-                if (cEncryptor->InitOK() == FALSE)
-                {
-                    cEncryptor.Reset();
-                    return FALSE;
-                }
-            }
-            break;
+                break;
 
-        case ZONE_Decryptor:
-            if (!cDecryptor)
-            {
-                cDecryptor.Attach(MX_DEBUG_NEW CAsymmetricCipherEncoderDecoder());
+            case ZONE_Decryptor:
                 if (!cDecryptor)
                 {
-                    return FALSE;
+                    cDecryptor.Attach(MX_DEBUG_NEW CAsymmetricCipherEncoderDecoder());
+                    if (!cDecryptor)
+                    {
+                        return FALSE;
+                    }
+                    if (cDecryptor->InitOK() == FALSE)
+                    {
+                        cDecryptor.Reset();
+                        return FALSE;
+                    }
                 }
-                if (cDecryptor->InitOK() == FALSE)
-                {
-                    cDecryptor.Reset();
-                    return FALSE;
-                }
-            }
-            break;
+                break;
 
-        case ZONE_Signer:
-            if (!cSigner)
-            {
-                cSigner.Attach(MX_DEBUG_NEW CAsymmetricCipherSignerVerifier());
+            case ZONE_Signer:
                 if (!cSigner)
                 {
-                    return FALSE;
+                    cSigner.Attach(MX_DEBUG_NEW CAsymmetricCipherSignerVerifier());
+                    if (!cSigner)
+                    {
+                        return FALSE;
+                    }
+                    if (cSigner->InitOK() == FALSE)
+                    {
+                        cSigner.Reset();
+                        return FALSE;
+                    }
                 }
-                if (cSigner->InitOK() == FALSE)
-                {
-                    cSigner.Reset();
-                    return FALSE;
-                }
-            }
-            break;
+                break;
 
-        case ZONE_Verifier:
-            if (!cVerifier)
-            {
-                cVerifier.Attach(MX_DEBUG_NEW CAsymmetricCipherSignerVerifier());
+            case ZONE_Verifier:
                 if (!cVerifier)
                 {
-                    return FALSE;
+                    cVerifier.Attach(MX_DEBUG_NEW CAsymmetricCipherSignerVerifier());
+                    if (!cVerifier)
+                    {
+                        return FALSE;
+                    }
+                    if (cVerifier->InitOK() == FALSE)
+                    {
+                        cVerifier.Reset();
+                        return FALSE;
+                    }
                 }
-                if (cVerifier->InitOK() == FALSE)
-                {
-                    cVerifier.Reset();
-                    return FALSE;
-                }
-            }
-            break;
+                break;
 
-        default:
-            return FALSE;
+            default:
+                return FALSE;
         }
 
         return TRUE;
@@ -284,71 +282,71 @@ class CAsymmetricCipherData : public virtual CBaseMemObj
 
         switch (nZone)
         {
-        case ZONE_Encryptor:
-            cEncryptor->Reset(TRUE);
-            ERR_clear_error();
-            cEncryptor->lpKeyCtx = EVP_PKEY_CTX_new_from_pkey(NULL, lpKey, NULL);
-            if (cEncryptor->lpKeyCtx == NULL)
-            {
-                return MX::Internals::OpenSSL::GetLastErrorCode(E_OUTOFMEMORY);
-            }
-            if (EVP_PKEY_encrypt_init(cEncryptor->lpKeyCtx) <= 0)
-            {
-                return MX::Internals::OpenSSL::GetLastErrorCode(E_NOTIMPL);
-            }
-            break;
+            case ZONE_Encryptor:
+                cEncryptor->Reset(TRUE);
+                ERR_clear_error();
+                cEncryptor->lpKeyCtx = EVP_PKEY_CTX_new_from_pkey(NULL, lpKey, NULL);
+                if (cEncryptor->lpKeyCtx == NULL)
+                {
+                    return MX::Internals::OpenSSL::GetLastErrorCode(E_OUTOFMEMORY);
+                }
+                if (EVP_PKEY_encrypt_init(cEncryptor->lpKeyCtx) <= 0)
+                {
+                    return MX::Internals::OpenSSL::GetLastErrorCode(E_NOTIMPL);
+                }
+                break;
 
-        case ZONE_Decryptor:
-            cDecryptor->Reset(TRUE);
-            ERR_clear_error();
-            cDecryptor->lpKeyCtx = EVP_PKEY_CTX_new_from_pkey(NULL, lpKey, NULL);
-            if (cDecryptor->lpKeyCtx == NULL)
-            {
-                return MX::Internals::OpenSSL::GetLastErrorCode(E_OUTOFMEMORY);
-            }
-            if (EVP_PKEY_decrypt_init(cEncryptor->lpKeyCtx) <= 0)
-            {
-                return MX::Internals::OpenSSL::GetLastErrorCode(E_NOTIMPL);
-            }
-            break;
+            case ZONE_Decryptor:
+                cDecryptor->Reset(TRUE);
+                ERR_clear_error();
+                cDecryptor->lpKeyCtx = EVP_PKEY_CTX_new_from_pkey(NULL, lpKey, NULL);
+                if (cDecryptor->lpKeyCtx == NULL)
+                {
+                    return MX::Internals::OpenSSL::GetLastErrorCode(E_OUTOFMEMORY);
+                }
+                if (EVP_PKEY_decrypt_init(cEncryptor->lpKeyCtx) <= 0)
+                {
+                    return MX::Internals::OpenSSL::GetLastErrorCode(E_NOTIMPL);
+                }
+                break;
 
-        case ZONE_Signer:
-            cSigner->Reset(TRUE);
-            ERR_clear_error();
-            cSigner->lpKeyCtx = EVP_PKEY_CTX_new_from_pkey(NULL, lpKey, NULL);
-            if (cSigner->lpKeyCtx == NULL)
-            {
-                return MX::Internals::OpenSSL::GetLastErrorCode(E_OUTOFMEMORY);
-            }
-            if (EVP_PKEY_sign_init(cEncryptor->lpKeyCtx) <= 0)
-            {
-                return MX::Internals::OpenSSL::GetLastErrorCode(E_NOTIMPL);
-            }
-            break;
+            case ZONE_Signer:
+                cSigner->Reset(TRUE);
+                ERR_clear_error();
+                cSigner->lpKeyCtx = EVP_PKEY_CTX_new_from_pkey(NULL, lpKey, NULL);
+                if (cSigner->lpKeyCtx == NULL)
+                {
+                    return MX::Internals::OpenSSL::GetLastErrorCode(E_OUTOFMEMORY);
+                }
+                if (EVP_PKEY_sign_init(cEncryptor->lpKeyCtx) <= 0)
+                {
+                    return MX::Internals::OpenSSL::GetLastErrorCode(E_NOTIMPL);
+                }
+                break;
 
-        case ZONE_Verifier:
-            cVerifier->Reset(TRUE);
-            ERR_clear_error();
-            cVerifier->lpKeyCtx = EVP_PKEY_CTX_new_from_pkey(NULL, lpKey, NULL);
-            if (cVerifier->lpKeyCtx == NULL)
-            {
-                return MX::Internals::OpenSSL::GetLastErrorCode(E_OUTOFMEMORY);
-            }
-            if (EVP_PKEY_verify_init(cEncryptor->lpKeyCtx) <= 0)
-            {
-                return MX::Internals::OpenSSL::GetLastErrorCode(E_NOTIMPL);
-            }
-            break;
+            case ZONE_Verifier:
+                cVerifier->Reset(TRUE);
+                ERR_clear_error();
+                cVerifier->lpKeyCtx = EVP_PKEY_CTX_new_from_pkey(NULL, lpKey, NULL);
+                if (cVerifier->lpKeyCtx == NULL)
+                {
+                    return MX::Internals::OpenSSL::GetLastErrorCode(E_OUTOFMEMORY);
+                }
+                if (EVP_PKEY_verify_init(cEncryptor->lpKeyCtx) <= 0)
+                {
+                    return MX::Internals::OpenSSL::GetLastErrorCode(E_NOTIMPL);
+                }
+                break;
 
-        default:
-            return E_INVALIDARG;
+            default:
+                return E_INVALIDARG;
         }
 
         return S_OK;
     };
 
-  public:
-    EVP_PKEY *lpKey{NULL};
+public:
+    EVP_PKEY *lpKey{ NULL };
     MX::TAutoDeletePtr<CAsymmetricCipherEncoderDecoder> cEncryptor;
     MX::TAutoDeletePtr<CAsymmetricCipherEncoderDecoder> cDecryptor;
     MX::TAutoDeletePtr<CAsymmetricCipherSignerVerifier> cSigner;
@@ -363,8 +361,7 @@ class CAsymmetricCipherData : public virtual CBaseMemObj
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CAsymmetricCipher::CAsymmetricCipher() : CBaseMemObj(), CNonCopyableObj()
 {
@@ -431,44 +428,44 @@ HRESULT CAsymmetricCipher::BeginEncrypt(_In_opt_ MX::CAsymmetricCipher::ePadding
 
     switch (EVP_PKEY_get_base_id(asymcipher_data->lpKey))
     {
-    case EVP_PKEY_RSA:
-        switch (nPadding)
-        {
-        case MX::CAsymmetricCipher::None:
-            if (EVP_PKEY_CTX_set_rsa_padding(asymcipher_data->cEncryptor->lpKeyCtx, RSA_NO_PADDING) <= 0)
+        case EVP_PKEY_RSA:
+            switch (nPadding)
             {
-                hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_Unsupported);
-                asymcipher_data->cEncryptor->Reset(TRUE);
-                return hRes;
-            }
-            asymcipher_data->cEncryptor->nPaddingSize = 0;
-            break;
+                case MX::CAsymmetricCipher::None:
+                    if (EVP_PKEY_CTX_set_rsa_padding(asymcipher_data->cEncryptor->lpKeyCtx, RSA_NO_PADDING) <= 0)
+                    {
+                        hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_Unsupported);
+                        asymcipher_data->cEncryptor->Reset(TRUE);
+                        return hRes;
+                    }
+                    asymcipher_data->cEncryptor->nPaddingSize = 0;
+                    break;
 
-        case MX::CAsymmetricCipher::PKCS1:
-            if (EVP_PKEY_CTX_set_rsa_padding(asymcipher_data->cEncryptor->lpKeyCtx, RSA_PKCS1_PADDING) <= 0)
-            {
-                hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_Unsupported);
-                asymcipher_data->cEncryptor->Reset(TRUE);
-                return hRes;
-            }
-            asymcipher_data->cEncryptor->nPaddingSize = 11;
-            break;
+                case MX::CAsymmetricCipher::PKCS1:
+                    if (EVP_PKEY_CTX_set_rsa_padding(asymcipher_data->cEncryptor->lpKeyCtx, RSA_PKCS1_PADDING) <= 0)
+                    {
+                        hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_Unsupported);
+                        asymcipher_data->cEncryptor->Reset(TRUE);
+                        return hRes;
+                    }
+                    asymcipher_data->cEncryptor->nPaddingSize = 11;
+                    break;
 
-        case MX::CAsymmetricCipher::OAEP:
-            if (EVP_PKEY_CTX_set_rsa_padding(asymcipher_data->cEncryptor->lpKeyCtx, RSA_PKCS1_OAEP_PADDING) <= 0)
-            {
-                hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_Unsupported);
-                asymcipher_data->cEncryptor->Reset(TRUE);
-                return hRes;
-            }
-            asymcipher_data->cEncryptor->nPaddingSize = 41;
-            break;
+                case MX::CAsymmetricCipher::OAEP:
+                    if (EVP_PKEY_CTX_set_rsa_padding(asymcipher_data->cEncryptor->lpKeyCtx, RSA_PKCS1_OAEP_PADDING) <= 0)
+                    {
+                        hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_Unsupported);
+                        asymcipher_data->cEncryptor->Reset(TRUE);
+                        return hRes;
+                    }
+                    asymcipher_data->cEncryptor->nPaddingSize = 41;
+                    break;
 
-        default:
-            asymcipher_data->cEncryptor->Reset(TRUE);
-            return E_INVALIDARG;
-        }
-        break;
+                default:
+                    asymcipher_data->cEncryptor->Reset(TRUE);
+                    return E_INVALIDARG;
+            }
+            break;
     }
 
     // done
@@ -490,7 +487,7 @@ HRESULT CAsymmetricCipher::EncryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataL
     }
 
     nMaxWritable = EVP_PKEY_get_size(asymcipher_data->lpKey) - asymcipher_data->cEncryptor->nPaddingSize -
-                   asymcipher_data->cEncryptor->cInputBuffer->GetLength();
+        asymcipher_data->cEncryptor->cInputBuffer->GetLength();
     if (nDataLength > nMaxWritable)
     {
         asymcipher_data->cEncryptor->Reset(TRUE);
@@ -519,8 +516,7 @@ HRESULT CAsymmetricCipher::EndEncrypt()
     }
 
     ERR_clear_error();
-    if (EVP_PKEY_encrypt(asymcipher_data->cEncryptor->lpKeyCtx, NULL, &nOutLen,
-                         asymcipher_data->cEncryptor->cInputBuffer->GetBuffer(),
+    if (EVP_PKEY_encrypt(asymcipher_data->cEncryptor->lpKeyCtx, NULL, &nOutLen, asymcipher_data->cEncryptor->cInputBuffer->GetBuffer(),
                          (int)(asymcipher_data->cEncryptor->cInputBuffer->GetLength())) <= 0)
     {
         hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_Unsupported);
@@ -539,8 +535,7 @@ HRESULT CAsymmetricCipher::EndEncrypt()
             return E_OUTOFMEMORY;
         }
 
-        if (EVP_PKEY_encrypt(asymcipher_data->cEncryptor->lpKeyCtx, lpOut, &nOutLen,
-                             asymcipher_data->cEncryptor->cInputBuffer->GetBuffer(),
+        if (EVP_PKEY_encrypt(asymcipher_data->cEncryptor->lpKeyCtx, lpOut, &nOutLen, asymcipher_data->cEncryptor->cInputBuffer->GetBuffer(),
                              (int)(asymcipher_data->cEncryptor->cInputBuffer->GetLength())) <= 0)
         {
             hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_Unsupported);
@@ -592,44 +587,44 @@ HRESULT CAsymmetricCipher::BeginDecrypt(_In_opt_ MX::CAsymmetricCipher::ePadding
 
     switch (EVP_PKEY_get_base_id(asymcipher_data->lpKey))
     {
-    case EVP_PKEY_RSA:
-        switch (nPadding)
-        {
-        case MX::CAsymmetricCipher::None:
-            if (EVP_PKEY_CTX_set_rsa_padding(asymcipher_data->cDecryptor->lpKeyCtx, RSA_NO_PADDING) <= 0)
+        case EVP_PKEY_RSA:
+            switch (nPadding)
             {
-                hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_Unsupported);
-                asymcipher_data->cDecryptor->Reset(TRUE);
-                return hRes;
-            }
-            asymcipher_data->cDecryptor->nPaddingSize = 0;
-            break;
+                case MX::CAsymmetricCipher::None:
+                    if (EVP_PKEY_CTX_set_rsa_padding(asymcipher_data->cDecryptor->lpKeyCtx, RSA_NO_PADDING) <= 0)
+                    {
+                        hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_Unsupported);
+                        asymcipher_data->cDecryptor->Reset(TRUE);
+                        return hRes;
+                    }
+                    asymcipher_data->cDecryptor->nPaddingSize = 0;
+                    break;
 
-        case MX::CAsymmetricCipher::PKCS1:
-            if (EVP_PKEY_CTX_set_rsa_padding(asymcipher_data->cDecryptor->lpKeyCtx, RSA_PKCS1_PADDING) <= 0)
-            {
-                hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_Unsupported);
-                asymcipher_data->cDecryptor->Reset(TRUE);
-                return hRes;
-            }
-            asymcipher_data->cDecryptor->nPaddingSize = 11;
-            break;
+                case MX::CAsymmetricCipher::PKCS1:
+                    if (EVP_PKEY_CTX_set_rsa_padding(asymcipher_data->cDecryptor->lpKeyCtx, RSA_PKCS1_PADDING) <= 0)
+                    {
+                        hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_Unsupported);
+                        asymcipher_data->cDecryptor->Reset(TRUE);
+                        return hRes;
+                    }
+                    asymcipher_data->cDecryptor->nPaddingSize = 11;
+                    break;
 
-        case MX::CAsymmetricCipher::OAEP:
-            if (EVP_PKEY_CTX_set_rsa_padding(asymcipher_data->cDecryptor->lpKeyCtx, RSA_PKCS1_OAEP_PADDING) <= 0)
-            {
-                hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_Unsupported);
-                asymcipher_data->cDecryptor->Reset(TRUE);
-                return hRes;
-            }
-            asymcipher_data->cDecryptor->nPaddingSize = 41;
-            break;
+                case MX::CAsymmetricCipher::OAEP:
+                    if (EVP_PKEY_CTX_set_rsa_padding(asymcipher_data->cDecryptor->lpKeyCtx, RSA_PKCS1_OAEP_PADDING) <= 0)
+                    {
+                        hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_Unsupported);
+                        asymcipher_data->cDecryptor->Reset(TRUE);
+                        return hRes;
+                    }
+                    asymcipher_data->cDecryptor->nPaddingSize = 41;
+                    break;
 
-        default:
-            asymcipher_data->cDecryptor->Reset(TRUE);
-            return E_INVALIDARG;
-        }
-        break;
+                default:
+                    asymcipher_data->cDecryptor->Reset(TRUE);
+                    return E_INVALIDARG;
+            }
+            break;
     }
 
     // done
@@ -651,7 +646,7 @@ HRESULT CAsymmetricCipher::DecryptStream(_In_ LPCVOID lpData, _In_ SIZE_T nDataL
     }
 
     nMaxWritable = EVP_PKEY_size(asymcipher_data->lpKey) - asymcipher_data->cDecryptor->nPaddingSize -
-                   asymcipher_data->cDecryptor->cInputBuffer->GetLength();
+        asymcipher_data->cDecryptor->cInputBuffer->GetLength();
     if (nDataLength > nMaxWritable)
     {
         asymcipher_data->cDecryptor->Reset(TRUE);
@@ -680,8 +675,7 @@ HRESULT CAsymmetricCipher::EndDecrypt()
     }
 
     ERR_clear_error();
-    if (EVP_PKEY_encrypt(asymcipher_data->cDecryptor->lpKeyCtx, NULL, &nOutLen,
-                         asymcipher_data->cDecryptor->cInputBuffer->GetBuffer(),
+    if (EVP_PKEY_encrypt(asymcipher_data->cDecryptor->lpKeyCtx, NULL, &nOutLen, asymcipher_data->cDecryptor->cInputBuffer->GetBuffer(),
                          (int)(asymcipher_data->cDecryptor->cInputBuffer->GetLength())) <= 0)
     {
         hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_Unsupported);
@@ -700,8 +694,7 @@ HRESULT CAsymmetricCipher::EndDecrypt()
             return E_OUTOFMEMORY;
         }
 
-        if (EVP_PKEY_encrypt(asymcipher_data->cDecryptor->lpKeyCtx, lpOut, &nOutLen,
-                             asymcipher_data->cDecryptor->cInputBuffer->GetBuffer(),
+        if (EVP_PKEY_encrypt(asymcipher_data->cDecryptor->lpKeyCtx, lpOut, &nOutLen, asymcipher_data->cDecryptor->cInputBuffer->GetBuffer(),
                              (int)(asymcipher_data->cDecryptor->cInputBuffer->GetLength())) <= 0)
         {
             hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_Unsupported);
@@ -815,8 +808,7 @@ HRESULT CAsymmetricCipher::EndSign()
     }
 
     ERR_clear_error();
-    if (EVP_PKEY_sign(asymcipher_data->cSigner->lpKeyCtx, (unsigned char *)lpSig, &nSigSize,
-                      asymcipher_data->cSigner->cDigest.GetResult(),
+    if (EVP_PKEY_sign(asymcipher_data->cSigner->lpKeyCtx, (unsigned char *)lpSig, &nSigSize, asymcipher_data->cSigner->cDigest.GetResult(),
                       asymcipher_data->cSigner->cDigest.GetResultSize()) <= 0)
     {
         hRes = MX::Internals::OpenSSL::GetLastErrorCode(MX_E_Unsupported);
@@ -929,8 +921,7 @@ HRESULT CAsymmetricCipher::EndVerify(_In_ LPCVOID lpSignature, _In_ SIZE_T nSign
 
     ERR_clear_error();
     res = EVP_PKEY_verify(asymcipher_data->cVerifier->lpKeyCtx, (unsigned char *)lpSignature, nSignatureLen,
-                          asymcipher_data->cVerifier->cDigest.GetResult(),
-                          asymcipher_data->cVerifier->cDigest.GetResultSize());
+                          asymcipher_data->cVerifier->cDigest.GetResult(), asymcipher_data->cVerifier->cDigest.GetResultSize());
     if (res > 0)
     {
         hRes = S_OK;

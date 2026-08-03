@@ -20,13 +20,11 @@
 #include "..\..\include\Database\BaseConnector.h"
 #include "..\..\Include\Strings\Utf8.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
-namespace Database
-{
+namespace Database {
 
 CBaseConnector::CBaseConnector() : TRefCounted<CBaseMemObj>(), CNonCopyableObj()
 {

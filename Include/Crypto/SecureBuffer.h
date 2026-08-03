@@ -26,12 +26,11 @@ typedef struct bio_st BIO;
 
 //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 class CSecureBuffer : public virtual TRefCounted<CBaseMemObj>, public CNonCopyableObj
 {
-  public:
+public:
     CSecureBuffer();
     ~CSecureBuffer();
 
@@ -63,10 +62,10 @@ class CSecureBuffer : public virtual TRefCounted<CBaseMemObj>, public CNonCopyab
 
     BIO *CreateBIO();
 
-  private:
+private:
     BOOL EnsureWritableSpace(_In_ SIZE_T nBytes);
 
-  private:
+private:
     LPBYTE lpBuffer;
     SIZE_T nLength, nSize;
 };

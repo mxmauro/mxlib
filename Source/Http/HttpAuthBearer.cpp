@@ -18,29 +18,27 @@
  * limitations under the License.
  */
 #include "..\..\Include\Http\HttpAuthBearer.h"
-/*
-#include "..\..\Include\Http\HttpCommon.h"
-#include "..\..\Include\Crypto\Base64.h"
-#include "..\..\Include\AutoPtr.h"
-#include "..\..\Include\Strings\Utf8.h"
-#include "..\..\Include\Crypto\MessageDigest.h"
-#include "..\..\Include\FnvHash.h"
-*/
+ /*
+ #include "..\..\Include\Http\HttpCommon.h"
+ #include "..\..\Include\Crypto\Base64.h"
+ #include "..\..\Include\AutoPtr.h"
+ #include "..\..\Include\Strings\Utf8.h"
+ #include "..\..\Include\Crypto\MessageDigest.h"
+ #include "..\..\Include\FnvHash.h"
+ */
 
-/*
-WWW-Authenticate: Bearer scope="{scope}", realm="example",
-                       error="invalid_token",
-                       error_description="The access token expired"
+ /*
+ WWW-Authenticate: Bearer scope="{scope}", realm="example", error="invalid_token", error_description="The access token expired"
 
-Authorization: Bearer mF_9.B5f-4.1JqM
+ Authorization:
+     Bearer mF_9.B5f-4.1JqM
 
-scope a space separated list of scope items, items chars must be inside this set %x21 / %x23-5B / %x5D-7E
-*/
+ scope a space separated list of scope items, items chars must be inside this set %x21 / %x23-5B / %x5D-7E
+ */
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
-namespace MX
-{
+namespace MX {
 
 CHttpAuthBearer::CHttpAuthBearer() : CHttpAuthBase(), CNonCopyableObj()
 {

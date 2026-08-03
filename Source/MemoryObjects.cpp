@@ -31,7 +31,7 @@
 #ifdef _DEBUG
 #define HEAP_CHECK_CAPTURE_STACK
 #else  //_DEBUG
-// #define HEAP_CHECK_CAPTURE_STACK
+ // #define HEAP_CHECK_CAPTURE_STACK
 #endif //_DEBUG
 
 #if defined(MX_MEMORY_OBJECTS_HEAP_CHECK) && defined(HEAP_CHECK_CAPTURE_STACK)
@@ -45,8 +45,7 @@
 #include <VersionHelpers.h>
 
 typedef USHORT(WINAPI *lpfnRtlCaptureStackBackTrace)(ULONG, ULONG, PVOID *, PULONG);
-typedef BOOL(WINAPI *lpfnSymInitializeW)(_In_ HANDLE hProcess, _In_opt_z_ PCWSTR UserSearchPath,
-                                         _In_ BOOL fInvadeProcess);
+typedef BOOL(WINAPI *lpfnSymInitializeW)(_In_ HANDLE hProcess, _In_opt_z_ PCWSTR UserSearchPath, _In_ BOOL fInvadeProcess);
 typedef BOOL(WINAPI *lpfnSymRefreshModuleList)(_In_ HANDLE hProcess);
 typedef BOOL(WINAPI *lpfnSymFromAddrW)(_In_ HANDLE hProcess, _In_ DWORD64 Address, _Out_opt_ PDWORD64 Displacement,
                                        _Inout_ PSYMBOL_INFOW Symbol);
@@ -111,8 +110,8 @@ typedef struct tagMINIDEBUG_PREBLOCK
 #ifdef HEAP_CHECK_CAPTURE_STACK
 static int __cdecl InitializeMemory();
 #endif // HEAP_CHECK_CAPTURE_STACK
-static VOID InitializeBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk, _In_ SIZE_T nSize, _In_opt_z_ const char *szFilenameA,
-                            _In_ int nLineNumber, _In_ LPVOID lpRetAddress);
+static VOID InitializeBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk, _In_ SIZE_T nSize, _In_opt_z_ const char *szFilenameA, _In_ int nLineNumber,
+                            _In_ LPVOID lpRetAddress);
 static VOID SetBlockTags(_In_ MINIDEBUG_PREBLOCK *pPreBlk, _In_ BOOL bOnFree);
 // static VOID CheckBlocks();
 static VOID CheckBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk);
@@ -139,7 +138,7 @@ static size_t DefaultMemSize(_In_opt_ void *lpPtr);
 
 //-----------------------------------------------------------
 
-static MX_MALLOC_OVERRIDE MxDefaultAllocatorOverride = {DefaultMalloc, DefaultRealloc, DefaultFree, DefaultMemSize};
+static MX_MALLOC_OVERRIDE MxDefaultAllocatorOverride = { DefaultMalloc, DefaultRealloc, DefaultFree, DefaultMemSize };
 extern "C" LPMX_MALLOC_OVERRIDE lpMxDefaultAllocatorOverride = &MxDefaultAllocatorOverride;
 extern "C" LPMX_MALLOC_OVERRIDE lpMxAllocatorOverride;
 
@@ -180,7 +179,7 @@ static struct
     // LONG volatile nCheckCounter;
     MINIDEBUG_PREBLOCK *lpHead;
     MINIDEBUG_PREBLOCK *lpTail;
-} sAllocatedBlocks = {0, 0, /*CHECK_COUNTER_START, */ NULL, NULL};
+} sAllocatedBlocks = { 0, 0, /*CHECK_COUNTER_START, */ NULL, NULL };
 #endif // MX_MEMORY_OBJECTS_HEAP_CHECK
 
 //-----------------------------------------------------------
@@ -216,7 +215,7 @@ extern "C"
         }
         return p;
 #else  // MX_MEMORY_OBJECTS_HEAP_CHECK
-    return lpMxAllocatorOverride->alloc(nSize);
+        return lpMxAllocatorOverride->alloc(nSize);
 #endif // MX_MEMORY_OBJECTS_HEAP_CHECK
     }
 
@@ -246,7 +245,7 @@ extern "C"
         }
         return p;
 #else  // MX_MEMORY_OBJECTS_HEAP_CHECK
-    return lpMxAllocatorOverride->alloc(nSize);
+        return lpMxAllocatorOverride->alloc(nSize);
 #endif // MX_MEMORY_OBJECTS_HEAP_CHECK
     }
 
@@ -290,12 +289,11 @@ extern "C"
         LinkBlock(pPreBlk);
         return p;
 #else  // MX_MEMORY_OBJECTS_HEAP_CHECK
-    return lpMxAllocatorOverride->realloc(lpPtr, nSize);
+        return lpMxAllocatorOverride->realloc(lpPtr, nSize);
 #endif // MX_MEMORY_OBJECTS_HEAP_CHECK
     }
 
-    void *MxMemReallocD(_In_opt_ void *lpPtr, _In_ size_t nSize, _In_opt_z_ const char *szFilenameA,
-                        _In_ int nLineNumber)
+    void *MxMemReallocD(_In_opt_ void *lpPtr, _In_ size_t nSize, _In_opt_z_ const char *szFilenameA, _In_ int nLineNumber)
     {
 #ifdef MX_MEMORY_OBJECTS_HEAP_CHECK
         MINIDEBUG_PREBLOCK *pPreBlk;
@@ -335,7 +333,7 @@ extern "C"
         LinkBlock(pPreBlk);
         return p;
 #else  // MX_MEMORY_OBJECTS_HEAP_CHECK
-    return lpMxAllocatorOverride->realloc(lpPtr, nSize);
+        return lpMxAllocatorOverride->realloc(lpPtr, nSize);
 #endif // MX_MEMORY_OBJECTS_HEAP_CHECK
     }
 
@@ -374,7 +372,7 @@ extern "C"
             nSize = lpMxAllocatorOverride->memsize(pPreBlk);
             return (nSize > EXTRA_ALLOC) ? (nSize - EXTRA_ALLOC) : 0;
 #else  // MX_MEMORY_OBJECTS_HEAP_CHECK
-        return lpMxAllocatorOverride->memsize(lpPtr);
+            return lpMxAllocatorOverride->memsize(lpPtr);
 #endif // MX_MEMORY_OBJECTS_HEAP_CHECK
         }
         return 0;
@@ -417,13 +415,13 @@ extern "C"
             {
                 *((LPBYTE)lpDest) = (BYTE)nVal;
                 lpDest = (LPBYTE)lpDest + 1;
-            } while (--nCount > 0);
+            }
+            while (--nCount > 0);
         }
         return;
     }
 
-    void MxMemCopy(_Out_writes_bytes_all_(nCount) void *lpDest, _In_reads_bytes_(nCount) const void *lpSrc,
-                   _In_ size_t nCount)
+    void MxMemCopy(_Out_writes_bytes_all_(nCount) void *lpDest, _In_reads_bytes_(nCount) const void *lpSrc, _In_ size_t nCount)
     {
         if (XISALIGNED(lpSrc) && XISALIGNED(lpDest))
         {
@@ -556,8 +554,7 @@ static int __cdecl InitializeMemory()
         if (::IsWindowsXPOrGreater() != FALSE)
         {
             // use RtlCaptureStackBackTrace only on xp or later
-            fnRtlCaptureStackBackTrace =
-                (lpfnRtlCaptureStackBackTrace)::GetProcAddress(hNtDll, "RtlCaptureStackBackTrace");
+            fnRtlCaptureStackBackTrace = (lpfnRtlCaptureStackBackTrace)::GetProcAddress(hNtDll, "RtlCaptureStackBackTrace");
         }
     }
     // IMPORTANT: Always check these functions does not use memory
@@ -573,16 +570,14 @@ static int __cdecl InitializeMemory()
         fnSymRefreshModuleList = (lpfnSymRefreshModuleList)::GetProcAddress(hDbgHelpDLL, "SymRefreshModuleList");
         fnSymFromAddrW = (lpfnSymFromAddrW)::GetProcAddress(hDbgHelpDLL, "SymFromAddrW");
         fnImagehlpApiVersion = (lpfnImagehlpApiVersion)::GetProcAddress(hDbgHelpDLL, "ImagehlpApiVersion");
-        if (fnSymInitializeW != NULL && fnSymRefreshModuleList != NULL && fnSymFromAddrW != NULL &&
-            fnImagehlpApiVersion != NULL)
+        if (fnSymInitializeW != NULL && fnSymRefreshModuleList != NULL && fnSymFromAddrW != NULL && fnImagehlpApiVersion != NULL)
         {
             try
             {
                 LPAPI_VERSION lpApiVer = fnImagehlpApiVersion();
 
-                if (lpApiVer != NULL &&
-                    (lpApiVer->MajorVersion > 4 || (lpApiVer->MajorVersion == 4 && lpApiVer->MinorVersion > 0) ||
-                     (lpApiVer->MajorVersion == 4 && lpApiVer->MinorVersion == 0 && lpApiVer->Revision >= 5)))
+                if (lpApiVer != NULL && (lpApiVer->MajorVersion > 4 || (lpApiVer->MajorVersion == 4 && lpApiVer->MinorVersion > 0) ||
+                                         (lpApiVer->MajorVersion == 4 && lpApiVer->MinorVersion == 0 && lpApiVer->Revision >= 5)))
                 {
                     b = fnSymInitializeW(::GetCurrentProcess(), NULL, TRUE);
                 }
@@ -608,8 +603,8 @@ static int __cdecl InitializeMemory()
 }
 #endif // HEAP_CHECK_CAPTURE_STACK
 
-static VOID InitializeBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk, _In_ SIZE_T nSize, _In_opt_z_ const char *szFilenameA,
-                            _In_ int nLineNumber, _In_ LPVOID lpRetAddress)
+static VOID InitializeBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk, _In_ SIZE_T nSize, _In_opt_z_ const char *szFilenameA, _In_ int nLineNumber,
+                            _In_ LPVOID lpRetAddress)
 {
     pPreBlk->lpNext = pPreBlk->lpPrev = NULL;
     pPreBlk->szFilenameA = (LPCSTR)szFilenameA;
@@ -693,11 +688,15 @@ static VOID LinkBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk)
     MX_ASSERT_ALWAYS(pPreBlk->lpNext == NULL);
     MX_ASSERT_ALWAYS(pPreBlk->lpPrev == NULL);
     if (sAllocatedBlocks.lpTail != NULL)
+    {
         sAllocatedBlocks.lpTail->lpNext = pPreBlk;
+    }
     pPreBlk->lpPrev = sAllocatedBlocks.lpTail;
     sAllocatedBlocks.lpTail = pPreBlk;
     if (sAllocatedBlocks.lpHead == NULL)
+    {
         sAllocatedBlocks.lpHead = pPreBlk;
+    }
     //----
     (sAllocatedBlocks.nCount)++;
     return;
@@ -710,9 +709,13 @@ static VOID UnlinkBlock(_In_ MINIDEBUG_PREBLOCK *pPreBlk)
     AssertNotTag(pPreBlk->lpNext);
     AssertNotTag(pPreBlk->lpPrev);
     if (sAllocatedBlocks.lpHead == pPreBlk)
+    {
         sAllocatedBlocks.lpHead = pPreBlk->lpNext;
+    }
     if (sAllocatedBlocks.lpTail == pPreBlk)
+    {
         sAllocatedBlocks.lpTail = pPreBlk->lpPrev;
+    }
     if (pPreBlk->lpNext != NULL)
     {
         AssertNotTag(pPreBlk->lpNext->lpPrev);
@@ -740,15 +743,12 @@ static VOID AssertNotTag(_In_ MINIDEBUG_PREBLOCK *pPreBlk)
     val = (SIZE_T)pPreBlk;
 #if defined(_M_IX86)
     MX_ASSERT_ALWAYS(val != CHECKTAG1a && val != CHECKTAG1b && val != CHECKTAG2a && val != CHECKTAG2b);
-    MX_ASSERT_ALWAYS(val != CHECKTAG1a_FREE && val != CHECKTAG1b_FREE && val != CHECKTAG2a_FREE &&
-                     val != CHECKTAG2b_FREE);
+    MX_ASSERT_ALWAYS(val != CHECKTAG1a_FREE && val != CHECKTAG1b_FREE && val != CHECKTAG2a_FREE && val != CHECKTAG2b_FREE);
 #elif defined(_M_X64)
     MX_ASSERT_ALWAYS(dw[0] != CHECKTAG1a && dw[0] != CHECKTAG1b && dw[0] != CHECKTAG2a && dw[0] != CHECKTAG2b);
-    MX_ASSERT_ALWAYS(dw[0] != CHECKTAG1a_FREE && dw[0] != CHECKTAG1b_FREE && dw[0] != CHECKTAG2a_FREE &&
-                     dw[0] != CHECKTAG2b_FREE);
+    MX_ASSERT_ALWAYS(dw[0] != CHECKTAG1a_FREE && dw[0] != CHECKTAG1b_FREE && dw[0] != CHECKTAG2a_FREE && dw[0] != CHECKTAG2b_FREE);
     MX_ASSERT_ALWAYS(dw[1] != CHECKTAG1a && dw[1] != CHECKTAG1b && dw[1] != CHECKTAG2a && dw[1] != CHECKTAG2b);
-    MX_ASSERT_ALWAYS(dw[1] != CHECKTAG1a_FREE && dw[1] != CHECKTAG1b_FREE && dw[1] != CHECKTAG2a_FREE &&
-                     dw[1] != CHECKTAG2b_FREE);
+    MX_ASSERT_ALWAYS(dw[1] != CHECKTAG1a_FREE && dw[1] != CHECKTAG1b_FREE && dw[1] != CHECKTAG2a_FREE && dw[1] != CHECKTAG2b_FREE);
 #endif
     return;
 }
@@ -795,18 +795,21 @@ extern "C"
                 if (szFilenameA != NULL)
                 {
                     if (MX::StrCompareA(szFilenameA, lpBlock->szFilenameA, TRUE) != 0)
+                    {
                         continue;
+                    }
                 }
 
-                MX::DebugPrint(
-                    "MXLIB: Leak 0x%p (%Iu bytes): [%02X %02X %02X %02X %02X %02X %02X %02X] / RA:0x%p / %s[%lu]\n", p,
-                    (SIZE_T)((LPBYTE)(lpBlock->lpPost) - p), p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],
-                    lpBlock->lpRetAddress, lpBlock->szFilenameA, (ULONG)(lpBlock->nLineNumber));
+                MX::DebugPrint("MXLIB: Leak 0x%p (%Iu bytes): [%02X %02X %02X %02X %02X %02X %02X %02X] / RA:0x%p / %s[%lu]\n", p,
+                    (SIZE_T)((LPBYTE)(lpBlock->lpPost) - p), p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7], lpBlock->lpRetAddress,
+                    lpBlock->szFilenameA, (ULONG)(lpBlock->nLineNumber));
             }
             else
             {
                 if (szFilenameA != NULL)
+                {
                     continue;
+                }
                 MX::DebugPrint("MXLIB: Leak 0x%p (%Iu bytes): [%02X %02X %02X %02X %02X %02X %02X %02X] / RA:0x%p\n", p,
                                (SIZE_T)((LPBYTE)(lpBlock->lpPost) - p), p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7],
                                lpBlock->lpRetAddress);
@@ -818,7 +821,9 @@ extern "C"
                 for (nIdx = 0; nIdx < HEAP_CHECK_STACK_ENTRIES; nIdx++)
                 {
                     if (lpBlock->nStackValues[nIdx] == 0)
+                    {
                         break;
+                    }
                     ::MxMemSet(&(sFullSymbolInfoW.sSymbolInfoW), 0, sizeof(sFullSymbolInfoW.sSymbolInfoW));
                     sFullSymbolInfoW.sSymbolInfoW.SizeOfStruct = (ULONG)sizeof(sFullSymbolInfoW.sSymbolInfoW);
                     sFullSymbolInfoW.sSymbolInfoW.MaxNameLen = MX_ARRAYLEN(sFullSymbolInfoW.szNameContinuationW);
@@ -832,11 +837,9 @@ extern "C"
                     {
                         sFullSymbolInfoW.sSymbolInfoW.Name[0] = 0;
                     }
-                    MX::DebugPrint("  %s 0x%IX => %S + 0x%IX\n", ((nIdx == 0) ? "Stack:" : "      "),
-                                   lpBlock->nStackValues[nIdx],
+                    MX::DebugPrint("  %s 0x%IX => %S + 0x%IX\n", ((nIdx == 0) ? "Stack:" : "      "), lpBlock->nStackValues[nIdx],
                                    ((sFullSymbolInfoW.sSymbolInfoW.Name[0] != 0) ? sFullSymbolInfoW.sSymbolInfoW.Name
-                                                                                 : L"Unknown"),
-                                   qwDisp);
+                                    : L"Unknown"), qwDisp);
                 }
             }
             else
@@ -845,11 +848,15 @@ extern "C"
                 for (nIdx = 0; nIdx < HEAP_CHECK_STACK_ENTRIES; nIdx++)
                 {
                     if (lpBlock->nStackValues[nIdx] == 0)
+                    {
                         break;
-                    len = mx_sprintf_s(szBufferA + (SIZE_T)ofs, MX_ARRAYLEN(szBufferA) - (SIZE_T)ofs, "%s0x%IX",
-                                       ((nIdx == 0) ? "" : ", "), lpBlock->nStackValues[nIdx]);
+                    }
+                    len = mx_sprintf_s(szBufferA + (SIZE_T)ofs, MX_ARRAYLEN(szBufferA) - (SIZE_T)ofs, "%s0x%IX", ((nIdx == 0) ? "" : ", "),
+                                       lpBlock->nStackValues[nIdx]);
                     if (len > 0)
+                    {
                         ofs += len;
+                    }
                 }
                 if (ofs > 0)
                 {

@@ -40,7 +40,7 @@
 #include "NtDefs.h"
 #include "MemoryObjects.h"
 
-//-----------------------------------------------------------
+ //-----------------------------------------------------------
 
 #ifdef _DEBUG
 #define MX_ASSERT(x)                                                                                                   \
@@ -78,7 +78,7 @@
 extern "C++"
 {
     template <typename _CountofType, size_t _SizeOfArray>
-    char (*__countof_helper(MX_UNALIGNED _CountofType (&_Array)[_SizeOfArray]))[_SizeOfArray];
+    char (*__countof_helper(MX_UNALIGNED _CountofType(&_Array)[_SizeOfArray]))[_SizeOfArray];
 
 #define MX_ARRAYLEN(_Array) (sizeof(*__countof_helper(_Array)) + 0)
 }
@@ -142,15 +142,15 @@ extern "C"
     {
         switch (nNtStatus)
         {
-        case STATUS_NO_MEMORY:
-        case STATUS_INSUFFICIENT_RESOURCES:
-            return E_OUTOFMEMORY;
-        case STATUS_CANCELLED:
-            return MX_E_Cancelled;
-        case STATUS_NOT_FOUND:
-            return MX_E_NotFound;
-        case STATUS_NOT_IMPLEMENTED:
-            return E_NOTIMPL;
+            case STATUS_NO_MEMORY:
+            case STATUS_INSUFFICIENT_RESOURCES:
+                return E_OUTOFMEMORY;
+            case STATUS_CANCELLED:
+                return MX_E_Cancelled;
+            case STATUS_NOT_FOUND:
+                return MX_E_NotFound;
+            case STATUS_NOT_IMPLEMENTED:
+                return E_NOTIMPL;
         }
         return NT_SUCCESS(nNtStatus) ? (HRESULT)nNtStatus : HRESULT_FROM_NT(nNtStatus);
     }
